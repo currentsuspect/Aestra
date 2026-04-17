@@ -6,22 +6,22 @@
 #include "../AestraCore/include/AestraLog.h"
 
 bool AestraRootComponent::onKeyEvent(const NUIKeyEvent& event) {
-    if (event.keyCode == NUIKeyCode::Space && m_rootContent) {
+    // 1. Global app-level shortcuts (Ctrl+Z, Ctrl+Y, Space) — BEFORE focused component
+    if (m_rootContent) {
         if (m_rootContent->onKeyEvent(event)) {
             return true;
         }
     }
 
-    // 1. First, dispatch to focused component (correct behavior)
+    // 2. Dispatch to focused component
     if (auto focused = AestraUI::NUIComponent::getFocusedComponent()) {
         if (focused->onKeyEvent(event)) {
              return true;
         }
     }
 
-    // 2. Fallback to global shortcuts
+    // 3. Fallback: F12 HUD toggle
     if (event.pressed) {
-        // F12: HUD
         if (event.keyCode == NUIKeyCode::F12) {
             if (m_rootUnifiedHUD) {
                 m_rootUnifiedHUD->setVisible(!m_rootUnifiedHUD->isVisible());

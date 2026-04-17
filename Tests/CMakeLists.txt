@@ -512,4 +512,9 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Headless/CMakeLists.txt")
     add_subdirectory(Headless)
 endif()
 
+# Security regression tests
+if(AESTRA_ENABLE_TESTS AND EXISTS ${CMAKE_SOURCE_DIR}/tests/security/CMakeLists.txt)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/tests/security security_tests)
+endif()
+
 message(STATUS "Tests configured - see Tests/ directory")

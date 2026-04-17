@@ -8,8 +8,10 @@
 #include "../Components/TimelineSummaryCache.h"
 #include "../AestraUI/Core/NUIComponent.h"
 #include "NUIButton.h"
+#include "Models/PatternSource.h"
 #include <memory>
 #include <functional>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -81,6 +83,7 @@ public:
     void setAudioEngine(AudioEngine* engine) { m_audioEngine = engine; }
     
 private:
+    void adjustPatternLengthBars(int barsDelta);
     void updateGhostChannels();
     void rebuildTimelineMinimap();
     void layoutTimelineMinimap();
@@ -94,7 +97,11 @@ private:
     PatternID m_currentPatternId;
     UnitID m_editingUnitId{0};
     std::function<void(PatternID)> m_onPatternEdited;
-    double m_patternDurationBeats{4.0};
+    double m_patternDurationBeats{16.0};
+
+    // Undo/redo support
+    std::vector<MidiNote> m_notesBeforeEdit; // Captured state before user edits
+    bool m_applyingUndoRedo{false};           // Guard flag to prevent re-entry
 };
 
 } // namespace Audio

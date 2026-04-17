@@ -224,7 +224,7 @@ private:
     uint32_t m_color;
 
     // Audio parameters (atomic for thread safety)
-    std::atomic<float> m_volume{0.55f}; // Default: 78% (-5.2dB) to match FL/industry headroom standards
+    std::atomic<float> m_volume{1.0f};
     std::atomic<float> m_pan{0.0f};
     std::atomic<float> m_width{1.0f};
     std::atomic<bool> m_muted{false};
@@ -243,6 +243,10 @@ private:
     EffectChain m_effectChain;
 
     std::function<void(const AudioQueueCommand&)> m_commandSink;
+
+    // Pre-allocated deinterleave buffers for RT-safe effect processing
+    std::vector<float> m_leftChannelBuf;
+    std::vector<float> m_rightChannelBuf;
 
     // Routing (v3.1)
     // Primary output (defaults to Master). 0xFFFFFFFF = Master.

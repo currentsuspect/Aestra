@@ -113,17 +113,14 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     
     // Get theme colors
     auto& themeManager = NUIThemeManager::getInstance();
-    NUIColor bgColor = themeManager.getColor("background"); // Use background color for flush look
+    NUIColor bgColor = themeManager.getColor("backgroundSecondary");
     
-    // Draw title bar background - flush with window background, but with a slight top sheen.
+    // Draw title bar background - flat and minimal.
     renderer.fillRect(bounds, bgColor);
-    renderer.fillRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, std::max(8.0f, bounds.height * 0.42f)},
-                             10.0f,
-                             NUIColor::white().withAlpha(0.018f));
     renderer.drawLine({bounds.x, bounds.bottom() - 1.0f},
                       {bounds.right(), bounds.bottom() - 1.0f},
                       1.0f,
-                      themeManager.getColor("borderSubtle").withAlpha(0.26f));
+                      themeManager.getColor("borderSubtle").withAlpha(0.42f));
     
     // Draw window controls
     drawWindowControls(renderer);
@@ -135,9 +132,10 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
 void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     // Use config colors for hover states
-    NUIColor hoverBgColor = themeManager.getColor("primary").withAlpha(0.16f);
-    NUIColor closeHoverBg = themeManager.getColor("error"); // Red for close button
-    NUIColor exportColor = themeManager.getColor("accentPrimary"); // Purple for export
+    NUIColor hoverBgColor = themeManager.getColor("primary").withAlpha(0.20f);
+    NUIColor closeHoverBg = themeManager.getColor("error");
+    NUIColor exportColor = themeManager.getColor("accentPrimary");
+    NUIColor iconColor = themeManager.getColor("textPrimary").withAlpha(0.94f);
 
     // Draw export button (left of window controls)
     if (isExporting_) {
@@ -162,7 +160,7 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
         auto textSize = renderer.measureText(pctText, 9.0f);
         float textX = exportButtonRect_.x + (exportButtonRect_.width - textSize.width) * 0.5f;
         float textY = exportButtonRect_.y + (exportButtonRect_.height - 9.0f) * 0.5f;
-        renderer.drawText(pctText, NUIPoint(textX, textY), 9.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+        renderer.drawText(pctText, NUIPoint(textX, textY), 9.0f, themeManager.getColor("textPrimary").withAlpha(0.96f));
     } else {
         // Export button: download/upload icon
         if (exportHovered_) {
@@ -173,12 +171,12 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
         float cy = exportButtonRect_.y + exportButtonRect_.height * 0.5f;
         float iconSize = 10.0f;
         // Arrow up
-        renderer.drawLine(NUIPoint(cx, cy - iconSize * 0.5f), NUIPoint(cx, cy + iconSize * 0.3f), 1.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.8f));
+        renderer.drawLine(NUIPoint(cx, cy - iconSize * 0.5f), NUIPoint(cx, cy + iconSize * 0.3f), 1.5f, iconColor);
         // Arrow head
-        renderer.drawLine(NUIPoint(cx - 4.0f, cy - iconSize * 0.15f), NUIPoint(cx, cy - iconSize * 0.5f), 1.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.8f));
-        renderer.drawLine(NUIPoint(cx + 4.0f, cy - iconSize * 0.15f), NUIPoint(cx, cy - iconSize * 0.5f), 1.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.8f));
+        renderer.drawLine(NUIPoint(cx - 4.0f, cy - iconSize * 0.15f), NUIPoint(cx, cy - iconSize * 0.5f), 1.5f, iconColor);
+        renderer.drawLine(NUIPoint(cx + 4.0f, cy - iconSize * 0.15f), NUIPoint(cx, cy - iconSize * 0.5f), 1.5f, iconColor);
         // Base line
-        renderer.drawLine(NUIPoint(cx - 5.0f, cy + iconSize * 0.35f), NUIPoint(cx + 5.0f, cy + iconSize * 0.35f), 1.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.8f));
+        renderer.drawLine(NUIPoint(cx - 5.0f, cy + iconSize * 0.35f), NUIPoint(cx + 5.0f, cy + iconSize * 0.35f), 1.5f, iconColor);
     }
     
     // Draw minimize button
@@ -186,7 +184,7 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
         // Rounded hover effect
         renderer.fillRoundedRect(minimizeButtonRect_, 8.0f, hoverBgColor);
     }
-    minimizeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White
+    minimizeIcon_->setColor(iconColor);
     NUIPoint minCenter(minimizeButtonRect_.x + minimizeButtonRect_.width * 0.5f,
                        minimizeButtonRect_.y + minimizeButtonRect_.height * 0.5f);
     float iconOffset = 8.0f; // Center the 16px icon
@@ -203,16 +201,16 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     
     // Use appropriate icon based on maximized state and set to white
     auto& maxIcon = isMaximized_ ? restoreIcon_ : maximizeIcon_;
-    maxIcon->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // White
+    maxIcon->setColor(iconColor);
     maxIcon->setPosition(maxCenter.x - iconOffset, maxCenter.y - iconOffset);
     maxIcon->onRender(renderer);
     
     // Draw close button with red hover
     if (hoveredButton_ == HoverButton::Close) {
         // Rounded hover effect
-        renderer.fillRoundedRect(closeButtonRect_, 8.0f, closeHoverBg.withAlpha(0.92f));
+        renderer.fillRoundedRect(closeButtonRect_, 8.0f, closeHoverBg.withAlpha(0.88f));
     }
-    closeIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f)); // Always white
+    closeIcon_->setColor(themeManager.getColor("textPrimary").withAlpha(hoveredButton_ == HoverButton::Close ? 1.0f : 0.94f));
     NUIPoint closeCenter(closeButtonRect_.x + closeButtonRect_.width * 0.5f,
                          closeButtonRect_.y + closeButtonRect_.height * 0.5f);
     closeIcon_->setPosition(closeCenter.x - iconOffset, closeCenter.y - iconOffset);

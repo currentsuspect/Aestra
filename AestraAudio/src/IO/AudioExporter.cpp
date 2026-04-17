@@ -269,9 +269,19 @@ bool AudioExporter::writeWavHeader(std::ofstream& file, const Config& config, ui
     int bitsPerSample = static_cast<int>(config.bitDepth);
     int bytesPerSample = bitsPerSample / 8;
 
-    uint32_t byteRate = config.sampleRate * config.numChannels * bytesPerSample;
+    uint64_t byteRate64 = static_cast<uint64_t>(config.sampleRate) * config.numChannels * bytesPerSample;
     uint32_t blockAlign = config.numChannels * bytesPerSample;
-    uint32_t dataSize = static_cast<uint32_t>(totalFrames * blockAlign);
+    uint64_t dataSize64 = totalFrames * static_cast<uint64_t>(blockAlign);
+
+    if (byteRate64 > UINT32_MAX) {
+        byteRate64 = UINT32_MAX;
+    }
+    if (dataSize64 > UINT32_MAX) {
+        dataSize64 = UINT32_MAX;
+    }
+
+    uint32_t byteRate = static_cast<uint32_t>(byteRate64);
+    uint32_t dataSize = static_cast<uint32_t>(dataSize64);
     uint32_t fileSize = 36 + dataSize;
 
     uint16_t audioFormat = (config.bitDepth == BitDepth::Float_32) ? 3 : 1;

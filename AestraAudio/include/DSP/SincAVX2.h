@@ -19,19 +19,29 @@ namespace Audio {
 /**
  * @brief AVX2-optimized dot product for Sinc64 Turbo.
  *
+ * TASK 2: Phase interpolation — blend between c0 and c1 using alpha.
+ * coeff[t] = c0[t] + alpha * (c1[t] - c0[t])
+ * Then standard vectorized dot product with interleaved stereo de-interleaving.
+ *
  * This function MUST ONLY be called if CPUDetection::hasAVX2() returns true.
- * The code is isolated in this TU to prevent VEX-encoded scalar ops from
- * polluting the main codebase.
  */
 AESTRA_AVX2_TARGET
-inline void sincDotProductAVX2(const float* coeffs,
+inline void sincDotProductAVX2(const float* c0,
+                               const float* c1,
+                               float alpha,
                                const float* samples, // Interleaved L/R stereo
                                float& sumL, float& sumR) {
     __m256 vSumL = _mm256_setzero_ps();
     __m256 vSumR = _mm256_setzero_ps();
+    __m256 vAlpha = _mm256_set1_ps(alpha);
 
     for (int i = 0; i < 64; i += 8) {
-        __m256 vCoeff = _mm256_loadu_ps(&coeffs[i]);
+        // Load base and adjacent phase coefficients
+        __m256 vC0 = _mm256_loadu_ps(&c0[i]);
+        __m256 vC1 = _mm256_loadu_ps(&c1[i]);
+
+        // Phase interpolation: coeff = c0 + alpha * (c1 - c0)
+        __m256 vCoeff = _mm256_fmadd_ps(_mm256_sub_ps(vC1, vC0), vAlpha, vC0);
 
         // Optimize: Load 16 samples (8 stereo pairs) using 2 vector loads
         __m256 ra = _mm256_loadu_ps(&samples[i * 2]);
@@ -58,24 +68,33 @@ inline void sincDotProductAVX2(const float* coeffs,
 
 /**
  * @brief Reversed coefficient AVX2 dot product.
- * Handles the symmetry: data is forward, coeffs are read backwards.
+ * TASK 2: Phase interpolation + reversed coefficient access.
  */
 AESTRA_AVX2_TARGET
-inline void sincDotProductAVX2_Reversed(const float* coeffs, const float* samples, float& sumL, float& sumR) {
+inline void sincDotProductAVX2_Reversed(const float* c0,
+                                        const float* c1,
+                                        float alpha,
+                                        const float* samples, float& sumL, float& sumR) {
     __m256 vSumL = _mm256_setzero_ps();
     __m256 vSumR = _mm256_setzero_ps();
+    __m256 vAlpha = _mm256_set1_ps(alpha);
 
     // Reverse mask: 7, 6, 5, 4, 3, 2, 1, 0
     const __m256i vRevMask = _mm256_set_epi32(0, 1, 2, 3, 4, 5, 6, 7);
 
     for (int i = 0; i < 64; i += 8) {
         // Load coeffs from the end backwards
-        // i=0 -> want c[63]..c[56]. Load &c[56].
-        const float* cPtr = &coeffs[64 - 8 - i];
-        __m256 vCoeff = _mm256_loadu_ps(cPtr);
+        const float* c0Ptr = &c0[64 - 8 - i];
+        const float* c1Ptr = &c1[64 - 8 - i];
+        __m256 vC0 = _mm256_loadu_ps(c0Ptr);
+        __m256 vC1 = _mm256_loadu_ps(c1Ptr);
 
         // Reverse the coefficients in the register
-        vCoeff = _mm256_permutevar8x32_ps(vCoeff, vRevMask);
+        vC0 = _mm256_permutevar8x32_ps(vC0, vRevMask);
+        vC1 = _mm256_permutevar8x32_ps(vC1, vRevMask);
+
+        // Phase interpolation
+        __m256 vCoeff = _mm256_fmadd_ps(_mm256_sub_ps(vC1, vC0), vAlpha, vC0);
 
         // Load pairs (same as forward)
         __m256 ra = _mm256_loadu_ps(&samples[i * 2]);

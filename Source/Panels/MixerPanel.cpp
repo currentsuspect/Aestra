@@ -26,6 +26,7 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
                 trackManager->markModified();
             }
         });
+        m_viewModel->setCommandHistory(&m_trackManager->getCommandHistory());
     }
     m_newMixer = std::make_shared<UIMixerPanel>(m_viewModel, m_trackManager);
     m_newMixer->setId("UIMixerPanel_Inner");
@@ -51,5 +52,22 @@ void MixerPanel::refreshChannels()
     }
     
     m_viewModel->syncFromEngine(*m_trackManager, slotMap);
+    
+    // Direct sync: read volume from MixerChannel and update ViewModel faderGainDb
+    // This ensures undo/redo reflects immediately without waiting for audio thread
+    for (size_t i = 0; i < m_trackManager->getChannelCount(); ++i) {
+        auto* channel = m_trackManager->getChannel(i);
+        if (!channel) continue;
+        auto* vmChannel = m_viewModel->getChannelById(channel->getChannelId());
+        if (vmChannel) {
+            float linearGain = channel->getVolume();
+            float db = (linearGain > 0.0001f) ? 20.0f * std::log10(linearGain) : -90.0f;
+            vmChannel->faderGainDb = db;
+            vmChannel->muted = channel->isMuted();
+            vmChannel->soloed = channel->isSoloed();
+            vmChannel->pan = channel->getPan();
+        }
+    }
+    
     m_newMixer->refreshChannels();
 }

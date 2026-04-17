@@ -89,11 +89,20 @@ endif()
 # =============================================================================
 add_subdirectory(AestraCore)
 
-if(AESTRA_PLATFORM_LINUX AND TARGET AestraCore)
-  target_compile_options(AestraCore PRIVATE
-    -Wall -Wextra -Wpedantic
-    -Wno-unused-parameter
-  )
+if(AESTRA_PLATFORM_LINUX)
+    add_compile_options(-Wall -Wextra -Wpedantic)
+    # Suppress known noisy warnings
+    add_compile_options(
+        -Wno-sequence-point
+        -Wno-pedantic
+        -Wno-unused-parameter
+        -Wno-unused-variable
+        -Wno-unused-but-set-variable
+        -Wno-maybe-uninitialized
+        -Wno-switch
+        -Wno-format-truncation
+        -Wno-reorder
+    )
 endif()
 
 # =============================================================================

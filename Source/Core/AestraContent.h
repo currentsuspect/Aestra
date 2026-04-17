@@ -44,8 +44,10 @@ namespace Aestra::Audio {
     class MixerPanel;
     class PianoRollPanel;
     class ArsenalPanel;
+    class SampleEditorPanel;
     class PatternBrowserPanel;
     class WindowPanel;
+    class AestraHistoryPanel;
     class AuditionEngine;  // For Audition Mode
 }
 
@@ -107,6 +109,7 @@ public:
         AestraUI::NUIRect pianoRollRect = {0, 0, 800, 450};
         /** @brief Arsenal overlay bounds in overlay-local coordinates. */
         AestraUI::NUIRect sequencerRect = {0, 0, 600, 300};
+        AestraUI::NUIRect historyRect = {0, 80, 280, 460};
 
         /** @brief True while an overlay panel is being dragged. */
         bool isDragging = false;
@@ -157,6 +160,8 @@ public:
     void setArsenalPanelVisible(bool visible);
     /** @brief Toggle the Arsenal panel regardless of active mode. */
     void toggleArsenalPanel();
+    /** @brief Toggle the History panel visibility. */
+    void toggleHistoryPanel();
 
     /** @brief Compute the safe workspace rectangle after chrome and sidebars. */
     AestraUI::NUIRect computeSafeRect() const;
@@ -248,11 +253,18 @@ public:
     void openPatternInPianoRoll(Aestra::Audio::PatternID patternId);
 
 private:
+    Aestra::Audio::UnitID resolveEditingUnitForPattern(Aestra::Audio::PatternID patternId) const;
     ViewFocus resolveTransportFocus() const;
     bool isTransportRolling() const;
     void handleTransportPlayRequest();
     void clearPendingCountIn();
     void updatePendingCountIn();
+    void startPatternClipPreview(Aestra::Audio::PatternID patternId);
+    void stopPatternClipPreview(bool restoreTimelineUi);
+
+    // Pattern loop length helpers
+    double getActivePatternLengthBeats() const;
+    void updatePatternLoopLength(Aestra::Audio::PatternID patternId);
 
     std::shared_ptr<AestraUI::NUIComponent> m_workspaceLayer;
     std::shared_ptr<OverlayLayer> m_overlayLayer;
@@ -281,6 +293,7 @@ private:
     std::shared_ptr<Aestra::Audio::MixerPanel> m_mixerPanel;
     std::shared_ptr<Aestra::Audio::PianoRollPanel> m_pianoRollPanel;
     std::shared_ptr<Aestra::Audio::ArsenalPanel> m_sequencerPanel;
+    std::shared_ptr<Aestra::Audio::AestraHistoryPanel> m_historyPanel;
     std::shared_ptr<AestraUI::PluginUIController> m_pluginController;
     
     // Temp files for Audition (v4.0)
@@ -308,8 +321,20 @@ private:
     
     // Playback state persistence
     double m_savedTimelinePosition = 0.0;
+    bool m_patternClipPreviewActive{false};
+    Aestra::Audio::PatternID m_previewPatternId{};
     bool m_countInEnabled{false};
     bool m_pendingCountIn{false};
     bool m_forcedMetronomeForCountIn{false};
     double m_pendingCountInTargetSeconds{0.0};
+
+    std::shared_ptr<Aestra::Audio::SampleEditorPanel> m_sampleEditorPanel;
+    AestraUI::NUIRect m_sampleEditorRect{0.0f, 0.0f, 640.0f, 430.0f};
+    Aestra::Audio::UnitID m_sampleEditorUnitId{0};
+    bool m_sampleEditorDragging{false};
+    AestraUI::NUIPoint m_sampleEditorDragStartMouseOverlay{0.0f, 0.0f};
+    AestraUI::NUIRect m_sampleEditorDragStartRect{0.0f, 0.0f, 0.0f, 0.0f};
+
+    void openSampleEditorForUnit(Aestra::Audio::UnitID unitId, const std::string& samplePath);
+    void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
 };

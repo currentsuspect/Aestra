@@ -36,7 +36,7 @@ jobs:
 
       - name: Test
         working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
+        run: ctest --test-dir build --output-on-failure -E "Runtime|Experimental"
 
       - name: Discord Notification
         if: always() && env.DISCORD_WEBHOOK != ''
@@ -80,7 +80,7 @@ jobs:
       - name: Test
         working-directory: build
         shell: bash
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
+        run: ctest --test-dir build --output-on-failure -E "Runtime|Experimental"
 
       - name: Discord Notification
         if: always() && env.DISCORD_WEBHOOK != ''
@@ -125,7 +125,7 @@ jobs:
 
       - name: Test
         working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
+        run: ctest --test-dir build --output-on-failure -E "Runtime|Experimental"
 
       - name: Discord Notification
         if: always() && env.DISCORD_WEBHOOK != ''

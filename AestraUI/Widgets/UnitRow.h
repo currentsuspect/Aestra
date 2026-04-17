@@ -123,11 +123,11 @@ private:
     void stopEditing(bool save);
     
     // === Layout Constants (Premium v2) ===
-    static constexpr float ROW_HEIGHT = 42.0f;        // Increased from 28px
-    static constexpr float CONTROL_WIDTH = 280.0f;    // Increased from 220px
+    static constexpr float ROW_HEIGHT = 56.0f;
+    static constexpr float CONTROL_WIDTH = 336.0f;
     static constexpr float DRAG_HANDLE_WIDTH = 16.0f; // Grip area
     static constexpr float COLOR_STRIP_WIDTH = 5.0f;  // Wider strip
-    static constexpr float BUTTON_SIZE = 22.0f;       // Larger buttons
+    static constexpr float BUTTON_SIZE = 20.0f;
     static constexpr float BUTTON_SPACING = 6.0f;     // More breathing room
     static constexpr float PAD_MIN_SIZE = 20.0f;      // Minimum step pad size
     static constexpr float PAD_SPACING = 3.0f;        // Space between pads
@@ -138,6 +138,9 @@ private:
     int m_stepCount = 16;
     float m_scrollX = 0.0f;
     int m_hoveredStep = -1;
+    
+    // Minimap pitch scroll
+    float m_minimapPitchOffset = 0.0f; // Scroll offset for pitch viewport
     
     // === Interaction States ===
     bool m_isHovered = false;

@@ -4,6 +4,10 @@
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
+#include "Commands/SetVolumeCommand.h"
+#include "Commands/SetPanCommand.h"
+#include "Commands/SetMuteCommand.h"
+#include "Commands/SetSoloCommand.h"
 #include <algorithm>
 
 namespace Aestra {
@@ -21,9 +25,15 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     m_volumeFader = std::make_shared<AestraUI::Fader>();
     m_volumeFader->setValue(m_track ? m_track->getVolume() : 0.8f);
     m_volumeFader->setOnValueChange([this](double value) {
-        if (m_track) {
-            float vol = static_cast<float>(value);
-            m_track->setVolume(vol);
+        if (m_track && m_trackManager) {
+            float newVol = static_cast<float>(value);
+            float oldVol = m_track->getVolume();
+            // Don't set volume manually — let the command do it
+            if (std::abs(newVol - oldVol) > 0.0001f) {
+                m_trackManager->getCommandHistory().pushAndExecute(
+                    std::make_shared<SetVolumeCommand>(*m_track, newVol));
+                Aestra::Log::info("[MixerView] Vol cmd: " + std::to_string(oldVol) + " -> " + std::to_string(newVol));
+            }
         }
     });
     addChild(m_volumeFader);
@@ -32,9 +42,13 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     m_panKnob = std::make_shared<AestraUI::PanKnob>();
     m_panKnob->setValue(0.0f);  // Center
     m_panKnob->setOnValueChange([this](double value) {
-        if (m_track) {
-            float pan = static_cast<float>(value);
-            m_track->setPan(pan);
+        if (m_track && m_trackManager) {
+            float newPan = static_cast<float>(value);
+            float oldPan = m_track->getPan();
+            if (std::abs(newPan - oldPan) > 0.0001f) {
+                m_trackManager->getCommandHistory().pushAndExecute(
+                    std::make_shared<SetPanCommand>(*m_track, newPan));
+            }
         }
     });
     addChild(m_panKnob);
@@ -42,9 +56,9 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     // Create mute button
     m_muteButton = std::make_shared<AestraUI::MuteButton>();
     m_muteButton->setOnToggle([this](bool toggled) {
-        if (m_track) {
-            m_track->setMute(toggled);
-            // m_muteButton->setOn(m_track->isMuted()); // Already set by toggle
+        if (m_track && m_trackManager) {
+            m_trackManager->getCommandHistory().pushAndExecute(
+                std::make_shared<SetMuteCommand>(*m_track, toggled));
         }
     });
     // Initialize state
@@ -54,16 +68,16 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     // Create solo button
     m_soloButton = std::make_shared<AestraUI::SoloButton>();
     m_soloButton->setOnToggle([this](bool toggled) {
-        if (m_track) {
+        if (m_track && m_trackManager) {
             bool newSolo = toggled;
-            
+
             // If enabling solo, clear all other solos first (exclusive solo)
-            if (newSolo && m_trackManager) {
+            if (newSolo) {
                 m_trackManager->clearAllSolos();
             }
-            
-            m_track->setSolo(newSolo);
-            // m_soloButton->setOn(m_track->isSoloed()); // Already set by toggle
+
+            m_trackManager->getCommandHistory().pushAndExecute(
+                std::make_shared<SetSoloCommand>(*m_track, newSolo));
         }
     });
     // Initialize state

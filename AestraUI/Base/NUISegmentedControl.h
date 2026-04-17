@@ -104,7 +104,7 @@ public:
         renderer.fillRect(highlightRect, NUIColor(1.0f, 1.0f, 1.0f, 0.12f));
         
         // Draw segment labels
-        float fontSize = 10.5f;
+        float fontSize = 11.75f;
         for (size_t i = 0; i < segments_.size(); ++i) {
             float segmentX = bounds.x + i * segmentWidth;
             NUIRect segmentBounds(segmentX, bounds.y, segmentWidth, bounds.height);
@@ -112,7 +112,7 @@ public:
             bool isSelected = (i == selectedIndex_);
             NUIColor textColor = isSelected 
                 ? theme.getColor("textPrimary")
-                : theme.getColor("textSecondary").withAlpha(static_cast<int>(i) == hoveredIndex_ ? 0.92f : 0.82f);
+                : theme.getColor("textSecondary").withAlpha(static_cast<int>(i) == hoveredIndex_ ? 0.96f : 0.90f);
             
             renderer.drawTextCentered(segments_[i], segmentBounds, fontSize, textColor);
         }

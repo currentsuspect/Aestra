@@ -11,7 +11,8 @@ enum class ViewType {
     Mixer,
     Sequencer,
     PianoRoll,
-    Playlist
+    Playlist,
+    History
 };
 
 } // namespace Audio

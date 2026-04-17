@@ -50,6 +50,8 @@ public:
     
     /** @brief Set the active pattern edited by Arsenal. */
     void setActivePattern(PatternID patternId);
+    /** @brief Select the Arsenal unit used for editing and clipboard actions. */
+    void setSelectedUnit(UnitID unitId);
     
     /** @brief Get the active pattern edited by Arsenal. */
     PatternID getActivePatternID() const { return m_activePatternID; }
@@ -66,12 +68,16 @@ public:
     
     /** @brief Set the callback used to open a unit editor. */
     void setOnRequestEditor(std::function<void(UnitID)> cb) { m_onRequestEditor = cb; }
+    /** @brief Set the callback used to open a pattern in the Piano Roll. */
+    void setOnRequestPatternEditor(std::function<void(PatternID)> cb) { m_onRequestPatternEditor = cb; }
     /** @brief Set the callback used to request sample loading. */
     void setOnRequestLoadSample(std::function<void(UnitID)> cb) { m_onRequestLoadSample = cb; }
     /** @brief Set the callback used for generic plugin drops. */
     void setOnPluginDropped(std::function<void(const std::string&)> cb) { m_onPluginDropped = cb; }
     /** @brief Set the callback used for plugin drops onto a specific unit. */
     void setOnPluginDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onPluginDroppedToUnit = cb; }
+    /** @brief Set the callback used when an audio sample is dropped onto a unit. */
+    void setOnSampleDroppedToUnit(std::function<void(UnitID, const std::string&)> cb) { m_onSampleDroppedToUnit = cb; }
     /** @brief Set the callback fired when unit selection changes. */
     void setOnSelectedUnitChanged(std::function<void(UnitID)> cb) { m_onSelectedUnitChanged = std::move(cb); }
     /** @brief Set the callback used to activate playback before editing. */
@@ -143,9 +149,11 @@ private:
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
     std::function<void(UnitID)> m_onRequestEditor;
+    std::function<void(PatternID)> m_onRequestPatternEditor;
     std::function<void(UnitID)> m_onRequestLoadSample;
     std::function<void(const std::string&)> m_onPluginDropped;
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
+    std::function<void(UnitID, const std::string&)> m_onSampleDroppedToUnit;
     std::function<void(UnitID)> m_onSelectedUnitChanged;
     std::function<void()> m_onRequestPlaybackActivation;
     std::function<void(PatternID)> m_onPatternEdited;

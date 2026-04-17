@@ -13,6 +13,10 @@ namespace Aestra {
 namespace Audio {
 namespace Plugins {
 
+namespace {
+constexpr float kSamplerOutputHeadroom = 0.22f; // ~ -13 dB default trim
+}
+
 SamplerPlugin::SamplerPlugin() {
     // defaults
     m_params[kParamAttack].store(0.01f); // 10ms
@@ -20,6 +24,50 @@ SamplerPlugin::SamplerPlugin() {
     m_params[kParamSustain].store(1.0f); // Full
     m_params[kParamRelease].store(0.1f); // 100ms
     m_params[kParamPitch].store(0.5f);   // Center (0 semitones)
+}
+
+void SamplerPlugin::setEnvelope(float attack, float decay, float sustain, float release) noexcept {
+    m_params[kParamAttack].store(std::max(0.001f, attack), std::memory_order_relaxed);
+    m_params[kParamDecay].store(std::max(0.001f, decay), std::memory_order_relaxed);
+    m_params[kParamSustain].store(std::clamp(sustain, 0.0f, 1.0f), std::memory_order_relaxed);
+    m_params[kParamRelease].store(std::max(0.001f, release), std::memory_order_relaxed);
+}
+
+void SamplerPlugin::setCoarseSemitones(float semitones) noexcept {
+    const float normalized = std::clamp((semitones / 24.0f) + 0.5f, 0.0f, 1.0f);
+    m_params[kParamPitch].store(normalized, std::memory_order_relaxed);
+}
+
+void SamplerPlugin::setFineTuneCents(float cents) noexcept {
+    m_fineTuneCents.store(std::clamp(cents, -100.0f, 100.0f), std::memory_order_relaxed);
+}
+
+void SamplerPlugin::setSampleWindow(float startNorm, float endNorm) noexcept {
+    const float start = std::clamp(startNorm, 0.0f, 0.999f);
+    const float end = std::clamp(endNorm, start + 0.001f, 1.0f);
+    m_loopStartNorm.store(start, std::memory_order_relaxed);
+    m_loopEndNorm.store(end, std::memory_order_relaxed);
+}
+
+void SamplerPlugin::setLoopEnabled(bool enabled) noexcept {
+    m_loopEnabled.store(enabled, std::memory_order_relaxed);
+}
+
+void SamplerPlugin::setMaxVoices(int maxVoices) noexcept {
+    m_maxVoices.store(std::clamp(maxVoices, 1, kMaxVoices), std::memory_order_relaxed);
+}
+
+void SamplerPlugin::setRootMidiNote(int note) noexcept {
+    m_rootMidiNote.store(std::clamp(note, 0, 127), std::memory_order_relaxed);
+}
+
+float SamplerPlugin::getCoarseSemitones() const noexcept {
+    const float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
+    return (pitchParam - 0.5f) * 24.0f;
+}
+
+float SamplerPlugin::getFineTuneCents() const noexcept {
+    return m_fineTuneCents.load(std::memory_order_relaxed);
 }
 
 bool SamplerPlugin::initialize(double sampleRate, uint32_t maxBlockSize) {
@@ -80,6 +128,57 @@ bool SamplerPlugin::loadSample(const std::string& path) {
     return true;
 }
 
+bool SamplerPlugin::normalizeSample(float targetPeak) {
+    auto currentData = std::atomic_load(&m_data);
+    if (!currentData || currentData->data.empty()) {
+        return false;
+    }
+
+    float peak = 0.0f;
+    for (float s : currentData->data) {
+        peak = std::max(peak, std::abs(s));
+    }
+    if (peak <= 0.0001f) {
+        return false;
+    }
+
+    const float gain = std::clamp(targetPeak, 0.1f, 1.0f) / peak;
+    auto edited = std::make_shared<SampleData>(*currentData);
+    for (auto& s : edited->data) {
+        s *= gain;
+    }
+
+    auto oldData = std::atomic_exchange(&m_data, edited);
+    GarbageCollector::instance().release(oldData);
+    return true;
+}
+
+bool SamplerPlugin::reverseSample() {
+    auto currentData = std::atomic_load(&m_data);
+    if (!currentData || currentData->data.empty() || currentData->channels == 0) {
+        return false;
+    }
+
+    const uint32_t channels = currentData->channels;
+    const size_t frames = currentData->data.size() / channels;
+    if (frames < 2) {
+        return false;
+    }
+
+    auto edited = std::make_shared<SampleData>(*currentData);
+    auto& d = edited->data;
+    for (size_t i = 0; i < frames / 2; ++i) {
+        const size_t j = frames - 1 - i;
+        for (uint32_t ch = 0; ch < channels; ++ch) {
+            std::swap(d[i * channels + ch], d[j * channels + ch]);
+        }
+    }
+
+    auto oldData = std::atomic_exchange(&m_data, edited);
+    GarbageCollector::instance().release(oldData);
+    return true;
+}
+
 void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
                             uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* midiInput,
                             MidiBuffer* midiOutput) {
@@ -105,14 +204,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     if (!currentData || currentData->data.empty())
         return;
 
-    // Parameters
-    float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
-    float semitones = (pitchParam - 0.5f) * 24.0f;
-    float pitchRatio = std::pow(2.0f, semitones / 12.0f);
-
     // Source Rate correction
     double baseRate = (double)currentData->rate / m_sampleRate;
-    double rate = baseRate * pitchRatio;
 
     // Events
     uint32_t eventIdx = 0;
@@ -120,13 +213,23 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
 
     const auto& sampleVec = currentData->data;
     uint32_t channels = currentData->channels;
+    const double totalFrames = static_cast<double>(sampleVec.size() / std::max<uint32_t>(channels, 1));
+    if (totalFrames <= 1.0) {
+        return;
+    }
+    const float startNorm = std::clamp(m_loopStartNorm.load(std::memory_order_relaxed), 0.0f, 0.999f);
+    const float endNorm = std::clamp(m_loopEndNorm.load(std::memory_order_relaxed), startNorm + 0.001f, 1.0f);
+    const double startFrame = startNorm * (totalFrames - 1.0);
+    const double endFrame = std::max(startFrame + 1.0, endNorm * totalFrames);
+    const double loopLength = std::max(1.0, endFrame - startFrame);
+    const bool loopEnabled = m_loopEnabled.load(std::memory_order_relaxed);
 
     for (uint32_t i = 0; i < numFrames; ++i) {
         // Handle MIDI
         while (midiInput && eventIdx < eventCount) {
             const auto& e = midiInput->getEvent(eventIdx);
             if (e.sampleOffset == i) {
-                handleMidiEvent(e);
+                handleMidiEvent(e, baseRate);
                 eventIdx++;
             } else if (e.sampleOffset < i) {
                 eventIdx++; // Skip past
@@ -138,10 +241,30 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         // Render Voices
         float L = 0.0f;
         float R = 0.0f;
+        int activeVoiceCount = 0;
+        for (const auto& v : m_voices) {
+            if (v.active) {
+                ++activeVoiceCount;
+            }
+        }
+        const float voiceComp = 1.0f / std::sqrt(static_cast<float>(std::max(1, activeVoiceCount)));
 
         for (auto& v : m_voices) {
             if (!v.active)
                 continue;
+
+            // In one-shot mode there may be no note-off; trigger a timed release near the end
+            // so ADSR remains meaningful for per-hit shaping.
+            if (!loopEnabled && v.stage != EnvStage::Release && v.stage != EnvStage::Off) {
+                const double framesToEnd = endFrame - v.position;
+                const float releaseSec = std::max(m_params[kParamRelease].load(std::memory_order_relaxed), 0.001f);
+                const double releaseFrames = releaseSec * m_sampleRate;
+                if (framesToEnd <= releaseFrames) {
+                    v.stage = EnvStage::Release;
+                    v.stageTime = 0.0;
+                    v.releaseGain = std::max(0.0f, v.currentGain);
+                }
+            }
 
             // Envelope
             float env = getEnvelopeLevel(v, 1.0 / m_sampleRate);
@@ -151,7 +274,18 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             }
 
             // Sample Lookup
-            if (v.position >= sampleVec.size() / channels) {
+            if (v.position < startFrame) {
+                v.position = startFrame;
+            }
+            if (v.position >= endFrame) {
+                if (loopEnabled) {
+                    v.position = startFrame + std::fmod(v.position - startFrame, loopLength);
+                } else {
+                    v.active = false;
+                    continue;
+                }
+            }
+            if (v.position >= totalFrames) {
                 v.active = false;
                 continue;
             }
@@ -170,27 +304,31 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
 
                 // Next sample (interpolating to)
                 float nL = 0.0f, nR = 0.0f;
-                if ((idx + 1) * channels < sampleVec.size()) {
+                const bool nextInWindow = static_cast<double>(idx + 1) < endFrame;
+                if (nextInWindow && (idx + 1) * channels < sampleVec.size()) {
                     nL = sampleVec[(idx + 1) * channels];
                     nR = (channels > 1 && ((idx + 1) * channels + 1 < sampleVec.size()))
                              ? sampleVec[(idx + 1) * channels + 1]
                              : nL;
                 } else {
-                    // Boundary condition: hold last sample or loop? Here we hold/zero
-                    nL = 0.0f; // sL; // or zero?
-                    nR = 0.0f; // sR;
+                    nL = loopEnabled ? sampleVec[static_cast<uint64_t>(startFrame) * channels] : 0.0f;
+                    if (channels > 1 && loopEnabled && static_cast<uint64_t>(startFrame) * channels + 1 < sampleVec.size()) {
+                        nR = sampleVec[static_cast<uint64_t>(startFrame) * channels + 1];
+                    } else {
+                        nR = loopEnabled ? nL : 0.0f;
+                    }
                 }
 
                 float outL = sL + frac * (nL - sL);
                 float outR = sR + frac * (nR - sR);
 
-                float gain = (v.velocity * v.velocity) * env; // Quadratic velocity
+                float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * voiceComp;
                 L += outL * gain;
                 R += outR * gain;
             }
 
             // Advance
-            v.position += rate;
+            v.position += v.playbackRate;
         }
 
         outputs[0][i] = L;
@@ -198,12 +336,19 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     }
 }
 
-void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event) {
+void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseRate) {
     uint8_t status = event.data[0] & 0xF0;
     uint8_t note = event.data[1];
     uint8_t velocity = event.data[2];
 
     if (status == 0x90 && velocity > 0) { // Note On
+        const int maxVoices = std::clamp(m_maxVoices.load(std::memory_order_relaxed), 1, kMaxVoices);
+        double noteStartFrame = 0.0;
+        if (auto currentData = std::atomic_load(&m_data); currentData && currentData->channels > 0) {
+            const double totalFrames = static_cast<double>(currentData->data.size() / currentData->channels);
+            noteStartFrame = std::clamp(static_cast<double>(m_loopStartNorm.load(std::memory_order_relaxed)), 0.0, 0.999) *
+                             std::max(1.0, totalFrames - 1.0);
+        }
         // Find free voice
         Voice* freeVoice = nullptr;
         Voice* oldestRelease = nullptr;
@@ -211,7 +356,8 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event) {
         double maxReleaseTime = -1.0;
         double maxActiveTime = -1.0;
 
-        for (auto& v : m_voices) {
+        for (int i = 0; i < maxVoices; ++i) {
+            auto& v = m_voices[static_cast<size_t>(i)];
             if (!v.active) {
                 freeVoice = &v;
                 break;
@@ -238,15 +384,18 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event) {
         freeVoice->active = true;
         freeVoice->note = note;
         freeVoice->velocity = velocity / 127.0f;
-        freeVoice->position = 0.0;
+        freeVoice->position = noteStartFrame;
+        const float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
+        const float globalSemitones = (pitchParam - 0.5f) * 24.0f + (m_fineTuneCents.load(std::memory_order_relaxed) / 100.0f);
+        const int rootMidiNote = m_rootMidiNote.load(std::memory_order_relaxed);
+        const float noteSemitones = static_cast<float>(note) - static_cast<float>(rootMidiNote);
+        const float ratio = std::pow(2.0f, (globalSemitones + noteSemitones) / 12.0f);
+        freeVoice->playbackRate = baseRate * ratio;
         freeVoice->stage = EnvStage::Attack;
         freeVoice->stageTime = 0.0;
         freeVoice->currentGain = 0.0f;
     } else if (status == 0x80 || (status == 0x90 && velocity == 0)) { // Note Off
-        // [MODIFIED] One-Shot Mode Default: Ignore Note-Offs
-        // User requested "patterns should play the full audio no cut unless specified"
-        // Future: Add boolean parameter for OneShot vs Gate mode.
-        /*
+        // ADSR-driven one-shot: note-off enters release so envelope fully shapes each hit.
         for (auto& v : m_voices) {
             if (v.active && v.note == note && v.stage != EnvStage::Release) {
                 v.stage = EnvStage::Release;
@@ -254,7 +403,6 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event) {
                 v.releaseGain = v.currentGain;
             }
         }
-        */
     }
 }
 
@@ -352,6 +500,12 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
         pArr.push(Aestra::JSON(static_cast<double>(p.load())));
     }
     json.set("params", pArr);
+    json.set("fineTuneCents", Aestra::JSON(static_cast<double>(m_fineTuneCents.load(std::memory_order_relaxed))));
+    json.set("loopStartNorm", Aestra::JSON(static_cast<double>(m_loopStartNorm.load(std::memory_order_relaxed))));
+    json.set("loopEndNorm", Aestra::JSON(static_cast<double>(m_loopEndNorm.load(std::memory_order_relaxed))));
+    json.set("loopEnabled", Aestra::JSON(m_loopEnabled.load(std::memory_order_relaxed)));
+    json.set("maxVoices", Aestra::JSON(static_cast<double>(m_maxVoices.load(std::memory_order_relaxed))));
+    json.set("rootMidiNote", Aestra::JSON(static_cast<double>(m_rootMidiNote.load(std::memory_order_relaxed))));
 
     // Sample Path
     {
@@ -381,18 +535,29 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
         }
     }
 
+    if (json.has("fineTuneCents")) {
+        m_fineTuneCents.store(std::clamp(static_cast<float>(json["fineTuneCents"].asNumber()), -100.0f, 100.0f),
+                              std::memory_order_relaxed);
+    }
+    if (json.has("loopStartNorm") || json.has("loopEndNorm")) {
+        const float startNorm = json.has("loopStartNorm") ? static_cast<float>(json["loopStartNorm"].asNumber()) : 0.0f;
+        const float endNorm = json.has("loopEndNorm") ? static_cast<float>(json["loopEndNorm"].asNumber()) : 1.0f;
+        setSampleWindow(startNorm, endNorm);
+    }
+    if (json.has("loopEnabled")) {
+        m_loopEnabled.store(json["loopEnabled"].asBool(), std::memory_order_relaxed);
+    }
+    if (json.has("maxVoices")) {
+        setMaxVoices(static_cast<int>(json["maxVoices"].asNumber()));
+    }
+    if (json.has("rootMidiNote")) {
+        setRootMidiNote(static_cast<int>(json["rootMidiNote"].asNumber()));
+    }
+
     if (json.has("samplePath")) {
         std::string path = json["samplePath"].asString();
-        // Guard against path traversal — only allow relative paths resolved
-        // against the plugin's working directory, reject absolute paths
-        // that escape the expected sample directories.
         if (!path.empty()) {
-            // Reject absolute paths (could reference arbitrary filesystem locations)
-            if (path[0] == '/' || path[0] == '\\' || (path.size() >= 2 && path[1] == ':')) {
-                return false;
-            }
-            // Reject path traversal components
-            if (path.find("..") != std::string::npos) {
+            if (path.find("://") != std::string::npos) {
                 return false;
             }
             loadSample(path);

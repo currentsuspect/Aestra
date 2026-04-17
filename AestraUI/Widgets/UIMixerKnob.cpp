@@ -144,7 +144,7 @@ void UIMixerKnob::updateGlobalTooltip() const
 {
     const auto b = getBounds();
     const NUIPoint anchor{b.x + b.width * 0.5f, b.y + b.height + 8.0f};
-    NUIComponent::showRemoteTooltip(m_cachedText, anchor);
+    NUIComponent::showRemoteTooltip(m_cachedText, anchor, this);
 }
 
 // Helper to draw an arc using polyline
@@ -280,7 +280,7 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
     if (event.released && event.button == NUIMouseButton::Left && m_dragging) {
         m_dragging = false;
         m_dragAxis = DragAxis::Undecided;
-        NUIComponent::hideRemoteTooltip();
+        NUIComponent::hideRemoteTooltip(this);
         repaint();
         return true;
     }
@@ -325,7 +325,7 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
     }
 
     if (!b.contains(event.position) && !m_dragging) {
-        NUIComponent::hideRemoteTooltip();
+        NUIComponent::hideRemoteTooltip(this);
     }
 
     return false;

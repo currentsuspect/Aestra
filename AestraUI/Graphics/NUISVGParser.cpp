@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cctype>
 #include <cmath>
+#include <algorithm>
 #include <iostream>
 
 // Include NanoSVG with implementation
@@ -382,16 +383,22 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg, co
     // Delete rasterizer
     nsvgDeleteRasterizer(rast);
     
-    // Apply color tinting if specified
+    // Apply color tinting if specified.
+    // Replace source RGB with tint RGB so "white tint" produces true white icons
+    // even when the SVG source path color is black.
     if (tintColor.a > 0.0f) {
+        const unsigned char tintR = static_cast<unsigned char>(std::clamp(tintColor.r, 0.0f, 1.0f) * 255.0f);
+        const unsigned char tintG = static_cast<unsigned char>(std::clamp(tintColor.g, 0.0f, 1.0f) * 255.0f);
+        const unsigned char tintB = static_cast<unsigned char>(std::clamp(tintColor.b, 0.0f, 1.0f) * 255.0f);
+        const float tintA = std::clamp(tintColor.a, 0.0f, 1.0f);
         for (int i = 0; i < w * h; ++i) {
-            int idx = i * 4;
-            // Multiply RGB values by tint color RGB components
-            rgba[idx + 0] = static_cast<unsigned char>(rgba[idx + 0] * tintColor.r);
-            rgba[idx + 1] = static_cast<unsigned char>(rgba[idx + 1] * tintColor.g);
-            rgba[idx + 2] = static_cast<unsigned char>(rgba[idx + 2] * tintColor.b);
-            // Multiply alpha values by tint color alpha component
-            rgba[idx + 3] = static_cast<unsigned char>(rgba[idx + 3] * tintColor.a);
+            const int idx = i * 4;
+            const unsigned char srcA = rgba[idx + 3];
+            if (srcA == 0) continue;
+            rgba[idx + 0] = tintR;
+            rgba[idx + 1] = tintG;
+            rgba[idx + 2] = tintB;
+            rgba[idx + 3] = static_cast<unsigned char>(static_cast<float>(srcA) * tintA);
         }
     }
     

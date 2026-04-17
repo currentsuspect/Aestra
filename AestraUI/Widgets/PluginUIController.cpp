@@ -279,9 +279,12 @@ bool PluginUIController::loadPluginToSlot(const std::string& pluginId,
     auto instance = m_manager->createInstanceById(pluginId);
     if (!instance) return false;
     
-    // Initialize with current audio settings
-    // TODO: Get actual sample rate/block size from audio engine
-    if (!instance->initialize(44100.0, 512)) {
+    // Initialize with current manager defaults.
+    double sampleRate = m_manager->getDefaultSampleRate();
+    if (sampleRate <= 0.0) sampleRate = 44100.0;
+    uint32_t blockSize = m_manager->getDefaultBlockSize();
+    if (blockSize == 0) blockSize = 512;
+    if (!instance->initialize(sampleRate, blockSize)) {
         return false;
     }
     

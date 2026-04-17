@@ -271,12 +271,12 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
 
         // Icon Column Logic
         if (isHovered) {
-             renderer.drawText("▶", AestraUI::NUIPoint(colNo - 3.0f, y + 8.0f), 11.0f, theme.getColor("textPrimary"));
+             renderer.drawText("▶", AestraUI::NUIPoint(colNo - 3.0f, y + 8.0f), 12.0f, theme.getColor("textPrimary"));
         } else if (isCurrent) {
              // Speaker icon or waveform icon
-             renderer.drawText("ılı", AestraUI::NUIPoint(colNo - 1.0f, y + 8.0f), 11.0f, theme.getColor("primary")); 
+             renderer.drawText("ılı", AestraUI::NUIPoint(colNo - 1.0f, y + 8.0f), 12.0f, theme.getColor("primary")); 
         } else {
-             renderer.drawText(std::to_string(i + 1), AestraUI::NUIPoint(colNo, y + 8.0f), 11.0f, theme.getColor("textTertiary"));
+             renderer.drawText(std::to_string(i + 1), AestraUI::NUIPoint(colNo, y + 8.0f), 12.0f, theme.getColor("textTertiary").withAlpha(0.95f));
         }
         
         // Title
@@ -286,7 +286,7 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
         
         // Time
         std::string timeStr = (item.durationSeconds > 0.0) ? formatTime(item.durationSeconds) : "--:--";
-        renderer.drawText(timeStr, AestraUI::NUIPoint(colTime, y + 8.0f), 11.0f, theme.getColor("textSecondary"));
+        renderer.drawText(timeStr, AestraUI::NUIPoint(colTime, y + 8.0f), 12.0f, theme.getColor("textSecondary").withAlpha(0.96f));
         
         y += rowPitch;
     }
@@ -300,6 +300,7 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
 // ============================================================================
 
 void AuditionPanel::layoutComponents() {
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     auto bounds = getBounds();
     const float padding = 20.0f;
     const float gap = 16.0f;
@@ -348,11 +349,15 @@ void AuditionPanel::layoutComponents() {
     float playSize = 54.0f;
     float navSize = 34.0f;
     float navGap = 10.0f;
+    const auto navButtonBg = theme.getColor("buttonBgDefault").withAlpha(0.66f);
+    const auto navButtonBorder = theme.getColor("borderSubtle").withAlpha(0.92f);
+    const auto utilityButtonBg = theme.getColor("buttonBgDefault").withAlpha(0.72f);
+    const auto utilityButtonBorder = theme.getColor("border").withAlpha(0.92f);
     
     m_prevButton->setBounds(AestraUI::NUIAbsolute(bounds, infoX - bounds.x, controlsY + (playSize-navSize)/2 - bounds.y, navSize, navSize));
     // Glass Style for Prev
-    m_prevButton->setBackgroundColor(AestraUI::NUIColor(0.1f, 0.1f, 0.15f, 0.4f));
-    m_prevButton->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.1f));
+    m_prevButton->setBackgroundColor(navButtonBg);
+    m_prevButton->setBorderColor(navButtonBorder);
     m_prevButton->setBorderWidth(1.0f);
     m_prevButton->setCornerRadius(navSize/2.0f);
 
@@ -360,15 +365,15 @@ void AuditionPanel::layoutComponents() {
     // Glass Style for Play (Slightly brighter/different?)
     // Let's make it consistent but maybe slightly more opaque or accented if playing? 
     // For now, consistent Glass Base.
-    m_playPauseButton->setBackgroundColor(AestraUI::NUIColor(0.1f, 0.1f, 0.15f, 0.4f));
-    m_playPauseButton->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.1f));
+    m_playPauseButton->setBackgroundColor(navButtonBg);
+    m_playPauseButton->setBorderColor(navButtonBorder);
     m_playPauseButton->setBorderWidth(1.0f);
     m_playPauseButton->setCornerRadius(playSize/2.0f);
 
     m_nextButton->setBounds(AestraUI::NUIAbsolute(bounds, infoX + navSize + navGap + playSize + navGap - bounds.x, controlsY + (playSize-navSize)/2 - bounds.y, navSize, navSize));
     // Glass Style for Next
-    m_nextButton->setBackgroundColor(AestraUI::NUIColor(0.1f, 0.1f, 0.15f, 0.4f));
-    m_nextButton->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.1f));
+    m_nextButton->setBackgroundColor(navButtonBg);
+    m_nextButton->setBorderColor(navButtonBorder);
     m_nextButton->setBorderWidth(1.0f);
     m_nextButton->setCornerRadius(navSize/2.0f);
     
@@ -413,15 +418,15 @@ void AuditionPanel::layoutComponents() {
     }
     // Apply Glass Style to DSP Button
     // Apply Glass Style to DSP Button - Match Transport Style
-    m_dspPresetButton->setBackgroundColor(AestraUI::NUIColor(0.12f, 0.12f, 0.22f, 0.4f));
-    m_dspPresetButton->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
+    m_dspPresetButton->setBackgroundColor(utilityButtonBg);
+    m_dspPresetButton->setBorderColor(utilityButtonBorder);
     m_dspPresetButton->setBorderWidth(1.0f);
     m_dspPresetButton->setCornerRadius(16.0f);
 
     // Apply Glass Style to A/B Button
     // Apply Glass Style to A/B Button - Match Transport Style
-    m_abToggleButton->setBackgroundColor(AestraUI::NUIColor(0.12f, 0.12f, 0.22f, 0.4f));
-    m_abToggleButton->setBorderColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
+    m_abToggleButton->setBackgroundColor(utilityButtonBg);
+    m_abToggleButton->setBorderColor(utilityButtonBorder);
     m_abToggleButton->setBorderWidth(1.0f);
     m_abToggleButton->setCornerRadius(16.0f);
     
@@ -551,7 +556,7 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
     // === 1. Base Background (Void) ===
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     renderer.fillRect(bounds, theme.getColor("backgroundPrimary"));
-    renderer.fillRect(bounds, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.015f));
+    renderer.fillRect(bounds, theme.getColor("backgroundSecondary").withAlpha(0.22f));
     
     const float padding = 20.0f;
     const float gap = 16.0f;
@@ -564,7 +569,7 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
 
     // === 2. Panels ===
     // Header
-    renderer.drawShadow(headerRect, 0, 8, 24, AestraUI::NUIColor(0,0,0,0.45f));
+    renderer.drawShadow(headerRect, 0, 8, 24, AestraUI::NUIColor(0,0,0,0.38f));
     renderer.fillRoundedRect(headerRect, 16.0f, theme.getColor("surfaceTertiary"));
     renderer.strokeRoundedRect(headerRect, 16.0f, 1.0f, theme.getColor("border").withAlpha(0.85f));
     if (m_currentHeaderColor.a > 0.1f) {
@@ -572,16 +577,16 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
          renderer.fillRoundedRect(headerRect, 16.0f, tint);
     }
     // Waveform
-    renderer.drawShadow(waveformRect, 0, 6, 18, AestraUI::NUIColor(0,0,0,0.4f));
+    renderer.drawShadow(waveformRect, 0, 6, 18, AestraUI::NUIColor(0,0,0,0.34f));
     renderer.fillRoundedRect(waveformRect, 16.0f, theme.getColor("surfaceTertiary"));
     renderer.strokeRoundedRect(waveformRect, 16.0f, 1.0f, theme.getColor("border").withAlpha(0.8f));
     // Queue
-    renderer.drawShadow(queueRect, 0, 6, 20, AestraUI::NUIColor(0,0,0,0.42f));
+    renderer.drawShadow(queueRect, 0, 6, 20, AestraUI::NUIColor(0,0,0,0.36f));
     renderer.fillRoundedRect(queueRect, 16.0f, theme.getColor("surfaceTertiary"));
     renderer.strokeRoundedRect(queueRect, 16.0f, 1.0f, theme.getColor("border").withAlpha(0.8f));
-    renderer.fillRoundedRect(AestraUI::NUIRect(headerRect.x, headerRect.y, headerRect.width, 36.0f), 16.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.018f));
-    renderer.fillRoundedRect(AestraUI::NUIRect(waveformRect.x, waveformRect.y, waveformRect.width, 28.0f), 16.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.018f));
-    renderer.fillRoundedRect(AestraUI::NUIRect(queueRect.x, queueRect.y, queueRect.width, 28.0f), 16.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.018f));
+    renderer.fillRoundedRect(AestraUI::NUIRect(headerRect.x, headerRect.y, headerRect.width, 36.0f), 16.0f, theme.getColor("primary").withAlpha(0.08f));
+    renderer.fillRoundedRect(AestraUI::NUIRect(waveformRect.x, waveformRect.y, waveformRect.width, 28.0f), 16.0f, theme.getColor("primary").withAlpha(0.08f));
+    renderer.fillRoundedRect(AestraUI::NUIRect(queueRect.x, queueRect.y, queueRect.width, 28.0f), 16.0f, theme.getColor("primary").withAlpha(0.08f));
     
     // === 3. Cover Art ===
     if (headerRect.width > 50) {
@@ -590,19 +595,19 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
         float artY = headerRect.y + (headerRect.height - artSize) * 0.5f;
 
         AestraUI::NUIRect artRect(headerRect.x + artPadding, artY, artSize, artSize);
-        renderer.fillRoundedRect(artRect, 12.0f, AestraUI::NUIColor(0.05f, 0.06f, 0.08f, 0.9f));
-        renderer.strokeRoundedRect(artRect, 12.0f, 1.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+        renderer.fillRoundedRect(artRect, 12.0f, theme.getColor("backgroundSecondary").withAlpha(0.94f));
+        renderer.strokeRoundedRect(artRect, 12.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.88f));
         
         if (hasCoverArt) {
             AestraUI::NUIRect srcRect(0, 0, static_cast<float>(m_coverArtWidth), static_cast<float>(m_coverArtHeight));
             renderer.setClipRect(artRect);
             renderer.drawTexture(m_coverArtTextureId, artRect, srcRect);
             renderer.clearClipRect();
-            renderer.strokeRoundedRect(artRect, 12.0f, 1.0f, AestraUI::NUIColor(1.0f,1.0f,1.0f,0.12f));
+            renderer.strokeRoundedRect(artRect, 12.0f, 1.0f, theme.getColor("border").withAlpha(0.92f));
         } else {
              AestraUI::NUIColor artFill(m_currentHeaderColor.r * 0.8f, m_currentHeaderColor.g * 0.8f, m_currentHeaderColor.b * 0.8f, 1.0f);
              renderer.fillRoundedRect(artRect, 12.0f, artFill.withAlpha(0.28f));
-             renderer.drawText("AESTRA", AestraUI::NUIPoint(artRect.x + artSize/2.0f - 26.0f, artRect.y + artSize/2.0f - 6.0f), 13.0f, AestraUI::NUIColor(0.82f, 0.82f, 0.82f, 0.85f));
+             renderer.drawText("AESTRA", AestraUI::NUIPoint(artRect.x + artSize/2.0f - 26.0f, artRect.y + artSize/2.0f - 6.0f), 13.0f, theme.getColor("textSecondary").withAlpha(0.92f));
         }
     }
 
@@ -612,9 +617,9 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
     const float infoX = headerRect.x + artPadding + artSize + 28.0f;
     const float infoW = std::max(220.0f, headerRect.width - (artPadding + artSize + 28.0f) - artPadding);
     const float emptyContentCenterX = headerRect.x + headerRect.width * 0.46f;
-    renderer.drawText("AUDITION", AestraUI::NUIPoint(infoX, headerRect.y + 14.0f), 11.0f, theme.getColor("textSecondary").withAlpha(0.85f));
-    renderer.drawText("WAVEFORM", AestraUI::NUIPoint(waveformRect.x + 18.0f, waveformRect.y + 9.0f), 10.5f, theme.getColor("textSecondary").withAlpha(0.8f));
-    renderer.drawText("QUEUE", AestraUI::NUIPoint(queueRect.x + 18.0f, queueRect.y + 9.0f), 10.5f, theme.getColor("textSecondary").withAlpha(0.8f));
+    renderer.drawText("AUDITION", AestraUI::NUIPoint(infoX, headerRect.y + 14.0f), 12.0f, theme.getColor("textSecondary").withAlpha(0.92f));
+    renderer.drawText("WAVEFORM", AestraUI::NUIPoint(waveformRect.x + 18.0f, waveformRect.y + 9.0f), 11.5f, theme.getColor("textSecondary").withAlpha(0.90f));
+    renderer.drawText("QUEUE", AestraUI::NUIPoint(queueRect.x + 18.0f, queueRect.y + 9.0f), 11.5f, theme.getColor("textSecondary").withAlpha(0.90f));
 
     const float titleFont = clampf(bounds.width * 0.022f, 22.0f, 30.0f);
     const float titleY = hasCurrentTrack ? (headerRect.y + 92.0f) : (headerRect.y + 108.0f);
@@ -674,8 +679,8 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
         m_currentTime->setBackgroundVisible(false); // We draw manually for glass effect
         
         // Draw Glass Pill Background
-        renderer.fillRoundedRect(currentPillRest, 11.0f, AestraUI::NUIColor(0,0,0,0.5f)); // Dark glass
-        renderer.strokeRoundedRect(currentPillRest, 11.0f, 1.0f, AestraUI::NUIColor(1.0f,1.0f,1.0f,0.1f)); // Subtle border
+        renderer.fillRoundedRect(currentPillRest, 11.0f, theme.getColor("backgroundSecondary").withAlpha(0.86f)); // Dark glass
+        renderer.strokeRoundedRect(currentPillRest, 11.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.95f)); // Subtle border
     }
 
     if (m_totalTime) {
@@ -693,8 +698,8 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
          m_totalTime->setBackgroundVisible(false);
         
         // Draw Glass Pill Background
-        renderer.fillRoundedRect(totalPillRect, 11.0f, AestraUI::NUIColor(0,0,0,0.5f));
-        renderer.strokeRoundedRect(totalPillRect, 11.0f, 1.0f, AestraUI::NUIColor(1.0f,1.0f,1.0f,0.1f));
+        renderer.fillRoundedRect(totalPillRect, 11.0f, theme.getColor("backgroundSecondary").withAlpha(0.86f));
+        renderer.strokeRoundedRect(totalPillRect, 11.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.95f));
     }
     
 
@@ -763,7 +768,7 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
         const float centerX = area.x + area.width * 0.5f;
         const float centerY = area.y + area.height * 0.5f;
         renderer.drawText("Drop a track to analyze its shape", AestraUI::NUIPoint(centerX - 98.0f, centerY - 12.0f), 12.0f, theme.getColor("textSecondary").withAlpha(0.9f));
-        renderer.drawText("Scrub here once a source is loaded", AestraUI::NUIPoint(centerX - 92.0f, centerY + 8.0f), 11.0f, theme.getColor("textTertiary").withAlpha(0.9f));
+        renderer.drawText("Scrub here once a source is loaded", AestraUI::NUIPoint(centerX - 92.0f, centerY + 8.0f), 12.0f, theme.getColor("textTertiary").withAlpha(0.95f));
         return;
     }
     

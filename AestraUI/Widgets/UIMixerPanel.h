@@ -77,6 +77,9 @@ private:
     std::shared_ptr<Aestra::MixerViewModel> m_viewModel;
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
 
+    // Callback for fader undo/redo: channelId, newDb
+    std::function<void(uint32_t, float)> m_onFaderChanged;
+
     /// Channel strips (header + meter + fader)
     std::vector<std::shared_ptr<UIMixerStrip>> m_strips;
 

@@ -191,9 +191,9 @@ private:
     // Decode thread creates and publishes via atomic store.
     // Audio thread reads via atomic load - never blocks.
     std::atomic<AudioRingBuffer*> m_ringBuffer{nullptr};
-    std::atomic<uint32_t> m_ringBufferChannels{2}; // Cached for RT fallback
+    std::atomic<uint32_t> m_ringBufferChannels{2};
 
-    // Pending deletion (set by stop(), deleted after thread join)
+    std::unique_ptr<AudioRingBuffer> m_ringBufferOwned;
     AudioRingBuffer* m_pendingDelete{nullptr};
 
     // Decoder handle (platform-specific, opaque)

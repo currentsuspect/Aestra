@@ -83,6 +83,7 @@ private:
     SDL_GLContext m_glContext = nullptr;
     bool m_isFullscreen = false;
     float m_dpiScale = 1.0f;
+    mutable bool m_syntheticShiftForHorizontalWheel = false;
 
     // Callbacks
     HitTestCallback m_hitTestCallback;

@@ -59,6 +59,15 @@
 - [v1 Beta Task List](../docs/technical/v1_beta_task_list.md) - Detailed backlog
 - [Vision & Roadmap](Vision%20&%20Roadmap.md) - Legacy (redirects to above)
 
+## 💰 Product & Strategy (Internal)
+- [**Product Strategy**](Product-Strategy.md) - Full product strategy, moat stack, positioning
+- [**Pricing & Card System**](Pricing.md) - Tiers, pricing, card design, revenue model
+- [**Product Roadmap**](Roadmap-Product.md) - Release timeline from Beta to v1.2+
+- [**Muse AI Spec**](Muse-AI-Spec.md) - Predictive creative assistant (v1.1)
+- [**Design Language**](Design-Language.md) - Borrowed metaphors design system
+- [**Routing Implementation Checklist**](Routing-Implementation-Checklist.md) - Routing phases
+- [**Routing Bugs (2026-04-11)**](routing-bugs-found-2026-04-11.md) - Known routing issues
+
 ## 🏗️ Module READMEs
 - [`../AestraCore/README.md`](../AestraCore/README.md) - Core utilities
 - [`../AestraPlat/README.md`](../AestraPlat/README.md) - Platform abstraction

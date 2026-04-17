@@ -88,18 +88,18 @@ const void* hostGetExtension(const clap_host* /*host*/, const char* extension_id
 } // anonymous namespace
 
 clap_host* CLAPPluginInstance::createHost() {
-    static clap_host host;
-    host.clap_version = CLAP_VERSION;
-    host.host_data = nullptr;
-    host.name = "Aestra";
-    host.vendor = "Aestra Studios";
-    host.url = "https://Aestra.audio";
-    host.version = "1.0.0";
-    host.get_extension = hostGetExtension;
-    host.request_restart = hostRequestRestart;
-    host.request_process = hostRequestProcess;
-    host.request_callback = hostRequestCallback;
-    return &host;
+    m_hostStorage = std::make_unique<clap_host>();
+    m_hostStorage->clap_version = CLAP_VERSION;
+    m_hostStorage->host_data = nullptr;
+    m_hostStorage->name = "Aestra";
+    m_hostStorage->vendor = "Aestra Studios";
+    m_hostStorage->url = "https://Aestra.audio";
+    m_hostStorage->version = "1.0.0";
+    m_hostStorage->get_extension = hostGetExtension;
+    m_hostStorage->request_restart = hostRequestRestart;
+    m_hostStorage->request_process = hostRequestProcess;
+    m_hostStorage->request_callback = hostRequestCallback;
+    return m_hostStorage.get();
 }
 
 // ============================================================================

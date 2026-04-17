@@ -38,6 +38,18 @@
 
 namespace {
 
+float safeClampFloat(float value, float a, float b) {
+    if (!std::isfinite(value)) return 0.0f;
+    if (!std::isfinite(a) && !std::isfinite(b)) return 0.0f;
+    if (!std::isfinite(a)) a = b;
+    if (!std::isfinite(b)) b = a;
+    const float lo = std::min(a, b);
+    const float hi = std::max(a, b);
+    if (value <= lo) return lo;
+    if (value >= hi) return hi;
+    return value;
+}
+
 AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
     AestraUI::NUIComponent* root = component;
     while (root && root->getParent()) {
@@ -1131,8 +1143,8 @@ bool TrackManagerUI::clampInstantClipDragPosition(AestraUI::NUIPoint& position) 
     const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
     const float trackAreaBottom = bounds.y + bounds.height;
 
-    const float clampedX = std::clamp(position.x, gridStartX, gridEndX);
-    const float clampedY = std::clamp(position.y, trackAreaTop, trackAreaBottom);
+    const float clampedX = safeClampFloat(position.x, gridStartX, gridEndX);
+    const float clampedY = safeClampFloat(position.y, trackAreaTop, trackAreaBottom);
     const bool changed = std::abs(position.x - clampedX) > 0.5f || std::abs(position.y - clampedY) > 0.5f;
     position.x = clampedX;
     position.y = clampedY;
@@ -1170,6 +1182,10 @@ void TrackManagerUI::finishInstantClipDrag() {
     m_draggedClipTrack = nullptr;
     m_draggedClipId = ClipInstanceID{};
     m_suppressPlaylistRefresh = false; // Restore normal behavior
+    if (m_dragPatternPreviewActive && m_onStopPatternClipPreview) {
+        m_onStopPatternClipPreview();
+    }
+    m_dragPatternPreviewActive = false;
 
     if (m_window) {
         m_window->setMouseCapture(false);
@@ -1205,6 +1221,10 @@ void TrackManagerUI::cancelInstantClipDrag() {
     m_draggedClipTrack = nullptr;
     m_draggedClipId = ClipInstanceID{};
     m_suppressPlaylistRefresh = false;
+    if (m_dragPatternPreviewActive && m_onStopPatternClipPreview) {
+        m_onStopPatternClipPreview();
+    }
+    m_dragPatternPreviewActive = false;
 
     if (m_window) {
         m_window->setMouseCapture(false);
@@ -1308,6 +1328,12 @@ void TrackManagerUI::refreshTracks() {
         trackUI->setOnPatternClipOpenRequested([this](PatternID patternId) {
             if (m_onOpenPatternInPianoRoll) {
                 m_onOpenPatternInPianoRoll(patternId);
+            }
+        });
+        trackUI->setOnPatternClipDragStarted([this](PatternID patternId) {
+            if (m_onPreviewPatternClip && patternId.isValid()) {
+                m_onPreviewPatternClip(patternId);
+                m_dragPatternPreviewActive = true;
             }
         });
 
@@ -1461,14 +1487,14 @@ void TrackManagerUI::layoutTracks() {
     float horizontalScrollbarHeight = 24.0f;
     float rulerHeight = 28.0f;
     
-    float viewportHeight = bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight;
+    float viewportHeight = std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight);
     
     // In v3.1, panels are floating overlays and do not affect workspace viewport directly.
     // If we wanted docking, we'd subtract their space here based on external state pointers.
     
     // Layout timeline minimap (top, right after header, before ruler)
     if (m_timelineMinimap) {
-        float minimapWidth = bounds.width - scrollbarWidth;
+        float minimapWidth = std::max(0.0f, bounds.width - scrollbarWidth);
         float minimapY = headerHeight;
         m_timelineMinimap->setBounds(AestraUI::NUIAbsolute(bounds, 0, minimapY, minimapWidth, horizontalScrollbarHeight));
         updateTimelineMinimap(0.0);
@@ -1477,14 +1503,14 @@ void TrackManagerUI::layoutTracks() {
     // Layout vertical scrollbar (right side, below header, horizontal scrollbar, and ruler)
     if (m_scrollbar) {
         float scrollbarY = headerHeight + horizontalScrollbarHeight + rulerHeight;
-        float scrollbarX = bounds.width - scrollbarWidth;
+        float scrollbarX = std::max(0.0f, bounds.width - scrollbarWidth);
         m_scrollbar->setBounds(AestraUI::NUIAbsolute(bounds, scrollbarX, scrollbarY, scrollbarWidth, viewportHeight));
         updateScrollbar();
     }
 
     float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = bounds.x + controlAreaWidth + 5.0f;
-    float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    float gridStartX = bounds.x + std::max(0.0f, controlAreaWidth + 5.0f);
+    float trackAreaTop = bounds.y + std::max(0.0f, headerHeight + horizontalScrollbarHeight + rulerHeight);
 
     // === V3.0 LANE LAYOUT (Two-Rect Model) ===
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
@@ -1495,7 +1521,7 @@ void TrackManagerUI::layoutTracks() {
         
         // Fix: Use absolute coordinates (bounds.x, yPos).
         // AestraUI components use absolute screen coordinates.
-        float trackWidth = bounds.width - scrollbarWidth - 5.0f;
+        float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth - 5.0f);
         trackUI->setBounds(bounds.x, yPos, trackWidth, m_trackHeight);
         trackUI->setVisible(m_playlistVisible);
         
@@ -1736,8 +1762,8 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     float gridStartX = controlAreaWidth + 5;
     
     // Draw background (control area + full grid area - no bounds restriction)
-    // Deep Space Background (Explicitly dark to avoid missing-token pinks)
-    AestraUI::NUIColor bgColor = AestraUI::NUIColor::fromHex(0x050508); // Deep Void
+    AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
+    AestraUI::NUIColor gridBgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.96f);
     
     if (m_playlistVisible) {
         // Background for control area (always visible)
@@ -1748,7 +1774,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         float scrollbarWidth = 15.0f;
         float gridWidth = bounds.width - controlAreaWidth - scrollbarWidth - 5;
         AestraUI::NUIRect gridBg(bounds.x + gridStartX, bounds.y, gridWidth, bounds.height);
-        renderer.fillRect(gridBg, bgColor);
+        renderer.fillRect(gridBg, gridBgColor);
         
         // Draw border
         AestraUI::NUIColor borderColor = themeManager.getColor("border");
@@ -1816,8 +1842,8 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
 
         // Zebra Striping (Handled here for guaranteed ordering/visibility)
         if (i % 2 == 0) {
-            // Even rows: overlay for separation (8% white opacity)
-            renderer.fillRect(trackBounds, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+            // Even rows: subtle dark tonal separation (avoid bright zebra washout)
+            renderer.fillRect(trackBounds, themeManager.getColor("backgroundSecondary").withAlpha(0.22f));
         }
 
         track->renderStatic(renderer);
@@ -2119,7 +2145,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         
         // Clamp scroll to domain bounds
         double maxStartBeat = std::max(0.0, m_minimapDomainEndBeat - (gridWidthPx / m_pixelsPerBeat));
-        m_timelineScrollOffset = std::clamp(newScrollOffset, 0.0f, static_cast<float>(maxStartBeat * m_pixelsPerBeat));
+        m_timelineScrollOffset = safeClampFloat(newScrollOffset, 0.0f, static_cast<float>(maxStartBeat * m_pixelsPerBeat));
         
         // Sync to all tracks
         for (auto& trackUI : m_trackUIComponents) {
@@ -2307,7 +2333,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
                 m_trackManager->setPosition(positionInSeconds);
                 m_trackManager->setPlayStartPosition(positionInSeconds);
             } else if (m_isDrawingSelectionBox) {
-                m_selectionBoxEnd.x = std::clamp(m_lastMousePos.x, gridStartX, gridEndX);
+                m_selectionBoxEnd.x = safeClampFloat(m_lastMousePos.x, gridStartX, gridEndX);
                 invalidateCache();
             }
         }
@@ -2385,7 +2411,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     bool anyOldHovered = oldMenuHovered || oldAddHovered || oldSelectHovered || 
                          oldSplitHovered || oldMultiSelectHovered || oldFollowHovered;
     
-    if (anyToolbarHovered) {
+    if (m_toolbarBounds.contains(event.position) && anyToolbarHovered) {
         std::string tooltipText;
         if (m_menuHovered && !oldMenuHovered) tooltipText = "Menu";
         else if (m_addTrackHovered && !oldAddHovered) tooltipText = "Add Track";
@@ -2395,10 +2421,10 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         else if (m_followPlayheadHovered && !oldFollowHovered) tooltipText = "Follow Playhead";
         
         if (!tooltipText.empty()) {
-            AestraUI::NUIComponent::showRemoteTooltip(tooltipText, event.position);
+            AestraUI::NUIComponent::showRemoteTooltip(tooltipText, event.position, this);
         }
-    } else if (anyOldHovered && !anyToolbarHovered) {
-        AestraUI::NUIComponent::hideRemoteTooltip();
+    } else if (m_toolbarBounds.contains(event.position) && anyOldHovered && !anyToolbarHovered) {
+        AestraUI::NUIComponent::hideRemoteTooltip(this);
     }
     
     // Toolbar is rendered outside the playlist cache; don't invalidate the cache on hover.
@@ -2554,8 +2580,8 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             float gridBottomLocal = globalBounds.y + globalBounds.height; // Full height down
             
             // Clamp event position (window-local) to grid area
-            float targetX = std::clamp(event.position.x, gridLeftLocal, gridRightLocal);
-            float targetY = std::clamp(event.position.y, gridTopLocal, gridBottomLocal);
+            float targetX = safeClampFloat(event.position.x, gridLeftLocal, gridRightLocal);
+            float targetY = safeClampFloat(event.position.y, gridTopLocal, gridBottomLocal);
             
             // Apply bounds to internal selection logic
             m_selectionBoxEnd = {targetX, targetY};
@@ -2616,11 +2642,12 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     // Mouse wheel handling
     if (event.wheelDelta != 0.0f && (isInRuler || isInTrackArea)) {
-        // Check for Shift modifier - Shift+scroll = ZOOM
-        bool shiftHeld = (event.modifiers & AestraUI::NUIModifiers::Shift);
-        
-        if (shiftHeld || isInRuler) {
-            // ZOOM: Shift+scroll anywhere OR scroll on ruler
+        const bool shiftHeld = (event.modifiers & AestraUI::NUIModifiers::Shift);
+        const bool ctrlHeld = (event.modifiers & AestraUI::NUIModifiers::Ctrl);
+        const bool capsHeld = (event.modifiers & AestraUI::NUIModifiers::CapsLock);
+
+        if (isInRuler || ctrlHeld) {
+            // ZOOM: ruler wheel or Ctrl+wheel.
             m_lastMouseZoomX = localPos.x;
             
             // Calculate mouse position in "content space" BEFORE zoom
@@ -2640,7 +2667,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             
             // Exponential zoom
             float zoomMultiplier = event.wheelDelta > 0 ? 1.15f : 0.87f;
-            float newPixelsPerBeat = std::clamp(m_targetPixelsPerBeat * zoomMultiplier, minPPB, 300.0f);
+            float newPixelsPerBeat = safeClampFloat(m_targetPixelsPerBeat * zoomMultiplier, minPPB, 300.0f);
             
             m_targetPixelsPerBeat = newPixelsPerBeat;
             // Update immediate for snappiness (smooth zoom interpolation can be added later if needed)
@@ -2653,7 +2680,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             
             // Clamp scroll to domain bounds
             double maxStartBeat = std::max(0.0, m_minimapDomainEndBeat - (gridWidthPx / m_pixelsPerBeat));
-            newScrollOffset = std::clamp(newScrollOffset, 0.0f, static_cast<float>(maxStartBeat * m_pixelsPerBeat));
+            newScrollOffset = safeClampFloat(newScrollOffset, 0.0f, static_cast<float>(maxStartBeat * m_pixelsPerBeat));
             m_timelineScrollOffset = newScrollOffset;
             
             for (auto& trackUI : m_trackUIComponents) {
@@ -2664,8 +2691,27 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             
             invalidateCache();  // Full cache invalidation for zoom changes
             return true;
+        } else if (isInTrackArea && (shiftHeld || capsHeld)) {
+            // HORIZONTAL SCROLL: Shift/Caps+wheel (and synthetic Shift from laptop horizontal wheel).
+            auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+            const float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
+            const float gridStartX = controlAreaWidth + 5.0f;
+            const float gridWidthPx = getTimelineGridWidthPixels();
+            const double maxStartBeat = std::max(0.0, m_minimapDomainEndBeat - (gridWidthPx / m_pixelsPerBeat));
+            const float maxTimelineScroll = static_cast<float>(maxStartBeat * m_pixelsPerBeat);
+            constexpr float horizontalSpeed = 64.0f;
+            m_timelineScrollOffset = safeClampFloat(
+                m_timelineScrollOffset - event.wheelDelta * horizontalSpeed,
+                0.0f,
+                maxTimelineScroll
+            );
+            for (auto& trackUI : m_trackUIComponents) {
+                trackUI->setTimelineScrollOffset(m_timelineScrollOffset);
+            }
+            invalidateCache();
+            return true;
         } else {
-            // VERTICAL SCROLL: Regular scroll in track area (no shift)
+            // VERTICAL SCROLL: Regular scroll in track area.
             float scrollSpeed = 60.0f;
             float scrollDelta = -event.wheelDelta * scrollSpeed; // Invert for natural scroll direction
             
@@ -3069,35 +3115,10 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             return true;
         }
         
-        // Undo / Redo
+        // Undo/Redo is handled globally by AestraContent — don't duplicate here
+        
+        // Clipboard (Ctrl+C/V/X/D)
         if (event.modifiers & AestraUI::NUIModifiers::Ctrl) {
-            bool performed = false;
-            
-            // Redo: Ctrl+Shift+Z or Ctrl+Y
-            if ((event.keyCode == AestraUI::NUIKeyCode::Z && (event.modifiers & AestraUI::NUIModifiers::Shift)) ||
-                (event.keyCode == AestraUI::NUIKeyCode::Y)) {
-                if (m_trackManager->getCommandHistory().redo()) {
-                    performed = true;
-                    Log::info("[TrackManagerUI] Redo performed");
-                }
-            }
-            // Undo: Ctrl+Z
-            else if (event.keyCode == AestraUI::NUIKeyCode::Z) {
-                if (m_trackManager->getCommandHistory().undo()) {
-                    performed = true;
-                    Log::info("[TrackManagerUI] Undo performed");
-                }
-            }
-            
-            if (performed) {
-                refreshTracks();
-                invalidateCache();
-                scheduleTimelineMinimapRebuild();
-                m_trackManager->markModified();
-                return true;
-            }
-            
-            // Clipboard
             if (event.keyCode == AestraUI::NUIKeyCode::X) {
                 cutSelectedClip();
                 return true;
@@ -3412,7 +3433,7 @@ void TrackManagerUI::resizeTimelineViewEdgeFromMinimap(AestraUI::TimelineMinimap
         const double clampedEdge =
             std::max(domainStart, std::min(edgeBeat, anchorBeat - std::max(1e-6, minWidthBeats)));
         const double desiredWidth = std::max(minWidthBeats, std::min(maxWidthBeats, anchorBeat - clampedEdge));
-        const float newPixelsPerBeat = std::clamp(static_cast<float>(gridWidthPx / desiredWidth), kMinPixelsPerBeat, kMaxPixelsPerBeat);
+        const float newPixelsPerBeat = safeClampFloat(static_cast<float>(gridWidthPx / desiredWidth), kMinPixelsPerBeat, kMaxPixelsPerBeat);
         applyZoom(newPixelsPerBeat);
 
         const double viewWidthBeats = static_cast<double>(gridWidthPx / m_pixelsPerBeat);
@@ -3424,7 +3445,7 @@ void TrackManagerUI::resizeTimelineViewEdgeFromMinimap(AestraUI::TimelineMinimap
         const double clampedEdge =
             std::min(domainEnd, std::max(edgeBeat, anchorBeat + std::max(1e-6, minWidthBeats)));
         const double desiredWidth = std::max(minWidthBeats, std::min(maxWidthBeats, clampedEdge - anchorBeat));
-        const float newPixelsPerBeat = std::clamp(static_cast<float>(gridWidthPx / desiredWidth), kMinPixelsPerBeat, kMaxPixelsPerBeat);
+        const float newPixelsPerBeat = safeClampFloat(static_cast<float>(gridWidthPx / desiredWidth), kMinPixelsPerBeat, kMaxPixelsPerBeat);
         applyZoom(newPixelsPerBeat);
 
         setTimelineViewStartBeat(anchorBeat, isFinal);
@@ -3454,7 +3475,7 @@ void TrackManagerUI::zoomTimelineAroundBeat(double anchorBeat, float zoomMultipl
     float minPPB = std::max(1.0f, static_cast<float>(gridWidthPx / domainWidth));
 
     // Minimap zoom must feel immediate; keep the smooth-zoom system in sync by updating both.
-    const float newPixelsPerBeat = std::clamp(m_pixelsPerBeat * zoomMultiplier, minPPB, 300.0f);
+    const float newPixelsPerBeat = safeClampFloat(m_pixelsPerBeat * zoomMultiplier, minPPB, 300.0f);
     m_pixelsPerBeat = newPixelsPerBeat;
     m_targetPixelsPerBeat = newPixelsPerBeat;
 
@@ -3731,7 +3752,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         // Bigger text for major bars (multiples of 4 bars from bar 1)
         // When using stride, all shown bars are "major" since we're already filtering
         bool isMajorBar = (barStride > 1) || (barNum == 1) || ((barNum - 1) % 4 == 0); // 1, 5, 9, 13...
-        float fontSize = isMajorBar ? 11.0f : 9.0f;  // Compact ruler text
+        float fontSize = isMajorBar ? 12.0f : 10.5f;  // Improve tiny timeline readability
         
         auto textSize = renderer.measureText(barText, fontSize);
         
@@ -3744,7 +3765,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         // Draw text - clip rect handles edge clipping automatically
         renderer.drawText(barText, 
                         AestraUI::NUIPoint(textX, textY),
-                        fontSize, isMajorBar ? textCol : textCol.withAlpha(0.78f));
+                        fontSize, isMajorBar ? textCol : textCol.withAlpha(0.88f));
         
         // Bar tick line - major bars get full height, others half
         // Mature Style: Ticks bottom-up
@@ -4224,6 +4245,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     
     AestraUI::NUIRect textureBounds(0, 0, static_cast<float>(width), static_cast<float>(height));
     AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
+    AestraUI::NUIColor gridBgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.96f);
     AestraUI::NUIColor borderColor = themeManager.getColor("border");
     
     // Draw background panels
@@ -4231,8 +4253,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     renderer.fillRect(controlBg, bgColor);
     
     AestraUI::NUIRect gridBg(gridStartX, 0, gridWidth, static_cast<float>(height));
-    // Grid Background: Deep Charcoal (Lifted from Void)
-    renderer.fillRect(gridBg, AestraUI::NUIColor(0.09f, 0.09f, 0.10f, 1.0f));
+    renderer.fillRect(gridBg, gridBgColor);
     
     // Draw borders
     renderer.strokeRect(textureBounds, 1, borderColor);
@@ -4273,7 +4294,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
 
 
     // Bar numbers (cached in background texture)
-    float barFontSize = 11.0f;
+    float barFontSize = 12.0f;
     for (int bar = 0; bar <= static_cast<int>(maxExtentInBeats / m_beatsPerBar) + 4; ++bar) {
         float x = rulerRect.x + gridStartX + (bar * m_beatsPerBar * m_pixelsPerBeat) - m_timelineScrollOffset;
         if (x < rulerRect.x + gridStartX - 2.0f || x > rulerRect.right() + m_pixelsPerBeat) continue;
@@ -4605,6 +4626,31 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             auto pattern = m_trackManager->getPatternManager().getPattern(pid);
             if (pattern) {
                 double duration = pattern->lengthBeats;
+                auto& unitManager = m_trackManager->getUnitManager();
+                if (pattern->isMidi()) {
+                    const auto& midi = std::get<MidiPayload>(pattern->payload);
+                    std::unordered_set<UnitID> routedUnits;
+                    for (const auto& note : midi.notes) {
+                        if (note.unitId == 0 || routedUnits.find(note.unitId) != routedUnits.end()) {
+                            continue;
+                        }
+                        if (auto* unit = unitManager.getUnit(note.unitId)) {
+                            unitManager.setUnitMixerChannel(note.unitId, laneIndex);
+                            Log::info("[TrackManagerUI] Routed note unit " + std::to_string(note.unitId) +
+                                      " to timeline lane " + std::to_string(laneIndex));
+                            routedUnits.insert(note.unitId);
+                        }
+                    }
+                } else {
+                    for (const auto unitId : unitManager.getAllUnitIDs()) {
+                        if (auto* unit = unitManager.getUnit(unitId); unit && unit->defaultPatternId == pid) {
+                            unitManager.setUnitMixerChannel(unitId, laneIndex);
+                            Log::info("[TrackManagerUI] Routed owner unit " + std::to_string(unitId) +
+                                      " to timeline lane " + std::to_string(laneIndex));
+                            break;
+                        }
+                    }
+                }
                 // Create clip instance manually and use command for undo support
                 ClipInstance clip;
                 clip.id = ClipInstanceID::generate();
@@ -5350,7 +5396,7 @@ void Aestra::Audio::TrackManagerUI::renderPendingImports(AestraUI::NUIRenderer& 
         // Text
         std::string progressStr = " (" + std::to_string((int)(item.progress * 100)) + "%)";
         std::string text = "ANALYZING: " + item.displayName + (item.progress > 0 ? progressStr : "");
-        float fontSize = 10.0f;
+        float fontSize = 11.0f;
         auto textSize = renderer.measureText(text, fontSize);
         
         // Center text in rect

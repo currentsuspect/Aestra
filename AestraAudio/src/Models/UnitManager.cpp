@@ -1,6 +1,9 @@
 #include "UnitManager.h"
 
+#include "Models/PatternManager.h"
+#include "Plugin/BuiltInPlugins.h"
 #include "Plugin/PluginManager.h"
+#include "Plugin/SamplerPlugin.h"
 
 #include <algorithm>
 #include <cctype>
@@ -117,6 +120,14 @@ UnitID UnitManager::createUnit(const std::string& name, UnitGroup group) {
     info.id = id;
     info.name = name;
     info.group = std::move(group);
+
+    // Auto-create a default pattern for this unit
+    if (m_patternManager) {
+        std::string patternName = name.empty() ? ("Unit " + std::to_string(id) + " Pattern") : (name + " Pattern");
+        MidiPayload empty;
+        info.defaultPatternId = m_patternManager->createMidiPattern(patternName, 4.0, empty);
+    }
+
     m_units[id] = std::move(info);
     m_unitOrder.push_back(id);
     return id;
@@ -177,7 +188,42 @@ void UnitManager::setUnitEnabled(UnitID id, bool enabled) {
     }
 }
 void UnitManager::setUnitMixerChannel(UnitID id, int channel) { if (auto* u = getUnit(id)) u->targetMixerRoute = channel; }
-void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) { if (auto* u = getUnit(id)) u->audioClipPath = path; }
+void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
+    auto* u = getUnit(id);
+    if (!u) {
+        return;
+    }
+
+    u->audioClipPath = path;
+    u->group = UnitGroup::Audio;
+
+    if (path.empty()) {
+        return;
+    }
+
+    const std::string samplerId = BuiltInPlugins::samplerInfo().id;
+    if (!u->plugin || u->pluginId != samplerId) {
+        auto& pluginManager = PluginManager::getInstance();
+        auto samplerInstance = pluginManager.createInstanceById(samplerId);
+        if (samplerInstance) {
+            const double sr = m_sampleRate.load(std::memory_order_relaxed);
+            const uint32_t blockSize = m_blockSize.load(std::memory_order_relaxed);
+            if (samplerInstance->initialize(sr > 0 ? sr : 48000.0, blockSize > 0 ? blockSize : 512)) {
+                if ((u->enabled || u->isEnabled) && !samplerInstance->isActive()) {
+                    samplerInstance->activate();
+                }
+                u->pluginId = samplerId;
+                u->plugin = std::move(samplerInstance);
+            }
+        }
+    }
+
+    if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(u->plugin)) {
+        if (sampler->loadSample(path)) {
+            u->pluginState = sampler->saveState();
+        }
+    }
+}
 void UnitManager::setUnitColor(UnitID id, uint32_t color) { if (auto* u = getUnit(id)) u->color = color; }
 void UnitManager::setUnitGroup(UnitID id, UnitGroup group) { if (auto* u = getUnit(id)) u->group = std::move(group); }
 
@@ -240,6 +286,7 @@ JSON UnitManager::saveToJSON() const {
         u.set("solo", JSON(unit->isSolo));
         u.set("armed", JSON(unit->isArmed));
         u.set("audioClipPath", JSON(unit->audioClipPath));
+        u.set("defaultPatternId", JSON(static_cast<double>(unit->defaultPatternId.value)));
 
         JSON group = JSON::object();
         group.set("id", JSON(static_cast<double>(static_cast<uint32_t>(unit->group))));
@@ -311,6 +358,9 @@ void UnitManager::loadFromJSON(const JSON& json) {
         unit.isSolo = ju.has("solo") ? ju["solo"].asBool() : false;
         unit.isArmed = ju.has("armed") ? ju["armed"].asBool() : false;
         unit.audioClipPath = ju.has("audioClipPath") ? ju["audioClipPath"].asString() : std::string{};
+        if (ju.has("defaultPatternId")) {
+            unit.defaultPatternId = PatternID(static_cast<uint64_t>(ju["defaultPatternId"].asNumber()));
+        }
 
         if (ju.has("group")) {
             unit.group = unitGroupFromJson(ju["group"]);

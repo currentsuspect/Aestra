@@ -42,6 +42,28 @@ bool isAudioFileDrag(const AestraUI::DragData& data) {
     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
     return ext == "wav" || ext == "mp3" || ext == "flac" || ext == "ogg" || ext == "aiff";
 }
+
+float safeClampPanelScroll(float value, float upper) {
+    if (!std::isfinite(value) || !std::isfinite(upper) || upper <= 0.0f) {
+        return 0.0f;
+    }
+    if (value <= 0.0f) return 0.0f;
+    if (value >= upper) return upper;
+    return value;
+}
+
+void drawArsenalChip(AestraUI::NUIRenderer& renderer,
+                     const AestraUI::NUIRect& rect,
+                     const std::string& text,
+                     const AestraUI::NUIColor& fill,
+                     const AestraUI::NUIColor& stroke,
+                     const AestraUI::NUIColor& textColor,
+                     float fontSize = 9.0f)
+{
+    renderer.fillRoundedRect(rect, 5.0f, fill);
+    renderer.strokeRoundedRect(rect, 5.0f, 1.0f, stroke);
+    renderer.drawTextCentered(text, rect, fontSize, textColor);
+}
 } // namespace
 
 ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
@@ -163,7 +185,16 @@ void ArsenalPanel::refreshUnits() {
         });
         
         row->setOnEditUnit([this](UnitID id) {
-            if (m_onRequestEditor) m_onRequestEditor(id);
+            if (!m_trackManager) return;
+            auto& unitMgr = m_trackManager->getUnitManager();
+            const auto* unit = unitMgr.getUnit(id);
+            if (unit && !unit->pluginId.empty() && unit->plugin) {
+                // Unit has a plugin — open plugin editor
+                if (m_onRequestEditor) m_onRequestEditor(id);
+            } else if (unit && unit->defaultPatternId.isValid()) {
+                // Unit has a default pattern — open Piano Roll
+                if (m_onRequestPatternEditor) m_onRequestPatternEditor(unit->defaultPatternId);
+            }
         });
 
         row->setOnLoadUnitSample([this](UnitID id) {
@@ -173,6 +204,14 @@ void ArsenalPanel::refreshUnits() {
         row->setOnPluginDropped([this](UnitID unitId, const std::string& pluginId) {
             if (m_onPluginDroppedToUnit) {
                 m_onPluginDroppedToUnit(unitId, pluginId);
+            }
+        });
+        row->setOnSampleDropped([this](UnitID unitId, const std::string& samplePath) {
+            if (m_trackManager) {
+                m_trackManager->getUnitManager().setUnitEnabled(unitId, true);
+            }
+            if (m_onSampleDroppedToUnit) {
+                m_onSampleDroppedToUnit(unitId, samplePath);
             }
         });
         row->setOnPatternEdited([this](PatternID patternId) {
@@ -306,6 +345,24 @@ void ArsenalPanel::setActivePattern(PatternID patternId) {
     }
 }
 
+void ArsenalPanel::setSelectedUnit(UnitID unitId) {
+    if (!m_trackManager || unitId == 0 || m_selectedUnitId == unitId) {
+        return;
+    }
+
+    const auto unitIDs = m_trackManager->getUnitManager().getAllUnitIDs();
+    if (std::find(unitIDs.begin(), unitIDs.end(), unitId) == unitIDs.end()) {
+        return;
+    }
+
+    m_selectedUnitId = unitId;
+    syncRowSelection();
+    if (m_onSelectedUnitChanged) {
+        m_onSelectedUnitChanged(m_selectedUnitId);
+    }
+    repaint();
+}
+
 void ArsenalPanel::setStepCount(int count) {
     if (count != 16 && count != 32 && count != 64) {
         count = 16; // Default to 16 if invalid
@@ -390,8 +447,8 @@ void ArsenalPanel::layoutUnits() {
 
     // Reserve space for progress header
     float yPos = startY + PROGRESS_HEADER_HEIGHT + 8.0f - m_scrollY;
-    float spacing = 4.0f;        // Increased from 2px
-    float rowHeight = 42.0f;     // Increased from 28px - matches UnitRow::ROW_HEIGHT
+    float spacing = 8.0f;
+    float rowHeight = 56.0f;
     
     // Layout unit rows
     for (auto& row : m_unitRows) {
@@ -423,16 +480,16 @@ void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
     ensureDropTargetRegistration();
     const float viewportHeight = std::max(0.0f, (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - PROGRESS_HEADER_HEIGHT);
-    const float contentHeight = static_cast<float>(m_unitRows.size()) * (42.0f + 6.0f);
+    const float contentHeight = static_cast<float>(m_unitRows.size()) * (56.0f + 8.0f);
     const float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
-    m_targetScrollY = std::clamp(m_targetScrollY, 0.0f, maxScroll);
-    m_scrollY = std::clamp(m_scrollY, 0.0f, maxScroll);
+    m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
+    m_scrollY = safeClampPanelScroll(m_scrollY, maxScroll);
 
     const float delta = m_targetScrollY - m_scrollY;
     if (std::abs(delta) > 0.1f) {
         const float ease = 1.0f - std::exp(-static_cast<float>(dt) * 18.0f);
         m_scrollY += delta * ease;
-        m_scrollY = std::clamp(m_scrollY, 0.0f, maxScroll);
+        m_scrollY = safeClampPanelScroll(m_scrollY, maxScroll);
         layoutUnits();
     } else if (std::abs(delta) > 0.0f) {
         m_scrollY = m_targetScrollY;
@@ -517,29 +574,91 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     m_currentPlayStep = calculateCurrentStep();
     
     // Step layout (matches UnitRow grid layout)
-    float controlWidth = 280.0f; // Same as UnitRow::CONTROL_WIDTH
+    float controlWidth = 336.0f;
     float gridStartX = bounds.x + controlWidth + 6.0f;
     float availWidth = bounds.width - controlWidth - 12.0f;
 
     std::string selectedLabel = "No unit selected";
+    std::string routeLabel = "Awaiting route";
     if (m_trackManager && m_selectedUnitId != 0) {
         if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
             selectedLabel = unit->name.empty()
                 ? ("Unit " + std::to_string(m_selectedUnitId))
                 : unit->name;
+            routeLabel = unit->targetMixerRoute >= 0
+                ? ("Mixer CH " + std::to_string(unit->targetMixerRoute + 1))
+                : "Main Output";
         }
     }
 
     std::string patternLabel = std::to_string(m_stepCount) + " steps";
+    int noteCount = 0;
+    double lengthBeats = static_cast<double>(m_stepCount) * 0.25;
     if (m_trackManager && m_activePatternID.isValid()) {
         if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
             if (!pattern->name.empty()) {
                 patternLabel = pattern->name + " • " + patternLabel;
             }
+            lengthBeats = std::max(lengthBeats, pattern->lengthBeats);
+            if (pattern->isMidi()) {
+                noteCount = static_cast<int>(std::get<MidiPayload>(pattern->payload).notes.size());
+            }
         }
     }
-    renderer.drawText(selectedLabel, NUIPoint(bounds.x + 10.0f, bounds.y + 2.0f), 11.0f, theme.getColor("textPrimary"));
-    renderer.drawText(patternLabel, NUIPoint(bounds.x + 10.0f, bounds.y + 13.0f), 8.5f, theme.getColor("textSecondary").withAlpha(0.85f));
+
+    const int unitCount = m_trackManager ? static_cast<int>(m_trackManager->getUnitManager().getUnitCount()) : 0;
+    const int bars = std::max(1, static_cast<int>(std::round(lengthBeats / 4.0)));
+    const bool live = m_trackManager && m_trackManager->isPatternMode() && m_trackManager->isPlaying();
+
+    const NUIRect leftCard(bounds.x + 4.0f, bounds.y + 1.0f, std::max(180.0f, controlWidth - 14.0f), bounds.height - 2.0f);
+    renderer.fillRoundedRect(leftCard, 8.0f, theme.getColor("backgroundSecondary").withAlpha(0.92f));
+    renderer.strokeRoundedRect(leftCard, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.85f));
+
+    const NUIRect stateChip(leftCard.x + 8.0f, leftCard.y + 4.0f, 66.0f, 12.0f);
+    drawArsenalChip(renderer,
+                    stateChip,
+                    live ? "LIVE" : "STAGED",
+                    live ? theme.getColor("accentPrimary").withAlpha(0.18f) : theme.getColor("surfaceSecondary").withAlpha(0.75f),
+                    live ? theme.getColor("accentPrimary").withAlpha(0.78f) : theme.getColor("borderSubtle").withAlpha(0.85f),
+                    live ? theme.getColor("accentPrimary").lightened(0.12f) : theme.getColor("textSecondary"),
+                    8.5f);
+
+    renderer.drawText(selectedLabel, NUIPoint(leftCard.x + 8.0f, leftCard.y + 18.0f), 11.5f, theme.getColor("textPrimary"));
+    renderer.drawText(patternLabel, NUIPoint(leftCard.x + 8.0f, leftCard.y + 30.0f), 9.0f, theme.getColor("textSecondary").withAlpha(0.9f));
+
+    const float bottomY = leftCard.bottom() - 17.0f;
+    drawArsenalChip(renderer,
+                    {leftCard.x + 8.0f, bottomY, 58.0f, 12.0f},
+                    std::to_string(bars) + " Bars",
+                    theme.getColor("surfaceTertiary").withAlpha(0.78f),
+                    theme.getColor("borderSubtle").withAlpha(0.85f),
+                    theme.getColor("textSecondary"),
+                    8.25f);
+    drawArsenalChip(renderer,
+                    {leftCard.x + 72.0f, bottomY, 54.0f, 12.0f},
+                    std::to_string(noteCount) + " Notes",
+                    theme.getColor("surfaceTertiary").withAlpha(0.78f),
+                    theme.getColor("borderSubtle").withAlpha(0.85f),
+                    theme.getColor("textSecondary"),
+                    8.25f);
+    drawArsenalChip(renderer,
+                    {leftCard.x + 130.0f, bottomY, 56.0f, 12.0f},
+                    std::to_string(unitCount) + " Units",
+                    theme.getColor("surfaceTertiary").withAlpha(0.78f),
+                    theme.getColor("borderSubtle").withAlpha(0.85f),
+                    theme.getColor("textSecondary"),
+                    8.25f);
+    drawArsenalChip(renderer,
+                    {leftCard.x + 190.0f, bottomY, std::max(72.0f, leftCard.width - 198.0f), 12.0f},
+                    routeLabel,
+                    theme.getColor("accentPrimary").withAlpha(0.12f),
+                    theme.getColor("accentPrimary").withAlpha(0.34f),
+                    theme.getColor("textSecondary"),
+                    8.25f);
+
+    const NUIRect gridCard(gridStartX - 2.0f, bounds.y + 1.0f, std::max(0.0f, availWidth + 4.0f), bounds.height - 2.0f);
+    renderer.fillRoundedRect(gridCard, 8.0f, theme.getColor("backgroundSecondary").withAlpha(0.82f));
+    renderer.strokeRoundedRect(gridCard, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
     
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
     float indicatorHeight = PROGRESS_HEADER_HEIGHT - 6.0f;
@@ -564,12 +683,12 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
             bgColor = bgColor.lightened(0.1f);
         }
         
-        renderer.fillRoundedRect(indicatorRect, 2.0f, bgColor);
+        renderer.fillRoundedRect(indicatorRect, 2.5f, bgColor);
         
         // Highlight current playing step
         if (i == m_currentPlayStep) {
             NUIColor playColor = theme.getColor("accentPrimary");
-            renderer.fillRoundedRect(indicatorRect, 2.0f, playColor);
+            renderer.fillRoundedRect(indicatorRect, 2.5f, playColor);
             
             // Glow effect
             NUIRect glowRect(indicatorRect.x - 1, indicatorRect.y - 1, 
@@ -579,12 +698,16 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         // Show progress for steps already played in current loop
         else if (m_currentPlayStep >= 0 && i < m_currentPlayStep) {
             NUIColor playedColor = theme.getColor("accentPrimary").withAlpha(0.5f);
-            renderer.fillRoundedRect(indicatorRect, 2.0f, playedColor);
+            renderer.fillRoundedRect(indicatorRect, 2.5f, playedColor);
         }
         
         // Subtle border
-        renderer.strokeRoundedRect(indicatorRect, 2.0f, 0.5f, 
+        renderer.strokeRoundedRect(indicatorRect, 2.5f, 0.5f, 
                                    theme.getColor("borderSubtle").withAlpha(0.6f));
+
+        if (isBarStart) {
+            renderer.drawTextCentered(std::to_string((i / 4) + 1), indicatorRect, 7.5f, theme.getColor("textSecondary").withAlpha(0.88f));
+        }
     }
     
     renderer.clearClipRect();
@@ -643,7 +766,11 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
         }
 
         unitMgr.setUnitName(targetUnit, filename);
+        unitMgr.setUnitEnabled(targetUnit, true);
         unitMgr.setUnitAudioClip(targetUnit, data.filePath);
+        if (m_onSampleDroppedToUnit) {
+            m_onSampleDroppedToUnit(targetUnit, data.filePath);
+        }
         if (m_onSelectedUnitChanged) {
             m_onSelectedUnitChanged(targetUnit);
         }
@@ -784,8 +911,8 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
     // Handle drag-drop logic for reordering units
     if (m_isDragging) {
         auto bounds = m_listContainer->getBounds();
-        float rowHeight = 42.0f;
-        float spacing = 4.0f;
+        float rowHeight = 56.0f;
+        float spacing = 8.0f;
         
         // Calculate which drop zone we're over
         float localY = event.position.y - bounds.y + m_scrollY - 6.0f;
@@ -804,14 +931,25 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
     
-    // Scroll handling
+    // Scroll handling — delegate to UnitRow first (pitch viewport), then list scroll
     if (std::abs(event.wheelDelta) > 0.001f && getBounds().contains(event.position)) {
-        float contentHeight = (m_unitRows.size() * (42.0f + 4.0f)) + 40.0f + 12.0f; 
+        // Check if mouse is over a UnitRow — let it handle pitch scrolling
+        for (auto& row : m_unitRows) {
+            if (row && row->getBounds().contains(event.position)) {
+                if (row->onMouseEvent(event)) {
+                    repaint();
+                    return true;
+                }
+            }
+        }
+        
+        // Fallback: scroll the unit list
+        float contentHeight = (m_unitRows.size() * (56.0f + 8.0f)) + 40.0f + 12.0f; 
         float viewportHeight = m_listContainer ? m_listContainer->getBounds().height : 100.0f;
         float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
         
         m_targetScrollY -= event.wheelDelta * 40.0f;
-        m_targetScrollY = std::clamp(m_targetScrollY, 0.0f, maxScroll);
+        m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
         return true;
     }
     

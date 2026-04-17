@@ -195,7 +195,7 @@ public:
      * Get default system font.
      * On Windows: Segoe UI
      * On macOS: San Francisco
-     * On Linux: DejaVu Sans
+     * On Linux: Geist (AestraAssets) with DejaVu Sans fallback
      */
     std::shared_ptr<NUIFont> getDefaultFont(int fontSize = 14);
     
@@ -221,4 +221,3 @@ private:
 };
 
 } // namespace AestraUI
-

@@ -188,7 +188,7 @@ void AestraEQEditor::drawTitleBar(NUIRenderer& renderer) {
     renderer.fillRoundedRect(titleBar, kRadius, NUIColor(0.08f, 0.07f, 0.10f, 0.98f));
     renderer.drawText("Aestra EQ", {titleBar.x + kPadding, titleBar.y + 14.0f}, 13.0f,
                       theme.getColor("textPrimary"));
-    renderer.drawText("8-band parametric", {titleBar.x + 110.0f, titleBar.y + 15.0f}, 10.0f,
+    renderer.drawText("8-band parametric", {titleBar.x + 110.0f, titleBar.y + 15.0f}, 11.0f,
                       theme.getColor("accentPrimary").withAlpha(0.85f));
 
     float closeX = titleBar.right() - kCloseSize - 10.0f;
@@ -306,8 +306,8 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
         renderer.drawLine({bounds.x + 40.0f, y}, {bounds.right() - 10.0f, y},
                           1.0f, theme.getColor("accentPrimary").withAlpha(alpha));
         std::string label = (db >= 0 ? "+" : "") + std::to_string(db) + "dB";
-        renderer.drawText(label, {bounds.x + 4.0f, y - 6.0f}, 8.0f,
-                          theme.getColor("textSecondary").withAlpha(0.7f));
+        renderer.drawText(label, {bounds.x + 4.0f, y - 6.0f}, 9.0f,
+                          theme.getColor("textSecondary").withAlpha(0.84f));
     }
 
     // Frequency labels
@@ -318,8 +318,8 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
         float x = bounds.x + 40.0f + norm * (bounds.width - 50.0f);
         renderer.drawLine({x, bounds.y + 10.0f}, {x, bounds.bottom() - 10.0f},
                           1.0f, theme.getColor("textSecondary").withAlpha(0.10f));
-        renderer.drawText(freqLabels[i], {x - 8.0f, bounds.bottom() - 10.0f}, 8.0f,
-                          theme.getColor("textSecondary").withAlpha(0.7f));
+        renderer.drawText(freqLabels[i], {x - 8.0f, bounds.bottom() - 10.0f}, 9.0f,
+                          theme.getColor("textSecondary").withAlpha(0.84f));
     }
 
     // Draw curve
@@ -396,9 +396,9 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
         }
         renderer.strokeRoundedRect(pillRect, 7.0f, 1.0f,
                                    nodeColor.withAlpha(selected || dragging ? 0.52f : 0.26f));
-        renderer.drawText(band.name, {pillX + 5.0f, labelY + 3.0f}, 7.0f,
+        renderer.drawText(band.name, {pillX + 5.0f, labelY + 3.0f}, 8.25f,
                           theme.getColor("textPrimary").withAlpha(selected || dragging ? 0.98f : 0.82f));
-        renderer.drawText(freqLabel(band.freq), {pillX + 20.0f, labelY + 3.0f}, 7.0f,
+        renderer.drawText(freqLabel(band.freq), {pillX + 20.0f, labelY + 3.0f}, 8.25f,
                           nodeColor.withAlpha(selected || dragging ? 0.96f : 0.78f));
     }
 
@@ -416,18 +416,18 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
                                  selectedColor.withAlpha(0.16f));
         renderer.strokeRoundedRect({hudRect.x + 8.0f, hudRect.y + 6.0f, 34.0f, 14.0f}, 7.0f, 1.0f,
                                    selectedColor.withAlpha(0.34f));
-        renderer.drawText(band.name, {hudRect.x + 15.0f, hudRect.y + 9.0f}, 7.5f,
+        renderer.drawText(band.name, {hudRect.x + 15.0f, hudRect.y + 9.0f}, 8.75f,
                           theme.getColor("textPrimary").withAlpha(0.98f));
 
         const std::string meta = std::string(glyphTypeLabel(band.type)) + "  " + freqLabel(band.freq);
-        renderer.drawText(meta, {hudRect.x + 50.0f, hudRect.y + 8.0f}, 8.0f,
+        renderer.drawText(meta, {hudRect.x + 50.0f, hudRect.y + 8.0f}, 9.0f,
                           selectedColor.withAlpha(0.90f));
 
         const std::string detail = usesGainAxis(band)
             ? ("Gain " + gainLabel(band.gain) + " dB   Q " + qLabel(band.q, band.type))
             : ("Slope/Q " + qLabel(band.q, band.type));
-        renderer.drawText(detail, {hudRect.x + 50.0f, hudRect.y + 15.5f}, 7.0f,
-                          theme.getColor("textSecondary").withAlpha(0.82f));
+        renderer.drawText(detail, {hudRect.x + 50.0f, hudRect.y + 15.5f}, 8.0f,
+                          theme.getColor("textSecondary").withAlpha(0.90f));
     }
 }
 
@@ -682,10 +682,10 @@ void AestraEQEditor::drawBandPanel(NUIRenderer& renderer, const BandControl& ban
                       band.enabled ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.4f));
 
     if (band.enabled) {
-        renderer.drawText(typeLabel(band.type), {band.bounds.x + 6.0f, band.bounds.y + 14.0f}, 7.5f,
-                          accent.withAlpha(0.8f));
-        renderer.drawText("Q", {band.bounds.center().x - 3.0f, band.bounds.y + 14.0f}, 7.5f,
-                          theme.getColor("textSecondary").withAlpha(0.75f));
+        renderer.drawText(typeLabel(band.type), {band.bounds.x + 6.0f, band.bounds.y + 14.0f}, 8.5f,
+                          accent.withAlpha(0.9f));
+        renderer.drawText("Q", {band.bounds.center().x - 3.0f, band.bounds.y + 14.0f}, 8.5f,
+                          theme.getColor("textSecondary").withAlpha(0.86f));
     }
 
     if (!band.enabled) return;
@@ -701,8 +701,8 @@ void AestraEQEditor::drawBandPanel(NUIRenderer& renderer, const BandControl& ban
     }
     renderer.fillRoundedRect(band.qKnob, 7.0f, band.dragTarget == BandControl::Q ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : NUIColor(0.9f, 0.7f, 0.5f, 0.95f));
 
-    renderer.drawText(qLabel(band.q, band.type), {band.bounds.x + 6.0f, band.bounds.bottom() - 12.0f}, 7.0f,
-                      theme.getColor("textSecondary").withAlpha(0.6f));
+    renderer.drawText(qLabel(band.q, band.type), {band.bounds.x + 6.0f, band.bounds.bottom() - 12.0f}, 8.0f,
+                      theme.getColor("textSecondary").withAlpha(0.78f));
 }
 
 void AestraEQEditor::onRender(NUIRenderer& renderer) {

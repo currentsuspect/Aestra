@@ -20,6 +20,17 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
+float safeClampBrowserScroll(float value, float upper) {
+    if (!std::isfinite(value) || !std::isfinite(upper) || upper <= 0.0f) {
+        return 0.0f;
+    }
+    if (value <= 0.0f) return 0.0f;
+    if (value >= upper) return upper;
+    return value;
+}
+}
+
+namespace {
 std::string toLowerASCII(const std::string& text) {
     std::string out = text;
     std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) {
@@ -86,7 +97,7 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
         std::vector<std::string>{"Clips", "Patterns"}
     );
     m_modeToggle->setCornerRadius(10.0f);
-    m_modeToggle->setAccentColor(AestraUI::NUIColor(0.62f, 0.58f, 0.98f, 0.98f));
+    m_modeToggle->setAccentColor(themeManager.getColor("primary").withAlpha(0.98f));
     m_modeToggle->setSelectedIndex(static_cast<size_t>(m_mode), false);
     m_modeToggle->setOnSelectionChanged([this](size_t index) {
         switchMode(static_cast<BrowserMode>(index));
@@ -216,6 +227,14 @@ void PatternBrowserPanel::setSelectedPatternId(Aestra::Audio::PatternID patternI
     if (notify && m_onPatternSelected && patternId.isValid()) {
         m_onPatternSelected(patternId);
     }
+}
+
+bool PatternBrowserPanel::isClipBinEmpty() const {
+    return m_clips.empty();
+}
+
+bool PatternBrowserPanel::usesCompactRail() const {
+    return m_mode == BrowserMode::Clips && m_clips.empty();
 }
 
 void PatternBrowserPanel::refreshClips() {
@@ -356,13 +375,14 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
     if (isEmpty) {
         auto& theme = AestraUI::NUIThemeManager::getInstance();
         const bool dropActive = m_isDragOver;
+        const bool compactRail = bounds.width < 170.0f;
         const AestraUI::NUIRect stateCard{
-            bounds.x + 26.0f,
-            bounds.y + m_headerHeight + 34.0f,
-            std::max(0.0f, bounds.width - 52.0f),
-            std::max(96.0f, listRect.height - 68.0f)
+            bounds.x + (compactRail ? 10.0f : 26.0f),
+            bounds.y + m_headerHeight + (compactRail ? 16.0f : 34.0f),
+            std::max(0.0f, bounds.width - (compactRail ? 20.0f : 52.0f)),
+            std::max(compactRail ? 72.0f : 96.0f, listRect.height - (compactRail ? 32.0f : 68.0f))
         };
-        const float radius = 16.0f;
+        const float radius = compactRail ? 12.0f : 16.0f;
         const auto accent = theme.getColor("accentPrimary");
         renderer.fillRoundedRect(stateCard, radius,
                                  dropActive ? accent.withAlpha(0.10f)
@@ -373,23 +393,27 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
 
         const std::string title = dropActive
             ? "Drop To Import"
-            : (m_mode == BrowserMode::Patterns ? "No Patterns Yet" : "No Clips Yet");
-        const std::string detailLine1 = dropActive
+            : (m_mode == BrowserMode::Patterns ? "No Patterns Yet" : "Clip Bin Empty");
+        const std::string detailLine1 = compactRail
+            ? (dropActive ? "Release to import" : (m_mode == BrowserMode::Patterns ? "Create or drop MIDI" : "Drag files to timeline"))
+            : (dropActive
             ? "Release audio files here"
             : (m_mode == BrowserMode::Patterns
                 ? "Create a pattern, or drop files"
-                : "Drop audio files here");
-        const std::string detailLine2 = dropActive
+                : "Drag files straight to timeline"));
+        const std::string detailLine2 = compactRail
+            ? ""
+            : (dropActive
             ? "to add them to Clips"
             : (m_mode == BrowserMode::Patterns
                 ? "to switch into Clips"
-                : "to import them as clips");
+                : "Use Clips as an optional bin"));
 
         const AestraUI::NUIRect iconChip{
-            stateCard.center().x - 26.0f,
-            stateCard.y + 20.0f,
-            52.0f,
-            28.0f
+            stateCard.center().x - (compactRail ? 20.0f : 26.0f),
+            stateCard.y + (compactRail ? 12.0f : 20.0f),
+            compactRail ? 40.0f : 52.0f,
+            compactRail ? 24.0f : 28.0f
         };
         renderer.fillRoundedRect(iconChip, 14.0f,
                                  dropActive ? accent.withAlpha(0.16f)
@@ -399,20 +423,22 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
                                               : theme.getColor("border").withAlpha(0.22f));
         renderer.drawTextCentered(dropActive ? "DROP" : (m_mode == BrowserMode::Patterns ? "PATTERN" : "CLIPS"),
                                   iconChip,
-                                  9.0f,
+                                  compactRail ? 8.0f : 9.0f,
                                   dropActive ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.92f));
         renderer.drawTextCentered(title,
-                                  {stateCard.x + 18.0f, iconChip.bottom() + 12.0f, stateCard.width - 36.0f, 18.0f},
-                                  13.0f,
+                                  {stateCard.x + 14.0f, iconChip.bottom() + (compactRail ? 8.0f : 12.0f), stateCard.width - 28.0f, 18.0f},
+                                  compactRail ? 11.0f : 13.0f,
                                   theme.getColor("textPrimary").withAlpha(0.94f));
         renderer.drawTextCentered(detailLine1,
-                                  {stateCard.x + 24.0f, iconChip.bottom() + 34.0f, stateCard.width - 48.0f, 14.0f},
-                                  10.5f,
+                                  {stateCard.x + 14.0f, iconChip.bottom() + (compactRail ? 24.0f : 34.0f), stateCard.width - 28.0f, 14.0f},
+                                  compactRail ? 9.0f : 10.5f,
                                   theme.getColor("textSecondary").withAlpha(0.86f));
-        renderer.drawTextCentered(detailLine2,
-                                  {stateCard.x + 24.0f, iconChip.bottom() + 48.0f, stateCard.width - 48.0f, 14.0f},
-                                  10.5f,
-                                  theme.getColor("textSecondary").withAlpha(0.86f));
+        if (!detailLine2.empty()) {
+            renderer.drawTextCentered(detailLine2,
+                                      {stateCard.x + 24.0f, iconChip.bottom() + 48.0f, stateCard.width - 48.0f, 14.0f},
+                                      10.5f,
+                                      theme.getColor("textSecondary").withAlpha(0.86f));
+        }
         return;
     }
     
@@ -499,13 +525,13 @@ void PatternBrowserPanel::renderPatternItem(AestraUI::NUIRenderer& renderer, con
         std::string routeStr = ">" + std::to_string(entry.mixerChannel + 1);  // 1-based for display
         float routeX = itemRect.x + itemRect.width - 60;
         renderer.drawText(routeStr, AestraUI::NUIPoint(routeX, y + 9), 
-                         11.0f, theme.getColor("accentCyan"));  // Use theme accent
+                         12.0f, theme.getColor("accentCyan"));  // Use theme accent
     }
     
     // Length (right aligned)
     std::string lengthStr = std::to_string(static_cast<int>(entry.lengthBeats)) + "b";
     renderer.drawText(lengthStr, AestraUI::NUIPoint(itemRect.x + itemRect.width - 25, y + 9), 
-                     11.0f, theme.getColor("textDisabled"));
+                     12.0f, theme.getColor("textDisabled").withAlpha(0.92f));
 }
 
 bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
@@ -665,7 +691,7 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         float maxScroll = std::max(0.0f, listHeight - viewportHeight);
         
         m_targetScrollOffset -= event.wheelDelta * 40.0f;
-        m_targetScrollOffset = std::clamp(m_targetScrollOffset, 0.0f, maxScroll);
+        m_targetScrollOffset = safeClampBrowserScroll(m_targetScrollOffset, maxScroll);
         
         repaint();
         return true;
@@ -718,13 +744,13 @@ void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const 
     std::stringstream ss;
     ss << std::fixed << std::setprecision(1) << entry.duration << "s";
     std::string durStr = ss.str();
-    renderer.drawText(durStr, AestraUI::NUIPoint(itemRect.x + itemRect.width - 40, y + 9), 11.0f, theme.getColor("textDisabled"));
+    renderer.drawText(durStr, AestraUI::NUIPoint(itemRect.x + itemRect.width - 40, y + 9), 12.0f, theme.getColor("textDisabled").withAlpha(0.92f));
 }
 
 void PatternBrowserPanel::onResize(int width, int height) {
     auto bounds = getBounds();
     float padding = 8.0f;
-    float toggleWidth = 140.0f;
+    float toggleWidth = std::max(88.0f, std::min(140.0f, width - 12.0f));
     
     if (m_modeToggle) {
         float toggleY = height - m_footerHeight + (m_footerHeight - 24) / 2.0f;
@@ -750,14 +776,14 @@ void PatternBrowserPanel::onUpdate(double deltaTime) {
         ? static_cast<float>(m_patterns.size())
         : static_cast<float>(m_clips.size())) * m_itemHeight;
     const float maxScroll = std::max(0.0f, listHeight - viewportHeight);
-    m_targetScrollOffset = std::clamp(m_targetScrollOffset, 0.0f, maxScroll);
-    m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, maxScroll);
+    m_targetScrollOffset = safeClampBrowserScroll(m_targetScrollOffset, maxScroll);
+    m_scrollOffset = safeClampBrowserScroll(m_scrollOffset, maxScroll);
 
     const float delta = m_targetScrollOffset - m_scrollOffset;
     if (std::abs(delta) > 0.1f) {
         const float ease = 1.0f - std::exp(-static_cast<float>(deltaTime) * 18.0f);
         m_scrollOffset += delta * ease;
-        m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, maxScroll);
+        m_scrollOffset = safeClampBrowserScroll(m_scrollOffset, maxScroll);
         repaint();
     } else if (std::abs(delta) > 0.0f) {
         m_scrollOffset = m_targetScrollOffset;

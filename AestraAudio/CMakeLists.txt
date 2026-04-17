@@ -212,6 +212,10 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/SplitClipCommand.cpp
     src/Commands/AddClipCommand.cpp
     src/Commands/CreateLaneCommand.cpp
+    src/Commands/AddNoteCommand.cpp
+    src/Commands/RemoveNoteCommand.cpp
+    src/Commands/MoveNoteCommand.cpp
+    src/Commands/ResizeNoteCommand.cpp
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp
@@ -223,6 +227,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/BuiltInPlugins.cpp
     src/Plugin/SamplerPlugin.cpp
     src/Plugin/EffectChain.cpp
+    src/CommandManager.cpp
 )
 
 # Driver registry wiring:
@@ -329,6 +334,10 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Commands/SetPanCommand.h
     include/Commands/SetMuteCommand.h
     include/Commands/SetSoloCommand.h
+    include/Commands/AddNoteCommand.h
+    include/Commands/RemoveNoteCommand.h
+    include/Commands/MoveNoteCommand.h
+    include/Commands/ResizeNoteCommand.h
     
     # Headless / batch processing
     include/Headless/HeadlessMusicGenerator.h
@@ -343,6 +352,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Plugin/PluginFactory.h
     include/Plugin/BuiltInPlugins.h
     include/Plugin/EffectChain.h
+    include/CommandManager.h
     include/Plugin/VST3Host.h
     include/Plugin/AestraEQ.h
     include/Plugin/AestraComp.h

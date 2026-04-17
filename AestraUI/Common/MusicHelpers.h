@@ -62,11 +62,15 @@ public:
     static bool isNoteInScale(int pitch, int rootKey, ScaleType type);
     static std::vector<std::string> getRootNames();
     static std::vector<ScaleDef> getScales();
-    
+
     // Snap Helpers
     static double getSnapDuration(SnapGrid snap);
     static std::string getSnapName(SnapGrid snap);
     static std::vector<SnapGrid> getSnapOptions();
+
+    // Pitch Name Helpers
+    static std::string getPitchName(int midiNote);    // e.g. "C4", "F#3"
+    static std::string getPitchNameShort(int midiNote); // e.g. "C4", "F#3" (same, reserved for future shorthand)
 };
 
 } // namespace AestraUI
