@@ -3,6 +3,8 @@
 #include "../../AestraCore/include/AestraLog.h"
 #include "../include/AestraPlatform.h"
 
+#include <memory>
+
 // Platform-specific includes
 #if AESTRA_PLATFORM_WINDOWS
 #include "Win32/PlatformDPIWin32.h"
@@ -23,7 +25,7 @@
 namespace Aestra {
 
 // Static members
-IPlatformUtils* Platform::s_utils = nullptr;
+std::unique_ptr<IPlatformUtils> Platform::s_utils;
 
 // =============================================================================
 // Platform Factory
@@ -47,11 +49,11 @@ IPlatformUtils* Platform::getUtils() {
     if (!s_utils) {
         AESTRA_LOG_ERROR("Platform not initialized! Call Platform::initialize() first.");
     }
-    return s_utils;
+    return s_utils.get();
 }
 
 bool Platform::isInitialized() {
-    return s_utils != nullptr;
+    return s_utils != nullptr; // unique_ptr converts to bool implicitly
 }
 
 bool Platform::initialize() {
@@ -63,7 +65,7 @@ bool Platform::initialize() {
     // Initialize DPI awareness first (must be done before creating windows)
     PlatformDPI::initialize();
 
-    s_utils = new PlatformUtilsWin32();
+    s_utils = std::make_unique<PlatformUtilsWin32>();
     AESTRA_LOG_INFO("Windows platform initialized");
 #elif AESTRA_PLATFORM_LINUX
 #ifdef AESTRA_HAS_SDL2
@@ -73,7 +75,7 @@ bool Platform::initialize() {
         return false;
     }
 
-    s_utils = new PlatformUtilsLinux();
+    s_utils = std::make_unique<PlatformUtilsLinux>();
     AESTRA_LOG_INFO("Linux platform initialized (SDL2)");
 #else
     AESTRA_LOG_ERROR("Linux platform not supported without SDL2");
@@ -89,14 +91,11 @@ bool Platform::initialize() {
 }
 
 void Platform::shutdown() {
-    if (s_utils) {
-        delete s_utils;
-        s_utils = nullptr;
+    s_utils.reset();
 #if AESTRA_PLATFORM_LINUX && defined(AESTRA_HAS_SDL2)
-        SDL_Quit();
+    SDL_Quit();
 #endif
-        AESTRA_LOG_INFO("Platform shutdown");
-    }
+    AESTRA_LOG_INFO("Platform shutdown");
 }
 
 } // namespace Aestra

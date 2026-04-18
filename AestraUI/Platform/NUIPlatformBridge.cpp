@@ -84,6 +84,10 @@ void NUIPlatformBridge::setupEventBridges() {
             m_mousePositionFilter(x, y);
         }
 
+        if (!isWindowInteractive()) {
+            return;
+        }
+
         // Store mouse position for wheel events
         m_lastMouseX = x;
         m_lastMouseY = y;
@@ -114,6 +118,10 @@ void NUIPlatformBridge::setupEventBridges() {
     m_window->setMouseButtonCallback([this](Aestra::MouseButton button, bool pressed, int x, int y) {
         if (m_mousePositionFilter) {
             m_mousePositionFilter(x, y);
+        }
+
+        if (!isWindowInteractive()) {
+            return;
         }
 
         // Store mouse position for wheel events
@@ -149,6 +157,10 @@ void NUIPlatformBridge::setupEventBridges() {
 
     // Mouse wheel
     m_window->setMouseWheelCallback([this](float delta) {
+        if (!isWindowInteractive()) {
+            return;
+        }
+
         if (m_mouseWheelCallback) {
             m_mouseWheelCallback(delta);
         }
@@ -270,6 +282,10 @@ void NUIPlatformBridge::hide() {
 
 bool NUIPlatformBridge::processEvents() {
     return m_window ? m_window->pollEvents() : false;
+}
+
+bool NUIPlatformBridge::isWindowInteractive() const {
+    return m_window && m_window->isVisible() && m_window->isMapped();
 }
 
 void NUIPlatformBridge::swapBuffers() {

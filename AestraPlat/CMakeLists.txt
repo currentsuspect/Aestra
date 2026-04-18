@@ -80,12 +80,16 @@ if(WIN32)
         shell32
     )
 elseif(UNIX AND NOT APPLE)
+    find_package(X11 QUIET)
     if(SDL2_FOUND OR TARGET SDL2::SDL2)
         target_link_libraries(AestraPlat PRIVATE
             SDL2::SDL2
             ${CMAKE_DL_LIBS}
             pthread
         )
+        if(X11_FOUND)
+            target_link_libraries(AestraPlat PRIVATE X11::X11)
+        endif()
     else()
         target_link_libraries(AestraPlat PRIVATE
             ${CMAKE_DL_LIBS}

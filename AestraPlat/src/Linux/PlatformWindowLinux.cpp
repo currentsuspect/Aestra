@@ -2,8 +2,28 @@
 
 #include <SDL2/SDL_syswm.h>
 #include <iostream>
+#if defined(SDL_VIDEO_DRIVER_X11)
+#include <X11/Xlib.h>
+#endif
 
 namespace Aestra {
+
+namespace {
+bool getX11WindowInfo(SDL_Window* window, Display*& display, ::Window& x11Window) {
+    display = nullptr;
+    x11Window = 0;
+    if (!window) return false;
+
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (!SDL_GetWindowWMInfo(window, &info)) return false;
+    if (info.subsystem != SDL_SYSWM_X11) return false;
+
+    display = info.info.x11.display;
+    x11Window = info.info.x11.window;
+    return (display != nullptr && x11Window != 0);
+}
+} // namespace
 
 PlatformWindowLinux::PlatformWindowLinux() {
     // SDL_Init should be called by Platform::initialize()
@@ -46,6 +66,8 @@ bool PlatformWindowLinux::create(const WindowDesc& desc) {
     }
 
     m_isFullscreen = desc.startFullscreen;
+    m_isWindowVisible = true;
+    m_isWindowMapped = true;
 
     // Initial DPI check
     int dw, dh;
@@ -109,6 +131,22 @@ bool PlatformWindowLinux::pollEvents() {
                 case SDL_WINDOWEVENT_FOCUS_LOST:
                     if (m_focusCallback)
                         m_focusCallback(false);
+                    break;
+                case SDL_WINDOWEVENT_SHOWN:
+                    m_isWindowVisible = true;
+                    m_isWindowMapped = true;
+                    break;
+                case SDL_WINDOWEVENT_HIDDEN:
+                    m_isWindowVisible = false;
+                    m_isWindowMapped = false;
+                    break;
+                case SDL_WINDOWEVENT_MINIMIZED:
+                    m_isWindowMapped = false;
+                    break;
+                case SDL_WINDOWEVENT_RESTORED:
+                    if (m_isWindowVisible) {
+                        m_isWindowMapped = true;
+                    }
                     break;
                 }
             }
@@ -205,13 +243,35 @@ void PlatformWindowLinux::getPosition(int& x, int& y) const {
 }
 
 void PlatformWindowLinux::show() {
-    if (m_window)
+    if (m_window) {
+#if defined(SDL_VIDEO_DRIVER_X11)
+        Display* display = nullptr;
+        ::Window x11Window = 0;
+        if (getX11WindowInfo(m_window, display, x11Window)) {
+            XMapWindow(display, x11Window);
+            XFlush(display);
+        }
+#endif
         SDL_ShowWindow(m_window);
+        m_isWindowVisible = true;
+        m_isWindowMapped = true;
+    }
 }
 
 void PlatformWindowLinux::hide() {
-    if (m_window)
+    if (m_window) {
+#if defined(SDL_VIDEO_DRIVER_X11)
+        Display* display = nullptr;
+        ::Window x11Window = 0;
+        if (getX11WindowInfo(m_window, display, x11Window)) {
+            XUnmapWindow(display, x11Window);
+            XFlush(display);
+        }
+#endif
         SDL_HideWindow(m_window);
+        m_isWindowVisible = false;
+        m_isWindowMapped = false;
+    }
 }
 
 void PlatformWindowLinux::minimize() {
