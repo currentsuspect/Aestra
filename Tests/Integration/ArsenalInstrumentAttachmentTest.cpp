@@ -31,7 +31,7 @@ int main() {
     UnitID unitId = unitManager.createUnit("Aestra Rumble", UnitGroup::Synth);
     unitManager.attachPlugin(unitId, "com.Aestrastudios.rumble", rumble);
     unitManager.setUnitEnabled(unitId, true);
-    unitManager.setUnitMixerChannel(unitId, -1);
+    unitManager.clearUnitTimelineLane(unitId);
 
     auto snapshot = unitManager.getAudioSnapshot();
     require(snapshot != nullptr, "Audio snapshot is null");
@@ -39,7 +39,7 @@ int main() {
     require(snapshot->units[0].id == static_cast<int>(unitId), "Audio snapshot unit id mismatch");
     require(snapshot->units[0].enabled == true, "Audio snapshot enabled flag mismatch");
     require(snapshot->units[0].plugin != nullptr, "Audio snapshot plugin missing");
-    require(snapshot->units[0].routeId == -1, "Audio snapshot route mismatch");
+    require(snapshot->units[0].routeId == -1, "Audio snapshot timeline lane mismatch");
 
     std::cout << "[PASS] ArsenalInstrumentAttachmentTest\n";
     return 0;
