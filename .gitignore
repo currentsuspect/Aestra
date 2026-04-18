@@ -180,3 +180,10 @@ autosave.aes
 crash_flag
 runtime_log.txt
 build_log.txt
+
+# Resonance Pro / Claude Code config
+.clangd
+.lsp.json
+.claude/
+.resonance/
+
