@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <array>
 #include <unordered_map>
 #include <unordered_set>
 #include <atomic>
@@ -125,6 +126,7 @@ public:
         setDirty(true);
     }
     bool isLoadingPlayback() const { return isLoadingPlayback_; }
+    void setActivePlaybackPath(const std::string& path);
     
     // Multi-select
     void toggleFileSelection(int index, bool ctrlPressed, bool shiftPressed);
@@ -168,6 +170,13 @@ public:
         Size,
         Modified
     };
+
+    enum class QuickFilter {
+        All,
+        Audio,
+        Projects,
+        Folders
+    };
     
     void setSortMode(SortMode mode);
     void setSortAscending(bool ascending);
@@ -210,6 +219,7 @@ public:
         std::atomic<uint64_t> scanGeneration_{0};
         bool scanWorkerStarted_{false};
         bool scanningRoot_{false};
+        bool bootScanRecoveryAttempted_{false};
 
 		    void updateDisplayList();
 		    void updateDisplayListRecursive(FileItem& item, std::vector<const FileItem*>& list);
@@ -218,6 +228,7 @@ public:
 		    FileType getFileTypeFromExtension(const std::string& extension) const;
 		    std::shared_ptr<NUIIcon> getIconForFileType(FileType type);
 		    bool isFilterActive() const;
+            bool matchesQuickFilter(const FileItem& item) const;
 		    const std::vector<const FileItem*>& getActiveView() const;
 		    void invalidateAllItemCaches();
             void renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds);
@@ -249,6 +260,7 @@ public:
     // File management
     std::string currentPath_;
     std::string pendingSelectionPath_;
+    std::string activePlaybackPath_;
     std::vector<FileItem> rootItems_;
     std::vector<const FileItem*> displayItems_;
     std::vector<const FileItem*> filteredFiles_;  // Filtered files for search
@@ -310,6 +322,9 @@ public:
 	    bool favoritesHovered_ = false;
 	    bool tagsHovered_ = false;
 	    bool sortHovered_ = false;
+        QuickFilter activeQuickFilter_ = QuickFilter::All;
+        std::array<NUIRect, 4> quickFilterBounds_{};
+        int hoveredQuickFilter_ = -1;
 	    std::shared_ptr<NUIContextMenu> popupMenu_;
 	    std::string popupMenuTargetPath_;
 	    bool popupMenuTargetIsDirectory_ = false;

@@ -302,7 +302,9 @@ float NUIConfigLoader::parseDimension(const Aestra::JSON& value) {
         }
         try {
             return std::stof(str);
-        } catch (...) {
+        } catch (const std::invalid_argument&) {
+            return 0.0f;
+        } catch (const std::out_of_range&) {
             return 0.0f;
         }
     }

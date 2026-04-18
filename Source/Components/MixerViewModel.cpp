@@ -392,6 +392,8 @@ void MixerViewModel::clearClipLatch(uint32_t id) {
     if (channel) {
         channel->clipLatchL = false;
         channel->clipLatchR = false;
+        channel->suppressClipRelatchL = true;
+        channel->suppressClipRelatchR = true;
     }
 }
 
@@ -399,6 +401,8 @@ void MixerViewModel::clearMasterClipLatch() {
     if (m_master) {
         m_master->clipLatchL = false;
         m_master->clipLatchR = false;
+        m_master->suppressClipRelatchL = true;
+        m_master->suppressClipRelatchR = true;
     }
 }
 
@@ -415,19 +419,33 @@ void MixerViewModel::rebuildIdMap() {
 void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
                                         const Audio::MeterSnapshotBuffer::MeterReadout& snapshot,
                                         double deltaTime) {
+    auto sanitizeLinear = [](float value) -> float {
+        if (!std::isfinite(value)) return 0.0f;
+        return std::clamp(value, 0.0f, 4.0f);
+    };
+    auto sanitizeDb = [](float value) -> float {
+        if (!std::isfinite(value)) return MixerMath::DB_MIN;
+        return std::clamp(value, MixerMath::DB_MIN, 12.0f);
+    };
+    constexpr float CLIP_RELEASE_THRESHOLD = 0.999f;
+
     // Convert LINEAR to dB (UI mapping is log-space).
-    const float peakDbL = MixerMath::linearToDb(snapshot.peakL);
-    const float peakDbR = MixerMath::linearToDb(snapshot.peakR);
-    const float energyDbL = MixerMath::linearToDb(snapshot.rmsL);
-    const float energyDbR = MixerMath::linearToDb(snapshot.rmsR);
-    const float lowDbL = MixerMath::linearToDb(snapshot.lowL);
-    const float lowDbR = MixerMath::linearToDb(snapshot.lowR);
+    const float peakLinearL = sanitizeLinear(snapshot.peakL);
+    const float peakLinearR = sanitizeLinear(snapshot.peakR);
+    const float peakDbL = sanitizeDb(MixerMath::linearToDb(peakLinearL));
+    const float peakDbR = sanitizeDb(MixerMath::linearToDb(peakLinearR));
+    const float energyDbL = sanitizeDb(MixerMath::linearToDb(sanitizeLinear(snapshot.rmsL)));
+    const float energyDbR = sanitizeDb(MixerMath::linearToDb(sanitizeLinear(snapshot.rmsR)));
+    const float lowDbL = sanitizeDb(MixerMath::linearToDb(sanitizeLinear(snapshot.lowL)));
+    const float lowDbR = sanitizeDb(MixerMath::linearToDb(sanitizeLinear(snapshot.lowR)));
 
     auto smoothDb = [&](float current, float target, float attackMs, float releaseMs) -> float {
+        current = sanitizeDb(current);
+        target = sanitizeDb(target);
         const float ms = static_cast<float>(deltaTime * 1000.0);
         const float tau = (target > current) ? attackMs : releaseMs;
         const float coeff = 1.0f - std::exp(-ms / std::max(1e-3f, tau));
-        return current + (target - current) * coeff;
+        return sanitizeDb(current + (target - current) * coeff);
     };
 
     // Analysis envelopes (never drawn directly).
@@ -456,9 +474,11 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
     channel.smoothedPeakL = smoothDb(channel.smoothedPeakL, channel.envPeakL, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
     
     // Correlation and LUFS (already computed/smoothed in audio engine)
-    channel.correlation = snapshot.correlation;
-    channel.sidechainPeak = snapshot.sidechainPeak;
-    channel.integratedLufs = snapshot.integratedLufs;
+    channel.correlation = std::isfinite(snapshot.correlation) ? std::clamp(snapshot.correlation, -1.0f, 1.0f) : 0.0f;
+    channel.sidechainPeak = sanitizeLinear(snapshot.sidechainPeak);
+    channel.integratedLufs = std::isfinite(snapshot.integratedLufs)
+                                 ? std::clamp(snapshot.integratedLufs, -144.0f, 12.0f)
+                                 : -144.0f;
     
     channel.smoothedPeakR = smoothDb(channel.smoothedPeakR, channel.envPeakR, DISPLAY_ATTACK_MS, DISPLAY_RELEASE_MS);
 
@@ -497,9 +517,20 @@ void MixerViewModel::smoothMeterChannel(ChannelViewModel& channel,
         }
     }
 
-    // Clip latch (sticky until cleared by user).
-    if (snapshot.clipL) channel.clipLatchL = true;
-    if (snapshot.clipR) channel.clipLatchR = true;
+    // Clip latch:
+    // - user clear suppresses immediate re-latch while the same continuous clip is still active
+    // - once clip drops out, the next distinct clip event can latch again
+    if (peakLinearL < CLIP_RELEASE_THRESHOLD) {
+        channel.suppressClipRelatchL = false;
+    } else if (!channel.suppressClipRelatchL) {
+        channel.clipLatchL = true;
+    }
+
+    if (peakLinearR < CLIP_RELEASE_THRESHOLD) {
+        channel.suppressClipRelatchR = false;
+    } else if (!channel.suppressClipRelatchR) {
+        channel.clipLatchR = true;
+    }
 }
 
 std::vector<MixerViewModel::Destination> MixerViewModel::getAvailableDestinations(uint32_t excludeId) const
@@ -771,6 +802,14 @@ void MixerViewModel::setInsertBypass(uint32_t channelId, int slotIndex, bool byp
     // Update Engine
     if (auto mc = ch->channel) {
         mc->getEffectChain().setSlotBypassed(slotIndex, bypassed);
+        if (!bypassed) {
+            if (auto plugin = mc->getEffectChain().getPlugin(static_cast<size_t>(slotIndex))) {
+                plugin->resetWatchdog();
+                if (!plugin->isActive()) {
+                    plugin->activate();
+                }
+            }
+        }
         if (m_onProjectModified) m_onProjectModified();
     }
 }

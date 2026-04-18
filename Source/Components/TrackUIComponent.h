@@ -213,6 +213,7 @@ private:
  
     // Automation Interaction State (v3.1)
     bool m_isDraggingPoint = false;
+    bool m_isDraggingVolumeFader = false;
     int m_draggedPointIndex = -1;
     int m_draggedCurveIndex = -1;
     AestraUI::NUIPoint m_lastAutomationMousePos;
@@ -228,6 +229,7 @@ private:
 
 	    // UI Components
 	    std::shared_ptr<AestraUI::NUILabel> m_nameLabel;
+        std::shared_ptr<AestraUI::NUISlider> m_volumeFader;
 	    std::shared_ptr<AestraUI::NUIButton> m_muteButton;
 	    std::shared_ptr<AestraUI::NUIButton> m_soloButton;
 	    std::shared_ptr<AestraUI::NUIButton> m_recordButton;

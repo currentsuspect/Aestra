@@ -171,10 +171,14 @@ void WaveformCache::getPeaksForRange(uint32_t channel, SampleIndex startSample, 
         double startPeakF = (startSample + pixel * samplesPerPixel) / level.samplesPerPeak;
         double endPeakF = (startSample + (pixel + 1) * samplesPerPixel) / level.samplesPerPeak;
 
-        SampleIndex startPeak = static_cast<SampleIndex>(std::floor(startPeakF));
-        SampleIndex endPeak = static_cast<SampleIndex>(std::ceil(endPeakF));
-
-        outPeaks[pixel] = level.getPeakRange(channel, startPeak, endPeak);
+        if (peaksPerPixel <= 1.25) {
+            const double centerPeak = (startPeakF + endPeakF) * 0.5;
+            outPeaks[pixel] = level.getInterpolatedPeak(channel, centerPeak);
+        } else {
+            SampleIndex startPeak = static_cast<SampleIndex>(std::floor(startPeakF));
+            SampleIndex endPeak = static_cast<SampleIndex>(std::ceil(endPeakF));
+            outPeaks[pixel] = level.getPeakRange(channel, startPeak, endPeak);
+        }
     }
 }
 

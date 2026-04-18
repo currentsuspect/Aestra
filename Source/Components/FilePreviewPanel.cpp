@@ -14,24 +14,22 @@ namespace AestraUI {
 
 namespace {
 
-// Generate waveform overview from decoded audio samples
-std::vector<float> generateWaveformFromAudio(const std::vector<float>& samples, 
-                                              uint32_t numChannels, 
-                                              size_t targetSize = 256) {
+std::vector<float> generateWaveformFromAudio(const std::vector<float>& samples,
+                                             uint32_t numChannels,
+                                             size_t targetSize = 256) {
     std::vector<float> waveform(targetSize, 0.0f);
     if (samples.empty() || numChannels == 0) return waveform;
-    
+
     size_t totalFrames = samples.size() / numChannels;
     float framesPerBin = static_cast<float>(totalFrames) / targetSize;
-    
+
     for (size_t bin = 0; bin < targetSize; ++bin) {
         size_t startFrame = static_cast<size_t>(bin * framesPerBin);
         size_t endFrame = static_cast<size_t>((bin + 1) * framesPerBin);
         endFrame = std::min(endFrame, totalFrames);
-        
+
         float maxAmp = 0.0f;
         for (size_t frame = startFrame; frame < endFrame; ++frame) {
-            // Mix all channels for mono-sum peak
             float sum = 0.0f;
             for (uint32_t ch = 0; ch < numChannels; ++ch) {
                 sum += std::abs(samples[frame * numChannels + ch]);
@@ -40,7 +38,7 @@ std::vector<float> generateWaveformFromAudio(const std::vector<float>& samples,
         }
         waveform[bin] = std::min(1.0f, maxAmp);
     }
-    
+
     return waveform;
 }
 
@@ -106,13 +104,25 @@ void FilePreviewPanel::setFile(const FileItem* file) {
     // Increment generation to invalidate pending tasks
     currentGeneration_++;
 
+    pendingWaveformPath_.clear();
+    pendingWaveformFileSize_ = 0;
+    pendingWaveformDelay_ = 0.0;
+    waveformQueued_ = false;
+
+    // Keep selection cheap: defer waveform generation briefly so quick browse /
+    // import flows do not immediately trigger another heavy decode.
+    isLoading_ = false;
+
     if (currentFile_ && !currentFile_->isDirectory) {
         std::string ext = std::filesystem::path(currentFile_->path).extension().string();
         std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-        
-        if (ext == ".wav" || ext == ".mp3" || ext == ".flac" || ext == ".ogg" || 
+
+        if (ext == ".wav" || ext == ".mp3" || ext == ".flac" || ext == ".ogg" ||
             ext == ".aif" || ext == ".aiff" || ext == ".m4a" || ext == ".mp4") {
-            generateWaveform(currentFile_->path, currentFile_->size);
+            pendingWaveformPath_ = currentFile_->path;
+            pendingWaveformFileSize_ = currentFile_->size;
+            pendingWaveformDelay_ = 0.18;
+            waveformQueued_ = true;
         }
     }
     setDirty(true);
@@ -155,6 +165,20 @@ void FilePreviewPanel::setDuration(double seconds) {
     }
 }
 
+void FilePreviewPanel::onUpdate(double deltaTime) {
+    NUIComponent::onUpdate(deltaTime);
+
+    if (!waveformQueued_ || !isVisible() || isLoading_ || pendingWaveformPath_.empty()) {
+        return;
+    }
+
+    pendingWaveformDelay_ -= deltaTime;
+    if (pendingWaveformDelay_ <= 0.0) {
+        waveformQueued_ = false;
+        generateWaveform(pendingWaveformPath_, pendingWaveformFileSize_);
+    }
+}
+
 void FilePreviewPanel::generateWaveform(const std::string& path, size_t fileSize) {
     isLoading_ = true;
     loadingAnimationTime_ = 0.0f;
@@ -173,8 +197,10 @@ void FilePreviewPanel::waveformWorker(const std::string& path, uint64_t generati
     uint32_t sampleRate = 0;
     uint32_t numChannels = 0;
 
-    // Decode audio file (blocking)
-    bool success = Aestra::Audio::decodeAudioFile(path, audioData, sampleRate, numChannels);
+    // Preview waveform should not pay full import cost. Decode only a bounded
+    // sequential chunk for a fast approximate overview.
+    constexpr uint64_t kPreviewMaxFrames = 48000 * 24;
+    bool success = Aestra::Audio::decodeAudioPreview(path, audioData, sampleRate, numChannels, kPreviewMaxFrames);
 
     // Check cancellation after decode
     if (generation != currentGeneration_.load(std::memory_order_acquire)) return;

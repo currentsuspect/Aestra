@@ -276,9 +276,9 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "arsenalAccent") return theme.accentCyan;                         // Accent for highlights
     
     // Grid Tokens (for TrackManagerUI/TrackUIComponent)
-    if (colorName == "gridBar") return theme.primary.withAlpha(0.24f);                  // Bar line
-    if (colorName == "gridBeat") return theme.borderSubtle.withAlpha(0.70f);            // Beat line
-    if (colorName == "gridSubdivision") return theme.borderSubtle.withAlpha(0.42f);     // Sub-beat line
+    if (colorName == "gridBar") return NUIColor::white().withAlpha(0.07f);              // Bar line
+    if (colorName == "gridBeat") return NUIColor::white().withAlpha(0.04f);             // Beat line
+    if (colorName == "gridSubdivision") return NUIColor::white().withAlpha(0.03f);      // Sub-beat line
     
     // Waveform Preview Tokens
     if (colorName == "waveformFill") return theme.accentCyan.withAlpha(0.7f);          // Waveform fill color
@@ -512,16 +512,14 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     NUIThemeProperties theme;
 
     // ========================================================================
-    // Landing-aligned premium dark palette
-    // Mirrors aestra-website-fresh tones for cohesive brand language.
+    // Aestra Design System — Color Palette v1
     // ========================================================================
 
     // --- Surface Hierarchy ---
-    // Core neutrals from landing visuals: #080a0e, #0f1118, #13161e, #1a1e2a.
-    theme.backgroundPrimary   = NUIColor::fromHex(0x080a0e);
-    theme.backgroundSecondary = NUIColor::fromHex(0x0f1118);
-    theme.surfaceTertiary     = NUIColor::fromHex(0x13161e);
-    theme.surfaceRaised       = NUIColor::fromHex(0x1a1e2a);
+    theme.backgroundPrimary   = NUIColor::fromHex(0x0e0e12);
+    theme.backgroundSecondary = NUIColor::fromHex(0x13131a);
+    theme.surfaceTertiary     = NUIColor::fromHex(0x1a1a24);
+    theme.surfaceRaised       = NUIColor::fromHex(0x22222f);
 
     // Legacy aliases
     theme.background    = theme.backgroundPrimary;
@@ -529,40 +527,40 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     theme.surfaceVariant = theme.surfaceTertiary;
 
     // --- Accent & Branding ---
-    theme.primary          = NUIColor::fromHex(0x8b7de8);                  // landing purple
-    theme.primaryHover     = NUIColor::fromHex(0xa99ef5);
-    theme.primaryPressed   = NUIColor::fromHex(0x7c6fe0);
+    theme.primary          = NUIColor::fromHex(0x7c5cbf);
+    theme.primaryHover     = NUIColor::fromHex(0x9d7de0);
+    theme.primaryPressed   = NUIColor::fromHex(0x6f52ad);
     theme.primaryVariant   = theme.primaryPressed;
 
-    theme.secondary        = NUIColor::fromHex(0x4a9eff);                  // electric blue
-    theme.secondaryVariant = NUIColor::fromHex(0x3f86da);
+    theme.secondary        = NUIColor::fromHex(0x9d7de0);
+    theme.secondaryVariant = NUIColor::fromHex(0x7c5cbf);
 
-    theme.accentCyan       = NUIColor::fromHex(0x1db4a6);                  // teal
-    theme.accentMagenta    = NUIColor::fromHex(0xe06a4e);                  // coral
-    theme.accentLime       = NUIColor::fromHex(0x4caf6e);                  // green
+    theme.accentCyan       = NUIColor::fromHex(0x00e5cc);
+    theme.accentMagenta    = NUIColor::fromHex(0xe85454);
+    theme.accentLime       = NUIColor::fromHex(0x3dbb6e);
     theme.accentPrimary    = theme.primary;
     theme.accentSecondary  = theme.secondary;
 
     // --- Functional Colors ---
-    theme.success = NUIColor::fromHex(0x4caf6e);
-    theme.warning = NUIColor::fromHex(0xe8a230);
-    theme.error   = NUIColor::fromHex(0xe06a4e);
+    theme.success = NUIColor::fromHex(0x3dbb6e);
+    theme.warning = NUIColor::fromHex(0xe8a838);
+    theme.error   = NUIColor::fromHex(0xe85454);
     theme.info    = theme.secondary;
 
     // --- Text ---
-    theme.textPrimary   = NUIColor::fromHex(0xc0c8e0);
-    theme.textSecondary = NUIColor::fromHex(0x8b95b0);
-    theme.textDisabled  = NUIColor::fromHex(0x3a4060);
+    theme.textPrimary   = NUIColor::fromHex(0xffffff, 0.90f);
+    theme.textSecondary = NUIColor::fromHex(0xffffff, 0.50f);
+    theme.textDisabled  = NUIColor::fromHex(0xffffff, 0.25f);
     theme.textLink      = theme.secondary;                                 // cyan for links
     theme.textCritical  = theme.error;
 
     // --- Borders & Dividers ---
-    theme.borderSubtle   = NUIColor::fromHex(0x2a2f42, 0.86f);
-    theme.border         = NUIColor::fromHex(0x2a2f42);
+    theme.borderSubtle   = NUIColor::fromHex(0x2e2e3c, 0.82f);
+    theme.border         = NUIColor::fromHex(0x2e2e3c);
     theme.borderActive   = theme.primary;
-    theme.divider        = NUIColor::fromHex(0x1a1e2a, 0.95f);
-    theme.outline        = NUIColor::fromHex(0x3a4060);
-    theme.outlineVariant = NUIColor::fromHex(0x2a2f42, 0.80f);
+    theme.divider        = NUIColor::fromHex(0x22222f, 0.95f);
+    theme.outline        = NUIColor::fromHex(0x3b3b4e);
+    theme.outlineVariant = NUIColor::fromHex(0x2e2e3c, 0.80f);
 
     // --- Glass Aesthetic ---
     theme.glassHover  = NUIColor::white().withAlpha(0.030f);
@@ -570,19 +568,19 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     theme.glassActive = theme.primary.withAlpha(0.14f);
 
     // --- Buttons (backlit key gradient feel) ---
-    theme.buttonBgDefault  = NUIColor::fromHex(0x13161e);
-    theme.buttonBgHover    = NUIColor::fromHex(0x1a1e2a);
-    theme.buttonBgActive   = NUIColor::fromHex(0x252a3a);
+    theme.buttonBgDefault  = NUIColor::fromHex(0x1a1a24);
+    theme.buttonBgHover    = NUIColor::fromHex(0x22222f);
+    theme.buttonBgActive   = NUIColor::fromHex(0x7c5cbf, 0.30f);
     theme.buttonTextDefault = theme.textPrimary;
     theme.buttonTextActive  = theme.textPrimary;
 
     // --- Toggle ---
-    theme.toggleDefault = NUIColor::fromHex(0x13161e);
-    theme.toggleHover   = NUIColor::fromHex(0x1a1e2a);
+    theme.toggleDefault = NUIColor::fromHex(0x1a1a24);
+    theme.toggleHover   = NUIColor::fromHex(0x22222f);
     theme.toggleActive  = theme.primary.withAlpha(0.85f);
 
     // --- Sliders ---
-    theme.sliderTrack         = NUIColor::fromHex(0x1a1e2a);
+    theme.sliderTrack         = NUIColor::fromHex(0x22222f);
     theme.sliderHandle        = theme.primary;
     theme.sliderHandleHover   = theme.primaryHover;
     theme.sliderHandlePressed = theme.primaryPressed;
@@ -610,7 +608,7 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     theme.shadowXL = NUIThemeProperties::Shadow(0, 16, 32, 0, NUIColor::black(), 0.30f);
 
     // --- Mixer ---
-    theme.mixerStripBg      = NUIColor::fromHex(0x0f1118);
+    theme.mixerStripBg      = NUIColor::fromHex(0x13131a);
     theme.mixerMasterBorder = theme.primary.withAlpha(0.34f);
 
     return theme;

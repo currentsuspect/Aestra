@@ -140,6 +140,12 @@ public:
     /// Clear the entire queue
     void clearQueue();
 
+    /// Remove one item from queue by index
+    void removeFromQueue(size_t index);
+
+    /// Reorder one item in queue (move source index to destination index)
+    void moveQueueItem(size_t fromIndex, size_t toIndex);
+
     /// Get current queue
     const std::vector<AuditionQueueItem>& getQueue() const { return m_queue; }
 

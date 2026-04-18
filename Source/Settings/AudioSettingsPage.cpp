@@ -744,7 +744,11 @@ void AudioSettingsPage::loadSettings() {
         int val = 0;
         try {
             val = std::stoi(valStr);
-        } catch (...) { continue; }
+        } catch (const std::invalid_argument&) {
+            continue;
+        } catch (const std::out_of_range&) {
+            continue;
+        }
 
         if (key == "driver") {
             // Apply driver to engine FIRST to ensure device listing works

@@ -188,6 +188,8 @@ public:
     void cancelInstantClipDrag();
     bool isInstantClipDragActive() const { return m_isDraggingClipInstant; }
     bool clampInstantClipDragPosition(::AestraUI::NUIPoint& position) const;
+    bool placeFileOnTimeline(const std::string& filePath, const std::string& displayName = "");
+    bool placePatternOnTimeline(PatternID patternId);
     
     // === IDropTarget Interface ===
     ::AestraUI::DropFeedback onDragEnter(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position) override;
@@ -265,7 +267,7 @@ private:
 
     // UI Layout
     int m_trackHeight{48};
-    int m_trackSpacing{4}; // 8px grid spacing scale (S1)
+    int m_trackSpacing{3};
     float m_scrollOffset{0.0f};
     float m_targetScrollOffset{0.0f};
     PlaylistMode m_playlistMode{PlaylistMode::Clips};
@@ -520,9 +522,6 @@ private:
     double snapBeatToGrid(double beat) const; // Snap beat to nearest grid line
     double snapBeatToGridForward(double beat) const; // Snap beat to next grid line (paste-to-right)
     
-    // Grid helper
-    void drawGrid(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIRect& bounds, float gridStartX, float gridWidth, float timelineScrollOffset);
-
     // Tool icons initialization and rendering
     void createToolIcons();
     void updateToolbarBounds();

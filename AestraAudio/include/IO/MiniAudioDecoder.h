@@ -41,6 +41,16 @@ namespace Audio {
                                    uint32_t& numChannels, std::function<void(float)> progressCallback = nullptr);
 
 /**
+ * @brief Fast preview-only decode path.
+ *
+ * Decodes at most `maxFrames` sequential frames for lightweight UI preview
+ * waveform generation. This is intentionally approximate and should not be used
+ * for import, playback, or editing paths that need the full asset.
+ */
+[[nodiscard]] bool decodeAudioPreview(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate,
+                                      uint32_t& numChannels, uint64_t maxFrames);
+
+/**
  * @brief Ensures audio data is stereo by upmixing or downmixing.
  */
 void forceStereo(std::vector<float>& buffer, uint32_t& channelCount);

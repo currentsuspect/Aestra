@@ -1929,6 +1929,17 @@ PianoRollView::PianoRollView()
     
     m_vScroll = std::make_shared<NUIScrollbar>(NUIScrollbar::Orientation::Vertical);
     m_vScroll->setOrientation(NUIScrollbar::Orientation::Vertical);
+    {
+        auto& theme = NUIThemeManager::getInstance();
+        m_vScroll->setArrowSize(0.0f);
+        m_vScroll->setBorderWidth(0.0f);
+        m_vScroll->setBorderRadius(8.0f);
+        m_vScroll->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.55f));
+        m_vScroll->setThumbColor(theme.getColor("textPrimary").withAlpha(0.30f));
+        m_vScroll->setThumbHoverColor(theme.getColor("textPrimary").withAlpha(0.48f));
+        m_vScroll->setThumbPressedColor(theme.getColor("accentPrimary").withAlpha(0.68f));
+        m_vScroll->setMinimumThumbSize(0.06);
+    }
 
     // Initial default layout config
     m_minimap->setVisible(true);

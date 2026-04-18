@@ -2,6 +2,7 @@
 #include "PatternPlaybackEngine.h"
 
 #include "../../AestraCore/include/AestraLog.h"
+#include "Plugin/SamplerPlugin.h"
 
 #include <algorithm>
 #include <cmath>
@@ -37,6 +38,36 @@ bool eventComesBefore(const ScheduledEvent& a, const ScheduledEvent& b) {
         return a.data1 < b.data1;
     }
     return a.data2 < b.data2;
+}
+
+constexpr double kPitchedSamplerStepBeats = 0.25;
+
+const MidiNote* findNextActiveStepForUnit(const MidiPayload& midi, const MidiNote& currentNote) {
+    const double nextStepBeat = currentNote.startBeat + kPitchedSamplerStepBeats;
+    for (const auto& candidate : midi.notes) {
+        if (candidate.unitId != currentNote.unitId || candidate.durationBeats <= 0.0) {
+            continue;
+        }
+        if (std::abs(candidate.startBeat - nextStepBeat) <= 0.001) {
+            return &candidate;
+        }
+    }
+    return nullptr;
+}
+
+int resolveSamplerRootMidiNote(const UnitInfo* unit) {
+    if (!unit) {
+        return 60;
+    }
+    auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin);
+    return sampler ? sampler->getRootMidiNote() : 60;
+}
+
+int resolvePitchedSamplerMidiNote(const MidiNote& note, int rootMidiNote) {
+    if (note.pitchOffset == 0 && note.pitch > 0 && note.pitch != rootMidiNote) {
+        return std::clamp(note.pitch, 0, 127);
+    }
+    return std::clamp(rootMidiNote + static_cast<int>(note.pitchOffset), 0, 127);
 }
 } // namespace
 
@@ -161,9 +192,30 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 continue;
             }
 
+            const UnitInfo* unit = m_unitManager->getUnit(note.unitId);
+            const bool isPitchedSampler = unit && unit->type == UnitType::PitchedSampler;
+            const int resolvedMidiNote = isPitchedSampler
+                                             ? resolvePitchedSamplerMidiNote(note, resolveSamplerRootMidiNote(unit))
+                                             : std::clamp(note.pitch, 0, 127);
             double noteBeat = inst.startBeat + note.startBeat;
             uint64_t noteFrame = m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
             double offBeat = std::min(noteBeat + note.durationBeats, inst.startBeat + inst.sourceEndBeat);
+            bool suppressNoteOff = false;
+
+            if (isPitchedSampler) {
+                const double gate = std::clamp(static_cast<double>(note.gate), 0.1, 2.0);
+                offBeat = std::min(noteBeat + gate * kPitchedSamplerStepBeats, inst.startBeat + inst.sourceEndBeat);
+
+                if (const auto* nextStep = findNextActiveStepForUnit(midi, note)) {
+                    const double nextStepBeat = inst.startBeat + nextStep->startBeat;
+                    if (note.slide) {
+                        suppressNoteOff = true;
+                    } else {
+                        offBeat = std::min(offBeat, nextStepBeat);
+                    }
+                }
+            }
+
             uint64_t offFrame = m_clock->sampleFrameAtBeat(offBeat, sampleRate);
 
             uint16_t channelIdx = getChannelForUnit(note.unitId);
@@ -175,7 +227,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 onEvent.unitId = note.unitId;
                 onEvent.channelIdx = channelIdx;
                 onEvent.statusByte = 0x90;
-                onEvent.data1 = note.pitch;
+                onEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 onEvent.data2 = toMidiVelocity(note.velocity);
                 onEvent.priority = 1;
                 pendingEvents.push_back(onEvent);
@@ -188,20 +240,20 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 resumeOnEvent.unitId = note.unitId;
                 resumeOnEvent.channelIdx = channelIdx;
                 resumeOnEvent.statusByte = 0x90;
-                resumeOnEvent.data1 = note.pitch;
+                resumeOnEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 resumeOnEvent.data2 = toMidiVelocity(note.velocity);
                 resumeOnEvent.priority = 1;
                 pendingEvents.push_back(resumeOnEvent);
             }
 
-            if (offFrame >= scheduleFromFrame && offFrame < windowEnd) {
+            if (!suppressNoteOff && offFrame >= scheduleFromFrame && offFrame < windowEnd) {
                 ScheduledEvent offEvent{};
                 offEvent.sampleFrame = offFrame;
                 offEvent.instanceId = inst.instanceId;
                 offEvent.unitId = note.unitId;
                 offEvent.channelIdx = channelIdx;
                 offEvent.statusByte = 0x80;
-                offEvent.data1 = note.pitch;
+                offEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 offEvent.data2 = 0;
                 offEvent.priority = 0;
                 pendingEvents.push_back(offEvent);

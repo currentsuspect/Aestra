@@ -870,7 +870,7 @@ public:
         {
             auto* pattern = m_patternManager.getPattern(pid);
             if (pattern && pattern->isMidi()) {
-                const double resolvedLength = std::max(16.0, pattern->lengthBeats);
+                const double resolvedLength = std::max(8.0, pattern->lengthBeats);
                 if (std::abs(resolvedLength - pattern->lengthBeats) > 0.001) {
                     m_patternManager.applyPatch(pid, [resolvedLength](PatternSource& p) {
                         p.lengthBeats = resolvedLength;

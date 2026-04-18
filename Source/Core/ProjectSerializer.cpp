@@ -267,6 +267,9 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 nj.set("durationBeats", JSON(note.durationBeats));
                 nj.set("velocity", JSON(static_cast<double>(note.velocity)));
                 nj.set("unitId", JSON(static_cast<double>(note.unitId)));
+                nj.set("pitchOffset", JSON(static_cast<double>(note.pitchOffset)));
+                nj.set("gate", JSON(static_cast<double>(note.gate)));
+                nj.set("slide", JSON(note.slide));
                 notesArray.push(nj);
             }
             pjs.set("notes", notesArray);
@@ -691,6 +694,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         if (notes[n].has("durationBeats")) note.durationBeats = notes[n]["durationBeats"].asNumber();
                         if (notes[n].has("velocity")) note.velocity = static_cast<float>(notes[n]["velocity"].asNumber());
                         if (notes[n].has("unitId")) note.unitId = static_cast<uint64_t>(notes[n]["unitId"].asNumber());
+                        if (notes[n].has("pitchOffset")) note.pitchOffset = static_cast<int8_t>(notes[n]["pitchOffset"].asInt());
+                        if (notes[n].has("gate")) note.gate = static_cast<float>(notes[n]["gate"].asNumber());
+                        if (notes[n].has("slide")) note.slide = notes[n]["slide"].asBool();
                         payload.notes.push_back(note);
                     }
                 }

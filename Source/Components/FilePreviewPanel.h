@@ -19,6 +19,7 @@ public:
     ~FilePreviewPanel() override = default;
 
     void onRender(NUIRenderer& renderer) override;
+    void onUpdate(double deltaTime) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
     // Data input
@@ -53,6 +54,10 @@ private:
     
     // Async control
     std::atomic<uint64_t> currentGeneration_{0};
+    std::string pendingWaveformPath_;
+    size_t pendingWaveformFileSize_ = 0;
+    double pendingWaveformDelay_ = 0.0;
+    bool waveformQueued_ = false;
     
     // Layout
     NUIRect playButtonBounds_;
