@@ -30,6 +30,8 @@ public:
     // Window state
     void show() override;
     void hide() override;
+    bool isVisible() const override { return m_isWindowVisible; }
+    bool isMapped() const override { return m_isWindowMapped; }
     void minimize() override;
     void maximize() override;
     void restore() override;
@@ -82,6 +84,8 @@ private:
     SDL_Window* m_window = nullptr;
     SDL_GLContext m_glContext = nullptr;
     bool m_isFullscreen = false;
+    bool m_isWindowVisible = true;
+    bool m_isWindowMapped = true;
     float m_dpiScale = 1.0f;
     mutable bool m_syntheticShiftForHorizontalWheel = false;
 

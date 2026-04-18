@@ -4,6 +4,7 @@
 #include "NUITypes.h"
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace AestraUI {
 
@@ -41,7 +42,7 @@ private:
     void bakeGlyphs(float fontSize);
 
     bool initialized_;
-    unsigned char* fontBuffer_;
+    std::vector<unsigned char> fontBuffer_;
     std::unordered_map<char, GlyphInfo> glyphs_;
     uint32_t vao_, vbo_;
     float fontSize_;

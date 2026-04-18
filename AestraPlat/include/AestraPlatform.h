@@ -4,6 +4,7 @@
 #include "../../AestraCore/include/AestraConfig.h"
 
 #include <functional>
+#include <memory>
 #include <string>
 
 namespace Aestra {
@@ -180,6 +181,10 @@ public:
     virtual void show() = 0;
     /** @brief Hide the window. */
     virtual void hide() = 0;
+    /** @brief Check whether the native window is currently visible. */
+    virtual bool isVisible() const = 0;
+    /** @brief Check whether the native window is mapped/active for hit-testing. */
+    virtual bool isMapped() const = 0;
     /** @brief Minimize the window. */
     virtual void minimize() = 0;
     /** @brief Maximize the window. */
@@ -330,7 +335,7 @@ public:
     static bool setCurrentThreadPriority(ThreadPriority priority);
 
 private:
-    static IPlatformUtils* s_utils;
+    static std::unique_ptr<IPlatformUtils> s_utils;
 
     // RAII scope for Realtime Audio threads (MMCSS on Windows)
     // Usage: Create this ONLY on the main audio callback thread.

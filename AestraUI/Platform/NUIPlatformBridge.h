@@ -51,6 +51,7 @@ public:
     // Main loop
     bool processEvents();  // Returns false when window should close
     void swapBuffers();
+    bool isWindowInteractive() const;
     
     // Window properties
     void setTitle(const std::string& title);

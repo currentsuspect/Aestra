@@ -30,6 +30,8 @@ public:
 
     void show() override;
     void hide() override;
+    bool isVisible() const override;
+    bool isMapped() const override;
     void minimize() override;
     void maximize() override;
     void restore() override;

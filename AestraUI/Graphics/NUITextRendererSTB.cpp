@@ -11,7 +11,6 @@ namespace AestraUI {
 
 NUITextRendererSTB::NUITextRendererSTB()
     : initialized_(false)
-    , fontBuffer_(nullptr)
     , vao_(0)
     , vbo_(0)
     , fontSize_(16.0f)
@@ -66,10 +65,7 @@ void NUITextRendererSTB::shutdown() {
         vao_ = 0;
     }
 
-    if (fontBuffer_) {
-        delete[] fontBuffer_;
-        fontBuffer_ = nullptr;
-    }
+    fontBuffer_.clear();
 
     initialized_ = false;
 }
@@ -84,8 +80,8 @@ bool NUITextRendererSTB::loadFont(const std::string& fontPath) {
     size_t fileSize = file.tellg();
     file.seekg(0, std::ios::beg);
 
-    fontBuffer_ = new unsigned char[fileSize];
-    file.read(reinterpret_cast<char*>(fontBuffer_), fileSize);
+    fontBuffer_.resize(fileSize);
+    file.read(reinterpret_cast<char*>(fontBuffer_.data()), fileSize);
     file.close();
 
     return true;
@@ -93,7 +89,7 @@ bool NUITextRendererSTB::loadFont(const std::string& fontPath) {
 
 void NUITextRendererSTB::bakeGlyphs(float fontSize) {
     stbtt_fontinfo font;
-    if (!stbtt_InitFont(&font, fontBuffer_, 0)) {
+    if (!stbtt_InitFont(&font, fontBuffer_.data(), 0)) {
         std::cerr << "Failed to initialize STB font" << std::endl;
         return;
     }
