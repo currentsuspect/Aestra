@@ -88,6 +88,8 @@ struct ChannelViewModel {
     double peakHoldTimerR{0.0};              ///< Time since peak hold set (seconds)
     bool clipLatchL{false};                  ///< Left channel clip latch
     bool clipLatchR{false};                  ///< Right channel clip latch
+    bool suppressClipRelatchL{false};        ///< Ignore re-latch until clip drops once
+    bool suppressClipRelatchR{false};        ///< Ignore re-latch until clip drops once
     
     struct SendViewModel {
         uint32_t targetId{0};
@@ -118,6 +120,8 @@ struct ChannelViewModel {
         peakHoldTimerR = 0.0;
         clipLatchL = false;
         clipLatchR = false;
+        suppressClipRelatchL = false;
+        suppressClipRelatchR = false;
     }
 };
 

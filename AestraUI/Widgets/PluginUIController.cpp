@@ -208,6 +208,14 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
     
     rack->setOnSlotBypassToggled([chain](int slot, bool bypassed) {
         chain->setSlotBypassed(slot, bypassed);
+        if (!bypassed) {
+            if (auto plugin = chain->getPlugin(static_cast<size_t>(slot))) {
+                plugin->resetWatchdog();
+                if (!plugin->isActive()) {
+                    plugin->activate();
+                }
+            }
+        }
     });
     
     // NOTE: Do NOT bind setOnSlotRemoveRequested here!

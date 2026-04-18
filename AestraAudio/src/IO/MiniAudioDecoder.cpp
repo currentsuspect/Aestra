@@ -342,5 +342,50 @@ bool decodeAudioFile(const std::string& filePath, std::vector<float>& audioData,
     return ok;
 }
 
+bool decodeAudioPreview(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate,
+                        uint32_t& numChannels, uint64_t maxFrames) {
+#if defined(AESTRA_USE_MINIAUDIO)
+    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 0, 0);
+    ma_decoder decoder;
+#ifdef _WIN32
+    if (ma_decoder_init_file_w(pathStringToWide(filePath).c_str(), &config, &decoder) != MA_SUCCESS)
+        return false;
+#else
+    if (ma_decoder_init_file(filePath.c_str(), &config, &decoder) != MA_SUCCESS)
+        return false;
+#endif
+
+    ma_uint64 totalFrames = 0;
+    if (ma_decoder_get_length_in_pcm_frames(&decoder, &totalFrames) != MA_SUCCESS || totalFrames == 0) {
+        totalFrames = maxFrames;
+    }
+
+    const ma_uint64 framesToRead = std::min<ma_uint64>(totalFrames, std::max<ma_uint64>(1024, maxFrames));
+    audioData.resize(static_cast<size_t>(framesToRead) * decoder.outputChannels);
+
+    ma_uint64 framesRead = 0;
+    if (ma_decoder_read_pcm_frames(&decoder, audioData.data(), framesToRead, &framesRead) != MA_SUCCESS) {
+        ma_decoder_uninit(&decoder);
+        return false;
+    }
+
+    sampleRate = decoder.outputSampleRate;
+    numChannels = decoder.outputChannels;
+    ma_decoder_uninit(&decoder);
+
+    if (framesRead == 0) {
+        audioData.clear();
+        return false;
+    }
+
+    audioData.resize(static_cast<size_t>(framesRead) * numChannels);
+    forceStereo(audioData, numChannels);
+    return true;
+#else
+    (void) maxFrames;
+    return decodeAudioFile(filePath, audioData, sampleRate, numChannels, nullptr);
+#endif
+}
+
 } // namespace Audio
 } // namespace Aestra

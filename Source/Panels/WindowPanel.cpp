@@ -2,12 +2,40 @@
 #include "WindowPanel.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
 #include <cmath>
 
 using namespace Aestra::Audio;
+
+namespace {
+AestraUI::NUICursorStyle cursorStyleForResizeEdges(int edges) {
+    constexpr int kResizeLeft = 1 << 0;
+    constexpr int kResizeRight = 1 << 1;
+    constexpr int kResizeTop = 1 << 2;
+    constexpr int kResizeBottom = 1 << 3;
+    const bool left = (edges & kResizeLeft) != 0;
+    const bool right = (edges & kResizeRight) != 0;
+    const bool top = (edges & kResizeTop) != 0;
+    const bool bottom = (edges & kResizeBottom) != 0;
+
+    if ((left && top) || (right && bottom)) {
+        return AestraUI::NUICursorStyle::ResizeNWSE;
+    }
+    if ((right && top) || (left && bottom)) {
+        return AestraUI::NUICursorStyle::ResizeNESW;
+    }
+    if (left || right) {
+        return AestraUI::NUICursorStyle::ResizeEW;
+    }
+    if (top || bottom) {
+        return AestraUI::NUICursorStyle::ResizeNS;
+    }
+    return AestraUI::NUICursorStyle::Arrow;
+}
+} // namespace
 
 WindowPanel::WindowPanel(const std::string& title)
     : m_title(title)
@@ -238,6 +266,55 @@ void WindowPanel::onResize(int width, int height) {
 bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled()) return false;
 
+    if (m_resizing) {
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
+            m_resizing = false;
+            m_resizeEdges = ResizeNone;
+            if (m_onResizeEnd) m_onResizeEnd();
+            return true;
+        }
+
+        if (event.button == AestraUI::NUIMouseButton::None) {
+            const auto delta = event.position - m_resizeStartPos;
+            AestraUI::NUIRect proposed = m_resizeStartBounds;
+
+            if (m_resizeEdges & ResizeLeft) {
+                proposed.x = m_resizeStartBounds.x + delta.x;
+                proposed.width = m_resizeStartBounds.width - delta.x;
+            }
+            if (m_resizeEdges & ResizeRight) {
+                proposed.width = m_resizeStartBounds.width + delta.x;
+            }
+            if (m_resizeEdges & ResizeTop) {
+                proposed.y = m_resizeStartBounds.y + delta.y;
+                proposed.height = m_resizeStartBounds.height - delta.y;
+            }
+            if (m_resizeEdges & ResizeBottom) {
+                proposed.height = m_resizeStartBounds.height + delta.y;
+            }
+
+            if (proposed.width < m_minPanelWidth) {
+                if (m_resizeEdges & ResizeLeft) {
+                    proposed.x = m_resizeStartBounds.right() - m_minPanelWidth;
+                }
+                proposed.width = m_minPanelWidth;
+            }
+            if (proposed.height < m_minPanelHeight) {
+                if (m_resizeEdges & ResizeTop) {
+                    proposed.y = m_resizeStartBounds.bottom() - m_minPanelHeight;
+                }
+                proposed.height = m_minPanelHeight;
+            }
+
+            if (m_onResizeMove) {
+                m_onResizeMove(proposed);
+            } else {
+                setBounds(proposed);
+            }
+            return true;
+        }
+    }
+
     // Title-bar drag handling (panels can float independently of the playlist layout).
     if (m_draggingTitleBar) {
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
@@ -259,6 +336,19 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     }
 
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+        // Edge/corner resize handling (skip when minimized/maximized).
+        if (!m_minimized && !m_maximized) {
+            const int edges = getResizeEdgesAtPoint(event.position);
+            if (edges != ResizeNone) {
+                m_resizing = true;
+                m_resizeEdges = edges;
+                m_resizeStartPos = event.position;
+                m_resizeStartBounds = getBounds();
+                if (m_onResizeStart) m_onResizeStart();
+                return true;
+            }
+        }
+
         // Double-click the title bar to toggle maximize (excluding buttons).
         bool insideTitle = m_titleBarBounds.contains(event.position);
         
@@ -358,4 +448,33 @@ void WindowPanel::onCloseClicked() {
     if (m_onClose) {
         m_onClose();
     }
+}
+
+void WindowPanel::setMinimumPanelSize(float width, float height) {
+    m_minPanelWidth = std::max(100.0f, width);
+    m_minPanelHeight = std::max(m_titleBarHeight + 40.0f, height);
+}
+
+AestraUI::NUICursorStyle WindowPanel::getResizeCursorStyleForPoint(const AestraUI::NUIPoint& point) const {
+    if (!isVisible() || !isEnabled() || m_minimized || m_maximized) {
+        return AestraUI::NUICursorStyle::Arrow;
+    }
+
+    const int edges = (m_resizing && m_resizeEdges != ResizeNone)
+        ? m_resizeEdges
+        : getResizeEdgesAtPoint(point);
+    return cursorStyleForResizeEdges(edges);
+}
+
+int WindowPanel::getResizeEdgesAtPoint(const AestraUI::NUIPoint& point) const {
+    constexpr float kResizeHit = 7.0f;
+    const auto b = getBounds();
+    if (!b.contains(point)) return ResizeNone;
+
+    int edges = ResizeNone;
+    if (std::abs(point.x - b.x) <= kResizeHit) edges |= ResizeLeft;
+    if (std::abs(point.x - b.right()) <= kResizeHit) edges |= ResizeRight;
+    if (std::abs(point.y - b.y) <= kResizeHit) edges |= ResizeTop;
+    if (std::abs(point.y - b.bottom()) <= kResizeHit) edges |= ResizeBottom;
+    return edges;
 }

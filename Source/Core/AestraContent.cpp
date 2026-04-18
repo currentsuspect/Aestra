@@ -58,6 +58,13 @@ using namespace Aestra;
 using namespace AestraUI;
 using namespace Aestra::Audio;
 
+namespace {
+constexpr float kMinFileBrowserWidth = 186.0f;
+constexpr float kMinPatternBrowserWidth = 96.0f;
+constexpr float kMinTrackAreaWidth = 420.0f;
+constexpr float kResizeHitWidth = 6.0f;
+}
+
 // =============================================================================
 // SECTION: Construction
 // =============================================================================
@@ -75,7 +82,10 @@ AestraContent::~AestraContent() {
                 std::filesystem::remove(file);
                 Log::info("[AestraContent] Deleted temp audition file: " + file);
             }
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            // Log but don't fail cleanup
+            Log::warning("[AestraContent] Failed to delete temp file: " + std::string(e.what()));
+        }
     }
 }
 
@@ -426,6 +436,54 @@ AestraContent::AestraContent() {
         Log::info("Pattern double-clicked: " + std::to_string(patternId.value));
         openPatternInPianoRoll(patternId);
     });
+    m_patternBrowser->setOnPatternPreviewRequested([this](PatternID patternId) {
+        startPatternClipPreview(patternId);
+    });
+    m_patternBrowser->setOnPatternPlaceOnTimelineRequested([this](PatternID patternId) {
+        if (!m_trackManagerUI || !patternId.isValid()) {
+            return;
+        }
+        if (!m_trackManagerUI->placePatternOnTimeline(patternId)) {
+            Log::warning("[AestraContent] Failed to place pattern from bin onto timeline.");
+        }
+    });
+    m_patternBrowser->setOnClipPreviewRequested([this](const std::string& filePath) {
+        if (filePath.empty()) {
+            return;
+        }
+        if (!m_auditionEngine) {
+            m_auditionEngine = std::make_shared<Audio::AuditionEngine>();
+            if (m_audioEngine) {
+                m_audioEngine->setAuditionEngine(m_auditionEngine.get());
+                m_auditionEngine->setSampleRate(static_cast<double>(m_audioEngine->getSampleRate()));
+            }
+        }
+        if (!m_auditionEngine) {
+            return;
+        }
+        m_auditionEngine->addToQueue(filePath);
+        const size_t newIndex = m_auditionEngine->getQueue().empty() ? 0 : (m_auditionEngine->getQueue().size() - 1);
+        m_auditionEngine->jumpToTrack(newIndex);
+        m_auditionEngine->play();
+    });
+    m_patternBrowser->setOnClipPlaceOnTimelineRequested([this](const std::string& filePath, const std::string& displayName) {
+        if (!m_trackManagerUI || filePath.empty()) {
+            return;
+        }
+        if (!m_trackManagerUI->placeFileOnTimeline(filePath, displayName)) {
+            Log::warning("[AestraContent] Failed to place clip from bin onto timeline.");
+        }
+    });
+    m_patternBrowser->setOnClipShowInFileBrowserRequested([this](const std::string& filePath) {
+        if (!m_fileBrowser || filePath.empty()) {
+            return;
+        }
+        setBrowserVisible(true);
+        if (m_browserToggle) {
+            m_browserToggle->setSelectedIndex(0);
+        }
+        m_fileBrowser->selectFile(filePath);
+    });
     m_workspaceLayer->addChild(m_patternBrowser);
 
     // Create panels (add to overlay)
@@ -438,6 +496,13 @@ AestraContent::AestraContent() {
     m_mixerPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::Mixer, pos); });
     m_mixerPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::Mixer, pos); });
     m_mixerPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::Mixer); });
+    m_mixerPanel->setMinimumPanelSize(560.0f, 300.0f);
+    m_mixerPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
+        const auto allowed = computeAllowedRectForPanels();
+        m_viewState.mixerRect = clampRectToAllowed(proposed, allowed);
+        if (m_mixerPanel) m_mixerPanel->setBounds(m_viewState.mixerRect);
+        setDirty(true);
+    });
     m_overlayLayer->addChild(m_mixerPanel);
 
     m_pianoRollPanel = std::make_shared<PianoRollPanel>(m_trackManager);
@@ -471,6 +536,13 @@ AestraContent::AestraContent() {
     m_pianoRollPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::PianoRoll, pos); });
     m_pianoRollPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::PianoRoll, pos); });
     m_pianoRollPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::PianoRoll); });
+    m_pianoRollPanel->setMinimumPanelSize(560.0f, 280.0f);
+    m_pianoRollPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
+        const auto allowed = computeAllowedRectForPanels();
+        m_viewState.pianoRollRect = clampRectToAllowed(proposed, allowed);
+        if (m_pianoRollPanel) m_pianoRollPanel->setBounds(m_viewState.pianoRollRect);
+        setDirty(true);
+    });
     m_overlayLayer->addChild(m_pianoRollPanel);
     
     // Wire PatternManager to UnitManager and PlaylistModel for pattern cloning
@@ -513,6 +585,13 @@ AestraContent::AestraContent() {
     });
     m_sampleEditorPanel->setOnDragEnd([this]() {
         m_sampleEditorDragging = false;
+    });
+    m_sampleEditorPanel->setMinimumPanelSize(480.0f, 320.0f);
+    m_sampleEditorPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
+        const auto allowed = computeAllowedRectForPanels();
+        m_sampleEditorRect = clampRectToAllowed(proposed, allowed);
+        if (m_sampleEditorPanel) m_sampleEditorPanel->setBounds(m_sampleEditorRect);
+        setDirty(true);
     });
     m_sampleEditorPanel->onADSRChanged = [this](const SampleEditorPanel::ADSRParams& adsr) {
         if (!m_trackManager || !m_sampleEditorUnitId) {
@@ -729,6 +808,13 @@ AestraContent::AestraContent() {
     m_sequencerPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::Sequencer, pos); });
     m_sequencerPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::Sequencer, pos); });
     m_sequencerPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::Sequencer); });
+    m_sequencerPanel->setMinimumPanelSize(520.0f, 260.0f);
+    m_sequencerPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
+        const auto allowed = computeAllowedRectForPanels();
+        m_viewState.sequencerRect = clampRectToAllowed(proposed, allowed);
+        if (m_sequencerPanel) m_sequencerPanel->setBounds(m_viewState.sequencerRect);
+        setDirty(true);
+    });
     m_overlayLayer->addChild(m_sequencerPanel);
 
     // Create History panel
@@ -738,6 +824,13 @@ AestraContent::AestraContent() {
     m_historyPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::History, pos); });
     m_historyPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::History, pos); });
     m_historyPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::History); });
+    m_historyPanel->setMinimumPanelSize(240.0f, 220.0f);
+    m_historyPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
+        const auto allowed = computeAllowedRectForPanels();
+        m_viewState.historyRect = clampRectToAllowed(proposed, allowed);
+        if (m_historyPanel) m_historyPanel->setBounds(m_viewState.historyRect);
+        setDirty(true);
+    });
     m_historyPanel->setMaximized(false);
     m_historyPanel->setOnMaximizeToggle([this](bool) {
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
@@ -945,9 +1038,46 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect contentArea(bounds.x, bounds.y + transportHeight,
                                  width, height - transportHeight);
     renderer.fillRect(contentArea, themeManager.getColor("backgroundPrimary"));
-    renderer.strokeRect(contentArea, 1, themeManager.getColor("border"));
+    const auto contentBorder = themeManager.getColor("border");
+    renderer.drawLine({contentArea.x, contentArea.y}, {contentArea.x, contentArea.bottom()}, 1.0f, contentBorder);
+    renderer.drawLine({contentArea.right(), contentArea.y}, {contentArea.right(), contentArea.bottom()}, 1.0f, contentBorder);
+    renderer.drawLine({contentArea.x, contentArea.bottom()}, {contentArea.right(), contentArea.bottom()}, 1.0f, contentBorder);
 
     renderChildren(renderer);
+
+    // Resize affordance rails for docked browser dividers.
+    const auto drawDividerRail = [&renderer, &themeManager](const auto& component) {
+        if (!component || !component->isVisible()) {
+            return;
+        }
+        const auto edge = component->getGlobalBounds();
+        const float x = std::round(edge.right()) + 0.5f;
+        const float y0 = edge.y + 3.0f;
+        const float y1 = edge.bottom() - 3.0f;
+        if (y1 <= y0) {
+            return;
+        }
+
+        const auto base = themeManager.getColor("border").withAlpha(0.95f);
+        const auto accent = themeManager.getColor("primary").withAlpha(0.36f);
+        renderer.drawLine({x, y0}, {x, y1}, 1.0f, base);
+        renderer.drawLine({x + 1.0f, y0 + 8.0f}, {x + 1.0f, y1 - 8.0f}, 1.0f, accent);
+
+        const float cy = (y0 + y1) * 0.5f;
+        for (int i = -1; i <= 1; ++i) {
+            const float gy = cy + static_cast<float>(i) * 7.0f;
+            renderer.drawLine({x - 2.0f, gy}, {x + 2.0f, gy}, 1.0f, accent.withAlpha(0.8f));
+        }
+    };
+
+    if (m_fileBrowser && m_fileBrowser->isVisible()) {
+        drawDividerRail(m_fileBrowser);
+    } else if (m_pluginBrowser && m_pluginBrowser->isVisible()) {
+        drawDividerRail(m_pluginBrowser);
+    }
+    if (m_patternBrowser && m_patternBrowser->isVisible()) {
+        drawDividerRail(m_patternBrowser);
+    }
 }
 
 void AestraContent::onResize(int width, int height) {
@@ -1004,29 +1134,49 @@ void AestraContent::onResize(int width, int height) {
             labelX, labelY, 150.0f, 30.0f));
     }
 
-    const float minFileBrowserWidth = 186.0f;
-    const float maxFileBrowserWidth = std::max(minFileBrowserWidth, std::min(layout.fileBrowserWidth * 0.82f, 248.0f));
-    const float computedFileBrowserWidth = std::clamp(width * 0.145f, minFileBrowserWidth, maxFileBrowserWidth);
+    const float maxFileBrowserWidth = std::max(kMinFileBrowserWidth, std::min(layout.fileBrowserWidth * 0.82f, 320.0f));
+    const float computedFileBrowserWidth = std::clamp(width * 0.145f, kMinFileBrowserWidth, maxFileBrowserWidth);
+    if (m_fileBrowserWidthPref <= 0.0f) {
+        m_fileBrowserWidthPref = computedFileBrowserWidth;
+    }
+
+    const bool compactPatternDock = m_patternBrowser && m_patternBrowser->usesCompactRail();
+    const float expandedPatternWidth = std::clamp(width * 0.11f, 152.0f, 208.0f);
+    const float compactPatternWidth = std::clamp(width * 0.070f, kMinPatternBrowserWidth, 124.0f);
+    const float computedPatternBrowserWidth = compactPatternDock ? compactPatternWidth : expandedPatternWidth;
+    if (m_patternBrowserWidthPref <= 0.0f) {
+        m_patternBrowserWidthPref = computedPatternBrowserWidth;
+    }
+
+    const bool patternRailVisible = m_patternBrowser && m_patternBrowser->isVisible();
+    const float minPatternWidth = patternRailVisible ? kMinPatternBrowserWidth : 0.0f;
+    const float maxPatternWidth = patternRailVisible ? std::max(minPatternWidth, std::min(width * 0.24f, 280.0f)) : 0.0f;
+    const float maxFileByTrack = std::max(kMinFileBrowserWidth, width - kMinTrackAreaWidth - minPatternWidth);
+    const float fileBrowserWidth = std::clamp(m_fileBrowserWidthPref, kMinFileBrowserWidth, std::min(maxFileBrowserWidth, maxFileByTrack));
+    const float maxPatternByTrack = std::max(minPatternWidth, width - kMinTrackAreaWidth - fileBrowserWidth);
+    const float patternBrowserWidth = patternRailVisible
+        ? std::clamp(m_patternBrowserWidthPref, minPatternWidth, std::min(maxPatternWidth, maxPatternByTrack))
+        : 0.0f;
+
+    m_fileBrowserWidthPref = fileBrowserWidth;
+    if (patternRailVisible) {
+        m_patternBrowserWidthPref = patternBrowserWidth;
+    }
+
     const bool filesTabActive = !m_browserToggle || m_browserToggle->getSelectedIndex() == 0;
     const bool showPreviewDock = m_previewPanel && filesTabActive && m_fileBrowser && m_fileBrowser->isVisible() && m_previewPanel->hasFileSelection();
     if (m_previewPanel) {
         m_previewPanel->setVisible(showPreviewDock);
     }
-
-    float fileBrowserWidth = 0;
-    float patternBrowserWidth = 0;
     
     if (m_browserToggle) {
         // Toggle bar above browser
         float toggleHeight = 24.0f; // Compact toggle
         float toggleY = sidebarTopY + 4.0f;
-        float browserWidth = computedFileBrowserWidth;
-        
-        m_browserToggle->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, toggleY, browserWidth, toggleHeight));
+        m_browserToggle->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, toggleY, fileBrowserWidth, toggleHeight));
     }
 
     if (m_fileBrowser) {
-        fileBrowserWidth = computedFileBrowserWidth;
         float toggleHeight = 24.0f; // Matching above
         float fbTop = sidebarTopY + 4.0f + toggleHeight + 4.0f;
         float fbHeight = height - fbTop;
@@ -1048,22 +1198,10 @@ void AestraContent::onResize(int width, int height) {
         float toggleHeight = 24.0f;
         float pbTop = sidebarTopY + 4.0f + toggleHeight + 4.0f;
         float pbHeight = height - pbTop;
-        // recalculate width locally just in case
-        float pbWidth = computedFileBrowserWidth;
-        
-        m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, pbTop, pbWidth, pbHeight));
-    }
-    
-    // Ensure fileBrowserWidth is consistent even if m_fileBrowser is mysteriously absent (unlikely but safe)
-    if (fileBrowserWidth <= 0.1f) {
-        fileBrowserWidth = computedFileBrowserWidth;
+        m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, pbTop, fileBrowserWidth, pbHeight));
     }
     
     if (m_patternBrowser) {
-        const bool compactPatternDock = m_patternBrowser->usesCompactRail();
-        const float expandedWidth = std::clamp(width * 0.11f, 152.0f, 208.0f);
-        const float compactWidth = std::clamp(width * 0.070f, 96.0f, 124.0f);
-        patternBrowserWidth = compactPatternDock ? compactWidth : expandedWidth;
         float patternBrowserX = fileBrowserWidth;
         
         float pbY = isAuditionMode ? 0.0f : transportHeight;
@@ -1186,6 +1324,41 @@ void AestraContent::onResize(int width, int height) {
     AestraUI::NUIComponent::onResize(width, height);
 }
 
+bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
+    if (!isVisible() || !isEnabled()) {
+        return false;
+    }
+
+    if (m_browserResizing) {
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
+            m_browserResizing = false;
+            m_browserResizeTarget = BrowserResizeTarget::None;
+            return true;
+        }
+
+        if (event.button == AestraUI::NUIMouseButton::None) {
+            updateBrowserResizeDrag(event.position);
+            return true;
+        }
+
+        return true;
+    }
+
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+        const BrowserResizeTarget target = hitTestBrowserResizeTarget(event.position);
+        if (target != BrowserResizeTarget::None) {
+            m_browserResizing = true;
+            m_browserResizeTarget = target;
+            m_browserResizeStartX = event.position.x;
+            m_browserResizeStartFileWidth = std::max(kMinFileBrowserWidth, m_fileBrowserWidthPref);
+            m_browserResizeStartPatternWidth = std::max(kMinPatternBrowserWidth, m_patternBrowserWidthPref);
+            return true;
+        }
+    }
+
+    return AestraUI::NUIComponent::onMouseEvent(event);
+}
+
 // =============================================================================
 // SECTION: View Management
 // =============================================================================
@@ -1295,6 +1468,9 @@ void AestraContent::syncViewState() {
 // =============================================================================
 
 float AestraContent::getBrowserWidth() const {
+    if (m_fileBrowserWidthPref > 0.0f) {
+        return m_fileBrowserWidthPref;
+    }
     if (m_fileBrowser) {
         return m_fileBrowser->getBounds().width;
     }
@@ -1302,11 +1478,8 @@ float AestraContent::getBrowserWidth() const {
 }
 
 void AestraContent::setBrowserWidth(float width) {
-    if (m_fileBrowser && width > 0.0f) {
-        auto bounds = m_fileBrowser->getBounds();
-        bounds.width = width;
-        m_fileBrowser->setBounds(bounds);
-        // Trigger relayout to adjust other components
+    if (width > 0.0f) {
+        m_fileBrowserWidthPref = width;
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     }
 }
@@ -1482,6 +1655,19 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 m_auditionPanel->setOnPlayRequest([this]() {
                      stopSoundPreview();
                 });
+                m_auditionPanel->setOnActiveTrackPathChanged([this](const std::string& path) {
+                    if (m_fileBrowser) {
+                        m_fileBrowser->setActivePlaybackPath(path);
+                    }
+                });
+                if (m_fileBrowser) {
+                    std::string activePath;
+                    if (m_auditionEngine && m_auditionEngine->isPlaying()) {
+                        auto current = m_auditionEngine->getCurrentItem();
+                        if (current) activePath = current->filePath;
+                    }
+                    m_fileBrowser->setActivePlaybackPath(activePath);
+                }
                 // Fix Z-Order: Add to workspace layer (below overlay/transport), not root
                 if (m_workspaceLayer) {
                      m_workspaceLayer->addChild(m_auditionPanel);
@@ -1574,18 +1760,12 @@ void AestraContent::setArsenalPanelVisible(bool visible) {
             m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, allowed);
         }
 
-        if (!wasVisible) {
-            m_sequencerPanel->setOpacity(0.0f);
-        }
-
         m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, computeAllowedRectForPanels());
         m_sequencerPanel->setVisible(true);
-        m_sequencerPanel->setOpacity(1.0f);
         m_sequencerPanel->refreshUnits();
         m_sequencerPanel->setBounds(m_viewState.sequencerRect);
     } else {
         m_sequencerPanel->setVisible(false);
-        m_sequencerPanel->setOpacity(1.0f);
     }
 
     m_viewState.sequencerOpen = visible;
@@ -1688,6 +1868,74 @@ AestraUI::NUIRect AestraContent::clampRectToAllowed(AestraUI::NUIRect panel, con
     y = std::clamp(y, allowed.y, std::max(allowed.y, allowed.bottom() - h));
 
     return AestraUI::NUIRect(x, y, w, h);
+}
+
+AestraContent::BrowserResizeTarget AestraContent::hitTestBrowserResizeTarget(const AestraUI::NUIPoint& mouseScreen) const {
+    const auto isNearRightEdge = [&mouseScreen](const auto& component) {
+        if (!component || !component->isVisible()) {
+            return false;
+        }
+        const auto global = component->getGlobalBounds();
+        if (mouseScreen.y < global.y || mouseScreen.y > global.bottom()) {
+            return false;
+        }
+        return std::abs(mouseScreen.x - global.right()) <= kResizeHitWidth;
+    };
+
+    if (isNearRightEdge(m_patternBrowser)) {
+        return BrowserResizeTarget::PatternRail;
+    }
+    if (isNearRightEdge(m_fileBrowser) || isNearRightEdge(m_pluginBrowser) || isNearRightEdge(m_previewPanel)) {
+        return BrowserResizeTarget::FileRail;
+    }
+    return BrowserResizeTarget::None;
+}
+
+void AestraContent::updateBrowserResizeDrag(const AestraUI::NUIPoint& mouseScreen) {
+    const float deltaX = mouseScreen.x - m_browserResizeStartX;
+
+    if (m_browserResizeTarget == BrowserResizeTarget::FileRail) {
+        m_fileBrowserWidthPref = std::max(kMinFileBrowserWidth, m_browserResizeStartFileWidth + deltaX);
+    } else if (m_browserResizeTarget == BrowserResizeTarget::PatternRail) {
+        m_patternBrowserWidthPref = std::max(kMinPatternBrowserWidth, m_browserResizeStartPatternWidth + deltaX);
+    }
+
+    onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+    setDirty(true);
+}
+
+AestraUI::NUICursorStyle AestraContent::getPanelResizeCursorStyle(const AestraUI::NUIPoint& mouseScreen) const {
+    if (m_browserResizing && m_browserResizeTarget != BrowserResizeTarget::None) {
+        return AestraUI::NUICursorStyle::ResizeEW;
+    }
+
+    const auto resolveStyle = [&mouseScreen](const auto& panel) {
+        if (!panel || !panel->isVisible()) {
+            return AestraUI::NUICursorStyle::Arrow;
+        }
+        return panel->getResizeCursorStyleForPoint(mouseScreen);
+    };
+
+    const auto historyStyle = resolveStyle(m_historyPanel);
+    if (historyStyle != AestraUI::NUICursorStyle::Arrow) return historyStyle;
+
+    const auto sequencerStyle = resolveStyle(m_sequencerPanel);
+    if (sequencerStyle != AestraUI::NUICursorStyle::Arrow) return sequencerStyle;
+
+    const auto sampleStyle = resolveStyle(m_sampleEditorPanel);
+    if (sampleStyle != AestraUI::NUICursorStyle::Arrow) return sampleStyle;
+
+    const auto pianoStyle = resolveStyle(m_pianoRollPanel);
+    if (pianoStyle != AestraUI::NUICursorStyle::Arrow) return pianoStyle;
+
+    const auto mixerStyle = resolveStyle(m_mixerPanel);
+    if (mixerStyle != AestraUI::NUICursorStyle::Arrow) return mixerStyle;
+
+    if (hitTestBrowserResizeTarget(mouseScreen) != BrowserResizeTarget::None) {
+        return AestraUI::NUICursorStyle::ResizeEW;
+    }
+
+    return AestraUI::NUICursorStyle::Arrow;
 }
 
 // =============================================================================
@@ -2372,6 +2620,7 @@ void AestraContent::playSoundPreview(const AestraUI::FileItem& file) {
         m_previewIsPlaying = true;
         m_previewStartTime = std::chrono::steady_clock::now();
         m_currentPreviewFile = file.path;
+        if (m_fileBrowser) m_fileBrowser->setActivePlaybackPath(file.path);
         
         if (result == PreviewResult::Success) {
             Log::info("Sound preview started (cache hit)");
@@ -2399,6 +2648,9 @@ void AestraContent::stopSoundPreview() {
         m_previewEngine->stop();
     }
     m_previewIsPlaying = false;
+    if (m_fileBrowser && (!m_auditionEngine || !m_auditionEngine->isPlaying())) {
+        m_fileBrowser->setActivePlaybackPath("");
+    }
     Log::info("Sound preview stopped (file path preserved)");
 }
 
@@ -2652,6 +2904,7 @@ void AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
 
     // 4. Create new Unit with the plugin name and attach plugin for audio processing
     UnitID newUnit = unitManager.createUnit(unitName, UnitGroup::Synth);
+    unitManager.clearUnitTimelineLane(newUnit);
     unitManager.setUnitEnabled(newUnit, true);
     unitManager.attachPlugin(newUnit, pluginId, instance);
     unitManager.captureUnitPluginState(newUnit);
@@ -2691,6 +2944,7 @@ void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::stri
 
     unitManager.setUnitName(unitId, unitName);
     unitManager.setUnitGroup(unitId, UnitGroup::Synth);
+    unitManager.clearUnitTimelineLane(unitId);
     unitManager.setUnitEnabled(unitId, true);
     unitManager.attachPlugin(unitId, pluginId, instance);
     unitManager.captureUnitPluginState(unitId);

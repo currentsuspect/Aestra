@@ -64,6 +64,8 @@ public:
     void setLoopEnabled(bool enabled) noexcept;
     void setMaxVoices(int maxVoices) noexcept;
     void setRootMidiNote(int note) noexcept;
+    void setMonoMode(bool mono) noexcept;
+    void setGlideTimeMs(float glideTimeMs) noexcept;
     bool normalizeSample(float targetPeak = 0.95f);
     bool reverseSample();
 
@@ -74,6 +76,8 @@ public:
     bool isLoopEnabled() const noexcept { return m_loopEnabled.load(std::memory_order_relaxed); }
     int getMaxVoices() const noexcept { return m_maxVoices.load(std::memory_order_relaxed); }
     int getRootMidiNote() const noexcept { return m_rootMidiNote.load(std::memory_order_relaxed); }
+    bool isMonoMode() const noexcept { return m_monoMode.load(std::memory_order_relaxed); }
+    float getGlideTimeMs() const noexcept { return m_glideTimeMs.load(std::memory_order_relaxed); }
     float getAttack() const noexcept { return m_params[kParamAttack].load(std::memory_order_relaxed); }
     float getDecay() const noexcept { return m_params[kParamDecay].load(std::memory_order_relaxed); }
     float getSustain() const noexcept { return m_params[kParamSustain].load(std::memory_order_relaxed); }
@@ -108,6 +112,8 @@ private:
     std::atomic<bool> m_loopEnabled{false}; // one-shot default
     std::atomic<int> m_maxVoices{16};
     std::atomic<int> m_rootMidiNote{60}; // C3 default
+    std::atomic<bool> m_monoMode{false};
+    std::atomic<float> m_glideTimeMs{80.0f};
 
     // Voice Architecture
     enum class EnvStage { Attack, Decay, Sustain, Release, Off };
@@ -118,6 +124,8 @@ private:
         float velocity = 0.0f;
         double position = 0.0; // Sample index
         double playbackRate = 1.0; // sample index increment/frame
+        double targetPlaybackRate = 1.0;
+        bool glideActive = false;
         EnvStage stage = EnvStage::Off;
         double stageTime = 0.0; // Seconds in current stage
         float currentGain = 0.0f;

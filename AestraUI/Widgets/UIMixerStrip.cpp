@@ -8,6 +8,7 @@
 #include "ChannelSlotMap.h"
 #include "MeterSnapshot.h"
 #include "Plugin/AestraComp.h"
+#include "../../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
 #include <cmath>
@@ -318,22 +319,6 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
     m_meter = std::make_shared<UIMixerMeter>();
     m_meter->setShowCorrelation(true);
-    m_meter->onClipCleared = [this]() {
-        if (!m_viewModel) return;
-        auto* channel = m_viewModel->getChannelById(m_channelId);
-        if (channel) {
-            channel->clipLatchL = false;
-            channel->clipLatchR = false;
-            // Also inform audio thread? The latch is arguably UI-side, 
-            // but if MeterSnapshot has clip bit set, it will re-latch next frame.
-            // For now, clearing UI latch logic is enough as snapshot only sends 'current' clip frame 
-            // OR we need to clear snapshot "sticky" bit if it exists.
-            // Analysis of MeterSnapshot.h shows it sends 'current' clip flags (CLIP_L, CLIP_R).
-            // Logic in MixerViewModel accumulates it into clipLatch.
-            // So simply setting channel->clipLatch = false here works, as long as audio isn't *currently* clipping.
-            invalidateStaticCache();
-        }
-    };
     addChild(m_meter);
 
     m_fader = std::make_shared<UIMixerFader>();
@@ -367,6 +352,8 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         if (m_meterSnapshots) {
             m_meterSnapshots->clearClip(channel->slotIndex);
         }
+        m_meter->setClipLatch(false, false);
+        invalidateStaticCache();
     };
 
     // Hide strip buttons for master (keeps it visually distinct and avoids non-sense M/S/R).
@@ -753,6 +740,41 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
 
 bool UIMixerStrip::onMouseEvent(const NUIMouseEvent& event)
 {
+    if (m_meter && m_viewModel && event.pressed &&
+        (event.button == NUIMouseButton::Left || event.button == NUIMouseButton::Right) &&
+        getBounds().contains(event.position)) {
+        const auto stripBounds = getBounds();
+        const auto meterBounds = m_meter->getBounds();
+        auto* channel = m_viewModel->getChannelById(m_channelId);
+        std::ostringstream hitLog;
+        hitLog << "[MixerClipHit] channel=" << m_channelId
+               << " button=" << static_cast<int>(event.button)
+               << " click=(" << event.position.x << "," << event.position.y << ")"
+               << " strip=(" << stripBounds.x << "," << stripBounds.y << ","
+               << stripBounds.width << "," << stripBounds.height << ")"
+               << " meter=(" << meterBounds.x << "," << meterBounds.y << ","
+               << meterBounds.width << "," << meterBounds.height << ")"
+               << " inMeter=" << (meterBounds.contains(event.position) ? 1 : 0)
+               << " latchL=" << (channel ? (channel->clipLatchL ? 1 : 0) : -1)
+               << " latchR=" << (channel ? (channel->clipLatchR ? 1 : 0) : -1);
+        AESTRA_LOG_INFO(hitLog.str());
+    }
+
+    if (m_meter && m_viewModel && event.pressed &&
+        (event.button == NUIMouseButton::Left || event.button == NUIMouseButton::Right) &&
+        m_meter->getBounds().contains(event.position)) {
+        auto* channel = m_viewModel->getChannelById(m_channelId);
+        if (channel && (channel->clipLatchL || channel->clipLatchR)) {
+            m_viewModel->clearClipLatch(channel->id);
+            if (m_meterSnapshots) {
+                m_meterSnapshots->clearClip(channel->slotIndex);
+            }
+            m_meter->setClipLatch(false, false);
+            invalidateStaticCache();
+        }
+        return true;
+    }
+
     bool handledSelection = false;
     if (m_viewModel && event.pressed && event.button == NUIMouseButton::Left) {
         if (getBounds().contains(event.position)) {

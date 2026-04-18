@@ -539,10 +539,13 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
         m_rmsR.store(0.0f, std::memory_order_relaxed);
         auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
         if (snaps) {
-            snaps->writePeak(ChannelSlotMap::MASTER_SLOT_INDEX, 0.0f, 0.0f);
+            snaps->writeLevels(ChannelSlotMap::MASTER_SLOT_INDEX,
+                               0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -144.0f);
+            snaps->clearClip(ChannelSlotMap::MASTER_SLOT_INDEX);
             // Also clears all track slots so they don't freeze
             for (uint32_t i = 0; i < ChannelSlotMap::MAX_CHANNEL_SLOTS; ++i) {
-                snaps->writePeak(i, 0.0f, 0.0f);
+                snaps->writeLevels(i, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -144.0f);
+                snaps->writeSidechainPeak(i, 0.0f);
             }
         }
         m_telemetry.incrementBlocksProcessed();
@@ -1727,7 +1730,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         if (!processActive) {
             auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
             if (snaps && slot != ChannelSlotMap::INVALID_SLOT) {
-                snaps->writePeak(slot, 0.0f, 0.0f);
+                snaps->writeLevels(slot, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -144.0f);
                 snaps->writeSidechainPeak(slot, 0.0f);
             }
             continue;

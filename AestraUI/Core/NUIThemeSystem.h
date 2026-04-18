@@ -199,7 +199,7 @@ struct NUIThemeProperties {
     struct LayoutDimensions {
         // Panel widths
         float fileBrowserWidth = 300.0f;
-        float trackControlsWidth = 200.0f;
+        float trackControlsWidth = 236.0f;
         float timelineAreaWidth = 800.0f;
 
         // Track heights and spacing

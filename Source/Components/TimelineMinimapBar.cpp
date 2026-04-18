@@ -152,17 +152,17 @@ void TimelineMinimapBar::endDrag_()
 void TimelineMinimapBar::cacheThemeColors_()
 {
     auto& theme = NUIThemeManager::getInstance();
-    colors_.glassFill = theme.getColor("surfaceTertiary").withAlpha(0.12f);
-    colors_.glassBorder = theme.getColor("borderSubtle").withAlpha(0.50f);
-    colors_.cornerSeparator = theme.getColor("border").withAlpha(0.50f);
+    colors_.glassFill = theme.getColor("surfaceRaised").darkened(0.06f).withAlpha(0.98f);
+    colors_.glassBorder = theme.getColor("border").withAlpha(0.28f);
+    colors_.cornerSeparator = theme.getColor("border").withAlpha(0.28f);
 
     colors_.audioTint = theme.getColor("accentAmber");
     colors_.midiTint = theme.getColor("accentCyan");
     colors_.automationTint = theme.getColor("accentPrimary");
     colors_.baseline = theme.getColor("textSecondary").withAlpha(0.10f);
 
-    colors_.viewFill = theme.getColor("textPrimary").withAlpha(0.05f);
-    colors_.viewOutline = theme.getColor("textPrimary").withAlpha(0.28f);
+    colors_.viewFill = theme.getColor("accentPrimary").withAlpha(0.035f);
+    colors_.viewOutline = theme.getColor("accentPrimary").withAlpha(0.62f);
     colors_.selectionFill = theme.getColor("accentCyan").withAlpha(0.10f);
     colors_.loopFill = theme.getColor("accentPrimary").withAlpha(0.08f);
 
@@ -313,32 +313,28 @@ void TimelineMinimapBar::onRender(NUIRenderer& renderer)
 
             if (dragKind_ != DragKind::None || !showModeToggles_) {
                 const NUIColor active = NUIThemeManager::getInstance().getColor("borderActive").withAlpha(0.85f);
-                renderer.strokeRect(vr, 1.0f, active);
+                renderer.strokeRoundedRect(vr, 5.0f, 1.0f, active);
             }
 
             const bool leftHot = (hoverOnResizeEdge_ && hoverResizeEdge_ == TimelineMinimapResizeEdge::Left) ||
                                  (dragKind_ == DragKind::ResizeLeft);
             const bool rightHot = (hoverOnResizeEdge_ && hoverResizeEdge_ == TimelineMinimapResizeEdge::Right) ||
                                   (dragKind_ == DragKind::ResizeRight);
-            if (leftHot || rightHot || !showModeToggles_) {
-                // White, premium resize handle
-                const NUIColor handleColor = NUIColor(1.0f, 1.0f, 1.0f, 0.95f);
-                const NUIColor glowColor = NUIColor(1.0f, 1.0f, 1.0f, 0.4f);
-                
-                constexpr float hw = 2.0f; // Thinner (was 4.0f)
-                const float hy = vr.y + 2.0f;
-                const float hh = std::max(0.0f, vr.height - 4.0f);
-                
-                if (leftHot || !showModeToggles_) {
-                    NUIRect r(vr.x, hy, hw, hh);
-                    // Add subtle glow/shadow for depth
-                    renderer.fillRoundedRect(NUIRect(r.x - 1.0f, r.y - 1.0f, r.width + 2.0f, r.height + 2.0f), 2.0f, glowColor);
-                    renderer.fillRoundedRect(r, 1.0f, handleColor);
+            if (leftHot || rightHot || !showModeToggles_ || model_.view.isValid()) {
+                const NUIColor handleFill = NUIColor::white().withAlpha(0.30f);
+                const NUIColor handleStroke = colors_.viewOutline.withAlpha(0.95f);
+                constexpr float handleW = 8.0f;
+                const float handleH = std::max(8.0f, vr.height - 8.0f);
+
+                if (leftHot || !showModeToggles_ || model_.view.isValid()) {
+                    NUIRect r(vr.x + 2.0f, vr.y + 4.0f, handleW, handleH);
+                    renderer.fillRoundedRect(r, 3.0f, handleFill);
+                    renderer.strokeRoundedRect(r, 3.0f, 1.0f, handleStroke);
                 }
-                if (rightHot || !showModeToggles_) {
-                    NUIRect r(vr.right() - hw, hy, hw, hh);
-                    renderer.fillRoundedRect(NUIRect(r.x - 1.0f, r.y - 1.0f, r.width + 2.0f, r.height + 2.0f), 2.0f, glowColor);
-                    renderer.fillRoundedRect(r, 1.0f, handleColor);
+                if (rightHot || !showModeToggles_ || model_.view.isValid()) {
+                    NUIRect r(vr.right() - handleW - 2.0f, vr.y + 4.0f, handleW, handleH);
+                    renderer.fillRoundedRect(r, 3.0f, handleFill);
+                    renderer.strokeRoundedRect(r, 3.0f, 1.0f, handleStroke);
                 }
             }
         }

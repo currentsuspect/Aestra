@@ -136,7 +136,7 @@ void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f); // Semi-glass
     AestraUI::NUIColor borderColor = themeManager.getColor("glassBorder");
     AestraUI::NUIColor accentColor = themeManager.getColor("accentPrimary"); // Aestra Purple
-    AestraUI::NUIColor textPrimary = themeManager.getColor("textPrimary");
+    AestraUI::NUIColor textPrimary = themeManager.getColor("textPrimary").withAlpha(0.95f);
     AestraUI::NUIColor textSecondary = themeManager.getColor("textSecondary");
     
     const float radius = themeManager.getRadius("m");
@@ -346,9 +346,7 @@ void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     renderer.strokeRoundedRect(bounds, radius, 1.0f, themeManager.getColor("glassBorder"));
     
     // CRITICAL: Green when playing, white when stopped
-    AestraUI::NUIColor textColor = m_isPlaying 
-        ? themeManager.getColor("accentPrimary") 	// Vibrant purple when playing
-        : themeManager.getColor("textPrimary"); 	 	// White when stopped
+    AestraUI::NUIColor textColor = themeManager.getColor("textPrimary").withAlpha(0.95f);
     
     float fontSize = themeManager.getFontSize("m");
     std::string timeText = formatTime(m_currentTime);

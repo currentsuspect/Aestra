@@ -113,7 +113,7 @@ private:
             if (!filename.empty()) {
                 return filename;
             }
-        } catch (...) {
+        } catch (const std::filesystem::filesystem_error&) {
         }
         return filePath;
     }

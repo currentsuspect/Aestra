@@ -78,7 +78,7 @@ SavedAudioSelection loadSavedAudioSelection() {
             } else if (key == "input_device") {
                 selection.inputDeviceId = std::stoi(value);
             }
-        } catch (...) {
+        } catch (const std::exception&) {
         }
     }
 

@@ -5,6 +5,7 @@
 #include "NUIButton.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraCore/include/AestraLog.h"
+#include <cstdio>
 
 using namespace AestraUI;
 
@@ -12,6 +13,71 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
+constexpr int kArsenalMinPatternBars = 2;
+constexpr int kArsenalMaxPatternBars = 16;
+
+bool usesStepSequencerForUnitGroup(UnitGroup group) {
+    return group == UnitGroup::Drums || group == UnitGroup::Audio;
+}
+
+const char* unitTypeDisplayName(UnitType type) {
+    switch (type) {
+    case UnitType::Sampler: return "Sampler";
+    case UnitType::PitchedSampler: return "808";
+    case UnitType::Instrument: return "Instrument";
+    case UnitType::Audio: return "Audio";
+    default: return "Sampler";
+    }
+}
+
+const char* unitTypeDescription(UnitType type) {
+    switch (type) {
+    case UnitType::Sampler: return "Classic step sequencer";
+    case UnitType::PitchedSampler: return "808s, bass, slides";
+    case UnitType::Instrument: return "Melodies and chords";
+    case UnitType::Audio: return "Drop a clip directly";
+    default: return "";
+    }
+}
+
+UnitGroup unitGroupForType(UnitType type) {
+    switch (type) {
+    case UnitType::Instrument: return UnitGroup::Synth;
+    case UnitType::Audio: return UnitGroup::Audio;
+    case UnitType::Sampler:
+    case UnitType::PitchedSampler:
+    default: return UnitGroup::Drums;
+    }
+}
+
+std::string unitTypeContentLabel(UnitType type, int stepCount, double durationSeconds) {
+    switch (type) {
+    case UnitType::Sampler:
+        return std::to_string(stepCount) + " Steps";
+    case UnitType::PitchedSampler:
+        return std::to_string(stepCount) + " Steps · Pitched";
+    case UnitType::Instrument:
+        return "Piano Roll";
+    case UnitType::Audio: {
+        if (durationSeconds > 0.0) {
+            const int total = static_cast<int>(std::round(durationSeconds));
+            const int minutes = total / 60;
+            const int seconds = total % 60;
+            char buf[16];
+            std::snprintf(buf, sizeof(buf), "%d:%02d", minutes, seconds);
+            return std::string(buf);
+        }
+        return "Audio Clip";
+    }
+    default:
+        return std::to_string(stepCount) + " Steps";
+    }
+}
+
+AestraUI::NUIRect expandHitRect(const AestraUI::NUIRect& rect, float amount) {
+    return AestraUI::NUIRect(rect.x - amount, rect.y - amount, rect.width + amount * 2.0f, rect.height + amount * 2.0f);
+}
+
 bool isInstrumentPluginDrag(const AestraUI::DragData& data) {
     if (data.type != AestraUI::DragDataType::Plugin || data.sourceClipIdString.empty()) {
         return false;
@@ -67,7 +133,7 @@ void drawArsenalChip(AestraUI::NUIRenderer& renderer,
 } // namespace
 
 ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
-    : WindowPanel("THE ARSENAL")
+    : WindowPanel("")
     , m_trackManager(std::move(trackManager))
 {
     // setId("ArsenalPanel"); // Handled by WindowPanel title
@@ -77,7 +143,7 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
     if (m_trackManager) {
         auto& unitMgr = m_trackManager->getUnitManager();
         if (unitMgr.getUnitCount() == 0) {
-            UnitID defaultUnit = unitMgr.createUnit("Sampler 1", UnitGroup::Drums);
+            UnitID defaultUnit = unitMgr.createUnit("Sampler 1", UnitType::Sampler);
             unitMgr.setUnitEnabled(defaultUnit, true);
         }
     }
@@ -219,6 +285,11 @@ void ArsenalPanel::refreshUnits() {
                 m_onPatternEdited(patternId);
             }
         });
+        row->setOnOpenPatternEditor([this](PatternID patternId) {
+            if (m_onRequestPatternEditor) {
+                m_onRequestPatternEditor(patternId);
+            }
+        });
         
         m_listContainer->addChild(row);
         m_unitRows.push_back(row);
@@ -229,9 +300,11 @@ void ArsenalPanel::refreshUnits() {
     
     // Add "Add Unit" button
     auto addBtn = std::make_shared<NUIButton>("+ Add Unit");
-    addBtn->setBackgroundColor(theme.getColor("surfaceTertiary").withAlpha(0.5f));
-    addBtn->setHoverColor(theme.getColor("surfaceTertiary"));
-    addBtn->setTextColor(theme.getColor("textSecondary"));
+    addBtn->setStyle(NUIButton::Style::Secondary);
+    addBtn->setBackgroundColor(NUIColor::transparent());
+    addBtn->setHoverColor(theme.getColor("surfaceSecondary").withAlpha(0.45f));
+    addBtn->setPressedColor(theme.getColor("surfaceSecondary").withAlpha(0.32f));
+    addBtn->setTextColor(theme.getColor("textSecondary").withAlpha(0.5f));
     addBtn->setOnClick([this]() {
         onAddUnit();
     });
@@ -247,12 +320,21 @@ void ArsenalPanel::refreshUnits() {
 }
 
 void ArsenalPanel::onAddUnit() {
+    m_showUnitTypePicker = !m_showUnitTypePicker;
+    repaint();
+}
+
+void ArsenalPanel::createUnitOfType(UnitType type) {
     if (!m_trackManager) return;
-    std::string name = "Unit " + std::to_string(m_trackManager->getUnitManager().getUnitCount() + 1);
-    m_selectedUnitId = m_trackManager->getUnitManager().createUnit(name, UnitGroup::Synth);
+    const auto count = m_trackManager->getUnitManager().getUnitCount() + 1;
+    std::string name = (type == UnitType::Sampler ? "Sampler " :
+                        type == UnitType::PitchedSampler ? "808 " :
+                        type == UnitType::Instrument ? "Instrument " : "Audio ") + std::to_string(count);
+    m_selectedUnitId = m_trackManager->getUnitManager().createUnit(name, type);
     if (m_onSelectedUnitChanged) {
         m_onSelectedUnitChanged(m_selectedUnitId);
     }
+    m_showUnitTypePicker = false;
     refreshUnits();
 }
 
@@ -401,7 +483,7 @@ void ArsenalPanel::ensureDefaultPattern() {
     
     // Create Pattern 1 if it doesn't exist
     Aestra::Audio::MidiPayload empty;
-    m_activePatternID = pm.createMidiPattern("Pattern 1", 4.0, empty);
+    m_activePatternID = pm.createMidiPattern("Pattern 1", 8.0, empty);
     
     // [FIX] Pre-load pattern
     if (m_trackManager) {
@@ -421,12 +503,44 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
     // The base WindowPanel::onRender will handle its own background, title, and children rendering.
     WindowPanel::onRender(renderer);
 
+    auto& theme = NUIThemeManager::getInstance();
+    const auto bounds = getBounds();
+
+    std::string patternName = "Pattern";
+    std::string trackContext = "No Track";
+    if (m_trackManager && m_activePatternID.isValid()) {
+        if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
+            if (!pattern->name.empty()) {
+                patternName = pattern->name;
+            }
+        }
+    }
+    if (m_trackManager && m_selectedUnitId != 0) {
+        if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
+            if (!unit->name.empty()) {
+                trackContext = unit->name;
+            }
+        }
+    }
+    renderer.drawText(patternName,
+                      NUIPoint(bounds.x + 12.0f, bounds.y + 5.0f),
+                      12.0f,
+                      theme.getColor("textPrimary").withAlpha(0.9f));
+    renderer.drawText(patternName + " · " + trackContext,
+                      NUIPoint(bounds.x + 12.0f, bounds.y + 16.0f),
+                      8.5f,
+                      theme.getColor("textSecondary").withAlpha(0.5f));
+
     // Render progress header (step indicators above grid)
     if (m_listContainer && isVisible()) {
         NUIRect containerBounds = m_listContainer->getBounds();
         NUIRect headerBounds(containerBounds.x, containerBounds.y, 
                             containerBounds.width, PROGRESS_HEADER_HEIGHT);
         drawProgressHeader(renderer, headerBounds);
+    }
+
+    if (m_showUnitTypePicker) {
+        drawUnitTypePicker(renderer);
     }
     
     // Only render the color picker if it's visible.
@@ -464,7 +578,8 @@ void ArsenalPanel::layoutUnits() {
         auto addBtn = children.back();
         bool isAddButton = m_unitRows.empty() || (addBtn != m_unitRows.back());
         if (addBtn && isAddButton) {
-            addBtn->setBounds(NUIRect(startX, yPos + 8.0f, width, 34.0f));
+            m_addUnitButtonRect = NUIRect(startX, yPos + 8.0f, 120.0f, 28.0f);
+            addBtn->setBounds(m_addUnitButtonRect);
         }
     }
 }
@@ -555,16 +670,54 @@ int ArsenalPanel::calculateCurrentStep() {
     double beatsPerSecond = bpm / 60.0;
     double currentBeat = positionSeconds * beatsPerSecond;
     
-    // Get pattern length (default 4 bars = 16 beats for 16 steps at 0.25 beat/step)
-    double patternLengthBeats = m_stepCount * 0.25; // Each step is a 16th note (0.25 beats)
-    
+    // Use the actual pattern length instead of a hard-coded 1-bar step grid.
+    double patternLengthBeats = 8.0;
+    if (m_activePatternID.isValid()) {
+        if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
+            patternLengthBeats = std::max(8.0, pattern->lengthBeats);
+        }
+    }
+    const double beatsPerVisualStep = patternLengthBeats / std::max(1, m_stepCount);
+
     // Calculate position within pattern (looping)
     double patternBeat = std::fmod(currentBeat, patternLengthBeats);
     if (patternBeat < 0) patternBeat += patternLengthBeats;
     
     // Convert to step index
-    int step = static_cast<int>(patternBeat / 0.25);
+    int step = static_cast<int>(patternBeat / std::max(1e-6, beatsPerVisualStep));
     return std::clamp(step, 0, m_stepCount - 1);
+}
+
+void ArsenalPanel::adjustPatternBars(int deltaBars) {
+    if (!m_trackManager || !m_activePatternID.isValid() || deltaBars == 0) {
+        return;
+    }
+
+    auto& patternManager = m_trackManager->getPatternManager();
+    auto* pattern = patternManager.getPattern(m_activePatternID);
+    if (!pattern) {
+        return;
+    }
+
+    const int currentBars = std::clamp(
+        static_cast<int>(std::round(std::max(8.0, pattern->lengthBeats) / 4.0)),
+        kArsenalMinPatternBars,
+        kArsenalMaxPatternBars);
+    const int nextBars = std::clamp(currentBars + deltaBars, kArsenalMinPatternBars, kArsenalMaxPatternBars);
+    const double nextLengthBeats = static_cast<double>(nextBars) * 4.0;
+    if (std::abs(nextLengthBeats - pattern->lengthBeats) < 0.001) {
+        return;
+    }
+
+    patternManager.applyPatch(m_activePatternID, [nextLengthBeats](PatternSource& source) {
+        source.lengthBeats = nextLengthBeats;
+    });
+    m_trackManager->preparePatternForArsenal(m_activePatternID);
+    refreshUnits();
+    repaint();
+    if (m_onPatternEdited) {
+        m_onPatternEdited(m_activePatternID);
+    }
 }
 
 void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -574,86 +727,70 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     m_currentPlayStep = calculateCurrentStep();
     
     // Step layout (matches UnitRow grid layout)
-    float controlWidth = 336.0f;
+    float controlWidth = 312.0f;
     float gridStartX = bounds.x + controlWidth + 6.0f;
     float availWidth = bounds.width - controlWidth - 12.0f;
 
-    std::string selectedLabel = "No unit selected";
-    std::string routeLabel = "Awaiting route";
-    if (m_trackManager && m_selectedUnitId != 0) {
-        if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
-            selectedLabel = unit->name.empty()
-                ? ("Unit " + std::to_string(m_selectedUnitId))
-                : unit->name;
-            routeLabel = unit->targetMixerRoute >= 0
-                ? ("Mixer CH " + std::to_string(unit->targetMixerRoute + 1))
-                : "Main Output";
-        }
-    }
-
-    std::string patternLabel = std::to_string(m_stepCount) + " steps";
-    int noteCount = 0;
     double lengthBeats = static_cast<double>(m_stepCount) * 0.25;
+    UnitType selectedType = UnitType::Sampler;
+    double selectedDurationSeconds = 0.0;
     if (m_trackManager && m_activePatternID.isValid()) {
         if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
-            if (!pattern->name.empty()) {
-                patternLabel = pattern->name + " • " + patternLabel;
-            }
             lengthBeats = std::max(lengthBeats, pattern->lengthBeats);
-            if (pattern->isMidi()) {
-                noteCount = static_cast<int>(std::get<MidiPayload>(pattern->payload).notes.size());
-            }
         }
     }
+    if (m_trackManager && m_selectedUnitId != 0) {
+        if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
+            selectedType = unit->type;
+            selectedDurationSeconds = unit->audioDurationSeconds;
+        }
+    }
+    std::string contentLabel = unitTypeContentLabel(selectedType, m_stepCount, selectedDurationSeconds);
 
     const int unitCount = m_trackManager ? static_cast<int>(m_trackManager->getUnitManager().getUnitCount()) : 0;
-    const int bars = std::max(1, static_cast<int>(std::round(lengthBeats / 4.0)));
-    const bool live = m_trackManager && m_trackManager->isPatternMode() && m_trackManager->isPlaying();
+    const int bars = std::clamp(static_cast<int>(std::round(lengthBeats / 4.0)), kArsenalMinPatternBars, kArsenalMaxPatternBars);
+    const bool decEnabled = bars > kArsenalMinPatternBars;
+    const bool incEnabled = bars < kArsenalMaxPatternBars;
 
-    const NUIRect leftCard(bounds.x + 4.0f, bounds.y + 1.0f, std::max(180.0f, controlWidth - 14.0f), bounds.height - 2.0f);
+    const NUIRect leftCard(bounds.x + 4.0f, bounds.y + 1.0f, std::max(216.0f, controlWidth - 10.0f), bounds.height - 2.0f);
     renderer.fillRoundedRect(leftCard, 8.0f, theme.getColor("backgroundSecondary").withAlpha(0.92f));
     renderer.strokeRoundedRect(leftCard, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.85f));
 
-    const NUIRect stateChip(leftCard.x + 8.0f, leftCard.y + 4.0f, 66.0f, 12.0f);
-    drawArsenalChip(renderer,
-                    stateChip,
-                    live ? "LIVE" : "STAGED",
-                    live ? theme.getColor("accentPrimary").withAlpha(0.18f) : theme.getColor("surfaceSecondary").withAlpha(0.75f),
-                    live ? theme.getColor("accentPrimary").withAlpha(0.78f) : theme.getColor("borderSubtle").withAlpha(0.85f),
-                    live ? theme.getColor("accentPrimary").lightened(0.12f) : theme.getColor("textSecondary"),
-                    8.5f);
+    m_barsDecrementRect = NUIRect(leftCard.x + 10.0f, leftCard.y + 4.0f, 18.0f, leftCard.height - 8.0f);
+    m_barsValueRect = NUIRect(m_barsDecrementRect.right() + 4.0f, leftCard.y + 4.0f, 56.0f, leftCard.height - 8.0f);
+    m_barsIncrementRect = NUIRect(m_barsValueRect.right() + 4.0f, leftCard.y + 4.0f, 18.0f, leftCard.height - 8.0f);
 
-    renderer.drawText(selectedLabel, NUIPoint(leftCard.x + 8.0f, leftCard.y + 18.0f), 11.5f, theme.getColor("textPrimary"));
-    renderer.drawText(patternLabel, NUIPoint(leftCard.x + 8.0f, leftCard.y + 30.0f), 9.0f, theme.getColor("textSecondary").withAlpha(0.9f));
+    const auto pillFill = theme.getColor("surfaceTertiary").withAlpha(0.78f);
+    const auto pillStroke = theme.getColor("borderSubtle").withAlpha(0.85f);
+    const auto pillText = theme.getColor("textSecondary").withAlpha(0.9f);
+    renderer.fillRoundedRect(m_barsDecrementRect, 5.0f, pillFill);
+    renderer.strokeRoundedRect(m_barsDecrementRect, 5.0f, 1.0f, pillStroke);
+    renderer.drawTextCentered("-", m_barsDecrementRect, 10.5f, decEnabled ? pillText : NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
 
-    const float bottomY = leftCard.bottom() - 17.0f;
+    renderer.fillRoundedRect(m_barsValueRect, 5.0f, pillFill);
+    renderer.strokeRoundedRect(m_barsValueRect, 5.0f, 1.0f, pillStroke);
+    renderer.drawTextCentered(std::to_string(bars) + " Bars", m_barsValueRect, 8.5f, pillText);
+
+    renderer.fillRoundedRect(m_barsIncrementRect, 5.0f, pillFill);
+    renderer.strokeRoundedRect(m_barsIncrementRect, 5.0f, 1.0f, pillStroke);
+    renderer.drawTextCentered("+", m_barsIncrementRect, 10.5f, incEnabled ? pillText : NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
+
+    const float contentBadgeWidth = contentLabel == "Piano Roll" ? 74.0f : 62.0f;
+    const NUIRect contentBadge(m_barsIncrementRect.right() + 8.0f, leftCard.y + 4.0f, contentBadgeWidth, leftCard.height - 8.0f);
+    const NUIRect unitsBadge(contentBadge.right() + 6.0f, leftCard.y + 4.0f, 54.0f, leftCard.height - 8.0f);
     drawArsenalChip(renderer,
-                    {leftCard.x + 8.0f, bottomY, 58.0f, 12.0f},
-                    std::to_string(bars) + " Bars",
+                    contentBadge,
+                    contentLabel,
                     theme.getColor("surfaceTertiary").withAlpha(0.78f),
                     theme.getColor("borderSubtle").withAlpha(0.85f),
-                    theme.getColor("textSecondary"),
+                    theme.getColor("textSecondary").withAlpha(0.9f),
                     8.25f);
     drawArsenalChip(renderer,
-                    {leftCard.x + 72.0f, bottomY, 54.0f, 12.0f},
-                    std::to_string(noteCount) + " Notes",
-                    theme.getColor("surfaceTertiary").withAlpha(0.78f),
-                    theme.getColor("borderSubtle").withAlpha(0.85f),
-                    theme.getColor("textSecondary"),
-                    8.25f);
-    drawArsenalChip(renderer,
-                    {leftCard.x + 130.0f, bottomY, 56.0f, 12.0f},
+                    unitsBadge,
                     std::to_string(unitCount) + " Units",
                     theme.getColor("surfaceTertiary").withAlpha(0.78f),
                     theme.getColor("borderSubtle").withAlpha(0.85f),
-                    theme.getColor("textSecondary"),
-                    8.25f);
-    drawArsenalChip(renderer,
-                    {leftCard.x + 190.0f, bottomY, std::max(72.0f, leftCard.width - 198.0f), 12.0f},
-                    routeLabel,
-                    theme.getColor("accentPrimary").withAlpha(0.12f),
-                    theme.getColor("accentPrimary").withAlpha(0.34f),
-                    theme.getColor("textSecondary"),
+                    theme.getColor("textSecondary").withAlpha(0.9f),
                     8.25f);
 
     const NUIRect gridCard(gridStartX - 2.0f, bounds.y + 1.0f, std::max(0.0f, availWidth + 4.0f), bounds.height - 2.0f);
@@ -661,8 +798,8 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     renderer.strokeRoundedRect(gridCard, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
     
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
-    float indicatorHeight = PROGRESS_HEADER_HEIGHT - 6.0f;
-    float indicatorY = bounds.y + 3.0f;
+    float indicatorHeight = PROGRESS_HEADER_HEIGHT - 10.0f;
+    float indicatorY = bounds.y + 5.0f;
     
     // Scanlines/Clipping: Clip to header bounds to prevent overflow
     renderer.setClipRect(bounds);
@@ -711,6 +848,44 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     }
     
     renderer.clearClipRect();
+}
+
+void ArsenalPanel::drawUnitTypePicker(NUIRenderer& renderer) {
+    auto& theme = NUIThemeManager::getInstance();
+    if (m_addUnitButtonRect.width <= 0.0f || m_addUnitButtonRect.height <= 0.0f) {
+        return;
+    }
+
+    const float cardWidth = 332.0f;
+    const float cardHeight = 156.0f;
+    m_unitTypePickerRect = NUIRect(m_addUnitButtonRect.x,
+                                   m_addUnitButtonRect.bottom() + 8.0f,
+                                   cardWidth,
+                                   cardHeight);
+
+    renderer.fillRoundedRect(m_unitTypePickerRect, 10.0f, theme.getColor("backgroundSecondary").withAlpha(0.98f));
+    renderer.strokeRoundedRect(m_unitTypePickerRect, 10.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.9f));
+
+    const float padding = 10.0f;
+    const float gap = 8.0f;
+    const float cellWidth = (cardWidth - padding * 2.0f - gap) * 0.5f;
+    const float cellHeight = (cardHeight - padding * 2.0f - gap) * 0.5f;
+    const UnitType types[4] = {UnitType::Sampler, UnitType::PitchedSampler, UnitType::Instrument, UnitType::Audio};
+    const char* icons[4] = {"▦", "≋", "♫", "◫"};
+
+    for (int i = 0; i < 4; ++i) {
+        const int col = i % 2;
+        const int row = i / 2;
+        const NUIRect cell(m_unitTypePickerRect.x + padding + col * (cellWidth + gap),
+                           m_unitTypePickerRect.y + padding + row * (cellHeight + gap),
+                           cellWidth,
+                           cellHeight);
+        renderer.fillRoundedRect(cell, 8.0f, theme.getColor("surfaceTertiary").withAlpha(0.8f));
+        renderer.strokeRoundedRect(cell, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.72f));
+        renderer.drawText(icons[i], NUIPoint(cell.x + 10.0f, cell.y + 11.0f), 13.0f, theme.getColor("accentPrimary").withAlpha(0.9f));
+        renderer.drawText(unitTypeDisplayName(types[i]), NUIPoint(cell.x + 32.0f, cell.y + 10.0f), 11.0f, theme.getColor("textPrimary").withAlpha(0.95f));
+        renderer.drawText(unitTypeDescription(types[i]), NUIPoint(cell.x + 10.0f, cell.y + 28.0f), 8.5f, theme.getColor("textSecondary").withAlpha(0.68f));
+    }
 }
 
 // === Drag-Drop Callbacks ===
@@ -905,6 +1080,56 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
         if (event.pressed && !m_colorPicker->getBounds().contains(event.position)) {
             m_colorPicker->hide();
             repaint();
+        }
+    }
+
+    if (m_showUnitTypePicker && event.pressed && event.button == NUIMouseButton::Left) {
+        const float padding = 10.0f;
+        const float gap = 8.0f;
+        const float cellWidth = (m_unitTypePickerRect.width - padding * 2.0f - gap) * 0.5f;
+        const float cellHeight = (m_unitTypePickerRect.height - padding * 2.0f - gap) * 0.5f;
+        const UnitType types[4] = {UnitType::Sampler, UnitType::PitchedSampler, UnitType::Instrument, UnitType::Audio};
+
+        if (m_unitTypePickerRect.contains(event.position)) {
+            for (int i = 0; i < 4; ++i) {
+                const int col = i % 2;
+                const int row = i / 2;
+                const NUIRect cell(m_unitTypePickerRect.x + padding + col * (cellWidth + gap),
+                                   m_unitTypePickerRect.y + padding + row * (cellHeight + gap),
+                                   cellWidth,
+                                   cellHeight);
+                if (cell.contains(event.position)) {
+                    createUnitOfType(types[i]);
+                    return true;
+                }
+            }
+        } else if (!m_addUnitButtonRect.contains(event.position)) {
+            m_showUnitTypePicker = false;
+            repaint();
+            return true;
+        }
+    }
+
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        int bars = 4;
+        if (m_trackManager && m_activePatternID.isValid()) {
+            if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
+                bars = std::clamp(static_cast<int>(std::round(std::max(8.0, pattern->lengthBeats) / 4.0)),
+                                  kArsenalMinPatternBars,
+                                  kArsenalMaxPatternBars);
+            }
+        }
+
+        const auto decHitRect = expandHitRect(m_barsDecrementRect, 4.0f);
+        const auto incHitRect = expandHitRect(m_barsIncrementRect, 4.0f);
+
+        if (decHitRect.contains(event.position) && bars > kArsenalMinPatternBars) {
+            adjustPatternBars(-1);
+            return true;
+        }
+        if (incHitRect.contains(event.position) && bars < kArsenalMaxPatternBars) {
+            adjustPatternBars(1);
+            return true;
         }
     }
 

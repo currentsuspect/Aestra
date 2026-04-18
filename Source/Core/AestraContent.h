@@ -28,6 +28,7 @@
 namespace AestraUI {
     class NUIRenderer;
     class NUIPlatformBridge;
+    enum class NUICursorStyle;
     class FileBrowser;
     class FilePreviewPanel;
     class FileItem;
@@ -127,6 +128,8 @@ public:
     void onRender(AestraUI::NUIRenderer& renderer) override;
     /** @brief Relayout the workspace after a host resize. */
     void onResize(int width, int height) override;
+    /** @brief Handle workspace mouse interactions (including dock resize drags). */
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     /** @brief Handle global keyboard shortcuts for the workspace. */
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override; // [NEW] Global shortcuts
 
@@ -173,6 +176,8 @@ public:
     AestraUI::NUIRect computeMaximizedRect() const;
     /** @brief Clamp an overlay rectangle to the current allowed bounds. */
     AestraUI::NUIRect clampRectToAllowed(AestraUI::NUIRect panel, const AestraUI::NUIRect& allowed) const;
+    /** @brief Resolve resize cursor style for floating panel edges at a mouse position. */
+    AestraUI::NUICursorStyle getPanelResizeCursorStyle(const AestraUI::NUIPoint& mouseScreen) const;
 
     /** @brief Begin dragging an overlay panel. */
     void beginPanelDrag(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen);
@@ -261,6 +266,13 @@ private:
     void updatePendingCountIn();
     void startPatternClipPreview(Aestra::Audio::PatternID patternId);
     void stopPatternClipPreview(bool restoreTimelineUi);
+    enum class BrowserResizeTarget {
+        None,
+        FileRail,
+        PatternRail
+    };
+    BrowserResizeTarget hitTestBrowserResizeTarget(const AestraUI::NUIPoint& mouseScreen) const;
+    void updateBrowserResizeDrag(const AestraUI::NUIPoint& mouseScreen);
 
     // Pattern loop length helpers
     double getActivePatternLengthBeats() const;
@@ -283,6 +295,13 @@ private:
     std::shared_ptr<AestraUI::PluginBrowserPanel> m_pluginBrowser;
     std::shared_ptr<AestraUI::FilePreviewPanel> m_previewPanel;
     std::shared_ptr<Aestra::Audio::PatternBrowserPanel> m_patternBrowser;
+    float m_fileBrowserWidthPref{-1.0f};
+    float m_patternBrowserWidthPref{-1.0f};
+    bool m_browserResizing{false};
+    BrowserResizeTarget m_browserResizeTarget{BrowserResizeTarget::None};
+    float m_browserResizeStartX{0.0f};
+    float m_browserResizeStartFileWidth{0.0f};
+    float m_browserResizeStartPatternWidth{0.0f};
     std::shared_ptr<AestraUI::AudioVisualizer> m_audioVisualizer;
     std::shared_ptr<AestraUI::AudioVisualizer> m_waveformVisualizer;
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;

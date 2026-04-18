@@ -12,6 +12,7 @@
 // Forward declarations
 namespace AestraUI {
     class NUIRenderer;
+    enum class NUICursorStyle;
 }
 
 namespace Aestra {
@@ -71,7 +72,23 @@ public:
     void setOnDragMove(DragCallback callback) { m_onDragMove = callback; }
     void setOnDragEnd(std::function<void()> callback) { m_onDragEnd = callback; }
 
+    // Resize events (forwarded to parent controller)
+    using ResizeRectCallback = std::function<void(const AestraUI::NUIRect&)>;
+    void setOnResizeStart(std::function<void()> callback) { m_onResizeStart = callback; }
+    void setOnResizeMove(ResizeRectCallback callback) { m_onResizeMove = callback; }
+    void setOnResizeEnd(std::function<void()> callback) { m_onResizeEnd = callback; }
+    void setMinimumPanelSize(float width, float height);
+    AestraUI::NUICursorStyle getResizeCursorStyleForPoint(const AestraUI::NUIPoint& point) const;
+
 private:
+    enum ResizeEdge : int {
+        ResizeNone   = 0,
+        ResizeLeft   = 1 << 0,
+        ResizeRight  = 1 << 1,
+        ResizeTop    = 1 << 2,
+        ResizeBottom = 1 << 3
+    };
+
     std::string m_title;
     std::shared_ptr<AestraUI::NUIComponent> m_content;
     
@@ -95,6 +112,12 @@ private:
     AestraUI::NUIPoint m_dragStartPos;
     AestraUI::NUIRect m_dragStartBounds;
     bool m_userPositioned{false};
+    bool m_resizing{false};
+    int m_resizeEdges{ResizeNone};
+    AestraUI::NUIPoint m_resizeStartPos;
+    AestraUI::NUIRect m_resizeStartBounds;
+    float m_minPanelWidth{280.0f};
+    float m_minPanelHeight{180.0f};
     
     // Hover states
     bool m_titleBarHovered{false};
@@ -109,11 +132,15 @@ private:
     DragCallback m_onDragStart;
     DragCallback m_onDragMove;
     std::function<void()> m_onDragEnd;
+    std::function<void()> m_onResizeStart;
+    ResizeRectCallback m_onResizeMove;
+    std::function<void()> m_onResizeEnd;
     
     void layoutContent();
     void onMinimizeClicked();
     void onMaximizeClicked();
     void onCloseClicked();
+    int getResizeEdgesAtPoint(const AestraUI::NUIPoint& point) const;
 };
 
 } // namespace Audio

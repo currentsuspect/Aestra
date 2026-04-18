@@ -116,10 +116,13 @@ private:
     void layoutUnits();
     
     // Pattern Progress Visualization
-    static constexpr float PROGRESS_HEADER_HEIGHT = 20.0f;
+    static constexpr float PROGRESS_HEADER_HEIGHT = 28.0f;
     int m_currentPlayStep = -1;  // Current step for visualization (-1 = not playing)
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
     int calculateCurrentStep(); // Calculate step from TrackManager clock
+    void adjustPatternBars(int deltaBars);
+    void createUnitOfType(UnitType type);
+    void drawUnitTypePicker(AestraUI::NUIRenderer& renderer);
 
     // Pattern Management (driven by Pattern Browser)
     PatternID m_activePatternID{}; // The pattern being edited
@@ -159,6 +162,12 @@ private:
     std::function<void(PatternID)> m_onPatternEdited;
     std::function<void(PatternID)> m_onActivePatternChanged;
     bool m_dropTargetRegistered = false;
+    bool m_showUnitTypePicker = false;
+    AestraUI::NUIRect m_addUnitButtonRect{};
+    AestraUI::NUIRect m_unitTypePickerRect{};
+    AestraUI::NUIRect m_barsDecrementRect{};
+    AestraUI::NUIRect m_barsValueRect{};
+    AestraUI::NUIRect m_barsIncrementRect{};
 };
 
 } // namespace Audio

@@ -14,21 +14,19 @@
 namespace AestraUI {
 
 namespace {
-float safeClampUnitRowFloat(float value, float lower, float upper)
+bool usesStepSequencerForGroup(Aestra::Audio::UnitGroup group)
 {
-    if (!std::isfinite(value) || !std::isfinite(lower) || !std::isfinite(upper)) {
-        return lower;
-    }
-    if (upper < lower) {
-        upper = lower;
-    }
-    if (value <= lower) {
-        return lower;
-    }
-    if (value >= upper) {
-        return upper;
-    }
-    return value;
+    return group == Aestra::Audio::UnitGroup::Drums || group == Aestra::Audio::UnitGroup::Audio;
+}
+
+bool usesStepSequencerForType(Aestra::Audio::UnitType type)
+{
+    return type == Aestra::Audio::UnitType::Sampler || type == Aestra::Audio::UnitType::PitchedSampler;
+}
+
+bool usesPianoRollForType(Aestra::Audio::UnitType type)
+{
+    return type == Aestra::Audio::UnitType::Instrument;
 }
 
 void drawUnitRowChip(NUIRenderer& renderer,
@@ -57,6 +55,7 @@ void UnitRow::updateState() {
         m_name = unit->name;
         m_color = unit->color;
         m_group = unit->group;
+        m_type = unit->type;
         m_isEnabled = unit->isEnabled;
         m_isArmed = unit->isArmed;
         m_isMuted = unit->isMuted;
@@ -65,19 +64,24 @@ void UnitRow::updateState() {
                       unit->audioClipPath.substr(unit->audioClipPath.find_last_of("/\\") + 1);
         m_pluginId = unit->pluginId;
         m_mixerChannel = unit->targetMixerRoute;
+        m_audioDurationSeconds = unit->audioDurationSeconds;
+        m_audioPreviewWaveform = unit->audioPreviewWaveform;
 
-        switch (m_group) {
-        case Aestra::Audio::UnitGroup::Synth:
-            m_groupLabel = "Synth";
+        switch (m_type) {
+        case Aestra::Audio::UnitType::Sampler:
+            m_groupLabel = "Sampler";
             break;
-        case Aestra::Audio::UnitGroup::Drums:
-            m_groupLabel = "Drums";
+        case Aestra::Audio::UnitType::PitchedSampler:
+            m_groupLabel = "808";
             break;
-        case Aestra::Audio::UnitGroup::Audio:
+        case Aestra::Audio::UnitType::Instrument:
+            m_groupLabel = "Instrument";
+            break;
+        case Aestra::Audio::UnitType::Audio:
             m_groupLabel = "Audio";
             break;
         default:
-            m_groupLabel = "Unit";
+            m_groupLabel = "Sampler";
             break;
         }
 
@@ -115,84 +119,37 @@ void UnitRow::onRender(NUIRenderer& renderer) {
 void UnitRow::drawContent(NUIRenderer& renderer) {
     auto bounds = getBounds();
     auto& theme = NUIThemeManager::getInstance();
-    
-    // === Premium Panel Style v3 (Deep Glass) ===
+
     NUIRect cardBounds = bounds;
-    cardBounds.height -= 8.0f; // More spacing between rows
-    
-    float radius = theme.getRadius("radiusL");
+    cardBounds.height = 56.0f;
 
-    // Shadow/Glow behind the row
-    if (m_isSelected) {
-        renderer.drawShadow(cardBounds, 0.0f, 3.0f, 14.0f, theme.getColor("accentPrimary").withAlpha(0.28f));
-    } else if (m_isHovered || m_isDragging) {
-        renderer.drawShadow(cardBounds, 0.0f, 4.0f, 16.0f, theme.getColor("primary").withAlpha(0.2f));
-    } else {
-        renderer.drawShadow(cardBounds, 0.0f, 2.0f, 8.0f, NUIColor::black().withAlpha(0.5f));
-    }
-
-    // Glass Background
-    // Glass Background
-    // Use 'surfaceTertiary' (Glass Surface) which is 0.15f grey, or 'glassHover' for transparency.
-    // For rows, we want them to feel like plates floating on the void.
-    // Let's use a custom glass color derived from panel background but with alpha.
-    NUIColor cardBg = theme.getColor("surfaceTertiary").withAlpha(0.6f); 
+    const float radius = 7.0f;
+    NUIColor cardBg(0.101f, 0.101f, 0.141f, 1.0f);
+    NUIColor border(1.0f, 1.0f, 1.0f, 0.08f);
     if (m_isSelected) {
         cardBg = theme.getColor("accentPrimary").withAlpha(0.14f);
+        border = theme.getColor("accentPrimary").withAlpha(0.55f);
     } else if (m_isHovered) {
-        cardBg = cardBg.lightened(0.1f).withAlpha(0.7f);
+        cardBg = NUIColor(0.12f, 0.12f, 0.17f, 1.0f);
+        border = theme.getColor("accentPrimary").withAlpha(0.22f);
     }
-    
+
     renderer.fillRoundedRect(cardBounds, radius, cardBg);
-    
-    // Glass Border
-    // Glass Border
-    NUIColor borderColor = theme.getColor("glassBorder"); // 0.09f white
-    if (m_isSelected) {
-        borderColor = theme.getColor("accentPrimary").withAlpha(0.9f);
-    } else if (m_isHovered) {
-        borderColor = theme.getColor("accentPrimary").withAlpha(0.5f);
-    }
-    
-    renderer.strokeRoundedRect(cardBounds, radius, 1.0f, borderColor);
-    
-    // === Unit Accent Color (from unit's color) ===
-    float r = ((m_color >> 16) & 0xFF) / 255.0f;
-    float g = ((m_color >> 8) & 0xFF) / 255.0f;
-    float b = (m_color & 0xFF) / 255.0f;
-    NUIColor accentColor(r, g, b, 1.0f);
-    
-    // === Drag Handle Area (left edge) ===
-    NUIRect dragRect(cardBounds.x, cardBounds.y, DRAG_HANDLE_WIDTH, cardBounds.height);
+    renderer.strokeRoundedRect(cardBounds, radius, 1.0f, border);
+
+    NUIRect dragRect(cardBounds.x + 6.0f, cardBounds.y + 6.0f, 32.0f, cardBounds.height - 12.0f);
     drawDragHandle(renderer, dragRect);
-    
-    // === Glowing Neon Strip ===
-    float stripX = cardBounds.x + DRAG_HANDLE_WIDTH + 4.0f;
-    NUIRect stripRect(stripX, cardBounds.y + 10.0f, 4.0f, cardBounds.height - 20.0f);
-    
-    // Inner light
-    renderer.fillRoundedRect(stripRect, 2.0f, accentColor);
-    
-    // Outer neon glow
-    if (m_isEnabled) {
-        renderer.drawShadow(stripRect, 0, 0, 8.0f, accentColor.withAlpha(0.8f));
-    }
-    
-    // === Control Block (left side controls) ===
-    float controlStartX = stripX + COLOR_STRIP_WIDTH + 8.0f;
-    NUIRect controlRect(controlStartX, cardBounds.y, m_controlWidth - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 16.0f, cardBounds.height);
+
+    NUIRect controlRect(cardBounds.x + 42.0f, cardBounds.y, std::min(310.0f, cardBounds.width * 0.42f), cardBounds.height);
     drawControlBlock(renderer, controlRect);
-    
-    // === Vertical Separator ===
-    float separatorX = cardBounds.x + m_controlWidth;
-    renderer.drawLine(
-        NUIPoint(separatorX, cardBounds.y + 8.0f),
-        NUIPoint(separatorX, cardBounds.y + cardBounds.height - 8.0f),
-        1.0f, theme.getColor("borderSubtle")
-    );
-    
-    // === Context Block (step sequencer grid) ===
-    NUIRect contextRect(separatorX + 6.0f, cardBounds.y, cardBounds.width - m_controlWidth - 12.0f, cardBounds.height);
+
+    float separatorX = controlRect.right() + 6.0f;
+    renderer.drawLine(NUIPoint(separatorX, cardBounds.y + 8.0f),
+                      NUIPoint(separatorX, cardBounds.y + cardBounds.height - 8.0f),
+                      1.0f,
+                      theme.getColor("borderSubtle").withAlpha(0.55f));
+
+    NUIRect contextRect(separatorX + 8.0f, cardBounds.y + 6.0f, cardBounds.right() - separatorX - 14.0f, cardBounds.height - 12.0f);
     renderer.setClipRect(cardBounds);
     drawContextBlock(renderer, contextRect);
     renderer.clearClipRect();
@@ -200,23 +157,11 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
 void UnitRow::drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
-    
-    // Draw grip lines (3 horizontal lines)
-    float centerY = bounds.y + bounds.height / 2.0f;
-    float lineWidth = 8.0f;
-    float lineX = bounds.x + (bounds.width - lineWidth) / 2.0f;
-    float lineSpacing = 4.0f;
-    
-    NUIColor gripColor = m_isHovered ? theme.getColor("textSecondary") : theme.getColor("textDisabled");
-    
-    for (int i = -1; i <= 1; ++i) {
-        float y = centerY + (i * lineSpacing);
-        renderer.drawLine(
-            NUIPoint(lineX, y),
-            NUIPoint(lineX + lineWidth, y),
-            1.5f, gripColor
-        );
-    }
+    renderer.drawText("⠿", NUIPoint(bounds.x + 1.0f, bounds.y + 7.0f), 12.0f, theme.getColor("textSecondary").withAlpha(0.7f));
+    renderer.drawText(std::to_string(static_cast<unsigned long long>(m_unitId)),
+                      NUIPoint(bounds.x + 2.0f, bounds.y + 24.0f),
+                      9.0f,
+                      theme.getColor("textSecondary").withAlpha(0.56f));
 }
 
 void UnitRow::drawPowerIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
@@ -318,151 +263,47 @@ void UnitRow::drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
 
 void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
-    float centerY = bounds.y + bounds.height * 0.5f;
-    float x = bounds.x + 2.0f;
-    
-    // === 1. Power Button ===
-    NUIRect pwrRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
-    drawPowerIcon(renderer, pwrRect, m_isEnabled);
-    x += BUTTON_SIZE + BUTTON_SPACING;
-    
-    // === 2. Arm Button ===
-    NUIRect armRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
-    drawArmIcon(renderer, armRect, m_isArmed);
-    x += BUTTON_SIZE + BUTTON_SPACING;
-    
-    // === 3. Mute Button ===
-    NUIRect muteRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
+    bool hasContent = !m_pluginId.empty() || !m_audioClip.empty();
+    if (!hasContent && m_patternId.isValid()) {
+        if (auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId); pattern && pattern->isMidi()) {
+            const auto& midi = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
+            hasContent = std::any_of(midi.notes.begin(), midi.notes.end(), [this](const Aestra::Audio::MidiNote& note) {
+                return note.unitId == m_unitId || note.unitId == 0;
+            });
+        }
+    }
+    const float centerY = bounds.y + bounds.height * 0.5f;
+    const float nameX = bounds.x + 12.0f;
+
+    renderer.fillCircle(NUIPoint(nameX, bounds.y + 18.0f),
+                        3.0f,
+                        m_isEnabled ? NUIColor(0.38f, 0.90f, 0.48f, 1.0f) : NUIColor(0.42f, 0.42f, 0.48f, 1.0f));
+
+    std::string displayName = m_name.empty() ? ("Unit " + std::to_string(static_cast<unsigned long long>(m_unitId))) : m_name;
+    renderer.drawText(displayName,
+                      NUIPoint(nameX + 10.0f, bounds.y + 11.0f),
+                      12.0f,
+                      theme.getColor("textPrimary").withAlpha(0.92f));
+
+    renderer.drawText(m_groupLabel,
+                      NUIPoint(nameX + 10.0f, bounds.y + 27.0f),
+                      9.0f,
+                      theme.getColor("textSecondary").withAlpha(0.5f));
+
+    const float pillY = centerY - 10.0f;
+    const NUIRect muteRect(bounds.x + bounds.width - 92.0f, pillY, 24.0f, 20.0f);
+    const NUIRect soloRect(bounds.x + bounds.width - 62.0f, pillY, 24.0f, 20.0f);
     drawMuteIcon(renderer, muteRect, m_isMuted);
-    x += BUTTON_SIZE + BUTTON_SPACING;
-    
-    // === 4. Solo Button ===
-    NUIRect soloRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
     drawSoloIcon(renderer, soloRect, m_isSolo);
-    x += BUTTON_SIZE + BUTTON_SPACING;
 
-    // === 5. Edit Button (New) ===
-    NUIRect gearRect(x, centerY - BUTTON_SIZE/2, BUTTON_SIZE, BUTTON_SIZE);
-    drawGearIcon(renderer, gearRect, false); // Always "inactive" state unless toggled? Just use clickable style
-    x += BUTTON_SIZE + BUTTON_SPACING + 10.0f;
-    
-    // === Right-aligned info cluster ===
-    float rightX = bounds.x + bounds.width - 4.0f;
-    const bool hasSourceTag = !m_pluginId.empty() || !m_audioClip.empty();
-    const std::string mixText = (m_mixerChannel >= 0) ? ("CH " + std::to_string(m_mixerChannel + 1)) : "MAIN";
-    const float mixTagWidth = renderer.measureText(mixText, 10.0f).width + 10.0f;
-    const float sourceTagWidth = hasSourceTag
-        ? (renderer.measureText(!m_pluginId.empty() ? "INST" : "CLIP", 9.0f).width + 12.0f)
-        : 0.0f;
-    const float rightClusterWidth = mixTagWidth + (hasSourceTag ? (sourceTagWidth + 8.0f) : 0.0f);
-
-    // === 5. Unit Identity ===
-    float nameWidth = std::max(72.0f, (rightX - rightClusterWidth - 10.0f) - x);
-
-    if (!m_isEditingName) {
-        // Truncate long names to fit available space
-        std::string displayName = m_name;
-        float maxNameWidth = nameWidth - 10.0f;
-        auto textSize = renderer.measureText(displayName, 13.5f);
-        
-        if (textSize.width > maxNameWidth && displayName.length() > 3) {
-            // Binary search for truncation point
-            while (textSize.width > maxNameWidth && displayName.length() > 3) {
-                displayName = displayName.substr(0, displayName.length() - 1);
-                textSize = renderer.measureText(displayName + "...", 13.5f);
-            }
-            displayName += "...";
-        }
-        
-        renderer.drawText(displayName, NUIPoint(x, bounds.y + 7.0f), 13.5f, theme.getColor("textPrimary"));
-
-        std::string metaText = m_groupLabel + " • " + m_sourceSummary;
-
-        float maxMetaWidth = std::max(40.0f, nameWidth - 10.0f);
-        auto metaSize = renderer.measureText(metaText, 9.5f);
-        while (metaSize.width > maxMetaWidth && metaText.length() > 3) {
-            metaText.pop_back();
-            metaSize = renderer.measureText(metaText + "...", 9.5f);
-        }
-        if (metaSize.width > maxMetaWidth) {
-            metaText = "...";
-        } else if (metaText.length() < m_groupLabel.length()) {
-            metaText += "...";
-        }
-
-        if (nameWidth > 90.0f) {
-            renderer.drawText(metaText, NUIPoint(x, bounds.y + 22.0f), 9.5f, theme.getColor("textSecondary").withAlpha(0.95f));
-        }
-
-        if (nameWidth > 140.0f) {
-            std::string stateText = m_isEnabled ? "ACTIVE" : "BYPASSED";
-            if (m_isMuted) {
-                stateText = "MUTED";
-            } else if (m_isSolo) {
-                stateText = "SOLO";
-            } else if (m_isArmed) {
-                stateText = "ARMED";
-            }
-
-            const float stateW = renderer.measureText(stateText, 8.5f).width + 12.0f;
-            const NUIRect stateRect(x, bounds.y + 35.0f, stateW, 14.0f);
-            NUIColor stateFill = theme.getColor("surfaceSecondary").withAlpha(0.72f);
-            NUIColor stateStroke = theme.getColor("borderSubtle").withAlpha(0.9f);
-            NUIColor stateTextColor = theme.getColor("textSecondary");
-
-            if (m_isMuted) {
-                stateFill = NUIColor(1.0f, 0.65f, 0.20f, 0.18f);
-                stateStroke = NUIColor(1.0f, 0.75f, 0.30f, 0.7f);
-                stateTextColor = NUIColor(1.0f, 0.85f, 0.45f, 1.0f);
-            } else if (m_isSolo) {
-                stateFill = NUIColor(1.0f, 0.88f, 0.25f, 0.18f);
-                stateStroke = NUIColor(1.0f, 0.88f, 0.35f, 0.7f);
-                stateTextColor = NUIColor(1.0f, 0.9f, 0.45f, 1.0f);
-            } else if (m_isArmed) {
-                stateFill = NUIColor(0.96f, 0.30f, 0.36f, 0.18f);
-                stateStroke = NUIColor(1.0f, 0.42f, 0.48f, 0.75f);
-                stateTextColor = NUIColor(1.0f, 0.72f, 0.78f, 1.0f);
-            } else if (m_isEnabled) {
-                stateFill = theme.getColor("accentPrimary").withAlpha(0.16f);
-                stateStroke = theme.getColor("accentPrimary").withAlpha(0.72f);
-                stateTextColor = theme.getColor("accentPrimary").lightened(0.18f);
-            }
-
-            drawUnitRowChip(renderer, stateRect, stateText, stateFill, stateStroke, stateTextColor, 8.5f);
-        }
-    }
-
-    if (!m_pluginId.empty() || !m_audioClip.empty()) {
-        std::string sourceTag = !m_pluginId.empty() ? "INST" : "CLIP";
-        float w = renderer.measureText(sourceTag, 9.0f).width + 12.0f;
-        NUIColor tagBg = !m_pluginId.empty()
-            ? theme.getColor("accentPrimary").withAlpha(0.2f)
-            : NUIColor(0.22f, 0.46f, 0.88f, 0.18f);
-
-        NUIRect tagRect(rightX - mixTagWidth - 8.0f - w, centerY - 9.0f, w, 18.0f);
-        renderer.fillRoundedRect(tagRect, 4.0f, tagBg);
-        renderer.strokeRoundedRect(tagRect, 4.0f, 1.0f, theme.getColor("borderSubtle"));
-        float textY = renderer.calculateTextY(tagRect, 9.0f);
-        renderer.drawText(sourceTag, NUIPoint(tagRect.x + 6.0f, textY), 9.0f, theme.getColor("textSecondary"));
-    }
-    
-    // Mixer Channel Tag
-    if (m_mixerChannel >= 0) {
-        float w = mixTagWidth;
-
-        NUIRect tagRect(rightX - w, centerY - 9.0f, w, 18.0f);
-        renderer.fillRoundedRect(tagRect, 4.0f, theme.getColor("backgroundSecondary"));
-        renderer.strokeRoundedRect(tagRect, 4.0f, 1.0f, theme.getColor("borderSubtle"));
-        
-        float textY = renderer.calculateTextY(tagRect, 10.0f);
-        renderer.drawText(mixText, NUIPoint(tagRect.x + 5.0f, textY), 10.0f, theme.getColor("textSecondary"));
-    }
-    else {
-        NUIRect tagRect(rightX - mixTagWidth, centerY - 9.0f, mixTagWidth, 18.0f);
-        renderer.fillRoundedRect(tagRect, 4.0f, theme.getColor("backgroundSecondary"));
-        renderer.strokeRoundedRect(tagRect, 4.0f, 1.0f, theme.getColor("borderSubtle"));
-        float textY = renderer.calculateTextY(tagRect, 10.0f);
-        renderer.drawText(mixText, NUIPoint(tagRect.x + 5.0f, textY), 10.0f, theme.getColor("textSecondary"));
+    const float indicatorX = bounds.right() - 18.0f;
+    for (int i = 0; i < 3; ++i) {
+        const float h = 4.0f + i * 3.0f;
+        const NUIRect bar(indicatorX + i * 4.0f, bounds.y + 28.0f - h * 0.5f, 2.0f, h);
+        const NUIColor color = hasContent
+            ? theme.getColor("accentPrimary").withAlpha(0.75f - i * 0.12f)
+            : theme.getColor("textDisabled").withAlpha(0.28f);
+        renderer.fillRoundedRect(bar, 1.0f, color);
     }
 }
 
@@ -471,37 +312,21 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     struct NoteSpan {
         int startStep{0};
         int endStep{0};
-        int lane{0};
         int pitch{48};
         float velocity{1.0f};
     };
-    
-    // === Extract unit's accent color for active steps ===
-    float r = ((m_color >> 16) & 0xFF) / 255.0f;
-    float g = ((m_color >> 8) & 0xFF) / 255.0f;
-    float b = (m_color & 0xFF) / 255.0f;
-    NUIColor unitAccent(r, g, b, 1.0f);
 
-    const NUIRect contentCard(bounds.x + 2.0f, bounds.y + 5.0f,
-                              std::max(0.0f, bounds.width - 4.0f),
-                              std::max(0.0f, bounds.height - 10.0f));
-    renderer.fillRoundedRect(contentCard, 8.0f, theme.getColor("backgroundSecondary").withAlpha(0.8f));
-    renderer.strokeRoundedRect(contentCard, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.8f));
+    const NUIRect contentCard(bounds.x, bounds.y, std::max(0.0f, bounds.width), std::max(0.0f, bounds.height));
+    renderer.fillRoundedRect(contentCard, 6.0f, NUIColor(0.074f, 0.074f, 0.102f, 1.0f));
 
-    const float laneHeaderHeight = 16.0f;
     const float lanePadding = 6.0f;
     const NUIRect timelineStrip(contentCard.x + lanePadding,
                                 contentCard.y + lanePadding,
                                 std::max(0.0f, contentCard.width - lanePadding * 2.0f),
-                                laneHeaderHeight);
-    const NUIRect noteLane(contentCard.x + lanePadding,
-                           timelineStrip.bottom() + 4.0f,
-                           std::max(0.0f, contentCard.width - lanePadding * 2.0f),
-                           std::max(0.0f, contentCard.height - (timelineStrip.height + lanePadding * 2.0f + 4.0f)));
-    renderer.fillRoundedRect(timelineStrip, 5.0f, theme.getColor("surfaceTertiary").withAlpha(0.8f));
+                                std::max(0.0f, contentCard.height - lanePadding * 2.0f));
     
     // === Step Grid Layout ===
-    float availWidth = noteLane.width;
+    float availWidth = timelineStrip.width;
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f); // Min 26px
     float totalWidth = stepWidth * m_stepCount;
     
@@ -509,32 +334,20 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     float maxScroll = std::max(0.0f, totalWidth - availWidth);
     m_scrollX = std::max(0.0f, std::min(m_scrollX, maxScroll));
     
-    float padSize = stepWidth - PAD_SPACING;
-    padSize = std::max(padSize, PAD_MIN_SIZE);
-    padSize = std::min(padSize, noteLane.height - 2.0f);
-    
-    float gridY = noteLane.y + std::max(0.0f, (noteLane.height - padSize) / 2.0f);
-    
     // === Fetch Active Steps ===
     std::vector<int> activeSteps;
     std::vector<NoteSpan> noteSpans;
+    std::vector<int> stepPitch(m_stepCount, -1);
+    std::vector<float> stepLength(m_stepCount, 0.0f);
+    bool unitHasContent = !m_pluginId.empty() || !m_audioClip.empty();
+    const bool stepMode = usesStepSequencerForType(m_type);
     if (m_patternId.isValid()) {
         auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId);
         if (pattern && pattern->isMidi()) {
             auto& midi = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
-            std::vector<Aestra::Audio::MidiNote> unitNotes;
             for (const auto& note : midi.notes) {
                 if (note.unitId != m_unitId && note.unitId != 0) continue;
-                unitNotes.push_back(note);
-            }
-
-            std::sort(unitNotes.begin(), unitNotes.end(), [](const auto& a, const auto& b) {
-                if (std::abs(a.startBeat - b.startBeat) > 0.0001) return a.startBeat < b.startBeat;
-                return a.pitch < b.pitch;
-            });
-
-            std::vector<int> laneEnds;
-            for (const auto& note : unitNotes) {
+                unitHasContent = true;
                 const int startStep = std::clamp(static_cast<int>(std::floor(note.startBeat / 0.25 + 0.0001)), 0, m_stepCount - 1);
                 const double endBeat = std::max(note.startBeat + 0.25, note.startBeat + note.durationBeats);
                 const int endExclusive =
@@ -543,162 +356,165 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 for (int step = startStep; step < endExclusive; ++step) {
                     activeSteps.push_back(step);
                 }
-
-                int lane = 0;
-                while (lane < static_cast<int>(laneEnds.size()) && laneEnds[lane] > startStep) {
-                    ++lane;
-                }
-                if (lane == static_cast<int>(laneEnds.size())) {
-                    laneEnds.push_back(endExclusive);
-                } else {
-                    laneEnds[lane] = endExclusive;
-                }
-
-                noteSpans.push_back(NoteSpan{startStep, endExclusive, lane, note.pitch, note.velocity});
+                noteSpans.push_back(NoteSpan{startStep, endExclusive, note.pitch, note.velocity});
+                stepPitch[startStep] = note.pitch;
+                stepLength[startStep] = static_cast<float>(note.durationBeats);
             }
         }
     }
     std::sort(activeSteps.begin(), activeSteps.end());
     activeSteps.erase(std::unique(activeSteps.begin(), activeSteps.end()), activeSteps.end());
-    
-    // Theme colors
-    NUIColor stepInactiveColor = theme.getColor("stepInactive");
-    NUIColor stepActiveColor = unitAccent; 
-    NUIColor stepGlowColor = unitAccent.withAlpha(0.5f);
-    
-    // === Render Note Spans (Piano Roll Minimap) ===
-    if (!noteSpans.empty()) {
-        // Calculate pitch range
-        int minPitch = noteSpans[0].pitch;
-        int maxPitch = noteSpans[0].pitch;
-        for (const auto& span : noteSpans) {
-            if (span.pitch < minPitch) minPitch = span.pitch;
-            if (span.pitch > maxPitch) maxPitch = span.pitch;
-        }
-        
-        // Expand pitch range to show context (add 2 semitones padding)
-        minPitch = std::max(0, minPitch - 2);
-        maxPitch = std::min(127, maxPitch + 2);
-        const int pitchRange = std::max(maxPitch - minPitch, 12); // Min 1 octave visible
-        const float noteBarHeight = 6.0f;
-        
-        // Calculate minimap height based on pitch range
-        const float minimapMinHeight = 40.0f;
-        const float minimapMaxHeight = std::max(minimapMinHeight, bounds.height - 8.0f);
-        const float minimapHeight = safeClampUnitRowFloat(
-            static_cast<float>(pitchRange) * 2.5f, // 2.5px per semitone
-            minimapMinHeight,
-            minimapMaxHeight
-        );
-        const float minimapY = bounds.y + (bounds.height - minimapHeight) / 2.0f;
-        
-        // Apply scroll offset to visible pitch range
-        const float scrolledMinPitch = static_cast<float>(minPitch) + m_minimapPitchOffset;
-        const float scrolledMaxPitch = scrolledMinPitch + static_cast<float>(pitchRange);
 
-        // Draw grid lines (octave boundaries + pitch labels)
-        const char* pitchNames[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-        for (int p = minPitch; p <= maxPitch; ++p) {
-            if (p % 12 == 0) { // C notes = octave boundaries
-                float lineY = minimapY + minimapHeight
-                    - ((static_cast<float>(p) - scrolledMinPitch) / static_cast<float>(pitchRange)) * minimapHeight;
-                if (lineY >= minimapY && lineY <= minimapY + minimapHeight) {
-                    // Octave line — visible but subtle
-                    renderer.drawLine(
-                        NUIPoint(noteLane.x, lineY),
-                        NUIPoint(noteLane.right(), lineY),
-                        0.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.2f)
-                    );
-                    // Pitch label
-                    int octave = (p / 12) - 1;
-                    std::string label = std::string("C") + std::to_string(octave);
-                    renderer.drawText(label, NUIPoint(noteLane.x + 2.0f, lineY - 7.0f), 8.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.35f));
-                }
-            }
-            
-            // Draw every semitone as a faint line for reference
-            if (p % 12 != 0) {
-                float lineY = minimapY + minimapHeight
-                    - ((static_cast<float>(p) - scrolledMinPitch) / static_cast<float>(pitchRange)) * minimapHeight;
-                if (lineY >= minimapY && lineY <= minimapY + minimapHeight) {
-                    renderer.drawLine(
-                        NUIPoint(noteLane.x, lineY),
-                        NUIPoint(noteLane.right(), lineY),
-                        0.3f, NUIColor(1.0f, 1.0f, 1.0f, 0.05f)
-                    );
-                }
-            }
-        }
-        
-        // Draw beat grid lines (every 4 steps = 1 beat)
-        for (int s = 0; s <= m_stepCount; s += 1) {
-            float lineX = noteLane.x + (s * stepWidth) - m_scrollX;
-            if (lineX < noteLane.x || lineX > noteLane.right()) continue;
-            
-            bool isBeat = (s % 4 == 0);
-            bool isBar = (s % 16 == 0);
-            float thickness = isBar ? 1.0f : (isBeat ? 0.5f : 0.3f);
-            float alpha = isBar ? 0.24f : (isBeat ? 0.12f : 0.06f);
+    if (m_type == Aestra::Audio::UnitType::Sampler) {
+        const NUIColor inactiveFill(0.133f, 0.133f, 0.184f, 1.0f);
+        const NUIColor inactiveStroke(1.0f, 1.0f, 1.0f, 0.10f);
+        const NUIColor activeFill(0.486f, 0.361f, 0.749f, 1.0f);
+        const float cellGap = 3.0f;
+        const float cellRadius = 3.0f;
+        const float cellHeight = std::max(10.0f, timelineStrip.height - 6.0f);
+        const float cellY = timelineStrip.y + (timelineStrip.height - cellHeight) * 0.5f;
 
-            if (s < m_stepCount) {
-                NUIRect tickRect(lineX + 1.5f, timelineStrip.y + 2.0f, std::max(0.0f, stepWidth - 3.0f), timelineStrip.height - 4.0f);
-                if (isBar) {
-                    renderer.fillRoundedRect(tickRect, 3.5f, unitAccent.withAlpha(0.18f));
-                    renderer.strokeRoundedRect(tickRect, 3.5f, 1.0f, unitAccent.withAlpha(0.45f));
-                    const int barIndex = (s / 16) + 1;
-                    renderer.drawTextCentered("Bar " + std::to_string(barIndex), tickRect, 8.0f, theme.getColor("textSecondary").withAlpha(0.95f));
-                } else if (isBeat) {
-                    renderer.fillRoundedRect(tickRect, 3.0f, theme.getColor("surfaceSecondary").withAlpha(0.55f));
-                }
-            }
-            
-            renderer.drawLine(
-                NUIPoint(lineX, noteLane.y),
-                NUIPoint(lineX, noteLane.bottom()),
-                thickness, NUIColor(1.0f, 1.0f, 1.0f, alpha)
-            );
-        }
-
-        for (const auto& span : noteSpans) {
-            const float startX =
-                noteLane.x + (span.startStep * stepWidth) + PAD_SPACING * 0.5f - m_scrollX;
-            const float endX =
-                noteLane.x + (span.endStep * stepWidth) - PAD_SPACING * 0.5f - m_scrollX;
-            const float width = std::max(6.0f, endX - startX);
-
-            // Visibility culling
-            if (startX + width < noteLane.x || startX > noteLane.right()) {
+        for (int step = 0; step < m_stepCount; ++step) {
+            const float cellX = timelineStrip.x + (step * stepWidth) - m_scrollX + (cellGap * 0.5f);
+            const float cellWidth = std::max(8.0f, stepWidth - cellGap);
+            if (cellX + cellWidth < timelineStrip.x || cellX > timelineStrip.right()) {
                 continue;
             }
 
-            // Pitch-to-Y mapping using scrolled viewport
-            float pitchY = minimapY + minimapHeight
-                - ((span.pitch - scrolledMinPitch) / static_cast<float>(pitchRange)) * minimapHeight
-                - noteBarHeight;
+            const bool isActive = std::binary_search(activeSteps.begin(), activeSteps.end(), step);
+            NUIRect cellRect(cellX, cellY, cellWidth, cellHeight);
+            renderer.fillRoundedRect(cellRect, cellRadius, isActive ? activeFill : inactiveFill);
+            renderer.strokeRoundedRect(cellRect, cellRadius, 1.0f, inactiveStroke);
 
-            // Clamp to minimap bounds
-            const float pitchYMin = minimapY + 1.0f;
-            const float pitchYMax = std::max(pitchYMin, minimapY + minimapHeight - noteBarHeight - 1.0f);
-            pitchY = safeClampUnitRowFloat(pitchY, pitchYMin, pitchYMax);
-
-            NUIRect spanRect(startX, pitchY, width, noteBarHeight);
-            const float velocity = std::clamp(span.velocity <= 1.0f ? span.velocity : span.velocity / 127.0f, 0.1f, 1.0f);
-            const NUIColor fill = unitAccent.withAlpha(0.45f + velocity * 0.35f);
-            const NUIColor border = unitAccent.lightened(0.15f).withAlpha(0.95f);
-
-            renderer.fillRoundedRect(spanRect, std::min(noteBarHeight * 0.5f, 3.0f), fill);
-            renderer.strokeRoundedRect(spanRect, std::min(noteBarHeight * 0.5f, 3.0f), 1.0f, border);
+            if ((step + 1) % 4 == 0 && step + 1 < m_stepCount) {
+                const float markerX = cellRect.right() + (cellGap * 0.5f);
+                renderer.drawLine(NUIPoint(markerX, timelineStrip.y + 2.0f),
+                                  NUIPoint(markerX, timelineStrip.bottom() - 2.0f),
+                                  1.0f,
+                                  NUIColor(1.0f, 1.0f, 1.0f, 0.12f));
+            }
         }
-    } else {
-        renderer.drawTextCentered("Empty lane · draw in Piano Roll or drop a sample/plugin",
-                                  noteLane,
-                                  10.0f,
-                                  theme.getColor("textSecondary").withAlpha(0.78f));
+    } else if (m_type == Aestra::Audio::UnitType::PitchedSampler) {
+        const NUIColor inactiveFill(0.133f, 0.133f, 0.184f, 1.0f);
+        const NUIColor inactiveStroke(1.0f, 1.0f, 1.0f, 0.10f);
+        const NUIColor activeFill(0.486f, 0.361f, 0.749f, 1.0f);
+        const NUIColor pitchText = theme.getColor("textSecondary").withAlpha(0.72f);
+        const float cellGap = 3.0f;
+        const float topHeight = std::max(8.0f, timelineStrip.height * 0.58f);
+        const float pitchLaneHeight = std::max(8.0f, timelineStrip.height * 0.24f);
+        const float lengthLaneHeight = std::max(3.0f, timelineStrip.height * 0.10f);
+        const float topY = timelineStrip.y;
+        const float pitchY = topY + topHeight + 2.0f;
+        const float lengthY = timelineStrip.bottom() - lengthLaneHeight - 1.0f;
+
+        std::vector<NUIPoint> slidePoints;
+        for (int step = 0; step < m_stepCount; ++step) {
+            const float cellX = timelineStrip.x + (step * stepWidth) - m_scrollX + (cellGap * 0.5f);
+            const float cellWidth = std::max(8.0f, stepWidth - cellGap);
+            if (cellX + cellWidth < timelineStrip.x || cellX > timelineStrip.right()) {
+                continue;
+            }
+            const bool isActive = std::binary_search(activeSteps.begin(), activeSteps.end(), step);
+            NUIRect cellRect(cellX, topY, cellWidth, topHeight);
+            renderer.fillRoundedRect(cellRect, 3.0f, isActive ? activeFill : inactiveFill);
+            renderer.strokeRoundedRect(cellRect, 3.0f, 1.0f, inactiveStroke);
+
+            const NUIRect pitchRect(cellX, pitchY, cellWidth, pitchLaneHeight);
+            if (stepPitch[step] >= 0) {
+                const int display = stepPitch[step] - 36;
+                renderer.drawTextCentered((display >= 0 ? "+" : "") + std::to_string(display), pitchRect, 8.0f, pitchText);
+                slidePoints.push_back(NUIPoint(pitchRect.x + pitchRect.width * 0.5f, pitchRect.y + pitchRect.height * 0.5f));
+            } else {
+                renderer.drawTextCentered("·", pitchRect, 8.0f, pitchText.withAlpha(0.35f));
+            }
+
+            const NUIRect lengthBg(cellX, lengthY, cellWidth, lengthLaneHeight);
+            renderer.fillRoundedRect(lengthBg, 1.5f, inactiveStroke.withAlpha(0.35f));
+            if (stepLength[step] > 0.0f) {
+                const float ratio = std::clamp(stepLength[step] / 1.0f, 0.15f, 1.0f);
+                NUIRect lengthFill(cellX, lengthY, std::max(2.0f, cellWidth * ratio), lengthLaneHeight);
+                renderer.fillRoundedRect(lengthFill, 1.5f, activeFill.lightened(0.08f));
+            }
+        }
+
+        for (size_t i = 1; i < slidePoints.size(); ++i) {
+            renderer.drawLine(slidePoints[i - 1], slidePoints[i], 1.5f, activeFill.withAlpha(0.6f));
+        }
+    } else if (usesPianoRollForType(m_type) && !noteSpans.empty()) {
+        for (int lane = 0; lane < 5; ++lane) {
+            const float y = timelineStrip.y + ((lane + 1) * timelineStrip.height / 5.0f);
+            renderer.drawLine(NUIPoint(timelineStrip.x, y),
+                              NUIPoint(timelineStrip.right(), y),
+                              1.0f,
+                              NUIColor(1.0f, 1.0f, 1.0f, 0.07f));
+        }
+
+        int minPitch = noteSpans[0].pitch;
+        int maxPitch = noteSpans[0].pitch;
+        for (const auto& span : noteSpans) {
+            minPitch = std::min(minPitch, span.pitch);
+            maxPitch = std::max(maxPitch, span.pitch);
+        }
+        minPitch = std::max(0, minPitch - 2);
+        maxPitch = std::min(127, maxPitch + 2);
+        const int pitchRange = std::max(12, maxPitch - minPitch);
+        const NUIColor noteFill(0.486f, 0.361f, 0.749f, 0.88f);
+        const NUIColor noteStroke(1.0f, 1.0f, 1.0f, 0.10f);
+        const float noteHeight = 4.0f;
+
+        for (const auto& span : noteSpans) {
+            const float startX = timelineStrip.x + (span.startStep * stepWidth) + 1.5f - m_scrollX;
+            const float endX = timelineStrip.x + (span.endStep * stepWidth) - 1.5f - m_scrollX;
+            const float width = std::max(6.0f, endX - startX);
+            if (startX + width < timelineStrip.x || startX > timelineStrip.right()) {
+                continue;
+            }
+
+            float normalizedPitch = static_cast<float>(span.pitch - minPitch) / static_cast<float>(pitchRange);
+            float noteY = timelineStrip.bottom() - 2.0f - (normalizedPitch * (timelineStrip.height - noteHeight - 4.0f)) - noteHeight;
+            NUIRect noteRect(startX, noteY, width, noteHeight);
+            renderer.fillRoundedRect(noteRect, 2.0f, noteFill);
+            renderer.strokeRoundedRect(noteRect, 2.0f, 1.0f, noteStroke);
+        }
+    } else if (m_type == Aestra::Audio::UnitType::Audio) {
+        if (!m_audioPreviewWaveform.empty()) {
+            const float midY = timelineStrip.y + timelineStrip.height * 0.5f;
+            const float ampScale = std::max(4.0f, timelineStrip.height * 0.42f);
+            const float binWidth = timelineStrip.width / static_cast<float>(m_audioPreviewWaveform.size());
+            const NUIColor waveColor(0.486f, 0.361f, 0.749f, 0.9f);
+
+            for (size_t i = 0; i < m_audioPreviewWaveform.size(); ++i) {
+                const float x = timelineStrip.x + static_cast<float>(i) * binWidth;
+                const float amp = std::clamp(m_audioPreviewWaveform[i], 0.02f, 1.0f) * ampScale;
+                renderer.drawLine(NUIPoint(x, midY - amp), NUIPoint(x, midY + amp), std::max(1.0f, binWidth * 0.6f), waveColor);
+            }
+        }
+    }
+
+    if (!unitHasContent && m_isHovered) {
+        std::string emptyLabel = "Drop a sample or open Step Editor";
+        if (m_type == Aestra::Audio::UnitType::PitchedSampler) {
+            emptyLabel = "Drop a sample - pitch and slide per step";
+        } else if (m_type == Aestra::Audio::UnitType::Instrument) {
+            emptyLabel = "Open Piano Roll to add notes";
+        } else if (m_type == Aestra::Audio::UnitType::Audio) {
+            emptyLabel = "Drop an audio clip";
+        }
+        renderer.drawTextCentered("+", NUIRect(timelineStrip.x, timelineStrip.y + 2.0f, timelineStrip.width, 10.0f), 12.0f, theme.getColor("textSecondary").withAlpha(0.72f));
+        renderer.drawTextCentered(emptyLabel,
+                                  NUIRect(timelineStrip.x, timelineStrip.y + 10.0f, timelineStrip.width, timelineStrip.height - 10.0f),
+                                  9.0f,
+                                  theme.getColor("textSecondary").withAlpha(0.72f));
     }
 }
 
 bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     auto bounds = getBounds();
+    const NUIRect localDragRect(6.0f, 6.0f, 32.0f, 44.0f);
+    const NUIRect localControlRect(42.0f, 0.0f, std::min(310.0f, bounds.width * 0.42f), 56.0f);
+    const float separatorX = localControlRect.right() + 6.0f;
+    const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 14.0f)), 44.0f);
+    const NUIPoint localPoint(event.position.x - bounds.x, event.position.y - bounds.y);
 
     auto resolveGridStep = [this](const NUIPoint& position, const NUIRect& gridBounds) -> int {
         float relativeX = position.x - gridBounds.x;
@@ -800,24 +616,10 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     int oldHoveredStep = m_hoveredStep;
     m_hoveredStep = -1;
     
-    if (m_isHovered) {
-        float relativeX = event.position.x - bounds.x;
-        if (relativeX > m_controlWidth) {
-            // In step grid area
-            float gridX = relativeX - m_controlWidth;
-            
-            // Calculate step metrics same as draw
-            float availWidth = bounds.width - m_controlWidth;
-            float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
-            
-            // gridX is relative to view start. 
-            // Pos in content = gridX + m_scrollX
-            float contentX = gridX + m_scrollX;
-            int stepIndex = static_cast<int>(contentX / stepWidth);
-            
-            if (stepIndex >= 0 && stepIndex < m_stepCount) {
-                m_hoveredStep = stepIndex;
-            }
+    if (m_isHovered && localContextRect.contains(localPoint)) {
+        const int stepIndex = resolveGridStep(localPoint, localContextRect);
+        if (stepIndex >= 0 && stepIndex < m_stepCount) {
+            m_hoveredStep = stepIndex;
         }
     }
     
@@ -838,8 +640,7 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
              event.button == NUIMouseButton::None);
 
         if (isPointerMoveWhileEditing) {
-            const NUIRect gridBounds(bounds.x + m_controlWidth, bounds.y, bounds.width - m_controlWidth, bounds.height);
-            int stepIndex = resolveGridStep(event.position, gridBounds);
+            int stepIndex = resolveGridStep(localPoint, localContextRect);
             stepIndex = std::max(m_stepEditStart, std::min(m_stepCount - 1, stepIndex));
             const int endExclusive = stepIndex + 1;
             if (endExclusive != m_stepEditEndExclusive) {
@@ -862,24 +663,19 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
             // We just handle clicks on other elements.
 
             if (bounds.contains(event.position)) {
-                float relativeX = event.position.x - bounds.x;
-                
-                // Drag handle area
-                if (relativeX < DRAG_HANDLE_WIDTH) {
+                if (localDragRect.contains(localPoint)) {
                     m_isDragging = true;
                     m_dragStartPos = event.position;
                     if (m_onDragStart) m_onDragStart(m_unitId);
                     invalidateVisuals();
                     return true;
                 }
-                // Control block
-                else if (relativeX < m_controlWidth) {
-                    handleControlClick(event, NUIRect(bounds.x, bounds.y, m_controlWidth, bounds.height));
+                else if (localControlRect.contains(localPoint)) {
+                    handleControlClick(event, localControlRect);
                     return true;
                 }
-                // Step grid
-                else {
-                    handleContextClick(event, NUIRect(bounds.x + m_controlWidth, bounds.y, bounds.width - m_controlWidth, bounds.height));
+                else if (localContextRect.contains(localPoint)) {
+                    handleContextClick(event, localContextRect);
                     return true;
                 }
             }
@@ -888,14 +684,11 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         // === Right-click ===
         if (event.button == NUIMouseButton::Right) {
             if (bounds.contains(event.position)) {
-                float relativeX = event.position.x - bounds.x;
-                // Color strip
-                if (relativeX >= DRAG_HANDLE_WIDTH && relativeX < DRAG_HANDLE_WIDTH + COLOR_STRIP_WIDTH + 20.0f) {
+                if (localDragRect.contains(localPoint)) {
                     if (m_onRequestColorPicker) m_onRequestColorPicker();
                     return true;
                 }
-                // Step Grid - Cycle Steps
-                if (relativeX > m_controlWidth) {
+                if (localContextRect.contains(localPoint)) {
                     m_stepCount = (m_stepCount == 16) ? 32 : (m_stepCount == 32) ? 64 : 16;
                     if (m_stepCount == 16) m_scrollX = 0; // Reset scroll for small count
                     invalidateVisuals();
@@ -960,108 +753,66 @@ void UnitRow::stopEditing(bool save) {
 }
 
 void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& bounds) {
-    float relativeX = event.position.x - bounds.x - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 8.0f;
-    
-    // Button hit testing based on new layout
-    float btnStartX = 0.0f;
-    
-    // Power: first button
-    if (relativeX >= btnStartX && relativeX < btnStartX + BUTTON_SIZE) {
+    const auto rowBounds = getBounds();
+    const float rowLocalX = event.position.x - rowBounds.x;
+    const float rowLocalY = event.position.y - rowBounds.y;
+    const float localX = rowLocalX - bounds.x;
+    const float localY = rowLocalY - bounds.y;
+    const float dotCenterX = 12.0f;
+    const float dotCenterY = 18.0f;
+    const float dx = localX - dotCenterX;
+    const float dy = localY - dotCenterY;
+    if ((dx * dx + dy * dy) <= 36.0f) {
         m_manager.setUnitEnabled(m_unitId, !m_isEnabled);
         updateState();
         invalidateVisuals();
         return;
     }
-    btnStartX += BUTTON_SIZE + BUTTON_SPACING;
-    
-    // Arm: second button
-    if (relativeX >= btnStartX && relativeX < btnStartX + BUTTON_SIZE) {
-        m_manager.setUnitArmed(m_unitId, !m_isArmed);
-        updateState();
-        invalidateVisuals();
-        return;
-    }
-    btnStartX += BUTTON_SIZE + BUTTON_SPACING;
-    
-    // Mute: third button
-    if (relativeX >= btnStartX && relativeX < btnStartX + BUTTON_SIZE) {
+
+    const NUIRect muteRect(bounds.width - 92.0f, bounds.height * 0.5f - 10.0f, 24.0f, 20.0f);
+    const NUIRect soloRect(bounds.width - 62.0f, bounds.height * 0.5f - 10.0f, 24.0f, 20.0f);
+    const NUIPoint localPoint(localX, localY);
+    if (muteRect.contains(localPoint)) {
         m_manager.setUnitMute(m_unitId, !m_isMuted);
         updateState();
         invalidateVisuals();
         return;
     }
-    btnStartX += BUTTON_SIZE + BUTTON_SPACING;
-    
-    // Solo: fourth button
-    if (relativeX >= btnStartX && relativeX < btnStartX + BUTTON_SIZE) {
+    if (soloRect.contains(localPoint)) {
         m_manager.setUnitSolo(m_unitId, !m_isSolo);
         updateState();
         invalidateVisuals();
         return;
     }
-    btnStartX += BUTTON_SIZE + BUTTON_SPACING;
 
-    // Edit: fifth button
-    if (relativeX >= btnStartX && relativeX < btnStartX + BUTTON_SIZE) {
-        if (m_onEditUnit) m_onEditUnit(m_unitId);
-        return;
-    }
-    btnStartX += BUTTON_SIZE + BUTTON_SPACING + 4.0f;
-    
-    // Name area: double-click to edit
-    float mixerBitStart = bounds.width - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 8.0f - 50.0f; // Start of mixer channel area
-    if (relativeX >= btnStartX && relativeX < mixerBitStart) {
-        // Manual double-click detection (fallback if OS event fails)
-        auto now = std::chrono::steady_clock::now();
-        long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-        bool manualDoubleClick = (nowMs - m_lastClickTimeMs < 500);
-        
-        // Update click time for next check
-        m_lastClickTimeMs = nowMs;
-
-        if (manualDoubleClick || event.doubleClick) {
-            // Calculate absolute position for input widget
-            float xOffset = DRAG_HANDLE_WIDTH + COLOR_STRIP_WIDTH + 8.0f;
-            float absoluteX = xOffset + btnStartX;
-            float width = mixerBitStart - btnStartX;
-            float absoluteY = (bounds.height - 24.0f) / 2.0f + 1.0f;
-            
-            startEditing(NUIRect(absoluteX, absoluteY, width, 24.0f));
-        }
-        return;
-    }
-    
-    // Mixer Channel (right side) - Click to cycle channels
-    float rightBoundary = bounds.width - DRAG_HANDLE_WIDTH - COLOR_STRIP_WIDTH - 8.0f;
-    
-    // Clip Name / Waveform Area (Double-click to load sample)
-    if (relativeX >= rightBoundary - 120.0f && relativeX <= rightBoundary) {
-         float mixerStart = rightBoundary - 50.0f;
-         if (relativeX < mixerStart) {
-             // Double-click detection for sample loading
-             auto now = std::chrono::steady_clock::now();
-             long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-             bool isDoubleClick = (nowMs - m_lastClipClickTimeMs < 400);
-             m_lastClipClickTimeMs = nowMs;
-             
-             if (isDoubleClick || event.doubleClick) {
-                 // Trigger sample file picker
-                 if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
-             }
-             return;
-         }
-    }
-
-    if (relativeX >= rightBoundary - 50.0f && relativeX <= rightBoundary - 10.0f) {
-        int newChannel = (m_mixerChannel + 1) % 16;
-        m_manager.setUnitMixerChannel(m_unitId, newChannel);
-        updateState();
-        invalidateVisuals();
-        return;
+    auto now = std::chrono::steady_clock::now();
+    long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    bool manualDoubleClick = (nowMs - m_lastClickTimeMs < 500);
+    m_lastClickTimeMs = nowMs;
+    if (manualDoubleClick || event.doubleClick) {
+        startEditing(NUIRect(22.0f, 8.0f, std::max(120.0f, bounds.width - 120.0f), 22.0f));
     }
 }
 
 void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& bounds) {
+    const auto rowBounds = getBounds();
+    const NUIPoint localPoint(event.position.x - rowBounds.x - bounds.x,
+                              event.position.y - rowBounds.y - bounds.y);
+
+    if (usesPianoRollForType(m_type)) {
+        if (m_onOpenPatternEditor && m_patternId.isValid()) {
+            m_onOpenPatternEditor(m_patternId);
+        }
+        return;
+    }
+
+    if (m_type == Aestra::Audio::UnitType::Audio) {
+        if (m_onLoadUnitSample) {
+            m_onLoadUnitSample(m_unitId);
+        }
+        return;
+    }
+
     // === Double-click to load sample ===
     auto now = std::chrono::steady_clock::now();
     long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
@@ -1075,7 +826,7 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
     }
     
     // === Single click: Grid Interaction - Toggle Steps ===
-    float relativeX = event.position.x - bounds.x;
+    float relativeX = localPoint.x;
     float availWidth = bounds.width;
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
     
@@ -1106,7 +857,8 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
                 return;
             }
 
-            midi.notes.push_back({60, targetBeat, 0.25, 100.0f / 127.0f, m_unitId});
+            const int defaultPitch = (m_type == Aestra::Audio::UnitType::PitchedSampler) ? 36 : 60;
+            midi.notes.push_back({defaultPitch, targetBeat, 0.25, 100.0f / 127.0f, m_unitId});
         });
 
         if (removedExisting) {

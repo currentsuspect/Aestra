@@ -30,6 +30,32 @@ float clampf(float value, float lo, float hi) {
     return std::max(lo, std::min(value, hi));
 }
 
+AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
+    AestraUI::NUIComponent* root = component;
+    while (root && root->getParent()) {
+        root = root->getParent();
+    }
+    return root;
+}
+
+void detachContextMenu(const std::shared_ptr<AestraUI::NUIContextMenu>& menu) {
+    if (!menu) return;
+    if (auto* parent = menu->getParent()) {
+        parent->removeChild(menu);
+    }
+}
+
+void attachAndShowContextMenu(AestraUI::NUIComponent* owner,
+                              const std::shared_ptr<AestraUI::NUIContextMenu>& menu,
+                              const AestraUI::NUIPoint& position) {
+    if (!owner || !menu) return;
+    AestraUI::NUIComponent* root = getRootComponent(owner);
+    if (!root) root = owner;
+    root->addChild(menu);
+    menu->showAt(position);
+    root->repaint();
+}
+
 } // namespace
 
 // ============================================================================
@@ -59,6 +85,9 @@ AuditionPanel::AuditionPanel(std::shared_ptr<Audio::AuditionEngine> engine)
             m_pendingTrackTitle = item.title;
             m_pendingTrackArtist = item.artist;
             m_pendingTrackUiUpdate = true;
+            if (m_onActiveTrackPathChanged) {
+                m_onActiveTrackPathChanged(item.filePath);
+            }
             Log::info("[AuditionPanel] Track changed: " + item.title);
         });
         
@@ -74,6 +103,8 @@ AuditionPanel::AuditionPanel(std::shared_ptr<Audio::AuditionEngine> engine)
 }
 
 AuditionPanel::~AuditionPanel() {
+    detachContextMenu(m_queueContextMenu);
+    m_queueContextMenu = nullptr;
     if (m_engine) {
         m_engine->setOnTrackChanged(nullptr);
         m_engine->setOnPlaybackStateChanged(nullptr);
@@ -117,6 +148,8 @@ void AuditionPanel::setupComponents() {
     m_playPauseButton = std::make_shared<AestraUI::NUIButton>(""); 
     m_playPauseButton->setStyle(AestraUI::NUIButton::Style::Primary);
     m_playPauseButton->setCornerRadius(28.0f);
+    m_playPauseButton->setHoverColor(theme.getColor("accentPrimary").withAlpha(0.86f));
+    m_playPauseButton->setPressedColor(theme.getColor("accentPrimary").withAlpha(1.0f));
     m_playPauseButton->setOnClick([this]() {
         if (m_engine) {
              if (!m_engine->isPlaying()) {
@@ -129,17 +162,23 @@ void AuditionPanel::setupComponents() {
     
     m_prevButton = std::make_shared<AestraUI::NUIButton>("");
     m_prevButton->setStyle(AestraUI::NUIButton::Style::Icon);
+    m_prevButton->setHoverColor(theme.getColor("surfaceRaised").withAlpha(0.92f));
+    m_prevButton->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.42f));
     m_prevButton->setOnClick([this]() { if (m_engine) m_engine->previousTrack(); });
     addChild(m_prevButton);
     
     m_nextButton = std::make_shared<AestraUI::NUIButton>("");
     m_nextButton->setStyle(AestraUI::NUIButton::Style::Icon);
+    m_nextButton->setHoverColor(theme.getColor("surfaceRaised").withAlpha(0.92f));
+    m_nextButton->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.42f));
     m_nextButton->setOnClick([this]() { if (m_engine) m_engine->nextTrack(); });
     addChild(m_nextButton);
     
     // 3. DSP Buttons
     m_dspPresetButton = std::make_shared<AestraUI::NUIButton>("Studio Reference");
     m_dspPresetButton->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_dspPresetButton->setHoverColor(theme.getColor("accentPrimary").withAlpha(0.22f));
+    m_dspPresetButton->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.34f));
     m_dspPresetButton->setOnClick([this]() { 
         if (!m_engine) return;
         
@@ -173,19 +212,34 @@ void AuditionPanel::setupComponents() {
     });
     addChild(m_dspPresetButton);
     
-    m_abToggleButton = std::make_shared<AestraUI::NUIButton>("A/B");
+    m_abToggleButton = std::make_shared<AestraUI::NUIButton>("A DRY");
     m_abToggleButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_abToggleButton->setToggleable(true);
+    m_abToggleButton->setHoverColor(theme.getColor("accentPrimary").withAlpha(0.24f));
+    m_abToggleButton->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.40f));
     m_abToggleButton->setOnToggle([this](bool active) {
         if (m_engine) m_engine->setABMode(active);
+        if (m_abToggleButton) m_abToggleButton->setText(active ? "B WET" : "A DRY");
     });
     addChild(m_abToggleButton);
     
     // 4. Sliders
     m_progressSlider = std::make_shared<AestraUI::NUISlider>();
-    // We do NOT add m_progressSlider as child anymore - Waveform is the scrubber!
+    m_progressSlider->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.86f));
+    m_progressSlider->setFillColor(theme.getColor("accentPrimary").withAlpha(0.95f));
+    m_progressSlider->setThumbColor(theme.getColor("textPrimary").withAlpha(0.94f));
+    m_progressSlider->setThumbHoverColor(theme.getColor("accentPrimary").lightened(0.16f));
+    m_progressSlider->setValue(0.0f);
+    m_progressSlider->setOnValueChange([this](double val) {
+        if (m_engine) m_engine->seekNormalized(std::clamp(val, 0.0, 1.0));
+    });
+    addChild(m_progressSlider);
     
     m_volumeSlider = std::make_shared<AestraUI::NUISlider>();
+    m_volumeSlider->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.86f));
+    m_volumeSlider->setFillColor(theme.getColor("accentPrimary").withAlpha(0.92f));
+    m_volumeSlider->setThumbColor(theme.getColor("textPrimary").withAlpha(0.94f));
+    m_volumeSlider->setThumbHoverColor(theme.getColor("accentPrimary").lightened(0.16f));
     m_volumeSlider->setValue(1.0f);
     m_volumeSlider->setOnValueChange([this](double val) { // Fixed: setOnValueChange, double
         if (m_engine) m_engine->setVolume(static_cast<float>(val));
@@ -208,9 +262,27 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
     if (!m_engine) return;
     
     auto& theme = AestraUI::NUIThemeManager::getInstance();
-    float colNo = area.x + 12.0f;
-    float colTitle = area.x + 58.0f;
-    float colTime = area.x + area.width - 54.0f;
+    constexpr float rowH = 42.0f;
+    constexpr float rowPitch = rowH;
+    constexpr float headerH = 24.0f;
+    const float listY = area.y + headerH + 2.0f;
+
+    float colNo = area.x + 8.0f;
+    float colTitle = area.x + 44.0f;
+    float colTime = area.x + area.width - 56.0f;
+
+    renderer.drawText("Queue", AestraUI::NUIPoint(area.x + 2.0f, area.y + 4.0f), 12.0f, theme.getColor("textSecondary").withAlpha(0.95f));
+    if (m_clearQueueHovered) {
+        renderer.fillRoundedRect(m_clearQueueButtonBounds, 8.0f, theme.getColor("accentPrimary").withAlpha(0.16f));
+        renderer.strokeRoundedRect(m_clearQueueButtonBounds, 8.0f, 1.0f, theme.getColor("accentPrimary").withAlpha(0.58f));
+    }
+    renderer.drawText("Clear", AestraUI::NUIPoint(m_clearQueueButtonBounds.x + 3.0f, m_clearQueueButtonBounds.y + 1.0f), 12.0f,
+                      m_clearQueueHovered ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.90f));
+    renderer.drawLine(
+        AestraUI::NUIPoint(area.x, listY - 2.0f),
+        AestraUI::NUIPoint(area.right(), listY - 2.0f),
+        1.0f,
+        theme.getColor("textPrimary").withAlpha(0.08f));
     
     // Items
     const auto& queue = m_engine->getQueue();
@@ -218,77 +290,101 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
 
     if (queue.empty()) {
         const float centerX = area.x + area.width * 0.5f;
-        const float centerY = area.y + area.height * 0.32f;
-        renderer.drawText("Build a listening queue from the browser", AestraUI::NUIPoint(centerX - 106.0f, centerY - 8.0f), 13.0f, theme.getColor("textSecondary").withAlpha(0.95f));
-        renderer.drawText("Drag files here or use Audition from the timeline menu", AestraUI::NUIPoint(centerX - 142.0f, centerY + 12.0f), 11.0f, theme.getColor("textTertiary").withAlpha(0.92f));
+        const float centerY = listY + (area.height - headerH) * 0.32f;
+        renderer.drawText("Build a listening queue from the browser", AestraUI::NUIPoint(centerX - 106.0f, centerY - 8.0f), 13.0f, theme.getColor("textSecondary").withAlpha(0.92f));
+        renderer.drawText("Drag files here or use Audition from the timeline menu", AestraUI::NUIPoint(centerX - 142.0f, centerY + 12.0f), 11.0f, theme.getColor("textTertiary").withAlpha(0.90f));
         return;
     }
     
-    float y = area.y;
-    float rowH = 32.0f;
-    float spacing = 4.0f;
-    const float rowPitch = rowH + spacing;
+    float y = listY;
     
     for (size_t i = 0; i < queue.size(); ++i) {
         if (y + rowH > area.y + area.height) break; // Clip
         
         const auto& item = queue[i];
-        bool isCurrent = (currentItem && currentItem->id == item.id);
+        bool isCurrent = (m_engine->isPlaying() && currentItem && currentItem->id == item.id);
         bool isHovered = (static_cast<int>(i) == m_hoveredQueueIndex);
         
         AestraUI::NUIRect rowRect(area.x, y, area.width, rowH);
         
-        // Background
+        // Subtle row backgrounds; no boxed queue container treatment.
         if (isCurrent) {
-            // Active Glass Gradient
-            AestraUI::NUIColor start = AestraUI::NUIColor(0.1f, 0.1f, 0.15f, 0.9f);
-            AestraUI::NUIColor end = AestraUI::NUIColor(0.15f, 0.15f, 0.22f, 0.8f);
-            
-            // Draw gradient background
-             for(int j=0; j<4; ++j) {
-                 float f = j/3.0f;
-                 AestraUI::NUIRect r = rowRect;
-                 r.y += j * (rowRect.height/4.0f);
-                 r.height = rowRect.height/4.0f;
-                 renderer.fillRoundedRect(r, 6.0f, AestraUI::NUIColor::lerp(start, end, f));
-             }
-             
-            // Neon Border
-            renderer.strokeRoundedRect(rowRect, 6.0f, 1.0f, theme.getColor("primary")); 
-            
-            // Inner Highlight
-            AestraUI::NUIRect innerRect = rowRect;
-            innerRect.x += 1.0f; innerRect.y += 1.0f;
-            innerRect.width -= 2.0f; innerRect.height -= 2.0f;
-            renderer.strokeRoundedRect(innerRect, 5.0f, 1.0f, theme.getColor("primary").withAlpha(0.3f));
-            
+            renderer.fillRect(rowRect, theme.getColor("accentPrimary").withAlpha(0.24f));
+            renderer.fillRect(AestraUI::NUIRect(rowRect.x, rowRect.y, 4.0f, rowRect.height), theme.getColor("accentPrimary").withAlpha(0.96f));
+            renderer.strokeRect(rowRect, 1.0f, theme.getColor("accentPrimary").withAlpha(0.52f));
         } else if (isHovered) {
-             renderer.fillRoundedRect(rowRect, 6.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f)); // Hover light
+            renderer.fillRect(rowRect, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.05f));
+        }
+        renderer.drawLine(
+            AestraUI::NUIPoint(rowRect.x, rowRect.bottom()),
+            AestraUI::NUIPoint(rowRect.right(), rowRect.bottom()),
+            1.0f,
+            theme.getColor("textPrimary").withAlpha(0.08f));
+
+        // Left edge: hover drag handle or active equalizer icon, otherwise track number.
+        const bool showHandle = isHovered && !isCurrent;
+        if (isCurrent) {
+            const float baseX = colNo + 1.0f;
+            const float baseY = y + 12.0f;
+            for (int b = 0; b < 3; ++b) {
+                const float phase = m_animationTime * 8.0f + static_cast<float>(b) * 0.75f;
+                const float h = 5.0f + (std::sin(phase) * 0.5f + 0.5f) * 8.0f;
+                const float bx = baseX + static_cast<float>(b) * 4.5f;
+                renderer.fillRoundedRect(AestraUI::NUIRect(bx, baseY + (14.0f - h), 3.0f, h), 1.0f, theme.getColor("accentPrimary").withAlpha(0.95f));
+            }
+        } else if (showHandle) {
+            const float dotX = colNo + 2.0f;
+            const float dotY = y + 11.0f;
+            const bool handleHovered = (m_queueHandleHoverIndex == static_cast<int>(i));
+            if (handleHovered) {
+                renderer.fillRoundedRect(AestraUI::NUIRect(colNo - 3.0f, y + 8.0f, 16.0f, 20.0f), 5.0f, theme.getColor("accentPrimary").withAlpha(0.22f));
+            }
+            const auto dotColor = handleHovered
+                ? theme.getColor("textPrimary")
+                : theme.getColor("textSecondary").withAlpha(0.82f);
+            for (int r = 0; r < 3; ++r) {
+                for (int c = 0; c < 2; ++c) {
+                    renderer.fillRoundedRect(AestraUI::NUIRect(dotX + c * 4.0f, dotY + r * 4.0f, 1.8f, 1.8f), 0.9f, dotColor);
+                }
+            }
         } else {
-             // Alternating subtle
-             if (i % 2 == 0) renderer.fillRoundedRect(rowRect, 6.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.01f));
+            const AestraUI::NUIColor numberColor = theme.getColor("textTertiary").withAlpha(0.92f);
+            renderer.drawText(std::to_string(i + 1), AestraUI::NUIPoint(colNo, y + 12.0f), 12.0f, numberColor);
         }
 
-        // Icon Column Logic
-        if (isHovered) {
-             renderer.drawText("▶", AestraUI::NUIPoint(colNo - 3.0f, y + 8.0f), 12.0f, theme.getColor("textPrimary"));
-        } else if (isCurrent) {
-             // Speaker icon or waveform icon
-             renderer.drawText("ılı", AestraUI::NUIPoint(colNo - 1.0f, y + 8.0f), 12.0f, theme.getColor("primary")); 
-        } else {
-             renderer.drawText(std::to_string(i + 1), AestraUI::NUIPoint(colNo, y + 8.0f), 12.0f, theme.getColor("textTertiary").withAlpha(0.95f));
-        }
-        
-        // Title
-        AestraUI::NUIColor titleColor = isCurrent ? theme.getColor("primary") : theme.getColor("textPrimary");
+        // Track name (middle, top line)
+        AestraUI::NUIColor titleColor = isCurrent ? theme.getColor("textPrimary") : theme.getColor("textPrimary").withAlpha(0.96f);
         const std::string title = truncateAuditionText(item.title.empty() ? "Untitled Track" : item.title, 42);
         renderer.drawText(title, AestraUI::NUIPoint(colTitle, y + 8.0f), 13.0f, titleColor);
-        
-        // Time
+
+        // Artist (middle, second line)
+        const std::string artist = truncateAuditionText(item.artist.empty() ? "Unknown Artist" : item.artist, 46);
+        renderer.drawText(artist, AestraUI::NUIPoint(colTitle, y + 24.0f), 11.0f, theme.getColor("textSecondary").withAlpha(0.86f));
+
+        // Duration (right)
         std::string timeStr = (item.durationSeconds > 0.0) ? formatTime(item.durationSeconds) : "--:--";
-        renderer.drawText(timeStr, AestraUI::NUIPoint(colTime, y + 8.0f), 12.0f, theme.getColor("textSecondary").withAlpha(0.96f));
+        renderer.drawText(timeStr, AestraUI::NUIPoint(colTime, y + 14.0f), 12.0f, theme.getColor("textSecondary").withAlpha(0.94f));
+
+        // Hover-only remove control before duration.
+        if (isHovered) {
+            if (m_queueRemoveHoverIndex == static_cast<int>(i)) {
+                renderer.fillRoundedRect(AestraUI::NUIRect(colTime - 25.0f, y + 10.0f, 17.0f, 17.0f), 8.5f, theme.getColor("error").withAlpha(0.24f));
+            }
+            const auto removeColor = (m_queueRemoveHoverIndex == static_cast<int>(i))
+                ? theme.getColor("error")
+                : theme.getColor("textSecondary").withAlpha(0.80f);
+            renderer.drawText("✕", AestraUI::NUIPoint(colTime - 22.0f, y + 14.0f), 12.0f, removeColor);
+        }
         
         y += rowPitch;
+    }
+
+    if (m_isDraggingQueueItem && m_queueDragInsertIndex >= 0) {
+        const int lineIdx = m_queueDragInsertIndex;
+        const float lineY = listY + static_cast<float>(lineIdx) * rowPitch;
+        renderer.fillRect(
+            AestraUI::NUIRect(area.x + 6.0f, lineY - 1.0f, area.width - 12.0f, 2.0f),
+            theme.getColor("accentPrimary").withAlpha(0.95f));
     }
 }
 // ============================================================================
@@ -302,154 +398,121 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
 void AuditionPanel::layoutComponents() {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     auto bounds = getBounds();
-    const float padding = 20.0f;
-    const float gap = 16.0f;
+    const float padding = 18.0f;
+    const float gap = 8.0f;
     const float contentWidth = std::max(0.0f, bounds.width - padding * 2.0f);
-    const float headerHeight = clampf(bounds.height * 0.34f, 180.0f, 228.0f);
-    const float waveformHeight = clampf(bounds.height * 0.17f, 108.0f, 140.0f);
+    const float headerHeight = clampf(bounds.height * 0.44f, 220.0f, 280.0f);
+    const float waveformHeight = 80.0f;
     
     AestraUI::NUIRect headerRect(bounds.x + padding, bounds.y + padding, contentWidth, headerHeight);
     AestraUI::NUIRect waveformRect(bounds.x + padding, headerRect.bottom() + gap, contentWidth, waveformHeight);
     AestraUI::NUIRect queueRect(bounds.x + padding, waveformRect.bottom() + gap, contentWidth, bounds.height - waveformRect.bottom() - gap - padding);
     const bool hasCurrentTrack = (m_engine && m_engine->getCurrentItem().has_value());
     
-    // === 1. Header Layout ===
-    const float artPadding = 18.0f;
-    const float artSize = clampf(headerRect.height - artPadding * 2.0f, 120.0f, 168.0f);
-    const float artY = headerRect.y + (headerRect.height - artSize) * 0.5f;
-    const float infoX = headerRect.x + artPadding + artSize + 28.0f;
-    const float infoW = std::max(220.0f, headerRect.width - (artPadding + artSize + 28.0f) - artPadding);
-    const float emptyContentCenterX = headerRect.x + headerRect.width * 0.40f;
-    const float emptyContentWidth = clampf(infoW * 0.50f, 260.0f, 400.0f);
-    const float startY = artY;
-    
-    // Title
-    m_trackTitle->setFontSize(clampf(bounds.width * 0.022f, 22.0f, 30.0f));
-    m_trackTitle->setBounds(AestraUI::NUIAbsolute(bounds,
-                                                  (hasCurrentTrack ? infoX : (emptyContentCenterX - emptyContentWidth * 0.5f)) - bounds.x,
-                                                  (startY + (hasCurrentTrack ? 18.0f : 42.0f)) - bounds.y,
-                                                  hasCurrentTrack ? infoW : emptyContentWidth,
-                                                  36.0f));
-    m_trackTitle->setAlignment(hasCurrentTrack ? AestraUI::NUILabel::Alignment::Left : AestraUI::NUILabel::Alignment::Center);
-    
-    // Artist
+    // === 1. Player block layout ===
+    const float innerPad = 24.0f;
+    const float artSize = 140.0f;
+    const float topRowH = artSize;
+    const float controlsH = 62.0f;
+    const float progressRowH = 22.0f;
+    const float utilityH = 28.0f;
+    const float rowGap1 = 8.0f;
+    const float rowGap2 = 14.0f;
+    const float rowGap3 = 14.0f;
+    const float rightColH = 34.0f + rowGap1 + 22.0f + rowGap1 + controlsH;
+    const float topBlockH = std::max(artSize, rightColH);
+
+    const float utilityY = headerRect.bottom() - innerPad - utilityH;
+    const float progressY = utilityY - rowGap3 - progressRowH;
+    const float upperAreaTop = headerRect.y + innerPad;
+    const float upperAreaBottom = progressY - rowGap2;
+    const float upperAreaH = std::max(0.0f, upperAreaBottom - upperAreaTop);
+    const float topRowY = upperAreaTop + std::max(0.0f, (upperAreaH - topBlockH) * 0.5f);
+
+    const float artX = headerRect.x + innerPad;
+    const float artY = topRowY + (topBlockH - artSize) * 0.5f;
+    const float infoX = artX + artSize + 24.0f;
+    const float infoW = std::max(220.0f, headerRect.right() - innerPad - infoX);
+    const float rightColY = topRowY + (topBlockH - rightColH) * 0.5f;
+    const float titleY = rightColY;
+    const float subtitleY = titleY + 34.0f + rowGap1;
+    const float controlsInlineY = subtitleY + 22.0f + rowGap1;
+
+    m_trackTitle->setFontSize(clampf(bounds.width * 0.021f, 22.0f, 30.0f));
+    m_trackTitle->setBounds(AestraUI::NUIAbsolute(bounds, infoX - bounds.x, titleY - bounds.y, infoW, 34.0f));
+    m_trackTitle->setAlignment(AestraUI::NUILabel::Alignment::Left);
     m_trackArtist->setFontSize(15.0f);
-    m_trackArtist->setBounds(AestraUI::NUIAbsolute(bounds,
-                                                   (hasCurrentTrack ? infoX : (emptyContentCenterX - emptyContentWidth * 0.5f)) - bounds.x,
-                                                   (startY + (hasCurrentTrack ? 58.0f : 74.0f)) - bounds.y,
-                                                   hasCurrentTrack ? infoW : emptyContentWidth,
-                                                   22.0f));
-    m_trackArtist->setAlignment(hasCurrentTrack ? AestraUI::NUILabel::Alignment::Left : AestraUI::NUILabel::Alignment::Center);
-    
-    // Controls - Bottom aligned in header info area
-    float controlsY = hasCurrentTrack ? (headerRect.bottom() - ((headerRect.height - artSize) * 0.5f) - 58.0f)
-                                      : (headerRect.y + headerRect.height * 0.71f);
-    
-    // Play Button Group
-    float playSize = 54.0f;
-    float navSize = 34.0f;
-    float navGap = 10.0f;
+    m_trackArtist->setBounds(AestraUI::NUIAbsolute(bounds, infoX - bounds.x, subtitleY - bounds.y, infoW, 22.0f));
+    m_trackArtist->setAlignment(AestraUI::NUILabel::Alignment::Left);
+
+    // Centered transport row
+    const float playSize = 62.0f;
+    const float navSize = 40.0f;
+    const float navGap = 14.0f;
     const auto navButtonBg = theme.getColor("buttonBgDefault").withAlpha(0.66f);
     const auto navButtonBorder = theme.getColor("borderSubtle").withAlpha(0.92f);
     const auto utilityButtonBg = theme.getColor("buttonBgDefault").withAlpha(0.72f);
     const auto utilityButtonBorder = theme.getColor("border").withAlpha(0.92f);
-    
-    m_prevButton->setBounds(AestraUI::NUIAbsolute(bounds, infoX - bounds.x, controlsY + (playSize-navSize)/2 - bounds.y, navSize, navSize));
-    // Glass Style for Prev
+
+    const float transportWidth = navSize + navGap + playSize + navGap + navSize;
+    const float transportStartX = hasCurrentTrack
+        ? infoX
+        : (headerRect.x + headerRect.width * 0.5f - transportWidth * 0.5f);
+    m_prevButton->setBounds(AestraUI::NUIAbsolute(bounds, transportStartX - bounds.x, controlsInlineY + (playSize - navSize) * 0.5f - bounds.y, navSize, navSize));
     m_prevButton->setBackgroundColor(navButtonBg);
     m_prevButton->setBorderColor(navButtonBorder);
     m_prevButton->setBorderWidth(1.0f);
-    m_prevButton->setCornerRadius(navSize/2.0f);
+    m_prevButton->setCornerRadius(navSize * 0.5f);
 
-    m_playPauseButton->setBounds(AestraUI::NUIAbsolute(bounds, infoX + navSize + navGap - bounds.x, controlsY - bounds.y, playSize, playSize));
-    // Glass Style for Play (Slightly brighter/different?)
-    // Let's make it consistent but maybe slightly more opaque or accented if playing? 
-    // For now, consistent Glass Base.
+    m_playPauseButton->setBounds(AestraUI::NUIAbsolute(bounds, transportStartX + navSize + navGap - bounds.x, controlsInlineY - bounds.y, playSize, playSize));
     m_playPauseButton->setBackgroundColor(navButtonBg);
-    m_playPauseButton->setBorderColor(navButtonBorder);
+    m_playPauseButton->setBorderColor(theme.getColor("accentPrimary").withAlpha(0.95f));
     m_playPauseButton->setBorderWidth(1.0f);
-    m_playPauseButton->setCornerRadius(playSize/2.0f);
+    m_playPauseButton->setCornerRadius(playSize * 0.5f);
 
-    m_nextButton->setBounds(AestraUI::NUIAbsolute(bounds, infoX + navSize + navGap + playSize + navGap - bounds.x, controlsY + (playSize-navSize)/2 - bounds.y, navSize, navSize));
-    // Glass Style for Next
+    m_nextButton->setBounds(AestraUI::NUIAbsolute(bounds, transportStartX + navSize + navGap + playSize + navGap - bounds.x, controlsInlineY + (playSize - navSize) * 0.5f - bounds.y, navSize, navSize));
     m_nextButton->setBackgroundColor(navButtonBg);
     m_nextButton->setBorderColor(navButtonBorder);
     m_nextButton->setBorderWidth(1.0f);
-    m_nextButton->setCornerRadius(navSize/2.0f);
-    
-    // DSP & Volume Group (Right aligned or Next to transport)
-    float transportGroupWidth = navSize + navGap + playSize + navGap + navSize;
-    float controlsRight = headerRect.right() - artPadding;
-    float volumeW = hasCurrentTrack ? clampf(headerRect.width * 0.14f, 76.0f, 112.0f) : 78.0f;
-    float abW = 50.0f;
-    float dspW = hasCurrentTrack ? clampf(headerRect.width * 0.16f, 104.0f, 154.0f) : 108.0f;
-    if (!hasCurrentTrack) {
-        const float playCenterX = emptyContentCenterX - 74.0f;
-        const float emptyClusterStartX = playCenterX - (navSize + navGap + playSize * 0.5f);
-        const float emptyExtraX = emptyClusterStartX + transportGroupWidth + 14.0f;
+    m_nextButton->setCornerRadius(navSize * 0.5f);
 
-        m_prevButton->setBounds(AestraUI::NUIAbsolute(bounds, emptyClusterStartX - bounds.x, controlsY + (playSize-navSize)/2 - bounds.y, navSize, navSize));
-        m_playPauseButton->setBounds(AestraUI::NUIAbsolute(bounds, emptyClusterStartX + navSize + navGap - bounds.x, controlsY - bounds.y, playSize, playSize));
-        m_nextButton->setBounds(AestraUI::NUIAbsolute(bounds, emptyClusterStartX + navSize + navGap + playSize + navGap - bounds.x, controlsY + (playSize-navSize)/2 - bounds.y, navSize, navSize));
-        m_dspPresetButton->setBounds(AestraUI::NUIAbsolute(bounds, emptyExtraX - bounds.x, controlsY + 11.0f - bounds.y, dspW, 32.0f));
-        m_abToggleButton->setBounds(AestraUI::NUIAbsolute(bounds, emptyExtraX + dspW + 10.0f - bounds.x, controlsY + 11.0f - bounds.y, abW, 32.0f));
-        m_volumeSlider->setBounds(AestraUI::NUIAbsolute(bounds, emptyExtraX + dspW + abW + 14.0f - bounds.x, controlsY + 23.0f - bounds.y, volumeW, 6.0f));
-    } else {
-        float rightClusterWidth = dspW + 10.0f + abW + 14.0f + volumeW;
-        float totalControlsWidth = transportGroupWidth + 14.0f + rightClusterWidth;
-        float clusterStartX = infoX;
-        float desiredStartX = infoX + 360.0f;
-        float maxStartX = std::max(infoX, controlsRight - totalControlsWidth);
-        clusterStartX = std::max(infoX + 220.0f, std::min(desiredStartX, maxStartX));
-        float rowOverflow = (clusterStartX + totalControlsWidth) - controlsRight;
-        if (rowOverflow > 0.0f) {
-            clusterStartX -= rowOverflow;
-        }
-        clusterStartX = std::max(infoX + 180.0f, clusterStartX);
-        float extraX = clusterStartX + transportGroupWidth + 14.0f;
+    // Full-width progress row with timestamps at ends.
+    const float progressLeft = headerRect.x + innerPad;
+    const float progressRight = headerRect.right() - innerPad;
+    const float timeW = 48.0f;
+    const float sliderX = progressLeft + timeW + 8.0f;
+    const float sliderW = std::max(120.0f, progressRight - sliderX - timeW - 8.0f);
+    m_currentTime->setBounds(AestraUI::NUIAbsolute(bounds, progressLeft - bounds.x, progressY + 3.0f - bounds.y, timeW, 16.0f));
+    m_currentTime->setAlignment(AestraUI::NUILabel::Alignment::Left);
+    m_totalTime->setBounds(AestraUI::NUIAbsolute(bounds, progressRight - timeW - bounds.x, progressY + 3.0f - bounds.y, timeW, 16.0f));
+    m_totalTime->setAlignment(AestraUI::NUILabel::Alignment::Right);
+    m_progressSlider->setBounds(AestraUI::NUIAbsolute(bounds, sliderX - bounds.x, progressY + 8.0f - bounds.y, sliderW, 6.0f));
 
-        m_prevButton->setBounds(AestraUI::NUIAbsolute(bounds, clusterStartX - bounds.x, controlsY + (playSize-navSize)/2 - bounds.y, navSize, navSize));
-        m_playPauseButton->setBounds(AestraUI::NUIAbsolute(bounds, clusterStartX + navSize + navGap - bounds.x, controlsY - bounds.y, playSize, playSize));
-        m_nextButton->setBounds(AestraUI::NUIAbsolute(bounds, clusterStartX + navSize + navGap + playSize + navGap - bounds.x, controlsY + (playSize-navSize)/2 - bounds.y, navSize, navSize));
-        
-        m_dspPresetButton->setBounds(AestraUI::NUIAbsolute(bounds, extraX - bounds.x, controlsY + 11.0f - bounds.y, dspW, 32.0f));
-        m_abToggleButton->setBounds(AestraUI::NUIAbsolute(bounds, extraX + dspW + 10.0f - bounds.x, controlsY + 11.0f - bounds.y, abW, 32.0f));
-        m_volumeSlider->setBounds(AestraUI::NUIAbsolute(bounds, extraX + dspW + abW + 14.0f - bounds.x, controlsY + 23.0f - bounds.y, volumeW, 6.0f));
-    }
-    // Apply Glass Style to DSP Button
-    // Apply Glass Style to DSP Button - Match Transport Style
+    // Bottom utility row: pills left, volume right on one line.
+    const float dspW = 124.0f;
+    const float abW = 64.0f;
+    const float volumeWDefault = clampf(headerRect.width * 0.20f, 120.0f, 180.0f);
+    const float pillsEndX = progressLeft + dspW + 8.0f + abW;
+    const float minGap = 16.0f;
+    const float maxVolumeW = std::max(80.0f, progressRight - (pillsEndX + minGap));
+    const float volumeW = std::min(volumeWDefault, maxVolumeW);
+    const float volumeX = progressRight - volumeW;
+
+    m_dspPresetButton->setBounds(AestraUI::NUIAbsolute(bounds, progressLeft - bounds.x, utilityY - bounds.y, dspW, 26.0f));
+    m_abToggleButton->setBounds(AestraUI::NUIAbsolute(bounds, progressLeft + dspW + 8.0f - bounds.x, utilityY - bounds.y, abW, 26.0f));
     m_dspPresetButton->setBackgroundColor(utilityButtonBg);
     m_dspPresetButton->setBorderColor(utilityButtonBorder);
     m_dspPresetButton->setBorderWidth(1.0f);
-    m_dspPresetButton->setCornerRadius(16.0f);
-
-    // Apply Glass Style to A/B Button
-    // Apply Glass Style to A/B Button - Match Transport Style
+    m_dspPresetButton->setCornerRadius(13.0f);
     m_abToggleButton->setBackgroundColor(utilityButtonBg);
     m_abToggleButton->setBorderColor(utilityButtonBorder);
     m_abToggleButton->setBorderWidth(1.0f);
-    m_abToggleButton->setCornerRadius(16.0f);
-    
-    // Volume - Mini slider
-    // === 2. Waveform Info ===
-    // Time labels inside waveform panel, bottom corners
-    float timeY = waveformRect.bottom() - 24.0f;
-    m_currentTime->setBounds(AestraUI::NUIAbsolute(bounds, waveformRect.x + 12.0f - bounds.x, timeY - bounds.y, 60.0f, 16.0f));
-    m_totalTime->setBounds(AestraUI::NUIAbsolute(bounds, waveformRect.right() - 72.0f - bounds.x, timeY - bounds.y, 60.0f, 16.0f));
+    m_abToggleButton->setCornerRadius(13.0f);
+    m_volumeSlider->setBounds(AestraUI::NUIAbsolute(bounds, volumeX - bounds.x, utilityY + 10.0f - bounds.y, volumeW, 8.0f));
 
-    AestraUI::NUIRect waveformInner = waveformRect;
-    waveformInner.x += 20.0f;
-    waveformInner.y += 32.0f;
-    waveformInner.width -= 40.0f;
-    waveformInner.height -= 72.0f;
-    m_waveformArea = waveformInner;
-
-    AestraUI::NUIRect queueInner = queueRect;
-    queueInner.x += 12.0f;
-    queueInner.y += 34.0f;
-    queueInner.width -= 24.0f;
-    queueInner.height -= 40.0f;
-    m_queueArea = queueInner;
+    m_waveformArea = waveformRect;
+    m_queueArea = queueRect;
+    m_clearQueueButtonBounds = AestraUI::NUIRect(queueRect.right() - 44.0f, queueRect.y + 2.0f, 42.0f, 18.0f);
 }
 
 // ============================================================================
@@ -480,6 +543,13 @@ void AuditionPanel::onUpdate(double deltaTime) {
         if (m_pendingTrackUiUpdate) {
             if (m_trackTitle) m_trackTitle->setText(m_pendingTrackTitle);
             if (m_trackArtist) m_trackArtist->setText(m_pendingTrackArtist);
+            if (m_pendingTrackTitle != m_displayTrackTitle || m_pendingTrackArtist != m_displayTrackArtist) {
+                m_nextTrackTitle = m_pendingTrackTitle;
+                m_nextTrackArtist = m_pendingTrackArtist;
+                m_trackTextTransitionActive = true;
+                m_trackTextTransitionSwapped = false;
+                m_trackTextTransitionTime = 0.0f;
+            }
             m_pendingTrackUiUpdate = false;
             setDirty(true);
         }
@@ -493,9 +563,105 @@ void AuditionPanel::onUpdate(double deltaTime) {
         bool hasCurrent = m_engine->getCurrentItem().has_value();
         if (hasCurrent != m_hadCurrentItem) {
             m_hadCurrentItem = hasCurrent;
+            if (!hasCurrent) {
+                if (m_trackTitle && m_trackTitle->getText() != "No Track Selected") {
+                    m_trackTitle->setText("No Track Selected");
+                }
+                if (m_trackArtist && m_trackArtist->getText() != "Drag files to start") {
+                    m_trackArtist->setText("Drag files to start");
+                }
+                m_displayTrackTitle = "No Track Selected";
+                m_displayTrackArtist = "Drag files to start";
+                m_trackTextTransitionActive = false;
+                m_trackTextTransitionSwapped = false;
+                m_trackTextTransitionTime = 0.0f;
+                m_waveformRevealTrackId.clear();
+                if (m_onActiveTrackPathChanged) m_onActiveTrackPathChanged("");
+            }
             layoutComponents();
             setDirty(true);
         }
+
+        const auto& theme = AestraUI::NUIThemeManager::getInstance();
+        const bool isPlaying = m_engine->isPlaying();
+        if (m_playPauseButton && isPlaying != m_lastPlayingVisualState) {
+            const auto playBg = isPlaying
+                ? theme.getColor("accentPrimary").withAlpha(0.96f)
+                : theme.getColor("buttonBgDefault").withAlpha(0.72f);
+            const auto playBorder = isPlaying
+                ? theme.getColor("accentPrimary").lightened(0.22f).withAlpha(0.98f)
+                : theme.getColor("accentPrimary").withAlpha(0.95f);
+            m_playPauseButton->setBackgroundColor(playBg);
+            m_playPauseButton->setBorderColor(playBorder);
+            m_playPauseButton->setHoverColor(theme.getColor("accentPrimary").withAlpha(isPlaying ? 1.0f : 0.88f));
+            m_playPauseButton->setPressedColor(theme.getColor("accentPrimary").withAlpha(1.0f));
+            m_lastPlayingVisualState = isPlaying;
+        }
+
+        const bool abWet = m_engine->isABWetMode();
+        if (m_abToggleButton && abWet != m_lastABWetVisualState) {
+            m_abToggleButton->setToggled(abWet);
+            m_abToggleButton->setText(abWet ? "B WET" : "A DRY");
+            if (abWet) {
+                m_abToggleButton->setBackgroundColor(theme.getColor("accentPrimary").withAlpha(0.38f));
+                m_abToggleButton->setBorderColor(theme.getColor("accentPrimary").withAlpha(0.95f));
+                m_abToggleButton->setTextColor(theme.getColor("textPrimary"));
+            } else {
+                m_abToggleButton->setBackgroundColor(theme.getColor("buttonBgDefault").withAlpha(0.72f));
+                m_abToggleButton->setBorderColor(theme.getColor("border").withAlpha(0.92f));
+                m_abToggleButton->setTextColor(theme.getColor("textSecondary").withAlpha(0.98f));
+            }
+            m_lastABWetVisualState = abWet;
+        }
+    }
+
+    bool sourceReady = false;
+    std::string currentTrackId;
+    if (m_engine) {
+        auto source = m_engine->getCurrentSource();
+        sourceReady = (source && source->isReady());
+        auto item = m_engine->getCurrentItem();
+        if (item) currentTrackId = item->id;
+    }
+
+    if (m_isDropLoading) {
+        const bool loadTimedOut = (m_animationTime - m_loadingStateStart) > 2.0f;
+        if (sourceReady || loadTimedOut) {
+            m_isDropLoading = false;
+            setDirty(true);
+        }
+    }
+
+    if (sourceReady && !currentTrackId.empty() && currentTrackId != m_waveformRevealTrackId) {
+        m_waveformRevealTrackId = currentTrackId;
+        m_waveformRevealProgress = 0.0f;
+        m_waveformRevealActive = true;
+        setDirty(true);
+    }
+    if (m_waveformRevealActive) {
+        m_waveformRevealProgress = std::min(1.0f, m_waveformRevealProgress + static_cast<float>(deltaTime / 0.4));
+        if (m_waveformRevealProgress >= 0.999f) {
+            m_waveformRevealProgress = 1.0f;
+            m_waveformRevealActive = false;
+        }
+        setDirty(true);
+    }
+
+    if (m_trackTextTransitionActive) {
+        constexpr float transitionDuration = 0.15f;
+        constexpr float halfDuration = transitionDuration * 0.5f;
+        m_trackTextTransitionTime += static_cast<float>(deltaTime);
+        if (!m_trackTextTransitionSwapped && m_trackTextTransitionTime >= halfDuration) {
+            m_displayTrackTitle = m_nextTrackTitle;
+            m_displayTrackArtist = m_nextTrackArtist;
+            m_trackTextTransitionSwapped = true;
+        }
+        if (m_trackTextTransitionTime >= transitionDuration) {
+            m_trackTextTransitionActive = false;
+            m_trackTextTransitionSwapped = false;
+            m_trackTextTransitionTime = 0.0f;
+        }
+        setDirty(true);
     }
     
     // Update time
@@ -504,6 +670,10 @@ void AuditionPanel::onUpdate(double deltaTime) {
         double dur = m_engine->getDurationSeconds();
         m_currentTime->setText(formatTime(pos));
         m_totalTime->setText(formatTime(dur));
+        const double norm = (dur > 1e-6) ? std::clamp(pos / dur, 0.0, 1.0) : 0.0;
+        if (m_progressSlider && std::abs(m_progressSlider->getValue() - norm) > 0.002) {
+            m_progressSlider->setValue(norm);
+        }
     }
     
     NUIComponent::onUpdate(deltaTime);
@@ -545,9 +715,15 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
                     }
                 } catch (const std::exception& e) {
                     Log::error("[AuditionPanel] Exception decoding cover art: " + std::string(e.what()));
-                } catch (...) {
-                    Log::error("[AuditionPanel] Unknown exception decoding cover art");
                 }
+            }
+        } else if (!item) {
+            m_currentTrackId.clear();
+            if (m_coverArtTextureId != 0) {
+                renderer.deleteTexture(m_coverArtTextureId);
+                m_coverArtTextureId = 0;
+                m_coverArtWidth = 0;
+                m_coverArtHeight = 0;
             }
         }
         hasCoverArt = (m_coverArtTextureId != 0);
@@ -558,154 +734,192 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
     renderer.fillRect(bounds, theme.getColor("backgroundPrimary"));
     renderer.fillRect(bounds, theme.getColor("backgroundSecondary").withAlpha(0.22f));
     
-    const float padding = 20.0f;
-    const float gap = 16.0f;
-    float headerHeight = clampf(bounds.height * 0.34f, 180.0f, 228.0f);
-    float waveformHeight = clampf(bounds.height * 0.17f, 108.0f, 140.0f);
+    const float padding = 18.0f;
+    const float gap = 8.0f;
+    const float headerHeight = clampf(bounds.height * 0.44f, 220.0f, 280.0f);
+    const float waveformHeight = 80.0f;
     
-    AestraUI::NUIRect headerRect(bounds.x + padding, bounds.y + padding, bounds.width - padding*2, headerHeight);
-    AestraUI::NUIRect waveformRect(bounds.x + padding, headerRect.bottom() + gap, bounds.width - padding*2, waveformHeight);
-    AestraUI::NUIRect queueRect(bounds.x + padding, waveformRect.bottom() + gap, bounds.width - padding*2, bounds.height - waveformRect.bottom() - gap - padding);
+    AestraUI::NUIRect headerRect(bounds.x + padding, bounds.y + padding, bounds.width - padding * 2.0f, headerHeight);
+    AestraUI::NUIRect waveformRect(bounds.x + padding, headerRect.bottom() + gap, bounds.width - padding * 2.0f, waveformHeight);
+    AestraUI::NUIRect queueRect(bounds.x + padding, waveformRect.bottom() + gap, bounds.width - padding * 2.0f, bounds.height - waveformRect.bottom() - gap - padding);
 
-    // === 2. Panels ===
-    // Header
-    renderer.drawShadow(headerRect, 0, 8, 24, AestraUI::NUIColor(0,0,0,0.38f));
-    renderer.fillRoundedRect(headerRect, 16.0f, theme.getColor("surfaceTertiary"));
-    renderer.strokeRoundedRect(headerRect, 16.0f, 1.0f, theme.getColor("border").withAlpha(0.85f));
-    if (m_currentHeaderColor.a > 0.1f) {
-         AestraUI::NUIColor tint = m_currentHeaderColor; tint.a = 0.09f;
-         renderer.fillRoundedRect(headerRect, 16.0f, tint);
+    // One continuous audition surface with subtle section flow.
+    AestraUI::NUIRect surfaceRect(bounds.x + padding, bounds.y + padding, bounds.width - padding * 2.0f, bounds.height - padding * 2.0f);
+    renderer.fillRoundedRect(surfaceRect, 16.0f, theme.getColor("surfaceTertiary").withAlpha(0.86f));
+    renderer.fillRoundedRect(
+        AestraUI::NUIRect(surfaceRect.x + 1.0f, surfaceRect.y + 1.0f, surfaceRect.width - 2.0f, surfaceRect.height * 0.30f),
+        15.0f,
+        theme.getColor("surfaceRaised").withAlpha(0.34f));
+    renderer.strokeRoundedRect(surfaceRect, 16.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.42f));
+
+    renderer.drawLine(
+        AestraUI::NUIPoint(surfaceRect.x + 8.0f, waveformRect.y - 4.0f),
+        AestraUI::NUIPoint(surfaceRect.right() - 8.0f, waveformRect.y - 4.0f),
+        1.0f,
+        theme.getColor("textPrimary").withAlpha(0.10f));
+    renderer.drawLine(
+        AestraUI::NUIPoint(surfaceRect.x + 8.0f, queueRect.y - 4.0f),
+        AestraUI::NUIPoint(surfaceRect.right() - 8.0f, queueRect.y - 4.0f),
+        1.0f,
+        theme.getColor("textPrimary").withAlpha(0.10f));
+
+    if (m_isHoveringQueue) {
+        const float pulse = 0.5f + 0.5f * std::sin(m_animationTime * 6.0f);
+        const auto accent = theme.getColor("accentPrimary").withAlpha(0.35f + pulse * 0.35f);
+        renderer.fillRoundedRect(surfaceRect, 16.0f, AestraUI::NUIColor(0, 0, 0, 0.18f));
+        renderer.drawGlow(headerRect, 20.0f, 0.55f + pulse * 0.35f, accent);
+        renderer.strokeRoundedRect(headerRect, 16.0f, 2.0f, accent);
+        const auto center = headerRect.center();
+        renderer.drawText("⬇", AestraUI::NUIPoint(center.x - 9.0f, center.y - 28.0f), 30.0f, theme.getColor("textPrimary").withAlpha(0.95f));
+        renderer.drawText("Drop to audition", AestraUI::NUIPoint(center.x - 62.0f, center.y + 4.0f), 16.0f, theme.getColor("textPrimary").withAlpha(0.95f));
     }
-    // Waveform
-    renderer.drawShadow(waveformRect, 0, 6, 18, AestraUI::NUIColor(0,0,0,0.34f));
-    renderer.fillRoundedRect(waveformRect, 16.0f, theme.getColor("surfaceTertiary"));
-    renderer.strokeRoundedRect(waveformRect, 16.0f, 1.0f, theme.getColor("border").withAlpha(0.8f));
-    // Queue
-    renderer.drawShadow(queueRect, 0, 6, 20, AestraUI::NUIColor(0,0,0,0.36f));
-    renderer.fillRoundedRect(queueRect, 16.0f, theme.getColor("surfaceTertiary"));
-    renderer.strokeRoundedRect(queueRect, 16.0f, 1.0f, theme.getColor("border").withAlpha(0.8f));
-    renderer.fillRoundedRect(AestraUI::NUIRect(headerRect.x, headerRect.y, headerRect.width, 36.0f), 16.0f, theme.getColor("primary").withAlpha(0.08f));
-    renderer.fillRoundedRect(AestraUI::NUIRect(waveformRect.x, waveformRect.y, waveformRect.width, 28.0f), 16.0f, theme.getColor("primary").withAlpha(0.08f));
-    renderer.fillRoundedRect(AestraUI::NUIRect(queueRect.x, queueRect.y, queueRect.width, 28.0f), 16.0f, theme.getColor("primary").withAlpha(0.08f));
     
-    // === 3. Cover Art ===
-    if (headerRect.width > 50) {
-        float artPadding = 18.0f;
-        float artSize = clampf(headerHeight - (artPadding * 2), 120.0f, 168.0f);
-        float artY = headerRect.y + (headerRect.height - artSize) * 0.5f;
+    const bool hasCurrentTrack = (m_engine && m_engine->getCurrentItem().has_value());
 
-        AestraUI::NUIRect artRect(headerRect.x + artPadding, artY, artSize, artSize);
+    // === 3. Cover Art ===
+    if (headerRect.width > 50 && (hasCurrentTrack || hasCoverArt || m_isDropLoading)) {
+        const float innerPad = 24.0f;
+        const float artSize = 140.0f;
+        const float topRowH = artSize;
+        const float controlsH = 62.0f;
+        const float progressRowH = 22.0f;
+        const float utilityH = 28.0f;
+        const float rowGap1 = 8.0f;
+        const float rowGap2 = 14.0f;
+        const float rowGap3 = 14.0f;
+        const float rightColH = 34.0f + rowGap1 + 22.0f + rowGap1 + controlsH;
+        const float topBlockH = std::max(artSize, rightColH);
+        const float utilityY = headerRect.bottom() - innerPad - utilityH;
+        const float progressY = utilityY - rowGap3 - progressRowH;
+        const float upperAreaTop = headerRect.y + innerPad;
+        const float upperAreaBottom = progressY - rowGap2;
+        const float upperAreaH = std::max(0.0f, upperAreaBottom - upperAreaTop);
+        const float topRowY = upperAreaTop + std::max(0.0f, (upperAreaH - topBlockH) * 0.5f);
+        const float artY = topRowY + (topBlockH - artSize) * 0.5f;
+
+        AestraUI::NUIRect artRect(headerRect.x + innerPad, artY, artSize, artSize);
         renderer.fillRoundedRect(artRect, 12.0f, theme.getColor("backgroundSecondary").withAlpha(0.94f));
-        renderer.strokeRoundedRect(artRect, 12.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.88f));
+        renderer.fillRoundedRect(
+            AestraUI::NUIRect(artRect.x + 1.0f, artRect.y + 1.0f, artRect.width - 2.0f, artRect.height * 0.48f),
+            11.0f,
+            theme.getColor("surfaceRaised").withAlpha(0.28f));
+        renderer.strokeRoundedRect(artRect, 12.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.78f));
         
-        if (hasCoverArt) {
+        if (m_isDropLoading) {
+            const float cx = artRect.x + artRect.width * 0.5f;
+            const float cy = artRect.y + artRect.height * 0.5f;
+            const float r0 = 14.0f;
+            const float r1 = 22.0f;
+            const int segments = 12;
+            const float phase = m_animationTime * 10.0f;
+            for (int i = 0; i < segments; ++i) {
+                const float a = (static_cast<float>(i) / static_cast<float>(segments)) * 6.2831853f;
+                const float alpha = 0.15f + 0.75f * ((std::sin(phase - static_cast<float>(i) * 0.45f) + 1.0f) * 0.5f);
+                const auto col = theme.getColor("accentPrimary").withAlpha(alpha);
+                const AestraUI::NUIPoint p0(cx + std::cos(a) * r0, cy + std::sin(a) * r0);
+                const AestraUI::NUIPoint p1(cx + std::cos(a) * r1, cy + std::sin(a) * r1);
+                renderer.drawLine(p0, p1, 2.0f, col);
+            }
+        } else if (hasCoverArt) {
             AestraUI::NUIRect srcRect(0, 0, static_cast<float>(m_coverArtWidth), static_cast<float>(m_coverArtHeight));
+            // Keep image fully visible (contain fit) and inset so rounded-corner shell clips cleanly.
+            AestraUI::NUIRect dstRect = AestraUI::NUIRect(artRect.x + 6.0f, artRect.y + 6.0f, artRect.width - 12.0f, artRect.height - 12.0f);
+            if (m_coverArtWidth > 0 && m_coverArtHeight > 0) {
+                const float srcAspect = static_cast<float>(m_coverArtWidth) / static_cast<float>(m_coverArtHeight);
+                const float dstAspect = dstRect.width / dstRect.height;
+                if (srcAspect > dstAspect) {
+                    const float fittedH = dstRect.width / srcAspect;
+                    dstRect.y = dstRect.y + (dstRect.height - fittedH) * 0.5f;
+                    dstRect.height = fittedH;
+                } else {
+                    const float fittedW = dstRect.height * srcAspect;
+                    dstRect.x = dstRect.x + (dstRect.width - fittedW) * 0.5f;
+                    dstRect.width = fittedW;
+                }
+            }
             renderer.setClipRect(artRect);
-            renderer.drawTexture(m_coverArtTextureId, artRect, srcRect);
+            renderer.drawTexture(m_coverArtTextureId, dstRect, srcRect);
             renderer.clearClipRect();
             renderer.strokeRoundedRect(artRect, 12.0f, 1.0f, theme.getColor("border").withAlpha(0.92f));
         } else {
              AestraUI::NUIColor artFill(m_currentHeaderColor.r * 0.8f, m_currentHeaderColor.g * 0.8f, m_currentHeaderColor.b * 0.8f, 1.0f);
-             renderer.fillRoundedRect(artRect, 12.0f, artFill.withAlpha(0.28f));
-             renderer.drawText("AESTRA", AestraUI::NUIPoint(artRect.x + artSize/2.0f - 26.0f, artRect.y + artSize/2.0f - 6.0f), 13.0f, theme.getColor("textSecondary").withAlpha(0.92f));
+             renderer.fillRoundedRect(artRect, 12.0f, artFill.withAlpha(0.14f));
+             renderer.drawText("♪", AestraUI::NUIPoint(artRect.x + artSize * 0.5f - 6.0f, artRect.y + artSize * 0.5f - 10.0f), 22.0f, theme.getColor("textTertiary").withAlpha(0.40f));
         }
     }
 
-    const bool hasCurrentTrack = (m_engine && m_engine->getCurrentItem().has_value());
-    const float artPadding = 18.0f;
-    const float artSize = clampf(headerHeight - (artPadding * 2), 120.0f, 168.0f);
-    const float infoX = headerRect.x + artPadding + artSize + 28.0f;
-    const float infoW = std::max(220.0f, headerRect.width - (artPadding + artSize + 28.0f) - artPadding);
-    const float emptyContentCenterX = headerRect.x + headerRect.width * 0.46f;
-    renderer.drawText("AUDITION", AestraUI::NUIPoint(infoX, headerRect.y + 14.0f), 12.0f, theme.getColor("textSecondary").withAlpha(0.92f));
-    renderer.drawText("WAVEFORM", AestraUI::NUIPoint(waveformRect.x + 18.0f, waveformRect.y + 9.0f), 11.5f, theme.getColor("textSecondary").withAlpha(0.90f));
-    renderer.drawText("QUEUE", AestraUI::NUIPoint(queueRect.x + 18.0f, queueRect.y + 9.0f), 11.5f, theme.getColor("textSecondary").withAlpha(0.90f));
+    const float innerPad = 24.0f;
+    const float artSize = 140.0f;
+    const float topRowH = artSize;
+    const float controlsH = 62.0f;
+    const float progressRowH = 22.0f;
+    const float utilityH = 28.0f;
+    const float rowGap1 = 8.0f;
+    const float rowGap2 = 14.0f;
+    const float rowGap3 = 14.0f;
+    const float rightColH = 34.0f + rowGap1 + 22.0f + rowGap1 + controlsH;
+    const float topBlockH = std::max(artSize, rightColH);
+    const float utilityY = headerRect.bottom() - innerPad - utilityH;
+    const float progressY = utilityY - rowGap3 - progressRowH;
+    const float upperAreaTop = headerRect.y + innerPad;
+    const float upperAreaBottom = progressY - rowGap2;
+    const float upperAreaH = std::max(0.0f, upperAreaBottom - upperAreaTop);
+    const float topRowY = upperAreaTop + std::max(0.0f, (upperAreaH - topBlockH) * 0.5f);
+    const float infoX = headerRect.x + innerPad + artSize + 24.0f;
+    const float infoW = std::max(200.0f, headerRect.right() - innerPad - infoX);
 
     const float titleFont = clampf(bounds.width * 0.022f, 22.0f, 30.0f);
-    const float titleY = hasCurrentTrack ? (headerRect.y + 92.0f) : (headerRect.y + 108.0f);
-    const float subtitleY = titleY + (hasCurrentTrack ? 28.0f : 34.0f);
-    const std::string titleText = truncateAuditionText(m_trackTitle ? m_trackTitle->getText() : "No Track Selected", 32);
-    const std::string subtitleText = truncateAuditionText(m_trackArtist ? m_trackArtist->getText() : "Drag files to start", 46);
+    const float rightColY = topRowY + (topBlockH - rightColH) * 0.5f;
+    const float titleY = rightColY;
+    const float subtitleY = titleY + 34.0f + rowGap1;
+    const float playSize = 62.0f;
+    const float navSize = 40.0f;
+    const float navGap = 14.0f;
+    const float transportWidth = navSize + navGap + playSize + navGap + navSize;
+    const float transportCenterX = hasCurrentTrack
+        ? (infoX + transportWidth * 0.5f)
+        : (headerRect.x + headerRect.width * 0.5f);
+    float titleAlpha = 1.0f;
+    if (m_trackTextTransitionActive) {
+        constexpr float transitionDuration = 0.15f;
+        constexpr float halfDuration = transitionDuration * 0.5f;
+        if (m_trackTextTransitionTime < halfDuration) {
+            titleAlpha = clampf(1.0f - (m_trackTextTransitionTime / halfDuration), 0.0f, 1.0f);
+        } else {
+            titleAlpha = clampf((m_trackTextTransitionTime - halfDuration) / halfDuration, 0.0f, 1.0f);
+        }
+    }
+
+    const std::string titleText = m_isDropLoading
+        ? "Loading..."
+        : truncateAuditionText(m_displayTrackTitle, 32);
+    const std::string subtitleText = m_isDropLoading
+        ? "Preparing audio preview"
+        : truncateAuditionText(m_displayTrackArtist, 46);
     if (hasCurrentTrack) {
-        renderer.drawText(titleText, AestraUI::NUIPoint(infoX, titleY), titleFont, theme.getColor("textPrimary"));
-        renderer.drawText(subtitleText, AestraUI::NUIPoint(infoX, subtitleY), 15.0f, theme.getColor("textSecondary"));
+        renderer.drawText(titleText, AestraUI::NUIPoint(infoX, titleY), titleFont, theme.getColor("textPrimary").withAlpha(titleAlpha));
+        renderer.drawText(subtitleText, AestraUI::NUIPoint(infoX, subtitleY), 15.0f, theme.getColor("textSecondary").withAlpha(0.95f * titleAlpha));
     } else {
-        const float centerX = emptyContentCenterX;
-        renderer.drawText(titleText, AestraUI::NUIPoint(centerX - 122.0f, titleY), titleFont, theme.getColor("textPrimary"));
-        renderer.drawText(subtitleText, AestraUI::NUIPoint(centerX - 72.0f, subtitleY), 15.0f, theme.getColor("textSecondary"));
+        const float textW = std::min(520.0f, headerRect.width - innerPad * 2.0f);
+        renderer.drawTextCentered(
+            titleText,
+            AestraUI::NUIRect(transportCenterX - textW * 0.5f, titleY, textW, 34.0f),
+            titleFont,
+            theme.getColor("textPrimary").withAlpha(titleAlpha));
+        renderer.drawTextCentered(
+            subtitleText,
+            AestraUI::NUIRect(transportCenterX - textW * 0.5f, subtitleY, textW, 22.0f),
+            15.0f,
+            theme.getColor("textTertiary").withAlpha(0.95f * titleAlpha));
     }
     
     // === 4. Content Calls ===
-    AestraUI::NUIRect waveformInner = waveformRect;
-    float wInset = 20.0f;
-    waveformInner.x += wInset; waveformInner.y += 32.0f; 
-    waveformInner.width -= wInset*2; 
-    waveformInner.height -= (48.0f + 24.0f);
+    AestraUI::NUIRect waveformInner = m_waveformArea;
     renderWaveform(renderer, waveformInner);
     
-    AestraUI::NUIRect queueInner = queueRect;
-    float qInset = 12.0f;
-    queueInner.x += qInset; queueInner.y += 34.0f;
-    queueInner.width -= qInset*2; queueInner.height -= (qInset + 28.0f); 
+    AestraUI::NUIRect queueInner = m_queueArea;
     renderQueue(renderer, queueInner);
     
-
-    // === Render Time Label Backgrounds (Pill shape) in Reserved Bottom Space ===
-    // Use the reserved space: waveformRect bottom + padding
-    float timePillY = waveformInner.bottom() + 6.0f;
-    float pillW = 70.0f;
-    float pillH = 22.0f;
-    
-    // Calculate precise center based on layout
-    float totalTimeWidth = (pillW * 2) + 40.0f; // 2 pills + gap
-    float startX = waveformRect.x + (waveformRect.width - totalTimeWidth) / 2.0f;
-    
-    AestraUI::NUIRect currentPillRest(startX, timePillY, pillW, pillH);
-    AestraUI::NUIRect totalPillRect(startX + pillW + 40.0f, timePillY, pillW, pillH);
-    
-    if (m_currentTime) {
-        std::string timeStr = "0:00";
-        double pos = 0.0;
-        if (m_engine) pos = m_engine->getPositionSeconds();
-        int mins = static_cast<int>(pos / 60.0);
-        int secs = static_cast<int>(pos) % 60;
-        std::stringstream ss;
-        ss << mins << ":" << std::setfill('0') << std::setw(2) << secs;
-        m_currentTime->setText(ss.str());
-        
-        // Use full pill bounds and Center alignment
-        m_currentTime->setBounds(currentPillRest);
-        m_currentTime->setAlignment(AestraUI::NUILabel::Alignment::Center);
-        m_currentTime->setBackgroundVisible(false); // We draw manually for glass effect
-        
-        // Draw Glass Pill Background
-        renderer.fillRoundedRect(currentPillRest, 11.0f, theme.getColor("backgroundSecondary").withAlpha(0.86f)); // Dark glass
-        renderer.strokeRoundedRect(currentPillRest, 11.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.95f)); // Subtle border
-    }
-
-    if (m_totalTime) {
-        std::string timeStr = "0:00";
-        double dur = 0.0;
-        if (m_engine) dur = m_engine->getDurationSeconds();
-        int mins = static_cast<int>(dur / 60.0);
-        int secs = static_cast<int>(dur) % 60;
-        std::stringstream ss;
-        ss << mins << ":" << std::setfill('0') << std::setw(2) << secs;
-        m_totalTime->setText(ss.str());
-        
-        m_totalTime->setBounds(totalPillRect);
-        m_totalTime->setAlignment(AestraUI::NUILabel::Alignment::Center);
-         m_totalTime->setBackgroundVisible(false);
-        
-        // Draw Glass Pill Background
-        renderer.fillRoundedRect(totalPillRect, 11.0f, theme.getColor("backgroundSecondary").withAlpha(0.86f));
-        renderer.strokeRoundedRect(totalPillRect, 11.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.95f));
-    }
-    
-
-     // m_currentTime->onRender(renderer); // REMOVED: Handled by renderChildren()
-     // m_totalTime->onRender(renderer);   // REMOVED: Handled by renderChildren()
-
     // === Overlay SVGs on Buttons ===
     // Force White/Primary color for visibility against filled buttons
     AestraUI::NUIColor iconColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -718,6 +932,55 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
     
     // RENDER CHILD COMPONENTS (Buttons, Labels, Slider) on top of panels
     renderChildren(renderer);
+
+    if (m_isDropLoading && m_progressSlider) {
+        const auto pb = m_progressSlider->getBounds();
+        const float shimmerW = std::max(36.0f, pb.width * 0.24f);
+        const float travel = pb.width + shimmerW;
+        const float x = pb.x + std::fmod(m_animationTime * 220.0f, travel) - shimmerW;
+        renderer.fillRoundedRect(
+            AestraUI::NUIRect(x, pb.y - 1.0f, shimmerW, pb.height + 2.0f),
+            std::max(1.0f, pb.height * 0.5f),
+            theme.getColor("accentPrimary").withAlpha(0.32f));
+    }
+
+    if (m_progressSlider && m_progressSlider->isHovered()) {
+        const auto pb = m_progressSlider->getBounds();
+        renderer.strokeRoundedRect(
+            AestraUI::NUIRect(pb.x - 2.0f, pb.y - 3.0f, pb.width + 4.0f, pb.height + 6.0f),
+            std::max(4.0f, pb.height * 0.9f),
+            1.0f,
+            theme.getColor("accentPrimary").withAlpha(0.62f));
+    }
+    if (m_volumeSlider && m_volumeSlider->isHovered()) {
+        const auto vb = m_volumeSlider->getBounds();
+        renderer.strokeRoundedRect(
+            AestraUI::NUIRect(vb.x - 2.0f, vb.y - 3.0f, vb.width + 4.0f, vb.height + 6.0f),
+            std::max(4.0f, vb.height * 0.9f),
+            1.0f,
+            theme.getColor("accentPrimary").withAlpha(0.62f));
+    }
+
+    // Volume icon to the left of the volume slider.
+    if (m_volumeSlider) {
+        const auto v = m_volumeSlider->getBounds();
+        const float iconCx = v.x - 12.0f;
+        const float iconCy = v.y + v.height * 0.5f;
+        const bool volumeHovered = m_volumeSlider->isHovered();
+        const AestraUI::NUIColor volColor = volumeHovered
+            ? theme.getColor("accentPrimary").withAlpha(0.96f)
+            : theme.getColor("textSecondary").withAlpha(0.90f);
+
+        // Speaker body
+        renderer.fillRect(AestraUI::NUIRect(iconCx - 6.0f, iconCy - 3.0f, 4.0f, 6.0f), volColor);
+        // Cone
+        renderer.drawLine(AestraUI::NUIPoint(iconCx - 2.0f, iconCy - 3.0f), AestraUI::NUIPoint(iconCx + 2.0f, iconCy - 6.0f), 1.5f, volColor);
+        renderer.drawLine(AestraUI::NUIPoint(iconCx - 2.0f, iconCy + 3.0f), AestraUI::NUIPoint(iconCx + 2.0f, iconCy + 6.0f), 1.5f, volColor);
+        renderer.drawLine(AestraUI::NUIPoint(iconCx + 2.0f, iconCy - 6.0f), AestraUI::NUIPoint(iconCx + 2.0f, iconCy + 6.0f), 1.5f, volColor);
+        // Waves
+        renderer.drawLine(AestraUI::NUIPoint(iconCx + 5.0f, iconCy - 3.0f), AestraUI::NUIPoint(iconCx + 7.0f, iconCy), 1.0f, volColor.withAlpha(0.78f));
+        renderer.drawLine(AestraUI::NUIPoint(iconCx + 7.0f, iconCy), AestraUI::NUIPoint(iconCx + 5.0f, iconCy + 3.0f), 1.0f, volColor.withAlpha(0.78f));
+    }
 
     // Prev
     {
@@ -781,28 +1044,31 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
     AestraUI::NUIColor playedColorStart = theme.getColor("primary"); // Purple
     AestraUI::NUIColor playedColorEnd = theme.getColor("secondary"); // Cyan (or mapped secondary)
     AestraUI::NUIColor unplayedColor = theme.getColor("surfaceRaised");
-    unplayedColor.a = 0.5f;
+    unplayedColor.a = 0.68f;
 
-    const float pixelStride = 3.0f;
+    const float pixelStride = 2.0f;
     const float barWidth = 2.0f;
     const uint32_t numBars = static_cast<uint32_t>(area.width / pixelStride);
     if (numBars == 0) return;
     
     const size_t totalFrames = buffer->numFrames;
     const uint32_t channels = buffer->numChannels;
-    const size_t framesPerBar = totalFrames / numBars;
     const auto& data = buffer->interleavedData;
     
     float centerY = area.y + area.height / 2.0f;
     float halfHeight = area.height / 2.0f;
     double progress = m_engine->getPositionNormalized();
     float playheadX = area.x + static_cast<float>(progress) * area.width;
+    const float easedReveal = m_waveformRevealProgress * m_waveformRevealProgress * (3.0f - 2.0f * m_waveformRevealProgress);
+    const float revealX = area.x + area.width * std::clamp(easedReveal, 0.0f, 1.0f);
     
     for (uint32_t i = 0; i < numBars; ++i) {
         float maxAmp = 0.0f;
-        size_t startFrame = i * framesPerBar;
-        size_t endFrame = std::min(startFrame + framesPerBar, totalFrames);
-        size_t step = framesPerBar > 100 ? framesPerBar / 100 : 1;
+        const size_t startFrame = static_cast<size_t>((static_cast<double>(i) / static_cast<double>(numBars)) * static_cast<double>(totalFrames));
+        const size_t endFrame = std::max(startFrame + 1,
+                                         static_cast<size_t>((static_cast<double>(i + 1) / static_cast<double>(numBars)) * static_cast<double>(totalFrames)));
+        const size_t spanFrames = std::max<size_t>(1, endFrame - startFrame);
+        const size_t step = spanFrames > 100 ? (spanFrames / 100) : 1;
         
         for (size_t f = startFrame; f < endFrame; f += step) {
             size_t idx = f * channels;
@@ -819,6 +1085,7 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
             if (h > halfHeight) h = halfHeight;
             
             float x = area.x + (i * pixelStride);
+            if (x > revealX) break;
             
             AestraUI::NUIRect barRect(x, centerY - h, barWidth, h * 2.0f);
             
@@ -872,10 +1139,62 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
 
 bool AuditionPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     auto bounds = getBounds();
+    constexpr float queueHeaderH = 24.0f;
+    constexpr float queueRowPitch = 42.0f;
+    auto queueRowAt = [&](const AestraUI::NUIPoint& p) -> int {
+        if (!m_queueArea.contains(p)) return -1;
+        const float listY = m_queueArea.y + queueHeaderH + 2.0f;
+        if (p.y < listY) return -1;
+        const int idx = static_cast<int>((p.y - listY) / queueRowPitch);
+        if (!m_engine) return -1;
+        const int size = static_cast<int>(m_engine->getQueue().size());
+        return (idx >= 0 && idx < size) ? idx : -1;
+    };
+    auto isOnQueueHandle = [&](const AestraUI::NUIPoint& p, int row) -> bool {
+        if (row < 0) return false;
+        const float y = m_queueArea.y + queueHeaderH + 2.0f + static_cast<float>(row) * queueRowPitch;
+        return AestraUI::NUIRect(m_queueArea.x + 8.0f, y + 10.0f, 12.0f, 16.0f).contains(p);
+    };
+    auto isOnQueueRemove = [&](const AestraUI::NUIPoint& p, int row) -> bool {
+        if (row < 0) return false;
+        const float y = m_queueArea.y + queueHeaderH + 2.0f + static_cast<float>(row) * queueRowPitch;
+        return AestraUI::NUIRect(m_queueArea.right() - 78.0f, y + 9.0f, 18.0f, 18.0f).contains(p);
+    };
+    auto queueInsertAt = [&](const AestraUI::NUIPoint& p) -> int {
+        if (!m_engine) return -1;
+        const int size = static_cast<int>(m_engine->getQueue().size());
+        const float listY = m_queueArea.y + queueHeaderH + 2.0f;
+        const float raw = (p.y - listY) / queueRowPitch;
+        return std::clamp(static_cast<int>(std::floor(raw + 0.5f)), 0, size);
+    };
+    auto scrubNormFromX = [this](float x) -> double {
+        if (m_waveformArea.width <= 1.0f) return 0.0;
+        const float relativeX = x - m_waveformArea.x;
+        const float normPos = relativeX / m_waveformArea.width;
+        // Avoid hard-locking at exact track end while dragging.
+        return static_cast<double>(std::clamp(normPos, 0.0f, 0.9995f));
+    };
+
+    // Give the queue context menu first chance to consume input.
+    if (m_queueContextMenu) {
+        const bool handled = m_queueContextMenu->onMouseEvent(event);
+        if (handled) {
+            return true;
+        }
+        if (event.pressed &&
+            (event.button == AestraUI::NUIMouseButton::Left || event.button == AestraUI::NUIMouseButton::Right)) {
+            detachContextMenu(m_queueContextMenu);
+            m_queueContextMenu = nullptr;
+            setDirty(true);
+        }
+    }
     
     // Early exit if mouse is outside our bounds entirely
-    if (!bounds.contains(event.position)) {
+    if (!bounds.contains(event.position) && !m_isScrubbingWaveform) {
         m_hoveredQueueIndex = -1;
+        m_queueRemoveHoverIndex = -1;
+        m_queueHandleHoverIndex = -1;
+        m_clearQueueHovered = false;
         return NUIComponent::onMouseEvent(event);
     }
     
@@ -883,40 +1202,183 @@ bool AuditionPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         if (m_waveformArea.contains(event.position)) {
             m_isScrubbingWaveform = true;
-            float relativeX = event.position.x - m_waveformArea.x;
-            float normPos = relativeX / m_waveformArea.width;
-            if (m_engine) m_engine->seekNormalized(static_cast<double>(std::clamp(normPos, 0.0f, 1.0f)));
+            if (m_engine) m_engine->seekNormalized(scrubNormFromX(event.position.x));
             return true;
         }
     } else if (event.released) {
         m_isScrubbingWaveform = false;
     } else if (m_isScrubbingWaveform) {
-        float relativeX = event.position.x - m_waveformArea.x;
-        float normPos = relativeX / m_waveformArea.width;
-        if (m_engine) m_engine->seekNormalized(static_cast<double>(std::clamp(normPos, 0.0f, 1.0f)));
+        if (m_engine) m_engine->seekNormalized(scrubNormFromX(event.position.x));
         return true;
     }
     
-    // 2. Queue Hover & Click-to-Play
+    // 2. Queue interactions (clear, remove, reorder, click-to-play)
+    const bool clearHover = m_clearQueueButtonBounds.contains(event.position);
+    if (clearHover != m_clearQueueHovered) {
+        m_clearQueueHovered = clearHover;
+        setDirty(true);
+    }
+
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && clearHover) {
+        if (m_engine) m_engine->clearQueue();
+        m_hoveredQueueIndex = -1;
+        m_queueRemoveHoverIndex = -1;
+        m_queueHandleHoverIndex = -1;
+        m_clearQueueHovered = false;
+        m_isDraggingQueueItem = false;
+        m_queueDragFromIndex = -1;
+        m_queueDragInsertIndex = -1;
+        setDirty(true);
+        return true;
+    }
+
+    if (!event.pressed && !event.released && m_isDraggingQueueItem) {
+        m_queueDragInsertIndex = queueInsertAt(event.position);
+        setDirty(true);
+        return true;
+    }
+
     if (m_queueArea.contains(event.position)) {
-        float relY = event.position.y - m_queueArea.y;
-        constexpr float rowPitch = 36.0f;
-        int index = static_cast<int>(relY / rowPitch);
-        if (m_engine && index >= 0 && index < static_cast<int>(m_engine->getQueue().size())) {
-            m_hoveredQueueIndex = index;
-            
-            // Click to play
-            if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+        const int prevHover = m_hoveredQueueIndex;
+        const int prevHandleHover = m_queueHandleHoverIndex;
+        const int prevRemoveHover = m_queueRemoveHoverIndex;
+        const int index = queueRowAt(event.position);
+        m_hoveredQueueIndex = index;
+        m_queueHandleHoverIndex = (index >= 0 && isOnQueueHandle(event.position, index)) ? index : -1;
+        m_queueRemoveHoverIndex = (index >= 0 && isOnQueueRemove(event.position, index)) ? index : -1;
+        if (prevHover != m_hoveredQueueIndex || prevHandleHover != m_queueHandleHoverIndex || prevRemoveHover != m_queueRemoveHoverIndex) {
+            setDirty(true);
+        }
+
+        if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && index >= 0) {
+            if (m_queueRemoveHoverIndex == index) {
+                if (m_engine) m_engine->removeFromQueue(static_cast<size_t>(index));
+                m_hoveredQueueIndex = -1;
+                m_queueRemoveHoverIndex = -1;
+                m_queueHandleHoverIndex = -1;
+                setDirty(true);
+                return true;
+            }
+            if (m_queueHandleHoverIndex == index) {
+                m_isDraggingQueueItem = true;
+                m_queueDragFromIndex = index;
+                m_queueDragInsertIndex = index;
+                setDirty(true);
+                return true;
+            }
+            if (m_engine) {
                 m_engine->jumpToTrack(static_cast<size_t>(index));
                 m_engine->play();
                 Log::info("[AuditionPanel] Clicked queue item: " + std::to_string(index));
                 return true;
             }
-        } else {
-            m_hoveredQueueIndex = -1;
+        }
+
+        if (event.pressed && event.button == AestraUI::NUIMouseButton::Right && index >= 0 && m_engine) {
+            const auto& queue = m_engine->getQueue();
+            const int queueSize = static_cast<int>(queue.size());
+            if (queueSize <= 0) return true;
+
+            detachContextMenu(m_queueContextMenu);
+            m_queueContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
+            auto menu = m_queueContextMenu;
+
+            const bool canMoveUp = index > 0;
+            const bool canMoveDown = index < queueSize - 1;
+            const bool canMoveTop = index > 0;
+            const bool canMoveBottom = index < queueSize - 1;
+
+            auto playNowItem = std::make_shared<AestraUI::NUIContextMenuItem>("Play Now");
+            playNowItem->setOnClick([this, index]() {
+                if (!m_engine) return;
+                m_engine->jumpToTrack(static_cast<size_t>(index));
+                m_engine->play();
+            });
+            menu->addItem(playNowItem);
+            menu->addSeparator();
+
+            auto moveTopItem = std::make_shared<AestraUI::NUIContextMenuItem>("Move to Top");
+            moveTopItem->setEnabled(canMoveTop);
+            moveTopItem->setOnClick([this, index]() {
+                if (!m_engine || index <= 0) return;
+                m_engine->moveQueueItem(static_cast<size_t>(index), 0);
+            });
+            menu->addItem(moveTopItem);
+
+            auto moveUpItem = std::make_shared<AestraUI::NUIContextMenuItem>("Move Up");
+            moveUpItem->setEnabled(canMoveUp);
+            moveUpItem->setOnClick([this, index]() {
+                if (!m_engine || index <= 0) return;
+                m_engine->moveQueueItem(static_cast<size_t>(index), static_cast<size_t>(index - 1));
+            });
+            menu->addItem(moveUpItem);
+
+            auto moveDownItem = std::make_shared<AestraUI::NUIContextMenuItem>("Move Down");
+            moveDownItem->setEnabled(canMoveDown);
+            moveDownItem->setOnClick([this, index, queueSize]() {
+                if (!m_engine || index >= queueSize - 1) return;
+                m_engine->moveQueueItem(static_cast<size_t>(index), static_cast<size_t>(index + 1));
+            });
+            menu->addItem(moveDownItem);
+
+            auto moveBottomItem = std::make_shared<AestraUI::NUIContextMenuItem>("Move to Bottom");
+            moveBottomItem->setEnabled(canMoveBottom);
+            moveBottomItem->setOnClick([this, index, queueSize]() {
+                if (!m_engine || index >= queueSize - 1) return;
+                m_engine->moveQueueItem(static_cast<size_t>(index), static_cast<size_t>(queueSize - 1));
+            });
+            menu->addItem(moveBottomItem);
+            menu->addSeparator();
+
+            auto deleteItem = std::make_shared<AestraUI::NUIContextMenuItem>("Delete");
+            deleteItem->setOnClick([this, index]() {
+                if (!m_engine) return;
+                m_engine->removeFromQueue(static_cast<size_t>(index));
+            });
+            menu->addItem(deleteItem);
+
+            menu->setOnHide([this]() {
+                detachContextMenu(m_queueContextMenu);
+                m_queueContextMenu = nullptr;
+                setDirty(true);
+            });
+            attachAndShowContextMenu(this, menu, event.position);
+            setDirty(true);
+            return true;
+        }
+
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left && m_isDraggingQueueItem) {
+            const int from = m_queueDragFromIndex;
+            const int insert = std::max(0, m_queueDragInsertIndex);
+            if (m_engine && from >= 0) {
+                int destination = insert;
+                if (destination > from) destination -= 1;
+                const int size = static_cast<int>(m_engine->getQueue().size());
+                destination = std::clamp(destination, 0, std::max(0, size - 1));
+                if (destination != from) {
+                    m_engine->moveQueueItem(static_cast<size_t>(from), static_cast<size_t>(destination));
+                }
+            }
+            m_isDraggingQueueItem = false;
+            m_queueDragFromIndex = -1;
+            m_queueDragInsertIndex = -1;
+            setDirty(true);
+            return true;
         }
     } else {
-        m_hoveredQueueIndex = -1;
+        if (m_hoveredQueueIndex != -1 || m_queueRemoveHoverIndex != -1 || m_queueHandleHoverIndex != -1) {
+            m_hoveredQueueIndex = -1;
+            m_queueRemoveHoverIndex = -1;
+            m_queueHandleHoverIndex = -1;
+            setDirty(true);
+        }
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left && m_isDraggingQueueItem) {
+            m_isDraggingQueueItem = false;
+            m_queueDragFromIndex = -1;
+            m_queueDragInsertIndex = -1;
+            setDirty(true);
+            return true;
+        }
     }
 
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Right) {
@@ -1002,16 +1464,14 @@ AestraUI::DropFeedback AuditionPanel::onDragEnter(const AestraUI::DragData& data
 
 AestraUI::DropFeedback AuditionPanel::onDragOver(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
     if (data.type == AestraUI::DragDataType::File) {
+        m_isHoveringQueue = true;
         return AestraUI::DropFeedback::Copy;
     }
     return AestraUI::DropFeedback::None;
 }
 
 void AuditionPanel::onDragLeave() {
-    // Only reset if we were hovering queue
-    if (m_isHoveringQueue) {
-        // m_isHoveringQueue = false; // Optional, might want to keep it if mouse is over
-    }
+    m_isHoveringQueue = false;
 }
 
 AestraUI::DropResult AuditionPanel::onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
@@ -1020,16 +1480,15 @@ AestraUI::DropResult AuditionPanel::onDrop(const AestraUI::DragData& data, const
         Log::info("[AuditionPanel] Dropped file: " + data.filePath);
         try {
             addFileToQueue(data.filePath);
+            m_isDropLoading = true;
+            m_loadingStateStart = m_animationTime;
+            m_waveformRevealTrackId.clear();
             result.accepted = true;
             result.message = "Added to queue";
         } catch (const std::exception& e) {
             Log::error("[AuditionPanel] Exception in addFileToQueue: " + std::string(e.what()));
             result.accepted = false;
             result.message = std::string("Error: ") + e.what();
-        } catch (...) {
-            Log::error("[AuditionPanel] Unknown exception in addFileToQueue");
-            result.accepted = false;
-            result.message = "Unknown error";
         }
         m_isHoveringQueue = false;
     }

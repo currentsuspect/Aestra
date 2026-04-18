@@ -61,6 +61,14 @@ void SamplerPlugin::setRootMidiNote(int note) noexcept {
     m_rootMidiNote.store(std::clamp(note, 0, 127), std::memory_order_relaxed);
 }
 
+void SamplerPlugin::setMonoMode(bool mono) noexcept {
+    m_monoMode.store(mono, std::memory_order_relaxed);
+}
+
+void SamplerPlugin::setGlideTimeMs(float glideTimeMs) noexcept {
+    m_glideTimeMs.store(std::clamp(glideTimeMs, 0.0f, 2000.0f), std::memory_order_relaxed);
+}
+
 float SamplerPlugin::getCoarseSemitones() const noexcept {
     const float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
     return (pitchParam - 0.5f) * 24.0f;
@@ -193,6 +201,9 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             v.active = false;
             v.stage = EnvStage::Off;
             v.position = 0.0;
+            v.playbackRate = 1.0;
+            v.targetPlaybackRate = 1.0;
+            v.glideActive = false;
             v.stageTime = 0.0;
             v.currentGain = 0.0f;
             v.releaseGain = 0.0f;
@@ -252,6 +263,22 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         for (auto& v : m_voices) {
             if (!v.active)
                 continue;
+
+            if (v.glideActive) {
+                const float glideTimeMs = m_glideTimeMs.load(std::memory_order_relaxed);
+                if (glideTimeMs <= 0.0f) {
+                    v.playbackRate = v.targetPlaybackRate;
+                    v.glideActive = false;
+                } else {
+                    const double glideSamples = std::max(1.0, (static_cast<double>(glideTimeMs) * m_sampleRate) / 1000.0);
+                    const double glideCoeff = 1.0 - std::exp(-1.0 / glideSamples);
+                    v.playbackRate += (v.targetPlaybackRate - v.playbackRate) * glideCoeff;
+                    if (std::abs(v.targetPlaybackRate - v.playbackRate) < 1.0e-5) {
+                        v.playbackRate = v.targetPlaybackRate;
+                        v.glideActive = false;
+                    }
+                }
+            }
 
             // In one-shot mode there may be no note-off; trigger a timed release near the end
             // so ADSR remains meaningful for per-hit shaping.
@@ -342,6 +369,50 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
     uint8_t velocity = event.data[2];
 
     if (status == 0x90 && velocity > 0) { // Note On
+        const float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
+        const float globalSemitones = (pitchParam - 0.5f) * 24.0f + (m_fineTuneCents.load(std::memory_order_relaxed) / 100.0f);
+        const int rootMidiNote = m_rootMidiNote.load(std::memory_order_relaxed);
+        const float noteSemitones = static_cast<float>(note) - static_cast<float>(rootMidiNote);
+        const float ratio = std::pow(2.0f, (globalSemitones + noteSemitones) / 12.0f);
+        const double targetRate = baseRate * ratio;
+
+        if (m_monoMode.load(std::memory_order_relaxed)) {
+            double noteStartFrame = 0.0;
+            if (auto currentData = std::atomic_load(&m_data); currentData && currentData->channels > 0) {
+                const double totalFrames = static_cast<double>(currentData->data.size() / currentData->channels);
+                noteStartFrame = std::clamp(static_cast<double>(m_loopStartNorm.load(std::memory_order_relaxed)), 0.0, 0.999) *
+                                 std::max(1.0, totalFrames - 1.0);
+            }
+
+            auto& voice = m_voices[0];
+            const bool legato = voice.active && voice.stage != EnvStage::Release && voice.stage != EnvStage::Off;
+
+            voice.active = true;
+            voice.note = note;
+            voice.velocity = velocity / 127.0f;
+
+            if (legato) {
+                voice.targetPlaybackRate = targetRate;
+                const float glideTimeMs = m_glideTimeMs.load(std::memory_order_relaxed);
+                if (glideTimeMs <= 0.0f) {
+                    voice.playbackRate = targetRate;
+                    voice.targetPlaybackRate = targetRate;
+                    voice.glideActive = false;
+                } else {
+                    voice.glideActive = std::abs(voice.targetPlaybackRate - voice.playbackRate) > 1.0e-5;
+                }
+            } else {
+                voice.position = noteStartFrame;
+                voice.playbackRate = targetRate;
+                voice.targetPlaybackRate = targetRate;
+                voice.glideActive = false;
+                voice.stage = EnvStage::Attack;
+                voice.stageTime = 0.0;
+                voice.currentGain = 0.0f;
+            }
+            return;
+        }
+
         const int maxVoices = std::clamp(m_maxVoices.load(std::memory_order_relaxed), 1, kMaxVoices);
         double noteStartFrame = 0.0;
         if (auto currentData = std::atomic_load(&m_data); currentData && currentData->channels > 0) {
@@ -385,12 +456,9 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         freeVoice->note = note;
         freeVoice->velocity = velocity / 127.0f;
         freeVoice->position = noteStartFrame;
-        const float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
-        const float globalSemitones = (pitchParam - 0.5f) * 24.0f + (m_fineTuneCents.load(std::memory_order_relaxed) / 100.0f);
-        const int rootMidiNote = m_rootMidiNote.load(std::memory_order_relaxed);
-        const float noteSemitones = static_cast<float>(note) - static_cast<float>(rootMidiNote);
-        const float ratio = std::pow(2.0f, (globalSemitones + noteSemitones) / 12.0f);
-        freeVoice->playbackRate = baseRate * ratio;
+        freeVoice->playbackRate = targetRate;
+        freeVoice->targetPlaybackRate = targetRate;
+        freeVoice->glideActive = false;
         freeVoice->stage = EnvStage::Attack;
         freeVoice->stageTime = 0.0;
         freeVoice->currentGain = 0.0f;
@@ -506,6 +574,8 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
     json.set("loopEnabled", Aestra::JSON(m_loopEnabled.load(std::memory_order_relaxed)));
     json.set("maxVoices", Aestra::JSON(static_cast<double>(m_maxVoices.load(std::memory_order_relaxed))));
     json.set("rootMidiNote", Aestra::JSON(static_cast<double>(m_rootMidiNote.load(std::memory_order_relaxed))));
+    json.set("monoMode", Aestra::JSON(m_monoMode.load(std::memory_order_relaxed)));
+    json.set("glideTimeMs", Aestra::JSON(static_cast<double>(m_glideTimeMs.load(std::memory_order_relaxed))));
 
     // Sample Path
     {
@@ -552,6 +622,12 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
     }
     if (json.has("rootMidiNote")) {
         setRootMidiNote(static_cast<int>(json["rootMidiNote"].asNumber()));
+    }
+    if (json.has("monoMode")) {
+        setMonoMode(json["monoMode"].asBool());
+    }
+    if (json.has("glideTimeMs")) {
+        setGlideTimeMs(static_cast<float>(json["glideTimeMs"].asNumber()));
     }
 
     if (json.has("samplePath")) {

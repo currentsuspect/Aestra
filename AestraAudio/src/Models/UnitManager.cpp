@@ -1,18 +1,90 @@
 #include "UnitManager.h"
 
 #include "Models/PatternManager.h"
+#include "IO/MetadataParser.h"
+#include "IO/MiniAudioDecoder.h"
 #include "Plugin/BuiltInPlugins.h"
 #include "Plugin/PluginManager.h"
 #include "Plugin/SamplerPlugin.h"
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <iomanip>
 #include <sstream>
 
 namespace Aestra {
 namespace Audio {
 namespace {
+UnitGroup unitGroupForType(UnitType type) {
+    switch (type) {
+    case UnitType::Instrument: return UnitGroup::Synth;
+    case UnitType::Audio: return UnitGroup::Audio;
+    case UnitType::Sampler:
+    case UnitType::PitchedSampler:
+    default: return UnitGroup::Drums;
+    }
+}
+
+void applySamplerDefaultsForUnitType(const UnitInfo& unit) {
+    auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit.plugin);
+    if (!sampler) {
+        return;
+    }
+
+    if (unit.type == UnitType::PitchedSampler) {
+        sampler->setMonoMode(true);
+        sampler->setGlideTimeMs(80.0f);
+    } else {
+        sampler->setMonoMode(false);
+    }
+}
+} // namespace
+
+std::string unitTypeName(UnitType type) {
+    switch (type) {
+    case UnitType::Sampler: return "Sampler";
+    case UnitType::PitchedSampler: return "PitchedSampler";
+    case UnitType::Instrument: return "Instrument";
+    case UnitType::Audio: return "Audio";
+    default: return "Sampler";
+    }
+}
+
+UnitType unitTypeFromJson(const JSON& typeJson) {
+    if (typeJson.isObject()) {
+        if (typeJson.has("id")) {
+            return static_cast<UnitType>(typeJson["id"].asInt());
+        }
+        if (typeJson.has("name")) {
+            const std::string name = typeJson["name"].asString();
+            if (name == "Sampler") return UnitType::Sampler;
+            if (name == "PitchedSampler" || name == "808") return UnitType::PitchedSampler;
+            if (name == "Instrument") return UnitType::Instrument;
+            if (name == "Audio") return UnitType::Audio;
+        }
+    } else if (typeJson.isNumber()) {
+        return static_cast<UnitType>(typeJson.asInt());
+    } else if (typeJson.isString()) {
+        const std::string name = typeJson.asString();
+        if (name == "Sampler") return UnitType::Sampler;
+        if (name == "PitchedSampler" || name == "808") return UnitType::PitchedSampler;
+        if (name == "Instrument") return UnitType::Instrument;
+        if (name == "Audio") return UnitType::Audio;
+    }
+    return UnitType::Sampler;
+}
+
+UnitType unitTypeFromGroup(UnitGroup group) {
+    switch (group) {
+    case UnitGroup::Synth: return UnitType::Instrument;
+    case UnitGroup::Audio: return UnitType::Audio;
+    case UnitGroup::Drums:
+    case UnitGroup::Unknown:
+    default: return UnitType::Sampler;
+    }
+}
+
 std::string unitGroupName(UnitGroup group) {
     switch (group) {
     case UnitGroup::Synth: return "Synth";
@@ -77,7 +149,30 @@ std::vector<uint8_t> hexToBytes(const std::string& hex) {
     }
     return bytes;
 }
-} // namespace
+
+std::vector<float> generatePreviewWaveform(const std::vector<float>& samples, uint32_t numChannels, size_t targetSize = 128) {
+    std::vector<float> waveform(targetSize, 0.0f);
+    if (samples.empty() || numChannels == 0) {
+        return waveform;
+    }
+
+    const size_t totalFrames = samples.size() / numChannels;
+    const float framesPerBin = static_cast<float>(totalFrames) / static_cast<float>(targetSize);
+    for (size_t bin = 0; bin < targetSize; ++bin) {
+        const size_t startFrame = static_cast<size_t>(bin * framesPerBin);
+        const size_t endFrame = std::min(totalFrames, static_cast<size_t>((bin + 1) * framesPerBin));
+        float maxAmp = 0.0f;
+        for (size_t frame = startFrame; frame < endFrame; ++frame) {
+            float sum = 0.0f;
+            for (uint32_t ch = 0; ch < numChannels; ++ch) {
+                sum += std::abs(samples[frame * numChannels + ch]);
+            }
+            maxAmp = std::max(maxAmp, sum / static_cast<float>(numChannels));
+        }
+        waveform[bin] = std::min(1.0f, maxAmp);
+    }
+    return waveform;
+}
 
 std::shared_ptr<const AudioArsenalSnapshot> UnitManager::getAudioSnapshot() const {
     auto snapshot = std::make_shared<AudioArsenalSnapshot>();
@@ -111,26 +206,30 @@ const UnitInfo* UnitManager::getUnit(UnitID id) const {
 }
 
 UnitID UnitManager::createUnit() {
-    return createUnit("", UnitGroup::Unknown);
+    return createUnit("", UnitType::Sampler);
 }
 
-UnitID UnitManager::createUnit(const std::string& name, UnitGroup group) {
+UnitID UnitManager::createUnit(const std::string& name, UnitType type) {
     UnitID id = nextId++;
     UnitInfo info;
     info.id = id;
     info.name = name;
-    info.group = std::move(group);
+    info.type = type;
+    info.group = unitGroupForType(type);
 
-    // Auto-create a default pattern for this unit
-    if (m_patternManager) {
+    if (m_patternManager && type != UnitType::Audio) {
         std::string patternName = name.empty() ? ("Unit " + std::to_string(id) + " Pattern") : (name + " Pattern");
         MidiPayload empty;
-        info.defaultPatternId = m_patternManager->createMidiPattern(patternName, 4.0, empty);
+        info.defaultPatternId = m_patternManager->createMidiPattern(patternName, 8.0, empty);
     }
 
     m_units[id] = std::move(info);
     m_unitOrder.push_back(id);
     return id;
+}
+
+UnitID UnitManager::createUnit(const std::string& name, UnitGroup group) {
+    return createUnit(name, unitTypeFromGroup(group));
 }
 
 void UnitManager::reorderUnit(UnitID id, size_t newIndex) {
@@ -187,7 +286,25 @@ void UnitManager::setUnitEnabled(UnitID id, bool enabled) {
         }
     }
 }
-void UnitManager::setUnitMixerChannel(UnitID id, int channel) { if (auto* u = getUnit(id)) u->targetMixerRoute = channel; }
+void UnitManager::setUnitMixerChannel(UnitID id, int channel) { assignUnitToTimelineLane(id, channel); }
+void UnitManager::assignUnitToTimelineLane(UnitID id, int laneIndex) {
+    if (auto* u = getUnit(id)) {
+        u->targetMixerRoute = laneIndex;
+    }
+}
+
+void UnitManager::clearUnitTimelineLane(UnitID id) {
+    if (auto* u = getUnit(id)) {
+        u->targetMixerRoute = -1;
+    }
+}
+
+int UnitManager::getUnitTimelineLane(UnitID id) const {
+    if (const auto* u = getUnit(id)) {
+        return u->targetMixerRoute;
+    }
+    return -1;
+}
 void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
     auto* u = getUnit(id);
     if (!u) {
@@ -195,9 +312,31 @@ void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
     }
 
     u->audioClipPath = path;
-    u->group = UnitGroup::Audio;
+    u->audioDurationSeconds = 0.0;
+    u->audioPreviewWaveform.clear();
 
     if (path.empty()) {
+        return;
+    }
+
+    const auto metadata = MetadataParser::parse(path);
+    if (metadata.durationSeconds > 0.0) {
+        u->audioDurationSeconds = metadata.durationSeconds;
+    }
+
+    std::vector<float> previewAudio;
+    uint32_t previewRate = 0;
+    uint32_t previewChannels = 0;
+    constexpr uint64_t kPreviewMaxFrames = 48000 * 24;
+    if (decodeAudioPreview(path, previewAudio, previewRate, previewChannels, kPreviewMaxFrames)) {
+        u->audioPreviewWaveform = generatePreviewWaveform(previewAudio, previewChannels);
+        if (u->audioDurationSeconds <= 0.0 && previewRate > 0 && previewChannels > 0) {
+            u->audioDurationSeconds = static_cast<double>(previewAudio.size()) / static_cast<double>(previewRate * previewChannels);
+        }
+    }
+
+    if (u->type == UnitType::Audio) {
+        u->group = UnitGroup::Audio;
         return;
     }
 
@@ -214,6 +353,7 @@ void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
                 }
                 u->pluginId = samplerId;
                 u->plugin = std::move(samplerInstance);
+                applySamplerDefaultsForUnitType(*u);
             }
         }
     }
@@ -226,11 +366,18 @@ void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
 }
 void UnitManager::setUnitColor(UnitID id, uint32_t color) { if (auto* u = getUnit(id)) u->color = color; }
 void UnitManager::setUnitGroup(UnitID id, UnitGroup group) { if (auto* u = getUnit(id)) u->group = std::move(group); }
+UnitType UnitManager::getUnitType(UnitID id) const {
+    if (const auto* u = getUnit(id)) {
+        return u->type;
+    }
+    return UnitType::Sampler;
+}
 
 void UnitManager::attachPlugin(UnitID id, const std::string& pluginId, std::shared_ptr<IPluginInstance> plugin) {
     if (auto* u = getUnit(id)) {
         u->pluginId = pluginId;
         u->plugin = std::move(plugin);
+        applySamplerDefaultsForUnitType(*u);
         if (u->plugin) {
             if ((u->enabled || u->isEnabled) && !u->plugin->isActive()) {
                 u->plugin->activate();
@@ -281,17 +428,24 @@ JSON UnitManager::saveToJSON() const {
         u.set("name", JSON(unit->name));
         u.set("enabled", JSON(unit->enabled || unit->isEnabled));
         u.set("targetMixerRoute", JSON(static_cast<double>(unit->targetMixerRoute)));
+        u.set("timelineLaneAssignment", JSON(static_cast<double>(unit->targetMixerRoute)));
         u.set("color", JSON(std::to_string(unit->color)));
         u.set("muted", JSON(unit->isMuted));
         u.set("solo", JSON(unit->isSolo));
         u.set("armed", JSON(unit->isArmed));
         u.set("audioClipPath", JSON(unit->audioClipPath));
+        u.set("audioDurationSeconds", JSON(unit->audioDurationSeconds));
         u.set("defaultPatternId", JSON(static_cast<double>(unit->defaultPatternId.value)));
 
         JSON group = JSON::object();
         group.set("id", JSON(static_cast<double>(static_cast<uint32_t>(unit->group))));
         group.set("name", JSON(unitGroupName(unit->group)));
         u.set("group", group);
+
+        JSON type = JSON::object();
+        type.set("id", JSON(static_cast<double>(static_cast<uint32_t>(unit->type))));
+        type.set("name", JSON(unitTypeName(unit->type)));
+        u.set("type", type);
 
         if (!unit->pluginId.empty()) {
             u.set("pluginId", JSON(unit->pluginId));
@@ -342,7 +496,11 @@ void UnitManager::loadFromJSON(const JSON& json) {
         unit.name = ju.has("name") ? ju["name"].asString() : std::string{};
         unit.enabled = ju.has("enabled") ? ju["enabled"].asBool() : false;
         unit.isEnabled = unit.enabled;
-        unit.targetMixerRoute = ju.has("targetMixerRoute") ? ju["targetMixerRoute"].asInt() : -1;
+        if (ju.has("timelineLaneAssignment")) {
+            unit.targetMixerRoute = ju["timelineLaneAssignment"].asInt();
+        } else {
+            unit.targetMixerRoute = ju.has("targetMixerRoute") ? ju["targetMixerRoute"].asInt() : -1;
+        }
         if (ju.has("color")) {
             if (ju["color"].isString()) {
                 try {
@@ -358,6 +516,7 @@ void UnitManager::loadFromJSON(const JSON& json) {
         unit.isSolo = ju.has("solo") ? ju["solo"].asBool() : false;
         unit.isArmed = ju.has("armed") ? ju["armed"].asBool() : false;
         unit.audioClipPath = ju.has("audioClipPath") ? ju["audioClipPath"].asString() : std::string{};
+        unit.audioDurationSeconds = ju.has("audioDurationSeconds") ? ju["audioDurationSeconds"].asNumber() : 0.0;
         if (ju.has("defaultPatternId")) {
             unit.defaultPatternId = PatternID(static_cast<uint64_t>(ju["defaultPatternId"].asNumber()));
         }
@@ -365,6 +524,8 @@ void UnitManager::loadFromJSON(const JSON& json) {
         if (ju.has("group")) {
             unit.group = unitGroupFromJson(ju["group"]);
         }
+        unit.type = ju.has("type") ? unitTypeFromJson(ju["type"]) : unitTypeFromGroup(unit.group);
+        unit.group = unitGroupForType(unit.type);
 
         unit.pluginId = ju.has("pluginId") ? ju["pluginId"].asString() : std::string{};
         if (ju.has("pluginStateHex") && ju["pluginStateHex"].isString()) {
@@ -383,6 +544,7 @@ void UnitManager::loadFromJSON(const JSON& json) {
                 if (!unit.pluginState.empty()) {
                     unit.plugin->loadState(unit.pluginState);
                 }
+                applySamplerDefaultsForUnitType(unit);
             }
         }
 

@@ -471,7 +471,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         // Setup Colors
         AestraUI::NUIColor currentBg = glassBg;
         AestraUI::NUIColor currentBorder = glassBorder;
-        AestraUI::NUIColor iconColor = iconGrey;
+        AestraUI::NUIColor iconColor = iconGrey.withAlpha(0.35f);
         
         // LOGIC: Glassy Look (Reverted per user request)
         // Active = Purple Tint Glass + Purple Icon
@@ -489,7 +489,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
          } else if (isHovered) {
              currentBg = glassHover;
              currentBorder = themeManager.getColor("border").withAlpha(0.38f);
-             iconColor = themeManager.getColor("textPrimary");
+             iconColor = themeManager.getColor("textPrimary").withAlpha(0.70f);
          }
 
         if (isPrimaryTransport) {
@@ -519,7 +519,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         }
 
         // Render Icon
-        const float localIconSize = isPrimaryTransport ? 20.0f : iconSize;
+        const float localIconSize = isPrimaryTransport ? 24.0f : iconSize;
         float localPadding = (buttonRect.width - localIconSize) * 0.5f;
         if (localPadding < 2.0f) localPadding = 2.0f;
         AestraUI::NUIRect iconRect = NUIAbsolute(buttonRect, localPadding, localPadding, localIconSize, localIconSize);
@@ -575,6 +575,8 @@ void TransportBar::layoutComponents() {
 
     // Use configurable dimensions - OVERRIDE for Compact Mode
     float buttonSize = 34.0f; // Relaxed from 28.0f
+    const float primaryButtonScale = 1.20f;
+    const float primaryButtonSize = buttonSize * primaryButtonScale;
     float spacing = 8.0f;     // Relaxed from 6.0f
     float groupSpacing = 24.0f; // Relaxed from 16.0f
 
@@ -624,13 +626,19 @@ void TransportBar::layoutComponents() {
     float xCursor = islandX + islandPadding;
 
     // Group 1: Transport
-    m_playButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+    const auto placePrimaryButton = [&](const std::shared_ptr<AestraUI::NUIButton>& button, float x) {
+        if (!button) return;
+        const float grow = 0.5f * (primaryButtonSize - buttonSize);
+        button->setBounds(NUIAbsolute(bounds, x - grow, centerOffsetY - grow, primaryButtonSize, primaryButtonSize));
+    };
+
+    placePrimaryButton(m_playButton, xCursor);
     xCursor += buttonSize + spacing;
     
-    m_stopButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+    placePrimaryButton(m_stopButton, xCursor);
     xCursor += buttonSize + spacing;
     
-    m_recordButton->setBounds(NUIAbsolute(bounds, xCursor, centerOffsetY, buttonSize, buttonSize));
+    placePrimaryButton(m_recordButton, xCursor);
     xCursor += buttonSize + groupSpacing; // GAP
 
     // Group 2: Extras
@@ -719,12 +727,23 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     // User asked to fix Z. If we make it opaque it blocks. If trans, it blends.
     // Let's keep it solid "surfaceTertiary" from theme (usually opaque-ish).
     renderer.fillRoundedRect(islandRect, 12.0f, islandColor);
+    renderer.strokeRoundedRect(islandRect, 12.0f, 1.0f, themeManager.getColor("borderSubtle").withAlpha(0.82f));
     
-    // 4. Border
-    renderer.strokeRoundedRect(islandRect, 12.0f, 1.0f, themeManager.getColor("border"));
-
-    // 5. Group separators to improve hierarchy readability
+    // 4. Group separators to improve hierarchy readability
     const float leftEdge = islandRect.x + islandPadding;
+    const float buttonClusterTop = islandRect.y + 6.0f;
+    const float buttonClusterHeight = islandRect.height - 12.0f;
+    const auto groupFill = themeManager.getColor("surfaceRaised").withAlpha(0.24f);
+    const auto groupBorder = themeManager.getColor("borderSubtle").withAlpha(0.42f);
+    renderer.fillRoundedRect({leftEdge - 6.0f, buttonClusterTop, group1Width + 12.0f, buttonClusterHeight}, 9.0f, groupFill);
+    renderer.strokeRoundedRect({leftEdge - 6.0f, buttonClusterTop, group1Width + 12.0f, buttonClusterHeight}, 9.0f, 1.0f, groupBorder);
+    renderer.fillRoundedRect({leftEdge + group1Width + groupSpacing - 6.0f, buttonClusterTop, group2Width + 12.0f, buttonClusterHeight}, 9.0f, groupFill);
+    renderer.strokeRoundedRect({leftEdge + group1Width + groupSpacing - 6.0f, buttonClusterTop, group2Width + 12.0f, buttonClusterHeight}, 9.0f, 1.0f, groupBorder);
+    renderer.fillRoundedRect({leftEdge + group1Width + groupSpacing + group2Width + groupSpacing - 6.0f, buttonClusterTop, infoWidth + 12.0f, buttonClusterHeight}, 9.0f, groupFill.withAlpha(0.30f));
+    renderer.strokeRoundedRect({leftEdge + group1Width + groupSpacing + group2Width + groupSpacing - 6.0f, buttonClusterTop, infoWidth + 12.0f, buttonClusterHeight}, 9.0f, 1.0f, groupBorder.withAlpha(0.9f));
+    renderer.fillRoundedRect({leftEdge + group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing - 6.0f, buttonClusterTop, group4Width + 12.0f, buttonClusterHeight}, 9.0f, groupFill);
+    renderer.strokeRoundedRect({leftEdge + group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing - 6.0f, buttonClusterTop, group4Width + 12.0f, buttonClusterHeight}, 9.0f, 1.0f, groupBorder);
+
     const float sep1X = leftEdge + group1Width + (groupSpacing * 0.5f);
     const float sep2X = sep1X + groupSpacing * 0.5f + group2Width + (groupSpacing * 0.5f);
     const float sep3X = sep2X + groupSpacing * 0.5f + infoWidth + (groupSpacing * 0.5f);

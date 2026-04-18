@@ -94,7 +94,11 @@ void NUIButton::onRender(NUIRenderer& renderer) {
         
         const bool raisedButton = style_ != Style::Text && style_ != Style::Icon;
         if (raisedButton) {
-            renderer.drawShadow(visualRect, 0.0f, 6.0f, 16.0f, NUIColor(0, 0, 0, active ? 0.12f : 0.20f));
+            const float minDim = std::min(visualRect.width, visualRect.height);
+            const bool circularButton = radius >= (minDim * 0.45f);
+            if (!circularButton) {
+                renderer.drawShadow(visualRect, 0.0f, 6.0f, 16.0f, NUIColor(0, 0, 0, active ? 0.12f : 0.20f));
+            }
         }
         renderer.fillRoundedRect(visualRect, radius, drawColor);
         if (!hasCustomBg_) {
