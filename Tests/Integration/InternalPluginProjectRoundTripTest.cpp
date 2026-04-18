@@ -62,7 +62,7 @@ int main() {
     UnitID unitId = unitManager1.createUnit("Aestra Rumble", UnitGroup::Synth);
     unitManager1.setUnitEnabled(unitId, true);
     unitManager1.setUnitColor(unitId, 0xAA5500u);
-    unitManager1.setUnitMixerChannel(unitId, 3);
+    unitManager1.assignUnitToTimelineLane(unitId, 3);
     unitManager1.attachPlugin(unitId, "com.Aestrastudios.rumble", rumble);
     unitManager1.captureUnitPluginState(unitId);
 
@@ -81,7 +81,7 @@ int main() {
     const UnitInfo* loadedUnit = unitManager2.getUnit(unitIds[0]);
     require(loadedUnit != nullptr, "Loaded unit missing");
     require(loadedUnit->name == "Aestra Rumble", "Loaded unit name mismatch");
-    require(loadedUnit->targetMixerRoute == 3, "Loaded unit route mismatch");
+    require(loadedUnit->targetMixerRoute == 3, "Loaded unit timeline lane mismatch");
     require(loadedUnit->color == 0xAA5500u, "Loaded unit color mismatch");
     require(loadedUnit->enabled == true, "Loaded unit enabled flag mismatch");
     require(loadedUnit->pluginId == "com.Aestrastudios.rumble", "Loaded plugin ID mismatch");
