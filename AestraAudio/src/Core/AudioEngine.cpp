@@ -339,7 +339,7 @@ void AudioEngine::setThreadCount(int count) {
  * - Meter snapshots are published if a snapshot buffer is available; clipping flags are set when peaks >= 1.0.
  * - Dithering mode, safety processing, metronome, and LUFS accumulation are all controlled by engine state flags.
  */
-void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime) {
+int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime) {
     (void)streamTime;
 
     // Process Input (Recording)
@@ -351,7 +351,7 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
     }
 
     if (!outputBuffer || numFrames == 0) {
-        return;
+        return 0;
     }
 
     // Enable Denormals protection (Flush-to-Zero)
@@ -363,7 +363,7 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
         std::memset(outputBuffer, 0,
                     static_cast<size_t>(numFrames) * numOutputChannels * sizeof(float));
         RESTORE_DENORMALS
-        return;
+        return 0;
     }
 
     // Update meter analysis coefficients if the (RT-provided) sample rate changed.
@@ -524,7 +524,7 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
 
             m_telemetry.incrementBlocksProcessed();
             RESTORE_DENORMALS
-            return;
+            return 0;
         }
     }
 
@@ -550,7 +550,7 @@ void AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, ui
         }
         m_telemetry.incrementBlocksProcessed();
         RESTORE_DENORMALS
-        return;
+        return 0;
     }
 
     // Render to double-precision master buffer
@@ -1011,6 +1011,7 @@ m_fadeState.store(FadeState::Silent, std::memory_order_relaxed);
     m_telemetry.recordStableBlock();
 
     RESTORE_DENORMALS
+    return 0;
 }
 
 void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {

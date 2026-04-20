@@ -197,7 +197,7 @@ public:
     /** @brief Get the primary output destination identifier. */
     uint32_t getMainOutputId() const { return m_mainOutputId; }
 
-    /** @brief Get a copy of the current send list. */
+    /** @brief Get a copy of the current send list. Thread-safe: caller must not be RT. */
     std::vector<AudioRoute> getSends() const; // Returns copy
     /** @brief Add a send route. */
     void addSend(const AudioRoute& route);
