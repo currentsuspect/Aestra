@@ -1,4 +1,8 @@
 # Build outputs
+build-linux/
+res/
+scripts/build-aestra.sh
+scripts/test-aestra.sh
 **/build/
 **/out/
 **/bin/

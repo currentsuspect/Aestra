@@ -208,17 +208,52 @@ public:
     /**
      * @brief Check if a plugin path is in a trusted system directory.
      *
-     * Trusted paths (auto-loaded without warning):
-     *   Linux:   /usr/lib/vst3, /usr/lib/clap, /usr/local/lib/*
-     *   Windows: C:\Program Files\Common Files\VST3, C:\Program Files\Common Files\CLAP
-     *   macOS:   /Library/Audio/Plug-Ins/VST3, /Library/Audio/Plug-Ins/CLAP
-     *
-     * Untrusted paths (require user confirmation on first load):
-     *   Linux:   ~/.vst3, ~/.clap
-     *   Windows: %LOCALAPPDATA%\Programs\Common\VST3, etc.
-     *   macOS:   ~/Library/Audio/Plug-Ins/*
+     * Only checks system paths. For user-configured paths, use checkPathTrusted().
      */
     static bool isTrustedPath(const std::filesystem::path& path);
+
+    /**
+     * @brief Check if a plugin path is trusted (system + user-configured).
+     *
+     * Checks both system paths and user-configured trusted paths (RTM-005 Part B).
+     */
+    bool checkPathTrusted(const std::filesystem::path& path) const;
+
+    /**
+     * @brief Add a user-configured trusted path (RTM-005 Part B).
+     *
+     * Paths added here are treated as trusted and skip first-load warning.
+     * Stored persistently in config/settings file.
+     *
+     * @param path Directory path to trust
+     */
+    void addTrustedPath(const std::filesystem::path& path);
+
+    /**
+     * @brief Remove a user-configured trusted path (RTM-005 Part B).
+     *
+     * @param path Directory path to untrust
+     */
+    void removeTrustedPath(const std::filesystem::path& path);
+
+    /**
+     * @brief Get all user-configured trusted paths.
+     *
+     * @return Vector of trusted directory paths
+     */
+    std::vector<std::filesystem::path> getTrustedPaths() const;
+
+    /**
+     * @brief Load trusted paths from persistent storage.
+     * Called during PluginScanner initialization.
+     */
+    void loadTrustedPaths();
+
+    /**
+     * @brief Save trusted paths to persistent storage.
+     * Called after user adds/removes a path.
+     */
+    void saveTrustedPaths() const;
 
     /**
      * @brief Callback invoked when a plugin from an untrusted path is loaded for the first time.
@@ -250,6 +285,9 @@ private:
     // [SEC-RTM-005] First-load warning for untrusted-path plugins
     FirstLoadWarningCallback m_firstLoadWarningCb;
     std::set<std::string> m_seenUntrustedPlugins;  // path strings already acknowledged
+
+    // [SEC-RTM-005 Part B] User-configured trusted paths (loaded from config)
+    std::vector<std::filesystem::path> m_userTrustedPaths;
 
     // Internal scanning methods
     void scanDirectory(const std::filesystem::path& dir, std::vector<PluginInfo>& results,

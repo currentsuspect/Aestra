@@ -4,6 +4,7 @@
 
 #include "Plugin/BuiltInPlugins.h"
 #include "AestraLog.h"
+#include "AestraPlatform.h"
 
 #include <algorithm>
 #include <cctype>
@@ -34,6 +35,7 @@ void mergeBuiltInPlugins(std::vector<PluginInfo>& plugins) {
 } // namespace
 
 PluginScanner::PluginScanner() {
+    loadTrustedPaths();  // [SEC-RTM-005 Part B] Load user-configured trusted paths
     mergeBuiltInPlugins(m_scannedPlugins);
 }
 
@@ -500,7 +502,8 @@ void PluginScanner::scanDirectory(const std::filesystem::path& dir, std::vector<
 
                 for (auto& info : scanned) {
                     // [SEC-RTM-005] First-load warning for untrusted-path plugins
-                    if (!isTrustedPath(info.path)) {
+                    // checkPathTrusted() checks both system AND user-configured paths
+                    if (!checkPathTrusted(info.path)) {
                         std::unique_lock<std::mutex> cbLock(m_mutex);
                         if (m_seenUntrustedPlugins.find(info.path.string()) == m_seenUntrustedPlugins.end()) {
                             if (m_firstLoadWarningCb) {
@@ -606,6 +609,7 @@ int PluginScanner::countPluginFiles() const {
 // Security: Trusted Paths (SEC-RTM-005)
 // ==============================
 
+// Static method: only checks system paths (no member access)
 bool PluginScanner::isTrustedPath(const std::filesystem::path& path) {
     std::string p = path.lexically_normal().string();
 
@@ -630,7 +634,169 @@ bool PluginScanner::isTrustedPath(const std::filesystem::path& path) {
     }
 
     // Everything else (user home directories, custom paths) is untrusted
+    // Note: User-configured paths checked in non-static checkPath() below
     return false;
+}
+
+// Non-static method: checks both system AND user-configured paths (RTM-005 Part B)
+bool PluginScanner::checkPathTrusted(const std::filesystem::path& path) const {
+    std::string p = path.lexically_normal().string();
+
+    // First check system paths (static method)
+    if (isTrustedPath(path)) {
+        return true;
+    }
+
+    // Then check user-configured paths
+    for (const auto& trusted : m_userTrustedPaths) {
+        std::string tp = trusted.lexically_normal().string();
+        if (p.find(tp) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// [SEC-RTM-005 Part B] User-configured trusted paths
+void PluginScanner::addTrustedPath(const std::filesystem::path& path) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_userTrustedPaths.push_back(path.lexically_normal());
+    saveTrustedPaths();
+}
+
+void PluginScanner::removeTrustedPath(const std::filesystem::path& path) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto normalized = path.lexically_normal();
+    m_userTrustedPaths.erase(
+        std::remove_if(m_userTrustedPaths.begin(), m_userTrustedPaths.end(),
+            [&normalized](const std::filesystem::path& p) {
+                return p.lexically_normal() == normalized;
+            }),
+        m_userTrustedPaths.end()
+    );
+    saveTrustedPaths();
+}
+
+std::vector<std::filesystem::path> PluginScanner::getTrustedPaths() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_userTrustedPaths;
+}
+
+void PluginScanner::loadTrustedPaths() {
+    // Load user-configured trusted paths from JSON file
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_userTrustedPaths.clear();
+
+    try {
+        // Try to get app data directory from platform utils
+        std::filesystem::path configPath;
+        if (auto* utils = Aestra::Platform::getUtils()) {
+            std::error_code ec;
+            std::filesystem::path appDataDir(utils->getAppDataPath("Aestra"));
+            if (!appDataDir.empty()) {
+                std::filesystem::create_directories(appDataDir, ec);
+                configPath = appDataDir / "trusted_paths.json";
+            }
+        }
+
+        if (configPath.empty() || !std::filesystem::exists(configPath)) {
+            return;  // No config location available yet
+        }
+
+        // Read JSON file
+        std::ifstream file(configPath);
+        if (!file.is_open()) {
+            return;
+        }
+
+        // Simple JSON parse: look for "paths": [...]
+        std::string content((std::istreambuf_iterator<char>(file)),
+                           std::istreambuf_iterator<char>());
+
+        // Find the paths array
+        auto pathsStart = content.find("\"paths\":");
+        if (pathsStart == std::string::npos) {
+            return;
+        }
+
+        // Extract paths between [ and ]
+        auto arrayStart = content.find("[", pathsStart);
+        auto arrayEnd = content.find("]", arrayStart);
+        if (arrayStart == std::string::npos || arrayEnd == std::string::npos) {
+            return;
+        }
+
+        // Extract each string between quotes
+        size_t pos = arrayStart + 1;
+        while (pos < arrayEnd) {
+            auto quoteStart = content.find("\"", pos);
+            if (quoteStart == std::string::npos || quoteStart >= arrayEnd) break;
+            auto quoteEnd = content.find("\"", quoteStart + 1);
+            if (quoteEnd == std::string::npos || quoteEnd >= arrayEnd) break;
+
+            std::string pathStr = content.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
+            if (!pathStr.empty()) {
+                m_userTrustedPaths.push_back(std::filesystem::path(pathStr));
+            }
+            pos = quoteEnd + 1;
+        }
+
+        Log::info("[PluginScanner] Loaded " + std::to_string(m_userTrustedPaths.size()) +
+                  " trusted paths from config");
+
+    } catch (const std::exception& e) {
+        Log::warning("[PluginScanner] Failed to load trusted paths: " + std::string(e.what()));
+    }
+}
+
+void PluginScanner::saveTrustedPaths() const {
+    // Save user-configured trusted paths to JSON file
+    try {
+        std::filesystem::path configPath;
+
+        // Try to get app data directory from platform utils
+        if (auto* utils = Aestra::Platform::getUtils()) {
+            std::error_code ec;
+            std::filesystem::path appDataDir(utils->getAppDataPath("Aestra"));
+            if (!appDataDir.empty()) {
+                std::filesystem::create_directories(appDataDir, ec);
+                configPath = appDataDir / "trusted_paths.json";
+            }
+        }
+
+        if (configPath.empty()) {
+            Log::warning("[PluginScanner] No config path available to save trusted paths");
+            return;
+        }
+
+        // Build JSON
+        std::string json = "{\n  \"paths\": [\n";
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            for (size_t i = 0; i < m_userTrustedPaths.size(); ++i) {
+                json += "    \"" + m_userTrustedPaths[i].lexically_normal().string() + "\"";
+                if (i < m_userTrustedPaths.size() - 1) json += ",";
+                json += "\n";
+            }
+        }
+        json += "  ]\n}\n";
+
+        // Write file
+        std::ofstream file(configPath);
+        if (!file.is_open()) {
+            Log::warning("[PluginScanner] Failed to open config file for trusted paths");
+            return;
+        }
+        file << json;
+        file.close();
+
+        Log::info("[PluginScanner] Saved " + std::to_string(m_userTrustedPaths.size()) +
+                  " trusted paths to config");
+
+    } catch (const std::exception& e) {
+        Log::warning("[PluginScanner] Failed to save trusted paths: " + std::string(e.what()));
+    }
 }
 
 void PluginScanner::setFirstLoadWarningCallback(FirstLoadWarningCallback cb) {

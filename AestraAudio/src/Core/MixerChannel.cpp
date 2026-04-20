@@ -134,6 +134,9 @@ void MixerChannel::processAudio(float* outputBuffer, uint32_t numFrames, double 
 }
 
 std::vector<AudioRoute> MixerChannel::getSends() const {
+    // B-005: getSends() must never be called from the audio callback (RT) thread.
+    // Calling from RT can cause lock contention or deadlock. Sends are only
+    // accessed during graph build (main thread) or UI serialization.
     std::lock_guard<std::mutex> lock(m_sendMutex);
     return m_sends;
 }

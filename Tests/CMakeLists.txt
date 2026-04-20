@@ -338,6 +338,24 @@ target_link_libraries(AestraOscillatorTest PRIVATE AestraAudio AestraCore)
 target_compile_definitions(AestraOscillatorTest PRIVATE AESTRA_HEADLESS)
 add_test(NAME AestraOscillatorTest COMMAND AestraOscillatorTest)
 
+# Automation Stress Test
+add_executable(AutomationStressTest AestraAudio/AutomationStressTest.cpp)
+target_link_libraries(AutomationStressTest PRIVATE AestraAudio AestraCore)
+target_compile_definitions(AutomationStressTest PRIVATE AESTRA_HEADLESS)
+add_test(NAME AutomationStressTest COMMAND AutomationStressTest)
+
+# Arsenal Parameter Stress Test
+add_executable(ArsenalParameterStressTest AestraAudio/ArsenalParameterStressTest.cpp)
+target_link_libraries(ArsenalParameterStressTest PRIVATE AestraRumble AestraAudioCore AestraCore)
+target_compile_definitions(ArsenalParameterStressTest PRIVATE AESTRA_HEADLESS)
+add_test(NAME ArsenalParameterStressTest COMMAND ArsenalParameterStressTest)
+
+# Mixer Bus Stress Test
+add_executable(MixerBusStressTest AestraAudio/MixerBusStressTest.cpp)
+target_link_libraries(MixerBusStressTest PRIVATE AestraAudio AestraCore)
+target_compile_definitions(MixerBusStressTest PRIVATE AESTRA_HEADLESS)
+add_test(NAME MixerBusStressTest COMMAND MixerBusStressTest)
+
 # Mixer Bus Test
 add_executable(AestraMixerBusTest AestraAudio/MixerBusTest.cpp)
 target_link_libraries(AestraMixerBusTest PRIVATE AestraAudio AestraCore)

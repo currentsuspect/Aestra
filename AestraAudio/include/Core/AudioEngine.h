@@ -77,7 +77,7 @@ public:
      * @brief Process a single audio block (driver callback entry).
      * Must remain lock-free, allocation-free.
      */
-    void processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime);
+    int processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime);
 
     /**
      * @brief Immediate panic/reset (Double Stop).
