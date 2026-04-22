@@ -219,6 +219,8 @@ public:
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
     /** @brief Bind the live audio engine used by transport-aware panels. */
     void setAudioEngine(Aestra::Audio::AudioEngine* engine);
+    /** @brief Propagate transport tempo to tempo-aware internal plugins. */
+    void setPluginTempo(float bpm);
 
     /** @brief Reset the workspace back to the default starter project. */
     void resetToDefaultProject();  // Clear and recreate default tracks

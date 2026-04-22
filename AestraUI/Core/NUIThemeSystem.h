@@ -203,13 +203,13 @@ struct NUIThemeProperties {
         float timelineAreaWidth = 800.0f;
 
         // Track heights and spacing
-        float trackHeight = 48.0f;
+        float trackHeight = 46.0f;
         float trackSpacing = 4.0f;
         float trackLabelHeight = 20.0f;
 
         // Transport bar dimensions
         float transportBarHeight = 56.0f;
-        float transportButtonSize = 36.0f;
+        float transportButtonSize = 28.0f;
         float transportButtonSpacing = 8.0f;
 
         // Control button dimensions

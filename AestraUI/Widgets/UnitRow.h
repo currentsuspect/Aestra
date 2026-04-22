@@ -153,6 +153,7 @@ private:
     bool m_isHovered = false;
     bool m_isDragging = false;
     bool m_isSelected = false;
+    bool m_isDropHighlighted = false;
     NUIPoint m_dragStartPos;
     bool m_isStepEditing = false;
     int m_stepEditStart = -1;

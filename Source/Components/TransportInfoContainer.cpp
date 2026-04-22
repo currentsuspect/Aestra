@@ -128,113 +128,11 @@ void BPMDisplay::onUpdate(double deltaTime) {
 
 void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
-    
-    // Get theme for rendering
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    
-    // Get colors
-    AestraUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f); // Semi-glass
-    AestraUI::NUIColor borderColor = themeManager.getColor("glassBorder");
-    AestraUI::NUIColor accentColor = themeManager.getColor("accentPrimary"); // Aestra Purple
-    AestraUI::NUIColor textPrimary = themeManager.getColor("textPrimary").withAlpha(0.95f);
-    AestraUI::NUIColor textSecondary = themeManager.getColor("textSecondary");
-    
-    const float radius = themeManager.getRadius("m");
-    
-    // Hover glow effect
-    if (m_isHovered) {
-        AestraUI::NUIRect glowBounds = bounds;
-        glowBounds.x -= 1.0f;
-        glowBounds.y -= 1.0f;
-        glowBounds.width += 2.0f;
-        glowBounds.height += 2.0f;
-        AestraUI::NUIColor glowColor = accentColor;
-        glowColor.a = 0.3f;
-        renderer.strokeRoundedRect(glowBounds, radius + 1.0f, 2.0f, glowColor);
-    }
-    
-    // Draw Dark Pill Background
-    renderer.fillRoundedRect(bounds, radius, bgColor);
-    
-    // Border
-    AestraUI::NUIColor currentBorder = m_isHovered ? accentColor : borderColor;
-    if (m_isHovered) currentBorder.a = 0.6f;
-    renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
-    
-    // Pulse effect
-    if (m_pulseAnimation > 0.0f) {
-        AestraUI::NUIColor pulseColor = accentColor;
-        pulseColor.a = m_pulseAnimation * 0.4f;
-        renderer.fillRoundedRect(bounds, radius, pulseColor);
-    }
-    
-    // Text color
-    AestraUI::NUIColor textColor = textPrimary;
-    if (m_pulseAnimation > 0.5f) {
-        textColor = accentColor;
-    }
-    
-    float fontSize = themeManager.getFontSize("m"); // Compact font
     std::stringstream ss;
-    ss << std::fixed << std::setprecision(1) << m_displayBPM << " BPM";
-    std::string bpmText = ss.str();
-    
-    // === CENTERED CLUSTER LAYOUT ===
-    AestraUI::NUISize textSize = renderer.measureText(bpmText, fontSize);
-    
-    float arrowSize = 12.0f;  // Balanced size (not too small, fits container)
-    float arrowGap = 1.0f;    // Tight spacing between arrows
-    float textArrowGap = 8.0f; // Comfortable gap between text and arrows
-    float horizontalPadding = 6.0f; // Internal padding from edges
-    
-    float arrowBlockWidth = arrowSize;
-    float arrowBlockHeight = (arrowSize * 2) + arrowGap;
-    
-    float totalContentWidth = textSize.width + textArrowGap + arrowBlockWidth;
-    
-    // Calculate available width with padding
-    float availableWidth = bounds.width - (horizontalPadding * 2);
-    
-    // Center the entire cluster (Text + Arrows) within the padded area
-    float startX = bounds.x + horizontalPadding + (availableWidth - totalContentWidth) * 0.5f;
-    float textX = std::round(startX);
-    float textY = std::round(renderer.calculateTextY(bounds, fontSize));
-    
-    float arrowX = std::round(startX + textSize.width + textArrowGap);
-    float arrowY = bounds.y + (bounds.height - arrowBlockHeight) * 0.5f;
-    
-    // Update Cached Bounds for Hit Testing
-    m_cachedUpArrowBounds = AestraUI::NUIRect(arrowX, arrowY, arrowSize, arrowSize);
-    m_cachedDownArrowBounds = AestraUI::NUIRect(arrowX, arrowY + arrowSize + arrowGap, arrowSize, arrowSize);
-    
-    // Draw text
-    renderer.drawText(bpmText, AestraUI::NUIPoint(textX, textY), fontSize, textColor);
-    
-    // Draw arrow buttons
-    
-    // Up arrow color
-    AestraUI::NUIColor upColor = textSecondary;
-    if (m_upArrowPressed) upColor = accentColor;
-    else if (m_upArrowHovered) upColor = textPrimary;
-    
-    // Down arrow color
-    AestraUI::NUIColor downColor = textSecondary;
-    if (m_downArrowPressed) downColor = accentColor;
-    else if (m_downArrowHovered) downColor = textPrimary;
-    
-    // Draw up arrow
-    if (m_upArrow) {
-        m_upArrow->setBounds(m_cachedUpArrowBounds);
-        m_upArrow->setColor(upColor);
-        m_upArrow->onRender(renderer);
-    }
-    
-    // Draw down arrow
-    if (m_downArrow) {
-        m_downArrow->setBounds(m_cachedDownArrowBounds);
-        m_downArrow->setColor(downColor);
-        m_downArrow->onRender(renderer);
-    }
+    ss << std::fixed << std::setprecision(2) << m_displayBPM;
+    renderer.drawTextCentered(ss.str(), {bounds.x, bounds.y + 6.0f, bounds.width, 18.0f},
+                              15.0f, themeManager.getColor("textPrimary").withAlpha(0.95f));
 }
 
 bool BPMDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
@@ -299,6 +197,11 @@ bool BPMDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     // Capture hover changes for redraw
     if (wasHovered != m_isHovered || inUp || inDown) {
+        if (inBounds) {
+            AestraUI::NUIComponent::showRemoteTooltip("BPM - scroll to adjust", event.position, this);
+        } else {
+            AestraUI::NUIComponent::hideRemoteTooltip(this);
+        }
         return true; // Consume event to trigger redraw
     }
     
@@ -327,7 +230,7 @@ std::string TimerDisplay::formatTime(double seconds) const {
     int millis = static_cast<int>((seconds - totalSeconds) * 100);
     
     std::stringstream ss;
-    ss << std::setfill('0') << std::setw(2) << minutes << ":"
+    ss << minutes << ":" << std::setfill('0')
         << std::setw(2) << secs << "."
         << std::setw(2) << millis;
     return ss.str();
@@ -335,28 +238,19 @@ std::string TimerDisplay::formatTime(double seconds) const {
 
 void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
-    
-    // Get theme for rendering
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    
-    // Draw Dark Pill Background (Glass)
-    const float radius = themeManager.getRadius("m");
-    auto glassColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f);
-    renderer.fillRoundedRect(bounds, radius, glassColor);
-    renderer.strokeRoundedRect(bounds, radius, 1.0f, themeManager.getColor("glassBorder"));
-    
-    // CRITICAL: Green when playing, white when stopped
-    AestraUI::NUIColor textColor = themeManager.getColor("textPrimary").withAlpha(0.95f);
-    
-    float fontSize = themeManager.getFontSize("m");
     std::string timeText = formatTime(m_currentTime);
-    
-    // Perfectly center text in the pill
-    AestraUI::NUISize textSize = renderer.measureText(timeText, fontSize);
-    float textY = std::round(renderer.calculateTextY(bounds, fontSize));
-    float textX = std::round(bounds.x + (bounds.width - textSize.width) * 0.5f);
-    
-    renderer.drawText(timeText, AestraUI::NUIPoint(textX, textY), fontSize, textColor);
+    renderer.drawTextCentered(timeText, {bounds.x, bounds.y + 6.0f, bounds.width, 18.0f},
+                              15.0f, themeManager.getColor("textPrimary").withAlpha(0.95f));
+}
+
+bool TimerDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
+    if (getBounds().contains(event.position)) {
+        AestraUI::NUIComponent::showRemoteTooltip("Playback time", event.position, this);
+        return false;
+    }
+    AestraUI::NUIComponent::hideRemoteTooltip(this);
+    return false;
 }
 
 // ============================================================================
@@ -400,46 +294,11 @@ std::string TimeSignatureDisplay::getDisplayText() const {
 
 void TimeSignatureDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
-    
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    
-    // Consistent Glass styling
-    const float radius = themeManager.getRadius("m");
-    AestraUI::NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.5f);
-    AestraUI::NUIColor borderColor = themeManager.getColor("glassBorder");
-    AestraUI::NUIColor accentColor = themeManager.getColor("accentPrimary");
-    
-    // Hover glow
-    if (m_isHovered) {
-        AestraUI::NUIRect glowBounds = bounds;
-        glowBounds.x -= 1.0f;
-        glowBounds.y -= 1.0f;
-        glowBounds.width += 2.0f;
-        glowBounds.height += 2.0f;
-        AestraUI::NUIColor glowColor = accentColor;
-        glowColor.a = 0.3f; // Glow opacity
-        renderer.strokeRoundedRect(glowBounds, radius + 1.0f, 2.0f, glowColor);
-    }
-    
-    // Background
-    renderer.fillRoundedRect(bounds, radius, bgColor);
-    
-    // Border
-    AestraUI::NUIColor currentBorder = m_isHovered ? accentColor : borderColor;
-    if (m_isHovered) currentBorder.a = 0.6f;
-    renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
-    
-    // Text
-    AestraUI::NUIColor textColor = m_isHovered ? accentColor : themeManager.getColor("textPrimary");
-    
-    float fontSize = themeManager.getFontSize("m");
+    AestraUI::NUIColor textColor = m_isHovered ? themeManager.getColor("accentPrimary") : themeManager.getColor("textPrimary");
     std::string text = getDisplayText();
-    
-    AestraUI::NUISize textSize = renderer.measureText(text, fontSize);
-    float textY = std::round(renderer.calculateTextY(bounds, fontSize));
-    float textX = std::round(bounds.x + (bounds.width - textSize.width) * 0.5f);
-    
-    renderer.drawText(text, AestraUI::NUIPoint(textX, textY), fontSize, textColor);
+    renderer.drawTextCentered(text, {bounds.x, bounds.y + 6.0f, bounds.width, 18.0f},
+                              15.0f, textColor.withAlpha(0.95f));
 }
 
 
@@ -461,6 +320,11 @@ bool TimeSignatureDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     // Capture hover changes for redraw
     if (wasHovered != m_isHovered) {
+        if (inside) {
+            AestraUI::NUIComponent::showRemoteTooltip("Time signature - click to cycle", event.position, this);
+        } else {
+            AestraUI::NUIComponent::hideRemoteTooltip(this);
+        }
         setDirty(true);
         return true;
     }

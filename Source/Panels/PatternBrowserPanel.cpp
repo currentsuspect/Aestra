@@ -132,18 +132,19 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
     // Cache theme colors
-    m_backgroundColor = themeManager.getColor("backgroundSecondary").darkened(0.08f);
+    m_backgroundColor = AestraUI::NUIColor(0.073f, 0.078f, 0.094f, 1.0f);
     m_textColor = themeManager.getColor("textPrimary");
-    m_borderColor = themeManager.getColor("border");
-    m_selectedColor = themeManager.getColor("primary");
+    m_borderColor = AestraUI::NUIColor::white().withAlpha(0.075f);
+    m_selectedColor = AestraUI::NUIColor(0.486f, 0.361f, 0.749f, 1.0f);
     
     // Initialize Toggle Switch
     m_modeToggle = std::make_shared<AestraUI::NUISegmentedControl>(
         std::vector<std::string>{"Clips", "Patterns"}
     );
     m_modeToggle->setCornerRadius(10.0f);
-    m_modeToggle->setAccentColor(themeManager.getColor("primary").withAlpha(0.98f));
+    m_modeToggle->setAccentColor(AestraUI::NUIColor(0.36f, 0.25f, 0.58f, 1.0f));
     m_modeToggle->setSelectedIndex(static_cast<size_t>(m_mode), false);
+    m_modeToggle->setVisible(false);
     m_modeToggle->setOnSelectionChanged([this](size_t index) {
         switchMode(static_cast<BrowserMode>(index));
     });
@@ -307,6 +308,14 @@ bool PatternBrowserPanel::usesCompactRail() const {
     return m_mode == BrowserMode::Clips && m_clips.empty();
 }
 
+void PatternBrowserPanel::showPatternsTab() {
+    switchMode(BrowserMode::Patterns);
+}
+
+void PatternBrowserPanel::showClipsTab() {
+    switchMode(BrowserMode::Clips);
+}
+
 void PatternBrowserPanel::refreshClips() {
     m_clips.clear();
     if (!m_trackManager) return;
@@ -416,34 +425,32 @@ void PatternBrowserPanel::renderHeader(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect headerRect(bounds.x, bounds.y, bounds.width, m_headerHeight);
     auto& theme = AestraUI::NUIThemeManager::getInstance();
 
-    renderer.fillRect(headerRect, theme.getColor("backgroundSecondary").withAlpha(0.92f));
-    renderer.fillRect({headerRect.x, headerRect.y, headerRect.width, std::max(1.0f, headerRect.height * 0.52f)},
-                      theme.getColor("surfaceRaised").withAlpha(0.10f));
+    renderer.fillRect(headerRect, AestraUI::NUIColor(0.073f, 0.078f, 0.094f, 1.0f));
+    renderer.fillRect({headerRect.x, headerRect.y, headerRect.width, 1.0f},
+                      AestraUI::NUIColor::white().withAlpha(0.018f));
     renderer.drawLine(
         AestraUI::NUIPoint(bounds.x, bounds.y + m_headerHeight),
         AestraUI::NUIPoint(bounds.x + bounds.width, bounds.y + m_headerHeight),
-        1.0f, m_borderColor.withAlpha(0.75f)
+        1.0f, m_borderColor
     );
 
     // Render footer background and separator
     AestraUI::NUIRect footerRect(bounds.x, bounds.bottom() - m_footerHeight, bounds.width, m_footerHeight);
-    renderer.fillRect(footerRect, theme.getColor("backgroundSecondary").withAlpha(0.96f));
-    renderer.drawLine(
-        AestraUI::NUIPoint(bounds.x, footerRect.y),
-        AestraUI::NUIPoint(bounds.x + bounds.width, footerRect.y),
-        1.0f, m_borderColor.withAlpha(0.75f)
-    );
-
-    const AestraUI::NUIRect rail(bounds.x + 8.0f, footerRect.y + 5.0f, std::max(0.0f, bounds.width - 16.0f), std::max(0.0f, footerRect.height - 10.0f));
-    renderer.fillRoundedRect(rail, 10.0f, theme.getColor("surfaceRaised").withAlpha(0.22f));
-    renderer.strokeRoundedRect(rail, 10.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.28f));
+    if (m_footerHeight > 0.0f) {
+        renderer.fillRect(footerRect, AestraUI::NUIColor(0.073f, 0.078f, 0.094f, 1.0f));
+        renderer.drawLine(
+            AestraUI::NUIPoint(bounds.x, footerRect.y),
+            AestraUI::NUIPoint(bounds.x + bounds.width, footerRect.y),
+            1.0f, m_borderColor
+        );
+    }
 
     const size_t itemCount = (m_mode == BrowserMode::Clips) ? m_clips.size() : m_patterns.size();
     const std::string title = (m_mode == BrowserMode::Clips ? "Clips (" : "Patterns (") + std::to_string(itemCount) + ")";
     renderer.drawText(title,
                       AestraUI::NUIPoint(bounds.x + 10.0f, bounds.y + 12.0f),
                       12.5f,
-                      theme.getColor("textPrimary").withAlpha(0.90f));
+                      theme.getColor("textPrimary").withAlpha(0.78f));
     
     // Mode toggle is rendered by addChild mechanism automatically
     // The buttons are also rendered by addChild mechanism
@@ -480,6 +487,30 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
         auto& theme = AestraUI::NUIThemeManager::getInstance();
         const bool dropActive = m_isDragOver;
         const bool compactRail = bounds.width < 170.0f;
+        if (compactRail) {
+            renderer.fillRect(listRect, AestraUI::NUIColor(0.073f, 0.078f, 0.094f, 1.0f));
+            const AestraUI::NUIRect chip{
+                bounds.x + 10.0f,
+                bounds.y + m_headerHeight + 16.0f,
+                std::max(0.0f, bounds.width - 20.0f),
+                32.0f
+            };
+            renderer.fillRoundedRect(chip, 5.0f,
+                                     dropActive ? theme.getColor("accentPrimary").withAlpha(0.16f)
+                                                : AestraUI::NUIColor::white().withAlpha(0.025f));
+            renderer.strokeRoundedRect(chip, 5.0f, 1.0f,
+                                       dropActive ? theme.getColor("accentPrimary").withAlpha(0.38f)
+                                                  : AestraUI::NUIColor::white().withAlpha(0.070f));
+            renderer.drawTextCentered(dropActive ? "Drop" : (m_mode == BrowserMode::Patterns ? "Patterns" : "Clips"),
+                                      chip,
+                                      10.5f,
+                                      theme.getColor("textPrimary").withAlpha(dropActive ? 0.92f : 0.70f));
+            renderer.drawTextCentered(dropActive ? "release" : "ready",
+                                      {chip.x, chip.bottom() + 7.0f, chip.width, 14.0f},
+                                      9.0f,
+                                      theme.getColor("textSecondary").withAlpha(0.56f));
+            return;
+        }
         const AestraUI::NUIRect stateCard{
             bounds.x + (compactRail ? 10.0f : 26.0f),
             bounds.y + m_headerHeight + (compactRail ? 16.0f : 34.0f),

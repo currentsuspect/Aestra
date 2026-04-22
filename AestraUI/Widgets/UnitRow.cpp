@@ -126,7 +126,10 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     const float radius = 7.0f;
     NUIColor cardBg(0.101f, 0.101f, 0.141f, 1.0f);
     NUIColor border(1.0f, 1.0f, 1.0f, 0.08f);
-    if (m_isSelected) {
+    if (m_isDropHighlighted) {
+        cardBg = theme.getColor("accentPrimary").withAlpha(0.18f);
+        border = theme.getColor("accentPrimary").withAlpha(0.95f);
+    } else if (m_isSelected) {
         cardBg = theme.getColor("accentPrimary").withAlpha(0.14f);
         border = theme.getColor("accentPrimary").withAlpha(0.55f);
     } else if (m_isHovered) {
@@ -135,7 +138,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     }
 
     renderer.fillRoundedRect(cardBounds, radius, cardBg);
-    renderer.strokeRoundedRect(cardBounds, radius, 1.0f, border);
+    renderer.strokeRoundedRect(cardBounds, radius, m_isDropHighlighted ? 2.0f : 1.0f, border);
 
     NUIRect dragRect(cardBounds.x + 6.0f, cardBounds.y + 6.0f, 32.0f, cardBounds.height - 12.0f);
     drawDragHandle(renderer, dragRect);
@@ -905,14 +908,19 @@ UnitRow::~UnitRow() {
 
 DropFeedback UnitRow::onDragEnter(const DragData& data, const NUIPoint& position) {
     (void)position;
+    auto markAccepted = [this]() {
+        m_isDropHighlighted = true;
+        invalidateVisuals();
+        return DropFeedback::Copy;
+    };
+
     if (data.type == DragDataType::Plugin && !data.sourceClipIdString.empty()) {
         if (const auto* plugin = std::any_cast<PluginListItem>(&data.customData)) {
             if (plugin->typeName != "Instrument") {
                 return DropFeedback::None;
             }
         }
-        invalidateVisuals();
-        return DropFeedback::Copy;
+        return markAccepted();
     }
 
     // Accept file drags (audio files)
@@ -923,8 +931,7 @@ DropFeedback UnitRow::onDragEnter(const DragData& data, const NUIPoint& position
         std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
         
         if (ext == "wav" || ext == "mp3" || ext == "flac" || ext == "ogg" || ext == "aiff") {
-            invalidateVisuals();
-            return DropFeedback::Copy;
+            return markAccepted();
         }
     }
     return DropFeedback::None;
@@ -935,18 +942,21 @@ DropFeedback UnitRow::onDragOver(const DragData& data, const NUIPoint& position)
 }
 
 void UnitRow::onDragLeave() {
+    m_isDropHighlighted = false;
     invalidateVisuals();
 }
 
 DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
     (void)position;
     DropResult result;
+    m_isDropHighlighted = false;
     
     if (data.type == DragDataType::Plugin && !data.sourceClipIdString.empty()) {
         if (const auto* plugin = std::any_cast<PluginListItem>(&data.customData)) {
             if (plugin->typeName != "Instrument") {
                 result.accepted = false;
                 result.message = "Only instrument plugins can be dropped into Arsenal";
+                invalidateVisuals();
                 return result;
             }
         }
@@ -991,6 +1001,7 @@ DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
         }
     }
     
+    invalidateVisuals();
     return result;
 }
 

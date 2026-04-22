@@ -110,7 +110,7 @@ private:
     std::atomic<float> m_loopStartNorm{0.0f};
     std::atomic<float> m_loopEndNorm{1.0f};
     std::atomic<bool> m_loopEnabled{false}; // one-shot default
-    std::atomic<int> m_maxVoices{16};
+    std::atomic<int> m_maxVoices{4};
     std::atomic<int> m_rootMidiNote{60}; // C3 default
     std::atomic<bool> m_monoMode{false};
     std::atomic<float> m_glideTimeMs{80.0f};

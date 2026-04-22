@@ -416,6 +416,50 @@ target_include_directories(AestraEQTest PRIVATE
 add_test(NAME AestraEQTest COMMAND AestraEQTest)
 set_tests_properties(AestraEQTest PROPERTIES LABELS "audio;plugins;eq")
 
+# Aestra Comp Phase 0 Test
+add_executable(AestraCompPhase0Test AestraAudio/AestraCompPhase0Test.cpp)
+target_link_libraries(AestraCompPhase0Test PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraCompPhase0Test PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraCompPhase0Test COMMAND AestraCompPhase0Test)
+set_tests_properties(AestraCompPhase0Test PROPERTIES LABELS "audio;plugins;comp;phase0")
+
+# Aestra Comp Phase 1 Test
+add_executable(AestraCompPhase1Test AestraAudio/AestraCompPhase1Test.cpp)
+target_link_libraries(AestraCompPhase1Test PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraCompPhase1Test PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraCompPhase1Test COMMAND AestraCompPhase1Test)
+set_tests_properties(AestraCompPhase1Test PROPERTIES LABELS "audio;plugins;comp;phase1")
+
+# Aestra Comp Upgrade Test
+add_executable(AestraCompUpgradeTest AestraAudio/AestraCompUpgradeTest.cpp)
+target_link_libraries(AestraCompUpgradeTest PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraCompUpgradeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraCompUpgradeTest COMMAND AestraCompUpgradeTest)
+set_tests_properties(AestraCompUpgradeTest PROPERTIES LABELS "audio;plugins;comp;upgrade")
+
+# Aestra Delay Upgrade Test
+add_executable(AestraDelayUpgradeTest AestraAudio/AestraDelayUpgradeTest.cpp)
+target_link_libraries(AestraDelayUpgradeTest PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraDelayUpgradeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraDelayUpgradeTest COMMAND AestraDelayUpgradeTest)
+set_tests_properties(AestraDelayUpgradeTest PROPERTIES LABELS "audio;plugins;delay;upgrade")
+
 # Serialization Compatibility Test (Requires GTest)
 # add_executable(AestraSerializationCompatibilityTest AestraAudio/SerializationCompatibilityTest.cpp)
 # target_link_libraries(AestraSerializationCompatibilityTest PRIVATE AestraAudio AestraCore)

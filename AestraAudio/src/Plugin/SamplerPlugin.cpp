@@ -21,9 +21,10 @@ SamplerPlugin::SamplerPlugin() {
     // defaults
     m_params[kParamAttack].store(0.01f); // 10ms
     m_params[kParamDecay].store(0.1f);   // 100ms
-    m_params[kParamSustain].store(1.0f); // Full
-    m_params[kParamRelease].store(0.1f); // 100ms
+    m_params[kParamSustain].store(0.8f); // 80%
+    m_params[kParamRelease].store(0.3f); // 300ms
     m_params[kParamPitch].store(0.5f);   // Center (0 semitones)
+    m_maxVoices.store(4, std::memory_order_relaxed);
 }
 
 void SamplerPlugin::setEnvelope(float attack, float decay, float sustain, float release) noexcept {

@@ -447,7 +447,15 @@ bool AestraApp::initialize(const std::string& projectPath) {
         m_windowManager->showDropdownMenu(menu, 100.0f);
     });
 
-    menuBar->setBounds(AestraUI::NUIRect(10.0f, 4.0f, 180.0f, 24.0f));
+    menuBar->addItem("Help", [this]() {
+        auto menu = std::make_shared<AestraUI::NUIContextMenu>();
+        menu->addItem("About Aestra", []() {
+            Log::info("Aestra Help: About requested");
+        });
+        m_windowManager->showDropdownMenu(menu, 145.0f);
+    });
+
+    menuBar->setBounds(AestraUI::NUIRect(10.0f, 4.0f, 230.0f, 24.0f));
     m_windowManager->setMenuBar(menuBar);
 
     // Callbacks
@@ -667,6 +675,9 @@ void AestraApp::connectAudioToUI() {
         m_content->getTransportBar()->setOnTempoChange([this, engine](float bpm) {
             if (engine) {
                 engine->setBPM(bpm);
+            }
+            if (m_content) {
+                m_content->setPluginTempo(bpm);
             }
         });
 
@@ -942,6 +953,9 @@ ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& 
         auto* engine = m_audioController->getEngine();
         engine->setTransportPlaying(false);
         engine->setBPM(static_cast<float>(result.tempo));
+        if (m_content) {
+            m_content->setPluginTempo(static_cast<float>(result.tempo));
+        }
         const double sampleRate = std::max(1.0, static_cast<double>(engine->getSampleRate()));
         engine->setGlobalSamplePos(static_cast<uint64_t>(std::max(0.0, result.playhead) * sampleRate));
     }

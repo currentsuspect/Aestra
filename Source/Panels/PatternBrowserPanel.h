@@ -52,6 +52,8 @@ public:
     void setSelectedPatternId(Aestra::Audio::PatternID patternId, bool notify = false);
     bool isClipBinEmpty() const;
     bool usesCompactRail() const;
+    void showPatternsTab();
+    void showClipsTab();
 
     // IDropTarget Implementation
     AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
@@ -107,7 +109,7 @@ private:
     
     // UI Layout
     float m_headerHeight = 40.0f; // Header now contains Buttons
-    float m_footerHeight = 42.0f; // Footer contains Mode Toggle
+    float m_footerHeight = 0.0f;
     float m_itemHeight = 32.0f;
     float m_scrollOffset = 0.0f;
     float m_targetScrollOffset = 0.0f;

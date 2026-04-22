@@ -1,6 +1,5 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-// AestraVerb — Algorithmic stereo reverb with predelay, decay, and damping.
-// Arsenal effect plugin for Aestra DAW.
+// AestraVerb — Modulated FDN stereo reverb with predelay and pre-diffusion.
 
 #pragma once
 
@@ -9,6 +8,9 @@
 #include <array>
 #include <atomic>
 #include <cmath>
+#include <cstring>
+#include <mutex>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -16,54 +18,87 @@ namespace Aestra {
 namespace Audio {
 namespace Plugins {
 
-// Schroeder reverb: 4 parallel comb filters → 2 all-pass filters in series
 class AestraVerb : public IPluginInstance {
 public:
-    static constexpr uint32_t kStateMagic = 0x52564201; // 'RVB' v1
-
-    // Delay line sizes (prime numbers for good diffusion)
-    static constexpr uint32_t kComb1 = 1116;
-    static constexpr uint32_t kComb2 = 1188;
-    static constexpr uint32_t kComb3 = 1277;
-    static constexpr uint32_t kComb4 = 1356;
-    static constexpr uint32_t kAllpass1 = 225;
-    static constexpr uint32_t kAllpass2 = 556;
-    static constexpr uint32_t kPredelay = 4800; // 100ms at 48kHz
-    static constexpr uint32_t kBufferSize = kPredelay + 64;
+    static constexpr uint32_t kStateMagic = 0x52564203; // 'RVB' v3
 
     enum Param : uint32_t {
-        kDecay = 0,    // 0.1 to 0.99
-        kDamping,      // 0 to 1 (high-freq absorption)
-        kPredelayMs,   // 0 to 200ms
-        kWidth,        // stereo width 0 to 1
-        kMix,          // wet/dry 0 to 1
+        kDecay = 0,
+        kDamping,
+        kPredelayMs,
+        kWidth,
+        kMix,
         kBypass,
+        kSize,
+        kDiffusion,
+        kModRate,
+        kModDepth,
+        kMode,
         kParamCount
+    };
+
+    enum class Mode : int {
+        Room = 0,
+        Hall = 1,
+        Plate = 2
+    };
+
+    static constexpr size_t kFDNLineCount = 8;
+    static constexpr size_t kDiffuserCount = 4;
+    static constexpr size_t kPlatePostAllpassCount = 2;
+    static constexpr size_t kEarlyTapCount = 12;
+    static constexpr float kReferenceSampleRate = 44100.0f;
+    static constexpr float kMaxPredelayMs = 500.0f;
+    static constexpr float kWetMakeupGain = 6.0f;
+    static constexpr float kTwoPi = 6.28318530718f;
+    static constexpr uint32_t kControlInterval = 32;
+    static constexpr std::array<float, kFDNLineCount> kLfoBaseRates = {
+        0.21f, 0.37f, 0.53f, 0.71f, 0.89f, 1.07f, 1.23f, 1.41f
+    };
+    static constexpr std::array<uint32_t, kDiffuserCount> kBaseDiffuserLengths = {
+        142, 107, 379, 277
+    };
+    static constexpr std::array<uint32_t, kPlatePostAllpassCount> kPlatePostAllpassLengths = {
+        89, 67
+    };
+    static constexpr std::array<float, kFDNLineCount> kLfoSecondaryRates = {
+        0.083f, 0.127f, 0.173f, 0.229f, 0.281f, 0.337f, 0.389f, 0.443f
+    };
+    static constexpr std::array<float, kFDNLineCount> kInjectL = {
+        0.93f, -0.37f, 0.61f, -0.79f, 0.23f, 0.84f, -0.51f, 0.42f
+    };
+    static constexpr std::array<float, kFDNLineCount> kInjectR = {
+        0.29f, 0.88f, -0.73f, -0.19f, 0.96f, -0.44f, 0.57f, -0.82f
+    };
+    static constexpr std::array<float, kFDNLineCount> kOutputL = {
+        0.42f, -0.31f, 0.37f, 0.23f, -0.36f, 0.29f, 0.33f, -0.27f
+    };
+    static constexpr std::array<float, kFDNLineCount> kOutputR = {
+        0.24f, 0.39f, -0.28f, 0.35f, 0.31f, -0.34f, 0.26f, 0.41f
     };
 
     AestraVerb() = default;
 
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         (void)maxBlockSize;
-        m_sampleRate = sampleRate;
+        m_sampleRate = sampleRate > 1.0 ? sampleRate : 48000.0;
         const auto defaults = getParameters();
         for (const auto& param : defaults) {
             if (param.id < kParamCount) {
                 m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
+                m_smoothedParams[param.id] = param.defaultValue;
             }
         }
-        // Initialize delay buffers
-        for (auto& b : m_combBuf) b.assign(kBufferSize, 0.0f);
-        for (auto& b : m_allpassBuf) b.assign(kAllpass2 + 64, 0.0f);
-        m_combPos.assign(4, 0);
-        m_allpassPos.assign(2, 0);
-        m_predelayPos = 0;
-        m_filtL = m_filtR = 0.0f;
+        prepareDelayLines(true);
         return true;
     }
 
     void shutdown() override {}
-    void activate() override { m_active.store(true, std::memory_order_relaxed); clearBuffers(); }
+    void activate() override {
+        std::lock_guard<std::mutex> lock(m_rebuildMutex);
+        m_active.store(true, std::memory_order_relaxed);
+        clearBuffers(true);
+    }
     void deactivate() override { m_active.store(false, std::memory_order_relaxed); }
     bool isActive() const override { return m_active.load(std::memory_order_relaxed); }
 
@@ -76,105 +111,203 @@ public:
 
         if (!m_active.load(std::memory_order_relaxed) ||
             m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
-            for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
-                if (outputs[ch] && ch < numInputChannels && inputs[ch])
-                    std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
-                else if (outputs[ch])
-                    std::memset(outputs[ch], 0, numFrames * sizeof(float));
-            }
+            copyDry(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             return;
         }
 
-        const float decay = 0.1f + m_params[kDecay].load(std::memory_order_relaxed) * 0.89f;
-        const float damp = m_params[kDamping].load(std::memory_order_relaxed);
-        const float width = m_params[kWidth].load(std::memory_order_relaxed);
-        const float mix = m_params[kMix].load(std::memory_order_relaxed);
-
-        const float combLens[4] = { kComb1, kComb2, kComb3, kComb4 };
-        const float allpassLens[2] = { kAllpass1, kAllpass2 };
-        const float feedback = decay;
-        const float dampCoeff = damp;
-
-        float filtL = m_filtL;
-        float filtR = m_filtR;
-        int combPos[4] = { m_combPos[0], m_combPos[1], m_combPos[2], m_combPos[3] };
-        int allpassPos[2] = { m_allpassPos[0], m_allpassPos[1] };
-        int predelayPos = m_predelayPos;
-
-        for (uint32_t i = 0; i < numFrames; ++i) {
-            float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
-            float inR = (numInputChannels > 1 && inputs[1]) ? inputs[1][i] : inL;
-
-            // Predelay buffer — ring buffer with separate read position
-            m_predelay[predelayPos] = inL;
-            m_predelay[predelayPos + kPredelay] = inR;
-
-            int readPos = (predelayPos + 1) % kPredelay;
-            float delayedL = m_predelay[readPos];
-            float delayedR = m_predelay[readPos + kPredelay];
-            predelayPos = (predelayPos + 1) % kPredelay;
-            float dryL = inL;
-            float dryR = inR;
-
-            // Parallel comb filters (staggered for stereo)
-            float combOutL = 0, combOutR = 0;
-            for (int c = 0; c < 4; ++c) {
-                int len = static_cast<int>(combLens[c]);
-                float outL = m_combBuf[c][combPos[c]];
-                float outR = m_combBuf[c][(combPos[c] + len / 3) % len];
-
-                // Damping
-                filtL = outL * (1.0f - dampCoeff) + filtL * dampCoeff;
-                filtR = outR * (1.0f - dampCoeff) + filtR * dampCoeff;
-
-                m_combBuf[c][combPos[c]] = delayedL + filtL * feedback;
-                m_combBuf[c][(combPos[c] + len / 3) % len] = delayedR + filtR * feedback;
-                combPos[c] = (combPos[c] + 1) % len;
-
-                combOutL += outL;
-                combOutR += outR;
-            }
-
-            // Scale comb output
-            combOutL /= 4.0f;
-            combOutR /= 4.0f;
-
-            // Two all-pass filters in series
-            for (int a = 0; a < 2; ++a) {
-                int len = static_cast<int>(allpassLens[a]);
-                float bufL = m_allpassBuf[a][allpassPos[a]];
-                float bufR = m_allpassBuf[a][(allpassPos[a] + len / 3) % len];
-
-                float outL = -combOutL + bufL;
-                float outR = -combOutR + bufR;
-
-                m_allpassBuf[a][allpassPos[a]] = combOutL + bufL * 0.5f;
-                m_allpassBuf[a][(allpassPos[a] + len / 3) % len] = combOutR + bufR * 0.5f;
-                allpassPos[a] = (allpassPos[a] + 1) % len;
-
-                combOutL = outL;
-                combOutR = outR;
-            }
-
-            // Stereo width
-            float wetL = combOutL * (1.0f + width) + combOutR * (1.0f - width);
-            float wetR = combOutR * (1.0f + width) + combOutL * (1.0f - width);
-            wetL *= 0.25f;
-            wetR *= 0.25f;
-
-            // Wet/dry mix
-            float outL = dryL * (1.0f - mix) + wetL * mix;
-            float outR = dryR * (1.0f - mix) + wetR * mix;
-
-            if (numOutputChannels > 0 && outputs[0]) outputs[0][i] = std::clamp(outL, -1.0f, 1.0f);
-            if (numOutputChannels > 1 && outputs[1]) outputs[1][i] = std::clamp(outR, -1.0f, 1.0f);
+        std::unique_lock<std::mutex> rebuildLock(m_rebuildMutex, std::try_to_lock);
+        if (!rebuildLock.owns_lock()) {
+            copyDry(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+            return;
         }
 
-        m_filtL = filtL;
-        m_filtR = filtR;
-        m_combPos = { combPos[0], combPos[1], combPos[2], combPos[3] };
-        m_allpassPos = { allpassPos[0], allpassPos[1] };
+        if (m_predelayL.empty() || m_delayLines[0].empty()) {
+            copyDry(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+            return;
+        }
+
+        const Mode mode = currentMode();
+        const ModeConstants constants = constantsForMode(mode);
+        const float sampleScale = static_cast<float>(m_sampleRate) / kReferenceSampleRate;
+        const float smoothingCoeff = 1.0f - std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.015f));
+        const float lowDampCoeff = 1.0f - std::exp(-kTwoPi * 110.0f / static_cast<float>(m_sampleRate));
+        const float randomCoeff = 1.0f - std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.22f));
+
+        int predelayPos = m_predelayPos;
+        int earlyPos = m_earlyPos;
+        auto delayPos = m_delayPos;
+        auto diffuserPos = m_diffuserPos;
+        auto platePostPos = m_platePostPos;
+        auto dampingState = m_dampingState;
+        auto lowDampState = m_lowDampState;
+        auto lfoPhase = m_lfoPhase;
+        auto lfoPhase2 = m_lfoPhase2;
+        auto lfoSin = m_lfoSin;
+        auto lfoCos = m_lfoCos;
+        auto lfoSin2 = m_lfoSin2;
+        auto lfoCos2 = m_lfoCos2;
+        auto randomMod = m_randomMod;
+        auto randomTarget = m_randomTarget;
+        auto randomCounter = m_randomCounter;
+        auto randomState = m_randomState;
+        auto smoothedParams = m_smoothedParams;
+
+        if (!m_predelayL.empty()) {
+            predelayPos = wrapIndex(predelayPos, static_cast<int>(m_predelayL.size()));
+        }
+        earlyPos = wrapIndex(earlyPos, static_cast<int>(m_earlyL.size()));
+        for (size_t line = 0; line < kFDNLineCount; ++line) {
+            delayPos[line] = wrapIndex(delayPos[line], static_cast<int>(m_delayLines[line].size()));
+        }
+        for (size_t stage = 0; stage < kDiffuserCount; ++stage) {
+            diffuserPos[stage] = wrapIndex(diffuserPos[stage], static_cast<int>(m_diffuserL[stage].size()));
+        }
+        for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
+            platePostPos[stage] = wrapIndex(platePostPos[stage], static_cast<int>(m_platePostL[stage].size()));
+        }
+
+        std::array<float, kFDNLineCount> lineOut{};
+        std::array<float, kFDNLineCount> matrixOut{};
+        ControlCache control{};
+        uint32_t controlCountdown = 0;
+
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            for (uint32_t p = 0; p < kParamCount; ++p) {
+                if (p == kBypass || p == kMode) continue;
+                const float target = m_params[p].load(std::memory_order_relaxed);
+                smoothedParams[p] += (target - smoothedParams[p]) * smoothingCoeff;
+            }
+
+            if (controlCountdown == 0) {
+                for (size_t line = 0; line < kFDNLineCount; ++line) {
+                    normalizeOscillator(lfoSin[line], lfoCos[line]);
+                    normalizeOscillator(lfoSin2[line], lfoCos2[line]);
+                }
+                updateControlCache(control, smoothedParams, constants, mode, sampleScale);
+                controlCountdown = kControlInterval;
+            }
+            --controlCountdown;
+
+            const float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
+            const float inR = (numInputChannels > 1 && inputs[1]) ? inputs[1][i] : inL;
+            const float dryL = inL;
+            const float dryR = inR;
+
+            m_predelayL[predelayPos] = inL;
+            m_predelayR[predelayPos] = inR;
+            int predelayRead = predelayPos - control.predelaySamples;
+            if (predelayRead < 0) predelayRead += static_cast<int>(m_predelayL.size());
+            float delayedL = m_predelayL[predelayRead];
+            float delayedR = m_predelayR[predelayRead];
+            if (++predelayPos >= static_cast<int>(m_predelayL.size())) predelayPos = 0;
+
+            float earlyL = 0.0f;
+            float earlyR = 0.0f;
+            processEarlyReflections(delayedL, delayedR, control, earlyL, earlyR, earlyPos);
+
+            if (control.diffusionEnabled) {
+                processDiffusers(delayedL, delayedR, control, diffuserPos);
+            }
+
+            delayedL += earlyL * 0.20f;
+            delayedR += earlyR * 0.20f;
+
+            for (size_t line = 0; line < kFDNLineCount; ++line) {
+                float lfoOffset = 0.0f;
+                if (control.modulationEnabled) {
+                    if (--randomCounter[line] <= 0) {
+                        randomTarget[line] = nextRandomBipolar(randomState[line]);
+                        randomCounter[line] = std::max(64, static_cast<int>((0.075f + 0.013f * static_cast<float>(line)) * static_cast<float>(m_sampleRate)));
+                    }
+                    randomMod[line] += (randomTarget[line] - randomMod[line]) * randomCoeff;
+                    const float multi = lfoSin[line] * 0.68f +
+                                        lfoSin2[line] * 0.22f +
+                                        randomMod[line] * 0.18f;
+                    lfoOffset = multi * control.modDepthSamples;
+
+                    const float nextSin = lfoSin[line] * control.lfoCosInc[line] + lfoCos[line] * control.lfoSinInc[line];
+                    const float nextCos = lfoCos[line] * control.lfoCosInc[line] - lfoSin[line] * control.lfoSinInc[line];
+                    lfoSin[line] = nextSin;
+                    lfoCos[line] = nextCos;
+
+                    const float nextSin2 = lfoSin2[line] * control.lfoCosInc2[line] + lfoCos2[line] * control.lfoSinInc2[line];
+                    const float nextCos2 = lfoCos2[line] * control.lfoCosInc2[line] - lfoSin2[line] * control.lfoSinInc2[line];
+                    lfoSin2[line] = nextSin2;
+                    lfoCos2[line] = nextCos2;
+
+                    lfoPhase[line] += control.lfoPhaseInc[line];
+                    lfoPhase2[line] += control.lfoPhaseInc2[line];
+                    if (lfoPhase[line] >= kTwoPi) lfoPhase[line] -= kTwoPi;
+                    if (lfoPhase2[line] >= kTwoPi) lfoPhase2[line] -= kTwoPi;
+                }
+                lineOut[line] = readDelayLine(line, delayPos[line], static_cast<float>(control.lineLengths[line]) + lfoOffset);
+            }
+
+            float sum = 0.0f;
+            for (float sample : lineOut) sum += sample;
+            const float householderMean = sum * (2.0f / static_cast<float>(kFDNLineCount));
+
+            float wetL = 0.0f;
+            float wetR = 0.0f;
+            for (size_t line = 0; line < kFDNLineCount; ++line) {
+                matrixOut[line] = lineOut[line] - householderMean;
+                dampingState[line] += control.dampingCoeff * (matrixOut[line] - dampingState[line]);
+
+                const float injected = (delayedL * kInjectL[line] + delayedR * kInjectR[line]) * 0.115f;
+                float feedback = dampingState[line] * control.feedbackGains[line];
+                lowDampState[line] += (feedback - lowDampState[line]) * lowDampCoeff;
+                feedback -= lowDampState[line] * 0.82f;
+                m_delayLines[line][delayPos[line]] = injected + feedback;
+                if (++delayPos[line] >= static_cast<int>(m_delayLines[line].size())) delayPos[line] = 0;
+
+                wetL += lineOut[line] * kOutputL[line];
+                wetR += lineOut[line] * kOutputR[line];
+            }
+
+            wetL += earlyL * 0.18f;
+            wetR += earlyR * 0.18f;
+
+            wetL *= kWetMakeupGain;
+            wetR *= kWetMakeupGain;
+
+            if (mode == Mode::Plate) {
+                processPlatePostAllpass(wetL, wetR, platePostPos);
+            }
+
+            const float widthL = wetL * control.widthMain + wetR * control.widthCross;
+            const float widthR = wetR * control.widthMain + wetL * control.widthCross;
+            wetL = widthL * 0.5f;
+            wetR = widthR * 0.5f;
+
+            wetL = sanitize(wetL);
+            wetR = sanitize(wetR);
+
+            if (numOutputChannels > 0 && outputs[0]) {
+                outputs[0][i] = std::clamp(dryL * control.dryGain + wetL * control.wetGain, -1.0f, 1.0f);
+            }
+            if (numOutputChannels > 1 && outputs[1]) {
+                outputs[1][i] = std::clamp(dryR * control.dryGain + wetR * control.wetGain, -1.0f, 1.0f);
+            }
+        }
+
         m_predelayPos = predelayPos;
+        m_earlyPos = earlyPos;
+        m_delayPos = delayPos;
+        m_diffuserPos = diffuserPos;
+        m_platePostPos = platePostPos;
+        m_dampingState = dampingState;
+        m_lowDampState = lowDampState;
+        m_lfoPhase = lfoPhase;
+        m_lfoPhase2 = lfoPhase2;
+        m_lfoSin = lfoSin;
+        m_lfoCos = lfoCos;
+        m_lfoSin2 = lfoSin2;
+        m_lfoCos2 = lfoCos2;
+        m_randomMod = randomMod;
+        m_randomTarget = randomTarget;
+        m_randomCounter = randomCounter;
+        m_randomState = randomState;
+        m_smoothedParams = smoothedParams;
     }
 
     uint32_t getParameterCount() const override { return kParamCount; }
@@ -182,9 +315,11 @@ public:
         if (id >= kParamCount) return 0.0f;
         return m_params[id].load(std::memory_order_relaxed);
     }
+
     void setParameter(uint32_t id, float value) override {
         if (id >= kParamCount) return;
-        m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
+        const float clamped = std::clamp(value, 0.0f, 1.0f);
+        m_params[id].store(clamped, std::memory_order_relaxed);
     }
 
     std::vector<PluginParameter> getParameters() const override {
@@ -195,35 +330,60 @@ public:
             { kWidth, "Width", "WID", "", 0.7f, 0.0f, 1.0f, true },
             { kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true },
             { kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
+            { kSize, "Size", "SIZ", "x", 0.473684f, 0.0f, 1.0f, true },
+            { kDiffusion, "Diffusion", "DIF", "%", 0.7f, 0.0f, 1.0f, true },
+            { kModRate, "Mod Rate", "RTE", "x", 0.5f, 0.0f, 1.0f, true },
+            { kModDepth, "Mod Depth", "DEP", "smpl", 0.3125f, 0.0f, 1.0f, true },
+            { kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, 2 },
         };
     }
 
     std::string getParameterDisplay(uint32_t id) const override {
         if (id >= kParamCount) return "";
-        float v = getParameter(id);
+        const float v = getParameter(id);
         switch (id) {
-        case kDecay: return std::to_string(static_cast<int>((0.1f + v * 0.89f) * 100)) + "%";
+        case kDecay: return std::to_string(static_cast<int>((0.3f + v * 9.7f) * 10.0f) / 10.0f) + "s";
         case kDamping: return std::to_string(static_cast<int>(v * 100)) + "%";
-        case kPredelayMs: return std::to_string(static_cast<int>(v * 200)) + "ms";
+        case kPredelayMs: return std::to_string(static_cast<int>(v * kMaxPredelayMs)) + "ms";
         case kWidth: return std::to_string(static_cast<int>(v * 100)) + "%";
         case kMix: return std::to_string(static_cast<int>(v * 100)) + "%";
         case kBypass: return v > 0.5f ? "ON" : "OFF";
+        case kSize: {
+            const float size = 0.1f + v * 1.9f;
+            return std::to_string(static_cast<int>(size * 100.0f) / 100.0f) + "x";
+        }
+        case kDiffusion: return std::to_string(static_cast<int>(v * 100)) + "%";
+        case kModRate: return std::to_string(static_cast<int>(v * 200)) + "%";
+        case kModDepth: return std::to_string(static_cast<int>(v * 80.0f) / 10.0f) + " smp";
+        case kMode:
+            switch (modeIndex()) {
+            case 0: return "Room";
+            case 1: return "Hall";
+            default: return "Plate";
+            }
         default: return "";
         }
     }
 
     std::vector<uint8_t> saveState() const override {
-        struct Blob { uint32_t magic = kStateMagic; uint32_t version = 1; float params[kParamCount]; } blob;
+        struct Blob { uint32_t magic = kStateMagic; uint32_t version = 3; float params[kParamCount]; } blob;
         for (uint32_t i = 0; i < kParamCount; ++i) blob.params[i] = getParameter(i);
         const auto* data = reinterpret_cast<const uint8_t*>(&blob);
         return { data, data + sizeof(blob) };
     }
+
     bool loadState(const std::vector<uint8_t>& state) override {
         if (state.size() < sizeof(uint32_t) * 2) return false;
-        struct StateBlob { uint32_t magic; uint32_t version; float params[kParamCount]; };
-        const auto* blob = reinterpret_cast<const StateBlob*>(state.data());
-        if (blob->magic != kStateMagic) return false;
-        for (uint32_t i = 0; i < kParamCount; ++i) setParameter(i, blob->params[i]);
+        struct Header { uint32_t magic; uint32_t version; };
+        const auto* header = reinterpret_cast<const Header*>(state.data());
+        if (header->magic != 0x52564201 && header->magic != 0x52564202 && header->magic != kStateMagic) return false;
+        const size_t availableParams = (state.size() - sizeof(uint32_t) * 2) / sizeof(float);
+        const auto* params = reinterpret_cast<const float*>(state.data() + sizeof(uint32_t) * 2);
+        for (size_t i = 0; i < std::min<size_t>(availableParams, kParamCount); ++i) {
+            setParameter(static_cast<uint32_t>(i), params[i]);
+        }
+        std::lock_guard<std::mutex> lock(m_rebuildMutex);
+        prepareDelayLines(false);
         return true;
     }
 
@@ -231,12 +391,12 @@ public:
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return {800, 600}; }
+    std::pair<int, int> getEditorSize() const override { return {560, 420}; }
     bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override { return 0; }
-    uint32_t getTailSamples() const override { return 4096; }
+    uint32_t getTailSamples() const override { return static_cast<uint32_t>(m_sampleRate * 20.0); }
     WatchdogStats getWatchdogStats() const override { return {}; }
     void resetWatchdog() override {}
     bool isBypassedByWatchdog() const override { return false; }
@@ -245,28 +405,418 @@ public:
     void setInfo(const PluginInfo& info) { m_info = info; }
 
 private:
-    void clearBuffers() {
-        for (auto& b : m_combBuf) std::fill(b.begin(), b.end(), 0.0f);
-        for (auto& b : m_allpassBuf) std::fill(b.begin(), b.end(), 0.0f);
-        std::fill(m_predelay.begin(), m_predelay.end(), 0.0f);
-        m_filtL = m_filtR = 0.0f;
-        m_combPos.assign(4, 0);
-        m_allpassPos.assign(2, 0);
+    struct ModeConstants {
+        std::array<uint32_t, kFDNLineCount> fdnBase{};
+        float dampingScalar{1.0f};
+        float modDepthScalar{1.0f};
+        float diffusionScalar{1.0f};
+        float decayScalar{1.0f};
+    };
+
+    struct ControlCache {
+        float dampingCoeff{0.7f};
+        float diffusionG{0.7f};
+        float modDepthSamples{2.5f};
+        float dryGain{0.0f};
+        float wetGain{1.0f};
+        float widthMain{1.7f};
+        float widthCross{0.3f};
+        int predelaySamples{0};
+        bool modulationEnabled{true};
+        bool diffusionEnabled{true};
+        std::array<int, kFDNLineCount> lineLengths{};
+        std::array<float, kFDNLineCount> feedbackGains{};
+        std::array<float, kFDNLineCount> lfoSinInc{};
+        std::array<float, kFDNLineCount> lfoCosInc{};
+        std::array<float, kFDNLineCount> lfoSinInc2{};
+        std::array<float, kFDNLineCount> lfoCosInc2{};
+        std::array<float, kFDNLineCount> lfoPhaseInc{};
+        std::array<float, kFDNLineCount> lfoPhaseInc2{};
+        std::array<int, kDiffuserCount> diffuserLengths{};
+        std::array<int, kEarlyTapCount> earlyDelayL{};
+        std::array<int, kEarlyTapCount> earlyDelayR{};
+        std::array<float, kEarlyTapCount> earlyGains{};
+    };
+
+    static ModeConstants constantsForMode(Mode mode) {
+        switch (mode) {
+        case Mode::Hall:
+            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 0.72f, 1.4f, 0.85f, 1.6f};
+        case Mode::Plate:
+            return {{{1013, 1151, 947, 863, 823, 919, 743, 677}}, 0.42f, 3.0f, 1.2f, 0.9f};
+        case Mode::Room:
+        default:
+            return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.15f, 1.0f, 1.0f, 1.0f};
+        }
+    }
+
+    int modeIndex() const {
+        return std::clamp(static_cast<int>(std::round(getParameter(kMode) * 2.0f)), 0, 2);
+    }
+
+    Mode currentMode() const {
+        switch (modeIndex()) {
+        case 1: return Mode::Hall;
+        case 2: return Mode::Plate;
+        default: return Mode::Room;
+        }
+    }
+
+    float sizeScalar() const {
+        return 0.1f + std::clamp(getParameter(kSize), 0.0f, 1.0f) * 1.9f;
+    }
+
+    static uint32_t maxFdnBaseForLine(size_t line) {
+        const auto room = constantsForMode(Mode::Room);
+        const auto hall = constantsForMode(Mode::Hall);
+        const auto plate = constantsForMode(Mode::Plate);
+        return std::max({room.fdnBase[line], hall.fdnBase[line], plate.fdnBase[line]});
+    }
+
+    void updateControlCache(ControlCache& cache,
+                            const std::array<float, kParamCount>& smoothedParams,
+                            const ModeConstants& constants,
+                            Mode mode,
+                            float sampleScale) const {
+        static constexpr std::array<float, kEarlyTapCount> tapMs = {
+            5.1f, 7.9f, 11.3f, 13.7f, 17.1f, 19.9f, 23.5f, 29.7f, 34.1f, 41.9f, 53.3f, 67.7f
+        };
+        static constexpr std::array<float, kEarlyTapCount> tapGain = {
+            0.34f, -0.24f, 0.21f, 0.18f, -0.16f, 0.14f, -0.12f, 0.105f, 0.092f, -0.078f, 0.062f, -0.052f
+        };
+
+        const float sr = static_cast<float>(m_sampleRate);
+        const float size = 0.1f + std::clamp(smoothedParams[kSize], 0.0f, 1.0f) * 1.9f;
+        const float decayTime = (0.3f + smoothedParams[kDecay] * 9.7f) * constants.decayScalar;
+        const float dampingParam = std::clamp(smoothedParams[kDamping], 0.0f, 1.0f);
+        const float damping = std::clamp(dampingParam * constants.dampingScalar, 0.0f, 0.98f);
+        cache.dampingCoeff = 1.0f - damping;
+
+        const float predelayMs = std::clamp(smoothedParams[kPredelayMs], 0.0f, 1.0f) * kMaxPredelayMs;
+        cache.predelaySamples = std::clamp(static_cast<int>(std::round((predelayMs / 1000.0f) * sr)),
+                                           0, std::max(0, m_maxPredelaySamples));
+
+        cache.diffusionG = std::clamp(smoothedParams[kDiffusion] * 0.85f * constants.diffusionScalar, 0.0f, 0.85f);
+        cache.diffusionEnabled = cache.diffusionG > 0.0001f;
+
+        const float modRateScalar = smoothedParams[kModRate] * 2.0f;
+        cache.modDepthSamples = smoothedParams[kModDepth] * 8.0f * constants.modDepthScalar;
+        cache.modulationEnabled = cache.modDepthSamples > 0.0001f && modRateScalar > 0.0001f;
+
+        const float width = std::clamp(smoothedParams[kWidth], 0.0f, 1.0f);
+        cache.widthMain = 1.0f + width;
+        cache.widthCross = 1.0f - width;
+
+        const float mix = std::clamp(smoothedParams[kMix], 0.0f, 1.0f);
+        const float mixAngle = mix * (kTwoPi * 0.25f);
+        cache.dryGain = std::cos(mixAngle);
+        cache.wetGain = std::sin(mixAngle);
+
+        for (size_t line = 0; line < kFDNLineCount; ++line) {
+            cache.lineLengths[line] = logicalFdnLength(line, constants, sampleScale, size);
+            const float delaySeconds = static_cast<float>(cache.lineLengths[line]) / sr;
+            cache.feedbackGains[line] = std::pow(10.0f, -3.0f * delaySeconds / std::max(0.1f, decayTime));
+
+            const float inc = (kTwoPi * kLfoBaseRates[line] * modRateScalar) / sr;
+            cache.lfoPhaseInc[line] = inc;
+            cache.lfoSinInc[line] = std::sin(inc);
+            cache.lfoCosInc[line] = std::cos(inc);
+
+            const float inc2 = (kTwoPi * kLfoSecondaryRates[line] * modRateScalar) / sr;
+            cache.lfoPhaseInc2[line] = inc2;
+            cache.lfoSinInc2[line] = std::sin(inc2);
+            cache.lfoCosInc2[line] = std::cos(inc2);
+        }
+
+        for (size_t stage = 0; stage < kDiffuserCount; ++stage) {
+            cache.diffuserLengths[stage] = logicalDiffuserLength(stage, sampleScale, size);
+        }
+
+        const float modeSpread = mode == Mode::Hall ? 1.45f : (mode == Mode::Plate ? 0.55f : 0.82f);
+        const float modeLevel = mode == Mode::Hall ? 0.58f : (mode == Mode::Plate ? 0.28f : 0.78f);
+        const float sizeTerm = std::sqrt(std::max(0.1f, size));
+        const int ringSize = static_cast<int>(m_earlyL.size());
+        const int maxDelay = std::max(1, ringSize - 1);
+        for (size_t tap = 0; tap < kEarlyTapCount; ++tap) {
+            const int delay = std::clamp(
+                static_cast<int>(std::round(tapMs[tap] * modeSpread * sizeTerm * sr / 1000.0f)),
+                1,
+                maxDelay
+            );
+            const int decorrelate = static_cast<int>((tap % 3U) + 1U);
+            cache.earlyDelayL[tap] = delay;
+            cache.earlyDelayR[tap] = std::min(maxDelay, delay + decorrelate);
+            cache.earlyGains[tap] = tapGain[tap] * modeLevel;
+        }
+    }
+
+    void prepareDelayLines(bool randomizeLfos) {
+        const float sampleScale = static_cast<float>(m_sampleRate) / kReferenceSampleRate;
+
+        m_maxPredelaySamples = std::max(1, static_cast<int>(std::ceil(m_sampleRate * 0.5)));
+        m_predelayL.assign(static_cast<size_t>(m_maxPredelaySamples) + 1, 0.0f);
+        m_predelayR.assign(static_cast<size_t>(m_maxPredelaySamples) + 1, 0.0f);
+
+        for (size_t line = 0; line < kFDNLineCount; ++line) {
+            const int maxLength = std::max(
+                128,
+                static_cast<int>(std::ceil(maxFdnBaseForLine(line) * sampleScale * 2.0f)) + 64
+            );
+            m_delayLines[line].assign(static_cast<size_t>(maxLength), 0.0f);
+            m_delayLengths[line] = std::min(maxLength - 2, std::max(100, maxLength / 2));
+        }
+
+        for (size_t stage = 0; stage < kDiffuserCount; ++stage) {
+            const int maxLength = std::max(
+                2,
+                static_cast<int>(std::ceil(kBaseDiffuserLengths[stage] * sampleScale * 2.0f)) + 8
+            );
+            m_diffuserLengths[stage] = maxLength / 2;
+            m_diffuserL[stage].assign(static_cast<size_t>(maxLength), 0.0f);
+            m_diffuserR[stage].assign(static_cast<size_t>(maxLength), 0.0f);
+        }
+
+        for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
+            const int maxLength = std::max(
+                2,
+                static_cast<int>(std::ceil(kPlatePostAllpassLengths[stage] * sampleScale)) + 4
+            );
+            m_platePostL[stage].assign(static_cast<size_t>(maxLength), 0.0f);
+            m_platePostR[stage].assign(static_cast<size_t>(maxLength), 0.0f);
+        }
+
+        const int earlyMaxSamples = std::max(2, static_cast<int>(std::ceil(m_sampleRate * 0.14)));
+        m_earlyL.assign(static_cast<size_t>(earlyMaxSamples), 0.0f);
+        m_earlyR.assign(static_cast<size_t>(earlyMaxSamples), 0.0f);
+
+        clearBuffers(randomizeLfos);
+    }
+
+    void clearBuffers(bool randomizeLfos) {
+        for (auto& b : m_delayLines) std::fill(b.begin(), b.end(), 0.0f);
+        for (auto& b : m_diffuserL) std::fill(b.begin(), b.end(), 0.0f);
+        for (auto& b : m_diffuserR) std::fill(b.begin(), b.end(), 0.0f);
+        for (auto& b : m_platePostL) std::fill(b.begin(), b.end(), 0.0f);
+        for (auto& b : m_platePostR) std::fill(b.begin(), b.end(), 0.0f);
+        std::fill(m_earlyL.begin(), m_earlyL.end(), 0.0f);
+        std::fill(m_earlyR.begin(), m_earlyR.end(), 0.0f);
+        std::fill(m_predelayL.begin(), m_predelayL.end(), 0.0f);
+        std::fill(m_predelayR.begin(), m_predelayR.end(), 0.0f);
+        m_delayPos.fill(0);
+        m_diffuserPos.fill(0);
+        m_platePostPos.fill(0);
+        m_dampingState.fill(0.0f);
+        m_lowDampState.fill(0.0f);
         m_predelayPos = 0;
+        m_earlyPos = 0;
+
+        if (randomizeLfos) {
+            std::mt19937 rng{std::random_device{}()};
+            std::uniform_real_distribution<float> dist(0.0f, kTwoPi);
+            for (auto& phase : m_lfoPhase) phase = dist(rng);
+            for (auto& phase : m_lfoPhase2) phase = dist(rng);
+            std::uniform_int_distribution<uint32_t> stateDist(1U, 0x7fffffffU);
+            for (auto& state : m_randomState) state = stateDist(rng);
+        }
+        for (size_t line = 0; line < kFDNLineCount; ++line) {
+            m_lfoSin[line] = std::sin(m_lfoPhase[line]);
+            m_lfoCos[line] = std::cos(m_lfoPhase[line]);
+            m_lfoSin2[line] = std::sin(m_lfoPhase2[line]);
+            m_lfoCos2[line] = std::cos(m_lfoPhase2[line]);
+        }
+        m_randomMod.fill(0.0f);
+        m_randomTarget.fill(0.0f);
+        m_randomCounter.fill(0);
+    }
+
+    void copyDry(const float* const* inputs, float** outputs, uint32_t numInputChannels,
+                 uint32_t numOutputChannels, uint32_t numFrames) const {
+        for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
+            if (outputs[ch] && ch < numInputChannels && inputs[ch]) {
+                std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
+            } else if (outputs[ch]) {
+                std::memset(outputs[ch], 0, numFrames * sizeof(float));
+            }
+        }
+    }
+
+    float readDelayLine(size_t line, int writePos, float delaySamples) const {
+        const auto& buffer = m_delayLines[line];
+        const int size = static_cast<int>(buffer.size());
+        if (size <= 1) return 0.0f;
+
+        float readPos = static_cast<float>(writePos) - delaySamples;
+        while (readPos < 0.0f) readPos += static_cast<float>(size);
+        while (readPos >= static_cast<float>(size)) readPos -= static_cast<float>(size);
+
+        const int i0 = static_cast<int>(std::floor(readPos));
+        int i1 = i0 + 1;
+        if (i1 >= size) i1 = 0;
+        const float frac = readPos - static_cast<float>(i0);
+        return buffer[static_cast<size_t>(i0)] * (1.0f - frac) + buffer[static_cast<size_t>(i1)] * frac;
+    }
+
+    int logicalFdnLength(size_t line, const ModeConstants& constants, float sampleScale, float size) const {
+        const int maxSize = static_cast<int>(m_delayLines[line].size());
+        return std::clamp(
+            static_cast<int>(std::round(constants.fdnBase[line] * sampleScale * size)),
+            100,
+            std::max(100, maxSize - 12)
+        );
+    }
+
+    int logicalDiffuserLength(size_t stage, float sampleScale, float size) const {
+        const int maxSize = static_cast<int>(m_diffuserL[stage].size());
+        return std::clamp(
+            static_cast<int>(std::round(kBaseDiffuserLengths[stage] * sampleScale * size)),
+            1,
+            std::max(1, maxSize - 1)
+        );
+    }
+
+    void processEarlyReflections(float left, float right, const ControlCache& control,
+                                 float& earlyL, float& earlyR, int& pos) {
+        if (m_earlyL.empty() || m_earlyR.empty()) return;
+
+        const int ringSize = static_cast<int>(m_earlyL.size());
+        pos = wrapIndex(pos, ringSize);
+
+        m_earlyL[static_cast<size_t>(pos)] = left;
+        m_earlyR[static_cast<size_t>(pos)] = right;
+
+        for (size_t tap = 0; tap < kEarlyTapCount; ++tap) {
+            int readL = pos - control.earlyDelayL[tap];
+            if (readL < 0) readL += ringSize;
+            int readR = pos - control.earlyDelayR[tap];
+            if (readR < 0) readR += ringSize;
+            const float gain = control.earlyGains[tap];
+            earlyL += m_earlyL[static_cast<size_t>(readL)] * gain +
+                      m_earlyR[static_cast<size_t>(readR)] * gain * 0.28f;
+            earlyR += m_earlyR[static_cast<size_t>(readR)] * gain -
+                      m_earlyL[static_cast<size_t>(readL)] * gain * 0.22f;
+        }
+
+        if (++pos >= ringSize) pos = 0;
+    }
+
+    void processDiffusers(float& left, float& right, const ControlCache& control,
+                          std::array<int, kDiffuserCount>& pos) {
+        for (size_t stage = 0; stage < kDiffuserCount; ++stage) {
+            auto& bufL = m_diffuserL[stage];
+            auto& bufR = m_diffuserR[stage];
+            if (bufL.empty() || bufR.empty()) continue;
+
+            const int len = control.diffuserLengths[stage];
+            int p = pos[stage];
+            if (p >= len) p = 0;
+            const float delayedL = bufL[static_cast<size_t>(p)];
+            const float delayedR = bufR[static_cast<size_t>(p)];
+            const float yL = delayedL - control.diffusionG * left;
+            const float yR = delayedR - control.diffusionG * right;
+            bufL[static_cast<size_t>(p)] = left + control.diffusionG * yL;
+            bufR[static_cast<size_t>(p)] = right + control.diffusionG * yR;
+            left = yL;
+            right = yR;
+            if (++p >= len) p = 0;
+            pos[stage] = p;
+        }
+    }
+
+    void processPlatePostAllpass(float& left, float& right,
+                                 std::array<int, kPlatePostAllpassCount>& pos) {
+        const float g = 0.6f;
+        for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
+            auto& bufL = m_platePostL[stage];
+            auto& bufR = m_platePostR[stage];
+            if (bufL.empty() || bufR.empty()) continue;
+
+            const int p = wrapIndex(pos[stage], static_cast<int>(bufL.size()));
+            const float delayedL = bufL[static_cast<size_t>(p)];
+            const float delayedR = bufR[static_cast<size_t>(p)];
+            const float yL = delayedL - g * left;
+            const float yR = delayedR - g * right;
+            bufL[static_cast<size_t>(p)] = left + g * yL;
+            bufR[static_cast<size_t>(p)] = right + g * yR;
+            left = yL;
+            right = yR;
+            pos[stage] = (p + 1) % static_cast<int>(bufL.size());
+        }
+    }
+
+    static float nextRandomBipolar(uint32_t& state) {
+        state = state * 1664525u + 1013904223u;
+        const float normalized = static_cast<float>((state >> 8) & 0x00ffffffu) / static_cast<float>(0x00ffffffu);
+        return normalized * 2.0f - 1.0f;
+    }
+
+    static int wrapIndex(int index, int size) {
+        if (size <= 0) return 0;
+        index %= size;
+        if (index < 0) index += size;
+        return index;
+    }
+
+    static float sanitize(float value) {
+        if (!std::isfinite(value) || std::abs(value) < 1.0e-20f) return 0.0f;
+        return value;
+    }
+
+    static void normalizeOscillator(float& s, float& c) {
+        const float mag2 = s * s + c * c;
+        if (mag2 > 0.25f && mag2 < 4.0f) {
+            const float scale = 1.0f / std::sqrt(mag2);
+            s *= scale;
+            c *= scale;
+        } else {
+            s = 0.0f;
+            c = 1.0f;
+        }
     }
 
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
-    std::array<std::atomic<float>, kParamCount> m_params;
+    std::array<std::atomic<float>, kParamCount> m_params{};
+    std::array<float, kParamCount> m_smoothedParams{};
+    mutable std::mutex m_rebuildMutex;
 
-    std::array<std::vector<float>, 4> m_combBuf;
-    std::array<std::vector<float>, 2> m_allpassBuf;
-    std::vector<float> m_predelay = std::vector<float>(kPredelay * 2, 0.0f);
-    std::vector<int> m_combPos = {0, 0, 0, 0};
-    std::vector<int> m_allpassPos = {0, 0};
+    std::array<std::vector<float>, kFDNLineCount> m_delayLines;
+    std::array<int, kFDNLineCount> m_delayLengths{};
+    std::array<int, kFDNLineCount> m_delayPos{};
+    std::array<float, kFDNLineCount> m_dampingState{};
+    std::array<float, kFDNLineCount> m_lowDampState{};
+    std::array<float, kFDNLineCount> m_lfoPhase{};
+    std::array<float, kFDNLineCount> m_lfoPhase2{};
+    std::array<float, kFDNLineCount> m_lfoSin{};
+    std::array<float, kFDNLineCount> m_lfoCos{};
+    std::array<float, kFDNLineCount> m_lfoSin2{};
+    std::array<float, kFDNLineCount> m_lfoCos2{};
+    std::array<float, kFDNLineCount> m_randomMod{};
+    std::array<float, kFDNLineCount> m_randomTarget{};
+    std::array<int, kFDNLineCount> m_randomCounter{};
+    std::array<uint32_t, kFDNLineCount> m_randomState{};
+
+    std::array<std::vector<float>, kDiffuserCount> m_diffuserL;
+    std::array<std::vector<float>, kDiffuserCount> m_diffuserR;
+    std::array<int, kDiffuserCount> m_diffuserLengths{};
+    std::array<int, kDiffuserCount> m_diffuserPos{};
+
+    std::array<std::vector<float>, kPlatePostAllpassCount> m_platePostL;
+    std::array<std::vector<float>, kPlatePostAllpassCount> m_platePostR;
+    std::array<int, kPlatePostAllpassCount> m_platePostPos{};
+
+    std::vector<float> m_earlyL;
+    std::vector<float> m_earlyR;
+    int m_earlyPos = 0;
+
+    std::vector<float> m_predelayL;
+    std::vector<float> m_predelayR;
+    int m_maxPredelaySamples = 1;
     int m_predelayPos = 0;
-    float m_filtL = 0, m_filtR = 0;
+
+    // TODO: separate hi/lo damping (kHFDamping + kLFDamping) for more tonal control
+    // TODO: Convolution mode — IR loader using same drag system as Arsenal
+    // TODO: Early reflections as discrete pre-FDN tapped delay line network
 };
 
 } // namespace Plugins

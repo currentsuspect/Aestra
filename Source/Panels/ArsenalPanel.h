@@ -41,6 +41,10 @@ public:
     AestraUI::DropResult onDrop(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
     /** @brief Get the drop target bounds for the Arsenal panel. */
     AestraUI::NUIRect getDropBounds() const override;
+    /** @brief Register the panel and current rows for lifecycle-scoped drag/drop. */
+    void registerDropTargets(bool reorder = false);
+    /** @brief Unregister the panel and current rows from drag/drop. */
+    void unregisterDropTargets();
 
     /** @brief Rebuild the UI rows from the current UnitManager state. */
     void refreshUnits();
@@ -142,7 +146,6 @@ private:
     bool removeSelectedUnit();
     void syncRowSelection();
     void removeUnitNotes(UnitID unitId);
-    void ensureDropTargetRegistration(bool reorder = false);
     
     // Drag-drop callbacks
     void onUnitDragStart(UnitID unitId);

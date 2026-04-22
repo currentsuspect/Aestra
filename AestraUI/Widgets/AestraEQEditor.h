@@ -56,6 +56,11 @@ private:
     void layoutControls();
     void drawTitleBar(NUIRenderer& renderer);
     void drawResponseCurve(NUIRenderer& renderer, const NUIRect& bounds);
+    void drawBlueprintGrid(NUIRenderer& renderer, const NUIRect& bounds);
+    void drawUtilityStrip(NUIRenderer& renderer, const NUIRect& bounds);
+    void drawInputOutputPanel(NUIRenderer& renderer, const NUIRect& bounds, bool output);
+    void drawFilterGuardPanel(NUIRenderer& renderer, const NUIRect& bounds, bool highPass);
+    void drawDynamicSection(NUIRenderer& renderer, const NUIRect& bounds);
     void updateSpectrumSnapshot();
     void drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& bounds);
     NUIRect responseGraphBounds(const NUIRect& outerBounds) const;
@@ -101,11 +106,11 @@ private:
     uint64_t m_workerResultSerial = 0;
     std::shared_ptr<NUIContextMenu> m_bandTypeMenu;
 
-    static constexpr float kWindowWidth = 760.0f;
-    static constexpr float kWindowHeight = 410.0f;
-    static constexpr float kTitleHeight = 42.0f;
-    static constexpr float kCurveHeight = 160.0f;
-    static constexpr float kPadding = 14.0f;
+    static constexpr float kWindowWidth = 1180.0f;
+    static constexpr float kWindowHeight = 660.0f;
+    static constexpr float kTitleHeight = 58.0f;
+    static constexpr float kCurveHeight = 238.0f;
+    static constexpr float kPadding = 12.0f;
     static constexpr size_t kNumBands = 8;
 };
 

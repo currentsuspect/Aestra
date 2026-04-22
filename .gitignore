@@ -1,5 +1,6 @@
 # Build outputs
 build-linux/
+build-headless/
 res/
 scripts/build-aestra.sh
 scripts/test-aestra.sh
@@ -190,4 +191,3 @@ build_log.txt
 .lsp.json
 .claude/
 .resonance/
-
