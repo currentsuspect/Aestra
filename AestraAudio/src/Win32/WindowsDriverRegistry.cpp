@@ -66,6 +66,7 @@ void RegisterPlatformDrivers(AudioDeviceManager& manager) {
     } catch (const std::exception& e) {
         std::cerr << "[AudioDriverRegistry] Dummy driver failed: " << e.what() << std::endl;
     }
+}
 
 } // namespace Audio
 } // namespace Aestra

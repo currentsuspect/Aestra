@@ -5,7 +5,18 @@
 
 namespace Aestra {
 
-std::string shellEscape(const std::string& input);
+inline std::string shellEscape(const std::string& input) {
+    std::string escaped = "'";
+    for (char c : input) {
+        if (c == '\'') {
+            escaped += "'\\''";
+        } else {
+            escaped += c;
+        }
+    }
+    escaped += "'";
+    return escaped;
+}
 
 class PlatformUtilsLinux : public IPlatformUtils {
 public:

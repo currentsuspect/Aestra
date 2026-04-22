@@ -25,19 +25,6 @@ std::string trimTrailingNewlines(std::string value) {
 
 namespace Aestra {
 
-std::string shellEscape(const std::string& input) {
-    std::string escaped = "'";
-    for (char c : input) {
-        if (c == '\'') {
-            escaped += "'\\''";
-        } else {
-            escaped += c;
-        }
-    }
-    escaped += "'";
-    return escaped;
-}
-
 namespace {
 
 std::string runDialogCommand(const std::string& command) {
