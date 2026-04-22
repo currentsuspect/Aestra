@@ -233,6 +233,7 @@ private:
 	    std::shared_ptr<AestraUI::NUIButton> m_muteButton;
 	    std::shared_ptr<AestraUI::NUIButton> m_soloButton;
 	    std::shared_ptr<AestraUI::NUIButton> m_recordButton;
+	    std::shared_ptr<AestraUI::NUIButton> m_routeButton;
         std::shared_ptr<AestraUI::NUIContextMenu> m_recordModeMenu;
 
     // UI callbacks

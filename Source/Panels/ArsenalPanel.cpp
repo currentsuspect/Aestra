@@ -168,7 +168,7 @@ ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
 }
 
 ArsenalPanel::~ArsenalPanel() {
-    AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
+    unregisterDropTargets();
 }
 
 void ArsenalPanel::createLayout() {
@@ -179,6 +179,10 @@ void ArsenalPanel::createLayout() {
 void ArsenalPanel::refreshUnits() {
     if (!m_listContainer || !m_trackManager) return;
     auto& theme = NUIThemeManager::getInstance();
+    const bool shouldRestoreDropTargets = m_dropTargetRegistered;
+    if (shouldRestoreDropTargets) {
+        unregisterDropTargets();
+    }
     
     // Clear previous children
     m_listContainer->removeAllChildren();
@@ -294,8 +298,6 @@ void ArsenalPanel::refreshUnits() {
         m_listContainer->addChild(row);
         m_unitRows.push_back(row);
         
-        // Register as drop target for file drag-drop
-        AestraUI::NUIDragDropManager::getInstance().registerDropTarget(row);
     }
     
     // Add "Add Unit" button
@@ -312,7 +314,9 @@ void ArsenalPanel::refreshUnits() {
     
     layoutUnits();
     syncRowSelection();
-    ensureDropTargetRegistration(true);
+    if (shouldRestoreDropTargets) {
+        registerDropTargets(true);
+    }
     
     if (auto parent = getParent()) {
         parent->repaint();
@@ -593,7 +597,6 @@ void ArsenalPanel::onResize(int width, int height) {
 
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
-    ensureDropTargetRegistration();
     const float viewportHeight = std::max(0.0f, (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - PROGRESS_HEADER_HEIGHT);
     const float contentHeight = static_cast<float>(m_unitRows.size()) * (56.0f + 8.0f);
     const float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
@@ -629,7 +632,7 @@ void ArsenalPanel::onUpdate(double dt) {
     }
 }
 
-void ArsenalPanel::ensureDropTargetRegistration(bool reorder) {
+void ArsenalPanel::registerDropTargets(bool reorder) {
     auto self = weak_from_this().lock();
     if (!self) {
         return;
@@ -642,12 +645,32 @@ void ArsenalPanel::ensureDropTargetRegistration(bool reorder) {
 
     if (reorder || m_dropTargetRegistered) {
         AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
+        for (const auto& row : m_unitRows) {
+            if (row) {
+                AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(row.get());
+            }
+        }
     }
 
     if (!m_dropTargetRegistered || reorder) {
         AestraUI::NUIDragDropManager::getInstance().registerDropTarget(dropTarget);
+        for (const auto& row : m_unitRows) {
+            if (row) {
+                AestraUI::NUIDragDropManager::getInstance().registerDropTarget(row);
+            }
+        }
         m_dropTargetRegistered = true;
     }
+}
+
+void ArsenalPanel::unregisterDropTargets() {
+    AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(this);
+    for (const auto& row : m_unitRows) {
+        if (row) {
+            AestraUI::NUIDragDropManager::getInstance().unregisterDropTarget(row.get());
+        }
+    }
+    m_dropTargetRegistered = false;
 }
 
 // === Pattern Progress Visualization ===

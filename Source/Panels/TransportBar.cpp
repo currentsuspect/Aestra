@@ -194,21 +194,18 @@ void TransportBar::createButtons() {
     // Play/Pause/Stop/Record...
     // Play/Pause/Stop/Record...
     auto& theme = AestraUI::NUIThemeManager::getInstance();
-    const auto buttonGlass = theme.getColor("buttonBgDefault").withAlpha(0.62f);
-    const auto buttonBorder = theme.getColor("borderSubtle").withAlpha(0.92f);
     auto createBtn = [&](std::shared_ptr<AestraUI::NUIButton>& btn, std::function<void()> cb) {
         btn = std::make_shared<AestraUI::NUIButton>();
         btn->setText("");
         btn->setStyle(AestraUI::NUIButton::Style::Icon);
-        btn->setSize(40, 40);
+        btn->setSize(28, 28);
         
-        // APPLIZED GLASS STYLE - UPDATED
-        // Brighter tinted glass to match AuditionPanel and improve visibility
-        btn->setBackgroundColor(buttonGlass);
-        btn->setBorderColor(buttonBorder);
-        btn->setBorderWidth(1.0f);
-        btn->setCornerRadius(20.0f); // Circular
-        btn->setGlowEnabled(true); // Hover glow
+        btn->setBackgroundColor(AestraUI::NUIColor::transparent());
+        btn->setHoverColor(theme.getColor("surfaceRaised"));
+        btn->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.34f));
+        btn->setBorderEnabled(false);
+        btn->setCornerRadius(6.0f);
+        btn->setGlowEnabled(false);
         
         btn->setOnClick(cb);
         addChild(btn);
@@ -439,9 +436,9 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
     const auto& layout = themeManager.getLayoutDimensions();
     
     // Colors
-    AestraUI::NUIColor glassBg = themeManager.getColor("buttonBgDefault").withAlpha(0.95f);
-    AestraUI::NUIColor glassBorder = themeManager.getColor("borderSubtle").withAlpha(0.90f);
-    AestraUI::NUIColor glassHover = themeManager.getColor("buttonBgHover").withAlpha(0.98f);
+    AestraUI::NUIColor glassBg = AestraUI::NUIColor::transparent();
+    AestraUI::NUIColor glassBorder = AestraUI::NUIColor::transparent();
+    AestraUI::NUIColor glassHover = themeManager.getColor("surfaceRaised");
     AestraUI::NUIColor glassActive = themeManager.getColor("accentPrimary").withAlpha(0.15f);
     
     AestraUI::NUIColor iconGrey = themeManager.getColor("textSecondary");
@@ -506,20 +503,19 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         }
         
         // Draw Button Background
-        renderer.drawShadow(buttonRect, 0.0f, isPrimaryTransport ? 8.0f : 6.0f, isPrimaryTransport ? 22.0f : 18.0f, AestraUI::NUIColor(0, 0, 0, isPrimaryTransport ? 0.20f : 0.14f));
-        renderer.fillRoundedRect(buttonRect, 7.0f, currentBg);
-        renderer.strokeRoundedRect(buttonRect, 7.0f, 1.0f, currentBorder);
-        renderer.strokeRoundedRect({buttonRect.x + 1.0f, buttonRect.y + 1.0f, buttonRect.width - 2.0f, buttonRect.height - 2.0f},
-                                   6.0f,
-                                   1.0f,
-                                   AestraUI::NUIColor::white().withAlpha(0.025f));
+        if (isHovered || isActive || isRecording) {
+            renderer.fillRoundedRect(buttonRect, 6.0f, currentBg);
+            if (currentBorder.a > 0.0f) {
+                renderer.strokeRoundedRect(buttonRect, 6.0f, 1.0f, currentBorder);
+            }
+        }
         
         if (!btn->isEnabled()) {
             iconColor = iconColor.withAlpha(0.3f);
         }
 
         // Render Icon
-        const float localIconSize = isPrimaryTransport ? 24.0f : iconSize;
+        const float localIconSize = isPrimaryTransport ? 18.0f : 16.0f;
         float localPadding = (buttonRect.width - localIconSize) * 0.5f;
         if (localPadding < 2.0f) localPadding = 2.0f;
         AestraUI::NUIRect iconRect = NUIAbsolute(buttonRect, localPadding, localPadding, localIconSize, localIconSize);
@@ -574,11 +570,11 @@ void TransportBar::layoutComponents() {
     const auto& layout = themeManager.getLayoutDimensions();
 
     // Use configurable dimensions - OVERRIDE for Compact Mode
-    float buttonSize = 34.0f; // Relaxed from 28.0f
-    const float primaryButtonScale = 1.20f;
+    float buttonSize = 28.0f;
+    const float primaryButtonScale = 1.0f;
     const float primaryButtonSize = buttonSize * primaryButtonScale;
-    float spacing = 8.0f;     // Relaxed from 6.0f
-    float groupSpacing = 24.0f; // Relaxed from 16.0f
+    float spacing = 8.0f;
+    float groupSpacing = 20.0f;
 
     // --- Layout Logic: Center-Out Calculation ---
     // We calculate the required width first to center the island perfectly
@@ -594,14 +590,14 @@ void TransportBar::layoutComponents() {
     // Let's check TransportInfoContainer first, but for now allow 170.
     // Group 3: Info Display (Center)
     // Expanded Info: 220px to accommodate children
-    float infoWidth = 220.0f; 
+    float infoWidth = 260.0f;
     
     // Group 4: Views (Mixer, Seq, Piano, Playlist) - 4 buttons
     float group4Width = (buttonSize * 4) + (spacing * 3);
 
     // Total Content Width
     float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
-    float islandPadding = 12.0f; // Reduced padding
+    float islandPadding = 10.0f;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
     // Clamp to window width
@@ -609,8 +605,8 @@ void TransportBar::layoutComponents() {
         islandWidth = bounds.width - 20.0f;
     }
 
-    const float islandHeight = 48.0f;
-    const float visualCenterBiasY = -1.0f;
+    const float islandHeight = std::min(50.0f, bounds.height);
+    const float visualCenterBiasY = 0.0f;
     float islandX = std::round((bounds.width - islandWidth) * 0.5f);
     float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);
     
@@ -694,21 +690,21 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     // 2. Re-Calculate Island Geometry (Match layoutComponents logic)
     // 2. Re-Calculate Island Geometry (Match layoutComponents logic)
     // Compact Values (Relaxed per user request: "space would have done the trick")
-    float buttonSize = 34.0f; // Increased from 28.0f
-    float spacing = 8.0f;     // Increased from 6.0f
-    float groupSpacing = 24.0f; // Increased from 16.0f
+    float buttonSize = 28.0f;
+    float spacing = 8.0f;
+    float groupSpacing = 20.0f;
     float group1Width = (buttonSize * 3) + (spacing * 2);
     float group2Width = (buttonSize * 4) + (spacing * 3);
-    float infoWidth = 220.0f; // Increased from 170.0f per user request ("give it more space")
+    float infoWidth = 260.0f;
     float group4Width = (buttonSize * 4) + (spacing * 3);
 
     float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
-    float islandPadding = 12.0f;
+    float islandPadding = 10.0f;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
     if (islandWidth > bounds.width - 20.0f) islandWidth = bounds.width - 20.0f;
     
-    const float islandHeight = 48.0f;
+    const float islandHeight = 50.0f;
     const float visualCenterBiasY = -1.0f;
     float islandX = std::round((bounds.width - islandWidth) * 0.5f);
     float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);
@@ -720,36 +716,41 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
 
     AestraUI::NUIRect islandRect(bounds.x + islandX, bounds.y + islandY, islandWidth, islandHeight);
 
-    // 3. Draw Island Body
-    renderer.drawShadow(islandRect, 0.0f, 4.0f, 12.0f, AestraUI::NUIColor(0,0,0,0.5f));
+    renderer.fillRect(bounds, themeManager.getColor("backgroundSecondary"));
+    renderer.drawLine({bounds.x, bounds.bottom() - 1.0f},
+                      {bounds.right(), bounds.bottom() - 1.0f},
+                      1.0f,
+                      themeManager.getColor("border").withAlpha(0.92f));
     
-    AestraUI::NUIColor islandColor = themeManager.getColor("surfaceTertiary"); // Opaque or slightly trans? 
-    // User asked to fix Z. If we make it opaque it blocks. If trans, it blends.
-    // Let's keep it solid "surfaceTertiary" from theme (usually opaque-ish).
-    renderer.fillRoundedRect(islandRect, 12.0f, islandColor);
-    renderer.strokeRoundedRect(islandRect, 12.0f, 1.0f, themeManager.getColor("borderSubtle").withAlpha(0.82f));
-    
-    // 4. Group separators to improve hierarchy readability
     const float leftEdge = islandRect.x + islandPadding;
-    const float buttonClusterTop = islandRect.y + 6.0f;
-    const float buttonClusterHeight = islandRect.height - 12.0f;
-    const auto groupFill = themeManager.getColor("surfaceRaised").withAlpha(0.24f);
-    const auto groupBorder = themeManager.getColor("borderSubtle").withAlpha(0.42f);
-    renderer.fillRoundedRect({leftEdge - 6.0f, buttonClusterTop, group1Width + 12.0f, buttonClusterHeight}, 9.0f, groupFill);
-    renderer.strokeRoundedRect({leftEdge - 6.0f, buttonClusterTop, group1Width + 12.0f, buttonClusterHeight}, 9.0f, 1.0f, groupBorder);
-    renderer.fillRoundedRect({leftEdge + group1Width + groupSpacing - 6.0f, buttonClusterTop, group2Width + 12.0f, buttonClusterHeight}, 9.0f, groupFill);
-    renderer.strokeRoundedRect({leftEdge + group1Width + groupSpacing - 6.0f, buttonClusterTop, group2Width + 12.0f, buttonClusterHeight}, 9.0f, 1.0f, groupBorder);
-    renderer.fillRoundedRect({leftEdge + group1Width + groupSpacing + group2Width + groupSpacing - 6.0f, buttonClusterTop, infoWidth + 12.0f, buttonClusterHeight}, 9.0f, groupFill.withAlpha(0.30f));
-    renderer.strokeRoundedRect({leftEdge + group1Width + groupSpacing + group2Width + groupSpacing - 6.0f, buttonClusterTop, infoWidth + 12.0f, buttonClusterHeight}, 9.0f, 1.0f, groupBorder.withAlpha(0.9f));
-    renderer.fillRoundedRect({leftEdge + group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing - 6.0f, buttonClusterTop, group4Width + 12.0f, buttonClusterHeight}, 9.0f, groupFill);
-    renderer.strokeRoundedRect({leftEdge + group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing - 6.0f, buttonClusterTop, group4Width + 12.0f, buttonClusterHeight}, 9.0f, 1.0f, groupBorder);
+    const float groupY = islandRect.y + 7.0f;
+    const float groupH = 36.0f;
+    const auto groupBg = themeManager.getColor("surfaceTertiary").withAlpha(0.54f);
+    const auto groupBorder = themeManager.getColor("border").withAlpha(0.58f);
+    const auto drawGroup = [&](float x, float w) {
+        if (w <= 0.0f) {
+            return;
+        }
+        AestraUI::NUIRect groupRect(std::round(x), std::round(groupY), std::round(w), groupH);
+        renderer.fillRoundedRect(groupRect, 7.0f, groupBg);
+        renderer.strokeRoundedRect(groupRect, 7.0f, 1.0f, groupBorder);
+    };
+
+    const float g1X = leftEdge - 6.0f;
+    const float g2X = leftEdge + group1Width + groupSpacing - 6.0f;
+    const float infoX = leftEdge + group1Width + groupSpacing + group2Width + groupSpacing - 6.0f;
+    const float g4X = leftEdge + group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing - 6.0f;
+    drawGroup(g1X, group1Width + 12.0f);
+    drawGroup(g2X, group2Width + 12.0f);
+    drawGroup(infoX, infoWidth + 12.0f);
+    drawGroup(g4X, group4Width + 12.0f);
 
     const float sep1X = leftEdge + group1Width + (groupSpacing * 0.5f);
     const float sep2X = sep1X + groupSpacing * 0.5f + group2Width + (groupSpacing * 0.5f);
     const float sep3X = sep2X + groupSpacing * 0.5f + infoWidth + (groupSpacing * 0.5f);
     const float sepTop = islandRect.y + 8.0f;
     const float sepBottom = islandRect.bottom() - 8.0f;
-    const auto sepColor = themeManager.getColor("borderSubtle").withAlpha(0.70f);
+    const auto sepColor = themeManager.getColor("borderSubtle").withAlpha(0.46f);
     renderer.drawLine({sep1X, sepTop}, {sep1X, sepBottom}, 1.0f, sepColor);
     renderer.drawLine({sep2X, sepTop}, {sep2X, sepBottom}, 1.0f, sepColor);
     renderer.drawLine({sep3X, sepTop}, {sep3X, sepBottom}, 1.0f, sepColor);

@@ -11,7 +11,6 @@
 #include <functional>
 
 namespace AestraUI {
-class NUIComboBox;
 class NUILabel;
 }
 
@@ -73,6 +72,8 @@ public:
     PitchTune getPitchTune() const { return m_pitchTune; }
     void setVoiceCount(int voices);
     int getVoiceCount() const;
+    void setMonoMode(bool mono);
+    bool isMonoMode() const { return m_monoMode; }
 
     // Normalize and Reverse
     void normalize();
@@ -83,12 +84,14 @@ public:
     std::function<void(const LoopPoints&)> onLoopPointsChanged;
     std::function<void(const PitchTune&)> onPitchTuneChanged;
     std::function<void(int)> onVoiceCountChanged;
+    std::function<void(bool)> onMonoModeChanged;
     std::function<void()> onControlCommitRequested;
     std::function<void()> onNormalizeRequested;
     std::function<void()> onReverseRequested;
     std::function<void()> onSampleModified;
 
     void onResize(int width, int height) override;
+    AestraUI::NUICursorStyle getResizeCursorStyleForPoint(const AestraUI::NUIPoint& point) const;
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
@@ -104,6 +107,7 @@ private:
 
     // Loop
     LoopPoints m_loopPoints;
+    bool m_monoMode{false};
 
     // Pitch/Tune
     PitchTune m_pitchTune;
@@ -112,24 +116,24 @@ private:
     std::shared_ptr<WaveformDisplayComponent> m_waveformDisplay;
     std::shared_ptr<ADSRDisplayComponent> m_adsrDisplay;
 
-    std::shared_ptr<AestraUI::NUISlider> m_attackSlider;
-    std::shared_ptr<AestraUI::NUISlider> m_decaySlider;
-    std::shared_ptr<AestraUI::NUISlider> m_sustainSlider;
-    std::shared_ptr<AestraUI::NUISlider> m_releaseSlider;
-    std::shared_ptr<AestraUI::NUISlider> m_zoomSlider;
-    std::shared_ptr<AestraUI::NUISlider> m_loopStartSlider;
-    std::shared_ptr<AestraUI::NUISlider> m_loopEndSlider;
     std::shared_ptr<AestraUI::NUISlider> m_pitchCoarseSlider;
     std::shared_ptr<AestraUI::NUISlider> m_pitchFineSlider;
     std::shared_ptr<AestraUI::NUISlider> m_voiceCountSlider;
 
     std::shared_ptr<AestraUI::NUIButton> m_normalizeBtn;
     std::shared_ptr<AestraUI::NUIButton> m_reverseBtn;
-    std::shared_ptr<AestraUI::NUIComboBox> m_loopModeCombo;
-    std::shared_ptr<AestraUI::NUILabel> m_zoomLabel;
-    std::shared_ptr<AestraUI::NUILabel> m_trimLabel;
+    std::shared_ptr<AestraUI::NUIButton> m_oneShotModeBtn;
+    std::shared_ptr<AestraUI::NUIButton> m_loopModeBtn;
+    std::shared_ptr<AestraUI::NUIButton> m_pingPongModeBtn;
+    std::shared_ptr<AestraUI::NUIButton> m_monoModeBtn;
+    std::shared_ptr<AestraUI::NUIButton> m_polyModeBtn;
+    std::shared_ptr<AestraUI::NUILabel> m_waveformHintLabel;
     std::shared_ptr<AestraUI::NUILabel> m_modeLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_voiceCountLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_voiceCountValueLabel;
     std::shared_ptr<AestraUI::NUILabel> m_pitchLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_pitchCoarseLabel;
+    std::shared_ptr<AestraUI::NUILabel> m_pitchFineLabel;
     std::shared_ptr<AestraUI::NUILabel> m_adsrLabel;
 
     // Layout container
@@ -139,10 +143,14 @@ private:
     void buildUI();
     void requestControlCommit();
     void onWaveformZoomChanged(float zoom);
-    void onADSRControlChanged();
+    void onADSRDisplayChanged(const ADSRParams& params);
     void onLoopControlChanged();
     void onPitchControlChanged();
     void onVoiceCountControlChanged();
+    void setMonoModeInternal(bool mono, bool notify);
+    void setLoopMode(LoopMode mode);
+    void updateModeButtons();
+    void updateMonoPolyControls();
 };
 
 /**
@@ -192,13 +200,38 @@ public:
 
     void setADSR(float attack, float decay, float sustain, float release);
 
+    std::function<void(float, float, float, float)> onADSRChanged;
+    std::function<void()> onADSRCommitRequested;
+
     void onRender(AestraUI::NUIRenderer& renderer) override;
+    void onUpdate(double deltaTime) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    void onMouseLeave() override;
+    AestraUI::NUICursorStyle getCursorStyleForPoint(const AestraUI::NUIPoint& point) const;
 
 private:
+    enum class Handle {
+        None,
+        Attack,
+        Decay,
+        Sustain,
+        Release
+    };
+
     float m_attack{0.01f};
     float m_decay{0.1f};
     float m_sustain{1.0f};
     float m_release{0.1f};
+    Handle m_hoveredHandle{Handle::None};
+    Handle m_draggingHandle{Handle::None};
+    float m_hoverPulseTime{0.0f};
+    AestraUI::NUIPoint m_dragStartMouse;
+    float m_dragStartAttack{0.01f};
+    float m_dragStartDecay{0.1f};
+    float m_dragStartSustain{1.0f};
+    float m_dragStartRelease{0.1f};
+
+    Handle getHandleAtPoint(const AestraUI::NUIPoint& point) const;
 };
 
 } // namespace Audio

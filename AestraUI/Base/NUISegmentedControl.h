@@ -18,6 +18,11 @@ namespace AestraUI {
  */
 class NUISegmentedControl : public NUIComponent {
 public:
+    enum class VisualStyle {
+        Pill,
+        UnderlineTabs
+    };
+
     NUISegmentedControl(const std::vector<std::string>& segments)
         : segments_(segments)
         , selectedIndex_(0)
@@ -25,6 +30,7 @@ public:
         , cornerRadius_(12.0f)
         , accentColor_(NUIColor(0.55f, 0.36f, 0.96f, 1.0f))
         , hoveredIndex_(-1)
+        , visualStyle_(VisualStyle::Pill)
     {
         setId("SegmentedControl");
     }
@@ -56,17 +62,49 @@ public:
     
     void setCornerRadius(float radius) { cornerRadius_ = radius; }
     void setAccentColor(const NUIColor& color) { accentColor_ = color; setDirty(true); }
+    void setVisualStyle(VisualStyle style) { visualStyle_ = style; setDirty(true); }
     
     void onRender(NUIRenderer& renderer) override {
         auto bounds = getBounds();
         auto& theme = NUIThemeManager::getInstance();
+
+        if (visualStyle_ == VisualStyle::UnderlineTabs) {
+            renderer.fillRect(bounds, theme.getColor("backgroundSecondary"));
+            renderer.drawLine({bounds.x, bounds.bottom() - 1.0f},
+                              {bounds.right(), bounds.bottom() - 1.0f},
+                              1.0f,
+                              theme.getColor("border").withAlpha(0.88f));
+
+            if (!segments_.empty()) {
+                const float segmentWidth = bounds.width / static_cast<float>(segments_.size());
+                for (size_t i = 0; i < segments_.size(); ++i) {
+                    const float segmentX = bounds.x + static_cast<float>(i) * segmentWidth;
+                    const NUIRect segmentBounds(segmentX, bounds.y, segmentWidth, bounds.height);
+                    const bool isSelected = i == selectedIndex_;
+                    const bool hovered = static_cast<int>(i) == hoveredIndex_;
+                    if (hovered && !isSelected) {
+                        renderer.fillRect(segmentBounds, theme.getColor("surfaceRaised").withAlpha(0.38f));
+                    }
+                    const NUIColor textColor = isSelected
+                        ? theme.getColor("textPrimary")
+                        : theme.getColor("textPrimary").withAlpha(hovered ? 0.72f : 0.50f);
+                    renderer.drawTextCentered(segments_[i], segmentBounds, 11.5f, textColor);
+                    if (isSelected) {
+                        renderer.fillRect({segmentBounds.x, segmentBounds.bottom() - 2.0f, segmentBounds.width, 2.0f}, accentColor_);
+                    }
+                }
+            }
+
+            NUIComponent::onRender(renderer);
+            return;
+        }
         
         // Background track
-        NUIColor trackColor = theme.getColor("surfaceRaised").withAlpha(0.72f);
+        NUIColor trackColor(0.070f, 0.076f, 0.094f, 0.96f);
         renderer.fillRoundedRect(bounds, cornerRadius_, trackColor);
         
         renderer.strokeRoundedRect(bounds, cornerRadius_, 1.0f,
-            theme.getColor("borderSubtle").withAlpha(0.34f));
+            theme.getColor("borderSubtle").withAlpha(0.46f));
         renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
             std::max(0.0f, cornerRadius_ - 1.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.018f));
 
@@ -88,8 +126,8 @@ public:
                 NUIRect inactiveRect(segmentX, bounds.y + padding, indicatorWidth, indicatorHeight);
                 const bool hovered = static_cast<int>(i) == hoveredIndex_;
                 renderer.fillRoundedRect(inactiveRect, cornerRadius_ - padding, 
-                    hovered ? theme.getColor("buttonBgHover").withAlpha(0.72f)
-                            : theme.getColor("buttonBgDefault").withAlpha(0.46f));
+                    hovered ? NUIColor(1.0f, 1.0f, 1.0f, 0.045f)
+                            : NUIColor(0.0f, 0.0f, 0.0f, 0.0f));
             }
         }
         
@@ -97,8 +135,8 @@ public:
         float indicatorX = bounds.x + padding + indicatorPosition_ * segmentWidth;
         NUIRect indicatorRect(indicatorX, bounds.y + padding, indicatorWidth, indicatorHeight);
         
-        renderer.fillRoundedRect(indicatorRect, cornerRadius_ - padding, accentColor_.withAlpha(0.22f));
-        renderer.strokeRoundedRect(indicatorRect, cornerRadius_ - padding, 1.0f, accentColor_.withAlpha(0.46f));
+        renderer.fillRoundedRect(indicatorRect, cornerRadius_ - padding, accentColor_.withAlpha(0.42f));
+        renderer.strokeRoundedRect(indicatorRect, cornerRadius_ - padding, 1.0f, accentColor_.withAlpha(0.62f));
         
         NUIRect highlightRect(indicatorRect.x + 2, indicatorRect.y, indicatorRect.width - 4, 1.0f);
         renderer.fillRect(highlightRect, NUIColor(1.0f, 1.0f, 1.0f, 0.12f));
@@ -112,7 +150,7 @@ public:
             bool isSelected = (i == selectedIndex_);
             NUIColor textColor = isSelected 
                 ? theme.getColor("textPrimary")
-                : theme.getColor("textSecondary").withAlpha(static_cast<int>(i) == hoveredIndex_ ? 0.96f : 0.90f);
+                : theme.getColor("textSecondary").withAlpha(static_cast<int>(i) == hoveredIndex_ ? 0.90f : 0.74f);
             
             renderer.drawTextCentered(segments_[i], segmentBounds, fontSize, textColor);
         }
@@ -191,6 +229,7 @@ private:
     float cornerRadius_;
     NUIColor accentColor_;
     int hoveredIndex_;
+    VisualStyle visualStyle_;
     std::function<void(size_t)> onSelectionChanged_;
 };
 

@@ -21,6 +21,7 @@
 #include "../AestraUI/Widgets/UIMixerPanel.h"
 #include "../AestraUI/Widgets/UIMixerInspector.h"
 #include "PluginManager.h"
+#include "Plugin/AestraDelay.h"
 #include "MixerChannel.h"
 
 // AestraUI includes
@@ -59,7 +60,7 @@ using namespace AestraUI;
 using namespace Aestra::Audio;
 
 namespace {
-constexpr float kMinFileBrowserWidth = 186.0f;
+constexpr float kMinFileBrowserWidth = 300.0f;
 constexpr float kMinPatternBrowserWidth = 96.0f;
 constexpr float kMinTrackAreaWidth = 420.0f;
 constexpr float kResizeHitWidth = 6.0f;
@@ -284,14 +285,24 @@ AestraContent::AestraContent() {
     
     // Create Browser Toggle (Files | Plugins)
     m_browserToggle = std::make_shared<AestraUI::NUISegmentedControl>(
-        std::vector<std::string>{"Files", "Plugins"}
+        std::vector<std::string>{"Browser", "Plugins", "Patterns", "Clips"}
     );
-    m_browserToggle->setCornerRadius(10.0f);
-    m_browserToggle->setAccentColor(AestraUI::NUIThemeManager::getInstance().getColor("primary").withAlpha(1.0f));
+    m_browserToggle->setCornerRadius(0.0f);
+    m_browserToggle->setAccentColor(AestraUI::NUIColor::fromHex(0x7c3aed));
+    m_browserToggle->setVisualStyle(AestraUI::NUISegmentedControl::VisualStyle::UnderlineTabs);
     m_browserToggle->setOnSelectionChanged([this](size_t index) {
         bool showFiles = (index == 0);
+        bool showPlugins = (index == 1);
+        bool showPatterns = (index == 2);
+        bool showClips = (index == 3);
+        bool allowPatternPane = m_viewFocus == ViewFocus::Timeline;
         if (m_fileBrowser) m_fileBrowser->setVisible(showFiles);
-        if (m_pluginBrowser) m_pluginBrowser->setVisible(!showFiles);
+        if (m_pluginBrowser) m_pluginBrowser->setVisible(showPlugins);
+        if (m_patternBrowser) {
+            m_patternBrowser->setVisible(allowPatternPane && (showPatterns || showClips));
+            if (showPatterns) m_patternBrowser->showPatternsTab();
+            if (showClips) m_patternBrowser->showClipsTab();
+        }
         if (m_previewPanel) m_previewPanel->setVisible(showFiles && m_previewPanel->hasFileSelection());
         
         // Re-layout
@@ -411,6 +422,14 @@ AestraContent::AestraContent() {
             m_previewPanel->setFile(&file);
             const bool filesTabActive = !m_browserToggle || m_browserToggle->getSelectedIndex() == 0;
             m_previewPanel->setVisible(filesTabActive && m_previewPanel->hasFileSelection());
+        }
+        onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+    });
+    m_fileBrowser->setOnPathChanged([this](const std::string&) {
+        stopSoundPreview();
+        if (m_previewPanel) {
+            m_previewPanel->clear();
+            m_previewPanel->setVisible(false);
         }
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     });
@@ -639,6 +658,17 @@ AestraContent::AestraContent() {
         }
         sampler->setMaxVoices(voiceCount);
     };
+    m_sampleEditorPanel->onMonoModeChanged = [this](bool monoMode) {
+        if (!m_trackManager || !m_sampleEditorUnitId) {
+            return;
+        }
+        auto plugin = m_trackManager->getUnitManager().getUnitPlugin(m_sampleEditorUnitId);
+        auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(plugin);
+        if (!sampler) {
+            return;
+        }
+        sampler->setMonoMode(monoMode);
+    };
     m_sampleEditorPanel->onNormalizeRequested = [this]() {
         if (!m_trackManager || !m_sampleEditorUnitId) {
             return;
@@ -801,6 +831,7 @@ AestraContent::AestraContent() {
     }
     
     m_sequencerPanel->setVisible(false);
+    m_sequencerPanel->unregisterDropTargets();
     m_sequencerPanel->setOnClose([this]() { setArsenalPanelVisible(false); });
     m_sequencerPanel->setOnMaximizeToggle([this](bool) { 
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); 
@@ -863,7 +894,7 @@ AestraContent::AestraContent() {
         std::vector<std::string>{"Arsenal", "Timeline", "Audition"}
     );
     m_viewToggle->setCornerRadius(12.0f);
-    m_viewToggle->setAccentColor(theme.getColor("primary").withAlpha(1.0f));
+    m_viewToggle->setAccentColor(AestraUI::NUIColor(0.36f, 0.25f, 0.58f, 1.0f));
     m_viewToggle->setOnSelectionChanged([this](size_t index) {
         ViewFocus newFocus;
         switch (index) {
@@ -1090,7 +1121,7 @@ void AestraContent::onResize(int width, int height) {
     if (m_overlayLayer) m_overlayLayer->setBounds(contentBounds);
 
     // DYNAMIC LAYOUT: Timeline-first hierarchy
-    const float transportHeight = std::max(layout.transportBarHeight, 68.0f);
+    const float transportHeight = 56.0f;
     float sidebarTopY = transportHeight; // Keep primary content aligned under transport
 
     bool isAuditionMode = (m_viewFocus == ViewFocus::Audition);
@@ -1112,7 +1143,7 @@ void AestraContent::onResize(int width, int height) {
     
     if (m_viewToggle) {
         auto rootBounds = getBounds();
-        float toggleWidth = 160.0f;
+        float toggleWidth = 310.0f;
         float toggleHeight = 24.0f;
         float yPos = 4.0f;
         
@@ -1134,11 +1165,15 @@ void AestraContent::onResize(int width, int height) {
             labelX, labelY, 150.0f, 30.0f));
     }
 
-    const float maxFileBrowserWidth = std::max(kMinFileBrowserWidth, std::min(layout.fileBrowserWidth * 0.82f, 320.0f));
-    const float computedFileBrowserWidth = std::clamp(width * 0.145f, kMinFileBrowserWidth, maxFileBrowserWidth);
+    const float maxFileBrowserWidth = std::max(kMinFileBrowserWidth, std::min(width * 0.42f, 560.0f));
+    const float computedFileBrowserWidth = std::clamp(width * 0.24f, kMinFileBrowserWidth, maxFileBrowserWidth);
     if (m_fileBrowserWidthPref <= 0.0f) {
         m_fileBrowserWidthPref = computedFileBrowserWidth;
     }
+
+    const size_t browserTab = m_browserToggle ? m_browserToggle->getSelectedIndex() : 0;
+    const bool browserPatternTabActive = browserTab == 2;
+    const bool clipsTabActive = browserTab == 3;
 
     const bool compactPatternDock = m_patternBrowser && m_patternBrowser->usesCompactRail();
     const float expandedPatternWidth = std::clamp(width * 0.11f, 152.0f, 208.0f);
@@ -1148,7 +1183,7 @@ void AestraContent::onResize(int width, int height) {
         m_patternBrowserWidthPref = computedPatternBrowserWidth;
     }
 
-    const bool patternRailVisible = m_patternBrowser && m_patternBrowser->isVisible();
+    const bool patternRailVisible = m_patternBrowser && m_patternBrowser->isVisible() && !browserPatternTabActive && !clipsTabActive;
     const float minPatternWidth = patternRailVisible ? kMinPatternBrowserWidth : 0.0f;
     const float maxPatternWidth = patternRailVisible ? std::max(minPatternWidth, std::min(width * 0.24f, 280.0f)) : 0.0f;
     const float maxFileByTrack = std::max(kMinFileBrowserWidth, width - kMinTrackAreaWidth - minPatternWidth);
@@ -1163,7 +1198,7 @@ void AestraContent::onResize(int width, int height) {
         m_patternBrowserWidthPref = patternBrowserWidth;
     }
 
-    const bool filesTabActive = !m_browserToggle || m_browserToggle->getSelectedIndex() == 0;
+    const bool filesTabActive = browserTab == 0;
     const bool showPreviewDock = m_previewPanel && filesTabActive && m_fileBrowser && m_fileBrowser->isVisible() && m_previewPanel->hasFileSelection();
     if (m_previewPanel) {
         m_previewPanel->setVisible(showPreviewDock);
@@ -1171,22 +1206,23 @@ void AestraContent::onResize(int width, int height) {
     
     if (m_browserToggle) {
         // Toggle bar above browser
-        float toggleHeight = 24.0f; // Compact toggle
-        float toggleY = sidebarTopY + 4.0f;
+        float toggleHeight = 32.0f;
+        float toggleY = sidebarTopY + 0.0f;
         m_browserToggle->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, toggleY, fileBrowserWidth, toggleHeight));
     }
 
     if (m_fileBrowser) {
-        float toggleHeight = 24.0f; // Matching above
-        float fbTop = sidebarTopY + 4.0f + toggleHeight + 4.0f;
+        float toggleHeight = 32.0f;
+        float fbTop = sidebarTopY + toggleHeight;
         float fbHeight = height - fbTop;
         
         if (showPreviewDock) {
-           float previewHeight = 62.0f;
-           fbHeight -= previewHeight;
-            
-           m_previewPanel->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, fbTop + fbHeight,
-                fileBrowserWidth, previewHeight));
+           const float previewHeight = 52.0f;
+           const float navWidth = std::clamp(fileBrowserWidth * 0.38f, 128.0f, 210.0f);
+           const float previewWidth = std::max(0.0f, fileBrowserWidth - navWidth);
+
+           m_previewPanel->setBounds(AestraUI::NUIAbsolute(contentBounds, navWidth, fbTop + fbHeight - previewHeight,
+                previewWidth, previewHeight));
         }
         
         m_fileBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, fbTop,
@@ -1195,20 +1231,26 @@ void AestraContent::onResize(int width, int height) {
     
     if (m_pluginBrowser) {
         // Occupies same space as file browser + preview panel
-        float toggleHeight = 24.0f;
-        float pbTop = sidebarTopY + 4.0f + toggleHeight + 4.0f;
+        float toggleHeight = 32.0f;
+        float pbTop = sidebarTopY + toggleHeight;
         float pbHeight = height - pbTop;
         m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, pbTop, fileBrowserWidth, pbHeight));
     }
     
     if (m_patternBrowser) {
-        float patternBrowserX = fileBrowserWidth;
-        
-        float pbY = isAuditionMode ? 0.0f : transportHeight;
-        float pbHeight = height - pbY;
-        
-        m_patternBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, patternBrowserX, pbY,
-                                                        patternBrowserWidth, pbHeight));
+        if (browserPatternTabActive || clipsTabActive) {
+            const float toggleHeight = 32.0f;
+            const float clipTop = sidebarTopY + toggleHeight;
+            m_patternBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0.0f, clipTop,
+                                                            fileBrowserWidth, height - clipTop));
+        } else {
+            float patternBrowserX = fileBrowserWidth;
+            float pbY = isAuditionMode ? 0.0f : transportHeight;
+            float pbHeight = height - pbY;
+
+            m_patternBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, patternBrowserX, pbY,
+                                                            patternBrowserWidth, pbHeight));
+        }
     }
 
     if (m_audioVisualizer || m_waveformVisualizer) {
@@ -1386,7 +1428,12 @@ void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
         case Audio::ViewType::Sequencer:
             if (m_viewState.sequencerOpen != open) {
                 m_viewState.sequencerOpen = open;
-                if (m_sequencerPanel) m_sequencerPanel->setVisible(open);
+                if (m_sequencerPanel) {
+                    m_sequencerPanel->setVisible(open);
+                    if (!open) {
+                        m_sequencerPanel->unregisterDropTargets();
+                    }
+                }
                 changed = true;
             }
             break;
@@ -1416,7 +1463,10 @@ void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
                     break;
                 case Audio::ViewType::Sequencer:
                     m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, allowed);
-                    if (m_sequencerPanel) m_sequencerPanel->setBounds(m_viewState.sequencerRect);
+                    if (m_sequencerPanel) {
+                        m_sequencerPanel->setBounds(m_viewState.sequencerRect);
+                        m_sequencerPanel->registerDropTargets(true);
+                    }
                     break; 
                 default:
                     break;
@@ -1537,13 +1587,23 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         if (auditionMode) {
             if (m_mixerPanel) m_mixerPanel->setVisible(false);
             if (m_pianoRollPanel) m_pianoRollPanel->setVisible(false);
-            if (m_sequencerPanel) m_sequencerPanel->setVisible(false);
+            if (m_sequencerPanel) {
+                m_sequencerPanel->setVisible(false);
+                m_sequencerPanel->unregisterDropTargets();
+            }
             return;
         }
 
         if (m_mixerPanel) m_mixerPanel->setVisible(m_viewState.mixerOpen);
         if (m_pianoRollPanel) m_pianoRollPanel->setVisible(m_viewState.pianoRollOpen);
-        if (m_sequencerPanel) m_sequencerPanel->setVisible(m_viewState.sequencerOpen);
+        if (m_sequencerPanel) {
+            m_sequencerPanel->setVisible(m_viewState.sequencerOpen);
+            if (m_viewState.sequencerOpen) {
+                m_sequencerPanel->registerDropTargets(true);
+            } else {
+                m_sequencerPanel->unregisterDropTargets();
+            }
+        }
     };
     
     // Handle mode transitions
@@ -1699,7 +1759,10 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         if (!isAudition) {
              // Returning to DAW Mode - Restore UI
              if (m_transportBar) m_transportBar->setVisible(true);
-             if (m_patternBrowser) m_patternBrowser->setVisible(true);
+             const size_t browserTab = m_browserToggle ? m_browserToggle->getSelectedIndex() : 0;
+             const bool showBrowserPatternPane =
+                 focus == ViewFocus::Timeline && (browserTab == 2 || browserTab == 3);
+             if (m_patternBrowser) m_patternBrowser->setVisible(showBrowserPatternPane);
              if (m_waveformVisualizer) m_waveformVisualizer->setVisible(true);
              if (m_audioVisualizer) m_audioVisualizer->setVisible(true);
              applyOverlayPanelVisibility(false);
@@ -1762,10 +1825,12 @@ void AestraContent::setArsenalPanelVisible(bool visible) {
 
         m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, computeAllowedRectForPanels());
         m_sequencerPanel->setVisible(true);
-        m_sequencerPanel->refreshUnits();
         m_sequencerPanel->setBounds(m_viewState.sequencerRect);
+        m_sequencerPanel->refreshUnits();
+        m_sequencerPanel->registerDropTargets(true);
     } else {
         m_sequencerPanel->setVisible(false);
+        m_sequencerPanel->unregisterDropTargets();
     }
 
     m_viewState.sequencerOpen = visible;
@@ -2772,6 +2837,7 @@ void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
     pitch.fine = sampler->getFineTuneCents();
     m_sampleEditorPanel->setPitchTune(pitch);
     m_sampleEditorPanel->setVoiceCount(sampler->getMaxVoices());
+    m_sampleEditorPanel->setMonoMode(sampler->isMonoMode());
 }
 
 void AestraContent::openSampleEditorForUnit(UnitID unitId, const std::string& samplePath) {
@@ -2862,6 +2928,10 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
         Log::error("Failed to initialize effect instance for: " + pluginId);
         return;
     }
+    if (auto delay = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraDelay>(instance)) {
+        const float bpm = m_audioEngine ? m_audioEngine->getBPM() : 120.0f;
+        delay->setBPM(bpm);
+    }
     instance->activate();
     
     // 4. Insert into first available effect chain slot (via CommandHistory for undo)
@@ -2874,6 +2944,15 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
         Log::info("Loaded effect to Track " + std::to_string(trackIndex + 1) + " slot " + std::to_string(slot));
     } else {
         Log::warning("No empty effect slots on Track " + std::to_string(trackIndex + 1));
+    }
+}
+
+void AestraContent::setPluginTempo(float bpm) {
+    auto& pluginManager = Aestra::Audio::PluginManager::getInstance();
+    for (const auto& instance : pluginManager.getActiveInstances()) {
+        if (auto delay = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraDelay>(instance)) {
+            delay->setBPM(bpm);
+        }
     }
 }
 

@@ -266,7 +266,7 @@ private:
     ::AestraUI::NUIPlatformBridge* m_window = nullptr;
 
     // UI Layout
-    int m_trackHeight{48};
+    int m_trackHeight{46};
     int m_trackSpacing{3};
     float m_scrollOffset{0.0f};
     float m_targetScrollOffset{0.0f};

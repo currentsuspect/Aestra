@@ -113,7 +113,7 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     
     // Get theme colors
     auto& themeManager = NUIThemeManager::getInstance();
-    NUIColor bgColor = themeManager.getColor("backgroundSecondary");
+    NUIColor bgColor = NUIColor::fromHex(0x0d0d12);
     
     // Draw title bar background - flat and minimal.
     renderer.fillRect(bounds, bgColor);
@@ -124,6 +124,26 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     
     // Draw window controls
     drawWindowControls(renderer);
+
+    const auto text = themeManager.getColor("textPrimary").withAlpha(0.90f);
+    const auto muted = themeManager.getColor("textSecondary").withAlpha(0.76f);
+    const auto accent = themeManager.getColor("accentPrimary");
+    const float userFont = 12.0f;
+    const std::string user = "currentsuspect";
+    const NUISize userSize = renderer.measureText(user, userFont);
+    constexpr float badgeW = 70.0f;
+    constexpr float badgeH = 22.0f;
+    constexpr float badgeGapToControls = 12.0f;
+    const NUIRect badge(minimizeButtonRect_.x - badgeGapToControls - badgeW,
+                        bounds.y + std::round((height_ - badgeH) * 0.5f),
+                        badgeW,
+                        badgeH);
+    const float userX = badge.x - userSize.width - 14.0f;
+    renderer.drawText(user, {userX, std::round(renderer.calculateTextY({userX, badge.y, userSize.width, badge.height}, userFont))},
+                      userFont, muted);
+    renderer.fillRoundedRect(badge, 11.0f, NUIColor::transparent());
+    renderer.strokeRoundedRect(badge, 11.0f, 1.0f, accent.withAlpha(0.78f));
+    renderer.drawTextCentered("Founder", badge, 11.0f, text);
     
     // Render custom children (NUIMenuBar, view toggle, etc.)
     renderChildren(renderer);
@@ -132,7 +152,7 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
 void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     // Use config colors for hover states
-    NUIColor hoverBgColor = themeManager.getColor("primary").withAlpha(0.20f);
+    NUIColor hoverBgColor = themeManager.getColor("primary").withAlpha(0.16f);
     NUIColor closeHoverBg = themeManager.getColor("error");
     NUIColor exportColor = themeManager.getColor("accentPrimary");
     NUIColor iconColor = themeManager.getColor("textPrimary").withAlpha(0.94f);
@@ -161,22 +181,6 @@ void NUICustomTitleBar::drawWindowControls(NUIRenderer& renderer) {
         float textX = exportButtonRect_.x + (exportButtonRect_.width - textSize.width) * 0.5f;
         float textY = exportButtonRect_.y + (exportButtonRect_.height - 9.0f) * 0.5f;
         renderer.drawText(pctText, NUIPoint(textX, textY), 9.0f, themeManager.getColor("textPrimary").withAlpha(0.96f));
-    } else {
-        // Export button: download/upload icon
-        if (exportHovered_) {
-            renderer.fillRoundedRect(exportButtonRect_, 8.0f, hoverBgColor);
-        }
-        // Draw a simple "export" icon (arrow pointing up from a line)
-        float cx = exportButtonRect_.x + exportButtonRect_.width * 0.5f;
-        float cy = exportButtonRect_.y + exportButtonRect_.height * 0.5f;
-        float iconSize = 10.0f;
-        // Arrow up
-        renderer.drawLine(NUIPoint(cx, cy - iconSize * 0.5f), NUIPoint(cx, cy + iconSize * 0.3f), 1.5f, iconColor);
-        // Arrow head
-        renderer.drawLine(NUIPoint(cx - 4.0f, cy - iconSize * 0.15f), NUIPoint(cx, cy - iconSize * 0.5f), 1.5f, iconColor);
-        renderer.drawLine(NUIPoint(cx + 4.0f, cy - iconSize * 0.15f), NUIPoint(cx, cy - iconSize * 0.5f), 1.5f, iconColor);
-        // Base line
-        renderer.drawLine(NUIPoint(cx - 5.0f, cy + iconSize * 0.35f), NUIPoint(cx + 5.0f, cy + iconSize * 0.35f), 1.5f, iconColor);
     }
     
     // Draw minimize button
@@ -232,7 +236,7 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
     bool previousExportHover = exportHovered_;
     exportHovered_ = false;
     
-    if (isPointInButton(mousePos, exportButtonRect_) && !isExporting_) {
+    if (false && isPointInButton(mousePos, exportButtonRect_) && !isExporting_) {
         exportHovered_ = true;
     } else if (isPointInButton(mousePos, minimizeButtonRect_)) {
         hoveredButton_ = HoverButton::Minimize;
@@ -249,7 +253,7 @@ bool NUICustomTitleBar::onMouseEvent(const NUIMouseEvent& event) {
     
     if (event.pressed && event.button == NUIMouseButton::Left) {
         // Check export button first
-        if (isPointInButton(mousePos, exportButtonRect_) && !isExporting_) {
+        if (false && isPointInButton(mousePos, exportButtonRect_) && !isExporting_) {
             if (onExportRequested_) onExportRequested_();
             return true;
         }
