@@ -6,6 +6,7 @@
 #include "IO/MiniAudioDecoder.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <filesystem>
 
@@ -15,6 +16,38 @@ namespace Plugins {
 
 namespace {
 constexpr float kSamplerOutputHeadroom = 0.22f; // ~ -13 dB default trim
+
+bool isSafeSamplerStatePath(const std::string& path) {
+    if (path.empty() || path.find("://") != std::string::npos) {
+        return false;
+    }
+
+    // Block POSIX absolute paths, Windows drive paths, root-relative Windows
+    // paths, and UNC/network paths before filesystem normalization can vary by
+    // platform.
+    if (path[0] == '/' || path[0] == '\\') {
+        return false;
+    }
+    if (path.size() >= 2 && std::isalpha(static_cast<unsigned char>(path[0])) && path[1] == ':') {
+        return false;
+    }
+    if (path.rfind("\\\\", 0) == 0 || path.rfind("//", 0) == 0) {
+        return false;
+    }
+
+    std::string normalized = path;
+    std::replace(normalized.begin(), normalized.end(), '\\', '/');
+    std::filesystem::path fsPath(normalized);
+    if (fsPath.is_absolute()) {
+        return false;
+    }
+    for (const auto& part : fsPath) {
+        if (part == "..") {
+            return false;
+        }
+    }
+    return true;
+}
 }
 
 SamplerPlugin::SamplerPlugin() {
@@ -634,7 +667,7 @@ bool SamplerPlugin::loadState(const std::vector<uint8_t>& state) {
     if (json.has("samplePath")) {
         std::string path = json["samplePath"].asString();
         if (!path.empty()) {
-            if (path.find("://") != std::string::npos) {
+            if (!isSafeSamplerStatePath(path)) {
                 return false;
             }
             loadSample(path);

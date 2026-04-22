@@ -149,6 +149,9 @@ public:
 
     // Parsing
     static JSON parse(const std::string& jsonString) {
+        if (exceedsMaxDepth(jsonString)) {
+            return JSON();
+        }
         size_t pos = 0;
         return parseValue(jsonString, pos, 0);
     }
@@ -256,8 +259,41 @@ private:
 
     static constexpr size_t kMaxJsonDepth = 1024; // Prevent stack exhaustion on crafted input
 
+    static bool exceedsMaxDepth(const std::string& str) {
+        size_t depth = 0;
+        bool inString = false;
+        bool escaped = false;
+
+        for (char c : str) {
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (c == '\\') {
+                    escaped = true;
+                } else if (c == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (c == '"') {
+                inString = true;
+            } else if (c == '{' || c == '[') {
+                if (++depth > kMaxJsonDepth) {
+                    return true;
+                }
+            } else if ((c == '}' || c == ']') && depth > 0) {
+                --depth;
+            }
+        }
+        return false;
+    }
+
     static JSON parseValue(const std::string& str, size_t& pos, size_t depth) {
-        if (depth > kMaxJsonDepth) return JSON();
+        if (depth > kMaxJsonDepth) {
+            pos = str.size();
+            return JSON();
+        }
         skipWhitespace(str, pos);
         if (pos >= str.size())
             return JSON();

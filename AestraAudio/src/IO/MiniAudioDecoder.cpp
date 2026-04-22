@@ -254,6 +254,11 @@ bool loadWithMediaFoundation(const std::string& filePath, std::vector<float>& au
 void forceStereo(std::vector<float>& buffer, uint32_t& channelCount) {
     if (channelCount == 2)
         return;
+    if (channelCount == 0) {
+        buffer.clear();
+        channelCount = 1;
+        return;
+    }
     if (channelCount == 1) {
         std::vector<float> stereo(buffer.size() * 2);
         for (size_t i = 0; i < buffer.size(); ++i) {
