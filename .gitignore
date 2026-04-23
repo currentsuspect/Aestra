@@ -177,14 +177,17 @@ recent_files.json
 
 .qwen/
 
-# Runtime state files (per AGENTS.md)
+# Runtime & Build Artifacts (never commit) ──────────────────────────────
 audio_settings.conf
 browser_settings.json
 aestra_profile.json
 autosave.aes
+*.aes
 crash_flag
 runtime_log.txt
 build_log.txt
+*.json.trace
+autosave.*
 
 # Resonance Pro / Claude Code config
 .clangd
