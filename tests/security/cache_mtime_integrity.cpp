@@ -38,7 +38,7 @@ int main() {
     std::cout << "\n[Test 2] Mtime verification" << std::endl;
 
     // Create a temp file, get its mtime, modify it, check mismatch
-    std::string tmpPath = "/tmp/rtm006_test_plugin.so";
+    const auto tmpPath = std::filesystem::temp_directory_path() / "rtm006_test_plugin.so";
 
     // Create file
     {
@@ -48,6 +48,8 @@ int main() {
     }
 
     std::error_code ec;
+    const auto knownMtime = std::filesystem::file_time_type::clock::now() - std::chrono::seconds(10);
+    std::filesystem::last_write_time(tmpPath, knownMtime, ec);
     auto mtime1 = std::filesystem::last_write_time(tmpPath, ec);
     uint64_t mtime1Bits = ec ? 0 : mtime1.time_since_epoch().count();
 
@@ -62,7 +64,7 @@ int main() {
         f << " modified";
         f.close();
     }
-    std::filesystem::last_write_time(tmpPath, mtime1 + std::chrono::seconds(2), ec);
+    std::filesystem::last_write_time(tmpPath, knownMtime + std::chrono::seconds(20), ec);
 
     bool modifiedFileRejected = !verifyCacheEntryMtime(tmpPath, mtime1Bits);
     std::cout << "  [" << (modifiedFileRejected ? "PASS" : "FAIL") << "] Modified file: mtime mismatch detected" << std::endl;
@@ -72,7 +74,7 @@ int main() {
     std::cout << "  [" << (unknownMtimeOk ? "PASS" : "FAIL") << "] Unknown mtime (0): skipped gracefully" << std::endl;
 
     // Test with non-existent file → should pass (skip check, will fail on actual load)
-    bool nonexistentSkipped = verifyCacheEntryMtime("/tmp/nonexistent_plugin_v9.so", mtime1Bits);
+    bool nonexistentSkipped = verifyCacheEntryMtime((std::filesystem::temp_directory_path() / "nonexistent_plugin_v9.so").string(), mtime1Bits);
     std::cout << "  [" << (nonexistentSkipped ? "PASS" : "FAIL") << "] Non-existent file: skipped (will fail on load)" << std::endl;
 
     // Cleanup
