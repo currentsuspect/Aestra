@@ -193,8 +193,8 @@ Headers organized by domain in `AestraAudio/include/`: `Core/`, `DSP/`, `Models/
 | Tier | Flag | Tests |
 |---|---|---|
 | Always registered | (none) | `CommandHistoryTest`, `MoveClipCommandTest`, `MacroCommandTest`, `AestraOscillatorTest`, `AestraMixerBusTest`, `AestraAtomicSaveTest` |
-| Runtime-gated | `AESTRA_ENABLE_RUNTIME_TESTS=ON` | `AestraAudioTest`, `AestraAudioSoakTest`, `ProjectRoundTripTest`, `AutosaveRoundTripTest` |
-| Experimental-gated | `AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON` | `AestraWaveformLockTest`, `AestraAudioCallbackTest`, `AestraFilterTest`, `AestraSampleRateConverterTest` |
+| Runtime-gated | `AESTRA_ENABLE_RUNTIME_TESTS=ON` | `AestraAudioTest`, `AestraAudioSoakTest`, `AestraAudioDriverSoakTest`, `ProjectRoundTripTest`, `AutosaveRoundTripTest`, `RumblePluginFactoryTest`, `RumbleUsagePathTest`, `RumbleDiscoveryTest`, `RumbleStateTest`, `InternalPluginProjectRoundTripTest`, `ArsenalInstrumentAttachmentTest`, `ArsenalParameterStressTest`, `AestraDeviceManagerTest` (Win32) |
+| Experimental-gated | `AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON` | `AestraWaveformLockTest`, `AestraWaveformCacheTest`, `AestraAudioCallbackTest`, `AestraFilterTest`, `AestraSampleRateConverterTest` |
 
 **CI runs only the always-registered tier.** If you add a test that requires hardware or runtime state, gate it behind `AESTRA_ENABLE_RUNTIME_TESTS`.
 
