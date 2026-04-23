@@ -691,13 +691,19 @@ void PluginScanner::loadTrustedPaths() {
     try {
         // Try to get app data directory from platform utils
         std::filesystem::path configPath;
-        if (auto* utils = Aestra::Platform::getUtils()) {
+        if (Aestra::Platform::isInitialized()) {
+            auto* utils = Aestra::Platform::getUtils();
+            if (!utils) {
+                return;
+            }
             std::error_code ec;
             std::filesystem::path appDataDir(utils->getAppDataPath("Aestra"));
             if (!appDataDir.empty()) {
                 std::filesystem::create_directories(appDataDir, ec);
                 configPath = appDataDir / "trusted_paths.json";
             }
+        } else {
+            return;
         }
 
         if (configPath.empty() || !std::filesystem::exists(configPath)) {
@@ -756,13 +762,19 @@ void PluginScanner::saveTrustedPaths() const {
         std::filesystem::path configPath;
 
         // Try to get app data directory from platform utils
-        if (auto* utils = Aestra::Platform::getUtils()) {
+        if (Aestra::Platform::isInitialized()) {
+            auto* utils = Aestra::Platform::getUtils();
+            if (!utils) {
+                return;
+            }
             std::error_code ec;
             std::filesystem::path appDataDir(utils->getAppDataPath("Aestra"));
             if (!appDataDir.empty()) {
                 std::filesystem::create_directories(appDataDir, ec);
                 configPath = appDataDir / "trusted_paths.json";
             }
+        } else {
+            return;
         }
 
         if (configPath.empty()) {
