@@ -54,7 +54,7 @@ int main() {
     uint64_t mtime1Bits = ec ? 0 : mtime1.time_since_epoch().count();
 
     // Verify same mtime → pass
-    bool sameMtimeOk = verifyCacheEntryMtime(tmpPath, mtime1Bits);
+    bool sameMtimeOk = verifyCacheEntryMtime(tmpPath.string(), mtime1Bits);
     std::cout << "  [" << (sameMtimeOk ? "PASS" : "FAIL") << "] Unmodified file: mtime matches" << std::endl;
 
     // Modify file
@@ -66,11 +66,11 @@ int main() {
     }
     std::filesystem::last_write_time(tmpPath, knownMtime + std::chrono::seconds(20), ec);
 
-    bool modifiedFileRejected = !verifyCacheEntryMtime(tmpPath, mtime1Bits);
+    bool modifiedFileRejected = !verifyCacheEntryMtime(tmpPath.string(), mtime1Bits);
     std::cout << "  [" << (modifiedFileRejected ? "PASS" : "FAIL") << "] Modified file: mtime mismatch detected" << std::endl;
 
     // Test with zero mtime (unknown) → should pass (skip check)
-    bool unknownMtimeOk = verifyCacheEntryMtime(tmpPath, 0);
+    bool unknownMtimeOk = verifyCacheEntryMtime(tmpPath.string(), 0);
     std::cout << "  [" << (unknownMtimeOk ? "PASS" : "FAIL") << "] Unknown mtime (0): skipped gracefully" << std::endl;
 
     // Test with non-existent file → should pass (skip check, will fail on actual load)
