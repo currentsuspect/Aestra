@@ -7,10 +7,12 @@
 #include <filesystem>
 #include <set>
 #include <functional>
+#include <algorithm>
 
 // Reproduce isTrustedPath from PluginScanner.cpp
 bool isTrustedPath(const std::filesystem::path& path) {
-    std::string p = path.lexically_normal().string();
+    std::string p = path.lexically_normal().generic_string();
+    std::replace(p.begin(), p.end(), '\\', '/');
 
     // Linux: system-wide paths are trusted
     if (p.find("/usr/lib/vst3") == 0 ||
@@ -21,8 +23,8 @@ bool isTrustedPath(const std::filesystem::path& path) {
     }
 
     // Windows: Program Files paths are trusted
-    if (p.find("C:\\Program Files\\Common Files\\VST3") == 0 ||
-        p.find("C:\\Program Files\\Common Files\\CLAP") == 0) {
+    if (p.find("C:/Program Files/Common Files/VST3") == 0 ||
+        p.find("C:/Program Files/Common Files/CLAP") == 0) {
         return true;
     }
 

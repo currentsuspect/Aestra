@@ -310,6 +310,7 @@ if(WIN32 AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DeviceManagerTest.c
     target_link_libraries(AestraDeviceManagerTest PRIVATE AestraAudio AestraCore)
     target_link_libraries(AestraDeviceManagerTest PRIVATE avrt)
     add_test(NAME AestraDeviceManagerTest COMMAND AestraDeviceManagerTest)
+    set_tests_properties(AestraDeviceManagerTest PROPERTIES LABELS "Runtime;audio;device")
 endif()
 
 # Audio Callback Test
