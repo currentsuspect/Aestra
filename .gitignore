@@ -1,6 +1,5 @@
 # Build outputs
-build-linux/
-build-headless/
+build-*/
 res/
 scripts/build-aestra.sh
 scripts/test-aestra.sh
