@@ -23,6 +23,31 @@
       }
     },
     {
+      "name": "ci",
+      "displayName": "CI headless deterministic tests",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "AESTRA_CI": "ON"
+      }
+    },
+    {
+      "name": "ci-asan",
+      "displayName": "CI sanitizer headless tests",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "AESTRA_CI": "ON",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
       "name": "full",
       "displayName": "Full app (UI + tests default)",
       "inherits": "base",
@@ -71,6 +96,20 @@
       "targets": [
         "AestraHeadless"
       ],
+      "jobs": 0
+    },
+    {
+      "name": "ci-release",
+      "displayName": "Build CI deterministic tests (Release)",
+      "configurePreset": "ci",
+      "configuration": "Release",
+      "jobs": 0
+    },
+    {
+      "name": "ci-asan",
+      "displayName": "Build CI sanitizer tests",
+      "configurePreset": "ci-asan",
+      "configuration": "Debug",
       "jobs": 0
     },
     {

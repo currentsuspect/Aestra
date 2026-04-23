@@ -16,6 +16,7 @@ option(AESTRAUI_BUILD_EXAMPLES "Build example applications" OFF)
 option(AESTRAUI_BUILD_OPENGL "Build OpenGL renderer" ON)
 option(AESTRAUI_BUILD_VULKAN "Build Vulkan renderer" OFF)
 option(AESTRAUI_BUILD_TESTS "Build unit tests" OFF)
+option(AESTRAUI_ENABLE_PREMIUM_EDITORS "Build private premium plugin editors" OFF)
 
 # =============================================================================
 # Core Library
@@ -131,8 +132,6 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/PluginSelectorMenu.cpp
     Widgets/GenericPluginEditor.h
     Widgets/GenericPluginEditor.cpp
-    Widgets/RumblePluginEditor.h
-    Widgets/RumblePluginEditor.cpp
     Widgets/AestraEQEditor.h
     Widgets/AestraEQEditor.cpp
     Widgets/AestraCompEditor.h
@@ -142,6 +141,13 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/AestraDelayEditor.h
     Widgets/AestraDelayEditor.cpp
 )
+
+if(AESTRAUI_ENABLE_PREMIUM_EDITORS)
+    list(APPEND AESTRAUI_CORE_SOURCES
+        Widgets/RumblePluginEditor.h
+        Widgets/RumblePluginEditor.cpp
+    )
+endif()
 
 set(AESTRAUI_GRAPHICS_SOURCES
     Graphics/NUIRenderer.h

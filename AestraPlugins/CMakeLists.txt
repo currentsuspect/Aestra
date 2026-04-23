@@ -5,3 +5,11 @@ project(AestraPlugins LANGUAGES CXX)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraRumble/CMakeLists.txt")
     add_subdirectory(AestraRumble)
 endif()
+
+add_library(AestraPremiumPlugins INTERFACE)
+
+if(TARGET AestraRumble)
+    target_link_libraries(AestraPremiumPlugins INTERFACE
+        "$<LINK_LIBRARY:WHOLE_ARCHIVE,AestraRumble>"
+    )
+endif()
