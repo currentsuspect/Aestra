@@ -5,8 +5,11 @@
 #include "MiniAudioDecoder.h"
 #include "PluginManager.h"
 #include <atomic>
+#include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -23,6 +26,20 @@ namespace {
     constexpr int PROJECT_VERSION_CURRENT = 1;
     constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
     constexpr size_t PROJECT_HISTORY_MAX_ENTRIES = 50;
+    constexpr uintmax_t PROJECT_MAX_FILE_BYTES = 64ull * 1024ull * 1024ull;
+    constexpr size_t PROJECT_MAX_SOURCES = 10000;
+    constexpr size_t PROJECT_MAX_PATTERNS = 100000;
+    constexpr size_t PROJECT_MAX_LANES = 2048;
+    constexpr size_t PROJECT_MAX_CLIPS_PER_LANE = 100000;
+    constexpr size_t PROJECT_MAX_NOTES_PER_PATTERN = 1000000;
+    constexpr size_t PROJECT_MAX_SLICES_PER_PATTERN = 1000000;
+    constexpr size_t PROJECT_MAX_AUTOMATION_CURVES_PER_LANE = 2048;
+    constexpr size_t PROJECT_MAX_AUTOMATION_POINTS_PER_CURVE = 100000;
+    constexpr size_t PROJECT_MAX_SENDS_PER_LANE = 256;
+    constexpr size_t PROJECT_MAX_UI_PANELS = 256;
+    constexpr size_t PROJECT_MAX_STRING_BYTES = 4096;
+    constexpr size_t PROJECT_MAX_PATH_BYTES = 32768;
+    constexpr size_t PROJECT_MAX_EFFECT_STATE_HEX_BYTES = 4ull * 1024ull * 1024ull;
     std::atomic<uint64_t> g_projectHistoryCounter{0};
 
     std::string bytesToHex(const std::vector<uint8_t>& bytes) {
@@ -36,7 +53,7 @@ namespace {
 
     std::vector<uint8_t> hexToBytes(const std::string& hex) {
         std::vector<uint8_t> bytes;
-        if (hex.size() % 2 != 0) {
+        if (hex.size() % 2 != 0 || hex.size() > PROJECT_MAX_EFFECT_STATE_HEX_BYTES) {
             return bytes;
         }
 
@@ -57,6 +74,299 @@ namespace {
             bytes.push_back(static_cast<uint8_t>((high << 4) | low));
         }
         return bytes;
+    }
+
+    bool hasJsonObjectEnvelope(const std::string& contents) {
+        const auto begin = std::find_if_not(contents.begin(), contents.end(), [](unsigned char c) {
+            return std::isspace(c) != 0;
+        });
+        if (begin == contents.end() || *begin != '{') {
+            return false;
+        }
+        const auto rbegin = std::find_if_not(contents.rbegin(), contents.rend(), [](unsigned char c) {
+            return std::isspace(c) != 0;
+        });
+        return rbegin != contents.rend() && *rbegin == '}';
+    }
+
+    bool hasUnsafeNumericToken(const std::string& contents) {
+        bool inString = false;
+        bool escaped = false;
+        for (size_t i = 0; i < contents.size(); ++i) {
+            const char c = contents[i];
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (c == '\\') {
+                    escaped = true;
+                } else if (c == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (c == '"') {
+                inString = true;
+                continue;
+            }
+            if (c != '-' && (c < '0' || c > '9')) {
+                continue;
+            }
+
+            const size_t start = i;
+            if (contents[i] == '-') {
+                ++i;
+            }
+            while (i < contents.size() && ((contents[i] >= '0' && contents[i] <= '9') || contents[i] == '.')) {
+                ++i;
+            }
+            bool hasExponent = false;
+            int exponentSign = 1;
+            int exponent = 0;
+            if (i < contents.size() && (contents[i] == 'e' || contents[i] == 'E')) {
+                hasExponent = true;
+                ++i;
+                if (i < contents.size() && (contents[i] == '+' || contents[i] == '-')) {
+                    exponentSign = contents[i] == '-' ? -1 : 1;
+                    ++i;
+                }
+                while (i < contents.size() && contents[i] >= '0' && contents[i] <= '9') {
+                    if (exponent < 10000) {
+                        exponent = exponent * 10 + (contents[i] - '0');
+                    }
+                    ++i;
+                }
+            }
+
+            const size_t end = i;
+            --i;
+            if (end - start > 128) {
+                return true;
+            }
+            if (hasExponent && exponentSign > 0 && exponent > 308) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool validArraySection(const JSON& root, const char* key, size_t maxCount, std::string& error, bool required = false) {
+        if (!root.has(key)) {
+            if (required) {
+                error = std::string("Invalid project file: missing '") + key + "' section";
+                return false;
+            }
+            return true;
+        }
+        const JSON& value = root[key];
+        if (!value.isArray()) {
+            error = std::string("Invalid project file: '") + key + "' must be an array";
+            return false;
+        }
+        if (value.size() > maxCount) {
+            error = std::string("Invalid project file: '") + key + "' exceeds maximum count";
+            return false;
+        }
+        return true;
+    }
+
+    bool validFiniteNumber(const JSON& object, const char* key, std::string& error, bool required = false) {
+        if (!object.has(key)) {
+            if (required) {
+                error = std::string("Invalid project file: missing numeric field '") + key + "'";
+                return false;
+            }
+            return true;
+        }
+        if (!object[key].isNumber() || !std::isfinite(object[key].asNumber())) {
+            error = std::string("Invalid project file: field '") + key + "' must be a finite number";
+            return false;
+        }
+        return true;
+    }
+
+    bool validStringField(const JSON& object, const char* key, size_t maxBytes, std::string& error, bool required = false) {
+        if (!object.has(key)) {
+            if (required) {
+                error = std::string("Invalid project file: missing string field '") + key + "'";
+                return false;
+            }
+            return true;
+        }
+        if (!object[key].isString()) {
+            error = std::string("Invalid project file: field '") + key + "' must be a string";
+            return false;
+        }
+        if (object[key].asString().size() > maxBytes) {
+            error = std::string("Invalid project file: field '") + key + "' is too large";
+            return false;
+        }
+        return true;
+    }
+
+    bool validColorField(const JSON& object, const char* key, std::string& error) {
+        if (!object.has(key)) {
+            return true;
+        }
+        if (object[key].isString()) {
+            if (object[key].asString().size() > PROJECT_MAX_STRING_BYTES) {
+                error = std::string("Invalid project file: field '") + key + "' is too large";
+                return false;
+            }
+            return true;
+        }
+        if (object[key].isNumber() && std::isfinite(object[key].asNumber())) {
+            return true;
+        }
+        error = std::string("Invalid project file: field '") + key + "' must be a color string or number";
+        return false;
+    }
+
+    double finiteNumberOr(const JSON& object, const char* key, double fallback, double minValue, double maxValue) {
+        if (!object.has(key) || !object[key].isNumber() || !std::isfinite(object[key].asNumber())) {
+            return fallback;
+        }
+        return std::clamp(object[key].asNumber(), minValue, maxValue);
+    }
+
+    std::string boundedStringOr(const JSON& object, const char* key, const std::string& fallback, size_t maxBytes) {
+        if (!object.has(key) || !object[key].isString()) {
+            return fallback;
+        }
+        const std::string& value = object[key].asString();
+        if (value.size() > maxBytes) {
+            return value.substr(0, maxBytes);
+        }
+        return value;
+    }
+
+    bool validateProjectStructure(const JSON& root, std::string& error) {
+        if (!root.has("version") || !root["version"].isNumber() || !std::isfinite(root["version"].asNumber())) {
+            error = "Invalid project file: missing or invalid version";
+            return false;
+        }
+        if (!validFiniteNumber(root, "tempo", error)) return false;
+        if (!validFiniteNumber(root, "playhead", error)) return false;
+        if (!validArraySection(root, "sources", PROJECT_MAX_SOURCES, error)) return false;
+        if (!validArraySection(root, "patterns", PROJECT_MAX_PATTERNS, error)) return false;
+        if (!validArraySection(root, "lanes", PROJECT_MAX_LANES, error, true)) return false;
+
+        if (root.has("sources")) {
+            const JSON& sources = root["sources"];
+            for (size_t i = 0; i < sources.size(); ++i) {
+                if (!sources[i].isObject()) {
+                    error = "Invalid project file: source entry must be an object";
+                    return false;
+                }
+                if (!validFiniteNumber(sources[i], "id", error, true)) return false;
+                if (!validStringField(sources[i], "path", PROJECT_MAX_PATH_BYTES, error, true)) return false;
+                if (!validStringField(sources[i], "name", PROJECT_MAX_STRING_BYTES, error)) return false;
+            }
+        }
+
+        if (root.has("patterns")) {
+            const JSON& patterns = root["patterns"];
+            for (size_t i = 0; i < patterns.size(); ++i) {
+                if (!patterns[i].isObject()) {
+                    error = "Invalid project file: pattern entry must be an object";
+                    return false;
+                }
+                if (!validFiniteNumber(patterns[i], "id", error, true)) return false;
+                if (!validFiniteNumber(patterns[i], "length", error, true)) return false;
+                if (!validStringField(patterns[i], "name", PROJECT_MAX_STRING_BYTES, error)) return false;
+                if (!validStringField(patterns[i], "type", PROJECT_MAX_STRING_BYTES, error, true)) return false;
+                const std::string type = patterns[i]["type"].asString();
+                if (type == "audio") {
+                    if (!validFiniteNumber(patterns[i], "sourceId", error, true)) return false;
+                    if (patterns[i].has("slices")) {
+                        if (!patterns[i]["slices"].isArray() || patterns[i]["slices"].size() > PROJECT_MAX_SLICES_PER_PATTERN) {
+                            error = "Invalid project file: pattern slices must be a bounded array";
+                            return false;
+                        }
+                    }
+                } else if (type == "midi") {
+                    if (patterns[i].has("notes")) {
+                        if (!patterns[i]["notes"].isArray() || patterns[i]["notes"].size() > PROJECT_MAX_NOTES_PER_PATTERN) {
+                            error = "Invalid project file: pattern notes must be a bounded array";
+                            return false;
+                        }
+                    }
+                } else {
+                    error = "Invalid project file: unsupported pattern type";
+                    return false;
+                }
+            }
+        }
+
+        const JSON& lanes = root["lanes"];
+        for (size_t i = 0; i < lanes.size(); ++i) {
+            if (!lanes[i].isObject()) {
+                error = "Invalid project file: lane entry must be an object";
+                return false;
+            }
+            if (!validStringField(lanes[i], "name", PROJECT_MAX_STRING_BYTES, error)) return false;
+            if (!validColorField(lanes[i], "color", error)) return false;
+            if (!validFiniteNumber(lanes[i], "volume", error)) return false;
+            if (!validFiniteNumber(lanes[i], "pan", error)) return false;
+            if (lanes[i].has("effectChainStateHex") &&
+                (!lanes[i]["effectChainStateHex"].isString() ||
+                 lanes[i]["effectChainStateHex"].asString().size() > PROJECT_MAX_EFFECT_STATE_HEX_BYTES)) {
+                error = "Invalid project file: effect chain state is too large";
+                return false;
+            }
+            if (lanes[i].has("clips") &&
+                (!lanes[i]["clips"].isArray() || lanes[i]["clips"].size() > PROJECT_MAX_CLIPS_PER_LANE)) {
+                error = "Invalid project file: lane clips must be a bounded array";
+                return false;
+            }
+            if (lanes[i].has("clips") && lanes[i]["clips"].isArray()) {
+                const JSON& clips = lanes[i]["clips"];
+                for (size_t c = 0; c < clips.size(); ++c) {
+                    if (!clips[c].isObject()) {
+                        error = "Invalid project file: clip entry must be an object";
+                        return false;
+                    }
+                    if (!validColorField(clips[c], "color", error)) return false;
+                    if (!validStringField(clips[c], "id", PROJECT_MAX_STRING_BYTES, error)) return false;
+                    if (!validStringField(clips[c], "name", PROJECT_MAX_STRING_BYTES, error)) return false;
+                }
+            }
+            if (lanes[i].has("automation") &&
+                (!lanes[i]["automation"].isArray() || lanes[i]["automation"].size() > PROJECT_MAX_AUTOMATION_CURVES_PER_LANE)) {
+                error = "Invalid project file: lane automation must be a bounded array";
+                return false;
+            }
+            if (lanes[i].has("routing") && lanes[i]["routing"].isObject() && lanes[i]["routing"].has("sends")) {
+                const JSON& sends = lanes[i]["routing"]["sends"];
+                if (!sends.isArray() || sends.size() > PROJECT_MAX_SENDS_PER_LANE) {
+                    error = "Invalid project file: lane sends must be a bounded array";
+                    return false;
+                }
+            }
+            if (lanes[i].has("automation") && lanes[i]["automation"].isArray()) {
+                const JSON& automation = lanes[i]["automation"];
+                for (size_t a = 0; a < automation.size(); ++a) {
+                    if (!automation[a].isObject()) {
+                        error = "Invalid project file: automation curve must be an object";
+                        return false;
+                    }
+                    if (automation[a].has("points") &&
+                        (!automation[a]["points"].isArray() ||
+                         automation[a]["points"].size() > PROJECT_MAX_AUTOMATION_POINTS_PER_CURVE)) {
+                        error = "Invalid project file: automation points must be a bounded array";
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (root.has("ui") && root["ui"].isObject() && root["ui"].has("panels")) {
+            if (!root["ui"]["panels"].isArray() || root["ui"]["panels"].size() > PROJECT_MAX_UI_PANELS) {
+                error = "Invalid project file: UI panels must be a bounded array";
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 
@@ -460,7 +770,15 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     // ========================================================================
     // PHASE 1: Parse and validate JSON (non-destructive)
     // ========================================================================
-    std::ifstream in(path);
+    std::error_code fileEc;
+    const auto fileSize = std::filesystem::file_size(path, fileEc);
+    if (fileEc || fileSize > PROJECT_MAX_FILE_BYTES) {
+        result.errorMessage = "Invalid project file: file is too large or unreadable";
+        Log::error("[ProjectLoad] " + result.errorMessage);
+        return result;
+    }
+
+    std::ifstream in(path, std::ios::binary);
     if (!in) {
         result.errorMessage = "Cannot open file: " + path;
         return result;
@@ -472,6 +790,17 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
     Log::info("[ProjectLoad] Read bytes=" + std::to_string(contents.size()));
 #endif
+
+    if (!hasJsonObjectEnvelope(contents)) {
+        result.errorMessage = "Invalid project file: project must be a single JSON object";
+        Log::error("[ProjectLoad] " + result.errorMessage);
+        return result;
+    }
+    if (hasUnsafeNumericToken(contents)) {
+        result.errorMessage = "Invalid project file: numeric token exceeds safe bounds";
+        Log::error("[ProjectLoad] " + result.errorMessage);
+        return result;
+    }
 
     JSON root = JSON::parse(contents);
     if (!root.isObject()) {
@@ -485,7 +814,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
     // Version check
     int fileVersion = 0;
-    if (root.has("version")) {
+    if (root.has("version") && root["version"].isNumber() && std::isfinite(root["version"].asNumber())) {
         fileVersion = static_cast<int>(root["version"].asNumber());
     }
     
@@ -500,6 +829,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         result.errorMessage = "Project file version " + std::to_string(fileVersion) + 
                    " is newer than this version of AESTRA (" + std::to_string(PROJECT_VERSION_CURRENT) + 
                    "). Please update AESTRA to open this project.";
+        Log::error("[ProjectLoad] " + result.errorMessage);
+        return result;
+    }
+
+    if (!validateProjectStructure(root, result.errorMessage)) {
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }
@@ -525,13 +859,6 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     // PHASE 2: Validate structure and check assets (non-destructive)
     // ========================================================================
     
-    // Check for required sections
-    if (!root.has("lanes")) {
-        result.errorMessage = "Invalid project file: missing 'lanes' section";
-        Log::error("[ProjectLoad] " + result.errorMessage);
-        return result;
-    }
-    
     // Validate and collect missing audio assets
     if (root.has("sources")) {
         const JSON& sj = root["sources"];
@@ -555,8 +882,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     // PHASE 3: Commit - clear existing state and load new data
     // ========================================================================
     
-    result.tempo = (root.has("tempo") && root["tempo"].isNumber()) ? root["tempo"].asNumber() : 120.0;
-    result.playhead = (root.has("playhead") && root["playhead"].isNumber()) ? root["playhead"].asNumber() : 0.0;
+    result.tempo = finiteNumberOr(root, "tempo", 120.0, 20.0, 999.0);
+    result.playhead = finiteNumberOr(root, "playhead", 0.0, 0.0, 24.0 * 60.0 * 60.0);
 
     // Optional UI state
     if (root.has("ui") && root["ui"].isObject()) {
@@ -580,12 +907,12 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 if (!pj.isObject()) continue;
 
                 PanelState p;
-                if (pj.has("title") && pj["title"].isString()) p.title = pj["title"].asString();
-                if (pj.has("x")) p.x = pj["x"].asNumber();
-                if (pj.has("y")) p.y = pj["y"].asNumber();
-                if (pj.has("width")) p.width = pj["width"].asNumber();
-                if (pj.has("height")) p.height = pj["height"].asNumber();
-                if (pj.has("expandedHeight")) p.expandedHeight = pj["expandedHeight"].asNumber();
+                p.title = boundedStringOr(pj, "title", "", PROJECT_MAX_STRING_BYTES);
+                p.x = finiteNumberOr(pj, "x", 0.0, -100000.0, 100000.0);
+                p.y = finiteNumberOr(pj, "y", 0.0, -100000.0, 100000.0);
+                p.width = finiteNumberOr(pj, "width", 0.0, 0.0, 100000.0);
+                p.height = finiteNumberOr(pj, "height", 0.0, 0.0, 100000.0);
+                p.expandedHeight = finiteNumberOr(pj, "expandedHeight", 0.0, 0.0, 100000.0);
                 if (pj.has("minimized") && pj["minimized"].isBool()) p.minimized = pj["minimized"].asBool();
                 if (pj.has("maximized") && pj["maximized"].isBool()) p.maximized = pj["maximized"].asBool();
                 if (pj.has("userPositioned") && pj["userPositioned"].isBool()) p.userPositioned = pj["userPositioned"].asBool();
@@ -620,8 +947,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         Log::info("[ProjectLoad] Loading sources count=" + std::to_string(sj.size()));
     #endif
         for (size_t i = 0; i < sj.size(); ++i) {
-            uint32_t oldId = static_cast<uint32_t>(sj[i]["id"].asNumber());
-            std::string filePath = sj[i]["path"].asString();
+            uint32_t oldId = static_cast<uint32_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+            std::string filePath = boundedStringOr(sj[i], "path", "", PROJECT_MAX_PATH_BYTES);
+            if (oldId == 0 || filePath.empty()) {
+                continue;
+            }
             ClipSourceID newId = sourceManager.getOrCreateSource(filePath);
             idMap[oldId] = newId;
             
@@ -662,20 +992,28 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         Log::info("[ProjectLoad] Loading patterns count=" + std::to_string(pj.size()));
     #endif
         for (size_t i = 0; i < pj.size(); ++i) {
-            uint64_t oldId = static_cast<uint64_t>(pj[i]["id"].asNumber());
-            std::string name = pj[i]["name"].asString();
-            double length = pj[i]["length"].asNumber();
-            std::string type = pj[i]["type"].asString();
+            uint64_t oldId = static_cast<uint64_t>(finiteNumberOr(pj[i], "id", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
+            std::string name = boundedStringOr(pj[i], "name", "Pattern", PROJECT_MAX_STRING_BYTES);
+            double length = finiteNumberOr(pj[i], "length", 4.0, 0.0001, 1000000.0);
+            std::string type = boundedStringOr(pj[i], "type", "midi", PROJECT_MAX_STRING_BYTES);
+            if (oldId == 0) {
+                continue;
+            }
 
             if (type == "audio") {
-                uint32_t oldSrcId = static_cast<uint32_t>(pj[i]["sourceId"].asNumber());
+                uint32_t oldSrcId = static_cast<uint32_t>(
+                    finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
                 if (idMap.count(oldSrcId)) {
                     AudioSlicePayload payload;
                     payload.audioSourceId = idMap[oldSrcId];
                     if (pj[i].has("slices")) {
                         const JSON& slj = pj[i]["slices"];
                         for (size_t s = 0; s < slj.size(); ++s) {
-                            payload.slices.push_back({slj[s]["start"].asNumber(), slj[s]["length"].asNumber()});
+                            if (!slj[s].isObject()) continue;
+                            payload.slices.push_back({
+                                finiteNumberOr(slj[s], "start", 0.0, 0.0, 1.0e15),
+                                finiteNumberOr(slj[s], "length", 0.0, 0.0, 1.0e15)
+                            });
                         }
                     }
                     PatternID newId = patternManager.createAudioPattern(name, length, payload);
@@ -689,13 +1027,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     for (size_t n = 0; n < notes.size(); ++n) {
                         if (!notes[n].isObject()) continue;
                         MidiNote note;
-                        if (notes[n].has("pitch")) note.pitch = static_cast<int>(notes[n]["pitch"].asNumber());
-                        if (notes[n].has("startBeat")) note.startBeat = notes[n]["startBeat"].asNumber();
-                        if (notes[n].has("durationBeats")) note.durationBeats = notes[n]["durationBeats"].asNumber();
-                        if (notes[n].has("velocity")) note.velocity = static_cast<float>(notes[n]["velocity"].asNumber());
-                        if (notes[n].has("unitId")) note.unitId = static_cast<uint64_t>(notes[n]["unitId"].asNumber());
-                        if (notes[n].has("pitchOffset")) note.pitchOffset = static_cast<int8_t>(notes[n]["pitchOffset"].asInt());
-                        if (notes[n].has("gate")) note.gate = static_cast<float>(notes[n]["gate"].asNumber());
+                        note.pitch = static_cast<int>(finiteNumberOr(notes[n], "pitch", 60.0, 0.0, 127.0));
+                        note.startBeat = finiteNumberOr(notes[n], "startBeat", 0.0, 0.0, 1000000.0);
+                        note.durationBeats = finiteNumberOr(notes[n], "durationBeats", 0.25, 0.0, 1000000.0);
+                        note.velocity = static_cast<float>(finiteNumberOr(notes[n], "velocity", 1.0, 0.0, 1.0));
+                        note.unitId = static_cast<uint64_t>(
+                            finiteNumberOr(notes[n], "unitId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
+                        note.pitchOffset = static_cast<int8_t>(finiteNumberOr(notes[n], "pitchOffset", 0.0, -128.0, 127.0));
+                        note.gate = static_cast<float>(finiteNumberOr(notes[n], "gate", 1.0, 0.0, 1.0));
                         if (notes[n].has("slide")) note.slide = notes[n]["slide"].asBool();
                         payload.notes.push_back(note);
                     }
@@ -716,22 +1055,25 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
             Log::info("[ProjectLoad] Lane[" + std::to_string(i) + "] name='" + lj[i]["name"].asString() + "'");
     #endif
-            PlaylistLaneID laneId = playlist.createLane(lj[i]["name"].asString());
-            MixerChannel* channel = trackManager->addChannel(lj[i]["name"].asString());
+            const std::string laneName = boundedStringOr(lj[i], "name", "Track", PROJECT_MAX_STRING_BYTES);
+            PlaylistLaneID laneId = playlist.createLane(laneName);
+            MixerChannel* channel = trackManager->addChannel(laneName);
             if (auto* lane = playlist.getLane(laneId)) {
-                if (lj[i]["color"].isString()) {
+                if (lj[i].has("color") && lj[i]["color"].isString()) {
                     try {
                         lane->colorRGBA = static_cast<uint32_t>(std::stoul(lj[i]["color"].asString()));
                     } catch (const std::exception&) {
                         lane->colorRGBA = 0xFFFFFFFF;
                     }
-                } else {
+                } else if (lj[i].has("color") && lj[i]["color"].isNumber()) {
                     lane->colorRGBA = static_cast<uint32_t>(lj[i]["color"].asNumber());
+                } else {
+                    lane->colorRGBA = 0xFFFFFFFF;
                 }
-                lane->volume = static_cast<float>(lj[i]["volume"].asNumber());
-                lane->pan = static_cast<float>(lj[i]["pan"].asNumber());
-                lane->muted = lj[i]["mute"].asBool();
-                lane->solo = lj[i]["solo"].asBool();
+                lane->volume = static_cast<float>(finiteNumberOr(lj[i], "volume", 1.0, 0.0, 4.0));
+                lane->pan = static_cast<float>(finiteNumberOr(lj[i], "pan", 0.0, -1.0, 1.0));
+                lane->muted = lj[i].has("mute") && lj[i]["mute"].isBool() && lj[i]["mute"].asBool();
+                lane->solo = lj[i].has("solo") && lj[i]["solo"].isBool() && lj[i]["solo"].asBool();
 
                 if (channel) {
                     channel->setName(lane->name);
@@ -788,18 +1130,22 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     double projectSampleRate = playlist.getProjectSampleRate();
                     double samplesPerBeat = (projectSampleRate * 60.0) / std::max(projectBPM, 1.0);
                     for (size_t a = 0; a < aj.size(); ++a) {
-                        std::string param = aj[a]["param"].asString();
-                        auto target = static_cast<AutomationTarget>(aj[a]["targetEnum"].asNumber());
+                        if (!aj[a].isObject()) continue;
+                        std::string param = boundedStringOr(aj[a], "param", "", PROJECT_MAX_STRING_BYTES);
+                        auto target = static_cast<AutomationTarget>(
+                            finiteNumberOr(aj[a], "targetEnum", 0.0, 0.0, 1024.0));
                         
                         AutomationCurve curve(param, target);
-                        curve.setDefaultValue(aj[a]["default"].asNumber());
+                        curve.setDefaultValue(finiteNumberOr(aj[a], "default", 0.0, -1.0e6, 1.0e6));
                         
+                        if (!aj[a].has("points") || !aj[a]["points"].isArray()) continue;
                         const JSON& pts = aj[a]["points"];
                         for (size_t p = 0; p < pts.size(); ++p) {
-                            curve.addPoint(pts[p]["b"].asNumber(),
-                                         pts[p]["v"].asNumber(),
+                            if (!pts[p].isObject()) continue;
+                            curve.addPoint(finiteNumberOr(pts[p], "b", 0.0, 0.0, 1000000.0),
+                                         finiteNumberOr(pts[p], "v", 0.0, -1.0e6, 1.0e6),
                                          samplesPerBeat,
-                                         static_cast<float>(pts[p]["c"].asNumber()));
+                                         static_cast<float>(finiteNumberOr(pts[p], "c", 0.0, -1.0e6, 1.0e6)));
                         }
                         lane->automationCurves.push_back(curve);
                     }
@@ -811,37 +1157,40 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     Log::info("[ProjectLoad]  clips count=" + std::to_string(cj.size()));
 #endif
                     for (size_t c = 0; c < cj.size(); ++c) {
-                        uint64_t oldPatId = static_cast<uint64_t>(cj[c]["patternId"].asNumber());
+                        if (!cj[c].isObject()) continue;
+                        uint64_t oldPatId = static_cast<uint64_t>(
+                            finiteNumberOr(cj[c], "patternId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
                         if (patternMap.count(oldPatId)) {
                             ClipInstance clip;
-                            clip.id = ClipInstanceID::fromString(cj[c]["id"].asString());
+                            clip.id = ClipInstanceID::fromString(boundedStringOr(cj[c], "id", "", PROJECT_MAX_STRING_BYTES));
                             clip.patternId = patternMap[oldPatId];
                             clip.sourceId = clip.patternId.value;
-                            clip.startBeat = cj[c]["start"].asNumber();
-                            clip.durationBeats = cj[c]["duration"].asNumber();
-                            clip.sourceOffset = (cj[c].has("sourceOffset") && cj[c]["sourceOffset"].isNumber())
-                                ? cj[c]["sourceOffset"].asNumber()
-                                : 0.0;
-                            clip.name = cj[c]["name"].asString();
-                            if (cj[c]["color"].isString()) {
+                            clip.startBeat = finiteNumberOr(cj[c], "start", 0.0, 0.0, 1000000.0);
+                            clip.durationBeats = finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
+                            clip.sourceOffset = finiteNumberOr(cj[c], "sourceOffset", 0.0, 0.0, 1000000.0);
+                            clip.name = boundedStringOr(cj[c], "name", "", PROJECT_MAX_STRING_BYTES);
+                            if (cj[c].has("color") && cj[c]["color"].isString()) {
                                 try {
                                     clip.colorRGBA = static_cast<uint32_t>(std::stoul(cj[c]["color"].asString()));
                                 } catch (const std::exception&) {
                                     clip.colorRGBA = 0xFFFFFFFF;
                                 }
-                            } else {
+                            } else if (cj[c].has("color") && cj[c]["color"].isNumber()) {
                                 clip.colorRGBA = static_cast<uint32_t>(cj[c]["color"].asNumber());
+                            } else {
+                                clip.colorRGBA = 0xFFFFFFFF;
                             }
 
                             if (cj[c].has("edits")) {
                                 const JSON& ej = cj[c]["edits"];
-                                clip.edits.gainLinear = static_cast<float>(ej["gain"].asNumber());
-                                clip.edits.pan = static_cast<float>(ej["pan"].asNumber());
-                                clip.edits.muted = ej["muted"].asBool();
-                                clip.edits.playbackRate = static_cast<float>(ej["playbackRate"].asNumber());
-                                clip.edits.fadeInBeats = ej["fadeIn"].asNumber();
-                                clip.edits.fadeOutBeats = ej["fadeOut"].asNumber();
-                                clip.edits.sourceStart = ej["sourceStart"].asNumber();
+                                clip.edits.gainLinear = static_cast<float>(finiteNumberOr(ej, "gain", 1.0, 0.0, 16.0));
+                                clip.edits.pan = static_cast<float>(finiteNumberOr(ej, "pan", 0.0, -1.0, 1.0));
+                                clip.edits.muted = ej.has("muted") && ej["muted"].isBool() && ej["muted"].asBool();
+                                clip.edits.playbackRate = static_cast<float>(
+                                    finiteNumberOr(ej, "playbackRate", 1.0, 0.01, 100.0));
+                                clip.edits.fadeInBeats = finiteNumberOr(ej, "fadeIn", 0.0, 0.0, 1000000.0);
+                                clip.edits.fadeOutBeats = finiteNumberOr(ej, "fadeOut", 0.0, 0.0, 1000000.0);
+                                clip.edits.sourceStart = finiteNumberOr(ej, "sourceStart", 0.0, 0.0, 1.0e15);
                             }
                             playlist.addClip(laneId, clip);
                         }

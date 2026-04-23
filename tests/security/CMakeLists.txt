@@ -44,10 +44,16 @@ add_test(NAME SecAutosaveRecoveryGuard COMMAND SecAutosaveRecoveryGuard)
 add_executable(SecFlacVendorlenBounds flac_vendorlen_bounds.cpp)
 add_executable(SecCacheMtimeIntegrity cache_mtime_integrity.cpp)
 add_executable(SecPluginTrustedPath plugin_trusted_path.cpp)
+add_executable(SecOutOfProcessPluginHost out_of_process_plugin_host.cpp)
+add_executable(SecPluginScanIsolation plugin_scan_isolation.cpp)
+add_executable(SecProjectLoadHardening project_load_hardening.cpp)
 
 add_test(NAME SecFlacVendorlenBounds COMMAND SecFlacVendorlenBounds)
 add_test(NAME SecCacheMtimeIntegrity COMMAND SecCacheMtimeIntegrity)
 add_test(NAME SecPluginTrustedPath COMMAND SecPluginTrustedPath)
+add_test(NAME SecOutOfProcessPluginHost COMMAND SecOutOfProcessPluginHost $<TARGET_FILE:AestraPluginHost>)
+add_test(NAME SecPluginScanIsolation COMMAND SecPluginScanIsolation $<TARGET_FILE:AestraPluginHost> /usr/lib/clap/lsp-plugins.clap)
+add_test(NAME SecProjectLoadHardening COMMAND SecProjectLoadHardening)
 
 if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
     target_sources(SecStoulCrash PRIVATE ${REPO_ROOT}/Source/Core/ProjectSerializer.cpp)
@@ -131,4 +137,31 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
         ${REPO_ROOT}/AestraCore/include
     )
     target_link_libraries(SecPluginTrustedPath PRIVATE AestraAudio AestraCore)
+
+    target_include_directories(SecOutOfProcessPluginHost PRIVATE
+        ${REPO_ROOT}/AestraAudio/include
+        ${REPO_ROOT}/AestraAudio/include/Plugin
+        ${REPO_ROOT}/AestraCore/include
+    )
+    target_link_libraries(SecOutOfProcessPluginHost PRIVATE AestraAudio AestraCore)
+
+    target_include_directories(SecPluginScanIsolation PRIVATE
+        ${REPO_ROOT}/AestraAudio/include
+        ${REPO_ROOT}/AestraAudio/include/Plugin
+        ${REPO_ROOT}/AestraCore/include
+    )
+    target_link_libraries(SecPluginScanIsolation PRIVATE AestraAudio AestraCore)
+
+    target_sources(SecProjectLoadHardening PRIVATE ${REPO_ROOT}/Source/Core/ProjectSerializer.cpp)
+    target_include_directories(SecProjectLoadHardening PRIVATE
+        ${REPO_ROOT}/Source
+        ${REPO_ROOT}/Source/Core
+        ${REPO_ROOT}/AestraAudio/include
+        ${REPO_ROOT}/AestraAudio/include/Core
+        ${REPO_ROOT}/AestraAudio/include/Models
+        ${REPO_ROOT}/AestraAudio/include/IO
+        ${REPO_ROOT}/AestraCore/include
+        ${REPO_ROOT}/AestraPlat/include
+    )
+    target_link_libraries(SecProjectLoadHardening PRIVATE AestraAudio AestraCore AestraPlat)
 endif()

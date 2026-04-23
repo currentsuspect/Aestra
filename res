@@ -18,7 +18,11 @@ export CLAUDE_CODE_USE_OPENAI=1
 export RESONANCE_USE_OPENAI=1
 export RESONANCE_OPENAI_BASE_URL=https://opencode.ai/zen/v1
 export RESONANCE_OPENAI_MODEL=minimax-m2.5-free
-export RESONANCE_OPENAI_API_KEY=sk-qEE8jCzhug9bqQiS972UvEWcmzmz5hLbTv1Rmh3JbaDunA62arYiZqiVgcw3dfZx
+
+if [ -z "${RESONANCE_OPENAI_API_KEY:-}" ]; then
+  echo "Error: RESONANCE_OPENAI_API_KEY is not set. Load it from your shell or .env before running this launcher."
+  exit 1
+fi
 
 # Add Aestra scripts to PATH so the agent can find them
 export PATH="$AESTRA_DIR/scripts:$PATH"

@@ -265,7 +265,7 @@ public:
 
     /**
      * @brief Set the callback for first-load warnings from untrusted paths.
-     * If not set, untrusted-path plugins are loaded without warning (legacy behavior).
+     * If not set, untrusted-path plugins are skipped before binary load.
      */
     void setFirstLoadWarningCallback(FirstLoadWarningCallback cb);
 
