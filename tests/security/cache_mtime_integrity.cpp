@@ -62,6 +62,7 @@ int main() {
         f << " modified";
         f.close();
     }
+    std::filesystem::last_write_time(tmpPath, mtime1 + std::chrono::seconds(2), ec);
 
     bool modifiedFileRejected = !verifyCacheEntryMtime(tmpPath, mtime1Bits);
     std::cout << "  [" << (modifiedFileRejected ? "PASS" : "FAIL") << "] Modified file: mtime mismatch detected" << std::endl;

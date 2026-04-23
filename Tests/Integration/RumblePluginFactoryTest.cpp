@@ -33,25 +33,28 @@ int main() {
     factory.createPluginAsync(info, [&](PluginInstancePtr created) { instance = created; });
 
     std::cout << "TEST: factory returned instance... ";
-    assert(instance != nullptr);
+    if (!instance) {
+        std::cerr << "FAIL: factory returned null instance\n";
+        return 1;
+    }
     std::cout << "✅ PASS\n";
 
     std::cout << "TEST: plugin metadata matches... ";
     const auto& pluginInfo = instance->getInfo();
-    assert(pluginInfo.id == "com.Aestrastudios.rumble");
-    assert(pluginInfo.name == "Aestra Rumble");
-    assert(pluginInfo.type == PluginType::Instrument);
-    assert(pluginInfo.format == PluginFormat::Internal);
-    assert(pluginInfo.numAudioOutputs == 2);
-    assert(pluginInfo.hasMidiInput == true);
-    assert(pluginInfo.hasEditor == true);
+    if (pluginInfo.id != "com.Aestrastudios.rumble" || pluginInfo.name != "Aestra Rumble" ||
+        pluginInfo.type != PluginType::Instrument || pluginInfo.format != PluginFormat::Internal ||
+        pluginInfo.numAudioOutputs != 2 || !pluginInfo.hasMidiInput || !pluginInfo.hasEditor) {
+        std::cerr << "FAIL: plugin metadata mismatch\n";
+        return 1;
+    }
     std::cout << "✅ PASS\n";
 
     std::cout << "TEST: plugin initializes and exposes parameters... ";
-    assert(instance->initialize(48000.0, 512));
-    assert(instance->getParameterCount() == 4);
-    assert(!instance->getParameters().empty());
-    assert(instance->getTailSamples() > 0);
+    if (!instance->initialize(48000.0, 512) || instance->getParameterCount() != 4 ||
+        instance->getParameters().empty() || instance->getTailSamples() == 0) {
+        std::cerr << "FAIL: plugin failed initialization/parameter checks\n";
+        return 1;
+    }
     instance->shutdown();
     std::cout << "✅ PASS\n";
 
