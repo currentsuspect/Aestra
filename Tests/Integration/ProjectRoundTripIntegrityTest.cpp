@@ -117,6 +117,30 @@ void compareProjectSemantic(const std::string& json1, const std::string& json2, 
     int units1 = countField(norm1, "units");
     int units2 = countField(norm2, "units");
 
+    auto getLaneNames = [](const std::string& json) -> std::vector<std::string> {
+        std::vector<std::string> names;
+        size_t search = 0;
+        while ((search = json.find("\"lanes\":[", search)) != std::string::npos) {
+            size_t laneStart = json.find('{', search);
+            while (laneStart != std::string::npos) {
+                size_t laneEnd = json.find('}', laneStart);
+                std::string lane = json.substr(laneStart, laneEnd - laneStart + 1);
+                size_t namePos = lane.find("\"name\":\"");
+                if (namePos != std::string::npos) {
+                    size_t nameStart = namePos + 8;
+                    size_t nameEnd = lane.find("\"", nameStart);
+                    names.push_back(lane.substr(nameStart, nameEnd - nameStart));
+                }
+                laneStart = json.find('{', laneEnd);
+            }
+            ++search;
+        }
+        return names;
+    };
+
+    std::vector<std::string> names1 = getLaneNames(norm1);
+    std::vector<std::string> names2 = getLaneNames(norm2);
+
     if (lanes1 != lanes2 || clips1 != clips2 || notes1 != notes2 || units1 != units2) {
         std::cout << "[FAIL] " << testName << " - count mismatch (lanes:" << lanes1 << "vs" << lanes2
                  << " clips:" << clips1 << "vs" << clips2
@@ -124,6 +148,12 @@ void compareProjectSemantic(const std::string& json1, const std::string& json2, 
                  << " units:" << units1 << "vs" << units2 << ")" << std::endl;
         assert(false);
     }
+
+    if (names1 != names2) {
+        std::cout << "[FAIL] " << testName << " - lane names differ" << std::endl;
+        assert(false);
+    }
+
     std::cout << "[PASS] " << testName << std::endl;
 }
 
