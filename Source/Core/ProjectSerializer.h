@@ -9,6 +9,40 @@
 #include <vector>
 #include <chrono>
 
+namespace Aestra {
+
+enum class LoadIssueSeverity {
+    Warning,
+    Error
+};
+
+struct LoadIssue {
+    LoadIssueSeverity severity;
+    std::string category;
+    std::string message;
+    uint64_t objectId{0};
+    std::string referenceId;
+    std::string context;
+};
+
+struct ProjectLoadReport {
+    std::vector<LoadIssue> issues;
+    bool hasErrors() const {
+        for (const auto& i : issues) {
+            if (i.severity == LoadIssueSeverity::Error) return true;
+        }
+        return false;
+    }
+    bool hasWarnings() const {
+        for (const auto& i : issues) {
+            if (i.severity == LoadIssueSeverity::Warning) return true;
+        }
+        return false;
+    }
+};
+
+}
+
 class ProjectSerializer {
 public:
     struct PanelState {
@@ -33,10 +67,11 @@ public:
         bool ok{false};
         double tempo{120.0};
         double playhead{0.0};
-        std::string errorMessage;  // Populated on failure
-        std::vector<std::string> missingAssets;  // Audio files that couldn't be found
+        std::string errorMessage;
+        std::vector<std::string> missingAssets;
 
         std::optional<UIState> ui;
+        std::unique_ptr<::Aestra::ProjectLoadReport> report;
     };
 
     struct SerializeResult {

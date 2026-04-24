@@ -81,6 +81,38 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     endif()
 endif()
 
+# Project Load Regression Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectLoadRegressionTest.cpp")
+    add_executable(ProjectLoadRegressionTest
+        Integration/ProjectLoadRegressionTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectLoadRegressionTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(ProjectLoadRegressionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    target_compile_definitions(ProjectLoadRegressionTest PRIVATE
+        $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
+    )
+    if(AESTRA_ENABLE_RUNTIME_TESTS)
+        add_test(NAME ProjectLoadRegressionTest COMMAND ProjectLoadRegressionTest)
+        set_tests_properties(ProjectLoadRegressionTest PROPERTIES LABELS "integration;runtime")
+    else()
+        message(STATUS "ProjectLoadRegressionTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    endif()
+endif()
+
 # Plugin Scanner Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/PluginScanTest.cpp")
     add_executable(AestraPluginScanTest Integration/PluginScanTest.cpp)

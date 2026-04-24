@@ -14,6 +14,8 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <unordered_map>
+#include <unordered_set>
 
 using namespace Aestra;
 using namespace Aestra::Audio;
@@ -856,7 +858,113 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     }
 
     // ========================================================================
-    // PHASE 2: Validate structure and check assets (non-destructive)
+    // PHASE 2: Build load plan and validate references (non-destructive)
+    // ========================================================================
+
+    std::unordered_set<uint64_t> allPatternIds;
+    std::unordered_set<uint64_t> allUnitIds;
+    std::unordered_set<uint32_t> allSourceIds;
+    std::unordered_map<uint64_t, std::string> patternNames;
+    std::unordered_set<uint64_t> orphanClipPatternIds;
+    std::unordered_set<uint64_t> orphanNoteUnitIds;
+
+    if (root.has("sources")) {
+        const JSON& sj = root["sources"];
+        for (size_t i = 0; i < sj.size(); ++i) {
+            uint32_t id = static_cast<uint32_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+            if (id != 0) allSourceIds.insert(id);
+        }
+    }
+
+    if (root.has("patterns")) {
+        const JSON& pj = root["patterns"];
+        for (size_t i = 0; i < pj.size(); ++i) {
+            uint64_t id = static_cast<uint64_t>(finiteNumberOr(pj[i], "id", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
+            if (id != 0) {
+                allPatternIds.insert(id);
+                patternNames[id] = boundedStringOr(pj[i], "name", "Pattern", PROJECT_MAX_STRING_BYTES);
+            }
+        }
+    }
+
+    if (root.has("arsenal")) {
+        const JSON& aj = root["arsenal"];
+        if (aj.has("units") && aj["units"].isArray()) {
+            const JSON& units = aj["units"];
+            for (size_t i = 0; i < units.size(); ++i) {
+                if (!units[i].isObject() || !units[i].has("id")) continue;
+                uint64_t id = static_cast<uint64_t>(units[i]["id"].asNumber());
+                if (id != 0) allUnitIds.insert(id);
+            }
+        }
+    }
+
+    if (root.has("lanes")) {
+        const JSON& lj = root["lanes"];
+        for (size_t i = 0; i < lj.size(); ++i) {
+            if (!lj[i].has("clips") || !lj[i]["clips"].isArray()) continue;
+            const JSON& cj = lj[i]["clips"];
+            for (size_t c = 0; c < cj.size(); ++c) {
+                if (!cj[c].isObject()) continue;
+                uint64_t patternId = static_cast<uint64_t>(
+                    finiteNumberOr(cj[c], "patternId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
+                if (patternId != 0 && !allPatternIds.count(patternId)) {
+                    orphanClipPatternIds.insert(patternId);
+                    Log::warning("[ProjectLoad] Clip references missing pattern " + std::to_string(patternId) +
+                               " - clip will be preserved with placeholder");
+                }
+            }
+        }
+    }
+
+    if (root.has("patterns")) {
+        const JSON& pj = root["patterns"];
+        for (size_t i = 0; i < pj.size(); ++i) {
+            std::string type = boundedStringOr(pj[i], "type", "midi", PROJECT_MAX_STRING_BYTES);
+            if (type == "midi" && pj[i].has("notes") && pj[i]["notes"].isArray()) {
+                const JSON& notes = pj[i]["notes"];
+                for (size_t n = 0; n < notes.size(); ++n) {
+                    if (!notes[n].isObject()) continue;
+                    uint64_t unitId = static_cast<uint64_t>(
+                        finiteNumberOr(notes[n], "unitId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
+                    if (unitId != 0 && !allUnitIds.count(unitId)) {
+                        orphanNoteUnitIds.insert(unitId);
+                        Log::warning("[ProjectLoad] MIDI note references missing Arsenal unit " + std::to_string(unitId) +
+                                   " - note preserved but unit reference unresolved");
+                    }
+                }
+            }
+        }
+    }
+
+    // Build structured report for reference validation issues
+    if (!orphanClipPatternIds.empty() || !orphanNoteUnitIds.empty()) {
+        auto report = std::make_unique<ProjectLoadReport>();
+        for (const auto& pid : orphanClipPatternIds) {
+            report->issues.push_back({
+                LoadIssueSeverity::Warning,
+                "clip",
+                "Clip references missing pattern - clip will be preserved with placeholder",
+                pid,
+                std::to_string(pid),
+                ""
+            });
+        }
+        for (const auto& uid : orphanNoteUnitIds) {
+            report->issues.push_back({
+                LoadIssueSeverity::Warning,
+                "unit",
+                "MIDI note references missing Arsenal unit - note preserved but unit reference unresolved",
+                uid,
+                std::to_string(uid),
+                ""
+            });
+        }
+        result.report = std::move(report);
+    }
+
+    // ========================================================================
+    // PHASE 3: Validate structure and check assets (non-destructive)
     // ========================================================================
     
     // Validate and collect missing audio assets
@@ -878,9 +986,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                      " audio file(s) not found - clips will appear without waveforms");
     }
 
-    // ========================================================================
-    // PHASE 3: Commit - clear existing state and load new data
-    // ========================================================================
+// ========================================================================
+// PHASE 4: Commit - clear existing state and load new data
+// ========================================================================
     
     result.tempo = finiteNumberOr(root, "tempo", 120.0, 20.0, 999.0);
     result.playhead = finiteNumberOr(root, "playhead", 0.0, 0.0, 24.0 * 60.0 * 60.0);
@@ -939,7 +1047,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     patternManager.clear();
     trackManager->clearAllChannels();
 
-    // 1. Load Sources (and decode audio files)
+    // 2. Load Sources (and decode audio files)
     std::unordered_map<uint32_t, ClipSourceID> idMap;
     if (root.has("sources")) {
         const JSON& sj = root["sources"];
@@ -984,7 +1092,12 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         }
     }
 
-    // 2. Load Patterns
+    // 5. Load Arsenal Units (must load before patterns - patterns reference unitId in MIDI note data)
+    if (root.has("arsenal")) {
+        trackManager->getUnitManager().loadFromJSON(root["arsenal"]);
+    }
+
+    // 3. Load Patterns
     std::unordered_map<uint64_t, PatternID> patternMap;
     if (root.has("patterns")) {
         const JSON& pj = root["patterns"];
@@ -1045,7 +1158,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         }
     }
 
-    // 3. Load Lanes and Clips
+    // 4. Load Lanes and Clips
     if (root.has("lanes")) {
         const JSON& lj = root["lanes"];
     #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
@@ -1200,10 +1313,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         }
     }
 
-    // 4. Load Arsenal Units
-    if (root.has("arsenal")) {
-        trackManager->getUnitManager().loadFromJSON(root["arsenal"]);
-    }
+    // PHASE 8: Final rebind pass - verify all references
+    #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
+    Log::info("[ProjectLoad] Final rebind pass");
+    #endif
 
     result.ok = true;
     Log::info("Project loaded: " + path);

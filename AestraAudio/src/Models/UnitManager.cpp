@@ -538,12 +538,17 @@ void UnitManager::loadFromJSON(const JSON& json) {
                 double sr = m_sampleRate.load(std::memory_order_relaxed);
                 uint32_t blockSize = m_blockSize.load(std::memory_order_relaxed);
                 unit.plugin->initialize(sr > 0 ? sr : 48000.0, blockSize > 0 ? blockSize : 512);
-                if (unit.enabled || unit.isEnabled) {
-                    unit.plugin->activate();
-                }
+
+                // Load state BEFORE activation to ensure plugin is ready before processing audio.
+                // This matches EffectChain lifecycle: create -> initialize -> loadState -> activate.
                 if (!unit.pluginState.empty()) {
                     unit.plugin->loadState(unit.pluginState);
                 }
+
+                if (unit.enabled || unit.isEnabled) {
+                    unit.plugin->activate();
+                }
+
                 applySamplerDefaultsForUnitType(unit);
             }
         }
