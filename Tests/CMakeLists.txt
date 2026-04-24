@@ -77,18 +77,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
         add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
         set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;runtime")
     else()
-        message(STATUS "ProjectRoundTrip tests built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+message(STATUS "ProjectRoundTrip tests built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
 endif()
 
-# Project Load Regression Test
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectLoadRegressionTest.cpp")
-    add_executable(ProjectLoadRegressionTest
-        Integration/ProjectLoadRegressionTest.cpp
+# Project Round-Trip Integrity Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripIntegrityTest.cpp")
+    add_executable(ProjectRoundTripIntegrityTest
+        Integration/ProjectRoundTripIntegrityTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
     )
-    target_link_libraries(ProjectLoadRegressionTest PRIVATE AestraAudio AestraCore)
-    target_include_directories(ProjectLoadRegressionTest PRIVATE
+    target_link_libraries(ProjectRoundTripIntegrityTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(ProjectRoundTripIntegrityTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
         ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
@@ -102,14 +102,14 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectLoadRegressionTest.cpp
         ${CMAKE_SOURCE_DIR}/AestraCore/include
         ${CMAKE_SOURCE_DIR}/Source
     )
-    target_compile_definitions(ProjectLoadRegressionTest PRIVATE
+    target_compile_definitions(ProjectRoundTripIntegrityTest PRIVATE
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
     if(AESTRA_ENABLE_RUNTIME_TESTS)
-        add_test(NAME ProjectLoadRegressionTest COMMAND ProjectLoadRegressionTest)
-        set_tests_properties(ProjectLoadRegressionTest PROPERTIES LABELS "integration;runtime")
+        add_test(NAME ProjectRoundTripIntegrityTest COMMAND ProjectRoundTripIntegrityTest)
+        set_tests_properties(ProjectRoundTripIntegrityTest PROPERTIES LABELS "integration;runtime")
     else()
-        message(STATUS "ProjectLoadRegressionTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+        message(STATUS "ProjectRoundTripIntegrityTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
 endif()
 
