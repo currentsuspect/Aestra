@@ -13,6 +13,10 @@ add_executable(SecDivZero div_zero_channels.cpp)
 add_executable(SecSamplerPath sampler_path_traversal.cpp)
 add_executable(SecId3Overflow id3_overflow.cpp)
 add_executable(SecShellEscape shell_escape_test.cpp)
+add_executable(SecLicenseProfileHardening
+    license_profile_hardening.cpp
+    ${REPO_ROOT}/Source/license/LicenseVerifier.cpp
+)
 
 # Blue team fixes — proof of fix tests (S002)
 add_executable(SecClipColorStoul clip_color_stoul.cpp)
@@ -25,6 +29,7 @@ add_test(NAME SecDivZero COMMAND SecDivZero)
 add_test(NAME SecSamplerPath COMMAND SecSamplerPath)
 add_test(NAME SecId3Overflow COMMAND SecId3Overflow)
 add_test(NAME SecShellEscape COMMAND SecShellEscape)
+add_test(NAME SecLicenseProfileHardening COMMAND SecLicenseProfileHardening)
 
 # Blue team fix proofs
 add_test(NAME SecClipColorStoul COMMAND SecClipColorStoul)
@@ -100,12 +105,18 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
     target_include_directories(SecJsonDos PRIVATE
         ${REPO_ROOT}/AestraCore/include
     )
+    target_include_directories(SecLicenseProfileHardening PRIVATE
+        ${REPO_ROOT}/Source
+        ${REPO_ROOT}/Source/license
+        ${REPO_ROOT}/AestraCore/include
+    )
 
     target_include_directories(SecJsonParserHardening PRIVATE
         ${REPO_ROOT}/Source/Core
         ${REPO_ROOT}/AestraCore/include
     )
     target_link_libraries(SecJsonParserHardening PRIVATE AestraCore)
+    target_link_libraries(SecLicenseProfileHardening PRIVATE AestraCore)
 
     target_include_directories(SecEnvVarValidation PRIVATE
         ${REPO_ROOT}/AestraCore/include

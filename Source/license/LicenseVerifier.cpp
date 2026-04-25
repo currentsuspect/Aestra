@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+#include <cstdlib>
 
 #include "AestraJSON.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -38,11 +39,14 @@ std::string getLicenseFilePath() {
 
 static UserProfile parseProfile(const Aestra::JSON& j) {
 	UserProfile p;
+	p.username = "Guest";
+	p.tier = "Aestra Core";
+	p.serial = "CORE-XXXXXXX";
+	p.signature = "";
+	p.verified = false;
 	if (j.isObject()) {
 		if (j.has("username")) p.username = j["username"].asString();
-		if (j.has("tier"))     p.tier     = j["tier"].asString();
 		if (j.has("serial"))   p.serial   = j["serial"].asString();
-		if (j.has("signature"))p.signature= j["signature"].asString();
 	}
 	return p;
 }
@@ -96,14 +100,15 @@ bool saveProfile(const UserProfile& profile) {
 }
 
 bool verifyLicense(UserProfile& profile) {
-	// Stubbed verifier for public repo:
-	// - If signature equals "MOCK-VALID", mark verified true
-	// - Otherwise unverified; force tier to Aestra Core
+	// Default-safe behavior: user-editable profile files are not trusted for entitlement.
 	const std::string payload = profile.username + profile.serial + profile.tier;
 	(void)payload; (void)kPublicKeyPem; // placeholders for real verification
-	// Deliberate stub: Aestra_CORE_MODE builds accept "MOCK-VALID" as a placeholder
-	// signature. Real cryptographic verification is implemented in the private repo.
-	bool ok = (profile.signature == "MOCK-VALID");
+#if defined(AESTRA_ENABLE_TEST_LICENSES) && AESTRA_ENABLE_TEST_LICENSES
+	// Test-only path for local/unit testing.
+	const bool ok = (profile.signature == "MOCK-VALID");
+#else
+	const bool ok = false;
+#endif
 	profile.verified = ok;
 	if (!ok) {
 		profile.tier = "Aestra Core";

@@ -5,6 +5,12 @@
 #include <filesystem>
 
 #include "LicenseVerifier.h"
+#if __has_include("LicenseGate.h")
+#include "LicenseGate.h"
+#define AESTRA_HAS_LICENSE_GATE 1
+#else
+#define AESTRA_HAS_LICENSE_GATE 0
+#endif
 #include "../../AestraCore/include/AestraLog.h"
 
 // AestraUI includes
@@ -19,6 +25,11 @@ namespace Aestra {
 static std::atomic<bool> g_profileLoaded{false};
 static UserProfile g_profile;
 static std::string g_cardSvgPath;
+
+struct TrustedAccessState {
+	std::string displayTier = "Aestra Core";
+	bool verified = false;
+};
 
 static std::string getAssetsCardsDir() {
 	// Use mock assets location in public builds
@@ -44,10 +55,36 @@ static const char* verificationBadge(bool verified) {
 	return verified ? "✅ Verified" : "⚪ Offline / ❌ Unverified";
 }
 
+static TrustedAccessState loadTrustedAccessState() {
+	TrustedAccessState trusted;
+#if AESTRA_HAS_LICENSE_GATE
+	switch (Aestra::License::LicenseGate::currentTier()) {
+		case Aestra::License::LicenseTier::Founder:
+			trusted.displayTier = "Aestra Founder";
+			trusted.verified = true;
+			break;
+		case Aestra::License::LicenseTier::Supporter:
+			trusted.displayTier = "Aestra Plus";
+			trusted.verified = true;
+			break;
+		case Aestra::License::LicenseTier::Core:
+		default:
+			trusted.displayTier = "Aestra Core";
+			trusted.verified = false;
+			break;
+	}
+#endif
+	return trusted;
+}
+
 static void ensureProfileLoadedOnce() {
 	if (g_profileLoaded.load()) return;
 	g_profile = loadProfile();
+	// Keep local profile metadata non-authoritative.
 	verifyLicense(g_profile);
+	const TrustedAccessState trusted = loadTrustedAccessState();
+	g_profile.tier = trusted.displayTier;
+	g_profile.verified = trusted.verified;
 	g_cardSvgPath = svgForTier(g_profile.tier);
 	g_profileLoaded.store(true);
 }
