@@ -15,15 +15,20 @@ int main() {
     auto& manager = PluginManager::getInstance();
 
     std::cout << "TEST: plugin manager initializes... ";
-    assert(manager.initialize());
+    if (!manager.initialize()) {
+        std::cerr << "FAIL: plugin manager failed to initialize\n";
+        return 1;
+    }
     std::cout << "✅ PASS\n";
 
     std::cout << "TEST: rumble is discoverable by id... ";
     const PluginInfo* rumbleInfo = manager.findPlugin("com.Aestrastudios.rumble");
-    assert(rumbleInfo != nullptr);
-    assert(rumbleInfo->format == PluginFormat::Internal);
-    assert(rumbleInfo->type == PluginType::Instrument);
-    assert(rumbleInfo->hasMidiInput == true);
+    if (!rumbleInfo || rumbleInfo->format != PluginFormat::Internal ||
+        rumbleInfo->type != PluginType::Instrument || !rumbleInfo->hasMidiInput) {
+        std::cerr << "FAIL: rumble metadata missing or incorrect\n";
+        manager.shutdown();
+        return 1;
+    }
     std::cout << "✅ PASS\n";
 
     std::cout << "TEST: internal instruments include rumble... ";
@@ -35,13 +40,20 @@ int main() {
             break;
         }
     }
-    assert(foundRumble);
+    if (!foundRumble) {
+        std::cerr << "FAIL: rumble missing from instrument plugin list\n";
+        manager.shutdown();
+        return 1;
+    }
     std::cout << "✅ PASS\n";
 
     std::cout << "TEST: createInstanceById works for rumble... ";
     auto instance = manager.createInstanceById("com.Aestrastudios.rumble");
-    assert(instance != nullptr);
-    assert(instance->initialize(48000.0, 512));
+    if (!instance || !instance->initialize(48000.0, 512)) {
+        std::cerr << "FAIL: createInstanceById returned null or failed initialization\n";
+        manager.shutdown();
+        return 1;
+    }
     instance->shutdown();
     std::cout << "✅ PASS\n";
 

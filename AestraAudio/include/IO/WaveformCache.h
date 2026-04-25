@@ -122,7 +122,7 @@ class WaveformCache {
 public:
     /// Default mip level settings
     static constexpr uint32_t DEFAULT_BASE_SAMPLES_PER_PEAK = 64;
-    static constexpr uint32_t DEFAULT_NUM_LEVELS = 5;
+    static constexpr uint32_t DEFAULT_NUM_LEVELS = 4;
     static constexpr uint32_t MIP_LEVEL_MULTIPLIER = 4; // Each level is 4x coarser
 
     WaveformCache();

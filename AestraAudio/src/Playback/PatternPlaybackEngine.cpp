@@ -2,9 +2,12 @@
 #include "PatternPlaybackEngine.h"
 
 #include "../../AestraCore/include/AestraLog.h"
+#include "Plugin/SamplerPlugin.h"
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -17,6 +20,55 @@ uint8_t toMidiVelocity(float velocity) {
     }
     return static_cast<uint8_t>(std::clamp<int>(static_cast<int>(std::lround(clamped)), 0, 127));
 }
+
+bool eventComesBefore(const ScheduledEvent& a, const ScheduledEvent& b) {
+    if (a.sampleFrame != b.sampleFrame) {
+        return a.sampleFrame < b.sampleFrame;
+    }
+    if (a.priority != b.priority) {
+        return a.priority < b.priority;
+    }
+    if (a.instanceId != b.instanceId) {
+        return a.instanceId < b.instanceId;
+    }
+    if (a.statusByte != b.statusByte) {
+        return a.statusByte < b.statusByte;
+    }
+    if (a.data1 != b.data1) {
+        return a.data1 < b.data1;
+    }
+    return a.data2 < b.data2;
+}
+
+constexpr double kPitchedSamplerStepBeats = 0.25;
+
+const MidiNote* findNextActiveStepForUnit(const MidiPayload& midi, const MidiNote& currentNote) {
+    const double nextStepBeat = currentNote.startBeat + kPitchedSamplerStepBeats;
+    for (const auto& candidate : midi.notes) {
+        if (candidate.unitId != currentNote.unitId || candidate.durationBeats <= 0.0) {
+            continue;
+        }
+        if (std::abs(candidate.startBeat - nextStepBeat) <= 0.001) {
+            return &candidate;
+        }
+    }
+    return nullptr;
+}
+
+int resolveSamplerRootMidiNote(const UnitInfo* unit) {
+    if (!unit) {
+        return 60;
+    }
+    auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit->plugin);
+    return sampler ? sampler->getRootMidiNote() : 60;
+}
+
+int resolvePitchedSamplerMidiNote(const MidiNote& note, int rootMidiNote) {
+    if (note.pitchOffset == 0 && note.pitch > 0 && note.pitch != rootMidiNote) {
+        return std::clamp(note.pitch, 0, 127);
+    }
+    return std::clamp(rootMidiNote + static_cast<int>(note.pitchOffset), 0, 127);
+}
 } // namespace
 
 PatternPlaybackEngine::PatternPlaybackEngine(TimelineClock* clock, PatternManager* patternMgr, UnitManager* unitMgr)
@@ -28,7 +80,8 @@ PatternPlaybackEngine::PatternPlaybackEngine(TimelineClock* clock, PatternManage
     }
 }
 
-void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startBeat, uint32_t instanceId) {
+void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startBeat, uint32_t instanceId,
+                                                    double sourceStartBeat, double durationBeats) {
     if (instanceId >= 256) {
         Aestra::Log::error("[PatternPlayback] Instance ID must be < 256");
         return;
@@ -44,13 +97,18 @@ void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startB
         inst.patternId = pid;
         inst.startBeat = startBeat;
         inst.instanceId = instanceId;
-        inst.nextEventIdx = 0;
+        inst.sourceStartBeat = std::max(0.0, sourceStartBeat);
+        inst.sourceEndBeat =
+            durationBeats > 0.0 ? (inst.sourceStartBeat + durationBeats) : std::numeric_limits<double>::infinity();
+        inst.scheduledThroughFrame = 0;
 
         m_activeInstances.push_back(inst);
     }
 
     Aestra::Log::info("[PatternPlayback] Scheduled instance " + std::to_string(instanceId) + " pattern " +
-                      std::to_string(pid.value) + " at beat " + std::to_string(startBeat));
+                      std::to_string(pid.value) + " at beat " + std::to_string(startBeat) +
+                      " sourceStart=" + std::to_string(sourceStartBeat) +
+                      " duration=" + std::to_string(durationBeats));
 }
 
 void PatternPlaybackEngine::cancelPatternInstance(uint32_t instanceId) {
@@ -81,21 +139,19 @@ uint16_t PatternPlaybackEngine::getChannelForUnit(UnitID unitId) const {
 void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, int lookaheadSamples) {
     uint64_t windowEnd = currentFrame + lookaheadSamples;
 
-    // Check for loop wrap (time moved backwards)
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     if (currentFrame < m_lastRefillFrame) {
-        // Reset all active instances to read from start
         for (auto& inst : m_activeInstances) {
-            inst.nextEventIdx = 0;
+            inst.scheduledThroughFrame = 0;
         }
-        // Optional: Clear queue? Generally not needed if timestamps are checked.
     }
     m_lastRefillFrame = currentFrame;
 
-    // Debug log occassionally
-    static int refillCounter = 0;
-    bool shouldLog = (refillCounter++ % 100 == 0);
+    bool shouldLog = (m_refillCounter.fetch_add(1, std::memory_order_relaxed) % 100 == 0);
+    std::vector<ScheduledEvent> pendingEvents;
+    pendingEvents.reserve(512);
 
-    std::lock_guard<std::mutex> lock(m_mutex);
     for (auto& inst : m_activeInstances) {
         // Skip cancelled instances
         if (m_instanceCancelled[inst.instanceId].load(std::memory_order_acquire)) {
@@ -119,80 +175,98 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
         if (shouldLog && !midi.notes.empty()) {
             Aestra::Log::info("[PatternPlayback] Processing Pattern " + std::to_string(inst.patternId.value) +
                               " with " + std::to_string(midi.notes.size()) +
-                              " notes. NextEventIdx=" + std::to_string(inst.nextEventIdx));
+                              " notes. sourceWindow=[" + std::to_string(inst.sourceStartBeat) +
+                              ", " + std::to_string(inst.sourceEndBeat) + ")");
         }
 
-        // [FIX] Ensure notes are sorted by beat position to handle out-of-order note insertion
-        // This is critical for correct playback when notes are added in reverse or random order
-        if (inst.nextEventIdx == 0 && !midi.notes.empty()) {
-            // Check if already sorted; if not, sort now
-            bool isSorted = true;
-            for (size_t i = 1; i < midi.notes.size(); ++i) {
-                if (midi.notes[i].startBeat < midi.notes[i - 1].startBeat) {
-                    isSorted = false;
-                    break;
+        const uint64_t previousScheduledThroughFrame = inst.scheduledThroughFrame;
+        const uint64_t scheduleFromFrame = std::max(currentFrame, previousScheduledThroughFrame);
+        if (scheduleFromFrame >= windowEnd) {
+            continue;
+        }
+
+        for (const auto& note : midi.notes) {
+            const double noteStartInSource = note.startBeat;
+            const double noteEndInSource = note.startBeat + note.durationBeats;
+            if (noteEndInSource <= inst.sourceStartBeat || noteStartInSource >= inst.sourceEndBeat) {
+                continue;
+            }
+
+            const UnitInfo* unit = m_unitManager->getUnit(note.unitId);
+            const bool isPitchedSampler = unit && unit->type == UnitType::PitchedSampler;
+            const int resolvedMidiNote = isPitchedSampler
+                                             ? resolvePitchedSamplerMidiNote(note, resolveSamplerRootMidiNote(unit))
+                                             : std::clamp(note.pitch, 0, 127);
+            double noteBeat = inst.startBeat + note.startBeat;
+            uint64_t noteFrame = m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
+            double offBeat = std::min(noteBeat + note.durationBeats, inst.startBeat + inst.sourceEndBeat);
+            bool suppressNoteOff = false;
+
+            if (isPitchedSampler) {
+                const double gate = std::clamp(static_cast<double>(note.gate), 0.1, 2.0);
+                offBeat = std::min(noteBeat + gate * kPitchedSamplerStepBeats, inst.startBeat + inst.sourceEndBeat);
+
+                if (const auto* nextStep = findNextActiveStepForUnit(midi, note)) {
+                    const double nextStepBeat = inst.startBeat + nextStep->startBeat;
+                    if (note.slide) {
+                        suppressNoteOff = true;
+                    } else {
+                        offBeat = std::min(offBeat, nextStepBeat);
+                    }
                 }
             }
 
-            if (!isSorted) {
-                // Make a mutable copy and sort it
-                auto notesCopy = midi.notes;
-                std::sort(notesCopy.begin(), notesCopy.end(),
-                          [](const MidiNote& a, const MidiNote& b) { return a.startBeat < b.startBeat; });
-
-                // Replace the pattern's notes with sorted version
-                const_cast<MidiPayload&>(midi).notes = std::move(notesCopy);
-            }
-        }
-
-        // Schedule events in lookahead window
-        while (inst.nextEventIdx < midi.notes.size()) {
-            const auto& note = midi.notes[inst.nextEventIdx];
-
-            // Convert beat to sample frame
-            double noteBeat = inst.startBeat + note.startBeat;
-            uint64_t noteFrame = m_clock->sampleFrameAtBeat(noteBeat, sampleRate);
-
-            if (noteFrame >= windowEnd) {
-                break; // Outside lookahead window
-            }
+            uint64_t offFrame = m_clock->sampleFrameAtBeat(offBeat, sampleRate);
 
             uint16_t channelIdx = getChannelForUnit(note.unitId);
 
-            // Schedule note-on (priority = 1)
-            ScheduledEvent onEvent{};
-            onEvent.sampleFrame = noteFrame;
-            onEvent.instanceId = inst.instanceId;
-            onEvent.unitId = note.unitId; // [NEW]
-            onEvent.channelIdx = channelIdx;
-            onEvent.statusByte = 0x90; // Note-on
-            onEvent.data1 = note.pitch;
-            onEvent.data2 = toMidiVelocity(note.velocity);
-            onEvent.priority = 1; // Note-on comes after note-off at same sample
-
-            if (!m_rtQueue.push(onEvent)) {
-                m_overflowCounter.fetch_add(1, std::memory_order_relaxed);
+            if (noteFrame >= scheduleFromFrame && noteFrame < windowEnd) {
+                ScheduledEvent onEvent{};
+                onEvent.sampleFrame = noteFrame;
+                onEvent.instanceId = inst.instanceId;
+                onEvent.unitId = note.unitId;
+                onEvent.channelIdx = channelIdx;
+                onEvent.statusByte = 0x90;
+                onEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
+                onEvent.data2 = toMidiVelocity(note.velocity);
+                onEvent.priority = 1;
+                pendingEvents.push_back(onEvent);
+            } else if (noteFrame < scheduleFromFrame && offFrame > scheduleFromFrame &&
+                       noteFrame >= previousScheduledThroughFrame) {
+                // Playback entered while this note was already active; start it immediately at the buffer edge once.
+                ScheduledEvent resumeOnEvent{};
+                resumeOnEvent.sampleFrame = scheduleFromFrame;
+                resumeOnEvent.instanceId = inst.instanceId;
+                resumeOnEvent.unitId = note.unitId;
+                resumeOnEvent.channelIdx = channelIdx;
+                resumeOnEvent.statusByte = 0x90;
+                resumeOnEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
+                resumeOnEvent.data2 = toMidiVelocity(note.velocity);
+                resumeOnEvent.priority = 1;
+                pendingEvents.push_back(resumeOnEvent);
             }
 
-            // Schedule note-off (priority = 0)
-            double offBeat = noteBeat + note.durationBeats;
-            uint64_t offFrame = m_clock->sampleFrameAtBeat(offBeat, sampleRate);
-
-            ScheduledEvent offEvent{};
-            offEvent.sampleFrame = offFrame;
-            offEvent.instanceId = inst.instanceId;
-            offEvent.unitId = note.unitId; // [NEW]
-            offEvent.channelIdx = channelIdx;
-            offEvent.statusByte = 0x80; // Note-off
-            offEvent.data1 = note.pitch;
-            offEvent.data2 = 0;
-            offEvent.priority = 0; // Note-off comes first at same sample
-
-            if (!m_rtQueue.push(offEvent)) {
-                m_overflowCounter.fetch_add(1, std::memory_order_relaxed);
+            if (!suppressNoteOff && offFrame >= scheduleFromFrame && offFrame < windowEnd) {
+                ScheduledEvent offEvent{};
+                offEvent.sampleFrame = offFrame;
+                offEvent.instanceId = inst.instanceId;
+                offEvent.unitId = note.unitId;
+                offEvent.channelIdx = channelIdx;
+                offEvent.statusByte = 0x80;
+                offEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
+                offEvent.data2 = 0;
+                offEvent.priority = 0;
+                pendingEvents.push_back(offEvent);
             }
+        }
 
-            inst.nextEventIdx++;
+        inst.scheduledThroughFrame = windowEnd;
+    }
+
+    std::sort(pendingEvents.begin(), pendingEvents.end(), eventComesBefore);
+    for (const auto& event : pendingEvents) {
+        if (!m_rtQueue.push(event)) {
+            m_overflowCounter.fetch_add(1, std::memory_order_relaxed);
         }
     }
 }
@@ -279,7 +353,7 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
 void PatternPlaybackEngine::flush() {
     std::lock_guard<std::mutex> lock(m_mutex);
     for (auto& inst : m_activeInstances) {
-        inst.nextEventIdx = 0;
+        inst.scheduledThroughFrame = 0;
     }
     ScheduledEvent ev;
     while (m_rtQueue.peek(ev)) {

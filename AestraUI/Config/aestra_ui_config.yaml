@@ -83,7 +83,7 @@ colors:
 layout:
   # Panel widths
   fileBrowserWidth: 260.0          # Left sidebar width (increased for hierarchy)
-  trackControlsWidth: 200.0        # Track controls panel width
+  trackControlsWidth: 236.0        # Track controls panel width (>=220 for name + fader + M/S/R)
   timelineAreaWidth: 800.0         # Main timeline area width
 
   # Track dimensions

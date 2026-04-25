@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PlatformWindowWin32.h"
 
+#include <vector>
 #include "../../../AestraCore/include/AestraAssert.h"
 #include "../../../AestraCore/include/AestraLog.h"
 #include "../../../AestraUI/External/glad/include/glad/glad.h"
@@ -96,17 +97,16 @@ bool PlatformWindowWin32::create(const WindowDesc& desc) {
 
     // Convert title to wide string
     int titleLen = MultiByteToWideChar(CP_UTF8, 0, m_title.c_str(), -1, nullptr, 0);
-    wchar_t* wideTitle = new wchar_t[titleLen];
-    MultiByteToWideChar(CP_UTF8, 0, m_title.c_str(), -1, wideTitle, titleLen);
+    std::vector<wchar_t> wideTitle(titleLen);
+    MultiByteToWideChar(CP_UTF8, 0, m_title.c_str(), -1, wideTitle.data(), titleLen);
 
     // Create window
     DWORD exStyle = WS_EX_APPWINDOW;
 
-    m_hwnd = CreateWindowExW(exStyle, WINDOW_CLASS_NAME, wideTitle, style, x, y, windowWidth, windowHeight, nullptr,
+    m_hwnd = CreateWindowExW(exStyle, WINDOW_CLASS_NAME, wideTitle.data(), style, x, y, windowWidth, windowHeight, nullptr,
                              nullptr, GetModuleHandle(nullptr),
                              this // Pass 'this' pointer to WM_CREATE
     );
-    delete[] wideTitle;
 
     if (!m_hwnd) {
         AESTRA_LOG_ERROR("Failed to create window");
@@ -910,10 +910,9 @@ LRESULT PlatformWindowWin32::handleMessage(UINT msg, WPARAM wParam, LPARAM lPara
 void PlatformWindowWin32::setTitle(const std::string& title) {
     m_title = title;
     int titleLen = MultiByteToWideChar(CP_UTF8, 0, title.c_str(), -1, nullptr, 0);
-    wchar_t* wideTitle = new wchar_t[titleLen];
-    MultiByteToWideChar(CP_UTF8, 0, title.c_str(), -1, wideTitle, titleLen);
-    SetWindowTextW(m_hwnd, wideTitle);
-    delete[] wideTitle;
+    std::vector<wchar_t> wideTitle(titleLen);
+    MultiByteToWideChar(CP_UTF8, 0, title.c_str(), -1, wideTitle.data(), titleLen);
+    SetWindowTextW(m_hwnd, wideTitle.data());
 }
 
 void PlatformWindowWin32::setSize(int width, int height) {
@@ -962,6 +961,14 @@ void PlatformWindowWin32::show() {
 
 void PlatformWindowWin32::hide() {
     ShowWindow(m_hwnd, SW_HIDE);
+}
+
+bool PlatformWindowWin32::isVisible() const {
+    return m_hwnd && (IsWindowVisible(m_hwnd) == TRUE);
+}
+
+bool PlatformWindowWin32::isMapped() const {
+    return isVisible() && !isMinimized();
 }
 
 void PlatformWindowWin32::minimize() {

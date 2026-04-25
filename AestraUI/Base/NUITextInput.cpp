@@ -2,6 +2,7 @@
 #include "NUITextInput.h"
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
+#include "../../AestraPlat/include/AestraPlatform.h"
 #include <algorithm>
 #include <cmath>
 #include <chrono>
@@ -725,7 +726,9 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
         case NUIKeyCode::C:
             if (event.modifiers & NUIModifiers::Ctrl)
             {
-                // TODO: Copy to clipboard
+                if (auto* utils = Aestra::Platform::getUtils()) {
+                    utils->setClipboardText(getSelectedText());
+                }
                 break;
             }
             [[fallthrough]];
@@ -733,7 +736,11 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
         case NUIKeyCode::V:
             if (event.modifiers & NUIModifiers::Ctrl)
             {
-                // TODO: Paste from clipboard
+                if (!readOnly_) {
+                    if (auto* utils = Aestra::Platform::getUtils()) {
+                        insertText(utils->getClipboardText());
+                    }
+                }
                 break;
             }
             [[fallthrough]];
@@ -741,8 +748,29 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
         case NUIKeyCode::X:
             if (event.modifiers & NUIModifiers::Ctrl)
             {
-                // TODO: Cut to clipboard
+                if (!readOnly_) {
+                    if (auto* utils = Aestra::Platform::getUtils()) {
+                        utils->setClipboardText(getSelectedText());
+                    }
+                    deleteSelectedText();
+                }
                 break;
+            }
+            [[fallthrough]];
+            
+        case NUIKeyCode::Z:
+            if (event.modifiers & NUIModifiers::Ctrl)
+            {
+                // Don't consume Ctrl+Z/Ctrl+Shift+Z — let it bubble up to global undo/redo handler
+                return;
+            }
+            [[fallthrough]];
+            
+        case NUIKeyCode::Y:
+            if (event.modifiers & NUIModifiers::Ctrl)
+            {
+                // Don't consume Ctrl+Y — let it bubble up to global redo handler
+                return;
             }
             [[fallthrough]];
             

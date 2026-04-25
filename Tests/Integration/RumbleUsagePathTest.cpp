@@ -61,18 +61,34 @@ int main() {
 
     auto& manager = PluginManager::getInstance();
     std::cout << "TEST: plugin manager initializes... ";
-    assert(manager.initialize());
+    if (!manager.initialize()) {
+        std::cerr << "FAIL: plugin manager failed to initialize\n";
+        return 1;
+    }
     std::cout << "✅ PASS\n";
 
     auto instance = manager.createInstance(makeRumbleInfo());
     std::cout << "TEST: manager creates internal rumble instance... ";
-    assert(instance != nullptr);
+    if (!instance) {
+        std::cerr << "FAIL: manager returned null rumble instance\n";
+        manager.shutdown();
+        return 1;
+    }
     std::cout << "✅ PASS\n";
 
     std::cout << "TEST: instance initializes and activates... ";
-    assert(instance->initialize(48000.0, 256));
+    if (!instance->initialize(48000.0, 256)) {
+        std::cerr << "FAIL: rumble instance failed to initialize\n";
+        manager.shutdown();
+        return 1;
+    }
     instance->activate();
-    assert(instance->isActive());
+    if (!instance->isActive()) {
+        std::cerr << "FAIL: rumble instance failed to activate\n";
+        instance->shutdown();
+        manager.shutdown();
+        return 1;
+    }
     std::cout << "✅ PASS\n";
 
     instance->setParameter(0, 0.58f); // decay
@@ -127,10 +143,14 @@ int main() {
     const auto stats = analyze(interleaved);
 
     std::cout << "TEST: rendered audio is sane and audible... ";
-    assert(!stats.hasInvalid);
-    assert(stats.peak > 1.0e-5f);
-    assert(stats.peak < 0.98f);
-    assert(stats.rms > 1.0e-4);
+    if (stats.hasInvalid || stats.peak <= 1.0e-5f || stats.peak >= 0.98f || stats.rms <= 1.0e-4) {
+        std::cerr << "FAIL: invalid render stats. peak=" << stats.peak << " rms=" << stats.rms
+                  << " invalid=" << stats.hasInvalid << "\n";
+        instance->deactivate();
+        instance->shutdown();
+        manager.shutdown();
+        return 1;
+    }
     std::cout << "✅ PASS\n";
 
     std::cout << "  Peak: " << stats.peak << "\n";

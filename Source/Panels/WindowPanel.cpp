@@ -2,6 +2,7 @@
 #include "WindowPanel.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
@@ -9,9 +10,37 @@
 
 using namespace Aestra::Audio;
 
+namespace {
+AestraUI::NUICursorStyle cursorStyleForResizeEdges(int edges) {
+    constexpr int kResizeLeft = 1 << 0;
+    constexpr int kResizeRight = 1 << 1;
+    constexpr int kResizeTop = 1 << 2;
+    constexpr int kResizeBottom = 1 << 3;
+    const bool left = (edges & kResizeLeft) != 0;
+    const bool right = (edges & kResizeRight) != 0;
+    const bool top = (edges & kResizeTop) != 0;
+    const bool bottom = (edges & kResizeBottom) != 0;
+
+    if ((left && top) || (right && bottom)) {
+        return AestraUI::NUICursorStyle::ResizeNWSE;
+    }
+    if ((right && top) || (left && bottom)) {
+        return AestraUI::NUICursorStyle::ResizeNESW;
+    }
+    if (left || right) {
+        return AestraUI::NUICursorStyle::ResizeEW;
+    }
+    if (top || bottom) {
+        return AestraUI::NUICursorStyle::ResizeNS;
+    }
+    return AestraUI::NUICursorStyle::Arrow;
+}
+} // namespace
+
 WindowPanel::WindowPanel(const std::string& title)
     : m_title(title)
 {
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     const char* minimizeSvg = R"(
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 12h12"/>
@@ -35,21 +64,23 @@ WindowPanel::WindowPanel(const std::string& title)
         </svg>
     )";
 
+    const auto iconColor = theme.getColor("textPrimary").withAlpha(0.92f);
     m_minimizeIcon = std::make_shared<AestraUI::NUIIcon>(minimizeSvg);
-    m_minimizeIcon->setColor(AestraUI::NUIColor(0.92f, 0.92f, 0.96f, 0.9f));
+    m_minimizeIcon->setColor(iconColor);
     m_maximizeIcon = std::make_shared<AestraUI::NUIIcon>(maximizeSvg);
-    m_maximizeIcon->setColor(AestraUI::NUIColor(0.92f, 0.92f, 0.96f, 0.9f));
+    m_maximizeIcon->setColor(iconColor);
     m_restoreIcon = std::make_shared<AestraUI::NUIIcon>(restoreSvg);
-    m_restoreIcon->setColor(AestraUI::NUIColor(0.92f, 0.92f, 0.96f, 0.9f));
+    m_restoreIcon->setColor(iconColor);
     m_closeIcon = std::make_shared<AestraUI::NUIIcon>(closeSvg);
-    m_closeIcon->setColor(AestraUI::NUIColor(0.92f, 0.92f, 0.96f, 0.9f));
+    m_closeIcon->setColor(iconColor);
 
     // Create close button (X)
     m_closeButton = std::make_shared<AestraUI::NUIButton>();
     m_closeButton->setStyle(AestraUI::NUIButton::Style::Text);
+    m_closeButton->setText("");
     m_closeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-    m_closeButton->setHoverColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f)); // Increased from 0.08
-    m_closeButton->setPressedColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.14f));
+    m_closeButton->setHoverColor(theme.getColor("error").withAlpha(0.24f));
+    m_closeButton->setPressedColor(theme.getColor("error").withAlpha(0.16f));
     m_closeButton->setTextColor(AestraUI::NUIColor::transparent());
     m_closeButton->setOnClick([this]() {
         onCloseClicked();
@@ -59,9 +90,10 @@ WindowPanel::WindowPanel(const std::string& title)
     // Create maximize button ([] when normal, [ ] when maximized)
     m_maximizeButton = std::make_shared<AestraUI::NUIButton>();
     m_maximizeButton->setStyle(AestraUI::NUIButton::Style::Text);
+    m_maximizeButton->setText("");
     m_maximizeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-    m_maximizeButton->setHoverColor(AestraUI::NUIColor::white().withAlpha(0.5f));
-    m_maximizeButton->setPressedColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.14f));
+    m_maximizeButton->setHoverColor(theme.getColor("primary").withAlpha(0.20f));
+    m_maximizeButton->setPressedColor(theme.getColor("primary").withAlpha(0.14f));
     m_maximizeButton->setTextColor(AestraUI::NUIColor::transparent());
     m_maximizeButton->setOnClick([this]() {
         onMaximizeClicked();
@@ -71,9 +103,10 @@ WindowPanel::WindowPanel(const std::string& title)
     // Create minimize button (_)
     m_minimizeButton = std::make_shared<AestraUI::NUIButton>();
     m_minimizeButton->setStyle(AestraUI::NUIButton::Style::Text);
+    m_minimizeButton->setText("");
     m_minimizeButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-    m_minimizeButton->setHoverColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.25f)); // Increased
-    m_minimizeButton->setPressedColor(AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.14f));
+    m_minimizeButton->setHoverColor(theme.getColor("primary").withAlpha(0.20f));
+    m_minimizeButton->setPressedColor(theme.getColor("primary").withAlpha(0.14f));
     m_minimizeButton->setTextColor(AestraUI::NUIColor::transparent());
     m_minimizeButton->setOnClick([this]() {
         onMinimizeClicked();
@@ -118,11 +151,6 @@ void WindowPanel::setMinimized(bool minimized) {
         }
         
         Log::info("WindowPanel '" + m_title + "' expanded");
-    }
-    
-    // Update button text
-    if (m_minimizeButton) {
-        m_minimizeButton->setText(m_minimized ? "+" : "_"); // + for expand, _ for minimize
     }
     
     // Notify parent to relayout
@@ -174,41 +202,31 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect titleBarRect(bounds.x, bounds.y, bounds.width, m_titleBarHeight);
     m_titleBarBounds = titleBarRect;
     
-    // GLASS DESIGN: Unified semi-transparent background + border
-    // We draw ONE rounded rect for the whole window if possible, or composed rects.
-    // Since WindowPanel is a floating window, let's treat the whole thing as one glass pane.
-    
-    // Consistent corner radius matching child components
+    // Unified panel shell + flat titlebar treatment
     const float windowRadius = theme.getRadius("m");
-    auto glassColor = theme.getColor("surfaceTertiary");
+    auto bodyColor = theme.getColor("surfaceTertiary");
+    auto titleBarColor = theme.getColor("surfaceRaised");
     auto borderColor = theme.getColor("border");
 
     renderer.drawShadow(bounds, 0.0f, 10.0f, 28.0f, AestraUI::NUIColor(0, 0, 0, 0.22f));
     
-    // Draw content background (if expanded) - Unified with Title Bar in Glass Mode
+    // Draw content background
     if (!m_minimized) {
-        // Draw one large glass pane for the whole window
-        // Full window body with rounded corners
-        renderer.fillRoundedRect(bounds, windowRadius, glassColor);
+        renderer.fillRoundedRect(bounds, windowRadius, bodyColor);
         renderer.strokeRoundedRect(bounds, windowRadius, 1.0f, borderColor);
-        renderer.fillRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, std::min(44.0f, bounds.height - 2.0f)},
-                                 std::max(0.0f, windowRadius - 1.0f),
-                                 AestraUI::NUIColor::white().withAlpha(0.020f));
+        renderer.fillRect(titleBarRect, titleBarColor.withAlpha(0.98f));
         
-        // Separator for title bar (subtle)
+        // Separator for title bar
         renderer.drawLine(
             AestraUI::NUIPoint(bounds.x + 4, bounds.y + m_titleBarHeight),
             AestraUI::NUIPoint(bounds.x + bounds.width - 4, bounds.y + m_titleBarHeight),
             1.0f, 
-            borderColor.withAlpha(0.5f)
+            borderColor.withAlpha(0.72f)
         );
     } else {
-        // Minimized: Just title bar with rounded corners
-        renderer.fillRoundedRect(titleBarRect, windowRadius, glassColor);
+        // Minimized: titlebar only
+        renderer.fillRoundedRect(titleBarRect, windowRadius, titleBarColor.withAlpha(0.98f));
         renderer.strokeRoundedRect(titleBarRect, windowRadius, 1.0f, borderColor);
-        renderer.fillRoundedRect({titleBarRect.x + 1.0f, titleBarRect.y + 1.0f, titleBarRect.width - 2.0f, titleBarRect.height * 0.52f},
-                                 std::max(0.0f, windowRadius - 1.0f),
-                                 AestraUI::NUIColor::white().withAlpha(0.020f));
     }
     
     // Draw title text
@@ -248,6 +266,55 @@ void WindowPanel::onResize(int width, int height) {
 bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled()) return false;
 
+    if (m_resizing) {
+        if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
+            m_resizing = false;
+            m_resizeEdges = ResizeNone;
+            if (m_onResizeEnd) m_onResizeEnd();
+            return true;
+        }
+
+        if (event.button == AestraUI::NUIMouseButton::None) {
+            const auto delta = event.position - m_resizeStartPos;
+            AestraUI::NUIRect proposed = m_resizeStartBounds;
+
+            if (m_resizeEdges & ResizeLeft) {
+                proposed.x = m_resizeStartBounds.x + delta.x;
+                proposed.width = m_resizeStartBounds.width - delta.x;
+            }
+            if (m_resizeEdges & ResizeRight) {
+                proposed.width = m_resizeStartBounds.width + delta.x;
+            }
+            if (m_resizeEdges & ResizeTop) {
+                proposed.y = m_resizeStartBounds.y + delta.y;
+                proposed.height = m_resizeStartBounds.height - delta.y;
+            }
+            if (m_resizeEdges & ResizeBottom) {
+                proposed.height = m_resizeStartBounds.height + delta.y;
+            }
+
+            if (proposed.width < m_minPanelWidth) {
+                if (m_resizeEdges & ResizeLeft) {
+                    proposed.x = m_resizeStartBounds.right() - m_minPanelWidth;
+                }
+                proposed.width = m_minPanelWidth;
+            }
+            if (proposed.height < m_minPanelHeight) {
+                if (m_resizeEdges & ResizeTop) {
+                    proposed.y = m_resizeStartBounds.bottom() - m_minPanelHeight;
+                }
+                proposed.height = m_minPanelHeight;
+            }
+
+            if (m_onResizeMove) {
+                m_onResizeMove(proposed);
+            } else {
+                setBounds(proposed);
+            }
+            return true;
+        }
+    }
+
     // Title-bar drag handling (panels can float independently of the playlist layout).
     if (m_draggingTitleBar) {
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
@@ -269,6 +336,19 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     }
 
     if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+        // Edge/corner resize handling (skip when minimized/maximized).
+        if (!m_minimized && !m_maximized) {
+            const int edges = getResizeEdgesAtPoint(event.position);
+            if (edges != ResizeNone) {
+                m_resizing = true;
+                m_resizeEdges = edges;
+                m_resizeStartPos = event.position;
+                m_resizeStartBounds = getBounds();
+                if (m_onResizeStart) m_onResizeStart();
+                return true;
+            }
+        }
+
         // Double-click the title bar to toggle maximize (excluding buttons).
         bool insideTitle = m_titleBarBounds.contains(event.position);
         
@@ -311,9 +391,7 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (handledByChildren) return true;
 
     // Consume events that occur inside the panel bounds to prevent "click-through"
-    // into underlying timeline/content layers.
-    if (getBounds().contains(event.position)) {
-        return true;
+    if (getBounds().contains(event.position)) {        return true;
     }
 
     return false;
@@ -321,12 +399,14 @@ bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
 void WindowPanel::layoutContent() {
     auto bounds = getBounds();
+    const float panelWidth = std::max(100.0f, bounds.width);
+    const float panelHeight = std::max(m_titleBarHeight + 20.0f, bounds.height);
     const float buttonSize = std::max(18.0f, m_titleBarHeight - 8.0f);
     const float buttonPadding = 4.0f;
-    float currentX = bounds.width - buttonSize - buttonPadding;
+    float currentX = panelWidth - buttonSize - buttonPadding;
     
     // Update title bar bounds for hit testing (absolute coordinates)
-    m_titleBarBounds = NUIAbsolute(bounds, 0, 0, bounds.width, m_titleBarHeight);
+    m_titleBarBounds = NUIAbsolute(bounds, 0, 0, panelWidth, m_titleBarHeight);
     
     // Layout buttons right-to-left: Close, Maximize, Minimize
     if (m_closeButton) {
@@ -346,11 +426,11 @@ void WindowPanel::layoutContent() {
     // Layout content (below title bar)
     if (m_content && !m_minimized) {
         float contentY = m_titleBarHeight;
-        float contentHeight = bounds.height - m_titleBarHeight;
-        m_content->setBounds(NUIAbsolute(bounds, 0, contentY, bounds.width, contentHeight));
+        float contentHeight = std::max(20.0f, panelHeight - m_titleBarHeight);
+        m_content->setBounds(NUIAbsolute(bounds, 0, contentY, panelWidth, contentHeight));
         
         // Trigger content's internal layout
-        m_content->onResize(static_cast<int>(bounds.width), static_cast<int>(contentHeight));
+        m_content->onResize(static_cast<int>(panelWidth), static_cast<int>(contentHeight));
     }
 }
 
@@ -368,4 +448,33 @@ void WindowPanel::onCloseClicked() {
     if (m_onClose) {
         m_onClose();
     }
+}
+
+void WindowPanel::setMinimumPanelSize(float width, float height) {
+    m_minPanelWidth = std::max(100.0f, width);
+    m_minPanelHeight = std::max(m_titleBarHeight + 40.0f, height);
+}
+
+AestraUI::NUICursorStyle WindowPanel::getResizeCursorStyleForPoint(const AestraUI::NUIPoint& point) const {
+    if (!isVisible() || !isEnabled() || m_minimized || m_maximized) {
+        return AestraUI::NUICursorStyle::Arrow;
+    }
+
+    const int edges = (m_resizing && m_resizeEdges != ResizeNone)
+        ? m_resizeEdges
+        : getResizeEdgesAtPoint(point);
+    return cursorStyleForResizeEdges(edges);
+}
+
+int WindowPanel::getResizeEdgesAtPoint(const AestraUI::NUIPoint& point) const {
+    constexpr float kResizeHit = 7.0f;
+    const auto b = getBounds();
+    if (!b.contains(point)) return ResizeNone;
+
+    int edges = ResizeNone;
+    if (std::abs(point.x - b.x) <= kResizeHit) edges |= ResizeLeft;
+    if (std::abs(point.x - b.right()) <= kResizeHit) edges |= ResizeRight;
+    if (std::abs(point.y - b.y) <= kResizeHit) edges |= ResizeTop;
+    if (std::abs(point.y - b.bottom()) <= kResizeHit) edges |= ResizeBottom;
+    return edges;
 }

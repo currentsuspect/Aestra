@@ -77,7 +77,7 @@ struct MeterSnapshotBuffer {
         s.lowR.store(loR, std::memory_order_relaxed);
         s.correlation.store(corr, std::memory_order_relaxed);
         s.lufs.store(lufs, std::memory_order_relaxed);
-        // integratedLufs is updated separately by LUFS metering
+        s.integratedLufs.store(lufs, std::memory_order_relaxed);
     }
 
     void setClip(int slot, bool cL, bool cR) {

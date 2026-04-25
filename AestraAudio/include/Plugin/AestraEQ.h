@@ -476,7 +476,7 @@ public:
     }
 
     // ---- Editor (headless for now) ----
-    bool hasEditor() const { return false; }
+    bool hasEditor() const { return true; }
     bool openEditor(void*) { return false; }
     void closeEditor() {}
     bool isEditorOpen() const { return false; }

@@ -15,13 +15,97 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #ifdef _WIN32
 #include <objbase.h>
 #include <windows.h>
+#elif __APPLE__
+#include <limits.h>
+#include <mach-o/dyld.h>
+#else
+#include <unistd.h>
 #endif
 
 using namespace Aestra;
+
+namespace {
+std::filesystem::path getExecutableDirectory() {
+#ifdef _WIN32
+    char exePath[MAX_PATH] = {};
+    const DWORD len = GetModuleFileNameA(nullptr, exePath, MAX_PATH);
+    if (len > 0 && len < MAX_PATH) {
+        return std::filesystem::path(std::string(exePath, len)).parent_path();
+    }
+#elif __APPLE__
+    char exePath[PATH_MAX] = {};
+    uint32_t size = sizeof(exePath);
+    if (_NSGetExecutablePath(exePath, &size) == 0) {
+        return std::filesystem::path(exePath).parent_path();
+    }
+#else
+    char exePath[4096] = {};
+    const ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
+    if (len > 0) {
+        exePath[len] = '\0';
+        return std::filesystem::path(exePath).parent_path();
+    }
+#endif
+    return {};
+}
+
+std::filesystem::path findAestraFontDirectory() {
+    namespace fs = std::filesystem;
+    std::vector<fs::path> roots;
+    roots.push_back(fs::current_path());
+
+    const fs::path exeDir = getExecutableDirectory();
+    if (!exeDir.empty() && exeDir != roots.front()) {
+        roots.push_back(exeDir);
+    }
+
+    std::error_code ec;
+    for (const auto& root : roots) {
+        fs::path probe = root;
+        while (!probe.empty()) {
+            const fs::path candidate = probe / "AestraAssets" / "fonts";
+            const fs::path geistMedium = candidate / "Geist" / "Geist-Medium.ttf";
+            if (fs::exists(geistMedium, ec) && !ec) {
+                return candidate;
+            }
+
+            const fs::path parent = probe.parent_path();
+            if (parent == probe) {
+                break;
+            }
+            probe = parent;
+        }
+    }
+
+    return {};
+}
+
+void configureFontDirectoryEnv() {
+    if (std::getenv("AESTRA_FONT_DIR") != nullptr) {
+        Log::info("AESTRA_FONT_DIR already set externally");
+        return;
+    }
+
+    const auto fontDir = findAestraFontDirectory();
+    if (fontDir.empty()) {
+        Log::warning("Could not auto-detect AestraAssets/fonts; Geist may fall back to system font");
+        return;
+    }
+
+#ifdef _WIN32
+    _putenv_s("AESTRA_FONT_DIR", fontDir.string().c_str());
+#else
+    setenv("AESTRA_FONT_DIR", fontDir.string().c_str(), 1);
+#endif
+
+    Log::info("Configured AESTRA_FONT_DIR: " + fontDir.string());
+}
+} // namespace
 
 // =============================================================================
 // Initialize Logging to File
@@ -61,6 +145,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     
     // Initialize file logging FIRST (before any other logging)
     initializeFileLogging();
+    configureFontDirectoryEnv();
     
     // Initialize COM as STA (Single-Threaded Apartment) for ASIO support
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
@@ -90,6 +175,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 #else
 int main(int argc, char* argv[]) {
     initializeFileLogging();
+    configureFontDirectoryEnv();
     
     int exitCode = 0;
     std::string projectPath;

@@ -212,6 +212,10 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/SplitClipCommand.cpp
     src/Commands/AddClipCommand.cpp
     src/Commands/CreateLaneCommand.cpp
+    src/Commands/AddNoteCommand.cpp
+    src/Commands/RemoveNoteCommand.cpp
+    src/Commands/MoveNoteCommand.cpp
+    src/Commands/ResizeNoteCommand.cpp
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp
@@ -220,9 +224,12 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Plugin/PluginScanner.cpp
     src/Plugin/PluginManager.cpp
     src/Plugin/PluginFactory.cpp
+    src/Plugin/OutOfProcessPluginInstance.cpp
+    src/Plugin/InternalPluginRegistry.cpp
     src/Plugin/BuiltInPlugins.cpp
     src/Plugin/SamplerPlugin.cpp
     src/Plugin/EffectChain.cpp
+    src/CommandManager.cpp
 )
 
 # Driver registry wiring:
@@ -329,6 +336,10 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Commands/SetPanCommand.h
     include/Commands/SetMuteCommand.h
     include/Commands/SetSoloCommand.h
+    include/Commands/AddNoteCommand.h
+    include/Commands/RemoveNoteCommand.h
+    include/Commands/MoveNoteCommand.h
+    include/Commands/ResizeNoteCommand.h
     
     # Headless / batch processing
     include/Headless/HeadlessMusicGenerator.h
@@ -341,8 +352,11 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Plugin/PluginScanner.h
     include/Plugin/PluginManager.h
     include/Plugin/PluginFactory.h
+    include/Plugin/OutOfProcessPluginInstance.h
+    include/Plugin/InternalPluginRegistry.h
     include/Plugin/BuiltInPlugins.h
     include/Plugin/EffectChain.h
+    include/CommandManager.h
     include/Plugin/VST3Host.h
     include/Plugin/AestraEQ.h
     include/Plugin/AestraComp.h
@@ -427,6 +441,7 @@ if(TARGET AestraCore)
     target_link_libraries(AestraAudioCore PUBLIC AestraCore)
 endif()
 
+target_link_libraries(AestraAudioCore PUBLIC AestraLicense)
 target_link_libraries(AestraAudioCore PUBLIC AestraPlat)
 
 # macOS frameworks needed by VST3 hosting
@@ -445,17 +460,13 @@ if(WIN32)
     target_link_libraries(AestraAudioCore PUBLIC mfplat mfreadwrite mfuuid)
 endif()
 
-# =============================================================================
-# Premium Plugins Integration (Optional)
-# =============================================================================
-if(EXISTS "${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/CMakeLists.txt")
-    message(STATUS "AestraRumble: Linking premium 808 synthesizer")
-    target_link_libraries(AestraAudioCore PRIVATE AestraRumble)
-    target_compile_definitions(AestraAudioCore PRIVATE AESTRA_HAS_PLUGINS)
-    target_include_directories(AestraAudioCore PRIVATE 
-        ${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/include
-    )
-endif()
+add_executable(AestraPluginHost
+    src/Plugin/AestraPluginHostMain.cpp
+)
+
+set_target_properties(AestraPluginHost PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
 
 # ENFORCEMENT: AestraAudioCore MUST NOT link Windows libraries
 # We can check this by property retrieval (not easy at config time for implicit libs)
@@ -560,6 +571,10 @@ elseif(UNIX)
         add_library(AestraAudio INTERFACE)
         target_link_libraries(AestraAudio INTERFACE AestraAudioCore)
     endif()
+endif()
+
+if(TARGET AestraAudio AND TARGET AestraPremiumPlugins)
+    target_link_libraries(AestraAudio INTERFACE AestraPremiumPlugins)
 endif()
 
 

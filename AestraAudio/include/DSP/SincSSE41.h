@@ -14,20 +14,29 @@ namespace Audio {
 /**
  * @brief SSE4.1-optimized dot product for Sinc64 Turbo.
  *
+ * TASK 2: Phase interpolation — blend between c0 and c1 using alpha.
+ * coeff[t] = c0[t] + alpha * (c1[t] - c0[t])
+ * Then standard vectorized dot product.
+ *
  * This function MUST ONLY be called if CPUDetection::hasSSE41() returns true
  * and CPUDetection::hasAVX2() returns false.
- *
- * Uses SSE4.1 _mm_dp_ps for efficient dot products, processing 4 taps at a time.
  */
-inline void sincDotProductSSE41(const float* coeffs,
+inline void sincDotProductSSE41(const float* c0,
+                                const float* c1,
+                                float alpha,
                                 const float* samples, // Interleaved L/R stereo
                                 float& sumL, float& sumR) {
     __m128 vSumL = _mm_setzero_ps();
     __m128 vSumR = _mm_setzero_ps();
+    __m128 vAlpha = _mm_set1_ps(alpha);
 
     // Process 64 taps, 4 at a time
     for (int i = 0; i < 64; i += 4) {
-        __m128 vCoeff = _mm_loadu_ps(&coeffs[i]);
+        __m128 vC0 = _mm_loadu_ps(&c0[i]);
+        __m128 vC1 = _mm_loadu_ps(&c1[i]);
+
+        // Phase interpolation: coeff = c0 + alpha * (c1 - c0)
+        __m128 vCoeff = _mm_add_ps(vC0, _mm_mul_ps(_mm_sub_ps(vC1, vC0), vAlpha));
 
         // Gather left channel samples (every other sample starting at 0)
         __m128 vL = _mm_set_ps(samples[(i + 3) * 2], samples[(i + 2) * 2], samples[(i + 1) * 2], samples[i * 2]);
@@ -41,16 +50,12 @@ inline void sincDotProductSSE41(const float* coeffs,
         vSumR = _mm_add_ps(vSumR, _mm_mul_ps(vR, vCoeff));
     }
 
-    // Horizontal sum using SSE3 hadd or SSE fallback
-    // SSE4.1 doesn't add horizontal sum, but we can use shuffle+add
-
-    // Sum L: [a, b, c, d] -> a+b+c+d
+    // Horizontal sum
     __m128 shufL = _mm_shuffle_ps(vSumL, vSumL, _MM_SHUFFLE(2, 3, 0, 1));
     __m128 sumsL = _mm_add_ps(vSumL, shufL);
     shufL = _mm_movehl_ps(shufL, sumsL);
     sumsL = _mm_add_ss(sumsL, shufL);
 
-    // Sum R: same procedure
     __m128 shufR = _mm_shuffle_ps(vSumR, vSumR, _MM_SHUFFLE(2, 3, 0, 1));
     __m128 sumsR = _mm_add_ps(vSumR, shufR);
     shufR = _mm_movehl_ps(shufR, sumsR);

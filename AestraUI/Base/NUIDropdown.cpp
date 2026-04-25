@@ -34,7 +34,8 @@ NUIDropdown::NUIDropdown()
         borderColor_ = props.border;
         textColor_ = props.textPrimary;
         arrowColor_ = props.textSecondary;
-    } catch (...) {
+    } catch (const std::exception& e) {
+        // Fallback to defaults if theme retrieval fails
         backgroundColor_ = NUIColor(0.15f, 0.15f, 0.15f, 1.0f);
         hoverColor_ = NUIColor(0.22f, 0.24f, 0.30f, 1.0f);
         selectedColor_ = NUIColor(0.25f, 0.35f, 0.45f, 1.0f);

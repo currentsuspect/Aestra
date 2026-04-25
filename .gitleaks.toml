@@ -20,3 +20,10 @@ title = "Aestra gitleaks config"
   regex = '''-----BEGIN (RSA|OPENSSH|EC) PRIVATE KEY-----'''
   entropy = 0
   keywords = ["PRIVATE KEY"]
+
+[[rules]]
+  id = "Aestra-openai-style-api-key"
+  description = "OpenAI-compatible API key"
+  regex = '''\bsk-[A-Za-z0-9][A-Za-z0-9_-]{20,}\b'''
+  entropy = 3.5
+  keywords = ["sk-"]

@@ -185,16 +185,13 @@ void StreamingDecoder::stop() {
         m_decodeThread.join();
     }
 
-    // Delete any pending buffer from previous stop
     if (m_pendingDelete) {
         delete m_pendingDelete;
         m_pendingDelete = nullptr;
     }
 
-    // Atomically swap out the current buffer and delete it
-    // Safe because thread is joined and no RT reads can happen in Idle state
-    AudioRingBuffer* old = m_ringBuffer.exchange(nullptr, std::memory_order_acq_rel);
-    delete old;
+    m_ringBufferOwned.reset();
+    m_ringBuffer.store(nullptr, std::memory_order_release);
 
     m_state.store(State::Idle, std::memory_order_release);
 }
@@ -258,10 +255,9 @@ void StreamingDecoder::decodeThreadFunc(const std::string& path, double targetLa
 
     // Create ring buffer (2 seconds capacity)
     size_t bufferFrames = static_cast<size_t>(sampleRate * 2.0);
-    AudioRingBuffer* newBuffer = new AudioRingBuffer(bufferFrames, channels);
+    m_ringBufferOwned = std::make_unique<AudioRingBuffer>(bufferFrames, channels);
 
-    // Atomically publish to RT thread (release semantics ensure buffer is fully constructed)
-    m_ringBuffer.store(newBuffer, std::memory_order_release);
+    m_ringBuffer.store(m_ringBufferOwned.get(), std::memory_order_release);
 
     // Determine pre-buffer amount based on latency target
     size_t preBufferFrames = static_cast<size_t>((targetLatencyMs / 1000.0) * sampleRate);

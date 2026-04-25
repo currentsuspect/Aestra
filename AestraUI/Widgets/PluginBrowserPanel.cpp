@@ -4,6 +4,7 @@
 #include "NUIRenderer.h"
 #include "NUIDragDrop.h"
 #include "NUIContextMenu.h"
+#include "NUIThemeSystem.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -19,21 +20,21 @@ namespace AestraUI {
 // ============================================================================
 
 namespace Colors {
-    static const NUIColor panelBackground = {0.095f, 0.10f, 0.14f, 0.98f};
-    static const NUIColor panelTop = {0.12f, 0.13f, 0.18f, 0.98f};
-    static const NUIColor panelBorder = {0.42f, 0.46f, 0.60f, 0.18f};
-    static const NUIColor textPrimary = {0.97f, 0.98f, 1.0f, 1.0f};
-    static const NUIColor textSecondary = {0.72f, 0.76f, 0.86f, 1.0f};
-    static const NUIColor textDisabled = {0.42f, 0.45f, 0.55f, 1.0f};
-    static const NUIColor accentPrimary = {0.62f, 0.70f, 0.98f, 1.0f};
-    static const NUIColor accentSecondary = {0.43f, 0.89f, 0.82f, 1.0f};
-    static const NUIColor accentWarning = {0.98f, 0.80f, 0.46f, 1.0f};
-    static const NUIColor buttonBackground = {0.18f, 0.20f, 0.27f, 0.98f};
-    static const NUIColor buttonBackgroundHover = {0.22f, 0.24f, 0.33f, 0.98f};
-    static const NUIColor inputBackground = {0.14f, 0.16f, 0.22f, 0.98f};
-    static const NUIColor rowBackground = {0.15f, 0.17f, 0.23f, 0.56f};
-    static const NUIColor listHover = {0.22f, 0.24f, 0.33f, 0.86f};
-    static const NUIColor listSelected = {0.42f, 0.50f, 0.78f, 0.42f};
+    static const NUIColor panelBackground = NUIThemeManager::getInstance().getColor("backgroundPrimary");
+    static const NUIColor panelTop = NUIThemeManager::getInstance().getColor("backgroundSecondary").withAlpha(0.92f);
+    static const NUIColor panelBorder = NUIThemeManager::getInstance().getColor("border").withAlpha(0.40f);
+    static const NUIColor textPrimary = NUIThemeManager::getInstance().getColor("textPrimary");
+    static const NUIColor textSecondary = NUIThemeManager::getInstance().getColor("textSecondary");
+    static const NUIColor textDisabled = NUIThemeManager::getInstance().getColor("textDisabled");
+    static const NUIColor accentPrimary = NUIThemeManager::getInstance().getColor("accentPrimary");
+    static const NUIColor accentSecondary = NUIThemeManager::getInstance().getColor("accentSecondary");
+    static const NUIColor accentWarning = NUIThemeManager::getInstance().getColor("warning");
+    static const NUIColor buttonBackground = NUIThemeManager::getInstance().getColor("buttonBgDefault").withAlpha(0.94f);
+    static const NUIColor buttonBackgroundHover = NUIThemeManager::getInstance().getColor("buttonBgHover").withAlpha(0.84f);
+    static const NUIColor inputBackground = NUIThemeManager::getInstance().getColor("inputBgDefault");
+    static const NUIColor rowBackground = NUIThemeManager::getInstance().getColor("buttonBgDefault").withAlpha(0.82f);
+    static const NUIColor listHover = NUIThemeManager::getInstance().getColor("buttonBgHover").withAlpha(0.78f);
+    static const NUIColor listSelected = NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(0.20f);
 }
 
 // ============================================================================
@@ -48,12 +49,10 @@ void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
     std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     auto bounds = getBounds();
     
-    renderer.drawShadow(bounds, 0.0f, 8.0f, 18.0f, NUIColor(0, 0, 0, 0.16f));
+    renderer.drawShadow(bounds, 0.0f, 8.0f, 18.0f, NUIColor(0, 0, 0, 0.12f));
     renderer.fillRoundedRect(bounds, 12.0f, Colors::panelBackground);
     renderer.fillRoundedRect({bounds.x, bounds.y, bounds.width, 52.0f}, 12.0f, Colors::panelTop);
     renderer.strokeRoundedRect(bounds, 12.0f, 1.0f, Colors::panelBorder);
-    renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
-                               11.0f, 1.0f, NUIColor::white().withAlpha(0.025f));
     
     renderHeader(renderer);
     renderTabs(renderer);
@@ -101,13 +100,12 @@ void PluginBrowserPanel::renderTabs(NUIRenderer& renderer) {
         NUIRect tabRect = {bounds.x + 10.0f + i * (tabWidth + gap), y, tabWidth, TAB_HEIGHT - 6.0f};
         
         if (i == m_activeTab) {
-            renderer.drawShadow(tabRect, 0.0f, 4.0f, 10.0f, NUIColor(0, 0, 0, 0.10f));
             renderer.fillRoundedRect(tabRect, 10.0f, Colors::buttonBackgroundHover);
-            renderer.strokeRoundedRect(tabRect, 10.0f, 1.0f, Colors::accentPrimary.withAlpha(0.30f));
+            renderer.strokeRoundedRect(tabRect, 10.0f, 1.0f, Colors::accentPrimary.withAlpha(0.26f));
             renderer.fillRoundedRect({tabRect.x + 8.0f, tabRect.bottom() - 3.0f, tabRect.width - 16.0f, 2.0f}, 1.0f, Colors::accentPrimary);
         } else {
-            renderer.fillRoundedRect(tabRect, 10.0f, Colors::buttonBackground.withAlpha(0.82f));
-            renderer.strokeRoundedRect(tabRect, 10.0f, 1.0f, Colors::panelBorder);
+            renderer.fillRoundedRect(tabRect, 10.0f, Colors::buttonBackground.withAlpha(0.96f));
+            renderer.strokeRoundedRect(tabRect, 10.0f, 1.0f, Colors::panelBorder.withAlpha(0.70f));
         }
         
         auto measured = renderer.measureText(tabLabels[i], 10.0f);
@@ -213,7 +211,7 @@ void PluginBrowserPanel::renderScanProgress(NUIRenderer& renderer) {
     
     renderer.fillRect({bounds.x, listTop, bounds.width,
                       bounds.height - HEADER_HEIGHT - TAB_HEIGHT - SEARCH_HEIGHT},
-                     {0.02f, 0.03f, 0.05f, 0.74f});
+                     Colors::panelBackground.withAlpha(0.82f));
     
     float barWidth = bounds.width - 40;
     float barX = bounds.x + 20;
@@ -563,11 +561,8 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
     
     renderer.fillRoundedRect(bounds, 10.0f, Colors::panelBackground);
-    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, Colors::panelBorder.withAlpha(0.75f));
-    renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
-                               9.0f,
-                               1.0f,
-                               NUIColor::white().withAlpha(0.025f));
+    renderer.fillRoundedRect({bounds.x, bounds.y, bounds.width, 34.0f}, 10.0f, Colors::panelTop);
+    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, Colors::panelBorder.withAlpha(0.84f));
     
     // Enable clipping
     renderer.setClipRect(bounds);
@@ -601,29 +596,25 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     if (slot.isEmpty && !isBeingDragged) {
         // Empty Slot: Subtle transparency or very faint glass
         // Using Aestra "Deep Glass" tokens if available, otherwise manual
-        bgColor = isHovered ? NUIColor(1.0f, 1.0f, 1.0f, 0.06f) : NUIColor(0.0f, 0.0f, 0.0f, 0.18f);
-        borderColor = isHovered ? Colors::accentPrimary.withAlpha(0.26f) : NUIColor(1.0f, 1.0f, 1.0f, 0.06f);
+        bgColor = isHovered ? Colors::buttonBackgroundHover.withAlpha(0.72f) : Colors::buttonBackground.withAlpha(0.74f);
+        borderColor = isHovered ? Colors::accentPrimary.withAlpha(0.26f) : Colors::panelBorder.withAlpha(0.42f);
     } else {
         // Populated: Solid dark glass
         // If bypassed, make it slightly dimmer/transparent
         if (isBeingDragged) {
-            bgColor = isHovered ? NUIColor(1.0f, 1.0f, 1.0f, 0.1f) : NUIColor(1.0f, 1.0f, 1.0f, 0.05f);
+            bgColor = isHovered ? Colors::buttonBackgroundHover.withAlpha(0.72f) : Colors::buttonBackground.withAlpha(0.62f);
             borderColor = Colors::accentPrimary.withAlpha(0.2f);
         } else if (slot.bypassed) {
-             bgColor = NUIColor(0.0f, 0.0f, 0.0f, 0.34f);
+             bgColor = Colors::buttonBackground.withAlpha(0.64f);
              borderColor = Colors::panelBorder.withAlpha(0.5f);
         } else {
-             bgColor = isHovered ? NUIColor(0.0f, 0.0f, 0.0f, 0.56f) : NUIColor(0.0f, 0.0f, 0.0f, 0.48f);
+             bgColor = isHovered ? Colors::buttonBackgroundHover.withAlpha(0.84f) : Colors::buttonBackground.withAlpha(0.80f);
              borderColor = isHovered ? Colors::accentPrimary.withAlpha(0.82f) : Colors::panelBorder;
         }
     }
 
     renderer.fillRoundedRect(slotRect, 8.0f, bgColor);
     renderer.strokeRoundedRect(slotRect, 8.0f, 1.0f, borderColor);
-    renderer.strokeRoundedRect({slotRect.x + 1.0f, slotRect.y + 1.0f, slotRect.width - 2.0f, slotRect.height - 2.0f},
-                               7.0f,
-                               1.0f,
-                               NUIColor::white().withAlpha(0.022f));
     
     // DEBUG: Visual indicator for pending removal
     if (slot.pendingRemoval) {
@@ -634,7 +625,7 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     char numBuf[8];
     std::snprintf(numBuf, sizeof(numBuf), "%d", index + 1);
     const NUIRect indexChip{slotRect.x + 8.0f, slotRect.y + (slotRect.height - 14.0f) * 0.5f, 18.0f, 14.0f};
-    renderer.fillRoundedRect(indexChip, 7.0f, NUIColor(1.0f, 1.0f, 1.0f, slot.isEmpty ? 0.05f : 0.07f));
+    renderer.fillRoundedRect(indexChip, 7.0f, Colors::buttonBackgroundHover.withAlpha(slot.isEmpty ? 0.62f : 0.76f));
     renderer.strokeRoundedRect(indexChip, 7.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
     renderer.drawTextCentered(numBuf, indexChip, 9.0f, Colors::textDisabled.withAlpha(0.68f));
     
@@ -719,27 +710,9 @@ NUIRect EffectChainRack::slotRectForIndex(int index) const {
 }
 
 bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
-    if (event.type == NUIMouseEventType::Down) {
-         char logBuf[128];
-         std::snprintf(logBuf, sizeof(logBuf), "[Rack] onMouseEvent Down at Y=%0.1f", event.position.y);
-         Aestra::Log::info(logBuf);
-    }
     if (!isVisible()) return false;
 
-    // DEBUG: Track mouse for overlay
     m_currentMousePos = event.position;
-
-    // DEBUG: Log Clicks
-    if (event.pressed || event.released) {
-        int hit = hitTestSlot(event.position.y);
-        char logBuf[128];
-        std::snprintf(logBuf, sizeof(logBuf), "[Rack] Mouse %s Btn=%d Y=%.1f Hit=%d", 
-                      (event.pressed ? "Press" : "Release"), 
-                      (int)event.button, 
-                      event.position.y, 
-                      hit);
-        Aestra::Log::info(logBuf);
-    }
 
     auto bounds = getBounds();
     
@@ -887,60 +860,26 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
                  auto now = std::chrono::steady_clock::now();
                  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastClickTime).count();
                  bool isDoubleClick = (slotIdx == m_lastClickSlot && elapsed < 300);
-                 
-                 m_lastClickTime = now;
-                 m_lastClickSlot = slotIdx;
-                if (slotIdx != -1) {
-                     // Log click interaction for debugging
-                     char logBuf[128];
+                  
+                  m_lastClickTime = now;
+                  m_lastClickSlot = slotIdx;
+                  
+                  if (isDoubleClick) {
                      if (!m_slots[slotIdx].isEmpty) {
-                         std::snprintf(logBuf, sizeof(logBuf), "[Rack] Click on Slot %d (Filled). Pending DoubleClick check.", slotIdx);
-                         Aestra::Log::info(logBuf);
-                     } else {
-                         std::snprintf(logBuf, sizeof(logBuf), "[Rack] Click on Slot %d (Empty). Pending DoubleClick check.", slotIdx);
-                         Aestra::Log::info(logBuf);
-                     }
-                }
-                 
-                 if (isDoubleClick) {
-                    char logBuf[128];
-                    if (!m_slots[slotIdx].isEmpty) {
-                        std::snprintf(logBuf, sizeof(logBuf), "[Rack] Double Click: Slot %d -> Open Windows", slotIdx);
-                        Aestra::Log::info(logBuf);
                         if (m_onSlotClicked) m_onSlotClicked(slotIdx);
-                    } else {
-                        std::snprintf(logBuf, sizeof(logBuf), "[Rack] Double Click: Slot %d -> Open Browser", slotIdx);
-                        Aestra::Log::info(logBuf);
+                     } else {
                         if (m_onAddPluginRequested) m_onAddPluginRequested(slotIdx);
-                    }
-                    m_lastClickSlot = -1; // Reset to avoid triple-click issues
+                     }
+                     m_lastClickSlot = -1; // Reset to avoid triple-click issues
                  } else {
                      // Single click - Prepare for Drag
                      if (!m_slots[slotIdx].isEmpty) {
                          m_draggingSlotIndex = slotIdx;
                          m_dragStartPos = event.position;
                      }
-                 }
-                 return true;
-                 
-                 if (isDoubleClick) {
-                    if (!m_slots[slotIdx].isEmpty) {
-                        // Aestra::Log::info("[Rack] Double Click: Slot %d (Plugin Window)", slotIdx); // Log added above
-                        if (m_onSlotClicked) m_onSlotClicked(slotIdx);
-                    } else {
-                        // Aestra::Log::info("[Rack] Double Click: Slot %d (Add Plugin Browser)", slotIdx); // Log added above
-                        if (m_onAddPluginRequested) m_onAddPluginRequested(slotIdx);
-                    }
-                    m_lastClickSlot = -1; // Reset to avoid triple-click issues
-                 } else {
-                     if (!m_slots[slotIdx].isEmpty) {
-                         // Prepare for Drag
-                         m_draggingSlotIndex = slotIdx;
-                         m_dragStartPos = event.position;
-                     }
-                 }
-                 return true;
-             }
+                  }
+                  return true;
+              }
         }
     }
     else if (event.pressed && event.button == NUIMouseButton::Right) {
@@ -959,12 +898,9 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
             // DELETE ACTION
             auto deleteItem = std::make_shared<NUIContextMenuItem>("Delete", NUIContextMenuItem::Type::Normal);
             deleteItem->setOnClick([this]() {
-                Aestra::Log::info("[Rack] Delete clicked. Invoking m_onSlotRemoveRequested.");
                 if (m_onSlotRemoveRequested) {
-                    Aestra::Log::info("[Rack] Callback IS set. Invoking now...");
                     if (m_contextMenuSlot >= 0) {
                         m_onSlotRemoveRequested(m_contextMenuSlot);
-                        Aestra::Log::info("[Rack] Callback invoked successfully.");
                     }
                 } else {
                     Aestra::Log::warning("[Rack] m_onSlotRemoveRequested is NULL! Callback not bound.");
@@ -1037,18 +973,6 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
 
 void EffectChainRack::setSlot(int index, const EffectSlotInfo& info) {
     if (index >= 0 && index < MAX_SLOTS) {
-        // DEBUG LOGGING
-        char logBuf[128];
-        if (!m_slots[index].isEmpty && info.isEmpty) {
-             std::snprintf(logBuf, sizeof(logBuf), "[Rack] Slot %d CLEARED (Empty=true)", index);
-             Aestra::Log::info(logBuf);
-        } else if (info.isEmpty) {
-             // Aestra::Log::info("[Rack] Slot %d Set Empty", index);
-        } else {
-             std::snprintf(logBuf, sizeof(logBuf), "[Rack] Slot %d Set: %s %s", index, info.name.c_str(), (info.bypassed ? "(Bypassed)" : ""));
-             Aestra::Log::info(logBuf);
-        }
-
         m_slots[index] = info;
         
         // Apply Override Logic

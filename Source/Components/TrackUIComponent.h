@@ -75,6 +75,7 @@ public:
     // Callback for clip selection
     void setOnClipSelected(std::function<void(TrackUIComponent*, ClipInstanceID)> callback) { m_onClipSelectedCallback = callback; }
     void setOnPatternClipOpenRequested(std::function<void(PatternID)> callback) { m_onPatternClipOpenRequested = std::move(callback); }
+    void setOnPatternClipDragStarted(std::function<void(PatternID)> callback) { m_onPatternClipDragStarted = std::move(callback); }
 
     // Callback for track selection
     void setOnTrackSelected(std::function<void(TrackUIComponent*, bool)> callback) { m_onTrackSelectedCallback = callback; }
@@ -161,6 +162,7 @@ private:
     std::function<void(TrackUIComponent*, double)> m_onSplitRequestedCallback;
     std::function<void(TrackUIComponent*, ClipInstanceID)> m_onClipSelectedCallback;
     std::function<void(PatternID)> m_onPatternClipOpenRequested;
+    std::function<void(PatternID)> m_onPatternClipDragStarted;
     std::function<void(TrackUIComponent*, bool)> m_onTrackSelectedCallback;
     std::function<void()> m_onSendToAuditionCallback;
 
@@ -190,6 +192,8 @@ private:
     // Multi-clip bounds for hit testing (maps ClipInstanceID to its rendered bounds)
     std::map<ClipInstanceID, AestraUI::NUIRect> m_allClipBounds;
     ClipInstanceID m_activeClipId;  // Currently clicked/dragged clip id
+    ClipInstanceID m_lastClickedClipId;
+    long long m_lastClipClickTimeMs = 0;
 
     
     // Clip trimming state (edge resize)
@@ -209,6 +213,7 @@ private:
  
     // Automation Interaction State (v3.1)
     bool m_isDraggingPoint = false;
+    bool m_isDraggingVolumeFader = false;
     int m_draggedPointIndex = -1;
     int m_draggedCurveIndex = -1;
     AestraUI::NUIPoint m_lastAutomationMousePos;
@@ -224,9 +229,11 @@ private:
 
 	    // UI Components
 	    std::shared_ptr<AestraUI::NUILabel> m_nameLabel;
+        std::shared_ptr<AestraUI::NUISlider> m_volumeFader;
 	    std::shared_ptr<AestraUI::NUIButton> m_muteButton;
 	    std::shared_ptr<AestraUI::NUIButton> m_soloButton;
 	    std::shared_ptr<AestraUI::NUIButton> m_recordButton;
+	    std::shared_ptr<AestraUI::NUIButton> m_routeButton;
         std::shared_ptr<AestraUI::NUIContextMenu> m_recordModeMenu;
 
     // UI callbacks

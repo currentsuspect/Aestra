@@ -34,7 +34,9 @@ int NUISliderConfig::getInt(const std::string& key, int defaultValue) const {
     if (it != config_.end()) {
         try {
             return std::stoi(it->second);
-        } catch (...) {
+        } catch (const std::invalid_argument&) {
+            return defaultValue;
+        } catch (const std::out_of_range&) {
             return defaultValue;
         }
     }
@@ -46,7 +48,9 @@ float NUISliderConfig::getFloat(const std::string& key, float defaultValue) cons
     if (it != config_.end()) {
         try {
             return std::stof(it->second);
-        } catch (...) {
+        } catch (const std::invalid_argument&) {
+            return defaultValue;
+        } catch (const std::out_of_range&) {
             return defaultValue;
         }
     }

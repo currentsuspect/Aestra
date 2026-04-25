@@ -80,8 +80,8 @@ log "=== Lane 1: Security Tests ==="
 
 # The security CMakeLists.txt creates individual binaries, not a unified target.
 # Build and run each test individually.
-SEC_TEST_NAMES=("SecStoulCrash" "SecJsonDos" "SecDivZero" "SecSamplerPath" "SecId3Overflow" "SecShellEscape" "SecClipColorStoul" "SecPluginCacheBounds" "SecFreadTruncatedWav" "SecJsonParserHardening" "SecEnvVarValidation" "SecAutosaveRecoveryGuard" "SecFlacVendorlenBounds" "SecCacheMtimeIntegrity" "SecPluginTrustedPath")
-TEST_DISPLAY_NAMES=("stoul_crash" "json_dos" "div_zero_channels" "sampler_path_traversal" "id3_overflow" "shell_escape_test" "clip_color_stoul" "plugin_cache_bounds" "fread_truncated_wav" "json_parser_hardening" "env_var_validation" "autosave_recovery_guard" "flac_vendorlen_bounds" "cache_mtime_integrity" "plugin_trusted_path")
+SEC_TEST_NAMES=("SecStoulCrash" "SecJsonDos" "SecDivZero" "SecSamplerPath" "SecId3Overflow" "SecShellEscape" "SecClipColorStoul" "SecPluginCacheBounds" "SecFreadTruncatedWav" "SecJsonParserHardening" "SecEnvVarValidation" "SecAutosaveRecoveryGuard" "SecFlacVendorlenBounds" "SecCacheMtimeIntegrity" "SecPluginTrustedPath" "SecOutOfProcessPluginHost" "SecPluginScanIsolation" "SecProjectLoadHardening")
+TEST_DISPLAY_NAMES=("stoul_crash" "json_dos" "div_zero_channels" "sampler_path_traversal" "id3_overflow" "shell_escape_test" "clip_color_stoul" "plugin_cache_bounds" "fread_truncated_wav" "json_parser_hardening" "env_var_validation" "autosave_recovery_guard" "flac_vendorlen_bounds" "cache_mtime_integrity" "plugin_trusted_path" "out_of_process_plugin_host" "plugin_scan_isolation" "project_load_hardening")
 
 TEST_EXIT_CODES=()
 TEST_OUTPUT_FILES=()
@@ -97,6 +97,8 @@ for i in "${!SEC_TEST_NAMES[@]}"; do
   for candidate in \
     "$BUILD_DIR/$target" \
     "$BUILD_DIR/tests/$target" \
+    "$BUILD_DIR/Tests/security_tests/$target" \
+    "$BUILD_DIR/tests/security_tests/$target" \
     "$BUILD_DIR/bin/$target" \
     "$BUILD_DIR/bin/tests/$target"; do
     [ -x "$candidate" ] && SEC_BIN="$candidate" && break
@@ -110,6 +112,8 @@ for i in "${!SEC_TEST_NAMES[@]}"; do
     for candidate in \
       "$BUILD_DIR/$target" \
       "$BUILD_DIR/tests/$target" \
+      "$BUILD_DIR/Tests/security_tests/$target" \
+      "$BUILD_DIR/tests/security_tests/$target" \
       "$BUILD_DIR/bin/$target" \
       "$BUILD_DIR/bin/tests/$target"; do
       [ -x "$candidate" ] && SEC_BIN="$candidate" && break
@@ -126,16 +130,34 @@ for i in "${!SEC_TEST_NAMES[@]}"; do
 
   OUT_FILE="${RESULTS_DIR}/${RID}_${display}.txt"
   set +e
-  "$SEC_BIN" > "$OUT_FILE" 2>&1
-  EXIT_CODE=$?
+  if [ "$target" = "SecOutOfProcessPluginHost" ]; then
+    REAL_CLAP="/usr/lib/clap/lsp-plugins.clap"
+    if [ -x "$REAL_CLAP" ]; then
+      "$SEC_BIN" "$BUILD_DIR/bin/AestraPluginHost" "$REAL_CLAP" > "$OUT_FILE" 2>&1
+    else
+      "$SEC_BIN" "$BUILD_DIR/bin/AestraPluginHost" > "$OUT_FILE" 2>&1
+    fi
+  elif [ "$target" = "SecPluginScanIsolation" ]; then
+    REAL_CLAP="/usr/lib/clap/lsp-plugins.clap"
+    if [ -x "$REAL_CLAP" ]; then
+      "$SEC_BIN" "$BUILD_DIR/bin/AestraPluginHost" "$REAL_CLAP" > "$OUT_FILE" 2>&1
+    else
+      echo "SKIP: /usr/lib/clap/lsp-plugins.clap not installed" > "$OUT_FILE"
+      EXIT_CODE=0
+    fi
+  else
+    "$SEC_BIN" > "$OUT_FILE" 2>&1
+  fi
+  RUN_EXIT_CODE=${EXIT_CODE:-$?}
+  unset EXIT_CODE
   set -e
-  TEST_EXIT_CODES+=($EXIT_CODE)
+  TEST_EXIT_CODES+=($RUN_EXIT_CODE)
   TEST_OUTPUT_FILES+=("$OUT_FILE")
-  if [ "$EXIT_CODE" -eq 0 ]; then
+  if [ "$RUN_EXIT_CODE" -eq 0 ]; then
     log "  [PASS] $display"
     TEST_PASS=$((TEST_PASS + 1))
   else
-    log "  [FAIL] $display (exit $EXIT_CODE)"
+    log "  [FAIL] $display (exit $RUN_EXIT_CODE)"
     TEST_FAIL=$((TEST_FAIL + 1))
   fi
 done
@@ -250,7 +272,10 @@ for candidate in \
   [ -x "$candidate" ] && MATH_BIN="$candidate" && break
 done
 for candidate in \
-  "$BUILD_DIR/AestraFilterTest" "$BUILD_DIR/tests/AestraFilterTest" "$BUILD_DIR/bin/AestraFilterTest"; do
+  "$BUILD_DIR/AestraFilterTest" \
+  "$BUILD_DIR/tests/AestraFilterTest" \
+  "$BUILD_DIR/Tests/AestraFilterTest" \
+  "$BUILD_DIR/bin/AestraFilterTest"; do
   [ -x "$candidate" ] && FILTER_BIN="$candidate" && break
 done
 

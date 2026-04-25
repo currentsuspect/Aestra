@@ -14,8 +14,19 @@ namespace AestraUI {
 
 namespace {
 constexpr float kCloseSize = 16.0f;
-constexpr float kRadius = 12.0f;
+constexpr float kRadius = 16.0f;
 constexpr float kPi = 3.14159265358979323846f;
+
+const NUIColor kBlueprintBg(0.035f, 0.035f, 0.052f, 0.98f);
+const NUIColor kBlueprintPanel(0.070f, 0.064f, 0.102f, 0.86f);
+const NUIColor kBlueprintLine(0.58f, 0.42f, 0.94f, 0.42f);
+const NUIColor kBlueprintDim(0.72f, 0.66f, 0.90f, 0.18f);
+const NUIColor kBlueprintText(0.94f, 0.93f, 1.0f, 0.94f);
+const NUIColor kBlueprintMuted(0.72f, 0.69f, 0.84f, 0.66f);
+const NUIColor kGlassDeep(0.018f, 0.017f, 0.028f, 0.94f);
+const NUIColor kGlassSurface(0.085f, 0.078f, 0.120f, 0.88f);
+const NUIColor kAccentPurple(0.55f, 0.38f, 0.92f, 1.0f);
+const NUIColor kAccentCyan(0.0f, 0.88f, 0.80f, 1.0f);
 
 NUIColor bandColorForIndex(size_t index) {
     static const NUIColor colors[] = {
@@ -112,6 +123,37 @@ NUIRect graphNodeSafeBounds(const NUIRect& graphBounds) {
         std::max(1.0f, graphBounds.height - kNodePadY * 2.0f),
     };
 }
+
+void drawBlueprintLabel(NUIRenderer& renderer, const std::string& text, const NUIRect& rect, float size = 9.0f) {
+    renderer.drawText(text, {rect.x + 11.0f, rect.y + 8.0f}, size, kBlueprintMuted);
+}
+
+void drawBlueprintKnob(NUIRenderer& renderer,
+                       const NUIPoint& center,
+                       float radius,
+                       float norm,
+                       const std::string& label,
+                       const std::string& value,
+                       bool active,
+                       const NUIColor& accent) {
+    const float start = 0.73f * kPi;
+    const float end = 2.27f * kPi;
+    const float angle = start + std::clamp(norm, 0.0f, 1.0f) * (end - start);
+    const NUIColor line = active ? accent.withAlpha(0.98f) : kBlueprintDim;
+
+    renderer.fillCircle(center, radius + 8.0f, active ? accent.withAlpha(0.12f) : NUIColor(0.0f, 0.0f, 0.0f, 0.20f));
+    renderer.fillCircle(center, radius + 4.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.28f));
+    renderer.strokeCircle(center, radius + 3.0f, 1.2f, active ? accent.withAlpha(0.30f) : kBlueprintDim);
+    renderer.fillCircle(center, radius, NUIColor(0.018f, 0.017f, 0.030f, 0.96f));
+    renderer.fillCircle({center.x - radius * 0.28f, center.y - radius * 0.30f}, radius * 0.42f,
+                        NUIColor(0.17f, 0.15f, 0.23f, 0.56f));
+    renderer.strokeCircle(center, radius, 1.4f, active ? accent.withAlpha(0.76f) : kBlueprintDim);
+    const NUIPoint tip{center.x + std::cos(angle) * (radius - 3.0f), center.y + std::sin(angle) * (radius - 3.0f)};
+    renderer.drawLine(center, tip, 2.0f, line);
+    renderer.fillCircle(tip, 2.0f, line);
+    renderer.drawText(label, {center.x - radius - 4.0f, center.y + radius + 8.0f}, 8.2f, kBlueprintMuted);
+    renderer.drawText(value, {center.x - radius - 4.0f, center.y + radius + 19.0f}, 8.4f, active ? kBlueprintText : kBlueprintMuted.withAlpha(0.46f));
+}
 }
 
 AestraEQEditor::AestraEQEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
@@ -153,58 +195,166 @@ void AestraEQEditor::buildControls() {
 
 void AestraEQEditor::layoutControls() {
     auto bounds = getBounds();
-    constexpr float bandGap = 12.0f;
+    constexpr float bandGap = 8.0f;
     float bandW = (bounds.width - kPadding * 2.0f - bandGap * 7.0f) / 8.0f;
-    float y = bounds.y + kTitleHeight + kCurveHeight + 14.0f;
-    float h = bounds.bottom() - y - kPadding;
+    float y = bounds.y + kTitleHeight + kCurveHeight + 76.0f;
+    float h = 124.0f;
 
     for (size_t i = 0; i < m_bands.size(); ++i) {
         auto& b = m_bands[i];
         float x = bounds.x + kPadding + i * (bandW + bandGap);
         b.bounds = NUIRect(x, y, bandW, h);
-        float sliderW = 8.0f;
-        float knobSize = 14.0f;
-        float sliderTop = y + 30.0f;
-        float sliderHeight = std::max(40.0f, h - 58.0f);
-        float cx = x + bandW * 0.5f;
+        const float knobSize = 32.0f;
+        const float hitPad = 10.0f;
+        const float knobY = y + 60.0f;
+        const float freqX = x + bandW * 0.24f;
+        const float gainX = x + bandW * 0.52f;
+        const float qX = x + bandW * 0.80f;
 
-        b.freqSlider = {};
-        b.freqKnob = {};
-        b.gainSlider = {};
-        b.gainKnob = {};
-
-        b.qSlider = NUIRect(cx - sliderW * 0.5f, sliderTop, sliderW, sliderHeight);
-        b.qKnob = NUIRect(cx - knobSize * 0.5f,
-                          sliderTop + (1.0f - b.q) * sliderHeight - knobSize * 0.5f,
-                          knobSize, knobSize);
+        b.freqSlider = NUIRect(freqX - knobSize * 0.5f - hitPad, y + 30.0f, knobSize + hitPad * 2.0f, h - 38.0f);
+        b.gainSlider = NUIRect(gainX - knobSize * 0.5f - hitPad, y + 30.0f, knobSize + hitPad * 2.0f, h - 38.0f);
+        b.qSlider = NUIRect(qX - knobSize * 0.5f - hitPad, y + 30.0f, knobSize + hitPad * 2.0f, h - 38.0f);
+        b.freqKnob = NUIRect(freqX - knobSize * 0.5f, knobY - knobSize * 0.5f, knobSize, knobSize);
+        b.gainKnob = NUIRect(gainX - knobSize * 0.5f, knobY - knobSize * 0.5f, knobSize, knobSize);
+        b.qKnob = NUIRect(qX - knobSize * 0.5f, knobY - knobSize * 0.5f, knobSize, knobSize);
     }
 }
 
 void AestraEQEditor::drawTitleBar(NUIRenderer& renderer) {
     auto bounds = getBounds();
-    auto& theme = NUIThemeManager::getInstance();
     NUIRect titleBar(bounds.x, bounds.y, bounds.width, kTitleHeight);
 
-    renderer.fillRoundedRect(titleBar, kRadius, NUIColor(0.08f, 0.07f, 0.10f, 0.98f));
-    renderer.drawText("Aestra EQ", {titleBar.x + kPadding, titleBar.y + 14.0f}, 13.0f,
-                      theme.getColor("textPrimary"));
-    renderer.drawText("8-band parametric", {titleBar.x + 110.0f, titleBar.y + 15.0f}, 10.0f,
-                      theme.getColor("accentPrimary").withAlpha(0.85f));
+    renderer.fillRoundedRect(titleBar, kRadius, NUIColor(0.025f, 0.023f, 0.038f, 0.98f));
+    renderer.fillRoundedRect({titleBar.x + 1.0f, titleBar.y + 1.0f, titleBar.width - 2.0f, 28.0f},
+                             kRadius, NUIColor(0.18f, 0.13f, 0.30f, 0.16f));
+    renderer.strokeRoundedRect(titleBar, kRadius, 1.0f, kBlueprintLine.withAlpha(0.30f));
+
+    const NUIRect logo{titleBar.x + 14.0f, titleBar.y + 10.0f, 38.0f, 38.0f};
+    renderer.fillRoundedRect(logo, 11.0f, kAccentPurple.withAlpha(0.18f));
+    renderer.strokeRoundedRect(logo, 11.0f, 1.2f, kAccentPurple.withAlpha(0.52f));
+    renderer.drawText("EQ", {logo.x + 10.0f, logo.y + 12.0f}, 13.0f, kBlueprintText);
+    renderer.drawText("AESTRA EQ", {titleBar.x + 64.0f, titleBar.y + 9.0f}, 18.0f, kBlueprintText);
+    renderer.drawText("ADVANCED EQUALIZER", {titleBar.x + 65.0f, titleBar.y + 32.0f}, 10.0f, kBlueprintMuted);
+
+    const NUIRect undoChip{titleBar.x + 282.0f, titleBar.y + 16.0f, 34.0f, 26.0f};
+    const NUIRect redoChip{undoChip.right() + 8.0f, undoChip.y, 34.0f, 26.0f};
+    renderer.drawText("<", {undoChip.x + 12.0f, undoChip.y + 7.0f}, 13.0f, kBlueprintMuted);
+    renderer.drawText(">", {redoChip.x + 12.0f, redoChip.y + 7.0f}, 13.0f, kBlueprintMuted.withAlpha(0.42f));
+
+    const NUIRect preset{titleBar.x + titleBar.width * 0.37f, titleBar.y + 14.0f, 278.0f, 30.0f};
+    renderer.fillRoundedRect(preset, 9.0f, NUIColor(0.055f, 0.050f, 0.078f, 0.92f));
+    renderer.strokeRoundedRect(preset, 9.0f, 1.0f, kBlueprintLine.withAlpha(0.38f));
+    renderer.drawText("Modern Hip Hop Mix", {preset.x + 80.0f, preset.y + 10.0f}, 10.5f, kBlueprintText);
+    renderer.drawText("<", {preset.x + 14.0f, preset.y + 8.0f}, 12.0f, kBlueprintMuted);
+    renderer.drawText("v", {preset.right() - 21.0f, preset.y + 8.0f}, 10.0f, kBlueprintMuted);
+
+    const NUIRect modeChip{preset.right() + 16.0f, preset.y, 54.0f, 30.0f};
+    const NUIRect fftChip{modeChip.right() + 2.0f, modeChip.y, 54.0f, 30.0f};
+    renderer.fillRoundedRect(modeChip, 12.0f, kAccentPurple.withAlpha(0.12f));
+    renderer.strokeRoundedRect(modeChip, 12.0f, 1.0f, kAccentPurple.withAlpha(0.36f));
+    renderer.drawText("A / B", {modeChip.x + 15.0f, modeChip.y + 9.0f}, 9.5f, kBlueprintText);
+    renderer.fillRoundedRect(fftChip, 12.0f, kBlueprintPanel.withAlpha(0.76f));
+    renderer.strokeRoundedRect(fftChip, 12.0f, 1.0f, kBlueprintDim.withAlpha(0.55f));
+    renderer.drawText("A > B", {fftChip.x + 13.0f, fftChip.y + 9.0f}, 9.5f, kBlueprintMuted);
+
+    const float iconY = titleBar.y + 15.0f;
+    for (int i = 0; i < 4; ++i) {
+        const NUIRect icon{titleBar.right() - 146.0f + static_cast<float>(i) * 36.0f, iconY, 27.0f, 27.0f};
+        renderer.fillRoundedRect(icon, 7.0f, NUIColor(0.050f, 0.047f, 0.071f, 0.86f));
+        renderer.strokeRoundedRect(icon, 7.0f, 1.0f, kBlueprintDim.withAlpha(0.62f));
+    }
+    renderer.drawText("S", {titleBar.right() - 137.0f, iconY + 8.0f}, 9.0f, kBlueprintMuted);
+    renderer.drawText("M", {titleBar.right() - 101.0f, iconY + 8.0f}, 9.0f, kBlueprintMuted);
+    renderer.drawText("R", {titleBar.right() - 65.0f, iconY + 8.0f}, 9.0f, kBlueprintMuted);
 
     float closeX = titleBar.right() - kCloseSize - 10.0f;
     float closeY = titleBar.y + (kTitleHeight - kCloseSize) * 0.5f;
+    renderer.fillCircle({closeX + kCloseSize * 0.5f, closeY + kCloseSize * 0.5f}, 13.0f,
+                        NUIColor(0.12f, 0.105f, 0.15f, 0.76f));
     renderer.drawLine({closeX + 4.0f, closeY + 4.0f}, {closeX + 12.0f, closeY + 12.0f}, 1.5f,
-                      theme.getColor("textSecondary"));
+                      kBlueprintMuted);
     renderer.drawLine({closeX + 12.0f, closeY + 4.0f}, {closeX + 4.0f, closeY + 12.0f}, 1.5f,
-                      theme.getColor("textSecondary"));
-    renderer.drawLine({titleBar.x, titleBar.bottom()}, {titleBar.right(), titleBar.bottom()},
-                      1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.06f));
+                      kBlueprintMuted);
+    renderer.drawLine({titleBar.x + 14.0f, titleBar.bottom()}, {titleBar.right() - 14.0f, titleBar.bottom()},
+                      1.0f, kBlueprintLine.withAlpha(0.24f));
+}
+
+void AestraEQEditor::drawBlueprintGrid(NUIRenderer& renderer, const NUIRect& bounds) {
+    renderer.fillRoundedRect(bounds, kRadius, kBlueprintBg);
+    renderer.fillRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height * 0.45f},
+                             kRadius, NUIColor(0.14f, 0.10f, 0.22f, 0.12f));
+    renderer.fillRoundedRect({bounds.x + bounds.width * 0.55f, bounds.y + bounds.height * 0.20f,
+                              bounds.width * 0.32f, bounds.height * 0.38f},
+                             kRadius, kAccentPurple.withAlpha(0.035f));
+    renderer.strokeRoundedRect(bounds, kRadius, 1.0f, kBlueprintLine.withAlpha(0.26f));
+}
+
+void AestraEQEditor::drawUtilityStrip(NUIRenderer& renderer, const NUIRect& bounds) {
+    const float gap = 8.0f;
+    const float blockW = (bounds.width - gap * 6.0f) / 7.0f;
+    static const char* titles[] = {"BYPASS", "STEREO MODE", "ANALYZER", "SLOPE", "RESOLUTION", "DYNAMIC EQ", "PANEL"};
+    static const char* values[] = {"ON", "L/R  M/S  L  R", "Pre+Post", "12  24  36  48", "High", "Per Band", "Compact"};
+
+    for (int i = 0; i < 7; ++i) {
+        const NUIRect block{bounds.x + static_cast<float>(i) * (blockW + gap), bounds.y, blockW, bounds.height};
+        const bool primary = i == 0 || i == 2 || i == 5;
+        renderer.fillRoundedRect(block, 8.0f, primary ? kAccentPurple.withAlpha(0.13f) : NUIColor(0.050f, 0.047f, 0.070f, 0.88f));
+        renderer.strokeRoundedRect(block, 10.0f, 1.0f,
+                                   primary ? kAccentPurple.withAlpha(0.34f) : kBlueprintDim.withAlpha(0.82f));
+        renderer.drawText(titles[i], {block.x + 11.0f, block.y + 9.0f}, 8.5f, kBlueprintMuted);
+        renderer.drawText(values[i], {block.x + 11.0f, block.y + 31.0f}, 9.5f, kBlueprintText);
+        renderer.drawLine({block.x + 11.0f, block.bottom() - 13.0f}, {block.right() - 11.0f, block.bottom() - 13.0f},
+                          1.0f, (primary ? kAccentPurple : kAccentCyan).withAlpha(0.22f));
+    }
+}
+
+void AestraEQEditor::drawInputOutputPanel(NUIRenderer& renderer, const NUIRect& bounds, bool output) {
+    renderer.fillRoundedRect(bounds, 10.0f, NUIColor(0.040f, 0.038f, 0.056f, 0.92f));
+    renderer.strokeRoundedRect(bounds, 11.0f, 1.0f, kBlueprintDim.withAlpha(0.72f));
+
+    const std::string title = output ? "OUTPUT" : "INPUT";
+    renderer.drawText(title, {bounds.x + 34.0f, bounds.y + 17.0f}, 10.0f, kBlueprintText);
+    renderer.drawText("0.0 dB", {bounds.x + 33.0f, bounds.y + 39.0f}, 11.0f, kBlueprintText.withAlpha(0.86f));
+
+    const NUIPoint knobCenter{bounds.x + bounds.width * 0.50f, bounds.y + 86.0f};
+    drawBlueprintKnob(renderer, knobCenter, 21.0f, 0.50f, "", "", true, output ? kAccentCyan : kAccentPurple);
+
+    const float meterTop = bounds.y + 136.0f;
+    const float meterH = bounds.height - 164.0f;
+    const float meterW = 10.0f;
+    const float leftX = bounds.x + bounds.width * 0.39f;
+    const float rightX = bounds.x + bounds.width * 0.55f;
+    for (int ch = 0; ch < 2; ++ch) {
+        const float x = ch == 0 ? leftX : rightX;
+        renderer.fillRoundedRect({x, meterTop, meterW, meterH}, 2.0f, NUIColor(0.010f, 0.010f, 0.016f, 0.82f));
+        renderer.fillRoundedRect({x, meterTop + meterH * 0.26f, meterW, meterH * 0.74f}, 2.0f, kAccentCyan.withAlpha(0.80f));
+        renderer.fillRoundedRect({x, meterTop + meterH * 0.62f, meterW, meterH * 0.38f}, 2.0f, kAccentPurple.withAlpha(0.42f));
+    }
+
+    renderer.drawText("L", {leftX + 1.0f, bounds.bottom() - 22.0f}, 8.0f, kBlueprintMuted);
+    renderer.drawText("R", {rightX + 1.0f, bounds.bottom() - 22.0f}, 8.0f, kBlueprintMuted);
+}
+
+void AestraEQEditor::drawFilterGuardPanel(NUIRenderer& renderer, const NUIRect& bounds, bool highPass) {
+    renderer.fillRoundedRect(bounds, 10.0f, NUIColor(0.040f, 0.038f, 0.056f, 0.92f));
+    renderer.strokeRoundedRect(bounds, 11.0f, 1.0f, kBlueprintDim.withAlpha(0.72f));
+
+    const NUIColor accent = highPass ? bandColorForIndex(0) : bandColorForIndex(7);
+    renderer.fillCircle({bounds.x + 23.0f, bounds.y + 25.0f}, 3.0f, accent);
+    renderer.drawText(highPass ? "HPF" : "LPF", {bounds.x + 44.0f, bounds.y + 20.0f}, 10.5f, kBlueprintText);
+
+    const NUIRect slope{bounds.x + 24.0f, bounds.y + 58.0f, bounds.width - 48.0f, 24.0f};
+    renderer.fillRoundedRect(slope, 6.0f, kGlassDeep);
+    renderer.strokeRoundedRect(slope, 6.0f, 1.0f, kBlueprintDim.withAlpha(0.64f));
+    renderer.drawText("24 dB/Oct", {slope.x + 17.0f, slope.y + 8.0f}, 8.8f, kBlueprintText.withAlpha(0.86f));
+    renderer.drawText(highPass ? "20.0 Hz" : "20.0 kHz", {bounds.x + 42.0f, bounds.bottom() - 38.0f}, 12.0f, kBlueprintText);
+    drawBlueprintKnob(renderer, {bounds.x + bounds.width * 0.50f, bounds.y + 141.0f}, 21.0f,
+                      highPass ? 0.00f : 1.0f, "FREQ", "", true, accent);
 }
 
 void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(bounds, kRadius, NUIColor(0.06f, 0.06f, 0.07f, 0.95f));
-    renderer.strokeRoundedRect(bounds, kRadius, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+    drawBlueprintGrid(renderer, bounds);
     drawSpectrumBackdrop(renderer, bounds);
     m_lastResponseBounds = responseGraphBounds(bounds);
 
@@ -303,11 +453,10 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     for (int db = -18; db <= 18; db += 6) {
         float y = bounds.bottom() - 20.0f - (static_cast<float>(db) + dbRange) / (dbRange * 2.0f) * (bounds.height - 40.0f);
         float alpha = (db == 0) ? 0.25f : 0.10f;
-        renderer.drawLine({bounds.x + 40.0f, y}, {bounds.right() - 10.0f, y},
-                          1.0f, theme.getColor("accentPrimary").withAlpha(alpha));
+        renderer.drawLine({bounds.x + 50.0f, y}, {bounds.right() - 18.0f, y},
+                          db == 0 ? 1.5f : 1.0f, kBlueprintLine.withAlpha(alpha + 0.10f));
         std::string label = (db >= 0 ? "+" : "") + std::to_string(db) + "dB";
-        renderer.drawText(label, {bounds.x + 4.0f, y - 6.0f}, 8.0f,
-                          theme.getColor("textSecondary").withAlpha(0.7f));
+        renderer.drawText(label, {bounds.x + 10.0f, y - 6.0f}, 9.0f, kBlueprintMuted);
     }
 
     // Frequency labels
@@ -316,10 +465,9 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     for (int i = 0; i < 6; ++i) {
         float norm = (std::log10(freqs[i]) - std::log10(20.0f)) / (std::log10(20000.0f) - std::log10(20.0f));
         float x = bounds.x + 40.0f + norm * (bounds.width - 50.0f);
-        renderer.drawLine({x, bounds.y + 10.0f}, {x, bounds.bottom() - 10.0f},
-                          1.0f, theme.getColor("textSecondary").withAlpha(0.10f));
-        renderer.drawText(freqLabels[i], {x - 8.0f, bounds.bottom() - 10.0f}, 8.0f,
-                          theme.getColor("textSecondary").withAlpha(0.7f));
+        renderer.drawLine({x, bounds.y + 12.0f}, {x, bounds.bottom() - 22.0f},
+                          1.0f, kBlueprintDim.withAlpha(0.25f));
+        renderer.drawText(freqLabels[i], {x - 8.0f, bounds.y + 10.0f}, 9.0f, kBlueprintMuted);
     }
 
     // Draw curve
@@ -337,7 +485,7 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     }
 
     const std::vector<NUIPoint> smoothCurvePoints = makeSmoothCurvePoints(curvePoints, 6);
-    const NUIColor curveColor = theme.getColor("accentPrimary").withAlpha(0.85f);
+    const NUIColor curveColor = NUIColor(0.76f, 0.62f, 1.0f, 0.94f);
     std::vector<NUIPoint> offsetUp = smoothCurvePoints;
     std::vector<NUIPoint> offsetDown = smoothCurvePoints;
     for (size_t i = 0; i < smoothCurvePoints.size(); ++i) {
@@ -345,11 +493,11 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
         offsetDown[i].y += 0.75f;
     }
 
-    renderer.drawPolyline(offsetUp.data(), static_cast<int>(offsetUp.size()), 4.0f, curveColor.withAlpha(0.07f));
-    renderer.drawPolyline(offsetDown.data(), static_cast<int>(offsetDown.size()), 4.0f, curveColor.withAlpha(0.07f));
-    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 6.0f, curveColor.withAlpha(0.10f));
-    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 3.0f, curveColor.withAlpha(0.34f));
-    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 1.4f, curveColor.withAlpha(0.96f));
+    renderer.drawPolyline(offsetUp.data(), static_cast<int>(offsetUp.size()), 6.0f, curveColor.withAlpha(0.06f));
+    renderer.drawPolyline(offsetDown.data(), static_cast<int>(offsetDown.size()), 6.0f, kAccentCyan.withAlpha(0.035f));
+    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 7.0f, curveColor.withAlpha(0.10f));
+    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 3.5f, curveColor.withAlpha(0.32f));
+    renderer.drawPolyline(smoothCurvePoints.data(), static_cast<int>(smoothCurvePoints.size()), 1.6f, kBlueprintText.withAlpha(0.90f));
 
     for (size_t i = 0; i < m_bands.size(); ++i) {
         const auto& band = m_bands[i];
@@ -373,7 +521,7 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
             renderer.fillCircle(node, radius + 7.0f, nodeColor.withAlpha(0.08f));
         }
         renderer.fillCircle(node, radius + 4.0f, nodeColor.withAlpha(selected || dragging ? 0.16f : 0.10f));
-        renderer.fillCircle(node, radius, NUIColor(0.08f, 0.08f, 0.10f, 0.95f));
+        renderer.fillCircle(node, radius, kGlassDeep);
         renderer.strokeCircle(node, radius, selected || dragging ? 1.8f : 1.4f, nodeColor);
         renderer.fillCircle(node, selected || dragging ? 2.5f : 2.0f, nodeColor);
 
@@ -386,19 +534,17 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
         renderer.drawLine({node.x, labelY + 16.0f}, {node.x, node.y - radius - 4.0f},
                           1.0f, nodeColor.withAlpha(selected || hovered || dragging ? 0.18f : 0.10f));
         const NUIRect pillRect{pillX, labelY, pillWidth, 14.0f};
-        renderer.fillRoundedRect(pillRect, 7.0f,
-                                 selected || dragging
-                                     ? NUIColor(0.11f, 0.11f, 0.14f, 0.96f)
-                                     : NUIColor(0.09f, 0.09f, 0.11f, 0.90f));
+        renderer.fillRoundedRect(pillRect, 5.0f,
+                                 selected || dragging ? kBlueprintPanel : NUIColor(0.040f, 0.038f, 0.060f, 0.88f));
         if (selected || dragging) {
             renderer.fillRoundedRect({pillRect.x + 1.0f, pillRect.y + 1.0f, pillRect.width - 2.0f, pillRect.height * 0.52f},
-                                     6.0f, nodeColor.withAlpha(0.09f));
+                                     5.0f, nodeColor.withAlpha(0.09f));
         }
-        renderer.strokeRoundedRect(pillRect, 7.0f, 1.0f,
+        renderer.strokeRoundedRect(pillRect, 5.0f, 1.0f,
                                    nodeColor.withAlpha(selected || dragging ? 0.52f : 0.26f));
-        renderer.drawText(band.name, {pillX + 5.0f, labelY + 3.0f}, 7.0f,
+        renderer.drawText(band.name, {pillX + 5.0f, labelY + 3.0f}, 8.25f,
                           theme.getColor("textPrimary").withAlpha(selected || dragging ? 0.98f : 0.82f));
-        renderer.drawText(freqLabel(band.freq), {pillX + 20.0f, labelY + 3.0f}, 7.0f,
+        renderer.drawText(freqLabel(band.freq), {pillX + 20.0f, labelY + 3.0f}, 8.25f,
                           nodeColor.withAlpha(selected || dragging ? 0.96f : 0.78f));
     }
 
@@ -416,18 +562,18 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
                                  selectedColor.withAlpha(0.16f));
         renderer.strokeRoundedRect({hudRect.x + 8.0f, hudRect.y + 6.0f, 34.0f, 14.0f}, 7.0f, 1.0f,
                                    selectedColor.withAlpha(0.34f));
-        renderer.drawText(band.name, {hudRect.x + 15.0f, hudRect.y + 9.0f}, 7.5f,
+        renderer.drawText(band.name, {hudRect.x + 15.0f, hudRect.y + 9.0f}, 8.75f,
                           theme.getColor("textPrimary").withAlpha(0.98f));
 
         const std::string meta = std::string(glyphTypeLabel(band.type)) + "  " + freqLabel(band.freq);
-        renderer.drawText(meta, {hudRect.x + 50.0f, hudRect.y + 8.0f}, 8.0f,
+        renderer.drawText(meta, {hudRect.x + 50.0f, hudRect.y + 8.0f}, 9.0f,
                           selectedColor.withAlpha(0.90f));
 
         const std::string detail = usesGainAxis(band)
             ? ("Gain " + gainLabel(band.gain) + " dB   Q " + qLabel(band.q, band.type))
             : ("Slope/Q " + qLabel(band.q, band.type));
-        renderer.drawText(detail, {hudRect.x + 50.0f, hudRect.y + 15.5f}, 7.0f,
-                          theme.getColor("textSecondary").withAlpha(0.82f));
+        renderer.drawText(detail, {hudRect.x + 50.0f, hudRect.y + 15.5f}, 8.0f,
+                          theme.getColor("textSecondary").withAlpha(0.90f));
     }
 }
 
@@ -560,9 +706,9 @@ void AestraEQEditor::drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& 
         return;
     }
 
-    const float left = bounds.x + 40.0f;
-    const float right = bounds.right() - 10.0f;
-    const float top = bounds.y + 10.0f;
+    const float left = bounds.x + 50.0f;
+    const float right = bounds.right() - 18.0f;
+    const float top = bounds.y + 22.0f;
     const float bottom = bounds.bottom() - 20.0f;
     const float width = right - left;
     const float height = bottom - top;
@@ -581,16 +727,16 @@ void AestraEQEditor::drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& 
         const float barHeight = mag * height;
         const float y = bottom - barHeight;
 
-        const NUIColor glow(0.64f, 0.36f, 1.0f, 0.05f + mag * 0.09f);
-        const NUIColor core(0.74f, 0.52f, 1.0f, 0.05f + mag * 0.08f);
+        const NUIColor glow(0.55f, 0.38f, 0.92f, 0.026f + mag * 0.082f);
+        const NUIColor core(0.0f, 0.88f, 0.80f, 0.018f + mag * 0.050f);
         renderer.fillRect({x, y, barWidth, barHeight}, glow);
         renderer.fillRect({x, std::max(top, y + barHeight * 0.38f), barWidth, barHeight * 0.62f}, core);
     }
 }
 
 NUIRect AestraEQEditor::responseGraphBounds(const NUIRect& outerBounds) const {
-    return {outerBounds.x + 40.0f, outerBounds.y + 10.0f,
-            outerBounds.width - 50.0f, outerBounds.height - 30.0f};
+    return {outerBounds.x + 50.0f, outerBounds.y + 22.0f,
+            outerBounds.width - 68.0f, outerBounds.height - 42.0f};
 }
 
 bool AestraEQEditor::usesGainAxis(const BandControl& band) const {
@@ -663,57 +809,114 @@ void AestraEQEditor::updateBandFromGraphPosition(int bandIndex, const NUIPoint& 
 }
 
 void AestraEQEditor::drawBandPanel(NUIRenderer& renderer, const BandControl& band) {
-    auto& theme = NUIThemeManager::getInstance();
     const size_t bandIndex = static_cast<size_t>(&band - m_bands.data());
     NUIColor accent = bandColorForIndex(bandIndex);
-    NUIColor cardColor = band.hovered || band.dragging ? NUIColor(0.14f, 0.12f, 0.16f, 0.98f)
-                                                        : NUIColor(0.10f, 0.09f, 0.12f, 0.96f);
+    const bool hot = band.hovered || band.dragging || static_cast<int>(bandIndex) == m_selectedBand;
+    NUIColor cardColor = hot ? NUIColor(0.095f, 0.078f, 0.130f, 0.94f) : NUIColor(0.045f, 0.043f, 0.064f, 0.92f);
 
-    renderer.fillRoundedRect(band.bounds, 8.0f, cardColor);
-    if (band.enabled) {
-        renderer.strokeRoundedRect(band.bounds, 8.0f, 1.0f,
-                                   band.hovered || band.dragging ? accent.withAlpha(0.60f)
-                                                                 : accent.withAlpha(0.25f));
-    } else {
-        renderer.strokeRoundedRect(band.bounds, 8.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.04f));
+    renderer.fillRoundedRect(band.bounds, 11.0f, cardColor);
+    renderer.strokeRoundedRect(band.bounds, 11.0f, hot ? 1.7f : 1.0f,
+                               band.enabled ? (hot ? accent.withAlpha(0.54f) : kBlueprintDim.withAlpha(0.78f))
+                                            : kBlueprintDim.withAlpha(0.30f));
+
+    const NUIRect header{band.bounds.x, band.bounds.y, band.bounds.width, 25.0f};
+    renderer.fillRoundedRect({header.x, header.y, header.width, 4.0f}, 2.0f,
+                             band.enabled ? accent.withAlpha(hot ? 0.72f : 0.42f)
+                                          : kBlueprintMuted.withAlpha(0.14f));
+    renderer.drawLine({header.x + 10.0f, header.bottom()}, {header.right() - 10.0f, header.bottom()}, 1.0f,
+                      accent.withAlpha(band.enabled ? 0.20f : 0.08f));
+    renderer.fillCircle({band.bounds.x + 12.0f, band.bounds.y + 12.0f}, 3.0f,
+                        band.enabled ? accent.withAlpha(0.95f) : kBlueprintMuted.withAlpha(0.20f));
+    renderer.drawText(band.name, {band.bounds.x + 21.0f, band.bounds.y + 8.0f}, 10.0f,
+                      band.enabled ? kBlueprintText : kBlueprintMuted.withAlpha(0.42f));
+    renderer.drawText(typeLabel(band.type), {band.bounds.right() - 50.0f, band.bounds.y + 8.0f}, 8.5f,
+                      band.enabled ? accent.withAlpha(0.94f) : kBlueprintMuted.withAlpha(0.42f));
+
+    if (!band.enabled) {
+        renderer.drawText("OFF", {band.bounds.x + 9.0f, band.bounds.y + 54.0f}, 16.0f, kBlueprintMuted.withAlpha(0.35f));
+        return;
     }
 
-    renderer.drawText(band.name, {band.bounds.x + 6.0f, band.bounds.y + 4.0f}, 9.0f,
-                      band.enabled ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.4f));
+    drawBlueprintKnob(renderer, band.freqKnob.center(), 15.0f, band.freq, "FREQ", freqLabel(band.freq), true, accent);
+    drawBlueprintKnob(renderer, band.gainKnob.center(), 15.0f, band.gain, "GAIN", gainLabel(band.gain) + " dB", true, accent);
+    drawBlueprintKnob(renderer, band.qKnob.center(), 15.0f, band.q, "Q", qLabel(band.q, band.type), true, accent);
+}
 
-    if (band.enabled) {
-        renderer.drawText(typeLabel(band.type), {band.bounds.x + 6.0f, band.bounds.y + 14.0f}, 7.5f,
-                          accent.withAlpha(0.8f));
-        renderer.drawText("Q", {band.bounds.center().x - 3.0f, band.bounds.y + 14.0f}, 7.5f,
-                          theme.getColor("textSecondary").withAlpha(0.75f));
+void AestraEQEditor::drawDynamicSection(NUIRenderer& renderer, const NUIRect& bounds) {
+    const float sideW = bounds.width * 0.18f;
+    const float graphW = bounds.width * 0.20f;
+    const float knobAreaW = bounds.width - sideW - graphW - 28.0f;
+    const NUIRect left{bounds.x, bounds.y, sideW, bounds.height};
+    const NUIRect knobs{left.right() + 8.0f, bounds.y, knobAreaW, bounds.height};
+    const NUIRect graph{knobs.right() + 8.0f, bounds.y, graphW, bounds.height};
+    const NUIRect meter{graph.right() + 8.0f, bounds.y, bounds.right() - graph.right() - 8.0f, bounds.height};
+
+    renderer.fillRoundedRect(left, 10.0f, NUIColor(0.040f, 0.038f, 0.056f, 0.90f));
+    renderer.strokeRoundedRect(left, 11.0f, 1.0f, kBlueprintDim.withAlpha(0.72f));
+    drawBlueprintLabel(renderer, "DYNAMIC EQ", left);
+    renderer.fillRoundedRect({left.x + 12.0f, left.y + 42.0f, 34.0f, 24.0f}, 7.0f, kAccentPurple.withAlpha(0.28f));
+    renderer.drawText("ON", {left.x + 22.0f, left.y + 50.0f}, 8.0f, kBlueprintText);
+    renderer.drawText("MODE", {left.x + 78.0f, left.y + 26.0f}, 8.0f, kBlueprintMuted);
+    renderer.drawText("Bell   Wide", {left.x + 78.0f, left.y + 50.0f}, 9.5f, kBlueprintText);
+    renderer.drawText("Sidechain", {left.x + 78.0f, left.y + 82.0f}, 8.0f, kBlueprintMuted);
+    renderer.drawText("Internal", {left.x + 78.0f, left.y + 106.0f}, 9.5f, kBlueprintText);
+
+    renderer.fillRoundedRect(knobs, 10.0f, NUIColor(0.040f, 0.038f, 0.056f, 0.90f));
+    renderer.strokeRoundedRect(knobs, 11.0f, 1.0f, kBlueprintDim.withAlpha(0.72f));
+    static const char* labels[] = {"THRESHOLD", "RANGE", "RATIO", "ATTACK", "RELEASE", "MAKEUP", "MIX"};
+    static const char* values[] = {"-24.0 dB", "-6.0 dB", "3.0:1", "10 ms", "120 ms", "0.0 dB", "100%"};
+    const float step = knobs.width / 7.0f;
+    for (int i = 0; i < 7; ++i) {
+        const float cx = knobs.x + step * (static_cast<float>(i) + 0.5f);
+        drawBlueprintKnob(renderer, {cx, knobs.y + 62.0f}, 19.0f, 0.50f + static_cast<float>(i % 3 - 1) * 0.08f,
+                          labels[i], values[i], true, i == 6 ? kAccentCyan : kAccentPurple);
     }
 
-    if (!band.enabled) return;
-
-    renderer.fillRoundedRect({band.bounds.center().x - 1.0f, band.qSlider.y, 2.0f, band.qSlider.height}, 1.0f,
-                             NUIColor(1.0f, 1.0f, 1.0f, 0.06f));
-    renderer.fillRoundedRect(band.qSlider, 4.0f, NUIColor(0.02f, 0.02f, 0.03f, 0.7f));
-    float qFill = band.q * band.qSlider.height;
-    if (qFill > 0) {
-        renderer.fillRoundedRect({band.qSlider.x, band.qSlider.y + band.qSlider.height - qFill,
-                                  band.qSlider.width, qFill},
-                                 3.0f, NUIColor(0.8f, 0.5f, 0.3f, 0.8f));
+    renderer.fillRoundedRect(graph, 10.0f, NUIColor(0.040f, 0.038f, 0.056f, 0.90f));
+    renderer.strokeRoundedRect(graph, 11.0f, 1.0f, kBlueprintDim.withAlpha(0.72f));
+    for (int i = 1; i < 4; ++i) {
+        const float y = graph.y + static_cast<float>(i) * graph.height / 4.0f;
+        renderer.drawLine({graph.x + 14.0f, y}, {graph.right() - 14.0f, y}, 1.0f, kBlueprintDim.withAlpha(0.20f));
     }
-    renderer.fillRoundedRect(band.qKnob, 7.0f, band.dragTarget == BandControl::Q ? NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : NUIColor(0.9f, 0.7f, 0.5f, 0.95f));
+    std::vector<NUIPoint> curve{{graph.x + 18.0f, graph.bottom() - 26.0f},
+                                {graph.x + graph.width * 0.42f, graph.y + graph.height * 0.52f},
+                                {graph.x + graph.width * 0.72f, graph.y + graph.height * 0.32f},
+                                {graph.right() - 20.0f, graph.y + 30.0f}};
+    renderer.drawPolyline(curve.data(), static_cast<int>(curve.size()), 2.0f, kAccentPurple.withAlpha(0.85f));
 
-    renderer.drawText(qLabel(band.q, band.type), {band.bounds.x + 6.0f, band.bounds.bottom() - 12.0f}, 7.0f,
-                      theme.getColor("textSecondary").withAlpha(0.6f));
+    renderer.fillRoundedRect(meter, 10.0f, NUIColor(0.040f, 0.038f, 0.056f, 0.90f));
+    renderer.strokeRoundedRect(meter, 11.0f, 1.0f, kBlueprintDim.withAlpha(0.72f));
+    renderer.drawText("GR", {meter.x + 18.0f, meter.y + 14.0f}, 10.0f, kBlueprintText);
+    const NUIRect gr{meter.x + 25.0f, meter.y + 42.0f, 12.0f, meter.height - 60.0f};
+    renderer.fillRoundedRect(gr, 2.0f, kGlassDeep);
+    renderer.fillRoundedRect({gr.x, gr.y + gr.height * 0.48f, gr.width, gr.height * 0.52f}, 2.0f, kAccentPurple.withAlpha(0.82f));
 }
 
 void AestraEQEditor::onRender(NUIRenderer& renderer) {
     updateSpectrumSnapshot();
     auto bounds = getBounds();
-    renderer.fillRoundedRect(bounds, kRadius, NUIColor(0.07f, 0.07f, 0.08f, 0.97f));
-    renderer.strokeRoundedRect(bounds, kRadius, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.10f));
+    drawBlueprintGrid(renderer, bounds);
+    renderer.strokeRoundedRect(bounds, kRadius, 1.2f, kBlueprintLine.withAlpha(0.44f));
 
     drawTitleBar(renderer);
-    drawResponseCurve(renderer, {bounds.x + kPadding, bounds.y + kTitleHeight + 4.0f,
-                                  bounds.width - kPadding * 2.0f, kCurveHeight});
+    const float graphTop = bounds.y + kTitleHeight + 12.0f;
+    const float sideW = 104.0f;
+    const float filterW = 118.0f;
+    const float gap = 8.0f;
+    const NUIRect inputPanel{bounds.x + kPadding, graphTop, sideW, kCurveHeight};
+    const NUIRect hpfPanel{inputPanel.right() + gap, graphTop, filterW, kCurveHeight};
+    const NUIRect outputPanel{bounds.right() - kPadding - sideW, graphTop, sideW, kCurveHeight};
+    const NUIRect lpfPanel{outputPanel.x - gap - filterW, graphTop, filterW, kCurveHeight};
+    const NUIRect graphPanel{hpfPanel.right() + gap, graphTop,
+                             lpfPanel.x - hpfPanel.right() - gap * 2.0f, kCurveHeight};
+
+    drawInputOutputPanel(renderer, inputPanel, false);
+    drawFilterGuardPanel(renderer, hpfPanel, true);
+    drawResponseCurve(renderer, graphPanel);
+    drawFilterGuardPanel(renderer, lpfPanel, false);
+    drawInputOutputPanel(renderer, outputPanel, true);
+    drawUtilityStrip(renderer, {bounds.x + kPadding, bounds.y + kTitleHeight + kCurveHeight + 20.0f,
+                                bounds.width - kPadding * 2.0f, 48.0f});
 
     if (!m_bands.empty()) {
         const auto& first = m_bands.front();
@@ -721,12 +924,24 @@ void AestraEQEditor::onRender(NUIRenderer& renderer) {
         renderer.fillRoundedRect(
             {first.bounds.x - 4.0f, first.bounds.y - 8.0f,
              last.bounds.right() - first.bounds.x + 8.0f, first.bounds.height + 16.0f},
-            11.0f, NUIColor(0.10f, 0.11f, 0.16f, 0.72f));
+            14.0f, NUIColor(0.024f, 0.022f, 0.034f, 0.74f));
+        renderer.strokeRoundedRect(
+            {first.bounds.x - 4.0f, first.bounds.y - 8.0f,
+             last.bounds.right() - first.bounds.x + 8.0f, first.bounds.height + 16.0f},
+            14.0f, 1.0f, kBlueprintLine.withAlpha(0.28f));
     }
 
     for (const auto& band : m_bands) {
         drawBandPanel(renderer, band);
     }
+
+    drawDynamicSection(renderer, {bounds.x + kPadding, bounds.bottom() - 126.0f,
+                                  bounds.width - kPadding * 2.0f, 104.0f});
+
+    renderer.drawText("AESTRA EQ", {bounds.x + 18.0f, bounds.bottom() - 16.0f}, 8.0f, kBlueprintMuted);
+    renderer.drawText("Zero Latency", {bounds.x + bounds.width * 0.30f, bounds.bottom() - 16.0f}, 8.0f, kBlueprintMuted);
+    renderer.drawText("Oversampling: 2x", {bounds.x + bounds.width * 0.46f, bounds.bottom() - 16.0f}, 8.0f, kBlueprintMuted);
+    renderer.drawText("Max Bands: 8", {bounds.x + bounds.width * 0.62f, bounds.bottom() - 16.0f}, 8.0f, kBlueprintMuted);
 }
 
 int AestraEQEditor::hitTestBand(float x, float y) const {
@@ -916,9 +1131,7 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
                 band.dragging = true;
                 band.dragTarget = target;
                 band.dragStartX = event.position.y;
-                const NUIRect& sliderRect = (target == BandControl::Freq) ? band.freqSlider : (target == BandControl::Gain ? band.gainSlider : band.qSlider);
-                float val = 1.0f - (event.position.y - sliderRect.y) / std::max(1.0f, sliderRect.height);
-                updateBandValue(bandIdx, target, val);
+                band.dragStartValue = (target == BandControl::Freq) ? band.freq : (target == BandControl::Gain ? band.gain : band.q);
                 return true;
             }
             // Toggle enabled on click outside sliders
@@ -958,10 +1171,7 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
             continue;
         }
 
-        const NUIRect& sliderRect = (band.dragTarget == BandControl::Freq)
-            ? band.freqSlider
-            : (band.dragTarget == BandControl::Gain ? band.gainSlider : band.qSlider);
-        float val = 1.0f - (event.position.y - sliderRect.y) / std::max(1.0f, sliderRect.height);
+        const float val = band.dragStartValue + (band.dragStartX - event.position.y) * 0.0065f;
         updateBandValue(static_cast<int>(i), band.dragTarget, val);
 
         if (!event.pressed && event.button == NUIMouseButton::Left) {
@@ -974,9 +1184,6 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!event.pressed && event.button == NUIMouseButton::Left) {
         for (auto& band : m_bands) {
             if (band.dragging) {
-                const NUIRect& sliderRect = (band.dragTarget == BandControl::Freq) ? band.freqSlider : (band.dragTarget == BandControl::Gain ? band.gainSlider : band.qSlider);
-                float val = 1.0f - (event.position.y - sliderRect.y) / std::max(1.0f, sliderRect.height);
-                updateBandValue(static_cast<int>(&band - m_bands.data()), band.dragTarget, val);
                 band.dragging = false;
                 band.dragTarget = BandControl::None;
                 return true;

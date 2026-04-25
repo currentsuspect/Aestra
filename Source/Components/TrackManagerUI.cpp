@@ -38,6 +38,18 @@
 
 namespace {
 
+float safeClampFloat(float value, float a, float b) {
+    if (!std::isfinite(value)) return 0.0f;
+    if (!std::isfinite(a) && !std::isfinite(b)) return 0.0f;
+    if (!std::isfinite(a)) a = b;
+    if (!std::isfinite(b)) b = a;
+    const float lo = std::min(a, b);
+    const float hi = std::max(a, b);
+    if (value <= lo) return lo;
+    if (value >= hi) return hi;
+    return value;
+}
+
 AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
     AestraUI::NUIComponent* root = component;
     while (root && root->getParent()) {
@@ -109,6 +121,17 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     
     // Create scrollbar
     m_scrollbar = std::make_shared<AestraUI::NUIScrollbar>(AestraUI::NUIScrollbar::Orientation::Vertical);
+    {
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
+        m_scrollbar->setArrowSize(0.0f);
+        m_scrollbar->setBorderWidth(0.0f);
+        m_scrollbar->setBorderRadius(8.0f);
+        m_scrollbar->setTrackColor(theme.getColor("surfaceRaised").withAlpha(0.55f));
+        m_scrollbar->setThumbColor(theme.getColor("textPrimary").withAlpha(0.30f));
+        m_scrollbar->setThumbHoverColor(theme.getColor("textPrimary").withAlpha(0.48f));
+        m_scrollbar->setThumbPressedColor(theme.getColor("accentPrimary").withAlpha(0.68f));
+        m_scrollbar->setMinimumThumbSize(0.06);
+    }
     m_scrollbar->setOnScroll([this](double position) {
         onScroll(position);
     });
@@ -131,6 +154,8 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
         m_minimapMode = mode;
         setDirty(true);
     };
+    m_timelineMinimap->setShowModeToggles(false);
+    m_timelineMinimap->setLeadingInset(AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth);
     addChild(m_timelineMinimap);
 
     // Create UI components for existing tracks
@@ -313,21 +338,16 @@ void TrackManagerUI::updateToolbarBounds() {
     const float innerPad = themeManager.getSpacing("s"); // 8px from edge
     const float buttonSpacing = 6.0f; // Standardized gap for Aestra UI philosophy
 
-    // AESTRA UI Philosophy: Standardized 24px toolbar buttons in 40px headers
-    const float buttonSize = 24.0f; 
+    // Secondary toolbar controls are intentionally smaller than primary transport controls.
+    const float buttonSize = 22.0f; 
     const float iconSize = buttonSize;
     
     // Vertical centering for 24px button in 40px header (8px top/bottom padding)
     float currentX = bounds.x + innerPad;
     float currentY = bounds.y + (headerHeight - buttonSize) * 0.5f;
     
-    // 1. Menu Icon (Far Left)
-    m_menuIconBounds = AestraUI::NUIRect(currentX, currentY, buttonSize, buttonSize);
-    currentX += buttonSize + 14.0f; // Extra gap for separator (Aestra UI update)
-
-    // 2. Add Track Button
-    m_addTrackBounds = AestraUI::NUIRect(currentX, currentY, buttonSize, buttonSize);
-    currentX += buttonSize + (innerPad * 1.5f); // Slightly larger gap to separate major modules
+    m_menuIconBounds = AestraUI::NUIRect(0, 0, 0, 0);
+    m_addTrackBounds = AestraUI::NUIRect(0, 0, 0, 0);
 
     // 3. Tools Module
     float toolbarX = currentX;
@@ -367,30 +387,25 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     updateToolbarBounds();
 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const float radius = themeManager.getRadius("m") + 1.0f;
-    const auto idleBg = themeManager.getColor("buttonBgDefault").withAlpha(0.94f);
-    const auto hoverBg = themeManager.getColor("buttonBgHover").withAlpha(0.97f);
-    const auto activeBg = themeManager.getColor("buttonBgActive").withAlpha(0.99f);
-    const auto idleBorder = themeManager.getColor("border").withAlpha(0.24f);
-    const auto hoverBorder = themeManager.getColor("border").withAlpha(0.40f);
-    const auto activeBorder = themeManager.getColor("borderActive").withAlpha(0.24f);
-    const auto innerHighlight = AestraUI::NUIColor::white().withAlpha(0.025f);
-    const auto shadowColor = AestraUI::NUIColor(0, 0, 0, 0.14f);
-    const auto utilityBg = themeManager.getColor("surfaceRaised").withAlpha(0.58f);
-    const auto utilityHoverBg = themeManager.getColor("buttonBgHover").withAlpha(0.86f);
-    const auto utilityBorder = themeManager.getColor("borderSubtle").withAlpha(0.26f);
-    const auto utilityHoverBorder = themeManager.getColor("border").withAlpha(0.34f);
-    const auto modeIdleBg = themeManager.getColor("buttonBgDefault").withAlpha(0.90f);
-    const auto modeHoverBg = themeManager.getColor("buttonBgHover").withAlpha(0.95f);
-    const auto modeActiveBg = themeManager.getColor("buttonBgActive").withAlpha(0.98f);
-    const auto modeIdleBorder = themeManager.getColor("borderSubtle").withAlpha(0.24f);
-    const auto modeHoverBorder = themeManager.getColor("border").withAlpha(0.38f);
-    const auto modeActiveBorder = themeManager.getColor("borderActive").withAlpha(0.36f);
-    const auto accent = themeManager.getColor("accentPrimary");
+    const float radius = 5.0f;
+    const auto idleBorder = AestraUI::NUIColor::white().withAlpha(0.070f);
+    const auto hoverBorder = AestraUI::NUIColor::white().withAlpha(0.135f);
+    const auto shadowColor = AestraUI::NUIColor(0, 0, 0, 0.10f);
+    const auto utilityBg = AestraUI::NUIColor(0.070f, 0.076f, 0.094f, 0.96f);
+    const auto utilityHoverBg = AestraUI::NUIColor(0.095f, 0.103f, 0.124f, 0.98f);
+    const auto utilityBorder = AestraUI::NUIColor::white().withAlpha(0.075f);
+    const auto utilityHoverBorder = AestraUI::NUIColor::white().withAlpha(0.145f);
+    const auto modeIdleBg = AestraUI::NUIColor(0.070f, 0.076f, 0.094f, 0.94f);
+    const auto modeHoverBg = AestraUI::NUIColor(0.096f, 0.104f, 0.126f, 0.98f);
+    const auto accentPurple = AestraUI::NUIColor(0.486f, 0.361f, 0.749f, 1.0f); // #7c5cbf
+    const auto modeActiveBg = accentPurple.withAlpha(0.62f);
+    const auto modeIdleBorder = AestraUI::NUIColor::white().withAlpha(0.075f);
+    const auto modeHoverBorder = AestraUI::NUIColor::white().withAlpha(0.145f);
+    const auto modeActiveBorder = accentPurple.withAlpha(0.62f);
 
     auto drawClusterPlate = [&](const AestraUI::NUIRect& rect) {
-        renderer.fillRoundedRect(rect, radius + 2.0f, themeManager.getColor("surfaceRaised").withAlpha(0.34f));
-        renderer.strokeRoundedRect(rect, radius + 2.0f, 1.0f, idleBorder.withAlpha(0.26f));
+        renderer.fillRoundedRect(rect, radius + 1.0f, AestraUI::NUIColor(0.060f, 0.066f, 0.082f, 0.42f));
+        renderer.strokeRoundedRect(rect, radius + 1.0f, 1.0f, idleBorder.withAlpha(0.55f));
     };
 
     const AestraUI::NUIRect toolCluster{
@@ -409,77 +424,14 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     };
     drawClusterPlate(utilityCluster);
 
-    const AestraUI::NUIRect actionCluster{
-        m_menuIconBounds.x - 5.0f,
-        m_menuIconBounds.y - 4.0f,
-        (m_addTrackBounds.right() - m_menuIconBounds.x) + 10.0f,
-        m_menuIconBounds.height + 8.0f
-    };
-    drawClusterPlate(actionCluster);
-
     auto drawUtilityButton = [&](const AestraUI::NUIRect& bounds, bool hovered) {
         const auto currentBg = hovered ? utilityHoverBg : utilityBg;
         const auto currentBorder = hovered ? utilityHoverBorder : utilityBorder;
-        renderer.drawShadow(bounds, 0.0f, hovered ? 4.0f : 3.0f, hovered ? 12.0f : 10.0f,
-                            shadowColor.withAlpha(hovered ? 0.64f : 0.52f));
+        renderer.drawShadow(bounds, 0.0f, hovered ? 2.0f : 1.0f, hovered ? 7.0f : 5.0f,
+                            shadowColor.withAlpha(hovered ? 0.44f : 0.30f));
         renderer.fillRoundedRect(bounds, radius, currentBg);
         renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
-        renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
-                                   std::max(0.0f, radius - 1.0f),
-                                   1.0f,
-                                   innerHighlight.withAlpha(0.8f));
     };
-
-    // Menu Button (leftmost)
-    {
-        drawUtilityButton(m_menuIconBounds, m_menuHovered);
-    }
-    if (m_menuIcon) {
-        const float iconSz = 16.0f;
-        AestraUI::NUIPoint center = m_menuIconBounds.center();
-        
-        // Save current state
-        // Rotate around the center of the icon
-        renderer.pushTransform(center.x, center.y, m_menuIconRotation, 1.0f);
-        
-        // Draw centered at local (0,0) - renderer handles the translation to 'center' via pushTransform
-        // Note: We use a temporary rect centered at 0,0
-        m_menuIcon->setBounds(AestraUI::NUIRect(-iconSz * 0.5f, -iconSz * 0.5f, iconSz, iconSz));
-        m_menuIcon->setColor(m_menuHovered
-                                 ? themeManager.getColor("textPrimary").withAlpha(0.94f)
-                                 : themeManager.getColor("textSecondary").withAlpha(0.76f));
-        m_menuIcon->onRender(renderer);
-        
-        renderer.popTransform();
-    }
-
-    // Separator line (user requested - same as Piano Roll)
-    {
-        float sepX = m_menuIconBounds.right() + 7.0f; // Center in 14px gap
-        renderer.drawLine(
-            AestraUI::NUIPoint(sepX, m_menuIconBounds.y + 4), 
-            AestraUI::NUIPoint(sepX, m_menuIconBounds.bottom() - 4), 
-            1.0f, idleBorder.withAlpha(0.3f)
-        );
-    }
-
-    // Add-track button (next to menu)
-    {
-        drawUtilityButton(m_addTrackBounds, m_addTrackHovered);
-    }
-    if (m_addTrackIcon) {
-        const float iconSz = 16.0f;
-        AestraUI::NUIRect iconRect(
-            std::round(m_addTrackBounds.x + (m_addTrackBounds.width - iconSz) * 0.5f),
-            std::round(m_addTrackBounds.y + (m_addTrackBounds.height - iconSz) * 0.5f),
-            iconSz, iconSz
-        );
-        m_addTrackIcon->setBounds(iconRect);
-        m_addTrackIcon->setColor(m_addTrackHovered
-                                     ? themeManager.getColor("textPrimary").withAlpha(0.94f)
-                                     : themeManager.getColor("textSecondary").withAlpha(0.78f));
-        m_addTrackIcon->onRender(renderer);
-    }
 
     // Helper lambda to draw icon with selection state
     auto drawToolIcon = [&](std::shared_ptr<AestraUI::NUIIcon>& icon, const AestraUI::NUIRect& bounds, PlaylistTool tool, bool hovered) {
@@ -496,32 +448,28 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
             currentBorder = modeHoverBorder;
         }
 
-        renderer.drawShadow(bounds, 0.0f, isActive ? 5.0f : 4.0f, isActive ? 15.0f : 13.0f,
-                            shadowColor.withAlpha(isActive ? 0.84f : hovered ? 0.72f : 0.60f));
+        renderer.drawShadow(bounds, 0.0f, isActive ? 2.0f : 1.0f, isActive ? 8.0f : 5.0f,
+                            shadowColor.withAlpha(isActive ? 0.48f : hovered ? 0.40f : 0.28f));
         renderer.fillRoundedRect(bounds, radius, currentBg);
         renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
         if (isActive) {
-            renderer.fillRoundedRect({bounds.x + 5.0f, bounds.y + 2.0f, bounds.width - 10.0f, 2.0f},
+            renderer.fillRoundedRect({bounds.x + 6.0f, bounds.bottom() - 3.0f, bounds.width - 12.0f, 1.0f},
                                      1.0f,
-                                     accent.withAlpha(0.68f));
+                                     accentPurple.withAlpha(0.78f));
         }
-        renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
-                                   std::max(0.0f, radius - 1.0f),
-                                   1.0f,
-                                   innerHighlight);
         
         // Draw icon
         if (icon) {
-            const float iconSz = 16.0f;
+            const float iconSz = 19.0f;
             AestraUI::NUIRect iconRect(
                 std::round(bounds.x + (bounds.width - iconSz) * 0.5f),
                 std::round(bounds.y + (bounds.height - iconSz) * 0.5f),
                 iconSz, iconSz
             );
             icon->setBounds(iconRect);
-            icon->setColor(isActive ? accent.withAlpha(0.96f)
-                                    : hovered ? themeManager.getColor("textPrimary").withAlpha(0.90f)
-                                              : themeManager.getColor("textSecondary").withAlpha(0.72f));
+            icon->setColor(isActive ? themeManager.getColor("textPrimary").withAlpha(0.90f)
+                                    : hovered ? themeManager.getColor("textPrimary").withAlpha(0.70f)
+                                              : themeManager.getColor("textPrimary").withAlpha(0.45f));
             icon->onRender(renderer);
         }
     };
@@ -538,25 +486,21 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         auto currentBg = utilityBg;
         auto currentBorder = utilityBorder;
         if (followActive) {
-            currentBg = accent.withAlpha(0.18f);
-            currentBorder = accent.withAlpha(0.42f);
+            currentBg = AestraUI::NUIColor(0.486f, 0.361f, 0.749f, 0.22f);
+            currentBorder = AestraUI::NUIColor(0.486f, 0.361f, 0.749f, 0.48f);
         } else if (m_followPlayheadHovered) {
             currentBg = utilityHoverBg;
             currentBorder = utilityHoverBorder;
         }
-        renderer.drawShadow(m_followPlayheadBounds, 0.0f, followActive ? 5.0f : 4.0f, followActive ? 14.0f : 11.0f,
-                            shadowColor.withAlpha(followActive ? 0.76f : 0.56f));
+        renderer.drawShadow(m_followPlayheadBounds, 0.0f, followActive ? 2.0f : 1.0f, followActive ? 8.0f : 5.0f,
+                            shadowColor.withAlpha(followActive ? 0.46f : 0.30f));
         renderer.fillRoundedRect(m_followPlayheadBounds, radius, currentBg);
         renderer.strokeRoundedRect(m_followPlayheadBounds, radius, 1.0f, currentBorder);
         if (followActive) {
-            renderer.fillRoundedRect({m_followPlayheadBounds.x + 5.0f, m_followPlayheadBounds.y + 2.0f, m_followPlayheadBounds.width - 10.0f, 2.0f},
+            renderer.fillRoundedRect({m_followPlayheadBounds.x + 6.0f, m_followPlayheadBounds.bottom() - 3.0f, m_followPlayheadBounds.width - 12.0f, 1.0f},
                                      1.0f,
-                                     accent.withAlpha(0.68f));
+                                     accentPurple.withAlpha(0.78f));
         }
-        renderer.strokeRoundedRect({m_followPlayheadBounds.x + 1.0f, m_followPlayheadBounds.y + 1.0f, m_followPlayheadBounds.width - 2.0f, m_followPlayheadBounds.height - 2.0f},
-                                   std::max(0.0f, radius - 1.0f),
-                                   1.0f,
-                                   innerHighlight);
     }
     
     if (m_followPlayheadIcon) {
@@ -569,9 +513,9 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         m_followPlayheadIcon->setBounds(iconRect);
         
         if (followActive) {
-            m_followPlayheadIcon->setColor(accent.withAlpha(0.96f));
+            m_followPlayheadIcon->setColor(themeManager.getColor("textPrimary").withAlpha(0.90f));
         } else {
-            m_followPlayheadIcon->setColor(themeManager.getColor("textSecondary").withAlpha(m_followPlayheadHovered ? 0.88f : 0.76f));
+            m_followPlayheadIcon->setColor(themeManager.getColor("textPrimary").withAlpha(m_followPlayheadHovered ? 0.70f : 0.35f));
         }
         m_followPlayheadIcon->onRender(renderer);
     }
@@ -1131,12 +1075,78 @@ bool TrackManagerUI::clampInstantClipDragPosition(AestraUI::NUIPoint& position) 
     const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
     const float trackAreaBottom = bounds.y + bounds.height;
 
-    const float clampedX = std::clamp(position.x, gridStartX, gridEndX);
-    const float clampedY = std::clamp(position.y, trackAreaTop, trackAreaBottom);
+    const float clampedX = safeClampFloat(position.x, gridStartX, gridEndX);
+    const float clampedY = safeClampFloat(position.y, trackAreaTop, trackAreaBottom);
     const bool changed = std::abs(position.x - clampedX) > 0.5f || std::abs(position.y - clampedY) > 0.5f;
     position.x = clampedX;
     position.y = clampedY;
     return changed;
+}
+
+bool TrackManagerUI::placeFileOnTimeline(const std::string& filePath, const std::string& displayName) {
+    if (!m_trackManager || filePath.empty()) {
+        return false;
+    }
+
+    int targetLane = 0;
+    if (auto* selectedTrack = getSelectedTrackUI()) {
+        for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
+            if (m_trackUIComponents[i].get() == selectedTrack) {
+                targetLane = static_cast<int>(i);
+                break;
+            }
+        }
+    }
+
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const auto bounds = getBounds();
+    const float trackAreaStartY = bounds.y + 38.0f + 24.0f + 28.0f;
+    const float y = trackAreaStartY + (targetLane * (m_trackHeight + m_trackSpacing)) - m_scrollOffset + 2.0f;
+    const float gridStartX = theme.getLayoutDimensions().trackControlsWidth + 5.0f;
+    const double playheadBeats = snapBeatToGrid(
+        m_trackManager->getPlaylistModel().secondsToBeats(std::max(0.0, m_trackManager->getPosition())));
+    const float x = bounds.x + gridStartX + static_cast<float>(playheadBeats * m_pixelsPerBeat) - m_timelineScrollOffset + 2.0f;
+
+    AestraUI::DragData dragData;
+    dragData.type = AestraUI::DragDataType::File;
+    dragData.filePath = filePath;
+    dragData.displayName = displayName;
+    const auto dropResult = onDrop(dragData, AestraUI::NUIPoint(x, y));
+    return dropResult.accepted;
+}
+
+bool TrackManagerUI::placePatternOnTimeline(PatternID patternId) {
+    if (!m_trackManager || !patternId.isValid()) {
+        return false;
+    }
+
+    int targetLane = 0;
+    if (auto* selectedTrack = getSelectedTrackUI()) {
+        for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
+            if (m_trackUIComponents[i].get() == selectedTrack) {
+                targetLane = static_cast<int>(i);
+                break;
+            }
+        }
+    }
+
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const auto bounds = getBounds();
+    const float trackAreaStartY = bounds.y + 38.0f + 24.0f + 28.0f;
+    const float y = trackAreaStartY + (targetLane * (m_trackHeight + m_trackSpacing)) - m_scrollOffset + 2.0f;
+    const float gridStartX = theme.getLayoutDimensions().trackControlsWidth + 5.0f;
+    const double playheadBeats = snapBeatToGrid(
+        m_trackManager->getPlaylistModel().secondsToBeats(std::max(0.0, m_trackManager->getPosition())));
+    const float x = bounds.x + gridStartX + static_cast<float>(playheadBeats * m_pixelsPerBeat) - m_timelineScrollOffset + 2.0f;
+
+    AestraUI::DragData dragData;
+    dragData.type = AestraUI::DragDataType::Pattern;
+    dragData.customData = patternId;
+    if (const auto* pattern = m_trackManager->getPatternManager().getPattern(patternId)) {
+        dragData.displayName = pattern->name;
+    }
+    const auto dropResult = onDrop(dragData, AestraUI::NUIPoint(x, y));
+    return dropResult.accepted;
 }
 
 void TrackManagerUI::finishInstantClipDrag() {
@@ -1170,6 +1180,10 @@ void TrackManagerUI::finishInstantClipDrag() {
     m_draggedClipTrack = nullptr;
     m_draggedClipId = ClipInstanceID{};
     m_suppressPlaylistRefresh = false; // Restore normal behavior
+    if (m_dragPatternPreviewActive && m_onStopPatternClipPreview) {
+        m_onStopPatternClipPreview();
+    }
+    m_dragPatternPreviewActive = false;
 
     if (m_window) {
         m_window->setMouseCapture(false);
@@ -1205,6 +1219,10 @@ void TrackManagerUI::cancelInstantClipDrag() {
     m_draggedClipTrack = nullptr;
     m_draggedClipId = ClipInstanceID{};
     m_suppressPlaylistRefresh = false;
+    if (m_dragPatternPreviewActive && m_onStopPatternClipPreview) {
+        m_onStopPatternClipPreview();
+    }
+    m_dragPatternPreviewActive = false;
 
     if (m_window) {
         m_window->setMouseCapture(false);
@@ -1308,6 +1326,12 @@ void TrackManagerUI::refreshTracks() {
         trackUI->setOnPatternClipOpenRequested([this](PatternID patternId) {
             if (m_onOpenPatternInPianoRoll) {
                 m_onOpenPatternInPianoRoll(patternId);
+            }
+        });
+        trackUI->setOnPatternClipDragStarted([this](PatternID patternId) {
+            if (m_onPreviewPatternClip && patternId.isValid()) {
+                m_onPreviewPatternClip(patternId);
+                m_dragPatternPreviewActive = true;
             }
         });
 
@@ -1461,14 +1485,14 @@ void TrackManagerUI::layoutTracks() {
     float horizontalScrollbarHeight = 24.0f;
     float rulerHeight = 28.0f;
     
-    float viewportHeight = bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight;
+    float viewportHeight = std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight);
     
     // In v3.1, panels are floating overlays and do not affect workspace viewport directly.
     // If we wanted docking, we'd subtract their space here based on external state pointers.
     
     // Layout timeline minimap (top, right after header, before ruler)
     if (m_timelineMinimap) {
-        float minimapWidth = bounds.width - scrollbarWidth;
+        float minimapWidth = std::max(0.0f, bounds.width - scrollbarWidth);
         float minimapY = headerHeight;
         m_timelineMinimap->setBounds(AestraUI::NUIAbsolute(bounds, 0, minimapY, minimapWidth, horizontalScrollbarHeight));
         updateTimelineMinimap(0.0);
@@ -1477,14 +1501,14 @@ void TrackManagerUI::layoutTracks() {
     // Layout vertical scrollbar (right side, below header, horizontal scrollbar, and ruler)
     if (m_scrollbar) {
         float scrollbarY = headerHeight + horizontalScrollbarHeight + rulerHeight;
-        float scrollbarX = bounds.width - scrollbarWidth;
+        float scrollbarX = std::max(0.0f, bounds.width - scrollbarWidth);
         m_scrollbar->setBounds(AestraUI::NUIAbsolute(bounds, scrollbarX, scrollbarY, scrollbarWidth, viewportHeight));
         updateScrollbar();
     }
 
     float controlAreaWidth = layout.trackControlsWidth;
-    float gridStartX = bounds.x + controlAreaWidth + 5.0f;
-    float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
+    float gridStartX = bounds.x + std::max(0.0f, controlAreaWidth + 5.0f);
+    float trackAreaTop = bounds.y + std::max(0.0f, headerHeight + horizontalScrollbarHeight + rulerHeight);
 
     // === V3.0 LANE LAYOUT (Two-Rect Model) ===
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
@@ -1495,7 +1519,7 @@ void TrackManagerUI::layoutTracks() {
         
         // Fix: Use absolute coordinates (bounds.x, yPos).
         // AestraUI components use absolute screen coordinates.
-        float trackWidth = bounds.width - scrollbarWidth - 5.0f;
+        float trackWidth = std::max(0.0f, bounds.width - scrollbarWidth - 5.0f);
         trackUI->setBounds(bounds.x, yPos, trackWidth, m_trackHeight);
         trackUI->setVisible(m_playlistVisible);
         
@@ -1736,26 +1760,28 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     float gridStartX = controlAreaWidth + 5;
     
     // Draw background (control area + full grid area - no bounds restriction)
-    // Deep Space Background (Explicitly dark to avoid missing-token pinks)
-    AestraUI::NUIColor bgColor = AestraUI::NUIColor::fromHex(0x050508); // Deep Void
+    AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
+    const AestraUI::NUIColor gridBgColor = AestraUI::NUIColor(0.070f, 0.075f, 0.090f, 1.0f);
+    const auto depthTop = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.025f);
+    const auto depthBottom = AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.08f);
     
     if (m_playlistVisible) {
         // Background for control area (always visible)
         AestraUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
-        renderer.fillRect(controlBg, bgColor);
+        renderer.fillRect(controlBg, AestraUI::NUIColor(0.078f, 0.084f, 0.102f, 1.0f));
         
         // Background for grid area (match track background; zebra grid provides contrast)
         float scrollbarWidth = 15.0f;
         float gridWidth = bounds.width - controlAreaWidth - scrollbarWidth - 5;
         AestraUI::NUIRect gridBg(bounds.x + gridStartX, bounds.y, gridWidth, bounds.height);
-        renderer.fillRect(gridBg, bgColor);
+        renderer.fillRect(gridBg, gridBgColor);
+        renderer.fillRect({gridBg.x, gridBg.y, gridBg.width, std::max(1.0f, gridBg.height * 0.12f)}, depthTop);
+        renderer.fillRect({gridBg.x, gridBg.bottom() - std::max(8.0f, gridBg.height * 0.10f), gridBg.width, std::max(8.0f, gridBg.height * 0.10f)}, depthBottom);
         
         // Draw border
         AestraUI::NUIColor borderColor = themeManager.getColor("border");
-        renderer.strokeRect(bounds, 1, borderColor);
+        renderer.strokeRect(bounds, 1, borderColor.withAlpha(0.42f));
         
-        // Draw Grid (Restored and moved after background)
-        drawGrid(renderer, bounds, gridStartX, gridWidth, m_timelineScrollOffset);
     }
     
     // Header/Track Count (Static)
@@ -1814,11 +1840,14 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         const auto trackBounds = track->getBounds();
         if (trackBounds.bottom() < viewportTop || trackBounds.y > viewportBottom) continue;
 
-        // Zebra Striping (Handled here for guaranteed ordering/visibility)
-        if (i % 2 == 0) {
-            // Even rows: overlay for separation (8% white opacity)
-            renderer.fillRect(trackBounds, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
-        }
+        // Flat dark row base for empty cells (no per-row color tinting).
+        renderer.fillRect(trackBounds, AestraUI::NUIColor(0.070f, 0.075f, 0.090f, 1.0f));
+        renderer.drawLine(
+            AestraUI::NUIPoint(trackBounds.x + controlAreaWidth, trackBounds.bottom() - 1.0f),
+            AestraUI::NUIPoint(trackBounds.right(), trackBounds.bottom() - 1.0f),
+            1.0f,
+            AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.065f)
+        );
 
         track->renderStatic(renderer);
     }
@@ -1836,8 +1865,13 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
 
         float headerHeight = 38.0f;
         AestraUI::NUIRect headerRect(bounds.x, bounds.y, headerWidth, headerHeight);
-        renderer.fillRect(headerRect, bgColor);
-        renderer.strokeRect(headerRect, 1, borderColor);
+        renderer.fillRect(headerRect, AestraUI::NUIColor(0.078f, 0.084f, 0.102f, 1.0f));
+        renderer.fillRect({headerRect.x, headerRect.bottom() - 4.0f, headerRect.width, 4.0f},
+                          AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.10f));
+        const auto headerBorder = borderColor.withAlpha(0.42f);
+        renderer.drawLine({headerRect.x, headerRect.y}, {headerRect.x, headerRect.bottom()}, 1.0f, headerBorder);
+        renderer.drawLine({headerRect.right(), headerRect.y}, {headerRect.right(), headerRect.bottom()}, 1.0f, headerBorder);
+        renderer.drawLine({headerRect.x, headerRect.bottom()}, {headerRect.right(), headerRect.bottom()}, 1.0f, headerBorder);
         
         // Draw time ruler below header
         float rulerHeight = 28.0f;
@@ -2119,7 +2153,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         
         // Clamp scroll to domain bounds
         double maxStartBeat = std::max(0.0, m_minimapDomainEndBeat - (gridWidthPx / m_pixelsPerBeat));
-        m_timelineScrollOffset = std::clamp(newScrollOffset, 0.0f, static_cast<float>(maxStartBeat * m_pixelsPerBeat));
+        m_timelineScrollOffset = safeClampFloat(newScrollOffset, 0.0f, static_cast<float>(maxStartBeat * m_pixelsPerBeat));
         
         // Sync to all tracks
         for (auto& trackUI : m_trackUIComponents) {
@@ -2307,7 +2341,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
                 m_trackManager->setPosition(positionInSeconds);
                 m_trackManager->setPlayStartPosition(positionInSeconds);
             } else if (m_isDrawingSelectionBox) {
-                m_selectionBoxEnd.x = std::clamp(m_lastMousePos.x, gridStartX, gridEndX);
+                m_selectionBoxEnd.x = safeClampFloat(m_lastMousePos.x, gridStartX, gridEndX);
                 invalidateCache();
             }
         }
@@ -2323,6 +2357,9 @@ void TrackManagerUI::onResize(int width, int height) {
     invalidateCache();  // Full invalidation on resize for immediate repaint
     
     layoutTracks();
+    if (m_timelineMinimap) {
+        m_timelineMinimap->setLeadingInset(AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth);
+    }
     // Zebra Striping: Assign row index to tracks
     for (size_t i = 0; i < m_trackUIComponents.size(); ++i) {
         if (m_trackUIComponents[i]) {
@@ -2385,7 +2422,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     bool anyOldHovered = oldMenuHovered || oldAddHovered || oldSelectHovered || 
                          oldSplitHovered || oldMultiSelectHovered || oldFollowHovered;
     
-    if (anyToolbarHovered) {
+    if (m_toolbarBounds.contains(event.position) && anyToolbarHovered) {
         std::string tooltipText;
         if (m_menuHovered && !oldMenuHovered) tooltipText = "Menu";
         else if (m_addTrackHovered && !oldAddHovered) tooltipText = "Add Track";
@@ -2395,10 +2432,10 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         else if (m_followPlayheadHovered && !oldFollowHovered) tooltipText = "Follow Playhead";
         
         if (!tooltipText.empty()) {
-            AestraUI::NUIComponent::showRemoteTooltip(tooltipText, event.position);
+            AestraUI::NUIComponent::showRemoteTooltip(tooltipText, event.position, this);
         }
-    } else if (anyOldHovered && !anyToolbarHovered) {
-        AestraUI::NUIComponent::hideRemoteTooltip();
+    } else if (m_toolbarBounds.contains(event.position) && anyOldHovered && !anyToolbarHovered) {
+        AestraUI::NUIComponent::hideRemoteTooltip(this);
     }
     
     // Toolbar is rendered outside the playlist cache; don't invalidate the cache on hover.
@@ -2554,8 +2591,8 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             float gridBottomLocal = globalBounds.y + globalBounds.height; // Full height down
             
             // Clamp event position (window-local) to grid area
-            float targetX = std::clamp(event.position.x, gridLeftLocal, gridRightLocal);
-            float targetY = std::clamp(event.position.y, gridTopLocal, gridBottomLocal);
+            float targetX = safeClampFloat(event.position.x, gridLeftLocal, gridRightLocal);
+            float targetY = safeClampFloat(event.position.y, gridTopLocal, gridBottomLocal);
             
             // Apply bounds to internal selection logic
             m_selectionBoxEnd = {targetX, targetY};
@@ -2616,11 +2653,12 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     // Mouse wheel handling
     if (event.wheelDelta != 0.0f && (isInRuler || isInTrackArea)) {
-        // Check for Shift modifier - Shift+scroll = ZOOM
-        bool shiftHeld = (event.modifiers & AestraUI::NUIModifiers::Shift);
-        
-        if (shiftHeld || isInRuler) {
-            // ZOOM: Shift+scroll anywhere OR scroll on ruler
+        const bool shiftHeld = (event.modifiers & AestraUI::NUIModifiers::Shift);
+        const bool ctrlHeld = (event.modifiers & AestraUI::NUIModifiers::Ctrl);
+        const bool capsHeld = (event.modifiers & AestraUI::NUIModifiers::CapsLock);
+
+        if (isInRuler || ctrlHeld) {
+            // ZOOM: ruler wheel or Ctrl+wheel.
             m_lastMouseZoomX = localPos.x;
             
             // Calculate mouse position in "content space" BEFORE zoom
@@ -2640,7 +2678,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             
             // Exponential zoom
             float zoomMultiplier = event.wheelDelta > 0 ? 1.15f : 0.87f;
-            float newPixelsPerBeat = std::clamp(m_targetPixelsPerBeat * zoomMultiplier, minPPB, 300.0f);
+            float newPixelsPerBeat = safeClampFloat(m_targetPixelsPerBeat * zoomMultiplier, minPPB, 300.0f);
             
             m_targetPixelsPerBeat = newPixelsPerBeat;
             // Update immediate for snappiness (smooth zoom interpolation can be added later if needed)
@@ -2653,7 +2691,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             
             // Clamp scroll to domain bounds
             double maxStartBeat = std::max(0.0, m_minimapDomainEndBeat - (gridWidthPx / m_pixelsPerBeat));
-            newScrollOffset = std::clamp(newScrollOffset, 0.0f, static_cast<float>(maxStartBeat * m_pixelsPerBeat));
+            newScrollOffset = safeClampFloat(newScrollOffset, 0.0f, static_cast<float>(maxStartBeat * m_pixelsPerBeat));
             m_timelineScrollOffset = newScrollOffset;
             
             for (auto& trackUI : m_trackUIComponents) {
@@ -2664,8 +2702,27 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             
             invalidateCache();  // Full cache invalidation for zoom changes
             return true;
+        } else if (isInTrackArea && (shiftHeld || capsHeld)) {
+            // HORIZONTAL SCROLL: Shift/Caps+wheel (and synthetic Shift from laptop horizontal wheel).
+            auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+            const float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
+            const float gridStartX = controlAreaWidth + 5.0f;
+            const float gridWidthPx = getTimelineGridWidthPixels();
+            const double maxStartBeat = std::max(0.0, m_minimapDomainEndBeat - (gridWidthPx / m_pixelsPerBeat));
+            const float maxTimelineScroll = static_cast<float>(maxStartBeat * m_pixelsPerBeat);
+            constexpr float horizontalSpeed = 64.0f;
+            m_timelineScrollOffset = safeClampFloat(
+                m_timelineScrollOffset - event.wheelDelta * horizontalSpeed,
+                0.0f,
+                maxTimelineScroll
+            );
+            for (auto& trackUI : m_trackUIComponents) {
+                trackUI->setTimelineScrollOffset(m_timelineScrollOffset);
+            }
+            invalidateCache();
+            return true;
         } else {
-            // VERTICAL SCROLL: Regular scroll in track area (no shift)
+            // VERTICAL SCROLL: Regular scroll in track area.
             float scrollSpeed = 60.0f;
             float scrollDelta = -event.wheelDelta * scrollSpeed; // Invert for natural scroll direction
             
@@ -3069,35 +3126,10 @@ bool TrackManagerUI::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             return true;
         }
         
-        // Undo / Redo
+        // Undo/Redo is handled globally by AestraContent — don't duplicate here
+        
+        // Clipboard (Ctrl+C/V/X/D)
         if (event.modifiers & AestraUI::NUIModifiers::Ctrl) {
-            bool performed = false;
-            
-            // Redo: Ctrl+Shift+Z or Ctrl+Y
-            if ((event.keyCode == AestraUI::NUIKeyCode::Z && (event.modifiers & AestraUI::NUIModifiers::Shift)) ||
-                (event.keyCode == AestraUI::NUIKeyCode::Y)) {
-                if (m_trackManager->getCommandHistory().redo()) {
-                    performed = true;
-                    Log::info("[TrackManagerUI] Redo performed");
-                }
-            }
-            // Undo: Ctrl+Z
-            else if (event.keyCode == AestraUI::NUIKeyCode::Z) {
-                if (m_trackManager->getCommandHistory().undo()) {
-                    performed = true;
-                    Log::info("[TrackManagerUI] Undo performed");
-                }
-            }
-            
-            if (performed) {
-                refreshTracks();
-                invalidateCache();
-                scheduleTimelineMinimapRebuild();
-                m_trackManager->markModified();
-                return true;
-            }
-            
-            // Clipboard
             if (event.keyCode == AestraUI::NUIKeyCode::X) {
                 cutSelectedClip();
                 return true;
@@ -3412,7 +3444,7 @@ void TrackManagerUI::resizeTimelineViewEdgeFromMinimap(AestraUI::TimelineMinimap
         const double clampedEdge =
             std::max(domainStart, std::min(edgeBeat, anchorBeat - std::max(1e-6, minWidthBeats)));
         const double desiredWidth = std::max(minWidthBeats, std::min(maxWidthBeats, anchorBeat - clampedEdge));
-        const float newPixelsPerBeat = std::clamp(static_cast<float>(gridWidthPx / desiredWidth), kMinPixelsPerBeat, kMaxPixelsPerBeat);
+        const float newPixelsPerBeat = safeClampFloat(static_cast<float>(gridWidthPx / desiredWidth), kMinPixelsPerBeat, kMaxPixelsPerBeat);
         applyZoom(newPixelsPerBeat);
 
         const double viewWidthBeats = static_cast<double>(gridWidthPx / m_pixelsPerBeat);
@@ -3424,7 +3456,7 @@ void TrackManagerUI::resizeTimelineViewEdgeFromMinimap(AestraUI::TimelineMinimap
         const double clampedEdge =
             std::min(domainEnd, std::max(edgeBeat, anchorBeat + std::max(1e-6, minWidthBeats)));
         const double desiredWidth = std::max(minWidthBeats, std::min(maxWidthBeats, clampedEdge - anchorBeat));
-        const float newPixelsPerBeat = std::clamp(static_cast<float>(gridWidthPx / desiredWidth), kMinPixelsPerBeat, kMaxPixelsPerBeat);
+        const float newPixelsPerBeat = safeClampFloat(static_cast<float>(gridWidthPx / desiredWidth), kMinPixelsPerBeat, kMaxPixelsPerBeat);
         applyZoom(newPixelsPerBeat);
 
         setTimelineViewStartBeat(anchorBeat, isFinal);
@@ -3454,7 +3486,7 @@ void TrackManagerUI::zoomTimelineAroundBeat(double anchorBeat, float zoomMultipl
     float minPPB = std::max(1.0f, static_cast<float>(gridWidthPx / domainWidth));
 
     // Minimap zoom must feel immediate; keep the smooth-zoom system in sync by updating both.
-    const float newPixelsPerBeat = std::clamp(m_pixelsPerBeat * zoomMultiplier, minPPB, 300.0f);
+    const float newPixelsPerBeat = safeClampFloat(m_pixelsPerBeat * zoomMultiplier, minPPB, 300.0f);
     m_pixelsPerBeat = newPixelsPerBeat;
     m_targetPixelsPerBeat = newPixelsPerBeat;
 
@@ -3641,17 +3673,14 @@ void TrackManagerUI::deselectAllTracks() {
 
 void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    auto borderColor = themeManager.getColor("borderColor");
-    auto textColor = themeManager.getColor("textPrimary");
-    auto accentColor = themeManager.getColor("accentPrimary");
+    auto borderColor = AestraUI::NUIColor::white().withAlpha(0.085f);
+    auto accentColor = AestraUI::NUIColor(0.486f, 0.361f, 0.749f, 1.0f);
     
-    // === PRO/GLASS RULER STYLE ===
-    // Background: Darker than track area to visually separate
-    auto glassBg = themeManager.getColor("backgroundSecondary").withAlpha(0.92f);
-    auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.045f); // Top edge highlight
-    
+    auto glassBg = themeManager.getColor("backgroundPrimary");
+    auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.018f);
+
     auto textCol = themeManager.getColor("textPrimary").withAlpha(0.94f);
-    auto tickCol = themeManager.getColor("textPrimary").withAlpha(0.62f);
+    auto tickCol = AestraUI::NUIColor::fromHex(0x1e1e28).withAlpha(0.95f);
     
     // Restore layout definition
     const auto& layout = themeManager.getLayoutDimensions();
@@ -3666,21 +3695,19 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     
     AestraUI::NUIRect gridRulerRect(gridStartX, rulerBounds.y, gridWidth, rulerBounds.height);
     
-    // 1. Draw glass background on grid area (timeline portion)
-    float cornerRadius = 4.0f;
+    float cornerRadius = 3.0f;
     renderer.fillRoundedRect(gridRulerRect, cornerRadius, glassBg);
     
     // Subtle top highlight on grid area only
     AestraUI::NUIRect highlightRect(gridRulerRect.x, gridRulerRect.y, gridRulerRect.width, 1.0f);
     renderer.fillRect(highlightRect, glassHighlight);
     
-    // Draw subtle glass border on grid area
-    renderer.strokeRoundedRect(gridRulerRect, cornerRadius, 1.0f, borderColor.withAlpha(0.34f));
+    renderer.strokeRoundedRect(gridRulerRect, cornerRadius, 1.0f, borderColor);
     renderer.drawLine(
         AestraUI::NUIPoint(gridRulerRect.x, gridRulerRect.bottom() - 1.0f),
         AestraUI::NUIPoint(gridRulerRect.right(), gridRulerRect.bottom() - 1.0f),
         1.0f,
-        themeManager.getColor("glassBorder").withAlpha(0.20f)
+        AestraUI::NUIColor::white().withAlpha(0.075f)
     );
 
     // === SET CLIP RECT for timeline grid area (prevents text/ticks bleeding outside) ===
@@ -3690,25 +3717,12 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     int beatsPerBar = m_beatsPerBar;
     float pixelsPerBar = m_pixelsPerBeat * beatsPerBar;
     
-    // === ADAPTIVE DENSITY: Determine bar stride based on zoom level ===
-    // When zoomed out far, skip bars to avoid clutter - smooth LOD transitions
-    int barStride = 1;  // Default: show every bar
-    if (pixelsPerBar < 2.0f) {
-        barStride = 128; // Ultra extreme zoom: every 128 bars
-    } else if (pixelsPerBar < 4.0f) {
-        barStride = 64;  // Extreme zoom out: every 64 bars
-    } else if (pixelsPerBar < 8.0f) {
-        barStride = 32;  // Very far zoom: every 32 bars
-    } else if (pixelsPerBar < 12.0f) {
-        barStride = 16;  // Far zoom: every 16 bars
-    } else if (pixelsPerBar < 20.0f) {
-        barStride = 8;   // Zoomed out: every 8 bars
-    } else if (pixelsPerBar < 35.0f) {
-        barStride = 4;   // Medium-far zoom: every 4 bars
-    } else if (pixelsPerBar < 55.0f) {
-        barStride = 2;   // Medium zoom: every 2 bars
+    // === ADAPTIVE DENSITY: keep contiguous 1,2,3... bars unless labels would overlap ===
+    int barStride = 1;
+    const float minLabelSpacingPx = 28.0f;
+    while ((pixelsPerBar * static_cast<float>(barStride)) < minLabelSpacingPx && barStride < 128) {
+        barStride *= 2;
     }
-    // else barStride = 1 (show every bar)
     
     // Calculate which bar to start drawing from based on scroll offset
     int startBar = static_cast<int>(m_timelineScrollOffset / pixelsPerBar);
@@ -3731,7 +3745,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         // Bigger text for major bars (multiples of 4 bars from bar 1)
         // When using stride, all shown bars are "major" since we're already filtering
         bool isMajorBar = (barStride > 1) || (barNum == 1) || ((barNum - 1) % 4 == 0); // 1, 5, 9, 13...
-        float fontSize = isMajorBar ? 11.0f : 9.0f;  // Compact ruler text
+        float fontSize = isMajorBar ? 11.5f : 10.0f;
         
         auto textSize = renderer.measureText(barText, fontSize);
         
@@ -3744,7 +3758,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         // Draw text - clip rect handles edge clipping automatically
         renderer.drawText(barText, 
                         AestraUI::NUIPoint(textX, textY),
-                        fontSize, isMajorBar ? textCol : textCol.withAlpha(0.78f));
+                        fontSize, isMajorBar ? textCol : textCol.withAlpha(0.76f));
         
         // Bar tick line - major bars get full height, others half
         // Mature Style: Ticks bottom-up
@@ -3753,7 +3767,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
             AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height - tickHeight),
             AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height),
             1.0f,
-            isMajorBar ? tickCol : tickCol.withAlpha(0.7f)
+            isMajorBar ? tickCol : tickCol.withAlpha(0.58f)
         );
         
         // Beat ticks within the bar (only if zoomed in enough AND not striding)
@@ -3762,9 +3776,8 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
             for (int beat = 1; beat < beatsPerBar; ++beat) {
                 float beatX = x + (beat * m_pixelsPerBeat);
                 
-                // Downbeats (main beats 1,2,3,4) get brighter, taller ticks
-                float beatTickHeight = rulerBounds.height * 0.35f;  // Taller than before
-                AestraUI::NUIColor beatTickColor = accentColor.withAlpha(0.65f);  // Bright purple
+                float beatTickHeight = rulerBounds.height * 0.30f;
+                AestraUI::NUIColor beatTickColor = AestraUI::NUIColor::fromHex(0x1e1e28).withAlpha(0.66f);
                 
                 renderer.drawLine(
                     AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height - beatTickHeight),
@@ -3815,14 +3828,14 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
 
     // 2. Draw SOLID background for CONTROL AREA (left side - DRAWN LAST to fully cover any bleed)
     //    Use backgroundPrimary to match minimap's left section exactly
-    auto controlBg = themeManager.getColor("backgroundPrimary");
+    auto controlBg = themeManager.getColor("backgroundSecondary");
     AestraUI::NUIRect controlRect(rulerBounds.x, rulerBounds.y, controlAreaWidth + 5.0f, rulerBounds.height);
     renderer.fillRect(controlRect, controlBg);
     renderer.drawLine(
         AestraUI::NUIPoint(controlRect.x, controlRect.bottom() - 1.0f),
         AestraUI::NUIPoint(controlRect.right(), controlRect.bottom() - 1.0f),
         1.0f,
-        themeManager.getColor("glassBorder").withAlpha(0.14f)
+        AestraUI::NUIColor::white().withAlpha(0.060f)
     );
 
     // Dedicated "corner" panel where track controls meet the ruler.
@@ -3831,7 +3844,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         AestraUI::NUIPoint(cornerRect.right(), cornerRect.y),
         AestraUI::NUIPoint(cornerRect.right(), cornerRect.bottom()),
         1.0f,
-        borderColor.withAlpha(0.5f)
+        borderColor.withAlpha(0.82f)
     );
 
 }
@@ -3976,113 +3989,6 @@ double TrackManagerUI::getMaxTimelineExtent() const {
 }
 
 
-// Shared Grid Drawing Helper
-void TrackManagerUI::drawGrid(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX, float gridWidth, float timelineScrollOffset) {
-    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    
-    // Draw Dynamic Snap Grid
-    double snapDur = AestraUI::MusicTheory::getSnapDuration(m_snapSetting);
-    if (m_snapSetting == AestraUI::SnapGrid::None) snapDur = 1.0;
-    if (snapDur <= 0.0001) snapDur = 1.0;
-
-    // Dynamic Density (Relaxed to 5px)
-    while ((m_pixelsPerBeat * snapDur) < 5.0f) {
-        snapDur *= 2.0;
-    }
-
-    double startBeat = timelineScrollOffset / m_pixelsPerBeat;
-    double endBeat = startBeat + (gridWidth / m_pixelsPerBeat);
-
-    // === ADAPTIVE GRID DENSITY based on zoom level ===
-    // Determine the minimum spacing between grid lines to avoid clutter
-    float pixelsPerBar = m_pixelsPerBeat * m_beatsPerBar;
-    int gridBarStride = 1;  // Default: grid line every bar
-    bool showBeatLines = true;
-    bool showSubdivisions = true;
-    
-    if (pixelsPerBar < 2.0f) {
-        gridBarStride = 128; // Ultra extreme: every 128 bars
-        showBeatLines = false;
-        showSubdivisions = false;
-    } else if (pixelsPerBar < 4.0f) {
-        gridBarStride = 64;  // Extreme zoom: every 64 bars
-        showBeatLines = false;
-        showSubdivisions = false;
-    } else if (pixelsPerBar < 8.0f) {
-        gridBarStride = 32;  // Very far zoom: every 32 bars
-        showBeatLines = false;
-        showSubdivisions = false;
-    } else if (pixelsPerBar < 12.0f) {
-        gridBarStride = 16;  // Far zoom: every 16 bars
-        showBeatLines = false;
-        showSubdivisions = false;
-    } else if (pixelsPerBar < 20.0f) {
-        gridBarStride = 8;   // Zoomed out: every 8 bars
-        showBeatLines = false;
-        showSubdivisions = false;
-    } else if (pixelsPerBar < 35.0f) {
-        gridBarStride = 4;   // Medium-far zoom: every 4 bars
-        showBeatLines = false;
-        showSubdivisions = false;
-    } else if (pixelsPerBar < 55.0f) {
-        gridBarStride = 2;   // Medium zoom: every 2 bars
-        showBeatLines = false;
-        showSubdivisions = false;
-    } else if (m_pixelsPerBeat < 12.0f) {
-        // Bars visible but beats too close
-        showBeatLines = false;
-        showSubdivisions = false;
-    } else if (m_pixelsPerBeat < 25.0f) {
-        // Beats visible but subdivisions too close
-        showSubdivisions = false;
-    }
-
-    // Round start to nearest snap (adjusted for stride)
-    double barBeats = static_cast<double>(m_beatsPerBar);
-    double strideBeats = barBeats * gridBarStride;
-    double current = std::floor(startBeat / strideBeats) * strideBeats;
-    
-    // Grid Lines - Using Theme Tokens
-    AestraUI::NUIColor barLineColor = themeManager.getColor("gridBar");
-    AestraUI::NUIColor beatLineColor = themeManager.getColor("gridBeat");
-    AestraUI::NUIColor subBeatLineColor = themeManager.getColor("gridSubdivision");
-
-    // Draw grid lines with adaptive density
-    for (; current <= endBeat + strideBeats; current += snapDur) {
-        float xPos = bounds.x + gridStartX + static_cast<float>(current * m_pixelsPerBeat) - timelineScrollOffset;
-        
-        // Strict culling within valid grid area
-        if (xPos < bounds.x + gridStartX || xPos > bounds.x + gridStartX + gridWidth) continue;
-
-        // Hierarchy logic
-        bool isBar = (std::fmod(std::abs(current), barBeats) < 0.001);
-        bool isStrideBar = (std::fmod(std::abs(current), strideBeats) < 0.001);
-        bool isBeat = (std::fmod(std::abs(current), 1.0) < 0.001);
-        
-        // Skip lines based on adaptive density settings
-        if (!isStrideBar && !showBeatLines) continue;  // Skip non-stride bars and beats
-        if (!isBar && !isBeat && !showSubdivisions) continue;  // Skip subdivisions
-        if (!isBar && !showBeatLines) continue;  // Skip beats when not showing them
-        
-        // Draw Vertical Grid Line (Full Height) using fillRect for reliable batching
-        float trackAreaTop = bounds.y;
-        float trackAreaBottom = bounds.y + bounds.height;
-        float height = trackAreaBottom - trackAreaTop;
-        AestraUI::NUIRect lineRect(xPos, trackAreaTop, 1.0f, height);
-        
-        // Batching Friendly: fillRect uses Type 0 (Image/Color default) which works perfectly with Unified Batching
-        if (isBar) {
-            renderer.fillRect(lineRect, barLineColor);
-        }
-        else if (isBeat) {
-            renderer.fillRect(lineRect, beatLineColor);
-        }
-        else {
-            renderer.fillRect(lineRect, subBeatLineColor);
-        }
-    }
-}
-
 // Draw playhead (vertical line showing current playback position)
 // Draw playhead (vertical line showing current playback position)
 void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
@@ -4224,6 +4130,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     
     AestraUI::NUIRect textureBounds(0, 0, static_cast<float>(width), static_cast<float>(height));
     AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
+    const AestraUI::NUIColor gridBgColor = AestraUI::NUIColor(0.08235f, 0.08235f, 0.11765f, 1.0f); // #15151e
     AestraUI::NUIColor borderColor = themeManager.getColor("border");
     
     // Draw background panels
@@ -4231,17 +4138,20 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     renderer.fillRect(controlBg, bgColor);
     
     AestraUI::NUIRect gridBg(gridStartX, 0, gridWidth, static_cast<float>(height));
-    // Grid Background: Deep Charcoal (Lifted from Void)
-    renderer.fillRect(gridBg, AestraUI::NUIColor(0.09f, 0.09f, 0.10f, 1.0f));
+    renderer.fillRect(gridBg, gridBgColor);
     
-    // Draw borders
-    renderer.strokeRect(textureBounds, 1, borderColor);
+    // Draw borders (no top edge so transport + toolbar remain a continuous band)
+    renderer.drawLine({textureBounds.x, textureBounds.y}, {textureBounds.x, textureBounds.bottom()}, 1.0f, borderColor);
+    renderer.drawLine({textureBounds.right(), textureBounds.y}, {textureBounds.right(), textureBounds.bottom()}, 1.0f, borderColor);
+    renderer.drawLine({textureBounds.x, textureBounds.bottom()}, {textureBounds.right(), textureBounds.bottom()}, 1.0f, borderColor);
     
     // Draw header bar
     float headerHeight = 38.0f;
     AestraUI::NUIRect headerRect(0, 0, static_cast<float>(width), headerHeight);
     renderer.fillRect(headerRect, bgColor);
-    renderer.strokeRect(headerRect, 1, borderColor);
+    renderer.drawLine({headerRect.x, headerRect.y}, {headerRect.x, headerRect.bottom()}, 1.0f, borderColor);
+    renderer.drawLine({headerRect.right(), headerRect.y}, {headerRect.right(), headerRect.bottom()}, 1.0f, borderColor);
+    renderer.drawLine({headerRect.x, headerRect.bottom()}, {headerRect.right(), headerRect.bottom()}, 1.0f, borderColor);
     
     // Draw time ruler
     float rulerHeight = 28.0f;
@@ -4263,17 +4173,8 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     renderer.fillRect(rulerRect, bg);
     renderer.strokeRect(rulerRect, 1, borderColor);
     
-    // Draw beat markers (grid lines)
-    // USE SHARED HELPER
-    float trackAreaTop = rulerRect.y + rulerRect.height;
-    AestraUI::NUIRect gridArea(0, trackAreaTop, static_cast<float>(width), static_cast<float>(height) - trackAreaTop);
-    
-    drawGrid(renderer, gridArea, gridStartX, gridWidth, m_timelineScrollOffset);
-
-
-
     // Bar numbers (cached in background texture)
-    float barFontSize = 11.0f;
+    float barFontSize = 12.0f;
     for (int bar = 0; bar <= static_cast<int>(maxExtentInBeats / m_beatsPerBar) + 4; ++bar) {
         float x = rulerRect.x + gridStartX + (bar * m_beatsPerBar * m_pixelsPerBeat) - m_timelineScrollOffset;
         if (x < rulerRect.x + gridStartX - 2.0f || x > rulerRect.right() + m_pixelsPerBeat) continue;
@@ -4597,7 +4498,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             if (data.customData.has_value()) {
                 pid = std::any_cast<PatternID>(data.customData);
             }
-        } catch (...) {
+        } catch (const std::bad_any_cast&) {
             Log::error("[TrackManagerUI] Failed to cast pattern ID from drag data");
         }
 
@@ -4605,6 +4506,31 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             auto pattern = m_trackManager->getPatternManager().getPattern(pid);
             if (pattern) {
                 double duration = pattern->lengthBeats;
+                auto& unitManager = m_trackManager->getUnitManager();
+                if (pattern->isMidi()) {
+                    const auto& midi = std::get<MidiPayload>(pattern->payload);
+                    std::unordered_set<UnitID> routedUnits;
+                    for (const auto& note : midi.notes) {
+                        if (note.unitId == 0 || routedUnits.find(note.unitId) != routedUnits.end()) {
+                            continue;
+                        }
+                        if (auto* unit = unitManager.getUnit(note.unitId)) {
+                            unitManager.assignUnitToTimelineLane(note.unitId, laneIndex);
+                            Log::info("[TrackManagerUI] Routed note unit " + std::to_string(note.unitId) +
+                                      " to timeline lane " + std::to_string(laneIndex));
+                            routedUnits.insert(note.unitId);
+                        }
+                    }
+                } else {
+                    for (const auto unitId : unitManager.getAllUnitIDs()) {
+                        if (auto* unit = unitManager.getUnit(unitId); unit && unit->defaultPatternId == pid) {
+                            unitManager.assignUnitToTimelineLane(unitId, laneIndex);
+                            Log::info("[TrackManagerUI] Routed owner unit " + std::to_string(unitId) +
+                                      " to timeline lane " + std::to_string(laneIndex));
+                            break;
+                        }
+                    }
+                }
                 // Create clip instance manually and use command for undo support
                 ClipInstance clip;
                 clip.id = ClipInstanceID::generate();
@@ -4786,8 +4712,6 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                                               this->invalidateCache(); 
                                               this->m_backgroundNeedsUpdate = true;
                                               this->setDirty(true);
-                                              // Refresh tracks to update UI with waveform data
-                                              this->refreshTracks();
                                           });
                                      }
                                 });
@@ -5038,64 +4962,35 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIColor highlightColor(0.733f, 0.525f, 0.988f, 0.08f);  // Very subtle
     renderer.fillRect(trackHighlight, highlightColor);
     
-    // Draw clip skeleton preview - EXACT same measurements as real clips
-    // Real clips use: y + 2, height - 4 (see TrackUIComponent clippedClipBounds)
+    // Draw clip preview using the same visual language as placed timeline clips.
     if (timeX >= gridStartX && timeX <= bounds.right() - 20) {
         float previewWidth = 150.0f;  // Reasonable preview width
         
-        // Clip skeleton bounds - matches actual clip positioning exactly
-        AestraUI::NUIRect clipSkeleton(
+        AestraUI::NUIRect clipPreview(
             timeX,
             trackY + 2,  // Same as real clip: bounds.y + 2
             previewWidth,
             static_cast<float>(m_trackHeight) - 4  // Same as real clip: bounds.height - 4
         );
-        
-        // Semi-transparent fill
-        AestraUI::NUIColor skeletonFill(0.733f, 0.525f, 0.988f, 0.25f);
-        renderer.fillRect(clipSkeleton, skeletonFill);
-        
-        // Border matching clip style
-        AestraUI::NUIColor skeletonBorder(0.733f, 0.525f, 0.988f, 0.7f);
-        
-        // Top border (thicker, like real clip)
-        renderer.drawLine(
-            AestraUI::NUIPoint(clipSkeleton.x, clipSkeleton.y),
-            AestraUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y),
+
+        const float clipRadius = 6.0f;
+        const float labelBarHeight = 14.0f;
+        const auto clipColor = themeManager.getColor("accentPrimary");
+        const auto clipFill = clipColor.withAlpha(0.30f);
+        const auto clipBorder = clipColor.lightened(0.12f).withAlpha(0.70f);
+        renderer.fillRoundedRect(clipPreview, clipRadius, clipFill);
+        renderer.strokeRoundedRect(clipPreview, clipRadius, 1.0f, clipBorder);
+        renderer.fillRoundedRect(
+            {clipPreview.x + 1.5f, clipPreview.y + 1.5f, 4.0f, std::max(0.0f, clipPreview.height - 3.0f)},
             2.0f,
-            skeletonBorder
+            clipColor.lightened(0.18f).withAlpha(0.95f)
         );
-        
-        // Other borders
-        renderer.drawLine(
-            AestraUI::NUIPoint(clipSkeleton.x, clipSkeleton.y + clipSkeleton.height),
-            AestraUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y + clipSkeleton.height),
-            1.0f,
-            skeletonBorder.withAlpha(0.5f)
-        );
-        renderer.drawLine(
-            AestraUI::NUIPoint(clipSkeleton.x, clipSkeleton.y),
-            AestraUI::NUIPoint(clipSkeleton.x, clipSkeleton.y + clipSkeleton.height),
-            1.0f,
-            skeletonBorder.withAlpha(0.5f)
-        );
-        renderer.drawLine(
-            AestraUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y),
-            AestraUI::NUIPoint(clipSkeleton.x + clipSkeleton.width, clipSkeleton.y + clipSkeleton.height),
-            1.0f,
-            skeletonBorder.withAlpha(0.5f)
-        );
-        
-        // Name strip at top (like real clips have)
-        float nameStripHeight = 16.0f;
-        AestraUI::NUIRect nameStrip(
-            clipSkeleton.x,
-            clipSkeleton.y,
-            clipSkeleton.width,
-            nameStripHeight
-        );
-        renderer.fillRect(nameStrip, skeletonBorder.withAlpha(0.6f));
-        
+
+        const float headerH = std::min(labelBarHeight, std::max(0.0f, clipPreview.height - 2.0f));
+        const AestraUI::NUIRect headerRect(clipPreview.x + 1.0f, clipPreview.y + 1.0f,
+                                           std::max(0.0f, clipPreview.width - 2.0f), headerH);
+        renderer.fillRoundedRect(headerRect, clipRadius - 1.5f, clipColor.withAlpha(0.50f));
+
         // Get drag data for display name
         auto& dragManager = AestraUI::NUIDragDropManager::getInstance();
         if (dragManager.isDragging()) {
@@ -5104,9 +4999,11 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
             if (displayName.length() > 18) {
                 displayName = displayName.substr(0, 15) + "...";
             }
-            AestraUI::NUIPoint textPos(clipSkeleton.x + 4, clipSkeleton.y + 2);
-            renderer.drawText(displayName, textPos, 11.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+            const float labelTextY = headerRect.y + std::max(0.0f, (headerRect.height - 10.0f) * 0.5f);
+            AestraUI::NUIPoint textPos(clipPreview.x + 6.0f, labelTextY);
+            renderer.drawText(displayName, textPos, 10.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
         }
+
     }
 }
 
@@ -5350,7 +5247,7 @@ void Aestra::Audio::TrackManagerUI::renderPendingImports(AestraUI::NUIRenderer& 
         // Text
         std::string progressStr = " (" + std::to_string((int)(item.progress * 100)) + "%)";
         std::string text = "ANALYZING: " + item.displayName + (item.progress > 0 ? progressStr : "");
-        float fontSize = 10.0f;
+        float fontSize = 11.0f;
         auto textSize = renderer.measureText(text, fontSize);
         
         // Center text in rect

@@ -1,6 +1,7 @@
 #pragma once
 #include "../../AestraCore/include/AestraJSON.h"
 #include "../Plugin/PluginHost.h"
+#include "Models/PatternSource.h"
 
 #include <cstdint>
 #include <memory>
@@ -12,6 +13,7 @@ namespace Aestra {
 namespace Audio {
 
 // Forward declarations
+class PatternManager;
 using UnitID = uint64_t;
 
 enum class UnitGroup : uint32_t {
@@ -19,6 +21,13 @@ enum class UnitGroup : uint32_t {
     Synth = 1,
     Drums = 2,
     Audio = 3,
+};
+
+enum class UnitType : uint32_t {
+    Sampler = 1,
+    PitchedSampler = 2,
+    Instrument = 3,
+    Audio = 4,
 };
 
 /**
@@ -29,8 +38,14 @@ struct UnitInfo {
     UnitID id{0};
     /** @brief Whether the unit is enabled in the realtime engine snapshot. */
     bool enabled{false};
-    /** @brief Mixer route identifier, or -1 when routed directly to master. */
-    int targetMixerRoute{-1}; // -1 = not routed
+    /**
+     * @brief Timeline lane assignment compatibility field.
+     *
+     * Standalone Arsenal preview is always auditioned directly to master.
+     * This value only matters once the unit is placed on the Timeline and a
+     * lane owns its mix routing.
+     */
+    int targetMixerRoute{-1};
     /** @brief Live plugin instance attached to this unit. */
     std::shared_ptr<IPluginInstance> plugin;
     /** @brief Plugin identifier used to recreate the instance. */
@@ -52,8 +67,16 @@ struct UnitInfo {
     bool isEnabled{false};
     /** @brief Associated audio clip path for clip-based units. */
     std::string audioClipPath;
+    /** @brief Cached clip duration for audio-style units. */
+    double audioDurationSeconds{0.0};
+    /** @brief Lightweight preview waveform bins for Arsenal rendering. */
+    std::vector<float> audioPreviewWaveform;
     /** @brief High-level group classification used by the Arsenal UI. */
     UnitGroup group;
+    /** @brief Permanent unit type chosen at creation. */
+    UnitType type{UnitType::Sampler};
+    /** @brief Default pattern associated with this unit for Piano Roll editing. */
+    PatternID defaultPatternId;
 };
 
 /**
@@ -66,7 +89,7 @@ struct UnitState {
     bool enabled;
     /** @brief Plugin instance used for rendering. */
     std::shared_ptr<IPluginInstance> plugin;
-    /** @brief Mixer route identifier. */
+    /** @brief Timeline lane assignment, or -1 for direct master preview. */
     int routeId;
 };
 
@@ -112,6 +135,7 @@ public:
      * @return Identifier of the created unit.
      */
     UnitID createUnit();
+    UnitID createUnit(const std::string& name, UnitType type);
     /**
      * @brief Create a unit with explicit display name and group.
      * @param name User-facing unit name.
@@ -157,14 +181,22 @@ public:
     void setUnitArmed(UnitID id, bool armed);
     /** @brief Set enabled state for a unit. */
     void setUnitEnabled(UnitID id, bool enabled);
-    /** @brief Route a unit to a mixer channel. */
+    /** @brief Legacy alias for Timeline lane assignment. */
     void setUnitMixerChannel(UnitID id, int channel);
+    /** @brief Assign a unit to a Timeline lane for arrangement playback. */
+    void assignUnitToTimelineLane(UnitID id, int laneIndex);
+    /** @brief Clear any Timeline lane assignment so the unit previews to master. */
+    void clearUnitTimelineLane(UnitID id);
+    /** @brief Get the current Timeline lane assignment, or -1 when none. */
+    int getUnitTimelineLane(UnitID id) const;
     /** @brief Attach an audio clip path to a unit. */
     void setUnitAudioClip(UnitID id, const std::string& path);
     /** @brief Set the UI accent color for a unit. */
     void setUnitColor(UnitID id, uint32_t color);
     /** @brief Set the unit group classification. */
     void setUnitGroup(UnitID id, UnitGroup group);
+    /** @brief Get the permanent unit type for a unit. */
+    UnitType getUnitType(UnitID id) const;
 
     /**
      * @brief Attach a plugin instance to a unit.
@@ -187,12 +219,16 @@ public:
     /** @brief Restore unit state from JSON. */
     void loadFromJSON(const JSON& json);
 
+    /** @brief Set the PatternManager used for auto-creating patterns per unit. */
+    void setPatternManager(PatternManager* pm) { m_patternManager = pm; }
+
 private:
     UnitID nextId{1};
     std::unordered_map<UnitID, UnitInfo> m_units;
     std::vector<UnitID> m_unitOrder;
     std::atomic<double> m_sampleRate{48000.0};
     std::atomic<uint32_t> m_blockSize{512};
+    PatternManager* m_patternManager{nullptr};
 
 public:
     void setSampleRate(double rate) { m_sampleRate.store(rate, std::memory_order_relaxed); }

@@ -77,7 +77,7 @@ public:
      * @brief Process a single audio block (driver callback entry).
      * Must remain lock-free, allocation-free.
      */
-    void processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime);
+    int processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime);
 
     /**
      * @brief Immediate panic/reset (Double Stop).
@@ -278,6 +278,9 @@ public:
     /** @brief Bind the preview engine mixed into the main output. */
     void setPreviewEngine(PreviewEngine* engine) { m_previewEngine.store(engine, std::memory_order_relaxed); }
 
+    /** @brief Set preview ducking gain (0.0 = ducked by ~6dB, 1.0 = full volume). */
+    void setPreviewDuckGain(float gain) { m_previewDuckGain.store(gain, std::memory_order_relaxed); }
+
     /**
      * @brief Render a range of the timeline (or a specific track) to a WAV file.
      *
@@ -452,7 +455,7 @@ private:
 
     struct UnitAuditionState {
         UnitID unitId{0};
-        uint8_t note{36};
+        uint8_t note{48}; // [FIX] C3 (MIDI 48) — canonical default octave for melodic instruments
         uint8_t velocity{100};
         uint32_t noteOffSamplesRemaining{0};
         bool noteOnPending{false};
@@ -503,6 +506,8 @@ private:
     std::vector<bool> m_rtProcessActive;
     std::vector<size_t> m_rtProcessOrder;
     std::vector<size_t> m_rtIndexQueue;
+    std::vector<size_t> m_rtSoloProcessQueue;
+    std::vector<bool> m_rtCycleVisited;
 
     // --- Antigravity Routing Engine (v3.1) ---
     // Moved struct definitions to AudioGraphState.h
@@ -591,6 +596,10 @@ private:
     // File Browser Preview Engine (additive mix into output)
     std::atomic<PreviewEngine*> m_previewEngine{nullptr};
 
+    // Transport-aware preview ducking
+    std::atomic<float> m_previewDuckGain{1.0f};  // Linear gain applied to transport when preview is active
+    float m_smoothedPreviewDuckGain{1.0f};       // Smoothed version for click-free transitions
+
     // Recent output ring buffer for oscilloscope/mini-waveform displays.
     std::vector<float> m_waveformHistory;
     std::atomic<uint32_t> m_waveformWriteIndex{0};
@@ -598,7 +607,7 @@ private:
 
     // Fade state machine
     enum class FadeState { None, FadingIn, FadingOut, Silent };
-    FadeState m_fadeState{FadeState::None};
+    std::atomic<FadeState> m_fadeState{FadeState::None};
     uint32_t m_fadeSamplesRemaining{0};
     static constexpr uint32_t FADE_OUT_SAMPLES = 1024;
     static constexpr uint32_t FADE_IN_SAMPLES = 256;

@@ -19,6 +19,7 @@ public:
     ~FilePreviewPanel() override = default;
 
     void onRender(NUIRenderer& renderer) override;
+    void onUpdate(double deltaTime) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
     // Data input
@@ -35,12 +36,14 @@ public:
     void setOnSeek(std::function<void(double)> callback) { onSeek_ = callback; }
     void setPlayheadPosition(double seconds);
     void setDuration(double seconds);
+    bool hasFileSelection() const { return hasCurrentFile_ && !currentFile_.isDirectory; }
 
 private:
     void generateWaveform(const std::string& path, size_t fileSize);
     void waveformWorker(const std::string& path, uint64_t generation);
 
-    const FileItem* currentFile_ = nullptr;
+    FileItem currentFile_;
+    bool hasCurrentFile_ = false;
     std::vector<float> waveformData_;
     mutable std::mutex waveformMutex_;
     
@@ -52,6 +55,10 @@ private:
     
     // Async control
     std::atomic<uint64_t> currentGeneration_{0};
+    std::string pendingWaveformPath_;
+    size_t pendingWaveformFileSize_ = 0;
+    double pendingWaveformDelay_ = 0.0;
+    bool waveformQueued_ = false;
     
     // Layout
     NUIRect playButtonBounds_;

@@ -51,8 +51,8 @@ void CommandHistory::pushAndExecute(std::shared_ptr<ICommand> cmd) {
 
     // Notify listeners AFTER releasing lock to prevent deadlock
     // if callback queries CommandHistory state
-    if (stateChanged && m_onStateChanged) {
-        m_onStateChanged();
+    if (stateChanged) {
+        for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
     }
 }
 
@@ -97,9 +97,7 @@ void CommandHistory::commitTransaction() {
             stateChanged = true;
         }
 
-        if (stateChanged && m_onStateChanged) {
-            m_onStateChanged();
-        }
+        if (stateChanged) { for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); } }
     }
 }
 
@@ -146,9 +144,7 @@ bool CommandHistory::undo() {
     }
 
     // Notify listeners AFTER releasing lock
-    if (success && m_onStateChanged) {
-        m_onStateChanged();
-    }
+    if (success) { for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); } }
     return success;
 }
 
@@ -176,9 +172,7 @@ bool CommandHistory::redo() {
     }
 
     // Notify listeners AFTER releasing lock
-    if (success && m_onStateChanged) {
-        m_onStateChanged();
-    }
+    if (success) { for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); } }
     return success;
 }
 
@@ -215,9 +209,7 @@ void CommandHistory::clear() {
         stateChanged = true;
     }
     // Notify AFTER releasing lock
-    if (stateChanged && m_onStateChanged) {
-        m_onStateChanged();
-    }
+    if (stateChanged) { for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); } }
 }
 
 void CommandHistory::setMaxHistorySize(size_t size) {
@@ -271,6 +263,28 @@ size_t CommandHistory::calculateMemoryUsage() const {
         }
     }
     return total;
+}
+
+void CommandHistory::undoTo(int targetIndex) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    while (static_cast<int>(m_undoStack.size()) > targetIndex && !m_undoStack.empty()) {
+        auto& cmd = m_undoStack.back();
+        cmd->undo();
+        m_redoStack.push_back(cmd);
+        m_undoStack.pop_back();
+    }
+    for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
+}
+
+void CommandHistory::redoTo(int targetIndex) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    while (static_cast<int>(m_redoStack.size()) > targetIndex && !m_redoStack.empty()) {
+        auto& cmd = m_redoStack.back();
+        cmd->redo();
+        m_undoStack.push_back(cmd);
+        m_redoStack.pop_back();
+    }
+    for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
 }
 
 } // namespace Audio

@@ -28,6 +28,7 @@
 namespace AestraUI {
     class NUIRenderer;
     class NUIPlatformBridge;
+    enum class NUICursorStyle;
     class FileBrowser;
     class FilePreviewPanel;
     class FileItem;
@@ -44,8 +45,10 @@ namespace Aestra::Audio {
     class MixerPanel;
     class PianoRollPanel;
     class ArsenalPanel;
+    class SampleEditorPanel;
     class PatternBrowserPanel;
     class WindowPanel;
+    class AestraHistoryPanel;
     class AuditionEngine;  // For Audition Mode
 }
 
@@ -107,6 +110,7 @@ public:
         AestraUI::NUIRect pianoRollRect = {0, 0, 800, 450};
         /** @brief Arsenal overlay bounds in overlay-local coordinates. */
         AestraUI::NUIRect sequencerRect = {0, 0, 600, 300};
+        AestraUI::NUIRect historyRect = {0, 80, 280, 460};
 
         /** @brief True while an overlay panel is being dragged. */
         bool isDragging = false;
@@ -124,6 +128,8 @@ public:
     void onRender(AestraUI::NUIRenderer& renderer) override;
     /** @brief Relayout the workspace after a host resize. */
     void onResize(int width, int height) override;
+    /** @brief Handle workspace mouse interactions (including dock resize drags). */
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     /** @brief Handle global keyboard shortcuts for the workspace. */
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override; // [NEW] Global shortcuts
 
@@ -157,6 +163,8 @@ public:
     void setArsenalPanelVisible(bool visible);
     /** @brief Toggle the Arsenal panel regardless of active mode. */
     void toggleArsenalPanel();
+    /** @brief Toggle the History panel visibility. */
+    void toggleHistoryPanel();
 
     /** @brief Compute the safe workspace rectangle after chrome and sidebars. */
     AestraUI::NUIRect computeSafeRect() const;
@@ -168,6 +176,8 @@ public:
     AestraUI::NUIRect computeMaximizedRect() const;
     /** @brief Clamp an overlay rectangle to the current allowed bounds. */
     AestraUI::NUIRect clampRectToAllowed(AestraUI::NUIRect panel, const AestraUI::NUIRect& allowed) const;
+    /** @brief Resolve resize cursor style for floating panel edges at a mouse position. */
+    AestraUI::NUICursorStyle getPanelResizeCursorStyle(const AestraUI::NUIPoint& mouseScreen) const;
 
     /** @brief Begin dragging an overlay panel. */
     void beginPanelDrag(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen);
@@ -209,6 +219,8 @@ public:
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
     /** @brief Bind the live audio engine used by transport-aware panels. */
     void setAudioEngine(Aestra::Audio::AudioEngine* engine);
+    /** @brief Propagate transport tempo to tempo-aware internal plugins. */
+    void setPluginTempo(float bpm);
 
     /** @brief Reset the workspace back to the default starter project. */
     void resetToDefaultProject();  // Clear and recreate default tracks
@@ -248,11 +260,25 @@ public:
     void openPatternInPianoRoll(Aestra::Audio::PatternID patternId);
 
 private:
+    Aestra::Audio::UnitID resolveEditingUnitForPattern(Aestra::Audio::PatternID patternId) const;
     ViewFocus resolveTransportFocus() const;
     bool isTransportRolling() const;
     void handleTransportPlayRequest();
     void clearPendingCountIn();
     void updatePendingCountIn();
+    void startPatternClipPreview(Aestra::Audio::PatternID patternId);
+    void stopPatternClipPreview(bool restoreTimelineUi);
+    enum class BrowserResizeTarget {
+        None,
+        FileRail,
+        PatternRail
+    };
+    BrowserResizeTarget hitTestBrowserResizeTarget(const AestraUI::NUIPoint& mouseScreen) const;
+    void updateBrowserResizeDrag(const AestraUI::NUIPoint& mouseScreen);
+
+    // Pattern loop length helpers
+    double getActivePatternLengthBeats() const;
+    void updatePatternLoopLength(Aestra::Audio::PatternID patternId);
 
     std::shared_ptr<AestraUI::NUIComponent> m_workspaceLayer;
     std::shared_ptr<OverlayLayer> m_overlayLayer;
@@ -271,6 +297,13 @@ private:
     std::shared_ptr<AestraUI::PluginBrowserPanel> m_pluginBrowser;
     std::shared_ptr<AestraUI::FilePreviewPanel> m_previewPanel;
     std::shared_ptr<Aestra::Audio::PatternBrowserPanel> m_patternBrowser;
+    float m_fileBrowserWidthPref{-1.0f};
+    float m_patternBrowserWidthPref{-1.0f};
+    bool m_browserResizing{false};
+    BrowserResizeTarget m_browserResizeTarget{BrowserResizeTarget::None};
+    float m_browserResizeStartX{0.0f};
+    float m_browserResizeStartFileWidth{0.0f};
+    float m_browserResizeStartPatternWidth{0.0f};
     std::shared_ptr<AestraUI::AudioVisualizer> m_audioVisualizer;
     std::shared_ptr<AestraUI::AudioVisualizer> m_waveformVisualizer;
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
@@ -281,6 +314,7 @@ private:
     std::shared_ptr<Aestra::Audio::MixerPanel> m_mixerPanel;
     std::shared_ptr<Aestra::Audio::PianoRollPanel> m_pianoRollPanel;
     std::shared_ptr<Aestra::Audio::ArsenalPanel> m_sequencerPanel;
+    std::shared_ptr<Aestra::Audio::AestraHistoryPanel> m_historyPanel;
     std::shared_ptr<AestraUI::PluginUIController> m_pluginController;
     
     // Temp files for Audition (v4.0)
@@ -308,8 +342,20 @@ private:
     
     // Playback state persistence
     double m_savedTimelinePosition = 0.0;
+    bool m_patternClipPreviewActive{false};
+    Aestra::Audio::PatternID m_previewPatternId{};
     bool m_countInEnabled{false};
     bool m_pendingCountIn{false};
     bool m_forcedMetronomeForCountIn{false};
     double m_pendingCountInTargetSeconds{0.0};
+
+    std::shared_ptr<Aestra::Audio::SampleEditorPanel> m_sampleEditorPanel;
+    AestraUI::NUIRect m_sampleEditorRect{0.0f, 0.0f, 640.0f, 430.0f};
+    Aestra::Audio::UnitID m_sampleEditorUnitId{0};
+    bool m_sampleEditorDragging{false};
+    AestraUI::NUIPoint m_sampleEditorDragStartMouseOverlay{0.0f, 0.0f};
+    AestraUI::NUIRect m_sampleEditorDragStartRect{0.0f, 0.0f, 0.0f, 0.0f};
+
+    void openSampleEditorForUnit(Aestra::Audio::UnitID unitId, const std::string& samplePath);
+    void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
 };

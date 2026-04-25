@@ -77,10 +77,15 @@ void NUIPlatformBridge::destroy() {
 // =============================================================================
 
 void NUIPlatformBridge::setupEventBridges() {
+    m_capsLockLatched = m_window && m_window->getCurrentModifiers().capsLock;
     // Mouse move
     m_window->setMouseMoveCallback([this](int x, int y) {
         if (m_mousePositionFilter) {
             m_mousePositionFilter(x, y);
+        }
+
+        if (!isWindowInteractive()) {
+            return;
         }
 
         // Store mouse position for wheel events
@@ -100,7 +105,9 @@ void NUIPlatformBridge::setupEventBridges() {
             event.released = false;
             event.wheelDelta = 0.0f;
             if (m_window) {
-                event.modifiers = convertModifiers(m_window->getCurrentModifiers());
+                auto mods = m_window->getCurrentModifiers();
+                mods.capsLock = mods.capsLock || m_capsLockLatched;
+                event.modifiers = convertModifiers(mods);
             }
             
             m_rootComponent->onMouseEvent(event);
@@ -111,6 +118,10 @@ void NUIPlatformBridge::setupEventBridges() {
     m_window->setMouseButtonCallback([this](Aestra::MouseButton button, bool pressed, int x, int y) {
         if (m_mousePositionFilter) {
             m_mousePositionFilter(x, y);
+        }
+
+        if (!isWindowInteractive()) {
+            return;
         }
 
         // Store mouse position for wheel events
@@ -136,7 +147,9 @@ void NUIPlatformBridge::setupEventBridges() {
             event.released = !pressed;
             event.wheelDelta = 0.0f;
             if (m_window) {
-                event.modifiers = convertModifiers(m_window->getCurrentModifiers());
+                auto mods = m_window->getCurrentModifiers();
+                mods.capsLock = mods.capsLock || m_capsLockLatched;
+                event.modifiers = convertModifiers(mods);
             }
             m_rootComponent->onMouseEvent(event);
         }
@@ -144,6 +157,10 @@ void NUIPlatformBridge::setupEventBridges() {
 
     // Mouse wheel
     m_window->setMouseWheelCallback([this](float delta) {
+        if (!isWindowInteractive()) {
+            return;
+        }
+
         if (m_mouseWheelCallback) {
             m_mouseWheelCallback(delta);
         }
@@ -158,7 +175,9 @@ void NUIPlatformBridge::setupEventBridges() {
             event.wheelDelta = delta;
             // Query current modifier state for Shift+scroll zoom support
             if (m_window) {
-                event.modifiers = convertModifiers(m_window->getCurrentModifiers());
+                auto mods = m_window->getCurrentModifiers();
+                mods.capsLock = mods.capsLock || m_capsLockLatched;
+                event.modifiers = convertModifiers(mods);
             }
             m_rootComponent->onMouseEvent(event);
         }
@@ -166,6 +185,12 @@ void NUIPlatformBridge::setupEventBridges() {
 
     // Key
     m_window->setKeyCallback([this](Aestra::KeyCode key, bool pressed, const Aestra::KeyModifiers& mods) {
+        if (key == Aestra::KeyCode::CapsLock && pressed) {
+            m_capsLockLatched = !m_capsLockLatched;
+        }
+        if (mods.capsLock) {
+            m_capsLockLatched = true;
+        }
         if (m_keyCallback) {
             m_keyCallback(convertKeyCode(key), pressed);
         }
@@ -257,6 +282,10 @@ void NUIPlatformBridge::hide() {
 
 bool NUIPlatformBridge::processEvents() {
     return m_window ? m_window->pollEvents() : false;
+}
+
+bool NUIPlatformBridge::isWindowInteractive() const {
+    return m_window && m_window->isVisible() && m_window->isMapped();
 }
 
 void NUIPlatformBridge::swapBuffers() {

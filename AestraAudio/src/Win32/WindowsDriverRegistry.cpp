@@ -55,15 +55,17 @@ void RegisterPlatformDrivers(AudioDeviceManager& manager) {
         if (rtaudio->initialize()) {
             manager.addDriver(std::move(rtaudio));
         }
-    } catch (...) {
-        std::cerr << "[AudioDriverRegistry] RtAudio exception" << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "[AudioDriverRegistry] RtAudio exception: " << e.what() << std::endl;
     }
 
     // Register Dummy Driver (Last Resort / Safety)
     try {
         manager.addDriver(std::make_unique<DummyAudioDriver>());
         std::cout << "[AudioDriverRegistry] Dummy driver registered (Safety fallback active)" << std::endl;
-    } catch (...) {}
+    } catch (const std::exception& e) {
+        std::cerr << "[AudioDriverRegistry] Dummy driver failed: " << e.what() << std::endl;
+    }
 }
 
 } // namespace Audio

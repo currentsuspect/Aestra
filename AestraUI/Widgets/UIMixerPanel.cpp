@@ -1,10 +1,14 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPanel.h"
-
+#include "UIMixerStrip.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "MixerViewModel.h"
 #include "MeterSnapshot.h"
+#include "Commands/SetVolumeCommand.h"
+#include "Commands/SetMuteCommand.h"
+#include "Commands/SetSoloCommand.h"
+#include "Commands/SetPanCommand.h"
 #include "TrackManager.h"
 #include <algorithm>
 
@@ -12,6 +16,20 @@ namespace AestraUI {
 
 namespace {
 constexpr float kMinimapRadius = 7.0f;
+
+float safeClampMixerScroll(float value, float upper)
+{
+    if (!std::isfinite(value) || !std::isfinite(upper) || upper <= 0.0f) {
+        return 0.0f;
+    }
+    if (value <= 0.0f) {
+        return 0.0f;
+    }
+    if (value >= upper) {
+        return upper;
+    }
+    return value;
+}
 
 NUIColor colorFromArgb(uint32_t argb, float alphaScale = 1.0f)
 {
@@ -115,6 +133,56 @@ void UIMixerPanel::refreshChannels()
                 m_inspector->setActiveTab(UIMixerInspector::Tab::Inserts);
             }
         };
+        
+        // Wire fader to CommandHistory for undo/redo
+        uint32_t chId = channel->id;
+        int slotIdx = channel->slotIndex;
+        strip->onFaderChanged = [this, chId, slotIdx](float newDb) {
+            if (!m_trackManager) return;
+            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            if (!mixerChannel) return;
+
+            // Convert dB to linear gain
+            float newGain = (newDb <= -90.0f) ? 0.0f : std::pow(10.0f, newDb / 20.0f);
+            float oldGain = mixerChannel->getVolume();
+
+            if (std::abs(newGain - oldGain) > 0.0001f) {
+                m_trackManager->getCommandHistory().pushAndExecute(
+                    std::make_shared<Aestra::Audio::SetVolumeCommand>(*mixerChannel, newGain));
+                Aestra::Log::info("[UIMixerPanel] Fader cmd: " + std::to_string(newDb) + " dB");
+            }
+        };
+
+        // Wire mute to CommandHistory for undo/redo
+        strip->onMuteChanged = [this, slotIdx](bool muted) {
+            if (!m_trackManager) return;
+            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            if (!mixerChannel) return;
+
+            m_trackManager->getCommandHistory().pushAndExecute(
+                std::make_shared<Aestra::Audio::SetMuteCommand>(*mixerChannel, muted));
+        };
+
+        // Wire solo to CommandHistory for undo/redo
+        strip->onSoloChanged = [this, slotIdx](bool soloed) {
+            if (!m_trackManager) return;
+            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            if (!mixerChannel) return;
+
+            m_trackManager->getCommandHistory().pushAndExecute(
+                std::make_shared<Aestra::Audio::SetSoloCommand>(*mixerChannel, soloed));
+        };
+
+        // Wire pan to CommandHistory for undo/redo
+        strip->onPanChanged = [this, slotIdx](float pan) {
+            if (!m_trackManager) return;
+            auto* mixerChannel = m_trackManager->getChannel(static_cast<size_t>(slotIdx));
+            if (!mixerChannel) return;
+
+            m_trackManager->getCommandHistory().pushAndExecute(
+                std::make_shared<Aestra::Audio::SetPanCommand>(*mixerChannel, pan));
+        };
+
         m_strips.push_back(strip);
         addChild(strip);
     }
@@ -160,8 +228,10 @@ void UIMixerPanel::layoutMeters()
     const float visibleW = getChannelViewportWidth();
     const float contentW = getChannelContentWidth();
     const float maxScroll = getChannelMaxScroll();
-    m_scrollX = std::clamp(m_scrollX, 0.0f, maxScroll);
-    m_targetScrollX = std::clamp(m_targetScrollX, 0.0f, maxScroll);
+    (void)visibleW;
+    (void)contentW;
+    m_scrollX = safeClampMixerScroll(m_scrollX, maxScroll);
+    m_targetScrollX = safeClampMixerScroll(m_targetScrollX, maxScroll);
 
     float x = left - m_scrollX;
     for (size_t i = 0; i < m_strips.size(); ++i) {
@@ -181,12 +251,13 @@ void UIMixerPanel::onResize(int width, int height)
 void UIMixerPanel::onUpdate(double deltaTime)
 {
     const float maxScroll = getChannelMaxScroll();
-    m_targetScrollX = std::clamp(m_targetScrollX, 0.0f, maxScroll);
+    m_targetScrollX = safeClampMixerScroll(m_targetScrollX, maxScroll);
 
     const float delta = m_targetScrollX - m_scrollX;
     if (std::abs(delta) > 0.1f) {
         const float ease = 1.0f - std::exp(-static_cast<float>(deltaTime) * 18.0f);
         m_scrollX += delta * ease;
+        m_scrollX = safeClampMixerScroll(m_scrollX, maxScroll);
         layoutMeters();
     } else if (std::abs(delta) > 0.0f) {
         m_scrollX = m_targetScrollX;

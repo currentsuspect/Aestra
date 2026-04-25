@@ -2,8 +2,28 @@
 
 #include <SDL2/SDL_syswm.h>
 #include <iostream>
+#if defined(SDL_VIDEO_DRIVER_X11)
+#include <X11/Xlib.h>
+#endif
 
 namespace Aestra {
+
+namespace {
+bool getX11WindowInfo(SDL_Window* window, Display*& display, ::Window& x11Window) {
+    display = nullptr;
+    x11Window = 0;
+    if (!window) return false;
+
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (!SDL_GetWindowWMInfo(window, &info)) return false;
+    if (info.subsystem != SDL_SYSWM_X11) return false;
+
+    display = info.info.x11.display;
+    x11Window = info.info.x11.window;
+    return (display != nullptr && x11Window != 0);
+}
+} // namespace
 
 PlatformWindowLinux::PlatformWindowLinux() {
     // SDL_Init should be called by Platform::initialize()
@@ -34,6 +54,9 @@ bool PlatformWindowLinux::create(const WindowDesc& desc) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
     m_window = SDL_CreateWindow(desc.title.c_str(), x, y, desc.width, desc.height, flags);
 
@@ -43,6 +66,8 @@ bool PlatformWindowLinux::create(const WindowDesc& desc) {
     }
 
     m_isFullscreen = desc.startFullscreen;
+    m_isWindowVisible = true;
+    m_isWindowMapped = true;
 
     // Initial DPI check
     int dw, dh;
@@ -107,6 +132,22 @@ bool PlatformWindowLinux::pollEvents() {
                     if (m_focusCallback)
                         m_focusCallback(false);
                     break;
+                case SDL_WINDOWEVENT_SHOWN:
+                    m_isWindowVisible = true;
+                    m_isWindowMapped = true;
+                    break;
+                case SDL_WINDOWEVENT_HIDDEN:
+                    m_isWindowVisible = false;
+                    m_isWindowMapped = false;
+                    break;
+                case SDL_WINDOWEVENT_MINIMIZED:
+                    m_isWindowMapped = false;
+                    break;
+                case SDL_WINDOWEVENT_RESTORED:
+                    if (m_isWindowVisible) {
+                        m_isWindowMapped = true;
+                    }
+                    break;
                 }
             }
             break;
@@ -129,8 +170,18 @@ bool PlatformWindowLinux::pollEvents() {
             break;
 
         case SDL_MOUSEWHEEL:
-            if (m_mouseWheelCallback)
-                m_mouseWheelCallback(e.wheel.y); // Vertical scroll
+            if (m_mouseWheelCallback) {
+                float delta = static_cast<float>(e.wheel.y);
+                const bool horizontalGesture = (e.wheel.y == 0 && e.wheel.x != 0);
+                if (horizontalGesture) {
+                    // SDL wheel.x > 0 means scroll right, map to negative delta so consumers
+                    // that do target -= wheelDelta move view content to the right.
+                    delta = -static_cast<float>(e.wheel.x);
+                    m_syntheticShiftForHorizontalWheel = true;
+                }
+                m_mouseWheelCallback(delta);
+                m_syntheticShiftForHorizontalWheel = false;
+            }
             break;
 
         case SDL_KEYDOWN:
@@ -192,13 +243,35 @@ void PlatformWindowLinux::getPosition(int& x, int& y) const {
 }
 
 void PlatformWindowLinux::show() {
-    if (m_window)
+    if (m_window) {
+#if defined(SDL_VIDEO_DRIVER_X11)
+        Display* display = nullptr;
+        ::Window x11Window = 0;
+        if (getX11WindowInfo(m_window, display, x11Window)) {
+            XMapWindow(display, x11Window);
+            XFlush(display);
+        }
+#endif
         SDL_ShowWindow(m_window);
+        m_isWindowVisible = true;
+        m_isWindowMapped = true;
+    }
 }
 
 void PlatformWindowLinux::hide() {
-    if (m_window)
+    if (m_window) {
+#if defined(SDL_VIDEO_DRIVER_X11)
+        Display* display = nullptr;
+        ::Window x11Window = 0;
+        if (getX11WindowInfo(m_window, display, x11Window)) {
+            XUnmapWindow(display, x11Window);
+            XFlush(display);
+        }
+#endif
         SDL_HideWindow(m_window);
+        m_isWindowVisible = false;
+        m_isWindowMapped = false;
+    }
 }
 
 void PlatformWindowLinux::minimize() {
@@ -308,7 +381,11 @@ void PlatformWindowLinux::setCursorPosition(int x, int y) {
 }
 
 KeyModifiers PlatformWindowLinux::getCurrentModifiers() const {
-    return getModifiers(SDL_GetModState());
+    KeyModifiers mods = getModifiers(SDL_GetModState());
+    if (m_syntheticShiftForHorizontalWheel) {
+        mods.shift = true;
+    }
+    return mods;
 }
 
 // Helpers
@@ -324,6 +401,8 @@ KeyCode PlatformWindowLinux::translateKey(SDL_Keycode key) {
         return KeyCode::Escape;
     case SDLK_TAB:
         return KeyCode::Tab;
+    case SDLK_CAPSLOCK:
+        return KeyCode::CapsLock;
     case SDLK_SPACE:
         return KeyCode::Space;
     case SDLK_RETURN:
@@ -349,6 +428,20 @@ KeyCode PlatformWindowLinux::translateKey(SDL_Keycode key) {
     case SDLK_LALT:
     case SDLK_RALT:
         return KeyCode::Alt;
+    case SDLK_a: case SDLK_b: case SDLK_c: case SDLK_d: case SDLK_e:
+    case SDLK_f: case SDLK_g: case SDLK_h: case SDLK_i: case SDLK_j:
+    case SDLK_k: case SDLK_l: case SDLK_m: case SDLK_n: case SDLK_o:
+    case SDLK_p: case SDLK_q: case SDLK_r: case SDLK_s: case SDLK_t:
+    case SDLK_u: case SDLK_v: case SDLK_w: case SDLK_x: case SDLK_y:
+    case SDLK_z:
+        return static_cast<KeyCode>(static_cast<int>(KeyCode::A) + (key - SDLK_a));
+    case SDLK_0: case SDLK_1: case SDLK_2: case SDLK_3: case SDLK_4:
+    case SDLK_5: case SDLK_6: case SDLK_7: case SDLK_8: case SDLK_9:
+        return static_cast<KeyCode>(static_cast<int>(KeyCode::Num0) + (key - SDLK_0));
+    case SDLK_F1: case SDLK_F2: case SDLK_F3: case SDLK_F4:
+    case SDLK_F5: case SDLK_F6: case SDLK_F7: case SDLK_F8:
+    case SDLK_F9: case SDLK_F10: case SDLK_F11: case SDLK_F12:
+        return static_cast<KeyCode>(static_cast<int>(KeyCode::F1) + (key - SDLK_F1));
     default:
         return KeyCode::Unknown;
     }
@@ -360,6 +453,7 @@ KeyModifiers PlatformWindowLinux::getModifiers(Uint16 mod) const {
     m.control = (mod & KMOD_CTRL);
     m.alt = (mod & KMOD_ALT);
     m.super = (mod & KMOD_GUI);
+    m.capsLock = (mod & KMOD_CAPS);
     return m;
 }
 

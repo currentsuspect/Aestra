@@ -476,11 +476,12 @@ void NUIComponent::setTooltip(const std::string& text) {
     tooltipText_ = text;
 }
 
-void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& position) {
+void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner) {
     const bool wasActive = s_tooltipState.active;
     s_tooltipState.text = text;
     s_tooltipState.position = position;
     s_tooltipState.hoverPos = position;  // Set both for manual tooltip calls
+    s_tooltipState.owner = owner;
     s_tooltipState.active = true;
     if (!wasActive) {
         s_tooltipState.delayTimer = 0.0f;
@@ -488,8 +489,15 @@ void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& po
     }
 }
 
-void NUIComponent::hideRemoteTooltip() {
+void NUIComponent::hideRemoteTooltip(const void* owner) {
+    if (owner != nullptr && s_tooltipState.owner != owner) {
+        return;
+    }
+    if (owner == nullptr && s_tooltipState.owner != nullptr) {
+        return;
+    }
     s_tooltipState.active = false;
+    s_tooltipState.owner = nullptr;
 }
 
 void NUIComponent::updateGlobalTooltip(double deltaTime) {

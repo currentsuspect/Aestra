@@ -34,6 +34,7 @@ private:
     NUIColor m_textSecondary;
     NUIColor m_selectedText;
     NUIColor m_selectedBg;
+    NUIColor m_selectedBorder;
 
     void cacheThemeColors();
     static NUIColor colorFromARGB(uint32_t argb);

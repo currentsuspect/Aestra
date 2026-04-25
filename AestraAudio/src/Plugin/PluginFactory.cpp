@@ -3,6 +3,8 @@
 #include "PluginFactory.h"
 
 #include "AestraLog.h"
+#include "Plugin/BuiltInPlugins.h"
+#include "Plugin/OutOfProcessPluginInstance.h"
 
 // Re-using the same host includes as PluginManager
 #ifdef AESTRA_HAS_VST3
@@ -13,29 +15,8 @@
 #include "Plugin/CLAPHost.h"
 #endif
 
-#ifdef AESTRA_HAS_PLUGINS
-#include "Plugin/SamplerPlugin.h"
-#include "Plugin/AestraEQ.h"
-#include "Plugin/AestraComp.h"
-#include "Plugin/AestraVerb.h"
-#include "Plugin/AestraDelay.h"
-#include "RumbleInstance.h"
-#endif
-
 namespace Aestra {
 namespace Audio {
-
-namespace {
-void applyInternalPluginDefaults(const PluginInstancePtr& instance) {
-    if (!instance) {
-        return;
-    }
-
-    for (const auto& param : instance->getParameters()) {
-        instance->setParameter(param.id, param.defaultValue);
-    }
-}
-} // namespace
 
 void InProcessPluginFactory::createPluginAsync(const PluginInfo& info,
                                                std::function<void(PluginInstancePtr)> callback) {
@@ -96,55 +77,40 @@ PluginInstancePtr InProcessPluginFactory::createCLAPInstance(const PluginInfo& i
 }
 
 PluginInstancePtr InProcessPluginFactory::createInternalInstance(const PluginInfo& info) {
-#ifdef AESTRA_HAS_PLUGINS
-    // Aestra Rumble 808 Bass Synthesizer
-    if (info.id == "com.Aestrastudios.rumble") {
-        auto rumble = std::make_shared<Aestra::Plugins::RumbleInstance>();
-        applyInternalPluginDefaults(rumble);
-        return rumble;
+    BuiltInPlugins::registerCoreBuiltIns();
+    return InternalPluginRegistry::instance().createInstance(info.id);
+}
+
+OutOfProcessPluginFactory::OutOfProcessPluginFactory(std::string hostExecutablePath)
+    : m_hostExecutablePath(std::move(hostExecutablePath)) {}
+
+void OutOfProcessPluginFactory::createPluginAsync(const PluginInfo& info,
+                                                  std::function<void(PluginInstancePtr)> callback) {
+    PluginInstancePtr instance = nullptr;
+
+    if (info.format == PluginFormat::Internal) {
+        Log::warning("[PluginHost] Internal plugin requested through out-of-process factory: " + info.id);
+    } else {
+        auto proxy = std::make_shared<OutOfProcessPluginInstance>(info, m_hostExecutablePath);
+        if (proxy->load()) {
+            instance = std::move(proxy);
+        }
     }
 
-    // Aestra Sampler
-    if (info.id == "com.Aestrastudios.sampler") {
-        auto sampler = std::make_shared<Aestra::Audio::Plugins::SamplerPlugin>();
-        applyInternalPluginDefaults(sampler);
-        return sampler;
+    if (callback) {
+        callback(instance);
+    }
+}
+
+HybridPluginFactory::HybridPluginFactory(std::string hostExecutablePath) : m_outOfProcess(std::move(hostExecutablePath)) {}
+
+void HybridPluginFactory::createPluginAsync(const PluginInfo& info, std::function<void(PluginInstancePtr)> callback) {
+    if (info.format == PluginFormat::Internal) {
+        m_inProcess.createPluginAsync(info, std::move(callback));
+        return;
     }
 
-    // Aestra EQ — 8-Band Parametric Equalizer
-    if (info.id == "com.Aestrastudios.eq") {
-        auto eq = std::make_shared<Aestra::Audio::Plugins::AestraEQ>();
-        eq->setInfo(info);
-        applyInternalPluginDefaults(eq);
-        return eq;
-    }
-
-    // Aestra Comp — Dynamics Compressor
-    if (info.id == "com.Aestrastudios.comp") {
-        auto comp = std::make_shared<Aestra::Audio::Plugins::AestraComp>();
-        comp->setInfo(info);
-        applyInternalPluginDefaults(comp);
-        return comp;
-    }
-
-    // Aestra Verb — Algorithmic Reverb
-    if (info.id == "com.Aestrastudios.verb") {
-        auto verb = std::make_shared<Aestra::Audio::Plugins::AestraVerb>();
-        verb->setInfo(info);
-        applyInternalPluginDefaults(verb);
-        return verb;
-    }
-
-    // Aestra Delay — Stereo Delay with Modulation
-    if (info.id == "com.Aestrastudios.delay") {
-        auto delay = std::make_shared<Aestra::Audio::Plugins::AestraDelay>();
-        delay->setInfo(info);
-        applyInternalPluginDefaults(delay);
-        return delay;
-    }
-#endif
-    (void)info;
-    return nullptr;
+    m_outOfProcess.createPluginAsync(info, std::move(callback));
 }
 
 } // namespace Audio

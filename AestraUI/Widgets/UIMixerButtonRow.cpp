@@ -179,9 +179,9 @@ bool UIMixerButtonRow::onMouseEvent(const NUIMouseEvent& event)
                 NUIPoint center(rect.x + rect.width * 0.5f, rect.y + rect.height + 8.0f);
                 NUIPoint globalPos = localToGlobal(center);
                 
-                NUIComponent::showRemoteTooltip(text, globalPos);
+                NUIComponent::showRemoteTooltip(text, globalPos, this);
             } else {
-                NUIComponent::hideRemoteTooltip();
+                NUIComponent::hideRemoteTooltip(this);
             }
         }
     }
@@ -227,7 +227,7 @@ void UIMixerButtonRow::onMouseLeave()
     if (m_hovered != -1) {
         m_hovered = -1;
         requestInvalidate();
-        NUIComponent::hideRemoteTooltip();
+        NUIComponent::hideRemoteTooltip(this);
     }
     NUIComponent::onMouseLeave();
 }

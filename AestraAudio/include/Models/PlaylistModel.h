@@ -49,6 +49,17 @@ struct PlaylistLane {
     explicit PlaylistLane(int idx) : index(idx) { id = PlaylistLaneID::generate(); }
 };
 
+struct MidiClipPlaybackInstance {
+    PatternID patternId;
+    double startBeat{0.0};
+    double sourceOffsetBeats{0.0};
+    double durationBeats{0.0};
+
+    bool isValid() const { return patternId.isValid() && durationBeats > 0.0; }
+    double patternStartBeat() const { return startBeat - sourceOffsetBeats; }
+    double endBeat() const { return startBeat + durationBeats; }
+};
+
 /**
  * @brief Multi-lane playlist model with undo/redo support
  *
@@ -310,7 +321,18 @@ public:
         ClipInstance newClip;
         newClip.id = ClipInstanceID::generate();
         newClip.name = clip->name;
-        newClip.patternId = clip->patternId;
+        // Clone the pattern so split halves are independent (not instanced)
+        // Per design philosophy: "Everything is independent by default"
+        if (m_patternManager) {
+            PatternID clonedId = m_patternManager->clonePattern(clip->patternId);
+            if (clonedId.isValid()) {
+                newClip.patternId = clonedId;
+            } else {
+                newClip.patternId = clip->patternId; // fallback: share if clone fails
+            }
+        } else {
+            newClip.patternId = clip->patternId;
+        }
         newClip.colorRGBA = clip->colorRGBA;
         newClip.startBeat = splitBeat;
         newClip.durationBeats = clip->endBeat() - splitBeat;
@@ -497,6 +519,32 @@ public:
             ids.push_back(lane.id);
         }
         return ids;
+    }
+
+    std::vector<MidiClipPlaybackInstance> collectMidiClipInstances(const PatternManager& patterns) const {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        std::vector<MidiClipPlaybackInstance> instances;
+        for (const auto& lane : m_lanes) {
+            for (const auto& clip : lane.clips) {
+                if (!clip.patternId.isValid()) {
+                    continue;
+                }
+                const auto* pattern = patterns.getPattern(clip.patternId);
+                if (!pattern || !pattern->isMidi()) {
+                    continue;
+                }
+
+                MidiClipPlaybackInstance instance;
+                instance.patternId = clip.patternId;
+                instance.startBeat = clip.startBeat;
+                instance.sourceOffsetBeats = clip.sourceOffset;
+                instance.durationBeats = clip.durationBeats;
+                if (instance.isValid()) {
+                    instances.push_back(instance);
+                }
+            }
+        }
+        return instances;
     }
 
     /**

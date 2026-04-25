@@ -122,6 +122,7 @@ public:
     bool isPlaying() const { return m_isPlaying; }
     
     void onRender(AestraUI::NUIRenderer& renderer) override;
+    bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
 
 private:
     double m_currentTime;

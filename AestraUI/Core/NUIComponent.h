@@ -31,6 +31,7 @@ struct TooltipState {
     std::string text;
     NUIPoint position;
     NUIPoint hoverPos;  // Actual mouse position when tooltip was triggered
+    const void* owner = nullptr;
     bool active = false;
     float alpha = 0.0f;
     float delayTimer = 0.0f;
@@ -170,8 +171,8 @@ public:
     std::string getTooltip() const { return tooltipText_; }
     
     // Global Tooltip Management
-    static void showRemoteTooltip(const std::string& text, const NUIPoint& position);
-    static void hideRemoteTooltip();
+    static void showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner = nullptr);
+    static void hideRemoteTooltip(const void* owner = nullptr);
     static void renderGlobalTooltip(NUIRenderer& renderer);
     static void updateGlobalTooltip(double deltaTime);
 

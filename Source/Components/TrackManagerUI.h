@@ -119,6 +119,8 @@ public:
     void setOnToggleSequencer(std::function<void()> cb) { m_onToggleSequencer = cb; }
     void setOnTogglePlaylist(std::function<void()> cb) { m_onTogglePlaylist = cb; }
     void setOnOpenPatternInPianoRoll(std::function<void(PatternID)> cb) { m_onOpenPatternInPianoRoll = std::move(cb); }
+    void setOnPreviewPatternClip(std::function<void(PatternID)> cb) { m_onPreviewPatternClip = std::move(cb); }
+    void setOnStopPatternClipPreview(std::function<void()> cb) { m_onStopPatternClipPreview = std::move(cb); }
     
     // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project)
     void setOnLoopPresetChanged(std::function<void(int preset)> cb) { m_onLoopPresetChanged = cb; }
@@ -186,6 +188,8 @@ public:
     void cancelInstantClipDrag();
     bool isInstantClipDragActive() const { return m_isDraggingClipInstant; }
     bool clampInstantClipDragPosition(::AestraUI::NUIPoint& position) const;
+    bool placeFileOnTimeline(const std::string& filePath, const std::string& displayName = "");
+    bool placePatternOnTimeline(PatternID patternId);
     
     // === IDropTarget Interface ===
     ::AestraUI::DropFeedback onDragEnter(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position) override;
@@ -262,8 +266,8 @@ private:
     ::AestraUI::NUIPlatformBridge* m_window = nullptr;
 
     // UI Layout
-    int m_trackHeight{48};
-    int m_trackSpacing{4}; // 8px grid spacing scale (S1)
+    int m_trackHeight{46};
+    int m_trackSpacing{3};
     float m_scrollOffset{0.0f};
     float m_targetScrollOffset{0.0f};
     PlaylistMode m_playlistMode{PlaylistMode::Clips};
@@ -471,12 +475,15 @@ private:
     std::function<void()> m_onToggleSequencer;
     std::function<void()> m_onTogglePlaylist;
     std::function<void(PatternID)> m_onOpenPatternInPianoRoll;
+    std::function<void(PatternID)> m_onPreviewPatternClip;
+    std::function<void()> m_onStopPatternClipPreview;
     std::function<void(int)> m_onLoopPresetChanged;  // Called when loop preset dropdown changes
     std::function<void(double, double)> m_onSelectionMade;  // Called when ruler selection finalized
     std::function<void(double, double)> m_onLoopRegionUpdate;  // Called when loop region needs update (Project auto-update)
     std::function<void(uint32_t, const std::string&)> m_onSendToAudition;  // Called for "Send to Audition"
     std::function<void(double, double)> m_onSendSelectionToAudition;  // Called for "Send Selection to Audition"
     std::function<void()> m_onClipLibraryChanged;
+    bool m_dragPatternPreviewActive = false;
     
     void updateBackgroundCache(::AestraUI::NUIRenderer& renderer);
     void updateControlsCache(::AestraUI::NUIRenderer& renderer);
@@ -515,9 +522,6 @@ private:
     double snapBeatToGrid(double beat) const; // Snap beat to nearest grid line
     double snapBeatToGridForward(double beat) const; // Snap beat to next grid line (paste-to-right)
     
-    // Grid helper
-    void drawGrid(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIRect& bounds, float gridStartX, float gridWidth, float timelineScrollOffset);
-
     // Tool icons initialization and rendering
     void createToolIcons();
     void updateToolbarBounds();

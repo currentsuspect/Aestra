@@ -153,7 +153,8 @@ public:
      * @param startBeat Beat at which the pattern starts.
      * @param instanceId Caller-supplied instance identifier.
      */
-    void schedulePatternInstance(PatternID pid, double startBeat, uint32_t instanceId);
+    void schedulePatternInstance(PatternID pid, double startBeat, uint32_t instanceId,
+                                 double sourceStartBeat = 0.0, double durationBeats = -1.0);
 
     /**
      * Cancel pattern instance via atomic flag (RT-safe)
@@ -210,7 +211,9 @@ private:
         PatternID patternId;
         double startBeat;
         uint32_t instanceId;
-        size_t nextEventIdx; // Next note to schedule
+        double sourceStartBeat;
+        double sourceEndBeat;
+        uint64_t scheduledThroughFrame;
     };
 
     TimelineClock* m_clock;
@@ -231,6 +234,7 @@ private:
     std::atomic<uint32_t> m_overflowCounter;
     std::atomic<uint32_t> m_processedCounter;
     uint64_t m_lastRefillFrame{0}; // [NEW] Detect loop wraps
+    std::atomic<int> m_refillCounter{0};
 
     // Helpers
     uint16_t getChannelForUnit(UnitID unitId) const;

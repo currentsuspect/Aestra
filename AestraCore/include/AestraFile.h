@@ -78,10 +78,14 @@ public:
         if (!isOpen_)
             return 0;
         auto pos = stream_.tellg();
+        if (pos == std::streampos(-1))
+            return 0;
         stream_.seekg(0, std::ios::end);
-        size_t fileSize = stream_.tellg();
+        auto endPos = stream_.tellg();
         stream_.seekg(pos);
-        return fileSize;
+        if (endPos == std::streampos(-1))
+            return 0;
+        return static_cast<size_t>(endPos);
     }
 
     // Seek to position
@@ -291,6 +295,8 @@ public:
         const auto& data = *dataRef_;
         uint32_t size;
         if (!read(size))
+            return false;
+        if (size > 64 * 1024 * 1024)
             return false;
         if (position_ + size > data.size())
             return false;

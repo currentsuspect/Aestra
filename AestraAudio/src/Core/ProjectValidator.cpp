@@ -41,8 +41,8 @@ ProjectValidator::SchemaVersion::fromString(const std::string& str) {
             version.major = major;
             return version;
         }
-    } catch (...) {}
-    
+    } catch (const std::exception&) {}
+
     return std::nullopt;
 }
 
