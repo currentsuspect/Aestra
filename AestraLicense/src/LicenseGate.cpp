@@ -584,6 +584,7 @@ std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
             {"account", SECRET_SCHEMA_ATTRIBUTE_STRING},
             {"NULL", SECRET_SCHEMA_ATTRIBUTE_STRING},
         },
+        0, 0, 0, 0, 0, 0, 0, 0,
     };
 
     GError* error = nullptr;
