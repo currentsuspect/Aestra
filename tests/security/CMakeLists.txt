@@ -61,6 +61,7 @@ add_test(NAME SecPluginTrustedPath COMMAND SecPluginTrustedPath)
 add_test(NAME SecOutOfProcessPluginHost COMMAND SecOutOfProcessPluginHost $<TARGET_FILE:AestraPluginHost>)
 add_test(NAME SecPluginScanIsolation COMMAND SecPluginScanIsolation $<TARGET_FILE:AestraPluginHost> /usr/lib/clap/lsp-plugins.clap)
 add_test(NAME SecProjectLoadHardening COMMAND SecProjectLoadHardening)
+set_tests_properties(SecPluginScanIsolation PROPERTIES SKIP_RETURN_CODE 77)
 
 if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
     target_sources(SecStoulCrash PRIVATE ${REPO_ROOT}/Source/Core/ProjectSerializer.cpp)
