@@ -358,7 +358,7 @@ Still have questions? Check these resources:
 
 1. **Search GitHub Issues** - Someone may have asked already
 2. **Open a new issue** - Describe your problem clearly
-3. **Email support** - makoridylan@gmail.com
+3. **Email support** - support@aestra.studio
 4. **Community discussions** - GitHub Discussions (coming soon)
 
 ---

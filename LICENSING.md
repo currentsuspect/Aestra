@@ -197,7 +197,7 @@ We chose a source-available model for several reasons:
 
 **Pricing and availability will be announced upon official release.**
 
-To express interest in early access or commercial licensing, contact: [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
+To express interest in early access or commercial licensing, contact: [licensing@aestra.studio](mailto:licensing@aestra.studio)
 
 ---
 
@@ -256,7 +256,7 @@ Any unauthorized use of this software will result in:
 ## 📧 Contact & Inquiries
 
 ### For Licensing Questions
-- **Email:** [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
+- **Email:** [licensing@aestra.studio](mailto:licensing@aestra.studio)
 - **Subject Line:** "Aestra Licensing Inquiry"
 
 ### For Technical Questions
@@ -264,7 +264,7 @@ Any unauthorized use of this software will result in:
 - **GitHub Discussions:** [Community forum](https://github.com/currentsuspect/Aestra/discussions)
 
 ### For Partnership Opportunities
-- **Email:** [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
+- **Email:** [licensing@aestra.studio](mailto:licensing@aestra.studio)
 - **Subject Line:** "Aestra Partnership Inquiry"
 
 ---

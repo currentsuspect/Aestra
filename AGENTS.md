@@ -243,7 +243,7 @@ All CI builds use `-DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENAB
 
 - **License**: ASSAL v1.1 (source-available, NOT open-source). Code can be studied and contributed to, but cannot be used/copied/modified/redistributed without permission.
 - **Secret scanning**: Gitleaks configured (`.gitleaks.toml`). Never commit keys, tokens, or credentials.
-- **Vulnerability reports**: Email `makoridylan@gmail.com` with subject `SECURITY: [summary]`. 72-hour acknowledgment SLA.
+- **Vulnerability reports**: Email `security@aestra.studio` with subject `SECURITY: [summary]`. 72-hour acknowledgment SLA.
 - Aestra runs locally; no internet access except optional update checks.
 - Data-loss bugs, crash loops, and performance regressions are high-priority.
 
