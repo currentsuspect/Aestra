@@ -7,28 +7,46 @@
 #include <filesystem>
 #include <set>
 #include <functional>
+#include <algorithm>
+
+std::string normalizedGenericPath(const std::filesystem::path& path) {
+    std::string normalized = path.lexically_normal().generic_string();
+    std::replace(normalized.begin(), normalized.end(), '\\', '/');
+    while (normalized.size() > 1 && normalized.back() == '/') {
+        normalized.pop_back();
+    }
+    return normalized;
+}
+
+bool pathIsOrUnder(const std::filesystem::path& path, const std::filesystem::path& root) {
+    const std::string candidate = normalizedGenericPath(path);
+    const std::string base = normalizedGenericPath(root);
+    if (candidate == base) {
+        return true;
+    }
+    return !base.empty() && candidate.size() > base.size() && candidate.compare(0, base.size(), base) == 0 &&
+           candidate[base.size()] == '/';
+}
 
 // Reproduce isTrustedPath from PluginScanner.cpp
 bool isTrustedPath(const std::filesystem::path& path) {
-    std::string p = path.lexically_normal().string();
-
     // Linux: system-wide paths are trusted
-    if (p.find("/usr/lib/vst3") == 0 ||
-        p.find("/usr/lib/clap") == 0 ||
-        p.find("/usr/local/lib/vst3") == 0 ||
-        p.find("/usr/local/lib/clap") == 0) {
+    if (pathIsOrUnder(path, "/usr/lib/vst3") ||
+        pathIsOrUnder(path, "/usr/lib/clap") ||
+        pathIsOrUnder(path, "/usr/local/lib/vst3") ||
+        pathIsOrUnder(path, "/usr/local/lib/clap")) {
         return true;
     }
 
     // Windows: Program Files paths are trusted
-    if (p.find("C:\\Program Files\\Common Files\\VST3") == 0 ||
-        p.find("C:\\Program Files\\Common Files\\CLAP") == 0) {
+    if (pathIsOrUnder(path, "C:/Program Files/Common Files/VST3") ||
+        pathIsOrUnder(path, "C:/Program Files/Common Files/CLAP")) {
         return true;
     }
 
     // macOS: system Library paths are trusted
-    if (p.find("/Library/Audio/Plug-Ins/VST3") == 0 ||
-        p.find("/Library/Audio/Plug-Ins/CLAP") == 0) {
+    if (pathIsOrUnder(path, "/Library/Audio/Plug-Ins/VST3") ||
+        pathIsOrUnder(path, "/Library/Audio/Plug-Ins/CLAP")) {
         return true;
     }
 
@@ -61,6 +79,10 @@ int main() {
         {"/Users/user/Library/Audio/Plug-Ins/VST3/sketchy.vst3", false, "macOS user VST3"},
         {"/tmp/malicious.clap", false, "Temp directory CLAP"},
         {"/opt/custom/plugins/sketchy.vst3", false, "Custom install path"},
+        {"/usr/lib/vst3evil/sketchy.vst3", false, "Linux prefix spoof"},
+        {"/usr/local/lib/clap.backup/sketchy.clap", false, "Linux local prefix spoof"},
+        {"C:\\Program Files\\Common Files\\VST3evil\\sketchy.vst3", false, "Windows prefix spoof"},
+        {"/Library/Audio/Plug-Ins/VST3evil/sketchy.vst3", false, "macOS prefix spoof"},
     };
 
     bool allPass = true;

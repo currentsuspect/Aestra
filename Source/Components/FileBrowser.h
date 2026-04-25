@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <array>
 #include <unordered_map>
 #include <unordered_set>
 #include <atomic>
@@ -75,6 +76,9 @@ struct FileItem {
     mutable bool isTruncated = false;
     mutable int searchScore = 0;
     
+    FileItem()
+        : type(FileType::Unknown), isDirectory(false), size(0) {}
+
     FileItem(const std::string& n, const std::string& p, FileType t, bool isDir, size_t s = 0, const std::string& modified = "")
         : name(n), path(p), type(t), isDirectory(isDir), size(s), lastModified(modified) {}
         
@@ -125,6 +129,7 @@ public:
         setDirty(true);
     }
     bool isLoadingPlayback() const { return isLoadingPlayback_; }
+    void setActivePlaybackPath(const std::string& path);
     
     // Multi-select
     void toggleFileSelection(int index, bool ctrlPressed, bool shiftPressed);
@@ -168,11 +173,20 @@ public:
         Size,
         Modified
     };
+
+    enum class QuickFilter {
+        All,
+        Audio,
+        Projects,
+        Folders
+    };
     
     void setSortMode(SortMode mode);
     void setSortAscending(bool ascending);
     
 	private:
+        struct BrowserLayout;
+
 	    void loadDirectoryContents();
 	    void loadFolderContents(FileItem* item);
 
@@ -210,6 +224,7 @@ public:
         std::atomic<uint64_t> scanGeneration_{0};
         bool scanWorkerStarted_{false};
         bool scanningRoot_{false};
+        bool bootScanRecoveryAttempted_{false};
 
 		    void updateDisplayList();
 		    void updateDisplayListRecursive(FileItem& item, std::vector<const FileItem*>& list);
@@ -218,12 +233,15 @@ public:
 		    FileType getFileTypeFromExtension(const std::string& extension) const;
 		    std::shared_ptr<NUIIcon> getIconForFileType(FileType type);
 		    bool isFilterActive() const;
+            bool matchesQuickFilter(const FileItem& item) const;
 		    const std::vector<const FileItem*>& getActiveView() const;
 		    void invalidateAllItemCaches();
             void renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds);
 		    void renderFileList(NUIRenderer& renderer);
 		    void renderInteractiveBreadcrumbs(NUIRenderer& renderer);
 		    void renderToolbar(NUIRenderer& renderer);
+            void renderNavigationPane(NUIRenderer& renderer, const BrowserLayout& layout);
+            void renderListHeader(NUIRenderer& renderer, const BrowserLayout& layout);
 	    void renderScrollbar(NUIRenderer& renderer);
     void renderSearchBox(NUIRenderer& renderer);
     void updateScrollPosition();
@@ -232,9 +250,12 @@ public:
 	    bool handleSearchBoxMouseEvent(const NUIMouseEvent& event);
 	    bool handleScrollbarMouseEvent(const NUIMouseEvent& event);
 	    bool handleBreadcrumbMouseEvent(const NUIMouseEvent& event);
+        bool handleNavigationMouseEvent(const NUIMouseEvent& event, const BrowserLayout& layout);
 	    void updateScrollbarVisibility();
 	    void showFavoritesMenu();
+	    void showAddFolderMenu();
 	    void showSortMenu();
+	    void showQuickFilterMenu();
 	    void showTagFilterMenu();
 	    void showItemContextMenu(const FileItem& item, const NUIPoint& position);
 	    void showHiddenBreadcrumbMenu(const std::vector<std::string>& hiddenPaths, const NUIPoint& position);
@@ -245,10 +266,47 @@ public:
 	    void pushToHistory(const std::string& path);
 	    void navigateBack();
 	    void navigateForward();
+
+        enum class BrowserNavAction {
+            Favorites,
+            Purple,
+            CollectionDrums,
+            CollectionInstruments,
+            Vocals,
+            Sounds,
+            Drums,
+            Instruments,
+            AudioEffects,
+            Plugins,
+            Clips,
+            Samples,
+            Packs,
+            UserLibrary,
+            CurrentProject,
+            CustomPlace,
+            AddFolder
+        };
+
+        struct BrowserNavHit {
+            BrowserNavAction action;
+            NUIRect bounds;
+            std::string path;
+        };
+
+        struct BrowserLayout {
+            NUIRect search;
+            NUIRect navPane;
+            NUIRect listHeader;
+            NUIRect list;
+            float navWidth = 0.0f;
+        };
+
+        BrowserLayout computeBrowserLayout() const;
     
     // File management
     std::string currentPath_;
     std::string pendingSelectionPath_;
+    std::string activePlaybackPath_;
     std::vector<FileItem> rootItems_;
     std::vector<const FileItem*> displayItems_;
     std::vector<const FileItem*> filteredFiles_;  // Filtered files for search
@@ -306,10 +364,23 @@ public:
 	    NUIRect favoritesButtonBounds_;
 	    NUIRect tagsButtonBounds_;
 	    NUIRect sortButtonBounds_;
+	    NUIRect backButtonBounds_;
+	    NUIRect forwardButtonBounds_;
+	    NUIRect filterButtonBounds_;
 	    bool refreshHovered_ = false;
 	    bool favoritesHovered_ = false;
 	    bool tagsHovered_ = false;
 	    bool sortHovered_ = false;
+	    bool backHovered_ = false;
+	    bool forwardHovered_ = false;
+	    bool filterHovered_ = false;
+        QuickFilter activeQuickFilter_ = QuickFilter::All;
+        std::array<NUIRect, 4> quickFilterBounds_{};
+        int hoveredQuickFilter_ = -1;
+        BrowserNavAction activeNavAction_ = BrowserNavAction::Sounds;
+        std::string activeNavPath_;
+        int hoveredNavIndex_ = -1;
+        std::vector<BrowserNavHit> navHits_;
 	    std::shared_ptr<NUIContextMenu> popupMenu_;
 	    std::string popupMenuTargetPath_;
 	    bool popupMenuTargetIsDirectory_ = false;
@@ -318,6 +389,7 @@ public:
 	    // Tags / filtering
 	    std::unordered_map<std::string, std::vector<std::string>> tagsByPath_;
 	    std::string activeTagFilter_;
+	    std::vector<std::string> customPlacePaths_;
     
     // Preview panel state
     bool previewPanelVisible_;

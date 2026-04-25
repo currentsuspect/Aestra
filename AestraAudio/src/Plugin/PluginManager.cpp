@@ -5,6 +5,8 @@
 #include "AestraLog.h"
 #include "AestraPlatform.h" // For getAppDataPath
 #include "PluginFactory.h"  // [NEW]
+#include "Plugin/InternalPluginRegistry.h"
+#include "Plugin/BuiltInPlugins.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -18,6 +20,13 @@
 
 namespace Aestra {
 namespace Audio {
+
+namespace {
+bool isUnavailableInternalPlugin(const PluginInfo& info) {
+    return info.format == PluginFormat::Internal &&
+           !InternalPluginRegistry::instance().isPluginAvailable(info.id);
+}
+}
 
 // Singleton instance
 PluginManager& PluginManager::getInstance() {
@@ -49,11 +58,14 @@ bool PluginManager::initialize() {
     }
 #endif
 
+    BuiltInPlugins::registerCoreBuiltIns();
+
     // Add default search paths
     m_scanner.addDefaultSearchPaths();
 
-    // Initialize default factory (In-Process)
-    m_factory = std::make_unique<InProcessPluginFactory>();
+    // Built-ins stay in-process. Third-party native plugin formats are routed
+    // through the helper process so a plugin crash does not take down the DAW.
+    m_factory = std::make_unique<HybridPluginFactory>();
 
     // Load plugin cache when platform utilities are available.
     // In headless/internal-plugin test flows the platform layer may not be initialized,
@@ -243,15 +255,29 @@ size_t PluginManager::getActiveInstanceCount() const {
 // ==============================
 
 const PluginInfo* PluginManager::findPlugin(const std::string& id) const {
-    return m_scanner.findPlugin(id);
+    const PluginInfo* info = m_scanner.findPlugin(id);
+    if (info && isUnavailableInternalPlugin(*info)) {
+        return nullptr;
+    }
+    return info;
 }
 
 std::vector<PluginInfo> PluginManager::getPluginsByType(PluginType type) const {
-    return m_scanner.getPluginsByType(type);
+    auto plugins = m_scanner.getPluginsByType(type);
+    plugins.erase(std::remove_if(plugins.begin(), plugins.end(), [](const PluginInfo& info) {
+                      return isUnavailableInternalPlugin(info);
+                  }),
+                  plugins.end());
+    return plugins;
 }
 
 std::vector<PluginInfo> PluginManager::getPluginsByFormat(PluginFormat format) const {
-    return m_scanner.getPluginsByFormat(format);
+    auto plugins = m_scanner.getPluginsByFormat(format);
+    plugins.erase(std::remove_if(plugins.begin(), plugins.end(), [](const PluginInfo& info) {
+                      return isUnavailableInternalPlugin(info);
+                  }),
+                  plugins.end());
+    return plugins;
 }
 
 // ==============================

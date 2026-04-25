@@ -203,6 +203,10 @@ private:
         int32_t textureLoc = -1;
         int32_t useTextureLoc = -1;
         int32_t smoothnessLoc = -1; // Added for SDF text
+        int32_t textTexelSizeLoc = -1;
+        int32_t textSharpenLoc = -1;
+        int32_t textGammaLoc = -1;
+        int32_t outputLinearLoc = -1;
     };
     
     // Transform stack
@@ -281,6 +285,7 @@ private:
     uint32_t drawCallCount_ = 0;  // Draw call tracking
     bool scissorEnabled_ = false;
     bool debugTextBounds_ = false;
+    bool framebufferSRGBEnabled_ = false;
 
     
     // OpenGL objects
@@ -340,7 +345,7 @@ private:
     // - Large atlas (48px) for bigger UI text
     // - Medium atlas (24px) for common 15–21px UI copy
     // - Small atlas (14px) for ~12-13px UI labels
-    // - Extra-small atlas (12px) for the densest tiny copy
+    // - Extra-small atlas (20px supersampled) for the densest tiny copy
     // Cache by Unicode codepoint (uint32_t) instead of char for full UTF-8 support
     std::unordered_map<uint32_t, FontData> fontCache_;
     std::unordered_map<uint32_t, FontData> fontCacheMedium_;
@@ -352,7 +357,7 @@ private:
     int atlasFontSize_ = 40;       // Pixel height of glyphs baked into the large atlas
     int atlasFontSizeMedium_ = 22; // Pixel height of glyphs baked into the medium atlas
     int atlasFontSizeSmall_ = 16;  // Pixel height of glyphs baked into the small atlas
-    int atlasFontSizeXSmall_ = 14; // Pixel height of glyphs baked into the extra-small atlas
+    int atlasFontSizeXSmall_ = 20; // Pixel height of glyphs baked into the extra-small atlas
     float fontAscent_ = 0.0f;
     float fontDescent_ = 0.0f;
     float fontLineHeight_ = 0.0f;

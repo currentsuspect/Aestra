@@ -4,7 +4,9 @@ project(AestraRumble LANGUAGES CXX)
 
 add_library(AestraRumble STATIC
     src/RumbleInstance.cpp
+    src/RumblePluginRegistration.cpp
     include/RumbleInstance.h
+    include/RumblePluginRegistration.h
 )
 
 target_include_directories(AestraRumble
@@ -15,6 +17,7 @@ target_include_directories(AestraRumble
 target_link_libraries(AestraRumble
     PUBLIC
         AestraPluginAPI
+        AestraLicense
 )
 
 target_compile_features(AestraRumble PUBLIC cxx_std_17)

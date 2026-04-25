@@ -2,6 +2,10 @@
 #include "NUIFont.h"
 #include <iostream>
 #include <cstring>
+#include <array>
+#include <cstdlib>
+#include <filesystem>
+#include <vector>
 
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
@@ -339,21 +343,60 @@ std::shared_ptr<NUIFont> NUIFontManager::getFont(const std::string& filepath, in
 }
 
 std::shared_ptr<NUIFont> NUIFontManager::getDefaultFont(int fontSize) {
-    std::string fontPath;
+    std::vector<std::string> fontCandidates;
+
+    if (const char* fontDir = std::getenv("AESTRA_FONT_DIR")) {
+        const std::string base(fontDir);
+        fontCandidates.push_back(base + "/Geist/Geist-Medium.ttf");
+        fontCandidates.push_back(base + "/Geist/Geist-Regular.ttf");
+        fontCandidates.push_back(base + "/Geist-Medium.ttf");
+        fontCandidates.push_back(base + "/Geist-Regular.ttf");
+    }
     
 #ifdef _WIN32
-    // Windows: Segoe UI
-    fontPath = "C:\\Windows\\Fonts\\segoeui.ttf";
+    fontCandidates.push_back("C:\\Windows\\Fonts\\segoeui.ttf");
 #elif __APPLE__
-    // macOS: San Francisco (fallback to Helvetica)
-    fontPath = "/System/Library/Fonts/SFNS.ttf";
-    // TODO: Check if exists, fallback to Helvetica
+    fontCandidates.push_back("/System/Library/Fonts/SFNS.ttf");
+    fontCandidates.push_back("/System/Library/Fonts/Supplemental/Arial.ttf");
 #else
-    // Linux: DejaVu Sans
-    fontPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+    // Linux: search broadly for Geist relative to cwd before system fallback.
+    constexpr std::array<const char*, 8> prefixes = {
+        "",
+        "../",
+        "../../",
+        "../../../",
+        "../../../../",
+        "../../../../../",
+        "../../../../../../",
+        "../../../../../../../"
+    };
+
+    for (const char* prefix : prefixes) {
+        fontCandidates.push_back(std::string(prefix) + "AestraAssets/fonts/Geist/Geist-Medium.ttf");
+        fontCandidates.push_back(std::string(prefix) + "AestraAssets/fonts/Geist/Geist-Regular.ttf");
+    }
+
+    fontCandidates.push_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+    fontCandidates.push_back("/usr/share/fonts/TTF/DejaVuSans.ttf");
 #endif
-    
-    return getFont(fontPath, fontSize);
+
+    for (const auto& fontPath : fontCandidates) {
+        std::error_code ec;
+        if (!std::filesystem::exists(fontPath, ec) || ec) {
+            continue;
+        }
+
+        auto font = getFont(fontPath, fontSize);
+        if (font) {
+            return font;
+        }
+    }
+
+    // Last-resort attempt with first candidate if probing failed (e.g., virtual FS or permission edge-cases).
+    if (!fontCandidates.empty()) {
+        return getFont(fontCandidates.front(), fontSize);
+    }
+    return nullptr;
 }
 
 void NUIFontManager::clearCache() {
@@ -361,4 +404,3 @@ void NUIFontManager::clearCache() {
 }
 
 } // namespace AestraUI
-

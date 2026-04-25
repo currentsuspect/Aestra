@@ -8,6 +8,7 @@
 #include "PatternSource.h" // For PatternID (value type, can't forward-declare)
 #include <functional>
 #include <memory>
+#include <vector>
 
 namespace Aestra { 
     namespace Audio { 
@@ -61,6 +62,8 @@ public:
     std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onPluginDropped;
     /** @brief Callback fired after the shared pattern backing this row is edited. */
     std::function<void(Aestra::Audio::PatternID)> m_onPatternEdited;
+    /** @brief Callback used to open the full Piano Roll editor. */
+    std::function<void(Aestra::Audio::PatternID)> m_onOpenPatternEditor;
     
     void setOnDragStart(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDragStart = cb; }
     void setOnDrop(std::function<void(Aestra::Audio::UnitID, int)> cb) { m_onDrop = cb; }
@@ -70,6 +73,7 @@ public:
     void setOnSampleDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onSampleDropped = cb; }
     void setOnPluginDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onPluginDropped = cb; }
     void setOnPatternEdited(std::function<void(Aestra::Audio::PatternID)> cb) { m_onPatternEdited = cb; }
+    void setOnOpenPatternEditor(std::function<void(Aestra::Audio::PatternID)> cb) { m_onOpenPatternEditor = cb; }
     
     /**
      * @brief Set the visible step count for the sequencer section.
@@ -108,6 +112,7 @@ private:
     std::string m_name;
     uint32_t m_color;
     Aestra::Audio::UnitGroup m_group;
+    Aestra::Audio::UnitType m_type{Aestra::Audio::UnitType::Sampler};
     bool m_isEnabled = true;
     bool m_isArmed = false;
     bool m_isMuted = false;
@@ -116,18 +121,20 @@ private:
     std::string m_pluginId;
     std::string m_sourceSummary;
     std::string m_groupLabel;
-    int m_mixerChannel = -1; // Mixer route
+    double m_audioDurationSeconds = 0.0;
+    std::vector<float> m_audioPreviewWaveform;
+    int m_mixerChannel = -1;
 
     // === Internal State ===
     void startEditing(const NUIRect& rect);
     void stopEditing(bool save);
     
     // === Layout Constants (Premium v2) ===
-    static constexpr float ROW_HEIGHT = 42.0f;        // Increased from 28px
-    static constexpr float CONTROL_WIDTH = 280.0f;    // Increased from 220px
+    static constexpr float ROW_HEIGHT = 56.0f;
+    static constexpr float CONTROL_WIDTH = 312.0f;
     static constexpr float DRAG_HANDLE_WIDTH = 16.0f; // Grip area
     static constexpr float COLOR_STRIP_WIDTH = 5.0f;  // Wider strip
-    static constexpr float BUTTON_SIZE = 22.0f;       // Larger buttons
+    static constexpr float BUTTON_SIZE = 20.0f;
     static constexpr float BUTTON_SPACING = 6.0f;     // More breathing room
     static constexpr float PAD_MIN_SIZE = 20.0f;      // Minimum step pad size
     static constexpr float PAD_SPACING = 3.0f;        // Space between pads
@@ -139,10 +146,14 @@ private:
     float m_scrollX = 0.0f;
     int m_hoveredStep = -1;
     
+    // Minimap pitch scroll
+    float m_minimapPitchOffset = 0.0f; // Scroll offset for pitch viewport
+    
     // === Interaction States ===
     bool m_isHovered = false;
     bool m_isDragging = false;
     bool m_isSelected = false;
+    bool m_isDropHighlighted = false;
     NUIPoint m_dragStartPos;
     bool m_isStepEditing = false;
     int m_stepEditStart = -1;

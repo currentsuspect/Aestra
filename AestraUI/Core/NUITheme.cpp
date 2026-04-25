@@ -9,27 +9,27 @@ NUITheme::NUITheme() {
 std::shared_ptr<NUITheme> NUITheme::createDefault() {
     auto theme = std::make_shared<NUITheme>();
     
-    // Aestra "Deep Glass" Theme
-    theme->setColor("background", NUIColor::fromHex(0x0a0b10));   // Void
-    theme->setColor("surface", NUIColor::fromHex(0x181b21, 0.9f)); // Dark Surface (Glass)
-    theme->setColor("surfaceLight", NUIColor::fromHex(0x242730)); // Overlay
+    // Aestra landing-aligned premium dark palette
+    theme->setColor("background", NUIColor::fromHex(0x080a0e));
+    theme->setColor("surface", NUIColor::fromHex(0x0f1118, 0.96f));
+    theme->setColor("surfaceLight", NUIColor::fromHex(0x13161e));
     
     // Accents
-    theme->setColor("primary", NUIColor::fromHex(0x9d4edd));      // Aestra Purple
-    theme->setColor("secondary", NUIColor::fromHex(0x4cc9f0));    // Neon Cyan
-    theme->setColor("accent", NUIColor::fromHex(0x06d6a0));       // Signal Green
-    theme->setColor("warning", NUIColor::fromHex(0xffd166));      // Warning Yellow/Orange
-    theme->setColor("error", NUIColor::fromHex(0xef476f));        // Signal Red
+    theme->setColor("primary", NUIColor::fromHex(0x8b7de8));      // Brand purple
+    theme->setColor("secondary", NUIColor::fromHex(0x4a9eff));    // Electric blue
+    theme->setColor("accent", NUIColor::fromHex(0x1db4a6));       // Teal
+    theme->setColor("warning", NUIColor::fromHex(0xe8a230));      // Amber
+    theme->setColor("error", NUIColor::fromHex(0xe06a4e));        // Coral
     
     // UI Elements
-    theme->setColor("text", NUIColor::fromHex(0xffffff, 0.95f));
-    theme->setColor("textSecondary", NUIColor::fromHex(0xffffff, 0.6f));
-    theme->setColor("textDisabled", NUIColor::fromHex(0xffffff, 0.3f));
+    theme->setColor("text", NUIColor::fromHex(0xc0c8e0));
+    theme->setColor("textSecondary", NUIColor::fromHex(0x8b95b0));
+    theme->setColor("textDisabled", NUIColor::fromHex(0x3a4060));
     
-    theme->setColor("border", NUIColor::fromHex(0xffffff, 0.1f)); // 10% White Border
-    theme->setColor("hover", NUIColor::fromHex(0xffffff, 0.05f));  // Subtle white highlight
-    theme->setColor("active", NUIColor::fromHex(0x9d4edd, 0.2f));  // Purple Tint
-    theme->setColor("disabled", NUIColor::fromHex(0x181b21, 0.5f));
+    theme->setColor("border", NUIColor::fromHex(0x2a2f42, 0.86f));
+    theme->setColor("hover", NUIColor::fromHex(0xffffff, 0.06f));
+    theme->setColor("active", NUIColor::fromHex(0x8b7de8, 0.2f));
+    theme->setColor("disabled", NUIColor::fromHex(0x1a1e2a, 0.58f));
 
     // Dimensions
     theme->setDimension("borderRadius", 12.0f);        // Soft Geometry

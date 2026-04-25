@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, develop]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   BUILD_TYPE: Release
 
@@ -29,14 +33,22 @@ jobs:
           sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
         working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
+        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-results-linux
+          path: build/ctest-results-linux.xml
+          if-no-files-found: ignore
 
       - name: Discord Notification
         if: always() && env.DISCORD_WEBHOOK != ''
@@ -72,7 +84,7 @@ jobs:
           cmake-version: "3.28"
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
@@ -80,7 +92,15 @@ jobs:
       - name: Test
         working-directory: build
         shell: bash
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
+        run: ctest --test-dir . -C ${{env.BUILD_TYPE}} --output-on-failure --output-junit ctest-results-windows.xml
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-results-windows
+          path: build/ctest-results-windows.xml
+          if-no-files-found: ignore
 
       - name: Discord Notification
         if: always() && env.DISCORD_WEBHOOK != ''
@@ -118,14 +138,22 @@ jobs:
           cmake-version: "3.28"
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
 
       - name: Test
         working-directory: build
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure -R "CommandHistoryTest|MoveClipCommandTest|MacroCommandTest|AestraOscillatorTest|AestraMixerBusTest|AestraAtomicSaveTest"
+        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-macos.xml
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-results-macos
+          path: build/ctest-results-macos.xml
+          if-no-files-found: ignore
 
       - name: Discord Notification
         if: always() && env.DISCORD_WEBHOOK != ''
@@ -179,7 +207,7 @@ jobs:
           sudo apt-get install -y clang-tidy-14 clang-format-14
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=OFF -DAESTRA_HEADLESS_ONLY=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Run clang-tidy
         run: |
@@ -187,3 +215,49 @@ jobs:
             AestraCore/src/*.cpp \
             -- -IAestraCore/include -std=c++17 2>&1 | head -100 || true
         continue-on-error: true
+
+  sanitizer-linux:
+    name: Sanitizers (ASan/UBSan, advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "3.28"
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
+
+      - name: Configure
+        run: >
+          cmake -B build-asan -S .
+          -DCMAKE_BUILD_TYPE=Debug
+          -DAestra_CORE_MODE=ON
+          -DAESTRA_CI=ON
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+
+      - name: Build
+        run: cmake --build build-asan --config Debug
+
+      - name: Test
+        working-directory: build-asan
+        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-asan.xml
+
+      - name: Upload sanitizer test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-results-asan
+          path: build-asan/ctest-results-asan.xml
+          if-no-files-found: ignore

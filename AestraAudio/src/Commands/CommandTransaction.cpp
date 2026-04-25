@@ -54,10 +54,11 @@ void CommandTransaction::redo() {
         return;
     }
     
-    // Redo all commands in order (call redo(), not execute(), to preserve state)
+    // Re-apply all commands in original order. Transaction tests and history
+    // semantics treat redo as replaying the original execute sequence.
     for (auto& cmd : m_commands) {
         if (cmd) {
-            cmd->redo();
+            cmd->execute();
         }
     }
     

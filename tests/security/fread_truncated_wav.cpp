@@ -11,6 +11,7 @@
 #include <cstring>
 #include <cstdio>
 #include <vector>
+#include <filesystem>
 
 // Reproduce the FIXED fread parsing logic from MetronomeEngine.cpp
 bool fixedWavRead16(FILE* file, uint32_t numSamples, uint16_t numChannels,
@@ -59,6 +60,9 @@ bool fixedWavRead24(FILE* file, uint32_t numSamples, uint16_t numChannels,
 static void writeWav16(const char* path, uint32_t sampleRate, uint16_t channels,
                        const int16_t* data, uint32_t numSamples) {
     FILE* f = fopen(path, "wb");
+    if (!f) {
+        return;
+    }
     // RIFF header
     fwrite("RIFF", 1, 4, f);
     uint32_t fileSize = 36 + numSamples * channels * 2;
@@ -91,6 +95,9 @@ static void writeTruncatedWav16(const char* path, uint32_t sampleRate, uint16_t 
                                  const int16_t* actualData, uint32_t actualSamples,
                                  uint32_t claimedSamples) {
     FILE* f = fopen(path, "wb");
+    if (!f) {
+        return;
+    }
     // RIFF header
     fwrite("RIFF", 1, 4, f);
     // Use claimed size for file size (lies about actual data)
@@ -123,8 +130,11 @@ static void writeTruncatedWav16(const char* path, uint32_t sampleRate, uint16_t 
 int main() {
     std::cout << "=== RTM-011: MetronomeEngine fread unchecked return — proof of fix ===" << std::endl;
 
-    const char* normalWav = "/tmp/rtm011_normal.wav";
-    const char* truncatedWav = "/tmp/rtm011_truncated.wav";
+    const auto tmpDir = std::filesystem::temp_directory_path();
+    const auto normalWavPath = tmpDir / "rtm011_normal.wav";
+    const auto truncatedWavPath = tmpDir / "rtm011_truncated.wav";
+    const std::string normalWav = normalWavPath.string();
+    const std::string truncatedWav = truncatedWavPath.string();
 
     // Create test data: 100 samples of a sine wave
     const uint32_t actualSamples = 100;
@@ -136,13 +146,13 @@ int main() {
         testData[i] = static_cast<int16_t>(32767.0f * 0.5f); // DC offset for easy detection
     }
 
-    writeWav16(normalWav, sampleRate, channels, testData.data(), actualSamples);
-    writeTruncatedWav16(truncatedWav, sampleRate, channels, testData.data(), actualSamples, claimedSamples);
+    writeWav16(normalWav.c_str(), sampleRate, channels, testData.data(), actualSamples);
+    writeTruncatedWav16(truncatedWav.c_str(), sampleRate, channels, testData.data(), actualSamples, claimedSamples);
 
     // Test 1: Normal WAV should parse successfully
     std::cout << "\n[Test 1] Normal WAV parsing" << std::endl;
     {
-        FILE* f = fopen(normalWav, "rb");
+        FILE* f = fopen(normalWav.c_str(), "rb");
         if (!f) { std::cout << "  [FAIL] Could not open normal WAV" << std::endl; return 1; }
         // Skip to data chunk (simplified — just read the audio data directly)
         // For this test, we simulate the fread behavior by seeking past headers
@@ -157,7 +167,7 @@ int main() {
     // Test 2: Truncated WAV should be REJECTED (not crash, not produce garbage)
     std::cout << "\n[Test 2] Truncated WAV rejection" << std::endl;
     {
-        FILE* f = fopen(truncatedWav, "rb");
+        FILE* f = fopen(truncatedWav.c_str(), "rb");
         if (!f) { std::cout << "  [FAIL] Could not open truncated WAV" << std::endl; return 1; }
         fseek(f, 44, SEEK_SET);
         std::vector<float> samples;
@@ -175,7 +185,7 @@ int main() {
     // Test 3: Verify no uninitialized memory in output for truncated case
     std::cout << "\n[Test 3] Uninitialized memory protection" << std::endl;
     {
-        FILE* f = fopen(truncatedWav, "rb");
+        FILE* f = fopen(truncatedWav.c_str(), "rb");
         if (!f) { std::cout << "  [FAIL] Could not open truncated WAV" << std::endl; return 1; }
         fseek(f, 44, SEEK_SET);
         std::vector<float> samples;
@@ -202,8 +212,8 @@ int main() {
     std::cout << "\n[PASS] All fread checks verified. RTM-011 fixed." << std::endl;
 
     // Cleanup
-    std::remove(normalWav);
-    std::remove(truncatedWav);
+    std::remove(normalWav.c_str());
+    std::remove(truncatedWav.c_str());
 
     return 0;
 }

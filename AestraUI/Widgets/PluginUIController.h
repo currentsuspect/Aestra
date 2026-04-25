@@ -5,7 +5,6 @@
 #include "NUITypes.h"
 #include "PluginBrowserPanel.h"
 #include "GenericPluginEditor.h"
-#include "RumblePluginEditor.h"
 
 // AestraAudio includes
 #include <PluginHost.h>
@@ -15,8 +14,13 @@
 
 #include <functional>
 #include <memory>
+#include <algorithm>
 #include <string>
 #include <vector>
+
+#ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
+#include "RumblePluginEditor.h"
+#endif
 
 namespace AestraUI {
 class PluginSelectorMenu;

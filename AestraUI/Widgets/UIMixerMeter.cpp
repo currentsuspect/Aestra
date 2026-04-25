@@ -377,7 +377,8 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
 bool UIMixerMeter::onMouseEvent(const NUIMouseEvent& event)
 {
     // Handle click on clip indicator to clear clip latch
-    if (event.pressed && event.button == NUIMouseButton::Left) {
+    if (event.pressed &&
+        (event.button == NUIMouseButton::Left || event.button == NUIMouseButton::Right)) {
         auto bounds = getBounds();
 
         // Check if click is within the meter bounds (anywhere)

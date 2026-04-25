@@ -171,10 +171,14 @@ void WaveformCache::getPeaksForRange(uint32_t channel, SampleIndex startSample, 
         double startPeakF = (startSample + pixel * samplesPerPixel) / level.samplesPerPeak;
         double endPeakF = (startSample + (pixel + 1) * samplesPerPixel) / level.samplesPerPeak;
 
-        SampleIndex startPeak = static_cast<SampleIndex>(std::floor(startPeakF));
-        SampleIndex endPeak = static_cast<SampleIndex>(std::ceil(endPeakF));
-
-        outPeaks[pixel] = level.getPeakRange(channel, startPeak, endPeak);
+        if (peaksPerPixel <= 1.25) {
+            const double centerPeak = (startPeakF + endPeakF) * 0.5;
+            outPeaks[pixel] = level.getInterpolatedPeak(channel, centerPeak);
+        } else {
+            SampleIndex startPeak = static_cast<SampleIndex>(std::floor(startPeakF));
+            SampleIndex endPeak = static_cast<SampleIndex>(std::ceil(endPeakF));
+            outPeaks[pixel] = level.getPeakRange(channel, startPeak, endPeak);
+        }
     }
 }
 
@@ -223,6 +227,7 @@ struct WaveformCacheBuilder::Impl {
     std::atomic<size_t> pendingCount{0};
     std::atomic<bool> cancelFlag{false};
     mutable std::mutex mutex;
+    std::vector<std::thread> threads;
 };
 
 WaveformCacheBuilder::WaveformCacheBuilder() : m_impl(std::make_unique<Impl>()) {}
@@ -245,23 +250,26 @@ void WaveformCacheBuilder::buildAsync(const ClipSource& source, CompletionCallba
     auto buffer = source.getBuffer();
     auto* impl = m_impl.get();
 
-    std::thread([buffer, callback, impl]() {
-        if (impl->cancelFlag.load()) {
+    {
+        std::lock_guard<std::mutex> lock(impl->mutex);
+        impl->threads.emplace_back([buffer, callback, impl]() {
+            if (impl->cancelFlag.load()) {
+                impl->pendingCount.fetch_sub(1);
+                if (callback)
+                    callback(nullptr);
+                return;
+            }
+
+            auto cache = std::make_shared<WaveformCache>();
+            cache->buildFromBuffer(*buffer);
+
             impl->pendingCount.fetch_sub(1);
-            if (callback)
-                callback(nullptr);
-            return;
-        }
 
-        auto cache = std::make_shared<WaveformCache>();
-        cache->buildFromBuffer(*buffer);
-
-        impl->pendingCount.fetch_sub(1);
-
-        if (callback) {
-            callback(cache);
-        }
-    }).detach();
+            if (callback) {
+                callback(cache);
+            }
+        });
+    }
 }
 
 std::shared_ptr<WaveformCache> WaveformCacheBuilder::buildSync(const ClipSource& source) {
@@ -278,9 +286,13 @@ std::shared_ptr<WaveformCache> WaveformCacheBuilder::buildSync(const ClipSource&
 void WaveformCacheBuilder::cancelAll() {
     m_impl->cancelFlag.store(true);
 
-    // Wait for pending builds to finish
-    while (m_impl->pendingCount.load() > 0) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    {
+        std::lock_guard<std::mutex> lock(m_impl->mutex);
+        for (auto& t : m_impl->threads) {
+            if (t.joinable())
+                t.join();
+        }
+        m_impl->threads.clear();
     }
 
     m_impl->cancelFlag.store(false);

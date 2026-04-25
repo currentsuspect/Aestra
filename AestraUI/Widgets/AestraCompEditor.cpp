@@ -5,8 +5,22 @@
 #include "Plugin/AestraComp.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 
 namespace AestraUI {
+
+namespace {
+constexpr float kPi = 3.14159265358979323846f;
+NUIColor compAccent() { return NUIColor(1.0f, 0.62f, 0.20f, 1.0f); }
+NUIColor compPurple() { return NUIColor(0.48f, 0.34f, 0.78f, 1.0f); }
+NUIColor panelBg() { return NUIColor(0.052f, 0.050f, 0.070f, 0.992f); }
+NUIColor cardBg() { return NUIColor(0.090f, 0.080f, 0.110f, 0.94f); }
+
+float linearToDbNorm(float linear, float minDb = -60.0f, float maxDb = 6.0f) {
+    const float db = linear > 1.0e-8f ? 20.0f * std::log10(linear) : minDb;
+    return std::clamp((db - minDb) / (maxDb - minDb), 0.0f, 1.0f);
+}
+}
 
 AestraCompEditor::AestraCompEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
     : m_instance(std::move(instance)) {
@@ -18,15 +32,22 @@ AestraCompEditor::AestraCompEditor(std::shared_ptr<Aestra::Audio::IPluginInstanc
 void AestraCompEditor::buildControls() {
     m_knobs.clear();
     if (!m_instance) return;
-    struct Meta { const char* label; const char* sub; } meta[] = {
-        {"Threshold", "dB"}, {"Ratio", ":1"}, {"Attack", "ms"},
-        {"Release", "ms"}, {"Makeup", "dB"}, {"Knee", "dB"}
+
+    struct Meta { const char* label; uint32_t id; } meta[] = {
+        {"Threshold", Aestra::Audio::Plugins::AestraComp::kThreshold},
+        {"Ratio", Aestra::Audio::Plugins::AestraComp::kRatio},
+        {"Attack", Aestra::Audio::Plugins::AestraComp::kAttack},
+        {"Release", Aestra::Audio::Plugins::AestraComp::kRelease},
+        {"Makeup", Aestra::Audio::Plugins::AestraComp::kMakeup},
+        {"Knee", Aestra::Audio::Plugins::AestraComp::kKnee},
+        {"Mix", Aestra::Audio::Plugins::AestraComp::kMix},
     };
-    uint32_t ids[] = {0, 1, 2, 3, 4, 5};
-    for (int i = 0; i < 6; ++i) {
+
+    for (const auto& item : meta) {
         Knob k;
-        k.label = meta[i].label; k.subtitle = meta[i].sub;
-        k.paramId = ids[i]; k.value = m_instance->getParameter(ids[i]);
+        k.label = item.label;
+        k.paramId = item.id;
+        k.value = m_instance->getParameter(item.id);
         m_knobs.push_back(k);
     }
     layoutControls();
@@ -34,123 +55,208 @@ void AestraCompEditor::buildControls() {
 
 void AestraCompEditor::layoutControls() {
     auto b = getBounds();
-    float totalW = m_knobs.size() * kKnobSize + (m_knobs.size() - 1) * kKnobGap;
-    float startX = b.x + (b.width - totalW) * 0.5f;
-    float controlH = kKnobSize + 50.0f;
-    float y = b.y + kTitleH + std::max(20.0f, (b.height - kTitleH - controlH) * 0.5f + 6.0f);
+    const float contentX = b.x + kPad;
+    const float contentW = b.width - kPad * 2.0f;
+    const float modeY = b.y + kTitleH + 16.0f;
+    const float modeH = 36.0f;
+    m_peakModeRect = {contentX, modeY, contentW * 0.5f, modeH};
+    m_rmsModeRect = {contentX + contentW * 0.5f, modeY, contentW * 0.5f, modeH};
+
+    const float gridY = modeY + modeH + 20.0f;
+    const float cellGap = 12.0f;
+    const float cellW = (contentW - cellGap * 3.0f) / 4.0f;
+    const float cellH = 96.0f;
+
     for (size_t i = 0; i < m_knobs.size(); ++i) {
-        auto& k = m_knobs[i];
-        float x = startX + i * (kKnobSize + kKnobGap);
-        k.bounds = NUIRect(x - 10, y, kKnobSize + 20, kKnobSize + 50);
-        k.knobRect = NUIRect(x, y + 10, kKnobSize, kKnobSize);
+        const int row = static_cast<int>(i / 4);
+        const int col = static_cast<int>(i % 4);
+        const float x = contentX + static_cast<float>(col) * (cellW + cellGap);
+        const float y = gridY + static_cast<float>(row) * (cellH + 14.0f);
+        m_knobs[i].bounds = {x, y, cellW, cellH};
+        m_knobs[i].knobRect = {x + (cellW - kKnobSize) * 0.5f, y + 18.0f, kKnobSize, kKnobSize};
     }
+
+    const float meterX = contentX + 3.0f * (cellW + cellGap);
+    const float meterY = gridY + cellH + 14.0f;
+    m_grMeterRect = {meterX, meterY, cellW, cellH};
 }
 
 void AestraCompEditor::drawTitleBar(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& theme = NUIThemeManager::getInstance();
-    NUIRect titleBar(b.x, b.y, b.width, kTitleH);
-    renderer.fillRoundedRect(titleBar, kRadius, NUIColor(0.16f, 0.18f, 0.27f, 0.94f));
-    renderer.drawText("Aestra Comp", {titleBar.x + kPad, titleBar.y + 10.0f}, 13.0f, theme.getColor("textPrimary"));
-    renderer.drawText("Dynamics processor", {titleBar.x + kPad, titleBar.y + 23.0f}, 9.0f,
-                      theme.getColor("textSecondary").withAlpha(0.82f));
-    float cx = titleBar.right() - 16.0f - 10.0f, cy = titleBar.y + (kTitleH - 16.0f) * 0.5f;
-    renderer.drawLine({cx+4, cy+4}, {cx+12, cy+12}, 1.5f, theme.getColor("textSecondary"));
-    renderer.drawLine({cx+12, cy+4}, {cx+4, cy+12}, 1.5f, theme.getColor("textSecondary"));
-    renderer.drawLine({titleBar.x, titleBar.bottom()}, {titleBar.right(), titleBar.bottom()},
-                      1.0f, NUIColor(1,1,1,0.08f));
+    const NUIColor accent = compAccent();
+
+    renderer.fillRoundedRect({b.x, b.y, b.width, kTitleH + 10.0f}, kRadius, NUIColor(0.12f, 0.09f, 0.08f, 0.92f));
+    renderer.fillCircle({b.x + kPad + 10.0f, b.y + 24.0f}, 8.0f, accent.withAlpha(0.45f));
+    renderer.fillCircle({b.x + kPad + 10.0f, b.y + 24.0f}, 4.0f, accent);
+    renderer.drawText("Aestra Comp", {b.x + kPad + 28.0f, b.y + 14.0f}, 14.0f, theme.getColor("textPrimary"));
+    renderer.drawText("Peak/RMS dynamics processor", {b.x + kPad + 28.0f, b.y + 31.0f}, 9.0f,
+                      theme.getColor("textSecondary").withAlpha(0.72f));
+
+    NUIRect chip(b.right() - 96.0f, b.y + 16.0f, 46.0f, 20.0f);
+    renderer.fillRoundedRect(chip, 10.0f, NUIColor(0.10f, 0.08f, 0.06f, 0.8f));
+    renderer.strokeRoundedRect(chip, 10.0f, 1.0f, accent.withAlpha(0.36f));
+    renderer.drawText("DYN", {chip.x + 12.0f, chip.y + 5.0f}, 8.0f, accent.withAlpha(0.9f));
+
+    const NUIRect closeRect(b.right() - 36.0f, b.y + 15.0f, 22.0f, 22.0f);
+    renderer.fillRoundedRect(closeRect, 11.0f, NUIColor(1, 1, 1, 0.08f));
+    renderer.drawLine({closeRect.x + 7.0f, closeRect.y + 7.0f}, {closeRect.x + 15.0f, closeRect.y + 15.0f}, 1.6f,
+                      theme.getColor("textPrimary").withAlpha(0.72f));
+    renderer.drawLine({closeRect.x + 15.0f, closeRect.y + 7.0f}, {closeRect.x + 7.0f, closeRect.y + 15.0f}, 1.6f,
+                      theme.getColor("textPrimary").withAlpha(0.72f));
 }
 
-void AestraCompEditor::drawMeter(NUIRenderer& renderer, const NUIRect& bounds) {
+void AestraCompEditor::drawModeSwitcher(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(bounds, 8.0f, NUIColor(0.04f, 0.04f, 0.05f, 0.8f));
-    // GR meter bar
-    float meterW = 6.0f;
-    float meterX = bounds.right() - 16.0f;
-    float meterTop = bounds.y + 4.0f;
-    float meterBot = bounds.bottom() - 4.0f;
-    float meterH = meterBot - meterTop;
-    renderer.fillRoundedRect({meterX, meterTop, meterW, meterH}, 3.0f, NUIColor(0.06f, 0.06f, 0.07f, 0.9f));
-    float grNorm = 0.0f;
-    if (auto comp = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraComp>(m_instance)) {
-        const float grDb = comp->getCurrentGainReductionDb();
-        grNorm = std::clamp(grDb / 24.0f, 0.0f, 1.0f);
+    const float mode = m_instance ? m_instance->getParameter(Aestra::Audio::Plugins::AestraComp::kDetectorMode) : 0.0f;
+    const bool rms = mode > 0.5f;
+    const NUIRect outer(m_peakModeRect.x, m_peakModeRect.y, m_peakModeRect.width + m_rmsModeRect.width, m_peakModeRect.height);
+    renderer.fillRoundedRect(outer, 10.0f, NUIColor(0.034f, 0.032f, 0.044f, 0.96f));
+    renderer.strokeRoundedRect(outer, 10.0f, 1.0f, compPurple().withAlpha(0.45f));
+
+    auto drawSegment = [&](const NUIRect& rect, const char* label, bool active) {
+        renderer.fillRoundedRect(rect, 9.0f, active ? compPurple().withAlpha(0.96f) : NUIColor(0, 0, 0, 0));
+        renderer.drawText(label, {rect.center().x - 14.0f, rect.y + 11.0f}, 10.0f,
+                          active ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.75f));
+    };
+    drawSegment(m_peakModeRect, "Peak", !rms);
+    drawSegment(m_rmsModeRect, "RMS", rms);
+}
+
+std::string AestraCompEditor::formattedValue(uint32_t paramId) const {
+    if (!m_instance) return {};
+    const float v = m_instance->getParameter(paramId);
+    char buf[32]{};
+    using Comp = Aestra::Audio::Plugins::AestraComp;
+    switch (paramId) {
+    case Comp::kThreshold:
+        std::snprintf(buf, sizeof(buf), "%ddB", static_cast<int>(std::round(-60.0f + v * 60.0f)));
+        break;
+    case Comp::kRatio:
+        std::snprintf(buf, sizeof(buf), "%.1f:1", 1.0f + v * 19.0f);
+        break;
+    case Comp::kAttack:
+        std::snprintf(buf, sizeof(buf), "%.1fms", 0.1f + v * 99.9f);
+        break;
+    case Comp::kRelease:
+        std::snprintf(buf, sizeof(buf), "%.1fms", 10.0f + v * 990.0f);
+        break;
+    case Comp::kMakeup:
+        std::snprintf(buf, sizeof(buf), "%.1fdB", v * 24.0f);
+        break;
+    case Comp::kKnee:
+        std::snprintf(buf, sizeof(buf), "%.1fdB", v * 24.0f);
+        break;
+    case Comp::kMix:
+        std::snprintf(buf, sizeof(buf), "%d%%", static_cast<int>(std::round(v * 100.0f)));
+        break;
+    default:
+        return m_instance->getParameterDisplay(paramId);
     }
-    float grH = meterH * grNorm;
-    NUIColor grColor = NUIColor(1.0f, 0.6f, 0.2f);
-    renderer.fillRoundedRect({meterX, meterBot - grH, meterW, grH}, 3.0f, grColor.withAlpha(0.8f));
-    renderer.drawText("GR", {meterX - 14.0f, meterTop - 2.0f}, 7.0f, theme.getColor("textSecondary").withAlpha(0.5f));
+    return buf;
 }
 
 void AestraCompEditor::drawKnob(NUIRenderer& renderer, const Knob& k) {
     auto& theme = NUIThemeManager::getInstance();
-    NUIColor accent = NUIColor(1.0f, 0.6f, 0.2f);
+    const NUIColor accent = compAccent();
+    const bool hot = k.hovered || k.dragging;
 
-    // Background
-    renderer.fillRoundedRect(k.bounds, 8.0f,
-        k.hovered || k.dragging ? NUIColor(0.14f, 0.12f, 0.16f, 0.98f) : NUIColor(0.10f, 0.09f, 0.12f, 0.96f));
-    renderer.strokeRoundedRect(k.bounds, 8.0f, 1.0f,
-        k.hovered || k.dragging ? accent.withAlpha(0.5f) : NUIColor(1,1,1,0.05f));
+    renderer.fillRoundedRect(k.bounds, 12.0f, hot ? NUIColor(0.135f, 0.105f, 0.095f, 0.98f) : cardBg());
+    renderer.strokeRoundedRect(k.bounds, 12.0f, 1.0f, hot ? accent.withAlpha(0.48f) : NUIColor(1, 1, 1, 0.07f));
 
-    // Knob circle
-    float cx = k.knobRect.center().x, cy = k.knobRect.center().y, r = kKnobSize * 0.42f;
-    renderer.fillCircle({cx, cy}, r, NUIColor(0.08f, 0.08f, 0.09f, 0.95f));
-    renderer.strokeCircle({cx, cy}, r, 1.0f, accent.withAlpha(0.3f));
+    const float cx = k.knobRect.center().x;
+    const float cy = k.knobRect.center().y;
+    const float r = kKnobSize * 0.38f;
+    renderer.fillCircle({cx, cy}, r + 7.0f, accent.withAlpha(hot ? 0.16f : 0.08f));
+    renderer.fillCircle({cx, cy}, r, NUIColor(0.035f, 0.032f, 0.040f, 0.98f));
+    renderer.strokeCircle({cx, cy}, r + 4.0f, 2.0f, NUIColor(1, 1, 1, 0.08f));
 
-    // Knob arc (filled portion)
-    constexpr float pi = 3.14159265358979323846f;
-    float startAngle = pi * 0.75f;
-    float endAngle = startAngle + k.value * pi * 1.5f;
-    int numSeg = 32;
-    for (int i = 0; i < numSeg; ++i) {
-        float a1 = startAngle + (endAngle - startAngle) * i / numSeg;
-        float a2 = startAngle + (endAngle - startAngle) * (i + 1) / numSeg;
-        float x1 = cx + std::cos(a1) * (r - 3);
-        float y1 = cy + std::sin(a1) * (r - 3);
-        float x2 = cx + std::cos(a2) * (r - 3);
-        float y2 = cy + std::sin(a2) * (r - 3);
-        renderer.drawLine({x1, y1}, {x2, y2}, 3.0f, accent.withAlpha(0.8f));
+    const float startAngle = kPi * 0.75f;
+    const float endAngle = startAngle + k.value * kPi * 1.5f;
+    for (int i = 0; i < 34; ++i) {
+        const float a1 = startAngle + (endAngle - startAngle) * static_cast<float>(i) / 34.0f;
+        const float a2 = startAngle + (endAngle - startAngle) * static_cast<float>(i + 1) / 34.0f;
+        renderer.drawLine({cx + std::cos(a1) * (r + 5.0f), cy + std::sin(a1) * (r + 5.0f)},
+                          {cx + std::cos(a2) * (r + 5.0f), cy + std::sin(a2) * (r + 5.0f)},
+                          3.0f, accent.withAlpha(0.88f));
     }
 
-    // Knob pointer
-    float ptrAngle = startAngle + k.value * pi * 1.5f;
-    float px = cx + std::cos(ptrAngle) * (r - 6);
-    float py = cy + std::sin(ptrAngle) * (r - 6);
-    renderer.fillCircle({px, py}, 3.0f, k.dragging ? NUIColor(1,1,1,1.0f) : accent);
+    const float ptrAngle = startAngle + k.value * kPi * 1.5f;
+    renderer.drawLine({cx, cy}, {cx + std::cos(ptrAngle) * (r - 6.0f), cy + std::sin(ptrAngle) * (r - 6.0f)},
+                      2.0f, theme.getColor("textPrimary").withAlpha(0.85f));
+    renderer.fillCircle({cx + std::cos(ptrAngle) * (r - 1.0f), cy + std::sin(ptrAngle) * (r - 1.0f)}, 3.0f, accent);
 
-    // Labels
-    renderer.drawText(k.label, {k.bounds.x + 8.0f, k.bounds.y + 4.0f}, 9.0f, theme.getColor("textPrimary"));
-    renderer.drawText(m_instance ? m_instance->getParameterDisplay(k.paramId) : "0",
-                      {k.bounds.x + 8.0f, k.bounds.bottom() - 12.0f}, 8.5f,
-                      accent.withAlpha(0.9f));
+    renderer.drawText(k.label, {k.bounds.x + 10.0f, k.bounds.y + 7.0f}, 9.0f, theme.getColor("textPrimary").withAlpha(0.82f));
+    renderer.drawText(formattedValue(k.paramId), {k.bounds.x + 10.0f, k.bounds.bottom() - 16.0f}, 9.0f, accent.withAlpha(0.92f));
+}
+
+void AestraCompEditor::drawGainReductionMeter(NUIRenderer& renderer, const NUIRect& bounds) {
+    auto& theme = NUIThemeManager::getInstance();
+    float grDb = 0.0f;
+    if (auto comp = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraComp>(m_instance)) {
+        grDb = comp->getCurrentGainReductionDb();
+    }
+    const float norm = std::clamp(grDb / 24.0f, 0.0f, 1.0f);
+    renderer.fillRoundedRect(bounds, 12.0f, cardBg());
+    renderer.strokeRoundedRect(bounds, 12.0f, 1.0f, NUIColor(1, 1, 1, 0.07f));
+    renderer.drawText("GR", {bounds.x + 10.0f, bounds.y + 7.0f}, 9.0f, theme.getColor("textPrimary").withAlpha(0.82f));
+
+    const NUIRect well(bounds.x + bounds.width * 0.5f - 10.0f, bounds.y + 24.0f, 20.0f, bounds.height - 44.0f);
+    renderer.fillRoundedRect(well, 8.0f, NUIColor(0.028f, 0.025f, 0.032f, 0.95f));
+    const float fillH = well.height * norm;
+    renderer.fillRoundedRect({well.x, well.bottom() - fillH, well.width, fillH}, 8.0f, compAccent().withAlpha(0.88f));
+
+    char buf[24]{};
+    std::snprintf(buf, sizeof(buf), "%.1fdB", grDb);
+    renderer.drawText(buf, {bounds.x + 10.0f, bounds.bottom() - 16.0f}, 9.0f, compAccent().withAlpha(0.92f));
+}
+
+void AestraCompEditor::drawHorizontalMeter(NUIRenderer& renderer, const NUIRect& bounds, const std::string& label, float level) {
+    auto& theme = NUIThemeManager::getInstance();
+    const float norm = linearToDbNorm(level);
+    renderer.fillRoundedRect(bounds, 8.0f, NUIColor(0.032f, 0.030f, 0.040f, 0.96f));
+    renderer.fillRoundedRect({bounds.x, bounds.y, bounds.width * norm, bounds.height}, 8.0f,
+                             (label == "IN" ? compAccent() : compPurple()).withAlpha(0.78f));
+    renderer.strokeRoundedRect(bounds, 8.0f, 1.0f, NUIColor(1, 1, 1, 0.07f));
+    renderer.drawText(label, {bounds.x + 8.0f, bounds.y + 4.0f}, 8.0f, theme.getColor("textPrimary").withAlpha(0.82f));
 }
 
 void AestraCompEditor::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
-    float cardY = m_knobs.empty() ? (b.y + kTitleH + 18.0f) : (m_knobs.front().bounds.y - 14.0f);
-    float cardH = m_knobs.empty() ? 126.0f : (m_knobs.front().bounds.height + 28.0f);
-    renderer.fillRoundedRect(b, kRadius, NUIColor(0.07f, 0.08f, 0.11f, 0.985f));
-    renderer.fillRoundedRect({b.x + 1.0f, cardY, b.width - 2.0f, cardH}, 11.0f,
-                             NUIColor(0.10f, 0.11f, 0.16f, 0.72f));
-    renderer.strokeRoundedRect(b, kRadius, 1.0f, NUIColor(0.60f, 0.68f, 1.0f, 0.16f));
+    renderer.fillRoundedRect(b, kRadius, panelBg());
+    renderer.strokeRoundedRect(b, kRadius, 1.0f, compAccent().withAlpha(0.20f));
     drawTitleBar(renderer);
+    drawModeSwitcher(renderer);
     for (const auto& k : m_knobs) drawKnob(renderer, k);
-    NUIRect meterArea(b.x + kPad, b.y + kTitleH + 10, b.width - kPad * 2 - 26, 24);
-    drawMeter(renderer, meterArea);
+    drawGainReductionMeter(renderer, m_grMeterRect);
+
+    float inLevel = 0.0f;
+    float outLevel = 0.0f;
+    if (auto comp = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraComp>(m_instance)) {
+        inLevel = comp->getInputLevel();
+        outLevel = comp->getOutputLevel();
+    }
+    const float meterY = b.bottom() - 36.0f;
+    const float meterW = (b.width - kPad * 2.0f - 12.0f) * 0.5f;
+    drawHorizontalMeter(renderer, {b.x + kPad, meterY, meterW, 16.0f}, "IN", inLevel);
+    drawHorizontalMeter(renderer, {b.x + kPad + meterW + 12.0f, meterY, meterW, 16.0f}, "OUT", outLevel);
 }
 
 int AestraCompEditor::hitTestKnob(float x, float y) const {
-    for (size_t i = 0; i < m_knobs.size(); ++i)
+    for (size_t i = 0; i < m_knobs.size(); ++i) {
         if (m_knobs[i].bounds.contains({x, y})) return static_cast<int>(i);
+    }
     return -1;
 }
+
 bool AestraCompEditor::hitTestCloseButton(float x, float y) const {
     auto b = getBounds();
-    return NUIRect(b.right() - 26, b.y + 13, 16, 16).contains({x, y});
+    return NUIRect(b.right() - 36.0f, b.y + 15.0f, 22.0f, 22.0f).contains({x, y});
 }
+
 bool AestraCompEditor::hitTestTitleBar(float x, float y) const {
     auto b = getBounds();
-    return NUIRect(b.x, b.y, b.width - 32, kTitleH).contains({x, y});
+    return NUIRect(b.x, b.y, b.width - 42.0f, kTitleH).contains({x, y});
 }
 
 void AestraCompEditor::updateKnobValue(int idx, float v) {
@@ -164,21 +270,37 @@ void AestraCompEditor::updateKnobValue(int idx, float v) {
 bool AestraCompEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
     auto b = getBounds();
-    bool isDraggingKnob = std::any_of(m_knobs.begin(), m_knobs.end(),
-                                      [](const Knob& knob) { return knob.dragging; });
-    bool contains = b.contains(event.position);
+    const bool isDraggingKnob = std::any_of(m_knobs.begin(), m_knobs.end(),
+                                            [](const Knob& knob) { return knob.dragging; });
+    const bool contains = b.contains(event.position);
     if (event.pressed && event.button == NUIMouseButton::Left && !contains && !m_isDraggingWindow && !isDraggingKnob) {
-        if (m_onClose) m_onClose(); return false;
+        if (m_onClose) m_onClose();
+        return false;
     }
     if (!contains && !m_isDraggingWindow && !isDraggingKnob) return false;
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        if (hitTestCloseButton(event.position.x, event.position.y)) { if (m_onClose) m_onClose(); return true; }
-        if (hitTestTitleBar(event.position.x, event.position.y)) {
-            m_isDraggingWindow = true; m_dragStartPos = event.position;
-            m_windowStartPos = {b.x, b.y}; return true;
+        if (hitTestCloseButton(event.position.x, event.position.y)) {
+            if (m_onClose) m_onClose();
+            return true;
         }
-        int kIdx = hitTestKnob(event.position.x, event.position.y);
+        if (m_peakModeRect.contains(event.position) && m_instance) {
+            m_instance->setParameter(Aestra::Audio::Plugins::AestraComp::kDetectorMode, 0.0f);
+            setDirty(true);
+            return true;
+        }
+        if (m_rmsModeRect.contains(event.position) && m_instance) {
+            m_instance->setParameter(Aestra::Audio::Plugins::AestraComp::kDetectorMode, 1.0f);
+            setDirty(true);
+            return true;
+        }
+        if (hitTestTitleBar(event.position.x, event.position.y)) {
+            m_isDraggingWindow = true;
+            m_dragStartPos = event.position;
+            m_windowStartPos = {b.x, b.y};
+            return true;
+        }
+        const int kIdx = hitTestKnob(event.position.x, event.position.y);
         if (kIdx >= 0) {
             m_knobs[kIdx].dragging = true;
             m_knobs[kIdx].dragStartY = event.position.y;
@@ -186,22 +308,30 @@ bool AestraCompEditor::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
     }
+
     if (m_isDraggingWindow) {
-        if (!event.pressed && event.button == NUIMouseButton::Left) { m_isDraggingWindow = false; return true; }
-        float dx = event.position.x - m_dragStartPos.x, dy = event.position.y - m_dragStartPos.y;
+        if (!event.pressed && event.button == NUIMouseButton::Left) {
+            m_isDraggingWindow = false;
+            return true;
+        }
+        const float dx = event.position.x - m_dragStartPos.x;
+        const float dy = event.position.y - m_dragStartPos.y;
         setBounds(m_windowStartPos.x + dx, m_windowStartPos.y + dy, b.width, b.height);
-        layoutControls(); return true;
+        layoutControls();
+        return true;
     }
+
     for (size_t i = 0; i < m_knobs.size(); ++i) {
         if (m_knobs[i].dragging) {
-            float delta = (m_knobs[i].dragStartY - event.position.y) / 150.0f;
+            const float delta = (m_knobs[i].dragStartY - event.position.y) / 150.0f;
             updateKnobValue(static_cast<int>(i), std::clamp(m_knobs[i].dragStartValue + delta, 0.0f, 1.0f));
             if (!event.pressed && event.button == NUIMouseButton::Left) m_knobs[i].dragging = false;
             return true;
         }
     }
+
     if (!event.pressed && !event.released) {
-        int h = contains ? hitTestKnob(event.position.x, event.position.y) : -1;
+        const int h = contains ? hitTestKnob(event.position.x, event.position.y) : -1;
         if (h != m_hoveredKnob) {
             m_hoveredKnob = h;
             for (size_t i = 0; i < m_knobs.size(); ++i) m_knobs[i].hovered = (static_cast<int>(i) == h);

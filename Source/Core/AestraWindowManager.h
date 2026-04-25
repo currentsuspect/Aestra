@@ -193,10 +193,14 @@ private:
     bool m_useCustomCursor{true};
     bool m_windowFocused{true};
     std::shared_ptr<AestraUI::NUIIcon> m_cursorArrow;
+    std::shared_ptr<AestraUI::NUIIcon> m_cursorHandPointing;
     std::shared_ptr<AestraUI::NUIIcon> m_cursorHand;
+    std::shared_ptr<AestraUI::NUIIcon> m_cursorHandGrabbing;
     std::shared_ptr<AestraUI::NUIIcon> m_cursorIBeam;
     std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeH;
     std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeV;
+    std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeDiagNESW;
+    std::shared_ptr<AestraUI::NUIIcon> m_cursorResizeDiagNWSE;
     AestraUI::NUICursorStyle m_activeCursorStyle{AestraUI::NUICursorStyle::Arrow};
 
     // Input State

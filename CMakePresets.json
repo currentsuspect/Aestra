@@ -19,7 +19,32 @@
       "displayName": "Headless (no UI, container-friendly)",
       "inherits": "base",
       "cacheVariables": {
-        "Aestra_HEADLESS_ONLY": "ON"
+        "AESTRA_HEADLESS_ONLY": "ON"
+      }
+    },
+    {
+      "name": "ci",
+      "displayName": "CI headless deterministic tests",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "AESTRA_CI": "ON"
+      }
+    },
+    {
+      "name": "ci-asan",
+      "displayName": "CI sanitizer headless tests",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "AESTRA_CI": "ON",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
       }
     },
     {
@@ -27,7 +52,7 @@
       "displayName": "Full app (UI + tests default)",
       "inherits": "base",
       "cacheVariables": {
-        "Aestra_HEADLESS_ONLY": "OFF"
+        "AESTRA_HEADLESS_ONLY": "OFF"
       }
     },
     {
@@ -35,8 +60,8 @@
       "displayName": "Full app (UI, tests OFF for faster/confident builds)",
       "inherits": "base",
       "cacheVariables": {
-        "Aestra_HEADLESS_ONLY": "OFF",
-        "Aestra_ENABLE_TESTS": "OFF"
+        "AESTRA_HEADLESS_ONLY": "OFF",
+        "AESTRA_ENABLE_TESTS": "OFF"
       }
     },
     {
@@ -74,6 +99,20 @@
       "jobs": 0
     },
     {
+      "name": "ci-release",
+      "displayName": "Build CI deterministic tests (Release)",
+      "configurePreset": "ci",
+      "configuration": "Release",
+      "jobs": 0
+    },
+    {
+      "name": "ci-asan",
+      "displayName": "Build CI sanitizer tests",
+      "configurePreset": "ci-asan",
+      "configuration": "Debug",
+      "jobs": 0
+    },
+    {
       "name": "full-release",
       "displayName": "Build full solution (Release)",
       "configurePreset": "full",
@@ -93,6 +132,12 @@
       "configurePreset": "lowmem",
       "configuration": "Release",
       "jobs": 2
+    },
+    {
+      "name": "lowmem",
+      "displayName": "Build low-mem (Release)",
+      "configurePreset": "lowmem",
+      "configuration": "Release"
     }
   ]
 }

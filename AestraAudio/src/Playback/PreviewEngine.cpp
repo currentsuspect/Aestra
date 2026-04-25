@@ -404,12 +404,30 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
             __m128 vLo = _mm_unpacklo_ps(vOutL, vOutR);
             __m128 vHi = _mm_unpackhi_ps(vOutL, vOutR);
 
-            // Accumulate (Add to existing output)
+            // Accumulate with transparent soft limiter
             __m128 vDestLo = _mm_loadu_ps(interleavedOutput + i * 2);
             __m128 vDestHi = _mm_loadu_ps(interleavedOutput + i * 2 + 4);
 
             vDestLo = _mm_add_ps(vDestLo, vLo);
             vDestHi = _mm_add_ps(vDestHi, vHi);
+
+            // Transparent soft limiter: pass clean below 0.85, saturate excess above
+            // Branchless SIMD: mask for |x| > threshold, blend result
+            const __m128 vThreshold = _mm_set1_ps(0.85f);
+            const __m128 vOne = _mm_set1_ps(1.0f);
+
+            auto simdSoftLimit = [&](const __m128& x) -> __m128 {
+                __m128 vAbs = _mm_andnot_ps(_mm_set1_ps(-0.0f), x);
+                __m128 vMask = _mm_cmpgt_ps(vAbs, vThreshold); // 0xFFFFFFFF where |x| > threshold
+                __m128 vSign = _mm_and_ps(x, _mm_castsi128_ps(_mm_set1_epi32(0x80000000)));
+                __m128 vOver = _mm_sub_ps(vAbs, vThreshold);
+                __m128 vSaturated = _mm_add_ps(vThreshold, _mm_div_ps(vOver, _mm_add_ps(vOne, vOver)));
+                __m128 vResult = _mm_or_ps(vSign, vSaturated); // apply sign
+                return _mm_or_ps(_mm_and_ps(vMask, vResult), _mm_andnot_ps(vMask, x)); // blend: limit where hot, pass-through where clean
+            };
+
+            vDestLo = simdSoftLimit(vDestLo);
+            vDestHi = simdSoftLimit(vDestHi);
 
             _mm_storeu_ps(interleavedOutput + i * 2, vDestLo);
             _mm_storeu_ps(interleavedOutput + i * 2 + 4, vDestHi);
@@ -491,8 +509,21 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
             outR = cubic(r0, r1, r2, r3, frac);
         }
 
-        interleavedOutput[i * 2] += outL * currentGain;
-        interleavedOutput[i * 2 + 1] += outR * currentGain;
+        // Soft limiter: transparent below threshold, saturates only excess
+        // Preserves preview accuracy — signal sounds like itself until it clips
+        float rawL = interleavedOutput[i * 2] + outL * currentGain;
+        float rawR = interleavedOutput[i * 2 + 1] + outR * currentGain;
+
+        auto softLimit = [](float x, float threshold) -> float {
+            float abs_x = std::abs(x);
+            if (abs_x <= threshold) return x; // clean pass-through
+            float sign = x > 0.0f ? 1.0f : -1.0f;
+            float over = abs_x - threshold;
+            return sign * (threshold + over / (1.0f + over)); // only saturates excess
+        };
+
+        interleavedOutput[i * 2] = softLimit(rawL, 0.85f);
+        interleavedOutput[i * 2 + 1] = softLimit(rawR, 0.85f);
 
         phase += ratio;
     }
@@ -507,9 +538,11 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
     bool finished = voice->fadeOutActive && (voice->fadeOutPos >= fadeOutSamples);
     if (finished) {
         voice->playing.store(false, std::memory_order_release);
-        if (m_onComplete) {
-            m_onComplete(voice->path);
+        {
+            std::lock_guard<std::mutex> lock(m_completedPathMutex);
+            m_completedPathStr = voice->path;
         }
+        m_completionPending.store(true, std::memory_order_release);
         // Clear only if still the active voice
         std::shared_ptr<PreviewVoice> expected = voice;
         std::atomic_compare_exchange_strong_explicit(&m_activeVoice, &expected, std::shared_ptr<PreviewVoice>(),
@@ -554,6 +587,19 @@ double PreviewEngine::getPlaybackPosition() const {
 double PreviewEngine::getDuration() const {
     auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
     return voice ? voice->durationSeconds : 0.0;
+}
+
+void PreviewEngine::handleDeferredCompletion() {
+    if (m_completionPending.exchange(false, std::memory_order_acq_rel)) {
+        std::string path;
+        {
+            std::lock_guard<std::mutex> lock(m_completedPathMutex);
+            path = m_completedPathStr;
+        }
+        if (m_onComplete) {
+            m_onComplete(path);
+        }
+    }
 }
 
 } // namespace Audio

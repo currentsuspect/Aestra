@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <cstdlib>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_LCD_FILTER_H
@@ -81,6 +82,17 @@ static uint32_t decodeUTF8(const std::string& text, size_t& index) {
     return 0; // Invalid UTF-8
 }
 
+static float normalizeSmallTextSize(float requestedSize, float alpha) {
+    // Policy: tiny secondary labels should not dip below a practical readable floor.
+    if (alpha < 0.80f && requestedSize < 12.0f) {
+        return 12.0f;
+    }
+    if (alpha < 0.92f && requestedSize < 11.0f) {
+        return 11.0f;
+    }
+    return requestedSize;
+}
+
 // ============================================================================
 // Shader Sources (embedded)
 // ============================================================================
@@ -137,6 +149,10 @@ out vec4 FragColor;
 
 uniform sampler2D uTexture;
 uniform bool uUseTexture;
+uniform vec2 uTextTexelSize;
+uniform float uTextSharpen;
+uniform float uTextGamma;
+uniform bool uOutputLinear;
 
 // Squircle SDF Implementation
 // Based on "sdContinuousRect" logic but optimized for GLSL 3.3
@@ -156,6 +172,35 @@ float sdCircle(vec2 p, float r) {
     return length(p) - r;
 }
 
+float decodeTextCoverage(vec4 texColor) {
+    float rgbDelta = abs(texColor.r - texColor.g) + abs(texColor.g - texColor.b) + abs(texColor.b - texColor.r);
+    bool looksLCD = rgbDelta > 0.015;
+    if (looksLCD) {
+        return clamp((texColor.r + texColor.g + texColor.b) / 3.0, 0.0, 1.0);
+    }
+    return clamp(texColor.a, 0.0, 1.0);
+}
+
+float sampleTextCoverage(vec2 uv) {
+    vec4 centerTexel = texture(uTexture, uv);
+    float center = decodeTextCoverage(centerTexel);
+    if (uTextSharpen <= 0.001 || uTextTexelSize.x <= 0.0 || uTextTexelSize.y <= 0.0) {
+        return center;
+    }
+
+    float n = decodeTextCoverage(texture(uTexture, uv + vec2(0.0, -uTextTexelSize.y)));
+    float s = decodeTextCoverage(texture(uTexture, uv + vec2(0.0,  uTextTexelSize.y)));
+    float e = decodeTextCoverage(texture(uTexture, uv + vec2( uTextTexelSize.x, 0.0)));
+    float w = decodeTextCoverage(texture(uTexture, uv + vec2(-uTextTexelSize.x, 0.0)));
+    float neighborhood = (n + s + e + w) * 0.25;
+    float sharpened = center + (center - neighborhood) * uTextSharpen;
+    return clamp(sharpened, 0.0, 1.0);
+}
+
+vec3 srgbToLinear(vec3 c) {
+    return pow(max(c, vec3(0.0)), vec3(2.2));
+}
+
 void main() {
     vec4 color = vColor;
     int primitiveID = int(floor(vPrimitiveType + 0.5));
@@ -173,7 +218,7 @@ void main() {
              color.a *= alpha;
         } else if (primitiveID == 4) {
                // Bitmap text — atlas stores coverage in alpha channel.
-               float coverage = texColor.a;
+               float coverage = pow(sampleTextCoverage(vTexCoord), uTextGamma);
                color.a *= coverage;
         } else {
              // Regular textured primitive
@@ -190,7 +235,7 @@ void main() {
         float dist = sdSquircle(pos, vRectSize * 0.5, vRadius);
         
         // High quality AA using fwidth
-        float aaWidth = fwidth(dist) * 1.5; // Slight boost for softness
+        float aaWidth = fwidth(dist) * 1.25; // Slightly wider AA to calm staircase edges
         float alpha = 1.0 - smoothstep(-aaWidth, aaWidth, dist);
         
         color.a *= alpha;
@@ -237,6 +282,9 @@ void main() {
     
     // Type 5: Solid colored geometry (lines, triangles) - already handled by default color
     
+    if (uOutputLinear) {
+        color.rgb = srgbToLinear(color.rgb);
+    }
     FragColor = color;
 }
 
@@ -288,10 +336,17 @@ bool NUIRendererGL::initialize(int width, int height) {
         return false;
     }
 
-    // NOTE: Aestra UI currently tints text in the shader and composites into an sRGB-authored UI.
-    // Proper LCD/subpixel text requires display subpixel order/orientation handling and a
-    // subpixel-aware blending pipeline. Until that's implemented, default to grayscale coverage.
-    fontUseLCD_ = false;
+    // Prefer LCD/subpixel rasterization when FreeType can provide filtered LCD masks.
+    // If unsupported, we gracefully fall back to grayscale coverage.
+    fontUseLCD_ = true;
+    if (const char* disableLCD = std::getenv("AESTRA_DISABLE_LCD")) {
+        if (disableLCD[0] == '1') {
+            fontUseLCD_ = false;
+        }
+    }
+    if (fontUseLCD_ && FT_Library_SetLcdFilter(ftLibrary_, FT_LCD_FILTER_DEFAULT) != 0) {
+        fontUseLCD_ = false;
+    }
     
         // Try to load the best font for Aestra.
         // Prefer a production-safe medium weight first so the UI hierarchy feels
@@ -376,10 +431,10 @@ bool NUIRendererGL::initialize(int width, int height) {
     glDisable(GL_CULL_FACE);
     // Leave framebuffer sRGB disabled; palette is authored in sRGB and shaders output in sRGB
     
-    // Note: MSAA support will be added in Phase 2
-    // For now, we rely on thin lines (1.0px) and proper blending for good quality
-    // Phase 2 will implement MSAA via framebuffer or WGL extensions
-    // See docs/MSAA_IMPLEMENTATION_GUIDE.md for details
+    // Prefer smoother edges when a multisampled default framebuffer is available.
+    glEnable(GL_MULTISAMPLE);
+    glEnable(GL_FRAMEBUFFER_SRGB);
+    framebufferSRGBEnabled_ = (glGetError() == GL_NO_ERROR);
     
     return true;
 }
@@ -473,6 +528,12 @@ void NUIRendererGL::beginFrame() {
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
     glDisable(GL_CULL_FACE);
+    glEnable(GL_MULTISAMPLE);
+    if (framebufferSRGBEnabled_) {
+        glEnable(GL_FRAMEBUFFER_SRGB);
+    } else {
+        glDisable(GL_FRAMEBUFFER_SRGB);
+    }
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -756,7 +817,7 @@ void NUIRendererGL::drawLine(const NUIPoint& start, const NUIPoint& end, float t
     if (len < 0.001f) return;
 
     const float halfThickness = thickness * 0.5f;
-    const float featherWidth = std::max(0.75f, thickness * 0.75f);
+    const float featherWidth = std::max(0.55f, thickness * 0.55f);
     const float innerNx = -dy / len * halfThickness;
     const float innerNy = dx / len * halfThickness;
     const float outerNx = -dy / len * (halfThickness + featherWidth);
@@ -805,7 +866,7 @@ void NUIRendererGL::drawPolyline(const NUIPoint* points, int count, float thickn
     }
 
     const float halfThickness = thickness * 0.5f;
-    const float featherWidth = std::max(0.75f, thickness * 0.75f);
+    const float featherWidth = std::max(0.55f, thickness * 0.55f);
     const uint32_t baseIndex = static_cast<uint32_t>(vertices_.size());
     const NUIColor transparent(color.r, color.g, color.b, 0.0f);
 
@@ -1070,17 +1131,18 @@ void NUIRendererGL::drawShadow(const NUIRect& rect, float offsetX, float offsetY
 // ============================================================================
 
 void NUIRendererGL::drawText(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) {
+    const float effectiveFontSize = normalizeSmallTextSize(fontSize, color.a);
     // Use FreeType atlas for ALL text - consistent rendering
     
     if (fontInitialized_) {
         // Use centralized atlas selection
-        AtlasInfo atlas = selectAtlas(fontSize);
+        AtlasInfo atlas = selectAtlas(effectiveFontSize);
         
         // Scale factor from baked atlas to requested fontSize
-        float scale = fontSize / static_cast<float>(atlas.atlasSize);
+        float scale = effectiveFontSize / static_cast<float>(atlas.atlasSize);
         float scaledAscent = atlas.ascent * scale;
 
-        renderTextWithFont(text, NUIPoint(position.x, position.y + scaledAscent), fontSize, color);
+        renderTextWithFont(text, NUIPoint(position.x, position.y + scaledAscent), effectiveFontSize, color);
         return;
     }
 
@@ -1118,8 +1180,8 @@ float NUIRendererGL::getDPIScale() {
 NUIRendererGL::AtlasInfo NUIRendererGL::selectAtlas(float fontSize) const {
     AtlasInfo info;
     
-    const bool useXSmallAtlas = (fontSize <= 14.25f);
-    const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 16.75f);
+    const bool useXSmallAtlas = (fontSize <= 11.25f);
+    const bool useSmallAtlas = (!useXSmallAtlas && fontSize <= 17.0f);
     const bool useMediumAtlas = (!useXSmallAtlas && !useSmallAtlas && fontSize <= 20.5f);
     
     if (useXSmallAtlas && fontAtlasTextureIdXSmall_ != 0 && atlasFontSizeXSmall_ > 0) {
@@ -1813,16 +1875,17 @@ void NUIRendererGL::drawCharacter(char c, float x, float y, float width, float h
 }
 
 void NUIRendererGL::drawTextCentered(const std::string& text, const NUIRect& rect, float fontSize, const NUIColor& color) {
+    const float effectiveFontSize = normalizeSmallTextSize(fontSize, color.a);
     // Measure actual text dimensions
-    NUISize textSize = measureText(text, fontSize);
+    NUISize textSize = measureText(text, effectiveFontSize);
 
     // Calculate horizontal centering
     float x = std::round(rect.x + (rect.width - textSize.width) * 0.5f);
 
     // Calculate vertical centering using real font metrics (Top-Left Y + Ascent).
-    float y = std::round(calculateTextY(rect, fontSize));
+    float y = std::round(calculateTextY(rect, effectiveFontSize));
     
-    drawText(text, NUIPoint(x, y), fontSize, color);
+    drawText(text, NUIPoint(x, y), effectiveFontSize, color);
 }
 
 NUIRenderer::FontMetrics NUIRendererGL::getFontMetrics(float fontSize) const {
@@ -2014,9 +2077,9 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         cache.clear();
 
         int loadedChars = 0;
-        const int loadFlagsBase = FT_LOAD_NO_BITMAP | FT_LOAD_FORCE_AUTOHINT;
+        const int loadFlagsBase = FT_LOAD_DEFAULT | FT_LOAD_FORCE_AUTOHINT;
         const int loadFlagsLCD = loadFlagsBase | FT_LOAD_TARGET_LCD;
-        const int loadFlagsGray = loadFlagsBase | FT_LOAD_TARGET_NORMAL;
+        const int loadFlagsGray = loadFlagsBase | FT_LOAD_TARGET_LIGHT;
         const int padding = 3;
 
         // Build character set: ASCII + Unicode symbols
@@ -2051,17 +2114,22 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
             // embolden amount so small labels gain confidence without turning
             // blurry or overfilled.
             if (ftFace_->glyph->format == FT_GLYPH_FORMAT_OUTLINE && atlasFontSize >= 11) {
-                FT_Pos emboldenStrength = 18;
+                FT_Pos emboldenX = 14;
+                FT_Pos emboldenY = 8;
                 if (atlasFontSize >= 40) {
-                    emboldenStrength = 42;
+                    emboldenX = 36;
+                    emboldenY = 18;
                 } else if (atlasFontSize >= 22) {
-                    emboldenStrength = 26;
+                    emboldenX = 24;
+                    emboldenY = 14;
                 } else if (atlasFontSize >= 16) {
-                    emboldenStrength = 22;
+                    emboldenX = 20;
+                    emboldenY = 12;
                 } else if (atlasFontSize >= 14) {
-                    emboldenStrength = 24;
+                    emboldenX = 18;
+                    emboldenY = 11;
                 }
-                FT_Outline_Embolden(&ftFace_->glyph->outline, emboldenStrength);
+                FT_Outline_EmboldenXY(&ftFace_->glyph->outline, emboldenX, emboldenY);
             }
 
             const FT_Render_Mode renderMode = fontUseLCD_ ? FT_RENDER_MODE_LCD : FT_RENDER_MODE_NORMAL;
@@ -2211,7 +2279,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
     // Extra-small atlas for the densest 10-11 px copy.
     {
-        const int ATLAS_FONT_SIZE_XSMALL = 14;
+        const int ATLAS_FONT_SIZE_XSMALL = 20;
         atlasFontSizeXSmall_ = ATLAS_FONT_SIZE_XSMALL;
         (void)buildAtlas(ATLAS_FONT_SIZE_XSMALL,
                          fontAtlasTextureIdXSmall_,
@@ -2260,6 +2328,35 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
     // fontSize is in logical pixels - no DPI scaling needed here
     // Scale factor from atlas size to requested font size
     float scale = fontSize / static_cast<float>(atlas.atlasSize);
+    NUIColor glyphColor = color;
+    constexpr float kPrimaryAlphaFloor = 0.94f;
+    constexpr float kSecondaryAlphaFloor = 0.88f;
+    constexpr float kTertiaryAlphaFloor = 0.84f;
+    const bool isSecondary = color.a < 0.92f;
+    const bool isTertiary = color.a < 0.80f;
+    if (fontSize <= 13.5f) {
+        // Small UI text can look dim compared to larger readouts (e.g. BPM/timer).
+        // Lift opacity/brightness slightly so dense labels stay readable.
+        glyphColor.a = std::min(1.0f, glyphColor.a * 1.08f + 0.02f);
+        if (!isSecondary) {
+            glyphColor.a = std::max(glyphColor.a, kPrimaryAlphaFloor);
+        } else if (!isTertiary) {
+            glyphColor.a = std::max(glyphColor.a, kSecondaryAlphaFloor);
+        } else {
+            glyphColor.a = std::max(glyphColor.a, kTertiaryAlphaFloor);
+        }
+        if (fontSize <= 11.75f) {
+            glyphColor.a = std::max(glyphColor.a, 0.84f);
+        }
+        const float luma = 0.2126f * glyphColor.r + 0.7152f * glyphColor.g + 0.0722f * glyphColor.b;
+        const float targetLuma = (fontSize <= 11.75f) ? 0.80f : 0.73f;
+        if (luma < targetLuma) {
+            const float lift = std::min(0.10f, (targetLuma - luma) * 0.20f);
+            glyphColor.r = std::min(1.0f, glyphColor.r + lift);
+            glyphColor.g = std::min(1.0f, glyphColor.g + lift);
+            glyphColor.b = std::min(1.0f, glyphColor.b + lift);
+        }
+    }
 
     // position.y is the BASELINE position (already adjusted by caller)
     // Pixel-align starting position for crisp text
@@ -2320,10 +2417,10 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
 
         // Draw textured quad for character
         // Type 4 = Bitmap Text
-        addVertex(xpos,     ypos + h, ch.u0, ch.v1, color, 0,0,0,0, 0,0,0, 4.0f); 
-        addVertex(xpos + w, ypos + h, ch.u1, ch.v1, color, 0,0,0,0, 0,0,0, 4.0f); 
-        addVertex(xpos + w, ypos,     ch.u1, ch.v0, color, 0,0,0,0, 0,0,0, 4.0f); 
-        addVertex(xpos,     ypos,     ch.u0, ch.v0, color, 0,0,0,0, 0,0,0, 4.0f);
+        addVertex(xpos,     ypos + h, ch.u0, ch.v1, glyphColor, 0,0,0,0, 0,0,0, 4.0f); 
+        addVertex(xpos + w, ypos + h, ch.u1, ch.v1, glyphColor, 0,0,0,0, 0,0,0, 4.0f); 
+        addVertex(xpos + w, ypos,     ch.u1, ch.v0, glyphColor, 0,0,0,0, 0,0,0, 4.0f); 
+        addVertex(xpos,     ypos,     ch.u0, ch.v0, glyphColor, 0,0,0,0, 0,0,0, 4.0f);
         
         // Add indices for quad
         uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
@@ -2481,6 +2578,10 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
     glUniform1i(primitiveShader_.primitiveTypeLoc, 0);
+    glUniform1i(primitiveShader_.outputLinearLoc, framebufferSRGBEnabled_ ? 1 : 0);
+    glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
+    glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
+    glUniform1f(primitiveShader_.textGammaLoc, 1.0f);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -2747,6 +2848,10 @@ void NUIRendererGL::flush() {
     // Use shader
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
+    glUniform1i(primitiveShader_.outputLinearLoc, framebufferSRGBEnabled_ ? 1 : 0);
+    glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
+    glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
+    glUniform1f(primitiveShader_.textGammaLoc, 1.0f);
     // Note: opacity is already in vertex colors
     glUniform1i(primitiveShader_.primitiveTypeLoc, currentPrimitiveType_);
     // Default to no texturing; enable below if a texture is bound
@@ -2769,6 +2874,15 @@ void NUIRendererGL::flush() {
         glBindTexture(GL_TEXTURE_2D, currentTextureId_);
         glUniform1i(primitiveShader_.textureLoc, 0);
         glUniform1i(primitiveShader_.useTextureLoc, 1);
+        const bool isFontAtlasTexture = (currentTextureId_ == fontAtlasTextureId_
+            || currentTextureId_ == fontAtlasTextureIdMedium_
+            || currentTextureId_ == fontAtlasTextureIdSmall_
+            || currentTextureId_ == fontAtlasTextureIdXSmall_);
+        if (isFontAtlasTexture) {
+            glUniform2f(primitiveShader_.textTexelSizeLoc, 1.0f / fontAtlasWidth_, 1.0f / fontAtlasHeight_);
+            glUniform1f(primitiveShader_.textSharpenLoc, 0.28f);
+            glUniform1f(primitiveShader_.textGammaLoc, 0.93f);
+        }
     }
     
     // Draw
@@ -2849,6 +2963,10 @@ bool NUIRendererGL::loadShaders() {
     primitiveShader_.textureLoc = glGetUniformLocation(primitiveShader_.id, "uTexture");
     primitiveShader_.useTextureLoc = glGetUniformLocation(primitiveShader_.id, "uUseTexture");
     primitiveShader_.smoothnessLoc = glGetUniformLocation(primitiveShader_.id, "uSmoothness");
+    primitiveShader_.textTexelSizeLoc = glGetUniformLocation(primitiveShader_.id, "uTextTexelSize");
+    primitiveShader_.textSharpenLoc = glGetUniformLocation(primitiveShader_.id, "uTextSharpen");
+    primitiveShader_.textGammaLoc = glGetUniformLocation(primitiveShader_.id, "uTextGamma");
+    primitiveShader_.outputLinearLoc = glGetUniformLocation(primitiveShader_.id, "uOutputLinear");
 
     
     return true;

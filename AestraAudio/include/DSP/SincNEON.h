@@ -12,18 +12,29 @@ namespace Audio {
 /**
  * @brief ARM NEON-optimized dot product for Sinc64 Turbo.
  *
+ * TASK 2: Phase interpolation — blend between c0 and c1 using alpha.
+ * coeff[t] = c0[t] + alpha * (c1[t] - c0[t])
+ * Then standard vectorized dot product.
+ *
  * This function is used on ARM platforms (Apple Silicon, ARM Linux, iOS).
  * Uses NEON SIMD instructions for efficient 4-wide vector operations.
  */
-inline void sincDotProductNEON(const float* coeffs,
+inline void sincDotProductNEON(const float* c0,
+                               const float* c1,
+                               float alpha,
                                const float* samples, // Interleaved L/R stereo
                                float& sumL, float& sumR) {
     float32x4_t vSumL = vdupq_n_f32(0.0f);
     float32x4_t vSumR = vdupq_n_f32(0.0f);
+    float32x4_t vAlpha = vdupq_n_f32(alpha);
 
     // Process 64 taps, 4 at a time
     for (int i = 0; i < 64; i += 4) {
-        float32x4_t vCoeff = vld1q_f32(&coeffs[i]);
+        float32x4_t vC0 = vld1q_f32(&c0[i]);
+        float32x4_t vC1 = vld1q_f32(&c1[i]);
+
+        // Phase interpolation: coeff = c0 + alpha * (c1 - c0)
+        float32x4_t vCoeff = vfmaq_f32(vC0, vsubq_f32(vC1, vC0), vAlpha);
 
         // Gather left channel samples
         float32x4_t vL = {samples[i * 2], samples[(i + 1) * 2], samples[(i + 2) * 2], samples[(i + 3) * 2]};
@@ -61,7 +72,8 @@ inline void sincDotProductNEON(const float* coeffs,
 namespace Aestra {
 namespace Audio {
 
-inline void sincDotProductNEON(const float* /*coeffs*/, const float* /*samples*/, float& sumL, float& sumR) {
+inline void sincDotProductNEON(const float* /*c0*/, const float* /*c1*/, float /*alpha*/,
+                                const float* /*samples*/, float& sumL, float& sumR) {
     sumL = sumR = 0.0f;
 }
 

@@ -30,6 +30,7 @@
 #include "NUILabel.h"
 #include "NUIButton.h"   // Buttons are in Widgets/
 #include "NUISlider.h"      // Slider is in Core/
+#include "NUIContextMenu.h"
 #include "AuditionEngine.h"
 #include "../AestraUI/Core/NUIDragDrop.h"    // Added for drag and drop support
 #include "../AestraUI/Graphics/NUISVGParser.h" // For SVG Icons
@@ -65,6 +66,7 @@ public:
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
     
     void setOnPlayRequest(std::function<void()> callback) { m_onPlayRequest = std::move(callback); }
+    void setOnActiveTrackPathChanged(std::function<void(const std::string&)> callback) { m_onActiveTrackPathChanged = std::move(callback); }
     
     // ===== IDropTarget Implementation =====
     AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
@@ -124,14 +126,29 @@ private:
     bool m_dropTargetRegistered{false};
     bool m_isScrubbingWaveform{false}; // New: Soundcloud-style scrubbing
     int m_hoveredQueueIndex{-1};       // New: Queue hover state
+    int m_queueRemoveHoverIndex{-1};
+    int m_queueHandleHoverIndex{-1};
+    bool m_isDraggingQueueItem{false};
+    int m_queueDragFromIndex{-1};
+    int m_queueDragInsertIndex{-1};
+    bool m_clearQueueHovered{false};
     AestraUI::NUIRect m_waveformArea{};
     AestraUI::NUIRect m_queueArea{};
+    AestraUI::NUIRect m_clearQueueButtonBounds{};
+    std::shared_ptr<AestraUI::NUIContextMenu> m_queueContextMenu;
     std::mutex m_pendingUiMutex;
     std::string m_pendingTrackTitle;
     std::string m_pendingTrackArtist;
     bool m_pendingTrackUiUpdate{false};
     bool m_pendingPlaybackUiUpdate{false};
     bool m_hadCurrentItem{false};
+    bool m_lastPlayingVisualState{false};
+    bool m_lastABWetVisualState{false};
+    bool m_isDropLoading{false};
+    float m_loadingStateStart{0.0f};
+    float m_waveformRevealProgress{1.0f};
+    bool m_waveformRevealActive{false};
+    std::string m_waveformRevealTrackId;
     
     // Visuals
     AestraUI::NUIColor m_currentHeaderColor{0.1f, 0.1f, 0.1f, 1.0f}; // Cached for waveform gradient
@@ -149,6 +166,14 @@ private:
     std::shared_ptr<AestraUI::NUISVGDocument> m_svgNext; // Restored
     // Callbacks
     std::function<void()> m_onPlayRequest;
+    std::function<void(const std::string&)> m_onActiveTrackPathChanged;
+    std::string m_displayTrackTitle{"No Track Selected"};
+    std::string m_displayTrackArtist{"Drag files to start"};
+    std::string m_nextTrackTitle;
+    std::string m_nextTrackArtist;
+    bool m_trackTextTransitionActive{false};
+    bool m_trackTextTransitionSwapped{false};
+    float m_trackTextTransitionTime{0.0f};
     
     // Layout Logic
     void setupComponents();

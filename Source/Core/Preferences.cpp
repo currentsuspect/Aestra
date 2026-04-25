@@ -89,8 +89,8 @@ void Preferences::load() {
                     }
                 }
             }
-        } catch (...) {
-            Log::warning("[Preferences] Failed to parse recent files");
+        } catch (const std::exception& e) {
+            Log::warning("[Preferences] Failed to parse recent files: " + std::string(e.what()));
         }
     }
 }
@@ -190,7 +190,7 @@ bool Preferences::loadFromJson(const std::string& jsonStr) {
         JSON json = JSON::parse(jsonStr);
         fromJson(json);
         return true;
-    } catch (...) {
+    } catch (const std::exception&) {
         return false;
     }
 }

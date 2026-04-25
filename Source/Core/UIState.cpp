@@ -45,8 +45,8 @@ void UIState::load() {
         JSON json = JSON::parse(jsonStr);
         fromJson(json);
         Log::info("[UIState] Loaded from: " + path);
-    } catch (...) {
-        Log::warning("[UIState] Failed to parse UI state file, using defaults");
+    } catch (const std::exception& e) {
+        Log::warning("[UIState] Failed to parse UI state file: " + std::string(e.what()));
     }
 }
 

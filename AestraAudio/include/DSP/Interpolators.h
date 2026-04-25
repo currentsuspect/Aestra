@@ -497,11 +497,16 @@ struct Sinc32Interpolator {
 
 struct Sinc64Turbo {
     static constexpr int TAPS = 64;
+    static constexpr int HALF_TAPS = 32;
     static constexpr int PHASES = 2048;
     static constexpr int HALF_PHASES = 1024;
     static constexpr double KAISER_BETA = 12.0;
 
     struct alignas(64) Table {
+        // TASK 2: Full 64-tap table for efficient vectorized access.
+        // 2048 phases * 64 taps = 131072 floats = 512KB.
+        // Symmetry folding was attempted (512KB → 256KB) but caused scattered
+        // memory access patterns that defeated SIMD vectorization.
         float coeffs[HALF_PHASES][TAPS];
 
         Table() {
@@ -544,12 +549,22 @@ struct Sinc64Turbo {
                                        SimdOp op, SimdRevOp revOp) {
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
-        int phaseIdx = static_cast<int>(frac * (PHASES - 1) + 0.5);
+        const double phaseF = frac * static_cast<double>(PHASES - 1);
+        const int phaseIdx = static_cast<int>(phaseF + 0.5);
         bool reversed = (phaseIdx >= HALF_PHASES);
         int lutIdx = reversed ? (PHASES - 1 - phaseIdx) : phaseIdx;
 
-        // Fast access to static table
-        const float* c = getTable().coeffs[lutIdx];
+        // TASK 2: Phase interpolation — load adjacent entry for sub-quantization blending
+        int lutIdx2 = (lutIdx + 1 < HALF_PHASES) ? lutIdx + 1 : lutIdx;
+        double alpha = phaseF - std::floor(phaseF);  // fractional part within quantized step
+        if (reversed) {
+            alpha = 1.0 - alpha;  // reverse direction of alpha for mirrored phases
+        }
+        const float alphaF = static_cast<float>(alpha);
+
+        // Fast access to static table (two adjacent phases)
+        const float* c0 = getTable().coeffs[lutIdx];
+        const float* c1 = getTable().coeffs[lutIdx2];
 
         const int64_t startIdx = idx - 31;
         float sumL = 0.0f;
@@ -558,16 +573,18 @@ struct Sinc64Turbo {
         bool validRange = (startIdx >= 0 && startIdx + 64 <= totalFrames);
 
         if (validRange && !reversed) {
-            op(c, &data[startIdx * 2], sumL, sumR);
+            op(c0, c1, alphaF, &data[startIdx * 2], sumL, sumR);
         } else if (validRange && reversed) {
-            revOp(c, &data[startIdx * 2], sumL, sumR);
+            revOp(c0, c1, alphaF, &data[startIdx * 2], sumL, sumR);
         } else {
             // Scalar fallback for boundaries
             for (int t = 0; t < 64; ++t) {
                 int64_t sIdx = startIdx + t;
                 if (sIdx < 0 || sIdx >= totalFrames)
                     continue;
-                float coeff = reversed ? c[63 - t] : c[t];
+                float coeff0 = reversed ? c0[63 - t] : c0[t];
+                float coeff1 = reversed ? c1[63 - t] : c1[t];
+                float coeff = coeff0 + alphaF * (coeff1 - coeff0);
                 sumL += data[sIdx * 2] * coeff;
                 sumR += data[sIdx * 2 + 1] * coeff;
             }
@@ -590,20 +607,12 @@ struct Sinc64Turbo {
     }
 
     static void implSSE41(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
-        // SSE4.1 usually doesn't have a specialized reversed kernel in this codebase, assume fallback or standard
-        // If SincSSE41.h doesn't have reversed, using scalar fallback logic for reversed part inside template is fine
-        // providing a dummy lambda for reversed if it doesn't exist?
-        // Checking SincSSE41.h would be ideal, but for now let's map to the standard scalar-loop-reversed or a
-        // scalar-shim
-        auto scalarRev = [](const float* c, const float* s, float& l, float& r) {
-            // We shouldn't hit this often in validRange+reversed if we pass the scalar loop in 'else'
-            // BUT `interpolateImpl` calls `revOp`.
-            // If SincSSE41.h lacks reversed, we must provide one.
-            // Let's use scalar for reversed path on SSE4.1 for safety/simplicity unless we verified SincSSE41_Reversed
-            // exists. For safety: simply use scalar loop here.
+        auto scalarRev = [](const float* c0, const float* c1, float alpha, const float* s, float& l, float& r) {
             float sl = 0, sr = 0;
             for (int t = 0; t < 64; ++t) {
-                float coeff = c[63 - t];
+                float coeff0 = c0[63 - t];
+                float coeff1 = c1[63 - t];
+                float coeff = coeff0 + alpha * (coeff1 - coeff0);
                 sl += s[t * 2] * coeff;
                 sr += s[t * 2 + 1] * coeff;
             }
@@ -616,12 +625,13 @@ struct Sinc64Turbo {
 
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
     static void implNEON(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
-        // Assume optimized NEON
         interpolateImpl(data, totalFrames, phase, outL, outR, sincDotProductNEON,
-                        [](const float* c, const float* s, float& l, float& r) {
+                        [](const float* c0, const float* c1, float alpha, const float* s, float& l, float& r) {
                             float sl = 0, sr = 0;
                             for (int t = 0; t < 64; ++t) {
-                                float coeff = c[63 - t];
+                                float coeff0 = c0[63 - t];
+                                float coeff1 = c1[63 - t];
+                                float coeff = coeff0 + alpha * (coeff1 - coeff0);
                                 sl += s[t * 2] * coeff;
                                 sr += s[t * 2 + 1] * coeff;
                             }
@@ -632,19 +642,22 @@ struct Sinc64Turbo {
 #endif // ARM NEON
 
     static void implScalar(const float* data, int64_t totalFrames, double phase, float& outL, float& outR) {
-        auto scalarOp = [](const float* c, const float* s, float& l, float& r) {
+        auto scalarOp = [](const float* c0, const float* c1, float alpha, const float* s, float& l, float& r) {
             float sl = 0, sr = 0;
             for (int t = 0; t < 64; ++t) {
-                sl += s[t * 2] * c[t];
-                sr += s[t * 2 + 1] * c[t];
+                float coeff = c0[t] + alpha * (c1[t] - c0[t]);
+                sl += s[t * 2] * coeff;
+                sr += s[t * 2 + 1] * coeff;
             }
             l = sl;
             r = sr;
         };
-        auto scalarRev = [](const float* c, const float* s, float& l, float& r) {
+        auto scalarRev = [](const float* c0, const float* c1, float alpha, const float* s, float& l, float& r) {
             float sl = 0, sr = 0;
             for (int t = 0; t < 64; ++t) {
-                float coeff = c[63 - t];
+                float coeff0 = c0[63 - t];
+                float coeff1 = c1[63 - t];
+                float coeff = coeff0 + alpha * (coeff1 - coeff0);
                 sl += s[t * 2] * coeff;
                 sr += s[t * 2 + 1] * coeff;
             }

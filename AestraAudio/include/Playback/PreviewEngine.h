@@ -48,6 +48,7 @@ public:
     float getGlobalPreviewVolume() const;
     double getPlaybackPosition() const; // New method
     double getDuration() const;
+    void handleDeferredCompletion();
 
 private:
     struct PreviewVoice {
@@ -83,6 +84,11 @@ private:
     std::atomic<float> m_globalGainDb;
     std::function<void(const std::string&)> m_onComplete;
 
+    // Deferred completion (audio thread -> main thread)
+    std::atomic<bool> m_completionPending{false};
+    std::string m_completedPathStr;
+    std::mutex m_completedPathMutex;
+
     // Decode Worker Thread
     // Persistent thread to handle decode requests without spawn overhead
     struct DecodeJob {
@@ -95,12 +101,10 @@ private:
     std::mutex m_workerMutex;
     std::condition_variable m_workerCV;
     std::optional<DecodeJob> m_pendingJob;
+    std::atomic<uint64_t> m_decodeGeneration{0};
     bool m_workerRunning{true};
 
     void workerLoop();
-
-    // Generation counter to handle rapid switching
-    std::atomic<uint64_t> m_decodeGeneration{0};
 };
 
 } // namespace Audio

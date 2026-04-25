@@ -20,6 +20,15 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
         return false;
     }
 
+    if (plugin) {
+        if (m_maxBlockSize > 0 && m_sampleRate > 0.0) {
+            plugin->initialize(m_sampleRate, m_maxBlockSize);
+        }
+        if (!plugin->isActive()) {
+            plugin->activate();
+        }
+    }
+
     m_slots[slotIndex].plugin = std::move(plugin);
     m_slots[slotIndex].bypassed.store(false);
     m_slots[slotIndex].dryWetMix.store(1.0f);
@@ -181,6 +190,16 @@ void EffectChain::prepare(double sampleRate, uint32_t maxBlockSize) {
     const size_t required = static_cast<size_t>(maxBlockSize) * 2;
     if (m_dryBuffer.size() < required) {
         m_dryBuffer.resize(required);
+    }
+
+    for (auto& slot : m_slots) {
+        if (!slot.plugin) {
+            continue;
+        }
+        slot.plugin->initialize(m_sampleRate, m_maxBlockSize);
+        if (!slot.plugin->isActive()) {
+            slot.plugin->activate();
+        }
     }
 }
 
@@ -366,6 +385,10 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
 
         std::string pluginId(reinterpret_cast<const char*>(&state[offset]), idLen);
         offset += idLen;
+
+        if (offset + 1 + sizeof(float) > state.size()) {
+            return false;
+        }
 
         // Read bypass state
         bool bypassed = state[offset++] != 0;

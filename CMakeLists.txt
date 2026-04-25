@@ -32,10 +32,25 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(AESTRA_HEADLESS_ONLY "Configure/build headless targets only (skips UI + app)" OFF)
 option(AESTRA_ENABLE_UI "Build the AESTRA_DAW UI application" ON)
 option(AESTRA_ENABLE_TESTS "Build test executables" ON)
+option(AESTRA_CI "Configure deterministic CI-safe defaults" OFF)
+option(AESTRA_ENABLE_PREMIUM_PLUGINS "Build private premium plugin modules" OFF)
+option(AESTRA_ENABLE_TEST_LICENSES "Enable test-only mock license acceptance" OFF)
 
 if(AESTRA_HEADLESS_ONLY)
   set(AESTRA_ENABLE_UI OFF CACHE BOOL "Build the AESTRA_DAW UI application" FORCE)
   # Tests should be allowed in headless mode (e.g. for CI)
+endif()
+
+if(AESTRA_CI)
+  set(AESTRA_HEADLESS_ONLY ON CACHE BOOL "Configure/build headless targets only (skips UI + app)" FORCE)
+  set(AESTRA_ENABLE_UI OFF CACHE BOOL "Build the AESTRA_DAW UI application" FORCE)
+  set(AESTRA_ENABLE_TESTS ON CACHE BOOL "Build test executables" FORCE)
+  set(AESTRA_ENABLE_RUNTIME_TESTS OFF CACHE BOOL "Enable runtime/device-dependent tests" FORCE)
+  set(AESTRA_ENABLE_EXPERIMENTAL_TESTS OFF CACHE BOOL "Enable unstable/experimental tests" FORCE)
+endif()
+
+if(AESTRA_ENABLE_PREMIUM_PLUGINS)
+  set(AESTRAUI_ENABLE_PREMIUM_EDITORS ON CACHE BOOL "Build private premium plugin editors" FORCE)
 endif()
 
 # =============================================================================
@@ -89,17 +104,31 @@ endif()
 # =============================================================================
 add_subdirectory(AestraCore)
 
-if(AESTRA_PLATFORM_LINUX AND TARGET AestraCore)
-  target_compile_options(AestraCore PRIVATE
-    -Wall -Wextra -Wpedantic
-    -Wno-unused-parameter
-  )
+if(AESTRA_PLATFORM_LINUX)
+    add_compile_options(-Wall -Wextra -Wpedantic)
+    # Suppress known noisy warnings
+    add_compile_options(
+        -Wno-sequence-point
+        -Wno-pedantic
+        -Wno-unused-parameter
+        -Wno-unused-variable
+        -Wno-unused-but-set-variable
+        -Wno-maybe-uninitialized
+        -Wno-switch
+        -Wno-format-truncation
+        -Wno-reorder
+    )
 endif()
 
 # =============================================================================
 # AestraPlat - Platform Abstraction (Must be before AestraAudio)
 # =============================================================================
 add_subdirectory(AestraPlat)
+
+# =============================================================================
+# AestraLicense - Offline License Verification
+# =============================================================================
+add_subdirectory(AestraLicense)
 
 # =============================================================================
 # Shared Plugin API Interface
@@ -112,16 +141,15 @@ target_include_directories(AestraPluginAPI INTERFACE
 target_link_libraries(AestraPluginAPI INTERFACE AestraCore)
 
 # =============================================================================
-# AestraPlugins - Premium Plugins (Optional Private Submodule)
-# Must be added before AestraAudio so plugin targets exist when linked.
+# AestraPlugins - Premium Plugins (Optional Private Modules)
 # =============================================================================
-if(EXISTS "${CMAKE_SOURCE_DIR}/AestraPlugins/CMakeLists.txt")
-    message(STATUS "Found AestraPlugins - including premium plugins")
+if(AESTRA_ENABLE_PREMIUM_PLUGINS AND EXISTS "${CMAKE_SOURCE_DIR}/AestraPlugins/CMakeLists.txt")
+    message(STATUS "Aestra premium plugins enabled")
     add_subdirectory(AestraPlugins)
-    set(AESTRA_HAS_PLUGINS ON)
+elseif(AESTRA_ENABLE_PREMIUM_PLUGINS)
+    message(WARNING "AESTRA_ENABLE_PREMIUM_PLUGINS=ON but AestraPlugins/CMakeLists.txt was not found")
 else()
-    message(STATUS "AestraPlugins not found - skipping premium plugins")
-    set(AESTRA_HAS_PLUGINS OFF)
+    message(STATUS "Aestra premium plugins disabled")
 endif()
 
 # =============================================================================

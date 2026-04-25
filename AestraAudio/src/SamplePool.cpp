@@ -43,7 +43,7 @@ SampleKey SamplePool::makeKeyFast(const std::string& path) {
         fs::path p = fs::absolute(makeUnicodePath(path));
         key.filePath = pathToUtf8(p);
         key.modTime = 0; // Skip file stat - much faster
-    } catch (...) {
+    } catch (const std::exception&) {
         key.filePath = path;
         key.modTime = 0;
     }

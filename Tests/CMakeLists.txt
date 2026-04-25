@@ -11,6 +11,14 @@ enable_testing()
 option(AESTRA_ENABLE_RUNTIME_TESTS "Enable runtime/integration tests that require host audio/devices or full project semantics" OFF)
 option(AESTRA_ENABLE_EXPERIMENTAL_TESTS "Enable currently unstable/under-investigation tests in default CTest run" OFF)
 
+# Test targets must behave the same in Release as they do in Debug. Several
+# legacy tests still use assert(), so keep assertions live for all test binaries.
+if(MSVC)
+    add_compile_options(/UNDEBUG)
+else()
+    add_compile_options(-UNDEBUG)
+endif()
+
 # =============================================================================
 # Integration Tests (Cross-Module)
 # =============================================================================
@@ -69,7 +77,39 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
         add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
         set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;runtime")
     else()
-        message(STATUS "ProjectRoundTrip tests built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+message(STATUS "ProjectRoundTrip tests built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    endif()
+endif()
+
+# Project Round-Trip Integrity Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripIntegrityTest.cpp")
+    add_executable(ProjectRoundTripIntegrityTest
+        Integration/ProjectRoundTripIntegrityTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectRoundTripIntegrityTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(ProjectRoundTripIntegrityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    target_compile_definitions(ProjectRoundTripIntegrityTest PRIVATE
+        $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
+    )
+    if(AESTRA_ENABLE_RUNTIME_TESTS)
+        add_test(NAME ProjectRoundTripIntegrityTest COMMAND ProjectRoundTripIntegrityTest)
+        set_tests_properties(ProjectRoundTripIntegrityTest PROPERTIES LABELS "integration;runtime")
+    else()
+        message(STATUS "ProjectRoundTripIntegrityTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
 endif()
 
@@ -87,44 +127,56 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/PluginScanTest.cpp")
     endif()
 endif()
 
-# Rumble Plugin Factory Test
-if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumblePluginFactoryTest.cpp")
+# Rumble Plugin Factory Test (requires runtime plugin system)
+if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumblePluginFactoryTest.cpp")
     add_executable(RumblePluginFactoryTest Integration/RumblePluginFactoryTest.cpp)
-    target_link_libraries(RumblePluginFactoryTest PRIVATE AestraAudioCore AestraRumble AestraCore)
+    target_link_libraries(RumblePluginFactoryTest PRIVATE AestraAudioCore AestraPremiumPlugins AestraCore)
     target_include_directories(RumblePluginFactoryTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
-    add_test(NAME RumblePluginFactoryTest COMMAND RumblePluginFactoryTest)
-    set_tests_properties(RumblePluginFactoryTest PROPERTIES LABELS "plugins;rumble;factory")
+    if(AESTRA_ENABLE_RUNTIME_TESTS)
+        add_test(NAME RumblePluginFactoryTest COMMAND RumblePluginFactoryTest)
+        set_tests_properties(RumblePluginFactoryTest PROPERTIES LABELS "plugins;rumble;factory;runtime")
+    else()
+        message(STATUS "RumblePluginFactoryTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    endif()
 endif()
 
-# Rumble Usage Path Test
-if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumbleUsagePathTest.cpp")
+# Rumble Usage Path Test (requires runtime plugin system)
+if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumbleUsagePathTest.cpp")
     add_executable(RumbleUsagePathTest Integration/RumbleUsagePathTest.cpp)
-    target_link_libraries(RumbleUsagePathTest PRIVATE AestraAudioCore AestraRumble AestraCore)
+    target_link_libraries(RumbleUsagePathTest PRIVATE AestraAudioCore AestraPremiumPlugins AestraCore)
     target_include_directories(RumbleUsagePathTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
-    add_test(NAME RumbleUsagePathTest COMMAND RumbleUsagePathTest)
-    set_tests_properties(RumbleUsagePathTest PROPERTIES LABELS "plugins;rumble;usage")
+    if(AESTRA_ENABLE_RUNTIME_TESTS)
+        add_test(NAME RumbleUsagePathTest COMMAND RumbleUsagePathTest)
+        set_tests_properties(RumbleUsagePathTest PROPERTIES LABELS "plugins;rumble;usage;runtime")
+    else()
+        message(STATUS "RumbleUsagePathTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    endif()
 endif()
 
-# Rumble Discovery Test
-if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumbleDiscoveryTest.cpp")
+# Rumble Discovery Test (requires runtime plugin system)
+if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/RumbleDiscoveryTest.cpp")
     add_executable(RumbleDiscoveryTest Integration/RumbleDiscoveryTest.cpp)
-    target_link_libraries(RumbleDiscoveryTest PRIVATE AestraAudioCore AestraRumble AestraCore)
+    target_link_libraries(RumbleDiscoveryTest PRIVATE AestraAudioCore AestraPremiumPlugins AestraCore)
     target_include_directories(RumbleDiscoveryTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
-    add_test(NAME RumbleDiscoveryTest COMMAND RumbleDiscoveryTest)
-    set_tests_properties(RumbleDiscoveryTest PROPERTIES LABELS "plugins;rumble;discovery")
+    if(AESTRA_ENABLE_RUNTIME_TESTS)
+        add_test(NAME RumbleDiscoveryTest COMMAND RumbleDiscoveryTest)
+        set_tests_properties(RumbleDiscoveryTest PROPERTIES LABELS "plugins;rumble;discovery;runtime")
+    else()
+        message(STATUS "RumbleDiscoveryTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    endif()
 endif()
 
-# Internal Plugin Project Round-Trip Test
-if(TARGET AestraAudio AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/InternalPluginProjectRoundTripTest.cpp")
+# Internal Plugin Project Round-Trip Test (requires runtime plugin system)
+if(TARGET AestraAudio AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/InternalPluginProjectRoundTripTest.cpp")
     add_executable(InternalPluginProjectRoundTripTest
         Integration/InternalPluginProjectRoundTripTest.cpp
         ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
@@ -147,20 +199,28 @@ if(TARGET AestraAudio AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/Intern
     target_compile_definitions(InternalPluginProjectRoundTripTest PRIVATE
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
-    add_test(NAME InternalPluginProjectRoundTripTest COMMAND InternalPluginProjectRoundTripTest)
-    set_tests_properties(InternalPluginProjectRoundTripTest PROPERTIES LABELS "integration;plugins;project")
+    if(AESTRA_ENABLE_RUNTIME_TESTS)
+        add_test(NAME InternalPluginProjectRoundTripTest COMMAND InternalPluginProjectRoundTripTest)
+        set_tests_properties(InternalPluginProjectRoundTripTest PROPERTIES LABELS "integration;plugins;project;runtime")
+    else()
+        message(STATUS "InternalPluginProjectRoundTripTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    endif()
 endif()
 
-# Arsenal Instrument Attachment Test
-if(TARGET AestraAudio AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ArsenalInstrumentAttachmentTest.cpp")
+# Arsenal Instrument Attachment Test (requires runtime plugin system)
+if(TARGET AestraAudio AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ArsenalInstrumentAttachmentTest.cpp")
     add_executable(ArsenalInstrumentAttachmentTest Integration/ArsenalInstrumentAttachmentTest.cpp)
     target_link_libraries(ArsenalInstrumentAttachmentTest PRIVATE AestraAudio AestraCore)
     target_include_directories(ArsenalInstrumentAttachmentTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
-    add_test(NAME ArsenalInstrumentAttachmentTest COMMAND ArsenalInstrumentAttachmentTest)
-    set_tests_properties(ArsenalInstrumentAttachmentTest PROPERTIES LABELS "integration;arsenal;plugins")
+    if(AESTRA_ENABLE_RUNTIME_TESTS)
+        add_test(NAME ArsenalInstrumentAttachmentTest COMMAND ArsenalInstrumentAttachmentTest)
+        set_tests_properties(ArsenalInstrumentAttachmentTest PROPERTIES LABELS "integration;arsenal;plugins;runtime")
+    else()
+        message(STATUS "ArsenalInstrumentAttachmentTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    endif()
 endif()
 
 # Resampler Benchmark
@@ -305,11 +365,14 @@ target_link_libraries(AestraWavLoaderTest PRIVATE AestraAudio AestraCore)
 add_test(NAME AestraWavLoaderTest COMMAND AestraWavLoaderTest)
 
 # Device Manager Test (Windows only)
-if(WIN32 AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DeviceManagerTest.cpp")
+if(WIN32 AND AESTRA_ENABLE_RUNTIME_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DeviceManagerTest.cpp")
     add_executable(AestraDeviceManagerTest AestraAudio/DeviceManagerTest.cpp)
     target_link_libraries(AestraDeviceManagerTest PRIVATE AestraAudio AestraCore)
     target_link_libraries(AestraDeviceManagerTest PRIVATE avrt)
-    add_test(NAME AestraDeviceManagerTest COMMAND AestraDeviceManagerTest)
+    add_test(NAME RuntimeAestraDeviceManagerTest COMMAND AestraDeviceManagerTest)
+    set_tests_properties(RuntimeAestraDeviceManagerTest PROPERTIES LABELS "Runtime;audio;device")
+elseif(WIN32)
+    message(STATUS "AestraDeviceManagerTest skipped in deterministic test mode (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
 endif()
 
 # Audio Callback Test
@@ -337,6 +400,30 @@ add_executable(AestraOscillatorTest AestraAudio/OscillatorTest.cpp)
 target_link_libraries(AestraOscillatorTest PRIVATE AestraAudio AestraCore)
 target_compile_definitions(AestraOscillatorTest PRIVATE AESTRA_HEADLESS)
 add_test(NAME AestraOscillatorTest COMMAND AestraOscillatorTest)
+
+# Automation Stress Test
+add_executable(AutomationStressTest AestraAudio/AutomationStressTest.cpp)
+target_link_libraries(AutomationStressTest PRIVATE AestraAudio AestraCore)
+target_compile_definitions(AutomationStressTest PRIVATE AESTRA_HEADLESS)
+add_test(NAME AutomationStressTest COMMAND AutomationStressTest)
+
+# Arsenal Parameter Stress Test (requires runtime plugin system)
+if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins)
+    add_executable(ArsenalParameterStressTest AestraAudio/ArsenalParameterStressTest.cpp)
+    target_link_libraries(ArsenalParameterStressTest PRIVATE AestraPremiumPlugins AestraAudioCore AestraCore)
+    target_compile_definitions(ArsenalParameterStressTest PRIVATE AESTRA_HEADLESS)
+    if(AESTRA_ENABLE_RUNTIME_TESTS)
+        add_test(NAME ArsenalParameterStressTest COMMAND ArsenalParameterStressTest)
+    else()
+        message(STATUS "ArsenalParameterStressTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    endif()
+endif()
+
+# Mixer Bus Stress Test
+add_executable(MixerBusStressTest AestraAudio/MixerBusStressTest.cpp)
+target_link_libraries(MixerBusStressTest PRIVATE AestraAudio AestraCore)
+target_compile_definitions(MixerBusStressTest PRIVATE AESTRA_HEADLESS)
+add_test(NAME MixerBusStressTest COMMAND MixerBusStressTest)
 
 # Mixer Bus Test
 add_executable(AestraMixerBusTest AestraAudio/MixerBusTest.cpp)
@@ -397,6 +484,50 @@ target_include_directories(AestraEQTest PRIVATE
 )
 add_test(NAME AestraEQTest COMMAND AestraEQTest)
 set_tests_properties(AestraEQTest PROPERTIES LABELS "audio;plugins;eq")
+
+# Aestra Comp Phase 0 Test
+add_executable(AestraCompPhase0Test AestraAudio/AestraCompPhase0Test.cpp)
+target_link_libraries(AestraCompPhase0Test PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraCompPhase0Test PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraCompPhase0Test COMMAND AestraCompPhase0Test)
+set_tests_properties(AestraCompPhase0Test PROPERTIES LABELS "audio;plugins;comp;phase0")
+
+# Aestra Comp Phase 1 Test
+add_executable(AestraCompPhase1Test AestraAudio/AestraCompPhase1Test.cpp)
+target_link_libraries(AestraCompPhase1Test PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraCompPhase1Test PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraCompPhase1Test COMMAND AestraCompPhase1Test)
+set_tests_properties(AestraCompPhase1Test PROPERTIES LABELS "audio;plugins;comp;phase1")
+
+# Aestra Comp Upgrade Test
+add_executable(AestraCompUpgradeTest AestraAudio/AestraCompUpgradeTest.cpp)
+target_link_libraries(AestraCompUpgradeTest PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraCompUpgradeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraCompUpgradeTest COMMAND AestraCompUpgradeTest)
+set_tests_properties(AestraCompUpgradeTest PROPERTIES LABELS "audio;plugins;comp;upgrade")
+
+# Aestra Delay Upgrade Test
+add_executable(AestraDelayUpgradeTest AestraAudio/AestraDelayUpgradeTest.cpp)
+target_link_libraries(AestraDelayUpgradeTest PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraDelayUpgradeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraDelayUpgradeTest COMMAND AestraDelayUpgradeTest)
+set_tests_properties(AestraDelayUpgradeTest PROPERTIES LABELS "audio;plugins;delay;upgrade")
 
 # Serialization Compatibility Test (Requires GTest)
 # add_executable(AestraSerializationCompatibilityTest AestraAudio/SerializationCompatibilityTest.cpp)
@@ -491,16 +622,20 @@ target_include_directories(CommandTransactionTest PRIVATE
 add_test(NAME CommandTransactionTest COMMAND CommandTransactionTest)
 set_tests_properties(CommandTransactionTest PROPERTIES LABELS "commands;phase2")
 
-# Rumble State Test
-if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
+# Rumble State Test (requires runtime plugin system)
+if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
     add_executable(RumbleStateTest Commands/RumbleStateTest.cpp)
-    target_link_libraries(RumbleStateTest PRIVATE AestraRumble AestraAudioCore AestraCore)
+    target_link_libraries(RumbleStateTest PRIVATE AestraPremiumPlugins AestraAudioCore AestraCore)
     target_include_directories(RumbleStateTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
-    add_test(NAME RumbleStateTest COMMAND RumbleStateTest)
-    set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state")
+    if(AESTRA_ENABLE_RUNTIME_TESTS)
+        add_test(NAME RumbleStateTest COMMAND RumbleStateTest)
+        set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state;runtime")
+    else()
+        message(STATUS "RumbleStateTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+    endif()
 endif()
 
 message(STATUS "Commands tests added - Phase 2 undo/redo system")
@@ -510,6 +645,11 @@ message(STATUS "Commands tests added - Phase 2 undo/redo system")
 # =============================================================================
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Headless/CMakeLists.txt")
     add_subdirectory(Headless)
+endif()
+
+# Security regression tests
+if(AESTRA_ENABLE_TESTS AND EXISTS ${CMAKE_SOURCE_DIR}/tests/security/CMakeLists.txt)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/tests/security security_tests)
 endif()
 
 message(STATUS "Tests configured - see Tests/ directory")

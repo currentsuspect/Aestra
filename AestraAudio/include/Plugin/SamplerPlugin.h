@@ -57,6 +57,31 @@ public:
     // Custom Methods
     bool loadSample(const std::string& path);
     void setSampleRate(double sampleRate) { m_sampleRate = sampleRate; }
+    void setEnvelope(float attack, float decay, float sustain, float release) noexcept;
+    void setCoarseSemitones(float semitones) noexcept;
+    void setFineTuneCents(float cents) noexcept;
+    void setSampleWindow(float startNorm, float endNorm) noexcept;
+    void setLoopEnabled(bool enabled) noexcept;
+    void setMaxVoices(int maxVoices) noexcept;
+    void setRootMidiNote(int note) noexcept;
+    void setMonoMode(bool mono) noexcept;
+    void setGlideTimeMs(float glideTimeMs) noexcept;
+    bool normalizeSample(float targetPeak = 0.95f);
+    bool reverseSample();
+
+    float getCoarseSemitones() const noexcept;
+    float getFineTuneCents() const noexcept;
+    float getLoopStartNorm() const noexcept { return m_loopStartNorm.load(std::memory_order_relaxed); }
+    float getLoopEndNorm() const noexcept { return m_loopEndNorm.load(std::memory_order_relaxed); }
+    bool isLoopEnabled() const noexcept { return m_loopEnabled.load(std::memory_order_relaxed); }
+    int getMaxVoices() const noexcept { return m_maxVoices.load(std::memory_order_relaxed); }
+    int getRootMidiNote() const noexcept { return m_rootMidiNote.load(std::memory_order_relaxed); }
+    bool isMonoMode() const noexcept { return m_monoMode.load(std::memory_order_relaxed); }
+    float getGlideTimeMs() const noexcept { return m_glideTimeMs.load(std::memory_order_relaxed); }
+    float getAttack() const noexcept { return m_params[kParamAttack].load(std::memory_order_relaxed); }
+    float getDecay() const noexcept { return m_params[kParamDecay].load(std::memory_order_relaxed); }
+    float getSustain() const noexcept { return m_params[kParamSustain].load(std::memory_order_relaxed); }
+    float getRelease() const noexcept { return m_params[kParamRelease].load(std::memory_order_relaxed); }
 
     // RT-safe: requests an immediate voice reset on the next process() call.
     void requestHardResetVoices() noexcept { m_resetVoicesRequested.store(true, std::memory_order_release); }
@@ -81,6 +106,14 @@ private:
     // Parameters
     enum ParamID { kParamAttack = 0, kParamDecay, kParamSustain, kParamRelease, kParamPitch, kParamCount };
     std::array<std::atomic<float>, kParamCount> m_params;
+    std::atomic<float> m_fineTuneCents{0.0f};
+    std::atomic<float> m_loopStartNorm{0.0f};
+    std::atomic<float> m_loopEndNorm{1.0f};
+    std::atomic<bool> m_loopEnabled{false}; // one-shot default
+    std::atomic<int> m_maxVoices{4};
+    std::atomic<int> m_rootMidiNote{60}; // C3 default
+    std::atomic<bool> m_monoMode{false};
+    std::atomic<float> m_glideTimeMs{80.0f};
 
     // Voice Architecture
     enum class EnvStage { Attack, Decay, Sustain, Release, Off };
@@ -90,6 +123,9 @@ private:
         int note = 0;
         float velocity = 0.0f;
         double position = 0.0; // Sample index
+        double playbackRate = 1.0; // sample index increment/frame
+        double targetPlaybackRate = 1.0;
+        bool glideActive = false;
         EnvStage stage = EnvStage::Off;
         double stageTime = 0.0; // Seconds in current stage
         float currentGain = 0.0f;
@@ -100,7 +136,7 @@ private:
     std::array<Voice, kMaxVoices> m_voices;
 
     // Helpers
-    void handleMidiEvent(const MidiBuffer::Event& event);
+    void handleMidiEvent(const MidiBuffer::Event& event, double baseRate);
     void renderVoice(Voice& voice, float* outL, float* outR, uint32_t frames);
     float getEnvelopeLevel(Voice& voice, double dt);
 };

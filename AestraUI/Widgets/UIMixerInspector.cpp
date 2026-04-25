@@ -571,11 +571,11 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
     const NUIRect titleChip{headerRect.x + 10.0f, headerRect.y + 10.0f, 56.0f, 18.0f};
     renderer.fillRoundedRect(titleChip, 9.0f, m_bg.withAlpha(0.34f));
     renderer.strokeRoundedRect(titleChip, 9.0f, 1.0f, accent.withAlpha(0.22f));
-    renderer.drawTextCentered(channel->id == 0 ? "BUS" : "TRACK", titleChip, 9.0f, m_textSecondary.withAlpha(0.92f));
+    renderer.drawTextCentered(channel->id == 0 ? "BUS" : "TRACK", titleChip, 10.0f, m_textSecondary.withAlpha(0.95f));
 
     renderer.drawText(m_cachedHeaderTitle, {headerRect.x + 10.0f, headerRect.y + 30.0f}, 12.5f, m_text);
     if (!m_cachedHeaderSubtitle.empty()) {
-        renderer.drawText(m_cachedHeaderSubtitle, {headerRect.x + 10.0f, headerRect.y + 45.0f}, 10.0f, m_textSecondary.withAlpha(0.92f));
+        renderer.drawText(m_cachedHeaderSubtitle, {headerRect.x + 10.0f, headerRect.y + 45.0f}, 11.0f, m_textSecondary.withAlpha(0.95f));
     }
     {
         const char* flowSteps[4];
@@ -604,9 +604,9 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         const float chipY = headerRect.y + 59.0f;
         for (int i = 0; i < flowCount; ++i) {
             const std::string step = flowSteps[i];
-            const float textW = renderer.measureText(step, 8.0f).width;
+            const float textW = renderer.measureText(step, 9.0f).width;
             const float chipW = textW + 12.0f;
-            const NUIRect chipRect{chipX, chipY, chipW, 13.0f};
+            const NUIRect chipRect{chipX, chipY, chipW, 14.0f};
             const bool activeStep = (m_activeTab == Tab::Inserts && step == "Inserts") ||
                                     (m_activeTab == Tab::Sends && step == "Sends") ||
                                     (m_activeTab == Tab::IO && (step == "Input" || step == "Record"));
@@ -619,7 +619,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                                        1.0f,
                                        activeStep ? accent.withAlpha(0.22f)
                                                   : m_border.withAlpha(0.18f));
-            renderer.drawTextCentered(step, chipRect, 8.0f, m_textSecondary.withAlpha(activeStep ? 0.94f : 0.82f));
+            renderer.drawTextCentered(step, chipRect, 9.0f, m_textSecondary.withAlpha(activeStep ? 0.96f : 0.90f));
             chipX += chipW + 4.0f;
         }
     }
@@ -636,7 +636,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, INSERT_SUMMARY_H};
         renderer.fillRoundedRect(summaryCard, 12.0f, m_tabBg.withAlpha(0.46f));
         renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, accent.withAlpha(0.16f));
-        renderer.drawText("Insert Status", {summaryCard.x + 10.0f, summaryCard.y + 7.0f}, 8.5f, m_textSecondary.withAlpha(0.88f));
+        renderer.drawText("Insert Status", {summaryCard.x + 10.0f, summaryCard.y + 7.0f}, 9.5f, m_textSecondary.withAlpha(0.94f));
         renderer.drawText(buf, {summaryCard.x + 10.0f, summaryCard.y + 18.0f}, 10.5f, m_text.withAlpha(0.96f));
 
         // Rack is rendered by renderChildren() if visible
@@ -657,18 +657,18 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
             ? NUIThemeManager::getInstance().getColor("warning").withAlpha(0.30f)
             : accent.withAlpha(0.16f);
         renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, summaryStroke);
-        renderer.drawText("Send Status", {summaryCard.x + 10.0f, summaryCard.y + 7.0f}, 8.5f, m_textSecondary.withAlpha(0.88f));
+        renderer.drawText("Send Status", {summaryCard.x + 10.0f, summaryCard.y + 7.0f}, 9.5f, m_textSecondary.withAlpha(0.94f));
         renderer.drawText(summaryBuf, {summaryCard.x + 10.0f, summaryCard.y + 19.0f}, 10.5f, m_text.withAlpha(0.96f));
         if (hasRoutingWarning) {
             renderer.drawText(routingWarning,
                               {summaryCard.x + 118.0f, summaryCard.y + 19.0f},
-                              8.5f,
+                              9.25f,
                               NUIThemeManager::getInstance().getColor("warning").withAlpha(0.92f));
         } else {
             renderer.drawText("Audio sends for this track.",
                               {summaryCard.x + 118.0f, summaryCard.y + 19.0f},
-                              8.5f,
-                              m_textSecondary.withAlpha(0.74f));
+                              9.25f,
+                              m_textSecondary.withAlpha(0.84f));
         }
 
         const NUIRect outputHeader{contentRect.x, summaryCard.bottom() + 8.0f, contentRect.width, SEND_OUTPUT_CARD_H};
@@ -676,12 +676,12 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         renderer.strokeRoundedRect(outputHeader, 14.0f, 1.0f, m_border.withAlpha(0.36f));
         renderer.drawText("Main Output", {outputHeader.x + 10.0f, outputHeader.y + 10.0f}, 11.5f, m_text);
         renderer.drawText("Choose where the main audible path goes.",
-                          {outputHeader.x + 10.0f, outputHeader.y + 25.0f}, 8.75f, m_textSecondary.withAlpha(0.82f));
+                          {outputHeader.x + 10.0f, outputHeader.y + 25.0f}, 9.5f, m_textSecondary.withAlpha(0.88f));
         renderer.drawText("Master or subgroup destination.",
-                          {outputHeader.x + 10.0f, outputHeader.y + 37.0f}, 8.5f, m_textSecondary.withAlpha(0.68f));
+                          {outputHeader.x + 10.0f, outputHeader.y + 37.0f}, 9.25f, m_textSecondary.withAlpha(0.78f));
         renderer.drawText("Main path",
                           {outputHeader.x + outputHeader.width - 70.0f, outputHeader.bottom() - 14.0f},
-                          8.25f, m_textSecondary.withAlpha(0.62f));
+                          9.0f, m_textSecondary.withAlpha(0.76f));
 
         const NUIRect routingCard{contentRect.x, outputHeader.bottom() + 10.0f, contentRect.width, SEND_ROUTE_MAP_H};
         renderer.fillRoundedRect(routingCard, 12.0f, m_tabBg.withAlpha(0.52f));
@@ -690,15 +690,15 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
 
         const bool sidechainReady = hasSidechainReadyDestination(m_viewModel, channel);
         const char* sidechainLabel = sidechainReady ? "SC ready" : "SC unavailable";
-        const float sidechainW = renderer.measureText(sidechainLabel, 8.5f).width + 18.0f;
+        const float sidechainW = renderer.measureText(sidechainLabel, 9.0f).width + 18.0f;
         const bool busOnly = !channel->masterSendEnabled && channel->mainOutputId != 0;
         const char* masterLabel = busOnly ? "Master off" : "Master on";
-        const float masterW = renderer.measureText(masterLabel, 8.5f).width + 18.0f;
+        const float masterW = renderer.measureText(masterLabel, 9.0f).width + 18.0f;
         const NUIRect sidechainChip{routingCard.right() - sidechainW - 10.0f, routingCard.y + 7.0f, sidechainW, 18.0f};
         const NUIRect masterChip{sidechainChip.x - masterW - 6.0f, routingCard.y + 7.0f, masterW, 18.0f};
         renderer.fillRoundedRect(masterChip, 9.0f, busOnly ? accent.withAlpha(0.10f) : m_bg.withAlpha(0.28f));
         renderer.strokeRoundedRect(masterChip, 9.0f, 1.0f, busOnly ? accent.withAlpha(0.20f) : m_border.withAlpha(0.14f));
-        renderer.drawTextCentered(masterLabel, masterChip, 8.5f, m_textSecondary.withAlpha(0.88f));
+        renderer.drawTextCentered(masterLabel, masterChip, 9.0f, m_textSecondary.withAlpha(0.92f));
         renderer.fillRoundedRect(sidechainChip,
                                  9.0f,
                                  sidechainReady ? accent.withAlpha(0.10f) : m_bg.withAlpha(0.28f));
@@ -708,8 +708,8 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                                    sidechainReady ? accent.withAlpha(0.20f) : m_border.withAlpha(0.14f));
         renderer.drawTextCentered(sidechainLabel,
                                   sidechainChip,
-                                  8.5f,
-                                  m_textSecondary.withAlpha(sidechainReady ? 0.92f : 0.82f));
+                                  9.0f,
+                                  m_textSecondary.withAlpha(sidechainReady ? 0.94f : 0.90f));
 
         const float laneTop = routingCard.y + 34.0f;
         const float sourceW = 52.0f;
@@ -718,15 +718,15 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         renderer.fillRoundedRect(sourceChip, 10.0f, m_bg.withAlpha(0.34f));
         renderer.strokeRoundedRect(sourceChip, 10.0f, 1.0f, accent.withAlpha(0.16f));
         const std::string sourceLabel = m_cachedTrackNumber > 0 ? ("Track " + std::to_string(m_cachedTrackNumber)) : "Track";
-        renderer.drawTextCentered(sourceLabel, sourceChip, 8.75f, m_textSecondary.withAlpha(0.96f));
+        renderer.drawTextCentered(sourceLabel, sourceChip, 9.25f, m_textSecondary.withAlpha(0.97f));
 
         const std::string routeTarget = channel->routeName.empty() ? "Master" : channel->routeName;
         const char* outputPrefix = busOnly ? "Bus: " : "Out: ";
         const NUIRect outputChip{routingCard.right() - targetW - 10.0f, laneTop + 1.0f, targetW, 18.0f};
         renderer.fillRoundedRect(outputChip, 9.0f, m_bg.withAlpha(0.22f));
         renderer.strokeRoundedRect(outputChip, 9.0f, 1.0f, m_border.withAlpha(0.14f));
-        renderer.drawTextCentered(fitLabel(renderer, std::string(outputPrefix) + routeTarget, 8.5f, outputChip.width - 12.0f),
-                                  outputChip, 8.5f, m_textSecondary.withAlpha(0.88f));
+        renderer.drawTextCentered(fitLabel(renderer, std::string(outputPrefix) + routeTarget, 9.0f, outputChip.width - 12.0f),
+                                  outputChip, 9.0f, m_textSecondary.withAlpha(0.92f));
 
         const float routeBaseY = sourceChip.y + sourceChip.height * 0.5f;
         renderer.drawLine({sourceChip.right() + 6.0f, routeBaseY},
@@ -743,8 +743,8 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
             renderer.strokeRoundedRect(targetChip, 9.0f, 1.0f, accent.withAlpha(0.14f));
             const std::string routeLabel = std::string(send.sidechainOnly ? "SC" : "S")
                 + std::to_string(i + 1) + " -> " + send.targetName;
-            renderer.drawTextCentered(fitLabel(renderer, routeLabel, 8.25f, targetChip.width - 12.0f),
-                                      targetChip, 8.25f, m_textSecondary.withAlpha(0.94f));
+            renderer.drawTextCentered(fitLabel(renderer, routeLabel, 8.75f, targetChip.width - 12.0f),
+                                      targetChip, 8.75f, m_textSecondary.withAlpha(0.95f));
             renderer.drawLine({sourceChip.right() + 6.0f, routeBaseY},
                               {targetChip.x - 8.0f, targetChip.y + targetChip.height * 0.5f},
                               1.5f,
@@ -756,8 +756,8 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
             std::snprintf(extraBuf, sizeof(extraBuf), "+%d more", sendCount - visibleRoutes);
             renderer.drawText(extraBuf,
                               {routingCard.right() - 58.0f, routingCard.bottom() - 14.0f},
-                              8.0f,
-                              m_textSecondary.withAlpha(0.72f));
+                              9.0f,
+                              m_textSecondary.withAlpha(0.82f));
         }
 
         float currentY = routingCard.bottom() + 12.0f - m_scrollOffset;

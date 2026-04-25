@@ -1,10 +1,24 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "MusicHelpers.h"
 
+#include <algorithm>
+
 namespace AestraUI {
 
 std::vector<std::string> MusicTheory::getRootNames() {
     return { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+}
+
+std::string MusicTheory::getPitchName(int midiNote) {
+    static const char* names[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    midiNote = std::clamp(midiNote, 0, 127);
+    int octave = (midiNote / 12) - 2; // MIDI 60 = C3 (Ableton/Yamaha convention)
+    int noteInOctave = midiNote % 12;
+    return std::string(names[noteInOctave]) + std::to_string(octave);
+}
+
+std::string MusicTheory::getPitchNameShort(int midiNote) {
+    return getPitchName(midiNote);
 }
 
 std::vector<ScaleDef> MusicTheory::getScales() {
@@ -35,7 +49,7 @@ bool MusicTheory::isNoteInScale(int pitch, int rootKey, ScaleType type) {
     
     auto scales = getScales();
     int typeIdx = static_cast<int>(type);
-    if (typeIdx < 0 || typeIdx >= scales.size()) return true; // Fallback
+    if (typeIdx < 0 || typeIdx >= static_cast<int>(scales.size())) return true; // Fallback
     
     const auto& intervals = scales[typeIdx].intervals;
     for (int i : intervals) {

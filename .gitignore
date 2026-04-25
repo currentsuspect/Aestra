@@ -1,4 +1,8 @@
 # Build outputs
+build-*/
+res/
+scripts/build-aestra.sh
+scripts/test-aestra.sh
 **/build/
 **/out/
 **/bin/
@@ -170,13 +174,22 @@ ui_state.json
 recent_files.json
 *.userprefs
 
-# Build directories - comprehensive patterns
-**/build/
-**/build-*/
-**/build_*/
-**/build*/
-**/out/
-**/bin/
-**/obj/
-**/dist/
 .qwen/
+
+# Runtime & Build Artifacts (never commit) ──────────────────────────────
+audio_settings.conf
+browser_settings.json
+aestra_profile.json
+autosave.aes
+*.aes
+crash_flag
+runtime_log.txt
+build_log.txt
+*.json.trace
+autosave.*
+
+# Resonance Pro / Claude Code config
+.clangd
+.lsp.json
+.claude/
+.resonance/

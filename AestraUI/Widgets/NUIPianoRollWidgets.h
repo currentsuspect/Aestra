@@ -1,4 +1,4 @@
-﻿// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NUIComponent.h"
@@ -33,10 +33,22 @@ public:
     /** @brief Set the vertical scroll offset applied to the lane. */
     void setScrollOffsetY(float offset);
 
+    /** @brief Set callback for note preview (pitch, velocity). Called when user clicks a key. */
+    void setOnPreviewNote(std::function<void(int pitch, int velocity)> cb);
+
+    /** @brief Set callback to check if transport is playing (suppress preview when playing). */
+    void setIsPlayingCallback(std::function<bool()> cb);
+
+    /** @brief Forward isPlaying callback from PianoRollView. */
+    void setIsPlayingFromParent(std::function<bool()> cb) { m_isPlayingCallback = std::move(cb); }
+
 private:
     float keyHeight_;
     float scrollY_;
     int hoveredKey_; // -1 if none
+    int previewPitch_; // Currently playing preview note (-1 if none)
+    std::function<void(int pitch, int velocity)> onPreviewNote_;
+    std::function<bool()> m_isPlayingCallback;
 };
 
 // -----------------------------------------------------------------------------
@@ -142,6 +154,8 @@ public:
     void setGrid(std::shared_ptr<PianoRollGrid> grid);
     /** @brief Bind the note layer controlled by the toolbar tools. */
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> notes); // To set tools directly
+    void setPatternLengthBeats(double beats);
+    void setOnAdjustPatternLength(std::function<void(int barsDelta)> cb) { onAdjustPatternLength_ = std::move(cb); }
     /** @brief Get the currently open context menu, if any. */
     std::shared_ptr<NUIComponent> getActiveContextMenu() const { return m_activeContextMenu; }
     /** @brief Close and remove the currently open context menu, if any. */
@@ -157,6 +171,8 @@ private:
     std::shared_ptr<NUIButton> m_ptrBtn;
     std::shared_ptr<NUIButton> m_pencilBtn;
     std::shared_ptr<NUIButton> m_eraserBtn;
+    std::shared_ptr<NUIButton> m_lengthDownBtn;
+    std::shared_ptr<NUIButton> m_lengthUpBtn;
     
     GlobalTool activeTool_ = GlobalTool::Pencil;
     
@@ -165,11 +181,14 @@ private:
     std::shared_ptr<AestraUI::NUIIcon> m_ptrIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_pencilIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_eraserIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_lengthDownIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_lengthUpIcon;
 
     std::weak_ptr<PianoRollGrid> grid_;
     std::weak_ptr<PianoRollNoteLayer> notes_;
     
     std::shared_ptr<NUIComponent> m_activeContextMenu;
+    std::function<void(int barsDelta)> onAdjustPatternLength_;
 
     void closeActiveContextMenu();
     
@@ -177,6 +196,7 @@ private:
     void setActiveTool(GlobalTool tool);
     
     std::string m_patternName = "New Pattern";
+    double m_patternLengthBeats = 16.0;
     std::shared_ptr<NUILabel> m_patternLabel;
 };
 
@@ -279,6 +299,15 @@ public:
     /** @brief Get the snap grid used for note edits. */
     SnapGrid getSnap() const { return snap_; }
     
+    /** @brief Set the musical root key for scale snapping. */
+    void setRootKey(int root) { rootKey_ = root; }
+    /** @brief Set the active scale type for scale snapping. */
+    void setScaleType(ScaleType type) { scaleType_ = type; }
+    /** @brief Enable or disable snap-to-scale quantization on the Y-axis. */
+    void setSnapToScale(bool enabled) { snapToScale_ = enabled; }
+    /** @brief Check if snap-to-scale is currently active. */
+    bool getSnapToScale() const { return snapToScale_; }
+    
     /** @brief Push an undo command onto the local history stack. */
     void pushUndo(const std::string& desc, const std::vector<MidiNote>& oldNotes, const std::vector<MidiNote>& newNotes);
     /** @brief Undo the last local note edit. */
@@ -294,6 +323,12 @@ public:
     void setScrollOffsetX(float offset);
     /** @brief Set the vertical scroll offset. */
     void setScrollOffsetY(float offset);
+    void setTotalDurationBeats(double beats) { totalDurationBeats_ = beats; }
+    double getTotalDurationBeats() const { return totalDurationBeats_; }
+
+    /** @brief Call during drag to update edge scrolling and apply scroll offset. */
+    void updateEdgeScrolling(float mouseX, float mouseY, const NUIRect& bounds, std::function<void()> syncCallback = nullptr);
+    
     /** @brief Set the current playhead beat used for rendering. */
     void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
 
@@ -312,6 +347,7 @@ private:
     float scrollX_;
     float scrollY_;
     double playheadBeat_ = 0.0;
+    double totalDurationBeats_ = 400.0;
     
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
     uint64_t defaultUnitId_ = 0;
@@ -339,6 +375,8 @@ private:
     State state_ = State::None;
     
     NUIPoint dragStartPos_;
+    float dragStartScrollX_ = 0.0f;
+    float dragStartScrollY_ = 0.0f;
     std::vector<MidiNote> dragStartNotes_; // Snapshot for move/resize logic
     
     // For Painting
@@ -351,11 +389,23 @@ private:
     
     // Snap
     SnapGrid snap_ = SnapGrid::Beat;
+    
+    // Scale Snapping
+    int rootKey_ = 0;
+    ScaleType scaleType_ = ScaleType::Chromatic;
+    bool snapToScale_ = false;
+
+    // Edge Scrolling During Drag
+    static constexpr float kEdgeThreshold = 50.0f;
+    static constexpr float kMaxScrollSpeed = 15.0f;
+    bool isEdgeScrolling_ = false;
+    NUIPoint edgeScrollDir_; // (-1,-1) to (1,1) indicating direction
 
     // Helpers
     int findNoteAt(float localX, float localY);
     void commitNotes();
     double snapToGrid(double beat);
+    int snapPitchToScale(int pitch);
 };
 
 // -----------------------------------------------------------------------------
@@ -405,9 +455,11 @@ public:
     void setNotes(const std::vector<MidiNote>& notes);
     const std::vector<MidiNote>& getNotes() const;
     void setPatternName(const std::string& name);
+    void setPatternLengthBeats(double beats);
     void setPlayheadBeat(double beat, bool follow = false);
     void setTotalDurationBeats(double beats);
     void setLocalMinimapVisible(bool visible);
+    void applyEdgeAutoScroll(float scrollX, float scrollY);
     double getViewStartBeat() const;
     double getViewDurationBeats() const;
     void setViewWindow(double startBeat, double durationBeats);
@@ -415,6 +467,13 @@ public:
     void setDefaultUnitId(uint64_t unitId);
     
     void setGhostPatterns(const std::vector<PianoRollNoteLayer::GhostPattern>& ghosts);
+
+    /** @brief Set callback to check transport playback state (suppress preview when playing). */
+    void setIsPlayingCallback(std::function<bool()> cb);
+
+    /** @brief Forward preview note callback to key lane. */
+    void setOnPreviewNote(std::function<void(int pitch, int velocity)> cb);
+    void setOnAdjustPatternLength(std::function<void(int barsDelta)> cb);
 
     void setPixelsPerBeat(float ppb);
     void setBeatsPerBar(int bpb);
@@ -447,7 +506,10 @@ private:
     float m_targetScrollY;
     double m_playheadBeat = 0.0;
     double m_totalDurationBeats = 400.0;
+    double m_patternLengthBeats = 16.0;
     bool m_showLocalMinimap = true;
+
+    std::function<bool()> m_isPlayingCallback;
 
     bool m_isResizingPanel = false; // Added for splitter dragging
     float m_dragStartPanelHeight = 0.0f;

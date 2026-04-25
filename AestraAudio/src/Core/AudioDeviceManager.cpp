@@ -66,9 +66,6 @@ bool AudioDeviceManager::initialize() {
     } catch (const std::exception& e) {
         std::cerr << "AudioDeviceManager::initialize: Exception: " << e.what() << std::endl;
         return false;
-    } catch (...) {
-        std::cerr << "AudioDeviceManager::initialize: Unknown exception" << std::endl;
-        return false;
     }
 }
 
@@ -843,7 +840,10 @@ bool AudioDeviceManager::switchToSafetyDriver() {
         try {
             m_activeDriver->stopStream();
             m_activeDriver->closeStream();
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            // Driver in bad state - log and continue cleanup
+            std::cerr << "Warning: Error closing audio driver: " << e.what() << std::endl;
+        }
         m_activeDriver = nullptr;
     }
 

@@ -8,6 +8,17 @@
 
 namespace AestraUI {
 
+namespace {
+bool isComponentEligibleForDragTarget(const NUIComponent* component) {
+    for (const NUIComponent* node = component; node != nullptr; node = node->getParent()) {
+        if (!node->isVisible() || !node->isHitTestVisible() || node->getOpacity() <= 0.0f) {
+            return false;
+        }
+    }
+    return true;
+}
+} // namespace
+
 NUIDragDropManager& NUIDragDropManager::getInstance() {
     static NUIDragDropManager instance;
     return instance;
@@ -175,10 +186,10 @@ std::shared_ptr<IDropTarget> NUIDragDropManager::findTargetAt(const NUIPoint& po
             
             // DEBUG LOGGING
             auto component = std::dynamic_pointer_cast<NUIComponent>(target);
-            bool isVisible = component ? component->isVisible() : true;
-            
-            if (component && !isVisible) {
-                Aestra::Log::info("[DragDrop] Skipping invisible target");
+            const bool isEligible = component ? isComponentEligibleForDragTarget(component.get()) : true;
+
+            if (component && !isEligible) {
+                Aestra::Log::info("[DragDrop] Skipping hidden/non-interactive target");
                 ++it;
                 continue;
             }
@@ -186,7 +197,7 @@ std::shared_ptr<IDropTarget> NUIDragDropManager::findTargetAt(const NUIPoint& po
             auto bounds = target->getDropBounds();
             if (bounds.contains(position)) {
                 if (component) {
-                     Aestra::Log::info("[DragDrop] Hit target (Visible=" + std::to_string(isVisible) + ")");
+                     Aestra::Log::info("[DragDrop] Hit eligible drop target");
                 }
                 return target;
             }

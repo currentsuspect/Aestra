@@ -45,11 +45,11 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OfflineRenderRegressionTest.cpp")
 endif()
 
 # Rumble Render Test
-if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleRenderTest.cpp")
+if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleRenderTest.cpp")
     add_executable(RumbleRenderTest
         RumbleRenderTest.cpp
     )
-    target_link_libraries(RumbleRenderTest PRIVATE AestraRumble AestraAudioCore AestraCore)
+    target_link_libraries(RumbleRenderTest PRIVATE AestraPremiumPlugins AestraAudioCore AestraCore)
     target_include_directories(RumbleRenderTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -62,11 +62,11 @@ if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SO
 endif()
 
 # Rumble Arsenal Audible Test
-if(TARGET AestraAudioCore AND TARGET AestraRumble AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleArsenalAudibleTest.cpp")
+if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleArsenalAudibleTest.cpp")
     add_executable(RumbleArsenalAudibleTest
         RumbleArsenalAudibleTest.cpp
     )
-    target_link_libraries(RumbleArsenalAudibleTest PRIVATE AestraAudioCore AestraRumble AestraCore)
+    target_link_libraries(RumbleArsenalAudibleTest PRIVATE AestraAudioCore AestraPremiumPlugins AestraCore)
     target_include_directories(RumbleArsenalAudibleTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include

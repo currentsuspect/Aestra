@@ -2,12 +2,15 @@
 
 #include "PluginUIController.h"
 #include "PluginSelectorMenu.h"
-#include "RumblePluginEditor.h"
 #include "GenericPluginEditor.h"
 #include "AestraEQEditor.h"
 #include "AestraCompEditor.h"
 #include "AestraVerbEditor.h"
 #include "AestraDelayEditor.h"
+
+#ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
+#include "RumblePluginEditor.h"
+#endif
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -208,6 +211,14 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
     
     rack->setOnSlotBypassToggled([chain](int slot, bool bypassed) {
         chain->setSlotBypassed(slot, bypassed);
+        if (!bypassed) {
+            if (auto plugin = chain->getPlugin(static_cast<size_t>(slot))) {
+                plugin->resetWatchdog();
+                if (!plugin->isActive()) {
+                    plugin->activate();
+                }
+            }
+        }
     });
     
     // NOTE: Do NOT bind setOnSlotRemoveRequested here!
@@ -279,9 +290,12 @@ bool PluginUIController::loadPluginToSlot(const std::string& pluginId,
     auto instance = m_manager->createInstanceById(pluginId);
     if (!instance) return false;
     
-    // Initialize with current audio settings
-    // TODO: Get actual sample rate/block size from audio engine
-    if (!instance->initialize(44100.0, 512)) {
+    // Initialize with current manager defaults.
+    double sampleRate = m_manager->getDefaultSampleRate();
+    if (sampleRate <= 0.0) sampleRate = 44100.0;
+    uint32_t blockSize = m_manager->getDefaultBlockSize();
+    if (blockSize == 0) blockSize = 512;
+    if (!instance->initialize(sampleRate, blockSize)) {
         return false;
     }
     
@@ -321,13 +335,16 @@ void PluginUIController::openPluginEditor(
     std::shared_ptr<NUIComponent> editor;
     const std::string& pluginId = instance->getInfo().id;
 
-    if (pluginId == "com.Aestrastudios.rumble") {
+    if (false) {
+#ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
+    } else if (pluginId == "com.Aestrastudios.rumble") {
         auto ed = std::make_shared<RumblePluginEditor>(instance);
         ed->setOnClose([this, ed]() {
             if (m_popupLayer) m_popupLayer->removeChild(ed);
             m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
         });
         editor = ed;
+#endif
     } else if (pluginId == "com.Aestrastudios.eq") {
         auto ed = std::make_shared<AestraEQEditor>(instance);
         ed->setOnClose([this, ed]() {
@@ -380,8 +397,10 @@ void PluginUIController::openPluginEditor(
             comp->onResize();
         } else if (auto generic = std::dynamic_pointer_cast<GenericPluginEditor>(editorComp)) {
             generic->onResize();
+#ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
         } else if (auto rumble = std::dynamic_pointer_cast<RumblePluginEditor>(editorComp)) {
             rumble->onResize(static_cast<int>(width), static_cast<int>(height));
+#endif
         }
     };
 

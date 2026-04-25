@@ -3,6 +3,7 @@
 
 #include "Commands/ICommand.h"
 #include "Core/MixerChannel.h"
+#include "AestraLog.h"
 
 #include <memory>
 #include <string>
@@ -25,6 +26,7 @@ public:
         m_originalVolume = m_channel.getVolume();
         m_channel.setVolume(m_newVolume);
         m_executed = true;
+        Log::info("[SetVolume] execute: " + std::to_string(m_originalVolume) + " -> " + std::to_string(m_newVolume));
     }
 
     void undo() override {
@@ -33,6 +35,7 @@ public:
 
         m_channel.setVolume(m_originalVolume);
         m_executed = false;
+        Log::info("[SetVolume] undo: " + std::to_string(m_newVolume) + " -> " + std::to_string(m_originalVolume));
     }
 
     void redo() override {

@@ -75,10 +75,12 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
     const NUIRect& b = layout.bounds;
     if (b.isEmpty()) return;
 
-    // Glass bar.
-    renderer.fillRoundedRect(b, 6.0f, colors.glassFill);
+    // Piano-roll style glass shell.
+    renderer.fillRoundedRect(b, 7.0f, colors.glassFill);
+    renderer.fillRoundedRect(NUIRect(b.x + 1.0f, b.y + 1.0f, b.width - 2.0f, b.height * 0.45f), 6.0f,
+                             colors.glassFill.lightened(0.025f).withAlpha(0.70f));
     if (colors.glassBorder.a > 0.0f) {
-        renderer.strokeRoundedRect(b, 6.0f, 1.0f, colors.glassBorder);
+        renderer.strokeRoundedRect(b, 7.0f, 1.0f, colors.glassBorder);
     }
 
     // Corner separator (matches the ruler corner boundary).
@@ -117,7 +119,7 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
         const float vw = std::max(1.0f, std::abs(x1 - x0));
         viewportRect = NUIRect(vx, map.y, vw, map.height);
         hasViewportRect = true;
-        renderer.fillRect(viewportRect, colors.viewFill);
+        renderer.fillRoundedRect(viewportRect, 5.0f, colors.viewFill);
     }
 
     const int N = static_cast<int>(s->bucketCount);
@@ -277,7 +279,7 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
 
     // Viewport outline stays above the content; fill was rendered beneath it.
     if (hasViewportRect) {
-        renderer.strokeRect(viewportRect, 1.0f, colors.viewOutline);
+        renderer.strokeRoundedRect(viewportRect, 5.0f, 1.0f, colors.viewOutline);
     }
 
     // Playhead: collision-free outline (dark underlay + bright center).

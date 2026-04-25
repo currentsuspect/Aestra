@@ -872,14 +872,20 @@ NUIRect NUIScrollbar::getRightArrowRect() const
 NUIRect NUIScrollbar::getTrackRect() const
 {
     NUIRect bounds = getBounds();
+    const bool arrowless = arrowSize_ <= 0.5f;
+    const float endCapInset = arrowless ? 2.0f : 0.0f;
     
     if (orientation_ == Orientation::Vertical)
     {
-        return NUIRect(bounds.x, bounds.y + arrowSize_, bounds.width, bounds.height - arrowSize_ * 2);
+        const float y = bounds.y + arrowSize_ + endCapInset;
+        const float h = std::max(0.0f, bounds.height - (arrowSize_ * 2.0f) - (endCapInset * 2.0f));
+        return NUIRect(bounds.x, y, bounds.width, h);
     }
     else
     {
-        return NUIRect(bounds.x + arrowSize_, bounds.y, bounds.width - arrowSize_ * 2, bounds.height);
+        const float x = bounds.x + arrowSize_ + endCapInset;
+        const float w = std::max(0.0f, bounds.width - (arrowSize_ * 2.0f) - (endCapInset * 2.0f));
+        return NUIRect(x, bounds.y, w, bounds.height);
     }
 }
 
@@ -1030,30 +1036,32 @@ void NUIScrollbar::drawArrowIcon(NUIRenderer& renderer, const NUIRect& rect, flo
 
 void NUIScrollbar::drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& trackRect)
 {
-    // Track: subtle gradient based on configured color
+    if (trackRect.isEmpty()) return;
+
+    // Track: make end caps read clearly as intentional rounded pills.
     const float trackAlphaMul = (isHovered_ || isDragging_) ? 0.16f : 0.06f;
-    NUIColor trackBase = trackColor_.withAlpha(std::clamp(trackColor_.a * trackAlphaMul, 0.0f, 1.0f));
-    NUIColor trackTop = trackBase.lightened(0.03f);
-    NUIColor trackBottom = trackBase.darkened(0.06f);
-    const float radius = std::min(trackRect.width, trackRect.height) * 0.5f;
-    
-    // Draw gradient track background (16px wide)
-    for (int i = 0; i < 3; ++i)
-    {
-        float factor = static_cast<float>(i) / 2.0f;
-        NUIColor gradientColor = NUIColor::lerp(trackTop, trackBottom, factor);
-        NUIRect gradientRect = trackRect;
-        gradientRect.y += i * 0.4f;
-        gradientRect.height -= i * 0.4f;
-        renderer.fillRoundedRect(gradientRect, radius, gradientColor);
+    const NUIColor trackBase = trackColor_.withAlpha(std::clamp(trackColor_.a * trackAlphaMul, 0.0f, 1.0f));
+    const NUIColor trackTop = trackBase.lightened(0.03f);
+    const NUIColor trackBottom = trackBase.darkened(0.06f);
+
+    NUIRect visualTrack = trackRect;
+    if (orientation_ == Orientation::Vertical) {
+        visualTrack.x += 1.0f;
+        visualTrack.width = std::max(0.0f, visualTrack.width - 2.0f);
+    } else {
+        visualTrack.y += 1.0f;
+        visualTrack.height = std::max(0.0f, visualTrack.height - 2.0f);
     }
-    
-    // Very subtle inner highlight
-    NUIRect highlightRect = trackRect;
-    highlightRect.x += 1.0f;
+    if (visualTrack.isEmpty()) return;
+
+    const float maxRadius = std::min(visualTrack.width, visualTrack.height) * 0.5f;
+    const float radius = std::clamp(borderRadius_, 0.0f, maxRadius);
+
+    renderer.fillRoundedRect(visualTrack, radius, trackBottom);
+
+    NUIRect highlightRect = visualTrack;
     highlightRect.y += 1.0f;
-    highlightRect.width -= 2.0f;
-    highlightRect.height = trackRect.height * 0.3f;
+    highlightRect.height = std::max(0.0f, visualTrack.height * 0.45f - 1.0f);
     const float highlightAlphaMul = (isHovered_ || isDragging_) ? 0.35f : 0.25f;
     renderer.fillRoundedRect(highlightRect, std::max(0.0f, radius - 1.0f),
                              trackTop.withAlpha(trackTop.a * highlightAlphaMul));

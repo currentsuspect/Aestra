@@ -5,6 +5,7 @@
 #include <vector>
 #include <functional>
 #include <string>
+#include <unordered_set>
 
 #include "../AestraUI/Core/NUIComponent.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
@@ -16,6 +17,7 @@ namespace AestraUI {
     class NUISegmentedControl;
     class NUIButton;
     class NUIIcon;
+    class NUIContextMenu;
 }
 
 namespace Aestra {
@@ -36,13 +38,22 @@ public:
     void setOnPatternSelected(std::function<void(Aestra::Audio::PatternID)> callback) { m_onPatternSelected = callback; }
     void setOnPatternDragStart(std::function<void(Aestra::Audio::PatternID)> callback) { m_onPatternDragStart = callback; }
     void setOnPatternDoubleClick(std::function<void(Aestra::Audio::PatternID)> callback) { m_onPatternDoubleClick = callback; }
+    void setOnPatternPreviewRequested(std::function<void(Aestra::Audio::PatternID)> callback) { m_onPatternPreviewRequested = std::move(callback); }
+    void setOnPatternPlaceOnTimelineRequested(std::function<void(Aestra::Audio::PatternID)> callback) { m_onPatternPlaceOnTimelineRequested = std::move(callback); }
     
     // Clip callbacks
     void setOnClipDragStart(std::function<void(Aestra::Audio::ClipSourceID)> callback) { m_onClipDragStart = callback; }
+    void setOnClipPreviewRequested(std::function<void(const std::string&)> callback) { m_onClipPreviewRequested = std::move(callback); }
+    void setOnClipPlaceOnTimelineRequested(std::function<void(const std::string&, const std::string&)> callback) { m_onClipPlaceOnTimelineRequested = std::move(callback); }
+    void setOnClipShowInFileBrowserRequested(std::function<void(const std::string&)> callback) { m_onClipShowInFileBrowserRequested = std::move(callback); }
 
     // Currently selected item
     Aestra::Audio::PatternID getSelectedPatternId() const { return m_selectedPatternId; }
     void setSelectedPatternId(Aestra::Audio::PatternID patternId, bool notify = false);
+    bool isClipBinEmpty() const;
+    bool usesCompactRail() const;
+    void showPatternsTab();
+    void showClipsTab();
 
     // IDropTarget Implementation
     AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
@@ -75,6 +86,7 @@ private:
         bool isMidi;
         double lengthBeats;
         int mixerChannel = -1;
+        bool isPlacedOnTimeline = false;
     };
     std::vector<PatternEntry> m_patterns;
     
@@ -86,6 +98,7 @@ private:
         uint32_t sampleRate;
         uint32_t numChannels;
         double duration;
+        bool isPlacedOnTimeline = false;
     };
     std::vector<ClipEntry> m_clips;
     
@@ -96,7 +109,7 @@ private:
     
     // UI Layout
     float m_headerHeight = 40.0f; // Header now contains Buttons
-    float m_footerHeight = 42.0f; // Footer contains Mode Toggle
+    float m_footerHeight = 0.0f;
     float m_itemHeight = 32.0f;
     float m_scrollOffset = 0.0f;
     float m_targetScrollOffset = 0.0f;
@@ -105,7 +118,12 @@ private:
     std::function<void(Aestra::Audio::PatternID)> m_onPatternSelected;
     std::function<void(Aestra::Audio::PatternID)> m_onPatternDragStart;
     std::function<void(Aestra::Audio::PatternID)> m_onPatternDoubleClick;
+    std::function<void(Aestra::Audio::PatternID)> m_onPatternPreviewRequested;
+    std::function<void(Aestra::Audio::PatternID)> m_onPatternPlaceOnTimelineRequested;
     std::function<void(Aestra::Audio::ClipSourceID)> m_onClipDragStart;
+    std::function<void(const std::string&)> m_onClipPreviewRequested;
+    std::function<void(const std::string&, const std::string&)> m_onClipPlaceOnTimelineRequested;
+    std::function<void(const std::string&)> m_onClipShowInFileBrowserRequested;
     
     // Buttons (Patterns mode)
     std::shared_ptr<AestraUI::NUIButton> m_createButton;
@@ -118,6 +136,7 @@ private:
     std::shared_ptr<AestraUI::NUIIcon> m_trashIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_midiIcon;
     std::shared_ptr<AestraUI::NUIIcon> m_audioIcon;
+    std::shared_ptr<AestraUI::NUIIcon> m_playIcon;
     
     // Theme colors
     AestraUI::NUIColor m_backgroundColor;
@@ -141,7 +160,12 @@ private:
     
     // Drag visual feedback
     bool m_isDragOver = false;
-    
+    bool m_dropTargetRegistered = false;
+    std::unordered_set<uint64_t> m_removedClipSourceIds;
+    std::unordered_set<uint64_t> m_removedPatternIds;
+    std::shared_ptr<AestraUI::NUIContextMenu> m_clipContextMenu;
+    std::shared_ptr<AestraUI::NUIContextMenu> m_patternContextMenu;
+
     void renderHeader(AestraUI::NUIRenderer& renderer);
     void renderContent(AestraUI::NUIRenderer& renderer);
     void renderPatternList(AestraUI::NUIRenderer& renderer);
@@ -151,6 +175,9 @@ private:
     void renderClipItem(AestraUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool selected, bool hovered);
     
     void switchMode(BrowserMode mode);
+    void ensureDropTargetRegistration();
+    void showClipContextMenu(const ClipEntry& entry, const AestraUI::NUIPoint& position);
+    void showPatternContextMenu(const PatternEntry& entry, const AestraUI::NUIPoint& position);
 };
 
 } // namespace Audio

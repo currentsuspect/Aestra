@@ -20,6 +20,8 @@
 #include <string>
 #include <vector>
 
+#include "ClipResampler.h"
+
 namespace Aestra {
 namespace Audio {
 
@@ -138,6 +140,12 @@ public:
     /// Clear the entire queue
     void clearQueue();
 
+    /// Remove one item from queue by index
+    void removeFromQueue(size_t index);
+
+    /// Reorder one item in queue (move source index to destination index)
+    void moveQueueItem(size_t fromIndex, size_t toIndex);
+
     /// Get current queue
     const std::vector<AuditionQueueItem>& getQueue() const { return m_queue; }
 
@@ -221,6 +229,9 @@ public:
     /// Process audio block (called from audio thread)
     void processBlock(float* output, uint32_t numFrames, uint32_t numChannels);
 
+    /// Handle deferred track transition (call from main thread)
+    void handleDeferredTrackTransition();
+
     /// Set output sample rate
     void setSampleRate(double sampleRate) { m_sampleRate.store(sampleRate); }
 
@@ -235,6 +246,8 @@ private:
     std::atomic<bool> m_isPlaying{false};
     std::atomic<double> m_positionSeconds{0.0};
     std::atomic<double> m_sampleRate{48000.0};
+    std::atomic<double> m_cachedDurationSeconds{0.0};
+    std::atomic<bool> m_trackTransitionPending{false};
 
     // DSP
     AuditionDSPPreset m_currentPreset{AuditionDSPPreset::Bypass()};
@@ -270,12 +283,14 @@ private:
             lofiCounter = 0;
         }
     } m_dspState;
+    ClipResampler m_resampler;
 
     // Options
     std::atomic<bool> m_shuffle{false};
     RepeatMode m_repeatMode{RepeatMode::Off};
     std::atomic<uint32_t> m_crossfadeMs{500};
     std::atomic<float> m_volume{1.0f};
+    std::atomic<int> m_positionCallbackCounter{0};
 
     // Audio source
     std::shared_ptr<ClipSource> m_currentSource;

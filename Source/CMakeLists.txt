@@ -44,6 +44,10 @@ set(Aestra_SOURCES
 	Panels/PatternBrowserPanel.cpp
 	Panels/AuditionPanel.h
 	Panels/AuditionPanel.cpp
+	Panels/AestraHistoryPanel.h
+	Panels/AestraHistoryPanel.cpp
+	Panels/SampleEditorPanel.h
+	Panels/SampleEditorPanel.cpp
 	
 	# Settings
 	Settings/ConfirmationDialog.h
@@ -107,6 +111,17 @@ set(Aestra_SOURCES
 
 
 add_executable(Aestra ${Aestra_SOURCES})
+
+if(AESTRA_ENABLE_TEST_LICENSES)
+	target_compile_definitions(Aestra PRIVATE AESTRA_ENABLE_TEST_LICENSES=1)
+endif()
+
+if(TARGET AestraLicense)
+	target_link_libraries(Aestra PRIVATE AestraLicense)
+	target_compile_definitions(Aestra PRIVATE AESTRA_HAS_LICENSE_GATE=1)
+else()
+	target_compile_definitions(Aestra PRIVATE AESTRA_HAS_LICENSE_GATE=0)
+endif()
 
 # Enable UTF-8 encoding for source files (fixes Unicode character rendering)
 if(MSVC)

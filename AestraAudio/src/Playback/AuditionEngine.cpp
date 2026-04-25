@@ -112,6 +112,67 @@ void AuditionEngine::clearQueue() {
     Log::info("[AuditionEngine] Queue cleared");
 }
 
+void AuditionEngine::removeFromQueue(size_t index) {
+    std::function<void()> onQueueUpdated;
+    bool shouldReloadCurrent = false;
+    {
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        if (index >= m_queue.size()) return;
+
+        const int32_t removed = static_cast<int32_t>(index);
+        m_queue.erase(m_queue.begin() + static_cast<std::ptrdiff_t>(index));
+
+        if (m_queue.empty()) {
+            m_currentIndex = -1;
+            m_currentSource.reset();
+            m_positionSeconds.store(0.0);
+            m_cachedDurationSeconds.store(0.0, std::memory_order_release);
+            m_isPlaying.store(false);
+        } else if (m_currentIndex > removed) {
+            --m_currentIndex;
+        } else if (m_currentIndex == removed) {
+            if (m_currentIndex >= static_cast<int32_t>(m_queue.size())) {
+                m_currentIndex = static_cast<int32_t>(m_queue.size()) - 1;
+            }
+            shouldReloadCurrent = true;
+        }
+
+        onQueueUpdated = m_onQueueUpdated;
+    }
+
+    if (shouldReloadCurrent) {
+        loadCurrentTrack(false);
+    }
+    if (onQueueUpdated) onQueueUpdated();
+}
+
+void AuditionEngine::moveQueueItem(size_t fromIndex, size_t toIndex) {
+    std::function<void()> onQueueUpdated;
+    {
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        if (fromIndex >= m_queue.size() || toIndex >= m_queue.size() || fromIndex == toIndex) {
+            return;
+        }
+
+        auto moved = std::move(m_queue[fromIndex]);
+        m_queue.erase(m_queue.begin() + static_cast<std::ptrdiff_t>(fromIndex));
+        m_queue.insert(m_queue.begin() + static_cast<std::ptrdiff_t>(toIndex), std::move(moved));
+
+        const int32_t from = static_cast<int32_t>(fromIndex);
+        const int32_t to = static_cast<int32_t>(toIndex);
+        if (m_currentIndex == from) {
+            m_currentIndex = to;
+        } else if (from < m_currentIndex && to >= m_currentIndex) {
+            --m_currentIndex;
+        } else if (from > m_currentIndex && to <= m_currentIndex) {
+            ++m_currentIndex;
+        }
+
+        onQueueUpdated = m_onQueueUpdated;
+    }
+    if (onQueueUpdated) onQueueUpdated();
+}
+
 std::optional<AuditionQueueItem> AuditionEngine::getCurrentItem() const {
     std::lock_guard<std::mutex> lock(m_queueMutex);
     if (m_currentIndex >= 0 && m_currentIndex < static_cast<int32_t>(m_queue.size())) {
@@ -252,11 +313,16 @@ double AuditionEngine::getPositionNormalized() const {
     double duration = getDurationSeconds();
     if (duration <= 0.0)
         return 0.0;
-    return m_positionSeconds.load() / duration;
+    return std::clamp(getPositionSeconds() / duration, 0.0, 1.0);
 }
 
 double AuditionEngine::getPositionSeconds() const {
-    return m_positionSeconds.load();
+    const double raw = std::max(0.0, m_positionSeconds.load());
+    const double duration = getDurationSeconds();
+    if (duration > 0.0) {
+        return std::min(raw, duration);
+    }
+    return raw;
 }
 
 double AuditionEngine::getDurationSeconds() const {
@@ -335,13 +401,12 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
             output[i * numChannels + 1] = outR;
         } else {
             // Mono source or mono output - use ClipResampler (falls back to Cubic for mono)
-            static ClipResampler resampler;
-            resampler.setQuality(ClipResamplingQuality::High);
+            m_resampler.setQuality(ClipResamplingQuality::High);
 
             for (uint32_t ch = 0; ch < numChannels; ++ch) {
                 uint32_t srcCh = (srcChannels == 1) ? 0 : ch;
                 output[i * numChannels + ch] =
-                    resampler.getSample(interleavedData, totalFrames, srcChannels, srcPosition, srcCh);
+                    m_resampler.getSample(interleavedData, totalFrames, srcChannels, srcPosition, srcCh);
             }
         }
     }
@@ -354,15 +419,18 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
         }
     }
 
-    m_positionSeconds.store(currentPos);
-
     // Check for end of track
-    double duration = getDurationSeconds();
+    double duration = m_cachedDurationSeconds.load(std::memory_order_acquire);
+    const double boundedPos = (duration > 0.0)
+                                  ? std::clamp(currentPos, 0.0, duration)
+                                  : std::max(0.0, currentPos);
+    m_positionSeconds.store(boundedPos);
+
     if (currentPos >= duration && duration > 0.0) {
         if (m_repeatMode == RepeatMode::One) {
-            seekSeconds(0.0);
+            m_positionSeconds.store(0.0);
         } else {
-            nextTrack();
+            m_trackTransitionPending.store(true, std::memory_order_release);
         }
     }
 
@@ -372,9 +440,8 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     }
 
     // Position callback (throttled)
-    static int callbackCounter = 0;
-    if (++callbackCounter % 10 == 0 && m_onPositionChanged) {
-        m_onPositionChanged(currentPos);
+    if (m_positionCallbackCounter.fetch_add(1, std::memory_order_relaxed) % 10 == 0 && m_onPositionChanged) {
+        m_onPositionChanged(boundedPos);
     }
 }
 
@@ -421,6 +488,7 @@ void AuditionEngine::loadCurrentTrack(bool startPlayback) {
             } catch (const std::exception& e) {
                 Log::error("[AuditionEngine] Exception creating source: " + std::string(e.what()));
                 m_currentSource.reset();
+                m_cachedDurationSeconds.store(0.0, std::memory_order_release);
             }
         } else {
             Log::error("[AuditionEngine] Failed to decode file: " + item.filePath);
@@ -428,7 +496,10 @@ void AuditionEngine::loadCurrentTrack(bool startPlayback) {
         }
     }
 
-    m_positionSeconds.store(item.lastPosition);
+    const double duration = getDurationSeconds();
+    const double clampedStart = (duration > 0.0) ? std::clamp(item.lastPosition, 0.0, duration) : std::max(0.0, item.lastPosition);
+    m_positionSeconds.store(clampedStart);
+    m_cachedDurationSeconds.store(duration, std::memory_order_release);
 
     notifyTrackChanged();
 
@@ -673,6 +744,12 @@ void AuditionEngine::applyDSPChain(float* buffer, uint32_t numFrames, uint32_t n
         if (numChannels > 1) {
             buffer[i * numChannels + 1] = std::clamp(right, -1.0f, 1.0f);
         }
+    }
+}
+
+void AuditionEngine::handleDeferredTrackTransition() {
+    if (m_trackTransitionPending.exchange(false, std::memory_order_acq_rel)) {
+        nextTrack();
     }
 }
 

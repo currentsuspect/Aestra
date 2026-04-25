@@ -614,10 +614,16 @@ public:
      * @brief Start transport playback from the current UI position.
      */
     void play() {
+        if (!m_patternMode.load(std::memory_order_relaxed)) {
+            m_patternPlaybackEngine.flush();
+        }
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
         const double playStartPosition = m_position.load(std::memory_order_relaxed);
         m_playStartPosition.store(playStartPosition, std::memory_order_relaxed);
+        if (!m_patternMode.load(std::memory_order_relaxed)) {
+            scheduleTimelinePatternInstances(playStartPosition);
+        }
         pushTransportCommand(1.0f, playStartPosition);
         if (m_stopPreviewCallback) {
             m_stopPreviewCallback();
@@ -721,6 +727,7 @@ public:
      */
     void stopArsenalPlayback(bool keepPatternMode = false) {
         stop();
+        m_patternPlaybackEngine.flush();
         if (!keepPatternMode) {
             m_patternMode.store(false, std::memory_order_relaxed);
         }
@@ -859,6 +866,19 @@ public:
         m_position.store(0.0, std::memory_order_relaxed);
         m_playStartPosition.store(0.0, std::memory_order_relaxed);
         m_patternPlaybackEngine.flush();
+
+        {
+            auto* pattern = m_patternManager.getPattern(pid);
+            if (pattern && pattern->isMidi()) {
+                const double resolvedLength = std::max(8.0, pattern->lengthBeats);
+                if (std::abs(resolvedLength - pattern->lengthBeats) > 0.001) {
+                    m_patternManager.applyPatch(pid, [resolvedLength](PatternSource& p) {
+                        p.lengthBeats = resolvedLength;
+                    });
+                }
+            }
+        }
+
         pushTransportCommand(1.0f, 0.0);
         m_patternPlaybackEngine.schedulePatternInstance(pid, 0.0, 1);
     }
@@ -895,6 +915,65 @@ public:
     }
 
 private:
+    static double quantizePatternLengthBeats(double contentEndBeat) {
+        constexpr double kBeatsPerBar = 4.0;
+        constexpr double kBarsPerPatternBlock = 4.0;
+        constexpr double kPatternBlockBeats = kBeatsPerBar * kBarsPerPatternBlock; // 16 beats = 4 bars
+
+        const double safeContentEnd = std::max(0.0, contentEndBeat);
+        const double blocksNeeded = std::max(1.0, std::ceil(safeContentEnd / kPatternBlockBeats));
+        return blocksNeeded * kPatternBlockBeats;
+    }
+
+    void scheduleTimelinePatternInstances(double playStartPositionSeconds) {
+        const double bpm = std::max(1.0, m_playlistModel.getBPM());
+        const double playStartBeat = playStartPositionSeconds * bpm / 60.0;
+        const auto instances = m_playlistModel.collectMidiClipInstances(m_patternManager);
+
+        Log::info("[TimelinePattern] scheduling " + std::to_string(instances.size()) +
+                  " MIDI clip instances from beat " + std::to_string(playStartBeat));
+
+        uint32_t instanceId = 2; // Reserve 1 for Arsenal-focused single-pattern playback.
+        for (const auto& instance : instances) {
+            if (!instance.isValid()) {
+                continue;
+            }
+            if (instance.endBeat() <= playStartBeat) {
+                continue;
+            }
+            if (instanceId >= 256) {
+                Log::warning("[TrackManager] Too many timeline MIDI clip instances to schedule; truncating at 254");
+                break;
+            }
+
+            std::string routeSummary = "no-pattern";
+            if (auto* pattern = m_patternManager.getPattern(instance.patternId); pattern && pattern->isMidi()) {
+                const auto& midi = std::get<MidiPayload>(pattern->payload);
+                size_t noteCount = midi.notes.size();
+                UnitID firstUnitId = noteCount > 0 ? midi.notes.front().unitId : 0;
+                int firstRoute = -999;
+                if (firstUnitId != 0) {
+                    if (auto* unit = m_unitManager.getUnit(firstUnitId)) {
+                        firstRoute = unit->targetMixerRoute;
+                    } else {
+                        firstRoute = -998;
+                    }
+                }
+                routeSummary = "notes=" + std::to_string(noteCount) +
+                               " firstUnit=" + std::to_string(firstUnitId) +
+                               " firstRoute=" + std::to_string(firstRoute);
+            }
+
+            Log::info("[TimelinePattern] pattern=" + std::to_string(instance.patternId.value) +
+                      " clipStart=" + std::to_string(instance.startBeat) +
+                      " sourceOffset=" + std::to_string(instance.sourceOffsetBeats) +
+                      " schedStart=" + std::to_string(instance.patternStartBeat()) +
+                      " " + routeSummary);
+            m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.patternStartBeat(), instanceId++,
+                                                            instance.sourceOffsetBeats, instance.durationBeats);
+        }
+    }
+
     double getCurrentTransportBeat() const {
         const double bpm = std::max(1.0, m_playlistModel.getBPM());
         return m_position.load(std::memory_order_relaxed) * bpm / 60.0;

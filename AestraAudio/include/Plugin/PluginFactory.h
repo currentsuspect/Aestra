@@ -2,9 +2,11 @@
 #pragma once
 
 #include "PluginHost.h" // For PluginInstancePtr and PluginInfo
+#include "InternalPluginRegistry.h"
 
 #include <functional>
 #include <memory>
+#include <string>
 
 namespace Aestra {
 namespace Audio {
@@ -47,6 +49,36 @@ private:
     PluginInstancePtr createVST3Instance(const PluginInfo& info);
     PluginInstancePtr createCLAPInstance(const PluginInfo& info);
     PluginInstancePtr createInternalInstance(const PluginInfo& info);
+};
+
+/**
+ * @brief Factory for loading native third-party plugins behind a helper process.
+ *
+ * This factory returns a parent-side proxy. The helper process owns the risky
+ * native plugin module; if it crashes, the proxy is marked crashed and future
+ * audio callbacks bypass without blocking the realtime thread.
+ */
+class OutOfProcessPluginFactory : public IPluginFactory {
+public:
+    explicit OutOfProcessPluginFactory(std::string hostExecutablePath = {});
+
+    void createPluginAsync(const PluginInfo& info, std::function<void(PluginInstancePtr)> callback) override;
+
+    const std::string& getHostExecutablePath() const { return m_hostExecutablePath; }
+
+private:
+    std::string m_hostExecutablePath;
+};
+
+class HybridPluginFactory : public IPluginFactory {
+public:
+    explicit HybridPluginFactory(std::string hostExecutablePath = {});
+
+    void createPluginAsync(const PluginInfo& info, std::function<void(PluginInstancePtr)> callback) override;
+
+private:
+    InProcessPluginFactory m_inProcess;
+    OutOfProcessPluginFactory m_outOfProcess;
 };
 
 } // namespace Audio
