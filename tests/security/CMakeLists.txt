@@ -59,7 +59,20 @@ add_test(NAME SecFlacVendorlenBounds COMMAND SecFlacVendorlenBounds)
 add_test(NAME SecCacheMtimeIntegrity COMMAND SecCacheMtimeIntegrity)
 add_test(NAME SecPluginTrustedPath COMMAND SecPluginTrustedPath)
 add_test(NAME SecOutOfProcessPluginHost COMMAND SecOutOfProcessPluginHost $<TARGET_FILE:AestraPluginHost>)
-add_test(NAME SecPluginScanIsolation COMMAND SecPluginScanIsolation $<TARGET_FILE:AestraPluginHost> /usr/lib/clap/lsp-plugins.clap)
+find_file(AESTRA_CLAP_TEST_PLUGIN
+    NAMES lsp-plugins.clap
+    PATHS
+        /usr/lib/clap
+        /usr/local/lib/clap
+        /opt/homebrew/lib/clap
+        /opt/local/lib/clap
+)
+if(AESTRA_CLAP_TEST_PLUGIN)
+    add_test(NAME SecPluginScanIsolation COMMAND SecPluginScanIsolation $<TARGET_FILE:AestraPluginHost> ${AESTRA_CLAP_TEST_PLUGIN})
+else()
+    message(STATUS "SecPluginScanIsolation: CLAP fixture not found at configure time; test will self-skip.")
+    add_test(NAME SecPluginScanIsolation COMMAND SecPluginScanIsolation $<TARGET_FILE:AestraPluginHost> ${CMAKE_BINARY_DIR}/missing-lsp-plugins.clap)
+endif()
 add_test(NAME SecProjectLoadHardening COMMAND SecProjectLoadHardening)
 set_tests_properties(SecPluginScanIsolation PROPERTIES SKIP_RETURN_CODE 77)
 

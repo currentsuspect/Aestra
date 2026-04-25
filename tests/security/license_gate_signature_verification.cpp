@@ -1,8 +1,8 @@
 #include "LicenseGate.h"
 
-#include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <string>
 #include <vector>
 
@@ -42,17 +42,34 @@ int main() {
         "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e06522490155"
         "5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b");
 
+    if (signature.size() != 64U) {
+        std::cerr << "failed: test vector signature hex did not decode to 64 bytes\n";
+        return 1;
+    }
+
     const std::string payload;
-    assert(Aestra::License::verifyEd25519Detached(payload, signature, publicKey));
+    if (!Aestra::License::verifyEd25519Detached(payload, signature, publicKey)) {
+        std::cerr << "failed: valid signature was rejected\n";
+        return 1;
+    }
 
     std::string tamperedPayload = "x";
-    assert(!Aestra::License::verifyEd25519Detached(tamperedPayload, signature, publicKey));
+    if (Aestra::License::verifyEd25519Detached(tamperedPayload, signature, publicKey)) {
+        std::cerr << "failed: tampered payload was accepted\n";
+        return 1;
+    }
 
     signature[0] ^= 0x01;
-    assert(!Aestra::License::verifyEd25519Detached(payload, signature, publicKey));
+    if (Aestra::License::verifyEd25519Detached(payload, signature, publicKey)) {
+        std::cerr << "failed: tampered signature was accepted\n";
+        return 1;
+    }
 
     std::vector<unsigned char> shortSignature(63, 0x00);
-    assert(!Aestra::License::verifyEd25519Detached(payload, shortSignature, publicKey));
+    if (Aestra::License::verifyEd25519Detached(payload, shortSignature, publicKey)) {
+        std::cerr << "failed: short signature was accepted\n";
+        return 1;
+    }
 
     return 0;
 }
