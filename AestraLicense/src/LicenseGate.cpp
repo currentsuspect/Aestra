@@ -547,33 +547,23 @@ std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
 }
 #elif defined(__APPLE__)
 std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
-    CFTypeRef result = nullptr;
     const std::string service(kServiceName);
     const std::string account(kAccountName);
-    const OSStatus status = SecKeychainFindGenericPassword(
-        nullptr,
-        static_cast<UInt32>(service.size()), service.c_str(),
-        static_cast<UInt32>(account.size()), account.c_str(),
-        nullptr, nullptr, nullptr);
-    if (status != errSecSuccess) {
-        return {};
-    }
-
-    const void* data = nullptr;
     UInt32 length = 0;
-    if (SecKeychainFindGenericPassword(nullptr,
-                                       static_cast<UInt32>(service.size()), service.c_str(),
-                                       static_cast<UInt32>(account.size()), account.c_str(),
-                                       &length, &data, nullptr) != errSecSuccess) {
+    void* passwordData = nullptr;
+
+    const OSStatus status = SecKeychainFindGenericPassword(nullptr,
+                                                            static_cast<UInt32>(service.size()), service.c_str(),
+                                                            static_cast<UInt32>(account.size()), account.c_str(),
+                                                            &length, &passwordData, nullptr);
+    if (status != errSecSuccess || passwordData == nullptr || length == 0) {
         return {};
     }
 
-    std::vector<unsigned char> result(static_cast<const unsigned char*>(data),
-                                      static_cast<const unsigned char*>(data) + length);
-    SecKeychainItemFreeContent(nullptr, data);
-    (void)result;
-    CFRelease(result);
-    return result;
+    std::vector<unsigned char> leaseBytes(static_cast<const unsigned char*>(passwordData),
+                                          static_cast<const unsigned char*>(passwordData) + length);
+    SecKeychainItemFreeContent(nullptr, passwordData);
+    return leaseBytes;
 }
 #else
 std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
