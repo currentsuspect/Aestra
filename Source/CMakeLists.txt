@@ -116,6 +116,13 @@ if(AESTRA_ENABLE_TEST_LICENSES)
 	target_compile_definitions(Aestra PRIVATE AESTRA_ENABLE_TEST_LICENSES=1)
 endif()
 
+if(TARGET AestraLicense)
+	target_link_libraries(Aestra PRIVATE AestraLicense)
+	target_compile_definitions(Aestra PRIVATE AESTRA_HAS_LICENSE_GATE=1)
+else()
+	target_compile_definitions(Aestra PRIVATE AESTRA_HAS_LICENSE_GATE=0)
+endif()
+
 # Enable UTF-8 encoding for source files (fixes Unicode character rendering)
 if(MSVC)
     target_compile_options(Aestra PRIVATE /utf-8)
