@@ -133,7 +133,7 @@ Welcome to the comprehensive documentation hub for **Aestra**! This guide helps 
 - [GitHub Issues](https://github.com/currentsuspect/Aestra/issues)
 
 ### 📧 **Direct Contact**
-- **Email**: makoridylan@gmail.com
+- **Email**: support@aestra.studio
 - **GitHub**: [@currentsuspect](https://github.com/currentsuspect)
 
 ## 📝 Documentation Standards

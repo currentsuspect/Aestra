@@ -19,7 +19,7 @@ The public roadmap target is **v1 Beta in December 2026**. Until then, this repo
 If you discover a security issue or exploit in Aestra:
 
 1. **Do not** publicly disclose the details.
-2. Email **makoridylan@gmail.com** with the subject line  
+2. Email **security@aestra.studio** with the subject line  
    `SECURITY: [brief issue summary]`.
 3. Include:
    - The affected version / commit hash  

@@ -129,7 +129,7 @@ We welcome contributions from the community! Before contributing:
 
 ## 📧 Contact & Support
 
-- **Email**: makoridylan@gmail.com
+- **Email**: support@aestra.studio
 - **GitHub Issues**: [Report bugs or request features](https://github.com/currentsuspect/Aestra/issues)
 - **Documentation Issues**: Use our [Issue Template](TEMPLATE/ISSUE_TEMPLATE.md)
 
