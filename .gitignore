@@ -193,3 +193,6 @@ autosave.*
 .lsp.json
 .claude/
 .resonance/
+
+# Cloudflare email routing temp files
+.cf-email-routing-*

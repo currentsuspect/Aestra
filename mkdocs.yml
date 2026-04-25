@@ -172,8 +172,8 @@ extra:
       link: https://x.com/currentsuspect
       name: Dylan on Twitter
     - icon: fontawesome/solid/envelope
-      link: mailto:makoridylan@gmail.com
-      name: Email Dylan
+      link: mailto:support@aestra.studio
+      name: Email Aestra Support
   version:
     provider: mike
     label: v1.1-dev
