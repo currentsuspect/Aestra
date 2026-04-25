@@ -5,11 +5,8 @@
 #include <filesystem>
 
 #include "LicenseVerifier.h"
-#if __has_include("LicenseGate.h")
+#if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
 #include "LicenseGate.h"
-#define AESTRA_HAS_LICENSE_GATE 1
-#else
-#define AESTRA_HAS_LICENSE_GATE 0
 #endif
 #include "../../AestraCore/include/AestraLog.h"
 
