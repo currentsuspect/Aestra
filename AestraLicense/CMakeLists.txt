@@ -33,6 +33,8 @@ if(WIN32)
 elseif(APPLE)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(LIBSODIUM REQUIRED libsodium)
+    # CI on macOS reported linker failures with plain ${LIBSODIUM_LIBRARIES} ("-lsodium").
+    # Resolve the concrete library path from pkg-config hints to keep linking reliable.
     find_library(LIBSODIUM_LIBRARY NAMES sodium libsodium HINTS ${LIBSODIUM_LIBRARY_DIRS})
     if(NOT LIBSODIUM_LIBRARY)
         message(FATAL_ERROR "AestraLicense requires libsodium on macOS for Ed25519 verification.")

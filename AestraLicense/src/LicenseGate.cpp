@@ -556,7 +556,14 @@ std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
                                                             static_cast<UInt32>(service.size()), service.c_str(),
                                                             static_cast<UInt32>(account.size()), account.c_str(),
                                                             &length, &passwordData, nullptr);
-    if (status != errSecSuccess || passwordData == nullptr || length == 0) {
+    if (status != errSecSuccess || passwordData == nullptr) {
+        if (passwordData != nullptr) {
+            SecKeychainItemFreeContent(nullptr, passwordData);
+        }
+        return {};
+    }
+    if (length == 0) {
+        SecKeychainItemFreeContent(nullptr, passwordData);
         return {};
     }
 

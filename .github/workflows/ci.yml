@@ -13,6 +13,7 @@ concurrency:
 
 env:
   BUILD_TYPE: Release
+  VCPKG_REF: 52f5569a8e867859fac967c1e3f10ca0a8a3cc39 # vcpkg tag 2026.03.18
 
 jobs:
   build-linux:
@@ -77,6 +78,9 @@ jobs:
   build-windows:
     name: Windows (MSVC)
     runs-on: windows-latest
+    env:
+      VCPKG_ROOT: ${{ runner.temp }}\vcpkg
+      VCPKG_BINARY_SOURCES: clear;files,${{ runner.temp }}\vcpkg\archives,readwrite
     steps:
       - uses: actions/checkout@v4
         with:
@@ -87,12 +91,31 @@ jobs:
         with:
           cmake-version: "3.28"
 
+      - name: Cache vcpkg artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}\vcpkg\downloads
+            ${{ runner.temp }}\vcpkg\buildtrees
+            ${{ runner.temp }}\vcpkg\packages
+            ${{ runner.temp }}\vcpkg\installed
+            ${{ runner.temp }}\vcpkg\archives
+          key: windows-vcpkg-${{ env.VCPKG_REF }}-${{ runner.os }}-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            windows-vcpkg-${{ env.VCPKG_REF }}-${{ runner.os }}-
+
       - name: Setup vcpkg and libsodium
         shell: pwsh
         run: |
-          git clone https://github.com/microsoft/vcpkg.git "$env:RUNNER_TEMP\vcpkg"
-          & "$env:RUNNER_TEMP\vcpkg\bootstrap-vcpkg.bat"
-          & "$env:RUNNER_TEMP\vcpkg\vcpkg.exe" install libsodium:x64-windows
+          if (!(Test-Path $env:VCPKG_ROOT)) {
+            git clone https://github.com/microsoft/vcpkg.git $env:VCPKG_ROOT
+          }
+          git -C $env:VCPKG_ROOT fetch --depth=1 origin $env:VCPKG_REF
+          git -C $env:VCPKG_ROOT checkout --force $env:VCPKG_REF
+          if (!(Test-Path "$env:VCPKG_ROOT\vcpkg.exe")) {
+            & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
+          }
+          & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows
 
       - name: Configure
         shell: pwsh
@@ -101,7 +124,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
             -DAestra_CORE_MODE=ON `
             -DAESTRA_CI=ON `
-            -DCMAKE_TOOLCHAIN_FILE="$env:RUNNER_TEMP\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows
 
       - name: Build
