@@ -17,6 +17,7 @@ add_executable(SecLicenseProfileHardening
     license_profile_hardening.cpp
     ${REPO_ROOT}/Source/license/LicenseVerifier.cpp
 )
+add_executable(SecLicenseGateSignature license_gate_signature_verification.cpp)
 
 # Blue team fixes — proof of fix tests (S002)
 add_executable(SecClipColorStoul clip_color_stoul.cpp)
@@ -30,6 +31,7 @@ add_test(NAME SecSamplerPath COMMAND SecSamplerPath)
 add_test(NAME SecId3Overflow COMMAND SecId3Overflow)
 add_test(NAME SecShellEscape COMMAND SecShellEscape)
 add_test(NAME SecLicenseProfileHardening COMMAND SecLicenseProfileHardening)
+add_test(NAME SecLicenseGateSignature COMMAND SecLicenseGateSignature)
 
 # Blue team fix proofs
 add_test(NAME SecClipColorStoul COMMAND SecClipColorStoul)
@@ -175,4 +177,11 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
         ${REPO_ROOT}/AestraPlat/include
     )
     target_link_libraries(SecProjectLoadHardening PRIVATE AestraAudio AestraCore AestraPlat)
+endif()
+
+if(TARGET AestraLicense)
+    target_include_directories(SecLicenseGateSignature PRIVATE
+        ${REPO_ROOT}/AestraLicense/include
+    )
+    target_link_libraries(SecLicenseGateSignature PRIVATE AestraLicense)
 endif()

@@ -22,8 +22,10 @@
 #include <windows.h>
 #include <dpapi.h>
 #include <intrin.h>
+#include <sodium.h>
 #elif defined(__APPLE__)
 #include <Security/Security.h>
+#include <sodium.h>
 #include <sys/mount.h>
 #include <sys/sysctl.h>
 #include <sys/utsname.h>
@@ -313,7 +315,6 @@ std::filesystem::path backupLeasePath() {
     return defaultDataDir() / "license" / kBackupFileName;
 }
 
-#ifndef _WIN32
 void ensureSodiumInitialized() {
     static std::once_flag sodiumOnce;
     std::call_once(sodiumOnce, []() {
@@ -321,7 +322,6 @@ void ensureSodiumInitialized() {
         (void)rc;
     });
 }
-#endif
 
 std::string hashTextBlake2bHex(const std::string& text, size_t outBytes = 16) {
 #ifdef _WIN32
@@ -635,18 +635,7 @@ std::vector<unsigned char> loadLeaseFromEncryptedBackup(const DeviceFingerprint&
 }
 
 bool verifyLeaseSignature(const std::string& payload, const std::vector<unsigned char>& signature) {
-    if (signature.size() != 64) {
-        return false;
-    }
-#ifdef _WIN32
-    (void)payload;
-    return false;
-#else
-    ensureSodiumInitialized();
-    return crypto_sign_verify_detached(signature.data(),
-                                       reinterpret_cast<const unsigned char*>(payload.data()), payload.size(),
-                                       AESTRA_LICENSE_PUBKEY) == 0;
-#endif
+    return verifyEd25519Detached(payload, signature, AESTRA_LICENSE_PUBKEY);
 }
 
 bool loadAndVerifyLease(LeaseRecord& outLease) {
@@ -716,6 +705,18 @@ void initializeImpl() {
     LicenseGate::refreshAsync();
 }
 } // namespace
+
+bool verifyEd25519Detached(const std::string& payload,
+                           const std::vector<unsigned char>& signature,
+                           const unsigned char publicKey[32]) {
+    if (publicKey == nullptr || signature.size() != crypto_sign_BYTES) {
+        return false;
+    }
+    ensureSodiumInitialized();
+    return crypto_sign_verify_detached(signature.data(),
+                                       reinterpret_cast<const unsigned char*>(payload.data()), payload.size(),
+                                       publicKey) == 0;
+}
 
 void LicenseGate::initialize() {
     std::call_once(gateState().initOnce, initializeImpl);
