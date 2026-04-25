@@ -3,6 +3,8 @@
 #include "LicenseTier.h"
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 namespace Aestra {
 namespace License {
@@ -17,6 +19,11 @@ inline constexpr unsigned char AESTRA_LICENSE_PUBKEY[32] = {
     0xa9, 0x40, 0x6b, 0x20, 0x29, 0x5a, 0xb3, 0xe6,
     0x00, 0x30, 0x9b, 0xa3, 0x8f, 0x28, 0x86, 0x4f,
 };
+
+// Shared Ed25519 detached-signature verifier used by the license gate and tests.
+bool verifyEd25519Detached(const std::string& payload,
+                           const std::vector<unsigned char>& signature,
+                           const unsigned char publicKey[32]);
 
 class LicenseGate {
 public:
