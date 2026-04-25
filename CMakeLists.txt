@@ -34,6 +34,7 @@ option(AESTRA_ENABLE_UI "Build the AESTRA_DAW UI application" ON)
 option(AESTRA_ENABLE_TESTS "Build test executables" ON)
 option(AESTRA_CI "Configure deterministic CI-safe defaults" OFF)
 option(AESTRA_ENABLE_PREMIUM_PLUGINS "Build private premium plugin modules" OFF)
+option(AESTRA_ENABLE_TEST_LICENSES "Enable test-only mock license acceptance" OFF)
 
 if(AESTRA_HEADLESS_ONLY)
   set(AESTRA_ENABLE_UI OFF CACHE BOOL "Build the AESTRA_DAW UI application" FORCE)
