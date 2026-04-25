@@ -62,8 +62,9 @@ public:
     }
 
     void reset() {
-        if (m_buffer.size() >= m_windowSize)
-            std::memset(m_buffer.data(), 0, m_windowSize * sizeof(float));
+        if (!m_buffer.empty() && m_windowSize > 0) {
+            std::fill_n(m_buffer.begin(), std::min<size_t>(m_buffer.size(), m_windowSize), 0.0f);
+        }
         m_writeIndex = 0;
         m_sumSquares = 0.0;
         m_recalcCounter = 0;

@@ -350,7 +350,7 @@ void testMultipleRoundTripCycles() {
 
         save1 = serializeProject(*tm, result.tempo, result.playhead);
 
-        std::string nextPath = testDir / ("project_" + std::to_string(cycle + 1) + ".aes");
+        std::filesystem::path nextPath = testDir / ("project_" + std::to_string(cycle + 1) + ".aes");
         p = nextPath;
     }
 

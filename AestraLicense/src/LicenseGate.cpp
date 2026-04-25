@@ -22,8 +22,10 @@
 #include <windows.h>
 #include <dpapi.h>
 #include <intrin.h>
+#include <sodium.h>
 #elif defined(__APPLE__)
 #include <Security/Security.h>
+#include <sodium.h>
 #include <sys/mount.h>
 #include <sys/sysctl.h>
 #include <sys/utsname.h>
@@ -313,7 +315,6 @@ std::filesystem::path backupLeasePath() {
     return defaultDataDir() / "license" / kBackupFileName;
 }
 
-#ifndef _WIN32
 void ensureSodiumInitialized() {
     static std::once_flag sodiumOnce;
     std::call_once(sodiumOnce, []() {
@@ -321,7 +322,6 @@ void ensureSodiumInitialized() {
         (void)rc;
     });
 }
-#endif
 
 std::string hashTextBlake2bHex(const std::string& text, size_t outBytes = 16) {
 #ifdef _WIN32
@@ -547,33 +547,23 @@ std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
 }
 #elif defined(__APPLE__)
 std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
-    CFTypeRef result = nullptr;
     const std::string service(kServiceName);
     const std::string account(kAccountName);
-    const OSStatus status = SecKeychainFindGenericPassword(
-        nullptr,
-        static_cast<UInt32>(service.size()), service.c_str(),
-        static_cast<UInt32>(account.size()), account.c_str(),
-        nullptr, nullptr, nullptr);
-    if (status != errSecSuccess) {
-        return {};
-    }
-
-    const void* data = nullptr;
     UInt32 length = 0;
-    if (SecKeychainFindGenericPassword(nullptr,
-                                       static_cast<UInt32>(service.size()), service.c_str(),
-                                       static_cast<UInt32>(account.size()), account.c_str(),
-                                       &length, &data, nullptr) != errSecSuccess) {
+    void* passwordData = nullptr;
+
+    const OSStatus status = SecKeychainFindGenericPassword(nullptr,
+                                                            static_cast<UInt32>(service.size()), service.c_str(),
+                                                            static_cast<UInt32>(account.size()), account.c_str(),
+                                                            &length, &passwordData, nullptr);
+    if (status != errSecSuccess || passwordData == nullptr || length == 0) {
         return {};
     }
 
-    std::vector<unsigned char> result(static_cast<const unsigned char*>(data),
-                                      static_cast<const unsigned char*>(data) + length);
-    SecKeychainItemFreeContent(nullptr, data);
-    (void)result;
-    CFRelease(result);
-    return result;
+    std::vector<unsigned char> leaseBytes(static_cast<const unsigned char*>(passwordData),
+                                          static_cast<const unsigned char*>(passwordData) + length);
+    SecKeychainItemFreeContent(nullptr, passwordData);
+    return leaseBytes;
 }
 #else
 std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
@@ -635,18 +625,7 @@ std::vector<unsigned char> loadLeaseFromEncryptedBackup(const DeviceFingerprint&
 }
 
 bool verifyLeaseSignature(const std::string& payload, const std::vector<unsigned char>& signature) {
-    if (signature.size() != 64) {
-        return false;
-    }
-#ifdef _WIN32
-    (void)payload;
-    return false;
-#else
-    ensureSodiumInitialized();
-    return crypto_sign_verify_detached(signature.data(),
-                                       reinterpret_cast<const unsigned char*>(payload.data()), payload.size(),
-                                       AESTRA_LICENSE_PUBKEY) == 0;
-#endif
+    return verifyEd25519Detached(payload, signature, AESTRA_LICENSE_PUBKEY);
 }
 
 bool loadAndVerifyLease(LeaseRecord& outLease) {
@@ -716,6 +695,18 @@ void initializeImpl() {
     LicenseGate::refreshAsync();
 }
 } // namespace
+
+bool verifyEd25519Detached(const std::string& payload,
+                           const std::vector<unsigned char>& signature,
+                           const unsigned char publicKey[32]) {
+    if (publicKey == nullptr || signature.size() != crypto_sign_BYTES) {
+        return false;
+    }
+    ensureSodiumInitialized();
+    return crypto_sign_verify_detached(signature.data(),
+                                       reinterpret_cast<const unsigned char*>(payload.data()), payload.size(),
+                                       publicKey) == 0;
+}
 
 void LicenseGate::initialize() {
     std::call_once(gateState().initOnce, initializeImpl);
