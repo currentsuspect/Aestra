@@ -5,6 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -30,7 +31,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
+          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev
 
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
@@ -41,6 +42,9 @@ jobs:
       - name: Test
         working-directory: build
         run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml
+
+      - name: License verification tests
+        run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
 
       - name: Upload test report
         if: always()
@@ -83,8 +87,22 @@ jobs:
         with:
           cmake-version: "3.28"
 
+      - name: Setup vcpkg and libsodium
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$env:RUNNER_TEMP\vcpkg"
+          & "$env:RUNNER_TEMP\vcpkg\bootstrap-vcpkg.bat"
+          & "$env:RUNNER_TEMP\vcpkg\vcpkg.exe" install libsodium:x64-windows
+
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
+        shell: pwsh
+        run: |
+          cmake -B build -S . `
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
+            -DAestra_CORE_MODE=ON `
+            -DAESTRA_CI=ON `
+            -DCMAKE_TOOLCHAIN_FILE="$env:RUNNER_TEMP\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
@@ -93,6 +111,10 @@ jobs:
         working-directory: build
         shell: bash
         run: ctest --test-dir . -C ${{env.BUILD_TYPE}} --output-on-failure --output-junit ctest-results-windows.xml
+
+      - name: License verification tests
+        shell: bash
+        run: ctest --test-dir build -C ${{env.BUILD_TYPE}} -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
 
       - name: Upload test report
         if: always()
@@ -204,7 +226,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-14 clang-format-14
+          sudo apt-get install -y clang-tidy-14 clang-format-14 libsodium-dev libsecret-1-dev
 
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -236,7 +258,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
+          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev
 
       - name: Configure
         run: >
