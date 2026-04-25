@@ -41,13 +41,6 @@ static std::string svgForTier(const std::string& tier) {
 	return getAssetsCardsDir() + "/core_card.svg";
 }
 
-static const char* tooltipForTier(const std::string& tier) {
-	if (tier == "Aestra Founder") return "Founding Access — Where it all began.";
-	if (tier == "Aestra Plus") return "Full Suite Access — Muse Integration Active.";
-	if (tier == "Aestra Campus")  return "Educational / Enterprise Edition.";
-	return "Essential Access — Free Tier.";
-}
-
 static const char* verificationBadge(bool verified) {
 	return verified ? "✅ Verified" : "⚪ Offline / ❌ Unverified";
 }
