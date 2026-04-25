@@ -78,9 +78,6 @@ jobs:
   build-windows:
     name: Windows (MSVC)
     runs-on: windows-latest
-    env:
-      VCPKG_ROOT: ${{ runner.temp }}\vcpkg
-      VCPKG_BINARY_SOURCES: clear;files,${{ runner.temp }}\vcpkg\archives,readwrite
     steps:
       - uses: actions/checkout@v4
         with:
@@ -107,6 +104,8 @@ jobs:
       - name: Setup vcpkg and libsodium
         shell: pwsh
         run: |
+          $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
+          $env:VCPKG_BINARY_SOURCES = "clear;files,$env:RUNNER_TEMP\vcpkg\archives,readwrite"
           if (!(Test-Path $env:VCPKG_ROOT)) {
             git clone https://github.com/microsoft/vcpkg.git $env:VCPKG_ROOT
           }
@@ -120,6 +119,7 @@ jobs:
       - name: Configure
         shell: pwsh
         run: |
+          $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
           cmake -B build -S . `
             -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
             -DAestra_CORE_MODE=ON `
