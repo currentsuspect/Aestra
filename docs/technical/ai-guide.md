@@ -341,7 +341,7 @@ Muse AI is part of **Aestra Premium**:
 **Have ideas for Muse AI features?**
 
 - 💡 Open a feature request on GitHub
-- 📧 Email: [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
+- 📧 Email: [hello@aestra.studio](mailto:hello@aestra.studio)
 - 💬 Join our community discussions
 
 We're actively gathering input during development. Your feedback helps shape Muse!

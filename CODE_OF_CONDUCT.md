@@ -44,7 +44,7 @@ Examples of unacceptable behavior:
 * They have the right to **edit, remove, or block** comments, commits, code, issues, or accounts that violate these rules.
 * For serious or repeated violations, users may be banned from repositories, community spaces, or events.
 * Reports can be made confidentially via:
-  **Email:** [makoridylan@gmail.com](mailto:makoridylan@gmail.com)
+  **Email:** [hello@aestra.studio](mailto:hello@aestra.studio)
 
 All reports will be reviewed and handled respectfully and fairly.
 

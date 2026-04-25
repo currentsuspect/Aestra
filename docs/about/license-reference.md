@@ -271,7 +271,7 @@ While you grant full rights, we value contributions:
 ## Licensing Inquiries
 
 **For licensing questions or enterprise sales:**
-- 📧 Email: makoridylan@gmail.com
+- 📧 Email: licensing@aestra.studio
 - 🌐 Website: Coming Soon
 - 💼 Enterprise: Contact for volume licensing
 
