@@ -159,6 +159,11 @@ jobs:
         with:
           cmake-version: "3.28"
 
+      - name: Install Dependencies
+        run: |
+          brew update
+          brew install pkg-config libsodium
+
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
 
