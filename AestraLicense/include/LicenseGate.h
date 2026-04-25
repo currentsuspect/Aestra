@@ -8,7 +8,10 @@ namespace Aestra {
 namespace License {
 
 inline constexpr unsigned char AESTRA_LICENSE_PUBKEY[32] = {
-    // AESTRA_TEST_KEY_V1
+    // Development/test verification public key for public repository builds.
+    // This is NOT a production private signing key and can be committed safely.
+    // Replace in private/release pipelines with the intended production verification key.
+    // Key label: AESTRA_DEV_TEST_PUBKEY_V1
     0xbc, 0x31, 0xf4, 0xae, 0x03, 0x60, 0xf0, 0xcd,
     0x62, 0xaf, 0x1e, 0x23, 0x32, 0xa8, 0xa2, 0x41,
     0xa9, 0x40, 0x6b, 0x20, 0x29, 0x5a, 0xb3, 0xe6,
