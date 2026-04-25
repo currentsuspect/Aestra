@@ -51,25 +51,6 @@ namespace {
         return targetName.substr(0, 6);
     }
 
-    std::string compactRouteName(uint32_t targetId, const std::string& targetName)
-    {
-        if (targetId == 0 || targetName == "Master" || targetName == "MASTER") {
-            return "M";
-        }
-        const std::string trackPrefix = "Track ";
-        if (targetName.rfind(trackPrefix, 0) == 0) {
-            return "T" + targetName.substr(trackPrefix.size());
-        }
-        const std::string lanePrefix = "Lane ";
-        if (targetName.rfind(lanePrefix, 0) == 0) {
-            return "L" + targetName.substr(lanePrefix.size());
-        }
-        if (targetName.size() <= 6) {
-            return targetName;
-        }
-        return targetName.substr(0, 6);
-    }
-
     std::string buildStripRouteSummary(const Aestra::ChannelViewModel& channel)
     {
         if (channel.id == 0) {

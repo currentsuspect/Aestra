@@ -277,7 +277,6 @@ public:
         float blockInputPeak = 0.0f;
         float blockOutputPeak = 0.0f;
 
-        float blockGainReductionDb = 0.0f;
         for (uint32_t i = 0; i < numFrames; ++i) {
             m_thresholdSmoothed += (getParameter(kThreshold) - m_thresholdSmoothed) * smoothingCoeff;
             m_ratioSmoothed += (getParameter(kRatio) - m_ratioSmoothed) * smoothingCoeff;
