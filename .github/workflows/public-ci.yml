@@ -40,7 +40,8 @@ jobs:
           if ($certFiles) { $violations += $certFiles }
 
           if ($violations.Count -gt 0) {
-            Write-Error "Public guard blocked private/release-sensitive artifacts:`n$($violations -join \"`n\")"
+            $joined = ($violations | ForEach-Object { "$_" }) -join "`n"
+            Write-Error "Public guard blocked private/release-sensitive artifacts:`n$joined"
             exit 1
           }
           Write-Host "Public guard passed: no blocked private/release-sensitive artifacts detected."
