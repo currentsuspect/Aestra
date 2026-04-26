@@ -73,8 +73,16 @@ struct UnitInfo {
      * routing behavior.
      */
     int targetMixerRoute{-1};
-    /** @brief Explicit interpretation of @ref targetMixerRoute for guardrail usage. */
-    ArsenalRouteMode getRouteMode() const noexcept { return arsenalRouteModeFromRouteId(targetMixerRoute); }
+    /**
+     * @brief Explicit route mode field (Phase 2A scaffolding).
+     *
+     * Compatibility note: current rendering authority remains legacy
+     * @ref targetMixerRoute mapping. This field is kept aligned for explicitness
+     * and future migration, but does not change current behavior.
+     */
+    ArsenalRouteMode routeMode{ArsenalRouteMode::PreviewToMaster};
+    /** @brief Explicit in-memory route mode value. */
+    ArsenalRouteMode getRouteMode() const noexcept { return routeMode; }
     /** @brief True when this unit currently routes into the Timeline track path. */
     bool routesToTimelineTrack() const noexcept { return getRouteMode() == ArsenalRouteMode::RoutedToTimelineTrack; }
     /** @brief True when this unit currently routes to master preview path. */
@@ -129,8 +137,14 @@ struct UnitState {
      * - >= 0 routes to Timeline track path
      */
     int routeId;
-    /** @brief Explicit interpretation of @ref routeId for non-behavioral guardrails. */
-    ArsenalRouteMode getRouteMode() const noexcept { return arsenalRouteModeFromRouteId(routeId); }
+    /**
+     * @brief Explicit route mode snapshot field (Phase 2A scaffolding).
+     *
+     * Compatibility note: current rendering authority remains @ref routeId.
+     */
+    ArsenalRouteMode routeMode{ArsenalRouteMode::PreviewToMaster};
+    /** @brief Explicit in-memory route mode value. */
+    ArsenalRouteMode getRouteMode() const noexcept { return routeMode; }
     /** @brief True when this unit currently routes into the Timeline track path. */
     bool routesToTimelineTrack() const noexcept { return getRouteMode() == ArsenalRouteMode::RoutedToTimelineTrack; }
     /** @brief True when this unit currently routes to master preview path. */

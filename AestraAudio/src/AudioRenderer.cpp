@@ -263,8 +263,7 @@ void AudioRenderer::renderArsenalUnitsForTrack(uint32_t trackIndex, double* trac
     const float* ins[2] = {engineRef.m_silentBufferF.data(), engineRef.m_silentBufferF.data()};
     size_t bIdx = 0;
     for (const auto& u : snap->units) {
-        if (u.enabled && u.plugin && ArsenalProcessingContext::routesToTimelineTrack(u.routeId) &&
-            u.routeId == static_cast<int>(trackIndex)) {
+        if (u.enabled && u.plugin && arsenal.shouldRenderToTimelineTrack(u, trackIndex)) {
             std::fill(engineRef.m_pluginBufferF.begin(), engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2, 0.0f);
             float* outs[2] = {engineRef.m_pluginBufferF.data(), engineRef.m_pluginBufferF.data() + ctx.numFrames};
             MidiBuffer* mIn =
@@ -296,7 +295,7 @@ void AudioRenderer::processArsenalUnits(const Context& ctx, AudioEngine& engineR
     size_t bIdx = 0;
     for (const auto& u : snap->units) {
         // Only handle units not routed to a Timeline track.
-        if (u.enabled && u.plugin && ArsenalProcessingContext::routesToMasterPreview(u.routeId)) {
+        if (u.enabled && u.plugin && arsenal.shouldRenderToMasterPreview(u)) {
             std::fill(engineRef.m_pluginBufferF.begin(), engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2, 0.0f);
             float* outs[2] = {engineRef.m_pluginBufferF.data(), engineRef.m_pluginBufferF.data() + ctx.numFrames};
             MidiBuffer* mIn =

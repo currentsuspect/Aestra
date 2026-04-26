@@ -21,5 +21,25 @@ bool ArsenalProcessingContext::hasUnits() const {
     return snapshot && !snapshot->units.empty();
 }
 
+ArsenalRouteMode ArsenalProcessingContext::resolveRouteMode(const UnitInfo& unit) const noexcept {
+    return routeModeFromRouteId(unit.targetMixerRoute);
+}
+
+ArsenalRouteMode ArsenalProcessingContext::resolveRouteMode(const UnitState& unit) const noexcept {
+    return routeModeFromRouteId(unit.routeId);
+}
+
+bool ArsenalProcessingContext::shouldRenderToTimelineTrack(const UnitState& unit, uint32_t trackIndex) const noexcept {
+    return resolveRouteMode(unit) == ArsenalRouteMode::RoutedToTimelineTrack && unit.routeId == static_cast<int>(trackIndex);
+}
+
+bool ArsenalProcessingContext::shouldRenderToMasterPreview(const UnitState& unit) const noexcept {
+    return resolveRouteMode(unit) == ArsenalRouteMode::PreviewToMaster;
+}
+
+bool ArsenalProcessingContext::isFutureDraftMode(const UnitState& unit) const noexcept {
+    return unit.getRouteMode() == ArsenalRouteMode::Draft;
+}
+
 } // namespace Audio
 } // namespace Aestra

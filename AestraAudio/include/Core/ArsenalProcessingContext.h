@@ -35,13 +35,12 @@ public:
         return arsenalRouteModeFromRouteId(routeId);
     }
 
-    static constexpr bool routesToTimelineTrack(int routeId) noexcept {
-        return routeModeFromRouteId(routeId) == ArsenalRouteMode::RoutedToTimelineTrack;
-    }
+    ArsenalRouteMode resolveRouteMode(const UnitInfo& unit) const noexcept;
+    ArsenalRouteMode resolveRouteMode(const UnitState& unit) const noexcept;
 
-    static constexpr bool routesToMasterPreview(int routeId) noexcept {
-        return routeModeFromRouteId(routeId) == ArsenalRouteMode::PreviewToMaster;
-    }
+    bool shouldRenderToTimelineTrack(const UnitState& unit, uint32_t trackIndex) const noexcept;
+    bool shouldRenderToMasterPreview(const UnitState& unit) const noexcept;
+    bool isFutureDraftMode(const UnitState& unit) const noexcept;
 
 private:
     UnitManager* m_unitManager{nullptr};

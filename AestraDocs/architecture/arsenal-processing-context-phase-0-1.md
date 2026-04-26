@@ -11,8 +11,9 @@
    - does **not** introduce a new DSP graph or engine
 3. Refactored `AudioRenderer` Arsenal route checks to use explicit helper names while preserving existing logic.
 4. Added two small deterministic tests:
-   - `ArsenalRouteModeTest`
-   - `ArsenalProcessingContextTest`
+   - `ArsenalRouteModeCompatibilityTest` (renamed/expanded in Phase 2A)
+   - `ArsenalProcessingContextRoutingTest` (renamed/expanded in Phase 2A)
+   - `ArsenalRouteModeRoundTripTest` (added in Phase 2A)
 
 ## What did not change
 
@@ -31,6 +32,12 @@
 
 These helpers are naming/guardrail scaffolding over existing behavior only.
 
+## Phase 2A follow-up status
+
+Phase 2A adds an explicit in-memory `routeMode` field while preserving `routeId`
+as current render/export authority. `Draft` remains inactive scaffolding and does
+not currently mute, bypass, or export-exclude units.
+
 ## Why route modes are scaffolding only
 
 The explicit enum documents intent and removes ambiguity around magic integer checks, but it is currently just a typed interpretation of legacy `routeId`. It does not activate `Draft` or any new routing mode behavior in this phase.
@@ -42,4 +49,3 @@ Phase 0/1 is intentionally non-behavioral. The wrapper only names and centralize
 ## Next safe phase
 
 Proceed to route-mode model expansion only after parity/regression coverage is sufficient (especially routing/export parity assertions), then add bridge semantics incrementally without changing schema or output unexpectedly.
-
