@@ -6,11 +6,13 @@
 #include "Plugin/BuiltInPlugins.h"
 #include "Plugin/PluginManager.h"
 #include "Plugin/SamplerPlugin.h"
+#include "AestraLog.h"
 
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <iomanip>
+#include <optional>
 #include <sstream>
 
 namespace Aestra {
@@ -38,6 +40,37 @@ void applySamplerDefaultsForUnitType(const UnitInfo& unit) {
     } else {
         sampler->setMonoMode(false);
     }
+}
+
+std::string arsenalRouteModeName(ArsenalRouteMode routeMode) {
+    switch (routeMode) {
+    case ArsenalRouteMode::PreviewToMaster: return "PreviewToMaster";
+    case ArsenalRouteMode::RoutedToTimelineTrack: return "RoutedToTimelineTrack";
+    case ArsenalRouteMode::Draft: return "Draft";
+    default: return "PreviewToMaster";
+    }
+}
+
+std::optional<ArsenalRouteMode> arsenalRouteModeFromJson(const JSON& routeModeJson) {
+    if (routeModeJson.isObject()) {
+        if (routeModeJson.has("id")) {
+            return static_cast<ArsenalRouteMode>(routeModeJson["id"].asInt());
+        }
+        if (routeModeJson.has("name")) {
+            const std::string name = routeModeJson["name"].asString();
+            if (name == "PreviewToMaster") return ArsenalRouteMode::PreviewToMaster;
+            if (name == "RoutedToTimelineTrack") return ArsenalRouteMode::RoutedToTimelineTrack;
+            if (name == "Draft") return ArsenalRouteMode::Draft;
+        }
+    } else if (routeModeJson.isNumber()) {
+        return static_cast<ArsenalRouteMode>(routeModeJson.asInt());
+    } else if (routeModeJson.isString()) {
+        const std::string name = routeModeJson.asString();
+        if (name == "PreviewToMaster") return ArsenalRouteMode::PreviewToMaster;
+        if (name == "RoutedToTimelineTrack") return ArsenalRouteMode::RoutedToTimelineTrack;
+        if (name == "Draft") return ArsenalRouteMode::Draft;
+    }
+    return std::nullopt;
 }
 } // namespace
 
@@ -189,6 +222,7 @@ std::shared_ptr<const AudioArsenalSnapshot> UnitManager::getAudioSnapshot() cons
         state.enabled = unit->enabled || unit->isEnabled;
         state.plugin = unit->plugin;
         state.routeId = unit->targetMixerRoute;
+        state.routeMode = arsenalRouteModeFromRouteId(state.routeId);
         snapshot->units.push_back(std::move(state));
     }
 
@@ -290,12 +324,14 @@ void UnitManager::setUnitMixerChannel(UnitID id, int channel) { assignUnitToTime
 void UnitManager::assignUnitToTimelineLane(UnitID id, int laneIndex) {
     if (auto* u = getUnit(id)) {
         u->targetMixerRoute = laneIndex;
+        u->routeMode = arsenalRouteModeFromRouteId(laneIndex);
     }
 }
 
 void UnitManager::clearUnitTimelineLane(UnitID id) {
     if (auto* u = getUnit(id)) {
         u->targetMixerRoute = -1;
+        u->routeMode = ArsenalRouteMode::PreviewToMaster;
     }
 }
 
@@ -436,6 +472,11 @@ JSON UnitManager::saveToJSON() const {
         u.set("audioClipPath", JSON(unit->audioClipPath));
         u.set("audioDurationSeconds", JSON(unit->audioDurationSeconds));
         u.set("defaultPatternId", JSON(static_cast<double>(unit->defaultPatternId.value)));
+        const ArsenalRouteMode resolvedRouteMode = arsenalRouteModeFromRouteId(unit->targetMixerRoute);
+        JSON routeMode = JSON::object();
+        routeMode.set("id", JSON(static_cast<double>(static_cast<uint8_t>(resolvedRouteMode))));
+        routeMode.set("name", JSON(arsenalRouteModeName(resolvedRouteMode)));
+        u.set("routeMode", routeMode);
 
         JSON group = JSON::object();
         group.set("id", JSON(static_cast<double>(static_cast<uint32_t>(unit->group))));
@@ -500,6 +541,18 @@ void UnitManager::loadFromJSON(const JSON& json) {
             unit.targetMixerRoute = ju["timelineLaneAssignment"].asInt();
         } else {
             unit.targetMixerRoute = ju.has("targetMixerRoute") ? ju["targetMixerRoute"].asInt() : -1;
+        }
+        const ArsenalRouteMode legacyResolvedRouteMode = arsenalRouteModeFromRouteId(unit.targetMixerRoute);
+        unit.routeMode = legacyResolvedRouteMode;
+        if (ju.has("routeMode")) {
+            const auto loadedRouteMode = arsenalRouteModeFromJson(ju["routeMode"]);
+            if (loadedRouteMode.has_value() && loadedRouteMode.value() != legacyResolvedRouteMode) {
+                Log::warning("[UnitManager] routeMode disagrees with routeId for unit " + std::to_string(unit.id) +
+                             "; keeping routeId-compatible behavior.");
+            } else if (!loadedRouteMode.has_value()) {
+                Log::warning("[UnitManager] Invalid routeMode value for unit " + std::to_string(unit.id) +
+                             "; falling back to routeId-compatible behavior.");
+            }
         }
         if (ju.has("color")) {
             if (ju["color"].isString()) {
