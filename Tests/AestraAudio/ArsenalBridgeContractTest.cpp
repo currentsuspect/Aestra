@@ -1,9 +1,10 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
-#include <array>
+#include "Models/ArsenalBridgeMode.h"
+#include "Models/UnitManager.h"
+
 #include <cstdlib>
 #include <iostream>
-#include <string_view>
 
 namespace {
 void require(bool cond, const char* msg) {
@@ -15,24 +16,31 @@ void require(bool cond, const char* msg) {
 } // namespace
 
 int main() {
-    // This is a policy contract test only.
-    // We intentionally avoid introducing a production bridge enum in Phase 2B.
-    constexpr std::array<std::string_view, 6> kBridgeModes = {
-        "DraftOnly",
-        "PreviewToMaster",
-        "LinkedRack",
-        "LocalCopy",
-        "RenderedAudio",
-        "FrozenAudio",
-    };
+    using namespace Aestra::Audio;
 
-    require(kBridgeModes.size() == 6, "Bridge contract must define exactly six bridge states");
-    require(kBridgeModes[0] == "DraftOnly", "Bridge mode[0] must remain DraftOnly");
-    require(kBridgeModes[1] == "PreviewToMaster", "Bridge mode[1] must remain PreviewToMaster");
-    require(kBridgeModes[2] == "LinkedRack", "Bridge mode[2] must remain LinkedRack");
-    require(kBridgeModes[3] == "LocalCopy", "Bridge mode[3] must remain LocalCopy");
-    require(kBridgeModes[4] == "RenderedAudio", "Bridge mode[4] must remain RenderedAudio");
-    require(kBridgeModes[5] == "FrozenAudio", "Bridge mode[5] must remain FrozenAudio");
+    // Stable mode set and stable string mapping contract.
+    require(toString(ArsenalBridgeMode::DraftOnly) == "DraftOnly", "DraftOnly bridge token changed");
+    require(toString(ArsenalBridgeMode::PreviewToMaster) == "PreviewToMaster", "PreviewToMaster bridge token changed");
+    require(toString(ArsenalBridgeMode::LinkedRack) == "LinkedRack", "LinkedRack bridge token changed");
+    require(toString(ArsenalBridgeMode::LocalCopy) == "LocalCopy", "LocalCopy bridge token changed");
+    require(toString(ArsenalBridgeMode::RenderedAudio) == "RenderedAudio", "RenderedAudio bridge token changed");
+    require(toString(ArsenalBridgeMode::FrozenAudio) == "FrozenAudio", "FrozenAudio bridge token changed");
+
+    require(arsenalBridgeModeFromString("DraftOnly") == ArsenalBridgeMode::DraftOnly, "DraftOnly parse failed");
+    require(arsenalBridgeModeFromString("PreviewToMaster") == ArsenalBridgeMode::PreviewToMaster,
+            "PreviewToMaster parse failed");
+    require(arsenalBridgeModeFromString("LinkedRack") == ArsenalBridgeMode::LinkedRack, "LinkedRack parse failed");
+    require(arsenalBridgeModeFromString("LocalCopy") == ArsenalBridgeMode::LocalCopy, "LocalCopy parse failed");
+    require(arsenalBridgeModeFromString("RenderedAudio") == ArsenalBridgeMode::RenderedAudio,
+            "RenderedAudio parse failed");
+    require(arsenalBridgeModeFromString("FrozenAudio") == ArsenalBridgeMode::FrozenAudio, "FrozenAudio parse failed");
+    require(!arsenalBridgeModeFromString("invalid").has_value(), "Invalid bridge token must parse non-fatally");
+
+    // Bridge metadata must remain independent from route-mode compatibility.
+    require(arsenalRouteModeFromRouteId(-1) == ArsenalRouteMode::PreviewToMaster,
+            "Route mode compatibility changed for preview routing");
+    require(arsenalRouteModeFromRouteId(0) == ArsenalRouteMode::RoutedToTimelineTrack,
+            "Route mode compatibility changed for timeline routing");
 
     std::cout << "[PASS] ArsenalBridgeContractTest\n";
     return 0;

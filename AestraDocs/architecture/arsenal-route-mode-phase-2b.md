@@ -74,3 +74,6 @@ No production bridge enum is introduced in this phase to avoid premature runtime
 Before changing `PreviewToMaster` export behavior, add explicit offline-render
 regression coverage proving expected inclusion/exclusion behavior under both live
 and offline authorities. Until that test exists, keep current export parity.
+
+Bridge metadata preparation and parity guardrails continue in:
+`AestraDocs/architecture/arsenal-bridge-mode-phase-2c.md`.

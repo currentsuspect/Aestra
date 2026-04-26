@@ -498,10 +498,21 @@ set_tests_properties(ArsenalRouteModePolicyTest PROPERTIES LABELS "audio;arsenal
 add_executable(ArsenalBridgeContractTest AestraAudio/ArsenalBridgeContractTest.cpp)
 target_link_libraries(ArsenalBridgeContractTest PRIVATE AestraCore)
 target_include_directories(ArsenalBridgeContractTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
 add_test(NAME ArsenalBridgeContractTest COMMAND ArsenalBridgeContractTest)
 set_tests_properties(ArsenalBridgeContractTest PROPERTIES LABELS "arsenal;policy")
+
+# Arsenal export current-policy parity guard (Phase 2C)
+add_executable(ArsenalExportCurrentPolicyTest AestraAudio/ArsenalExportCurrentPolicyTest.cpp)
+target_link_libraries(ArsenalExportCurrentPolicyTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(ArsenalExportCurrentPolicyTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ArsenalExportCurrentPolicyTest COMMAND ArsenalExportCurrentPolicyTest)
+set_tests_properties(ArsenalExportCurrentPolicyTest PROPERTIES LABELS "arsenal;policy;offline")
 
 # Sample Rate Converter Test
 add_executable(AestraSampleRateConverterTest AestraAudio/SampleRateConverterTest.cpp)
