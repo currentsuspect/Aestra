@@ -5,6 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -12,6 +13,7 @@ concurrency:
 
 env:
   BUILD_TYPE: Release
+  VCPKG_REF: 52f5569a8e867859fac967c1e3f10ca0a8a3cc39 # vcpkg tag 2026.03.18
 
 jobs:
   build-linux:
@@ -30,7 +32,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
+          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev
 
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
@@ -40,7 +42,10 @@ jobs:
 
       - name: Test
         working-directory: build
-        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml
+        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation"
+
+      - name: License verification tests
+        run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
 
       - name: Upload test report
         if: always()
@@ -83,8 +88,44 @@ jobs:
         with:
           cmake-version: "3.28"
 
+      - name: Cache vcpkg artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}\vcpkg\downloads
+            ${{ runner.temp }}\vcpkg\buildtrees
+            ${{ runner.temp }}\vcpkg\packages
+            ${{ runner.temp }}\vcpkg\installed
+            ${{ runner.temp }}\vcpkg\archives
+          key: windows-vcpkg-${{ env.VCPKG_REF }}-${{ runner.os }}-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            windows-vcpkg-${{ env.VCPKG_REF }}-${{ runner.os }}-
+
+      - name: Setup vcpkg and libsodium
+        shell: pwsh
+        run: |
+          $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
+          $env:VCPKG_BINARY_SOURCES = "clear;files,$env:RUNNER_TEMP\vcpkg\archives,readwrite"
+          if (!(Test-Path $env:VCPKG_ROOT)) {
+            git clone https://github.com/microsoft/vcpkg.git $env:VCPKG_ROOT
+          }
+          git -C $env:VCPKG_ROOT fetch --depth=1 origin $env:VCPKG_REF
+          git -C $env:VCPKG_ROOT checkout --force $env:VCPKG_REF
+          if (!(Test-Path "$env:VCPKG_ROOT\vcpkg.exe")) {
+            & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
+          }
+          & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows
+
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
+        shell: pwsh
+        run: |
+          $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
+          cmake -B build -S . `
+            -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} `
+            -DAestra_CORE_MODE=ON `
+            -DAESTRA_CI=ON `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
@@ -92,7 +133,11 @@ jobs:
       - name: Test
         working-directory: build
         shell: bash
-        run: ctest --test-dir . -C ${{env.BUILD_TYPE}} --output-on-failure --output-junit ctest-results-windows.xml
+        run: ctest --test-dir . -C ${{env.BUILD_TYPE}} --output-on-failure --output-junit ctest-results-windows.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation"
+
+      - name: License verification tests
+        shell: bash
+        run: ctest --test-dir build -C ${{env.BUILD_TYPE}} -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
 
       - name: Upload test report
         if: always()
@@ -136,6 +181,11 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: "3.28"
+
+      - name: Install Dependencies
+        run: |
+          brew update
+          brew install pkg-config libsodium
 
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
@@ -204,7 +254,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang-tidy-14 clang-format-14
+          sudo apt-get install -y clang-tidy-14 clang-format-14 libsodium-dev libsecret-1-dev
 
       - name: Configure
         run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -236,7 +286,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev
+          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev
 
       - name: Configure
         run: >

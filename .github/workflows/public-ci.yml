@@ -1,13 +1,13 @@
-name: Public CI (Aestra Core)
+name: Public Main Guard (Aestra Core)
 
-# Only run public CI on direct pushes to `main` to ensure the public build checks
-# verify the public repository state. Pull requests (which may originate from
-# forks or temporary branches) can contain private folders and will fail this
-# check; run pull-request checks in separate workflows if you want PR-level
-# validation without the private-folder guard.
+# Public release guard for main:
+# - block accidental private/commercial assets in the public repo
+# - validate public core/headless build and a small maintained smoke subset
+# Full development CI lives in .github/workflows/ci.yml.
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-core:
@@ -19,17 +19,51 @@ jobs:
       - name: Ensure no private folders
         shell: pwsh
         run: |
-          $blocked = @('Aestra-premium','Aestra-build','assets_premium','assets_private','models','weights')
-          foreach ($b in $blocked) {
-            if (Test-Path $b) { Write-Error "Private folder present in public CI: $b"; exit 1 }
+          $blockedPaths = @(
+            'Aestra-premium',
+            'Aestra-build',
+            'assets_premium',
+            'assets_private',
+            'models',
+            'weights',
+            'secrets',
+            'private',
+            '.env'
+          )
+
+          $violations = @()
+          foreach ($path in $blockedPaths) {
+            if (Test-Path $path) { $violations += $path }
           }
+
+          $certFiles = Get-ChildItem -Path . -Recurse -File -Include *.pfx,*.p12 -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+          if ($certFiles) { $violations += $certFiles }
+
+          if ($violations.Count -gt 0) {
+            $joined = ($violations | ForEach-Object { "$_" }) -join "`n"
+            Write-Error "Public guard blocked private/release-sensitive artifacts:`n$joined"
+            exit 1
+          }
+          Write-Host "Public guard passed: no blocked private/release-sensitive artifacts detected."
       - name: Setup CMake
         uses: lukka/get-cmake@latest
+      - name: Setup vcpkg and libsodium
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$env:RUNNER_TEMP\vcpkg"
+          & "$env:RUNNER_TEMP\vcpkg\bootstrap-vcpkg.bat"
+          & "$env:RUNNER_TEMP\vcpkg\vcpkg.exe" install libsodium:x64-windows
       - name: Configure
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path build | Out-Null
-          cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_UI=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build `
+            -DAestra_CORE_MODE=ON `
+            -DAESTRA_HEADLESS_ONLY=ON `
+            -DAESTRA_ENABLE_UI=OFF `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$env:RUNNER_TEMP\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows
       - name: Build
         shell: pwsh
         run: cmake --build build --config Release --parallel
