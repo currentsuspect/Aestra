@@ -208,7 +208,7 @@ code goes here
 **Need more assistance?**
 
 - 💬 [GitHub Issues](https://github.com/currentsuspect/Aestra/issues) - Report problems or ask questions
-- 📧 Email: makoridylan@gmail.com
+- 📧 Email: support@aestra.studio
 - 📖 [FAQ](../technical/faq.md) - Check frequently asked questions
 
 ## 📝 Contributing

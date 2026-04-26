@@ -22,9 +22,27 @@ target_link_libraries(AestraLicense
 )
 
 if(WIN32)
-    target_link_libraries(AestraLicense PRIVATE crypt32)
+    find_path(LIBSODIUM_INCLUDE_DIR sodium.h)
+    find_library(LIBSODIUM_LIBRARY NAMES sodium libsodium)
+    if(NOT LIBSODIUM_INCLUDE_DIR OR NOT LIBSODIUM_LIBRARY)
+        message(FATAL_ERROR "AestraLicense requires libsodium on Windows for Ed25519 verification.")
+    endif()
+
+    target_include_directories(AestraLicense PRIVATE ${LIBSODIUM_INCLUDE_DIR})
+    target_link_libraries(AestraLicense PRIVATE crypt32 ${LIBSODIUM_LIBRARY})
 elseif(APPLE)
-    target_link_libraries(AestraLicense PRIVATE "-framework Security")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LIBSODIUM REQUIRED libsodium)
+    # CI on macOS reported linker failures with plain ${LIBSODIUM_LIBRARIES} ("-lsodium").
+    # Resolve the concrete library path from pkg-config hints to keep linking reliable.
+    find_library(LIBSODIUM_LIBRARY NAMES sodium libsodium HINTS ${LIBSODIUM_LIBRARY_DIRS})
+    if(NOT LIBSODIUM_LIBRARY)
+        message(FATAL_ERROR "AestraLicense requires libsodium on macOS for Ed25519 verification.")
+    endif()
+
+    target_include_directories(AestraLicense PRIVATE ${LIBSODIUM_INCLUDE_DIRS})
+    target_link_libraries(AestraLicense PRIVATE ${LIBSODIUM_LIBRARY} "-framework Security")
+    target_compile_options(AestraLicense PRIVATE ${LIBSODIUM_CFLAGS_OTHER})
 else()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(LIBSODIUM REQUIRED libsodium)

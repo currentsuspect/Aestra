@@ -18,8 +18,8 @@ int main(int argc, char** argv) {
     const std::filesystem::path hostPath = argv[1];
     const std::filesystem::path clapPath = argv[2];
     if (!std::filesystem::exists(hostPath) || !std::filesystem::exists(clapPath)) {
-        std::cerr << "helper or CLAP test plugin path does not exist\n";
-        return 2;
+        std::cout << "[SKIP] helper or CLAP test plugin path does not exist\n";
+        return 77;
     }
 
 #ifdef _WIN32
