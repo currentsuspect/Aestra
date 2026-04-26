@@ -80,3 +80,6 @@ with explicit preview inclusion/exclusion assertions tied to final product polic
 Phase 2C is a metadata and safety phase. It provides vocabulary and guardrails
 to reduce migration risk while preserving existing behavior until dedicated
 behavior-switch phases are specified and fully regression-covered.
+
+Additive bridge metadata persistence is implemented in:
+`AestraDocs/architecture/arsenal-bridge-mode-phase-2d.md`.

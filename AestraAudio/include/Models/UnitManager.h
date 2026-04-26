@@ -1,6 +1,7 @@
 #pragma once
 #include "../../AestraCore/include/AestraJSON.h"
 #include "../Plugin/PluginHost.h"
+#include "Models/ArsenalBridgeMode.h"
 #include "Models/PatternSource.h"
 
 #include <cstdint>
@@ -87,6 +88,15 @@ struct UnitInfo {
     bool routesToTimelineTrack() const noexcept { return getRouteMode() == ArsenalRouteMode::RoutedToTimelineTrack; }
     /** @brief True when this unit currently routes to master preview path. */
     bool routesToMasterPreview() const noexcept { return getRouteMode() == ArsenalRouteMode::PreviewToMaster; }
+    /**
+     * @brief Ownership metadata for Arsenal->Timeline bridge semantics.
+     *
+     * This field is additive metadata only and does not affect current routing
+     * or render/export authority.
+     */
+    ArsenalBridgeMode bridgeMode{ArsenalBridgeMode::PreviewToMaster};
+    /** @brief Explicit in-memory bridge ownership mode value. */
+    ArsenalBridgeMode getBridgeMode() const noexcept { return bridgeMode; }
     /** @brief Live plugin instance attached to this unit. */
     std::shared_ptr<IPluginInstance> plugin;
     /** @brief Plugin identifier used to recreate the instance. */
