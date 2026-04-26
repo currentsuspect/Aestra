@@ -2,6 +2,7 @@
 #include "AudioRenderer.h"
 
 #include "../../AestraCore/include/AestraMath.h"
+#include "ArsenalProcessingContext.h"
 #include "AudioEngine.h"
 #include "EffectChain.h"
 #include "Interpolators.h"
@@ -229,10 +230,10 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
 
 void AudioRenderer::processArsenalMidi(const Context& ctx, AudioEngine& engineRef) {
     auto* pe = engineRef.m_patternEngine.load(std::memory_order_acquire);
-    auto* um = engineRef.m_unitManager.load(std::memory_order_acquire);
-    if (!pe || !um || ctx.sampleRate == 0)
+    ArsenalProcessingContext arsenal(engineRef.m_unitManager.load(std::memory_order_acquire), pe);
+    if (!pe || !arsenal.unitManager() || ctx.sampleRate == 0)
         return;
-    auto snap = um->getAudioSnapshot();
+    auto snap = arsenal.getSnapshot();
     if (!snap || snap->units.empty())
         return;
 
@@ -253,18 +254,17 @@ void AudioRenderer::processArsenalMidi(const Context& ctx, AudioEngine& engineRe
 
 void AudioRenderer::renderArsenalUnitsForTrack(uint32_t trackIndex, double* trackBuffer, const Context& ctx,
                                                AudioEngine& engineRef) {
-    // [FIX] Audio during arsenal: Route to specific mixer tracks
-    auto* um = engineRef.m_unitManager.load(std::memory_order_acquire);
-    if (!um)
-        return;
-    auto snap = um->getAudioSnapshot();
+    // Arsenal currently participates inside the main engine render path.
+    ArsenalProcessingContext arsenal(engineRef.m_unitManager.load(std::memory_order_acquire));
+    auto snap = arsenal.getSnapshot();
     if (!snap || snap->units.empty())
         return;
 
     const float* ins[2] = {engineRef.m_silentBufferF.data(), engineRef.m_silentBufferF.data()};
     size_t bIdx = 0;
     for (const auto& u : snap->units) {
-        if (u.enabled && u.plugin && u.routeId == (int)trackIndex) {
+        if (u.enabled && u.plugin && ArsenalProcessingContext::routesToTimelineTrack(u.routeId) &&
+            u.routeId == static_cast<int>(trackIndex)) {
             std::fill(engineRef.m_pluginBufferF.begin(), engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2, 0.0f);
             float* outs[2] = {engineRef.m_pluginBufferF.data(), engineRef.m_pluginBufferF.data() + ctx.numFrames};
             MidiBuffer* mIn =
@@ -285,18 +285,18 @@ void AudioRenderer::renderArsenalUnitsForTrack(uint32_t trackIndex, double* trac
 void AudioRenderer::processArsenalUnits(const Context& ctx, AudioEngine& engineRef) {
     if (ctx.isolatedTrackIndex >= 0)
         return;
-    auto* um = engineRef.m_unitManager.load(std::memory_order_acquire);
-    if (!um)
-        return;
-    auto snap = um->getAudioSnapshot();
+    // Current semantics: PreviewToMaster units are audible and export-participating
+    // because export follows the same processBlock authority.
+    ArsenalProcessingContext arsenal(engineRef.m_unitManager.load(std::memory_order_acquire));
+    auto snap = arsenal.getSnapshot();
     if (!snap || snap->units.empty())
         return;
 
     const float* ins[2] = {engineRef.m_silentBufferF.data(), engineRef.m_silentBufferF.data()};
     size_t bIdx = 0;
     for (const auto& u : snap->units) {
-        // Only handle units NOT routed to a track (those going to Master)
-        if (u.enabled && u.plugin && u.routeId < 0) {
+        // Only handle units not routed to a Timeline track.
+        if (u.enabled && u.plugin && ArsenalProcessingContext::routesToMasterPreview(u.routeId)) {
             std::fill(engineRef.m_pluginBufferF.begin(), engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2, 0.0f);
             float* outs[2] = {engineRef.m_pluginBufferF.data(), engineRef.m_pluginBufferF.data() + ctx.numFrames};
             MidiBuffer* mIn =

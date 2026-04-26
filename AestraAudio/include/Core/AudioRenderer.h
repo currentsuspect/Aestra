@@ -51,23 +51,33 @@ public:
      * @param engineRef Helper ref to engine for accessing EffectChains/Clips (Legacy bridge).
      */
     /**
-     * @brief Pass 1: Handle MIDI timing and pattern scheduling
+     * @brief Pass 1: Handle Arsenal MIDI timing and pattern scheduling.
+     *
+     * Current architecture: Arsenal MIDI scheduling participates in the main
+     * engine render path. Timeline remains arrangement/export authority.
      */
     void processArsenalMidi(const Context& ctx, AudioEngine& engineRef);
 
     /**
-     * @brief Pass 2: Main graph render (Clips + Plugins + Effects)
+     * @brief Pass 2: Main graph render (Clips + Plugins + Effects).
      */
     void renderBlock(const Context& ctx, AudioGraphState& state, AudioEngine& engineRef);
 
     /**
-     * @brief Pass 3: Process Arsenal units routed to Master
+     * @brief Pass 3: Process Arsenal units routed to Master preview.
+     *
+     * Current behavior is intentionally unchanged: routeId < 0 renders to
+     * master path and remains export-participating because export follows the
+     * live processBlock/render authority.
      */
     void processArsenalUnits(const Context& ctx, AudioEngine& engineRef);
 
 private:
     /**
-     * @brief Helper to render Arsenal units assigned to a specific track
+     * @brief Helper to render Arsenal units assigned to a specific Timeline track.
+     *
+     * Current behavior is intentionally unchanged: routeId == trackIndex renders
+     * into that track path before Timeline track effects.
      */
     void renderArsenalUnitsForTrack(uint32_t trackIndex, double* trackBuffer, const Context& ctx,
                                     AudioEngine& engineRef);
