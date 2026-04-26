@@ -16,6 +16,29 @@ namespace Audio {
 class PatternManager;
 using UnitID = uint64_t;
 
+/**
+ * @brief Explicit interpretation of current Arsenal route semantics.
+ *
+ * This enum is scaffolding for context ownership cleanup. It maps to the
+ * existing `routeId` / `targetMixerRoute` behavior and does not alter routing.
+ */
+enum class ArsenalRouteMode : uint8_t {
+    PreviewToMaster = 0,
+    RoutedToTimelineTrack = 1,
+    Draft = 2,
+};
+
+/**
+ * @brief Map legacy route id semantics to the explicit Arsenal route model.
+ *
+ * Current behavior mapping:
+ * - routeId < 0  -> PreviewToMaster
+ * - routeId >= 0 -> RoutedToTimelineTrack
+ */
+constexpr ArsenalRouteMode arsenalRouteModeFromRouteId(int routeId) noexcept {
+    return routeId < 0 ? ArsenalRouteMode::PreviewToMaster : ArsenalRouteMode::RoutedToTimelineTrack;
+}
+
 enum class UnitGroup : uint32_t {
     Unknown = 0,
     Synth = 1,
@@ -41,11 +64,21 @@ struct UnitInfo {
     /**
      * @brief Timeline lane assignment compatibility field.
      *
-     * Standalone Arsenal preview is always auditioned directly to master.
-     * This value only matters once the unit is placed on the Timeline and a
-     * lane owns its mix routing.
+     * Current behavior maps this integer directly to route mode:
+     * - < 0 routes unit output to master preview path.
+     * - >= 0 routes unit output to the Timeline track at that index.
+     *
+     * Arsenal currently participates in the main engine render path. Timeline
+     * remains arrangement/export authority, and export follows live processBlock
+     * routing behavior.
      */
     int targetMixerRoute{-1};
+    /** @brief Explicit interpretation of @ref targetMixerRoute for guardrail usage. */
+    ArsenalRouteMode getRouteMode() const noexcept { return arsenalRouteModeFromRouteId(targetMixerRoute); }
+    /** @brief True when this unit currently routes into the Timeline track path. */
+    bool routesToTimelineTrack() const noexcept { return getRouteMode() == ArsenalRouteMode::RoutedToTimelineTrack; }
+    /** @brief True when this unit currently routes to master preview path. */
+    bool routesToMasterPreview() const noexcept { return getRouteMode() == ArsenalRouteMode::PreviewToMaster; }
     /** @brief Live plugin instance attached to this unit. */
     std::shared_ptr<IPluginInstance> plugin;
     /** @brief Plugin identifier used to recreate the instance. */
@@ -89,15 +122,32 @@ struct UnitState {
     bool enabled;
     /** @brief Plugin instance used for rendering. */
     std::shared_ptr<IPluginInstance> plugin;
-    /** @brief Timeline lane assignment, or -1 for direct master preview. */
+    /**
+     * @brief Legacy route id consumed by current render path.
+     *
+     * - < 0 routes to master preview path
+     * - >= 0 routes to Timeline track path
+     */
     int routeId;
+    /** @brief Explicit interpretation of @ref routeId for non-behavioral guardrails. */
+    ArsenalRouteMode getRouteMode() const noexcept { return arsenalRouteModeFromRouteId(routeId); }
+    /** @brief True when this unit currently routes into the Timeline track path. */
+    bool routesToTimelineTrack() const noexcept { return getRouteMode() == ArsenalRouteMode::RoutedToTimelineTrack; }
+    /** @brief True when this unit currently routes to master preview path. */
+    bool routesToMasterPreview() const noexcept { return getRouteMode() == ArsenalRouteMode::PreviewToMaster; }
 };
 
 /**
  * @brief Immutable audio-thread snapshot of Arsenal state.
  */
 struct AudioArsenalSnapshot {
-    /** @brief Ordered list of unit states visible to the audio engine. */
+    /**
+     * @brief Ordered list of unit states visible to the audio engine.
+     *
+     * Snapshot data currently feeds Arsenal processing that runs inside the main
+     * engine render path. Export authority remains tied to Timeline/live
+     * processBlock behavior.
+     */
     std::vector<UnitState> units;
 };
 

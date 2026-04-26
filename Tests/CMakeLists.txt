@@ -441,6 +441,26 @@ target_include_directories(AestraUUIDTest PRIVATE
 add_test(NAME AestraUUIDTest COMMAND AestraUUIDTest)
 set_tests_properties(AestraUUIDTest PROPERTIES LABELS "audio;uuid")
 
+# Arsenal route-mode mapping guardrail test
+add_executable(ArsenalRouteModeTest AestraAudio/ArsenalRouteModeTest.cpp)
+target_link_libraries(ArsenalRouteModeTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(ArsenalRouteModeTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ArsenalRouteModeTest COMMAND ArsenalRouteModeTest)
+set_tests_properties(ArsenalRouteModeTest PROPERTIES LABELS "audio;arsenal")
+
+# Arsenal processing context smoke test (behavior-preserving wrapper)
+add_executable(ArsenalProcessingContextTest AestraAudio/ArsenalProcessingContextTest.cpp)
+target_link_libraries(ArsenalProcessingContextTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(ArsenalProcessingContextTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ArsenalProcessingContextTest COMMAND ArsenalProcessingContextTest)
+set_tests_properties(ArsenalProcessingContextTest PROPERTIES LABELS "audio;arsenal")
+
 # Sample Rate Converter Test
 add_executable(AestraSampleRateConverterTest AestraAudio/SampleRateConverterTest.cpp)
 target_link_libraries(AestraSampleRateConverterTest PRIVATE AestraAudio AestraCore)
