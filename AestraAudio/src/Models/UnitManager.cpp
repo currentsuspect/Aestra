@@ -72,6 +72,10 @@ std::optional<ArsenalRouteMode> arsenalRouteModeFromJson(const JSON& routeModeJs
     }
     return std::nullopt;
 }
+
+ArsenalBridgeMode bridgeModeFallbackFromRouteId(int routeId) {
+    return routeId < 0 ? ArsenalBridgeMode::PreviewToMaster : ArsenalBridgeMode::LinkedRack;
+}
 } // namespace
 
 std::string unitTypeName(UnitType type) {
@@ -250,6 +254,7 @@ UnitID UnitManager::createUnit(const std::string& name, UnitType type) {
     info.name = name;
     info.type = type;
     info.group = unitGroupForType(type);
+    info.bridgeMode = bridgeModeFallbackFromRouteId(info.targetMixerRoute);
 
     if (m_patternManager && type != UnitType::Audio) {
         std::string patternName = name.empty() ? ("Unit " + std::to_string(id) + " Pattern") : (name + " Pattern");
@@ -477,6 +482,7 @@ JSON UnitManager::saveToJSON() const {
         routeMode.set("id", JSON(static_cast<double>(static_cast<uint8_t>(resolvedRouteMode))));
         routeMode.set("name", JSON(arsenalRouteModeName(resolvedRouteMode)));
         u.set("routeMode", routeMode);
+        u.set("bridgeMode", JSON(std::string(toString(unit->bridgeMode))));
 
         JSON group = JSON::object();
         group.set("id", JSON(static_cast<double>(static_cast<uint32_t>(unit->group))));
@@ -552,6 +558,21 @@ void UnitManager::loadFromJSON(const JSON& json) {
             } else if (!loadedRouteMode.has_value()) {
                 Log::warning("[UnitManager] Invalid routeMode value for unit " + std::to_string(unit.id) +
                              "; falling back to routeId-compatible behavior.");
+            }
+        }
+        unit.bridgeMode = bridgeModeFallbackFromRouteId(unit.targetMixerRoute);
+        if (ju.has("bridgeMode")) {
+            if (ju["bridgeMode"].isString()) {
+                const auto loadedBridgeMode = arsenalBridgeModeFromString(ju["bridgeMode"].asString());
+                if (loadedBridgeMode.has_value()) {
+                    unit.bridgeMode = loadedBridgeMode.value();
+                } else {
+                    Log::warning("[UnitManager] Invalid bridgeMode value for unit " + std::to_string(unit.id) +
+                                 "; falling back to routeId-compatible bridge metadata.");
+                }
+            } else {
+                Log::warning("[UnitManager] Non-string bridgeMode for unit " + std::to_string(unit.id) +
+                             "; falling back to routeId-compatible bridge metadata.");
             }
         }
         if (ju.has("color")) {
