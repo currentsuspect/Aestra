@@ -484,6 +484,25 @@ target_include_directories(ArsenalRouteModeRoundTripTest PRIVATE
 add_test(NAME ArsenalRouteModeRoundTripTest COMMAND ArsenalRouteModeRoundTripTest)
 set_tests_properties(ArsenalRouteModeRoundTripTest PROPERTIES LABELS "audio;arsenal;roundtrip")
 
+# Arsenal route-mode policy contract test (Phase 2B)
+add_executable(ArsenalRouteModePolicyTest AestraAudio/ArsenalRouteModePolicyTest.cpp)
+target_link_libraries(ArsenalRouteModePolicyTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(ArsenalRouteModePolicyTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ArsenalRouteModePolicyTest COMMAND ArsenalRouteModePolicyTest)
+set_tests_properties(ArsenalRouteModePolicyTest PROPERTIES LABELS "audio;arsenal;policy")
+
+# Arsenal bridge-mode terminology contract test (Phase 2B policy-only)
+add_executable(ArsenalBridgeContractTest AestraAudio/ArsenalBridgeContractTest.cpp)
+target_link_libraries(ArsenalBridgeContractTest PRIVATE AestraCore)
+target_include_directories(ArsenalBridgeContractTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ArsenalBridgeContractTest COMMAND ArsenalBridgeContractTest)
+set_tests_properties(ArsenalBridgeContractTest PROPERTIES LABELS "arsenal;policy")
+
 # Sample Rate Converter Test
 add_executable(AestraSampleRateConverterTest AestraAudio/SampleRateConverterTest.cpp)
 target_link_libraries(AestraSampleRateConverterTest PRIVATE AestraAudio AestraCore)

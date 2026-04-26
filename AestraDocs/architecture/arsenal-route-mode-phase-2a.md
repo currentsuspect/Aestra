@@ -44,3 +44,6 @@ rendered assets, separate Arsenal graph ownership, or UI mode controls.
 1. Define explicit product behavior for each mode (`Draft`, `PreviewToMaster`, `RoutedToTimelineTrack`) and the user-facing transitions.
 2. Add a clear Arsenal→Timeline bridge model (linked rack, local copy, rendered/frozen asset) before behavior switches.
 3. Add targeted offline parity tests for preview-vs-track path once a stable deterministic harness is available for both paths.
+
+Phase 2B policy contract and terminology are documented in:
+`AestraDocs/architecture/arsenal-route-mode-phase-2b.md`.
