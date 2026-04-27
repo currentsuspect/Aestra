@@ -1,0 +1,286 @@
+name: AestraVerb SIMD Hardware Lab
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+    paths:
+      - "AestraAudio/**"
+      - "Tests/**"
+      - "labs/reverb/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - ".github/workflows/aestra-reverb-simd-lab.yml"
+  pull_request:
+    paths:
+      - "AestraAudio/**"
+      - "Tests/**"
+      - "labs/reverb/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - ".github/workflows/aestra-reverb-simd-lab.yml"
+
+jobs:
+  reverb-simd-lab:
+    name: Reverb SIMD Benchmark
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: System info
+        run: |
+          mkdir -p labs/reverb/ci-output
+          {
+            echo "=== uname ==="
+            uname -a
+            echo
+            echo "=== lscpu ==="
+            lscpu
+            echo
+            echo "=== nproc ==="
+            nproc
+            echo
+            echo "=== memory ==="
+            free -h
+            echo
+            echo "=== cpuinfo head ==="
+            cat /proc/cpuinfo | head -80
+            echo
+            echo "=== cpu flags ==="
+            grep -m1 flags /proc/cpuinfo || true
+            echo
+            echo "=== compiler ==="
+            c++ --version
+            echo
+            echo "=== cmake ==="
+            cmake --version
+          } | tee labs/reverb/ci-output/cpu-metadata.txt
+
+      - name: Detect SIMD support
+        id: simd
+        shell: bash
+        run: |
+          FLAGS="$(grep -m1 flags /proc/cpuinfo || true)"
+
+          has_flag() {
+            echo "$FLAGS" | grep -qw "$1"
+          }
+
+          if has_flag sse4_1; then echo "sse41=true" >> "$GITHUB_OUTPUT"; else echo "sse41=false" >> "$GITHUB_OUTPUT"; fi
+          if has_flag avx; then echo "avx=true" >> "$GITHUB_OUTPUT"; else echo "avx=false" >> "$GITHUB_OUTPUT"; fi
+          if has_flag avx2; then echo "avx2=true" >> "$GITHUB_OUTPUT"; else echo "avx2=false" >> "$GITHUB_OUTPUT"; fi
+          if has_flag fma; then echo "fma=true" >> "$GITHUB_OUTPUT"; else echo "fma=false" >> "$GITHUB_OUTPUT"; fi
+
+          echo "SSE4.1: $(has_flag sse4_1 && echo yes || echo no)"
+          echo "AVX:    $(has_flag avx && echo yes || echo no)"
+          echo "AVX2:   $(has_flag avx2 && echo yes || echo no)"
+          echo "FMA:    $(has_flag fma && echo yes || echo no)"
+
+      - name: Configure Release build
+        run: |
+          cmake -S . -B build-reverb-lab \
+            -DAestra_CORE_MODE=ON \
+            -DAESTRA_HEADLESS_ONLY=ON \
+            -DAESTRA_ENABLE_UI=OFF \
+            -DAESTRA_ENABLE_TESTS=ON \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build benchmark
+        run: |
+          cmake --build build-reverb-lab \
+            --target AestraReverbBenchmark \
+            --parallel "$(nproc)" \
+            2>&1 | tee labs/reverb/ci-output/build-log.txt
+
+      - name: Find benchmark binary
+        id: bench
+        run: |
+          BENCH="$(find build-reverb-lab -type f -name AestraReverbBenchmark | head -1)"
+          echo "binary=$BENCH" >> "$GITHUB_OUTPUT"
+          echo "Benchmark binary: $BENCH"
+
+      - name: Run benchmark — Runtime Dispatch (Cubic + best available SIMD)
+        shell: bash
+        run: |
+          "${{ steps.bench.outputs.binary }}" \
+            --iterations 5 \
+            --duration 5 \
+            --warmup 1 \
+            --output-json labs/reverb/ci-output/benchmark-dispatch.json \
+            --output-md labs/reverb/ci-output/benchmark-dispatch.md \
+            --output-text labs/reverb/ci-output/benchmark-dispatch.txt \
+            2>&1 | tee labs/reverb/ci-output/benchmark-dispatch.log
+
+      - name: Run benchmark — Scalar Fallback (Cubic + Scalar)
+        shell: bash
+        run: |
+          "${{ steps.bench.outputs.binary }}" \
+            --scalar \
+            --iterations 5 \
+            --duration 5 \
+            --warmup 1 \
+            --output-json labs/reverb/ci-output/benchmark-scalar.json \
+            --output-md labs/reverb/ci-output/benchmark-scalar.md \
+            --output-text labs/reverb/ci-output/benchmark-scalar.txt \
+            2>&1 | tee labs/reverb/ci-output/benchmark-scalar.log
+
+      - name: Run benchmark — Linear + Scalar (original baseline)
+        shell: bash
+        run: |
+          "${{ steps.bench.outputs.binary }}" \
+            --scalar \
+            --linear \
+            --iterations 5 \
+            --duration 5 \
+            --warmup 1 \
+            --output-json labs/reverb/ci-output/benchmark-linear-scalar.json \
+            --output-md labs/reverb/ci-output/benchmark-linear-scalar.md \
+            --output-text labs/reverb/ci-output/benchmark-linear-scalar.txt \
+            2>&1 | tee labs/reverb/ci-output/benchmark-linear-scalar.log
+
+      - name: Run benchmark — Cubic + AVX2 (only if AVX2 detected)
+        if: ${{ steps.simd.outputs.avx2 == 'true' }}
+        shell: bash
+        run: |
+          # NOTE: AVX2 is runtime-dispatched. On an AVX2 machine the runtime
+          # dispatch benchmark already uses AVX2. This step is a no-op placeholder
+          # for future explicit AVX2 forcing if we add that CLI flag.
+          echo "AVX2 detected on runner. Runtime dispatch benchmark already exercised AVX2 path."
+          echo "AVX2: RUN" > labs/reverb/ci-output/avx2-status.txt
+
+      - name: Skip AVX2 benchmark (if not detected)
+        if: ${{ steps.simd.outputs.avx2 != 'true' }}
+        shell: bash
+        run: |
+          echo "AVX2 NOT detected on this runner. Skipping AVX2-specific benchmark."
+          echo "AVX2: SKIPPED" > labs/reverb/ci-output/avx2-status.txt
+
+      - name: Generate comparison report
+        shell: bash
+        run: |
+          REPORT="labs/reverb/ci-output/comparison-report.md"
+          echo "# AestraVerb SIMD Comparison Report" > "$REPORT"
+          echo "" >> "$REPORT"
+          echo "| Configuration | Room (ms) | Hall (ms) | Plate (ms) |" >> "$REPORT"
+          echo "|---------------|-----------|-----------|------------|" >> "$REPORT"
+
+          # Write a small Python helper to a temp file to avoid YAML inline script issues
+          cat > /tmp/extract_json.py << 'PYEOF'
+          import json, sys
+          try:
+              d = json.load(open(sys.argv[1]))
+              for m in d.get('modes', []):
+                  print(f"{m['name']}={m['medianUs']}")
+          except Exception:
+              print('ERROR')
+          PYEOF
+
+          extract_median() {
+            local file="$1"
+            if [ -f "$file" ]; then
+              python3 /tmp/extract_json.py "$file" 2>/dev/null || echo "ERROR"
+            else
+              echo "MISSING"
+            fi
+          }
+
+          DISPATCH="$(extract_median labs/reverb/ci-output/benchmark-dispatch.json)"
+          SCALAR="$(extract_median labs/reverb/ci-output/benchmark-scalar.json)"
+          LINEAR="$(extract_median labs/reverb/ci-output/benchmark-linear-scalar.json)"
+
+          # Build table rows
+          for label in "Dispatch (Cubic+SIMD)" "Scalar (Cubic)" "Linear+Scalar"; do
+            case "$label" in
+              "Dispatch (Cubic+SIMD)")
+                DATA="$DISPATCH"
+                ;;
+              "Scalar (Cubic)")
+                DATA="$SCALAR"
+                ;;
+              "Linear+Scalar")
+                DATA="$LINEAR"
+                ;;
+            esac
+
+            ROOM="$(echo "$DATA" | grep -m1 '^Room=' | cut -d= -f2 || echo N/A)"
+            HALL="$(echo "$DATA" | grep -m1 '^Hall=' | cut -d= -f2 || echo N/A)"
+            PLATE="$(echo "$DATA" | grep -m1 '^Plate=' | cut -d= -f2 || echo N/A)"
+
+            # Convert us to ms with python
+            ROOM_MS="$(python3 -c "v='$ROOM'; print(f'{float(v)/1000:.1f}' if v not in ('N/A','ERROR','MISSING') else v)")"
+            HALL_MS="$(python3 -c "v='$HALL'; print(f'{float(v)/1000:.1f}' if v not in ('N/A','ERROR','MISSING') else v)")"
+            PLATE_MS="$(python3 -c "v='$PLATE'; print(f'{float(v)/1000:.1f}' if v not in ('N/A','ERROR','MISSING') else v)")"
+
+            echo "| $label | $ROOM_MS | $HALL_MS | $PLATE_MS |" >> "$REPORT"
+          done
+
+          echo "" >> "$REPORT"
+          echo "## Speedup vs Scalar Baseline" >> "$REPORT"
+          echo "" >> "$REPORT"
+
+          # Calculate speedups
+          ROOM_SCALAR="$(echo "$SCALAR" | grep -m1 '^Room=' | cut -d= -f2 || echo 0)"
+          ROOM_DISP="$(echo "$DISPATCH" | grep -m1 '^Room=' | cut -d= -f2 || echo 0)"
+          if [ -n "$ROOM_SCALAR" ] && [ -n "$ROOM_DISP" ] && [ "$ROOM_SCALAR" != "0" ] && [ "$ROOM_DISP" != "0" ]; then
+            SPEEDUP="$(python3 -c "print(f'{float(\"$ROOM_SCALAR\")/float(\"$ROOM_DISP\"):.2f}x')")"
+            echo "- Room: Dispatch is **${SPEEDUP}** faster than Scalar" >> "$REPORT"
+          fi
+
+          echo "" >> "$REPORT"
+          echo "## Runner Info" >> "$REPORT"
+          echo "" >> "$REPORT"
+          echo "- SSE4.1: ${{ steps.simd.outputs.sse41 }}" >> "$REPORT"
+          echo "- AVX: ${{ steps.simd.outputs.avx }}" >> "$REPORT"
+          echo "- AVX2: ${{ steps.simd.outputs.avx2 }}" >> "$REPORT"
+          echo "- FMA: ${{ steps.simd.outputs.fma }}" >> "$REPORT"
+          echo "- Git SHA: $(git rev-parse --short HEAD)" >> "$REPORT"
+          echo "- Branch: $(git rev-parse --abbrev-ref HEAD)" >> "$REPORT"
+
+          cat "$REPORT"
+
+      - name: Write GitHub step summary
+        if: always()
+        run: |
+          echo "# AestraVerb SIMD Hardware Lab" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## CPU Detection" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- SSE4.1: ${{ steps.simd.outputs.sse41 }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- AVX: ${{ steps.simd.outputs.avx }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- AVX2: ${{ steps.simd.outputs.avx2 }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- FMA: ${{ steps.simd.outputs.fma }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${{ steps.simd.outputs.avx2 }}" == "true" ]; then
+            echo "✅ AVX2 detected — runtime dispatch used AVX2 path" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⏭️ AVX2 NOT detected — AVX2 benchmark SKIPPED (expected on non-AVX2 runners)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -f labs/reverb/ci-output/comparison-report.md ]; then
+            echo "## Benchmark Comparison" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            cat labs/reverb/ci-output/comparison-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Artifacts" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download the full benchmark logs and JSON reports from the artifacts section." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aestra-reverb-simd-lab-${{ github.run_id }}
+          path: |
+            labs/reverb/ci-output/**
+            build-reverb-lab/**/CMakeCache.txt
+            build-reverb-lab/**/CMakeError.log
+            build-reverb-lab/**/CMakeOutput.log
