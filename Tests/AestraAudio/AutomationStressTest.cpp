@@ -172,6 +172,47 @@ void test_target_256_raw_cast_is_volume() {
     testsPassed++;
 }
 
+// 2a-XII: automationTargetFromRawInt helper prevents wrap-to-Volume hazard.
+// All integer→AutomationTarget ingress should use this helper.
+void test_automation_target_from_raw_int() {
+    // Known values pass through unchanged
+    if (automationTargetFromRawInt(0) != AutomationTarget::Volume) {
+        printf("FAIL: raw 0 → Volume\n"); testsFailed++; return;
+    }
+    if (automationTargetFromRawInt(1) != AutomationTarget::Pan) {
+        printf("FAIL: raw 1 → Pan\n"); testsFailed++; return;
+    }
+    if (automationTargetFromRawInt(255) != AutomationTarget::Custom) {
+        printf("FAIL: raw 255 → Custom\n"); testsFailed++; return;
+    }
+    // Unrecognized in-range values preserved as-is (renderer skips them)
+    if (static_cast<int>(automationTargetFromRawInt(128)) != 128) {
+        printf("FAIL: raw 128 should be preserved\n"); testsFailed++; return;
+    }
+    if (static_cast<int>(automationTargetFromRawInt(2)) != 2) {
+        printf("FAIL: raw 2 should be preserved\n"); testsFailed++; return;
+    }
+    // Wrap-to-Volume hazard prevented: 256 → 255 (Custom), NOT 0 (Volume)
+    if (automationTargetFromRawInt(256) != AutomationTarget::Custom) {
+        printf("FAIL: raw 256 must clamp to Custom(255), not Volume(0)\n"); testsFailed++; return;
+    }
+    if (static_cast<int>(automationTargetFromRawInt(256)) != 255) {
+        printf("FAIL: raw 256 clamped value mismatch\n"); testsFailed++; return;
+    }
+    // Huge values clamp safely
+    if (automationTargetFromRawInt(10000) != AutomationTarget::Custom) {
+        printf("FAIL: raw 10000 must clamp to Custom\n"); testsFailed++; return;
+    }
+    if (automationTargetFromRawInt(999999) != AutomationTarget::Custom) {
+        printf("FAIL: raw 999999 must clamp to Custom\n"); testsFailed++; return;
+    }
+    // Negative values clamp to Volume (matching finiteNumberOr min=0 behavior)
+    if (automationTargetFromRawInt(-1) != AutomationTarget::Volume) {
+        printf("FAIL: raw -1 must clamp to Volume(0)\n"); testsFailed++; return;
+    }
+    testsPassed++;
+}
+
 int main() {
     printf("=== Automation Deserialization Stress Tests ===\n\n");
 
@@ -207,6 +248,9 @@ int main() {
 
     printf("\n2a-XI: AutomationTarget 256 raw cast wraps to Volume (uint8_t hazard)\n");
     test_target_256_raw_cast_is_volume();
+
+    printf("\n2a-XII: automationTargetFromRawInt helper prevents wrap-to-Volume\n");
+    test_automation_target_from_raw_int();
 
     printf("\n=== Results: %d passed, %d failed ===\n", testsPassed, testsFailed);
     return testsFailed > 0 ? 1 : 0;
