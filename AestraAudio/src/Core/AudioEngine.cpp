@@ -2504,7 +2504,8 @@ void AudioEngine::requestVoiceResetOnPatternChange() {
 // Arsenal Unit Processing (Pattern Playback)
 //==============================================================================
 
-void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame) {
+void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
+                                     double* targetBuffer, int32_t isolatedTrackIndex) {
     // [FIX] Only process Arsenal units in pattern/Arsenal mode
     // In Timeline mode, skip entirely to prevent audio bleed with wrong sample rate
     if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
@@ -2574,8 +2575,8 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         ++bufIdx;
     }
 
-    // Refill and process pattern MIDI events only while playing
-    if (transportPlaying) {
+    // Refill and process pattern MIDI events while playing, or during offline bounce
+    if (transportPlaying || targetBuffer != nullptr) {
         constexpr int LOOKAHEAD_SAMPLES = 2048; // ~40ms at 48kHz
         patternEngine->refillWindow(currentFrame, static_cast<int>(sampleRate), LOOKAHEAD_SAMPLES);
         patternEngine->processAudio(currentFrame, static_cast<int>(numFrames), unitMidiRoutes.data(),
@@ -2592,6 +2593,14 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
 
     for (const auto& unit : snapshot->units) {
         if (!unit.enabled || !unit.plugin) {
+            bufIdx++;
+            continue;
+        }
+
+        // During bounce (targetBuffer set), skip PreviewToMaster units.
+        // renderBlock handles PreviewToMaster via AudioRenderer::processArsenalUnits.
+        // During live processBlock, all units process through m_masterBufferD.
+        if (targetBuffer != nullptr && unit.getRouteMode() == ArsenalRouteMode::PreviewToMaster) {
             bufIdx++;
             continue;
         }
@@ -2615,7 +2624,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         unit.plugin->process(inputs, outputs, 2, 2, numFrames, midiIn, &midiOut);
 
         // Mix plugin output into master buffer (mixing floats into double master)
-        double* masterD = m_masterBufferD.data() + static_cast<size_t>(bufferOffset) * 2;
+        double* masterD = (targetBuffer ? targetBuffer : m_masterBufferD.data()) + static_cast<size_t>(bufferOffset) * 2;
         for (uint32_t i = 0; i < numFrames; ++i) {
             masterD[i * 2 + 0] += static_cast<double>(outputs[0][i]); // Left
             masterD[i * 2 + 1] += static_cast<double>(outputs[1][i]); // Right
@@ -2716,6 +2725,11 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
 
         // Render
         m_rtRenderer.renderBlock(ctx, graphState, *this);
+
+        // Process Arsenal pattern playback (MIDI buffer pop + unit render).
+        // renderBlock handles PreviewToMaster; this call processes track-routed
+        // Arsenal units that need MIDI buffer population for pattern playback.
+        processArsenalUnits(framesThisBlock, 0, currentFrame, blockBuffer.data(), trackId);
 
         // Buffer Conversion (Double -> Float)
         for (size_t i = 0; i < framesThisBlock * 2; ++i) {

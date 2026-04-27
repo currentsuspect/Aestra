@@ -441,8 +441,17 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
     require(!fullSamples.empty(), "Full bounce wav should not be empty");
     require(!isoSamples.empty(), "Isolated bounce wav should not be empty");
 
-    std::cout << "[INFO] Bounce: full=" << fullSamples.size() << " samples, iso="
-              << isoSamples.size() << " samples\n";
+    // Arsenal pattern playback now renders during bounce.
+    // Track-routed units are audible in both full and isolated bounce.
+    const float fullPeak = peakOf(fullSamples);
+    const float isoPeak = peakOf(isoSamples);
+    require(fullPeak > 1.0e-4f,
+            "Full bounce should be audible (Arsenal track-routed + preview paths)");
+    require(isoPeak > 1.0e-4f,
+            "Isolated bounce should be audible (track-routed Arsenal unit on target track)");
+
+    std::cout << "[INFO] Bounce: full=" << fullSamples.size() << " samples peak=" << fullPeak
+              << " iso=" << isoSamples.size() << " samples peak=" << isoPeak << "\n";
 }
 } // namespace
 
