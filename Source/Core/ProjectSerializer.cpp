@@ -1245,8 +1245,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     for (size_t a = 0; a < aj.size(); ++a) {
                         if (!aj[a].isObject()) continue;
                         std::string param = boundedStringOr(aj[a], "param", "", PROJECT_MAX_STRING_BYTES);
-                        auto target = static_cast<AutomationTarget>(
-                            finiteNumberOr(aj[a], "targetEnum", 0.0, 0.0, 255.0));
+                        auto target = automationTargetFromRawInt(
+                            static_cast<int>(finiteNumberOr(aj[a], "targetEnum", 0.0, 0.0, 255.0)));
                         // Warn for unrecognized targets (preserved non-fatally).
                         // AutomationTarget is uint8_t; known values are Volume(0), Pan(1), Custom(255).
                         // Unknown enums are kept as-is — the renderer is responsible for skipping them.
