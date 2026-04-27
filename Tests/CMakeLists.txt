@@ -316,6 +316,17 @@ endif()
 add_executable(AestraSincBenchmark AestraAudio/SincBenchmark.cpp)
 target_link_libraries(AestraSincBenchmark PRIVATE AestraAudioCore AestraCore)
 
+# Reverb SIMD Benchmark
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbBenchmark.cpp")
+    add_executable(AestraReverbBenchmark AestraAudio/ReverbBenchmark.cpp)
+    target_link_libraries(AestraReverbBenchmark PRIVATE AestraAudio AestraCore)
+    target_include_directories(AestraReverbBenchmark PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
 # Stress benchmark companion used by dsp-benchmark workflow
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/AestraStressTest.cpp")
     add_executable(AestraStressTest Integration/AestraStressTest.cpp)

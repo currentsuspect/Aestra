@@ -4,6 +4,7 @@
 #pragma once
 
 #include "Plugin/PluginHost.h"
+#include "DSP/ReverbSIMD.h"
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -130,6 +131,8 @@ public:
         const ModeConstants constants = constantsForMode(mode);
         const float sampleScale = static_cast<float>(m_sampleRate) / kReferenceSampleRate;
         const float smoothingCoeff = 1.0f - std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.015f));
+        const float blockSmoothingCoeff = 1.0f - std::exp(-4.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.015f));
+        static constexpr uint32_t kSmoothBlock = 4;
         const float lowDampCoeff = 1.0f - std::exp(-kTwoPi * 110.0f / static_cast<float>(m_sampleRate));
         const float randomCoeff = 1.0f - std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.22f));
 
@@ -167,21 +170,34 @@ public:
         }
 
         std::array<float, kFDNLineCount> lineOut{};
-        std::array<float, kFDNLineCount> matrixOut{};
         ControlCache control{};
         uint32_t controlCountdown = 0;
 
+        uint32_t smoothCountdown = 0;
         for (uint32_t i = 0; i < numFrames; ++i) {
-            for (uint32_t p = 0; p < kParamCount; ++p) {
-                if (p == kBypass || p == kMode) continue;
-                const float target = m_params[p].load(std::memory_order_relaxed);
-                smoothedParams[p] += (target - smoothedParams[p]) * smoothingCoeff;
+            if (smoothCountdown == 0) {
+                for (uint32_t p = 0; p < kParamCount; ++p) {
+                    if (p == kBypass || p == kMode) continue;
+                    const float target = m_params[p].load(std::memory_order_relaxed);
+                    smoothedParams[p] += (target - smoothedParams[p]) * blockSmoothingCoeff;
+                }
+                smoothCountdown = kSmoothBlock;
             }
+            --smoothCountdown;
 
             if (controlCountdown == 0) {
-                for (size_t line = 0; line < kFDNLineCount; ++line) {
-                    normalizeOscillator(lfoSin[line], lfoCos[line]);
-                    normalizeOscillator(lfoSin2[line], lfoCos2[line]);
+#ifdef AESTRA_REVERB_HAS_AVX2
+                static const bool useAVX2 = Aestra::Core::CPUDetection::get().hasAVX2();
+                if (useAVX2) {
+                    DSP::ReverbSIMD::normalizeLFOsAVX2(lfoSin.data(), lfoCos.data());
+                    DSP::ReverbSIMD::normalizeLFOsAVX2(lfoSin2.data(), lfoCos2.data());
+                } else
+#endif
+                {
+                    for (size_t line = 0; line < kFDNLineCount; ++line) {
+                        normalizeOscillator(lfoSin[line], lfoCos[line]);
+                        normalizeOscillator(lfoSin2[line], lfoCos2[line]);
+                    }
                 }
                 updateControlCache(control, smoothedParams, constants, mode, sampleScale);
                 controlCountdown = kControlInterval;
@@ -206,11 +222,67 @@ public:
             processEarlyReflections(delayedL, delayedR, control, earlyL, earlyR, earlyPos);
 
             if (control.diffusionEnabled) {
-                processDiffusers(delayedL, delayedR, control, diffuserPos);
+#ifdef AESTRA_REVERB_HAS_SSE
+                static const bool useSSE = Aestra::Core::CPUDetection::get().hasSSE41();
+                if (useSSE) {
+                    float* bufL[kDiffuserCount];
+                    float* bufR[kDiffuserCount];
+                    int lens[kDiffuserCount];
+                    for (size_t s = 0; s < kDiffuserCount; ++s) {
+                        bufL[s] = m_diffuserL[s].data();
+                        bufR[s] = m_diffuserR[s].data();
+                        lens[s] = control.diffuserLengths[s];
+                    }
+                    DSP::ReverbSIMD::processDiffusersSSE(delayedL, delayedR, control.diffusionG,
+                                                         bufL, bufR, diffuserPos.data(), lens, kDiffuserCount);
+                } else
+#endif
+                {
+                    processDiffusers(delayedL, delayedR, control, diffuserPos);
+                }
             }
 
             delayedL += earlyL * 0.20f;
             delayedR += earlyR * 0.20f;
+
+            // Vectorized LFO updates (sin/cos quadrature oscillators)
+            if (control.modulationEnabled) {
+#ifdef AESTRA_REVERB_HAS_AVX2
+                static const bool useAVX2 = Aestra::Core::CPUDetection::get().hasAVX2();
+                if (useAVX2) {
+                    DSP::ReverbSIMD::updateLFOsAVX2(
+                        lfoSin.data(), lfoCos.data(),
+                        lfoSin2.data(), lfoCos2.data(),
+                        control.lfoCosInc.data(), control.lfoSinInc.data(),
+                        control.lfoCosInc2.data(), control.lfoSinInc2.data());
+                } else
+#endif
+#ifdef AESTRA_REVERB_HAS_SSE
+                {
+                    DSP::ReverbSIMD::updateLFOsSSE(lfoSin.data(), lfoCos.data(),
+                                                   control.lfoCosInc.data(), control.lfoSinInc.data());
+                    DSP::ReverbSIMD::updateLFOsSSE(&lfoSin[4], &lfoCos[4],
+                                                   &control.lfoCosInc[4], &control.lfoSinInc[4]);
+                    DSP::ReverbSIMD::updateLFOsSSE(lfoSin2.data(), lfoCos2.data(),
+                                                   control.lfoCosInc2.data(), control.lfoSinInc2.data());
+                    DSP::ReverbSIMD::updateLFOsSSE(&lfoSin2[4], &lfoCos2[4],
+                                                   &control.lfoCosInc2[4], &control.lfoSinInc2[4]);
+                }
+#else
+                {
+                    for (size_t line = 0; line < kFDNLineCount; ++line) {
+                        const float nextSin = lfoSin[line] * control.lfoCosInc[line] + lfoCos[line] * control.lfoSinInc[line];
+                        const float nextCos = lfoCos[line] * control.lfoCosInc[line] - lfoSin[line] * control.lfoSinInc[line];
+                        lfoSin[line] = nextSin;
+                        lfoCos[line] = nextCos;
+                        const float nextSin2 = lfoSin2[line] * control.lfoCosInc2[line] + lfoCos2[line] * control.lfoSinInc2[line];
+                        const float nextCos2 = lfoCos2[line] * control.lfoCosInc2[line] - lfoSin2[line] * control.lfoSinInc2[line];
+                        lfoSin2[line] = nextSin2;
+                        lfoCos2[line] = nextCos2;
+                    }
+                }
+#endif
+            }
 
             for (size_t line = 0; line < kFDNLineCount; ++line) {
                 float lfoOffset = 0.0f;
@@ -225,16 +297,6 @@ public:
                                         randomMod[line] * 0.18f;
                     lfoOffset = multi * control.modDepthSamples;
 
-                    const float nextSin = lfoSin[line] * control.lfoCosInc[line] + lfoCos[line] * control.lfoSinInc[line];
-                    const float nextCos = lfoCos[line] * control.lfoCosInc[line] - lfoSin[line] * control.lfoSinInc[line];
-                    lfoSin[line] = nextSin;
-                    lfoCos[line] = nextCos;
-
-                    const float nextSin2 = lfoSin2[line] * control.lfoCosInc2[line] + lfoCos2[line] * control.lfoSinInc2[line];
-                    const float nextCos2 = lfoCos2[line] * control.lfoCosInc2[line] - lfoSin2[line] * control.lfoSinInc2[line];
-                    lfoSin2[line] = nextSin2;
-                    lfoCos2[line] = nextCos2;
-
                     lfoPhase[line] += control.lfoPhaseInc[line];
                     lfoPhase2[line] += control.lfoPhaseInc2[line];
                     if (lfoPhase[line] >= kTwoPi) lfoPhase[line] -= kTwoPi;
@@ -243,25 +305,27 @@ public:
                 lineOut[line] = readDelayLine(line, delayPos[line], static_cast<float>(control.lineLengths[line]) + lfoOffset);
             }
 
-            float sum = 0.0f;
-            for (float sample : lineOut) sum += sample;
-            const float householderMean = sum * (2.0f / static_cast<float>(kFDNLineCount));
-
             float wetL = 0.0f;
             float wetR = 0.0f;
-            for (size_t line = 0; line < kFDNLineCount; ++line) {
-                matrixOut[line] = lineOut[line] - householderMean;
-                dampingState[line] += control.dampingCoeff * (matrixOut[line] - dampingState[line]);
 
-                const float injected = (delayedL * kInjectL[line] + delayedR * kInjectR[line]) * 0.115f;
-                float feedback = dampingState[line] * control.feedbackGains[line];
-                lowDampState[line] += (feedback - lowDampState[line]) * lowDampCoeff;
-                feedback -= lowDampState[line] * 0.82f;
-                m_delayLines[line][delayPos[line]] = injected + feedback;
-                if (++delayPos[line] >= static_cast<int>(m_delayLines[line].size())) delayPos[line] = 0;
-
-                wetL += lineOut[line] * kOutputL[line];
-                wetR += lineOut[line] * kOutputR[line];
+            // SIMD-accelerated FDN Householder matrix + feedback + output mixing
+            // Falls back to scalar path on non-SIMD platforms.
+            {
+                float* delayPtrs[kFDNLineCount];
+                int delaySizes[kFDNLineCount];
+                for (size_t line = 0; line < kFDNLineCount; ++line) {
+                    delayPtrs[line] = m_delayLines[line].data();
+                    delaySizes[line] = static_cast<int>(m_delayLines[line].size());
+                }
+                DSP::ReverbSIMD::processFDNSample(
+                    lineOut.data(), delayedL, delayedR,
+                    dampingState.data(), lowDampState.data(),
+                    delayPtrs, delayPos.data(), delaySizes,
+                    control.feedbackGains.data(),
+                    kInjectL.data(), kInjectR.data(),
+                    kOutputL.data(), kOutputR.data(),
+                    control.dampingCoeff, lowDampCoeff,
+                    wetL, wetR);
             }
 
             wetL += earlyL * 0.18f;
@@ -649,11 +713,24 @@ private:
         while (readPos < 0.0f) readPos += static_cast<float>(size);
         while (readPos >= static_cast<float>(size)) readPos -= static_cast<float>(size);
 
-        const int i0 = static_cast<int>(std::floor(readPos));
-        int i1 = i0 + 1;
-        if (i1 >= size) i1 = 0;
-        const float frac = readPos - static_cast<float>(i0);
-        return buffer[static_cast<size_t>(i0)] * (1.0f - frac) + buffer[static_cast<size_t>(i1)] * frac;
+        const int i1 = static_cast<int>(readPos);
+        const int i2 = (i1 + 1) >= size ? 0 : (i1 + 1);
+        const int i0 = (i1 - 1) < 0 ? (size - 1) : (i1 - 1);
+        const int i3 = (i2 + 1) >= size ? 0 : (i2 + 1);
+        const float frac = readPos - static_cast<float>(i1);
+
+        // Prefetch upcoming samples to hide memory latency in the feedback loop
+        __builtin_prefetch(&buffer[static_cast<size_t>(i2)], 0, 0);
+
+        // Cubic Hermite interpolation — superior high-frequency preservation
+        // vs linear, critical for reverb feedback loops where each pass
+        // through a linear interpolator acts as a gentle lowpass.
+        return DSP::ReverbSIMD::cubicHermite(
+            buffer[static_cast<size_t>(i0)],
+            buffer[static_cast<size_t>(i1)],
+            buffer[static_cast<size_t>(i2)],
+            buffer[static_cast<size_t>(i3)],
+            frac);
     }
 
     int logicalFdnLength(size_t line, const ModeConstants& constants, float sampleScale, float size) const {
