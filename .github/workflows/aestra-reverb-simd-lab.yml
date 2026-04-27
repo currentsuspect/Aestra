@@ -88,6 +88,7 @@ jobs:
             -DAESTRA_HEADLESS_ONLY=ON \
             -DAESTRA_ENABLE_UI=OFF \
             -DAESTRA_ENABLE_TESTS=ON \
+            -DAESTRA_REVERB_PROFILE=ON \
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build benchmark
@@ -159,6 +160,33 @@ jobs:
         run: |
           echo "AVX2 NOT detected on this runner. Skipping AVX2-specific benchmark."
           echo "AVX2: SKIPPED" > labs/reverb/ci-output/avx2-status.txt
+
+      - name: Run stage profiling — Runtime Dispatch
+        shell: bash
+        run: |
+          "${{ steps.bench.outputs.binary }}" \
+            --profile-stages \
+            --iterations 5 \
+            --duration 5 \
+            --warmup 1 \
+            --output-json labs/reverb/ci-output/stage-profile-dispatch.json \
+            --output-md labs/reverb/ci-output/stage-profile-dispatch.md \
+            --output-text labs/reverb/ci-output/stage-profile-dispatch.txt \
+            2>&1 | tee labs/reverb/ci-output/stage-profile-dispatch.log
+
+      - name: Run stage profiling — Scalar Fallback
+        shell: bash
+        run: |
+          "${{ steps.bench.outputs.binary }}" \
+            --profile-stages \
+            --scalar \
+            --iterations 5 \
+            --duration 5 \
+            --warmup 1 \
+            --output-json labs/reverb/ci-output/stage-profile-scalar.json \
+            --output-md labs/reverb/ci-output/stage-profile-scalar.md \
+            --output-text labs/reverb/ci-output/stage-profile-scalar.txt \
+            2>&1 | tee labs/reverb/ci-output/stage-profile-scalar.log
 
       - name: Generate comparison report
         shell: bash

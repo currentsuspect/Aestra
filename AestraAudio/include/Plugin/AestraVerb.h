@@ -15,9 +15,31 @@
 #include <string>
 #include <vector>
 
+#ifdef AESTRA_REVERB_PROFILE
+#include <chrono>
+#endif
+
 namespace Aestra {
 namespace Audio {
 namespace Plugins {
+
+// Lab-only profiling macros. Zero overhead when AESTRA_REVERB_PROFILE is undefined.
+#ifdef AESTRA_REVERB_PROFILE
+#define AESTRA_PROFILE_STAGE(stageEnum) \
+    auto _aestra_prof_t0_##stageEnum = std::chrono::high_resolution_clock::now()
+#define AESTRA_PROFILE_STAGE_END(stageEnum) \
+    do { \
+        auto _aestra_prof_t1_##stageEnum = std::chrono::high_resolution_clock::now(); \
+        size_t _aestra_prof_idx_##stageEnum = static_cast<size_t>(ProfileStage::stageEnum); \
+        this->m_profileData[_aestra_prof_idx_##stageEnum].totalNs += static_cast<uint64_t>( \
+            std::chrono::duration_cast<std::chrono::nanoseconds>( \
+                _aestra_prof_t1_##stageEnum - _aestra_prof_t0_##stageEnum).count()); \
+        this->m_profileData[_aestra_prof_idx_##stageEnum].sampleCount++; \
+    } while(0)
+#else
+#define AESTRA_PROFILE_STAGE(stageEnum) do { } while(0)
+#define AESTRA_PROFILE_STAGE_END(stageEnum) do { } while(0)
+#endif
 
 class AestraVerb : public IPluginInstance {
 public:
@@ -175,6 +197,7 @@ public:
 
         uint32_t smoothCountdown = 0;
         for (uint32_t i = 0; i < numFrames; ++i) {
+            AESTRA_PROFILE_STAGE(kParamSmooth);
             if (smoothCountdown == 0) {
                 for (uint32_t p = 0; p < kParamCount; ++p) {
                     if (p == kBypass || p == kMode) continue;
@@ -184,7 +207,9 @@ public:
                 smoothCountdown = kSmoothBlock;
             }
             --smoothCountdown;
+            AESTRA_PROFILE_STAGE_END(kParamSmooth);
 
+            AESTRA_PROFILE_STAGE(kLFOControl);
             if (controlCountdown == 0) {
 #ifdef AESTRA_REVERB_HAS_AVX2
                 static const bool useAVX2 = Aestra::Core::CPUDetection::get().hasAVX2();
@@ -203,7 +228,9 @@ public:
                 controlCountdown = kControlInterval;
             }
             --controlCountdown;
+            AESTRA_PROFILE_STAGE_END(kLFOControl);
 
+            AESTRA_PROFILE_STAGE(kInputPrep);
             const float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
             const float inR = (numInputChannels > 1 && inputs[1]) ? inputs[1][i] : inL;
             const float dryL = inL;
@@ -216,11 +243,15 @@ public:
             float delayedL = m_predelayL[predelayRead];
             float delayedR = m_predelayR[predelayRead];
             if (++predelayPos >= static_cast<int>(m_predelayL.size())) predelayPos = 0;
+            AESTRA_PROFILE_STAGE_END(kInputPrep);
 
+            AESTRA_PROFILE_STAGE(kEarlyReflections);
             float earlyL = 0.0f;
             float earlyR = 0.0f;
             processEarlyReflections(delayedL, delayedR, control, earlyL, earlyR, earlyPos);
+            AESTRA_PROFILE_STAGE_END(kEarlyReflections);
 
+            AESTRA_PROFILE_STAGE(kDiffuser);
             if (control.diffusionEnabled) {
 #ifdef AESTRA_REVERB_HAS_SSE
                 static const bool useSSE = Aestra::Core::CPUDetection::get().hasSSE41();
@@ -242,9 +273,12 @@ public:
                 }
             }
 
+            AESTRA_PROFILE_STAGE_END(kDiffuser);
+
             delayedL += earlyL * 0.20f;
             delayedR += earlyR * 0.20f;
 
+            AESTRA_PROFILE_STAGE(kModulationLFO);
             // Vectorized LFO updates (sin/cos quadrature oscillators)
             if (control.modulationEnabled) {
 #ifdef AESTRA_REVERB_HAS_AVX2
@@ -284,6 +318,9 @@ public:
 #endif
             }
 
+            AESTRA_PROFILE_STAGE_END(kModulationLFO);
+
+            AESTRA_PROFILE_STAGE(kFDNDelayRead);
             for (size_t line = 0; line < kFDNLineCount; ++line) {
                 float lfoOffset = 0.0f;
                 if (control.modulationEnabled) {
@@ -304,7 +341,9 @@ public:
                 }
                 lineOut[line] = readDelayLine(line, delayPos[line], static_cast<float>(control.lineLengths[line]) + lfoOffset);
             }
+            AESTRA_PROFILE_STAGE_END(kFDNDelayRead);
 
+            AESTRA_PROFILE_STAGE(kFDNFeedbackMatrix);
             float wetL = 0.0f;
             float wetR = 0.0f;
 
@@ -327,7 +366,9 @@ public:
                     control.dampingCoeff, lowDampCoeff,
                     wetL, wetR);
             }
+            AESTRA_PROFILE_STAGE_END(kFDNFeedbackMatrix);
 
+            AESTRA_PROFILE_STAGE(kOutputMix);
             wetL += earlyL * 0.18f;
             wetR += earlyR * 0.18f;
 
@@ -352,6 +393,7 @@ public:
             if (numOutputChannels > 1 && outputs[1]) {
                 outputs[1][i] = std::clamp(dryR * control.dryGain + wetR * control.wetGain, -1.0f, 1.0f);
             }
+            AESTRA_PROFILE_STAGE_END(kOutputMix);
         }
 
         m_predelayPos = predelayPos;
@@ -468,7 +510,62 @@ public:
 
     void setInfo(const PluginInfo& info) { m_info = info; }
 
+    // ============================================================================
+    // Lab-only stage profiler (compile-time gated, zero overhead when disabled)
+    // ============================================================================
+#ifdef AESTRA_REVERB_PROFILE
+public:
+    enum class ProfileStage : uint8_t {
+        kInputPrep = 0,
+        kParamSmooth,
+        kLFOControl,
+        kEarlyReflections,
+        kDiffuser,
+        kModulationLFO,
+        kFDNDelayRead,
+        kFDNFeedbackMatrix,
+        kOutputMix,
+        kStageCount
+    };
+
+    struct StageProfileData {
+        uint64_t totalNs = 0;
+        uint64_t sampleCount = 0;
+    };
+
+    void resetProfileData() {
+        for (auto& s : m_profileData) {
+            s.totalNs = 0;
+            s.sampleCount = 0;
+        }
+    }
+
+    const std::array<StageProfileData, static_cast<size_t>(ProfileStage::kStageCount)>& getProfileData() const {
+        return m_profileData;
+    }
+
+    static const char* stageName(ProfileStage stage) {
+        switch (stage) {
+        case ProfileStage::kInputPrep: return "Input/Predelay";
+        case ProfileStage::kParamSmooth: return "Parameter Smoothing";
+        case ProfileStage::kLFOControl: return "LFO Normalize + Control";
+        case ProfileStage::kEarlyReflections: return "Early Reflections";
+        case ProfileStage::kDiffuser: return "Diffuser";
+        case ProfileStage::kModulationLFO: return "Modulation/LFO";
+        case ProfileStage::kFDNDelayRead: return "FDN Delay Read";
+        case ProfileStage::kFDNFeedbackMatrix: return "FDN Feedback/Matrix";
+        case ProfileStage::kOutputMix: return "Output/Mix";
+        default: return "Unknown";
+        }
+    }
+
 private:
+#else
+    // Dummy types for non-profile builds so member declaration is valid
+    struct StageProfileData { uint64_t totalNs = 0; uint64_t sampleCount = 0; };
+    enum class ProfileStage : uint8_t { kStageCount = 9 };
+#endif
+
     struct ModeConstants {
         std::array<uint32_t, kFDNLineCount> fdnBase{};
         float dampingScalar{1.0f};
@@ -900,6 +997,10 @@ private:
     // TODO: separate hi/lo damping (kHFDamping + kLFDamping) for more tonal control
     // TODO: Convolution mode — IR loader using same drag system as Arsenal
     // TODO: Early reflections as discrete pre-FDN tapped delay line network
+
+#ifdef AESTRA_REVERB_PROFILE
+    mutable std::array<StageProfileData, static_cast<size_t>(ProfileStage::kStageCount)> m_profileData{};
+#endif
 };
 
 } // namespace Plugins
