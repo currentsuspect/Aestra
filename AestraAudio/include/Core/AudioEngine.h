@@ -383,7 +383,8 @@ private:
     void applyPendingCommands();
     void applyPendingMetronomeCountInRt();
     void clearMetronomeCountInRt();
-    void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame);
+    void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
+                            double* targetBuffer = nullptr, int32_t isolatedTrackIndex = -1);
     void injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
                                    uint32_t numFrames) noexcept;
 
