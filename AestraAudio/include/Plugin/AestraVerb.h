@@ -199,7 +199,7 @@ public:
             diffuserPos[stage] = wrapIndex(diffuserPos[stage], static_cast<int>(m_diffuserL[stage].size()));
         }
         for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
-            platePostPos[stage] = wrapIndex(platePostPos[stage], static_cast<int>(m_platePostL[stage].size()));
+            platePostPos[stage] &= m_platePostMasks[stage];
         }
 
         std::array<float, kFDNLineCount> lineOut{};
@@ -387,7 +387,9 @@ public:
             wetR *= kWetMakeupGain;
 
             if (mode == Mode::Plate) {
+                AESTRA_PROFILE_STAGE(kPlatePostAllpass);
                 processPlatePostAllpass(wetL, wetR, platePostPos);
+                AESTRA_PROFILE_STAGE_END(kPlatePostAllpass);
             }
 
             const float widthL = wetL * control.widthMain + wetR * control.widthCross;
@@ -535,6 +537,7 @@ public:
         kModulationLFO,
         kFDNDelayRead,
         kFDNFeedbackMatrix,
+        kPlatePostAllpass,
         kOutputMix,
         kStageCount
     };
@@ -565,6 +568,7 @@ public:
         case ProfileStage::kModulationLFO: return "Modulation/LFO";
         case ProfileStage::kFDNDelayRead: return "FDN Delay Read";
         case ProfileStage::kFDNFeedbackMatrix: return "FDN Feedback/Matrix";
+        case ProfileStage::kPlatePostAllpass: return "Plate Post-Allpass";
         case ProfileStage::kOutputMix: return "Output/Mix";
         default: return "Unknown";
         }
@@ -574,7 +578,7 @@ private:
 #else
     // Dummy types for non-profile builds so member declaration is valid
     struct StageProfileData { uint64_t totalNs = 0; uint64_t sampleCount = 0; };
-    enum class ProfileStage : uint8_t { kStageCount = 9 };
+    enum class ProfileStage : uint8_t { kStageCount = 10 };
 #endif
 
     struct ModeConstants {
@@ -755,8 +759,11 @@ private:
                 2,
                 static_cast<int>(std::ceil(kPlatePostAllpassLengths[stage] * sampleScale)) + 4
             );
-            m_platePostL[stage].assign(static_cast<size_t>(maxLength), 0.0f);
-            m_platePostR[stage].assign(static_cast<size_t>(maxLength), 0.0f);
+            const uint32_t pow2Size = nextPowerOfTwo(static_cast<uint32_t>(maxLength));
+            m_platePostL[stage].assign(static_cast<size_t>(pow2Size), 0.0f);
+            m_platePostR[stage].assign(static_cast<size_t>(pow2Size), 0.0f);
+            m_platePostDelayLengths[stage] = maxLength;
+            m_platePostMasks[stage] = static_cast<int>(pow2Size) - 1;
         }
 
         const int earlyMaxSamples = std::max(2, static_cast<int>(std::ceil(m_sampleRate * 0.14)));
@@ -925,16 +932,20 @@ private:
             auto& bufR = m_platePostR[stage];
             if (bufL.empty() || bufR.empty()) continue;
 
-            const int p = wrapIndex(pos[stage], static_cast<int>(bufL.size()));
-            const float delayedL = bufL[static_cast<size_t>(p)];
-            const float delayedR = bufR[static_cast<size_t>(p)];
+            const int mask = m_platePostMasks[stage];
+            const int delayLength = m_platePostDelayLengths[stage];
+            const int p = pos[stage] & mask;
+            const int readP = (p - delayLength) & mask;
+
+            const float delayedL = bufL[static_cast<size_t>(readP)];
+            const float delayedR = bufR[static_cast<size_t>(readP)];
             const float yL = delayedL - g * left;
             const float yR = delayedR - g * right;
             bufL[static_cast<size_t>(p)] = left + g * yL;
             bufR[static_cast<size_t>(p)] = right + g * yR;
             left = yL;
             right = yR;
-            pos[stage] = (p + 1) % static_cast<int>(bufL.size());
+            pos[stage] = (p + 1) & mask;
         }
     }
 
@@ -999,6 +1010,8 @@ private:
 
     std::array<std::vector<float>, kPlatePostAllpassCount> m_platePostL;
     std::array<std::vector<float>, kPlatePostAllpassCount> m_platePostR;
+    std::array<int, kPlatePostAllpassCount> m_platePostDelayLengths{};
+    std::array<int, kPlatePostAllpassCount> m_platePostMasks{};
     std::array<int, kPlatePostAllpassCount> m_platePostPos{};
 
     std::vector<float> m_earlyL;

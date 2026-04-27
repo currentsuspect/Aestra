@@ -36,21 +36,22 @@ labs/reverb/
 | 003 | 2026-04-28 | 1 | 1 | 0 | Stage profiling + quality guardrails. See sessions. |
 | 004 | 2026-04-28 | 1 | 3 | 1 | FDN Delay Read optimization (power-of-two + bitmask). See sessions. |
 | 005 | 2026-04-28 | 1 | 2 | 2 | Early Reflection optimization + Plate timing investigation. See sessions. |
+| 006 | 2026-04-28 | 1 | 4 | 1 | Plate post-allpass optimization + profile stage + benchmark bug fix. See sessions. |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Status**: Early Reflections optimized, Plate post-allpass identified as root cause of Plate slowness, Session 006 target selected
+- **Status**: Plate post-allpass optimized, Plate now on par with Room, diffuser and predelay identified as next targets, Session 007 target selected
 
 ### Benchmark Results (SSE4.1, no AVX2, 5s @ 48kHz)
 
-| Mode | Dispatch (S005) | Scalar (S005) | vs Scalar | Real-Time (Dispatch) |
+| Mode | Dispatch (S006) | Scalar (S006) | vs Scalar | Real-Time (Dispatch) |
 |------|-----------------|---------------|-----------|---------------------|
-| Room | 124.0 ms | 139.8 ms | **1.13x** | **40.33x** |
-| Hall | 139.5 ms | 188.2 ms | **1.35x** | **35.84x** |
-| Plate | 136.6 ms | — | — | **36.59x** |
+| Room | 127.5 ms | 147.5 ms | **1.16x** | **39.21x** |
+| Hall | 131.3 ms | 183.4 ms | **1.40x** | **38.07x** |
+| Plate | 126.4 ms | — | — | **39.56x** |
 
-*Note: Absolute numbers elevated by system load. Relative improvements are valid.*
+*Note: Absolute numbers affected by system load on 2-core machine. Relative trends are valid.*
 
 ### Quality Results
 
@@ -58,39 +59,47 @@ labs/reverb/
 - **Callback budget**: <2.5% even in heaviest mode (non-profile)
 - **Projected AVX2 speedup**: 1.5-2.0x overall vs scalar (cubic would match/exceed original linear speed)
 
-### Stage Profile Hotspots (Session 005, after optimization)
+### Stage Profile Hotspots (Session 006, Plate Mode)
 
-| Rank | Stage | % (Dispatch) | Session 004 (Before) |
-|------|-------|-------------|---------------------|
-| 1 | **FDN Delay Read** | **34.3%** | 34.4% → 34.3% |
-| 2 | Early Reflections | **14.5%** | 15.0% → 14.5% |
-| 3 | FDN Feedback/Matrix | 9.8% | 9.6% → 9.8% |
-| 4 | Diffuser | 8.7% | 8.6% → 8.7% |
-| 5 | LFO Normalize + Control | 8.1% | 8.3% → 8.1% |
+| Rank | Stage | % (Plate) |
+|------|-------|----------|
+| 1 | **FDN Delay Read** | **28.8%** |
+| 2 | Output/Mix | 13.4% |
+| 3 | Early Reflections | 12.6% |
+| 4 | Diffuser | 9.2% |
+| 5 | FDN Feedback/Matrix | 8.7% |
+| 6 | LFO Normalize + Control | 7.2% |
+| 7 | Input/Predelay | 7.0% |
+| 8 | **Plate Post-Allpass** | **4.9%** |
+| 9 | Modulation/LFO | 4.5% |
+| 10 | Parameter Smoothing | 3.7% |
 
-**Early Reflections improvement**: -7.5% stage time (184.97 ms → 171.00 ms)
-**Whole-reverb improvement**: ~1.8% dispatch
+**Plate Post-Allpass improvement**: Now a separate 4.9% stage with zero modulo overhead.
+**Plate-vs-Room gap**: Closed. Plate (126.4 ms) ≈ Room (127.5 ms).
 
-### Plate Timing Investigation — Root Cause Found
+### Plate Timing — Root Cause Resolved
 
-**Plate was 43% slower than Room in Session 004 (157.8 ms vs 110.0 ms).**
+**Plate was ~10% slower than Room in Session 005 (136.6 ms vs 124.0 ms).**
 
-**Finding:** Early Reflections are NOT the cause. The `processPlatePostAllpass`
-function is the culprit. It adds 2 allpass stages per sample, each using
-`wrapIndex()` (integer `%` modulo) and another `%` for position increment.
-The post-allpass buffer sizes (93 and 71 at 48kHz) are **not power-of-two**,
-making the modulo operations expensive integer divisions.
+**Cause:** `processPlatePostAllpass` used non-power-of-two buffers (101 and 77 at 48kHz)
+with expensive integer `%` modulo operations (`wrapIndex` + `(p+1) % size`).
 
-**Session 006 target**: Plate Post-Allpass — power-of-two buffers + bitmask wrapping.
+**Fix:** Power-of-two buffer capacity (128) with separate delay lengths (101, 77)
+and bitmask wrapping (`& mask`). Mathematically equivalent output.
+
+**Result:** Plate is now on par with Room. The expensive modulo was the dominant cost.
 
 ### Durable Patterns (Accepted)
 
-1. **Power-of-two + bitmask wrapping** — Works for any ring buffer where size
+1. **Power-of-two + bitmask wrapping** — Works for any ring buffer where capacity
    can be rounded up. Eliminates branches and modulo. Applied to FDN delay lines
-   (S004) and early reflections (S005). Applicable to diffusers and post-allpass.
-2. **Cache mask as member variable** — `m_delayLineMasks[]`, `m_earlyMask`.
-   Avoids recomputing `size - 1` in hot paths.
-3. **Remove ineffective prefetch** — `__builtin_prefetch` removed from FDN delay
+   (S004), early reflections (S005), and post-allpass (S006). Applicable to diffusers
+   and predelay.
+2. **Separate delay length from buffer capacity** — Allows power-of-two capacity
+   while preserving exact delay timing. Used in post-allpass (S006).
+3. **Cache mask as member variable** — `m_delayLineMasks[]`, `m_earlyMask`,
+   `m_platePostMasks[]`. Avoids recomputing `size - 1` in hot paths.
+4. **Remove ineffective prefetch** — `__builtin_prefetch` removed from FDN delay
    read (S004). Four cache-line-local samples don't benefit from explicit prefetch.
 
 ### Rejected Patterns (Documented)
@@ -102,3 +111,8 @@ making the modulo operations expensive integer divisions.
 3. **Branchless `frac < 0` fix** — Compiler handles predictable branch well.
    No improvement measured.
 4. **Hybrid cubic/linear interpolation** — Violates hard constraint.
+5. **Changing delay to match buffer capacity** — Would alter sound. Delay length
+   must be preserved independently of capacity.
+
+**Session 007 target**: Diffuser wrapping — 4 stages with conditional `if (p >= len) p = 0;`
+and non-power-of-two buffers. Same power-of-two + bitmask pattern applies.

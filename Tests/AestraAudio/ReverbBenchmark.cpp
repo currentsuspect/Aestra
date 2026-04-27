@@ -729,6 +729,12 @@ int main(int argc, char* argv[]) {
         auto result = benchmarkPlugin(verb, inputL, inputR, cfg.iterations, cfg.profileStages);
         results.push_back({"Plate", result});
 
+#ifdef AESTRA_REVERB_PROFILE
+        if (cfg.profileStages) {
+            lastStageProfile = buildStageReport(verb);
+        }
+#endif
+
         if (!cfg.jsonStdout) {
             std::cout << "\n─── Plate Mode ───\n";
             std::cout << "  Median time:  " << std::fixed << std::setprecision(1) << result.medianUs << " us\n";
