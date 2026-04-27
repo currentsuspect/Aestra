@@ -32,11 +32,13 @@ labs/reverb/
 | Session | Date | Rounds | Accepted | Rejected | Notes |
 |---------|------|--------|----------|----------|-------|
 | 001 | 2026-04-28 | 1 | 1 | 0 | SIMD core + cubic Hermite + benchmark. See sessions. |
+| 002 | 2026-04-28 | 1 | 1 | 0 | CI workflow + benchmark CLI extensions. See sessions. |
+| 003 | 2026-04-28 | 1 | 1 | 0 | Stage profiling + quality guardrails. See sessions. |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Status**: Lab initialized, SIMD core benchmarked, quality improved
+- **Status**: Stage profiling active, hotspots identified, Session 004 target selected
 
 ### Benchmark Results (SSE4.1, no AVX2)
 
@@ -51,6 +53,18 @@ labs/reverb/
 - **Cubic Hermite interpolation**: +1.12 pp HF energy >10kHz vs linear
 - **Callback budget**: <2.5% even in heaviest Hall mode
 - **Projected AVX2 speedup**: 1.5-2.0x overall vs scalar (cubic would match/exceed original linear speed)
+
+### Stage Profile Hotspots (from Session 003)
+
+| Rank | Stage | % (Dispatch) | % (Scalar) |
+|------|-------|-------------|------------|
+| 1 | **FDN Delay Read** | **34.5%** | **32.7%** |
+| 2 | Early Reflections | 14.7% | 14.9% |
+| 3 | FDN Feedback/Matrix | 10.9% | 14.2% |
+| 4 | Diffuser | 8.6% | 9.1% |
+| 5 | LFO Normalize + Control | 8.2% | 7.8% |
+
+**Session 004 target**: FDN Delay Read — 34.5% of total CPU time.
 
 ### Planned Optimizations
 

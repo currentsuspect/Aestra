@@ -382,6 +382,11 @@ if (AESTRA_USE_MINIAUDIO)
     target_compile_definitions(AestraAudioCore PRIVATE AESTRA_USE_MINIAUDIO)
 endif()
 
+# AestraVerb stage profiling (lab/benchmark only). Zero overhead when off.
+if (AESTRA_REVERB_PROFILE)
+    target_compile_definitions(AestraAudioCore PUBLIC AESTRA_REVERB_PROFILE)
+endif()
+
 # AVX2/FMA: Enabled per-TU via #pragma in SincAVX2.h for safe runtime dispatch.
 # IMPORTANT: Do NOT add global /arch:AVX2 here - it causes VEX-encoded scalar ops
 # that crash on non-AVX2 CPUs even in the fallback path.
