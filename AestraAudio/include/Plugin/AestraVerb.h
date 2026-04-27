@@ -715,9 +715,15 @@ private:
 
         const int i1 = static_cast<int>(readPos);
         const int i2 = (i1 + 1) >= size ? 0 : (i1 + 1);
+        const float frac = readPos - static_cast<float>(i1);
+
+        // Test hook: force linear interpolation for benchmark comparison
+        if (DSP::ReverbSIMD::g_forceLinearInterpolation) {
+            return buffer[static_cast<size_t>(i1)] * (1.0f - frac) + buffer[static_cast<size_t>(i2)] * frac;
+        }
+
         const int i0 = (i1 - 1) < 0 ? (size - 1) : (i1 - 1);
         const int i3 = (i2 + 1) >= size ? 0 : (i2 + 1);
-        const float frac = readPos - static_cast<float>(i1);
 
         // Prefetch upcoming samples to hide memory latency in the feedback loop
         __builtin_prefetch(&buffer[static_cast<size_t>(i2)], 0, 0);

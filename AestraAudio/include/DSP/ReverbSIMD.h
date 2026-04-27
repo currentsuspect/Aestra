@@ -32,8 +32,9 @@ namespace ReverbSIMD {
 static constexpr size_t kFDNLineCount = 8;
 static constexpr size_t kEarlyTapCount = 12;
 
-// Test-only hook: set to true to force scalar fallback for benchmarking
+// Test-only hooks: set to true to force specific paths for benchmarking
 extern bool g_forceScalarFallback;
+extern bool g_forceLinearInterpolation;
 
 // ============================================================================
 // Quality improvement: Cubic Hermite interpolation for delay line reads.
