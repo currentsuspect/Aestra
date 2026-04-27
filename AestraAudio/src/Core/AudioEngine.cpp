@@ -2605,6 +2605,13 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
             continue;
         }
 
+        // During isolated-track bounce, skip track-routed units not assigned
+        // to the isolated track. routeId maps directly to the track index.
+        if (isolatedTrackIndex >= 0 && unit.routeId >= 0 && unit.routeId != isolatedTrackIndex) {
+            bufIdx++;
+            continue;
+        }
+
         // Clear plugin output buffer
         std::fill(m_pluginBufferF.begin(), m_pluginBufferF.begin() + requiredStereoSamples, 0.0f);
 
