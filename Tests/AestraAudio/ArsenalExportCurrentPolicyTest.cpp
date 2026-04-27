@@ -30,6 +30,12 @@ CurrentRoutingDecision classifyCurrentRouting(const Aestra::Audio::ArsenalProces
     decision.toTimelineTrack = ctx.shouldRenderToTimelineTrack(unit, trackIndex);
     return decision;
 }
+
+bool shouldRunMasterPreviewPass(int32_t isolatedTrackIndex) {
+    // Mirrors current AudioRenderer::processArsenalUnits() guard:
+    // if (ctx.isolatedTrackIndex >= 0) return;
+    return isolatedTrackIndex < 0;
+}
 } // namespace
 
 int main() {
@@ -59,6 +65,12 @@ int main() {
     require(routedOffline.toTimelineTrack, "Track-routed unit export parity changed unexpectedly");
     require(routedLive.toTimelineTrack == routedOffline.toTimelineTrack,
             "Track-routed live/offline parity must remain stable");
+
+    // Current isolated-track policy: master-preview pass is skipped whenever a
+    // specific track is isolated. This assertion documents current behavior
+    // without changing renderer logic.
+    require(shouldRunMasterPreviewPass(-1), "Master-preview pass should run when not isolating");
+    require(!shouldRunMasterPreviewPass(0), "Master-preview pass should be skipped for isolated track 0");
 
     std::cout << "[PASS] ArsenalExportCurrentPolicyTest\n";
     return 0;
