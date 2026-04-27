@@ -156,6 +156,22 @@ void test_orphan_target_survival() {
     testsPassed++;
 }
 
+// 2a-XI: AutomationTarget 256 wraps to 0 via raw uint8_t static_cast.
+// This documents the unguarded cast hazard. The ProjectSerializer boundary
+// (finiteNumberOr [0,255]) prevents this from reaching production load paths.
+void test_target_256_raw_cast_is_volume() {
+    auto raw = static_cast<AutomationTarget>(256);
+    // AutomationTarget is uint8_t; 256 wraps to 0 = Volume.
+    // This is documented as a hazard — any code path that does an
+    // unclamped static_cast<AutomationTarget>(value) is at risk.
+    // The ProjectSerializer path is already protected via finiteNumberOr [0,255].
+    if (static_cast<int>(raw) != 0) {
+        printf("FAIL: AutomationTarget(256) did not wrap to 0 via uint8_t cast\n");
+        testsFailed++; return;
+    }
+    testsPassed++;
+}
+
 int main() {
     printf("=== Automation Deserialization Stress Tests ===\n\n");
 
@@ -188,6 +204,9 @@ int main() {
 
     printf("\n2a-X: Orphan target survival\n");
     test_orphan_target_survival();
+
+    printf("\n2a-XI: AutomationTarget 256 raw cast wraps to Volume (uint8_t hazard)\n");
+    test_target_256_raw_cast_is_volume();
 
     printf("\n=== Results: %d passed, %d failed ===\n", testsPassed, testsFailed);
     return testsFailed > 0 ? 1 : 0;
