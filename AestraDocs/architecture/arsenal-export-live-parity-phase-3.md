@@ -24,11 +24,12 @@ Using deterministic tests (`ArsenalExportLiveParityTest` +
     running simultaneously in the same engine session) are correctly
     segregated: both routing paths produce audio without cross-contamination.
     Proven via `ArsenalExportLiveParityTest` Case 4 (live + export).
-8. `bounceRangeToWav` renders track-routed Arsenal pattern audio. MIDI
-    buffer population reused from `AudioEngine::processArsenalUnits` via
-    a target-buffer parameter. PreviewToMaster during bounce is handled by
-    `AudioRenderer::processArsenalUnits` (existing guard). Proven via
-    `ArsenalExportLiveParityTest` Case 5 (full + isolated bounce, peaks > 0).
+8. `bounceRangeToWav` renders track-routed Arsenal pattern audio and
+    correctly excludes wrong-track units during isolated bounce. MIDI buffer
+    population reused from `AudioEngine::processArsenalUnits` via a target-
+    buffer parameter, with `isolatedTrackIndex` filtering for route-correct
+    units. Proven via `ArsenalExportLiveParityTest` Case 5 (full + iso0 + iso1
+    bounce — iso1 wrong-track peak = 0).
 9. Existing `AudioExporter` / `processBlock` behavior unchanged.
 
 ## What behavior remains unproven
