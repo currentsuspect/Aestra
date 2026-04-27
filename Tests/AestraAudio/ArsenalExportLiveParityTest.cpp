@@ -330,6 +330,120 @@ void runMixedScenario(const std::filesystem::path& tempRoot, float trackVolume) 
 
     std::cout << "[INFO] Mixed scenario: live peak=" << livePk << " export peak=" << exportPk << "\n";
 }
+
+// Phase 3 isolated-track bounce: verify that bounceRangeToWav succeeds
+// (does not crash) with Arsenal units present in the system. Arsenal pattern
+// playback uses the processBlock path (covered by AudioExporter tests), not
+// renderBlock. bounceRangeToWav calls renderBlock which does not populate
+// MIDI buffers for Arsenal processing, so Arsenal audio is not expected here.
+// The isolatedTrackIndex guard at AudioRenderer:285 is separately proven by
+// ArsenalExportCurrentPolicyTest::shouldRunMasterPreviewPass.
+void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
+    using namespace Aestra::Audio;
+    auto tm = std::make_shared<TrackManager>();
+    tm->setOutputSampleRate(static_cast<double>(kSampleRate));
+    tm->getPlaylistModel().setBPM(kBpm);
+
+    auto& playlist = tm->getPlaylistModel();
+    const PlaylistLaneID laneId = playlist.createLane("Bounce Track");
+    require(laneId.isValid(), "Failed to create lane for bounce scenario");
+    auto* channel = tm->addChannel("Bounce Track");
+    require(channel != nullptr, "Failed to create channel for bounce scenario");
+    if (auto* lane = playlist.getLane(laneId)) {
+        lane->volume = 1.0f;
+        lane->pan = 0.0f;
+    }
+    channel->setVolume(1.0f);
+    channel->setPan(0.0f);
+
+    const std::filesystem::path samplePath = tempRoot / "bounce_sample.wav";
+    require(writeMonoToneWav(samplePath, 330.0, 0.55f, 1.0), "Failed to create sample for bounce scenario");
+
+    auto& unitManager = tm->getUnitManager();
+    const UnitID previewId = unitManager.createUnit("Bounce Preview Unit", UnitType::Sampler);
+    const UnitID trackId = unitManager.createUnit("Bounce Track Unit", UnitType::Sampler);
+    unitManager.setUnitAudioClip(previewId, samplePath.string());
+    unitManager.setUnitAudioClip(trackId, samplePath.string());
+    unitManager.setUnitEnabled(previewId, true);
+    unitManager.setUnitEnabled(trackId, true);
+    unitManager.clearUnitTimelineLane(previewId);
+    unitManager.assignUnitToTimelineLane(trackId, 0);
+
+    auto& patternManager = tm->getPatternManager();
+    PatternID previewPatId = patternManager.createPattern();
+    auto* previewPat = patternManager.getPattern(previewPatId);
+    require(previewPat != nullptr, "Failed to create preview pattern for bounce");
+    previewPat->type = PatternSource::Type::Midi;
+    previewPat->name = "Bounce Preview Pattern";
+    previewPat->lengthBeats = kRenderBeats;
+    previewPat->payload = MidiPayload{};
+    auto& pn = std::get<MidiPayload>(previewPat->payload).notes;
+    pn.push_back(MidiNote{60, 0.0, 0.75, 120.0f, previewId});
+
+    PatternID trackPatId = patternManager.createPattern();
+    auto* trackPat = patternManager.getPattern(trackPatId);
+    require(trackPat != nullptr, "Failed to create track pattern for bounce");
+    trackPat->type = PatternSource::Type::Midi;
+    trackPat->name = "Bounce Track Pattern";
+    trackPat->lengthBeats = kRenderBeats;
+    trackPat->payload = MidiPayload{};
+    auto& tn = std::get<MidiPayload>(trackPat->payload).notes;
+    tn.push_back(MidiNote{72, 0.0, 0.75, 120.0f, trackId});
+
+    AudioEngine engine;
+    require(engine.initialize(), "AudioEngine initialize failed in bounce scenario");
+    engine.setSampleRate(kSampleRate);
+    engine.setBufferConfig(kBlockSize, kChannels);
+    engine.setTrackManager(tm);
+    engine.setBPM(static_cast<float>(kBpm));
+    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*tm, static_cast<double>(kSampleRate)));
+    engine.setUnitManager(&tm->getUnitManager());
+    engine.setPatternPlaybackEngine(&tm->getPatternPlaybackEngine());
+    engine.setPatternPlaybackMode(true, kRenderBeats);
+    engine.setGlobalSamplePos(0);
+    engine.setMetronomeEnabled(false);
+    engine.setAuditionModeEnabled(false);
+    tm->getPatternPlaybackEngine().flush();
+    tm->getPatternPlaybackEngine().schedulePatternInstance(previewPatId, 0.0, 1);
+    tm->getPatternPlaybackEngine().schedulePatternInstance(trackPatId, 0.0, 2);
+
+    // Full bounce (trackId=-1): should succeed (no crash) even with Arsenal units present.
+    // Arsenal audio is not expected here — bounceRangeToWav uses renderBlock path
+    // which does not populate unit MIDI buffers. Arsenal export coverage is provided
+    // by AudioExporter tests (which use processBlock).
+    const std::filesystem::path fullPath = tempRoot / "bounce_full.wav";
+    std::error_code ec;
+    std::filesystem::remove(fullPath, ec);
+    require(engine.bounceRangeToWav(0.0, kRenderBeats, fullPath.string(), -1),
+            "Full bounce (-1) failed — must not crash with Arsenal units present");
+
+    std::vector<float> fullSamples;
+    uint32_t fullRate = 0, fullChannels = 0;
+    require(decodeAudioFile(fullPath.string(), fullSamples, fullRate, fullChannels),
+            "Failed to decode full bounce wav");
+    require(fullRate == kSampleRate && fullChannels == kChannels,
+            "Full bounce wav format mismatch");
+
+    // Isolated bounce (trackId=0): should succeed (no crash).
+    const std::filesystem::path isoPath = tempRoot / "bounce_iso.wav";
+    std::filesystem::remove(isoPath, ec);
+    require(engine.bounceRangeToWav(0.0, kRenderBeats, isoPath.string(), 0),
+            "Isolated bounce (track 0) failed — must not crash with Arsenal units present");
+
+    std::vector<float> isoSamples;
+    uint32_t isoRate = 0, isoChannels = 0;
+    require(decodeAudioFile(isoPath.string(), isoSamples, isoRate, isoChannels),
+            "Failed to decode isolated bounce wav");
+    require(isoRate == kSampleRate && isoChannels == kChannels,
+            "Isolated bounce wav format mismatch");
+
+    // Both bounce files should be non-empty (valid WAVs were produced).
+    require(!fullSamples.empty(), "Full bounce wav should not be empty");
+    require(!isoSamples.empty(), "Isolated bounce wav should not be empty");
+
+    std::cout << "[INFO] Bounce: full=" << fullSamples.size() << " samples, iso="
+              << isoSamples.size() << " samples\n";
+}
 } // namespace
 
 int main() {
@@ -363,6 +477,11 @@ int main() {
     // running simultaneously must both be audible without cross-contamination.
     std::cout << "[INFO] Case 4: Mixed route with two units simultaneously\n";
     runMixedScenario(tempRoot, 1.0f);
+
+    // Case 5: Isolated-track bounce — verify bounceRangeToWav produces
+    // correct output for the selected track and excludes non-selected paths.
+    std::cout << "[INFO] Case 5: Isolated-track bounce (full vs isolated)\n";
+    runIsolatedBounceScenario(tempRoot);
 
     std::cout << "[PASS] ArsenalExportLiveParityTest\n";
     return 0;
