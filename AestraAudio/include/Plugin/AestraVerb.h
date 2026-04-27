@@ -100,6 +100,17 @@ public:
         0.24f, 0.39f, -0.28f, 0.35f, 0.31f, -0.34f, 0.26f, 0.41f
     };
 
+    static uint32_t nextPowerOfTwo(uint32_t v) {
+        v--;
+        v |= v >> 1;
+        v |= v >> 2;
+        v |= v >> 4;
+        v |= v >> 8;
+        v |= v >> 16;
+        v++;
+        return v;
+    }
+
     AestraVerb() = default;
 
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
@@ -182,7 +193,7 @@ public:
         }
         earlyPos = wrapIndex(earlyPos, static_cast<int>(m_earlyL.size()));
         for (size_t line = 0; line < kFDNLineCount; ++line) {
-            delayPos[line] = wrapIndex(delayPos[line], static_cast<int>(m_delayLines[line].size()));
+            delayPos[line] &= m_delayLineMasks[line];
         }
         for (size_t stage = 0; stage < kDiffuserCount; ++stage) {
             diffuserPos[stage] = wrapIndex(diffuserPos[stage], static_cast<int>(m_diffuserL[stage].size()));
@@ -351,15 +362,15 @@ public:
             // Falls back to scalar path on non-SIMD platforms.
             {
                 float* delayPtrs[kFDNLineCount];
-                int delaySizes[kFDNLineCount];
+                int delayMasks[kFDNLineCount];
                 for (size_t line = 0; line < kFDNLineCount; ++line) {
                     delayPtrs[line] = m_delayLines[line].data();
-                    delaySizes[line] = static_cast<int>(m_delayLines[line].size());
+                    delayMasks[line] = m_delayLineMasks[line];
                 }
                 DSP::ReverbSIMD::processFDNSample(
                     lineOut.data(), delayedL, delayedR,
                     dampingState.data(), lowDampState.data(),
-                    delayPtrs, delayPos.data(), delaySizes,
+                    delayPtrs, delayPos.data(), delayMasks,
                     control.feedbackGains.data(),
                     kInjectL.data(), kInjectR.data(),
                     kOutputL.data(), kOutputR.data(),
@@ -723,7 +734,9 @@ private:
                 128,
                 static_cast<int>(std::ceil(maxFdnBaseForLine(line) * sampleScale * 2.0f)) + 64
             );
-            m_delayLines[line].assign(static_cast<size_t>(maxLength), 0.0f);
+            const uint32_t pow2Size = nextPowerOfTwo(static_cast<uint32_t>(maxLength));
+            m_delayLines[line].assign(static_cast<size_t>(pow2Size), 0.0f);
+            m_delayLineMasks[line] = static_cast<int>(pow2Size) - 1;
             m_delayLengths[line] = std::min(maxLength - 2, std::max(100, maxLength / 2));
         }
 
@@ -803,27 +816,29 @@ private:
 
     float readDelayLine(size_t line, int writePos, float delaySamples) const {
         const auto& buffer = m_delayLines[line];
-        const int size = static_cast<int>(buffer.size());
-        if (size <= 1) return 0.0f;
+        const int mask = m_delayLineMasks[line];
+        if (mask <= 0) return 0.0f;
 
-        float readPos = static_cast<float>(writePos) - delaySamples;
-        while (readPos < 0.0f) readPos += static_cast<float>(size);
-        while (readPos >= static_cast<float>(size)) readPos -= static_cast<float>(size);
-
-        const int i1 = static_cast<int>(readPos);
-        const int i2 = (i1 + 1) >= size ? 0 : (i1 + 1);
-        const float frac = readPos - static_cast<float>(i1);
+        float readPosF = static_cast<float>(writePos) - delaySamples;
+        int readPosI = static_cast<int>(readPosF);
+        float frac = readPosF - static_cast<float>(readPosI);
+        if (frac < 0.0f) {
+            frac += 1.0f;
+            --readPosI;
+        }
+        readPosI &= mask;
 
         // Test hook: force linear interpolation for benchmark comparison
         if (DSP::ReverbSIMD::g_forceLinearInterpolation) {
-            return buffer[static_cast<size_t>(i1)] * (1.0f - frac) + buffer[static_cast<size_t>(i2)] * frac;
+            const int i2 = (readPosI + 1) & mask;
+            return buffer[static_cast<size_t>(readPosI)] * (1.0f - frac) +
+                   buffer[static_cast<size_t>(i2)] * frac;
         }
 
-        const int i0 = (i1 - 1) < 0 ? (size - 1) : (i1 - 1);
-        const int i3 = (i2 + 1) >= size ? 0 : (i2 + 1);
-
-        // Prefetch upcoming samples to hide memory latency in the feedback loop
-        __builtin_prefetch(&buffer[static_cast<size_t>(i2)], 0, 0);
+        const int i0 = (readPosI - 1) & mask;
+        const int i1 = readPosI;
+        const int i2 = (readPosI + 1) & mask;
+        const int i3 = (readPosI + 2) & mask;
 
         // Cubic Hermite interpolation — superior high-frequency preservation
         // vs linear, critical for reverb feedback loops where each pass
@@ -961,6 +976,7 @@ private:
     mutable std::mutex m_rebuildMutex;
 
     std::array<std::vector<float>, kFDNLineCount> m_delayLines;
+    std::array<int, kFDNLineCount> m_delayLineMasks{};
     std::array<int, kFDNLineCount> m_delayLengths{};
     std::array<int, kFDNLineCount> m_delayPos{};
     std::array<float, kFDNLineCount> m_dampingState{};
