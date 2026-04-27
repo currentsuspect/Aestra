@@ -118,6 +118,44 @@ void test_remove_out_of_bounds() {
     testsPassed++;
 }
 
+// 2a-VIII: Invalid target enum value (non-fatal, preserved as-is)
+void test_invalid_target_enum() {
+    // An unrecognized AutomationTarget value should be stored and queryable.
+    // The renderer must handle unknown targets gracefully (e.g., skip).
+    AutomationCurve curve("unknown_param", static_cast<AutomationTarget>(999));
+    curve.setDefaultValue(0.75f);
+    curve.addPoint(1.0, 0.5f, 480.0);
+
+    if (curve.getAutomationTarget() != static_cast<AutomationTarget>(999)) {
+        printf("FAIL: target enum mismatch\n"); testsFailed++; return;
+    }
+    if (curve.getPoints().size() != 1) { printf("FAIL: expected 1 point\n"); testsFailed++; return; }
+    testsPassed++;
+}
+
+// 2a-IX: Curve with no points survives serialization round-trip concept
+void test_empty_curve_survival() {
+    AutomationCurve curve("pan", AutomationTarget::Pan);
+    curve.setDefaultValue(0.0f);
+    if (curve.getPoints().size() != 0) { printf("FAIL: expected 0 points\n"); testsFailed++; return; }
+    if (curve.getValueAtBeat(1.0, 480.0) != curve.getDefaultValue()) {
+        printf("FAIL: empty curve value should equal default\n"); testsFailed++; return;
+    }
+    testsPassed++;
+}
+
+// 2a-X: Orphaned automation target survives (semantic survival)
+void test_orphan_target_survival() {
+    // Automation for a removed/missing target should still be loadable
+    // and round-trippable — the renderer is responsible for skipping unknown targets.
+    AutomationCurve curve("deleted_plugin_param", static_cast<AutomationTarget>(511));
+    curve.setDefaultValue(0.25f);
+    curve.addPoint(0.0, 0.5f, 480.0);
+    curve.addPoint(2.0, 0.75f, 480.0);
+    if (curve.getPoints().size() != 2) { printf("FAIL: expected 2 points\n"); testsFailed++; return; }
+    testsPassed++;
+}
+
 int main() {
     printf("=== Automation Deserialization Stress Tests ===\n\n");
 
@@ -141,6 +179,15 @@ int main() {
 
     printf("\n2a-VII: Remove out of bounds\n");
     test_remove_out_of_bounds();
+
+    printf("\n2a-VIII: Invalid target enum\n");
+    test_invalid_target_enum();
+
+    printf("\n2a-IX: Empty curve survival\n");
+    test_empty_curve_survival();
+
+    printf("\n2a-X: Orphan target survival\n");
+    test_orphan_target_survival();
 
     printf("\n=== Results: %d passed, %d failed ===\n", testsPassed, testsFailed);
     return testsFailed > 0 ? 1 : 0;

@@ -62,6 +62,46 @@ int main() {
     require(!ctx.shouldRenderToTimelineTrack(*previewState, 2),
             "Preview unit should not render to timeline tracks");
 
+    // Bridge mode independence regression guard:
+    // bridgeMode is additive metadata only and must not affect routing decisions.
+    // Any change that makes bridgeMode influence routing is a regression.
+    constexpr std::array<ArsenalBridgeMode, 6> kAllBridgeModes = {
+        ArsenalBridgeMode::DraftOnly,
+        ArsenalBridgeMode::PreviewToMaster,
+        ArsenalBridgeMode::LinkedRack,
+        ArsenalBridgeMode::LocalCopy,
+        ArsenalBridgeMode::RenderedAudio,
+        ArsenalBridgeMode::FrozenAudio,
+    };
+    for (ArsenalBridgeMode bm : kAllBridgeModes) {
+        UnitManager bmMgr;
+        const UnitID bmTimeline = bmMgr.createUnit("BM-Timeline", UnitType::Sampler);
+        const UnitID bmPreview = bmMgr.createUnit("BM-Preview", UnitType::Sampler);
+        bmMgr.assignUnitToTimelineLane(bmTimeline, 0);
+        bmMgr.clearUnitTimelineLane(bmPreview);
+        if (auto* u = bmMgr.getUnit(bmTimeline)) u->bridgeMode = bm;
+        if (auto* u = bmMgr.getUnit(bmPreview)) u->bridgeMode = bm;
+        auto bmSnap = bmMgr.getAudioSnapshot();
+        require(bmSnap && bmSnap->units.size() == 2, "Bridge mode unit snapshot size mismatch");
+
+        const UnitState* bmTimelineState = nullptr;
+        const UnitState* bmPreviewState = nullptr;
+        for (const auto& us : bmSnap->units) {
+            if (us.id == static_cast<int>(bmTimeline)) bmTimelineState = &us;
+            else if (us.id == static_cast<int>(bmPreview)) bmPreviewState = &us;
+        }
+        require(bmTimelineState && bmPreviewState, "Bridge mode unit state missing");
+
+        require(ctx.shouldRenderToTimelineTrack(*bmTimelineState, 0),
+                "Bridge mode must not suppress timeline routing");
+        require(!ctx.shouldRenderToMasterPreview(*bmTimelineState),
+                "Bridge mode must not change timeline routing to master preview");
+        require(ctx.shouldRenderToMasterPreview(*bmPreviewState),
+                "Bridge mode must not suppress master preview routing");
+        require(!ctx.shouldRenderToTimelineTrack(*bmPreviewState, 0),
+                "Bridge mode must not reroute preview units to timeline");
+    }
+
     std::cout << "[PASS] ArsenalProcessingContextRoutingTest\n";
     return 0;
 }
