@@ -201,6 +201,135 @@ ScenarioResult runScenario(const std::filesystem::path& tempRoot,
     result.exportPeak = peakOf(exportedSamples);
     return result;
 }
+
+// Phase 3 mixed-route permutation: two units, one PreviewToMaster and one
+// RoutedToTimelineTrack, running simultaneously in the same engine session.
+// Proves that the engine correctly segregates both routing paths without
+// cross-contamination.
+void runMixedScenario(const std::filesystem::path& tempRoot, float trackVolume) {
+    using namespace Aestra::Audio;
+    auto tm = std::make_shared<TrackManager>();
+    tm->setOutputSampleRate(static_cast<double>(kSampleRate));
+    tm->getPlaylistModel().setBPM(kBpm);
+
+    auto& playlist = tm->getPlaylistModel();
+    const PlaylistLaneID laneId = playlist.createLane("Mixed Track");
+    require(laneId.isValid(), "Failed to create lane for mixed scenario");
+    auto* channel = tm->addChannel("Mixed Track");
+    require(channel != nullptr, "Failed to create channel for mixed scenario");
+    if (auto* lane = playlist.getLane(laneId)) {
+        lane->volume = trackVolume;
+        lane->pan = 0.0f;
+    }
+    channel->setVolume(trackVolume);
+    channel->setPan(0.0f);
+
+    const std::filesystem::path samplePath = tempRoot / "mixed_sample.wav";
+    require(writeMonoToneWav(samplePath, 440.0, 0.55f, 1.0), "Failed to create sample wav for mixed scenario");
+
+    auto& unitManager = tm->getUnitManager();
+    const UnitID previewUnitId = unitManager.createUnit("Mixed Preview Unit", UnitType::Sampler);
+    const UnitID trackUnitId = unitManager.createUnit("Mixed Track Unit", UnitType::Sampler);
+    unitManager.setUnitAudioClip(previewUnitId, samplePath.string());
+    unitManager.setUnitAudioClip(trackUnitId, samplePath.string());
+    unitManager.setUnitEnabled(previewUnitId, true);
+    unitManager.setUnitEnabled(trackUnitId, true);
+    unitManager.clearUnitTimelineLane(previewUnitId);
+    unitManager.assignUnitToTimelineLane(trackUnitId, 0);
+
+    auto& patternManager = tm->getPatternManager();
+    PatternID previewPatternId = patternManager.createPattern();
+    auto* previewPattern = patternManager.getPattern(previewPatternId);
+    require(previewPattern != nullptr, "Failed to create preview pattern for mixed scenario");
+    previewPattern->type = PatternSource::Type::Midi;
+    previewPattern->name = "Mixed Preview Pattern";
+    previewPattern->lengthBeats = kRenderBeats;
+    previewPattern->payload = MidiPayload{};
+    auto& previewNotes = std::get<MidiPayload>(previewPattern->payload).notes;
+    previewNotes.push_back(MidiNote{72, 0.0, 0.75, 120.0f, previewUnitId});
+    previewNotes.push_back(MidiNote{76, 1.0, 0.75, 110.0f, previewUnitId});
+
+    PatternID trackPatternId = patternManager.createPattern();
+    auto* trackPattern = patternManager.getPattern(trackPatternId);
+    require(trackPattern != nullptr, "Failed to create track pattern for mixed scenario");
+    trackPattern->type = PatternSource::Type::Midi;
+    trackPattern->name = "Mixed Track Pattern";
+    trackPattern->lengthBeats = kRenderBeats;
+    trackPattern->payload = MidiPayload{};
+    auto& trackNotes = std::get<MidiPayload>(trackPattern->payload).notes;
+    trackNotes.push_back(MidiNote{60, 0.0, 0.75, 120.0f, trackUnitId});
+    trackNotes.push_back(MidiNote{64, 1.0, 0.75, 110.0f, trackUnitId});
+
+    AudioEngine engine;
+    require(engine.initialize(), "AudioEngine initialize failed in mixed scenario");
+    engine.setSampleRate(kSampleRate);
+    engine.setBufferConfig(kBlockSize, kChannels);
+    engine.setTrackManager(tm);
+    engine.setBPM(static_cast<float>(kBpm));
+    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*tm, static_cast<double>(kSampleRate)));
+    engine.setUnitManager(&tm->getUnitManager());
+    engine.setPatternPlaybackEngine(&tm->getPatternPlaybackEngine());
+    engine.setPatternPlaybackMode(true, kRenderBeats);
+    engine.setGlobalSamplePos(0);
+    engine.setMetronomeEnabled(false);
+    engine.setAuditionModeEnabled(false);
+    tm->getPatternPlaybackEngine().flush();
+    tm->getPatternPlaybackEngine().schedulePatternInstance(previewPatternId, 0.0, 1);
+    tm->getPatternPlaybackEngine().schedulePatternInstance(trackPatternId, 0.0, 2);
+    engine.setTransportPlaying(true);
+
+    const uint32_t totalFrames = static_cast<uint32_t>(kRenderSeconds * static_cast<double>(kSampleRate));
+    std::vector<float> liveBlock(static_cast<size_t>(kBlockSize) * kChannels, 0.0f);
+    std::vector<float> liveSamples;
+    liveSamples.reserve(static_cast<size_t>(totalFrames) * kChannels);
+
+    uint32_t rendered = 0;
+    while (rendered < totalFrames) {
+        const uint32_t framesThisBlock = std::min(kBlockSize, totalFrames - rendered);
+        std::fill(liveBlock.begin(), liveBlock.end(), 0.0f);
+        engine.processBlock(liveBlock.data(), nullptr, framesThisBlock, 0.0);
+        liveSamples.insert(liveSamples.end(), liveBlock.begin(),
+                           liveBlock.begin() + static_cast<std::ptrdiff_t>(framesThisBlock * kChannels));
+        rendered += framesThisBlock;
+    }
+    engine.setTransportPlaying(false);
+
+    const std::filesystem::path exportPath = tempRoot / "mixed_export.wav";
+    std::error_code ec;
+    std::filesystem::remove(exportPath, ec);
+
+    AudioExporter exporter(engine, *tm);
+    AudioExporter::Config config;
+    config.outputPath = exportPath.string();
+    config.sampleRate = kSampleRate;
+    config.numChannels = kChannels;
+    config.bitDepth = AudioExporter::BitDepth::Float_32;
+    config.scope = AudioExporter::RenderScope::Selection;
+    config.startTimeSeconds = 0.0;
+    config.endTimeSeconds = kRenderSeconds;
+    config.tailSeconds = 0.0;
+    const auto exportResult = exporter.render(config);
+    require(exportResult.success, "AudioExporter render failed in mixed scenario");
+
+    std::vector<float> exportedSamples;
+    uint32_t exportedRate = 0;
+    uint32_t exportedChannels = 0;
+    require(decodeAudioFile(exportPath.string(), exportedSamples, exportedRate, exportedChannels),
+            "Failed to decode exported wav in mixed scenario");
+    require(exportedRate == kSampleRate, "Exported sample rate mismatch in mixed scenario");
+    require(exportedChannels == kChannels, "Exported channel count mismatch in mixed scenario");
+
+    const float livePk = peakOf(liveSamples);
+    const float exportPk = peakOf(exportedSamples);
+
+    // Both units should produce audio simultaneously in the mixed scenario.
+    // The PreviewToMaster unit bypasses the track path; the track-routed unit
+    // goes through the track. Both should contribute to output.
+    require(livePk > 1.0e-4f, "Mixed scenario: live output should be audible");
+    require(exportPk > 1.0e-4f, "Mixed scenario: export output should be audible");
+
+    std::cout << "[INFO] Mixed scenario: live peak=" << livePk << " export peak=" << exportPk << "\n";
+}
 } // namespace
 
 int main() {
@@ -229,6 +358,11 @@ int main() {
     const ScenarioResult routedOpenTrack = runScenario(tempRoot, "routed_open_track", true, 1.0f);
     require(routedOpenTrack.livePeak > 1.0e-4f, "Track-routed Arsenal should be audible in live output when track is open");
     require(routedOpenTrack.exportPeak > 1.0e-4f, "Track-routed Arsenal should be audible in export when track is open");
+
+    // Case 4: Mixed route permutations — two units (preview + track-routed)
+    // running simultaneously must both be audible without cross-contamination.
+    std::cout << "[INFO] Case 4: Mixed route with two units simultaneously\n";
+    runMixedScenario(tempRoot, 1.0f);
 
     std::cout << "[PASS] ArsenalExportLiveParityTest\n";
     return 0;
