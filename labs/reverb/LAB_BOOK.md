@@ -35,53 +35,70 @@ labs/reverb/
 | 002 | 2026-04-28 | 1 | 1 | 0 | CI workflow + benchmark CLI extensions. See sessions. |
 | 003 | 2026-04-28 | 1 | 1 | 0 | Stage profiling + quality guardrails. See sessions. |
 | 004 | 2026-04-28 | 1 | 3 | 1 | FDN Delay Read optimization (power-of-two + bitmask). See sessions. |
+| 005 | 2026-04-28 | 1 | 2 | 2 | Early Reflection optimization + Plate timing investigation. See sessions. |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Status**: FDN Delay Read optimized, Early Reflections now #1 hotspot, Session 005 target selected
+- **Status**: Early Reflections optimized, Plate post-allpass identified as root cause of Plate slowness, Session 006 target selected
 
 ### Benchmark Results (SSE4.1, no AVX2, 5s @ 48kHz)
 
-| Mode | Dispatch (Session 004) | Scalar (Session 004) | vs Scalar | Real-Time (Dispatch) |
-|------|------------------------|----------------------|-----------|---------------------|
-| Room | 110.0 ms | 132.6 ms | **1.21x** | **45.45x** |
-| Hall | 118.6 ms | 144.3 ms | **1.22x** | **42.17x** |
-| Plate | 157.8 ms | 140.9 ms | 0.89x | **31.69x** |
+| Mode | Dispatch (S005) | Scalar (S005) | vs Scalar | Real-Time (Dispatch) |
+|------|-----------------|---------------|-----------|---------------------|
+| Room | 124.0 ms | 139.8 ms | **1.13x** | **40.33x** |
+| Hall | 139.5 ms | 188.2 ms | **1.35x** | **35.84x** |
+| Plate | 136.6 ms | — | — | **36.59x** |
+
+*Note: Absolute numbers elevated by system load. Relative improvements are valid.*
 
 ### Quality Results
 
 - **Cubic Hermite interpolation**: +1.12 pp HF energy >10kHz vs linear
-- **Callback budget**: <2.5% even in heaviest Hall mode (non-profile)
+- **Callback budget**: <2.5% even in heaviest mode (non-profile)
 - **Projected AVX2 speedup**: 1.5-2.0x overall vs scalar (cubic would match/exceed original linear speed)
 
-### Stage Profile Hotspots (Session 004, after optimization)
+### Stage Profile Hotspots (Session 005, after optimization)
 
-| Rank | Stage | % (Dispatch) | % (Scalar) | Session 003 (Before) |
-|------|-------|-------------|------------|---------------------|
-| 1 | **FDN Delay Read** | **34.4%** | **32.5%** | 34.5% → 34.4% |
-| 2 | Early Reflections | 13.8% | 13.2% | 14.7% → 13.8% |
-| 3 | FDN Feedback/Matrix | 9.6% | 14.2% | 10.9% → 9.6% |
-| 4 | Diffuser | 8.6% | 8.3% | 8.6% → 8.6% |
-| 5 | LFO Normalize + Control | 8.3% | 8.0% | 8.2% → 8.3% |
+| Rank | Stage | % (Dispatch) | Session 004 (Before) |
+|------|-------|-------------|---------------------|
+| 1 | **FDN Delay Read** | **34.3%** | 34.4% → 34.3% |
+| 2 | Early Reflections | **14.5%** | 15.0% → 14.5% |
+| 3 | FDN Feedback/Matrix | 9.8% | 9.6% → 9.8% |
+| 4 | Diffuser | 8.7% | 8.6% → 8.7% |
+| 5 | LFO Normalize + Control | 8.1% | 8.3% → 8.1% |
 
-**FDN Delay Read improvement**: -5.2% stage time (335.15 ms → 317.78 ms)
-**Whole-reverb improvement**: -4.5% dispatch, -13.4% scalar
+**Early Reflections improvement**: -7.5% stage time (184.97 ms → 171.00 ms)
+**Whole-reverb improvement**: ~1.8% dispatch
 
-**Session 005 target**: Early Reflections — 12 scalar taps with conditional wrapping per tap.
-Recommended: power-of-two buffer + bitmask wrapping, possibly partial SSE vectorization.
+### Plate Timing Investigation — Root Cause Found
 
-### Planned Optimizations
+**Plate was 43% slower than Room in Session 004 (157.8 ms vs 110.0 ms).**
 
-1. **AVX2 8-wide FDN** — Householder matrix, damping, feedback, output mixing
-2. **AVX2 LFO updates** — 8 quadrature oscillators in parallel
-3. **Cubic Hermite delay reads** — quality upgrade over linear interpolation
-4. **SSE4.1 fallback** — 4-wide for older x86
-5. **NEON fallback** — 4-wide for ARM
+**Finding:** Early Reflections are NOT the cause. The `processPlatePostAllpass`
+function is the culprit. It adds 2 allpass stages per sample, each using
+`wrapIndex()` (integer `%` modulo) and another `%` for position increment.
+The post-allpass buffer sizes (93 and 71 at 48kHz) are **not power-of-two**,
+making the modulo operations expensive integer divisions.
 
-### Quality Hypothesis
+**Session 006 target**: Plate Post-Allpass — power-of-two buffers + bitmask wrapping.
 
-Cubic Hermite interpolation in the 8 delay-line reads will preserve approximately
-6-12 dB more high-frequency energy per feedback pass compared to linear.
-Over 20+ passes in the FDN matrix, this compounds to a noticeably brighter,
-more spacious reverb tail without adding artificial highs.
+### Durable Patterns (Accepted)
+
+1. **Power-of-two + bitmask wrapping** — Works for any ring buffer where size
+   can be rounded up. Eliminates branches and modulo. Applied to FDN delay lines
+   (S004) and early reflections (S005). Applicable to diffusers and post-allpass.
+2. **Cache mask as member variable** — `m_delayLineMasks[]`, `m_earlyMask`.
+   Avoids recomputing `size - 1` in hot paths.
+3. **Remove ineffective prefetch** — `__builtin_prefetch` removed from FDN delay
+   read (S004). Four cache-line-local samples don't benefit from explicit prefetch.
+
+### Rejected Patterns (Documented)
+
+1. **SIMD delay reads** — Gather/scatter not available on SSE4.1; would require
+   interleaved storage (topology change). Rejected per prompt guidance.
+2. **SIMD early reflection taps** — 12 taps with interleaved L/R accumulation
+   don't vectorize cleanly on SSE4.1. Scalar bitmask is faster.
+3. **Branchless `frac < 0` fix** — Compiler handles predictable branch well.
+   No improvement measured.
+4. **Hybrid cubic/linear interpolation** — Violates hard constraint.

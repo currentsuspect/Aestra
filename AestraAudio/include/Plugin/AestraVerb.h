@@ -191,7 +191,7 @@ public:
         if (!m_predelayL.empty()) {
             predelayPos = wrapIndex(predelayPos, static_cast<int>(m_predelayL.size()));
         }
-        earlyPos = wrapIndex(earlyPos, static_cast<int>(m_earlyL.size()));
+        earlyPos &= m_earlyMask;
         for (size_t line = 0; line < kFDNLineCount; ++line) {
             delayPos[line] &= m_delayLineMasks[line];
         }
@@ -760,8 +760,10 @@ private:
         }
 
         const int earlyMaxSamples = std::max(2, static_cast<int>(std::ceil(m_sampleRate * 0.14)));
-        m_earlyL.assign(static_cast<size_t>(earlyMaxSamples), 0.0f);
-        m_earlyR.assign(static_cast<size_t>(earlyMaxSamples), 0.0f);
+        const uint32_t earlyPow2 = nextPowerOfTwo(static_cast<uint32_t>(earlyMaxSamples));
+        m_earlyL.assign(static_cast<size_t>(earlyPow2), 0.0f);
+        m_earlyR.assign(static_cast<size_t>(earlyPow2), 0.0f);
+        m_earlyMask = static_cast<int>(earlyPow2) - 1;
 
         clearBuffers(randomizeLfos);
     }
@@ -871,19 +873,17 @@ private:
 
     void processEarlyReflections(float left, float right, const ControlCache& control,
                                  float& earlyL, float& earlyR, int& pos) {
-        if (m_earlyL.empty() || m_earlyR.empty()) return;
+        if (m_earlyMask <= 0) return;
 
-        const int ringSize = static_cast<int>(m_earlyL.size());
-        pos = wrapIndex(pos, ringSize);
+        const int mask = m_earlyMask;
+        pos &= mask;
 
         m_earlyL[static_cast<size_t>(pos)] = left;
         m_earlyR[static_cast<size_t>(pos)] = right;
 
         for (size_t tap = 0; tap < kEarlyTapCount; ++tap) {
-            int readL = pos - control.earlyDelayL[tap];
-            if (readL < 0) readL += ringSize;
-            int readR = pos - control.earlyDelayR[tap];
-            if (readR < 0) readR += ringSize;
+            const int readL = (pos - control.earlyDelayL[tap]) & mask;
+            const int readR = (pos - control.earlyDelayR[tap]) & mask;
             const float gain = control.earlyGains[tap];
             earlyL += m_earlyL[static_cast<size_t>(readL)] * gain +
                       m_earlyR[static_cast<size_t>(readR)] * gain * 0.28f;
@@ -891,7 +891,7 @@ private:
                       m_earlyL[static_cast<size_t>(readL)] * gain * 0.22f;
         }
 
-        if (++pos >= ringSize) pos = 0;
+        pos = (pos + 1) & mask;
     }
 
     void processDiffusers(float& left, float& right, const ControlCache& control,
@@ -1003,6 +1003,7 @@ private:
 
     std::vector<float> m_earlyL;
     std::vector<float> m_earlyR;
+    int m_earlyMask = 0;
     int m_earlyPos = 0;
 
     std::vector<float> m_predelayL;
