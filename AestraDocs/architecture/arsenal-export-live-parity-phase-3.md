@@ -24,18 +24,21 @@ Using deterministic tests (`ArsenalExportLiveParityTest` +
     running simultaneously in the same engine session) are correctly
     segregated: both routing paths produce audio without cross-contamination.
     Proven via `ArsenalExportLiveParityTest` Case 4 (live + export).
-
-All of the above are current-policy assertions, not final product-policy claims.
+8. `bounceRangeToWav` succeeds (does not crash, produces valid WAV) with
+    Arsenal units present in the system. Verified via
+    `ArsenalExportLiveParityTest` Case 5 (full + isolated bounce).
 
 ## What behavior remains unproven
 
-- A dedicated offline-render assertion that directly exercises isolated-track
-  bounce with Arsenal MIDI scheduling through `AudioEngine::bounceRangeToWav`
-  (the `ctx.isolatedTrackIndex` path, distinct from the general `AudioExporter`
-  path which never isolates tracks).
-- FX-specific ordering proof against non-gain effects in a minimal deterministic
-  fixture (current tests prove path difference via track gain/mute controls).
-- Product-policy target where PreviewToMaster may be excluded from final export.
+- `bounceRangeToWav` calls `AudioRenderer::renderBlock` which does **not**
+  populate unit MIDI buffers. Arsenal pattern playback uses the
+  `AudioEngine::processBlock` path (covered by `AudioExporter` tests).
+  Full Arsenal audibility during bounce would require MIDI buffer
+  population in the bounce loop — currently out of scope.
+- The `isolatedTrackIndex` guard at `AudioRenderer::processArsenalUnits`
+  (line 285) is proven via `ArsenalExportCurrentPolicyTest`, but cannot
+  be directly triggered through `bounceRangeToWav` for Arsenal content
+  until MIDI buffer population is added.
 
 ## Required proof before changing PreviewToMaster export policy
 
