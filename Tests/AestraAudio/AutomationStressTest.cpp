@@ -206,9 +206,12 @@ void test_automation_target_from_raw_int() {
     if (automationTargetFromRawInt(999999) != AutomationTarget::Custom) {
         printf("FAIL: raw 999999 must clamp to Custom\n"); testsFailed++; return;
     }
-    // Negative values clamp to Volume (matching finiteNumberOr min=0 behavior)
-    if (automationTargetFromRawInt(-1) != AutomationTarget::Volume) {
-        printf("FAIL: raw -1 must clamp to Volume(0)\n"); testsFailed++; return;
+    // Negative values clamp to Custom (no backward-compat reason to become Volume)
+    if (automationTargetFromRawInt(-1) != AutomationTarget::Custom) {
+        printf("FAIL: raw -1 must clamp to Custom(255), not Volume(0)\n"); testsFailed++; return;
+    }
+    if (automationTargetFromRawInt(-999999) != AutomationTarget::Custom) {
+        printf("FAIL: raw -999999 must clamp to Custom\n"); testsFailed++; return;
     }
     testsPassed++;
 }

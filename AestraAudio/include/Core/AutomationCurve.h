@@ -22,13 +22,14 @@ enum class AutomationTarget : uint8_t { Volume = 0, Pan = 1, Custom = 255 };
 /**
  * @brief Clamp a raw integer to a safe AutomationTarget.
  *
- * Prevents the uint8_t wrap-AutomationTarget(wraptoVolume- hazard (raw value 256
- * wraps to 0 = Volume under unguarded static_cast). Values >= 256 are clamped to
+ * Prevents the uint8_t wrap-to-Volume hazard (raw value 256 wraps to 0 = Volume
+ * under unguarded static_cast). Values >= 256 and negative values are clamped to
  * 255 (Custom). Values 2–254 are preserved as-is (renderer skips unrecognized
  * targets). This is the single ingress validator for any integer→AutomationTarget
  * path (JSON, API, migration).
  */
 inline AutomationTarget automationTargetFromRawInt(int rawValue) noexcept {
+    if (rawValue < 0) return AutomationTarget::Custom;
     return static_cast<AutomationTarget>(static_cast<uint8_t>(std::clamp(rawValue, 0, 255)));
 }
 
