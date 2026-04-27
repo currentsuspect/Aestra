@@ -187,6 +187,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/DSP/AudioProcessor.cpp
     src/DSP/Filter.cpp
     src/DSP/Oscillator.cpp
+    src/DSP/ReverbSIMD.cpp
     src/DSP/SincAVX512.cpp
     src/DSP/SampleRateConverter.cpp
     
