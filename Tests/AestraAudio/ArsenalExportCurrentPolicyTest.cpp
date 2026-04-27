@@ -32,8 +32,11 @@ CurrentRoutingDecision classifyCurrentRouting(const Aestra::Audio::ArsenalProces
 }
 
 bool shouldRunMasterPreviewPass(int32_t isolatedTrackIndex) {
-    // Mirrors current AudioRenderer::processArsenalUnits() guard:
-    // if (ctx.isolatedTrackIndex >= 0) return;
+    // Mirrors AudioRenderer::processArsenalUnits() guard in
+    // AestraAudio/src/AudioRenderer.cpp (ctx.isolatedTrackIndex >= 0 check).
+    // Export path (AudioEngine::bounceRangeToWav) sets ctx.isolatedTrackIndex
+    // identically. This function documents the guard contract — any change to
+    // either side must update both.
     return isolatedTrackIndex < 0;
 }
 } // namespace
@@ -71,6 +74,7 @@ int main() {
     // without changing renderer logic.
     require(shouldRunMasterPreviewPass(-1), "Master-preview pass should run when not isolating");
     require(!shouldRunMasterPreviewPass(0), "Master-preview pass should be skipped for isolated track 0");
+    require(!shouldRunMasterPreviewPass(5), "Master-preview pass should be skipped for any positive track index");
 
     std::cout << "[PASS] ArsenalExportCurrentPolicyTest\n";
     return 0;
