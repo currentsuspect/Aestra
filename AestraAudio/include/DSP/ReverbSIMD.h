@@ -87,7 +87,7 @@ inline void processFDNSampleAVX2(
     float* lowDampState,
     float* const* delayLines,
     int* delayPos,
-    const int* delaySizes,
+    const int* delayMasks,
     const float* feedbackGains,
     const float* injectL,
     const float* injectR,
@@ -146,7 +146,7 @@ inline void processFDNSampleAVX2(
     _mm256_store_ps(writeVals, vWrite);
     for (size_t line = 0; line < kFDNLineCount; ++line) {
         delayLines[line][delayPos[line]] = writeVals[line];
-        if (++delayPos[line] >= delaySizes[line]) delayPos[line] = 0;
+        delayPos[line] = (delayPos[line] + 1) & delayMasks[line];
     }
 
     // wetL += dot(lineOut, outputL), wetR += dot(lineOut, outputR)
@@ -236,7 +236,7 @@ inline void processFDNSampleSSE(
     float* lowDampState,
     float* const* delayLines,
     int* delayPos,
-    const int* delaySizes,
+    const int* delayMasks,
     const float* feedbackGains,
     const float* injectL,
     const float* injectR,
@@ -287,7 +287,7 @@ inline void processFDNSampleSSE(
         for (size_t i = 0; i < 4; ++i) {
             size_t line = b + i;
             delayLines[line][delayPos[line]] = writeVals[i];
-            if (++delayPos[line] >= delaySizes[line]) delayPos[line] = 0;
+            delayPos[line] = (delayPos[line] + 1) & delayMasks[line];
         }
 
         __m128 vDotL = _mm_mul_ps(vLineOut, vOutputL);
@@ -329,7 +329,7 @@ inline void processFDNSampleNEON(
     float* lowDampState,
     float* const* delayLines,
     int* delayPos,
-    const int* delaySizes,
+    const int* delayMasks,
     const float* feedbackGains,
     const float* injectL,
     const float* injectR,
@@ -381,7 +381,7 @@ inline void processFDNSampleNEON(
         for (size_t i = 0; i < 4; ++i) {
             size_t line = b + i;
             delayLines[line][delayPos[line]] = writeVals[i];
-            if (++delayPos[line] >= delaySizes[line]) delayPos[line] = 0;
+            delayPos[line] = (delayPos[line] + 1) & delayMasks[line];
         }
 
         float32x4_t vDotL = vmulq_f32(vLineOut, vOutputL);
@@ -454,7 +454,7 @@ inline void processFDNSample(
     float* lowDampState,
     float* const* delayLines,
     int* delayPos,
-    const int* delaySizes,
+    const int* delayMasks,
     const float* feedbackGains,
     const float* injectL,
     const float* injectR,
@@ -470,7 +470,7 @@ inline void processFDNSample(
         static const bool useAVX2 = Aestra::Core::CPUDetection::get().hasAVX2();
         if (useAVX2) {
             processFDNSampleAVX2(lineOut, delayedL, delayedR, dampingState, lowDampState,
-                                 delayLines, delayPos, delaySizes, feedbackGains,
+                                 delayLines, delayPos, delayMasks, feedbackGains,
                                  injectL, injectR, outputL, outputR,
                                  dampingCoeff, lowDampCoeff, wetL, wetR);
             return;
@@ -481,7 +481,7 @@ inline void processFDNSample(
         static const bool useSSE = Aestra::Core::CPUDetection::get().hasSSE41();
         if (useSSE) {
             processFDNSampleSSE(lineOut, delayedL, delayedR, dampingState, lowDampState,
-                                delayLines, delayPos, delaySizes, feedbackGains,
+                                delayLines, delayPos, delayMasks, feedbackGains,
                                 injectL, injectR, outputL, outputR,
                                 dampingCoeff, lowDampCoeff, wetL, wetR);
             return;
@@ -490,7 +490,7 @@ inline void processFDNSample(
 
 #ifdef AESTRA_REVERB_HAS_NEON
         processFDNSampleNEON(lineOut, delayedL, delayedR, dampingState, lowDampState,
-                             delayLines, delayPos, delaySizes, feedbackGains,
+                             delayLines, delayPos, delayMasks, feedbackGains,
                              injectL, injectR, outputL, outputR,
                              dampingCoeff, lowDampCoeff, wetL, wetR);
         return;
@@ -510,7 +510,7 @@ inline void processFDNSample(
         lowDampState[line] += (feedback - lowDampState[line]) * lowDampCoeff;
         feedback -= lowDampState[line] * 0.82f;
         delayLines[line][delayPos[line]] = injected + feedback;
-        if (++delayPos[line] >= delaySizes[line]) delayPos[line] = 0;
+        delayPos[line] = (delayPos[line] + 1) & delayMasks[line];
         wetL += lineOut[line] * outputL[line];
         wetR += lineOut[line] * outputR[line];
     }
