@@ -408,6 +408,7 @@ void testUnresolvedRouteTargetNonFatal() {
 
     // The unresolvable send to channel 99 is preserved in the channel
     // but silently ignored by the audio runtime (INVALID_SLOT check).
+    // ProjectSerializer logs a warning for unresolved send targets during load.
     bool foundUnresolvable = false;
     bool foundMaster = false;
     for (const auto& send : sends) {

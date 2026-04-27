@@ -330,6 +330,10 @@ void UnitManager::assignUnitToTimelineLane(UnitID id, int laneIndex) {
     if (auto* u = getUnit(id)) {
         u->targetMixerRoute = laneIndex;
         u->routeMode = arsenalRouteModeFromRouteId(laneIndex);
+        // bridgeMode is intentionally NOT updated here.
+        // bridgeMode represents ownership metadata (e.g. DraftOnly, LinkedRack)
+        // and is independent of the current routing assignment.
+        // routeId/routeMode remain authoritative for render/export decisions.
     }
 }
 
@@ -337,6 +341,7 @@ void UnitManager::clearUnitTimelineLane(UnitID id) {
     if (auto* u = getUnit(id)) {
         u->targetMixerRoute = -1;
         u->routeMode = ArsenalRouteMode::PreviewToMaster;
+        // bridgeMode intentionally not reset — see assignUnitToTimelineLane comment.
     }
 }
 
