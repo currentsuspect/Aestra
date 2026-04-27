@@ -1246,7 +1246,18 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         if (!aj[a].isObject()) continue;
                         std::string param = boundedStringOr(aj[a], "param", "", PROJECT_MAX_STRING_BYTES);
                         auto target = static_cast<AutomationTarget>(
-                            finiteNumberOr(aj[a], "targetEnum", 0.0, 0.0, 1024.0));
+                            finiteNumberOr(aj[a], "targetEnum", 0.0, 0.0, 255.0));
+                        // Warn for unrecognized targets (preserved non-fatally).
+                        // AutomationTarget is uint8_t; known values are Volume(0), Pan(1), Custom(255).
+                        // Unknown enums are kept as-is — the renderer is responsible for skipping them.
+                        {
+                            const int rawTarget = static_cast<int>(target);
+                            if (rawTarget != 0 && rawTarget != 1 && rawTarget != 255) {
+                                Log::warning("[ProjectLoad] Automation curve '" + param +
+                                             "' has unrecognized target enum " + std::to_string(rawTarget) +
+                                             "; curve preserved but may be skipped at runtime.");
+                            }
+                        }
                         
                         AutomationCurve curve(param, target);
                         curve.setDefaultValue(finiteNumberOr(aj[a], "default", 0.0, -1.0e6, 1.0e6));
@@ -1308,6 +1319,30 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             playlist.addClip(laneId, clip);
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // PHASE 7: Validate send routing targets.
+    // Unresolved sends are non-fatal — the audio runtime silently ignores them
+    // via INVALID_SLOT checks. This warning helps diagnose silent routing loss.
+    {
+        std::unordered_set<uint32_t> validChannelIds;
+        validChannelIds.insert(0xFFFFFFFFu); // master
+        for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
+            if (auto* ch = trackManager->getChannel(ci)) {
+                validChannelIds.insert(ch->getChannelId());
+            }
+        }
+        for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
+            auto* channel = trackManager->getChannel(ci);
+            if (!channel) continue;
+            for (const auto& send : channel->getSends()) {
+                if (!validChannelIds.count(send.targetChannelId)) {
+                    Log::warning("[ProjectLoad] Send from '" + channel->getName() +
+                                 "' targets channel ID " + std::to_string(send.targetChannelId) +
+                                 " which does not exist; send will be silent.");
                 }
             }
         }
