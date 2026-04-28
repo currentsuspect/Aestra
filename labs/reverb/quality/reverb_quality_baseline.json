@@ -4,48 +4,48 @@
   "modes": [
     {
       "name": "room",
-      "rms": 0.00386958,
-      "peak": 0.380761,
-      "hfRatio": 1.44949,
+      "rms": 0.00318478,
+      "peak": 0.307382,
+      "hfRatio": 1.40621,
       "hasNaN": false,
       "hasInf": false,
       "decay": {
-        "t20Ms": 250.667,
-        "t40Ms": 448,
-        "t60Ms": 661.333,
+        "t20Ms": 256,
+        "t40Ms": 453.333,
+        "t60Ms": 666.667,
         "monotonic": true,
         "maxReboundDb": 0
       },
       "spectral": {
-        "lowRatio": 0.0675547,
-        "midRatio": 0.686525,
-        "highRatio": 0.24592,
-        "crestFactor": 6.91006,
+        "lowRatio": 0.0640046,
+        "midRatio": 0.680213,
+        "highRatio": 0.255783,
+        "crestFactor": 6.75838,
         "metallicPeakHz": 960.938,
-        "metallicPeakDb": 16.7896,
-        "metallicPeakLocalDb": 4.85618,
+        "metallicPeakDb": 16.5969,
+        "metallicPeakLocalDb": 5.0733,
         "metallicPeakBand": "mid",
         "metallicPeakSeverity": "none",
         "metallicPeakPersistent": false
       },
       "stereo": {
         "corrEarly": 1,
-        "corrLate": 0.642592,
+        "corrLate": 0.820486,
         "monoPeak": 0.183306,
-        "widthProxy": 1.47421
+        "widthProxy": 1.07215
       },
       "transient": {
         "bloomTimeMs": 6.89583,
         "earlyOnsetMs": 54.2917,
         "earlyPeakMs": 54.2917,
-        "earlyPeakCount": 593,
+        "earlyPeakCount": 641,
         "earlyActiveBins1ms": 82,
         "earlyActiveBinRatio": 0.546667,
-        "earlyCrestFactor": 26.858,
+        "earlyCrestFactor": 23.7481,
         "earlyEnergyMs25": 59.5,
-        "earlyEnergyMs50": 92.0833,
-        "earlyEnergyMs75": 109.312,
-        "earlyDensityScore": 12.0699
+        "earlyEnergyMs50": 92.7708,
+        "earlyEnergyMs75": 108.729,
+        "earlyDensityScore": 14.7554
       }
     },
     {

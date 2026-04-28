@@ -409,7 +409,7 @@ public:
             // Anti-correlated diff boost: wetL' = wetL + k*(wetL-wetR), wetR' = wetR - k*(wetL-wetR).
             // Preserves mono fold-down exactly: (wetL+diff) + (wetR-diff) = wetL + wetR.
             float kDecorr = 0.0f;
-            if (mode == Mode::Room) kDecorr = 0.60f;
+            if (mode == Mode::Room) kDecorr = 0.30f;   // Session 016: reduced from 0.60 to tame extreme width on dense material
             else if (mode == Mode::Plate) kDecorr = 0.60f;
             if (kDecorr > 0.0f) {
                 const float diff = (wetL - wetR) * kDecorr;
