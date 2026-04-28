@@ -188,9 +188,7 @@ public:
         auto randomState = m_randomState;
         auto smoothedParams = m_smoothedParams;
 
-        if (!m_predelayL.empty()) {
-            predelayPos = wrapIndex(predelayPos, static_cast<int>(m_predelayL.size()));
-        }
+        predelayPos &= m_predelayMask;
         earlyPos &= m_earlyMask;
         for (size_t line = 0; line < kFDNLineCount; ++line) {
             delayPos[line] &= m_delayLineMasks[line];
@@ -247,13 +245,13 @@ public:
             const float dryL = inL;
             const float dryR = inR;
 
+            const int preMask = m_predelayMask;
             m_predelayL[predelayPos] = inL;
             m_predelayR[predelayPos] = inR;
-            int predelayRead = predelayPos - control.predelaySamples;
-            if (predelayRead < 0) predelayRead += static_cast<int>(m_predelayL.size());
+            int predelayRead = (predelayPos - control.predelaySamples) & preMask;
             float delayedL = m_predelayL[predelayRead];
             float delayedR = m_predelayR[predelayRead];
-            if (++predelayPos >= static_cast<int>(m_predelayL.size())) predelayPos = 0;
+            predelayPos = (predelayPos + 1) & preMask;
             AESTRA_PROFILE_STAGE_END(kInputPrep);
 
             AESTRA_PROFILE_STAGE(kEarlyReflections);
@@ -732,8 +730,10 @@ private:
         const float sampleScale = static_cast<float>(m_sampleRate) / kReferenceSampleRate;
 
         m_maxPredelaySamples = std::max(1, static_cast<int>(std::ceil(m_sampleRate * 0.5)));
-        m_predelayL.assign(static_cast<size_t>(m_maxPredelaySamples) + 1, 0.0f);
-        m_predelayR.assign(static_cast<size_t>(m_maxPredelaySamples) + 1, 0.0f);
+        const uint32_t predelayPow2 = nextPowerOfTwo(static_cast<uint32_t>(m_maxPredelaySamples) + 1);
+        m_predelayL.assign(static_cast<size_t>(predelayPow2), 0.0f);
+        m_predelayR.assign(static_cast<size_t>(predelayPow2), 0.0f);
+        m_predelayMask = static_cast<int>(predelayPow2) - 1;
 
         for (size_t line = 0; line < kFDNLineCount; ++line) {
             const int maxLength = std::max(
@@ -1028,6 +1028,7 @@ private:
     std::vector<float> m_predelayL;
     std::vector<float> m_predelayR;
     int m_maxPredelaySamples = 1;
+    int m_predelayMask = 0;
     int m_predelayPos = 0;
 
     // TODO: separate hi/lo damping (kHFDamping + kLFDamping) for more tonal control
