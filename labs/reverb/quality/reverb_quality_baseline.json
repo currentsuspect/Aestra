@@ -70,34 +70,34 @@
     },
     {
       "name": "plate",
-      "rms": 0.00315176,
-      "peak": 0.084147,
-      "hfRatio": 1.71797,
+      "rms": 0.00308262,
+      "peak": 0.0808497,
+      "hfRatio": 1.79436,
       "hasNaN": false,
       "hasInf": false,
       "decay": {
         "t20Ms": 245.333,
-        "t40Ms": 400,
+        "t40Ms": 394.667,
         "t60Ms": 576,
         "monotonic": true,
         "maxReboundDb": 0
       },
       "spectral": {
-        "lowRatio": 0.0964013,
-        "midRatio": 0.339607,
-        "highRatio": 0.563992,
-        "crestFactor": 11.6681,
-        "metallicPeakHz": 562.5,
-        "metallicPeakDb": 21.34
+        "lowRatio": 0.0746892,
+        "midRatio": 0.285923,
+        "highRatio": 0.639388,
+        "crestFactor": 9.08311,
+        "metallicPeakHz": 4687.5,
+        "metallicPeakDb": 19.1647
       },
       "stereo": {
         "corrEarly": 1,
-        "corrLate": 0.502923,
-        "monoPeak": 0.0336469,
-        "widthProxy": 1.73768
+        "corrLate": 0.604199,
+        "monoPeak": 0.0324329,
+        "widthProxy": 1.73716
       },
       "transient": {
-        "bloomTimeMs": 48.5208,
+        "bloomTimeMs": 48.125,
         "earlyDensity": 0
       }
     }
