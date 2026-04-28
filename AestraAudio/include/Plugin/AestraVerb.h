@@ -9,6 +9,11 @@
 #include <array>
 #include <atomic>
 #include <cmath>
+
+// MSVC does not define M_PI by default
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 #include <cstring>
 #include <mutex>
 #include <random>
