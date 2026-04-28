@@ -392,6 +392,18 @@ public:
                 AESTRA_PROFILE_STAGE_END(kPlatePostAllpass);
             }
 
+            // Late-tail stereo decorrelation (Session 011).
+            // Anti-correlated diff boost: wetL' = wetL + k*(wetL-wetR), wetR' = wetR - k*(wetL-wetR).
+            // Preserves mono fold-down exactly: (wetL+diff) + (wetR-diff) = wetL + wetR.
+            float kDecorr = 0.0f;
+            if (mode == Mode::Room) kDecorr = 0.60f;
+            else if (mode == Mode::Plate) kDecorr = 0.60f;
+            if (kDecorr > 0.0f) {
+                const float diff = (wetL - wetR) * kDecorr;
+                wetL += diff;
+                wetR -= diff;
+            }
+
             const float widthL = wetL * control.widthMain + wetR * control.widthCross;
             const float widthR = wetR * control.widthMain + wetL * control.widthCross;
             wetL = widthL * 0.5f;
@@ -798,7 +810,7 @@ private:
         m_earlyPos = 0;
 
         if (randomizeLfos) {
-            std::mt19937 rng{std::random_device{}()};
+            std::mt19937 rng{0xAE57A000u}; // deterministic seed for reproducible tests
             std::uniform_real_distribution<float> dist(0.0f, kTwoPi);
             for (auto& phase : m_lfoPhase) phase = dist(rng);
             for (auto& phase : m_lfoPhase2) phase = dist(rng);

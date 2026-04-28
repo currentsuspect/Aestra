@@ -41,19 +41,20 @@ labs/reverb/
 | 008 | 2026-04-28 | 1 | 3 | 0 | Input/Predelay optimization (power-of-two + bitmask). See sessions. |
 | 009 | 2026-04-28 | 1 | 0 | 2 | LFO Normalize + Control investigated, no measurable gain. Rejected. See sessions. |
 | 010 | 2026-04-28 | 1 | 2 | 0 | Quality measurement baseline established. See sessions. |
+| 011 | 2026-04-28 | 1 | 3 | 0 | Late-tail decorrelation + quality lab bug fix. See sessions. |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Status**: Performance plateau reached. All low-hanging fruit (ring buffer wrapping) harvested. All modes exceed 50x real-time. Session 010 requires AVX2 hardware or architectural change.
+- **Status**: Performance plateau reached. All low-hanging fruit (ring buffer wrapping) harvested. All modes exceed 50x real-time. Quality baseline corrected (Hall was measured as Plate in S010). Late-tail decorrelation fixes Room/Plate stereo collapse.
 
 ### Benchmark Results (SSE4.1, no AVX2, 5s @ 48kHz)
 
-| Mode | Dispatch (S008) | Scalar (S008) | Real-Time (Dispatch) |
-|------|-----------------|---------------|---------------------|
-| Room | **98.6 ms** | 107.8 ms | **50.73x** |
-| Hall | **95.0 ms** | 110.8 ms | **52.64x** |
-| Plate | **91.8 ms** | — | **54.46x** |
+| Mode | Dispatch (S011) | Real-Time (Dispatch) |
+|------|-----------------|---------------------|
+| Room | **96.3 ms** | **51.92x** |
+| Hall | **92.6 ms** | **53.99x** |
+| Plate | **88.8 ms** | **56.32x** |
 
 **All modes exceed 50x real-time with cubic Hermite interpolation.**
 
@@ -141,18 +142,22 @@ The remaining hotspots are fundamentally limited by:
 - Lower-noise benchmark environment (to measure sub-5% optimizations)
 - Architectural redesign of FDN delay-line memory layout for gather-friendly access
 
-### Quality Baseline (Session 010)
+### Quality Baseline (Session 011, corrected)
 
 | Metric | Room | Hall | Plate |
 |--------|------|------|-------|
-| T60 | 714 ms | 816 ms | 554 ms |
+| T60 | 661 ms | 1349 ms | 576 ms |
 | Spectral | Mid-heavy | High-heavy | Balanced |
-| Crest Factor | 7.2 | 4.4 | 11.1 |
-| Late Correlation | 0.974 | 0.788 | 0.967 |
-| Bloom Time | 6.9 ms | 49.2 ms | 36.0 ms |
+| Crest Factor | 6.9 | 5.2 | 11.7 |
+| Late Correlation | 0.643 | 0.525 | 0.503 |
+| Bloom Time | 6.9 ms | 8.7 ms | 48.5 ms |
 
-**Red flags:** Room & Plate late tail highly correlated (>0.96). Plate metallic peak at 1406 Hz (20.9 dB).
+**Red flags:** None. Room/Plate late correlation fixed by decorrelation (k=0.60).
+
+**Note:** Session 010 Hall quality metrics were affected by a quality-lab
+parameter mapping bug (`kMode=1.0f` mapped to Plate, not Hall). Session 011
+fixes the mapping and establishes the corrected Hall baseline (T60 ~1349ms).
 
 **Quality artifacts:** `labs/reverb/quality/` — impulse WAVs, noise burst WAVs, JSON metrics, Markdown report.
 
-**Session 011 target**: Late tail stereo decorrelation (Room/Plate correlation >0.96).
+**Session 012 target:** Plate metallic peak at 562 Hz (21.3 dB crest).

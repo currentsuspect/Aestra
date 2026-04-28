@@ -4,31 +4,31 @@
   "modes": [
     {
       "name": "room",
-      "rms": 0.00252912,
-      "peak": 0.255483,
-      "hfRatio": 1.27307,
+      "rms": 0.00386958,
+      "peak": 0.380761,
+      "hfRatio": 1.44949,
       "hasNaN": false,
       "hasInf": false,
       "decay": {
-        "t20Ms": 272,
-        "t40Ms": 490.667,
-        "t60Ms": 714.667,
+        "t20Ms": 250.667,
+        "t40Ms": 448,
+        "t60Ms": 661.333,
         "monotonic": true,
         "maxReboundDb": 0
       },
       "spectral": {
-        "lowRatio": 0.0428311,
-        "midRatio": 0.566121,
-        "highRatio": 0.391048,
-        "crestFactor": 7.23708,
-        "metallicPeakHz": 1710.94,
-        "metallicPeakDb": 17.1913
+        "lowRatio": 0.0675547,
+        "midRatio": 0.686525,
+        "highRatio": 0.24592,
+        "crestFactor": 6.91006,
+        "metallicPeakHz": 960.938,
+        "metallicPeakDb": 16.7896
       },
       "stereo": {
         "corrEarly": 1,
-        "corrLate": 0.974274,
+        "corrLate": 0.642592,
         "monoPeak": 0.183306,
-        "widthProxy": 0.694748
+        "widthProxy": 1.47421
       },
       "transient": {
         "bloomTimeMs": 6.89583,
@@ -37,67 +37,67 @@
     },
     {
       "name": "hall",
-      "rms": 0.00187124,
-      "peak": 0.0630369,
-      "hfRatio": 1.62201,
+      "rms": 0.0021229,
+      "peak": 0.189975,
+      "hfRatio": 1.5569,
       "hasNaN": false,
       "hasInf": false,
       "decay": {
-        "t20Ms": 357.333,
-        "t40Ms": 597.333,
-        "t60Ms": 816,
+        "t20Ms": 522.667,
+        "t40Ms": 1024,
+        "t60Ms": 1349.33,
         "monotonic": true,
         "maxReboundDb": 0
       },
       "spectral": {
-        "lowRatio": 0.0451396,
-        "midRatio": 0.174914,
-        "highRatio": 0.779947,
-        "crestFactor": 4.37181,
-        "metallicPeakHz": 5835.94,
-        "metallicPeakDb": 12.8132
+        "lowRatio": 0.0380004,
+        "midRatio": 0.444267,
+        "highRatio": 0.517733,
+        "crestFactor": 5.18127,
+        "metallicPeakHz": 1007.81,
+        "metallicPeakDb": 14.2887
       },
       "stereo": {
         "corrEarly": 1,
-        "corrLate": 0.787861,
-        "monoPeak": 0.052971,
-        "widthProxy": 0.672153
+        "corrLate": 0.525268,
+        "monoPeak": 0.136305,
+        "widthProxy": 0.738205
       },
       "transient": {
-        "bloomTimeMs": 49.25,
+        "bloomTimeMs": 8.70833,
         "earlyDensity": 0
       }
     },
     {
       "name": "plate",
-      "rms": 0.00189983,
-      "peak": 0.0602716,
-      "hfRatio": 1.7704,
+      "rms": 0.00315176,
+      "peak": 0.084147,
+      "hfRatio": 1.71797,
       "hasNaN": false,
       "hasInf": false,
       "decay": {
-        "t20Ms": 240,
-        "t40Ms": 394.667,
-        "t60Ms": 554.667,
+        "t20Ms": 245.333,
+        "t40Ms": 400,
+        "t60Ms": 576,
         "monotonic": true,
         "maxReboundDb": 0
       },
       "spectral": {
-        "lowRatio": 0.114253,
-        "midRatio": 0.367412,
-        "highRatio": 0.518335,
-        "crestFactor": 11.0909,
-        "metallicPeakHz": 1406.25,
-        "metallicPeakDb": 20.8994
+        "lowRatio": 0.0964013,
+        "midRatio": 0.339607,
+        "highRatio": 0.563992,
+        "crestFactor": 11.6681,
+        "metallicPeakHz": 562.5,
+        "metallicPeakDb": 21.34
       },
       "stereo": {
         "corrEarly": 1,
-        "corrLate": 0.967225,
-        "monoPeak": 0.0486263,
-        "widthProxy": 0.699409
+        "corrLate": 0.502923,
+        "monoPeak": 0.0336469,
+        "widthProxy": 1.73768
       },
       "transient": {
-        "bloomTimeMs": 36.0417,
+        "bloomTimeMs": 48.5208,
         "earlyDensity": 0
       }
     }
