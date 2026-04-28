@@ -449,7 +449,9 @@ if(TARGET AestraCore)
     target_link_libraries(AestraAudioCore PUBLIC AestraCore)
 endif()
 
-target_link_libraries(AestraAudioCore PUBLIC AestraLicense)
+if(TARGET AestraLicense)
+    target_link_libraries(AestraAudioCore PUBLIC AestraLicense)
+endif()
 target_link_libraries(AestraAudioCore PUBLIC AestraPlat)
 
 # macOS frameworks needed by VST3 hosting

@@ -127,9 +127,14 @@ endif()
 add_subdirectory(AestraPlat)
 
 # =============================================================================
-# AestraLicense - Offline License Verification
+# AestraLicense - Offline License Verification (optional for lab builds)
 # =============================================================================
-add_subdirectory(AestraLicense)
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+    add_subdirectory(AestraLicense)
+else()
+    message(WARNING "pkg-config not found. Skipping AestraLicense.")
+endif()
 
 # =============================================================================
 # Shared Plugin API Interface

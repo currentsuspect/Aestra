@@ -347,6 +347,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbMaterialLab.cpp")
         ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
+    add_test(NAME ReverbMaterialLabTest COMMAND AestraReverbMaterialLab)
 endif()
 
 # Stress benchmark companion used by dsp-benchmark workflow
