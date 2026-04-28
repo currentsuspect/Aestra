@@ -683,12 +683,12 @@ int main() {
         }
     }
 
-    // 3. Room should not have changed (check snare Room tailRMS is within tolerance)
+    // 3. Room tail target for the darker Session 023 retune.
     {
         const auto* room = findResult("snare", "room");
         if (room) {
-            float expectedRoomTail = 0.0470f;  // Session 015 baseline
-            float tolerance = 0.002f;
+            float expectedRoomTail = 0.0271f;
+            float tolerance = 0.003f;
             if (std::abs(room->tailRms - expectedRoomTail) > tolerance) {
                 std::cerr << "FAIL: snare Room tailRMS changed from " << expectedRoomTail
                           << " to " << room->tailRms << " (tolerance: " << tolerance << ")\n";

@@ -108,9 +108,9 @@ public:
     static constexpr size_t kEarlyTapCount = 12;
     static constexpr float kReferenceSampleRate = 44100.0f;
     static constexpr float kMaxPredelayMs = 500.0f;
-    static constexpr float kWetMakeupGain = 6.0f;
+    static constexpr float kWetMakeupGain = 4.2f;
     static constexpr float kTwoPi = 6.28318530718f;
-    static constexpr uint32_t kControlInterval = 32;
+    static constexpr uint32_t kControlInterval = 64;
     static constexpr std::array<float, kFDNLineCount> kLfoBaseRates = {
         0.21f, 0.37f, 0.53f, 0.71f, 0.89f, 1.07f, 1.23f, 1.41f
     };
@@ -199,11 +199,10 @@ public:
         const Mode mode = currentMode();
         const ModeConstants constants = constantsForMode(mode);
         const float sampleScale = static_cast<float>(m_sampleRate) / kReferenceSampleRate;
-        const float smoothingCoeff = 1.0f - std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.015f));
         const float blockSmoothingCoeff = 1.0f - std::exp(-4.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.015f));
         static constexpr uint32_t kSmoothBlock = 4;
         const float lowDampCoeff = 1.0f - std::exp(-kTwoPi * 110.0f / static_cast<float>(m_sampleRate));
-        const float randomCoeff = 1.0f - std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.22f));
+        const int preMask = m_predelayMask;
 
         int predelayPos = m_predelayPos;
         int earlyPos = m_earlyPos;
@@ -212,16 +211,10 @@ public:
         auto platePostPos = m_platePostPos;
         auto dampingState = m_dampingState;
         auto lowDampState = m_lowDampState;
-        auto lfoPhase = m_lfoPhase;
-        auto lfoPhase2 = m_lfoPhase2;
         auto lfoSin = m_lfoSin;
         auto lfoCos = m_lfoCos;
         auto lfoSin2 = m_lfoSin2;
         auto lfoCos2 = m_lfoCos2;
-        auto randomMod = m_randomMod;
-        auto randomTarget = m_randomTarget;
-        auto randomCounter = m_randomCounter;
-        auto randomState = m_randomState;
         auto smoothedParams = m_smoothedParams;
 
         predelayPos &= m_predelayMask;
@@ -234,6 +227,22 @@ public:
         }
         for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
             platePostPos[stage] &= m_platePostMasks[stage];
+        }
+
+        std::array<float*, kFDNLineCount> delayPtrs{};
+        std::array<int, kFDNLineCount> delayMasks{};
+        for (size_t line = 0; line < kFDNLineCount; ++line) {
+            delayPtrs[line] = m_delayLines[line].data();
+            delayMasks[line] = m_delayLineMasks[line];
+        }
+
+        std::array<float*, kDiffuserCount> diffuserPtrsL{};
+        std::array<float*, kDiffuserCount> diffuserPtrsR{};
+        std::array<int, kDiffuserCount> diffuserMasks{};
+        for (size_t stage = 0; stage < kDiffuserCount; ++stage) {
+            diffuserPtrsL[stage] = m_diffuserL[stage].data();
+            diffuserPtrsR[stage] = m_diffuserR[stage].data();
+            diffuserMasks[stage] = m_diffuserMasks[stage];
         }
 
         std::array<float, kFDNLineCount> lineOut{};
@@ -281,7 +290,6 @@ public:
             const float dryL = inL;
             const float dryR = inR;
 
-            const int preMask = m_predelayMask;
             m_predelayL[predelayPos] = inL;
             m_predelayR[predelayPos] = inR;
             int predelayRead = (predelayPos - control.predelaySamples) & preMask;
@@ -301,18 +309,10 @@ public:
 #ifdef AESTRA_REVERB_HAS_SSE
                 static const bool useSSE = Aestra::Core::CPUDetection::get().hasSSE41();
                 if (useSSE) {
-                    float* bufL[kDiffuserCount];
-                    float* bufR[kDiffuserCount];
-                    int masks[kDiffuserCount];
-                    int lens[kDiffuserCount];
-                    for (size_t s = 0; s < kDiffuserCount; ++s) {
-                        bufL[s] = m_diffuserL[s].data();
-                        bufR[s] = m_diffuserR[s].data();
-                        masks[s] = m_diffuserMasks[s];
-                        lens[s] = control.diffuserLengths[s];
-                    }
                     DSP::ReverbSIMD::processDiffusersSSE(delayedL, delayedR, control.diffusionG,
-                                                         bufL, bufR, diffuserPos.data(), masks, lens, kDiffuserCount);
+                                                         diffuserPtrsL.data(), diffuserPtrsR.data(),
+                                                         diffuserPos.data(), diffuserMasks.data(),
+                                                         control.diffuserLengths.data(), kDiffuserCount);
                 } else
 #endif
                 {
@@ -322,10 +322,8 @@ public:
 
             AESTRA_PROFILE_STAGE_END(kDiffuser);
 
-            // Session 016: increased early-to-FDN injection from 0.20 to 0.30
-            // so transient energy better enters the reverb tank.
-            delayedL += earlyL * 0.30f;
-            delayedR += earlyR * 0.30f;
+            delayedL += earlyL * 0.22f;
+            delayedR += earlyR * 0.22f;
 
             AESTRA_PROFILE_STAGE(kModulationLFO);
             // Vectorized LFO updates (sin/cos quadrature oscillators)
@@ -373,20 +371,8 @@ public:
             for (size_t line = 0; line < kFDNLineCount; ++line) {
                 float lfoOffset = 0.0f;
                 if (control.modulationEnabled) {
-                    if (--randomCounter[line] <= 0) {
-                        randomTarget[line] = nextRandomBipolar(randomState[line]);
-                        randomCounter[line] = std::max(64, static_cast<int>((0.075f + 0.013f * static_cast<float>(line)) * static_cast<float>(m_sampleRate)));
-                    }
-                    randomMod[line] += (randomTarget[line] - randomMod[line]) * randomCoeff;
-                    const float multi = lfoSin[line] * 0.68f +
-                                        lfoSin2[line] * 0.22f +
-                                        randomMod[line] * 0.18f;
+                    const float multi = lfoSin[line] * 0.74f + lfoSin2[line] * 0.26f;
                     lfoOffset = multi * control.modDepthSamples;
-
-                    lfoPhase[line] += control.lfoPhaseInc[line];
-                    lfoPhase2[line] += control.lfoPhaseInc2[line];
-                    if (lfoPhase[line] >= kTwoPi) lfoPhase[line] -= kTwoPi;
-                    if (lfoPhase2[line] >= kTwoPi) lfoPhase2[line] -= kTwoPi;
                 }
                 lineOut[line] = readDelayLine(line, delayPos[line], static_cast<float>(control.lineLengths[line]) + lfoOffset);
             }
@@ -399,16 +385,10 @@ public:
             // SIMD-accelerated FDN Householder matrix + feedback + output mixing
             // Falls back to scalar path on non-SIMD platforms.
             {
-                float* delayPtrs[kFDNLineCount];
-                int delayMasks[kFDNLineCount];
-                for (size_t line = 0; line < kFDNLineCount; ++line) {
-                    delayPtrs[line] = m_delayLines[line].data();
-                    delayMasks[line] = m_delayLineMasks[line];
-                }
                 DSP::ReverbSIMD::processFDNSample(
                     lineOut.data(), delayedL, delayedR,
                     dampingState.data(), lowDampState.data(),
-                    delayPtrs, delayPos.data(), delayMasks,
+                    delayPtrs.data(), delayPos.data(), delayMasks.data(),
                     control.feedbackGains.data(),
                     kInjectL.data(), kInjectR.data(),
                     kOutputL.data(), kOutputR.data(),
@@ -418,8 +398,8 @@ public:
             AESTRA_PROFILE_STAGE_END(kFDNFeedbackMatrix);
 
             AESTRA_PROFILE_STAGE(kOutputMix);
-            wetL += earlyL * 0.18f;
-            wetR += earlyR * 0.18f;
+            wetL += earlyL * 0.12f;
+            wetR += earlyR * 0.12f;
 
             wetL *= kWetMakeupGain;
             wetR *= kWetMakeupGain;
@@ -447,8 +427,8 @@ public:
             // Anti-correlated diff boost: wetL' = wetL + k*(wetL-wetR), wetR' = wetR - k*(wetL-wetR).
             // Preserves mono fold-down exactly: (wetL+diff) + (wetR-diff) = wetL + wetR.
             float kDecorr = 0.0f;
-            if (mode == Mode::Room) kDecorr = 0.30f;   // Session 016: reduced from 0.60 to tame extreme width on dense material
-            else if (mode == Mode::Plate) kDecorr = 0.60f;
+            if (mode == Mode::Room) kDecorr = 0.22f;
+            else if (mode == Mode::Plate) kDecorr = 0.34f;
             if (kDecorr > 0.0f) {
                 const float diff = (wetL - wetR) * kDecorr;
                 wetL += diff;
@@ -491,16 +471,10 @@ public:
         m_platePostPos = platePostPos;
         m_dampingState = dampingState;
         m_lowDampState = lowDampState;
-        m_lfoPhase = lfoPhase;
-        m_lfoPhase2 = lfoPhase2;
         m_lfoSin = lfoSin;
         m_lfoCos = lfoCos;
         m_lfoSin2 = lfoSin2;
         m_lfoCos2 = lfoCos2;
-        m_randomMod = randomMod;
-        m_randomTarget = randomTarget;
-        m_randomCounter = randomCounter;
-        m_randomState = randomState;
         m_smoothedParams = smoothedParams;
     }
 
@@ -737,14 +711,12 @@ private:
     static ModeConstants constantsForMode(Mode mode) {
         switch (mode) {
         case Mode::Hall:
-            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 0.72f, 1.4f, 0.85f, 1.6f};
+            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.05f, 1.05f, 0.78f, 1.35f};
         case Mode::Plate:
-            // Session 016: longer FDN lines for proper plate density and sustain.
-            // Plate lines should be longer than Room for characteristic thick tails.
-            return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 0.28f, 3.0f, 1.35f, 1.1f};
+            return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 1.35f, 1.15f, 1.02f, 0.92f};
         case Mode::Room:
         default:
-            return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.15f, 1.0f, 1.0f, 1.0f};
+            return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.22f, 0.82f, 0.92f, 0.95f};
         }
     }
 
@@ -794,11 +766,11 @@ private:
         cache.predelaySamples = std::clamp(static_cast<int>(std::round((predelayMs / 1000.0f) * sr)),
                                            0, std::max(0, m_maxPredelaySamples));
 
-        cache.diffusionG = std::clamp(smoothedParams[kDiffusion] * 0.85f * constants.diffusionScalar, 0.0f, 0.85f);
+        cache.diffusionG = std::clamp(smoothedParams[kDiffusion] * 0.74f * constants.diffusionScalar, 0.0f, 0.78f);
         cache.diffusionEnabled = cache.diffusionG > 0.0001f;
 
         const float modRateScalar = smoothedParams[kModRate] * 2.0f;
-        cache.modDepthSamples = smoothedParams[kModDepth] * 8.0f * constants.modDepthScalar;
+        cache.modDepthSamples = smoothedParams[kModDepth] * 5.0f * constants.modDepthScalar;
         cache.modulationEnabled = cache.modDepthSamples > 0.0001f && modRateScalar > 0.0001f;
 
         const float width = std::clamp(smoothedParams[kWidth], 0.0f, 1.0f);
@@ -899,8 +871,7 @@ private:
         m_earlyR.assign(static_cast<size_t>(earlyPow2), 0.0f);
         m_earlyMask = static_cast<int>(earlyPow2) - 1;
 
-        // Session 016: softened Plate peaking cut from -4.0 to -3.0 dB to preserve tail energy.
-        m_platePeakCoeff = peakingCoefficients(-3.0f, 562.0f, static_cast<float>(m_sampleRate), 1.5f);
+        m_platePeakCoeff = peakingCoefficients(-5.5f, 620.0f, static_cast<float>(m_sampleRate), 1.15f);
 
         clearBuffers(randomizeLfos);
     }
@@ -970,27 +941,9 @@ private:
         }
         readPosI &= mask;
 
-        // Test hook: force linear interpolation for benchmark comparison
-        if (DSP::ReverbSIMD::g_forceLinearInterpolation) {
-            const int i2 = (readPosI + 1) & mask;
-            return buffer[static_cast<size_t>(readPosI)] * (1.0f - frac) +
-                   buffer[static_cast<size_t>(i2)] * frac;
-        }
-
-        const int i0 = (readPosI - 1) & mask;
-        const int i1 = readPosI;
         const int i2 = (readPosI + 1) & mask;
-        const int i3 = (readPosI + 2) & mask;
-
-        // Cubic Hermite interpolation — superior high-frequency preservation
-        // vs linear, critical for reverb feedback loops where each pass
-        // through a linear interpolator acts as a gentle lowpass.
-        return DSP::ReverbSIMD::cubicHermite(
-            buffer[static_cast<size_t>(i0)],
-            buffer[static_cast<size_t>(i1)],
-            buffer[static_cast<size_t>(i2)],
-            buffer[static_cast<size_t>(i3)],
-            frac);
+        return buffer[static_cast<size_t>(readPosI)] * (1.0f - frac) +
+               buffer[static_cast<size_t>(i2)] * frac;
     }
 
     int logicalFdnLength(size_t line, const ModeConstants& constants, float sampleScale, float size) const {
@@ -1060,7 +1013,7 @@ private:
 
     void processPlatePostAllpass(float& left, float& right,
                                  std::array<int, kPlatePostAllpassCount>& pos) {
-        const float g = 0.6f;
+        const float g = 0.45f;
         for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
             auto& bufL = m_platePostL[stage];
             auto& bufR = m_platePostR[stage];
@@ -1083,12 +1036,6 @@ private:
         }
     }
 
-    static float nextRandomBipolar(uint32_t& state) {
-        state = state * 1664525u + 1013904223u;
-        const float normalized = static_cast<float>((state >> 8) & 0x00ffffffu) / static_cast<float>(0x00ffffffu);
-        return normalized * 2.0f - 1.0f;
-    }
-
     static int wrapIndex(int index, int size) {
         if (size <= 0) return 0;
         index %= size;
@@ -1097,7 +1044,10 @@ private:
     }
 
     static float sanitize(float value) {
-        if (!std::isfinite(value) || std::abs(value) < 1.0e-20f) return 0.0f;
+        if (value != value || value <= -32.0f || value >= 32.0f ||
+            (value > -1.0e-20f && value < 1.0e-20f)) {
+            return 0.0f;
+        }
         return value;
     }
 
