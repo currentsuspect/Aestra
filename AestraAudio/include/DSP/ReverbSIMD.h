@@ -405,6 +405,7 @@ inline void processDiffusersSSE(float& left, float& right,
                                 float* const* diffuserBuffersL,
                                 float* const* diffuserBuffersR,
                                 int* diffuserPos,
+                                const int* diffuserMasks,
                                 const int* diffuserLengths,
                                 size_t stageCount) noexcept {
     if (diffusionG <= 0.0001f) return;
@@ -414,13 +415,14 @@ inline void processDiffusersSSE(float& left, float& right,
 
         float* bufL = diffuserBuffersL[stage];
         float* bufR = diffuserBuffersR[stage];
+        const int mask = diffuserMasks[stage];
         const int len = diffuserLengths[stage];
-        int p = diffuserPos[stage];
-        if (p >= len) p = 0;
+        int p = diffuserPos[stage] & mask;
+        const int readP = (p - len) & mask;
 
         __m128 vIn = _mm_set_ps(0.0f, 0.0f, right, left);
         __m128 vG = _mm_set1_ps(g);
-        __m128 vDelayed = _mm_set_ps(0.0f, 0.0f, bufR[p], bufL[p]);
+        __m128 vDelayed = _mm_set_ps(0.0f, 0.0f, bufR[readP], bufL[readP]);
 
         __m128 vY = _mm_sub_ps(vDelayed, _mm_mul_ps(vG, vIn));
         __m128 vWrite = _mm_add_ps(vIn, _mm_mul_ps(vG, vY));
@@ -435,8 +437,7 @@ inline void processDiffusersSSE(float& left, float& right,
         left = yVals[0];
         right = yVals[1];
 
-        if (++p >= len) p = 0;
-        diffuserPos[stage] = p;
+        diffuserPos[stage] = (p + 1) & mask;
     }
 }
 

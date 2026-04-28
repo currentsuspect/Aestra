@@ -196,7 +196,7 @@ public:
             delayPos[line] &= m_delayLineMasks[line];
         }
         for (size_t stage = 0; stage < kDiffuserCount; ++stage) {
-            diffuserPos[stage] = wrapIndex(diffuserPos[stage], static_cast<int>(m_diffuserL[stage].size()));
+            diffuserPos[stage] &= m_diffuserMasks[stage];
         }
         for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
             platePostPos[stage] &= m_platePostMasks[stage];
@@ -269,14 +269,16 @@ public:
                 if (useSSE) {
                     float* bufL[kDiffuserCount];
                     float* bufR[kDiffuserCount];
+                    int masks[kDiffuserCount];
                     int lens[kDiffuserCount];
                     for (size_t s = 0; s < kDiffuserCount; ++s) {
                         bufL[s] = m_diffuserL[s].data();
                         bufR[s] = m_diffuserR[s].data();
+                        masks[s] = m_diffuserMasks[s];
                         lens[s] = control.diffuserLengths[s];
                     }
                     DSP::ReverbSIMD::processDiffusersSSE(delayedL, delayedR, control.diffusionG,
-                                                         bufL, bufR, diffuserPos.data(), lens, kDiffuserCount);
+                                                         bufL, bufR, diffuserPos.data(), masks, lens, kDiffuserCount);
                 } else
 #endif
                 {
@@ -749,9 +751,11 @@ private:
                 2,
                 static_cast<int>(std::ceil(kBaseDiffuserLengths[stage] * sampleScale * 2.0f)) + 8
             );
+            const uint32_t pow2Size = nextPowerOfTwo(static_cast<uint32_t>(maxLength));
             m_diffuserLengths[stage] = maxLength / 2;
-            m_diffuserL[stage].assign(static_cast<size_t>(maxLength), 0.0f);
-            m_diffuserR[stage].assign(static_cast<size_t>(maxLength), 0.0f);
+            m_diffuserL[stage].assign(static_cast<size_t>(pow2Size), 0.0f);
+            m_diffuserR[stage].assign(static_cast<size_t>(pow2Size), 0.0f);
+            m_diffuserMasks[stage] = static_cast<int>(pow2Size) - 1;
         }
 
         for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
@@ -908,19 +912,20 @@ private:
             auto& bufR = m_diffuserR[stage];
             if (bufL.empty() || bufR.empty()) continue;
 
+            const int mask = m_diffuserMasks[stage];
             const int len = control.diffuserLengths[stage];
-            int p = pos[stage];
-            if (p >= len) p = 0;
-            const float delayedL = bufL[static_cast<size_t>(p)];
-            const float delayedR = bufR[static_cast<size_t>(p)];
+            int p = pos[stage] & mask;
+            const int readP = (p - len) & mask;
+
+            const float delayedL = bufL[static_cast<size_t>(readP)];
+            const float delayedR = bufR[static_cast<size_t>(readP)];
             const float yL = delayedL - control.diffusionG * left;
             const float yR = delayedR - control.diffusionG * right;
             bufL[static_cast<size_t>(p)] = left + control.diffusionG * yL;
             bufR[static_cast<size_t>(p)] = right + control.diffusionG * yR;
             left = yL;
             right = yR;
-            if (++p >= len) p = 0;
-            pos[stage] = p;
+            pos[stage] = (p + 1) & mask;
         }
     }
 
@@ -1006,6 +1011,7 @@ private:
     std::array<std::vector<float>, kDiffuserCount> m_diffuserL;
     std::array<std::vector<float>, kDiffuserCount> m_diffuserR;
     std::array<int, kDiffuserCount> m_diffuserLengths{};
+    std::array<int, kDiffuserCount> m_diffuserMasks{};
     std::array<int, kDiffuserCount> m_diffuserPos{};
 
     std::array<std::vector<float>, kPlatePostAllpassCount> m_platePostL;
