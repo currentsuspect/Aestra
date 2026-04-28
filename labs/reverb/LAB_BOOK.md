@@ -43,6 +43,7 @@ labs/reverb/
 | 010 | 2026-04-28 | 1 | 2 | 0 | Quality measurement baseline established. See sessions. |
 | 011 | 2026-04-28 | 1 | 3 | 0 | Late-tail decorrelation + quality lab bug fix. See sessions. |
 | 012 | 2026-04-28 | 1 | 1 | 2 | Plate metallic peak elimination with peaking EQ. See sessions. |
+| 013 | 2026-04-28 | 1 | 1 | 1 | 4687 Hz peak validation + perceptual metric improvement. See sessions. |
 
 ## Current State
 
@@ -143,7 +144,7 @@ The remaining hotspots are fundamentally limited by:
 - Lower-noise benchmark environment (to measure sub-5% optimizations)
 - Architectural redesign of FDN delay-line memory layout for gather-friendly access
 
-### Quality Baseline (Session 012)
+### Quality Baseline (Session 013, perceptual metric)
 
 | Metric | Room | Hall | Plate |
 |--------|------|------|-------|
@@ -152,15 +153,20 @@ The remaining hotspots are fundamentally limited by:
 | Crest Factor | 6.9 | 5.2 | 9.1 |
 | Late Correlation | 0.643 | 0.525 | 0.604 |
 | Bloom Time | 6.9 ms | 8.7 ms | 48.1 ms |
-| Metallic Peak | 960 Hz / 16.8 dB | 1007 Hz / 14.3 dB | 4687 Hz / 19.2 dB |
+| Metallic Peak (Hz/dB/local/band/sev) | 960 / 16.8 / 4.9 / mid / none | 1007 / 14.3 / 7.4 / mid / none | 4687 / 19.2 / 14.9 / presence / low |
 
-**Red flags:** None. Room/Plate late correlation fixed by decorrelation (k=0.60).
-Plate 562 Hz metallic peak eliminated by gentle peaking EQ (-4 dB, Q=1.5).
+**Red flags:** None. The quality lab now uses perceptual severity ratings:
+- low-mid persistent peaks >8 dB local → HIGH (boxy/metallic)
+- mid persistent peaks >10 dB local → HIGH (honk)
+- presence persistent peaks >12 dB local → HIGH (harsh)
+- air persistent peaks >15 dB local → HIGH (fizz)
+
+**Session 013 verdict:** 4687 Hz Plate peak is low severity, only in impulse
+response (not noise burst), and does not warrant a second EQ cut.
 
 **Note:** Session 010 Hall metrics were incorrect due to a quality lab bug
 (Hall parameter 1.0f mapped to Plate mode). True Hall T60 is ~1349ms.
 
 **Quality artifacts:** `labs/reverb/quality/` — impulse WAVs, noise burst WAVs, JSON metrics, Markdown report.
 
-**Session 013 target:** Evaluate new 4687 Hz Plate peak in listening tests, or
-calibrate early reflection density metric.
+**Session 014 target:** Early reflection density metric calibration (all modes report 0).

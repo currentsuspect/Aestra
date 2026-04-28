@@ -110,7 +110,11 @@ struct SpectralMetrics {
     float highEnergy = 0.0f;    // 4000-20000 Hz
     float crestFactor = 0.0f;   // max bin / avg bin in late tail
     float metallicPeakHz = 0.0f;
-    float metallicPeakDb = 0.0f;
+    float metallicPeakDb = 0.0f;       // dB above broadband average
+    float metallicPeakLocalDb = 0.0f;  // dB above local average (+/- 5 bins)
+    std::string metallicPeakBand;      // low, low-mid, mid, presence, air
+    std::string metallicPeakSeverity;  // low, medium, high
+    bool metallicPeakPersistent = false;
 };
 
 struct StereoMetrics {
@@ -230,6 +234,59 @@ static SpectralMetrics computeSpectral(const std::vector<float>& signal, float s
         avgMag /= static_cast<float>(count);
         m.crestFactor = maxMag / std::max(avgMag, 1e-20f);
         m.metallicPeakDb = 20.0f * std::log10(maxMag / std::max(avgMag, 1e-20f));
+
+        // Local average (+/- 5 bins around peak)
+        size_t peakBin = static_cast<size_t>(m.metallicPeakHz / binHz);
+        float localSum = 0.0f;
+        size_t localCount = 0;
+        for (size_t j = (peakBin > 5 ? peakBin - 5 : 0); j <= peakBin + 5 && j <= fftSize / 2; ++j) {
+            if (j != peakBin && j > 10) {
+                localSum += std::abs(fftBuf[j]);
+                localCount++;
+            }
+        }
+        float localAvg = localCount > 0 ? localSum / static_cast<float>(localCount) : avgMag;
+        m.metallicPeakLocalDb = 20.0f * std::log10(maxMag / std::max(localAvg, 1e-20f));
+
+        // Band label
+        if (m.metallicPeakHz < 200.0f) m.metallicPeakBand = "low";
+        else if (m.metallicPeakHz < 900.0f) m.metallicPeakBand = "low-mid";
+        else if (m.metallicPeakHz < 3000.0f) m.metallicPeakBand = "mid";
+        else if (m.metallicPeakHz < 6000.0f) m.metallicPeakBand = "presence";
+        else m.metallicPeakBand = "air";
+
+        // Perceptual severity based on frequency band and local crest
+        float localCrest = maxMag / std::max(localAvg, 1e-20f);
+        if (m.metallicPeakBand == "low-mid" && localCrest > 8.0f) m.metallicPeakSeverity = "high";
+        else if (m.metallicPeakBand == "mid" && localCrest > 10.0f) m.metallicPeakSeverity = "high";
+        else if (m.metallicPeakBand == "presence" && localCrest > 12.0f) m.metallicPeakSeverity = "high";
+        else if (m.metallicPeakBand == "air" && localCrest > 15.0f) m.metallicPeakSeverity = "high";
+        else if (localCrest > 6.0f) m.metallicPeakSeverity = "medium";
+        else if (localCrest > 3.0f) m.metallicPeakSeverity = "low";
+        else m.metallicPeakSeverity = "none";
+
+        // Persistence check: is the same frequency dominant in late tail (last 25%)?
+        size_t lateStart = n * 3 / 4;
+        if (lateStart + fftSize <= n) {
+            std::vector<std::complex<float>> lateFft(fftSize);
+            for (size_t i = 0; i < fftSize; ++i) {
+                float w = 0.5f * (1.0f - std::cos(2.0f * static_cast<float>(M_PI) * static_cast<float>(i) / static_cast<float>(fftSize - 1)));
+                lateFft[i] = std::complex<float>(signal[lateStart + i] * w, 0.0f);
+            }
+            fft(lateFft);
+            float lateMaxMag = 0.0f;
+            size_t lateMaxBin = 0;
+            for (size_t i = 11; i <= fftSize / 2; ++i) {
+                float mag = std::abs(lateFft[i]);
+                if (mag > lateMaxMag) {
+                    lateMaxMag = mag;
+                    lateMaxBin = i;
+                }
+            }
+            float latePeakHz = static_cast<float>(lateMaxBin) * binHz;
+            // Consider persistent if within +/- 1.5 bins
+            m.metallicPeakPersistent = std::abs(latePeakHz - m.metallicPeakHz) < (1.5f * binHz);
+        }
     }
 
     float sum = m.lowEnergy + m.midEnergy + m.highEnergy;
@@ -483,7 +540,11 @@ static std::string generateJsonReport(const std::vector<ModeQuality>& modes, flo
         j << "        \"highRatio\": " << q.spectral.highEnergy << ",\n";
         j << "        \"crestFactor\": " << q.spectral.crestFactor << ",\n";
         j << "        \"metallicPeakHz\": " << q.spectral.metallicPeakHz << ",\n";
-        j << "        \"metallicPeakDb\": " << q.spectral.metallicPeakDb << "\n";
+        j << "        \"metallicPeakDb\": " << q.spectral.metallicPeakDb << ",\n";
+        j << "        \"metallicPeakLocalDb\": " << q.spectral.metallicPeakLocalDb << ",\n";
+        j << "        \"metallicPeakBand\": \"" << q.spectral.metallicPeakBand << "\",\n";
+        j << "        \"metallicPeakSeverity\": \"" << q.spectral.metallicPeakSeverity << "\",\n";
+        j << "        \"metallicPeakPersistent\": " << (q.spectral.metallicPeakPersistent ? "true" : "false") << "\n";
         j << "      },\n";
         j << "      \"stereo\": {\n";
         j << "        \"corrEarly\": " << q.stereo.corrEarly << ",\n";
@@ -520,8 +581,8 @@ static std::string generateMarkdownReport(const std::vector<ModeQuality>& modes)
     }
 
     md << "\n## Spectral Profile\n\n";
-    md << "| Mode | Low (20-500Hz) | Mid (500-4kHz) | High (4k-20kHz) | Crest | Metallic Peak (Hz/dB) |\n";
-    md << "|------|----------------|----------------|-----------------|-------|----------------------|\n";
+    md << "| Mode | Low (20-500Hz) | Mid (500-4kHz) | High (4k-20kHz) | Crest | Metallic Peak (Hz/dB/local/band/sev) |\n";
+    md << "|------|----------------|----------------|-----------------|-------|---------------------------------------|\n";
     for (const auto& q : modes) {
         md << "| " << q.name
            << " | " << std::fixed << std::setprecision(2) << q.spectral.lowEnergy
@@ -529,7 +590,11 @@ static std::string generateMarkdownReport(const std::vector<ModeQuality>& modes)
            << " | " << q.spectral.highEnergy
            << " | " << std::setprecision(1) << q.spectral.crestFactor
            << " | " << static_cast<int>(q.spectral.metallicPeakHz) << " Hz / "
-           << std::setprecision(1) << q.spectral.metallicPeakDb << " dB"
+           << std::setprecision(1) << q.spectral.metallicPeakDb << " dB / "
+           << std::setprecision(1) << q.spectral.metallicPeakLocalDb << " local / "
+           << q.spectral.metallicPeakBand << " / "
+           << q.spectral.metallicPeakSeverity
+           << (q.spectral.metallicPeakPersistent ? " (persist)" : "")
            << " |\n";
     }
 
@@ -562,8 +627,12 @@ static std::string generateMarkdownReport(const std::vector<ModeQuality>& modes)
         if (q.hasInf) { md << "- **" << q.name << "**: Inf detected in output\n"; anyFlags = true; }
         if (!q.decay.monotonic) { md << "- **" << q.name << "**: Non-monotonic tail decay (max rebound "
             << std::fixed << std::setprecision(1) << q.decay.maxReboundDb << " dB)\n"; anyFlags = true; }
-        if (q.spectral.crestFactor > 30.0f) { md << "- **" << q.name << "**: High spectral crest factor ("
-            << std::setprecision(1) << q.spectral.crestFactor << ") — possible metallic ringing\n"; anyFlags = true; }
+        if (q.spectral.metallicPeakSeverity == "high" && q.spectral.metallicPeakPersistent) {
+            md << "- **" << q.name << "**: Persistent " << q.spectral.metallicPeakBand
+               << " metallic peak at " << static_cast<int>(q.spectral.metallicPeakHz) << " Hz ("
+               << std::setprecision(1) << q.spectral.metallicPeakLocalDb << " dB local) — severity: HIGH\n";
+            anyFlags = true;
+        }
         if (q.stereo.corrLate > 0.95f) { md << "- **" << q.name << "**: Late tail highly correlated ("
             << std::setprecision(3) << q.stereo.corrLate << ") — risk of mono collapse\n"; anyFlags = true; }
         if (q.transient.bloomTimeMs < 0.5f) { md << "- **" << q.name << "**: Very fast bloom ("
@@ -571,18 +640,14 @@ static std::string generateMarkdownReport(const std::vector<ModeQuality>& modes)
     }
     if (!anyFlags) md << "No significant red flags detected.\n";
 
-    md << "\n## Recommended Session 011 Target\n\n";
+    md << "\n## Recommended Next Session Target\n\n";
     md << "Based on this baseline, the most promising quality improvement areas are:\n\n";
-    md << "1. **Spectral balance**: Compare metallic peak levels across modes. "
-       << "If any mode shows a crest factor >15, investigate whether the allpass/diffuser "
-       << "chain is producing resonant peaks.\n\n";
-    md << "2. **Decay smoothness**: If non-monotonic decay rebounds exceed 3 dB, "
-       << "investigate whether the FDN feedback matrix or delay lengths are causing "
-       << "periodic energy reinforcements.\n\n";
-    md << "3. **Stereo width late tail**: If late correlation approaches 1.0, "
-       << "the reverb may collapse to mono in the tail. The width matrix in Output/Mix "
-       << "can be adjusted or a small decorrelation signal can be added.\n\n";
-    md << "4. **Mode distinctness**: If Room/Hall/Plate show similar decay shapes, "
+    md << "1. **Early reflection density metric**: The current detection threshold may be too high. "
+       << "All modes report zero early density.\n\n";
+    md << "2. **Perceptual peak validation**: The metallic-peak metric now includes severity ratings. "
+       << "Low-severity peaks in the presence/air band may not require correction. "
+       << "Listening validation is the final arbiter.\n\n";
+    md << "3. **Mode distinctness**: If Room/Hall/Plate show similar decay shapes, "
        << "the mode differentiation may need stronger parameter scaling or different "
        << "delay base arrays.\n";
 
@@ -651,6 +716,8 @@ int main() {
                   << " RMS=" << q.rms
                   << " HF=" << std::setprecision(1) << (q.hfRatio * 100.0f) << "%"
                   << " Crest=" << q.spectral.crestFactor
+                  << " Metallic=" << static_cast<int>(q.spectral.metallicPeakHz) << "Hz/"
+                  << q.spectral.metallicPeakBand << "/" << q.spectral.metallicPeakSeverity
                   << "\n";
     }
 

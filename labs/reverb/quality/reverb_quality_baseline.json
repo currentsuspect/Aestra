@@ -22,7 +22,11 @@
         "highRatio": 0.24592,
         "crestFactor": 6.91006,
         "metallicPeakHz": 960.938,
-        "metallicPeakDb": 16.7896
+        "metallicPeakDb": 16.7896,
+        "metallicPeakLocalDb": 4.85618,
+        "metallicPeakBand": "mid",
+        "metallicPeakSeverity": "none",
+        "metallicPeakPersistent": false
       },
       "stereo": {
         "corrEarly": 1,
@@ -55,7 +59,11 @@
         "highRatio": 0.517733,
         "crestFactor": 5.18127,
         "metallicPeakHz": 1007.81,
-        "metallicPeakDb": 14.2887
+        "metallicPeakDb": 14.2887,
+        "metallicPeakLocalDb": 7.37085,
+        "metallicPeakBand": "mid",
+        "metallicPeakSeverity": "none",
+        "metallicPeakPersistent": false
       },
       "stereo": {
         "corrEarly": 1,
@@ -88,7 +96,11 @@
         "highRatio": 0.639388,
         "crestFactor": 9.08311,
         "metallicPeakHz": 4687.5,
-        "metallicPeakDb": 19.1647
+        "metallicPeakDb": 19.1647,
+        "metallicPeakLocalDb": 14.9168,
+        "metallicPeakBand": "presence",
+        "metallicPeakSeverity": "low",
+        "metallicPeakPersistent": false
       },
       "stereo": {
         "corrEarly": 1,
