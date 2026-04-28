@@ -42,6 +42,7 @@ labs/reverb/
 | 009 | 2026-04-28 | 1 | 0 | 2 | LFO Normalize + Control investigated, no measurable gain. Rejected. See sessions. |
 | 010 | 2026-04-28 | 1 | 2 | 0 | Quality measurement baseline established. See sessions. |
 | 011 | 2026-04-28 | 1 | 3 | 0 | Late-tail decorrelation + quality lab bug fix. See sessions. |
+| 012 | 2026-04-28 | 1 | 1 | 2 | Plate metallic peak elimination with peaking EQ. See sessions. |
 
 ## Current State
 
@@ -142,22 +143,24 @@ The remaining hotspots are fundamentally limited by:
 - Lower-noise benchmark environment (to measure sub-5% optimizations)
 - Architectural redesign of FDN delay-line memory layout for gather-friendly access
 
-### Quality Baseline (Session 011, corrected)
+### Quality Baseline (Session 012)
 
 | Metric | Room | Hall | Plate |
 |--------|------|------|-------|
 | T60 | 661 ms | 1349 ms | 576 ms |
 | Spectral | Mid-heavy | High-heavy | Balanced |
-| Crest Factor | 6.9 | 5.2 | 11.7 |
-| Late Correlation | 0.643 | 0.525 | 0.503 |
-| Bloom Time | 6.9 ms | 8.7 ms | 48.5 ms |
+| Crest Factor | 6.9 | 5.2 | 9.1 |
+| Late Correlation | 0.643 | 0.525 | 0.604 |
+| Bloom Time | 6.9 ms | 8.7 ms | 48.1 ms |
+| Metallic Peak | 960 Hz / 16.8 dB | 1007 Hz / 14.3 dB | 4687 Hz / 19.2 dB |
 
 **Red flags:** None. Room/Plate late correlation fixed by decorrelation (k=0.60).
+Plate 562 Hz metallic peak eliminated by gentle peaking EQ (-4 dB, Q=1.5).
 
-**Note:** Session 010 Hall quality metrics were affected by a quality-lab
-parameter mapping bug (`kMode=1.0f` mapped to Plate, not Hall). Session 011
-fixes the mapping and establishes the corrected Hall baseline (T60 ~1349ms).
+**Note:** Session 010 Hall metrics were incorrect due to a quality lab bug
+(Hall parameter 1.0f mapped to Plate mode). True Hall T60 is ~1349ms.
 
 **Quality artifacts:** `labs/reverb/quality/` — impulse WAVs, noise burst WAVs, JSON metrics, Markdown report.
 
-**Session 012 target:** Plate metallic peak at 562 Hz (21.3 dB crest).
+**Session 013 target:** Evaluate new 4687 Hz Plate peak in listening tests, or
+calibrate early reflection density metric.

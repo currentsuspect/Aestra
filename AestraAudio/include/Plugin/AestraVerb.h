@@ -390,6 +390,19 @@ public:
                 AESTRA_PROFILE_STAGE(kPlatePostAllpass);
                 processPlatePostAllpass(wetL, wetR, platePostPos);
                 AESTRA_PROFILE_STAGE_END(kPlatePostAllpass);
+
+                // Session 012: gentle peaking cut at ~562 Hz to tame metallic ringing.
+                // Direct Form 2 (transposed) biquad — 2 states per channel.
+                const auto& c = m_platePeakCoeff;
+                const float inL = wetL, inR = wetR;
+                wetL = c[0] * inL + m_platePeakZ1L;
+                m_platePeakZ1L = c[1] * inL - c[3] * wetL + m_platePeakZ2L;
+                m_platePeakZ2L = c[2] * inL - c[4] * wetL;
+                wetR = c[0] * inR + m_platePeakZ1R;
+                m_platePeakZ1R = c[1] * inR - c[3] * wetR + m_platePeakZ2R;
+                m_platePeakZ2R = c[2] * inR - c[4] * wetR;
+                wetL = sanitize(wetL);
+                wetR = sanitize(wetR);
             }
 
             // Late-tail stereo decorrelation (Session 011).
@@ -788,6 +801,9 @@ private:
         m_earlyR.assign(static_cast<size_t>(earlyPow2), 0.0f);
         m_earlyMask = static_cast<int>(earlyPow2) - 1;
 
+        // Session 012: gentle peaking cut at ~562 Hz to tame Plate metallic ringing.
+        m_platePeakCoeff = peakingCoefficients(-4.0f, 562.0f, static_cast<float>(m_sampleRate), 1.5f);
+
         clearBuffers(randomizeLfos);
     }
 
@@ -826,6 +842,9 @@ private:
         m_randomMod.fill(0.0f);
         m_randomTarget.fill(0.0f);
         m_randomCounter.fill(0);
+
+        m_platePeakZ1L = m_platePeakZ2L = 0.0f;
+        m_platePeakZ1R = m_platePeakZ2R = 0.0f;
     }
 
     void copyDry(const float* const* inputs, float** outputs, uint32_t numInputChannels,
@@ -996,6 +1015,27 @@ private:
         }
     }
 
+    // Compute peaking EQ coefficients (b0,b1,b2,a1,a2 with a0 normalized to 1).
+    // dbGain: positive = boost, negative = cut.  Q: bandwidth at -3dB (or -dBgain/2 for peaking).
+    // Uses standard RBJ Audio EQ Cookbook formula (same equation works for boost and cut).
+    static std::array<float, 5> peakingCoefficients(float dbGain, float freqHz, float sampleRate, float Q) {
+        const float A = std::sqrt(std::pow(10.0f, dbGain / 20.0f));
+        const float w0 = 2.0f * static_cast<float>(M_PI) * freqHz / sampleRate;
+        const float cosw0 = std::cos(w0);
+        const float sinw0 = std::sin(w0);
+        const float alpha = sinw0 / (2.0f * Q);
+
+        const float b0 = 1.0f + alpha * A;
+        const float b1 = -2.0f * cosw0;
+        const float b2 = 1.0f - alpha * A;
+        const float a0 = 1.0f + alpha / A;
+        const float a1 = -2.0f * cosw0;
+        const float a2 = 1.0f - alpha / A;
+
+        const float invA0 = 1.0f / a0;
+        return {b0 * invA0, b1 * invA0, b2 * invA0, a1 * invA0, a2 * invA0};
+    }
+
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
@@ -1042,6 +1082,14 @@ private:
     int m_maxPredelaySamples = 1;
     int m_predelayMask = 0;
     int m_predelayPos = 0;
+
+    // Session 012: gentle peaking EQ to tame Plate metallic ringing (~562 Hz).
+    // Coefficients precomputed at init; only applied in Plate mode.
+    std::array<float, 5> m_platePeakCoeff{}; // b0, b1, b2, a1, a2 (a0 normalized to 1)
+    float m_platePeakZ1L = 0.0f;
+    float m_platePeakZ2L = 0.0f;
+    float m_platePeakZ1R = 0.0f;
+    float m_platePeakZ2R = 0.0f;
 
     // TODO: separate hi/lo damping (kHFDamping + kLFDamping) for more tonal control
     // TODO: Convolution mode — IR loader using same drag system as Arsenal
