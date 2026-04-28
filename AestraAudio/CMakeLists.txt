@@ -387,6 +387,11 @@ if (AESTRA_REVERB_PROFILE)
     target_compile_definitions(AestraAudioCore PUBLIC AESTRA_REVERB_PROFILE)
 endif()
 
+# AestraVerb clamp diagnostics (lab only). Zero overhead when off.
+if (AESTRA_REVERB_DIAGNOSTICS)
+    target_compile_definitions(AestraAudioCore PUBLIC AESTRA_REVERB_DIAGNOSTICS)
+endif()
+
 # AVX2/FMA: Enabled per-TU via #pragma in SincAVX2.h for safe runtime dispatch.
 # IMPORTANT: Do NOT add global /arch:AVX2 here - it causes VEX-encoded scalar ops
 # that crash on non-AVX2 CPUs even in the fallback path.

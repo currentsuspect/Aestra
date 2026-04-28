@@ -41,6 +41,37 @@ namespace Plugins {
 #define AESTRA_PROFILE_STAGE_END(stageEnum) do { } while(0)
 #endif
 
+// Lab-only clamp diagnostics. Zero overhead when AESTRA_REVERB_DIAGNOSTICS is undefined.
+#ifdef AESTRA_REVERB_DIAGNOSTICS
+#define AESTRA_DIAG_PRECLAMP(l, r) \
+    do { \
+        const float _absL = std::abs(l); \
+        const float _absR = std::abs(r); \
+        const float _pk = _absL > _absR ? _absL : _absR; \
+        if (_pk > m_diagPreClampPeak) m_diagPreClampPeak = _pk; \
+    } while(0)
+#define AESTRA_DIAG_POSTCLAMP(l, r) \
+    do { \
+        const float _absL = std::abs(l); \
+        const float _absR = std::abs(r); \
+        const float _pk = _absL > _absR ? _absL : _absR; \
+        if (_pk > m_diagPostClampPeak) m_diagPostClampPeak = _pk; \
+        if (std::abs(l) >= 0.9999f || std::abs(r) >= 0.9999f) m_diagClampSampleCount += 2; \
+        m_diagTotalSamples += 2; \
+    } while(0)
+#define AESTRA_DIAG_WETPRE(l, r) \
+    do { \
+        const float _absL = std::abs(l); \
+        const float _absR = std::abs(r); \
+        const float _pk = _absL > _absR ? _absL : _absR; \
+        if (_pk > m_diagWetPreClampPeak) m_diagWetPreClampPeak = _pk; \
+    } while(0)
+#else
+#define AESTRA_DIAG_PRECLAMP(l, r) do { } while(0)
+#define AESTRA_DIAG_POSTCLAMP(l, r) do { } while(0)
+#define AESTRA_DIAG_WETPRE(l, r) do { } while(0)
+#endif
+
 class AestraVerb : public IPluginInstance {
 public:
     static constexpr uint32_t kStateMagic = 0x52564203; // 'RVB' v3
@@ -427,11 +458,23 @@ public:
             wetL = sanitize(wetL);
             wetR = sanitize(wetR);
 
+            AESTRA_DIAG_WETPRE(wetL, wetR);
+
+            const float sumL = dryL * control.dryGain + wetL * control.wetGain;
+            const float sumR = dryR * control.dryGain + wetR * control.wetGain;
+
+            AESTRA_DIAG_PRECLAMP(sumL, sumR);
+
+            const float outL = std::clamp(sumL, -1.0f, 1.0f);
+            const float outR = std::clamp(sumR, -1.0f, 1.0f);
+
+            AESTRA_DIAG_POSTCLAMP(outL, outR);
+
             if (numOutputChannels > 0 && outputs[0]) {
-                outputs[0][i] = std::clamp(dryL * control.dryGain + wetL * control.wetGain, -1.0f, 1.0f);
+                outputs[0][i] = outL;
             }
             if (numOutputChannels > 1 && outputs[1]) {
-                outputs[1][i] = std::clamp(dryR * control.dryGain + wetR * control.wetGain, -1.0f, 1.0f);
+                outputs[1][i] = outR;
             }
             AESTRA_PROFILE_STAGE_END(kOutputMix);
         }
@@ -606,6 +649,51 @@ private:
     // Dummy types for non-profile builds so member declaration is valid
     struct StageProfileData { uint64_t totalNs = 0; uint64_t sampleCount = 0; };
     enum class ProfileStage : uint8_t { kStageCount = 10 };
+#endif
+
+    // ============================================================================
+    // Lab-only clamp diagnostics (compile-time gated, zero overhead when disabled)
+    // ============================================================================
+#ifdef AESTRA_REVERB_DIAGNOSTICS
+public:
+    struct ClampDiagnostics {
+        float preClampPeak = 0.0f;      // Peak absolute value before std::clamp
+        float postClampPeak = 0.0f;     // Peak absolute value after std::clamp
+        float wetPreClampPeak = 0.0f;   // Peak absolute value of wet signal before final mix
+        uint64_t clampSampleCount = 0;  // Number of output samples at |value| >= 0.9999
+        uint64_t totalSamples = 0;      // Total output samples processed
+        float sourcePeak = 0.0f;        // Peak of the dry input source
+    };
+
+    void resetDiagnostics() {
+        m_diagPreClampPeak = 0.0f;
+        m_diagPostClampPeak = 0.0f;
+        m_diagWetPreClampPeak = 0.0f;
+        m_diagClampSampleCount = 0;
+        m_diagTotalSamples = 0;
+        m_diagSourcePeak = 0.0f;
+    }
+
+    void setSourcePeak(float peak) { m_diagSourcePeak = peak; }
+
+    ClampDiagnostics getClampDiagnostics() const {
+        ClampDiagnostics d;
+        d.preClampPeak = m_diagPreClampPeak;
+        d.postClampPeak = m_diagPostClampPeak;
+        d.wetPreClampPeak = m_diagWetPreClampPeak;
+        d.clampSampleCount = m_diagClampSampleCount;
+        d.totalSamples = m_diagTotalSamples;
+        d.sourcePeak = m_diagSourcePeak;
+        return d;
+    }
+
+private:
+    float m_diagPreClampPeak = 0.0f;
+    float m_diagPostClampPeak = 0.0f;
+    float m_diagWetPreClampPeak = 0.0f;
+    uint64_t m_diagClampSampleCount = 0;
+    uint64_t m_diagTotalSamples = 0;
+    float m_diagSourcePeak = 0.0f;
 #endif
 
     struct ModeConstants {
