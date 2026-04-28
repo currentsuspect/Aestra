@@ -492,14 +492,22 @@ static std::string generateJsonReport(
 // ============================================================================
 
 static std::string execCmd(const char* cmd) {
+#ifdef _MSC_VER
+    FILE* pipe = _popen(cmd, "r");
+#else
     FILE* pipe = popen(cmd, "r");
+#endif
     if (!pipe) return "";
     char buffer[128];
     std::string result;
     while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
         result += buffer;
     }
+#ifdef _MSC_VER
+    _pclose(pipe);
+#else
     pclose(pipe);
+#endif
     while (!result.empty() && (result.back() == '\n' || result.back() == '\r')) {
         result.pop_back();
     }

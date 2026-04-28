@@ -3,6 +3,7 @@
 #include "Core/ArsenalProcessingContext.h"
 #include "Models/UnitManager.h"
 
+#include <array>
 #include <cstdlib>
 #include <iostream>
 
