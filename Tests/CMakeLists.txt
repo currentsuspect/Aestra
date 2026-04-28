@@ -327,6 +327,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbBenchmark.cpp")
     )
 endif()
 
+# Reverb Quality Measurement Lab
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbQualityLab.cpp")
+    add_executable(AestraReverbQualityLab AestraAudio/ReverbQualityLab.cpp)
+    target_link_libraries(AestraReverbQualityLab PRIVATE AestraAudio AestraCore)
+    target_include_directories(AestraReverbQualityLab PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
 # Stress benchmark companion used by dsp-benchmark workflow
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/AestraStressTest.cpp")
     add_executable(AestraStressTest Integration/AestraStressTest.cpp)

@@ -40,6 +40,7 @@ labs/reverb/
 | 007 | 2026-04-28 | 1 | 4 | 1 | Diffuser wrapping optimization (power-of-two + bitmask). See sessions. |
 | 008 | 2026-04-28 | 1 | 3 | 0 | Input/Predelay optimization (power-of-two + bitmask). See sessions. |
 | 009 | 2026-04-28 | 1 | 0 | 2 | LFO Normalize + Control investigated, no measurable gain. Rejected. See sessions. |
+| 010 | 2026-04-28 | 1 | 2 | 0 | Quality measurement baseline established. See sessions. |
 
 ## Current State
 
@@ -140,6 +141,18 @@ The remaining hotspots are fundamentally limited by:
 - Lower-noise benchmark environment (to measure sub-5% optimizations)
 - Architectural redesign of FDN delay-line memory layout for gather-friendly access
 
-**Session 010 recommendation:** Either target a specific sub-hotspot with proven
-potential (e.g., Parameter Smoothing SSE vectorization) or pivot to measuring
-on AVX2 hardware to validate the AVX2 FDN path.
+### Quality Baseline (Session 010)
+
+| Metric | Room | Hall | Plate |
+|--------|------|------|-------|
+| T60 | 714 ms | 816 ms | 554 ms |
+| Spectral | Mid-heavy | High-heavy | Balanced |
+| Crest Factor | 7.2 | 4.4 | 11.1 |
+| Late Correlation | 0.974 | 0.788 | 0.967 |
+| Bloom Time | 6.9 ms | 49.2 ms | 36.0 ms |
+
+**Red flags:** Room & Plate late tail highly correlated (>0.96). Plate metallic peak at 1406 Hz (20.9 dB).
+
+**Quality artifacts:** `labs/reverb/quality/` — impulse WAVs, noise burst WAVs, JSON metrics, Markdown report.
+
+**Session 011 target**: Late tail stereo decorrelation (Room/Plate correlation >0.96).
