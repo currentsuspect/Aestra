@@ -561,9 +561,11 @@ int main() {
             verb.setParameter(AestraVerb::kWidth, 0.7f);
             verb.activate();
 
-            // Reset diagnostics before render
+            // Reset diagnostics before render (requires AESTRA_REVERB_DIAGNOSTICS)
+#ifdef AESTRA_REVERB_DIAGNOSTICS
             verb.resetDiagnostics();
             verb.setSourcePeak(srcPeak);
+#endif
 
             std::vector<float> outL(n), outR(n);
             size_t chunkSize = 256;
@@ -574,43 +576,49 @@ int main() {
                 verb.process(inPtrs, outPtrs, 2, 2, static_cast<uint32_t>(frames));
             }
 
-            // Capture clamp diagnostics
-            auto diag = verb.getClampDiagnostics();
-
             writeWavFloat(outDir + "/" + mode.name + "_" + src.name + ".wav", outL, outR, sampleRate);
 
             auto res = analyzeMaterial(src.name, mode.name, outL, outR, sampleRate);
 
-            // Populate clamp diagnostics
-            res.preClampPeak = diag.preClampPeak;
-            res.postClampPeak = diag.postClampPeak;
-            res.wetPreClampPeak = diag.wetPreClampPeak;
-            res.clampSampleCount = diag.clampSampleCount;
-            res.totalSamples = diag.totalSamples;
-            res.sourcePeak = diag.sourcePeak;
+            // Populate clamp diagnostics (requires AESTRA_REVERB_DIAGNOSTICS)
+#ifdef AESTRA_REVERB_DIAGNOSTICS
+            {
+                auto diag = verb.getClampDiagnostics();
+                res.preClampPeak = diag.preClampPeak;
+                res.postClampPeak = diag.postClampPeak;
+                res.wetPreClampPeak = diag.wetPreClampPeak;
+                res.clampSampleCount = diag.clampSampleCount;
+                res.totalSamples = diag.totalSamples;
+                res.sourcePeak = diag.sourcePeak;
 
-            // Determine clamp status
-            if (diag.clampSampleCount > 0) {
-                if (src.name == "vocal_phrase") {
-                    res.clampStatus = "pre-existing vocal clamp case";
+                // Determine clamp status
+                if (diag.clampSampleCount > 0) {
+                    if (src.name == "vocal_phrase") {
+                        res.clampStatus = "pre-existing vocal clamp case";
+                    } else {
+                        res.clampStatus = "clamped";
+                    }
                 } else {
-                    res.clampStatus = "clamped";
+                    res.clampStatus = "not clamped";
                 }
-            } else {
-                res.clampStatus = "not clamped";
             }
+#else
+            res.clampStatus = "diagnostics disabled";
+#endif
 
             results.push_back(res);
 
             // Print clamp info inline
-            if (diag.clampSampleCount > 0) {
-                float pct = diag.totalSamples > 0
-                    ? (100.0f * static_cast<float>(diag.clampSampleCount) / static_cast<float>(diag.totalSamples))
+#ifdef AESTRA_REVERB_DIAGNOSTICS
+            if (res.clampSampleCount > 0) {
+                float pct = res.totalSamples > 0
+                    ? (100.0f * static_cast<float>(res.clampSampleCount) / static_cast<float>(res.totalSamples))
                     : 0.0f;
-                std::cout << " CLAMPED (preClampPeak=" << std::fixed << std::setprecision(4) << diag.preClampPeak
-                          << " clampSamples=" << diag.clampSampleCount
+                std::cout << " CLAMPED (preClampPeak=" << std::fixed << std::setprecision(4) << res.preClampPeak
+                          << " clampSamples=" << res.clampSampleCount
                           << " " << std::setprecision(2) << pct << "%)";
             }
+#endif
             std::cout << " done" << std::endl;
         }
     }
