@@ -100,7 +100,7 @@ public:
         }
         
         // Background track
-        NUIColor trackColor(0.070f, 0.076f, 0.094f, 0.96f);
+        NUIColor trackColor(0.060f, 0.065f, 0.080f, 0.96f);
         renderer.fillRoundedRect(bounds, cornerRadius_, trackColor);
         
         renderer.strokeRoundedRect(bounds, cornerRadius_, 1.0f,
@@ -135,8 +135,8 @@ public:
         float indicatorX = bounds.x + padding + indicatorPosition_ * segmentWidth;
         NUIRect indicatorRect(indicatorX, bounds.y + padding, indicatorWidth, indicatorHeight);
         
-        renderer.fillRoundedRect(indicatorRect, cornerRadius_ - padding, accentColor_.withAlpha(0.42f));
-        renderer.strokeRoundedRect(indicatorRect, cornerRadius_ - padding, 1.0f, accentColor_.withAlpha(0.62f));
+        renderer.fillRoundedRect(indicatorRect, cornerRadius_ - padding, accentColor_.withAlpha(0.56f));
+        renderer.strokeRoundedRect(indicatorRect, cornerRadius_ - padding, 1.0f, accentColor_.withAlpha(0.74f));
         
         NUIRect highlightRect(indicatorRect.x + 2, indicatorRect.y, indicatorRect.width - 4, 1.0f);
         renderer.fillRect(highlightRect, NUIColor(1.0f, 1.0f, 1.0f, 0.12f));
@@ -148,9 +148,9 @@ public:
             NUIRect segmentBounds(segmentX, bounds.y, segmentWidth, bounds.height);
             
             bool isSelected = (i == selectedIndex_);
-            NUIColor textColor = isSelected 
-                ? theme.getColor("textPrimary")
-                : theme.getColor("textSecondary").withAlpha(static_cast<int>(i) == hoveredIndex_ ? 0.90f : 0.74f);
+            NUIColor textColor = isSelected
+                ? theme.getColor("textPrimary").withAlpha(0.96f)
+                : theme.getColor("textSecondary").withAlpha(static_cast<int>(i) == hoveredIndex_ ? 0.86f : 0.66f);
             
             renderer.drawTextCentered(segments_[i], segmentBounds, fontSize, textColor);
         }

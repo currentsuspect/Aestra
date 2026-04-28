@@ -341,20 +341,22 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     };
 
     const float centerY = bounds.y + bounds.height * 0.5f;
-    const float playSize = 32.0f;
-    playButtonBounds_ = NUIRect(bounds.x + 10.0f, centerY - playSize * 0.5f, playSize, playSize);
+    const float playSize = 24.0f;
+    playButtonBounds_ = NUIRect(bounds.x + 12.0f, centerY - playSize * 0.5f, playSize, playSize);
 
     const float textX = playButtonBounds_.right() + 10.0f;
-    const float durationW = 44.0f;
-    const float durationX = bounds.right() - durationW - 8.0f;
-    const float waveformX = std::min(std::max(textX + 126.0f, bounds.x + bounds.width * 0.52f),
-                                     std::max(textX + 64.0f, durationX - 46.0f));
-    const float waveformW = std::max(32.0f, durationX - waveformX - 8.0f);
-    NUIRect waveformBounds(waveformX, bounds.y + 13.0f, waveformW, bounds.height - 26.0f);
+    const float rightPad = 10.0f;
+    const float waveformW = std::clamp(bounds.width * 0.20f, 38.0f, 58.0f);
+    const float waveformX = bounds.right() - waveformW - rightPad;
+    const float durationW = 36.0f;
+    const float durationX = waveformX - durationW - 6.0f;
+    const bool showDuration = durationX > textX + 40.0f;
+    NUIRect waveformBounds(waveformX, bounds.y + 12.0f, waveformW, bounds.height - 24.0f);
 
-    const float textMaxWidth = std::max(0.0f, waveformX - textX - 10.0f);
-    std::string displayName = truncateToWidth(renderer, currentFile_.name, 12.0f, textMaxWidth);
-    renderer.drawText(displayName, NUIPoint(textX, bounds.y + 10.0f), 12.0f, theme.getColor("textPrimary"));
+    const float textLimitX = showDuration ? durationX : waveformX;
+    const float textMaxWidth = std::max(0.0f, textLimitX - textX - 8.0f);
+    std::string displayName = truncateToWidth(renderer, currentFile_.name, 11.0f, textMaxWidth);
+    renderer.drawText(displayName, NUIPoint(textX, bounds.y + 10.0f), 11.0f, theme.getColor("textPrimary").withAlpha(0.92f));
     
     std::string sizeStr;
     if (currentFile_.size < 1024) {
@@ -370,21 +372,21 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     if (!ext.empty() && ext[0] == '.') ext = ext.substr(1);
     
     std::string meta = sizeStr + "  " + ext;
-    renderer.drawText(meta, NUIPoint(textX, bounds.y + 28.0f), 10.0f, theme.getColor("textSecondary").withAlpha(0.72f));
+    renderer.drawText(meta, NUIPoint(textX, bounds.y + 27.0f), 9.5f, theme.getColor("textSecondary").withAlpha(0.68f));
 
     NUIColor btnBg = isPlaying_
-        ? theme.getColor("accentPrimary").withAlpha(0.92f)
-        : theme.getColor("surfaceRaised").withAlpha(0.9f);
+        ? theme.getColor("accentPrimary").withAlpha(0.82f)
+        : theme.getColor("surfaceRaised").withAlpha(0.76f);
     NUIColor btnBorder = isPlaying_
-        ? theme.getColor("accentPrimary").withAlpha(0.9f)
-        : theme.getColor("border").withAlpha(0.34f);
+        ? theme.getColor("accentPrimary").withAlpha(0.76f)
+        : theme.getColor("border").withAlpha(0.28f);
     renderer.fillRoundedRect(playButtonBounds_, playSize * 0.5f, btnBg);
     renderer.strokeRoundedRect(playButtonBounds_, playSize * 0.5f, 1.0f, btnBorder);
     
     // Icon
     auto& icon = isPlaying_ ? stopIcon_ : playIcon_;
     if (icon) {
-        float iconSize = 13.0f;
+        float iconSize = 11.0f;
         // Pixel snap positions
         float iconX = std::floor(playButtonBounds_.x + (playButtonBounds_.width - iconSize) * 0.5f + (isPlaying_ ? 0.0f : 1.0f)); 
         // Nudge Stop icon down 1px
@@ -395,10 +397,12 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         icon->onRender(renderer);
     }
 
-    renderer.drawText(formatTime(duration_), NUIPoint(durationX, bounds.y + 20.0f), 10.0f,
-                      theme.getColor("textSecondary").withAlpha(0.72f));
+    if (showDuration) {
+        renderer.drawText(formatTime(duration_), NUIPoint(durationX, bounds.y + 20.0f), 9.5f,
+                          theme.getColor("textSecondary").withAlpha(0.62f));
+    }
 
-    renderer.fillRoundedRect(waveformBounds, 4.0f, theme.getColor("backgroundPrimary").withAlpha(0.18f));
+    renderer.fillRoundedRect(waveformBounds, 4.0f, theme.getColor("backgroundPrimary").withAlpha(0.14f));
     
     // Draw waveform or loading state
     // Draw waveform or loading state
@@ -437,7 +441,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     } else if (hasData && waveformBounds.width > 0 && waveformBounds.height > 0) {
         std::lock_guard<std::mutex> lock(waveformMutex_);
         if (waveformData_.empty()) return;
-        NUIColor waveformFill = theme.getColor("accentPrimary").withAlpha(0.50f);
+        NUIColor waveformFill = theme.getColor("accentPrimary").withAlpha(0.38f);
         
         float centerY = waveformBounds.y + waveformBounds.height * 0.5f;
         float maxAmplitude = waveformBounds.height * 0.45f;
@@ -474,7 +478,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
             renderer.drawLine(
                 NUIPoint(playheadX, waveformBounds.y),
                 NUIPoint(playheadX, waveformBounds.y + waveformBounds.height),
-                2.0f, theme.getColor("accentPrimary")
+                1.5f, theme.getColor("accentPrimary").withAlpha(0.82f)
             );
         }
     }
@@ -501,14 +505,9 @@ bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
 
-        const float textX = playButtonBounds_.right() + 10.0f;
-        const float durationW = 44.0f;
-        const float durationX = getBounds().right() - durationW - 8.0f;
-        const float waveformX = std::min(std::max(textX + 126.0f, getBounds().x + getBounds().width * 0.52f),
-                                         std::max(textX + 64.0f, durationX - 46.0f));
-        NUIRect waveformBounds(waveformX, getBounds().y + 13.0f,
-                               std::max(32.0f, durationX - waveformX - 8.0f),
-                               getBounds().height - 26.0f);
+        const float waveformW = std::clamp(bounds.width * 0.20f, 38.0f, 58.0f);
+        const float waveformX = bounds.right() - waveformW - 10.0f;
+        NUIRect waveformBounds(waveformX, bounds.y + 12.0f, waveformW, bounds.height - 24.0f);
         if (waveformBounds.contains(event.position) && duration_ > 0.0) {
             float relativeX = event.position.x - waveformBounds.x;
             float progress = std::clamp(relativeX / waveformBounds.width, 0.0f, 1.0f);
