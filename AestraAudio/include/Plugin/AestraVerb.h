@@ -470,8 +470,8 @@ public:
 
             AESTRA_DIAG_PRECLAMP(sumL, sumR);
 
-            const float outL = std::clamp(sumL, -1.0f, 1.0f);
-            const float outR = std::clamp(sumR, -1.0f, 1.0f);
+            const float outL = sanitize(sumL);
+            const float outR = sanitize(sumR);
 
             AESTRA_DIAG_POSTCLAMP(outL, outR);
 
