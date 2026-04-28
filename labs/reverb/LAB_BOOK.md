@@ -44,6 +44,7 @@ labs/reverb/
 | 011 | 2026-04-28 | 1 | 3 | 0 | Late-tail decorrelation + quality lab bug fix. See sessions. |
 | 012 | 2026-04-28 | 1 | 1 | 2 | Plate metallic peak elimination with peaking EQ. See sessions. |
 | 013 | 2026-04-28 | 1 | 1 | 1 | 4687 Hz peak validation + perceptual metric improvement. See sessions. |
+| 014 | 2026-04-28 | 1 | 1 | 0 | Early reflection density metric calibration. See sessions. |
 
 ## Current State
 
@@ -144,7 +145,7 @@ The remaining hotspots are fundamentally limited by:
 - Lower-noise benchmark environment (to measure sub-5% optimizations)
 - Architectural redesign of FDN delay-line memory layout for gather-friendly access
 
-### Quality Baseline (Session 013, perceptual metric)
+### Quality Baseline (Session 014)
 
 | Metric | Room | Hall | Plate |
 |--------|------|------|-------|
@@ -154,19 +155,19 @@ The remaining hotspots are fundamentally limited by:
 | Late Correlation | 0.643 | 0.525 | 0.604 |
 | Bloom Time | 6.9 ms | 8.7 ms | 48.1 ms |
 | Metallic Peak (Hz/dB/local/band/sev) | 960 / 16.8 / 4.9 / mid / none | 1007 / 14.3 / 7.4 / mid / none | 4687 / 19.2 / 14.9 / presence / low |
+| Early Onset | 54.3 ms | 59.9 ms | 53.1 ms |
+| Early Peak Count | 593 | 29 | 1375 |
+| Early Active Ratio | 0.55 | 0.14 | 0.65 |
+| Early Density Score | 12.07 | 0.10 | 90.54 |
 
-**Red flags:** None. The quality lab now uses perceptual severity ratings:
-- low-mid persistent peaks >8 dB local → HIGH (boxy/metallic)
-- mid persistent peaks >10 dB local → HIGH (honk)
-- presence persistent peaks >12 dB local → HIGH (harsh)
-- air persistent peaks >15 dB local → HIGH (fizz)
+**Red flags:** None.
 
-**Session 013 verdict:** 4687 Hz Plate peak is low severity, only in impulse
-response (not noise burst), and does not warrant a second EQ cut.
+**Session 014 verdict:** Early reflection metric now correctly distinguishes modes:
+Hall is sparse (0.10), Room is moderate (12.07), Plate is dense/diffuse (90.54).
 
 **Note:** Session 010 Hall metrics were incorrect due to a quality lab bug
 (Hall parameter 1.0f mapped to Plate mode). True Hall T60 is ~1349ms.
 
 **Quality artifacts:** `labs/reverb/quality/` — impulse WAVs, noise burst WAVs, JSON metrics, Markdown report.
 
-**Session 014 target:** Early reflection density metric calibration (all modes report 0).
+**Session 015 target:** Listening validation with synthetic material (snare, vocal, bright transient).

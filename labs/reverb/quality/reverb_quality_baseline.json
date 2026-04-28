@@ -36,7 +36,16 @@
       },
       "transient": {
         "bloomTimeMs": 6.89583,
-        "earlyDensity": 0
+        "earlyOnsetMs": 54.2917,
+        "earlyPeakMs": 54.2917,
+        "earlyPeakCount": 593,
+        "earlyActiveBins1ms": 82,
+        "earlyActiveBinRatio": 0.546667,
+        "earlyCrestFactor": 26.858,
+        "earlyEnergyMs25": 59.5,
+        "earlyEnergyMs50": 92.0833,
+        "earlyEnergyMs75": 109.312,
+        "earlyDensityScore": 12.0699
       }
     },
     {
@@ -73,7 +82,16 @@
       },
       "transient": {
         "bloomTimeMs": 8.70833,
-        "earlyDensity": 0
+        "earlyOnsetMs": 59.9167,
+        "earlyPeakMs": 59.9375,
+        "earlyPeakCount": 29,
+        "earlyActiveBins1ms": 21,
+        "earlyActiveBinRatio": 0.14,
+        "earlyCrestFactor": 40.7881,
+        "earlyEnergyMs25": 59.9375,
+        "earlyEnergyMs50": 65.4167,
+        "earlyEnergyMs75": 83.375,
+        "earlyDensityScore": 0.0995389
       }
     },
     {
@@ -110,7 +128,16 @@
       },
       "transient": {
         "bloomTimeMs": 48.125,
-        "earlyDensity": 0
+        "earlyOnsetMs": 53.1042,
+        "earlyPeakMs": 76.8542,
+        "earlyPeakCount": 1375,
+        "earlyActiveBins1ms": 97,
+        "earlyActiveBinRatio": 0.646667,
+        "earlyCrestFactor": 9.82053,
+        "earlyEnergyMs25": 78.9583,
+        "earlyEnergyMs50": 98.3125,
+        "earlyEnergyMs75": 117.354,
+        "earlyDensityScore": 90.5416
       }
     }
   ]
