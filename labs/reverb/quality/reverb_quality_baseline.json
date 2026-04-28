@@ -1,0 +1,105 @@
+{
+  "sampleRate": 48000,
+  "frames": 8192,
+  "modes": [
+    {
+      "name": "room",
+      "rms": 0.00252912,
+      "peak": 0.255483,
+      "hfRatio": 1.27307,
+      "hasNaN": false,
+      "hasInf": false,
+      "decay": {
+        "t20Ms": 272,
+        "t40Ms": 490.667,
+        "t60Ms": 714.667,
+        "monotonic": true,
+        "maxReboundDb": 0
+      },
+      "spectral": {
+        "lowRatio": 0.0428311,
+        "midRatio": 0.566121,
+        "highRatio": 0.391048,
+        "crestFactor": 7.23708,
+        "metallicPeakHz": 1710.94,
+        "metallicPeakDb": 17.1913
+      },
+      "stereo": {
+        "corrEarly": 1,
+        "corrLate": 0.974274,
+        "monoPeak": 0.183306,
+        "widthProxy": 0.694748
+      },
+      "transient": {
+        "bloomTimeMs": 6.89583,
+        "earlyDensity": 0
+      }
+    },
+    {
+      "name": "hall",
+      "rms": 0.00187124,
+      "peak": 0.0630369,
+      "hfRatio": 1.62201,
+      "hasNaN": false,
+      "hasInf": false,
+      "decay": {
+        "t20Ms": 357.333,
+        "t40Ms": 597.333,
+        "t60Ms": 816,
+        "monotonic": true,
+        "maxReboundDb": 0
+      },
+      "spectral": {
+        "lowRatio": 0.0451396,
+        "midRatio": 0.174914,
+        "highRatio": 0.779947,
+        "crestFactor": 4.37181,
+        "metallicPeakHz": 5835.94,
+        "metallicPeakDb": 12.8132
+      },
+      "stereo": {
+        "corrEarly": 1,
+        "corrLate": 0.787861,
+        "monoPeak": 0.052971,
+        "widthProxy": 0.672153
+      },
+      "transient": {
+        "bloomTimeMs": 49.25,
+        "earlyDensity": 0
+      }
+    },
+    {
+      "name": "plate",
+      "rms": 0.00189983,
+      "peak": 0.0602716,
+      "hfRatio": 1.7704,
+      "hasNaN": false,
+      "hasInf": false,
+      "decay": {
+        "t20Ms": 240,
+        "t40Ms": 394.667,
+        "t60Ms": 554.667,
+        "monotonic": true,
+        "maxReboundDb": 0
+      },
+      "spectral": {
+        "lowRatio": 0.114253,
+        "midRatio": 0.367412,
+        "highRatio": 0.518335,
+        "crestFactor": 11.0909,
+        "metallicPeakHz": 1406.25,
+        "metallicPeakDb": 20.8994
+      },
+      "stereo": {
+        "corrEarly": 1,
+        "corrLate": 0.967225,
+        "monoPeak": 0.0486263,
+        "widthProxy": 0.699409
+      },
+      "transient": {
+        "bloomTimeMs": 36.0417,
+        "earlyDensity": 0
+      }
+    }
+  ]
+}
