@@ -38,7 +38,8 @@ extern bool g_forceScalarFallback;
 extern bool g_forceLinearInterpolation;
 
 inline float sanitizeFeedbackValue(float value) noexcept {
-    if (!std::isfinite(value) || std::abs(value) < 1.0e-20f) {
+    if (value != value || value <= -32.0f || value >= 32.0f ||
+        (value > -1.0e-20f && value < 1.0e-20f)) {
         return 0.0f;
     }
     return value;
