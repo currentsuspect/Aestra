@@ -46,6 +46,7 @@ labs/reverb/
 | 013 | 2026-04-28 | 1 | 1 | 1 | 4687 Hz peak validation + perceptual metric improvement. See sessions. |
 | 014 | 2026-04-28 | 1 | 1 | 0 | Early reflection density metric calibration. See sessions. |
 | 015 | 2026-04-28 | 1 | 1 | 0 | Synthetic material validation. See sessions. |
+| 016 | 2026-04-28 | 1 | 1 | 0 | Room width safety + v0.1 freeze decision. See sessions. |
 
 ## Current State
 
@@ -171,24 +172,31 @@ Hall is sparse (0.10), Room is moderate (12.07), Plate is dense/diffuse (90.54).
 
 **Quality artifacts:** `labs/reverb/quality/` — impulse WAVs, noise burst WAVs, JSON metrics, Markdown report.
 
-### Material Validation (Session 015)
+### v0.1 Freeze State (Session 016)
 
-Synthetic signals rendered through Room/Hall/Plate:
+**Room decorrelation: k=0.30** (reduced from 0.60 to tame extreme width on dense material)
 
-| Finding | Room | Hall | Plate |
-|---------|------|------|-------|
-| Tail RMS (snare) | 0.0132 | 0.0153 | **0.0025** (19% of Room) |
-| Tail RMS (bright ping) | 0.0223 | 0.0201 | **0.0027** (12% of Room) |
-| Late correlation (mix bus) | **-0.915** | 0.813 | -0.522 |
-| Metallic severity (all) | low | low | low |
-| Mono safety (all except vocal) | <0.47 | <0.47 | <0.27 |
+| Metric | Room | Hall | Plate |
+|--------|------|------|-------|
+| T60 | 666 ms | 1349 ms | 576 ms |
+| Late Correlation (impulse) | **0.820** | 0.525 | 0.604 |
+| Late Correlation (chord stab) | **-0.679** | 0.824 | -0.404 |
+| Late Correlation (mix bus) | **-0.835** | 0.813 | -0.522 |
+| Metallic Severity | none | none | low |
+| Mono Peak (mix bus) | 0.218 | 0.226 | 0.134 |
+| Real-Time | ~55x | ~49x | ~44x |
 
-**Session 015 verdict:**
-- Plate tails are very short on transient material (12-19% of Room) — may sound thin
-- No metallic ringing on any realistic material — Sessions 012-013 fixes confirmed
-- Room stereo may be excessively wide on dense material (corr -0.915)
-- Hall is the most consistent mode across all sources
+**v0.1 Freeze Verdict:**
+- **No critical issues.** All modes stable, real-time safe, no metallic ringing.
+- **Hall** is the most consistent mode across all material.
+- **Room** width is now moderate (k=0.30). Extreme negative correlation on dense
+  material is partly an FDN characteristic; decorrelation adjustment alone cannot
+  fully eliminate it.
+- **Plate** is bright and characterful. Transient tail energy is low (12-19% of
+  Room RMS) — documented as v0.2 tuning candidate, not a v0.1 blocker.
 
-**Session 016 target:** Evaluate whether Plate transient tail energy is correct
-behavior or needs level/scaling adjustment. Alternative: calibrate Room stereo
-width (reduce k from 0.60 to 0.35-0.45).
+**v0.2 Candidates:**
+1. Plate transient tail energy tuning (level/decay scaling)
+2. Room dense-material FDN correlation (architectural)
+3. Real recorded material listening tests
+4. Additional preset variations
