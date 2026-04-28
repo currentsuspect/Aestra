@@ -45,6 +45,7 @@ labs/reverb/
 | 012 | 2026-04-28 | 1 | 1 | 2 | Plate metallic peak elimination with peaking EQ. See sessions. |
 | 013 | 2026-04-28 | 1 | 1 | 1 | 4687 Hz peak validation + perceptual metric improvement. See sessions. |
 | 014 | 2026-04-28 | 1 | 1 | 0 | Early reflection density metric calibration. See sessions. |
+| 015 | 2026-04-28 | 1 | 1 | 0 | Synthetic material validation. See sessions. |
 
 ## Current State
 
@@ -170,4 +171,24 @@ Hall is sparse (0.10), Room is moderate (12.07), Plate is dense/diffuse (90.54).
 
 **Quality artifacts:** `labs/reverb/quality/` — impulse WAVs, noise burst WAVs, JSON metrics, Markdown report.
 
-**Session 015 target:** Listening validation with synthetic material (snare, vocal, bright transient).
+### Material Validation (Session 015)
+
+Synthetic signals rendered through Room/Hall/Plate:
+
+| Finding | Room | Hall | Plate |
+|---------|------|------|-------|
+| Tail RMS (snare) | 0.0132 | 0.0153 | **0.0025** (19% of Room) |
+| Tail RMS (bright ping) | 0.0223 | 0.0201 | **0.0027** (12% of Room) |
+| Late correlation (mix bus) | **-0.915** | 0.813 | -0.522 |
+| Metallic severity (all) | low | low | low |
+| Mono safety (all except vocal) | <0.47 | <0.47 | <0.27 |
+
+**Session 015 verdict:**
+- Plate tails are very short on transient material (12-19% of Room) — may sound thin
+- No metallic ringing on any realistic material — Sessions 012-013 fixes confirmed
+- Room stereo may be excessively wide on dense material (corr -0.915)
+- Hall is the most consistent mode across all sources
+
+**Session 016 target:** Evaluate whether Plate transient tail energy is correct
+behavior or needs level/scaling adjustment. Alternative: calibrate Room stereo
+width (reduce k from 0.60 to 0.35-0.45).
