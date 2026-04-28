@@ -372,7 +372,7 @@ AestraContent::AestraContent() {
                     item.vendor = p.vendor;
                     item.version = p.version;
                     item.category = p.category;
-                    item.formatStr = (p.format == Aestra::Audio::PluginFormat::VST3) ? "VST3" : "CLAP";
+                    item.formatStr = (p.format == Aestra::Audio::PluginFormat::VST3) ? "VST3" : "CLAP (Exp.)";
                     item.typeName = (p.type == Aestra::Audio::PluginType::Instrument) ? "Instrument" : "Effect";
                     uiPlugins.push_back(item);
                 }
@@ -3044,7 +3044,7 @@ void AestraContent::refreshPluginList() {
         item.vendor = p.vendor;
         item.version = p.version;
         item.category = p.category;
-        item.formatStr = (p.format == Aestra::Audio::PluginFormat::VST3) ? "VST3" : "CLAP";
+        item.formatStr = (p.format == Aestra::Audio::PluginFormat::VST3) ? "VST3" : "CLAP (Exp.)";
         item.typeName = (p.type == Aestra::Audio::PluginType::Instrument) ? "Instrument" : "Effect";
         uiPlugins.push_back(item);
     }
