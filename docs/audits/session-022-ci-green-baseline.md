@@ -3,7 +3,7 @@
 **Date:** 2026-04-29
 **Branch:** `codex/session-022-ci-green-baseline`
 **Starting SHA:** `6b3e689d` (develop, post-Session 021)
-**Final SHA:** *(set after commit)*
+**Final SHA:** `7a245cee`
 
 ## Objective
 
@@ -184,7 +184,7 @@ cmake --build build-reverb-lab --target AestraReverbMaterialLab --target AestraR
 
 - **Starting branch:** `codex/session-022-ci-green-baseline` from `develop` at `6b3e689d`
 - **Final branch:** `codex/session-022-ci-green-baseline`
-- **Final SHA:** *(set after commit)*
+- **Final SHA:** `7a245cee`
 - **Working tree:** clean after commit
 - **6 root causes identified:** 1 code, 4 workflow config, 1 latent CMake guard
 - **57/57 local tests pass**
