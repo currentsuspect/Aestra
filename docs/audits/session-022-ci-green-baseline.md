@@ -3,7 +3,7 @@
 **Date:** 2026-04-29
 **Branch:** `codex/session-022-ci-green-baseline`
 **Starting SHA:** `6b3e689d` (develop, post-Session 021)
-**Final SHA:** `7a245cee`
+**Final SHA:** `6a9c9d79`
 
 ## Objective
 
@@ -235,7 +235,7 @@ FAIL: snare Room tailRMS changed from 0.047 to 0.0299841 (tolerance: 0.002)
 
 - **Starting branch:** `codex/session-022-ci-green-baseline` from `develop` at `6b3e689d`
 - **Final branch:** `codex/session-022-ci-green-baseline`
-- **Final SHA:** `7a245cee`
+- **Final SHA:** `6a9c9d79`
 - **Working tree:** clean after commit
 - **6 root causes identified:** 1 code, 4 workflow config, 1 latent CMake guard
 - **57/57 local tests pass**
