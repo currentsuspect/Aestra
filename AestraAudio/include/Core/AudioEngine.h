@@ -356,6 +356,8 @@ public:
 
 private:
     static constexpr size_t kMaxTracks = 4096;
+    static constexpr size_t kMaxSendsPerTrack = 256;  // Matches PROJECT_MAX_SENDS_PER_LANE
+    static constexpr size_t kMaxEdgesPerTrack = 16;   // Conservative max routing edges per track
     static constexpr uint32_t kWaveformHistoryFramesDefault = 2048;
 
     // Fast Xorshift32 RNG for dither
@@ -497,7 +499,15 @@ private:
     std::vector<TrackRTState> m_trackState;
 
     // Reused render-graph scratch state to avoid heap churn in the audio callback.
-    std::unordered_map<uint32_t, size_t> m_rtTrackIndexById;
+    // All pre-allocated in setBufferConfig() to kMaxTracks capacity.
+    // RT path uses index-based writes and .clear() (which preserves capacity).
+
+    // Flat vector replacing unordered_map<uint32_t, size_t>.
+    // Indexed by trackId; value is graph index, or kMaxTracks sentinel for "not present".
+    // Safe because trackId is bounded by kMaxTracks (enforced by ChannelSlotMap).
+    std::vector<size_t> m_rtTrackIndexById;
+    size_t m_rtTrackIndexByIdActiveCount{0}; // Number of valid entries written this block
+
     std::vector<std::vector<size_t>> m_rtAudibleDownstream;
     std::vector<std::vector<size_t>> m_rtAudibleIncoming;
     std::vector<std::vector<size_t>> m_rtSidechainIncoming;
@@ -509,6 +519,19 @@ private:
     std::vector<size_t> m_rtIndexQueue;
     std::vector<size_t> m_rtSoloProcessQueue;
     std::vector<bool> m_rtCycleVisited;
+
+    // Scratch buffer for send routing in renderGraph (pre-allocated, avoids local std::vector).
+    struct PreparedSendRoute {
+        const double* source{nullptr};
+        double* dest{nullptr};
+        SmoothedParamD* gainL{nullptr};
+        SmoothedParamD* gainR{nullptr};
+    };
+    std::vector<PreparedSendRoute> m_preparedRoutesScratch;
+
+    // Tracks last sample rate synced to Arsenal units (avoids per-block scans).
+    // Replaces static local in processArsenalUnits for RT safety.
+    uint32_t m_lastSyncedArsenalSampleRate{0};
 
     // --- Antigravity Routing Engine (v3.1) ---
     // Moved struct definitions to AudioGraphState.h
