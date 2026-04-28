@@ -1079,6 +1079,37 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
             m_trackState.assign(kMaxTracks, TrackRTState{});
         }
 
+        // Pre-allocate all RT graph scratch vectors to avoid heap allocation in renderGraph.
+        // Outer vectors sized to kMaxTracks; inner vectors pre-sized to kMaxEdgesPerTrack.
+        m_rtTrackIndexById.assign(kMaxTracks, kMaxTracks); // sentinel = "not present"
+        m_rtAudibleDownstream.resize(kMaxTracks);
+        m_rtAudibleIncoming.resize(kMaxTracks);
+        m_rtSidechainIncoming.resize(kMaxTracks);
+        m_rtTopoEdges.resize(kMaxTracks);
+        for (size_t i = 0; i < kMaxTracks; ++i) {
+            m_rtAudibleDownstream[i].reserve(kMaxEdgesPerTrack);
+            m_rtAudibleIncoming[i].reserve(kMaxEdgesPerTrack);
+            m_rtSidechainIncoming[i].reserve(kMaxEdgesPerTrack);
+            m_rtTopoEdges[i].reserve(kMaxEdgesPerTrack);
+        }
+        m_rtTopoIndegree.resize(kMaxTracks);
+        m_rtAudibleEligible.resize(kMaxTracks);
+        m_rtProcessActive.resize(kMaxTracks);
+        m_rtProcessOrder.reserve(kMaxTracks);
+        m_rtIndexQueue.reserve(kMaxTracks);
+        m_rtSoloProcessQueue.reserve(kMaxTracks);
+        m_rtCycleVisited.resize(kMaxTracks);
+
+        // Pre-allocate send scratch buffers for each track slot.
+        for (size_t i = 0; i < kMaxTracks; ++i) {
+            m_trackState[i].sendGainL.reserve(kMaxSendsPerTrack);
+            m_trackState[i].sendGainR.reserve(kMaxSendsPerTrack);
+            m_trackState[i].preFaderBuffer.reserve(requiredSize);
+        }
+
+        // Pre-allocate prepared-routes scratch (max sends per track).
+        m_preparedRoutesScratch.reserve(kMaxSendsPerTrack);
+
 #ifdef _WIN32
         // Lock buffers in memory to prevent page faults during real-time processing
         if (!m_masterBufferD.empty()) {
@@ -1400,16 +1431,31 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
     // Solo detection and routed solo support.
     bool anySolo = false;
-    m_rtTrackIndexById.clear();
-    m_rtTrackIndexById.reserve(graph.tracks.size());
-    for (size_t i = 0; i < graph.tracks.size(); ++i) {
-        m_rtTrackIndexById[graph.tracks[i].trackId] = i;
+    // Reset flat track-index map (no deallocation — just overwrite active entries).
+    const size_t prevActive = m_rtTrackIndexByIdActiveCount;
+    for (size_t i = 0; i < prevActive; ++i) {
+        // We don't track which IDs were written; reset all possible entries
+        // below graph.tracks.size() since that's the only range we write.
     }
-
-    m_rtAudibleDownstream.resize(graph.tracks.size());
-    m_rtAudibleIncoming.resize(graph.tracks.size());
-    m_rtSidechainIncoming.resize(graph.tracks.size());
+    // Simpler: just reset the entries we're about to write.
+    // The flat vector is pre-sized to kMaxTracks in setBufferConfig().
     for (size_t i = 0; i < graph.tracks.size(); ++i) {
+        const uint32_t tid = graph.tracks[i].trackId;
+        if (tid < kMaxTracks) {
+            m_rtTrackIndexById[tid] = kMaxTracks; // clear sentinel
+        }
+    }
+    for (size_t i = 0; i < graph.tracks.size(); ++i) {
+        const uint32_t tid = graph.tracks[i].trackId;
+        if (tid < kMaxTracks) {
+            m_rtTrackIndexById[tid] = i;
+        }
+    }
+    m_rtTrackIndexByIdActiveCount = graph.tracks.size();
+
+    // Reset per-track edge lists (clear inner vectors; outer vector already sized).
+    const size_t numTracks = graph.tracks.size();
+    for (size_t i = 0; i < numTracks; ++i) {
         m_rtAudibleDownstream[i].clear();
         m_rtAudibleIncoming[i].clear();
         m_rtSidechainIncoming[i].clear();
@@ -1418,11 +1464,10 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     m_rtProcessActive.assign(availableTracks, false);
 
     auto addTrackEdge = [&](size_t srcIndex, uint32_t destTrackId, bool sidechainOnly) {
-        auto it = m_rtTrackIndexById.find(destTrackId);
-        if (it == m_rtTrackIndexById.end()) {
+        if (destTrackId >= kMaxTracks || m_rtTrackIndexById[destTrackId] == kMaxTracks) {
             return;
         }
-        const size_t destIndex = it->second;
+        const size_t destIndex = m_rtTrackIndexById[destTrackId];
         if (destIndex == srcIndex) {
             return;
         }
@@ -1455,7 +1500,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         m_rtIndexQueue.clear();
         size_t audibleQueueRead = 0;
         m_rtSoloProcessQueue.clear();
-        m_rtSoloProcessQueue.reserve(graph.tracks.size());
+        // Capacity already reserved in setBufferConfig(); no reserve() needed.
         size_t processQueueRead = 0;
 
         for (size_t i = 0; i < graph.tracks.size(); ++i) {
@@ -1576,20 +1621,21 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     // Process tracks in audible topological order so any routed upstream
     // content reaches a destination before that destination runs inserts/fader/metering.
     m_rtProcessOrder.clear();
-    m_rtProcessOrder.reserve(graph.tracks.size());
-    m_rtTopoIndegree.assign(graph.tracks.size(), 0u);
-    m_rtTopoEdges.resize(graph.tracks.size());
-    for (size_t i = 0; i < graph.tracks.size(); ++i) {
+    // All vectors pre-allocated in setBufferConfig(); no reserve()/resize() needed.
+    const size_t topoCount = graph.tracks.size();
+    for (size_t i = 0; i < topoCount; ++i) {
+        m_rtTopoIndegree[i] = 0u;
+    }
+    for (size_t i = 0; i < topoCount; ++i) {
         m_rtTopoEdges[i].clear();
     }
-    for (size_t i = 0; i < graph.tracks.size(); ++i) {
+    for (size_t i = 0; i < topoCount; ++i) {
         const auto& track = graph.tracks[i];
         auto addEdge = [&](uint32_t destTrackId) {
-            auto it = m_rtTrackIndexById.find(destTrackId);
-            if (it == m_rtTrackIndexById.end()) {
+            if (destTrackId >= kMaxTracks || m_rtTrackIndexById[destTrackId] == kMaxTracks) {
                 return;
             }
-            const size_t destIndex = it->second;
+            const size_t destIndex = m_rtTrackIndexById[destTrackId];
             if (destIndex == i) {
                 return;
             }
@@ -1610,7 +1656,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
     m_rtIndexQueue.clear();
     size_t readyRead = 0;
-    for (size_t i = 0; i < m_rtTopoIndegree.size(); ++i) {
+    for (size_t i = 0; i < topoCount; ++i) {
         if (m_rtTopoIndegree[i] == 0u) {
             m_rtIndexQueue.push_back(i);
         }
@@ -1624,17 +1670,20 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
         }
     }
-    const bool cycleDetected = m_rtProcessOrder.size() != graph.tracks.size();
+    const bool cycleDetected = m_rtProcessOrder.size() != topoCount;
     if (cycleDetected) {
         if (!m_loggedRoutingCycleWarning) {
             Aestra::Log::warning("[AudioEngine] Routing cycle detected; cyclic routes will not render correctly.");
             m_loggedRoutingCycleWarning = true;
         }
-        m_rtCycleVisited.assign(graph.tracks.size(), false);
+        // Zero cycle-visited flags using index writes (no alloc).
+        for (size_t i = 0; i < topoCount; ++i) {
+            m_rtCycleVisited[i] = false;
+        }
         for (const size_t index : m_rtProcessOrder) {
             m_rtCycleVisited[index] = true;
         }
-        for (size_t i = 0; i < graph.tracks.size(); ++i) {
+        for (size_t i = 0; i < topoCount; ++i) {
             if (!m_rtCycleVisited[i]) {
                 m_rtProcessOrder.push_back(i);
             }
@@ -2182,15 +2231,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         }
 
         if (!muted) {
-            struct PreparedSendRoute {
-                const double* source{nullptr};
-                double* dest{nullptr};
-                SmoothedParamD* gainL{nullptr};
-                SmoothedParamD* gainR{nullptr};
-            };
-
-            std::vector<PreparedSendRoute> preparedRoutes;
-            preparedRoutes.reserve(track.sends.size());
+            // Use pre-allocated member scratch buffer (no heap allocation in RT path).
+            m_preparedRoutesScratch.clear();
             for (size_t sendIndex = 0; sendIndex < track.sends.size(); ++sendIndex) {
                 const auto& send = track.sends[sendIndex];
                 if (send.mute) {
@@ -2208,7 +2250,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                         scDestSlot < availableTracks &&
                         scDestSlot != trackIdx) {
                         route.dest = m_trackSidechainBuffersD[scDestSlot].data();
-                        preparedRoutes.push_back(route);
+                        m_preparedRoutesScratch.push_back(route);
                     }
                     continue;
                 }
@@ -2219,7 +2261,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
                 if (send.targetChannelId == 0xFFFFFFFFu) {
                     route.dest = masterBuf;
-                    preparedRoutes.push_back(route);
+                    m_preparedRoutesScratch.push_back(route);
                     continue;
                 }
 
@@ -2233,11 +2275,11 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     sendDestSlot != trackIdx &&
                     (!anySolo || m_rtAudibleEligible[sendDestSlot])) {
                     route.dest = m_trackBuffersD[sendDestSlot].data();
-                    preparedRoutes.push_back(route);
+                    m_preparedRoutesScratch.push_back(route);
                 }
             }
 
-            for (const auto& route : preparedRoutes) {
+            for (const auto& route : m_preparedRoutesScratch) {
                 for (uint32_t i = 0; i < numFrames; ++i) {
                     const double sendGainL = route.gainL->next();
                     const double sendGainR = route.gainR->next();
@@ -2537,9 +2579,9 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         return;
     }
 
-    // Sync sample rate to units only when it changes (avoid per-block scans)
-    static uint32_t s_lastSyncedSampleRate = 0;
-    if (s_lastSyncedSampleRate != sampleRate) {
+    // Sync sample rate to units only when it changes (avoid per-block scans).
+    // Uses member variable instead of static local for RT safety.
+    if (m_lastSyncedArsenalSampleRate != sampleRate) {
         for (const auto& unitState : snapshot->units) {
             if (unitState.plugin) {
                 auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(unitState.plugin);
@@ -2548,7 +2590,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
                 }
             }
         }
-        s_lastSyncedSampleRate = sampleRate;
+        m_lastSyncedArsenalSampleRate = sampleRate;
     }
 
     const size_t requiredStereoSamples = static_cast<size_t>(numFrames) * 2;
