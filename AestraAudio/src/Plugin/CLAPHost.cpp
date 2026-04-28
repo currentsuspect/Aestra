@@ -242,6 +242,8 @@ bool CLAPPluginInstance::load(const std::filesystem::path& path, int pluginIndex
 
     m_loaded = true;
     Log::info("CLAP: Loaded plugin: " + m_info.name + " (" + m_info.vendor + ")");
+    Log::warning("CLAP support is experimental. MIDI input, plugin state save/load, "
+                 "and host callbacks are not fully implemented for this plugin.");
 
     return true;
 }
@@ -349,7 +351,7 @@ void CLAPPluginInstance::process(const float* const* inputs, float** outputs, ui
     process.audio_outputs = &outputBuffer;
     process.audio_inputs_count = 1;
     process.audio_outputs_count = 1;
-    process.in_events = nullptr; // TODO: MIDI events
+    process.in_events = nullptr; // CLAP MIDI not implemented — events are silently dropped.
     process.out_events = nullptr;
 
     m_plugin->process(m_plugin, &process);
@@ -429,13 +431,16 @@ std::string CLAPPluginInstance::getParameterDisplay(uint32_t id) const {
 }
 
 std::vector<uint8_t> CLAPPluginInstance::saveState() const {
-    // TODO: Implement via clap_plugin_state extension
+    // CLAP state save is not yet implemented (requires clap_plugin_state extension).
+    // Returning empty — project will not preserve CLAP plugin state across save/load.
+    Log::warning("CLAP: saveState() not implemented for '" + m_info.name + "'; plugin state will not be persisted.");
     return {};
 }
 
 bool CLAPPluginInstance::loadState(const std::vector<uint8_t>& state) {
     (void)state;
-    // TODO: Implement via clap_plugin_state extension
+    // CLAP state load is not yet implemented (requires clap_plugin_state extension).
+    Log::warning("CLAP: loadState() not implemented for '" + m_info.name + "'; saved state cannot be restored.");
     return false;
 }
 

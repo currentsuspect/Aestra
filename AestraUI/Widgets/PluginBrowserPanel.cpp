@@ -195,7 +195,10 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
     renderer.drawText(vendorMeta, {textX, rowRect.y + 22}, 9.0f, Colors::textSecondary.withAlpha(0.88f));
     
     float badgeX = rowRect.x + rowRect.width - 38;
-    NUIRect badge = {badgeX, rowRect.y + 7, 30, 14};
+    // Badge width: VST3 = 30, CLAP (Exp.) = 48
+    const bool isCLAP = (plugin.formatStr.find("CLAP") != std::string::npos);
+    const float badgeWidth = isCLAP ? 48.0f : 30.0f;
+    NUIRect badge = {badgeX, rowRect.y + 7, badgeWidth, 14};
     
     NUIColor badgeColor = (plugin.formatStr == "VST3") 
         ? Colors::accentPrimary.withAlpha(0.22f)
@@ -418,7 +421,7 @@ void PluginBrowserPanel::applyFilters() {
                 passType = (p.formatStr == "VST3");
                 break;
             case PluginFilterType::CLAP:
-                passType = (p.formatStr == "CLAP");
+                passType = (p.formatStr.find("CLAP") != std::string::npos);
                 break;
             case PluginFilterType::Favorites:
                 passType = p.isFavorite;

@@ -25,7 +25,7 @@ struct PluginListItem {
     std::string vendor;          ///< Plugin vendor/manufacturer
     std::string version;         ///< Version string
     std::string category;        ///< Category string (Effect, Instrument, etc.)
-    std::string formatStr;       ///< "VST3" or "CLAP"
+    std::string formatStr;       ///< "VST3", "CLAP (Exp.)", or "Int"
     std::string typeName;        ///< "Effect", "Instrument", "Analyzer"
     bool isFavorite = false;     ///< User has marked as favorite
 };

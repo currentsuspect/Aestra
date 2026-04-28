@@ -456,7 +456,7 @@ PluginListItem PluginUIController::convertToListItem(
             item.formatStr = "VST3";
             break;
         case Aestra::Audio::PluginFormat::CLAP:
-            item.formatStr = "CLAP";
+            item.formatStr = "CLAP (Exp.)";
             break;
         default:
             item.formatStr = "Int";
