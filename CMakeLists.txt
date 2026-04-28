@@ -36,6 +36,7 @@ option(AESTRA_CI "Configure deterministic CI-safe defaults" OFF)
 option(AESTRA_ENABLE_PREMIUM_PLUGINS "Build private premium plugin modules" OFF)
 option(AESTRA_ENABLE_TEST_LICENSES "Enable test-only mock license acceptance" OFF)
 option(AESTRA_REVERB_PROFILE "Enable AestraVerb stage profiling (lab/benchmark only)" OFF)
+option(AESTRA_REVERB_DIAGNOSTICS "Enable AestraVerb clamp diagnostics (lab only)" OFF)
 
 if(AESTRA_HEADLESS_ONLY)
   set(AESTRA_ENABLE_UI OFF CACHE BOOL "Build the AESTRA_DAW UI application" FORCE)
