@@ -286,8 +286,10 @@ public:
 
             AESTRA_PROFILE_STAGE_END(kDiffuser);
 
-            delayedL += earlyL * 0.20f;
-            delayedR += earlyR * 0.20f;
+            // Session 016: increased early-to-FDN injection from 0.20 to 0.30
+            // so transient energy better enters the reverb tank.
+            delayedL += earlyL * 0.30f;
+            delayedR += earlyR * 0.30f;
 
             AESTRA_PROFILE_STAGE(kModulationLFO);
             // Vectorized LFO updates (sin/cos quadrature oscillators)
@@ -644,7 +646,9 @@ private:
         case Mode::Hall:
             return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 0.72f, 1.4f, 0.85f, 1.6f};
         case Mode::Plate:
-            return {{{1013, 1151, 947, 863, 823, 919, 743, 677}}, 0.42f, 3.0f, 1.2f, 0.9f};
+            // Session 016: longer FDN lines for proper plate density and sustain.
+            // Plate lines should be longer than Room for characteristic thick tails.
+            return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 0.28f, 3.0f, 1.35f, 1.1f};
         case Mode::Room:
         default:
             return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.15f, 1.0f, 1.0f, 1.0f};
@@ -734,7 +738,8 @@ private:
         }
 
         const float modeSpread = mode == Mode::Hall ? 1.45f : (mode == Mode::Plate ? 0.55f : 0.82f);
-        const float modeLevel = mode == Mode::Hall ? 0.58f : (mode == Mode::Plate ? 0.28f : 0.78f);
+        // Session 016: Plate early level raised from 0.28 to 0.40 for stronger transient energy injection.
+        const float modeLevel = mode == Mode::Hall ? 0.58f : (mode == Mode::Plate ? 0.40f : 0.78f);
         const float sizeTerm = std::sqrt(std::max(0.1f, size));
         const int ringSize = static_cast<int>(m_earlyL.size());
         const int maxDelay = std::max(1, ringSize - 1);
@@ -801,8 +806,8 @@ private:
         m_earlyR.assign(static_cast<size_t>(earlyPow2), 0.0f);
         m_earlyMask = static_cast<int>(earlyPow2) - 1;
 
-        // Session 012: gentle peaking cut at ~562 Hz to tame Plate metallic ringing.
-        m_platePeakCoeff = peakingCoefficients(-4.0f, 562.0f, static_cast<float>(m_sampleRate), 1.5f);
+        // Session 016: softened Plate peaking cut from -4.0 to -3.0 dB to preserve tail energy.
+        m_platePeakCoeff = peakingCoefficients(-3.0f, 562.0f, static_cast<float>(m_sampleRate), 1.5f);
 
         clearBuffers(randomizeLfos);
     }
