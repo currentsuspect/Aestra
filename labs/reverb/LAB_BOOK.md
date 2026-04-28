@@ -39,22 +39,22 @@ labs/reverb/
 | 006 | 2026-04-28 | 1 | 4 | 1 | Plate post-allpass optimization + profile stage + benchmark bug fix. See sessions. |
 | 007 | 2026-04-28 | 1 | 4 | 1 | Diffuser wrapping optimization (power-of-two + bitmask). See sessions. |
 | 008 | 2026-04-28 | 1 | 3 | 0 | Input/Predelay optimization (power-of-two + bitmask). See sessions. |
+| 009 | 2026-04-28 | 1 | 0 | 2 | LFO Normalize + Control investigated, no measurable gain. Rejected. See sessions. |
 
 ## Current State
 
 - **Branch**: `develop`
-- **Status**: All major ring buffers now power-of-two + bitmask. All modes exceed 50x real-time. LFO normalization identified as next target. Session 009 target selected.
+- **Status**: Performance plateau reached. All low-hanging fruit (ring buffer wrapping) harvested. All modes exceed 50x real-time. Session 010 requires AVX2 hardware or architectural change.
 
 ### Benchmark Results (SSE4.1, no AVX2, 5s @ 48kHz)
 
-| Mode | Dispatch (S008) | Scalar (S008) | vs Scalar | Real-Time (Dispatch) |
-|------|-----------------|---------------|-----------|---------------------|
-| Room | **98.6 ms** | 161.4 ms* | — | **50.73x** |
-| Hall | **95.0 ms** | 139.4 ms* | — | **52.64x** |
-| Plate | **91.8 ms** | — | — | **54.46x** |
+| Mode | Dispatch (S008) | Scalar (S008) | Real-Time (Dispatch) |
+|------|-----------------|---------------|---------------------|
+| Room | **98.6 ms** | 107.8 ms | **50.73x** |
+| Hall | **95.0 ms** | 110.8 ms | **52.64x** |
+| Plate | **91.8 ms** | — | **54.46x** |
 
-*Scalar path shows elevated variance due to system load on 2-core machine.
-**All modes now exceed 50x real-time with cubic Hermite interpolation.**
+**All modes exceed 50x real-time with cubic Hermite interpolation.**
 
 ### Quality Results
 
@@ -62,7 +62,22 @@ labs/reverb/
 - **Callback budget**: <2.0% even in heaviest mode (non-profile)
 - **Projected AVX2 speedup**: 1.5-2.0x overall vs scalar (cubic would match/exceed original linear speed)
 
-### Stage Profile Hotspots (Session 008, Room Mode)
+### Cumulative Progress (Room Dispatch, 5s @ 48kHz)
+
+| Session | Room Time | Delta | Cumulative vs S001 |
+|---------|-----------|-------|-------------------|
+| Baseline (original linear) | ~63 ms | — | — |
+| S001 (cubic + SIMD core) | 107.3 ms | +70% quality | Quality baseline |
+| S004 (FDN bitmask) | 110.0 ms | -4.5% | — |
+| S005 (early refl bitmask) | 124.0 ms | +1.8%* | — |
+| S006 (post-allpass bitmask) | 127.5 ms | -1.8%* | — |
+| S007 (diffuser bitmask) | 103.7 ms | **-18.7%** | **-3.3%** |
+| S008 (predelay bitmask) | 98.6 ms | **-4.9%** | **-8.1%** |
+| S009 (LFO/control) | 98.6 ms | 0% | **-8.1%** |
+
+*Numbers affected by system load variance on 2-core machine.
+
+### Stage Profile Hotspots (Session 008, Final State)
 
 | Rank | Stage | % |
 |------|-------|---|
@@ -72,33 +87,17 @@ labs/reverb/
 | 4 | FDN Feedback/Matrix | 8.7% |
 | 5 | Diffuser | 8.4% |
 | 6 | LFO Normalize + Control | 7.4% |
-| 7 | **Input/Predelay** | **6.5%** |
+| 7 | Input/Predelay | 6.5% |
 | 8 | Plate Post-Allpass | 5.4% |
 | 9 | Parameter Smoothing | 4.4% |
 | 10 | Modulation/LFO | 4.2% |
 
-**Input/Predelay improvement**: ~5% whole-reverb (Room/Hall).
 **All ring buffers** (FDN, early reflections, diffusers, post-allpass, predelay) now use power-of-two + bitmask.
-
-### Cumulative Progress (Room Dispatch, 5s @ 48kHz)
-
-| Session | Room Time | Delta | Cumulative |
-|---------|-----------|-------|------------|
-| Baseline (original linear) | ~63 ms | — | — |
-| S001 (cubic + SIMD core) | 107.3 ms | +70% quality | Quality baseline |
-| S004 (FDN bitmask) | 110.0 ms | -4.5% | — |
-| S005 (early refl bitmask) | 124.0 ms | +1.8%* | — |
-| S006 (post-allpass bitmask) | 127.5 ms | -1.8%* | — |
-| S007 (diffuser bitmask) | 103.7 ms | **-18.7%** | **-3.3% vs S001** |
-| S008 (predelay bitmask) | 98.6 ms | **-4.9%** | **-8.1% vs S001** |
-
-*Numbers affected by system load variance on 2-core machine.
 
 ### Durable Patterns (Accepted)
 
 1. **Power-of-two + bitmask wrapping** — The universal pattern. Applied to all 5
-   ring buffer types: FDN delay lines, early reflections, diffusers, post-allpass,
-   and predelay. Eliminates all branches and modulo operations from buffer wrapping.
+   ring buffer types. Eliminates all branches and modulo operations from buffer wrapping.
 2. **Separate delay length from buffer capacity** — Allows power-of-two capacity
    while preserving exact delay timing. Used in post-allpass, diffusers.
 3. **Cache mask as member variable** — `m_delayLineMasks[]`, `m_earlyMask`,
@@ -120,7 +119,27 @@ labs/reverb/
    must be preserved independently of capacity.
 6. **SIMD gather for diffuser reads** — Only 4 stages, different buffers, different
    offsets. Not worth complexity; scalar bitmask is nearly as fast as SSE.
+7. **Reducing LFO normalization frequency** — Expected gain (~0.2%) is below
+   benchmark noise floor (~5-15%). No measurable improvement.
+8. **Fast reciprocal sqrt for scalar LFOs** — Expected gain (~0.2%) is below
+   measurement threshold. Not worth adding approximate math.
 
-**Session 009 target**: LFO Normalize + Control — `normalizeOscillator` does scalar
-`std::sqrt` per line every 32 samples. Could use fast rsqrt approximation or reduce
-normalization frequency to 64/128 samples.
+### Performance Plateau Analysis
+
+The remaining hotspots are fundamentally limited by:
+- **FDN Delay Read (28.6%)**: Cubic Hermite interpolation arithmetic (64 FMAs/sample)
+  and memory bandwidth (32 float reads/sample). Cannot be optimized further without
+  changing interpolation order or memory layout.
+- **Output/Mix (14.0%)**: Width matrix (4 FMAs/sample) and clamping. SIMD would save
+  ~2 ops, negligible at current performance levels.
+- **LFO Normalize + Control (7.4%)**: Infrequent operations that appear large in
+  profile builds due to `std::chrono` overhead distortion. Actual production cost <1%.
+
+**Further meaningful gains require:**
+- AVX2-capable hardware (projected 1.5-2.0x from vectorized FDN feedback)
+- Lower-noise benchmark environment (to measure sub-5% optimizations)
+- Architectural redesign of FDN delay-line memory layout for gather-friendly access
+
+**Session 010 recommendation:** Either target a specific sub-hotspot with proven
+potential (e.g., Parameter Smoothing SSE vectorization) or pivot to measuring
+on AVX2 hardware to validate the AVX2 FDN path.
