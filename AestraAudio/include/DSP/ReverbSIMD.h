@@ -5,6 +5,7 @@
 #include "CPUDetection.h"
 
 #include <array>
+#include <cmath>
 #include <cstdint>
 
 #if defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
@@ -35,6 +36,13 @@ static constexpr size_t kEarlyTapCount = 12;
 // Test-only hooks: set to true to force specific paths for benchmarking
 extern bool g_forceScalarFallback;
 extern bool g_forceLinearInterpolation;
+
+inline float sanitizeFeedbackValue(float value) noexcept {
+    if (!std::isfinite(value) || std::abs(value) < 1.0e-20f) {
+        return 0.0f;
+    }
+    return value;
+}
 
 // ============================================================================
 // Quality improvement: Cubic Hermite interpolation for delay line reads.
@@ -145,7 +153,7 @@ inline void processFDNSampleAVX2(
     alignas(32) float writeVals[8];
     _mm256_store_ps(writeVals, vWrite);
     for (size_t line = 0; line < kFDNLineCount; ++line) {
-        delayLines[line][delayPos[line]] = writeVals[line];
+        delayLines[line][delayPos[line]] = sanitizeFeedbackValue(writeVals[line]);
         delayPos[line] = (delayPos[line] + 1) & delayMasks[line];
     }
 
@@ -247,6 +255,13 @@ inline void processFDNSampleSSE(
     float& wetL,
     float& wetR) noexcept {
 
+    const __m128 vLineOut0 = _mm_loadu_ps(lineOut);
+    const __m128 vLineOut1 = _mm_loadu_ps(lineOut + 4);
+    __m128 vSum = _mm_add_ps(vLineOut0, vLineOut1);
+    vSum = _mm_add_ps(vSum, _mm_movehl_ps(vSum, vSum));
+    vSum = _mm_add_ps(vSum, _mm_shuffle_ps(vSum, vSum, _MM_SHUFFLE(1, 1, 1, 1)));
+    const __m128 vHouseholderMean = _mm_set1_ps(_mm_cvtss_f32(vSum) * 0.25f);
+
     for (size_t block = 0; block < 2; ++block) {
         size_t b = block * 4;
         __m128 vLineOut = _mm_loadu_ps(&lineOut[b]);
@@ -258,13 +273,7 @@ inline void processFDNSampleSSE(
         __m128 vOutputL = _mm_loadu_ps(&outputL[b]);
         __m128 vOutputR = _mm_loadu_ps(&outputR[b]);
 
-        // Sum for partial mean (SSE2 horizontal add)
-        __m128 vSum = vLineOut;
-        vSum = _mm_add_ps(vSum, _mm_movehl_ps(vSum, vSum));
-        vSum = _mm_add_ps(vSum, _mm_shuffle_ps(vSum, vSum, _MM_SHUFFLE(1, 1, 1, 1)));
-        __m128 vMean = _mm_mul_ps(vSum, _mm_set1_ps(0.25f));
-
-        __m128 vMatrixOut = _mm_sub_ps(vLineOut, vMean);
+        __m128 vMatrixOut = _mm_sub_ps(vLineOut, vHouseholderMean);
 
         __m128 vDampCoeff = _mm_set1_ps(dampingCoeff);
         __m128 vNewDampState = _mm_add_ps(_mm_mul_ps(vDampCoeff, _mm_sub_ps(vMatrixOut, vDampState)), vDampState);
@@ -286,7 +295,7 @@ inline void processFDNSampleSSE(
         _mm_store_ps(writeVals, vWrite);
         for (size_t i = 0; i < 4; ++i) {
             size_t line = b + i;
-            delayLines[line][delayPos[line]] = writeVals[i];
+            delayLines[line][delayPos[line]] = sanitizeFeedbackValue(writeVals[i]);
             delayPos[line] = (delayPos[line] + 1) & delayMasks[line];
         }
 
@@ -380,7 +389,7 @@ inline void processFDNSampleNEON(
         vst1q_f32(writeVals, vWrite);
         for (size_t i = 0; i < 4; ++i) {
             size_t line = b + i;
-            delayLines[line][delayPos[line]] = writeVals[i];
+            delayLines[line][delayPos[line]] = sanitizeFeedbackValue(writeVals[i]);
             delayPos[line] = (delayPos[line] + 1) & delayMasks[line];
         }
 
@@ -510,7 +519,7 @@ inline void processFDNSample(
         float feedback = dampingState[line] * feedbackGains[line];
         lowDampState[line] += (feedback - lowDampState[line]) * lowDampCoeff;
         feedback -= lowDampState[line] * 0.82f;
-        delayLines[line][delayPos[line]] = injected + feedback;
+        delayLines[line][delayPos[line]] = sanitizeFeedbackValue(injected + feedback);
         delayPos[line] = (delayPos[line] + 1) & delayMasks[line];
         wetL += lineOut[line] * outputL[line];
         wetR += lineOut[line] * outputR[line];

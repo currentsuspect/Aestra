@@ -327,6 +327,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbBenchmark.cpp")
     )
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbSIMDParityTest.cpp")
+    add_executable(ReverbSIMDParityTest AestraAudio/ReverbSIMDParityTest.cpp)
+    target_link_libraries(ReverbSIMDParityTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(ReverbSIMDParityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ReverbSIMDParityTest COMMAND ReverbSIMDParityTest)
+    set_tests_properties(ReverbSIMDParityTest PROPERTIES LABELS "audio;dsp;reverb")
+endif()
+
 # Reverb Quality Measurement Lab
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbQualityLab.cpp")
     add_executable(AestraReverbQualityLab AestraAudio/ReverbQualityLab.cpp)
