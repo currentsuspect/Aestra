@@ -605,8 +605,8 @@ int main() {
 
     std::vector<ModeQuality> modes;
     modes.push_back(measureMode("room", 0.0f, 0.6f, 0.5f, 0.7f, sampleRate, numFrames, qualityDir));
-    modes.push_back(measureMode("hall", 1.0f, 0.9f, 0.9f, 0.85f, sampleRate, numFrames, qualityDir));
-    modes.push_back(measureMode("plate", 2.0f, 0.7f, 0.6f, 0.8f, sampleRate, numFrames, qualityDir));
+    modes.push_back(measureMode("hall", 0.5f, 0.9f, 0.9f, 0.85f, sampleRate, numFrames, qualityDir));
+    modes.push_back(measureMode("plate", 1.0f, 0.7f, 0.6f, 0.8f, sampleRate, numFrames, qualityDir));
 
     // Write JSON report
     {
