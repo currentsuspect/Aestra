@@ -109,8 +109,10 @@ void PluginManager::shutdown() {
         return;
     }
 
-    // Cancel any ongoing scan
-    m_scanner.cancelScan();
+    // Cancel any ongoing scan and join the scanner thread.
+    // This ensures the thread is stopped before static singleton destruction,
+    // which prevents the shutdown hang that forced the quick_exit workaround.
+    m_scanner.cancelAndJoin();
 
     // Save plugin cache only when platform utilities are available.
     const bool platformInitialized = Platform::isInitialized();

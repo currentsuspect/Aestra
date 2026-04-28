@@ -215,10 +215,25 @@ int main(int argc, char* argv[]) {
 #endif
     
     Log::info("Aestra Exiting with code: " + std::to_string(exitCode));
-    
-    // TODO: [P2] Investigate shutdown hang - static singleton destructors (PluginManager,
-    // AudioEngine) or ASIO/COM cleanup order causes process to hang after all explicit
-    // cleanup completes. Using quick_exit to bypass, but root cause still unknown.
-    // See: AestraApp::shutdown() for explicit cleanup that runs successfully.
-    std::quick_exit(exitCode);
+
+    // Session 020: Replaced std::quick_exit with normal return.
+    //
+    // Root cause of the prior hang: PluginManager::shutdown() called
+    // m_scanner.cancelScan() but did not join the scanner thread. The
+    // thread join was deferred to PluginScanner::~PluginScanner() during
+    // static singleton destruction, where it could block on file I/O
+    // or a stale cancel-check loop.
+    //
+    // Fix: PluginManager::shutdown() now calls m_scanner.cancelAndJoin()
+    // which explicitly joins the thread during the deterministic shutdown
+    // sequence, before static destruction.
+    //
+    // Remaining static singletons (AppLifecycle, AudioThreadStats,
+    // Preferences, NUIThemeManager) have trivial or default destructors
+    // and are safe to destroy in unspecified order.
+    //
+    // If a future shutdown hang reappears, re-enable quick_exit as a
+    // last-resort fallback and add targeted diagnostics to identify the
+    // blocking subsystem.
+    return exitCode;
 }

@@ -400,6 +400,13 @@ void PluginScanner::cancelScan() {
     m_cancelRequested.store(true);
 }
 
+void PluginScanner::cancelAndJoin() {
+    m_cancelRequested.store(true);
+    if (m_scanThread.joinable()) {
+        m_scanThread.join();
+    }
+}
+
 bool PluginScanner::isScanning() const {
     return m_scanning.load();
 }
