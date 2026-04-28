@@ -125,8 +125,17 @@ struct StereoMetrics {
 };
 
 struct TransientMetrics {
-    float bloomTimeMs = 0.0f;   // time from impulse to -3dB below peak
-    float earlyDensity = 0.0f;  // number of significant peaks in first 50ms
+    float bloomTimeMs = 0.0f;        // time from impulse to -3dB below peak
+    float earlyOnsetMs = 0.0f;       // first sample > -60dB relative to early-window peak
+    float earlyPeakMs = 0.0f;        // time of maximum in early window
+    float earlyPeakCount = 0.0f;     // local maxima above -30dB rel to early-window peak
+    float earlyActiveBins1ms = 0.0f; // 1ms bins with energy above -40dB rel to early-window peak
+    float earlyActiveBinRatio = 0.0f;// active bins / total bins in early window
+    float earlyCrestFactor = 0.0f;   // peak / RMS in early window
+    float earlyEnergyMs25 = 0.0f;    // ms to reach 25% of early-window cumulative energy
+    float earlyEnergyMs50 = 0.0f;    // ms to reach 50% of early-window cumulative energy
+    float earlyEnergyMs75 = 0.0f;    // ms to reach 75% of early-window cumulative energy
+    float earlyDensityScore = 0.0f;  // composite: peakCount * activeRatio / crestFactor
 };
 
 struct ModeQuality {
@@ -391,18 +400,115 @@ static TransientMetrics computeTransient(const std::vector<float>& left, const s
     }
     if (m.bloomTimeMs == 0.0f) m.bloomTimeMs = static_cast<float>(n - peakIdx) / sampleRate * 1000.0f;
 
-    // Early density: count of local maxima in first 50ms (excluding sample 0)
-    size_t earlyWindow = static_cast<size_t>(sampleRate * 0.05f);
-    earlyWindow = std::min(earlyWindow, n);
-    int peaks = 0;
-    float directPeak = std::max(std::abs(left[0]), std::abs(right[0]));
-    for (size_t i = 2; i + 2 < earlyWindow; ++i) {
-        float v = std::abs(left[i]) + std::abs(right[i]);
-        float prev = std::abs(left[i-1]) + std::abs(right[i-1]);
-        float next = std::abs(left[i+1]) + std::abs(right[i+1]);
-        if (v > prev && v > next && v > directPeak * 0.02f) peaks++;
+    // =========================================================================
+    // Session 014: Comprehensive early reflection metrics
+    // =========================================================================
+    // The old metric reported 0 density because:
+    // 1. First 50ms is silent (predelay + processing latency)
+    // 2. Threshold was relative to direct impulse peak (1.0), which is far above
+    //    the actual early reflection energy (~0.05-0.4)
+    // 3. AestraVerb produces a concentrated early energy burst, not multiple
+    //    discrete peaks in the first 50ms
+    //
+    // New approach: use a wider window (0-150ms), threshold relative to the
+    // EARLY WINDOW peak, and report multiple complementary metrics.
+    // =========================================================================
+
+    const size_t kEarlyWindowEnd = static_cast<size_t>(sampleRate * 0.15f); // 150ms
+    const size_t kEarlyEnd = std::min(kEarlyWindowEnd, n);
+    if (kEarlyEnd < 3) return m;
+
+    // Mono sum for analysis
+    std::vector<float> mono(kEarlyEnd);
+    for (size_t i = 0; i < kEarlyEnd; ++i) {
+        mono[i] = std::abs(left[i]) + std::abs(right[i]);
     }
-    m.earlyDensity = static_cast<float>(peaks);
+
+    // Find early-window peak (ignoring sample 0 which is the input impulse)
+    float earlyPeak = 0.0f;
+    size_t earlyPeakIdx = 0;
+    for (size_t i = 1; i < kEarlyEnd; ++i) {
+        if (mono[i] > earlyPeak) {
+            earlyPeak = mono[i];
+            earlyPeakIdx = i;
+        }
+    }
+    if (earlyPeak < 1e-10f) return m; // no early energy at all
+
+    m.earlyPeakMs = static_cast<float>(earlyPeakIdx) / sampleRate * 1000.0f;
+
+    // Onset: first sample > -60 dB relative to early-window peak
+    const float onsetThresh = earlyPeak * 0.001f; // -60 dB
+    for (size_t i = 1; i < kEarlyEnd; ++i) {
+        if (mono[i] > onsetThresh) {
+            m.earlyOnsetMs = static_cast<float>(i) / sampleRate * 1000.0f;
+            break;
+        }
+    }
+
+    // Peak count: local maxima above -30 dB relative to early-window peak
+    const float peakThresh = earlyPeak * 0.0316f; // -30 dB
+    int peakCount = 0;
+    for (size_t i = 2; i + 2 < kEarlyEnd; ++i) {
+        if (mono[i] > mono[i-1] && mono[i] > mono[i+1] && mono[i] > peakThresh) {
+            peakCount++;
+        }
+    }
+    m.earlyPeakCount = static_cast<float>(peakCount);
+
+    // 1ms bin analysis: count active bins
+    const size_t bins1ms = static_cast<size_t>(sampleRate * 0.001f); // samples per 1ms bin
+    if (bins1ms > 0) {
+        size_t totalBins = (kEarlyEnd + bins1ms - 1) / bins1ms;
+        const float binThresh = earlyPeak * 0.01f; // -40 dB
+        size_t activeBins = 0;
+        for (size_t b = 0; b < totalBins; ++b) {
+            size_t start = b * bins1ms;
+            size_t end = std::min(start + bins1ms, kEarlyEnd);
+            float binMax = 0.0f;
+            for (size_t i = start; i < end; ++i) {
+                binMax = std::max(binMax, mono[i]);
+            }
+            if (binMax > binThresh) activeBins++;
+        }
+        m.earlyActiveBins1ms = static_cast<float>(activeBins);
+        m.earlyActiveBinRatio = totalBins > 0 ? static_cast<float>(activeBins) / static_cast<float>(totalBins) : 0.0f;
+    }
+
+    // Crest factor in early window
+    double earlySumSq = 0.0;
+    for (size_t i = 0; i < kEarlyEnd; ++i) {
+        earlySumSq += mono[i] * mono[i];
+    }
+    float earlyRms = static_cast<float>(std::sqrt(earlySumSq / static_cast<double>(kEarlyEnd)));
+    m.earlyCrestFactor = earlyPeak / std::max(earlyRms, 1e-20f);
+
+    // Energy buildup: time to reach 25%, 50%, 75% of cumulative energy
+    std::vector<double> cumEnergy(kEarlyEnd);
+    double totalEnergy = 0.0;
+    for (size_t i = 0; i < kEarlyEnd; ++i) {
+        totalEnergy += mono[i] * mono[i];
+        cumEnergy[i] = totalEnergy;
+    }
+    if (totalEnergy > 1e-20) {
+        for (size_t i = 0; i < kEarlyEnd; ++i) {
+            float ratio = static_cast<float>(cumEnergy[i] / totalEnergy);
+            if (m.earlyEnergyMs25 == 0.0f && ratio >= 0.25f) {
+                m.earlyEnergyMs25 = static_cast<float>(i) / sampleRate * 1000.0f;
+            }
+            if (m.earlyEnergyMs50 == 0.0f && ratio >= 0.50f) {
+                m.earlyEnergyMs50 = static_cast<float>(i) / sampleRate * 1000.0f;
+            }
+            if (m.earlyEnergyMs75 == 0.0f && ratio >= 0.75f) {
+                m.earlyEnergyMs75 = static_cast<float>(i) / sampleRate * 1000.0f;
+                break;
+            }
+        }
+    }
+
+    // Composite density score: more peaks + more active bins = higher density
+    // Divided by crest factor to penalize sparse single-spike responses
+    m.earlyDensityScore = (m.earlyPeakCount * m.earlyActiveBinRatio) / std::max(m.earlyCrestFactor, 1.0f);
 
     return m;
 }
@@ -554,7 +660,16 @@ static std::string generateJsonReport(const std::vector<ModeQuality>& modes, flo
         j << "      },\n";
         j << "      \"transient\": {\n";
         j << "        \"bloomTimeMs\": " << q.transient.bloomTimeMs << ",\n";
-        j << "        \"earlyDensity\": " << q.transient.earlyDensity << "\n";
+        j << "        \"earlyOnsetMs\": " << q.transient.earlyOnsetMs << ",\n";
+        j << "        \"earlyPeakMs\": " << q.transient.earlyPeakMs << ",\n";
+        j << "        \"earlyPeakCount\": " << q.transient.earlyPeakCount << ",\n";
+        j << "        \"earlyActiveBins1ms\": " << q.transient.earlyActiveBins1ms << ",\n";
+        j << "        \"earlyActiveBinRatio\": " << q.transient.earlyActiveBinRatio << ",\n";
+        j << "        \"earlyCrestFactor\": " << q.transient.earlyCrestFactor << ",\n";
+        j << "        \"earlyEnergyMs25\": " << q.transient.earlyEnergyMs25 << ",\n";
+        j << "        \"earlyEnergyMs50\": " << q.transient.earlyEnergyMs50 << ",\n";
+        j << "        \"earlyEnergyMs75\": " << q.transient.earlyEnergyMs75 << ",\n";
+        j << "        \"earlyDensityScore\": " << q.transient.earlyDensityScore << "\n";
         j << "      }\n";
         j << "    }" << (m + 1 < modes.size() ? "," : "") << "\n";
     }
@@ -610,13 +725,22 @@ static std::string generateMarkdownReport(const std::vector<ModeQuality>& modes)
            << " |\n";
     }
 
-    md << "\n## Transient Smear\n\n";
-    md << "| Mode | Bloom Time (ms) | Early Reflection Density |\n";
-    md << "|------|-----------------|--------------------------|\n";
+    md << "\n## Transient Smear & Early Reflections\n\n";
+    md << "| Mode | Bloom (ms) | Onset (ms) | Peak (ms) | PeakCount | ActiveBins | ActiveRatio | Crest | E25% | E50% | E75% | DensityScore |\n";
+    md << "|------|------------|------------|-----------|-----------|------------|-------------|-------|------|------|------|--------------|\n";
     for (const auto& q : modes) {
         md << "| " << q.name
            << " | " << std::fixed << std::setprecision(1) << q.transient.bloomTimeMs
-           << " | " << static_cast<int>(q.transient.earlyDensity)
+           << " | " << std::setprecision(1) << q.transient.earlyOnsetMs
+           << " | " << std::setprecision(1) << q.transient.earlyPeakMs
+           << " | " << static_cast<int>(q.transient.earlyPeakCount)
+           << " | " << static_cast<int>(q.transient.earlyActiveBins1ms)
+           << " | " << std::setprecision(2) << q.transient.earlyActiveBinRatio
+           << " | " << std::setprecision(1) << q.transient.earlyCrestFactor
+           << " | " << std::setprecision(1) << q.transient.earlyEnergyMs25
+           << " | " << std::setprecision(1) << q.transient.earlyEnergyMs50
+           << " | " << std::setprecision(1) << q.transient.earlyEnergyMs75
+           << " | " << std::setprecision(3) << q.transient.earlyDensityScore
            << " |\n";
     }
 
@@ -642,14 +766,13 @@ static std::string generateMarkdownReport(const std::vector<ModeQuality>& modes)
 
     md << "\n## Recommended Next Session Target\n\n";
     md << "Based on this baseline, the most promising quality improvement areas are:\n\n";
-    md << "1. **Early reflection density metric**: The current detection threshold may be too high. "
-       << "All modes report zero early density.\n\n";
-    md << "2. **Perceptual peak validation**: The metallic-peak metric now includes severity ratings. "
-       << "Low-severity peaks in the presence/air band may not require correction. "
-       << "Listening validation is the final arbiter.\n\n";
-    md << "3. **Mode distinctness**: If Room/Hall/Plate show similar decay shapes, "
-       << "the mode differentiation may need stronger parameter scaling or different "
-       << "delay base arrays.\n";
+    md << "1. **Listening validation with synthetic material**: The reverb has been optimized for "
+       << "metrics. Real listening tests with snare, vocal, and bright transient material would "
+       << "confirm whether the current Plate brightness and Room density are musically appropriate.\n\n";
+    md << "2. **Mode distinctness**: If Room/Hall/Plate show similar decay shapes or early response "
+       << "profiles, the mode differentiation may need stronger parameter scaling.\n\n";
+    md << "3. **Performance on lower-end hardware**: Current benchmarks are on a 2-core machine. "
+       << "Verify real-time budget on target hardware.\n";
 
     return md.str();
 }
@@ -718,6 +841,12 @@ int main() {
                   << " Crest=" << q.spectral.crestFactor
                   << " Metallic=" << static_cast<int>(q.spectral.metallicPeakHz) << "Hz/"
                   << q.spectral.metallicPeakBand << "/" << q.spectral.metallicPeakSeverity
+                  << " Early=" << std::setprecision(1) << q.transient.earlyOnsetMs
+                  << "ms-onset " << std::setprecision(1) << q.transient.earlyPeakMs
+                  << "ms-peak " << static_cast<int>(q.transient.earlyPeakCount)
+                  << "-peaks " << std::setprecision(2) << q.transient.earlyActiveBinRatio
+                  << "-active " << std::setprecision(3) << q.transient.earlyDensityScore
+                  << "-score"
                   << "\n";
     }
 
