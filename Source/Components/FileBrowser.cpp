@@ -35,12 +35,12 @@ namespace AestraUI {
 namespace {
 
 constexpr float kPreviewPanelHeight = 90.0f;
-constexpr float BROWSER_SEARCH_ROW_H = 34.0f;
+constexpr float BROWSER_SEARCH_ROW_H = 36.0f;
 constexpr float BROWSER_TOP_PAD = 8.0f;
 constexpr float BROWSER_CONTENT_GAP = 8.0f;
 constexpr float BROWSER_NAV_ROW_H = 28.0f;
 constexpr float BROWSER_LIST_HEADER_H = 52.0f;
-constexpr float BROWSER_LIST_ROW_H = 24.0f;
+constexpr float BROWSER_LIST_ROW_H = 25.0f;
 constexpr float BROWSER_BUTTONS_ROW_H = 0.0f;
 constexpr float BROWSER_BREADCRUMB_ROW_H = 0.0f;
 constexpr float BROWSER_ROW_SPACING = BROWSER_CONTENT_GAP;
@@ -333,7 +333,7 @@ FileBrowser::FileBrowser()
     // Initialize search input
     // Initialize search input
     searchInput_ = std::make_shared<NUITextInput>();
-    searchInput_->setPlaceholderText("Search files...");
+    searchInput_->setPlaceholderText("Search library...");
     addChild(searchInput_);
     
     // Bind search callback
@@ -341,8 +341,10 @@ FileBrowser::FileBrowser()
         applyFilter();
     });
     searchInput_->setMaxLength(512); 
-    searchInput_->setTextColor(themeManager.getColor("textPrimary")); 
-    searchInput_->setBorderRadius(18.0f); // Pill shape for search bar
+    searchInput_->setTextColor(themeManager.getColor("textPrimary"));
+    searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
+    searchInput_->setPadding(34.0f);
+    searchInput_->setBorderRadius(6.0f);
 
     // Initialize icons with improved visibility for Liminal Dark v2.0
     // Use inline SVG content for reliable icon loading
@@ -772,11 +774,11 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     auto& themeManager = NUIThemeManager::getInstance();
     navHits_.clear();
 
-    const NUIColor paneBg(0.067f, 0.067f, 0.086f, 1.0f);
-    const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.54f);
-    const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.80f);
-    const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
-    const NUIColor selectedBg(0.11f, 0.12f, 0.16f, 0.94f);
+    const NUIColor paneBg(0.061f, 0.064f, 0.079f, 1.0f);
+    const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.46f);
+    const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.76f);
+    const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.44f);
+    const NUIColor selectedBg = themeManager.getColor("accentPrimary").withAlpha(0.105f);
     const NUIColor hoverBg = NUIColor::white().withAlpha(0.035f);
     const NUIColor divider = themeManager.getColor("border").withAlpha(0.36f);
 
@@ -799,7 +801,9 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     };
 
     auto drawSection = [&](const std::string& label) {
-        renderer.drawText(label, {layout.navPane.x + 16.0f, y}, 10.5f, sectionColor);
+        std::string upper = label;
+        std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+        renderer.drawText(upper, {layout.navPane.x + 16.0f, y}, 10.0f, sectionColor);
         if (label == "Collections") {
             renderer.drawText("^", {layout.navPane.right() - 18.0f, y}, 10.0f, sectionColor.withAlpha(0.72f));
         }
@@ -892,6 +896,9 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         const bool hovered = hoveredNavIndex_ == hitIndex;
         if (selected) {
             renderer.fillRoundedRect(row, 4.0f, selectedBg);
+            renderer.fillRoundedRect({row.x, row.y + 4.0f, 2.0f, row.height - 8.0f},
+                                     1.0f,
+                                     themeManager.getColor("accentPrimary").withAlpha(0.92f));
         } else if (hovered) {
             renderer.fillRoundedRect(row, 4.0f, hoverBg);
         }
@@ -952,8 +959,8 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
 void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& layout) {
     auto& themeManager = NUIThemeManager::getInstance();
-    const NUIColor headerBg = themeManager.getColor("backgroundSecondary");
-    const NUIColor border = themeManager.getColor("border").withAlpha(0.50f);
+    const NUIColor headerBg = themeManager.getColor("backgroundSecondary").darkened(0.03f);
+    const NUIColor border = themeManager.getColor("border").withAlpha(0.40f);
     const NUIColor text = themeManager.getColor("textPrimary");
     renderer.fillRect(layout.listHeader, headerBg);
 
@@ -980,7 +987,7 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
     renderer.drawText(crumbText,
                       {crumb.x, std::round(renderer.calculateTextY(crumb, 12.0f))},
                       12.0f,
-                      text.withAlpha(0.82f));
+                      text.withAlpha(0.76f));
     renderer.drawLine({layout.listHeader.x, layout.listHeader.y + 27.0f},
                       {layout.listHeader.right(), layout.listHeader.y + 27.0f},
                       1.0f, border.withAlpha(0.65f));
@@ -991,10 +998,10 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
     const float kindX = layout.listHeader.right() - 56.0f;
     renderer.drawText("Name", {layout.listHeader.x + 12.0f,
                                std::round(renderer.calculateTextY(columnRow, 12.0f))},
-                      12.0f, themeManager.getColor("textPrimary").withAlpha(0.82f));
+                      11.5f, themeManager.getColor("textSecondary").withAlpha(0.62f));
     renderer.drawText("Kind", {kindX,
-                               std::round(renderer.calculateTextY(columnRow, 12.0f))},
-                      12.0f, themeManager.getColor("textPrimary").withAlpha(0.70f));
+                               std::round(renderer.calculateTextY(columnRow, 11.5f))},
+                      11.5f, themeManager.getColor("textSecondary").withAlpha(0.54f));
 }
 
 void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -1112,6 +1119,24 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     // Render interactive children (Search Input, Popup Menus) ON TOP of the cache
     // These handle their own dirtiness and shouldn't trigger full cache rebuilds
     renderChildren(renderer);
+
+    if (searchInput_ && searchInput_->isVisible()) {
+        auto& themeManager = NUIThemeManager::getInstance();
+        const NUIRect search = searchInput_->getBounds();
+        const NUIColor iconColor = themeManager.getColor("textSecondary").withAlpha(0.58f);
+        const float cx = search.x + 17.0f;
+        const float cy = search.y + search.height * 0.5f;
+        renderer.strokeCircle({cx, cy - 1.0f}, 4.6f, 1.3f, iconColor);
+        renderer.drawLine({cx + 3.7f, cy + 2.7f}, {cx + 7.2f, cy + 6.2f}, 1.3f, iconColor);
+
+        const float fx = search.right() - 18.0f;
+        for (int i = 0; i < 3; ++i) {
+            const float y = search.y + 11.0f + static_cast<float>(i) * 5.5f;
+            renderer.drawLine({fx - 6.0f, y}, {fx + 6.0f, y}, 1.1f, iconColor.withAlpha(0.78f));
+            const float knobX = fx + (i == 1 ? -2.5f : 3.0f);
+            renderer.fillCircle({knobX, y}, 1.7f, iconColor);
+        }
+    }
     
     // Loading spinner removed - now handled by FilePreviewPanel
 }
@@ -1195,9 +1220,12 @@ void FileBrowser::onResize(int width, int height) {
         searchInput_->setBounds(browserLayout.search);
         
         searchInput_->setTextColor(textColor_);
-        searchInput_->setBackgroundColor(NUIColor(0.110f, 0.116f, 0.134f, 0.96f));
-        searchInput_->setBorderColor(themeManager.getColor("border").withAlpha(0.34f));
-        searchInput_->setBorderRadius(3.0f);
+        searchInput_->setBackgroundColor(NUIColor(0.083f, 0.088f, 0.106f, 0.98f));
+        searchInput_->setBorderColor(themeManager.getColor("border").withAlpha(0.36f));
+        searchInput_->setFocusedBorderColor(themeManager.getColor("accentPrimary").withAlpha(0.72f));
+        searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
+        searchInput_->setPadding(34.0f);
+        searchInput_->setBorderRadius(6.0f);
     }
     
     itemHeight_ = BROWSER_LIST_ROW_H;
@@ -2507,14 +2535,15 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     renderer.setClipRect(listClip);
 
-    const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.92f);
+    const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.50f);
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary");
-    const NUIColor selectedRow = themeManager.getColor("surfaceRaised").withAlpha(0.92f);
-    const NUIColor hoverRow = NUIColor::white().withAlpha(0.032f);
-    const NUIColor gridLine = themeManager.getColor("border").withAlpha(0.20f);
-    const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.92f);
-    const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.62f);
-    const float labelFont = 13.0f;
+    const NUIColor selectedRow = themeManager.getColor("accentPrimary").withAlpha(0.15f);
+    const NUIColor hoverRow = NUIColor::white().withAlpha(0.028f);
+    const NUIColor gridLine = themeManager.getColor("border").withAlpha(0.14f);
+    const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.82f);
+    const NUIColor folderText = themeManager.getColor("textPrimary").withAlpha(0.92f);
+    const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.56f);
+    const float labelFont = 12.5f;
     const float rowIndentStep = 18.0f;
 
     for (int i = firstVisibleIndex; i < lastVisibleIndex; ++i) {
@@ -2570,7 +2599,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         }
 
         renderer.drawText(displayName, {contentX, std::round(renderer.calculateTextY(itemRect, labelFont))},
-                          labelFont, selected ? themeManager.getColor("textPrimary") : text);
+                          labelFont,
+                          selected ? themeManager.getColor("textPrimary")
+                                   : item->isDirectory ? folderText : text);
         renderer.drawText(item->isDirectory ? "Folder" : "Audio",
                           {kindX, std::round(renderer.calculateTextY(itemRect, 12.0f))},
                           12.0f,
@@ -2856,6 +2887,24 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
     renderer.fillRect(topBand, NUIColor(0.086f, 0.092f, 0.108f, 1.0f));
     renderer.drawLine({topBand.x, topBand.bottom()}, {topBand.right(), topBand.bottom()},
                       1.0f, themeManager.getColor("border").withAlpha(0.40f));
+
+    if (searchInput_) {
+        const NUIRect search = searchInput_->getBounds();
+        const NUIColor iconColor = themeManager.getColor("textSecondary").withAlpha(0.58f);
+        const float cx = search.x + 17.0f;
+        const float cy = search.y + search.height * 0.5f;
+        renderer.strokeCircle({cx, cy - 1.0f}, 4.6f, 1.3f, iconColor);
+        renderer.drawLine({cx + 3.7f, cy + 2.7f}, {cx + 7.2f, cy + 6.2f}, 1.3f, iconColor);
+
+        const float fx = search.right() - 18.0f;
+        for (int i = 0; i < 3; ++i) {
+            const float y = search.y + 11.0f + static_cast<float>(i) * 5.5f;
+            renderer.drawLine({fx - 6.0f, y}, {fx + 6.0f, y}, 1.1f, iconColor.withAlpha(0.78f));
+            const float knobX = fx + (i == 1 ? -2.5f : 3.0f);
+            renderer.fillCircle({knobX, y}, 1.7f, iconColor);
+        }
+    }
+
     renderNavigationPane(renderer, browserLayout);
     renderListHeader(renderer, browserLayout);
     return;

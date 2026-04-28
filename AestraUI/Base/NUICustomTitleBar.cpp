@@ -141,9 +141,9 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     const float userX = badge.x - userSize.width - 14.0f;
     renderer.drawText(user, {userX, std::round(renderer.calculateTextY({userX, badge.y, userSize.width, badge.height}, userFont))},
                       userFont, muted);
-    renderer.fillRoundedRect(badge, 11.0f, NUIColor::transparent());
-    renderer.strokeRoundedRect(badge, 11.0f, 1.0f, accent.withAlpha(0.78f));
-    renderer.drawTextCentered("Founder", badge, 11.0f, text);
+    renderer.fillRoundedRect(badge, 11.0f, accent.withAlpha(0.055f));
+    renderer.strokeRoundedRect(badge, 11.0f, 1.0f, accent.withAlpha(0.50f));
+    renderer.drawTextCentered("Founder", badge, 11.0f, text.withAlpha(0.84f));
     
     // Render custom children (NUIMenuBar, view toggle, etc.)
     renderChildren(renderer);
