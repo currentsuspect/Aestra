@@ -106,7 +106,8 @@ jobs:
         run: |
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
           $env:VCPKG_BINARY_SOURCES = "clear;files,$env:RUNNER_TEMP\vcpkg\archives,readwrite"
-          if (!(Test-Path $env:VCPKG_ROOT)) {
+          if (!(Test-Path "$env:VCPKG_ROOT\.git")) {
+            if (Test-Path $env:VCPKG_ROOT) { Remove-Item -Recurse -Force $env:VCPKG_ROOT }
             git clone https://github.com/microsoft/vcpkg.git $env:VCPKG_ROOT
           }
           git -C $env:VCPKG_ROOT fetch --depth=1 origin $env:VCPKG_REF

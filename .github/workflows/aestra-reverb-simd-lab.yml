@@ -81,6 +81,11 @@ jobs:
           echo "AVX2:   $(has_flag avx2 && echo yes || echo no)"
           echo "FMA:    $(has_flag fma && echo yes || echo no)"
 
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsodium-dev libsecret-1-dev pkg-config
+
       - name: Configure Release build
         run: |
           cmake -S . -B build-reverb-lab \
@@ -89,6 +94,7 @@ jobs:
             -DAESTRA_ENABLE_UI=OFF \
             -DAESTRA_ENABLE_TESTS=ON \
             -DAESTRA_REVERB_PROFILE=ON \
+            -DAESTRA_REVERB_DIAGNOSTICS=ON \
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build benchmark
