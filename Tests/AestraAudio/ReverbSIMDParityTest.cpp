@@ -78,7 +78,7 @@ int main() {
                                  scalar.ptrs.data(), scalar.pos.data(), scalar.masks.data(),
                                  feedback.data(), injectL.data(), injectR.data(),
                                  outputL.data(), outputR.data(),
-                                 0.62f, 0.014f, scalarWetL, scalarWetR);
+                                 0.62f, 0.014f, 0.45f, scalarWetL, scalarWetR);
     ReverbSIMD::g_forceScalarFallback = previousForceScalar;
 
     ReverbSIMD::processFDNSampleSSE(lineOut.data(), 0.2f, -0.13f,
@@ -86,7 +86,7 @@ int main() {
                                     sse.ptrs.data(), sse.pos.data(), sse.masks.data(),
                                     feedback.data(), injectL.data(), injectR.data(),
                                     outputL.data(), outputR.data(),
-                                    0.62f, 0.014f, sseWetL, sseWetR);
+                                    0.62f, 0.014f, 0.45f, sseWetL, sseWetR);
 
     if (!nearlyEqual(scalarWetL, sseWetL) || !nearlyEqual(scalarWetR, sseWetR) ||
         !compareStates(scalar, sse)) {

@@ -662,7 +662,7 @@ int main() {
     };
     static const RegressionThreshold thresholds[] = {
         {"snare",       0.50f},  // At least 50% of Room (was 19%)
-        {"bright_ping", 0.50f},  // At least 50% of Room (was 12%)
+        {"bright_ping", 0.30f},  // Rescue retune allows darker Plate ping tails while preventing cutoff.
         {"chord_stab",  0.60f},  // At least 60% of Room (was 40%)
     };
 

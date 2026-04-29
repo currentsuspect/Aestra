@@ -392,7 +392,7 @@ public:
                     control.feedbackGains.data(),
                     kInjectL.data(), kInjectR.data(),
                     kOutputL.data(), kOutputR.data(),
-                    control.dampingCoeff, lowDampCoeff,
+                    control.dampingCoeff, lowDampCoeff, control.lowDampAmount,
                     wetL, wetR);
             }
             AESTRA_PROFILE_STAGE_END(kFDNFeedbackMatrix);
@@ -423,12 +423,14 @@ public:
                 wetR = sanitize(wetR);
             }
 
+            processWetVoicing(wetL, wetR, mode, control);
+
             // Late-tail stereo decorrelation (Session 011).
             // Anti-correlated diff boost: wetL' = wetL + k*(wetL-wetR), wetR' = wetR - k*(wetL-wetR).
             // Preserves mono fold-down exactly: (wetL+diff) + (wetR-diff) = wetL + wetR.
             float kDecorr = 0.0f;
             if (mode == Mode::Room) kDecorr = 0.22f;
-            else if (mode == Mode::Plate) kDecorr = 0.34f;
+            else if (mode == Mode::Plate) kDecorr = 0.26f;
             if (kDecorr > 0.0f) {
                 const float diff = (wetL - wetR) * kDecorr;
                 wetL += diff;
@@ -492,16 +494,16 @@ public:
 
     std::vector<PluginParameter> getParameters() const override {
         return {
-            { kDecay, "Decay", "DEC", "", 0.5f, 0.0f, 1.0f, true },
-            { kDamping, "Damping", "DMP", "", 0.3f, 0.0f, 1.0f, true },
-            { kPredelayMs, "Predelay", "PRE", "ms", 0.1f, 0.0f, 1.0f, true },
-            { kWidth, "Width", "WID", "", 0.7f, 0.0f, 1.0f, true },
+            { kDecay, "Decay", "DEC", "", 0.56f, 0.0f, 1.0f, true },
+            { kDamping, "Damping", "DMP", "", 0.50f, 0.0f, 1.0f, true },
+            { kPredelayMs, "Predelay", "PRE", "ms", 0.06f, 0.0f, 1.0f, true },
+            { kWidth, "Width", "WID", "", 0.68f, 0.0f, 1.0f, true },
             { kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true },
             { kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
-            { kSize, "Size", "SIZ", "x", 0.473684f, 0.0f, 1.0f, true },
-            { kDiffusion, "Diffusion", "DIF", "%", 0.7f, 0.0f, 1.0f, true },
-            { kModRate, "Mod Rate", "RTE", "x", 0.5f, 0.0f, 1.0f, true },
-            { kModDepth, "Mod Depth", "DEP", "smpl", 0.3125f, 0.0f, 1.0f, true },
+            { kSize, "Size", "SIZ", "x", 0.52f, 0.0f, 1.0f, true },
+            { kDiffusion, "Diffusion", "DIF", "%", 0.64f, 0.0f, 1.0f, true },
+            { kModRate, "Mod Rate", "RTE", "x", 0.42f, 0.0f, 1.0f, true },
+            { kModDepth, "Mod Depth", "DEP", "smpl", 0.24f, 0.0f, 1.0f, true },
             { kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, 2 },
         };
     }
@@ -555,7 +557,7 @@ public:
         return true;
     }
 
-    bool hasEditor() const override { return false; }
+    bool hasEditor() const override { return true; }
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }
@@ -685,8 +687,11 @@ private:
 
     struct ControlCache {
         float dampingCoeff{0.7f};
+        float lowDampAmount{0.45f};
         float diffusionG{0.7f};
         float modDepthSamples{2.5f};
+        float wetToneCoeff{0.6f};
+        float wetAirBlend{0.2f};
         float dryGain{0.0f};
         float wetGain{1.0f};
         float widthMain{1.7f};
@@ -711,12 +716,12 @@ private:
     static ModeConstants constantsForMode(Mode mode) {
         switch (mode) {
         case Mode::Hall:
-            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.05f, 1.05f, 0.78f, 1.35f};
+            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.18f, 0.92f, 0.74f, 1.42f};
         case Mode::Plate:
-            return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 1.35f, 1.15f, 1.02f, 0.92f};
+            return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 1.38f, 0.96f, 0.98f, 1.45f};
         case Mode::Room:
         default:
-            return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.22f, 0.82f, 0.92f, 0.95f};
+            return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.22f, 0.72f, 0.82f, 1.20f};
         }
     }
 
@@ -761,6 +766,13 @@ private:
         const float dampingParam = std::clamp(smoothedParams[kDamping], 0.0f, 1.0f);
         const float damping = std::clamp(dampingParam * constants.dampingScalar, 0.0f, 0.98f);
         cache.dampingCoeff = 1.0f - damping;
+        cache.lowDampAmount = mode == Mode::Hall ? 0.34f : (mode == Mode::Plate ? 0.42f : 0.48f);
+
+        const float toneCutHz = mode == Mode::Hall
+            ? 6200.0f - dampingParam * 2600.0f
+            : (mode == Mode::Plate ? 10500.0f - dampingParam * 2500.0f : 7600.0f - dampingParam * 3000.0f);
+        cache.wetToneCoeff = 1.0f - std::exp(-kTwoPi * std::clamp(toneCutHz, 2800.0f, 12000.0f) / sr);
+        cache.wetAirBlend = mode == Mode::Hall ? 0.08f : (mode == Mode::Plate ? 0.12f : 0.14f);
 
         const float predelayMs = std::clamp(smoothedParams[kPredelayMs], 0.0f, 1.0f) * kMaxPredelayMs;
         cache.predelaySamples = std::clamp(static_cast<int>(std::round((predelayMs / 1000.0f) * sr)),
@@ -803,8 +815,7 @@ private:
         }
 
         const float modeSpread = mode == Mode::Hall ? 1.45f : (mode == Mode::Plate ? 0.55f : 0.82f);
-        // Session 016: Plate early level raised from 0.28 to 0.40 for stronger transient energy injection.
-        const float modeLevel = mode == Mode::Hall ? 0.58f : (mode == Mode::Plate ? 0.40f : 0.78f);
+        const float modeLevel = mode == Mode::Hall ? 0.54f : (mode == Mode::Plate ? 0.40f : 0.68f);
         const float sizeTerm = std::sqrt(std::max(0.1f, size));
         const int ringSize = static_cast<int>(m_earlyL.size());
         const int maxDelay = std::max(1, ringSize - 1);
@@ -871,7 +882,11 @@ private:
         m_earlyR.assign(static_cast<size_t>(earlyPow2), 0.0f);
         m_earlyMask = static_cast<int>(earlyPow2) - 1;
 
-        m_platePeakCoeff = peakingCoefficients(-5.5f, 620.0f, static_cast<float>(m_sampleRate), 1.15f);
+        const float sr = static_cast<float>(m_sampleRate);
+        m_platePeakCoeff = peakingCoefficients(-5.5f, 620.0f, sr, 1.15f);
+        m_boxCutCoeff[0] = peakingCoefficients(-2.4f, 430.0f, sr, 0.85f);
+        m_boxCutCoeff[1] = peakingCoefficients(-1.8f, 520.0f, sr, 0.75f);
+        m_boxCutCoeff[2] = peakingCoefficients(-2.3f, 1250.0f, sr, 1.10f);
 
         clearBuffers(randomizeLfos);
     }
@@ -914,6 +929,10 @@ private:
 
         m_platePeakZ1L = m_platePeakZ2L = 0.0f;
         m_platePeakZ1R = m_platePeakZ2R = 0.0f;
+        m_boxCutZ1L = m_boxCutZ2L = 0.0f;
+        m_boxCutZ1R = m_boxCutZ2R = 0.0f;
+        m_wetToneStateL = 0.0f;
+        m_wetToneStateR = 0.0f;
     }
 
     void copyDry(const float* const* inputs, float** outputs, uint32_t numInputChannels,
@@ -1036,6 +1055,26 @@ private:
         }
     }
 
+    void processWetVoicing(float& left, float& right, Mode mode, const ControlCache& control) {
+        const auto& c = m_boxCutCoeff[static_cast<size_t>(mode)];
+        const float inL = left;
+        const float inR = right;
+        left = c[0] * inL + m_boxCutZ1L;
+        m_boxCutZ1L = c[1] * inL - c[3] * left + m_boxCutZ2L;
+        m_boxCutZ2L = c[2] * inL - c[4] * left;
+        right = c[0] * inR + m_boxCutZ1R;
+        m_boxCutZ1R = c[1] * inR - c[3] * right + m_boxCutZ2R;
+        m_boxCutZ2R = c[2] * inR - c[4] * right;
+
+        m_wetToneStateL += control.wetToneCoeff * (left - m_wetToneStateL);
+        m_wetToneStateR += control.wetToneCoeff * (right - m_wetToneStateR);
+        left = m_wetToneStateL + (left - m_wetToneStateL) * control.wetAirBlend;
+        right = m_wetToneStateR + (right - m_wetToneStateR) * control.wetAirBlend;
+
+        left = sanitize(left);
+        right = sanitize(right);
+    }
+
     static int wrapIndex(int index, int size) {
         if (size <= 0) return 0;
         index %= size;
@@ -1134,10 +1173,17 @@ private:
     // Session 012: gentle peaking EQ to tame Plate metallic ringing (~562 Hz).
     // Coefficients precomputed at init; only applied in Plate mode.
     std::array<float, 5> m_platePeakCoeff{}; // b0, b1, b2, a1, a2 (a0 normalized to 1)
+    std::array<std::array<float, 5>, 3> m_boxCutCoeff{};
     float m_platePeakZ1L = 0.0f;
     float m_platePeakZ2L = 0.0f;
     float m_platePeakZ1R = 0.0f;
     float m_platePeakZ2R = 0.0f;
+    float m_boxCutZ1L = 0.0f;
+    float m_boxCutZ2L = 0.0f;
+    float m_boxCutZ1R = 0.0f;
+    float m_boxCutZ2R = 0.0f;
+    float m_wetToneStateL = 0.0f;
+    float m_wetToneStateR = 0.0f;
 
     // TODO: separate hi/lo damping (kHFDamping + kLFDamping) for more tonal control
     // TODO: Convolution mode — IR loader using same drag system as Arsenal

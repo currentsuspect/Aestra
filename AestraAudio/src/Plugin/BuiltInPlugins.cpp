@@ -89,7 +89,7 @@ const PluginInfo& verbInfo() {
         p.numAudioOutputs = 2;
         p.hasMidiInput = false;
         p.hasMidiOutput = false;
-        p.hasEditor = false;
+        p.hasEditor = true;
         return p;
     }();
     return info;

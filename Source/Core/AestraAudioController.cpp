@@ -169,6 +169,16 @@ void AestraAudioController::shutdown() {
 
 void AestraAudioController::setContent(std::shared_ptr<AestraContent> content) {
     m_content = content;
+    Aestra::Audio::TrackManager* trackManager = nullptr;
+    Aestra::Audio::PreviewEngine* previewEngine = nullptr;
+    if (content) {
+        if (auto tm = content->getTrackManager()) {
+            trackManager = tm.get();
+        }
+        previewEngine = content->getPreviewEngine();
+    }
+    m_rtTrackManager.store(trackManager, std::memory_order_release);
+    m_rtPreviewEngine.store(previewEngine, std::memory_order_release);
 }
 
 bool AestraAudioController::openDefaultStream(void* userData) {
@@ -242,9 +252,9 @@ bool AestraAudioController::openDefaultStream(void* userData) {
         config.deviceId = outputDevice->id;
         config.inputDeviceId = inputDevice ? inputDevice->id : outputDevice->id;
         config.sampleRate = 48000;
-        config.bufferSize = 256;
+        config.bufferSize = 512;
 
-        config.numInputChannels = inputDevice ? inputDevice->maxInputChannels : 0;
+        config.numInputChannels = 0;
         config.numOutputChannels = std::min<uint32_t>(2, std::max<uint32_t>(1, outputDevice->maxOutputChannels));
         Log::info("AestraAudioController: Initial stream config - Output Device: " + std::to_string(config.deviceId) +
                   ", Input Device: " + std::to_string(config.inputDeviceId) +
@@ -302,11 +312,10 @@ bool AestraAudioController::startStream() {
         m_audioEngine->setInputCallback([](const float* input, uint32_t n, void* user) {
             auto* controller = static_cast<AestraAudioController*>(user);
             if (controller) {
-                if (auto content = controller->m_content.lock()) {
-                    if (content->getTrackManager()) {
-                        content->getTrackManager()->updateInputDiagnostics(input, n);
-                        content->getTrackManager()->processInput(input, n);
-                    }
+                auto* trackManager = controller->m_rtTrackManager.load(std::memory_order_acquire);
+                if (trackManager) {
+                    trackManager->updateInputDiagnostics(input, n);
+                    trackManager->processInput(input, n, &controller->m_audioEngine->telemetry());
                 }
             }
         }, this);
@@ -330,6 +339,7 @@ bool AestraAudioController::startStream() {
             tm->setOutputSampleRate(static_cast<double>(m_streamConfig.sampleRate));
             tm->setInputSampleRate(static_cast<double>(m_streamConfig.sampleRate));
             tm->setInputChannelCount(m_streamConfig.numInputChannels);
+            tm->publishInputMonitoringSnapshot();
             Log::info("AestraAudioController: Updated TrackManager Sample Rate to " + std::to_string(m_streamConfig.sampleRate));
         }
         if (auto pe = content->getPreviewEngine()) {
@@ -374,7 +384,6 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
     if (actualRate <= 0.0) actualRate = 48000.0;
 
     if (controller->m_audioEngine) {
-        controller->m_audioEngine->setSampleRate(static_cast<uint32_t>(actualRate));
         controller->m_audioEngine->processBlock(outputBuffer, inputBuffer, nFrames, streamTime);
     } else {
         const uint32_t outCh = std::max<uint32_t>(1, controller->m_streamConfig.numOutputChannels);
@@ -382,20 +391,15 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
     }
 
     if (inputBuffer) {
-        if (auto content = controller->m_content.lock()) {
-            if (auto trackManager = content->getTrackManager()) {
-                trackManager->mixInputMonitoring(inputBuffer, outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
-            }
+        auto* trackManager = controller->m_rtTrackManager.load(std::memory_order_acquire);
+        if (trackManager) {
+            trackManager->mixInputMonitoring(inputBuffer, outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
         }
     }
 
     // Preview mixing
-    if (auto content = controller->m_content.lock()) {
-        if (content->getPreviewEngine()) {
-            auto previewEngine = content->getPreviewEngine();
-            previewEngine->setOutputSampleRate(actualRate);
-            previewEngine->process(outputBuffer, nFrames);
-        }
+    if (auto* previewEngine = controller->m_rtPreviewEngine.load(std::memory_order_acquire)) {
+        previewEngine->process(outputBuffer, nFrames);
     }
 
     if (controller->m_audioEngine) {
@@ -412,6 +416,12 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
            const uint64_t deltaCycles = cbEndCycles - cbStartCycles;
            const uint64_t ns = (deltaCycles * 1000000000ull) / hz;
            tel.lastCallbackNs.store(ns, std::memory_order_relaxed);
+           tel.updateMaxCallbackNs(ns);
+           const uint64_t deadlineNs =
+               (static_cast<uint64_t>(nFrames) * 1000000000ull) / static_cast<uint64_t>(actualRate);
+           if (deadlineNs > 0 && ns > deadlineNs) {
+               tel.incrementOverruns();
+           }
         }
     }
 

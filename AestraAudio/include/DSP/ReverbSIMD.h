@@ -104,6 +104,7 @@ inline void processFDNSampleAVX2(
     const float* outputR,
     float dampingCoeff,
     float lowDampCoeff,
+    float lowDampAmount,
     float& wetL,
     float& wetR) noexcept {
 
@@ -144,8 +145,8 @@ inline void processFDNSampleAVX2(
     __m256 vNewLowDampState = _mm256_fmadd_ps(vLowDampCoeff, _mm256_sub_ps(vFeedback, vLowDampState), vLowDampState);
     _mm256_storeu_ps(lowDampState, vNewLowDampState);
 
-    // feedback -= lowDampState * 0.82f
-    __m256 vFinalFeedback = _mm256_fnmadd_ps(vNewLowDampState, _mm256_set1_ps(0.82f), vFeedback);
+    // Mode-aware low trim. Keep enough low/low-mid energy for body without letting sub buildup dominate.
+    __m256 vFinalFeedback = _mm256_fnmadd_ps(vNewLowDampState, _mm256_set1_ps(lowDampAmount), vFeedback);
 
     // delayLines[line][pos] = injected + feedback
     __m256 vWrite = _mm256_add_ps(vInjected, vFinalFeedback);
@@ -253,6 +254,7 @@ inline void processFDNSampleSSE(
     const float* outputR,
     float dampingCoeff,
     float lowDampCoeff,
+    float lowDampAmount,
     float& wetL,
     float& wetR) noexcept {
 
@@ -289,7 +291,7 @@ inline void processFDNSampleSSE(
         __m128 vNewLowDampState = _mm_add_ps(_mm_mul_ps(vLowDampCoeff, _mm_sub_ps(vFeedback, vLowDampState)), vLowDampState);
         _mm_storeu_ps(&lowDampState[b], vNewLowDampState);
 
-        __m128 vFinalFeedback = _mm_sub_ps(vFeedback, _mm_mul_ps(vNewLowDampState, _mm_set1_ps(0.82f)));
+        __m128 vFinalFeedback = _mm_sub_ps(vFeedback, _mm_mul_ps(vNewLowDampState, _mm_set1_ps(lowDampAmount)));
         __m128 vWrite = _mm_add_ps(vInjected, vFinalFeedback);
 
         alignas(16) float writeVals[4];
@@ -347,6 +349,7 @@ inline void processFDNSampleNEON(
     const float* outputR,
     float dampingCoeff,
     float lowDampCoeff,
+    float lowDampAmount,
     float& wetL,
     float& wetR) noexcept {
 
@@ -383,7 +386,7 @@ inline void processFDNSampleNEON(
         float32x4_t vNewLowDampState = vmlaq_f32(vLowDampState, vLowDampCoeff, vsubq_f32(vFeedback, vLowDampState));
         vst1q_f32(&lowDampState[b], vNewLowDampState);
 
-        float32x4_t vFinalFeedback = vsubq_f32(vFeedback, vmulq_f32(vNewLowDampState, vdupq_n_f32(0.82f)));
+        float32x4_t vFinalFeedback = vsubq_f32(vFeedback, vmulq_f32(vNewLowDampState, vdupq_n_f32(lowDampAmount)));
         float32x4_t vWrite = vaddq_f32(vInjected, vFinalFeedback);
 
         alignas(16) float writeVals[4];
@@ -473,6 +476,7 @@ inline void processFDNSample(
     const float* outputR,
     float dampingCoeff,
     float lowDampCoeff,
+    float lowDampAmount,
     float& wetL,
     float& wetR) noexcept {
 
@@ -483,7 +487,7 @@ inline void processFDNSample(
             processFDNSampleAVX2(lineOut, delayedL, delayedR, dampingState, lowDampState,
                                  delayLines, delayPos, delayMasks, feedbackGains,
                                  injectL, injectR, outputL, outputR,
-                                 dampingCoeff, lowDampCoeff, wetL, wetR);
+                                 dampingCoeff, lowDampCoeff, lowDampAmount, wetL, wetR);
             return;
         }
 #endif
@@ -494,7 +498,7 @@ inline void processFDNSample(
             processFDNSampleSSE(lineOut, delayedL, delayedR, dampingState, lowDampState,
                                 delayLines, delayPos, delayMasks, feedbackGains,
                                 injectL, injectR, outputL, outputR,
-                                dampingCoeff, lowDampCoeff, wetL, wetR);
+                                dampingCoeff, lowDampCoeff, lowDampAmount, wetL, wetR);
             return;
         }
 #endif
@@ -503,7 +507,7 @@ inline void processFDNSample(
         processFDNSampleNEON(lineOut, delayedL, delayedR, dampingState, lowDampState,
                              delayLines, delayPos, delayMasks, feedbackGains,
                              injectL, injectR, outputL, outputR,
-                             dampingCoeff, lowDampCoeff, wetL, wetR);
+                             dampingCoeff, lowDampCoeff, lowDampAmount, wetL, wetR);
         return;
 #endif
     }
@@ -519,7 +523,7 @@ inline void processFDNSample(
         const float injected = (delayedL * injectL[line] + delayedR * injectR[line]) * 0.115f;
         float feedback = dampingState[line] * feedbackGains[line];
         lowDampState[line] += (feedback - lowDampState[line]) * lowDampCoeff;
-        feedback -= lowDampState[line] * 0.82f;
+        feedback -= lowDampState[line] * lowDampAmount;
         delayLines[line][delayPos[line]] = sanitizeFeedbackValue(injected + feedback);
         delayPos[line] = (delayPos[line] + 1) & delayMasks[line];
         wetL += lineOut[line] * outputL[line];
