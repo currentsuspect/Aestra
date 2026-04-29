@@ -100,6 +100,7 @@ private:
     bool m_haveParentSnapshot = false;
     float m_visualPhase = 0.0f;
     float m_visualDirtyAccum = 0.0f;
+    float m_modeIndicatorPosition = 0.0f;
     NUIRect m_lastParentBounds;
     NUIPoint m_dragStartPos, m_windowStartPos;
     static constexpr float kWinW = 760, kWinH = 560, kTitleH = 52, kPad = 18, kRadius = 10;

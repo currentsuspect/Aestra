@@ -215,8 +215,8 @@ void AestraVerbEditor::layoutControls() {
         float y = mainY;
         float w = stackW;
         switch (k.paramId) {
-        case kPredelay: y = mainY + 96.0f; break;
-        case kSize: y = mainY + 172.0f; break;
+        case kPredelay: y = mainY + 88.0f; break;
+        case kSize: y = mainY + 158.0f; break;
         case kDamping: x = rightX; y = mainY + 0.0f; w = rightW; break;
         case kDiffusion: x = rightX; y = mainY + 58.0f; w = rightW; break;
         case kModRate: x = rightX; y = mainY + 116.0f; w = rightW; break;
@@ -419,20 +419,35 @@ void AestraVerbEditor::drawModeSelector(NUIRenderer& renderer, NUIColor accent) 
         renderer.strokeRoundedRect(outer, 17.0f, 1.0f, NUIColor(1, 1, 1, 0.14f));
         renderer.strokeRoundedRect({outer.x + 1.0f, outer.y + 1.0f, outer.width - 2.0f, outer.height - 2.0f},
                                    16.0f, 1.0f, NUIColor(1, 1, 1, 0.018f));
+
+        const float segmentW = outer.width / static_cast<float>(m_modes.size());
+        const float pad = 2.0f;
+        for (const auto& mode : m_modes) {
+            if (mode.mode == activeMode) continue;
+            const bool pressed = mode.mode == m_pressedMode;
+            if (mode.hovered || pressed) {
+                const NUIRect hoverRect(outer.x + pad + static_cast<float>(mode.mode) * segmentW,
+                                        outer.y + pad,
+                                        segmentW - pad * 2.0f,
+                                        outer.height - pad * 2.0f);
+                renderer.fillRoundedRect(hoverRect, 15.0f, NUIColor(1, 1, 1, pressed ? 0.060f : 0.040f));
+            }
+        }
+
+        const NUIRect indicator(outer.x + pad + m_modeIndicatorPosition * segmentW,
+                                outer.y + pad,
+                                segmentW - pad * 2.0f,
+                                outer.height - pad * 2.0f);
+        renderer.fillRoundedRect(indicator, 15.0f, accent.withAlpha(m_pressedMode == activeMode ? 0.58f : 0.52f));
+        renderer.strokeRoundedRect(indicator, 15.0f, 1.0f, accent.withAlpha(m_pressedMode == activeMode ? 0.64f : 0.58f));
+        renderer.fillRect({indicator.x + 7.0f, indicator.y + 1.0f, indicator.width - 14.0f, 1.0f},
+                          NUIColor(1, 1, 1, 0.11f));
+        renderer.fillCircle({indicator.center().x, indicator.bottom() - 4.0f}, 2.0f, NUIColor(1, 1, 1, 0.20f));
     }
     for (const auto& mode : m_modes) {
         const bool active = mode.mode == activeMode;
         const bool focused = mode.mode == m_focusedMode;
-        const bool pressed = mode.mode == m_pressedMode;
         const NUIRect segment(mode.bounds.x + 2.0f, mode.bounds.y + 2.0f, mode.bounds.width - 4.0f, mode.bounds.height - 4.0f);
-        if (active) {
-            renderer.fillRoundedRect(segment, 15.0f, accent.withAlpha(pressed ? 0.58f : 0.52f));
-            renderer.strokeRoundedRect(segment, 15.0f, 1.0f, accent.withAlpha(pressed ? 0.62f : 0.52f));
-            renderer.fillRect({segment.x + 7.0f, segment.y + 1.0f, segment.width - 14.0f, 1.0f}, NUIColor(1, 1, 1, 0.105f));
-            renderer.fillCircle({segment.center().x, segment.bottom() - 4.0f}, 2.0f, NUIColor(1, 1, 1, 0.20f));
-        } else if (mode.hovered) {
-            renderer.fillRoundedRect(segment, 15.0f, NUIColor(1, 1, 1, pressed ? 0.060f : 0.040f));
-        }
         if (focused) {
             renderer.strokeRoundedRect(segment, 15.0f, 1.0f, accent.withAlpha(active ? 0.46f : 0.28f));
         }
@@ -482,8 +497,8 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const Knob& k, NUIColor a
         renderer.fillCircle({cx - macroR * 0.18f, cy - macroR * 0.22f}, macroR * 0.23f, NUIColor(1, 1, 1, 0.030f + stateLift * 0.018f));
         renderer.strokeCircle({cx, cy}, macroR * 0.78f, 1.0f, NUIColor(1, 1, 1, 0.095f + stateLift * 0.045f));
         const float pa = startAngle + k.value * sweep;
-        renderer.drawLine({cx, cy},
-                          {cx + std::cos(pa) * (macroR * 0.57f), cy + std::sin(pa) * (macroR * 0.57f)}, 4.0f,
+        renderer.drawLine({cx + std::cos(pa) * (macroR - 14.0f), cy + std::sin(pa) * (macroR - 14.0f)},
+                          {cx + std::cos(pa) * (macroR - 3.0f), cy + std::sin(pa) * (macroR - 3.0f)}, 4.0f,
                           verbGold().withAlpha(active ? 1.0f : (hover ? 0.98f : 0.92f)));
         const float seconds = 0.3f + getParamValue(kDecay) * 9.7f;
         std::ostringstream value;
@@ -636,6 +651,15 @@ void AestraVerbEditor::onUpdate(double deltaTime) {
     m_visualPhase += static_cast<float>(deltaTime) * (0.55f + modRate * 2.2f + modDepth * 1.6f);
     if (m_visualPhase > kTwoPi * 8.0f) {
         m_visualPhase = std::fmod(m_visualPhase, kTwoPi * 8.0f);
+    }
+    const float targetModePosition = static_cast<float>(std::clamp(static_cast<int>(std::round(getParamValue(kMode) * 2.0f)), 0, 2));
+    const float modeDiff = targetModePosition - m_modeIndicatorPosition;
+    if (std::abs(modeDiff) > 0.001f) {
+        m_modeIndicatorPosition += modeDiff * 12.0f * static_cast<float>(deltaTime);
+        if (std::abs(targetModePosition - m_modeIndicatorPosition) < 0.01f) {
+            m_modeIndicatorPosition = targetModePosition;
+        }
+        setDirty(true);
     }
     m_visualDirtyAccum += static_cast<float>(deltaTime);
     if (m_visualDirtyAccum >= 1.0f / 30.0f) {
