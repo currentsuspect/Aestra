@@ -109,6 +109,10 @@ public:
     static constexpr float kReferenceSampleRate = 44100.0f;
     static constexpr float kMaxPredelayMs = 500.0f;
     static constexpr float kWetMakeupGain = 4.2f;
+    // Session 004: per-mode wet compensation for box-cut/air reductions (linear gain).
+    static constexpr float kRoomWetCompGain = 1.096f;   // +0.8 dB
+    static constexpr float kHallWetCompGain = 1.047f;   // +0.4 dB
+    static constexpr float kPlateWetCompGain = 1.122f;  // +1.0 dB
     static constexpr float kTwoPi = 6.28318530718f;
     static constexpr uint32_t kControlInterval = 64;
     static constexpr std::array<float, kFDNLineCount> kLfoBaseRates = {
@@ -123,6 +127,10 @@ public:
     static constexpr std::array<float, kFDNLineCount> kLfoSecondaryRates = {
         0.062f, 0.095f, 0.130f, 0.172f, 0.211f, 0.253f, 0.292f, 0.332f
     };
+    // Session 004: per-mode mud cleanup HP cutoff frequencies (Hz).
+    // Index 0=Room, 1=Hall, 2=Plate.
+    static constexpr std::array<float, 3> kMudHpCutoffHz = {110.0f, 65.0f, 100.0f};
+    static constexpr std::array<float, 3> kMudHpBlend = {0.7f, 0.4f, 0.6f};
     static constexpr std::array<float, kFDNLineCount> kInjectL = {
         0.93f, -0.37f, 0.61f, -0.79f, 0.23f, 0.84f, -0.51f, 0.42f
     };
@@ -403,6 +411,29 @@ public:
 
             wetL *= kWetMakeupGain;
             wetR *= kWetMakeupGain;
+
+            // Session 004: per-mode wet compensation for box-cut/air energy loss
+            {
+                const float compGain = (mode == Mode::Room) ? kRoomWetCompGain
+                                     : (mode == Mode::Hall) ? kHallWetCompGain
+                                     : kPlateWetCompGain;
+                wetL *= compGain;
+                wetR *= compGain;
+            }
+
+            // Session 004: mud cleanup — gentle one-pole HP filter, mode-dependent
+            {
+                const int modeIdx = static_cast<int>(mode);
+                const float alpha = m_mudHpCoeff[static_cast<size_t>(modeIdx)];
+                const float blend = kMudHpBlend[static_cast<size_t>(modeIdx)];
+                // One-pole HP: y[n] = x[n] - state; state += (1-alpha)*y[n]
+                const float hpL = wetL - m_mudHpStateL;
+                const float hpR = wetR - m_mudHpStateR;
+                m_mudHpStateL += (1.0f - alpha) * hpL;
+                m_mudHpStateR += (1.0f - alpha) * hpR;
+                wetL = wetL + (hpL - wetL) * blend;
+                wetR = wetR + (hpR - wetR) * blend;
+            }
 
             if (mode == Mode::Plate) {
                 AESTRA_PROFILE_STAGE(kPlatePostAllpass);
@@ -716,7 +747,7 @@ private:
     static ModeConstants constantsForMode(Mode mode) {
         switch (mode) {
         case Mode::Hall:
-            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.18f, 0.58f, 0.74f, 1.42f};
+            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.18f, 0.68f, 0.74f, 1.42f};
         case Mode::Plate:
             return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 1.38f, 0.50f, 0.98f, 1.45f};
         case Mode::Room:
@@ -772,7 +803,7 @@ private:
             ? 6200.0f - dampingParam * 2600.0f
             : (mode == Mode::Plate ? 7300.0f - dampingParam * 1800.0f : 7600.0f - dampingParam * 3000.0f);
         cache.wetToneCoeff = 1.0f - std::exp(-kTwoPi * std::clamp(toneCutHz, 2800.0f, 12000.0f) / sr);
-        cache.wetAirBlend = mode == Mode::Hall ? 0.045f : (mode == Mode::Plate ? 0.055f : 0.07f);
+        cache.wetAirBlend = mode == Mode::Hall ? 0.058f : (mode == Mode::Plate ? 0.055f : 0.07f);
 
         const float predelayMs = std::clamp(smoothedParams[kPredelayMs], 0.0f, 1.0f) * kMaxPredelayMs;
         cache.predelaySamples = std::clamp(static_cast<int>(std::round((predelayMs / 1000.0f) * sr)),
@@ -885,8 +916,14 @@ private:
         const float sr = static_cast<float>(m_sampleRate);
         m_platePeakCoeff = peakingCoefficients(-5.5f, 620.0f, sr, 1.15f);
         m_boxCutCoeff[0] = peakingCoefficients(-4.6f, 430.0f, sr, 0.85f);
-        m_boxCutCoeff[1] = peakingCoefficients(-3.8f, 520.0f, sr, 0.75f);
+        m_boxCutCoeff[1] = peakingCoefficients(-3.0f, 520.0f, sr, 0.75f);
         m_boxCutCoeff[2] = peakingCoefficients(-4.2f, 1250.0f, sr, 1.10f);
+
+        // Session 004: precompute per-mode mud HP filter coefficients (one-pole)
+        for (size_t m = 0; m < 3; ++m) {
+            const float omega = kTwoPi * kMudHpCutoffHz[m] / sr;
+            m_mudHpCoeff[m] = std::exp(-omega);
+        }
 
         clearBuffers(randomizeLfos);
     }
@@ -933,6 +970,8 @@ private:
         m_boxCutZ1R = m_boxCutZ2R = 0.0f;
         m_wetToneStateL = 0.0f;
         m_wetToneStateR = 0.0f;
+        m_mudHpStateL = 0.0f;
+        m_mudHpStateR = 0.0f;
     }
 
     void copyDry(const float* const* inputs, float** outputs, uint32_t numInputChannels,
@@ -1184,6 +1223,10 @@ private:
     float m_boxCutZ2R = 0.0f;
     float m_wetToneStateL = 0.0f;
     float m_wetToneStateR = 0.0f;
+    // Session 004: mud cleanup one-pole HP filter state
+    std::array<float, 3> m_mudHpCoeff{};  // per-mode alpha coefficients
+    float m_mudHpStateL = 0.0f;
+    float m_mudHpStateR = 0.0f;
 
     // TODO: separate hi/lo damping (kHFDamping + kLFDamping) for more tonal control
     // TODO: Convolution mode — IR loader using same drag system as Arsenal
