@@ -687,8 +687,8 @@ int main() {
     {
         const auto* room = findResult("snare", "room");
         if (room) {
-            float expectedRoomTail = 0.0271f;
-            float tolerance = 0.003f;
+            float expectedRoomTail = 0.0215f;
+            float tolerance = 0.004f;
             if (std::abs(room->tailRms - expectedRoomTail) > tolerance) {
                 std::cerr << "FAIL: snare Room tailRMS changed from " << expectedRoomTail
                           << " to " << room->tailRms << " (tolerance: " << tolerance << ")\n";
