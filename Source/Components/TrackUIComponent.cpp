@@ -267,6 +267,9 @@ void TrackUIComponent::onRecordToggled() {
     if (m_channel) {
         const bool armed = m_recordButton && m_recordButton->isToggled();
         m_channel->setArmed(armed);
+        if (m_trackManager) {
+            m_trackManager->publishInputMonitoringSnapshot();
+        }
         Log::info("Lane " + m_laneId.toString() + " armed: " + (armed ? "ON" : "OFF"));
         updateUI();
         repaint();
@@ -285,12 +288,18 @@ void TrackUIComponent::showRecordModeMenu(const AestraUI::NUIPoint& position) {
     m_recordModeMenu->addRadioItem("Arm Only", "record_mode", !m_channel->isMonitoringEnabled(), [this]() {
         if (!m_channel) return;
         m_channel->setMonitoringEnabled(false);
+        if (m_trackManager) {
+            m_trackManager->publishInputMonitoringSnapshot();
+        }
         updateUI();
         repaint();
     });
     m_recordModeMenu->addRadioItem("Arm + Monitor", "record_mode", m_channel->isMonitoringEnabled(), [this]() {
         if (!m_channel) return;
         m_channel->setMonitoringEnabled(true);
+        if (m_trackManager) {
+            m_trackManager->publishInputMonitoringSnapshot();
+        }
         updateUI();
         repaint();
     });

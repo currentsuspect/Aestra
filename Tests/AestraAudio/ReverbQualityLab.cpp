@@ -147,6 +147,10 @@ struct ModeQuality {
     float rms = 0.0f;
     float peak = 0.0f;
     float hfRatio = 0.0f;
+    float earlyCentroidHz = 0.0f;
+    float lateCentroidHz = 0.0f;
+    float earlyHighEnergy = 0.0f;
+    float lateHighEnergy = 0.0f;
     bool hasNaN = false;
     bool hasInf = false;
 };
@@ -305,6 +309,46 @@ static SpectralMetrics computeSpectral(const std::vector<float>& signal, float s
         m.highEnergy /= sum;
     }
     return m;
+}
+
+static void computeTailToneOverTime(const std::vector<float>& signal, float sampleRate,
+                                    float& earlyCentroidHz, float& lateCentroidHz,
+                                    float& earlyHighEnergy, float& lateHighEnergy) {
+    if (signal.size() < 4096) return;
+
+    auto analyzeWindow = [&](size_t start, float& centroid, float& highEnergy) {
+        constexpr size_t fftSize = 2048;
+        if (start + fftSize > signal.size()) return;
+        std::vector<std::complex<float>> fftBuf(fftSize);
+        for (size_t i = 0; i < fftSize; ++i) {
+            const float w = 0.5f * (1.0f - std::cos(2.0f * static_cast<float>(M_PI) *
+                                                    static_cast<float>(i) / static_cast<float>(fftSize - 1)));
+            fftBuf[i] = std::complex<float>(signal[start + i] * w, 0.0f);
+        }
+        fft(fftBuf);
+
+        const float binHz = sampleRate / static_cast<float>(fftSize);
+        double weightedHz = 0.0;
+        double energy = 0.0;
+        double high = 0.0;
+        for (size_t bin = 1; bin <= fftSize / 2; ++bin) {
+            const float hz = static_cast<float>(bin) * binHz;
+            const double mag = std::abs(fftBuf[bin]);
+            const double binEnergy = mag * mag;
+            weightedHz += static_cast<double>(hz) * binEnergy;
+            energy += binEnergy;
+            if (hz >= 4000.0f) {
+                high += binEnergy;
+            }
+        }
+        if (energy > 1.0e-20) {
+            centroid = static_cast<float>(weightedHz / energy);
+            highEnergy = static_cast<float>(high / energy);
+        }
+    };
+
+    analyzeWindow(signal.size() / 4, earlyCentroidHz, earlyHighEnergy);
+    analyzeWindow(signal.size() * 3 / 4, lateCentroidHz, lateHighEnergy);
 }
 
 static StereoMetrics computeStereo(const std::vector<float>& left, const std::vector<float>& right,
@@ -605,6 +649,9 @@ static ModeQuality measureMode(const std::string& name, float modeParam,
 
     // 6. Spectral metrics (use L channel)
     q.spectral = computeSpectral(tailL, sampleRate);
+    computeTailToneOverTime(tailL, sampleRate,
+                            q.earlyCentroidHz, q.lateCentroidHz,
+                            q.earlyHighEnergy, q.lateHighEnergy);
 
     // 7. Stereo metrics
     q.stereo = computeStereo(tailL, tailR, sampleRate);
@@ -631,6 +678,10 @@ static std::string generateJsonReport(const std::vector<ModeQuality>& modes, flo
         j << "      \"rms\": " << q.rms << ",\n";
         j << "      \"peak\": " << q.peak << ",\n";
         j << "      \"hfRatio\": " << q.hfRatio << ",\n";
+        j << "      \"earlyCentroidHz\": " << q.earlyCentroidHz << ",\n";
+        j << "      \"lateCentroidHz\": " << q.lateCentroidHz << ",\n";
+        j << "      \"earlyHighEnergy\": " << q.earlyHighEnergy << ",\n";
+        j << "      \"lateHighEnergy\": " << q.lateHighEnergy << ",\n";
         j << "      \"hasNaN\": " << (q.hasNaN ? "true" : "false") << ",\n";
         j << "      \"hasInf\": " << (q.hasInf ? "true" : "false") << ",\n";
         j << "      \"decay\": {\n";
@@ -713,6 +764,19 @@ static std::string generateMarkdownReport(const std::vector<ModeQuality>& modes)
            << " |\n";
     }
 
+    md << "\n## Tail Tone Over Time\n\n";
+    md << "| Mode | Early Centroid | Late Centroid | Early High Energy | Late High Energy | Darkens? |\n";
+    md << "|------|----------------|---------------|-------------------|------------------|----------|\n";
+    for (const auto& q : modes) {
+        md << "| " << q.name
+           << " | " << static_cast<int>(q.earlyCentroidHz) << " Hz"
+           << " | " << static_cast<int>(q.lateCentroidHz) << " Hz"
+           << " | " << std::fixed << std::setprecision(3) << q.earlyHighEnergy
+           << " | " << q.lateHighEnergy
+           << " | " << (q.lateCentroidHz <= q.earlyCentroidHz && q.lateHighEnergy <= q.earlyHighEnergy ? "Yes" : "No")
+           << " |\n";
+    }
+
     md << "\n## Stereo / Mono Safety\n\n";
     md << "| Mode | Early Corr | Late Corr | Mono Peak | Width Proxy |\n";
     md << "|------|------------|-----------|-----------|-------------|\n";
@@ -755,6 +819,10 @@ static std::string generateMarkdownReport(const std::vector<ModeQuality>& modes)
             md << "- **" << q.name << "**: Persistent " << q.spectral.metallicPeakBand
                << " metallic peak at " << static_cast<int>(q.spectral.metallicPeakHz) << " Hz ("
                << std::setprecision(1) << q.spectral.metallicPeakLocalDb << " dB local) — severity: HIGH\n";
+            anyFlags = true;
+        }
+        if (q.lateCentroidHz > q.earlyCentroidHz * 1.05f && q.lateHighEnergy > q.earlyHighEnergy * 1.05f) {
+            md << "- **" << q.name << "**: Tail gets brighter over time; possible HF buildup\n";
             anyFlags = true;
         }
         if (q.stereo.corrLate > 0.95f) { md << "- **" << q.name << "**: Late tail highly correlated ("
@@ -838,6 +906,8 @@ int main() {
                   << "ms Peak=" << std::fixed << std::setprecision(3) << q.peak
                   << " RMS=" << q.rms
                   << " HF=" << std::setprecision(1) << (q.hfRatio * 100.0f) << "%"
+                  << " Centroid=" << static_cast<int>(q.earlyCentroidHz) << "->"
+                  << static_cast<int>(q.lateCentroidHz) << "Hz"
                   << " Crest=" << q.spectral.crestFactor
                   << " Metallic=" << static_cast<int>(q.spectral.metallicPeakHz) << "Hz/"
                   << q.spectral.metallicPeakBand << "/" << q.spectral.metallicPeakSeverity

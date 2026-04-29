@@ -33,6 +33,9 @@ struct AudioTelemetry {
     std::atomic<uint64_t> overruns{0};
     std::atomic<uint64_t> maxCallbackNs{0};
     std::atomic<uint64_t> lastCallbackNs{0};
+    std::atomic<uint64_t> rtAllocationViolations{0};
+    std::atomic<uint64_t> rtLockViolations{0};
+    std::atomic<uint64_t> rtLogViolations{0};
 
     // Callback budget context (set from the audio thread wrapper)
     std::atomic<uint32_t> lastBufferFrames{0};
@@ -40,6 +43,7 @@ struct AudioTelemetry {
 
     // Cycle counter calibration (Hz). If 0, callback ns timing may be unavailable.
     std::atomic<uint64_t> cycleHz{0};
+    std::atomic<int32_t> linuxRtPriorityErrno{0};
 
     // SRC activity: number of processed blocks that executed resampling work.
     std::atomic<uint64_t> srcActiveBlocks{0};
@@ -55,9 +59,11 @@ struct AudioTelemetry {
     static constexpr uint32_t kRecoveryFrames = 100;  // Stable frames to exit recovery
 
     // B-010: Thread priority verification status
-    // Bitmask: bit 0 = SetThreadPriority success
-    //          bit 1 = MMCSS (AvSetMmThreadCharacteristics) success
-    //          bit 2 = MMCSS priority (AvSetMmThreadPriority) success
+    // Windows bitmask: bit 0 = SetThreadPriority success
+    //                  bit 1 = MMCSS (AvSetMmThreadCharacteristics) success
+    //                  bit 2 = MMCSS priority (AvSetMmThreadPriority) success
+    // Linux bitmask:   bit 0 = callback thread SCHED_FIFO success
+    //                  bit 1 = mlockall success
     std::atomic<uint32_t> threadPriorityStatus{0};
 
     // B-010: Thread priority status bits
@@ -72,6 +78,11 @@ struct AudioTelemetry {
     void incrementXruns() noexcept { xruns.fetch_add(1, std::memory_order_relaxed); }
     void incrementOverruns() noexcept { overruns.fetch_add(1, std::memory_order_relaxed); }
     void incrementSrcActiveBlocks() noexcept { srcActiveBlocks.fetch_add(1, std::memory_order_relaxed); }
+    void incrementRtAllocationViolations() noexcept {
+        rtAllocationViolations.fetch_add(1, std::memory_order_relaxed);
+    }
+    void incrementRtLockViolations() noexcept { rtLockViolations.fetch_add(1, std::memory_order_relaxed); }
+    void incrementRtLogViolations() noexcept { rtLogViolations.fetch_add(1, std::memory_order_relaxed); }
 
     /**
      * @brief B-009: Record an underrun and manage recovery state
@@ -151,6 +162,9 @@ struct AudioTelemetry {
     void updateLastBufferFrames(uint32_t frames) noexcept { lastBufferFrames.store(frames, std::memory_order_relaxed); }
     void updateLastSampleRate(uint32_t rate) noexcept { lastSampleRate.store(rate, std::memory_order_relaxed); }
     void updateCycleHz(uint64_t hz) noexcept { cycleHz.store(hz, std::memory_order_relaxed); }
+    void updateLinuxRtPriorityErrno(int32_t value) noexcept {
+        linuxRtPriorityErrno.store(value, std::memory_order_relaxed);
+    }
 
     // Reads with relaxed ordering
     uint64_t getBlocksProcessed() const noexcept { return blocksProcessed.load(std::memory_order_relaxed); }
@@ -159,9 +173,17 @@ struct AudioTelemetry {
     uint64_t getOverruns() const noexcept { return overruns.load(std::memory_order_relaxed); }
     uint64_t getMaxCallbackNs() const noexcept { return maxCallbackNs.load(std::memory_order_relaxed); }
     uint64_t getLastCallbackNs() const noexcept { return lastCallbackNs.load(std::memory_order_relaxed); }
+    uint64_t getRtAllocationViolations() const noexcept {
+        return rtAllocationViolations.load(std::memory_order_relaxed);
+    }
+    uint64_t getRtLockViolations() const noexcept { return rtLockViolations.load(std::memory_order_relaxed); }
+    uint64_t getRtLogViolations() const noexcept { return rtLogViolations.load(std::memory_order_relaxed); }
     uint32_t getLastBufferFrames() const noexcept { return lastBufferFrames.load(std::memory_order_relaxed); }
     uint32_t getLastSampleRate() const noexcept { return lastSampleRate.load(std::memory_order_relaxed); }
     uint64_t getCycleHz() const noexcept { return cycleHz.load(std::memory_order_relaxed); }
+    int32_t getLinuxRtPriorityErrno() const noexcept {
+        return linuxRtPriorityErrno.load(std::memory_order_relaxed);
+    }
     uint64_t getSrcActiveBlocks() const noexcept { return srcActiveBlocks.load(std::memory_order_relaxed); }
     uint32_t getConsecutiveUnderruns() const noexcept { return consecutiveUnderruns.load(std::memory_order_relaxed); }
     uint64_t getRecoveryModeActivations() const noexcept {

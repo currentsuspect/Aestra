@@ -3,6 +3,7 @@
 #include "Core/AudioTelemetry.h"
 
 #include <iostream>
+#include <cerrno>
 #include <utility>
 #include <vector>
 
@@ -161,24 +162,14 @@ bool RtAudioDriver::startStream() {
     }
 
 #ifdef __linux__
-    // Set SCHED_FIFO real-time scheduling for the audio thread
-    // RtAudio creates its own thread; we set priority on the calling thread
-    // which should be the audio thread context at this point.
-    // Note: This requires CAP_SYS_NICE or appropriate RLIMIT_RTPRIO.
-    struct sched_param param;
-    param.sched_priority = sched_get_priority_max(SCHED_FIFO);
-    // Use 50% of max priority to avoid starving system threads
-    param.sched_priority = (param.sched_priority + sched_get_priority_min(SCHED_FIFO)) / 2;
-    if (pthread_setschedparam(pthread_self(), SCHED_FIFO, &param) == 0) {
-        if (m_telemetry) {
-            m_telemetry->setThreadPriorityBit(0x01); // SCHED_FIFO success
-        }
-    }
-    // mlockall to prevent page faults during RT processing
+    m_callbackRtPriorityAttempted.store(false, std::memory_order_release);
+    // mlockall is process-wide and can be requested from the starter thread.
     if (mlockall(MCL_CURRENT | MCL_FUTURE) == 0) {
         if (m_telemetry) {
             m_telemetry->setThreadPriorityBit(0x02); // mlockall success
         }
+    } else if (m_telemetry) {
+        m_telemetry->updateLinuxRtPriorityErrno(errno);
     }
 #endif
 
@@ -210,6 +201,23 @@ uint32_t RtAudioDriver::getStreamBufferSize() const {
 int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int numFrames, double streamTime,
                                    RtAudioStreamStatus status, void* userData) {
     auto* driver = static_cast<RtAudioDriver*>(userData);
+#ifdef __linux__
+    bool expected = false;
+    if (driver->m_callbackRtPriorityAttempted.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+        struct sched_param param;
+        param.sched_priority = sched_get_priority_max(SCHED_FIFO);
+        param.sched_priority = (param.sched_priority + sched_get_priority_min(SCHED_FIFO)) / 2;
+        const int rtResult = pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+        if (driver->m_telemetry) {
+            if (rtResult == 0) {
+                driver->m_telemetry->setThreadPriorityBit(0x01);
+                driver->m_telemetry->updateLinuxRtPriorityErrno(0);
+            } else {
+                driver->m_telemetry->updateLinuxRtPriorityErrno(rtResult);
+            }
+        }
+    }
+#endif
     if (status != 0) {
         driver->m_stats.underrunCount++;
         if (driver->m_telemetry) {

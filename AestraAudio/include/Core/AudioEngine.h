@@ -226,7 +226,10 @@ public:
     bool isPatternPlaybackMode() const { return m_patternPlaybackMode.load(std::memory_order_relaxed); }
 
     /** @brief Bind the unit manager used for Arsenal rendering. */
-    void setUnitManager(UnitManager* mgr) { m_unitManager.store(mgr, std::memory_order_release); }
+    void setUnitManager(UnitManager* mgr) {
+        m_unitManager.store(mgr, std::memory_order_release);
+        refreshSamplerCache();
+    }
     /** @brief Bind the pattern playback engine used for scheduled MIDI. */
     void setPatternPlaybackEngine(PatternPlaybackEngine* engine) {
         m_patternEngine.store(engine, std::memory_order_release);
@@ -387,6 +390,8 @@ private:
     void clearMetronomeCountInRt();
     void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
                             double* targetBuffer = nullptr, int32_t isolatedTrackIndex = -1);
+    void resetCachedSamplerVoicesRt() noexcept;
+    void syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept;
     void injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
                                    uint32_t numFrames) noexcept;
 

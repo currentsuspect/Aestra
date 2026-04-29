@@ -1,6 +1,7 @@
 #pragma once
 #include "../Commands/CommandHistory.h"
 #include "../Core/AudioCommandQueue.h"
+#include "../Core/AudioTelemetry.h"
 #include "../Core/ChannelSlotMap.h"
 #include "../DSP/ContinuousParamBuffer.h"
 #include "../Commands/AddClipCommand.h"
@@ -19,7 +20,6 @@
 #include <array>
 #include <cmath>
 #include <chrono>
-#include <condition_variable>
 #include <ctime>
 #include <cstdlib>
 #include <fstream>
@@ -53,6 +53,11 @@ public:
         std::atomic<uint64_t> totalCapturedFrames{0};
         std::atomic<bool> hasStarted{false};
         int inputIndex{-1};
+    };
+
+    struct RtInputMonitorRoute {
+        int inputIndex{-1};
+        float volume{1.0f};
     };
 
     /**
@@ -108,6 +113,7 @@ public:
             m_channelSlotMap = std::make_shared<ChannelSlotMap>();
         }
         m_channelSlotMap->rebuild(m_channels);
+        publishInputMonitoringSnapshot();
         
         return raw;
     }
@@ -124,6 +130,7 @@ public:
         if (m_channelSlotMap) {
             m_channelSlotMap->rebuild(m_channels);
         }
+        publishInputMonitoringSnapshot();
         return true;
     }
 
@@ -142,6 +149,7 @@ public:
         if (m_channelSlotMap) {
             m_channelSlotMap->rebuild(m_channels);
         }
+        publishInputMonitoringSnapshot();
         return true;
     }
 
@@ -204,7 +212,10 @@ public:
      * @brief Set input channel count
      * @param count Number of hardware input channels currently available.
      */
-    void setInputChannelCount(int count) { m_inputChannelCount = count; }
+    void setInputChannelCount(int count) {
+        m_inputChannelCount = count;
+        publishInputMonitoringSnapshot();
+    }
     void setRecordingProjectPath(const std::string& projectPath) { m_recordingProjectPath = projectPath; }
 
     /**
@@ -350,7 +361,7 @@ public:
      * @param input Input channel buffer.
      * @param frames Number of frames available in the input buffer.
      */
-    void processInput(const float* input, uint32_t frames) {
+    void processInput(const float* input, uint32_t frames, AudioTelemetry* telemetry = nullptr) {
         if (!m_isCapturing.load(std::memory_order_relaxed) || !input || frames == 0 || m_inputChannelCount <= 0) {
             return;
         }
@@ -360,22 +371,14 @@ public:
         }
 
         struct RecordingWriteGuard {
-            RecordingWriteGuard(std::atomic<uint32_t>& writersIn,
-                                std::condition_variable& writersCvIn,
-                                std::mutex& writersMutexIn)
-                : writers(writersIn), writersCv(writersCvIn), writersMutex(writersMutexIn) {
+            explicit RecordingWriteGuard(std::atomic<uint32_t>& writersIn) : writers(writersIn) {
                 writers.fetch_add(1, std::memory_order_acq_rel);
             }
             ~RecordingWriteGuard() {
-                if (writers.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-                    std::lock_guard<std::mutex> lock(writersMutex);
-                    writersCv.notify_all();
-                }
+                writers.fetch_sub(1, std::memory_order_acq_rel);
             }
             std::atomic<uint32_t>& writers;
-            std::condition_variable& writersCv;
-            std::mutex& writersMutex;
-        } guard(m_recordingWriters, m_recordingWritersCv, m_recordingWritersMutex);
+        } guard(m_recordingWriters);
 
         if (!m_recordingCaptureAccepting.load(std::memory_order_acquire)) {
             return;
@@ -468,10 +471,9 @@ public:
             bool expectedStart = false;
             if (capture.hasStarted.compare_exchange_strong(expectedStart, true, std::memory_order_acq_rel)) {
                 capture.startBeat.store(effectiveCaptureBeat, std::memory_order_release);
-                const std::string inputLabel =
-                    (requestedInput == -2) ? "auto-mono" : ("input " + std::to_string(std::max(0, requestedInput) + 1));
-                Log::info("[TrackManager] Recording capture started for track " + std::to_string(channel->getChannelId()) +
-                          " from " + inputLabel);
+                if (telemetry) {
+                    telemetry->incrementRtLogViolations();
+                }
                 if (hasDeferredStart) {
                     startedDeferredCapture = true;
                 }
@@ -491,9 +493,34 @@ public:
         }
 
         if (!capturedAnyChannel && !m_recordingNoArmLogged) {
-            Log::warning("[TrackManager] Record enabled but no armed tracks had a valid input channel.");
+            if (telemetry) {
+                telemetry->incrementRtLogViolations();
+            }
             m_recordingNoArmLogged = true;
         }
+    }
+
+    void publishInputMonitoringSnapshot() {
+        std::array<RtInputMonitorRoute, 32> routes{};
+        uint32_t count = 0;
+        for (const auto& channel : m_channels) {
+            if (!channel || !channel->isArmed() || !channel->isMonitoringEnabled()) {
+                continue;
+            }
+            const int requestedInput = channel->getInputChannelIndex();
+            if (requestedInput == -1) {
+                continue;
+            }
+            if (count >= routes.size()) {
+                break;
+            }
+            routes[count++] = RtInputMonitorRoute{requestedInput, channel->getVolume()};
+        }
+
+        const uint32_t inactive = 1u - m_activeInputMonitorSnapshot.load(std::memory_order_relaxed);
+        m_inputMonitorSnapshots[inactive] = routes;
+        m_inputMonitorRouteCounts[inactive].store(count, std::memory_order_release);
+        m_activeInputMonitorSnapshot.store(inactive, std::memory_order_release);
     }
 
     /**
@@ -552,19 +579,8 @@ public:
             return;
         }
 
-        size_t monitoredCount = 0;
-        for (const auto& channel : m_channels) {
-            if (!channel || !channel->isArmed() || !channel->isMonitoringEnabled()) {
-                continue;
-            }
-
-            if (channel->getInputChannelIndex() == -1) {
-                continue;
-            }
-
-            ++monitoredCount;
-        }
-
+        const uint32_t snapshotIndex = m_activeInputMonitorSnapshot.load(std::memory_order_acquire);
+        const uint32_t monitoredCount = m_inputMonitorRouteCounts[snapshotIndex].load(std::memory_order_acquire);
         if (monitoredCount == 0) {
             return;
         }
@@ -574,15 +590,9 @@ public:
             const size_t inputBaseIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount);
             float monitoredSample = 0.0f;
 
-            for (const auto& channelPtr : m_channels) {
-                const MixerChannel* channel = channelPtr.get();
-                if (!channel || !channel->isArmed() || !channel->isMonitoringEnabled()) {
-                    continue;
-                }
-                const int requestedInput = channel->getInputChannelIndex();
-                if (requestedInput == -1) {
-                    continue;
-                }
+            const auto& routes = m_inputMonitorSnapshots[snapshotIndex];
+            for (uint32_t routeIndex = 0; routeIndex < monitoredCount && routeIndex < routes.size(); ++routeIndex) {
+                const int requestedInput = routes[routeIndex].inputIndex;
                 float sample = 0.0f;
 
                 if (requestedInput == -2) {
@@ -595,7 +605,7 @@ public:
                     sample = input[inputBaseIndex + static_cast<size_t>(requestedInput)];
                 }
 
-                monitoredSample += sample * channel->getVolume();
+                monitoredSample += sample * routes[routeIndex].volume;
             }
 
             monitoredSample *= monitorMixScale;
@@ -1026,12 +1036,12 @@ private:
     void finalizeCaptureSession() {
         m_recordingCaptureAccepting.store(false, std::memory_order_release);
         m_isCapturing.store(false, std::memory_order_relaxed);
-        std::unique_lock<std::mutex> writersLock(m_recordingWritersMutex);
-        const bool writersDrained =
-            m_recordingWritersCv.wait_for(writersLock, std::chrono::milliseconds(250), [this]() {
-                return m_recordingWriters.load(std::memory_order_acquire) == 0;
-            });
-        writersLock.unlock();
+        const auto waitDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(250);
+        bool writersDrained = m_recordingWriters.load(std::memory_order_acquire) == 0;
+        while (!writersDrained && std::chrono::steady_clock::now() < waitDeadline) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            writersDrained = m_recordingWriters.load(std::memory_order_acquire) == 0;
+        }
         if (!writersDrained) {
             Log::warning("[TrackManager] Timed out waiting for recording writers to drain before finalizing capture.");
         }
@@ -1373,10 +1383,11 @@ private:
     mutable std::mutex m_recordingMutex;
     std::unordered_map<uint32_t, std::unique_ptr<RecordingCapture>> m_recordingCaptures;
     std::atomic<uint32_t> m_recordingWriters{0};
-    mutable std::mutex m_recordingWritersMutex;
-    std::condition_variable m_recordingWritersCv;
     std::atomic<bool> m_recordingCaptureAccepting{false};
     std::array<std::atomic<float>, 8> m_inputPeaks{};
+    std::array<RtInputMonitorRoute, 32> m_inputMonitorSnapshots[2]{};
+    std::array<std::atomic<uint32_t>, 2> m_inputMonitorRouteCounts{};
+    std::atomic<uint32_t> m_activeInputMonitorSnapshot{0};
     double m_maxRecordingSeconds{15.0};
     double m_recordingSessionStartBeat{0.0};
     bool m_recordingSessionUsesPlacementOverride{false};

@@ -12,6 +12,10 @@
 
 // Forward declarations
 class AestraContent;
+namespace Aestra::Audio {
+class PreviewEngine;
+class TrackManager;
+}
 
 class AestraAudioController {
 public:
@@ -54,4 +58,6 @@ private:
 
     // Weak reference to content for callback routing
     std::weak_ptr<AestraContent> m_content;
+    std::atomic<Aestra::Audio::TrackManager*> m_rtTrackManager{nullptr};
+    std::atomic<Aestra::Audio::PreviewEngine*> m_rtPreviewEngine{nullptr};
 };

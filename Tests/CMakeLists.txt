@@ -312,6 +312,19 @@ if(WIN32)
     target_link_libraries(AestraAudioPerformanceTest PRIVATE avrt)
 endif()
 
+add_executable(AestraRealtimePathStressTest AestraAudio/RealtimePathStressTest.cpp)
+target_link_libraries(AestraRealtimePathStressTest PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraRealtimePathStressTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraRealtimePathStressTest COMMAND AestraRealtimePathStressTest)
+set_tests_properties(AestraRealtimePathStressTest PROPERTIES LABELS "audio;realtime;stress")
+
 # Sinc Interpolator Benchmark
 add_executable(AestraSincBenchmark AestraAudio/SincBenchmark.cpp)
 target_link_libraries(AestraSincBenchmark PRIVATE AestraAudioCore AestraCore)
@@ -336,6 +349,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbSIMDParityTest.cpp")
     )
     add_test(NAME ReverbSIMDParityTest COMMAND ReverbSIMDParityTest)
     set_tests_properties(ReverbSIMDParityTest PROPERTIES LABELS "audio;dsp;reverb")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbSafetyRegressionTest.cpp")
+    add_executable(ReverbSafetyRegressionTest AestraAudio/ReverbSafetyRegressionTest.cpp)
+    target_link_libraries(ReverbSafetyRegressionTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(ReverbSafetyRegressionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ReverbSafetyRegressionTest COMMAND ReverbSafetyRegressionTest)
+    set_tests_properties(ReverbSafetyRegressionTest PROPERTIES LABELS "audio;dsp;reverb;safety")
 endif()
 
 # Reverb Quality Measurement Lab

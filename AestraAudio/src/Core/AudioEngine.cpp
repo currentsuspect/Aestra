@@ -312,6 +312,52 @@ void AudioEngine::setThreadCount(int count) {
     }
 }
 
+void AudioEngine::refreshSamplerCache() {
+    std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> samplers{};
+    size_t count = 0;
+
+    auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
+    if (unitMgr) {
+        auto snapshot = unitMgr->getAudioSnapshot();
+        if (snapshot) {
+            for (const auto& unitState : snapshot->units) {
+                if (count >= samplers.size()) {
+                    break;
+                }
+                auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unitState.plugin);
+                if (sampler) {
+                    samplers[count++] = sampler.get();
+                }
+            }
+        }
+    }
+
+    m_cachedSamplers = samplers;
+    m_cachedSamplerCount.store(count, std::memory_order_release);
+}
+
+void AudioEngine::resetCachedSamplerVoicesRt() noexcept {
+    const size_t cachedCount = m_cachedSamplerCount.load(std::memory_order_acquire);
+    for (size_t i = 0; i < cachedCount && i < m_cachedSamplers.size(); ++i) {
+        if (m_cachedSamplers[i]) {
+            m_cachedSamplers[i]->requestHardResetVoices();
+        }
+    }
+}
+
+void AudioEngine::syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept {
+    if (m_lastSyncedArsenalSampleRate == sampleRate) {
+        return;
+    }
+    const size_t cachedCount = m_cachedSamplerCount.load(std::memory_order_acquire);
+    for (size_t i = 0; i < cachedCount && i < m_cachedSamplers.size(); ++i) {
+        if (m_cachedSamplers[i]) {
+            m_cachedSamplers[i]->setSampleRate(static_cast<double>(sampleRate));
+        }
+    }
+    m_lastSyncedArsenalSampleRate = sampleRate;
+}
+
 /**
  * @brief Real-time audio processing entry point for a single block.
  *
@@ -411,27 +457,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         if (pe)
             pe->flush();
 
-        auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
-        if (unitMgr) {
-            auto snapshot = unitMgr->getAudioSnapshot();
-            if (snapshot) {
-                for (const auto& unitState : snapshot->units) {
-                    if (unitState.plugin) {
-                        Plugins::SamplerPlugin* sampler = nullptr;
-                        const size_t cachedCount = m_cachedSamplerCount.load(std::memory_order_acquire);
-                        for (size_t ci = 0; ci < cachedCount; ++ci) {
-                            if (m_cachedSamplers[ci] == unitState.plugin.get()) {
-                                sampler = m_cachedSamplers[ci];
-                                break;
-                            }
-                        }
-                        if (sampler) {
-                            sampler->requestHardResetVoices();
-                        }
-                    }
-                }
-            }
-        }
+        resetCachedSamplerVoicesRt();
 
         // Force silence immediately.
         m_fadeState.store(FadeState::Silent, std::memory_order_relaxed);
@@ -463,27 +489,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
             pe->flush();
 
         if (patternModeNow) {
-            auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
-            if (unitMgr) {
-                auto snapshot = unitMgr->getAudioSnapshot();
-                if (snapshot) {
-                    for (const auto& unitState : snapshot->units) {
-                        if (unitState.plugin) {
-                            Plugins::SamplerPlugin* sampler = nullptr;
-                            const size_t cachedCount = m_cachedSamplerCount.load(std::memory_order_acquire);
-                            for (size_t ci = 0; ci < cachedCount; ++ci) {
-                                if (m_cachedSamplers[ci] == unitState.plugin.get()) {
-                                    sampler = m_cachedSamplers[ci];
-                                    break;
-                                }
-                            }
-                            if (sampler) {
-                                sampler->requestHardResetVoices();
-                            }
-                        }
-                    }
-                }
-            }
+            resetCachedSamplerVoicesRt();
         }
     }
 
@@ -2579,19 +2585,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         return;
     }
 
-    // Sync sample rate to units only when it changes (avoid per-block scans).
-    // Uses member variable instead of static local for RT safety.
-    if (m_lastSyncedArsenalSampleRate != sampleRate) {
-        for (const auto& unitState : snapshot->units) {
-            if (unitState.plugin) {
-                auto sampler = std::dynamic_pointer_cast<Aestra::Audio::Plugins::SamplerPlugin>(unitState.plugin);
-                if (sampler) {
-                    sampler->setSampleRate((double)sampleRate);
-                }
-            }
-        }
-        m_lastSyncedArsenalSampleRate = sampleRate;
-    }
+    syncCachedSamplerSampleRatesRt(sampleRate);
 
     const size_t requiredStereoSamples = static_cast<size_t>(numFrames) * 2;
     // Buffers must be pre-sized in setBufferConfig()
