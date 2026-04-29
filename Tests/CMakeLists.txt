@@ -390,6 +390,37 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbMaterialLab.cpp")
     endif()
 endif()
 
+# MiMoClaw listening pack generators
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ListeningPack002.cpp")
+    add_executable(AestraListeningPack002 AestraAudio/ListeningPack002.cpp)
+    target_link_libraries(AestraListeningPack002 PRIVATE AestraAudio AestraCore)
+    target_include_directories(AestraListeningPack002 PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ListeningPack003.cpp")
+    add_executable(AestraListeningPack003 AestraAudio/ListeningPack003.cpp)
+    target_link_libraries(AestraListeningPack003 PRIVATE AestraAudio AestraCore)
+    target_include_directories(AestraListeningPack003 PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ListeningPack004.cpp")
+    add_executable(AestraListeningPack004 AestraAudio/ListeningPack004.cpp)
+    target_link_libraries(AestraListeningPack004 PRIVATE AestraAudio AestraCore)
+    target_include_directories(AestraListeningPack004 PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
 # Stress benchmark companion used by dsp-benchmark workflow
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/AestraStressTest.cpp")
     add_executable(AestraStressTest Integration/AestraStressTest.cpp)
