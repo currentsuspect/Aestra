@@ -411,6 +411,16 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ListeningPack003.cpp")
     )
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ListeningPack004.cpp")
+    add_executable(AestraListeningPack004 AestraAudio/ListeningPack004.cpp)
+    target_link_libraries(AestraListeningPack004 PRIVATE AestraAudio AestraCore)
+    target_include_directories(AestraListeningPack004 PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
 # Stress benchmark companion used by dsp-benchmark workflow
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/AestraStressTest.cpp")
     add_executable(AestraStressTest Integration/AestraStressTest.cpp)
