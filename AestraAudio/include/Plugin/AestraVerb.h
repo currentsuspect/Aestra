@@ -111,7 +111,7 @@ public:
     static constexpr float kWetMakeupGain = 4.2f;
     // Session 004: per-mode wet compensation for box-cut/air reductions (linear gain).
     static constexpr float kRoomWetCompGain = 1.096f;   // +0.8 dB
-    static constexpr float kHallWetCompGain = 1.047f;   // +0.4 dB
+    static constexpr float kHallWetCompGain = 0.96f;    // -0.35 dB; level-matches Hall without letting it jump forward.
     static constexpr float kPlateWetCompGain = 1.122f;  // +1.0 dB
     static constexpr float kTwoPi = 6.28318530718f;
     static constexpr uint32_t kControlInterval = 64;
@@ -129,10 +129,10 @@ public:
     };
     // Session 004: per-mode mud cleanup HP cutoff frequencies (Hz).
     // Index 0=Room, 1=Hall, 2=Plate.
-    static constexpr std::array<float, 3> kMudHpCutoffHz = {110.0f, 65.0f, 100.0f};
+    static constexpr std::array<float, 3> kMudHpCutoffHz = {110.0f, 86.0f, 100.0f};
     // Session 006: reduce mud HP blend — Session 004 values were too aggressive,
     // thinning the low-end especially on Room. Keep only gentle rumble cleanup.
-    static constexpr std::array<float, 3> kMudHpBlend = {0.40f, 0.20f, 0.35f};
+    static constexpr std::array<float, 3> kMudHpBlend = {0.40f, 0.36f, 0.35f};
     static constexpr std::array<float, kFDNLineCount> kInjectL = {
         0.93f, -0.37f, 0.61f, -0.79f, 0.23f, 0.84f, -0.51f, 0.42f
     };
@@ -552,6 +552,9 @@ public:
         if (id >= kParamCount) return;
         const float clamped = std::clamp(value, 0.0f, 1.0f);
         m_params[id].store(clamped, std::memory_order_relaxed);
+        if (!m_active.load(std::memory_order_relaxed)) {
+            m_smoothedParams[id] = clamped;
+        }
     }
 
     std::vector<PluginParameter> getParameters() const override {
@@ -560,7 +563,7 @@ public:
             { kDamping, "Damping", "DMP", "", 0.50f, 0.0f, 1.0f, true },
             { kPredelayMs, "Predelay", "PRE", "ms", 0.02f, 0.0f, 1.0f, true },
             { kWidth, "Width", "WID", "", 0.68f, 0.0f, 1.0f, true },
-            { kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true },
+            { kMix, "Mix", "MIX", "%", 0.36f, 0.0f, 1.0f, true },
             { kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
             { kSize, "Size", "SIZ", "x", 0.52f, 0.0f, 1.0f, true },
             { kDiffusion, "Diffusion", "DIF", "%", 0.64f, 0.0f, 1.0f, true },
@@ -623,7 +626,7 @@ public:
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return {560, 420}; }
+    std::pair<int, int> getEditorSize() const override { return {760, 560}; }
     bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
@@ -778,7 +781,7 @@ private:
     static ModeConstants constantsForMode(Mode mode) {
         switch (mode) {
         case Mode::Hall:
-            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.18f, 0.68f, 0.74f, 1.42f};
+            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.18f, 0.64f, 0.96f, 1.36f};
         case Mode::Plate:
             return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 1.38f, 0.50f, 0.98f, 1.45f};
         case Mode::Room:
@@ -830,17 +833,16 @@ private:
         const float dampingParam = std::clamp(smoothedParams[kDamping], 0.0f, 1.0f);
         const float damping = std::clamp(dampingParam * constants.dampingScalar, 0.0f, 0.98f);
         cache.dampingCoeff = 1.0f - damping;
-        cache.lowDampAmount = mode == Mode::Hall ? 0.34f : (mode == Mode::Plate ? 0.42f : 0.48f);
+        cache.lowDampAmount = mode == Mode::Hall ? 0.43f : (mode == Mode::Plate ? 0.42f : 0.48f);
 
-        // Session 006: raise tone cutoff — Session 004 values were too low (3600–7600 Hz),
-        // creating excessive darkening. New range: ~5600–10600 Hz.
+        // Keep Hall darker than Plate, but leave enough top-end through for air after the low-mid cleanup.
         const float toneCutHz = mode == Mode::Hall
-            ? 8200.0f - dampingParam * 2600.0f
+            ? 8600.0f - dampingParam * 2300.0f
             : (mode == Mode::Plate ? 9300.0f - dampingParam * 1800.0f : 9600.0f - dampingParam * 3000.0f);
         cache.wetToneCoeff = 1.0f - std::exp(-kTwoPi * std::clamp(toneCutHz, 4800.0f, 14000.0f) / sr);
         // Session 006: restore air blend — Session 004 values were too low (~6%),
         // removing most high-frequency content above the tone cutoff.
-        cache.wetAirBlend = mode == Mode::Hall ? 0.14f : (mode == Mode::Plate ? 0.18f : 0.15f);
+        cache.wetAirBlend = mode == Mode::Hall ? 0.21f : (mode == Mode::Plate ? 0.18f : 0.15f);
 
         const float predelayMs = std::clamp(smoothedParams[kPredelayMs], 0.0f, 1.0f) * kMaxPredelayMs;
         cache.predelaySamples = std::clamp(static_cast<int>(std::round((predelayMs / 1000.0f) * sr)),
@@ -851,7 +853,7 @@ private:
 
         const float modRateScalar = smoothedParams[kModRate] * 2.0f;
         // Session 006: increase mod depth multiplier from 5.0 to 7.0.
-        // Effective depth at default (0.14): Room 0.14×7×0.45=0.44 smp, Hall 0.14×7×0.68=0.67 smp,
+        // Effective depth at default (0.14): Room 0.14×7×0.45=0.44 smp, Hall 0.14×7×0.64=0.63 smp,
         // Plate 0.14×7×0.50=0.49 smp. Subtle but audible — avoids the flangey extremes.
         cache.modDepthSamples = smoothedParams[kModDepth] * 7.0f * constants.modDepthScalar;
         cache.modulationEnabled = cache.modDepthSamples > 0.0001f && modRateScalar > 0.0001f;
@@ -885,8 +887,9 @@ private:
             cache.diffuserLengths[stage] = logicalDiffuserLength(stage, sampleScale, size);
         }
 
-        const float modeSpread = mode == Mode::Hall ? 1.45f : (mode == Mode::Plate ? 0.55f : 0.82f);
-        const float modeLevel = mode == Mode::Hall ? 0.54f : (mode == Mode::Plate ? 0.40f : 0.68f);
+        // Hall wants a dense front edge, not an obvious second echo before the tail blooms.
+        const float modeSpread = mode == Mode::Hall ? 1.14f : (mode == Mode::Plate ? 0.55f : 0.82f);
+        const float modeLevel = mode == Mode::Hall ? 0.42f : (mode == Mode::Plate ? 0.40f : 0.68f);
         const float sizeTerm = std::sqrt(std::max(0.1f, size));
         const int ringSize = static_cast<int>(m_earlyL.size());
         const int maxDelay = std::max(1, ringSize - 1);
