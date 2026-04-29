@@ -112,7 +112,7 @@ public:
     static constexpr float kTwoPi = 6.28318530718f;
     static constexpr uint32_t kControlInterval = 64;
     static constexpr std::array<float, kFDNLineCount> kLfoBaseRates = {
-        0.21f, 0.37f, 0.53f, 0.71f, 0.89f, 1.07f, 1.23f, 1.41f
+        0.158f, 0.278f, 0.398f, 0.533f, 0.668f, 0.803f, 0.923f, 1.058f
     };
     static constexpr std::array<uint32_t, kDiffuserCount> kBaseDiffuserLengths = {
         142, 107, 379, 277
@@ -121,7 +121,7 @@ public:
         89, 67
     };
     static constexpr std::array<float, kFDNLineCount> kLfoSecondaryRates = {
-        0.083f, 0.127f, 0.173f, 0.229f, 0.281f, 0.337f, 0.389f, 0.443f
+        0.062f, 0.095f, 0.130f, 0.172f, 0.211f, 0.253f, 0.292f, 0.332f
     };
     static constexpr std::array<float, kFDNLineCount> kInjectL = {
         0.93f, -0.37f, 0.61f, -0.79f, 0.23f, 0.84f, -0.51f, 0.42f
@@ -371,7 +371,7 @@ public:
             for (size_t line = 0; line < kFDNLineCount; ++line) {
                 float lfoOffset = 0.0f;
                 if (control.modulationEnabled) {
-                    const float multi = lfoSin[line] * 0.74f + lfoSin2[line] * 0.26f;
+                    const float multi = lfoSin[line] * 0.45f + lfoSin2[line] * 0.55f;
                     lfoOffset = multi * control.modDepthSamples;
                 }
                 lineOut[line] = readDelayLine(line, delayPos[line], static_cast<float>(control.lineLengths[line]) + lfoOffset);
@@ -503,7 +503,7 @@ public:
             { kSize, "Size", "SIZ", "x", 0.52f, 0.0f, 1.0f, true },
             { kDiffusion, "Diffusion", "DIF", "%", 0.64f, 0.0f, 1.0f, true },
             { kModRate, "Mod Rate", "RTE", "x", 0.42f, 0.0f, 1.0f, true },
-            { kModDepth, "Mod Depth", "DEP", "smpl", 0.24f, 0.0f, 1.0f, true },
+            { kModDepth, "Mod Depth", "DEP", "smpl", 0.10f, 0.0f, 1.0f, true },
             { kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, 2 },
         };
     }
@@ -716,12 +716,12 @@ private:
     static ModeConstants constantsForMode(Mode mode) {
         switch (mode) {
         case Mode::Hall:
-            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.18f, 0.92f, 0.74f, 1.42f};
+            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.18f, 0.58f, 0.74f, 1.42f};
         case Mode::Plate:
-            return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 1.38f, 0.96f, 0.98f, 1.45f};
+            return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 1.38f, 0.50f, 0.98f, 1.45f};
         case Mode::Room:
         default:
-            return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.22f, 0.72f, 0.82f, 1.20f};
+            return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.22f, 0.15f, 0.82f, 1.20f};
         }
     }
 
@@ -770,9 +770,9 @@ private:
 
         const float toneCutHz = mode == Mode::Hall
             ? 6200.0f - dampingParam * 2600.0f
-            : (mode == Mode::Plate ? 10500.0f - dampingParam * 2500.0f : 7600.0f - dampingParam * 3000.0f);
+            : (mode == Mode::Plate ? 7300.0f - dampingParam * 1800.0f : 7600.0f - dampingParam * 3000.0f);
         cache.wetToneCoeff = 1.0f - std::exp(-kTwoPi * std::clamp(toneCutHz, 2800.0f, 12000.0f) / sr);
-        cache.wetAirBlend = mode == Mode::Hall ? 0.08f : (mode == Mode::Plate ? 0.12f : 0.14f);
+        cache.wetAirBlend = mode == Mode::Hall ? 0.045f : (mode == Mode::Plate ? 0.055f : 0.07f);
 
         const float predelayMs = std::clamp(smoothedParams[kPredelayMs], 0.0f, 1.0f) * kMaxPredelayMs;
         cache.predelaySamples = std::clamp(static_cast<int>(std::round((predelayMs / 1000.0f) * sr)),
@@ -884,9 +884,9 @@ private:
 
         const float sr = static_cast<float>(m_sampleRate);
         m_platePeakCoeff = peakingCoefficients(-5.5f, 620.0f, sr, 1.15f);
-        m_boxCutCoeff[0] = peakingCoefficients(-2.4f, 430.0f, sr, 0.85f);
-        m_boxCutCoeff[1] = peakingCoefficients(-1.8f, 520.0f, sr, 0.75f);
-        m_boxCutCoeff[2] = peakingCoefficients(-2.3f, 1250.0f, sr, 1.10f);
+        m_boxCutCoeff[0] = peakingCoefficients(-4.6f, 430.0f, sr, 0.85f);
+        m_boxCutCoeff[1] = peakingCoefficients(-3.8f, 520.0f, sr, 0.75f);
+        m_boxCutCoeff[2] = peakingCoefficients(-4.2f, 1250.0f, sr, 1.10f);
 
         clearBuffers(randomizeLfos);
     }
@@ -1032,7 +1032,7 @@ private:
 
     void processPlatePostAllpass(float& left, float& right,
                                  std::array<int, kPlatePostAllpassCount>& pos) {
-        const float g = 0.45f;
+        const float g = 0.32f;
         for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
             auto& bufL = m_platePostL[stage];
             auto& bufR = m_platePostR[stage];
