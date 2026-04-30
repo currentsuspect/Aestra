@@ -1,9 +1,10 @@
-// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include "NUIComponent.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
+
 #include <functional>
 #include <memory>
 #include <string>
@@ -14,16 +15,19 @@ namespace AestraUI {
 class AestraCompEditor : public NUIComponent {
 public:
     explicit AestraCompEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
+
     void onRender(NUIRenderer& renderer) override;
+    void onUpdate(double deltaTime) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onResize() { layoutControls(); }
+    void onResize(int width, int height) override;
     void setOnClose(std::function<void()> cb) { m_onClose = std::move(cb); }
 
 private:
-    struct Knob {
+    struct Control {
         std::string label;
         uint32_t paramId = 0;
-        float value = 0.5f;
+        float value = 0.0f;
         NUIRect bounds;
         NUIRect knobRect;
         bool dragging = false;
@@ -34,34 +38,48 @@ private:
 
     void buildControls();
     void layoutControls();
+    void syncControlsFromPlugin();
     void drawTitleBar(NUIRenderer& renderer);
-    void drawModeSwitcher(NUIRenderer& renderer);
-    void drawKnob(NUIRenderer& renderer, const Knob& k);
-    void drawGainReductionMeter(NUIRenderer& renderer, const NUIRect& bounds);
-    void drawHorizontalMeter(NUIRenderer& renderer, const NUIRect& bounds, const std::string& label, float level);
-    int hitTestKnob(float x, float y) const;
+    void drawBypassButton(NUIRenderer& renderer);
+    void drawControl(NUIRenderer& renderer, const Control& control);
+    void drawGainReductionMeter(NUIRenderer& renderer);
+    void drawLevelMeter(NUIRenderer& renderer, const NUIRect& bounds, const std::string& label, float smoothedLevel);
+    void drawCloseButton(NUIRenderer& renderer);
+    int hitTestControl(float x, float y) const;
     bool hitTestCloseButton(float x, float y) const;
     bool hitTestTitleBar(float x, float y) const;
-    void updateKnobValue(int idx, float normalizedValue);
-    std::string formattedValue(uint32_t paramId) const;
+    void updateControlValue(int idx, float normalizedValue);
+    void setBypassed(bool bypassed);
+    bool isBypassed() const;
+    std::string valueText(uint32_t paramId) const;
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
-    std::vector<Knob> m_knobs;
+    std::vector<Control> m_controls;
     std::function<void()> m_onClose;
-    int m_hoveredKnob = -1;
+
+    NUIRect m_grMeterRect;
+    NUIRect m_inputMeterRect;
+    NUIRect m_outputMeterRect;
+    NUIRect m_bypassRect;
+
+    int m_hoveredControl = -1;
+    bool m_bypassHovered = false;
+    bool m_closeHovered = false;
     bool m_isDraggingWindow = false;
     NUIPoint m_dragStartPos;
     NUIPoint m_windowStartPos;
-    NUIRect m_peakModeRect;
-    NUIRect m_rmsModeRect;
-    NUIRect m_grMeterRect;
 
-    static constexpr float kWinW = 560.0f;
-    static constexpr float kWinH = 390.0f;
+    float m_grDisplayDb = 0.0f;
+    float m_inputDisplay = 0.0f;
+    float m_outputDisplay = 0.0f;
+    double m_meterTimer = 0.0;
+
+    static constexpr float kWinW = 680.0f;
+    static constexpr float kWinH = 470.0f;
     static constexpr float kTitleH = 58.0f;
-    static constexpr float kPad = 22.0f;
-    static constexpr float kRadius = 16.0f;
-    static constexpr float kKnobSize = 62.0f;
+    static constexpr float kPad = 20.0f;
+    static constexpr float kRadius = 12.0f;
+    static constexpr float kKnobSize = 56.0f;
 };
 
 } // namespace AestraUI

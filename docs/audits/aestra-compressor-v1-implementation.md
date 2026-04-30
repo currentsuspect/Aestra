@@ -169,3 +169,72 @@ Quality issue classification:
 Final quality decision:
 
 The Compressor V1 core is ready for the UI/metering pass. Remaining work should focus on presentation, metering integration, and workflow polish without changing the V1 DSP contract.
+
+## UI And Metering Pass
+
+Status: implemented around the existing `AestraCompEditor` route. No DSP or public parameter changes were made.
+
+Files changed:
+
+- `AestraUI/Widgets/AestraCompEditor.h`
+- `AestraUI/Widgets/AestraCompEditor.cpp`
+
+Editor path discovered:
+
+- `PluginUIController::openPluginEditor()` routes `com.Aestrastudios.comp` to `AestraCompEditor`.
+- `AestraUI/CMakeLists.txt` already builds `AestraCompEditor` into `AestraUI_Core`.
+- `AestraComp::hasEditor()` returns true, while `openEditor()` returns false. That mismatch only affects the native `PluginEditorWindow` path; the in-app Aestra UI route uses `PluginUIController` and hosts `AestraCompEditor` directly.
+- No generic plugin meter bus exists for compressor gain reduction. Existing track meters use `MeterSnapshotBuffer`; Compressor V1 reads plugin-local atomics instead.
+
+Final editor behavior:
+
+- Title: `AESTRA COMPRESSOR`.
+- Bypass is shown as an explicit `ACTIVE` / `BYPASSED` button.
+- Visible controls are exactly the V1 surface:
+  - Threshold
+  - Ratio
+  - Attack
+  - Release
+  - Knee
+  - Makeup
+  - Mix
+  - Input
+  - Output
+  - Detector HPF
+  - Bypass
+- Deprecated controls are not rendered: detector modes, topology, hold, auto release, range, lookahead, link law, SC listen, SC LPF, style, quality, saturation, and clipper controls remain hidden.
+
+Meter integration:
+
+- The editor safely casts the plugin instance to `AestraComp` and reads `getCurrentGainReductionDb()`, `getInputLevel()`, and `getOutputLevel()`.
+- Meter smoothing is UI-side in `AestraCompEditor::onUpdate()`.
+- The UI refreshes meters at roughly 30 Hz with `repaint()`.
+- The audio path is unchanged: no locks, allocations, routing changes, or DSP writes were added.
+
+Build and validation:
+
+```bash
+cmake -S . -B build/full-fast -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=OFF -DAESTRA_ENABLE_TESTS=OFF -DCMAKE_BUILD_TYPE=Release
+cmake --build build/full-fast --target AestraUI_Core --parallel 2
+cmake --build build/headless --target AestraCompPhase0Test AestraCompPhase1Test AestraCompUpgradeTest AestraCompressorMaterialLab AestraEQTest AestraDelayUpgradeTest --parallel 2
+ctest --test-dir build/headless -R "AestraComp|AestraCompressorMaterialLab|AestraEQTest|AestraDelayUpgradeTest" --output-on-failure
+```
+
+Results:
+
+- `AestraUI_Core`: built successfully.
+- Compressor tests and material lab: passed.
+- Nearby built-in effect tests (`AestraEQTest`, `AestraDelayUpgradeTest`): passed.
+
+Known UI limitations:
+
+- No transfer curve yet.
+- No generic plugin meter bus yet.
+- No preset browser inside the compressor editor.
+- No mode selector by design.
+- No external sidechain UX by design.
+- No clipping/limiting indicator beyond input/output level activity.
+
+Next recommended pass:
+
+Freeze the V1 editor contract after a visual QA pass with screenshots. If desired, add a generic plugin meter bus later, but do not block Compressor V1 on it because local atomic metering is sufficient for the current editor.
