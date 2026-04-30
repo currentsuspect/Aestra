@@ -530,10 +530,10 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const Knob& k, NUIColor a
     renderer.drawLine({cx, cy}, {cx + std::cos(pa) * (r * 0.56f), cy + std::sin(pa) * (r * 0.56f)}, 2.0f,
                       NUIColor(1.0f, 1.0f, 1.0f, active ? 0.98f : (hover ? 0.92f : 0.84f)));
     const float textX = k.knobRect.right() + 13.0f;
-    renderer.drawText(k.label, {textX, k.bounds.y + 12.0f}, 10.0f,
-                      theme.getColor("textPrimary").withAlpha(0.70f + stateLift * 0.12f));
-    renderer.drawText(formatParameterValue(k.paramId), {textX, k.bounds.y + 31.0f}, 10.5f,
-                      accent.withAlpha(0.78f + stateLift * 0.15f));
+    renderer.drawText(k.label, {textX, k.bounds.y + 12.0f}, 10.5f,
+                      theme.getColor("textPrimary").withAlpha(0.74f + stateLift * 0.12f));
+    renderer.drawText(formatParameterValue(k.paramId), {textX, k.bounds.y + 31.0f}, 11.0f,
+                      accent.withAlpha(0.82f + stateLift * 0.15f));
 }
 
 void AestraVerbEditor::drawMixSlider(NUIRenderer& renderer, NUIColor accent) {
@@ -545,7 +545,7 @@ void AestraVerbEditor::drawMixSlider(NUIRenderer& renderer, NUIColor accent) {
                                    7.0f, 1.0f, accent.withAlpha(0.24f));
     }
     renderer.drawText("MIX", {m_mixBounds.x, m_mixBounds.y + 8.0f}, 9.5f,
-                      theme.getColor("textPrimary").withAlpha(0.66f + stateLift * 0.12f));
+                      theme.getColor("textPrimary").withAlpha(0.70f + stateLift * 0.12f));
     renderer.fillRoundedRect(m_mixTrack, 2.0f, NUIColor(1, 1, 1, 0.13f + stateLift * 0.035f));
     renderer.fillRoundedRect({m_mixTrack.x, m_mixTrack.y, m_mixTrack.width * mix, m_mixTrack.height}, 2.0f,
                              accent.withAlpha(0.82f + stateLift * 0.10f));
@@ -669,7 +669,16 @@ void AestraVerbEditor::onUpdate(double deltaTime) {
 }
 
 void AestraVerbEditor::drawSectionLabels(NUIRenderer& renderer) {
-    (void)renderer;
+    auto b = getBounds();
+    const float mainX = editorContentX(b);
+    const float contentW = b.width - (mainX - b.x) - kPad;
+    const float stackW = std::clamp(contentW * 0.25f, 108.0f, 130.0f);
+
+    renderer.drawText("PREDELAY / SIZE", {mainX + 6.0f, b.y + 120.0f}, 8.5f,
+                      verbAccent().withAlpha(0.50f));
+
+    renderer.drawText("MODULATION", {mainX + contentW - 144.0f, b.y + 120.0f}, 8.5f,
+                      verbAccent().withAlpha(0.50f));
 }
 
 void AestraVerbEditor::onRender(NUIRenderer& renderer) {
@@ -682,6 +691,8 @@ void AestraVerbEditor::onRender(NUIRenderer& renderer) {
     drawModeSelector(renderer, accent);
     const float mainX = editorContentX(b);
     const float contentW = b.width - (mainX - b.x) - kPad;
+    renderer.drawLine({mainX - 4.0f, b.y + 104.0f}, {mainX + contentW + 4.0f, b.y + 104.0f}, 1.0f,
+                      NUIColor(1, 1, 1, 0.050f));
     renderer.fillRoundedRect({mainX - 8.0f, b.y + 106.0f, contentW + 16.0f, 294.0f}, 8.0f,
                              verbSurfaceBg().withAlpha(0.92f));
     renderer.strokeRoundedRect({mainX - 8.0f, b.y + 106.0f, contentW + 16.0f, 294.0f}, 8.0f, 1.0f,
@@ -691,8 +702,9 @@ void AestraVerbEditor::onRender(NUIRenderer& renderer) {
     renderer.drawLine({mainX + contentW - 151.0f, b.y + 146.0f}, {mainX + contentW - 151.0f, b.y + 358.0f}, 1.0f,
                       NUIColor(1, 1, 1, 0.045f));
     for (const auto& k : m_knobs) drawKnob(renderer, k, accent);
-    drawAnalysisPanels(renderer, accent);
+    drawSectionLabels(renderer);
     drawMixSlider(renderer, accent);
+    drawAnalysisPanels(renderer, accent);
 }
 
 int AestraVerbEditor::hitTestKnob(float x, float y) const {
