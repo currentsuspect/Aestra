@@ -59,7 +59,7 @@ const PluginInfo& compInfo() {
     static const PluginInfo info = [] {
         PluginInfo p;
         p.id = "com.Aestrastudios.comp";
-        p.name = "Aestra Comp";
+        p.name = "Aestra Compressor";
         p.vendor = "Aestra Studios";
         p.version = "0.1.0";
         p.category = "Dynamics";
