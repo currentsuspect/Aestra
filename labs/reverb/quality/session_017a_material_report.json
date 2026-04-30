@@ -14,13 +14,13 @@
       "tailRms": 0.0216918,
       "metallicPeakDb": 15.9162,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.985731,
+      "preClampPeak": 0.270646,
+      "postClampPeak": 0.270646,
+      "wetPreClampPeak": 0.270646,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "snare",
@@ -36,13 +36,13 @@
       "tailRms": 0.0191889,
       "metallicPeakDb": 13.785,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.985731,
+      "preClampPeak": 0.218276,
+      "postClampPeak": 0.218276,
+      "wetPreClampPeak": 0.218276,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "snare",
@@ -58,13 +58,13 @@
       "tailRms": 0.017018,
       "metallicPeakDb": 17.0728,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.985731,
+      "preClampPeak": 0.249237,
+      "postClampPeak": 0.249237,
+      "wetPreClampPeak": 0.249237,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "bright_ping",
@@ -80,13 +80,13 @@
       "tailRms": 0.0321423,
       "metallicPeakDb": 13.9174,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.894392,
+      "preClampPeak": 0.377022,
+      "postClampPeak": 0.377022,
+      "wetPreClampPeak": 0.377022,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "bright_ping",
@@ -102,13 +102,13 @@
       "tailRms": 0.0314655,
       "metallicPeakDb": 11.5344,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.894392,
+      "preClampPeak": 0.194924,
+      "postClampPeak": 0.194924,
+      "wetPreClampPeak": 0.194924,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "bright_ping",
@@ -124,13 +124,13 @@
       "tailRms": 0.0106272,
       "metallicPeakDb": 9.85079,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.894392,
+      "preClampPeak": 0.224566,
+      "postClampPeak": 0.224566,
+      "wetPreClampPeak": 0.224566,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "vocal_phrase",
@@ -146,13 +146,13 @@
       "tailRms": 0.364209,
       "metallicPeakDb": 11.6797,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
-      "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "sourcePeak": 0.7986,
+      "preClampPeak": 1.47744,
+      "postClampPeak": 1.47744,
+      "wetPreClampPeak": 1.47744,
+      "clampSampleCount": 1256,
+      "totalSamples": 96000,
+      "clampStatus": "pre-existing vocal clamp case"
     },
     {
       "name": "vocal_phrase",
@@ -168,13 +168,13 @@
       "tailRms": 0.244241,
       "metallicPeakDb": 12.8311,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.7986,
+      "preClampPeak": 0.960798,
+      "postClampPeak": 0.960798,
+      "wetPreClampPeak": 0.960798,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 96000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "vocal_phrase",
@@ -190,13 +190,13 @@
       "tailRms": 0.333719,
       "metallicPeakDb": 11.8035,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
-      "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "sourcePeak": 0.7986,
+      "preClampPeak": 1.29417,
+      "postClampPeak": 1.29417,
+      "wetPreClampPeak": 1.29417,
+      "clampSampleCount": 554,
+      "totalSamples": 96000,
+      "clampStatus": "pre-existing vocal clamp case"
     },
     {
       "name": "chord_stab",
@@ -212,13 +212,13 @@
       "tailRms": 0.066416,
       "metallicPeakDb": 12.0613,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.899612,
+      "preClampPeak": 0.301428,
+      "postClampPeak": 0.301428,
+      "wetPreClampPeak": 0.301428,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "chord_stab",
@@ -234,13 +234,13 @@
       "tailRms": 0.0834187,
       "metallicPeakDb": 12.5665,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.899612,
+      "preClampPeak": 0.289617,
+      "postClampPeak": 0.289617,
+      "wetPreClampPeak": 0.289617,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "chord_stab",
@@ -256,13 +256,13 @@
       "tailRms": 0.0918923,
       "metallicPeakDb": 11.1691,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.899612,
+      "preClampPeak": 0.379438,
+      "postClampPeak": 0.379438,
+      "wetPreClampPeak": 0.379438,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "low_pulse",
@@ -278,13 +278,13 @@
       "tailRms": 0.0223976,
       "metallicPeakDb": 10.5877,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.865783,
+      "preClampPeak": 0.284556,
+      "postClampPeak": 0.284556,
+      "wetPreClampPeak": 0.284556,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "low_pulse",
@@ -300,13 +300,13 @@
       "tailRms": 0.0257725,
       "metallicPeakDb": 10.6867,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.865783,
+      "preClampPeak": 0.213973,
+      "postClampPeak": 0.213973,
+      "wetPreClampPeak": 0.213973,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "low_pulse",
@@ -322,13 +322,13 @@
       "tailRms": 0.0154915,
       "metallicPeakDb": 9.51106,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.865783,
+      "preClampPeak": 0.44646,
+      "postClampPeak": 0.44646,
+      "wetPreClampPeak": 0.44646,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 48000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "mix_bus",
@@ -344,13 +344,13 @@
       "tailRms": 0.0357188,
       "metallicPeakDb": 15.0325,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.541831,
+      "preClampPeak": 0.168459,
+      "postClampPeak": 0.168459,
+      "wetPreClampPeak": 0.168459,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 96000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "mix_bus",
@@ -366,13 +366,13 @@
       "tailRms": 0.0589043,
       "metallicPeakDb": 16.2379,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.541831,
+      "preClampPeak": 0.255626,
+      "postClampPeak": 0.255626,
+      "wetPreClampPeak": 0.255626,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 96000,
+      "clampStatus": "not clamped"
     },
     {
       "name": "mix_bus",
@@ -388,13 +388,13 @@
       "tailRms": 0.0606229,
       "metallicPeakDb": 13.5011,
       "metallicSeverity": "low",
-      "sourcePeak": 0,
-      "preClampPeak": 0,
-      "postClampPeak": 0,
-      "wetPreClampPeak": 0,
+      "sourcePeak": 0.541831,
+      "preClampPeak": 0.232083,
+      "postClampPeak": 0.232083,
+      "wetPreClampPeak": 0.232083,
       "clampSampleCount": 0,
-      "totalSamples": 0,
-      "clampStatus": "diagnostics disabled"
+      "totalSamples": 96000,
+      "clampStatus": "not clamped"
     }
   ]
 }
