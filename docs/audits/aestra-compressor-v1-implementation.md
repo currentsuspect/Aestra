@@ -238,3 +238,134 @@ Known UI limitations:
 Next recommended pass:
 
 Freeze the V1 editor contract after a visual QA pass with screenshots. If desired, add a generic plugin meter bus later, but do not block Compressor V1 on it because local atomic metering is sufficient for the current editor.
+
+## Visual QA And Editor Freeze Pass
+
+Status: visual QA complete, editor frozen for V1. No DSP or public parameter changes were made.
+
+### Visual QA Summary
+
+Layout structure:
+
+- Window: 680x508 px (increased from 470 for vertical breathing room).
+- Title bar: 58 px with `AESTRA COMPRESSOR` (amber/teal, 17px) and subtitle.
+- Bypass button: top-right, `ACTIVE` / `BYPASSED` toggle.
+- Close button: top-right, 26x26 px (increased from 24x24 for clickability, aligned with Verb).
+- Gain reduction meter: full-width, 80 px horizontal bar, amber fill, `-XdB` readout, tick labels at 0/-12/-24.
+- Input/Output level meters: side-by-side below GR, 28 px, teal (IN) / amber (OUT).
+- Separator line between meter section and control grid.
+- Control grid: 5x2, primary row (Threshold, Ratio, Attack, Release, Knee) with 64px knobs and 108px cells, secondary row (Makeup, Mix, Input, Output, Detector HPF) with 48px knobs and 86px cells.
+
+Visual hierarchy:
+
+- Primary controls (Threshold, Ratio, Attack, Release) have larger knobs (64px), full-opacity teal accent, larger labels (8.5px, 0.78 alpha).
+- Secondary controls (Knee, Makeup, Mix, Input, Output, Detector HPF) have smaller knobs (48px), dimmed teal accent (0.72x), smaller labels (8.0px, 0.64 alpha).
+- Gain reduction meter is the dominant visual element — correct for a compressor.
+- Input/output meters are secondary — useful but not competing with GR.
+- Bypass is visible but not obnoxious.
+
+Meter behavior:
+
+- GR meter: reads `getCurrentGainReductionDb()`, clamped 0–48 dB, normalized to 0–24 dB display range, amber horizontal bar with tick marks.
+- Input/Output meters: read `getInputLevel()` / `getOutputLevel()`, converted to dB-normalized display.
+- All meters: UI-side smoothing at ~30 Hz, no audio-thread impact.
+- Metering route: plugin-local atomics, no generic plugin meter bus.
+
+Consistency with Verb:
+
+- Both editors share: panel/surface/inset background pattern, `AESTRA <NAME>` title format, close button style, title-bar drag, teal accent (Verb uses purple/gold, Comp uses amber/teal — each has its own palette).
+- Comp now has: primary/secondary knob hierarchy, separator line, larger close button — aligned with Verb's premium native direction.
+- Verb has features Comp does not need: presets, mode selector, analysis panels — these are not appropriate for a compressor V1.
+
+Stale labels or old concepts:
+
+- None found. All labels match V1 surface. No deprecated control names visible.
+
+### Polish Changes Made
+
+- Window height: 470 → 508 px for vertical breathing room.
+- Primary knob size: 56px → 64px (Threshold, Ratio, Attack, Release, Knee).
+- Secondary knob size: new 48px (Makeup, Mix, Input, Output, Detector HPF).
+- Primary/secondary visual hierarchy: accent opacity, label size, label alpha, arc thickness, pointer thickness.
+- Title font: 16px → 17px for Verb alignment.
+- Close button: 24x24 → 26x26 for Verb alignment.
+- GR meter tick label contrast: 0.60 → 0.72 alpha.
+- GR meter section label contrast: 0.78 → 0.82 alpha.
+- Level meter label contrast: 0.76 → 0.82 alpha.
+- Separator line between meters and controls.
+- Knob radius calculation: now derived from knobRect size instead of fixed constant.
+
+### Editor Freeze Contract
+
+Locked for Compressor V1:
+
+- V1 visible control set: Threshold, Ratio, Attack, Release, Knee, Makeup, Mix, Input, Output, Detector HPF, Bypass.
+- Local atomics metering route: `getCurrentGainReductionDb()`, `getInputLevel()`, `getOutputLevel()`.
+- Gain reduction meter as primary visual feedback.
+- Input/output meter as secondary feedback.
+- No mode selector.
+- No deprecated controls.
+- No fake advanced compressor features.
+- Plugin ID remains `com.Aestrastudios.comp`.
+- Display name remains `Aestra Compressor` unless Dylan changes branding.
+- Editor window size 680x508.
+- Primary/secondary knob hierarchy (64px/48px).
+
+Allowed future polish:
+
+- Transfer curve display.
+- Preset browser.
+- Better animation/meter ballistics.
+- Generic plugin meter bus.
+- Alternate compact layout.
+- Factory presets.
+- Mode/voicing pass after V1 freeze.
+
+Not allowed without reopening V1:
+
+- Changing DSP behavior.
+- Changing public parameter identity.
+- Reintroducing hidden/deprecated controls.
+- Adding saturation/lookahead/modes as if they were already part of V1.
+- Breaking old state compatibility.
+
+### Tests And Builds Run
+
+```bash
+cmake -S . -B build/full-fast -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=OFF -DAESTRA_ENABLE_TESTS=OFF -DCMAKE_BUILD_TYPE=Release
+cmake --build build/full-fast --target AestraUI_Core --parallel
+cmake -S . -B build/headless -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build/headless --target AestraCompPhase0Test AestraCompPhase1Test AestraCompUpgradeTest AestraCompressorMaterialLab --parallel
+ctest --test-dir build/headless -R "AestraComp|AestraCompressorMaterialLab" --output-on-failure
+ctest --test-dir build/headless -R "AestraEQTest|AestraDelayUpgradeTest" --output-on-failure
+git diff --check
+```
+
+Results:
+
+- `AestraUI_Core`: built successfully (pre-existing `-Woverloaded-virtual` warnings in other editors, not introduced by this pass).
+- `AestraCompPhase0Test`: passed.
+- `AestraCompPhase1Test`: passed.
+- `AestraCompUpgradeTest`: passed.
+- `AestraCompressorMaterialLab`: passed.
+- `AestraEQTest`: passed.
+- `AestraDelayUpgradeTest`: passed.
+- `git diff --check`: clean.
+
+Screenshot status:
+
+- No automated screenshot path exists for NUI editors. Manual screenshots require running the full Aestra application with audio hardware.
+
+### Remaining UI Limitations
+
+- No transfer curve display.
+- No generic plugin meter bus.
+- No preset browser.
+- No mode selector (by design).
+- No external sidechain UX (by design).
+- No clipping/limiting indicator beyond input/output level activity.
+- No automated screenshot generation for CI.
+
+### Next Recommended Pass
+
+Transfer curve display or preset browser. Both are allowed future polish and do not require reopening the V1 freeze. A generic plugin meter bus would benefit all built-in plugins but is not blocking Compressor V1.

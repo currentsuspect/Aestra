@@ -75,11 +75,12 @@ private:
     double m_meterTimer = 0.0;
 
     static constexpr float kWinW = 680.0f;
-    static constexpr float kWinH = 470.0f;
+    static constexpr float kWinH = 508.0f;
     static constexpr float kTitleH = 58.0f;
     static constexpr float kPad = 20.0f;
     static constexpr float kRadius = 12.0f;
-    static constexpr float kKnobSize = 56.0f;
+    static constexpr float kKnobSizePrimary = 64.0f;
+    static constexpr float kKnobSizeSecondary = 48.0f;
 };
 
 } // namespace AestraUI
