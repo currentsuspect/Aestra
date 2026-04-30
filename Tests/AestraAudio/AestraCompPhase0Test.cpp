@@ -234,6 +234,35 @@ bool testMixAndGainControls() {
     return true;
 }
 
+bool testDetectorHPFReducesLowFrequencyTriggering() {
+    std::vector<float> lowTone(48000, 0.0f);
+    for (size_t i = 0; i < lowTone.size(); ++i) {
+        lowTone[i] = std::sin(static_cast<float>(i) * 2.0f * 3.14159265358979323846f * 60.0f / 48000.0f) * 0.8f;
+    }
+
+    AestraComp noFilter;
+    configure(noFilter);
+    noFilter.setParameter(AestraComp::kThreshold, thresholdNorm(-30.0f));
+    noFilter.setParameter(AestraComp::kRatio, ratioNorm(8.0f));
+    (void)processMono(noFilter, lowTone);
+    const float grNoFilter = noFilter.getCurrentGainReductionDb();
+
+    AestraComp withFilter;
+    configure(withFilter);
+    withFilter.setParameter(AestraComp::kThreshold, thresholdNorm(-30.0f));
+    withFilter.setParameter(AestraComp::kRatio, ratioNorm(8.0f));
+    withFilter.setParameter(AestraComp::kDetectorHPF, 1.0f);
+    (void)processMono(withFilter, lowTone);
+    const float grWithFilter = withFilter.getCurrentGainReductionDb();
+
+    if (!(grWithFilter + 3.0f < grNoFilter)) {
+        std::cerr << "detector HPF did not reduce low-frequency GR enough: noFilter=" << grNoFilter
+                  << " withFilter=" << grWithFilter << "\n";
+        return false;
+    }
+    return true;
+}
+
 bool testStereoLinkAndSanitization() {
     AestraComp comp;
     configure(comp);
@@ -275,6 +304,7 @@ int main() {
     if (!testAttackAndReleaseTiming()) return 1;
     if (!testSampleRateIndependence()) return 1;
     if (!testMixAndGainControls()) return 1;
+    if (!testDetectorHPFReducesLowFrequencyTriggering()) return 1;
     if (!testStereoLinkAndSanitization()) return 1;
     std::cout << "All AestraComp V1 DSP tests passed.\n";
     return 0;

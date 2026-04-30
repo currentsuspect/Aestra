@@ -87,6 +87,8 @@ Materials include silence, sine tone, bass pulse, transient/snare, vocal-ish sus
 - No advanced stereo link controls.
 - No transfer curve display.
 - No custom premium UI in this pass.
+- No generic plugin meter bus yet.
+- Hot output can exceed 0 dBFS by design.
 
 ## Deferred Features
 
@@ -98,3 +100,72 @@ Materials include silence, sine tone, bass pulse, transient/snare, vocal-ish sus
 - Advanced stereo link controls.
 - Transfer curve display.
 - Custom premium UI.
+
+## Validation Pass Results
+
+Validation pass commit scope: Compressor V1 quality tests, reproducible material lab, and documentation only. No DSP or public parameter changes were made.
+
+Tests added or strengthened:
+
+- `AestraCompPhase0Test` now directly verifies that Detector HPF reduces low-frequency detector triggering.
+- `AestraCompPhase1Test` now verifies built-in metadata: display name `Aestra Compressor`, plugin ID `com.Aestrastudios.comp`, and Dynamics effect classification.
+- `AestraCompressorMaterialLab` was added as a deterministic, hardware-free lab target.
+
+Material lab target:
+
+- Target: `AestraCompressorMaterialLab`
+- Source: `Tests/AestraAudio/AestraCompressorMaterialLab.cpp`
+- CTest name: `AestraCompressorMaterialLab`
+- Outputs:
+  - `labs/compressor/quality/compressor_quality_baseline.md`
+  - `labs/compressor/quality/compressor_quality_baseline.json`
+
+Material lab cases:
+
+- silence
+- sine tone
+- bass pulse
+- snare/transient
+- vocal-ish sustained signal
+- chord/pad
+- simple mix bus
+- extreme sweep
+
+Metrics emitted:
+
+- peak in/out
+- RMS in/out
+- max gain reduction
+- average gain reduction
+- clipping count
+- NaN/Inf count
+- bypass parity result
+- max absolute sample
+- sanity result
+
+Validation commands run:
+
+```bash
+cmake -S . -B build/headless -DAestra_CORE_MODE=ON -DAESTRA_HEADLESS_ONLY=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build/headless --target AestraCompPhase0Test AestraCompPhase1Test AestraCompUpgradeTest AestraCompressorMaterialLab AestraEQTest AestraDelayUpgradeTest --parallel 2
+ctest --test-dir build/headless -R "AestraComp|AestraCompressorMaterialLab|AestraEQTest|AestraDelayUpgradeTest" --output-on-failure
+python -m json.tool labs/compressor/quality/compressor_quality_baseline.json
+```
+
+Results:
+
+- Compressor tests: passed.
+- Compressor material lab: passed and regenerated the baseline files.
+- Nearby built-in effect tests (`AestraEQTest`, `AestraDelayUpgradeTest`): passed.
+- JSON baseline validation: passed.
+
+Quality issue classification:
+
+- REQUIRED: none found in DSP.
+- RECOMMENDED: keep the reproducible lab target in CI-facing test builds.
+- DEFER: custom editor, generic plugin meter bus, transfer curve display, auto gain, external sidechain UX, advanced stereo link controls.
+- REJECT: modes, saturation, lookahead, analog modeling, and any public parameter expansion for V1.
+
+Final quality decision:
+
+The Compressor V1 core is ready for the UI/metering pass. Remaining work should focus on presentation, metering integration, and workflow polish without changing the V1 DSP contract.

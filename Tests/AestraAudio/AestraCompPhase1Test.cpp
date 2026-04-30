@@ -2,6 +2,7 @@
 // AestraCompPhase1Test — V1 compressor parameter and state contract tests.
 
 #include "Plugin/AestraComp.h"
+#include "Plugin/BuiltInPlugins.h"
 
 #include <algorithm>
 #include <cmath>
@@ -131,6 +132,23 @@ bool testProcessPathDoesNotResizeKnownBuffers() {
     return true;
 }
 
+bool testBuiltInMetadata() {
+    const auto& info = Aestra::Audio::BuiltInPlugins::compInfo();
+    if (info.id != "com.Aestrastudios.comp") {
+        std::cerr << "unexpected compressor plugin ID: " << info.id << "\n";
+        return false;
+    }
+    if (info.name != "Aestra Compressor") {
+        std::cerr << "unexpected compressor display name: " << info.name << "\n";
+        return false;
+    }
+    if (info.category != "Dynamics" || info.type != Aestra::Audio::PluginType::Effect) {
+        std::cerr << "unexpected compressor metadata category/type\n";
+        return false;
+    }
+    return true;
+}
+
 } // namespace
 
 int main() {
@@ -140,6 +158,7 @@ int main() {
     if (!testStateRoundTrip()) return 1;
     if (!testInvalidStateFailsSafely()) return 1;
     if (!testProcessPathDoesNotResizeKnownBuffers()) return 1;
+    if (!testBuiltInMetadata()) return 1;
     std::cout << "All AestraComp V1 parameter/state tests passed.\n";
     return 0;
 }

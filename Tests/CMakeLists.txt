@@ -754,6 +754,18 @@ target_include_directories(AestraCompUpgradeTest PRIVATE
 add_test(NAME AestraCompUpgradeTest COMMAND AestraCompUpgradeTest)
 set_tests_properties(AestraCompUpgradeTest PROPERTIES LABELS "audio;plugins;comp;upgrade")
 
+# Aestra Compressor Material Lab
+add_executable(AestraCompressorMaterialLab AestraAudio/AestraCompressorMaterialLab.cpp)
+target_link_libraries(AestraCompressorMaterialLab PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraCompressorMaterialLab PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+target_compile_definitions(AestraCompressorMaterialLab PRIVATE AESTRA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+add_test(NAME AestraCompressorMaterialLab COMMAND AestraCompressorMaterialLab)
+set_tests_properties(AestraCompressorMaterialLab PROPERTIES LABELS "audio;plugins;comp;lab")
+
 # Aestra Delay Upgrade Test
 add_executable(AestraDelayUpgradeTest AestraAudio/AestraDelayUpgradeTest.cpp)
 target_link_libraries(AestraDelayUpgradeTest PRIVATE AestraAudio AestraCore)
