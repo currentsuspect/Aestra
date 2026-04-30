@@ -672,12 +672,15 @@ void AestraVerbEditor::drawSectionLabels(NUIRenderer& renderer) {
     auto b = getBounds();
     const float mainX = editorContentX(b);
     const float contentW = b.width - (mainX - b.x) - kPad;
-    const float stackW = std::clamp(contentW * 0.25f, 108.0f, 130.0f);
+    const float rightX = mainX + contentW - 144.0f;
 
     renderer.drawText("PREDELAY / SIZE", {mainX + 6.0f, b.y + 120.0f}, 8.5f,
                       verbAccent().withAlpha(0.50f));
 
-    renderer.drawText("MODULATION", {mainX + contentW - 144.0f, b.y + 120.0f}, 8.5f,
+    renderer.drawText("TONE", {rightX, b.y + 104.0f}, 8.5f,
+                      verbAccent().withAlpha(0.50f));
+
+    renderer.drawText("MODULATION", {rightX, b.y + 208.0f}, 8.5f,
                       verbAccent().withAlpha(0.50f));
 }
 
