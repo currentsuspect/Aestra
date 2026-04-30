@@ -92,16 +92,19 @@ void AestraCompEditor::layoutControls() {
 
     const float gridY = meterTop + 142.0f;
     const float gapX = 10.0f;
-    const float gapY = 12.0f;
+    const float gapY = 16.0f;
     const float cellW = (contentW - gapX * 4.0f) / 5.0f;
-    const float cellH = 96.0f;
+    const float cellHPrimary = 108.0f;
+    const float cellHSecondary = 86.0f;
     for (size_t i = 0; i < m_controls.size(); ++i) {
         const int row = static_cast<int>(i / 5);
         const int col = static_cast<int>(i % 5);
         const float x = contentX + static_cast<float>(col) * (cellW + gapX);
-        const float y = gridY + static_cast<float>(row) * (cellH + gapY);
+        const float cellH = (row == 0) ? cellHPrimary : cellHSecondary;
+        const float y = gridY + (row == 0 ? 0.0f : cellHPrimary + gapY);
+        const float knobSz = (row == 0) ? kKnobSizePrimary : kKnobSizeSecondary;
         m_controls[i].bounds = NUIRect(x, y, cellW, cellH);
-        m_controls[i].knobRect = NUIRect(x + (cellW - kKnobSize) * 0.5f, y + 21.0f, kKnobSize, kKnobSize);
+        m_controls[i].knobRect = NUIRect(x + (cellW - knobSz) * 0.5f, y + 21.0f, knobSz, knobSz);
     }
 }
 
@@ -146,9 +149,9 @@ void AestraCompEditor::drawTitleBar(NUIRenderer& renderer) {
     renderer.fillRoundedRect(title, kRadius, panelBg());
     renderer.drawLine({title.x + 18.0f, title.bottom() - 1.0f}, {title.right() - 18.0f, title.bottom() - 1.0f},
                       1.0f, NUIColor(1, 1, 1, 0.060f));
-    renderer.drawText("AESTRA", {title.x + 22.0f, title.y + 17.0f}, 16.0f, amber().withAlpha(0.96f));
-    renderer.drawText("COMPRESSOR", {title.x + 92.0f, title.y + 17.0f}, 16.0f, teal().withAlpha(0.96f));
-    renderer.drawText("Zero-latency feed-forward dynamics", {title.x + 23.0f, title.y + 37.0f}, 9.0f,
+    renderer.drawText("AESTRA", {title.x + 22.0f, title.y + 16.0f}, 17.0f, amber().withAlpha(0.96f));
+    renderer.drawText("COMPRESSOR", {title.x + 100.0f, title.y + 16.0f}, 17.0f, teal().withAlpha(0.96f));
+    renderer.drawText("Zero-latency feed-forward dynamics", {title.x + 23.0f, title.y + 38.0f}, 9.0f,
                       theme.getColor("textSecondary").withAlpha(0.74f));
 }
 
@@ -167,11 +170,11 @@ void AestraCompEditor::drawBypassButton(NUIRenderer& renderer) {
 void AestraCompEditor::drawCloseButton(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& theme = NUIThemeManager::getInstance();
-    const NUIRect closeRect(b.right() - 35.0f, b.y + 16.0f, 24.0f, 24.0f);
+    const NUIRect closeRect(b.right() - 36.0f, b.y + 15.0f, 26.0f, 26.0f);
     renderer.fillRoundedRect(closeRect, 8.0f, NUIColor(1, 1, 1, m_closeHovered ? 0.070f : 0.030f));
-    renderer.drawLine({closeRect.x + 7.0f, closeRect.y + 7.0f}, {closeRect.x + 17.0f, closeRect.y + 17.0f}, 1.65f,
+    renderer.drawLine({closeRect.x + 7.0f, closeRect.y + 7.0f}, {closeRect.x + 19.0f, closeRect.y + 19.0f}, 1.70f,
                       theme.getColor("textPrimary").withAlpha(m_closeHovered ? 0.90f : 0.68f));
-    renderer.drawLine({closeRect.x + 17.0f, closeRect.y + 7.0f}, {closeRect.x + 7.0f, closeRect.y + 17.0f}, 1.65f,
+    renderer.drawLine({closeRect.x + 19.0f, closeRect.y + 7.0f}, {closeRect.x + 7.0f, closeRect.y + 19.0f}, 1.70f,
                       theme.getColor("textPrimary").withAlpha(m_closeHovered ? 0.90f : 0.68f));
 }
 
@@ -181,7 +184,7 @@ void AestraCompEditor::drawGainReductionMeter(NUIRenderer& renderer) {
     renderer.fillRoundedRect(b, 10.0f, surfaceBg());
     renderer.strokeRoundedRect(b, 10.0f, 1.0f, NUIColor(1, 1, 1, 0.075f));
     renderer.drawText("GAIN REDUCTION", {b.x + 16.0f, b.y + 12.0f}, 9.0f,
-                      theme.getColor("textPrimary").withAlpha(0.78f));
+                      theme.getColor("textPrimary").withAlpha(0.82f));
 
     const NUIRect track(b.x + 16.0f, b.y + 38.0f, b.width - 104.0f, 12.0f);
     renderer.fillRoundedRect(track, 6.0f, insetBg());
@@ -194,11 +197,11 @@ void AestraCompEditor::drawGainReductionMeter(NUIRenderer& renderer) {
     renderer.fillRoundedRect({track.x, track.y, track.width * norm, track.height}, 6.0f,
                              amber().withAlpha(0.90f));
     renderer.drawText("0", {track.x - 1.0f, track.bottom() + 11.0f}, 8.0f,
-                      theme.getColor("textSecondary").withAlpha(0.60f));
+                      theme.getColor("textSecondary").withAlpha(0.72f));
     renderer.drawText("-12", {track.x + track.width * 0.5f - 10.0f, track.bottom() + 11.0f}, 8.0f,
-                      theme.getColor("textSecondary").withAlpha(0.60f));
+                      theme.getColor("textSecondary").withAlpha(0.72f));
     renderer.drawText("-24", {track.right() - 18.0f, track.bottom() + 11.0f}, 8.0f,
-                      theme.getColor("textSecondary").withAlpha(0.60f));
+                      theme.getColor("textSecondary").withAlpha(0.72f));
 
     char buf[32]{};
     std::snprintf(buf, sizeof(buf), "-%.1fdB", m_grDisplayDb);
@@ -218,7 +221,7 @@ void AestraCompEditor::drawLevelMeter(NUIRenderer& renderer,
                              (label == "IN" ? teal() : amber()).withAlpha(0.86f));
     renderer.strokeRoundedRect(bounds, 8.0f, 1.0f, NUIColor(1, 1, 1, 0.065f));
     renderer.drawText(label, {bounds.x + 14.0f, bounds.y + 9.0f}, 8.0f,
-                      theme.getColor("textPrimary").withAlpha(0.76f));
+                      theme.getColor("textPrimary").withAlpha(0.82f));
 }
 
 std::string AestraCompEditor::valueText(uint32_t paramId) const {
@@ -229,14 +232,19 @@ std::string AestraCompEditor::valueText(uint32_t paramId) const {
 void AestraCompEditor::drawControl(NUIRenderer& renderer, const Control& control) {
     auto& theme = NUIThemeManager::getInstance();
     const bool hot = control.hovered || control.dragging;
-    const NUIColor accent = control.paramId == Aestra::Audio::Plugins::AestraComp::kOutputGain ? amber() : teal();
+    const bool isPrimary = control.paramId == Aestra::Audio::Plugins::AestraComp::kThreshold ||
+                           control.paramId == Aestra::Audio::Plugins::AestraComp::kRatio ||
+                           control.paramId == Aestra::Audio::Plugins::AestraComp::kAttack ||
+                           control.paramId == Aestra::Audio::Plugins::AestraComp::kRelease;
+    const NUIColor accent = isPrimary ? teal() : teal().withAlpha(0.72f);
 
     renderer.fillRoundedRect(control.bounds, 9.0f, hot ? NUIColor(0.070f, 0.078f, 0.085f, 0.99f) : surfaceBg());
     renderer.strokeRoundedRect(control.bounds, 9.0f, 1.0f, hot ? accent.withAlpha(0.42f) : NUIColor(1, 1, 1, 0.060f));
 
     const float cx = control.knobRect.center().x;
     const float cy = control.knobRect.center().y;
-    const float r = kKnobSize * 0.35f;
+    const float knobRadius = std::min(control.knobRect.width, control.knobRect.height) * 0.5f;
+    const float r = knobRadius * 0.70f;
     renderer.fillCircle({cx, cy}, r + 7.0f, accent.withAlpha(hot ? 0.16f : 0.08f));
     renderer.fillCircle({cx, cy}, r, insetBg());
     renderer.strokeCircle({cx, cy}, r + 3.0f, 2.0f, NUIColor(1, 1, 1, 0.08f));
@@ -249,15 +257,18 @@ void AestraCompEditor::drawControl(NUIRenderer& renderer, const Control& control
         const float a = start + sweep * t;
         arc[i] = {cx + std::cos(a) * (r + 5.0f), cy + std::sin(a) * (r + 5.0f)};
     }
-    renderer.drawPolyline(arc.data(), static_cast<int>(arc.size()), 3.0f, accent.withAlpha(0.92f));
+    renderer.drawPolyline(arc.data(), static_cast<int>(arc.size()), isPrimary ? 3.0f : 2.5f, accent.withAlpha(0.92f));
 
     const float pointerAngle = start + sweep;
-    renderer.drawLine({cx, cy}, {cx + std::cos(pointerAngle) * (r - 5.0f), cy + std::sin(pointerAngle) * (r - 5.0f)},
-                      2.0f, theme.getColor("textPrimary").withAlpha(0.84f));
+    const float pointerLen = r - (isPrimary ? 5.0f : 4.0f);
+    renderer.drawLine({cx, cy}, {cx + std::cos(pointerAngle) * pointerLen, cy + std::sin(pointerAngle) * pointerLen},
+                      isPrimary ? 2.0f : 1.75f, theme.getColor("textPrimary").withAlpha(0.84f));
 
-    renderer.drawText(control.label, {control.bounds.x + 9.0f, control.bounds.y + 7.0f}, 8.0f,
-                      theme.getColor("textPrimary").withAlpha(0.76f));
-    renderer.drawText(valueText(control.paramId), {control.bounds.x + 9.0f, control.bounds.bottom() - 16.0f}, 8.0f,
+    const float labelAlpha = isPrimary ? 0.78f : 0.64f;
+    renderer.drawText(control.label, {control.bounds.x + 9.0f, control.bounds.y + 7.0f}, isPrimary ? 8.5f : 8.0f,
+                      theme.getColor("textPrimary").withAlpha(labelAlpha));
+    const float valueY = control.bounds.bottom() - (isPrimary ? 17.0f : 15.0f);
+    renderer.drawText(valueText(control.paramId), {control.bounds.x + 9.0f, valueY}, isPrimary ? 8.5f : 8.0f,
                       accent.withAlpha(0.95f));
 }
 
@@ -272,6 +283,10 @@ void AestraCompEditor::onRender(NUIRenderer& renderer) {
     drawGainReductionMeter(renderer);
     drawLevelMeter(renderer, m_inputMeterRect, "IN", m_inputDisplay);
     drawLevelMeter(renderer, m_outputMeterRect, "OUT", m_outputDisplay);
+
+    const float sepY = m_outputMeterRect.bottom() + 12.0f;
+    renderer.drawLine({b.x + kPad, sepY}, {b.right() - kPad, sepY}, 1.0f, NUIColor(1, 1, 1, 0.050f));
+
     for (const auto& control : m_controls) {
         drawControl(renderer, control);
     }
@@ -286,7 +301,7 @@ int AestraCompEditor::hitTestControl(float x, float y) const {
 
 bool AestraCompEditor::hitTestCloseButton(float x, float y) const {
     auto b = getBounds();
-    return NUIRect(b.right() - 35.0f, b.y + 16.0f, 24.0f, 24.0f).contains({x, y});
+    return NUIRect(b.right() - 36.0f, b.y + 15.0f, 26.0f, 26.0f).contains({x, y});
 }
 
 bool AestraCompEditor::hitTestTitleBar(float x, float y) const {
