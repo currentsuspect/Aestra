@@ -207,6 +207,51 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessMain.cpp")
   message(STATUS "AestraHeadless configured")
 endif()
 
+if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessExportMain.cpp")
+  add_executable(AestraHeadlessExport
+    Source/App/HeadlessExportMain.cpp
+  )
+
+  if(MSVC)
+    target_compile_options(AestraHeadlessExport PRIVATE /utf-8)
+  endif()
+
+  set_target_properties(AestraHeadlessExport PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  )
+
+  target_link_libraries(AestraHeadlessExport PRIVATE
+    AestraAudioCore
+    AestraCore
+  )
+
+  target_include_directories(AestraHeadlessExport PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+  )
+
+  if(WIN32)
+    target_compile_definitions(AestraHeadlessExport PRIVATE
+      _CRT_SECURE_NO_WARNINGS
+      NOMINMAX
+    )
+    target_link_libraries(AestraHeadlessExport PRIVATE mfplat mfreadwrite mfuuid)
+  endif()
+
+  if(AESTRA_ENABLE_TESTS)
+    add_test(NAME AestraHeadlessExportRejectsBadArgs
+      COMMAND AestraHeadlessExport --duration nope)
+    set_tests_properties(AestraHeadlessExportRejectsBadArgs PROPERTIES
+      WILL_FAIL TRUE
+      LABELS "cli;headless")
+  endif()
+
+  message(STATUS "AestraHeadlessExport configured")
+endif()
+
 if(AESTRA_ENABLE_UI)
   # =============================================================================
   # AestraUI - UI Framework
