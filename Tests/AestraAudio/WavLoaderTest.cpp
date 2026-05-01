@@ -164,6 +164,55 @@ bool run24BitTest() {
     return true;
 }
 
+bool run32BitPcmTest() {
+    std::cout << "Test 4: 32-bit PCM conversion...";
+    std::vector<int32_t> samples = {0, 1073741824, -2147483647 - 1};
+    std::string path = makeTempPath("Aestra_32bit_pcm.wav");
+    writeTestWav(path, 32, 48000, 1, samples, false);
+
+    std::vector<float> audio;
+    uint32_t sampleRate = 0;
+    uint32_t channels = 0;
+    bool ok = decodeAudioFile(path, audio, sampleRate, channels);
+    fs::remove(path);
+
+    if (!ok || audio.size() != samples.size() * 2 || sampleRate != 48000 || channels != 2) {
+        std::cout << " FAILED\n";
+        return false;
+    }
+
+    if (!approxEqual(audio[0], 0.0f) ||
+        !approxEqual(audio[2], 0.5f, 1e-5f) ||
+        !approxEqual(audio[4], -1.0f, 1e-5f)) {
+        std::cout << " FAILED (32-bit PCM values out of range)\n";
+        return false;
+    }
+
+    std::cout << " OK\n";
+    return true;
+}
+
+bool runInvalidMetadataTest() {
+    std::cout << "Test 5: Invalid WAV metadata rejection...";
+    std::vector<int32_t> samples = {0, 1};
+    std::string path = makeTempPath("Aestra_invalid_channels.wav");
+    writeTestWav(path, 16, 44100, 0, samples, false);
+
+    std::vector<float> audio;
+    uint32_t sampleRate = 0;
+    uint32_t channels = 0;
+    bool ok = decodeAudioFile(path, audio, sampleRate, channels);
+    fs::remove(path);
+
+    if (ok) {
+        std::cout << " FAILED\n";
+        return false;
+    }
+
+    std::cout << " OK\n";
+    return true;
+}
+
 } // namespace
 
 int main() {
@@ -171,6 +220,8 @@ int main() {
     success &= runBasic16BitTest();
     success &= runJunkChunkTest();
     success &= run24BitTest();
+    success &= run32BitPcmTest();
+    success &= runInvalidMetadataTest();
 
     if (success) {
         std::cout << "All WAV loader tests passed.\n";
