@@ -266,24 +266,30 @@ size_t CommandHistory::calculateMemoryUsage() const {
 }
 
 void CommandHistory::undoTo(int targetIndex) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    while (static_cast<int>(m_undoStack.size()) > targetIndex && !m_undoStack.empty()) {
-        auto& cmd = m_undoStack.back();
-        cmd->undo();
-        m_redoStack.push_back(cmd);
-        m_undoStack.pop_back();
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        while (static_cast<int>(m_undoStack.size()) > targetIndex && !m_undoStack.empty()) {
+            auto& cmd = m_undoStack.back();
+            cmd->undo();
+            m_redoStack.push_back(cmd);
+            m_undoStack.pop_back();
+        }
     }
+    // Notify AFTER releasing lock to prevent deadlock if callback queries history
     for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
 }
 
 void CommandHistory::redoTo(int targetIndex) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    while (static_cast<int>(m_redoStack.size()) > targetIndex && !m_redoStack.empty()) {
-        auto& cmd = m_redoStack.back();
-        cmd->redo();
-        m_undoStack.push_back(cmd);
-        m_redoStack.pop_back();
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        while (static_cast<int>(m_redoStack.size()) > targetIndex && !m_redoStack.empty()) {
+            auto& cmd = m_redoStack.back();
+            cmd->redo();
+            m_undoStack.push_back(cmd);
+            m_redoStack.pop_back();
+        }
     }
+    // Notify AFTER releasing lock to prevent deadlock if callback queries history
     for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
 }
 

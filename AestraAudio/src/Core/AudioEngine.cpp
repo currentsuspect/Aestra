@@ -1421,6 +1421,10 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         return;
     }
 
+    // Debug assertion: graph must not exceed pre-allocated RT vector capacity.
+    // If this fires, the RT topo/edge vectors will overflow → memory corruption.
+    assert(graph.tracks.size() <= kMaxTracks && "renderGraph: track count exceeds kMaxTracks — RT vector overflow");
+
     // Calc pointers
     double* masterBuf = m_masterBufferD.data() + bufferOffset * numChannels;
 
