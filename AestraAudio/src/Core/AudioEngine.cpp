@@ -1091,6 +1091,7 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         m_rtAudibleDownstream.resize(kMaxTracks);
         m_rtAudibleIncoming.resize(kMaxTracks);
         m_rtSidechainIncoming.resize(kMaxTracks);
+        m_rtSidechainReceiverFlags.assign(kMaxTracks, 0);
         m_rtTopoEdges.resize(kMaxTracks);
         for (size_t i = 0; i < kMaxTracks; ++i) {
             m_rtAudibleDownstream[i].reserve(kMaxEdgesPerTrack);
@@ -1620,15 +1621,25 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
     // Clear all per-track buffers for this block up front so routed audio can
     // accumulate into destination tracks before they render/process.
-    for (const auto& track : graph.tracks) {
+    // Sidechain buffers: only clear for tracks that receive sidechain input this
+    // block or received it last block.  Tracks that never participate in
+    // sidechain routing skip the memset, saving memory bandwidth.
+    for (size_t gi = 0; gi < graph.tracks.size(); ++gi) {
+        const auto& track = graph.tracks[gi];
         const uint32_t trackIdx = track.trackIndex;
         if (static_cast<size_t>(trackIdx) >= availableTracks) {
             continue;
         }
         auto& buffer = m_trackBuffersD[trackIdx];
         std::memset(buffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
-        auto& sidechainBuffer = m_trackSidechainBuffersD[trackIdx];
-        std::memset(sidechainBuffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
+
+        const bool receivesSidechainThisBlock = !m_rtSidechainIncoming[gi].empty();
+        const bool receivedSidechainLastBlock = m_rtSidechainReceiverFlags[trackIdx] != 0;
+        if (receivesSidechainThisBlock || receivedSidechainLastBlock) {
+            auto& sidechainBuffer = m_trackSidechainBuffersD[trackIdx];
+            std::memset(sidechainBuffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
+        }
+        m_rtSidechainReceiverFlags[trackIdx] = receivesSidechainThisBlock ? 1 : 0;
     }
 
     // Process tracks in audible topological order so any routed upstream
