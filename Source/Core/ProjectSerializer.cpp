@@ -1125,7 +1125,12 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                               " (" + std::to_string(buffer->numFrames) + " frames, " + 
                               std::to_string(sampleRate) + " Hz)");
                 } else {
-                    Log::warning("[ProjectLoad] Failed to decode: " + filePath);
+                    Log::warning("[ProjectLoad] Failed to decode: " + filePath + " — creating silent mono fallback");
+                    auto fallback = std::make_shared<AudioBufferData>();
+                    fallback->numChannels = 1;
+                    fallback->sampleRate = 44100;
+                    fallback->numFrames = 0;
+                    source->setBuffer(fallback);
                 }
             }
         }
