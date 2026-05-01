@@ -105,6 +105,9 @@ public:
     /** @brief Get the active sample rate used by the engine. */
     uint32_t getSampleRate() const { return m_sampleRate.load(std::memory_order_relaxed); }
 
+    /** @brief Check if a routing cycle was detected on the audio thread (poll from UI). */
+    bool hasRoutingCycleDetected() const { return m_loggedRoutingCycleWarning.load(std::memory_order_relaxed); }
+
     /** @brief Configure the maximum buffer and output-channel counts. */
     void setBufferConfig(uint32_t maxFrames, uint32_t numChannels);
     /** @brief Set transport running state and mirror it onto the audio command queue. */
@@ -798,7 +801,7 @@ private:
     static const BiquadCoeff kKWeightRLB;       // HPF
 
     TrackRTState m_dummyTrackState; // [FIX] Replaces static local to remove priority inversion risk
-    bool m_loggedRoutingCycleWarning{false};
+    std::atomic<bool> m_loggedRoutingCycleWarning{false};
 
     // Guard for resource loading (e.g., metronome samples)
     std::atomic<bool> m_resourcesLoading{false};

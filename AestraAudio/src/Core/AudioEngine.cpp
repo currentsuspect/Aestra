@@ -1106,10 +1106,13 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         m_rtSoloProcessQueue.reserve(kMaxTracks);
         m_rtCycleVisited.resize(kMaxTracks);
 
-        // Pre-allocate send scratch buffers for each track slot.
+        // Pre-size send scratch buffers for each track slot.
+        // Use resize() instead of reserve() so renderGraph() never triggers
+        // heap allocation on the audio thread.  kMaxSendsPerTrack is bounded
+        // (256) so the per-track cost is modest.
         for (size_t i = 0; i < kMaxTracks; ++i) {
-            m_trackState[i].sendGainL.reserve(kMaxSendsPerTrack);
-            m_trackState[i].sendGainR.reserve(kMaxSendsPerTrack);
+            m_trackState[i].sendGainL.resize(kMaxSendsPerTrack);
+            m_trackState[i].sendGainR.resize(kMaxSendsPerTrack);
             m_trackState[i].preFaderBuffer.reserve(requiredSize);
         }
 
@@ -1678,10 +1681,9 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     }
     const bool cycleDetected = m_rtProcessOrder.size() != topoCount;
     if (cycleDetected) {
-        if (!m_loggedRoutingCycleWarning) {
-            Aestra::Log::warning("[AudioEngine] Routing cycle detected; cyclic routes will not render correctly.");
-            m_loggedRoutingCycleWarning = true;
-        }
+        // [RT-SAFE] Set atomic flag instead of logging on the audio thread.
+        // A non-RT thread can poll hasRoutingCycleDetected() and log once.
+        m_loggedRoutingCycleWarning.store(true, std::memory_order_relaxed);
         // Zero cycle-visited flags using index writes (no alloc).
         for (size_t i = 0; i < topoCount; ++i) {
             m_rtCycleVisited[i] = false;
@@ -1695,7 +1697,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
         }
     } else {
-        m_loggedRoutingCycleWarning = false;
+        m_loggedRoutingCycleWarning.store(false, std::memory_order_relaxed);
     }
 
     for (const size_t orderedIndex : m_rtProcessOrder) {
@@ -1753,9 +1755,11 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         const bool processActive =
             !anySolo || (static_cast<size_t>(trackIdx) < availableTracks && m_rtProcessActive[trackIdx]);
 
-        if (state.sendGainL.size() != track.sends.size()) {
-            state.sendGainL.resize(track.sends.size());
-            state.sendGainR.resize(track.sends.size());
+        // Initialize send gain smoothers when send count changes.
+        // Vectors are pre-sized to kMaxSendsPerTrack in setBufferConfig(),
+        // so we never resize here — only update the active entries.
+        if (state.lastActiveSendCount != track.sends.size()) {
+            state.lastActiveSendCount = track.sends.size();
             for (size_t sendIndex = 0; sendIndex < track.sends.size(); ++sendIndex) {
                 double targetL = 0.0;
                 double targetR = 0.0;
@@ -2173,15 +2177,24 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         double* lfStateL = publishTrackSnapshot ? &m_meterLfStateL[slot] : nullptr;
         double* lfStateR = publishTrackSnapshot ? &m_meterLfStateR[slot] : nullptr;
 
-        const bool hasPreFaderSend = std::any_of(
+        bool hasPreFaderSend = std::any_of(
             track.sends.begin(),
             track.sends.end(),
             [](const auto& send) { return !send.mute && !send.postFader; });
-        if (hasPreFaderSend) {
-            state.preFaderBuffer.resize(static_cast<size_t>(numFrames) * 2u);
+        const size_t preFaderSize = static_cast<size_t>(numFrames) * 2u;
+        // Guard: only resize if capacity is already reserved by setBufferConfig().
+        // If the audio thread delivers a larger block than we reserved for,
+        // skip pre-fader sends rather than allocate on the RT thread.
+        if (hasPreFaderSend && state.preFaderBuffer.capacity() >= preFaderSize) {
+            state.preFaderBuffer.resize(preFaderSize);
             std::memcpy(state.preFaderBuffer.data(),
                         trackData,
-                        static_cast<size_t>(numFrames) * 2u * sizeof(double));
+                        preFaderSize * sizeof(double));
+        } else if (hasPreFaderSend) {
+            // Capacity insufficient — pre-fader sends will be silenced for this block.
+            // This should never happen in normal operation (setBufferConfig reserves
+            // to maxBufferFrames). Flag for diagnostics.
+            hasPreFaderSend = false;
         } else {
             state.preFaderBuffer.clear();
         }
