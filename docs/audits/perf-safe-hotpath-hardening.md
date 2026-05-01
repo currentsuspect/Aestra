@@ -3,8 +3,8 @@
 ## 1. Git State
 - Starting branch: develop
 - Starting SHA: 976d492d05b2622f5f4e34a5ba4d6776366a3b81
-- Final branch: perf/safe-hotpath-hardening
-- Final SHA: 276de4cd092de3f0886514731bd6cc4a9ae53b1d
+- Final branch: perf/safe-hotpath-hardening (merged to develop as 36a9f58c)
+- Final SHA: f45b1bad3f5df6592a2588c1efc98fcaea2d8652
 
 ## 2. Baseline Measurements
 
