@@ -39,6 +39,10 @@ struct TrackRTState {
     bool mute{false};
     bool solo{false};
     bool soloSafe{false};
+
+    // Track the last active send count so renderGraph() can detect when
+    // sends are added/removed without resizing the pre-sized vectors.
+    size_t lastActiveSendCount{0};
 };
 
 struct RuntimeConnection {
