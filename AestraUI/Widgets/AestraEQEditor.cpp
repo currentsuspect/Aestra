@@ -179,15 +179,28 @@ void AestraEQEditor::buildControls() {
     m_bands.clear();
     if (!m_instance) return;
 
+    using EQ = Aestra::Audio::Plugins::AestraEQ;
+    static constexpr uint32_t enableIds[] = {EQ::kParamHPFEnable, EQ::kParamLShEnable, EQ::kParamBell1Enable, EQ::kParamBell2Enable, EQ::kParamHShEnable, EQ::kParamLPFEnable};
+    static constexpr uint32_t freqIds[]   = {EQ::kParamHPFFreq,   EQ::kParamLShFreq,   EQ::kParamBell1Freq,   EQ::kParamBell2Freq,   EQ::kParamHShFreq,   EQ::kParamLPFFreq};
+    static constexpr uint32_t gainIds[]   = {0,                   EQ::kParamLShGain,   EQ::kParamBell1Gain,   EQ::kParamBell2Gain,   EQ::kParamHShGain,   0};
+    static constexpr uint32_t qIds[]      = {EQ::kParamHPFSlope,  EQ::kParamLShQ,      EQ::kParamBell1Q,      EQ::kParamBell2Q,      EQ::kParamHShQ,      EQ::kParamLPFSlope};
+    static constexpr uint32_t types[]     = {1, 3, 0, 0, 4, 2}; // LowCut, LowShelf, Bell, Bell, HighShelf, HighCut
+    static const std::string names[]      = {"HP", "LS", "B1", "B2", "HS", "LP"};
+
     for (size_t i = 0; i < kNumBands; ++i) {
         BandControl bc;
-        bc.paramBase = static_cast<uint32_t>(i * 5);
-        bc.name = "B" + std::to_string(static_cast<int>(i + 1));
-        bc.enabled = m_instance->getParameter(bc.paramBase) > 0.5f;
-        bc.type = static_cast<uint32_t>(m_instance->getParameter(bc.paramBase + 1) * 7.0f + 0.5f);
-        bc.freq = m_instance->getParameter(bc.paramBase + 2);
-        bc.gain = m_instance->getParameter(bc.paramBase + 3);
-        bc.q = m_instance->getParameter(bc.paramBase + 4);
+        bc.enableId = enableIds[i];
+        bc.freqId = freqIds[i];
+        bc.gainId = gainIds[i];
+        bc.qId = qIds[i];
+        bc.name = names[i];
+        bc.type = types[i];
+        bc.usesGain = (gainIds[i] != 0);
+        bc.usesSlope = (i == 0 || i == 5);
+        bc.enabled = m_instance->getParameter(bc.enableId) > 0.5f;
+        bc.freq = m_instance->getParameter(bc.freqId);
+        bc.gain = bc.usesGain ? m_instance->getParameter(bc.gainId) : 0.5f;
+        bc.q = m_instance->getParameter(bc.qId);
         m_bands.push_back(std::move(bc));
     }
     layoutControls();
@@ -196,7 +209,7 @@ void AestraEQEditor::buildControls() {
 void AestraEQEditor::layoutControls() {
     auto bounds = getBounds();
     constexpr float bandGap = 8.0f;
-    float bandW = (bounds.width - kPadding * 2.0f - bandGap * 7.0f) / 8.0f;
+    float bandW = (bounds.width - kPadding * 2.0f - bandGap * 5.0f) / 6.0f;
     float y = bounds.y + kTitleHeight + kCurveHeight + 76.0f;
     float h = 124.0f;
 
@@ -359,34 +372,31 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     m_lastResponseBounds = responseGraphBounds(bounds);
 
     // Compute approximate response curve
-    auto freqToHz = [](float norm) {
+    auto graphFreqHz = [](float norm) {
         float logMin = std::log10(20.0f), logMax = std::log10(20000.0f);
         return std::pow(10.0f, logMin + norm * (logMax - logMin));
     };
-    auto gainToDb = [](float norm) { return -18.0f + norm * 36.0f; };
-    auto qToLinear = [](float norm) { return 0.1f + norm * 9.9f; };
-    auto filterStageCount = [](uint32_t type, float norm) {
-        using FilterType = Aestra::Audio::Plugins::FilterType;
-        const auto filterType = static_cast<FilterType>(type);
-        if (!usesDiscreteCutSlope(type)) {
-            return 1u;
-        }
-        switch (cutSlopeDbPerOct(norm)) {
-        case 12u: return 1u;
-        case 24u: return 2u;
-        case 48u: return 4u;
-        case 72u: return 6u;
-        case 96u: return 8u;
-        default: return 1u;
+    auto bandFreqHz = [](size_t bandIdx, float norm) -> float {
+        switch (bandIdx) {
+        case 0: return 20.0f * std::pow(25.0f, std::clamp(norm, 0.0f, 1.0f));
+        case 1: return 40.0f * std::pow(25.0f, std::clamp(norm, 0.0f, 1.0f));
+        case 2: return 80.0f * std::pow(100.0f, std::clamp(norm, 0.0f, 1.0f));
+        case 3: return 200.0f * std::pow(80.0f, std::clamp(norm, 0.0f, 1.0f));
+        case 4: return 2000.0f * std::pow(10.0f, std::clamp(norm, 0.0f, 1.0f));
+        case 5: return 1000.0f * std::pow(20.0f, std::clamp(norm, 0.0f, 1.0f));
+        default: return 1000.0f;
         }
     };
-    auto effectiveQ = [&](uint32_t type, float norm) {
-        using FilterType = Aestra::Audio::Plugins::FilterType;
-        const auto filterType = static_cast<FilterType>(type);
-        if (usesDiscreteCutSlope(type)) {
-            return 0.70710678f;
-        }
-        return qToLinear(norm);
+    auto freqToGraphNorm = [](float hz) {
+        float logMin = std::log10(20.0f), logMax = std::log10(20000.0f);
+        return (std::log10(hz) - logMin) / (logMax - logMin);
+    };
+    auto gainToDb = [](float norm) { return -18.0f + norm * 36.0f; };
+    auto qToLinear = [](float norm) { return 0.1f + norm * 9.9f; };
+    auto slopeStages = [](float norm) -> uint32_t {
+        static constexpr uint32_t slopes[] = {12, 24, 36, 48};
+        const uint32_t idx = static_cast<uint32_t>(std::round(std::clamp(norm, 0.0f, 1.0f) * 3.0f));
+        return slopes[std::min(idx, 3u)] / 12;
     };
     auto biquadMagnitudeDb = [](const Aestra::Audio::Plugins::FilterCoeffs& coeffs, double omega) {
         const double cos1 = std::cos(omega);
@@ -409,22 +419,33 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance);
     const float sampleRate = static_cast<float>(std::max(1.0, eq ? eq->getAnalyzerSampleRate() : 48000.0));
 
-    // Compute total response at a higher point density so the graph reads as a
-    // continuous curve rather than a chain of obvious line segments.
+    static constexpr Aestra::Audio::Plugins::FilterType kBandTypes[] = {
+        Aestra::Audio::Plugins::FilterType::LowCut,
+        Aestra::Audio::Plugins::FilterType::LowShelf,
+        Aestra::Audio::Plugins::FilterType::Bell,
+        Aestra::Audio::Plugins::FilterType::Bell,
+        Aestra::Audio::Plugins::FilterType::HighShelf,
+        Aestra::Audio::Plugins::FilterType::HighCut
+    };
+
     const int numPoints = 1400;
     std::vector<float> responseDb(numPoints, 0.0f);
     for (int p = 0; p < numPoints; ++p) {
         float freqNorm = static_cast<float>(p) / (numPoints - 1);
-        float freq = freqToHz(freqNorm);
+        float freq = graphFreqHz(freqNorm);
         double omega = 2.0 * static_cast<double>(kPi) * static_cast<double>(freq) / static_cast<double>(sampleRate);
-        for (const auto& band : m_bands) {
+        for (size_t bi = 0; bi < m_bands.size(); ++bi) {
+            const auto& band = m_bands[bi];
             if (!band.enabled) continue;
-            float f0 = freqToHz(band.freq);
-            float gainDb = gainToDb(band.gain);
-            float Q = effectiveQ(band.type, band.q);
-            const auto type = static_cast<Aestra::Audio::Plugins::FilterType>(band.type);
+            float f0 = bandFreqHz(bi, band.freq);
+            f0 = std::clamp(f0, 20.0f, sampleRate * 0.49f);
+            float gainDb = band.usesGain ? gainToDb(band.gain) : 0.0f;
+            float Q = band.usesSlope ? 0.70710678f : qToLinear(band.q);
+            Q = std::clamp(Q, 0.1f, 10.0f);
+            const auto type = kBandTypes[bi];
             const auto coeffs = Aestra::Audio::Plugins::designBiquad(type, f0, gainDb, Q, sampleRate);
-            float bandResponse = biquadMagnitudeDb(coeffs, omega) * static_cast<float>(filterStageCount(band.type, band.q));
+            uint32_t stages = band.usesSlope ? slopeStages(band.q) : 1;
+            float bandResponse = biquadMagnitudeDb(coeffs, omega) * static_cast<float>(stages);
             if (type == Aestra::Audio::Plugins::FilterType::LowCut || type == Aestra::Audio::Plugins::FilterType::HighCut) {
                 bandResponse = std::min(bandResponse, 0.0f);
             }
@@ -544,7 +565,7 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
                                    nodeColor.withAlpha(selected || dragging ? 0.52f : 0.26f));
         renderer.drawText(band.name, {pillX + 5.0f, labelY + 3.0f}, 8.25f,
                           theme.getColor("textPrimary").withAlpha(selected || dragging ? 0.98f : 0.82f));
-        renderer.drawText(freqLabel(band.freq), {pillX + 20.0f, labelY + 3.0f}, 8.25f,
+        renderer.drawText(bandFreqLabel(i, band.freq), {pillX + 20.0f, labelY + 3.0f}, 8.25f,
                           nodeColor.withAlpha(selected || dragging ? 0.96f : 0.78f));
     }
 
@@ -565,7 +586,7 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
         renderer.drawText(band.name, {hudRect.x + 15.0f, hudRect.y + 9.0f}, 8.75f,
                           theme.getColor("textPrimary").withAlpha(0.98f));
 
-        const std::string meta = std::string(glyphTypeLabel(band.type)) + "  " + freqLabel(band.freq);
+        const std::string meta = std::string(glyphTypeLabel(band.type)) + "  " + bandFreqLabel(static_cast<size_t>(m_selectedBand), band.freq);
         renderer.drawText(meta, {hudRect.x + 50.0f, hudRect.y + 8.0f}, 9.0f,
                           selectedColor.withAlpha(0.90f));
 
@@ -740,24 +761,28 @@ NUIRect AestraEQEditor::responseGraphBounds(const NUIRect& outerBounds) const {
 }
 
 bool AestraEQEditor::usesGainAxis(const BandControl& band) const {
-    switch (static_cast<Aestra::Audio::Plugins::FilterType>(band.type)) {
-    case Aestra::Audio::Plugins::FilterType::Bell:
-    case Aestra::Audio::Plugins::FilterType::LowShelf:
-    case Aestra::Audio::Plugins::FilterType::HighShelf:
-    case Aestra::Audio::Plugins::FilterType::Tilt:
-        return true;
-    case Aestra::Audio::Plugins::FilterType::LowCut:
-    case Aestra::Audio::Plugins::FilterType::HighCut:
-    case Aestra::Audio::Plugins::FilterType::Notch:
-    case Aestra::Audio::Plugins::FilterType::BandPass:
-        return false;
-    }
-    return true;
+    return band.usesGain;
 }
 
 NUIPoint AestraEQEditor::graphNodePosition(const BandControl& band, const NUIRect& graphBounds) const {
     const NUIRect safeBounds = graphNodeSafeBounds(graphBounds);
-    const float x = safeBounds.x + band.freq * safeBounds.width;
+    const size_t bandIdx = static_cast<size_t>(&band - m_bands.data());
+
+    auto bandFreqToGraphNorm = [](size_t idx, float norm) -> float {
+        float hz = 1000.0f;
+        switch (idx) {
+        case 0: hz = 20.0f * std::pow(25.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+        case 1: hz = 40.0f * std::pow(25.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+        case 2: hz = 80.0f * std::pow(100.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+        case 3: hz = 200.0f * std::pow(80.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+        case 4: hz = 2000.0f * std::pow(10.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+        case 5: hz = 1000.0f * std::pow(20.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+        }
+        float logMin = std::log10(20.0f), logMax = std::log10(20000.0f);
+        return (std::log10(hz) - logMin) / (logMax - logMin);
+    };
+
+    const float x = safeBounds.x + bandFreqToGraphNorm(bandIdx, band.freq) * safeBounds.width;
     const float y = usesGainAxis(band)
         ? (safeBounds.bottom() - band.gain * safeBounds.height)
         : (safeBounds.y + safeBounds.height * 0.5f);
@@ -792,17 +817,41 @@ void AestraEQEditor::updateBandFromGraphPosition(int bandIndex, const NUIPoint& 
 
     auto& band = m_bands[bandIndex];
     const NUIRect safeBounds = graphNodeSafeBounds(m_lastResponseBounds);
-    const float freqNorm = std::clamp((position.x - safeBounds.x) / std::max(1.0f, safeBounds.width), 0.0f, 1.0f);
+    const float graphNorm = std::clamp((position.x - safeBounds.x) / std::max(1.0f, safeBounds.width), 0.0f, 1.0f);
     const float verticalNorm = std::clamp(1.0f - ((position.y - safeBounds.y) / std::max(1.0f, safeBounds.height)), 0.0f, 1.0f);
 
+    // Convert graph frequency norm (20-20kHz) to band-specific frequency norm
+    auto graphNormToHz = [](float norm) -> float {
+        float logMin = std::log10(20.0f), logMax = std::log10(20000.0f);
+        return std::pow(10.0f, logMin + norm * (logMax - logMin));
+    };
+    auto hzToBandNorm = [](size_t idx, float hz) -> float {
+        switch (idx) {
+        case 0: return std::clamp(std::log10(hz / 20.0f) / std::log10(25.0f), 0.0f, 1.0f);
+        case 1: return std::clamp(std::log10(hz / 40.0f) / std::log10(25.0f), 0.0f, 1.0f);
+        case 2: return std::clamp(std::log10(hz / 80.0f) / std::log10(100.0f), 0.0f, 1.0f);
+        case 3: return std::clamp(std::log10(hz / 200.0f) / std::log10(80.0f), 0.0f, 1.0f);
+        case 4: return std::clamp(std::log10(hz / 2000.0f) / std::log10(10.0f), 0.0f, 1.0f);
+        case 5: return std::clamp(std::log10(hz / 1000.0f) / std::log10(20.0f), 0.0f, 1.0f);
+        default: return 0.5f;
+        }
+    };
+
+    const float hz = graphNormToHz(graphNorm);
+    const float freqNorm = hzToBandNorm(static_cast<size_t>(bandIndex), hz);
+
     band.freq = freqNorm;
-    m_instance->setParameter(band.paramBase + 2, band.freq);
-    if (usesGainAxis(band)) {
+    m_instance->setParameter(band.freqId, band.freq);
+    if (band.usesGain) {
         band.gain = verticalNorm;
-        m_instance->setParameter(band.paramBase + 3, band.gain);
+        m_instance->setParameter(band.gainId, band.gain);
+    } else if (band.usesSlope) {
+        const float quantized = quantizeCutSlopeNorm(verticalNorm);
+        band.q = quantized;
+        m_instance->setParameter(band.qId, band.q);
     } else {
-        band.q = usesDiscreteCutSlope(band.type) ? quantizeCutSlopeNorm(verticalNorm) : verticalNorm;
-        m_instance->setParameter(band.paramBase + 4, band.q);
+        band.q = verticalNorm;
+        m_instance->setParameter(band.qId, band.q);
     }
     layoutControls();
     setDirty(true);
@@ -837,9 +886,18 @@ void AestraEQEditor::drawBandPanel(NUIRenderer& renderer, const BandControl& ban
         return;
     }
 
-    drawBlueprintKnob(renderer, band.freqKnob.center(), 15.0f, band.freq, "FREQ", freqLabel(band.freq), true, accent);
-    drawBlueprintKnob(renderer, band.gainKnob.center(), 15.0f, band.gain, "GAIN", gainLabel(band.gain) + " dB", true, accent);
-    drawBlueprintKnob(renderer, band.qKnob.center(), 15.0f, band.q, "Q", qLabel(band.q, band.type), true, accent);
+    drawBlueprintKnob(renderer, band.freqKnob.center(), 15.0f, band.freq, "FREQ", bandFreqLabel(bandIndex, band.freq), true, accent);
+    if (band.usesGain) {
+        drawBlueprintKnob(renderer, band.gainKnob.center(), 15.0f, band.gain, "GAIN", gainLabel(band.gain) + " dB", true, accent);
+    }
+    if (band.usesSlope) {
+        static constexpr uint32_t slopes[] = {12, 24, 36, 48};
+        const uint32_t idx = static_cast<uint32_t>(std::round(std::clamp(band.q, 0.0f, 1.0f) * 3.0f));
+        const uint32_t slopeVal = slopes[std::min(idx, 3u)];
+        drawBlueprintKnob(renderer, band.qKnob.center(), 15.0f, band.q, "SLOPE", std::to_string(slopeVal) + " dB", true, accent);
+    } else {
+        drawBlueprintKnob(renderer, band.qKnob.center(), 15.0f, band.q, "Q", qLabel(band.q, band.type), true, accent);
+    }
 }
 
 void AestraEQEditor::drawDynamicSection(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -976,19 +1034,24 @@ void AestraEQEditor::updateBandValue(int bandIndex, BandControl::DragTarget targ
     auto& b = m_bands[bandIndex];
     normalizedValue = std::clamp(normalizedValue, 0.0f, 1.0f);
 
-    uint32_t pid = b.paramBase;
     switch (target) {
     case BandControl::Freq:
         b.freq = normalizedValue;
-        m_instance->setParameter(pid + 2, b.freq);
+        m_instance->setParameter(b.freqId, b.freq);
         break;
     case BandControl::Gain:
-        b.gain = normalizedValue;
-        m_instance->setParameter(pid + 3, b.gain);
+        if (b.usesGain) {
+            b.gain = normalizedValue;
+            m_instance->setParameter(b.gainId, b.gain);
+        }
         break;
     case BandControl::Q:
-        b.q = usesDiscreteCutSlope(b.type) ? quantizeCutSlopeNorm(normalizedValue) : normalizedValue;
-        m_instance->setParameter(pid + 4, b.q);
+        if (b.usesSlope) {
+            b.q = quantizeCutSlopeNorm(normalizedValue);
+        } else {
+            b.q = normalizedValue;
+        }
+        m_instance->setParameter(b.qId, b.q);
         break;
     default: break;
     }
@@ -997,13 +1060,27 @@ void AestraEQEditor::updateBandValue(int bandIndex, BandControl::DragTarget targ
 }
 
 std::string AestraEQEditor::typeLabel(uint32_t type) const {
-    static const char* names[] = {"Bell", "LoCut", "HiCut", "LoShelf", "HiShelf", "Notch", "BP", "Tilt"};
+    static const char* names[] = {"Bell", "HiPass", "LoPass", "LoShelf", "HiShelf", "Notch", "BP", "Tilt"};
     return type < 8 ? names[type] : "Bell";
 }
 std::string AestraEQEditor::freqLabel(float norm) const {
+    // Default: full range (used by HUD display which passes Hz-normalized values)
     float hz = std::pow(10.0f, std::log10(20.0f) + norm * (std::log10(20000.0f) - std::log10(20.0f)));
     if (hz >= 1000) { std::ostringstream o; o << std::fixed << std::setprecision(1) << hz / 1000.0f << "k"; return o.str(); }
     return std::to_string(static_cast<int>(hz));
+}
+std::string AestraEQEditor::bandFreqLabel(size_t bandIdx, float norm) const {
+    float hz = 1000.0f;
+    switch (bandIdx) {
+    case 0: hz = 20.0f * std::pow(25.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+    case 1: hz = 40.0f * std::pow(25.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+    case 2: hz = 80.0f * std::pow(100.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+    case 3: hz = 200.0f * std::pow(80.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+    case 4: hz = 2000.0f * std::pow(10.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+    case 5: hz = 1000.0f * std::pow(20.0f, std::clamp(norm, 0.0f, 1.0f)); break;
+    }
+    if (hz >= 1000) { std::ostringstream o; o << std::fixed << std::setprecision(1) << hz / 1000.0f << "k"; return o.str(); }
+    return std::to_string(static_cast<int>(hz + 0.5f));
 }
 std::string AestraEQEditor::gainLabel(float norm) const {
     float db = -18.0f + norm * 36.0f;
@@ -1049,7 +1126,7 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
         if (graphBandIdx >= 0) {
             auto& band = m_bands[graphBandIdx];
             m_selectedBand = graphBandIdx;
-            if (usesDiscreteCutSlope(band.type)) {
+            if (band.usesSlope) {
                 const float currentIndex = std::round(std::clamp(band.q, 0.0f, 1.0f) * 4.0f);
                 const float nextIndex = std::clamp(currentIndex + (event.wheelDelta > 0.0f ? 1.0f : -1.0f), 0.0f, 4.0f);
                 band.q = nextIndex / 4.0f;
@@ -1058,7 +1135,7 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
                 band.q = std::clamp(band.q + (event.wheelDelta > 0.0f ? step : -step), 0.0f, 1.0f);
             }
             if (m_instance) {
-                m_instance->setParameter(band.paramBase + 4, band.q);
+                m_instance->setParameter(band.qId, band.q);
             }
             layoutControls();
             setDirty(true);
@@ -1078,11 +1155,11 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
                 item->setRadioGroup("eq_band_type");
                 item->setChecked(m_bands[bandIdx].type == type);
                 item->setOnClick([this, bandIdx, type]() {
-                    if (!m_instance || bandIdx < 0 || bandIdx >= static_cast<int>(m_bands.size())) {
+                    if (bandIdx < 0 || bandIdx >= static_cast<int>(m_bands.size())) {
                         return;
                     }
+                    // V1: type changes are display-only (DSP uses fixed band types)
                     m_bands[bandIdx].type = type;
-                    m_instance->setParameter(m_bands[bandIdx].paramBase + 1, static_cast<float>(type) / 7.0f);
                     if (m_bandTypeMenu) {
                         m_bandTypeMenu->hide();
                     }
@@ -1136,7 +1213,7 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
             }
             // Toggle enabled on click outside sliders
             if (!band.dragging) {
-                m_instance->setParameter(band.paramBase, band.enabled ? 0.0f : 1.0f);
+                m_instance->setParameter(band.enableId, band.enabled ? 0.0f : 1.0f);
                 band.enabled = !band.enabled;
                 layoutControls();
                 setDirty(true);

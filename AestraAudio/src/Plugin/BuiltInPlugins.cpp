@@ -41,15 +41,15 @@ const PluginInfo& eqInfo() {
         p.id = "com.Aestrastudios.eq";
         p.name = "Aestra EQ";
         p.vendor = "Aestra Studios";
-        p.version = "0.1.0";
+        p.version = "1.0.0";
         p.category = "Equalizer";
         p.format = PluginFormat::Internal;
         p.type = PluginType::Effect;
-        p.numAudioInputs = 4;
+        p.numAudioInputs = 2;
         p.numAudioOutputs = 2;
         p.hasMidiInput = false;
         p.hasMidiOutput = false;
-        p.hasEditor = false;
+        p.hasEditor = true;
         return p;
     }();
     return info;

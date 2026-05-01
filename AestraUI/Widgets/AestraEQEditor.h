@@ -31,13 +31,18 @@ public:
 
 private:
     struct BandControl {
-        uint32_t paramBase = 0;
+        uint32_t enableId = 0;
+        uint32_t freqId = 0;
+        uint32_t gainId = 0;
+        uint32_t qId = 0;
         std::string name;
         bool enabled = true;
         float freq = 0.5f;
         float gain = 0.5f;
         float q = 0.5f;
         uint32_t type = 0;
+        bool usesGain = true;
+        bool usesSlope = false;
         NUIRect bounds;
         NUIRect freqSlider;
         NUIRect gainSlider;
@@ -76,6 +81,7 @@ private:
     bool hitTestTitleBar(float x, float y) const;
     std::string typeLabel(uint32_t type) const;
     std::string freqLabel(float norm) const;
+    std::string bandFreqLabel(size_t bandIdx, float norm) const;
     std::string gainLabel(float norm) const;
     std::string qLabel(float norm, uint32_t type) const;
     void analyzerWorkerMain();
@@ -111,7 +117,7 @@ private:
     static constexpr float kTitleHeight = 58.0f;
     static constexpr float kCurveHeight = 238.0f;
     static constexpr float kPadding = 12.0f;
-    static constexpr size_t kNumBands = 8;
+    static constexpr size_t kNumBands = 6;
 };
 
 } // namespace AestraUI
