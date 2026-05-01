@@ -26,6 +26,7 @@
 #include <functional>
 #include <filesystem>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 #include <memory>
 #include <mutex>
@@ -1212,14 +1213,27 @@ private:
         }
 
         const uint16_t audioFormat = 3; // IEEE float
+        if (buffer.numChannels == 0 ||
+            buffer.numChannels > std::numeric_limits<uint16_t>::max() ||
+            buffer.sampleRate == 0 ||
+            buffer.interleavedData.size() > (std::numeric_limits<uint32_t>::max() / sizeof(float)) ||
+            buffer.numFrames > std::numeric_limits<uint32_t>::max()) {
+            return false;
+        }
         const uint16_t numChannels = static_cast<uint16_t>(buffer.numChannels);
         const uint32_t sampleRate = buffer.sampleRate;
         const uint16_t bitsPerSample = 32;
         const uint16_t blockAlign = static_cast<uint16_t>(numChannels * (bitsPerSample / 8));
+        if (sampleRate > std::numeric_limits<uint32_t>::max() / blockAlign) {
+            return false;
+        }
         const uint32_t byteRate = sampleRate * blockAlign;
         const uint32_t dataSize = static_cast<uint32_t>(buffer.interleavedData.size() * sizeof(float));
         const uint32_t sampleCount = static_cast<uint32_t>(buffer.numFrames);
         const uint32_t factChunkSize = 4;
+        if (dataSize > std::numeric_limits<uint32_t>::max() - 48u) {
+            return false;
+        }
         const uint32_t riffChunkSize = 48u + dataSize;
 
         file.write("RIFF", 4);

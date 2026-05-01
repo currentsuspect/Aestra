@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstring>
 #include <cstdlib>
+#include <limits>
 #include <random>
 #include <mutex>
 
@@ -32,6 +33,10 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     }
     if (config.sampleRate == 0) {
         result.errorMessage = "Invalid sample rate";
+        return result;
+    }
+    if (config.numChannels == 0 || config.numChannels > 64) {
+        result.errorMessage = "Invalid channel count";
         return result;
     }
 
@@ -74,6 +79,15 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
 
     if (totalFrames == 0) {
         result.errorMessage = "Nothing to render (zero frames)";
+        return result;
+    }
+    int bitsPerSample = static_cast<int>(config.bitDepth);
+    uint64_t blockAlign64 = static_cast<uint64_t>(config.numChannels) * static_cast<uint64_t>(bitsPerSample / 8);
+    if (blockAlign64 == 0 || blockAlign64 > std::numeric_limits<uint16_t>::max() ||
+        totalFrames > std::numeric_limits<uint32_t>::max() / blockAlign64 ||
+        totalFrames > std::numeric_limits<uint64_t>::max() / blockAlign64 ||
+        36ull + totalFrames * blockAlign64 > std::numeric_limits<uint32_t>::max()) {
+        result.errorMessage = "WAV export is too large for RIFF/WAV; use a shorter range or lower format settings";
         return result;
     }
 
@@ -270,17 +284,22 @@ bool AudioExporter::writeWavHeader(std::ofstream& file, const Config& config, ui
     int bytesPerSample = bitsPerSample / 8;
 
     uint64_t byteRate64 = static_cast<uint64_t>(config.sampleRate) * config.numChannels * bytesPerSample;
-    uint32_t blockAlign = config.numChannels * bytesPerSample;
-    uint64_t dataSize64 = totalFrames * static_cast<uint64_t>(blockAlign);
-
-    if (byteRate64 > UINT32_MAX) {
-        byteRate64 = UINT32_MAX;
+    uint64_t blockAlign64 = static_cast<uint64_t>(config.numChannels) * bytesPerSample;
+    if (config.numChannels == 0 || blockAlign64 == 0 ||
+        blockAlign64 > std::numeric_limits<uint16_t>::max() ||
+        byteRate64 > std::numeric_limits<uint32_t>::max() ||
+        totalFrames > std::numeric_limits<uint64_t>::max() / blockAlign64) {
+        return false;
     }
-    if (dataSize64 > UINT32_MAX) {
-        dataSize64 = UINT32_MAX;
+
+    uint64_t dataSize64 = totalFrames * blockAlign64;
+    if (dataSize64 > std::numeric_limits<uint32_t>::max() ||
+        36ull + dataSize64 > std::numeric_limits<uint32_t>::max()) {
+        return false;
     }
 
     uint32_t byteRate = static_cast<uint32_t>(byteRate64);
+    uint16_t blockAlign = static_cast<uint16_t>(blockAlign64);
     uint32_t dataSize = static_cast<uint32_t>(dataSize64);
     uint32_t fileSize = 36 + dataSize;
 
