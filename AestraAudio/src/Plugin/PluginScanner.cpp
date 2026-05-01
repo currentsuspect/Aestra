@@ -5,6 +5,7 @@
 #include "Plugin/BuiltInPlugins.h"
 #include "Plugin/InternalPluginRegistry.h"
 #include "AestraLog.h"
+#include "AestraJSON.h"
 #include "AestraPlatform.h"
 
 #include <algorithm>
@@ -62,8 +63,22 @@ void mergeBuiltInPlugins(std::vector<PluginInfo>& plugins) {
 }
 
 std::string normalizedGenericPath(const std::filesystem::path& path) {
-    std::string normalized = path.lexically_normal().generic_string();
+    std::error_code ec;
+    std::filesystem::path normalizedPath = std::filesystem::weakly_canonical(path, ec);
+    if (ec) {
+        ec.clear();
+        normalizedPath = std::filesystem::absolute(path, ec);
+        if (ec) {
+            normalizedPath = path;
+        }
+    }
+    std::string normalized = normalizedPath.lexically_normal().generic_string();
     std::replace(normalized.begin(), normalized.end(), '\\', '/');
+#ifdef _WIN32
+    std::transform(normalized.begin(), normalized.end(), normalized.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+#endif
     while (normalized.size() > 1 && normalized.back() == '/') {
         normalized.pop_back();
     }
@@ -964,42 +979,43 @@ void PluginScanner::loadTrustedPaths() {
             return;  // No config location available yet
         }
 
-        // Read JSON file
         std::ifstream file(configPath);
         if (!file.is_open()) {
             return;
         }
 
-        // Simple JSON parse: look for "paths": [...]
         std::string content((std::istreambuf_iterator<char>(file)),
                            std::istreambuf_iterator<char>());
 
-        // Find the paths array
-        auto pathsStart = content.find("\"paths\":");
-        if (pathsStart == std::string::npos) {
+        constexpr size_t kMaxTrustedPathsFileBytes = 1024 * 1024;
+        constexpr size_t kMaxTrustedPaths = 1024;
+        constexpr size_t kMaxTrustedPathBytes = 32768;
+        if (content.size() > kMaxTrustedPathsFileBytes) {
+            Log::warning("[PluginScanner] Trusted paths config too large; ignoring");
             return;
         }
 
-        // Extract paths between [ and ]
-        auto arrayStart = content.find("[", pathsStart);
-        auto arrayEnd = content.find("]", arrayStart);
-        if (arrayStart == std::string::npos || arrayEnd == std::string::npos) {
+        JSON root = JSON::parse(content);
+        if (!root.isObject() || !root.has("paths") || !root["paths"].isArray()) {
             return;
         }
 
-        // Extract each string between quotes
-        size_t pos = arrayStart + 1;
-        while (pos < arrayEnd) {
-            auto quoteStart = content.find("\"", pos);
-            if (quoteStart == std::string::npos || quoteStart >= arrayEnd) break;
-            auto quoteEnd = content.find("\"", quoteStart + 1);
-            if (quoteEnd == std::string::npos || quoteEnd >= arrayEnd) break;
-
-            std::string pathStr = content.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
-            if (!pathStr.empty()) {
-                m_userTrustedPaths.push_back(std::filesystem::path(pathStr));
+        const JSON& paths = root["paths"];
+        for (size_t i = 0; i < paths.size() && m_userTrustedPaths.size() < kMaxTrustedPaths; ++i) {
+            if (!paths[i].isString()) {
+                continue;
             }
-            pos = quoteEnd + 1;
+            const std::string& pathStr = paths[i].asString();
+            if (pathStr.empty() || pathStr.size() > kMaxTrustedPathBytes) {
+                continue;
+            }
+            std::filesystem::path normalized = std::filesystem::path(pathStr).lexically_normal();
+            const auto it = std::find_if(m_userTrustedPaths.begin(), m_userTrustedPaths.end(), [&](const auto& existing) {
+                return normalizedGenericPath(existing) == normalizedGenericPath(normalized);
+            });
+            if (it == m_userTrustedPaths.end()) {
+                m_userTrustedPaths.push_back(std::move(normalized));
+            }
         }
 
         Log::info("[PluginScanner] Loaded " + std::to_string(m_userTrustedPaths.size()) +
@@ -1036,19 +1052,17 @@ void PluginScanner::saveTrustedPaths() const {
             return;
         }
 
-        // Build JSON
-        std::string json = "{\n  \"paths\": [\n";
+        JSON root = JSON::object();
+        JSON paths = JSON::array();
         size_t trustedPathCount = 0;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             trustedPathCount = m_userTrustedPaths.size();
-            for (size_t i = 0; i < m_userTrustedPaths.size(); ++i) {
-                json += "    \"" + m_userTrustedPaths[i].lexically_normal().string() + "\"";
-                if (i < m_userTrustedPaths.size() - 1) json += ",";
-                json += "\n";
+            for (const auto& trustedPath : m_userTrustedPaths) {
+                paths.push(trustedPath.lexically_normal().string());
             }
         }
-        json += "  ]\n}\n";
+        root.set("paths", paths);
 
         // Write file
         std::ofstream file(configPath);
@@ -1056,7 +1070,7 @@ void PluginScanner::saveTrustedPaths() const {
             Log::warning("[PluginScanner] Failed to open config file for trusted paths");
             return;
         }
-        file << json;
+        file << root.toString(2) << "\n";
         file.close();
 
         Log::info("[PluginScanner] Saved " + std::to_string(trustedPathCount) +

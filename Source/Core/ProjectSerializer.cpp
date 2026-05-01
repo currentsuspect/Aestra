@@ -10,12 +10,20 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
+
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 using namespace Aestra;
 using namespace Aestra::Audio;
@@ -149,6 +157,29 @@ namespace {
             }
         }
         return false;
+    }
+
+    bool hasDecodableAudioExtension(const std::filesystem::path& path) {
+        std::string ext = path.extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return ext == ".wav" || ext == ".wave" || ext == ".mp3" || ext == ".flac" ||
+               ext == ".ogg" || ext == ".aiff" || ext == ".aif" || ext == ".m4a";
+    }
+
+    std::filesystem::path resolveProjectAssetPath(const std::filesystem::path& projectPath,
+                                                  const std::string& storedPath) {
+        std::filesystem::path assetPath(storedPath);
+        if (assetPath.is_relative() && projectPath.has_parent_path()) {
+            assetPath = projectPath.parent_path() / assetPath;
+        }
+        return assetPath.lexically_normal();
+    }
+
+    bool isRegularDecodableAsset(const std::filesystem::path& path) {
+        std::error_code ec;
+        return hasDecodableAudioExtension(path) && std::filesystem::is_regular_file(path, ec) && !ec;
     }
 
     bool validArraySection(const JSON& root, const char* key, size_t maxCount, std::string& error, bool required = false) {
@@ -400,13 +431,16 @@ static bool writeAtomicallyImpl(const std::string& path, const std::string& cont
         }
     }
 
-    // On Windows, rename() fails if the destination exists.
-    if (fs::exists(target, ec)) {
-        ec.clear();
-        fs::remove(target, ec);
-        ec.clear();
+#ifdef _WIN32
+    if (!MoveFileExW(tmp.wstring().c_str(), target.wstring().c_str(),
+                     MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        const DWORD error = GetLastError();
+        Log::error("Project save failed: cannot replace target: " + target.string() +
+                   " (Win32 error " + std::to_string(error) + ")");
+        fs::remove(tmp, ec);
+        return false;
     }
-
+#else
     fs::rename(tmp, target, ec);
     if (ec) {
         Log::error("Project save failed: cannot replace target: " + target.string() + " (" + ec.message() + ")");
@@ -414,6 +448,7 @@ static bool writeAtomicallyImpl(const std::string& path, const std::string& cont
         fs::remove(tmp, ec);
         return false;
     }
+#endif
 
     return true;
 }
@@ -764,6 +799,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         result.errorMessage = "File not found: " + path;
         return result;
     }
+    const std::filesystem::path projectPath(path);
 
 #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
     Log::info(std::string("[ProjectLoad] Begin: ") + path);
@@ -972,10 +1008,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         const JSON& sj = root["sources"];
         for (size_t i = 0; i < sj.size(); ++i) {
             if (!sj[i].has("path")) continue;
-            std::string filePath = sj[i]["path"].asString();
+            std::string storedPath = sj[i]["path"].asString();
+            std::filesystem::path filePath = resolveProjectAssetPath(projectPath, storedPath);
             if (!std::filesystem::exists(filePath)) {
-                result.missingAssets.push_back(filePath);
-                Log::warning("[ProjectLoad] Missing audio asset: " + filePath);
+                result.missingAssets.push_back(storedPath);
+                Log::warning("[ProjectLoad] Missing audio asset: " + storedPath);
             }
         }
     }
@@ -1056,16 +1093,18 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     #endif
         for (size_t i = 0; i < sj.size(); ++i) {
             uint32_t oldId = static_cast<uint32_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
-            std::string filePath = boundedStringOr(sj[i], "path", "", PROJECT_MAX_PATH_BYTES);
-            if (oldId == 0 || filePath.empty()) {
+            std::string storedPath = boundedStringOr(sj[i], "path", "", PROJECT_MAX_PATH_BYTES);
+            if (oldId == 0 || storedPath.empty()) {
                 continue;
             }
+            std::filesystem::path resolvedPath = resolveProjectAssetPath(projectPath, storedPath);
+            const std::string filePath = resolvedPath.string();
             ClipSourceID newId = sourceManager.getOrCreateSource(filePath);
             idMap[oldId] = newId;
             
             // Actually decode the audio file and load into source
             ClipSource* source = sourceManager.getSource(newId);
-            if (source && !source->isReady() && std::filesystem::exists(filePath)) {
+            if (source && !source->isReady() && isRegularDecodableAsset(resolvedPath)) {
                 std::vector<float> decodedData;
                 uint32_t sampleRate = 0;
                 uint32_t numChannels = 0;
