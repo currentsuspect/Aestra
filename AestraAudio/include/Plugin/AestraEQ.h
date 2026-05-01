@@ -1,6 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-// EQ — Parametric equalizer with biquad filters.
-// Arsenal effect plugin for Aestra DAW.
+// EQ — V1 truthful parametric equalizer with biquad filters.
+// 6 fixed-type bands: HPF, Low Shelf, Bell, Bell, High Shelf, LPF.
 
 #pragma once
 
@@ -19,7 +19,7 @@ namespace Audio {
 namespace Plugins {
 
 // ============================================================================
-// Biquad Filter (Cookbook formulae, Robert Bristow-Johnson)
+// Biquad Filter — Direct Form II Transposed
 // ============================================================================
 
 class BiquadFilter {
@@ -27,11 +27,16 @@ public:
     BiquadFilter() { reset(); }
 
     void reset() {
-        m_x1 = m_x2 = m_y1 = m_y2 = 0.0f;
+        m_z1 = 0.0f;
+        m_z2 = 0.0f;
     }
 
     void setCoeffs(float b0, float b1, float b2, float a0, float a1, float a2) {
-        // Normalize by a0 and validate
+        if (std::abs(a0) < 1.0e-12f) {
+            m_b0 = 1.0f; m_b1 = 0.0f; m_b2 = 0.0f;
+            m_a1 = 0.0f; m_a2 = 0.0f;
+            return;
+        }
         const float invA0 = 1.0f / a0;
         m_b0 = b0 * invA0;
         m_b1 = b1 * invA0;
@@ -39,31 +44,24 @@ public:
         m_a1 = a1 * invA0;
         m_a2 = a2 * invA0;
 
-        // Validate coefficients — reset if unstable
-        if (std::isnan(m_b0) || std::isinf(m_b0) ||
-            std::isnan(m_a1) || std::isinf(m_a1) ||
-            std::isnan(m_a2) || std::isinf(m_a2)) {
-            // Unstable coefficients — set to passthrough
-            m_b0 = 1; m_b1 = 0; m_b2 = 0;
-            m_a1 = 0; m_a2 = 0;
+        if (!std::isfinite(m_b0) || !std::isfinite(m_a1) || !std::isfinite(m_a2)) {
+            m_b0 = 1.0f; m_b1 = 0.0f; m_b2 = 0.0f;
+            m_a1 = 0.0f; m_a2 = 0.0f;
         }
     }
 
     float process(float in) {
-        // Guard against NaN propagation
-        if (std::isnan(in) || std::isinf(in)) {
-            m_x1 = m_x2 = m_y1 = m_y2 = 0.0f;
+        if (!std::isfinite(in)) {
+            m_z1 = m_z2 = 0.0f;
             return 0.0f;
         }
-        const float out = m_b0 * in + m_b1 * m_x1 + m_b2 * m_x2
-                        - m_a1 * m_y1 - m_a2 * m_y2;
-        if (std::isnan(out) || std::isinf(out)) {
-            // Filter instability detected — reset state
-            m_x1 = m_x2 = m_y1 = m_y2 = 0.0f;
+        const float out = m_b0 * in + m_z1;
+        m_z1 = m_b1 * in - m_a1 * out + m_z2;
+        m_z2 = m_b2 * in - m_a2 * out;
+        if (!std::isfinite(out)) {
+            m_z1 = m_z2 = 0.0f;
             return 0.0f;
         }
-        m_x2 = m_x1; m_x1 = in;
-        m_y2 = m_y1; m_y1 = out;
         return out;
     }
 
@@ -74,14 +72,13 @@ public:
     }
 
 private:
-    float m_b0 = 1, m_b1 = 0, m_b2 = 0;
-    float m_a1 = 0, m_a2 = 0;
-    float m_x1 = 0, m_x2 = 0;
-    float m_y1 = 0, m_y2 = 0;
+    float m_b0 = 1.0f, m_b1 = 0.0f, m_b2 = 0.0f;
+    float m_a1 = 0.0f, m_a2 = 0.0f;
+    float m_z1 = 0.0f, m_z2 = 0.0f;
 };
 
 // ============================================================================
-// Filter Design Functions
+// Filter Type Enum (internal, not all exposed in V1)
 // ============================================================================
 
 enum class FilterType : uint32_t {
@@ -110,7 +107,7 @@ static FilterCoeffs designBiquad(
     const float w0 = 2.0f * pi * frequency / sampleRate;
     const float cos_w0 = std::cos(w0);
     const float sin_w0 = std::sin(w0);
-    const float A = std::pow(10.0f, gainDb / 40.0f); // sqrt of linear gain
+    const float A = std::pow(10.0f, gainDb / 40.0f);
     const float alpha = sin_w0 / (2.0f * q);
 
     float b0 = 0, b1 = 0, b2 = 0, a0 = 1, a1 = 0, a2 = 0;
@@ -126,7 +123,6 @@ static FilterCoeffs designBiquad(
         break;
     }
     case FilterType::LowCut: {
-        // High-pass filter: passes frequencies ABOVE cutoff
         b0 =  (1 + cos_w0) / 2;
         b1 = -(1 + cos_w0);
         b2 =  (1 + cos_w0) / 2;
@@ -136,7 +132,6 @@ static FilterCoeffs designBiquad(
         break;
     }
     case FilterType::HighCut: {
-        // Low-pass filter: passes frequencies BELOW cutoff
         b0 =  (1 - cos_w0) / 2;
         b1 =   1 - cos_w0;
         b2 =  (1 - cos_w0) / 2;
@@ -182,7 +177,6 @@ static FilterCoeffs designBiquad(
         break;
     }
     case FilterType::Tilt: {
-        // Tilt shelf: opposite slopes for low and high
         const float gainLow = std::pow(10.0f, gainDb / 20.0f);
         const float gainHigh = std::pow(10.0f, -gainDb / 20.0f);
         const float A_tilt = std::sqrt(gainLow);
@@ -200,62 +194,92 @@ static FilterCoeffs designBiquad(
 }
 
 // ============================================================================
-// EQ Band
+// EQ Band (internal)
 // ============================================================================
 
 struct EQBand {
-    std::atomic<bool> enabled{true};
-    std::atomic<uint32_t> type{0};     // FilterType enum
-    std::atomic<float> frequency{0.5f}; // normalized 0-1 → 20Hz-20kHz
-    std::atomic<float> gain{0.5f};      // normalized 0-1 → -18dB to +18dB
-    std::atomic<float> q{0.5f};         // normalized 0-1 → 0.1-10.0
+    std::atomic<bool> enabled{false};
+    std::atomic<uint32_t> type{0};
+    std::atomic<float> frequency{0.5f};
+    std::atomic<float> gain{0.5f};
+    std::atomic<float> q{0.5f};
 };
 
-struct EQStateBlob {
+// ============================================================================
+// State Blobs
+// ============================================================================
+
+struct EQStateBlobV1 {
     uint32_t magic;
     uint32_t version;
-    float params[41]; // kParamCount
+    float params[41];
     uint8_t enabled[8];
     uint8_t types[8];
 };
 
+struct EQStateBlobV2 {
+    uint32_t magic;
+    uint32_t version;
+    float params[23]; // kV1ParamCount
+};
+
 // ============================================================================
-// Aestra EQ — Parametric Equalizer (8 bands)
+// Aestra EQ V1 — 6-band fixed-type parametric equalizer
 // ============================================================================
 
 class AestraEQ : public IPluginInstance {
 public:
-    static constexpr uint32_t kNumBands = 8;
-    static constexpr uint32_t kStateMagic = 0x45510001; // 'EQ' + version 1
+    static constexpr uint32_t kNumBands = 8;         // Internal band count (editor compat)
+    static constexpr uint32_t kV1BandCount = 6;      // V1 public band count
+    static constexpr uint32_t kStateMagicV1 = 0x45510001;
+    static constexpr uint32_t kStateMagicV2 = 0x45510002;
     static constexpr uint32_t kAnalyzerWindowSize = 1024;
-    static constexpr uint32_t kMaxFilterStages = 8;
-    static constexpr std::array<float, kNumBands> kDefaultFreqs = {
-        0.04f, 0.12f, 0.22f, 0.36f, 0.50f, 0.66f, 0.80f, 0.92f
-    };
+    static constexpr uint32_t kMaxFilterStages = 4;  // V1 max: 48 dB/oct = 4 stages
+    static constexpr uint32_t kBlockSize = 16;       // Smoothing update interval
 
-    // Parameter IDs: per-band params (5 per band) + master bypass
-    static constexpr uint32_t kParamBandStart = 0;
-    static constexpr uint32_t kParamBypass = kParamBandStart + kNumBands * 5;
-    static constexpr uint32_t kParamCount = kParamBypass + 1;
+    // V1 parameter IDs (22 params)
+    static constexpr uint32_t kParamHPFEnable    = 0;
+    static constexpr uint32_t kParamHPFFreq      = 1;
+    static constexpr uint32_t kParamHPFSlope     = 2;
+    static constexpr uint32_t kParamLShEnable    = 3;
+    static constexpr uint32_t kParamLShFreq      = 4;
+    static constexpr uint32_t kParamLShGain      = 5;
+    static constexpr uint32_t kParamLShQ         = 6;
+    static constexpr uint32_t kParamBell1Enable  = 7;
+    static constexpr uint32_t kParamBell1Freq    = 8;
+    static constexpr uint32_t kParamBell1Gain    = 9;
+    static constexpr uint32_t kParamBell1Q       = 10;
+    static constexpr uint32_t kParamBell2Enable  = 11;
+    static constexpr uint32_t kParamBell2Freq    = 12;
+    static constexpr uint32_t kParamBell2Gain    = 13;
+    static constexpr uint32_t kParamBell2Q       = 14;
+    static constexpr uint32_t kParamHShEnable    = 15;
+    static constexpr uint32_t kParamHShFreq      = 16;
+    static constexpr uint32_t kParamHShGain      = 17;
+    static constexpr uint32_t kParamHShQ         = 18;
+    static constexpr uint32_t kParamLPFEnable    = 19;
+    static constexpr uint32_t kParamLPFFreq      = 20;
+    static constexpr uint32_t kParamLPFSlope     = 21;
+    static constexpr uint32_t kParamBypass       = 22;
+    static constexpr uint32_t kV1ParamCount      = 23;
 
-    AestraEQ() = default;
+    // Legacy parameter count (for internal band mapping)
+    static constexpr uint32_t kLegacyBandStride = 5;
+    static constexpr uint32_t kLegacyParamCount = 41;
+
+    AestraEQ() {
+        initDefaults();
+    }
 
     bool initialize(double sampleRate, uint32_t maxBlockSize) {
         m_sampleRate = sampleRate;
         m_maxBlockSize = maxBlockSize;
-
-        // Initialize bands with default values
-        // Start with a neutral, consistent graph: all visible bands begin as
-        // bell filters distributed across the spectrum. That keeps the default
-        // interaction intuitive before type-specific shaping is introduced.
-        for (uint32_t i = 0; i < kNumBands; ++i) {
-            m_bands[i].frequency.store(kDefaultFreqs[i], std::memory_order_relaxed);
-            m_bands[i].q.store(0.5f, std::memory_order_relaxed);
-            m_bands[i].gain.store(0.5f, std::memory_order_relaxed);
-            m_bands[i].type.store(static_cast<uint32_t>(FilterType::Bell), std::memory_order_relaxed);
-            m_bands[i].enabled.store(true, std::memory_order_relaxed);
+        computeSmoothingCoeff();
+        for (uint32_t i = 0; i < kV1ParamCount; ++i) {
+            m_smoothed[i].store(m_params[i].load(std::memory_order_relaxed), std::memory_order_relaxed);
         }
-        updateAllFilters();
+        snapBandTypes();
+        rebuildAllCoefficients();
         return true;
     }
 
@@ -273,59 +297,49 @@ public:
         (void)midiOutput;
 
         if (!m_active.load(std::memory_order_relaxed)) {
-            // Pass-through or silence
-            for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
-                if (outputs[ch] && ch < numInputChannels && inputs[ch]) {
-                    std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
-                } else if (outputs[ch]) {
-                    std::memset(outputs[ch], 0, numFrames * sizeof(float));
-                }
-            }
+            copyOrSilence(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             publishAnalyzerFrame(outputs, std::min(numInputChannels, numOutputChannels), numFrames);
             return;
         }
 
-        // Check bypass
         if (m_params[kParamBypass].load(std::memory_order_relaxed) > 0.5f) {
-            for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
-                if (outputs[ch] && ch < numInputChannels && inputs[ch]) {
-                    std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
-                } else if (outputs[ch]) {
-                    std::memset(outputs[ch], 0, numFrames * sizeof(float));
-                }
-            }
+            copyOrSilence(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             publishAnalyzerFrame(outputs, std::min(numInputChannels, numOutputChannels), numFrames);
             return;
         }
 
-        // Check if filter coefficients need updating (atomic snapshot)
-        if (m_filtersDirty.load(std::memory_order_acquire)) {
-            updateAllFilters();
-            m_filtersDirty.store(false, std::memory_order_release);
-        }
-
-        // Process each channel
         const uint32_t channels = std::min(numInputChannels, numOutputChannels);
         for (uint32_t ch = 0; ch < channels; ++ch) {
             if (!inputs[ch] || !outputs[ch]) continue;
-
-            // Copy input to output
             std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
+        }
 
-            // Process through each enabled band
-            for (uint32_t band = 0; band < kNumBands; ++band) {
-                if (m_bands[band].enabled.load(std::memory_order_relaxed)) {
-                    const FilterType type = static_cast<FilterType>(m_bands[band].type.load(std::memory_order_relaxed));
-                    const uint32_t stages = filterStageCount(type, m_bands[band].q.load(std::memory_order_relaxed));
-                    const uint32_t stageBase = (ch * kNumBands + band) * kMaxFilterStages;
+        const float smoothCoeff = m_smoothingCoeff.load(std::memory_order_relaxed);
+        uint32_t sampleOffset = 0;
+
+        while (sampleOffset < numFrames) {
+            const uint32_t blockEnd = std::min(sampleOffset + kBlockSize, numFrames);
+            const uint32_t blockFrames = blockEnd - sampleOffset;
+
+            smoothParameters(smoothCoeff);
+            rebuildAllCoefficients();
+
+            for (uint32_t ch = 0; ch < channels; ++ch) {
+                if (!inputs[ch] || !outputs[ch]) continue;
+                float* buf = outputs[ch] + sampleOffset;
+                for (uint32_t band = 0; band < kV1BandCount; ++band) {
+                    if (!m_bandEnabled[band].load(std::memory_order_relaxed)) continue;
+                    const uint32_t stages = m_bandStages[band].load(std::memory_order_relaxed);
+                    const uint32_t stageBase = (ch * kV1BandCount + band) * kMaxFilterStages;
                     for (uint32_t stage = 0; stage < stages; ++stage) {
-                        m_filters[stageBase + stage].process(outputs[ch], numFrames);
+                        m_filters[stageBase + stage].process(buf, blockFrames);
                     }
                 }
             }
+
+            sampleOffset = blockEnd;
         }
 
-        // Handle extra output channels (silence or copy from first)
         for (uint32_t ch = channels; ch < numOutputChannels; ++ch) {
             if (outputs[ch]) std::memset(outputs[ch], 0, numFrames * sizeof(float));
         }
@@ -334,148 +348,128 @@ public:
     }
 
     // ---- Parameters (normalized 0-1) ----
-    uint32_t getParameterCount() const { return kParamCount; }
+    uint32_t getParameterCount() const { return kV1ParamCount; }
 
     float getParameter(uint32_t id) const {
-        if (id >= kParamCount) return 0.0f;
+        if (id >= kV1ParamCount) return 0.0f;
         return m_params[id].load(std::memory_order_relaxed);
     }
 
     void setParameter(uint32_t id, float value) {
-        if (id >= kParamCount) return;
+        if (id >= kV1ParamCount) return;
         m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
-
-        // Update the corresponding band
-        if (id < kNumBands * 5) {
-            const uint32_t band = id / 5;
-            const uint32_t sub = id % 5;
-            switch (sub) {
-            case 0: m_bands[band].enabled.store(value > 0.5f, std::memory_order_relaxed); break;
-            case 1: m_bands[band].type.store(static_cast<uint32_t>(std::round(value * 7.0f)), std::memory_order_relaxed); break;
-            case 2: m_bands[band].frequency.store(value, std::memory_order_relaxed); break;
-            case 3: m_bands[band].gain.store(value, std::memory_order_relaxed); break;
-            case 4: m_bands[band].q.store(value, std::memory_order_relaxed); break;
-            }
-            m_filtersDirty.store(true, std::memory_order_release);
-        }
+        markDirtyForParam(id);
     }
 
     std::vector<PluginParameter> getParameters() const {
         std::vector<PluginParameter> params;
-        params.reserve(kParamCount);
+        params.reserve(kV1ParamCount);
 
-        for (uint32_t band = 0; band < kNumBands; ++band) {
-            // Enabled
-            params.push_back({
-                band * 5, "Band " + std::to_string(band + 1) + " On",
-                "B" + std::to_string(band + 1), "", 1.0f, 0.0f, 1.0f, true, false, false, 1
-            });
-            // Type
-            params.push_back({
-                band * 5 + 1, "Band " + std::to_string(band + 1) + " Type",
-                "T" + std::to_string(band + 1), "", 0.0f, 0.0f, 1.0f, true, false, false, 7
-            });
-            // Frequency
-            params.push_back({
-                band * 5 + 2, "Band " + std::to_string(band + 1) + " Freq",
-                "F" + std::to_string(band + 1), "Hz", kDefaultFreqs[band], 0.0f, 1.0f, true, false, false, 0
-            });
-            // Gain
-            params.push_back({
-                band * 5 + 3, "Band " + std::to_string(band + 1) + " Gain",
-                "G" + std::to_string(band + 1), "dB", 0.5f, 0.0f, 1.0f, true, false, false, 0
-            });
-            // Q
-            params.push_back({
-                band * 5 + 4, "Band " + std::to_string(band + 1) + " Q",
-                "Q" + std::to_string(band + 1), "", 0.5f, 0.0f, 1.0f, true, false, false, 0
-            });
-        }
+        // Band 1 — High-Pass
+        params.push_back({kParamHPFEnable, "High-Pass Enable", "HP On", "", 0.0f, 0.0f, 1.0f, true, false, false, 1});
+        params.push_back({kParamHPFFreq,   "High-Pass Frequency", "HP Freq", "Hz", 0.392f, 0.0f, 1.0f, true, false, false, 0});
+        params.push_back({kParamHPFSlope,  "High-Pass Slope", "HP Slp", "dB/oct", 0.333f, 0.0f, 1.0f, true, false, false, 3});
+
+        // Band 2 — Low Shelf
+        params.push_back({kParamLShEnable, "Low Shelf Enable", "LS On", "", 0.0f, 0.0f, 1.0f, true, false, false, 1});
+        params.push_back({kParamLShFreq,   "Low Shelf Frequency", "LS Freq", "Hz", 0.370f, 0.0f, 1.0f, true, false, false, 0});
+        params.push_back({kParamLShGain,   "Low Shelf Gain", "LS Gain", "dB", 0.5f, 0.0f, 1.0f, true, false, false, 0});
+        params.push_back({kParamLShQ,      "Low Shelf Q", "LS Q", "", 0.061f, 0.0f, 1.0f, true, false, false, 0});
+
+        // Band 3 — Bell 1
+        params.push_back({kParamBell1Enable, "Bell 1 Enable", "B1 On", "", 1.0f, 0.0f, 1.0f, true, false, false, 1});
+        params.push_back({kParamBell1Freq,   "Bell 1 Frequency", "B1 Freq", "Hz", 0.430f, 0.0f, 1.0f, true, false, false, 0});
+        params.push_back({kParamBell1Gain,   "Bell 1 Gain", "B1 Gain", "dB", 0.5f, 0.0f, 1.0f, true, false, false, 0});
+        params.push_back({kParamBell1Q,      "Bell 1 Q", "B1 Q", "", 0.091f, 0.0f, 1.0f, true, false, false, 0});
+
+        // Band 4 — Bell 2
+        params.push_back({kParamBell2Enable, "Bell 2 Enable", "B2 On", "", 1.0f, 0.0f, 1.0f, true, false, false, 1});
+        params.push_back({kParamBell2Freq,   "Bell 2 Frequency", "B2 Freq", "Hz", 0.607f, 0.0f, 1.0f, true, false, false, 0});
+        params.push_back({kParamBell2Gain,   "Bell 2 Gain", "B2 Gain", "dB", 0.5f, 0.0f, 1.0f, true, false, false, 0});
+        params.push_back({kParamBell2Q,      "Bell 2 Q", "B2 Q", "", 0.091f, 0.0f, 1.0f, true, false, false, 0});
+
+        // Band 5 — High Shelf
+        params.push_back({kParamHShEnable, "High Shelf Enable", "HS On", "", 0.0f, 0.0f, 1.0f, true, false, false, 1});
+        params.push_back({kParamHShFreq,   "High Shelf Frequency", "HS Freq", "Hz", 0.765f, 0.0f, 1.0f, true, false, false, 0});
+        params.push_back({kParamHShGain,   "High Shelf Gain", "HS Gain", "dB", 0.5f, 0.0f, 1.0f, true, false, false, 0});
+        params.push_back({kParamHShQ,      "High Shelf Q", "HS Q", "", 0.061f, 0.0f, 1.0f, true, false, false, 0});
+
+        // Band 6 — Low-Pass
+        params.push_back({kParamLPFEnable, "Low-Pass Enable", "LP On", "", 0.0f, 0.0f, 1.0f, true, false, false, 1});
+        params.push_back({kParamLPFFreq,   "Low-Pass Frequency", "LP Freq", "Hz", 0.926f, 0.0f, 1.0f, true, false, false, 0});
+        params.push_back({kParamLPFSlope,  "Low-Pass Slope", "LP Slp", "dB/oct", 0.0f, 0.0f, 1.0f, true, false, false, 3});
 
         // Master bypass
-        params.push_back({
-            kParamBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1
-        });
+        params.push_back({kParamBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1});
 
         return params;
     }
 
     std::string getParameterDisplay(uint32_t id) const {
-        if (id >= kParamCount) return "";
+        if (id >= kV1ParamCount) return "";
         const float val = getParameter(id);
 
-        if (id == kParamBypass) {
+        if (id == kParamBypass) return val > 0.5f ? "ON" : "OFF";
+
+        switch (id) {
+        case kParamHPFEnable: case kParamLShEnable: case kParamBell1Enable:
+        case kParamBell2Enable: case kParamHShEnable: case kParamLPFEnable:
             return val > 0.5f ? "ON" : "OFF";
-        }
-
-        const uint32_t band = id / 5;
-        const uint32_t sub = id % 5;
-
-        switch (sub) {
-        case 0: return val > 0.5f ? "ON" : "OFF";
-        case 1: {
-            static const char* names[] = {"Bell", "LoCut", "HiCut", "LoShelf", "HiShelf", "Notch", "BandPass", "Tilt"};
-            const uint32_t idx = static_cast<uint32_t>(std::round(val * 7.0f));
-            return names[idx];
-        }
-        case 2: {
-            const float freq = freqToHz(val);
-            if (freq >= 1000) return std::to_string(freq / 1000).substr(0, 4) + "kHz";
-            return std::to_string(static_cast<int>(freq)) + "Hz";
-        }
-        case 3: {
-            const float db = gainToDb(val);
-            return (db >= 0 ? "+" : "") + std::to_string(db).substr(0, 5) + "dB";
-        }
-        case 4: {
-            if (id < kNumBands * 5) {
-                const FilterType type = static_cast<FilterType>(m_bands[band].type.load(std::memory_order_relaxed));
-                if (type == FilterType::LowCut || type == FilterType::HighCut) {
-                    return std::to_string(filterStageCount(type, val) * 12) + " dB/oct";
-                }
-            }
-            const float qVal = qToLinear(val);
-            return std::to_string(qVal).substr(0, 4);
-        }
+        case kParamHPFFreq:  return formatFreq(hpfFreqToHz(val));
+        case kParamLShFreq:  return formatFreq(lshFreqToHz(val));
+        case kParamBell1Freq: return formatFreq(bell1FreqToHz(val));
+        case kParamBell2Freq: return formatFreq(bell2FreqToHz(val));
+        case kParamHShFreq:  return formatFreq(hshFreqToHz(val));
+        case kParamLPFFreq:  return formatFreq(lpfFreqToHz(val));
+        case kParamHPFSlope: return std::to_string(slopeDbPerOct(val)) + " dB/oct";
+        case kParamLPFSlope: return std::to_string(slopeDbPerOct(val)) + " dB/oct";
+        case kParamLShGain:  return formatGain(gainToDb(val));
+        case kParamLShQ:     return formatQ(qToLinear(val));
+        case kParamBell1Gain: return formatGain(gainToDb(val));
+        case kParamBell1Q:   return formatQ(qToLinear(val));
+        case kParamBell2Gain: return formatGain(gainToDb(val));
+        case kParamBell2Q:   return formatQ(qToLinear(val));
+        case kParamHShGain:  return formatGain(gainToDb(val));
+        case kParamHShQ:     return formatQ(qToLinear(val));
         default: return "";
         }
     }
 
-    // ---- State ----
+    // ---- State (V2 primary, V1 migration) ----
     std::vector<uint8_t> saveState() const {
-        EQStateBlob blob;
-        blob.magic = kStateMagic;
-        blob.version = 1;
-        for (uint32_t i = 0; i < kParamCount; ++i) {
+        EQStateBlobV2 blob{};
+        blob.magic = kStateMagicV2;
+        blob.version = 2;
+        for (uint32_t i = 0; i < kV1ParamCount; ++i) {
             blob.params[i] = getParameter(i);
         }
-        for (uint32_t i = 0; i < kNumBands; ++i) {
-            blob.enabled[i] = m_bands[i].enabled.load(std::memory_order_relaxed) ? 1 : 0;
-            blob.types[i] = static_cast<uint8_t>(m_bands[i].type.load(std::memory_order_relaxed));
-        }
-
         const uint8_t* data = reinterpret_cast<const uint8_t*>(&blob);
         return std::vector<uint8_t>(data, data + sizeof(blob));
     }
 
     bool loadState(const std::vector<uint8_t>& state) {
-        if (state.size() < sizeof(EQStateBlob)) return false;
-
-        const EQStateBlob* blob = reinterpret_cast<const EQStateBlob*>(state.data());
-        if (blob->magic != kStateMagic) return false;
-
-        for (uint32_t i = 0; i < kParamCount; ++i) {
-            setParameter(i, blob->params[i]);
+        if (state.size() >= sizeof(EQStateBlobV2)) {
+            const auto* v2 = reinterpret_cast<const EQStateBlobV2*>(state.data());
+            if (v2->magic == kStateMagicV2 && v2->version == 2) {
+                for (uint32_t i = 0; i < kV1ParamCount; ++i) {
+                    setParameter(i, std::clamp(v2->params[i], 0.0f, 1.0f));
+                }
+                m_filtersDirty.store(true, std::memory_order_release);
+                return true;
+            }
         }
-        for (uint32_t i = 0; i < kNumBands; ++i) {
-            m_bands[i].enabled.store(blob->enabled[i] != 0, std::memory_order_relaxed);
-            m_bands[i].type.store(blob->types[i], std::memory_order_relaxed);
+
+        if (state.size() >= sizeof(EQStateBlobV1)) {
+            const auto* v1 = reinterpret_cast<const EQStateBlobV1*>(state.data());
+            if (v1->magic == kStateMagicV1) {
+                return migrateV1State(v1);
+            }
         }
-        m_filtersDirty.store(true, std::memory_order_release);
-        return true;
+
+        return false;
     }
 
-    // ---- Editor (headless for now) ----
+    // ---- Editor ----
     bool hasEditor() const { return true; }
     bool openEditor(void*) { return false; }
     void closeEditor() {}
@@ -485,19 +479,14 @@ public:
 
     const PluginInfo& getInfo() const { return m_info; }
     uint32_t getLatencySamples() const { return 0; }
-    uint32_t getTailSamples() const { return 64; } // filter tail
+    uint32_t getTailSamples() const { return 64; }
     double getAnalyzerSampleRate() const { return m_sampleRate; }
     bool getAnalyzerWindow(std::array<float, kAnalyzerWindowSize>& out, uint64_t* outSerial = nullptr) const {
         const uint64_t serial = m_publishedAnalyzerSerial.load(std::memory_order_acquire);
-        if (serial == 0) {
-            return false;
-        }
-
+        if (serial == 0) return false;
         const uint32_t page = m_publishedAnalyzerPage.load(std::memory_order_acquire);
         out = m_analyzerPages[page];
-        if (outSerial) {
-            *outSerial = serial;
-        }
+        if (outSerial) *outSerial = serial;
         return true;
     }
 
@@ -506,77 +495,298 @@ public:
     bool isBypassedByWatchdog() const { return false; }
     bool isCrashed() const { return false; }
 
-    // ---- Helpers ----
     void setInfo(const PluginInfo& info) { m_info = info; }
 
+    // Legacy accessors for editor compatibility
+    uint32_t getLegacyParameterCount() const { return kLegacyParamCount; }
+
+    float getLegacyParameter(uint32_t id) const {
+        if (id >= kLegacyParamCount) return 0.0f;
+        const uint32_t band = id / kLegacyBandStride;
+        const uint32_t sub = id % kLegacyBandStride;
+        if (band < kV1BandCount) {
+            switch (sub) {
+            case 0: return getParameter(bandV1EnableId(band));
+            case 1: return 0.0f;
+            case 2: return getParameter(bandV1FreqId(band));
+            case 3: return getParameter(bandV1GainId(band));
+            case 4: return getParameter(bandV1QId(band));
+            }
+        }
+        return 0.5f;
+    }
+
+    void setLegacyParameter(uint32_t id, float value) {
+        const uint32_t band = id / kLegacyBandStride;
+        const uint32_t sub = id % kLegacyBandStride;
+        if (band < kV1BandCount) {
+            switch (sub) {
+            case 0: setParameter(bandV1EnableId(band), value); break;
+            case 2: setParameter(bandV1FreqId(band), value); break;
+            case 3: setParameter(bandV1GainId(band), value); break;
+            case 4: setParameter(bandV1QId(band), value); break;
+            default: break;
+            }
+        }
+    }
+
 private:
-    // Frequency mapping: normalized 0-1 → 20Hz-20kHz (logarithmic)
-    static float freqToHz(float norm) {
-        const float logMin = std::log10(20.0f);
-        const float logMax = std::log10(20000.0f);
-        return std::pow(10.0f, logMin + norm * (logMax - logMin));
+    // ---- Safety ----
+    static float sanitizeSample(float sample) {
+        if (!std::isfinite(sample)) return 0.0f;
+        return std::clamp(sample, -16.0f, 16.0f);
     }
 
-    // Gain mapping: normalized 0-1 → -18dB to +18dB
+    static void copyOrSilence(const float* const* inputs, float** outputs,
+                               uint32_t numInputChannels, uint32_t numOutputChannels,
+                               uint32_t numFrames) {
+        for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
+            if (outputs[ch] && ch < numInputChannels && inputs[ch]) {
+                std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
+            } else if (outputs[ch]) {
+                std::memset(outputs[ch], 0, numFrames * sizeof(float));
+            }
+        }
+    }
+
+    // ---- Default initialization ----
+    void initDefaults() {
+        for (auto& p : m_params) p.store(0.0f, std::memory_order_relaxed);
+        m_params[kParamHPFEnable].store(0.0f, std::memory_order_relaxed);
+        m_params[kParamHPFFreq].store(0.392f, std::memory_order_relaxed);   // 80 Hz
+        m_params[kParamHPFSlope].store(0.333f, std::memory_order_relaxed);  // 24 dB/oct
+        m_params[kParamLShEnable].store(0.0f, std::memory_order_relaxed);
+        m_params[kParamLShFreq].store(0.370f, std::memory_order_relaxed);   // 200 Hz
+        m_params[kParamLShGain].store(0.5f, std::memory_order_relaxed);     // 0 dB
+        m_params[kParamLShQ].store(0.061f, std::memory_order_relaxed);      // 0.707
+        m_params[kParamBell1Enable].store(1.0f, std::memory_order_relaxed);
+        m_params[kParamBell1Freq].store(0.430f, std::memory_order_relaxed);  // 500 Hz
+        m_params[kParamBell1Gain].store(0.5f, std::memory_order_relaxed);    // 0 dB
+        m_params[kParamBell1Q].store(0.091f, std::memory_order_relaxed);     // 1.0
+        m_params[kParamBell2Enable].store(1.0f, std::memory_order_relaxed);
+        m_params[kParamBell2Freq].store(0.607f, std::memory_order_relaxed);  // 2000 Hz
+        m_params[kParamBell2Gain].store(0.5f, std::memory_order_relaxed);    // 0 dB
+        m_params[kParamBell2Q].store(0.091f, std::memory_order_relaxed);     // 1.0
+        m_params[kParamHShEnable].store(0.0f, std::memory_order_relaxed);
+        m_params[kParamHShFreq].store(0.765f, std::memory_order_relaxed);   // 8000 Hz
+        m_params[kParamHShGain].store(0.5f, std::memory_order_relaxed);     // 0 dB
+        m_params[kParamHShQ].store(0.061f, std::memory_order_relaxed);      // 0.707
+        m_params[kParamLPFEnable].store(0.0f, std::memory_order_relaxed);
+        m_params[kParamLPFFreq].store(0.926f, std::memory_order_relaxed);   // 18000 Hz
+        m_params[kParamLPFSlope].store(0.0f, std::memory_order_relaxed);    // 12 dB/oct
+        m_params[kParamBypass].store(0.0f, std::memory_order_relaxed);
+
+        for (auto& s : m_smoothed) s.store(0.0f, std::memory_order_relaxed);
+    }
+
+    void computeSmoothingCoeff() {
+        const float coeff = 1.0f - std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.005f));
+        m_smoothingCoeff.store(coeff, std::memory_order_relaxed);
+    }
+
+    // ---- Band type/enable mapping ----
+    static constexpr FilterType kBandTypes[kV1BandCount] = {
+        FilterType::LowCut, FilterType::LowShelf, FilterType::Bell,
+        FilterType::Bell, FilterType::HighShelf, FilterType::HighCut
+    };
+
+    static bool bandUsesSlope(uint32_t band) {
+        return band == 0 || band == 5;
+    }
+
+    static bool bandUsesGain(uint32_t band) {
+        return band >= 1 && band <= 4;
+    }
+
+    static uint32_t bandV1EnableId(uint32_t band) {
+        static constexpr uint32_t ids[] = {
+            kParamHPFEnable, kParamLShEnable, kParamBell1Enable,
+            kParamBell2Enable, kParamHShEnable, kParamLPFEnable
+        };
+        return ids[band];
+    }
+
+    static uint32_t bandV1FreqId(uint32_t band) {
+        static constexpr uint32_t ids[] = {
+            kParamHPFFreq, kParamLShFreq, kParamBell1Freq,
+            kParamBell2Freq, kParamHShFreq, kParamLPFFreq
+        };
+        return ids[band];
+    }
+
+    static uint32_t bandV1GainId(uint32_t band) {
+        static constexpr uint32_t ids[] = {
+            0, kParamLShGain, kParamBell1Gain, kParamBell2Gain, kParamHShGain, 0
+        };
+        return ids[band];
+    }
+
+    static uint32_t bandV1QId(uint32_t band) {
+        static constexpr uint32_t ids[] = {
+            kParamHPFSlope, kParamLShQ, kParamBell1Q, kParamBell2Q, kParamHShQ, kParamLPFSlope
+        };
+        return ids[band];
+    }
+
+    void snapBandTypes() {
+        for (uint32_t i = 0; i < kV1BandCount; ++i) {
+            m_bandEnabled[i].store(getParameter(bandV1EnableId(i)) > 0.5f, std::memory_order_relaxed);
+        }
+    }
+
+    void markDirtyForParam(uint32_t id) {
+        if (id == kParamBypass) return;
+        if (id <= kParamLPFSlope) {
+            const uint32_t band = bandIndexForParam(id);
+            if (band < kV1BandCount) {
+                m_bandEnabled[band].store(getParameter(bandV1EnableId(band)) > 0.5f, std::memory_order_relaxed);
+            }
+            m_filtersDirty.store(true, std::memory_order_release);
+        }
+    }
+
+    static uint32_t bandIndexForParam(uint32_t id) {
+        if (id <= kParamHPFSlope) return 0;
+        if (id <= kParamLShQ) return 1;
+        if (id <= kParamBell1Q) return 2;
+        if (id <= kParamBell2Q) return 3;
+        if (id <= kParamHShQ) return 4;
+        if (id <= kParamLPFSlope) return 5;
+        return kV1BandCount;
+    }
+
+    // ---- Mapping functions ----
+    static float hpfFreqToHz(float norm) {
+        return 20.0f * std::pow(25.0f, std::clamp(norm, 0.0f, 1.0f)); // 20–500 Hz
+    }
+    static float lshFreqToHz(float norm) {
+        return 40.0f * std::pow(25.0f, std::clamp(norm, 0.0f, 1.0f)); // 40–1000 Hz
+    }
+    static float bell1FreqToHz(float norm) {
+        return 80.0f * std::pow(100.0f, std::clamp(norm, 0.0f, 1.0f)); // 80–8000 Hz
+    }
+    static float bell2FreqToHz(float norm) {
+        return 200.0f * std::pow(80.0f, std::clamp(norm, 0.0f, 1.0f)); // 200–16000 Hz
+    }
+    static float hshFreqToHz(float norm) {
+        return 2000.0f * std::pow(10.0f, std::clamp(norm, 0.0f, 1.0f)); // 2000–20000 Hz
+    }
+    static float lpfFreqToHz(float norm) {
+        return 1000.0f * std::pow(20.0f, std::clamp(norm, 0.0f, 1.0f)); // 1000–20000 Hz
+    }
+
     static float gainToDb(float norm) {
-        return -18.0f + norm * 36.0f;
+        return -18.0f + std::clamp(norm, 0.0f, 1.0f) * 36.0f;
     }
 
-    // Q mapping: normalized 0-1 → 0.1 to 10.0
     static float qToLinear(float norm) {
-        return 0.1f + norm * 9.9f;
+        return 0.1f + std::clamp(norm, 0.0f, 1.0f) * 9.9f;
     }
 
-    static uint32_t cutSlopeDbPerOct(float norm) {
-        static constexpr std::array<uint32_t, 5> kSlopeDb = {12u, 24u, 48u, 72u, 96u};
+    static uint32_t slopeDbPerOct(float norm) {
+        static constexpr uint32_t slopes[] = {12, 24, 36, 48};
         const float clamped = std::clamp(norm, 0.0f, 1.0f);
-        const size_t index = static_cast<size_t>(std::round(clamped * static_cast<float>(kSlopeDb.size() - 1)));
-        return kSlopeDb[std::min(index, kSlopeDb.size() - 1)];
+        const uint32_t idx = static_cast<uint32_t>(std::round(clamped * 3.0f));
+        return slopes[std::min(idx, 3u)];
     }
 
-    static uint32_t filterStageCount(FilterType type, float norm) {
-        if (type != FilterType::LowCut && type != FilterType::HighCut) {
-            return 1;
-        }
-        switch (cutSlopeDbPerOct(norm)) {
-        case 12u: return 1u;
-        case 24u: return 2u;
-        case 48u: return 4u;
-        case 72u: return 6u;
-        case 96u: return 8u;
-        default: return 1u;
+    static uint32_t slopeStageCount(float norm) {
+        const uint32_t db = slopeDbPerOct(norm);
+        return db / 12;
+    }
+
+    float bandFrequencyHz(uint32_t band, float norm) const {
+        switch (band) {
+        case 0: return hpfFreqToHz(norm);
+        case 1: return lshFreqToHz(norm);
+        case 2: return bell1FreqToHz(norm);
+        case 3: return bell2FreqToHz(norm);
+        case 4: return hshFreqToHz(norm);
+        case 5: return lpfFreqToHz(norm);
+        default: return 1000.0f;
         }
     }
 
-    static float effectiveFilterQ(FilterType type, float norm) {
-        if (type == FilterType::LowCut || type == FilterType::HighCut) {
-            // For cascaded cut filters, keep each stage Butterworth-like so
-            // slope increases without introducing a resonant peak.
-            return 0.70710678f;
-        }
+    float bandQValue(uint32_t band, float norm) const {
+        if (bandUsesSlope(band)) return 0.70710678f; // Butterworth
         return qToLinear(norm);
     }
 
-    static float dbToNorm(float db) { return (db + 18.0f) / 36.0f; }
-    static float freqToNorm(float hz) {
-        const float logMin = std::log10(20.0f);
-        const float logMax = std::log10(20000.0f);
-        return (std::log10(hz) - logMin) / (logMax - logMin);
+    uint32_t bandStageCount(uint32_t band, float slopeNorm) const {
+        if (!bandUsesSlope(band)) return 1;
+        return slopeStageCount(slopeNorm);
     }
 
-    void updateAllFilters() {
-        for (uint32_t ch = 0; ch < 2; ++ch) {
-            for (uint32_t band = 0; band < kNumBands; ++band) {
-                if (!m_bands[band].enabled.load(std::memory_order_relaxed)) continue;
+    // ---- Display helpers ----
+    static std::string formatFreq(float hz) {
+        if (hz >= 1000.0f) {
+            char buf[16];
+            std::snprintf(buf, sizeof(buf), "%.1fkHz", hz / 1000.0f);
+            return buf;
+        }
+        char buf[16];
+        std::snprintf(buf, sizeof(buf), "%dHz", static_cast<int>(hz + 0.5f));
+        return buf;
+    }
 
-                const float freq = freqToHz(m_bands[band].frequency.load(std::memory_order_relaxed));
-                const float gain = gainToDb(m_bands[band].gain.load(std::memory_order_relaxed));
-                const FilterType type = static_cast<FilterType>(m_bands[band].type.load(std::memory_order_relaxed));
-                const float q = effectiveFilterQ(type, m_bands[band].q.load(std::memory_order_relaxed));
-                const uint32_t stages = filterStageCount(type, m_bands[band].q.load(std::memory_order_relaxed));
+    static std::string formatGain(float db) {
+        char buf[16];
+        std::snprintf(buf, sizeof(buf), "%+.1fdB", db);
+        return buf;
+    }
 
-                const auto coeffs = designBiquad(type, freq, gain, q, m_sampleRate);
-                const uint32_t stageBase = (ch * kNumBands + band) * kMaxFilterStages;
+    static std::string formatQ(float q) {
+        char buf[16];
+        std::snprintf(buf, sizeof(buf), "%.2f", q);
+        return buf;
+    }
+
+    // ---- Smoothing ----
+    void smoothParameters(float coeff) {
+        for (uint32_t i = 0; i < kV1ParamCount; ++i) {
+            if (i == kParamBypass) continue;
+            const float target = m_params[i].load(std::memory_order_relaxed);
+            float current = m_smoothed[i].load(std::memory_order_relaxed);
+            current += (target - current) * coeff;
+            m_smoothed[i].store(current, std::memory_order_relaxed);
+        }
+    }
+
+    // ---- Coefficient rebuild ----
+    void rebuildAllCoefficients() {
+        for (uint32_t band = 0; band < kV1BandCount; ++band) {
+            const bool enabled = m_bandEnabled[band].load(std::memory_order_relaxed);
+            const FilterType type = kBandTypes[band];
+
+            m_bandStages[band].store(enabled ? bandStageCount(band, m_smoothed[bandV1QId(band)].load(std::memory_order_relaxed)) : 1u, std::memory_order_relaxed);
+
+            if (!enabled) {
+                for (uint32_t ch = 0; ch < 2; ++ch) {
+                    const uint32_t stageBase = (ch * kV1BandCount + band) * kMaxFilterStages;
+                    for (uint32_t stage = 0; stage < kMaxFilterStages; ++stage) {
+                        m_filters[stageBase + stage].setCoeffs(1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+                    }
+                }
+                continue;
+            }
+
+            float freqNorm, gainNorm, qNorm, slopeNorm;
+            readSmoothedBandParams(band, freqNorm, gainNorm, qNorm, slopeNorm);
+
+            float freq = bandFrequencyHz(band, freqNorm);
+            freq = std::clamp(freq, 20.0f, static_cast<float>(m_sampleRate) * 0.49f);
+            const float gainDb = bandUsesGain(band) ? gainToDb(gainNorm) : 0.0f;
+            float q = bandQValue(band, qNorm);
+            q = std::clamp(q, 0.1f, 10.0f);
+            const uint32_t stages = bandStageCount(band, slopeNorm);
+
+            auto coeffs = designBiquad(type, freq, gainDb, q, static_cast<float>(m_sampleRate));
+            if (!std::isfinite(coeffs.b0) || !std::isfinite(coeffs.a0) || std::abs(coeffs.a0) < 1.0e-12f) {
+                coeffs = {1, 0, 0, 1, 0, 0};
+            }
+
+            for (uint32_t ch = 0; ch < 2; ++ch) {
+                const uint32_t stageBase = (ch * kV1BandCount + band) * kMaxFilterStages;
                 for (uint32_t stage = 0; stage < kMaxFilterStages; ++stage) {
                     if (stage < stages) {
                         m_filters[stageBase + stage].setCoeffs(
@@ -590,28 +800,91 @@ private:
         }
     }
 
-    void publishAnalyzerFrame(float** outputs, uint32_t numChannels, uint32_t numFrames) {
-        if (numChannels == 0 || !outputs) {
-            return;
+    void readSmoothedBandParams(uint32_t band, float& freq, float& gain, float& q, float& slope) const {
+        freq = m_smoothed[bandV1FreqId(band)].load(std::memory_order_relaxed);
+        if (bandUsesGain(band)) {
+            gain = m_smoothed[bandV1GainId(band)].load(std::memory_order_relaxed);
+        } else {
+            gain = 0.5f;
         }
+        if (bandUsesSlope(band)) {
+            slope = m_smoothed[bandV1QId(band)].load(std::memory_order_relaxed);
+            q = 0.5f;
+        } else {
+            q = m_smoothed[bandV1QId(band)].load(std::memory_order_relaxed);
+            slope = 0.0f;
+        }
+    }
+
+    // ---- State migration ----
+    bool migrateV1State(const EQStateBlobV1* v1) {
+        static constexpr FilterType v1BandTargetTypes[] = {
+            FilterType::LowCut, FilterType::LowShelf, FilterType::Bell,
+            FilterType::Bell, FilterType::HighShelf, FilterType::HighCut
+        };
+
+        for (uint32_t band = 0; band < kV1BandCount; ++band) {
+            const uint32_t v1Base = band * kLegacyBandStride;
+            const bool v1Enabled = v1->enabled[band] != 0;
+            const uint32_t v1Type = v1->types[band];
+
+            setParameter(bandV1EnableId(band), v1Enabled ? 1.0f : 0.0f);
+
+            if (v1Type == static_cast<uint32_t>(v1BandTargetTypes[band])) {
+                if (v1Base + 4 < kLegacyParamCount) {
+                    setParameter(bandV1FreqId(band), std::clamp(v1->params[v1Base + 2], 0.0f, 1.0f));
+                    if (bandUsesGain(band)) {
+                        setParameter(bandV1GainId(band), std::clamp(v1->params[v1Base + 3], 0.0f, 1.0f));
+                    }
+                    setParameter(bandV1QId(band), std::clamp(v1->params[v1Base + 4], 0.0f, 1.0f));
+                }
+            } else {
+                // Type mismatch — load defaults for this band
+                for (const auto& p : getParameters()) {
+                    if (p.id == bandV1FreqId(band)) {
+                        setParameter(bandV1FreqId(band), p.defaultValue);
+                        break;
+                    }
+                }
+                if (bandUsesGain(band)) {
+                    for (const auto& p : getParameters()) {
+                        if (p.id == bandV1GainId(band)) {
+                            setParameter(bandV1GainId(band), p.defaultValue);
+                            break;
+                        }
+                    }
+                }
+                for (const auto& p : getParameters()) {
+                    if (p.id == bandV1QId(band)) {
+                        setParameter(bandV1QId(band), p.defaultValue);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (kLegacyParamCount > 40) {
+            setParameter(kParamBypass, v1->params[40] > 0.5f ? 1.0f : 0.0f);
+        }
+
+        m_filtersDirty.store(true, std::memory_order_release);
+        return true;
+    }
+
+    // ---- Analyzer ----
+    void publishAnalyzerFrame(float** outputs, uint32_t numChannels, uint32_t numFrames) {
+        if (numChannels == 0 || !outputs) return;
 
         for (uint32_t i = 0; i < numFrames; ++i) {
             float mono = 0.0f;
-            uint32_t contributingChannels = 0;
-
+            uint32_t count = 0;
             for (uint32_t ch = 0; ch < numChannels; ++ch) {
-                if (!outputs[ch]) {
-                    continue;
+                if (outputs[ch]) {
+                    mono += outputs[ch][i];
+                    ++count;
                 }
-                mono += outputs[ch][i];
-                ++contributingChannels;
             }
-
-            if (contributingChannels == 0) {
-                mono = 0.0f;
-            } else if (contributingChannels > 1) {
-                mono /= static_cast<float>(contributingChannels);
-            }
+            mono = (count > 1) ? mono / static_cast<float>(count) : mono;
 
             m_analyzerPages[m_analyzerWritePage][m_analyzerWritePos++] = mono;
             if (m_analyzerWritePos >= kAnalyzerWindowSize) {
@@ -623,15 +896,22 @@ private:
         }
     }
 
+    // ---- Member state ----
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     uint32_t m_maxBlockSize = 512;
     std::atomic<bool> m_active{false};
     std::atomic<bool> m_filtersDirty{true};
+    std::atomic<float> m_smoothingCoeff{0.001f};
 
-    std::array<EQBand, kNumBands> m_bands;
-    std::array<BiquadFilter, kNumBands * 2 * kMaxFilterStages> m_filters; // 2 channels, staged for steeper cuts
-    std::array<std::atomic<float>, kParamCount> m_params;
+    std::array<std::atomic<float>, kV1ParamCount> m_params{};
+    std::array<std::atomic<float>, kV1ParamCount> m_smoothed{};
+    std::array<std::atomic<bool>, kV1BandCount> m_bandEnabled{};
+    std::array<std::atomic<uint32_t>, kV1BandCount> m_bandStages{};
+
+    // 2 channels * kV1BandCount bands * kMaxFilterStages
+    std::array<BiquadFilter, 2 * kV1BandCount * kMaxFilterStages> m_filters;
+
     std::array<std::array<float, kAnalyzerWindowSize>, 2> m_analyzerPages{};
     std::atomic<uint32_t> m_publishedAnalyzerPage{0};
     std::atomic<uint64_t> m_publishedAnalyzerSerial{0};
