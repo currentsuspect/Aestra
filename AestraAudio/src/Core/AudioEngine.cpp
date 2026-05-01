@@ -563,7 +563,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     const AudioGraph& graph = m_state.activeGraph();
 
     // Loop & Position Logic Loop Calculation
-    bool playing = m_transportPlaying.load(std::memory_order_relaxed);
+    bool playing = isPlaying;
     bool loopEnabled = m_loopEnabled.load(std::memory_order_relaxed);
 
     // Pattern Mode Override
@@ -591,7 +591,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
             float bpm = m_metronomeEngine.getBPM();
             // Convert loop end beat to sample position
             double samplesPerBeat =
-                (static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)) * 60.0) / std::max(static_cast<double>(bpm), 1.0);
+                (static_cast<double>(currentSampleRate) * 60.0) / std::max(static_cast<double>(bpm), 1.0);
             uint64_t loopEndSample = static_cast<uint64_t>(loopEndBeat * samplesPerBeat);
             loopStartSample = static_cast<uint64_t>(loopStartBeat * samplesPerBeat);
 
@@ -660,14 +660,14 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
             // === Pattern Mode: Clear Buffer ===
             std::fill(m_masterBufferD.begin(),
                       m_masterBufferD.begin() +
-                          static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed),
+                          static_cast<size_t>(numFrames) * numOutputChannels,
                       0.0);
         }
     } else {
         // Zero the double buffer
         std::fill(m_masterBufferD.begin(),
                   m_masterBufferD.begin() +
-                      static_cast<size_t>(numFrames) * m_outputChannels.load(std::memory_order_relaxed),
+                      static_cast<size_t>(numFrames) * numOutputChannels,
                   0.0);
     }
 
@@ -693,7 +693,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
     // === Test Tone Injection ===
     if (m_testToneEnabled.load(std::memory_order_relaxed)) {
-        const double sampleRate = static_cast<double>(m_sampleRate.load(std::memory_order_relaxed));
+        const double sampleRate = static_cast<double>(currentSampleRate);
         if (sampleRate > 0.0) {
             const double frequency = 440.0;
             const double amplitude = 0.05; // -26dB
@@ -723,7 +723,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     // === Preview Ducking Gain Calculation ===
     // When transport is playing and preview is active, duck transport by ~6dB
     const double duckFadeTimeMs = 50.0;  // ~50ms smooth fade
-    const double duckFadeSamples = (static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)) * duckFadeTimeMs) / 1000.0;
+    const double duckFadeSamples = (static_cast<double>(currentSampleRate) * duckFadeTimeMs) / 1000.0;
     const double duckFadeDelta = 1.0 / std::max(duckFadeSamples, 1.0);
     
     // Check if preview is active
@@ -1704,6 +1704,16 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         m_loggedRoutingCycleWarning.store(false, std::memory_order_relaxed);
     }
 
+    // Cache loop-invariant atomics before the per-track loop to avoid
+    // redundant loads (12 loads x N tracks per audio block).
+    // These values are stable for the duration of a single renderGraph() call.
+    const uint32_t cachedSampleRate = m_sampleRate.load(std::memory_order_relaxed);
+    auto* cachedSlotMap = m_channelSlotMapRaw.load(std::memory_order_acquire);
+    auto* cachedParams = m_continuousParamsRaw.load(std::memory_order_acquire);
+    auto* cachedSnaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
+    const bool cachedPatternMode = m_patternPlaybackMode.load(std::memory_order_relaxed);
+    const auto cachedInterpQuality = m_interpQuality.load(std::memory_order_relaxed);
+
     for (const size_t orderedIndex : m_rtProcessOrder) {
         const auto& track = graph.tracks[orderedIndex];
         const uint32_t trackIdx = track.trackIndex;
@@ -1719,10 +1729,10 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         float trimDb = 0.0f;
         uint32_t slot = ChannelSlotMap::INVALID_SLOT;
 
-        auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_acquire);
+        auto* slotMap = cachedSlotMap;
         if (slotMap) {
             slot = slotMap->getSlotIndex(track.trackId);
-            auto* params = m_continuousParamsRaw.load(std::memory_order_acquire);
+            auto* params = cachedParams;
             if (slot != ChannelSlotMap::INVALID_SLOT && params) {
                 params->read(slot, faderDb, panParam, trimDb);
             }
@@ -1736,12 +1746,12 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         double panTarget = clampD(static_cast<double>(track.pan) + static_cast<double>(panParam), -1.0, 1.0);
 
         // Apply Automation Override (v3.1)
-        if (!track.automationCurves.empty() && m_sampleRate.load(std::memory_order_relaxed) > 0) {
+        if (!track.automationCurves.empty() && cachedSampleRate > 0) {
             uint64_t globalPos = m_globalSamplePos.load(std::memory_order_relaxed);
-            const double samplesPerBeat = (static_cast<double>(m_sampleRate.load(std::memory_order_relaxed)) * 60.0) /
+            const double samplesPerBeat = (static_cast<double>(cachedSampleRate) * 60.0) /
                                           std::max(graph.bpm, 1.0);
             double currentBeat =
-                (static_cast<double>(globalPos) / m_sampleRate.load(std::memory_order_relaxed)) * (graph.bpm / 60.0);
+                (static_cast<double>(globalPos) / cachedSampleRate) * (graph.bpm / 60.0);
             for (const auto& curve : track.automationCurves) {
                 if (curve.getAutomationTarget() == AutomationTarget::Volume) {
                     volTarget = curve.getValueAtBeat(currentBeat, samplesPerBeat);
@@ -1792,7 +1802,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         }
 
         if (!processActive) {
-            auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
+            auto* snaps = cachedSnaps;
             if (snaps && slot != ChannelSlotMap::INVALID_SLOT) {
                 snaps->writeLevels(slot, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -144.0f);
                 snaps->writeSidechainPeak(slot, 0.0f);
@@ -1806,7 +1816,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
         // Check isPlaying inside loop to avoid brace wrapping issues
         // [FIX] Suppress timeline clips if in Pattern Mode (Audio Isolation)
-        bool patternMode = m_patternPlaybackMode.load(std::memory_order_relaxed);
+        bool patternMode = cachedPatternMode;
 
         if (!patternMode) {
             for (const auto& clip : track.clips) {
@@ -1822,7 +1832,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                 uint32_t framesToRender = static_cast<uint32_t>(end - start);
 
                 // Sample rate ratio
-                const double outputRate = static_cast<double>(m_sampleRate.load(std::memory_order_relaxed));
+                const double outputRate = static_cast<double>(cachedSampleRate);
                 const double srcRate = clip.sourceSampleRate > 0.0 ? clip.sourceSampleRate : outputRate;
                 const double ratio = srcRate / outputRate;
 
@@ -1892,7 +1902,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     if (channels == 1) {
                         // Mono Resampling — use the same quality interpolators as stereo.
                         // The mono path reads a single float per frame, so we duplicate to L/R.
-                        switch (m_interpQuality.load(std::memory_order_relaxed)) {
+                        switch (cachedInterpQuality) {
                         case Interpolators::InterpolationQuality::Cubic:
                             for (uint32_t i = 0; i < framesToRender && phase < phaseEnd; ++i) {
                                 double fade = 1.0;
@@ -1937,7 +1947,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 }
                                 double clipGain = static_cast<double>(clip.gain);
                                 double val = Interpolators::sincInterpolateMono(data, totalFrames, phase,
-                                    m_interpQuality.load(std::memory_order_relaxed));
+                                    cachedInterpQuality);
                                 dst[i * 2] += val * clipGain * fade;
                                 dst[i * 2 + 1] += val * clipGain * fade;
                                 phase += ratio;
@@ -2173,7 +2183,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         double lowAccTrackR = 0.0;
         double sumLRTrack = 0.0; // Correlation accumulator
 
-        auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
+        auto* snaps = cachedSnaps;
         const bool publishTrackSnapshot = (snaps && slot != ChannelSlotMap::INVALID_SLOT);
         if (publishTrackSnapshot) {
             snaps->writeSidechainPeak(slot, trackSidechainPeak);
