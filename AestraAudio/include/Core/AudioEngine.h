@@ -519,6 +519,7 @@ private:
     std::vector<std::vector<size_t>> m_rtAudibleDownstream;
     std::vector<std::vector<size_t>> m_rtAudibleIncoming;
     std::vector<std::vector<size_t>> m_rtSidechainIncoming;
+    std::vector<uint8_t> m_rtSidechainReceiverFlags; // Indexed by trackIndex: 1 if track received sidechain input last block
     std::vector<std::vector<size_t>> m_rtTopoEdges;
     std::vector<uint32_t> m_rtTopoIndegree;
     std::vector<bool> m_rtAudibleEligible;
