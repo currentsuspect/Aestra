@@ -18,14 +18,19 @@ destroys them after the audio side has dropped its references.
 
 | File | Function | Likely context | RT-reachable? | Action |
 |---|---|---:|---:|---|
+| `Source/App/AestraApp.cpp` | `AestraApp::run()` | GUI main loop idle/update cadence | No | Periodic `AudioEngine::performNonRealtimeMaintenance()` call |
+| `Source/App/HeadlessMain.cpp` | `renderEngine()` | Headless validation/render loop | No | Periodic `AudioEngine::performNonRealtimeMaintenance()` call |
+| `AestraAudio/src/IO/AudioExporter.cpp` | `AudioExporter::render()` | Offline export loop | No | Periodic `AudioEngine::performNonRealtimeMaintenance()` call |
+| `Source/Core/AestraAudioController.cpp` | `AestraAudioController::shutdown()` | App shutdown after stream close | No | Explicit `AudioEngine::drainDeferredResourcesForShutdown()` call |
 | `AestraAudio/src/Plugin/SamplerPlugin.cpp` | `SamplerPlugin::shutdown()` | Plugin shutdown / non-RT lifecycle | No | Label retired `SampleData` and rely on RT guard |
 | `AestraAudio/src/Plugin/SamplerPlugin.cpp` | `SamplerPlugin::loadSample()` | UI/loading/sample import | No | Label retired `SampleData` and rely on RT guard |
 | `AestraAudio/src/Plugin/SamplerPlugin.cpp` | `SamplerPlugin::normalizeSample()` | UI/editor sample edit | No | Label retired `SampleData` and rely on RT guard |
 | `AestraAudio/src/Plugin/SamplerPlugin.cpp` | `SamplerPlugin::reverseSample()` | UI/editor sample edit | No | Label retired `SampleData` and rely on RT guard |
 | `Tests/AestraAudio/GarbageCollectorTest.cpp` | test helpers | Unit tests | Simulated only | Covers normal and marked-RT misuse paths |
 
-No production `collect()`, `drainUntilStable()`, `stats()`, or `zombieCount()` call sites were found outside tests during
-this pass.
+No production direct `collect()`, `drainUntilStable()`, `stats()`, or `zombieCount()` call sites were found outside
+tests during this pass. Production collection now flows through `AudioEngine::performNonRealtimeMaintenance()` and
+`AudioEngine::drainDeferredResourcesForShutdown()`.
 
 ## Resource Status
 

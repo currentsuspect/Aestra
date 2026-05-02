@@ -165,6 +165,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
             std::min<uint64_t>(RENDER_BLOCK_FRAMES, framesRemaining));
 
         m_engine.processBlock(m_renderBufferF.data(), nullptr, framesThisBlock, 0.0);
+        m_engine.performNonRealtimeMaintenance();
 
         // Track peak level
         float blockPeak = calculatePeakDb(m_renderBufferF.data(), framesThisBlock, config.numChannels);

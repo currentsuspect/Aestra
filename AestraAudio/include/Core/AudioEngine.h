@@ -80,6 +80,21 @@ public:
     int processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime);
 
     /**
+     * @brief Non-real-time maintenance hook for deferred resource reclamation.
+     *
+     * Safe to call from the UI loop, idle tick, export loop, or headless render
+     * loop. Throttled internally so frequent calls stay cheap.
+     */
+    void performNonRealtimeMaintenance();
+
+    /**
+     * @brief Non-real-time shutdown drain for deferred resources.
+     *
+     * Call only after the audio stream has been stopped and closed.
+     */
+    void drainDeferredResourcesForShutdown();
+
+    /**
      * @brief Immediate panic/reset (Double Stop).
      * Clears all buffers and resets plugin states. Main Thread.
      */
@@ -681,6 +696,7 @@ private:
     static constexpr size_t kMaxCachedSamplers = 64;
     std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> m_cachedSamplers{};
     std::atomic<size_t> m_cachedSamplerCount{0};
+    std::atomic<uint64_t> m_lastDeferredResourceCollectionNs{0};
 
 public:
     /**

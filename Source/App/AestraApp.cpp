@@ -797,6 +797,10 @@ void AestraApp::run() {
              } else {
                  std::this_thread::sleep_for(std::chrono::duration<double>(sleepTime));
              }
+         }
+
+        if (m_audioController && m_audioController->getEngine()) {
+            m_audioController->getEngine()->performNonRealtimeMaintenance();
         }
 
         UnifiedProfiler::getInstance().endFrame();

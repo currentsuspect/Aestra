@@ -285,6 +285,7 @@ static RunMetrics renderEngine(AudioEngine& engine,
             std::min<uint64_t>(bufferFrames, totalFrames - framesProcessed));
 
         engine.processBlock(out.data(), nullptr, framesThisBlock, streamTime);
+        engine.performNonRealtimeMaintenance();
 
         for (uint32_t i = 0; i < framesThisBlock * kChannels; ++i) {
             const float s = out[i];

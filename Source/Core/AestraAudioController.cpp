@@ -162,6 +162,9 @@ void AestraAudioController::shutdown() {
         stopStream();
         closeStream();
     }
+    if (m_audioEngine) {
+        m_audioEngine->drainDeferredResourcesForShutdown();
+    }
     m_audioEngine.reset();
     m_audioManager.reset();
     m_initialized = false;
