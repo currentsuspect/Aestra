@@ -4775,9 +4775,14 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
 
             // Request Plugin Creation (Async)
             // Captured variables must be kept alive. m_trackManager is a shared_ptr.
+            // NOTE: The callback runs on a worker thread (PluginManager's factory thread),
+            // not the main/UI thread. This is a known risk: EffectChain::insertPlugin()
+            // should be called from the main/control thread. Future fix: route through
+            // main-thread dispatch (Stage B). This is documented in the plugin/effect-chain
+            // lifetime audit (labs/memory/plugin_effect_lifetime_audit.md).
             std::string displayName = data.displayName;
             auto trackManager = m_trackManager;
-            
+
             pluginManager.createInstanceByIdAsync(pluginId, [trackManager, channelIndex, displayName, pluginId](Aestra::Audio::PluginInstancePtr instance) {
                 if (!instance) {
                     Log::error("[TrackManagerUI] Plugin creation failed for ID: " + pluginId);
@@ -4789,12 +4794,12 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
 
                 auto& pluginManager = Aestra::Audio::PluginManager::getInstance();
                 if (instance->initialize(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize())) {
-                    instance->activate(); 
-                    
+                    instance->activate();
+
                     auto& chain = channel->getEffectChain();
                     chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
                     size_t slot = chain.getFirstEmptySlot();
-                    
+
                     if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
                         chain.insertPlugin(slot, instance);
                         Log::info("[TrackManagerUI] Added plugin (Async): " + displayName);
