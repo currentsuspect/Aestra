@@ -14,11 +14,13 @@ Threading rules:
 - `collect()` is non-real-time only. It owns the zombie list and may run destructors.
 - Object destruction happens on the thread that calls `collect()`.
 - The audio callback must never call `release()`, `collect()`, diagnostics, or shutdown drains.
+- Debug builds can mark the audio callback thread and report/assert if GC APIs are called from that context.
 - Audio code should only publish/load the shared resource and keep processing free of locks, allocation, logging, and I/O.
 
 Current use:
 
 - Sampler sample buffers are atomically replaced, and old `SampleData` objects are retired through `GarbageCollector`.
+- See `resource_retirement_map.md` for the current call-site audit and candidate future resources.
 
 Likely future uses:
 

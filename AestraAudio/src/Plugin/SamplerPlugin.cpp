@@ -121,7 +121,7 @@ void SamplerPlugin::shutdown() {
     m_active = false;
     // Force release of data to ensure cleanup
     auto old = std::atomic_exchange(&m_data, std::shared_ptr<SampleData>(nullptr));
-    GarbageCollector::instance().release(old);
+    GarbageCollector::instance().release(old, "SamplerPlugin::SampleData shutdown");
 }
 
 void SamplerPlugin::activate() {
@@ -165,7 +165,7 @@ bool SamplerPlugin::loadSample(const std::string& path) {
     auto oldData = std::atomic_exchange(&m_data, newData);
 
     // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
-    GarbageCollector::instance().release(oldData);
+    GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
 
     return true;
 }
@@ -191,7 +191,7 @@ bool SamplerPlugin::normalizeSample(float targetPeak) {
     }
 
     auto oldData = std::atomic_exchange(&m_data, edited);
-    GarbageCollector::instance().release(oldData);
+    GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
     return true;
 }
 
@@ -217,7 +217,7 @@ bool SamplerPlugin::reverseSample() {
     }
 
     auto oldData = std::atomic_exchange(&m_data, edited);
-    GarbageCollector::instance().release(oldData);
+    GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
     return true;
 }
 

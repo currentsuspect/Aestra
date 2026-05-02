@@ -10,6 +10,7 @@
 #include "Playback/PreviewEngine.h"
 #include "Plugin/SamplerPlugin.h" // [NEW]
 #include "PluginHost.h"
+#include "RealtimeThreadGuard.h"
 #include "UnitManager.h"
 #include "miniaudio.h"
 
@@ -386,6 +387,7 @@ void AudioEngine::syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept {
  * - Dithering mode, safety processing, metronome, and LUFS accumulation are all controlled by engine state flags.
  */
 int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime) {
+    ScopedRealtimeAudioThread realtimeScope;
     (void)streamTime;
 
     // Process Input (Recording)
