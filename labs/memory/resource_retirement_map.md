@@ -43,17 +43,20 @@ tests during this pass. Production collection now flows through `AudioEngine::pe
 | Engine meter snapshots | Already GC-safe | `AudioEngine::setMeterSnapshots()` retires the previous shared buffer through GC. |
 | Engine continuous params | Already GC-safe | `AudioEngine::setContinuousParams()` retires the previous shared buffer through GC. |
 | Engine channel-slot maps | Already GC-safe | `AudioEngine::setChannelSlotMap()` retires the previous shared routing map through GC. |
-| Plugin graph snapshots | Needs deferred destruction later | Snapshot publication can leave the audio thread holding old graph state. |
-| Effect chain / plugin instances | Dangerous/unknown | Plugin destructors may be expensive or host-dependent; defer only after ownership model audit. |
+| Plugin graph snapshots | Needs snapshot architecture first | `AudioGraph` is double-buffered but stores raw `EffectChain*` pointers. Old graphs are safe, but the pointed-to objects are live/mutable. See [plugin_effect_lifetime_audit.md](plugin_effect_lifetime_audit.md) §6.1. |
+| Effect chain / plugin instances | Needs snapshot architecture first | **Audit complete (2026-05-02).** `EffectChain::m_slots` mutation (insert/remove/clear) is unsynchronized with audio-thread `process()`. GC adoption is blocked until snapshot-based slot publication is implemented. See [plugin_effect_lifetime_audit.md](plugin_effect_lifetime_audit.md). |
 | Waveform cache data | Needs deferred destruction later | Cache entries can be large and audio/UI-visible, but current ownership should be audited first. |
 | Decoded browser preview audio | Needs deferred destruction later | Preview buffers may become audio-visible and should avoid destruction on callback paths. |
 | Frozen/rendered audio assets | Needs deferred destruction later | Large immutable assets are good candidates once publication ownership is explicit. |
 | Export/render graph resources | Does not need GC today | Offline export is non-RT; use GC only if resources become shared with live playback snapshots. |
-| Automation snapshot/state objects | Dangerous/unknown | Needs a snapshot ownership audit before adoption. |
+| Automation snapshot/state objects | Dangerous/unknown | Needs a snapshot ownership audit before adoption. Consider auditing after effect-chain snapshot architecture is in place. |
 
 ## Follow-Ups
 
 - Keep every new GC caller in this map with a thread-context note.
 - Prefer immutable shared resources plus atomic/snapshot publication before adopting GC.
 - Add short-run CI coverage for RT misuse guards if the test harness grows death-test support.
-- Audit plugin graph and effect chain lifetimes before using GC for plugin instances.
+- ~~Audit plugin graph and effect chain lifetimes before using GC for plugin instances.~~ **Done:** see [plugin_effect_lifetime_audit.md](plugin_effect_lifetime_audit.md).
+- Implement snapshot-based effect-chain slot publication (Stage B of the audit recommendation).
+- After snapshot architecture, adopt GC for retired plugin instances (Stage C).
+- Harden `clearAllChannels()` to synchronize with audio graph before destruction (Stage D).
