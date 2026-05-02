@@ -309,6 +309,7 @@ bool AestraAudioController::startStream() {
         m_audioEngine->setInputCallback([](const float* input, uint32_t n, void* user) {
             auto* controller = static_cast<AestraAudioController*>(user);
             if (controller) {
+                // Load once and reuse to avoid repeated atomic operations
                 auto content = std::atomic_load_explicit(&controller->m_rtContent, std::memory_order_acquire);
                 if (content) {
                     if (auto trackManager = content->getTrackManager()) {
@@ -391,17 +392,16 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
         std::fill(outputBuffer, outputBuffer + static_cast<size_t>(nFrames) * outCh, 0.0f);
     }
 
-    if (inputBuffer) {
-        auto content = std::atomic_load_explicit(&controller->m_rtContent, std::memory_order_acquire);
-        if (content) {
-            if (auto trackManager = content->getTrackManager()) {
-                trackManager->mixInputMonitoring(inputBuffer, outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
-            }
+    // Load content snapshot once and reuse for the entire callback to avoid repeated atomic operations
+    auto content = std::atomic_load_explicit(&controller->m_rtContent, std::memory_order_acquire);
+
+    if (inputBuffer && content) {
+        if (auto trackManager = content->getTrackManager()) {
+            trackManager->mixInputMonitoring(inputBuffer, outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
         }
     }
 
-    // Preview mixing
-    auto content = std::atomic_load_explicit(&controller->m_rtContent, std::memory_order_acquire);
+    // Preview mixing - reuse the same content snapshot
     if (content) {
         if (auto* previewEngine = content->getPreviewEngine()) {
             previewEngine->process(outputBuffer, nFrames);

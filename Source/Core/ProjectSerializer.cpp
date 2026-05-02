@@ -1098,8 +1098,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 continue;
             }
             std::filesystem::path resolvedPath = resolveProjectAssetPath(projectPath, storedPath);
-            const std::string filePath = resolvedPath.string();
-            ClipSourceID newId = sourceManager.getOrCreateSource(filePath);
+            const std::string sourcePath = storedPath; // Use original storedPath for serialization
+            const std::string filePath = resolvedPath.string(); // Use resolvedPath only for file I/O
+            ClipSourceID newId = sourceManager.getOrCreateSource(sourcePath);
             idMap[oldId] = newId;
             const bool assetReadable =
                 std::filesystem::exists(resolvedPath) && std::filesystem::is_regular_file(resolvedPath);

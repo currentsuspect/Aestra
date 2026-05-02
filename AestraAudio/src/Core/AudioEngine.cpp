@@ -253,19 +253,16 @@ void AudioEngine::applyPendingCommands() {
 if (transportPlaying && sawRestartEdge) {
             m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
             m_fadeSamplesRemaining = FADE_IN_SAMPLES;
-        } else if (transportPlaying && m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent) {
-            m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
-            m_fadeSamplesRemaining = FADE_IN_SAMPLES;
-        } else if (transportPlaying && m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
-            m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
-            m_fadeSamplesRemaining = FADE_IN_SAMPLES;
-        } else if (transportPlaying && m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent) {
-            m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
-            m_fadeSamplesRemaining = FADE_IN_SAMPLES;
-        } else if (transportPlaying && m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
-            uint32_t fadeProgress = FADE_OUT_SAMPLES - m_fadeSamplesRemaining;
-            m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
-            m_fadeSamplesRemaining = std::min(fadeProgress, FADE_IN_SAMPLES);
+        } else if (transportPlaying) {
+            auto state = m_fadeState.load(std::memory_order_relaxed);
+            if (state == FadeState::Silent || state == FadeState::FadingOut) {
+                uint32_t fadeProgress = FADE_OUT_SAMPLES - m_fadeSamplesRemaining;
+                m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
+                m_fadeSamplesRemaining = std::min(fadeProgress, FADE_IN_SAMPLES);
+            } else if (state == FadeState::None) {
+                m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
+                m_fadeSamplesRemaining = FADE_IN_SAMPLES;
+            }
         }
     }
 }
@@ -1743,6 +1740,9 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             if (destIndex == i) {
                 return;
             }
+            if (m_rtTopoEdges[i].size() >= kMaxEdgesPerTrack) {
+                return;
+            }
             m_rtTopoEdges[i].push_back(destIndex);
             m_rtTopoIndegree[destIndex] += 1u;
         };
@@ -2866,11 +2866,15 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     // However, for simplicity and since we are stopped, we use the active graph.
     // Ideally we clone it.
 
-    // trackId parameter is the track index (0-based). Use directly for
-    // isolatedTrackIndex. -1 means all tracks (render everything).
+    // trackId parameter is the persistent track ID. Search for matching renderTracks entry.
     int32_t isolatedTrackIndex = -1;
     if (trackId >= 0) {
-        isolatedTrackIndex = trackId;
+        for (size_t i = 0; i < graphState.renderTracks.size(); ++i) {
+            if (graphState.renderTracks[i].trackIndex == static_cast<uint32_t>(trackId)) {
+                isolatedTrackIndex = static_cast<int32_t>(i);
+                break;
+            }
+        }
     }
 
     Aestra::Log::info("[AudioEngine] Starting bounce: " + std::to_string(totalFrames) + " frames.");

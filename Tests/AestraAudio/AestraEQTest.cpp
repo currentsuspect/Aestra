@@ -158,10 +158,11 @@ bool testFlatEQEqualsInput() {
     const uint32_t frames = kBlockSize;
 
     // Let smoothing settle
-    std::vector<float> dummy(frames, 0.0f);
+    std::vector<float> dummyIn(frames, 0.0f);
+    std::vector<float> dummyOut(frames, 0.0f);
     for (int i = 0; i < 200; ++i) {
-        const float* inPtr = dummy.data();
-        float* outPtr = dummy.data();
+        const float* inPtr = dummyIn.data();
+        float* outPtr = dummyOut.data();
         eq.process(&inPtr, &outPtr, 1, 1, frames);
     }
 

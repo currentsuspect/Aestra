@@ -945,21 +945,13 @@ void WASAPISharedDriver::unregisterDeviceNotifier() {
 }
 
 void WASAPISharedDriver::onDeviceStateChanged(const std::string& deviceId, uint32_t newState) {
-    (void)deviceId;
-    (void)newState;
-    // Device state changed — check if our current device is still valid
-    // If the active device was removed, trigger fallback
-    if (m_isRunning.load(std::memory_order_relaxed) && m_state == DriverState::STREAM_RUNNING) {
-        // Check if current device is still available
-        if (!m_device) {
-            Aestra::Log::error("[WASAPI Shared] Active device removed — triggering safety fallback");
-            if (m_telemetry) {
-                m_telemetry->incrementXruns();
-            }
-            // Notify via error callback if set
-            if (m_errorCallback) {
-                m_errorCallback(DriverError::DEVICE_NOT_FOUND, "Active audio device was removed");
-            }
+    if (newState != DEVICE_STATE_ACTIVE && m_isRunning.load(std::memory_order_relaxed) && m_state == DriverState::STREAM_RUNNING) {
+        Aestra::Log::error("[WASAPI Shared] Active device removed — triggering safety fallback");
+        if (m_telemetry) {
+            m_telemetry->incrementXruns();
+        }
+        if (m_errorCallback) {
+            m_errorCallback(DriverError::DEVICE_NOT_FOUND, "Active audio device was removed");
         }
     }
 }

@@ -983,16 +983,23 @@ void PluginScanner::loadTrustedPaths() {
             return;
         }
 
-        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-
+        // Check file size before reading entire file into memory
+        file.seekg(0, std::ios::end);
+        if (!file.good()) {
+            return;
+        }
+        const size_t fileSize = static_cast<size_t>(file.tellg());
+        file.seekg(0, std::ios::beg);
         constexpr size_t kMaxTrustedPathsFileBytes = 1024 * 1024;
-        constexpr size_t kMaxTrustedPaths = 1024;
-        constexpr size_t kMaxTrustedPathBytes = 32768;
-        if (content.size() > kMaxTrustedPathsFileBytes) {
+        if (fileSize > kMaxTrustedPathsFileBytes) {
             Log::warning("[PluginScanner] Trusted paths config too large; ignoring");
             return;
         }
 
+        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+        constexpr size_t kMaxTrustedPaths = 1024;
+        constexpr size_t kMaxTrustedPathBytes = 32768;
         JSON root = JSON::parse(content);
         if (!root.isObject() || !root.has("paths") || !root["paths"].isArray()) {
             return;

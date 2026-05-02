@@ -1235,17 +1235,13 @@ void WASAPIExclusiveDriver::unregisterDeviceNotifier() {
 }
 
 void WASAPIExclusiveDriver::onDeviceStateChanged(const std::string& deviceId, uint32_t newState) {
-    (void)deviceId;
-    (void)newState;
-    if (m_isRunning.load(std::memory_order_relaxed) && m_state == DriverState::STREAM_RUNNING) {
-        if (!m_device) {
-            Aestra::Log::error("[WASAPI Exclusive] Active device removed — triggering safety fallback");
-            if (m_telemetry) {
-                m_telemetry->incrementXruns();
-            }
-            if (m_errorCallback) {
-                m_errorCallback(DriverError::DEVICE_NOT_FOUND, "Active audio device was removed");
-            }
+    if (newState != DEVICE_STATE_ACTIVE && m_isRunning.load(std::memory_order_relaxed) && m_state == DriverState::STREAM_RUNNING) {
+        Aestra::Log::error("[WASAPI Exclusive] Active device removed — triggering safety fallback");
+        if (m_telemetry) {
+            m_telemetry->incrementXruns();
+        }
+        if (m_errorCallback) {
+            m_errorCallback(DriverError::DEVICE_NOT_FOUND, "Active audio device was removed");
         }
     }
 }

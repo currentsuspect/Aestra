@@ -129,6 +129,7 @@ private:
     size_t m_maxHistoryMemory = 100 * 1024 * 1024; // 100MB default
 
     mutable std::mutex m_mutex;
+    mutable std::mutex m_operationMutex;
     std::vector<StateChangedCallback> m_onStateChangedCallbacks;
 
     void trimHistory();

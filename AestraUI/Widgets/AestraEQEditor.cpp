@@ -1063,12 +1063,6 @@ std::string AestraEQEditor::typeLabel(uint32_t type) const {
     static const char* names[] = {"Bell", "HiPass", "LoPass", "LoShelf", "HiShelf", "Notch", "BP", "Tilt"};
     return type < 8 ? names[type] : "Bell";
 }
-std::string AestraEQEditor::freqLabel(float norm) const {
-    // Default: full range (used by HUD display which passes Hz-normalized values)
-    float hz = std::pow(10.0f, std::log10(20.0f) + norm * (std::log10(20000.0f) - std::log10(20.0f)));
-    if (hz >= 1000) { std::ostringstream o; o << std::fixed << std::setprecision(1) << hz / 1000.0f << "k"; return o.str(); }
-    return std::to_string(static_cast<int>(hz));
-}
 std::string AestraEQEditor::bandFreqLabel(size_t bandIdx, float norm) const {
     float hz = 1000.0f;
     switch (bandIdx) {

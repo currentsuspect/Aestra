@@ -5,7 +5,7 @@
 #include "RealtimeThreadGuard.h"
 
 #include <atomic>
-#include <cassert>
+#include <gtest/gtest.h>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>

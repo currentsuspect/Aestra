@@ -6,11 +6,12 @@
 #include "RealtimeThreadGuard.h"
 
 #include <atomic>
-#include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <memory>
 #include <vector>
+
+#define require(cond, msg) do { if (!(cond)) { std::cerr << "FAIL: " << (msg) << std::endl; return 1; } } while(0)
 
 using namespace Aestra::Audio;
 
@@ -21,11 +22,11 @@ void emptyChainSnapshotHasNoPlugins() {
     chain.prepare(48000.0, 512);
 
     auto snapshot = chain.createSnapshot();
-    assert(snapshot != nullptr);
-    assert(snapshot->getActiveSlotCount() == 0);
+    require(snapshot != nullptr, "emptyChainSnapshotHasNoPlugins: snapshot is null");
+    require(snapshot->getActiveSlotCount() == 0, "emptyChainSnapshotHasNoPlugins: active slot count != 0");
 
     for (size_t i = 0; i < EffectChainSnapshot::MAX_SLOTS; ++i) {
-        assert(snapshot->slot(i).isEmpty());
+        require(snapshot->slot(i).isEmpty(), "emptyChainSnapshotHasNoPlugins: slot not empty");
     }
 
     std::cout << "PASS: emptyChainSnapshotHasNoPlugins\n";
@@ -41,10 +42,10 @@ void snapshotAfterInsertContainsPlugin() {
     chain.insertPlugin(0, plugin);
 
     auto snapshot = chain.createSnapshot();
-    assert(snapshot != nullptr);
-    assert(snapshot->getActiveSlotCount() == 1);
-    assert(snapshot->slot(0).plugin != nullptr);
-    assert(snapshot->slot(0).plugin.get() == plugin.get());
+    require(snapshot != nullptr, "snapshotAfterInsertContainsPlugin: snapshot is null");
+    require(snapshot->getActiveSlotCount() == 1, "snapshotAfterInsertContainsPlugin: active slot count != 1");
+    require(snapshot->slot(0).plugin != nullptr, "snapshotAfterInsertContainsPlugin: plugin is null");
+    require(snapshot->slot(0).plugin.get() == plugin.get(), "snapshotAfterInsertContainsPlugin: plugin mismatch");
 
     std::cout << "PASS: snapshotAfterInsertContainsPlugin\n";
 }
@@ -60,16 +61,16 @@ void snapshotKeepsPluginAliveAfterRemoval() {
 
     // Create snapshot while plugin is in chain
     auto snapshot = chain.createSnapshot();
-    assert(snapshot->slot(0).plugin != nullptr);
+    require(snapshot->slot(0).plugin != nullptr, "snapshotKeepsPluginAliveAfterRemoval: plugin is null after snapshot");
 
     // Remove plugin from mutable chain
     auto removed = chain.removePlugin(0);
-    assert(removed != nullptr);
-    assert(chain.getActiveSlotCount() == 0);
+    require(removed != nullptr, "snapshotKeepsPluginAliveAfterRemoval: removePlugin returned null");
+    require(chain.getActiveSlotCount() == 0, "snapshotKeepsPluginAliveAfterRemoval: active slot count != 0");
 
     // Snapshot still holds plugin - plugin stays alive
-    assert(snapshot->slot(0).plugin != nullptr);
-    assert(snapshot->slot(0).plugin.get() == plugin.get());
+    require(snapshot->slot(0).plugin != nullptr, "snapshotKeepsPluginAliveAfterRemoval: plugin removed from snapshot");
+    require(snapshot->slot(0).plugin.get() == plugin.get(), "snapshotKeepsPluginAliveAfterRemoval: plugin mismatch");
 
     // Plugin destructor should NOT have run yet
     std::cout << "PASS: snapshotKeepsPluginAliveAfterRemoval\n";
@@ -85,7 +86,7 @@ void snapshotIsImmutableFromPublicAPI() {
     chain.insertPlugin(0, plugin);
 
     auto snapshot = chain.createSnapshot();
-    assert(snapshot != nullptr);
+    require(snapshot != nullptr, "snapshotIsImmutableFromPublicAPI: snapshot is null");
 
     // Verify we cannot get a mutable reference
     // The slot() method returns const reference
@@ -107,15 +108,15 @@ void snapshotCapturesBypassState() {
     chain.setSlotBypassed(0, true);
 
     auto snapshot = chain.createSnapshot();
-    assert(snapshot->slot(0).bypassed == true);
+    require(snapshot->slot(0).bypassed == true, "snapshotCapturesBypassState: bypassed != true");
 
     // Unbypass and create another snapshot
     chain.setSlotBypassed(0, false);
     auto snapshot2 = chain.createSnapshot();
-    assert(snapshot2->slot(0).bypassed == false);
+    require(snapshot2->slot(0).bypassed == false, "snapshotCapturesBypassState: snapshot2 bypassed != false");
 
     // Old snapshot still has bypassed = true
-    assert(snapshot->slot(0).bypassed == true);
+    require(snapshot->slot(0).bypassed == true, "snapshotCapturesBypassState: old snapshot bypassed != true");
 
     std::cout << "PASS: snapshotCapturesBypassState\n";
 }

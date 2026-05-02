@@ -80,7 +80,6 @@ private:
     bool hitTestCloseButton(float x, float y) const;
     bool hitTestTitleBar(float x, float y) const;
     std::string typeLabel(uint32_t type) const;
-    std::string freqLabel(float norm) const;
     std::string bandFreqLabel(size_t bandIdx, float norm) const;
     std::string gainLabel(float norm) const;
     std::string qLabel(float norm, uint32_t type) const;

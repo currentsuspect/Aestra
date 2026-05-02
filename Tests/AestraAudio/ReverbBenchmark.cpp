@@ -364,6 +364,7 @@ static std::string stageProfileToMarkdown(const std::vector<StageReport>& report
 struct ModeResult {
     std::string name;
     BenchResult result;
+    std::vector<StageReport> stageProfile;
 };
 
 static std::string generateMarkdownReport(
@@ -567,11 +568,13 @@ int main(int argc, char* argv[]) {
     // CPU info
     const auto& cpu = Aestra::Core::CPUDetection::get();
     bool hasAVX2 = cpu.hasAVX2();
+    bool hasFMA = cpu.hasFMA();
     bool hasSSE41 = cpu.hasSSE41();
     bool hasNEON = cpu.hasNEON();
 
     std::string cpuFlags;
     if (hasAVX2) cpuFlags += "AVX2 ";
+    if (hasFMA) cpuFlags += "FMA ";
     if (hasSSE41) cpuFlags += "SSE4.1 ";
     if (hasNEON) cpuFlags += "NEON ";
     if (cpuFlags.empty()) cpuFlags = "Scalar-only";
@@ -579,8 +582,10 @@ int main(int argc, char* argv[]) {
     std::string simdPathName;
     if (cfg.forceScalar) {
         simdPathName = "Scalar (forced)";
+    } else if (hasAVX2 && hasFMA) {
+        simdPathName = "AVX2+FMA (runtime dispatch)";
     } else if (hasAVX2) {
-        simdPathName = "AVX2 (runtime dispatch)";
+        simdPathName = "AVX2 (no FMA, runtime dispatch)";
     } else if (hasSSE41) {
         simdPathName = "SSE4.1 (runtime dispatch)";
     } else if (hasNEON) {
@@ -668,13 +673,13 @@ int main(int argc, char* argv[]) {
         verb.setParameter(AestraVerb::kWidth, 0.7f);
 
         auto result = benchmarkPlugin(verb, inputL, inputR, cfg.iterations, cfg.profileStages);
-        results.push_back({"Room", result});
-
+        ModeResult modeResult = {"Room", result};
 #ifdef AESTRA_REVERB_PROFILE
         if (cfg.profileStages) {
-            lastStageProfile = buildStageReport(verb);
+            modeResult.stageProfile = buildStageReport(verb);
         }
 #endif
+        results.push_back(modeResult);
 
         if (!cfg.jsonStdout) {
             std::cout << "─── Room Mode ───\n";
@@ -697,7 +702,7 @@ int main(int argc, char* argv[]) {
 
 #ifdef AESTRA_REVERB_PROFILE
             if (cfg.profileStages) {
-                printStageReport(lastStageProfile);
+                printStageReport(results.back().stageProfile);
             }
 #endif
         }
@@ -749,13 +754,13 @@ int main(int argc, char* argv[]) {
         verb.setParameter(AestraVerb::kWidth, 0.8f);
 
         auto result = benchmarkPlugin(verb, inputL, inputR, cfg.iterations, cfg.profileStages);
-        results.push_back({"Plate", result});
-
+        ModeResult modeResult = {"Plate", result};
 #ifdef AESTRA_REVERB_PROFILE
         if (cfg.profileStages) {
-            lastStageProfile = buildStageReport(verb);
+            modeResult.stageProfile = buildStageReport(verb);
         }
 #endif
+        results.push_back(modeResult);
 
         if (!cfg.jsonStdout) {
             std::cout << "\n─── Plate Mode ───\n";
