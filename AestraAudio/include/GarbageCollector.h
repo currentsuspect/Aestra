@@ -70,9 +70,16 @@ public:
      * storage with static or otherwise externally managed lifetime.
      */
     template <typename T> void release(std::shared_ptr<T> ptr, const char* label) {
-        assertNonRealtime("GarbageCollector::release");
+        if (!assertNonRealtime("GarbageCollector::release"))
+            return;
         if (!ptr)
             return;
+
+        // Increment counters BEFORE publishing to m_incoming/m_overflow
+        // so collect() never sees a resource without incremented accounting
+        const size_t tracked = m_currentlyTracked.fetch_add(1, std::memory_order_relaxed) + 1;
+        m_totalReleased.fetch_add(1, std::memory_order_relaxed);
+        updateMax(m_maxZombieCount, tracked);
 
         RetiredResource resource{std::static_pointer_cast<const void>(std::move(ptr)), label};
         std::lock_guard<std::mutex> lock(m_releaseMutex);
@@ -82,10 +89,6 @@ public:
             const size_t overflowSize = m_overflow.size();
             updateMax(m_overflowCount, overflowSize);
         }
-
-        const size_t tracked = m_currentlyTracked.fetch_add(1, std::memory_order_relaxed) + 1;
-        m_totalReleased.fetch_add(1, std::memory_order_relaxed);
-        updateMax(m_maxZombieCount, tracked);
     }
 
     /**
@@ -96,24 +99,25 @@ public:
      * that only the collector is still holding them.
      */
     void collect() {
-        assertNonRealtime("GarbageCollector::collect");
+        if (!assertNonRealtime("GarbageCollector::collect"))
+            return;
         noteCollectorThread();
+
+        // Serialize all non-RT callers to prevent races on m_zombies and counters
+        std::lock_guard<std::mutex> lock(m_releaseMutex);
 
         RetiredResource item;
         while (m_incoming.popMoveAndClear(item)) {
             m_zombies.push_back(std::move(item));
         }
 
-        {
-            std::lock_guard<std::mutex> lock(m_releaseMutex);
-            if (!m_overflow.empty()) {
-                const size_t drained = m_overflow.size();
-                m_zombies.insert(m_zombies.end(), std::make_move_iterator(m_overflow.begin()),
-                                 std::make_move_iterator(m_overflow.end()));
-                m_overflow.clear();
-                m_totalOverflowDrained.fetch_add(drained, std::memory_order_relaxed);
-                m_overflowCount.store(0, std::memory_order_relaxed);
-            }
+        if (!m_overflow.empty()) {
+            const size_t drained = m_overflow.size();
+            m_zombies.insert(m_zombies.end(), std::make_move_iterator(m_overflow.begin()),
+                             std::make_move_iterator(m_overflow.end()));
+            m_overflow.clear();
+            m_totalOverflowDrained.fetch_add(drained, std::memory_order_relaxed);
+            m_overflowCount.store(0, std::memory_order_relaxed);
         }
 
         internalCleanup();
@@ -125,7 +129,8 @@ public:
      * @return number of collect passes performed.
      */
     size_t drainUntilStable(size_t maxPasses = 8) {
-        assertNonRealtime("GarbageCollector::drainUntilStable");
+        if (!assertNonRealtime("GarbageCollector::drainUntilStable"))
+            return 0;
         size_t passes = 0;
         size_t previousCollected = m_totalCollected.load(std::memory_order_relaxed);
         for (; passes < maxPasses; ++passes) {
@@ -141,12 +146,14 @@ public:
 
     /** @return Number of retired resources still retained by the collector. */
     size_t zombieCount() const {
-        assertNonRealtime("GarbageCollector::zombieCount");
+        if (!assertNonRealtime("GarbageCollector::zombieCount"))
+            return 0;
         return m_currentlyTracked.load(std::memory_order_relaxed);
     }
 
     GarbageCollectorStats stats() const {
-        assertNonRealtime("GarbageCollector::stats");
+        if (!assertNonRealtime("GarbageCollector::stats"))
+            return GarbageCollectorStats{};
         GarbageCollectorStats result;
         result.totalReleased = m_totalReleased.load(std::memory_order_relaxed);
         result.totalCollected = m_totalCollected.load(std::memory_order_relaxed);
@@ -192,8 +199,8 @@ private:
         }
     }
 
-    static void assertNonRealtime(const char* apiName) {
-        (void)reportRealtimeMisuse(apiName);
+    static bool assertNonRealtime(const char* apiName) {
+        return !reportRealtimeMisuse(apiName);
     }
 
     void noteCollectorThread() {

@@ -361,27 +361,30 @@ void AudioEngine::setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMa
 }
 
 void AudioEngine::refreshSamplerCache() {
-    std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> samplers{};
-    size_t count = 0;
-
     auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
     if (unitMgr) {
-        auto snapshot = unitMgr->getAudioSnapshot();
-        if (snapshot) {
-            for (const auto& unitState : snapshot->units) {
-                if (count >= samplers.size()) {
-                    break;
-                }
-                auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unitState.plugin);
-                if (sampler) {
-                    samplers[count++] = sampler.get();
-                }
+        SamplerCacheSnapshot snapshot;
+        refreshSamplerCacheToSnapshot(*unitMgr, snapshot);
+        m_cachedSamplerOwners = std::move(snapshot.owners);
+        m_cachedSamplers = snapshot.samplers;
+        m_cachedSamplerCount.store(snapshot.count, std::memory_order_release);
+    }
+}
+
+void AudioEngine::refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheSnapshot& snapshot) {
+    auto snapshotObj = mgr.getAudioSnapshot();
+    if (snapshotObj) {
+        for (const auto& unitState : snapshotObj->units) {
+            if (snapshot.count >= snapshot.samplers.size()) {
+                break;
+            }
+            auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unitState.plugin);
+            if (sampler) {
+                snapshot.owners[snapshot.count] = sampler;
+                snapshot.samplers[snapshot.count++] = sampler.get();
             }
         }
     }
-
-    m_cachedSamplers = samplers;
-    m_cachedSamplerCount.store(count, std::memory_order_release);
 }
 
 void AudioEngine::performNonRealtimeMaintenance() {
@@ -1564,10 +1567,16 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             return;
         }
         if (sidechainOnly) {
-            m_rtSidechainIncoming[destIndex].push_back(srcIndex);
+            if (m_rtSidechainIncoming[destIndex].size() < kMaxEdgesPerTrack) {
+                m_rtSidechainIncoming[destIndex].push_back(srcIndex);
+            }
         } else {
-            m_rtAudibleDownstream[srcIndex].push_back(destIndex);
-            m_rtAudibleIncoming[destIndex].push_back(srcIndex);
+            if (m_rtAudibleDownstream[srcIndex].size() < kMaxEdgesPerTrack) {
+                m_rtAudibleDownstream[srcIndex].push_back(destIndex);
+            }
+            if (m_rtAudibleIncoming[destIndex].size() < kMaxEdgesPerTrack) {
+                m_rtAudibleIncoming[destIndex].push_back(srcIndex);
+            }
         }
     };
 
@@ -1861,9 +1870,10 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         // Initialize send gain smoothers when send count changes.
         // Vectors are pre-sized to kMaxSendsPerTrack in setBufferConfig(),
         // so we never resize here — only update the active entries.
-        if (state.lastActiveSendCount != track.sends.size()) {
-            state.lastActiveSendCount = track.sends.size();
-            for (size_t sendIndex = 0; sendIndex < track.sends.size(); ++sendIndex) {
+        const size_t sendCount = std::min(track.sends.size(), static_cast<size_t>(kMaxSendsPerTrack));
+        if (state.lastActiveSendCount != sendCount) {
+            state.lastActiveSendCount = sendCount;
+            for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
                 double targetL = 0.0;
                 double targetR = 0.0;
                 fastPanGainsD(
@@ -1878,7 +1888,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
         }
 
-        for (size_t sendIndex = 0; sendIndex < track.sends.size(); ++sendIndex) {
+        for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
             double targetL = 0.0;
             double targetR = 0.0;
             fastPanGainsD(
@@ -2355,7 +2365,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         if (!muted) {
             // Use pre-allocated member scratch buffer (no heap allocation in RT path).
             m_preparedRoutesScratch.clear();
-            for (size_t sendIndex = 0; sendIndex < track.sends.size(); ++sendIndex) {
+            const size_t sendCount = std::min(track.sends.size(), static_cast<size_t>(kMaxSendsPerTrack));
+            for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
                 const auto& send = track.sends[sendIndex];
                 if (send.mute) {
                     continue;

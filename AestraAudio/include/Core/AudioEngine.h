@@ -62,6 +62,18 @@ class AudioEngine {
     friend class AudioRenderer; // Allow access to private members during hybrid engine transition
     friend class AudioExporter; // Allow access for offline rendering/export
 public:
+    static constexpr size_t kMaxCachedSamplers = 64;
+    struct SamplerCacheSnapshot {
+        std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> samplers{};
+        std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> owners{};
+        size_t count = 0;
+    };
+
+    struct UnitManagerSnapshot {
+        UnitManager* manager{nullptr};
+        SamplerCacheSnapshot cache;
+    };
+
     /** @brief Construct the realtime audio engine. */
     AudioEngine();
     /** @brief Destroy the realtime audio engine and release owned resources. */
@@ -236,9 +248,26 @@ public:
 
     /** @brief Bind the unit manager used for Arsenal rendering. */
     void setUnitManager(UnitManager* mgr) {
+        // Build complete snapshot (manager + cache) before publishing
+        // so audio thread never sees mixed state
+        auto* snapshot = new UnitManagerSnapshot();
+        snapshot->manager = mgr;
+        if (mgr) {
+            refreshSamplerCacheToSnapshot(*mgr, snapshot->cache);
+        }
+        // Atomically publish the complete snapshot
+        auto* old = m_unitManagerSnapshot.exchange(snapshot, std::memory_order_release);
+        delete old;
+        // Also update legacy fields for backward compatibility during transition
         m_unitManager.store(mgr, std::memory_order_release);
-        refreshSamplerCache();
+        auto cache = snapshot->cache;
+        m_cachedSamplers = cache.samplers;
+        m_cachedSamplerOwners = cache.owners;
+        m_cachedSamplerCount.store(cache.count, std::memory_order_release);
     }
+
+    // Internal helper: populate a cache snapshot from a specific UnitManager
+    void refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheSnapshot& snapshot);
     /** @brief Bind the pattern playback engine used for scheduled MIDI. */
     void setPatternPlaybackEngine(PatternPlaybackEngine* engine) {
         m_patternEngine.store(engine, std::memory_order_release);
@@ -684,8 +713,12 @@ private:
 
     // RT-safe sampler cache (refreshed from main thread when units change)
     // Avoids dynamic_pointer_cast on RT thread during hard stop/restart
-    static constexpr size_t kMaxCachedSamplers = 64;
+    std::atomic<UnitManagerSnapshot*> m_unitManagerSnapshot{nullptr};
+
+    // Legacy separate fields kept for backward compatibility during transition
+    // TODO: remove these once all readers migrated to m_unitManagerSnapshot
     std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> m_cachedSamplers{};
+    std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> m_cachedSamplerOwners{};
     std::atomic<size_t> m_cachedSamplerCount{0};
     std::atomic<uint64_t> m_lastDeferredResourceCollectionNs{0};
 

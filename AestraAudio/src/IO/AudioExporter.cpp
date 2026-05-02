@@ -85,7 +85,6 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     uint64_t blockAlign64 = static_cast<uint64_t>(config.numChannels) * static_cast<uint64_t>(bitsPerSample / 8);
     if (blockAlign64 == 0 || blockAlign64 > std::numeric_limits<uint16_t>::max() ||
         totalFrames > std::numeric_limits<uint32_t>::max() / blockAlign64 ||
-        totalFrames > std::numeric_limits<uint64_t>::max() / blockAlign64 ||
         36ull + totalFrames * blockAlign64 > std::numeric_limits<uint32_t>::max()) {
         result.errorMessage = "WAV export is too large for RIFF/WAV; use a shorter range or lower format settings";
         return result;
