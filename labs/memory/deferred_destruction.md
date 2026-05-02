@@ -16,6 +16,8 @@ Threading rules:
 - The audio callback must never call `release()`, `collect()`, diagnostics, or shutdown drains.
 - Debug builds can mark the audio callback thread and report/assert if GC APIs are called from that context.
 - Audio code should only publish/load the shared resource and keep processing free of locks, allocation, logging, and I/O.
+- Engine-published meter snapshots, continuous params, and channel-slot maps are retired through GC from non-RT
+  setters so their previous shared buffers do not disappear during an in-flight audio block.
 
 Production cadence:
 

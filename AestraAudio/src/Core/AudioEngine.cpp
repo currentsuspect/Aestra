@@ -315,6 +315,51 @@ void AudioEngine::setThreadCount(int count) {
     }
 }
 
+void AudioEngine::setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots) {
+    if (reportRealtimeMisuse("AudioEngine::setMeterSnapshots")) {
+        return;
+    }
+
+    if (m_meterSnapshotsOwned.get() == snapshots.get()) {
+        return;
+    }
+
+    auto retired = std::move(m_meterSnapshotsOwned);
+    m_meterSnapshotsOwned = std::move(snapshots);
+    m_meterSnapshotsRaw.store(m_meterSnapshotsOwned.get(), std::memory_order_release);
+    GarbageCollector::instance().release(std::move(retired), "AudioEngine::MeterSnapshotBuffer");
+}
+
+void AudioEngine::setContinuousParams(std::shared_ptr<ContinuousParamBuffer> params) {
+    if (reportRealtimeMisuse("AudioEngine::setContinuousParams")) {
+        return;
+    }
+
+    if (m_continuousParamsOwned.get() == params.get()) {
+        return;
+    }
+
+    auto retired = std::move(m_continuousParamsOwned);
+    m_continuousParamsOwned = std::move(params);
+    m_continuousParamsRaw.store(m_continuousParamsOwned.get(), std::memory_order_release);
+    GarbageCollector::instance().release(std::move(retired), "AudioEngine::ContinuousParamBuffer");
+}
+
+void AudioEngine::setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMap) {
+    if (reportRealtimeMisuse("AudioEngine::setChannelSlotMap")) {
+        return;
+    }
+
+    if (m_channelSlotMapOwned.get() == slotMap.get()) {
+        return;
+    }
+
+    auto retired = std::move(m_channelSlotMapOwned);
+    m_channelSlotMapOwned = std::move(slotMap);
+    m_channelSlotMapRaw.store(m_channelSlotMapOwned.get(), std::memory_order_release);
+    GarbageCollector::instance().release(std::move(retired), "AudioEngine::ChannelSlotMap");
+}
+
 void AudioEngine::refreshSamplerCache() {
     std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> samplers{};
     size_t count = 0;
