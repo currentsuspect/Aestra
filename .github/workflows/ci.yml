@@ -133,7 +133,7 @@ jobs:
           if (!(Test-Path "$env:VCPKG_ROOT\vcpkg.exe")) {
             & "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
           }
-          & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows
+          & "$env:VCPKG_ROOT\vcpkg.exe" install libsodium:x64-windows gtest:x64-windows
 
       - name: Configure
         shell: pwsh
@@ -207,7 +207,7 @@ jobs:
           brew install pkg-config libsodium googletest
 
       - name: Configure
-        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_CI=ON -DCMAKE_PREFIX_PATH="/opt/homebrew;/usr/local"
 
       - name: Build
         run: cmake --build build --config ${{env.BUILD_TYPE}}
