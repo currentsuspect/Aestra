@@ -2762,7 +2762,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         }
 
         // During isolated-track bounce, skip track-routed units not assigned
-        // to the isolated track. routeId maps directly to the track index.
+        // to the isolated track.
         if (isolatedTrackIndex >= 0 && unit.routeId >= 0 && unit.routeId != isolatedTrackIndex) {
             bufIdx++;
             continue;
@@ -2856,6 +2856,11 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         std::this_thread::sleep_for(std::chrono::milliseconds(50)); // Allow RT to spin down
     }
 
+    // Compile graph to populate renderTracks before we can search it.
+    // This is needed for offline bounce since compileGraph() runs asynchronously during live playback.
+    // Must call before locking m_graphMutex to avoid deadlock.
+    compileGraph();
+
     // Lock graph for stability during bounce
     std::lock_guard<std::mutex> lock(m_graphMutex);
 
@@ -2866,15 +2871,12 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     // However, for simplicity and since we are stopped, we use the active graph.
     // Ideally we clone it.
 
-    // trackId parameter is the persistent track ID. Search for matching renderTracks entry.
+    // trackId parameter is the persistent track lane index.
+    // isolatedTrackIndex is used to compare against unit.routeId (which is also the lane index).
+    // Use trackId directly when >= 0 for the comparison.
     int32_t isolatedTrackIndex = -1;
     if (trackId >= 0) {
-        for (size_t i = 0; i < graphState.renderTracks.size(); ++i) {
-            if (graphState.renderTracks[i].trackIndex == static_cast<uint32_t>(trackId)) {
-                isolatedTrackIndex = static_cast<int32_t>(i);
-                break;
-            }
-        }
+        isolatedTrackIndex = trackId;
     }
 
     Aestra::Log::info("[AudioEngine] Starting bounce: " + std::to_string(totalFrames) + " frames.");
