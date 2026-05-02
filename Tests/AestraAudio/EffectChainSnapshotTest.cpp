@@ -11,7 +11,8 @@
 #include <memory>
 #include <vector>
 
-#define require(cond, msg) do { if (!(cond)) { std::cerr << "FAIL: " << (msg) << std::endl; return 1; } } while(0)
+#include <cassert>
+#define require(cond, msg) assert(cond && msg)
 
 using namespace Aestra::Audio;
 
@@ -156,9 +157,7 @@ void mutatingChainDoesNotAlterOldSnapshot() {
 }
 
 void nonRtInsertRemoveStillWorks() {
-    int misuseCount = 0;
-    auto countHandler = [](const char* apiName) noexcept { ++misuseCount; };
-    auto previousHandler = setRealtimeMisuseHandler(countHandler);
+    auto previousHandler = setRealtimeMisuseHandler(nullptr);
 
     EffectChain chain;
     chain.prepare(48000.0, 512);
@@ -179,9 +178,7 @@ void nonRtInsertRemoveStillWorks() {
 }
 
 void realtimeMisuseGuardsStillWork() {
-    int misuseCount = 0;
-    auto countHandler = [](const char* apiName) noexcept { ++misuseCount; };
-    auto previousHandler = setRealtimeMisuseHandler(countHandler);
+    auto previousHandler = setRealtimeMisuseHandler(nullptr);
 
     EffectChain chain;
     chain.prepare(48000.0, 512);

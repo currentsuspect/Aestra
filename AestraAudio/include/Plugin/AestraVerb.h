@@ -1046,7 +1046,7 @@ private:
         }
         readPosI &= mask;
 
-        if (g_forceLinearInterpolation) {
+        if (Aestra::Audio::DSP::ReverbSIMD::g_forceLinearInterpolation) {
             const int i2 = (readPosI + 1) & mask;
             return buffer[static_cast<size_t>(readPosI)] * (1.0f - frac) +
                    buffer[static_cast<size_t>(i2)] * frac;
@@ -1054,7 +1054,7 @@ private:
             const int i0 = (readPosI - 1) & mask;
             const int i2 = (readPosI + 1) & mask;
             const int i3 = (readPosI + 2) & mask;
-            return cubicHermite(
+            return Aestra::Audio::DSP::ReverbSIMD::cubicHermite(
                 buffer[static_cast<size_t>(i0)],
                 buffer[static_cast<size_t>(readPosI)],
                 buffer[static_cast<size_t>(i2)],

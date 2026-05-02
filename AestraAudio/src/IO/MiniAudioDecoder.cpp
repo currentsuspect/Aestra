@@ -110,7 +110,7 @@ bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_
             if (!readExact(file, &byteRate, sizeof(uint32_t))) {
                 return false;
             }
-            if (!readExact(file, &blockAlign, sizeof(uint16_t)))) {
+            if (!readExact(file, &blockAlign, sizeof(uint16_t))) {
                 return false;
             }
             if (!readExact(file, &bitsPerSample, sizeof(uint16_t))) {

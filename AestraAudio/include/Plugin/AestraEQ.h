@@ -640,28 +640,6 @@ static uint32_t bandV1EnableId(uint32_t band) {
         return ids[band];
     }
 
-    static uint32_t bandV1FreqId(uint32_t band) {
-        static constexpr uint32_t ids[] = {
-            kParamHPFFreq, kParamLShFreq, kParamBell1Freq,
-            kParamBell2Freq, kParamHShFreq, kParamLPFFreq
-        };
-        return ids[band];
-    }
-
-    static uint32_t bandV1GainId(uint32_t band) {
-        static constexpr uint32_t ids[] = {
-            0, kParamLShGain, kParamBell1Gain, kParamBell2Gain, kParamHShGain, 0
-        };
-        return ids[band];
-    }
-
-    static uint32_t bandV1QId(uint32_t band) {
-        static constexpr uint32_t ids[] = {
-            kParamHPFSlope, kParamLShQ, kParamBell1Q, kParamBell2Q, kParamHShQ, kParamLPFSlope
-        };
-        return ids[band];
-    }
-
     void snapBandTypes() {
         for (uint32_t i = 0; i < kV1BandCount; ++i) {
             m_bandEnabled[i].store(getParameter(bandV1EnableId(i)) > 0.5f, std::memory_order_relaxed);
