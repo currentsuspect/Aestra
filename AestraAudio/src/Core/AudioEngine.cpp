@@ -2866,6 +2866,18 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     // However, for simplicity and since we are stopped, we use the active graph.
     // Ideally we clone it.
 
+    // trackId parameter is the stable channelId (1-based). Translate to trackIndex (0-based)
+    // for use with ctx.isolatedTrackIndex and processArsenalUnits, which expect 0-based indices.
+    int32_t isolatedTrackIndex = -1;
+    if (trackId > 0) {
+        for (size_t i = 0; i < graphState.renderTracks.size(); ++i) {
+            if (graphState.renderTracks[i].trackId == static_cast<uint32_t>(trackId)) {
+                isolatedTrackIndex = static_cast<int32_t>(i);
+                break;
+            }
+        }
+    }
+
     Aestra::Log::info("[AudioEngine] Starting bounce: " + std::to_string(totalFrames) + " frames.");
 
     while (framesRemaining > 0) {
@@ -2884,7 +2896,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         // ctx.graph is usually accessed via EngineState or we assume graphState has everything.
         // AudioRenderer uses `graphState` passed in.
         ctx.isOffline = true;
-        ctx.isolatedTrackIndex = trackId;
+        ctx.isolatedTrackIndex = isolatedTrackIndex;
 
         // Render
         m_rtRenderer.renderBlock(ctx, graphState, *this);
@@ -2892,7 +2904,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         // Process Arsenal pattern playback (MIDI buffer pop + unit render).
         // renderBlock handles PreviewToMaster; this call processes track-routed
         // Arsenal units that need MIDI buffer population for pattern playback.
-        processArsenalUnits(framesThisBlock, 0, currentFrame, blockBuffer.data(), trackId);
+        processArsenalUnits(framesThisBlock, 0, currentFrame, blockBuffer.data(), isolatedTrackIndex);
 
         // Buffer Conversion (Double -> Float)
         for (size_t i = 0; i < framesThisBlock * 2; ++i) {
