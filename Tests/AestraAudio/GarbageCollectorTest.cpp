@@ -179,7 +179,9 @@ void statsRemainSaneAfterReleaseCollectAndDrain() {
 
 void realtimeReleaseMisuseIsReported() {
     BasicGarbageCollector<4> gc;
-    std::atomic<int> destroyed{0};
+    // Separate counters: one for rejected RT release, one for valid non-RT release
+    std::atomic<int> rtRejectedDestroyed{0};
+    std::atomic<int> nonRtDestroyed{0};
     g_realtimeMisuseCount.store(0, std::memory_order_relaxed);
     auto previousHandler = setRealtimeMisuseHandler(countRealtimeMisuse);
 
@@ -189,11 +191,14 @@ void realtimeReleaseMisuseIsReported() {
 
     {
         ScopedRealtimeAudioThread realtimeScope;
-        gc.release(std::make_shared<TrackedObject>(destroyed), "rt.release");
+        gc.release(std::make_shared<TrackedObject>(rtRejectedDestroyed), "rt.release");
     }
 
     setRealtimeMisuseHandler(previousHandler);
     assert(g_realtimeMisuseCount.load(std::memory_order_relaxed) == 1);
+
+    // Verify the RT rejected release did destroy the temporary object (not silently retained)
+    assert(rtRejectedDestroyed.load(std::memory_order_relaxed) == 1);
 
     // Verify GC state unchanged - release() refused to mutate
     auto postStats = gc.stats();
@@ -203,9 +208,18 @@ void realtimeReleaseMisuseIsReported() {
     assert(postZombies == preZombies);
 
     // Now do proper non-RT release and verify it works
-    gc.release(std::make_shared<TrackedObject>(destroyed), "non-rt");
+    // Test explicit ownership: GC must NOT destroy while external owner exists
+    auto nonRtObj = std::make_shared<TrackedObject>(nonRtDestroyed);
+    gc.release(nonRtObj, "non-rt");
+
+    // External caller still holds reference - GC must NOT destroy yet
     gc.collect();
-    assert(destroyed.load(std::memory_order_relaxed) == 1);
+    assert(nonRtDestroyed.load(std::memory_order_relaxed) == 0);
+
+    // Release external reference, GC can now destroy
+    nonRtObj.reset();
+    gc.collect();
+    assert(nonRtDestroyed.load(std::memory_order_relaxed) == 1);
 }
 
 void realtimeCollectMisuseIsReported() {
