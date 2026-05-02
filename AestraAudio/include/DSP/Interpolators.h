@@ -679,11 +679,7 @@ struct Sinc64Turbo {
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
         if (cpu.hasAVX512F())
             return implAVX512;
-        if (cpu.hasAVX2() && cpu.hasFMA()
-#if defined(AESTRA_SINC_CAN_INLINE_AVX2_FMA)
-            && defined(AESTRA_SINC_CAN_INLINE_AVX2_FMA)
-#endif
-        )
+        if (cpu.hasAVX2() && cpu.hasFMA())
             return implAVX2;
         if (cpu.hasSSE41())
             return implSSE41;
