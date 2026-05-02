@@ -2866,14 +2866,11 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     // However, for simplicity and since we are stopped, we use the active graph.
     // Ideally we clone it.
 
-    // trackId parameter is the stable channelId (1-based). Translate to trackIndex (0-based)
-    // for use with ctx.isolatedTrackIndex and processArsenalUnits, which expect 0-based indices.
+    // trackId parameter is the track index (0-based). Use directly for
+    // isolatedTrackIndex. -1 means all tracks (render everything).
     int32_t isolatedTrackIndex = -1;
-    if (trackId > 0) {
-        int32_t targetIndex = static_cast<int32_t>(trackId) - 1;
-        if (targetIndex >= 0 && static_cast<size_t>(targetIndex) < graphState.renderTracks.size()) {
-            isolatedTrackIndex = targetIndex;
-        }
+    if (trackId >= 0) {
+        isolatedTrackIndex = trackId;
     }
 
     Aestra::Log::info("[AudioEngine] Starting bounce: " + std::to_string(totalFrames) + " frames.");
@@ -2910,8 +2907,10 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         }
 
         // Write
-        if (ma_encoder_write_pcm_frames(&encoder, floatBuffer.data(), framesThisBlock, NULL) != framesThisBlock) {
-            Aestra::Log::error("[AudioEngine] Write error during bounce");
+        ma_uint64 framesWritten = 0;
+        ma_result result = ma_encoder_write_pcm_frames(&encoder, floatBuffer.data(), framesThisBlock, &framesWritten);
+        if (result != MA_SUCCESS || framesWritten != framesThisBlock) {
+            Aestra::Log::error("[AudioEngine] Write error during bounce: result=" + std::to_string(result) + ", written=" + std::to_string(framesWritten));
             break;
         }
 
