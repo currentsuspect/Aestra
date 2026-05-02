@@ -105,9 +105,9 @@ bool RtAudioDriver::openStream(const AudioStreamConfig& config, AudioCallback ca
     }
 
     RtAudio::StreamOptions options{};
-    options.flags = RTAUDIO_MINIMIZE_LATENCY;
+    options.flags = RTAUDIO_MINIMIZE_LATENCY | RTAUDIO_SCHEDULE_REALTIME;
     options.numberOfBuffers = 2;
-    options.priority = 0;
+    options.priority = sched_get_priority_max(SCHED_FIFO);
 
     unsigned int sampleRate = config.sampleRate;
     unsigned int bufferFrames = config.bufferSize;

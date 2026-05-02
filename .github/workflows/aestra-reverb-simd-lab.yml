@@ -109,6 +109,10 @@ jobs:
         id: bench
         run: |
           BENCH="$(find build-reverb-lab -type f -name AestraReverbBenchmark | head -1)"
+          if [ -z "$BENCH" ]; then
+            echo "ERROR: Benchmark binary not found" >&2
+            exit 1
+          fi
           echo "binary=$BENCH" >> "$GITHUB_OUTPUT"
           echo "Benchmark binary: $BENCH"
 
@@ -246,6 +250,10 @@ jobs:
             HALL="$(echo "$DATA" | grep -m1 '^Hall=' | cut -d= -f2 || echo N/A)"
             PLATE="$(echo "$DATA" | grep -m1 '^Plate=' | cut -d= -f2 || echo N/A)"
 
+            ROOM="${ROOM:-N/A}"
+            HALL="${HALL:-N/A}"
+            PLATE="${PLATE:-N/A}"
+
             # Convert us to ms with python
             ROOM_MS="$(python3 -c "v='$ROOM'; print(f'{float(v)/1000:.1f}' if v not in ('N/A','ERROR','MISSING') else v)")"
             HALL_MS="$(python3 -c "v='$HALL'; print(f'{float(v)/1000:.1f}' if v not in ('N/A','ERROR','MISSING') else v)")"
@@ -261,6 +269,8 @@ jobs:
           # Calculate speedups
           ROOM_SCALAR="$(echo "$SCALAR" | grep -m1 '^Room=' | cut -d= -f2 || echo 0)"
           ROOM_DISP="$(echo "$DISPATCH" | grep -m1 '^Room=' | cut -d= -f2 || echo 0)"
+          ROOM_SCALAR="${ROOM_SCALAR:-0}"
+          ROOM_DISP="${ROOM_DISP:-0}"
           if [ -n "$ROOM_SCALAR" ] && [ -n "$ROOM_DISP" ] && [ "$ROOM_SCALAR" != "0" ] && [ "$ROOM_DISP" != "0" ]; then
             SPEEDUP="$(python3 -c "print(f'{float(\"$ROOM_SCALAR\")/float(\"$ROOM_DISP\"):.2f}x')")"
             echo "- Room: Dispatch is **${SPEEDUP}** faster than Scalar" >> "$REPORT"

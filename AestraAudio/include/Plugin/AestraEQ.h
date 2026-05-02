@@ -601,11 +601,42 @@ private:
         return band >= 1 && band <= 4;
     }
 
-    static uint32_t bandV1EnableId(uint32_t band) {
+static uint32_t bandV1EnableId(uint32_t band) {
         static constexpr uint32_t ids[] = {
             kParamHPFEnable, kParamLShEnable, kParamBell1Enable,
             kParamBell2Enable, kParamHShEnable, kParamLPFEnable
         };
+        if (band >= kV1BandCount) {
+            return ids[0];
+        }
+        return ids[band];
+    }
+    static uint32_t bandV1FreqId(uint32_t band) {
+        static constexpr uint32_t ids[] = {
+            kParamHPFFreq, kParamLShFreq, kParamBell1Freq,
+            kParamBell2Freq, kParamHShFreq, kParamLPFFreq
+        };
+        if (band >= kV1BandCount) {
+            return ids[0];
+        }
+        return ids[band];
+    }
+    static uint32_t bandV1GainId(uint32_t band) {
+        static constexpr uint32_t ids[] = {
+            0, kParamLShGain, kParamBell1Gain, kParamBell2Gain, kParamHShGain, 0
+        };
+        if (band >= kV1BandCount) {
+            return ids[1];
+        }
+        return ids[band];
+    }
+    static uint32_t bandV1QId(uint32_t band) {
+        static constexpr uint32_t ids[] = {
+            kParamHPFSlope, kParamLShQ, kParamBell1Q, kParamBell2Q, kParamHShQ, kParamLPFSlope
+        };
+        if (band >= kV1BandCount) {
+            return ids[1];
+        }
         return ids[band];
     }
 

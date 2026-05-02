@@ -733,8 +733,11 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
                       themeManager.getColor("border").withAlpha(0.92f));
     
     const float leftEdge = islandRect.x + islandPadding;
-    const float groupY = islandRect.y + 6.0f;
-    const float groupH = 36.0f;
+    const float topInset = 6.0f;
+    const float bottomInset = 6.0f;
+    const float available = islandRect.height - topInset - bottomInset;
+    const float groupH = std::max(0.0f, std::min(36.0f, available));
+    const float groupY = islandRect.y + topInset;
     const auto groupBg = themeManager.getColor("surfaceTertiary").withAlpha(0.42f);
     const auto groupBorder = themeManager.getColor("border").withAlpha(0.46f);
     const auto drawGroup = [&](float x, float w) {

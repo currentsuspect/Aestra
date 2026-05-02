@@ -70,7 +70,6 @@ struct AudioTelemetry {
     static constexpr uint32_t kPriorityBit_ThreadPriority = 0x01;
     static constexpr uint32_t kPriorityBit_MMCSS = 0x02;
     static constexpr uint32_t kPriorityBit_MMCSSPriority = 0x04;
-    static constexpr uint32_t kPriorityBit_AllSuccess = 0x07;
 #if defined(_WIN32)
     static constexpr uint32_t kPriorityBits_PlatformSuccess =
         kPriorityBit_ThreadPriority | kPriorityBit_MMCSS | kPriorityBit_MMCSSPriority;

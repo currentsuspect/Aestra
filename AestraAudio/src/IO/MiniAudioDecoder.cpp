@@ -105,8 +105,20 @@ bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_
                 !readExact(file, &sr, sizeof(uint32_t))) {
                 return false;
             }
-            file.seekg(6, std::ios::cur); // Skip byteRate, blockAlign
+            uint32_t byteRate = 0;
+            uint16_t blockAlign = 0;
+            if (!readExact(file, &byteRate, sizeof(uint32_t))) {
+                return false;
+            }
+            if (!readExact(file, &blockAlign, sizeof(uint16_t)))) {
+                return false;
+            }
             if (!readExact(file, &bitsPerSample, sizeof(uint16_t))) {
+                return false;
+            }
+            uint16_t expectedBlockAlign = channelCount * static_cast<uint16_t>(bitsPerSample / 8);
+            uint32_t expectedByteRate = sr * static_cast<uint32_t>(expectedBlockAlign);
+            if (blockAlign != expectedBlockAlign || byteRate != expectedByteRate) {
                 return false;
             }
             if (chunkSize > 16)

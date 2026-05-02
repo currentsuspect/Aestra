@@ -120,7 +120,9 @@ bool CommandHistory::isTransactionActive() const {
 
 bool CommandHistory::undo() {
     std::shared_ptr<ICommand> cmd;
-    
+
+    std::lock_guard<std::mutex> opLock(m_operationMutex);
+
     // Phase 1: Pop from undo stack under lock
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -161,7 +163,9 @@ bool CommandHistory::undo() {
 
 bool CommandHistory::redo() {
     std::shared_ptr<ICommand> cmd;
-    
+
+    std::lock_guard<std::mutex> opLock(m_operationMutex);
+
     // Phase 1: Pop from redo stack under lock
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -292,6 +296,8 @@ size_t CommandHistory::calculateMemoryUsage() const {
 void CommandHistory::undoTo(int targetIndex) {
     std::vector<std::shared_ptr<ICommand>> cmds;
 
+    std::lock_guard<std::mutex> opLock(m_operationMutex);
+
     // Phase 1: Pop all commands to undo under lock
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -334,6 +340,8 @@ void CommandHistory::undoTo(int targetIndex) {
 
 void CommandHistory::redoTo(int targetIndex) {
     std::vector<std::shared_ptr<ICommand>> cmds;
+
+    std::lock_guard<std::mutex> opLock(m_operationMutex);
 
     // Phase 1: Pop all commands to redo under lock
     {

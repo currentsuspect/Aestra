@@ -1046,9 +1046,21 @@ private:
         }
         readPosI &= mask;
 
-        const int i2 = (readPosI + 1) & mask;
-        return buffer[static_cast<size_t>(readPosI)] * (1.0f - frac) +
-               buffer[static_cast<size_t>(i2)] * frac;
+        if (g_forceLinearInterpolation) {
+            const int i2 = (readPosI + 1) & mask;
+            return buffer[static_cast<size_t>(readPosI)] * (1.0f - frac) +
+                   buffer[static_cast<size_t>(i2)] * frac;
+        } else {
+            const int i0 = (readPosI - 1) & mask;
+            const int i2 = (readPosI + 1) & mask;
+            const int i3 = (readPosI + 2) & mask;
+            return cubicHermite(
+                buffer[static_cast<size_t>(i0)],
+                buffer[static_cast<size_t>(readPosI)],
+                buffer[static_cast<size_t>(i2)],
+                buffer[static_cast<size_t>(i3)],
+                frac);
+        }
     }
 
     int logicalFdnLength(size_t line, const ModeConstants& constants, float sampleScale, float size) const {

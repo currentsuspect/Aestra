@@ -304,6 +304,7 @@ public:
             m_slots[i].bypassed = slots[i].bypassed.load(std::memory_order_acquire);
             m_slots[i].dryWetMix = slots[i].dryWetMix.load(std::memory_order_acquire);
         }
+        m_slotCount = MAX_SLOTS;
     }
 
     size_t slotCount() const noexcept { return m_slotCount; }

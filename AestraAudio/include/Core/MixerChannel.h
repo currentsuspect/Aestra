@@ -194,7 +194,8 @@ public:
 
     /** @brief Set the audio-thread command sink used for RT-safe updates. */
     void setCommandSink(std::function<void(const AudioQueueCommand&)> cb) { m_commandSink = std::move(cb); }
-    /** @brief Set callback used to refresh input monitoring snapshots after route-affecting changes. */
+/** @brief Set callback used to refresh input monitoring snapshots after route-affecting changes.
+    * NOTE: Must be set before audio engine processing starts. Caller is responsible for thread safety. */
     void setInputMonitoringStateChangedCallback(std::function<void()> cb) {
         m_inputMonitoringStateChanged = std::move(cb);
     }
@@ -211,7 +212,7 @@ public:
     uint32_t getMainOutputId() const { return m_mainOutputId; }
 
     /** @brief Get a copy of the current send list. Thread-safe: caller must not be RT. */
-    std::vector<AudioRoute> getSends() const; // Returns copy
+    std::vector<AudioRoute> getSends() const; // Returns c std::vector<AudioRoute> getSends() const; // Returns copy
     /** @brief Add a send route. */
     void addSend(const AudioRoute& route);
     /** @brief Remove a send route by index. */
@@ -272,8 +273,13 @@ private:
     std::vector<AudioRoute> m_sends;
 
     void notifyInputMonitoringStateChanged() {
-        if (m_inputMonitoringStateChanged) {
-            m_inputMonitoringStateChanged();
+        std::function<void()> cb;
+        {
+            std::lock_guard<std::mutex> lock(m_sendMutex);
+            cb = m_inputMonitoringStateChanged;
+        }
+        if (cb) {
+            cb();
         }
     }
 };
