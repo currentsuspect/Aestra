@@ -297,6 +297,8 @@ Export uses `processBlock()` directly (same as live). The `bounceRangeToWav()` p
 
 ### Stage B: Snapshot Architecture (If needed after Stage A)
 
+**Design document:** See [effect_chain_snapshot_design.md](effect_chain_snapshot_design.md) for full design.
+
 1. **Snapshot-based effect chain publication.** Similar to `AudioArsenalSnapshot`, create an immutable snapshot of effect-chain slot state (plugin pointers, bypass, dry/wet) that the audio thread reads. The main thread builds the snapshot and atomically publishes it. The audio thread reads only the snapshot.
 
 2. **Double-buffer EffectChain state.** Use `EngineState`-style double-buffering for per-track effect chain state. The inactive buffer is written by the main thread, then atomically swapped.
