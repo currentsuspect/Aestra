@@ -43,8 +43,8 @@ tests during this pass. Production collection now flows through `AudioEngine::pe
 | Engine meter snapshots | Already GC-safe | `AudioEngine::setMeterSnapshots()` retires the previous shared buffer through GC. |
 | Engine continuous params | Already GC-safe | `AudioEngine::setContinuousParams()` retires the previous shared buffer through GC. |
 | Engine channel-slot maps | Already GC-safe | `AudioEngine::setChannelSlotMap()` retires the previous shared routing map through GC. |
-| Plugin graph snapshots | Needs snapshot architecture first | `AudioGraph` is double-buffered but stores raw `EffectChain*` pointers. Old graphs are safe, but the pointed-to objects are live/mutable. See [plugin_effect_lifetime_audit.md](plugin_effect_lifetime_audit.md) §6.1. |
-| Effect chain / plugin instances | Needs snapshot architecture first | **Audit complete (2026-05-02).** `EffectChain::m_slots` mutation (insert/remove/clear) is unsynchronized with audio-thread `process()`. GC adoption is blocked until snapshot-based slot publication is implemented. See [plugin_effect_lifetime_audit.md](plugin_effect_lifetime_audit.md). |
+| Plugin graph snapshots | Design complete | Snapshot architecture designed in [effect_chain_snapshot_design.md](effect_chain_snapshot_design.md). Implementation will enable optional GC adoption. |
+| Effect chain / plugin instances | Design complete | **Stage B design complete.** Snapshot-based publication will replace raw EffectChain* in AudioGraph. See [effect_chain_snapshot_design.md](effect_chain_snapshot_design.md). |
 | Waveform cache data | Needs deferred destruction later | Cache entries can be large and audio/UI-visible, but current ownership should be audited first. |
 | Decoded browser preview audio | Needs deferred destruction later | Preview buffers may become audio-visible and should avoid destruction on callback paths. |
 | Frozen/rendered audio assets | Needs deferred destruction later | Large immutable assets are good candidates once publication ownership is explicit. |
