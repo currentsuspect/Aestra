@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "../../AestraCore/include/AestraThreading.h"
+#include "RealtimeThreadGuard.h"
 
 namespace Aestra {
 namespace Audio {
@@ -36,9 +37,10 @@ struct GarbageCollectorStats {
  * Threading contract:
  *   - release() is non-RT only. It may lock and allocate on overflow.
  *   - collect() is non-RT only. It uses std::vector and may destroy objects.
+ *   - zombieCount() and stats() are for non-RT diagnostics/debug/UI only.
  *   - Destruction happens on the thread that calls collect().
  *   - The real-time audio thread must never call release(), collect(),
- *     drainUntilStable(), or stats APIs.
+ *     drainUntilStable(), zombieCount(), or stats APIs.
  *
  * Expected usage:
  *   1. Publish a new resource with an atomic shared_ptr swap.
@@ -68,6 +70,7 @@ public:
      * storage with static or otherwise externally managed lifetime.
      */
     template <typename T> void release(std::shared_ptr<T> ptr, const char* label) {
+        assertNonRealtime("GarbageCollector::release");
         if (!ptr)
             return;
 
@@ -93,6 +96,7 @@ public:
      * that only the collector is still holding them.
      */
     void collect() {
+        assertNonRealtime("GarbageCollector::collect");
         noteCollectorThread();
 
         RetiredResource item;
@@ -121,6 +125,7 @@ public:
      * @return number of collect passes performed.
      */
     size_t drainUntilStable(size_t maxPasses = 8) {
+        assertNonRealtime("GarbageCollector::drainUntilStable");
         size_t passes = 0;
         size_t previousCollected = m_totalCollected.load(std::memory_order_relaxed);
         for (; passes < maxPasses; ++passes) {
@@ -135,9 +140,13 @@ public:
     }
 
     /** @return Number of retired resources still retained by the collector. */
-    size_t zombieCount() const { return m_currentlyTracked.load(std::memory_order_relaxed); }
+    size_t zombieCount() const {
+        assertNonRealtime("GarbageCollector::zombieCount");
+        return m_currentlyTracked.load(std::memory_order_relaxed);
+    }
 
     GarbageCollectorStats stats() const {
+        assertNonRealtime("GarbageCollector::stats");
         GarbageCollectorStats result;
         result.totalReleased = m_totalReleased.load(std::memory_order_relaxed);
         result.totalCollected = m_totalCollected.load(std::memory_order_relaxed);
@@ -181,6 +190,10 @@ private:
         while (candidate > current &&
                !target.compare_exchange_weak(current, candidate, std::memory_order_relaxed, std::memory_order_relaxed)) {
         }
+    }
+
+    static void assertNonRealtime(const char* apiName) {
+        (void)reportRealtimeMisuse(apiName);
     }
 
     void noteCollectorThread() {

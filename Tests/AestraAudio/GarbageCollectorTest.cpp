@@ -1,5 +1,6 @@
 #include "GarbageCollector.h"
 #include "Plugin/SamplerPlugin.h"
+#include "RealtimeThreadGuard.h"
 
 #include <atomic>
 #include <cassert>
@@ -14,6 +15,12 @@
 using namespace Aestra::Audio;
 
 namespace {
+
+std::atomic<int> g_realtimeMisuseCount{0};
+
+void countRealtimeMisuse(const char*) noexcept {
+    g_realtimeMisuseCount.fetch_add(1, std::memory_order_relaxed);
+}
 
 struct TrackedObject {
     explicit TrackedObject(std::atomic<int>& counter) : destructorCounter(counter) {}
@@ -123,6 +130,71 @@ void queueFullFallbackRetainsAndEventuallyCollects() {
     assert(afterCollect.overflowCount == 0);
 }
 
+void statsRemainSaneAfterReleaseCollectAndDrain() {
+    BasicGarbageCollector<4> gc;
+    std::atomic<int> destroyed{0};
+
+    gc.release(std::make_shared<TrackedObject>(destroyed), "stats.labeled");
+    gc.release(std::make_shared<TrackedObject>(destroyed));
+
+    const auto afterRelease = gc.stats();
+    assert(afterRelease.totalReleased == 2);
+    assert(afterRelease.totalCollected == 0);
+    assert(afterRelease.currentlyTracked == 2);
+    assert(afterRelease.maxZombieCount >= 2);
+
+    const size_t passes = gc.drainUntilStable(8);
+    assert(passes >= 1);
+    assert(destroyed.load(std::memory_order_relaxed) == 2);
+
+    const auto afterDrain = gc.stats();
+    assert(afterDrain.totalReleased == 2);
+    assert(afterDrain.totalCollected == 2);
+    assert(afterDrain.currentlyTracked == 0);
+    assert(afterDrain.incomingQueueFullCount == 0);
+}
+
+void realtimeReleaseMisuseIsReported() {
+    BasicGarbageCollector<4> gc;
+    std::atomic<int> destroyed{0};
+    g_realtimeMisuseCount.store(0, std::memory_order_relaxed);
+    auto previousHandler = setRealtimeMisuseHandler(countRealtimeMisuse);
+
+    {
+        ScopedRealtimeAudioThread realtimeScope;
+        gc.release(std::make_shared<TrackedObject>(destroyed), "rt.release");
+    }
+
+    setRealtimeMisuseHandler(previousHandler);
+    assert(g_realtimeMisuseCount.load(std::memory_order_relaxed) == 1);
+
+    gc.collect();
+    assert(destroyed.load(std::memory_order_relaxed) == 1);
+}
+
+void realtimeCollectMisuseIsReported() {
+    BasicGarbageCollector<4> gc;
+    std::atomic<int> destroyed{0};
+    auto externalRef = std::make_shared<TrackedObject>(destroyed);
+    gc.release(externalRef, "rt.collect");
+
+    g_realtimeMisuseCount.store(0, std::memory_order_relaxed);
+    auto previousHandler = setRealtimeMisuseHandler(countRealtimeMisuse);
+
+    {
+        ScopedRealtimeAudioThread realtimeScope;
+        gc.collect();
+    }
+
+    setRealtimeMisuseHandler(previousHandler);
+    assert(g_realtimeMisuseCount.load(std::memory_order_relaxed) == 1);
+    assert(destroyed.load(std::memory_order_relaxed) == 0);
+
+    externalRef.reset();
+    gc.collect();
+    assert(destroyed.load(std::memory_order_relaxed) == 1);
+}
+
 void multipleNonRtProducersAreSerializedSafely() {
     BasicGarbageCollector<8> gc;
     std::atomic<int> destroyed{0};
@@ -204,6 +276,9 @@ int main() {
     deferredDestructionWaitsForExternalReference();
     poppedQueueSlotsDoNotRetainSharedPtrReferences();
     queueFullFallbackRetainsAndEventuallyCollects();
+    statsRemainSaneAfterReleaseCollectAndDrain();
+    realtimeReleaseMisuseIsReported();
+    realtimeCollectMisuseIsReported();
     multipleNonRtProducersAreSerializedSafely();
     multipleCollectPassesAreStable();
     nullReleaseIsHarmless();
