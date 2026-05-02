@@ -4,6 +4,7 @@
 #include "../../AestraCore/include/AestraLog.h"
 #include "../../AestraCore/include/AestraMath.h"
 #include "AuditionEngine.h"
+#include "GarbageCollector.h"
 #include "EffectChain.h" // [NEW]
 #include "PathUtils.h"   // [NEW] For robust path conversion
 #include "PatternPlaybackEngine.h"
@@ -15,6 +16,7 @@
 #include "miniaudio.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <queue>
@@ -335,6 +337,35 @@ void AudioEngine::refreshSamplerCache() {
 
     m_cachedSamplers = samplers;
     m_cachedSamplerCount.store(count, std::memory_order_release);
+}
+
+void AudioEngine::performNonRealtimeMaintenance() {
+    if (reportRealtimeMisuse("AudioEngine::performNonRealtimeMaintenance")) {
+        return;
+    }
+
+    constexpr uint64_t kCollectionIntervalNs = 500000000ull;
+    const uint64_t nowNs = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+
+    uint64_t lastNs = m_lastDeferredResourceCollectionNs.load(std::memory_order_relaxed);
+    if (lastNs != 0 && nowNs - lastNs < kCollectionIntervalNs) {
+        return;
+    }
+
+    if (!m_lastDeferredResourceCollectionNs.compare_exchange_strong(lastNs, nowNs, std::memory_order_relaxed)) {
+        return;
+    }
+
+    GarbageCollector::instance().collect();
+}
+
+void AudioEngine::drainDeferredResourcesForShutdown() {
+    if (reportRealtimeMisuse("AudioEngine::drainDeferredResourcesForShutdown")) {
+        return;
+    }
+
+    GarbageCollector::instance().drainUntilStable(8);
 }
 
 void AudioEngine::resetCachedSamplerVoicesRt() noexcept {

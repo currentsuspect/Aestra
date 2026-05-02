@@ -1,4 +1,5 @@
 #include "GarbageCollector.h"
+#include "Core/AudioEngine.h"
 #include "Plugin/SamplerPlugin.h"
 #include "RealtimeThreadGuard.h"
 
@@ -268,6 +269,63 @@ void samplerSampleReplacementAndShutdownDoNotCrash() {
     fs::remove(secondPath, ec);
 }
 
+void productionMaintenanceCadenceCollectsDeferredResources() {
+    GarbageCollector::instance().drainUntilStable(8);
+    AudioEngine engine;
+    std::atomic<int> destroyed{0};
+
+    auto externalRef = std::make_shared<TrackedObject>(destroyed);
+    GarbageCollector::instance().release(externalRef, "engine.maintenance");
+
+    engine.performNonRealtimeMaintenance();
+
+    const auto afterFirstMaintenance = GarbageCollector::instance().stats();
+    assert(afterFirstMaintenance.currentlyTracked == 1);
+    assert(destroyed.load(std::memory_order_relaxed) == 0);
+
+    externalRef.reset();
+    std::this_thread::sleep_for(std::chrono::milliseconds(600));
+    engine.performNonRealtimeMaintenance();
+
+    assert(destroyed.load(std::memory_order_relaxed) == 1);
+    assert(GarbageCollector::instance().stats().currentlyTracked == 0);
+}
+
+void shutdownDrainCollectsDeferredResources() {
+    GarbageCollector::instance().drainUntilStable(8);
+    AudioEngine engine;
+    std::atomic<int> destroyed{0};
+
+    auto externalRef = std::make_shared<TrackedObject>(destroyed);
+    GarbageCollector::instance().release(externalRef, "engine.shutdown");
+    engine.performNonRealtimeMaintenance();
+
+    externalRef.reset();
+    engine.drainDeferredResourcesForShutdown();
+
+    assert(destroyed.load(std::memory_order_relaxed) == 1);
+    assert(GarbageCollector::instance().stats().currentlyTracked == 0);
+}
+
+void maintenanceMethodsRejectRealtimeContext() {
+    GarbageCollector::instance().drainUntilStable(8);
+    AudioEngine engine;
+    std::atomic<int> destroyed{0};
+
+    g_realtimeMisuseCount.store(0, std::memory_order_relaxed);
+    auto previousHandler = setRealtimeMisuseHandler(countRealtimeMisuse);
+
+    {
+        ScopedRealtimeAudioThread realtimeScope;
+        engine.performNonRealtimeMaintenance();
+        engine.drainDeferredResourcesForShutdown();
+    }
+
+    setRealtimeMisuseHandler(previousHandler);
+    assert(g_realtimeMisuseCount.load(std::memory_order_relaxed) == 2);
+    assert(destroyed.load(std::memory_order_relaxed) == 0);
+}
+
 } // namespace
 
 int main() {
@@ -280,6 +338,9 @@ int main() {
     realtimeReleaseMisuseIsReported();
     realtimeCollectMisuseIsReported();
     multipleNonRtProducersAreSerializedSafely();
+    productionMaintenanceCadenceCollectsDeferredResources();
+    shutdownDrainCollectsDeferredResources();
+    maintenanceMethodsRejectRealtimeContext();
     multipleCollectPassesAreStable();
     nullReleaseIsHarmless();
     samplerSampleReplacementAndShutdownDoNotCrash();

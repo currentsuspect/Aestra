@@ -17,6 +17,13 @@ Threading rules:
 - Debug builds can mark the audio callback thread and report/assert if GC APIs are called from that context.
 - Audio code should only publish/load the shared resource and keep processing free of locks, allocation, logging, and I/O.
 
+Production cadence:
+
+- `AudioEngine::performNonRealtimeMaintenance()` is the normal periodic hook.
+- It is called from the GUI app loop, headless render loop, and offline export loop.
+- It is throttled internally to roughly twice per second so frequent UI ticks do not waste work.
+- `AudioEngine::drainDeferredResourcesForShutdown()` is the explicit shutdown drain and runs after the audio stream is closed.
+
 Current use:
 
 - Sampler sample buffers are atomically replaced, and old `SampleData` objects are retired through `GarbageCollector`.
