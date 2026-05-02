@@ -2870,11 +2870,9 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     // for use with ctx.isolatedTrackIndex and processArsenalUnits, which expect 0-based indices.
     int32_t isolatedTrackIndex = -1;
     if (trackId > 0) {
-        for (size_t i = 0; i < graphState.renderTracks.size(); ++i) {
-            if (graphState.renderTracks[i].trackId == static_cast<uint32_t>(trackId)) {
-                isolatedTrackIndex = static_cast<int32_t>(i);
-                break;
-            }
+        int32_t targetIndex = static_cast<int32_t>(trackId) - 1;
+        if (targetIndex >= 0 && static_cast<size_t>(targetIndex) < graphState.renderTracks.size()) {
+            isolatedTrackIndex = targetIndex;
         }
     }
 

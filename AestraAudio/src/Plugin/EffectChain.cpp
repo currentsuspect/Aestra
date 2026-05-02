@@ -483,5 +483,13 @@ void EffectChain::reset() {
     m_chainBypassed.store(wasBypassed);
 }
 
+std::shared_ptr<const EffectChainSnapshot> EffectChain::createSnapshot() const {
+    if (reportRealtimeMisuse("EffectChain::createSnapshot")) {
+        return nullptr;
+    }
+    auto snapshot = std::make_shared<EffectChainSnapshot>(m_slots);
+    return snapshot;
+}
+
 } // namespace Audio
 } // namespace Aestra
