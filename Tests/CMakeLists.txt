@@ -462,6 +462,16 @@ add_executable(AestraAtomicSaveTest AestraAudio/AtomicSaveTest.cpp)
 target_link_libraries(AestraAtomicSaveTest PRIVATE AestraCore)
 add_test(NAME AestraAtomicSaveTest COMMAND AestraAtomicSaveTest)
 
+# Deferred destruction / resource reclamation test
+add_executable(AestraGarbageCollectorTest AestraAudio/GarbageCollectorTest.cpp)
+target_link_libraries(AestraGarbageCollectorTest PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraGarbageCollectorTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraGarbageCollectorTest COMMAND AestraGarbageCollectorTest)
+set_tests_properties(AestraGarbageCollectorTest PROPERTIES LABELS "audio;memory;reclamation")
+
 # Watchdog Test (requires VST3 SDK headers)
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")
     add_executable(AestraWatchdogTest AestraAudio/WatchdogTest.cpp)
