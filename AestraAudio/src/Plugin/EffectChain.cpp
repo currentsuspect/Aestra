@@ -1,6 +1,7 @@
 #include "EffectChain.h"
 
 #include "PluginManager.h"
+#include "RealtimeThreadGuard.h"
 
 #include <algorithm>
 #include <cstring>
@@ -16,6 +17,9 @@ EffectChain::~EffectChain() = default;
 // ==============================
 
 bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
+    if (reportRealtimeMisuse("EffectChain::insertPlugin")) {
+        return false;
+    }
     if (slotIndex >= MAX_SLOTS) {
         return false;
     }
@@ -37,6 +41,9 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
 }
 
 PluginInstancePtr EffectChain::removePlugin(size_t slotIndex) {
+    if (reportRealtimeMisuse("EffectChain::removePlugin")) {
+        return nullptr;
+    }
     if (slotIndex >= MAX_SLOTS) {
         return nullptr;
     }
@@ -47,6 +54,9 @@ PluginInstancePtr EffectChain::removePlugin(size_t slotIndex) {
 }
 
 bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
+    if (reportRealtimeMisuse("EffectChain::movePlugin")) {
+        return false;
+    }
     if (fromSlot >= MAX_SLOTS || toSlot >= MAX_SLOTS) {
         return false;
     }
@@ -72,6 +82,9 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
 }
 
 bool EffectChain::swapPlugins(size_t slot1, size_t slot2) {
+    if (reportRealtimeMisuse("EffectChain::swapPlugins")) {
+        return false;
+    }
     if (slot1 >= MAX_SLOTS || slot2 >= MAX_SLOTS) {
         return false;
     }
@@ -135,6 +148,9 @@ size_t EffectChain::getActiveSlotCount() const {
 }
 
 void EffectChain::clear() {
+    if (reportRealtimeMisuse("EffectChain::clear")) {
+        return;
+    }
     for (auto& slot : m_slots) {
         slot.plugin = nullptr;
         slot.bypassed.store(false);
@@ -346,6 +362,9 @@ std::vector<uint8_t> EffectChain::saveState() const {
 }
 
 bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& manager) {
+    if (reportRealtimeMisuse("EffectChain::loadState")) {
+        return false;
+    }
     if (state.size() < 5) {
         return false;
     }
@@ -443,6 +462,9 @@ uint32_t EffectChain::getTotalLatency() const {
 }
 
 void EffectChain::reset() {
+    if (reportRealtimeMisuse("EffectChain::reset")) {
+        return;
+    }
     // 1. Temporarily bypass the chain to silence audio input
     bool wasBypassed = m_chainBypassed.exchange(true);
 

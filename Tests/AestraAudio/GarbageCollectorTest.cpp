@@ -1,6 +1,7 @@
 #include "GarbageCollector.h"
 #include "Core/AudioEngine.h"
 #include "Plugin/SamplerPlugin.h"
+#include "Plugin/EffectChain.h"
 #include "RealtimeThreadGuard.h"
 
 #include <atomic>
@@ -404,6 +405,90 @@ void audioEngineSnapshotSettersRejectRealtimeContext() {
     assert(g_realtimeMisuseCount.load(std::memory_order_relaxed) == 3);
 }
 
+void effectChainInsertPluginRejectsRealtimeContext() {
+    auto previousHandler = setRealtimeMisuseHandler(countRealtimeMisuse);
+    g_realtimeMisuseCount.store(0, std::memory_order_relaxed);
+
+    EffectChain chain;
+    chain.prepare(48000.0, 512);
+
+    auto plugin = std::make_shared<Aestra::Audio::Plugins::SamplerPlugin>();
+    plugin->initialize(48000.0, 512);
+
+    {
+        ScopedRealtimeAudioThread realtimeScope;
+        bool result = chain.insertPlugin(0, plugin);
+        assert(result == false);
+    }
+
+    setRealtimeMisuseHandler(previousHandler);
+    assert(g_realtimeMisuseCount.load(std::memory_order_relaxed) == 1);
+}
+
+void effectChainRemovePluginRejectsRealtimeContext() {
+    auto previousHandler = setRealtimeMisuseHandler(countRealtimeMisuse);
+    g_realtimeMisuseCount.store(0, std::memory_order_relaxed);
+
+    EffectChain chain;
+    chain.prepare(48000.0, 512);
+
+    auto plugin = std::make_shared<Aestra::Audio::Plugins::SamplerPlugin>();
+    plugin->initialize(48000.0, 512);
+    plugin->activate();
+    chain.insertPlugin(0, plugin);
+
+    {
+        ScopedRealtimeAudioThread realtimeScope;
+        auto removed = chain.removePlugin(0);
+        assert(removed == nullptr);
+    }
+
+    setRealtimeMisuseHandler(previousHandler);
+    assert(g_realtimeMisuseCount.load(std::memory_order_relaxed) == 1);
+}
+
+void effectChainClearRejectsRealtimeContext() {
+    auto previousHandler = setRealtimeMisuseHandler(countRealtimeMisuse);
+    g_realtimeMisuseCount.store(0, std::memory_order_relaxed);
+
+    EffectChain chain;
+    chain.prepare(48000.0, 512);
+
+    auto plugin = std::make_shared<Aestra::Audio::Plugins::SamplerPlugin>();
+    plugin->initialize(48000.0, 512);
+    plugin->activate();
+    chain.insertPlugin(0, plugin);
+
+    {
+        ScopedRealtimeAudioThread realtimeScope;
+        chain.clear();
+    }
+
+    setRealtimeMisuseHandler(previousHandler);
+    assert(g_realtimeMisuseCount.load(std::memory_order_relaxed) == 1);
+}
+
+void effectChainNonRtInsertRemoveStillWorks() {
+    auto previousHandler = setRealtimeMisuseHandler(nullptr);
+    g_realtimeMisuseCount.store(0, std::memory_order_relaxed);
+
+    EffectChain chain;
+    chain.prepare(48000.0, 512);
+
+    auto plugin = std::make_shared<Aestra::Audio::Plugins::SamplerPlugin>();
+    plugin->initialize(48000.0, 512);
+
+    bool insertResult = chain.insertPlugin(0, plugin);
+    assert(insertResult == true);
+    assert(chain.getActiveSlotCount() == 1);
+
+    auto removed = chain.removePlugin(0);
+    assert(removed != nullptr);
+    assert(chain.getActiveSlotCount() == 0);
+
+    setRealtimeMisuseHandler(previousHandler);
+}
+
 } // namespace
 
 int main() {
@@ -421,6 +506,10 @@ int main() {
     maintenanceMethodsRejectRealtimeContext();
     audioEngineSnapshotSettersRetireOldResourcesThroughGc();
     audioEngineSnapshotSettersRejectRealtimeContext();
+    effectChainInsertPluginRejectsRealtimeContext();
+    effectChainRemovePluginRejectsRealtimeContext();
+    effectChainClearRejectsRealtimeContext();
+    effectChainNonRtInsertRemoveStillWorks();
     multipleCollectPassesAreStable();
     nullReleaseIsHarmless();
     samplerSampleReplacementAndShutdownDoNotCrash();

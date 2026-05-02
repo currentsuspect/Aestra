@@ -32,10 +32,20 @@ struct EffectSlot {
  * Audio flows through each non-empty slot in sequence. Slots can be bypassed
  * individually and have dry/wet mix controls.
  *
- * Thread Safety:
- * - Slot modification (insert/remove) should be done from main thread
- * - process() is RT-safe and called from audio thread
- * - Bypass and dry/wet can be changed from any thread (atomic)
+ * Thread Safety — Mutation Contract:
+ * - Slot mutation (insertPlugin, removePlugin, movePlugin, swapPlugins, clear,
+ *   reset) is NON-RT only. These must never be called from the audio thread or
+ *   any thread marked with ScopedRealtimeAudioThread.
+ * - Slot mutation MUST NOT occur concurrently with process(). The audio thread
+ *   reads m_slots directly through a raw EffectChain* pointer baked into the
+ *   AudioGraph snapshot. There is no internal mutex protecting m_slots during
+ *   process().
+ * - Worker-created plugin instances must be handed back to the main/control
+ *   thread before insertion into the chain.
+ * - The future fix is snapshot-based slot publication (Stage B of the
+ *   plugin/effect-chain lifetime audit). This class adds debug-time RT-misuse
+ *   guards only; it does not implement the snapshot rewrite.
+ * - Bypass and dry/wet can be changed from any thread (atomic).
  *
  * Processing Flow:
  * @code

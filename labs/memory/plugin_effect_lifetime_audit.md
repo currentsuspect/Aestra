@@ -321,6 +321,78 @@ Export uses `processBlock()` directly (same as live). The `bounceRangeToWav()` p
 
 ---
 
+## 8. Stage A Implementation Notes (2026-05-02)
+
+The following guardrails were implemented in this pass:
+
+### 8.1 RT-Misuse Guards Added
+
+The following `EffectChain` mutation methods now call `reportRealtimeMisuse()` at their entry points:
+
+- `insertPlugin()` — returns `false` if called from RT context
+- `removePlugin()` — returns `nullptr` if called from RT context
+- `movePlugin()` — returns `false` if called from RT context
+- `swapPlugins()` — returns `false` if called from RT context
+- `clear()` — early returns if called from RT context
+- `reset()` — early returns if called from RT context
+- `loadState()` — returns `false` if called from RT context
+
+In debug builds, if a handler is installed via `setRealtimeMisuseHandler()`, it is called. Otherwise, an assertion fires. The guards use the existing `RealtimeThreadGuard` infrastructure.
+
+**Location:** `AestraAudio/src/Plugin/EffectChain.cpp`
+
+### 8.2 Mutation Contract Documented
+
+The class-level documentation in `EffectChain.h` was updated to state:
+
+- Slot mutation is NON-RT only.
+- Slot mutation must not occur concurrently with `process()`.
+- Worker-created plugin instances must be handed back to the main/control thread before insertion.
+- The future fix is snapshot-based publication (Stage B); this pass adds debug-time guards only.
+
+**Location:** `AestraAudio/include/Plugin/EffectChain.h` lines 28–47
+
+### 8.3 Async Callback Risk Documented
+
+The async plugin creation callback in `TrackManagerUI.cpp` (line 4781) runs on a worker thread and calls `EffectChain::insertPlugin()` directly. This is a known risk: mutation should occur on the main/control thread.
+
+A comment was added noting:
+- The callback runs on a worker thread, not main thread
+- This is a documented risk
+- Future fix: route through main-thread dispatch (Stage B)
+
+**Location:** `Source/Components/TrackManagerUI.cpp` lines 4776–4781
+
+### 8.4 clearAllChannels Not Fixed
+
+`TrackManager::clearAllChannels()` destroys `MixerChannel` (and its `EffectChain`) without acquiring `AudioEngine::m_graphMutex`. This requires cross-component coordination that cannot be safely fixed without the snapshot architecture (Stage B/C). This remains a documented risk.
+
+### 8.5 Tests Added
+
+Four new test cases were added to `GarbageCollectorTest.cpp`:
+
+- `effectChainInsertPluginRejectsRealtimeContext()` — verifies `insertPlugin()` is rejected from RT context
+- `effectChainRemovePluginRejectsRealtimeContext()` — verifies `removePlugin()` is rejected from RT context
+- `effectChainClearRejectsRealtimeContext()` — verifies `clear()` is rejected from RT context
+- `effectChainNonRtInsertRemoveStillWorks()` — verifies normal non-RT mutation still works
+
+**Location:** `Tests/AestraAudio/GarbageCollectorTest.cpp`
+
+### 8.6 GC Adoption Status
+
+**No GC adoption was added for EffectChain or plugin instances in this pass.** The RT-misuse guards do not route objects through GarbageCollector. GC adoption is still deferred until Stage B (snapshot architecture) is implemented.
+
+### 8.7 What Was NOT Changed
+
+- No snapshot architecture implemented (Stage B deferred)
+- No GC adoption for plugin/effect-chain objects
+- No DSP behavior changes
+- No plugin audio output changes
+- No locks added to EffectChain (the guards are assertion-only)
+- No main-thread dispatch mechanism added (documented as risk only)
+
+---
+
 ## Appendix A: Complete File Index
 
 ### EffectChain
