@@ -1010,9 +1010,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             if (!sj[i].has("path")) continue;
             std::string storedPath = sj[i]["path"].asString();
             std::filesystem::path filePath = resolveProjectAssetPath(projectPath, storedPath);
-            if (!std::filesystem::exists(filePath)) {
+            if (!std::filesystem::exists(filePath) || !std::filesystem::is_regular_file(filePath)) {
                 result.missingAssets.push_back(storedPath);
-                Log::warning("[ProjectLoad] Missing audio asset: " + storedPath);
+                Log::warning("[ProjectLoad] Missing or unreadable audio asset: " + storedPath);
             }
         }
     }
@@ -1101,10 +1101,16 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             const std::string filePath = resolvedPath.string();
             ClipSourceID newId = sourceManager.getOrCreateSource(filePath);
             idMap[oldId] = newId;
+            const bool assetReadable =
+                std::filesystem::exists(resolvedPath) && std::filesystem::is_regular_file(resolvedPath);
+            if (!assetReadable) {
+                result.missingAssets.push_back(storedPath);
+                Log::warning("[ProjectLoad] Missing or unreadable audio asset: " + storedPath);
+            }
             
             // Actually decode the audio file and load into source
             ClipSource* source = sourceManager.getSource(newId);
-            if (source && !source->isReady() && isRegularDecodableAsset(resolvedPath)) {
+            if (source && !source->isReady() && assetReadable && isRegularDecodableAsset(resolvedPath)) {
                 std::vector<float> decodedData;
                 uint32_t sampleRate = 0;
                 uint32_t numChannels = 0;
@@ -1126,6 +1132,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                               std::to_string(sampleRate) + " Hz)");
                 } else {
                     Log::warning("[ProjectLoad] Failed to decode: " + filePath + " — creating silent mono fallback");
+                    result.missingAssets.push_back(storedPath);
                     auto fallback = std::make_shared<AudioBufferData>();
                     fallback->numChannels = 1;
                     fallback->sampleRate = 44100;

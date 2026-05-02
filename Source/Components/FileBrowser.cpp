@@ -2907,7 +2907,6 @@ void FileBrowser::renderToolbar(NUIRenderer& renderer) {
 
     renderNavigationPane(renderer, browserLayout);
     renderListHeader(renderer, browserLayout);
-    return;
     }
 
     // Get layout dimensions from theme

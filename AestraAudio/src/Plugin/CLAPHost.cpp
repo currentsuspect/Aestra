@@ -438,9 +438,10 @@ std::vector<uint8_t> CLAPPluginInstance::saveState() const {
 }
 
 bool CLAPPluginInstance::loadState(const std::vector<uint8_t>& state) {
-    (void)state;
     // CLAP state load is not yet implemented (requires clap_plugin_state extension).
-    Log::warning("CLAP: loadState() not implemented for '" + m_info.name + "'; saved state cannot be restored.");
+    if (!state.empty()) {
+        Log::warning("CLAP: loadState() not implemented for '" + m_info.name + "'; saved state cannot be restored.");
+    }
     return false;
 }
 

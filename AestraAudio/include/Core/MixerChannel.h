@@ -157,15 +157,24 @@ public:
     bool isSoloSafe() const { return m_soloSafe.load(); }
 
     /** @brief Arm or disarm the channel. */
-    void setArmed(bool armed) { m_isArmed.store(armed); }
+    void setArmed(bool armed) {
+        m_isArmed.store(armed);
+        notifyInputMonitoringStateChanged();
+    }
     /** @brief Check whether the channel is armed. */
     bool isArmed() const { return m_isArmed.load(); }
     /** @brief Enable or disable input monitoring. */
-    void setMonitoringEnabled(bool enabled) { m_monitorInput.store(enabled); }
+    void setMonitoringEnabled(bool enabled) {
+        m_monitorInput.store(enabled);
+        notifyInputMonitoringStateChanged();
+    }
     /** @brief Check whether input monitoring is enabled. */
     bool isMonitoringEnabled() const { return m_monitorInput.load(); }
     /** @brief Select the monitored input channel index (-2 = Auto, -1 = None, >=0 = explicit input). */
-    void setInputChannelIndex(int index) { m_inputChannelIndex.store(index); }
+    void setInputChannelIndex(int index) {
+        m_inputChannelIndex.store(index);
+        notifyInputMonitoringStateChanged();
+    }
     /** @brief Get the monitored input channel index (-2 = Auto, -1 = None, >=0 = explicit input). */
     int getInputChannelIndex() const { return m_inputChannelIndex.load(); }
 
@@ -185,6 +194,10 @@ public:
 
     /** @brief Set the audio-thread command sink used for RT-safe updates. */
     void setCommandSink(std::function<void(const AudioQueueCommand&)> cb) { m_commandSink = std::move(cb); }
+    /** @brief Set callback used to refresh input monitoring snapshots after route-affecting changes. */
+    void setInputMonitoringStateChangedCallback(std::function<void()> cb) {
+        m_inputMonitoringStateChanged = std::move(cb);
+    }
 
     /** @brief Apply quality settings to the channel. */
     void setQualitySettings(const AudioQualitySettings&) {}
@@ -243,6 +256,7 @@ private:
     EffectChain m_effectChain;
 
     std::function<void(const AudioQueueCommand&)> m_commandSink;
+    std::function<void()> m_inputMonitoringStateChanged;
 
     // Pre-allocated deinterleave buffers for RT-safe effect processing
     std::vector<float> m_leftChannelBuf;
@@ -256,6 +270,12 @@ private:
     // Aux Sends / Direct Outs
     mutable std::mutex m_sendMutex;
     std::vector<AudioRoute> m_sends;
+
+    void notifyInputMonitoringStateChanged() {
+        if (m_inputMonitoringStateChanged) {
+            m_inputMonitoringStateChanged();
+        }
+    }
 };
 
 using Track = MixerChannel;

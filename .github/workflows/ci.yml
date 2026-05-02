@@ -107,8 +107,26 @@ jobs:
           $env:VCPKG_ROOT = "$env:RUNNER_TEMP\vcpkg"
           $env:VCPKG_BINARY_SOURCES = "clear;files,$env:RUNNER_TEMP\vcpkg\archives,readwrite"
           if (!(Test-Path "$env:VCPKG_ROOT\.git")) {
-            if (Test-Path $env:VCPKG_ROOT) { Remove-Item -Recurse -Force $env:VCPKG_ROOT }
+            $artifactBackup = Join-Path $env:RUNNER_TEMP "vcpkg-artifacts"
+            $artifactDirs = @("downloads", "buildtrees", "packages", "installed", "archives")
+            if (Test-Path $artifactBackup) { Remove-Item -Recurse -Force $artifactBackup }
+            New-Item -ItemType Directory -Path $artifactBackup | Out-Null
+            if (Test-Path $env:VCPKG_ROOT) {
+              foreach ($dir in $artifactDirs) {
+                $source = Join-Path $env:VCPKG_ROOT $dir
+                if (Test-Path $source) {
+                  Move-Item -Path $source -Destination (Join-Path $artifactBackup $dir)
+                }
+              }
+              Remove-Item -Recurse -Force $env:VCPKG_ROOT
+            }
             git clone https://github.com/microsoft/vcpkg.git $env:VCPKG_ROOT
+            foreach ($dir in $artifactDirs) {
+              $saved = Join-Path $artifactBackup $dir
+              if (Test-Path $saved) {
+                Move-Item -Path $saved -Destination (Join-Path $env:VCPKG_ROOT $dir)
+              }
+            }
           }
           git -C $env:VCPKG_ROOT fetch --depth=1 origin $env:VCPKG_REF
           git -C $env:VCPKG_ROOT checkout --force $env:VCPKG_REF

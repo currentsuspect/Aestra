@@ -438,16 +438,6 @@ void TrackUIComponent::updateTrackNameColors() {
                 
                 m_nameLabel->setTextColor(autoColor);
                 
-                // [FIX] Persist this visual color to the model so Mixer can see it!
-                if (m_trackManager && m_laneId.isValid()) {
-                    auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
-                    if (lane && lane->colorRGBA != autoColor.toHex()) {
-                        lane->colorRGBA = autoColor.toHex();
-                        // Also update MixerChannel for good measure
-                        if (m_channel) m_channel->setColor(autoColor.toHex());
-                    }
-                }
-                
                 return; // Successfully set color, exit
             } catch (const std::exception&) {
                 // Fall through
@@ -795,7 +785,7 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
             renderer.drawText(displayName,
                               AestraUI::NUIPoint(nameX, clipBounds.y + 4.0f),
                               10.0f,
-                              themeManager.getColor("backgroundPrimary").withAlpha(clipSelected ? 0.88f : 0.72f));
+                              themeManager.getColor("textPrimary").withAlpha(clipSelected ? 0.88f : 0.72f));
         }
 
     }

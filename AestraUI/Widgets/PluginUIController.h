@@ -170,9 +170,10 @@ public:
      */
     void setOnScanComplete(std::function<void(int pluginCount)> callback);
 
-private:
     // Convert PluginInfo to PluginListItem for UI
     PluginListItem convertToListItem(const Aestra::Audio::PluginInfo& info) const;
+
+private:
     
     // Backend references
     Aestra::Audio::PluginScanner* m_scanner = nullptr;

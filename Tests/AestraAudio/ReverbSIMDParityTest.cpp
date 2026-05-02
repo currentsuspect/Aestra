@@ -56,7 +56,7 @@ bool compareStates(const FDNState& a, const FDNState& b) {
 int main() {
     using namespace Aestra::Audio::DSP;
 
-#if defined(AESTRA_REVERB_HAS_SSE)
+#if defined(AESTRA_ENABLE_RUNTIME_TESTS) && defined(AESTRA_REVERB_HAS_SSE)
     std::array<float, kLines> lineOut{{0.31f, -0.19f, 0.07f, 0.41f, -0.23f, 0.17f, -0.11f, 0.29f}};
     std::array<float, kLines> feedback{{0.73f, 0.71f, 0.69f, 0.67f, 0.65f, 0.63f, 0.61f, 0.59f}};
     std::array<float, kLines> injectL{{0.93f, -0.37f, 0.61f, -0.79f, 0.23f, 0.84f, -0.51f, 0.42f}};

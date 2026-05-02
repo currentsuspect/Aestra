@@ -117,6 +117,10 @@ public:
         const uint32_t channels = std::min<uint32_t>(2, numOutputChannels);
         const bool stereo = channels >= 2;
 
+        if (m_detectorHPFDirty.exchange(false, std::memory_order_acq_rel)) {
+            updateDetectorHPF();
+        }
+
         float env = m_env;
         float hpfXL = m_hpfXL;
         float hpfYL = m_hpfYL;
@@ -126,8 +130,9 @@ public:
         float blockOutputPeak = 0.0f;
         float blockGainReductionDb = 0.0f;
 
-        for (uint32_t i = 0; i < numFrames; ++i) {
+        for (uint32_t blockStart = 0; blockStart < numFrames; blockStart += kBlockSize) {
             smoothParams(smoothingCoeff);
+            const uint32_t blockEnd = std::min(blockStart + kBlockSize, numFrames);
 
             const float thresholdDb = thresholdDbFromNorm(m_thresholdSmoothed);
             const float ratio = ratioFromNorm(m_ratioSmoothed);
@@ -139,6 +144,7 @@ public:
             const float outputLinear = dbToLinear(bipolarGainDbFromNorm(m_outputGainSmoothed));
             const float mix = std::clamp(m_mixSmoothed, 0.0f, 1.0f);
 
+            for (uint32_t i = blockStart; i < blockEnd; ++i) {
             const float rawL = readInput(inputs, numInputChannels, 0, i);
             const float rawR = stereo ? readInput(inputs, numInputChannels, 1, i) : rawL;
             const float dryL = sanitizeSample(rawL);
@@ -181,6 +187,7 @@ public:
             for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
                 if (outputs[ch]) outputs[ch][i] = 0.0f;
             }
+            }
         }
 
         m_env = env;
@@ -205,7 +212,9 @@ public:
         if (id >= kParamCount) return;
         const float clampedValue = std::clamp(value, 0.0f, 1.0f);
         m_params[id].store(clampedValue, std::memory_order_relaxed);
-        if (id == kDetectorHPF) updateDetectorHPF();
+        if (id == kDetectorHPF) {
+            m_detectorHPFDirty.store(true, std::memory_order_release);
+        }
 
         if (!m_hasProcessed.load(std::memory_order_relaxed)) {
             switch (id) {
@@ -368,6 +377,7 @@ public:
 private:
     static constexpr float kMinDb = -120.0f;
     static constexpr float kMaxSample = 16.0f;
+    static constexpr uint32_t kBlockSize = 16;
 
     void loadDefaults() {
         for (const auto& param : getParameters()) {
@@ -511,6 +521,7 @@ private:
     uint32_t m_maxBlockSize = 512;
     std::atomic<bool> m_active{false};
     std::atomic<bool> m_hasProcessed{false};
+    std::atomic<bool> m_detectorHPFDirty{false};
     std::array<std::atomic<float>, kParamCount> m_params{};
 
     float m_env = 0.0f;

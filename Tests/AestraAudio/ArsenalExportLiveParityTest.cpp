@@ -343,6 +343,10 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
     // Track 0 — Arsenal unit assigned here
     const PlaylistLaneID lane0 = playlist.createLane("Bounce Track 0");
     require(lane0.isValid(), "Failed to create lane 0 for bounce");
+    if (auto* lane = playlist.getLane(lane0)) {
+        lane->volume = 1.0f;
+        lane->pan = 0.0f;
+    }
     auto* channel0 = tm->addChannel("Bounce Track 0");
     require(channel0 != nullptr, "Failed to create channel 0 for bounce");
     channel0->setVolume(1.0f);
@@ -350,6 +354,10 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
     // Track 1 — no Arsenal unit, used for wrong-track silence check
     const PlaylistLaneID lane1 = playlist.createLane("Bounce Track 1");
     require(lane1.isValid(), "Failed to create lane 1 for bounce");
+    if (auto* lane = playlist.getLane(lane1)) {
+        lane->volume = 1.0f;
+        lane->pan = 0.0f;
+    }
     auto* channel1 = tm->addChannel("Bounce Track 1");
     require(channel1 != nullptr, "Failed to create channel 1 for bounce");
     channel1->setVolume(1.0f);

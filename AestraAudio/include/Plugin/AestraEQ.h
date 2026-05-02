@@ -322,7 +322,10 @@ public:
             const uint32_t blockFrames = blockEnd - sampleOffset;
 
             smoothParameters(smoothCoeff);
-            rebuildAllCoefficients();
+            const bool smoothingPending = hasPendingSmoothedParameterChanges();
+            if (m_filtersDirty.exchange(smoothingPending, std::memory_order_acq_rel) || smoothingPending) {
+                rebuildAllCoefficients();
+            }
 
             for (uint32_t ch = 0; ch < channels; ++ch) {
                 if (!inputs[ch] || !outputs[ch]) continue;
@@ -752,6 +755,18 @@ private:
         }
     }
 
+    bool hasPendingSmoothedParameterChanges() const {
+        for (uint32_t i = 0; i < kV1ParamCount; ++i) {
+            if (i == kParamBypass) continue;
+            const float target = m_params[i].load(std::memory_order_relaxed);
+            const float current = m_smoothed[i].load(std::memory_order_relaxed);
+            if (std::abs(target - current) > 1.0e-4f) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ---- Coefficient rebuild ----
     void rebuildAllCoefficients() {
         for (uint32_t band = 0; band < kV1BandCount; ++band) {
@@ -840,21 +855,22 @@ private:
                 }
             } else {
                 // Type mismatch — load defaults for this band
-                for (const auto& p : getParameters()) {
+                const auto params = getParameters();
+                for (const auto& p : params) {
                     if (p.id == bandV1FreqId(band)) {
                         setParameter(bandV1FreqId(band), p.defaultValue);
                         break;
                     }
                 }
                 if (bandUsesGain(band)) {
-                    for (const auto& p : getParameters()) {
+                    for (const auto& p : params) {
                         if (p.id == bandV1GainId(band)) {
                             setParameter(bandV1GainId(band), p.defaultValue);
                             break;
                         }
                     }
                 }
-                for (const auto& p : getParameters()) {
+                for (const auto& p : params) {
                     if (p.id == bandV1QId(band)) {
                         setParameter(bandV1QId(band), p.defaultValue);
                         break;

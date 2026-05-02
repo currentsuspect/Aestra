@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -267,7 +268,12 @@ static Metrics analyze(const std::vector<float>& L, const std::vector<float>& R,
 int main() {
     const float sr = 48000.0f;
     const std::string outDir = "labs/reverb/quality/mimoclaw_004_hall_restore_comp_mud_pack";
-    std::system(("mkdir -p " + outDir).c_str());
+    std::error_code ec;
+    std::filesystem::create_directories(outDir, ec);
+    if (ec || !std::filesystem::is_directory(outDir)) {
+        std::cerr << "Failed to create output directory: " << outDir << "\n";
+        return 1;
+    }
 
     // Sources
     struct Src { std::string name; std::vector<float> (*gen)(float,float); float dur; };

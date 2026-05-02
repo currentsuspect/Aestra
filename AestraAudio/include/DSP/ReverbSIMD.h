@@ -8,16 +8,25 @@
 #include <cmath>
 #include <cstdint>
 
-#if defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
-#include <immintrin.h>
-#define AESTRA_REVERB_HAS_AVX2 1
-#define AESTRA_REVERB_HAS_SSE 1
-#endif
-
 #if defined(__GNUC__) || defined(__clang__)
 #define AESTRA_AVX2_TARGET __attribute__((target("avx2,fma")))
+#define AESTRA_REVERB_CAN_INLINE_AVX2_FMA 1
+#elif defined(_MSC_VER) && (defined(__AVX2__) || defined(__FMA__))
+#define AESTRA_AVX2_TARGET
+#define AESTRA_REVERB_CAN_INLINE_AVX2_FMA 1
 #else
 #define AESTRA_AVX2_TARGET
+#endif
+
+#if (defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)) && \
+    defined(AESTRA_REVERB_CAN_INLINE_AVX2_FMA)
+#include <immintrin.h>
+#define AESTRA_REVERB_HAS_AVX2 1
+#endif
+
+#if defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+#include <immintrin.h>
+#define AESTRA_REVERB_HAS_SSE 1
 #endif
 
 #if defined(__ARM_NEON) || defined(__ARM_NEON__) || defined(__aarch64__)
@@ -353,6 +362,13 @@ inline void processFDNSampleNEON(
     float& wetL,
     float& wetR) noexcept {
 
+    const float32x4_t vLineOut0 = vld1q_f32(&lineOut[0]);
+    const float32x4_t vLineOut1 = vld1q_f32(&lineOut[4]);
+    const float32x4_t vPairSum = vaddq_f32(vLineOut0, vLineOut1);
+    const float32x4_t vRevSum = vaddq_f32(vPairSum, vrev64q_f32(vPairSum));
+    const float total = vgetq_lane_f32(vRevSum, 0) + vgetq_lane_f32(vRevSum, 2);
+    const float32x4_t vMean = vdupq_n_f32(total * 0.25f);
+
     for (size_t block = 0; block < 2; ++block) {
         size_t b = block * 4;
         float32x4_t vLineOut = vld1q_f32(&lineOut[b]);
@@ -363,13 +379,6 @@ inline void processFDNSampleNEON(
         float32x4_t vInjectR = vld1q_f32(&injectR[b]);
         float32x4_t vOutputL = vld1q_f32(&outputL[b]);
         float32x4_t vOutputR = vld1q_f32(&outputR[b]);
-
-        // Horizontal sum for mean
-        float32x4_t vSum = vaddq_f32(vLineOut, vrev64q_f32(vLineOut));
-        float sumL = vgetq_lane_f32(vSum, 0) + vgetq_lane_f32(vSum, 2);
-        float sumR = vgetq_lane_f32(vSum, 1) + vgetq_lane_f32(vSum, 3);
-        float mean = (sumL + sumR) * 0.25f;
-        float32x4_t vMean = vdupq_n_f32(mean);
 
         float32x4_t vMatrixOut = vsubq_f32(vLineOut, vMean);
 
@@ -482,7 +491,8 @@ inline void processFDNSample(
 
     if (!g_forceScalarFallback) {
 #ifdef AESTRA_REVERB_HAS_AVX2
-        static const bool useAVX2 = Aestra::Core::CPUDetection::get().hasAVX2();
+        static const bool useAVX2 =
+            Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
         if (useAVX2) {
             processFDNSampleAVX2(lineOut, delayedL, delayedR, dampingState, lowDampState,
                                  delayLines, delayPos, delayMasks, feedbackGains,

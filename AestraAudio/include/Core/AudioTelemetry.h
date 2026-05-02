@@ -71,6 +71,15 @@ struct AudioTelemetry {
     static constexpr uint32_t kPriorityBit_MMCSS = 0x02;
     static constexpr uint32_t kPriorityBit_MMCSSPriority = 0x04;
     static constexpr uint32_t kPriorityBit_AllSuccess = 0x07;
+#if defined(_WIN32)
+    static constexpr uint32_t kPriorityBits_PlatformSuccess =
+        kPriorityBit_ThreadPriority | kPriorityBit_MMCSS | kPriorityBit_MMCSSPriority;
+#elif defined(__linux__)
+    static constexpr uint32_t kPriorityBits_PlatformSuccess =
+        kPriorityBit_ThreadPriority | kPriorityBit_MMCSS;
+#else
+    static constexpr uint32_t kPriorityBits_PlatformSuccess = kPriorityBit_ThreadPriority;
+#endif
 
     // Convenience methods for relaxed memory ordering access
     // Increments
@@ -145,7 +154,7 @@ struct AudioTelemetry {
      * @brief B-010: Check if all thread priority settings succeeded
      */
     bool isThreadPriorityOptimal() const noexcept {
-        return (getThreadPriorityStatus() & kPriorityBit_AllSuccess) == kPriorityBit_AllSuccess;
+        return (getThreadPriorityStatus() & kPriorityBits_PlatformSuccess) == kPriorityBits_PlatformSuccess;
     }
 
     // Updates

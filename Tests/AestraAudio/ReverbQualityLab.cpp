@@ -16,12 +16,18 @@
 #include <cstdint>
 #include <cstring>
 #include <fstream>
+#include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
 using Aestra::Audio::Plugins::AestraVerb;
+
+namespace {
+constexpr float kPi = 3.14159265358979323846f;
+}
 
 // ============================================================================
 // Simple power-of-2 FFT for spectral analysis
@@ -39,7 +45,7 @@ static void fft(std::vector<std::complex<float>>& a) {
     }
 
     for (size_t len = 2; len <= n; len <<= 1) {
-        float ang = -2.0f * static_cast<float>(M_PI) / static_cast<float>(len);
+        float ang = -2.0f * kPi / static_cast<float>(len);
         std::complex<float> wlen(std::cos(ang), std::sin(ang));
         for (size_t i = 0; i < n; i += len) {
             std::complex<float> w(1.0f, 0.0f);
@@ -210,7 +216,7 @@ static SpectralMetrics computeSpectral(const std::vector<float>& signal, float s
         size_t idx = start + i;
         if (idx < n) {
             // Hann window
-            float w = 0.5f * (1.0f - std::cos(2.0f * static_cast<float>(M_PI) * static_cast<float>(i) / static_cast<float>(fftSize - 1)));
+            float w = 0.5f * (1.0f - std::cos(2.0f * kPi * static_cast<float>(i) / static_cast<float>(fftSize - 1)));
             fftBuf[i] = std::complex<float>(signal[idx] * w, 0.0f);
         } else {
             fftBuf[i] = std::complex<float>(0.0f, 0.0f);
@@ -283,7 +289,7 @@ static SpectralMetrics computeSpectral(const std::vector<float>& signal, float s
         if (lateStart + fftSize <= n) {
             std::vector<std::complex<float>> lateFft(fftSize);
             for (size_t i = 0; i < fftSize; ++i) {
-                float w = 0.5f * (1.0f - std::cos(2.0f * static_cast<float>(M_PI) * static_cast<float>(i) / static_cast<float>(fftSize - 1)));
+                float w = 0.5f * (1.0f - std::cos(2.0f * kPi * static_cast<float>(i) / static_cast<float>(fftSize - 1)));
                 lateFft[i] = std::complex<float>(signal[lateStart + i] * w, 0.0f);
             }
             fft(lateFft);
@@ -321,7 +327,7 @@ static void computeTailToneOverTime(const std::vector<float>& signal, float samp
         if (start + fftSize > signal.size()) return;
         std::vector<std::complex<float>> fftBuf(fftSize);
         for (size_t i = 0; i < fftSize; ++i) {
-            const float w = 0.5f * (1.0f - std::cos(2.0f * static_cast<float>(M_PI) *
+            const float w = 0.5f * (1.0f - std::cos(2.0f * kPi *
                                                     static_cast<float>(i) / static_cast<float>(fftSize - 1)));
             fftBuf[i] = std::complex<float>(signal[start + i] * w, 0.0f);
         }
@@ -610,6 +616,17 @@ static ModeQuality measureMode(const std::string& name, float modeParam,
         noiseR[i] = v;
     }
     std::vector<float> noiseOutL(numFrames), noiseOutR(numFrames);
+    verb.shutdown();
+    verb.initialize(sampleRate, 256);
+    verb.setParameter(AestraVerb::kMode, modeParam);
+    verb.setParameter(AestraVerb::kDecay, decayParam);
+    verb.setParameter(AestraVerb::kSize, sizeParam);
+    verb.setParameter(AestraVerb::kDiffusion, diffusionParam);
+    verb.setParameter(AestraVerb::kModRate, 0.5f);
+    verb.setParameter(AestraVerb::kModDepth, 0.3f);
+    verb.setParameter(AestraVerb::kMix, 1.0f);
+    verb.setParameter(AestraVerb::kWidth, 0.7f);
+    verb.activate();
     inPtrs[0] = noiseL.data(); inPtrs[1] = noiseR.data();
     outPtrs[0] = noiseOutL.data(); outPtrs[1] = noiseOutR.data();
     verb.process(inPtrs, outPtrs, 2, 2, numFrames);
@@ -853,8 +870,12 @@ int main() {
     const uint32_t numFrames = 65536; // ~1.36s tail
     const std::string qualityDir = "labs/reverb/quality";
 
-    // Ensure directory exists (simple mkdir on Linux)
-    std::system(("mkdir -p " + qualityDir).c_str());
+    std::error_code ec;
+    std::filesystem::create_directories(qualityDir, ec);
+    if (ec || !std::filesystem::is_directory(qualityDir)) {
+        std::cerr << "Failed to create quality output directory: " << qualityDir << "\n";
+        return 1;
+    }
 
     std::cout << "AestraVerb Quality Measurement Lab\n";
     std::cout << "==================================\n\n";

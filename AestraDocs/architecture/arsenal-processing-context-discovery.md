@@ -2,14 +2,15 @@
 
 ## Scope
 
-This is a discovery pass only. No production behavior, serialization rules, routing, or CI configuration was changed.
+This document records a historical discovery pass. Its snapshot below was captured for context and does not describe
+the current branch or any later pull request contents.
 
-## Repository Snapshot
+## Historical Repository Snapshot
 
 - **Branch:** `develop`
 - **Commit:** `7c446483a0c5dc07200cb8b5d3f42044dd71873b`
 - **Working tree at start:** clean
-- **Working tree now:** one documentation file added (`AestraDocs/architecture/arsenal-processing-context-discovery.md`)
+- **Working tree then:** one documentation file added (`AestraDocs/architecture/arsenal-processing-context-discovery.md`)
 
 ---
 
@@ -257,4 +258,3 @@ Target model:
 
 **Proceed with Phase 0 only** (guardrails + naming/model clarity), then Phase 1 thin-wrapper extraction.  
 Do **not** jump directly to behavior changes until explicit bridge semantics and regression tests (Phase 3) are in place.
-
