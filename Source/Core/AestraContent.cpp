@@ -366,15 +366,7 @@ AestraContent::AestraContent() {
                 // Map results to UI items
                 std::vector<AestraUI::PluginListItem> uiPlugins;
                 for (const auto& p : results) {
-                    AestraUI::PluginListItem item;
-                    item.id = p.id;
-                    item.name = p.name;
-                    item.vendor = p.vendor;
-                    item.version = p.version;
-                    item.category = p.category;
-                    item.formatStr = (p.format == Aestra::Audio::PluginFormat::VST3) ? "VST3" : "CLAP (Exp.)";
-                    item.typeName = (p.type == Aestra::Audio::PluginType::Instrument) ? "Instrument" : "Effect";
-                    uiPlugins.push_back(item);
+                    uiPlugins.push_back(m_pluginController->convertToListItem(p));
                 }
                 
                 if (m_pluginBrowser) {

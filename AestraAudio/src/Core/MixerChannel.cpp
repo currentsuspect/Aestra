@@ -34,6 +34,7 @@ void MixerChannel::setVolume(float volume) {
     const float previous = m_volume.exchange(volume);
     if (m_mixerBus)
         m_mixerBus->setGain(volume);
+    notifyInputMonitoringStateChanged();
     if (m_commandSink && m_channelId > 0 && std::abs(previous - volume) > 0.0001f) {
         AudioQueueCommand cmd{};
         cmd.type = AudioQueueCommandType::SetTrackVolume;

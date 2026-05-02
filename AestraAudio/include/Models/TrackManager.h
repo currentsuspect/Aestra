@@ -104,6 +104,9 @@ public:
             std::make_unique<MixerChannel>(name.empty() ? "Track " + std::to_string(m_channels.size() + 1) : name,
                                            static_cast<uint32_t>(m_channels.size() + 1));
         channel->setCommandSink(m_commandSink);
+        channel->setInputMonitoringStateChangedCallback([this]() {
+            publishInputMonitoringSnapshot();
+        });
         auto* raw = channel.get();
         m_channels.push_back(std::move(channel));
         m_graphDirty.store(true, std::memory_order_relaxed);
@@ -472,9 +475,6 @@ public:
             bool expectedStart = false;
             if (capture.hasStarted.compare_exchange_strong(expectedStart, true, std::memory_order_acq_rel)) {
                 capture.startBeat.store(effectiveCaptureBeat, std::memory_order_release);
-                if (telemetry) {
-                    telemetry->incrementRtLogViolations();
-                }
                 if (hasDeferredStart) {
                     startedDeferredCapture = true;
                 }
@@ -494,9 +494,7 @@ public:
         }
 
         if (!capturedAnyChannel && !m_recordingNoArmLogged) {
-            if (telemetry) {
-                telemetry->incrementRtLogViolations();
-            }
+            (void)telemetry;
             m_recordingNoArmLogged = true;
         }
     }

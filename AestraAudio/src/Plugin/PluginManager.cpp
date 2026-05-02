@@ -56,6 +56,7 @@ bool PluginManager::initialize() {
         // Both are acceptable
         return false;
     }
+    m_comInitialized = (hr == S_OK || hr == S_FALSE);
 #endif
 
     BuiltInPlugins::registerCoreBuiltIns();
@@ -144,7 +145,10 @@ void PluginManager::shutdown() {
 
 #ifdef _WIN32
     // Uninitialize COM
-    CoUninitialize();
+    if (m_comInitialized) {
+        CoUninitialize();
+        m_comInitialized = false;
+    }
 #endif
 
     m_initialized = false;

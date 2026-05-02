@@ -51,7 +51,7 @@ void printUsage(const char* programName) {
 }
 
 const char* requireValue(int argc, char* argv[], int& index, const std::string& option) {
-    if (index + 1 >= argc) {
+    if (index + 1 >= argc || argv[index + 1] == nullptr || argv[index + 1][0] == '-') {
         throw std::invalid_argument("Missing value for " + option);
     }
     return argv[++index];

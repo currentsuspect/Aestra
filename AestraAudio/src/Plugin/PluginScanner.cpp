@@ -417,7 +417,7 @@ void PluginScanner::cancelScan() {
 
 void PluginScanner::cancelAndJoin() {
     m_cancelRequested.store(true);
-    if (m_scanThread.joinable()) {
+    if (m_scanThread.joinable() && m_scanThread.get_id() != std::this_thread::get_id()) {
         m_scanThread.join();
     }
 }

@@ -138,6 +138,12 @@ bool CommandHistory::undo() {
         success = true;
     } catch (const std::exception& e) {
         std::cerr << "Command undo failed: " << e.what() << std::endl;
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_undoStack.push_back(cmd);
+    } catch (...) {
+        std::cerr << "Command undo failed with unknown exception" << std::endl;
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_undoStack.push_back(cmd);
     }
 
     // Phase 3: Push to redo stack under lock
@@ -173,6 +179,12 @@ bool CommandHistory::redo() {
         success = true;
     } catch (const std::exception& e) {
         std::cerr << "Command redo failed: " << e.what() << std::endl;
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_redoStack.push_back(cmd);
+    } catch (...) {
+        std::cerr << "Command redo failed with unknown exception" << std::endl;
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_redoStack.push_back(cmd);
     }
 
     // Phase 3: Push to undo stack under lock
@@ -290,20 +302,34 @@ void CommandHistory::undoTo(int targetIndex) {
     }
 
     // Phase 2: Execute all undos outside lock
-    for (auto& cmd : cmds) {
-        cmd->undo();
+    std::vector<std::shared_ptr<ICommand>> successfulUndos;
+    size_t nextIndex = 0;
+    try {
+        for (; nextIndex < cmds.size(); ++nextIndex) {
+            cmds[nextIndex]->undo();
+            successfulUndos.push_back(cmds[nextIndex]);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Command undoTo failed: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "Command undoTo failed with unknown exception" << std::endl;
     }
 
-    // Phase 3: Push all to redo stack under lock
+    // Phase 3: Move only successful undos to redo and restore the rest.
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        for (auto& cmd : cmds) {
+        for (size_t i = cmds.size(); i > nextIndex; --i) {
+            m_undoStack.push_back(cmds[i - 1]);
+        }
+        for (auto& cmd : successfulUndos) {
             m_redoStack.push_back(cmd);
         }
     }
 
     // Phase 4: Notify listeners outside lock
-    for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
+    if (!successfulUndos.empty()) {
+        for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
+    }
 }
 
 void CommandHistory::redoTo(int targetIndex) {
@@ -319,20 +345,34 @@ void CommandHistory::redoTo(int targetIndex) {
     }
 
     // Phase 2: Execute all redos outside lock
-    for (auto& cmd : cmds) {
-        cmd->redo();
+    std::vector<std::shared_ptr<ICommand>> successfulRedos;
+    size_t nextIndex = 0;
+    try {
+        for (; nextIndex < cmds.size(); ++nextIndex) {
+            cmds[nextIndex]->redo();
+            successfulRedos.push_back(cmds[nextIndex]);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Command redoTo failed: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "Command redoTo failed with unknown exception" << std::endl;
     }
 
-    // Phase 3: Push all to undo stack under lock
+    // Phase 3: Move only successful redos to undo and restore the rest.
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        for (auto& cmd : cmds) {
+        for (size_t i = cmds.size(); i > nextIndex; --i) {
+            m_redoStack.push_back(cmds[i - 1]);
+        }
+        for (auto& cmd : successfulRedos) {
             m_undoStack.push_back(cmd);
         }
     }
 
     // Phase 4: Notify listeners outside lock
-    for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
+    if (!successfulRedos.empty()) {
+        for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
+    }
 }
 
 } // namespace Audio

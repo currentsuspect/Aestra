@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
 
 namespace Aestra {
@@ -26,7 +27,7 @@ enum class ArsenalBridgeMode : uint8_t {
 /**
  * @brief Stable string representation for persistence/docs/tests.
  */
-constexpr std::string_view toString(ArsenalBridgeMode mode) noexcept {
+inline std::string toString(ArsenalBridgeMode mode) {
     switch (mode) {
     case ArsenalBridgeMode::DraftOnly: return "DraftOnly";
     case ArsenalBridgeMode::PreviewToMaster: return "PreviewToMaster";
@@ -34,7 +35,8 @@ constexpr std::string_view toString(ArsenalBridgeMode mode) noexcept {
     case ArsenalBridgeMode::LocalCopy: return "LocalCopy";
     case ArsenalBridgeMode::RenderedAudio: return "RenderedAudio";
     case ArsenalBridgeMode::FrozenAudio: return "FrozenAudio";
-    default: return "DraftOnly";
+    default:
+        return "InvalidArsenalBridgeMode(" + std::to_string(static_cast<int>(mode)) + ")";
     }
 }
 

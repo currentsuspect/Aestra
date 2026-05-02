@@ -35,6 +35,14 @@ std::filesystem::path makeTempDir() {
     return fallback;
 }
 
+struct TempDir {
+    std::filesystem::path path;
+    ~TempDir() {
+        std::error_code ec;
+        std::filesystem::remove_all(path, ec);
+    }
+};
+
 std::string readFile(const std::filesystem::path& path) {
     std::ifstream in(path, std::ios::binary);
     return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -142,9 +150,9 @@ void verifyLegacyRouteIdOnlyProjectLoad(const std::filesystem::path& path) {
 } // namespace
 
 int main() {
-    const auto tempDir = makeTempDir();
-    verifyCurrentProjectRoundTrip(tempDir / "current_roundtrip.aes");
-    verifyLegacyRouteIdOnlyProjectLoad(tempDir / "legacy_routeid_only.aes");
+    const TempDir tempDir{makeTempDir()};
+    verifyCurrentProjectRoundTrip(tempDir.path / "current_roundtrip.aes");
+    verifyLegacyRouteIdOnlyProjectLoad(tempDir.path / "legacy_routeid_only.aes");
 
     std::cout << "[PASS] ArsenalRouteModeRoundTripTest\n";
     return 0;

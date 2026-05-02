@@ -54,11 +54,11 @@ bool usesDiscreteCutSlope(uint32_t type) {
 }
 
 float quantizeCutSlopeNorm(float norm) {
-    static constexpr float kSlopeSteps[] = {0.0f, 0.25f, 0.5f, 0.75f, 1.0f};
+    static constexpr float kSlopeSteps[] = {0.0f, 1.0f / 3.0f, 2.0f / 3.0f, 1.0f};
     const float clamped = std::clamp(norm, 0.0f, 1.0f);
     int bestIndex = 0;
     float bestDistance = std::abs(clamped - kSlopeSteps[0]);
-    for (int i = 1; i < 5; ++i) {
+    for (int i = 1; i < 4; ++i) {
         const float distance = std::abs(clamped - kSlopeSteps[i]);
         if (distance < bestDistance) {
             bestDistance = distance;
@@ -69,10 +69,14 @@ float quantizeCutSlopeNorm(float norm) {
 }
 
 uint32_t cutSlopeDbPerOct(float norm) {
-    static constexpr uint32_t kSlopeDb[] = {12u, 24u, 48u, 72u, 96u};
+    static constexpr uint32_t kSlopeDb[] = {12u, 24u, 36u, 48u};
     const float quantized = quantizeCutSlopeNorm(norm);
-    const int index = static_cast<int>(std::round(quantized * 4.0f));
-    return kSlopeDb[std::clamp(index, 0, 4)];
+    const int index = static_cast<int>(std::round(quantized * 3.0f));
+    return kSlopeDb[std::clamp(index, 0, 3)];
+}
+
+uint32_t cutSlopeStageCount(float norm) {
+    return cutSlopeDbPerOct(norm) / 12u;
 }
 
 std::vector<NUIPoint> makeSmoothCurvePoints(const std::vector<NUIPoint>& points, int subdivisions) {
@@ -394,9 +398,7 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     auto gainToDb = [](float norm) { return -18.0f + norm * 36.0f; };
     auto qToLinear = [](float norm) { return 0.1f + norm * 9.9f; };
     auto slopeStages = [](float norm) -> uint32_t {
-        static constexpr uint32_t slopes[] = {12, 24, 36, 48};
-        const uint32_t idx = static_cast<uint32_t>(std::round(std::clamp(norm, 0.0f, 1.0f) * 3.0f));
-        return slopes[std::min(idx, 3u)] / 12;
+        return cutSlopeStageCount(norm);
     };
     auto biquadMagnitudeDb = [](const Aestra::Audio::Plugins::FilterCoeffs& coeffs, double omega) {
         const double cos1 = std::cos(omega);
@@ -891,9 +893,7 @@ void AestraEQEditor::drawBandPanel(NUIRenderer& renderer, const BandControl& ban
         drawBlueprintKnob(renderer, band.gainKnob.center(), 15.0f, band.gain, "GAIN", gainLabel(band.gain) + " dB", true, accent);
     }
     if (band.usesSlope) {
-        static constexpr uint32_t slopes[] = {12, 24, 36, 48};
-        const uint32_t idx = static_cast<uint32_t>(std::round(std::clamp(band.q, 0.0f, 1.0f) * 3.0f));
-        const uint32_t slopeVal = slopes[std::min(idx, 3u)];
+        const uint32_t slopeVal = cutSlopeDbPerOct(band.q);
         drawBlueprintKnob(renderer, band.qKnob.center(), 15.0f, band.q, "SLOPE", std::to_string(slopeVal) + " dB", true, accent);
     } else {
         drawBlueprintKnob(renderer, band.qKnob.center(), 15.0f, band.q, "Q", qLabel(band.q, band.type), true, accent);
@@ -999,7 +999,7 @@ void AestraEQEditor::onRender(NUIRenderer& renderer) {
     renderer.drawText("AESTRA EQ", {bounds.x + 18.0f, bounds.bottom() - 16.0f}, 8.0f, kBlueprintMuted);
     renderer.drawText("Zero Latency", {bounds.x + bounds.width * 0.30f, bounds.bottom() - 16.0f}, 8.0f, kBlueprintMuted);
     renderer.drawText("Oversampling: 2x", {bounds.x + bounds.width * 0.46f, bounds.bottom() - 16.0f}, 8.0f, kBlueprintMuted);
-    renderer.drawText("Max Bands: 8", {bounds.x + bounds.width * 0.62f, bounds.bottom() - 16.0f}, 8.0f, kBlueprintMuted);
+    renderer.drawText("Max Bands: 6", {bounds.x + bounds.width * 0.62f, bounds.bottom() - 16.0f}, 8.0f, kBlueprintMuted);
 }
 
 int AestraEQEditor::hitTestBand(float x, float y) const {
@@ -1127,9 +1127,9 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
             auto& band = m_bands[graphBandIdx];
             m_selectedBand = graphBandIdx;
             if (band.usesSlope) {
-                const float currentIndex = std::round(std::clamp(band.q, 0.0f, 1.0f) * 4.0f);
-                const float nextIndex = std::clamp(currentIndex + (event.wheelDelta > 0.0f ? 1.0f : -1.0f), 0.0f, 4.0f);
-                band.q = nextIndex / 4.0f;
+                const float currentIndex = std::round(quantizeCutSlopeNorm(band.q) * 3.0f);
+                const float nextIndex = std::clamp(currentIndex + (event.wheelDelta > 0.0f ? 1.0f : -1.0f), 0.0f, 3.0f);
+                band.q = nextIndex / 3.0f;
             } else {
                 const float step = 0.03f;
                 band.q = std::clamp(band.q + (event.wheelDelta > 0.0f ? step : -step), 0.0f, 1.0f);

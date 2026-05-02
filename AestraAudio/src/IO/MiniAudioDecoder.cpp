@@ -145,7 +145,13 @@ bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_
     }
     file.seekg(dataPos);
 
-    size_t samplesCount = dataSize / (bitsPerSample / 8);
+    const uint32_t bytesPerSample = bitsPerSample / 8;
+    const uint32_t blockAlign = static_cast<uint32_t>(channelCount) * bytesPerSample;
+    if (bytesPerSample == 0 || blockAlign == 0 || dataSize % bytesPerSample != 0 || dataSize % blockAlign != 0) {
+        return false;
+    }
+
+    size_t samplesCount = dataSize / bytesPerSample;
     // Secondary cap: prevent allocations > 500M samples (~2 GB for float32)
     constexpr size_t kMaxSamples = 500000000;
     if (samplesCount > kMaxSamples) {

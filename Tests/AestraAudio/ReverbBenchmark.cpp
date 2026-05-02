@@ -217,6 +217,7 @@ static BenchResult benchmarkPlugin(AestraVerb& verb, const std::vector<float>& i
 // ============================================================================
 
 static float highFrequencyEnergyRatio(const std::vector<float>& signal, double sampleRate) {
+    constexpr double pi = 3.14159265358979323846;
     const size_t N = signal.size();
     const size_t bins = N / 2 + 1;
     double totalEnergy = 0.0;
@@ -226,7 +227,7 @@ static float highFrequencyEnergyRatio(const std::vector<float>& signal, double s
     for (size_t k = 0; k < bins; ++k) {
         double re = 0.0, im = 0.0;
         for (size_t n = 0; n < N; ++n) {
-            double phase = -2.0 * M_PI * double(k) * double(n) / double(N);
+            double phase = -2.0 * pi * double(k) * double(n) / double(N);
             re += signal[n] * std::cos(phase);
             im += signal[n] * std::sin(phase);
         }
@@ -299,12 +300,34 @@ static void printStageReport(const std::vector<StageReport>& report) {
     }
 }
 
+static std::string jsonEscape(const std::string& value) {
+    std::ostringstream out;
+    for (unsigned char c : value) {
+        switch (c) {
+        case '\\': out << "\\\\"; break;
+        case '"': out << "\\\""; break;
+        case '\n': out << "\\n"; break;
+        case '\r': out << "\\r"; break;
+        case '\t': out << "\\t"; break;
+        default:
+            if (c < 0x20) {
+                out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c)
+                    << std::dec << std::setfill(' ');
+            } else {
+                out << static_cast<char>(c);
+            }
+            break;
+        }
+    }
+    return out.str();
+}
+
 static std::string stageProfileToJson(const std::vector<StageReport>& report) {
     std::ostringstream j;
     j << "  \"stageProfile\": [\n";
     for (size_t i = 0; i < report.size(); ++i) {
         j << "    {\n";
-        j << "      \"name\": \"" << report[i].name << "\",\n";
+        j << "      \"name\": \"" << jsonEscape(report[i].name) << "\",\n";
         j << "      \"totalMs\": " << std::fixed << std::setprecision(2) << (report[i].totalNs / 1e6) << ",\n";
         j << "      \"avgUs\": " << std::setprecision(3) << (report[i].avgNs / 1e3) << ",\n";
         j << "      \"percent\": " << std::setprecision(1) << report[i].percent << "\n";
@@ -441,14 +464,14 @@ static std::string generateJsonReport(
     j << "{\n";
     j << "  \"timestamp\": " << std::chrono::duration_cast<std::chrono::seconds>(
            std::chrono::system_clock::now().time_since_epoch()).count() << ",\n";
-    j << "  \"gitSha\": \"" << gitSha << "\",\n";
-    j << "  \"gitBranch\": \"" << gitBranch << "\",\n";
+    j << "  \"gitSha\": \"" << jsonEscape(gitSha) << "\",\n";
+    j << "  \"gitBranch\": \"" << jsonEscape(gitBranch) << "\",\n";
     j << "  \"sampleRate\": " << static_cast<int>(sampleRate) << ",\n";
     j << "  \"numFrames\": " << numFrames << ",\n";
     j << "  \"iterations\": " << iterations << ",\n";
-    j << "  \"interpolation\": \"" << interpolationName << "\",\n";
-    j << "  \"simdPath\": \"" << simdPathName << "\",\n";
-    j << "  \"cpuFlags\": \"" << cpuFlags << "\",\n";
+    j << "  \"interpolation\": \"" << jsonEscape(interpolationName) << "\",\n";
+    j << "  \"simdPath\": \"" << jsonEscape(simdPathName) << "\",\n";
+    j << "  \"cpuFlags\": \"" << jsonEscape(cpuFlags) << "\",\n";
     j << "  \"hfEnergyRatio\": " << std::setprecision(6) << hfRatio << ",\n";
     j << "  \"modes\": [\n";
 
@@ -457,7 +480,7 @@ static std::string generateJsonReport(
         const auto& mr = results[i];
         double budgetPct = (mr.result.medianUs / (numFrames / 256.0 * callbackUs)) * 100.0;
         j << "    {\n";
-        j << "      \"name\": \"" << mr.name << "\",\n";
+        j << "      \"name\": \"" << jsonEscape(mr.name) << "\",\n";
         j << "      \"medianUs\": " << std::fixed << std::setprecision(1) << mr.result.medianUs << ",\n";
         j << "      \"minUs\": " << mr.result.minUs << ",\n";
         j << "      \"maxUs\": " << mr.result.maxUs << ",\n";
@@ -653,16 +676,7 @@ int main(int argc, char* argv[]) {
         }
 #endif
 
-        if (cfg.jsonStdout) {
-            std::cout << "{\n";
-            std::cout << "  \"mode\": \"room\",\n";
-            std::cout << "  \"hasAVX2\": " << (hasAVX2 ? "true" : "false") << ",\n";
-            std::cout << "  \"medianUs\": " << result.medianUs << ",\n";
-            std::cout << "  \"samplesPerSec\": " << result.samplesPerSec << ",\n";
-            std::cout << "  \"rtFactor\": " << result.rtFactor << ",\n";
-            std::cout << "  \"outputRMS\": " << result.outputRMS << "\n";
-            std::cout << "}\n";
-        } else {
+        if (!cfg.jsonStdout) {
             std::cout << "─── Room Mode ───\n";
             std::cout << "  Median time:  " << std::fixed << std::setprecision(1) << result.medianUs << " us\n";
             std::cout << "  Min/Max:      " << result.minUs << " / " << result.maxUs << " us\n";
@@ -761,7 +775,7 @@ int main(int argc, char* argv[]) {
 
     // Quality analysis
     float hfRatio = 0.0f;
-    if (!cfg.jsonStdout) {
+    {
         AestraVerb verb;
         verb.initialize(sampleRate, 4096);
         verb.setParameter(AestraVerb::kMode, 1.0f);
@@ -779,6 +793,8 @@ int main(int argc, char* argv[]) {
         verb.process(inPtrs, outPtrs, 2, 2, 4096);
 
         hfRatio = highFrequencyEnergyRatio(tailL, sampleRate);
+    }
+    if (!cfg.jsonStdout) {
         std::cout << "\n─── Quality Metrics ───\n";
         std::cout << "  Interpolation:  " << interpolationName << "\n";
         std::cout << "  HF Energy >10k: " << std::setprecision(4) << (hfRatio * 100.0f) << "%\n";
@@ -796,6 +812,12 @@ int main(int argc, char* argv[]) {
                                     cpuFlags, gitSha, gitBranch, interpolationName, simdPathName, hfRatio,
                                     cfg.profileStages ? &lastStageProfile : nullptr);
         }
+    }
+
+    if (cfg.jsonStdout) {
+        std::cout << generateJsonReport(results, sampleRate, numFrames, cfg.iterations,
+                                        cpuFlags, gitSha, gitBranch, interpolationName, simdPathName, hfRatio,
+                                        cfg.profileStages ? &lastStageProfile : nullptr);
     }
 
     if (!cfg.outputMdPath.empty()) {

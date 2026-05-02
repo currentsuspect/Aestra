@@ -204,7 +204,32 @@ bool runInvalidMetadataTest() {
     bool ok = decodeAudioFile(path, audio, sampleRate, channels);
     fs::remove(path);
 
-    if (ok) {
+    std::string badDataPath = makeTempPath("Aestra_invalid_data_size.wav");
+    {
+        std::ofstream out(badDataPath, std::ios::binary);
+        out.write("RIFF", 4);
+        writeUint32(out, 36 + 3);
+        out.write("WAVE", 4);
+        out.write("fmt ", 4);
+        writeUint32(out, 16);
+        writeUint16(out, 1);
+        writeUint16(out, 2);
+        writeUint32(out, 44100);
+        writeUint32(out, 44100 * 2 * 2);
+        writeUint16(out, 4);
+        writeUint16(out, 16);
+        out.write("data", 4);
+        writeUint32(out, 3);
+        const char malformed[3] = {};
+        out.write(malformed, sizeof(malformed));
+    }
+    audio.clear();
+    sampleRate = 0;
+    channels = 0;
+    const bool badDataOk = decodeAudioFile(badDataPath, audio, sampleRate, channels);
+    fs::remove(badDataPath);
+
+    if (ok || badDataOk) {
         std::cout << " FAILED\n";
         return false;
     }

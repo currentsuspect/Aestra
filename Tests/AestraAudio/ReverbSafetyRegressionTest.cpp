@@ -14,6 +14,7 @@ using Aestra::Audio::Plugins::AestraVerb;
 namespace {
 
 constexpr float kSampleRate = 48000.0f;
+constexpr float kPi = 3.14159265358979323846f;
 
 struct RenderStats {
     float peak = 0.0f;
@@ -44,7 +45,7 @@ std::vector<float> makeBrightTransient(size_t frames, float hz) {
     for (size_t i = 0; i < frames; ++i) {
         const float t = static_cast<float>(i) / kSampleRate;
         const float env = std::exp(-t / 0.018f);
-        signal[i] = std::sin(2.0f * static_cast<float>(M_PI) * hz * t) * env * 0.95f;
+        signal[i] = std::sin(2.0f * kPi * hz * t) * env * 0.95f;
     }
     return signal;
 }
@@ -59,9 +60,9 @@ std::vector<float> makeSibilantVocal(size_t frames) {
         } else if (t > 0.75f) {
             env = std::max(0.0f, (0.9f - t) / 0.15f);
         }
-        const float body = std::sin(2.0f * static_cast<float>(M_PI) * 220.0f * t) * 0.55f;
-        const float formant = std::sin(2.0f * static_cast<float>(M_PI) * 880.0f * t) * 0.18f;
-        const float sibilance = std::sin(2.0f * static_cast<float>(M_PI) * 6800.0f * t) *
+        const float body = std::sin(2.0f * kPi * 220.0f * t) * 0.55f;
+        const float formant = std::sin(2.0f * kPi * 880.0f * t) * 0.18f;
+        const float sibilance = std::sin(2.0f * kPi * 6800.0f * t) *
             std::exp(-std::abs(t - 0.18f) / 0.035f) * 0.22f;
         signal[i] = (body + formant + sibilance) * env;
     }

@@ -38,7 +38,7 @@ bool ArsenalProcessingContext::shouldRenderToMasterPreview(const UnitState& unit
 }
 
 bool ArsenalProcessingContext::isFutureDraftMode(const UnitState& unit) const noexcept {
-    return unit.getRouteMode() == ArsenalRouteMode::Draft;
+    return resolveRouteMode(unit) == ArsenalRouteMode::Draft;
 }
 
 } // namespace Audio

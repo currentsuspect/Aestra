@@ -475,7 +475,6 @@ bool testCallbackCanQueryHistory() {
 
     CommandHistory history;
     int queryCount = 0;
-    bool anyQueryFailed = false;
 
     // Register a callback that re-enters CommandHistory by querying state.
     // This would deadlock if callbacks were invoked while m_mutex is held.

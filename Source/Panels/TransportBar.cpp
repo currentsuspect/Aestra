@@ -15,11 +15,11 @@ namespace Aestra {
 
 namespace {
 
-constexpr float kTransportButtonSize = 28.0f;
-constexpr float kTransportButtonSpacing = 8.0f;
-constexpr float kTransportGroupSpacing = 24.0f;
-constexpr float kTransportIslandPadding = 12.0f;
-constexpr float kTransportIslandHeight = 48.0f;
+constexpr float TRANSPORT_BUTTON_SIZE = 28.0f;
+constexpr float TRANSPORT_BUTTON_SPACING = 8.0f;
+constexpr float TRANSPORT_GROUP_SPACING = 24.0f;
+constexpr float TRANSPORT_ISLAND_PADDING = 12.0f;
+constexpr float TRANSPORT_ISLAND_HEIGHT = 48.0f;
 
 } // namespace
 
@@ -580,11 +580,11 @@ void TransportBar::layoutComponents() {
     const auto& layout = themeManager.getLayoutDimensions();
 
     // Use configurable dimensions - OVERRIDE for Compact Mode
-    float buttonSize = kTransportButtonSize;
+    float buttonSize = TRANSPORT_BUTTON_SIZE;
     const float primaryButtonScale = 1.0f;
     const float primaryButtonSize = buttonSize * primaryButtonScale;
-    float spacing = kTransportButtonSpacing;
-    float groupSpacing = kTransportGroupSpacing;
+    float spacing = TRANSPORT_BUTTON_SPACING;
+    float groupSpacing = TRANSPORT_GROUP_SPACING;
 
     // --- Layout Logic: Center-Out Calculation ---
     // We calculate the required width first to center the island perfectly
@@ -607,7 +607,7 @@ void TransportBar::layoutComponents() {
 
     // Total Content Width
     float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
-    float islandPadding = kTransportIslandPadding;
+    float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
     // Clamp to window width
@@ -615,7 +615,7 @@ void TransportBar::layoutComponents() {
         islandWidth = bounds.width - 20.0f;
     }
 
-    const float islandHeight = std::min(kTransportIslandHeight, bounds.height);
+    const float islandHeight = std::min(TRANSPORT_ISLAND_HEIGHT, bounds.height);
     const float visualCenterBiasY = 0.0f;
     float islandX = std::round((bounds.width - islandWidth) * 0.5f);
     float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);
@@ -700,21 +700,21 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     // 2. Re-Calculate Island Geometry (Match layoutComponents logic)
     // 2. Re-Calculate Island Geometry (Match layoutComponents logic)
     // Compact Values (Relaxed per user request: "space would have done the trick")
-    float buttonSize = kTransportButtonSize;
-    float spacing = kTransportButtonSpacing;
-    float groupSpacing = kTransportGroupSpacing;
+    float buttonSize = TRANSPORT_BUTTON_SIZE;
+    float spacing = TRANSPORT_BUTTON_SPACING;
+    float groupSpacing = TRANSPORT_GROUP_SPACING;
     float group1Width = (buttonSize * 3) + (spacing * 2);
     float group2Width = (buttonSize * 4) + (spacing * 3);
     float infoWidth = 260.0f;
     float group4Width = (buttonSize * 4) + (spacing * 3);
 
     float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
-    float islandPadding = kTransportIslandPadding;
+    float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
     if (islandWidth > bounds.width - 20.0f) islandWidth = bounds.width - 20.0f;
     
-    const float islandHeight = kTransportIslandHeight;
+    const float islandHeight = std::min(TRANSPORT_ISLAND_HEIGHT, bounds.height);
     const float visualCenterBiasY = -1.0f;
     float islandX = std::round((bounds.width - islandWidth) * 0.5f);
     float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);

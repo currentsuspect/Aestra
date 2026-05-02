@@ -75,11 +75,13 @@ void processBlocks(AestraEQ& eq, const float* input, float* output, uint32_t tot
 }
 
 void settleSmoothing(AestraEQ& eq, uint32_t numBlocks = 500) {
-    std::vector<float> silence(kBlockSize, 0.0f);
+    std::vector<float> in(kBlockSize, 0.0f);
+    std::vector<float> out(kBlockSize, 0.0f);
     for (uint32_t i = 0; i < numBlocks; ++i) {
-        const float* ip = silence.data();
-        float* op = silence.data();
+        const float* ip = in.data();
+        float* op = out.data();
         eq.process(&ip, &op, 1, 1, kBlockSize);
+        std::copy(out.begin(), out.end(), in.begin());
     }
 }
 

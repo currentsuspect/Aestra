@@ -155,12 +155,6 @@ bool RtAudioDriver::startStream() {
         return true;
     }
 
-    RtAudioErrorType error = m_rtAudio->startStream();
-    if (error != RTAUDIO_NO_ERROR) {
-        m_lastError = "RtAudio failed to start stream";
-        return false;
-    }
-
 #ifdef __linux__
     m_callbackRtPriorityAttempted.store(false, std::memory_order_release);
     // mlockall is process-wide and can be requested from the starter thread.
@@ -171,7 +165,28 @@ bool RtAudioDriver::startStream() {
     } else if (m_telemetry) {
         m_telemetry->updateLinuxRtPriorityErrno(errno);
     }
+    bool expected = false;
+    if (m_callbackRtPriorityAttempted.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+        struct sched_param param;
+        param.sched_priority = sched_get_priority_max(SCHED_FIFO);
+        param.sched_priority = (param.sched_priority + sched_get_priority_min(SCHED_FIFO)) / 2;
+        const int rtResult = pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
+        if (m_telemetry) {
+            if (rtResult == 0) {
+                m_telemetry->setThreadPriorityBit(0x01);
+                m_telemetry->updateLinuxRtPriorityErrno(0);
+            } else {
+                m_telemetry->updateLinuxRtPriorityErrno(rtResult);
+            }
+        }
+    }
 #endif
+
+    RtAudioErrorType error = m_rtAudio->startStream();
+    if (error != RTAUDIO_NO_ERROR) {
+        m_lastError = "RtAudio failed to start stream";
+        return false;
+    }
 
     return true;
 }
@@ -201,23 +216,6 @@ uint32_t RtAudioDriver::getStreamBufferSize() const {
 int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsigned int numFrames, double streamTime,
                                    RtAudioStreamStatus status, void* userData) {
     auto* driver = static_cast<RtAudioDriver*>(userData);
-#ifdef __linux__
-    bool expected = false;
-    if (driver->m_callbackRtPriorityAttempted.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
-        struct sched_param param;
-        param.sched_priority = sched_get_priority_max(SCHED_FIFO);
-        param.sched_priority = (param.sched_priority + sched_get_priority_min(SCHED_FIFO)) / 2;
-        const int rtResult = pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
-        if (driver->m_telemetry) {
-            if (rtResult == 0) {
-                driver->m_telemetry->setThreadPriorityBit(0x01);
-                driver->m_telemetry->updateLinuxRtPriorityErrno(0);
-            } else {
-                driver->m_telemetry->updateLinuxRtPriorityErrno(rtResult);
-            }
-        }
-    }
-#endif
     if (status != 0) {
         driver->m_stats.underrunCount++;
         if (driver->m_telemetry) {

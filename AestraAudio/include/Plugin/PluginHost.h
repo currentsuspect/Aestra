@@ -347,13 +347,19 @@ public:
     void addEvent(uint32_t sampleOffset, const uint8_t* data, uint8_t size) {
         if (size <= 3 && data != nullptr) {
             uint32_t index = m_eventCount.load(std::memory_order_acquire);
-            if (index < MAX_EVENTS) {
+            while (index < MAX_EVENTS) {
+                const uint32_t desired = index + 1;
+                if (!m_eventCount.compare_exchange_weak(index, desired,
+                                                        std::memory_order_acq_rel,
+                                                        std::memory_order_acquire)) {
+                    continue;
+                }
                 Event& e = m_events[index];
                 e.sampleOffset = sampleOffset;
                 e.size = size;
                 std::memset(e.data, 0, sizeof(e.data));
                 std::memcpy(e.data, data, size);
-                m_eventCount.store(index + 1, std::memory_order_release);
+                return;
             }
         }
     }

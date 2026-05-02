@@ -284,7 +284,8 @@ public:
             AESTRA_PROFILE_STAGE(kLFOControl);
             if (controlCountdown == 0) {
 #ifdef AESTRA_REVERB_HAS_AVX2
-                static const bool useAVX2 = Aestra::Core::CPUDetection::get().hasAVX2();
+                static const bool useAVX2 =
+                    Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
                 if (useAVX2) {
                     DSP::ReverbSIMD::normalizeLFOsAVX2(lfoSin.data(), lfoCos.data());
                     DSP::ReverbSIMD::normalizeLFOsAVX2(lfoSin2.data(), lfoCos2.data());
@@ -347,7 +348,8 @@ public:
             // Vectorized LFO updates (sin/cos quadrature oscillators)
             if (control.modulationEnabled) {
 #ifdef AESTRA_REVERB_HAS_AVX2
-                static const bool useAVX2 = Aestra::Core::CPUDetection::get().hasAVX2();
+                static const bool useAVX2 =
+                    Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
                 if (useAVX2) {
                     DSP::ReverbSIMD::updateLFOsAVX2(
                         lfoSin.data(), lfoCos.data(),
@@ -622,7 +624,7 @@ public:
         return true;
     }
 
-    bool hasEditor() const override { return true; }
+    bool hasEditor() const override { return false; }
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }

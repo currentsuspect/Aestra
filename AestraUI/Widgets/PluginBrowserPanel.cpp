@@ -194,10 +194,10 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
     renderer.drawText(name, {textX, rowRect.y + 5}, 12.0f, Colors::textPrimary);
     renderer.drawText(vendorMeta, {textX, rowRect.y + 22}, 9.0f, Colors::textSecondary.withAlpha(0.88f));
     
-    float badgeX = rowRect.x + rowRect.width - 38;
     // Badge width: VST3 = 30, CLAP (Exp.) = 48
     const bool isCLAP = (plugin.formatStr.find("CLAP") != std::string::npos);
     const float badgeWidth = isCLAP ? 48.0f : 30.0f;
+    float badgeX = rowRect.x + rowRect.width - badgeWidth - 8.0f;
     NUIRect badge = {badgeX, rowRect.y + 7, badgeWidth, 14};
     
     NUIColor badgeColor = (plugin.formatStr == "VST3") 

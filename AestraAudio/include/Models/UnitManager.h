@@ -82,8 +82,8 @@ struct UnitInfo {
      * and future migration, but does not change current behavior.
      */
     ArsenalRouteMode routeMode{ArsenalRouteMode::PreviewToMaster};
-    /** @brief Explicit in-memory route mode value. */
-    ArsenalRouteMode getRouteMode() const noexcept { return routeMode; }
+    /** @brief Effective route mode, preserving legacy route fields as authority until cleared. */
+    ArsenalRouteMode getRouteMode() const noexcept { return arsenalRouteModeFromRouteId(targetMixerRoute); }
     /** @brief True when this unit currently routes into the Timeline track path. */
     bool routesToTimelineTrack() const noexcept { return getRouteMode() == ArsenalRouteMode::RoutedToTimelineTrack; }
     /** @brief True when this unit currently routes to master preview path. */
@@ -153,8 +153,8 @@ struct UnitState {
      * Compatibility note: current rendering authority remains @ref routeId.
      */
     ArsenalRouteMode routeMode{ArsenalRouteMode::PreviewToMaster};
-    /** @brief Explicit in-memory route mode value. */
-    ArsenalRouteMode getRouteMode() const noexcept { return routeMode; }
+    /** @brief Effective route mode, preserving legacy route fields as authority until cleared. */
+    ArsenalRouteMode getRouteMode() const noexcept { return arsenalRouteModeFromRouteId(routeId); }
     /** @brief True when this unit currently routes into the Timeline track path. */
     bool routesToTimelineTrack() const noexcept { return getRouteMode() == ArsenalRouteMode::RoutedToTimelineTrack; }
     /** @brief True when this unit currently routes to master preview path. */

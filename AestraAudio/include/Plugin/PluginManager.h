@@ -197,6 +197,7 @@ private:
 
     mutable std::mutex m_mutex;
     bool m_initialized = false;
+    bool m_comInitialized = false;
 
     PluginScanner m_scanner;
     std::vector<std::weak_ptr<IPluginInstance>> m_activeInstances;
