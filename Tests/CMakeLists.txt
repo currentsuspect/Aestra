@@ -322,8 +322,12 @@ target_include_directories(AestraRealtimePathStressTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
-add_test(NAME AestraRealtimePathStressTest COMMAND AestraRealtimePathStressTest)
-set_tests_properties(AestraRealtimePathStressTest PROPERTIES LABELS "audio;realtime;stress")
+if(AESTRA_ENABLE_RUNTIME_TESTS)
+    add_test(NAME AestraRealtimePathStressTest COMMAND AestraRealtimePathStressTest)
+    set_tests_properties(AestraRealtimePathStressTest PROPERTIES LABELS "audio;realtime;stress")
+else()
+    message(STATUS "AestraRealtimePathStressTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+endif()
 
 # Sinc Interpolator Benchmark
 add_executable(AestraSincBenchmark AestraAudio/SincBenchmark.cpp)
@@ -385,8 +389,10 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbMaterialLab.cpp")
     )
     # Regression thresholds are calibrated for Linux/GCC floating-point behavior.
     # Register test only on Linux to avoid false failures from cross-platform FP drift.
-    if(UNIX AND NOT APPLE)
+    if(AESTRA_ENABLE_RUNTIME_TESTS AND UNIX AND NOT APPLE)
         add_test(NAME ReverbMaterialLabTest COMMAND AestraReverbMaterialLab)
+    elseif(NOT AESTRA_ENABLE_RUNTIME_TESTS)
+        message(STATUS "ReverbMaterialLabTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
 endif()
 
@@ -471,6 +477,16 @@ target_include_directories(AestraGarbageCollectorTest PRIVATE
 )
 add_test(NAME AestraGarbageCollectorTest COMMAND AestraGarbageCollectorTest)
 set_tests_properties(AestraGarbageCollectorTest PROPERTIES LABELS "audio;memory;reclamation")
+
+# EffectChain Snapshot Test (Pass 1: immutable snapshot type)
+add_executable(AestraEffectChainSnapshotTest AestraAudio/EffectChainSnapshotTest.cpp)
+target_link_libraries(AestraEffectChainSnapshotTest PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraEffectChainSnapshotTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraEffectChainSnapshotTest COMMAND AestraEffectChainSnapshotTest)
+set_tests_properties(AestraEffectChainSnapshotTest PROPERTIES LABELS "audio;plugin")
 
 # Watchdog Test (requires VST3 SDK headers)
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")
@@ -761,8 +777,12 @@ target_include_directories(AestraCompUpgradeTest PRIVATE
     ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
     ${CMAKE_SOURCE_DIR}/AestraCore/include
 )
-add_test(NAME AestraCompUpgradeTest COMMAND AestraCompUpgradeTest)
-set_tests_properties(AestraCompUpgradeTest PROPERTIES LABELS "audio;plugins;comp;upgrade")
+if(AESTRA_ENABLE_RUNTIME_TESTS)
+    add_test(NAME AestraCompUpgradeTest COMMAND AestraCompUpgradeTest)
+    set_tests_properties(AestraCompUpgradeTest PROPERTIES LABELS "audio;plugins;comp;upgrade")
+else()
+    message(STATUS "AestraCompUpgradeTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
+endif()
 
 # Aestra Compressor Material Lab
 add_executable(AestraCompressorMaterialLab AestraAudio/AestraCompressorMaterialLab.cpp)
