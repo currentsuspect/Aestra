@@ -233,13 +233,16 @@ struct TrackRenderState {
 
 **Goal:** Add immutable snapshot type without audio graph changes.
 
+**Status:** ✅ IMPLEMENTED (2026-05-02, develop @ 77aec3fe)
+
 **Changes:**
-- Add `EffectSlotSnapshot` and `EffectChainSnapshot` types.
-- Add `EffectChainSnapshot::build(const EffectChain&)` factory.
-- Tests verify snapshot holds independent plugin refs.
+- Added `EffectChainSnapshotSlot` and `EffectChainSnapshot` types to `EffectChain.h` (embedded, not separate file per Pass 1 simplicity).
+- Added `EffectChain::createSnapshot()` method.
+- Added tests in `Tests/AestraAudio/EffectChainSnapshotTest.cpp`.
 
 **Files:**
-- New: `AestraAudio/include/Plugin/EffectChainSnapshot.h`
+- Modify: `AestraAudio/include/Plugin/EffectChain.h`
+- Modify: `AestraAudio/src/Plugin/EffectChain.cpp`
 - New: `Tests/AestraAudio/EffectChainSnapshotTest.cpp`
 
 ### Pass 2 — EffectChain Publication
