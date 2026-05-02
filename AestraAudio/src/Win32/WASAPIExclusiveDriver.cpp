@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "WASAPIExclusiveDriver.h"
+
 #include "AudioTelemetry.h"
 
 // Windows-specific includes (only in .cpp file)
@@ -66,14 +67,16 @@ public:
     STDMETHODIMP_(ULONG) AddRef() override { return InterlockedIncrement(&m_refCount); }
     STDMETHODIMP_(ULONG) Release() override {
         ULONG count = InterlockedDecrement(&m_refCount);
-        if (count == 0) delete this;
+        if (count == 0)
+            delete this;
         return count;
     }
 
     STDMETHODIMP OnDeviceStateChanged(LPCWSTR pwstrDeviceId, DWORD dwNewState) override {
         (void)pwstrDeviceId;
         (void)dwNewState;
-        if (m_driver) m_driver->onDeviceStateChanged("", dwNewState);
+        if (m_driver)
+            m_driver->onDeviceStateChanged("", dwNewState);
         return S_OK;
     }
     STDMETHODIMP OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWSTR pwstrDefaultDeviceId) override {
@@ -92,12 +95,14 @@ public:
     }
     STDMETHODIMP OnDeviceAdded(LPCWSTR pwstrDeviceId) override {
         (void)pwstrDeviceId;
-        if (m_driver) m_driver->onDeviceStateChanged("", DEVICE_STATE_ACTIVE);
+        if (m_driver)
+            m_driver->onDeviceStateChanged("", DEVICE_STATE_ACTIVE);
         return S_OK;
     }
     STDMETHODIMP OnDeviceRemoved(LPCWSTR pwstrDeviceId) override {
         (void)pwstrDeviceId;
-        if (m_driver) m_driver->onDeviceStateChanged("", DEVICE_STATE_NOTPRESENT);
+        if (m_driver)
+            m_driver->onDeviceStateChanged("", DEVICE_STATE_NOTPRESENT);
         return S_OK;
     }
 
@@ -1203,8 +1208,8 @@ void WASAPIExclusiveDriver::registerDeviceNotifier() {
     }
 
     WASAPIExclusiveDeviceNotifier* notifier = new WASAPIExclusiveDeviceNotifier(this);
-    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)
-                     ->RegisterEndpointNotificationCallback(notifier);
+    HRESULT hr =
+        reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->RegisterEndpointNotificationCallback(notifier);
     if (SUCCEEDED(hr)) {
         m_deviceNotifier = notifier;
         Aestra::Log::info("[WASAPI Exclusive] Hot-plug detection registered");

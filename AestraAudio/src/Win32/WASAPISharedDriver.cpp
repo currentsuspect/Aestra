@@ -1,9 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "WASAPISharedDriver.h"
 
-#include "DitherUtils.h"
 #include "AestraLog.h"
 #include "AudioTelemetry.h"
+#include "DitherUtils.h"
 
 // Windows-specific includes (only in .cpp file)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -65,7 +65,8 @@ public:
     STDMETHODIMP_(ULONG) AddRef() override { return InterlockedIncrement(&m_refCount); }
     STDMETHODIMP_(ULONG) Release() override {
         ULONG count = InterlockedDecrement(&m_refCount);
-        if (count == 0) delete this;
+        if (count == 0)
+            delete this;
         return count;
     }
 
@@ -95,12 +96,14 @@ public:
     }
     STDMETHODIMP OnDeviceAdded(LPCWSTR pwstrDeviceId) override {
         (void)pwstrDeviceId;
-        if (m_driver) m_driver->onDeviceStateChanged("", DEVICE_STATE_ACTIVE);
+        if (m_driver)
+            m_driver->onDeviceStateChanged("", DEVICE_STATE_ACTIVE);
         return S_OK;
     }
     STDMETHODIMP OnDeviceRemoved(LPCWSTR pwstrDeviceId) override {
         (void)pwstrDeviceId;
-        if (m_driver) m_driver->onDeviceStateChanged("", DEVICE_STATE_NOTPRESENT);
+        if (m_driver)
+            m_driver->onDeviceStateChanged("", DEVICE_STATE_NOTPRESENT);
         return S_OK;
     }
 
@@ -915,8 +918,8 @@ void WASAPISharedDriver::registerDeviceNotifier() {
     }
 
     WASAPIDeviceNotifier* notifier = new WASAPIDeviceNotifier(this);
-    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)
-                     ->RegisterEndpointNotificationCallback(notifier);
+    HRESULT hr =
+        reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->RegisterEndpointNotificationCallback(notifier);
     if (SUCCEEDED(hr)) {
         m_deviceNotifier = notifier;
         Aestra::Log::info("[WASAPI Shared] Hot-plug detection registered");
