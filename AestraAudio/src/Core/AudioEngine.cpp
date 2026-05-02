@@ -1526,20 +1526,10 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
     // Solo detection and routed solo support.
     bool anySolo = false;
-    // Reset flat track-index map (no deallocation — just overwrite active entries).
-    const size_t prevActive = m_rtTrackIndexByIdActiveCount;
-    for (size_t i = 0; i < prevActive; ++i) {
-        // We don't track which IDs were written; reset all possible entries
-        // below graph.tracks.size() since that's the only range we write.
-    }
-    // Simpler: just reset the entries we're about to write.
-    // The flat vector is pre-sized to kMaxTracks in setBufferConfig().
-    for (size_t i = 0; i < graph.tracks.size(); ++i) {
-        const uint32_t tid = graph.tracks[i].trackId;
-        if (tid < kMaxTracks) {
-            m_rtTrackIndexById[tid] = kMaxTracks; // clear sentinel
-        }
-    }
+    // Reset flat track-index map to sentinel for ALL entries.
+    // This clears stale indices from previous graphs where trackIds
+    // existed in previous block but not current graph.tracks.
+    std::fill(m_rtTrackIndexById.begin(), m_rtTrackIndexById.end(), kMaxTracks);
     for (size_t i = 0; i < graph.tracks.size(); ++i) {
         const uint32_t tid = graph.tracks[i].trackId;
         if (tid < kMaxTracks) {
@@ -1563,6 +1553,9 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             return;
         }
         const size_t destIndex = m_rtTrackIndexById[destTrackId];
+        if (destIndex >= graph.tracks.size()) {
+            return;
+        }
         if (destIndex == srcIndex) {
             return;
         }
