@@ -1,8 +1,8 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
-#include <cstdlib>
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <memory>
@@ -172,16 +172,11 @@ struct ClapModule {
     void* library = nullptr;
     const ClapPluginEntry* entry = nullptr;
     const ClapPlugin* plugin = nullptr;
-    ClapHost host = {ClapVersion{1, 1, 0},
-                     nullptr,
-                     "AestraPluginHost",
-                     "Aestra Studios",
-                     "https://Aestra.audio",
-                     "1.0.0",
-                     hostGetExtension,
-                     hostRequestRestart,
-                     hostRequestProcess,
-                     hostRequestCallback};
+    ClapHost host = {ClapVersion{1, 1, 0},   nullptr,
+                     "AestraPluginHost",     "Aestra Studios",
+                     "https://Aestra.audio", "1.0.0",
+                     hostGetExtension,       hostRequestRestart,
+                     hostRequestProcess,     hostRequestCallback};
     bool active = false;
     uint32_t maxBlockSize = 0;
     std::vector<float> inputStorage[2];
@@ -342,8 +337,8 @@ struct ClapModule {
         for (uint32_t ch = 0; ch < 2; ++ch) {
             std::fill(outputStorage[ch].begin(), outputStorage[ch].begin() + frames, 0.0f);
             for (uint32_t frame = 0; frame < frames; ++frame) {
-                inputStorage[ch][frame] = (ch < channels) ? interleavedInput[static_cast<size_t>(frame) * channels + ch]
-                                                          : 0.0f;
+                inputStorage[ch][frame] =
+                    (ch < channels) ? interleavedInput[static_cast<size_t>(frame) * channels + ch] : 0.0f;
             }
         }
 
@@ -427,9 +422,12 @@ struct ClapModule {
 #endif
 
 int hexValue(char c) {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return 10 + c - 'a';
-    if (c >= 'A' && c <= 'F') return 10 + c - 'A';
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return 10 + c - 'a';
+    if (c >= 'A' && c <= 'F')
+        return 10 + c - 'A';
     return -1;
 }
 
