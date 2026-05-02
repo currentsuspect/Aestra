@@ -155,7 +155,9 @@ void mutatingChainDoesNotAlterOldSnapshot() {
 }
 
 void nonRtInsertRemoveStillWorks() {
-    auto previousHandler = setRealtimeMisuseHandler(nullptr);
+    int misuseCount = 0;
+    auto countHandler = [](const char* apiName) noexcept { ++misuseCount; };
+    auto previousHandler = setRealtimeMisuseHandler(countHandler);
 
     EffectChain chain;
     chain.prepare(48000.0, 512);
@@ -176,7 +178,9 @@ void nonRtInsertRemoveStillWorks() {
 }
 
 void realtimeMisuseGuardsStillWork() {
-    auto previousHandler = setRealtimeMisuseHandler(nullptr);
+    int misuseCount = 0;
+    auto countHandler = [](const char* apiName) noexcept { ++misuseCount; };
+    auto previousHandler = setRealtimeMisuseHandler(countHandler);
 
     EffectChain chain;
     chain.prepare(48000.0, 512);
