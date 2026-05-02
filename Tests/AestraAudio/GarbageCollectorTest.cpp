@@ -183,6 +183,10 @@ void realtimeReleaseMisuseIsReported() {
     g_realtimeMisuseCount.store(0, std::memory_order_relaxed);
     auto previousHandler = setRealtimeMisuseHandler(countRealtimeMisuse);
 
+    // Snapshot state before RT call
+    auto preStats = gc.stats();
+    size_t preZombies = gc.zombieCount();
+
     {
         ScopedRealtimeAudioThread realtimeScope;
         gc.release(std::make_shared<TrackedObject>(destroyed), "rt.release");
@@ -191,6 +195,15 @@ void realtimeReleaseMisuseIsReported() {
     setRealtimeMisuseHandler(previousHandler);
     assert(g_realtimeMisuseCount.load(std::memory_order_relaxed) == 1);
 
+    // Verify GC state unchanged - release() refused to mutate
+    auto postStats = gc.stats();
+    size_t postZombies = gc.zombieCount();
+    assert(postStats.totalReleased == preStats.totalReleased);
+    assert(postStats.currentlyTracked == preStats.currentlyTracked);
+    assert(postZombies == preZombies);
+
+    // Now do proper non-RT release and verify it works
+    gc.release(std::make_shared<TrackedObject>(destroyed), "non-rt");
     gc.collect();
     assert(destroyed.load(std::memory_order_relaxed) == 1);
 }
@@ -200,6 +213,10 @@ void realtimeCollectMisuseIsReported() {
     std::atomic<int> destroyed{0};
     auto externalRef = std::make_shared<TrackedObject>(destroyed);
     gc.release(externalRef, "rt.collect");
+
+    // Snapshot state before RT call
+    auto preStats = gc.stats();
+    size_t preZombies = gc.zombieCount();
 
     g_realtimeMisuseCount.store(0, std::memory_order_relaxed);
     auto previousHandler = setRealtimeMisuseHandler(countRealtimeMisuse);
@@ -213,6 +230,14 @@ void realtimeCollectMisuseIsReported() {
     assert(g_realtimeMisuseCount.load(std::memory_order_relaxed) == 1);
     assert(destroyed.load(std::memory_order_relaxed) == 0);
 
+    // Verify GC state unchanged - collect() refused to mutate
+    auto postStats = gc.stats();
+    size_t postZombies = gc.zombieCount();
+    assert(postStats.totalCollected == preStats.totalCollected);
+    assert(postStats.currentlyTracked == preStats.currentlyTracked);
+    assert(postZombies == preZombies);
+
+    // Now do proper non-RT collect and verify it works
     externalRef.reset();
     gc.collect();
     assert(destroyed.load(std::memory_order_relaxed) == 1);

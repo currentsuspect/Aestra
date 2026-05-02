@@ -103,6 +103,10 @@ int main() {
     engine.setSampleRate(kSampleRate);
     engine.setBufferConfig(kFrames, kChannels);
     engine.setPatternPlaybackMode(true, 4.0);
+    if (!engine.initialize()) {
+        std::cerr << "engine initialize failed\n";
+        return 1;
+    }
 
     TrackManager tracks;
     tracks.setInputChannelCount(1);
@@ -167,7 +171,7 @@ int main() {
     std::cout << "rtLockViolations=" << tel.getRtLockViolations() << "\n";
     std::cout << "rtLogViolations=" << tel.getRtLogViolations() << "\n";
 
-    if (tel.getRtLockViolations() != 0 || tel.getRtLogViolations() != 0) {
+    if (localOverruns > 0 || tel.getOverruns() > 0 || tel.getRtLockViolations() != 0 || tel.getRtLogViolations() != 0) {
         return 1;
     }
 
