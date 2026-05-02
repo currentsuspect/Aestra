@@ -30,6 +30,27 @@ struct TrackedObject {
     std::atomic<int>& destructorCounter;
 };
 
+struct TrackedMeterSnapshotBuffer : MeterSnapshotBuffer {
+    explicit TrackedMeterSnapshotBuffer(std::atomic<int>& counter) : destructorCounter(counter) {}
+    ~TrackedMeterSnapshotBuffer() { destructorCounter.fetch_add(1, std::memory_order_relaxed); }
+
+    std::atomic<int>& destructorCounter;
+};
+
+struct TrackedContinuousParamBuffer : ContinuousParamBuffer {
+    explicit TrackedContinuousParamBuffer(std::atomic<int>& counter) : destructorCounter(counter) {}
+    ~TrackedContinuousParamBuffer() { destructorCounter.fetch_add(1, std::memory_order_relaxed); }
+
+    std::atomic<int>& destructorCounter;
+};
+
+struct TrackedChannelSlotMap : ChannelSlotMap {
+    explicit TrackedChannelSlotMap(std::atomic<int>& counter) : destructorCounter(counter) {}
+    ~TrackedChannelSlotMap() { destructorCounter.fetch_add(1, std::memory_order_relaxed); }
+
+    std::atomic<int>& destructorCounter;
+};
+
 void writeUint32(std::ofstream& out, uint32_t value) {
     out.put(static_cast<char>(value & 0xFF));
     out.put(static_cast<char>((value >> 8) & 0xFF));
@@ -326,6 +347,63 @@ void maintenanceMethodsRejectRealtimeContext() {
     assert(destroyed.load(std::memory_order_relaxed) == 0);
 }
 
+void audioEngineSnapshotSettersRetireOldResourcesThroughGc() {
+    GarbageCollector::instance().drainUntilStable(8);
+
+    AudioEngine engine;
+
+    std::atomic<int> meterDestroyed{0};
+    auto meterRetired = std::make_shared<TrackedMeterSnapshotBuffer>(meterDestroyed);
+    auto meterReplacement = std::make_shared<MeterSnapshotBuffer>();
+    engine.setMeterSnapshots(meterRetired);
+    engine.setMeterSnapshots(meterReplacement);
+    GarbageCollector::instance().collect();
+    assert(meterDestroyed.load(std::memory_order_relaxed) == 0);
+    meterRetired.reset();
+    GarbageCollector::instance().collect();
+    assert(meterDestroyed.load(std::memory_order_relaxed) == 1);
+
+    std::atomic<int> paramsDestroyed{0};
+    auto paramsRetired = std::make_shared<TrackedContinuousParamBuffer>(paramsDestroyed);
+    auto paramsReplacement = std::make_shared<ContinuousParamBuffer>();
+    engine.setContinuousParams(paramsRetired);
+    engine.setContinuousParams(paramsReplacement);
+    GarbageCollector::instance().collect();
+    assert(paramsDestroyed.load(std::memory_order_relaxed) == 0);
+    paramsRetired.reset();
+    GarbageCollector::instance().collect();
+    assert(paramsDestroyed.load(std::memory_order_relaxed) == 1);
+
+    std::atomic<int> slotMapDestroyed{0};
+    auto slotMapRetired = std::make_shared<TrackedChannelSlotMap>(slotMapDestroyed);
+    auto slotMapReplacement = std::make_shared<ChannelSlotMap>();
+    engine.setChannelSlotMap(slotMapRetired);
+    engine.setChannelSlotMap(slotMapReplacement);
+    GarbageCollector::instance().collect();
+    assert(slotMapDestroyed.load(std::memory_order_relaxed) == 0);
+    slotMapRetired.reset();
+    GarbageCollector::instance().collect();
+    assert(slotMapDestroyed.load(std::memory_order_relaxed) == 1);
+}
+
+void audioEngineSnapshotSettersRejectRealtimeContext() {
+    GarbageCollector::instance().drainUntilStable(8);
+
+    AudioEngine engine;
+    auto previousHandler = setRealtimeMisuseHandler(countRealtimeMisuse);
+    g_realtimeMisuseCount.store(0, std::memory_order_relaxed);
+
+    {
+        ScopedRealtimeAudioThread realtimeScope;
+        engine.setMeterSnapshots(std::make_shared<MeterSnapshotBuffer>());
+        engine.setContinuousParams(std::make_shared<ContinuousParamBuffer>());
+        engine.setChannelSlotMap(std::make_shared<ChannelSlotMap>());
+    }
+
+    setRealtimeMisuseHandler(previousHandler);
+    assert(g_realtimeMisuseCount.load(std::memory_order_relaxed) == 3);
+}
+
 } // namespace
 
 int main() {
@@ -341,6 +419,8 @@ int main() {
     productionMaintenanceCadenceCollectsDeferredResources();
     shutdownDrainCollectsDeferredResources();
     maintenanceMethodsRejectRealtimeContext();
+    audioEngineSnapshotSettersRetireOldResourcesThroughGc();
+    audioEngineSnapshotSettersRejectRealtimeContext();
     multipleCollectPassesAreStable();
     nullReleaseIsHarmless();
     samplerSampleReplacementAndShutdownDoNotCrash();

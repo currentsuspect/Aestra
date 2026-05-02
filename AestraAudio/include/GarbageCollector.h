@@ -74,7 +74,7 @@ public:
         if (!ptr)
             return;
 
-        RetiredResource resource{std::static_pointer_cast<void>(std::move(ptr)), label};
+        RetiredResource resource{std::static_pointer_cast<const void>(std::move(ptr)), label};
         std::lock_guard<std::mutex> lock(m_releaseMutex);
         if (!m_incoming.push(resource)) {
             m_incomingQueueFullCount.fetch_add(1, std::memory_order_relaxed);
@@ -160,7 +160,7 @@ public:
 
 private:
     struct RetiredResource {
-        std::shared_ptr<void> object;
+        std::shared_ptr<const void> object;
         const char* label = nullptr;
     };
 

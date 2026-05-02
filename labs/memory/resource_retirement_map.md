@@ -18,6 +18,9 @@ destroys them after the audio side has dropped its references.
 
 | File | Function | Likely context | RT-reachable? | Action |
 |---|---|---:|---:|---|
+| `AestraAudio/src/Core/AudioEngine.cpp` | `AudioEngine::setMeterSnapshots()` | UI/non-RT snapshot publication | No | Retires old meter buffers through GC |
+| `AestraAudio/src/Core/AudioEngine.cpp` | `AudioEngine::setContinuousParams()` | UI/non-RT snapshot publication | No | Retires old continuous-param buffers through GC |
+| `AestraAudio/src/Core/AudioEngine.cpp` | `AudioEngine::setChannelSlotMap()` | UI/non-RT routing publication | No | Retires old channel-slot maps through GC |
 | `Source/App/AestraApp.cpp` | `AestraApp::run()` | GUI main loop idle/update cadence | No | Periodic `AudioEngine::performNonRealtimeMaintenance()` call |
 | `Source/App/HeadlessMain.cpp` | `renderEngine()` | Headless validation/render loop | No | Periodic `AudioEngine::performNonRealtimeMaintenance()` call |
 | `AestraAudio/src/IO/AudioExporter.cpp` | `AudioExporter::render()` | Offline export loop | No | Periodic `AudioEngine::performNonRealtimeMaintenance()` call |
@@ -37,6 +40,9 @@ tests during this pass. Production collection now flows through `AudioEngine::pe
 | Resource | Status | Notes |
 |---|---|---|
 | Sampler sample buffers | Already GC-safe | Current `SampleData` swaps retire old buffers through GC from non-RT code. |
+| Engine meter snapshots | Already GC-safe | `AudioEngine::setMeterSnapshots()` retires the previous shared buffer through GC. |
+| Engine continuous params | Already GC-safe | `AudioEngine::setContinuousParams()` retires the previous shared buffer through GC. |
+| Engine channel-slot maps | Already GC-safe | `AudioEngine::setChannelSlotMap()` retires the previous shared routing map through GC. |
 | Plugin graph snapshots | Needs deferred destruction later | Snapshot publication can leave the audio thread holding old graph state. |
 | Effect chain / plugin instances | Dangerous/unknown | Plugin destructors may be expensive or host-dependent; defer only after ownership model audit. |
 | Waveform cache data | Needs deferred destruction later | Cache entries can be large and audio/UI-visible, but current ownership should be audited first. |

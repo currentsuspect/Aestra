@@ -146,23 +146,14 @@ public:
         compileGraph();
     }
 
-    /** @brief Publish the shared meter snapshot buffer used by the UI. */
-    void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots) {
-        m_meterSnapshotsOwned = std::move(snapshots);
-        m_meterSnapshotsRaw.store(m_meterSnapshotsOwned.get(), std::memory_order_release);
-    }
+    /** @brief Publish the shared meter snapshot buffer used by the UI. Non-RT only. */
+    void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots);
 
-    /** @brief Publish the continuous parameter buffer used for automation. */
-    void setContinuousParams(std::shared_ptr<ContinuousParamBuffer> params) {
-        m_continuousParamsOwned = std::move(params);
-        m_continuousParamsRaw.store(m_continuousParamsOwned.get(), std::memory_order_release);
-    }
+    /** @brief Publish the continuous parameter buffer used for automation. Non-RT only. */
+    void setContinuousParams(std::shared_ptr<ContinuousParamBuffer> params);
 
-    /** @brief Publish the channel-slot map used by the audio thread. */
-    void setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMap) {
-        m_channelSlotMapOwned = std::move(slotMap);
-        m_channelSlotMapRaw.store(m_channelSlotMapOwned.get(), std::memory_order_release);
-    }
+    /** @brief Publish the channel-slot map used by the audio thread. Non-RT only. */
+    void setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMap);
 
     /** @brief Get the current transport position in samples. */
     uint64_t getGlobalSamplePos() const { return m_globalSamplePos.load(std::memory_order_relaxed); }
