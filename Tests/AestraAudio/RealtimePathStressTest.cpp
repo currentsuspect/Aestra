@@ -10,8 +10,10 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <system_error>
 #include <thread>
 #include <vector>
 
@@ -69,10 +71,31 @@ int main() {
     constexpr uint32_t kSampleRate = 48000;
     constexpr uint32_t kFrames = 64;
     constexpr uint32_t kChannels = 2;
-    const std::string wavPath = "/tmp/aestra_realtime_path_stress.wav";
 
-    if (!writeTestWav(wavPath, kSampleRate, kSampleRate / 2)) {
+    // Use a guaranteed-writable temp directory instead of hardcoded /tmp/
+    std::error_code ec;
+    auto tmpDir = std::filesystem::temp_directory_path(ec);
+    if (ec) {
+        std::cerr << "failed to resolve temp_directory_path: " << ec.message() << "\n";
+        std::cerr << "cwd: " << std::filesystem::current_path(ec).string() << "\n";
+        return 1;
+    }
+    auto wavPath = tmpDir / "aestra_realtime_path_stress.wav";
+
+    // Ensure parent directory exists (handles CI environments with nested temp dirs)
+    if (!tmpDir.empty() && !std::filesystem::exists(tmpDir, ec)) {
+        std::filesystem::create_directories(tmpDir, ec);
+        if (ec) {
+            std::cerr << "failed to create temp dir: " << tmpDir.string() << ": " << ec.message() << "\n";
+            return 1;
+        }
+    }
+
+    if (!writeTestWav(wavPath.string(), kSampleRate, kSampleRate / 2)) {
         std::cerr << "failed to write test wav\n";
+        std::cerr << "  absolute path: " << std::filesystem::absolute(wavPath).string() << "\n";
+        std::cerr << "  cwd: " << std::filesystem::current_path(ec).string() << "\n";
+        std::cerr << "  WAV write is required for sampler/preview load — aborting test\n";
         return 1;
     }
 
@@ -91,14 +114,14 @@ int main() {
 
     PreviewEngine preview;
     preview.setOutputSampleRate(kSampleRate);
-    const auto previewResult = preview.play(wavPath, -9.0f, 0.25);
+    const auto previewResult = preview.play(wavPath.string(), -9.0f, 0.25);
     if (previewResult == PreviewResult::Failed) {
         std::cerr << "preview failed to start\n";
         return 1;
     }
 
     Plugins::SamplerPlugin sampler;
-    if (!sampler.initialize(kSampleRate, kFrames) || !sampler.loadSample(wavPath)) {
+    if (!sampler.initialize(kSampleRate, kFrames) || !sampler.loadSample(wavPath.string())) {
         std::cerr << "sampler failed to load test wav\n";
         return 1;
     }
