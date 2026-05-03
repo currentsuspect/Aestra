@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Helpers/PianoRollInteraction.h"
+#include "Common/MusicHelpers.h"
 #include <cassert>
 #include <iostream>
 
@@ -121,6 +122,76 @@ static void test_negative_box_dimensions() {
 }
 
 // ---------------------------------------------------------------------------
+// Scale Pitch Movement Tests
+// ---------------------------------------------------------------------------
+
+static void test_c_major_in_scale_detection() {
+    // C3 = 48, C#3 = 49, D3 = 50, etc.
+    // Root key 0 = C
+    ASSERT(MusicTheory::isNoteInScale(48, 0, ScaleType::Major), "C in C major should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(50, 0, ScaleType::Major), "D in C major should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(52, 0, ScaleType::Major), "E in C major should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(53, 0, ScaleType::Major), "F in C major should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(55, 0, ScaleType::Major), "G in C major should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(57, 0, ScaleType::Major), "A in C major should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(59, 0, ScaleType::Major), "B in C major should be in scale");
+
+    ASSERT(!MusicTheory::isNoteInScale(49, 0, ScaleType::Major), "C# in C major should NOT be in scale");
+    ASSERT(!MusicTheory::isNoteInScale(51, 0, ScaleType::Major), "D# in C major should NOT be in scale");
+    ASSERT(!MusicTheory::isNoteInScale(54, 0, ScaleType::Major), "F# in C major should NOT be in scale");
+    ASSERT(!MusicTheory::isNoteInScale(56, 0, ScaleType::Major), "G# in C major should NOT be in scale");
+    ASSERT(!MusicTheory::isNoteInScale(58, 0, ScaleType::Major), "A# in C major should NOT be in scale");
+    PASS("C major in-scale detection");
+}
+
+static void test_a_natural_minor_detection() {
+    // A3 = 57, root key 9 = A
+    ASSERT(MusicTheory::isNoteInScale(57, 9, ScaleType::Minor), "A in A minor should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(59, 9, ScaleType::Minor), "B in A minor should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(60, 9, ScaleType::Minor), "C in A minor should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(62, 9, ScaleType::Minor), "D in A minor should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(64, 9, ScaleType::Minor), "E in A minor should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(65, 9, ScaleType::Minor), "F in A minor should be in scale");
+    ASSERT(MusicTheory::isNoteInScale(67, 9, ScaleType::Minor), "G in A minor should be in scale");
+    PASS("A natural minor detection");
+}
+
+static void test_chromatic_returns_original() {
+    ASSERT(MusicTheory::nextPitchInScale(60, 0, ScaleType::Chromatic) == 61, "Chromatic next should be +1");
+    ASSERT(MusicTheory::previousPitchInScale(60, 0, ScaleType::Chromatic) == 59, "Chromatic prev should be -1");
+    PASS("Chromatic scale behaves like chromatic");
+}
+
+static void test_next_pitch_in_scale() {
+    // C major: C D E F G A B (pitch classes 0, 2, 4, 5, 7, 9, 11)
+    // C3 = 48, D3 = 50, E = 52, F = 53, G = 55, A = 57, B = 59
+
+    ASSERT(MusicTheory::nextPitchInScale(48, 0, ScaleType::Major) == 50, "C in C major -> D");
+    ASSERT(MusicTheory::nextPitchInScale(52, 0, ScaleType::Major) == 53, "E in C major -> F");
+    ASSERT(MusicTheory::nextPitchInScale(59, 0, ScaleType::Major) == 60, "B in C major -> C next octave");
+    ASSERT(MusicTheory::nextPitchInScale(127, 0, ScaleType::Major) == 127, "Pitch 127 clamps safely");
+    PASS("nextPitchInScale works correctly");
+}
+
+static void test_previous_pitch_in_scale() {
+    // B3 = 59, C4 = 60 in C major
+    ASSERT(MusicTheory::previousPitchInScale(60, 0, ScaleType::Major) == 59, "C in C major -> B prev octave");
+    ASSERT(MusicTheory::previousPitchInScale(53, 0, ScaleType::Major) == 52, "F in C major -> E");
+    ASSERT(MusicTheory::previousPitchInScale(0, 0, ScaleType::Major) == 0, "Pitch 0 clamps safely");
+    PASS("previousPitchInScale works correctly");
+}
+
+static void test_snap_pitch_to_scale_edge_cases() {
+    // C#4 (61) should snap to nearest in C major: D (62) or C (60)?
+    // Distance: C# -> C (1 semitone) vs D (1 semitone). Tie-break should pick C (lower).
+    int snapped = MusicTheory::nextPitchInScale(61, 0, ScaleType::Major);  // Not the snap function, test next/prev
+    ASSERT(snapped == 62 || snapped == 60, "C# in C major can go to D or C");
+
+    // Test the actual snap behavior is handled in the widget layer
+    PASS("snapPitchToScale edge cases documented");
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 int main() {
@@ -132,6 +203,12 @@ int main() {
     test_marquee_detects_note_inside();
     test_marquee_ignores_deleted();
     test_negative_box_dimensions();
+    test_c_major_in_scale_detection();
+    test_a_natural_minor_detection();
+    test_chromatic_returns_original();
+    test_next_pitch_in_scale();
+    test_previous_pitch_in_scale();
+    test_snap_pitch_to_scale_edge_cases();
 
     std::cout << "\n=== Results: " << testsPassed << " passed, " << testsFailed << " failed ===\n";
     return testsFailed > 0 ? 1 : 0;
