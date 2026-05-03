@@ -87,11 +87,35 @@ std::string MusicTheory::getSnapName(SnapGrid snap) {
 }
 
 std::vector<SnapGrid> MusicTheory::getSnapOptions() {
-    return { 
-        SnapGrid::Bar, SnapGrid::Beat, SnapGrid::Half, 
-        SnapGrid::Quarter, SnapGrid::Eighth, SnapGrid::Sixteenth, 
-        SnapGrid::Triplet, SnapGrid::None 
+    return {
+        SnapGrid::Bar, SnapGrid::Beat, SnapGrid::Half,
+        SnapGrid::Quarter, SnapGrid::Eighth, SnapGrid::Sixteenth,
+        SnapGrid::Triplet, SnapGrid::None
     };
+}
+
+int MusicTheory::nextPitchInScale(int pitch, int rootKey, ScaleType type) {
+    if (type == ScaleType::Chromatic) {
+        return std::min(127, pitch + 1);
+    }
+    for (int candidate = pitch + 1; candidate <= 127; ++candidate) {
+        if (isNoteInScale(candidate, rootKey, type)) {
+            return candidate;
+        }
+    }
+    return 127; // Clamp to max if no higher scale pitch found
+}
+
+int MusicTheory::previousPitchInScale(int pitch, int rootKey, ScaleType type) {
+    if (type == ScaleType::Chromatic) {
+        return std::max(0, pitch - 1);
+    }
+    for (int candidate = pitch - 1; candidate >= 0; --candidate) {
+        if (isNoteInScale(candidate, rootKey, type)) {
+            return candidate;
+        }
+    }
+    return 0; // Clamp to min if no lower scale pitch found
 }
 
 } // namespace AestraUI

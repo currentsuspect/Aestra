@@ -836,6 +836,16 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/TextRendererSTBSpaceTest.cpp")
     message(STATUS "TextRendererSTBSpaceTest added - Issue #121 regression test")
 endif()
 
+# PianoRollInteraction Test - tests for pure helper functions
+add_executable(PianoRollInteractionTest AestraUI/PianoRollInteractionTest.cpp)
+target_link_libraries(PianoRollInteractionTest PRIVATE AestraUI_Core)
+target_include_directories(PianoRollInteractionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraUI
+    ${CMAKE_SOURCE_DIR}/AestraUI/Common
+)
+add_test(NAME PianoRollInteractionTest COMMAND PianoRollInteractionTest)
+set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction")
+
 # =============================================================================
 # Commands Tests (Phase 2 - Undo/Redo System)
 # =============================================================================

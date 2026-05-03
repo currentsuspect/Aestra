@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIPianoRollWidgets.h"
 #include "../Common/MusicHelpers.h"
+#include "../Helpers/PianoRollInteraction.h"
 #include "NUIDropdown.h"
 #include "NUIButton.h"
 #include "NUIContextMenu.h"
@@ -1067,19 +1068,7 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
 }
 
 int PianoRollNoteLayer::findNoteAt(float localX, float localY) {
-    for (int i = static_cast<int>(notes_.size()) - 1; i >= 0; --i) {
-        const auto& n = notes_[i];
-        if (n.isDeleted) continue;
-        float nx = static_cast<float>(n.startBeat * pixelsPerBeat_);
-        float ny = (127 - n.pitch) * keyHeight_;
-        float nw = static_cast<float>(n.durationBeats * pixelsPerBeat_);
-        float nh = keyHeight_;
-
-        if (localX >= nx && localX < nx + nw && localY >= ny && localY < ny + nh) {
-            return i;
-        }
-    }
-    return -1;
+    return findNoteAtLocal(notes_, localX, localY, pixelsPerBeat_, keyHeight_);
 }
 
 bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
@@ -1568,7 +1557,11 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                     auto oldNotes = notes_;
                     for (auto& n : notes_) {
                         if (n.selected && !n.isDeleted) {
-                            n.pitch = std::min(127, n.pitch + 1);
+                            if (snapToScale_ && scaleType_ != ScaleType::Chromatic) {
+                                n.pitch = MusicTheory::nextPitchInScale(n.pitch, rootKey_, scaleType_);
+                            } else {
+                                n.pitch = std::min(127, n.pitch + 1);
+                            }
                         }
                     }
                     pushUndo("Transpose Up", oldNotes, notes_);
@@ -1580,7 +1573,11 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                     auto oldNotes = notes_;
                     for (auto& n : notes_) {
                         if (n.selected && !n.isDeleted) {
-                            n.pitch = std::max(0, n.pitch - 1);
+                            if (snapToScale_ && scaleType_ != ScaleType::Chromatic) {
+                                n.pitch = MusicTheory::previousPitchInScale(n.pitch, rootKey_, scaleType_);
+                            } else {
+                                n.pitch = std::max(0, n.pitch - 1);
+                            }
                         }
                     }
                     pushUndo("Transpose Down", oldNotes, notes_);

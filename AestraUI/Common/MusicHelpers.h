@@ -71,6 +71,10 @@ public:
     // Pitch Name Helpers
     static std::string getPitchName(int midiNote);    // e.g. "C4", "F#3"
     static std::string getPitchNameShort(int midiNote); // e.g. "C4", "F#3" (same, reserved for future shorthand)
+
+    // Scale Pitch Movement Helpers
+    static int nextPitchInScale(int pitch, int rootKey, ScaleType type);
+    static int previousPitchInScale(int pitch, int rootKey, ScaleType type);
 };
 
 } // namespace AestraUI
