@@ -48,6 +48,8 @@ set(AESTRAUI_CORE_SOURCES
     Core/NUISliderConfig.cpp
     Common/MusicHelpers.h
     Common/MusicHelpers.cpp
+    Helpers/PianoRollInteraction.h
+    Helpers/PianoRollInteraction.cpp
 
     # Base generic widgets
     Base/NUIButton.h
