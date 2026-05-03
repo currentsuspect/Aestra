@@ -1017,7 +1017,7 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
                                  ? NUIColor::white().withAlpha(0.26f)
                                  : themeManager.getColor("border").withAlpha(0.26f);
 
-        float velFactor = 0.5f + (n.velocity / 127.0f) * 0.5f;
+        float velFactor = 0.3f + n.velocity * 0.7f;
         coreColor = coreColor.withAlpha(coreColor.a * velFactor);
 
         renderer.drawShadow(NUIRect(r.x, r.y + 1.0f, r.width, r.height), 0.0f, 3.0f, 8.0f, NUIColor(0, 0, 0, 0.10f));
@@ -1146,9 +1146,9 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                  newNote.durationBeats = lastNoteDuration_; 
                  newNote.velocity = lastNoteVelocity_;
                  newNote.unitId = defaultUnitId_;
-                 newNote.selected = true; 
-                 newNote.animationScale = 1.0f; // Instant appearance 
-                 
+                 newNote.selected = true;
+                 newNote.animationScale = 1.0f; // Instant appearance
+
                  if (!(event.modifiers & NUIModifiers::Shift)) {
                     for(auto& n : notes_) n.selected = false;
                  }
@@ -1408,7 +1408,7 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
             return true;
         }
 
-        if (event.keyCode == NUIKeyCode::Delete) {
+        if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {
             auto oldNotes = notes_; // Snapshot
             bool anyDeleted = false;
             for (auto& n : notes_) {
@@ -1419,6 +1419,7 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
             }
             if (anyDeleted) {
                 pushUndo("Delete", oldNotes, notes_);
+                commitNotes();
                 repaint();
             }
             return true;
@@ -1490,6 +1491,104 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                 commitNotes();
                 repaint();
                 return true;
+            }
+        }
+    // Select All (Ctrl+A)
+        if (ctrl && event.keyCode == NUIKeyCode::A) {
+            for (auto& n : notes_) {
+                if (!n.isDeleted) n.selected = true;
+            }
+            repaint();
+            return true;
+        }
+
+        // Clear selection on Escape
+        if (event.keyCode == NUIKeyCode::Escape) {
+            for (auto& n : notes_) n.selected = false;
+            state_ = State::None;
+            repaint();
+            return true;
+        }
+
+        // Arrow nudge — only when notes are selected
+        {
+            bool anySelected = false;
+            for (const auto& n : notes_) { if (n.selected && !n.isDeleted) { anySelected = true; break; } }
+            if (anySelected) {
+                double snapStep = MusicTheory::getSnapDuration(snap_);
+                if (snapStep <= 0.0) snapStep = 1.0;
+
+                // Shift modifies behavior: plain = move, Shift = resize
+                bool shift = (event.modifiers & NUIModifiers::Shift);
+
+                if (event.keyCode == NUIKeyCode::Left) {
+                    auto oldNotes = notes_;
+                    if (shift) {
+                        // Shrink: reduce duration of selected notes
+                        for (auto& n : notes_) {
+                            if (n.selected && !n.isDeleted) {
+                                n.durationBeats = std::max(0.125, n.durationBeats - snapStep);
+                            }
+                        }
+                    } else {
+                        // Nudge left
+                        for (auto& n : notes_) {
+                            if (n.selected && !n.isDeleted) {
+                                n.startBeat = std::max(0.0, n.startBeat - snapStep);
+                            }
+                        }
+                    }
+                    pushUndo(shift ? "Resize Left" : "Nudge Left", oldNotes, notes_);
+                    commitNotes();
+                    repaint();
+                    return true;
+                }
+                else if (event.keyCode == NUIKeyCode::Right) {
+                    auto oldNotes = notes_;
+                    if (shift) {
+                        // Extend: increase duration of selected notes
+                        for (auto& n : notes_) {
+                            if (n.selected && !n.isDeleted) {
+                                n.durationBeats += snapStep;
+                            }
+                        }
+                    } else {
+                        // Nudge right
+                        for (auto& n : notes_) {
+                            if (n.selected && !n.isDeleted) {
+                                n.startBeat += snapStep;
+                            }
+                        }
+                    }
+                    pushUndo(shift ? "Resize Right" : "Nudge Right", oldNotes, notes_);
+                    commitNotes();
+                    repaint();
+                    return true;
+                }
+                else if (event.keyCode == NUIKeyCode::Up) {
+                    auto oldNotes = notes_;
+                    for (auto& n : notes_) {
+                        if (n.selected && !n.isDeleted) {
+                            n.pitch = std::min(127, n.pitch + 1);
+                        }
+                    }
+                    pushUndo("Transpose Up", oldNotes, notes_);
+                    commitNotes();
+                    repaint();
+                    return true;
+                }
+                else if (event.keyCode == NUIKeyCode::Down) {
+                    auto oldNotes = notes_;
+                    for (auto& n : notes_) {
+                        if (n.selected && !n.isDeleted) {
+                            n.pitch = std::max(0, n.pitch - 1);
+                        }
+                    }
+                    pushUndo("Transpose Down", oldNotes, notes_);
+                    commitNotes();
+                    repaint();
+                    return true;
+                }
             }
         }
     }

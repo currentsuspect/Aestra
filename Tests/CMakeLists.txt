@@ -870,6 +870,16 @@ target_include_directories(MacroCommandTest PRIVATE
 add_test(NAME MacroCommandTest COMMAND MacroCommandTest)
 set_tests_properties(MacroCommandTest PROPERTIES LABELS "commands;phase2")
 
+# Note Commands Test (AddNote, RemoveNote, MoveNote, ResizeNote)
+add_executable(NoteCommandsTest Commands/NoteCommandsTest.cpp)
+target_link_libraries(NoteCommandsTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(NoteCommandsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME NoteCommandsTest COMMAND NoteCommandsTest)
+set_tests_properties(NoteCommandsTest PROPERTIES LABELS "commands;phase2")
+
 # Mixer Commands Test (Volume, Pan, Mute, Solo)
 add_executable(MixerCommandsTest Commands/MixerCommandsTest.cpp)
 target_link_libraries(MixerCommandsTest PRIVATE AestraAudioCore AestraCore)

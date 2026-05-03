@@ -361,7 +361,7 @@ private:
     
     // Note Memory (Buffer)
     double lastNoteDuration_ = 1.0; // Default 1 beat
-    int lastNoteVelocity_ = 100;    // Default velocity (User req: not 0)
+    float lastNoteVelocity_ = 0.79f; // Default velocity (0-1 float, ~MIDI 100)
 
     // Interaction State
     enum class State {

@@ -20,6 +20,7 @@ void RemoveNoteCommand::execute() {
                 [this](const MidiNote& n) {
                     return n.pitch == m_note.pitch &&
                            n.startBeat == m_note.startBeat &&
+                           n.durationBeats == m_note.durationBeats &&
                            n.unitId == m_note.unitId;
                 }), notes.end());
         }
