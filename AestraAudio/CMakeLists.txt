@@ -218,6 +218,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/RemoveNoteCommand.cpp
     src/Commands/MoveNoteCommand.cpp
     src/Commands/ResizeNoteCommand.cpp
+    src/Commands/NoteDiff.cpp
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp
