@@ -1,0 +1,156 @@
+{
+  "sampleRate": 48000,
+  "frames": 8192,
+  "modes": [
+    {
+      "name": "room",
+      "rms": 0.00150566,
+      "peak": 0.0894511,
+      "hfRatio": 0.627315,
+      "earlyCentroidHz": 966.565,
+      "lateCentroidHz": 684.879,
+      "earlyHighEnergy": 0.00305366,
+      "lateHighEnergy": 0.00231113,
+      "hasNaN": false,
+      "hasInf": false,
+      "decay": {
+        "t20Ms": 778.667,
+        "t40Ms": 1344,
+        "t60Ms": 1344,
+        "monotonic": true,
+        "maxReboundDb": 0
+      },
+      "spectral": {
+        "lowRatio": 0.247237,
+        "midRatio": 0.749709,
+        "highRatio": 0.00305366,
+        "crestFactor": 26.5875,
+        "metallicPeakHz": 867.188,
+        "metallicPeakDb": 28.4936,
+        "metallicPeakLocalDb": 6.32913,
+        "metallicPeakBand": "low-mid",
+        "metallicPeakSeverity": "none",
+        "metallicPeakPersistent": false
+      },
+      "stereo": {
+        "corrEarly": 1,
+        "corrLate": -0.208008,
+        "monoPeak": 0.0654196,
+        "widthProxy": 1.0705
+      },
+      "transient": {
+        "bloomTimeMs": 11.75,
+        "earlyOnsetMs": 14.2917,
+        "earlyPeakMs": 14.3125,
+        "earlyPeakCount": 821,
+        "earlyActiveBins1ms": 120,
+        "earlyActiveBinRatio": 0.8,
+        "earlyCrestFactor": 17.5465,
+        "earlyEnergyMs25": 52.9167,
+        "earlyEnergyMs50": 65.3958,
+        "earlyEnergyMs75": 89.4375,
+        "earlyDensityScore": 37.4319
+      }
+    },
+    {
+      "name": "hall",
+      "rms": 0.00104457,
+      "peak": 0.042253,
+      "hfRatio": 0.633528,
+      "earlyCentroidHz": 2143.41,
+      "lateCentroidHz": 1216.83,
+      "earlyHighEnergy": 0.1057,
+      "lateHighEnergy": 0.0114629,
+      "hasNaN": false,
+      "hasInf": false,
+      "decay": {
+        "t20Ms": 1194.67,
+        "t40Ms": 1194.67,
+        "t60Ms": 1194.67,
+        "monotonic": true,
+        "maxReboundDb": 0
+      },
+      "spectral": {
+        "lowRatio": 0.162685,
+        "midRatio": 0.731615,
+        "highRatio": 0.1057,
+        "crestFactor": 10.2051,
+        "metallicPeakHz": 1242.19,
+        "metallicPeakDb": 20.1763,
+        "metallicPeakLocalDb": 9.06901,
+        "metallicPeakBand": "mid",
+        "metallicPeakSeverity": "none",
+        "metallicPeakPersistent": false
+      },
+      "stereo": {
+        "corrEarly": 1,
+        "corrLate": 0.2061,
+        "monoPeak": 0.0349686,
+        "widthProxy": 0.728368
+      },
+      "transient": {
+        "bloomTimeMs": 27.25,
+        "earlyOnsetMs": 17.8125,
+        "earlyPeakMs": 17.8333,
+        "earlyPeakCount": 335,
+        "earlyActiveBins1ms": 61,
+        "earlyActiveBinRatio": 0.406667,
+        "earlyCrestFactor": 19.1265,
+        "earlyEnergyMs25": 114.958,
+        "earlyEnergyMs50": 131,
+        "earlyEnergyMs75": 142.083,
+        "earlyDensityScore": 7.12276
+      }
+    },
+    {
+      "name": "plate",
+      "rms": 0.00134698,
+      "peak": 0.0449089,
+      "hfRatio": 0.751714,
+      "earlyCentroidHz": 878.577,
+      "lateCentroidHz": 550.07,
+      "earlyHighEnergy": 0.00738852,
+      "lateHighEnergy": 0.0043968,
+      "hasNaN": false,
+      "hasInf": false,
+      "decay": {
+        "t20Ms": 736,
+        "t40Ms": 1338.67,
+        "t60Ms": 1338.67,
+        "monotonic": true,
+        "maxReboundDb": 0
+      },
+      "spectral": {
+        "lowRatio": 0.353852,
+        "midRatio": 0.638759,
+        "highRatio": 0.00738852,
+        "crestFactor": 25.3689,
+        "metallicPeakHz": 398.438,
+        "metallicPeakDb": 28.086,
+        "metallicPeakLocalDb": 6.05796,
+        "metallicPeakBand": "low-mid",
+        "metallicPeakSeverity": "none",
+        "metallicPeakPersistent": false
+      },
+      "stereo": {
+        "corrEarly": 1,
+        "corrLate": -0.116265,
+        "monoPeak": 0.0303238,
+        "widthProxy": 1.04046
+      },
+      "transient": {
+        "bloomTimeMs": 27.1667,
+        "earlyOnsetMs": 13.125,
+        "earlyPeakMs": 16.8542,
+        "earlyPeakCount": 1528,
+        "earlyActiveBins1ms": 137,
+        "earlyActiveBinRatio": 0.913333,
+        "earlyCrestFactor": 9.11664,
+        "earlyEnergyMs25": 61.6042,
+        "earlyEnergyMs50": 74.4167,
+        "earlyEnergyMs75": 93.0833,
+        "earlyDensityScore": 153.08
+      }
+    }
+  ]
+}

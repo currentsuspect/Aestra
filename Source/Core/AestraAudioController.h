@@ -12,6 +12,10 @@
 
 // Forward declarations
 class AestraContent;
+namespace Aestra::Audio {
+class PreviewEngine;
+class TrackManager;
+}
 
 class AestraAudioController {
 public:
@@ -52,6 +56,7 @@ private:
     bool m_initialized{false};
     bool m_isAudioRunning{false};
 
-    // Weak reference to content for callback routing
+    // Weak UI reference plus atomically published ownership for callback routing.
     std::weak_ptr<AestraContent> m_content;
+    std::shared_ptr<AestraContent> m_rtContent;
 };

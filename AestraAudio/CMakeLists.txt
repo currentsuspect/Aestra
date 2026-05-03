@@ -161,6 +161,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Core/AudioEngine.cpp
     src/Core/AudioDeviceManager.cpp
     src/Core/AutosaveManager.cpp
+    src/Core/ArsenalProcessingContext.cpp
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
     src/Core/ProjectValidator.cpp
@@ -186,6 +187,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/DSP/AudioProcessor.cpp
     src/DSP/Filter.cpp
     src/DSP/Oscillator.cpp
+    src/DSP/ReverbSIMD.cpp
     src/DSP/SincAVX512.cpp
     src/DSP/SampleRateConverter.cpp
     
@@ -272,6 +274,7 @@ endif()
 set(AESTRA_AUDIO_CORE_HEADERS
     include/Core/AudioGraphBuilder.h
     include/Core/AudioEngine.h
+    include/Core/ArsenalProcessingContext.h
     include/Core/MasterSafetyLimiter.h
     include/Core/AudioCommandQueue.h
     include/Core/AudioTelemetry.h
@@ -379,6 +382,16 @@ if (AESTRA_USE_MINIAUDIO)
     target_compile_definitions(AestraAudioCore PRIVATE AESTRA_USE_MINIAUDIO)
 endif()
 
+# AestraVerb stage profiling (lab/benchmark only). Zero overhead when off.
+if (AESTRA_REVERB_PROFILE)
+    target_compile_definitions(AestraAudioCore PUBLIC AESTRA_REVERB_PROFILE)
+endif()
+
+# AestraVerb clamp diagnostics (lab only). Zero overhead when off.
+if (AESTRA_REVERB_DIAGNOSTICS)
+    target_compile_definitions(AestraAudioCore PUBLIC AESTRA_REVERB_DIAGNOSTICS)
+endif()
+
 # AVX2/FMA: Enabled per-TU via #pragma in SincAVX2.h for safe runtime dispatch.
 # IMPORTANT: Do NOT add global /arch:AVX2 here - it causes VEX-encoded scalar ops
 # that crash on non-AVX2 CPUs even in the fallback path.
@@ -441,7 +454,9 @@ if(TARGET AestraCore)
     target_link_libraries(AestraAudioCore PUBLIC AestraCore)
 endif()
 
-target_link_libraries(AestraAudioCore PUBLIC AestraLicense)
+if(TARGET AestraLicense)
+    target_link_libraries(AestraAudioCore PUBLIC AestraLicense)
+endif()
 target_link_libraries(AestraAudioCore PUBLIC AestraPlat)
 
 # macOS frameworks needed by VST3 hosting

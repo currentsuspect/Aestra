@@ -2,14 +2,15 @@
 
 #include "PluginScanner.h"
 
-#include "Plugin/BuiltInPlugins.h"
-#include "Plugin/InternalPluginRegistry.h"
+#include "AestraJSON.h"
 #include "AestraLog.h"
 #include "AestraPlatform.h"
+#include "Plugin/BuiltInPlugins.h"
+#include "Plugin/InternalPluginRegistry.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cctype>
+#include <chrono>
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
@@ -37,23 +38,20 @@ namespace Audio {
 
 namespace {
 bool isVisiblePlugin(const PluginInfo& plugin) {
-    return plugin.format != PluginFormat::Internal ||
-           InternalPluginRegistry::instance().isPluginAvailable(plugin.id);
+    return plugin.format != PluginFormat::Internal || InternalPluginRegistry::instance().isPluginAvailable(plugin.id);
 }
 
 void sanitizeInternalPlugins(std::vector<PluginInfo>& plugins) {
-    plugins.erase(std::remove_if(plugins.begin(), plugins.end(), [](const PluginInfo& plugin) {
-                      return !isVisiblePlugin(plugin);
-                  }),
+    plugins.erase(std::remove_if(plugins.begin(), plugins.end(),
+                                 [](const PluginInfo& plugin) { return !isVisiblePlugin(plugin); }),
                   plugins.end());
 }
 
 void mergeBuiltInPlugins(std::vector<PluginInfo>& plugins) {
     BuiltInPlugins::registerCoreBuiltIns();
     for (auto& builtIn : BuiltInPlugins::all()) {
-        const auto it = std::find_if(plugins.begin(), plugins.end(), [&](const PluginInfo& existing) {
-            return existing.id == builtIn.id;
-        });
+        const auto it = std::find_if(plugins.begin(), plugins.end(),
+                                     [&](const PluginInfo& existing) { return existing.id == builtIn.id; });
         if (it == plugins.end()) {
             plugins.push_back(std::move(builtIn));
         }
@@ -62,8 +60,21 @@ void mergeBuiltInPlugins(std::vector<PluginInfo>& plugins) {
 }
 
 std::string normalizedGenericPath(const std::filesystem::path& path) {
-    std::string normalized = path.lexically_normal().generic_string();
+    std::error_code ec;
+    std::filesystem::path normalizedPath = std::filesystem::weakly_canonical(path, ec);
+    if (ec) {
+        ec.clear();
+        normalizedPath = std::filesystem::absolute(path, ec);
+        if (ec) {
+            normalizedPath = path;
+        }
+    }
+    std::string normalized = normalizedPath.lexically_normal().generic_string();
     std::replace(normalized.begin(), normalized.end(), '\\', '/');
+#ifdef _WIN32
+    std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+#endif
     while (normalized.size() > 1 && normalized.back() == '/') {
         normalized.pop_back();
     }
@@ -92,9 +103,12 @@ std::string hexEncodeString(const std::string& input) {
 }
 
 int hexValue(char c) {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return 10 + c - 'a';
-    if (c >= 'A' && c <= 'F') return 10 + c - 'A';
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return 10 + c - 'a';
+    if (c >= 'A' && c <= 'F')
+        return 10 + c - 'A';
     return -1;
 }
 
@@ -214,7 +228,8 @@ std::vector<PluginInfo> scanClapMetadataOutOfProcess(const std::filesystem::path
     std::vector<PluginInfo> result;
     const std::string command = "SCAN clap " + hexEncodeString(path.string());
     std::string response;
-    if (sendAll(inPipe[1], command) && readLineWithTimeout(outPipe[0], pid, response, std::chrono::milliseconds(1000)) &&
+    if (sendAll(inPipe[1], command) &&
+        readLineWithTimeout(outPipe[0], pid, response, std::chrono::milliseconds(1000)) &&
         response.compare(0, 3, "OK ") == 0) {
         std::istringstream fields(response.substr(3));
         std::string idHex;
@@ -259,7 +274,7 @@ std::vector<PluginInfo> scanClapMetadataOutOfProcess(const std::filesystem::path
 } // namespace
 
 PluginScanner::PluginScanner() {
-    loadTrustedPaths();  // [SEC-RTM-005 Part B] Load user-configured trusted paths
+    loadTrustedPaths(); // [SEC-RTM-005 Part B] Load user-configured trusted paths
     mergeBuiltInPlugins(m_scannedPlugins);
 }
 
@@ -400,6 +415,13 @@ void PluginScanner::cancelScan() {
     m_cancelRequested.store(true);
 }
 
+void PluginScanner::cancelAndJoin() {
+    m_cancelRequested.store(true);
+    if (m_scanThread.joinable() && m_scanThread.get_id() != std::this_thread::get_id()) {
+        m_scanThread.join();
+    }
+}
+
 bool PluginScanner::isScanning() const {
     return m_scanning.load();
 }
@@ -525,7 +547,7 @@ bool PluginScanner::saveScanCache(const std::filesystem::path& cachePath) const 
         const char magic[4] = {'N', 'P', 'S', 'C'}; // Aestra Plugin Scan Cache
         file.write(magic, 4);
 
-        uint32_t version = 2;  // v2: includes file mtime for integrity (SEC-RTM-006)
+        uint32_t version = 2; // v2: includes file mtime for integrity (SEC-RTM-006)
         file.write(reinterpret_cast<const char*>(&version), sizeof(version));
 
         // Write plugin count
@@ -608,11 +630,14 @@ bool PluginScanner::loadScanCache(const std::filesystem::path& cachePath) {
         auto readString = [&file, kMaxStringLen]() -> std::string {
             uint32_t len;
             file.read(reinterpret_cast<char*>(&len), sizeof(len));
-            if (!file.good()) return "";
-            if (len > kMaxStringLen) return "";
+            if (!file.good())
+                return "";
+            if (len > kMaxStringLen)
+                return "";
             std::string s(len, '\0');
             file.read(s.data(), len);
-            if (!file.good()) return "";
+            if (!file.good())
+                return "";
             return s;
         };
 
@@ -644,7 +669,7 @@ bool PluginScanner::loadScanCache(const std::filesystem::path& cachePath) {
                     if (!ec) {
                         uint64_t currentMtimeBits = currentMtime.time_since_epoch().count();
                         if (currentMtimeBits != cachedMtimeBits) {
-                            integrityOk = false;  // File modified — needs rescan
+                            integrityOk = false; // File modified — needs rescan
                         }
                     }
                 }
@@ -853,10 +878,8 @@ int PluginScanner::countPluginFiles() const {
 // Static method: only checks system paths (no member access)
 bool PluginScanner::isTrustedPath(const std::filesystem::path& path) {
     // Linux: system-wide paths are trusted
-    if (pathIsOrUnder(path, "/usr/lib/vst3") ||
-        pathIsOrUnder(path, "/usr/lib/clap") ||
-        pathIsOrUnder(path, "/usr/local/lib/vst3") ||
-        pathIsOrUnder(path, "/usr/local/lib/clap")) {
+    if (pathIsOrUnder(path, "/usr/lib/vst3") || pathIsOrUnder(path, "/usr/lib/clap") ||
+        pathIsOrUnder(path, "/usr/local/lib/vst3") || pathIsOrUnder(path, "/usr/local/lib/clap")) {
         return true;
     }
 
@@ -867,8 +890,7 @@ bool PluginScanner::isTrustedPath(const std::filesystem::path& path) {
     }
 
     // macOS: system Library paths are trusted
-    if (pathIsOrUnder(path, "/Library/Audio/Plug-Ins/VST3") ||
-        pathIsOrUnder(path, "/Library/Audio/Plug-Ins/CLAP")) {
+    if (pathIsOrUnder(path, "/Library/Audio/Plug-Ins/VST3") || pathIsOrUnder(path, "/Library/Audio/Plug-Ins/CLAP")) {
         return true;
     }
 
@@ -914,13 +936,12 @@ void PluginScanner::removeTrustedPath(const std::filesystem::path& path) {
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         auto normalized = path.lexically_normal();
-        m_userTrustedPaths.erase(
-            std::remove_if(m_userTrustedPaths.begin(), m_userTrustedPaths.end(),
-                [&normalized](const std::filesystem::path& p) {
-                    return normalizedGenericPath(p) == normalizedGenericPath(normalized);
-                }),
-            m_userTrustedPaths.end()
-        );
+        m_userTrustedPaths.erase(std::remove_if(m_userTrustedPaths.begin(), m_userTrustedPaths.end(),
+                                                [&normalized](const std::filesystem::path& p) {
+                                                    return normalizedGenericPath(p) ==
+                                                           normalizedGenericPath(normalized);
+                                                }),
+                                 m_userTrustedPaths.end());
     }
     saveTrustedPaths();
 }
@@ -954,49 +975,56 @@ void PluginScanner::loadTrustedPaths() {
         }
 
         if (configPath.empty() || !std::filesystem::exists(configPath)) {
-            return;  // No config location available yet
+            return; // No config location available yet
         }
 
-        // Read JSON file
         std::ifstream file(configPath);
         if (!file.is_open()) {
             return;
         }
 
-        // Simple JSON parse: look for "paths": [...]
-        std::string content((std::istreambuf_iterator<char>(file)),
-                           std::istreambuf_iterator<char>());
-
-        // Find the paths array
-        auto pathsStart = content.find("\"paths\":");
-        if (pathsStart == std::string::npos) {
+        // Check file size before reading entire file into memory
+        file.seekg(0, std::ios::end);
+        if (!file.good()) {
+            return;
+        }
+        const size_t fileSize = static_cast<size_t>(file.tellg());
+        file.seekg(0, std::ios::beg);
+        constexpr size_t kMaxTrustedPathsFileBytes = 1024 * 1024;
+        if (fileSize > kMaxTrustedPathsFileBytes) {
+            Log::warning("[PluginScanner] Trusted paths config too large; ignoring");
             return;
         }
 
-        // Extract paths between [ and ]
-        auto arrayStart = content.find("[", pathsStart);
-        auto arrayEnd = content.find("]", arrayStart);
-        if (arrayStart == std::string::npos || arrayEnd == std::string::npos) {
+        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+        constexpr size_t kMaxTrustedPaths = 1024;
+        constexpr size_t kMaxTrustedPathBytes = 32768;
+        JSON root = JSON::parse(content);
+        if (!root.isObject() || !root.has("paths") || !root["paths"].isArray()) {
             return;
         }
 
-        // Extract each string between quotes
-        size_t pos = arrayStart + 1;
-        while (pos < arrayEnd) {
-            auto quoteStart = content.find("\"", pos);
-            if (quoteStart == std::string::npos || quoteStart >= arrayEnd) break;
-            auto quoteEnd = content.find("\"", quoteStart + 1);
-            if (quoteEnd == std::string::npos || quoteEnd >= arrayEnd) break;
-
-            std::string pathStr = content.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
-            if (!pathStr.empty()) {
-                m_userTrustedPaths.push_back(std::filesystem::path(pathStr));
+        const JSON& paths = root["paths"];
+        for (size_t i = 0; i < paths.size() && m_userTrustedPaths.size() < kMaxTrustedPaths; ++i) {
+            if (!paths[i].isString()) {
+                continue;
             }
-            pos = quoteEnd + 1;
+            const std::string& pathStr = paths[i].asString();
+            if (pathStr.empty() || pathStr.size() > kMaxTrustedPathBytes) {
+                continue;
+            }
+            std::filesystem::path normalized = std::filesystem::path(pathStr).lexically_normal();
+            const auto it =
+                std::find_if(m_userTrustedPaths.begin(), m_userTrustedPaths.end(), [&](const auto& existing) {
+                    return normalizedGenericPath(existing) == normalizedGenericPath(normalized);
+                });
+            if (it == m_userTrustedPaths.end()) {
+                m_userTrustedPaths.push_back(std::move(normalized));
+            }
         }
 
-        Log::info("[PluginScanner] Loaded " + std::to_string(m_userTrustedPaths.size()) +
-                  " trusted paths from config");
+        Log::info("[PluginScanner] Loaded " + std::to_string(m_userTrustedPaths.size()) + " trusted paths from config");
 
     } catch (const std::exception& e) {
         Log::warning("[PluginScanner] Failed to load trusted paths: " + std::string(e.what()));
@@ -1029,19 +1057,17 @@ void PluginScanner::saveTrustedPaths() const {
             return;
         }
 
-        // Build JSON
-        std::string json = "{\n  \"paths\": [\n";
+        JSON root = JSON::object();
+        JSON paths = JSON::array();
         size_t trustedPathCount = 0;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             trustedPathCount = m_userTrustedPaths.size();
-            for (size_t i = 0; i < m_userTrustedPaths.size(); ++i) {
-                json += "    \"" + m_userTrustedPaths[i].lexically_normal().string() + "\"";
-                if (i < m_userTrustedPaths.size() - 1) json += ",";
-                json += "\n";
+            for (const auto& trustedPath : m_userTrustedPaths) {
+                paths.push(trustedPath.lexically_normal().string());
             }
         }
-        json += "  ]\n}\n";
+        root.set("paths", paths);
 
         // Write file
         std::ofstream file(configPath);
@@ -1049,11 +1075,10 @@ void PluginScanner::saveTrustedPaths() const {
             Log::warning("[PluginScanner] Failed to open config file for trusted paths");
             return;
         }
-        file << json;
+        file << root.toString(2) << "\n";
         file.close();
 
-        Log::info("[PluginScanner] Saved " + std::to_string(trustedPathCount) +
-                  " trusted paths to config");
+        Log::info("[PluginScanner] Saved " + std::to_string(trustedPathCount) + " trusted paths to config");
 
     } catch (const std::exception& e) {
         Log::warning("[PluginScanner] Failed to save trusted paths: " + std::string(e.what()));

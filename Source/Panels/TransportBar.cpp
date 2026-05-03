@@ -13,6 +13,16 @@
 
 namespace Aestra {
 
+namespace {
+
+constexpr float TRANSPORT_BUTTON_SIZE = 28.0f;
+constexpr float TRANSPORT_BUTTON_SPACING = 8.0f;
+constexpr float TRANSPORT_GROUP_SPACING = 24.0f;
+constexpr float TRANSPORT_ISLAND_PADDING = 12.0f;
+constexpr float TRANSPORT_ISLAND_HEIGHT = 48.0f;
+
+} // namespace
+
 // =============================================================================
 // SECTION: Construction & Setup
 // =============================================================================
@@ -201,8 +211,8 @@ void TransportBar::createButtons() {
         btn->setSize(28, 28);
         
         btn->setBackgroundColor(AestraUI::NUIColor::transparent());
-        btn->setHoverColor(theme.getColor("surfaceRaised"));
-        btn->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.34f));
+        btn->setHoverColor(theme.getColor("surfaceRaised").withAlpha(0.88f));
+        btn->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.24f));
         btn->setBorderEnabled(false);
         btn->setCornerRadius(6.0f);
         btn->setGlowEnabled(false);
@@ -480,19 +490,19 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
              iconColor = iconRed;
              if (isHovered) currentBg = iconRed.withAlpha(0.22f);
         } else if (isActive) {
-             currentBg = themeManager.getColor("buttonBgActive").withAlpha(0.98f);
-             currentBorder = themeManager.getColor("borderActive").withAlpha(0.22f);
+             currentBg = themeManager.getColor("accentPrimary").withAlpha(0.18f);
+             currentBorder = themeManager.getColor("accentPrimary").withAlpha(0.34f);
              iconColor = themeManager.getColor("textPrimary");
          } else if (isHovered) {
-             currentBg = glassHover;
-             currentBorder = themeManager.getColor("border").withAlpha(0.38f);
-             iconColor = themeManager.getColor("textPrimary").withAlpha(0.70f);
+             currentBg = glassHover.withAlpha(0.82f);
+             currentBorder = themeManager.getColor("border").withAlpha(0.30f);
+             iconColor = themeManager.getColor("textPrimary").withAlpha(0.76f);
          }
 
         if (isPrimaryTransport) {
             if (!isRecording && !isActive && !isHovered) {
-                currentBg = themeManager.getColor("buttonBgHover").withAlpha(0.92f);
-                currentBorder = themeManager.getColor("border").withAlpha(0.48f);
+                currentBg = themeManager.getColor("buttonBgHover").withAlpha(0.64f);
+                currentBorder = themeManager.getColor("border").withAlpha(0.38f);
             } else if (isActive && !isRecording) {
                 currentBg = themeManager.getColor("accentPrimary").withAlpha(0.22f);
                 currentBorder = themeManager.getColor("accentPrimary").withAlpha(0.46f);
@@ -503,7 +513,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         }
         
         // Draw Button Background
-        if (isHovered || isActive || isRecording) {
+        if (isHovered || isActive || isRecording || isPrimaryTransport) {
             renderer.fillRoundedRect(buttonRect, 6.0f, currentBg);
             if (currentBorder.a > 0.0f) {
                 renderer.strokeRoundedRect(buttonRect, 6.0f, 1.0f, currentBorder);
@@ -570,11 +580,11 @@ void TransportBar::layoutComponents() {
     const auto& layout = themeManager.getLayoutDimensions();
 
     // Use configurable dimensions - OVERRIDE for Compact Mode
-    float buttonSize = 28.0f;
+    float buttonSize = TRANSPORT_BUTTON_SIZE;
     const float primaryButtonScale = 1.0f;
     const float primaryButtonSize = buttonSize * primaryButtonScale;
-    float spacing = 8.0f;
-    float groupSpacing = 20.0f;
+    float spacing = TRANSPORT_BUTTON_SPACING;
+    float groupSpacing = TRANSPORT_GROUP_SPACING;
 
     // --- Layout Logic: Center-Out Calculation ---
     // We calculate the required width first to center the island perfectly
@@ -597,7 +607,7 @@ void TransportBar::layoutComponents() {
 
     // Total Content Width
     float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
-    float islandPadding = 10.0f;
+    float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
     // Clamp to window width
@@ -605,7 +615,7 @@ void TransportBar::layoutComponents() {
         islandWidth = bounds.width - 20.0f;
     }
 
-    const float islandHeight = std::min(50.0f, bounds.height);
+    const float islandHeight = std::min(TRANSPORT_ISLAND_HEIGHT, bounds.height);
     const float visualCenterBiasY = 0.0f;
     float islandX = std::round((bounds.width - islandWidth) * 0.5f);
     float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);
@@ -690,21 +700,21 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     // 2. Re-Calculate Island Geometry (Match layoutComponents logic)
     // 2. Re-Calculate Island Geometry (Match layoutComponents logic)
     // Compact Values (Relaxed per user request: "space would have done the trick")
-    float buttonSize = 28.0f;
-    float spacing = 8.0f;
-    float groupSpacing = 20.0f;
+    float buttonSize = TRANSPORT_BUTTON_SIZE;
+    float spacing = TRANSPORT_BUTTON_SPACING;
+    float groupSpacing = TRANSPORT_GROUP_SPACING;
     float group1Width = (buttonSize * 3) + (spacing * 2);
     float group2Width = (buttonSize * 4) + (spacing * 3);
     float infoWidth = 260.0f;
     float group4Width = (buttonSize * 4) + (spacing * 3);
 
     float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
-    float islandPadding = 10.0f;
+    float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
     if (islandWidth > bounds.width - 20.0f) islandWidth = bounds.width - 20.0f;
     
-    const float islandHeight = 50.0f;
+    const float islandHeight = std::min(TRANSPORT_ISLAND_HEIGHT, bounds.height);
     const float visualCenterBiasY = -1.0f;
     float islandX = std::round((bounds.width - islandWidth) * 0.5f);
     float islandY = std::round((bounds.height - islandHeight) * 0.5f + visualCenterBiasY);
@@ -723,17 +733,20 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
                       themeManager.getColor("border").withAlpha(0.92f));
     
     const float leftEdge = islandRect.x + islandPadding;
-    const float groupY = islandRect.y + 7.0f;
-    const float groupH = 36.0f;
-    const auto groupBg = themeManager.getColor("surfaceTertiary").withAlpha(0.54f);
-    const auto groupBorder = themeManager.getColor("border").withAlpha(0.58f);
+    const float topInset = 6.0f;
+    const float bottomInset = 6.0f;
+    const float available = islandRect.height - topInset - bottomInset;
+    const float groupH = std::max(0.0f, std::min(36.0f, available));
+    const float groupY = islandRect.y + topInset;
+    const auto groupBg = themeManager.getColor("surfaceTertiary").withAlpha(0.42f);
+    const auto groupBorder = themeManager.getColor("border").withAlpha(0.46f);
     const auto drawGroup = [&](float x, float w) {
         if (w <= 0.0f) {
             return;
         }
         AestraUI::NUIRect groupRect(std::round(x), std::round(groupY), std::round(w), groupH);
-        renderer.fillRoundedRect(groupRect, 7.0f, groupBg);
-        renderer.strokeRoundedRect(groupRect, 7.0f, 1.0f, groupBorder);
+        renderer.fillRoundedRect(groupRect, 6.0f, groupBg);
+        renderer.strokeRoundedRect(groupRect, 6.0f, 1.0f, groupBorder);
     };
 
     const float g1X = leftEdge - 6.0f;

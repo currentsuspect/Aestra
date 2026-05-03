@@ -92,6 +92,22 @@ public:
         return true;
     }
 
+    // Pop by moving out of the consumed slot, then clear the slot.
+    // Use for owning payloads where stale references in ring storage would
+    // incorrectly extend object lifetime after the item has been consumed.
+    [[nodiscard]] bool popMoveAndClear(T& item) {
+        size_t currentRead = readIndex.load(std::memory_order_relaxed);
+
+        if (currentRead == writeIndex.load(std::memory_order_acquire)) [[unlikely]] {
+            return false; // Buffer empty
+        }
+
+        item = std::move(buffer[currentRead]);
+        buffer[currentRead] = T{};
+        readIndex.store(mask(currentRead + 1), std::memory_order_release);
+        return true;
+    }
+
     // Check if buffer is empty
     bool isEmpty() const {
         return readIndex.load(std::memory_order_acquire) == writeIndex.load(std::memory_order_acquire);

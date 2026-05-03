@@ -1,412 +1,311 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-// AestraCompPhase0Test — Validates Phase 0 cleanup fixes.
-// Run: cmake --build build --target AestraCompPhase0Test && ./build/bin/AestraCompPhase0Test
+// AestraCompPhase0Test — V1 compressor DSP contract tests.
 
 #include "Plugin/AestraComp.h"
+
+#include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <iomanip>
 #include <iostream>
+#include <limits>
 #include <vector>
 
-using namespace Aestra::Audio::Plugins;
+using Aestra::Audio::Plugins::AestraComp;
 
 namespace {
 
-constexpr double kSampleRate = 48000.0;
-constexpr uint32_t kBlockSize = 512;
-constexpr double kTau = 6.28318530717958647692;
-constexpr float kTolerance = 0.5f; // dB tolerance for level tests
+constexpr uint32_t kBlockSize = 256;
 
-void generateTone(float* buffer, uint32_t frames, double freq, float ampLinear) {
-    for (uint32_t i = 0; i < frames; ++i) {
-        const double t = static_cast<double>(i) / kSampleRate;
-        buffer[i] = static_cast<float>(std::sin(kTau * freq * t) * ampLinear);
-    }
+float thresholdNorm(float db) { return (db + 60.0f) / 60.0f; }
+float ratioNorm(float ratio) { return (ratio - 1.0f) / 19.0f; }
+float attackNorm(float ms) { return (ms - 0.1f) / 99.9f; }
+float releaseNorm(float ms) { return (ms - 10.0f) / 990.0f; }
+float gainNorm(float db) { return (db + 24.0f) / 48.0f; }
+float dbToLinear(float db) { return std::pow(10.0f, db / 20.0f); }
+float linearToDb(float x) { return x > 1.0e-12f ? 20.0f * std::log10(x) : -120.0f; }
+
+void configure(AestraComp& comp, double sampleRate = 48000.0) {
+    comp.initialize(sampleRate, kBlockSize);
+    comp.setParameter(AestraComp::kThreshold, thresholdNorm(-24.0f));
+    comp.setParameter(AestraComp::kRatio, ratioNorm(4.0f));
+    comp.setParameter(AestraComp::kAttack, attackNorm(0.1f));
+    comp.setParameter(AestraComp::kRelease, releaseNorm(10.0f));
+    comp.setParameter(AestraComp::kMakeup, 0.0f);
+    comp.setParameter(AestraComp::kKnee, 0.0f);
+    comp.setParameter(AestraComp::kMix, 1.0f);
+    comp.setParameter(AestraComp::kBypass, 0.0f);
+    comp.setParameter(AestraComp::kInputGain, gainNorm(0.0f));
+    comp.setParameter(AestraComp::kOutputGain, gainNorm(0.0f));
+    comp.setParameter(AestraComp::kDetectorHPF, 0.0f);
+    comp.activate();
 }
 
-float linearToDb(float linear) {
-    return linear > 1e-12f ? 20.0f * std::log10(linear) : -120.0f;
-}
-
-float calculateRMS(const float* buffer, uint32_t frames) {
-    double sum = 0.0;
-    for (uint32_t i = 0; i < frames; ++i) {
-        sum += buffer[i] * buffer[i];
-    }
-    return static_cast<float>(std::sqrt(sum / frames));
-}
-
-float calculatePeak(const float* buffer, uint32_t frames) {
-    float peak = 0.0f;
-    for (uint32_t i = 0; i < frames; ++i) {
-        float absVal = std::abs(buffer[i]);
-        if (absVal > peak) peak = absVal;
-    }
-    return peak;
-}
-
-// Process N blocks through compressor, return output buffer
-std::vector<float> processBlocks(AestraComp& comp, const float* input,
-                                  uint32_t numBlocks, uint32_t blockSize) {
-    std::vector<float> output(numBlocks * blockSize, 0.0f);
-    const float* inPtr = input;
-    float* outPtr = output.data();
-
-    for (uint32_t b = 0; b < numBlocks; ++b) {
-        comp.process(&inPtr, &outPtr, 1, 1, blockSize);
-        inPtr += blockSize;
-        outPtr += blockSize;
+std::vector<float> processMono(AestraComp& comp, const std::vector<float>& input, uint32_t blockSize = kBlockSize) {
+    std::vector<float> output(input.size(), 0.0f);
+    for (size_t offset = 0; offset < input.size(); offset += blockSize) {
+        const uint32_t frames = static_cast<uint32_t>(std::min<size_t>(blockSize, input.size() - offset));
+        const float* inputs[] = {input.data() + offset};
+        float* outputs[] = {output.data() + offset};
+        comp.process(inputs, outputs, 1, 1, frames);
     }
     return output;
 }
 
-// Stereo version
-std::pair<std::vector<float>, std::vector<float>>
-processStereoBlocks(AestraComp& comp, const float* inL, const float* inR,
-                     uint32_t numBlocks, uint32_t blockSize) {
-    uint32_t totalFrames = numBlocks * blockSize;
-    std::vector<float> outL(totalFrames, 0.0f);
-    std::vector<float> outR(totalFrames, 0.0f);
-
-    for (uint32_t b = 0; b < numBlocks; ++b) {
-        uint32_t offset = b * blockSize;
-        const float* inputs[2] = { inL + offset, inR + offset };
-        float* outputs[2] = { outL.data() + offset, outR.data() + offset };
-        comp.process(inputs, outputs, 2, 2, blockSize);
+std::pair<std::vector<float>, std::vector<float>> processStereo(AestraComp& comp,
+                                                                const std::vector<float>& inL,
+                                                                const std::vector<float>& inR) {
+    std::vector<float> outL(inL.size(), 0.0f);
+    std::vector<float> outR(inR.size(), 0.0f);
+    for (size_t offset = 0; offset < inL.size(); offset += kBlockSize) {
+        const uint32_t frames = static_cast<uint32_t>(std::min<size_t>(kBlockSize, inL.size() - offset));
+        const float* inputs[] = {inL.data() + offset, inR.data() + offset};
+        float* outputs[] = {outL.data() + offset, outR.data() + offset};
+        comp.process(inputs, outputs, 2, 2, frames);
     }
-    return { outL, outR };
+    return {outL, outR};
 }
 
-// =====================================================================
-// V-1: Makeup gain applied exactly once
-// Input: -12dB sine, threshold -20dB, ratio 4:1, makeup +6dB
-// Expected: output ≈ -12 + 6 = -6dB (some compression applied)
-// If double makeup: output would be ~0dB
-// =====================================================================
-bool testMakeupGainSingleApplication() {
-    std::cout << "  [V-1] Makeup gain single application... ";
+bool near(float a, float b, float tolerance) {
+    return std::abs(a - b) <= tolerance;
+}
 
+bool testSilenceAndBypass() {
     AestraComp comp;
-    comp.initialize(kSampleRate, kBlockSize);
-    comp.activate();
-
-    // Settings
-    comp.setParameter(AestraComp::kThreshold, 0.333f); // -60 + 0.333*60 = -40dB
-    comp.setParameter(AestraComp::kRatio, 0.158f);     // 1 + 0.158*19 ≈ 4:1
-    comp.setParameter(AestraComp::kAttack, 0.0f);      // fastest attack
-    comp.setParameter(AestraComp::kRelease, 0.0f);     // fastest release
-    comp.setParameter(AestraComp::kMakeup, 0.25f);     // 0.25*24 = +6dB
-    comp.setParameter(AestraComp::kKnee, 0.0f);        // hard knee
-    comp.setParameter(AestraComp::kMix, 1.0f);             // 100% wet
-    comp.setParameter(AestraComp::kBypass, 0.0f);      // not bypassed
-
-    // Input: -12dB sine ≈ 0.251 linear
-    const uint32_t numBlocks = 20; // ~213ms at 48kHz, plenty for envelope to settle
-    const uint32_t totalFrames = numBlocks * kBlockSize;
-    std::vector<float> input(totalFrames);
-    generateTone(input.data(), totalFrames, 1000.0, 0.251f);
-
-    auto output = processBlocks(comp, input.data(), numBlocks, kBlockSize);
-
-    // Measure output RMS (skip first 5 blocks for envelope settling)
-    float outputRms = calculateRMS(output.data() + 5 * kBlockSize, (numBlocks - 5) * kBlockSize);
-    float outputDb = linearToDb(outputRms);
-
-    // With threshold -40dB and input -12dB, signal is 28dB above threshold
-    // At 4:1 ratio, gain reduction ≈ 28 * (1 - 1/4) = 21dB
-    // Output = -12 - 21 + 6 = -27dB (approximately)
-    // With double makeup: -12 - 21 + 12 = -21dB
-    float expectedDb = -12.0f - 21.0f + 6.0f; // ≈ -27dB
-
-    if (std::abs(outputDb - expectedDb) > 5.0f) {
-        std::cerr << "FAILED: output " << std::fixed << std::setprecision(1)
-                  << outputDb << "dB, expected ~" << expectedDb
-                  << "dB (diff=" << std::abs(outputDb - expectedDb) << "dB)\n";
+    configure(comp);
+    std::vector<float> silence(4096, 0.0f);
+    auto out = processMono(comp, silence);
+    if (std::any_of(out.begin(), out.end(), [](float x) { return x != 0.0f; })) {
+        std::cerr << "silence produced non-zero output\n";
         return false;
     }
 
-    std::cout << "PASSED (output=" << std::fixed << std::setprecision(1)
-              << outputDb << "dB)\n";
-    return true;
-}
-
-// =====================================================================
-// V-2: No hard output clamp
-// Input: hot signal with high makeup, output should soft-saturate instead of
-// flattening at exactly +/-1.0.
-// =====================================================================
-bool testNoHardClamp() {
-    std::cout << "  [V-2] No hard output clamp... ";
-
-    AestraComp comp;
-    comp.initialize(kSampleRate, kBlockSize);
-    comp.activate();
-
-    // Low threshold, high ratio, high makeup — should produce output > 0dB
-    comp.setParameter(AestraComp::kThreshold, 0.0f);   // -60dB
-    comp.setParameter(AestraComp::kRatio, 0.0f);       // 1:1 (no compression)
-    comp.setParameter(AestraComp::kAttack, 0.5f);
-    comp.setParameter(AestraComp::kRelease, 0.5f);
-    comp.setParameter(AestraComp::kMakeup, 1.0f);      // +24dB
-    comp.setParameter(AestraComp::kKnee, 0.0f);
-    comp.setParameter(AestraComp::kMix, 1.0f);
-    comp.setParameter(AestraComp::kBypass, 0.0f);
-
-    // Input: -6dB sine
-    const uint32_t numBlocks = 10;
-    const uint32_t totalFrames = numBlocks * kBlockSize;
-    std::vector<float> input(totalFrames);
-    generateTone(input.data(), totalFrames, 1000.0, 0.5f);
-
-    auto output = processBlocks(comp, input.data(), numBlocks, kBlockSize);
-
-    // Output peak should approach 1.0 without hard-clamping to exactly 1.0.
-    float peak = calculatePeak(output.data() + 2 * kBlockSize, (numBlocks - 2) * kBlockSize);
-
-    if (peak < 0.90f || peak >= 1.0f) {
-        std::cerr << "FAILED: peak " << std::fixed << std::setprecision(4)
-                  << peak << " outside soft-saturation range\n";
-        return false;
-    }
-
-    std::cout << "PASSED (peak=" << std::fixed << std::setprecision(4) << peak << ")\n";
-    return true;
-}
-
-// =====================================================================
-// V-3: No zipper noise during attack automation
-// Smooth transition when attack changes during playback
-// =====================================================================
-bool testNoZipperNoise() {
-    std::cout << "  [V-3] No zipper noise during automation... ";
-
-    AestraComp comp;
-    comp.initialize(kSampleRate, kBlockSize);
-    comp.activate();
-
-    comp.setParameter(AestraComp::kThreshold, 0.5f);   // -30dB
-    comp.setParameter(AestraComp::kRatio, 0.3f);       // ~6.7:1
-    comp.setParameter(AestraComp::kMakeup, 0.0f);
-    comp.setParameter(AestraComp::kKnee, 0.0f);
-    comp.setParameter(AestraComp::kMix, 1.0f);
-    comp.setParameter(AestraComp::kBypass, 0.0f);
-
-    const uint32_t totalFrames = 48000; // 1 second
-    std::vector<float> input(totalFrames);
-    generateTone(input.data(), totalFrames, 1000.0, 0.5f);
-
-    // Process in blocks while ramping attack
-    std::vector<float> output(totalFrames, 0.0f);
-    const float* inPtr = input.data();
-    float* outPtr = output.data();
-
-    for (uint32_t b = 0; b < totalFrames / kBlockSize; ++b) {
-        float t = static_cast<float>(b) / (totalFrames / kBlockSize);
-        comp.setParameter(AestraComp::kAttack, t); // ramp 0→1
-        comp.process(&inPtr, &outPtr, 1, 1, kBlockSize);
-        inPtr += kBlockSize;
-        outPtr += kBlockSize;
-    }
-
-    // Check for large sample-to-sample jumps (> 0.1 = ~-20dB jump = zipper)
-    float maxJump = 0.0f;
-    for (uint32_t i = 1; i < totalFrames; ++i) {
-        float jump = std::abs(output[i] - output[i - 1]);
-        if (jump > maxJump) maxJump = jump;
-    }
-
-    if (maxJump > 0.1f) {
-        std::cerr << "FAILED: max sample jump " << std::fixed << std::setprecision(4)
-                  << maxJump << " (> 0.1 = zipper noise)\n";
-        return false;
-    }
-
-    std::cout << "PASSED (maxJump=" << std::fixed << std::setprecision(4) << maxJump << ")\n";
-    return true;
-}
-
-// =====================================================================
-// V-4: Bypass transparency
-// Bypass on vs off with no compression — should be identical
-// =====================================================================
-bool testBypassTransparency() {
-    std::cout << "  [V-4] Bypass transparency... ";
-
-    const uint32_t totalFrames = kBlockSize * 4;
-    std::vector<float> input(totalFrames);
-    generateTone(input.data(), totalFrames, 1000.0, 0.3f);
-
-    // Process with bypass ON
-    AestraComp compBypass;
-    compBypass.initialize(kSampleRate, kBlockSize);
-    compBypass.activate();
-    compBypass.setParameter(AestraComp::kBypass, 1.0f);
-
-    auto outBypass = processBlocks(compBypass, input.data(), 4, kBlockSize);
-
-    // Process with bypass OFF but no compression (threshold at -60dB, ratio 1:1)
-    AestraComp compPass;
-    compPass.initialize(kSampleRate, kBlockSize);
-    compPass.activate();
-    compPass.setParameter(AestraComp::kThreshold, 0.0f); // -60dB
-    compPass.setParameter(AestraComp::kRatio, 0.0f);     // 1:1
-    compPass.setParameter(AestraComp::kMakeup, 0.0f);
-    compPass.setParameter(AestraComp::kMix, 1.0f);
-    compPass.setParameter(AestraComp::kBypass, 0.0f);
-
-    auto outPass = processBlocks(compPass, input.data(), 4, kBlockSize);
-
-    // Compare (skip first block for envelope settling)
-    float maxDiff = 0.0f;
-    for (uint32_t i = kBlockSize; i < totalFrames; ++i) {
-        float diff = std::abs(outBypass[i] - outPass[i]);
-        if (diff > maxDiff) maxDiff = diff;
-    }
-
-    if (maxDiff > 1e-5f) {
-        std::cerr << "FAILED: bypass vs passthrough diff " << std::fixed
-                  << std::setprecision(6) << maxDiff << "\n";
-        return false;
-    }
-
-    std::cout << "PASSED\n";
-    return true;
-}
-
-// =====================================================================
-// V-5: Metadata consistency
-// Param IDs match enum, display strings are valid, state round-trips
-// =====================================================================
-bool testMetadataConsistency() {
-    std::cout << "  [V-5] Metadata consistency... ";
-
-    AestraComp comp;
-    comp.initialize(kSampleRate, kBlockSize);
-
-    // Check parameter count
-    if (comp.getParameterCount() != AestraComp::kParamCount) {
-        std::cerr << "FAILED: getParameterCount()=" << comp.getParameterCount()
-                  << " != kParamCount=" << AestraComp::kParamCount << "\n";
-        return false;
-    }
-
-    // Check getParameters() vector size and IDs
-    auto params = comp.getParameters();
-    if (params.size() != AestraComp::kParamCount) {
-        std::cerr << "FAILED: getParameters() size=" << params.size()
-                  << " != kParamCount=" << AestraComp::kParamCount << "\n";
-        return false;
-    }
-
-    for (uint32_t i = 0; i < AestraComp::kParamCount; ++i) {
-        if (params[i].id != i) {
-            std::cerr << "FAILED: param[" << i << "].id=" << params[i].id
-                      << " (expected " << i << ")\n";
-            return false;
-        }
-        if (params[i].name.empty()) {
-            std::cerr << "FAILED: param[" << i << "] has empty name\n";
+    std::vector<float> input(4096);
+    for (size_t i = 0; i < input.size(); ++i) input[i] = std::sin(static_cast<float>(i) * 0.01f) * 0.37f;
+    comp.setParameter(AestraComp::kBypass, 1.0f);
+    out = processMono(comp, input);
+    for (size_t i = 0; i < input.size(); ++i) {
+        if (out[i] != input[i]) {
+            std::cerr << "bypass mismatch at " << i << "\n";
             return false;
         }
     }
-
-    // Check display strings for all params
-    for (uint32_t i = 0; i < AestraComp::kParamCount; ++i) {
-        std::string display = comp.getParameterDisplay(i);
-        if (display.empty()) {
-            std::cerr << "FAILED: param[" << i << "] has empty display\n";
-            return false;
-        }
-    }
-
-    // Check state round-trip
-    comp.setParameter(AestraComp::kThreshold, 0.42f);
-    comp.setParameter(AestraComp::kRatio, 0.33f);
-    comp.setParameter(AestraComp::kAttack, 0.11f);
-    comp.setParameter(AestraComp::kRelease, 0.77f);
-
-    auto state = comp.saveState();
-
-    AestraComp comp2;
-    comp2.initialize(kSampleRate, kBlockSize);
-    if (!comp2.loadState(state)) {
-        std::cerr << "FAILED: loadState returned false\n";
-        return false;
-    }
-
-    for (uint32_t i = 0; i < AestraComp::kParamCount; ++i) {
-        float v1 = comp.getParameter(i);
-        float v2 = comp2.getParameter(i);
-        if (std::abs(v1 - v2) > 1e-6f) {
-            std::cerr << "FAILED: state round-trip param[" << i << "]: "
-                      << v1 << " != " << v2 << "\n";
-            return false;
-        }
-    }
-
-    std::cout << "PASSED\n";
     return true;
 }
 
-// =====================================================================
-// V-6: Gain reduction metering works
-// =====================================================================
-bool testGRMetering() {
-    std::cout << "  [V-6] Gain reduction metering... ";
-
+bool testStaticGainReduction() {
     AestraComp comp;
-    comp.initialize(kSampleRate, kBlockSize);
-    comp.activate();
+    configure(comp);
+    std::vector<float> input(48000, 0.5f);
+    auto out = processMono(comp, input);
 
-    // Strong compression settings
-    comp.setParameter(AestraComp::kThreshold, 0.5f);   // -30dB
-    comp.setParameter(AestraComp::kRatio, 0.9f);       // ~18:1
-    comp.setParameter(AestraComp::kAttack, 0.0f);
-    comp.setParameter(AestraComp::kRelease, 0.5f);
-    comp.setParameter(AestraComp::kMakeup, 0.0f);
-    comp.setParameter(AestraComp::kKnee, 0.0f);
-    comp.setParameter(AestraComp::kMix, 1.0f);
-    comp.setParameter(AestraComp::kBypass, 0.0f);
+    const float inputDb = linearToDb(0.5f);
+    const float overDb = inputDb - (-24.0f);
+    const float expected = 0.5f * dbToLinear(-overDb * (1.0f - 1.0f / 4.0f));
+    if (!near(out.back(), expected, 0.015f)) {
+        std::cerr << "static GR output=" << out.back() << " expected~=" << expected << "\n";
+        return false;
+    }
+    return true;
+}
 
-    // Hot input: -6dB
-    const uint32_t numBlocks = 10;
-    const uint32_t totalFrames = numBlocks * kBlockSize;
-    std::vector<float> input(totalFrames);
-    generateTone(input.data(), totalFrames, 1000.0, 0.5f);
+bool testKneeMonotonic() {
+    auto run = [](float amp, float kneeNorm) {
+        AestraComp comp;
+        configure(comp);
+        comp.setParameter(AestraComp::kThreshold, thresholdNorm(-18.0f));
+        comp.setParameter(AestraComp::kRatio, ratioNorm(6.0f));
+        comp.setParameter(AestraComp::kKnee, kneeNorm);
+        std::vector<float> input(48000, amp);
+        return processMono(comp, input).back();
+    };
 
-    auto output = processBlocks(comp, input.data(), numBlocks, kBlockSize);
-
-    float gr = comp.getCurrentGainReductionDb();
-
-    // Should have significant GR (> 10dB)
-    if (gr < 10.0f) {
-        std::cerr << "FAILED: GR=" << std::fixed << std::setprecision(1)
-                  << gr << "dB (expected > 10dB)\n";
+    const float belowAmp = dbToLinear(-21.0f);
+    const float nearAmp = dbToLinear(-18.0f);
+    const float aboveAmp = dbToLinear(-9.0f);
+    const float belowGain = run(belowAmp, 1.0f) / belowAmp;
+    const float nearGain = run(nearAmp, 1.0f) / nearAmp;
+    const float aboveGain = run(aboveAmp, 1.0f) / aboveAmp;
+    if (!(belowGain > nearGain && nearGain > aboveGain)) {
+        std::cerr << "soft knee gain is not monotonic: " << belowGain << ", " << nearGain << ", " << aboveGain
+                  << "\n";
         return false;
     }
 
-    std::cout << "PASSED (GR=" << std::fixed << std::setprecision(1) << gr << "dB)\n";
+    const float hardBelow = run(belowAmp, 0.0f);
+    if (!near(hardBelow, belowAmp, 0.002f)) {
+        std::cerr << "hard knee compressed below-threshold signal\n";
+        return false;
+    }
+    return true;
+}
+
+bool testAttackAndReleaseTiming() {
+    AestraComp attackComp;
+    configure(attackComp);
+    attackComp.setParameter(AestraComp::kAttack, attackNorm(50.0f));
+    std::vector<float> step(48000, 1.0f);
+    auto attackOut = processMono(attackComp, step);
+    if (!(std::abs(attackOut[32]) > std::abs(attackOut[12000]))) {
+        std::cerr << "attack did not reduce gain over time\n";
+        return false;
+    }
+
+    AestraComp releaseComp;
+    configure(releaseComp);
+    releaseComp.setParameter(AestraComp::kAttack, attackNorm(0.1f));
+    releaseComp.setParameter(AestraComp::kRelease, releaseNorm(300.0f));
+    std::vector<float> releaseInput(48000, 1.0f);
+    std::fill(releaseInput.begin() + 24000, releaseInput.end(), 0.1f);
+    auto releaseOut = processMono(releaseComp, releaseInput);
+    if (!(std::abs(releaseOut[24100]) < std::abs(releaseOut.back()))) {
+        std::cerr << "release did not recover gain\n";
+        return false;
+    }
+    return true;
+}
+
+bool testSampleRateIndependence() {
+    float reference = 0.0f;
+    for (double sampleRate : {44100.0, 48000.0, 96000.0}) {
+        AestraComp comp;
+        configure(comp, sampleRate);
+        std::vector<float> input(static_cast<size_t>(sampleRate * 0.5), 0.5f);
+        const float tail = processMono(comp, input).back();
+        if (reference == 0.0f) reference = tail;
+        if (!near(tail, reference, 0.015f)) {
+            std::cerr << "sample-rate mismatch at " << sampleRate << ": " << tail << " vs " << reference << "\n";
+            return false;
+        }
+    }
+    return true;
+}
+
+bool testMixAndGainControls() {
+    std::vector<float> input(48000, 0.5f);
+
+    AestraComp wetComp;
+    configure(wetComp);
+    const float wet = processMono(wetComp, input).back();
+
+    AestraComp dryComp;
+    configure(dryComp);
+    dryComp.setParameter(AestraComp::kMix, 0.0f);
+    const float dry = processMono(dryComp, input).back();
+    if (!near(dry, 0.5f, 0.0001f)) {
+        std::cerr << "mix 0 not dry: " << dry << "\n";
+        return false;
+    }
+
+    AestraComp halfComp;
+    configure(halfComp);
+    halfComp.setParameter(AestraComp::kMix, 0.5f);
+    const float half = processMono(halfComp, input).back();
+    if (!near(half, 0.5f * (dry + wet), 0.01f)) {
+        std::cerr << "mix 50 mismatch: " << half << " expected " << 0.5f * (dry + wet) << "\n";
+        return false;
+    }
+
+    AestraComp makeupComp;
+    configure(makeupComp);
+    makeupComp.setParameter(AestraComp::kMakeup, 0.25f); // +6 dB
+    const float makeup = processMono(makeupComp, input).back();
+    if (!near(makeup, wet * dbToLinear(6.0f), 0.03f)) {
+        std::cerr << "makeup mismatch\n";
+        return false;
+    }
+
+    AestraComp outputComp;
+    configure(outputComp);
+    outputComp.setParameter(AestraComp::kOutputGain, gainNorm(6.0f));
+    const float output = processMono(outputComp, input).back();
+    if (!near(output, wet * dbToLinear(6.0f), 0.03f)) {
+        std::cerr << "output gain mismatch\n";
+        return false;
+    }
+
+    AestraComp inputComp;
+    configure(inputComp);
+    inputComp.setParameter(AestraComp::kInputGain, gainNorm(6.0f));
+    (void)processMono(inputComp, input).back();
+    if (!(inputComp.getCurrentGainReductionDb() > wetComp.getCurrentGainReductionDb() + 3.0f)) {
+        std::cerr << "input gain did not increase detector gain reduction\n";
+        return false;
+    }
+    return true;
+}
+
+bool testDetectorHPFReducesLowFrequencyTriggering() {
+    std::vector<float> lowTone(48000, 0.0f);
+    for (size_t i = 0; i < lowTone.size(); ++i) {
+        lowTone[i] = std::sin(static_cast<float>(i) * 2.0f * 3.14159265358979323846f * 60.0f / 48000.0f) * 0.8f;
+    }
+
+    AestraComp noFilter;
+    configure(noFilter);
+    noFilter.setParameter(AestraComp::kThreshold, thresholdNorm(-30.0f));
+    noFilter.setParameter(AestraComp::kRatio, ratioNorm(8.0f));
+    (void)processMono(noFilter, lowTone);
+    const float grNoFilter = noFilter.getCurrentGainReductionDb();
+
+    AestraComp withFilter;
+    configure(withFilter);
+    withFilter.setParameter(AestraComp::kThreshold, thresholdNorm(-30.0f));
+    withFilter.setParameter(AestraComp::kRatio, ratioNorm(8.0f));
+    withFilter.setParameter(AestraComp::kDetectorHPF, 1.0f);
+    (void)processMono(withFilter, lowTone);
+    const float grWithFilter = withFilter.getCurrentGainReductionDb();
+
+    if (!(grWithFilter + 3.0f < grNoFilter)) {
+        std::cerr << "detector HPF did not reduce low-frequency GR enough: noFilter=" << grNoFilter
+                  << " withFilter=" << grWithFilter << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool testStereoLinkAndSanitization() {
+    AestraComp comp;
+    configure(comp);
+    std::vector<float> inL(48000, 0.8f);
+    std::vector<float> inR(48000, 0.2f);
+    auto [outL, outR] = processStereo(comp, inL, inR);
+    const float ratio = outL.back() / outR.back();
+    if (!near(ratio, 4.0f, 0.05f)) {
+        std::cerr << "linked stereo image changed ratio=" << ratio << "\n";
+        return false;
+    }
+
+    AestraComp poison;
+    configure(poison);
+    std::vector<float> input = {0.0f, std::numeric_limits<float>::quiet_NaN(),
+                                std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity(),
+                                1.0e30f, -1.0e30f, 0.25f};
+    auto out = processMono(poison, input);
+    for (float sample : out) {
+        if (!std::isfinite(sample)) {
+            std::cerr << "non-finite output from poisoned input\n";
+            return false;
+        }
+    }
+    if (!std::isfinite(poison.getCurrentGainReductionDb())) {
+        std::cerr << "non-finite gain reduction state\n";
+        return false;
+    }
     return true;
 }
 
 } // namespace
 
 int main() {
-    std::cout << "AestraComp Phase 0 Tests\n";
-    std::cout << "========================\n";
-
-    int passed = 0;
-    int total = 6;
-
-    if (testMakeupGainSingleApplication()) passed++;
-    if (testNoHardClamp()) passed++;
-    if (testNoZipperNoise()) passed++;
-    if (testBypassTransparency()) passed++;
-    if (testMetadataConsistency()) passed++;
-    if (testGRMetering()) passed++;
-
-    std::cout << "\n" << passed << "/" << total << " tests passed\n";
-
-    return passed == total ? 0 : 1;
+    std::cout << "AestraComp V1 DSP Tests\n";
+    if (!testSilenceAndBypass()) return 1;
+    if (!testStaticGainReduction()) return 1;
+    if (!testKneeMonotonic()) return 1;
+    if (!testAttackAndReleaseTiming()) return 1;
+    if (!testSampleRateIndependence()) return 1;
+    if (!testMixAndGainControls()) return 1;
+    if (!testDetectorHPFReducesLowFrequencyTriggering()) return 1;
+    if (!testStereoLinkAndSanitization()) return 1;
+    std::cout << "All AestraComp V1 DSP tests passed.\n";
+    return 0;
 }

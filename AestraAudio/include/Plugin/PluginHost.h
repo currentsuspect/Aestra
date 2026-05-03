@@ -345,16 +345,21 @@ public:
     };
 
     void addEvent(uint32_t sampleOffset, const uint8_t* data, uint8_t size) {
-        if (size <= 3) {
-            uint32_t index = m_eventCount.fetch_add(1, std::memory_order_relaxed);
-            if (index < MAX_EVENTS) {
+        if (size <= 3 && data != nullptr) {
+            uint32_t index = m_eventCount.load(std::memory_order_acquire);
+            while (index < MAX_EVENTS) {
+                const uint32_t desired = index + 1;
+                if (!m_eventCount.compare_exchange_weak(index, desired,
+                                                        std::memory_order_acq_rel,
+                                                        std::memory_order_acquire)) {
+                    continue;
+                }
                 Event& e = m_events[index];
                 e.sampleOffset = sampleOffset;
                 e.size = size;
+                std::memset(e.data, 0, sizeof(e.data));
                 std::memcpy(e.data, data, size);
-            } else {
-                // Buffer full, rollback count (not strictly necessary but cleaner)
-                m_eventCount.store(MAX_EVENTS, std::memory_order_relaxed);
+                return;
             }
         }
     }

@@ -11,8 +11,9 @@
 namespace Aestra {
 namespace Audio {
 
-// Forward declaration
+// Forward declarations
 class PluginManager;
+class EffectChainSnapshot;
 
 /**
  * @brief Single slot in an effect chain
@@ -32,10 +33,20 @@ struct EffectSlot {
  * Audio flows through each non-empty slot in sequence. Slots can be bypassed
  * individually and have dry/wet mix controls.
  *
- * Thread Safety:
- * - Slot modification (insert/remove) should be done from main thread
- * - process() is RT-safe and called from audio thread
- * - Bypass and dry/wet can be changed from any thread (atomic)
+ * Thread Safety — Mutation Contract:
+ * - Slot mutation (insertPlugin, removePlugin, movePlugin, swapPlugins, clear,
+ *   reset) is NON-RT only. These must never be called from the audio thread or
+ *   any thread marked with ScopedRealtimeAudioThread.
+ * - Slot mutation MUST NOT occur concurrently with process(). The audio thread
+ *   reads m_slots directly through a raw EffectChain* pointer baked into the
+ *   AudioGraph snapshot. There is no internal mutex protecting m_slots during
+ *   process().
+ * - Worker-created plugin instances must be handed back to the main/control
+ *   thread before insertion into the chain.
+ * - The future fix is snapshot-based slot publication (Stage B of the
+ *   plugin/effect-chain lifetime audit). This class adds debug-time RT-misuse
+ *   guards only; it does not implement the snapshot rewrite.
+ * - Bypass and dry/wet can be changed from any thread (atomic).
  *
  * Processing Flow:
  * @code
@@ -229,6 +240,25 @@ public:
      */
     uint32_t getTotalLatency() const;
 
+    // ==============================
+    // Snapshot (Pass 1)
+    // ==============================
+
+    /**
+     * @brief Create an immutable snapshot of the effect chain.
+     *
+     * This snapshot is designed to eventually replace raw EffectChain* access
+     * in the audio thread. It holds shared_ptr copies so plugin instances
+     * stay alive while any snapshot exists.
+     *
+     * NOTE: This is Pass 1 implementation only — the snapshot is created
+     * but not yet published to the audio thread. Future passes will add
+     * atomic publication and AudioGraph consumption.
+     *
+     * @return Immutable snapshot of current effect chain state.
+     */
+    std::shared_ptr<const EffectChainSnapshot> createSnapshot() const;
+
 private:
     std::array<EffectSlot, MAX_SLOTS> m_slots;
     std::atomic<bool> m_chainBypassed{false};
@@ -237,6 +267,69 @@ private:
     std::vector<float> m_dryBuffer;
     uint32_t m_maxBlockSize = 0;
     double m_sampleRate = 44100.0;
+};
+
+/**
+ * @brief Immutable snapshot of a single effect chain slot.
+ *
+ * Used for RT-safe audio processing. The snapshot holds shared_ptr copies
+ * so plugin instances stay alive while any snapshot exists.
+ */
+struct EffectChainSnapshotSlot {
+    PluginInstancePtr plugin;    ///< Plugin instance (copied shared_ptr)
+    bool bypassed;               ///< Bypass state (copied value)
+    float dryWetMix;            ///< Dry/wet mix (copied value)
+
+    bool isEmpty() const { return plugin == nullptr; }
+};
+
+/**
+ * @brief Immutable snapshot of an entire effect chain.
+ *
+ * This snapshot is designed to replace raw EffectChain* access in the audio
+ * thread. It is built from the mutable EffectChain and published atomically.
+ *
+ * Pass 1 implementation: snapshot type and builder only.
+ * Future passes will add publication and AudioGraph consumption.
+ */
+class EffectChainSnapshot {
+public:
+    static constexpr size_t MAX_SLOTS = 10;
+
+    EffectChainSnapshot() = default;
+
+    explicit EffectChainSnapshot(const std::array<EffectSlot, MAX_SLOTS>& slots) {
+        for (size_t i = 0; i < MAX_SLOTS; ++i) {
+            m_slots[i].plugin = slots[i].plugin;
+            m_slots[i].bypassed = slots[i].bypassed.load(std::memory_order_acquire);
+            m_slots[i].dryWetMix = slots[i].dryWetMix.load(std::memory_order_acquire);
+        }
+        m_slotCount = MAX_SLOTS;
+    }
+
+    size_t slotCount() const noexcept { return m_slotCount; }
+
+    const EffectChainSnapshotSlot& slot(size_t index) const noexcept {
+        return m_slots[index];
+    }
+
+    const std::array<EffectChainSnapshotSlot, MAX_SLOTS>& slots() const noexcept {
+        return m_slots;
+    }
+
+    size_t getActiveSlotCount() const noexcept {
+        size_t count = 0;
+        for (size_t i = 0; i < MAX_SLOTS; ++i) {
+            if (!m_slots[i].isEmpty()) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+private:
+    std::array<EffectChainSnapshotSlot, MAX_SLOTS> m_slots{};
+    size_t m_slotCount = 0;
 };
 
 } // namespace Audio
