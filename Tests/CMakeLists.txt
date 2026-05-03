@@ -880,6 +880,16 @@ target_include_directories(NoteCommandsTest PRIVATE
 add_test(NAME NoteCommandsTest COMMAND NoteCommandsTest)
 set_tests_properties(NoteCommandsTest PROPERTIES LABELS "commands;phase2")
 
+# NoteDiff Test (headless diffing logic for piano roll save path)
+add_executable(NoteDiffTest Commands/NoteDiffTest.cpp)
+target_link_libraries(NoteDiffTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(NoteDiffTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME NoteDiffTest COMMAND NoteDiffTest)
+set_tests_properties(NoteDiffTest PROPERTIES LABELS "commands;phase2")
+
 # Mixer Commands Test (Volume, Pan, Mute, Solo)
 add_executable(MixerCommandsTest Commands/MixerCommandsTest.cpp)
 target_link_libraries(MixerCommandsTest PRIVATE AestraAudioCore AestraCore)

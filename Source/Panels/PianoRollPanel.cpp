@@ -7,6 +7,7 @@
 #include "Commands/RemoveNoteCommand.h"
 #include "Commands/MoveNoteCommand.h"
 #include "Commands/ResizeNoteCommand.h"
+#include "Commands/NoteDiff.h"
 #include "Commands/CommandHistory.h"
 #include "../AestraCore/include/AestraLog.h"
 #include <cmath>
@@ -182,104 +183,13 @@ void PianoRollPanel::savePattern() {
         currentNotes.push_back(backendNote);
     }
 
-    // Detect what changed by comparing m_notesBeforeEdit with currentNotes.
-    // Identity is intentionally based on note lane/position; move/resize handling
-    // below reconciles notes that changed shape after edit gestures.
-    auto noteIdentity = [](const MidiNote& a, const MidiNote& b) {
-        return a.pitch == b.pitch &&
-               a.startBeat == b.startBeat &&
-               a.unitId == b.unitId;
-    };
+    // Diff the before/after states using the dedicated diff function.
+    // diffNotes handles same-position/different-duration disambiguation via
+    // a two-pass algorithm: exact full-field matching first, then position
+    // grouping for move/resize inference.
+    NoteDiffResult diff = diffNotes(m_notesBeforeEdit, currentNotes);
 
-    // Find added notes (in current but not in before, by identity)
-    std::vector<MidiNote> addedNotes;
-    for (const auto& cur : currentNotes) {
-        bool found = false;
-        for (const auto& prev : m_notesBeforeEdit) {
-            if (noteIdentity(cur, prev)) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            addedNotes.push_back(cur);
-        }
-    }
-
-    // Find removed notes (in before but not in current, by identity)
-    std::vector<MidiNote> removedNotes;
-    for (const auto& prev : m_notesBeforeEdit) {
-        bool found = false;
-        for (const auto& cur : currentNotes) {
-            if (noteIdentity(prev, cur)) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            removedNotes.push_back(prev);
-        }
-    }
-
-    // Find moved/resized notes (same identity but different position/duration)
-    std::vector<std::pair<MidiNote, MidiNote>> movedNotes;   // (old, new)
-    std::vector<std::pair<MidiNote, MidiNote>> resizedNotes; // (old, new)
-    for (const auto& prev : m_notesBeforeEdit) {
-        for (const auto& cur : currentNotes) {
-            // Same identity (pitch, startBeat, unitId match)
-            if (prev.pitch == cur.pitch &&
-                prev.startBeat == cur.startBeat &&
-                prev.unitId == cur.unitId) {
-                // Duration changed = resize
-                if (prev.durationBeats != cur.durationBeats) {
-                    resizedNotes.push_back({prev, cur});
-                }
-            }
-            // Same unitId and duration, different position = move
-            else if (prev.unitId == cur.unitId &&
-                     prev.durationBeats == cur.durationBeats &&
-                     prev.velocity == cur.velocity &&
-                     (prev.pitch != cur.pitch || prev.startBeat != cur.startBeat)) {
-                // Check if this note was "moved" (not a remove+add)
-                bool wasInRemoved = false;
-                for (const auto& r : removedNotes) {
-                    if (noteIdentity(r, prev)) {
-                        wasInRemoved = true;
-                        break;
-                    }
-                }
-                bool isNewlyAdded = false;
-                for (const auto& a : addedNotes) {
-                    if (noteIdentity(a, cur)) {
-                        isNewlyAdded = true;
-                        break;
-                    }
-                }
-                if (wasInRemoved && isNewlyAdded) {
-                    // This is a move operation - remove from added/removed lists
-                    movedNotes.push_back({prev, cur});
-                }
-            }
-        }
-    }
-
-    // Remove moved notes from added/removed lists
-    for (const auto& [oldNote, newNote] : movedNotes) {
-        removedNotes.erase(
-            std::remove_if(removedNotes.begin(), removedNotes.end(),
-                [&](const MidiNote& n) { return noteIdentity(n, oldNote); }),
-            removedNotes.end());
-        addedNotes.erase(
-            std::remove_if(addedNotes.begin(), addedNotes.end(),
-                [&](const MidiNote& n) { return noteIdentity(n, newNote); }),
-            addedNotes.end());
-    }
-
-    // Create and execute commands for each detected change
-    bool hasChanges = !addedNotes.empty() || !removedNotes.empty() ||
-                      !movedNotes.empty() || !resizedNotes.empty();
-
-    if (hasChanges) {
+    if (!diff.empty()) {
         // Guard against CommandHistory OnStateChanged reloading the UI mid-save
         m_applyingUndoRedo = true;
 
@@ -292,34 +202,36 @@ void PianoRollPanel::savePattern() {
             }
         });
 
-        // Execute commands in order — each modifies pattern data, and pushAndExecute
-        // adds the command to the undo stack.
-        // Order: remove first, then move/resize, then add (so references stay valid).
-        for (const auto& note : removedNotes) {
+        // Execute commands in a safe order:
+        // 1. Remove first — removes notes that no longer exist
+        // 2. Move/Resize — operates on notes that still exist in the pattern
+        // 3. Add last — adds new notes
+        // This ordering ensures commands never interfere with each other.
+        for (const auto& note : diff.removed) {
             auto cmd = std::make_shared<RemoveNoteCommand>(pm, m_currentPatternId, note);
             history.pushAndExecute(cmd);
         }
-        for (const auto& [oldNote, newNote] : movedNotes) {
+        for (const auto& [oldNote, newNote] : diff.moved) {
             auto cmd = std::make_shared<MoveNoteCommand>(
                 pm, m_currentPatternId, oldNote, newNote.startBeat, newNote.pitch);
             history.pushAndExecute(cmd);
         }
-        for (const auto& [oldNote, newNote] : resizedNotes) {
+        for (const auto& [oldNote, newNote] : diff.resized) {
             auto cmd = std::make_shared<ResizeNoteCommand>(
                 pm, m_currentPatternId, oldNote, newNote.durationBeats);
             history.pushAndExecute(cmd);
         }
-        for (const auto& note : addedNotes) {
+        for (const auto& note : diff.added) {
             auto cmd = std::make_shared<AddNoteCommand>(pm, m_currentPatternId, note);
             history.pushAndExecute(cmd);
         }
 
         Log::info("[PianoRollPanel] Saved pattern " + std::to_string(m_currentPatternId.value) +
                   " with " + std::to_string(currentNotes.size()) + " notes" +
-                  " (added:" + std::to_string(addedNotes.size()) +
-                  " removed:" + std::to_string(removedNotes.size()) +
-                  " moved:" + std::to_string(movedNotes.size()) +
-                  " resized:" + std::to_string(resizedNotes.size()) + ")");
+                  " (added:" + std::to_string(diff.added.size()) +
+                  " removed:" + std::to_string(diff.removed.size()) +
+                  " moved:" + std::to_string(diff.moved.size()) +
+                  " resized:" + std::to_string(diff.resized.size()) + ")");
 
         m_applyingUndoRedo = false;
     }
@@ -347,7 +259,7 @@ void PianoRollPanel::savePattern() {
         pattern.lengthBeats = newLengthBeats;
     });
 
-    // [FIX] If we're in Arsenal pattern mode, update the audio engine's loop length immediately
+    // If we're in Arsenal pattern mode, update the audio engine's loop length immediately
     // so the next playback restart uses the correct boundary without requiring a focus switch.
     if (m_trackManager && m_trackManager->isPatternMode() && m_audioEngine) {
         m_audioEngine->setPatternPlaybackMode(true, newLengthBeats);
