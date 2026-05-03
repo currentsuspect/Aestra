@@ -118,6 +118,104 @@ void test_remove_out_of_bounds() {
     testsPassed++;
 }
 
+// 2a-VIII: Invalid target enum value (non-fatal, preserved as-is)
+void test_invalid_target_enum() {
+    // An unrecognized AutomationTarget value should be stored and queryable.
+    // The renderer must handle unknown targets gracefully (e.g., skip).
+    AutomationCurve curve("unknown_param", static_cast<AutomationTarget>(999));
+    curve.setDefaultValue(0.75f);
+    curve.addPoint(1.0, 0.5f, 480.0);
+
+    if (curve.getAutomationTarget() != static_cast<AutomationTarget>(999)) {
+        printf("FAIL: target enum mismatch\n"); testsFailed++; return;
+    }
+    if (curve.getPoints().size() != 1) { printf("FAIL: expected 1 point\n"); testsFailed++; return; }
+    testsPassed++;
+}
+
+// 2a-IX: Curve with no points survives serialization round-trip concept
+void test_empty_curve_survival() {
+    AutomationCurve curve("pan", AutomationTarget::Pan);
+    curve.setDefaultValue(0.0f);
+    if (curve.getPoints().size() != 0) { printf("FAIL: expected 0 points\n"); testsFailed++; return; }
+    if (curve.getValueAtBeat(1.0, 480.0) != curve.getDefaultValue()) {
+        printf("FAIL: empty curve value should equal default\n"); testsFailed++; return;
+    }
+    testsPassed++;
+}
+
+// 2a-X: Orphaned automation target survives (semantic survival)
+void test_orphan_target_survival() {
+    // Automation for a removed/missing target should still be loadable
+    // and round-trippable — the renderer is responsible for skipping unknown targets.
+    AutomationCurve curve("deleted_plugin_param", static_cast<AutomationTarget>(511));
+    curve.setDefaultValue(0.25f);
+    curve.addPoint(0.0, 0.5f, 480.0);
+    curve.addPoint(2.0, 0.75f, 480.0);
+    if (curve.getPoints().size() != 2) { printf("FAIL: expected 2 points\n"); testsFailed++; return; }
+    testsPassed++;
+}
+
+// 2a-XI: AutomationTarget 256 wraps to 0 via raw uint8_t static_cast.
+// This documents the unguarded cast hazard. The ProjectSerializer boundary
+// (finiteNumberOr [0,255]) prevents this from reaching production load paths.
+void test_target_256_raw_cast_is_volume() {
+    auto raw = static_cast<AutomationTarget>(256);
+    // AutomationTarget is uint8_t; 256 wraps to 0 = Volume.
+    // This is documented as a hazard — any code path that does an
+    // unclamped static_cast<AutomationTarget>(value) is at risk.
+    // The ProjectSerializer path is already protected via finiteNumberOr [0,255].
+    if (static_cast<int>(raw) != 0) {
+        printf("FAIL: AutomationTarget(256) did not wrap to 0 via uint8_t cast\n");
+        testsFailed++; return;
+    }
+    testsPassed++;
+}
+
+// 2a-XII: automationTargetFromRawInt helper prevents wrap-to-Volume hazard.
+// All integer→AutomationTarget ingress should use this helper.
+void test_automation_target_from_raw_int() {
+    // Known values pass through unchanged
+    if (automationTargetFromRawInt(0) != AutomationTarget::Volume) {
+        printf("FAIL: raw 0 → Volume\n"); testsFailed++; return;
+    }
+    if (automationTargetFromRawInt(1) != AutomationTarget::Pan) {
+        printf("FAIL: raw 1 → Pan\n"); testsFailed++; return;
+    }
+    if (automationTargetFromRawInt(255) != AutomationTarget::Custom) {
+        printf("FAIL: raw 255 → Custom\n"); testsFailed++; return;
+    }
+    // Unrecognized in-range values preserved as-is (renderer skips them)
+    if (static_cast<int>(automationTargetFromRawInt(128)) != 128) {
+        printf("FAIL: raw 128 should be preserved\n"); testsFailed++; return;
+    }
+    if (static_cast<int>(automationTargetFromRawInt(2)) != 2) {
+        printf("FAIL: raw 2 should be preserved\n"); testsFailed++; return;
+    }
+    // Wrap-to-Volume hazard prevented: 256 → 255 (Custom), NOT 0 (Volume)
+    if (automationTargetFromRawInt(256) != AutomationTarget::Custom) {
+        printf("FAIL: raw 256 must clamp to Custom(255), not Volume(0)\n"); testsFailed++; return;
+    }
+    if (static_cast<int>(automationTargetFromRawInt(256)) != 255) {
+        printf("FAIL: raw 256 clamped value mismatch\n"); testsFailed++; return;
+    }
+    // Huge values clamp safely
+    if (automationTargetFromRawInt(10000) != AutomationTarget::Custom) {
+        printf("FAIL: raw 10000 must clamp to Custom\n"); testsFailed++; return;
+    }
+    if (automationTargetFromRawInt(999999) != AutomationTarget::Custom) {
+        printf("FAIL: raw 999999 must clamp to Custom\n"); testsFailed++; return;
+    }
+    // Negative values clamp to Custom (no backward-compat reason to become Volume)
+    if (automationTargetFromRawInt(-1) != AutomationTarget::Custom) {
+        printf("FAIL: raw -1 must clamp to Custom(255), not Volume(0)\n"); testsFailed++; return;
+    }
+    if (automationTargetFromRawInt(-999999) != AutomationTarget::Custom) {
+        printf("FAIL: raw -999999 must clamp to Custom\n"); testsFailed++; return;
+    }
+    testsPassed++;
+}
+
 int main() {
     printf("=== Automation Deserialization Stress Tests ===\n\n");
 
@@ -141,6 +239,21 @@ int main() {
 
     printf("\n2a-VII: Remove out of bounds\n");
     test_remove_out_of_bounds();
+
+    printf("\n2a-VIII: Invalid target enum\n");
+    test_invalid_target_enum();
+
+    printf("\n2a-IX: Empty curve survival\n");
+    test_empty_curve_survival();
+
+    printf("\n2a-X: Orphan target survival\n");
+    test_orphan_target_survival();
+
+    printf("\n2a-XI: AutomationTarget 256 raw cast wraps to Volume (uint8_t hazard)\n");
+    test_target_256_raw_cast_is_volume();
+
+    printf("\n2a-XII: automationTargetFromRawInt helper prevents wrap-to-Volume\n");
+    test_automation_target_from_raw_int();
 
     printf("\n=== Results: %d passed, %d failed ===\n", testsPassed, testsFailed);
     return testsFailed > 0 ? 1 : 0;

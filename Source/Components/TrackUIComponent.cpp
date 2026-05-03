@@ -78,13 +78,16 @@ std::string truncateClipLabel(const std::string& text, float availableWidth, flo
     return text.substr(0, maxChars - 2) + "..";
 }
 
-AestraUI::NUIRect insetClipRect(const AestraUI::NUIRect& rect, float insetX, float insetY) {
-    return AestraUI::NUIRect(
-        rect.x + insetX,
-        rect.y + insetY,
-        std::max(1.0f, rect.width - insetX * 2.0f),
-        std::max(4.0f, rect.height - insetY * 2.0f)
-    );
+AestraUI::NUIColor restrainDawColor(const AestraUI::NUIColor& color, float brightnessScale, float saturationScale,
+                                    float alpha) {
+    const float luma = (0.2126f * color.r) + (0.7152f * color.g) + (0.0722f * color.b);
+    const float tonedR = ((color.r - luma) * saturationScale + luma) * brightnessScale;
+    const float tonedG = ((color.g - luma) * saturationScale + luma) * brightnessScale;
+    const float tonedB = ((color.b - luma) * saturationScale + luma) * brightnessScale;
+    return AestraUI::NUIColor(std::clamp(tonedR, 0.0f, 1.0f),
+                              std::clamp(tonedG, 0.0f, 1.0f),
+                              std::clamp(tonedB, 0.0f, 1.0f),
+                              alpha >= 0.0f ? alpha : color.a);
 }
 
 } // namespace
@@ -264,6 +267,9 @@ void TrackUIComponent::onRecordToggled() {
     if (m_channel) {
         const bool armed = m_recordButton && m_recordButton->isToggled();
         m_channel->setArmed(armed);
+        if (m_trackManager) {
+            m_trackManager->publishInputMonitoringSnapshot();
+        }
         Log::info("Lane " + m_laneId.toString() + " armed: " + (armed ? "ON" : "OFF"));
         updateUI();
         repaint();
@@ -282,12 +288,18 @@ void TrackUIComponent::showRecordModeMenu(const AestraUI::NUIPoint& position) {
     m_recordModeMenu->addRadioItem("Arm Only", "record_mode", !m_channel->isMonitoringEnabled(), [this]() {
         if (!m_channel) return;
         m_channel->setMonitoringEnabled(false);
+        if (m_trackManager) {
+            m_trackManager->publishInputMonitoringSnapshot();
+        }
         updateUI();
         repaint();
     });
     m_recordModeMenu->addRadioItem("Arm + Monitor", "record_mode", m_channel->isMonitoringEnabled(), [this]() {
         if (!m_channel) return;
         m_channel->setMonitoringEnabled(true);
+        if (m_trackManager) {
+            m_trackManager->publishInputMonitoringSnapshot();
+        }
         updateUI();
         repaint();
     });
@@ -396,18 +408,6 @@ void TrackUIComponent::updateTrackNameColors() {
     if (!m_nameLabel || !m_channel) return;
 
     std::string trackName = m_channel->getName();
-    auto softenTrackColor = [](const AestraUI::NUIColor& color) {
-        const float brightnessScale = 0.85f; // ~15% lower brightness
-        const float saturationScale = 0.80f; // keep identity, reduce neon clash
-        const float luma = (0.2126f * color.r) + (0.7152f * color.g) + (0.0722f * color.b);
-        const float tonedR = ((color.r - luma) * saturationScale + luma) * brightnessScale;
-        const float tonedG = ((color.g - luma) * saturationScale + luma) * brightnessScale;
-        const float tonedB = ((color.b - luma) * saturationScale + luma) * brightnessScale;
-        return AestraUI::NUIColor(std::clamp(tonedR, 0.0f, 1.0f),
-                                  std::clamp(tonedG, 0.0f, 1.0f),
-                                  std::clamp(tonedB, 0.0f, 1.0f),
-                                  color.a);
-    };
 
     // Apply bright colors based on track number for "Track X" format
     size_t spacePos = trackName.find(' ');
@@ -434,19 +434,9 @@ void TrackUIComponent::updateTrackNameColors() {
             try {
                 uint32_t trackNumber = std::stoul(numberStr);
                 size_t colorIndex = (trackNumber - 1) % brightColors.size();
-                AestraUI::NUIColor autoColor = softenTrackColor(brightColors[colorIndex]);
+                AestraUI::NUIColor autoColor = restrainDawColor(brightColors[colorIndex], 0.72f, 0.30f, 0.78f);
                 
                 m_nameLabel->setTextColor(autoColor);
-                
-                // [FIX] Persist this visual color to the model so Mixer can see it!
-                if (m_trackManager && m_laneId.isValid()) {
-                    auto* lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
-                    if (lane && lane->colorRGBA != autoColor.toHex()) {
-                        lane->colorRGBA = autoColor.toHex();
-                        // Also update MixerChannel for good measure
-                        if (m_channel) m_channel->setColor(autoColor.toHex());
-                    }
-                }
                 
                 return; // Successfully set color, exit
             } catch (const std::exception&) {
@@ -457,7 +447,7 @@ void TrackUIComponent::updateTrackNameColors() {
         // Get track index from ID for consistent coloring (fallback)
         uint32_t trackId = m_channel->getChannelId();
         size_t colorIndex = (trackId - 1) % brightColors.size();
-        m_nameLabel->setTextColor(softenTrackColor(brightColors[colorIndex]));
+        m_nameLabel->setTextColor(restrainDawColor(brightColors[colorIndex], 0.72f, 0.30f, 0.78f));
     } else {
         // Fallback for non-standard track names
         uint32_t color = m_channel->getColor();
@@ -465,7 +455,7 @@ void TrackUIComponent::updateTrackNameColors() {
         float g = ((color >> 8) & 0xFF) / 255.0f;
         float b = (color & 0xFF) / 255.0f;
         float a = ((color >> 24) & 0xFF) / 255.0f;
-        m_nameLabel->setTextColor(softenTrackColor(AestraUI::NUIColor(r, g, b, a)));
+        m_nameLabel->setTextColor(restrainDawColor(AestraUI::NUIColor(r, g, b, a), 0.72f, 0.30f, 0.78f));
     }
 }
 
@@ -637,8 +627,8 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
 
     if (!topPoints.empty()) {
         const float centerYf = static_cast<float>(centerY);
-        const AestraUI::NUIColor fillColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.18f);
-        const AestraUI::NUIColor peakColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.35f);
+        const AestraUI::NUIColor fillColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.17f);
+        const AestraUI::NUIColor peakColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.34f);
         const float lineWidth = 1.0f;
 
         for (size_t i = 0; i < topPoints.size(); ++i) {
@@ -756,15 +746,20 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
     }
     
     bool clipSelected = (clip.id == m_activeClipId);
-    constexpr float kClipLabelBarHeight = 14.0f;
-    AestraUI::NUIColor tintFill = clipColor.withAlpha(clipSelected ? 0.78f : 0.70f);
+    const AestraUI::NUIColor clipBase = restrainDawColor(clipColor,
+                                                         clipSelected ? 1.02f : 0.90f,
+                                                         clipSelected ? 0.80f : 0.66f,
+                                                         1.0f);
+    AestraUI::NUIColor tintFill = clipBase.withAlpha(clipSelected ? 0.78f : 0.60f);
+    renderer.fillRoundedRect(clipBounds, clipRadius, themeManager.getColor("backgroundPrimary").withAlpha(0.16f));
     renderer.fillRoundedRect(clipBounds, clipRadius, tintFill);
 
-    AestraUI::NUIColor borderColor = clipColor.lightened(0.12f).withAlpha(clipSelected ? 0.92f : 0.74f);
-    const float borderWidth = 1.0f;
+    AestraUI::NUIColor borderColor = clipBase.lightened(0.10f).withAlpha(clipSelected ? 0.94f : 0.58f);
+    float borderWidth = 1.0f;
     
     if (clipSelected) {
-        borderColor = clipColor.lightened(0.24f).withAlpha(0.92f);
+        borderColor = clipBase.lightened(0.22f).withAlpha(0.92f);
+        borderWidth = 1.35f;
     }
     
     // Ghost instance check
@@ -777,6 +772,12 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
     }
     
     renderer.strokeRoundedRect(clipBounds, clipRadius, borderWidth, borderColor);
+    if (clipSelected) {
+        renderer.strokeRoundedRect({clipBounds.x - 1.0f, clipBounds.y - 1.0f, clipBounds.width + 2.0f, clipBounds.height + 2.0f},
+                                   clipRadius + 1.0f,
+                                   1.0f,
+                                   themeManager.getColor("accentPrimary").withAlpha(0.52f));
+    }
     if (clipBounds.height > 12.0f && clipBounds.width > 28.0f) {
         const float nameX = clipBounds.x + 6.0f;
         const std::string displayName = truncateClipLabel(sampleName, clipBounds.width - 16.0f, 6.0f);
@@ -784,7 +785,7 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
             renderer.drawText(displayName,
                               AestraUI::NUIPoint(nameX, clipBounds.y + 4.0f),
                               10.0f,
-                              AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.85f));
+                              themeManager.getColor("textPrimary").withAlpha(clipSelected ? 0.88f : 0.72f));
         }
 
     }
@@ -1045,12 +1046,16 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
     
     // Zebra striping moved to TrackManagerUI for guaranteed rendering order
     
-    AestraUI::NUIColor trackBgColor = AestraUI::NUIColor::transparent();
+    AestraUI::NUIColor trackBgColor =
+        (m_rowIndex % 2 == 0) ? AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.008f)
+                              : AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.030f);
 
     // Selection Highlight (Static base)
     if (isSelected()) {
-         AestraUI::NUIColor selectedColor = themeManager.getColor("primary").withAlpha(0.12f);
+         AestraUI::NUIColor selectedColor = themeManager.getColor("accentPrimary").withAlpha(0.075f);
          trackBgColor = selectedColor; 
+    } else if (isHovered()) {
+         trackBgColor = AestraUI::NUIColor::white().withAlpha(0.020f);
     }
     
     // Apply background
@@ -1067,13 +1072,15 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
         
         // Static Control Area State
         if (m_channel) {
-             if (m_selected) {
-                 // Selected: Brighter Glass Highlight
-                 baseControlColor = themeManager.getColor("accentPrimary").withAlpha(0.16f);
+            if (m_selected) {
+                 // Selected: clear, quiet lane ownership.
+                 baseControlColor = themeManager.getColor("accentPrimary").withAlpha(0.13f);
              } else if (m_channel->isSoloed()) {
                  baseControlColor = themeManager.getColor("accentCyan").withAlpha(0.10f);
              } else if (m_channel->isMuted()) {
                  baseControlColor = themeManager.getColor("backgroundSecondary");
+             } else if (isHovered()) {
+                 baseControlColor = themeManager.getColor("surfaceRaised").withAlpha(0.70f);
              }
         }
         
@@ -1098,7 +1105,8 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
             AestraUI::NUIColor stripColor(r, g, b, a > 0.0f ? a : 1.0f);
             
             const float stripWidth = 3.0f;
-            const auto stripBright = stripColor.lightened(0.14f).withAlpha(0.96f);
+            const float stripAlpha = (m_selected || (m_channel && (m_channel->isArmed() || m_channel->isSoloed()))) ? 0.86f : 0.52f;
+            const auto stripBright = restrainDawColor(stripColor, 0.84f, 0.62f, stripAlpha);
             renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripBright);
         }
 
@@ -1191,7 +1199,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     const AestraUI::NUIRect controlAreaBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
 
     // Layered control slab with cool depth.
-    renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(0.22f));
+    renderer.fillRect(controlAreaBounds, themeManager.getColor("surfaceRaised").withAlpha(isHovered() ? 0.30f : 0.18f));
 
     AestraUI::NUIRect highlightRect = controlAreaBounds;
     highlightRect.height = 1.0f;
@@ -1221,15 +1229,15 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
                     float visualLevel = std::pow(level, 0.5f); // Perceptual scaling
                     
                     float meterX = bounds.x + 20.0f; 
-                    float meterY = bounds.y + 10.0f; 
+                    float meterY = bounds.y + 13.0f;
                     float meterW = 140.0f * visualLevel;
-                    float meterH = 28.0f; 
+                    float meterH = 22.0f;
                     
                     AestraUI::NUIRect meterRect(meterX, meterY, meterW, meterH);
                     
-                    AestraUI::NUIColor meterColor = themeManager.getColor("success").withAlpha(0.15f);
-                    if (visualLevel > 0.8f) meterColor = themeManager.getColor("error").withAlpha(0.2f);
-                    else if (visualLevel > 0.5f) meterColor = themeManager.getColor("warning").withAlpha(0.2f);
+                    AestraUI::NUIColor meterColor = themeManager.getColor("success").withAlpha(0.055f);
+                    if (visualLevel > 0.8f) meterColor = themeManager.getColor("error").withAlpha(0.08f);
+                    else if (visualLevel > 0.5f) meterColor = themeManager.getColor("warning").withAlpha(0.075f);
                     
                     renderer.fillRoundedRect(meterRect, 4.0f, meterColor);
                 }
@@ -1353,8 +1361,9 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             }
         }
         
-        const float stripWidth = 4.0f;
-        stripColor = stripColor.lightened(0.14f).withAlpha(0.96f);
+        const float stripWidth = 3.0f;
+        const float stripAlpha = (m_selected || m_channel->isArmed() || m_channel->isSoloed()) ? 0.90f : 0.64f;
+        stripColor = restrainDawColor(stripColor, 0.86f, 0.62f, stripAlpha);
         
         // Draw strip
         renderer.fillRect(AestraUI::NUIRect(bounds.x, bounds.y, stripWidth, bounds.height), stripColor);
@@ -1407,18 +1416,39 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     }
 
     if (m_channel) {
-        const auto textIdle = themeManager.getColor("textPrimary").withAlpha(0.48f);
+        const auto textIdle = themeManager.getColor("textPrimary").withAlpha(isHovered() ? 0.68f : 0.54f);
         const auto muteActive = AestraUI::NUIColor::fromHex(0xf97316, 0.95f);
         const auto soloActive = themeManager.getColor("accentPrimary").withAlpha(0.95f);
         const auto recordActive = AestraUI::NUIColor::fromHex(0xef4444, 0.95f);
         const float fontSize = 11.0f;
 
-        const auto drawControlLabel = [&](const std::shared_ptr<AestraUI::NUIButton>& button,
-                                          const std::string& label,
-                                          AestraUI::NUIColor color) {
+        const auto drawButtonShell = [&](const std::shared_ptr<AestraUI::NUIButton>& button,
+                                         bool active,
+                                         AestraUI::NUIColor activeColor) {
             if (!button) {
                 return;
             }
+            const auto rect = button->getBounds();
+            const bool hovered = button->isHovered() && button->isEnabled();
+            AestraUI::NUIColor bg = AestraUI::NUIColor::white().withAlpha(hovered ? 0.050f : 0.022f);
+            AestraUI::NUIColor border = themeManager.getColor("border").withAlpha(hovered ? 0.25f : 0.11f);
+            if (active) {
+                bg = activeColor.withAlpha(0.16f);
+                border = activeColor.withAlpha(0.42f);
+            }
+            renderer.fillRoundedRect(rect, 4.0f, bg);
+            renderer.strokeRoundedRect(rect, 4.0f, 1.0f, border);
+        };
+
+        const auto drawControlLabel = [&](const std::shared_ptr<AestraUI::NUIButton>& button,
+                                          const std::string& label,
+                                          AestraUI::NUIColor color,
+                                          bool active,
+                                          AestraUI::NUIColor activeColor) {
+            if (!button) {
+                return;
+            }
+            drawButtonShell(button, active, activeColor);
             const auto rect = button->getBounds();
             const auto textSize = renderer.measureText(label, fontSize);
             renderer.drawText(label,
@@ -1433,6 +1463,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             if (!button) {
                 return;
             }
+            drawButtonShell(button, false, color);
             const auto rect = button->getBounds();
             const float cy = std::round(rect.y + rect.height * 0.5f) + 0.5f;
             const float left = std::round(rect.x + 2.5f) + 0.5f;
@@ -1446,15 +1477,19 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             renderer.drawLine({left, cy + 2.5f}, {left + arrow, cy + 5.0f}, 1.1f, color);
         };
 
-        drawControlLabel(m_muteButton, "M", m_channel->isMuted() ? muteActive : textIdle);
-        drawControlLabel(m_soloButton, "S", m_channel->isSoloed() ? soloActive : textIdle);
-        drawControlLabel(m_recordButton, "O", m_channel->isArmed() ? recordActive : textIdle);
+        drawControlLabel(m_muteButton, "M", m_channel->isMuted() ? muteActive : textIdle,
+                         m_channel->isMuted(), muteActive);
+        drawControlLabel(m_soloButton, "S", m_channel->isSoloed() ? soloActive : textIdle,
+                         m_channel->isSoloed(), soloActive);
+        drawControlLabel(m_recordButton, m_channel->isMonitoringEnabled() ? "I" : "R",
+                         m_channel->isArmed() ? recordActive : textIdle,
+                         m_channel->isArmed(), recordActive);
         drawRouteGlyph(m_routeButton, textIdle);
     }
 
     // Track number marker (left of name): 10px, 40% white.
     if (m_nameLabel && m_channel) {
-        constexpr float stripWidth = 4.0f;
+        constexpr float stripWidth = 3.0f;
         uint32_t trackNumber = m_channel->getChannelId();
         const auto laneName = m_nameLabel->getText();
         uint32_t parsedNumber = 0;
@@ -1465,8 +1500,8 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         renderer.drawText(
             std::to_string(trackNumber),
             AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f, nameBounds.y + 2.0f),
-            10.0f,
-            AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.40f)
+            10.5f,
+            AestraUI::NUIColor(1.0f, 1.0f, 1.0f, m_selected ? 0.70f : 0.46f)
         );
 
     }
@@ -1491,7 +1526,7 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
         return;
     }
     
-    // 1. ZEBRA STRIPING (Per Bar)
+    // 1. LOW-CONTRAST BAR SHADING
     float pixelsPerBar = m_pixelsPerBeat * m_beatsPerBar;
     int startBar = static_cast<int>(m_timelineScrollOffset / pixelsPerBar);
     int endBar = static_cast<int>((m_timelineScrollOffset + gridWidth) / pixelsPerBar) + 1;
@@ -1517,7 +1552,7 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
              if (rectW > 0 && rectX < gridEndX) {
                  renderer.fillRect(
                      AestraUI::NUIRect(rectX, bounds.y, rectW, bounds.height), 
-                     AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.020f)
+                     AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.003f)
                  );
              }
         }
@@ -1585,11 +1620,11 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     const int lastVisibleBar = static_cast<int>(std::ceil(endBeat / static_cast<double>(beatsPerBar))) + 1;
 
     // Grid hierarchy from palette tokens.
-    const AestraUI::NUIColor barLineColor = AestraUI::NUIColor::fromHex(0x1e1e28).withAlpha(0.92f);
-    const AestraUI::NUIColor beatLineColor = AestraUI::NUIColor::fromHex(0x1e1e28).withAlpha(0.62f);
-    const AestraUI::NUIColor subBeatLineColor = AestraUI::NUIColor::fromHex(0x1e1e28).withAlpha(0.42f);
-    const bool drawBeatSubdivisions = (m_pixelsPerBeat >= 10.0f);
-    const bool drawFurtherSubdivisions = (m_pixelsPerBeat >= 30.0f);
+    const AestraUI::NUIColor barLineColor = AestraUI::NUIColor::fromHex(0x2a2a37).withAlpha(0.44f);
+    const AestraUI::NUIColor beatLineColor = AestraUI::NUIColor::fromHex(0x242431).withAlpha(0.11f);
+    const AestraUI::NUIColor subBeatLineColor = AestraUI::NUIColor::fromHex(0x22222d).withAlpha(0.055f);
+    const bool drawBeatSubdivisions = (m_pixelsPerBeat >= 18.0f);
+    const bool drawFurtherSubdivisions = (m_pixelsPerBeat >= 54.0f);
 
     for (int bar = firstVisibleBar; bar <= lastVisibleBar; ++bar) {
         const float barX = gridStartX + (bar * pixelsPerBar) - m_timelineScrollOffset;
@@ -1598,7 +1633,7 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
             renderer.drawLine(
                 AestraUI::NUIPoint(barX, bounds.y),
                 AestraUI::NUIPoint(barX, bounds.y + bounds.height),
-                1.0f,
+                isPrimary ? 1.05f : 1.0f,
                 isPrimary ? barLineColor : subBeatLineColor
             );
         }
@@ -1686,9 +1721,9 @@ void TrackUIComponent::onResize(int width, int height) {
     const float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
 
     // Buttons cluster (horizontal, right-aligned within the control area)
-    const float buttonW = 14.0f;
+    const float buttonW = 16.0f;
     const float buttonH = 18.0f;
-    const float spacing = 8.0f;
+    const float spacing = 6.0f;
     const int numButtons = m_routeButton ? 4 : (m_recordButton ? 3 : 2);
     const float buttonsTotalW = numButtons * buttonW + (numButtons - 1) * spacing;
     

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -21,6 +22,7 @@
 
 // GLAD must be included after Windows headers to avoid macro conflicts
 #include "../../External/glad/include/glad/glad.h"
+#include "../../External/stb_image.h"
 
 // Suppress APIENTRY redefinition warning - both define the same value
 #ifdef _WIN32
@@ -2675,8 +2677,26 @@ void NUIRendererGL::drawTextureFlippedV(uint32_t textureId, const NUIRect& destR
 // ============================================================================
 
 uint32_t NUIRendererGL::loadTexture(const std::string& filepath) {
-    // Simple stub - file loading not implemented here
-    (void)filepath;
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    const std::array<std::string, 5> candidates = {
+        filepath,
+        "../" + filepath,
+        "../../" + filepath,
+        "../../../" + filepath,
+        "../../../../" + filepath,
+    };
+
+    for (const auto& candidate : candidates) {
+        unsigned char* rgba = stbi_load(candidate.c_str(), &width, &height, &channels, 4);
+        if (!rgba) continue;
+
+        const uint32_t textureId = createTexture(rgba, width, height);
+        stbi_image_free(rgba);
+        return textureId;
+    }
+
     return 0;
 }
 

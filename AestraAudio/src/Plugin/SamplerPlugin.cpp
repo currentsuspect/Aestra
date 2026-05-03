@@ -121,7 +121,7 @@ void SamplerPlugin::shutdown() {
     m_active = false;
     // Force release of data to ensure cleanup
     auto old = std::atomic_exchange(&m_data, std::shared_ptr<SampleData>(nullptr));
-    GarbageCollector::instance().release(old);
+    GarbageCollector::instance().release(old, "SamplerPlugin::SampleData shutdown");
 }
 
 void SamplerPlugin::activate() {
@@ -165,7 +165,7 @@ bool SamplerPlugin::loadSample(const std::string& path) {
     auto oldData = std::atomic_exchange(&m_data, newData);
 
     // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
-    GarbageCollector::instance().release(oldData);
+    GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
 
     return true;
 }
@@ -191,7 +191,7 @@ bool SamplerPlugin::normalizeSample(float targetPeak) {
     }
 
     auto oldData = std::atomic_exchange(&m_data, edited);
-    GarbageCollector::instance().release(oldData);
+    GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
     return true;
 }
 
@@ -217,7 +217,7 @@ bool SamplerPlugin::reverseSample() {
     }
 
     auto oldData = std::atomic_exchange(&m_data, edited);
-    GarbageCollector::instance().release(oldData);
+    GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
     return true;
 }
 
@@ -268,6 +268,13 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     const double endFrame = std::max(startFrame + 1.0, endNorm * totalFrames);
     const double loopLength = std::max(1.0, endFrame - startFrame);
     const bool loopEnabled = m_loopEnabled.load(std::memory_order_relaxed);
+    int activeVoiceCount = 0;
+    for (const auto& v : m_voices) {
+        if (v.active) {
+            ++activeVoiceCount;
+        }
+    }
+    bool activeVoiceCountDirty = false;
 
     for (uint32_t i = 0; i < numFrames; ++i) {
         // Handle MIDI
@@ -275,6 +282,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             const auto& e = midiInput->getEvent(eventIdx);
             if (e.sampleOffset == i) {
                 handleMidiEvent(e, baseRate);
+                activeVoiceCountDirty = true;
                 eventIdx++;
             } else if (e.sampleOffset < i) {
                 eventIdx++; // Skip past
@@ -286,11 +294,14 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         // Render Voices
         float L = 0.0f;
         float R = 0.0f;
-        int activeVoiceCount = 0;
-        for (const auto& v : m_voices) {
-            if (v.active) {
-                ++activeVoiceCount;
+        if (activeVoiceCountDirty) {
+            activeVoiceCount = 0;
+            for (const auto& v : m_voices) {
+                if (v.active) {
+                    ++activeVoiceCount;
+                }
             }
+            activeVoiceCountDirty = false;
         }
         const float voiceComp = 1.0f / std::sqrt(static_cast<float>(std::max(1, activeVoiceCount)));
 
@@ -331,6 +342,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             float env = getEnvelopeLevel(v, 1.0 / m_sampleRate);
             if (v.stage == EnvStage::Off) {
                 v.active = false;
+                activeVoiceCountDirty = true;
                 continue;
             }
 
@@ -343,11 +355,13 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
                     v.position = startFrame + std::fmod(v.position - startFrame, loopLength);
                 } else {
                     v.active = false;
+                    activeVoiceCountDirty = true;
                     continue;
                 }
             }
             if (v.position >= totalFrames) {
                 v.active = false;
+                activeVoiceCountDirty = true;
                 continue;
             }
 

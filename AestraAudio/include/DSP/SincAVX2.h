@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved.
-// This file is compiled with /arch:AVX2 to enable SIMD intrinsics.
-// It is only called when CPUDetection confirms AVX2 support.
+// This file uses AVX2+FMA intrinsics. GCC/Clang compile the inline functions
+// with a per-function target; MSVC only exposes them when the including TU is
+// already built with matching architecture flags.
 #pragma once
 
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
@@ -9,9 +10,15 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 #define AESTRA_AVX2_TARGET __attribute__((target("avx2,fma")))
+#define AESTRA_SINC_CAN_INLINE_AVX2_FMA 1
+#elif defined(_MSC_VER) && (defined(__AVX2__) || defined(__FMA__))
+#define AESTRA_AVX2_TARGET
+#define AESTRA_SINC_CAN_INLINE_AVX2_FMA 1
 #else
 #define AESTRA_AVX2_TARGET
 #endif
+
+#ifdef AESTRA_SINC_CAN_INLINE_AVX2_FMA
 
 namespace Aestra {
 namespace Audio {
@@ -23,7 +30,8 @@ namespace Audio {
  * coeff[t] = c0[t] + alpha * (c1[t] - c0[t])
  * Then standard vectorized dot product with interleaved stereo de-interleaving.
  *
- * This function MUST ONLY be called if CPUDetection::hasAVX2() returns true.
+ * This function MUST ONLY be called if CPUDetection::hasAVX2() and hasFMA()
+ * return true.
  */
 AESTRA_AVX2_TARGET
 inline void sincDotProductAVX2(const float* c0,
@@ -120,4 +128,40 @@ inline void sincDotProductAVX2_Reversed(const float* c0,
 
 } // namespace Audio
 } // namespace Aestra
+#else
+namespace Aestra {
+namespace Audio {
+inline void sincDotProductAVX2(const float* c0,
+                               const float* c1,
+                               float alpha,
+                               const float* samples,
+                               float& sumL,
+                               float& sumR) {
+    sumL = 0.0f;
+    sumR = 0.0f;
+    for (int i = 0; i < 64; ++i) {
+        const float coeff = c0[i] + alpha * (c1[i] - c0[i]);
+        sumL += samples[i * 2] * coeff;
+        sumR += samples[i * 2 + 1] * coeff;
+    }
+}
+
+inline void sincDotProductAVX2_Reversed(const float* c0,
+                                        const float* c1,
+                                        float alpha,
+                                        const float* samples,
+                                        float& sumL,
+                                        float& sumR) {
+    sumL = 0.0f;
+    sumR = 0.0f;
+    for (int i = 0; i < 64; ++i) {
+        const int coeffIndex = 63 - i;
+        const float coeff = c0[coeffIndex] + alpha * (c1[coeffIndex] - c0[coeffIndex]);
+        sumL += samples[i * 2] * coeff;
+        sumR += samples[i * 2 + 1] * coeff;
+    }
+}
+} // namespace Audio
+} // namespace Aestra
+#endif // AESTRA_SINC_CAN_INLINE_AVX2_FMA
 #endif // x86 guard

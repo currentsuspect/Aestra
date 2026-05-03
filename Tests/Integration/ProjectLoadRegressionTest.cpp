@@ -14,6 +14,9 @@
 #include <iostream>
 #include <string>
 
+using namespace Aestra;
+using namespace Aestra::Audio;
+
 namespace {
 
 bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, int numSamples) {
@@ -324,7 +327,7 @@ void testMissingAudioFileNonDestructive() {
     out << projectJson;
     out.close();
 
-    auto trackManager = std::make_shared<Aestra::Audio::TrackManager>();
+    auto trackManager = std::make_shared<TrackManager>();
     auto result = ProjectSerializer::load(testProject.string(), trackManager);
 
     // Load should succeed but with missing asset warning
@@ -332,6 +335,205 @@ void testMissingAudioFileNonDestructive() {
     assert(!result.missingAssets.empty());
 
     std::cout << "[PASS] Missing audio file is non-destructive" << std::endl;
+
+    std::filesystem::remove_all(testDir);
+}
+
+void testUnresolvedRouteTargetNonFatal() {
+    std::cout << "[TEST] Unresolved send routing targets are non-fatal..." << std::endl;
+
+    auto testDir = makeTempDir();
+    std::filesystem::path testProject = testDir / "project.aes";
+
+    // Project with routing sends to a channel ID that doesn't exist.
+    // Channel IDs are 1-based and sequential during load.
+    // Lane 0 gets channel ID 1. The send target 99 does not exist.
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [],
+        "lanes": [
+            {
+                "name": "Track 1",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "clips": [],
+                "routing": {
+                    "mainOutputId": 0,
+                    "sends": [
+                        {
+                            "targetId": 99,
+                            "gain": 0.8,
+                            "pan": 0.0,
+                            "postFader": true,
+                            "mute": false,
+                            "sidechainOnly": false
+                        },
+                        {
+                            "targetId": 0,
+                            "gain": 0.5,
+                            "pan": -0.5,
+                            "postFader": true,
+                            "mute": false,
+                            "sidechainOnly": true
+                        }
+                    ]
+                }
+            }
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+
+    // Load must succeed — unresolved sends must not cause errors.
+    assert(result.ok);
+
+    // Verify the channel was created and has the sends (both the
+    // unresolvable and the resolvable master send).
+    assert(trackManager->getChannelCount() == 1);
+    auto* channel = trackManager->getChannel(0);
+    assert(channel != nullptr);
+
+    const auto sends = channel->getSends();
+    assert(sends.size() == 2);
+
+    // The unresolvable send to channel 99 is preserved in the channel
+    // but silently ignored by the audio runtime (INVALID_SLOT check).
+    // ProjectSerializer logs a warning for unresolved send targets during load.
+    bool foundUnresolvable = false;
+    bool foundMaster = false;
+    for (const auto& send : sends) {
+        if (send.targetChannelId == 99) {
+            foundUnresolvable = true;
+        }
+        if (send.targetChannelId == 0xFFFFFFFFu) {
+            foundMaster = true;
+        }
+    }
+    assert(foundUnresolvable);
+    assert(foundMaster);
+
+    // Verify that saving and reloading preserves the routing (no data loss).
+    std::string saved = ProjectSerializer::serialize(trackManager, 120.0, 0.0, 0).contents;
+    assert(!saved.empty());
+    assert(saved.find("\"targetId\": 99") != std::string::npos ||
+           saved.find("\"targetId\":99") != std::string::npos);
+
+    // Load the re-saved project and verify routing is still preserved.
+    std::filesystem::path testProject2 = testDir / "project2.aes";
+    std::ofstream out2(testProject2);
+    out2 << saved;
+    out2.close();
+
+    auto trackManager2 = std::make_shared<TrackManager>();
+    auto result2 = ProjectSerializer::load(testProject2.string(), trackManager2);
+    assert(result2.ok);
+
+    auto* channel2 = trackManager2->getChannel(0);
+    assert(channel2 != nullptr);
+    const auto sends2 = channel2->getSends();
+    assert(sends2.size() == 2);
+
+    // Verify the mainOutputId is stable after round-trip
+    assert(channel2->getMainOutputId() == channel->getMainOutputId());
+
+    std::cout << "[PASS] Unresolved send routing targets are non-fatal" << std::endl;
+
+    std::filesystem::remove_all(testDir);
+}
+
+void testAutomationTarget256DoesNotWrapToVolume() {
+    std::cout << "[TEST] AutomationTarget 256 does not wrap to Volume..." << std::endl;
+
+    auto testDir = makeTempDir();
+    std::filesystem::path testProject = testDir / "project.aes";
+
+    // AutomationTarget is uint8_t. Raw static_cast wraps 256→0 (Volume).
+    // The ProjectSerializer boundary [0,255] must clamp 256 to 255 (Custom).
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [],
+        "lanes": [
+            {
+                "name": "Track 1",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "clips": [],
+                "automation": [
+                    {
+                        "param": "volume",
+                        "targetEnum": 256,
+                        "default": 0.75,
+                        "points": [
+                            {"b": 0.0, "v": 1.0, "c": 0.0},
+                            {"b": 4.0, "v": 0.5, "c": 0.0}
+                        ]
+                    }
+                ]
+            }
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+    assert(result.ok);
+
+    auto laneIds = trackManager->getPlaylistModel().getLaneIDs();
+    assert(!laneIds.empty());
+    auto* lane = trackManager->getPlaylistModel().getLane(laneIds[0]);
+    assert(lane);
+    assert(!lane->automationCurves.empty());
+
+    auto& curve = lane->automationCurves[0];
+    // Must NOT wrap to Volume(0)
+    assert(curve.getAutomationTarget() != AutomationTarget::Volume);
+    // Must be clamped to Custom(255) per the serializer boundary
+    assert(curve.getAutomationTarget() == AutomationTarget::Custom);
+    // Default value must survive
+    assert(curve.getDefaultValue() == 0.75f);
+    // Points must survive (2 points defined)
+    assert(curve.getPoints().size() == 2);
+
+    // Verify round-trip: re-save and reload
+    std::string saved = ProjectSerializer::serialize(trackManager, 120.0, 0.0, 0).contents;
+    assert(!saved.empty());
+
+    std::filesystem::path testProject2 = testDir / "project2.aes";
+    std::ofstream out2(testProject2);
+    out2 << saved;
+    out2.close();
+
+    auto trackManager2 = std::make_shared<TrackManager>();
+    auto result2 = ProjectSerializer::load(testProject2.string(), trackManager2);
+    assert(result2.ok);
+
+    auto laneIds2 = trackManager2->getPlaylistModel().getLaneIDs();
+    assert(!laneIds2.empty());
+    auto* lane2 = trackManager2->getPlaylistModel().getLane(laneIds2[0]);
+    assert(lane2);
+    assert(!lane2->automationCurves.empty());
+    assert(lane2->automationCurves[0].getAutomationTarget() == AutomationTarget::Custom);
+    assert(lane2->automationCurves[0].getPoints().size() == 2);
+
+    std::cout << "[PASS] AutomationTarget 256 does not wrap to Volume" << std::endl;
 
     std::filesystem::remove_all(testDir);
 }
@@ -347,6 +549,8 @@ int main() {
     testFailedValidationDoesNotClear();
     testUnitManagerSurvivesFailedLoad();
     testMissingAudioFileNonDestructive();
+    testUnresolvedRouteTargetNonFatal();
+    testAutomationTarget256DoesNotWrapToVolume();
 
     std::cout << "=== All tests passed ===" << std::endl;
     return 0;

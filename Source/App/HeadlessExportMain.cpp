@@ -13,7 +13,10 @@
 #include "../AestraAudio/include/Headless/HeadlessMusicGenerator.h"
 #include "../AestraCore/include/AestraLog.h"
 
+#include <cmath>
 #include <iostream>
+#include <limits>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <cstring>
@@ -47,6 +50,41 @@ void printUsage(const char* programName) {
     std::cout << "  --help                Show this help message\n";
 }
 
+const char* requireValue(int argc, char* argv[], int& index, const std::string& option) {
+    if (index + 1 >= argc || argv[index + 1] == nullptr || argv[index + 1][0] == '-') {
+        throw std::invalid_argument("Missing value for " + option);
+    }
+    return argv[++index];
+}
+
+uint32_t parseUint32Option(const char* value, const std::string& option, uint32_t minValue, uint32_t maxValue) {
+    size_t consumed = 0;
+    unsigned long parsed = 0;
+    try {
+        parsed = std::stoul(value, &consumed, 10);
+    } catch (const std::exception&) {
+        throw std::invalid_argument("Invalid numeric value for " + option + ": " + value);
+    }
+    if (consumed != std::strlen(value) || parsed < minValue || parsed > maxValue) {
+        throw std::invalid_argument("Value out of range for " + option + ": " + value);
+    }
+    return static_cast<uint32_t>(parsed);
+}
+
+double parseDoubleOption(const char* value, const std::string& option, double minValue, double maxValue) {
+    size_t consumed = 0;
+    double parsed = 0.0;
+    try {
+        parsed = std::stod(value, &consumed);
+    } catch (const std::exception&) {
+        throw std::invalid_argument("Invalid numeric value for " + option + ": " + value);
+    }
+    if (consumed != std::strlen(value) || !std::isfinite(parsed) || parsed < minValue || parsed > maxValue) {
+        throw std::invalid_argument("Value out of range for " + option + ": " + value);
+    }
+    return parsed;
+}
+
 CommandLineArgs parseArgs(int argc, char* argv[]) {
     CommandLineArgs args;
     
@@ -60,18 +98,23 @@ CommandLineArgs parseArgs(int argc, char* argv[]) {
             args.listTemplates = true;
         } else if (arg == "--verbose" || arg == "-v") {
             args.verbose = true;
-        } else if (arg == "--template" && i + 1 < argc) {
-            args.templateName = argv[++i];
-        } else if (arg == "--duration" && i + 1 < argc) {
-            args.durationBars = static_cast<uint32_t>(std::stoul(argv[++i]));
-        } else if (arg == "--tempo" && i + 1 < argc) {
-            args.tempo = std::stod(argv[++i]);
-        } else if (arg == "--output" && i + 1 < argc) {
-            args.outputPath = argv[++i];
-        } else if (arg == "--sample-rate" && i + 1 < argc) {
-            args.sampleRate = static_cast<uint32_t>(std::stoul(argv[++i]));
-        } else if (arg == "--bit-depth" && i + 1 < argc) {
-            args.bitDepth = argv[++i];
+        } else if (arg == "--template") {
+            args.templateName = requireValue(argc, argv, i, arg);
+        } else if (arg == "--duration") {
+            args.durationBars = parseUint32Option(requireValue(argc, argv, i, arg), arg, 1, 100000);
+        } else if (arg == "--tempo") {
+            args.tempo = parseDoubleOption(requireValue(argc, argv, i, arg), arg, 20.0, 999.0);
+        } else if (arg == "--output") {
+            args.outputPath = requireValue(argc, argv, i, arg);
+        } else if (arg == "--sample-rate") {
+            args.sampleRate = parseUint32Option(requireValue(argc, argv, i, arg), arg, 8000, 384000);
+        } else if (arg == "--bit-depth") {
+            args.bitDepth = requireValue(argc, argv, i, arg);
+            if (args.bitDepth != "16" && args.bitDepth != "24" && args.bitDepth != "32") {
+                throw std::invalid_argument("Invalid value for --bit-depth: " + args.bitDepth);
+            }
+        } else {
+            throw std::invalid_argument("Unknown option: " + arg);
         }
     }
     
@@ -94,7 +137,14 @@ AudioExporter::BitDepth parseBitDepth(const std::string& depth) {
 }
 
 int main(int argc, char* argv[]) {
-    auto args = parseArgs(argc, argv);
+    CommandLineArgs args;
+    try {
+        args = parseArgs(argc, argv);
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << "\n\n";
+        printUsage(argv[0]);
+        return 2;
+    }
     
     if (args.listTemplates) {
         listTemplates();

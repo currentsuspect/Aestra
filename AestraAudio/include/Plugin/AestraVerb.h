@@ -4,19 +4,78 @@
 #pragma once
 
 #include "Plugin/PluginHost.h"
+#include "DSP/ReverbSIMD.h"
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
+
+// MSVC does not define M_PI by default
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 #include <cstring>
 #include <mutex>
 #include <random>
 #include <string>
 #include <vector>
 
+#ifdef AESTRA_REVERB_PROFILE
+#include <chrono>
+#endif
+
 namespace Aestra {
 namespace Audio {
 namespace Plugins {
+
+// Lab-only profiling macros. Zero overhead when AESTRA_REVERB_PROFILE is undefined.
+#ifdef AESTRA_REVERB_PROFILE
+#define AESTRA_PROFILE_STAGE(stageEnum) \
+    auto _aestra_prof_t0_##stageEnum = std::chrono::high_resolution_clock::now()
+#define AESTRA_PROFILE_STAGE_END(stageEnum) \
+    do { \
+        auto _aestra_prof_t1_##stageEnum = std::chrono::high_resolution_clock::now(); \
+        size_t _aestra_prof_idx_##stageEnum = static_cast<size_t>(ProfileStage::stageEnum); \
+        this->m_profileData[_aestra_prof_idx_##stageEnum].totalNs += static_cast<uint64_t>( \
+            std::chrono::duration_cast<std::chrono::nanoseconds>( \
+                _aestra_prof_t1_##stageEnum - _aestra_prof_t0_##stageEnum).count()); \
+        this->m_profileData[_aestra_prof_idx_##stageEnum].sampleCount++; \
+    } while(0)
+#else
+#define AESTRA_PROFILE_STAGE(stageEnum) do { } while(0)
+#define AESTRA_PROFILE_STAGE_END(stageEnum) do { } while(0)
+#endif
+
+// Lab-only clamp diagnostics. Zero overhead when AESTRA_REVERB_DIAGNOSTICS is undefined.
+#ifdef AESTRA_REVERB_DIAGNOSTICS
+#define AESTRA_DIAG_PRECLAMP(l, r) \
+    do { \
+        const float _absL = std::abs(l); \
+        const float _absR = std::abs(r); \
+        const float _pk = _absL > _absR ? _absL : _absR; \
+        if (_pk > m_diagPreClampPeak) m_diagPreClampPeak = _pk; \
+    } while(0)
+#define AESTRA_DIAG_POSTCLAMP(l, r) \
+    do { \
+        const float _absL = std::abs(l); \
+        const float _absR = std::abs(r); \
+        const float _pk = _absL > _absR ? _absL : _absR; \
+        if (_pk > m_diagPostClampPeak) m_diagPostClampPeak = _pk; \
+        if (std::abs(l) >= 0.9999f || std::abs(r) >= 0.9999f) m_diagClampSampleCount += 2; \
+        m_diagTotalSamples += 2; \
+    } while(0)
+#define AESTRA_DIAG_WETPRE(l, r) \
+    do { \
+        const float _absL = std::abs(l); \
+        const float _absR = std::abs(r); \
+        const float _pk = _absL > _absR ? _absL : _absR; \
+        if (_pk > m_diagWetPreClampPeak) m_diagWetPreClampPeak = _pk; \
+    } while(0)
+#else
+#define AESTRA_DIAG_PRECLAMP(l, r) do { } while(0)
+#define AESTRA_DIAG_POSTCLAMP(l, r) do { } while(0)
+#define AESTRA_DIAG_WETPRE(l, r) do { } while(0)
+#endif
 
 class AestraVerb : public IPluginInstance {
 public:
@@ -49,11 +108,15 @@ public:
     static constexpr size_t kEarlyTapCount = 12;
     static constexpr float kReferenceSampleRate = 44100.0f;
     static constexpr float kMaxPredelayMs = 500.0f;
-    static constexpr float kWetMakeupGain = 6.0f;
+    static constexpr float kWetMakeupGain = 4.2f;
+    // Session 004: per-mode wet compensation for box-cut/air reductions (linear gain).
+    static constexpr float kRoomWetCompGain = 1.096f;   // +0.8 dB
+    static constexpr float kHallWetCompGain = 0.96f;    // -0.35 dB; level-matches Hall without letting it jump forward.
+    static constexpr float kPlateWetCompGain = 1.122f;  // +1.0 dB
     static constexpr float kTwoPi = 6.28318530718f;
-    static constexpr uint32_t kControlInterval = 32;
+    static constexpr uint32_t kControlInterval = 64;
     static constexpr std::array<float, kFDNLineCount> kLfoBaseRates = {
-        0.21f, 0.37f, 0.53f, 0.71f, 0.89f, 1.07f, 1.23f, 1.41f
+        0.158f, 0.278f, 0.398f, 0.533f, 0.668f, 0.803f, 0.923f, 1.058f
     };
     static constexpr std::array<uint32_t, kDiffuserCount> kBaseDiffuserLengths = {
         142, 107, 379, 277
@@ -62,8 +125,14 @@ public:
         89, 67
     };
     static constexpr std::array<float, kFDNLineCount> kLfoSecondaryRates = {
-        0.083f, 0.127f, 0.173f, 0.229f, 0.281f, 0.337f, 0.389f, 0.443f
+        0.062f, 0.095f, 0.130f, 0.172f, 0.211f, 0.253f, 0.292f, 0.332f
     };
+    // Session 004: per-mode mud cleanup HP cutoff frequencies (Hz).
+    // Index 0=Room, 1=Hall, 2=Plate.
+    static constexpr std::array<float, 3> kMudHpCutoffHz = {110.0f, 86.0f, 100.0f};
+    // Session 006: reduce mud HP blend — Session 004 values were too aggressive,
+    // thinning the low-end especially on Room. Keep only gentle rumble cleanup.
+    static constexpr std::array<float, 3> kMudHpBlend = {0.40f, 0.36f, 0.35f};
     static constexpr std::array<float, kFDNLineCount> kInjectL = {
         0.93f, -0.37f, 0.61f, -0.79f, 0.23f, 0.84f, -0.51f, 0.42f
     };
@@ -76,6 +145,17 @@ public:
     static constexpr std::array<float, kFDNLineCount> kOutputR = {
         0.24f, 0.39f, -0.28f, 0.35f, 0.31f, -0.34f, 0.26f, 0.41f
     };
+
+    static uint32_t nextPowerOfTwo(uint32_t v) {
+        v--;
+        v |= v >> 1;
+        v |= v >> 2;
+        v |= v >> 4;
+        v |= v >> 8;
+        v |= v >> 16;
+        v++;
+        return v;
+    }
 
     AestraVerb() = default;
 
@@ -129,9 +209,12 @@ public:
         const Mode mode = currentMode();
         const ModeConstants constants = constantsForMode(mode);
         const float sampleScale = static_cast<float>(m_sampleRate) / kReferenceSampleRate;
-        const float smoothingCoeff = 1.0f - std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.015f));
+        const float blockSmoothingCoeff = 1.0f - std::exp(-4.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.015f));
+        static constexpr uint32_t kSmoothBlock = 4;
         const float lowDampCoeff = 1.0f - std::exp(-kTwoPi * 110.0f / static_cast<float>(m_sampleRate));
+        // Session 006: restore random modulation smoothing coefficient.
         const float randomCoeff = 1.0f - std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.22f));
+        const int preMask = m_predelayMask;
 
         int predelayPos = m_predelayPos;
         int earlyPos = m_earlyPos;
@@ -152,42 +235,75 @@ public:
         auto randomState = m_randomState;
         auto smoothedParams = m_smoothedParams;
 
-        if (!m_predelayL.empty()) {
-            predelayPos = wrapIndex(predelayPos, static_cast<int>(m_predelayL.size()));
-        }
-        earlyPos = wrapIndex(earlyPos, static_cast<int>(m_earlyL.size()));
+        predelayPos &= m_predelayMask;
+        earlyPos &= m_earlyMask;
         for (size_t line = 0; line < kFDNLineCount; ++line) {
-            delayPos[line] = wrapIndex(delayPos[line], static_cast<int>(m_delayLines[line].size()));
+            delayPos[line] &= m_delayLineMasks[line];
         }
         for (size_t stage = 0; stage < kDiffuserCount; ++stage) {
-            diffuserPos[stage] = wrapIndex(diffuserPos[stage], static_cast<int>(m_diffuserL[stage].size()));
+            diffuserPos[stage] &= m_diffuserMasks[stage];
         }
         for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
-            platePostPos[stage] = wrapIndex(platePostPos[stage], static_cast<int>(m_platePostL[stage].size()));
+            platePostPos[stage] &= m_platePostMasks[stage];
+        }
+
+        std::array<float*, kFDNLineCount> delayPtrs{};
+        std::array<int, kFDNLineCount> delayMasks{};
+        for (size_t line = 0; line < kFDNLineCount; ++line) {
+            delayPtrs[line] = m_delayLines[line].data();
+            delayMasks[line] = m_delayLineMasks[line];
+        }
+
+        std::array<float*, kDiffuserCount> diffuserPtrsL{};
+        std::array<float*, kDiffuserCount> diffuserPtrsR{};
+        std::array<int, kDiffuserCount> diffuserMasks{};
+        for (size_t stage = 0; stage < kDiffuserCount; ++stage) {
+            diffuserPtrsL[stage] = m_diffuserL[stage].data();
+            diffuserPtrsR[stage] = m_diffuserR[stage].data();
+            diffuserMasks[stage] = m_diffuserMasks[stage];
         }
 
         std::array<float, kFDNLineCount> lineOut{};
-        std::array<float, kFDNLineCount> matrixOut{};
         ControlCache control{};
         uint32_t controlCountdown = 0;
 
+        uint32_t smoothCountdown = 0;
         for (uint32_t i = 0; i < numFrames; ++i) {
-            for (uint32_t p = 0; p < kParamCount; ++p) {
-                if (p == kBypass || p == kMode) continue;
-                const float target = m_params[p].load(std::memory_order_relaxed);
-                smoothedParams[p] += (target - smoothedParams[p]) * smoothingCoeff;
+            AESTRA_PROFILE_STAGE(kParamSmooth);
+            if (smoothCountdown == 0) {
+                for (uint32_t p = 0; p < kParamCount; ++p) {
+                    if (p == kBypass || p == kMode) continue;
+                    const float target = m_params[p].load(std::memory_order_relaxed);
+                    smoothedParams[p] += (target - smoothedParams[p]) * blockSmoothingCoeff;
+                }
+                smoothCountdown = kSmoothBlock;
             }
+            --smoothCountdown;
+            AESTRA_PROFILE_STAGE_END(kParamSmooth);
 
+            AESTRA_PROFILE_STAGE(kLFOControl);
             if (controlCountdown == 0) {
-                for (size_t line = 0; line < kFDNLineCount; ++line) {
-                    normalizeOscillator(lfoSin[line], lfoCos[line]);
-                    normalizeOscillator(lfoSin2[line], lfoCos2[line]);
+#ifdef AESTRA_REVERB_HAS_AVX2
+                static const bool useAVX2 =
+                    Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
+                if (useAVX2) {
+                    DSP::ReverbSIMD::normalizeLFOsAVX2(lfoSin.data(), lfoCos.data());
+                    DSP::ReverbSIMD::normalizeLFOsAVX2(lfoSin2.data(), lfoCos2.data());
+                } else
+#endif
+                {
+                    for (size_t line = 0; line < kFDNLineCount; ++line) {
+                        normalizeOscillator(lfoSin[line], lfoCos[line]);
+                        normalizeOscillator(lfoSin2[line], lfoCos2[line]);
+                    }
                 }
                 updateControlCache(control, smoothedParams, constants, mode, sampleScale);
                 controlCountdown = kControlInterval;
             }
             --controlCountdown;
+            AESTRA_PROFILE_STAGE_END(kLFOControl);
 
+            AESTRA_PROFILE_STAGE(kInputPrep);
             const float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
             const float inR = (numInputChannels > 1 && inputs[1]) ? inputs[1][i] : inL;
             const float dryL = inL;
@@ -195,45 +311,98 @@ public:
 
             m_predelayL[predelayPos] = inL;
             m_predelayR[predelayPos] = inR;
-            int predelayRead = predelayPos - control.predelaySamples;
-            if (predelayRead < 0) predelayRead += static_cast<int>(m_predelayL.size());
+            int predelayRead = (predelayPos - control.predelaySamples) & preMask;
             float delayedL = m_predelayL[predelayRead];
             float delayedR = m_predelayR[predelayRead];
-            if (++predelayPos >= static_cast<int>(m_predelayL.size())) predelayPos = 0;
+            predelayPos = (predelayPos + 1) & preMask;
+            AESTRA_PROFILE_STAGE_END(kInputPrep);
 
+            AESTRA_PROFILE_STAGE(kEarlyReflections);
             float earlyL = 0.0f;
             float earlyR = 0.0f;
             processEarlyReflections(delayedL, delayedR, control, earlyL, earlyR, earlyPos);
+            AESTRA_PROFILE_STAGE_END(kEarlyReflections);
 
+            AESTRA_PROFILE_STAGE(kDiffuser);
             if (control.diffusionEnabled) {
-                processDiffusers(delayedL, delayedR, control, diffuserPos);
+#ifdef AESTRA_REVERB_HAS_SSE
+                static const bool useSSE = Aestra::Core::CPUDetection::get().hasSSE41();
+                if (useSSE) {
+                    DSP::ReverbSIMD::processDiffusersSSE(delayedL, delayedR, control.diffusionG,
+                                                         diffuserPtrsL.data(), diffuserPtrsR.data(),
+                                                         diffuserPos.data(), diffuserMasks.data(),
+                                                         control.diffuserLengths.data(), kDiffuserCount);
+                } else
+#endif
+                {
+                    processDiffusers(delayedL, delayedR, control, diffuserPos);
+                }
             }
 
-            delayedL += earlyL * 0.20f;
-            delayedR += earlyR * 0.20f;
+            AESTRA_PROFILE_STAGE_END(kDiffuser);
 
+            delayedL += earlyL * 0.22f;
+            delayedR += earlyR * 0.22f;
+
+            AESTRA_PROFILE_STAGE(kModulationLFO);
+            // Vectorized LFO updates (sin/cos quadrature oscillators)
+            if (control.modulationEnabled) {
+#ifdef AESTRA_REVERB_HAS_AVX2
+                static const bool useAVX2 =
+                    Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
+                if (useAVX2) {
+                    DSP::ReverbSIMD::updateLFOsAVX2(
+                        lfoSin.data(), lfoCos.data(),
+                        lfoSin2.data(), lfoCos2.data(),
+                        control.lfoCosInc.data(), control.lfoSinInc.data(),
+                        control.lfoCosInc2.data(), control.lfoSinInc2.data());
+                } else
+#endif
+#ifdef AESTRA_REVERB_HAS_SSE
+                {
+                    DSP::ReverbSIMD::updateLFOsSSE(lfoSin.data(), lfoCos.data(),
+                                                   control.lfoCosInc.data(), control.lfoSinInc.data());
+                    DSP::ReverbSIMD::updateLFOsSSE(&lfoSin[4], &lfoCos[4],
+                                                   &control.lfoCosInc[4], &control.lfoSinInc[4]);
+                    DSP::ReverbSIMD::updateLFOsSSE(lfoSin2.data(), lfoCos2.data(),
+                                                   control.lfoCosInc2.data(), control.lfoSinInc2.data());
+                    DSP::ReverbSIMD::updateLFOsSSE(&lfoSin2[4], &lfoCos2[4],
+                                                   &control.lfoCosInc2[4], &control.lfoSinInc2[4]);
+                }
+#else
+                {
+                    for (size_t line = 0; line < kFDNLineCount; ++line) {
+                        const float nextSin = lfoSin[line] * control.lfoCosInc[line] + lfoCos[line] * control.lfoSinInc[line];
+                        const float nextCos = lfoCos[line] * control.lfoCosInc[line] - lfoSin[line] * control.lfoSinInc[line];
+                        lfoSin[line] = nextSin;
+                        lfoCos[line] = nextCos;
+                        const float nextSin2 = lfoSin2[line] * control.lfoCosInc2[line] + lfoCos2[line] * control.lfoSinInc2[line];
+                        const float nextCos2 = lfoCos2[line] * control.lfoCosInc2[line] - lfoSin2[line] * control.lfoSinInc2[line];
+                        lfoSin2[line] = nextSin2;
+                        lfoCos2[line] = nextCos2;
+                    }
+                }
+#endif
+            }
+
+            AESTRA_PROFILE_STAGE_END(kModulationLFO);
+
+            AESTRA_PROFILE_STAGE(kFDNDelayRead);
             for (size_t line = 0; line < kFDNLineCount; ++line) {
                 float lfoOffset = 0.0f;
                 if (control.modulationEnabled) {
+                    // Session 006: restore random/aperiodic modulation component.
+                    // Blend: 0.40 primary LFO + 0.48 secondary LFO + 0.12 random.
+                    // The random component provides organic, non-periodic motion.
                     if (--randomCounter[line] <= 0) {
                         randomTarget[line] = nextRandomBipolar(randomState[line]);
                         randomCounter[line] = std::max(64, static_cast<int>((0.075f + 0.013f * static_cast<float>(line)) * static_cast<float>(m_sampleRate)));
                     }
                     randomMod[line] += (randomTarget[line] - randomMod[line]) * randomCoeff;
-                    const float multi = lfoSin[line] * 0.68f +
-                                        lfoSin2[line] * 0.22f +
-                                        randomMod[line] * 0.18f;
+                    const float multi = lfoSin[line] * 0.40f +
+                                        lfoSin2[line] * 0.48f +
+                                        randomMod[line] * 0.12f;
                     lfoOffset = multi * control.modDepthSamples;
-
-                    const float nextSin = lfoSin[line] * control.lfoCosInc[line] + lfoCos[line] * control.lfoSinInc[line];
-                    const float nextCos = lfoCos[line] * control.lfoCosInc[line] - lfoSin[line] * control.lfoSinInc[line];
-                    lfoSin[line] = nextSin;
-                    lfoCos[line] = nextCos;
-
-                    const float nextSin2 = lfoSin2[line] * control.lfoCosInc2[line] + lfoCos2[line] * control.lfoSinInc2[line];
-                    const float nextCos2 = lfoCos2[line] * control.lfoCosInc2[line] - lfoSin2[line] * control.lfoSinInc2[line];
-                    lfoSin2[line] = nextSin2;
-                    lfoCos2[line] = nextCos2;
 
                     lfoPhase[line] += control.lfoPhaseInc[line];
                     lfoPhase2[line] += control.lfoPhaseInc2[line];
@@ -242,36 +411,88 @@ public:
                 }
                 lineOut[line] = readDelayLine(line, delayPos[line], static_cast<float>(control.lineLengths[line]) + lfoOffset);
             }
+            AESTRA_PROFILE_STAGE_END(kFDNDelayRead);
 
-            float sum = 0.0f;
-            for (float sample : lineOut) sum += sample;
-            const float householderMean = sum * (2.0f / static_cast<float>(kFDNLineCount));
-
+            AESTRA_PROFILE_STAGE(kFDNFeedbackMatrix);
             float wetL = 0.0f;
             float wetR = 0.0f;
-            for (size_t line = 0; line < kFDNLineCount; ++line) {
-                matrixOut[line] = lineOut[line] - householderMean;
-                dampingState[line] += control.dampingCoeff * (matrixOut[line] - dampingState[line]);
 
-                const float injected = (delayedL * kInjectL[line] + delayedR * kInjectR[line]) * 0.115f;
-                float feedback = dampingState[line] * control.feedbackGains[line];
-                lowDampState[line] += (feedback - lowDampState[line]) * lowDampCoeff;
-                feedback -= lowDampState[line] * 0.82f;
-                m_delayLines[line][delayPos[line]] = injected + feedback;
-                if (++delayPos[line] >= static_cast<int>(m_delayLines[line].size())) delayPos[line] = 0;
-
-                wetL += lineOut[line] * kOutputL[line];
-                wetR += lineOut[line] * kOutputR[line];
+            // SIMD-accelerated FDN Householder matrix + feedback + output mixing
+            // Falls back to scalar path on non-SIMD platforms.
+            {
+                DSP::ReverbSIMD::processFDNSample(
+                    lineOut.data(), delayedL, delayedR,
+                    dampingState.data(), lowDampState.data(),
+                    delayPtrs.data(), delayPos.data(), delayMasks.data(),
+                    control.feedbackGains.data(),
+                    kInjectL.data(), kInjectR.data(),
+                    kOutputL.data(), kOutputR.data(),
+                    control.dampingCoeff, lowDampCoeff, control.lowDampAmount,
+                    wetL, wetR);
             }
+            AESTRA_PROFILE_STAGE_END(kFDNFeedbackMatrix);
 
-            wetL += earlyL * 0.18f;
-            wetR += earlyR * 0.18f;
+            AESTRA_PROFILE_STAGE(kOutputMix);
+            wetL += earlyL * 0.12f;
+            wetR += earlyR * 0.12f;
 
             wetL *= kWetMakeupGain;
             wetR *= kWetMakeupGain;
 
+            // Session 004: per-mode wet compensation for box-cut/air energy loss
+            {
+                const float compGain = (mode == Mode::Room) ? kRoomWetCompGain
+                                     : (mode == Mode::Hall) ? kHallWetCompGain
+                                     : kPlateWetCompGain;
+                wetL *= compGain;
+                wetR *= compGain;
+            }
+
+            // Session 004: mud cleanup — gentle one-pole HP filter, mode-dependent
+            {
+                const int modeIdx = static_cast<int>(mode);
+                const float alpha = m_mudHpCoeff[static_cast<size_t>(modeIdx)];
+                const float blend = kMudHpBlend[static_cast<size_t>(modeIdx)];
+                // One-pole HP: y[n] = x[n] - state; state += (1-alpha)*y[n]
+                const float hpL = wetL - m_mudHpStateL;
+                const float hpR = wetR - m_mudHpStateR;
+                m_mudHpStateL += (1.0f - alpha) * hpL;
+                m_mudHpStateR += (1.0f - alpha) * hpR;
+                wetL = wetL + (hpL - wetL) * blend;
+                wetR = wetR + (hpR - wetR) * blend;
+            }
+
             if (mode == Mode::Plate) {
+                AESTRA_PROFILE_STAGE(kPlatePostAllpass);
                 processPlatePostAllpass(wetL, wetR, platePostPos);
+                AESTRA_PROFILE_STAGE_END(kPlatePostAllpass);
+
+                // Session 012: gentle peaking cut at ~562 Hz to tame metallic ringing.
+                // Direct Form 2 (transposed) biquad — 2 states per channel.
+                const auto& c = m_platePeakCoeff;
+                const float inL = wetL, inR = wetR;
+                wetL = c[0] * inL + m_platePeakZ1L;
+                m_platePeakZ1L = c[1] * inL - c[3] * wetL + m_platePeakZ2L;
+                m_platePeakZ2L = c[2] * inL - c[4] * wetL;
+                wetR = c[0] * inR + m_platePeakZ1R;
+                m_platePeakZ1R = c[1] * inR - c[3] * wetR + m_platePeakZ2R;
+                m_platePeakZ2R = c[2] * inR - c[4] * wetR;
+                wetL = sanitize(wetL);
+                wetR = sanitize(wetR);
+            }
+
+            processWetVoicing(wetL, wetR, mode, control);
+
+            // Late-tail stereo decorrelation (Session 011).
+            // Anti-correlated diff boost: wetL' = wetL + k*(wetL-wetR), wetR' = wetR - k*(wetL-wetR).
+            // Preserves mono fold-down exactly: (wetL+diff) + (wetR-diff) = wetL + wetR.
+            float kDecorr = 0.0f;
+            if (mode == Mode::Room) kDecorr = 0.22f;
+            else if (mode == Mode::Plate) kDecorr = 0.26f;
+            if (kDecorr > 0.0f) {
+                const float diff = (wetL - wetR) * kDecorr;
+                wetL += diff;
+                wetR -= diff;
             }
 
             const float widthL = wetL * control.widthMain + wetR * control.widthCross;
@@ -282,12 +503,25 @@ public:
             wetL = sanitize(wetL);
             wetR = sanitize(wetR);
 
+            AESTRA_DIAG_WETPRE(wetL, wetR);
+
+            const float sumL = dryL * control.dryGain + wetL * control.wetGain;
+            const float sumR = dryR * control.dryGain + wetR * control.wetGain;
+
+            AESTRA_DIAG_PRECLAMP(sumL, sumR);
+
+            const float outL = sanitize(sumL);
+            const float outR = sanitize(sumR);
+
+            AESTRA_DIAG_POSTCLAMP(outL, outR);
+
             if (numOutputChannels > 0 && outputs[0]) {
-                outputs[0][i] = std::clamp(dryL * control.dryGain + wetL * control.wetGain, -1.0f, 1.0f);
+                outputs[0][i] = outL;
             }
             if (numOutputChannels > 1 && outputs[1]) {
-                outputs[1][i] = std::clamp(dryR * control.dryGain + wetR * control.wetGain, -1.0f, 1.0f);
+                outputs[1][i] = outR;
             }
+            AESTRA_PROFILE_STAGE_END(kOutputMix);
         }
 
         m_predelayPos = predelayPos;
@@ -320,20 +554,23 @@ public:
         if (id >= kParamCount) return;
         const float clamped = std::clamp(value, 0.0f, 1.0f);
         m_params[id].store(clamped, std::memory_order_relaxed);
+        if (!m_active.load(std::memory_order_relaxed)) {
+            m_smoothedParams[id] = clamped;
+        }
     }
 
     std::vector<PluginParameter> getParameters() const override {
         return {
-            { kDecay, "Decay", "DEC", "", 0.5f, 0.0f, 1.0f, true },
-            { kDamping, "Damping", "DMP", "", 0.3f, 0.0f, 1.0f, true },
-            { kPredelayMs, "Predelay", "PRE", "ms", 0.1f, 0.0f, 1.0f, true },
-            { kWidth, "Width", "WID", "", 0.7f, 0.0f, 1.0f, true },
-            { kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true },
+            { kDecay, "Decay", "DEC", "", 0.56f, 0.0f, 1.0f, true },
+            { kDamping, "Damping", "DMP", "", 0.50f, 0.0f, 1.0f, true },
+            { kPredelayMs, "Predelay", "PRE", "ms", 0.02f, 0.0f, 1.0f, true },
+            { kWidth, "Width", "WID", "", 0.68f, 0.0f, 1.0f, true },
+            { kMix, "Mix", "MIX", "%", 0.36f, 0.0f, 1.0f, true },
             { kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
-            { kSize, "Size", "SIZ", "x", 0.473684f, 0.0f, 1.0f, true },
-            { kDiffusion, "Diffusion", "DIF", "%", 0.7f, 0.0f, 1.0f, true },
-            { kModRate, "Mod Rate", "RTE", "x", 0.5f, 0.0f, 1.0f, true },
-            { kModDepth, "Mod Depth", "DEP", "smpl", 0.3125f, 0.0f, 1.0f, true },
+            { kSize, "Size", "SIZ", "x", 0.52f, 0.0f, 1.0f, true },
+            { kDiffusion, "Diffusion", "DIF", "%", 0.64f, 0.0f, 1.0f, true },
+            { kModRate, "Mod Rate", "RTE", "x", 0.42f, 0.0f, 1.0f, true },
+            { kModDepth, "Mod Depth", "DEP", "smpl", 0.14f, 0.0f, 1.0f, true },
             { kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, 2 },
         };
     }
@@ -391,7 +628,7 @@ public:
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return {560, 420}; }
+    std::pair<int, int> getEditorSize() const override { return {760, 560}; }
     bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
@@ -404,7 +641,109 @@ public:
 
     void setInfo(const PluginInfo& info) { m_info = info; }
 
+    // ============================================================================
+    // Lab-only stage profiler (compile-time gated, zero overhead when disabled)
+    // ============================================================================
+#ifdef AESTRA_REVERB_PROFILE
+public:
+    enum class ProfileStage : uint8_t {
+        kInputPrep = 0,
+        kParamSmooth,
+        kLFOControl,
+        kEarlyReflections,
+        kDiffuser,
+        kModulationLFO,
+        kFDNDelayRead,
+        kFDNFeedbackMatrix,
+        kPlatePostAllpass,
+        kOutputMix,
+        kStageCount
+    };
+
+    struct StageProfileData {
+        uint64_t totalNs = 0;
+        uint64_t sampleCount = 0;
+    };
+
+    void resetProfileData() {
+        for (auto& s : m_profileData) {
+            s.totalNs = 0;
+            s.sampleCount = 0;
+        }
+    }
+
+    const std::array<StageProfileData, static_cast<size_t>(ProfileStage::kStageCount)>& getProfileData() const {
+        return m_profileData;
+    }
+
+    static const char* stageName(ProfileStage stage) {
+        switch (stage) {
+        case ProfileStage::kInputPrep: return "Input/Predelay";
+        case ProfileStage::kParamSmooth: return "Parameter Smoothing";
+        case ProfileStage::kLFOControl: return "LFO Normalize + Control";
+        case ProfileStage::kEarlyReflections: return "Early Reflections";
+        case ProfileStage::kDiffuser: return "Diffuser";
+        case ProfileStage::kModulationLFO: return "Modulation/LFO";
+        case ProfileStage::kFDNDelayRead: return "FDN Delay Read";
+        case ProfileStage::kFDNFeedbackMatrix: return "FDN Feedback/Matrix";
+        case ProfileStage::kPlatePostAllpass: return "Plate Post-Allpass";
+        case ProfileStage::kOutputMix: return "Output/Mix";
+        default: return "Unknown";
+        }
+    }
+
 private:
+#else
+    // Dummy types for non-profile builds so member declaration is valid
+    struct StageProfileData { uint64_t totalNs = 0; uint64_t sampleCount = 0; };
+    enum class ProfileStage : uint8_t { kStageCount = 10 };
+#endif
+
+    // ============================================================================
+    // Lab-only clamp diagnostics (compile-time gated, zero overhead when disabled)
+    // ============================================================================
+#ifdef AESTRA_REVERB_DIAGNOSTICS
+public:
+    struct ClampDiagnostics {
+        float preClampPeak = 0.0f;      // Peak absolute value before std::clamp
+        float postClampPeak = 0.0f;     // Peak absolute value after std::clamp
+        float wetPreClampPeak = 0.0f;   // Peak absolute value of wet signal before final mix
+        uint64_t clampSampleCount = 0;  // Number of output samples at |value| >= 0.9999
+        uint64_t totalSamples = 0;      // Total output samples processed
+        float sourcePeak = 0.0f;        // Peak of the dry input source
+    };
+
+    void resetDiagnostics() {
+        m_diagPreClampPeak = 0.0f;
+        m_diagPostClampPeak = 0.0f;
+        m_diagWetPreClampPeak = 0.0f;
+        m_diagClampSampleCount = 0;
+        m_diagTotalSamples = 0;
+        m_diagSourcePeak = 0.0f;
+    }
+
+    void setSourcePeak(float peak) { m_diagSourcePeak = peak; }
+
+    ClampDiagnostics getClampDiagnostics() const {
+        ClampDiagnostics d;
+        d.preClampPeak = m_diagPreClampPeak;
+        d.postClampPeak = m_diagPostClampPeak;
+        d.wetPreClampPeak = m_diagWetPreClampPeak;
+        d.clampSampleCount = m_diagClampSampleCount;
+        d.totalSamples = m_diagTotalSamples;
+        d.sourcePeak = m_diagSourcePeak;
+        return d;
+    }
+
+private:
+    float m_diagPreClampPeak = 0.0f;
+    float m_diagPostClampPeak = 0.0f;
+    float m_diagWetPreClampPeak = 0.0f;
+    uint64_t m_diagClampSampleCount = 0;
+    uint64_t m_diagTotalSamples = 0;
+    float m_diagSourcePeak = 0.0f;
+#endif
+
     struct ModeConstants {
         std::array<uint32_t, kFDNLineCount> fdnBase{};
         float dampingScalar{1.0f};
@@ -415,8 +754,11 @@ private:
 
     struct ControlCache {
         float dampingCoeff{0.7f};
+        float lowDampAmount{0.45f};
         float diffusionG{0.7f};
         float modDepthSamples{2.5f};
+        float wetToneCoeff{0.6f};
+        float wetAirBlend{0.2f};
         float dryGain{0.0f};
         float wetGain{1.0f};
         float widthMain{1.7f};
@@ -441,12 +783,14 @@ private:
     static ModeConstants constantsForMode(Mode mode) {
         switch (mode) {
         case Mode::Hall:
-            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 0.72f, 1.4f, 0.85f, 1.6f};
+            return {{{2557, 2617, 2491, 2422, 2277, 2356, 2188, 2116}}, 1.18f, 0.64f, 0.96f, 1.36f};
         case Mode::Plate:
-            return {{{1013, 1151, 947, 863, 823, 919, 743, 677}}, 0.42f, 3.0f, 1.2f, 0.9f};
+            return {{{1313, 1451, 1247, 1163, 1123, 1219, 1043, 977}}, 1.38f, 0.50f, 0.98f, 1.45f};
         case Mode::Room:
         default:
-            return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.15f, 1.0f, 1.0f, 1.0f};
+            // Session 006: restore modDepthScalar from 0.15 to 0.45.
+            // 0.15 made Room modulation effectively inaudible.
+            return {{{1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116}}, 1.22f, 0.45f, 0.82f, 1.20f};
         }
     }
 
@@ -491,16 +835,29 @@ private:
         const float dampingParam = std::clamp(smoothedParams[kDamping], 0.0f, 1.0f);
         const float damping = std::clamp(dampingParam * constants.dampingScalar, 0.0f, 0.98f);
         cache.dampingCoeff = 1.0f - damping;
+        cache.lowDampAmount = mode == Mode::Hall ? 0.43f : (mode == Mode::Plate ? 0.42f : 0.48f);
+
+        // Keep Hall darker than Plate, but leave enough top-end through for air after the low-mid cleanup.
+        const float toneCutHz = mode == Mode::Hall
+            ? 8600.0f - dampingParam * 2300.0f
+            : (mode == Mode::Plate ? 9300.0f - dampingParam * 1800.0f : 9600.0f - dampingParam * 3000.0f);
+        cache.wetToneCoeff = 1.0f - std::exp(-kTwoPi * std::clamp(toneCutHz, 4800.0f, 14000.0f) / sr);
+        // Session 006: restore air blend — Session 004 values were too low (~6%),
+        // removing most high-frequency content above the tone cutoff.
+        cache.wetAirBlend = mode == Mode::Hall ? 0.21f : (mode == Mode::Plate ? 0.18f : 0.15f);
 
         const float predelayMs = std::clamp(smoothedParams[kPredelayMs], 0.0f, 1.0f) * kMaxPredelayMs;
         cache.predelaySamples = std::clamp(static_cast<int>(std::round((predelayMs / 1000.0f) * sr)),
                                            0, std::max(0, m_maxPredelaySamples));
 
-        cache.diffusionG = std::clamp(smoothedParams[kDiffusion] * 0.85f * constants.diffusionScalar, 0.0f, 0.85f);
+        cache.diffusionG = std::clamp(smoothedParams[kDiffusion] * 0.74f * constants.diffusionScalar, 0.0f, 0.78f);
         cache.diffusionEnabled = cache.diffusionG > 0.0001f;
 
         const float modRateScalar = smoothedParams[kModRate] * 2.0f;
-        cache.modDepthSamples = smoothedParams[kModDepth] * 8.0f * constants.modDepthScalar;
+        // Session 006: increase mod depth multiplier from 5.0 to 7.0.
+        // Effective depth at default (0.14): Room 0.14×7×0.45=0.44 smp, Hall 0.14×7×0.64=0.63 smp,
+        // Plate 0.14×7×0.50=0.49 smp. Subtle but audible — avoids the flangey extremes.
+        cache.modDepthSamples = smoothedParams[kModDepth] * 7.0f * constants.modDepthScalar;
         cache.modulationEnabled = cache.modDepthSamples > 0.0001f && modRateScalar > 0.0001f;
 
         const float width = std::clamp(smoothedParams[kWidth], 0.0f, 1.0f);
@@ -532,8 +889,9 @@ private:
             cache.diffuserLengths[stage] = logicalDiffuserLength(stage, sampleScale, size);
         }
 
-        const float modeSpread = mode == Mode::Hall ? 1.45f : (mode == Mode::Plate ? 0.55f : 0.82f);
-        const float modeLevel = mode == Mode::Hall ? 0.58f : (mode == Mode::Plate ? 0.28f : 0.78f);
+        // Hall wants a dense front edge, not an obvious second echo before the tail blooms.
+        const float modeSpread = mode == Mode::Hall ? 1.14f : (mode == Mode::Plate ? 0.55f : 0.82f);
+        const float modeLevel = mode == Mode::Hall ? 0.42f : (mode == Mode::Plate ? 0.40f : 0.68f);
         const float sizeTerm = std::sqrt(std::max(0.1f, size));
         const int ringSize = static_cast<int>(m_earlyL.size());
         const int maxDelay = std::max(1, ringSize - 1);
@@ -554,15 +912,19 @@ private:
         const float sampleScale = static_cast<float>(m_sampleRate) / kReferenceSampleRate;
 
         m_maxPredelaySamples = std::max(1, static_cast<int>(std::ceil(m_sampleRate * 0.5)));
-        m_predelayL.assign(static_cast<size_t>(m_maxPredelaySamples) + 1, 0.0f);
-        m_predelayR.assign(static_cast<size_t>(m_maxPredelaySamples) + 1, 0.0f);
+        const uint32_t predelayPow2 = nextPowerOfTwo(static_cast<uint32_t>(m_maxPredelaySamples) + 1);
+        m_predelayL.assign(static_cast<size_t>(predelayPow2), 0.0f);
+        m_predelayR.assign(static_cast<size_t>(predelayPow2), 0.0f);
+        m_predelayMask = static_cast<int>(predelayPow2) - 1;
 
         for (size_t line = 0; line < kFDNLineCount; ++line) {
             const int maxLength = std::max(
                 128,
                 static_cast<int>(std::ceil(maxFdnBaseForLine(line) * sampleScale * 2.0f)) + 64
             );
-            m_delayLines[line].assign(static_cast<size_t>(maxLength), 0.0f);
+            const uint32_t pow2Size = nextPowerOfTwo(static_cast<uint32_t>(maxLength));
+            m_delayLines[line].assign(static_cast<size_t>(pow2Size), 0.0f);
+            m_delayLineMasks[line] = static_cast<int>(pow2Size) - 1;
             m_delayLengths[line] = std::min(maxLength - 2, std::max(100, maxLength / 2));
         }
 
@@ -571,9 +933,11 @@ private:
                 2,
                 static_cast<int>(std::ceil(kBaseDiffuserLengths[stage] * sampleScale * 2.0f)) + 8
             );
+            const uint32_t pow2Size = nextPowerOfTwo(static_cast<uint32_t>(maxLength));
             m_diffuserLengths[stage] = maxLength / 2;
-            m_diffuserL[stage].assign(static_cast<size_t>(maxLength), 0.0f);
-            m_diffuserR[stage].assign(static_cast<size_t>(maxLength), 0.0f);
+            m_diffuserL[stage].assign(static_cast<size_t>(pow2Size), 0.0f);
+            m_diffuserR[stage].assign(static_cast<size_t>(pow2Size), 0.0f);
+            m_diffuserMasks[stage] = static_cast<int>(pow2Size) - 1;
         }
 
         for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
@@ -581,13 +945,32 @@ private:
                 2,
                 static_cast<int>(std::ceil(kPlatePostAllpassLengths[stage] * sampleScale)) + 4
             );
-            m_platePostL[stage].assign(static_cast<size_t>(maxLength), 0.0f);
-            m_platePostR[stage].assign(static_cast<size_t>(maxLength), 0.0f);
+            const uint32_t pow2Size = nextPowerOfTwo(static_cast<uint32_t>(maxLength));
+            m_platePostL[stage].assign(static_cast<size_t>(pow2Size), 0.0f);
+            m_platePostR[stage].assign(static_cast<size_t>(pow2Size), 0.0f);
+            m_platePostDelayLengths[stage] = maxLength;
+            m_platePostMasks[stage] = static_cast<int>(pow2Size) - 1;
         }
 
         const int earlyMaxSamples = std::max(2, static_cast<int>(std::ceil(m_sampleRate * 0.14)));
-        m_earlyL.assign(static_cast<size_t>(earlyMaxSamples), 0.0f);
-        m_earlyR.assign(static_cast<size_t>(earlyMaxSamples), 0.0f);
+        const uint32_t earlyPow2 = nextPowerOfTwo(static_cast<uint32_t>(earlyMaxSamples));
+        m_earlyL.assign(static_cast<size_t>(earlyPow2), 0.0f);
+        m_earlyR.assign(static_cast<size_t>(earlyPow2), 0.0f);
+        m_earlyMask = static_cast<int>(earlyPow2) - 1;
+
+        const float sr = static_cast<float>(m_sampleRate);
+        m_platePeakCoeff = peakingCoefficients(-5.5f, 620.0f, sr, 1.15f);
+        // Session 006: reduce box-cut depth — Session 004 values removed too much body.
+        // Room: -4.6→-3.3 dB, Hall: -3.0→-2.8 dB, Plate: -4.2→-3.3 dB
+        m_boxCutCoeff[0] = peakingCoefficients(-3.3f, 430.0f, sr, 0.85f);
+        m_boxCutCoeff[1] = peakingCoefficients(-2.8f, 520.0f, sr, 0.75f);
+        m_boxCutCoeff[2] = peakingCoefficients(-3.3f, 1250.0f, sr, 1.10f);
+
+        // Session 004: precompute per-mode mud HP filter coefficients (one-pole)
+        for (size_t m = 0; m < 3; ++m) {
+            const float omega = kTwoPi * kMudHpCutoffHz[m] / sr;
+            m_mudHpCoeff[m] = std::exp(-omega);
+        }
 
         clearBuffers(randomizeLfos);
     }
@@ -611,7 +994,7 @@ private:
         m_earlyPos = 0;
 
         if (randomizeLfos) {
-            std::mt19937 rng{std::random_device{}()};
+            std::mt19937 rng{0xAE57A000u}; // deterministic seed for reproducible tests
             std::uniform_real_distribution<float> dist(0.0f, kTwoPi);
             for (auto& phase : m_lfoPhase) phase = dist(rng);
             for (auto& phase : m_lfoPhase2) phase = dist(rng);
@@ -627,6 +1010,15 @@ private:
         m_randomMod.fill(0.0f);
         m_randomTarget.fill(0.0f);
         m_randomCounter.fill(0);
+
+        m_platePeakZ1L = m_platePeakZ2L = 0.0f;
+        m_platePeakZ1R = m_platePeakZ2R = 0.0f;
+        m_boxCutZ1L = m_boxCutZ2L = 0.0f;
+        m_boxCutZ1R = m_boxCutZ2R = 0.0f;
+        m_wetToneStateL = 0.0f;
+        m_wetToneStateR = 0.0f;
+        m_mudHpStateL = 0.0f;
+        m_mudHpStateR = 0.0f;
     }
 
     void copyDry(const float* const* inputs, float** outputs, uint32_t numInputChannels,
@@ -642,18 +1034,33 @@ private:
 
     float readDelayLine(size_t line, int writePos, float delaySamples) const {
         const auto& buffer = m_delayLines[line];
-        const int size = static_cast<int>(buffer.size());
-        if (size <= 1) return 0.0f;
+        const int mask = m_delayLineMasks[line];
+        if (mask <= 0) return 0.0f;
 
-        float readPos = static_cast<float>(writePos) - delaySamples;
-        while (readPos < 0.0f) readPos += static_cast<float>(size);
-        while (readPos >= static_cast<float>(size)) readPos -= static_cast<float>(size);
+        float readPosF = static_cast<float>(writePos) - delaySamples;
+        int readPosI = static_cast<int>(readPosF);
+        float frac = readPosF - static_cast<float>(readPosI);
+        if (frac < 0.0f) {
+            frac += 1.0f;
+            --readPosI;
+        }
+        readPosI &= mask;
 
-        const int i0 = static_cast<int>(std::floor(readPos));
-        int i1 = i0 + 1;
-        if (i1 >= size) i1 = 0;
-        const float frac = readPos - static_cast<float>(i0);
-        return buffer[static_cast<size_t>(i0)] * (1.0f - frac) + buffer[static_cast<size_t>(i1)] * frac;
+        if (Aestra::Audio::DSP::ReverbSIMD::g_forceLinearInterpolation) {
+            const int i2 = (readPosI + 1) & mask;
+            return buffer[static_cast<size_t>(readPosI)] * (1.0f - frac) +
+                   buffer[static_cast<size_t>(i2)] * frac;
+        } else {
+            const int i0 = (readPosI - 1) & mask;
+            const int i2 = (readPosI + 1) & mask;
+            const int i3 = (readPosI + 2) & mask;
+            return Aestra::Audio::DSP::ReverbSIMD::cubicHermite(
+                buffer[static_cast<size_t>(i0)],
+                buffer[static_cast<size_t>(readPosI)],
+                buffer[static_cast<size_t>(i2)],
+                buffer[static_cast<size_t>(i3)],
+                frac);
+        }
     }
 
     int logicalFdnLength(size_t line, const ModeConstants& constants, float sampleScale, float size) const {
@@ -676,19 +1083,17 @@ private:
 
     void processEarlyReflections(float left, float right, const ControlCache& control,
                                  float& earlyL, float& earlyR, int& pos) {
-        if (m_earlyL.empty() || m_earlyR.empty()) return;
+        if (m_earlyMask <= 0) return;
 
-        const int ringSize = static_cast<int>(m_earlyL.size());
-        pos = wrapIndex(pos, ringSize);
+        const int mask = m_earlyMask;
+        pos &= mask;
 
         m_earlyL[static_cast<size_t>(pos)] = left;
         m_earlyR[static_cast<size_t>(pos)] = right;
 
         for (size_t tap = 0; tap < kEarlyTapCount; ++tap) {
-            int readL = pos - control.earlyDelayL[tap];
-            if (readL < 0) readL += ringSize;
-            int readR = pos - control.earlyDelayR[tap];
-            if (readR < 0) readR += ringSize;
+            const int readL = (pos - control.earlyDelayL[tap]) & mask;
+            const int readR = (pos - control.earlyDelayR[tap]) & mask;
             const float gain = control.earlyGains[tap];
             earlyL += m_earlyL[static_cast<size_t>(readL)] * gain +
                       m_earlyR[static_cast<size_t>(readR)] * gain * 0.28f;
@@ -696,7 +1101,7 @@ private:
                       m_earlyL[static_cast<size_t>(readL)] * gain * 0.22f;
         }
 
-        if (++pos >= ringSize) pos = 0;
+        pos = (pos + 1) & mask;
     }
 
     void processDiffusers(float& left, float& right, const ControlCache& control,
@@ -706,47 +1111,66 @@ private:
             auto& bufR = m_diffuserR[stage];
             if (bufL.empty() || bufR.empty()) continue;
 
+            const int mask = m_diffuserMasks[stage];
             const int len = control.diffuserLengths[stage];
-            int p = pos[stage];
-            if (p >= len) p = 0;
-            const float delayedL = bufL[static_cast<size_t>(p)];
-            const float delayedR = bufR[static_cast<size_t>(p)];
+            int p = pos[stage] & mask;
+            const int readP = (p - len) & mask;
+
+            const float delayedL = bufL[static_cast<size_t>(readP)];
+            const float delayedR = bufR[static_cast<size_t>(readP)];
             const float yL = delayedL - control.diffusionG * left;
             const float yR = delayedR - control.diffusionG * right;
             bufL[static_cast<size_t>(p)] = left + control.diffusionG * yL;
             bufR[static_cast<size_t>(p)] = right + control.diffusionG * yR;
             left = yL;
             right = yR;
-            if (++p >= len) p = 0;
-            pos[stage] = p;
+            pos[stage] = (p + 1) & mask;
         }
     }
 
     void processPlatePostAllpass(float& left, float& right,
                                  std::array<int, kPlatePostAllpassCount>& pos) {
-        const float g = 0.6f;
+        const float g = 0.32f;
         for (size_t stage = 0; stage < kPlatePostAllpassCount; ++stage) {
             auto& bufL = m_platePostL[stage];
             auto& bufR = m_platePostR[stage];
             if (bufL.empty() || bufR.empty()) continue;
 
-            const int p = wrapIndex(pos[stage], static_cast<int>(bufL.size()));
-            const float delayedL = bufL[static_cast<size_t>(p)];
-            const float delayedR = bufR[static_cast<size_t>(p)];
+            const int mask = m_platePostMasks[stage];
+            const int delayLength = m_platePostDelayLengths[stage];
+            const int p = pos[stage] & mask;
+            const int readP = (p - delayLength) & mask;
+
+            const float delayedL = bufL[static_cast<size_t>(readP)];
+            const float delayedR = bufR[static_cast<size_t>(readP)];
             const float yL = delayedL - g * left;
             const float yR = delayedR - g * right;
             bufL[static_cast<size_t>(p)] = left + g * yL;
             bufR[static_cast<size_t>(p)] = right + g * yR;
             left = yL;
             right = yR;
-            pos[stage] = (p + 1) % static_cast<int>(bufL.size());
+            pos[stage] = (p + 1) & mask;
         }
     }
 
-    static float nextRandomBipolar(uint32_t& state) {
-        state = state * 1664525u + 1013904223u;
-        const float normalized = static_cast<float>((state >> 8) & 0x00ffffffu) / static_cast<float>(0x00ffffffu);
-        return normalized * 2.0f - 1.0f;
+    void processWetVoicing(float& left, float& right, Mode mode, const ControlCache& control) {
+        const auto& c = m_boxCutCoeff[static_cast<size_t>(mode)];
+        const float inL = left;
+        const float inR = right;
+        left = c[0] * inL + m_boxCutZ1L;
+        m_boxCutZ1L = c[1] * inL - c[3] * left + m_boxCutZ2L;
+        m_boxCutZ2L = c[2] * inL - c[4] * left;
+        right = c[0] * inR + m_boxCutZ1R;
+        m_boxCutZ1R = c[1] * inR - c[3] * right + m_boxCutZ2R;
+        m_boxCutZ2R = c[2] * inR - c[4] * right;
+
+        m_wetToneStateL += control.wetToneCoeff * (left - m_wetToneStateL);
+        m_wetToneStateR += control.wetToneCoeff * (right - m_wetToneStateR);
+        left = m_wetToneStateL + (left - m_wetToneStateL) * control.wetAirBlend;
+        right = m_wetToneStateR + (right - m_wetToneStateR) * control.wetAirBlend;
+
+        left = sanitize(left);
+        right = sanitize(right);
     }
 
     static int wrapIndex(int index, int size) {
@@ -757,8 +1181,18 @@ private:
     }
 
     static float sanitize(float value) {
-        if (!std::isfinite(value) || std::abs(value) < 1.0e-20f) return 0.0f;
+        if (value != value || value <= -32.0f || value >= 32.0f ||
+            (value > -1.0e-20f && value < 1.0e-20f)) {
+            return 0.0f;
+        }
         return value;
+    }
+
+    // Session 006: restored for random modulation component.
+    static float nextRandomBipolar(uint32_t& state) {
+        state = state * 1664525u + 1013904223u;
+        const float normalized = static_cast<float>((state >> 8) & 0x00ffffffu) / static_cast<float>(0x00ffffffu);
+        return normalized * 2.0f - 1.0f;
     }
 
     static void normalizeOscillator(float& s, float& c) {
@@ -773,6 +1207,27 @@ private:
         }
     }
 
+    // Compute peaking EQ coefficients (b0,b1,b2,a1,a2 with a0 normalized to 1).
+    // dbGain: positive = boost, negative = cut.  Q: bandwidth at -3dB (or -dBgain/2 for peaking).
+    // Uses standard RBJ Audio EQ Cookbook formula (same equation works for boost and cut).
+    static std::array<float, 5> peakingCoefficients(float dbGain, float freqHz, float sampleRate, float Q) {
+        const float A = std::sqrt(std::pow(10.0f, dbGain / 20.0f));
+        const float w0 = 2.0f * static_cast<float>(M_PI) * freqHz / sampleRate;
+        const float cosw0 = std::cos(w0);
+        const float sinw0 = std::sin(w0);
+        const float alpha = sinw0 / (2.0f * Q);
+
+        const float b0 = 1.0f + alpha * A;
+        const float b1 = -2.0f * cosw0;
+        const float b2 = 1.0f - alpha * A;
+        const float a0 = 1.0f + alpha / A;
+        const float a1 = -2.0f * cosw0;
+        const float a2 = 1.0f - alpha / A;
+
+        const float invA0 = 1.0f / a0;
+        return {b0 * invA0, b1 * invA0, b2 * invA0, a1 * invA0, a2 * invA0};
+    }
+
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
@@ -781,6 +1236,7 @@ private:
     mutable std::mutex m_rebuildMutex;
 
     std::array<std::vector<float>, kFDNLineCount> m_delayLines;
+    std::array<int, kFDNLineCount> m_delayLineMasks{};
     std::array<int, kFDNLineCount> m_delayLengths{};
     std::array<int, kFDNLineCount> m_delayPos{};
     std::array<float, kFDNLineCount> m_dampingState{};
@@ -799,24 +1255,52 @@ private:
     std::array<std::vector<float>, kDiffuserCount> m_diffuserL;
     std::array<std::vector<float>, kDiffuserCount> m_diffuserR;
     std::array<int, kDiffuserCount> m_diffuserLengths{};
+    std::array<int, kDiffuserCount> m_diffuserMasks{};
     std::array<int, kDiffuserCount> m_diffuserPos{};
 
     std::array<std::vector<float>, kPlatePostAllpassCount> m_platePostL;
     std::array<std::vector<float>, kPlatePostAllpassCount> m_platePostR;
+    std::array<int, kPlatePostAllpassCount> m_platePostDelayLengths{};
+    std::array<int, kPlatePostAllpassCount> m_platePostMasks{};
     std::array<int, kPlatePostAllpassCount> m_platePostPos{};
 
     std::vector<float> m_earlyL;
     std::vector<float> m_earlyR;
+    int m_earlyMask = 0;
     int m_earlyPos = 0;
 
     std::vector<float> m_predelayL;
     std::vector<float> m_predelayR;
     int m_maxPredelaySamples = 1;
+    int m_predelayMask = 0;
     int m_predelayPos = 0;
+
+    // Session 012: gentle peaking EQ to tame Plate metallic ringing (~562 Hz).
+    // Coefficients precomputed at init; only applied in Plate mode.
+    std::array<float, 5> m_platePeakCoeff{}; // b0, b1, b2, a1, a2 (a0 normalized to 1)
+    std::array<std::array<float, 5>, 3> m_boxCutCoeff{};
+    float m_platePeakZ1L = 0.0f;
+    float m_platePeakZ2L = 0.0f;
+    float m_platePeakZ1R = 0.0f;
+    float m_platePeakZ2R = 0.0f;
+    float m_boxCutZ1L = 0.0f;
+    float m_boxCutZ2L = 0.0f;
+    float m_boxCutZ1R = 0.0f;
+    float m_boxCutZ2R = 0.0f;
+    float m_wetToneStateL = 0.0f;
+    float m_wetToneStateR = 0.0f;
+    // Session 004: mud cleanup one-pole HP filter state
+    std::array<float, 3> m_mudHpCoeff{};  // per-mode alpha coefficients
+    float m_mudHpStateL = 0.0f;
+    float m_mudHpStateR = 0.0f;
 
     // TODO: separate hi/lo damping (kHFDamping + kLFDamping) for more tonal control
     // TODO: Convolution mode — IR loader using same drag system as Arsenal
     // TODO: Early reflections as discrete pre-FDN tapped delay line network
+
+#ifdef AESTRA_REVERB_PROFILE
+    mutable std::array<StageProfileData, static_cast<size_t>(ProfileStage::kStageCount)> m_profileData{};
+#endif
 };
 
 } // namespace Plugins

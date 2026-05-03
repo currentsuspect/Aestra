@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstring>
 #include <fstream>
+#include <limits>
 
 #ifdef _WIN32
 #include <mfapi.h>
@@ -65,6 +66,10 @@ void downmixToStereoImpl(const std::vector<float>& input, uint32_t inChannels, s
     }
 }
 
+bool readExact(std::ifstream& file, void* dest, std::streamsize bytes) {
+    return static_cast<bool>(file.read(reinterpret_cast<char*>(dest), bytes));
+}
+
 bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate, uint32_t& numChannels) {
     std::ifstream file(makeUnicodePath(filePath), std::ios::binary);
     if (!file)
@@ -95,11 +100,27 @@ bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_
             fmtFound = true;
             if (chunkSize < 16)
                 return false;
-            file.read(reinterpret_cast<char*>(&audioFormat), sizeof(uint16_t));
-            file.read(reinterpret_cast<char*>(&channelCount), sizeof(uint16_t));
-            file.read(reinterpret_cast<char*>(&sr), sizeof(uint32_t));
-            file.seekg(6, std::ios::cur); // Skip byteRate, blockAlign
-            file.read(reinterpret_cast<char*>(&bitsPerSample), sizeof(uint16_t));
+            if (!readExact(file, &audioFormat, sizeof(uint16_t)) ||
+                !readExact(file, &channelCount, sizeof(uint16_t)) ||
+                !readExact(file, &sr, sizeof(uint32_t))) {
+                return false;
+            }
+            uint32_t byteRate = 0;
+            uint16_t blockAlign = 0;
+            if (!readExact(file, &byteRate, sizeof(uint32_t))) {
+                return false;
+            }
+            if (!readExact(file, &blockAlign, sizeof(uint16_t))) {
+                return false;
+            }
+            if (!readExact(file, &bitsPerSample, sizeof(uint16_t))) {
+                return false;
+            }
+            uint16_t expectedBlockAlign = channelCount * static_cast<uint16_t>(bitsPerSample / 8);
+            uint32_t expectedByteRate = sr * static_cast<uint32_t>(expectedBlockAlign);
+            if (blockAlign != expectedBlockAlign || byteRate != expectedByteRate) {
+                return false;
+            }
             if (chunkSize > 16)
                 file.seekg(chunkSize - 16, std::ios::cur);
         } else if (std::strncmp(chunkId, "data", 4) == 0) {
@@ -118,9 +139,13 @@ bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_
         return false;
     if (audioFormat != 1 && audioFormat != 3)
         return false;
+    if (channelCount == 0 || channelCount > 64 || sr == 0)
+        return false;
 
     // Guard against division by zero (RTM-001) and unsupported bit depths
     if (bitsPerSample != 16 && bitsPerSample != 24 && bitsPerSample != 32)
+        return false;
+    if (audioFormat == 3 && bitsPerSample != 32)
         return false;
 
     // Guard against heap exhaustion — cap dataSize to actual remaining file size (RTM-002)
@@ -132,7 +157,13 @@ bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_
     }
     file.seekg(dataPos);
 
-    size_t samplesCount = dataSize / (bitsPerSample / 8);
+    const uint32_t bytesPerSample = bitsPerSample / 8;
+    const uint32_t blockAlign = static_cast<uint32_t>(channelCount) * bytesPerSample;
+    if (bytesPerSample == 0 || blockAlign == 0 || dataSize % bytesPerSample != 0 || dataSize % blockAlign != 0) {
+        return false;
+    }
+
+    size_t samplesCount = dataSize / bytesPerSample;
     // Secondary cap: prevent allocations > 500M samples (~2 GB for float32)
     constexpr size_t kMaxSamples = 500000000;
     if (samplesCount > kMaxSamples) {
@@ -142,12 +173,14 @@ bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_
 
     if (bitsPerSample == 16) {
         std::vector<int16_t> raw(samplesCount);
-        file.read(reinterpret_cast<char*>(raw.data()), dataSize);
+        if (!readExact(file, raw.data(), dataSize))
+            return false;
         for (size_t i = 0; i < samplesCount; ++i)
             audioData[i] = raw[i] / 32768.0f;
     } else if (bitsPerSample == 24) {
         std::vector<uint8_t> raw(dataSize);
-        file.read(reinterpret_cast<char*>(raw.data()), dataSize);
+        if (!readExact(file, raw.data(), dataSize))
+            return false;
         for (size_t i = 0; i < samplesCount; ++i) {
             uint32_t s24 = raw[i * 3] | (raw[i * 3 + 1] << 8) | (raw[i * 3 + 2] << 16);
             if (s24 & 0x800000)
@@ -155,7 +188,17 @@ bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_
             audioData[i] = static_cast<int32_t>(s24) / 8388608.0f;
         }
     } else if (bitsPerSample == 32) {
-        file.read(reinterpret_cast<char*>(audioData.data()), dataSize);
+        if (audioFormat == 3) {
+            if (!readExact(file, audioData.data(), dataSize))
+                return false;
+        } else {
+            std::vector<int32_t> raw(samplesCount);
+            if (!readExact(file, raw.data(), dataSize))
+                return false;
+            constexpr float scale = 1.0f / 2147483648.0f;
+            for (size_t i = 0; i < samplesCount; ++i)
+                audioData[i] = static_cast<float>(raw[i] * scale);
+        }
     } else {
         return false;
     }
@@ -203,9 +246,13 @@ bool loadWithMediaFoundation(const std::string& filePath, std::vector<float>& au
     ComPtr<IMFMediaType> curType;
     if (FAILED(reader->GetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, &curType)))
         return false;
-    UINT32 sr, ch;
-    curType->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &sr);
-    curType->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &ch);
+    UINT32 sr = 0;
+    UINT32 ch = 0;
+    if (FAILED(curType->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND, &sr)) ||
+        FAILED(curType->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &ch)) ||
+        sr == 0 || ch == 0 || ch > 64) {
+        return false;
+    }
     sampleRate = sr;
     numChannels = ch;
 

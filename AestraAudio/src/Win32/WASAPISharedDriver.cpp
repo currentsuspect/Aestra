@@ -1,9 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "WASAPISharedDriver.h"
 
-#include "DitherUtils.h"
 #include "AestraLog.h"
 #include "AudioTelemetry.h"
+#include "DitherUtils.h"
 
 // Windows-specific includes (only in .cpp file)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -65,7 +65,8 @@ public:
     STDMETHODIMP_(ULONG) AddRef() override { return InterlockedIncrement(&m_refCount); }
     STDMETHODIMP_(ULONG) Release() override {
         ULONG count = InterlockedDecrement(&m_refCount);
-        if (count == 0) delete this;
+        if (count == 0)
+            delete this;
         return count;
     }
 
@@ -95,12 +96,14 @@ public:
     }
     STDMETHODIMP OnDeviceAdded(LPCWSTR pwstrDeviceId) override {
         (void)pwstrDeviceId;
-        if (m_driver) m_driver->onDeviceStateChanged("", DEVICE_STATE_ACTIVE);
+        if (m_driver)
+            m_driver->onDeviceStateChanged("", DEVICE_STATE_ACTIVE);
         return S_OK;
     }
     STDMETHODIMP OnDeviceRemoved(LPCWSTR pwstrDeviceId) override {
         (void)pwstrDeviceId;
-        if (m_driver) m_driver->onDeviceStateChanged("", DEVICE_STATE_NOTPRESENT);
+        if (m_driver)
+            m_driver->onDeviceStateChanged("", DEVICE_STATE_NOTPRESENT);
         return S_OK;
     }
 
@@ -915,8 +918,8 @@ void WASAPISharedDriver::registerDeviceNotifier() {
     }
 
     WASAPIDeviceNotifier* notifier = new WASAPIDeviceNotifier(this);
-    HRESULT hr = reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)
-                     ->RegisterEndpointNotificationCallback(notifier);
+    HRESULT hr =
+        reinterpret_cast<IMMDeviceEnumerator*>(m_deviceEnumerator)->RegisterEndpointNotificationCallback(notifier);
     if (SUCCEEDED(hr)) {
         m_deviceNotifier = notifier;
         Aestra::Log::info("[WASAPI Shared] Hot-plug detection registered");
@@ -942,21 +945,13 @@ void WASAPISharedDriver::unregisterDeviceNotifier() {
 }
 
 void WASAPISharedDriver::onDeviceStateChanged(const std::string& deviceId, uint32_t newState) {
-    (void)deviceId;
-    (void)newState;
-    // Device state changed — check if our current device is still valid
-    // If the active device was removed, trigger fallback
-    if (m_isRunning.load(std::memory_order_relaxed) && m_state == DriverState::STREAM_RUNNING) {
-        // Check if current device is still available
-        if (!m_device) {
-            Aestra::Log::error("[WASAPI Shared] Active device removed — triggering safety fallback");
-            if (m_telemetry) {
-                m_telemetry->incrementXruns();
-            }
-            // Notify via error callback if set
-            if (m_errorCallback) {
-                m_errorCallback(DriverError::DEVICE_NOT_FOUND, "Active audio device was removed");
-            }
+    if (newState != DEVICE_STATE_ACTIVE && m_isRunning.load(std::memory_order_relaxed) && m_state == DriverState::STREAM_RUNNING) {
+        Aestra::Log::error("[WASAPI Shared] Active device removed — triggering safety fallback");
+        if (m_telemetry) {
+            m_telemetry->incrementXruns();
+        }
+        if (m_errorCallback) {
+            m_errorCallback(DriverError::DEVICE_NOT_FOUND, "Active audio device was removed");
         }
     }
 }

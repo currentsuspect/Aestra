@@ -3673,14 +3673,14 @@ void TrackManagerUI::deselectAllTracks() {
 
 void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    auto borderColor = AestraUI::NUIColor::white().withAlpha(0.085f);
+    auto borderColor = AestraUI::NUIColor::white().withAlpha(0.075f);
     auto accentColor = AestraUI::NUIColor(0.486f, 0.361f, 0.749f, 1.0f);
     
-    auto glassBg = themeManager.getColor("backgroundPrimary");
-    auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.018f);
+    auto glassBg = themeManager.getColor("backgroundPrimary").darkened(0.02f);
+    auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.014f);
 
-    auto textCol = themeManager.getColor("textPrimary").withAlpha(0.94f);
-    auto tickCol = AestraUI::NUIColor::fromHex(0x1e1e28).withAlpha(0.95f);
+    auto textCol = themeManager.getColor("textPrimary").withAlpha(0.86f);
+    auto tickCol = AestraUI::NUIColor::fromHex(0x2c2c3b).withAlpha(0.82f);
     
     // Restore layout definition
     const auto& layout = themeManager.getLayoutDimensions();
@@ -3745,7 +3745,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         // Bigger text for major bars (multiples of 4 bars from bar 1)
         // When using stride, all shown bars are "major" since we're already filtering
         bool isMajorBar = (barStride > 1) || (barNum == 1) || ((barNum - 1) % 4 == 0); // 1, 5, 9, 13...
-        float fontSize = isMajorBar ? 11.5f : 10.0f;
+        float fontSize = isMajorBar ? 11.0f : 10.0f;
         
         auto textSize = renderer.measureText(barText, fontSize);
         
@@ -3762,11 +3762,11 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         
         // Bar tick line - major bars get full height, others half
         // Mature Style: Ticks bottom-up
-        float tickHeight = isMajorBar ? rulerBounds.height * 0.5f : rulerBounds.height * 0.25f;
+        float tickHeight = isMajorBar ? rulerBounds.height * 0.58f : rulerBounds.height * 0.24f;
         renderer.drawLine(
             AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height - tickHeight),
             AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height),
-            1.0f,
+            isMajorBar ? 1.15f : 1.0f,
             isMajorBar ? tickCol : tickCol.withAlpha(0.58f)
         );
         
@@ -3777,7 +3777,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
                 float beatX = x + (beat * m_pixelsPerBeat);
                 
                 float beatTickHeight = rulerBounds.height * 0.30f;
-                AestraUI::NUIColor beatTickColor = AestraUI::NUIColor::fromHex(0x1e1e28).withAlpha(0.66f);
+                AestraUI::NUIColor beatTickColor = AestraUI::NUIColor::fromHex(0x242431).withAlpha(0.48f);
                 
                 renderer.drawLine(
                     AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height - beatTickHeight),
@@ -4022,7 +4022,7 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     float trackWidth = bounds.width - scrollbarWidth;
     float gridWidth = trackWidth - (controlAreaWidth + 5.0f);
     float gridEndX = gridStartX + gridWidth;
-    float triangleSize = 6.0f;  // Triangle extends this much left/right from playhead center
+    float triangleSize = 6.0f;  // Marker extends this much left/right from playhead center
     
     // Calculate playhead boundaries
     float headerHeight = 38.0f;
@@ -4075,7 +4075,7 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
              );
         }
 
-        // Draw playhead line (Thinner 1px, simple)
+        // Draw playhead line (thin, pixel-aligned)
         renderer.drawLine(
             AestraUI::NUIPoint(playheadX, playheadStartY),
             AestraUI::NUIPoint(playheadX, playheadEndY),
@@ -4083,21 +4083,14 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
             playheadColor
         );
 
-        // Draw playhead Triangle Cap (In Ruler)
-        // Triangle pointing down - Filled
-        // Manual rasterization using vertical lines since NUIRenderer lacks fillTriangle
-        for (float dx = -triangleSize; dx <= triangleSize; dx += 1.0f) {
-            float ratio = 1.0f - (std::abs(dx) / triangleSize); // 1.0 at center, 0.0 at edges
-            float h = triangleSize * ratio;
-            if (h < 1.0f) h = 1.0f; // Ensure at least 1px
-            
-            renderer.drawLine(
-                AestraUI::NUIPoint(playheadX + dx, playheadStartY),
-                AestraUI::NUIPoint(playheadX + dx, playheadStartY + h),
-                1.0f,
-                playheadColor
-            );
-        }
+        // Draw ruler-locked circular marker. It sits just above the grid start so the
+        // vertical line reads as anchored to the ruler rather than floating.
+        const float markerRadius = 6.0f;
+        const AestraUI::NUIPoint markerCenter(playheadX, playheadStartY - 1.0f);
+        renderer.fillCircle(markerCenter, markerRadius + 2.0f, themeManager.getColor("backgroundPrimary").withAlpha(0.92f));
+        renderer.fillCircle(markerCenter, markerRadius, playheadColor.withAlpha(0.20f));
+        renderer.strokeCircle(markerCenter, markerRadius, 1.3f, playheadColor.withAlpha(0.98f));
+        renderer.fillCircle(markerCenter, 1.7f, playheadColor);
     }
 }
 
@@ -4782,9 +4775,14 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
 
             // Request Plugin Creation (Async)
             // Captured variables must be kept alive. m_trackManager is a shared_ptr.
+            // NOTE: The callback runs on a worker thread (PluginManager's factory thread),
+            // not the main/UI thread. This is a known risk: EffectChain::insertPlugin()
+            // should be called from the main/control thread. Future fix: route through
+            // main-thread dispatch (Stage B). This is documented in the plugin/effect-chain
+            // lifetime audit (labs/memory/plugin_effect_lifetime_audit.md).
             std::string displayName = data.displayName;
             auto trackManager = m_trackManager;
-            
+
             pluginManager.createInstanceByIdAsync(pluginId, [trackManager, channelIndex, displayName, pluginId](Aestra::Audio::PluginInstancePtr instance) {
                 if (!instance) {
                     Log::error("[TrackManagerUI] Plugin creation failed for ID: " + pluginId);
@@ -4796,12 +4794,12 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
 
                 auto& pluginManager = Aestra::Audio::PluginManager::getInstance();
                 if (instance->initialize(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize())) {
-                    instance->activate(); 
-                    
+                    instance->activate();
+
                     auto& chain = channel->getEffectChain();
                     chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
                     size_t slot = chain.getFirstEmptySlot();
-                    
+
                     if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
                         chain.insertPlugin(slot, instance);
                         Log::info("[TrackManagerUI] Added plugin (Async): " + displayName);

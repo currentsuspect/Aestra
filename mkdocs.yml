@@ -25,7 +25,6 @@ copyright: >
 # ----------------------------------------
 theme:
   name: material
-  custom_dir: overrides  # allows custom HTML injection (for branding, animations, etc.)
   language: en
   features:
     - navigation.instant

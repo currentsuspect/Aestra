@@ -125,6 +125,18 @@ public:
     void cancelScan();
 
     /**
+     * @brief Cancel scan and join the scanner thread.
+     *
+     * Call this during explicit shutdown to ensure the scan thread is
+     * stopped before static singletons are destroyed. This prevents
+     * the hang caused by PluginScanner::~PluginScanner() joining a
+     * thread that hasn't checked the cancel flag yet.
+     *
+     * Safe to call multiple times. No-op if no scan is running.
+     */
+    void cancelAndJoin();
+
+    /**
      * @brief Check if scan is in progress
      */
     bool isScanning() const;

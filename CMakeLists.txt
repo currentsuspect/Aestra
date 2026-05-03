@@ -35,6 +35,8 @@ option(AESTRA_ENABLE_TESTS "Build test executables" ON)
 option(AESTRA_CI "Configure deterministic CI-safe defaults" OFF)
 option(AESTRA_ENABLE_PREMIUM_PLUGINS "Build private premium plugin modules" OFF)
 option(AESTRA_ENABLE_TEST_LICENSES "Enable test-only mock license acceptance" OFF)
+option(AESTRA_REVERB_PROFILE "Enable AestraVerb stage profiling (lab/benchmark only)" OFF)
+option(AESTRA_REVERB_DIAGNOSTICS "Enable AestraVerb clamp diagnostics (lab only)" OFF)
 
 if(AESTRA_HEADLESS_ONLY)
   set(AESTRA_ENABLE_UI OFF CACHE BOOL "Build the AESTRA_DAW UI application" FORCE)
@@ -126,9 +128,14 @@ endif()
 add_subdirectory(AestraPlat)
 
 # =============================================================================
-# AestraLicense - Offline License Verification
+# AestraLicense - Offline License Verification (optional for lab builds)
 # =============================================================================
-add_subdirectory(AestraLicense)
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+    add_subdirectory(AestraLicense)
+else()
+    message(WARNING "pkg-config not found. Skipping AestraLicense.")
+endif()
 
 # =============================================================================
 # Shared Plugin API Interface
@@ -198,6 +205,51 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessMain.cpp")
   endif()
 
   message(STATUS "AestraHeadless configured")
+endif()
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessExportMain.cpp")
+  add_executable(AestraHeadlessExport
+    Source/App/HeadlessExportMain.cpp
+  )
+
+  if(MSVC)
+    target_compile_options(AestraHeadlessExport PRIVATE /utf-8)
+  endif()
+
+  set_target_properties(AestraHeadlessExport PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  )
+
+  target_link_libraries(AestraHeadlessExport PRIVATE
+    AestraAudioCore
+    AestraCore
+  )
+
+  target_include_directories(AestraHeadlessExport PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+  )
+
+  if(WIN32)
+    target_compile_definitions(AestraHeadlessExport PRIVATE
+      _CRT_SECURE_NO_WARNINGS
+      NOMINMAX
+    )
+    target_link_libraries(AestraHeadlessExport PRIVATE mfplat mfreadwrite mfuuid)
+  endif()
+
+  if(AESTRA_ENABLE_TESTS)
+    add_test(NAME AestraHeadlessExportRejectsBadArgs
+      COMMAND AestraHeadlessExport --duration nope)
+    set_tests_properties(AestraHeadlessExportRejectsBadArgs PROPERTIES
+      WILL_FAIL TRUE
+      LABELS "cli;headless")
+  endif()
+
+  message(STATUS "AestraHeadlessExport configured")
 endif()
 
 if(AESTRA_ENABLE_UI)

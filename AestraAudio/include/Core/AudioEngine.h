@@ -62,6 +62,18 @@ class AudioEngine {
     friend class AudioRenderer; // Allow access to private members during hybrid engine transition
     friend class AudioExporter; // Allow access for offline rendering/export
 public:
+    static constexpr size_t kMaxCachedSamplers = 64;
+    struct SamplerCacheSnapshot {
+        std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> samplers{};
+        std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> owners{};
+        size_t count = 0;
+    };
+
+    struct UnitManagerSnapshot {
+        UnitManager* manager{nullptr};
+        SamplerCacheSnapshot cache;
+    };
+
     /** @brief Construct the realtime audio engine. */
     AudioEngine();
     /** @brief Destroy the realtime audio engine and release owned resources. */
@@ -78,6 +90,21 @@ public:
      * Must remain lock-free, allocation-free.
      */
     int processBlock(float* outputBuffer, const float* inputBuffer, uint32_t numFrames, double streamTime);
+
+    /**
+     * @brief Non-real-time maintenance hook for deferred resource reclamation.
+     *
+     * Safe to call from the UI loop, idle tick, export loop, or headless render
+     * loop. Throttled internally so frequent calls stay cheap.
+     */
+    void performNonRealtimeMaintenance();
+
+    /**
+     * @brief Non-real-time shutdown drain for deferred resources.
+     *
+     * Call only after the audio stream has been stopped and closed.
+     */
+    void drainDeferredResourcesForShutdown();
 
     /**
      * @brief Immediate panic/reset (Double Stop).
@@ -105,6 +132,9 @@ public:
     /** @brief Get the active sample rate used by the engine. */
     uint32_t getSampleRate() const { return m_sampleRate.load(std::memory_order_relaxed); }
 
+    /** @brief Check if a routing cycle was detected on the audio thread (poll from UI). */
+    bool hasRoutingCycleDetected() const { return m_loggedRoutingCycleWarning.load(std::memory_order_relaxed); }
+
     /** @brief Configure the maximum buffer and output-channel counts. */
     void setBufferConfig(uint32_t maxFrames, uint32_t numChannels);
     /** @brief Set transport running state and mirror it onto the audio command queue. */
@@ -128,23 +158,14 @@ public:
         compileGraph();
     }
 
-    /** @brief Publish the shared meter snapshot buffer used by the UI. */
-    void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots) {
-        m_meterSnapshotsOwned = std::move(snapshots);
-        m_meterSnapshotsRaw.store(m_meterSnapshotsOwned.get(), std::memory_order_release);
-    }
+    /** @brief Publish the shared meter snapshot buffer used by the UI. Non-RT only. */
+    void setMeterSnapshots(std::shared_ptr<MeterSnapshotBuffer> snapshots);
 
-    /** @brief Publish the continuous parameter buffer used for automation. */
-    void setContinuousParams(std::shared_ptr<ContinuousParamBuffer> params) {
-        m_continuousParamsOwned = std::move(params);
-        m_continuousParamsRaw.store(m_continuousParamsOwned.get(), std::memory_order_release);
-    }
+    /** @brief Publish the continuous parameter buffer used for automation. Non-RT only. */
+    void setContinuousParams(std::shared_ptr<ContinuousParamBuffer> params);
 
-    /** @brief Publish the channel-slot map used by the audio thread. */
-    void setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMap) {
-        m_channelSlotMapOwned = std::move(slotMap);
-        m_channelSlotMapRaw.store(m_channelSlotMapOwned.get(), std::memory_order_release);
-    }
+    /** @brief Publish the channel-slot map used by the audio thread. Non-RT only. */
+    void setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMap);
 
     /** @brief Get the current transport position in samples. */
     uint64_t getGlobalSamplePos() const { return m_globalSamplePos.load(std::memory_order_relaxed); }
@@ -226,7 +247,27 @@ public:
     bool isPatternPlaybackMode() const { return m_patternPlaybackMode.load(std::memory_order_relaxed); }
 
     /** @brief Bind the unit manager used for Arsenal rendering. */
-    void setUnitManager(UnitManager* mgr) { m_unitManager.store(mgr, std::memory_order_release); }
+    void setUnitManager(UnitManager* mgr) {
+        // Build complete snapshot (manager + cache) before publishing
+        // so audio thread never sees mixed state
+        auto* snapshot = new UnitManagerSnapshot();
+        snapshot->manager = mgr;
+        if (mgr) {
+            refreshSamplerCacheToSnapshot(*mgr, snapshot->cache);
+        }
+        // Atomically publish the complete snapshot
+        auto* old = m_unitManagerSnapshot.exchange(snapshot, std::memory_order_release);
+        delete old;
+        // Also update legacy fields for backward compatibility during transition
+        m_unitManager.store(mgr, std::memory_order_release);
+        auto cache = snapshot->cache;
+        m_cachedSamplers = cache.samplers;
+        m_cachedSamplerOwners = cache.owners;
+        m_cachedSamplerCount.store(cache.count, std::memory_order_release);
+    }
+
+    // Internal helper: populate a cache snapshot from a specific UnitManager
+    void refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheSnapshot& snapshot);
     /** @brief Bind the pattern playback engine used for scheduled MIDI. */
     void setPatternPlaybackEngine(PatternPlaybackEngine* engine) {
         m_patternEngine.store(engine, std::memory_order_release);
@@ -356,6 +397,8 @@ public:
 
 private:
     static constexpr size_t kMaxTracks = 4096;
+    static constexpr size_t kMaxSendsPerTrack = 256;  // Matches PROJECT_MAX_SENDS_PER_LANE
+    static constexpr size_t kMaxEdgesPerTrack = 16;   // Conservative max routing edges per track
     static constexpr uint32_t kWaveformHistoryFramesDefault = 2048;
 
     // Fast Xorshift32 RNG for dither
@@ -383,7 +426,10 @@ private:
     void applyPendingCommands();
     void applyPendingMetronomeCountInRt();
     void clearMetronomeCountInRt();
-    void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame);
+    void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
+                            double* targetBuffer = nullptr, int32_t isolatedTrackIndex = -1);
+    void resetCachedSamplerVoicesRt() noexcept;
+    void syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept;
     void injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
                                    uint32_t numFrames) noexcept;
 
@@ -496,10 +542,19 @@ private:
     std::vector<TrackRTState> m_trackState;
 
     // Reused render-graph scratch state to avoid heap churn in the audio callback.
-    std::unordered_map<uint32_t, size_t> m_rtTrackIndexById;
+    // All pre-allocated in setBufferConfig() to kMaxTracks capacity.
+    // RT path uses index-based writes and .clear() (which preserves capacity).
+
+    // Flat vector replacing unordered_map<uint32_t, size_t>.
+    // Indexed by trackId; value is graph index, or kMaxTracks sentinel for "not present".
+    // Safe because trackId is bounded by kMaxTracks (enforced by ChannelSlotMap).
+    std::vector<size_t> m_rtTrackIndexById;
+    size_t m_rtTrackIndexByIdActiveCount{0}; // Number of valid entries written this block
+
     std::vector<std::vector<size_t>> m_rtAudibleDownstream;
     std::vector<std::vector<size_t>> m_rtAudibleIncoming;
     std::vector<std::vector<size_t>> m_rtSidechainIncoming;
+    std::vector<uint8_t> m_rtSidechainReceiverFlags; // Indexed by trackIndex: 1 if track received sidechain input last block
     std::vector<std::vector<size_t>> m_rtTopoEdges;
     std::vector<uint32_t> m_rtTopoIndegree;
     std::vector<bool> m_rtAudibleEligible;
@@ -508,6 +563,19 @@ private:
     std::vector<size_t> m_rtIndexQueue;
     std::vector<size_t> m_rtSoloProcessQueue;
     std::vector<bool> m_rtCycleVisited;
+
+    // Scratch buffer for send routing in renderGraph (pre-allocated, avoids local std::vector).
+    struct PreparedSendRoute {
+        const double* source{nullptr};
+        double* dest{nullptr};
+        SmoothedParamD* gainL{nullptr};
+        SmoothedParamD* gainR{nullptr};
+    };
+    std::vector<PreparedSendRoute> m_preparedRoutesScratch;
+
+    // Tracks last sample rate synced to Arsenal units (avoids per-block scans).
+    // Replaces static local in processArsenalUnits for RT safety.
+    uint32_t m_lastSyncedArsenalSampleRate{0};
 
     // --- Antigravity Routing Engine (v3.1) ---
     // Moved struct definitions to AudioGraphState.h
@@ -645,9 +713,14 @@ private:
 
     // RT-safe sampler cache (refreshed from main thread when units change)
     // Avoids dynamic_pointer_cast on RT thread during hard stop/restart
-    static constexpr size_t kMaxCachedSamplers = 64;
+    std::atomic<UnitManagerSnapshot*> m_unitManagerSnapshot{nullptr};
+
+    // Legacy separate fields kept for backward compatibility during transition
+    // TODO: remove these once all readers migrated to m_unitManagerSnapshot
     std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> m_cachedSamplers{};
+    std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> m_cachedSamplerOwners{};
     std::atomic<size_t> m_cachedSamplerCount{0};
+    std::atomic<uint64_t> m_lastDeferredResourceCollectionNs{0};
 
 public:
     /**
@@ -769,7 +842,7 @@ private:
     static const BiquadCoeff kKWeightRLB;       // HPF
 
     TrackRTState m_dummyTrackState; // [FIX] Replaces static local to remove priority inversion risk
-    bool m_loggedRoutingCycleWarning{false};
+    std::atomic<bool> m_loggedRoutingCycleWarning{false};
 
     // Guard for resource loading (e.g., metronome samples)
     std::atomic<bool> m_resourcesLoading{false};

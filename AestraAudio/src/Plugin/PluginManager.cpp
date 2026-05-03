@@ -56,6 +56,7 @@ bool PluginManager::initialize() {
         // Both are acceptable
         return false;
     }
+    m_comInitialized = (hr == S_OK || hr == S_FALSE);
 #endif
 
     BuiltInPlugins::registerCoreBuiltIns();
@@ -109,8 +110,10 @@ void PluginManager::shutdown() {
         return;
     }
 
-    // Cancel any ongoing scan
-    m_scanner.cancelScan();
+    // Cancel any ongoing scan and join the scanner thread.
+    // This ensures the thread is stopped before static singleton destruction,
+    // which prevents the shutdown hang that forced the quick_exit workaround.
+    m_scanner.cancelAndJoin();
 
     // Save plugin cache only when platform utilities are available.
     const bool platformInitialized = Platform::isInitialized();
@@ -142,7 +145,10 @@ void PluginManager::shutdown() {
 
 #ifdef _WIN32
     // Uninitialize COM
-    CoUninitialize();
+    if (m_comInitialized) {
+        CoUninitialize();
+        m_comInitialized = false;
+    }
 #endif
 
     m_initialized = false;
