@@ -1069,11 +1069,12 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
 int PianoRollNoteLayer::findNoteAt(float localX, float localY) {
     for (int i = static_cast<int>(notes_.size()) - 1; i >= 0; --i) {
         const auto& n = notes_[i];
+        if (n.isDeleted) continue;
         float nx = static_cast<float>(n.startBeat * pixelsPerBeat_);
         float ny = (127 - n.pitch) * keyHeight_;
         float nw = static_cast<float>(n.durationBeats * pixelsPerBeat_);
         float nh = keyHeight_;
-        
+
         if (localX >= nx && localX < nx + nw && localY >= ny && localY < ny + nh) {
             return i;
         }
@@ -1108,7 +1109,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     
     if (state_ == State::Erasing && !event.released) {
          int idx = findNoteAt(localX, localY);
-         if (idx != -1) {
+         if (idx != -1 && !notes_[idx].isDeleted) {
              auto oldNotes = notes_;
              notes_.erase(notes_.begin() + idx);
              // pushUndo("Erase", oldNotes, notes_); // TODO: Batch Undo
@@ -1287,29 +1288,24 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             if (norm.width < 0) { norm.x += norm.width; norm.width *= -1; }
             if (norm.height < 0) { norm.y += norm.height; norm.height *= -1; }
             
-            // Select Intersecting Notes
+            // Select Intersecting Notes (marquee adds to selection during drag)
             for (auto& n : notes_) {
+                // Skip deleted notes
+                if (n.isDeleted) continue;
+
                 float nx = b.x + static_cast<float>(n.startBeat * pixelsPerBeat_) - scrollX_;
                 float ny = b.y + (127 - n.pitch) * keyHeight_ - scrollY_;
                 float nw = static_cast<float>(n.durationBeats * pixelsPerBeat_);
                 float nh = keyHeight_;
-                
+
                 NUIRect nr(nx, ny, nw, nh);
-                
-                // Logic: If Shift was held essentially 'add' to selection? 
-                // Simple logic: If inside rect -> Select.
-                // Resetting unseen notes? 
-                // For now, simple standard marquee: 
-                // Notes inside = True. 
-                // (Ideally should handle toggle or keep existing, but this re-evaluates every frame)
-                
+
+                // Standard marquee: select notes inside the box
+                // Notes outside the box are left unchanged during drag
+                // (final selection replacement happens on release)
                 if (nr.x < norm.x + norm.width && nr.x + nr.width > norm.x &&
                     nr.y < norm.y + norm.height && nr.y + nr.height > norm.y) {
                     n.selected = true;
-                } else if (!(event.modifiers & NUIModifiers::Shift)) {
-                    // Only deselect if not holding shift? 
-                    // Actually standard box select replaces selection unless Shift.
-                     n.selected = false; 
                 }
             }
             repaint();
@@ -1364,11 +1360,14 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     // --- RELEASE ---
     if (event.released && event.button == NUIMouseButton::Left) {
         if (state_ == State::SelectingBox) {
+            // Marquee selection done. Selection was cleared on click (without Shift),
+            // and notes inside the box were selected during drag.
             state_ = State::None;
+            selectionRect_ = NUIRect(0, 0, 0, 0);
             repaint();
             return true;
         }
-        
+
         if (state_ != State::None) {
             // Update Memory
             if (state_ == State::Painting && paintingNoteIndex_ != -1) {
