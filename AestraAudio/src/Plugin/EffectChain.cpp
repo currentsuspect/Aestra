@@ -13,6 +13,14 @@ EffectChain::EffectChain() = default;
 EffectChain::~EffectChain() = default;
 
 // ==============================
+// Snapshot Publication (Pass 2)
+// ==============================
+
+void EffectChain::publishSnapshot() {
+    m_currentSnapshot = std::make_shared<EffectChainSnapshot>(m_slots);
+}
+
+// ==============================
 // Slot Management
 // ==============================
 
@@ -37,6 +45,7 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
     m_slots[slotIndex].bypassed.store(false);
     m_slots[slotIndex].dryWetMix.store(1.0f);
 
+    publishSnapshot();
     return true;
 }
 
@@ -50,6 +59,8 @@ PluginInstancePtr EffectChain::removePlugin(size_t slotIndex) {
 
     auto plugin = std::move(m_slots[slotIndex].plugin);
     m_slots[slotIndex].plugin = nullptr;
+
+    publishSnapshot();
     return plugin;
 }
 
@@ -78,6 +89,7 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
     m_slots[fromSlot].bypassed.store(false);
     m_slots[fromSlot].dryWetMix.store(1.0f);
 
+    publishSnapshot();
     return true;
 }
 
@@ -104,6 +116,7 @@ bool EffectChain::swapPlugins(size_t slot1, size_t slot2) {
     m_slots[slot2].bypassed.store(bypass1);
     m_slots[slot2].dryWetMix.store(mix1);
 
+    publishSnapshot();
     return true;
 }
 
@@ -156,6 +169,7 @@ void EffectChain::clear() {
         slot.bypassed.store(false);
         slot.dryWetMix.store(1.0f);
     }
+    publishSnapshot();
 }
 
 // ==============================
@@ -217,6 +231,9 @@ void EffectChain::prepare(double sampleRate, uint32_t maxBlockSize) {
             slot.plugin->activate();
         }
     }
+
+    // Initialize snapshot for Pass 2
+    publishSnapshot();
 }
 
 void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFrames,
@@ -442,6 +459,7 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         }
     }
 
+    publishSnapshot();
     return true;
 }
 
@@ -481,6 +499,12 @@ void EffectChain::reset() {
 
     // 3. Restore original bypass state
     m_chainBypassed.store(wasBypassed);
+
+    publishSnapshot();
+}
+
+std::shared_ptr<const EffectChainSnapshot> EffectChain::getSnapshot() const {
+    return m_currentSnapshot;
 }
 
 std::shared_ptr<const EffectChainSnapshot> EffectChain::createSnapshot() const {
