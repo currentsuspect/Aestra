@@ -2435,6 +2435,12 @@ void PianoRollView::setScale(int root, ScaleType type) {
     }
 }
 
+void PianoRollView::setSnapToScale(bool enabled) {
+    if (m_notes) {
+        m_notes->setSnapToScale(enabled);
+    }
+}
+
 void PianoRollView::setPatternName(const std::string& name) {
     if (m_toolbar) m_toolbar->setPatternName(name);
 }

@@ -4,6 +4,7 @@
 #include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
 #include "PluginManager.h"
+#include "Music/ScaleContext.h"
 #include <atomic>
 #include <algorithm>
 #include <cctype>
@@ -323,6 +324,26 @@ namespace {
                             return false;
                         }
                     }
+                    // Validate optional scale field
+                    if (patterns[i].has("scale")) {
+                        const JSON& scale = patterns[i]["scale"];
+                        if (!scale.isObject()) {
+                            error = "Invalid project file: pattern scale must be an object";
+                            return false;
+                        }
+                        if (scale.has("rootKey") && !scale["rootKey"].isNumber()) {
+                            error = "Invalid project file: scale rootKey must be a number";
+                            return false;
+                        }
+                        if (scale.has("scaleKind") && !scale["scaleKind"].isString()) {
+                            error = "Invalid project file: scale scaleKind must be a string";
+                            return false;
+                        }
+                        if (scale.has("snapToScale") && !scale["snapToScale"].isBool()) {
+                            error = "Invalid project file: scale snapToScale must be a boolean";
+                            return false;
+                        }
+                    }
                 } else {
                     error = "Invalid project file: unsupported pattern type";
                     return false;
@@ -620,6 +641,16 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 notesArray.push(nj);
             }
             pjs.set("notes", notesArray);
+
+            // Serialize scale context if present
+            if (p->scaleOverride.has_value()) {
+                const auto& ctx = p->scaleOverride.value();
+                JSON scaleJson = JSON::object();
+                scaleJson.set("rootKey", JSON(static_cast<double>(ctx.rootKey)));
+                scaleJson.set("scaleKind", JSON(scaleKindToString(ctx.scaleKind)));
+                scaleJson.set("snapToScale", JSON(ctx.snapToScale));
+                pjs.set("scale", scaleJson);
+            }
         }
         patternsJson.push(pjs);
     }
@@ -1206,6 +1237,28 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 }
                 PatternID newId = patternManager.createMidiPattern(name, length, payload);
                 patternMap[oldId] = newId;
+
+                // Deserialize scale context if present
+                if (pj[i].has("scale") && pj[i]["scale"].isObject()) {
+                    const JSON& scaleJson = pj[i]["scale"];
+                    ScaleContext ctx;
+                    ctx.rootKey = static_cast<int>(finiteNumberOr(scaleJson, "rootKey", 0.0, -12.0, 24.0));
+                    if (scaleJson.has("scaleKind") && scaleJson["scaleKind"].isString()) {
+                        auto kind = scaleKindFromString(scaleJson["scaleKind"].asString());
+                        if (kind.has_value()) {
+                            ctx.scaleKind = kind.value();
+                        }
+                    }
+                    if (scaleJson.has("snapToScale") && scaleJson["snapToScale"].isBool()) {
+                        ctx.snapToScale = scaleJson["snapToScale"].asBool();
+                    }
+                    if (ctx.hasNonDefaultValues()) {
+                        PatternSource* pattern = patternManager.getPattern(newId);
+                        if (pattern) {
+                            pattern->scaleOverride = ctx;
+                        }
+                    }
+                }
             }
         }
     }

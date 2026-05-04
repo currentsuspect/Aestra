@@ -321,6 +321,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Models/MultiClipPlaylist.h
     include/Models/ArsenalUnit.h
     include/Models/UnitManager.h
+    include/Music/ScaleContext.h
 
     include/IO/StreamingDecoder.h
     # Undo/Redo
@@ -344,7 +345,8 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Commands/RemoveNoteCommand.h
     include/Commands/MoveNoteCommand.h
     include/Commands/ResizeNoteCommand.h
-    
+    include/Commands/NoteDiff.h
+
     # Headless / batch processing
     include/Headless/HeadlessMusicGenerator.h
     

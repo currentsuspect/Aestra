@@ -1,7 +1,9 @@
 #pragma once
 #include "ClipSource.h"
+#include "../Music/ScaleContext.h"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -83,6 +85,7 @@ public:
     Type type{Type::Empty};
     std::variant<std::monostate, MidiPayload, AudioSlicePayload> payload;
     int m_mixerChannel{-1};
+    std::optional<ScaleContext> scaleOverride;
 
     int getMixerChannel() const { return m_mixerChannel; }
     void setMixerChannel(int ch) { m_mixerChannel = ch; }
