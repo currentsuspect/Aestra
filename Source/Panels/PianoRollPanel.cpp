@@ -10,6 +10,7 @@
 #include "Commands/NoteDiff.h"
 #include "Commands/CommandHistory.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "Music/ScaleContext.h"
 #include <cmath>
 #include <unordered_map>
 #include <random>
@@ -105,7 +106,17 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
     
     if (pattern && pattern->isMidi()) {
         m_currentPatternId = patternId;
-        
+
+        // Load scale context if present
+        if (pattern->scaleOverride.has_value()) {
+            const auto& ctx = pattern->scaleOverride.value();
+            m_pianoRoll->setScale(ctx.rootKey, static_cast<AestraUI::ScaleType>(static_cast<int>(ctx.scaleKind)));
+            m_pianoRoll->setSnapToScale(ctx.snapToScale);
+        } else {
+            m_pianoRoll->setScale(0, AestraUI::ScaleType::Chromatic);
+            m_pianoRoll->setSnapToScale(false);
+        }
+
         // Convert backend notes to UI notes
         const auto& midiPayload = std::get<MidiPayload>(pattern->payload);
         std::vector<AestraUI::MidiNote> uiNotes;

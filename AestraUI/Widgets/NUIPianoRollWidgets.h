@@ -481,6 +481,7 @@ public:
     // Global Control API
     void setTool(GlobalTool tool);
     void setScale(int root, ScaleType type);
+    void setSnapToScale(bool enabled);
     
 private:
     std::shared_ptr<PianoRollKeyLane> m_keys;

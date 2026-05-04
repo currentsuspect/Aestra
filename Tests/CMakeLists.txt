@@ -900,6 +900,16 @@ target_include_directories(NoteDiffTest PRIVATE
 add_test(NAME NoteDiffTest COMMAND NoteDiffTest)
 set_tests_properties(NoteDiffTest PROPERTIES LABELS "commands;phase2")
 
+# ScaleContext Test (scale context default values and helpers)
+add_executable(ScaleContextTest AestraAudio/ScaleContextTest.cpp)
+target_link_libraries(ScaleContextTest PRIVATE AestraAudioCore AestraCore)
+target_include_directories(ScaleContextTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ScaleContextTest COMMAND ScaleContextTest)
+set_tests_properties(ScaleContextTest PROPERTIES LABELS "audio;scale;music")
+
 # Mixer Commands Test (Volume, Pan, Mute, Solo)
 add_executable(MixerCommandsTest Commands/MixerCommandsTest.cpp)
 target_link_libraries(MixerCommandsTest PRIVATE AestraAudioCore AestraCore)
