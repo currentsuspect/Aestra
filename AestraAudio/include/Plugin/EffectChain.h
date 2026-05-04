@@ -241,32 +241,42 @@ public:
     uint32_t getTotalLatency() const;
 
     // ==============================
-    // Snapshot (Pass 1)
+    // Snapshot (Pass 2)
     // ==============================
 
     /**
-     * @brief Create an immutable snapshot of the effect chain.
+     * @brief Get the current published snapshot.
      *
-     * This snapshot is designed to eventually replace raw EffectChain* access
-     * in the audio thread. It holds shared_ptr copies so plugin instances
-     * stay alive while any snapshot exists.
+     * Returns the snapshot that was built on the last mutation.
+     * The snapshot is immutable and safe to read from the audio thread.
      *
-     * NOTE: This is Pass 1 implementation only — the snapshot is created
-     * but not yet published to the audio thread. Future passes will add
-     * atomic publication and AudioGraph consumption.
+     * @return Current immutable snapshot (never nullptr after prepare()).
+     */
+    std::shared_ptr<const EffectChainSnapshot> getSnapshot() const;
+
+    /**
+     * @brief Create a snapshot on-demand (Pass 1 compatibility).
      *
-     * @return Immutable snapshot of current effect chain state.
+     * This method is kept for Pass 1 compatibility tests.
+     * Use getSnapshot() to get the published snapshot after mutations.
      */
     std::shared_ptr<const EffectChainSnapshot> createSnapshot() const;
 
 private:
     std::array<EffectSlot, MAX_SLOTS> m_slots;
     std::atomic<bool> m_chainBypassed{false};
+    std::shared_ptr<const EffectChainSnapshot> m_currentSnapshot; // Pass 2: published snapshot
 
     // Pre-allocated buffers for dry/wet mixing
     std::vector<float> m_dryBuffer;
     uint32_t m_maxBlockSize = 0;
     double m_sampleRate = 44100.0;
+
+    // ==============================
+    // Snapshot Publication (Pass 2)
+    // ==============================
+
+    void publishSnapshot();
 };
 
 /**
