@@ -643,7 +643,7 @@ bool AudioDeviceManager::setPreferredDriverType(AudioDriverType type) {
         return false;
     }
 
-    // Skip if already set
+    // Skip if already set — prevents redundant reopens during UI population
     if (m_preferredDriverType == type) {
         return true;
     }
