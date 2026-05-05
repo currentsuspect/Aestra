@@ -163,6 +163,10 @@ private:
     } m_originalState;
     
     bool m_dirty;
+
+    // Guard to suppress stream-reopening calls during UI construction and initial load.
+    // When true, dropdown callbacks and loadSettings() do NOT call AudioDeviceManager setters.
+    bool m_isInitializing = true;
     
     // Async Loading Infrastructure
     std::atomic<bool> m_isLoadingDevices{false};

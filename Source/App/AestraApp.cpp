@@ -53,9 +53,6 @@ void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content, con
 AestraApp::AestraApp()
     : m_running(false)
 {
-    // Initialize m_projectPath with autosave path
-    m_projectPath = getAutosavePath();
-
     // Initialize unified logging
     auto multiLogger = std::make_shared<MultiLogger>(LogLevel::Info);
     multiLogger->addLogger(std::make_shared<ConsoleLogger>(LogLevel::Info));
@@ -67,6 +64,7 @@ AestraApp::AestraApp()
     Log::init(m_asyncLogger);
     Log::info("Logging initialized to console and " + logPath);
 
+    // Note: m_projectPath initialized lazily in initialize() after Platform is ready
     m_windowManager = std::make_unique<AestraWindowManager>();
     m_audioController = std::make_unique<AestraAudioController>();
 }
@@ -140,11 +138,24 @@ bool AestraApp::initialize(const std::string& projectPath) {
 
     Log::info("Aestra v1.0.0 - Initializing...");
 
-    writeCrashFlag();
+    // Check for crashed session BEFORE initializing platform.
+    // This is the only legitimate time to write the crash flag — at the
+    // START of a new session, indicating we made it through initialization.
+    // We do NOT write it unconditionally on every startup.
+    bool crashedSession = isCrashedSession();
 
     if (!Platform::initialize()) {
         Log::error("Failed to initialize platform");
         return false;
+    }
+
+    // Initialize m_projectPath AFTER Platform is initialized
+    m_projectPath = getAutosavePath();
+
+    // Write crash flag only if there was a prior crash session.
+    // This marks that this session started successfully.
+    if (crashedSession) {
+        writeCrashFlag();
     }
 
     // Load preferences and UI state early

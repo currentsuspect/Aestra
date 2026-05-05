@@ -319,9 +319,23 @@ void AudioDeviceManager::getLatencyCompensationValues(double& inputLatencyMs, do
     const_cast<AudioStreamConfig&>(m_currentConfig).outputLatencyMs = outputLatencyMs;
 }
 
+static bool configsEqual(const AudioStreamConfig& a, const AudioStreamConfig& b) {
+    return a.deviceId == b.deviceId &&
+           a.inputDeviceId == b.inputDeviceId &&
+           a.sampleRate == b.sampleRate &&
+           a.bufferSize == b.bufferSize &&
+           a.numInputChannels == b.numInputChannels &&
+           a.numOutputChannels == b.numOutputChannels;
+}
+
 bool AudioDeviceManager::switchDevice(uint32_t deviceId) {
     if (!m_initialized) {
         return false;
+    }
+
+    // Skip if already set to this device
+    if (m_currentConfig.deviceId == deviceId) {
+        return true;
     }
 
     // Validate the new device
@@ -357,6 +371,11 @@ bool AudioDeviceManager::switchDevice(uint32_t deviceId) {
 bool AudioDeviceManager::switchInputDevice(uint32_t deviceId) {
     if (!m_initialized) {
         return false;
+    }
+
+    // Skip if already set
+    if (m_currentConfig.inputDeviceId == deviceId) {
+        return true;
     }
 
     auto devices = getDevices();
@@ -395,6 +414,12 @@ bool AudioDeviceManager::setSampleRate(uint32_t sampleRate) {
     if (!m_initialized) {
         Aestra::Log::error("[AudioDeviceManager] setSampleRate failed: Not initialized");
         return false;
+    }
+
+    // Skip if already set to this rate
+    if (m_currentConfig.sampleRate == sampleRate) {
+        Aestra::Log::info("[AudioDeviceManager] Sample rate unchanged (" + std::to_string(sampleRate) + " Hz), skipping reopen");
+        return true;
     }
 
     // Validate sample rate (common rates)
@@ -461,6 +486,12 @@ bool AudioDeviceManager::setSampleRate(uint32_t sampleRate) {
 bool AudioDeviceManager::setBufferSize(uint32_t bufferSize) {
     if (!m_initialized) {
         return false;
+    }
+
+    // Skip if already set
+    if (m_currentConfig.bufferSize == bufferSize) {
+        Aestra::Log::info("[AudioDeviceManager] Buffer size unchanged (" + std::to_string(bufferSize) + "), skipping reopen");
+        return true;
     }
 
     // Validate buffer size (reasonable range: 64 to 8192 frames)
@@ -610,6 +641,11 @@ bool AudioDeviceManager::setPreferredDriverType(AudioDriverType type) {
     if (!m_initialized) {
         std::cerr << "Cannot set driver type: not initialized" << std::endl;
         return false;
+    }
+
+    // Skip if already set
+    if (m_preferredDriverType == type) {
+        return true;
     }
 
     // Only support WASAPI types for now (conceptually)

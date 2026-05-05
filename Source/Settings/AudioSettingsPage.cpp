@@ -200,6 +200,7 @@ AudioSettingsPage::AudioSettingsPage(AudioDeviceManager* audioManager, AudioEngi
     : m_audioManager(audioManager)
     , m_audioEngine(engine)
     , m_dirty(false)
+    , m_isInitializing(true)
 {
     Log::info("[AudioSettingsPage] Constructor started (with button init)");
     createUI(); // Create UI elements FIRST
@@ -277,20 +278,27 @@ void AudioSettingsPage::createUI() {
         return d;
     };
 
-    m_driverDropdown = createDropdown([this](int idx) { 
+    m_driverDropdown = createDropdown([this](int idx) {
         m_dirty = true;
-        
+
+        // Guard: during initialization, setting the dropdown value (e.g., via setSelectedByValue)
+        // may trigger the callback before the audio system is ready. Skip audio calls.
+        if (m_isInitializing) return;
+
         // SWITCH DRIVER IMMEDIATELY so device list is correct
         if (m_audioManager) {
              m_audioManager->setPreferredDriverType((AudioDriverType)m_driverDropdown->getSelectedValue());
         }
-        
+
         // When driver changes, we need to update device list (and potentially switch backend)
         updateDeviceList();
     });
-    
-    m_deviceDropdown = createDropdown([this](int idx) { 
-        m_dirty = true; 
+
+    m_deviceDropdown = createDropdown([this](int idx) {
+        m_dirty = true;
+
+        if (m_isInitializing) return;
+
         // SWITCH DEVICE IMMEDIATELY
         if (m_audioManager) {
             m_audioManager->switchDevice((uint32_t)m_deviceDropdown->getSelectedValue());
@@ -299,6 +307,9 @@ void AudioSettingsPage::createUI() {
 
     m_inputDeviceDropdown = createDropdown([this](int idx) {
         m_dirty = true;
+
+        if (m_isInitializing) return;
+
         if (m_audioManager) {
             const int selected = m_inputDeviceDropdown->getSelectedValue();
             if (selected >= 0) {
@@ -306,17 +317,23 @@ void AudioSettingsPage::createUI() {
             }
         }
     });
-    
-    m_sampleRateDropdown = createDropdown([this](int idx) { 
-        m_dirty = true; 
+
+    m_sampleRateDropdown = createDropdown([this](int idx) {
+        m_dirty = true;
+
+        if (m_isInitializing) return;
+
         if (m_audioManager) {
             m_audioManager->setSampleRate((uint32_t)m_sampleRateDropdown->getSelectedValue());
         }
         updateLatencyEstimate();
     });
-    
-    m_bufferSizeDropdown = createDropdown([this](int idx) { 
+
+    m_bufferSizeDropdown = createDropdown([this](int idx) {
         m_dirty = true;
+
+        if (m_isInitializing) return;
+
         if (m_audioManager) {
              m_audioManager->setBufferSize((uint32_t)m_bufferSizeDropdown->getSelectedValue());
         }
@@ -401,7 +418,15 @@ void AudioSettingsPage::createUI() {
     Log::info("[AudioSettingsPage] Initial updateDriverList complete.");
     
     // Load persisted settings (overrides defaults if exists)
+    // NOTE: loadSettings() is called BEFORE m_isInitializing is set to false.
+    // This prevents loadSettings() from triggering openStream calls during startup.
+    // The audio device was already opened once by AudioEngineController.
+    // Settings from disk are applied only if they differ from the active config,
+    // and this is handled by the equality-check guards in AudioDeviceManager setters.
     loadSettings();
+
+    // Done with initialization — now allow interactive changes to propagate to audio system
+    m_isInitializing = false;
 }
 
 
@@ -734,6 +759,13 @@ void AudioSettingsPage::loadSettings() {
     }
 
     Log::info("[AudioSettingsPage] Loading settings...");
+
+    // During initialization, we skip the audio manager calls.
+    // The stream was opened once by AudioEngineController.
+    // AudioDeviceManager's equality checks guard against unnecessary reopens on direct calls.
+    // We only need to populate the UI dropdowns to reflect saved values.
+    // After init, user interactions via dropdown callbacks will handle audio changes.
+    const bool skipAudioCalls = m_isInitializing;
     std::string line;
     while (std::getline(file, line)) {
         auto pos = line.find('=');
@@ -752,26 +784,25 @@ void AudioSettingsPage::loadSettings() {
 
         if (key == "driver") {
             // Apply driver to engine FIRST to ensure device listing works
-            if (m_audioManager) {
+            if (m_audioManager && !skipAudioCalls) {
                 m_audioManager->setPreferredDriverType((AudioDriverType)val);
-                // Also trigger updateDeviceList manually just in case
             }
             m_driverDropdown->setSelectedByValue(val);
         }
         else if (key == "device") {
-            if (m_audioManager) m_audioManager->switchDevice((uint32_t)val);
+            if (m_audioManager && !skipAudioCalls) m_audioManager->switchDevice((uint32_t)val);
             m_deviceDropdown->setSelectedByValue(val);
         }
         else if (key == "input_device") {
-            if (m_audioManager) m_audioManager->switchInputDevice((uint32_t)val);
+            if (m_audioManager && !skipAudioCalls) m_audioManager->switchInputDevice((uint32_t)val);
             m_inputDeviceDropdown->setSelectedByValue(val);
         }
         else if (key == "samplerate") {
-            if (m_audioManager) m_audioManager->setSampleRate((uint32_t)val);
+            if (m_audioManager && !skipAudioCalls) m_audioManager->setSampleRate((uint32_t)val);
             m_sampleRateDropdown->setSelectedByValue(val);
         }
         else if (key == "buffersize") {
-            if (m_audioManager) m_audioManager->setBufferSize((uint32_t)val);
+            if (m_audioManager && !skipAudioCalls) m_audioManager->setBufferSize((uint32_t)val);
             m_bufferSizeDropdown->setSelectedByValue(val);
         }
         else if (key == "quality_preset") {

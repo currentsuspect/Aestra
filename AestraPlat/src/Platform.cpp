@@ -46,9 +46,6 @@ IPlatformWindow* Platform::createWindow() {
 }
 
 IPlatformUtils* Platform::getUtils() {
-    if (!s_utils) {
-        AESTRA_LOG_ERROR("Platform not initialized! Call Platform::initialize() first.");
-    }
     return s_utils.get();
 }
 

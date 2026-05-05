@@ -12,6 +12,7 @@
 #include FT_OUTLINE_H
 // Profiler include for recording draw calls/triangles
 #include "../../../AestraCore/include/AestraProfiler.h"
+#include "../../../AestraCore/include/AestraLog.h"
 
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
@@ -2094,15 +2095,15 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         charSet.push_back(0x25A0); // ■ Stop
         charSet.push_back(0x23F8); // ⏸ Pause
         charSet.push_back(0x23EF); // ⏯ Play/Pause
-        charSet.push_back(0x23F9); // ⏹ Stop
+charSet.push_back(0x23F9); // ⏹ Stop
         charSet.push_back(0x23FA); // ⏺ Record
-        
+
         for (uint32_t codepoint : charSet) {
             FT_UInt glyphIndex = FT_Get_Char_Index(ftFace_, codepoint);
             if (glyphIndex == 0) {
                 // Log only for symbols we explicitly requested (ignore control chars if any)
                 if (codepoint > 127) {
-                    std::cerr << "WARNING: Font missing glyph for U+" << std::hex << codepoint << std::dec << std::endl;
+                    AESTRA_LOG_STREAM_DEBUG << "Font missing glyph for U+" << std::hex << codepoint << std::dec;
                 }
                 continue; // skip if not in font
             }
@@ -2153,7 +2154,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
 
             // Check if atlas is full
             if (atlasY + height + padding >= fontAtlasHeight_) {
-                std::cerr << "ERROR: Font atlas full (" << atlasFontSize << "px)!" << std::endl;
+                AESTRA_LOG_STREAM_ERROR << "Font atlas full (" << atlasFontSize << "px)!";
                 break;
             }
 
@@ -2226,9 +2227,9 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
             loadedChars++;
         }
 
-        std::cout << "[Text] Font atlas built: " << fontPath
-                  << " (" << atlasFontSize << "px, " << loadedChars << " glyphs, "
-                  << (fontUseLCD_ ? "LCD subpixel" : "grayscale") << ")" << std::endl;
+        AESTRA_LOG_STREAM_DEBUG << "[Text] Font atlas built: " << fontPath
+                               << " (" << atlasFontSize << "px, " << loadedChars << " glyphs, "
+                               << (fontUseLCD_ ? "LCD subpixel" : "grayscale") << ")";
         return loadedChars > 0;
     };
 
