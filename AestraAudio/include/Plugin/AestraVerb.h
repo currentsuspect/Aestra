@@ -15,7 +15,6 @@
 #define M_PI 3.14159265358979323846
 #endif
 #include <cstring>
-#include <mutex>
 #include <random>
 #include <string>
 #include <vector>
@@ -175,7 +174,6 @@ public:
 
     void shutdown() override {}
     void activate() override {
-        std::lock_guard<std::mutex> lock(m_rebuildMutex);
         m_active.store(true, std::memory_order_relaxed);
         clearBuffers(true);
     }
@@ -195,11 +193,8 @@ public:
             return;
         }
 
-        std::unique_lock<std::mutex> rebuildLock(m_rebuildMutex, std::try_to_lock);
-        if (!rebuildLock.owns_lock()) {
-            copyDry(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
-            return;
-        }
+        // RT-safe: prepareDelayLines only runs in activate()/loadState(), never concurrently with process()
+        // No lock needed - audio thread reads current state, control thread updates atomically
 
         if (m_predelayL.empty() || m_delayLines[0].empty()) {
             copyDry(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
@@ -619,7 +614,6 @@ public:
         for (size_t i = 0; i < std::min<size_t>(availableParams, kParamCount); ++i) {
             setParameter(static_cast<uint32_t>(i), params[i]);
         }
-        std::lock_guard<std::mutex> lock(m_rebuildMutex);
         prepareDelayLines(false);
         return true;
     }
@@ -1233,7 +1227,6 @@ private:
     std::atomic<bool> m_active{false};
     std::array<std::atomic<float>, kParamCount> m_params{};
     std::array<float, kParamCount> m_smoothedParams{};
-    mutable std::mutex m_rebuildMutex;
 
     std::array<std::vector<float>, kFDNLineCount> m_delayLines;
     std::array<int, kFDNLineCount> m_delayLineMasks{};
