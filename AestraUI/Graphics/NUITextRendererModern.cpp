@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUITextRendererModern.h"
+#include "AestraLog.h"
 #include <iostream>
 #include <cassert>
 
@@ -53,7 +54,7 @@ bool NUITextRendererModern::initialize() {
     // Initialize SDL2_ttf if not already done
     if (!TTF_WasInit()) {
         if (TTF_Init() == -1) {
-            std::cerr << "TTF_Init failed: " << TTF_GetError() << std::endl;
+            AESTRA_LOG_ERROR("TTF_Init failed: " + std::string(TTF_GetError()));
             return false;
         }
     }
@@ -61,7 +62,7 @@ bool NUITextRendererModern::initialize() {
     // Create shader program
     shaderProgram_ = createProgram(vertexShaderSource_, fragmentShaderSource_);
     if (!shaderProgram_) {
-        std::cerr << "Failed to create shader program" << std::endl;
+        AESTRA_LOG_ERROR("Failed to create shader program");
         return false;
     }
     
@@ -71,7 +72,7 @@ bool NUITextRendererModern::initialize() {
     // Set initial viewport
     setViewport(width_, height_);
     
-    std::cout << "âœ“ Modern text renderer initialized" << std::endl;
+        AESTRA_LOG_DEBUG("Modern text renderer initialized"); << std::endl;
     return true;
 }
 
@@ -104,7 +105,7 @@ void NUITextRendererModern::shutdown() {
 bool NUITextRendererModern::loadFont(const std::string& fontPath, int fontSize) {
     TTF_Font* font = TTF_OpenFont(fontPath.c_str(), fontSize);
     if (!font) {
-        std::cerr << "Failed to open font: " << TTF_GetError() << std::endl;
+        AESTRA_LOG_ERROR("Failed to open font: " + std::string(TTF_GetError()));
         return false;
     }
     
@@ -112,7 +113,7 @@ bool NUITextRendererModern::loadFont(const std::string& fontPath, int fontSize) 
     TTF_CloseFont(font);
     
     if (success) {
-        std::cout << "âœ“ Font loaded: " << fontPath << " (" << fontSize << "px)" << std::endl;
+        AESTRA_LOG_DEBUG("Font loaded: " + fontPath + " (" + std::to_string(fontSize) + "px)");
     }
     
     return success;
@@ -278,7 +279,7 @@ GLuint NUITextRendererModern::compileShader(GLenum type, const char* source) {
     if (!success) {
         char infoLog[1024];
         glGetShaderInfoLog(shader, 1024, nullptr, infoLog);
-        std::cerr << "Shader compile error: " << infoLog << std::endl;
+        AESTRA_LOG_ERROR("Shader compile error: " + std::string(infoLog));
         return 0;
     }
     
@@ -305,7 +306,7 @@ GLuint NUITextRendererModern::createProgram(const char* vs, const char* fs) {
     if (!success) {
         char infoLog[1024];
         glGetProgramInfoLog(program, 1024, nullptr, infoLog);
-        std::cerr << "Program link error: " << infoLog << std::endl;
+        AESTRA_LOG_ERROR("Program link error: " + std::string(infoLog));
         glDeleteProgram(program);
         program = 0;
     }
@@ -333,7 +334,7 @@ bool NUITextRendererModern::buildFontAtlas(TTF_Font* font, FontAtlas& outAtlas, 
         // Render glyph to surface as 32-bit RGBA with alpha
         SDL_Surface* glyphSurface = TTF_RenderGlyph_Blended(font, c, SDL_Color{255, 255, 255, 255});
         if (!glyphSurface) {
-            std::cerr << "Failed glyph " << c << ": " << TTF_GetError() << std::endl;
+            AESTRA_LOG_ERROR("Failed glyph " + std::to_string(c) + ": " + std::string(TTF_GetError()));
             continue;
         }
         
@@ -354,7 +355,7 @@ bool NUITextRendererModern::buildFontAtlas(TTF_Font* font, FontAtlas& outAtlas, 
     // Create target surface (RGBA)
     SDL_Surface* atlasSurf = SDL_CreateRGBSurfaceWithFormat(0, atlasW, atlasH, 32, SDL_PIXELFORMAT_RGBA32);
     if (!atlasSurf) {
-        std::cerr << "Failed create atlas surface" << std::endl;
+        AESTRA_LOG_ERROR("Failed create atlas surface");
         for (auto& tp : placements) {
             SDL_FreeSurface(std::get<1>(tp));
         }
@@ -378,7 +379,7 @@ bool NUITextRendererModern::buildFontAtlas(TTF_Font* font, FontAtlas& outAtlas, 
         // Retrieve font metrics for glyph
         int minx, maxx, miny, maxy, advance;
         if (TTF_GlyphMetrics(font, static_cast<Uint16>(ch), &minx, &maxx, &miny, &maxy, &advance) != 0) {
-            std::cerr << "TTF_GlyphMetrics failed: " << TTF_GetError() << std::endl;
+            AESTRA_LOG_ERROR("TTF_GlyphMetrics failed: " + std::string(TTF_GetError()));
         }
         
         Glyph g;

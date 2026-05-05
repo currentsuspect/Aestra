@@ -81,11 +81,11 @@ AestraContent::~AestraContent() {
         try {
             if (std::filesystem::exists(file)) {
                 std::filesystem::remove(file);
-                Log::info("[AestraContent] Deleted temp audition file: " + file);
+                AESTRA_LOG_DEBUG("[AestraContent] Deleted temp audition file: " + file);
             }
         } catch (const std::exception& e) {
             // Log but don't fail cleanup
-            Log::warning("[AestraContent] Failed to delete temp file: " + std::string(e.what()));
+            AESTRA_LOG_WARNING("[AestraContent] Failed to delete temp file: " + std::string(e.what()));
         }
     }
 }
@@ -178,7 +178,7 @@ AestraContent::AestraContent() {
         std::string tempPath = tempFile.string();
         
         // 4. Perform bounce (Offline rendering)
-        Log::info("[AestraContent] Bouncing track " + std::to_string(trackId) + " to " + tempPath);
+        AESTRA_LOG_DEBUG("[AestraContent] Bouncing track " + std::to_string(trackId) + " to " + tempPath);
         bool success = m_audioEngine->bounceRangeToWav(0.0, projectDurationBeats, tempPath, static_cast<int32_t>(trackId));
         
         if (success) {
@@ -193,7 +193,7 @@ AestraContent::AestraContent() {
             
             setViewFocus(ViewFocus::Audition);
         } else {
-            Log::error("[AestraContent] Failed to bounce track to Audition.");
+            AESTRA_LOG_ERROR("[AestraContent] Failed to bounce track to Audition.");
         }
     });
 
@@ -208,7 +208,7 @@ AestraContent::AestraContent() {
         std::string tempPath = tempFile.string();
         
         // 2. Perform bounce (trackId -1 means Master Output)
-        Log::info("[AestraContent] Bouncing selection to " + tempPath);
+        AESTRA_LOG_DEBUG("[AestraContent] Bouncing selection to " + tempPath);
         bool success = m_audioEngine->bounceRangeToWav(startBeat, endBeat, tempPath, -1);
         
         if (success) {
@@ -223,7 +223,7 @@ AestraContent::AestraContent() {
             
             setViewFocus(ViewFocus::Audition);
         } else {
-            Log::error("[AestraContent] Failed to bounce selection to Audition.");
+            AESTRA_LOG_ERROR("[AestraContent] Failed to bounce selection to Audition.");
         }
     });
     m_trackManagerUI->setOnClipLibraryChanged([this]() {
@@ -313,11 +313,11 @@ AestraContent::AestraContent() {
     // Create file browser (add to workspace)
     m_fileBrowser = std::make_shared<AestraUI::FileBrowser>();
     m_fileBrowser->setOnFileOpened([this](const AestraUI::FileItem& file) {
-        Log::info("File opened: " + file.path);
+        AESTRA_LOG_DEBUG("File opened: " + file.path);
         loadSampleIntoSelectedTrack(file.path);
     });
     m_fileBrowser->setOnSoundPreview([this](const AestraUI::FileItem& file) {
-        Log::info("Sound preview requested: " + file.path);
+        AESTRA_LOG_DEBUG("Sound preview requested: " + file.path);
         playSoundPreview(file);
     });
 
@@ -336,11 +336,11 @@ AestraContent::AestraContent() {
         
         // Prevent spam-clicking: don't start a new scan if one is already running
         if (pm.getScanner().isScanning()) {
-            Log::info("Scan already in progress, ignoring request.");
+            AESTRA_LOG_DEBUG("Scan already in progress, ignoring request.");
             return;
         }
         
-        Log::info("Scan requested by user.");
+        AESTRA_LOG_DEBUG("Scan requested by user.");
         
         // Set UI to scanning state
         if (m_pluginBrowser) {
@@ -372,16 +372,16 @@ AestraContent::AestraContent() {
                 if (m_pluginBrowser) {
                     m_pluginBrowser->setPluginList(uiPlugins);
                 }
-                Log::info("Scan complete. UI updated with " + std::to_string(results.size()) + " plugins.");
+                AESTRA_LOG_DEBUG("Scan complete. UI updated with " + std::to_string(results.size()) + " plugins.");
             } else {
-                Log::error("Plugin scan failed or cancelled.");
+                AESTRA_LOG_ERROR("Plugin scan failed or cancelled.");
             }
         });
     });
 
     // Plugin load callback (double-click)
     m_pluginBrowser->setOnPluginLoadRequested([this](const AestraUI::PluginListItem& plugin) {
-        Log::info("Plugin load requested: " + plugin.name + " (" + plugin.typeName + ")");
+        AESTRA_LOG_DEBUG("Plugin load requested: " + plugin.name + " (" + plugin.typeName + ")");
         if (plugin.typeName == "Effect") {
             loadEffectToSelectedTrack(plugin.id);
         } else if (plugin.typeName == "Instrument") {
@@ -429,7 +429,7 @@ AestraContent::AestraContent() {
     // Create pattern browser panel (add to workspace, side panel)
     m_patternBrowser = std::make_shared<PatternBrowserPanel>(m_trackManager.get());
     m_patternBrowser->setOnPatternSelected([this](PatternID patternId) {
-        Log::info("Pattern selected: " + std::to_string(patternId.value));
+        AESTRA_LOG_TRACE("Pattern selected: " + std::to_string(patternId.value));
         const UnitID editingUnit = resolveEditingUnitForPattern(patternId);
         if (m_sequencerPanel) {
             m_sequencerPanel->setActivePattern(patternId);
@@ -441,10 +441,10 @@ AestraContent::AestraContent() {
         }
     });
     m_patternBrowser->setOnPatternDragStart([this](PatternID patternId) {
-        Log::info("Pattern drag started: " + std::to_string(patternId.value));
+        AESTRA_LOG_TRACE("Pattern drag started: " + std::to_string(patternId.value));
     });
     m_patternBrowser->setOnPatternDoubleClick([this](PatternID patternId) {
-        Log::info("Pattern double-clicked: " + std::to_string(patternId.value));
+        AESTRA_LOG_TRACE("Pattern double-clicked: " + std::to_string(patternId.value));
         openPatternInPianoRoll(patternId);
     });
     m_patternBrowser->setOnPatternPreviewRequested([this](PatternID patternId) {
@@ -455,7 +455,7 @@ AestraContent::AestraContent() {
             return;
         }
         if (!m_trackManagerUI->placePatternOnTimeline(patternId)) {
-            Log::warning("[AestraContent] Failed to place pattern from bin onto timeline.");
+            AESTRA_LOG_WARNING("[AestraContent] Failed to place pattern from bin onto timeline.");
         }
     });
     m_patternBrowser->setOnClipPreviewRequested([this](const std::string& filePath) {
@@ -482,7 +482,7 @@ AestraContent::AestraContent() {
             return;
         }
         if (!m_trackManagerUI->placeFileOnTimeline(filePath, displayName)) {
-            Log::warning("[AestraContent] Failed to place clip from bin onto timeline.");
+            AESTRA_LOG_WARNING("[AestraContent] Failed to place clip from bin onto timeline.");
         }
     });
     m_patternBrowser->setOnClipShowInFileBrowserRequested([this](const std::string& filePath) {
@@ -739,7 +739,7 @@ AestraContent::AestraContent() {
               });
              
              // 2. Perform Load
-             Log::info("Loading sample into Unit " + std::to_string(id) + ": " + file.path);
+             AESTRA_LOG_DEBUG("Loading sample into Unit " + std::to_string(id) + ": " + file.path);
               if (m_trackManager) {
                   auto& unitManager = m_trackManager->getUnitManager();
                   unitManager.setUnitEnabled(id, true);
@@ -1439,7 +1439,7 @@ void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
     }
 
     if (changed) {
-        Log::info("[ViewState] View changed: " + std::to_string(static_cast<int>(view)) + " -> " + (open ? "OPEN" : "CLOSED"));
+        AESTRA_LOG_DEBUG("[ViewState] View changed: " + std::to_string(static_cast<int>(view)) + " -> " + (open ? "OPEN" : "CLOSED"));
         syncViewState();
         
         if (open) {
@@ -1491,7 +1491,7 @@ void AestraContent::toggleFileBrowser() {
     if (m_fileBrowser) {
         bool isVisible = m_fileBrowser->isVisible();
         m_fileBrowser->setVisible(!isVisible);
-        Log::info("File Browser toggled: " + std::string(!isVisible ? "VISIBLE" : "HIDDEN"));
+        AESTRA_LOG_DEBUG("File Browser toggled: " + std::string(!isVisible ? "VISIBLE" : "HIDDEN"));
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     }
 }
@@ -1551,7 +1551,7 @@ void AestraContent::setBrowserVisible(bool visible) {
                 m_previewPanel->setVisible(visible && m_browserToggle && m_browserToggle->getSelectedIndex() == 0);
             }
             onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
-            Log::info("[PanelState] Browser visibility set to: " + std::string(visible ? "VISIBLE" : "HIDDEN"));
+            AESTRA_LOG_DEBUG("[PanelState] Browser visibility set to: " + std::string(visible ? "VISIBLE" : "HIDDEN"));
         }
     }
 }
@@ -1739,7 +1739,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             if (m_waveformVisualizer) m_waveformVisualizer->setVisible(false);
             if (m_audioVisualizer) m_audioVisualizer->setVisible(false);
             
-            Log::info("[ViewFocus] Entering Audition Mode");
+            AESTRA_LOG_DEBUG("[ViewFocus] Entering Audition Mode");
         } 
         
         // GLOBAL VISIBILITY STATE MANAGEMENT
@@ -1784,7 +1784,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
     
     // Hot-swap playback if needed (only for Arsenal/Timeline swap, not Audition)
     if (wasPlaying && m_transportBar && focus != ViewFocus::Audition && previousFocus != ViewFocus::Audition) {
-        Log::info("[Focus] Hot-swapping playback mode");
+        AESTRA_LOG_DEBUG("[Focus] Hot-swapping playback mode");
         m_transportBar->stop();
         m_transportBar->play();
     }
@@ -2014,7 +2014,7 @@ void AestraContent::beginPanelDrag(Audio::ViewType view, const AestraUI::NUIPoin
         default: break;
     }
     
-    Log::info("Started dragging panel: " + std::to_string(static_cast<int>(view)));
+    AESTRA_LOG_TRACE("Started dragging panel: " + std::to_string(static_cast<int>(view)));
 }
 
 void AestraContent::updatePanelDrag(Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen) {
@@ -2055,7 +2055,7 @@ void AestraContent::updatePanelDrag(Audio::ViewType view, const AestraUI::NUIPoi
 
 void AestraContent::endPanelDrag(Audio::ViewType view) {
      m_viewState.isDragging = false;
-     Log::info("Ended dragging panel: " + std::to_string(static_cast<int>(view)));
+     AESTRA_LOG_TRACE("Ended dragging panel: " + std::to_string(static_cast<int>(view)));
 }
 
 // =============================================================================
@@ -2349,7 +2349,7 @@ void AestraContent::playFromCurrentFocus() {
 
         const PatternID activePattern = m_sequencerPanel->getActivePatternID();
         if (!activePattern.isValid()) {
-            Aestra::Log::error("[Arsenal] Cannot start playback without an active pattern");
+            AESTRA_LOG_ERROR("[Arsenal] Cannot start playback without an active pattern");
             return;
         }
 
@@ -2357,7 +2357,7 @@ void AestraContent::playFromCurrentFocus() {
             m_audioEngine->setPatternPlaybackMode(true, getActivePatternLengthBeats());
         }
 
-        Aestra::Log::info("[Arsenal] Focus-aware play scheduling pattern " + std::to_string(activePattern.value));
+        AESTRA_LOG_DEBUG("[Arsenal] Focus-aware play scheduling pattern " + std::to_string(activePattern.value));
         m_trackManager->playPatternInArsenal(activePattern);
         return;
     }
@@ -2382,7 +2382,7 @@ void AestraContent::stopFromCurrentFocus(bool hardStop) {
 
     if (focus == ViewFocus::Arsenal) {
         if (m_trackManager) {
-            Aestra::Log::info("[Arsenal] Focus-aware stop");
+            AESTRA_LOG_DEBUG("[Arsenal] Focus-aware stop");
             m_trackManager->stopArsenalPlayback(true);
         }
         if (hardStop && m_audioEngine) {
@@ -2514,7 +2514,7 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
             }
         });
     }
-    Aestra::Log::info("AestraContent::setAudioEngine called - Initializing View State");
+    AESTRA_LOG_DEBUG("AestraContent::setAudioEngine called - Initializing View State");
     // Ensure correct initial state now that engine is valid
     setViewFocus(ViewFocus::Timeline);
 }
@@ -2524,7 +2524,7 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
 // =============================================================================
 
 void AestraContent::resetToDefaultProject() {
-    Log::info("resetToDefaultProject() - clearing and recreating default state");
+    AESTRA_LOG_DEBUG("resetToDefaultProject() - clearing and recreating default state");
     
     if (!m_trackManager) return;
     
@@ -2543,11 +2543,11 @@ void AestraContent::resetToDefaultProject() {
     // Reset modified flag
     m_trackManager->setModified(false);
     
-    Log::info("resetToDefaultProject() completed");
+    AESTRA_LOG_DEBUG("resetToDefaultProject() completed");
 }
 
 void AestraContent::addDemoTracks() {
-    Log::info("addDemoTracks() called - starting demo track creation (v3.0)");
+    AESTRA_LOG_DEBUG("addDemoTracks() called - starting demo track creation (v3.0)");
 
     if (!m_trackManager) return;
     auto& playlist = m_trackManager->getPlaylistModel();
@@ -2580,21 +2580,21 @@ void AestraContent::addDemoTracks() {
     if (m_trackManagerUI) {
         m_trackManagerUI->refreshTracks();
     }
-    Log::info("addDemoTracks() completed - created " + std::to_string(DEFAULT_TRACK_COUNT) + " lanes/channels");
+    AESTRA_LOG_DEBUG("addDemoTracks() completed - created " + std::to_string(DEFAULT_TRACK_COUNT) + " lanes/channels");
 }
 
 bool AestraContent::generateTestWavFile(const std::string& filename, float frequency, double duration) {
-    Log::info("generateTestWavFile called for: " + filename);
+    AESTRA_LOG_DEBUG("generateTestWavFile called for: " + filename);
 
     std::ifstream checkFile(filename);
     if (checkFile) {
         checkFile.close();
-        Log::info("File already exists: " + filename);
+        AESTRA_LOG_DEBUG("File already exists: " + filename);
         return true;
     }
     checkFile.close();
 
-    Log::info("Generating test WAV file: " + filename + " (" + std::to_string(frequency) + " Hz, " + std::to_string(duration) + "s)");
+    AESTRA_LOG_DEBUG("Generating test WAV file: " + filename + " (" + std::to_string(frequency) + " Hz, " + std::to_string(duration) + "s)");
 
     const uint32_t sampleRate = 44100;
     const uint16_t numChannels = 2;
@@ -2636,7 +2636,7 @@ bool AestraContent::generateTestWavFile(const std::string& filename, float frequ
 
     std::ofstream wavFile(filename, std::ios::binary);
     if (!wavFile) {
-        Log::error("Failed to create test WAV file: " + filename);
+        AESTRA_LOG_ERROR("Failed to create test WAV file: " + filename);
         return false;
     }
 
@@ -2648,10 +2648,10 @@ bool AestraContent::generateTestWavFile(const std::string& filename, float frequ
     if (verifyFile) {
         verifyFile.seekg(0, std::ios::end);
         verifyFile.close();
-        Log::info("Test WAV file generated successfully: " + filename);
+        AESTRA_LOG_DEBUG("Test WAV file generated successfully: " + filename);
         return true;
     } else {
-        Log::error("Failed to verify WAV file creation: " + filename);
+        AESTRA_LOG_ERROR("Failed to verify WAV file creation: " + filename);
         return false;
     }
 }
@@ -2661,12 +2661,12 @@ bool AestraContent::generateTestWavFile(const std::string& filename, float frequ
 // =============================================================================
 
 void AestraContent::playSoundPreview(const AestraUI::FileItem& file) {
-    Log::info("Playing sound preview for: " + file.path);
+    AESTRA_LOG_DEBUG("Playing sound preview for: " + file.path);
 
     stopSoundPreview();
 
     if (!m_previewEngine) {
-        Log::error("Preview engine not initialized");
+        AESTRA_LOG_ERROR("Preview engine not initialized");
         return;
     }
 
@@ -2680,44 +2680,44 @@ void AestraContent::playSoundPreview(const AestraUI::FileItem& file) {
         if (m_fileBrowser) m_fileBrowser->setActivePlaybackPath(file.path);
         
         if (result == PreviewResult::Success) {
-            Log::info("Sound preview started (cache hit)");
+            AESTRA_LOG_DEBUG("Sound preview started (cache hit)");
             if (m_previewPanel) m_previewPanel->setPlaying(true);
         } else {
             if (m_previewPanel) {
                 m_previewPanel->setLoading(true);
             }
-            Log::info("Sound preview pending (async decode)");
+            AESTRA_LOG_DEBUG("Sound preview pending (async decode)");
         }
     } else {
-        Log::warning("Failed to load preview audio: " + file.path);
+        AESTRA_LOG_WARNING("Failed to load preview audio: " + file.path);
     }
 }
 
 void AestraContent::stopSoundPreview() {
-    Log::info("stopSoundPreview() called");
+    AESTRA_LOG_TRACE("stopSoundPreview() called");
     if (m_previewPanel) {
         m_previewPanel->setLoading(false);
         m_previewPanel->setPlaying(false);
     }
-    
+
     if (m_previewEngine) {
-        if (m_previewIsPlaying) Log::info(" - Stopping preview engine...");
+        if (m_previewIsPlaying) AESTRA_LOG_TRACE("Stopping preview engine...");
         m_previewEngine->stop();
     }
     m_previewIsPlaying = false;
     if (m_fileBrowser && (!m_auditionEngine || !m_auditionEngine->isPlaying())) {
         m_fileBrowser->setActivePlaybackPath("");
     }
-    Log::info("Sound preview stopped (file path preserved)");
+    AESTRA_LOG_TRACE("Sound preview stopped");
 }
 
 void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
-    Log::info("=== Loading sample into arrangement: " + filePath + " ===");
+    AESTRA_LOG_DEBUG("=== Loading sample into arrangement: " + filePath + " ===");
     
     stopSoundPreview();
     
     if (!m_trackManager) {
-        Log::error("TrackManager not initialized");
+        AESTRA_LOG_ERROR("TrackManager not initialized");
         return;
     }
     
@@ -2725,13 +2725,13 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     ClipSourceID sourceId = sourceManager.getOrCreateSource(filePath);
     
     if (!sourceId.isValid()) {
-        Log::error("Failed to load sample source: " + filePath);
+        AESTRA_LOG_ERROR("Failed to load sample source: " + filePath);
         return;
     }
     
     ClipSource* source = sourceManager.getSource(sourceId);
     if (source && !source->isReady()) {
-        Log::info("Decoding source in Main: " + filePath);
+        AESTRA_LOG_DEBUG("Decoding source in Main: " + filePath);
         std::vector<float> decodedData;
         uint32_t sampleRate = 0;
         uint32_t numChannels = 0;
@@ -2746,7 +2746,7 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     }
 
     if (!source || !source->isReady()) {
-        Log::error("Failed to decode or ready sample source: " + filePath);
+        AESTRA_LOG_ERROR("Failed to decode or ready sample source: " + filePath);
         return;
     }
 
@@ -2767,7 +2767,7 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     PatternID patternId = patternManager.createAudioPattern(patternName, durationBeats, payload);
     
     if (!patternId.isValid()) {
-        Log::error("Failed to create pattern for sample");
+        AESTRA_LOG_ERROR("Failed to create pattern for sample");
         return;
     }
 
@@ -2798,7 +2798,7 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
         m_trackManagerUI->invalidateCache();
     }
     
-    Log::info("Sample loaded into arrangement via v3.0 architecture");
+    AESTRA_LOG_DEBUG("Sample loaded into arrangement via v3.0 architecture");
 }
 
 void AestraContent::syncSampleEditorToUnit(UnitID unitId) {
@@ -2904,7 +2904,7 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
     size_t trackIndex = 0;
     auto channel = m_trackManager->getChannel(trackIndex);
     if (!channel) {
-        Log::error("Cannot load effect: No mixer channel at index " + std::to_string(trackIndex));
+        AESTRA_LOG_ERROR("Cannot load effect: No mixer channel at index " + std::to_string(trackIndex));
         return;
     }
     
@@ -2912,12 +2912,12 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
     auto& pm = Aestra::Audio::PluginManager::getInstance();
     auto instance = pm.createInstanceById(pluginId);
     if (!instance) {
-        Log::error("Failed to create plugin instance for: " + pluginId);
+        AESTRA_LOG_ERROR("Failed to create plugin instance for: " + pluginId);
         return;
     }
 
     if (!instance->initialize(pm.getDefaultSampleRate(), pm.getDefaultBlockSize())) {
-        Log::error("Failed to initialize effect instance for: " + pluginId);
+        AESTRA_LOG_ERROR("Failed to initialize effect instance for: " + pluginId);
         return;
     }
     if (auto delay = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraDelay>(instance)) {
@@ -2933,9 +2933,9 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
     if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
         m_trackManager->getCommandHistory().pushAndExecute(
             std::make_shared<Aestra::Audio::AddPluginCommand>(*channel, slot, std::move(instance)));
-        Log::info("Loaded effect to Track " + std::to_string(trackIndex + 1) + " slot " + std::to_string(slot));
+        AESTRA_LOG_DEBUG("Loaded effect to Track " + std::to_string(trackIndex + 1) + " slot " + std::to_string(slot));
     } else {
-        Log::warning("No empty effect slots on Track " + std::to_string(trackIndex + 1));
+        AESTRA_LOG_WARNING("No empty effect slots on Track " + std::to_string(trackIndex + 1));
     }
 }
 
@@ -2964,12 +2964,12 @@ void AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
     // 3. Create and initialize plugin instance
     auto instance = pm.createInstanceById(pluginId);
     if (!instance) {
-        Log::error("Failed to create instrument instance for Arsenal: " + pluginId);
+        AESTRA_LOG_ERROR("Failed to create instrument instance for Arsenal: " + pluginId);
         return;
     }
 
     if (!instance->initialize(pm.getDefaultSampleRate(), pm.getDefaultBlockSize())) {
-        Log::error("Failed to initialize instrument instance for Arsenal: " + pluginId);
+        AESTRA_LOG_ERROR("Failed to initialize instrument instance for Arsenal: " + pluginId);
         return;
     }
 
@@ -2985,7 +2985,7 @@ void AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
         m_sequencerPanel->refreshUnits();
     }
 
-    Log::info("Loaded instrument '" + unitName + "' to Arsenal as Unit " + std::to_string(newUnit));
+    AESTRA_LOG_DEBUG("Loaded instrument '" + unitName + "' to Arsenal as Unit " + std::to_string(newUnit));
 }
 
 void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::string& pluginId) {
@@ -2994,7 +2994,7 @@ void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::stri
 
     auto* unit = unitManager.getUnit(unitId);
     if (!unit) {
-        Log::error("Cannot attach instrument to missing Arsenal Unit " + std::to_string(unitId));
+        AESTRA_LOG_ERROR("Cannot attach instrument to missing Arsenal Unit " + std::to_string(unitId));
         return;
     }
 
@@ -3004,12 +3004,12 @@ void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::stri
 
     auto instance = pm.createInstanceById(pluginId);
     if (!instance) {
-        Log::error("Failed to create instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " + pluginId);
+        AESTRA_LOG_ERROR("Failed to create instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " + pluginId);
         return;
     }
 
     if (!instance->initialize(pm.getDefaultSampleRate(), pm.getDefaultBlockSize())) {
-        Log::error("Failed to initialize instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " + pluginId);
+        AESTRA_LOG_ERROR("Failed to initialize instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " + pluginId);
         return;
     }
 
@@ -3020,7 +3020,7 @@ void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::stri
     unitManager.attachPlugin(unitId, pluginId, instance);
     unitManager.captureUnitPluginState(unitId);
 
-    Log::info("Attached instrument '" + unitName + "' to Arsenal Unit " + std::to_string(unitId));
+    AESTRA_LOG_DEBUG("Attached instrument '" + unitName + "' to Arsenal Unit " + std::to_string(unitId));
 }
 
 void AestraContent::refreshPluginList() {
@@ -3041,7 +3041,7 @@ void AestraContent::refreshPluginList() {
         uiPlugins.push_back(item);
     }
     m_pluginBrowser->setPluginList(uiPlugins);
-    Aestra::Log::info("Refreshed plugin list UI: " + std::to_string(uiPlugins.size()) + " plugins found.");
+    AESTRA_LOG_DEBUG("Refreshed plugin list UI: " + std::to_string(uiPlugins.size()) + " plugins found.");
 }
 
 void AestraContent::refreshProjectViews() {
@@ -3109,15 +3109,15 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             if ((event.keyCode == AestraUI::NUIKeyCode::Z && (event.modifiers & AestraUI::NUIModifiers::Shift)) ||
                 event.keyCode == AestraUI::NUIKeyCode::Y) {
                 performed = m_trackManager->getCommandHistory().redo();
-                Log::info("[AestraContent] Ctrl+Shift+Z/Y pressed, redo=" + std::to_string(performed));
+                AESTRA_LOG_DEBUG("[AestraContent] Ctrl+Shift+Z/Y pressed, redo=" + std::to_string(performed));
             } else if (event.keyCode == AestraUI::NUIKeyCode::H) {
                 toggleHistoryPanel();
                 return true;
             } else if (event.keyCode == AestraUI::NUIKeyCode::Z) {
                 performed = m_trackManager->getCommandHistory().undo();
-                Log::info("[AestraContent] Ctrl+Z pressed, undo=" + std::to_string(performed));
+                AESTRA_LOG_DEBUG("[AestraContent] Ctrl+Z pressed, undo=" + std::to_string(performed));
             } else {
-                Log::info("[AestraContent] Ctrl+Key: code=" + std::to_string(static_cast<int>(event.keyCode)));
+                AESTRA_LOG_DEBUG("[AestraContent] Ctrl+Key: code=" + std::to_string(static_cast<int>(event.keyCode)));
             }
         }
         
@@ -3140,7 +3140,7 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             return true;
         }
         m_spaceShortcutLatched = true;
-        Aestra::Log::info("[AestraContent] Spacebar pressed. ViewFocus: " + std::to_string(static_cast<int>(m_viewFocus)));
+        AESTRA_LOG_DEBUG("[AestraContent] Spacebar pressed. ViewFocus: " + std::to_string(static_cast<int>(m_viewFocus)));
     }
     
     // Spacebar follows the top-level selected mode first. Overlay/panel focus can

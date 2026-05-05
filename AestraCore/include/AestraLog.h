@@ -254,12 +254,20 @@ public:
 
 private:
     Log() {
-        // Default to console logger with level based on build type
+        // Default to Warning on Release, Info on Debug
+        LogLevel defaultLevel;
 #ifdef NDEBUG
-        logger_ = std::make_shared<ConsoleLogger>(LogLevel::Warning);
+        defaultLevel = LogLevel::Warning;
 #else
-        logger_ = std::make_shared<ConsoleLogger>(LogLevel::Info);
+        defaultLevel = LogLevel::Info;
 #endif
+
+        // Env var override: AESTRA_LOG_LEVEL=trace|debug|info|warn|error
+        if (const char* env = std::getenv("AESTRA_LOG_LEVEL")) {
+            defaultLevel = parseLogLevel(env);
+        }
+
+        logger_ = std::make_shared<ConsoleLogger>(defaultLevel);
     }
 
     static Log& instance() {

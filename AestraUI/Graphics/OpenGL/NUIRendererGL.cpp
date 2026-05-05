@@ -327,7 +327,7 @@ bool NUIRendererGL::initialize(int width, int height) {
 
     // Initialize Glassmorphism Pass (Retina Blur)
     if (!glassPass_.initialize(width, height)) {
-        std::cerr << "WARNING: Glassmorphism Pass failed to init." << std::endl;
+        AESTRA_LOG_WARNING("Glassmorphism Pass failed to init.");
     }
     
     // Text rendering will be initialized with FreeType below
@@ -335,7 +335,7 @@ bool NUIRendererGL::initialize(int width, int height) {
     // Initialize FreeType
     fontInitialized_ = false;
     if (FT_Init_FreeType(&ftLibrary_) != 0) {
-        std::cerr << "ERROR: Could not init FreeType Library" << std::endl;
+        AESTRA_LOG_ERROR("Could not init FreeType Library");
         return false;
     }
 
@@ -418,12 +418,12 @@ bool NUIRendererGL::initialize(int width, int height) {
         }
         
         if (!fontLoaded) {
-            std::cerr << "WARNING: Could not load any font, using fallback" << std::endl;
+            AESTRA_LOG_WARNING("Could not load any font, using fallback");
             useSDFText_ = false;
         } else {
             // Force bitmap text for now - SDF has glyph rendering issues
             useSDFText_ = false;
-            std::cout << "Using bitmap text renderer\n";
+            AESTRA_LOG_DEBUG("Using bitmap text renderer");
         }
     
     // Set initial state
@@ -2008,7 +2008,7 @@ NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
 
 bool NUIRendererGL::loadFont(const std::string& fontPath) {
     if (FT_New_Face(ftLibrary_, fontPath.c_str(), 0, &ftFace_)) {
-        std::cerr << "ERROR: Failed to load font: " << fontPath << std::endl;
+        AESTRA_LOG_ERROR("Failed to load font: " + fontPath);
         return false;
     }
     defaultFontPath_ = fontPath;
@@ -2025,7 +2025,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
                           int& atlasY,
                           int& atlasRowHeight) -> bool {
         if (FT_Set_Pixel_Sizes(ftFace_, 0, atlasFontSize) != 0) {
-            std::cerr << "ERROR: Failed to set atlas pixel size (" << atlasFontSize << ") for font: " << fontPath << std::endl;
+            AESTRA_LOG_ERROR("Failed to set atlas pixel size (" + std::to_string(atlasFontSize) + ") for font: " + fontPath);
             return false;
         }
 
@@ -2296,7 +2296,7 @@ charSet.push_back(0x23F9); // ⏹ Stop
     }
 
     fontInitialized_ = true;
-    std::cout << "[Text] Font loaded: " << fontPath << " (quad atlases enabled)" << std::endl;
+    AESTRA_LOG_DEBUG("Font loaded: " + fontPath + " (quad atlases enabled)");
     return true;
 }
 
@@ -2532,8 +2532,7 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
                                 int width, int height) {
     // Validate input parameters
     if (!rgba || width <= 0 || height <= 0) {
-        std::cerr << "OpenGL: Invalid texture data (rgba=" << (void*)rgba 
-                  << ", width=" << width << ", height=" << height << ")" << std::endl;
+        AESTRA_LOG_ERROR("OpenGL: Invalid texture data (rgba=" + std::string(rgba ? "valid" : "null") + ", width=" + std::to_string(width) + ", height=" + std::to_string(height) + ")");
         return;
     }
 
@@ -2546,7 +2545,7 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     GLuint texture;
     glGenTextures(1, &texture);
     if (texture == 0) {
-        std::cerr << "OpenGL: Failed to generate texture" << std::endl;
+        AESTRA_LOG_ERROR("OpenGL: Failed to generate texture");
         return;
     }
 
@@ -2757,7 +2756,7 @@ uint32_t NUIRendererGL::renderToTextureBegin(int width, int height) {
 
     // Check status
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        std::cerr << "FBO incomplete" << std::endl;
+        AESTRA_LOG_ERROR("FBO incomplete");
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         return 0;
     }
