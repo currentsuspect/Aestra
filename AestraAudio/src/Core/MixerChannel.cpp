@@ -15,11 +15,11 @@ MixerChannel::MixerChannel(const std::string& name, uint32_t channelId)
 {
     // m_uuid.low = m_channelId; // REMOVED: Do not overwrite generated UUID with 0!
     m_mixerBus = std::make_unique<MixerBus>(m_name.c_str(), 2);
-    Log::info("MixerChannel created: " + m_name + " (ID: " + std::to_string(m_channelId) + ")");
+    AESTRA_LOG_TRACE("MixerChannel created: " + m_name + " (ID: " + std::to_string(m_channelId) + ")");
 }
 
 MixerChannel::~MixerChannel() {
-    Log::info("MixerChannel destroyed: " + m_name);
+    AESTRA_LOG_TRACE("MixerChannel destroyed: " + m_name);
 }
 
 void MixerChannel::setName(const std::string& name) {

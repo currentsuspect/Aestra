@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIFont.h"
+#include "AestraLog.h"
+
 #include <iostream>
 #include <cstring>
 #include <array>
@@ -64,7 +66,7 @@ bool NUIFont::initializeFreeType() {
     if (refCount_ == 0) {
         FT_Error error = FT_Init_FreeType(&ftLibrary_);
         if (error) {
-            std::cerr << "Failed to initialize FreeType library" << std::endl;
+            AESTRA_LOG_ERROR("Failed to initialize FreeType library");
             return false;
         }
     }
@@ -86,41 +88,41 @@ void NUIFont::shutdownFreeType() {
 
 bool NUIFont::loadFromFile(const std::string& filepath, int fontSize) {
     if (!ftLibrary_) {
-        std::cerr << "FreeType not initialized" << std::endl;
+        AESTRA_LOG_ERROR("FreeType not initialized");
         return false;
     }
     
     // Load font face
     FT_Error error = FT_New_Face(ftLibrary_, filepath.c_str(), 0, &face_);
     if (error) {
-        std::cerr << "Failed to load font: " << filepath << std::endl;
+        AESTRA_LOG_ERROR("Failed to load font: " + filepath);
         return false;
     }
     
     filepath_ = filepath;
     setSize(fontSize);
     
-    std::cout << "âœ“ Font loaded: " << filepath << " (" << fontSize << "px)" << std::endl;
+    AESTRA_LOG_DEBUG("Font loaded: " + filepath + " (" + std::to_string(fontSize) + "px)");
     return true;
 }
 
 bool NUIFont::loadFromMemory(const uint8_t* data, size_t size, int fontSize) {
     if (!ftLibrary_) {
-        std::cerr << "FreeType not initialized" << std::endl;
+        AESTRA_LOG_ERROR("FreeType not initialized");
         return false;
     }
     
     // Load font from memory
     FT_Error error = FT_New_Memory_Face(ftLibrary_, data, static_cast<FT_Long>(size), 0, &face_);
     if (error) {
-        std::cerr << "Failed to load font from memory" << std::endl;
+        AESTRA_LOG_ERROR("Failed to load font from memory");
         return false;
     }
     
     filepath_ = "[memory]";
     setSize(fontSize);
     
-    std::cout << "âœ“ Font loaded from memory (" << fontSize << "px)" << std::endl;
+    AESTRA_LOG_DEBUG("Font loaded from memory (" + std::to_string(fontSize) + "px)");
     return true;
 }
 
@@ -211,7 +213,8 @@ float NUIFont::measureText(const std::string& text) {
 // ============================================================================
 
 void NUIFont::cacheASCII() {
-    std::cout << "Caching ASCII glyphs (32-126)..." << std::endl;
+    // Pre-cache ASCII glyphs silently for performance.
+    // Diagnostics are only surfaced on first getGlyph() miss.
     
     int cached = 0;
     for (uint32_t c = 32; c <= 126; ++c) {
@@ -220,7 +223,7 @@ void NUIFont::cacheASCII() {
         }
     }
     
-    std::cout << "âœ“ Cached " << cached << " ASCII glyphs" << std::endl;
+        AESTRA_LOG_TRACE("Cached " + std::to_string(cached) + " ASCII glyphs");
 }
 
 void NUIFont::clearCache() {
@@ -244,7 +247,7 @@ bool NUIFont::rasterizeGlyph(uint32_t character, NUIGlyph& glyph) {
     // Load glyph
     FT_Error error = FT_Load_Char(face_, character, FT_LOAD_RENDER);
     if (error) {
-        std::cerr << "Failed to load glyph: " << character << std::endl;
+        AESTRA_LOG_ERROR("Failed to load glyph: " + std::to_string(character));
         return false;
     }
     
