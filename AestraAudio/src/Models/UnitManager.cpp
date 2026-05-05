@@ -9,6 +9,7 @@
 #include "AestraLog.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cmath>
 #include <iomanip>
@@ -211,7 +212,7 @@ std::vector<float> generatePreviewWaveform(const std::vector<float>& samples, ui
     return waveform;
 }
 
-std::shared_ptr<const AudioArsenalSnapshot> UnitManager::getAudioSnapshot() const {
+void UnitManager::publishSnapshot() {
     auto snapshot = std::make_shared<AudioArsenalSnapshot>();
     snapshot->units.reserve(m_unitOrder.size());
 
@@ -227,10 +228,17 @@ std::shared_ptr<const AudioArsenalSnapshot> UnitManager::getAudioSnapshot() cons
         state.plugin = unit->plugin;
         state.routeId = unit->targetMixerRoute;
         state.routeMode = arsenalRouteModeFromRouteId(state.routeId);
-        snapshot->units.push_back(std::move(state));
+        state.isMuted = unit->isMuted;
+        state.isSolo = unit->isSolo;
+        snapshot->units.push_back(state);
     }
 
-    return snapshot;
+    std::atomic_store(&m_publishedSnapshot, snapshot);
+}
+
+std::shared_ptr<const AudioArsenalSnapshot> UnitManager::getAudioSnapshot() const {
+    auto snapshot = std::atomic_load(&m_publishedSnapshot);
+    return std::const_pointer_cast<const AudioArsenalSnapshot>(snapshot);
 }
 
 UnitInfo* UnitManager::getUnit(UnitID id) {
@@ -264,6 +272,7 @@ UnitID UnitManager::createUnit(const std::string& name, UnitType type) {
 
     m_units[id] = std::move(info);
     m_unitOrder.push_back(id);
+    publishSnapshot();
     return id;
 }
 
@@ -286,6 +295,7 @@ void UnitManager::reorderUnit(UnitID id, size_t newIndex) {
         newIndex = m_unitOrder.size();
     }
     m_unitOrder.insert(m_unitOrder.begin() + static_cast<std::ptrdiff_t>(newIndex), value);
+    publishSnapshot();
 }
 
 bool UnitManager::removeUnit(UnitID id) {
@@ -295,6 +305,7 @@ bool UnitManager::removeUnit(UnitID id) {
     }
 
     m_unitOrder.erase(orderIt);
+    publishSnapshot();
     return m_units.erase(id) > 0;
 }
 
@@ -302,11 +313,12 @@ void UnitManager::clear() {
     m_units.clear();
     m_unitOrder.clear();
     nextId = 1;
+    publishSnapshot();
 }
 
 void UnitManager::setUnitName(UnitID id, const std::string& name) { if (auto* u = getUnit(id)) u->name = name; }
-void UnitManager::setUnitMute(UnitID id, bool muted) { if (auto* u = getUnit(id)) u->isMuted = muted; }
-void UnitManager::setUnitSolo(UnitID id, bool solo) { if (auto* u = getUnit(id)) u->isSolo = solo; }
+void UnitManager::setUnitMute(UnitID id, bool muted) { if (auto* u = getUnit(id)) { u->isMuted = muted; publishSnapshot(); } }
+void UnitManager::setUnitSolo(UnitID id, bool solo) { if (auto* u = getUnit(id)) { u->isSolo = solo; publishSnapshot(); } }
 void UnitManager::setUnitArmed(UnitID id, bool armed) { if (auto* u = getUnit(id)) u->isArmed = armed; }
 void UnitManager::setUnitEnabled(UnitID id, bool enabled) {
     if (auto* u = getUnit(id)) {
@@ -323,6 +335,7 @@ void UnitManager::setUnitEnabled(UnitID id, bool enabled) {
                 }
             }
         }
+        publishSnapshot();
     }
 }
 void UnitManager::setUnitMixerChannel(UnitID id, int channel) { assignUnitToTimelineLane(id, channel); }
@@ -330,6 +343,7 @@ void UnitManager::assignUnitToTimelineLane(UnitID id, int laneIndex) {
     if (auto* u = getUnit(id)) {
         u->targetMixerRoute = laneIndex;
         u->routeMode = arsenalRouteModeFromRouteId(laneIndex);
+        publishSnapshot();
         // bridgeMode is intentionally NOT updated here.
         // bridgeMode represents ownership metadata (e.g. DraftOnly, LinkedRack)
         // and is independent of the current routing assignment.
@@ -341,7 +355,7 @@ void UnitManager::clearUnitTimelineLane(UnitID id) {
     if (auto* u = getUnit(id)) {
         u->targetMixerRoute = -1;
         u->routeMode = ArsenalRouteMode::PreviewToMaster;
-        // bridgeMode intentionally not reset — see assignUnitToTimelineLane comment.
+        publishSnapshot();
     }
 }
 
@@ -383,6 +397,7 @@ void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
 
     if (u->type == UnitType::Audio) {
         u->group = UnitGroup::Audio;
+        publishSnapshot();
         return;
     }
 
@@ -409,6 +424,7 @@ void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
             u->pluginState = sampler->saveState();
         }
     }
+    publishSnapshot();
 }
 void UnitManager::setUnitColor(UnitID id, uint32_t color) { if (auto* u = getUnit(id)) u->color = color; }
 void UnitManager::setUnitGroup(UnitID id, UnitGroup group) { if (auto* u = getUnit(id)) u->group = std::move(group); }
@@ -432,6 +448,7 @@ void UnitManager::attachPlugin(UnitID id, const std::string& pluginId, std::shar
         } else {
             u->pluginState.clear();
         }
+        publishSnapshot();
     }
 }
 
@@ -441,6 +458,7 @@ void UnitManager::setUnitPluginState(UnitID id, const std::vector<uint8_t>& stat
         if (u->plugin && !state.empty()) {
             u->plugin->loadState(state);
         }
+        publishSnapshot();
     }
 }
 
@@ -640,6 +658,7 @@ void UnitManager::loadFromJSON(const JSON& json) {
     if (nextId <= maxSeenId) {
         nextId = maxSeenId + 1;
     }
+    publishSnapshot();
 }
 
 } // namespace Audio

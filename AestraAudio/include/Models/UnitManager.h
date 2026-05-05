@@ -4,6 +4,7 @@
 #include "Models/ArsenalBridgeMode.h"
 #include "Models/PatternSource.h"
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -147,6 +148,10 @@ struct UnitState {
      * - >= 0 routes to Timeline track path
      */
     int routeId;
+    /** @brief True when the unit is muted (audio thread visibility). */
+    bool isMuted{false};
+    /** @brief True when the unit is soloed (audio thread visibility). */
+    bool isSolo{false};
     /**
      * @brief Explicit route mode snapshot field (Phase 2A scaffolding).
      *
@@ -296,6 +301,16 @@ public:
     /** @brief Set the PatternManager used for auto-creating patterns per unit. */
     void setPatternManager(PatternManager* pm) { m_patternManager = pm; }
 
+    /**
+     * @brief Publish the current Arsenal state as an immutable snapshot.
+     *
+     * Call from the main/control thread whenever Arsenal state changes
+     * (unit created/destroyed, route changed, plugin attached, mute/solo/enabled changed).
+     * The audio thread reads the published snapshot via getAudioSnapshot() without
+     * allocating, locking, or mutating project state.
+     */
+    void publishSnapshot();
+
 private:
     UnitID nextId{1};
     std::unordered_map<UnitID, UnitInfo> m_units;
@@ -303,6 +318,15 @@ private:
     std::atomic<double> m_sampleRate{48000.0};
     std::atomic<uint32_t> m_blockSize{512};
     PatternManager* m_patternManager{nullptr};
+
+    /**
+     * @brief Published immutable snapshot for the audio thread.
+     *
+     * Updated by publishSnapshot() on the control thread.
+     * Read by getAudioSnapshot() on the audio thread via atomic_load.
+     * Release semantics on store ensures the audio thread never sees a partial snapshot.
+     */
+    mutable std::shared_ptr<AudioArsenalSnapshot> m_publishedSnapshot;
 
 public:
     void setSampleRate(double rate) { m_sampleRate.store(rate, std::memory_order_relaxed); }
