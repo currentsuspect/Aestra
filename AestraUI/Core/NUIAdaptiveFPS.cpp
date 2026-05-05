@@ -169,9 +169,9 @@ double NUIAdaptiveFPS::endFrame(
     double targetFrameTime = 1.0 / m_currentTargetFPS;
     double sleepTime = targetFrameTime - frameTime;
     
-    // DEBUG: Print timing info (frames 10-20 for steady state)
+    // DEBUG: Print timing info (frames 10-20 for steady state) - only with logging enabled
     static int debugFrameCount = 0;
-    if (debugFrameCount >= 10 && debugFrameCount < 20) {
+    if (m_config.enableLogging && debugFrameCount >= 10 && debugFrameCount < 20) {
         std::cout << "[STEADY Frame " << debugFrameCount << "] "
                   << "actualDeltaTime: " << (actualDeltaTime * 1000.0) << "ms | "
                   << "frameTime (work): " << (frameTime * 1000.0) << "ms | "

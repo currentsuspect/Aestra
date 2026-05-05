@@ -21,7 +21,7 @@ namespace Aestra {
 // =============================================================================
 // Log Levels
 // =============================================================================
-enum class LogLevel { Debug, Info, Warning, Error };
+enum class LogLevel { Trace, Debug, Info, Warning, Error };
 
 // =============================================================================
 // Logger Interface
@@ -70,6 +70,8 @@ private:
 
     std::string getLevelString(LogLevel level) const {
         switch (level) {
+        case LogLevel::Trace:
+            return "[TRACE]";
         case LogLevel::Debug:
             return "[DEBUG]";
         case LogLevel::Info:
@@ -136,6 +138,8 @@ private:
 
     std::string getLevelString(LogLevel level) const {
         switch (level) {
+        case LogLevel::Trace:
+            return "[TRACE]";
         case LogLevel::Debug:
             return "[DEBUG]";
         case LogLevel::Info:
@@ -201,6 +205,12 @@ public:
         }
     }
 
+    static void trace(const std::string& message) {
+        if (instance().logger_) {
+            instance().logger_->log(LogLevel::Trace, message);
+        }
+    }
+
     static void info(const std::string& message) {
         if (instance().logger_) {
             instance().logger_->log(LogLevel::Info, message);
@@ -233,10 +243,23 @@ public:
         instance().logger_ = std::make_shared<ConsoleLogger>();
     }
 
+    static LogLevel parseLogLevel(const std::string& str) {
+        if (str == "trace") return LogLevel::Trace;
+        if (str == "debug") return LogLevel::Debug;
+        if (str == "info") return LogLevel::Info;
+        if (str == "warn" || str == "warning") return LogLevel::Warning;
+        if (str == "error") return LogLevel::Error;
+        return LogLevel::Info; // Default
+    }
+
 private:
     Log() {
-        // Default to console logger
-        logger_ = std::make_shared<ConsoleLogger>();
+        // Default to console logger with level based on build type
+#ifdef NDEBUG
+        logger_ = std::make_shared<ConsoleLogger>(LogLevel::Warning);
+#else
+        logger_ = std::make_shared<ConsoleLogger>(LogLevel::Info);
+#endif
     }
 
     static Log& instance() {
@@ -250,12 +273,14 @@ private:
 // =============================================================================
 // Convenience Macros
 // =============================================================================
+#define AESTRA_LOG_TRACE(msg) Aestra::Log::trace(msg)
 #define AESTRA_LOG_DEBUG(msg) Aestra::Log::debug(msg)
 #define AESTRA_LOG_INFO(msg) Aestra::Log::info(msg)
 #define AESTRA_LOG_WARNING(msg) Aestra::Log::warning(msg)
 #define AESTRA_LOG_ERROR(msg) Aestra::Log::error(msg)
 
 // Stream-style logging
+#define AESTRA_LOG_STREAM_TRACE Aestra::LogStream(Aestra::LogLevel::Trace)
 #define AESTRA_LOG_STREAM_DEBUG Aestra::LogStream(Aestra::LogLevel::Debug)
 #define AESTRA_LOG_STREAM_INFO Aestra::LogStream(Aestra::LogLevel::Info)
 #define AESTRA_LOG_STREAM_WARNING Aestra::LogStream(Aestra::LogLevel::Warning)

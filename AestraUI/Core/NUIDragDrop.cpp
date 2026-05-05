@@ -194,13 +194,13 @@ std::shared_ptr<IDropTarget> NUIDragDropManager::findTargetAt(const NUIPoint& po
                 continue;
             }
             
-            auto bounds = target->getDropBounds();
-            if (bounds.contains(position)) {
-                if (component) {
-                     Aestra::Log::info("[DragDrop] Hit eligible drop target");
-                }
-                return target;
-            }
+auto bounds = target->getDropBounds();
+             if (bounds.contains(position)) {
+                 if (component) {
+                     Aestra::Log::trace("[DragDrop] Hit eligible drop target");
+                 }
+                 return target;
+             }
             ++it;
         } else {
             // Clean up expired weak_ptr

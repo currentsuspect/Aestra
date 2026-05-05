@@ -180,7 +180,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
 
 TrackUIComponent::~TrackUIComponent() {
     detachContextMenu(m_recordModeMenu);
-    Log::info("TrackUIComponent destroyed for lane: " + m_laneId.toString());
+    Log::debug("TrackUIComponent destroyed for lane: " + m_laneId.toString());
 }
 
 double TrackUIComponent::getSnapGridSizeBeats() const {
