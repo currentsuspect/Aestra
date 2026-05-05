@@ -167,6 +167,11 @@ private:
     // Guard to suppress stream-reopening calls during UI construction and initial load.
     // When true, dropdown callbacks and loadSettings() do NOT call AudioDeviceManager setters.
     bool m_isInitializing = true;
+
+    // Guard to suppress driver/device changes during async UI population.
+    // When true, dropdown callbacks must NOT call setPreferredDriverType, switchDevice, etc.
+    // to prevent the async device-load completion path from mutating active audio state.
+    bool m_isPopulatingDeviceUI = false;
     
     // Async Loading Infrastructure
     std::atomic<bool> m_isLoadingDevices{false};

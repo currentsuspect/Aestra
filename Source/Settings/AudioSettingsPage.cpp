@@ -281,9 +281,9 @@ void AudioSettingsPage::createUI() {
     m_driverDropdown = createDropdown([this](int idx) {
         m_dirty = true;
 
-        // Guard: during initialization, setting the dropdown value (e.g., via setSelectedByValue)
-        // may trigger the callback before the audio system is ready. Skip audio calls.
-        if (m_isInitializing) return;
+        // Guard: skip audio calls during initialization and async UI population.
+        // The stream was opened once by AudioEngineController. UI must not mutate it.
+        if (m_isInitializing || m_isPopulatingDeviceUI) return;
 
         // SWITCH DRIVER IMMEDIATELY so device list is correct
         if (m_audioManager) {
@@ -297,7 +297,7 @@ void AudioSettingsPage::createUI() {
     m_deviceDropdown = createDropdown([this](int idx) {
         m_dirty = true;
 
-        if (m_isInitializing) return;
+        if (m_isInitializing || m_isPopulatingDeviceUI) return;
 
         // SWITCH DEVICE IMMEDIATELY
         if (m_audioManager) {
@@ -308,7 +308,7 @@ void AudioSettingsPage::createUI() {
     m_inputDeviceDropdown = createDropdown([this](int idx) {
         m_dirty = true;
 
-        if (m_isInitializing) return;
+        if (m_isInitializing || m_isPopulatingDeviceUI) return;
 
         if (m_audioManager) {
             const int selected = m_inputDeviceDropdown->getSelectedValue();
@@ -321,7 +321,7 @@ void AudioSettingsPage::createUI() {
     m_sampleRateDropdown = createDropdown([this](int idx) {
         m_dirty = true;
 
-        if (m_isInitializing) return;
+        if (m_isInitializing || m_isPopulatingDeviceUI) return;
 
         if (m_audioManager) {
             m_audioManager->setSampleRate((uint32_t)m_sampleRateDropdown->getSelectedValue());
@@ -332,7 +332,7 @@ void AudioSettingsPage::createUI() {
     m_bufferSizeDropdown = createDropdown([this](int idx) {
         m_dirty = true;
 
-        if (m_isInitializing) return;
+        if (m_isInitializing || m_isPopulatingDeviceUI) return;
 
         if (m_audioManager) {
              m_audioManager->setBufferSize((uint32_t)m_bufferSizeDropdown->getSelectedValue());
@@ -953,7 +953,12 @@ void AudioSettingsPage::startAsyncDeviceLoad() {
 void AudioSettingsPage::onDeviceLoadComplete() {
     // Apply cached data to UI (called from main thread)
     std::lock_guard<std::mutex> lock(m_deviceDataMutex);
-    
+
+    // Guard: during UI population, dropdown selection changes must NOT
+    // call AudioDeviceManager setters. The stream is already open — UI
+    // hydration must not mutate audio device state.
+    m_isPopulatingDeviceUI = true;
+
     // Populate driver dropdown
     m_driverDropdown->clearItems();
     for (const auto& [name, value] : m_cachedDevices.driverTypes) {
@@ -1005,7 +1010,9 @@ void AudioSettingsPage::onDeviceLoadComplete() {
     if (m_inputDeviceDropdown) m_inputDeviceDropdown->setEnabled(true);
     
     updateLatencyEstimate();
-    
+
+    m_isPopulatingDeviceUI = false;
+
     Log::info("[AudioSettingsPage] UI populated with device data");
 }
 
