@@ -1,4 +1,5 @@
 #pragma once
+#include "../Core/GraphDirtyReason.h"
 #include "../Commands/AddClipCommand.h"
 #include "../Commands/CommandHistory.h"
 #include "../Core/AudioCommandQueue.h"
@@ -70,7 +71,7 @@ public:
         m_channelSlotMap = std::make_shared<ChannelSlotMap>();
         // Wire up playlist model to trigger audio graph rebuild when clips change
         m_playlistModel.setClipChangedCallback(
-            [this](const ClipInstanceID&) { m_graphDirty.store(true, std::memory_order_relaxed); });
+            [this](const ClipInstanceID&) { requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); });
     }
 
     /**
@@ -113,7 +114,7 @@ public:
         }
         auto* raw = channel.get();
         m_channels.push_back(std::move(channel));
-        m_graphDirty.store(true, std::memory_order_relaxed);
+        requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         m_modified.store(true, std::memory_order_relaxed);
 
         // Rebuild channel slot map
@@ -139,7 +140,7 @@ public:
         if (m_channels.empty())
             return false;
         m_channels.pop_back();
-        m_graphDirty.store(true, std::memory_order_relaxed);
+        requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         m_modified.store(true, std::memory_order_relaxed);
         if (m_channelSlotMap) {
             m_channelSlotMap->rebuild(m_channels);
@@ -157,7 +158,7 @@ public:
         }
 
         m_channels.erase(it);
-        m_graphDirty.store(true, std::memory_order_relaxed);
+        requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         m_modified.store(true, std::memory_order_relaxed);
         if (m_channelSlotMap) {
             m_channelSlotMap->rebuild(m_channels);
@@ -771,29 +772,51 @@ public:
      */
     bool isModified() const { return m_modified.load(std::memory_order_relaxed); }
 
-    /**
-     * @brief Consume and clear the graph-dirty flag.
-     * @return Previous dirty state.
-     */
-    bool consumeGraphDirty() { return m_graphDirty.exchange(false, std::memory_order_acq_rel); }
-    /**
-     * @brief Clear the graph-dirty flag after rebuilding a snapshot.
-     */
-    void rebuildAndPushSnapshot() { m_graphDirty.store(false, std::memory_order_relaxed); }
-    enum class GraphDirtyReason {
-        TimelineChanged,
-        EffectChainChanged,
-        RoutingChanged,
-        TrackProcessingChanged,
-    };
+    using GraphDirtyReason = Aestra::Audio::GraphDirtyReason;
 
     /**
      * @brief Request a non-real-time rebuild of the live playback graph.
+     * All state mutations should call this method.
      */
     void requestAudioGraphRebuild(GraphDirtyReason reason = GraphDirtyReason::TimelineChanged) {
-        (void)reason;
-        m_graphDirty.store(true, std::memory_order_relaxed);
+        m_lastReason.store(reason, std::memory_order_relaxed);
+        m_requestGeneration.fetch_add(1, std::memory_order_relaxed);
+        m_graphDirty.store(true, std::memory_order_release);
     }
+
+    /**
+     * @brief Check if a rebuild has been requested (non-consuming).
+     */
+    bool hasPendingGraphRebuild() const {
+        return m_graphDirty.load(std::memory_order_acquire);
+    }
+
+    /**
+     * @brief Get the request generation counter (non-consuming).
+     */
+    uint64_t graphRebuildRequestGeneration() const {
+        return m_requestGeneration.load(std::memory_order_relaxed);
+    }
+
+    /**
+     * @brief Get the last reason for a rebuild request (non-consuming).
+     */
+    GraphDirtyReason lastGraphDirtyReason() const {
+        return m_lastReason.load(std::memory_order_relaxed);
+    }
+
+    /**
+     * @brief Consume and clear pending rebuild request.
+     * ONLY PlaybackGraphController should call this.
+     */
+    bool consumePendingGraphRebuild() {
+        return m_graphDirty.exchange(false, std::memory_order_acq_rel);
+    }
+
+    /**
+     * @brief Push effect chain snapshots for all channels.
+     */
+    void rebuildAndPushSnapshot();
 
     /**
      * @brief Mark the live audio graph as requiring a rebuild.
@@ -853,7 +876,7 @@ public:
      */
     void clearAllChannels() {
         m_channels.clear();
-        m_graphDirty.store(true, std::memory_order_relaxed);
+        requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         if (m_channelSlotMap) {
             m_channelSlotMap->clear();
         }
@@ -1164,7 +1187,7 @@ private:
 
         auto cmd = std::make_shared<AddClipCommand>(m_playlistModel, laneId, clip);
         m_commandHistory.pushAndExecute(cmd);
-        m_graphDirty.store(true, std::memory_order_relaxed);
+        requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged);
         m_modified.store(true, std::memory_order_relaxed);
 
         Log::info("[TrackManager] Recorded take committed: " + takePath + " on track " + std::to_string(channelId) +
@@ -1398,7 +1421,9 @@ private:
     std::atomic<bool> m_patternMode{false};
     std::atomic<bool> m_userScrubbing{false};
     std::atomic<bool> m_modified{false};
-    std::atomic<bool> m_graphDirty{true};
+    std::atomic<bool> m_graphDirty{true}; // Owned by TrackManager, consumed by PlaybackGraphController only
+    std::atomic<uint64_t> m_requestGeneration{0};
+    std::atomic<GraphDirtyReason> m_lastReason{GraphDirtyReason::TimelineChanged};
     mutable std::mutex m_recordingMutex;
     std::unordered_map<uint32_t, std::unique_ptr<RecordingCapture>> m_recordingCaptures;
     std::atomic<uint32_t> m_recordingWriters{0};
