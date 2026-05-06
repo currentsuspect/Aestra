@@ -107,16 +107,20 @@ AestraContent::AestraContent() {
     m_pluginController->setPluginScanner(&PluginManager::getInstance().getScanner());
     m_pluginController->setPopupLayer(m_overlayLayer.get());
 
-    m_pluginController->setOnPluginLoaded([this](const std::string&, int) {
-        if (m_trackManager)
+    // Scoped subscriptions for playback-critical callbacks
+    // Plugin loaded: mark project dirty
+    m_connections.add(m_pluginController->pluginLoaded.subscribe([this](const auto&) {
+        if (m_trackManager) {
             m_trackManager->markModified();
-    });
-    m_pluginController->setOnEffectChainChanged([this]() {
+        }
+    }));
+    // Effect chain changed: request graph rebuild
+    m_connections.add(m_pluginController->effectChainChanged.subscribe([this]() {
         if (m_playbackGraphController) {
             m_playbackGraphController->requestRebuild(
                 TrackManager::GraphDirtyReason::EffectChainChanged);
         }
-    });
+    }));
 
     // Create track manager for multi-track functionality
     m_trackManager = std::make_shared<TrackManager>();
@@ -162,15 +166,14 @@ AestraContent::AestraContent() {
         m_audioEngine->setLoopEnabled(endBeat > startBeat);
     });
 
-    // Wire TrackManagerUI's internal graph dirty handling to the PlaybackGraphController.
-    // TrackManagerUI::onUpdate() may call requestRebuild() for async plugin operations.
-    // The actual graph drain happens in AestraApp::run() through the controller.
-    m_trackManagerUI->setOnGraphDirty([this]() {
+    // Wire TrackManagerUI's graph dirty signal to PlaybackGraphController.
+    // TrackManagerUI may emit graphDirty for async plugin operations.
+    m_connections.add(m_trackManagerUI->graphDirty.subscribe([this]() {
         if (m_playbackGraphController) {
             m_playbackGraphController->requestRebuild(
                 TrackManager::GraphDirtyReason::EffectChainChanged);
         }
-    });
+    }));
 
     // Audition Mode integration - sends track to Audition queue and switches mode
     m_trackManagerUI->setOnSendToAudition([this](uint32_t trackId, const std::string& trackName) {

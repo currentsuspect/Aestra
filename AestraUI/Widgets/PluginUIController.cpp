@@ -56,9 +56,7 @@ void PluginUIController::bindBrowser(PluginBrowserPanel* browser) {
     // Wire plugin selection (double-click)
     browser->setOnPluginLoadRequested([this](const PluginListItem& item) {
         // Just notify - actual loading depends on context (which slot/chain)
-        if (m_onPluginLoaded) {
-            m_onPluginLoaded(item.id, -1);
-        }
+        pluginLoaded.emit({item.id, -1});
     });
     
     // Initial refresh
@@ -219,9 +217,7 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
                 }
             }
         }
-        if (m_onEffectChainChanged) {
-            m_onEffectChainChanged();
-        }
+        effectChainChanged.emit();
     });
     
     // NOTE: Do NOT bind setOnSlotRemoveRequested here!
@@ -308,13 +304,9 @@ bool PluginUIController::loadPluginToSlot(const std::string& pluginId,
     
     // Insert into chain
     chain->insertPlugin(slot, instance);
-    
-    if (m_onPluginLoaded) {
-        m_onPluginLoaded(pluginId, slot);
-    }
-    if (m_onEffectChainChanged) {
-        m_onEffectChainChanged();
-    }
+
+    pluginLoaded.emit({pluginId, slot});
+    effectChainChanged.emit();
     
     // Refresh any bound rack
     for (const auto& binding : m_rackBindings) {
@@ -330,9 +322,7 @@ void PluginUIController::removePluginFromSlot(Aestra::Audio::EffectChain* chain,
                                                int slot) {
     if (!chain) return;
     chain->removePlugin(slot);
-    if (m_onEffectChainChanged) {
-        m_onEffectChainChanged();
-    }
+    effectChainChanged.emit();
 }
 
 void PluginUIController::openPluginEditor(
@@ -437,11 +427,6 @@ void PluginUIController::openPluginEditor(
         m_popupLayer->addChild(editor);
         m_activeEditors.push_back(editor);
     }
-}
-
-void PluginUIController::setOnPluginLoaded(
-    std::function<void(const std::string&, int)> callback) {
-    m_onPluginLoaded = std::move(callback);
 }
 
 void PluginUIController::setOnScanComplete(

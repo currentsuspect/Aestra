@@ -14,6 +14,7 @@
 
 #include <functional>
 #include <memory>
+#include "Events/Connection.h"
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -159,15 +160,20 @@ public:
     // ==============================
     
     /**
-     * @brief Set callback when a plugin is loaded
-     * @param callback Callback receiving plugin identifier and slot index.
+     * @brief Event payload for plugin loaded signal.
      */
-    void setOnPluginLoaded(std::function<void(const std::string& pluginId, int slot)> callback);
+    struct PluginLoadedEvent {
+        std::string pluginId;
+        int slot{-1};
+    };
+
+    /** @brief Signal emitted when a plugin is loaded into a slot. */
+    Aestra::Events::Signal<PluginLoadedEvent> pluginLoaded;
 
     /**
-     * @brief Set callback when a bound effect chain changes and the audio graph needs republishing.
+     * @brief Signal emitted when a bound effect chain changes and the audio graph needs republishing.
      */
-    void setOnEffectChainChanged(std::function<void()> callback) { m_onEffectChainChanged = std::move(callback); }
+    Aestra::Events::Signal<void> effectChainChanged;
     
     /**
      * @brief Set callback when scan completes
@@ -194,9 +200,7 @@ private:
     };
     std::vector<RackBinding> m_rackBindings;
     
-    // Callbacks
-    std::function<void(const std::string&, int)> m_onPluginLoaded;
-    std::function<void()> m_onEffectChainChanged;
+    // effectChainChanged is a scoped subscription signal for effect-chain mutations.
     std::function<void(int)> m_onScanComplete;
     
     // UI components for popups

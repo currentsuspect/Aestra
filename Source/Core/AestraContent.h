@@ -21,6 +21,7 @@
 #include "PatternSource.h"
 #include "OverlayLayer.h"
 #include "../AestraAudio/include/Models/UnitManager.h"
+#include "Events/Connection.h"
 #include <memory>
 #include <string>
 #include <chrono>
@@ -358,6 +359,9 @@ private:
 
     // Playback graph controller - single authoritative drain for graph rebuilds
     std::unique_ptr<Aestra::Audio::PlaybackGraphController> m_playbackGraphController;
+
+    // Scoped connections for playback-critical callback lifecycle safety
+    Aestra::Events::ScopedConnections m_connections;
     Aestra::Audio::UnitID m_sampleEditorUnitId{0};
     bool m_sampleEditorDragging{false};
     AestraUI::NUIPoint m_sampleEditorDragStartMouseOverlay{0.0f, 0.0f};

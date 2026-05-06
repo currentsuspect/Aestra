@@ -2089,9 +2089,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
     // Plugin insert/remove requests go through the PlaybackGraphController.
     // TrackManagerUI does NOT consume graph dirty state here - the controller drains in AestraApp::run().
     // UI code should only request rebuilds via requestAudioGraphRebuild().
-    if (m_trackManager && m_onGraphDirty) {
-        m_onGraphDirty();
-    }
+    graphDirty.emit();
 
     // One-time registration for drag-and-drop
     // We do this here because shared_from_this() is not available in the constructor
