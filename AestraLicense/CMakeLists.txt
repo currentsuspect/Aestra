@@ -6,8 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(AestraLicense STATIC
+    src/AccountSession.cpp
     src/EntitlementStore.cpp
     src/LicenseGate.cpp
+    src/LocalAccountCache.cpp
 )
 
 target_include_directories(AestraLicense
