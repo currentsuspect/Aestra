@@ -42,9 +42,9 @@
 #include "AudioEngine.h"
 #include "ChannelSlotMap.h"
 #include "ClipSource.h"
-#include "PlaybackGraphController.h"
 #include "MiniAudioDecoder.h"
 #include "MixerViewModel.h"
+#include "PlaybackGraphController.h"
 #include "Plugin/SamplerPlugin.h"
 #include "PreviewEngine.h"
 #include "TrackManager.h"
@@ -73,6 +73,11 @@ constexpr float kResizeHitWidth = 6.0f;
 // =============================================================================
 
 AestraContent::~AestraContent() {
+    // TrackManager may be shared outside this component; clear the stored owner callback before member teardown.
+    if (m_trackManager) {
+        m_trackManager->setStopPreviewCallback(nullptr);
+    }
+
     // Cancel any running plugin scan to prevent callbacks from accessing dead pointers
     auto& pm = Aestra::Audio::PluginManager::getInstance();
     pm.getScanner().cancelScan();
@@ -117,15 +122,14 @@ AestraContent::AestraContent() {
     // Effect chain changed: request graph rebuild
     m_connections.add(m_pluginController->effectChainChanged.subscribe([this]() {
         if (m_playbackGraphController) {
-            m_playbackGraphController->requestRebuild(
-                TrackManager::GraphDirtyReason::EffectChainChanged);
+            m_playbackGraphController->requestRebuild(TrackManager::GraphDirtyReason::EffectChainChanged);
         }
     }));
 
     // Create track manager for multi-track functionality
     m_trackManager = std::make_shared<TrackManager>();
 
-    // Link TrackManager stop preview callback
+    // TrackManager is owned by AestraContent, and the destructor clears this stored callback before teardown.
     m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
 
     addDemoTracks();
@@ -170,8 +174,7 @@ AestraContent::AestraContent() {
     // TrackManagerUI may emit graphDirty for async plugin operations.
     m_connections.add(m_trackManagerUI->graphDirty.subscribe([this]() {
         if (m_playbackGraphController) {
-            m_playbackGraphController->requestRebuild(
-                TrackManager::GraphDirtyReason::EffectChainChanged);
+            m_playbackGraphController->requestRebuild(TrackManager::GraphDirtyReason::EffectChainChanged);
         }
     }));
 
@@ -1660,7 +1663,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
             // Restore playback position
             m_audioEngine->setPatternPlaybackMode(false, 4.0);
-            // Link TrackManager stop preview callback
+            // Reinstall the owner-bound preview callback after returning to timeline mode. The destructor clears it.
             if (m_trackManager) {
                 m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
             }

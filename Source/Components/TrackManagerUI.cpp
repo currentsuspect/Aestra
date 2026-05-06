@@ -4560,29 +4560,39 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
         ClipSource* source = sourceManager.getSource(sourceId);
 
         if (source) {
-            // Helper to create clip once source is ready
-            auto createClipFromSource = [this, source, sourceId, displayName = data.displayName, targetLaneId,
+            std::weak_ptr<AestraUI::NUIComponent> weakSelf = weak_from_this();
+
+            // Helper to create clip once source is ready. Async decode and queued tasks capture only weakSelf so
+            // they cannot call back into a destroyed TrackManagerUI.
+            auto createClipFromSource = [weakSelf, sourceId, displayName = data.displayName, targetLaneId,
                                          timePositionBeats]() {
+                auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
+                if (!self || !self->m_trackManager)
+                    return;
+
+                auto& sourceManager = self->m_trackManager->getSourceManager();
+                ClipSource* source = sourceManager.getSource(sourceId);
+
                 // Remove from pending imports (animation cleanup)
-                auto it =
-                    std::remove_if(m_pendingImports.begin(), m_pendingImports.end(), [&](const PendingImport& pi) {
+                auto it = std::remove_if(
+                    self->m_pendingImports.begin(), self->m_pendingImports.end(), [&](const PendingImport& pi) {
                         return pi.laneId == targetLaneId && std::abs(pi.startBeat - timePositionBeats) < 0.001 &&
                                pi.displayName == displayName;
                     });
-                if (it != m_pendingImports.end()) {
-                    m_pendingImports.erase(it, m_pendingImports.end());
-                    setDirty(true);
+                if (it != self->m_pendingImports.end()) {
+                    self->m_pendingImports.erase(it, self->m_pendingImports.end());
+                    self->setDirty(true);
                 }
 
-                if (m_onClipLibraryChanged) {
-                    m_onClipLibraryChanged();
+                if (self->m_onClipLibraryChanged) {
+                    self->m_onClipLibraryChanged();
                 }
 
                 if (!source || !source->isReady())
                     return;
 
                 double durationSeconds = source->getDurationSeconds();
-                double durationBeats = secondsToBeats(durationSeconds);
+                double durationBeats = self->secondsToBeats(durationSeconds);
                 Log::info("[TrackManagerUI] Duration: " + std::to_string(durationSeconds) +
                           "s, beats: " + std::to_string(durationBeats));
 
@@ -4591,11 +4601,11 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 payload.audioSourceId = sourceId;
                 payload.slices.push_back({0.0, static_cast<double>(source->getNumFrames())});
 
-                auto& patternManager = m_trackManager->getPatternManager();
+                auto& patternManager = self->m_trackManager->getPatternManager();
                 PatternID patternId = patternManager.createAudioPattern(displayName, durationBeats, payload);
 
                 if (patternId.isValid()) {
-                    auto& playlist = m_trackManager->getPlaylistModel();
+                    auto& playlist = self->m_trackManager->getPlaylistModel();
 
                     // Create clip instance manually and use command for undo support
                     ClipInstance clip;
@@ -4606,11 +4616,11 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     clip.sourceId = patternId.value;
 
                     auto cmd = std::make_shared<AddClipCommand>(playlist, targetLaneId, clip);
-                    m_trackManager->getCommandHistory().pushAndExecute(cmd);
+                    self->m_trackManager->getCommandHistory().pushAndExecute(cmd);
 
-                    refreshTracks();
-                    invalidateCache();
-                    scheduleTimelineMinimapRebuild();
+                    self->refreshTracks();
+                    self->invalidateCache();
+                    self->scheduleTimelineMinimapRebuild();
                     Log::info("[TrackManagerUI] Clip added successfully via command");
                 } else {
                     Log::error("[TrackManagerUI] PatternManager::createAudioPattern failed");
@@ -4634,7 +4644,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 std::shared_ptr<TrackManager> tm = m_trackManager;
 
                 // Launch decoding in background thread to prevent UI freeze
-                std::thread([this, tm, sourceId, filePath, displayName, createClipFromSource, targetLaneId,
+                std::thread([weakSelf, tm, sourceId, filePath, displayName, createClipFromSource, targetLaneId,
                              timePositionBeats]() {
                     std::vector<float> decodedData;
                     uint32_t sampleRate = 0;
@@ -4644,20 +4654,28 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                         std::make_shared<std::chrono::steady_clock::time_point>(std::chrono::steady_clock::now());
 
                     // Capture by value for the progress callback to avoid reference lifetime issues
-                    auto progressCb = [this, targetLaneId, timePositionBeats, displayName, lastUpdate](float p) {
+                    auto progressCb = [weakSelf, targetLaneId, timePositionBeats, displayName, lastUpdate](float p) {
                         auto now = std::chrono::steady_clock::now();
                         if (std::chrono::duration_cast<std::chrono::milliseconds>(now - *lastUpdate).count() < 16 &&
                             p < 1.0f)
                             return;
                         *lastUpdate = now;
 
-                        std::lock_guard<std::mutex> lock(m_pendingTasksMutex);
-                        m_pendingTasks.push_back([this, targetLaneId, timePositionBeats, displayName, p]() {
-                            for (auto& pi : m_pendingImports) {
+                        auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
+                        if (!self)
+                            return;
+
+                        std::lock_guard<std::mutex> lock(self->m_pendingTasksMutex);
+                        self->m_pendingTasks.push_back([weakSelf, targetLaneId, timePositionBeats, displayName, p]() {
+                            auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
+                            if (!self)
+                                return;
+
+                            for (auto& pi : self->m_pendingImports) {
                                 if (pi.laneId == targetLaneId && std::abs(pi.startBeat - timePositionBeats) < 0.001 &&
                                     pi.displayName == displayName) {
                                     pi.progress = p;
-                                    setDirty(true);
+                                    self->setDirty(true);
                                     break;
                                 }
                             }
@@ -4668,11 +4686,15 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     bool success = decodeAudioFile(filePath, decodedData, sampleRate, numChannels, progressCb);
 
                     // Post completion task to main thread
-                    {
-                        std::lock_guard<std::mutex> lock(m_pendingTasksMutex);
-                        m_pendingTasks.push_back([this, tm, sourceId, success, decodedData = std::move(decodedData),
-                                                  sampleRate, numChannels, displayName, createClipFromSource,
-                                                  filePath]() mutable {
+                    if (auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock())) {
+                        std::lock_guard<std::mutex> lock(self->m_pendingTasksMutex);
+                        self->m_pendingTasks.push_back([weakSelf, tm, sourceId, success,
+                                                        decodedData = std::move(decodedData), sampleRate, numChannels,
+                                                        displayName, createClipFromSource, filePath]() mutable {
+                            auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
+                            if (!self)
+                                return;
+
                             auto& sm = tm->getSourceManager();
                             ClipSource* src = sm.getSource(sourceId);
                             if (!src)
@@ -4689,30 +4711,38 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                                 Log::info("[TrackManagerUI] Async load complete for: " + filePath);
 
                                 // Trigger waveform cache build
-                                m_waveformBuilder.buildAsync(
-                                    *src, [this, src](std::shared_ptr<Aestra::Audio::WaveformCache> cache) {
+                                self->m_waveformBuilder.buildAsync(
+                                    *src, [weakSelf, src](std::shared_ptr<Aestra::Audio::WaveformCache> cache) {
                                         if (cache) {
-                                            std::lock_guard<std::mutex> lock(m_pendingTasksMutex);
-                                            m_pendingTasks.push_back([this, src, cache]() {
+                                            auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
+                                            if (!self)
+                                                return;
+
+                                            std::lock_guard<std::mutex> lock(self->m_pendingTasksMutex);
+                                            self->m_pendingTasks.push_back([weakSelf, src, cache]() {
+                                                auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
+                                                if (!self)
+                                                    return;
+
                                                 src->setWaveformCache(cache);
-                                                Log::info("✅ Waveform cache ready for: " + src->getName());
-                                                this->invalidateCache();
-                                                this->m_backgroundNeedsUpdate = true;
-                                                this->setDirty(true);
+                                                Log::info("Waveform cache ready for: " + src->getName());
+                                                self->invalidateCache();
+                                                self->m_backgroundNeedsUpdate = true;
+                                                self->setDirty(true);
                                             });
                                         }
                                     });
 
                                 // Queue clip creation to main thread via pending tasks
                                 // This ensures UI updates happen on the main thread, not the background decode thread
-                                std::lock_guard<std::mutex> lock(m_pendingTasksMutex);
-                                m_pendingTasks.push_back([this, createClipFromSource]() { createClipFromSource(); });
+                                std::lock_guard<std::mutex> lock(self->m_pendingTasksMutex);
+                                self->m_pendingTasks.push_back([createClipFromSource]() { createClipFromSource(); });
 
                             } else {
                                 Log::error("[TrackManagerUI] Failed to decode file async: " + filePath);
                                 // Queue cleanup to main thread
-                                std::lock_guard<std::mutex> lock(m_pendingTasksMutex);
-                                m_pendingTasks.push_back([this, createClipFromSource]() {
+                                std::lock_guard<std::mutex> lock(self->m_pendingTasksMutex);
+                                self->m_pendingTasks.push_back([createClipFromSource]() {
                                     createClipFromSource(); // Cleanup UI
                                 });
                             }
