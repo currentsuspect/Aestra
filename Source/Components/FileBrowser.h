@@ -360,23 +360,7 @@ public:
 	    std::shared_ptr<NUITextInput> searchInput_; // Replaced searchQuery_, searchBoxFocused_, searchCaretBlinkTime_, searchCaretVisible_
 	    float searchBoxWidth_;
 	    NUIRect searchBoxBounds_;
-	    NUIRect refreshButtonBounds_;
-	    NUIRect favoritesButtonBounds_;
-	    NUIRect tagsButtonBounds_;
-	    NUIRect sortButtonBounds_;
-	    NUIRect backButtonBounds_;
-	    NUIRect forwardButtonBounds_;
-	    NUIRect filterButtonBounds_;
-	    bool refreshHovered_ = false;
-	    bool favoritesHovered_ = false;
-	    bool tagsHovered_ = false;
-	    bool sortHovered_ = false;
-	    bool backHovered_ = false;
-	    bool forwardHovered_ = false;
-	    bool filterHovered_ = false;
         QuickFilter activeQuickFilter_ = QuickFilter::All;
-        std::array<NUIRect, 4> quickFilterBounds_{};
-        int hoveredQuickFilter_ = -1;
         BrowserNavAction activeNavAction_ = BrowserNavAction::Sounds;
         std::string activeNavPath_;
         int hoveredNavIndex_ = -1;
@@ -435,16 +419,7 @@ public:
     std::shared_ptr<NUIIcon> mp3FileIcon_;
     std::shared_ptr<NUIIcon> flacFileIcon_;
     std::shared_ptr<NUIIcon> unknownFileIcon_;
-    std::shared_ptr<NUIIcon> searchIcon_;
-    std::shared_ptr<NUIIcon> starIcon_;
-    std::shared_ptr<NUIIcon> starFilledIcon_;
     std::shared_ptr<NUIIcon> chevronIcon_;
-    std::shared_ptr<NUIIcon> chevronDownIcon_;
-    std::shared_ptr<NUIIcon> playIcon_;
-    std::shared_ptr<NUIIcon> pauseIcon_;
-    std::shared_ptr<NUIIcon> refreshIcon_; // Added missing icon
-    std::shared_ptr<NUIIcon> backIcon_;
-    std::shared_ptr<NUIIcon> forwardIcon_;
     
     // Callbacks
     std::function<void(const FileItem&)> onFileSelected_;

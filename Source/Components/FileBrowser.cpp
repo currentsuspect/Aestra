@@ -41,9 +41,6 @@ constexpr float BROWSER_CONTENT_GAP = 8.0f;
 constexpr float BROWSER_NAV_ROW_H = 28.0f;
 constexpr float BROWSER_LIST_HEADER_H = 52.0f;
 constexpr float BROWSER_LIST_ROW_H = 25.0f;
-constexpr float BROWSER_BUTTONS_ROW_H = 0.0f;
-constexpr float BROWSER_BREADCRUMB_ROW_H = 0.0f;
-constexpr float BROWSER_ROW_SPACING = BROWSER_CONTENT_GAP;
 
 AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
     AestraUI::NUIComponent* root = component;
@@ -95,22 +92,22 @@ std::string ellipsizeMiddle(NUIRenderer& renderer, const std::string& text, floa
     int low = 2;
     int high = static_cast<int>(text.size()) - 1;
     std::string bestStr = std::string(kEllipsis);
-    
+
     // If text is too short, return ellipsis
     if (high < low) return bestStr;
 
     while (low <= high) {
         int mid = low + (high - low) / 2; // Total characters to keep (approx)
-        
+
         // Distribution strategy: Try to keep roughly half, but preserve suffix
         size_t rightKeep = mid / 2;
         if (rightKeep < suffixMin) rightKeep = suffixMin;
         if (rightKeep > static_cast<size_t>(mid)) rightKeep = mid - 1; // Ensure 1 char for left
-        if (rightKeep == 0) rightKeep = 1; 
+        if (rightKeep == 0) rightKeep = 1;
 
         size_t leftKeep = mid - rightKeep;
         if (leftKeep == 0) { leftKeep = 1; rightKeep = mid - 1; } // Ensure left has something
-        
+
         // Safety check boundaries
         if (leftKeep + rightKeep >= text.size()) {
              // Should not happen if high < text.size()
@@ -119,7 +116,7 @@ std::string ellipsizeMiddle(NUIRenderer& renderer, const std::string& text, floa
         }
 
         std::string candidate = text.substr(0, leftKeep) + kEllipsis + text.substr(text.size() - rightKeep);
-        
+
         if (renderer.measureText(candidate, fontSize).width <= maxWidth) {
             bestStr = candidate;
             low = mid + 1; // Try to squeeze more characters
@@ -298,7 +295,7 @@ FileBrowser::FileBrowser()
 
     std::filesystem::path docsPath(targetRoot);
     std::error_code ec;
-    
+
     // Attempt creation
     if (!std::filesystem::exists(docsPath, ec)) {
         std::filesystem::create_directories(docsPath, ec);
@@ -315,11 +312,11 @@ FileBrowser::FileBrowser()
          currentPath_ = rootPath_;
          Aestra::Log::warning("[FileBrowser] Failed to set default root, fallback to CWD: " + rootPath_);
     }
-    
+
     // Initial scan happens in onUpdate/onResize or explicit load?
     // We usually wait for first render/update, but let's ensure it's validated.
     // loadState will override this if settings exist.
-    
+
     // Start scan
     // loadDirectoryContents(); // Called in onResize usually or first update?
     // Actually, let's call it here to be safe, assuming thread is ready.
@@ -335,12 +332,12 @@ FileBrowser::FileBrowser()
     searchInput_ = std::make_shared<NUITextInput>();
     searchInput_->setPlaceholderText("Search library...");
     addChild(searchInput_);
-    
+
     // Bind search callback
     searchInput_->setOnTextChange([this](const std::string& text) {
         applyFilter();
     });
-    searchInput_->setMaxLength(512); 
+    searchInput_->setMaxLength(512);
     searchInput_->setTextColor(themeManager.getColor("textPrimary"));
     searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
     searchInput_->setPadding(34.0f);
@@ -352,9 +349,9 @@ FileBrowser::FileBrowser()
     folderIcon_ = std::make_shared<NUIIcon>();
     const char* folderSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-2.06 11L15 10l.94-2H21v9h-3.06z" opacity="0.8"/><path d="M20,6H12L10,4H4A2,2,0,0,0,2,6V18A2,2,0,0,0,4,20H20A2,2,0,0,0,22,18V8A2,2,0,0,0,20,6Z"/></svg>)";
     folderIcon_->loadSVG(folderSvg);
-    folderIcon_->setIconSize(20, 20); 
+    folderIcon_->setIconSize(20, 20);
     folderIcon_->setColor(themeManager.getColor("textSecondary"));
-    
+
     // File Icon (Generic) -> unknownFileIcon_
     unknownFileIcon_ = std::make_shared<NUIIcon>();
     const char* fileSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>)";
@@ -411,51 +408,24 @@ FileBrowser::FileBrowser()
     chevronIcon_->setIconSize(16, 16);
     chevronIcon_->setColor(themeManager.getColor("textSecondary"));
 
-    // Chevron Down (Expanded)
-    chevronDownIcon_ = std::make_shared<NUIIcon>();
-    const char* chevronDownSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>)";
-    chevronDownIcon_->loadSVG(chevronDownSvg);
-    chevronDownIcon_->setIconSize(16, 16);
-    chevronDownIcon_->setColor(themeManager.getColor("textSecondary"));
-
-    // Refresh Icon
-    refreshIcon_ = std::make_shared<NUIIcon>();
-    const char* refreshSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>)";
-    refreshIcon_->loadSVG(refreshSvg);
-    refreshIcon_->setIconSize(16, 16);
-    refreshIcon_->setColor(themeManager.getColor("textSecondary"));
-
-    // Star Icon (Favorites - Empty)
-    starIcon_ = std::make_shared<NUIIcon>();
-    const char* starSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"/></svg>)";
-    starIcon_->loadSVG(starSvg);
-    starIcon_->setIconSize(16, 16);
-    starIcon_->setColor(themeManager.getColor("textSecondary"));
-
-    // Star Icon (Favorites - Filled)
-    starFilledIcon_ = std::make_shared<NUIIcon>();
-    const char* starFilledSvg = R"(<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>)";
-    starFilledIcon_->loadSVG(starFilledSvg);
-    starFilledIcon_->setIconSize(16, 16);
-    starFilledIcon_->setColor(themeManager.getColor("accentPrimary"));
     popupMenu_ = std::make_shared<NUIContextMenu>();
     popupMenu_->hide();
-    
+
     // Initialize navigation history with the resolved root path (from top of constructor)
     navHistory_.clear();
     navHistory_.push_back(currentPath_);
     navHistoryIndex_ = 0;
-    
+
     // Load Theme Colors (Consistent with AestraTheme)
     backgroundColor_ = themeManager.getColor("backgroundPrimary"); // Deep Void from theme
-    textColor_ = themeManager.getColor("textPrimary");             
-    
+    textColor_ = themeManager.getColor("textPrimary");
+
     // Use theme accent for selection (consistent with the rest of the app)
     selectedColor_ = themeManager.getColor("accentPrimary");
-    
+
     hoverColor_ = themeManager.getColor("buttonBgHover").withAlpha(0.72f);
     borderColor_ = themeManager.getColor("glassBorder");
-    
+
     // Perform initial layout now that all members (icons, search input) are initialized
     // This initializes scrollbarTrackHeight_ and other layout vars needed by updateScrollbarVisibility
     onResize(static_cast<int>(getWidth()), static_cast<int>(getHeight()));
@@ -561,7 +531,7 @@ const std::unordered_set<std::string> FileFilter::projectExtensions = {
 
 bool FileFilter::isAllowed(const std::string& path) {
     if (path.empty()) return false;
-    
+
     // Always allow visible directories (caller handles hidden check)
     std::error_code ec;
     if (std::filesystem::is_directory(path, ec)) return true;
@@ -622,7 +592,7 @@ std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int de
             }
 
             const std::string entryPath = entry.path().string();
-            
+
             // --- SMART FILTER APPLIED HERE ---
             // If it's not a directory and not in our whitelist, skip it.
             std::error_code dirEc;
@@ -752,7 +722,7 @@ void FileBrowser::processScanResults() {
 FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     NUIRect bounds = getBounds();
     const float effectiveW = effectiveWidth_ > 0.0f ? effectiveWidth_ : bounds.width;
-    const float headerH = BROWSER_TOP_PAD + BROWSER_SEARCH_ROW_H + BROWSER_CONTENT_GAP;
+    const float headerH = BROWSER_TOP_PAD + BROWSER_SEARCH_ROW_H;
     const float contentY = bounds.y + headerH;
     const float contentH = std::max(0.0f, bounds.height - headerH);
     const float navW = std::clamp(effectiveW * 0.34f, 118.0f, 188.0f);
@@ -760,12 +730,12 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     const float listW = std::max(0.0f, effectiveW - navW);
 
     BrowserLayout layout;
-    layout.search = NUIRect(bounds.x + 8.0f, bounds.y + BROWSER_TOP_PAD,
-                            std::max(0.0f, effectiveW - 16.0f), BROWSER_SEARCH_ROW_H);
+    layout.search = NUIRect(listX + 8.0f, bounds.y + BROWSER_TOP_PAD,
+                            std::max(0.0f, listW - 16.0f), BROWSER_SEARCH_ROW_H);
     layout.navPane = NUIRect(bounds.x, contentY, navW, contentH);
     layout.listHeader = NUIRect(listX, contentY, listW, BROWSER_LIST_HEADER_H);
     layout.list = NUIRect(listX, contentY + BROWSER_LIST_HEADER_H,
-                          listW, std::max(0.0f, contentH - BROWSER_LIST_HEADER_H));
+                         listW, std::max(0.0f, contentH - BROWSER_LIST_HEADER_H));
     layout.navWidth = navW;
     return layout;
 }
@@ -964,13 +934,6 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
     const NUIColor text = themeManager.getColor("textPrimary");
     renderer.fillRect(layout.listHeader, headerBg);
 
-    backButtonBounds_ = {};
-    forwardButtonBounds_ = {};
-    refreshButtonBounds_ = {};
-    tagsButtonBounds_ = {};
-    filterButtonBounds_ = {};
-    sortButtonBounds_ = {};
-
     std::string crumbText = ">  Current Project  v";
     if (!rootPath_.empty() && !currentPath_.empty()) {
         std::error_code ec;
@@ -1006,66 +969,44 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
 
 void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& themeManager = NUIThemeManager::getInstance();
-    
-    // Adjust bounds if preview panel is visible (bottom panel)
-    float fileBrowserHeight = bounds.height;
-    // Preview panel logic removed - FileBrowser now fills entire bounds
-    
+
     effectiveWidth_ = bounds.width; // Full width for file list
-    
+
     const BrowserLayout browserLayout = computeBrowserLayout();
     scrollbarTrackHeight_ = browserLayout.list.height;
-    
-    NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, fileBrowserHeight);
-    
-    // === SOLID BASE FILL ===
-    renderer.fillRect(fileBrowserBounds, NUIColor(0.086f, 0.092f, 0.108f, 1.0f));
-    
-    // === CLIPPED BACKGROUND RENDERING ===
-    // To achieve rounded-top, square-bottom corners WITH proper borders,
-    // we use clipping to draw borders in the correct regions.
-    
-    // Help: setClipRect now handles FBO transform stack automatically
-    const float cornerRadius = 8.0f;
-    
-    // 1. Draw the TOP border (with rounded corners) - clip out bottom 8px
-    {
-        NUIRect topClip = fileBrowserBounds;
-        topClip.height -= cornerRadius;
-        renderer.setClipRect(topClip);
-        renderer.strokeRoundedRect(fileBrowserBounds, cornerRadius, 1.0f, borderColor_);
-        renderer.clearClipRect();
-    }
-    
-    // 2. Draw the BOTTOM border (square corners) - only the bottom 8px
-    {
-        NUIRect bottomClip = fileBrowserBounds;
-        bottomClip.y = fileBrowserBounds.bottom() - cornerRadius;
-        bottomClip.height = cornerRadius;
-        renderer.setClipRect(bottomClip);
-        
-        // Draw side borders only (no top/bottom border in this region)
-        renderer.drawLine(NUIPoint(fileBrowserBounds.x, bottomClip.y), NUIPoint(fileBrowserBounds.x, bottomClip.bottom()), 1.0f, borderColor_);
-        renderer.drawLine(NUIPoint(fileBrowserBounds.right(), bottomClip.y), NUIPoint(fileBrowserBounds.right(), bottomClip.bottom()), 1.0f, borderColor_);
-        
-        renderer.clearClipRect();
-    }
-    
-    // Render toolbar with search box
-    renderToolbar(renderer);
 
-    // Render file list
+    NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, bounds.height);
+
+    renderer.fillRect(fileBrowserBounds, NUIColor(0.086f, 0.092f, 0.108f, 1.0f));
+
+    const float cornerRadius = 8.0f;
+
+    NUIRect topClip = fileBrowserBounds;
+    topClip.height -= cornerRadius;
+    renderer.setClipRect(topClip);
+    renderer.strokeRoundedRect(fileBrowserBounds, cornerRadius, 1.0f, borderColor_);
+    renderer.clearClipRect();
+
+    NUIRect bottomClip = fileBrowserBounds;
+    bottomClip.y = fileBrowserBounds.bottom() - cornerRadius;
+    bottomClip.height = cornerRadius;
+    renderer.setClipRect(bottomClip);
+
+    renderer.drawLine(NUIPoint(fileBrowserBounds.x, bottomClip.y), NUIPoint(fileBrowserBounds.x, bottomClip.bottom()), 1.0f, borderColor_);
+    renderer.drawLine(NUIPoint(fileBrowserBounds.right(), bottomClip.y), NUIPoint(fileBrowserBounds.right(), bottomClip.bottom()), 1.0f, borderColor_);
+
+    renderer.clearClipRect();
+
+    renderNavigationPane(renderer, browserLayout);
     renderFileList(renderer);
-    
-    // Render scrollbar
     renderScrollbar(renderer);
 }
 
 void FileBrowser::onRender(NUIRenderer& renderer) {
     AESTRA_ZONE("FileBrowser_Render");
-    
+
     if (!isVisible()) return;
-    
+
     NUIRect bounds = getBounds();
     if (bounds.isEmpty()) return;
 
@@ -1080,9 +1021,9 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
 
     // Cache size matches the component bounds
     AestraUI::NUISize cacheSize(static_cast<int>(bounds.width), static_cast<int>(bounds.height));
-    
+
     // Get/Create Cache
-    // We use a shared_ptr<void> member to hold the cache reference if NUI supports it, 
+    // We use a shared_ptr<void> member to hold the cache reference if NUI supports it,
     // or just look it up. TrackManagerUI uses getOrCreateCache returning SharedRenderCache.
     // Assuming getOrCreateCache returns a shared_ptr we can store (or ignore if internal).
     // Let's rely on m_cacheId lookup for now as TrackManagerUI did.
@@ -1099,16 +1040,16 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     if (cache) {
         renderCache->renderCachedOrUpdate(cache, bounds, [&]() {
             m_isRenderingToCache = true;
-            
+
             // Clear FBO with background color BEFORE any transforms to ensure full coverage
             renderer.clear(backgroundColor_);
-            
+
             // FBO is 0,0 based, so we must push a transform to negated bounds
             renderer.pushTransform(-bounds.x, -bounds.y);
-            
+
             // Render content
             renderStaticContent(renderer, bounds);
-            
+
             renderer.popTransform();
             m_isRenderingToCache = false;
         });
@@ -1137,7 +1078,7 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
             renderer.fillCircle({knobX, y}, 1.7f, iconColor);
         }
     }
-    
+
     // Loading spinner removed - now handled by FilePreviewPanel
 }
 
@@ -1156,9 +1097,9 @@ void FileBrowser::onUpdate(double deltaTime) {
         bootScanRecoveryAttempted_ = true;
         loadDirectoryContents();
     }
-    
+
     // Loading animation removed - now handled by FilePreviewPanel
-	    
+
     // Smooth scrolling with lerp
     float lerpSpeed = 12.0f;
     float snapThreshold = 0.5f;
@@ -1175,13 +1116,13 @@ void FileBrowser::onUpdate(double deltaTime) {
         scrollOffset_ = targetScrollOffset_;
     }
     scrollVelocity_ = scrollDelta;
-    
+
     // ALWAYS repaint if scroll position changed at all
     if (std::abs(scrollOffset_ - lastRenderedOffset_) > 0.01f) {
         lastRenderedOffset_ = scrollOffset_;
         invalidateCache();
     }
-    
+
     // Update scrollbar thumb position based on current scroll
     const auto& view = getActiveView();
     float maxScroll = std::max(0.0f, view.size() * itemHeight_ - scrollbarTrackHeight_);
@@ -1215,10 +1156,10 @@ void FileBrowser::onResize(int width, int height) {
 
     auto& themeManager = NUIThemeManager::getInstance();
     const BrowserLayout browserLayout = computeBrowserLayout();
-    
+
     if (searchInput_) {
         searchInput_->setBounds(browserLayout.search);
-        
+
         searchInput_->setTextColor(textColor_);
         searchInput_->setBackgroundColor(NUIColor(0.083f, 0.088f, 0.106f, 0.98f));
         searchInput_->setBorderColor(themeManager.getColor("border").withAlpha(0.36f));
@@ -1227,10 +1168,10 @@ void FileBrowser::onResize(int width, int height) {
         searchInput_->setPadding(34.0f);
         searchInput_->setBorderRadius(6.0f);
     }
-    
+
     itemHeight_ = BROWSER_LIST_ROW_H;
     float listHeight = browserLayout.list.height;
-    
+
     visibleItems_ = static_cast<int>(listHeight / itemHeight_);
     visibleItems_ = std::max(1, visibleItems_);
 
@@ -1242,7 +1183,7 @@ void FileBrowser::onResize(int width, int height) {
     // Update caches
     updateScrollPosition();
     updateBreadcrumbs();
-    updateScrollbarVisibility(); 
+    updateScrollbarVisibility();
     invalidateAllItemCaches(); // Force text re-layout on resize
     invalidateCache();
 }
@@ -1252,15 +1193,15 @@ void FileBrowser::invalidateAllItemCaches() {
     for (auto& item : rootItems_) {
         stack.push_back(&item);
     }
-    
+
     while (!stack.empty()) {
         AestraUI::FileItem* item = stack.back();
         stack.pop_back();
-        
+
         item->cacheValid = false;
         item->cachedDisplayName.clear();
         item->cachedSizeStr.clear();
-        
+
         for (auto& child : item->children) {
             stack.push_back(&child);
         }
@@ -1281,7 +1222,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     const BrowserLayout browserLayout = computeBrowserLayout();
     float listY = browserLayout.list.y;
     float listHeight = browserLayout.list.height;
-        
+
     // Update scrollbar track height ensuring it is fresh for this event
     scrollbarTrackHeight_ = listHeight;
 
@@ -1301,15 +1242,15 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             }
         }
     }
-    
+
     // === DRAG AND DROP HANDLING ===
     auto& dragManager = NUIDragDropManager::getInstance();
-    
+
     // If global drag is active, update it with mouse movement
     if (dragManager.isDragging()) {
         // Always update drag position on any mouse event
         dragManager.updateDrag(event.position);
-        
+
         if (!event.pressed && event.button == NUIMouseButton::Left) {
             dragManager.endDrag(event.position);
             dragPotential_ = false;
@@ -1330,17 +1271,17 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         hidePopupMenu();
         // Continue processing the click (e.g., select item) after closing.
     }
-    
+
     // Check for potential drag initiation (mouse moved while button held)
     if (dragPotential_ && dragSourceIndex_ >= 0 && dragSourceIndex_ < static_cast<int>(view.size())) {
         float dx = event.position.x - dragStartPos_.x;
         float dy = event.position.y - dragStartPos_.y;
         float dist = std::sqrt(dx * dx + dy * dy);
-        
+
 	        if (dist >= dragManager.getDragThreshold()) {
 	            // Start the drag!
 	            const FileItem* dragFile = view[dragSourceIndex_];
-	            
+
 	            // Only drag allowed files (using Smart Filter whitelist)
 	            if (!dragFile->isDirectory && FileFilter::isAllowed(dragFile->path)) {
 	                AestraUI::DragData dragData;
@@ -1350,7 +1291,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	                dragData.accentColor = NUIThemeManager::getInstance().getColor("accentPrimary");
                 dragData.previewWidth = 150.0f;
                 dragData.previewHeight = 30.0f;
-	                
+
 	                dragManager.beginDrag(dragData, dragStartPos_, this);
 	                isDraggingFile_ = true;
 	                dragPotential_ = false;
@@ -1361,13 +1302,13 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	            return true;
 	        }
 	    }
-    
+
     // Cancel drag potential on mouse release
     if (!event.pressed && event.button == NUIMouseButton::Left) {
         dragPotential_ = false;
         dragSourceIndex_ = -1;
     }
-    
+
     // If we're dragging the scrollbar, handle mouse events even outside bounds
     if (isDraggingScrollbar_) {
         // Always check scrollbar events if we're dragging
@@ -1375,7 +1316,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
     }
-    
+
     // Check if mouse is within bounds
     bool mouseInside = bounds.contains(event.position.x, event.position.y);
 
@@ -1388,14 +1329,14 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         float contentHeight = view.size() * itemHeight;
         float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
         bool needsScrollbar = maxScroll > 0.0f;
-        
+
         if (needsScrollbar) {
             scrollbarFadeTimer_ = 0.0f;
             scrollbarOpacity_ = 1.0f;
         }
         float scrollSpeed = 3.0f; // Scroll 3 items per wheel step
         float scrollDelta = event.wheelDelta * scrollSpeed * itemHeight;
-        
+
         targetScrollOffset_ -= scrollDelta;
 
         // Clamp target scroll offset
@@ -1412,72 +1353,10 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             hoveredIndex_ = -1;
             dirty = true;
         }
-        if (refreshHovered_ || favoritesHovered_ || tagsHovered_ || sortHovered_ ||
-            backHovered_ || forwardHovered_ || filterHovered_ || hoveredQuickFilter_ != -1) {
-            refreshHovered_ = false;
-            favoritesHovered_ = false;
-            tagsHovered_ = false;
-            sortHovered_ = false;
-            backHovered_ = false;
-            forwardHovered_ = false;
-            filterHovered_ = false;
-            hoveredQuickFilter_ = -1;
-            dirty = true;
-        }
         if (dirty) invalidateCache();
         return false;
     }
 
-    // Update toolbar hover states
-    const bool newRefreshHovered = !refreshButtonBounds_.isEmpty() && refreshButtonBounds_.contains(event.position);
-    const bool newFavoritesHovered = !favoritesButtonBounds_.isEmpty() && favoritesButtonBounds_.contains(event.position);
-    const bool newTagsHovered = !tagsButtonBounds_.isEmpty() && tagsButtonBounds_.contains(event.position);
-    const bool newSortHovered = !sortButtonBounds_.isEmpty() && sortButtonBounds_.contains(event.position);
-    const bool newBackHovered = !backButtonBounds_.isEmpty() && backButtonBounds_.contains(event.position);
-    const bool newForwardHovered = !forwardButtonBounds_.isEmpty() && forwardButtonBounds_.contains(event.position);
-    const bool newFilterHovered = !filterButtonBounds_.isEmpty() && filterButtonBounds_.contains(event.position);
-    int newHoveredQuickFilter = -1;
-    for (int i = 0; i < static_cast<int>(quickFilterBounds_.size()); ++i) {
-        if (!quickFilterBounds_[i].isEmpty() && quickFilterBounds_[i].contains(event.position)) {
-            newHoveredQuickFilter = i;
-            break;
-        }
-    }
-    if (newRefreshHovered != refreshHovered_ || newFavoritesHovered != favoritesHovered_ ||
-        newTagsHovered != tagsHovered_ || newSortHovered != sortHovered_ ||
-        newBackHovered != backHovered_ || newForwardHovered != forwardHovered_ ||
-        newFilterHovered != filterHovered_ ||
-        newHoveredQuickFilter != hoveredQuickFilter_) {
-        refreshHovered_ = newRefreshHovered;
-        favoritesHovered_ = newFavoritesHovered;
-        tagsHovered_ = newTagsHovered;
-        sortHovered_ = newSortHovered;
-        backHovered_ = newBackHovered;
-        forwardHovered_ = newForwardHovered;
-        filterHovered_ = newFilterHovered;
-        hoveredQuickFilter_ = newHoveredQuickFilter;
-        invalidateCache();
-    }
-
-    if (backHovered_) {
-        AestraUI::NUIComponent::showRemoteTooltip("Back", event.position, this);
-    } else if (forwardHovered_) {
-        AestraUI::NUIComponent::showRemoteTooltip("Forward", event.position, this);
-    } else if (refreshHovered_) {
-        AestraUI::NUIComponent::showRemoteTooltip("Refresh", event.position, this);
-    } else if (favoritesHovered_) {
-        AestraUI::NUIComponent::showRemoteTooltip("Favorites", event.position, this);
-    } else if (tagsHovered_) {
-        AestraUI::NUIComponent::showRemoteTooltip("Tags", event.position, this);
-    } else if (filterHovered_) {
-        AestraUI::NUIComponent::showRemoteTooltip("Filter", event.position, this);
-    } else if (sortHovered_) {
-        AestraUI::NUIComponent::showRemoteTooltip("Sort", event.position, this);
-    } else if (hoveredQuickFilter_ >= 0) {
-        constexpr const char* kFilterTooltips[] = {"All Files", "Audio", "Projects", "Folders"};
-        AestraUI::NUIComponent::showRemoteTooltip(kFilterTooltips[hoveredQuickFilter_], event.position, this);
-    }
-    
     // Handle scrollbar mouse events first - check if scrollbar should be visible
         const float contentHeight = view.size() * itemHeight;
         const float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
@@ -1485,71 +1364,8 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	    const float scrollbarGutter = scrollbarWidth_ + themeManager.getSpacing("xs");
 	    const float listX = browserLayout.list.x;
 	    const float listW = std::max(0.0f, browserLayout.list.width - scrollbarGutter);
-    
+
     // Wheel handling moved earlier in function (before bounds check)
-    // Toolbar controls
-    if (event.pressed && event.button == NUIMouseButton::Left) {
-        if (!backButtonBounds_.isEmpty() && backButtonBounds_.contains(event.position)) {
-            if (navHistoryIndex_ > 0) {
-                navigateBack();
-            }
-            return true;
-        }
-        if (!forwardButtonBounds_.isEmpty() && forwardButtonBounds_.contains(event.position)) {
-            if (navHistoryIndex_ >= 0 && navHistoryIndex_ + 1 < static_cast<int>(navHistory_.size())) {
-                navigateForward();
-            }
-            return true;
-        }
-        if (!refreshButtonBounds_.isEmpty() && refreshButtonBounds_.contains(event.position)) {
-            refresh();
-            return true;
-        }
-        if (!favoritesButtonBounds_.isEmpty() && favoritesButtonBounds_.contains(event.position)) {
-            if (popupMenu_ && popupMenu_->isVisible()) {
-                hidePopupMenu();
-                return true;
-            }
-            showFavoritesMenu();
-            return true;
-        }
-        if (!tagsButtonBounds_.isEmpty() && tagsButtonBounds_.contains(event.position)) {
-            if (popupMenu_ && popupMenu_->isVisible()) {
-                hidePopupMenu();
-                return true;
-            }
-            showTagFilterMenu();
-            return true;
-        }
-        if (!filterButtonBounds_.isEmpty() && filterButtonBounds_.contains(event.position)) {
-            if (popupMenu_ && popupMenu_->isVisible()) {
-                hidePopupMenu();
-                return true;
-            }
-            showQuickFilterMenu();
-            return true;
-        }
-        if (!sortButtonBounds_.isEmpty() && sortButtonBounds_.contains(event.position)) {
-            if (popupMenu_ && popupMenu_->isVisible()) {
-                hidePopupMenu();
-                return true;
-            }
-            showSortMenu();
-            return true;
-        }
-        for (int i = 0; i < static_cast<int>(quickFilterBounds_.size()); ++i) {
-            if (!quickFilterBounds_[i].isEmpty() && quickFilterBounds_[i].contains(event.position)) {
-                const QuickFilter next = static_cast<QuickFilter>(i);
-                if (activeQuickFilter_ != next) {
-                    activeQuickFilter_ = next;
-                    applyFilter();
-                } else if (popupMenu_ && popupMenu_->isVisible()) {
-                    hidePopupMenu();
-                }
-                return true;
-            }
-        }
-    }
 
     // Breadcrumb hover (for chip highlight)
     if (!breadcrumbs_.empty() && breadcrumbBounds_.contains(event.position)) {
@@ -1574,14 +1390,14 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     if (handleBreadcrumbMouseEvent(event)) {
         return true;
     }
-    
+
     // Check scrollbar events if scrollbar is needed (but not dragging - handled above)
     if (needsScrollbar && !view.empty() && !isDraggingScrollbar_) {
         if (handleScrollbarMouseEvent(event)) {
             return true;
         }
     }
-    
+
 	    // Check if click is in file list area
         bool isInsideList = (event.position.x >= listX && event.position.x <= listX + listW &&
                              event.position.y >= listY && event.position.y <= listY + listHeight);
@@ -1605,7 +1421,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	        int newHoveredIndex = (itemIndex >= 0 && itemIndex < static_cast<int>(view.size())) ? itemIndex : -1;
 	        if (newHoveredIndex != hoveredIndex_) {
 	            hoveredIndex_ = newHoveredIndex;
-                
+
                 // Tooltip Logic for Truncated Items
                 if (hoveredIndex_ >= 0 && hoveredIndex_ < static_cast<int>(view.size())) {
                     const FileItem* item = view[hoveredIndex_];
@@ -1615,7 +1431,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                         NUIPoint tooltipPos = event.position;
                         tooltipPos.x += 16.0f; // Offset
                         tooltipPos.y += 16.0f;
-                        
+
                         NUIComponent::showRemoteTooltip(item->name, tooltipPos, this);
                     } else {
                         NUIComponent::hideRemoteTooltip(this);
@@ -1674,7 +1490,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	            // Calculate which file was clicked
 	            float relativeY = event.position.y - listY;
 	            int itemIndex = static_cast<int>((relativeY + scrollOffset_) / itemHeight);
-	            
+
 	            if (itemIndex >= 0 && itemIndex < static_cast<int>(view.size())) {
 	                const FileItem* clickedFile = view[itemIndex];
 	                if (!clickedFile || clickedFile->isPlaceholder) {
@@ -1685,7 +1501,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                         hidePopupMenu();
                         return true;
                     }
-	                
+
 		                // Check for expander click (match renderFileList layout)
 		                if (clickedFile->isDirectory) {
 		                    const float indentStep = 18.0f;
@@ -1708,20 +1524,20 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	                    dragSourceIndex_ = itemIndex;
 	                    dragStartPos_ = event.position;
 	                }
-                
+
                 // Get current time for double-click detection
                 double currentTime = std::chrono::duration<double>(
                     std::chrono::steady_clock::now().time_since_epoch()
                 ).count();
-                
+
                 // Check for double-click: same item clicked within time window
-                bool isDoubleClick = (itemIndex == lastClickedIndex_) && 
+                bool isDoubleClick = (itemIndex == lastClickedIndex_) &&
                                     ((currentTime - lastClickTime_) < DOUBLE_CLICK_TIME);
-                
+
                 // Update click tracking
                 lastClickedIndex_ = itemIndex;
                 lastClickTime_ = currentTime;
-                
+
                 // Update selection with multi-select support
                 bool ctrl = event.modifiers & NUIModifiers::Ctrl;
                 bool shift = (event.modifiers & NUIModifiers::Shift) || (event.modifiers & NUIModifiers::CapsLock);
@@ -1730,20 +1546,20 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 	                const auto& activeView = getActiveView();
 	                if (selectedIndex_ >= 0 && selectedIndex_ < static_cast<int>(activeView.size())) {
 	                    selectedFile_ = activeView[selectedIndex_];
-	                    
+
 	                    // Waveform generation moved to FilePreviewPanel
 	                    // waveformData_.clear();
 	                    if (onFileSelected_) {
 	                        onFileSelected_(*selectedFile_);
 	                    }
 	                }
-                
+
                 // Handle double-click: open folders or files
                 if (isDoubleClick && selectedFile_) {
                     // Cancel drag potential on double-click
                     dragPotential_ = false;
                     dragSourceIndex_ = -1;
-                    
+
                     if (selectedFile_->isDirectory) {
                         // Double-click on folder: toggle it
                         toggleFolder(const_cast<FileItem*>(selectedFile_));
@@ -1775,13 +1591,13 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                         }
                     }
                 }
-                
+
                 invalidateCache();
                 return true;
             }
         }
     }
-    
+
     // If we reached here, and the click was inside the list area but on no item,
     // we MUST consume it to prevent focus from resetting to Root.
     if (isInsideList && event.pressed &&
@@ -1799,19 +1615,19 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 
 bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
     if (!isVisible() || !isEnabled()) return false;
-    
+
     // DOMINANT ROUTING: If search is focused, give it the event and STOP.
     // Do NOT let NUIComponent::onKeyEvent run if search handles it, to prevent double-handling or parent overrides.
     if (searchInput_ && searchInput_->isFocused()) {
         if (searchInput_->onKeyEvent(event)) return true;
-        
+
         // If search didn't consume it (e.g. random key), we might want to let parents handle shortcuts like Ctrl+S?
         // But for typing safety, let's just fall through ONLY if it wasn't a typing key.
     }
 
     // Only handle navigation/shortcuts when the file browser itself owns focus.
     if (!isFocused()) return false;
-    
+
     // Pass to children (if check above failed or wasn't focused)
     if (NUIComponent::onKeyEvent(event)) return true;
 
@@ -1831,7 +1647,7 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
                 return true;
             }
         }
-        
+
         // Esc -> Clear search or blur
         if (event.keyCode == NUIKeyCode::Escape) {
             if (searchInput_ && searchInput_->isFocused()) {
@@ -1873,18 +1689,18 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
 
                 if (c >= 32 && c <= 126 && searchInput_) {
                     searchInput_->setFocused(true);
-                    
+
                     // Construct a new event with the resolved character to ensure NUITextInput handles it
                     NUIKeyEvent resolvedEvent = event;
                     resolvedEvent.character = c;
-                    
+
                     searchInput_->onKeyEvent(resolvedEvent);
                     return true;
                 }
                 return false;
         }
     }
-    
+
     const auto& view = getActiveView();
 
     switch (event.keyCode) {
@@ -1917,7 +1733,7 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
                 return true;
             }
             break;
-            
+
         case NUIKeyCode::Down:
             if (!view.empty() && selectedIndex_ < static_cast<int>(view.size()) - 1) {
                 selectedIndex_++;
@@ -1947,7 +1763,7 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
                 return true;
             }
             break;
-            
+
         case NUIKeyCode::Right:
             if (selectedFile_ && selectedFile_->isDirectory) {
                 if (!selectedFile_->isExpanded) {
@@ -1965,7 +1781,7 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
                 return true;
             }
             break;
-            
+
 	        case NUIKeyCode::Enter:
 	            if (selectedFile_) {
 	                if (selectedFile_->isPlaceholder) {
@@ -1981,17 +1797,16 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
 	                return true;
 	            }
             break;
-            
+
         case NUIKeyCode::Backspace:
             navigateUp();
             return true;
     }
-    
+
     return false;
 }
 
 void FileBrowser::onMouseLeave() {
-    hoveredQuickFilter_ = -1;
     if (hoveredIndex_ >= 0 || hoveredNavIndex_ >= 0) {
         hoveredIndex_ = -1;
         hoveredNavIndex_ = -1;
@@ -2021,14 +1836,14 @@ void FileBrowser::setCurrentPath(const std::string& path) {
 
     currentPath_ = targetPath;
     viewDirty_ = true;
-    
+
     if (!isNavigatingHistory_) {
         pushToHistory(currentPath_);
     }
 
     loadDirectoryContents();
     updateBreadcrumbs();
-    
+
     // Reset scroll on folder change
     targetScrollOffset_ = 0.0f;
     scrollOffset_ = 0.0f;
@@ -2131,11 +1946,11 @@ void FileBrowser::selectFile(const std::string& path) {
             lastShiftSelectIndex_ = i;
             selectedFile_ = view[i];
             updateScrollPosition();
-            
+
             if (selectedFile_ && !selectedFile_->isDirectory) {
                 // Waveform generation moved to FilePreviewPanel
             }
-            
+
             if (onFileSelected_) {
                 onFileSelected_(*selectedFile_);
             }
@@ -2385,10 +2200,10 @@ void FileBrowser::updateDisplayListRecursive(FileItem& item, std::vector<const F
 
 void FileBrowser::toggleFolder(const FileItem* item) {
     if (!item->isDirectory) return;
-    
+
     // We need to modify the item, so cast away const (safe in this context)
     FileItem* nonConstItem = const_cast<FileItem*>(item);
-    
+
     if (nonConstItem->isExpanded) {
         nonConstItem->isExpanded = false;
     } else {
@@ -2403,7 +2218,7 @@ void FileBrowser::toggleFolder(const FileItem* item) {
 
 	bool FileBrowser::compareFileItems(const FileItem& a, const FileItem& b) const {
     // Priority: Search Score (descending) -> Folders First -> Name/etc (stable tie-break)
-    
+
     if (searchInput_ && !searchInput_->getText().empty()) {
         if (a.searchScore != b.searchScore) {
             return a.searchScore > b.searchScore; // Higher score first
@@ -2447,7 +2262,7 @@ void FileBrowser::toggleFolder(const FileItem* item) {
         // Use stable_sort to keep the list from "jiggling" during fuzzy search updates
         std::stable_sort(items.begin(), items.end(),
                   [this](const FileItem& a, const FileItem& b) { return compareFileItems(a, b); });
-        
+
         for (auto& item : items) {
             if (item.isDirectory && item.hasLoadedChildren && !item.children.empty()) {
                 sortRecursive(item.children); // Recurse
@@ -2456,7 +2271,7 @@ void FileBrowser::toggleFolder(const FileItem* item) {
     };
 
     sortRecursive(rootItems_);
-    
+
     // Also stable_sort the filtered View if it's active
     if (!filteredFiles_.empty()) {
         std::stable_sort(filteredFiles_.begin(), filteredFiles_.end(),
@@ -2471,7 +2286,7 @@ FileType FileBrowser::getFileTypeFromExtension(const std::string& extension) con
     if (extension == ".aiff" || extension == ".aif") return FileType::AudioFile;
     if (extension == ".Aestra" || extension == ".aes" || extension == ".Aestraproj") return FileType::ProjectFile;
     if (extension == ".mid" || extension == ".midi") return FileType::MusicFile;
-    
+
     return FileType::Unknown;
 }
 
@@ -2497,7 +2312,6 @@ std::shared_ptr<NUIIcon> FileBrowser::getIconForFileType(FileType type) {
 }
 
 void FileBrowser::renderFileList(NUIRenderer& renderer) {
-    {
     auto& themeManager = NUIThemeManager::getInstance();
     const BrowserLayout browserLayout = computeBrowserLayout();
     NUIRect listClip = browserLayout.list;
@@ -2609,539 +2423,11 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     }
 
     renderer.clearClipRect();
-    return;
-    }
-
-    // Get component dimensions from theme ONCE outside the loop
-    auto& themeManager = NUIThemeManager::getInstance();
-    const auto& layout = themeManager.getLayoutDimensions();
-
-    NUIRect bounds = getBounds();
-    // Use effective width to account for preview panel
-    // Use effective width to account for preview panel
-    float effectiveW = effectiveWidth_ > 0 ? effectiveWidth_ : bounds.width;
-    
-    // NEW STACK LAYOUT LOGIC (Shared with onResize and renderToolbar)
-    // Restore itemHeight which acts as the row height for file list items
-    float itemHeight = themeManager.getComponentDimension("fileBrowser", "itemHeight");
-    
-    // Calculate header total height
-    float totalHeaderH = BROWSER_BUTTONS_ROW_H + BROWSER_BREADCRUMB_ROW_H +
-                         BROWSER_ROW_SPACING + BROWSER_SEARCH_ROW_H + BROWSER_ROW_SPACING;
-    
-    // FIX: Subtract preview panel height from list height for correct clipping
-    // FIX: Subtract preview panel height from list height for correct clipping
-    float availableHeight = bounds.height;
-    // Preview panel moved to FilePreviewPanel
-    // if (previewPanelVisible_ && selectedFile_ && !selectedFile_->isDirectory) {
-    //     availableHeight -= kPreviewPanelHeight + 4;
-    // }
-    
-    float listY = bounds.y + totalHeaderH; 
-    float listHeight = availableHeight - totalHeaderH;
-
-    const auto& view = getActiveView();
-
-    // Keep a consistent right gutter so layout does not jump when scrollbar appears/disappears.
-    const float scrollbarGutter = scrollbarWidth_ + themeManager.getSpacing("xs");
-    const float listX = bounds.x + layout.panelMargin;
-    const float listW = effectiveW - 2 * layout.panelMargin - scrollbarGutter;
-    NUIRect listClip(listX, listY, listW, listHeight);
-
-    // CRITICAL FIX: The renderer's setClipRect already handles the transform stack.
-    // Manual offsetting here was causing double-offsetting in FBO mode.
-    
-    // CRITICAL: Cache invalidation moved to onResize to prevent frame spikes.
-    // if (std::abs(lastCachedWidth_ - listW) > 1.0f) ...
-
-    if (scanningRoot_ && view.empty()) {
-        renderer.setClipRect(listClip);
-        renderer.drawTextCentered("Loading...", listClip, 14.0f, textColor_.withAlpha(0.6f));
-        renderer.clearClipRect();
-        return;
-    }
-
-    // OPTIMIZATION: Only render visible items (virtualization)
-    int firstVisibleIndex = std::max(0, static_cast<int>(scrollOffset_ / itemHeight));
-    int lastVisibleIndex = std::min(static_cast<int>(view.size()), 
-                                     static_cast<int>((scrollOffset_ + listHeight) / itemHeight) + 1);
-
-    // Visual active state should track the single primary selection only.
-    auto isSelected = [this](int idx) {
-        return idx == selectedIndex_;
-    };
-
-    // Clip file items to the list area to prevent bleed
-    // Extend clip rect by 1px on all sides to ensure full coverage
-    NUIRect listClipExtended(listClip.x - 1.0f, listClip.y - 1.0f, listClip.width + 2.0f, listClip.height + 2.0f);
-    renderer.setClipRect(listClipExtended);
-    
-    const float listRadius = 10.0f;
-    const AestraUI::NUIColor listBg = themeManager.getColor("surfaceTertiary").withAlpha(0.62f);
-    renderer.fillRoundedRect(listClip, listRadius, listBg);
-    renderer.strokeRoundedRect(listClip, listRadius, 1.0f, themeManager.getColor("border").withAlpha(0.24f));
-    renderer.strokeRoundedRect({listClip.x + 1.0f, listClip.y + 1.0f, listClip.width - 2.0f, listClip.height - 2.0f},
-                               std::max(0.0f, listRadius - 1.0f),
-                               1.0f,
-                               AestraUI::NUIColor::white().withAlpha(0.02f));
-
-    const float labelFont = 14.0f;   // +3px for better legibility
-    const float metaFont = 12.0f;    // +2px for metadata
-    const float rowIndentStep = themeManager.getComponentDimension("fileBrowser", "indentSize");
-    const float maxIndent = std::min(72.0f, listW * 0.35f);
-    const int maxGuideDepth = static_cast<int>(std::floor(maxIndent / rowIndentStep));
-
-    // Hoist loop invariants
-    const float iconSize = themeManager.getComponentDimension("fileBrowser", "iconSize");
-    // Pre-calculate text vertical offsets to avoid repeated renderer calls/math
-    // Assuming simple centering: y + (height - lineHeight) / 2 is common, or renderer specific logic.
-    // Since we can't easily replicate renderer.calculateTextY exactly without its code, 
-    // we will calculate it ONCE for a dummy rect at (0,0) and apply the delta.
-    NUIRect dummyRect(0, 0, listW, itemHeight);
-    float labelYOffset = std::round(renderer.calculateTextY(dummyRect, labelFont));
-    float metaYOffset = std::round(renderer.calculateTextY(dummyRect, metaFont));
-
-    // Render file items (ONLY VISIBLE ONES!) - NO CLIPPING, manual bounds check instead
-    for (int i = firstVisibleIndex; i < lastVisibleIndex; ++i) {
-        // Calculate item position: each item is positioned at listY + (i * itemHeight) - scrollOffset
-        float itemY = listY + (i * itemHeight) - scrollOffset_;
-
-        // CRITICAL: Skip rendering if item would bleed above the list area (into path bar)
-        if (itemY < listY) {
-            continue;
-        }
-
-        // CULLING OPTIMIZATION:
-        // Allow partial items but skip if completely out of view
-        if (itemY > listY + listHeight) {
-            continue;
-        }
-
-        // Create item rect with proper dimensions (reserving right gutter for scrollbar lane)
-        NUIRect itemRect(listX, itemY, listW, itemHeight);
-        bool selected = isSelected(i);
-        bool hovered = (i == hoveredIndex_);
-        
-        const FileItem* item = view[i];
-        const bool playbackActive = !activePlaybackPath_.empty() && mapKeyForPath(item->path) == activePlaybackPath_;
-
-        const float rowRadius = std::min(9.0f, itemHeight * 0.32f);
-        NUIRect rowRect(itemRect.x + 4.0f, itemRect.y + 2.0f, std::max(1.0f, itemRect.width - 8.0f), std::max(1.0f, itemRect.height - 4.0f));
-        if (playbackActive || selected) {
-            renderer.drawShadow(rowRect, 0.0f, 6.0f, 16.0f, AestraUI::NUIColor(0, 0, 0, 0.16f));
-            renderer.fillRoundedRect(rowRect, rowRadius, themeManager.getColor("accentPrimary").withAlpha(0.30f));
-            renderer.strokeRoundedRect(rowRect, rowRadius, 1.0f, themeManager.getColor("borderActive").withAlpha(0.66f));
-            renderer.fillRoundedRect({rowRect.x, rowRect.y, 5.0f, rowRect.height}, 2.5f, themeManager.getColor("accentPrimary").withAlpha(0.98f));
-        } else if (hovered) {
-            renderer.fillRoundedRect(rowRect, rowRadius, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.05f));
-            renderer.strokeRoundedRect(rowRect, rowRadius, 1.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
-        } 
-        // Note: Alternating rows removed for cleaner "Deep Space" look
-        
-        // Indentation & Tree Lines (clamped so deep trees don't destroy name readability)
-        const int depth = item->depth;
-        const float indent = std::min(static_cast<float>(depth) * rowIndentStep, maxIndent);
-        float contentX = rowRect.x + 6.0f + indent;
-        const int guideDepth = std::min(depth, maxGuideDepth);
-        
-        // Draw vertical guide lines for tree structure
-        if (guideDepth > 0) {
-            // FIX: Align tree guide lines with expander positions (remove 0.5f offset)
-            float lineX = std::round(rowRect.x + 6.0f) + 0.5f;
-            // More subtle guide lines
-            const NUIColor guideColor = themeManager.getColor("glassBorder").withAlpha(0.12f);
-            const float yPad = 1.0f;
-            for (int d = 0; d < guideDepth; ++d) {
-                // Draw vertical line segment aligned with expander at this depth
-                renderer.drawLine(NUIPoint(lineX, itemRect.y + yPad),
-                                  NUIPoint(lineX, itemRect.y + itemRect.height - yPad),
-                                  1.0f, guideColor);
-                lineX += rowIndentStep;
-            }
-        }
-
-        // Expander arrow
-        if (item->isDirectory) {
-            float arrowSize = 12.0f;
-            NUIRect arrowRect(contentX - 6.0f, itemY + (itemHeight - arrowSize) * 0.5f, arrowSize, arrowSize);
-            
-            auto& icon = item->isExpanded ? chevronDownIcon_ : chevronIcon_;
-            if (icon) {
-                icon->setBounds(arrowRect);
-                icon->setColor(selected ? themeManager.getColor("textPrimary") : textColor_.withAlpha(0.72f));
-                icon->onRender(renderer);
-            }
-            contentX += 16.0f; // Reserve arrow slot only for directories.
-        }
-
-        // Render icon
-        auto icon = getIconForFileType(item->type);
-        if (icon) {
-            NUIRect iconRect(contentX, itemY + (itemHeight - iconSize) * 0.5f, iconSize, iconSize);
-            icon->setBounds(iconRect);
-            // Tint folder icons if selected
-            if (item->isDirectory && selected) {
-                // Keep original color or tint? Let's keep original for now but maybe brighten
-            }
-            icon->onRender(renderer);
-            contentX += iconSize + 8.0f;
-        } else {
-            contentX += iconSize + 8.0f;
-        }
-
-        // Render file name with proper vertical alignment and bounds checking to prevent bleeding
-        float textX = contentX;
-        float nameTextY = itemY + labelYOffset; // Use hoisted offset!
-        
-        // OPTIMIZATION: Cache file size string and display name
-        if (!item->cacheValid) {
-            // Calculate file size string (cache it)
-            item->cachedSizeStr.clear();
-            bool hasSize = !item->isDirectory && item->size > 0;
-            
-            if (hasSize) {
-                if (item->size < 1024) {
-                    item->cachedSizeStr = std::to_string(item->size) + " B";
-                } else if (item->size < 1024 * 1024) {
-                    item->cachedSizeStr = std::to_string(item->size / 1024) + " KB";
-                } else {
-                    item->cachedSizeStr = std::to_string(item->size / (1024 * 1024)) + " MB";
-                }
-            }
-            
-            // Calculate display name with truncation (cache it)
-            float minGap = 20.0f;
-            float rightMargin = 12.0f;
-            float actualSizeWidth = hasSize ? renderer.measureText(item->cachedSizeStr, metaFont).width : 0.0f;
-            float reservedForSize = hasSize ? (actualSizeWidth + minGap + rightMargin) : rightMargin;
-            float maxTextWidth = itemRect.width - (textX - itemRect.x) - reservedForSize;
-
-            // If the list is narrow, drop the size column to preserve name readability.
-            if (hasSize && maxTextWidth < 90.0f) {
-                item->cachedSizeStr.clear();
-                hasSize = false;
-                reservedForSize = rightMargin;
-                maxTextWidth = itemRect.width - (textX - itemRect.x) - reservedForSize;
-            }
-            
-            item->cachedDisplayName = item->name;
-            auto nameTextSize = renderer.measureText(item->cachedDisplayName, labelFont);
-            
-            if (nameTextSize.width > maxTextWidth) {
-                // Truncate with middle ellipsis (keeps extensions / suffixes readable)
-                item->cachedDisplayName = ellipsizeMiddle(renderer, item->name, labelFont, maxTextWidth);
-                item->isTruncated = true;
-            } else {
-                item->isTruncated = false;
-            }
-            
-            item->cacheValid = true;
-        }
-        
-        // Add hover effect
-        NUIColor nameColor = textColor_;
-        if (playbackActive || selected) {
-            nameColor = NUIColor::white();
-        } else if (hovered) {
-            nameColor = textColor_.lightened(0.12f);
-        }
-        
-        // USE CACHED display name
-        renderer.drawText(item->cachedDisplayName, NUIPoint(textX, nameTextY), labelFont, nameColor);
-        
-        // Render file size (only if cached size exists)
-        if (!item->cachedSizeStr.empty()) {
-            auto sizeText = renderer.measureText(item->cachedSizeStr, metaFont);
-            float sizeTextY = itemY + metaYOffset; // Use hoisted offset
-            
-            // Calculate position from the right
-            float rightMargin = 12.0f;
-            float sizeX = itemRect.x + itemRect.width - sizeText.width - rightMargin;
-            
-            // Render size
-            renderer.drawText(item->cachedSizeStr, NUIPoint(sizeX, sizeTextY), metaFont,
-                              selected ? themeManager.getColor("textSecondary").withAlpha(0.92f)
-                                       : themeManager.getColor("textSecondary").withAlpha(0.80f));
-        }
-    }
-
-    renderer.clearClipRect();
 }
 
 void FileBrowser::renderToolbar(NUIRenderer& renderer) {
-    {
-    refreshButtonBounds_ = {};
-    favoritesButtonBounds_ = {};
-    tagsButtonBounds_ = {};
-    sortButtonBounds_ = {};
-    quickFilterBounds_.fill({});
-    hoveredQuickFilter_ = -1;
-
-    auto& themeManager = NUIThemeManager::getInstance();
-    const BrowserLayout browserLayout = computeBrowserLayout();
-    NUIRect bounds = getBounds();
-    const float effectiveW = effectiveWidth_ > 0.0f ? effectiveWidth_ : bounds.width;
-    const NUIRect topBand(bounds.x, bounds.y, effectiveW,
-                          BROWSER_TOP_PAD + BROWSER_SEARCH_ROW_H + BROWSER_CONTENT_GAP);
-
-    renderer.fillRect(topBand, NUIColor(0.086f, 0.092f, 0.108f, 1.0f));
-    renderer.drawLine({topBand.x, topBand.bottom()}, {topBand.right(), topBand.bottom()},
-                      1.0f, themeManager.getColor("border").withAlpha(0.40f));
-
-    if (searchInput_) {
-        const NUIRect search = searchInput_->getBounds();
-        const NUIColor iconColor = themeManager.getColor("textSecondary").withAlpha(0.58f);
-        const float cx = search.x + 17.0f;
-        const float cy = search.y + search.height * 0.5f;
-        renderer.strokeCircle({cx, cy - 1.0f}, 4.6f, 1.3f, iconColor);
-        renderer.drawLine({cx + 3.7f, cy + 2.7f}, {cx + 7.2f, cy + 6.2f}, 1.3f, iconColor);
-
-        const float fx = search.right() - 18.0f;
-        for (int i = 0; i < 3; ++i) {
-            const float y = search.y + 11.0f + static_cast<float>(i) * 5.5f;
-            renderer.drawLine({fx - 6.0f, y}, {fx + 6.0f, y}, 1.1f, iconColor.withAlpha(0.78f));
-            const float knobX = fx + (i == 1 ? -2.5f : 3.0f);
-            renderer.fillCircle({knobX, y}, 1.7f, iconColor);
-        }
-    }
-
-    renderNavigationPane(renderer, browserLayout);
-    renderListHeader(renderer, browserLayout);
-    }
-
-    // Get layout dimensions from theme
-    auto& themeManager = NUIThemeManager::getInstance();
-    // Use fixed heights matching onResize logic
-    float totalHeaderHeight = BROWSER_BUTTONS_ROW_H + BROWSER_BREADCRUMB_ROW_H;
-    const float innerPad = 8.0f;
-
-    NUIRect bounds = getBounds();
-    // Use effective width to account for preview panel
-    float effectiveW = effectiveWidth_ > 0 ? effectiveWidth_ : bounds.width;
-
-    NUIRect toolbarRect(bounds.x, bounds.y, effectiveW, totalHeaderHeight);
-    
-    // Background
-    // Glass Toolbar Header
-    // Gradient for toolbar too
-    AestraUI::NUIColor toolbarBg = themeManager.getColor("surfaceTertiary").withAlpha(0.86f);
-    renderer.fillRect(toolbarRect, toolbarBg);
-    renderer.fillRect(AestraUI::NUIRect(toolbarRect.x, toolbarRect.y, toolbarRect.width, 1.0f),
-                      AestraUI::NUIColor::white().withAlpha(0.035f));
-    
-    // Draw separator below buttons row (before breadcrumbs)
-    float buttonRowSepY = toolbarRect.y + BROWSER_BUTTONS_ROW_H;
-    renderer.drawLine(NUIPoint(bounds.x, buttonRowSepY), NUIPoint(bounds.x + effectiveW, buttonRowSepY), 1.0f, themeManager.getColor("glassBorder").withAlpha(0.6f));
-    
-    // Draw separator below entire header (after breadcrumbs) 
-    float sepY = toolbarRect.bottom(); 
-    renderer.drawLine(NUIPoint(bounds.x, sepY), NUIPoint(bounds.x + effectiveW, sepY), 1.0f, borderColor_);
-
-    // Common sizes
-    // Common sizes
-    const float toolbarFont = themeManager.getFontSize("s");
-    const float buttonRadius = 7.0f;
-    const float buttonPadX = 8.0f;    
-    const float buttonH = 24.0f; // Standardized Aestra UI toolbar height
-    
-    // Center buttons in the TOP row (0 to buttonsRowHeight)
-    const float buttonY = toolbarRect.y + (BROWSER_BUTTONS_ROW_H - buttonH) / 2.0f;
-    const float iconSize = 14.0f;     
-    const float iconGap = 6.0f;       
-    const float clusterGap = 6.0f;   // Standardized Aestra UI gap
-
-    // === MEASURE layout from edges ===
-    
-    // 1. Right Layout (Sort <- Tags)
-    float currentRightX = toolbarRect.right() - innerPad;
-
-    // === PREPARE ===
-    
-    // Helper lambda for button drawing
-
-    auto drawButton = [&](const NUIRect& rect, const std::string& text, bool hovered, bool active = false) {
-        const bool iconOnly = text.empty();
-        NUIColor bg = iconOnly
-            ? themeManager.getColor("surfaceSecondary").withAlpha(0.54f)
-            : themeManager.getColor("buttonBgDefault").withAlpha(0.94f);
-        NUIColor border = iconOnly
-            ? themeManager.getColor("border").withAlpha(0.12f)
-            : themeManager.getColor("border").withAlpha(0.24f);
-        
-        if (active) {
-            bg = iconOnly
-                ? themeManager.getColor("buttonBgActive").withAlpha(0.82f)
-                : themeManager.getColor("buttonBgActive").withAlpha(0.99f);
-            border = themeManager.getColor("borderActive").withAlpha(iconOnly ? 0.20f : 0.26f);
-        } else if (hovered) {
-            bg = iconOnly
-                ? themeManager.getColor("buttonBgHover").withAlpha(0.72f)
-                : themeManager.getColor("buttonBgHover").withAlpha(0.96f);
-            border = themeManager.getColor("border").withAlpha(iconOnly ? 0.20f : 0.34f);
-        }
-
-        renderer.drawShadow(rect,
-                            0.0f,
-                            iconOnly ? 2.0f : 4.0f,
-                            iconOnly ? 8.0f : 12.0f,
-                            NUIColor(0, 0, 0, iconOnly ? 0.06f : 0.14f));
-        renderer.fillRoundedRect(rect, buttonRadius, bg);
-        renderer.strokeRoundedRect(rect, buttonRadius, 1.0f, border);
-        renderer.strokeRoundedRect({rect.x + 1.0f, rect.y + 1.0f, rect.width - 2.0f, rect.height - 2.0f},
-                                   std::max(0.0f, buttonRadius - 1.0f),
-                                   1.0f,
-                                   NUIColor::white().withAlpha(iconOnly ? 0.015f : 0.025f));
-        
-        if (!text.empty()) {
-            float tY = std::round(renderer.calculateTextY(rect, toolbarFont));
-            renderer.drawText(
-                text,
-                NUIPoint(rect.x + buttonPadX, tY),
-                toolbarFont,
-                active ? textColor_
-                       : hovered ? textColor_.withAlpha(0.94f)
-                                 : textColor_.withAlpha(0.76f));
-        }
-    };
-
-
-    // Sort Button (Compact)
-    std::string sortText = "Sort";
-    
-    auto sortTextSize = renderer.measureText(sortText, toolbarFont);
-    float sortButtonW = sortTextSize.width + buttonPadX * 2.0f + iconGap + iconSize; 
-    
-    sortButtonBounds_ = NUIRect(currentRightX - sortButtonW, buttonY, sortButtonW, buttonH);
-    if (sortButtonBounds_.x < toolbarRect.x) sortButtonBounds_.x = toolbarRect.x;
-    currentRightX = sortButtonBounds_.x - clusterGap;
-    
-    // RENDER SORT
-    drawButton(sortButtonBounds_, sortText, sortHovered_);
-    if (chevronDownIcon_) {
-        const NUIRect chevronRect(sortButtonBounds_.right() - buttonPadX - iconSize,
-                                  sortButtonBounds_.y + (sortButtonBounds_.height - iconSize) * 0.5f,
-                                  iconSize, iconSize);
-        chevronDownIcon_->setBounds(chevronRect);
-        chevronDownIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(sortHovered_ ? 0.96f : 0.78f));
-        chevronDownIcon_->onRender(renderer);
-    }
-
-    // Tags Button (Compact)
-    std::string tagsText = "Tags";
-    
-    auto tagsTextSize = renderer.measureText(tagsText, toolbarFont);
-    float tagsButtonW = tagsTextSize.width + buttonPadX * 2.0f + iconGap + iconSize;
-
-    tagsButtonBounds_ = NUIRect(currentRightX - tagsButtonW, buttonY, tagsButtonW, buttonH);
-    if (tagsButtonBounds_.x < toolbarRect.x) tagsButtonBounds_.x = toolbarRect.x;
-    currentRightX = tagsButtonBounds_.x - clusterGap;
-
-    // RENDER TAGS
-    bool isActive = !activeTagFilter_.empty();
-    drawButton(tagsButtonBounds_, tagsText, tagsHovered_, isActive);
-    if (chevronDownIcon_) {
-         const NUIRect chevronRect(tagsButtonBounds_.right() - buttonPadX - iconSize,
-                                   tagsButtonBounds_.y + (tagsButtonBounds_.height - iconSize) * 0.5f,
-                                   iconSize, iconSize);
-         chevronDownIcon_->setBounds(chevronRect);
-         chevronDownIcon_->setColor(themeManager.getColor("textSecondary").withAlpha(tagsHovered_ || isActive ? 0.96f : 0.78f));
-         chevronDownIcon_->onRender(renderer);
-    }
-
-    // Refresh Button - compact (Icon only)
-    float currentLeftX = toolbarRect.x + innerPad;
-    float refreshButtonW = buttonH; // Square button
-    
-    refreshButtonBounds_ = NUIRect(currentLeftX, buttonY, refreshButtonW, buttonH);
-    currentLeftX = refreshButtonBounds_.right() + clusterGap;
-
-    // Favorites Button - grouped with Refresh on the left
-    const float starSize = 16.0f;
-    const float starButtonW = buttonH;
-    favoritesButtonBounds_ = NUIRect(currentLeftX, buttonY, starButtonW, buttonH);
-    currentLeftX = favoritesButtonBounds_.right() + clusterGap;
-
-    // Render Favorites
-    bool isFav = isFavorite(currentPath_);
-    drawButton(favoritesButtonBounds_, "", favoritesHovered_, isFav); 
-        
-    auto icon = isFav ? starFilledIcon_ : starIcon_;
-    if (icon) {
-        float iconX = favoritesButtonBounds_.x + (favoritesButtonBounds_.width - starSize) * 0.5f;
-        float iconY = favoritesButtonBounds_.y + (favoritesButtonBounds_.height - starSize) * 0.5f;
-            
-        icon->setBounds(NUIRect(iconX, iconY, starSize, starSize));
-        icon->setColor(isFav ? AestraUI::NUIColor::white().withAlpha(0.96f)
-                             : AestraUI::NUIColor::white().withAlpha(favoritesHovered_ ? 0.82f : 0.68f));
-        icon->onRender(renderer);
-    }
-
-    // Quick filters
-    constexpr std::array<const char*, 4> kFilterLabels = {"All", "Audio", "Projects", "Folders"};
-    constexpr std::array<const char*, 4> kCompactFilterLabels = {"All", "Au", "Pr", "Fo"};
-    for (auto& b : quickFilterBounds_) b = NUIRect(0, 0, 0, 0);
-    const float filterGap = 6.0f;
-    const float availableW = std::max(0.0f, currentRightX - currentLeftX);
-    const bool useCompactFilters = availableW < 220.0f;
-    const auto& activeFilterLabels = useCompactFilters ? kCompactFilterLabels : kFilterLabels;
-    if (availableW > 70.0f) {
-        std::array<float, 4> idealW{};
-        float totalW = 0.0f;
-        for (int i = 0; i < 4; ++i) {
-            const auto textSize = renderer.measureText(activeFilterLabels[i], toolbarFont);
-            const float minW = useCompactFilters ? 28.0f : 50.0f;
-            idealW[i] = std::clamp(textSize.width + buttonPadX * 2.0f, minW, 92.0f);
-            totalW += idealW[i];
-        }
-        totalW += filterGap * 3.0f;
-
-        const float minButtonW = useCompactFilters ? 20.0f : 44.0f;
-        const float minTotal = minButtonW * 4.0f + filterGap * 3.0f;
-        float scale = 1.0f;
-        if (totalW > availableW && availableW > (filterGap * 3.0f + 4.0f)) {
-            scale = (availableW - filterGap * 3.0f) / std::max(1.0f, totalW - filterGap * 3.0f);
-        }
-
-        if (availableW >= minTotal || scale > 0.30f) {
-            float filterX = currentLeftX;
-            for (int i = 0; i < 4; ++i) {
-                const float w = std::max(minButtonW, idealW[i] * scale);
-                quickFilterBounds_[i] = NUIRect(filterX, buttonY, w, buttonH);
-                drawButton(
-                    quickFilterBounds_[i],
-                    activeFilterLabels[i],
-                    hoveredQuickFilter_ == i,
-                    static_cast<int>(activeQuickFilter_) == i
-                );
-                filterX += w + filterGap;
-            }
-        }
-    }
-
-
-    // 3. Middle (Breadcrumbs)
-    const float breadcrumbRowY = toolbarRect.y + BROWSER_BUTTONS_ROW_H;
-    const float breadcrumbRowH = BROWSER_BREADCRUMB_ROW_H;
-    
-    float breadcrumbX = toolbarRect.x + innerPad;
-    float breadcrumbW = toolbarRect.width - innerPad * 2.0f;
-    
-    if (breadcrumbW > 10.0f) {
-        breadcrumbBounds_ = NUIRect(breadcrumbX, breadcrumbRowY, breadcrumbW, breadcrumbRowH);
-        renderInteractiveBreadcrumbs(renderer);
-    } else {
-        breadcrumbBounds_ = NUIRect(0,0,0,0);
-    }
-
-    // Refresh RENDER
-    drawButton(refreshButtonBounds_, "", refreshHovered_);
-    if (refreshIcon_) {
-         float iconX = refreshButtonBounds_.x + (refreshButtonBounds_.width - iconSize) * 0.5f;
-         float iconY = refreshButtonBounds_.y + (refreshButtonBounds_.height - iconSize) * 0.5f;
-         refreshIcon_->setBounds(NUIRect(iconX, iconY, iconSize, iconSize));
-         refreshIcon_->setColor(AestraUI::NUIColor::white().withAlpha(refreshHovered_ ? 0.80f : 0.60f));
-         refreshIcon_->onRender(renderer);
-    }
+    (void)renderer;
+    // Toolbar header row removed - only search overlay is rendered in onRender
 }
 
 void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
@@ -3253,13 +2539,13 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		        });
 		    }
 
-		    const float menuX = favoritesButtonBounds_.isEmpty() ? lastMousePos_.x : favoritesButtonBounds_.x;
-		    const float menuY = (favoritesButtonBounds_.isEmpty() ? lastMousePos_.y : favoritesButtonBounds_.bottom()) + 6.0f;
-		    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(menuX, menuY));
-		    invalidateCache();
-		}
+const float menuX = lastMousePos_.x;
+    const float menuY = lastMousePos_.y + 6.0f;
+    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(menuX, menuY));
+    invalidateCache();
+}
 
-		void FileBrowser::showAddFolderMenu() {
+void FileBrowser::showAddFolderMenu() {
 		    if (!popupMenu_) return;
 
 		    popupMenu_->clear();
@@ -3295,26 +2581,26 @@ void FileBrowser::renderSearchBox(NUIRenderer& renderer) {
 		}
 
 void FileBrowser::showSortMenu() {
-		    if (!popupMenu_) return;
+    if (!popupMenu_) return;
 
-	    popupMenu_->clear();
-	    popupMenuTargetPath_.clear();
-	    popupMenuTargetIsDirectory_ = false;
+    popupMenu_->clear();
+    popupMenuTargetPath_.clear();
+    popupMenuTargetIsDirectory_ = false;
 
-	    popupMenu_->addRadioItem("Name", "sort_mode", sortMode_ == SortMode::Name, [this]() { setSortMode(SortMode::Name); });
-	    popupMenu_->addRadioItem("Type", "sort_mode", sortMode_ == SortMode::Type, [this]() { setSortMode(SortMode::Type); });
-	    popupMenu_->addRadioItem("Size", "sort_mode", sortMode_ == SortMode::Size, [this]() { setSortMode(SortMode::Size); });
-	    popupMenu_->addRadioItem("Modified", "sort_mode", sortMode_ == SortMode::Modified, [this]() { setSortMode(SortMode::Modified); });
-	    popupMenu_->addSeparator();
-	    popupMenu_->addCheckbox("Ascending", sortAscending_, [this](bool checked) { setSortAscending(checked); });
+    popupMenu_->addRadioItem("Name", "sort_mode", sortMode_ == SortMode::Name, [this]() { setSortMode(SortMode::Name); });
+    popupMenu_->addRadioItem("Type", "sort_mode", sortMode_ == SortMode::Type, [this]() { setSortMode(SortMode::Type); });
+    popupMenu_->addRadioItem("Size", "sort_mode", sortMode_ == SortMode::Size, [this]() { setSortMode(SortMode::Size); });
+    popupMenu_->addRadioItem("Modified", "sort_mode", sortMode_ == SortMode::Modified, [this]() { setSortMode(SortMode::Modified); });
+    popupMenu_->addSeparator();
+    popupMenu_->addCheckbox("Ascending", sortAscending_, [this](bool checked) { setSortAscending(checked); });
 
-	    const float menuX = sortButtonBounds_.x;
-	    const float menuY = sortButtonBounds_.bottom() + 6.0f;
-		    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(menuX, menuY));
-		    invalidateCache();
-		}
+    const float menuX = lastMousePos_.x;
+    const float menuY = lastMousePos_.y + 6.0f;
+    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(menuX, menuY));
+    invalidateCache();
+}
 
-		void FileBrowser::showQuickFilterMenu() {
+void FileBrowser::showQuickFilterMenu() {
 		    if (!popupMenu_) return;
 
 		    popupMenu_->clear();
@@ -3331,49 +2617,49 @@ void FileBrowser::showSortMenu() {
 		    });
 		    popupMenu_->addRadioItem("Projects", "quick_filter", activeQuickFilter_ == QuickFilter::Projects, [this]() {
 		        activeQuickFilter_ = QuickFilter::Projects;
-		        applyFilter();
-		    });
-		    popupMenu_->addRadioItem("Folders", "quick_filter", activeQuickFilter_ == QuickFilter::Folders, [this]() {
-		        activeQuickFilter_ = QuickFilter::Folders;
-		        applyFilter();
-		    });
+applyFilter();
+    });
+    popupMenu_->addRadioItem("Folders", "quick_filter", activeQuickFilter_ == QuickFilter::Folders, [this]() {
+        activeQuickFilter_ = QuickFilter::Folders;
+        applyFilter();
+    });
 
-		    const float menuX = filterButtonBounds_.isEmpty() ? sortButtonBounds_.x : filterButtonBounds_.x;
-		    const float menuY = (filterButtonBounds_.isEmpty() ? sortButtonBounds_.bottom() : filterButtonBounds_.bottom()) + 6.0f;
-		    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(menuX, menuY));
-		    invalidateCache();
-		}
+    const float menuX = lastMousePos_.x;
+    const float menuY = lastMousePos_.y + 6.0f;
+    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(menuX, menuY));
+    invalidateCache();
+}
 
-		void FileBrowser::showTagFilterMenu() {
-		    if (!popupMenu_) return;
+void FileBrowser::showTagFilterMenu() {
+    if (!popupMenu_) return;
 
-		    popupMenu_->clear();
-		    popupMenuTargetPath_.clear();
-		    popupMenuTargetIsDirectory_ = false;
+    popupMenu_->clear();
+    popupMenuTargetPath_.clear();
+    popupMenuTargetIsDirectory_ = false;
 
-		    popupMenu_->addRadioItem("All", "tag_filter", activeTagFilter_.empty(), [this]() {
-		        activeTagFilter_.clear();
-		        applyFilter();
-		    });
+    popupMenu_->addRadioItem("All", "tag_filter", activeTagFilter_.empty(), [this]() {
+        activeTagFilter_.clear();
+        applyFilter();
+    });
 
-		    auto tags = getAllTagsSorted();
-		    if (!tags.empty()) {
-		        popupMenu_->addSeparator();
-		        for (const auto& t : tags) {
-		            popupMenu_->addRadioItem(t, "tag_filter", activeTagFilter_ == t, [this, tag = t]() {
-		                activeTagFilter_ = tag;
-		                applyFilter();
-		            });
-		        }
-		    }
+    auto tags = getAllTagsSorted();
+    if (!tags.empty()) {
+        popupMenu_->addSeparator();
+        for (const auto& t : tags) {
+            popupMenu_->addRadioItem(t, "tag_filter", activeTagFilter_ == t, [this, tag = t]() {
+                activeTagFilter_ = tag;
+                applyFilter();
+            });
+        }
+    }
 
-		    const float menuX = tagsButtonBounds_.isEmpty() ? (sortButtonBounds_.x - 150.0f) : tagsButtonBounds_.x;
-		    const float menuY = (tagsButtonBounds_.isEmpty() ? sortButtonBounds_.bottom() : tagsButtonBounds_.bottom()) + 6.0f;
-		    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(menuX, menuY));
-		    invalidateCache();
-		}
+    const float menuX = lastMousePos_.x;
+    const float menuY = lastMousePos_.y + 6.0f;
+    attachAndShowPopupMenu(this, popupMenu_, NUIPoint(menuX, menuY));
+    invalidateCache();
+}
 
-		void FileBrowser::showItemContextMenu(const FileItem& item, const NUIPoint& position) {
+void FileBrowser::showItemContextMenu(const FileItem& item, const NUIPoint& position) {
 		    if (!popupMenu_) return;
 
 	    popupMenu_->clear();
@@ -3541,15 +2827,15 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
 
     // === GLASS/PRO SCROLLBAR STYLE ===
     // Adapted from NUIScrollbar::drawEnhancedTrack & drawEnhancedThumb
-    
+
     // 1. Draw Track (Subtle Gradient)
     const float trackAlphaMul = (hot ? 0.18f : 0.08f) * opacity;
     NUIColor trackBase = themeManager.getColor("border").withAlpha(std::clamp(trackAlphaMul, 0.0f, 1.0f));
     NUIColor trackTop = trackBase.lightened(0.03f);
     NUIColor trackBottom = trackBase.darkened(0.06f);
-    
+
     NUIRect trackRect(trackX, scrollbarY, trackWidth, scrollbarHeight);
-    
+
     // Draw gradient track background
     for (int i = 0; i < 4; ++i) {
         float factor = static_cast<float>(i) / 3.0f;
@@ -3559,7 +2845,7 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
         gradientRect.height -= i * 0.5f;
         renderer.fillRoundedRect(gradientRect, radius, gradientColor);
     }
-    
+
     // Track Inner Highlight
     NUIRect highlightRect = trackRect;
     highlightRect.x += 1.0f;
@@ -3574,11 +2860,11 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
     // 2. Draw Thumb (Glass w/ Gradient & Markers)
     float thumbY = scrollbarY + scrollbarThumbY_;
     NUIRect thumbRect(trackX, thumbY, trackWidth, scrollbarThumbHeight_);
-    
+
     // Determine thumb base color
     const bool thumbPressed = isDraggingScrollbar_;
     const bool thumbHot = thumbPressed || scrollbarHovered_;
-    
+
     // Use textSecondary as base (neutral grey/white)
     NUIColor thumbBase = themeManager.getColor("textSecondary");
     if (thumbPressed) {
@@ -3615,14 +2901,14 @@ void FileBrowser::renderScrollbar(NUIRenderer& renderer) {
         float markerSpacing = 3.0f;
         float totalMarkerHeight = (markerHeight * 2) + markerSpacing;
         float markerY = visualThumb.y + (visualThumb.height - totalMarkerHeight) * 0.5f;
-        
+
         NUIColor markerColor = AestraUI::NUIColor::white().withAlpha((thumbHot ? 0.4f : 0.2f) * opacity);
-        
+
         // Top marker
-        renderer.fillRoundedRect(NUIRect(visualThumb.x + 3.0f, markerY, visualThumb.width - 6.0f, markerHeight), 
+        renderer.fillRoundedRect(NUIRect(visualThumb.x + 3.0f, markerY, visualThumb.width - 6.0f, markerHeight),
                                  1.0f, markerColor);
         // Bottom marker
-        renderer.fillRoundedRect(NUIRect(visualThumb.x + 3.0f, markerY + markerHeight + markerSpacing, visualThumb.width - 6.0f, markerHeight), 
+        renderer.fillRoundedRect(NUIRect(visualThumb.x + 3.0f, markerY + markerHeight + markerSpacing, visualThumb.width - 6.0f, markerHeight),
                                  1.0f, markerColor);
     }
 
@@ -3644,7 +2930,7 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
     const BrowserLayout browserLayout = computeBrowserLayout();
     float scrollbarX = browserLayout.list.right() - scrollbarWidth_ - 2.0f;
     float scrollbarY = browserLayout.list.y;
-    
+
     // Use the member variable scrollbarTrackHeight_ for consistency
     // It's set in onResize() and used for thumb calculation
 
@@ -3673,15 +2959,15 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
         // Clamp scroll offset
         scrollOffset_ = std::max(0.0f, std::min(scrollOffset_, maxScroll));
         targetScrollOffset_ = scrollOffset_;
-        
+
         invalidateCache();
         return true;
     }
 
     // Check if mouse is over scrollbar area (with padding for easier clicking)
-    bool inScrollbarArea = (event.position.x >= scrollbarX - 10 && 
+    bool inScrollbarArea = (event.position.x >= scrollbarX - 10 &&
                              event.position.x <= scrollbarX + scrollbarWidth_ + 10 &&
-                             event.position.y >= scrollbarY - 10 && 
+                             event.position.y >= scrollbarY - 10 &&
                              event.position.y <= scrollbarY + scrollbarTrackHeight_ + 10);
 
     if (scrollbarHovered_ != inScrollbarArea) {
@@ -3727,7 +3013,7 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
             // Clamp scroll offset
             scrollOffset_ = std::max(0.0f, std::min(scrollOffset_, maxScroll));
             targetScrollOffset_ = scrollOffset_;
-            
+
             invalidateCache();
         }
         return true;
@@ -3765,7 +3051,6 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
     const BrowserNavAction action = navHits_[newHovered].action;
     activeNavAction_ = action;
     activeNavPath_ = navHits_[newHovered].path;
-    favoritesButtonBounds_ = navHits_[newHovered].bounds;
     auto setFilter = [this](QuickFilter filter) {
         if (activeQuickFilter_ != filter) {
             activeQuickFilter_ = filter;
@@ -3966,7 +3251,7 @@ void FileBrowser::applyFilter() {
     const bool hasNameFilter = !query.empty();
     const bool hasTagFilter = !activeTagFilter_.empty();
     const bool hasQuickFilter = activeQuickFilter_ != QuickFilter::All;
-    
+
     if (!hasNameFilter && !hasTagFilter && !hasQuickFilter) {
         // No filter active, display all root items
         updateDisplayList();
@@ -3981,7 +3266,7 @@ void FileBrowser::applyFilter() {
     // Prepare search query
     std::string needle = query;
     std::transform(needle.begin(), needle.end(), needle.begin(), [](unsigned char c){ return std::tolower(c); });
-    
+
     // Hybrid Search Rules
     bool isExtensionSearch = !needle.empty() && needle.front() == '.';
     bool isSubstringSearch = !isExtensionSearch && needle.find('.') != std::string::npos;
@@ -3989,7 +3274,7 @@ void FileBrowser::applyFilter() {
 
     // Flatten all items (including children) for comprehensive search
     std::vector<const FileItem*> allItems;
-    std::function<void(const std::vector<FileItem>&)> gatherItems = 
+    std::function<void(const std::vector<FileItem>&)> gatherItems =
         [&](const std::vector<FileItem>& items) {
         for (const auto& item : items) {
             allItems.push_back(&item);
@@ -4016,7 +3301,7 @@ void FileBrowser::applyFilter() {
                 } else {
                     matchesSearch = false;
                 }
-            } 
+            }
             else if (isSubstringSearch) {
                 // Rule 2: Substring-ish (all chars in order, contiguous ideally)
                 // For "kick.wav" seeking "kick.wav" -> exact substring
@@ -4025,29 +3310,29 @@ void FileBrowser::applyFilter() {
                 if (matchesSearch) {
                     score = 500 - static_cast<int>(foundPos); // Prefer earlier matches
                 }
-            } 
+            }
             else {
                 // Rule 3: Fuzzy Subsequence with Scoring
                 // -1 gap, +10 start, +5 start of word, +5 contiguous
                 // Penalty: -len/10
-                
+
                 size_t nIdx = 0;
                 size_t hIdx = 0;
                 int gapPenalty = 0;
                 int bonuses = 0;
                 int contiguousRun = 0;
                 bool firstCharMatched = false;
-                
+
                 // Track start of match for scoring
                 int firstMatchIdx = -1;
 
                 while (nIdx < needle.length() && hIdx < hay.length()) {
                     if (needle[nIdx] == hay[hIdx]) {
                         if (firstMatchIdx == -1) firstMatchIdx = static_cast<int>(hIdx);
-                        
+
                         // Start of string bonus
                         if (hIdx == 0) bonuses += 10;
-                        
+
                         // Start of word bonus (check prev char for separator)
                         if (hIdx > 0) {
                             char prev = hay[hIdx - 1];
@@ -4055,11 +3340,11 @@ void FileBrowser::applyFilter() {
                                 bonuses += 5;
                             }
                         }
-                        
+
                         // Contiguous bonus
                         if (nIdx > 0 && hIdx > 0 && needle[nIdx-1] == hay[hIdx-1]) { // Logic check: actually just checking if we matched prev loop
                             // This logic is slightly flawed for "contiguous in haystack", simplistic approach:
-                            contiguousRun++; 
+                            contiguousRun++;
                             if (contiguousRun > 0) bonuses += 5;
                         } else {
                             contiguousRun = 0;
@@ -4068,22 +3353,22 @@ void FileBrowser::applyFilter() {
                         nIdx++;
                     } else {
                          // Gap
-                         if (firstMatchIdx != -1) gapPenalty -= 1; // Only penalize gaps inside the match span? 
+                         if (firstMatchIdx != -1) gapPenalty -= 1; // Only penalize gaps inside the match span?
                          // Or simple: penalize every skipped char
                     }
                     hIdx++; // Always advance haystack
                 }
 
                 matchesSearch = (nIdx == needle.length()); // Found all chars
-                
+
                 if (matchesSearch) {
                     // Simple fuzzy score calculation re-pass or simplification
                     // Since the above verification loop is greedy, it might not find optimal alignment.
                     // For UI responsiveness, greedy is usually fine.
-                    
+
                     // Add penalty for total length to prefer shorter files
                     int lengthPenalty = static_cast<int>(hay.length()) / 10;
-                    
+
                     score = bonuses + gapPenalty - lengthPenalty;
                 }
             }
@@ -4168,7 +3453,7 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
              parts.push_back(root.root_name()); // Handle "C:" case
              if (parts.back().empty()) parts.back() = "Root"; // Fallback
         }
-        
+
         // Relative parts
         // Use lexical relative to avoid disk I/O or symlink confusion in rendering
         std::filesystem::path rel = p.lexically_relative(root);
@@ -4202,7 +3487,7 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
     std::vector<std::string> partDisplayNames; // Store ellipsized names
     partWidths.reserve(parts.size());
     partDisplayNames.reserve(parts.size());
-    
+
     float totalWidth = 0.0f;
     const float maxChipWidth = 120.0f; // Max width per breadcrumb chip
 
@@ -4211,11 +3496,11 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
         if (!partName.empty() && partName.back() == std::filesystem::path::preferred_separator) {
             partName.pop_back();
         }
-        
+
         // Ellipsize if too long
         std::string displayName = partName;
         float textW = renderer.measureText(partName, fontSize).width;
-        
+
         if (textW > maxChipWidth) {
              displayName = ellipsizeMiddle(renderer, partName, fontSize, maxChipWidth);
              textW = renderer.measureText(displayName, fontSize).width;
@@ -4224,7 +3509,7 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
         partDisplayNames.push_back(displayName);
         partWidths.push_back(textW);
         totalWidth += textW + chipPadX * 2.0f;
-        
+
         if (i < parts.size() - 1) {
             totalWidth += separatorW;
         }
@@ -4236,7 +3521,7 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
     // 3. Always show Parent (index size-2) if it exists and fits.
     // 4. Fill remaining space from the right (moving backwards from Parent-1).
     // 5. Gap between Root and first visible right item = "...".
-    
+
     const float availableWidth = breadcrumbRect.width;
     const auto ellipsisSize = renderer.measureText("...", fontSize);
     const float ellipsisW = ellipsisSize.width + chipPadX * 2.0f;
@@ -4246,9 +3531,9 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
     if (parts.size() > 1) {
         fixedWidth += (partWidths.back() + chipPadX * 2.0f) + separatorW;
         // Also account for separator after root if > 1 item
-        fixedWidth += separatorW; 
+        fixedWidth += separatorW;
     }
-    
+
     // Check if we need ellipsis (if size > 2, we might have a gap)
     bool hasGap = false;
     if (parts.size() > 2) {
@@ -4258,7 +3543,7 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
     }
 
     float availableForMiddle = availableWidth - fixedWidth;
-    
+
     // We strictly want to show Parent (size-2) if we can.
     size_t rightStartIndex = parts.size() - 1; // Default starts at Current
 
@@ -4266,19 +3551,19 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
         // Try to fit Parent (size-2)
         int parentIdx = static_cast<int>(parts.size()) - 2;
         float parentW = partWidths[parentIdx] + chipPadX * 2.0f + separatorW;
-        
+
         // If Parent fits, we include it. In fact, user requested "always have 3".
         // We will try our best to fit it. If it doesn't fit, we might have to ellipsize it further?
         // For now, standard fitting logic.
-        
+
         // Start filling from Parent backwards
         rightStartIndex = parts.size() - 1; // Includes Current
-        
+
         float currentRightWidth = 0.0f;
         // Loop from Parent down to 1
         for (int i = static_cast<int>(parts.size()) - 2; i >= 1; --i) {
              float partW = partWidths[static_cast<size_t>(i)] + chipPadX * 2.0f + separatorW;
-             
+
              if (currentRightWidth + partW <= availableForMiddle) {
                  currentRightWidth += partW;
                  rightStartIndex = static_cast<size_t>(i);
@@ -4286,15 +3571,15 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
                  break;
              }
         }
-        
+
     } else if (parts.size() == 2) {
         // Root + Current only. No gap.
-        rightStartIndex = 1; 
+        rightStartIndex = 1;
     } else {
         // Root only
         rightStartIndex = 1;
     }
-    
+
     // RENDERING
     float currentX = breadcrumbRect.x;
     breadcrumbs_.clear();
@@ -4306,19 +3591,19 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
     } else {
          buildPath = parts[0];
     }
-    
+
     {
         std::string partName = partDisplayNames[0];
         const float chipW = partWidths[0] + chipPadX * 2.0f;
         const NUIRect partRect(currentX, chipRowRect.y, chipW, chipRowRect.height);
-        
+
         Breadcrumb b;
         b.name = partName;
         b.path = buildPath.string();
         b.x = currentX;
         b.width = chipW;
         breadcrumbs_.push_back(b);
-        
+
         bool isHovered = (0 == hoveredBreadcrumbIndex_);
         // If it's the only one, it's also the last one
         bool isLast = (parts.size() == 1);
@@ -4332,12 +3617,12 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
          } else {
              renderer.fillRoundedRect(partRect, chipRadius, NUIThemeManager::getInstance().getColor("hover").withAlpha(0.44f));
         }
-        
+
         NUIColor color = isHovered ? NUIColor::white() : (isLast ? selectedColor_ : textColor_);
         renderer.drawText(partName, NUIPoint(currentX + chipPadX, breadcrumbTextY), fontSize, color);
-        
+
         currentX += chipW;
-        
+
         // Draw separator after root if we have more items
         if (parts.size() > 1) {
             renderer.drawText(separatorText, NUIPoint(currentX + separatorPad * 0.5f, breadcrumbTextY), fontSize, textColor_.withAlpha(0.45f));
@@ -4354,16 +3639,16 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
         b.name = "...";
         b.x = currentX;
         b.width = ellipsisW;
-        
+
         // Populate hidden paths
-        // We start from where buildPath currently is (parts[0]) 
+        // We start from where buildPath currently is (parts[0])
         // and append parts up to rightStartIndex-1.
         auto tempPath = std::filesystem::path(buildPath);
         for (size_t k = 1; k < rightStartIndex; ++k) {
              tempPath /= parts[k];
              b.hiddenPaths.push_back(tempPath.string());
         }
-        
+
         breadcrumbs_.push_back(b);
 
         // Render ellipsis
@@ -4376,14 +3661,14 @@ void FileBrowser::renderInteractiveBreadcrumbs(NUIRenderer& renderer) {
              renderer.fillRoundedRect(partRect, chipRadius, hoverColor_);
              renderer.strokeRoundedRect(partRect, chipRadius, 1, hoverColor_.lightened(0.2f));
         }
-        
+
         renderer.drawText("...", NUIPoint(currentX + chipPadX, breadcrumbTextY), fontSize, textColor_.withAlpha(0.55f));
         currentX += ellipsisW;
-        
+
         // Separator after ellipsis
         renderer.drawText(separatorText, NUIPoint(currentX + separatorPad * 0.5f, breadcrumbTextY), fontSize, textColor_.withAlpha(0.45f));
         currentX += separatorW;
-        
+
         // Update buildPath for the next visible items
         for (size_t k = 1; k < rightStartIndex; ++k) {
              buildPath /= parts[k];
@@ -4439,7 +3724,7 @@ bool FileBrowser::handleBreadcrumbMouseEvent(const NUIMouseEvent& event) {
     if (breadcrumbs_.empty() || breadcrumbBounds_.isEmpty()) return false;
     const float y = breadcrumbBounds_.y;
     const float h = breadcrumbBounds_.height;
-    
+
     int hoveredIndex = -1;
 
     for (size_t i = 0; i < breadcrumbs_.size(); ++i) {
@@ -4447,7 +3732,7 @@ bool FileBrowser::handleBreadcrumbMouseEvent(const NUIMouseEvent& event) {
         const float w = crumb.width > 0.0f ? crumb.width : static_cast<float>(crumb.name.size()) * 7.0f;
         if (event.position.x >= crumb.x && event.position.x <= crumb.x + w &&
             event.position.y >= y && event.position.y <= y + h) {
-            
+
             hoveredIndex = static_cast<int>(i);
 
             if (event.pressed && event.button == NUIMouseButton::Left) {
@@ -4461,11 +3746,11 @@ bool FileBrowser::handleBreadcrumbMouseEvent(const NUIMouseEvent& event) {
             }
         }
     }
-    
+
     if (hoveredIndex != hoveredBreadcrumbIndex_) {
         hoveredBreadcrumbIndex_ = hoveredIndex;
     }
-    
+
     return false;
 }
 
@@ -4480,10 +3765,10 @@ bool FileBrowser::handleSearchBoxMouseEvent(const NUIMouseEvent& event) {
 void FileBrowser::setPreviewPanelVisible(bool visible) {
     if (previewPanelVisible_ == visible) return;
     previewPanelVisible_ = visible;
-    
+
     // Trigger layout update and ensuring scrolling is clamped
     NUIRect b = getBounds();
-    onResize(b.width, b.height); 
+    onResize(b.width, b.height);
     invalidateCache();
 }
 */
@@ -4506,14 +3791,14 @@ void FileBrowser::saveState(const std::string& filePath) {
         Aestra::Log::warning("[FileBrowser] Failed to save state to: " + filePath);
         return;
     }
-    
+
     // Save as simple key=value format
     file << "currentPath=" << currentPath_ << "\n";
     file << "rootPath=" << rootPath_ << "\n";
     file << "scrollOffset=" << scrollOffset_ << "\n";
     file << "sortMode=" << static_cast<int>(sortMode_) << "\n";
     file << "sortAscending=" << (sortAscending_ ? "1" : "0") << "\n";
-    
+
     // Save expanded folders
     file << "expandedFolders=";
     bool first = true;
@@ -4531,7 +3816,7 @@ void FileBrowser::saveState(const std::string& filePath) {
         saveExpanded(item);
     }
     file << "\n";
-    
+
     // Save favorites
     file << "favorites=";
     for (size_t i = 0; i < favoritesPaths_.size(); ++i) {
@@ -4562,7 +3847,7 @@ void FileBrowser::saveState(const std::string& filePath) {
         firstTagEntry = false;
     }
     file << "\n";
-    
+
     file.close();
     Aestra::Log::info("[FileBrowser] State saved to: " + filePath);
 }
@@ -4573,7 +3858,7 @@ void FileBrowser::loadState(const std::string& filePath) {
         Aestra::Log::info("[FileBrowser] No saved state found at: " + filePath);
         return;
     }
-    
+
     std::string line;
     std::string loadedCurrentPath;
     std::string loadedRootPath;
@@ -4592,14 +3877,14 @@ void FileBrowser::loadState(const std::string& filePath) {
 	    bool hasTagFilter = false;
 	    std::unordered_map<std::string, std::vector<std::string>> loadedTagsByPath;
 	    bool hasTags = false;
-	    
+
 	    while (std::getline(file, line)) {
 	        size_t eqPos = line.find('=');
 	        if (eqPos == std::string::npos) continue;
-        
+
         std::string key = line.substr(0, eqPos);
         std::string value = line.substr(eqPos + 1);
-        
+
         if (key == "currentPath" && !value.empty()) {
             loadedCurrentPath = value;
         }
@@ -4706,7 +3991,7 @@ void FileBrowser::loadState(const std::string& filePath) {
 	            }
 	        }
 	    }
-	    
+
 	    file.close();
 
 	    // Apply settings in safe order (sort/root before directory load)
@@ -4736,7 +4021,7 @@ void FileBrowser::loadState(const std::string& filePath) {
         loadDirectoryContents();
         updateBreadcrumbs();
     }
-    
+
     // Re-expand saved folders
     std::function<void(FileItem&)> expandSaved = [&](FileItem& item) {
         if (item.isDirectory) {
@@ -4758,7 +4043,7 @@ void FileBrowser::loadState(const std::string& filePath) {
     for (auto& item : rootItems_) {
         expandSaved(item);
 	    }
-	    
+
 	    updateDisplayList();
 	    if (isFilterActive()) {
 	        applyFilter();
@@ -4780,7 +4065,7 @@ void FileBrowser::loadState(const std::string& filePath) {
 // Issue #120: Get list of currently expanded folder paths for UIState persistence
 std::vector<std::string> FileBrowser::getExpandedFolders() const {
     std::vector<std::string> expanded;
-    
+
     std::function<void(const FileItem&)> collectExpanded = [&](const FileItem& item) {
         if (item.isDirectory && item.isExpanded) {
             expanded.push_back(item.path);
@@ -4789,21 +4074,21 @@ std::vector<std::string> FileBrowser::getExpandedFolders() const {
             }
         }
     };
-    
+
     for (const auto& item : rootItems_) {
         collectExpanded(item);
     }
-    
+
     return expanded;
 }
 
 // Issue #120: Expand folders from a list of paths (used when restoring UIState)
 void FileBrowser::expandFolders(const std::vector<std::string>& folders) {
     if (folders.empty()) return;
-    
+
     std::function<void(FileItem&)> expandMatching = [&](FileItem& item) {
         if (!item.isDirectory) return;
-        
+
         for (const auto& path : folders) {
             if (item.path == path) {
                 if (!item.hasLoadedChildren) {
@@ -4813,16 +4098,16 @@ void FileBrowser::expandFolders(const std::vector<std::string>& folders) {
                 break;
             }
         }
-        
+
         for (auto& child : item.children) {
             expandMatching(child);
         }
     };
-    
+
     for (auto& item : rootItems_) {
         expandMatching(item);
     }
-    
+
     updateDisplayList();
     invalidateCache();
 }
@@ -4831,16 +4116,16 @@ void FileBrowser::showHiddenBreadcrumbMenu(const std::vector<std::string>& hidde
     if (!popupMenu_ || hiddenPaths.empty()) return;
 
     popupMenu_->clear();
-    
+
     // Header
-    // popupMenu_->addItem("Hidden Folders", [](){}); 
+    // popupMenu_->addItem("Hidden Folders", [](){});
     // popupMenu_->addSeparator();
 
     for (const auto& path : hiddenPaths) {
         std::filesystem::path p(path);
         std::string name = p.filename().string();
         if (name.empty()) name = p.string();
-        
+
         popupMenu_->addItem(name, [this, path]() {
             navigateTo(path);
         });
