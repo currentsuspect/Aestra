@@ -1936,6 +1936,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
                 // Bounds
                 const int64_t totalFrames = static_cast<int64_t>(clip.totalFrames);
+                const uint64_t totalFrameCount = static_cast<uint64_t>(totalFrames);
                 if (totalFrames > 0 && phase >= static_cast<double>(totalFrames)) {
                     continue;
                 }
@@ -2016,8 +2017,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 // Catmull-Rom 4-point on mono data
                                 float s0 = (idx > 0) ? data[idx - 1] : data[idx];
                                 float s1 = data[idx];
-                                float s2 = (idx + 1 < totalFrames) ? data[idx + 1] : data[idx];
-                                float s3 = (idx + 2 < totalFrames) ? data[idx + 2] : s2;
+                                float s2 = (idx + 1 < totalFrameCount) ? data[idx + 1] : data[idx];
+                                float s3 = (idx + 2 < totalFrameCount) ? data[idx + 2] : s2;
                                 double f = frac;
                                 sample = static_cast<float>(0.5 * ((2.0 * s1) + (-s0 + s2) * f +
                                                                    (2.0 * s0 - 5.0 * s1 + 4.0 * s2 - s3) * f * f +
