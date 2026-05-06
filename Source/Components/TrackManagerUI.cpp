@@ -2086,10 +2086,10 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         }
     }
 
-    // Rebuild graph if any plugin operations marked it dirty (plugin insert/remove via pending tasks).
-    // This mirrors the graph dirty check in AestraApp::run() so plugin changes take effect
-    // immediately rather than waiting for a clip move.
-    if (m_trackManager && m_onGraphDirty && m_trackManager->consumeGraphDirty()) {
+    // Plugin insert/remove requests go through the PlaybackGraphController.
+    // TrackManagerUI does NOT consume graph dirty state here - the controller drains in AestraApp::run().
+    // UI code should only request rebuilds via requestAudioGraphRebuild().
+    if (m_trackManager && m_onGraphDirty) {
         m_onGraphDirty();
     }
 

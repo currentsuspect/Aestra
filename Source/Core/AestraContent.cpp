@@ -42,6 +42,7 @@
 #include "AudioEngine.h"
 #include "ChannelSlotMap.h"
 #include "ClipSource.h"
+#include "PlaybackGraphController.h"
 #include "MiniAudioDecoder.h"
 #include "MixerViewModel.h"
 #include "Plugin/SamplerPlugin.h"
@@ -111,8 +112,8 @@ AestraContent::AestraContent() {
             m_trackManager->markModified();
     });
     m_pluginController->setOnEffectChainChanged([this]() {
-        if (m_trackManager) {
-            m_trackManager->requestAudioGraphRebuild(
+        if (m_playbackGraphController) {
+            m_playbackGraphController->requestRebuild(
                 TrackManager::GraphDirtyReason::EffectChainChanged);
         }
     });
@@ -161,21 +162,14 @@ AestraContent::AestraContent() {
         m_audioEngine->setLoopEnabled(endBeat > startBeat);
     });
 
-    // Wire TrackManagerUI's internal graph dirty handling to the main app update path.
-    // TrackManagerUI::onUpdate() calls consumeGraphDirty() to drain the flag set by
-    // pending plugin tasks (e.g., async plugin insertion from TrackManagerUI's drag-drop).
-    // That triggers this callback which mirrors the AestraApp::run() graph rebuild path
-    // directly, so plugin effects take effect immediately without needing a clip move.
+    // Wire TrackManagerUI's internal graph dirty handling to the PlaybackGraphController.
+    // TrackManagerUI::onUpdate() may call requestRebuild() for async plugin operations.
+    // The actual graph drain happens in AestraApp::run() through the controller.
     m_trackManagerUI->setOnGraphDirty([this]() {
-        if (!m_audioEngine || !m_trackManager) {
-            return;
+        if (m_playbackGraphController) {
+            m_playbackGraphController->requestRebuild(
+                TrackManager::GraphDirtyReason::EffectChainChanged);
         }
-        auto graph = AudioGraphBuilder::buildFromTrackManager(*m_trackManager, m_audioEngine->getSampleRate());
-        m_audioEngine->setGraph(graph);
-        if (auto slotMap = m_trackManager->getChannelSlotMapShared()) {
-            m_audioEngine->setChannelSlotMap(slotMap);
-        }
-        m_trackManager->rebuildAndPushSnapshot();
     });
 
     // Audition Mode integration - sends track to Audition queue and switches mode
@@ -2562,6 +2556,13 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
     if (m_pianoRollPanel) {
         m_pianoRollPanel->setAudioEngine(m_audioEngine);
     }
+
+    // Initialize the playback graph controller when engine is available
+    if (m_audioEngine && m_trackManager) {
+        m_playbackGraphController = std::make_unique<Aestra::Audio::PlaybackGraphController>();
+        m_playbackGraphController->setTrackManager(m_trackManager.get());
+        m_playbackGraphController->setAudioEngine(m_audioEngine);
+    }
     if (m_audioEngine && m_trackManager) {
         m_audioEngine->setUnitManager(&m_trackManager->getUnitManager());
         m_audioEngine->setPatternPlaybackEngine(&m_trackManager->getPatternPlaybackEngine());
@@ -2588,6 +2589,10 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
     AESTRA_LOG_DEBUG("AestraContent::setAudioEngine called - Initializing View State");
     // Ensure correct initial state now that engine is valid
     setViewFocus(ViewFocus::Timeline);
+}
+
+Aestra::Audio::PlaybackGraphController* AestraContent::getPlaybackGraphController() const {
+    return m_playbackGraphController.get();
 }
 
 // =============================================================================

@@ -51,6 +51,7 @@ namespace Aestra::Audio {
     class WindowPanel;
     class AestraHistoryPanel;
     class AuditionEngine;  // For Audition Mode
+    class PlaybackGraphController;
 }
 
 namespace Aestra {
@@ -222,6 +223,8 @@ public:
     void setAudioEngine(Aestra::Audio::AudioEngine* engine);
     /** @brief Propagate transport tempo to tempo-aware internal plugins. */
     void setPluginTempo(float bpm);
+    /** @brief Get the playback graph controller for canonical graph invalidation. */
+    Aestra::Audio::PlaybackGraphController* getPlaybackGraphController() const;
 
     /** @brief Reset the workspace back to the default starter project. */
     void resetToDefaultProject();  // Clear and recreate default tracks
@@ -352,6 +355,9 @@ private:
 
     std::shared_ptr<Aestra::Audio::SampleEditorPanel> m_sampleEditorPanel;
     AestraUI::NUIRect m_sampleEditorRect{0.0f, 0.0f, 640.0f, 430.0f};
+
+    // Playback graph controller - single authoritative drain for graph rebuilds
+    std::unique_ptr<Aestra::Audio::PlaybackGraphController> m_playbackGraphController;
     Aestra::Audio::UnitID m_sampleEditorUnitId{0};
     bool m_sampleEditorDragging{false};
     AestraUI::NUIPoint m_sampleEditorDragStartMouseOverlay{0.0f, 0.0f};
