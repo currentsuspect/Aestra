@@ -47,7 +47,7 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, 
         // Copy Routing
         trackState.mainOutputId = channel->getMainOutputId();
         trackState.sends = channel->getSends();
-        trackState.effectChain = &channel->getEffectChain();
+        trackState.effectChainSnapshot = channel->getEffectChain().getSnapshot();
 
         graph.tracks.push_back(std::move(trackState));
     }

@@ -17,7 +17,9 @@ EffectChain::~EffectChain() = default;
 // ==============================
 
 void EffectChain::publishSnapshot() {
-    m_currentSnapshot = std::make_shared<EffectChainSnapshot>(m_slots);
+    auto snapshot = std::make_shared<EffectChainSnapshot>(m_slots);
+    snapshot->isChainBypassed = m_chainBypassed.load(std::memory_order_acquire);
+    m_currentSnapshot = snapshot;
 }
 
 // ==============================
@@ -314,6 +316,92 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
 
             for (uint32_t ch = 0; ch < blendChannels; ++ch) {
                 const float* dry = m_dryBuffer.data() + ch * numFrames;
+                float* wet = buffer[ch];
+
+                for (uint32_t i = 0; i < numFrames; ++i) {
+                    wet[i] = dry[i] * dryGain + wet[i] * wetGain;
+                }
+            }
+        }
+        // dryWet <= 0.001f means fully dry, skip processing
+    }
+}
+
+// ==============================
+// EffectChainSnapshot Processing (Pass 3)
+// ==============================
+
+void EffectChainSnapshot::process(float** buffer, uint32_t numChannels, uint32_t numFrames,
+                                   const float* const* sidechainInputs, uint32_t numSidechainChannels,
+                                   float* dryBuffer) const {
+    // Skip if entire chain is bypassed
+    if (isChainBypassed) {
+        return;
+    }
+
+    // Process each slot in sequence
+    for (size_t slotIdx = 0; slotIdx < MAX_SLOTS; ++slotIdx) {
+        const auto& slot = m_slots[slotIdx];
+
+        // Skip empty or bypassed slots
+        if (slot.isEmpty() || slot.bypassed) {
+            continue;
+        }
+
+        auto& plugin = slot.plugin;
+        if (!plugin) {
+            continue;
+        }
+
+        if (!plugin->isActive()) {
+            continue;
+        }
+
+        float dryWet = slot.dryWetMix;
+
+        const PluginInfo& pluginInfo = plugin->getInfo();
+        const bool isBuiltInComp = (pluginInfo.id == "com.Aestrastudios.comp");
+        const uint32_t requestedInputChannels = numChannels + numSidechainChannels;
+        const bool canUseSidechain = sidechainInputs && numSidechainChannels > 0 &&
+                                     (pluginInfo.numAudioInputs >= requestedInputChannels || isBuiltInComp);
+        std::array<const float*, 4> inputChannels{};
+        const float* const* processInputs = reinterpret_cast<const float* const*>(buffer);
+        uint32_t processInputChannels = numChannels;
+        if (canUseSidechain) {
+            for (uint32_t ch = 0; ch < numChannels && ch < inputChannels.size(); ++ch) {
+                inputChannels[ch] = buffer[ch];
+            }
+            for (uint32_t ch = 0; ch < numSidechainChannels && (numChannels + ch) < inputChannels.size(); ++ch) {
+                inputChannels[numChannels + ch] = sidechainInputs[ch];
+            }
+            processInputs = inputChannels.data();
+            processInputChannels = isBuiltInComp
+                                       ? requestedInputChannels
+                                       : std::min<uint32_t>(pluginInfo.numAudioInputs, requestedInputChannels);
+        }
+
+        // If fully wet, process directly
+        if (dryWet >= 0.999f) {
+            plugin->process(processInputs, buffer, processInputChannels, numChannels, numFrames);
+        }
+        // If not fully wet, need to blend
+        else if (dryWet > 0.001f) {
+            const uint32_t blendChannels = (numChannels < 2) ? numChannels : 2;
+
+            // Save dry signal into caller-provided buffer
+            for (uint32_t ch = 0; ch < blendChannels; ++ch) {
+                std::memcpy(dryBuffer + ch * numFrames, buffer[ch], numFrames * sizeof(float));
+            }
+
+            // Process wet
+            plugin->process(processInputs, buffer, processInputChannels, numChannels, numFrames);
+
+            // Blend dry/wet
+            float wetGain = dryWet;
+            float dryGain = 1.0f - dryWet;
+
+            for (uint32_t ch = 0; ch < blendChannels; ++ch) {
+                const float* dry = dryBuffer + ch * numFrames;
                 float* wet = buffer[ch];
 
                 for (uint32_t i = 0; i < numFrames; ++i) {

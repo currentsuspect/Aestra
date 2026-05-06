@@ -337,6 +337,23 @@ public:
         return count;
     }
 
+    bool isChainBypassed{false}; // Copied from EffectChain
+
+    /**
+     * @brief Process audio through the effect chain snapshot.
+     *
+     * RT-safe processing using the immutable snapshot.
+     * @param buffer Array of channel buffers (will be modified in-place)
+     * @param numChannels Number of channels (typically 2 for stereo)
+     * @param numFrames Number of frames to process
+     * @param sidechainInputs Optional sidechain input channels
+     * @param numSidechainChannels Number of sidechain channels
+     * @param dryBuffer Pre-allocated buffer for dry/wet mixing (stereo, numFrames * 2 size required)
+     */
+    void process(float** buffer, uint32_t numChannels, uint32_t numFrames,
+                 const float* const* sidechainInputs, uint32_t numSidechainChannels,
+                 float* dryBuffer) const;
+
 private:
     std::array<EffectChainSnapshotSlot, MAX_SLOTS> m_slots{};
     size_t m_slotCount = 0;
