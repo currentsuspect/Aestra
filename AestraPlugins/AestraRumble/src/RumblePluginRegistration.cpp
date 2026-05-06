@@ -2,7 +2,7 @@
 
 #include "RumblePluginRegistration.h"
 
-#include "LicenseGate.h"
+#include "EntitlementStore.h"
 #include "Plugin/InternalPluginRegistry.h"
 #include "RumbleInstance.h"
 
@@ -36,21 +36,15 @@ void registerRumblePlugin() {
     std::call_once(once, [] {
         Aestra::Audio::InternalPluginRegistry::instance().registerPlugin({
             rumblePluginInfo(),
-            [] {
-                return std::make_shared<RumbleInstance>();
-            },
-            [] {
-                return Aestra::License::LicenseGate::canAccess(Aestra::License::Feature::RUMBLE);
-            },
+            [] { return std::make_shared<RumbleInstance>(); },
+            [] { return Aestra::License::EntitlementStore().canAccess(Aestra::License::ProductFeature::Rumble); },
         });
     });
 }
 
 namespace {
 struct RumblePluginAutoRegistrar {
-    RumblePluginAutoRegistrar() {
-        registerRumblePlugin();
-    }
+    RumblePluginAutoRegistrar() { registerRumblePlugin(); }
 };
 
 RumblePluginAutoRegistrar kRumblePluginAutoRegistrar;

@@ -36,7 +36,7 @@ static std::string getAssetsCardsDir() {
 
 static std::string svgForTier(const std::string& tier) {
 	if (tier == "Aestra Founder") return getAssetsCardsDir() + "/founder_card.svg";
-	if (tier == "Aestra Plus") return getAssetsCardsDir() + "/studio_card.svg";
+	if (tier == "Aestra Supporter") return getAssetsCardsDir() + "/studio_card.svg";
 	if (tier == "Aestra Campus")  return getAssetsCardsDir() + "/campus_card.svg";
 	return getAssetsCardsDir() + "/core_card.svg";
 }
@@ -54,7 +54,7 @@ static TrustedAccessState loadTrustedAccessState() {
 			trusted.verified = true;
 			break;
 		case Aestra::License::LicenseTier::Supporter:
-			trusted.displayTier = "Aestra Plus";
+			trusted.displayTier = "Aestra Supporter";
 			trusted.verified = true;
 			break;
 		case Aestra::License::LicenseTier::Core:

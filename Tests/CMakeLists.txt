@@ -990,7 +990,11 @@ set_tests_properties(CommandTransactionTest PROPERTIES LABELS "commands;phase2")
 # Rumble State Test (requires runtime plugin system)
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
     add_executable(RumbleStateTest Commands/RumbleStateTest.cpp)
-    target_link_libraries(RumbleStateTest PRIVATE AestraPremiumPlugins AestraAudioCore AestraCore)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumbleStateTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group AestraCore)
+    else()
+        target_link_libraries(RumbleStateTest PRIVATE AestraPremiumPlugins AestraAudioCore AestraCore)
+    endif()
     target_include_directories(RumbleStateTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -1001,6 +1005,22 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CU
     else()
         message(STATUS "RumbleStateTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
     endif()
+endif()
+
+if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleUnauthorizedOutputSafetyTest.cpp")
+    add_executable(RumbleUnauthorizedOutputSafetyTest Commands/RumbleUnauthorizedOutputSafetyTest.cpp)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumbleUnauthorizedOutputSafetyTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group AestraCore)
+    else()
+        target_link_libraries(RumbleUnauthorizedOutputSafetyTest PRIVATE AestraPremiumPlugins AestraAudioCore AestraCore)
+    endif()
+    target_include_directories(RumbleUnauthorizedOutputSafetyTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/include
+    )
+    add_test(NAME RumbleUnauthorizedOutputSafetyTest COMMAND RumbleUnauthorizedOutputSafetyTest)
+    set_tests_properties(RumbleUnauthorizedOutputSafetyTest PROPERTIES LABELS "plugins;rumble;license;safety")
 endif()
 
 message(STATUS "Commands tests added - Phase 2 undo/redo system")

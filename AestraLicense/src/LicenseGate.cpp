@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <chrono>
 #include <cctype>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -19,10 +19,10 @@
 #include <vector>
 
 #ifdef _WIN32
-#include <windows.h>
 #include <dpapi.h>
 #include <intrin.h>
 #include <sodium.h>
+#include <windows.h>
 #elif defined(__APPLE__)
 #include <Security/Security.h>
 #include <sodium.h>
@@ -69,6 +69,7 @@ struct GateState {
     std::once_flag initOnce;
     LicenseTier tier = LicenseTier::Core;
     int64_t expiresAt = 0;
+    EntitlementProfile profile;
 };
 
 GateState& gateState() {
@@ -105,9 +106,12 @@ bool fromHex(const std::string& hex, std::vector<unsigned char>& out) {
     out.clear();
     out.reserve(hex.size() / 2);
     auto decodeNibble = [](char ch) -> int {
-        if (ch >= '0' && ch <= '9') return ch - '0';
-        if (ch >= 'a' && ch <= 'f') return 10 + (ch - 'a');
-        if (ch >= 'A' && ch <= 'F') return 10 + (ch - 'A');
+        if (ch >= '0' && ch <= '9')
+            return ch - '0';
+        if (ch >= 'a' && ch <= 'f')
+            return 10 + (ch - 'a');
+        if (ch >= 'A' && ch <= 'F')
+            return 10 + (ch - 'A');
         return -1;
     };
     for (size_t i = 0; i < hex.size(); i += 2) {
@@ -182,6 +186,31 @@ bool tierFromString(const std::string& value, LicenseTier& tier) {
     return false;
 }
 
+MembershipTier toMembershipTier(LicenseTier tier) {
+    switch (tier) {
+    case LicenseTier::Supporter:
+        return MembershipTier::Supporter;
+    case LicenseTier::Founder:
+        return MembershipTier::Founder;
+    case LicenseTier::Core:
+    default:
+        return MembershipTier::Core;
+    }
+}
+
+EntitlementProfile makeCoreProfile(EntitlementStatus status) {
+    EntitlementProfile profile;
+    profile.tier = MembershipTier::Core;
+    profile.status = status;
+    profile.offline = true;
+    profile.verified = false;
+    return profile;
+}
+
+std::chrono::system_clock::time_point timePointFromUnixSeconds(int64_t seconds) {
+    return std::chrono::system_clock::time_point(std::chrono::seconds(seconds));
+}
+
 std::string stringArrayToJson(const std::vector<std::string>& values) {
     std::ostringstream out;
     out << "[";
@@ -207,8 +236,7 @@ std::string canonicalizeLeasePayload(const LeaseRecord& lease) {
         << "\"issued_at\":" << lease.issuedAt << ","
         << "\"expires_at\":" << lease.expiresAt << ","
         << "\"grace_policy\":" << quoteJson(lease.gracePolicy) << ","
-        << "\"revocation_epoch\":" << lease.revocationEpoch
-        << "}";
+        << "\"revocation_epoch\":" << lease.revocationEpoch << "}";
     return out.str();
 }
 
@@ -231,14 +259,22 @@ bool parseLeasePayload(const std::string& payload, LeaseRecord& out) {
     if (!json.isObject()) {
         return false;
     }
-    if (!json.has("license_id") || !json["license_id"].isString()) return false;
-    if (!json.has("user_id") || !json["user_id"].isString()) return false;
-    if (!json.has("tier") || !json["tier"].isString()) return false;
-    if (!json.has("device_hash") || !json["device_hash"].isString()) return false;
-    if (!json.has("issued_at") || !json["issued_at"].isNumber()) return false;
-    if (!json.has("expires_at") || !json["expires_at"].isNumber()) return false;
-    if (!json.has("grace_policy") || !json["grace_policy"].isString()) return false;
-    if (!json.has("revocation_epoch") || !json["revocation_epoch"].isNumber()) return false;
+    if (!json.has("license_id") || !json["license_id"].isString())
+        return false;
+    if (!json.has("user_id") || !json["user_id"].isString())
+        return false;
+    if (!json.has("tier") || !json["tier"].isString())
+        return false;
+    if (!json.has("device_hash") || !json["device_hash"].isString())
+        return false;
+    if (!json.has("issued_at") || !json["issued_at"].isNumber())
+        return false;
+    if (!json.has("expires_at") || !json["expires_at"].isNumber())
+        return false;
+    if (!json.has("grace_policy") || !json["grace_policy"].isString())
+        return false;
+    if (!json.has("revocation_epoch") || !json["revocation_epoch"].isNumber())
+        return false;
 
     LeaseRecord lease;
     lease.licenseId = json["license_id"].asString();
@@ -266,7 +302,8 @@ bool parseLeasePayload(const std::string& payload, LeaseRecord& out) {
     return true;
 }
 
-bool splitStoredLeaseBlob(const std::vector<unsigned char>& blob, std::string& payload, std::vector<unsigned char>& signature) {
+bool splitStoredLeaseBlob(const std::vector<unsigned char>& blob, std::string& payload,
+                          std::vector<unsigned char>& signature) {
     payload.clear();
     signature.clear();
     if (blob.empty()) {
@@ -329,8 +366,7 @@ std::string hashTextBlake2bHex(const std::string& text, size_t outBytes = 16) {
 #else
     ensureSodiumInitialized();
     std::vector<unsigned char> digest(outBytes, 0);
-    crypto_generichash(digest.data(), digest.size(),
-                       reinterpret_cast<const unsigned char*>(text.data()), text.size(),
+    crypto_generichash(digest.data(), digest.size(), reinterpret_cast<const unsigned char*>(text.data()), text.size(),
                        nullptr, 0);
     return toLowerHex(digest.data(), digest.size());
 #endif
@@ -377,7 +413,7 @@ std::string platformString() {
     out << "windows-" << version.dwMajorVersion << "." << version.dwMinorVersion << "." << version.dwBuildNumber;
     return out.str();
 #else
-    struct utsname info {};
+    struct utsname info{};
     if (uname(&info) == 0) {
         return std::string(info.sysname) + "-" + info.release;
     }
@@ -411,9 +447,8 @@ std::string cpuModelString() {
     HKEY key = nullptr;
     char buffer[256] = {};
     DWORD bufferSize = sizeof(buffer);
-    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE,
-                      "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-                      0, KEY_READ, &key) == ERROR_SUCCESS) {
+    if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0, KEY_READ, &key) ==
+        ERROR_SUCCESS) {
         const LONG result = RegQueryValueExA(key, "ProcessorNameString", nullptr, nullptr,
                                              reinterpret_cast<LPBYTE>(buffer), &bufferSize);
         RegCloseKey(key);
@@ -444,7 +479,7 @@ std::string primaryVolumeSerialString() {
     }
     return "unknown-volume";
 #elif defined(__APPLE__)
-    struct statfs stats {};
+    struct statfs stats{};
     if (statfs("/", &stats) == 0) {
         std::ostringstream out;
         out << std::hex << stats.f_fsid.val[0] << "-" << stats.f_fsid.val[1];
@@ -452,7 +487,7 @@ std::string primaryVolumeSerialString() {
     }
     return "unknown-volume";
 #else
-    struct stat stats {};
+    struct stat stats{};
     if (stat("/", &stats) == 0) {
         std::ostringstream out;
         out << std::hex << static_cast<unsigned long long>(stats.st_dev);
@@ -513,9 +548,8 @@ std::vector<unsigned char> deriveBackupKey(const DeviceFingerprint& fingerprint)
     }
 #else
     ensureSodiumInitialized();
-    crypto_generichash(key.data(), key.size(),
-                       reinterpret_cast<const unsigned char*>(fingerprint.encoded.data()), fingerprint.encoded.size(),
-                       nullptr, 0);
+    crypto_generichash(key.data(), key.size(), reinterpret_cast<const unsigned char*>(fingerprint.encoded.data()),
+                       fingerprint.encoded.size(), nullptr, 0);
 #endif
     return key;
 }
@@ -527,7 +561,8 @@ std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
     if (!file.good()) {
         return {};
     }
-    const std::vector<unsigned char> encrypted((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const std::vector<unsigned char> encrypted((std::istreambuf_iterator<char>(file)),
+                                               std::istreambuf_iterator<char>());
     if (encrypted.empty()) {
         return {};
     }
@@ -552,10 +587,9 @@ std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
     UInt32 length = 0;
     void* passwordData = nullptr;
 
-    const OSStatus status = SecKeychainFindGenericPassword(nullptr,
-                                                            static_cast<UInt32>(service.size()), service.c_str(),
-                                                            static_cast<UInt32>(account.size()), account.c_str(),
-                                                            &length, &passwordData, nullptr);
+    const OSStatus status = SecKeychainFindGenericPassword(nullptr, static_cast<UInt32>(service.size()),
+                                                           service.c_str(), static_cast<UInt32>(account.size()),
+                                                           account.c_str(), &length, &passwordData, nullptr);
     if (status != errSecSuccess || passwordData == nullptr) {
         if (passwordData != nullptr) {
             SecKeychainItemFreeContent(nullptr, passwordData);
@@ -581,7 +615,14 @@ std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
             {"account", SECRET_SCHEMA_ATTRIBUTE_STRING},
             {"NULL", SECRET_SCHEMA_ATTRIBUTE_STRING},
         },
-        0, 0, 0, 0, 0, 0, 0, 0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
     };
 
     GError* error = nullptr;
@@ -609,7 +650,8 @@ std::vector<unsigned char> loadLeaseFromEncryptedBackup(const DeviceFingerprint&
         return {};
     }
 
-    const std::vector<unsigned char> encrypted((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const std::vector<unsigned char> encrypted((std::istreambuf_iterator<char>(file)),
+                                               std::istreambuf_iterator<char>());
     if (encrypted.size() <= (kSecretBoxNonceBytes + kSecretBoxMacBytes)) {
         return {};
     }
@@ -635,7 +677,7 @@ bool verifyLeaseSignature(const std::string& payload, const std::vector<unsigned
     return verifyEd25519Detached(payload, signature, AESTRA_LICENSE_PUBKEY);
 }
 
-bool loadAndVerifyLease(LeaseRecord& outLease) {
+EntitlementStatus loadAndVerifyLease(LeaseRecord& outLease) {
     const DeviceFingerprint fingerprint = collectDeviceFingerprint();
 
     std::vector<unsigned char> blob = loadLeaseFromPrimarySecretStore();
@@ -643,39 +685,44 @@ bool loadAndVerifyLease(LeaseRecord& outLease) {
         blob = loadLeaseFromEncryptedBackup(fingerprint);
     }
     if (blob.empty()) {
-        return false;
+        return EntitlementStatus::Missing;
     }
 
     std::string payload;
     std::vector<unsigned char> signature;
     if (!splitStoredLeaseBlob(blob, payload, signature)) {
-        return false;
+        return EntitlementStatus::ParseError;
     }
     LeaseRecord lease;
-    if (!parseLeasePayload(payload, lease)) {
-        return false;
+    try {
+        if (!parseLeasePayload(payload, lease)) {
+            return EntitlementStatus::ParseError;
+        }
+    } catch (const std::exception&) {
+        return EntitlementStatus::ParseError;
     }
     if (!verifyLeaseSignature(canonicalizeLeasePayload(lease), signature)) {
-        return false;
+        return EntitlementStatus::InvalidSignature;
     }
 
     if (!deviceHashMatchesWithSingleFieldDrift(lease.deviceHash, fingerprint)) {
-        return false;
+        return EntitlementStatus::WrongDevice;
     }
     if (lease.gracePolicy != "restrict") {
-        return false;
+        return EntitlementStatus::ParseError;
     }
     if (lease.revocationEpoch != 0) {
-        return false;
+        return EntitlementStatus::Revoked;
     }
 
     const int64_t now = nowSeconds();
     if (now > (lease.expiresAt + kLeasePeriodSeconds)) {
-        return false;
+        return EntitlementStatus::Expired;
     }
 
+    const EntitlementStatus status = now > lease.expiresAt ? EntitlementStatus::Grace : EntitlementStatus::Valid;
     outLease = std::move(lease);
-    return true;
+    return status;
 }
 
 bool canAccessForTier(LicenseTier tier, Feature feature) {
@@ -692,27 +739,37 @@ bool canAccessForTier(LicenseTier tier, Feature feature) {
 void initializeImpl() {
     LeaseRecord lease;
     GateState& state = gateState();
-    if (loadAndVerifyLease(lease)) {
+    const EntitlementStatus status = loadAndVerifyLease(lease);
+    if (status == EntitlementStatus::Valid || status == EntitlementStatus::Grace) {
         state.tier = lease.tier;
         state.expiresAt = lease.expiresAt;
+        state.profile.tier = toMembershipTier(lease.tier);
+        state.profile.status = status;
+        state.profile.userId = lease.userId;
+        state.profile.licenseId = lease.licenseId;
+        state.profile.rawPlugins = lease.plugins;
+        state.profile.rawFeatures = lease.features;
+        state.profile.issuedAt = timePointFromUnixSeconds(lease.issuedAt);
+        state.profile.expiresAt = timePointFromUnixSeconds(lease.expiresAt);
+        state.profile.offline = true;
+        state.profile.verified = true;
     } else {
         state.tier = LicenseTier::Core;
         state.expiresAt = 0;
+        state.profile = makeCoreProfile(status);
     }
     LicenseGate::refreshAsync();
 }
 } // namespace
 
-bool verifyEd25519Detached(const std::string& payload,
-                           const std::vector<unsigned char>& signature,
+bool verifyEd25519Detached(const std::string& payload, const std::vector<unsigned char>& signature,
                            const unsigned char publicKey[32]) {
     if (publicKey == nullptr || signature.size() != crypto_sign_BYTES) {
         return false;
     }
     ensureSodiumInitialized();
-    return crypto_sign_verify_detached(signature.data(),
-                                       reinterpret_cast<const unsigned char*>(payload.data()), payload.size(),
-                                       publicKey) == 0;
+    return crypto_sign_verify_detached(signature.data(), reinterpret_cast<const unsigned char*>(payload.data()),
+                                       payload.size(), publicKey) == 0;
 }
 
 void LicenseGate::initialize() {
@@ -722,6 +779,11 @@ void LicenseGate::initialize() {
 LicenseTier LicenseGate::currentTier() {
     initialize();
     return gateState().tier;
+}
+
+EntitlementProfile LicenseGate::currentProfile() {
+    initialize();
+    return gateState().profile;
 }
 
 bool LicenseGate::canAccess(Feature feature) {
