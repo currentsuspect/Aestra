@@ -10,6 +10,7 @@ add_library(AestraLicense STATIC
     src/EntitlementStore.cpp
     src/LicenseGate.cpp
     src/LocalAccountCache.cpp
+    src/MembershipViewModel.cpp
 )
 
 target_include_directories(AestraLicense

@@ -26,6 +26,8 @@ if(TARGET AestraLicense)
     add_test(NAME SecAccountSessionCache COMMAND SecAccountSessionCache)
     add_executable(SecEntitlementStore entitlement_store_test.cpp)
     add_test(NAME SecEntitlementStore COMMAND SecEntitlementStore)
+    add_executable(SecMembershipViewModel membership_view_model_test.cpp)
+    add_test(NAME SecMembershipViewModel COMMAND SecMembershipViewModel)
 endif()
 
 # Blue team fixes — proof of fix tests (S002)
@@ -221,4 +223,9 @@ if(TARGET AestraLicense)
         ${REPO_ROOT}/AestraLicense/include
     )
     target_link_libraries(SecEntitlementStore PRIVATE AestraLicense)
+
+    target_include_directories(SecMembershipViewModel PRIVATE
+        ${REPO_ROOT}/AestraLicense/include
+    )
+    target_link_libraries(SecMembershipViewModel PRIVATE AestraLicense)
 endif()

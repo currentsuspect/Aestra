@@ -59,6 +59,9 @@ AccountSession::AccountSession(LocalAccountCache& cache, EntitlementStore& entit
     : m_cache(cache), m_entitlements(entitlements), m_snapshot(buildSnapshot()) {}
 
 AccountSessionSnapshot AccountSession::current() const {
+    if (m_snapshot.state == AccountSessionState::SyncUnavailable) {
+        return m_snapshot;
+    }
     return buildSnapshot();
 }
 

@@ -45,6 +45,7 @@ public:
     AccountSession(LocalAccountCache& cache, EntitlementStore& entitlements);
 
     AccountSessionSnapshot current() const;
+    AccountSessionSnapshot cachedSnapshot() const { return m_snapshot; }
     bool load();
     bool saveDisplayIdentity(const AccountIdentity& identity);
     void signOut();

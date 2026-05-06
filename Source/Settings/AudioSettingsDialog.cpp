@@ -10,6 +10,12 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraCore/include/AestraLog.h"
+#if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
+#include "AccountSession.h"
+#include "EntitlementStore.h"
+#include "LocalAccountCache.h"
+#include "MembershipViewModel.h"
+#endif
 #include "AudioDriverTypes.h"
 #include "TrackManager.h"
 #include "MixerChannel.h"
@@ -36,6 +42,46 @@ constexpr const char* kTestSoundStopSvg = R"(
         <path d="M7 7h10v10H7z"/>
     </svg>
 )";
+
+#if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
+std::string formatMembershipInfo() {
+    Aestra::License::EntitlementStore entitlements;
+    Aestra::License::LocalAccountCache accountCache;
+    Aestra::License::AccountSession accountSession(accountCache, entitlements);
+    Aestra::License::MembershipViewModel viewModel(accountSession, entitlements);
+    const Aestra::License::MembershipViewState state = viewModel.current();
+
+    std::ostringstream out;
+    out << "Membership\n\n"
+        << "Tier: " << state.tierLabel << "\n"
+        << "Status: " << state.statusLabel << "\n"
+        << "Account: " << state.accountLabel << "\n\n"
+        << state.detailMessage << "\n\n"
+        << "Available features:\n";
+
+    for (const Aestra::License::MembershipFeatureRow& feature : state.features) {
+        out << (feature.enabled ? "Enabled: " : "Unavailable: ") << feature.label;
+        if (!feature.enabled && !feature.reason.empty()) {
+            out << " - " << feature.reason;
+        }
+        out << "\n";
+    }
+
+    out << "\nSync: " << (state.canRefresh ? "Refresh can be attempted when backend sync is available."
+                                          : "No refresh action is available while signed out.")
+        << "\n\n"
+        << "UI displays local membership state only. Feature access remains entitlement-backed.";
+    return out.str();
+}
+#else
+std::string formatMembershipInfo() {
+    return "Membership\n\n"
+           "Tier: Aestra Core\n"
+           "Status: Local license services unavailable\n"
+           "Account: Signed out\n\n"
+           "Core access remains available. Membership sync is not available in this build.";
+}
+#endif
 } // namespace
 
 namespace Aestra {
@@ -82,36 +128,20 @@ void AudioSettingsDialog::createUI() {
     m_tabBar->setActiveTab(m_activeTab);
     m_tabBar->setOnTabChanged([this](const std::string& id) {
         m_activeTab = id;
+        if (m_activeTab == "info") {
+            updateInfoContent();
+        }
         layoutComponents();
     });
     addChild(m_tabBar);
     
     // Create info tab content
     m_infoTitle = std::make_shared<AestraUI::NUILabel>();
-    m_infoTitle->setText("Audio Settings Information");
+    m_infoTitle->setText("Membership");
     addChild(m_infoTitle);
     
     m_infoContent = std::make_shared<AestraUI::NUILabel>();
-    m_infoContent->setText(
-        "Quality Presets:\n\n"
-        "• Economy - Minimal CPU usage, suitable for tracking\n"
-        "• Balanced - Recommended for most projects\n"
-        "• High-Fidelity - Better quality, higher CPU\n"
-        "• Mastering - Maximum quality for final export\n\n"
-        "Resampling Quality:\n\n"
-        "Standardized to Sinc64 (Extreme Quality).\n"
-        "Zero aliasing, perfect phase response, negligible CPU cost.\n\n"
-        "Dithering:\n\n"
-        "Adds controlled noise to reduce quantization artifacts.\n"
-        "Use Triangular or Noise-Shaped for best results.\n\n"
-        "Multi-Threading:\n\n"
-        "Enables parallel processing of tracks. Recommended to use\n"
-        "hardware threads - 1 for optimal performance.\n\n"
-        "Aestra Mode:\n\n"
-        "• Off - Clean bypass\n"
-        "• Transparent - Reference-grade precision\n"
-        "• Euphoric - Warm analog character with harmonic richness"
-    );
+    updateInfoContent();
     m_infoContent->setMultiline(true);
     m_infoContent->setWordWrap(true);
     addChild(m_infoContent);
@@ -494,7 +524,14 @@ void AudioSettingsDialog::show() {
     captureOriginalQualityStateFromUi();
     m_suppressDirtyStateUpdates = false;
     updateApplyButtonState();
+    updateInfoContent();
     layoutComponents();
+}
+
+void AudioSettingsDialog::updateInfoContent() {
+    if (m_infoContent) {
+        m_infoContent->setText(formatMembershipInfo());
+    }
 }
 
 void AudioSettingsDialog::hide() {

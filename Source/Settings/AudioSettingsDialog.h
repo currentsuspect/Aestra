@@ -103,6 +103,7 @@ private:
     bool hasUnsavedChanges() const;
     void updateApplyButtonState();
     void markSettingsChanged();
+    void updateInfoContent();
     
     // Test sound functionality
     void playTestSound();

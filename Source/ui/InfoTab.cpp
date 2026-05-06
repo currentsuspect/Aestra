@@ -6,7 +6,10 @@
 
 #include "LicenseVerifier.h"
 #if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
-#include "LicenseGate.h"
+#include "AccountSession.h"
+#include "EntitlementStore.h"
+#include "LocalAccountCache.h"
+#include "MembershipViewModel.h"
 #endif
 #include "../../AestraCore/include/AestraLog.h"
 
@@ -25,6 +28,9 @@ static std::string g_cardSvgPath;
 
 struct TrustedAccessState {
 	std::string displayTier = "Aestra Core";
+	std::string statusLabel = "Signed out";
+	std::string detailMessage = "Core access remains available.";
+	std::string accountLabel = "Signed out";
 	bool verified = false;
 };
 
@@ -42,27 +48,22 @@ static std::string svgForTier(const std::string& tier) {
 }
 
 static const char* verificationBadge(bool verified) {
-	return verified ? "✅ Verified" : "⚪ Offline / ❌ Unverified";
+	return verified ? "Verified" : "Unverified";
 }
 
 static TrustedAccessState loadTrustedAccessState() {
 	TrustedAccessState trusted;
 #if AESTRA_HAS_LICENSE_GATE
-	switch (Aestra::License::LicenseGate::currentTier()) {
-		case Aestra::License::LicenseTier::Founder:
-			trusted.displayTier = "Aestra Founder";
-			trusted.verified = true;
-			break;
-		case Aestra::License::LicenseTier::Supporter:
-			trusted.displayTier = "Aestra Supporter";
-			trusted.verified = true;
-			break;
-		case Aestra::License::LicenseTier::Core:
-		default:
-			trusted.displayTier = "Aestra Core";
-			trusted.verified = false;
-			break;
-	}
+	Aestra::License::EntitlementStore entitlements;
+	Aestra::License::LocalAccountCache accountCache;
+	Aestra::License::AccountSession accountSession(accountCache, entitlements);
+	Aestra::License::MembershipViewModel viewModel(accountSession, entitlements);
+	const Aestra::License::MembershipViewState state = viewModel.current();
+	trusted.displayTier = state.tierLabel;
+	trusted.statusLabel = state.statusLabel;
+	trusted.detailMessage = state.detailMessage;
+	trusted.accountLabel = state.accountLabel;
+	trusted.verified = state.verified;
 #endif
 	return trusted;
 }
@@ -75,6 +76,8 @@ static void ensureProfileLoadedOnce() {
 	const TrustedAccessState trusted = loadTrustedAccessState();
 	g_profile.tier = trusted.displayTier;
 	g_profile.verified = trusted.verified;
+	g_profile.username = trusted.accountLabel;
+	g_profile.serial = trusted.statusLabel + " - " + trusted.detailMessage;
 	g_cardSvgPath = svgForTier(g_profile.tier);
 	g_profileLoaded.store(true);
 }
@@ -102,7 +105,7 @@ void RenderInfoTab() {
 	// Load SVG for the membership card icon (uses NUIIcon loader)
 	try {
 		cardIcon.loadSVGFile(g_cardSvgPath);
-		
+
 		// Simple accent for verified tiers (placeholder: change icon tint)
 		if (g_profile.verified && g_profile.tier != "Aestra Core") {
 			// No glow API currently; tint the icon as a subtle verified accent
