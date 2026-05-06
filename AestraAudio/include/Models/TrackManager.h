@@ -1,35 +1,36 @@
 #pragma once
+#include "../Commands/AddClipCommand.h"
 #include "../Commands/CommandHistory.h"
 #include "../Core/AudioCommandQueue.h"
 #include "../Core/AudioTelemetry.h"
 #include "../Core/ChannelSlotMap.h"
-#include "../DSP/ContinuousParamBuffer.h"
-#include "../Commands/AddClipCommand.h"
-#include "MeterSnapshot.h"
 #include "../Core/MixerChannel.h"
-#include "PatternManager.h"
+#include "../DSP/ContinuousParamBuffer.h"
 #include "../Playback/PatternPlaybackEngine.h"
 #include "../Playback/TimelineClock.h"
+#include "../RealtimeThreadGuard.h"
+#include "AestraLog.h"
+#include "MeterSnapshot.h"
+#include "PatternManager.h"
 #include "PlaylistModel.h"
 #include "SourceManager.h"
 #include "UnitManager.h"
-#include "AestraLog.h"
 
-#include <atomic>
 #include <algorithm>
 #include <array>
-#include <cmath>
+#include <atomic>
 #include <chrono>
-#include <ctime>
+#include <cmath>
 #include <cstdlib>
+#include <ctime>
+#include <filesystem>
 #include <fstream>
 #include <functional>
-#include <filesystem>
 #include <iomanip>
 #include <limits>
-#include <sstream>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <thread>
 #include <unordered_map>
 #include <vector>
@@ -68,9 +69,8 @@ public:
         m_continuousParams = std::make_shared<ContinuousParamBuffer>();
         m_channelSlotMap = std::make_shared<ChannelSlotMap>();
         // Wire up playlist model to trigger audio graph rebuild when clips change
-        m_playlistModel.setClipChangedCallback([this](const ClipInstanceID&) {
-            m_graphDirty.store(true, std::memory_order_relaxed);
-        });
+        m_playlistModel.setClipChangedCallback(
+            [this](const ClipInstanceID&) { m_graphDirty.store(true, std::memory_order_relaxed); });
     }
 
     /**
@@ -99,27 +99,36 @@ public:
      * @brief Add a new channel
      */
     MixerChannel* addChannel(const std::string& name = "") {
+        if (reportRealtimeMisuse("TrackManager::addChannel")) {
+            return nullptr;
+        }
         // IDs start at 1 to avoid collision with Master (ID 0).
         auto channel =
             std::make_unique<MixerChannel>(name.empty() ? "Track " + std::to_string(m_channels.size() + 1) : name,
                                            static_cast<uint32_t>(m_channels.size() + 1));
         channel->setCommandSink(m_commandSink);
-        channel->setInputMonitoringStateChangedCallback([this]() {
-            publishInputMonitoringSnapshot();
-        });
+        channel->setInputMonitoringStateChangedCallback([this]() { publishInputMonitoringSnapshot(); });
+        if (m_channelPrepareCallback) {
+            m_channelPrepareCallback(*channel);
+        }
         auto* raw = channel.get();
         m_channels.push_back(std::move(channel));
         m_graphDirty.store(true, std::memory_order_relaxed);
         m_modified.store(true, std::memory_order_relaxed);
-        
+
         // Rebuild channel slot map
         if (!m_channelSlotMap) {
             m_channelSlotMap = std::make_shared<ChannelSlotMap>();
         }
         m_channelSlotMap->rebuild(m_channels);
         publishInputMonitoringSnapshot();
-        
+
         return raw;
+    }
+
+    /** @brief Install the non-RT hook used to prepare newly created channels for live processing. */
+    void setChannelPrepareCallback(std::function<void(MixerChannel&)> callback) {
+        m_channelPrepareCallback = std::move(callback);
     }
 
     /**
@@ -127,7 +136,8 @@ public:
      * @return true if a channel was removed
      */
     bool removeLastChannel() {
-        if (m_channels.empty()) return false;
+        if (m_channels.empty())
+            return false;
         m_channels.pop_back();
         m_graphDirty.store(true, std::memory_order_relaxed);
         m_modified.store(true, std::memory_order_relaxed);
@@ -139,10 +149,9 @@ public:
     }
 
     bool removeChannelById(uint32_t channelId) {
-        auto it = std::find_if(m_channels.begin(), m_channels.end(),
-            [channelId](const auto& channel) {
-                return channel && channel->getChannelId() == channelId;
-            });
+        auto it = std::find_if(m_channels.begin(), m_channels.end(), [channelId](const auto& channel) {
+            return channel && channel->getChannelId() == channelId;
+        });
         if (it == m_channels.end()) {
             return false;
         }
@@ -324,9 +333,7 @@ public:
         m_hasDisplayPositionOverride.store(true, std::memory_order_release);
     }
 
-    void clearDisplayPositionOverride() {
-        m_hasDisplayPositionOverride.store(false, std::memory_order_release);
-    }
+    void clearDisplayPositionOverride() { m_hasDisplayPositionOverride.store(false, std::memory_order_release); }
 
     void setNextCapturePlacementStartBeat(double startBeat) {
         m_nextCapturePlacementStartBeat.store(std::max(0.0, startBeat), std::memory_order_relaxed);
@@ -378,9 +385,7 @@ public:
             explicit RecordingWriteGuard(std::atomic<uint32_t>& writersIn) : writers(writersIn) {
                 writers.fetch_add(1, std::memory_order_acq_rel);
             }
-            ~RecordingWriteGuard() {
-                writers.fetch_sub(1, std::memory_order_acq_rel);
-            }
+            ~RecordingWriteGuard() { writers.fetch_sub(1, std::memory_order_acq_rel); }
             std::atomic<uint32_t>& writers;
         } guard(m_recordingWriters);
 
@@ -427,8 +432,7 @@ public:
                 const double beatsUntilCapture = deferredStartBeat - captureBeat;
                 if (beatsUntilCapture > 0.0) {
                     const double secondsUntilCapture = beatsUntilCapture * 60.0 / bpm;
-                    const uint32_t skippedFrames =
-                        static_cast<uint32_t>(std::ceil(secondsUntilCapture * sampleRate));
+                    const uint32_t skippedFrames = static_cast<uint32_t>(std::ceil(secondsUntilCapture * sampleRate));
                     if (skippedFrames >= frames) {
                         continue;
                     }
@@ -538,8 +542,8 @@ public:
         for (int ch = 0; ch < trackedInputs; ++ch) {
             float peak = 0.0f;
             for (uint32_t frame = 0; frame < frames; ++frame) {
-                const size_t sampleIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount) +
-                                           static_cast<size_t>(ch);
+                const size_t sampleIndex =
+                    static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount) + static_cast<size_t>(ch);
                 peak = std::max(peak, std::abs(input[sampleIndex]));
             }
             m_inputPeaks[static_cast<size_t>(ch)].store(peak, std::memory_order_relaxed);
@@ -676,8 +680,7 @@ public:
         Log::info(std::string("[TrackManager] Record arm ") + (newArmedState ? "enabled" : "disabled"));
 
         if (newArmedState) {
-            if (hasArmedTracks() &&
-                m_transportPlayingConfirmed.load(std::memory_order_relaxed) &&
+            if (hasArmedTracks() && m_transportPlayingConfirmed.load(std::memory_order_relaxed) &&
                 !m_isCapturing.load(std::memory_order_relaxed)) {
                 beginCaptureSession();
             }
@@ -815,8 +818,7 @@ public:
             return;
         }
 
-        if (m_recordArmed.load(std::memory_order_relaxed) &&
-            hasArmedTracks() &&
+        if (m_recordArmed.load(std::memory_order_relaxed) && hasArmedTracks() &&
             !m_isCapturing.load(std::memory_order_relaxed)) {
             beginCaptureSession();
         }
@@ -881,9 +883,8 @@ public:
             if (pattern && pattern->isMidi()) {
                 const double resolvedLength = std::max(8.0, pattern->lengthBeats);
                 if (std::abs(resolvedLength - pattern->lengthBeats) > 0.001) {
-                    m_patternManager.applyPatch(pid, [resolvedLength](PatternSource& p) {
-                        p.lengthBeats = resolvedLength;
-                    });
+                    m_patternManager.applyPatch(pid,
+                                                [resolvedLength](PatternSource& p) { p.lengthBeats = resolvedLength; });
                 }
             }
         }
@@ -968,18 +969,17 @@ private:
                         firstRoute = -998;
                     }
                 }
-                routeSummary = "notes=" + std::to_string(noteCount) +
-                               " firstUnit=" + std::to_string(firstUnitId) +
+                routeSummary = "notes=" + std::to_string(noteCount) + " firstUnit=" + std::to_string(firstUnitId) +
                                " firstRoute=" + std::to_string(firstRoute);
             }
 
             Log::info("[TimelinePattern] pattern=" + std::to_string(instance.patternId.value) +
                       " clipStart=" + std::to_string(instance.startBeat) +
                       " sourceOffset=" + std::to_string(instance.sourceOffsetBeats) +
-                      " schedStart=" + std::to_string(instance.patternStartBeat()) +
-                      " " + routeSummary);
-            m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.patternStartBeat(), instanceId++,
-                                                            instance.sourceOffsetBeats, instance.durationBeats);
+                      " schedStart=" + std::to_string(instance.patternStartBeat()) + " " + routeSummary);
+            m_patternPlaybackEngine.schedulePatternInstance(instance.patternId, instance.patternStartBeat(),
+                                                            instanceId++, instance.sourceOffsetBeats,
+                                                            instance.durationBeats);
         }
     }
 
@@ -1019,8 +1019,7 @@ private:
             m_recordingCaptures[channel->getChannelId()] = std::move(capture);
         }
         m_recordingSessionStartBeat = getCurrentTransportBeat();
-        m_recordingSessionUsesPlacementOverride =
-            m_hasNextCapturePlacementStartBeat.load(std::memory_order_relaxed);
+        m_recordingSessionUsesPlacementOverride = m_hasNextCapturePlacementStartBeat.load(std::memory_order_relaxed);
         if (m_recordingSessionUsesPlacementOverride) {
             m_recordingSessionStartBeat = m_nextCapturePlacementStartBeat.load(std::memory_order_relaxed);
         }
@@ -1070,10 +1069,8 @@ private:
         }
     }
 
-    void commitRecordingTake(uint32_t channelId,
-                            const RecordingCapture& capture,
-                            double fallbackStartBeat,
-                            bool forcePlacementStartBeat) {
+    void commitRecordingTake(uint32_t channelId, const RecordingCapture& capture, double fallbackStartBeat,
+                             bool forcePlacementStartBeat) {
         std::vector<float> capturedSamples = copyCaptureSamples(capture);
         if (capturedSamples.empty()) {
             return;
@@ -1155,12 +1152,10 @@ private:
         m_graphDirty.store(true, std::memory_order_relaxed);
         m_modified.store(true, std::memory_order_relaxed);
 
-        Log::info("[TrackManager] Recorded take committed: " + takePath +
-                  " on track " + std::to_string(channelId) +
-                  " at beat " + std::to_string(startBeat) +
-                  " with raw peak " + std::to_string(rawPeak) +
-                  ", conditioned peak " + std::to_string(conditionedPeak) +
-                  ", clip gain " + std::to_string(playbackGain));
+        Log::info("[TrackManager] Recorded take committed: " + takePath + " on track " + std::to_string(channelId) +
+                  " at beat " + std::to_string(startBeat) + " with raw peak " + std::to_string(rawPeak) +
+                  ", conditioned peak " + std::to_string(conditionedPeak) + ", clip gain " +
+                  std::to_string(playbackGain));
     }
 
     std::string buildRecordingTakePath(uint32_t channelId) const {
@@ -1171,8 +1166,7 @@ private:
 
         const auto now = std::chrono::system_clock::now();
         const auto time = std::chrono::system_clock::to_time_t(now);
-        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            now.time_since_epoch()) % 1000;
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
         std::tm tm{};
 #if defined(_WIN32)
         localtime_s(&tm, &time);
@@ -1182,10 +1176,8 @@ private:
         static std::atomic<uint64_t> s_uniqCounter{0};
         const uint64_t uniq = s_uniqCounter.fetch_add(1, std::memory_order_relaxed);
         std::ostringstream oss;
-        oss << "track_" << channelId << "_take_"
-            << std::put_time(&tm, "%Y%m%d_%H%M%S")
-            << "_" << std::setfill('0') << std::setw(3) << ms.count()
-            << "_" << uniq << ".wav";
+        oss << "track_" << channelId << "_take_" << std::put_time(&tm, "%Y%m%d_%H%M%S") << "_" << std::setfill('0')
+            << std::setw(3) << ms.count() << "_" << uniq << ".wav";
         return (root / oss.str()).string();
     }
 
@@ -1211,8 +1203,7 @@ private:
         }
 
         const uint16_t audioFormat = 3; // IEEE float
-        if (buffer.numChannels == 0 ||
-            buffer.numChannels > std::numeric_limits<uint16_t>::max() ||
+        if (buffer.numChannels == 0 || buffer.numChannels > std::numeric_limits<uint16_t>::max() ||
             buffer.sampleRate == 0 ||
             buffer.interleavedData.size() > (std::numeric_limits<uint32_t>::max() / sizeof(float)) ||
             buffer.numFrames > std::numeric_limits<uint32_t>::max()) {
@@ -1379,6 +1370,7 @@ private:
     std::shared_ptr<ChannelSlotMap> m_channelSlotMap;
     UnitManager m_unitManager;
     std::function<void(const AudioQueueCommand&)> m_commandSink;
+    std::function<void(MixerChannel&)> m_channelPrepareCallback;
     std::function<void()> m_stopPreviewCallback;
     std::atomic<bool> m_isPlaying{false};
     std::atomic<bool> m_isPaused{false};
