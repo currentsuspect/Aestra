@@ -882,8 +882,10 @@ void UIMixerInspector::onUpdate(double deltaTime)
             const auto& inputs = m_viewModel->inputNames;
             const auto& deviceIds = m_viewModel->inputDeviceIds;
 
+            const auto itemCount = m_ioInputDropdown->getItemCount();
+
             const bool rebuildDropdown =
-                m_ioInputDropdown->getItemCount() != static_cast<int>(inputs.size()) ||
+                itemCount != inputs.size() ||
                 m_cachedInputNames != inputs ||
                 m_cachedInputDeviceIds != deviceIds;
 
@@ -905,7 +907,7 @@ void UIMixerInspector::onUpdate(double deltaTime)
                 }
             }
 
-            if (targetIndex >= 0 && targetIndex < m_ioInputDropdown->getItemCount()) {
+            if (targetIndex >= 0 && static_cast<size_t>(targetIndex) < itemCount) {
                 if (m_ioInputDropdown->getSelectedIndex() != targetIndex) {
                     m_ioInputDropdown->setSelectedIndex(targetIndex);
                 }
@@ -932,8 +934,10 @@ void UIMixerInspector::onUpdate(double deltaTime)
                 outputIds.push_back(static_cast<int>(dest.id));
             }
 
+            const auto outputItemCount = m_mainOutputDropdown->getItemCount();
+
             const bool rebuildDropdown =
-                m_mainOutputDropdown->getItemCount() != static_cast<int>(outputNames.size()) ||
+                outputItemCount != outputNames.size() ||
                 m_cachedOutputNames != outputNames ||
                 m_cachedOutputIds != outputIds;
 
@@ -954,7 +958,7 @@ void UIMixerInspector::onUpdate(double deltaTime)
                     break;
                 }
             }
-            if (targetIndex >= 0 && targetIndex < m_mainOutputDropdown->getItemCount()) {
+            if (targetIndex >= 0 && static_cast<size_t>(targetIndex) < outputItemCount) {
                 if (m_mainOutputDropdown->getSelectedIndex() != targetIndex) {
                     m_mainOutputDropdown->setSelectedIndex(targetIndex);
                 }
