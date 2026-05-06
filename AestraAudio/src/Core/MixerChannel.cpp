@@ -94,6 +94,12 @@ void MixerChannel::setSoloSafe(bool safe) {
     // it's used by the AudioEngine to decide suppression.
 }
 
+void MixerChannel::prepareProcessingBuffers(uint32_t maxFrames) {
+    m_leftChannelBuf.resize(maxFrames);
+    m_rightChannelBuf.resize(maxFrames);
+    m_dryChannelBuf.resize(static_cast<size_t>(maxFrames) * 2);
+}
+
 void MixerChannel::processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate) {
     if (!outputBuffer || numFrames == 0)
         return;
@@ -107,15 +113,33 @@ void MixerChannel::processAudio(float* outputBuffer, uint32_t numFrames, double 
     }
 
     // Process through insert effect chain (if any plugins loaded)
-    if (m_effectChain.getActiveSlotCount() > 0) {
+    // Pass 3: Use snapshot for RT-safety when available
+    if (m_effectChainSnapshot && m_effectChainSnapshot->getActiveSlotCount() > 0) {
         // Audio buffer is interleaved stereo (LRLRLRLR...)
         // Plugins expect planar format (LL...LL, RR...RR)
         // So we need to de-interleave -> process -> re-interleave
 
-        if (m_leftChannelBuf.size() < numFrames) {
-            m_leftChannelBuf.resize(numFrames);
-            m_rightChannelBuf.resize(numFrames);
+        if (m_leftChannelBuf.size() < numFrames || m_rightChannelBuf.size() < numFrames ||
+            m_dryChannelBuf.size() < static_cast<size_t>(numFrames) * 2)
+            return;
+
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            m_leftChannelBuf[i] = outputBuffer[i * 2];
+            m_rightChannelBuf[i] = outputBuffer[i * 2 + 1];
         }
+
+        float* channels[2] = {m_leftChannelBuf.data(), m_rightChannelBuf.data()};
+
+        m_effectChainSnapshot->process(channels, 2, numFrames, nullptr, 0, m_dryChannelBuf.data());
+
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            outputBuffer[i * 2] = m_leftChannelBuf[i];
+            outputBuffer[i * 2 + 1] = m_rightChannelBuf[i];
+        }
+    } else if (m_effectChain.getActiveSlotCount() > 0) {
+        // Fallback: direct processing when no snapshot set (should not happen in normal operation)
+        if (m_leftChannelBuf.size() < numFrames || m_rightChannelBuf.size() < numFrames)
+            return;
 
         for (uint32_t i = 0; i < numFrames; ++i) {
             m_leftChannelBuf[i] = outputBuffer[i * 2];
