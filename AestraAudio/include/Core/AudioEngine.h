@@ -126,6 +126,8 @@ public:
     AudioTelemetry& telemetry() { return m_telemetry; }
     /** @brief Access the mutable engine state object. */
     EngineState& engineState() { return m_state; }
+    /** @brief Non-RT diagnostic counter incremented whenever a graph is published. */
+    uint64_t graphGeneration() const { return m_graphGeneration.load(std::memory_order_relaxed); }
 
     /** @brief Set the active sample rate used by the engine. */
     void setSampleRate(uint32_t sampleRate) {
@@ -161,6 +163,7 @@ public:
     void setGraph(const AudioGraph& graph) {
         m_state.swapGraph(graph);
         compileGraph();
+        m_graphGeneration.fetch_add(1, std::memory_order_release);
     }
 
     /** @brief Publish the shared meter snapshot buffer used by the UI. Non-RT only. */
@@ -620,6 +623,7 @@ private:
     // AudioGraphState m_bgGraphState;      // The Background Graph State (Future)
 
     AudioRenderer m_rtRenderer; // The Real-Time Renderer
+    std::atomic<uint64_t> m_graphGeneration{0};
 
     // Legacy support for AudioEngine::compileGraph populating the state
     // We map m_renderTracks logic to m_rtGraphState.renderTracks

@@ -209,7 +209,7 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
         m_activeMenu->setFocused(true);
     });
     
-    rack->setOnSlotBypassToggled([chain](int slot, bool bypassed) {
+    rack->setOnSlotBypassToggled([this, chain](int slot, bool bypassed) {
         chain->setSlotBypassed(slot, bypassed);
         if (!bypassed) {
             if (auto plugin = chain->getPlugin(static_cast<size_t>(slot))) {
@@ -218,6 +218,9 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
                     plugin->activate();
                 }
             }
+        }
+        if (m_onEffectChainChanged) {
+            m_onEffectChainChanged();
         }
     });
     
@@ -309,6 +312,9 @@ bool PluginUIController::loadPluginToSlot(const std::string& pluginId,
     if (m_onPluginLoaded) {
         m_onPluginLoaded(pluginId, slot);
     }
+    if (m_onEffectChainChanged) {
+        m_onEffectChainChanged();
+    }
     
     // Refresh any bound rack
     for (const auto& binding : m_rackBindings) {
@@ -324,6 +330,9 @@ void PluginUIController::removePluginFromSlot(Aestra::Audio::EffectChain* chain,
                                                int slot) {
     if (!chain) return;
     chain->removePlugin(slot);
+    if (m_onEffectChainChanged) {
+        m_onEffectChainChanged();
+    }
 }
 
 void PluginUIController::openPluginEditor(

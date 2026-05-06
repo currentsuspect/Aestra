@@ -181,6 +181,9 @@ void EffectChain::clear() {
 void EffectChain::setSlotBypassed(size_t slotIndex, bool bypassed) {
     if (slotIndex < MAX_SLOTS) {
         m_slots[slotIndex].bypassed.store(bypassed, std::memory_order_release);
+        if (!reportRealtimeMisuse("EffectChain::setSlotBypassed")) {
+            publishSnapshot();
+        }
     }
 }
 
@@ -198,6 +201,9 @@ bool EffectChain::isSlotBypassed(size_t slotIndex) const {
 void EffectChain::setSlotDryWetMix(size_t slotIndex, float mix) {
     if (slotIndex < MAX_SLOTS) {
         m_slots[slotIndex].dryWetMix.store(std::clamp(mix, 0.0f, 1.0f), std::memory_order_release);
+        if (!reportRealtimeMisuse("EffectChain::setSlotDryWetMix")) {
+            publishSnapshot();
+        }
     }
 }
 

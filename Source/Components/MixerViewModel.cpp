@@ -810,6 +810,7 @@ void MixerViewModel::setInsertBypass(uint32_t channelId, int slotIndex, bool byp
                 }
             }
         }
+        if (m_onGraphDirty) m_onGraphDirty();
         if (m_onProjectModified) m_onProjectModified();
     }
 }
@@ -824,6 +825,7 @@ void MixerViewModel::setInsertMix(uint32_t channelId, int slotIndex, float mix) 
     // Update Engine
     if (auto mc = ch->channel) {
         mc->getEffectChain().setSlotDryWetMix(slotIndex, mix);
+        if (m_onGraphDirty) m_onGraphDirty();
          // Often mix changes don't need project dirty flag every frame, 
          // but for now we can trigger it or handle throttling elsewhere.
     }
@@ -863,6 +865,7 @@ void MixerViewModel::moveInsert(uint32_t channelId, int fromSlot, int toSlot) {
             chain.swapPlugins(fromSlot, toSlot);
         }
         
+        if (m_onGraphDirty) m_onGraphDirty();
         if (m_onProjectModified) m_onProjectModified();
     }
 }
