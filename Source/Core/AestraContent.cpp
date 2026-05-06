@@ -5,51 +5,52 @@
  */
 
 // Include panel headers FIRST to define complete types before AestraContent.h forward declarations
-#include "MixerPanel.h"
-#include "PianoRollPanel.h"
-#include "ArsenalPanel.h"
-#include "PatternBrowserPanel.h"
-#include "SampleEditorPanel.h"
-#include "AuditionPanel.h"                              // Audition Mode UI
-#include "AuditionEngine.h"       // Audition Mode backend
-#include "AestraHistoryPanel.h"
-#include "Commands/PluginCommands.h"
-
 #include "AestraContent.h"
+
 #include "../AestraUI/Widgets/PluginBrowserPanel.h"
 #include "../AestraUI/Widgets/PluginUIController.h"
-#include "../AestraUI/Widgets/UIMixerPanel.h"
 #include "../AestraUI/Widgets/UIMixerInspector.h"
-#include "PluginManager.h"
-#include "Plugin/AestraDelay.h"
+#include "../AestraUI/Widgets/UIMixerPanel.h"
+#include "AestraHistoryPanel.h"
+#include "ArsenalPanel.h"
+#include "AudioGraphBuilder.h"
+#include "AuditionEngine.h" // Audition Mode backend
+#include "AuditionPanel.h"  // Audition Mode UI
+#include "Commands/PluginCommands.h"
 #include "MixerChannel.h"
+#include "MixerPanel.h"
+#include "PatternBrowserPanel.h"
+#include "PianoRollPanel.h"
+#include "Plugin/AestraDelay.h"
+#include "PluginManager.h"
+#include "SampleEditorPanel.h"
 
 // AestraUI includes
-#include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 
 // Component includes
+#include "AudioVisualizer.h"
 #include "FileBrowser.h"
 #include "FilePreviewPanel.h"
-#include "AudioVisualizer.h"
-#include "TransportBar.h"
 #include "TrackManagerUI.h"
+#include "TransportBar.h"
 
 // Audio includes
+#include "../AestraCore/include/AestraLog.h"
 #include "AudioEngine.h"
 #include "ChannelSlotMap.h"
-#include "TrackManager.h"
-#include "PreviewEngine.h"
-#include "MiniAudioDecoder.h"
-#include "Plugin/SamplerPlugin.h"
-#include "MixerViewModel.h"
 #include "ClipSource.h"
-#include "../AestraCore/include/AestraLog.h"
+#include "MiniAudioDecoder.h"
+#include "MixerViewModel.h"
+#include "Plugin/SamplerPlugin.h"
+#include "PreviewEngine.h"
+#include "TrackManager.h"
 
 #include <cmath>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -64,7 +65,7 @@ constexpr float kMinFileBrowserWidth = 300.0f;
 constexpr float kMinPatternBrowserWidth = 96.0f;
 constexpr float kMinTrackAreaWidth = 420.0f;
 constexpr float kResizeHitWidth = 6.0f;
-}
+} // namespace
 
 // =============================================================================
 // SECTION: Construction
@@ -106,16 +107,15 @@ AestraContent::AestraContent() {
     m_pluginController->setPopupLayer(m_overlayLayer.get());
 
     m_pluginController->setOnPluginLoaded([this](const std::string&, int) {
-        if (m_trackManager) m_trackManager->markModified();
+        if (m_trackManager)
+            m_trackManager->markModified();
     });
 
     // Create track manager for multi-track functionality
     m_trackManager = std::make_shared<TrackManager>();
 
     // Link TrackManager stop preview callback
-    m_trackManager->setStopPreviewCallback([this]() {
-        stopSoundPreview();
-    });
+    m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
 
     addDemoTracks();
 
@@ -127,15 +127,9 @@ AestraContent::AestraContent() {
     // Wire up TrackManagerUI internal toggles to centralized authority (v3.1)
     m_trackManagerUI->setOnToggleMixer([this]() { toggleView(Audio::ViewType::Mixer); });
     m_trackManagerUI->setOnTogglePianoRoll([this]() { toggleView(Audio::ViewType::PianoRoll); });
-    m_trackManagerUI->setOnOpenPatternInPianoRoll([this](PatternID patternId) {
-        openPatternInPianoRoll(patternId);
-    });
-    m_trackManagerUI->setOnPreviewPatternClip([this](PatternID patternId) {
-        startPatternClipPreview(patternId);
-    });
-    m_trackManagerUI->setOnStopPatternClipPreview([this]() {
-        stopPatternClipPreview(true);
-    });
+    m_trackManagerUI->setOnOpenPatternInPianoRoll([this](PatternID patternId) { openPatternInPianoRoll(patternId); });
+    m_trackManagerUI->setOnPreviewPatternClip([this](PatternID patternId) { startPatternClipPreview(patternId); });
+    m_trackManagerUI->setOnStopPatternClipPreview([this]() { stopPatternClipPreview(true); });
     m_trackManagerUI->setOnToggleSequencer([this]() { toggleView(Audio::ViewType::Sequencer); });
     m_trackManagerUI->setOnTogglePlaylist([this]() { toggleView(Audio::ViewType::Playlist); });
     m_trackManagerUI->setOnLoopPresetChanged([this](int preset) {
@@ -161,6 +155,23 @@ AestraContent::AestraContent() {
         m_audioEngine->setLoopEnabled(endBeat > startBeat);
     });
 
+    // Wire TrackManagerUI's internal graph dirty handling to the main app update path.
+    // TrackManagerUI::onUpdate() calls consumeGraphDirty() to drain the flag set by
+    // pending plugin tasks (e.g., async plugin insertion from TrackManagerUI's drag-drop).
+    // That triggers this callback which mirrors the AestraApp::run() graph rebuild path
+    // directly, so plugin effects take effect immediately without needing a clip move.
+    m_trackManagerUI->setOnGraphDirty([this]() {
+        if (!m_audioEngine || !m_trackManager) {
+            return;
+        }
+        auto graph = AudioGraphBuilder::buildFromTrackManager(*m_trackManager, m_audioEngine->getSampleRate());
+        m_audioEngine->setGraph(graph);
+        if (auto slotMap = m_trackManager->getChannelSlotMapShared()) {
+            m_audioEngine->setChannelSlotMap(slotMap);
+        }
+        m_trackManager->rebuildAndPushSnapshot();
+    });
+
     // Audition Mode integration - sends track to Audition queue and switches mode
     m_trackManagerUI->setOnSendToAudition([this](uint32_t trackId, const std::string& trackName) {
         // 1. Ensure Audition engine exists
@@ -170,16 +181,20 @@ AestraContent::AestraContent() {
 
         // 2. Determine project duration for full track bounce
         double projectDurationBeats = m_trackManager->getPlaylistModel().getTotalDurationBeats();
-        if (projectDurationBeats < 0.1) projectDurationBeats = 16.0; // Default if empty
+        if (projectDurationBeats < 0.1)
+            projectDurationBeats = 16.0; // Default if empty
 
         // 3. Generate temporary file path
         auto tempDir = std::filesystem::temp_directory_path();
-        auto tempFile = tempDir / ("AestraAudition_Track_" + std::to_string(trackId) + "_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count()) + ".wav");
+        auto tempFile =
+            tempDir / ("AestraAudition_Track_" + std::to_string(trackId) + "_" +
+                       std::to_string(std::chrono::system_clock::now().time_since_epoch().count()) + ".wav");
         std::string tempPath = tempFile.string();
 
         // 4. Perform bounce (Offline rendering)
         AESTRA_LOG_DEBUG("[AestraContent] Bouncing track " + std::to_string(trackId) + " to " + tempPath);
-        bool success = m_audioEngine->bounceRangeToWav(0.0, projectDurationBeats, tempPath, static_cast<int32_t>(trackId));
+        bool success =
+            m_audioEngine->bounceRangeToWav(0.0, projectDurationBeats, tempPath, static_cast<int32_t>(trackId));
 
         if (success) {
             m_tempFiles.push_back(tempPath);
@@ -204,7 +219,9 @@ AestraContent::AestraContent() {
 
         // 1. Generate path
         auto tempDir = std::filesystem::temp_directory_path();
-        auto tempFile = tempDir / ("AestraAudition_Selection_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count()) + ".wav");
+        auto tempFile =
+            tempDir / ("AestraAudition_Selection_" +
+                       std::to_string(std::chrono::system_clock::now().time_since_epoch().count()) + ".wav");
         std::string tempPath = tempFile.string();
 
         // 2. Perform bounce (trackId -1 means Master Output)
@@ -236,9 +253,7 @@ AestraContent::AestraContent() {
 
     // Create transport bar (Moved to Workspace Layer and Early Init for correct Z-Order behind Sidebars)
     m_transportBar = std::make_shared<Aestra::TransportBar>();
-    m_transportBar->setOnToggleView([this](Audio::ViewType view) {
-        toggleView(view);
-    });
+    m_transportBar->setOnToggleView([this](Audio::ViewType view) { toggleView(view); });
 
     // Wire Transport to AudioEngine (timeline playback)
     m_transportBar->setOnPlay([this]() { handleTransportPlayRequest(); });
@@ -252,7 +267,7 @@ AestraContent::AestraContent() {
         stopSoundPreview();
     });
     m_transportBar->setOnRecord([this](bool recording) {
-        if(m_trackManager) {
+        if (m_trackManager) {
             bool isRecordArmed = m_trackManager->isRecordArmed();
             if (recording != isRecordArmed) {
                 m_trackManager->record();
@@ -260,7 +275,8 @@ AestraContent::AestraContent() {
         }
     });
     m_transportBar->setOnMetronomeToggle([this](bool enabled) {
-        if(m_trackManager) m_trackManager->enableMetronome(enabled);
+        if (m_trackManager)
+            m_trackManager->enableMetronome(enabled);
     });
     m_transportBar->setOnCountInToggle([this](bool enabled) {
         m_countInEnabled = enabled;
@@ -271,9 +287,7 @@ AestraContent::AestraContent() {
 
     // Helper: Stop preview when Audition Queue changes (drop)
     if (m_auditionEngine) {
-        m_auditionEngine->setOnQueueUpdated([this]() {
-            stopSoundPreview();
-        });
+        m_auditionEngine->setOnQueueUpdated([this]() { stopSoundPreview(); });
     }
 
     // Add to WORKSPACE layer but we want it ON TOP of sidebars if it's an island?
@@ -281,7 +295,6 @@ AestraContent::AestraContent() {
     // Browsers are added to workspace too.
     // If we want Transport ON TOP, add it LAST.
     // m_workspaceLayer->addChild(m_transportBar); // Deferred to end
-
 
     // Browser toggle removed - browser content now starts directly with search/navigation
 
@@ -323,35 +336,37 @@ AestraContent::AestraContent() {
             m_pluginBrowser->setScanStatus("Scanning...");
         }
 
-        pm.getScanner().scanAsync([this](const std::string& path, int current, int total) {
-             // Update progress
-             if (m_pluginBrowser && total > 0) {
-                 float progress = static_cast<float>(current) / static_cast<float>(total);
-                 m_pluginBrowser->setScanning(true, progress);
-                 m_pluginBrowser->setScanStatus("Scanning: " + path);
-             }
-        }, [this](const std::vector<Aestra::Audio::PluginInfo>& results, bool success) {
-            // Clear scanning state
-            if (m_pluginBrowser) {
-                m_pluginBrowser->setScanning(false, 0.0f);
-                m_pluginBrowser->setScanStatus("");
-            }
-
-            if (success) {
-                // Map results to UI items
-                std::vector<AestraUI::PluginListItem> uiPlugins;
-                for (const auto& p : results) {
-                    uiPlugins.push_back(m_pluginController->convertToListItem(p));
+        pm.getScanner().scanAsync(
+            [this](const std::string& path, int current, int total) {
+                // Update progress
+                if (m_pluginBrowser && total > 0) {
+                    float progress = static_cast<float>(current) / static_cast<float>(total);
+                    m_pluginBrowser->setScanning(true, progress);
+                    m_pluginBrowser->setScanStatus("Scanning: " + path);
                 }
-
+            },
+            [this](const std::vector<Aestra::Audio::PluginInfo>& results, bool success) {
+                // Clear scanning state
                 if (m_pluginBrowser) {
-                    m_pluginBrowser->setPluginList(uiPlugins);
+                    m_pluginBrowser->setScanning(false, 0.0f);
+                    m_pluginBrowser->setScanStatus("");
                 }
-                AESTRA_LOG_DEBUG("Scan complete. UI updated with " + std::to_string(results.size()) + " plugins.");
-            } else {
-                AESTRA_LOG_ERROR("Plugin scan failed or cancelled.");
-            }
-        });
+
+                if (success) {
+                    // Map results to UI items
+                    std::vector<AestraUI::PluginListItem> uiPlugins;
+                    for (const auto& p : results) {
+                        uiPlugins.push_back(m_pluginController->convertToListItem(p));
+                    }
+
+                    if (m_pluginBrowser) {
+                        m_pluginBrowser->setPluginList(uiPlugins);
+                    }
+                    AESTRA_LOG_DEBUG("Scan complete. UI updated with " + std::to_string(results.size()) + " plugins.");
+                } else {
+                    AESTRA_LOG_ERROR("Plugin scan failed or cancelled.");
+                }
+            });
     });
 
     // Plugin load callback (double-click)
@@ -371,15 +386,9 @@ AestraContent::AestraContent() {
 
     // Create file preview panel (add to workspace, below browser)
     m_previewPanel = std::make_shared<AestraUI::FilePreviewPanel>();
-    m_previewPanel->setOnPlay([this](const AestraUI::FileItem& file) {
-        playSoundPreview(file);
-    });
-    m_previewPanel->setOnStop([this]() {
-        stopSoundPreview();
-    });
-    m_previewPanel->setOnSeek([this](double seconds) {
-        seekSoundPreview(seconds);
-    });
+    m_previewPanel->setOnPlay([this](const AestraUI::FileItem& file) { playSoundPreview(file); });
+    m_previewPanel->setOnStop([this]() { stopSoundPreview(); });
+    m_previewPanel->setOnSeek([this](double seconds) { seekSoundPreview(seconds); });
     m_workspaceLayer->addChild(m_previewPanel);
 
     // Link file selection to preview panel
@@ -415,16 +424,13 @@ AestraContent::AestraContent() {
             m_pianoRollPanel->loadPattern(patternId);
         }
     });
-    m_patternBrowser->setOnPatternDragStart([this](PatternID patternId) {
-        AESTRA_LOG_TRACE("Pattern drag started: " + std::to_string(patternId.value));
-    });
+    m_patternBrowser->setOnPatternDragStart(
+        [this](PatternID patternId) { AESTRA_LOG_TRACE("Pattern drag started: " + std::to_string(patternId.value)); });
     m_patternBrowser->setOnPatternDoubleClick([this](PatternID patternId) {
         AESTRA_LOG_TRACE("Pattern double-clicked: " + std::to_string(patternId.value));
         openPatternInPianoRoll(patternId);
     });
-    m_patternBrowser->setOnPatternPreviewRequested([this](PatternID patternId) {
-        startPatternClipPreview(patternId);
-    });
+    m_patternBrowser->setOnPatternPreviewRequested([this](PatternID patternId) { startPatternClipPreview(patternId); });
     m_patternBrowser->setOnPatternPlaceOnTimelineRequested([this](PatternID patternId) {
         if (!m_trackManagerUI || !patternId.isValid()) {
             return;
@@ -452,14 +458,15 @@ AestraContent::AestraContent() {
         m_auditionEngine->jumpToTrack(newIndex);
         m_auditionEngine->play();
     });
-    m_patternBrowser->setOnClipPlaceOnTimelineRequested([this](const std::string& filePath, const std::string& displayName) {
-        if (!m_trackManagerUI || filePath.empty()) {
-            return;
-        }
-        if (!m_trackManagerUI->placeFileOnTimeline(filePath, displayName)) {
-            AESTRA_LOG_WARNING("[AestraContent] Failed to place clip from bin onto timeline.");
-        }
-    });
+    m_patternBrowser->setOnClipPlaceOnTimelineRequested(
+        [this](const std::string& filePath, const std::string& displayName) {
+            if (!m_trackManagerUI || filePath.empty()) {
+                return;
+            }
+            if (!m_trackManagerUI->placeFileOnTimeline(filePath, displayName)) {
+                AESTRA_LOG_WARNING("[AestraContent] Failed to place clip from bin onto timeline.");
+            }
+        });
     m_patternBrowser->setOnClipShowInFileBrowserRequested([this](const std::string& filePath) {
         if (!m_fileBrowser || filePath.empty()) {
             return;
@@ -476,9 +483,8 @@ AestraContent::AestraContent() {
     m_mixerPanel = std::make_shared<MixerPanel>(m_trackManager);
     m_mixerPanel->setVisible(false);
     m_mixerPanel->setOnClose([this]() { toggleView(Audio::ViewType::Mixer); });
-    m_mixerPanel->setOnMaximizeToggle([this](bool) {
-        onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
-    });
+    m_mixerPanel->setOnMaximizeToggle(
+        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
     m_mixerPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::Mixer, pos); });
     m_mixerPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::Mixer, pos); });
     m_mixerPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::Mixer); });
@@ -486,7 +492,8 @@ AestraContent::AestraContent() {
     m_mixerPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
         const auto allowed = computeAllowedRectForPanels();
         m_viewState.mixerRect = clampRectToAllowed(proposed, allowed);
-        if (m_mixerPanel) m_mixerPanel->setBounds(m_viewState.mixerRect);
+        if (m_mixerPanel)
+            m_mixerPanel->setBounds(m_viewState.mixerRect);
         setDirty(true);
     });
     m_overlayLayer->addChild(m_mixerPanel);
@@ -516,17 +523,19 @@ AestraContent::AestraContent() {
         m_pianoRollPanel->savePattern();
         toggleView(Audio::ViewType::PianoRoll);
     });
-    m_pianoRollPanel->setOnMaximizeToggle([this](bool) {
-        onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
-    });
-    m_pianoRollPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::PianoRoll, pos); });
-    m_pianoRollPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::PianoRoll, pos); });
+    m_pianoRollPanel->setOnMaximizeToggle(
+        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
+    m_pianoRollPanel->setOnDragStart(
+        [this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::PianoRoll, pos); });
+    m_pianoRollPanel->setOnDragMove(
+        [this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::PianoRoll, pos); });
     m_pianoRollPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::PianoRoll); });
     m_pianoRollPanel->setMinimumPanelSize(560.0f, 280.0f);
     m_pianoRollPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
         const auto allowed = computeAllowedRectForPanels();
         m_viewState.pianoRollRect = clampRectToAllowed(proposed, allowed);
-        if (m_pianoRollPanel) m_pianoRollPanel->setBounds(m_viewState.pianoRollRect);
+        if (m_pianoRollPanel)
+            m_pianoRollPanel->setBounds(m_viewState.pianoRollRect);
         setDirty(true);
     });
     m_overlayLayer->addChild(m_pianoRollPanel);
@@ -548,17 +557,18 @@ AestraContent::AestraContent() {
             m_sampleEditorPanel->setVisible(false);
         }
     });
-    m_sampleEditorPanel->setOnMaximizeToggle([this](bool) {
-        onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
-    });
+    m_sampleEditorPanel->setOnMaximizeToggle(
+        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
     m_sampleEditorPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) {
-        if (!m_overlayLayer) return;
+        if (!m_overlayLayer)
+            return;
         m_sampleEditorDragging = true;
         m_sampleEditorDragStartMouseOverlay = m_overlayLayer->globalToLocal(pos);
         m_sampleEditorDragStartRect = m_sampleEditorRect;
     });
     m_sampleEditorPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) {
-        if (!m_overlayLayer || !m_sampleEditorDragging || !m_sampleEditorPanel) return;
+        if (!m_overlayLayer || !m_sampleEditorDragging || !m_sampleEditorPanel)
+            return;
         const AestraUI::NUIPoint currentMouseOverlay = m_overlayLayer->globalToLocal(pos);
         const AestraUI::NUIPoint delta = currentMouseOverlay - m_sampleEditorDragStartMouseOverlay;
         AestraUI::NUIRect proposed = m_sampleEditorDragStartRect;
@@ -569,14 +579,13 @@ AestraContent::AestraContent() {
         m_sampleEditorPanel->setBounds(m_sampleEditorRect);
         setDirty(true);
     });
-    m_sampleEditorPanel->setOnDragEnd([this]() {
-        m_sampleEditorDragging = false;
-    });
+    m_sampleEditorPanel->setOnDragEnd([this]() { m_sampleEditorDragging = false; });
     m_sampleEditorPanel->setMinimumPanelSize(480.0f, 320.0f);
     m_sampleEditorPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
         const auto allowed = computeAllowedRectForPanels();
         m_sampleEditorRect = clampRectToAllowed(proposed, allowed);
-        if (m_sampleEditorPanel) m_sampleEditorPanel->setBounds(m_sampleEditorRect);
+        if (m_sampleEditorPanel)
+            m_sampleEditorPanel->setBounds(m_sampleEditorRect);
         setDirty(true);
     });
     m_sampleEditorPanel->onADSRChanged = [this](const SampleEditorPanel::ADSRParams& adsr) {
@@ -684,58 +693,55 @@ AestraContent::AestraContent() {
             }
         }
     });
-    m_sequencerPanel->setOnRequestPatternEditor([this](PatternID patternId) {
-        openPatternInPianoRoll(patternId);
-    });
+    m_sequencerPanel->setOnRequestPatternEditor([this](PatternID patternId) { openPatternInPianoRoll(patternId); });
 
     m_sequencerPanel->setOnRequestLoadSample([this](UnitID id) {
-        if (!m_fileBrowser) return;
+        if (!m_fileBrowser)
+            return;
 
         // Show browser if hidden
         if (!m_fileBrowser->isVisible()) {
             m_browserToggle->setSelectedIndex(0); // Select "Files" tab
             m_fileBrowser->setVisible(true);
-            if (m_pluginBrowser) m_pluginBrowser->setVisible(false);
-            if (m_previewPanel) m_previewPanel->setVisible(m_previewPanel->hasFileSelection());
+            if (m_pluginBrowser)
+                m_pluginBrowser->setVisible(false);
+            if (m_previewPanel)
+                m_previewPanel->setVisible(m_previewPanel->hasFileSelection());
             onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
         }
 
         // Set one-shot selection callback
         m_fileBrowser->setOnFileSelected([this, id](const AestraUI::FileItem& file) {
-             // 1. Restore default behavior (Preview)
-             m_fileBrowser->setOnFileSelected([this](const AestraUI::FileItem& f) {
-                 stopSoundPreview();
-                 if (m_previewPanel) {
-                     m_previewPanel->setFile(&f);
-                     const bool filesTabActive = !m_browserToggle || m_browserToggle->getSelectedIndex() == 0;
-                     m_previewPanel->setVisible(filesTabActive && m_previewPanel->hasFileSelection());
-                 }
-                 onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
-              });
+            // 1. Restore default behavior (Preview)
+            m_fileBrowser->setOnFileSelected([this](const AestraUI::FileItem& f) {
+                stopSoundPreview();
+                if (m_previewPanel) {
+                    m_previewPanel->setFile(&f);
+                    const bool filesTabActive = !m_browserToggle || m_browserToggle->getSelectedIndex() == 0;
+                    m_previewPanel->setVisible(filesTabActive && m_previewPanel->hasFileSelection());
+                }
+                onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+            });
 
-             // 2. Perform Load
-             AESTRA_LOG_DEBUG("Loading sample into Unit " + std::to_string(id) + ": " + file.path);
-              if (m_trackManager) {
-                  auto& unitManager = m_trackManager->getUnitManager();
-                  unitManager.setUnitEnabled(id, true);
-                  unitManager.setUnitAudioClip(id, file.path);
-                  if (m_sequencerPanel) {
-                      m_sequencerPanel->setSelectedUnit(id);
-                      m_sequencerPanel->refreshUnits();
-                  }
-                  openSampleEditorForUnit(id, file.path);
-               }
-          });
+            // 2. Perform Load
+            AESTRA_LOG_DEBUG("Loading sample into Unit " + std::to_string(id) + ": " + file.path);
+            if (m_trackManager) {
+                auto& unitManager = m_trackManager->getUnitManager();
+                unitManager.setUnitEnabled(id, true);
+                unitManager.setUnitAudioClip(id, file.path);
+                if (m_sequencerPanel) {
+                    m_sequencerPanel->setSelectedUnit(id);
+                    m_sequencerPanel->refreshUnits();
+                }
+                openSampleEditorForUnit(id, file.path);
+            }
+        });
     });
-    m_sequencerPanel->setOnPluginDropped([this](const std::string& pluginId) {
-        loadInstrumentToArsenal(pluginId);
-    });
-    m_sequencerPanel->setOnPluginDroppedToUnit([this](UnitID unitId, const std::string& pluginId) {
-        loadInstrumentIntoArsenalUnit(unitId, pluginId);
-    });
-    m_sequencerPanel->setOnSampleDroppedToUnit([this](UnitID unitId, const std::string& samplePath) {
-        openSampleEditorForUnit(unitId, samplePath);
-    });
+    m_sequencerPanel->setOnPluginDropped([this](const std::string& pluginId) { loadInstrumentToArsenal(pluginId); });
+    m_sequencerPanel->setOnPluginDroppedToUnit(
+        [this](UnitID unitId, const std::string& pluginId) { loadInstrumentIntoArsenalUnit(unitId, pluginId); });
+    m_sequencerPanel->setOnSampleDroppedToUnit(
+        [this](UnitID unitId, const std::string& samplePath) { openSampleEditorForUnit(unitId, samplePath); });
     m_sequencerPanel->setOnSelectedUnitChanged([this](UnitID unitId) {
         if (m_pianoRollPanel) {
             m_pianoRollPanel->setEditingUnit(unitId);
@@ -800,17 +806,19 @@ AestraContent::AestraContent() {
     m_sequencerPanel->setVisible(false);
     m_sequencerPanel->unregisterDropTargets();
     m_sequencerPanel->setOnClose([this]() { setArsenalPanelVisible(false); });
-    m_sequencerPanel->setOnMaximizeToggle([this](bool) {
-        onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
-    });
-    m_sequencerPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::Sequencer, pos); });
-    m_sequencerPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::Sequencer, pos); });
+    m_sequencerPanel->setOnMaximizeToggle(
+        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
+    m_sequencerPanel->setOnDragStart(
+        [this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::Sequencer, pos); });
+    m_sequencerPanel->setOnDragMove(
+        [this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::Sequencer, pos); });
     m_sequencerPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::Sequencer); });
     m_sequencerPanel->setMinimumPanelSize(520.0f, 260.0f);
     m_sequencerPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
         const auto allowed = computeAllowedRectForPanels();
         m_viewState.sequencerRect = clampRectToAllowed(proposed, allowed);
-        if (m_sequencerPanel) m_sequencerPanel->setBounds(m_viewState.sequencerRect);
+        if (m_sequencerPanel)
+            m_sequencerPanel->setBounds(m_viewState.sequencerRect);
         setDirty(true);
     });
     m_overlayLayer->addChild(m_sequencerPanel);
@@ -826,17 +834,22 @@ AestraContent::AestraContent() {
     m_historyPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
         const auto allowed = computeAllowedRectForPanels();
         m_viewState.historyRect = clampRectToAllowed(proposed, allowed);
-        if (m_historyPanel) m_historyPanel->setBounds(m_viewState.historyRect);
+        if (m_historyPanel)
+            m_historyPanel->setBounds(m_viewState.historyRect);
         setDirty(true);
     });
     m_historyPanel->setMaximized(false);
-    m_historyPanel->setOnMaximizeToggle([this](bool) {
-        onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
-    });
+    m_historyPanel->setOnMaximizeToggle(
+        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
     m_historyPanel->setOnHistoryChanged([this]() {
-        if (m_trackManagerUI) { m_trackManagerUI->refreshTracks(); m_trackManagerUI->invalidateCache(); }
-        if (m_mixerPanel) m_mixerPanel->refreshChannels();
-        if (m_sequencerPanel) m_sequencerPanel->refreshUnits();
+        if (m_trackManagerUI) {
+            m_trackManagerUI->refreshTracks();
+            m_trackManagerUI->invalidateCache();
+        }
+        if (m_mixerPanel)
+            m_mixerPanel->refreshChannels();
+        if (m_sequencerPanel)
+            m_sequencerPanel->refreshUnits();
         m_trackManager->markModified();
     });
     // NOTE: History panel is added LAST so it's on top and receives mouse events first.
@@ -845,7 +858,8 @@ AestraContent::AestraContent() {
     if (m_trackManager) {
         m_trackManager->getCommandHistory().addOnStateChanged([this]() {
             // Refresh all panels on any command state change
-            if (m_mixerPanel) m_mixerPanel->refreshChannels();
+            if (m_mixerPanel)
+                m_mixerPanel->refreshChannels();
             if (m_historyPanel) {
                 m_historyPanel->refreshHistory();
             }
@@ -857,18 +871,25 @@ AestraContent::AestraContent() {
 
     // Create Focus Toggle Buttons
     auto& theme = AestraUI::NUIThemeManager::getInstance();
-    m_viewToggle = std::make_shared<AestraUI::NUISegmentedControl>(
-        std::vector<std::string>{"Arsenal", "Timeline", "Audition"}
-    );
+    m_viewToggle =
+        std::make_shared<AestraUI::NUISegmentedControl>(std::vector<std::string>{"Arsenal", "Timeline", "Audition"});
     m_viewToggle->setCornerRadius(12.0f);
     m_viewToggle->setAccentColor(AestraUI::NUIColor(0.36f, 0.25f, 0.58f, 1.0f));
     m_viewToggle->setOnSelectionChanged([this](size_t index) {
         ViewFocus newFocus;
         switch (index) {
-            case 0: newFocus = ViewFocus::Arsenal; break;
-            case 1: newFocus = ViewFocus::Timeline; break;
-            case 2: newFocus = ViewFocus::Audition; break;
-            default: newFocus = ViewFocus::Timeline; break;
+        case 0:
+            newFocus = ViewFocus::Arsenal;
+            break;
+        case 1:
+            newFocus = ViewFocus::Timeline;
+            break;
+        case 2:
+            newFocus = ViewFocus::Audition;
+            break;
+        default:
+            newFocus = ViewFocus::Timeline;
+            break;
         }
         setViewFocus(newFocus);
 
@@ -879,7 +900,7 @@ AestraContent::AestraContent() {
     });
 
     // Initialize with Timeline mode as default (panel closed)
-    m_viewToggle->setSelectedIndex(1);  // Select "Timeline"
+    m_viewToggle->setSelectedIndex(1); // Select "Timeline"
     setViewFocus(ViewFocus::Timeline);
     setArsenalPanelVisible(false);
 
@@ -922,10 +943,10 @@ void AestraContent::onUpdate(double dt) {
     // Sync track changes to MixerViewModel
     auto tm = getTrackManager();
     if (tm && m_mixerPanel) {
-         auto viewModel = m_mixerPanel->getViewModel();
-         if (viewModel) {
-             auto slotMap = tm->getChannelSlotMapRaw();
-             if (slotMap) {
+        auto viewModel = m_mixerPanel->getViewModel();
+        if (viewModel) {
+            auto slotMap = tm->getChannelSlotMapRaw();
+            if (slotMap) {
                 viewModel->syncFromEngine(*tm, *slotMap);
                 m_mixerPanel->refreshChannels();
 
@@ -939,8 +960,8 @@ void AestraContent::onUpdate(double dt) {
                         }
                     }
                 }
-             }
-         }
+            }
+        }
     }
 
     // Update Plugin UI Binding (Effect Rack in Inspector)
@@ -964,7 +985,8 @@ void AestraContent::onUpdate(double dt) {
                         if (mixerUI) {
                             auto inspector = mixerUI->getInspector();
                             if (inspector && inspector->getEffectRack()) {
-                                m_pluginController->bindEffectRack(inspector->getEffectRack().get(), &channel->getEffectChain());
+                                m_pluginController->bindEffectRack(inspector->getEffectRack().get(),
+                                                                   &channel->getEffectChain());
                             }
                         }
                     }
@@ -1030,16 +1052,17 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
 
     AestraUI::NUIColor textColor = themeManager.getColor("textPrimary");
     AestraUI::NUIColor accentColor = themeManager.getColor("accentCyan");
-    AestraUI::NUIColor statusColor = m_audioActive ?
-        themeManager.getColor("accentLime") : themeManager.getColor("error");
+    AestraUI::NUIColor statusColor =
+        m_audioActive ? themeManager.getColor("accentLime") : themeManager.getColor("error");
 
-    AestraUI::NUIRect contentArea(bounds.x, bounds.y + transportHeight,
-                                 width, height - transportHeight);
+    AestraUI::NUIRect contentArea(bounds.x, bounds.y + transportHeight, width, height - transportHeight);
     renderer.fillRect(contentArea, themeManager.getColor("backgroundPrimary"));
     const auto contentBorder = themeManager.getColor("border");
     renderer.drawLine({contentArea.x, contentArea.y}, {contentArea.x, contentArea.bottom()}, 1.0f, contentBorder);
-    renderer.drawLine({contentArea.right(), contentArea.y}, {contentArea.right(), contentArea.bottom()}, 1.0f, contentBorder);
-    renderer.drawLine({contentArea.x, contentArea.bottom()}, {contentArea.right(), contentArea.bottom()}, 1.0f, contentBorder);
+    renderer.drawLine({contentArea.right(), contentArea.y}, {contentArea.right(), contentArea.bottom()}, 1.0f,
+                      contentBorder);
+    renderer.drawLine({contentArea.x, contentArea.bottom()}, {contentArea.right(), contentArea.bottom()}, 1.0f,
+                      contentBorder);
 
     renderChildren(renderer);
 
@@ -1084,8 +1107,10 @@ void AestraContent::onResize(int width, int height) {
 
     AestraUI::NUIRect contentBounds = getBounds();
 
-    if (m_workspaceLayer) m_workspaceLayer->setBounds(contentBounds);
-    if (m_overlayLayer) m_overlayLayer->setBounds(contentBounds);
+    if (m_workspaceLayer)
+        m_workspaceLayer->setBounds(contentBounds);
+    if (m_overlayLayer)
+        m_overlayLayer->setBounds(contentBounds);
 
     // DYNAMIC LAYOUT: Timeline-first hierarchy
     const float transportHeight = 56.0f;
@@ -1103,8 +1128,7 @@ void AestraContent::onResize(int width, int height) {
             // Hide transport bar physically (prevent mouse hits)
             m_transportBar->setBounds(AestraUI::NUIRect(0, -100, 0, 0));
         } else {
-            m_transportBar->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, 0,
-                contentBounds.width, transportHeight));
+            m_transportBar->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, 0, contentBounds.width, transportHeight));
         }
     }
 
@@ -1128,8 +1152,7 @@ void AestraContent::onResize(int width, int height) {
             labelX = toggleBounds.right() + 12.0f;
         }
         labelX = std::min(labelX, std::max(0.0f, contentBounds.width - 160.0f));
-        m_scopeLabel->setBounds(AestraUI::NUIAbsolute(contentBounds,
-            labelX, labelY, 150.0f, 30.0f));
+        m_scopeLabel->setBounds(AestraUI::NUIAbsolute(contentBounds, labelX, labelY, 150.0f, 30.0f));
     }
 
     const float maxFileBrowserWidth = std::max(kMinFileBrowserWidth, std::min(width * 0.42f, 560.0f));
@@ -1150,15 +1173,18 @@ void AestraContent::onResize(int width, int height) {
         m_patternBrowserWidthPref = computedPatternBrowserWidth;
     }
 
-    const bool patternRailVisible = m_patternBrowser && m_patternBrowser->isVisible() && !browserPatternTabActive && !clipsTabActive;
+    const bool patternRailVisible =
+        m_patternBrowser && m_patternBrowser->isVisible() && !browserPatternTabActive && !clipsTabActive;
     const float minPatternWidth = patternRailVisible ? kMinPatternBrowserWidth : 0.0f;
-    const float maxPatternWidth = patternRailVisible ? std::max(minPatternWidth, std::min(width * 0.24f, 280.0f)) : 0.0f;
+    const float maxPatternWidth =
+        patternRailVisible ? std::max(minPatternWidth, std::min(width * 0.24f, 280.0f)) : 0.0f;
     const float maxFileByTrack = std::max(kMinFileBrowserWidth, width - kMinTrackAreaWidth - minPatternWidth);
-    const float fileBrowserWidth = std::clamp(m_fileBrowserWidthPref, kMinFileBrowserWidth, std::min(maxFileBrowserWidth, maxFileByTrack));
+    const float fileBrowserWidth =
+        std::clamp(m_fileBrowserWidthPref, kMinFileBrowserWidth, std::min(maxFileBrowserWidth, maxFileByTrack));
     const float maxPatternByTrack = std::max(minPatternWidth, width - kMinTrackAreaWidth - fileBrowserWidth);
-    const float patternBrowserWidth = patternRailVisible
-        ? std::clamp(m_patternBrowserWidthPref, minPatternWidth, std::min(maxPatternWidth, maxPatternByTrack))
-        : 0.0f;
+    const float patternBrowserWidth = patternRailVisible ? std::clamp(m_patternBrowserWidthPref, minPatternWidth,
+                                                                      std::min(maxPatternWidth, maxPatternByTrack))
+                                                         : 0.0f;
 
     m_fileBrowserWidthPref = fileBrowserWidth;
     if (patternRailVisible) {
@@ -1166,49 +1192,49 @@ void AestraContent::onResize(int width, int height) {
     }
 
     const bool filesTabActive = browserTab == 0;
-    const bool showPreviewDock = m_previewPanel && filesTabActive && m_fileBrowser && m_fileBrowser->isVisible() && m_previewPanel->hasFileSelection();
+    const bool showPreviewDock = m_previewPanel && filesTabActive && m_fileBrowser && m_fileBrowser->isVisible() &&
+                                 m_previewPanel->hasFileSelection();
     if (m_previewPanel) {
         m_previewPanel->setVisible(showPreviewDock);
     }
 
-// Browser toggle removed - browser panes now start directly at sidebarTopY without toggle offset
+    // Browser toggle removed - browser panes now start directly at sidebarTopY without toggle offset
 
-     if (m_fileBrowser) {
-         float fbTop = sidebarTopY;
-         float fbHeight = height - fbTop;
+    if (m_fileBrowser) {
+        float fbTop = sidebarTopY;
+        float fbHeight = height - fbTop;
 
-if (showPreviewDock) {
+        if (showPreviewDock) {
             const float previewHeight = 52.0f;
             const float navWidth = std::clamp(fileBrowserWidth * 0.34f, 118.0f, 188.0f);
             const float previewWidth = std::max(0.0f, fileBrowserWidth - navWidth);
 
             m_previewPanel->setBounds(AestraUI::NUIAbsolute(contentBounds, navWidth, fbTop + fbHeight - previewHeight,
-                previewWidth, previewHeight));
+                                                            previewWidth, previewHeight));
         }
 
-        m_fileBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, fbTop,
-                                                   fileBrowserWidth, fbHeight));
+        m_fileBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, fbTop, fileBrowserWidth, fbHeight));
     }
 
-if (m_pluginBrowser) {
-         // Occupies same space as file browser + preview panel
-         float pbTop = sidebarTopY;
-         float pbHeight = height - pbTop;
-         m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, pbTop, fileBrowserWidth, pbHeight));
-     }
+    if (m_pluginBrowser) {
+        // Occupies same space as file browser + preview panel
+        float pbTop = sidebarTopY;
+        float pbHeight = height - pbTop;
+        m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, pbTop, fileBrowserWidth, pbHeight));
+    }
 
-     if (m_patternBrowser) {
-         if (browserPatternTabActive || clipsTabActive) {
-             float clipTop = sidebarTopY;
-             m_patternBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0.0f, clipTop,
-                                                             fileBrowserWidth, height - clipTop));
-         } else {
+    if (m_patternBrowser) {
+        if (browserPatternTabActive || clipsTabActive) {
+            float clipTop = sidebarTopY;
+            m_patternBrowser->setBounds(
+                AestraUI::NUIAbsolute(contentBounds, 0.0f, clipTop, fileBrowserWidth, height - clipTop));
+        } else {
             float patternBrowserX = fileBrowserWidth;
             float pbY = isAuditionMode ? 0.0f : transportHeight;
             float pbHeight = height - pbY;
 
-            m_patternBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, patternBrowserX, pbY,
-                                                            patternBrowserWidth, pbHeight));
+            m_patternBrowser->setBounds(
+                AestraUI::NUIAbsolute(contentBounds, patternBrowserX, pbY, patternBrowserWidth, pbHeight));
         }
     }
 
@@ -1220,15 +1246,18 @@ if (m_pluginBrowser) {
         float vuY = (transportHeight - visualizerHeight) / 2.0f;
 
         float totalWidth = meterWidth;
-        if (m_waveformVisualizer) totalWidth += waveformWidth + gap;
+        if (m_waveformVisualizer)
+            totalWidth += waveformWidth + gap;
 
         float xStart = width - totalWidth - layout.panelMargin;
         if (m_waveformVisualizer) {
-            m_waveformVisualizer->setBounds(AestraUI::NUIAbsolute(contentBounds, xStart, vuY, waveformWidth, visualizerHeight));
+            m_waveformVisualizer->setBounds(
+                AestraUI::NUIAbsolute(contentBounds, xStart, vuY, waveformWidth, visualizerHeight));
             xStart += waveformWidth + gap;
         }
         if (m_audioVisualizer) {
-            m_audioVisualizer->setBounds(AestraUI::NUIAbsolute(contentBounds, xStart, vuY, meterWidth, visualizerHeight));
+            m_audioVisualizer->setBounds(
+                AestraUI::NUIAbsolute(contentBounds, xStart, vuY, meterWidth, visualizerHeight));
         }
     }
 
@@ -1236,7 +1265,8 @@ if (m_pluginBrowser) {
         float trackAreaX = fileBrowserWidth + patternBrowserWidth;
         float trackAreaWidth = width - trackAreaX;
         float trackAreaHeight = height - transportHeight;
-        m_trackManagerUI->setBounds(AestraUI::NUIAbsolute(contentBounds, trackAreaX, transportHeight, trackAreaWidth, trackAreaHeight));
+        m_trackManagerUI->setBounds(
+            AestraUI::NUIAbsolute(contentBounds, trackAreaX, transportHeight, trackAreaWidth, trackAreaHeight));
 
         // AuditionPanel uses the same content area BUT ignores transport height
         if (m_auditionPanel) {
@@ -1257,10 +1287,11 @@ if (m_pluginBrowser) {
 
             // Overriding for Audition Mode
             if (m_viewFocus == ViewFocus::Audition) {
-                 m_auditionPanel->setBounds(AestraUI::NUIAbsolute(contentBounds, fileBrowserWidth, 0,
-                    width - fileBrowserWidth, height));
+                m_auditionPanel->setBounds(
+                    AestraUI::NUIAbsolute(contentBounds, fileBrowserWidth, 0, width - fileBrowserWidth, height));
             } else {
-                 m_auditionPanel->setBounds(AestraUI::NUIAbsolute(contentBounds, trackAreaX, transportHeight, trackAreaWidth, trackAreaHeight));
+                m_auditionPanel->setBounds(
+                    AestraUI::NUIAbsolute(contentBounds, trackAreaX, transportHeight, trackAreaWidth, trackAreaHeight));
             }
         }
     }
@@ -1269,12 +1300,12 @@ if (m_pluginBrowser) {
     AestraUI::NUIRect maxRect = computeMaximizedRect();
 
     if (m_mixerPanel && m_mixerPanel->isVisible()) {
-         if (m_mixerPanel->isMaximized()) {
-             m_mixerPanel->setBounds(maxRect);
-         } else {
-             m_viewState.mixerRect = clampRectToAllowed(m_viewState.mixerRect, allowed);
-             m_mixerPanel->setBounds(m_viewState.mixerRect);
-         }
+        if (m_mixerPanel->isMaximized()) {
+            m_mixerPanel->setBounds(maxRect);
+        } else {
+            m_viewState.mixerRect = clampRectToAllowed(m_viewState.mixerRect, allowed);
+            m_mixerPanel->setBounds(m_viewState.mixerRect);
+        }
     }
 
     if (m_pianoRollPanel && m_pianoRollPanel->isVisible()) {
@@ -1367,68 +1398,74 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
     bool changed = false;
     switch (view) {
-        case Audio::ViewType::Mixer:
-            if (m_viewState.mixerOpen != open) {
-                m_viewState.mixerOpen = open;
-                if (m_mixerPanel) {
-                    m_mixerPanel->setVisible(open);
-                    if (open) m_mixerPanel->refreshChannels();
+    case Audio::ViewType::Mixer:
+        if (m_viewState.mixerOpen != open) {
+            m_viewState.mixerOpen = open;
+            if (m_mixerPanel) {
+                m_mixerPanel->setVisible(open);
+                if (open)
+                    m_mixerPanel->refreshChannels();
+            }
+            changed = true;
+        }
+        break;
+    case Audio::ViewType::PianoRoll:
+        if (m_viewState.pianoRollOpen != open) {
+            m_viewState.pianoRollOpen = open;
+            if (m_pianoRollPanel)
+                m_pianoRollPanel->setVisible(open);
+            changed = true;
+        }
+        break;
+    case Audio::ViewType::Sequencer:
+        if (m_viewState.sequencerOpen != open) {
+            m_viewState.sequencerOpen = open;
+            if (m_sequencerPanel) {
+                m_sequencerPanel->setVisible(open);
+                if (!open) {
+                    m_sequencerPanel->unregisterDropTargets();
                 }
-                changed = true;
             }
-            break;
-        case Audio::ViewType::PianoRoll:
-            if (m_viewState.pianoRollOpen != open) {
-                m_viewState.pianoRollOpen = open;
-                if (m_pianoRollPanel) m_pianoRollPanel->setVisible(open);
-                changed = true;
-            }
-            break;
-        case Audio::ViewType::Sequencer:
-            if (m_viewState.sequencerOpen != open) {
-                m_viewState.sequencerOpen = open;
-                if (m_sequencerPanel) {
-                    m_sequencerPanel->setVisible(open);
-                    if (!open) {
-                        m_sequencerPanel->unregisterDropTargets();
-                    }
-                }
-                changed = true;
-            }
-            break;
-        case Audio::ViewType::Playlist:
-            if (m_viewState.playlistActive != open) {
-                m_viewState.playlistActive = open;
-                if (m_trackManagerUI) m_trackManagerUI->setVisible(open);
-                changed = true;
-            }
-            break;
+            changed = true;
+        }
+        break;
+    case Audio::ViewType::Playlist:
+        if (m_viewState.playlistActive != open) {
+            m_viewState.playlistActive = open;
+            if (m_trackManagerUI)
+                m_trackManagerUI->setVisible(open);
+            changed = true;
+        }
+        break;
     }
 
     if (changed) {
-        AESTRA_LOG_DEBUG("[ViewState] View changed: " + std::to_string(static_cast<int>(view)) + " -> " + (open ? "OPEN" : "CLOSED"));
+        AESTRA_LOG_DEBUG("[ViewState] View changed: " + std::to_string(static_cast<int>(view)) + " -> " +
+                         (open ? "OPEN" : "CLOSED"));
         syncViewState();
 
         if (open) {
             AestraUI::NUIRect allowed = computeAllowedRectForPanels();
             switch (view) {
-                case Audio::ViewType::Mixer:
-                    m_viewState.mixerRect = clampRectToAllowed(m_viewState.mixerRect, allowed);
-                    if (m_mixerPanel) m_mixerPanel->setBounds(m_viewState.mixerRect);
-                    break;
-                case Audio::ViewType::PianoRoll:
-                    m_viewState.pianoRollRect = clampRectToAllowed(m_viewState.pianoRollRect, allowed);
-                    if (m_pianoRollPanel) m_pianoRollPanel->setBounds(m_viewState.pianoRollRect);
-                    break;
-                case Audio::ViewType::Sequencer:
-                    m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, allowed);
-                    if (m_sequencerPanel) {
-                        m_sequencerPanel->setBounds(m_viewState.sequencerRect);
-                        m_sequencerPanel->registerDropTargets(true);
-                    }
-                    break;
-                default:
-                    break;
+            case Audio::ViewType::Mixer:
+                m_viewState.mixerRect = clampRectToAllowed(m_viewState.mixerRect, allowed);
+                if (m_mixerPanel)
+                    m_mixerPanel->setBounds(m_viewState.mixerRect);
+                break;
+            case Audio::ViewType::PianoRoll:
+                m_viewState.pianoRollRect = clampRectToAllowed(m_viewState.pianoRollRect, allowed);
+                if (m_pianoRollPanel)
+                    m_pianoRollPanel->setBounds(m_viewState.pianoRollRect);
+                break;
+            case Audio::ViewType::Sequencer:
+                m_viewState.sequencerRect = clampRectToAllowed(m_viewState.sequencerRect, allowed);
+                if (m_sequencerPanel) {
+                    m_sequencerPanel->setBounds(m_viewState.sequencerRect);
+                    m_sequencerPanel->registerDropTargets(true);
+                }
+                break;
+            default:
+                break;
             }
         }
 
@@ -1446,10 +1483,17 @@ void AestraContent::toggleView(Audio::ViewType view) {
 
     bool current = false;
     switch (view) {
-        case Audio::ViewType::Mixer: current = m_viewState.mixerOpen; break;
-        case Audio::ViewType::PianoRoll: current = m_viewState.pianoRollOpen; break;
-        case Audio::ViewType::Playlist: current = m_viewState.playlistActive; break;
-        default: break;
+    case Audio::ViewType::Mixer:
+        current = m_viewState.mixerOpen;
+        break;
+    case Audio::ViewType::PianoRoll:
+        current = m_viewState.pianoRollOpen;
+        break;
+    case Audio::ViewType::Playlist:
+        current = m_viewState.playlistActive;
+        break;
+    default:
+        break;
     }
     setViewOpen(view, !current);
 }
@@ -1534,7 +1578,8 @@ void AestraContent::setMixerVisible(bool visible) {
 void AestraContent::setViewFocus(ViewFocus focus) {
     // Guard against re-entrancy (setSelectedIndex triggers callback which calls setViewFocus)
     static bool isUpdating = false;
-    if (isUpdating) return;
+    if (isUpdating)
+        return;
     isUpdating = true;
 
     bool wasPlaying = (m_transportBar && m_transportBar->getState() == TransportState::Playing);
@@ -1544,8 +1589,10 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
     auto applyOverlayPanelVisibility = [this](bool auditionMode) {
         if (auditionMode) {
-            if (m_mixerPanel) m_mixerPanel->setVisible(false);
-            if (m_pianoRollPanel) m_pianoRollPanel->setVisible(false);
+            if (m_mixerPanel)
+                m_mixerPanel->setVisible(false);
+            if (m_pianoRollPanel)
+                m_pianoRollPanel->setVisible(false);
             if (m_sequencerPanel) {
                 m_sequencerPanel->setVisible(false);
                 m_sequencerPanel->unregisterDropTargets();
@@ -1553,8 +1600,10 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             return;
         }
 
-        if (m_mixerPanel) m_mixerPanel->setVisible(m_viewState.mixerOpen);
-        if (m_pianoRollPanel) m_pianoRollPanel->setVisible(m_viewState.pianoRollOpen);
+        if (m_mixerPanel)
+            m_mixerPanel->setVisible(m_viewState.mixerOpen);
+        if (m_pianoRollPanel)
+            m_pianoRollPanel->setVisible(m_viewState.pianoRollOpen);
         if (m_sequencerPanel) {
             m_sequencerPanel->setVisible(m_viewState.sequencerOpen);
             if (m_viewState.sequencerOpen) {
@@ -1588,8 +1637,10 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             }
 
             // Hide Audition panel if it exists (returning from Audition)
-            if (m_auditionPanel) m_auditionPanel->setVisible(false);
-            if (m_trackManagerUI) m_trackManagerUI->setVisible(true);
+            if (m_auditionPanel)
+                m_auditionPanel->setVisible(false);
+            if (m_trackManagerUI)
+                m_trackManagerUI->setVisible(true);
         }
         // === ENTERING TIMELINE ===
         else if (focus == ViewFocus::Timeline) {
@@ -1608,9 +1659,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             m_audioEngine->setPatternPlaybackMode(false, 4.0);
             // Link TrackManager stop preview callback
             if (m_trackManager) {
-                m_trackManager->setStopPreviewCallback([this]() {
-                    stopSoundPreview();
-                });
+                m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
             }
 
             m_audioEngine->setAuditionModeEnabled(false);
@@ -1626,8 +1675,10 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             }
 
             // Hide Audition panel if it exists (returning from Audition)
-            if (m_auditionPanel) m_auditionPanel->setVisible(false);
-            if (m_trackManagerUI) m_trackManagerUI->setVisible(true);
+            if (m_auditionPanel)
+                m_auditionPanel->setVisible(false);
+            if (m_trackManagerUI)
+                m_trackManagerUI->setVisible(true);
         }
         // === ENTERING AUDITION ===
         else if (focus == ViewFocus::Audition) {
@@ -1643,7 +1694,8 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
             // Stop any file browser preview
             stopSoundPreview();
-            if (m_previewEngine) m_previewEngine->stop();
+            if (m_previewEngine)
+                m_previewEngine->stop();
 
             // Save timeline position for when we return
             if (m_trackManager && previousFocus == ViewFocus::Timeline) {
@@ -1671,9 +1723,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
             if (!m_auditionPanel) {
                 m_auditionPanel = std::make_shared<AuditionPanel>(m_auditionEngine);
-                m_auditionPanel->setOnPlayRequest([this]() {
-                     stopSoundPreview();
-                });
+                m_auditionPanel->setOnPlayRequest([this]() { stopSoundPreview(); });
                 m_auditionPanel->setOnActiveTrackPathChanged([this](const std::string& path) {
                     if (m_fileBrowser) {
                         m_fileBrowser->setActivePlaybackPath(path);
@@ -1683,28 +1733,34 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                     std::string activePath;
                     if (m_auditionEngine && m_auditionEngine->isPlaying()) {
                         auto current = m_auditionEngine->getCurrentItem();
-                        if (current) activePath = current->filePath;
+                        if (current)
+                            activePath = current->filePath;
                     }
                     m_fileBrowser->setActivePlaybackPath(activePath);
                 }
                 // Fix Z-Order: Add to workspace layer (below overlay/transport), not root
                 if (m_workspaceLayer) {
-                     m_workspaceLayer->addChild(m_auditionPanel);
+                    m_workspaceLayer->addChild(m_auditionPanel);
                 } else {
-                     addChild(m_auditionPanel);
+                    addChild(m_auditionPanel);
                 }
             }
 
             // Show the Audition panel, hide DAW panels
             m_auditionPanel->setVisible(true);
-            if (m_trackManagerUI) m_trackManagerUI->setVisible(false);
+            if (m_trackManagerUI)
+                m_trackManagerUI->setVisible(false);
             applyOverlayPanelVisibility(true);
 
             // POLISH: Hide Transport, Pattern Browser, and Visualizers for immersion
-            if (m_transportBar) m_transportBar->setVisible(false);
-            if (m_patternBrowser) m_patternBrowser->setVisible(false);
-            if (m_waveformVisualizer) m_waveformVisualizer->setVisible(false);
-            if (m_audioVisualizer) m_audioVisualizer->setVisible(false);
+            if (m_transportBar)
+                m_transportBar->setVisible(false);
+            if (m_patternBrowser)
+                m_patternBrowser->setVisible(false);
+            if (m_waveformVisualizer)
+                m_waveformVisualizer->setVisible(false);
+            if (m_audioVisualizer)
+                m_audioVisualizer->setVisible(false);
 
             AESTRA_LOG_DEBUG("[ViewFocus] Entering Audition Mode");
         }
@@ -1713,25 +1769,33 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         // Ensure UI elements are correctly shown/hidden based on mode
         bool isAudition = (focus == ViewFocus::Audition);
 
-        if (m_auditionPanel) m_auditionPanel->setVisible(isAudition);
+        if (m_auditionPanel)
+            m_auditionPanel->setVisible(isAudition);
 
         if (!isAudition) {
-             // Returning to DAW Mode - Restore UI
-             if (m_transportBar) m_transportBar->setVisible(true);
-             const size_t browserTab = m_browserToggle ? m_browserToggle->getSelectedIndex() : 0;
-             const bool showBrowserPatternPane =
-                 focus == ViewFocus::Timeline && (browserTab == 2 || browserTab == 3);
-             if (m_patternBrowser) m_patternBrowser->setVisible(showBrowserPatternPane);
-             if (m_waveformVisualizer) m_waveformVisualizer->setVisible(true);
-             if (m_audioVisualizer) m_audioVisualizer->setVisible(true);
-             applyOverlayPanelVisibility(false);
+            // Returning to DAW Mode - Restore UI
+            if (m_transportBar)
+                m_transportBar->setVisible(true);
+            const size_t browserTab = m_browserToggle ? m_browserToggle->getSelectedIndex() : 0;
+            const bool showBrowserPatternPane = focus == ViewFocus::Timeline && (browserTab == 2 || browserTab == 3);
+            if (m_patternBrowser)
+                m_patternBrowser->setVisible(showBrowserPatternPane);
+            if (m_waveformVisualizer)
+                m_waveformVisualizer->setVisible(true);
+            if (m_audioVisualizer)
+                m_audioVisualizer->setVisible(true);
+            applyOverlayPanelVisibility(false);
         } else {
-             // Audition Mode - Hide Distractions
-             if (m_transportBar) m_transportBar->setVisible(false);
-             if (m_patternBrowser) m_patternBrowser->setVisible(false);
-             if (m_waveformVisualizer) m_waveformVisualizer->setVisible(false);
-             if (m_audioVisualizer) m_audioVisualizer->setVisible(false);
-             applyOverlayPanelVisibility(true);
+            // Audition Mode - Hide Distractions
+            if (m_transportBar)
+                m_transportBar->setVisible(false);
+            if (m_patternBrowser)
+                m_patternBrowser->setVisible(false);
+            if (m_waveformVisualizer)
+                m_waveformVisualizer->setVisible(false);
+            if (m_audioVisualizer)
+                m_audioVisualizer->setVisible(false);
+            applyOverlayPanelVisibility(true);
         }
 
         // Sync segment control to reflect the new focus
@@ -1760,7 +1824,8 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 }
 
 void AestraContent::setArsenalPanelVisible(bool visible) {
-    if (!m_sequencerPanel) return;
+    if (!m_sequencerPanel)
+        return;
 
     const bool wasVisible = m_sequencerPanel->isVisible();
     if (wasVisible == visible && m_viewState.sequencerOpen == visible) {
@@ -1810,7 +1875,8 @@ AestraUI::NUIRect AestraContent::computeSafeRect() const {
     AestraUI::NUIRect bounds = getBounds();
 
     float transportHeight = 60.0f;
-    if (m_transportBar) transportHeight = m_transportBar->getHeight();
+    if (m_transportBar)
+        transportHeight = m_transportBar->getHeight();
 
     AestraUI::NUIRect safe = bounds;
     safe.y += transportHeight;
@@ -1844,13 +1910,15 @@ AestraUI::NUIRect AestraContent::computeAllowedRectForPanels() const {
 
     float browserEdge = getVisibleBrowserEdge();
     if (browserEdge > safe.x) {
-       float shift = browserEdge - safe.x;
-       safe.x = browserEdge;
-       safe.width -= shift;
+        float shift = browserEdge - safe.x;
+        safe.x = browserEdge;
+        safe.width -= shift;
     }
 
-    if (safe.width < 100.0f) safe.width = 100.0f;
-    if (safe.height < 100.0f) safe.height = 100.0f;
+    if (safe.width < 100.0f)
+        safe.width = 100.0f;
+    if (safe.height < 100.0f)
+        safe.height = 100.0f;
 
     return safe;
 }
@@ -1859,7 +1927,8 @@ AestraUI::NUIRect AestraContent::computeMaximizedRect() const {
     AestraUI::NUIRect bounds = getBounds();
 
     float transportHeight = 60.0f;
-    if (m_transportBar) transportHeight = m_transportBar->getHeight();
+    if (m_transportBar)
+        transportHeight = m_transportBar->getHeight();
 
     AestraUI::NUIRect maxRect = bounds;
     maxRect.y += transportHeight;
@@ -1867,13 +1936,15 @@ AestraUI::NUIRect AestraContent::computeMaximizedRect() const {
 
     float browserEdge = getVisibleBrowserEdge();
     if (browserEdge > maxRect.x) {
-       float shift = browserEdge - maxRect.x;
-       maxRect.x = browserEdge;
-       maxRect.width -= shift;
+        float shift = browserEdge - maxRect.x;
+        maxRect.x = browserEdge;
+        maxRect.width -= shift;
     }
 
-    if (maxRect.width < 100.0f) maxRect.width = 100.0f;
-    if (maxRect.height < 100.0f) maxRect.height = 100.0f;
+    if (maxRect.width < 100.0f)
+        maxRect.width = 100.0f;
+    if (maxRect.height < 100.0f)
+        maxRect.height = 100.0f;
 
     return maxRect;
 }
@@ -1882,8 +1953,10 @@ AestraUI::NUIRect AestraContent::clampRectToAllowed(AestraUI::NUIRect panel, con
     // Clamp panel size to allowed area first, so bounds are valid for position clamp
     float w = std::max(100.0f, panel.width);
     float h = std::max(100.0f, panel.height);
-    if (w > allowed.width) w = allowed.width;
-    if (h > allowed.height) h = allowed.height;
+    if (w > allowed.width)
+        w = allowed.width;
+    if (h > allowed.height)
+        h = allowed.height;
 
     float x = std::clamp(panel.x, allowed.x, std::max(allowed.x, allowed.right() - w));
     float y = std::clamp(panel.y, allowed.y, std::max(allowed.y, allowed.bottom() - h));
@@ -1894,7 +1967,8 @@ AestraUI::NUIRect AestraContent::clampRectToAllowed(AestraUI::NUIRect panel, con
     return AestraUI::NUIRect(x, y, w, h);
 }
 
-AestraContent::BrowserResizeTarget AestraContent::hitTestBrowserResizeTarget(const AestraUI::NUIPoint& mouseScreen) const {
+AestraContent::BrowserResizeTarget
+AestraContent::hitTestBrowserResizeTarget(const AestraUI::NUIPoint& mouseScreen) const {
     const auto isNearRightEdge = [&mouseScreen](const auto& component) {
         if (!component || !component->isVisible()) {
             return false;
@@ -1941,19 +2015,24 @@ AestraUI::NUICursorStyle AestraContent::getPanelResizeCursorStyle(const AestraUI
     };
 
     const auto historyStyle = resolveStyle(m_historyPanel);
-    if (historyStyle != AestraUI::NUICursorStyle::Arrow) return historyStyle;
+    if (historyStyle != AestraUI::NUICursorStyle::Arrow)
+        return historyStyle;
 
     const auto sequencerStyle = resolveStyle(m_sequencerPanel);
-    if (sequencerStyle != AestraUI::NUICursorStyle::Arrow) return sequencerStyle;
+    if (sequencerStyle != AestraUI::NUICursorStyle::Arrow)
+        return sequencerStyle;
 
     const auto sampleStyle = resolveStyle(m_sampleEditorPanel);
-    if (sampleStyle != AestraUI::NUICursorStyle::Arrow) return sampleStyle;
+    if (sampleStyle != AestraUI::NUICursorStyle::Arrow)
+        return sampleStyle;
 
     const auto pianoStyle = resolveStyle(m_pianoRollPanel);
-    if (pianoStyle != AestraUI::NUICursorStyle::Arrow) return pianoStyle;
+    if (pianoStyle != AestraUI::NUICursorStyle::Arrow)
+        return pianoStyle;
 
     const auto mixerStyle = resolveStyle(m_mixerPanel);
-    if (mixerStyle != AestraUI::NUICursorStyle::Arrow) return mixerStyle;
+    if (mixerStyle != AestraUI::NUICursorStyle::Arrow)
+        return mixerStyle;
 
     if (hitTestBrowserResizeTarget(mouseScreen) != BrowserResizeTarget::None) {
         return AestraUI::NUICursorStyle::ResizeEW;
@@ -1967,25 +2046,36 @@ AestraUI::NUICursorStyle AestraContent::getPanelResizeCursorStyle(const AestraUI
 // =============================================================================
 
 void AestraContent::beginPanelDrag(Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen) {
-    if (!m_overlayLayer) return;
+    if (!m_overlayLayer)
+        return;
 
     m_viewState.isDragging = true;
     m_viewState.draggingView = view;
     m_viewState.dragStartMouseOverlay = m_overlayLayer->globalToLocal(mouseScreen);
 
     switch (view) {
-        case Audio::ViewType::Mixer: m_viewState.dragStartRect = m_viewState.mixerRect; break;
-        case Audio::ViewType::PianoRoll: m_viewState.dragStartRect = m_viewState.pianoRollRect; break;
-        case Audio::ViewType::Sequencer: m_viewState.dragStartRect = m_viewState.sequencerRect; break;
-        case Audio::ViewType::History: m_viewState.dragStartRect = m_viewState.historyRect; break;
-        default: break;
+    case Audio::ViewType::Mixer:
+        m_viewState.dragStartRect = m_viewState.mixerRect;
+        break;
+    case Audio::ViewType::PianoRoll:
+        m_viewState.dragStartRect = m_viewState.pianoRollRect;
+        break;
+    case Audio::ViewType::Sequencer:
+        m_viewState.dragStartRect = m_viewState.sequencerRect;
+        break;
+    case Audio::ViewType::History:
+        m_viewState.dragStartRect = m_viewState.historyRect;
+        break;
+    default:
+        break;
     }
 
     AESTRA_LOG_TRACE("Started dragging panel: " + std::to_string(static_cast<int>(view)));
 }
 
 void AestraContent::updatePanelDrag(Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen) {
-    if (!m_viewState.isDragging || !m_overlayLayer || view != m_viewState.draggingView) return;
+    if (!m_viewState.isDragging || !m_overlayLayer || view != m_viewState.draggingView)
+        return;
 
     AestraUI::NUIPoint currentMouseOverlay = m_overlayLayer->globalToLocal(mouseScreen);
     AestraUI::NUIPoint delta = currentMouseOverlay - m_viewState.dragStartMouseOverlay;
@@ -1998,31 +2088,36 @@ void AestraContent::updatePanelDrag(Audio::ViewType view, const AestraUI::NUIPoi
     AestraUI::NUIRect finalRect = clampRectToAllowed(proposed, allowed);
 
     switch (view) {
-        case Audio::ViewType::Mixer:
-            m_viewState.mixerRect = finalRect;
-            if (m_mixerPanel) m_mixerPanel->setBounds(finalRect);
-            break;
-        case Audio::ViewType::PianoRoll:
-            m_viewState.pianoRollRect = finalRect;
-            if (m_pianoRollPanel) m_pianoRollPanel->setBounds(finalRect);
-            break;
-        case Audio::ViewType::Sequencer:
-            m_viewState.sequencerRect = finalRect;
-            if (m_sequencerPanel) m_sequencerPanel->setBounds(finalRect);
-            break;
-        case Audio::ViewType::History:
-            m_viewState.historyRect = finalRect;
-            if (m_historyPanel) m_historyPanel->setBounds(finalRect);
-            break;
-        default: break;
+    case Audio::ViewType::Mixer:
+        m_viewState.mixerRect = finalRect;
+        if (m_mixerPanel)
+            m_mixerPanel->setBounds(finalRect);
+        break;
+    case Audio::ViewType::PianoRoll:
+        m_viewState.pianoRollRect = finalRect;
+        if (m_pianoRollPanel)
+            m_pianoRollPanel->setBounds(finalRect);
+        break;
+    case Audio::ViewType::Sequencer:
+        m_viewState.sequencerRect = finalRect;
+        if (m_sequencerPanel)
+            m_sequencerPanel->setBounds(finalRect);
+        break;
+    case Audio::ViewType::History:
+        m_viewState.historyRect = finalRect;
+        if (m_historyPanel)
+            m_historyPanel->setBounds(finalRect);
+        break;
+    default:
+        break;
     }
 
     setDirty(true);
 }
 
 void AestraContent::endPanelDrag(Audio::ViewType view) {
-     m_viewState.isDragging = false;
-     AESTRA_LOG_TRACE("Ended dragging panel: " + std::to_string(static_cast<int>(view)));
+    m_viewState.isDragging = false;
+    AESTRA_LOG_TRACE("Ended dragging panel: " + std::to_string(static_cast<int>(view)));
 }
 
 // =============================================================================
@@ -2159,10 +2254,13 @@ void AestraContent::stopPatternClipPreview(bool restoreTimelineUi) {
 ViewFocus AestraContent::resolveTransportFocus() const {
     if (m_viewToggle) {
         switch (m_viewToggle->getSelectedIndex()) {
-            case 0: return ViewFocus::Arsenal;
-            case 2: return ViewFocus::Audition;
-            case 1:
-            default: return ViewFocus::Timeline;
+        case 0:
+            return ViewFocus::Arsenal;
+        case 2:
+            return ViewFocus::Audition;
+        case 1:
+        default:
+            return ViewFocus::Timeline;
         }
     }
     return m_viewFocus;
@@ -2174,8 +2272,7 @@ bool AestraContent::isTransportRolling() const {
     }
 
     const bool trackManagerPlaying = m_trackManager && m_trackManager->isPlaying();
-    const bool transportBarPlaying = m_transportBar &&
-                                     m_transportBar->getState() == TransportState::Playing;
+    const bool transportBarPlaying = m_transportBar && m_transportBar->getState() == TransportState::Playing;
     return trackManagerPlaying || transportBarPlaying;
 }
 
@@ -2471,7 +2568,8 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
                 if (cmd.type == AudioQueueCommandType::SetTransportState) {
                     m_audioEngine->commandQueue().push(cmd);
                     if (m_trackManager) {
-                        const double engineSampleRate = std::max(1.0, static_cast<double>(m_audioEngine->getSampleRate()));
+                        const double engineSampleRate =
+                            std::max(1.0, static_cast<double>(m_audioEngine->getSampleRate()));
                         const double positionSeconds = static_cast<double>(cmd.samplePos) / engineSampleRate;
                         m_trackManager->onTransportStateApplied(cmd.value1 != 0.0f, positionSeconds);
                     }
@@ -2493,7 +2591,8 @@ void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
 void AestraContent::resetToDefaultProject() {
     AESTRA_LOG_DEBUG("resetToDefaultProject() - clearing and recreating default state");
 
-    if (!m_trackManager) return;
+    if (!m_trackManager)
+        return;
 
     // Clear existing state
     auto& playlist = m_trackManager->getPlaylistModel();
@@ -2516,7 +2615,8 @@ void AestraContent::resetToDefaultProject() {
 void AestraContent::addDemoTracks() {
     AESTRA_LOG_DEBUG("addDemoTracks() called - starting demo track creation (v3.0)");
 
-    if (!m_trackManager) return;
+    if (!m_trackManager)
+        return;
     auto& playlist = m_trackManager->getPlaylistModel();
 
     const int DEFAULT_TRACK_COUNT = 50;
@@ -2527,9 +2627,12 @@ void AestraContent::addDemoTracks() {
         m_trackManager->addChannel(name);
 
         if (auto* lane = playlist.getLane(laneId)) {
-            if (i % 3 == 1) lane->colorRGBA = 0xFFbb86fc;
-            else if (i % 3 == 2) lane->colorRGBA = 0xFF00bcd4;
-            else lane->colorRGBA = 0xFF9a9aa3;
+            if (i % 3 == 1)
+                lane->colorRGBA = 0xFFbb86fc;
+            else if (i % 3 == 2)
+                lane->colorRGBA = 0xFF00bcd4;
+            else
+                lane->colorRGBA = 0xFF9a9aa3;
 
             if (i == 1) {
                 AutomationCurve vol("Volume", AutomationTarget::Volume);
@@ -2561,7 +2664,8 @@ bool AestraContent::generateTestWavFile(const std::string& filename, float frequ
     }
     checkFile.close();
 
-    AESTRA_LOG_DEBUG("Generating test WAV file: " + filename + " (" + std::to_string(frequency) + " Hz, " + std::to_string(duration) + "s)");
+    AESTRA_LOG_DEBUG("Generating test WAV file: " + filename + " (" + std::to_string(frequency) + " Hz, " +
+                     std::to_string(duration) + "s)");
 
     const uint32_t sampleRate = 44100;
     const uint16_t numChannels = 2;
@@ -2644,11 +2748,13 @@ void AestraContent::playSoundPreview(const AestraUI::FileItem& file) {
         m_previewIsPlaying = true;
         m_previewStartTime = std::chrono::steady_clock::now();
         m_currentPreviewFile = file.path;
-        if (m_fileBrowser) m_fileBrowser->setActivePlaybackPath(file.path);
+        if (m_fileBrowser)
+            m_fileBrowser->setActivePlaybackPath(file.path);
 
         if (result == PreviewResult::Success) {
             AESTRA_LOG_DEBUG("Sound preview started (cache hit)");
-            if (m_previewPanel) m_previewPanel->setPlaying(true);
+            if (m_previewPanel)
+                m_previewPanel->setPlaying(true);
         } else {
             if (m_previewPanel) {
                 m_previewPanel->setLoading(true);
@@ -2668,7 +2774,8 @@ void AestraContent::stopSoundPreview() {
     }
 
     if (m_previewEngine) {
-        if (m_previewIsPlaying) AESTRA_LOG_TRACE("Stopping preview engine...");
+        if (m_previewIsPlaying)
+            AESTRA_LOG_TRACE("Stopping preview engine...");
         m_previewEngine->stop();
     }
     m_previewIsPlaying = false;
@@ -2816,7 +2923,8 @@ void AestraContent::updateSoundPreview() {
     if (m_previewEngine && m_previewIsPlaying) {
         if (m_previewEngine->isBufferReady() && m_previewPanel) {
             m_previewPanel->setLoading(false);
-            if (m_previewEngine->isPlaying()) m_previewPanel->setPlaying(true);
+            if (m_previewEngine->isPlaying())
+                m_previewPanel->setPlaying(true);
         }
 
         if (!m_previewEngine->isPlaying()) {
@@ -2841,7 +2949,8 @@ void AestraContent::seekSoundPreview(double seconds) {
             m_previewEngine->play(m_currentPreviewFile, 0.0f, m_previewDuration);
             m_previewIsPlaying = true;
             m_previewStartTime = std::chrono::steady_clock::now();
-            if (m_previewPanel) m_previewPanel->setPlaying(true);
+            if (m_previewPanel)
+                m_previewPanel->setPlaying(true);
         }
         m_previewEngine->seek(seconds);
     }
@@ -2864,7 +2973,8 @@ void AestraContent::updatePreviewPlayhead() {
 
 void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
     // 1. Get TrackManager
-    if (!m_trackManager) return;
+    if (!m_trackManager)
+        return;
 
     // 2. Get first MixerChannel (track selection not implemented yet)
     // TODO: Add track selection UI and pass selected index here
@@ -2917,7 +3027,8 @@ void AestraContent::setPluginTempo(float bpm) {
 
 void AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
     // 1. Get UnitManager from TrackManager
-    if (!m_trackManager) return;
+    if (!m_trackManager)
+        return;
     auto& unitManager = m_trackManager->getUnitManager();
 
     // 2. Find plugin info to get the name
@@ -2956,7 +3067,8 @@ void AestraContent::loadInstrumentToArsenal(const std::string& pluginId) {
 }
 
 void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::string& pluginId) {
-    if (!m_trackManager) return;
+    if (!m_trackManager)
+        return;
     auto& unitManager = m_trackManager->getUnitManager();
 
     auto* unit = unitManager.getUnit(unitId);
@@ -2971,12 +3083,14 @@ void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::stri
 
     auto instance = pm.createInstanceById(pluginId);
     if (!instance) {
-        AESTRA_LOG_ERROR("Failed to create instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " + pluginId);
+        AESTRA_LOG_ERROR("Failed to create instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " +
+                         pluginId);
         return;
     }
 
     if (!instance->initialize(pm.getDefaultSampleRate(), pm.getDefaultBlockSize())) {
-        AESTRA_LOG_ERROR("Failed to initialize instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " + pluginId);
+        AESTRA_LOG_ERROR("Failed to initialize instrument instance for Arsenal Unit " + std::to_string(unitId) + ": " +
+                         pluginId);
         return;
     }
 
@@ -2991,7 +3105,8 @@ void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::stri
 }
 
 void AestraContent::refreshPluginList() {
-    if (!m_pluginBrowser) return;
+    if (!m_pluginBrowser)
+        return;
 
     auto& pm = Aestra::Audio::PluginManager::getInstance();
     std::vector<AestraUI::PluginListItem> uiPlugins;
@@ -3041,7 +3156,8 @@ void AestraContent::refreshProjectViews() {
 }
 
 void AestraContent::toggleHistoryPanel() {
-    if (!m_historyPanel) return;
+    if (!m_historyPanel)
+        return;
     bool show = !m_historyPanel->isVisible();
     m_historyPanel->setVisible(show);
     if (show) {
@@ -3064,7 +3180,8 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         m_spaceShortcutLatched = false;
         return true;
     }
-    if (!event.pressed) return false;
+    if (!event.pressed)
+        return false;
 
     // Global Undo/Redo — intercept BEFORE any panel processes it
     // This prevents text inputs from capturing Ctrl+Z and ensures
@@ -3094,8 +3211,10 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
                 m_trackManagerUI->refreshTracks();
                 m_trackManagerUI->invalidateCache();
             }
-            if (m_mixerPanel) m_mixerPanel->refreshChannels();
-            if (m_sequencerPanel) m_sequencerPanel->refreshUnits();
+            if (m_mixerPanel)
+                m_mixerPanel->refreshChannels();
+            if (m_sequencerPanel)
+                m_sequencerPanel->refreshUnits();
             m_trackManager->markModified();
             return true; // Consume the event — don't pass to text inputs
         }
@@ -3107,7 +3226,8 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             return true;
         }
         m_spaceShortcutLatched = true;
-        AESTRA_LOG_DEBUG("[AestraContent] Spacebar pressed. ViewFocus: " + std::to_string(static_cast<int>(m_viewFocus)));
+        AESTRA_LOG_DEBUG("[AestraContent] Spacebar pressed. ViewFocus: " +
+                         std::to_string(static_cast<int>(m_viewFocus)));
     }
 
     // Spacebar follows the top-level selected mode first. Overlay/panel focus can
@@ -3117,10 +3237,16 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         ViewFocus transportFocus = m_viewFocus;
         if (m_viewToggle) {
             switch (m_viewToggle->getSelectedIndex()) {
-                case 0: transportFocus = ViewFocus::Arsenal; break;
-                case 2: transportFocus = ViewFocus::Audition; break;
-                case 1:
-                default: transportFocus = ViewFocus::Timeline; break;
+            case 0:
+                transportFocus = ViewFocus::Arsenal;
+                break;
+            case 2:
+                transportFocus = ViewFocus::Audition;
+                break;
+            case 1:
+            default:
+                transportFocus = ViewFocus::Timeline;
+                break;
             }
         }
 
@@ -3128,12 +3254,12 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
             // If Audition Panel didn't handle it (maybe lost focus?), try to toggle play/pause on engine directly
             if (m_auditionEngine) {
                 // Ensure preview stops
-                if (!m_auditionEngine->isPlaying()) stopSoundPreview();
+                if (!m_auditionEngine->isPlaying())
+                    stopSoundPreview();
                 m_auditionEngine->togglePlayPause();
                 return true;
             }
-        }
-        else {
+        } else {
             if (m_transportBar) {
                 if (isTransportRolling()) {
                     clearPendingCountIn();

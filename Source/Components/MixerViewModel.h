@@ -268,6 +268,9 @@ public:
     /** @brief Set CommandHistory for undo/redo on plugin operations. */
     void setCommandHistory(Audio::CommandHistory* ch) { m_commandHistory = ch; }
 
+    /** @brief Set callback to notify when graph needs rebuilding (e.g., after plugin insert/remove). */
+    void setGraphDirtyCallback(std::function<void()> callback) { m_onGraphDirty = std::move(callback); }
+
     struct Destination {
         uint32_t id;
         std::string name;
