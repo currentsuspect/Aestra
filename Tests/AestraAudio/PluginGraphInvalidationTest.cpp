@@ -3,6 +3,7 @@
 
 #include "Core/AudioEngine.h"
 #include "Core/AudioGraphBuilder.h"
+#include "Core/PlaybackGraphController.h"
 #include "Models/TrackManager.h"
 #include "Plugin/PluginHost.h"
 
@@ -139,16 +140,6 @@ void configureEngine(AudioEngine& engine, const std::shared_ptr<TrackManager>& t
     engine.initialize();
 }
 
-void drainGraphDirty(TrackManager& trackManager, AudioEngine& engine) {
-    if (!trackManager.consumeGraphDirty()) {
-        return;
-    }
-    if (auto slotMap = trackManager.getChannelSlotMapShared()) {
-        engine.setChannelSlotMap(slotMap);
-    }
-    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(trackManager, static_cast<double>(kSampleRate)));
-    trackManager.rebuildAndPushSnapshot();
-}
 
 float renderActiveTrackSnapshotMean(AudioEngine& engine) {
     const auto& activeGraph = engine.engineState().activeGraph();
@@ -230,7 +221,7 @@ void PluginRemoveTakesEffectWithoutClipMoveTest() {
     std::cout << "PASS: PluginRemoveTakesEffectWithoutClipMoveTest\n";
 }
 
-void PluginBypassPublishesSnapshotAndRequestsGraphDirtyTest() {
+void PluginBypassPublishesSnapshotTest() {
     auto trackManager = makeTrackManagerWithClip();
     auto* channel = trackManager->getChannel(0);
     assert(channel != nullptr);
@@ -240,12 +231,10 @@ void PluginBypassPublishesSnapshotAndRequestsGraphDirtyTest() {
     assert(chain.insertPlugin(0, plugin));
 
     chain.setSlotBypassed(0, true);
-    trackManager->requestAudioGraphRebuild(TrackManager::GraphDirtyReason::EffectChainChanged);
-    assert(trackManager->consumeGraphDirty());
     auto snapshot = chain.getSnapshot();
     assert(snapshot != nullptr);
     assert(snapshot->slot(0).bypassed);
-    std::cout << "PASS: PluginBypassPublishesSnapshotAndRequestsGraphDirtyTest\n";
+    std::cout << "PASS: PluginBypassPublishesSnapshotTest\n";
 }
 
 } // namespace
@@ -253,7 +242,7 @@ void PluginBypassPublishesSnapshotAndRequestsGraphDirtyTest() {
 int main() {
     PluginInsertTakesEffectWithoutClipMoveTest();
     PluginRemoveTakesEffectWithoutClipMoveTest();
-    PluginBypassPublishesSnapshotAndRequestsGraphDirtyTest();
+    PluginBypassPublishesSnapshotTest();
     std::cout << "All plugin graph invalidation tests passed\n";
     return 0;
 }

@@ -561,7 +561,7 @@ private:
     std::mutex m_pendingTasksMutex;
     std::vector<std::function<void()>> m_pendingTasks;
 
-    // Graph dirty callback — invoked by onUpdate() after consumeGraphDirty() returns true
+    // Graph dirty callback — invoked by onUpdate() after PlaybackGraphController drains
     std::function<void()> m_onGraphDirty;
 
     // === IMPORT ANIMATION ===
