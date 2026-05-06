@@ -780,10 +780,25 @@ public:
      * @brief Clear the graph-dirty flag after rebuilding a snapshot.
      */
     void rebuildAndPushSnapshot() { m_graphDirty.store(false, std::memory_order_relaxed); }
+    enum class GraphDirtyReason {
+        TimelineChanged,
+        EffectChainChanged,
+        RoutingChanged,
+        TrackProcessingChanged,
+    };
+
+    /**
+     * @brief Request a non-real-time rebuild of the live playback graph.
+     */
+    void requestAudioGraphRebuild(GraphDirtyReason reason = GraphDirtyReason::TimelineChanged) {
+        (void)reason;
+        m_graphDirty.store(true, std::memory_order_relaxed);
+    }
+
     /**
      * @brief Mark the live audio graph as requiring a rebuild.
      */
-    void markGraphDirty() { m_graphDirty.store(true, std::memory_order_relaxed); }
+    void markGraphDirty() { requestAudioGraphRebuild(); }
 
     /**
      * @brief Install the audio-command sink used to talk to the live engine.

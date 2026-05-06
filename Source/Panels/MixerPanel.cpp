@@ -18,7 +18,8 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
     if (m_trackManager) {
         m_viewModel->setOnGraphDirty([trackManager = m_trackManager]() {
             if (trackManager) {
-                trackManager->markGraphDirty();
+                trackManager->requestAudioGraphRebuild(
+                    TrackManager::GraphDirtyReason::EffectChainChanged);
             }
         });
         m_viewModel->setOnProjectModified([trackManager = m_trackManager]() {

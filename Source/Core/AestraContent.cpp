@@ -110,6 +110,12 @@ AestraContent::AestraContent() {
         if (m_trackManager)
             m_trackManager->markModified();
     });
+    m_pluginController->setOnEffectChainChanged([this]() {
+        if (m_trackManager) {
+            m_trackManager->requestAudioGraphRebuild(
+                TrackManager::GraphDirtyReason::EffectChainChanged);
+        }
+    });
 
     // Create track manager for multi-track functionality
     m_trackManager = std::make_shared<TrackManager>();

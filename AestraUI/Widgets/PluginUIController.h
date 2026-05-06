@@ -163,6 +163,11 @@ public:
      * @param callback Callback receiving plugin identifier and slot index.
      */
     void setOnPluginLoaded(std::function<void(const std::string& pluginId, int slot)> callback);
+
+    /**
+     * @brief Set callback when a bound effect chain changes and the audio graph needs republishing.
+     */
+    void setOnEffectChainChanged(std::function<void()> callback) { m_onEffectChainChanged = std::move(callback); }
     
     /**
      * @brief Set callback when scan completes
@@ -191,6 +196,7 @@ private:
     
     // Callbacks
     std::function<void(const std::string&, int)> m_onPluginLoaded;
+    std::function<void()> m_onEffectChainChanged;
     std::function<void(int)> m_onScanComplete;
     
     // UI components for popups

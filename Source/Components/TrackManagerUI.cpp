@@ -2089,10 +2089,8 @@ void TrackManagerUI::onUpdate(double deltaTime) {
     // Rebuild graph if any plugin operations marked it dirty (plugin insert/remove via pending tasks).
     // This mirrors the graph dirty check in AestraApp::run() so plugin changes take effect
     // immediately rather than waiting for a clip move.
-    if (m_trackManager && m_trackManager->consumeGraphDirty()) {
-        if (m_onGraphDirty) {
-            m_onGraphDirty();
-        }
+    if (m_trackManager && m_onGraphDirty && m_trackManager->consumeGraphDirty()) {
+        m_onGraphDirty();
     }
 
     // One-time registration for drag-and-drop
@@ -4811,8 +4809,9 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                         Log::error("[TrackManagerUI] Plugin initialization failed for ID: " + pluginId);
                     }
 
-                    // Mark graph dirty so it rebuilds on next update with the new snapshot
-                    trackManager->markGraphDirty();
+                    // Request the same non-RT graph rebuild path used by timeline edits.
+                    trackManager->requestAudioGraphRebuild(
+                        Aestra::Audio::TrackManager::GraphDirtyReason::EffectChainChanged);
                 });
             });
 

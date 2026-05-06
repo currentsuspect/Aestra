@@ -498,6 +498,18 @@ target_include_directories(AestraAudioEngineEffectChainPrepareTest PRIVATE
 add_test(NAME AestraAudioEngineEffectChainPrepareTest COMMAND AestraAudioEngineEffectChainPrepareTest)
 set_tests_properties(AestraAudioEngineEffectChainPrepareTest PROPERTIES LABELS "audio;plugin;regression")
 
+# Plugin insert/remove graph invalidation regression tests
+add_executable(AestraPluginGraphInvalidationTest AestraAudio/PluginGraphInvalidationTest.cpp)
+target_link_libraries(AestraPluginGraphInvalidationTest PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraPluginGraphInvalidationTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PluginInsertTakesEffectWithoutClipMoveTest COMMAND AestraPluginGraphInvalidationTest)
+add_test(NAME PluginRemoveTakesEffectWithoutClipMoveTest COMMAND AestraPluginGraphInvalidationTest)
+set_tests_properties(PluginInsertTakesEffectWithoutClipMoveTest PluginRemoveTakesEffectWithoutClipMoveTest
+    PROPERTIES LABELS "audio;plugin;regression")
+
 # MixerChannel scratch buffer regression tests
 add_executable(AestraMixerChannelScratchBufferTest AestraAudio/MixerChannelScratchBufferTest.cpp)
 target_link_libraries(AestraMixerChannelScratchBufferTest PRIVATE AestraAudio AestraCore)
