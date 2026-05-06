@@ -205,6 +205,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     # Other (root-level for now)
     src/AudioGraphBuilder.cpp
     src/ChannelSlotMap.cpp
+    src/Core/PlaybackGraphController.cpp
     src/SamplePool.cpp
     src/AudioRenderer.cpp
     
@@ -275,6 +276,7 @@ endif()
 set(AESTRA_AUDIO_CORE_HEADERS
     include/Core/AudioGraphBuilder.h
     include/Core/AudioEngine.h
+    include/Core/PlaybackGraphController.h
     include/Core/ArsenalProcessingContext.h
     include/Core/MasterSafetyLimiter.h
     include/Core/AudioCommandQueue.h

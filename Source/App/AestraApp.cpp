@@ -21,6 +21,7 @@
 #include "../Settings/ExportDialog.h"
 #include "PluginManager.h"
 #include "AudioGraphBuilder.h"
+#include "../../AestraAudio/include/Core/PlaybackGraphController.h"
 #include "../../AestraAudio/include/IO/AudioExporter.h"
 
 #include <iostream>
@@ -762,16 +763,12 @@ void AestraApp::run() {
                 updateWindowTitle();
             }
 
-            // Rebuild graph check
-            if (m_audioController->getEngine() && m_content && m_content->getTrackManager() &&
-                m_content->getTrackManager()->consumeGraphDirty()) {
-                    auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(), m_audioController->getSampleRate());
-                    m_audioController->getEngine()->setGraph(graph);
-                    if (auto slotMap = m_content->getTrackManager()->getChannelSlotMapShared()) {
-                        m_audioController->getEngine()->setChannelSlotMap(slotMap);
-                    }
-                    m_audioController->getEngine()->setContinuousParams(m_content->getTrackManager()->getContinuousParams());
-                    m_content->getTrackManager()->rebuildAndPushSnapshot();
+            // Rebuild graph check - uses PlaybackGraphController for canonical drain
+            if (m_audioController->getEngine() && m_content) {
+                auto* controller = m_content->getPlaybackGraphController();
+                if (controller) {
+                    controller->drainIfDirty(m_audioController->getSampleRate());
+                }
             }
         }
 
@@ -990,11 +987,18 @@ ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& 
         m_content->refreshProjectViews();
     }
 
-    if (m_audioController && m_audioController->getEngine() && m_content && m_content->getTrackManager()) {
-        auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(),
-                                                              m_audioController->getSampleRate());
-        m_audioController->getEngine()->setGraph(graph);
-        m_content->getTrackManager()->rebuildAndPushSnapshot();
+    // Project load - use PlaybackGraphController if available, otherwise fallback
+    if (m_audioController && m_audioController->getEngine() && m_content) {
+        auto* controller = m_content->getPlaybackGraphController();
+        if (controller) {
+            controller->requestRebuild(Aestra::Audio::PlaybackGraphController::GraphDirtyReason::ProjectLoaded);
+            controller->drainIfDirty(m_audioController->getSampleRate());
+        } else if (m_content->getTrackManager()) {
+            auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(),
+                                                                  m_audioController->getSampleRate());
+            m_audioController->getEngine()->setGraph(graph);
+            m_content->getTrackManager()->rebuildAndPushSnapshot();
+        }
     }
 
     syncRecordingProjectPath(m_content, m_projectPath);
