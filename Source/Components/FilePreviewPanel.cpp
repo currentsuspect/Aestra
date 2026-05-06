@@ -190,9 +190,13 @@ void FilePreviewPanel::generateWaveform(const std::string& path, size_t fileSize
     isLoading_ = true;
     loadingAnimationTime_ = 0.0f;
     uint64_t gen = currentGeneration_.load();
+    std::weak_ptr<NUIComponent> weakSelf = weak_from_this();
 
-    std::thread([this, path, gen]() {
-        waveformWorker(path, gen);
+    std::thread([weakSelf, path, gen]() {
+        auto self = std::dynamic_pointer_cast<FilePreviewPanel>(weakSelf.lock());
+        if (!self) return;
+
+        self->waveformWorker(path, gen);
     }).detach();
 }
 
