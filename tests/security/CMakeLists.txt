@@ -20,6 +20,8 @@ add_executable(SecLicenseProfileHardening
 if(TARGET AestraLicense)
     add_executable(SecLicenseGateSignature license_gate_signature_verification.cpp)
     add_test(NAME SecLicenseGateSignature COMMAND SecLicenseGateSignature)
+    add_executable(SecEntitlementStore entitlement_store_test.cpp)
+    add_test(NAME SecEntitlementStore COMMAND SecEntitlementStore)
 endif()
 
 # Blue team fixes — proof of fix tests (S002)
@@ -200,4 +202,9 @@ if(TARGET AestraLicense)
         ${REPO_ROOT}/AestraLicense/include
     )
     target_link_libraries(SecLicenseGateSignature PRIVATE AestraLicense)
+
+    target_include_directories(SecEntitlementStore PRIVATE
+        ${REPO_ROOT}/AestraLicense/include
+    )
+    target_link_libraries(SecEntitlementStore PRIVATE AestraLicense)
 endif()
