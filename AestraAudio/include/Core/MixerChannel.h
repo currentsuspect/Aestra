@@ -234,12 +234,14 @@ public:
     /** @brief Update send audible/sidechain-only mode by index. */
     void setSendSidechainOnly(int index, bool sidechainOnly);
 
-    /** @brief Set the effect chain snapshot for RT-safe processing. */
+    /** @brief Set the effect chain snapshot for RT-safe processing (deprecated - snapshots are now owned by EffectChain). */
     void setEffectChainSnapshot(std::shared_ptr<const EffectChainSnapshot> snapshot) {
         m_effectChainSnapshot = std::move(snapshot);
     }
-    /** @brief Get the current effect chain snapshot. */
-    std::shared_ptr<const EffectChainSnapshot> getEffectChainSnapshot() const { return m_effectChainSnapshot; }
+    /** @brief Get the current effect chain snapshot (Pass 3: returns canonical snapshot from EffectChain). */
+    std::shared_ptr<const EffectChainSnapshot> getEffectChainSnapshot() const {
+        return m_effectChain.getSnapshot();
+    }
 
     /** @brief Set the primary output destination identifier. */
     void setMainOutputId(uint32_t id) { m_mainOutputId = id; }

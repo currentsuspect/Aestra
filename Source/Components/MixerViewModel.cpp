@@ -897,7 +897,8 @@ void MixerViewModel::removeInsert(uint32_t channelId, int slot) {
             } else {
                 chain.removePlugin(slot);
             }
-            
+
+            if (m_onGraphDirty) m_onGraphDirty();
             if (m_onProjectModified) m_onProjectModified();
         }
     }

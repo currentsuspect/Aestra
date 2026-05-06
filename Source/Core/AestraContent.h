@@ -20,6 +20,7 @@
 #include "TransportBar.h"
 #include "PatternSource.h"
 #include "OverlayLayer.h"
+#include "../AestraAudio/include/Models/UnitManager.h"
 #include <memory>
 #include <string>
 #include <chrono>

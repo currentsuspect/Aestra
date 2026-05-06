@@ -1,33 +1,36 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "TrackManager.h"
 #include "ClipInstance.h"
-#include "PlaylistModel.h"
-#include "TrackUIComponent.h"
-#include "PianoRollPanel.h"
 #include "MixerPanel.h"
+#include "PianoRollPanel.h"
+#include "PlaylistModel.h"
+#include "TrackManager.h"
+#include "TrackUIComponent.h"
 // Sequencer panel include removed (replaced by Arsenal)
+#include "../AestraUI/Graphics/OpenGL/NUIRenderCache.h"
+#include "MusicHelpers.h"
+#include "NUIButton.h"
+#include "NUIComponent.h"
+#include "NUIContextMenu.h"
+#include "NUIDragDrop.h"
+#include "NUIDropdown.h" // Full type for shared_ptr usage
+#include "NUIIcon.h"
+#include "NUIScrollbar.h"
 #include "TimelineMinimapBar.h"
 #include "TimelineMinimapModel.h"
 #include "TimelineSummaryCache.h"
-#include "NUIComponent.h"
-#include "NUIScrollbar.h"
-#include "NUIButton.h"
-#include "NUIIcon.h"
-#include "NUIDragDrop.h"
-#include "../AestraUI/Graphics/OpenGL/NUIRenderCache.h"
-#include "MusicHelpers.h"
-#include "NUIDropdown.h" // Full type for shared_ptr usage
-#include <memory>
-#include <vector>
-#include <unordered_set>
-#include <mutex>
-#include <functional>
-#include "NUIContextMenu.h"
 #include "WaveformCache.h"
 
-namespace AestraUI { class NUIPlatformBridge; }
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <unordered_set>
+#include <vector>
+
+namespace AestraUI {
+class NUIPlatformBridge;
+}
 
 namespace Aestra {
 namespace Audio {
@@ -36,15 +39,15 @@ namespace Audio {
  * @brief Tool modes for playlist editing
  */
 enum class PlaylistTool {
-    Select,     // Default - select/move clips  
-    Split,      // Blade tool - click to split clips
-    MultiSelect,// Rectangle selection for multiple clips
-    Paint,      // Paint tool - left-click to stamp clipboard clip
-    Loop,       // Loop region tool
-    Draw,       // Draw automation/MIDI
-    Erase,      // Erase clips/notes
-    Mute,       // Click to mute clips
-    Slip        // Adjust content within clip bounds
+    Select,      // Default - select/move clips
+    Split,       // Blade tool - click to split clips
+    MultiSelect, // Rectangle selection for multiple clips
+    Paint,       // Paint tool - left-click to stamp clipboard clip
+    Loop,        // Loop region tool
+    Draw,        // Draw automation/MIDI
+    Erase,       // Erase clips/notes
+    Mute,        // Click to mute clips
+    Slip         // Adjust content within clip bounds
 };
 
 /**
@@ -70,14 +73,14 @@ public:
     void addTrack(const std::string& name = "");
     void refreshTracks();
     void invalidateAllCaches();
-    
+
     void invalidateCache(); // Keep for compatibility
-    
+
     // Solo coordination (exclusive solo behavior)
     void onTrackSoloToggled(TrackUIComponent* soloedTrack);
-    
+
     void onClipDeleted(TrackUIComponent* trackComp, ClipInstanceID clipId, const ::AestraUI::NUIPoint& rippleCenter);
-    
+
     // Clip splitting (split tool)
     void onSplitRequested(TrackUIComponent* trackComp, double splitBeat);
 
@@ -90,29 +93,32 @@ public:
     bool hasClipboardClip() const { return m_clipboardClip.id.isValid(); }
 
     // Playlist View
-    void togglePlaylist() { if (m_onTogglePlaylist) m_onTogglePlaylist(); }
+    void togglePlaylist() {
+        if (m_onTogglePlaylist)
+            m_onTogglePlaylist();
+    }
     void setPlaylistVisible(bool visible);
     bool isPlaylistVisible() const { return m_playlistVisible; }
-    
+
     // === TOOL SELECTION ===
     void setCurrentTool(PlaylistTool tool);
-    void setActiveTool(PlaylistTool tool) { setCurrentTool(tool); }  // Alias
+    void setActiveTool(PlaylistTool tool) { setCurrentTool(tool); } // Alias
     PlaylistTool getCurrentTool() const { return m_currentTool; }
-    PlaylistTool getActiveTool() const { return m_currentTool; }  // Alias
- 
+    PlaylistTool getActiveTool() const { return m_currentTool; } // Alias
+
     // === VIEW MODES ===
     void setPlaylistMode(PlaylistMode mode);
     PlaylistMode getPlaylistMode() const { return m_playlistMode; }
-    
+
     // Pattern Playback Mode (Arsenal) - Hides playhead/playline
     void setPatternMode(bool enabled);
     bool isPatternMode() const { return m_patternMode; }
-    
+
     // Cursor visibility callback (for custom cursor support)
     void setOnCursorVisibilityChanged(std::function<void(bool)> callback) { m_onCursorVisibilityChanged = callback; }
     bool isMinimapResizeCursorActive() const;
-    bool isCustomCursorActive() const;  // Returns true if any tool/resize cursor is active
-    
+    bool isCustomCursorActive() const; // Returns true if any tool/resize cursor is active
+
     // View Toggle Callbacks (v3.1)
     void setOnToggleMixer(std::function<void()> cb) { m_onToggleMixer = cb; }
     void setOnTogglePianoRoll(std::function<void()> cb) { m_onTogglePianoRoll = cb; }
@@ -121,23 +127,31 @@ public:
     void setOnOpenPatternInPianoRoll(std::function<void(PatternID)> cb) { m_onOpenPatternInPianoRoll = std::move(cb); }
     void setOnPreviewPatternClip(std::function<void(PatternID)> cb) { m_onPreviewPatternClip = std::move(cb); }
     void setOnStopPatternClipPreview(std::function<void()> cb) { m_onStopPatternClipPreview = std::move(cb); }
-    
+
     // Loop control callback (preset: 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project)
     void setOnLoopPresetChanged(std::function<void(int preset)> cb) { m_onLoopPresetChanged = cb; }
     int getLoopPreset() const { return m_loopPreset; }
-    
+
     // Selection made callback - called when ruler selection is finalized (startBeat, endBeat)
     // This should jump playhead to start and set up the loop region
     void setOnSelectionMade(std::function<void(double startBeat, double endBeat)> cb) { m_onSelectionMade = cb; }
-    
+
     // Loop region update callback - called when loop region needs to change (for Project auto-update)
     void setOnLoopRegionUpdate(std::function<void(double startBeat, double endBeat)> cb) { m_onLoopRegionUpdate = cb; }
-    
+
     // Audition Mode integration - called when user wants to send track/clip to Audition
-    void setOnSendToAudition(std::function<void(uint32_t trackId, const std::string& trackName)> cb) { m_onSendToAudition = cb; }
-    void setOnSendSelectionToAudition(std::function<void(double startBeat, double endBeat)> cb) { m_onSendSelectionToAudition = cb; }
+    void setOnSendToAudition(std::function<void(uint32_t trackId, const std::string& trackName)> cb) {
+        m_onSendToAudition = cb;
+    }
+    void setOnSendSelectionToAudition(std::function<void(double startBeat, double endBeat)> cb) {
+        m_onSendSelectionToAudition = cb;
+    }
     void setOnClipLibraryChanged(std::function<void()> cb) { m_onClipLibraryChanged = std::move(cb); }
-    
+
+    /** @brief Set callback invoked when the audio graph needs rebuilding (e.g., after plugin insert/remove).
+     *  Used by AestraContent to wire the graph rebuild into TrackManagerUI's update loop. */
+    void setOnGraphDirty(std::function<void()> cb) { m_onGraphDirty = std::move(cb); }
+
     // === MULTI-SELECTION ===
     void selectTrack(TrackUIComponent* track, bool addToSelection = false);
     void deselectTrack(TrackUIComponent* track);
@@ -145,41 +159,41 @@ public:
     void clearSelection();
     const std::unordered_set<TrackUIComponent*>& getSelectedTracks() const { return m_selectedTracks; }
     bool isTrackSelected(TrackUIComponent* track) const;
-    
+
     // Context Menu Helpers (v4.0)
     void openTrackContextMenu(const ::AestraUI::NUIPoint& position, std::function<void()> onSendToAudition);
-    
+
     // Snap-to-Grid control
     void setSnapEnabled(bool enabled) { m_snapEnabled = enabled; }
     bool isSnapEnabled() const { return m_snapEnabled; }
     void setSnapDivision(int division) { m_snapDivision = division; } // 1=bar, 4=beat, 16=16th
     int getSnapDivision() const { return m_snapDivision; }
-    
+
     // Follow Playhead
     enum class FollowMode {
-        Page,       // Jump to next page when playhead reaches edge
-        Continuous  // Smooth scrolling keeping playhead centered
+        Page,      // Jump to next page when playhead reaches edge
+        Continuous // Smooth scrolling keeping playhead centered
     };
-    
+
     void setFollowPlayhead(bool enabled) { m_followPlayhead = enabled; }
     bool isFollowPlayhead() const { return m_followPlayhead; }
-    
+
     void setFollowMode(FollowMode mode) { m_followMode = mode; }
     FollowMode getFollowMode() const { return m_followMode; }
-    
+
     // New Snap System
     void setSnapSetting(::AestraUI::SnapGrid snap);
     ::AestraUI::SnapGrid getSnapSetting() const { return m_snapSetting; }
-    
+
     // === CLIP MANIPULATION ===
-    void splitSelectedClipAtPlayhead();  // Split clip at current playhead position
+    void splitSelectedClipAtPlayhead(); // Split clip at current playhead position
     // copySelectedClip moved to line 85
-    void cutSelectedClip();              // Cut selected clip (copy + delete)
+    void cutSelectedClip(); // Cut selected clip (copy + delete)
     // pasteClip replaced by pasteClipboardAtCursor
     // stampClipAtCursor replaced by onPaintClip
-    void duplicateSelectedClip();        // Duplicate selected clip immediately after
-    void deleteSelectedClip();           // Delete selected clip
-    TrackUIComponent* getSelectedTrackUI() const;  // Get currently selected track UI
+    void duplicateSelectedClip();                 // Duplicate selected clip immediately after
+    void deleteSelectedClip();                    // Delete selected clip
+    TrackUIComponent* getSelectedTrackUI() const; // Get currently selected track UI
 
     // Instant clip dragging
     void startInstantClipDrag(TrackUIComponent* trackComp, ClipInstanceID clipId, const ::AestraUI::NUIPoint& clickPos);
@@ -190,14 +204,16 @@ public:
     bool clampInstantClipDragPosition(::AestraUI::NUIPoint& position) const;
     bool placeFileOnTimeline(const std::string& filePath, const std::string& displayName = "");
     bool placePatternOnTimeline(PatternID patternId);
-    
+
     // === IDropTarget Interface ===
-    ::AestraUI::DropFeedback onDragEnter(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position) override;
-    ::AestraUI::DropFeedback onDragOver(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position) override;
+    ::AestraUI::DropFeedback onDragEnter(const ::AestraUI::DragData& data,
+                                         const ::AestraUI::NUIPoint& position) override;
+    ::AestraUI::DropFeedback onDragOver(const ::AestraUI::DragData& data,
+                                        const ::AestraUI::NUIPoint& position) override;
     void onDragLeave() override;
     ::AestraUI::DropResult onDrop(const ::AestraUI::DragData& data, const ::AestraUI::NUIPoint& position) override;
     ::AestraUI::NUIRect getDropBounds() const override { return getBounds(); }
-    
+
     // Loop markers (Visual feedback)
     void setLoopRegion(double startBeat, double endBeat, bool enabled);
 
@@ -206,13 +222,15 @@ public:
 
     // Selection query for looping
     std::pair<double, double> getSelectionBeatRange() const;
-    
+
     // Time Signature Sync
     void setBeatsPerBar(int bpb) {
-        if (m_beatsPerBar == bpb) return;
+        if (m_beatsPerBar == bpb)
+            return;
         m_beatsPerBar = bpb;
-        for(auto& track : m_trackUIComponents) {
-            if(track) track->setBeatsPerBar(bpb);
+        for (auto& track : m_trackUIComponents) {
+            if (track)
+                track->setBeatsPerBar(bpb);
         }
         setDirty(true);
     }
@@ -227,7 +245,7 @@ public:
         }
         invalidateCache();
     }
-    
+
     float getHorizontalScroll() const { return m_timelineScrollOffset; }
     void setHorizontalScroll(float scroll) {
         m_timelineScrollOffset = std::max(0.0f, scroll);
@@ -236,7 +254,7 @@ public:
         }
         invalidateCache();
     }
-    
+
     float getVerticalScroll() const { return m_scrollOffset; }
     void setVerticalScroll(float scroll) {
         m_scrollOffset = std::max(0.0f, scroll);
@@ -248,7 +266,7 @@ protected:
     void onRender(::AestraUI::NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
     void onResize(int width, int height) override;
-    
+
     // Hide setDirty to trigger cache invalidation (except during cache rendering)
     void setDirty(bool dirty = true) {
         ::AestraUI::NUIComponent::setDirty(dirty);
@@ -256,7 +274,7 @@ protected:
             m_cacheInvalidated = true;
         }
     }
-    
+
     // 🔥 VIEWPORT CULLING: Override to only render visible tracks
     void renderChildren(::AestraUI::NUIRenderer& renderer);
 
@@ -272,18 +290,18 @@ private:
     float m_targetScrollOffset{0.0f};
     PlaylistMode m_playlistMode{PlaylistMode::Clips};
     bool m_patternMode = false; // True when Pattern (Arsenal) playback is active
-    
+
     // Timeline/Ruler settings
-    float m_pixelsPerBeat{50.0f};      // Horizontal zoom level
+    float m_pixelsPerBeat{50.0f};       // Horizontal zoom level
     float m_timelineScrollOffset{0.0f}; // Horizontal scroll position
     int m_beatsPerBar{4};               // Time signature numerator
     int m_subdivision{4};               // Grid subdivision (4 = 16th notes)
     ::AestraUI::SnapGrid m_snapSetting = ::AestraUI::SnapGrid::Bar;
-    
+
     // Legacy Snap (Check if used)
     bool m_snapEnabled = true;
     int m_snapDivision = 4;
-    
+
     // UI Components
     std::shared_ptr<::AestraUI::NUIScrollbar> m_scrollbar;
     std::shared_ptr<::AestraUI::TimelineMinimapBar> m_timelineMinimap;
@@ -300,24 +318,24 @@ private:
     double m_minimapDomainEndBeat{0.0};
     bool m_minimapNeedsRebuild{true};
     ::AestraUI::TimelineRange m_minimapSelectionBeatRange{};
-    
+
     // Tool icons (toolbar)
-    std::shared_ptr<::AestraUI::NUIIcon> m_menuIcon;       // Menu dropdown icon (down arrow)
+    std::shared_ptr<::AestraUI::NUIIcon> m_menuIcon; // Menu dropdown icon (down arrow)
     std::shared_ptr<::AestraUI::NUIIcon> m_selectToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_splitToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_multiSelectToolIcon;
     std::shared_ptr<::AestraUI::NUIIcon> m_paintToolIcon;  // Paint/stamp tool icon
     std::shared_ptr<::AestraUI::NUIIcon> m_moveCursorIcon; // Move (4-way arrow) cursor for Paint tool hovering clips
-    
+
     std::shared_ptr<::AestraUI::NUIContextMenu> m_activeContextMenu; // Keep track for cleanup
-    
+
     // Clipboard
     Audio::ClipInstance m_clipboardClip;
 
     // Animation state
     float m_menuIconRotation = 0.0f;
     float m_menuIconTargetRotation = 0.0f;
-    
+
     ::AestraUI::NUIRect m_menuIconBounds;
     ::AestraUI::NUIRect m_selectToolBounds;
     ::AestraUI::NUIRect m_splitToolBounds;
@@ -332,19 +350,19 @@ private:
     bool m_multiSelectToolHovered = false;
     bool m_paintToolHovered = false;
     bool m_followPlayheadHovered = false;
-    
+
     // Loop state
-    int m_loopPreset{0};  // 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project
+    int m_loopPreset{0}; // 0=Off, 1=1Bar, 2=2Bars, 3=4Bars, 4=8Bars, 5=Selection, 6=Project
     double m_lastProjectLoopExtentBeats{-1.0};
-    
+
     // Current editing tool
     PlaylistTool m_currentTool = PlaylistTool::Select;
-    bool m_cursorHidden = false;  // Track cursor visibility state
+    bool m_cursorHidden = false; // Track cursor visibility state
     std::function<void(bool)> m_onCursorVisibilityChanged;
-    
+
     // Multi-selection
     std::unordered_set<TrackUIComponent*> m_selectedTracks;
-    
+
     // Instant clip dragging (no ghost)
     bool m_isDraggingClipInstant = false;
     TrackUIComponent* m_draggedClipTrack = nullptr;
@@ -352,70 +370,69 @@ private:
     double m_clipDragOffsetBeats = 0.0;
     bool m_suppressPlaylistRefresh = false;
 
-    float m_clipDragOffsetX = 0.0f;  // Offset from clip start to mouse
-    double m_clipOriginalStartTime = 0.0;  // Original position before drag
-    int m_clipOriginalTrackIndex = -1;  // Original track before drag
+    float m_clipDragOffsetX = 0.0f;       // Offset from clip start to mouse
+    double m_clipOriginalStartTime = 0.0; // Original position before drag
+    int m_clipOriginalTrackIndex = -1;    // Original track before drag
     PlaylistLaneID m_clipOriginalLaneId;  // Original lane before drag
-    
+
     // Split tool cursor position
     float m_splitCursorX = 0.0f;
     bool m_showSplitCursor = false;
-    ::AestraUI::NUIPoint m_lastMousePos;  // Track mouse for split cursor rendering
-    
+    ::AestraUI::NUIPoint m_lastMousePos; // Track mouse for split cursor rendering
+
     // Playhead dragging state
     bool m_isDraggingPlayhead = false;
-    
+
     // === RULER SELECTION (Right-click or Ctrl+Left-click on ruler for looping) ===
     bool m_isDraggingRulerSelection = false;
     double m_rulerSelectionStartBeat = 0.0;
     double m_rulerSelectionEndBeat = 0.0;
     bool m_hasRulerSelection = false;
-    
+
     // === LOOP MARKERS (Visual feedback on ruler) ===
-    bool m_loopEnabled = false;  // Default OFF - no loop until user makes selection
+    bool m_loopEnabled = false; // Default OFF - no loop until user makes selection
     double m_loopStartBeat = 0.0;
     double m_loopEndBeat = 4.0;
     bool m_isDraggingLoopStart = false;
     bool m_isDraggingLoopEnd = false;
     bool m_hoveringLoopStart = false;
     bool m_hoveringLoopEnd = false;
-    double m_loopDragStartBeat = 0.0;  // Original beat position when drag started
-    
+    double m_loopDragStartBeat = 0.0; // Original beat position when drag started
+
     // === SELECTION BOX (Right-click drag or MultiSelect tool) ===
     bool m_isDrawingSelectionBox = false;
     ::AestraUI::NUIPoint m_selectionBoxStart;
     ::AestraUI::NUIPoint m_selectionBoxEnd;
-    
+
     // === SMOOTH ZOOM ANIMATION ===
-    float m_targetPixelsPerBeat = 50.0f;   // Target zoom level for animation (match initial m_pixelsPerBeat)
-    float m_zoomVelocity = 0.0f;           // Current zoom velocity for momentum
-    float m_lastMouseZoomX = 0.0f;         // Mouse X position during zoom for pivot
-    bool m_isZooming = false;              // True while actively zooming
-    bool m_dropTargetRegistered = false;   // Flag to ensure one-time registration
-    
+    float m_targetPixelsPerBeat = 50.0f; // Target zoom level for animation (match initial m_pixelsPerBeat)
+    float m_zoomVelocity = 0.0f;         // Current zoom velocity for momentum
+    float m_lastMouseZoomX = 0.0f;       // Mouse X position during zoom for pivot
+    bool m_isZooming = false;            // True while actively zooming
+    bool m_dropTargetRegistered = false; // Flag to ensure one-time registration
+
     // === FBO CACHING SYSTEM (like AudioSettingsDialog) ===
     ::AestraUI::CachedRenderData* m_cachedRender = nullptr;
     uint64_t m_cacheId;
-    bool m_cacheInvalidated = true;  // Start invalidated to force initial render
-    bool m_isRenderingToCache = false;  // Guard flag to prevent invalidation loops
+    bool m_cacheInvalidated = true;    // Start invalidated to force initial render
+    bool m_isRenderingToCache = false; // Guard flag to prevent invalidation loops
 
     // Playlist View State
     bool m_playlistVisible{true};
 
     // ⚡ MULTI-LAYER CACHING SYSTEM for 60+ FPS
-    
+
     // Layer 1: Static Background (grid, ruler ticks)
     uint32_t m_backgroundTextureId = 0;
     int m_backgroundCachedWidth = 0;
     int m_backgroundCachedHeight = 0;
     float m_backgroundCachedZoom = 0.0f;
     bool m_backgroundNeedsUpdate = true;
-    
-    
+
     // Layer 2: Track Controls (buttons, labels - semi-static)
     uint32_t m_controlsTextureId = 0;
     bool m_controlsNeedsUpdate = true;
-    
+
     // Layer 3: Waveforms (per-track FBO caching)
     struct TrackCache {
         uint32_t textureId = 0;
@@ -423,26 +440,26 @@ private:
         double lastContentHash = 0; // Simple hash to detect content changes
     };
     std::vector<TrackCache> m_trackCaches;
-    
+
     // Dirty flags for smart invalidation
-    bool m_playheadMoved = false;        // Only redraw playhead overlay
-    bool m_metersChanged = false;        // Only redraw audio meters
-    
+    bool m_playheadMoved = false; // Only redraw playhead overlay
+    bool m_metersChanged = false; // Only redraw audio meters
+
     // === DROP PREVIEW STATE ===
-    bool m_showDropPreview = false;      // True when drag is over timeline
-    int m_dropTargetTrack = -1;          // Track index for drop preview
-    double m_dropTargetTime = 0.0;       // Time position for drop preview
-    ::AestraUI::NUIRect m_dropPreviewRect;  // Visual preview rectangle
-    
+    bool m_showDropPreview = false;        // True when drag is over timeline
+    int m_dropTargetTrack = -1;            // Track index for drop preview
+    double m_dropTargetTime = 0.0;         // Time position for drop preview
+    ::AestraUI::NUIRect m_dropPreviewRect; // Visual preview rectangle
+
     // === SNAP-TO-GRID ===
     // === SNAP-TO-GRID (Legacy - preserved for compatibility but shadowed by m_snapSetting) ===
     // bool m_snapEnabled = true;           // Snap to grid enabled by default
     // int m_snapDivision = 4;              // Snap to beats (1=bar, 4=beat, 16=16th, etc.)
 
-    bool m_followPlayhead = false;          // Whether timeline automatically scrolls to follow playhead
+    bool m_followPlayhead = false;              // Whether timeline automatically scrolls to follow playhead
     FollowMode m_followMode = FollowMode::Page; // Default logic
     std::shared_ptr<::AestraUI::NUIIcon> m_followPlayheadIcon; // Icon for the toggle button
-    
+
     // === CLIPBOARD for copy/paste (v3.0) ===
     struct ClipboardData {
         bool hasData = false;
@@ -453,22 +470,21 @@ private:
         uint32_t colorRGBA = 0xFF4A90D9;
     };
     ClipboardData m_clipboard;
-    
+
     ClipInstanceID m_selectedClipId; // Track single selected clip for manipulation
 
-    
     // === DELETE ANIMATION (Ripple effect) ===
     struct DeleteAnimation {
-        PlaylistLaneID laneId;            // Lane being deleted from
-        ClipInstanceID clipId;            // Clip ID (for reference during animation if needed)
-        ::AestraUI::NUIPoint rippleCenter;   // Center of ripple effect
+        PlaylistLaneID laneId;             // Lane being deleted from
+        ClipInstanceID clipId;             // Clip ID (for reference during animation if needed)
+        ::AestraUI::NUIPoint rippleCenter; // Center of ripple effect
 
-        ::AestraUI::NUIRect clipBounds;      // Original clip bounds
-        float progress = 0.0f;            // Animation progress 0.0-1.0
-        float duration = 0.25f;           // Animation duration in seconds
+        ::AestraUI::NUIRect clipBounds; // Original clip bounds
+        float progress = 0.0f;          // Animation progress 0.0-1.0
+        float duration = 0.25f;         // Animation duration in seconds
     };
     std::vector<DeleteAnimation> m_deleteAnimations;
-    
+
     // Callbacks for toggles
     std::function<void()> m_onToggleMixer;
     std::function<void()> m_onTogglePianoRoll;
@@ -477,14 +493,15 @@ private:
     std::function<void(PatternID)> m_onOpenPatternInPianoRoll;
     std::function<void(PatternID)> m_onPreviewPatternClip;
     std::function<void()> m_onStopPatternClipPreview;
-    std::function<void(int)> m_onLoopPresetChanged;  // Called when loop preset dropdown changes
-    std::function<void(double, double)> m_onSelectionMade;  // Called when ruler selection finalized
-    std::function<void(double, double)> m_onLoopRegionUpdate;  // Called when loop region needs update (Project auto-update)
-    std::function<void(uint32_t, const std::string&)> m_onSendToAudition;  // Called for "Send to Audition"
-    std::function<void(double, double)> m_onSendSelectionToAudition;  // Called for "Send Selection to Audition"
+    std::function<void(int)> m_onLoopPresetChanged;        // Called when loop preset dropdown changes
+    std::function<void(double, double)> m_onSelectionMade; // Called when ruler selection finalized
+    std::function<void(double, double)>
+        m_onLoopRegionUpdate; // Called when loop region needs update (Project auto-update)
+    std::function<void(uint32_t, const std::string&)> m_onSendToAudition; // Called for "Send to Audition"
+    std::function<void(double, double)> m_onSendSelectionToAudition;      // Called for "Send Selection to Audition"
     std::function<void()> m_onClipLibraryChanged;
     bool m_dragPatternPreviewActive = false;
-    
+
     void updateBackgroundCache(::AestraUI::NUIRenderer& renderer);
     void updateControlsCache(::AestraUI::NUIRenderer& renderer);
     void updateTrackCache(::AestraUI::NUIRenderer& renderer, size_t trackIndex);
@@ -502,7 +519,8 @@ private:
     void scheduleTimelineMinimapRebuild();
     void updateTimelineMinimap(double deltaTime);
     void setTimelineViewStartBeat(double viewStartBeat, bool isFinal);
-    void resizeTimelineViewEdgeFromMinimap(::AestraUI::TimelineMinimapResizeEdge edge, double anchorBeat, double edgeBeat, bool isFinal);
+    void resizeTimelineViewEdgeFromMinimap(::AestraUI::TimelineMinimapResizeEdge edge, double anchorBeat,
+                                           double edgeBeat, bool isFinal);
     void centerTimelineViewAtBeat(double centerBeat);
     void zoomTimelineAroundBeat(double anchorBeat, float zoomMultiplier);
     float getTimelineGridWidthPixels() const;
@@ -510,18 +528,18 @@ private:
     void renderTimeRuler(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIRect& rulerBounds);
     void renderLoopMarkers(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIRect& rulerBounds);
     void renderPlayhead(::AestraUI::NUIRenderer& renderer);
-    void renderDropPreview(::AestraUI::NUIRenderer& renderer); // Render drop zone highlight
-    void renderDeleteAnimations(::AestraUI::NUIRenderer& renderer); // Render FL-style ripple delete
+    void renderDropPreview(::AestraUI::NUIRenderer& renderer);         // Render drop zone highlight
+    void renderDeleteAnimations(::AestraUI::NUIRenderer& renderer);    // Render FL-style ripple delete
     void renderTrackManagerStatic(::AestraUI::NUIRenderer& renderer);  // Static content (cached)
     void renderTrackManagerDynamic(::AestraUI::NUIRenderer& renderer); // Dynamic content (real-time)
-    
+
     // Helper to convert mouse position to track/time
     int getTrackAtPosition(float y) const;
     double getTimeAtPosition(float x) const;
-    void clearDropPreview(); // Clear drop preview state
-    double snapBeatToGrid(double beat) const; // Snap beat to nearest grid line
+    void clearDropPreview();                         // Clear drop preview state
+    double snapBeatToGrid(double beat) const;        // Snap beat to nearest grid line
     double snapBeatToGridForward(double beat) const; // Snap beat to next grid line (paste-to-right)
-    
+
     // Tool icons initialization and rendering
     void createToolIcons();
     void updateToolbarBounds();
@@ -529,12 +547,10 @@ private:
     bool handleToolbarClick(const ::AestraUI::NUIPoint& position);
     void renderToolCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
     void renderMinimapResizeCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
-    
 
-    
     // Split tool
     void performSplitAtPosition(int trackIndex, double timeSeconds);
-    
+
     // Calculate maximum timeline extent based on samples
     double getMaxTimelineExtent() const;
 
@@ -544,6 +560,9 @@ private:
     // Async Task Queue (for main thread callbacks)
     std::mutex m_pendingTasksMutex;
     std::vector<std::function<void()>> m_pendingTasks;
+
+    // Graph dirty callback — invoked by onUpdate() after consumeGraphDirty() returns true
+    std::function<void()> m_onGraphDirty;
 
     // === IMPORT ANIMATION ===
     struct PendingImport {
@@ -556,7 +575,7 @@ private:
     };
     std::vector<PendingImport> m_pendingImports;
     void renderPendingImports(AestraUI::NUIRenderer& renderer);
-    
+
     // (Duplicate methods removed)
 };
 
