@@ -35,6 +35,8 @@ struct ClipRenderState {
 /**
  * @brief Represents a routing connection (User/UI Layer)
  */
+class EffectChainSnapshot; // Forward declaration for Pass 3
+
 struct AudioRoute {
     uint32_t targetChannelId; // Destination ID (or SPECIAL_ID_MASTER)
     float gain{1.0f};         // Send Level (Linear)
@@ -61,7 +63,7 @@ struct TrackRenderState {
     // Routing (v3.1)
     uint32_t mainOutputId{0xFFFFFFFF}; // Master
     std::vector<AudioRoute> sends;
-    EffectChain* effectChain{nullptr};
+    std::shared_ptr<const EffectChainSnapshot> effectChainSnapshot{nullptr}; // Pass 3: snapshot-based effect chain
 };
 
 /**

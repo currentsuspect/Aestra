@@ -326,7 +326,7 @@ private:
      * Read by getAudioSnapshot() on the audio thread via atomic_load.
      * Release semantics on store ensures the audio thread never sees a partial snapshot.
      */
-    mutable std::shared_ptr<AudioArsenalSnapshot> m_publishedSnapshot;
+    mutable std::shared_ptr<AudioArsenalSnapshot> m_publishedSnapshot{std::make_shared<AudioArsenalSnapshot>()};
 
 public:
     void setSampleRate(double rate) { m_sampleRate.store(rate, std::memory_order_relaxed); }
