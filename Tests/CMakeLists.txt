@@ -478,6 +478,16 @@ target_include_directories(AestraGarbageCollectorTest PRIVATE
 add_test(NAME AestraGarbageCollectorTest COMMAND AestraGarbageCollectorTest)
 set_tests_properties(AestraGarbageCollectorTest PROPERTIES LABELS "audio;memory;reclamation")
 
+# Connection/ScopedCallback regression tests
+add_executable(AestraConnectionTest AestraAudio/ConnectionTest.cpp)
+target_link_libraries(AestraConnectionTest PRIVATE AestraCore)
+target_include_directories(AestraConnectionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}
+)
+add_test(NAME AestraConnectionTest COMMAND AestraConnectionTest)
+set_tests_properties(AestraConnectionTest PROPERTIES LABELS "audio;regression")
+
 # EffectChain Snapshot Test (Pass 1: immutable snapshot type)
 add_executable(AestraEffectChainSnapshotTest AestraAudio/EffectChainSnapshotTest.cpp)
 target_link_libraries(AestraEffectChainSnapshotTest PRIVATE AestraAudio AestraCore)

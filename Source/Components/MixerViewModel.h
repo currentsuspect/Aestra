@@ -2,6 +2,7 @@
 #pragma once
 
 #include "MixerMath.h"
+#include "Events/Connection.h"
 #include "MeterSnapshot.h"
 #include "ChannelSlotMap.h"
 #include "TrackManager.h"
@@ -268,8 +269,7 @@ public:
     /** @brief Set CommandHistory for undo/redo on plugin operations. */
     void setCommandHistory(Audio::CommandHistory* ch) { m_commandHistory = ch; }
 
-    /** @brief Set callback to notify when graph needs rebuilding (e.g., after plugin insert/remove). */
-    void setGraphDirtyCallback(std::function<void()> callback) { m_onGraphDirty = std::move(callback); }
+    // graphDirty and projectModified are scoped subscription signals for mixer state changes.
 
     struct Destination {
         uint32_t id;
@@ -293,12 +293,11 @@ public:
     void moveInsert(uint32_t channelId, int fromSlot, int toSlot);
     void removeInsert(uint32_t channelId, int slot);
 
-    void setOnGraphDirty(std::function<void()> cb) { m_onGraphDirty = std::move(cb); }
-    void setOnProjectModified(std::function<void()> cb) { m_onProjectModified = std::move(cb); }
+    // Graph/project state change signals (scoped subscription)
+    Aestra::Events::Signal<void> graphDirty;
+    Aestra::Events::Signal<void> projectModified;
 
 private:
-    std::function<void()> m_onGraphDirty;
-    std::function<void()> m_onProjectModified;
     std::unordered_map<uint32_t, std::string> m_blockedRoutingWarnings;
 
     /// Stable storage - pointers remain valid across add/remove

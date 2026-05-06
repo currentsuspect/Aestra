@@ -2,6 +2,7 @@
 #include "MixerPanel.h"
 
 #include "MixerViewModel.h"
+#include "Events/Connection.h"
 #include "../AestraUI/Widgets/UIMixerPanel.h"
 #include "../App/ServiceLocator.h"
 #include "AudioDeviceManager.h"
@@ -16,22 +17,23 @@ MixerPanel::MixerPanel(std::shared_ptr<TrackManager> trackManager)
     // Create view model and modern mixer
     m_viewModel = std::make_shared<Aestra::MixerViewModel>();
     if (m_trackManager) {
-        m_viewModel->setOnGraphDirty([trackManager = m_trackManager]() {
+        // Scoped subscriptions for graph dirty / project modified callbacks
+        m_connections.add(m_viewModel->graphDirty.subscribe([trackManager = m_trackManager]() {
             if (trackManager) {
                 trackManager->requestAudioGraphRebuild(
                     TrackManager::GraphDirtyReason::EffectChainChanged);
             }
-        });
-        m_viewModel->setOnProjectModified([trackManager = m_trackManager]() {
+        }));
+        m_connections.add(m_viewModel->projectModified.subscribe([trackManager = m_trackManager]() {
             if (trackManager) {
                 trackManager->markModified();
             }
-        });
+        }));
         m_viewModel->setCommandHistory(&m_trackManager->getCommandHistory());
     }
     m_newMixer = std::make_shared<UIMixerPanel>(m_viewModel, m_trackManager);
     m_newMixer->setId("UIMixerPanel_Inner");
-    
+
     // Set as content of WindowPanel
     setContent(m_newMixer);
 

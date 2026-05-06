@@ -595,8 +595,8 @@ void MixerViewModel::addSend(uint32_t channelId) {
         route.sidechainOnly = false;
         mc->addSend(route);
         
-        if (m_onGraphDirty) m_onGraphDirty();
-        if (m_onProjectModified) m_onProjectModified();
+        graphDirty.emit();
+        projectModified.emit();
     }
 }
 
@@ -611,8 +611,8 @@ void MixerViewModel::removeSend(uint32_t channelId, int sendIndex) {
     if (auto mc = ch->channel) {
         mc->removeSend(sendIndex);
         
-        if (m_onGraphDirty) m_onGraphDirty();
-        if (m_onProjectModified) m_onProjectModified();
+        graphDirty.emit();
+        projectModified.emit();
     }
 }
 
@@ -653,8 +653,8 @@ void MixerViewModel::setSendDestination(uint32_t channelId, int sendIndex, uint3
         uint32_t engineId = (targetId == 0) ? 0xFFFFFFFF : targetId;
         mc->setSendDestination(sendIndex, engineId);
         
-        if (m_onGraphDirty) m_onGraphDirty();
-        if (m_onProjectModified) m_onProjectModified();
+        graphDirty.emit();
+        projectModified.emit();
     }
 }
 
@@ -666,8 +666,8 @@ void MixerViewModel::setSendPostFader(uint32_t channelId, int sendIndex, bool po
 
     if (auto mc = ch->channel) {
         mc->setSendPostFader(sendIndex, postFader);
-        if (m_onGraphDirty) m_onGraphDirty();
-        if (m_onProjectModified) m_onProjectModified();
+        graphDirty.emit();
+        projectModified.emit();
     }
 }
 
@@ -679,8 +679,8 @@ void MixerViewModel::setSendSidechainOnly(uint32_t channelId, int sendIndex, boo
 
     if (auto mc = ch->channel) {
         mc->setSendSidechainOnly(sendIndex, sidechainOnly);
-        if (m_onGraphDirty) m_onGraphDirty();
-        if (m_onProjectModified) m_onProjectModified();
+        graphDirty.emit();
+        projectModified.emit();
     }
 }
 
@@ -707,8 +707,8 @@ void MixerViewModel::setMainOutputDestination(uint32_t channelId, uint32_t targe
 
     if (auto mc = ch->channel) {
         mc->setMainOutputId(targetId == 0 ? 0xFFFFFFFFu : targetId);
-        if (m_onGraphDirty) m_onGraphDirty();
-        if (m_onProjectModified) m_onProjectModified();
+        graphDirty.emit();
+        projectModified.emit();
     }
 }
 
@@ -810,8 +810,8 @@ void MixerViewModel::setInsertBypass(uint32_t channelId, int slotIndex, bool byp
                 }
             }
         }
-        if (m_onGraphDirty) m_onGraphDirty();
-        if (m_onProjectModified) m_onProjectModified();
+        graphDirty.emit();
+        projectModified.emit();
     }
 }
 
@@ -825,7 +825,7 @@ void MixerViewModel::setInsertMix(uint32_t channelId, int slotIndex, float mix) 
     // Update Engine
     if (auto mc = ch->channel) {
         mc->getEffectChain().setSlotDryWetMix(slotIndex, mix);
-        if (m_onGraphDirty) m_onGraphDirty();
+        graphDirty.emit();
          // Often mix changes don't need project dirty flag every frame, 
          // but for now we can trigger it or handle throttling elsewhere.
     }
@@ -865,8 +865,8 @@ void MixerViewModel::moveInsert(uint32_t channelId, int fromSlot, int toSlot) {
             chain.swapPlugins(fromSlot, toSlot);
         }
         
-        if (m_onGraphDirty) m_onGraphDirty();
-        if (m_onProjectModified) m_onProjectModified();
+        graphDirty.emit();
+        projectModified.emit();
     }
 }
 
@@ -901,8 +901,8 @@ void MixerViewModel::removeInsert(uint32_t channelId, int slot) {
                 chain.removePlugin(slot);
             }
 
-            if (m_onGraphDirty) m_onGraphDirty();
-            if (m_onProjectModified) m_onProjectModified();
+            graphDirty.emit();
+            projectModified.emit();
         }
     }
 }

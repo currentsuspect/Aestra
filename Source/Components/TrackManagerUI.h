@@ -24,6 +24,7 @@
 
 #include <functional>
 #include <memory>
+#include "Events/Connection.h"
 #include <mutex>
 #include <unordered_set>
 #include <vector>
@@ -148,9 +149,8 @@ public:
     }
     void setOnClipLibraryChanged(std::function<void()> cb) { m_onClipLibraryChanged = std::move(cb); }
 
-    /** @brief Set callback invoked when the audio graph needs rebuilding (e.g., after plugin insert/remove).
-     *  Used by AestraContent to wire the graph rebuild into TrackManagerUI's update loop. */
-    void setOnGraphDirty(std::function<void()> cb) { m_onGraphDirty = std::move(cb); }
+    /** @brief Signal emitted when the audio graph needs rebuilding (e.g., after plugin insert/remove). */
+    Aestra::Events::Signal<void> graphDirty;
 
     // === MULTI-SELECTION ===
     void selectTrack(TrackUIComponent* track, bool addToSelection = false);
@@ -561,8 +561,7 @@ private:
     std::mutex m_pendingTasksMutex;
     std::vector<std::function<void()>> m_pendingTasks;
 
-    // Graph dirty callback — invoked by onUpdate() after PlaybackGraphController drains
-    std::function<void()> m_onGraphDirty;
+    // graphDirty is a scoped subscription signal for TrackManagerUI graph rebuild requests.
 
     // === IMPORT ANIMATION ===
     struct PendingImport {

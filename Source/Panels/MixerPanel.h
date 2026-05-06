@@ -2,6 +2,7 @@
 #pragma once
 
 #include "WindowPanel.h"
+#include "Events/Connection.h"
 #include "TrackManager.h"
 #include "../AestraUI/Core/NUIComponent.h"
 #include "NUIButton.h"
@@ -39,6 +40,9 @@ private:
     // New mixer implementation (meters-only for now)
     std::shared_ptr<Aestra::MixerViewModel> m_viewModel;
     std::shared_ptr<AestraUI::UIMixerPanel> m_newMixer;
+
+    // Scoped connections for callback lifecycle safety
+    Aestra::Events::ScopedConnections m_connections;
 };
 
 } // namespace Audio
