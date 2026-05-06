@@ -24,7 +24,7 @@
 #endif
 #include "AudioGraphState.h"
 #include "AudioRenderer.h"
-#include "MetronomeEngine.h" // [NEW]
+#include "MetronomeEngine.h"     // [NEW]
 #include "Models/TrackManager.h" // [NEW] For headless rendering
 
 #include <array>
@@ -128,7 +128,12 @@ public:
     EngineState& engineState() { return m_state; }
 
     /** @brief Set the active sample rate used by the engine. */
-    void setSampleRate(uint32_t sampleRate) { m_sampleRate.store(sampleRate, std::memory_order_relaxed); }
+    void setSampleRate(uint32_t sampleRate) {
+        m_sampleRate.store(sampleRate, std::memory_order_relaxed);
+        if (m_channelPrepareConfig) {
+            m_channelPrepareConfig->sampleRate.store(sampleRate, std::memory_order_relaxed);
+        }
+    }
     /** @brief Get the active sample rate used by the engine. */
     uint32_t getSampleRate() const { return m_sampleRate.load(std::memory_order_relaxed); }
 
@@ -193,9 +198,7 @@ public:
     /** @brief Set global output headroom in decibels. */
     void setHeadroom(float db) { m_headroomLinear.store(std::pow(10.0f, db / 20.0f), std::memory_order_relaxed); }
     /** @brief Enable or disable the master safety limiter. Default: on. */
-    void setSafetyLimiterEnabled(bool enabled) {
-        m_safetyLimiterEnabled.store(enabled, std::memory_order_relaxed);
-    }
+    void setSafetyLimiterEnabled(bool enabled) { m_safetyLimiterEnabled.store(enabled, std::memory_order_relaxed); }
     /** @brief Check whether the master safety limiter is enabled. */
     bool isSafetyLimiterEnabled() const { return m_safetyLimiterEnabled.load(std::memory_order_relaxed); }
 
@@ -347,16 +350,40 @@ public:
      * @param trackManager Shared pointer to track manager
      */
     void setTrackManager(std::shared_ptr<TrackManager> trackManager) {
+        if (auto previous = m_trackManager.lock()) {
+            previous->setChannelPrepareCallback(nullptr);
+        }
         m_trackManager = std::move(trackManager);
+        if (auto current = m_trackManager.lock()) {
+            auto prepareConfig = m_channelPrepareConfig;
+            auto prepareChannel = [prepareConfig](MixerChannel& channel) {
+                if (!prepareConfig) {
+                    return;
+                }
+                const uint32_t maxBlockSize = prepareConfig->maxBlockSize.load(std::memory_order_relaxed);
+                if (maxBlockSize == 0) {
+                    return;
+                }
+                const double sampleRate =
+                    static_cast<double>(prepareConfig->sampleRate.load(std::memory_order_relaxed));
+                channel.prepareProcessingBuffers(maxBlockSize);
+                channel.getEffectChain().prepare(sampleRate, maxBlockSize);
+            };
+            current->setChannelPrepareCallback(prepareChannel);
+            const size_t channelCount = current->getChannelCount();
+            for (size_t i = 0; i < channelCount; ++i) {
+                if (auto* channel = current->getChannel(i)) {
+                    prepareChannel(*channel);
+                }
+            }
+        }
     }
 
     /**
      * @brief Get the current TrackManager
      * @return Shared pointer to track manager (may be null)
      */
-    std::shared_ptr<TrackManager> getTrackManager() const {
-        return m_trackManager.lock();
-    }
+    std::shared_ptr<TrackManager> getTrackManager() const { return m_trackManager.lock(); }
 
     /**
      * @brief Initialize the engine for rendering
@@ -396,9 +423,14 @@ public:
     }
 
 private:
+    struct ChannelPrepareConfig {
+        std::atomic<uint32_t> sampleRate{48000};
+        std::atomic<uint32_t> maxBlockSize{4096};
+    };
+
     static constexpr size_t kMaxTracks = 4096;
-    static constexpr size_t kMaxSendsPerTrack = 256;  // Matches PROJECT_MAX_SENDS_PER_LANE
-    static constexpr size_t kMaxEdgesPerTrack = 16;   // Conservative max routing edges per track
+    static constexpr size_t kMaxSendsPerTrack = 256; // Matches PROJECT_MAX_SENDS_PER_LANE
+    static constexpr size_t kMaxEdgesPerTrack = 16;  // Conservative max routing edges per track
     static constexpr uint32_t kWaveformHistoryFramesDefault = 2048;
 
     // Fast Xorshift32 RNG for dither
@@ -427,7 +459,7 @@ private:
     void applyPendingMetronomeCountInRt();
     void clearMetronomeCountInRt();
     void processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
-                            double* targetBuffer = nullptr, int32_t isolatedTrackIndex = -1);
+                             double* targetBuffer = nullptr, int32_t isolatedTrackIndex = -1);
     void resetCachedSamplerVoicesRt() noexcept;
     void syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept;
     void injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
@@ -469,6 +501,7 @@ private:
 
     std::atomic<uint32_t> m_sampleRate{48000};
     std::atomic<uint32_t> m_maxBufferFrames{4096}; // Larger default for safety
+    std::shared_ptr<ChannelPrepareConfig> m_channelPrepareConfig{std::make_shared<ChannelPrepareConfig>()};
     std::atomic<uint32_t> m_outputChannels{2};
     std::atomic<bool> m_transportPlaying{false};
     // RT-side tracking of last known transport state (avoids race with UI atomic updates)
@@ -497,6 +530,7 @@ private:
     std::vector<float> m_scratchR;                             // Scratch R for plugins
     std::vector<float> m_sidechainScratchL;                    // Scratch sidechain L for plugins
     std::vector<float> m_sidechainScratchR;                    // Scratch sidechain R for plugins
+    std::vector<float> m_dryBuffer;                            // Dry buffer for EffectChainSnapshot dry/wet mixing
     std::vector<MidiBuffer> m_scratchMidiBuffers;              // [NEW] Scratch MIDI buffers for units
 
     struct UnitAuditionState {
@@ -554,7 +588,8 @@ private:
     std::vector<std::vector<size_t>> m_rtAudibleDownstream;
     std::vector<std::vector<size_t>> m_rtAudibleIncoming;
     std::vector<std::vector<size_t>> m_rtSidechainIncoming;
-    std::vector<uint8_t> m_rtSidechainReceiverFlags; // Indexed by trackIndex: 1 if track received sidechain input last block
+    std::vector<uint8_t>
+        m_rtSidechainReceiverFlags; // Indexed by trackIndex: 1 if track received sidechain input last block
     std::vector<std::vector<size_t>> m_rtTopoEdges;
     std::vector<uint32_t> m_rtTopoIndegree;
     std::vector<bool> m_rtAudibleEligible;
@@ -665,8 +700,8 @@ private:
     std::atomic<PreviewEngine*> m_previewEngine{nullptr};
 
     // Transport-aware preview ducking
-    std::atomic<float> m_previewDuckGain{1.0f};  // Linear gain applied to transport when preview is active
-    float m_smoothedPreviewDuckGain{1.0f};       // Smoothed version for click-free transitions
+    std::atomic<float> m_previewDuckGain{1.0f}; // Linear gain applied to transport when preview is active
+    float m_smoothedPreviewDuckGain{1.0f};      // Smoothed version for click-free transitions
 
     // Recent output ring buffer for oscilloscope/mini-waveform displays.
     std::vector<float> m_waveformHistory;

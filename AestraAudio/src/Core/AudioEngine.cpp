@@ -4,9 +4,9 @@
 #include "../../AestraCore/include/AestraLog.h"
 #include "../../AestraCore/include/AestraMath.h"
 #include "AuditionEngine.h"
-#include "GarbageCollector.h"
 #include "EffectChain.h" // [NEW]
-#include "PathUtils.h"   // [NEW] For robust path conversion
+#include "GarbageCollector.h"
+#include "PathUtils.h" // [NEW] For robust path conversion
 #include "PatternPlaybackEngine.h"
 #include "Playback/PreviewEngine.h"
 #include "Plugin/SamplerPlugin.h" // [NEW]
@@ -117,8 +117,7 @@ void AudioEngine::applyPendingMetronomeCountInRt() {
 
     const uint32_t sampleRate = std::max(1u, m_sampleRate.load(std::memory_order_relaxed));
     const double bpm = std::max(1.0f, m_metronomeEngine.getBPM());
-    const uint64_t samplesPerBeat =
-        static_cast<uint64_t>((static_cast<double>(sampleRate) * 60.0) / bpm);
+    const uint64_t samplesPerBeat = static_cast<uint64_t>((static_cast<double>(sampleRate) * 60.0) / bpm);
     const uint64_t totalSamples = std::max<uint64_t>(samplesPerBeat, samplesPerBeat * beats);
     if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent) {
         m_fadeState.store(FadeState::None, std::memory_order_relaxed);
@@ -250,7 +249,7 @@ void AudioEngine::applyPendingCommands() {
         m_transportPlaying.store(transportPlaying, std::memory_order_relaxed);
         m_globalSamplePos.store(transportPos, std::memory_order_relaxed);
 
-if (transportPlaying && sawRestartEdge) {
+        if (transportPlaying && sawRestartEdge) {
             m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
             m_fadeSamplesRemaining = FADE_IN_SAMPLES;
         } else if (transportPlaying) {
@@ -391,7 +390,8 @@ void AudioEngine::performNonRealtimeMaintenance() {
 
     constexpr uint64_t kCollectionIntervalNs = 500000000ull;
     const uint64_t nowNs = static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
+        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch())
+            .count());
 
     uint64_t lastNs = m_lastDeferredResourceCollectionNs.load(std::memory_order_relaxed);
     if (lastNs != 0 && nowNs - lastNs < kCollectionIntervalNs) {
@@ -484,8 +484,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     // Safety: If buffers aren't allocated (setBufferConfig not called), silence and return.
     const uint32_t numOutputChannels = m_outputChannels.load(std::memory_order_relaxed);
     if (numOutputChannels == 0 || m_masterBufferD.empty()) {
-        std::memset(outputBuffer, 0,
-                    static_cast<size_t>(numFrames) * numOutputChannels * sizeof(float));
+        std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * numOutputChannels * sizeof(float));
         RESTORE_DENORMALS
         return 0;
     }
@@ -575,7 +574,8 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     // This prevents the audio from jumping to full volume instantly → no clicks
     // [FIX] Also critical for recovering from Panic (Silent) state
     if (isPlaying) {
-        if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent || (!wasPlaying && m_fadeState.load(std::memory_order_relaxed) != FadeState::FadingIn)) {
+        if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent ||
+            (!wasPlaying && m_fadeState.load(std::memory_order_relaxed) != FadeState::FadingIn)) {
             m_fadeState.store(FadeState::FadingIn, std::memory_order_relaxed);
             m_fadeSamplesRemaining = FADE_IN_SAMPLES;
         }
@@ -614,8 +614,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
     // Fast path: silent (only for normal DAW mode, not audition)
     if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent) {
-        std::memset(outputBuffer, 0,
-                    static_cast<size_t>(numFrames) * numOutputChannels * sizeof(float));
+        std::memset(outputBuffer, 0, static_cast<size_t>(numFrames) * numOutputChannels * sizeof(float));
         // Clear meters so UI doesn't freeze on the last loud block.
         m_peakL.store(0.0f, std::memory_order_relaxed);
         m_peakR.store(0.0f, std::memory_order_relaxed);
@@ -623,8 +622,7 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         m_rmsR.store(0.0f, std::memory_order_relaxed);
         auto* snaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
         if (snaps) {
-            snaps->writeLevels(ChannelSlotMap::MASTER_SLOT_INDEX,
-                               0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -144.0f);
+            snaps->writeLevels(ChannelSlotMap::MASTER_SLOT_INDEX, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -144.0f);
             snaps->clearClip(ChannelSlotMap::MASTER_SLOT_INDEX);
             // Also clears all track slots so they don't freeze
             for (uint32_t i = 0; i < ChannelSlotMap::MAX_CHANNEL_SLOTS; ++i) {
@@ -737,15 +735,11 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         } else {
             // === Pattern Mode: Clear Buffer ===
             std::fill(m_masterBufferD.begin(),
-                      m_masterBufferD.begin() +
-                          static_cast<size_t>(numFrames) * numOutputChannels,
-                      0.0);
+                      m_masterBufferD.begin() + static_cast<size_t>(numFrames) * numOutputChannels, 0.0);
         }
     } else {
         // Zero the double buffer
-        std::fill(m_masterBufferD.begin(),
-                  m_masterBufferD.begin() +
-                      static_cast<size_t>(numFrames) * numOutputChannels,
+        std::fill(m_masterBufferD.begin(), m_masterBufferD.begin() + static_cast<size_t>(numFrames) * numOutputChannels,
                   0.0);
     }
 
@@ -800,33 +794,35 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
     // === Preview Ducking Gain Calculation ===
     // When transport is playing and preview is active, duck transport by ~6dB
-    const double duckFadeTimeMs = 50.0;  // ~50ms smooth fade
+    const double duckFadeTimeMs = 50.0; // ~50ms smooth fade
     const double duckFadeSamples = (static_cast<double>(currentSampleRate) * duckFadeTimeMs) / 1000.0;
     const double duckFadeDelta = 1.0 / std::max(duckFadeSamples, 1.0);
-    
+
     // Check if preview is active
     bool previewIsActive = false;
     auto* preview = m_previewEngine.load(std::memory_order_relaxed);
     if (preview) {
         previewIsActive = preview->isPlaying();
     }
-    
+
     // Calculate target duck gain
     // When preview + transport both playing: duck to 0.5 (-6dB)
     // Otherwise: restore to 1.0 (0dB)
     const double targetDuckGain = (previewIsActive && isPlaying) ? 0.5 : 1.0;
-    
+
     // Smooth the duck gain transition
     double duckGain = m_smoothedPreviewDuckGain;
     if (duckGain < targetDuckGain) {
         duckGain += duckFadeDelta;
-        if (duckGain > targetDuckGain) duckGain = targetDuckGain;
+        if (duckGain > targetDuckGain)
+            duckGain = targetDuckGain;
     } else if (duckGain > targetDuckGain) {
         duckGain -= duckFadeDelta;
-        if (duckGain < targetDuckGain) duckGain = targetDuckGain;
+        if (duckGain < targetDuckGain)
+            duckGain = targetDuckGain;
     }
     m_smoothedPreviewDuckGain = duckGain;
-    
+
     // Publish smoothed gain for external queries
     m_previewDuckGain.store(static_cast<float>(duckGain), std::memory_order_relaxed);
 
@@ -1039,9 +1035,8 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         for (uint32_t i = 0; i < numFrames; ++i) {
             if (m_fadeSamplesRemaining == 0) {
                 std::memset(outputBuffer + i * 2, 0,
-                            static_cast<size_t>(numFrames - i) * numOutputChannels *
-                                sizeof(float));
-m_fadeState.store(FadeState::Silent, std::memory_order_relaxed);
+                            static_cast<size_t>(numFrames - i) * numOutputChannels * sizeof(float));
+                m_fadeState.store(FadeState::Silent, std::memory_order_relaxed);
                 break;
             }
             const double t = static_cast<double>(m_fadeSamplesRemaining) / fadeTotal;
@@ -1079,7 +1074,8 @@ m_fadeState.store(FadeState::Silent, std::memory_order_relaxed);
                               m_transportPlaying.load(std::memory_order_relaxed));
 
     // Advance position (Atomic update to pre-calculated next position)
-    if (m_transportPlaying.load(std::memory_order_relaxed) || m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
+    if (m_transportPlaying.load(std::memory_order_relaxed) ||
+        m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
         m_globalSamplePos.store(nextGlobalPos, std::memory_order_relaxed);
 
         // Handle Loop Metronome Reset
@@ -1106,6 +1102,12 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
     if (maxFrames > m_maxBufferFrames.load(std::memory_order_relaxed)) {
         m_maxBufferFrames.store(maxFrames, std::memory_order_relaxed);
     }
+    if (m_channelPrepareConfig) {
+        m_channelPrepareConfig->sampleRate.store(m_sampleRate.load(std::memory_order_relaxed),
+                                                 std::memory_order_relaxed);
+        m_channelPrepareConfig->maxBlockSize.store(m_maxBufferFrames.load(std::memory_order_relaxed),
+                                                   std::memory_order_relaxed);
+    }
 
     const size_t requiredSize = static_cast<size_t>(m_maxBufferFrames.load(std::memory_order_relaxed)) *
                                 m_outputChannels.load(std::memory_order_relaxed);
@@ -1124,6 +1126,10 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
             m_sidechainScratchL.resize(monoSize);
         if (m_sidechainScratchR.size() < monoSize)
             m_sidechainScratchR.resize(monoSize);
+        // Dry buffer for EffectChainSnapshot dry/wet mixing (stereo)
+        size_t dryBufferSize = static_cast<size_t>(m_maxBufferFrames.load(std::memory_order_relaxed)) * 2;
+        if (m_dryBuffer.size() < dryBufferSize)
+            m_dryBuffer.resize(dryBufferSize);
 
         // Pre-allocate per-unit MIDI scratch buffers so RT never resizes.
         // Note: units are expected to be low-count; we cap to a reasonable maximum.
@@ -1255,12 +1261,16 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
     }
 
     // Prepare insert chains at a safe point (may allocate). This prevents RT prepare() calls.
+    // Snapshot publication still depends on EffectChain::prepare(), so this remains required.
     const double sampleRate = static_cast<double>(m_sampleRate.load(std::memory_order_relaxed));
     const uint32_t maxBlockSize = m_maxBufferFrames.load(std::memory_order_relaxed);
-    const auto& graph = m_state.activeGraph();
-    for (const auto& tr : graph.tracks) {
-        if (tr.effectChain && tr.effectChain->getActiveSlotCount() > 0) {
-            tr.effectChain->prepare(sampleRate, maxBlockSize);
+    if (auto trackMgr = m_trackManager.lock()) {
+        const size_t channelCount = trackMgr->getChannelCount();
+        for (size_t i = 0; i < channelCount; ++i) {
+            if (auto* channel = trackMgr->getChannel(i)) {
+                channel->prepareProcessingBuffers(maxBlockSize);
+                channel->getEffectChain().prepare(sampleRate, maxBlockSize);
+            }
         }
     }
 }
@@ -1353,6 +1363,9 @@ AudioEngine::AudioEngine() {
 }
 
 AudioEngine::~AudioEngine() {
+    if (auto trackMgr = m_trackManager.lock()) {
+        trackMgr->setChannelPrepareCallback(nullptr);
+    }
     stopLoudnessWorker();
     if (g_audioEngineInstance == this) {
         g_audioEngineInstance = nullptr; // [NEW] Clear singleton
@@ -1602,8 +1615,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             if (!soloed && !soloSafe) {
                 continue;
             }
-            if (static_cast<size_t>(tr.trackIndex) < availableTracks &&
-                !m_rtAudibleEligible[tr.trackIndex]) {
+            if (static_cast<size_t>(tr.trackIndex) < availableTracks && !m_rtAudibleEligible[tr.trackIndex]) {
                 m_rtAudibleEligible[tr.trackIndex] = true;
                 m_rtIndexQueue.push_back(i);
             }
@@ -1614,8 +1626,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             m_rtSoloProcessQueue.push_back(index);
             for (const size_t destIndex : m_rtAudibleDownstream[index]) {
                 const uint32_t destTrackIndex = graph.tracks[destIndex].trackIndex;
-                if (static_cast<size_t>(destTrackIndex) >= availableTracks ||
-                    m_rtAudibleEligible[destTrackIndex]) {
+                if (static_cast<size_t>(destTrackIndex) >= availableTracks || m_rtAudibleEligible[destTrackIndex]) {
                     continue;
                 }
                 m_rtAudibleEligible[destTrackIndex] = true;
@@ -1626,8 +1637,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         while (processQueueRead < m_rtSoloProcessQueue.size()) {
             const size_t index = m_rtSoloProcessQueue[processQueueRead++];
             const uint32_t processTrackIndex = graph.tracks[index].trackIndex;
-            if (static_cast<size_t>(processTrackIndex) < availableTracks &&
-                !m_rtProcessActive[processTrackIndex]) {
+            if (static_cast<size_t>(processTrackIndex) < availableTracks && !m_rtProcessActive[processTrackIndex]) {
                 m_rtProcessActive[processTrackIndex] = true;
             }
 
@@ -1839,10 +1849,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         // Apply Automation Override (v3.1)
         if (!track.automationCurves.empty() && cachedSampleRate > 0) {
             uint64_t globalPos = m_globalSamplePos.load(std::memory_order_relaxed);
-            const double samplesPerBeat = (static_cast<double>(cachedSampleRate) * 60.0) /
-                                          std::max(graph.bpm, 1.0);
-            double currentBeat =
-                (static_cast<double>(globalPos) / cachedSampleRate) * (graph.bpm / 60.0);
+            const double samplesPerBeat = (static_cast<double>(cachedSampleRate) * 60.0) / std::max(graph.bpm, 1.0);
+            double currentBeat = (static_cast<double>(globalPos) / cachedSampleRate) * (graph.bpm / 60.0);
             for (const auto& curve : track.automationCurves) {
                 if (curve.getAutomationTarget() == AutomationTarget::Volume) {
                     volTarget = curve.getValueAtBeat(currentBeat, samplesPerBeat);
@@ -1869,11 +1877,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
                 double targetL = 0.0;
                 double targetR = 0.0;
-                fastPanGainsD(
-                    clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                    static_cast<double>(track.sends[sendIndex].gain),
-                    targetL,
-                    targetR);
+                fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                              static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
                 state.sendGainL[sendIndex].current = targetL;
                 state.sendGainL[sendIndex].target = targetL;
                 state.sendGainR[sendIndex].current = targetR;
@@ -1884,11 +1889,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
             double targetL = 0.0;
             double targetR = 0.0;
-            fastPanGainsD(
-                clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                static_cast<double>(track.sends[sendIndex].gain),
-                targetL,
-                targetR);
+            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
             state.sendGainL[sendIndex].setTarget(targetL);
             state.sendGainR[sendIndex].setTarget(targetR);
         }
@@ -2001,9 +2003,11 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 const uint64_t projectSample = start + i;
                                 if (fadeLen > 0) {
                                     if (projectSample < clip.startSample + fadeLen)
-                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen));
+                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
+                                                                  static_cast<double>(fadeLen));
                                     if (projectSample + fadeLen > clip.endSample)
-                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen));
+                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
+                                                                  static_cast<double>(fadeLen));
                                 }
                                 double clipGain = static_cast<double>(clip.gain);
                                 float sample = 0.0f;
@@ -2016,8 +2020,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 float s3 = (idx + 2 < totalFrames) ? data[idx + 2] : s2;
                                 double f = frac;
                                 sample = static_cast<float>(0.5 * ((2.0 * s1) + (-s0 + s2) * f +
-                                    (2.0 * s0 - 5.0 * s1 + 4.0 * s2 - s3) * f * f +
-                                    (-s0 + 3.0 * s1 - 3.0 * s2 + s3) * f * f * f));
+                                                                   (2.0 * s0 - 5.0 * s1 + 4.0 * s2 - s3) * f * f +
+                                                                   (-s0 + 3.0 * s1 - 3.0 * s2 + s3) * f * f * f));
                                 dst[i * 2] += sample * clipGain * fade;
                                 dst[i * 2 + 1] += sample * clipGain * fade;
                                 phase += ratio;
@@ -2033,13 +2037,15 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 const uint64_t projectSample = start + i;
                                 if (fadeLen > 0) {
                                     if (projectSample < clip.startSample + fadeLen)
-                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen));
+                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
+                                                                  static_cast<double>(fadeLen));
                                     if (projectSample + fadeLen > clip.endSample)
-                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen));
+                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
+                                                                  static_cast<double>(fadeLen));
                                 }
                                 double clipGain = static_cast<double>(clip.gain);
-                                double val = Interpolators::sincInterpolateMono(data, totalFrames, phase,
-                                    cachedInterpQuality);
+                                double val =
+                                    Interpolators::sincInterpolateMono(data, totalFrames, phase, cachedInterpQuality);
                                 dst[i * 2] += val * clipGain * fade;
                                 dst[i * 2 + 1] += val * clipGain * fade;
                                 phase += ratio;
@@ -2052,9 +2058,11 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 const uint64_t projectSample = start + i;
                                 if (fadeLen > 0) {
                                     if (projectSample < clip.startSample + fadeLen)
-                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) / static_cast<double>(fadeLen));
+                                        fade = std::min(fade, static_cast<double>(projectSample - clip.startSample) /
+                                                                  static_cast<double>(fadeLen));
                                     if (projectSample + fadeLen > clip.endSample)
-                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) / static_cast<double>(fadeLen));
+                                        fade = std::min(fade, static_cast<double>(clip.endSample - projectSample) /
+                                                                  static_cast<double>(fadeLen));
                                 }
                                 double clipGain = static_cast<double>(clip.gain);
                                 uint64_t idx = static_cast<uint64_t>(phase);
@@ -2223,12 +2231,13 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
         }
 
-        // === Plugin Processing (EffectChain) ===
+        // === Plugin Processing (EffectChain Snapshot) ===
         float trackSidechainPeak = 0.0f;
-        if (track.effectChain && track.effectChain->getActiveSlotCount() > 0) {
+        if (track.effectChainSnapshot && track.effectChainSnapshot->getActiveSlotCount() > 0) {
             // Check if scratches are large enough (should be from setBufferConfig)
             if (m_scratchL.size() >= numFrames && m_scratchR.size() >= numFrames &&
-                m_sidechainScratchL.size() >= numFrames && m_sidechainScratchR.size() >= numFrames) {
+                m_sidechainScratchL.size() >= numFrames && m_sidechainScratchR.size() >= numFrames &&
+                m_dryBuffer.size() >= static_cast<size_t>(numFrames) * 2) {
                 // 1. De-interleave Double -> Float
                 const double* dBuf = buffer.data();
                 const double* dScBuf = m_trackSidechainBuffersD[trackIdx].data();
@@ -2242,14 +2251,13 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     fR[k] = static_cast<float>(dBuf[k * 2 + 1]);
                     scL[k] = static_cast<float>(dScBuf[k * 2]);
                     scR[k] = static_cast<float>(dScBuf[k * 2 + 1]);
-                    trackSidechainPeak =
-                        std::max(trackSidechainPeak, std::max(std::abs(scL[k]), std::abs(scR[k])));
+                    trackSidechainPeak = std::max(trackSidechainPeak, std::max(std::abs(scL[k]), std::abs(scR[k])));
                 }
 
-                // 2. Process
+                // 2. Process using snapshot (RT-safe)
                 float* channels[2] = {fL, fR};
                 const float* sidechainChannels[2] = {scL, scR};
-                track.effectChain->process(channels, 2, numFrames, sidechainChannels, 2);
+                track.effectChainSnapshot->process(channels, 2, numFrames, sidechainChannels, 2, m_dryBuffer.data());
 
                 // 3. Re-interleave Float -> Double
                 double* dOut = buffer.data();
@@ -2283,19 +2291,15 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         double* lfStateL = publishTrackSnapshot ? &m_meterLfStateL[slot] : nullptr;
         double* lfStateR = publishTrackSnapshot ? &m_meterLfStateR[slot] : nullptr;
 
-        bool hasPreFaderSend = std::any_of(
-            track.sends.begin(),
-            track.sends.end(),
-            [](const auto& send) { return !send.mute && !send.postFader; });
+        bool hasPreFaderSend = std::any_of(track.sends.begin(), track.sends.end(),
+                                           [](const auto& send) { return !send.mute && !send.postFader; });
         const size_t preFaderSize = static_cast<size_t>(numFrames) * 2u;
         // Guard: only resize if capacity is already reserved by setBufferConfig().
         // If the audio thread delivers a larger block than we reserved for,
         // skip pre-fader sends rather than allocate on the RT thread.
         if (hasPreFaderSend && state.preFaderBuffer.capacity() >= preFaderSize) {
             state.preFaderBuffer.resize(preFaderSize);
-            std::memcpy(state.preFaderBuffer.data(),
-                        trackData,
-                        preFaderSize * sizeof(double));
+            std::memcpy(state.preFaderBuffer.data(), trackData, preFaderSize * sizeof(double));
         } else if (hasPreFaderSend) {
             // Capacity insufficient — pre-fader sends will be silenced for this block.
             // This should never happen in normal operation (setBufferConfig reserves
@@ -2324,14 +2328,13 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     masterBuf[i * 2 + 1] += outR;
                 } else if (audibleEligible && slotMap) {
                     const uint32_t destSlot = slotMap->getSlotIndex(track.mainOutputId);
-                    if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks && destSlot != trackIdx &&
-                        (!anySolo || m_rtAudibleEligible[destSlot])) {
+                    if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks &&
+                        destSlot != trackIdx && (!anySolo || m_rtAudibleEligible[destSlot])) {
                         auto& destBuffer = m_trackBuffersD[destSlot];
                         destBuffer[i * 2] += outL;
                         destBuffer[i * 2 + 1] += outR;
                     }
                 }
-
             }
 
             const double absL = (outL >= 0.0) ? outL : -outL;
@@ -2372,8 +2375,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
                 if (send.sidechainOnly && send.targetChannelId != 0xFFFFFFFFu && slotMap) {
                     const uint32_t scDestSlot = slotMap->getSlotIndex(send.targetChannelId);
-                    if (scDestSlot != ChannelSlotMap::INVALID_SLOT &&
-                        scDestSlot < availableTracks &&
+                    if (scDestSlot != ChannelSlotMap::INVALID_SLOT && scDestSlot < availableTracks &&
                         scDestSlot != trackIdx) {
                         route.dest = m_trackSidechainBuffersD[scDestSlot].data();
                         m_preparedRoutesScratch.push_back(route);
@@ -2396,10 +2398,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                 }
 
                 const uint32_t sendDestSlot = slotMap->getSlotIndex(send.targetChannelId);
-                if (sendDestSlot != ChannelSlotMap::INVALID_SLOT &&
-                    sendDestSlot < availableTracks &&
-                    sendDestSlot != trackIdx &&
-                    (!anySolo || m_rtAudibleEligible[sendDestSlot])) {
+                if (sendDestSlot != ChannelSlotMap::INVALID_SLOT && sendDestSlot < availableTracks &&
+                    sendDestSlot != trackIdx && (!anySolo || m_rtAudibleEligible[sendDestSlot])) {
                     route.dest = m_trackBuffersD[sendDestSlot].data();
                     m_preparedRoutesScratch.push_back(route);
                 }
@@ -2569,11 +2569,8 @@ void AudioEngine::compileGraph() {
 
             double sendGainL = 0.0;
             double sendGainR = 0.0;
-            fastPanGainsD(
-                clampD(static_cast<double>(send.pan), -1.0, 1.0),
-                static_cast<double>(send.gain),
-                sendGainL,
-                sendGainR);
+            fastPanGainsD(clampD(static_cast<double>(send.pan), -1.0, 1.0), static_cast<double>(send.gain), sendGainL,
+                          sendGainR);
 
             if (send.targetChannelId == 0xFFFFFFFF) {
                 // Route to Master
@@ -2619,9 +2616,15 @@ void AudioEngine::panic() {
     // that protects the swap.
     const AudioGraph& graph = m_state.activeGraph();
 
-    for (const auto& track : graph.tracks) {
-        if (track.effectChain) {
-            track.effectChain->reset();
+    // Reset effect chains via the original MixerChannels (not the snapshots)
+    // We use the trackManager to access the actual channels for panic()
+    auto trackMgr = m_trackManager.lock();
+    if (trackMgr) {
+        for (size_t i = 0; i < graph.tracks.size() && i < trackMgr->getChannelCount(); ++i) {
+            auto* channel = trackMgr->getChannel(i);
+            if (channel) {
+                channel->resetEffectChain();
+            }
         }
     }
 
@@ -2673,7 +2676,7 @@ void AudioEngine::requestVoiceResetOnPatternChange() {
 //==============================================================================
 
 void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset, uint64_t startFrame,
-                                     double* targetBuffer, int32_t isolatedTrackIndex) {
+                                      double* targetBuffer, int32_t isolatedTrackIndex) {
     // [FIX] Only process Arsenal units in pattern/Arsenal mode
     // In Timeline mode, skip entirely to prevent audio bleed with wrong sample rate
     if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
@@ -2787,7 +2790,8 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         unit.plugin->process(inputs, outputs, 2, 2, numFrames, midiIn, &midiOut);
 
         // Mix plugin output into master buffer (mixing floats into double master)
-        double* masterD = (targetBuffer ? targetBuffer : m_masterBufferD.data()) + static_cast<size_t>(bufferOffset) * 2;
+        double* masterD =
+            (targetBuffer ? targetBuffer : m_masterBufferD.data()) + static_cast<size_t>(bufferOffset) * 2;
         for (uint32_t i = 0; i < numFrames; ++i) {
             masterD[i * 2 + 0] += static_cast<double>(outputs[0][i]); // Left
             masterD[i * 2 + 1] += static_cast<double>(outputs[1][i]); // Right
@@ -2916,7 +2920,8 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         ma_uint64 framesWritten = 0;
         ma_result result = ma_encoder_write_pcm_frames(&encoder, floatBuffer.data(), framesThisBlock, &framesWritten);
         if (result != MA_SUCCESS || framesWritten != framesThisBlock) {
-            Aestra::Log::error("[AudioEngine] Write error during bounce: result=" + std::to_string(result) + ", written=" + std::to_string(framesWritten));
+            Aestra::Log::error("[AudioEngine] Write error during bounce: result=" + std::to_string(result) +
+                               ", written=" + std::to_string(framesWritten));
             break;
         }
 

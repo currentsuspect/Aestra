@@ -488,6 +488,26 @@ target_include_directories(AestraEffectChainSnapshotTest PRIVATE
 add_test(NAME AestraEffectChainSnapshotTest COMMAND AestraEffectChainSnapshotTest)
 set_tests_properties(AestraEffectChainSnapshotTest PROPERTIES LABELS "audio;plugin")
 
+# AudioEngine EffectChain prepare regression test
+add_executable(AestraAudioEngineEffectChainPrepareTest AestraAudio/AudioEngineEffectChainPrepareTest.cpp)
+target_link_libraries(AestraAudioEngineEffectChainPrepareTest PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraAudioEngineEffectChainPrepareTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraAudioEngineEffectChainPrepareTest COMMAND AestraAudioEngineEffectChainPrepareTest)
+set_tests_properties(AestraAudioEngineEffectChainPrepareTest PROPERTIES LABELS "audio;plugin;regression")
+
+# MixerChannel scratch buffer regression tests
+add_executable(AestraMixerChannelScratchBufferTest AestraAudio/MixerChannelScratchBufferTest.cpp)
+target_link_libraries(AestraMixerChannelScratchBufferTest PRIVATE AestraAudio AestraCore)
+target_include_directories(AestraMixerChannelScratchBufferTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraMixerChannelScratchBufferTest COMMAND AestraMixerChannelScratchBufferTest)
+set_tests_properties(AestraMixerChannelScratchBufferTest PROPERTIES LABELS "audio;plugin;regression")
+
 # Watchdog Test (requires VST3 SDK headers)
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")
     add_executable(AestraWatchdogTest AestraAudio/WatchdogTest.cpp)
@@ -837,14 +857,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/TextRendererSTBSpaceTest.cpp")
 endif()
 
 # PianoRollInteraction Test - tests for pure helper functions
-add_executable(PianoRollInteractionTest AestraUI/PianoRollInteractionTest.cpp)
-target_link_libraries(PianoRollInteractionTest PRIVATE AestraUI_Core)
-target_include_directories(PianoRollInteractionTest PRIVATE
-    ${CMAKE_SOURCE_DIR}/AestraUI
-    ${CMAKE_SOURCE_DIR}/AestraUI/Common
-)
-add_test(NAME PianoRollInteractionTest COMMAND PianoRollInteractionTest)
-set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction")
+# Guard on target presence because headless/CI disables AestraUI targets.
+if(TARGET AestraUI_Core)
+    add_executable(PianoRollInteractionTest AestraUI/PianoRollInteractionTest.cpp)
+    target_link_libraries(PianoRollInteractionTest PRIVATE AestraUI_Core)
+    target_include_directories(PianoRollInteractionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Common
+    )
+    add_test(NAME PianoRollInteractionTest COMMAND PianoRollInteractionTest)
+    set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction")
+else()
+    message(STATUS "PianoRollInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
 
 # =============================================================================
 # Commands Tests (Phase 2 - Undo/Redo System)
