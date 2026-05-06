@@ -2,11 +2,11 @@
 #pragma once
 
 #include "../AestraUUID.h"
-#include "AudioCommandQueue.h"
-#include "../Drivers/AudioDriverTypes.h"
-#include "AudioGraph.h"
 #include "../DSP/AudioProcessor.h"
+#include "../Drivers/AudioDriverTypes.h"
 #include "../Plugin/EffectChain.h"
+#include "AudioCommandQueue.h"
+#include "AudioGraph.h"
 #include "MixerBus.h"
 
 #include <atomic>
@@ -181,6 +181,9 @@ public:
     /** @brief Process this channel's audio for one callback block. */
     void processAudio(float* outputBuffer, uint32_t numFrames, double streamTime, double outputSampleRate);
 
+    /** @brief Pre-allocate scratch buffers required by processAudio(). Must be called off the audio thread. */
+    void prepareProcessingBuffers(uint32_t maxFrames);
+
     /** @brief Get the last stereo correlation value reported by the bus. */
     float getLastCorrelation() const {
         // Return 0 if no bus (e.g. inactive)
@@ -194,8 +197,8 @@ public:
 
     /** @brief Set the audio-thread command sink used for RT-safe updates. */
     void setCommandSink(std::function<void(const AudioQueueCommand&)> cb) { m_commandSink = std::move(cb); }
-/** @brief Set callback used to refresh input monitoring snapshots after route-affecting changes.
-    * NOTE: Must be set before audio engine processing starts. Caller is responsible for thread safety. */
+    /** @brief Set callback used to refresh input monitoring snapshots after route-affecting changes.
+     * NOTE: Must be set before audio engine processing starts. Caller is responsible for thread safety. */
     void setInputMonitoringStateChangedCallback(std::function<void()> cb) {
         m_inputMonitoringStateChanged = std::move(cb);
     }
@@ -207,6 +210,9 @@ public:
     EffectChain& getEffectChain() { return m_effectChain; }
     /** @brief Access the insert-effect chain. */
     const EffectChain& getEffectChain() const { return m_effectChain; }
+
+    /** @brief Reset all plugins in the effect chain (panic/hard reset). */
+    void resetEffectChain() { m_effectChain.reset(); }
 
     /** @brief Get the primary output destination identifier. */
     uint32_t getMainOutputId() const { return m_mainOutputId; }
@@ -227,6 +233,13 @@ public:
     void setSendPostFader(int index, bool postFader);
     /** @brief Update send audible/sidechain-only mode by index. */
     void setSendSidechainOnly(int index, bool sidechainOnly);
+
+    /** @brief Set the effect chain snapshot for RT-safe processing. */
+    void setEffectChainSnapshot(std::shared_ptr<const EffectChainSnapshot> snapshot) {
+        m_effectChainSnapshot = std::move(snapshot);
+    }
+    /** @brief Get the current effect chain snapshot. */
+    std::shared_ptr<const EffectChainSnapshot> getEffectChainSnapshot() const { return m_effectChainSnapshot; }
 
     /** @brief Set the primary output destination identifier. */
     void setMainOutputId(uint32_t id) { m_mainOutputId = id; }
@@ -255,6 +268,12 @@ private:
 
     // Effect chain for insert effects
     EffectChain m_effectChain;
+
+    // Pass 3: Snapshot for RT-safe processing (updated by AudioGraph publication)
+    std::shared_ptr<const EffectChainSnapshot> m_effectChainSnapshot{nullptr};
+
+    // Dry buffer for RT-safe dry/wet mixing in snapshot processing
+    std::vector<float> m_dryChannelBuf;
 
     std::function<void(const AudioQueueCommand&)> m_commandSink;
     std::function<void()> m_inputMonitoringStateChanged;
