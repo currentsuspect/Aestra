@@ -8,7 +8,8 @@ export type Env = {
   AESTRA_ENTITLEMENT_FIXTURES?: string;
   AESTRA_STORAGE_MODE?: "fixture" | "d1";
   AESTRA_LICENSE_DB?: D1Database;
-  AESTRA_LOGIN_MAILER_MODE?: "fixture" | "configured";
+  AESTRA_LOGIN_MAILER_MODE?: "fixture" | "d1" | "smtp";
+  AESTRA_RESEND_API_KEY?: string;
 };
 
 export function utf8Encode(value: string): Uint8Array {

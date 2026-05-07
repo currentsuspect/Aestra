@@ -80,21 +80,27 @@ migrate() {
 
 put_secrets() {
     require_token
-    cat <<'EOF_SECRETS'
-Entering Cloudflare Worker secrets. Do not paste these into source files.
-
-Required:
-- AESTRA_LICENSE_SIGNING_PRIVATE_KEY: base64 raw 64-byte Ed25519 secret key
-- AESTRA_ADMIN_API_KEY: admin/internal bearer secret
-- AESTRA_SIGNING_KEY_ID: unsigned key id metadata
-- AESTRA_STORAGE_MODE: d1
-
-Optional for production login once mailer is real:
-- AESTRA_LOGIN_MAILER_MODE
-EOF_SECRETS
+    echo "Entering Cloudflare Worker secrets. Do not paste these into source files."
+    echo ""
+    echo "=== AESTRA_LICENSE_SIGNING_PRIVATE_KEY ==="
+    echo "Generate with: node -e \"const nacl=require('tweetnacl'); const s=crypto.getRandomValues(new Uint8Array(32)); const k=nacl.sign.keyPair.fromSeed(s); const c=new Uint8Array(64); c.set(k.secretKey,0); process.stdout.write(btoa(String.fromCharCode(...c)));\""
     npx wrangler secret put AESTRA_LICENSE_SIGNING_PRIVATE_KEY
+    echo ""
+    echo "=== AESTRA_ADMIN_API_KEY ==="
+    echo "Generate with: openssl rand -hex 32"
     npx wrangler secret put AESTRA_ADMIN_API_KEY
+    echo ""
+    echo "=== AESTRA_SIGNING_KEY_ID (e.g. prod-2026-05) ==="
     npx wrangler secret put AESTRA_SIGNING_KEY_ID
+    echo ""
+    echo "=== AESTRA_RESEND_API_KEY ==="
+    echo "Get a free key at https://resend.com"
+    npx wrangler secret put AESTRA_RESEND_API_KEY
+    echo ""
+    echo "=== AESTRA_LOGIN_MAILER_MODE (type: smtp) ==="
+    npx wrangler secret put AESTRA_LOGIN_MAILER_MODE
+    echo ""
+    echo "=== AESTRA_STORAGE_MODE (type: d1) ==="
     npx wrangler secret put AESTRA_STORAGE_MODE
 }
 

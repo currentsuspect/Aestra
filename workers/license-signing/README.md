@@ -269,65 +269,101 @@ Rules enforced by this Worker:
 
 Do not commit `.dev.vars`, private keys, admin tokens, or generated production key material.
 
-Configure Cloudflare secrets with:
+### Signing Key (Ed25519)
+
+Generate a production signing key with:
+
+```bash
+node -e "
+const nacl = require('tweetnacl');
+const seed = crypto.getRandomValues(new Uint8Array(32));
+const keyPair = nacl.sign.keyPair.fromSeed(seed);
+const combined = new Uint8Array(64);
+combined.set(keyPair.secretKey, 0);
+process.stdout.write(btoa(String.fromCharCode(...combined)));
+"
+```
+
+This produces a base64 raw 64-byte Ed25519 secret key. Set it with:
+
+```bash
+wrangler secret put AESTRA_LICENSE_SIGNING_PRIVATE_KEY
+# paste the base64 output
+```
+
+The DAW embeds only the raw 32-byte Ed25519 public key extracted from the combined secret:
+
+```bash
+node -e "
+const nacl = require('tweetnacl');
+const seed = crypto.getRandomValues(new Uint8Array(32));
+const keyPair = nacl.sign.keyPair.fromSeed(seed);
+process.stdout.write(Array.from(keyPair.publicKey).map(b => b.toString(16).padStart(2,'0')).join(''));
+"
+```
+
+The public key hex is placed in the DAW's `LicenseGate.cpp`. It must never receive private signing material.
+
+### Admin Key
+
+Generate a random 32-byte hex admin key:
+
+```bash
+openssl rand -hex 32
+```
+
+Set it with:
+
+```bash
+wrangler secret put AESTRA_ADMIN_API_KEY
+# paste the hex output
+```
+
+### Signing Key ID
+
+A human-readable identifier for key rotation tracking:
+
+```bash
+wrangler secret put AESTRA_SIGNING_KEY_ID
+# e.g. prod-2026-05
+```
+
+### All secrets
+
+```bash
+wrangler secret put AESTRA_LICENSE_SIGNING_PRIVATE_KEY  # base64 Ed25519 64-byte
+wrangler secret put AESTRA_ADMIN_API_KEY                 # hex 32-byte random
+wrangler secret put AESTRA_SIGNING_KEY_ID                # string e.g. prod-2026-05
+```
+
+### Resend (Email Delivery)
+
+The login flow sends a one-time code via [Resend](https://resend.com). Get a free API key at resend.com, then:
+
+```bash
+wrangler secret put AESTRA_RESEND_API_KEY
+# paste your re_... API key
+
+wrangler secret put AESTRA_LOGIN_MAILER_MODE
+# type: smtp
+```
+
+The `AESTRA_LOGIN_MAILER_MODE` accepts:
+- `fixture` — returns the code in the response (dev/test only)
+- `smtp` — sends via Resend API (production)
+
+### Full production setup
 
 ```bash
 wrangler secret put AESTRA_LICENSE_SIGNING_PRIVATE_KEY
 wrangler secret put AESTRA_ADMIN_API_KEY
 wrangler secret put AESTRA_SIGNING_KEY_ID
+wrangler secret put AESTRA_RESEND_API_KEY
+wrangler secret put AESTRA_LOGIN_MAILER_MODE  # type: smtp
+npm run deploy
 ```
 
-Private key format:
-
-```text
-AESTRA_LICENSE_SIGNING_PRIVATE_KEY = base64 raw 64-byte Ed25519 secret key
-```
-
-The DAW embeds only the raw 32-byte Ed25519 public key. It must never receive private signing material.
-
-Fixture-only account refresh bindings for tests/dev:
-
-```text
-AESTRA_ACCOUNT_FIXTURE_SESSIONS = {"test-token":{"account_id":"acct_1","user_id":"user_1"}}
-AESTRA_ENTITLEMENT_FIXTURES = {"acct_1":{"license_id":"lic_1","tier":"Supporter","plugins":[],"features":["rumble"],"revocation_epoch":0}}
-```
-
-Do not use these fixture bindings as production account auth or entitlement storage.
-
-Fixture-only login delivery for tests/dev:
-
-```text
-AESTRA_LOGIN_MAILER_MODE = fixture
-```
-
-Production-like deployments must configure a real mail delivery path before using login start. `configured` currently
-means the mailer boundary is present but no provider integration is implemented in this repository pass.
-
-Configure the D1 binding in `wrangler.toml` after creating the Cloudflare database:
-
-```toml
-[[d1_databases]]
-binding = "AESTRA_LICENSE_DB"
-database_name = "aestra-license"
-database_id = "<cloudflare-d1-id>"
-migrations_dir = "migrations"
-```
-
-Current deployed Cloudflare D1 binding:
-
-```text
-database_name = aestra-license
-database_id = 4c09044c-95fc-4896-87ac-51cac5b99b91
-region = WEUR
-```
-
-Current Worker trigger:
-
-```text
-https://aestra-license-signing.makoridylan.workers.dev
-```
-
-Production setup helper:
+Or use the helper scripts:
 
 ```bash
 export CLOUDFLARE_API_TOKEN=...
@@ -336,12 +372,11 @@ npm run cf:create-d1
 export AESTRA_CF_D1_DATABASE_ID=<database-id>
 npm run cf:bind-d1
 npm run cf:migrate
-npm run cf:secrets
+npm run cf:secrets   # interactive — supply real values at the prompts
 npm run deploy
 ```
 
-`cf:secrets` is intentionally interactive and must be supplied with real values outside git. The repo does not contain
-the production Ed25519 private signing key, admin bearer token, or generated session secrets.
+`cf:secrets` is intentionally interactive. The repo does not contain the production Ed25519 private signing key, admin bearer token, Resend key, or generated session secrets.
 
 ## Local Worker/D1 Native Smoke
 

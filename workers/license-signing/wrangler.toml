@@ -5,15 +5,12 @@ compatibility_date = "2026-05-06"
 [vars]
 AESTRA_STORAGE_MODE = "d1"
 
-# Secrets are intentionally not stored here.
-# Configure production values with:
-#   wrangler secret put AESTRA_LICENSE_SIGNING_PRIVATE_KEY
-#   wrangler secret put AESTRA_ADMIN_API_KEY
-#   wrangler secret put AESTRA_SIGNING_KEY_ID
-#   wrangler secret put AESTRA_LOGIN_MAILER_MODE
-#
-# AESTRA_LICENSE_SIGNING_PRIVATE_KEY must be base64 raw 64-byte Ed25519
-# secret key material compatible with tweetnacl.sign.detached().
+# Secrets (set via wrangler secret put — never commit values here):
+#   AESTRA_LICENSE_SIGNING_PRIVATE_KEY   base64 raw 64-byte Ed25519 secret key (tweetnacl format)
+#   AESTRA_ADMIN_API_KEY                 hex random 32-byte admin bearer token
+#   AESTRA_SIGNING_KEY_ID                string key identifier e.g. prod-2026-05
+#   AESTRA_RESEND_API_KEY                Resend API key (re_...) for email delivery
+#   AESTRA_LOGIN_MAILER_MODE             fixture | smtp (production requires smtp)
 
 [[d1_databases]]
 binding = "AESTRA_LICENSE_DB"
