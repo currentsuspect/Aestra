@@ -1,9 +1,13 @@
 #include "LicenseRefreshClient.h"
 
 #include "AestraJSON.h"
+#include "HttpTransport.h"
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdlib>
+#include <ctime>
+#include <sstream>
 
 namespace Aestra {
 namespace License {
@@ -42,15 +46,98 @@ LicenseRefreshResult invalidResult(const std::string& message) {
     result.message = message;
     return result;
 }
+
+std::string escapeJsonString(const std::string& value) {
+    std::string out;
+    out.reserve(value.size());
+    for (char ch : value) {
+        switch (ch) {
+        case '\\':
+            out += "\\\\";
+            break;
+        case '"':
+            out += "\\\"";
+            break;
+        case '\n':
+            out += "\\n";
+            break;
+        case '\r':
+            out += "\\r";
+            break;
+        case '\t':
+            out += "\\t";
+            break;
+        default:
+            out += ch;
+            break;
+        }
+    }
+    return out;
+}
+
+std::string quoteJson(const std::string& value) {
+    return "\"" + escapeJsonString(value) + "\"";
+}
+
+std::string nowSecondsString() {
+    return std::to_string(static_cast<int64_t>(std::time(nullptr)));
+}
 } // namespace
 
-LicenseRefreshResult LicenseRefreshClient::refresh(const LicenseRefreshRequest& request) const {
-    (void)request;
-
+LicenseRefreshResult LicenseRefreshClient::refresh(const LicenseRefreshRequest& request, IHttpTransport& transport,
+                                                  const std::string& baseUrl, const std::string& sessionToken) {
     LicenseRefreshResult result;
-    result.status = LicenseRefreshStatus::SyncUnavailable;
-    result.message = "Membership refresh transport is not configured in this build.";
-    return result;
+    if (baseUrl.empty()) {
+        result.status = LicenseRefreshStatus::SyncUnavailable;
+        result.message = "Account API base URL is not configured.";
+        return result;
+    }
+    if (sessionToken.empty()) {
+        result.status = LicenseRefreshStatus::Unauthorized;
+        result.message = "No account session is available for refresh.";
+        return result;
+    }
+
+    std::string base = baseUrl;
+    while (!base.empty() && base.back() == '/') {
+        base.pop_back();
+    }
+
+    std::ostringstream body;
+    body << "{\"device_hash\":" << quoteJson(request.deviceHash) << ",\"issued_at\":" << nowSecondsString() << "}";
+
+    HttpRequest httpRequest;
+    httpRequest.method = "POST";
+    httpRequest.url = base + "/v1/account/entitlements/refresh";
+    httpRequest.body = body.str();
+    httpRequest.timeoutMs = 5000;
+    httpRequest.headers["content-type"] = "application/json";
+    httpRequest.headers["authorization"] = "Bearer " + sessionToken;
+
+    const HttpResponse response = transport.send(httpRequest);
+
+    if (response.status == 0) {
+        result.status = LicenseRefreshStatus::SyncUnavailable;
+        result.message = response.error.empty() ? "Account refresh transport unavailable." : response.error;
+        return result;
+    }
+    if (response.status == 401 || response.status == 403) {
+        result.status = LicenseRefreshStatus::Unauthorized;
+        result.message = "Account session is not authorized.";
+        return result;
+    }
+    if (response.status >= 500) {
+        result.status = LicenseRefreshStatus::SyncUnavailable;
+        result.message = "Account refresh server error.";
+        return result;
+    }
+    if (response.status < 200 || response.status >= 300) {
+        result.status = LicenseRefreshStatus::InvalidResponse;
+        result.message = "Account refresh request failed.";
+        return result;
+    }
+
+    return parseRefreshResponse(response.body);
 }
 
 LicenseRefreshResult LicenseRefreshClient::parseRefreshResponse(const std::string& jsonText) {
