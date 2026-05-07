@@ -527,23 +527,24 @@ bool testLoginFlowFull() {
     AccountApiConfig config;
     config.timeoutMs = 2000;
 
-    LoopbackHttpServer startServer(200, R"({"ok":true,"challenge_id":"lc_full_flow","expires_at":9999999999})");
-    if (!startServer.ok()) {
-        std::cout << "loopback sockets unavailable; skipping login flow integration test.\n";
-        return true;
-    }
-    config.baseUrl = startServer.baseUrl();
-
     LocalAccountCache cache(cachePath);
     FakeLeaseInstaller installer;
+    EntitlementStore entitlements;
     AccountApiClient apiClient(config, *transport);
     AccountService service(apiClient, cache, installer);
-    EntitlementStore entitlements;
-    AccountSession session(cache, entitlements);
-    MembershipViewModel view(session, entitlements);
 
     {
-        const AccountLoginStartServiceResult start = service.loginStart("flow@example.test");
+        LoopbackHttpServer startServer(200,
+                                       R"({"ok":true,"challenge_id":"lc_full_flow","expires_at":9999999999,"fixture_code":"111222"})");
+        if (!startServer.ok()) {
+            std::cout << "loopback sockets unavailable; skipping login flow integration test.\n";
+            return true;
+        }
+        config.baseUrl = startServer.baseUrl();
+        AccountApiClient startClient(config, *transport);
+        AccountService startService(startClient, cache, installer);
+
+        const AccountLoginStartServiceResult start = startService.loginStart("flow@example.test");
         ok &= expect(start.status == AccountServiceStatus::Success, "loginStart returns success");
         ok &= expect(start.challengeId == "lc_full_flow", "loginStart returns challenge_id");
         ok &= expect(startServer.request().method == "POST", "loginStart method is POST");
@@ -563,10 +564,27 @@ bool testLoginFlowFull() {
         config.baseUrl = verifyServer.baseUrl();
         AccountApiClient updatedClient(config, *transport);
         AccountService updatedService(updatedClient, cache, installer);
-        const AccountServiceResult verify = updatedService.loginVerify("flow@example.test", "lc_full_flow", "999999");
-        ok &= expect(verify.status == AccountServiceStatus::Success, "loginVerify returns success");
-        ok &= expect(verifyServer.request().url == "/v1/account/login/verify", "loginVerify path");
-        ok &= expect(verifyServer.request().body.find("999999") != std::string::npos, "loginVerify body contains code");
+
+        {
+            LoopbackHttpServer failServer(401, R"({"error":{"code":"invalid_code","message":"login code is invalid"}})");
+            if (failServer.ok()) {
+                AccountApiConfig failConfig;
+                failConfig.baseUrl = failServer.baseUrl();
+                failConfig.timeoutMs = 2000;
+                AccountApiClient failClient(failConfig, *transport);
+                AccountService failService(failClient, cache, installer);
+                const AccountServiceResult wrongCode =
+                    failService.loginVerify("flow@example.test", "lc_full_flow", "000000");
+                ok &= expect(wrongCode.status == AccountServiceStatus::Unauthorized,
+                             "verify with wrong code returns unauthorized");
+            }
+        }
+
+        const AccountServiceResult verify = updatedService.loginVerify("flow@example.test", "lc_full_flow", "111222");
+        ok &= expect(verify.status == AccountServiceStatus::Success, "verify with correct fixture_code succeeds");
+        ok &= expect(verifyServer.request().url == "/v1/account/login/verify", "verify path");
+        ok &= expect(verifyServer.request().body.find("111222") != std::string::npos,
+                     "verify body contains fixture_code from start response");
         const LocalAccountCacheLoadResult cached = cache.load();
         ok &= expect(cached.status == LocalAccountCacheLoadStatus::Loaded, "loginVerify stores session to cache");
         ok &= expect(cached.record.sessionToken == "session_flow_test", "cached session token is stored");
