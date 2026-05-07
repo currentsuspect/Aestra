@@ -9,6 +9,8 @@
 #include <Windows.h>
 #endif
 
+#include <utility>
+
 namespace AestraUI {
 
 NUIPlatformBridge::NUIPlatformBridge()
@@ -196,6 +198,12 @@ void NUIPlatformBridge::setupEventBridges() {
         }
         if (m_keyCallbackEx) {
             m_keyCallbackEx(convertKeyCode(key), pressed, mods.control, mods.shift, mods.alt);
+        }
+    });
+
+    m_window->setCharCallback([this](unsigned int codepoint) {
+        if (m_charCallback) {
+            m_charCallback(codepoint);
         }
     });
 
@@ -402,6 +410,10 @@ void NUIPlatformBridge::setKeyCallback(std::function<void(int, bool)> callback) 
 
 void NUIPlatformBridge::setKeyCallbackEx(std::function<void(int, bool, bool ctrl, bool shift, bool alt)> callback) {
     m_keyCallbackEx = callback;
+}
+
+void NUIPlatformBridge::setCharCallback(std::function<void(unsigned int)> callback) {
+    m_charCallback = std::move(callback);
 }
 
 void NUIPlatformBridge::setResizeCallback(std::function<void(int, int)> callback) {

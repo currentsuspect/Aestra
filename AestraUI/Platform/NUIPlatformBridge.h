@@ -84,6 +84,7 @@ public:
     void setMousePositionFilter(std::function<void(int&, int&)> callback);
     void setKeyCallback(std::function<void(int, bool)> callback);
     void setKeyCallbackEx(std::function<void(int, bool, bool ctrl, bool shift, bool alt)> callback);
+    void setCharCallback(std::function<void(unsigned int)> callback);
     void setResizeCallback(std::function<void(int, int)> callback);
     void setCloseCallback(std::function<void()> callback);
     void setDPIChangeCallback(std::function<void(float)> callback);
@@ -144,6 +145,7 @@ private:
     std::function<void(int&, int&)> m_mousePositionFilter;
     std::function<void(int, bool)> m_keyCallback;
     std::function<void(int, bool, bool, bool, bool)> m_keyCallbackEx;
+    std::function<void(unsigned int)> m_charCallback;
     std::function<void(int, int)> m_resizeCallback;
     std::function<void()> m_closeCallback;
     std::function<void(float)> m_dpiChangeCallback;
