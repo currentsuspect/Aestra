@@ -4,6 +4,7 @@
 #include "ISettingsPage.h"
 #include "NUIButton.h"
 #include "NUILabel.h"
+#include "NUITextInput.h"
 
 #if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
 #include "AccountApiClient.h"
@@ -42,6 +43,8 @@ private:
     void refreshDisplay();
     void refreshAccount();
     void signOut();
+    void startLogin();
+    void verifyLogin();
 
     std::shared_ptr<AestraUI::NUILabel> m_titleLabel;
     std::shared_ptr<AestraUI::NUILabel> m_accountLabel;
@@ -53,9 +56,16 @@ private:
     std::shared_ptr<AestraUI::NUILabel> m_detailLabel;
     std::shared_ptr<AestraUI::NUILabel> m_featuresTitleLabel;
     std::vector<std::shared_ptr<AestraUI::NUILabel>> m_featureLabels;
+    std::shared_ptr<AestraUI::NUILabel> m_signInTitleLabel;
+    std::shared_ptr<AestraUI::NUITextInput> m_emailInput;
+    std::shared_ptr<AestraUI::NUITextInput> m_codeInput;
+    std::shared_ptr<AestraUI::NUIButton> m_startLoginButton;
+    std::shared_ptr<AestraUI::NUIButton> m_verifyLoginButton;
     std::shared_ptr<AestraUI::NUIButton> m_refreshButton;
     std::shared_ptr<AestraUI::NUIButton> m_signOutButton;
     std::string m_lastRefreshMessage = "Not refreshed this session.";
+    std::string m_pendingLoginEmail;
+    std::string m_pendingChallengeId;
 
 #if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
     std::unique_ptr<Aestra::License::IHttpTransport> m_transport;
