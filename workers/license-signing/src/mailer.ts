@@ -20,7 +20,7 @@ export type LoginDelivery = {
 async function resendSend(env: Env, toEmail: string, code: string, expiresAt: number): Promise<void> {
   const apiKey = env.AESTRA_RESEND_API_KEY;
   if (!apiKey) {
-    return;
+    throw new MailerError(500, "resend_key_missing", "AESTRA_RESEND_API_KEY is not set");
   }
 
   const expiresMinutes = Math.ceil((expiresAt * 1000 - Date.now()) / 60000);

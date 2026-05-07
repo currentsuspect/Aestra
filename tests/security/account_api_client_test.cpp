@@ -633,6 +633,38 @@ bool testLoginFlowFull() {
     fs::remove(cachePath);
     return ok;
 }
+
+bool testDefaultWorkerUrl() {
+    const AccountApiConfig config = accountApiConfigFromEnvironment();
+    bool ok = true;
+    ok &= expect(!config.baseUrl.empty(), "accountApiConfigFromEnvironment returns non-empty default URL");
+    ok &= expect(config.baseUrl.find("workers.dev") != std::string::npos ||
+                     config.baseUrl.find("localhost") != std::string::npos,
+                 "default URL points to the dev Worker");
+    return ok;
+}
+
+bool testRealWorkerLoginStartSendsMail() {
+    if (!curlHttpTransportAvailable()) {
+        std::cout << "libcurl transport unavailable; skipping real Worker login test.\n";
+        return true;
+    }
+    const AccountApiConfig config = accountApiConfigFromEnvironment();
+    if (config.baseUrl.empty()) {
+        std::cout << "no Worker URL; skipping real Worker login test.\n";
+        return true;
+    }
+
+    std::unique_ptr<IHttpTransport> curlTransport = createDefaultHttpTransport();
+    AccountApiClient client(config, *curlTransport);
+
+    const LoginStartResult result = client.loginStart("aestra-real-worker-test@example.test");
+    bool ok = true;
+    ok &= expect(result.status == AccountApiStatus::Success, "loginStart against real Worker returns success");
+    ok &= expect(!result.challengeId.empty(), "real Worker loginStart returns challenge_id");
+    ok &= expect(result.challengeId.rfind("lc_", 0) == 0, "challenge_id has expected prefix");
+    return ok;
+}
 #endif
 
 int main() {
@@ -644,6 +676,8 @@ int main() {
     ok &= testServiceStoresSessionAndRefreshesLease();
     ok &= testServiceFailureBoundaries();
     ok &= testLoginFlowFull();
+    ok &= testDefaultWorkerUrl();
+    ok &= testRealWorkerLoginStartSendsMail();
     fs::remove_all(fs::temp_directory_path() / "aestra_account_api_client_tests");
 
     if (!ok) {
