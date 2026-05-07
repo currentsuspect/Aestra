@@ -8,6 +8,7 @@
 #include "MembershipViewModel.h"
 #endif
 
+#include <algorithm>
 #include <sstream>
 
 namespace Aestra {
@@ -118,6 +119,35 @@ void MembershipSettingsPage::createUI() {
         addChild(row);
     }
 
+    m_signInTitleLabel = makeMembershipLabel(13.0f);
+    m_signInTitleLabel->setText("Sign in");
+    addChild(m_signInTitleLabel);
+
+    m_emailInput = std::make_shared<AestraUI::NUITextInput>();
+    m_emailInput->setInputType(AestraUI::NUITextInput::InputType::Email);
+    m_emailInput->setPlaceholderText("Email");
+    m_emailInput->setMaxLength(254);
+    m_emailInput->setOnReturnKey([this]() { startLogin(); });
+    addChild(m_emailInput);
+
+    m_codeInput = std::make_shared<AestraUI::NUITextInput>();
+    m_codeInput->setPlaceholderText("Login code");
+    m_codeInput->setMaxLength(32);
+    m_codeInput->setOnReturnKey([this]() { verifyLogin(); });
+    addChild(m_codeInput);
+
+    m_startLoginButton = std::make_shared<AestraUI::NUIButton>();
+    m_startLoginButton->setText("Send Code");
+    m_startLoginButton->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_startLoginButton->setOnClick([this]() { startLogin(); });
+    addChild(m_startLoginButton);
+
+    m_verifyLoginButton = std::make_shared<AestraUI::NUIButton>();
+    m_verifyLoginButton->setText("Verify");
+    m_verifyLoginButton->setStyle(AestraUI::NUIButton::Style::Secondary);
+    m_verifyLoginButton->setOnClick([this]() { verifyLogin(); });
+    addChild(m_verifyLoginButton);
+
     m_refreshButton = std::make_shared<AestraUI::NUIButton>();
     m_refreshButton->setText("Refresh");
     m_refreshButton->setStyle(AestraUI::NUIButton::Style::Secondary);
@@ -199,6 +229,14 @@ void MembershipSettingsPage::refreshDisplay() {
 
     m_refreshButton->setEnabled(state.canRefresh);
     m_signOutButton->setEnabled(state.canSignOut);
+    const bool showSignIn = !state.signedIn;
+    m_signInTitleLabel->setVisible(showSignIn);
+    m_emailInput->setVisible(showSignIn);
+    m_codeInput->setVisible(showSignIn);
+    m_startLoginButton->setVisible(showSignIn);
+    m_verifyLoginButton->setVisible(showSignIn);
+    m_startLoginButton->setEnabled(showSignIn);
+    m_verifyLoginButton->setEnabled(showSignIn && !m_pendingChallengeId.empty());
 #else
     m_accountLabel->setText("Account: Signed out");
     m_tierLabel->setText("Core");
@@ -217,6 +255,11 @@ void MembershipSettingsPage::refreshDisplay() {
     }
     m_refreshButton->setEnabled(false);
     m_signOutButton->setEnabled(false);
+    m_signInTitleLabel->setVisible(false);
+    m_emailInput->setVisible(false);
+    m_codeInput->setVisible(false);
+    m_startLoginButton->setVisible(false);
+    m_verifyLoginButton->setVisible(false);
 #endif
     setDirty(true);
 }
@@ -235,6 +278,58 @@ void MembershipSettingsPage::refreshAccount() {
     refreshDisplay();
 }
 
+void MembershipSettingsPage::startLogin() {
+#if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
+    const std::string email = m_emailInput ? m_emailInput->getText() : "";
+    if (!m_accountService) {
+        m_lastRefreshMessage = "Account service is unavailable.";
+    } else if (email.empty()) {
+        m_lastRefreshMessage = "Email is required.";
+    } else {
+        const Aestra::License::AccountLoginStartServiceResult result = m_accountService->loginStart(email);
+        if (result.status == Aestra::License::AccountServiceStatus::Success && !result.challengeId.empty()) {
+            m_pendingLoginEmail = email;
+            m_pendingChallengeId = result.challengeId;
+            m_lastRefreshMessage = "Login code sent. Enter it below.";
+        } else {
+            m_pendingChallengeId.clear();
+            m_lastRefreshMessage = serviceStatusMessage(result.status);
+        }
+    }
+#else
+    m_lastRefreshMessage = "License services unavailable.";
+#endif
+    refreshDisplay();
+}
+
+void MembershipSettingsPage::verifyLogin() {
+#if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
+    const std::string email =
+        !m_pendingLoginEmail.empty() ? m_pendingLoginEmail : (m_emailInput ? m_emailInput->getText() : "");
+    const std::string code = m_codeInput ? m_codeInput->getText() : "";
+    if (!m_accountService) {
+        m_lastRefreshMessage = "Account service is unavailable.";
+    } else if (email.empty() || m_pendingChallengeId.empty() || code.empty()) {
+        m_lastRefreshMessage = "Email, challenge, and code are required.";
+    } else {
+        const Aestra::License::AccountServiceResult login =
+            m_accountService->loginVerify(email, m_pendingChallengeId, code);
+        if (login.status != Aestra::License::AccountServiceStatus::Success) {
+            m_lastRefreshMessage = serviceStatusMessage(login.status);
+        } else {
+            m_pendingChallengeId.clear();
+            const Aestra::License::AccountServiceResult refresh = m_accountService->refreshEntitlements();
+            m_lastRefreshMessage = refresh.status == Aestra::License::AccountServiceStatus::Success
+                                       ? "Signed in and synced now."
+                                       : "Signed in. " + serviceStatusMessage(refresh.status);
+        }
+    }
+#else
+    m_lastRefreshMessage = "License services unavailable.";
+#endif
+    refreshDisplay();
+}
+
 void MembershipSettingsPage::signOut() {
 #if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
     if (m_accountService) {
@@ -243,6 +338,8 @@ void MembershipSettingsPage::signOut() {
                                    ? "Signed out locally."
                                    : serviceStatusMessage(result.status);
     }
+    m_pendingChallengeId.clear();
+    m_pendingLoginEmail.clear();
 #else
     m_lastRefreshMessage = "Signed out.";
 #endif
@@ -308,6 +405,24 @@ void MembershipSettingsPage::layoutComponents() {
         }
         featureLabel->setVisible(true);
         placeRow(featureLabel, 18.0f);
+    }
+
+    if (m_signInTitleLabel->isVisible()) {
+        y = std::min(y + 8.0f, buttonY - 116.0f);
+        const float inputWidth = std::max(180.0f, contentWidth - buttonWidth - gap);
+        m_signInTitleLabel->setBounds(AestraUI::NUIRect(x, y, contentWidth, rowHeight));
+        y += rowHeight + 4.0f;
+        m_emailInput->setBounds(AestraUI::NUIRect(x, y, inputWidth, buttonHeight));
+        m_startLoginButton->setBounds(AestraUI::NUIRect(x + inputWidth + gap, y, buttonWidth, buttonHeight));
+        y += buttonHeight + gap;
+        m_codeInput->setBounds(AestraUI::NUIRect(x, y, inputWidth, buttonHeight));
+        m_verifyLoginButton->setBounds(AestraUI::NUIRect(x + inputWidth + gap, y, buttonWidth, buttonHeight));
+    } else {
+        m_signInTitleLabel->setBounds(AestraUI::NUIRect(x, buttonY, 0.0f, 0.0f));
+        m_emailInput->setBounds(AestraUI::NUIRect(x, buttonY, 0.0f, 0.0f));
+        m_startLoginButton->setBounds(AestraUI::NUIRect(x, buttonY, 0.0f, 0.0f));
+        m_codeInput->setBounds(AestraUI::NUIRect(x, buttonY, 0.0f, 0.0f));
+        m_verifyLoginButton->setBounds(AestraUI::NUIRect(x, buttonY, 0.0f, 0.0f));
     }
 
     m_refreshButton->setBounds(AestraUI::NUIRect(x, buttonY, buttonWidth, buttonHeight));
