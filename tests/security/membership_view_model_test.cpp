@@ -203,6 +203,54 @@ bool testRefreshUnavailable() {
                  "sync unavailable detail message");
     return ok;
 }
+
+bool testMembershipDisplaySummary() {
+    MembershipViewState state;
+    state.accountLabel = "artist@example.test";
+    state.tierLabel = "Aestra Founder";
+    state.statusLabel = "Verified";
+    state.detailMessage = "Membership is verified locally.";
+    state.verified = true;
+    state.offline = true;
+    state.features.push_back({"Core DAW", true, ""});
+    state.features.push_back({"Rumble Headless", true, ""});
+
+    const std::string summary = membershipDisplaySummary(state, "Synced now.");
+    bool ok = true;
+    ok &= expect(summary.find("Account: artist@example.test") != std::string::npos,
+                 "summary includes account label");
+    ok &= expect(summary.find("Tier: Aestra Founder") != std::string::npos, "summary includes tier");
+    ok &= expect(summary.find("Status: Verified") != std::string::npos, "summary includes status");
+    ok &= expect(summary.find("Last refresh: Synced now.") != std::string::npos, "summary includes refresh state");
+    ok &= expect(summary.find("Available: Rumble Headless") != std::string::npos,
+                 "summary includes feature rows");
+    return ok;
+}
+
+bool testMembershipBadgeMapping() {
+    bool ok = true;
+
+    MembershipViewState founder;
+    founder.tierLabel = "Aestra Founder";
+    founder.statusLabel = "Verified";
+    founder.verified = true;
+    ok &= expect(membershipBadgeTierText(founder) == "Founder", "badge maps Founder tier");
+    ok &= expect(membershipBadgeStatusText(founder) == "Verified", "badge maps verified status");
+
+    MembershipViewState supporterOffline;
+    supporterOffline.tierLabel = "Aestra Supporter";
+    supporterOffline.statusLabel = "Cached offline";
+    supporterOffline.verified = true;
+    ok &= expect(membershipBadgeTierText(supporterOffline) == "Supporter", "badge maps Supporter tier");
+    ok &= expect(membershipBadgeStatusText(supporterOffline) == "Offline", "badge compacts cached offline status");
+
+    MembershipViewState signedOut;
+    signedOut.tierLabel = "Aestra Core";
+    signedOut.statusLabel = "Signed out";
+    ok &= expect(membershipBadgeTierText(signedOut) == "Core", "badge maps Core tier");
+    ok &= expect(membershipBadgeStatusText(signedOut) == "Signed out", "badge maps signed-out status");
+    return ok;
+}
 } // namespace
 
 int main() {
@@ -218,6 +266,8 @@ int main() {
     ok &= testInvalidState(EntitlementStatus::WrongDevice, "Wrong device");
     ok &= testInvalidState(EntitlementStatus::ParseError, "Unreadable cache");
     ok &= testRefreshUnavailable();
+    ok &= testMembershipDisplaySummary();
+    ok &= testMembershipBadgeMapping();
     fs::remove_all(fs::temp_directory_path() / "aestra_membership_view_model_tests");
 
     if (!ok) {

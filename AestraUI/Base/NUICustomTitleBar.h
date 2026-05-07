@@ -23,6 +23,7 @@ public:
     // Title bar properties
     void setTitle(const std::string& title);
     std::string getTitle() const { return title_; }
+    void setMembershipBadge(const std::string& tier, const std::string& status, bool verified);
     
     void setHeight(float height);
     float getHeight() const { return height_; }
@@ -66,6 +67,9 @@ public:
 private:
     // Title bar content
     std::string title_;
+    std::string membershipTier_;
+    std::string membershipStatus_;
+    bool membershipVerified_;
     float height_;
     
     // Window controls
