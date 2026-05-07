@@ -261,6 +261,7 @@ void MembershipSettingsPage::refreshDisplay() {
     m_startLoginButton->setVisible(false);
     m_verifyLoginButton->setVisible(false);
 #endif
+    layoutComponents();
     setDirty(true);
 }
 
@@ -404,6 +405,7 @@ void MembershipSettingsPage::layoutComponents() {
         }
         if (y + 18.0f > maxFeatureBottom) {
             featureLabel->setVisible(false);
+            featureLabel->setBounds(AestraUI::NUIRect(x, buttonY, 0.0f, 0.0f));
             continue;
         }
         featureLabel->setVisible(true);
