@@ -10,6 +10,26 @@
 
 namespace AestraUI {
 
+namespace {
+char shiftedDigitCharacter(NUIKeyCode keyCode)
+{
+    switch (keyCode)
+    {
+        case NUIKeyCode::Num1: return '!';
+        case NUIKeyCode::Num2: return '@';
+        case NUIKeyCode::Num3: return '#';
+        case NUIKeyCode::Num4: return '$';
+        case NUIKeyCode::Num5: return '%';
+        case NUIKeyCode::Num6: return '^';
+        case NUIKeyCode::Num7: return '&';
+        case NUIKeyCode::Num8: return '*';
+        case NUIKeyCode::Num9: return '(';
+        case NUIKeyCode::Num0: return ')';
+        default: return 0;
+    }
+}
+} // namespace
+
 NUITextInput::NUITextInput(const std::string& text)
     : NUIComponent()
     , text_(text)
@@ -788,8 +808,11 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
                      if (shift != caps) c = std::toupper(c);
                 }
                 else if (event.keyCode >= NUIKeyCode::Num0 && event.keyCode <= NUIKeyCode::Num9) {
-                     c = '0' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::Num0));
-                     // Note: Handling shifted numbers (symbols) is too complex for this fallback without a map
+                     const bool shift = event.modifiers & NUIModifiers::Shift;
+                     c = shift ? shiftedDigitCharacter(event.keyCode)
+                               : static_cast<char>('0' +
+                                                   (static_cast<int>(event.keyCode) -
+                                                    static_cast<int>(NUIKeyCode::Num0)));
                 }
                 else if (event.keyCode == NUIKeyCode::Space) {
                      c = ' ';
