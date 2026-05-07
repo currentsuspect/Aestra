@@ -24,6 +24,11 @@ if(TARGET AestraLicense)
     add_test(NAME SecLicenseWorkerFixture COMMAND SecLicenseWorkerFixture)
     add_executable(SecLicenseRefreshClient license_refresh_client_test.cpp)
     add_test(NAME SecLicenseRefreshClient COMMAND SecLicenseRefreshClient)
+    add_executable(SecAccountApiClient account_api_client_test.cpp)
+    add_test(NAME SecAccountApiClient COMMAND SecAccountApiClient)
+    add_executable(SecAccountEndToEndSmoke account_end_to_end_smoke.cpp)
+    add_test(NAME SecAccountEndToEndSmoke COMMAND SecAccountEndToEndSmoke)
+    set_tests_properties(SecAccountEndToEndSmoke PROPERTIES SKIP_RETURN_CODE 77)
     add_executable(SecAccountSessionCache account_session_cache_test.cpp)
     add_test(NAME SecAccountSessionCache COMMAND SecAccountSessionCache)
     add_executable(SecEntitlementStore entitlement_store_test.cpp)
@@ -220,6 +225,17 @@ if(TARGET AestraLicense)
         ${REPO_ROOT}/AestraLicense/include
     )
     target_link_libraries(SecLicenseRefreshClient PRIVATE AestraLicense)
+
+    target_include_directories(SecAccountApiClient PRIVATE
+        ${REPO_ROOT}/AestraLicense/include
+    )
+    target_link_libraries(SecAccountApiClient PRIVATE AestraLicense)
+
+    target_include_directories(SecAccountEndToEndSmoke PRIVATE
+        ${REPO_ROOT}/AestraLicense/include
+        ${REPO_ROOT}/AestraCore/include
+    )
+    target_link_libraries(SecAccountEndToEndSmoke PRIVATE AestraLicense AestraCore)
 
     target_include_directories(SecAccountSessionCache PRIVATE
         ${REPO_ROOT}/AestraLicense/include

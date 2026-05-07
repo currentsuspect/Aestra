@@ -677,6 +677,133 @@ bool verifyLeaseSignature(const std::string& payload, const std::vector<unsigned
     return verifyEd25519Detached(payload, signature, AESTRA_LICENSE_PUBKEY);
 }
 
+bool saveLeaseToEncryptedBackup(const std::vector<unsigned char>& blob, const DeviceFingerprint& fingerprint) {
+#ifdef _WIN32
+    (void)blob;
+    (void)fingerprint;
+    return false;
+#else
+    ensureSodiumInitialized();
+    const auto key = deriveBackupKey(fingerprint);
+    std::vector<unsigned char> encrypted(kSecretBoxNonceBytes + blob.size() + kSecretBoxMacBytes, 0);
+    randombytes_buf(encrypted.data(), kSecretBoxNonceBytes);
+    if (crypto_secretbox_easy(encrypted.data() + kSecretBoxNonceBytes, blob.data(), blob.size(), encrypted.data(),
+                              key.data()) != 0) {
+        return false;
+    }
+
+    const std::filesystem::path path = backupLeasePath();
+    std::error_code ec;
+    std::filesystem::create_directories(path.parent_path(), ec);
+    if (ec) {
+        return false;
+    }
+    std::ofstream file(path, std::ios::binary | std::ios::trunc);
+    if (!file.good()) {
+        return false;
+    }
+    file.write(reinterpret_cast<const char*>(encrypted.data()), static_cast<std::streamsize>(encrypted.size()));
+    return file.good();
+#endif
+}
+
+#ifdef _WIN32
+bool saveLeaseToPrimarySecretStore(const std::vector<unsigned char>& blob) {
+    DATA_BLOB inBlob{};
+    inBlob.pbData = const_cast<BYTE*>(blob.data());
+    inBlob.cbData = static_cast<DWORD>(blob.size());
+
+    DATA_BLOB outBlob{};
+    if (!CryptProtectData(&inBlob, nullptr, nullptr, nullptr, nullptr, 0, &outBlob)) {
+        return false;
+    }
+
+    const std::filesystem::path path = defaultDataDir() / "license" / "lease.dpapi";
+    std::error_code ec;
+    std::filesystem::create_directories(path.parent_path(), ec);
+    if (ec) {
+        LocalFree(outBlob.pbData);
+        return false;
+    }
+    std::ofstream file(path, std::ios::binary | std::ios::trunc);
+    if (!file.good()) {
+        LocalFree(outBlob.pbData);
+        return false;
+    }
+    file.write(reinterpret_cast<const char*>(outBlob.pbData), static_cast<std::streamsize>(outBlob.cbData));
+    const bool ok = file.good();
+    LocalFree(outBlob.pbData);
+    return ok;
+}
+#elif defined(__APPLE__)
+bool saveLeaseToPrimarySecretStore(const std::vector<unsigned char>& blob) {
+    const std::string service(kServiceName);
+    const std::string account(kAccountName);
+    SecKeychainItemRef item = nullptr;
+    const OSStatus findStatus =
+        SecKeychainFindGenericPassword(nullptr, static_cast<UInt32>(service.size()), service.c_str(),
+                                       static_cast<UInt32>(account.size()), account.c_str(), nullptr, nullptr, &item);
+    if (findStatus == errSecSuccess && item != nullptr) {
+        const OSStatus updateStatus =
+            SecKeychainItemModifyAttributesAndData(item, nullptr, static_cast<UInt32>(blob.size()), blob.data());
+        CFRelease(item);
+        return updateStatus == errSecSuccess;
+    }
+    if (item != nullptr) {
+        CFRelease(item);
+    }
+
+    return SecKeychainAddGenericPassword(nullptr, static_cast<UInt32>(service.size()), service.c_str(),
+                                         static_cast<UInt32>(account.size()), account.c_str(),
+                                         static_cast<UInt32>(blob.size()), blob.data(), nullptr) == errSecSuccess;
+}
+#else
+bool saveLeaseToPrimarySecretStore(const std::vector<unsigned char>& blob) {
+    static const SecretSchema schema = {
+        "com.aestrastudios.license",
+        SECRET_SCHEMA_NONE,
+        {
+            {"account", SECRET_SCHEMA_ATTRIBUTE_STRING},
+            {"NULL", SECRET_SCHEMA_ATTRIBUTE_STRING},
+        },
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    };
+
+    const std::string secret(blob.begin(), blob.end());
+    GError* error = nullptr;
+    const gboolean ok = secret_password_store_sync(&schema, SECRET_COLLECTION_DEFAULT, "Aestra License Lease",
+                                                   secret.c_str(), nullptr, &error, "account", kAccountName, nullptr);
+    if (error != nullptr) {
+        g_error_free(error);
+        return false;
+    }
+    return ok == TRUE;
+}
+#endif
+
+void applyLeaseToGateState(const LeaseRecord& lease, EntitlementStatus status) {
+    GateState& state = gateState();
+    state.tier = lease.tier;
+    state.expiresAt = lease.expiresAt;
+    state.profile.tier = toMembershipTier(lease.tier);
+    state.profile.status = status;
+    state.profile.userId = lease.userId;
+    state.profile.licenseId = lease.licenseId;
+    state.profile.rawPlugins = lease.plugins;
+    state.profile.rawFeatures = lease.features;
+    state.profile.issuedAt = timePointFromUnixSeconds(lease.issuedAt);
+    state.profile.expiresAt = timePointFromUnixSeconds(lease.expiresAt);
+    state.profile.offline = true;
+    state.profile.verified = true;
+}
+
 EntitlementStatus loadAndVerifyLease(LeaseRecord& outLease) {
     const DeviceFingerprint fingerprint = collectDeviceFingerprint();
 
@@ -741,18 +868,7 @@ void initializeImpl() {
     GateState& state = gateState();
     const EntitlementStatus status = loadAndVerifyLease(lease);
     if (status == EntitlementStatus::Valid || status == EntitlementStatus::Grace) {
-        state.tier = lease.tier;
-        state.expiresAt = lease.expiresAt;
-        state.profile.tier = toMembershipTier(lease.tier);
-        state.profile.status = status;
-        state.profile.userId = lease.userId;
-        state.profile.licenseId = lease.licenseId;
-        state.profile.rawPlugins = lease.plugins;
-        state.profile.rawFeatures = lease.features;
-        state.profile.issuedAt = timePointFromUnixSeconds(lease.issuedAt);
-        state.profile.expiresAt = timePointFromUnixSeconds(lease.expiresAt);
-        state.profile.offline = true;
-        state.profile.verified = true;
+        applyLeaseToGateState(lease, status);
     } else {
         state.tier = LicenseTier::Core;
         state.expiresAt = 0;
@@ -770,6 +886,10 @@ bool verifyEd25519Detached(const std::string& payload, const std::vector<unsigne
     ensureSodiumInitialized();
     return crypto_sign_verify_detached(signature.data(), reinterpret_cast<const unsigned char*>(payload.data()),
                                        payload.size(), publicKey) == 0;
+}
+
+std::string currentDeviceHashForRefresh() {
+    return collectDeviceFingerprint().encoded;
 }
 
 void LicenseGate::initialize() {
@@ -792,6 +912,49 @@ bool LicenseGate::canAccess(Feature feature) {
 }
 
 void LicenseGate::refreshAsync() {}
+
+bool LicenseGate::installLeaseBlobForRefresh(const std::string& leaseBlob, std::string& message) {
+    std::vector<unsigned char> blob(leaseBlob.begin(), leaseBlob.end());
+    std::string payload;
+    std::vector<unsigned char> signature;
+    if (!splitStoredLeaseBlob(blob, payload, signature)) {
+        message = "Lease blob is malformed.";
+        return false;
+    }
+
+    LeaseRecord lease;
+    if (!parseLeasePayload(payload, lease)) {
+        message = "Lease payload is malformed.";
+        return false;
+    }
+    if (!verifyLeaseSignature(canonicalizeLeasePayload(lease), signature)) {
+        message = "Lease signature is invalid.";
+        return false;
+    }
+    const DeviceFingerprint fingerprint = collectDeviceFingerprint();
+    if (!deviceHashMatchesWithSingleFieldDrift(lease.deviceHash, fingerprint)) {
+        message = "Lease belongs to a different device.";
+        return false;
+    }
+    if (lease.gracePolicy != "restrict" || lease.revocationEpoch != 0) {
+        message = "Lease policy is unsupported.";
+        return false;
+    }
+
+    const EntitlementStatus status =
+        nowSeconds() > lease.expiresAt ? EntitlementStatus::Grace : EntitlementStatus::Valid;
+    if (!saveLeaseToPrimarySecretStore(blob) && !saveLeaseToEncryptedBackup(blob, fingerprint)) {
+        message = "Unable to store refreshed lease.";
+        return false;
+    }
+    applyLeaseToGateState(lease, status);
+    message = "Lease refreshed.";
+    return true;
+}
+
+bool LicenseGateLeaseInstaller::installLeaseBlob(const std::string& leaseBlob, std::string& message) {
+    return LicenseGate::installLeaseBlobForRefresh(leaseBlob, message);
+}
 
 int64_t LicenseGate::secondsUntilExpiry() {
     initialize();

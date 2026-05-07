@@ -61,6 +61,8 @@ set(Aestra_SOURCES
 	Settings/AudioSettingsPage.cpp
 	Settings/GeneralSettingsPage.h
 	Settings/GeneralSettingsPage.cpp
+	Settings/MembershipSettingsPage.h
+	Settings/MembershipSettingsPage.cpp
 	Settings/AppearanceSettingsPage.h
 	Settings/AppearanceSettingsPage.cpp
 	Settings/ExportDialog.h

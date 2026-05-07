@@ -102,6 +102,8 @@ checkpoints/
 *.asc
 .env
 .env.*
+.dev.vars
+.dev.vars.*
 secrets/
 secret/
 credentials/
@@ -146,6 +148,9 @@ doxygen_output.log
 # Build tools
 .lfsconfig
 .gitleaks.toml.local
+.wrangler/
+**/.wrangler/
+**/.wrangler.local-smoke.toml
 
 # Proprietary SDKs
 AestraAudio/External/ASIOSDK/

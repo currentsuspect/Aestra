@@ -14,6 +14,7 @@
 #include "SettingsDialog.h"
 #include "AudioSettingsPage.h"
 #include "GeneralSettingsPage.h"
+#include "MembershipSettingsPage.h"
 #include "AppearanceSettingsPage.h"
 #include "UnifiedHUD.h"
 #include "RecoveryDialog.h"
@@ -238,6 +239,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
          }
     });
     settingsDialog->addPage(audioPage);
+    settingsDialog->addPage(std::make_shared<MembershipSettingsPage>());
     settingsDialog->addPage(std::make_shared<AppearanceSettingsPage>());
     settingsDialog->setBounds(AestraUI::NUIRect(0, 0, 950, 600));
 

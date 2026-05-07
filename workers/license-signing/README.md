@@ -312,6 +312,67 @@ database_name = "aestra-license"
 database_id = "<cloudflare-d1-id>"
 ```
 
+## Local Worker/D1 Native Smoke
+
+The native dev public key is `AESTRA_DEV_TEST_PUBKEY_V1`:
+
+```text
+03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8
+```
+
+`scripts/dev-smoke.sh` generates ignored local Wrangler config and `.dev.vars.local-smoke` values for this dev/test
+key. The generated signing value is fixture material derived from the cross-language Worker test seed; it is for local
+smoke only and must not be reused for production. Production signing remains Cloudflare-secret based.
+
+Run the local smoke flow in two terminals:
+
+```bash
+cd workers/license-signing
+npm install
+scripts/dev-smoke.sh worker
+```
+
+Then, from the repo root:
+
+```bash
+cmake --build build-release --target SecAccountEndToEndSmoke -j2
+workers/license-signing/scripts/dev-smoke.sh native
+```
+
+The smoke target is skipped by default. It runs only when `AESTRA_SMOKE_EXPECT_LIVE_WORKER=1` is present.
+
+Expected flow:
+
+```text
+login/start fixture code
+-> login/verify issued session
+-> local session cache write
+-> account/me bearer request
+-> signed Core refresh verifies in LicenseGate
+-> admin manual Founder/Supporter grant
+-> signed paid refresh verifies in LicenseGate
+-> MembershipViewModel observes Aestra Founder or Aestra Supporter
+-> session revoke
+-> old bearer session becomes unauthorized
+```
+
+Useful environment overrides:
+
+```text
+AESTRA_SMOKE_PORT=8787
+AESTRA_SMOKE_EMAIL=smoke+aestra@example.test
+AESTRA_SMOKE_ADMIN_KEY=local-smoke-admin
+AESTRA_SMOKE_TIER=founder | supporter
+AESTRA_SMOKE_D1_STATE=workers/license-signing/.wrangler/local-smoke-state
+```
+
+Known limitations before production:
+
+- fixture mailer mode returns the one-time code to the caller
+- manual admin grants are dev/internal tooling, not billing
+- production D1 database IDs and Cloudflare secrets are not stored in this repository
+- key rotation and signed `kid` verification are still future work
+
 ## Development
 
 ```bash

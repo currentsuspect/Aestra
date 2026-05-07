@@ -13,6 +13,7 @@ struct LocalAccountRecord {
     AccountIdentity identity;
     AccountSessionState state = AccountSessionState::SignedOut;
     int64_t lastSyncUnix = 0;
+    std::string sessionToken;
     bool hasIdentity = false;
 };
 

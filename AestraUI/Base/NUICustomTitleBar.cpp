@@ -13,6 +13,9 @@ namespace AestraUI {
 NUICustomTitleBar::NUICustomTitleBar()
     : NUIComponent()
     , title_("Aestra")
+    , membershipTier_("Core")
+    , membershipStatus_("Signed out")
+    , membershipVerified_(false)
     , height_(32.0f)
     , isMaximized_(false)
     , hoveredButton_(HoverButton::None)
@@ -76,6 +79,16 @@ void NUICustomTitleBar::setTitle(const std::string& title) {
     setDirty(true);
 }
 
+void NUICustomTitleBar::setMembershipBadge(const std::string& tier, const std::string& status, bool verified) {
+    if (membershipTier_ == tier && membershipStatus_ == status && membershipVerified_ == verified) {
+        return;
+    }
+    membershipTier_ = tier.empty() ? "Core" : tier;
+    membershipStatus_ = status.empty() ? "Unknown" : status;
+    membershipVerified_ = verified;
+    setDirty(true);
+}
+
 void NUICustomTitleBar::setHeight(float height) {
     height_ = height;
     setSize(getBounds().width, height);
@@ -129,21 +142,25 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     const auto muted = themeManager.getColor("textSecondary").withAlpha(0.76f);
     const auto accent = themeManager.getColor("accentPrimary");
     const float userFont = 12.0f;
-    const std::string user = "currentsuspect";
-    const NUISize userSize = renderer.measureText(user, userFont);
-    constexpr float badgeW = 70.0f;
+    const std::string status = membershipStatus_;
+    const NUISize statusSize = renderer.measureText(status, userFont);
+    constexpr float badgeW = 86.0f;
     constexpr float badgeH = 22.0f;
     constexpr float badgeGapToControls = 12.0f;
     const NUIRect badge(minimizeButtonRect_.x - badgeGapToControls - badgeW,
                         bounds.y + std::round((height_ - badgeH) * 0.5f),
                         badgeW,
                         badgeH);
-    const float userX = badge.x - userSize.width - 14.0f;
-    renderer.drawText(user, {userX, std::round(renderer.calculateTextY({userX, badge.y, userSize.width, badge.height}, userFont))},
+    const float statusX = badge.x - statusSize.width - 14.0f;
+    renderer.drawText(status,
+                      {statusX, std::round(renderer.calculateTextY({statusX, badge.y, statusSize.width, badge.height},
+                                                                    userFont))},
                       userFont, muted);
-    renderer.fillRoundedRect(badge, 11.0f, accent.withAlpha(0.055f));
-    renderer.strokeRoundedRect(badge, 11.0f, 1.0f, accent.withAlpha(0.50f));
-    renderer.drawTextCentered("Founder", badge, 11.0f, text.withAlpha(0.84f));
+
+    const float verifiedAlpha = membershipVerified_ ? 0.50f : 0.28f;
+    renderer.fillRoundedRect(badge, 11.0f, accent.withAlpha(membershipVerified_ ? 0.075f : 0.035f));
+    renderer.strokeRoundedRect(badge, 11.0f, 1.0f, accent.withAlpha(verifiedAlpha));
+    renderer.drawTextCentered(membershipTier_, badge, 11.0f, text.withAlpha(0.84f));
     
     // Render custom children (NUIMenuBar, view toggle, etc.)
     renderChildren(renderer);

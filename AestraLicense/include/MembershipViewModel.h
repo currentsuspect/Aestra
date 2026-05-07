@@ -66,6 +66,9 @@ private:
 
 std::string membershipDisplayTierLabel(MembershipDisplayTier tier);
 std::string membershipDisplayStatusLabel(MembershipDisplayStatus status);
+std::string membershipDisplaySummary(const MembershipViewState& state, const std::string& lastRefreshMessage = "");
+std::string membershipBadgeTierText(const MembershipViewState& state);
+std::string membershipBadgeStatusText(const MembershipViewState& state);
 
 } // namespace License
 } // namespace Aestra

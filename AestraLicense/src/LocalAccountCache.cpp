@@ -179,7 +179,8 @@ LocalAccountCacheLoadResult LocalAccountCache::load() const {
         }
         if (!readOptionalString(json, "email", record.identity.email) ||
             !readOptionalString(json, "display_name", record.identity.displayName) ||
-            !readOptionalString(json, "avatar_url", record.identity.avatarUrl)) {
+            !readOptionalString(json, "avatar_url", record.identity.avatarUrl) ||
+            !readOptionalString(json, "session_token", record.sessionToken)) {
             result.status = LocalAccountCacheLoadStatus::Malformed;
             return result;
         }
@@ -223,6 +224,7 @@ bool LocalAccountCache::save(const LocalAccountRecord& record) const {
              << "  \"email\": \"" << escapeJsonString(record.identity.email) << "\",\n"
              << "  \"display_name\": \"" << escapeJsonString(record.identity.displayName) << "\",\n"
              << "  \"avatar_url\": \"" << escapeJsonString(record.identity.avatarUrl) << "\",\n"
+             << "  \"session_token\": \"" << escapeJsonString(record.sessionToken) << "\",\n"
              << "  \"last_sync_unix\": " << record.lastSyncUnix << ",\n"
              << "  \"session_state\": \"" << accountSessionStateToString(record.state) << "\"\n"
              << "}\n";

@@ -6,8 +6,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(AestraLicense STATIC
+    src/AccountApiClient.cpp
+    src/AccountService.cpp
     src/AccountSession.cpp
     src/EntitlementStore.cpp
+    src/HttpTransport.cpp
     src/LicenseGate.cpp
     src/LicenseRefreshClient.cpp
     src/LocalAccountCache.cpp
@@ -25,6 +28,14 @@ target_link_libraries(AestraLicense
     PUBLIC
         AestraCore
 )
+
+find_package(CURL QUIET)
+if(CURL_FOUND)
+    target_link_libraries(AestraLicense PRIVATE CURL::libcurl)
+    target_compile_definitions(AestraLicense PRIVATE AESTRA_LICENSE_HAS_CURL=1)
+else()
+    message(STATUS "AestraLicense: libcurl not found; native account HTTP transport will report unavailable.")
+endif()
 
 if(WIN32)
     find_path(LIBSODIUM_INCLUDE_DIR sodium.h)

@@ -7,6 +7,12 @@
 #include "SettingsDialog.h"
 #include "UnifiedHUD.h"
 #include "../AestraPlat/include/AestraPlatform.h"
+#if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
+#include "AccountSession.h"
+#include "EntitlementStore.h"
+#include "LocalAccountCache.h"
+#include "MembershipViewModel.h"
+#endif
 #include <memory>
 #include <functional>
 
@@ -58,6 +64,7 @@ public:
     }
     
     void onUpdate(double deltaTime) override {
+        updateMembershipBadge();
         NUIComponent::updateGlobalTooltip(deltaTime);
         NUIComponent::onUpdate(deltaTime);
     }
@@ -88,5 +95,27 @@ public:
         }
         
         NUIComponent::onResize(width, height);
+    }
+
+private:
+    void updateMembershipBadge() {
+        if (!m_rootCustomWindow || !m_rootCustomWindow->getTitleBar()) {
+            return;
+        }
+
+        std::string tier = "Core";
+        std::string status = "Signed out";
+        bool verified = false;
+#if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
+        Aestra::License::EntitlementStore entitlements;
+        Aestra::License::LocalAccountCache accountCache;
+        Aestra::License::AccountSession accountSession(accountCache, entitlements);
+        Aestra::License::MembershipViewModel viewModel(accountSession, entitlements);
+        const Aestra::License::MembershipViewState state = viewModel.current();
+        tier = Aestra::License::membershipBadgeTierText(state);
+        status = Aestra::License::membershipBadgeStatusText(state);
+        verified = state.verified;
+#endif
+        m_rootCustomWindow->getTitleBar()->setMembershipBadge(tier, status, verified);
     }
 };

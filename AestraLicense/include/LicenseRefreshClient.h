@@ -8,7 +8,9 @@ namespace License {
 enum class LicenseRefreshStatus {
     Success = 0,
     SyncUnavailable,
+    Unauthorized,
     InvalidResponse,
+    RejectedSignature,
 };
 
 struct LicenseRefreshRequest {
@@ -25,6 +27,12 @@ struct LicenseRefreshResult {
     std::string keyId;
     std::string format;
     std::string message;
+};
+
+class ILeaseInstaller {
+public:
+    virtual ~ILeaseInstaller() = default;
+    virtual bool installLeaseBlob(const std::string& leaseBlob, std::string& message) = 0;
 };
 
 class LicenseRefreshClient {

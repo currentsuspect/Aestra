@@ -1,6 +1,7 @@
 #include "MembershipViewModel.h"
 
 #include <array>
+#include <sstream>
 #include <utility>
 
 namespace Aestra {
@@ -178,6 +179,58 @@ std::string membershipDisplayStatusLabel(MembershipDisplayStatus status) {
     default:
         return "Signed out";
     }
+}
+
+std::string membershipDisplaySummary(const MembershipViewState& state, const std::string& lastRefreshMessage) {
+    std::ostringstream out;
+    out << "Account: " << state.accountLabel << "\n"
+        << "Tier: " << state.tierLabel << "\n"
+        << "Status: " << state.statusLabel << "\n"
+        << "Verification: " << (state.verified ? "Verified signed lease" : "Core or unverified local state") << "\n"
+        << "Sync: " << (state.offline ? "Local/offline cache" : "Online") << "\n";
+    if (!lastRefreshMessage.empty()) {
+        out << "Last refresh: " << lastRefreshMessage << "\n";
+    }
+    out << "\n" << state.detailMessage << "\n\n"
+        << "Features\n";
+    for (const MembershipFeatureRow& row : state.features) {
+        out << (row.enabled ? "Available: " : "Unavailable: ") << row.label;
+        if (!row.enabled && !row.reason.empty()) {
+            out << " - " << row.reason;
+        }
+        out << "\n";
+    }
+    return out.str();
+}
+
+std::string membershipBadgeTierText(const MembershipViewState& state) {
+    if (state.tierLabel == "Aestra Founder") {
+        return "Founder";
+    }
+    if (state.tierLabel == "Aestra Supporter") {
+        return "Supporter";
+    }
+    return "Core";
+}
+
+std::string membershipBadgeStatusText(const MembershipViewState& state) {
+    if (state.statusLabel == "Verified") {
+        return "Verified";
+    }
+    if (state.statusLabel == "Cached offline") {
+        return "Offline";
+    }
+    if (state.statusLabel == "Sync unavailable") {
+        return "Sync unavailable";
+    }
+    if (state.statusLabel == "Signed out") {
+        return "Signed out";
+    }
+    if (state.statusLabel == "Expired" || state.statusLabel == "Revoked" || state.statusLabel == "Invalid" ||
+        state.statusLabel == "Wrong device" || state.statusLabel == "Unreadable cache") {
+        return state.statusLabel;
+    }
+    return state.statusLabel.empty() ? "Unknown" : state.statusLabel;
 }
 
 MembershipViewModel::MembershipViewModel(AccountSession& session, EntitlementStore& entitlements)
