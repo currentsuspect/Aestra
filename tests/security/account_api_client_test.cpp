@@ -1,6 +1,9 @@
 #include "AccountApiClient.h"
 #include "AccountService.h"
+#include "EntitlementStore.h"
+#include "LicenseGate.h"
 #include "LocalAccountCache.h"
+#include "MembershipViewModel.h"
 
 #include <cctype>
 #include <filesystem>
@@ -510,6 +513,110 @@ bool testAccountApiClientWithCurlTransport() {
 }
 } // namespace
 
+#ifndef _WIN32
+bool testLoginFlowFull() {
+    if (!curlHttpTransportAvailable()) {
+        std::cout << "libcurl transport unavailable in this build; skipping login flow integration test.\n";
+        return true;
+    }
+    bool ok = true;
+    const fs::path cachePath = testPath("login_flow_full");
+    fs::remove(cachePath);
+
+    std::unique_ptr<IHttpTransport> transport = createDefaultHttpTransport();
+    AccountApiConfig config;
+    config.timeoutMs = 2000;
+
+    LoopbackHttpServer startServer(200, R"({"ok":true,"challenge_id":"lc_full_flow","expires_at":9999999999})");
+    if (!startServer.ok()) {
+        std::cout << "loopback sockets unavailable; skipping login flow integration test.\n";
+        return true;
+    }
+    config.baseUrl = startServer.baseUrl();
+
+    LocalAccountCache cache(cachePath);
+    FakeLeaseInstaller installer;
+    AccountApiClient apiClient(config, *transport);
+    AccountService service(apiClient, cache, installer);
+    EntitlementStore entitlements;
+    AccountSession session(cache, entitlements);
+    MembershipViewModel view(session, entitlements);
+
+    {
+        const AccountLoginStartServiceResult start = service.loginStart("flow@example.test");
+        ok &= expect(start.status == AccountServiceStatus::Success, "loginStart returns success");
+        ok &= expect(start.challengeId == "lc_full_flow", "loginStart returns challenge_id");
+        ok &= expect(startServer.request().method == "POST", "loginStart method is POST");
+        ok &= expect(startServer.request().url == "/v1/account/login/start", "loginStart path");
+        ok &= expect(startServer.request().body.find("flow@example.test") != std::string::npos,
+                     "loginStart body contains email");
+    }
+
+    {
+        LoopbackHttpServer verifyServer(200,
+                                        R"({"ok":true,"account":{"id":"acct_flow","email":"flow@example.test"},)"
+                                        R"("session":{"token":"session_flow_test","expires_at":9999999999}})");
+        if (!verifyServer.ok()) {
+            std::cout << "verify loopback server unavailable; skipping.\n";
+            return false;
+        }
+        config.baseUrl = verifyServer.baseUrl();
+        AccountApiClient updatedClient(config, *transport);
+        AccountService updatedService(updatedClient, cache, installer);
+        const AccountServiceResult verify = updatedService.loginVerify("flow@example.test", "lc_full_flow", "999999");
+        ok &= expect(verify.status == AccountServiceStatus::Success, "loginVerify returns success");
+        ok &= expect(verifyServer.request().url == "/v1/account/login/verify", "loginVerify path");
+        ok &= expect(verifyServer.request().body.find("999999") != std::string::npos, "loginVerify body contains code");
+        const LocalAccountCacheLoadResult cached = cache.load();
+        ok &= expect(cached.status == LocalAccountCacheLoadStatus::Loaded, "loginVerify stores session to cache");
+        ok &= expect(cached.record.sessionToken == "session_flow_test", "cached session token is stored");
+        ok &= expect(cached.record.identity.userId == "acct_flow", "loginVerify stores identity userId");
+        ok &= expect(cached.record.identity.email == "flow@example.test", "loginVerify stores identity email");
+    }
+
+    {
+        const std::string canonical =
+            "{\"license_id\":\"lic_flow\",\"user_id\":\"acct_flow\",\"tier\":\"Founder\",\"plugins\":[],"
+            "\"features\":[\"Rumble\",\"RumbleHeadless\",\"FounderBadge\",\"PremiumPluginBundle\"],"
+            "\"device_hash\":\"device_flow_test\",\"issued_at\":1700000000,"
+            "\"expires_at\":1799999999,\"grace_policy\":\"restrict\",\"revocation_epoch\":0}";
+        const std::string sigHex = std::string(128, 'a');
+        const std::string refreshBody =
+            "{\"payload\":{},\"canonical\":\"" + escapeJsonString(canonical) + "\",\"signature_hex\":\"" + sigHex +
+            "\",\"lease_blob\":\"" + escapeJsonString(canonical + "\n" + sigHex) +
+            "\",\"key_id\":\"test\",\"format\":\"aestra-license-v1\"}";
+        LoopbackHttpServer refreshServer(200, refreshBody);
+        if (!refreshServer.ok()) {
+            std::cout << "refresh loopback server unavailable; skipping.\n";
+            return false;
+        }
+        config.baseUrl = refreshServer.baseUrl();
+        AccountApiClient refreshedClient(config, *transport);
+        AccountService refreshedService(refreshedClient, cache, installer);
+        const AccountServiceResult refresh = refreshedService.refreshEntitlements();
+        ok &= expect(refresh.status == AccountServiceStatus::Success, "refreshEntitlements after loginVerify succeeds");
+        ok &= expect(!installer.installed.empty(), "lease installer received blob");
+        ok &= expect(refreshServer.request().headers.at("authorization") == "Bearer session_flow_test",
+                     "refreshEntitlements uses cached session token");
+    }
+
+    {
+        LocalAccountCache freshCache(cachePath);
+        AccountSession freshSession(freshCache, entitlements);
+        const AccountSessionSnapshot snap = freshSession.current();
+        ok &= expect(snap.signedIn, "fresh AccountSession sees signed-in after login flow");
+        ok &= expect(!snap.identity.userId.empty(), "fresh AccountSession has identity after login flow");
+        ok &= expect(freshSession.state() == AccountSessionState::SignedInCached ||
+                        freshSession.state() == AccountSessionState::SignedInFresh,
+                    "fresh AccountSession state is signed-in (not core/signed-out)");
+        ok &= expect(!snap.statusMessage.empty(), "fresh AccountSession has status message after login flow");
+    }
+
+    fs::remove(cachePath);
+    return ok;
+}
+#endif
+
 int main() {
     fs::remove_all(fs::temp_directory_path() / "aestra_account_api_client_tests");
     bool ok = true;
@@ -518,6 +625,7 @@ int main() {
     ok &= testAccountApiClientWithCurlTransport();
     ok &= testServiceStoresSessionAndRefreshesLease();
     ok &= testServiceFailureBoundaries();
+    ok &= testLoginFlowFull();
     fs::remove_all(fs::temp_directory_path() / "aestra_account_api_client_tests");
 
     if (!ok) {
