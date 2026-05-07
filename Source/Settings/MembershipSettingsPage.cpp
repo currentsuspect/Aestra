@@ -394,7 +394,10 @@ void MembershipSettingsPage::layoutComponents() {
     y += 9.0f;
     placeRow(m_featuresTitleLabel, rowHeight);
 
-    const float maxFeatureBottom = buttonY - 14.0f;
+    const bool showSignIn = m_signInTitleLabel->isVisible();
+    const float signInHeight = rowHeight + 4.0f + buttonHeight + gap + buttonHeight;
+    const float signInTop = buttonY - signInHeight - 12.0f;
+    const float maxFeatureBottom = showSignIn ? signInTop - 10.0f : buttonY - 14.0f;
     for (const std::shared_ptr<AestraUI::NUILabel>& featureLabel : m_featureLabels) {
         if (featureLabel->getText().empty()) {
             continue;
@@ -407,8 +410,8 @@ void MembershipSettingsPage::layoutComponents() {
         placeRow(featureLabel, 18.0f);
     }
 
-    if (m_signInTitleLabel->isVisible()) {
-        y = std::min(y + 8.0f, buttonY - 116.0f);
+    if (showSignIn) {
+        y = std::max(y + 8.0f, signInTop);
         const float inputWidth = std::max(180.0f, contentWidth - buttonWidth - gap);
         m_signInTitleLabel->setBounds(AestraUI::NUIRect(x, y, contentWidth, rowHeight));
         y += rowHeight + 4.0f;
