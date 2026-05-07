@@ -7,6 +7,13 @@ compatibility_date = "2026-05-06"
 #   wrangler secret put AESTRA_LICENSE_SIGNING_PRIVATE_KEY
 #   wrangler secret put AESTRA_ADMIN_API_KEY
 #   wrangler secret put AESTRA_SIGNING_KEY_ID
+#   wrangler secret put AESTRA_LOGIN_MAILER_MODE
 #
 # AESTRA_LICENSE_SIGNING_PRIVATE_KEY must be base64 raw 64-byte Ed25519
 # secret key material compatible with tweetnacl.sign.detached().
+
+# D1 production binding placeholder:
+# [[d1_databases]]
+# binding = "AESTRA_LICENSE_DB"
+# database_name = "aestra-license"
+# database_id = "replace-with-cloudflare-d1-id"

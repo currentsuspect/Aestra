@@ -9,6 +9,7 @@ add_library(AestraLicense STATIC
     src/AccountSession.cpp
     src/EntitlementStore.cpp
     src/LicenseGate.cpp
+    src/LicenseRefreshClient.cpp
     src/LocalAccountCache.cpp
     src/MembershipViewModel.cpp
 )

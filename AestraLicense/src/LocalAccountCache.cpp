@@ -69,6 +69,34 @@ bool readOptionalString(const Aestra::JSON& json, const std::string& key, std::s
     out = json[key].asString();
     return true;
 }
+
+std::string escapeJsonString(const std::string& value) {
+    std::string out;
+    out.reserve(value.size());
+    for (char ch : value) {
+        switch (ch) {
+        case '\\':
+            out += "\\\\";
+            break;
+        case '"':
+            out += "\\\"";
+            break;
+        case '\n':
+            out += "\\n";
+            break;
+        case '\r':
+            out += "\\r";
+            break;
+        case '\t':
+            out += "\\t";
+            break;
+        default:
+            out += ch;
+            break;
+        }
+    }
+    return out;
+}
 } // namespace
 
 std::string accountSessionStateToString(AccountSessionState state) {
@@ -185,20 +213,19 @@ bool LocalAccountCache::save(const LocalAccountRecord& record) const {
     try {
         std::filesystem::create_directories(m_cachePath.parent_path());
 
-        Aestra::JSON json = Aestra::JSON::object();
-        json.set("schema_version", static_cast<double>(kSchemaVersion));
-        json.set("user_id", record.identity.userId);
-        json.set("email", record.identity.email);
-        json.set("display_name", record.identity.displayName);
-        json.set("avatar_url", record.identity.avatarUrl);
-        json.set("last_sync_unix", static_cast<double>(record.lastSyncUnix));
-        json.set("session_state", accountSessionStateToString(record.state));
-
         std::ofstream file(m_cachePath, std::ios::binary | std::ios::trunc);
         if (!file.good()) {
             return false;
         }
-        file << json.toString(2);
+        file << "{\n"
+             << "  \"schema_version\": " << kSchemaVersion << ",\n"
+             << "  \"user_id\": \"" << escapeJsonString(record.identity.userId) << "\",\n"
+             << "  \"email\": \"" << escapeJsonString(record.identity.email) << "\",\n"
+             << "  \"display_name\": \"" << escapeJsonString(record.identity.displayName) << "\",\n"
+             << "  \"avatar_url\": \"" << escapeJsonString(record.identity.avatarUrl) << "\",\n"
+             << "  \"last_sync_unix\": " << record.lastSyncUnix << ",\n"
+             << "  \"session_state\": \"" << accountSessionStateToString(record.state) << "\"\n"
+             << "}\n";
         return file.good();
     } catch (const std::exception&) {
         return false;
