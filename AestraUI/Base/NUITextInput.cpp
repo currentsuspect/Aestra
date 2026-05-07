@@ -10,26 +10,6 @@
 
 namespace AestraUI {
 
-namespace {
-char shiftedDigitCharacter(NUIKeyCode keyCode)
-{
-    switch (keyCode)
-    {
-        case NUIKeyCode::Num1: return '!';
-        case NUIKeyCode::Num2: return '@';
-        case NUIKeyCode::Num3: return '#';
-        case NUIKeyCode::Num4: return '$';
-        case NUIKeyCode::Num5: return '%';
-        case NUIKeyCode::Num6: return '^';
-        case NUIKeyCode::Num7: return '&';
-        case NUIKeyCode::Num8: return '*';
-        case NUIKeyCode::Num9: return '(';
-        case NUIKeyCode::Num0: return ')';
-        default: return 0;
-    }
-}
-} // namespace
-
 NUITextInput::NUITextInput(const std::string& text)
     : NUIComponent()
     , text_(text)
@@ -799,26 +779,6 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
             // AND it's a valid printable character
             char c = event.character;
             
-            // Fallback: If character is 0 but we have a valid key code, map it (rudimentary)
-            if (c == 0) {
-                if (event.keyCode >= NUIKeyCode::A && event.keyCode <= NUIKeyCode::Z) {
-                     c = 'a' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::A));
-                     bool shift = (event.modifiers & NUIModifiers::Shift);
-                     bool caps = (event.modifiers & NUIModifiers::CapsLock);
-                     if (shift != caps) c = std::toupper(c);
-                }
-                else if (event.keyCode >= NUIKeyCode::Num0 && event.keyCode <= NUIKeyCode::Num9) {
-                     const bool shift = event.modifiers & NUIModifiers::Shift;
-                     c = shift ? shiftedDigitCharacter(event.keyCode)
-                               : static_cast<char>('0' +
-                                                   (static_cast<int>(event.keyCode) -
-                                                    static_cast<int>(NUIKeyCode::Num0)));
-                }
-                else if (event.keyCode == NUIKeyCode::Space) {
-                     c = ' ';
-                }
-            }
-
             if (c >= 32 && c != 127) // 32=Space, 127=DEL
             {
                 insertCharacter(c);

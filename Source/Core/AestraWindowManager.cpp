@@ -325,6 +325,20 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         }
     });
 
+    m_window->setCharCallback([this](unsigned int codepoint) {
+        if (codepoint < 32 || codepoint > 126) {
+            return;
+        }
+        if (auto* focused = AestraUI::NUIComponent::getFocusedComponent()) {
+            AestraUI::NUIKeyEvent event;
+            event.keyCode = AestraUI::NUIKeyCode::Unknown;
+            event.character = static_cast<char>(codepoint);
+            event.pressed = true;
+            event.modifiers = m_keyModifiers;
+            focused->onKeyEvent(event);
+        }
+    });
+
     m_window->setFocusCallback([this](bool focused) {
          if (m_useCustomCursor && m_window) {
              m_window->setCursorVisible(!focused); // Hide if focused (drawn manually)
