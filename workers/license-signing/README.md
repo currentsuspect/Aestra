@@ -310,7 +310,38 @@ Configure the D1 binding in `wrangler.toml` after creating the Cloudflare databa
 binding = "AESTRA_LICENSE_DB"
 database_name = "aestra-license"
 database_id = "<cloudflare-d1-id>"
+migrations_dir = "migrations"
 ```
+
+Current deployed Cloudflare D1 binding:
+
+```text
+database_name = aestra-license
+database_id = 4c09044c-95fc-4896-87ac-51cac5b99b91
+region = WEUR
+```
+
+Current Worker trigger:
+
+```text
+https://aestra-license-signing.makoridylan.workers.dev
+```
+
+Production setup helper:
+
+```bash
+export CLOUDFLARE_API_TOKEN=...
+npm run cf:check
+npm run cf:create-d1
+export AESTRA_CF_D1_DATABASE_ID=<database-id>
+npm run cf:bind-d1
+npm run cf:migrate
+npm run cf:secrets
+npm run deploy
+```
+
+`cf:secrets` is intentionally interactive and must be supplied with real values outside git. The repo does not contain
+the production Ed25519 private signing key, admin bearer token, or generated session secrets.
 
 ## Local Worker/D1 Native Smoke
 

@@ -6,6 +6,11 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "cf:check": "scripts/cf-prod.sh check",
+    "cf:create-d1": "scripts/cf-prod.sh create-d1",
+    "cf:bind-d1": "scripts/cf-prod.sh bind-d1",
+    "cf:migrate": "scripts/cf-prod.sh migrate",
+    "cf:secrets": "scripts/cf-prod.sh put-secrets",
     "deploy": "wrangler deploy"
   },
   "dependencies": {

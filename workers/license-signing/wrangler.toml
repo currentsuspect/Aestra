@@ -2,6 +2,9 @@ name = "aestra-license-signing"
 main = "src/index.ts"
 compatibility_date = "2026-05-06"
 
+[vars]
+AESTRA_STORAGE_MODE = "d1"
+
 # Secrets are intentionally not stored here.
 # Configure production values with:
 #   wrangler secret put AESTRA_LICENSE_SIGNING_PRIVATE_KEY
@@ -12,8 +15,8 @@ compatibility_date = "2026-05-06"
 # AESTRA_LICENSE_SIGNING_PRIVATE_KEY must be base64 raw 64-byte Ed25519
 # secret key material compatible with tweetnacl.sign.detached().
 
-# D1 production binding placeholder:
-# [[d1_databases]]
-# binding = "AESTRA_LICENSE_DB"
-# database_name = "aestra-license"
-# database_id = "replace-with-cloudflare-d1-id"
+[[d1_databases]]
+binding = "AESTRA_LICENSE_DB"
+database_name = "aestra-license"
+database_id = "4c09044c-95fc-4896-87ac-51cac5b99b91"
+migrations_dir = "migrations"
