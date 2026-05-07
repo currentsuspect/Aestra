@@ -28,6 +28,43 @@ const env: Env = {
   AESTRA_SIGNING_KEY_ID: "aestra-test-key",
 };
 
+const accountEnv: Env = {
+  ...env,
+  AESTRA_ACCOUNT_FIXTURE_SESSIONS: JSON.stringify({
+    "core-token": {
+      account_id: "acct_core",
+      user_id: "user_core",
+      email: "core@example.test",
+    },
+    "supporter-token": {
+      account_id: "acct_supporter",
+      user_id: "user_supporter",
+      email: "supporter@example.test",
+    },
+    "founder-token": {
+      account_id: "acct_founder",
+      user_id: "user_founder",
+      email: "founder@example.test",
+    },
+  }),
+  AESTRA_ENTITLEMENT_FIXTURES: JSON.stringify({
+    acct_supporter: {
+      license_id: "lic_supporter",
+      tier: "Supporter",
+      plugins: ["com.aestra.rumble"],
+      features: ["rumble"],
+      revocation_epoch: 0,
+    },
+    acct_founder: {
+      license_id: "lic_founder",
+      tier: "Founder",
+      plugins: ["com.aestra.rumble"],
+      features: ["rumble", "rumble_headless"],
+      revocation_epoch: 0,
+    },
+  }),
+};
+
 const validLease: LeasePayload = {
   license_id: "lic_123",
   user_id: "user_123",
@@ -39,6 +76,12 @@ const validLease: LeasePayload = {
   expires_at: 1235172690,
   grace_policy: "restrict",
   revocation_epoch: 0,
+};
+
+const accountRefreshRequest = {
+  device_hash: "device_account_1",
+  issued_at: 1234567890,
+  account_id: "ignored_request_account",
 };
 
 describe("parseSignRequest", () => {
@@ -126,6 +169,40 @@ describe("worker endpoints", () => {
     expect(body.format).toBe("aestra-license-v1");
   });
 
+  it("refreshes a valid lease request with a storage-ready lease blob", async () => {
+    const response = await worker.fetch(new Request("https://example.test/v1/entitlements/refresh", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-admin-key",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(validLease),
+    }), env);
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      payload: LeasePayload;
+      canonical: string;
+      signature_hex: string;
+      lease_blob: string;
+      key_id: string;
+      format: string;
+    };
+    expect(body.payload).toEqual(validLease);
+    expect(body.canonical).toBe(canonicalizeLease(validLease));
+    expect(body.signature_hex).toHaveLength(128);
+    expect(body.lease_blob).toBe(`${body.canonical}\n${body.signature_hex}`);
+    expect(body.key_id).toBe("aestra-test-key");
+    expect(body.format).toBe("aestra-license-v1");
+  });
+
+  it("rejects refresh requests without admin authorization", async () => {
+    const response = await worker.fetch(new Request("https://example.test/v1/entitlements/refresh", {
+      method: "POST",
+      body: JSON.stringify(validLease),
+    }), env);
+    expect(response.status).toBe(401);
+  });
+
   it("returns 400 for invalid request payloads", async () => {
     const response = await worker.fetch(new Request("https://example.test/v1/entitlements/sign", {
       method: "POST",
@@ -136,5 +213,158 @@ describe("worker endpoints", () => {
       body: JSON.stringify({ ...validLease, tier: "supporter" }),
     }), env);
     expect(response.status).toBe(400);
+  });
+
+  it("returns 400 for invalid refresh payloads", async () => {
+    const response = await worker.fetch(new Request("https://example.test/v1/entitlements/refresh", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-admin-key",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ ...validLease, expires_at: validLease.issued_at + 1 }),
+    }), env);
+    expect(response.status).toBe(400);
+  });
+
+  it("rejects account refresh without account authorization", async () => {
+    const response = await worker.fetch(new Request("https://example.test/v1/account/entitlements/refresh", {
+      method: "POST",
+      body: JSON.stringify(accountRefreshRequest),
+    }), accountEnv);
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects account refresh with invalid account authorization", async () => {
+    const response = await worker.fetch(new Request("https://example.test/v1/account/entitlements/refresh", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer bad-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(accountRefreshRequest),
+    }), accountEnv);
+    expect(response.status).toBe(401);
+  });
+
+  it("refreshes an authenticated account with a Core fallback lease when no entitlement exists", async () => {
+    const response = await worker.fetch(new Request("https://example.test/v1/account/entitlements/refresh", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer core-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(accountRefreshRequest),
+    }), accountEnv);
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      payload: LeasePayload;
+      canonical: string;
+      signature_hex: string;
+      lease_blob: string;
+      key_id: string;
+      format: string;
+    };
+    expect(body.payload).toEqual({
+      license_id: "core_acct_core",
+      user_id: "user_core",
+      tier: "Core",
+      plugins: [],
+      features: [],
+      device_hash: "device_account_1",
+      issued_at: 1234567890,
+      expires_at: 1235172690,
+      grace_policy: "restrict",
+      revocation_epoch: 0,
+    });
+    expect(body.canonical).toBe(canonicalizeLease(body.payload));
+    expect(body.signature_hex).toHaveLength(128);
+    expect(body.lease_blob).toBe(`${body.canonical}\n${body.signature_hex}`);
+    expect(body.key_id).toBe("aestra-test-key");
+    expect(body.format).toBe("aestra-license-v1");
+  });
+
+  it("refreshes an authenticated account with a server-side Supporter entitlement fixture", async () => {
+    const response = await worker.fetch(new Request("https://example.test/v1/account/entitlements/refresh", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer supporter-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(accountRefreshRequest),
+    }), accountEnv);
+    expect(response.status).toBe(200);
+    const body = await response.json() as { payload: LeasePayload; canonical: string; signature_hex: string };
+    expect(body.payload.user_id).toBe("user_supporter");
+    expect(body.payload.license_id).toBe("lic_supporter");
+    expect(body.payload.tier).toBe("Supporter");
+    expect(body.payload.plugins).toEqual(["com.aestra.rumble"]);
+    expect(body.payload.features).toEqual(["rumble"]);
+    expect(body.canonical).toBe(canonicalizeLease(body.payload));
+    expect(body.signature_hex).toHaveLength(128);
+  });
+
+  it("refreshes an authenticated account with a server-side Founder entitlement fixture", async () => {
+    const response = await worker.fetch(new Request("https://example.test/v1/account/entitlements/refresh", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer founder-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(accountRefreshRequest),
+    }), accountEnv);
+    expect(response.status).toBe(200);
+    const body = await response.json() as { payload: LeasePayload; canonical: string; signature_hex: string };
+    expect(body.payload.user_id).toBe("user_founder");
+    expect(body.payload.license_id).toBe("lic_founder");
+    expect(body.payload.tier).toBe("Founder");
+    expect(body.payload.features).toEqual(["rumble", "rumble_headless"]);
+    expect(body.canonical).toBe(canonicalizeLease(body.payload));
+    expect(body.signature_hex).toHaveLength(128);
+  });
+
+  it("does not trust account_id from the account refresh request body", async () => {
+    const response = await worker.fetch(new Request("https://example.test/v1/account/entitlements/refresh", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer core-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ ...accountRefreshRequest, account_id: "acct_founder" }),
+    }), accountEnv);
+    expect(response.status).toBe(200);
+    const body = await response.json() as { payload: LeasePayload };
+    expect(body.payload.user_id).toBe("user_core");
+    expect(body.payload.license_id).toBe("core_acct_core");
+    expect(body.payload.tier).toBe("Core");
+  });
+
+  it("fails loudly for malformed server-side entitlement records", async () => {
+    const malformedEnv: Env = {
+      ...accountEnv,
+      AESTRA_ENTITLEMENT_FIXTURES: JSON.stringify({
+        acct_supporter: {
+          license_id: "lic_bad",
+          tier: "Supporter",
+          plugins: ["com.aestra.rumble"],
+          features: "rumble",
+          revocation_epoch: 0,
+        },
+      }),
+    };
+    const response = await worker.fetch(new Request("https://example.test/v1/account/entitlements/refresh", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer supporter-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(accountRefreshRequest),
+    }), malformedEnv);
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "entitlement_malformed",
+      },
+    });
   });
 });

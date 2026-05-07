@@ -22,6 +22,8 @@ if(TARGET AestraLicense)
     add_test(NAME SecLicenseGateSignature COMMAND SecLicenseGateSignature)
     add_executable(SecLicenseWorkerFixture license_worker_fixture_verification.cpp)
     add_test(NAME SecLicenseWorkerFixture COMMAND SecLicenseWorkerFixture)
+    add_executable(SecLicenseRefreshClient license_refresh_client_test.cpp)
+    add_test(NAME SecLicenseRefreshClient COMMAND SecLicenseRefreshClient)
     add_executable(SecAccountSessionCache account_session_cache_test.cpp)
     add_test(NAME SecAccountSessionCache COMMAND SecAccountSessionCache)
     add_executable(SecEntitlementStore entitlement_store_test.cpp)
@@ -213,6 +215,11 @@ if(TARGET AestraLicense)
         ${REPO_ROOT}/AestraLicense/include
     )
     target_link_libraries(SecLicenseWorkerFixture PRIVATE AestraLicense)
+
+    target_include_directories(SecLicenseRefreshClient PRIVATE
+        ${REPO_ROOT}/AestraLicense/include
+    )
+    target_link_libraries(SecLicenseRefreshClient PRIVATE AestraLicense)
 
     target_include_directories(SecAccountSessionCache PRIVATE
         ${REPO_ROOT}/AestraLicense/include

@@ -4,6 +4,11 @@ export type Env = {
   AESTRA_LICENSE_SIGNING_PRIVATE_KEY: string;
   AESTRA_ADMIN_API_KEY: string;
   AESTRA_SIGNING_KEY_ID?: string;
+  AESTRA_ACCOUNT_FIXTURE_SESSIONS?: string;
+  AESTRA_ENTITLEMENT_FIXTURES?: string;
+  AESTRA_STORAGE_MODE?: "fixture" | "d1";
+  AESTRA_LICENSE_DB?: D1Database;
+  AESTRA_LOGIN_MAILER_MODE?: "fixture" | "configured";
 };
 
 export function utf8Encode(value: string): Uint8Array {
