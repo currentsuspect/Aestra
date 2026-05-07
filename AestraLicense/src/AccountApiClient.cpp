@@ -239,6 +239,11 @@ AccountApiConfig accountApiConfigFromEnvironment() {
     if (const char* envUrl = std::getenv("AESTRA_ACCOUNT_API_BASE_URL")) {
         config.baseUrl = envUrl;
     }
+#ifdef AESTRA_DEV_WORKER_URL
+    else {
+        config.baseUrl = AESTRA_DEV_WORKER_URL;
+    }
+#endif
     return config;
 }
 
