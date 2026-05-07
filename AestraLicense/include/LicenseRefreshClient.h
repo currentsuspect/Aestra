@@ -1,9 +1,13 @@
 #pragma once
 
+#include "HttpTransport.h"
+
 #include <string>
 
 namespace Aestra {
 namespace License {
+
+class IHttpTransport;
 
 enum class LicenseRefreshStatus {
     Success = 0,
@@ -37,7 +41,8 @@ public:
 
 class LicenseRefreshClient {
 public:
-    LicenseRefreshResult refresh(const LicenseRefreshRequest& request) const;
+    static LicenseRefreshResult refresh(const LicenseRefreshRequest& request, IHttpTransport& transport,
+                                         const std::string& baseUrl, const std::string& sessionToken);
 
     static LicenseRefreshResult parseRefreshResponse(const std::string& jsonText);
     static bool isUsableLeaseBlob(const LicenseRefreshResult& result);

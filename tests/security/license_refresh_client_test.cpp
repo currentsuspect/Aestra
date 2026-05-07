@@ -1,4 +1,5 @@
 #include "LicenseRefreshClient.h"
+#include "HttpTransport.h"
 
 #include <iostream>
 #include <string>
@@ -99,11 +100,11 @@ bool testRejectsUnsupportedFormat() {
 }
 
 bool testRefreshTransportRemainsUnavailable() {
-    LicenseRefreshClient client;
+    UnavailableHttpTransport transport;
     LicenseRefreshRequest request;
     request.userId = "user_refresh_1";
     request.deviceHash = "device_refresh_1";
-    const LicenseRefreshResult result = client.refresh(request);
+    const LicenseRefreshResult result = LicenseRefreshClient::refresh(request, transport, "", "");
 
     bool ok = true;
     ok &= expect(result.status == LicenseRefreshStatus::SyncUnavailable, "refresh transport is still unavailable");

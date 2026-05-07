@@ -1,6 +1,8 @@
 #include "LicenseGate.h"
 
 #include "AestraJSON.h"
+#include "HttpTransport.h"
+#include "LocalAccountCache.h"
 
 #include <algorithm>
 #include <array>
@@ -13,6 +15,7 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <mutex>
 #include <sstream>
 #include <string>
@@ -911,7 +914,49 @@ bool LicenseGate::canAccess(Feature feature) {
     return canAccessForTier(gateState().tier, feature);
 }
 
-void LicenseGate::refreshAsync() {}
+void LicenseGate::refreshAsync() {
+    LocalAccountCache cache;
+    const LocalAccountCacheLoadResult cached = cache.load();
+    if (cached.status != LocalAccountCacheLoadStatus::Loaded || cached.record.sessionToken.empty()) {
+        return;
+    }
+
+    std::unique_ptr<IHttpTransport> transport = createDefaultHttpTransport();
+    if (!transport) {
+        return;
+    }
+
+    std::string baseUrl;
+    if (const char* envUrl = std::getenv("AESTRA_ACCOUNT_API_BASE_URL")) {
+        baseUrl = envUrl;
+    }
+    if (baseUrl.empty()) {
+        return;
+    }
+
+    LicenseRefreshRequest request;
+    request.userId = cached.record.identity.userId;
+    request.deviceHash = currentDeviceHashForRefresh();
+
+    const LicenseRefreshResult result =
+        LicenseRefreshClient::refresh(request, *transport, baseUrl, cached.record.sessionToken);
+    if (result.status != LicenseRefreshStatus::Success) {
+        return;
+    }
+
+    std::string installMessage;
+    if (!LicenseGateLeaseInstaller{}.installLeaseBlob(result.leaseBlob, installMessage)) {
+        return;
+    }
+
+    LeaseRecord lease;
+    if (!parseLeasePayload(result.canonical, lease)) {
+        return;
+    }
+    const EntitlementStatus status =
+        nowSeconds() > lease.expiresAt ? EntitlementStatus::Grace : EntitlementStatus::Valid;
+    applyLeaseToGateState(lease, status);
+}
 
 bool LicenseGate::installLeaseBlobForRefresh(const std::string& leaseBlob, std::string& message) {
     std::vector<unsigned char> blob(leaseBlob.begin(), leaseBlob.end());
