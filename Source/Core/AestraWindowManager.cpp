@@ -271,7 +271,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         // RecoveryDialog is modal - consume all key events when visible
         if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
             AestraUI::NUIKeyEvent event;
-            event.keyCode = static_cast<AestraUI::NUIKeyCode>(key);
+            event.keyCode = convertToNUIKeyCode(key);
             event.pressed = pressed;
             m_recoveryDialog->onKeyEvent(event);
             return; // Block all other key handling while recovery dialog is shown
@@ -281,7 +281,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         // key latches and controls can observe the full key lifecycle.
         if (m_content) {
             AestraUI::NUIKeyEvent event;
-            event.keyCode = static_cast<AestraUI::NUIKeyCode>(key);
+            event.keyCode = convertToNUIKeyCode(key);
             event.pressed = pressed;
             event.released = !pressed;
             event.modifiers = m_keyModifiers;
