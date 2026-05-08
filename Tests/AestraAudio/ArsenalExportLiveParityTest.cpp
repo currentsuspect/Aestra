@@ -144,7 +144,7 @@ ScenarioResult runScenario(const std::filesystem::path& tempRoot,
     engine.setBufferConfig(kBlockSize, kChannels);
     engine.setTrackManager(tm);
     engine.setBPM(static_cast<float>(kBpm));
-    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*tm, static_cast<double>(kSampleRate)));
+    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*tm));
     engine.setUnitManager(&tm->getUnitManager());
     engine.setPatternPlaybackEngine(&tm->getPatternPlaybackEngine());
     engine.setPatternPlaybackMode(true, kRenderBeats);
@@ -266,7 +266,7 @@ void runMixedScenario(const std::filesystem::path& tempRoot, float trackVolume) 
     engine.setBufferConfig(kBlockSize, kChannels);
     engine.setTrackManager(tm);
     engine.setBPM(static_cast<float>(kBpm));
-    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*tm, static_cast<double>(kSampleRate)));
+    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*tm));
     engine.setUnitManager(&tm->getUnitManager());
     engine.setPatternPlaybackEngine(&tm->getPatternPlaybackEngine());
     engine.setPatternPlaybackMode(true, kRenderBeats);
@@ -389,7 +389,7 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
     engine.setBufferConfig(kBlockSize, kChannels);
     engine.setTrackManager(tm);
     engine.setBPM(static_cast<float>(kBpm));
-    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*tm, static_cast<double>(kSampleRate)));
+    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*tm));
     engine.setUnitManager(&tm->getUnitManager());
     engine.setPatternPlaybackEngine(&tm->getPatternPlaybackEngine());
     engine.setPatternPlaybackMode(true, kRenderBeats);
