@@ -5,7 +5,8 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iostream>
+#include "AestraLog.h"
+#include "AestraDebug.h"
 #include <limits>
 
 namespace Aestra {
@@ -57,8 +58,8 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) 
         // In the current implementation, lane index usually corresponds to mixer channel index.
         for (size_t laneIdx = 0; laneIdx < snapshot->lanes.size(); ++laneIdx) {
             if (laneIdx >= graph.tracks.size()) {
-                std::cerr << "[AudioGraphBuilder] Warning: snapshot has more lanes (" << snapshot->lanes.size()
-                          << ") than mixer tracks (" << graph.tracks.size() << "). Extra lanes dropped.\n";
+                AESTRA_DEBUG_ONLY(std::cerr << "[AudioGraphBuilder] Warning: snapshot has more lanes (" << snapshot->lanes.size()
+                          << ") than mixer tracks (" << graph.tracks.size() << "). Extra lanes dropped.\n");
                 break;
             }
 
@@ -70,13 +71,13 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) 
                     continue;
 
                 ClipRenderState clip;
-                // ClipRuntimeInfo.audioData is a raw pointer to AudioBufferData.
-                // AudioGraph needs a shared_ptr to AudioBuffer for lifetime management,
-                // but currently it just takes the raw pointer from the snapshot's buffer.
-                // We'll bridge this by assuming SourceManager keeps the buffers alive.
+                // ClipRenderState.bufferOwner holds a shared_ptr<AudioBufferData>
+                // that extends the buffer's lifetime independently of SourceManager.
+                // audioData is extracted from the same buffer as a raw pointer for hot-path use.
 
                 if (clipInfo.isAudio()) {
                     clip.audioData = clipInfo.audioData->interleavedData.data();
+                    clip.bufferOwner = clipInfo.sharedAudioData;
                     clip.totalFrames = clipInfo.audioData->numFrames;
                     clip.sourceSampleRate = static_cast<double>(clipInfo.sourceSampleRate);
                     clip.channels = clipInfo.sourceChannels;
