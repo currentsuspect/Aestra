@@ -95,6 +95,13 @@ public:
 
     /**
      * @brief Clear all sources
+     *
+     * No mutex required: ClipSource buffers are now co-owned via
+     * shared_ptr<AudioBufferData> held by ClipRenderState in each live AudioGraph.
+     * When clear() destroys all ClipSource objects, the shared_ptr refcounts held
+     * by any in-flight AudioGraph keep AudioBufferData alive until the graph is
+     * replaced. The atomic swap in EngineState ensures the audio thread never
+     * sees a partially-constructed graph.
      */
     void clear() {
         m_sources.clear();

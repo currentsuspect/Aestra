@@ -24,7 +24,6 @@ namespace Audio {
 namespace {
 static constexpr double PI_D = 3.14159265358979323846;
 static constexpr double QUARTER_PI_D = PI_D * 0.25;
-static constexpr uint64_t CLIP_EDGE_FADE_SAMPLES = 128;
 
 inline double dbToLinearD(double db) {
     if (db <= -90.0)
@@ -148,6 +147,9 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
     const double outputRate = static_cast<double>(ctx.sampleRate);
     double* dstBase = outputBuffer + bufferOffset * 2;
 
+    // Cache loop-invariant atomic before clip loop — avoids redundant loads per clip.
+    const auto cachedInterpQuality = engineRef.getInterpolationQuality();
+
     for (const auto& clip : clips) {
         if (!clip.audioData || blockEnd <= clip.startSample || blockStart >= clip.endSample)
             continue;
@@ -171,37 +173,125 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
         double* dst = dstBase + localOffset * 2;
         if (std::abs(ratio - 1.0) < 1e-9) {
             const float* src = clip.audioData + static_cast<uint64_t>(phase) * 2;
-            for (uint32_t i = 0; i < framesToRender; ++i) {
-                double fade = 1.0;
-                if (start + i < clip.startSample + CLIP_EDGE_FADE_SAMPLES)
-                    fade = std::min(fade, (double)(start + i - clip.startSample) / CLIP_EDGE_FADE_SAMPLES);
-                if (start + i + CLIP_EDGE_FADE_SAMPLES > clip.endSample)
-                    fade = std::min(fade, (double)(clip.endSample - (start + i)) / CLIP_EDGE_FADE_SAMPLES);
-                dst[i * 2] += (double)src[i * 2] * clip.gain * fade;
-                dst[i * 2 + 1] += (double)src[i * 2 + 1] * clip.gain * fade;
+            const double clipGainD = static_cast<double>(clip.gain);
+
+            // Precompute fade region boundaries for this clip/block intersection.
+            const uint32_t fadeInFrames =
+                (start < clip.startSample + CLIP_EDGE_FADE_SAMPLES)
+                    ? static_cast<uint32_t>(std::min(static_cast<uint64_t>(framesToRender),
+                                                     clip.startSample + CLIP_EDGE_FADE_SAMPLES - start))
+                    : 0;
+
+            const uint32_t fadeOutBegin =
+                (start + framesToRender > clip.endSample - CLIP_EDGE_FADE_SAMPLES)
+                    ? static_cast<uint32_t>(std::max(static_cast<int64_t>(0),
+                                                     static_cast<int64_t>(clip.endSample - CLIP_EDGE_FADE_SAMPLES) -
+                                                         static_cast<int64_t>(start)))
+                    : framesToRender;
+
+            const uint32_t bodyBegin = fadeInFrames;
+            const uint32_t bodyEnd = std::min(fadeOutBegin, framesToRender);
+
+            if (fadeInFrames > 0) {
+                for (uint32_t i = 0; i < fadeInFrames; ++i) {
+                    const double fade =
+                        static_cast<double>(start + i - clip.startSample) / CLIP_EDGE_FADE_SAMPLES;
+                    dst[i * 2] += static_cast<double>(src[i * 2]) * clipGainD * fade;
+                    dst[i * 2 + 1] += static_cast<double>(src[i * 2 + 1]) * clipGainD * fade;
+                }
+            }
+
+            if (bodyEnd > bodyBegin) {
+                for (uint32_t i = bodyBegin; i < bodyEnd; ++i) {
+                    dst[i * 2] += static_cast<double>(src[i * 2]) * clipGainD;
+                    dst[i * 2 + 1] += static_cast<double>(src[i * 2 + 1]) * clipGainD;
+                }
+            }
+
+            if (framesToRender > std::max(fadeOutBegin, fadeInFrames)) {
+                const uint32_t fadeOutStart = std::max(fadeOutBegin, fadeInFrames);
+                for (uint32_t i = fadeOutStart; i < framesToRender; ++i) {
+                    const double fade =
+                        static_cast<double>(clip.endSample - (start + i)) / CLIP_EDGE_FADE_SAMPLES;
+                    dst[i * 2] += static_cast<double>(src[i * 2]) * clipGainD * fade;
+                    dst[i * 2 + 1] += static_cast<double>(src[i * 2 + 1]) * clipGainD * fade;
+                }
             }
         } else {
-            auto processResample = [&](auto interpolateFunc) {
-                for (uint32_t i = 0; i < framesToRender; ++i) {
+            using InterpFn = void (*)(const float*, int64_t, double, float&, float&);
+            InterpFn interpolateFunc = Interpolators::Sinc64Turbo::interpolate;
+            switch (cachedInterpQuality) {
+            case Interpolators::InterpolationQuality::Cubic:
+                interpolateFunc = Interpolators::CubicInterpolator::interpolate;
+                break;
+            case Interpolators::InterpolationQuality::Sinc8:
+                interpolateFunc = Interpolators::Sinc8Interpolator::interpolate;
+                break;
+            case Interpolators::InterpolationQuality::Sinc16:
+                interpolateFunc = Interpolators::Sinc16Interpolator::interpolate;
+                break;
+            case Interpolators::InterpolationQuality::Sinc32:
+                interpolateFunc = Interpolators::Sinc32Turbo::interpolate;
+                break;
+            case Interpolators::InterpolationQuality::Sinc64:
+                interpolateFunc = Interpolators::Sinc64Turbo::interpolate;
+                break;
+            default: {
+                static_assert(static_cast<int>(Interpolators::InterpolationQuality::Sinc64) == 4,
+                             "All InterpolationQuality values must be handled above");
+                interpolateFunc = Interpolators::Sinc64Turbo::interpolate;
+                break;
+            }
+            }
+
+            const uint32_t fadeInFrames =
+                (start < clip.startSample + CLIP_EDGE_FADE_SAMPLES)
+                    ? static_cast<uint32_t>(std::min(static_cast<uint64_t>(framesToRender),
+                                                     clip.startSample + CLIP_EDGE_FADE_SAMPLES - start))
+                    : 0;
+
+            const uint32_t fadeOutBegin =
+                (start + framesToRender > clip.endSample - CLIP_EDGE_FADE_SAMPLES)
+                    ? static_cast<uint32_t>(std::max(static_cast<int64_t>(0),
+                                                     static_cast<int64_t>(clip.endSample - CLIP_EDGE_FADE_SAMPLES) -
+                                                         static_cast<int64_t>(start)))
+                    : framesToRender;
+
+            const uint32_t bodyBegin = fadeInFrames;
+            const uint32_t bodyEnd = std::min(fadeOutBegin, framesToRender);
+
+            if (fadeInFrames > 0) {
+                for (uint32_t i = 0; i < fadeInFrames; ++i) {
+                    const double fade = static_cast<double>(start + i - clip.startSample) / CLIP_EDGE_FADE_SAMPLES;
                     float outL, outR;
                     interpolateFunc(clip.audioData, clip.totalFrames, phase, outL, outR);
-                    double fade = 1.0;
-                    if (start + i < clip.startSample + CLIP_EDGE_FADE_SAMPLES)
-                        fade = std::min(fade, (double)(start + i - clip.startSample) / CLIP_EDGE_FADE_SAMPLES);
-                    if (start + i + CLIP_EDGE_FADE_SAMPLES > clip.endSample)
-                        fade = std::min(fade, (double)(clip.endSample - (start + i)) / CLIP_EDGE_FADE_SAMPLES);
-                    dst[i * 2] += (double)outL * clip.gain * fade;
-                    dst[i * 2 + 1] += (double)outR * clip.gain * fade;
+                    dst[i * 2] += static_cast<double>(outL) * clip.gain * fade;
+                    dst[i * 2 + 1] += static_cast<double>(outR) * clip.gain * fade;
                     phase += ratio;
                 }
-            };
-            auto q = engineRef.getInterpolationQuality();
-            if (q == Interpolators::InterpolationQuality::Cubic)
-                processResample(Interpolators::CubicInterpolator::interpolate);
-            else if (q == Interpolators::InterpolationQuality::Sinc64)
-                processResample(Interpolators::Sinc64Turbo::interpolate);
-            else
-                processResample(Interpolators::Sinc32Turbo::interpolate);
+            }
+
+            if (bodyEnd > bodyBegin) {
+                for (uint32_t i = bodyBegin; i < bodyEnd; ++i) {
+                    float outL, outR;
+                    interpolateFunc(clip.audioData, clip.totalFrames, phase, outL, outR);
+                    dst[i * 2] += static_cast<double>(outL) * clip.gain;
+                    dst[i * 2 + 1] += static_cast<double>(outR) * clip.gain;
+                    phase += ratio;
+                }
+            }
+
+            if (framesToRender > std::max(fadeOutBegin, fadeInFrames)) {
+                const uint32_t fadeOutStart = std::max(fadeOutBegin, fadeInFrames);
+                for (uint32_t i = fadeOutStart; i < framesToRender; ++i) {
+                    const double fade = static_cast<double>(clip.endSample - (start + i)) / CLIP_EDGE_FADE_SAMPLES;
+                    float outL, outR;
+                    interpolateFunc(clip.audioData, clip.totalFrames, phase, outL, outR);
+                    dst[i * 2] += static_cast<double>(outL) * clip.gain * fade;
+                    dst[i * 2 + 1] += static_cast<double>(outR) * clip.gain * fade;
+                    phase += ratio;
+                }
+            }
         }
     }
 }

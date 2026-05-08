@@ -41,6 +41,8 @@ public:
         bool isOffline{false};          // If true, skip real-time side effects (metering, etc)
     };
 
+static constexpr uint32_t CLIP_EDGE_FADE_SAMPLES = 128;
+
     AudioRenderer();
     ~AudioRenderer();
 
