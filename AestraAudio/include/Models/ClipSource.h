@@ -60,6 +60,8 @@ public:
 
     const AudioBufferData* getRawBuffer() const { return m_buffer.get(); }
 
+    std::shared_ptr<const AudioBufferData> getSharedBuffer() const { return m_buffer; }
+
     std::shared_ptr<AudioBufferData> getBuffer() const { return m_buffer; }
 
     const std::string& getFilePath() const { return m_filePath; }

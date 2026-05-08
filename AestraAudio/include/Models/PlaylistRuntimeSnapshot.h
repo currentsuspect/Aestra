@@ -4,6 +4,7 @@
 #include "TimeTypes.h"
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace Aestra {
@@ -19,6 +20,7 @@ class SourceManager;
 struct ClipRuntimeInfo {
     // Audio data pointer (owned by SourceManager)
     AudioBufferData* audioData{nullptr};
+    std::shared_ptr<const AudioBufferData> sharedAudioData;
 
     // Timing (in project samples)
     uint64_t startTime{0};   // Absolute start position

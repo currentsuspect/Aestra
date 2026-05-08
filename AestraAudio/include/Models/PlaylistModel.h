@@ -402,6 +402,7 @@ public:
                         auto& audioPayload = std::get<AudioSlicePayload>(pattern->payload);
                         if (auto* source = sources.getSource(audioPayload.audioSourceId)) {
                             clipInfo.audioData = const_cast<AudioBufferData*>(source->getRawBuffer());
+                            clipInfo.sharedAudioData = source->getSharedBuffer();
                             if (clipInfo.audioData) {
                                 clipInfo.sourceSampleRate = clipInfo.audioData->sampleRate;
                                 clipInfo.sourceChannels = clipInfo.audioData->numChannels;

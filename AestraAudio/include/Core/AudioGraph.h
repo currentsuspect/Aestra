@@ -11,6 +11,7 @@ namespace Aestra {
 namespace Audio {
 
 struct AudioBuffer; // Forward declaration (defined in SamplePool.h)
+struct AudioBufferData;
 class EffectChain;  // Forward declaration
 
 /**
@@ -21,6 +22,7 @@ class EffectChain;  // Forward declaration
  */
 struct ClipRenderState {
     std::shared_ptr<const AudioBuffer> buffer; // Owns audioData lifetime for the snapshot
+    std::shared_ptr<const AudioBufferData> bufferOwner;
     const float* audioData{nullptr};           // Interleaved stereo (engine format)
     uint64_t startSample{0};                   // Absolute project sample (engine rate)
     uint64_t endSample{0};                     // Exclusive end
