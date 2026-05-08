@@ -377,7 +377,7 @@ static RunMetrics runScenarioProject(const Scenario& sc) {
     trackManager->setPosition(loadRes.playhead);
     engine.setGlobalSamplePos(static_cast<uint64_t>(loadRes.playhead * static_cast<double>(sc.sampleRate)));
 
-    auto graph = AudioGraphBuilder::buildFromTrackManager(*trackManager, static_cast<double>(sc.sampleRate));
+    auto graph = AudioGraphBuilder::buildFromTrackManager(*trackManager);
     engine.setGraph(graph);
 
     engine.setTransportPlaying(true);

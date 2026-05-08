@@ -53,7 +53,7 @@ void PlaybackGraphController::rebuildGraph(double sampleRate) {
         return;
     }
 
-    auto graph = AudioGraphBuilder::buildFromTrackManager(*m_trackManager, sampleRate);
+    auto graph = AudioGraphBuilder::buildFromTrackManager(*m_trackManager);
     m_engine->setGraph(graph);
 
     if (auto slotMap = m_trackManager->getChannelSlotMapShared()) {

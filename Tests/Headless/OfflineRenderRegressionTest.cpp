@@ -155,7 +155,7 @@ void configureEngineFixture(AudioEngine& engine, const std::shared_ptr<TrackMana
     engine.setBufferConfig(512, kChannels);
     engine.setTrackManager(trackManager);
     engine.setBPM(static_cast<float>(kBpm));
-    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*trackManager, static_cast<double>(kSampleRate)));
+    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*trackManager));
     engine.initialize();
 }
 

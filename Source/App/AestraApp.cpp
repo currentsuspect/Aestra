@@ -996,8 +996,7 @@ ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& 
             controller->requestRebuild(Aestra::Audio::PlaybackGraphController::GraphDirtyReason::ProjectLoaded);
             controller->drainIfDirty(m_audioController->getSampleRate());
         } else if (m_content->getTrackManager()) {
-            auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager(),
-                                                                  m_audioController->getSampleRate());
+            auto graph = AudioGraphBuilder::buildFromTrackManager(*m_content->getTrackManager());
             m_audioController->getEngine()->setGraph(graph);
             m_content->getTrackManager()->rebuildAndPushSnapshot();
         }

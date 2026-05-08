@@ -19,9 +19,8 @@ public:
      * @brief Build a render graph from the current TrackManager state.
      *
      * @param trackManager Source track manager (UI/engine thread)
-     * @param outputSampleRate Target sample rate for rendering (engine/device rate)
      */
-    static AudioGraph buildFromTrackManager(TrackManager& trackManager, double outputSampleRate);
+    static AudioGraph buildFromTrackManager(TrackManager& trackManager);
 };
 
 } // namespace Audio

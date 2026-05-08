@@ -27,6 +27,13 @@ constexpr double kBpm = 120.0;
 constexpr double kDurationSeconds = 0.25;
 constexpr double kDurationBeats = 1.0;
 
+void drainGraphDirty(TrackManager& trackManager, AudioEngine& engine) {
+    PlaybackGraphController ctrl;
+    ctrl.setTrackManager(&trackManager);
+    ctrl.setAudioEngine(&engine);
+    ctrl.drainIfDirty(static_cast<double>(kSampleRate));
+}
+
 class TestGainPlugin final : public IPluginInstance {
 public:
     explicit TestGainPlugin(float gain)
@@ -136,7 +143,7 @@ void configureEngine(AudioEngine& engine, const std::shared_ptr<TrackManager>& t
     if (auto slotMap = trackManager->getChannelSlotMapShared()) {
         engine.setChannelSlotMap(slotMap);
     }
-    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*trackManager, static_cast<double>(kSampleRate)));
+    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*trackManager));
     engine.initialize();
 }
 

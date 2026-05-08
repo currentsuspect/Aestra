@@ -11,17 +11,7 @@
 namespace Aestra {
 namespace Audio {
 
-namespace {
-uint64_t safeSecondsToSamples(long double seconds, double sampleRate) {
-    const long double maxSamples = static_cast<long double>(std::numeric_limits<uint64_t>::max());
-    const long double samples = seconds * static_cast<long double>(sampleRate);
-    if (samples > maxSamples)
-        return std::numeric_limits<uint64_t>::max();
-    return static_cast<uint64_t>(std::llround(samples));
-}
-} // namespace
-
-AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, double outputSampleRate) {
+AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) {
     AudioGraph graph;
     const size_t channelCount = trackManager.getChannelCount();
     graph.tracks.reserve(channelCount);
@@ -47,7 +37,7 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, 
         // Copy Routing
         trackState.mainOutputId = channel->getMainOutputId();
         trackState.sends = channel->getSends();
-        trackState.effectChainSnapshot = channel->getEffectChain().getSnapshot();
+        trackState.effectChainSnapshot = channel->getEffectChainSnapshot();
 
         graph.tracks.push_back(std::move(trackState));
     }
@@ -61,12 +51,16 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, 
     auto snapshot = playlist.buildRuntimeSnapshot(patterns, sources);
     if (snapshot) {
         uint64_t maxEndSample = 0;
+        double projectSampleRate = playlist.getProjectSampleRate();
 
         // Map snapshot lanes to mixer tracks.
         // In the current implementation, lane index usually corresponds to mixer channel index.
         for (size_t laneIdx = 0; laneIdx < snapshot->lanes.size(); ++laneIdx) {
-            if (laneIdx >= graph.tracks.size())
+            if (laneIdx >= graph.tracks.size()) {
+                std::cerr << "[AudioGraphBuilder] Warning: snapshot has more lanes (" << snapshot->lanes.size()
+                          << ") than mixer tracks (" << graph.tracks.size() << "). Extra lanes dropped.\n";
                 break;
+            }
 
             auto& trackState = graph.tracks[laneIdx];
             const auto& laneInfo = snapshot->lanes[laneIdx];
@@ -93,7 +87,6 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, 
 
                 // Convert sourceStart (Project Rate) to sampleOffset (Source Rate)
                 // Use double precision to prevent audio popping due to sub-sample drift
-                double projectSampleRate = playlist.getProjectSampleRate();
                 if (projectSampleRate > 0.0 && clip.sourceSampleRate > 0.0) {
                     clip.sampleOffset =
                         static_cast<double>(clipInfo.sourceStart) * (clip.sourceSampleRate / projectSampleRate);
@@ -110,7 +103,7 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager, 
 
                 trackState.clips.push_back(std::move(clip));
             }
-            trackState.automationCurves = laneInfo.automationCurves;
+            trackState.automationCurves = std::move(laneInfo.automationCurves);
         }
 
         graph.timelineEndSample = maxEndSample;
