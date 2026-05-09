@@ -595,7 +595,7 @@ void RumbleInstance::handleMidiEvent(const Aestra::Audio::MidiBuffer::Event& eve
             m_voice.glideSourcePitch_hz = m_voice.glideTargetPitch_hz;
         }
 
-        m_voice.glideCurveExponent = mapGlideCurveExponent(getParameter(kParamGlideCurve));
+        m_voice.glideCurveExponent = mapGlideCurveExponent(m_smoothedParams[kParamGlideCurve]);
         const bool resetEnvelopes = getParameter(kParamRetriggerMode) < 0.5f;
         beginNote(note, velocity, resetEnvelopes);
         m_voice.noteIsHeld = true;
@@ -673,7 +673,7 @@ void RumbleInstance::handleNoteOff(uint8_t note) {
             m_voice.glideProgress = 1.0f;
             m_voice.glideSourcePitch_hz = m_voice.glideTargetPitch_hz;
         }
-        m_voice.glideCurveExponent = mapGlideCurveExponent(getParameter(kParamGlideCurve));
+        m_voice.glideCurveExponent = mapGlideCurveExponent(m_smoothedParams[kParamGlideCurve]);
         const bool resetEnvelopes = getParameter(kParamRetriggerMode) < 0.5f;
         beginNote(heldNote, heldVelocity, resetEnvelopes);
     }
@@ -706,6 +706,7 @@ void RumbleInstance::updateSmoothedParameters() {
         case kParamClickDecay:
         case kParamClickTone:
         case kParamGlideTime:
+        case kParamGlideCurve:
         case kParamFilterEnvAmount:
         case kParamFilterKeytrack:
             m_smoothedParams[i] += (target - m_smoothedParams[i]) * m_parameterSmoothingCoeff;
