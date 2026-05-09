@@ -164,7 +164,11 @@ public:
                 hpfYR = detR;
             }
 
-            const float detector = std::max(std::abs(detL), std::abs(detR));
+            const float powerInstant = (detL * detL + detR * detR) * 0.5f;
+            const float rmsCoeff = std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * kRmsWindowSec));
+            m_rmsEnvelope = powerInstant + rmsCoeff * (m_rmsEnvelope - powerInstant);
+            const float detector = std::sqrt(m_rmsEnvelope);
+
             const float attackCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * attackSec));
             const float releaseCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * releaseSec));
             const float coeff = detector > env ? attackCoeff : releaseCoeff;
@@ -378,6 +382,7 @@ private:
     static constexpr float kMinDb = -120.0f;
     static constexpr float kMaxSample = 16.0f;
     static constexpr uint32_t kBlockSize = 16;
+    static constexpr float kRmsWindowSec = 0.01f;
 
     void loadDefaults() {
         for (const auto& param : getParameters()) {
@@ -389,6 +394,7 @@ private:
 
     void resetRuntimeState() {
         m_env = 0.0f;
+        m_rmsEnvelope = 0.0f;
         m_hpfXL = 0.0f;
         m_hpfYL = 0.0f;
         m_hpfXR = 0.0f;
@@ -525,6 +531,7 @@ private:
     std::array<std::atomic<float>, kParamCount> m_params{};
 
     float m_env = 0.0f;
+    float m_rmsEnvelope = 0.0f;
     float m_hpfXL = 0.0f;
     float m_hpfYL = 0.0f;
     float m_hpfXR = 0.0f;
