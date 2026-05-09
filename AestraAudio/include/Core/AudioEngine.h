@@ -198,6 +198,16 @@ public:
     void setMasterGain(float gain) { m_masterGainTarget.store(gain, std::memory_order_relaxed); }
     /** @brief Get the master gain target. */
     float getMasterGain() const { return m_masterGainTarget.load(std::memory_order_relaxed); }
+
+    /** @brief Get count of NaN/Inf samples sanitized since last reset. */
+    uint64_t getNaNCount() const { return m_nanCount.load(std::memory_order_relaxed); }
+    /** @brief Get count of samples hard-clipped since last reset. */
+    uint64_t getClipCount() const { return m_clipCount.load(std::memory_order_relaxed); }
+    /** @brief Reset NaN and clip counters. */
+    void resetSignalCounters() {
+        m_nanCount.store(0, std::memory_order_relaxed);
+        m_clipCount.store(0, std::memory_order_relaxed);
+    }
     /** @brief Set global output headroom in decibels. */
     void setHeadroom(float db) { m_headroomLinear.store(std::pow(10.0f, db / 20.0f), std::memory_order_relaxed); }
     /** @brief Enable or disable the master safety limiter. Default: on. */
@@ -524,6 +534,10 @@ private:
     // Request MIDI panic (All Notes Off / All Sound Off) injection into unit MIDI buffers.
     std::atomic<bool> m_transportMidiPanicRequested{false};
     std::atomic<uint64_t> m_globalSamplePos{0};
+
+    // Signal integrity counters
+    std::atomic<uint64_t> m_nanCount{0};
+    std::atomic<uint64_t> m_clipCount{0};
 
     // Pre-allocated buffers - DOUBLE PRECISION for internal mixing
     std::vector<std::vector<double>> m_trackBuffersD;          // Double precision track buffers

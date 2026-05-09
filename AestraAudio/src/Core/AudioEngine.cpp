@@ -16,7 +16,9 @@
 #include "miniaudio.h"
 
 #include <algorithm>
+#include <cassert>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <queue>
@@ -874,11 +876,31 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     // This ensures that bouncing the same project twice produces identical bits.
     m_ditherRng.setSeed(static_cast<uint32_t>(m_globalSamplePos.load(std::memory_order_relaxed)) ^ 0x9E3779B9);
 
+    // Signal integrity counters (local, then atomic update at end)
+    uint32_t nanCount = 0;
+    uint32_t clipCount = 0;
+
     // Optimized output loop - minimal branches
     for (uint32_t i = 0; i < numFrames; ++i) {
         // Read from double buffer (apply master gain and preview ducking)
         double L = src[i * 2] * gain * duckGain;
         double R = src[i * 2 + 1] * gain * duckGain;
+
+        // Sanitize NaN/Inf BEFORE limiter (prevents state corruption)
+        if (std::isnan(L) || std::isinf(L)) {
+            L = 0.0;
+            nanCount++;
+#ifdef AESTRA_DEBUG
+            assert(false && "NaN/Inf detected in left channel output");
+#endif
+        }
+        if (std::isnan(R) || std::isinf(R)) {
+            R = 0.0;
+            nanCount++;
+#ifdef AESTRA_DEBUG
+            assert(false && "NaN/Inf detected in right channel output");
+#endif
+        }
 
         if (limiterOn) {
             m_safetyLimiter.process(L, R);
@@ -941,11 +963,28 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         m_loudnessState.blockEnergySum += (f2L * f2L) + (f2R * f2R);
         // -----------------------------------
 
+        // Hard clip as last resort (after limiter, before output)
+        L = std::clamp(L, -1.0, 1.0);
+        R = std::clamp(R, -1.0, 1.0);
+
+        // Track clipping events
+        if (std::abs(L) >= 0.999 || std::abs(R) >= 0.999) {
+            clipCount++;
+        }
+
         // Output as float
         outputBuffer[i * 2] = static_cast<float>(L);
         outputBuffer[i * 2 + 1] = static_cast<float>(R);
 
         gain += gainDelta;
+    }
+
+    // Update atomic counters (once per block, not per sample)
+    if (nanCount > 0) {
+        m_nanCount.fetch_add(nanCount, std::memory_order_relaxed);
+    }
+    if (clipCount > 0) {
+        m_clipCount.fetch_add(clipCount, std::memory_order_relaxed);
     }
 
     // Update smoothed gain state
