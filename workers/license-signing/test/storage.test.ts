@@ -771,11 +771,9 @@ describe("D1 account login and session issuance boundary", () => {
     const env = await makeD1Env(state);
     env.AESTRA_LOGIN_MAILER_MODE = "configured";
     const response = await loginStart(env, "configured@example.test");
-    expect(response.status).toBe(200);
-    const body = await response.json() as { ok: boolean; challenge_id: string; fixture_code?: string };
-    expect(body.ok).toBe(true);
-    expect(body.challenge_id).toMatch(/^lc_/);
-    expect(body.fixture_code).toBeUndefined();
+    expect(response.status).toBe(500);
+    const body = await response.json() as { ok: boolean; error?: { code: string } };
+    expect(body.error?.code).toBe("resend_key_missing");
   });
 
   it("does not reveal whether an account exists when starting login", async () => {

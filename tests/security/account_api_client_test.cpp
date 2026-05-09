@@ -529,7 +529,12 @@ bool testLoginFlowFull() {
 
     LocalAccountCache cache(cachePath);
     FakeLeaseInstaller installer;
-    EntitlementStore entitlements;
+    EntitlementProfile testProfile;
+    testProfile.tier = MembershipTier::Core;
+    testProfile.status = EntitlementStatus::Missing;
+    testProfile.offline = true;
+    testProfile.verified = false;
+    EntitlementStore entitlements([testProfile]() { return testProfile; });
     AccountApiClient apiClient(config, *transport);
     AccountService service(apiClient, cache, installer);
 

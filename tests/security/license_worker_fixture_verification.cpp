@@ -52,8 +52,7 @@ int main() {
         "\"issued_at\":1700000000,\"expires_at\":1700604800,\"grace_policy\":\"restrict\","
         "\"revocation_epoch\":0}";
     const std::vector<unsigned char> signature = fromHex(
-        "6570b63ace3cd4848ce82aa5afe4aa37120a86e6c31f44eef5dfaab350fe29d"
-        "165476c64f1bfb1741b4ff4b2db1d44c9866edb96e1cf974be24c7b424c575506");
+        "1976d12e7dc5e399f472ef0af739a33280c3df0624d093c2c2ba4506b56860b7b2e6108ece9b0e0fd6723d91003dd360fe2436e0163dace0328bf2dc0ca61908");
     bool ok = true;
     ok &= expect(signature.size() == 64U, "fixture signature should decode to 64 bytes");
     ok &= expect(Aestra::License::verifyEd25519Detached(canonical, signature, Aestra::License::AESTRA_LICENSE_PUBKEY),

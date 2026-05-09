@@ -930,6 +930,11 @@ void LicenseGate::refreshAsync() {
     if (const char* envUrl = std::getenv("AESTRA_ACCOUNT_API_BASE_URL")) {
         baseUrl = envUrl;
     }
+#ifdef AESTRA_DEV_WORKER_URL
+    else {
+        baseUrl = AESTRA_DEV_WORKER_URL;
+    }
+#endif
     if (baseUrl.empty()) {
         return;
     }
