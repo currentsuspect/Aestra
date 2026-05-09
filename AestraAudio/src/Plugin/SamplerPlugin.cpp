@@ -4,6 +4,7 @@
 #include "Plugin/BuiltInPlugins.h"
 #include "GarbageCollector.h"
 #include "IO/MiniAudioDecoder.h"
+#include "DSP/Interpolators.h"
 
 #include <algorithm>
 #include <cctype>
@@ -153,11 +154,29 @@ bool SamplerPlugin::loadSample(const std::string& path) {
         return false;
     }
 
+    // Convert planar to interleaved for Sinc64Turbo
+    // Decoder produces: [L0,L1,L2...,R0,R1,R2...] or [L0,L1,L2...] for mono
+    // Need: [L0,R0,L1,R1,L2,R2...] (always stereo for Sinc64Turbo)
+    const size_t numFrames = data.size() / std::max<uint32_t>(channels, 1);
+    std::vector<float> interleaved(numFrames * 2);
+    if (channels == 2) {
+        for (size_t i = 0; i < numFrames; ++i) {
+            interleaved[i * 2] = data[i];
+            interleaved[i * 2 + 1] = data[numFrames + i];
+        }
+    } else {
+        for (size_t i = 0; i < numFrames; ++i) {
+            interleaved[i * 2] = data[i];
+            interleaved[i * 2 + 1] = data[i];
+        }
+    }
+    data = std::move(interleaved);
+
     // Prepare new data container
     auto newData = std::make_shared<SampleData>();
     newData->data = std::move(data);
     newData->rate = rate;
-    newData->channels = channels;
+    newData->channels = 2;
     newData->path = path;
 
     // Atomic Swap (Thread-Safe, Lock-Free-ish)
@@ -257,8 +276,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     size_t eventCount = midiInput ? midiInput->getEventCount() : 0;
 
     const auto& sampleVec = currentData->data;
-    uint32_t channels = currentData->channels;
-    const double totalFrames = static_cast<double>(sampleVec.size() / std::max<uint32_t>(channels, 1));
+    // Data is now interleaved stereo (2 channels packed as L,R,L,R...)
+    const double totalFrames = static_cast<double>(sampleVec.size() / 2);
     if (totalFrames <= 1.0) {
         return;
     }
@@ -365,42 +384,20 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
                 continue;
             }
 
-            // Linear Interpolation
-            double pos = v.position;
-            uint64_t idx = (uint64_t)pos;
-            double frac = pos - idx;
-
-            // Safe sample fetching with Mono/Stereo support
-            // Check basic bounds for first channel
-            if (idx * channels < sampleVec.size()) {
-                float sL = sampleVec[idx * channels];
-                float sR =
-                    (channels > 1 && (idx * channels + 1 < sampleVec.size())) ? sampleVec[idx * channels + 1] : sL;
-
-                // Next sample (interpolating to)
-                float nL = 0.0f, nR = 0.0f;
-                const bool nextInWindow = static_cast<double>(idx + 1) < endFrame;
-                if (nextInWindow && (idx + 1) * channels < sampleVec.size()) {
-                    nL = sampleVec[(idx + 1) * channels];
-                    nR = (channels > 1 && ((idx + 1) * channels + 1 < sampleVec.size()))
-                             ? sampleVec[(idx + 1) * channels + 1]
-                             : nL;
-                } else {
-                    nL = loopEnabled ? sampleVec[static_cast<uint64_t>(startFrame) * channels] : 0.0f;
-                    if (channels > 1 && loopEnabled && static_cast<uint64_t>(startFrame) * channels + 1 < sampleVec.size()) {
-                        nR = sampleVec[static_cast<uint64_t>(startFrame) * channels + 1];
-                    } else {
-                        nR = loopEnabled ? nL : 0.0f;
-                    }
-                }
-
-                float outL = sL + frac * (nL - sL);
-                float outR = sR + frac * (nR - sR);
-
-                float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * voiceComp;
-                L += outL * gain;
-                R += outR * gain;
+            // Sinc64Turbo Interpolation (data is now interleaved)
+            float outL = 0.0f, outR = 0.0f;
+            if (v.position >= 0.0 && v.position < static_cast<double>(totalFrames)) {
+                Interpolators::Sinc64Turbo::interpolate(
+                    sampleVec.data(),        // interleaved stereo [L,R,L,R...]
+                    totalFrames,              // total frames (not samples)
+                    v.position,                // fractional position
+                    outL, outR                // output
+                );
             }
+
+            float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * voiceComp;
+            L += outL * gain;
+            R += outR * gain;
 
             // Advance
             v.position += v.playbackRate;

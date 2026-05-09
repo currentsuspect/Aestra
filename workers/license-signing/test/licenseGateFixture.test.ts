@@ -35,18 +35,19 @@ const fixtureLease: LeasePayload = {
 
 const expectedCanonical =
   "{\"license_id\":\"lic_worker_fixture_1\",\"user_id\":\"user_worker_fixture_1\",\"tier\":\"Supporter\",\"plugins\":[\"com.Aestrastudios.rumble\",\"com.Aestrastudios.experimental\"],\"features\":[\"rumble\",\"cloud_sync\"],\"device_hash\":\"v1:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:cccccccccccccccccccccccccccccccc:dddddddddddddddddddddddddddddddd\",\"issued_at\":1700000000,\"expires_at\":1700604800,\"grace_policy\":\"restrict\",\"revocation_epoch\":0}";
-const expectedPublicKeyHex = "03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8";
+const expectedPublicKeyHex = "bf30bfb9e66ff349bb96922b26e92fb860272adc2413f15b4052bc8b56800f58";
 const expectedSignatureHex =
-  "6570b63ace3cd4848ce82aa5afe4aa37120a86e6c31f44eef5dfaab350fe29d165476c64f1bfb1741b4ff4b2db1d44c9866edb96e1cf974be24c7b424c575506";
+  "1976d12e7dc5e399f472ef0af739a33280c3df0624d093c2c2ba4506b56860b7b2e6108ece9b0e0fd6723d91003dd360fe2436e0163dace0328bf2dc0ca61908";
 
 describe("LicenseGate cross-language fixture", () => {
   it("generates the exact canonical lease and signature verified by the C++ fixture test", async () => {
-    const seed = Uint8Array.from(Array.from({ length: 32 }, (_, i) => i));
-    const keyPair = nacl.sign.keyPair.fromSeed(seed);
+    const secret_b64 = "Vn6i+8aS0USH3ssQKlJYM5nDndtF5lBBtYO7qqlwqM6/ML+55m/zSbuWkism6S+4YCcq3CQT8VtAUryLVoAPWA==";
+    const secret = Uint8Array.from(atob(secret_b64), (c: string) => c.charCodeAt(0));
+    const keyPair = nacl.sign.keyPair.fromSecretKey(secret);
     const env: Env = {
-      AESTRA_LICENSE_SIGNING_PRIVATE_KEY: base64Encode(keyPair.secretKey),
+      AESTRA_LICENSE_SIGNING_PRIVATE_KEY: base64Encode(secret),
       AESTRA_ADMIN_API_KEY: "fixture-admin-key",
-      AESTRA_SIGNING_KEY_ID: "aestra-worker-fixture-v1",
+      AESTRA_SIGNING_KEY_ID: "AESTRA_DEV_TEST_PUBKEY_V3",
     };
 
     const canonical = canonicalizeLease(fixtureLease);
