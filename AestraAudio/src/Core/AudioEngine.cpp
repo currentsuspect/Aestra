@@ -52,7 +52,7 @@ inline double dbToLinearD(double db) {
     // UI uses -90 dB as "silence"
     if (db <= -90.0)
         return 0.0;
-    return static_cast<double>(Aestra::dbToGain(static_cast<float>(db)));
+    return std::pow(10.0, db / 20.0);
 }
 
 // Fast constant-power pan gains (replaces std::sin/cos)
