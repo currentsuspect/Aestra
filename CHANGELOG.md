@@ -9,6 +9,10 @@ The public repository is currently on a `0.x` pre-beta line. The release target 
 ### Fixed
 - Piano Roll: dropdown menu (Scale, Snap, Root Key) now responds to clicks — was using local bounds for positioning but global bounds for hit-testing
 
+### Audio Plugins
+- **AestraComp**: Replaced peak detection with RMS — the detector now responds to sustained loudness rather than transients, matching hardware compressor behavior. Uses power-domain IIR smoothing (10ms window).
+- **Rumble**: Smooth GlideCurve parameter during active glide — prevents audible discontinuities when curve is adjusted mid-glide.
+
 ### Device Resilience (EPIC K)
 
 - **Telemetry wiring**: Driver-level underrun/xrun counters now flow to engine telemetry across WASAPI Shared, WASAPI Exclusive, and RtAudioDriver
