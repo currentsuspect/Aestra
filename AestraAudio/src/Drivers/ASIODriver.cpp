@@ -459,9 +459,6 @@ ASIO::ASIOTime* ASIODriver::asioBufferSwitch(long doubleBufferIndex, long direct
     return nullptr;
 }
 
-// Ensure no stray definitions follow this block
-void ASIODriver::convertOutput(long index, const float* src, size_t frames) {}
-
 void ASIODriver::asioSampleRateDidChange(double sRate) {
     m_sampleRate = sRate;
 }

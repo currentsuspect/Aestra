@@ -60,7 +60,6 @@ private:
 
     // Format conversion helpers
     void convertInput(long index, float* dest, size_t frames);
-    void convertOutput(long index, const float* src, size_t frames);
 
     // Member Variables
     std::string m_driverName = "ASIO Wrapper";
