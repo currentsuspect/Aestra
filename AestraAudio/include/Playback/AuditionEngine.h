@@ -184,7 +184,7 @@ public:
     double getDurationSeconds() const;
 
     /// Get current source (for visualization)
-    std::shared_ptr<ClipSource> getCurrentSource() const { return m_currentSource; }
+    std::shared_ptr<ClipSource> getCurrentSource() const;
 
     // === DSP Chain ===
 
@@ -237,7 +237,7 @@ public:
 
 private:
     void loadCurrentTrack(bool startPlayback);
-    // Queue
+    // Queue (UI thread only - no RT access)
     std::vector<AuditionQueueItem> m_queue;
     int32_t m_currentIndex{-1};
     mutable std::mutex m_queueMutex;
@@ -248,6 +248,11 @@ private:
     std::atomic<double> m_sampleRate{48000.0};
     std::atomic<double> m_cachedDurationSeconds{0.0};
     std::atomic<bool> m_trackTransitionPending{false};
+
+    // RT-safe source pointer (C++17 atomic shared_ptr via std::atomic_load/store)
+    // NOTE: C++20+ has std::atomic<std::shared_ptr<T>> with member .load()/.store()
+    //       C++17 requires free functions std::atomic_load_explicit/std::atomic_store_explicit
+    std::shared_ptr<ClipSource> m_currentSource;
 
     // DSP
     AuditionDSPPreset m_currentPreset{AuditionDSPPreset::Bypass()};
@@ -291,9 +296,6 @@ private:
     std::atomic<uint32_t> m_crossfadeMs{500};
     std::atomic<float> m_volume{1.0f};
     std::atomic<int> m_positionCallbackCounter{0};
-
-    // Audio source
-    std::shared_ptr<ClipSource> m_currentSource;
 
     // Callbacks
     std::function<void(const AuditionQueueItem&)> m_onTrackChanged;
