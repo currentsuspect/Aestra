@@ -47,12 +47,6 @@ const char* glyphTypeLabel(uint32_t type) {
     return type < 8 ? labels[type] : "Bell";
 }
 
-bool usesDiscreteCutSlope(uint32_t type) {
-    using FilterType = Aestra::Audio::Plugins::FilterType;
-    const auto filterType = static_cast<FilterType>(type);
-    return filterType == FilterType::LowCut || filterType == FilterType::HighCut;
-}
-
 float quantizeCutSlopeNorm(float norm) {
     static constexpr float kSlopeSteps[] = {0.0f, 1.0f / 3.0f, 2.0f / 3.0f, 1.0f};
     const float clamped = std::clamp(norm, 0.0f, 1.0f);

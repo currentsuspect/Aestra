@@ -547,7 +547,7 @@ void AudioSettingsPage::updateDriverList() {
     auto types = m_audioManager->getAvailableDriverTypes();
     
     // Map types to UI
-    for (int i = 0; i < types.size(); ++i) {
+    for (size_t i = 0; i < types.size(); ++i) {
         std::string name = "Unknown";
         if (types[i] == AudioDriverType::WASAPI_SHARED) name = "WASAPI Shared";
         else if (types[i] == AudioDriverType::WASAPI_EXCLUSIVE) name = "WASAPI Exclusive";

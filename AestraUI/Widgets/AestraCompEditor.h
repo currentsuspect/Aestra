@@ -19,6 +19,7 @@ public:
     void onRender(NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    using NUIComponent::onResize;
     void onResize() { layoutControls(); }
     void onResize(int width, int height) override;
     void setOnClose(std::function<void()> cb) { m_onClose = std::move(cb); }

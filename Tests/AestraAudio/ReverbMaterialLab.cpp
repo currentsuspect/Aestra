@@ -212,37 +212,6 @@ struct MaterialResult {
     std::string clampStatus;  // "clamped" | "not clamped" | "pre-existing vocal clamp case"
 };
 
-static std::vector<float> renderDry(const std::vector<float>& sig, float sampleRate,
-                                    float modeParam, float decay, float size, float diffusion) {
-    size_t n = sig.size();
-    std::vector<float> outL(n), outR(n);
-    AestraVerb verb;
-    verb.initialize(sampleRate, 256);
-    verb.setParameter(AestraVerb::kMode, modeParam);
-    verb.setParameter(AestraVerb::kDecay, decay);
-    verb.setParameter(AestraVerb::kSize, size);
-    verb.setParameter(AestraVerb::kDiffusion, diffusion);
-    verb.setParameter(AestraVerb::kModRate, 0.5f);
-    verb.setParameter(AestraVerb::kModDepth, 0.3f);
-    verb.setParameter(AestraVerb::kMix, 1.0f);
-    verb.setParameter(AestraVerb::kWidth, 0.7f);
-    verb.activate();
-
-    // Process in chunks
-    size_t chunkSize = 256;
-    for (size_t offset = 0; offset < n; offset += chunkSize) {
-        size_t frames = std::min(chunkSize, n - offset);
-        const float* inPtrs[2] = {sig.data() + offset, sig.data() + offset};
-        float* outPtrs[2] = {outL.data() + offset, outR.data() + offset};
-        verb.process(inPtrs, outPtrs, 2, 2, static_cast<uint32_t>(frames));
-    }
-
-    // Mono sum for single return (we'll use stereo in analysis)
-    std::vector<float> mono(n);
-    for (size_t i = 0; i < n; ++i) mono[i] = (outL[i] + outR[i]) * 0.5f;
-    return mono;
-}
-
 static MaterialResult analyzeMaterial(const std::string& name, const std::string& modeName,
                                       const std::vector<float>& left, const std::vector<float>& right,
                                       float sampleRate) {

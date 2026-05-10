@@ -24,6 +24,7 @@ public:
    
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    using NUIComponent::onResize;
     void onResize();
     
     // Callback when close button is clicked

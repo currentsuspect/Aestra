@@ -480,8 +480,8 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
         auto getSample = [&](int64_t index, uint32_t channel) -> float {
             if (index < 0)
                 index = 0;
-            if (index >= totalFrames)
-                index = totalFrames - 1u;
+            if (static_cast<uint64_t>(index) >= totalFrames)
+                index = static_cast<int64_t>(totalFrames) - 1;
 
             // Handle mono/stereo mapping inside access
             if (srcChannels == 1) {

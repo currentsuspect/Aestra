@@ -16,6 +16,7 @@ public:
     explicit AestraDelayEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+    using NUIComponent::onResize;
     void onResize() { layoutControls(); }
     void setOnClose(std::function<void()> cb) { m_onClose = std::move(cb); }
 
