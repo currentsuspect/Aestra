@@ -11,7 +11,7 @@
 namespace AestraUI {
 
 namespace {
-    constexpr float LABEL_H = 0.0f; // Labels are shown via tooltip to reduce strip noise.
+    constexpr float LABEL_H = 11.0f; // Micro-label below knob cap
 
     constexpr float ARC_START = 135.0f * 3.14159265f / 180.0f; // 7 o'clock
     constexpr float ARC_END = 405.0f * 3.14159265f / 180.0f;   // 5 o'clock (wrapping)
@@ -120,7 +120,7 @@ void UIMixerKnob::updateCachedText()
 const char* UIMixerKnob::label() const
 {
     if (m_type == UIMixerKnobType::Send) return "SEND";
-    if (m_type == UIMixerKnobType::Width) return "WIDTH"; // Or "SEP"
+    if (m_type == UIMixerKnobType::Width) return "WID";
     return (m_type == UIMixerKnobType::Trim) ? "TRIM" : "PAN";
 }
 
@@ -182,8 +182,8 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
     const float cy = b.y + knobAreaH * 0.5f;
     
     // Size tuning: make it slightly punchier
-    float r = std::min(b.width, knobAreaH) * 0.42f; 
-    r = std::clamp(r, 10.0f, 16.0f);
+    float r = std::min(b.width, knobAreaH) * 0.42f;
+    r = std::clamp(r, 7.0f, 16.0f);
 
     const bool hovered = isHovered() || m_dragging;
     
@@ -219,17 +219,17 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
     // 3. Knob Cap (Inner Circle)
     // Slightly smaller than the ring
     float capR = r * 0.75f;
-    
-    // Subtle gradient simulation via two fills (or assuming flat looks modern enough)
+
     // Flat modern look: Dark grey cap
     NUIColor capColor = m_bg;
     if (hovered) capColor = m_bgHover;
-    
-    // Add distinct drop shadow for depth
-    renderer.drawShadow(NUIRect{cx - capR, cy - capR, capR * 2, capR * 2}, 0, 2, 4, NUIColor(0,0,0,0.5f));
-    
+
+    // Drop shadow for depth — smaller blur when knob is tiny (three-knob row)
+    float shadowBlur = std::min(4.0f, capR * 0.5f);
+    renderer.drawShadow(NUIRect{cx - capR, cy - capR, capR * 2, capR * 2}, 0, 2, shadowBlur, NUIColor(0,0,0,0.5f));
+
     renderer.fillCircle({cx, cy}, capR, capColor);
-    
+
     // Edge highlight for 3D feel
     renderer.strokeCircle({cx, cy}, capR, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.1f));
 
@@ -242,9 +242,15 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
         cx + std::cos(ptrAng) * ptrLen,
         cy + std::sin(ptrAng) * ptrLen
     };
-    
+
     // White pointer for contrast
     renderer.drawLine(ptrStart, ptrEnd, 2.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+
+    // 5. Micro-label below knob
+    if (LABEL_H > 0.0f) {
+        NUIRect labelRect{b.x, b.y + knobAreaH, b.width, LABEL_H};
+        renderer.drawTextCentered(label(), labelRect, 9.5f, m_textSecondary.withAlpha(0.7f));
+    }
 
     if (m_dragging) {
         updateGlobalTooltip();

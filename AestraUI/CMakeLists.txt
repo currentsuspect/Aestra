@@ -120,6 +120,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIMixerFooter.cpp
     Widgets/UIMixerInspector.h
     Widgets/UIMixerInspector.cpp
+    Widgets/UIMixerPluginDropdown.h
+    Widgets/UIMixerPluginDropdown.cpp
     Widgets/UnitRow.h
     Widgets/UnitRow.cpp
     Widgets/UnitColorPicker.h
@@ -130,8 +132,6 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/PluginBrowserPanel.cpp
     Widgets/PluginUIController.h
     Widgets/PluginUIController.cpp
-    Widgets/PluginSelectorMenu.h
-    Widgets/PluginSelectorMenu.cpp
     Widgets/GenericPluginEditor.h
     Widgets/GenericPluginEditor.cpp
     Widgets/AestraEQEditor.h

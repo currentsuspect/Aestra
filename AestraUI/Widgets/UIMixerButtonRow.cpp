@@ -31,9 +31,10 @@ void UIMixerButtonRow::cacheThemeColors()
     m_textOnBright = theme.getColor("textPrimary");
     m_textOnRed = theme.getColor("textPrimary");
 
-    m_muteOn = theme.getColor("accentAmber");
-    m_soloOn = theme.getColor("accentCyan");
-    m_armOn = theme.getColor("error");
+    // Active glow colors (amber mute, yellow solo, red arm)
+    m_muteOn = NUIColor(1.0f, 0.75f, 0.2f, 1.0f);   // amber
+    m_soloOn = NUIColor(1.0f, 0.92f, 0.3f, 1.0f);   // yellow
+    m_armOn  = NUIColor(1.0f, 0.25f, 0.25f, 1.0f);  // red
 }
 
 void UIMixerButtonRow::layoutButtons()
@@ -131,8 +132,8 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
         NUIColor border = m_border;
 
         if (active) {
-            bg = theme.getColor("buttonBgActive").withAlpha(0.99f);
-            border = activeBg.withAlpha(0.30f);
+            bg = activeBg.withAlpha(0.18f);
+            border = activeBg.withAlpha(0.65f);
             textColor = (i == 2) ? m_textOnRed : m_textOnBright;
         } else if (hovered) {
             bg = theme.getColor("buttonBgHover").withAlpha(0.99f);
@@ -143,7 +144,12 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
         }
 
         if (pressed) {
-            bg = theme.getColor("buttonBgActive").withAlpha(0.99f);
+            bg = active ? activeBg.withAlpha(0.28f) : theme.getColor("buttonBgActive").withAlpha(0.99f);
+        }
+
+        // Active glow behind pill
+        if (active) {
+            renderer.drawGlow(visualRect, BTN_RADIUS, 0.6f, activeBg.withAlpha(0.45f));
         }
 
         renderer.drawShadow(visualRect, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));

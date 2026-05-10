@@ -617,8 +617,38 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     }
 
     renderer.fillRoundedRect(slotRect, 8.0f, bgColor);
-    renderer.strokeRoundedRect(slotRect, 8.0f, 1.0f, borderColor);
-    
+
+    // Dashed border for empty slots to signal droppability
+    if (slot.isEmpty && !isBeingDragged) {
+        const float dash = 4.0f;
+        const float gap = 3.0f;
+        const float seg = dash + gap;
+        const float margin = 2.0f;
+        const float lx = slotRect.x + margin;
+        const float rx = slotRect.x + slotRect.width - margin;
+        const float ty = slotRect.y + margin;
+        const float by = slotRect.y + slotRect.height - margin;
+        const NUIColor dashCol = isHovered ? Colors::accentPrimary.withAlpha(0.35f) : Colors::panelBorder.withAlpha(0.35f);
+        // Top edge
+        for (float x = lx; x < rx; x += seg) {
+            renderer.drawLine({x, ty}, {std::min(x + dash, rx), ty}, 1.0f, dashCol);
+        }
+        // Bottom edge
+        for (float x = lx; x < rx; x += seg) {
+            renderer.drawLine({x, by}, {std::min(x + dash, rx), by}, 1.0f, dashCol);
+        }
+        // Left edge
+        for (float y = ty; y < by; y += seg) {
+            renderer.drawLine({lx, y}, {lx, std::min(y + dash, by)}, 1.0f, dashCol);
+        }
+        // Right edge
+        for (float y = ty; y < by; y += seg) {
+            renderer.drawLine({rx, y}, {rx, std::min(y + dash, by)}, 1.0f, dashCol);
+        }
+    } else {
+        renderer.strokeRoundedRect(slotRect, 8.0f, 1.0f, borderColor);
+    }
+
     // DEBUG: Visual indicator for pending removal
     if (slot.pendingRemoval) {
         renderer.strokeRoundedRect(slotRect, 4.0f, 2.0f, NUIColor(1.0f, 0.0f, 0.0f, 0.8f));

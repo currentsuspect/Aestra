@@ -6,6 +6,7 @@
 #include "UIMixerMeter.h"
 #include "UIMixerStrip.h"
 #include "UIMixerInspector.h"
+#include "UIMixerPluginDropdown.h"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -74,6 +75,9 @@ private:
     float getChannelMaxScroll() const;
     void updateScrollFromMinimapX(float x);
 
+    void showPluginDropdown(uint32_t channelId);
+    void loadPluginToSelectedChannel(const std::string& pluginId);
+
     std::shared_ptr<Aestra::MixerViewModel> m_viewModel;
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
 
@@ -88,6 +92,9 @@ private:
 
     /// Inspector panel (pinned on the right, before master)
     std::shared_ptr<UIMixerInspector> m_inspector;
+
+    /// Plugin finder dropdown (topmost, shown on Add Insert click)
+    std::shared_ptr<UIMixerPluginDropdown> m_pluginDropdown;
 
     // Horizontal scroll offset for channel strips (pixels).
     float m_scrollX{0.0f};

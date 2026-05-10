@@ -46,7 +46,9 @@ void NUITextInput::onRender(NUIRenderer& renderer)
     }
 
     // Enhanced background with inner shadows and focus glow
-    drawEnhancedBackground(renderer);
+    if (backgroundVisible_) {
+        drawEnhancedBackground(renderer);
+    }
     
     if (hasSelection_)
     {
@@ -54,7 +56,10 @@ void NUITextInput::onRender(NUIRenderer& renderer)
     }
     
     // Placeholder should disappear on interaction (click/focus), not only after typing.
-    if (text_.empty() && !placeholderText_.empty() && !isFocused() && !isPressed_)
+    bool showPlaceholder = text_.empty() && !placeholderText_.empty()
+                           && (!isFocused() || showPlaceholderWhenFocused_)
+                           && !isPressed_;
+    if (showPlaceholder)
     {
         drawPlaceholder(renderer);
     }
@@ -192,6 +197,12 @@ void NUITextInput::setPlaceholderText(const std::string& placeholder)
     setDirty(true);
 }
 
+void NUITextInput::setShowPlaceholderWhenFocused(bool show)
+{
+    showPlaceholderWhenFocused_ = show;
+    setDirty(true);
+}
+
 void NUITextInput::setInputType(InputType type)
 {
     inputType_ = type;
@@ -295,6 +306,12 @@ void NUITextInput::setTextColor(const NUIColor& color)
 void NUITextInput::setBackgroundColor(const NUIColor& color)
 {
     backgroundColor_ = color;
+    setDirty(true);
+}
+
+void NUITextInput::setBackgroundVisible(bool visible)
+{
+    backgroundVisible_ = visible;
     setDirty(true);
 }
 
@@ -481,20 +498,20 @@ void NUITextInput::drawText(NUIRenderer& renderer)
     if (text_.empty()) return;
     
     NUIRect bounds = getBounds();
-    NUIRect textRect(bounds.x + padding_, bounds.y + padding_, 
-                    bounds.width - padding_ * 2, bounds.height - padding_ * 2);
-    
+    NUIRect textRect(bounds.x + padding_, bounds.y,
+                    bounds.width - padding_ * 2, bounds.height);
+
     // Get display text (masked for password)
     std::string displayText = text_;
     if (inputType_ == InputType::Password)
     {
         displayText = std::string(text_.length(), passwordCharacter_);
     }
-    
+
     auto& themeManager = NUIThemeManager::getInstance();
     float fontSize = themeManager.getFontSize("m");
     float textY = std::round(renderer.calculateTextY(textRect, fontSize));
-    
+
     renderer.drawText(displayText, NUIPoint(std::round(textRect.x), textY), fontSize, textColor_);
 }
 
@@ -503,9 +520,9 @@ void NUITextInput::drawSelection(NUIRenderer& renderer)
     if (!hasSelection_ || charWidths_.empty()) return;
     
     NUIRect bounds = getBounds();
-    NUIRect textRect(bounds.x + padding_, bounds.y + padding_, 
-                    bounds.width - padding_ * 2, bounds.height - padding_ * 2);
-    
+    NUIRect textRect(bounds.x + padding_, bounds.y,
+                    bounds.width - padding_ * 2, bounds.height);
+
     int start = std::max(0, std::min(selectionStart_, selectionEnd_));
     int end = std::max(0, std::max(selectionStart_, selectionEnd_));
     
@@ -536,13 +553,14 @@ void NUITextInput::drawPlaceholder(NUIRenderer& renderer)
     if (placeholderText_.empty()) return;
     
     NUIRect bounds = getBounds();
-    NUIRect textRect(bounds.x + padding_, bounds.y + padding_, 
-                    bounds.width - padding_ * 2, bounds.height - padding_ * 2);
-    
+    // Use full height for vertical centering; horizontal padding for icon clearance
+    NUIRect textRect(bounds.x + padding_, bounds.y,
+                    bounds.width - padding_ * 2, bounds.height);
+
     auto& themeManager = NUIThemeManager::getInstance();
     float fontSize = themeManager.getFontSize("m");
     float textY = std::round(renderer.calculateTextY(textRect, fontSize));
-    
+
     // Draw placeholder with reduced opacity if not already handled by color
     renderer.drawText(placeholderText_, NUIPoint(std::round(textRect.x), textY), fontSize, placeholderColor_);
 }
@@ -884,8 +902,8 @@ void NUITextInput::drawEnhancedBackground(NUIRenderer& renderer)
         glowRect.y -= 2;
         glowRect.width += 4;
         glowRect.height += 4;
-        renderer.fillRoundedRect(glowRect, borderRadius_ + 2, 
-            NUIColor::fromHex(0x0078d4).withAlpha(0.3f));
+        renderer.fillRoundedRect(glowRect, borderRadius_ + 2,
+            focusedBorderColor_.withAlpha(0.3f));
     }
     
     // Inner shadow effect
@@ -917,7 +935,7 @@ void NUITextInput::drawEnhancedBackground(NUIRenderer& renderer)
     
     if (isFocused())
     {
-        borderColor = NUIColor::fromHex(0x0078d4);
+        borderColor = focusedBorderColor_;
         borderWidth = 2.0f;
     }
     else if (hasValidationError_)
@@ -948,8 +966,8 @@ void NUITextInput::drawAnimatedCaret(NUIRenderer& renderer)
     if (!shouldShow) return;
     
     NUIRect bounds = getBounds();
-    NUIRect textRect(bounds.x + padding_, bounds.y + padding_,
-                     bounds.width - padding_ * 2, bounds.height - padding_ * 2);
+    NUIRect textRect(bounds.x + padding_, bounds.y,
+                     bounds.width - padding_ * 2, bounds.height);
 
     auto& themeManager = NUIThemeManager::getInstance();
     const float fontSize = themeManager.getFontSize("m");
@@ -977,14 +995,14 @@ void NUITextInput::drawAnimatedCaret(NUIRenderer& renderer)
         caretX = std::round(textX + prefixSize.width);
     }
     
-    // Enhanced caret with glow
+    // Slim caret with subtle glow
     const float caretY = textY;
-    NUIRect glowRect(caretX - 1, caretY - 1, 3, caretHeight + 2);
-    renderer.fillRoundedRect(glowRect, 1.0f, NUIColor::fromHex(0x0078d4).withAlpha(0.3f));
-    
+    NUIRect glowRect(caretX - 0.5f, caretY - 1, 2, caretHeight + 2);
+    renderer.fillRoundedRect(glowRect, 1.0f, focusedBorderColor_.withAlpha(0.22f));
+
     // Main caret
-    NUIRect caretRect(caretX, caretY, 2, caretHeight);
-    renderer.fillRoundedRect(caretRect, 1.0f, NUIColor::fromHex(0x0078d4));
+    NUIRect caretRect(caretX, caretY, 1.5f, caretHeight);
+    renderer.fillRoundedRect(caretRect, 1.0f, focusedBorderColor_);
 }
 
 } // namespace AestraUI

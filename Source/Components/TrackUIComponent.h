@@ -224,17 +224,24 @@ private:
     AestraUI::NUIRect m_lastRenderBounds;
     uint64_t m_lastModelModId = 0;
     void invalidateCache() { m_backgroundValid = false; }
- 
+
     PlaylistMode m_playlistMode = PlaylistMode::Clips;
 
-	    // UI Components
-	    std::shared_ptr<AestraUI::NUILabel> m_nameLabel;
-        std::shared_ptr<AestraUI::NUISlider> m_volumeFader;
-	    std::shared_ptr<AestraUI::NUIButton> m_muteButton;
-	    std::shared_ptr<AestraUI::NUIButton> m_soloButton;
-	    std::shared_ptr<AestraUI::NUIButton> m_recordButton;
-	    std::shared_ptr<AestraUI::NUIButton> m_routeButton;
-        std::shared_ptr<AestraUI::NUIContextMenu> m_recordModeMenu;
+    // UI Components
+    std::shared_ptr<AestraUI::NUILabel> m_nameLabel;
+    std::shared_ptr<AestraUI::NUISlider> m_volumeFader;
+    std::shared_ptr<AestraUI::NUIButton> m_muteButton;
+    std::shared_ptr<AestraUI::NUIButton> m_soloButton;
+    std::shared_ptr<AestraUI::NUIButton> m_recordButton;
+    std::shared_ptr<AestraUI::NUIContextMenu> m_recordModeMenu;
+
+    // Volume Knob (replaces route button)
+    float m_volumeKnobValue = 1.0f;
+    bool m_isDraggingVolumeKnob = false;
+    bool m_volumeKnobHovered = false;
+    AestraUI::NUIPoint m_volumeKnobDragStartPos;
+    float m_volumeKnobDragStartValue = 0.0f;
+    AestraUI::NUIRect m_volumeKnobBounds;
 
     // UI callbacks
     void onVolumeChanged(float volume);

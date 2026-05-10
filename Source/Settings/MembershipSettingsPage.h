@@ -15,6 +15,7 @@
 #include "LocalAccountCache.h"
 #endif
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -36,6 +37,9 @@ public:
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    void onUpdate(double deltaTime) override;
+
+    void setOnSignOutConfirmed(std::function<void()> callback) { m_onSignOutConfirmed = callback; }
 
 private:
     void createUI();
@@ -45,6 +49,7 @@ private:
     void signOut();
     void startLogin();
     void verifyLogin();
+    void confirmSignOut();
 
     std::shared_ptr<AestraUI::NUILabel> m_titleLabel;
     std::shared_ptr<AestraUI::NUILabel> m_accountLabel;
@@ -63,9 +68,40 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_verifyLoginButton;
     std::shared_ptr<AestraUI::NUIButton> m_refreshButton;
     std::shared_ptr<AestraUI::NUIButton> m_signOutButton;
-    std::string m_lastRefreshMessage = "Not refreshed this session.";
+    std::string m_lastRefreshValue = "Not refreshed";
+    bool m_lastRefreshFailed = false;
     std::string m_pendingLoginEmail;
     std::string m_pendingChallengeId;
+
+    // Redesign layout bounds (for hit testing)
+    AestraUI::NUIRect m_founderCardBounds;
+    AestraUI::NUIRect m_featuresCardBounds;
+    AestraUI::NUIRect m_syncCardBounds;
+    AestraUI::NUIRect m_actionsRowBounds;
+    AestraUI::NUIRect m_btnRefreshBounds;
+    AestraUI::NUIRect m_btnManageBounds;
+    AestraUI::NUIRect m_btnSignOutBounds;
+    bool m_btnRefreshHovered = false;
+    bool m_btnManageHovered = false;
+    bool m_btnSignOutHovered = false;
+
+    // Refresh loading state
+    bool m_isRefreshing = false;
+
+    // Inline error note below actions row
+    std::string m_actionErrorMessage;
+    float m_actionErrorTimer = 0.0f;
+
+    // Sign-out confirmation overlay
+    bool m_showingSignOutConfirm = false;
+    AestraUI::NUIRect m_confirmDialogBounds;
+    AestraUI::NUIRect m_confirmCancelBtnBounds;
+    AestraUI::NUIRect m_confirmSignOutBtnBounds;
+    bool m_confirmCancelHovered = false;
+    bool m_confirmSignOutHovered = false;
+
+    // Callback fired after confirmed sign-out (parent should close dialog + show activation screen)
+    std::function<void()> m_onSignOutConfirmed;
 
 #if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
     std::unique_ptr<Aestra::License::IHttpTransport> m_transport;

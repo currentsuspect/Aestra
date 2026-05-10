@@ -7,12 +7,12 @@ Settings: threshold -24 dB, ratio 4:1, attack 10 ms, release 120 ms, knee 6 dB, 
 | Material | Peak In | RMS In | Peak Out | RMS Out | Max GR | Avg GR | Clips | NaN/Inf | Max Abs | Bypass | Sane |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
 | silence | 0.000 | 0.000 | 0.000 | 0.000 | 0.0 dB | 0.0 dB | 0 | 0 | 0.000 | pass | yes |
-| sine_tone | 0.500 | 0.354 | 0.706 | 0.144 | 11.2 dB | 11.1 dB | 0 | 0 | 0.706 | pass | yes |
-| bass_pulse | 0.827 | 0.206 | 1.167 | 0.113 | 13.2 dB | 6.7 dB | 166 | 0 | 1.167 | pass | yes |
-| snare_transient | 0.919 | 0.074 | 1.299 | 0.076 | 9.1 dB | 2.4 dB | 58 | 0 | 1.299 | pass | yes |
-| vocal_sustain | 0.596 | 0.319 | 0.662 | 0.139 | 10.7 dB | 10.6 dB | 0 | 0 | 0.662 | pass | yes |
-| chord_pad | 0.679 | 0.278 | 0.930 | 0.129 | 10.3 dB | 10.0 dB | 0 | 0 | 0.930 | pass | yes |
-| simple_mix_bus | 0.677 | 0.179 | 0.906 | 0.112 | 9.5 dB | 7.4 dB | 0 | 0 | 0.906 | pass | yes |
-| extreme_sweep | 19.998 | 8.186 | 0.470 | 0.295 | 34.5 dB | 28.3 dB | 0 | 0 | 0.470 | pass | yes |
+| sine_tone | 0.500 | 0.354 | 0.706 | 0.122 | 12.7 dB | 12.6 dB | 0 | 0 | 0.706 | pass | yes |
+| bass_pulse | 0.827 | 0.206 | 0.850 | 0.085 | 14.1 dB | 6.7 dB | 0 | 0 | 0.850 | pass | yes |
+| snare_transient | 0.919 | 0.074 | 1.299 | 0.062 | 9.4 dB | 2.2 dB | 28 | 0 | 1.299 | pass | yes |
+| vocal_sustain | 0.596 | 0.319 | 0.662 | 0.112 | 12.8 dB | 12.5 dB | 0 | 0 | 0.662 | pass | yes |
+| chord_pad | 0.679 | 0.278 | 0.930 | 0.105 | 12.5 dB | 12.0 dB | 0 | 0 | 0.930 | pass | yes |
+| simple_mix_bus | 0.677 | 0.179 | 0.906 | 0.093 | 11.2 dB | 9.1 dB | 0 | 0 | 0.906 | pass | yes |
+| extreme_sweep | 19.998 | 8.186 | 0.400 | 0.251 | 35.7 dB | 29.8 dB | 0 | 0 | 0.400 | pass | yes |
 
 The extreme sweep intentionally includes above-0-dBFS stress material. V1 does not clip or limit hot output by design.

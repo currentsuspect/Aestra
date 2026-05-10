@@ -13,9 +13,9 @@ namespace AestraUI {
 namespace {
     constexpr float TRACK_RADIUS = 4.0f;
     constexpr float HANDLE_RADIUS = 4.0f;
-    constexpr float HANDLE_HEIGHT = 16.0f;
-    constexpr float TOP_PAD = 10.0f;
-    constexpr float BOTTOM_PAD = 20.0f; // room for text
+    constexpr float HANDLE_HEIGHT = 18.0f;
+    constexpr float TOP_PAD = 18.0f;    // room for fixed dB readout at top
+    constexpr float BOTTOM_PAD = 6.0f;   // minimal padding below track
     constexpr float SNAP_DB = 0.5f;
     constexpr float DRAG_SLOP = 1.5f;
 }
@@ -94,80 +94,76 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
     const float trackHeight = std::max(1.0f, trackBottom - trackTop);
 
-    // Thinner track for "Tech" look
-    const float trackWidth = 6.0f;
+    // Narrow rail (4 px) centered in strip
+    const float trackWidth = 4.0f;
     const float trackX = bounds.x + (bounds.width - trackWidth) * 0.5f;
     NUIRect trackRect{trackX, trackTop, trackWidth, trackHeight};
 
-    // 1. Track Background (Deep Slot)
+    // 1. Track Background (deep recessed slot)
     renderer.fillRoundedRect(trackRect, 2.0f, m_trackBg);
-    // Inner shadow simulation (subtle borders)
-    renderer.strokeRoundedRect(trackRect, 2.0f, 1.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.8f));
+    renderer.strokeRoundedRect(trackRect, 2.0f, 1.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.6f));
 
-    // 2. Filled Portion (Neon Gradient)
+    // 2. Filled Portion (subtle, no wide glow)
     const float norm = (m_valueDb - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb));
     const float filledH = std::clamp(norm, 0.0f, 1.0f) * trackHeight;
-    
+
     if (filledH > 0.0f) {
-        // Draw fill slightly wider than track for glow bleed
-        float fillW = 6.0f; 
-        
-        NUIRect fillRect{trackX, trackBottom - filledH, fillW, filledH};
-        
-        // Gradient Fill: Top is Bright Neon, Bottom is Darker
-        NUIColor colorTop = m_trackFg;
-        NUIColor colorBottom = m_trackFg.withAlpha(0.3f);
-        
-        // We simulate gradient by drawing solid for now, but renderer supports gradient rects?
-        // Using solid for core, glow for effect
-        
-        // Inner Glow (Blur)
+        NUIRect fillRect{trackX, trackBottom - filledH, trackWidth, filledH};
+        // Core fill (slightly wider than track for crisp edge)
+        renderer.fillRoundedRect(fillRect, 2.0f, m_trackFg.withAlpha(0.85f));
+        // Very subtle inner glow (2px bleed)
         renderer.fillRoundedRect(
-            NUIRect{fillRect.x - 2, fillRect.y, fillRect.width + 4, fillRect.height},
-            4.0f,
-            m_trackFg.withAlpha(0.25f)
+            NUIRect{fillRect.x - 1, fillRect.y, fillRect.width + 2, fillRect.height},
+            3.0f,
+            m_trackFg.withAlpha(0.15f)
         );
-        
-        // Core (Bright)
-        renderer.fillRoundedRect(fillRect, 2.0f, m_trackFg.withAlpha(0.9f));
     }
 
-    // 3. Fader Handle (Illuminated Ring)
+    // 3. Fader Handle (distinct grab block)
     const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
                                      trackTop - HANDLE_HEIGHT * 0.5f,
                                      trackBottom - HANDLE_HEIGHT * 0.5f);
-    
-    // Wider tech handle
-    const float handleW = 28.0f;
+
+    // Handle: wider than track, clear visual weight
+    const float handleW = 32.0f;
     const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
     const float handleH = HANDLE_HEIGHT;
-    
-    NUIRect handleRect{handleX, handleY, handleW, handleH};
-    float handleRad = 3.0f;
 
-    // Handle Body (Dark Glass)
-    renderer.fillRoundedRect(handleRect, handleRad, NUIColor(0.15f, 0.15f, 0.20f, 0.95f));
-    
-    // Handle Border (Neon when active/hovered)
-    NUIColor handleBorder = isHovered() || m_dragging ? m_trackFg : NUIColor(1.0f, 1.0f, 1.0f, 0.3f);
+    NUIRect handleRect{handleX, handleY, handleW, handleH};
+    float handleRad = 4.0f;
+
+    // Drop shadow for depth
+    renderer.drawShadow(handleRect, 0.0f, 2.0f, 6.0f, NUIColor(0, 0, 0, 0.4f));
+
+    // Handle Body (dark surface)
+    renderer.fillRoundedRect(handleRect, handleRad, NUIColor(0.18f, 0.18f, 0.22f, 0.98f));
+
+    // Handle Border (accent when active/hovered, subtle white otherwise)
+    bool handleActive = isHovered() || m_dragging;
+    NUIColor handleBorder = handleActive ? m_trackFg : NUIColor(1.0f, 1.0f, 1.0f, 0.25f);
     renderer.strokeRoundedRect(handleRect, handleRad, 1.0f, handleBorder);
-    
-    // Center "Light Slit"
-    float slitW = 14.0f;
-    float slitH = 2.5f;
+
+    // Center accent line (the "light slit")
+    float slitW = 16.0f;
+    float slitH = 3.0f;
     renderer.fillRoundedRect(
-        NUIRect{handleX + (handleW - slitW)*0.5f, handleY + (handleH - slitH)*0.5f, slitW, slitH}, 
-        1.0f, 
-        isHovered() || m_dragging ? m_trackFg : NUIColor(1.0f, 1.0f, 1.0f, 0.6f)
+        NUIRect{handleX + (handleW - slitW)*0.5f, handleY + (handleH - slitH)*0.5f, slitW, slitH},
+        1.5f,
+        handleActive ? m_trackFg : NUIColor(1.0f, 1.0f, 1.0f, 0.5f)
     );
 
-    // Drag Value Tooltip
+    // 4. Fixed dB readout at top of fader area (not attached to handle)
+    const float fontSize = 10.5f;
+    NUIRect textRect{bounds.x, bounds.y + 2.0f, bounds.width, TOP_PAD - 4.0f};
+    renderer.drawTextCentered(m_cachedText, textRect, fontSize, m_textSecondary);
+
+    // 5. Drag Value Tooltip (only while dragging)
     if (m_dragging) {
         const float tipW = 38.0f;
         const float tipH = 18.0f;
         float tipX = handleX + (handleW - tipW) * 0.5f;
         float tipY = handleY - tipH - 4.0f;
-        
+
         // Flip to bottom if near top edge
         if (tipY < bounds.y) {
             tipY = handleY + handleH + 4.0f;
@@ -177,11 +173,6 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
         renderer.strokeRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, 1.0f, m_trackFg.withAlpha(0.5f));
         renderer.drawTextCentered(m_cachedText, {tipX, tipY, tipW, tipH}, 10.5f, m_text);
     }
-
-    // Value readout (bottom)
-    const float fontSize = 10.5f;
-    NUIRect textRect{bounds.x, trackBottom + 2.0f, bounds.width, bounds.y + bounds.height - trackBottom};
-    renderer.drawTextCentered(m_cachedText, textRect, fontSize, m_textSecondary);
 }
 
 bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
@@ -210,7 +201,7 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
         const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
                                          trackTop - HANDLE_HEIGHT * 0.5f,
                                          trackBottom - HANDLE_HEIGHT * 0.5f);
-        const float handleW = 28.0f;
+        const float handleW = 32.0f;
         const float handleH = HANDLE_HEIGHT;
         const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
         const NUIRect handleRect{handleX, handleY, handleW, handleH};

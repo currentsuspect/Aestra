@@ -24,7 +24,7 @@
 #endif
 
 namespace AestraUI {
-class PluginSelectorMenu;
+class UIMixerPluginDropdown;
 
 /**
  * @brief Controller that bridges plugin UI widgets to AestraAudio backend
@@ -205,7 +205,7 @@ private:
     
     // UI components for popups
     NUIComponent* m_popupLayer = nullptr;
-    std::shared_ptr<PluginSelectorMenu> m_activeMenu;
+    std::shared_ptr<UIMixerPluginDropdown> m_activeMenu;
     std::vector<std::shared_ptr<NUIComponent>> m_activeEditors;
 };
 

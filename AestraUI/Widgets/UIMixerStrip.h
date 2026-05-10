@@ -44,6 +44,9 @@ public:
     bool onMouseEvent(const NUIMouseEvent& event) override;
     uint32_t getChannelId() const { return m_channelId; }
 
+    /// Bounds of the FX summary (Add Insert) button in strip-local space.
+    NUIRect getFXSummaryBounds() const;
+
     // Request opening the inspector on the Inserts tab for this channel.
     std::function<void(uint32_t channelId)> onFXClicked;
 
@@ -94,7 +97,6 @@ private:
     bool m_cachedArmed{false};
     bool m_cachedMonitored{false};
     bool m_cachedStripHovered{false};
-    bool m_cachedShowChannelControls{true};
     bool m_cachedFaderHovered{false};
     bool m_cachedTrimHovered{false};
     bool m_cachedPanHovered{false};

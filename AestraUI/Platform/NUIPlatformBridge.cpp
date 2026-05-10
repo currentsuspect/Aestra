@@ -101,6 +101,7 @@ void NUIPlatformBridge::setupEventBridges() {
         // Forward to root component for hover effects
         if (m_rootComponent) {
             NUIMouseEvent event;
+            event.type = NUIMouseEventType::Move;
             event.position = {static_cast<float>(x), static_cast<float>(y)};
             event.button = NUIMouseButton::None;
             event.pressed = false;
@@ -137,6 +138,7 @@ void NUIPlatformBridge::setupEventBridges() {
         // Forward to root component for AestraUI event handling
         if (m_rootComponent) {
             NUIMouseEvent event;
+            event.type = pressed ? NUIMouseEventType::Down : NUIMouseEventType::Up;
             event.position = {static_cast<float>(x), static_cast<float>(y)};
             // Map button
             switch (button) {
@@ -170,6 +172,7 @@ void NUIPlatformBridge::setupEventBridges() {
         // Forward to root component for AestraUI event handling
         if (m_rootComponent) {
             NUIMouseEvent event;
+            event.type = NUIMouseEventType::Scroll;
             event.position = {static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY)};
             event.button = NUIMouseButton::None;
             event.pressed = false;

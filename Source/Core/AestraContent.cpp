@@ -314,6 +314,19 @@ AestraContent::AestraContent() {
         AESTRA_LOG_DEBUG("Sound preview requested: " + file.path);
         playSoundPreview(file);
     });
+    m_fileBrowser->setOnNavActionSelected([this](AestraUI::FileBrowser::BrowserNavAction action) {
+        if (!m_pluginBrowser)
+            return;
+        bool isPlugins = (action == AestraUI::FileBrowser::BrowserNavAction::Plugins);
+        m_pluginBrowser->setVisible(isPlugins);
+        if (isPlugins && m_fileBrowser) {
+            float navW = m_fileBrowser->getNavPaneWidth();
+            auto fbBounds = m_fileBrowser->getBounds();
+            float pbWidth = std::max(0.0f, fbBounds.width - navW);
+            m_pluginBrowser->setBounds(
+                AestraUI::NUIRect(fbBounds.x + navW, fbBounds.y, pbWidth, fbBounds.height));
+        }
+    });
 
     m_workspaceLayer->addChild(m_fileBrowser);
 
@@ -1198,8 +1211,9 @@ void AestraContent::onResize(int width, int height) {
     }
 
     const bool filesTabActive = browserTab == 0;
+    const bool pluginBrowserVisible = m_pluginBrowser && m_pluginBrowser->isVisible();
     const bool showPreviewDock = m_previewPanel && filesTabActive && m_fileBrowser && m_fileBrowser->isVisible() &&
-                                 m_previewPanel->hasFileSelection();
+                                 !pluginBrowserVisible && m_previewPanel->hasFileSelection();
     if (m_previewPanel) {
         m_previewPanel->setVisible(showPreviewDock);
     }
@@ -1223,10 +1237,21 @@ void AestraContent::onResize(int width, int height) {
     }
 
     if (m_pluginBrowser) {
-        // Occupies same space as file browser + preview panel
-        float pbTop = sidebarTopY;
-        float pbHeight = height - pbTop;
-        m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, pbTop, fileBrowserWidth, pbHeight));
+        bool isPlugins = m_fileBrowser && m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Plugins;
+        if (isPlugins && m_fileBrowser->isVisible()) {
+            float navW = m_fileBrowser->getNavPaneWidth();
+            float pbLeft = navW;
+            float pbWidth = std::max(0.0f, fileBrowserWidth - navW);
+            float pbTop = sidebarTopY;
+            float pbHeight = height - pbTop;
+            m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, pbLeft, pbTop - contentBounds.y, pbWidth, pbHeight));
+            m_pluginBrowser->setVisible(true);
+        } else {
+            float pbTop = sidebarTopY;
+            float pbHeight = height - pbTop;
+            m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, pbTop - contentBounds.y, fileBrowserWidth, pbHeight));
+            m_pluginBrowser->setVisible(false);
+        }
     }
 
     if (m_patternBrowser) {
@@ -1508,6 +1533,10 @@ void AestraContent::toggleFileBrowser() {
     if (m_fileBrowser) {
         bool isVisible = m_fileBrowser->isVisible();
         m_fileBrowser->setVisible(!isVisible);
+        if (m_pluginBrowser) {
+            bool showPlugins = !isVisible && m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Plugins;
+            m_pluginBrowser->setVisible(showPlugins);
+        }
         AESTRA_LOG_DEBUG("File Browser toggled: " + std::string(!isVisible ? "VISIBLE" : "HIDDEN"));
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     }
@@ -1554,18 +1583,15 @@ void AestraContent::setBrowserVisible(bool visible) {
             m_fileBrowser->setVisible(visible);
             // Also update plugin browser and preview panel visibility
             if (m_pluginBrowser) {
-                // If hiding, hide plugin browser too; if showing, show file browser tab
                 if (!visible) {
                     m_pluginBrowser->setVisible(false);
                 } else {
-                    // Show file browser tab
-                    if (m_browserToggle) {
-                        m_browserToggle->setSelectedIndex(0);
-                    }
+                    bool showPlugins = m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Plugins;
+                    m_pluginBrowser->setVisible(showPlugins);
                 }
             }
             if (m_previewPanel) {
-                m_previewPanel->setVisible(visible && m_browserToggle && m_browserToggle->getSelectedIndex() == 0);
+                m_previewPanel->setVisible(visible && m_fileBrowser->getActiveNavAction() != AestraUI::FileBrowser::BrowserNavAction::Plugins && m_previewPanel->hasFileSelection());
             }
             onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
             AESTRA_LOG_DEBUG("[PanelState] Browser visibility set to: " + std::string(visible ? "VISIBLE" : "HIDDEN"));

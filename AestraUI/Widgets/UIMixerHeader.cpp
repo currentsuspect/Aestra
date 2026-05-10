@@ -80,41 +80,42 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     // Safety check for invalid bounds
     if (bounds.width <= 0 || bounds.height <= 0) return;
 
-    // Background for selection
+    // Background for selection (tint with track color)
     if (m_selected) {
         renderer.fillRoundedRect(bounds, 10.0f, m_selectedBg);
         renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, m_selectedBorder);
     }
 
-    // Top Colored Bar (Visual Indicator) - Replaces side chip
-    constexpr float TOP_BAR_H = 4.0f;
-    
-    // Explicitly define top bar rect to cover full width
-    // Use floor/ceil to snap to pixels and avoid subpixel gaps (which causes "missing right/top" look)
+    // Top Colored Bar (Visual Identity) — pulled from Timeline track color
+    constexpr float TOP_BAR_H = 6.0f;
+
     NUIRect topBar{
-        std::floor(bounds.x), 
-        std::floor(bounds.y), 
-        std::ceil(bounds.width), 
+        std::floor(bounds.x),
+        std::floor(bounds.y),
+        std::ceil(bounds.width),
         TOP_BAR_H
     };
-    
-    // Use Primary Purple for Master if detection fails, otherwise use track color
-    NUIColor barColor = (m_isMaster && m_trackColorArgb == 0) // Fallback for master
-                        ? NUIThemeManager::getInstance().getColor("primary") 
-                        : colorFromARGB(m_trackColorArgb);
-                        
-    // Ensure alpha is 1.0 for the bar itself
-    barColor = barColor.withAlpha(1.0f);
-    
-    renderer.fillRect(topBar, barColor);
 
-    // Text area (Below the top bar)
-    // textRect starts AFTER top bar + padding
+    NUIColor trackColor = (m_isMaster && m_trackColorArgb == 0)
+                        ? NUIThemeManager::getInstance().getColor("primary")
+                        : colorFromARGB(m_trackColorArgb);
+    trackColor = trackColor.withAlpha(1.0f);
+
+    // Full-width track-color bar
+    renderer.fillRect(topBar, trackColor);
+
+    // Subtle background tint across the rest of the header for stronger color identity
+    if (!m_isMaster && m_trackColorArgb != 0) {
+        NUIRect tintRect{bounds.x, bounds.y + TOP_BAR_H, bounds.width, bounds.height - TOP_BAR_H};
+        renderer.fillRoundedRect(tintRect, std::max(0.0f, 10.0f - TOP_BAR_H), trackColor.withAlpha(0.06f));
+    }
+
+    // Text area (below the top bar)
     NUIRect textRect{
-        bounds.x + PAD_X, 
-        bounds.y + TOP_BAR_H + 2.0f, // padding below bar
-        bounds.width - (PAD_X * 2), 
-        bounds.height - (TOP_BAR_H + 2.0f)
+        bounds.x + PAD_X,
+        bounds.y + TOP_BAR_H + 3.0f,
+        bounds.width - (PAD_X * 2),
+        bounds.height - (TOP_BAR_H + 3.0f)
     };
 
     const float nameFont = m_isMaster ? 13.0f : 12.5f;

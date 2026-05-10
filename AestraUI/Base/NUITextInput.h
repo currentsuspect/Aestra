@@ -53,6 +53,9 @@ public:
     void setPlaceholderText(const std::string& placeholder);
     const std::string& getPlaceholderText() const { return placeholderText_; }
 
+    void setShowPlaceholderWhenFocused(bool show);
+    bool isShowPlaceholderWhenFocused() const { return showPlaceholderWhenFocused_; }
+
     void setInputType(InputType type);
     InputType getInputType() const { return inputType_; }
 
@@ -96,6 +99,9 @@ public:
 
     void setBackgroundColor(const NUIColor& color);
     NUIColor getBackgroundColor() const { return backgroundColor_; }
+
+    void setBackgroundVisible(bool visible);
+    bool isBackgroundVisible() const { return backgroundVisible_; }
 
     void setBorderColor(const NUIColor& color);
     NUIColor getBorderColor() const { return borderColor_; }
@@ -188,6 +194,7 @@ private:
     // Text content
     std::string text_;
     std::string placeholderText_;
+    bool showPlaceholderWhenFocused_ = false;
     InputType inputType_ = InputType::Text;
     Justification justification_ = Justification::Left;
     bool multiline_ = false;
@@ -208,6 +215,7 @@ private:
     // Visual properties
     NUIColor textColor_ = NUIColor::fromHex(0xffffffff);
     NUIColor backgroundColor_ = NUIColor::fromHex(0xff1a1d22);
+    bool backgroundVisible_ = true;
     NUIColor borderColor_ = NUIColor::fromHex(0xff666666);
     NUIColor focusedBorderColor_ = NUIColor::fromHex(0xffa855f7);
     NUIColor placeholderColor_ = NUIColor::fromHex(0xff888888);
