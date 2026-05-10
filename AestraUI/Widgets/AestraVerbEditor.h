@@ -18,6 +18,7 @@ public:
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onUpdate(double deltaTime) override;
     void onResize(int width, int height) override;
+    using NUIComponent::onResize;
     void onResize() { layoutControls(); }
     void setOnClose(std::function<void()> cb) { m_onClose = std::move(cb); }
 

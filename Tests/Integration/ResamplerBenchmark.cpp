@@ -71,14 +71,6 @@ static std::string qualityId(SRCQuality q) {
     return "unknown";
 }
 
-static std::string directionId(uint32_t src, uint32_t dst) {
-    return (dst > src) ? "up" : "down";
-}
-
-static std::string makeCaseId(uint32_t src, uint32_t dst, SRCQuality q) {
-    return directionId(src, dst) + "_" + std::to_string(src) + "_" + std::to_string(dst) + "_" + qualityId(q);
-}
-
 static std::vector<BenchCase> buildCases() {
     std::vector<BenchCase> cases;
 

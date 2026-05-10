@@ -2120,7 +2120,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                                 uint64_t idx = static_cast<uint64_t>(phase);
                                 double frac = phase - static_cast<double>(idx);
                                 float s0 = data[idx];
-                                float s1 = (idx + 1 < totalFrames) ? data[idx + 1] : s0;
+                                float s1 = (idx + 1 < static_cast<uint64_t>(totalFrames)) ? data[idx + 1] : s0;
                                 double val = s0 + frac * (s1 - s0);
                                 dst[i * 2] += val * clipGain * fade;
                                 dst[i * 2 + 1] += val * clipGain * fade;
@@ -2255,7 +2255,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     // Found unit for this track
                     MidiBuffer* midiBuf = nullptr;
                     for (size_t r = 0; r < unitMidiRouteCount; ++r) {
-                        if (unitMidiRoutes[r].unitId == unit.id) {
+                        if (unitMidiRoutes[r].unitId == static_cast<UnitID>(unit.id)) {
                             midiBuf = unitMidiRoutes[r].midiBuffer;
                             break;
                         }
@@ -2525,7 +2525,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
 
             MidiBuffer* midiBuf = nullptr;
             for (size_t r = 0; r < unitMidiRouteCount; ++r) {
-                if (unitMidiRoutes[r].unitId == unit.id) {
+                if (unitMidiRoutes[r].unitId == static_cast<UnitID>(unit.id)) {
                     midiBuf = unitMidiRoutes[r].midiBuffer;
                     break;
                 }
@@ -2852,7 +2852,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         // Process plugin with MIDI
         MidiBuffer* midiIn = nullptr;
         for (size_t r = 0; r < unitMidiRouteCount; ++r) {
-            if (unitMidiRoutes[r].unitId == unit.id) {
+            if (unitMidiRoutes[r].unitId == static_cast<UnitID>(unit.id)) {
                 midiIn = unitMidiRoutes[r].midiBuffer;
                 break;
             }

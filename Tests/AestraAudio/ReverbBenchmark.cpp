@@ -279,12 +279,6 @@ static std::vector<StageReport> buildStageReport(const AestraVerb& verb) {
     return report;
 }
 
-#else // no profiling support
-static std::vector<StageReport> buildStageReport(const AestraVerb&) {
-    return {};
-}
-#endif
-
 static void printStageReport(const std::vector<StageReport>& report) {
     std::cout << "\n─── Stage Profile (ranked by total time) ───\n";
     std::cout << "  " << std::left << std::setw(28) << "Stage"
@@ -298,28 +292,6 @@ static void printStageReport(const std::vector<StageReport>& report) {
                   << std::setw(12) << std::setprecision(3) << (sr.avgNs / 1e3)
                   << std::setw(10) << std::setprecision(1) << sr.percent << "%\n";
     }
-}
-
-static std::string jsonEscape(const std::string& value) {
-    std::ostringstream out;
-    for (unsigned char c : value) {
-        switch (c) {
-        case '\\': out << "\\\\"; break;
-        case '"': out << "\\\""; break;
-        case '\n': out << "\\n"; break;
-        case '\r': out << "\\r"; break;
-        case '\t': out << "\\t"; break;
-        default:
-            if (c < 0x20) {
-                out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c)
-                    << std::dec << std::setfill(' ');
-            } else {
-                out << static_cast<char>(c);
-            }
-            break;
-        }
-    }
-    return out.str();
 }
 
 static std::string stageProfileToJson(const std::vector<StageReport>& report) {
@@ -355,6 +327,34 @@ static std::string stageProfileToMarkdown(const std::vector<StageReport>& report
            << " (" << std::fixed << std::setprecision(1) << report[0].percent << "% of total)\n\n";
     }
     return md.str();
+}
+
+#else // no profiling support
+[[maybe_unused]] static std::vector<StageReport> buildStageReport(const AestraVerb&) {
+    return {};
+}
+#endif
+
+static std::string jsonEscape(const std::string& value) {
+    std::ostringstream out;
+    for (unsigned char c : value) {
+        switch (c) {
+        case '\\': out << "\\\\"; break;
+        case '"': out << "\\\""; break;
+        case '\n': out << "\\n"; break;
+        case '\r': out << "\\r"; break;
+        case '\t': out << "\\t"; break;
+        default:
+            if (c < 0x20) {
+                out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c)
+                    << std::dec << std::setfill(' ');
+            } else {
+                out << static_cast<char>(c);
+            }
+            break;
+        }
+    }
+    return out.str();
 }
 
 // ============================================================================
@@ -430,9 +430,11 @@ static std::string generateMarkdownReport(
         md << "\n";
     }
 
+#ifdef AESTRA_REVERB_PROFILE
     if (stageProfile && !stageProfile->empty()) {
         md << stageProfileToMarkdown(*stageProfile);
     }
+#endif
 
     md << "## Correctness Checks\n\n";
     bool allClean = true;
@@ -500,12 +502,16 @@ static std::string generateJsonReport(
     }
     j << "  ]";
 
+#ifdef AESTRA_REVERB_PROFILE
     if (stageProfile && !stageProfile->empty()) {
         j << ",\n";
         j << stageProfileToJson(*stageProfile);
     } else {
         j << "\n";
     }
+#else
+    j << "\n";
+#endif
 
     j << "}\n";
     return j.str();
@@ -673,7 +679,7 @@ int main(int argc, char* argv[]) {
         verb.setParameter(AestraVerb::kWidth, 0.7f);
 
         auto result = benchmarkPlugin(verb, inputL, inputR, cfg.iterations, cfg.profileStages);
-        ModeResult modeResult = {"Room", result};
+        ModeResult modeResult = {"Room", result, {}};
 #ifdef AESTRA_REVERB_PROFILE
         if (cfg.profileStages) {
             modeResult.stageProfile = buildStageReport(verb);
@@ -722,7 +728,7 @@ int main(int argc, char* argv[]) {
         verb.setParameter(AestraVerb::kWidth, 0.9f);
 
         auto result = benchmarkPlugin(verb, inputL, inputR, cfg.iterations, cfg.profileStages);
-        results.push_back({"Hall", result});
+        results.push_back({"Hall", result, {}});
 
         if (!cfg.jsonStdout) {
             std::cout << "\n─── Hall Mode (Stress) ───\n";
@@ -754,7 +760,7 @@ int main(int argc, char* argv[]) {
         verb.setParameter(AestraVerb::kWidth, 0.8f);
 
         auto result = benchmarkPlugin(verb, inputL, inputR, cfg.iterations, cfg.profileStages);
-        ModeResult modeResult = {"Plate", result};
+        ModeResult modeResult = {"Plate", result, {}};
 #ifdef AESTRA_REVERB_PROFILE
         if (cfg.profileStages) {
             modeResult.stageProfile = buildStageReport(verb);

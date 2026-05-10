@@ -31,6 +31,7 @@ struct FDNState {
     }
 };
 
+#if defined(AESTRA_ENABLE_RUNTIME_TESTS) && defined(AESTRA_REVERB_HAS_SSE)
 bool nearlyEqual(float a, float b, float tolerance = 1.0e-6f) {
     return std::abs(a - b) <= tolerance;
 }
@@ -50,6 +51,7 @@ bool compareStates(const FDNState& a, const FDNState& b) {
     }
     return true;
 }
+#endif
 
 } // namespace
 

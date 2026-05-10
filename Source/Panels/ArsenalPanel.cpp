@@ -16,10 +16,6 @@ namespace {
 constexpr int kArsenalMinPatternBars = 2;
 constexpr int kArsenalMaxPatternBars = 16;
 
-bool usesStepSequencerForUnitGroup(UnitGroup group) {
-    return group == UnitGroup::Drums || group == UnitGroup::Audio;
-}
-
 const char* unitTypeDisplayName(UnitType type) {
     switch (type) {
     case UnitType::Sampler: return "Sampler";
@@ -37,16 +33,6 @@ const char* unitTypeDescription(UnitType type) {
     case UnitType::Instrument: return "Melodies and chords";
     case UnitType::Audio: return "Drop a clip directly";
     default: return "";
-    }
-}
-
-UnitGroup unitGroupForType(UnitType type) {
-    switch (type) {
-    case UnitType::Instrument: return UnitGroup::Synth;
-    case UnitType::Audio: return UnitGroup::Audio;
-    case UnitType::Sampler:
-    case UnitType::PitchedSampler:
-    default: return UnitGroup::Drums;
     }
 }
 

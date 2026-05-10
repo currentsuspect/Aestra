@@ -14,11 +14,6 @@
 namespace AestraUI {
 
 namespace {
-bool usesStepSequencerForGroup(Aestra::Audio::UnitGroup group)
-{
-    return group == Aestra::Audio::UnitGroup::Drums || group == Aestra::Audio::UnitGroup::Audio;
-}
-
 bool usesStepSequencerForType(Aestra::Audio::UnitType type)
 {
     return type == Aestra::Audio::UnitType::Sampler || type == Aestra::Audio::UnitType::PitchedSampler;
@@ -27,19 +22,6 @@ bool usesStepSequencerForType(Aestra::Audio::UnitType type)
 bool usesPianoRollForType(Aestra::Audio::UnitType type)
 {
     return type == Aestra::Audio::UnitType::Instrument;
-}
-
-void drawUnitRowChip(NUIRenderer& renderer,
-                     const NUIRect& rect,
-                     const std::string& text,
-                     const NUIColor& fill,
-                     const NUIColor& stroke,
-                     const NUIColor& textColor,
-                     float fontSize = 9.0f)
-{
-    renderer.fillRoundedRect(rect, 5.0f, fill);
-    renderer.strokeRoundedRect(rect, 5.0f, 1.0f, stroke);
-    renderer.drawTextCentered(text, rect, fontSize, textColor);
 }
 }
 
