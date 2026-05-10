@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -43,6 +44,17 @@ struct TrackRTState {
     // Track the last active send count so renderGraph() can detect when
     // sends are added/removed without resizing the pre-sized vectors.
     size_t lastActiveSendCount{0};
+
+    // === Plugin Delay Compensation ===
+    uint32_t pluginLatencySamples{0};        // Total latency from effect chain
+    uint32_t compensationDelaySamples{0};    // Delay to apply for alignment
+    bool compensationEnabled{true};          // Can be disabled per-track
+    
+    // Fixed-size compensation buffer (stereo interleaved)
+    // 16384 samples = ~340ms @ 48kHz, ~170ms @ 96kHz
+    std::array<float, 32768> compensationBuffer{}; // 16384 frames * 2 channels
+    uint32_t compensationWritePos{0};
+    uint32_t compensationReadPos{0};
 };
 
 struct RuntimeConnection {
@@ -70,6 +82,10 @@ struct AudioGraphState {
     // The runtime state of each track (Volume, Pan, Mute)
     // Indexed by trackIndex
     std::vector<TrackRTState> trackStates;
+
+    // === Plugin Delay Compensation State ===
+    uint32_t maxProjectLatencySamples{0};    // Slowest track latency
+    bool latencyCompensationEnabled{true};   // Global enable/disable
 
     // Note: Plugin state will be added here later (v4.0 Hybrid Engine)
     // For now, plugins are still referenced via pointers in the AudioGraph or global lookups.

@@ -211,6 +211,10 @@ public:
     /** @brief Access the insert-effect chain. */
     const EffectChain& getEffectChain() const { return m_effectChain; }
 
+    void setEffectChainLatencyCallback(std::function<void()> callback) {
+        m_effectChain.setLatencyChangedCallback(std::move(callback));
+    }
+
     /** @brief Reset all plugins in the effect chain (panic/hard reset). */
     void resetEffectChain() { m_effectChain.reset(); }
 

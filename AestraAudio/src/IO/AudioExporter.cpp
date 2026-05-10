@@ -156,6 +156,10 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // prior playback cannot bleed into the export render.
     std::fill(m_renderBufferF.begin(), m_renderBufferF.end(), 0.0f);
 
+    // Phase 2: clear the engine's true-peak max-hold so the export reading
+    // reflects only this render pass, not stale peaks from prior playback.
+    m_engine.clearTruePeakHold();
+
     // Render loop using AudioRenderer::renderBlock (same path as bounceRangeToWav)
     uint64_t framesRemaining = totalFrames;
     result.framesRendered = 0;
@@ -234,8 +238,30 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         float peak = m_peakLevel.load(std::memory_order_relaxed);
         result.peakDb = peak > 0.0f ? 20.0 * std::log10(peak) : -96.0;
 
-        Log::info("[Export] Render complete: " + std::to_string(result.framesRendered) +
-                  " frames, peak: " + std::to_string(result.peakDb) + " dB");
+        // Phase 2: capture true-peak metrics measured during the export
+        // (engine's meter ran throughout processBlock).
+        result.maxTruePeakdBTP = m_engine.getMaxTruePeakdBTP();
+
+        if (config.validateTruePeak && result.maxTruePeakdBTP > config.truePeakCeilingdBTP) {
+            result.truePeakCeilingExceeded = true;
+            const std::string msg =
+                "[Export] True peak " + std::to_string(result.maxTruePeakdBTP) +
+                " dBTP exceeds ceiling " + std::to_string(config.truePeakCeilingdBTP) + " dBTP";
+            if (config.failOnTruePeakExceeded) {
+                Log::error(msg + " \u2014 export aborted");
+                result.errorMessage = msg;
+                result.success = false;
+                std::remove(config.outputPath.c_str());
+            } else {
+                Log::warning(msg);
+            }
+        }
+
+        if (result.success) {
+            Log::info("[Export] Render complete: " + std::to_string(result.framesRendered) +
+                      " frames, peak: " + std::to_string(result.peakDb) + " dB, true peak: " +
+                      std::to_string(result.maxTruePeakdBTP) + " dBTP");
+        }
     } else {
         file.close();
         std::remove(config.outputPath.c_str());

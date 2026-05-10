@@ -81,6 +81,47 @@ message(STATUS "ProjectRoundTrip tests built but not registered (set AESTRA_ENAB
     endif()
 endif()
 
+# Session Recovery Test (autosave + crash flag + recovery flow)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/SessionRecoveryTest.cpp")
+    add_executable(SessionRecoveryTest
+        Integration/SessionRecoveryTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(SessionRecoveryTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(SessionRecoveryTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    target_compile_definitions(SessionRecoveryTest PRIVATE
+        $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
+    )
+    add_test(NAME SessionRecoveryTest COMMAND SessionRecoveryTest)
+    set_tests_properties(SessionRecoveryTest PROPERTIES LABELS "integration;recovery;autosave")
+endif()
+
+# AutosaveManager unit test (background thread, dirty tracking, backup rotation)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AutosaveManagerTest.cpp")
+    add_executable(AutosaveManagerTest AestraAudio/AutosaveManagerTest.cpp)
+    target_link_libraries(AutosaveManagerTest PRIVATE AestraAudioCore AestraCore)
+    target_include_directories(AutosaveManagerTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AutosaveManagerTest COMMAND AutosaveManagerTest)
+    set_tests_properties(AutosaveManagerTest PROPERTIES LABELS "unit;autosave;recovery")
+endif()
+
 # Project Round-Trip Integrity Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripIntegrityTest.cpp")
     add_executable(ProjectRoundTripIntegrityTest

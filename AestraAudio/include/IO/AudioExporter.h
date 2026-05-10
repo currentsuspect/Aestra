@@ -86,6 +86,24 @@ public:
 
         /** @brief Minimum interval between progress callback updates. */
         std::chrono::milliseconds progressInterval{100};
+
+        // === True Peak Validation (Phase 2) ===
+        /**
+         * @brief When true, the rendered output is measured with the engine's
+         *        ITU-R BS.1770-4 inspired true-peak meter and validated against
+         *        @ref truePeakCeilingdBTP. Default off for backward compatibility.
+         */
+        bool validateTruePeak = false;
+
+        /** @brief Maximum allowed true peak in dBTP (Spotify spec is -1.0). */
+        float truePeakCeilingdBTP = -1.0f;
+
+        /**
+         * @brief When true, exceeding @ref truePeakCeilingdBTP causes the export
+         *        to fail (and the partial WAV is removed). When false, the breach
+         *        is logged as a warning and the export still succeeds.
+         */
+        bool failOnTruePeakExceeded = false;
     };
 
     /**
@@ -104,6 +122,12 @@ public:
         double durationSeconds = 0.0;
         /** @brief Measured peak output level in decibels full scale. */
         double peakDb = -96.0;  // Measured peak level
+
+        /** @brief Measured true peak (max channel) in dBTP across the rendered range. */
+        float maxTruePeakdBTP = -200.0f;
+
+        /** @brief Whether the configured true-peak ceiling was exceeded. */
+        bool truePeakCeilingExceeded = false;
 
         /**
          * @brief Convenience predicate for success checks.

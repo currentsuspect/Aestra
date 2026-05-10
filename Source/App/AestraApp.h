@@ -5,12 +5,12 @@
 #include "AestraAudioController.h"
 #include "AestraContent.h"
 #include "ProjectSerializer.h"
+#include "AutosaveManager.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "../Core/UIState.h"
 
 #include <memory>
 #include <string>
-#include <future>
-#include <atomic>
 #include <filesystem>
 
 /**
@@ -56,6 +56,19 @@ public:
     static bool isCrashedSession();
 
 private:
+    // Initialization helpers (extracted from initialize() for readability)
+    bool transitionToInitializing();
+    bool initializePlatformAndWindow(const Aestra::UIState& uiState);
+    bool initializeAudio();
+    void initializeContent();
+    void initializeAutosave(bool enabled);
+    void buildSettingsDialog();
+    void buildMenuBar();
+    void initializePlugins();
+    void loadOrRecoverProject(const std::string& projectPath, bool crashedSession);
+    void restoreUIState(const Aestra::UIState& uiState);
+    bool transitionToRunning();
+
     // Glue logic
     void setupCallbacks();
     void connectAudioToUI();
@@ -66,32 +79,35 @@ private:
     ProjectSerializer::LoadResult loadProjectFromPath(const std::string& path, const std::string& activeProjectPathOverride = "");
     ProjectSerializer::LoadResult loadProject();
     bool saveProject();
+    bool saveProjectToPath(const std::string& path);
+    void reinitAutosaveManager();
     ProjectSerializer::UIState captureUIState() const;
     void applyUIState(const ProjectSerializer::UIState& state);
-    void updateWindowTitle();  // Updates title bar with project name and dirty indicator
-    void startExport();         // Starts offline render/export with titlebar progress
-    
+    void updateWindowTitle();
+    void startExport();
+
 private:
     std::unique_ptr<AestraWindowManager> m_windowManager;
     std::unique_ptr<AestraAudioController> m_audioController;
-    
+
     std::shared_ptr<AestraContent> m_content;
     std::shared_ptr<Aestra::ILogger> m_asyncLogger;
-    
+
     bool m_running;
     bool m_pendingClose{false};
     std::string m_projectPath;
 
     // Auto-save
-    std::atomic<bool> m_autoSaveEnabled{true};
-    std::atomic<bool> m_autoSaveInFlight{false};
-    std::future<bool> m_autoSaveFuture;
-    
+    Aestra::Audio::AutosaveManager m_autoSaveManager;
+
     // Window title state (to avoid updating every frame)
     std::string m_lastWindowTitle;
     bool m_lastModifiedState{false};
-    
+
     // Recovery state (for deferred project loading during startup)
     std::string m_pendingAutosavePath;
     bool m_recoveryHandled{false};
+
+    // Lifetime token — set to false during shutdown so async callbacks can bail
+    std::shared_ptr<bool> m_aliveToken;
 };

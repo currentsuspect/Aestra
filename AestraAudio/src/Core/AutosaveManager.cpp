@@ -154,12 +154,20 @@ bool AutosaveManager::forceAutosave() {
 
 std::string AutosaveManager::getAutosavePath() const {
     std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_config.autosavePathOverride.empty()) return m_config.autosavePathOverride;
     if (m_projectPath.empty()) return "";
     return getAutosavePathForProject(m_projectPath);
 }
 
 std::string AutosaveManager::getBackupDirectory() const {
     std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_config.autosavePathOverride.empty()) {
+        fs::path p(m_config.autosavePathOverride);
+        if (p.has_parent_path()) {
+            return (p.parent_path() / (p.stem().string() + ".autosave")).string();
+        }
+        return "";
+    }
     if (m_projectPath.empty()) return "";
     return getBackupDirForProject(m_projectPath);
 }
@@ -341,34 +349,27 @@ bool AutosaveManager::performAutosave() {
     if (!m_isAutosaving.compare_exchange_strong(expected, true)) {
         return false;
     }
-    
+
     struct AutosavingGuard {
         std::atomic<bool>& flag;
         explicit AutosavingGuard(std::atomic<bool>& f) : flag(f) {}
         ~AutosavingGuard() { flag.store(false, std::memory_order_release); }
     } guard(m_isAutosaving);
-    
-    std::string projectPath;
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        projectPath = m_projectPath;
-    }
-    
-    if (projectPath.empty()) {
-        notifyError("Autosave failed: no project path");
+
+    std::string autosavePath = getAutosavePath();
+    if (autosavePath.empty()) {
+        notifyError("Autosave failed: no autosave path");
         return false;
     }
-    
+
     if (!m_config.serializer) {
         notifyError("Autosave failed: no serializer callback");
         return false;
     }
-    
+
     notifyStatus("Autosaving...");
-    
+
     rotateBackups();
-    
-    std::string autosavePath = getAutosavePathForProject(projectPath);
     
     // Call the serializer callback to get project data
     std::string data;
@@ -426,20 +427,19 @@ bool AutosaveManager::performAutosave() {
 }
 
 void AutosaveManager::rotateBackups() {
-    if (m_projectPath.empty() || m_config.maxBackupFiles == 0) return;
-    
-    std::string autosavePath = getAutosavePathForProject(m_projectPath);
-    std::string backupDir = getBackupDirForProject(m_projectPath);
-    
+    std::string autosavePath = getAutosavePath();
+    std::string backupDir = getBackupDirectory();
+    if (autosavePath.empty() || backupDir.empty() || m_config.maxBackupFiles == 0) return;
+
     std::error_code ec;
-    
+
     if (!fs::exists(autosavePath, ec) || ec) {
         return;
     }
-    
+
     fs::create_directories(backupDir, ec);
     if (ec) return;
-    
+
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
     std::stringstream ss;
@@ -447,18 +447,32 @@ void AutosaveManager::rotateBackups() {
     ss << std::put_time(std::localtime(&time), "%Y%m%d_%H%M%S");
     ss << ".aes";
     std::string backupPath = ss.str();
-    
+
     fs::copy_file(autosavePath, backupPath, ec);
     if (ec) {
         Log::warning("Failed to create backup: " + ec.message());
         return;
     }
-    
-    auto backups = listBackups(m_projectPath);
+
+    // Prune oldest backups
+    std::vector<std::string> backups;
+    for (const auto& entry : fs::directory_iterator(backupDir, ec)) {
+        if (entry.is_regular_file(ec) && entry.path().extension() == ".aes") {
+            backups.push_back(entry.path().string());
+        }
+    }
+    std::sort(backups.begin(), backups.end(),
+        [](const std::string& a, const std::string& b) {
+            std::error_code aec, bec;
+            auto timeA = fs::last_write_time(a, aec);
+            auto timeB = fs::last_write_time(b, bec);
+            return timeA > timeB;
+        });
+
     while (backups.size() > m_config.maxBackupFiles) {
         std::string oldest = backups.back();
         backups.pop_back();
-        
+
         fs::remove(oldest, ec);
         if (!ec) {
             Log::info("Removed old backup: " + oldest);

@@ -190,7 +190,8 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/DSP/ReverbSIMD.cpp
     src/DSP/SincAVX512.cpp
     src/DSP/SampleRateConverter.cpp
-    
+    src/DSP/TruePeakMeter.cpp
+
     # IO
     src/IO/AudioExporter.cpp
     src/IO/MiniAudioDecoder.cpp
@@ -302,6 +303,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Playback/PreviewEngine.h
     include/IO/SamplePool.h
     include/DSP/SampleRateConverter.h
+    include/DSP/TruePeakMeter.h
     include/Core/MixerChannel.h
     include/Models/TrackManager.h
     include/Models/PatternSource.h
