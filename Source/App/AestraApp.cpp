@@ -726,7 +726,9 @@ void AestraApp::connectAudioToUI() {
 void AestraApp::finalizeAudioSetup() {
     if (m_audioStreamReady) return;
     StartupTimer t("Deferred audio stream start");
-    if (m_audioController->openDefaultStream(this)) {
+    // Pass nullptr so openDefaultStream falls back to 'this' (the controller)
+    // as the audio-callback userData, which the callback expects.
+    if (m_audioController->openDefaultStream(nullptr)) {
         m_audioController->startStream();
         if (m_content) {
             m_content->setAudioStatus(true);
