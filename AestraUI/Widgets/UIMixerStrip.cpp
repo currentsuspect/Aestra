@@ -24,7 +24,7 @@ namespace {
     constexpr float BUTTONS_H = 26.0f;
     constexpr float FOOTER_H = 22.0f;
     constexpr float PAD = 8.0f;
-    constexpr float GAP = 6.0f;
+    constexpr float GAP = 8.0f;
     constexpr float SIDE_INSET = 4.0f;
     constexpr float SECTION_GAP = 8.0f;
     constexpr float METER_W = 28.0f;
@@ -175,8 +175,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     // Input Selector REMOVED (Moved to Inspector)
 
     m_trimKnob = std::make_shared<UIMixerKnob>(UIMixerKnobType::Trim);
-    // Reduce visual noise: show channel controls only when hovered/selected.
-    m_trimKnob->setVisible(false);
+    m_trimKnob->setVisible(true);
     m_trimKnob->onValueChanged = [this](float db) {
         if (!m_viewModel || !m_continuousParams) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);
@@ -196,7 +195,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
     // Pan Knob (Always visible)
     m_panKnob = std::make_shared<UIMixerKnob>(UIMixerKnobType::Pan);
-    m_panKnob->setVisible(false);
+    m_panKnob->setVisible(true);
     m_panKnob->onValueChanged = [this](float pan) {
         if (!m_viewModel || !m_continuousParams) return;
         auto* channel = m_viewModel->getChannelById(m_channelId);
@@ -212,7 +211,7 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
     // Width Knob (Always visible)
     m_widthKnob = std::make_shared<UIMixerKnob>(UIMixerKnobType::Width);
-    m_widthKnob->setVisible(false);
+    m_widthKnob->setVisible(true);
     m_widthKnob->onValueChanged = [this](float width) {
         if (!m_viewModel) return; 
         auto* channel = m_viewModel->getChannelById(m_channelId);
@@ -363,8 +362,10 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     if (m_channelId == 0 && m_panKnob) {
         m_panKnob->setVisible(false);
     }
-    // Also hide Width for master (typically mastering width is a separate plugin, or we can add it later if requested)
-    // For now, standard mixer master bus usually doesn't have per-strip width control unless explicitly added.
+    // Hide Trim/Width for master (master bus doesn't have per-strip trim or width)
+    if (m_channelId == 0 && m_trimKnob) {
+        m_trimKnob->setVisible(false);
+    }
     if (m_channelId == 0 && m_widthKnob) {
         m_widthKnob->setVisible(false);
     }
@@ -417,31 +418,32 @@ void UIMixerStrip::layoutChildren()
         y += BUTTONS_H + GAP;
     }
 
-    if (m_trimKnob && m_trimKnob->isVisible()) {
-        m_trimKnob->setBounds(contentX, y, contentW, KNOB_H);
-        y += KNOB_H + GAP;
+    // Three-knob row: Trim + Pan + Width (channel controls grouped together)
+    const bool showTrim = (m_trimKnob && m_trimKnob->isVisible());
+    const bool showPan = (m_panKnob && m_panKnob->isVisible());
+    const bool showWidth = (m_widthKnob && m_widthKnob->isVisible());
+    int visibleKnobCount = (showTrim ? 1 : 0) + (showPan ? 1 : 0) + (showWidth ? 1 : 0);
+    if (visibleKnobCount > 0) {
+        const float knobW = (contentW - GAP * (visibleKnobCount - 1)) / visibleKnobCount;
+        float knobX = contentX;
+        if (showTrim) {
+            m_trimKnob->setBounds(knobX, y, knobW, KNOB_H);
+            knobX += knobW + GAP;
+        }
+        if (showPan) {
+            m_panKnob->setBounds(knobX, y, knobW, KNOB_H);
+            knobX += knobW + GAP;
+        }
+        if (showWidth) {
+            m_widthKnob->setBounds(knobX, y, knobW, KNOB_H);
+        }
+        y += KNOB_H + SECTION_GAP;
     }
 
+    // FX Summary (Add Insert) below the channel controls
     if (m_fxSummary && m_fxSummary->isVisible()) {
         m_fxSummary->setBounds(contentX, y, contentW, FX_H);
         y += FX_H + SECTION_GAP;
-    }
-
-    // Side-by-side Pan and Width
-    const bool showPan = (m_panKnob && m_panKnob->isVisible());
-    const bool showWidth = (m_widthKnob && m_widthKnob->isVisible());
-    
-    if (showPan && showWidth) {
-        const float halfW = (contentW - GAP) * 0.5f;
-        m_panKnob->setBounds(contentX, y, halfW, KNOB_H);
-        m_widthKnob->setBounds(contentX + halfW + GAP, y, halfW, KNOB_H);
-        y += KNOB_H + SECTION_GAP;
-    } else if (showPan) {
-        m_panKnob->setBounds(contentX, y, contentW, KNOB_H);
-        y += KNOB_H + SECTION_GAP;
-    } else if (showWidth) {
-        m_widthKnob->setBounds(contentX, y, contentW, KNOB_H);
-        y += KNOB_H + SECTION_GAP;
     }
 
     const bool hasFooter = (m_footer && m_footer->isVisible());
@@ -496,22 +498,6 @@ void UIMixerStrip::onUpdate(double deltaTime)
     const bool selected = (m_viewModel->getSelectedChannelId() == static_cast<int32_t>(m_channelId));
     if (m_cachedSelected != selected) {
         m_cachedSelected = selected;
-        invalidateStaticCache();
-    }
-
-    const bool draggingControls =
-        (m_trimKnob && m_trimKnob->isDragging()) ||
-        (m_panKnob && m_panKnob->isDragging()) ||
-        (m_widthKnob && m_widthKnob->isDragging());
-
-    // Reduce strip noise: show Trim/Pan/Width only when selected or actively dragged.
-    const bool showChannelControls = (m_channelId != 0) && (selected || draggingControls);
-    if (m_cachedShowChannelControls != showChannelControls) {
-        m_cachedShowChannelControls = showChannelControls;
-        if (m_trimKnob) m_trimKnob->setVisible(showChannelControls);
-        if (m_panKnob) m_panKnob->setVisible(showChannelControls);
-        if (m_widthKnob) m_widthKnob->setVisible(showChannelControls);
-        layoutChildren();
         invalidateStaticCache();
     }
 
@@ -818,6 +804,11 @@ void UIMixerStrip::renderStaticLayer(NUIRenderer& renderer)
     if (m_footer && m_footer->isVisible()) {
         m_footer->onRender(renderer);
     }
+}
+
+NUIRect UIMixerStrip::getFXSummaryBounds() const
+{
+    return m_fxSummary ? m_fxSummary->getBounds() : NUIRect{};
 }
 
 } // namespace AestraUI

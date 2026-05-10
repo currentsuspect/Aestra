@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginUIController.h"
-#include "PluginSelectorMenu.h"
+#include "UIMixerPluginDropdown.h"
 #include "GenericPluginEditor.h"
 #include "AestraEQEditor.h"
 #include "AestraCompEditor.h"
@@ -137,8 +137,6 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
     });
     
     rack->setOnAddPluginRequested([this, rack, chain](int slot) {
-        if (!m_scanner || !m_manager) return;
-        
         // Remove existing menu if any
         if (m_activeMenu) {
             if (auto parent = m_activeMenu->getParent()) {
@@ -147,54 +145,8 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
             m_activeMenu.reset();
         }
 
-        // Create new menu
-        m_activeMenu = std::make_shared<PluginSelectorMenu>();
-        
-        // Filter only effects for the rack
-        const auto& allPlugins = m_scanner->getScannedPlugins();
-        std::vector<PluginListItem> effects;
-        for (const auto& p : allPlugins) {
-            if (p.type == Aestra::Audio::PluginType::Effect) {
-                effects.push_back(convertToListItem(p));
-            }
-        }
-        
-        m_activeMenu->setPlugins(effects);
-        
-        // Position menu near the rack slot
-        auto rackBounds = rack->getBounds();
-        float scrollOffset = rack->getScrollOffset();
-        float slotYLocal = 5 + slot * 28.0f - scrollOffset;
-        
-        // Offset to the left of the rack
-        float menuWidth = 200.0f;
-        float menuX = rackBounds.x - menuWidth - 4.0f;
-        float menuY = rackBounds.y + slotYLocal;
-        
-        m_activeMenu->setBounds(menuX, menuY, menuWidth, m_activeMenu->getHeight());
-        
-        // Handle selection
-        m_activeMenu->setOnPluginSelected([this, chain, slot](const std::string& id) {
-            loadPluginToSlot(id, chain, slot);
-            
-            // Close menu
-            if (m_activeMenu) {
-                if (auto parent = m_activeMenu->getParent()) {
-                    parent->removeChild(m_activeMenu);
-                }
-                m_activeMenu.reset();
-            }
-        });
-        
-        // Handle closure
-        m_activeMenu->setOnClosed([this]() {
-            if (m_activeMenu) {
-                if (auto parent = m_activeMenu->getParent()) {
-                    parent->removeChild(m_activeMenu);
-                }
-                m_activeMenu.reset();
-            }
-        });
+        // Create new dropdown
+        m_activeMenu = std::make_shared<UIMixerPluginDropdown>();
 
         // Add to popup layer if available, otherwise fallback to rack's parent
         if (m_popupLayer) {
@@ -202,9 +154,48 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
         } else if (auto parent = rack->getParent()) {
             parent->addChild(std::static_pointer_cast<NUIComponent>(m_activeMenu));
         }
-        
-        // Auto-focus the menu for immediate search
-        m_activeMenu->setFocused(true);
+
+        // Position near the rack slot
+        auto rackBounds = rack->getBounds();
+        float scrollOffset = rack->getScrollOffset();
+        float slotYLocal = 5 + slot * 28.0f - scrollOffset;
+
+        constexpr float DROP_W = 240.0f;
+        float dropX = rackBounds.x;
+        // Inspector rack is on the right side — flip dropdown to its left so it
+        // never overlaps the inspector panel.
+        if (m_popupLayer) {
+            auto layerBounds = m_popupLayer->getBounds();
+            if (dropX > layerBounds.width * 0.5f) {
+                dropX = std::max(4.0f, rackBounds.x - DROP_W - 4.0f);
+            }
+        }
+
+        NUIRect triggerRect{dropX, rackBounds.y + slotYLocal, rackBounds.width, 28.0f};
+        m_activeMenu->showAt(triggerRect, rackBounds.bottom() + 500.0f);
+
+        // Handle selection
+        m_activeMenu->onPluginSelected = [this, chain, slot](const std::string& pluginId, const std::string&) {
+            loadPluginToSlot(pluginId, chain, slot);
+
+            // Close menu
+            if (m_activeMenu) {
+                if (auto parent = m_activeMenu->getParent()) {
+                    parent->removeChild(m_activeMenu);
+                }
+                m_activeMenu.reset();
+            }
+        };
+
+        // Handle dismissal
+        m_activeMenu->onDismissed = [this]() {
+            if (m_activeMenu) {
+                if (auto parent = m_activeMenu->getParent()) {
+                    parent->removeChild(m_activeMenu);
+                }
+                m_activeMenu.reset();
+            }
+        };
     });
     
     rack->setOnSlotBypassToggled([this, chain](int slot, bool bypassed) {

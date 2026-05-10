@@ -206,6 +206,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         // RecoveryDialog is modal - consume mouse move when visible
         if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
             AestraUI::NUIMouseEvent event;
+            event.type = AestraUI::NUIMouseEventType::Move;
             event.position = AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y));
             event.button = AestraUI::NUIMouseButton::None;
             event.pressed = false;
@@ -223,8 +224,9 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         // RecoveryDialog is modal - consume all mouse events when visible
         if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
             AestraUI::NUIMouseEvent event;
+            event.type = pressed ? AestraUI::NUIMouseEventType::Down : AestraUI::NUIMouseEventType::Up;
             event.position = AestraUI::NUIPoint(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
-            event.button = (button == 0) ? AestraUI::NUIMouseButton::Left : 
+            event.button = (button == 0) ? AestraUI::NUIMouseButton::Left :
                           (button == 1) ? AestraUI::NUIMouseButton::Right : AestraUI::NUIMouseButton::Middle;
             event.pressed = pressed;
             m_recoveryDialog->onMouseEvent(event);

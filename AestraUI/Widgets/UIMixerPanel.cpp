@@ -10,6 +10,10 @@
 #include "Commands/SetSoloCommand.h"
 #include "Commands/SetPanCommand.h"
 #include "TrackManager.h"
+#include "PluginManager.h"
+#include "Commands/PluginCommands.h"
+#include "Plugin/EffectChain.h"
+#include "Plugin/AestraDelay.h"
 #include <algorithm>
 
 namespace AestraUI {
@@ -58,14 +62,22 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
                                                    m_trackManager->getMeterSnapshots(), 
                                                    m_trackManager->getContinuousParams());
     m_masterStrip->onFXClicked = [this](uint32_t channelId) {
-        if (m_viewModel) {
-            m_viewModel->setSelectedChannelId(static_cast<int32_t>(channelId));
-        }
+        showPluginDropdown(channelId);
+    };
+    addChild(m_masterStrip);
+
+    // Plugin finder dropdown (created hidden, shown on Add Insert click)
+    m_pluginDropdown = std::make_shared<UIMixerPluginDropdown>();
+    m_pluginDropdown->setId("UIMixerPluginDropdown");
+    m_pluginDropdown->onPluginSelected = [this](const std::string& pluginId, const std::string&) {
+        loadPluginToSelectedChannel(pluginId);
+    };
+    m_pluginDropdown->onBrowseAllRequested = [this]() {
         if (m_inspector) {
             m_inspector->setActiveTab(UIMixerInspector::Tab::Inserts);
         }
     };
-    addChild(m_masterStrip);
+    addChild(m_pluginDropdown);
 
     // Initial channel refresh
     refreshChannels();
@@ -126,12 +138,7 @@ void UIMixerPanel::refreshChannels()
                                                     m_trackManager->getMeterSnapshots(), 
                                                     m_trackManager->getContinuousParams());
         strip->onFXClicked = [this](uint32_t channelId) {
-            if (m_viewModel) {
-                m_viewModel->setSelectedChannelId(static_cast<int32_t>(channelId));
-            }
-            if (m_inspector) {
-                m_inspector->setActiveTab(UIMixerInspector::Tab::Inserts);
-            }
+            showPluginDropdown(channelId);
         };
         
         // Wire fader to CommandHistory for undo/redo
@@ -405,6 +412,11 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     if (m_masterStrip && m_masterStrip->isVisible()) {
         m_masterStrip->onRender(renderer);
     }
+
+    // Plugin dropdown renders as a floating overlay on top of everything.
+    if (m_pluginDropdown && m_pluginDropdown->isVisible()) {
+        m_pluginDropdown->onRender(renderer);
+    }
 }
 
 bool UIMixerPanel::onMouseEvent(const NUIMouseEvent& event)
@@ -507,6 +519,88 @@ void UIMixerPanel::updateScrollFromMinimapX(float x)
     const float clampedX = std::clamp(x, minimapRect.x + gap, minimapRect.x + gap + std::max(0.0f, laneW - viewportW));
     const float t = (laneW - viewportW) > 0.0f ? (clampedX - (minimapRect.x + gap)) / (laneW - viewportW) : 0.0f;
     m_targetScrollX = std::clamp(t * maxScroll, 0.0f, maxScroll);
+}
+
+void UIMixerPanel::showPluginDropdown(uint32_t channelId)
+{
+    if (!m_pluginDropdown || !m_viewModel) return;
+
+    // Select the channel first
+    m_viewModel->setSelectedChannelId(static_cast<int32_t>(channelId));
+
+    // Find the strip that triggered this so we can anchor to its FX summary button
+    UIMixerStrip* triggerStrip = nullptr;
+    for (const auto& strip : m_strips) {
+        if (strip && strip->getChannelId() == channelId) {
+            triggerStrip = strip.get();
+            break;
+        }
+    }
+    if (!triggerStrip) {
+        triggerStrip = m_masterStrip.get();
+    }
+    if (!triggerStrip) return;
+
+    // Anchor dropdown to the left edge of the strip, below the Add Insert button.
+    auto triggerBounds = triggerStrip->getBounds();
+    auto fxBounds     = triggerStrip->getFXSummaryBounds();
+
+    auto panelBounds = getBounds();
+    const float masterX  = panelBounds.x + panelBounds.width - MASTER_STRIP_WIDTH;
+    const float inspectorLeft = masterX - STRIP_SPACING - INSPECTOR_WIDTH;
+    const float viewportRight = inspectorLeft - STRIP_SPACING;
+
+    constexpr float DROP_W = 240.0f;
+    float dropX = triggerBounds.x; // left edge of strip, per design spec
+    if (dropX + DROP_W > viewportRight) {
+        // Strip is too far right – park dropdown on the left side of the viewport
+        // so it is unmistakably clear of the inspector.
+        dropX = panelBounds.x + 40.0f;
+    }
+    dropX = std::max(dropX, panelBounds.x);
+
+    NUIRect anchor{dropX, fxBounds.y, fxBounds.width, fxBounds.height};
+
+    m_pluginDropdown->bringToFront();
+    m_pluginDropdown->showAt(anchor, panelBounds.bottom());
+}
+
+void UIMixerPanel::loadPluginToSelectedChannel(const std::string& pluginId)
+{
+    if (!m_trackManager || !m_viewModel) return;
+
+    auto* vmChannel = m_viewModel->getSelectedChannel();
+    if (!vmChannel || !vmChannel->channel) return;
+
+    auto& pm = Aestra::Audio::PluginManager::getInstance();
+    auto instance = pm.createInstanceById(pluginId);
+    if (!instance) {
+        AESTRA_LOG_ERROR("Failed to create plugin instance for: " + pluginId);
+        return;
+    }
+
+    if (!instance->initialize(pm.getDefaultSampleRate(), pm.getDefaultBlockSize())) {
+        AESTRA_LOG_ERROR("Failed to initialize plugin instance for: " + pluginId);
+        return;
+    }
+    if (auto delay = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraDelay>(instance)) {
+        // TODO: wire BPM from transport when available
+        delay->setBPM(120.0f);
+    }
+    instance->activate();
+
+    auto& chain = vmChannel->channel->getEffectChain();
+    size_t slot = chain.getFirstEmptySlot();
+    if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
+        m_trackManager->getCommandHistory().pushAndExecute(
+            std::make_shared<Aestra::Audio::AddPluginCommand>(*vmChannel->channel, slot, std::move(instance)));
+        // Ensure inspector reflects the new insert
+        if (m_inspector) {
+            m_inspector->setActiveTab(UIMixerInspector::Tab::Inserts);
+        }
+    } else {
+        AESTRA_LOG_WARNING("No empty effect slots on channel " + std::to_string(vmChannel->id));
+    }
 }
 
 } // namespace AestraUI

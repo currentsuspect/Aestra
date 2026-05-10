@@ -322,7 +322,12 @@ void AestraApp::buildSettingsAndDialogs() {
          }
     });
     settingsDialog->addPage(audioPage);
-    settingsDialog->addPage(std::make_shared<MembershipSettingsPage>());
+    auto membershipPage = std::make_shared<MembershipSettingsPage>();
+    membershipPage->setOnSignOutConfirmed([settingsDialog]() {
+        settingsDialog->hide();
+        // TODO: Transition app to activation / sign-in screen
+    });
+    settingsDialog->addPage(membershipPage);
     settingsDialog->addPage(std::make_shared<AppearanceSettingsPage>());
     settingsDialog->setBounds(AestraUI::NUIRect(0, 0, 950, 600));
 

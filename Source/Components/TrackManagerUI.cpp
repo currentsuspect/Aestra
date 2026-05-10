@@ -361,21 +361,20 @@ void TrackManagerUI::updateToolbarBounds() {
     float currentX = bounds.x + innerPad;
     float currentY = bounds.y + (headerHeight - buttonSize) * 0.5f;
 
-    m_menuIconBounds = AestraUI::NUIRect(0, 0, 0, 0);
-    m_addTrackBounds = AestraUI::NUIRect(0, 0, 0, 0);
+    // 2. Add Track (leftmost)
+    m_addTrackBounds = AestraUI::NUIRect(currentX, currentY, iconSize, iconSize);
+    float iconX = currentX + iconSize + buttonSpacing;
+    float iconY = currentY;
 
     // 3. Tools Module
-    float toolbarX = currentX;
-    float toolbarY = currentY;
+    float toolbarX = iconX;
+    float toolbarY = iconY;
 
     const int numTools = 4; // Select, Split, MultiSelect, Paint
     float toolbarWidth = (iconSize * numTools) + (buttonSpacing * (numTools - 1));
     float toolbarHeight = iconSize;
 
     m_toolbarBounds = AestraUI::NUIRect(toolbarX, toolbarY, toolbarWidth, toolbarHeight);
-
-    float iconX = toolbarX;
-    float iconY = toolbarY;
 
     m_selectToolBounds = AestraUI::NUIRect(iconX, iconY, iconSize, iconSize);
     iconX += iconSize + buttonSpacing;
@@ -389,8 +388,10 @@ void TrackManagerUI::updateToolbarBounds() {
     // 4. Extras Module
     // Follow Playhead (Toggle)
     m_followPlayheadBounds = AestraUI::NUIRect(iconX, iconY, iconSize, iconSize);
+    iconX += iconSize + (innerPad * 1.5f);
 
-    // Dropdowns removed -> Moved to Context Menu
+    // 5. Menu (rightmost)
+    m_menuIconBounds = AestraUI::NUIRect(iconX, iconY, iconSize, iconSize);
 }
 
 // =============================================================================
@@ -420,7 +421,6 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
 
     auto drawClusterPlate = [&](const AestraUI::NUIRect& rect) {
         renderer.fillRoundedRect(rect, radius + 1.0f, AestraUI::NUIColor(0.060f, 0.066f, 0.082f, 0.42f));
-        renderer.strokeRoundedRect(rect, radius + 1.0f, 1.0f, idleBorder.withAlpha(0.55f));
     };
 
     const AestraUI::NUIRect toolCluster{m_selectToolBounds.x - 5.0f, m_selectToolBounds.y - 4.0f,
@@ -526,9 +526,46 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         m_followPlayheadIcon->onRender(renderer);
     }
 
-    // Render Loop Dropdown (moved to menu)
-    // Render Snap Dropdown (moved to menu)
-    // Render Popup Lists (moved to menu)
+    // Render Add Track button
+    {
+        auto currentBg = m_addTrackHovered ? utilityHoverBg : utilityBg;
+        auto currentBorder = m_addTrackHovered ? utilityHoverBorder : utilityBorder;
+        renderer.drawShadow(m_addTrackBounds, 0.0f, m_addTrackHovered ? 2.0f : 1.0f, m_addTrackHovered ? 7.0f : 5.0f,
+                            shadowColor.withAlpha(m_addTrackHovered ? 0.44f : 0.30f));
+        renderer.fillRoundedRect(m_addTrackBounds, radius, currentBg);
+        renderer.strokeRoundedRect(m_addTrackBounds, radius, 1.0f, currentBorder);
+        if (m_addTrackIcon) {
+            const float iconSz = 16.0f;
+            AestraUI::NUIRect iconRect(
+                std::round(m_addTrackBounds.x + (m_addTrackBounds.width - iconSz) * 0.5f),
+                std::round(m_addTrackBounds.y + (m_addTrackBounds.height - iconSz) * 0.5f), iconSz, iconSz);
+            m_addTrackIcon->setBounds(iconRect);
+            m_addTrackIcon->setColor(themeManager.getColor("textPrimary").withAlpha(m_addTrackHovered ? 0.85f : 0.55f));
+            m_addTrackIcon->onRender(renderer);
+        }
+    }
+
+    // Render Menu (hamburger) button
+    {
+        bool menuActive = m_activeContextMenu != nullptr;
+        auto currentBg = menuActive ? accentPurple.withAlpha(0.34f) : (m_menuHovered ? utilityHoverBg : utilityBg);
+        auto currentBorder = menuActive ? accentPurple.withAlpha(0.55f) : (m_menuHovered ? utilityHoverBorder : utilityBorder);
+        renderer.drawShadow(m_menuIconBounds, 0.0f, menuActive ? 2.5f : (m_menuHovered ? 2.0f : 1.0f),
+                            menuActive ? 9.0f : (m_menuHovered ? 7.0f : 5.0f),
+                            shadowColor.withAlpha(menuActive ? 0.50f : (m_menuHovered ? 0.44f : 0.30f)));
+        renderer.fillRoundedRect(m_menuIconBounds, radius, currentBg);
+        renderer.strokeRoundedRect(m_menuIconBounds, radius, 1.0f, currentBorder);
+        if (m_menuIcon) {
+            const float iconSz = 17.0f;
+            AestraUI::NUIRect iconRect(
+                std::round(m_menuIconBounds.x + (m_menuIconBounds.width - iconSz) * 0.5f),
+                std::round(m_menuIconBounds.y + (m_menuIconBounds.height - iconSz) * 0.5f), iconSz, iconSz);
+            m_menuIcon->setBounds(iconRect);
+            m_menuIcon->setColor(themeManager.getColor("textPrimary").withAlpha(
+                menuActive ? 0.92f : (m_menuHovered ? 0.80f : 0.55f)));
+            m_menuIcon->onRender(renderer);
+        }
+    }
 }
 
 bool TrackManagerUI::handleToolbarClick(const AestraUI::NUIPoint& position) {
@@ -1871,11 +1908,16 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         if (trackBounds.bottom() < viewportTop || trackBounds.y > viewportBottom)
             continue;
 
-        // Flat dark row base for empty cells (no per-row color tinting).
-        renderer.fillRect(trackBounds, AestraUI::NUIColor(0.070f, 0.075f, 0.090f, 1.0f));
-        renderer.drawLine(AestraUI::NUIPoint(trackBounds.x + controlAreaWidth, trackBounds.bottom() - 1.0f),
+        // Alternating row shade
+        const bool isEven = (i % 2) == 0;
+        const AestraUI::NUIColor evenRowColor = AestraUI::NUIColor(0.070f, 0.075f, 0.090f, 1.0f);
+        const AestraUI::NUIColor oddRowColor = AestraUI::NUIColor(0.062f, 0.067f, 0.082f, 1.0f);
+        renderer.fillRect(trackBounds, isEven ? evenRowColor : oddRowColor);
+
+        // 1px bottom border across full track width (control + grid)
+        renderer.drawLine(AestraUI::NUIPoint(trackBounds.x, trackBounds.bottom() - 1.0f),
                           AestraUI::NUIPoint(trackBounds.right(), trackBounds.bottom() - 1.0f), 1.0f,
-                          AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.065f));
+                          AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
 
         track->renderStatic(renderer);
     }
@@ -3800,12 +3842,12 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
 
         // Beat ticks within the bar (only if zoomed in enough AND not striding)
         // DOWNBEATS (1, 2, 3, 4) are BRIGHTER and TALLER for visibility
-        if (m_pixelsPerBeat >= 15.0f && barStride == 1) {
+        if (m_pixelsPerBeat >= 10.0f && barStride == 1) {
             for (int beat = 1; beat < beatsPerBar; ++beat) {
                 float beatX = x + (beat * m_pixelsPerBeat);
 
-                float beatTickHeight = rulerBounds.height * 0.30f;
-                AestraUI::NUIColor beatTickColor = AestraUI::NUIColor::fromHex(0x242431).withAlpha(0.48f);
+                float beatTickHeight = rulerBounds.height * 0.22f;
+                AestraUI::NUIColor beatTickColor = AestraUI::NUIColor::fromHex(0x242431).withAlpha(0.36f);
 
                 renderer.drawLine(AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height - beatTickHeight),
                                   AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height), 1.0f, beatTickColor);
@@ -4062,10 +4104,10 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
         // GLOW EFFECT (BG) - Only when playing
         if (m_trackManager->isPlaying()) {
             // Manual Gradient Glow for smoother look
-            float glowWidth = 6.0f; // Width of glow on each side
+            float glowWidth = 4.0f; // Width of glow on each side
             float lineH = playheadEndY - playheadStartY;
 
-            AestraUI::NUIColor glowColorCenter = playheadColor.withAlpha(0.25f); // Soft center
+            AestraUI::NUIColor glowColorCenter = playheadColor.withAlpha(0.14f); // Soft center
             AestraUI::NUIColor glowColorEdge = playheadColor.withAlpha(0.0f);    // Transparent edge
 
             // Left side glow (Transparent -> Color)
@@ -4079,9 +4121,9 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
             );
         }
 
-        // Draw playhead line (thin, pixel-aligned)
+        // Draw playhead line (thin, faint, pixel-aligned)
         renderer.drawLine(AestraUI::NUIPoint(playheadX, playheadStartY), AestraUI::NUIPoint(playheadX, playheadEndY),
-                          1.0f, playheadColor);
+                          1.0f, playheadColor.withAlpha(0.55f));
 
         // Draw ruler-locked circular marker. It sits just above the grid start so the
         // vertical line reads as anchored to the ruler rather than floating.

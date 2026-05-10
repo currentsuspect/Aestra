@@ -685,7 +685,25 @@ Status belongs in dedicated docs or reports, not in this file.
 
 ---
 
-## 25. DO
+## 25. Known Framework Debt
+
+### NUIPlatformBridge `NUIMouseEvent::type` — FIXED
+
+`NUIMouseEvent::type` is now populated correctly by `AestraUI/Platform/NUIPlatformBridge.cpp` and `Source/Core/AestraWindowManager.cpp` as of 2026-05-11. Use freely.
+
+Historical context: the field was previously left as `NUIMouseEventType::None` at every construction site, causing components that checked `event.type` to silently fail. The following components were affected and have been verified:
+
+* `MembershipSettingsPage` — now uses `event.pressed` directly (works regardless).
+* `AestraHistoryPanel` — `event.type` checks for Move/Scroll now fire correctly.
+* `NUIApp::handleMouseEvent` — adaptive FPS type checks now match correctly.
+* `UnitRow` — step-editing type checks are now functional (redundant with `pressed`/`released` but no longer dead).
+* `PluginBrowserPanel` — drag type check remains dead (`Drag` is not emitted by the bridge), but the `button == Left` path covers actual drag logic.
+
+Both `event.type` and `event.pressed`/`released` patterns are valid going forward.
+
+---
+
+## 26. DO
 
 * Use `Aestra_CORE_MODE=ON` for public-facing builds.
 * Use `AESTRA_HEADLESS_ONLY=ON` when UI is not needed.

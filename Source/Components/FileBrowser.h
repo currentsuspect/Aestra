@@ -183,10 +183,49 @@ public:
     
     void setSortMode(SortMode mode);
     void setSortAscending(bool ascending);
-    
-	private:
-        struct BrowserLayout;
 
+    // Navigation actions
+    enum class BrowserNavAction {
+        Favorites,
+        Purple,
+        CollectionDrums,
+        CollectionInstruments,
+        Vocals,
+        Sounds,
+        Drums,
+        Instruments,
+        AudioEffects,
+        Plugins,
+        Clips,
+        Samples,
+        Packs,
+        UserLibrary,
+        CurrentProject,
+        CustomPlace,
+        AddFolder
+    };
+
+    struct BrowserNavHit {
+        BrowserNavAction action;
+        NUIRect bounds;
+        std::string path;
+    };
+
+    struct BrowserLayout {
+        NUIRect search;
+        NUIRect navPane;
+        NUIRect listHeader;
+        NUIRect list;
+        float navWidth = 0.0f;
+    };
+
+    BrowserLayout computeBrowserLayout() const;
+    float getNavPaneWidth() const;
+    BrowserNavAction getActiveNavAction() const { return activeNavAction_; }
+
+    void setOnNavActionSelected(std::function<void(BrowserNavAction)> callback) { onNavActionSelected_ = callback; }
+
+	private:
 	    void loadDirectoryContents();
 	    void loadFolderContents(FileItem* item);
 
@@ -267,42 +306,6 @@ public:
 	    void navigateBack();
 	    void navigateForward();
 
-        enum class BrowserNavAction {
-            Favorites,
-            Purple,
-            CollectionDrums,
-            CollectionInstruments,
-            Vocals,
-            Sounds,
-            Drums,
-            Instruments,
-            AudioEffects,
-            Plugins,
-            Clips,
-            Samples,
-            Packs,
-            UserLibrary,
-            CurrentProject,
-            CustomPlace,
-            AddFolder
-        };
-
-        struct BrowserNavHit {
-            BrowserNavAction action;
-            NUIRect bounds;
-            std::string path;
-        };
-
-        struct BrowserLayout {
-            NUIRect search;
-            NUIRect navPane;
-            NUIRect listHeader;
-            NUIRect list;
-            float navWidth = 0.0f;
-        };
-
-        BrowserLayout computeBrowserLayout() const;
-    
     // File management
     std::string currentPath_;
     std::string pendingSelectionPath_;
@@ -426,6 +429,7 @@ public:
     std::function<void(const FileItem&)> onFileOpened_;
     std::function<void(const std::string&)> onPathChanged_;
     std::function<void(const FileItem&)> onSoundPreview_;
+    std::function<void(BrowserNavAction)> onNavActionSelected_;
     
     // Theme colors
     NUIColor backgroundColor_;
