@@ -76,6 +76,10 @@ static clap_host_params createHostParams() {
 static clap_host_params g_hostParams = createHostParams();
 
 const void* hostGetExtension(const clap_host* /*host*/, const char* extension_id) {
+    // [SEC-FIX] Guard against null extension_id from malicious plugins.
+    if (!extension_id) {
+        return nullptr;
+    }
     if (strcmp(extension_id, CLAP_EXT_LOG) == 0) {
         return &g_hostLog;
     }

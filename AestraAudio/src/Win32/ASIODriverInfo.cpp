@@ -31,7 +31,12 @@ std::string ReadRegistryString(HKEY hKey, const char* valueName) {
     LONG result = RegQueryValueExA(hKey, valueName, nullptr, &type, reinterpret_cast<LPBYTE>(buffer), &bufferSize);
 
     if (result == ERROR_SUCCESS && type == REG_SZ) {
-        return std::string(buffer);
+        // [SEC-FIX] Use bufferSize to avoid over-read if value lacks null terminator.
+        // bufferSize includes null terminator on success, so length is bufferSize - 1.
+        size_t len = (bufferSize > 0) ? (bufferSize - 1) : 0;
+        if (len >= sizeof(buffer))
+            len = sizeof(buffer) - 1;
+        return std::string(buffer, len);
     }
 
     return "";

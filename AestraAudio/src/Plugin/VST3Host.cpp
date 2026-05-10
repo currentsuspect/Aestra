@@ -584,6 +584,13 @@ std::vector<uint8_t> VST3PluginInstance::saveState() const {
                 if (numBytesWritten) *numBytesWritten = 0;
                 return kInvalidArgument;
             }
+            // [SEC-FIX] Cap stream size to prevent malicious plugins from exhausting memory.
+            constexpr int64_t MAX_MEMSTREAM_SIZE = 256LL * 1024 * 1024; // 256 MiB
+            if (pos > MAX_MEMSTREAM_SIZE || numBytes > MAX_MEMSTREAM_SIZE ||
+                pos + numBytes > MAX_MEMSTREAM_SIZE) {
+                if (numBytesWritten) *numBytesWritten = 0;
+                return kInvalidArgument;
+            }
             if (pos + numBytes > static_cast<int64_t>(data.size()))
                 data.resize(pos + numBytes);
             std::memcpy(data.data() + pos, buffer, numBytes);

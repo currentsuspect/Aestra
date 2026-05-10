@@ -245,7 +245,8 @@ bool NUITextRendererSDF::loadFontAtlas(const std::string& fontPath, float fontSi
             penY += rowHeight + 1;
             rowHeight = 0;
         }
-        if (penY + h >= atlasH) {
+        // [SEC-FIX] Reject glyphs that are wider or taller than the atlas to prevent memcpy overflow.
+        if (w > atlasW || h > atlasH || penY + h >= atlasH) {
             stbtt_FreeSDF(sdf, nullptr);
             break;
         }

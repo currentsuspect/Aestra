@@ -54,7 +54,10 @@ void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std
             return false;
         }
 
-        fseek(file, 4, SEEK_CUR); // Skip size
+        if (fseek(file, 4, SEEK_CUR) != 0) {
+            fclose(file);
+            return false;
+        } // Skip size
 
         char wave[4];
         if (fread(wave, 1, 4, file) != 4 || memcmp(wave, "WAVE", 4) != 0) {
@@ -82,7 +85,10 @@ void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std
                     fclose(file);
                     return false;
                 }
-                fseek(file, 6, SEEK_CUR);
+                if (fseek(file, 6, SEEK_CUR) != 0) {
+                    fclose(file);
+                    return false;
+                }
                 if (fread(&bitsPerSample, 2, 1, file) != 1) {
                     fclose(file);
                     return false;
@@ -96,8 +102,15 @@ void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std
                     fclose(file);
                     return false;
                 }
-                if (chunkLen > 16)
-                    fseek(file, chunkLen - 16, SEEK_CUR);
+                if (chunkLen > 16) {
+                    // [SEC-FIX] Cap seek to avoid backward seek from uint32 wrap on 32-bit.
+                    constexpr uint32_t MAX_SKIP = 0x7FFFFFFF;
+                    uint32_t skip = (chunkLen - 16 > MAX_SKIP) ? MAX_SKIP : (chunkLen - 16);
+                    if (fseek(file, static_cast<long>(skip), SEEK_CUR) != 0) {
+                        fclose(file);
+                        return false;
+                    }
+                }
             } else if (memcmp(chunkId, "data", 4) == 0) {
                 if (audioFormat != 1 || (bitsPerSample != 16 && bitsPerSample != 24)) {
                     fclose(file);
@@ -158,7 +171,13 @@ void MetronomeEngine::loadClickSounds(const std::string& downbeatPath, const std
                 fclose(file);
                 return true;
             } else {
-                fseek(file, chunkLen, SEEK_CUR);
+                // [SEC-FIX] Cap chunk skip to prevent backward seek / infinite loop.
+                constexpr uint32_t MAX_SKIP = 0x7FFFFFFF;
+                uint32_t skip = (chunkLen > MAX_SKIP) ? MAX_SKIP : chunkLen;
+                if (fseek(file, static_cast<long>(skip), SEEK_CUR) != 0) {
+                    fclose(file);
+                    return false;
+                }
             }
         }
         fclose(file);

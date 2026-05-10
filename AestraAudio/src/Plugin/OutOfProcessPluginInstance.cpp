@@ -164,6 +164,13 @@ bool PluginHostProcess::start() {
         close(inPipe[1]);
         close(outPipe[0]);
         close(outPipe[1]);
+        // [SEC-FIX] Validate path is absolute and a regular file before exec to prevent
+        // arbitrary code execution via AESTRA_PLUGIN_HOST_PATH environment variable.
+        std::error_code ec;
+        std::filesystem::path p(m_executablePath);
+        if (!p.is_absolute() || !std::filesystem::is_regular_file(p, ec)) {
+            _exit(127);
+        }
         execl(m_executablePath.c_str(), m_executablePath.c_str(), "--stdio", static_cast<char*>(nullptr));
         _exit(127);
     }

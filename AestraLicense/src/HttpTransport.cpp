@@ -20,6 +20,11 @@ std::once_flag g_curlInitOnce;
 size_t writeBody(char* ptr, size_t size, size_t nmemb, void* userdata) {
     auto* body = static_cast<std::string*>(userdata);
     const size_t byteCount = size * nmemb;
+    // [SEC-FIX] Reject responses exceeding a reasonable size to prevent memory exhaustion.
+    constexpr size_t MAX_RESPONSE_BYTES = 8 * 1024 * 1024; // 8 MiB
+    if (body->size() + byteCount > MAX_RESPONSE_BYTES) {
+        return 0; // Tell libcurl to abort the transfer
+    }
     body->append(ptr, byteCount);
     return byteCount;
 }
