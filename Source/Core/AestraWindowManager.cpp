@@ -162,7 +162,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
 
     // Create custom window with title bar
     m_customWindow = std::make_shared<NUICustomWindow>();
-    m_rootComponent->addChild(m_customWindow); // WIRED: Window is in the tree
+    m_rootComponent->setCustomWindow(m_customWindow); // WIRED: Window is in the tree
     m_customWindow->setTitle(config.title);
     m_customWindow->setBounds(NUIRect(0, 0, desc.width, desc.height));
 
