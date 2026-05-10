@@ -95,7 +95,8 @@ std::vector<AudioDeviceInfo> ASIODriver::getDevices() {
                 if (RegQueryValueExA(hSubKey, "CLSID", nullptr, &type, (LPBYTE)clsidStr, &clsidLen) == ERROR_SUCCESS) {
                     if (RegQueryValueExA(hSubKey, "Description", nullptr, &type, (LPBYTE)descStr, &descLen) !=
                         ERROR_SUCCESS) {
-                        strcpy_s(descStr, keyName);
+                        // [SEC-FIX] strcpy_s requires destination size; descStr is 128 bytes.
+                        strcpy_s(descStr, sizeof(descStr), keyName);
                     }
 
                     // Add to internal registry

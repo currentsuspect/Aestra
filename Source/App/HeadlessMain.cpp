@@ -211,7 +211,6 @@ static std::shared_ptr<AudioBuffer> makeSineBuffer(uint32_t sampleRate, uint32_t
         buffer->data[static_cast<size_t>(i) * 2 + 1] = s;
     }
 
-    buffer->ready.store(true, std::memory_order_release);
     return buffer;
 }
 

@@ -433,7 +433,8 @@ void TrackUIComponent::updateTrackNameColors() {
             std::string numberStr = trackName.substr(numberPos + 1);
             try {
                 uint32_t trackNumber = std::stoul(numberStr);
-                size_t colorIndex = (trackNumber - 1) % brightColors.size();
+                // [SEC-FIX] Guard against underflow when track number is 0.
+                size_t colorIndex = (trackNumber == 0) ? 0 : ((trackNumber - 1) % brightColors.size());
                 AestraUI::NUIColor autoColor = restrainDawColor(brightColors[colorIndex], 0.72f, 0.30f, 0.78f);
                 
                 m_nameLabel->setTextColor(autoColor);
