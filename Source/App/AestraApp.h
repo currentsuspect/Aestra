@@ -62,7 +62,9 @@ private:
     bool initializeAudio();
     void initializeContent();
     void initializeAutosave(bool enabled);
-    void buildSettingsDialog();
+    void buildRecoveryDialog();              // lightweight — needed during startup
+    void buildSettingsAndDialogs();          // heavy — deferred until first open
+    void ensureSettingsAndDialogs();         // lazy guard
     void buildMenuBar();
     void initializePlugins();
     void loadOrRecoverProject(const std::string& projectPath, bool crashedSession);
@@ -72,6 +74,7 @@ private:
     // Glue logic
     void setupCallbacks();
     void connectAudioToUI();
+    void finalizeAudioSetup(); // Deferred after window shown for instant startup
 
     // Project management
     void requestClose();
@@ -110,4 +113,8 @@ private:
 
     // Lifetime token — set to false during shutdown so async callbacks can bail
     std::shared_ptr<bool> m_aliveToken;
+
+    // Startup optimization flags
+    bool m_audioStreamReady = false;
+    bool m_audioConfigSynced = false;
 };

@@ -37,6 +37,20 @@ using namespace AestraUI;
 using namespace Aestra::Audio;
 
 namespace {
+
+struct StartupTimer {
+    const char* name;
+    std::chrono::steady_clock::time_point start;
+    explicit StartupTimer(const char* n)
+        : name(n), start(std::chrono::steady_clock::now()) {}
+    ~StartupTimer() {
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::steady_clock::now() - start)
+                           .count();
+        Log::info(std::string("[Startup] ") + name + ": " + std::to_string(elapsed) + " ms");
+    }
+};
+
 void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content, const std::string& projectPath) {
     if (!content) {
         return;
@@ -133,6 +147,8 @@ bool AestraApp::isCrashedSession() {
 }
 
 bool AestraApp::initialize(const std::string& projectPath) {
+    StartupTimer totalTimer("Total startup");
+
     if (!transitionToInitializing()) return false;
 
     Log::info("Aestra v1.0.0 - Initializing...");
@@ -140,9 +156,12 @@ bool AestraApp::initialize(const std::string& projectPath) {
     // Check for crashed session BEFORE initializing platform.
     bool crashedSession = isCrashedSession();
 
-    if (!Platform::initialize()) {
-        Log::error("Failed to initialize platform");
-        return false;
+    {
+        StartupTimer t("Platform init");
+        if (!Platform::initialize()) {
+            Log::error("Failed to initialize platform");
+            return false;
+        }
     }
 
     // Initialize m_projectPath AFTER Platform is initialized
@@ -160,15 +179,42 @@ bool AestraApp::initialize(const std::string& projectPath) {
     UIState uiState;
     uiState.load();
 
-    if (!initializePlatformAndWindow(uiState)) return false;
-    initializeAudio();
-    initializeContent();
-    initializeAutosave(autoSaveEnabled);
-    buildSettingsDialog();
-    buildMenuBar();
-    initializePlugins();
-    loadOrRecoverProject(projectPath, crashedSession);
-    restoreUIState(uiState);
+    {
+        StartupTimer t("Platform + Window");
+        if (!initializePlatformAndWindow(uiState)) return false;
+    }
+    {
+        StartupTimer t("Audio init");
+        initializeAudio();
+    }
+    {
+        StartupTimer t("Content init");
+        initializeContent();
+    }
+    {
+        StartupTimer t("Autosave init");
+        initializeAutosave(autoSaveEnabled);
+    }
+    {
+        StartupTimer t("Recovery dialog");
+        buildRecoveryDialog();
+    }
+    {
+        StartupTimer t("Menu bar");
+        buildMenuBar();
+    }
+    {
+        StartupTimer t("Plugins init");
+        initializePlugins();
+    }
+    {
+        StartupTimer t("Project load/recovery");
+        loadOrRecoverProject(projectPath, crashedSession);
+    }
+    {
+        StartupTimer t("UI state restore");
+        restoreUIState(uiState);
+    }
 
     return transitionToRunning();
 }
@@ -212,9 +258,8 @@ bool AestraApp::initializeAudio() {
         Log::warning("Audio Controller initialization failed (continuing without audio)");
         return false;
     }
-    if (m_audioController->openDefaultStream(nullptr)) {
-        m_audioController->startStream();
-    }
+    // Heavy stream open/start is deferred to finalizeAudioSetup() after the
+    // window is visible, for instant startup perception.
     return true;
 }
 
@@ -250,7 +295,12 @@ void AestraApp::initializeAutosave(bool enabled) {
     m_autoSaveManager.initialize(m_projectPath, std::move(config));
 }
 
-void AestraApp::buildSettingsDialog() {
+void AestraApp::buildRecoveryDialog() {
+    m_windowManager->setRecoveryDialog(std::make_shared<RecoveryDialog>());
+}
+
+void AestraApp::buildSettingsAndDialogs() {
+    StartupTimer t("SettingsAndDialogs build");
     auto settingsDialog = std::make_shared<SettingsDialog>();
     auto generalPage = std::make_shared<GeneralSettingsPage>();
     generalPage->setOnAutoSaveToggled([this](bool enabled) {
@@ -265,6 +315,8 @@ void AestraApp::buildSettingsDialog() {
     );
     audioPage->setOnStreamRestore([this]() {
          m_audioController->closeStream();
+         m_audioStreamReady = false;
+         m_audioConfigSynced = false;
          if (m_audioController->openDefaultStream(nullptr)) {
              m_audioController->startStream();
          }
@@ -276,7 +328,6 @@ void AestraApp::buildSettingsDialog() {
 
     m_windowManager->setSettingsDialog(settingsDialog);
     m_windowManager->setConfirmationDialog(std::make_shared<ConfirmationDialog>());
-    m_windowManager->setRecoveryDialog(std::make_shared<RecoveryDialog>());
 
     auto exportDialog = std::make_shared<ExportDialog>();
     m_windowManager->setExportDialog(exportDialog);
@@ -285,6 +336,12 @@ void AestraApp::buildSettingsDialog() {
     unifiedHUD->setVisible(false);
     unifiedHUD->setAudioEngine(m_audioController->getEngine());
     m_windowManager->setUnifiedHUD(unifiedHUD);
+}
+
+void AestraApp::ensureSettingsAndDialogs() {
+    if (!m_windowManager->getSettingsDialog()) {
+        buildSettingsAndDialogs();
+    }
 }
 
 void AestraApp::buildMenuBar() {
@@ -365,6 +422,7 @@ void AestraApp::buildMenuBar() {
         menu->addItem("Export Audio...", [this]() { startExport(); });
         menu->addSeparator();
         menu->addItem("Settings...", [this]() {
+            ensureSettingsAndDialogs();
             if (m_windowManager->getSettingsDialog()) {
                 m_windowManager->getSettingsDialog()->show();
             }
@@ -598,9 +656,10 @@ bool AestraApp::transitionToRunning() {
 }
 
 void AestraApp::connectAudioToUI() {
-    // Connect deferred audio settings
+    // Connect deferred audio settings (idempotent — safe to call again after stream opens)
     if (m_audioController->getEngine() && m_content && m_content->getTrackManager()) {
-        if (m_audioController->isInitialized()) {
+        if (m_audioController->isInitialized() && !m_audioConfigSynced) {
+            m_audioConfigSynced = true;
             auto& config = m_audioController->getStreamConfig();
             m_content->getTrackManager()->setInputChannelCount(config.numInputChannels);
             m_content->getTrackManager()->setOutputSampleRate(config.sampleRate);
@@ -624,7 +683,7 @@ void AestraApp::connectAudioToUI() {
             Aestra::ServiceLocator::provide<Aestra::Audio::TrackManager>(m_content->getTrackManager());
 
             auto trackMgr = m_content->getTrackManager();
-            trackMgr->getCommandHistory().addOnStateChanged([trackMgr]() {
+            trackMgr->getCommandHistory().setOnStateChanged([trackMgr]() {
                 if (trackMgr) trackMgr->markModified();
             });
             trackMgr->setOnModified([this]() {
@@ -664,6 +723,19 @@ void AestraApp::connectAudioToUI() {
     }
 }
 
+void AestraApp::finalizeAudioSetup() {
+    if (m_audioStreamReady) return;
+    StartupTimer t("Deferred audio stream start");
+    if (m_audioController->openDefaultStream(this)) {
+        m_audioController->startStream();
+        if (m_content) {
+            m_content->setAudioStatus(true);
+        }
+        connectAudioToUI(); // Sync configs now that stream is open
+        m_audioStreamReady = true;
+    }
+}
+
 void AestraApp::setupCallbacks() {
     m_windowManager->setCloseCallback([this]() {
         requestClose();
@@ -692,7 +764,11 @@ void AestraApp::setupCallbacks() {
 }
 
 void AestraApp::run() {
-    m_windowManager->render(); // Initial render
+    m_windowManager->render(); // Initial render — window visible NOW
+
+    // Complete heavy audio init after window is already showing,
+    // so the UI feels instant even if the stream takes a second.
+    finalizeAudioSetup();
 
     while (m_running && m_windowManager->processEvents()) {
         UnifiedProfiler::getInstance().beginFrame();
@@ -1100,6 +1176,7 @@ void AestraApp::startExport() {
         Log::warning("No audio engine available for export");
         return;
     }
+    ensureSettingsAndDialogs();
     auto& trackMgr = *m_content->getTrackManager();
     auto exportDialog = m_windowManager->getExportDialog();
     if (exportDialog) {

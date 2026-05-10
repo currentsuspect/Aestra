@@ -281,6 +281,7 @@ protected:
 private:
     std::shared_ptr<TrackManager> m_trackManager;
     std::vector<std::shared_ptr<TrackUIComponent>> m_trackUIComponents;
+    bool m_needsTrackRefresh = true; // Lazy-init: defer refreshTracks() from ctor to first render
     ::AestraUI::NUIPlatformBridge* m_window = nullptr;
 
     // UI Layout
