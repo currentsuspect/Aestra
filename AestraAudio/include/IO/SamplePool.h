@@ -3,153 +3,175 @@
 
 #include <atomic>
 #include <cstdint>
+#include <cstddef>
+#include <deque>
 #include <functional>
+#include <future>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <vector>
+#include <condition_variable>
 
 namespace Aestra {
 namespace Audio {
 
-/**
- * @brief Unique identity for a sample on disk
- *
- * Uses absolute path + modification time to invalidate cache when files change.
- * Two keys are equal only if both path and modification time match.
- */
 struct SampleKey {
-    std::string filePath; // Absolute filesystem path
-    uint64_t modTime{0};  // Last modification time (epoch-based)
+    std::string filePath;
+    uint64_t modTime{0};
 
     bool operator==(const SampleKey& other) const noexcept {
         return filePath == other.filePath && modTime == other.modTime;
     }
 };
 
-/**
- * @brief Hash functor for SampleKey
- *
- * Combines path hash and modification time for unordered_map.
- */
 struct SampleKeyHasher {
     size_t operator()(const SampleKey& key) const noexcept {
         size_t h = std::hash<std::string>{}(key.filePath);
-        // Combine with modTime using a good hash combiner
         h ^= static_cast<size_t>(key.modTime) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
         return h;
     }
 };
 
-/**
- * @brief Shared audio buffer representation
- *
- * Holds decoded PCM float samples and metadata. Lifetime is managed by shared_ptr
- * returned from SamplePool. When all references are dropped, the buffer becomes
- * eligible for garbage collection.
- */
 struct AudioBuffer {
-    std::vector<float> data; // Interleaved float samples [-1.0, 1.0]
-    uint32_t channels{0};    // Number of channels (e.g., 1=mono, 2=stereo)
-    uint32_t sampleRate{0};  // Sample rate in Hz (e.g., 44100)
-    uint64_t numFrames{0};   // Total frames = data.size() / channels
-    bool isStreaming{false}; // True if backed by streaming source
+    std::vector<float> data;
+    uint32_t channels{0};
+    uint32_t sampleRate{0};
+    uint64_t numFrames{0};
+    bool isStreaming{false};
 
-    // Future extension point for streaming sources
     std::shared_ptr<void> source;
 
-    // Cache management (automatically updated by SamplePool)
-    std::atomic<bool> ready{false};          // true when data is valid
-    std::atomic<uint64_t> lastAccessTick{0}; // LRU timestamp
-    std::string sourcePath;                  // For debugging/reloading
+    std::atomic<bool> ready{false};
+    std::atomic<uint64_t> lastAccessTick{0};
+    std::string sourcePath;
 };
 
-/**
- * @brief Thread-safe LRU cache for decoded audio samples
- *
- * Deduplicates audio buffers by file path, automatically loads on cache miss,
- * and evicts least-recently-used entries when memory budget is exceeded.
- * Lifetime is managed through standard shared_ptr semantics.
- */
 class SamplePool {
 public:
     static SamplePool& getInstance();
 
     /**
-     * @brief Acquire a buffer for the given path
+     * @brief Configure the background thread-pool size.
      *
-     * Returns cached buffer if available; otherwise invokes loader to decode.
-     * The loader must fill buffer fields (channels, sampleRate, data) and return true on success.
+     * Must be called before the first getInstance() invocation.
+     * If never called (or called with 0), the pool auto-detects
+     * based on hardware concurrency (capped at 8, minimum 2).
+     */
+    static void setThreadPoolSize(size_t numThreads);
+    static size_t getThreadPoolSize();
+
+    /**
+     * @brief Synchronously load or retrieve a cached sample.
      *
-     * @param path Filesystem path to audio file
-     * @param loader Decoding function (called on cache miss)
-     * @return shared_ptr to AudioBuffer, or nullptr on failure
+     * @note NOT realtime-safe. This path stats the file on the calling thread,
+     *       which may block on disk I/O. Call from a non-RT thread.
      */
     std::shared_ptr<AudioBuffer> acquire(const std::string& path, const std::function<bool(AudioBuffer&)>& loader = {});
 
     /**
-     * @brief Perform garbage collection
+     * @brief Asynchronously load a sample via the thread pool.
      *
-     * Removes expired buffers and evicts LRU entries until memory budget is met.
-     * Called automatically after each acquire(); manual calls are optional.
+     * @note Cache-hit returns immediately (no I/O). Cache-miss schedules
+     *       loading on a background worker. Safe to call from any thread,
+     *       but the returned future should not be waited on in a RT path.
      */
+    std::shared_ptr<std::future<std::shared_ptr<AudioBuffer>>>
+    acquireAsync(const std::string& path, const std::function<bool(AudioBuffer&)>& loader);
+
     void garbageCollect();
 
-    // Memory budget management
     void setMemoryBudget(size_t bytes);
     size_t getMemoryBudget() const { return m_memoryBudget; }
 
-    /**
-     * @brief Fast cache lookup (path-only, no filesystem stat)
-     *
-     * Checks if a buffer for the given path is already cached, without
-     * performing any filesystem operations. Returns nullptr on cache miss.
-     * This is much faster than acquire() for checking cache hits.
-     *
-     * @param path Filesystem path to audio file
-     * @return shared_ptr to AudioBuffer if cached, nullptr otherwise
-     */
     std::shared_ptr<AudioBuffer> tryGetCached(const std::string& path);
 
-    /**
-     * @brief Generate a fast cache key (path-only, no mod time)
-     *
-     * Returns a key based only on the normalized path, without checking
-     * the file's modification time. Useful for quick cache lookups.
-     */
     static SampleKey makeKeyFast(const std::string& path);
-
-    /**
-     * @brief Get current total memory usage (bytes)
-     *
-     * Thread-safe read of memory used by all managed buffers (cached + active).
-     */
-    size_t getMemoryUsage() const { return m_memoryCurrent.load(); }
-
-private:
-    SamplePool() = default;
-    ~SamplePool() = default;
-    SamplePool(const SamplePool&) = delete;
-    SamplePool& operator=(const SamplePool&) = delete;
-
-    // Key generation
     static SampleKey makeKey(const std::string& path);
 
-    // Memory calculation
+    size_t getMemoryUsage() const { return m_memoryCurrent.load(); }
+
+    void invalidatePath(const std::string& path);
+
+    void touchPath(const std::string& path);
+
+private:
+    SamplePool();
+    ~SamplePool();
+
     static size_t calculateBufferBytes(const AudioBuffer& buffer);
 
-    // Internal helpers (require m_mutex to be held)
     void updateMemoryUsageLocked();
     void garbageCollectLocked();
 
-    // Data members
+    void workerThread();
+
+    size_t computeThreadPoolSize() const;
+
+    // --- Internal cache entry metadata ---
+    struct CacheMeta {
+        uint64_t lastKnownModTime{0};
+        uint64_t lastAccessTick{0};
+        size_t bufferBytes{0};
+        std::list<std::string>::iterator lruIt;
+    };
+
+    // --- In-flight loading key ---
+    struct InflightKey {
+        std::string path;
+        uint64_t modTime{0};
+        bool operator==(const InflightKey& other) const noexcept {
+            return path == other.path && modTime == other.modTime;
+        }
+    };
+    struct InflightKeyHash {
+        size_t operator()(const InflightKey& key) const noexcept {
+            size_t h = std::hash<std::string>{}(key.path);
+            h ^= static_cast<size_t>(key.modTime) + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+            return h;
+        }
+    };
+
     mutable std::mutex m_mutex;
-    std::unordered_map<SampleKey, std::weak_ptr<AudioBuffer>, SampleKeyHasher> m_samples;
+    std::unordered_map<std::string, std::weak_ptr<AudioBuffer>> m_cache;
+    std::unordered_map<std::string, CacheMeta> m_meta;
+    std::list<std::string> m_lru;
 
-    size_t m_memoryBudget{0};               // 0 = unlimited
-    std::atomic<size_t> m_memoryCurrent{0}; // Total bytes of all buffers
+    struct LoadingState;
+    std::unordered_map<InflightKey, std::shared_ptr<LoadingState>, InflightKeyHash> m_inflight;
+    mutable std::mutex m_inflightMutex;
 
-    std::atomic_uint64_t m_accessCounter{0}; // Monotonic LRU ticker
+    struct LoadJob {
+        std::string path;
+        uint64_t modTime{0};
+        std::function<bool(AudioBuffer&)> loader;
+        std::shared_ptr<LoadingState> state;
+    };
+    std::deque<LoadJob> m_jobQueue;
+    std::mutex m_jobMutex;
+    std::condition_variable m_jobCV;
+    std::vector<std::thread> m_workers;
+    std::atomic<bool> m_running{true};
+
+    size_t m_memoryBudget{0};
+    std::atomic<size_t> m_memoryCurrent{0};
+
+    std::atomic_uint64_t m_accessCounter{0};
+
+    static std::atomic<size_t> s_configuredThreadPoolSize;
+};
+
+struct SamplePool::LoadingState {
+    std::list<std::promise<std::shared_ptr<AudioBuffer>>> promises;
+    std::mutex promisesMutex;
+    bool completed{false};
+    std::shared_ptr<AudioBuffer> result;
+    std::shared_ptr<AudioBuffer> buffer;
+
+    std::future<std::shared_ptr<AudioBuffer>> addPromise();
+    void complete(std::shared_ptr<AudioBuffer> value);
 };
 
 } // namespace Audio
