@@ -9,6 +9,7 @@
 #include "ContinuousParamBuffer.h"
 #include "EngineState.h"
 #include "Interpolators.h"
+#include "DSP/TruePeakMeter.h"
 #include "MasterSafetyLimiter.h"
 #include "MeterSnapshot.h"
 #include "PluginHost.h" // For MidiBuffer [NEW]
@@ -135,6 +136,12 @@ public:
         if (m_channelPrepareConfig) {
             m_channelPrepareConfig->sampleRate.store(sampleRate, std::memory_order_relaxed);
         }
+        // True-peak meter is sample-rate agnostic (4x oversampler) but we
+        // still publish the rate for diagnostics and reset peak history so
+        // stale peaks don't carry across sample-rate changes.
+        m_truePeakMeter.initialize(sampleRate);
+        m_truePeakLAtomic.store(0.0f, std::memory_order_relaxed);
+        m_truePeakRAtomic.store(0.0f, std::memory_order_relaxed);
     }
     /** @brief Get the active sample rate used by the engine. */
     uint32_t getSampleRate() const { return m_sampleRate.load(std::memory_order_relaxed); }
@@ -208,6 +215,40 @@ public:
         m_nanCount.store(0, std::memory_order_relaxed);
         m_clipCount.store(0, std::memory_order_relaxed);
     }
+
+    // === Plugin Delay Compensation ===
+    
+    /**
+     * @brief Calculate and apply plugin delay compensation across all tracks
+     * 
+     * Computes max latency, sets compensation delays, and publishes new snapshot.
+     * NOT RT-SAFE: Call from main thread only.
+     * 
+     * Triggers:
+     * - Plugin load/unload
+     * - Plugin bypass toggle
+     * - Effect chain reorder
+     * - Track enable/disable
+     */
+    void calculateLatencyCompensation();
+    
+    /**
+     * @brief Enable/disable global latency compensation
+     */
+    void setLatencyCompensationEnabled(bool enabled);
+    bool isLatencyCompensationEnabled() const;
+    
+    /**
+     * @brief Get current max project latency in samples
+     */
+    uint32_t getMaxProjectLatency() const;
+    
+    /**
+     * @brief Mark latency as dirty (needs recalculation)
+     * Called internally when plugins change
+     */
+    void markLatencyDirty();
+
     /** @brief Set global output headroom in decibels. */
     void setHeadroom(float db) { m_headroomLinear.store(std::pow(10.0f, db / 20.0f), std::memory_order_relaxed); }
     /** @brief Enable or disable the master safety limiter. Default: on. */
@@ -301,6 +342,32 @@ public:
     /** @brief Get the latest right RMS meter value. */
     float getRmsR() const { return m_rmsR.load(std::memory_order_relaxed); }
 
+    // === True Peak Metering (Phase 2 — ITU-R BS.1770-4 inspired) ===
+    /** @brief Latest left-channel true peak (linear, max-hold since last clear). */
+    float getTruePeakL() const { return m_truePeakLAtomic.load(std::memory_order_relaxed); }
+    /** @brief Latest right-channel true peak (linear, max-hold since last clear). */
+    float getTruePeakR() const { return m_truePeakRAtomic.load(std::memory_order_relaxed); }
+    /** @brief Latest max-channel true peak in dBTP (decibels True Peak). */
+    float getMaxTruePeakdBTP() const {
+        const float l = getTruePeakL();
+        const float r = getTruePeakR();
+        return TruePeakMeter::linearToDbTp(l > r ? l : r);
+    }
+    /** @brief Enable or disable true-peak metering on the master output (RT-safe). */
+    void setTruePeakMeteringEnabled(bool enabled) {
+        m_truePeakMeteringEnabled.store(enabled, std::memory_order_relaxed);
+    }
+    /** @brief Whether true-peak metering is currently enabled. */
+    bool isTruePeakMeteringEnabled() const {
+        return m_truePeakMeteringEnabled.load(std::memory_order_relaxed);
+    }
+    /** @brief Reset true-peak running max (does not disturb FIR history). */
+    void clearTruePeakHold() {
+        m_truePeakMeter.clearPeaks();
+        m_truePeakLAtomic.store(0.0f, std::memory_order_relaxed);
+        m_truePeakRAtomic.store(0.0f, std::memory_order_relaxed);
+    }
+
     /** @brief Set the active dithering mode. */
     void setDitheringMode(DitheringMode mode) { m_ditheringMode.store(mode, std::memory_order_relaxed); }
     /** @brief Get the active dithering mode. */
@@ -387,8 +454,12 @@ public:
             for (size_t i = 0; i < channelCount; ++i) {
                 if (auto* channel = current->getChannel(i)) {
                     prepareChannel(*channel);
+                    channel->setEffectChainLatencyCallback([this]() {
+                        calculateLatencyCompensation();
+                    });
                 }
             }
+            calculateLatencyCompensation();
         }
     }
 
@@ -699,6 +770,13 @@ private:
     std::atomic<float> m_rmsL{0.0f};
     std::atomic<float> m_rmsR{0.0f};
 
+    // True-peak metering (Phase 2). Meter itself is touched only by the
+    // audio thread; cross-thread reads use the published atomics.
+    TruePeakMeter m_truePeakMeter;
+    std::atomic<bool> m_truePeakMeteringEnabled{true};
+    std::atomic<float> m_truePeakLAtomic{0.0f};
+    std::atomic<float> m_truePeakRAtomic{0.0f};
+
     // TrackManager for playlist rendering (headless/offline mode)
     std::weak_ptr<TrackManager> m_trackManager;
 
@@ -899,6 +977,11 @@ private:
 
     // Guard for resource loading (e.g., metronome samples)
     std::atomic<bool> m_resourcesLoading{false};
+
+    // === Plugin Delay Compensation State ===
+    bool m_latencyCompensationEnabled{true};
+    uint32_t m_maxProjectLatency{0};
+    bool m_latencyDirty{true};  // Recalculate on next safe opportunity
 };
 
 } // namespace Audio

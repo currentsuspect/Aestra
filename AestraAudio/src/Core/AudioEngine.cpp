@@ -1123,6 +1123,18 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         }
     }
 
+    // === True Peak Metering (Phase 2) ===
+    // Run on the FINAL master output buffer, after fades + metronome + all
+    // processing. The meter is single-writer (audio thread only); UI reads
+    // the published atomics. Only enabled for stereo output (which is the
+    // only case the meter has been validated for).
+    if (m_truePeakMeteringEnabled.load(std::memory_order_relaxed) && numOutputChannels == 2 &&
+        numFrames > 0) {
+        m_truePeakMeter.processStereo(outputBuffer, numFrames);
+        m_truePeakLAtomic.store(m_truePeakMeter.getTruePeakL(), std::memory_order_relaxed);
+        m_truePeakRAtomic.store(m_truePeakMeter.getTruePeakR(), std::memory_order_relaxed);
+    }
+
     // Telemetry (lightweight counter only on RT thread)
     m_telemetry.incrementBlocksProcessed();
 
@@ -2305,6 +2317,26 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     dOut[k * 2] = static_cast<double>(fL[k]);
                     dOut[k * 2 + 1] = static_cast<double>(fR[k]);
                 }
+
+                // === Apply Plugin Delay Compensation ===
+                if (state.compensationEnabled && state.compensationDelaySamples > 0) {
+                    const uint32_t delay = state.compensationDelaySamples;
+                    const uint32_t capacity = static_cast<uint32_t>(state.compensationBuffer.size() / 2);
+                    if (delay < capacity) {
+                        for (uint32_t k = 0; k < numFrames; ++k) {
+                            const uint32_t writePos = state.compensationWritePos;
+                            const uint32_t readPos = (writePos + capacity - delay) % capacity;
+
+                            state.compensationBuffer[writePos * 2] = static_cast<float>(dOut[k * 2]);
+                            state.compensationBuffer[writePos * 2 + 1] = static_cast<float>(dOut[k * 2 + 1]);
+
+                            dOut[k * 2] = static_cast<double>(state.compensationBuffer[readPos * 2]);
+                            dOut[k * 2 + 1] = static_cast<double>(state.compensationBuffer[readPos * 2 + 1]);
+
+                            state.compensationWritePos = (writePos + 1) % capacity;
+                        }
+                    }
+                }
             }
         }
 
@@ -3000,6 +3032,100 @@ bool AudioEngine::initialize() {
 
     Aestra::Log::info("[AudioEngine] Initialized for headless rendering.");
     return true;
+}
+
+// ============================================================================
+// Plugin Delay Compensation (PDC)
+// ============================================================================
+
+void AudioEngine::calculateLatencyCompensation() {
+    if (!m_latencyCompensationEnabled) {
+        m_maxProjectLatency = 0;
+        m_latencyDirty = false;
+        return;
+    }
+
+    auto trackManager = m_trackManager.lock();
+    if (!trackManager) {
+        m_latencyDirty = false;
+        return;
+    }
+
+    const size_t trackCount = trackManager->getChannelCount();
+
+    // 1. Find max latency across all active tracks
+    uint32_t maxLatency = 0;
+    for (size_t i = 0; i < trackCount; ++i) {
+        auto* channel = trackManager->getChannel(i);
+        if (!channel) continue;
+
+        bool muted = channel->isMuted();
+        if (muted) continue;
+
+        uint32_t trackLatency = channel->getEffectChain().getTotalLatency();
+        maxLatency = std::max(maxLatency, trackLatency);
+    }
+
+    m_maxProjectLatency = maxLatency;
+
+    // 2. Update RT state for each track
+    int activeIdx = m_activeRenderTrackIndex.load(std::memory_order_relaxed);
+    auto& rtStates = m_graphStates[activeIdx].trackStates;
+
+    if (rtStates.size() < trackCount) {
+        rtStates.resize(trackCount);
+    }
+
+    for (size_t i = 0; i < trackCount && i < rtStates.size(); ++i) {
+        auto* channel = trackManager->getChannel(i);
+        if (!channel) continue;
+
+        uint32_t trackLatency = channel->getEffectChain().getTotalLatency();
+        uint32_t compensationDelay = maxLatency - trackLatency;
+
+        auto& rtState = rtStates[i];
+        rtState.pluginLatencySamples = trackLatency;
+        rtState.compensationDelaySamples = compensationDelay;
+
+        if (compensationDelay > 0) {
+            rtState.compensationBuffer.fill(0.0f);
+            rtState.compensationWritePos = 0;
+            rtState.compensationReadPos = 0;
+        }
+    }
+
+    // 3. Update graph state metadata
+    m_graphStates[activeIdx].maxProjectLatencySamples = maxLatency;
+    m_graphStates[activeIdx].latencyCompensationEnabled = m_latencyCompensationEnabled;
+
+    m_latencyDirty = false;
+
+    if (maxLatency > 0) {
+        double latencyMs = (maxLatency * 1000.0) / m_sampleRate.load(std::memory_order_relaxed);
+        Aestra::Log::info("[PDC] Max latency = " + std::to_string(maxLatency) + " samples (" +
+                         std::to_string(latencyMs) + " ms)");
+    }
+}
+
+void AudioEngine::setLatencyCompensationEnabled(bool enabled) {
+    if (m_latencyCompensationEnabled != enabled) {
+        m_latencyCompensationEnabled = enabled;
+    }
+    if (m_latencyDirty && m_latencyCompensationEnabled) {
+        calculateLatencyCompensation();
+    }
+}
+
+bool AudioEngine::isLatencyCompensationEnabled() const {
+    return m_latencyCompensationEnabled;
+}
+
+uint32_t AudioEngine::getMaxProjectLatency() const {
+    return m_maxProjectLatency;
+}
+
+void AudioEngine::markLatencyDirty() {
+    m_latencyDirty = true;
 }
 
 } // namespace Audio

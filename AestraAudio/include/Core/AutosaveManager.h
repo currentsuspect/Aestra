@@ -50,18 +50,24 @@ public:
     struct Config {
         // Autosave interval (default: 30 seconds)
         std::chrono::seconds autosaveInterval{30};
-        
+
         // Minimum time between dirty mark and autosave (debounce)
         std::chrono::seconds minDirtyDelay{5};
-        
+
         // Maximum number of rotated backups to keep
         size_t maxBackupFiles{5};
-        
+
         // Enable/disable autosave entirely
         bool enabled{true};
-        
+
         // Serialization callback (REQUIRED)
         SerializerFunc serializer;
+
+        // Optional explicit autosave path. When set, overrides the derived
+        // path from getAutosavePathForProject(). Used when the application
+        // layer manages its own autosave location (e.g., global app-data
+        // autosave independent of project path).
+        std::string autosavePathOverride;
     };
     
     struct RecoveryInfo {

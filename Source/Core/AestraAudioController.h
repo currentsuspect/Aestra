@@ -36,6 +36,9 @@ public:
     uint32_t getSampleRate() const { return m_streamConfig.sampleRate; }
     uint32_t getBufferSize() const { return m_streamConfig.bufferSize; }
 
+    // Buffer size change - updates both device and engine
+    bool setBufferSize(uint32_t bufferSize);
+
     // Accessors
     Aestra::Audio::AudioEngine* getEngine() { return m_audioEngine.get(); }
     Aestra::Audio::AudioDeviceManager* getDeviceManager() { return m_audioManager.get(); }

@@ -370,6 +370,32 @@ void AestraAudioController::closeStream() {
     if (m_audioManager) m_audioManager->closeStream();
 }
 
+bool AestraAudioController::setBufferSize(uint32_t bufferSize) {
+    if (!m_initialized || !m_audioManager) {
+        return false;
+    }
+
+    if (bufferSize == m_streamConfig.bufferSize) {
+        return true;
+    }
+
+    // Update device (this will reopen the stream)
+    if (!m_audioManager->setBufferSize(bufferSize)) {
+        return false;
+    }
+
+    // IMPORTANT: Also update the engine's buffer config!
+    // Without this, renderGraph will reject blocks larger than the old config
+    if (m_audioEngine) {
+        m_audioEngine->setBufferConfig(bufferSize, m_streamConfig.numOutputChannels);
+    }
+
+    // Update our local config
+    m_streamConfig.bufferSize = bufferSize;
+
+    return true;
+}
+
 int AestraAudioController::audioCallback(float* outputBuffer, const float* inputBuffer,
                          uint32_t nFrames, double streamTime, void* userData) {
     // B-005: Mark this as audio thread for constraint checking

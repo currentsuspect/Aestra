@@ -159,7 +159,7 @@ void PreviewEngine::workerLoop() {
             continue;
         }
 
-        if (voice && buffer && buffer->ready.load(std::memory_order_acquire)) {
+        if (voice && buffer && buffer->numFrames > 0) {
             voice->buffer = buffer;
             voice->sampleRate = sr > 0 ? static_cast<double>(sr) : 48000.0;
             voice->channels = ch > 0 ? ch : 2;
@@ -183,7 +183,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
 
     // Fast path: Check if buffer is already cached (no filesystem stat)
     auto cachedBuffer = SamplePool::getInstance().tryGetCached(path);
-    if (cachedBuffer && cachedBuffer->ready.load(std::memory_order_acquire)) {
+    if (cachedBuffer && cachedBuffer->numFrames > 0) {
         // Cache hit! Instant playback
         return startVoiceWithBuffer(cachedBuffer, path, gainDb, maxSeconds);
     }

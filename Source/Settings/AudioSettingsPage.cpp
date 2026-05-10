@@ -334,8 +334,12 @@ void AudioSettingsPage::createUI() {
 
         if (m_isInitializing || m_isPopulatingDeviceUI) return;
 
+        uint32_t newBufferSize = (uint32_t)m_bufferSizeDropdown->getSelectedValue();
         if (m_audioManager) {
-             m_audioManager->setBufferSize((uint32_t)m_bufferSizeDropdown->getSelectedValue());
+             bool success = m_audioManager->setBufferSize(newBufferSize);
+             if (success && m_audioEngine) {
+                 m_audioEngine->setBufferConfig(newBufferSize, 2);
+             }
         }
         updateLatencyEstimate();
     });

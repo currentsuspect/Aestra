@@ -48,6 +48,9 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
     m_slots[slotIndex].dryWetMix.store(1.0f);
 
     publishSnapshot();
+    if (m_onLatencyChanged) {
+        m_onLatencyChanged();
+    }
     return true;
 }
 
@@ -63,6 +66,9 @@ PluginInstancePtr EffectChain::removePlugin(size_t slotIndex) {
     m_slots[slotIndex].plugin = nullptr;
 
     publishSnapshot();
+    if (m_onLatencyChanged) {
+        m_onLatencyChanged();
+    }
     return plugin;
 }
 
@@ -183,6 +189,9 @@ void EffectChain::setSlotBypassed(size_t slotIndex, bool bypassed) {
         m_slots[slotIndex].bypassed.store(bypassed, std::memory_order_release);
         if (!reportRealtimeMisuse("EffectChain::setSlotBypassed")) {
             publishSnapshot();
+            if (m_onLatencyChanged) {
+                m_onLatencyChanged();
+            }
         }
     }
 }

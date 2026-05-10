@@ -5,6 +5,7 @@
 
 #include <array>
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -262,10 +263,16 @@ public:
      */
     std::shared_ptr<const EffectChainSnapshot> createSnapshot() const;
 
+    void setLatencyChangedCallback(std::function<void()> callback) {
+        m_onLatencyChanged = std::move(callback);
+    }
+
 private:
     std::array<EffectSlot, MAX_SLOTS> m_slots;
     std::atomic<bool> m_chainBypassed{false};
     std::shared_ptr<const EffectChainSnapshot> m_currentSnapshot; // Pass 2: published snapshot
+
+    std::function<void()> m_onLatencyChanged;
 
     // Pre-allocated buffers for dry/wet mixing
     std::vector<float> m_dryBuffer;

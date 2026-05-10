@@ -759,8 +759,12 @@ public:
 
     /**
      * @brief Mark the project as modified.
+     * Fires the optional on-modified callback for downstream dirty tracking.
      */
-    void markModified() { m_modified.store(true, std::memory_order_relaxed); }
+    void markModified() {
+        m_modified.store(true, std::memory_order_relaxed);
+        if (m_onModified) m_onModified();
+    }
     /**
      * @brief Override the project modified flag.
      * @param modified New modified-state value.
@@ -771,6 +775,11 @@ public:
      * @return True when the project has been modified.
      */
     bool isModified() const { return m_modified.load(std::memory_order_relaxed); }
+    /**
+     * @brief Register a callback invoked every time markModified() is called.
+     * Used by the application layer to forward dirty state to AutosaveManager.
+     */
+    void setOnModified(std::function<void()> callback) { m_onModified = std::move(callback); }
 
     using GraphDirtyReason = Aestra::Audio::GraphDirtyReason;
 
@@ -1421,6 +1430,7 @@ private:
     std::atomic<bool> m_patternMode{false};
     std::atomic<bool> m_userScrubbing{false};
     std::atomic<bool> m_modified{false};
+    std::function<void()> m_onModified;
     std::atomic<bool> m_graphDirty{true}; // Owned by TrackManager, consumed by PlaybackGraphController only
     std::atomic<uint64_t> m_requestGeneration{0};
     std::atomic<GraphDirtyReason> m_lastReason{GraphDirtyReason::TimelineChanged};

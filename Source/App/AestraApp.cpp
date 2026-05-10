@@ -5,7 +5,6 @@
 #include "AestraRootComponent.h"
 #include "AudioThreadConstraints.h"
 #include "Preferences.h"
-#include "UIState.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraCore/include/PointerRegistry.h"
 #include "FileBrowser.h"
@@ -54,6 +53,7 @@ void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content, con
 
 AestraApp::AestraApp()
     : m_running(false)
+    , m_aliveToken(std::make_shared<bool>(true))
 {
     // Initialize unified logging
     auto multiLogger = std::make_shared<MultiLogger>(LogLevel::Info);
@@ -133,17 +133,11 @@ bool AestraApp::isCrashedSession() {
 }
 
 bool AestraApp::initialize(const std::string& projectPath) {
-    if (!Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::Initializing)) {
-        Log::error("Failed to transition to Initializing state");
-        return false;
-    }
+    if (!transitionToInitializing()) return false;
 
     Log::info("Aestra v1.0.0 - Initializing...");
 
     // Check for crashed session BEFORE initializing platform.
-    // This is the only legitimate time to write the crash flag — at the
-    // START of a new session, indicating we made it through initialization.
-    // We do NOT write it unconditionally on every startup.
     bool crashedSession = isCrashedSession();
 
     if (!Platform::initialize()) {
@@ -154,32 +148,51 @@ bool AestraApp::initialize(const std::string& projectPath) {
     // Initialize m_projectPath AFTER Platform is initialized
     m_projectPath = getAutosavePath();
 
-    // Write crash flag only if there was a prior crash session.
-    // This marks that this session started successfully.
-    if (crashedSession) {
-        writeCrashFlag();
-    }
+    // ALWAYS write crash flag at session start. It is cleared only on clean
+    // shutdown. If the app crashes at any point, the flag persists and the
+    // next launch will detect it.
+    writeCrashFlag();
 
     // Load preferences and UI state early
     Preferences::instance().load();
-    m_autoSaveEnabled.store(Preferences::instance().autoSaveEnabled, std::memory_order_relaxed);
+    bool autoSaveEnabled = Preferences::instance().autoSaveEnabled;
 
     UIState uiState;
     uiState.load();
 
-    // Initialize Window with persisted state
+    if (!initializePlatformAndWindow(uiState)) return false;
+    initializeAudio();
+    initializeContent();
+    initializeAutosave(autoSaveEnabled);
+    buildSettingsDialog();
+    buildMenuBar();
+    initializePlugins();
+    loadOrRecoverProject(projectPath, crashedSession);
+    restoreUIState(uiState);
+
+    return transitionToRunning();
+}
+
+bool AestraApp::transitionToInitializing() {
+    if (!Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::Initializing)) {
+        Log::error("Failed to transition to Initializing state");
+        return false;
+    }
+    return true;
+}
+
+bool AestraApp::initializePlatformAndWindow(const UIState& uiState) {
     AestraWindowManager::WindowConfig winConfig;
     winConfig.title = "Aestra v1.0";
     winConfig.width = uiState.windowWidth;
     winConfig.height = uiState.windowHeight;
-    winConfig.fullscreen = false; // Default
+    winConfig.fullscreen = false;
 
     if (!m_windowManager->initialize(winConfig)) {
         Log::error("Failed to initialize Window Manager");
         return false;
     }
 
-    // Apply persisted window position/maximized state (Issue #120)
     AestraWindowManager::WindowState windowState;
     windowState.x = uiState.windowX;
     windowState.y = uiState.windowY;
@@ -191,18 +204,21 @@ bool AestraApp::initialize(const std::string& projectPath) {
     Log::info("[UIState] Applied window state: " + std::to_string(uiState.windowWidth) + "x" +
               std::to_string(uiState.windowHeight) + " at (" + std::to_string(uiState.windowX) + "," +
               std::to_string(uiState.windowY) + ") maximized=" + (uiState.maximized ? "true" : "false"));
+    return true;
+}
 
-    // Initialize Audio
+bool AestraApp::initializeAudio() {
     if (!m_audioController->initialize()) {
         Log::warning("Audio Controller initialization failed (continuing without audio)");
-    } else {
-        // Try opening default stream
-        if (m_audioController->openDefaultStream(nullptr)) {
-            m_audioController->startStream();
-        }
+        return false;
     }
+    if (m_audioController->openDefaultStream(nullptr)) {
+        m_audioController->startStream();
+    }
+    return true;
+}
 
-    // Initialize Content
+void AestraApp::initializeContent() {
     m_content = std::make_shared<AestraContent>();
     m_content->setPlatformBridge(m_windowManager->getWindow());
     m_content->setAudioStatus(m_audioController->isInitialized());
@@ -213,16 +229,32 @@ bool AestraApp::initialize(const std::string& projectPath) {
 
     m_windowManager->setContent(m_content);
     m_audioController->setContent(m_content);
+}
 
-    // Setup UI components via WindowManager helper
-    // Note: AestraWindowManager creates its own components?
-    // Wait, in AestraApp.cpp before, it created SettingsDialog, etc.
-    // WindowManager owns them now. We need to configure them.
+void AestraApp::initializeAutosave(bool enabled) {
+    Aestra::Audio::AutosaveManager::Config config;
+    config.enabled = enabled;
+    config.autosaveInterval = std::chrono::seconds(60);
+    config.autosavePathOverride = getAutosavePath();
+    config.serializer = [this](std::string& outData) -> bool {
+        if (!m_content || !m_content->getTrackManager()) return false;
+        const double tempo = (m_audioController && m_audioController->getEngine())
+            ? static_cast<double>(m_audioController->getEngine()->getBPM())
+            : (m_content->getTransportBar() ? static_cast<double>(m_content->getTransportBar()->getTempo()) : 120.0);
+        const double playhead = m_content->getTrackManager()->getPosition();
+        auto ser = ProjectSerializer::serialize(m_content->getTrackManager(), tempo, playhead, 0);
+        if (!ser.ok) return false;
+        outData = std::move(ser.contents);
+        return true;
+    };
+    m_autoSaveManager.initialize(m_projectPath, std::move(config));
+}
 
+void AestraApp::buildSettingsDialog() {
     auto settingsDialog = std::make_shared<SettingsDialog>();
     auto generalPage = std::make_shared<GeneralSettingsPage>();
     generalPage->setOnAutoSaveToggled([this](bool enabled) {
-        m_autoSaveEnabled.store(enabled, std::memory_order_relaxed);
+        m_autoSaveManager.setEnabled(enabled);
         Log::info(std::string("[AutoSave] ") + (enabled ? "Enabled" : "Disabled"));
     });
     settingsDialog->addPage(generalPage);
@@ -232,7 +264,6 @@ bool AestraApp::initialize(const std::string& projectPath) {
         m_audioController->getEngine()
     );
     audioPage->setOnStreamRestore([this]() {
-         // Re-open default stream logic? Or expose logic in AudioController
          m_audioController->closeStream();
          if (m_audioController->openDefaultStream(nullptr)) {
              m_audioController->startStream();
@@ -254,17 +285,20 @@ bool AestraApp::initialize(const std::string& projectPath) {
     unifiedHUD->setVisible(false);
     unifiedHUD->setAudioEngine(m_audioController->getEngine());
     m_windowManager->setUnifiedHUD(unifiedHUD);
+}
 
-    // Menu Bar
+void AestraApp::buildMenuBar() {
     auto menuBar = std::make_shared<AestraUI::NUIMenuBar>();
+
+    // File Menu
     menuBar->addItem("File", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
 
-        // Project actions
         menu->addItem("New Project", [this]() {
             if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
             if (m_content) m_content->resetToDefaultProject();
             m_projectPath = getAutosavePath();
+            reinitAutosaveManager();
             syncRecordingProjectPath(m_content, m_projectPath);
             m_lastWindowTitle.clear();
             Log::info("New project created");
@@ -286,9 +320,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
 
         menu->addSeparator();
 
-        menu->addItem("Save", [this]() {
-            saveCurrentProject();
-        });
+        menu->addItem("Save", [this]() { saveCurrentProject(); });
 
         menu->addItem("Save As...", [this]() {
             if (auto* utils = Aestra::Platform::getUtils()) {
@@ -301,6 +333,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
                 const std::string pickedPath = utils->saveFileDialog(options);
                 if (!pickedPath.empty()) {
                     m_projectPath = pickedPath;
+                    reinitAutosaveManager();
                     if (saveProject()) {
                         Log::info("Project saved as: " + pickedPath);
                     }
@@ -317,9 +350,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
         } else {
             size_t count = 0;
             for (const auto& entry : historyEntries) {
-                if (count++ >= 10) {
-                    break;
-                }
+                if (count++ >= 10) break;
                 historyMenu->addItem(entry.label, [this, snapshotPath = entry.path]() {
                     auto result = loadProjectFromPath(snapshotPath, m_projectPath);
                     if (!result.ok) {
@@ -330,29 +361,20 @@ bool AestraApp::initialize(const std::string& projectPath) {
         }
 
         menu->addSubmenu("Project History", historyMenu);
-
         menu->addSeparator();
-
-        menu->addItem("Export Audio...", [this]() {
-            startExport();
-        });
-
+        menu->addItem("Export Audio...", [this]() { startExport(); });
         menu->addSeparator();
-
         menu->addItem("Settings...", [this]() {
             if (m_windowManager->getSettingsDialog()) {
                 m_windowManager->getSettingsDialog()->show();
             }
         });
-
         menu->addSeparator();
-
-        menu->addItem("Exit", [this]() {
-            requestClose();
-        });
+        menu->addItem("Exit", [this]() { requestClose(); });
 
         m_windowManager->showDropdownMenu(menu, 10.0f);
     });
+
     // Edit Menu
     menuBar->addItem("Edit", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
@@ -364,12 +386,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
         auto undoItem = std::make_shared<AestraUI::NUIContextMenuItem>();
         undoItem->setShortcut("Ctrl+Z");
         undoItem->setEnabled(canUndo);
-        if (canUndo) {
-            std::string undoName = trackMgr->getCommandHistory().getUndoName();
-            undoItem->setText(undoName.empty() ? "Undo" : "Undo: " + undoName);
-        } else {
-            undoItem->setText("Undo");
-        }
+        undoItem->setText(canUndo ? trackMgr->getCommandHistory().getUndoName() : "Undo");
         undoItem->setOnClick([this]() {
             if (m_content && m_content->getTrackManager()) {
                 m_content->getTrackManager()->getCommandHistory().undo();
@@ -380,12 +397,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
         auto redoItem = std::make_shared<AestraUI::NUIContextMenuItem>();
         redoItem->setShortcut("Ctrl+Y");
         redoItem->setEnabled(canRedo);
-        if (canRedo) {
-            std::string redoName = trackMgr->getCommandHistory().getRedoName();
-            redoItem->setText(redoName.empty() ? "Redo" : "Redo: " + redoName);
-        } else {
-            redoItem->setText("Redo");
-        }
+        redoItem->setText(canRedo ? trackMgr->getCommandHistory().getRedoName() : "Redo");
         redoItem->setOnClick([this]() {
             if (m_content && m_content->getTrackManager()) {
                 m_content->getTrackManager()->getCommandHistory().redo();
@@ -400,21 +412,17 @@ bool AestraApp::initialize(const std::string& projectPath) {
                 tmUI->cutSelectedClip();
             }
         });
-
         menu->addItem("Copy", [this]() {
             if (auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr) {
                 tmUI->copySelectedClip();
             }
         });
-
         menu->addItem("Paste", [this]() {
             if (auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr) {
                 tmUI->pasteClipboardAtCursor();
             }
         });
-
         menu->addSeparator();
-
         menu->addItem("Delete", [this]() {
             if (auto tmUI = m_content ? m_content->getTrackManagerUI() : nullptr) {
                 tmUI->deleteSelectedClip();
@@ -433,27 +441,17 @@ bool AestraApp::initialize(const std::string& projectPath) {
                 hud->setVisible(!hud->isVisible());
             }
         });
-
         menu->addSeparator();
-
         menu->addItem("Toggle Fullscreen", [this]() {
-            if (m_windowManager) {
-                m_windowManager->toggleFullScreen();
-            }
+            if (m_windowManager) m_windowManager->toggleFullScreen();
         });
-
         menu->addSeparator();
-
         menu->addItem("Show Timeline", [this]() {
-            // TODO: Implement view switching
             Log::info("Show Timeline - Not yet fully implemented");
         });
-
         menu->addItem("Show Arsenal", [this]() {
-            // TODO: Implement view switching
             Log::info("Show Arsenal - Not yet fully implemented");
         });
-
         menu->addItem("Show History  Ctrl+H", [this]() {
             if (m_content) m_content->toggleHistoryPanel();
         });
@@ -461,6 +459,7 @@ bool AestraApp::initialize(const std::string& projectPath) {
         m_windowManager->showDropdownMenu(menu, 100.0f);
     });
 
+    // Help Menu
     menuBar->addItem("Help", [this]() {
         auto menu = std::make_shared<AestraUI::NUIContextMenu>();
         menu->addItem("About Aestra", []() {
@@ -472,147 +471,104 @@ bool AestraApp::initialize(const std::string& projectPath) {
     menuBar->setBounds(AestraUI::NUIRect(10.0f, 4.0f, 230.0f, 24.0f));
     m_windowManager->setMenuBar(menuBar);
 
-    // Callbacks
     setupCallbacks();
     m_windowManager->initializeCustomCursors();
-
     connectAudioToUI();
-
     m_running = true;
+}
 
-    // Plugin Manager
+void AestraApp::initializePlugins() {
     if (Aestra::Audio::PluginManager::getInstance().initialize()) {
         Log::info("Plugin Manager initialized");
         Aestra::Audio::PluginManager::getInstance().getScanner().addDefaultSearchPaths();
     }
+}
 
-    // Load Project
+void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashedSession) {
     if (!projectPath.empty() && std::filesystem::exists(projectPath)) {
         const std::string previousProjectPath = m_projectPath;
         m_projectPath = projectPath;
         auto result = loadProject();
         if (result.ok) {
+            reinitAutosaveManager();
             syncRecordingProjectPath(m_content, m_projectPath);
             if (result.ui) applyUIState(*result.ui);
         } else {
             m_projectPath = previousProjectPath;
         }
-    } else {
-        std::string autosavePath = getAutosavePath();
-        std::string timestamp;
-        bool crashedSession = isCrashedSession();
-
-        if (crashedSession && RecoveryDialog::detectAutosave(autosavePath, timestamp)) {
-            // [SEC-RTM-007] Verify temporal consistency: the autosave file must have
-            // been written within a reasonable window of the crash flag. A large delta
-            // suggests a planted attack (pre-seeded crash flag + malicious autosave).
-            bool timeConsistent = true;
-            {
-                std::error_code ecFlag, ecAuto;
-                auto flagMtime = std::filesystem::last_write_time(
-                    std::filesystem::path(getCrashFlagPath()), ecFlag);
-                auto saveMtime = std::filesystem::last_write_time(
-                    std::filesystem::path(autosavePath), ecAuto);
-                if (!ecFlag && !ecAuto) {
-                    auto deltaSec = std::abs(
-                        std::chrono::duration_cast<std::chrono::seconds>(
-                            saveMtime - flagMtime).count());
-                    constexpr int kMaxRecoveryDeltaSec = 300; // 5 minutes
-                    if (deltaSec > kMaxRecoveryDeltaSec) {
-                        timeConsistent = false;
-                        Log::warning("[Recovery] Crash flag and autosave mtime delta = " +
-                                     std::to_string(deltaSec) + "s (limit: " +
-                                     std::to_string(kMaxRecoveryDeltaSec) +
-                                     "s) — discarding as possible pre-seeded attack");
-                        std::error_code rmEc;
-                        std::filesystem::remove(autosavePath, rmEc);
-                        std::filesystem::remove(std::filesystem::path(getCrashFlagPath()), rmEc);
-                        m_recoveryHandled = true;
-                    }
-                }
-            }
-
-            if (timeConsistent) {
-            Log::info("[Recovery] Crash detected, showing recovery dialog");
-            // Store the path for later use and show the recovery dialog
-            m_pendingAutosavePath = autosavePath;
-            m_recoveryHandled = false;
-
-            if (auto recoveryDialog = m_windowManager->getRecoveryDialog()) {
-                recoveryDialog->show(autosavePath, [this, autosavePath](Aestra::RecoveryResponse response) {
-                    m_recoveryHandled = true;
-                    if (response == Aestra::RecoveryResponse::Recover) {
-                        // User chose to recover - load the autosave
-                        const std::string previousProjectPath = m_projectPath;
-                        m_projectPath = autosavePath;
-                        auto result = loadProject();
-                        if (result.ok) {
-                            syncRecordingProjectPath(m_content, m_projectPath);
-                            if (result.ui) applyUIState(*result.ui);
-                            Log::info("[Recovery] Autosave recovered successfully");
-                        } else {
-                            m_projectPath = previousProjectPath;
-                            Log::error("[Recovery] Failed to load autosave");
-                            // Fall back to empty project
-                            if (m_content) m_content->resetToDefaultProject();
-                        }
-                    } else if (response == Aestra::RecoveryResponse::Discard) {
-                        // User chose to discard - remove autosave and start fresh
-                        std::error_code ec;
-                        std::filesystem::remove(autosavePath, ec);
-                        if (ec) {
-                            Log::warning("[Recovery] Failed to remove autosave: " + ec.message());
-                        } else {
-                            Log::info("[Recovery] Autosave discarded");
-                        }
-                        if (m_content) m_content->resetToDefaultProject();
-                        m_projectPath = getAutosavePath();
-                        syncRecordingProjectPath(m_content, m_projectPath);
-                    }
-                });
-                Log::info("[Recovery] Showing recovery dialog for autosave");
-            } else {
-                // [SEC-RTM-015] RecoveryDialog unavailable — do NOT silently load
-                // the autosave, as it may have been planted by a local attacker.
-                // Instead, discard it and start with a fresh project.
-                Log::warning("[Recovery] RecoveryDialog not available — discarding "
-                             "autosave for safety (possible pre-seeded crash recovery attack)");
-                std::error_code ec;
-                std::filesystem::remove(autosavePath, ec);
-                if (ec) {
-                    Log::warning("[Recovery] Failed to remove suspicious autosave: " + ec.message());
-                }
-                m_recoveryHandled = true;
-            }
-            } // if (timeConsistent)
-        } else {
-            // No autosave found - mark recovery as "handled" (nothing to do)
-            m_recoveryHandled = true;
-        }
+        return;
     }
 
-    // Apply persisted panel layout state (Issue #120)
-    // This happens after all UI components are initialized
+    std::string autosavePath = getAutosavePath();
+    std::string timestamp;
+
+    if (crashedSession && RecoveryDialog::detectAutosave(autosavePath, timestamp)) {
+        Log::info("[Recovery] Crash detected, showing recovery dialog");
+        m_pendingAutosavePath = autosavePath;
+        m_recoveryHandled = false;
+
+        if (auto recoveryDialog = m_windowManager->getRecoveryDialog()) {
+            auto alive = m_aliveToken;
+            recoveryDialog->show(autosavePath, [this, alive, autosavePath](Aestra::RecoveryResponse response) {
+                if (!*alive) return;
+                m_recoveryHandled = true;
+                if (response == Aestra::RecoveryResponse::Recover) {
+                    const std::string previousProjectPath = m_projectPath;
+                    m_projectPath = autosavePath;
+                    auto result = loadProject();
+                    if (result.ok) {
+                        reinitAutosaveManager();
+                        syncRecordingProjectPath(m_content, m_projectPath);
+                        if (result.ui) applyUIState(*result.ui);
+                        Log::info("[Recovery] Autosave recovered successfully");
+                    } else {
+                        m_projectPath = previousProjectPath;
+                        Log::error("[Recovery] Failed to load autosave");
+                        if (m_content) m_content->resetToDefaultProject();
+                    }
+                } else if (response == Aestra::RecoveryResponse::Discard) {
+                    std::error_code ec;
+                    std::filesystem::remove(autosavePath, ec);
+                    if (ec) {
+                        Log::warning("[Recovery] Failed to remove autosave: " + ec.message());
+                    } else {
+                        Log::info("[Recovery] Autosave discarded");
+                    }
+                    if (m_content) m_content->resetToDefaultProject();
+                    m_projectPath = getAutosavePath();
+                    reinitAutosaveManager();
+                    syncRecordingProjectPath(m_content, m_projectPath);
+                }
+            });
+            Log::info("[Recovery] Showing recovery dialog for autosave");
+        } else {
+            Log::warning("[Recovery] RecoveryDialog not available — discarding autosave");
+            std::error_code ec;
+            std::filesystem::remove(autosavePath, ec);
+            m_recoveryHandled = true;
+        }
+    } else {
+        m_recoveryHandled = true;
+    }
+}
+
+void AestraApp::restoreUIState(const UIState& uiState) {
     if (m_content) {
         m_content->setBrowserVisible(uiState.browserVisible);
         m_content->setBrowserWidth(uiState.browserWidth);
         m_content->setMixerVisible(uiState.mixerVisible);
-        Log::info("[UIState] Applied panel state: browserVisible=" + std::string(uiState.browserVisible ? "true" : "false") +
+        Log::info("[UIState] Applied panel state: browserVisible=" +
+                  std::string(uiState.browserVisible ? "true" : "false") +
                   ", browserWidth=" + std::to_string(uiState.browserWidth) +
                   ", mixerVisible=" + std::string(uiState.mixerVisible ? "true" : "false"));
     }
 
-    // Apply file browser state (Issue #120: expanded folders + last browsed path)
     if (m_content && m_content->getFileBrowser()) {
         auto fileBrowser = m_content->getFileBrowser();
-
-        // Restore last browsed path if valid
         if (!uiState.lastBrowsedPath.empty() && std::filesystem::exists(uiState.lastBrowsedPath)) {
             fileBrowser->setCurrentPath(uiState.lastBrowsedPath);
             Log::info("[UIState] Restored file browser path: " + uiState.lastBrowsedPath);
         }
-
-        // Restore expanded folders
         if (!uiState.expandedFolders.empty()) {
             std::vector<std::string> folders(uiState.expandedFolders.begin(), uiState.expandedFolders.end());
             fileBrowser->expandFolders(folders);
@@ -620,10 +576,8 @@ bool AestraApp::initialize(const std::string& projectPath) {
         }
     }
 
-    // Issue #120: Apply persisted track view zoom/scroll state
     if (m_content && m_content->getTrackManagerUI()) {
         auto trackManagerUI = m_content->getTrackManagerUI();
-        // Only apply if values differ from defaults (user has customized)
         if (uiState.horizontalZoom != 1.0f || uiState.scrollPositionX != 0.0f || uiState.scrollPositionY != 0.0f) {
             trackManagerUI->setHorizontalZoom(uiState.horizontalZoom);
             trackManagerUI->setHorizontalScroll(uiState.scrollPositionX);
@@ -633,12 +587,13 @@ bool AestraApp::initialize(const std::string& projectPath) {
                       ", vScroll=" + std::to_string(uiState.scrollPositionY));
         }
     }
+}
 
+bool AestraApp::transitionToRunning() {
     if (!Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::Running)) {
         Log::error("Failed to transition to Running state");
         return false;
     }
-
     return true;
 }
 
@@ -672,6 +627,9 @@ void AestraApp::connectAudioToUI() {
             trackMgr->getCommandHistory().addOnStateChanged([trackMgr]() {
                 if (trackMgr) trackMgr->markModified();
             });
+            trackMgr->setOnModified([this]() {
+                m_autoSaveManager.markDirty();
+            });
 
             Aestra::PointerRegistry::expectNotNull("AudioEngine", m_audioController->getEngine());
             Aestra::PointerRegistry::expectNotNull("TrackManager", trackMgr.get());
@@ -681,13 +639,13 @@ void AestraApp::connectAudioToUI() {
 
     // Transport Bar Wiring
     if (m_content && m_content->getTransportBar() && m_audioController->getEngine()) {
-        auto engine = m_audioController->getEngine();
         // Play / pause / stop / metronome are owned by AestraContent so transport-aware
         // features like count-in, preview stop, and deferred capture all go through one path.
 
-        // Tempo change
-        m_content->getTransportBar()->setOnTempoChange([this, engine](float bpm) {
-            if (engine) {
+        // Tempo change — re-resolve the engine inside the callback to avoid capturing
+        // a raw pointer that could dangle if the audio controller is destroyed.
+        m_content->getTransportBar()->setOnTempoChange([this](float bpm) {
+            if (auto* engine = m_audioController ? m_audioController->getEngine() : nullptr) {
                 engine->setBPM(bpm);
             }
             if (m_content) {
@@ -696,11 +654,13 @@ void AestraApp::connectAudioToUI() {
         });
 
         // Load metronome click sounds (Redundant but safe fallback if Controller update missed it)
-        engine->loadMetronomeClicks(
-            "AestraAudio/assets/Aestra_metronome.wav",
-            "AestraAudio/assets/Aestra_metronome_up.wav"
-        );
-        engine->setBPM(120.0f);
+        if (auto* engine = m_audioController->getEngine()) {
+            engine->loadMetronomeClicks(
+                "AestraAudio/assets/Aestra_metronome.wav",
+                "AestraAudio/assets/Aestra_metronome_up.wav"
+            );
+            engine->setBPM(120.0f);
+        }
     }
 }
 
@@ -733,9 +693,6 @@ void AestraApp::setupCallbacks() {
 
 void AestraApp::run() {
     m_windowManager->render(); // Initial render
-
-    double autoSaveTimer = 0.0;
-    const double autoSaveInterval = 300.0;
 
     while (m_running && m_windowManager->processEvents()) {
         UnifiedProfiler::getInstance().beginFrame();
@@ -779,24 +736,13 @@ void AestraApp::run() {
             m_windowManager->render();
         }
 
-        // Auto-save logic
-        if (m_autoSaveFuture.valid()) {
-           if (m_autoSaveFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-                m_autoSaveInFlight.store(false, std::memory_order_relaxed);
-           }
-        }
+        // Autosave is handled entirely by AutosaveManager's background thread,
+        // triggered via markDirty() from TrackManager::setOnModified().
 
-        if (m_autoSaveEnabled.load(std::memory_order_relaxed)) {
-            double deltaTime = m_windowManager->getDeltaTime();
-            autoSaveTimer += deltaTime;
-            if (autoSaveTimer >= autoSaveInterval) {
-                 if (!m_autoSaveInFlight.load(std::memory_order_relaxed)) {
-                     if (m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified()) {
-                         autoSaveTimer = 0.0;
-                         // Capture & Save Async... (omitted for brevity in refactor example)
-                     }
-                 }
-            }
+        // Non-realtime audio work (graph rebuilds, plugin state commits) should
+        // happen before frame pacing so it doesn't eat into the sleep budget.
+        if (m_audioController && m_audioController->getEngine()) {
+            m_audioController->getEngine()->performNonRealtimeMaintenance();
         }
 
         double sleepTime = m_windowManager->endFrame();
@@ -809,10 +755,6 @@ void AestraApp::run() {
              }
          }
 
-        if (m_audioController && m_audioController->getEngine()) {
-            m_audioController->getEngine()->performNonRealtimeMaintenance();
-        }
-
         UnifiedProfiler::getInstance().endFrame();
     }
 }
@@ -821,7 +763,17 @@ void AestraApp::shutdown() {
     Log::info("[SHUTDOWN] Entering shutdown function...");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::ShuttingDown);
 
-    clearCrashFlag();
+    // Invalidate lifetime token so any async callbacks that fire during teardown
+    // bail out before touching partially-destroyed members.
+    if (m_aliveToken) *m_aliveToken = false;
+
+    // Emergency autosave before clearing crash flag — if shutdown crashes after this,
+    // the autosave is still available for recovery on next launch.
+    if (m_content && m_content->getTrackManager() && m_content->getTrackManager()->isModified()) {
+        Log::info("[SHUTDOWN] Emergency autosave before shutdown...");
+        m_autoSaveManager.forceAutosave();
+    }
+    m_autoSaveManager.shutdown();
 
     // Save preferences and UI state (Issue #120)
     Preferences::instance().save();
@@ -868,7 +820,7 @@ void AestraApp::shutdown() {
         // Get current path (last browsed)
         uiState.lastBrowsedPath = fileBrowser->getCurrentPath();
 
-        Log::info("[UIState] Captured file browser state: expandedFolders=" + 
+        Log::info("[UIState] Captured file browser state: expandedFolders=" +
                   std::to_string(uiState.expandedFolders.size()) +
                   ", lastPath=" + uiState.lastBrowsedPath);
     }
@@ -886,11 +838,7 @@ void AestraApp::shutdown() {
 
     uiState.save();
 
-    Aestra::ServiceLocator::clear();
-
     Aestra::Audio::PluginManager::getInstance().shutdown();
-
-    // Save project...
 
     m_audioController->shutdown();
     m_windowManager->shutdown();
@@ -898,6 +846,11 @@ void AestraApp::shutdown() {
     Platform::shutdown();
     Log::info("Aestra shutdown complete");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::Terminated);
+
+    // Clear crash flag LAST — if anything above crashes, the flag persists.
+    // Also clear ServiceLocator last so shutdown paths can still resolve services.
+    Aestra::ServiceLocator::clear();
+    clearCrashFlag();
     Log::shutdown();
 }
 
@@ -907,6 +860,13 @@ void AestraApp::requestClose() {
     if (!trackManager || !trackManager->isModified()) {
         m_running = false;
         return;
+    }
+
+    // Emergency autosave before showing close dialog — if the app is force-killed
+    // while the dialog is open, the autosave is still recoverable.
+    if (trackManager && trackManager->isModified()) {
+        Log::info("[Close] Emergency autosave before close dialog...");
+        m_autoSaveManager.forceAutosave();
     }
 
     if (!m_windowManager) {
@@ -931,9 +891,17 @@ void AestraApp::requestClose() {
                              m_running = false;
                          }
                          break;
-                     case Aestra::DialogResponse::DontSave:
+                     case Aestra::DialogResponse::DontSave: {
+                         // User explicitly chose not to save — remove the autosave
+                         // so it isn't offered for recovery on the next launch.
+                         std::error_code ec;
+                         std::filesystem::remove(getAutosavePath(), ec);
+                         if (ec) {
+                             Log::warning("[Close] Failed to remove autosave on Discard: " + ec.message());
+                         }
                          m_running = false;
                          break;
+                     }
                      case Aestra::DialogResponse::Cancel:
                      case Aestra::DialogResponse::None:
                      default:
@@ -1003,6 +971,7 @@ ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& 
     }
 
     syncRecordingProjectPath(m_content, m_projectPath);
+    reinitAutosaveManager();
     if (result.ui) {
         applyUIState(*result.ui);
     }
@@ -1028,13 +997,21 @@ ProjectSerializer::LoadResult AestraApp::loadProject() {
 }
 
 bool AestraApp::saveProject() {
+    if (m_projectPath.empty()) {
+        m_projectPath = getAutosavePath();
+    }
+    return saveProjectToPath(m_projectPath);
+}
+
+bool AestraApp::saveProjectToPath(const std::string& path) {
     if (!m_content || !m_content->getTrackManager()) {
         Log::warning("Cannot save project without an active TrackManager");
         return false;
     }
 
-    if (m_projectPath.empty()) {
-        m_projectPath = getAutosavePath();
+    if (path.empty()) {
+        Log::warning("Cannot save project to empty path");
+        return false;
     }
 
     const double tempo = (m_audioController && m_audioController->getEngine())
@@ -1043,17 +1020,37 @@ bool AestraApp::saveProject() {
     const double playhead = m_content->getTrackManager()->getPosition();
     const auto uiState = captureUIState();
 
-    const bool ok = ProjectSerializer::save(m_projectPath,
+    const bool ok = ProjectSerializer::save(path,
                                             m_content->getTrackManager(),
                                             tempo,
                                             playhead,
                                             &uiState);
-    if (ok) {
+    if (ok && path == m_projectPath) {
         m_content->getTrackManager()->setModified(false);
+        m_autoSaveManager.markClean();
         syncRecordingProjectPath(m_content, m_projectPath);
         updateWindowTitle();
     }
     return ok;
+}
+
+void AestraApp::reinitAutosaveManager() {
+    Aestra::Audio::AutosaveManager::Config config;
+    config.enabled = m_autoSaveManager.isEnabled();
+    config.autosaveInterval = std::chrono::seconds(60);
+    config.autosavePathOverride = getAutosavePath();
+    config.serializer = [this](std::string& outData) -> bool {
+        if (!m_content || !m_content->getTrackManager()) return false;
+        const double tempo = (m_audioController && m_audioController->getEngine())
+            ? static_cast<double>(m_audioController->getEngine()->getBPM())
+            : (m_content->getTransportBar() ? static_cast<double>(m_content->getTransportBar()->getTempo()) : 120.0);
+        const double playhead = m_content->getTrackManager()->getPosition();
+        auto ser = ProjectSerializer::serialize(m_content->getTrackManager(), tempo, playhead, 0);
+        if (!ser.ok) return false;
+        outData = std::move(ser.contents);
+        return true;
+    };
+    m_autoSaveManager.initialize(m_projectPath, std::move(config));
 }
 
 ProjectSerializer::UIState AestraApp::captureUIState() const {
@@ -1098,10 +1095,14 @@ void AestraApp::startExport() {
         Log::warning("No project loaded for export");
         return;
     }
-    auto& engine = Aestra::Audio::AudioEngine::getInstance();
+    auto* engine = m_audioController ? m_audioController->getEngine() : nullptr;
+    if (!engine) {
+        Log::warning("No audio engine available for export");
+        return;
+    }
     auto& trackMgr = *m_content->getTrackManager();
     auto exportDialog = m_windowManager->getExportDialog();
     if (exportDialog) {
-        exportDialog->show(m_projectPath, engine, trackMgr);
+        exportDialog->show(m_projectPath, *engine, trackMgr);
     }
 }
