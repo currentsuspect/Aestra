@@ -163,8 +163,8 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
         AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().trackControlsWidth);
     addChild(m_timelineMinimap);
 
-    // Create UI components for existing tracks
-    refreshTracks();
+    // Defer track UI creation to first render for instant startup.
+    // refreshTracks() will be called lazily in onRender() via m_needsTrackRefresh.
 
     // Register as observer of the playlist model to handle dynamic changes
     // TODO: addChangeObserver not yet implemented in PlaylistModel
@@ -1276,6 +1276,8 @@ void TrackManagerUI::addTrack(const std::string& name) {
 }
 
 void TrackManagerUI::refreshTracks() {
+    m_needsTrackRefresh = false; // Clear lazy-init flag if we got here directly
+
     if (!m_trackManager) {
         Log::error("refreshTracks: m_trackManager is null!");
         return;
@@ -1558,6 +1560,12 @@ void TrackManagerUI::updateTrackPositions() {
 void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
     AESTRA_ZONE("TrackMgrUI_Render");
     rmt_ScopedCPUSample(TrackMgrUI_Render, 0);
+
+    // Lazy-init track UIs on first render for instant startup
+    if (m_needsTrackRefresh) {
+        m_needsTrackRefresh = false;
+        refreshTracks();
+    }
 
     // Skip rendering if not visible (e.g., when user is on Mixer tab)
     if (!isVisible())
