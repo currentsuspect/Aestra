@@ -158,7 +158,7 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
                       {statusX, sharedBaselineY},
                       userFont, muted);
 
-    const float verifiedAlpha = membershipVerified_ ? 0.50f : 0.28f;
+    const float verifiedAlpha = membershipVerified_ ? 0.40f : 0.24f;
     renderer.fillRoundedRect(badge, 8.0f, accent.withAlpha(membershipVerified_ ? 0.075f : 0.035f));
     renderer.strokeRoundedRect(badge, 8.0f, 1.0f, accent.withAlpha(verifiedAlpha));
     renderer.drawTextCentered(membershipTier_, badge, 11.0f, text.withAlpha(0.84f));

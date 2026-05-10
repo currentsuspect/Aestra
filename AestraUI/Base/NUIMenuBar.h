@@ -42,7 +42,7 @@ public:
         auto bounds = getBounds();
         auto& theme = NUIThemeManager::getInstance();
         
-        NUIColor textColor = theme.getColor("textPrimary");
+        NUIColor textColor = theme.getColor("textPrimary").withAlpha(0.84f);
         NUIColor hoverColor = theme.getColor("accentPrimary").withAlpha(0.10f);
 
         float fontSize = 12.0f;

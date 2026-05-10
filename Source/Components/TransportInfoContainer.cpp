@@ -243,8 +243,9 @@ std::string TimerDisplay::formatTime(double seconds) const {
 void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    // Subtle readout background panel
-    renderer.fillRoundedRect(bounds, 4.0f, themeManager.getColor("backgroundSecondary").withAlpha(0.38f));
+    // Inset readout well — barely visible glassy background
+    renderer.fillRoundedRect(bounds, 4.0f, themeManager.getColor("surfaceRaised").withAlpha(0.10f));
+    renderer.strokeRoundedRect(bounds, 4.0f, 1.0f, themeManager.getColor("border").withAlpha(0.18f));
     std::string timeText = formatTime(m_currentTime);
     renderer.drawTextCentered(timeText, {bounds.x, bounds.y + 4.0f, bounds.width, 20.0f},
                               15.0f, themeManager.getColor("textPrimary").withAlpha(0.95f));
