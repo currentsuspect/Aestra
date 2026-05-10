@@ -15,7 +15,7 @@ namespace Aestra {
 
 namespace {
 
-constexpr float TRANSPORT_BUTTON_SIZE = 28.0f;
+constexpr float TRANSPORT_BUTTON_SIZE = 32.0f;
 constexpr float TRANSPORT_BUTTON_SPACING = 8.0f;
 constexpr float TRANSPORT_GROUP_SPACING = 24.0f;
 constexpr float TRANSPORT_ISLAND_PADDING = 12.0f;
@@ -208,7 +208,7 @@ void TransportBar::createButtons() {
         btn = std::make_shared<AestraUI::NUIButton>();
         btn->setText("");
         btn->setStyle(AestraUI::NUIButton::Style::Icon);
-        btn->setSize(28, 28);
+        btn->setSize(32, 32);
         
         btn->setBackgroundColor(AestraUI::NUIColor::transparent());
         btn->setHoverColor(theme.getColor("surfaceRaised").withAlpha(0.88f));

@@ -129,10 +129,13 @@ void BPMDisplay::onUpdate(double deltaTime) {
 void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    // Small "BPM" label above the value
+    renderer.drawTextCentered("BPM", {bounds.x, bounds.y, bounds.width, 10.0f},
+                                9.0f, themeManager.getColor("textSecondary").withAlpha(0.58f));
     std::stringstream ss;
     ss << std::fixed << std::setprecision(2) << m_displayBPM;
-    renderer.drawTextCentered(ss.str(), {bounds.x, bounds.y + 6.0f, bounds.width, 18.0f},
-                              15.0f, themeManager.getColor("textPrimary").withAlpha(0.95f));
+    renderer.drawTextCentered(ss.str(), {bounds.x, bounds.y + 9.0f, bounds.width, 19.0f},
+                              13.0f, themeManager.getColor("textPrimary").withAlpha(0.95f));
 }
 
 bool BPMDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
@@ -239,8 +242,10 @@ std::string TimerDisplay::formatTime(double seconds) const {
 void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    // Subtle readout background panel
+    renderer.fillRoundedRect(bounds, 4.0f, themeManager.getColor("backgroundSecondary").withAlpha(0.38f));
     std::string timeText = formatTime(m_currentTime);
-    renderer.drawTextCentered(timeText, {bounds.x, bounds.y + 6.0f, bounds.width, 18.0f},
+    renderer.drawTextCentered(timeText, {bounds.x, bounds.y + 4.0f, bounds.width, 20.0f},
                               15.0f, themeManager.getColor("textPrimary").withAlpha(0.95f));
 }
 
