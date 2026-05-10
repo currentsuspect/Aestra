@@ -565,6 +565,11 @@ add_executable(AestraWavLoaderTest AestraAudio/WavLoaderTest.cpp)
 target_link_libraries(AestraWavLoaderTest PRIVATE AestraAudio AestraCore)
 add_test(NAME AestraWavLoaderTest COMMAND AestraWavLoaderTest)
 
+# SamplePool Test
+add_executable(SamplePoolTest AestraAudio/SamplePoolTest.cpp)
+target_link_libraries(SamplePoolTest PRIVATE AestraAudio AestraCore)
+add_test(NAME SamplePoolTest COMMAND SamplePoolTest)
+
 # Device Manager Test (Windows only)
 if(WIN32 AND AESTRA_ENABLE_RUNTIME_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DeviceManagerTest.cpp")
     add_executable(AestraDeviceManagerTest AestraAudio/DeviceManagerTest.cpp)
