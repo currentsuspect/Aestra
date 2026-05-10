@@ -2370,6 +2370,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         renderer.fillRect(itemRect, (i % 2 == 0) ? evenRow : oddRow);
         if (selected) {
             renderer.fillRect(itemRect, selectedRow);
+            renderer.fillRect({itemRect.x, itemRect.y + 3.0f, 2.0f, itemRect.height - 6.0f},
+                              themeManager.getColor("accentPrimary").withAlpha(0.85f));
         } else if (hovered) {
             renderer.fillRect(itemRect, hoverRow);
         }

@@ -139,27 +139,28 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     drawWindowControls(renderer);
 
     const auto text = themeManager.getColor("textPrimary").withAlpha(0.90f);
-    const auto muted = themeManager.getColor("textSecondary").withAlpha(0.76f);
+    const auto muted = themeManager.getColor("textSecondary").withAlpha(0.58f);
     const auto accent = themeManager.getColor("accentPrimary");
     const float userFont = 12.0f;
     const std::string status = membershipStatus_;
     const NUISize statusSize = renderer.measureText(status, userFont);
-    constexpr float badgeW = 86.0f;
+    constexpr float badgeW = 96.0f;
     constexpr float badgeH = 22.0f;
     constexpr float badgeGapToControls = 12.0f;
+    const float badgeY = bounds.y + std::round((height_ - badgeH) * 0.5f);
     const NUIRect badge(minimizeButtonRect_.x - badgeGapToControls - badgeW,
-                        bounds.y + std::round((height_ - badgeH) * 0.5f),
+                        badgeY,
                         badgeW,
                         badgeH);
     const float statusX = badge.x - statusSize.width - 14.0f;
+    const float sharedBaselineY = std::round(renderer.calculateTextY({statusX, badgeY, statusSize.width, badgeH}, userFont));
     renderer.drawText(status,
-                      {statusX, std::round(renderer.calculateTextY({statusX, badge.y, statusSize.width, badge.height},
-                                                                    userFont))},
+                      {statusX, sharedBaselineY},
                       userFont, muted);
 
     const float verifiedAlpha = membershipVerified_ ? 0.50f : 0.28f;
-    renderer.fillRoundedRect(badge, 11.0f, accent.withAlpha(membershipVerified_ ? 0.075f : 0.035f));
-    renderer.strokeRoundedRect(badge, 11.0f, 1.0f, accent.withAlpha(verifiedAlpha));
+    renderer.fillRoundedRect(badge, 8.0f, accent.withAlpha(membershipVerified_ ? 0.075f : 0.035f));
+    renderer.strokeRoundedRect(badge, 8.0f, 1.0f, accent.withAlpha(verifiedAlpha));
     renderer.drawTextCentered(membershipTier_, badge, 11.0f, text.withAlpha(0.84f));
     
     // Render custom children (NUIMenuBar, view toggle, etc.)

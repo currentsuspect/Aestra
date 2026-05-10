@@ -43,30 +43,30 @@ public:
         auto& theme = NUIThemeManager::getInstance();
         
         NUIColor textColor = theme.getColor("textPrimary");
-        NUIColor hoverColor = theme.getColor("primary").withAlpha(0.2f); // Aestra Purple hover
-        
+        NUIColor hoverColor = theme.getColor("accentPrimary").withAlpha(0.10f);
+
         float fontSize = 12.0f;
-        float paddingX = 7.0f;
+        float paddingX = 11.0f;
         float x = bounds.x;
-        
+
         // Calculate and render each menu item
         itemRects_.clear();
         for (size_t i = 0; i < items_.size(); ++i) {
             const auto& item = items_[i];
             NUISize sz = renderer.measureText(item.label, fontSize);
-            
-            NUIRect itemRect(x, bounds.y, sz.width + paddingX * 2, bounds.height);
+
+            NUIRect itemRect(x, bounds.y + 2.0f, sz.width + paddingX * 2, bounds.height - 4.0f);
             itemRects_.push_back(itemRect);
-            
+
             // Draw hover background
             if (hoveredIndex_ == static_cast<int>(i)) {
-                renderer.fillRoundedRect(itemRect, 4.0f, hoverColor);
+                renderer.fillRoundedRect(itemRect, 5.0f, hoverColor);
             }
-            
+
             // Draw text centered
             renderer.drawTextCentered(item.label, itemRect, fontSize, textColor);
-            
-            x += itemRect.width + 4.0f; // 4px gap between items
+
+            x += itemRect.width + 2.0f; // 2px gap between items
         }
         
         NUIComponent::onRender(renderer);

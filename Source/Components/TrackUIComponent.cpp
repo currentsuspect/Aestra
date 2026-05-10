@@ -663,8 +663,8 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
                                             const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     
-    const float clipRadius = 6.0f;
-    
+    const float clipRadius = 4.0f;
+
     // Get clip color from pattern via PatternManager
     AestraUI::NUIColor clipColor = themeManager.getColor("primary");
     std::string sampleName = "Clip";
@@ -773,6 +773,9 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
     }
     
     renderer.strokeRoundedRect(clipBounds, clipRadius, borderWidth, borderColor);
+    // Subtle top inner highlight for depth
+    renderer.fillRect({clipBounds.x + 3.0f, clipBounds.y + 1.0f, std::max(0.0f, clipBounds.width - 6.0f), 1.0f},
+                      AestraUI::NUIColor::white().withAlpha(0.05f));
     if (clipSelected) {
         renderer.strokeRoundedRect({clipBounds.x - 1.0f, clipBounds.y - 1.0f, clipBounds.width + 2.0f, clipBounds.height + 2.0f},
                                    clipRadius + 1.0f,
@@ -908,7 +911,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
         baseColor = baseColor.withAlpha(0.4f);
     }
 
-    const float clipRadius = 6.0f;
+    const float clipRadius = 4.0f;
     renderer.fillRoundedRect(clipBounds, clipRadius, AestraUI::NUIColor(0.07f, 0.072f, 0.09f, 0.96f));
     renderer.fillRoundedRect(clipBounds, clipRadius, baseColor.withAlpha(isSelected ? 0.36f : 0.26f));
     renderer.strokeRoundedRect(
@@ -918,9 +921,13 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
         isSelected ? baseColor.lightened(0.28f).withAlpha(0.92f) : baseColor.lightened(0.18f).withAlpha(0.66f)
     );
 
+    // Subtle top inner highlight for depth
+    renderer.fillRect({clipBounds.x + 3.0f, clipBounds.y + 1.0f, std::max(0.0f, clipBounds.width - 6.0f), 1.0f},
+                      AestraUI::NUIColor::white().withAlpha(0.05f));
+
     const float headerHeight = std::min(18.0f, std::max(14.0f, clipBounds.height * 0.26f));
     const AestraUI::NUIRect headerRect(clipBounds.x + 1.0f, clipBounds.y + 1.0f, std::max(0.0f, clipBounds.width - 2.0f), headerHeight);
-    renderer.fillRoundedRect(headerRect, clipRadius - 1.5f, baseColor.withAlpha(isSelected ? 0.42f : 0.34f));
+    renderer.fillRoundedRect(headerRect, clipRadius - 1.0f, baseColor.withAlpha(isSelected ? 0.42f : 0.34f));
     renderer.fillRoundedRect(
         {clipBounds.x + 1.5f, clipBounds.y + 1.5f, 4.0f, std::max(0.0f, clipBounds.height - 3.0f)},
         2.0f,
