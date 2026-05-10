@@ -134,8 +134,9 @@ void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
                                 9.0f, themeManager.getColor("textSecondary").withAlpha(0.58f));
     std::stringstream ss;
     ss << std::fixed << std::setprecision(2) << m_displayBPM;
+    AestraUI::NUIColor bpmColor = m_isHovered ? themeManager.getColor("accentPrimary") : themeManager.getColor("textPrimary");
     renderer.drawTextCentered(ss.str(), {bounds.x, bounds.y + 9.0f, bounds.width, 19.0f},
-                              13.0f, themeManager.getColor("textPrimary").withAlpha(0.95f));
+                              13.0f, bpmColor.withAlpha(0.95f));
 }
 
 bool BPMDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
