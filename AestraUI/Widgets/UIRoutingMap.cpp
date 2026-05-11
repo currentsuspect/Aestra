@@ -1728,10 +1728,19 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
                              std::abs(mouse.y - m_dragNodeStartMouse.y);
             if (moveDist < 4.0f && m_dragNodeIdx >= 0) {
                 if (m_onNodeSelected) m_onNodeSelected(m_nodes[m_dragNodeIdx].id);
-                // Show left inspector in full panel mode on node click
+                // Inspector opens on double-click in full panel mode
                 if (m_mode == Mode::FullPanel) {
-                    m_inspectorVisible = true;
-                    m_inspectorNodeIdx = m_dragNodeIdx;
+                    auto now = std::chrono::steady_clock::now();
+                    long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        now.time_since_epoch()).count();
+                    bool isDouble = (nowMs - m_lastNodeClickTimeMs < 400) &&
+                                    (m_lastNodeClickIdx == m_dragNodeIdx);
+                    m_lastNodeClickTimeMs = nowMs;
+                    m_lastNodeClickIdx = m_dragNodeIdx;
+                    if (isDouble) {
+                        m_inspectorVisible = true;
+                        m_inspectorNodeIdx = m_dragNodeIdx;
+                    }
                 }
             } else if (m_dragNodeIdx >= 0) {
                 // Grid snap to 20 px in world space

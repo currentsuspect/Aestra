@@ -147,6 +147,8 @@ private:
     int m_hoveredNodeIdx{-1};
     int m_hoveredEdgeIdx{-1};
     long long m_lastClickTimeMs{0};
+    long long m_lastNodeClickTimeMs{0};
+    int m_lastNodeClickIdx{-1};
 
     // Drag-to-reroute state (full panel only)
     bool m_draggingConnection{false};
