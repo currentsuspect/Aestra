@@ -59,6 +59,7 @@ void UIRoutingMap::setMode(Mode mode) {
         m_mode = mode;
         m_graphDirty = true;
         m_zoom = 1.0f;
+        m_targetZoom = 1.0f;
         m_cameraX = 0.0f;
         m_cameraY = 0.0f;
         repaint();
@@ -300,6 +301,7 @@ void UIRoutingMap::fitToView() {
     float scaleX = canvasW / worldW;
     float scaleY = canvasH / worldH;
     m_zoom = std::clamp(std::min(scaleX, scaleY), 0.08f, 1.5f);
+    m_targetZoom = m_zoom;
 
     // Render convention: screenX = bounds.x + worldX*zoom + cameraX
     //                    screenY = bounds.y + titleBar + worldY*zoom + cameraY
@@ -424,6 +426,25 @@ void UIRoutingMap::onUpdate(double deltaTime) {
     } else {
         m_searchCaretTimer = 0.0f;
         m_searchCaretVisible = true;
+    }
+
+    // Smooth zoom interpolation (fixes scroll-wheel jitter)
+    if (m_mode == Mode::FullPanel && std::abs(m_zoom - m_targetZoom) > 0.001f) {
+        NUIRect bounds = getBounds();
+        float canvasY = bounds.y + 44.0f;
+        float oldZoom = m_zoom;
+        float t = std::min(1.0f, static_cast<float>(deltaTime) * 15.0f);
+        m_zoom += (m_targetZoom - m_zoom) * t;
+        if (m_zoomAnchorActive) {
+            float worldX = (m_zoomAnchorScreen.x - bounds.x - m_cameraX) / oldZoom;
+            float worldY = (m_zoomAnchorScreen.y - canvasY - m_cameraY) / oldZoom;
+            m_cameraX = m_zoomAnchorScreen.x - bounds.x - worldX * m_zoom;
+            m_cameraY = m_zoomAnchorScreen.y - canvasY - worldY * m_zoom;
+        }
+        repaint();
+    } else {
+        m_zoom = m_targetZoom;
+        m_zoomAnchorActive = false;
     }
 
     // Cache global solo state for edge dimming
@@ -972,9 +993,6 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     }
 
     renderer.clearClipRect();
-
-    // Mini overview inset in bottom-right corner
-    renderMiniOverview(renderer);
 
     // Left inspector panel
     renderInspector(renderer);
@@ -1594,8 +1612,10 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             }
             if (m_resetButtonRect.contains(mouse)) {
                 m_zoom = 1.0f;
+                m_targetZoom = 1.0f;
                 m_cameraX = 0.0f;
                 m_cameraY = 0.0f;
+                m_zoomAnchorActive = false;
                 m_fitPending = true;
                 repaint();
                 return true;
@@ -1868,20 +1888,34 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             }
         }
 
-        // Pan start (only if not dragging anything and not on node/edge)
-        if (event.pressed && event.button == NUIMouseButton::Left &&
-            !m_draggingConnection && !m_draggingNode && !m_draggingSend &&
-            m_hoveredNodeIdx < 0 && m_hoveredEdgeIdx < 0) {
-            m_panning = true;
-            m_panStartMouse = event.position;
-            m_panStartCameraX = m_cameraX;
-            m_panStartCameraY = m_cameraY;
-            return true;
+        // Pan start (left-click on empty canvas, or middle-click anywhere)
+        bool overUI = m_searchHovered || m_collapseHovered || m_fitHovered || m_resetHovered ||
+                      (m_inspectorVisible && m_inspectorPanelRect.contains(mouse)) ||
+                      (m_inspectorVisible && m_inspectorCloseHovered);
+        if (event.pressed && !m_draggingConnection && !m_draggingNode && !m_draggingSend && !overUI) {
+            if (event.button == NUIMouseButton::Middle) {
+                m_middlePanning = true;
+                m_middlePanStartMouse = event.position;
+                m_middlePanStartCameraX = m_cameraX;
+                m_middlePanStartCameraY = m_cameraY;
+                return true;
+            }
+            if (event.button == NUIMouseButton::Left && m_hoveredNodeIdx < 0 && m_hoveredEdgeIdx < 0) {
+                m_panning = true;
+                m_panStartMouse = event.position;
+                m_panStartCameraX = m_cameraX;
+                m_panStartCameraY = m_cameraY;
+                return true;
+            }
         }
 
         // Pan end
         if (!event.pressed && m_panning) {
             m_panning = false;
+            return true;
+        }
+        if (!event.pressed && m_middlePanning) {
+            m_middlePanning = false;
             return true;
         }
 
@@ -1894,20 +1928,21 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             repaint();
             return true;
         }
-
-        // Zoom (centered on mouse cursor)
-        if (event.type == NUIMouseEventType::Scroll) {
-            NUIRect bounds = getBounds();
-            float canvasY = bounds.y + 44.0f;
-            float oldZoom = m_zoom;
-            float zoomFactor = (event.wheelDelta > 0) ? 1.1f : 0.9f;
-            m_zoom = std::clamp(m_zoom * zoomFactor, 0.2f, 4.0f);
-            // Keep the world point under the mouse at the same screen position
-            float worldX = (mouse.x - bounds.x - m_cameraX) / oldZoom;
-            float worldY = (mouse.y - canvasY - m_cameraY) / oldZoom;
-            m_cameraX = mouse.x - bounds.x - worldX * m_zoom;
-            m_cameraY = mouse.y - canvasY - worldY * m_zoom;
+        if (m_middlePanning && event.type == NUIMouseEventType::Move) {
+            float dx = event.position.x - m_middlePanStartMouse.x;
+            float dy = event.position.y - m_middlePanStartMouse.y;
+            m_cameraX = m_middlePanStartCameraX + dx;
+            m_cameraY = m_middlePanStartCameraY + dy;
             repaint();
+            return true;
+        }
+
+        // Zoom (centered on mouse cursor, smooth)
+        if (event.type == NUIMouseEventType::Scroll) {
+            float zoomFactor = (event.wheelDelta > 0) ? 1.08f : 0.92f;
+            m_targetZoom = std::clamp(m_targetZoom * zoomFactor, 0.2f, 4.0f);
+            m_zoomAnchorScreen = mouse;
+            m_zoomAnchorActive = true;
             return true;
         }
     }
