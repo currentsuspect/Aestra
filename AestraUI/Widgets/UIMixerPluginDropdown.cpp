@@ -39,6 +39,7 @@ UIMixerPluginDropdown::UIMixerPluginDropdown()
     m_filtered = m_categories;
     setVisible(false);
 
+    // Real text input — same pattern as the library search bar in FileBrowser.
     m_searchInput = std::make_shared<NUITextInput>();
     m_searchInput->setPlaceholderText("Search plugins…");
     m_searchInput->setShowPlaceholderWhenFocused(true);
@@ -47,6 +48,8 @@ UIMixerPluginDropdown::UIMixerPluginDropdown()
     m_searchInput->setTextColor(m_textPrimary);
     m_searchInput->setPlaceholderColor(m_textTertiary);
     m_searchInput->setPadding(8.0f);
+    m_searchInput->setMaxLength(512);
+    m_searchInput->setBorderRadius(4.0f);
     m_searchInput->setOnTextChange([this](const std::string& text) {
         m_searchQuery = text;
         filter();
@@ -70,7 +73,7 @@ void UIMixerPluginDropdown::cacheThemeColors()
     m_textTertiary = theme.getColor("textDisabled");
     m_accent = theme.getColor("accentPrimary");
     m_rowHover = theme.getColor("buttonBgHover").withAlpha(0.78f);
-    m_searchBg = NUIColor(0.06f, 0.07f, 0.10f, 0.95f);
+    m_searchBg = theme.getColor("backgroundSecondary");
 }
 
 void UIMixerPluginDropdown::buildPluginList()
@@ -205,9 +208,11 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
     auto b = getBounds();
     if (b.isEmpty()) return;
 
-    // Container
+    // Container background
     renderer.fillRoundedRect(b, RADIUS, m_bg);
-    renderer.strokeRoundedRect(b, RADIUS, 0.5f, m_border);
+
+    // Clip to container bounds so nothing bleeds past the rounded corners
+    renderer.setClipRect(b);
 
     // Search section background (text input is transparent)
     NUIRect searchRect{b.x, b.y, b.width, SEARCH_H};
@@ -232,8 +237,6 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
     auto rows = flatten(m_filtered);
     float listTop = b.y + SEARCH_H;
     float listH = b.height - SEARCH_H - FOOTER_H;
-    NUIRect listClip{b.x, listTop, b.width, listH};
-    renderer.setClipRect(listClip);
 
     bool anyItem = false;
     for (size_t ri = 0; ri < rows.size(); ++ri) {
@@ -284,8 +287,6 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
                                    m_textTertiary);
     }
 
-    renderer.clearClipRect();
-
     // ── Footer ──
     float fy = b.y + b.height - FOOTER_H;
     renderer.drawLine({b.x, fy}, {b.right(), fy}, 0.5f, m_borderTertiary);
@@ -301,6 +302,12 @@ void UIMixerPluginDropdown::onRender(NUIRenderer& renderer)
         extIcon->setBounds(NUIRect(b.right() - 22.0f - 6.5f, fy + FOOTER_H * 0.5f - 6.5f, 13.0f, 13.0f));
         extIcon->onRender(renderer);
     }
+
+    // Clear container clip before drawing border on top
+    renderer.clearClipRect();
+
+    // Border stroke on top so it cleanly frames everything
+    renderer.strokeRoundedRect(b, RADIUS, 0.5f, m_border);
 }
 
 bool UIMixerPluginDropdown::onMouseEvent(const NUIMouseEvent& event)
