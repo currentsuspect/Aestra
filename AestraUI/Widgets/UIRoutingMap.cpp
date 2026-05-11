@@ -745,8 +745,14 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
                 if (static_cast<int>(i) == m_searchHoveredMatch) {
                     renderer.fillRoundedRect(m_searchDropdownRects[i], 4.0f, m_accent.withAlpha(0.18f));
                 }
-                renderer.drawText(fitLabel(renderer, matchNode.label, 11.0f, searchW - 16.0f),
-                                  {searchX + 8.0f, iy + 4.0f}, 11.0f, m_text.withAlpha(0.88f));
+                // Color dot
+                NUIColor dotColor(((matchNode.color >> 16) & 0xFF) / 255.0f,
+                                  ((matchNode.color >> 8) & 0xFF) / 255.0f,
+                                  (matchNode.color & 0xFF) / 255.0f,
+                                  ((matchNode.color >> 24) & 0xFF) / 255.0f);
+                renderer.fillCircle({searchX + 14.0f, iy + itemH * 0.5f}, 4.0f, dotColor);
+                renderer.drawText(fitLabel(renderer, matchNode.label, 11.0f, searchW - 34.0f),
+                                  {searchX + 24.0f, iy + 4.0f}, 11.0f, m_text.withAlpha(0.88f));
             }
             // Clear unused rects
             for (size_t i = m_searchMatches.size(); i < 5; ++i) {
@@ -907,7 +913,10 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
             float sy = canvasY + (src->y + src->outputY) * m_zoom + m_cameraY;
             float dx_ = bounds.x + (dst->x + dst->inputX) * m_zoom + m_cameraX;
             float dy_ = canvasY + (dst->y + dst->inputY) * m_zoom + m_cameraY;
-            drawBezier(renderer, {sx, sy}, {dx_, dy_}, 3.5f, m_accent.withAlpha(0.65f), false);
+            // Glow behind
+            drawBezier(renderer, {sx, sy}, {dx_, dy_}, 6.0f, m_accent.withAlpha(0.22f), false);
+            // Bright core
+            drawBezier(renderer, {sx, sy}, {dx_, dy_}, 3.5f, m_accent.withAlpha(0.92f), false);
         }
     }
 
@@ -1190,18 +1199,20 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
 
         // Input port (left side, all nodes)
         if (inHovered) {
-            renderer.fillCircle({nx, ny + nh * 0.5f}, portR + 3.0f, m_accent.withAlpha(0.25f));
+            renderer.fillCircle({nx, ny + nh * 0.5f}, portR + 4.0f, m_accent.withAlpha(0.35f));
+            renderer.fillCircle({nx, ny + nh * 0.5f}, portR + 2.0f, m_accent.withAlpha(0.55f));
         }
         renderer.fillCircle({nx, ny + nh * 0.5f}, portR, portFill);
-        renderer.strokeCircle({nx, ny + nh * 0.5f}, portR, 1.5f, inHovered ? m_accent.withAlpha(0.95f) : portStroke);
+        renderer.strokeCircle({nx, ny + nh * 0.5f}, portR, 1.5f, inHovered ? m_accent.withAlpha(0.98f) : portStroke);
 
         // Output port (right side, tracks only — master has no audio output here)
         if (node.type != Node::Master) {
             if (outHovered) {
-                renderer.fillCircle({nx + nw, ny + nh * 0.5f}, portR + 3.0f, m_accent.withAlpha(0.25f));
+                renderer.fillCircle({nx + nw, ny + nh * 0.5f}, portR + 4.0f, m_accent.withAlpha(0.35f));
+                renderer.fillCircle({nx + nw, ny + nh * 0.5f}, portR + 2.0f, m_accent.withAlpha(0.55f));
             }
             renderer.fillCircle({nx + nw, ny + nh * 0.5f}, portR, portFill);
-            renderer.strokeCircle({nx + nw, ny + nh * 0.5f}, portR, 1.5f, outHovered ? m_accent.withAlpha(0.95f) : portStroke);
+            renderer.strokeCircle({nx + nw, ny + nh * 0.5f}, portR, 1.5f, outHovered ? m_accent.withAlpha(0.98f) : portStroke);
         }
     } else {
         // === Minimap mode ===
@@ -1745,7 +1756,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
         if (!event.pressed && m_draggingNode) {
             float moveDist = std::abs(mouse.x - m_dragNodeStartMouse.x) +
                              std::abs(mouse.y - m_dragNodeStartMouse.y);
-            if (moveDist < 4.0f && m_dragNodeIdx >= 0) {
+            if (moveDist < 8.0f && m_dragNodeIdx >= 0) {
                 if (m_onNodeSelected) m_onNodeSelected(m_nodes[m_dragNodeIdx].id);
                 // Inspector opens on double-click in full panel mode
                 if (m_mode == Mode::FullPanel) {
@@ -1759,6 +1770,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
                     if (isDouble) {
                         m_inspectorVisible = true;
                         m_inspectorNodeIdx = m_dragNodeIdx;
+                        m_inspectorScrollY = 0.0f;
                     }
                 }
             } else if (m_dragNodeIdx >= 0) {
@@ -1786,6 +1798,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
         if (event.pressed && event.button == NUIMouseButton::Left && m_inspectorVisible && m_inspectorCloseHovered) {
             m_inspectorVisible = false;
             m_inspectorNodeIdx = -1;
+            m_inspectorScrollY = 0.0f;
             repaint();
             return true;
         }
@@ -1798,6 +1811,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             !m_collapseHovered && !m_fitHovered && !m_resetHovered && !overInspector && !m_searchHovered) {
             m_inspectorVisible = false;
             m_inspectorNodeIdx = -1;
+            m_inspectorScrollY = 0.0f;
             repaint();
         }
 
@@ -1821,6 +1835,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
                     if (m_hoveredNodeIdx >= 0) {
                         m_inspectorVisible = true;
                         m_inspectorNodeIdx = m_hoveredNodeIdx;
+                        m_inspectorScrollY = 0.0f;
                         repaint();
                     }
                 });
@@ -1952,6 +1967,16 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             float dy = event.position.y - m_middlePanStartMouse.y;
             m_cameraX = m_middlePanStartCameraX + dx;
             m_cameraY = m_middlePanStartCameraY + dy;
+            repaint();
+            return true;
+        }
+
+        // Inspector scroll (takes priority over canvas zoom)
+        if (event.type == NUIMouseEventType::Scroll && m_inspectorVisible &&
+            m_inspectorPanelRect.contains(mouse)) {
+            m_inspectorScrollY -= event.wheelDelta * 20.0f;
+            if (m_inspectorScrollY < 0.0f) m_inspectorScrollY = 0.0f;
+            if (m_inspectorScrollY > 400.0f) m_inspectorScrollY = 400.0f;
             repaint();
             return true;
         }
@@ -2093,6 +2118,33 @@ bool UIRoutingMap::onKeyEvent(const NUIKeyEvent& event) {
             repaint();
             return true;
         }
+    }
+
+    // Escape: close inspector first, then search, then let parent close the overlay
+    if (event.keyCode == NUIKeyCode::Escape) {
+        if (m_inspectorVisible) {
+            m_inspectorVisible = false;
+            m_inspectorNodeIdx = -1;
+            m_inspectorScrollY = 0.0f;
+            repaint();
+            return true;
+        }
+        if (m_searchFocused) {
+            m_searchQuery.clear();
+            m_searchFocused = false;
+            m_searchActive = false;
+            m_searchMatches.clear();
+            repaint();
+            return true;
+        }
+        return false; // Let AestraContent close the routing map overlay
+    }
+
+    // F key: fit to view
+    if (event.keyCode == NUIKeyCode::F && !m_searchFocused) {
+        m_fitPending = true;
+        repaint();
+        return true;
     }
 
     if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {
@@ -2372,7 +2424,10 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
     renderer.fillRoundedRect(m_inspectorPanelRect, 8.0f, NUIColor(0.07f, 0.06f, 0.10f, 0.96f));
     renderer.strokeRoundedRect(m_inspectorPanelRect, 8.0f, 1.0f, m_border.withAlpha(0.45f));
 
-    float y = insetY + 14.0f;
+    // Clip content to panel interior (scrollable area)
+    renderer.setClipRect(NUIRect{insetX + 2.0f, insetY + 6.0f, kInspectorW - 4.0f, insetH - 12.0f});
+
+    float y = insetY + 14.0f - m_inspectorScrollY;
     float left = insetX + 12.0f;
     float right = insetX + kInspectorW - 12.0f;
     float textW = right - left;
@@ -2475,7 +2530,6 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
                 renderer.drawText(mixBuf, {right - mixW - 6.0f, y + 4.0f}, 9.0f, m_textInfo.withAlpha(0.7f));
             }
             y += 24.0f;
-            if (y > insetY + insetH - 40.0f) break;
         }
     }
 
@@ -2520,9 +2574,11 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
             }
 
             y += 28.0f;
-            if (y > insetY + insetH - 40.0f) break;
         }
     }
+
+    // Clear clip so close button and scroll shadow render outside the content area
+    renderer.clearClipRect();
 
     // Close button (top-right of panel)
     m_inspectorCloseRect = NUIRect{insetX + kInspectorW - 26.0f, insetY + 8.0f, 18.0f, 18.0f};

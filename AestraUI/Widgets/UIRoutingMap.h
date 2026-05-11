@@ -178,6 +178,7 @@ private:
     NUIRect m_inspectorCloseRect{0, 0, 0, 0};
     bool m_inspectorCloseHovered{false};
     NUIRect m_inspectorPanelRect{0, 0, 0, 0};
+    float m_inspectorScrollY{0.0f};
 
     // Hover-to-trace state
     std::vector<bool> m_traceUpstreamMask; // per-node
