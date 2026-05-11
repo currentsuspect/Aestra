@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <sstream>
+#include <vector>
 
 namespace AestraUI {
 
@@ -42,6 +44,35 @@ namespace {
             clipped.pop_back();
         }
         return clipped.empty() ? ellipsis : clipped + ellipsis;
+    }
+
+    // Global rule: split text into lines that each fit within maxWidth.
+    // Used for multi-line descriptive text so nothing bleeds past panel edges.
+    std::vector<std::string> wrapText(NUIRenderer& renderer, const std::string& text,
+                                       float fontSize, float maxWidth)
+    {
+        std::vector<std::string> lines;
+        if (text.empty()) return lines;
+
+        std::string currentLine;
+        std::istringstream stream(text);
+        std::string word;
+
+        while (stream >> word) {
+            std::string test = currentLine.empty() ? word : currentLine + " " + word;
+            if (renderer.measureText(test, fontSize).width <= maxWidth) {
+                currentLine = std::move(test);
+            } else {
+                if (!currentLine.empty()) {
+                    lines.push_back(std::move(currentLine));
+                }
+                currentLine = word;
+            }
+        }
+        if (!currentLine.empty()) {
+            lines.push_back(std::move(currentLine));
+        }
+        return lines;
     }
 
     bool pluginSupportsSidechain(const Aestra::Audio::PluginInfo& info)
@@ -257,12 +288,14 @@ void UIMixerInspector::layoutHitRects()
     }
 
     if (m_ioInputDropdown) {
-        float currentY = contentY + 28.0f;
-        m_ioInputDropdown->setBounds(x, currentY, w, IO_DROPDOWN_H);
+        // Place dropdown below the ioHeader card (48 px) so it never overlaps hint text
+        float currentY = contentY + 54.0f;
+        m_ioInputDropdown->setBounds(x + 10.0f, currentY, w - 20.0f, IO_DROPDOWN_H);
     }
     if (m_mainOutputDropdown) {
         const float dropdownW = std::floor(w * 0.50f);
-        m_mainOutputDropdown->setBounds(x + 10.0f, contentY + 112.0f, dropdownW, IO_DROPDOWN_H);
+        // Position inside the outputHeader card, below the description text
+        m_mainOutputDropdown->setBounds(x + 10.0f, contentY + 66.0f, dropdownW, IO_DROPDOWN_H);
     }
 }
 
@@ -651,23 +684,23 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         } else {
             std::snprintf(summaryBuf, sizeof(summaryBuf), "%d send%s active", sendCount, sendCount == 1 ? "" : "s");
         }
-        const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, 36.0f};
+        const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, 52.0f};
         renderer.fillRoundedRect(summaryCard, 12.0f, m_tabBg.withAlpha(0.46f));
         const NUIColor summaryStroke = hasRoutingWarning
             ? NUIThemeManager::getInstance().getColor("warning").withAlpha(0.30f)
             : accent.withAlpha(0.16f);
         renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, summaryStroke);
         renderer.drawText("Send Status", {summaryCard.x + 10.0f, summaryCard.y + 7.0f}, 9.5f, m_textSecondary.withAlpha(0.94f));
-        renderer.drawText(summaryBuf, {summaryCard.x + 10.0f, summaryCard.y + 19.0f}, 10.5f, m_text.withAlpha(0.96f));
+        renderer.drawText(summaryBuf, {summaryCard.x + 10.0f, summaryCard.y + 22.0f}, 13.0f, m_text.withAlpha(0.96f));
         if (hasRoutingWarning) {
             renderer.drawText(routingWarning,
-                              {summaryCard.x + 118.0f, summaryCard.y + 19.0f},
-                              9.25f,
+                              {summaryCard.x + 10.0f, summaryCard.y + 38.0f},
+                              12.0f,
                               NUIThemeManager::getInstance().getColor("warning").withAlpha(0.92f));
         } else {
             renderer.drawText("Audio sends for this track.",
-                              {summaryCard.x + 118.0f, summaryCard.y + 19.0f},
-                              9.25f,
+                              {summaryCard.x + 10.0f, summaryCard.y + 38.0f},
+                              12.0f,
                               m_textSecondary.withAlpha(0.84f));
         }
 
@@ -679,26 +712,37 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                           {outputHeader.x + 10.0f, outputHeader.y + 25.0f}, 9.5f, m_textSecondary.withAlpha(0.88f));
         renderer.drawText("Master or subgroup destination.",
                           {outputHeader.x + 10.0f, outputHeader.y + 37.0f}, 9.25f, m_textSecondary.withAlpha(0.78f));
-        renderer.drawText("Main path",
-                          {outputHeader.x + outputHeader.width - 70.0f, outputHeader.bottom() - 14.0f},
-                          9.0f, m_textSecondary.withAlpha(0.76f));
+
+        // MAIN PATH label — left-aligned above the dropdown, same pattern as "Audio Input"
+        auto ddBounds = m_mainOutputDropdown->getBounds();
+        if (ddBounds.height > 0) {
+            renderer.drawText("MAIN PATH",
+                              {ddBounds.x, ddBounds.y - 16.0f},
+                              11.0f,
+                              m_textSecondary);
+        }
 
         const NUIRect routingCard{contentRect.x, outputHeader.bottom() + 10.0f, contentRect.width, SEND_ROUTE_MAP_H};
         renderer.fillRoundedRect(routingCard, 12.0f, m_tabBg.withAlpha(0.52f));
         renderer.strokeRoundedRect(routingCard, 12.0f, 1.0f, m_border.withAlpha(0.30f));
-        renderer.drawText("Route Map", {routingCard.x + 10.0f, routingCard.y + 8.0f}, 9.5f, m_text.withAlpha(0.92f));
+
+        // Route Map row: all three items share the same baseline
+        const float rowY = routingCard.y + 10.0f;
+        renderer.drawText("Route Map", {routingCard.x + 10.0f, rowY}, 12.0f, m_text.withAlpha(0.92f));
 
         const bool sidechainReady = hasSidechainReadyDestination(m_viewModel, channel);
         const char* sidechainLabel = sidechainReady ? "SC ready" : "SC unavailable";
-        const float sidechainW = renderer.measureText(sidechainLabel, 9.0f).width + 18.0f;
+        const float sidechainW = renderer.measureText(sidechainLabel, 12.0f).width + 18.0f;
         const bool busOnly = !channel->masterSendEnabled && channel->mainOutputId != 0;
         const char* masterLabel = busOnly ? "Master off" : "Master on";
-        const float masterW = renderer.measureText(masterLabel, 9.0f).width + 18.0f;
-        const NUIRect sidechainChip{routingCard.right() - sidechainW - 10.0f, routingCard.y + 7.0f, sidechainW, 18.0f};
-        const NUIRect masterChip{sidechainChip.x - masterW - 6.0f, routingCard.y + 7.0f, masterW, 18.0f};
+        const float masterW = renderer.measureText(masterLabel, 12.0f).width + 18.0f;
+        const float chipH = 20.0f;
+        const float chipY = rowY - 14.0f; // align chip centers with Route Map baseline
+        const NUIRect sidechainChip{routingCard.right() - sidechainW - 10.0f, chipY, sidechainW, chipH};
+        const NUIRect masterChip{sidechainChip.x - masterW - 12.0f, chipY, masterW, chipH};
         renderer.fillRoundedRect(masterChip, 9.0f, busOnly ? accent.withAlpha(0.10f) : m_bg.withAlpha(0.28f));
         renderer.strokeRoundedRect(masterChip, 9.0f, 1.0f, busOnly ? accent.withAlpha(0.20f) : m_border.withAlpha(0.14f));
-        renderer.drawTextCentered(masterLabel, masterChip, 9.0f, m_textSecondary.withAlpha(0.92f));
+        renderer.drawTextCentered(masterLabel, masterChip, 12.0f, m_textSecondary.withAlpha(0.92f));
         renderer.fillRoundedRect(sidechainChip,
                                  9.0f,
                                  sidechainReady ? accent.withAlpha(0.10f) : m_bg.withAlpha(0.28f));
@@ -708,7 +752,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                                    sidechainReady ? accent.withAlpha(0.20f) : m_border.withAlpha(0.14f));
         renderer.drawTextCentered(sidechainLabel,
                                   sidechainChip,
-                                  9.0f,
+                                  12.0f,
                                   m_textSecondary.withAlpha(sidechainReady ? 0.94f : 0.90f));
 
         const float laneTop = routingCard.y + 34.0f;
@@ -799,6 +843,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
              renderer.drawText("Pick a source, then verify the live level before record.",
                                {ioHeader.x + 10.0f, ioHeader.y + 25.0f}, 9.0f, m_textSecondary.withAlpha(0.94f));
 
+             // Dropdown is now below the ioHeader (positioned in onResize); infoCard follows after it.
              const float infoTop = contentRect.y + 84.0f;
              const NUIRect infoCard{contentRect.x, infoTop, contentRect.width, 100.0f};
              renderer.drawShadow(infoCard, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.10f));
@@ -843,8 +888,18 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                                9.0f,
                                m_textSecondary);
 
-             renderer.drawText("If this meter is flat or pinned, fix the input path before recording.",
-                               {contentRect.x, infoCard.bottom() + 12.0f}, 9.0f, m_textSecondary.withAlpha(0.88f));
+             // Hint text: wrap to panel width so it never overflows the boundary
+             const float hintX = contentRect.x + 12.0f;
+             const float hintY = infoCard.bottom() + 12.0f;
+             const float hintW = contentRect.width - 24.0f;
+             auto hintLines = wrapText(renderer,
+                                        "If this meter is flat or pinned, fix the input path before recording.",
+                                        9.0f, hintW);
+             for (size_t i = 0; i < hintLines.size(); ++i) {
+                 renderer.drawText(hintLines[i],
+                                   {hintX, hintY + static_cast<float>(i) * 12.0f},
+                                   9.0f, m_textSecondary.withAlpha(0.88f));
+             }
         }
     }
 
