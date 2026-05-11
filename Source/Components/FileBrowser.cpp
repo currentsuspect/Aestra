@@ -1472,6 +1472,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                 hoveredIndex_ = -1;
                 invalidateCache();
             }
+            AestraUI::NUIComponent::hideRemoteTooltip(this);
         }
 
 	    if (isInsideList) {

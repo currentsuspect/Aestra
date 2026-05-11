@@ -331,6 +331,30 @@ void UIRoutingMap::fitToView() {
     m_fitPending = false;
 }
 
+void UIRoutingMap::clampCamera() {
+    if (m_nodes.empty()) return;
+    NUIRect bounds = getBounds();
+    constexpr float kTitleBarH = 44.0f;
+    float canvasW = std::max(1.0f, bounds.width);
+    float canvasH = std::max(1.0f, bounds.height - kTitleBarH);
+
+    // Allow the user to pan until the graph is almost off-screen, but keep
+    // at least a 60 px "handle" visible so the canvas never feels lost.
+    constexpr float kMargin = 60.0f;
+
+    float minCamX = -m_worldMaxX * m_zoom + kMargin;
+    float maxCamX = canvasW - m_worldMinX * m_zoom - kMargin;
+    if (minCamX < maxCamX) {
+        m_cameraX = std::clamp(m_cameraX, minCamX, maxCamX);
+    }
+
+    float minCamY = -m_worldMaxY * m_zoom + kMargin;
+    float maxCamY = canvasH - m_worldMinY * m_zoom - kMargin;
+    if (minCamY < maxCamY) {
+        m_cameraY = std::clamp(m_cameraY, minCamY, maxCamY);
+    }
+}
+
 void UIRoutingMap::autoLayout() {
     if (m_mode == Mode::Minimap) {
         // Compact representation: tracks left column, master right, square-ish layout
@@ -1493,10 +1517,16 @@ void UIRoutingMap::onResize(int width, int height) {
 }
 
 bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
-    // NOTE: event.position and getBounds() are both in the same (global/parent-local)
-    // coordinate space because the routing map lives under the overlay layer.
-    // Do NOT call globalToLocal here — it would break the coordinate match.
     const NUIPoint& mouse = event.position;
+
+    // In full-panel mode the bounds span the entire content area, so an early
+    // bounds check prevents us from swallowing clicks meant for the title bar
+    // or transport bar.  The minimap is already tightly clipped by its parent
+    // layout, so we skip the guard there to avoid rejecting valid events when
+    // bounds are briefly stale (e.g. before the first onRender).
+    if (m_mode == Mode::FullPanel && !getBounds().contains(mouse)) {
+        return false;
+    }
 
     // Ensure hover state is current before handling presses / drags
     if (event.pressed || event.type == NUIMouseEventType::Move || event.type == NUIMouseEventType::Scroll) {
@@ -1959,6 +1989,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             float dy = event.position.y - m_panStartMouse.y;
             m_cameraX = m_panStartCameraX + dx;
             m_cameraY = m_panStartCameraY + dy;
+            clampCamera();
             repaint();
             return true;
         }
@@ -1967,6 +1998,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             float dy = event.position.y - m_middlePanStartMouse.y;
             m_cameraX = m_middlePanStartCameraX + dx;
             m_cameraY = m_middlePanStartCameraY + dy;
+            clampCamera();
             repaint();
             return true;
         }
@@ -1993,6 +2025,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             float worldY = (mouse.y - canvasY - m_cameraY) / oldZoom;
             m_cameraX = mouse.x - bounds.x - worldX * m_zoom;
             m_cameraY = mouse.y - canvasY - worldY * m_zoom;
+            clampCamera();
             repaint();
             return true;
         }

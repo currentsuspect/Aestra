@@ -48,6 +48,7 @@ public:
     // Component overrides
     void onRender(NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
+    bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
 
 private:
