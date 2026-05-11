@@ -666,26 +666,27 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     renderer.strokeRoundedRect(indexChip, 7.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
     renderer.drawTextCentered(numBuf, indexChip, 9.0f, Colors::textDisabled.withAlpha(0.68f));
 
-    // Available text area to the right of the chip
+    // Available text area to the right of the chip.
+    // Use the same vertical extent as the chip so drawTextCentered aligns identically.
     const float textX = slotRect.x + 36.0f;
     const float textW = slotRect.width - 36.0f - 8.0f;
+    const float rowH = chipH; // 14 px — same height as the index chip
 
     if (slot.isEmpty) {
         const float textSize = isHovered ? 10.0f : 9.5f;
         const NUIColor textColor = isHovered
             ? Colors::textPrimary
             : Colors::textDisabled.withAlpha(0.56f);
-        // Single line centered on slotMid — same mechanism as the chip text
-        const NUIRect textRect{textX, slotMid - 10.0f, textW, 20.0f};
+        const NUIRect textRect{textX, slotMid - rowH * 0.5f, textW, rowH};
         renderer.drawTextCentered(isHovered ? "+ Add Insert" : "Empty slot",
                                   textRect, textSize, textColor);
     } else {
-        // Two lines centered around slotMid
+        // Two lines: name above mid, status below mid, each in its own half-height rect
         NUIColor nameColor = slot.bypassed ? Colors::textDisabled.withAlpha(0.6f) : Colors::textPrimary;
-        const NUIRect nameRect{textX, slotMid - 11.0f, textW, 11.0f};
+        const NUIRect nameRect{textX, slotMid - rowH, textW, rowH};
         renderer.drawTextCentered(slot.name, nameRect, 10.5f, nameColor);
 
-        const NUIRect statusRect{textX, slotMid, textW, 10.0f};
+        const NUIRect statusRect{textX, slotMid, textW, rowH};
         renderer.drawTextCentered(slot.bypassed ? "Bypassed" : "Active",
                                   statusRect, 8.5f,
                                   slot.bypassed ? Colors::textDisabled.withAlpha(0.72f) : Colors::accentPrimary.withAlpha(0.78f));
