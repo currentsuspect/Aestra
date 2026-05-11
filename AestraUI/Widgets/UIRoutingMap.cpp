@@ -413,6 +413,19 @@ void UIRoutingMap::onUpdate(double deltaTime) {
     m_livePulsePhase += static_cast<float>(deltaTime) * 1.5f;
     if (m_livePulsePhase > 1.0f) m_livePulsePhase -= 1.0f;
 
+    // Search bar caret blink (~1 Hz)
+    if (m_searchFocused) {
+        m_searchCaretTimer += static_cast<float>(deltaTime);
+        if (m_searchCaretTimer >= 0.5f) {
+            m_searchCaretTimer -= 0.5f;
+            m_searchCaretVisible = !m_searchCaretVisible;
+            repaint();
+        }
+    } else {
+        m_searchCaretTimer = 0.0f;
+        m_searchCaretVisible = true;
+    }
+
     // Cache global solo state for edge dimming
     m_anySoloed = false;
     for (const auto& node : m_nodes) {
@@ -640,14 +653,14 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     }
 
     // Fit-to-view button
-    std::string fitLabel = "Fit";
-    float fitW = renderer.measureText(fitLabel, 11.0f).width + 20.0f;
+    std::string fitBtnLabel = "Fit";
+    float fitW = renderer.measureText(fitBtnLabel, 11.0f).width + 20.0f;
     m_fitButtonRect = NUIRect{bounds.right() - fitW - 14.0f, bounds.y + 10.0f, fitW, 22.0f};
     renderer.fillRoundedRect(m_fitButtonRect, 5.0f,
                              m_fitHovered ? m_accent.withAlpha(0.22f) : m_bg.withAlpha(0.45f));
     renderer.strokeRoundedRect(m_fitButtonRect, 5.0f, 1.0f,
                                m_fitHovered ? m_accent.withAlpha(0.65f) : m_border.withAlpha(0.35f));
-    renderer.drawTextCentered(fitLabel, m_fitButtonRect, 11.0f,
+    renderer.drawTextCentered(fitBtnLabel, m_fitButtonRect, 11.0f,
                               m_fitHovered ? m_accent.withAlpha(0.98f) : m_textSecondary.withAlpha(0.9f));
 
     // Reset layout button
@@ -676,8 +689,8 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
 
     // Search bar in title bar
     {
-        float searchX = bounds.x + bounds.width * 0.5f - 80.0f;
-        float searchW = 160.0f;
+        float searchX = bounds.x + bounds.width * 0.5f - 100.0f;
+        float searchW = 200.0f;
         m_searchRect = NUIRect{searchX, bounds.y + 10.0f, searchW, 22.0f};
         NUIColor searchBg = m_searchFocused ? m_bgSecondary.withAlpha(0.7f) : m_bgSecondary.withAlpha(0.45f);
         renderer.fillRoundedRect(m_searchRect, 5.0f, searchBg);
@@ -686,8 +699,38 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
         std::string searchDisplay = m_searchQuery.empty() ? "Search nodes..." : m_searchQuery;
         NUIColor searchTextCol = m_searchQuery.empty() ? m_textSecondary.withAlpha(0.45f) : m_text.withAlpha(0.85f);
         renderer.drawText(searchDisplay, {searchX + 8.0f, bounds.y + 13.0f}, 11.0f, searchTextCol);
-        if (m_searchActive && !m_searchQuery.empty()) {
-            // Highlight matching nodes with a subtle ring (rendered below in node loop)
+
+        // Blinking caret when focused
+        if (m_searchFocused && m_searchCaretVisible) {
+            float textW = renderer.measureText(m_searchQuery, 11.0f).width;
+            float caretX = searchX + 8.0f + textW + 1.0f;
+            float caretY = bounds.y + 10.0f + (22.0f - 12.0f) * 0.5f;
+            renderer.fillRoundedRect(NUIRect{caretX, caretY, 1.5f, 12.0f}, 1.0f, m_text.withAlpha(0.9f));
+        }
+
+        // Dropdown suggestions (rendered below search bar)
+        if (m_searchFocused && !m_searchMatches.empty()) {
+            float dropY = bounds.y + 10.0f + 22.0f + 2.0f;
+            float itemH = 22.0f;
+            float dropH = static_cast<float>(m_searchMatches.size()) * itemH + 4.0f;
+            NUIRect dropRect{searchX, dropY, searchW, dropH};
+            renderer.fillRoundedRect(dropRect, 5.0f, NUIColor(0.09f, 0.08f, 0.12f, 0.98f));
+            renderer.strokeRoundedRect(dropRect, 5.0f, 1.0f, m_border.withAlpha(0.35f));
+            for (size_t i = 0; i < m_searchMatches.size() && i < 5; ++i) {
+                int nodeIdx = m_searchMatches[i];
+                const auto& matchNode = m_nodes[nodeIdx];
+                float iy = dropY + 2.0f + static_cast<float>(i) * itemH;
+                m_searchDropdownRects[i] = NUIRect{searchX, iy, searchW, itemH};
+                if (static_cast<int>(i) == m_searchHoveredMatch) {
+                    renderer.fillRoundedRect(m_searchDropdownRects[i], 4.0f, m_accent.withAlpha(0.18f));
+                }
+                renderer.drawText(fitLabel(renderer, matchNode.label, 11.0f, searchW - 16.0f),
+                                  {searchX + 8.0f, iy + 4.0f}, 11.0f, m_text.withAlpha(0.88f));
+            }
+            // Clear unused rects
+            for (size_t i = m_searchMatches.size(); i < 5; ++i) {
+                m_searchDropdownRects[i] = NUIRect{0, 0, 0, 0};
+            }
         }
     }
 
@@ -1484,12 +1527,58 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
         // Search bar hit test
         if (event.pressed && event.button == NUIMouseButton::Left && m_searchRect.contains(mouse)) {
             m_searchFocused = true;
+            setFocused(true); // Ensure routing map receives key events
             repaint();
             return true;
         }
         if (event.pressed && event.button == NUIMouseButton::Left && !m_searchRect.contains(mouse)) {
-            m_searchFocused = false;
-            repaint();
+            bool overDropdown = false;
+            for (size_t i = 0; i < m_searchMatches.size() && i < 5; ++i) {
+                if (m_searchDropdownRects[i].contains(mouse)) { overDropdown = true; break; }
+            }
+            if (!overDropdown && !m_inspectorPanelRect.contains(mouse)) {
+                m_searchFocused = false;
+                m_searchMatches.clear();
+                repaint();
+            }
+        }
+
+        // Dropdown item click
+        if (event.pressed && event.button == NUIMouseButton::Left) {
+            for (size_t i = 0; i < m_searchMatches.size() && i < 5; ++i) {
+                if (m_searchDropdownRects[i].contains(mouse)) {
+                    int nodeIdx = m_searchMatches[i];
+                    if (nodeIdx >= 0 && nodeIdx < static_cast<int>(m_nodes.size())) {
+                        const auto& node = m_nodes[nodeIdx];
+                        NUIRect bounds = getBounds();
+                        float canvasY = bounds.y + 44.0f;
+                        float targetX = bounds.x + node.x * m_zoom + m_cameraX;
+                        float targetY = canvasY + node.y * m_zoom + m_cameraY;
+                        float canvasCX = bounds.x + bounds.width * 0.5f;
+                        float canvasCY = canvasY + (bounds.height - 44.0f) * 0.5f;
+                        m_cameraX += (canvasCX - targetX);
+                        m_cameraY += (canvasCY - targetY);
+                    }
+                    m_searchQuery.clear();
+                    m_searchFocused = false;
+                    m_searchMatches.clear();
+                    repaint();
+                    return true;
+                }
+            }
+        }
+
+        // Dropdown item hover tracking
+        {
+            int prevHover = m_searchHoveredMatch;
+            m_searchHoveredMatch = -1;
+            for (size_t i = 0; i < m_searchMatches.size() && i < 5; ++i) {
+                if (m_searchDropdownRects[i].contains(mouse)) {
+                    m_searchHoveredMatch = static_cast<int>(i);
+                    break;
+                }
+            }
+            if (prevHover != m_searchHoveredMatch) repaint();
         }
 
         // Button hit tests
@@ -1714,22 +1803,39 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             }
             if (m_hoveredEdgeIdx >= 0) {
                 const Edge& edge = m_edges[m_hoveredEdgeIdx];
-                if (edge.type != Edge::MainPath && edge.sendIndex >= 0 && m_onEditSendLevel) {
-                    static const float kLevels[] = {-144.0f, -24.0f, -12.0f, -6.0f, 0.0f, 6.0f};
-                    constexpr size_t kLevelCount = sizeof(kLevels) / sizeof(kLevels[0]);
-                    float current = edge.sendLevelDb;
-                    size_t idx = 0;
-                    for (size_t i = 0; i < kLevelCount; ++i) {
-                        if (current < kLevels[i] + 2.0f) {
-                            idx = i;
-                            break;
-                        }
-                        idx = kLevelCount - 1;
+                if (edge.type != Edge::MainPath && edge.sendIndex >= 0) {
+                    if (!m_edgeContextMenu) {
+                        m_edgeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
+                        m_edgeContextMenu->setCloseOnSelection(true);
                     }
-                    float next = kLevels[(idx + 1) % kLevelCount];
-                    m_onEditSendLevel(edge.sourceNodeId, edge.sendIndex, next);
-                    m_graphDirty = true;
-                    repaint();
+                    m_edgeContextMenu->clear();
+                    uint32_t srcId = edge.sourceNodeId;
+                    int sIdx = edge.sendIndex;
+                    // Level submenu
+                    auto levelMenu = std::make_shared<AestraUI::NUIContextMenu>();
+                    static const float kLevelVals[] = {-144.0f, -24.0f, -12.0f, -6.0f, 0.0f, 6.0f};
+                    static const char* kLevelLabels[] = {"-inf dB", "-24 dB", "-12 dB", "-6 dB", "0 dB", "+6 dB"};
+                    for (size_t li = 0; li < 6; ++li) {
+                        levelMenu->addItem(kLevelLabels[li], [this, srcId, sIdx, li]() {
+                            if (m_onEditSendLevel) m_onEditSendLevel(srcId, sIdx, kLevelVals[li]);
+                            m_graphDirty = true;
+                            repaint();
+                        });
+                    }
+                    m_edgeContextMenu->addSubmenu("Set Level", levelMenu);
+                    m_edgeContextMenu->addSeparator();
+                    m_edgeContextMenu->addItem("Delete Send", [this, srcId, sIdx]() {
+                        if (m_onRemoveSend) m_onRemoveSend(srcId, sIdx);
+                        m_graphDirty = true;
+                        m_selectedEdgeIdx = -1;
+                        repaint();
+                    });
+                    AestraUI::NUIComponent* root = this->getParent();
+                    while (root && root->getParent()) root = root->getParent();
+                    if (root) root->addChild(m_edgeContextMenu);
+                    m_edgeContextMenu->showAt(static_cast<int>(mouse.x), static_cast<int>(mouse.y));
+                } else if (edge.type == Edge::MainPath) {
+                    // No action for main path edges
                 }
                 return true;
             }
@@ -1826,6 +1932,28 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
     return false;
 }
 
+namespace {
+    std::string toLowerCopy(const std::string& s) {
+        std::string out;
+        out.reserve(s.size());
+        for (char c : s) out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+        return out;
+    }
+}
+
+void UIRoutingMap::recomputeSearchMatches() {
+    m_searchMatches.clear();
+    if (m_searchQuery.empty()) return;
+    std::string q = toLowerCopy(m_searchQuery);
+    for (size_t i = 0; i < m_nodes.size(); ++i) {
+        std::string label = toLowerCopy(m_nodes[i].label);
+        if (label.find(q) != std::string::npos) {
+            m_searchMatches.push_back(static_cast<int>(i));
+            if (m_searchMatches.size() >= 5) break;
+        }
+    }
+}
+
 bool UIRoutingMap::onKeyEvent(const NUIKeyEvent& event) {
     if (!event.pressed) return false;
 
@@ -1835,6 +1963,7 @@ bool UIRoutingMap::onKeyEvent(const NUIKeyEvent& event) {
             m_searchQuery.clear();
             m_searchFocused = false;
             m_searchActive = false;
+            m_searchMatches.clear();
             repaint();
             return true;
         }
@@ -1842,39 +1971,56 @@ bool UIRoutingMap::onKeyEvent(const NUIKeyEvent& event) {
             if (!m_searchQuery.empty()) {
                 m_searchQuery.pop_back();
                 m_searchActive = !m_searchQuery.empty();
+                recomputeSearchMatches();
                 repaint();
             }
             return true;
         }
         if (event.keyCode == NUIKeyCode::Enter) {
             m_searchActive = !m_searchQuery.empty();
-            // Pan camera to first matching node
-            if (m_searchActive) {
-                for (const auto& node : m_nodes) {
-                    std::string lowLabel, lowQuery;
-                    lowLabel.reserve(node.label.size());
-                    for (char c : node.label) lowLabel.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-                    lowQuery.reserve(m_searchQuery.size());
-                    for (char c : m_searchQuery) lowQuery.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-                    if (lowLabel.find(lowQuery) != std::string::npos) {
-                        NUIRect bounds = getBounds();
-                        float canvasY = bounds.y + 44.0f;
-                        float targetX = bounds.x + node.x * m_zoom + m_cameraX;
-                        float targetY = canvasY + node.y * m_zoom + m_cameraY;
-                        float canvasCX = bounds.x + bounds.width * 0.5f;
-                        float canvasCY = canvasY + (bounds.height - 44.0f) * 0.5f;
-                        m_cameraX += (canvasCX - targetX);
-                        m_cameraY += (canvasCY - targetY);
-                        repaint();
-                        break;
-                    }
+            if (!m_searchMatches.empty()) {
+                int nodeIdx = m_searchMatches[0];
+                if (m_searchHoveredMatch >= 0 && m_searchHoveredMatch < static_cast<int>(m_searchMatches.size())) {
+                    nodeIdx = m_searchMatches[m_searchHoveredMatch];
                 }
+                if (nodeIdx >= 0 && nodeIdx < static_cast<int>(m_nodes.size())) {
+                    const auto& node = m_nodes[nodeIdx];
+                    NUIRect bounds = getBounds();
+                    float canvasY = bounds.y + 44.0f;
+                    float targetX = bounds.x + node.x * m_zoom + m_cameraX;
+                    float targetY = canvasY + node.y * m_zoom + m_cameraY;
+                    float canvasCX = bounds.x + bounds.width * 0.5f;
+                    float canvasCY = canvasY + (bounds.height - 44.0f) * 0.5f;
+                    m_cameraX += (canvasCX - targetX);
+                    m_cameraY += (canvasCY - targetY);
+                }
+            }
+            m_searchQuery.clear();
+            m_searchFocused = false;
+            m_searchMatches.clear();
+            repaint();
+            return true;
+        }
+        if (event.keyCode == NUIKeyCode::Down) {
+            if (!m_searchMatches.empty()) {
+                m_searchHoveredMatch = (m_searchHoveredMatch + 1) % static_cast<int>(m_searchMatches.size());
+                repaint();
+            }
+            return true;
+        }
+        if (event.keyCode == NUIKeyCode::Up) {
+            if (!m_searchMatches.empty()) {
+                int count = static_cast<int>(m_searchMatches.size());
+                m_searchHoveredMatch = (m_searchHoveredMatch <= 0) ? count - 1 : m_searchHoveredMatch - 1;
+                repaint();
             }
             return true;
         }
         if (event.character >= 32 && event.character < 127) {
             m_searchQuery.push_back(event.character);
             m_searchActive = true;
+            m_searchHoveredMatch = 0;
+            recomputeSearchMatches();
             repaint();
             return true;
         }

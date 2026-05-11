@@ -33,20 +33,6 @@ namespace {
     constexpr float SEND_OUTPUT_CARD_H = 86.0f;
     constexpr float SEND_ROUTE_MAP_H = 116.0f;
 
-    std::string fitLabel(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth)
-    {
-        if (renderer.measureText(text, fontSize).width <= maxWidth) {
-            return text;
-        }
-        std::string clipped = text;
-        const std::string ellipsis = "...";
-        while (!clipped.empty() &&
-               renderer.measureText(clipped + ellipsis, fontSize).width > maxWidth) {
-            clipped.pop_back();
-        }
-        return clipped.empty() ? ellipsis : clipped + ellipsis;
-    }
-
     // Global rule: split text into lines that each fit within maxWidth.
     // Used for multi-line descriptive text so nothing bleeds past panel edges.
     std::vector<std::string> wrapText(NUIRenderer& renderer, const std::string& text,
@@ -76,49 +62,6 @@ namespace {
         return lines;
     }
 
-    bool pluginSupportsSidechain(const Aestra::Audio::PluginInfo& info)
-    {
-        return info.numAudioInputs >= 4;
-    }
-
-    bool channelHasSidechainConsumer(const Aestra::ChannelViewModel* channel)
-    {
-        if (!channel || !channel->channel) {
-            return false;
-        }
-
-        const auto& effectChain = channel->channel->getEffectChain();
-        for (size_t slotIndex = 0; slotIndex < Aestra::Audio::EffectChain::MAX_SLOTS; ++slotIndex) {
-            const auto* slot = effectChain.getSlot(slotIndex);
-            if (!slot || slot->isEmpty() || !slot->plugin) {
-                continue;
-            }
-            if (pluginSupportsSidechain(slot->plugin->getInfo())) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    bool hasSidechainReadyDestination(const Aestra::MixerViewModel* viewModel, const Aestra::ChannelViewModel* channel)
-    {
-        if (!viewModel || !channel) {
-            return false;
-        }
-
-        for (const auto& send : channel->sends) {
-            if (!send.sidechainOnly) {
-                continue;
-            }
-            const auto* targetChannel = viewModel->getChannelById(send.targetId);
-            if (channelHasSidechainConsumer(targetChannel)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }
 
 void UIMixerInspector::clampScrollOffsets()
