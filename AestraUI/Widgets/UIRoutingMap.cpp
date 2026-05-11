@@ -89,6 +89,12 @@ void UIRoutingMap::cacheThemeColors() {
 }
 
 void UIRoutingMap::rebuildGraph() {
+    // Preserve existing node positions so user-dragged layouts survive rebuilds
+    std::unordered_map<uint32_t, NUIPoint> savedPositions;
+    for (const auto& n : m_nodes) {
+        savedPositions[n.id] = {n.x, n.y};
+    }
+
     m_nodes.clear();
     m_edges.clear();
 
@@ -173,8 +179,21 @@ void UIRoutingMap::rebuildGraph() {
     }
 
     autoLayout();
+
+    // Restore user-dragged positions for nodes that existed before
+    bool hasNewNodes = false;
+    for (auto& node : m_nodes) {
+        auto it = savedPositions.find(node.id);
+        if (it != savedPositions.end()) {
+            node.x = it->second.x;
+            node.y = it->second.y;
+        } else {
+            hasNewNodes = true; // at least one node didn't exist before
+        }
+    }
+
     computeWorldBounds();
-    if (m_mode == Mode::FullPanel) {
+    if (m_mode == Mode::FullPanel && hasNewNodes) {
         m_fitPending = true;
     }
 }
