@@ -680,6 +680,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, cardH};
         renderer.fillRoundedRect(summaryCard, 12.0f, m_tabBg.withAlpha(0.46f));
         renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, accent.withAlpha(0.16f));
+        // TODO: vertically center Insert Status card text — blockStartY method not landing, revisit
         // Vertically center the two-line text block inside the card.
         // Treat both lines as a single block, then center the block.
         const float titleH = 9.5f;
