@@ -130,6 +130,25 @@ void NUICustomWindow::onResize(int width, int height) {
     NUIComponent::onResize(width, height);
 }
 
+bool NUICustomWindow::onMouseEvent(const NUIMouseEvent& event) {
+    if (!isVisible() || !isEnabled()) return false;
+
+    // Give the title bar first crack at events inside its bounds so that
+    // close / minimise / maximise buttons are not swallowed by content
+    // children that happen to be behind it in reverse-iteration order.
+    if (titleBar_ && titleBar_->isVisible() && titleBar_->getBounds().contains(event.position)) {
+        if (titleBar_->onMouseEvent(event)) {
+            return true;
+        }
+        // Title bar didn't consume the event — don't forward into content
+        // while the mouse is still in the title-bar area.
+        return false;
+    }
+
+    // For clicks outside the title bar, use standard dispatch (content first).
+    return NUIComponent::onMouseEvent(event);
+}
+
 bool NUICustomWindow::onKeyEvent(const NUIKeyEvent& event) {
     // Handle F11 for full screen toggle
     if (event.pressed && event.keyCode == NUIKeyCode::F11) {

@@ -246,6 +246,7 @@ private:
     void autoLayout();
     void computeWorldBounds();
     void fitToView();
+    void clampCamera();
     void renderMinimap(NUIRenderer& renderer);
     void renderFullPanel(NUIRenderer& renderer);
 
