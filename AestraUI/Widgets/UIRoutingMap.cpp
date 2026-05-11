@@ -1895,10 +1895,18 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
 
-        // Zoom
+        // Zoom (centered on mouse cursor)
         if (event.type == NUIMouseEventType::Scroll) {
+            NUIRect bounds = getBounds();
+            float canvasY = bounds.y + 44.0f;
+            float oldZoom = m_zoom;
             float zoomFactor = (event.wheelDelta > 0) ? 1.1f : 0.9f;
             m_zoom = std::clamp(m_zoom * zoomFactor, 0.2f, 4.0f);
+            // Keep the world point under the mouse at the same screen position
+            float worldX = (mouse.x - bounds.x - m_cameraX) / oldZoom;
+            float worldY = (mouse.y - canvasY - m_cameraY) / oldZoom;
+            m_cameraX = mouse.x - bounds.x - worldX * m_zoom;
+            m_cameraY = mouse.y - canvasY - worldY * m_zoom;
             repaint();
             return true;
         }
