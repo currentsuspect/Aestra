@@ -675,11 +675,12 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         } else {
             std::snprintf(buf, sizeof(buf), "%d insert%s active", fxCount, fxCount == 1 ? "" : "s");
         }
-        const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, INSERT_SUMMARY_H};
+        const float cardH = 52.0f; // fixed height so centering math has room to work
+        const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, cardH};
         renderer.fillRoundedRect(summaryCard, 12.0f, m_tabBg.withAlpha(0.46f));
         renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, accent.withAlpha(0.16f));
         // Vertically center the two-line text block inside the card
-        const float cardMid = summaryCard.y + summaryCard.height * 0.5f;
+        const float cardMid = summaryCard.y + cardH * 0.5f;
         renderer.drawText("Insert Status",
                           {summaryCard.x + 10.0f, cardMid - 3.0f},
                           9.5f, m_textSecondary.withAlpha(0.94f));
