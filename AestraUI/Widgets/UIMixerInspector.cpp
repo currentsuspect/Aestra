@@ -315,7 +315,8 @@ void UIMixerInspector::onResize(int width, int height)
     const auto b = getBounds();
     const float contentTop = PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
     if (m_effectRack) {
-        const float topPad = (m_activeTab == Tab::Inserts) ? 36.0f : 10.0f;
+        // Inserts tab: summary card is 52px tall, rack must start below it
+        const float topPad = (m_activeTab == Tab::Inserts) ? 60.0f : 10.0f;
         float rackH = std::max(0.0f, b.height - contentTop - topPad - PAD);
         m_effectRack->setBounds(b.x + PAD, b.y + contentTop + topPad, b.width - PAD * 2.0f, rackH);
     }
@@ -682,10 +683,10 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         // Vertically center the two-line text block inside the card
         const float cardMid = summaryCard.y + cardH * 0.5f;
         renderer.drawText("Insert Status",
-                          {summaryCard.x + 10.0f, cardMid - 3.0f},
+                          {summaryCard.x + 10.0f, cardMid - 9.0f},
                           9.5f, m_textSecondary.withAlpha(0.94f));
         renderer.drawText(buf,
-                          {summaryCard.x + 10.0f, cardMid + 6.0f},
+                          {summaryCard.x + 10.0f, cardMid + 9.0f},
                           10.5f, m_text.withAlpha(0.96f));
 
         // Rack is rendered by renderChildren() if visible
