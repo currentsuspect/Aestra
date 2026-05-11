@@ -15,6 +15,12 @@ SettingsDialog::SettingsDialog()
 }
 
 void SettingsDialog::createUI() {
+    // TODO: Add a "Workflow / UI Behavior" settings page that includes:
+    //   - "Skip send-type confirmation dialog" toggle (default: off).
+    //     When enabled, quick-sends created via drag-to-add-send in the
+    //     routing map will default to Audio Send without prompting.
+    //   - Other workflow preferences (e.g. default send level, auto-fit on open).
+
     // Footer buttons
     m_applyButton = std::make_shared<AestraUI::NUIButton>();
     m_applyButton->setText("Apply");

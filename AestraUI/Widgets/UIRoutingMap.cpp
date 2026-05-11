@@ -808,6 +808,9 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     // Mini overview inset in bottom-right corner
     renderMiniOverview(renderer);
 
+    // Left inspector panel
+    renderInspector(renderer);
+
     // Tooltip for hovered edge (rendered after clip is cleared)
     if (m_hoveredEdgeIdx >= 0 && m_hoveredEdgeIdx < static_cast<int>(m_edges.size())) {
         const auto& edge = m_edges[m_hoveredEdgeIdx];
@@ -1307,10 +1310,11 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
         m_collapseHovered = (m_mode == Mode::FullPanel) && m_collapseButtonRect.contains(mouse);
         m_fitHovered = (m_mode == Mode::FullPanel) && m_fitButtonRect.contains(mouse);
         m_resetHovered = (m_mode == Mode::FullPanel) && m_resetButtonRect.contains(mouse);
+        m_inspectorCloseHovered = m_inspectorVisible && m_inspectorCloseRect.contains(mouse);
         // Port hover tracking (full panel only)
         m_hoveredPortType = NoPort;
         m_hoveredPortNodeIdx = -1;
-        if (m_mode == Mode::FullPanel && m_hoveredNodeIdx < 0 && m_hoveredEdgeIdx < 0) {
+        if (m_mode == Mode::FullPanel && m_hoveredNodeIdx < 0 && m_hoveredEdgeIdx < 0 && !m_inspectorCloseHovered) {
             int outPort = hitTestOutputPort(mouse);
             if (outPort >= 0) {
                 m_hoveredPortType = OutputPort;
@@ -1444,8 +1448,35 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             if (targetIdx >= 0 && targetIdx != m_dragSendSourceIdx) {
                 uint32_t sourceId = m_nodes[m_dragSendSourceIdx].id;
                 uint32_t targetId = m_nodes[targetIdx].id;
-                if (m_onAddSend) m_onAddSend(sourceId, targetId);
-                m_graphDirty = true; // Rebuild to show new send edge
+                // Show send-type confirmation menu (Audio vs Sidechain)
+                m_pendingSendSourceId = sourceId;
+                m_pendingSendTargetId = targetId;
+                m_sendTypeMenuPending = true;
+                if (!m_sendTypeMenu) {
+                    m_sendTypeMenu = std::make_shared<AestraUI::NUIContextMenu>();
+                    m_sendTypeMenu->setCloseOnSelection(true);
+                    m_sendTypeMenu->setOnHide([this]() {
+                        m_sendTypeMenuPending = false;
+                        m_pendingSendSourceId = 0;
+                        m_pendingSendTargetId = 0;
+                    });
+                }
+                m_sendTypeMenu->clear();
+                m_sendTypeMenu->addItem("Audio Send", [this]() {
+                    if (m_onAddSend) m_onAddSend(m_pendingSendSourceId, m_pendingSendTargetId, false);
+                    m_graphDirty = true;
+                    repaint();
+                });
+                m_sendTypeMenu->addItem("Sidechain Only", [this]() {
+                    if (m_onAddSend) m_onAddSend(m_pendingSendSourceId, m_pendingSendTargetId, true);
+                    m_graphDirty = true;
+                    repaint();
+                });
+                // Attach to root and show at mouse position
+                AestraUI::NUIComponent* root = this->getParent();
+                while (root && root->getParent()) root = root->getParent();
+                if (root) root->addChild(m_sendTypeMenu);
+                m_sendTypeMenu->showAt(static_cast<int>(mouse.x), static_cast<int>(mouse.y));
             }
             m_draggingSend = false;
             m_dragSendSourceIdx = -1;
@@ -1459,6 +1490,11 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
                              std::abs(mouse.y - m_dragNodeStartMouse.y);
             if (moveDist < 4.0f && m_dragNodeIdx >= 0) {
                 if (m_onNodeSelected) m_onNodeSelected(m_nodes[m_dragNodeIdx].id);
+                // Show left inspector in full panel mode on node click
+                if (m_mode == Mode::FullPanel) {
+                    m_inspectorVisible = true;
+                    m_inspectorNodeIdx = m_dragNodeIdx;
+                }
             } else if (m_dragNodeIdx >= 0) {
                 // Grid snap to 20 px in world space
                 constexpr float kGrid = 20.0f;
@@ -1478,6 +1514,23 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
                 repaint();
                 return true;
             }
+        }
+
+        // Inspector close button
+        if (event.pressed && event.button == NUIMouseButton::Left && m_inspectorVisible && m_inspectorCloseHovered) {
+            m_inspectorVisible = false;
+            m_inspectorNodeIdx = -1;
+            repaint();
+            return true;
+        }
+
+        // Click on empty canvas while inspector is open → close inspector
+        if (event.pressed && event.button == NUIMouseButton::Left && m_inspectorVisible &&
+            m_hoveredNodeIdx < 0 && m_hoveredEdgeIdx < 0 && !m_inspectorCloseHovered &&
+            !m_collapseHovered && !m_fitHovered && !m_resetHovered) {
+            m_inspectorVisible = false;
+            m_inspectorNodeIdx = -1;
+            repaint();
         }
 
         // Right-click on send/sidechain edge → cycle send level (coarse inline edit)
@@ -1824,6 +1877,197 @@ void UIRoutingMap::renderMiniOverview(NUIRenderer& renderer) {
     float vpW = (bounds.width / m_zoom) * scale;
     float vpH = ((bounds.height - kFullTitleBarH) / m_zoom) * scale;
     renderer.strokeRoundedRect({vpX, vpY, vpW, vpH}, 3.0f, 1.5f, m_accent.withAlpha(0.75f));
+}
+
+void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
+    if (m_mode != Mode::FullPanel) return;
+    if (!m_inspectorVisible || m_inspectorNodeIdx < 0 || m_inspectorNodeIdx >= static_cast<int>(m_nodes.size())) return;
+    if (!m_viewModel) return;
+
+    const Node& node = m_nodes[m_inspectorNodeIdx];
+    const Aestra::ChannelViewModel* ch = m_viewModel->getChannelById(node.id);
+    // Master node (id == 0) uses master channel if available
+    if (!ch && node.id == 0) {
+        ch = m_viewModel->getMaster();
+    }
+    if (!ch) return;
+
+    NUIRect bounds = getBounds();
+    constexpr float kFullTitleBarH = 44.0f;
+    float canvasY = bounds.y + kFullTitleBarH;
+    float canvasH = bounds.height - kFullTitleBarH;
+
+    // Panel geometry
+    constexpr float kInspectorW = 260.0f;
+    float insetX = bounds.x + 12.0f;
+    float insetY = canvasY + 12.0f;
+    float insetH = canvasH - 24.0f;
+    if (insetH < 120.0f) return;
+
+    // Background
+    NUIRect panel{insetX, insetY, kInspectorW, insetH};
+    renderer.fillRoundedRect(panel, 8.0f, NUIColor(0.07f, 0.06f, 0.10f, 0.96f));
+    renderer.strokeRoundedRect(panel, 8.0f, 1.0f, m_border.withAlpha(0.45f));
+
+    float y = insetY + 14.0f;
+    float left = insetX + 14.0f;
+    float right = insetX + kInspectorW - 14.0f;
+    float textW = right - left;
+
+    // Color strip at top
+    NUIColor stripColor(((node.color >> 16) & 0xFF) / 255.0f,
+                        ((node.color >> 8) & 0xFF) / 255.0f,
+                        (node.color & 0xFF) / 255.0f,
+                        ((node.color >> 24) & 0xFF) / 255.0f);
+    renderer.fillRoundedRect({insetX + 1.0f, insetY + 1.0f, kInspectorW - 2.0f, 4.0f}, 3.0f, stripColor);
+
+    // Header: name + type
+    {
+        std::string typeLabel = (node.type == Node::Master) ? "MASTER BUS" : "TRACK";
+        renderer.drawText(typeLabel, {left, y}, 10.0f, m_textSecondary.withAlpha(0.7f));
+        float typeW = renderer.measureText(typeLabel, 10.0f).width;
+        std::string name = fitLabel(renderer, ch->name.empty() ? node.label : ch->name, 14.0f, textW - typeW - 10.0f);
+        renderer.drawText(name, {left + typeW + 8.0f, y - 1.0f}, 14.0f, m_text.withAlpha(0.95f));
+        y += 26.0f;
+    }
+
+    // M/S badges inline
+    if (ch->muted || ch->soloed) {
+        float badgeX = left;
+        if (ch->soloed) {
+            NUIRect bRect{badgeX, y, 20.0f, 18.0f};
+            renderer.fillRoundedRect(bRect, 4.0f, m_warning.withAlpha(0.85f));
+            renderer.drawTextCentered("S", bRect, 10.0f, NUIColor::black());
+            badgeX += 26.0f;
+        }
+        if (ch->muted) {
+            NUIRect bRect{badgeX, y, 20.0f, 18.0f};
+            renderer.fillRoundedRect(bRect, 4.0f, NUIColor(0.7f, 0.2f, 0.2f, 0.85f));
+            renderer.drawTextCentered("M", bRect, 10.0f, NUIColor::white());
+            badgeX += 26.0f;
+        }
+        y += 24.0f;
+    }
+
+    // Routing warning
+    if (node.hasRoutingWarning) {
+        std::string warn = m_viewModel->getRoutingWarning(node.id);
+        renderer.fillRoundedRect({left, y, textW, 20.0f}, 4.0f, NUIColor(0.9f, 0.5f, 0.2f, 0.18f));
+        renderer.strokeRoundedRect({left, y, textW, 20.0f}, 4.0f, 1.0f, NUIColor(0.9f, 0.5f, 0.2f, 0.5f));
+        std::string wtext = fitLabel(renderer, warn, 10.0f, textW - 8.0f);
+        renderer.drawText(wtext, {left + 6.0f, y + 3.0f}, 10.0f, NUIColor(0.9f, 0.5f, 0.2f, 0.9f));
+        y += 28.0f;
+    }
+
+    // Divider
+    renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));
+    y += 12.0f;
+
+    // === MAIN OUTPUT ===
+    renderer.drawText("Main Output", {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));
+    y += 16.0f;
+    {
+        std::string destName = ch->routeName.empty() ? "Master" : ch->routeName;
+        renderer.drawText(destName, {left + 8.0f, y}, 12.0f, m_text.withAlpha(0.85f));
+        if (!ch->masterSendEnabled) {
+            float dnw = renderer.measureText(destName, 12.0f).width;
+            renderer.drawText("(bypassed)", {left + 8.0f + dnw + 6.0f, y}, 10.0f, m_warning.withAlpha(0.75f));
+        }
+        y += 22.0f;
+    }
+
+    // Divider
+    renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));
+    y += 12.0f;
+
+    // === INSERT CHAIN ===
+    renderer.drawText("Insert Chain", {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));
+    y += 18.0f;
+    if (ch->inserts.empty()) {
+        renderer.drawText("No inserts", {left + 8.0f, y}, 11.0f, m_textSecondary.withAlpha(0.5f));
+        y += 18.0f;
+    } else {
+        for (size_t i = 0; i < ch->inserts.size(); ++i) {
+            const auto& insert = ch->inserts[i];
+            if (insert.isEmpty) {
+                renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, m_bgSecondary.withAlpha(0.35f));
+                renderer.drawText("Empty slot", {left + 14.0f, y + 3.0f}, 10.0f, m_textSecondary.withAlpha(0.45f));
+            } else {
+                NUIColor slotBg = insert.bypassed ? m_bgSecondary.withAlpha(0.35f) : m_bgSecondary.withAlpha(0.55f);
+                renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, slotBg);
+                renderer.strokeRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, 0.5f,
+                                           insert.bypassed ? m_border.withAlpha(0.3f) : m_accent.withAlpha(0.45f));
+                std::string slotLabel = fitLabel(renderer, insert.name, 11.0f, textW - 50.0f);
+                renderer.drawText(slotLabel, {left + 14.0f, y + 3.0f}, 11.0f,
+                                  insert.bypassed ? m_textSecondary.withAlpha(0.5f) : m_text.withAlpha(0.88f));
+                if (insert.bypassed) {
+                    float slw = renderer.measureText(slotLabel, 11.0f).width;
+                    renderer.drawText("bypass", {left + 14.0f + slw + 6.0f, y + 4.0f}, 9.0f, m_warning.withAlpha(0.65f));
+                }
+                if (insert.mix < 0.99f) {
+                    char mixBuf[16];
+                    std::snprintf(mixBuf, sizeof(mixBuf), "%.0f%%", insert.mix * 100.0f);
+                    float mixW = renderer.measureText(mixBuf, 9.0f).width;
+                    renderer.drawText(mixBuf, {right - mixW - 6.0f, y + 4.0f}, 9.0f, m_textInfo.withAlpha(0.7f));
+                }
+            }
+            y += 24.0f;
+            if (y > insetY + insetH - 40.0f) break; // guard against overflow
+        }
+    }
+
+    // Divider
+    renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));
+    y += 12.0f;
+
+    // === SENDS ===
+    renderer.drawText("Sends", {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));
+    y += 18.0f;
+    if (ch->sends.empty()) {
+        renderer.drawText("No sends", {left + 8.0f, y}, 11.0f, m_textSecondary.withAlpha(0.5f));
+        y += 18.0f;
+    } else {
+        for (size_t i = 0; i < ch->sends.size(); ++i) {
+            const auto& send = ch->sends[i];
+            renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, m_bgSecondary.withAlpha(0.35f));
+            renderer.strokeRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, 0.5f, m_border.withAlpha(0.25f));
+
+            std::string dest = send.targetName.empty() ? "?" : send.targetName;
+            std::string sendLabel = fitLabel(renderer, dest, 11.0f, textW - 80.0f);
+            renderer.drawText(sendLabel, {left + 14.0f, y + 4.0f}, 11.0f, m_text.withAlpha(0.85f));
+
+            // Send metadata row
+            float metaX = left + 14.0f;
+            float metaY = y + 14.0f;
+            float sendDb = gainToDb(send.gain);
+            char dbBuf[16];
+            std::snprintf(dbBuf, sizeof(dbBuf), "%.1f dB", sendDb);
+            renderer.drawText(dbBuf, {metaX, metaY}, 9.0f, m_textInfo.withAlpha(0.7f));
+            metaX += renderer.measureText(dbBuf, 9.0f).width + 8.0f;
+
+            if (send.sidechainOnly) {
+                renderer.drawText("sidechain", {metaX, metaY}, 9.0f, m_warning.withAlpha(0.75f));
+                metaX += renderer.measureText("sidechain", 9.0f).width + 8.0f;
+            }
+            if (!send.postFader) {
+                renderer.drawText("pre", {metaX, metaY}, 9.0f, m_textSecondary.withAlpha(0.7f));
+                metaX += renderer.measureText("pre", 9.0f).width + 8.0f;
+            }
+            if (send.muted) {
+                renderer.drawText("muted", {metaX, metaY}, 9.0f, NUIColor(0.7f, 0.2f, 0.2f, 0.75f));
+            }
+
+            y += 28.0f;
+            if (y > insetY + insetH - 40.0f) break;
+        }
+    }
+
+    // Close button (top-right of panel)
+    m_inspectorCloseRect = NUIRect{insetX + kInspectorW - 28.0f, insetY + 8.0f, 20.0f, 20.0f};
+    renderer.fillRoundedRect(m_inspectorCloseRect, 5.0f,
+                             m_inspectorCloseHovered ? NUIColor(0.9f, 0.3f, 0.3f, 0.45f)
+                                                      : NUIColor(0.2f, 0.2f, 0.2f, 0.4f));
+    renderer.drawTextCentered("x", m_inspectorCloseRect, 12.0f, m_textSecondary.withAlpha(0.85f));
 }
 
 } // namespace AestraUI

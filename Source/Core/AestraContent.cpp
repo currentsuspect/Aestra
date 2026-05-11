@@ -550,10 +550,19 @@ AestraContent::AestraContent() {
             }
         }
     });
-    m_routingMapPanel->setOnAddSend([this](uint32_t sourceId, uint32_t targetId) {
+    m_routingMapPanel->setOnAddSend([this](uint32_t sourceId, uint32_t targetId, bool sidechainOnly) {
         if (m_mixerPanel) {
             if (auto vm = m_mixerPanel->getViewModel()) {
                 vm->addSend(sourceId, targetId);
+                // Set sidechain flag on the newly appended send
+                if (sidechainOnly) {
+                    if (auto* ch = vm->getChannelById(sourceId)) {
+                        if (!ch->sends.empty()) {
+                            int newIdx = static_cast<int>(ch->sends.size()) - 1;
+                            vm->setSendSidechainOnly(sourceId, newIdx, true);
+                        }
+                    }
+                }
             }
         }
     });

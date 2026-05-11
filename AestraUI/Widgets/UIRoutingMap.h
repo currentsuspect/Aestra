@@ -3,8 +3,10 @@
 
 #include "NUIComponent.h"
 #include "NUIRenderer.h"
+#include "NUIContextMenu.h"
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -51,8 +53,8 @@ public:
     void setOnRerouteMain(std::function<void(uint32_t, uint32_t)> cb) { m_onRerouteMain = std::move(cb); }
 
     /// Callback fired when user drags from a track input port and drops on another node
-    /// to create a new send. Args: (sourceChannelId, targetId)
-    void setOnAddSend(std::function<void(uint32_t, uint32_t)> cb) { m_onAddSend = std::move(cb); }
+    /// to create a new send. Args: (sourceChannelId, targetId, sidechainOnly)
+    void setOnAddSend(std::function<void(uint32_t, uint32_t, bool)> cb) { m_onAddSend = std::move(cb); }
 
     /// Callback fired on right-click of a node to toggle mute.
     void setOnNodeMuteToggle(std::function<void(uint32_t)> cb) { m_onNodeMuteToggle = std::move(cb); }
@@ -155,6 +157,18 @@ private:
     int m_dragSendSourceIdx{-1};
     NUIPoint m_dragSendCurrentPos{0, 0};
 
+    // Send-type confirmation menu (shown on quick-send drop)
+    std::shared_ptr<AestraUI::NUIContextMenu> m_sendTypeMenu;
+    bool m_sendTypeMenuPending{false};
+    uint32_t m_pendingSendSourceId{0};
+    uint32_t m_pendingSendTargetId{0};
+
+    // Left inspector panel (full panel only)
+    bool m_inspectorVisible{false};
+    int m_inspectorNodeIdx{-1};
+    NUIRect m_inspectorCloseRect{0, 0, 0, 0};
+    bool m_inspectorCloseHovered{false};
+
     // Animation / live signal state
     float m_livePulsePhase{0.0f};
     bool m_anySoloed{false};
@@ -217,12 +231,13 @@ private:
 
     int hitTestInputPort(const NUIPoint& p) const;
     void renderMiniOverview(NUIRenderer& renderer);
+    void renderInspector(NUIRenderer& renderer);
 
     std::function<void()> m_onDoubleClick;
     std::function<void(uint32_t)> m_onNodeSelected;
     std::function<void()> m_onCollapse;
     std::function<void(uint32_t, uint32_t)> m_onRerouteMain;
-    std::function<void(uint32_t, uint32_t)> m_onAddSend;
+    std::function<void(uint32_t, uint32_t, bool)> m_onAddSend;
     std::function<void(uint32_t)> m_onNodeMuteToggle;
     std::function<void(uint32_t)> m_onNodeSoloToggle;
     std::function<void(uint32_t, int)> m_onRemoveSend;
