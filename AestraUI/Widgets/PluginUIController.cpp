@@ -155,24 +155,27 @@ void PluginUIController::bindEffectRack(EffectChainRack* rack,
             parent->addChild(std::static_pointer_cast<NUIComponent>(m_activeMenu));
         }
 
-        // Position near the rack slot
-        auto rackBounds = rack->getBounds();
-        float scrollOffset = rack->getScrollOffset();
-        float slotYLocal = 5 + slot * 28.0f - scrollOffset;
+        // Use the actual slot's rendered bounds as the anchor (not manual arithmetic).
+        NUIRect slotBounds = rack->getSlotBounds(slot);
 
         constexpr float DROP_W = 240.0f;
-        float dropX = rackBounds.x;
+        float dropX = slotBounds.x;
         // Inspector rack is on the right side — flip dropdown to its left so it
         // never overlaps the inspector panel.
         if (m_popupLayer) {
             auto layerBounds = m_popupLayer->getBounds();
             if (dropX > layerBounds.width * 0.5f) {
-                dropX = std::max(4.0f, rackBounds.x - DROP_W - 4.0f);
+                dropX = std::max(4.0f, slotBounds.x - DROP_W - 4.0f);
             }
         }
 
-        NUIRect triggerRect{dropX, rackBounds.y + slotYLocal, rackBounds.width, 28.0f};
-        m_activeMenu->showAt(triggerRect, rackBounds.bottom() + 500.0f);
+        NUIRect triggerRect{dropX, slotBounds.y, DROP_W, slotBounds.height};
+
+        // Flip boundary = popup layer bottom (full window) so the dropdown always
+        // opens upward when it would otherwise run off-screen.
+        float flipBoundary = m_popupLayer ? m_popupLayer->getBounds().bottom()
+                                           : rack->getBounds().bottom();
+        m_activeMenu->showAt(triggerRect, flipBoundary);
 
         // Handle selection
         m_activeMenu->onPluginSelected = [this, chain, slot](const std::string& pluginId, const std::string&) {

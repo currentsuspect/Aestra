@@ -283,16 +283,20 @@ public:
     void setOnAddPluginRequested(std::function<void(int slot)> callback);
     void setOnSlotMixChanged(std::function<void(int slot, float mix)> callback);
     void setOnSlotMoveRequested(std::function<void(int from, int to)> callback);
-    
+
+    /**
+     * @brief Get the screen-space bounds of a given slot (accounts for scroll).
+     */
+    NUIRect getSlotBounds(int index) const;
+
     /**
      * @brief Get current scroll offset
      */
     float getScrollOffset() const { return m_scrollOffset; }
-    
+
 private:
     void renderSlot(NUIRenderer& renderer, int index, float slotY);
     int hitTestSlot(float y) const;
-    NUIRect slotRectForIndex(int index) const;
     NUIRect slotRectForTop(float slotY) const;
     
     std::array<EffectSlotInfo, MAX_SLOTS> m_slots;
