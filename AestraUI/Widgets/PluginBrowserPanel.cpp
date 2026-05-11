@@ -654,16 +654,17 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
         renderer.strokeRoundedRect(slotRect, 4.0f, 2.0f, NUIColor(1.0f, 0.0f, 0.0f, 0.8f));
     }
 
-    // Slot Number (Left side, stylistic)
+    // Shared vertical midline for the slot row — center everything around it
+    const float slotMid = slotRect.y + slotRect.height * 0.5f;
+
+    // Slot Number (Left side, stylistic) — centered on slotMid, not pinned to slotRect.y
     char numBuf[8];
     std::snprintf(numBuf, sizeof(numBuf), "%d", index + 1);
-    const NUIRect indexChip{slotRect.x + 8.0f, slotRect.y + (slotRect.height - 14.0f) * 0.5f, 18.0f, 14.0f};
+    const float chipH = 14.0f;
+    const NUIRect indexChip{slotRect.x + 8.0f, slotMid - chipH * 0.5f, 18.0f, chipH};
     renderer.fillRoundedRect(indexChip, 7.0f, Colors::buttonBackgroundHover.withAlpha(slot.isEmpty ? 0.62f : 0.76f));
     renderer.strokeRoundedRect(indexChip, 7.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
     renderer.drawTextCentered(numBuf, indexChip, 9.0f, Colors::textDisabled.withAlpha(0.68f));
-    
-    // Shared vertical midline for the slot row — center all text on it
-    const float slotMid = slotRect.y + slotRect.height * 0.5f;
 
     if (slot.isEmpty) {
         const float textSize = isHovered ? 10.0f : 9.5f;
