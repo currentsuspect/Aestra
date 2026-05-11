@@ -15,9 +15,9 @@ namespace AestraUI {
 namespace {
 constexpr float kPi = 3.14159265358979323846f;
 
-NUIColor panelBg() { return NUIColor(0.034f, 0.037f, 0.043f, 0.995f); }
 NUIColor surfaceBg() { return NUIColor(0.052f, 0.056f, 0.064f, 0.980f); }
 NUIColor insetBg() { return NUIColor(0.018f, 0.020f, 0.024f, 0.960f); }
+// TODO: migrate plugin knob accent from teal to Aestra purple
 NUIColor amber() { return NUIColor(0.95f, 0.62f, 0.25f, 1.0f); }
 NUIColor teal() { return NUIColor(0.22f, 0.76f, 0.68f, 1.0f); }
 NUIColor red() { return NUIColor(0.92f, 0.28f, 0.22f, 1.0f); }
@@ -36,7 +36,9 @@ float smoothMeter(float current, float target, float attack, float release) {
 AestraCompEditor::AestraCompEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
     : m_instance(std::move(instance)) {
     setId("AestraCompEditor");
+    setPanelTitle("Aestra Compressor");
     setSize(kWinW, kWinH);
+    setEnforceParentBounds(true);
     buildControls();
 }
 
@@ -83,9 +85,9 @@ void AestraCompEditor::layoutControls() {
 
     const float contentX = b.x + kPad;
     const float contentW = b.width - kPad * 2.0f;
-    m_bypassRect = NUIRect(b.right() - 116.0f, b.y + 17.0f, 72.0f, 26.0f);
+    m_bypassRect = NUIRect(b.right() - 116.0f, b.y + AestraPanelWindow::TITLE_BAR_H + 6.0f, 72.0f, 26.0f);
 
-    const float meterTop = b.y + kTitleH + 16.0f;
+    const float meterTop = b.y + AestraPanelWindow::TITLE_BAR_H + 42.0f;
     m_grMeterRect = NUIRect(contentX, meterTop, contentW, 80.0f);
     m_inputMeterRect = NUIRect(contentX, meterTop + 94.0f, contentW * 0.5f - 8.0f, 28.0f);
     m_outputMeterRect = NUIRect(contentX + contentW * 0.5f + 8.0f, meterTop + 94.0f, contentW * 0.5f - 8.0f, 28.0f);
@@ -112,7 +114,7 @@ void AestraCompEditor::onResize(int width, int height) {
     (void)width;
     (void)height;
     layoutControls();
-    NUIComponent::onResize(width, height);
+    AestraPanelWindow::onResize(width, height);
 }
 
 void AestraCompEditor::syncControlsFromPlugin() {
@@ -124,7 +126,7 @@ void AestraCompEditor::syncControlsFromPlugin() {
 }
 
 void AestraCompEditor::onUpdate(double deltaTime) {
-    NUIComponent::onUpdate(deltaTime);
+    AestraPanelWindow::onUpdate(deltaTime);
     m_meterTimer += deltaTime;
     if (m_meterTimer < 1.0 / 30.0) return;
     m_meterTimer = 0.0;
@@ -141,41 +143,18 @@ void AestraCompEditor::onUpdate(double deltaTime) {
     repaint();
 }
 
-void AestraCompEditor::drawTitleBar(NUIRenderer& renderer) {
-    auto b = getBounds();
-    auto& theme = NUIThemeManager::getInstance();
-    const NUIRect title(b.x, b.y, b.width, kTitleH);
-
-    renderer.fillRoundedRect(title, kRadius, panelBg());
-    renderer.drawLine({title.x + 18.0f, title.bottom() - 1.0f}, {title.right() - 18.0f, title.bottom() - 1.0f},
-                      1.0f, NUIColor(1, 1, 1, 0.060f));
-    renderer.drawText("AESTRA", {title.x + 22.0f, title.y + 16.0f}, 17.0f, amber().withAlpha(0.96f));
-    renderer.drawText("COMPRESSOR", {title.x + 100.0f, title.y + 16.0f}, 17.0f, teal().withAlpha(0.96f));
-    renderer.drawText("Zero-latency feed-forward dynamics", {title.x + 23.0f, title.y + 38.0f}, 9.0f,
-                      theme.getColor("textSecondary").withAlpha(0.74f));
-}
-
 void AestraCompEditor::drawBypassButton(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     const bool bypassed = isBypassed();
-    const NUIColor fill = bypassed ? red().withAlpha(m_bypassHovered ? 0.94f : 0.78f)
-                                  : surfaceBg().withAlpha(m_bypassHovered ? 1.0f : 0.86f);
-    const NUIColor stroke = bypassed ? red().withAlpha(0.50f) : teal().withAlpha(m_bypassHovered ? 0.48f : 0.24f);
-    renderer.fillRoundedRect(m_bypassRect, 8.0f, fill);
-    renderer.strokeRoundedRect(m_bypassRect, 8.0f, 1.0f, stroke);
-    renderer.drawText(bypassed ? "BYPASSED" : "ACTIVE", {m_bypassRect.x + 12.0f, m_bypassRect.y + 8.0f}, 8.0f,
-                      bypassed ? theme.getColor("textPrimary") : teal().withAlpha(0.94f));
-}
-
-void AestraCompEditor::drawCloseButton(NUIRenderer& renderer) {
-    auto b = getBounds();
-    auto& theme = NUIThemeManager::getInstance();
-    const NUIRect closeRect(b.right() - 36.0f, b.y + 15.0f, 26.0f, 26.0f);
-    renderer.fillRoundedRect(closeRect, 8.0f, NUIColor(1, 1, 1, m_closeHovered ? 0.070f : 0.030f));
-    renderer.drawLine({closeRect.x + 7.0f, closeRect.y + 7.0f}, {closeRect.x + 19.0f, closeRect.y + 19.0f}, 1.70f,
-                      theme.getColor("textPrimary").withAlpha(m_closeHovered ? 0.90f : 0.68f));
-    renderer.drawLine({closeRect.x + 19.0f, closeRect.y + 7.0f}, {closeRect.x + 7.0f, closeRect.y + 19.0f}, 1.70f,
-                      theme.getColor("textPrimary").withAlpha(m_closeHovered ? 0.90f : 0.68f));
+    if (bypassed) {
+        renderer.fillRoundedRect(m_bypassRect, 8.0f, red().withAlpha(m_bypassHovered ? 0.94f : 0.78f));
+        renderer.strokeRoundedRect(m_bypassRect, 8.0f, 1.0f, red().withAlpha(0.50f));
+        renderer.drawText("BYPASSED", {m_bypassRect.x + 12.0f, m_bypassRect.y + 8.0f}, 8.0f,
+                          theme.getColor("textPrimary"));
+    } else {
+        renderer.fillRoundedRect(m_bypassRect, 8.0f, theme.getColor("success").withAlpha(0.18f));
+        renderer.drawTextCentered("ACTIVE", m_bypassRect, 8.0f, theme.getColor("success"));
+    }
 }
 
 void AestraCompEditor::drawGainReductionMeter(NUIRenderer& renderer) {
@@ -272,14 +251,9 @@ void AestraCompEditor::drawControl(NUIRenderer& renderer, const Control& control
                       accent.withAlpha(0.95f));
 }
 
-void AestraCompEditor::onRender(NUIRenderer& renderer) {
+void AestraCompEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
     auto b = getBounds();
-    renderer.fillRoundedRect(b, kRadius, panelBg());
-    renderer.strokeRoundedRect(b, kRadius, 1.0f, teal().withAlpha(0.18f));
-
-    drawTitleBar(renderer);
     drawBypassButton(renderer);
-    drawCloseButton(renderer);
     drawGainReductionMeter(renderer);
     drawLevelMeter(renderer, m_inputMeterRect, "IN", m_inputDisplay);
     drawLevelMeter(renderer, m_outputMeterRect, "OUT", m_outputDisplay);
@@ -297,16 +271,6 @@ int AestraCompEditor::hitTestControl(float x, float y) const {
         if (m_controls[i].bounds.contains({x, y})) return static_cast<int>(i);
     }
     return -1;
-}
-
-bool AestraCompEditor::hitTestCloseButton(float x, float y) const {
-    auto b = getBounds();
-    return NUIRect(b.right() - 36.0f, b.y + 15.0f, 26.0f, 26.0f).contains({x, y});
-}
-
-bool AestraCompEditor::hitTestTitleBar(float x, float y) const {
-    auto b = getBounds();
-    return NUIRect(b.x, b.y, b.width - 126.0f, kTitleH).contains({x, y});
 }
 
 void AestraCompEditor::updateControlValue(int idx, float normalizedValue) {
@@ -330,31 +294,20 @@ bool AestraCompEditor::isBypassed() const {
 bool AestraCompEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
 
+    // Let base class handle title bar / close / drag first
+    if (AestraPanelWindow::onMouseEvent(event)) {
+        return true;
+    }
+
     auto b = getBounds();
     const bool draggingControl = std::any_of(m_controls.begin(), m_controls.end(),
                                              [](const Control& control) { return control.dragging; });
     const bool contains = b.contains(event.position);
-    if (event.pressed && event.button == NUIMouseButton::Left && !contains && !m_isDraggingWindow && !draggingControl) {
-        if (m_onClose) m_onClose();
-        return false;
-    }
-    if (!contains && !m_isDraggingWindow && !draggingControl) return false;
+    if (!contains && !isDraggingWindow() && !draggingControl) return false;
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        if (hitTestCloseButton(event.position.x, event.position.y)) {
-            if (m_onClose) m_onClose();
-            return true;
-        }
-
         if (m_bypassRect.contains(event.position)) {
             setBypassed(!isBypassed());
-            return true;
-        }
-
-        if (hitTestTitleBar(event.position.x, event.position.y)) {
-            m_isDraggingWindow = true;
-            m_dragStartPos = event.position;
-            m_windowStartPos = {b.x, b.y};
             return true;
         }
 
@@ -365,18 +318,6 @@ bool AestraCompEditor::onMouseEvent(const NUIMouseEvent& event) {
             m_controls[idx].dragStartValue = m_controls[idx].value;
             return true;
         }
-    }
-
-    if (m_isDraggingWindow) {
-        if (!event.pressed && event.button == NUIMouseButton::Left) {
-            m_isDraggingWindow = false;
-            return true;
-        }
-        const float dx = event.position.x - m_dragStartPos.x;
-        const float dy = event.position.y - m_dragStartPos.y;
-        setBounds(m_windowStartPos.x + dx, m_windowStartPos.y + dy, b.width, b.height);
-        layoutControls();
-        return true;
     }
 
     for (size_t i = 0; i < m_controls.size(); ++i) {
@@ -390,11 +331,9 @@ bool AestraCompEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!event.pressed && !event.released) {
         const int hover = contains ? hitTestControl(event.position.x, event.position.y) : -1;
         const bool bypassHover = contains && m_bypassRect.contains(event.position);
-        const bool closeHover = contains && hitTestCloseButton(event.position.x, event.position.y);
-        if (hover != m_hoveredControl || bypassHover != m_bypassHovered || closeHover != m_closeHovered) {
+        if (hover != m_hoveredControl || bypassHover != m_bypassHovered) {
             m_hoveredControl = hover;
             m_bypassHovered = bypassHover;
-            m_closeHovered = closeHover;
             for (size_t i = 0; i < m_controls.size(); ++i) {
                 m_controls[i].hovered = static_cast<int>(i) == hover;
             }

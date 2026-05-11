@@ -4,6 +4,7 @@
 #include "NUIComponent.h"
 #include "NUIDropdown.h"
 #include "NUISegmentedControl.h"
+#include "UIRoutingMap.h"
 
 #include <cstdint>
 #include <string>
@@ -39,6 +40,7 @@ public:
     Tab getActiveTab() const { return m_activeTab; }
 
     std::shared_ptr<EffectChainRack> getEffectRack() const { return m_effectRack; }
+    std::shared_ptr<UIRoutingMap> getRoutingMap() const { return m_routingMap; }
 
 private:
     Aestra::MixerViewModel* m_viewModel{nullptr};
@@ -80,6 +82,9 @@ private:
     std::vector<std::shared_ptr<class UIMixerSend>> m_sendWidgets;
     void rebuildSendWidgets(const Aestra::ChannelViewModel* channel);
     void rebuildInsertRack(const Aestra::ChannelViewModel* channel);
+
+    // Routing map minimap
+    std::shared_ptr<UIRoutingMap> m_routingMap;
 
     // Cached header strings (updated only when selection changes)
     uint32_t m_cachedSelectedId{0xFFFFFFFFu};

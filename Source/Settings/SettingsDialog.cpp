@@ -117,29 +117,29 @@ void SettingsDialog::layoutComponents() {
     float padding = 20.0f;
     float sidebarWidth = 220.0f;
     float footerHeight = 60.0f;
-    float titleHeight = 40.0f;
-    
+    float titleHeight = 32.0f;
+
     // Sidebar
     m_sidebarBounds = AestraUI::NUIRect(
-        m_dialogBounds.x, 
-        m_dialogBounds.y + titleHeight, 
-        sidebarWidth, 
+        m_dialogBounds.x,
+        m_dialogBounds.y + titleHeight,
+        sidebarWidth,
         m_dialogBounds.height - titleHeight
     );
-    
+
     // Content Area
     m_contentBounds = AestraUI::NUIRect(
-        m_dialogBounds.x + sidebarWidth, 
-        m_dialogBounds.y + titleHeight, 
-        m_dialogBounds.width - sidebarWidth, 
+        m_dialogBounds.x + sidebarWidth,
+        m_dialogBounds.y + titleHeight,
+        m_dialogBounds.width - sidebarWidth,
         m_dialogBounds.height - titleHeight - footerHeight
     );
-    
-    // Close button
+
+    // Close button — matches AestraPanelWindow chrome (24x24 at right-28, top+4)
     m_closeButtonBounds = AestraUI::NUIRect(
-        m_dialogBounds.x + m_dialogBounds.width - 40,
-        m_dialogBounds.y + 10,
-        30, 30
+        m_dialogBounds.x + m_dialogBounds.width - 28,
+        m_dialogBounds.y + 4,
+        24, 24
     );
 
     // Sidebar items layout
@@ -208,65 +208,60 @@ void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
     renderer.fillRoundedRect(m_dialogBounds, radius, theme.getColor("backgroundPrimary"));
     renderer.strokeRoundedRect(m_dialogBounds, radius, 1.0f, theme.getColor("borderSubtle"));
     
-    // 4. Sidebar Background - FORCE correct key
-    // We need to respect the rounded corners on the left side.
-    // Simplifying: Clip sidebar to rounded rect or just draw rounded rect for sidebar too?
-    // Since sidebar is exactly the left part, we can draw a rounded rect for it but clipped?
-    // EASIEST: Just draw sidebar as a sharp rect but offset slightly to not bleed out corners?
-    // BETTER: Draw the sidebar as a PATH with rounded-left corners. But renderer API is limited.
-    // PROPOSAL: Draw rounded rect for sidebar, then cover right side?
-    // Actually, visually 5px/8px radius is small enough that drawing a sharp sidebar inside might look OK 
-    // IF the sidebar background matches window background. But it's slightly lighter ("backgroundSecondary").
-    // Let's try drawing sidebar as a rounded rect, but extend it to the right so the right corners are hidden by content?
-    // No, content is to the right.
-    // Let's just draw standard fillRect for sidebar for now. The slight corner issue is usually acceptable or handled by z-order.
-    // Actually, if we draw the rounded window background first (which we did), and sidebar is on top...
-    // The sidebar will be sharp.
-    // Let's stick to sharp sidebar for now or check if we have drawRoundedRectDifferentCorners (unlikely).
-    // User asked for "box a rounded conners one". Main shape refers to the window.
-    
-    renderer.fillRect(m_sidebarBounds, theme.getColor("backgroundSecondary")); 
-    renderer.fillRect(AestraUI::NUIRect(m_sidebarBounds.x + m_sidebarBounds.width - 1, m_sidebarBounds.y, 1, m_sidebarBounds.height), 
+    // 4. Title bar background (unified 32px chrome)
+    AestraUI::NUIRect titleBar(m_dialogBounds.x, m_dialogBounds.y, m_dialogBounds.width, 32.0f);
+    renderer.fillRect(titleBar, theme.getColor("backgroundPrimary"));
+    renderer.drawLine({titleBar.x, titleBar.bottom() - 0.5f},
+                      {titleBar.right(), titleBar.bottom() - 0.5f},
+                      0.5f, theme.getColor("borderSubtle"));
+
+    // 5. Title text — vertically centered via font metrics
+    float titleBaseline = renderer.calculateTextY(titleBar, 12.0f);
+    renderer.drawText("Settings", {m_dialogBounds.x + 12.0f, titleBaseline}, 12.0f,
+                      theme.getColor("textSecondary"));
+
+    // 6. Close button — line-drawn X matching AestraPanelWindow chrome
+    if (m_closeButtonHovered) {
+        renderer.fillRoundedRect(m_closeButtonBounds, 6.0f, AestraUI::NUIColor(0xff, 0xd9, 0x5f).withAlpha(0.22f));
+    }
+    float cx = m_closeButtonBounds.x + m_closeButtonBounds.width * 0.5f;
+    float cy = m_closeButtonBounds.y + m_closeButtonBounds.height * 0.5f;
+    float d = 5.0f;
+    AestraUI::NUIColor xColor = m_closeButtonHovered
+                                    ? AestraUI::NUIColor(0xff, 0xe5, 0x73)
+                                    : theme.getColor("textDisabled");
+    renderer.drawLine({cx - d, cy - d}, {cx + d, cy + d}, 1.5f, xColor);
+    renderer.drawLine({cx + d, cy - d}, {cx - d, cy + d}, 1.5f, xColor);
+
+    // 7. Sidebar Background
+    renderer.fillRect(m_sidebarBounds, theme.getColor("backgroundSecondary"));
+    renderer.fillRect(AestraUI::NUIRect(m_sidebarBounds.x + m_sidebarBounds.width - 1, m_sidebarBounds.y, 1, m_sidebarBounds.height),
                      theme.getColor("divider"));
-    
-    // 5. Sidebar Items
+
+    // 8. Sidebar Items
     for (const auto& item : m_sidebarItems) {
-        AestraUI::NUIColor bg = item.active ? theme.getColor("primary").withAlpha(0.2f) : 
+        AestraUI::NUIColor bg = item.active ? theme.getColor("primary").withAlpha(0.2f) :
                               (item.hovered ? theme.getColor("list.hover") : AestraUI::NUIColor(0,0,0,0));
-        
+
         if (item.active || item.hovered) {
             renderer.fillRect(item.bounds, bg);
         }
-        
+
         // Active indicator strip
         if (item.active) {
             renderer.fillRect(AestraUI::NUIRect(item.bounds.x, item.bounds.y, 3, item.bounds.height), theme.getColor("primary"));
         }
-        
-        renderer.drawText(item.title, AestraUI::NUIPoint(item.bounds.x + 20, item.bounds.y + 8), 14.0f, 
+
+        renderer.drawText(item.title, AestraUI::NUIPoint(item.bounds.x + 20, item.bounds.y + 8), 14.0f,
                          item.active ? theme.getColor("textSelect") : theme.getColor("text"));
     }
-    
-    // 6. Title
-    renderer.drawText("Settings", AestraUI::NUIPoint(m_dialogBounds.x + 20, m_dialogBounds.y + 10), 18.0f, theme.getColor("text"));
-    
-    // 7. Footer Divider
-    float footerY = m_dialogBounds.y + m_dialogBounds.height - 60.0f;
-    renderer.fillRect(AestraUI::NUIRect(m_dialogBounds.x + 220, footerY, m_dialogBounds.width - 220, 1), 
-                     theme.getColor("divider"));
-    
-    // 8. Close Button
-    // Improve visibility: standard "X" and slightly clearer hover effect
-    if (m_closeButtonHovered) {
-        // Use rounded box instead of circle
-        renderer.fillRoundedRect(m_closeButtonBounds, 6.0f, theme.getColor("error").withAlpha(0.8f));
-    }
-    // Centered X
-    // Assuming 30x30 button and 16px font
-    renderer.drawText("X", AestraUI::NUIPoint(m_closeButtonBounds.x + 9, m_closeButtonBounds.y + 7), 16.0f, 
-                     m_closeButtonHovered ? AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f) : theme.getColor("text"));// Forced white on error red hover
 
-    // 9. Blink Effect
+    // 9. Footer Divider
+    float footerY = m_dialogBounds.y + m_dialogBounds.height - 60.0f;
+    renderer.fillRect(AestraUI::NUIRect(m_dialogBounds.x + 220, footerY, m_dialogBounds.width - 220, 1),
+                     theme.getColor("divider"));
+
+    // 10. Blink Effect
     if (m_blinkAnimation > 0.0f) {
         renderer.strokeRoundedRect(m_dialogBounds, radius, 2.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, m_blinkAnimation * 0.5f));
     }

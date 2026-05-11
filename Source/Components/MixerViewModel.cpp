@@ -600,6 +600,69 @@ void MixerViewModel::addSend(uint32_t channelId) {
     }
 }
 
+void MixerViewModel::addSend(uint32_t channelId, uint32_t targetId) {
+    auto* ch = getChannelById(channelId);
+    if (!ch) return;
+    if (routeWouldCreateCycle(channelId, targetId)) {
+        m_blockedRoutingWarnings[channelId] = "Routing loop blocked";
+        return;
+    }
+
+    ChannelViewModel::SendViewModel send{};
+    send.targetId = targetId;
+    if (auto* target = getChannelById(targetId)) {
+        send.targetName = target->name.empty() ? "Bus" : target->name;
+    } else if (targetId == 0) {
+        send.targetName = "Master";
+    } else {
+        send.targetName = "Unknown";
+    }
+    send.gain = 1.0f;
+    send.sidechainOnly = false;
+    ch->sends.push_back(send);
+
+    if (auto mc = ch->channel) {
+        Audio::AudioRoute route{};
+        route.targetChannelId = (targetId == 0) ? 0xFFFFFFFFu : targetId;
+        route.gain = 1.0f;
+        route.sidechainOnly = false;
+        mc->addSend(route);
+        graphDirty.emit();
+        projectModified.emit();
+    }
+    m_blockedRoutingWarnings.erase(channelId);
+}
+
+void MixerViewModel::toggleMute(uint32_t channelId) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || !ch->channel) return;
+    bool newMute = !ch->channel->isMuted();
+    ch->channel->setMute(newMute);
+    ch->muted = newMute;
+    // Mutual exclusivity: muting turns off solo
+    if (newMute && ch->channel->isSoloed()) {
+        ch->channel->setSolo(false);
+        ch->soloed = false;
+    }
+    graphDirty.emit();
+    projectModified.emit();
+}
+
+void MixerViewModel::toggleSolo(uint32_t channelId) {
+    auto* ch = getChannelById(channelId);
+    if (!ch || !ch->channel) return;
+    bool newSolo = !ch->channel->isSoloed();
+    ch->channel->setSolo(newSolo);
+    ch->soloed = newSolo;
+    // Mutual exclusivity: soloing turns off mute
+    if (newSolo && ch->channel->isMuted()) {
+        ch->channel->setMute(false);
+        ch->muted = false;
+    }
+    graphDirty.emit();
+    projectModified.emit();
+}
+
 void MixerViewModel::removeSend(uint32_t channelId, int sendIndex) {
     auto* ch = getChannelById(channelId);
     if (!ch || sendIndex < 0 || sendIndex >= static_cast<int>(ch->sends.size())) return;

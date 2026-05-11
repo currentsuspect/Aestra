@@ -5,8 +5,10 @@
 #include "../Models/TimeTypes.h"
 
 #include <atomic>
+#include <cmath>
 #include <cstdint>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -20,19 +22,36 @@ namespace Audio {
 // =============================================================================
 
 /**
- * @brief A single min/max peak pair for waveform display
+ * @brief A single min/max/rms peak triplet for waveform display
  */
 struct WaveformPeak {
     float min = 0.0f;
     float max = 0.0f;
+    float rms = 0.0f;
+    uint32_t count = 0;
 
     WaveformPeak() = default;
-    WaveformPeak(float minVal, float maxVal) : min(minVal), max(maxVal) {}
+    WaveformPeak(float minVal, float maxVal, float rmsVal = 0.0f, uint32_t cnt = 0)
+        : min(minVal), max(maxVal), rms(rmsVal), count(cnt) {}
 
-    /// Merge with another peak (union)
+    /// Weighted RMS merge of two peaks
     void merge(const WaveformPeak& other) {
         min = std::min(min, other.min);
         max = std::max(max, other.max);
+        uint64_t totalCount = static_cast<uint64_t>(count) + static_cast<uint64_t>(other.count);
+        if (totalCount > 0) {
+            double sumSq = static_cast<double>(rms) * rms * static_cast<double>(count)
+                         + static_cast<double>(other.rms) * other.rms * static_cast<double>(other.count);
+            rms = static_cast<float>(std::sqrt(sumSq / static_cast<double>(totalCount)));
+            count = static_cast<uint32_t>(std::min(totalCount, static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())));
+        }
+    }
+
+    /// Sanitize NaN/Inf to 0
+    void sanitize() {
+        if (std::isnan(min) || std::isinf(min)) min = 0.0f;
+        if (std::isnan(max) || std::isinf(max)) max = 0.0f;
+        if (std::isnan(rms) || std::isinf(rms)) rms = 0.0f;
     }
 };
 
@@ -61,20 +80,26 @@ struct WaveformMipLevel {
         return idx < peaks.size() ? peaks[idx] : WaveformPeak();
     }
 
-    /// Get interpolated peak at fractional index
+    /// Get interpolated peak at fractional index (advisory: interpolation of min/max is
+    /// not physically meaningful for waveform peaks; prefer getPeakRange for rendering.)
     WaveformPeak getInterpolatedPeak(uint32_t channel, double peakIndex) const {
         if (channel >= numChannels || peakIndex < 0 || numPeaks == 0) {
             return WaveformPeak();
         }
 
         SampleIndex idx0 = static_cast<SampleIndex>(peakIndex);
-        SampleIndex idx1 = idx0 + 1;
+        SampleIndex idx1 = std::min(idx0 + 1, numPeaks - 1);
         float frac = static_cast<float>(peakIndex - idx0);
 
         WaveformPeak p0 = getPeak(channel, idx0);
         WaveformPeak p1 = getPeak(channel, idx1);
 
-        return WaveformPeak(p0.min + frac * (p1.min - p0.min), p0.max + frac * (p1.max - p0.max));
+        WaveformPeak result;
+        result.min = p0.min + frac * (p1.min - p0.min);
+        result.max = p0.max + frac * (p1.max - p0.max);
+        result.rms = (frac >= 0.5f) ? p1.rms : p0.rms;
+        result.count = (frac >= 0.5f) ? p1.count : p0.count;
+        return result;
     }
 
     /// Get peaks for a range, merged
@@ -257,7 +282,7 @@ public:
 
 private:
     struct Impl;
-    std::unique_ptr<Impl> m_impl;
+    std::shared_ptr<Impl> m_impl;
 };
 
 } // namespace Audio

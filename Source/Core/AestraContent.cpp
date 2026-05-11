@@ -517,6 +517,91 @@ AestraContent::AestraContent() {
     });
     m_overlayLayer->addChild(m_mixerPanel);
 
+    // Create routing map full-panel overlay (launched from mixer inspector minimap)
+    m_routingMapPanel = std::make_shared<AestraUI::UIRoutingMap>(AestraUI::UIRoutingMap::Mode::FullPanel);
+    m_routingMapPanel->setVisible(false);
+    if (m_mixerPanel && m_mixerPanel->getViewModel()) {
+        m_routingMapPanel->setViewModel(m_mixerPanel->getViewModel().get());
+    }
+    m_routingMapPanel->setOnNodeSelected([this](uint32_t nodeId) {
+        if (m_mixerPanel) {
+            auto mixerUI = m_mixerPanel->getMixerUI();
+            if (mixerUI) {
+                if (auto* vm = mixerUI->getViewModel()) {
+                    vm->setSelectedChannelId(static_cast<int32_t>(nodeId));
+                }
+                if (auto* inspector = mixerUI->getInspector()) {
+                    inspector->setActiveTab(AestraUI::UIMixerInspector::Tab::Sends);
+                }
+            }
+        }
+    });
+    m_routingMapPanel->setOnDoubleClick([this]() {
+        m_previousViewFocus = m_viewFocus;
+        setViewFocus(ViewFocus::RoutingMap);
+    });
+    m_routingMapPanel->setOnCollapse([this]() {
+        setViewFocus(m_previousViewFocus);
+    });
+    m_routingMapPanel->setOnRerouteMain([this](uint32_t sourceId, uint32_t targetId) {
+        if (m_mixerPanel) {
+            if (auto vm = m_mixerPanel->getViewModel()) {
+                vm->setMainOutputDestination(sourceId, targetId);
+            }
+        }
+    });
+    m_routingMapPanel->setOnAddSend([this](uint32_t sourceId, uint32_t targetId) {
+        if (m_mixerPanel) {
+            if (auto vm = m_mixerPanel->getViewModel()) {
+                vm->addSend(sourceId, targetId);
+            }
+        }
+    });
+    m_routingMapPanel->setOnNodeMuteToggle([this](uint32_t channelId) {
+        if (m_mixerPanel) {
+            if (auto vm = m_mixerPanel->getViewModel()) {
+                vm->toggleMute(channelId);
+            }
+        }
+    });
+    m_routingMapPanel->setOnNodeSoloToggle([this](uint32_t channelId) {
+        if (m_mixerPanel) {
+            if (auto vm = m_mixerPanel->getViewModel()) {
+                vm->toggleSolo(channelId);
+            }
+        }
+    });
+    m_routingMapPanel->setOnRemoveSend([this](uint32_t channelId, int sendIndex) {
+        if (m_mixerPanel) {
+            if (auto vm = m_mixerPanel->getViewModel()) {
+                vm->removeSend(channelId, sendIndex);
+            }
+        }
+    });
+    m_routingMapPanel->setOnEditSendLevel([this](uint32_t channelId, int sendIndex, float newDb) {
+        if (m_mixerPanel) {
+            if (auto vm = m_mixerPanel->getViewModel()) {
+                float linearGain = (newDb <= -144.0f) ? 0.0f : std::pow(10.0f, newDb / 20.0f);
+                vm->setSendLevel(channelId, sendIndex, linearGain);
+            }
+        }
+    });
+    m_overlayLayer->addChild(m_routingMapPanel);
+
+    // Wire inspector minimap double-click to open full routing map
+    if (m_mixerPanel) {
+        if (auto mixerUI = m_mixerPanel->getMixerUI()) {
+            if (auto* inspector = mixerUI->getInspector()) {
+                if (auto minimap = inspector->getRoutingMap()) {
+                    minimap->setOnDoubleClick([this]() {
+                        m_previousViewFocus = m_viewFocus;
+                        setViewFocus(ViewFocus::RoutingMap);
+                    });
+                }
+            }
+        }
+    }
+
     m_pianoRollPanel = std::make_shared<PianoRollPanel>(m_trackManager);
     if (m_audioEngine) {
         m_pianoRollPanel->setAudioEngine(m_audioEngine);
@@ -1339,6 +1424,10 @@ void AestraContent::onResize(int width, int height) {
         }
     }
 
+    if (m_routingMapPanel && m_routingMapPanel->isVisible()) {
+        m_routingMapPanel->setBounds(allowed);
+    }
+
     if (m_pianoRollPanel && m_pianoRollPanel->isVisible()) {
         if (m_pianoRollPanel->isMaximized()) {
             m_pianoRollPanel->setBounds(maxRect);
@@ -1796,15 +1885,39 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
             AESTRA_LOG_DEBUG("[ViewFocus] Entering Audition Mode");
         }
+        // === ENTERING ROUTING MAP ===
+        else if (focus == ViewFocus::RoutingMap) {
+            // Routing map is an overlay; preserve existing DAW state
+            if (m_routingMapPanel) {
+                AestraUI::NUIRect allowed = computeAllowedRectForPanels();
+                m_routingMapPanel->setBounds(allowed);
+                m_routingMapPanel->setVisible(true);
+                m_routingMapPanel->setDirty(true);
+            }
+            // Keep mixer visible so user still sees context
+            if (m_mixerPanel && m_viewState.mixerOpen) {
+                m_mixerPanel->setVisible(true);
+            }
+            AESTRA_LOG_DEBUG("[ViewFocus] Entering Routing Map");
+        }
 
         // GLOBAL VISIBILITY STATE MANAGEMENT
         // Ensure UI elements are correctly shown/hidden based on mode
         bool isAudition = (focus == ViewFocus::Audition);
+        bool isRoutingMap = (focus == ViewFocus::RoutingMap);
 
         if (m_auditionPanel)
             m_auditionPanel->setVisible(isAudition);
 
-        if (!isAudition) {
+        if (m_routingMapPanel) {
+            if (isRoutingMap) {
+                m_routingMapPanel->setVisible(true);
+            } else if (previousFocus == ViewFocus::RoutingMap) {
+                m_routingMapPanel->setVisible(false);
+            }
+        }
+
+        if (!isAudition && !isRoutingMap) {
             // Returning to DAW Mode - Restore UI
             if (m_transportBar)
                 m_transportBar->setVisible(true);
@@ -1817,7 +1930,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             if (m_audioVisualizer)
                 m_audioVisualizer->setVisible(true);
             applyOverlayPanelVisibility(false);
-        } else {
+        } else if (isAudition) {
             // Audition Mode - Hide Distractions
             if (m_transportBar)
                 m_transportBar->setVisible(false);
@@ -1832,8 +1945,14 @@ void AestraContent::setViewFocus(ViewFocus focus) {
 
         // Sync segment control to reflect the new focus
         if (m_viewToggle) {
-            size_t idx = (focus == ViewFocus::Arsenal) ? 0 : (focus == ViewFocus::Timeline) ? 1 : 2;
-            m_viewToggle->setSelectedIndex(idx);
+            size_t idx = 0;
+            if (focus == ViewFocus::Arsenal) idx = 0;
+            else if (focus == ViewFocus::Timeline) idx = 1;
+            else if (focus == ViewFocus::Audition) idx = 2;
+            // RoutingMap doesn't map to a toggle segment; leave prior selection
+            if (focus != ViewFocus::RoutingMap) {
+                m_viewToggle->setSelectedIndex(idx);
+            }
         }
 
         // Force layout update immediately to apply new visibility and margins
@@ -1845,8 +1964,10 @@ void AestraContent::setViewFocus(ViewFocus focus) {
         m_transportBar->setViewToggled(Audio::ViewType::Sequencer, focus == ViewFocus::Arsenal);
     }
 
-    // Hot-swap playback if needed (only for Arsenal/Timeline swap, not Audition)
-    if (wasPlaying && m_transportBar && focus != ViewFocus::Audition && previousFocus != ViewFocus::Audition) {
+    // Hot-swap playback if needed (only for Arsenal/Timeline swap, not Audition or RoutingMap)
+    bool isRoutingMapTransition = (focus == ViewFocus::RoutingMap || previousFocus == ViewFocus::RoutingMap);
+    if (wasPlaying && m_transportBar && !isRoutingMapTransition &&
+        focus != ViewFocus::Audition && previousFocus != ViewFocus::Audition) {
         AESTRA_LOG_DEBUG("[Focus] Hot-swapping playback mode");
         m_transportBar->stop();
         m_transportBar->play();
@@ -3271,6 +3392,14 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         m_spaceShortcutLatched = true;
         AESTRA_LOG_DEBUG("[AestraContent] Spacebar pressed. ViewFocus: " +
                          std::to_string(static_cast<int>(m_viewFocus)));
+    }
+
+    // Escape closes the routing map overlay if it's open
+    if (event.keyCode == AestraUI::NUIKeyCode::Escape) {
+        if (m_viewFocus == ViewFocus::RoutingMap) {
+            setViewFocus(m_previousViewFocus);
+            return true;
+        }
     }
 
     // Spacebar follows the top-level selected mode first. Overlay/panel focus can

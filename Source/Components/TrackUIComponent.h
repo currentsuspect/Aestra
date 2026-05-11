@@ -4,6 +4,7 @@
 #include "MixerChannel.h"
 #include "ClipInstance.h"
 #include "PlaylistModel.h"
+#include "WaveformCache.h"
 
 #include "NUIComponent.h"
 #include "NUIContextMenu.h"
@@ -252,13 +253,20 @@ private:
     void showRecordModeMenu(const AestraUI::NUIPoint& position);
     void updateRecordTooltip();
 
-    void drawWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, 
+    void drawWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
                      float offsetRatio = 0.0f, float visibleRatio = 1.0f);
     void drawWaveformForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
                               const ClipInstance& clip, float offsetRatio = 0.0f, float visibleRatio = 1.0f);
 
     void generateWaveformCache(int width, int height);
-    
+
+    // Zoom-aware waveform drawing helpers
+    void drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,
+                             const std::vector<Aestra::Audio::WaveformPeak>& peaks);
+    void drawCombinedWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
+                              const std::vector<Aestra::Audio::WaveformPeak>& peaksL,
+                              const std::vector<Aestra::Audio::WaveformPeak>& peaksR, size_t numChannels);
+
     // Sample clip container
     void drawSampleClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds);
     void drawSampleClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
@@ -268,12 +276,9 @@ private:
     void drawPatternClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
                                  const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip);
 
-    
-    // Waveform cache (regenerate only when audio data or size changes)
-    std::vector<std::pair<float, float>> m_waveformCache; // min/max pairs per pixel
-    int m_cachedWidth = 0;
-    int m_cachedHeight = 0;
-    size_t m_cachedAudioDataSize = 0;
+    // Reusable peak buffers to avoid per-frame allocations
+    std::vector<Aestra::Audio::WaveformPeak> m_waveformPeaksL;
+    std::vector<Aestra::Audio::WaveformPeak> m_waveformPeaksR;
     
     PlaylistLaneID m_laneId;
     std::shared_ptr<MixerChannel> m_channel;

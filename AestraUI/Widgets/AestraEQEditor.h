@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include "AestraPanelWindow.h"
 #include "NUIComponent.h"
 #include "NUIContextMenu.h"
 #include "NUITypes.h"
@@ -18,17 +19,15 @@
 
 namespace AestraUI {
 
-class AestraEQEditor : public NUIComponent {
+class AestraEQEditor : public AestraPanelWindow {
 public:
     explicit AestraEQEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
     ~AestraEQEditor() override;
 
-    void onRender(NUIRenderer& renderer) override;
+    void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
-    using NUIComponent::onResize;
+    using AestraPanelWindow::onResize;
     void onResize() { layoutControls(); }
-
-    void setOnClose(std::function<void()> callback) { m_onClose = std::move(callback); }
 
 private:
     struct BandControl {
@@ -60,7 +59,6 @@ private:
 
     void buildControls();
     void layoutControls();
-    void drawTitleBar(NUIRenderer& renderer);
     void drawResponseCurve(NUIRenderer& renderer, const NUIRect& bounds);
     void drawBlueprintGrid(NUIRenderer& renderer, const NUIRect& bounds);
     void drawUtilityStrip(NUIRenderer& renderer, const NUIRect& bounds);
@@ -78,8 +76,6 @@ private:
     void updateBandValue(int bandIndex, BandControl::DragTarget target, float normalizedValue);
     int hitTestBand(float x, float y) const;
     BandControl::DragTarget hitTestSlider(float x, float y, const BandControl& band) const;
-    bool hitTestCloseButton(float x, float y) const;
-    bool hitTestTitleBar(float x, float y) const;
     std::string typeLabel(uint32_t type) const;
     std::string bandFreqLabel(size_t bandIdx, float norm) const;
     std::string gainLabel(float norm) const;
@@ -88,13 +84,9 @@ private:
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
     std::vector<BandControl> m_bands;
-    std::function<void()> m_onClose;
     int m_hoveredBand = -1;
     int m_selectedBand = -1;
     int m_draggingGraphBand = -1;
-    bool m_isDraggingWindow = false;
-    NUIPoint m_dragStartPos;
-    NUIPoint m_windowStartPos;
     NUIRect m_lastResponseBounds;
     std::array<float, 160> m_spectrumMagnitudes{};
     std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> m_analyzerWindow{};
@@ -114,7 +106,6 @@ private:
 
     static constexpr float kWindowWidth = 1180.0f;
     static constexpr float kWindowHeight = 660.0f;
-    static constexpr float kTitleHeight = 58.0f;
     static constexpr float kCurveHeight = 238.0f;
     static constexpr float kPadding = 12.0f;
     static constexpr size_t kNumBands = 6;

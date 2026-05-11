@@ -122,6 +122,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIMixerInspector.cpp
     Widgets/UIMixerPluginDropdown.h
     Widgets/UIMixerPluginDropdown.cpp
+    Widgets/UIRoutingMap.h
+    Widgets/UIRoutingMap.cpp
     Widgets/UnitRow.h
     Widgets/UnitRow.cpp
     Widgets/UnitColorPicker.h
@@ -132,6 +134,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/PluginBrowserPanel.cpp
     Widgets/PluginUIController.h
     Widgets/PluginUIController.cpp
+    Widgets/AestraPanelWindow.h
+    Widgets/AestraPanelWindow.cpp
     Widgets/GenericPluginEditor.h
     Widgets/GenericPluginEditor.cpp
     Widgets/AestraEQEditor.h

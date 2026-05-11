@@ -213,6 +213,28 @@ inline void minMaxChannel(const float* data, size_t numFrames, uint32_t numChann
     outMax = max;
 }
 
+/**
+ * @brief Min/max/RMS for interleaved multichannel data (single channel extraction)
+ */
+inline void minMaxRMSChannel(const float* data, size_t numFrames, uint32_t numChannels, uint32_t channel,
+                             size_t startFrame, size_t endFrame, float& outMin, float& outMax,
+                             double& outSumSq) noexcept {
+    float min = FLT_MAX;
+    float max = -FLT_MAX;
+    double sumSq = 0.0;
+
+    for (size_t frame = startFrame; frame < endFrame && frame < numFrames; ++frame) {
+        float sample = data[frame * numChannels + channel];
+        min = std::min(min, sample);
+        max = std::max(max, sample);
+        sumSq += static_cast<double>(sample) * sample;
+    }
+
+    outMin = min;
+    outMax = max;
+    outSumSq = sumSq;
+}
+
 } // namespace WaveformSIMD
 } // namespace Audio
 } // namespace Aestra

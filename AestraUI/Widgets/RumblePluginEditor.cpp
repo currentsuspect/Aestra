@@ -9,14 +9,15 @@
 namespace AestraUI {
 
 namespace {
-constexpr float kCloseSize = 16.0f;
 constexpr float kCardRadius = 14.0f;
 }
 
 RumblePluginEditor::RumblePluginEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
     : m_instance(std::move(instance)) {
     setId("RumblePluginEditor");
+    setPanelTitle("Aestra Rumble");
     setSize(kWindowWidth, kWindowHeight);
+    setEnforceParentBounds(true);
     buildControls();
 }
 
@@ -56,7 +57,7 @@ void RumblePluginEditor::buildControls() {
 void RumblePluginEditor::layoutControls() {
     const auto bounds = getBounds();
     const float contentX = bounds.x + kPadding;
-    const float contentY = bounds.y + kTitleHeight + kPadding;
+    const float contentY = bounds.y + AestraPanelWindow::TITLE_BAR_H + kPadding;
     const float contentW = bounds.width - kPadding * 2.0f;
     const float cardsY = contentY + kHeroHeight + 12.0f;
     const float gap = 10.0f;
@@ -78,23 +79,6 @@ void RumblePluginEditor::onResize(int width, int height) {
     (void)width;
     (void)height;
     layoutControls();
-}
-
-void RumblePluginEditor::drawTitleBar(NUIRenderer& renderer, const NUIRect& bounds) {
-    auto& theme = NUIThemeManager::getInstance();
-    const NUIRect titleBar(bounds.x, bounds.y, bounds.width, kTitleHeight);
-
-    renderer.fillRoundedRect(titleBar, kCardRadius, NUIColor(0.10f, 0.08f, 0.10f, 0.98f));
-    renderer.drawText("Aestra Rumble", {titleBar.x + kPadding, titleBar.y + 12.0f}, 13.0f, theme.getColor("textPrimary"));
-    renderer.drawText("808 bass instrument", {titleBar.x + 130.0f, titleBar.y + 13.0f}, 10.0f,
-                      theme.getColor("accentPrimary").withAlpha(0.85f));
-
-    const float closeX = titleBar.right() - kCloseSize - 10.0f;
-    const float closeY = titleBar.y + (kTitleHeight - kCloseSize) * 0.5f;
-    renderer.drawLine({closeX + 4.0f, closeY + 4.0f}, {closeX + 12.0f, closeY + 12.0f}, 1.5f,
-                      theme.getColor("textSecondary"));
-    renderer.drawLine({closeX + 12.0f, closeY + 4.0f}, {closeX + 4.0f, closeY + 12.0f}, 1.5f,
-                      theme.getColor("textSecondary"));
 }
 
 void RumblePluginEditor::drawHero(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -145,13 +129,9 @@ void RumblePluginEditor::drawControl(NUIRenderer& renderer, const MacroControl& 
                              10.0f, accent.withAlpha(0.20f));
 }
 
-void RumblePluginEditor::onRender(NUIRenderer& renderer) {
+void RumblePluginEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
     const auto bounds = getBounds();
-    renderer.fillRoundedRect(bounds, kCardRadius, NUIColor(0.07f, 0.07f, 0.08f, 0.97f));
-    renderer.strokeRoundedRect(bounds, kCardRadius, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.12f));
-
-    drawTitleBar(renderer, bounds);
-    drawHero(renderer, {bounds.x + kPadding, bounds.y + kTitleHeight + kPadding, bounds.width - kPadding * 2.0f, kHeroHeight});
+    drawHero(renderer, {bounds.x + kPadding, bounds.y + AestraPanelWindow::TITLE_BAR_H + kPadding, bounds.width - kPadding * 2.0f, kHeroHeight});
 
     for (size_t i = 0; i < m_controls.size(); ++i) {
         drawControl(renderer, m_controls[i], static_cast<int>(i) == m_hoveredControl);
@@ -165,19 +145,6 @@ int RumblePluginEditor::hitTestControl(float x, float y) const {
         }
     }
     return -1;
-}
-
-bool RumblePluginEditor::hitTestCloseButton(float x, float y) const {
-    const auto bounds = getBounds();
-    const NUIRect closeRect(bounds.right() - kCloseSize - 10.0f, bounds.y + (kTitleHeight - kCloseSize) * 0.5f,
-                            kCloseSize, kCloseSize);
-    return closeRect.contains({x, y});
-}
-
-bool RumblePluginEditor::hitTestTitleBar(float x, float y) const {
-    const auto bounds = getBounds();
-    const NUIRect titleBar(bounds.x, bounds.y, bounds.width, kTitleHeight);
-    return titleBar.contains({x, y});
 }
 
 void RumblePluginEditor::updateControlValue(int controlIndex, float normalizedValue) {
@@ -198,35 +165,19 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
         return false;
     }
 
+    // Let base class handle title bar / close / drag first
+    if (AestraPanelWindow::onMouseEvent(event)) {
+        return true;
+    }
+
     const auto bounds = getBounds();
     const bool contains = bounds.contains(event.position);
 
-    if (event.pressed && event.button == NUIMouseButton::Left && !contains) {
-        if (m_onClose) {
-            m_onClose();
-        }
-        return false;
-    }
-
-    if (!contains && !m_isDraggingWindow) {
+    if (!contains && !isDraggingWindow()) {
         return false;
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        if (hitTestCloseButton(event.position.x, event.position.y)) {
-            if (m_onClose) {
-                m_onClose();
-            }
-            return true;
-        }
-
-        if (hitTestTitleBar(event.position.x, event.position.y)) {
-            m_isDraggingWindow = true;
-            m_dragStartPos = event.position;
-            m_windowStartPos = {bounds.x, bounds.y};
-            return true;
-        }
-
         m_hoveredControl = hitTestControl(event.position.x, event.position.y);
         if (m_hoveredControl >= 0) {
             m_controls[static_cast<size_t>(m_hoveredControl)].isDragging = true;
@@ -234,14 +185,6 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
             updateControlValue(m_hoveredControl, (event.position.x - track.x) / std::max(1.0f, track.width));
             return true;
         }
-    }
-
-    if (!event.pressed && !event.released && m_isDraggingWindow && event.button == NUIMouseButton::Left) {
-        const float dx = event.position.x - m_dragStartPos.x;
-        const float dy = event.position.y - m_dragStartPos.y;
-        setPosition(m_windowStartPos.x + dx, m_windowStartPos.y + dy);
-        layoutControls();
-        return true;
     }
 
     if (!event.pressed && !event.released && m_hoveredControl >= 0 && event.button == NUIMouseButton::Left) {
@@ -254,7 +197,6 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     if (!event.pressed && event.button == NUIMouseButton::Left) {
-        m_isDraggingWindow = false;
         for (auto& control : m_controls) {
             control.isDragging = false;
         }
