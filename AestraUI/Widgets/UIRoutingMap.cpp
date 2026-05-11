@@ -9,8 +9,10 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cctype>
 #include <iomanip>
 #include <sstream>
+#include <unordered_map>
 
 namespace AestraUI {
 
@@ -672,6 +674,43 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     renderer.drawTextCentered(collapseLabel, m_collapseButtonRect, 12.0f,
                               m_collapseHovered ? m_accent.withAlpha(0.98f) : m_textSecondary.withAlpha(0.9f));
 
+    // Search bar in title bar
+    {
+        float searchX = bounds.x + bounds.width * 0.5f - 80.0f;
+        float searchW = 160.0f;
+        m_searchRect = NUIRect{searchX, bounds.y + 10.0f, searchW, 22.0f};
+        NUIColor searchBg = m_searchFocused ? m_bgSecondary.withAlpha(0.7f) : m_bgSecondary.withAlpha(0.45f);
+        renderer.fillRoundedRect(m_searchRect, 5.0f, searchBg);
+        renderer.strokeRoundedRect(m_searchRect, 5.0f, 1.0f,
+                                   m_searchFocused ? m_accent.withAlpha(0.55f) : m_border.withAlpha(0.3f));
+        std::string searchDisplay = m_searchQuery.empty() ? "Search nodes..." : m_searchQuery;
+        NUIColor searchTextCol = m_searchQuery.empty() ? m_textSecondary.withAlpha(0.45f) : m_text.withAlpha(0.85f);
+        renderer.drawText(searchDisplay, {searchX + 8.0f, bounds.y + 13.0f}, 11.0f, searchTextCol);
+        if (m_searchActive && !m_searchQuery.empty()) {
+            // Highlight matching nodes with a subtle ring (rendered below in node loop)
+        }
+    }
+
+    // Legend: line type guide (bottom-left of title bar)
+    {
+        float legX = bounds.x + 18.0f;
+        float legY = bounds.y + 30.0f;
+        float dot = 3.0f;
+        // Solid = main path
+        renderer.fillCircle({legX + dot, legY + 4.0f}, dot, m_textSecondary.withAlpha(0.7f));
+        renderer.drawText("Route", {legX + 10.0f, legY}, 9.0f, m_textSecondary.withAlpha(0.55f));
+        float lw1 = renderer.measureText("Route", 9.0f).width + 18.0f;
+        // Dashed = send
+        float dx = legX + lw1;
+        renderer.strokeCircle({dx + dot, legY + 4.0f}, dot, 1.0f, m_textInfo.withAlpha(0.7f));
+        renderer.drawText("Send", {dx + 10.0f, legY}, 9.0f, m_textInfo.withAlpha(0.55f));
+        float lw2 = renderer.measureText("Send", 9.0f).width + 18.0f;
+        // Dashed orange = sidechain
+        float sx = legX + lw1 + lw2;
+        renderer.strokeCircle({sx + dot, legY + 4.0f}, dot, 1.0f, m_warning.withAlpha(0.7f));
+        renderer.drawText("Sidechain", {sx + 10.0f, legY}, 9.0f, m_warning.withAlpha(0.55f));
+    }
+
     // === Canvas area (clipped) ===
     NUIRect canvasRect{bounds.x + 1.0f, bounds.y + kTitleBarH + 1.0f,
                        bounds.width - 2.0f, bounds.height - kTitleBarH - 2.0f};
@@ -687,13 +726,60 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
                                      ? std::max(0.35f, 20.0f / static_cast<float>(m_edges.size()))
                                      : 1.0f;
 
+    // Precompute hover-to-trace masks if hovering a node
+    m_traceUpstreamMask.assign(m_nodes.size(), false);
+    m_traceDownstreamMask.assign(m_nodes.size(), false);
+    m_traceEdgeMask.assign(m_edges.size(), false);
+    if (m_hoveredNodeIdx >= 0 && !m_draggingConnection && !m_draggingNode && !m_draggingSend) {
+        // Build id->index map for trace lookups
+        std::unordered_map<uint32_t, size_t> idToIdx;
+        for (size_t i = 0; i < m_nodes.size(); ++i) idToIdx[m_nodes[i].id] = i;
+        // Downstream BFS from hovered node
+        std::vector<uint32_t> queue;
+        queue.push_back(m_nodes[m_hoveredNodeIdx].id);
+        size_t qhead = 0;
+        while (qhead < queue.size()) {
+            uint32_t curId = queue[qhead++];
+            for (size_t e = 0; e < m_edges.size(); ++e) {
+                if (m_edges[e].sourceNodeId == curId) {
+                    m_traceEdgeMask[e] = true;
+                    auto it = idToIdx.find(m_edges[e].targetNodeId);
+                    if (it != idToIdx.end() && !m_traceDownstreamMask[it->second]) {
+                        m_traceDownstreamMask[it->second] = true;
+                        queue.push_back(it->first);
+                    }
+                }
+            }
+        }
+        // Upstream BFS toward hovered node
+        queue.clear(); qhead = 0;
+        queue.push_back(m_nodes[m_hoveredNodeIdx].id);
+        while (qhead < queue.size()) {
+            uint32_t curId = queue[qhead++];
+            for (size_t e = 0; e < m_edges.size(); ++e) {
+                if (m_edges[e].targetNodeId == curId) {
+                    m_traceEdgeMask[e] = true;
+                    auto it = idToIdx.find(m_edges[e].sourceNodeId);
+                    if (it != idToIdx.end() && !m_traceUpstreamMask[it->second]) {
+                        m_traceUpstreamMask[it->second] = true;
+                        queue.push_back(it->first);
+                    }
+                }
+            }
+        }
+        m_traceDownstreamMask[m_hoveredNodeIdx] = true;
+        m_traceUpstreamMask[m_hoveredNodeIdx] = true;
+    }
+
     // Edges
-    for (const auto& edge : m_edges) {
+    for (size_t ei = 0; ei < m_edges.size(); ++ei) {
+        const auto& edge = m_edges[ei];
         const Node* src = nullptr;
         const Node* dst = nullptr;
-        for (const auto& n : m_nodes) {
-            if (n.id == edge.sourceNodeId) src = &n;
-            if (n.id == edge.targetNodeId) dst = &n;
+        size_t srcIdx = 0, dstIdx = 0;
+        for (size_t i = 0; i < m_nodes.size(); ++i) {
+            if (m_nodes[i].id == edge.sourceNodeId) { src = &m_nodes[i]; srcIdx = i; }
+            if (m_nodes[i].id == edge.targetNodeId) { dst = &m_nodes[i]; dstIdx = i; }
         }
         if (!src || !dst) continue;
 
@@ -709,14 +795,26 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
         if (sourceMuted) dimFactor *= 0.35f;
         if (soloSuppressed) dimFactor *= 0.25f;
 
+        // Trace highlighting boost
+        bool inTrace = m_traceEdgeMask[ei];
+        bool inTraceNode = m_traceUpstreamMask[srcIdx] || m_traceDownstreamMask[srcIdx] ||
+                           m_traceUpstreamMask[dstIdx] || m_traceDownstreamMask[dstIdx];
+
         const float baseA = edge.hovered ? 0.95f : 0.55f * edgeAlphaScale * dimFactor;
         NUIColor color = m_textSecondary.withAlpha(baseA);
         if (edge.type == Edge::SendPath) color = m_textInfo.withAlpha(edge.hovered ? 0.95f : 0.65f * edgeAlphaScale * dimFactor);
         if (edge.type == Edge::SidechainPath) color = m_warning.withAlpha(edge.hovered ? 0.95f : 0.72f * edgeAlphaScale * dimFactor);
 
+        if (inTrace) {
+            color = NUIColor(m_accent.r, m_accent.g, m_accent.b, 0.85f);
+            if (edge.type == Edge::SendPath) color = NUIColor(m_textInfo.r, m_textInfo.g, m_textInfo.b, 0.85f);
+            if (edge.type == Edge::SidechainPath) color = NUIColor(m_warning.r, m_warning.g, m_warning.b, 0.85f);
+        }
+
         float thickness = edge.hovered ? 2.2f : 1.25f;
+        if (inTrace) thickness = 2.5f;
         bool dashed = edge.type != Edge::MainPath;
-        if (sourceMuted) dashed = true; // muted sources get dashed edges
+        if (sourceMuted) dashed = true;
 
         drawBezier(renderer, {sx, sy}, {dx_, dy_}, thickness, color, dashed);
 
@@ -725,8 +823,8 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
             drawLivePulse(renderer, {sx, sy}, {dx_, dy_}, src->peakDb);
         }
 
-        // Send-level label on SendPath / SidechainPath edges
-        if ((edge.type == Edge::SendPath || edge.type == Edge::SidechainPath) && dimFactor > 0.2f) {
+        // Send-level label on SendPath / SidechainPath edges — only when hovered
+        if ((edge.type == Edge::SendPath || edge.type == Edge::SidechainPath) && (edge.hovered || inTrace) && dimFactor > 0.2f) {
             drawSendLevelLabel(renderer, {sx, sy}, {dx_, dy_}, edge.sendLevelDb);
         }
     }
@@ -750,8 +848,35 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     }
 
     // Nodes
-    for (const auto& node : m_nodes) {
+    bool anyTraceActive = m_hoveredNodeIdx >= 0 && (!m_draggingConnection && !m_draggingNode && !m_draggingSend);
+    for (size_t ni = 0; ni < m_nodes.size(); ++ni) {
+        const auto& node = m_nodes[ni];
         drawNode(renderer, node, m_zoom);
+        // Search highlight ring on matching nodes
+        if (m_searchActive && !m_searchQuery.empty()) {
+            std::string lowLabel, lowQuery;
+            lowLabel.reserve(node.label.size());
+            for (char c : node.label) lowLabel.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+            lowQuery.reserve(m_searchQuery.size());
+            for (char c : m_searchQuery) lowQuery.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+            if (lowLabel.find(lowQuery) != std::string::npos) {
+                float nx = bounds.x + node.x * m_zoom + m_cameraX;
+                float ny = canvasY + node.y * m_zoom + m_cameraY;
+                float nw = node.w * m_zoom;
+                float nh = node.h * m_zoom;
+                renderer.strokeRoundedRect({nx - 4.0f, ny - 4.0f, nw + 8.0f, nh + 8.0f}, 12.0f, 2.0f,
+                                           m_accent.withAlpha(0.55f));
+            }
+        }
+        // Trace dimming: non-trace nodes get a subtle dark overlay when trace is active
+        if (anyTraceActive && ni != static_cast<size_t>(m_hoveredNodeIdx) &&
+            !m_traceUpstreamMask[ni] && !m_traceDownstreamMask[ni]) {
+            float nx = bounds.x + node.x * m_zoom + m_cameraX;
+            float ny = canvasY + node.y * m_zoom + m_cameraY;
+            float nw = node.w * m_zoom;
+            float nh = node.h * m_zoom;
+            renderer.fillRoundedRect({nx, ny, nw, nh}, 10.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.35f));
+        }
     }
 
     // Highlight node being dragged
@@ -1310,11 +1435,14 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
         m_collapseHovered = (m_mode == Mode::FullPanel) && m_collapseButtonRect.contains(mouse);
         m_fitHovered = (m_mode == Mode::FullPanel) && m_fitButtonRect.contains(mouse);
         m_resetHovered = (m_mode == Mode::FullPanel) && m_resetButtonRect.contains(mouse);
+        m_searchHovered = (m_mode == Mode::FullPanel) && m_searchRect.contains(mouse);
+        bool overInspectorPanel = m_inspectorVisible && m_inspectorPanelRect.contains(mouse);
         m_inspectorCloseHovered = m_inspectorVisible && m_inspectorCloseRect.contains(mouse);
-        // Port hover tracking (full panel only)
+        // Port hover tracking (full panel only) — skip when over inspector or search
         m_hoveredPortType = NoPort;
         m_hoveredPortNodeIdx = -1;
-        if (m_mode == Mode::FullPanel && m_hoveredNodeIdx < 0 && m_hoveredEdgeIdx < 0 && !m_inspectorCloseHovered) {
+        if (m_mode == Mode::FullPanel && m_hoveredNodeIdx < 0 && m_hoveredEdgeIdx < 0 &&
+            !m_inspectorCloseHovered && !overInspectorPanel && !m_searchHovered) {
             int outPort = hitTestOutputPort(mouse);
             if (outPort >= 0) {
                 m_hoveredPortType = OutputPort;
@@ -1335,6 +1463,15 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
                        "\n" + std::to_string(m_nodes[m_hoveredNodeIdx].insertCount) + " inserts");
         } else if (m_hoveredEdgeIdx >= 0) {
             m_edges[m_hoveredEdgeIdx].hovered = true;
+            // Tooltip for edge type clarity
+            const auto& edge = m_edges[m_hoveredEdgeIdx];
+            if (edge.type == Edge::MainPath) {
+                setTooltip("Main route");
+            } else if (edge.type == Edge::SendPath) {
+                setTooltip("Audio send\nRight-click to adjust level");
+            } else if (edge.type == Edge::SidechainPath) {
+                setTooltip("Sidechain send\nRight-click to adjust level");
+            }
         } else {
             setTooltip("");
         }
@@ -1344,6 +1481,17 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     if (m_mode == Mode::FullPanel) {
+        // Search bar hit test
+        if (event.pressed && event.button == NUIMouseButton::Left && m_searchRect.contains(mouse)) {
+            m_searchFocused = true;
+            repaint();
+            return true;
+        }
+        if (event.pressed && event.button == NUIMouseButton::Left && !m_searchRect.contains(mouse)) {
+            m_searchFocused = false;
+            repaint();
+        }
+
         // Button hit tests
         if (event.pressed && event.button == NUIMouseButton::Left && !m_draggingConnection && !m_draggingNode && !m_draggingSend) {
             if (m_collapseButtonRect.contains(mouse)) {
@@ -1525,25 +1673,48 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
         }
 
         // Click on empty canvas while inspector is open → close inspector
+        // (but not when clicking inside the inspector panel itself)
+        bool overInspector = m_inspectorVisible && m_inspectorPanelRect.contains(mouse);
         if (event.pressed && event.button == NUIMouseButton::Left && m_inspectorVisible &&
             m_hoveredNodeIdx < 0 && m_hoveredEdgeIdx < 0 && !m_inspectorCloseHovered &&
-            !m_collapseHovered && !m_fitHovered && !m_resetHovered) {
+            !m_collapseHovered && !m_fitHovered && !m_resetHovered && !overInspector && !m_searchHovered) {
             m_inspectorVisible = false;
             m_inspectorNodeIdx = -1;
             repaint();
         }
 
-        // Right-click on send/sidechain edge → cycle send level (coarse inline edit)
+        // Right-click context menu on node, or inline edge level edit
         if (event.pressed && event.button == NUIMouseButton::Right && !m_draggingConnection && !m_draggingNode && !m_draggingSend) {
             if (m_hoveredNodeIdx >= 0) {
                 uint32_t cid = m_nodes[m_hoveredNodeIdx].id;
-                if (m_onNodeMuteToggle) m_onNodeMuteToggle(cid);
+                if (!m_nodeContextMenu) {
+                    m_nodeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
+                    m_nodeContextMenu->setCloseOnSelection(true);
+                }
+                m_nodeContextMenu->clear();
+                m_nodeContextMenu->addItem("Solo", [this, cid]() {
+                    if (m_onNodeSoloToggle) m_onNodeSoloToggle(cid);
+                });
+                m_nodeContextMenu->addItem("Mute", [this, cid]() {
+                    if (m_onNodeMuteToggle) m_onNodeMuteToggle(cid);
+                });
+                m_nodeContextMenu->addSeparator();
+                m_nodeContextMenu->addItem("Inspector", [this]() {
+                    if (m_hoveredNodeIdx >= 0) {
+                        m_inspectorVisible = true;
+                        m_inspectorNodeIdx = m_hoveredNodeIdx;
+                        repaint();
+                    }
+                });
+                AestraUI::NUIComponent* root = this->getParent();
+                while (root && root->getParent()) root = root->getParent();
+                if (root) root->addChild(m_nodeContextMenu);
+                m_nodeContextMenu->showAt(static_cast<int>(mouse.x), static_cast<int>(mouse.y));
                 return true;
             }
             if (m_hoveredEdgeIdx >= 0) {
                 const Edge& edge = m_edges[m_hoveredEdgeIdx];
                 if (edge.type != Edge::MainPath && edge.sendIndex >= 0 && m_onEditSendLevel) {
-                    // Cycle through coarse levels: -inf, -24, -12, -6, 0, +6 dB
                     static const float kLevels[] = {-144.0f, -24.0f, -12.0f, -6.0f, 0.0f, 6.0f};
                     constexpr size_t kLevelCount = sizeof(kLevels) / sizeof(kLevels[0]);
                     float current = edge.sendLevelDb;
@@ -1564,7 +1735,7 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
             }
         }
 
-        // Cancel any drag on right-click press (when not on a node for mute)
+        // Cancel any drag on right-click press
         if (event.pressed && event.button == NUIMouseButton::Right) {
             if (m_draggingConnection) {
                 m_draggingConnection = false;
@@ -1658,6 +1829,57 @@ bool UIRoutingMap::onMouseEvent(const NUIMouseEvent& event) {
 bool UIRoutingMap::onKeyEvent(const NUIKeyEvent& event) {
     if (!event.pressed) return false;
 
+    // Search bar text input (when focused)
+    if (m_searchFocused && m_mode == Mode::FullPanel) {
+        if (event.keyCode == NUIKeyCode::Escape) {
+            m_searchQuery.clear();
+            m_searchFocused = false;
+            m_searchActive = false;
+            repaint();
+            return true;
+        }
+        if (event.keyCode == NUIKeyCode::Backspace || event.keyCode == NUIKeyCode::Delete) {
+            if (!m_searchQuery.empty()) {
+                m_searchQuery.pop_back();
+                m_searchActive = !m_searchQuery.empty();
+                repaint();
+            }
+            return true;
+        }
+        if (event.keyCode == NUIKeyCode::Enter) {
+            m_searchActive = !m_searchQuery.empty();
+            // Pan camera to first matching node
+            if (m_searchActive) {
+                for (const auto& node : m_nodes) {
+                    std::string lowLabel, lowQuery;
+                    lowLabel.reserve(node.label.size());
+                    for (char c : node.label) lowLabel.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+                    lowQuery.reserve(m_searchQuery.size());
+                    for (char c : m_searchQuery) lowQuery.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+                    if (lowLabel.find(lowQuery) != std::string::npos) {
+                        NUIRect bounds = getBounds();
+                        float canvasY = bounds.y + 44.0f;
+                        float targetX = bounds.x + node.x * m_zoom + m_cameraX;
+                        float targetY = canvasY + node.y * m_zoom + m_cameraY;
+                        float canvasCX = bounds.x + bounds.width * 0.5f;
+                        float canvasCY = canvasY + (bounds.height - 44.0f) * 0.5f;
+                        m_cameraX += (canvasCX - targetX);
+                        m_cameraY += (canvasCY - targetY);
+                        repaint();
+                        break;
+                    }
+                }
+            }
+            return true;
+        }
+        if (event.character >= 32 && event.character < 127) {
+            m_searchQuery.push_back(event.character);
+            m_searchActive = true;
+            repaint();
+            return true;
+        }
+    }
+
     if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {
         if (m_selectedEdgeIdx >= 0 && m_selectedEdgeIdx < static_cast<int>(m_edges.size())) {
             const Edge& edge = m_edges[m_selectedEdgeIdx];
@@ -1675,6 +1897,13 @@ bool UIRoutingMap::onKeyEvent(const NUIKeyEvent& event) {
         }
     }
     if (event.keyCode == NUIKeyCode::Escape) {
+        if (m_searchFocused) {
+            m_searchQuery.clear();
+            m_searchFocused = false;
+            m_searchActive = false;
+            repaint();
+            return true;
+        }
         if (m_selectedEdgeIdx >= 0) {
             m_selectedEdgeIdx = -1;
             repaint();
@@ -1886,32 +2115,51 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
 
     const Node& node = m_nodes[m_inspectorNodeIdx];
     const Aestra::ChannelViewModel* ch = m_viewModel->getChannelById(node.id);
-    // Master node (id == 0) uses master channel if available
-    if (!ch && node.id == 0) {
-        ch = m_viewModel->getMaster();
-    }
+    if (!ch && node.id == 0) ch = m_viewModel->getMaster();
     if (!ch) return;
 
     NUIRect bounds = getBounds();
     constexpr float kFullTitleBarH = 44.0f;
     float canvasY = bounds.y + kFullTitleBarH;
-    float canvasH = bounds.height - kFullTitleBarH;
 
-    // Panel geometry
-    constexpr float kInspectorW = 260.0f;
-    float insetX = bounds.x + 12.0f;
-    float insetY = canvasY + 12.0f;
-    float insetH = canvasH - 24.0f;
-    if (insetH < 120.0f) return;
+    // Compute screen position of the clicked node so we can anchor the inspector near it
+    float nodeScreenX = bounds.x + node.x * m_zoom + m_cameraX;
+    float nodeScreenY = canvasY + node.y * m_zoom + m_cameraY;
+    float nodeScreenW = node.w * m_zoom;
+    float nodeScreenH = node.h * m_zoom;
+
+    constexpr float kInspectorW = 240.0f;
+    float insetX = nodeScreenX + nodeScreenW + 16.0f; // default: float to the right
+    float insetY = nodeScreenY;
+    // If it would overflow the right edge, flip to the left of the node
+    if (insetX + kInspectorW > bounds.x + bounds.width - 12.0f) {
+        insetX = nodeScreenX - kInspectorW - 16.0f;
+    }
+    // Clamp vertically within canvas
+    float maxInsetH = 420.0f;
+    float insetH = std::min(maxInsetH, bounds.y + bounds.height - insetY - 12.0f);
+    if (insetY < canvasY + 8.0f) {
+        insetY = canvasY + 8.0f;
+        insetH = std::min(maxInsetH, bounds.y + bounds.height - insetY - 12.0f);
+    }
+    if (insetH < 140.0f) {
+        insetY = canvasY + 8.0f;
+        insetH = std::min(maxInsetH, bounds.y + bounds.height - insetY - 12.0f);
+    }
+    // Clamp horizontally
+    if (insetX < bounds.x + 8.0f) insetX = bounds.x + 8.0f;
+    if (insetX + kInspectorW > bounds.right() - 8.0f) insetX = bounds.right() - kInspectorW - 8.0f;
+
+    // Remember panel rect for hit testing
+    m_inspectorPanelRect = NUIRect{insetX, insetY, kInspectorW, insetH};
 
     // Background
-    NUIRect panel{insetX, insetY, kInspectorW, insetH};
-    renderer.fillRoundedRect(panel, 8.0f, NUIColor(0.07f, 0.06f, 0.10f, 0.96f));
-    renderer.strokeRoundedRect(panel, 8.0f, 1.0f, m_border.withAlpha(0.45f));
+    renderer.fillRoundedRect(m_inspectorPanelRect, 8.0f, NUIColor(0.07f, 0.06f, 0.10f, 0.96f));
+    renderer.strokeRoundedRect(m_inspectorPanelRect, 8.0f, 1.0f, m_border.withAlpha(0.45f));
 
     float y = insetY + 14.0f;
-    float left = insetX + 14.0f;
-    float right = insetX + kInspectorW - 14.0f;
+    float left = insetX + 12.0f;
+    float right = insetX + kInspectorW - 12.0f;
     float textW = right - left;
 
     // Color strip at top
@@ -1926,9 +2174,9 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
         std::string typeLabel = (node.type == Node::Master) ? "MASTER BUS" : "TRACK";
         renderer.drawText(typeLabel, {left, y}, 10.0f, m_textSecondary.withAlpha(0.7f));
         float typeW = renderer.measureText(typeLabel, 10.0f).width;
-        std::string name = fitLabel(renderer, ch->name.empty() ? node.label : ch->name, 14.0f, textW - typeW - 10.0f);
-        renderer.drawText(name, {left + typeW + 8.0f, y - 1.0f}, 14.0f, m_text.withAlpha(0.95f));
-        y += 26.0f;
+        std::string name = fitLabel(renderer, ch->name.empty() ? node.label : ch->name, 13.0f, textW - typeW - 10.0f);
+        renderer.drawText(name, {left + typeW + 8.0f, y - 1.0f}, 13.0f, m_text.withAlpha(0.95f));
+        y += 24.0f;
     }
 
     // M/S badges inline
@@ -1944,7 +2192,6 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
             NUIRect bRect{badgeX, y, 20.0f, 18.0f};
             renderer.fillRoundedRect(bRect, 4.0f, NUIColor(0.7f, 0.2f, 0.2f, 0.85f));
             renderer.drawTextCentered("M", bRect, 10.0f, NUIColor::white());
-            badgeX += 26.0f;
         }
         y += 24.0f;
     }
@@ -1961,11 +2208,11 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
 
     // Divider
     renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));
-    y += 12.0f;
+    y += 10.0f;
 
     // === MAIN OUTPUT ===
     renderer.drawText("Main Output", {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));
-    y += 16.0f;
+    y += 14.0f;
     {
         std::string destName = ch->routeName.empty() ? "Master" : ch->routeName;
         renderer.drawText(destName, {left + 8.0f, y}, 12.0f, m_text.withAlpha(0.85f));
@@ -1973,56 +2220,57 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
             float dnw = renderer.measureText(destName, 12.0f).width;
             renderer.drawText("(bypassed)", {left + 8.0f + dnw + 6.0f, y}, 10.0f, m_warning.withAlpha(0.75f));
         }
-        y += 22.0f;
+        y += 20.0f;
     }
 
     // Divider
     renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));
-    y += 12.0f;
+    y += 10.0f;
 
     // === INSERT CHAIN ===
     renderer.drawText("Insert Chain", {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));
-    y += 18.0f;
-    if (ch->inserts.empty()) {
-        renderer.drawText("No inserts", {left + 8.0f, y}, 11.0f, m_textSecondary.withAlpha(0.5f));
-        y += 18.0f;
+    y += 16.0f;
+    // Count filled inserts
+    size_t filledInserts = 0;
+    for (const auto& in : ch->inserts) if (!in.isEmpty) ++filledInserts;
+    if (filledInserts == 0) {
+        renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, m_bgSecondary.withAlpha(0.35f));
+        renderer.strokeRoundedRect({left + 8.0f, y, textW - 16.0f, 22.0f}, 4.0f, 0.5f, m_accent.withAlpha(0.4f));
+        renderer.drawTextCentered("+ Add plugin", {left + 8.0f, y, textW - 16.0f, 22.0f}, 11.0f, m_accent.withAlpha(0.75f));
+        y += 28.0f;
     } else {
         for (size_t i = 0; i < ch->inserts.size(); ++i) {
             const auto& insert = ch->inserts[i];
-            if (insert.isEmpty) {
-                renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, m_bgSecondary.withAlpha(0.35f));
-                renderer.drawText("Empty slot", {left + 14.0f, y + 3.0f}, 10.0f, m_textSecondary.withAlpha(0.45f));
-            } else {
-                NUIColor slotBg = insert.bypassed ? m_bgSecondary.withAlpha(0.35f) : m_bgSecondary.withAlpha(0.55f);
-                renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, slotBg);
-                renderer.strokeRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, 0.5f,
-                                           insert.bypassed ? m_border.withAlpha(0.3f) : m_accent.withAlpha(0.45f));
-                std::string slotLabel = fitLabel(renderer, insert.name, 11.0f, textW - 50.0f);
-                renderer.drawText(slotLabel, {left + 14.0f, y + 3.0f}, 11.0f,
-                                  insert.bypassed ? m_textSecondary.withAlpha(0.5f) : m_text.withAlpha(0.88f));
-                if (insert.bypassed) {
-                    float slw = renderer.measureText(slotLabel, 11.0f).width;
-                    renderer.drawText("bypass", {left + 14.0f + slw + 6.0f, y + 4.0f}, 9.0f, m_warning.withAlpha(0.65f));
-                }
-                if (insert.mix < 0.99f) {
-                    char mixBuf[16];
-                    std::snprintf(mixBuf, sizeof(mixBuf), "%.0f%%", insert.mix * 100.0f);
-                    float mixW = renderer.measureText(mixBuf, 9.0f).width;
-                    renderer.drawText(mixBuf, {right - mixW - 6.0f, y + 4.0f}, 9.0f, m_textInfo.withAlpha(0.7f));
-                }
+            if (insert.isEmpty) continue;
+            NUIColor slotBg = insert.bypassed ? m_bgSecondary.withAlpha(0.35f) : m_bgSecondary.withAlpha(0.55f);
+            renderer.fillRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, slotBg);
+            renderer.strokeRoundedRect({left + 8.0f, y, textW - 16.0f, 20.0f}, 4.0f, 0.5f,
+                                       insert.bypassed ? m_border.withAlpha(0.3f) : m_accent.withAlpha(0.45f));
+            std::string slotLabel = fitLabel(renderer, insert.name, 11.0f, textW - 50.0f);
+            renderer.drawText(slotLabel, {left + 14.0f, y + 3.0f}, 11.0f,
+                              insert.bypassed ? m_textSecondary.withAlpha(0.5f) : m_text.withAlpha(0.88f));
+            if (insert.bypassed) {
+                float slw = renderer.measureText(slotLabel, 11.0f).width;
+                renderer.drawText("bypass", {left + 14.0f + slw + 6.0f, y + 4.0f}, 9.0f, m_warning.withAlpha(0.65f));
+            }
+            if (insert.mix < 0.99f) {
+                char mixBuf[16];
+                std::snprintf(mixBuf, sizeof(mixBuf), "%.0f%%", insert.mix * 100.0f);
+                float mixW = renderer.measureText(mixBuf, 9.0f).width;
+                renderer.drawText(mixBuf, {right - mixW - 6.0f, y + 4.0f}, 9.0f, m_textInfo.withAlpha(0.7f));
             }
             y += 24.0f;
-            if (y > insetY + insetH - 40.0f) break; // guard against overflow
+            if (y > insetY + insetH - 40.0f) break;
         }
     }
 
     // Divider
     renderer.drawLine({left, y}, {right, y}, 1.0f, m_border.withAlpha(0.25f));
-    y += 12.0f;
+    y += 10.0f;
 
     // === SENDS ===
     renderer.drawText("Sends", {left, y}, 10.0f, m_textSecondary.withAlpha(0.65f));
-    y += 18.0f;
+    y += 16.0f;
     if (ch->sends.empty()) {
         renderer.drawText("No sends", {left + 8.0f, y}, 11.0f, m_textSecondary.withAlpha(0.5f));
         y += 18.0f;
@@ -2036,7 +2284,6 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
             std::string sendLabel = fitLabel(renderer, dest, 11.0f, textW - 80.0f);
             renderer.drawText(sendLabel, {left + 14.0f, y + 4.0f}, 11.0f, m_text.withAlpha(0.85f));
 
-            // Send metadata row
             float metaX = left + 14.0f;
             float metaY = y + 14.0f;
             float sendDb = gainToDb(send.gain);
@@ -2063,7 +2310,7 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
     }
 
     // Close button (top-right of panel)
-    m_inspectorCloseRect = NUIRect{insetX + kInspectorW - 28.0f, insetY + 8.0f, 20.0f, 20.0f};
+    m_inspectorCloseRect = NUIRect{insetX + kInspectorW - 26.0f, insetY + 8.0f, 18.0f, 18.0f};
     renderer.fillRoundedRect(m_inspectorCloseRect, 5.0f,
                              m_inspectorCloseHovered ? NUIColor(0.9f, 0.3f, 0.3f, 0.45f)
                                                       : NUIColor(0.2f, 0.2f, 0.2f, 0.4f));

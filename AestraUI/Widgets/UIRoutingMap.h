@@ -163,11 +163,27 @@ private:
     uint32_t m_pendingSendSourceId{0};
     uint32_t m_pendingSendTargetId{0};
 
-    // Left inspector panel (full panel only)
+    // Floating inspector panel (full panel only)
     bool m_inspectorVisible{false};
     int m_inspectorNodeIdx{-1};
     NUIRect m_inspectorCloseRect{0, 0, 0, 0};
     bool m_inspectorCloseHovered{false};
+    NUIRect m_inspectorPanelRect{0, 0, 0, 0};
+
+    // Hover-to-trace state
+    std::vector<bool> m_traceUpstreamMask; // per-node
+    std::vector<bool> m_traceDownstreamMask; // per-node
+    std::vector<bool> m_traceEdgeMask; // per-edge
+
+    // Right-click node context menu
+    std::shared_ptr<AestraUI::NUIContextMenu> m_nodeContextMenu;
+
+    // Search bar state
+    bool m_searchActive{false};
+    std::string m_searchQuery;
+    NUIRect m_searchRect{0, 0, 0, 0};
+    bool m_searchHovered{false};
+    bool m_searchFocused{false};
 
     // Animation / live signal state
     float m_livePulsePhase{0.0f};
