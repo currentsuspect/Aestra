@@ -120,11 +120,18 @@ private:
     float m_cameraX{0};
     float m_cameraY{0};
     float m_zoom{1.0f};
+    float m_targetZoom{1.0f};
     bool m_panning{false};
+    bool m_middlePanning{false};
     bool m_fitPending{true};
     NUIPoint m_panStartMouse;
     float m_panStartCameraX{0};
     float m_panStartCameraY{0};
+    NUIPoint m_middlePanStartMouse;
+    float m_middlePanStartCameraX{0};
+    float m_middlePanStartCameraY{0};
+    NUIPoint m_zoomAnchorScreen{0, 0};
+    bool m_zoomAnchorActive{false};
 
     // Minimap last-rendered transform (for accurate hit-testing)
     float m_minimapScale{1.0f};
