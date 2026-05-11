@@ -373,20 +373,28 @@ void UIMixerInspector::updateHeaderCache(const Aestra::ChannelViewModel* channel
     }
 
     m_cachedTrackNumber = findTrackNumber(channel->id);
-    m_cachedHeaderTitle = channel->name.empty()
-        ? ("Track " + std::to_string(std::max(1, m_cachedTrackNumber)))
-        : channel->name;
-
     const std::string trackLabel = (m_cachedTrackNumber > 0)
         ? ("Track " + std::to_string(m_cachedTrackNumber))
         : "Channel";
+
+    m_cachedHeaderTitle = channel->name.empty()
+        ? trackLabel
+        : channel->name;
+
+    // Subtitle = track label only when title is a custom name (not the track label itself)
+    const bool titleIsTrackLabel = (m_cachedHeaderTitle == trackLabel);
     const bool hasSends = !channel->sends.empty();
-    m_cachedHeaderSubtitle = trackLabel;
+    m_cachedHeaderSubtitle.clear();
+    if (!titleIsTrackLabel) {
+        m_cachedHeaderSubtitle = trackLabel;
+    }
     if (!channel->masterSendEnabled && channel->mainOutputId != 0) {
-        m_cachedHeaderSubtitle += "  •  Bus only";
+        if (!m_cachedHeaderSubtitle.empty()) m_cachedHeaderSubtitle += "  •  ";
+        m_cachedHeaderSubtitle += "Bus only";
     }
     if (hasSends) {
-        m_cachedHeaderSubtitle += "  •  " + std::to_string(channel->sends.size()) + " send";
+        if (!m_cachedHeaderSubtitle.empty()) m_cachedHeaderSubtitle += "  •  ";
+        m_cachedHeaderSubtitle += std::to_string(channel->sends.size()) + " send";
         if (channel->sends.size() != 1) {
             m_cachedHeaderSubtitle += "s";
         }
@@ -634,21 +642,22 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         }
 
         float chipX = headerRect.x + 10.0f;
-        const float chipY = headerRect.y + 59.0f;
+        const float chipH = 16.0f;
+        const float chipY = headerRect.y + 58.0f;
         for (int i = 0; i < flowCount; ++i) {
             const std::string step = flowSteps[i];
             const float textW = renderer.measureText(step, 9.0f).width;
             const float chipW = textW + 12.0f;
-            const NUIRect chipRect{chipX, chipY, chipW, 14.0f};
+            const NUIRect chipRect{chipX, chipY, chipW, chipH};
             const bool activeStep = (m_activeTab == Tab::Inserts && step == "Inserts") ||
                                     (m_activeTab == Tab::Sends && step == "Sends") ||
                                     (m_activeTab == Tab::IO && (step == "Input" || step == "Record"));
             renderer.fillRoundedRect(chipRect,
-                                     6.5f,
+                                     7.0f,
                                      activeStep ? m_bg.withAlpha(0.48f)
                                                 : m_bg.withAlpha(0.32f));
             renderer.strokeRoundedRect(chipRect,
-                                       6.5f,
+                                       7.0f,
                                        1.0f,
                                        activeStep ? accent.withAlpha(0.22f)
                                                   : m_border.withAlpha(0.18f));
@@ -669,8 +678,14 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, INSERT_SUMMARY_H};
         renderer.fillRoundedRect(summaryCard, 12.0f, m_tabBg.withAlpha(0.46f));
         renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, accent.withAlpha(0.16f));
-        renderer.drawText("Insert Status", {summaryCard.x + 10.0f, summaryCard.y + 7.0f}, 9.5f, m_textSecondary.withAlpha(0.94f));
-        renderer.drawText(buf, {summaryCard.x + 10.0f, summaryCard.y + 18.0f}, 10.5f, m_text.withAlpha(0.96f));
+        // Vertically center the two-line text block inside the card
+        const float cardMid = summaryCard.y + summaryCard.height * 0.5f;
+        renderer.drawText("Insert Status",
+                          {summaryCard.x + 10.0f, cardMid - 3.0f},
+                          9.5f, m_textSecondary.withAlpha(0.94f));
+        renderer.drawText(buf,
+                          {summaryCard.x + 10.0f, cardMid + 6.0f},
+                          10.5f, m_text.withAlpha(0.96f));
 
         // Rack is rendered by renderChildren() if visible
     } else if (m_activeTab == Tab::Sends) {

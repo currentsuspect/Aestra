@@ -662,18 +662,26 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     renderer.strokeRoundedRect(indexChip, 7.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
     renderer.drawTextCentered(numBuf, indexChip, 9.0f, Colors::textDisabled.withAlpha(0.68f));
     
+    // Shared vertical midline for the slot row — center all text on it
+    const float slotMid = slotRect.y + slotRect.height * 0.5f;
+
     if (slot.isEmpty) {
-        if (isHovered) {
-             renderer.drawText("+ Add Insert", {slotRect.x + 36.0f, slotRect.y + 10.0f}, 10.0f, Colors::textPrimary);
-        } else {
-             renderer.drawText("Empty slot", {slotRect.x + 36.0f, slotRect.y + 10.0f}, 9.5f, Colors::textDisabled.withAlpha(0.56f));
-        }
+        const float textSize = isHovered ? 10.0f : 9.5f;
+        const NUIColor textColor = isHovered
+            ? Colors::textPrimary
+            : Colors::textDisabled.withAlpha(0.56f);
+        // Baseline offset so the text looks centered on the slot midline
+        const float baseline = slotMid + textSize * 0.25f;
+        renderer.drawText(isHovered ? "+ Add Insert" : "Empty slot",
+                          {slotRect.x + 36.0f, baseline},
+                          textSize, textColor);
     } else {
-        // Plugin Name
+        // Plugin Name — first of two lines, shift up slightly
         NUIColor nameColor = slot.bypassed ? Colors::textDisabled.withAlpha(0.6f) : Colors::textPrimary;
-        renderer.drawText(slot.name, {slotRect.x + 36, slotRect.y + 7.0f}, 10.5f, nameColor);
+        renderer.drawText(slot.name, {slotRect.x + 36.0f, slotMid - 1.5f + 10.5f * 0.25f}, 10.5f, nameColor);
+        // Status — second line, shift down slightly
         renderer.drawText(slot.bypassed ? "Bypassed" : "Active",
-                          {slotRect.x + 36, slotRect.y + 18.0f},
+                          {slotRect.x + 36.0f, slotMid + 4.0f + 8.5f * 0.25f},
                           8.5f,
                           slot.bypassed ? Colors::textDisabled.withAlpha(0.72f) : Colors::accentPrimary.withAlpha(0.78f));
         
