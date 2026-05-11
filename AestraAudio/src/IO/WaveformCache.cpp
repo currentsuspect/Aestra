@@ -7,8 +7,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <future>
-#include <queue>
 #include <shared_mutex>
 #include <thread>
 
@@ -75,15 +73,18 @@ void WaveformCache::buildLevel(const float* data, SampleIndex numFrames, uint32_
     for (SampleIndex peakIdx = 0; peakIdx < outLevel.numPeaks; ++peakIdx) {
         SampleIndex startFrame = peakIdx * samplesPerPeak;
         SampleIndex endFrame = std::min(startFrame + samplesPerPeak, numFrames);
+        uint32_t count = static_cast<uint32_t>(endFrame - startFrame);
 
         for (uint32_t ch = 0; ch < numChannels; ++ch) {
             float minVal, maxVal;
+            double sumSq = 0.0;
 
-            // Use SIMD-accelerated min/max (4-8x faster)
-            WaveformSIMD::minMaxChannel(data, numFrames, numChannels, ch, startFrame, endFrame, minVal, maxVal);
+            WaveformSIMD::minMaxRMSChannel(data, numFrames, numChannels, ch, startFrame, endFrame, minVal, maxVal, sumSq);
 
+            float rms = (count > 0) ? static_cast<float>(std::sqrt(sumSq / static_cast<double>(count))) : 0.0f;
             size_t idx = static_cast<size_t>(peakIdx * numChannels + ch);
-            outLevel.peaks[idx] = WaveformPeak(minVal, maxVal);
+            outLevel.peaks[idx] = WaveformPeak(minVal, maxVal, rms, count);
+            outLevel.peaks[idx].sanitize();
         }
     }
 }
@@ -124,15 +125,17 @@ size_t WaveformCache::selectLevel(double samplesPerPixel) const {
     if (m_levels.empty())
         return 0;
 
-    // Find level with samplesPerPeak <= samplesPerPixel
-    // Start from finest (0) and go coarser
+    // Prefer coarsest level where samplesPerPeak <= samplesPerPixel,
+    // capping at the finest level if zoomed in beyond LOD0.
+    size_t best = 0;
     for (size_t i = 0; i < m_levels.size(); ++i) {
-        if (m_levels[i].samplesPerPeak >= samplesPerPixel) {
-            return i > 0 ? i - 1 : 0;
+        if (m_levels[i].samplesPerPeak <= samplesPerPixel) {
+            best = i;
+        } else {
+            break;
         }
     }
-
-    return m_levels.size() - 1;
+    return best;
 }
 
 void WaveformCache::getPeaksForRange(uint32_t channel, SampleIndex startSample, SampleIndex endSample,
@@ -153,7 +156,7 @@ void WaveformCache::getPeaksForRange(uint32_t channel, SampleIndex startSample, 
     // Calculate samples per pixel
     double samplesPerPixel = static_cast<double>(endSample - startSample) / numPixels;
 
-    // Select appropriate mip level
+    // Select appropriate mip level: coarsest where samplesPerPeak <= samplesPerPixel
     size_t levelIdx = 0;
     for (size_t i = 0; i < m_levels.size(); ++i) {
         if (m_levels[i].samplesPerPeak <= samplesPerPixel) {
@@ -164,21 +167,17 @@ void WaveformCache::getPeaksForRange(uint32_t channel, SampleIndex startSample, 
     }
 
     const WaveformMipLevel& level = m_levels[levelIdx];
-    double peaksPerPixel = samplesPerPixel / level.samplesPerPeak;
 
-    // Generate peaks for each pixel
+    // Generate peaks for each pixel by merging LOD entries overlapping the pixel's sample range.
+    // This avoids interpolation of min/max (which is physically meaningless) and ensures
+    // deterministic, subpixel-stable mapping.
     for (uint32_t pixel = 0; pixel < numPixels; ++pixel) {
         double startPeakF = (startSample + pixel * samplesPerPixel) / level.samplesPerPeak;
         double endPeakF = (startSample + (pixel + 1) * samplesPerPixel) / level.samplesPerPeak;
 
-        if (peaksPerPixel <= 1.25) {
-            const double centerPeak = (startPeakF + endPeakF) * 0.5;
-            outPeaks[pixel] = level.getInterpolatedPeak(channel, centerPeak);
-        } else {
-            SampleIndex startPeak = static_cast<SampleIndex>(std::floor(startPeakF));
-            SampleIndex endPeak = static_cast<SampleIndex>(std::ceil(endPeakF));
-            outPeaks[pixel] = level.getPeakRange(channel, startPeak, endPeak);
-        }
+        SampleIndex startPeak = static_cast<SampleIndex>(std::floor(startPeakF));
+        SampleIndex endPeak = static_cast<SampleIndex>(std::ceil(endPeakF));
+        outPeaks[pixel] = level.getPeakRange(channel, startPeak, endPeak);
     }
 }
 
@@ -226,11 +225,9 @@ size_t WaveformCache::getMemoryUsage() const {
 struct WaveformCacheBuilder::Impl {
     std::atomic<size_t> pendingCount{0};
     std::atomic<bool> cancelFlag{false};
-    mutable std::mutex mutex;
-    std::vector<std::thread> threads;
 };
 
-WaveformCacheBuilder::WaveformCacheBuilder() : m_impl(std::make_unique<Impl>()) {}
+WaveformCacheBuilder::WaveformCacheBuilder() : m_impl(std::make_shared<Impl>()) {}
 
 WaveformCacheBuilder::~WaveformCacheBuilder() {
     cancelAll();
@@ -248,28 +245,28 @@ void WaveformCacheBuilder::buildAsync(const ClipSource& source, CompletionCallba
 
     // Capture buffer by shared_ptr for thread safety
     auto buffer = source.getBuffer();
-    auto* impl = m_impl.get();
+    auto impl = m_impl; // shared_ptr copy keeps Impl alive
 
-    {
-        std::lock_guard<std::mutex> lock(impl->mutex);
-        impl->threads.emplace_back([buffer, callback, impl]() {
-            if (impl->cancelFlag.load()) {
-                impl->pendingCount.fetch_sub(1);
-                if (callback)
-                    callback(nullptr);
-                return;
-            }
+    std::thread([buffer, callback, impl]() {
+        struct PendingDecrement {
+            std::atomic<size_t>* cnt;
+            explicit PendingDecrement(std::atomic<size_t>* c) : cnt(c) {}
+            ~PendingDecrement() { cnt->fetch_sub(1); }
+        } guard(&impl->pendingCount);
 
-            auto cache = std::make_shared<WaveformCache>();
-            cache->buildFromBuffer(*buffer);
+        if (impl->cancelFlag.load()) {
+            if (callback)
+                callback(nullptr);
+            return;
+        }
 
-            impl->pendingCount.fetch_sub(1);
+        auto cache = std::make_shared<WaveformCache>();
+        cache->buildFromBuffer(*buffer);
 
-            if (callback) {
-                callback(cache);
-            }
-        });
-    }
+        if (callback) {
+            callback(cache);
+        }
+    }).detach();
 }
 
 std::shared_ptr<WaveformCache> WaveformCacheBuilder::buildSync(const ClipSource& source) {
@@ -286,13 +283,12 @@ std::shared_ptr<WaveformCache> WaveformCacheBuilder::buildSync(const ClipSource&
 void WaveformCacheBuilder::cancelAll() {
     m_impl->cancelFlag.store(true);
 
-    {
-        std::lock_guard<std::mutex> lock(m_impl->mutex);
-        for (auto& t : m_impl->threads) {
-            if (t.joinable())
-                t.join();
-        }
-        m_impl->threads.clear();
+    // Wait up to 5 seconds for pending builds to finish
+    int waits = 0;
+    constexpr int kMaxWaits = 5000; // 5 seconds
+    while (m_impl->pendingCount.load(std::memory_order_acquire) > 0 && waits < kMaxWaits) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        ++waits;
     }
 
     m_impl->cancelFlag.store(false);

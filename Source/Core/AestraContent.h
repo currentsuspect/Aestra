@@ -16,6 +16,7 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "NUISegmentedControl.h"
 #include "NUILabel.h"
+#include "../AestraUI/Widgets/UIRoutingMap.h"
 #include "ViewTypes.h"
 #include "TransportBar.h"
 #include "PatternSource.h"
@@ -68,9 +69,10 @@ namespace AestraUI {
  * Arsenal, Timeline, and Audition are the three main modes
  */
 enum class ViewFocus {
-    Arsenal,   // Pattern construction/sound design
-    Timeline,  // Arrangement/composition
-    Audition   // Album listening/reference/DSP preview
+    Arsenal,     // Pattern construction/sound design
+    Timeline,    // Arrangement/composition
+    Audition,    // Album listening/reference/DSP preview
+    RoutingMap   // Full-panel routing visualization
 };
 
 /**
@@ -321,6 +323,7 @@ private:
     std::shared_ptr<Aestra::Audio::ArsenalPanel> m_sequencerPanel;
     std::shared_ptr<Aestra::Audio::AestraHistoryPanel> m_historyPanel;
     std::shared_ptr<AestraUI::PluginUIController> m_pluginController;
+    std::shared_ptr<AestraUI::UIRoutingMap> m_routingMapPanel;
     
     // Temp files for Audition (v4.0)
     std::vector<std::string> m_tempFiles;
@@ -336,6 +339,7 @@ private:
     // View state
     ViewState m_viewState;
     ViewFocus m_viewFocus = ViewFocus::Timeline;
+    ViewFocus m_previousViewFocus = ViewFocus::Timeline;
     uint32_t m_lastSelectedChannelId = 0xFFFFFFFFu;
     
     // Sound preview state

@@ -157,7 +157,9 @@ void drawBlueprintKnob(NUIRenderer& renderer,
 AestraEQEditor::AestraEQEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
     : m_instance(std::move(instance)) {
     setId("AestraEQEditor");
+    setPanelTitle("Aestra EQ");
     setSize(kWindowWidth, kWindowHeight);
+    setEnforceParentBounds(true);
     buildControls();
     m_spectrumWorker = std::thread([this]() { analyzerWorkerMain(); });
 }
@@ -208,7 +210,7 @@ void AestraEQEditor::layoutControls() {
     auto bounds = getBounds();
     constexpr float bandGap = 8.0f;
     float bandW = (bounds.width - kPadding * 2.0f - bandGap * 5.0f) / 6.0f;
-    float y = bounds.y + kTitleHeight + kCurveHeight + 76.0f;
+    float y = bounds.y + AestraPanelWindow::TITLE_BAR_H + kCurveHeight + 76.0f;
     float h = 124.0f;
 
     for (size_t i = 0; i < m_bands.size(); ++i) {
@@ -229,65 +231,6 @@ void AestraEQEditor::layoutControls() {
         b.gainKnob = NUIRect(gainX - knobSize * 0.5f, knobY - knobSize * 0.5f, knobSize, knobSize);
         b.qKnob = NUIRect(qX - knobSize * 0.5f, knobY - knobSize * 0.5f, knobSize, knobSize);
     }
-}
-
-void AestraEQEditor::drawTitleBar(NUIRenderer& renderer) {
-    auto bounds = getBounds();
-    NUIRect titleBar(bounds.x, bounds.y, bounds.width, kTitleHeight);
-
-    renderer.fillRoundedRect(titleBar, kRadius, NUIColor(0.025f, 0.023f, 0.038f, 0.98f));
-    renderer.fillRoundedRect({titleBar.x + 1.0f, titleBar.y + 1.0f, titleBar.width - 2.0f, 28.0f},
-                             kRadius, NUIColor(0.18f, 0.13f, 0.30f, 0.16f));
-    renderer.strokeRoundedRect(titleBar, kRadius, 1.0f, kBlueprintLine.withAlpha(0.30f));
-
-    const NUIRect logo{titleBar.x + 14.0f, titleBar.y + 10.0f, 38.0f, 38.0f};
-    renderer.fillRoundedRect(logo, 11.0f, kAccentPurple.withAlpha(0.18f));
-    renderer.strokeRoundedRect(logo, 11.0f, 1.2f, kAccentPurple.withAlpha(0.52f));
-    renderer.drawText("EQ", {logo.x + 10.0f, logo.y + 12.0f}, 13.0f, kBlueprintText);
-    renderer.drawText("AESTRA EQ", {titleBar.x + 64.0f, titleBar.y + 9.0f}, 18.0f, kBlueprintText);
-    renderer.drawText("ADVANCED EQUALIZER", {titleBar.x + 65.0f, titleBar.y + 32.0f}, 10.0f, kBlueprintMuted);
-
-    const NUIRect undoChip{titleBar.x + 282.0f, titleBar.y + 16.0f, 34.0f, 26.0f};
-    const NUIRect redoChip{undoChip.right() + 8.0f, undoChip.y, 34.0f, 26.0f};
-    renderer.drawText("<", {undoChip.x + 12.0f, undoChip.y + 7.0f}, 13.0f, kBlueprintMuted);
-    renderer.drawText(">", {redoChip.x + 12.0f, redoChip.y + 7.0f}, 13.0f, kBlueprintMuted.withAlpha(0.42f));
-
-    const NUIRect preset{titleBar.x + titleBar.width * 0.37f, titleBar.y + 14.0f, 278.0f, 30.0f};
-    renderer.fillRoundedRect(preset, 9.0f, NUIColor(0.055f, 0.050f, 0.078f, 0.92f));
-    renderer.strokeRoundedRect(preset, 9.0f, 1.0f, kBlueprintLine.withAlpha(0.38f));
-    renderer.drawText("Modern Hip Hop Mix", {preset.x + 80.0f, preset.y + 10.0f}, 10.5f, kBlueprintText);
-    renderer.drawText("<", {preset.x + 14.0f, preset.y + 8.0f}, 12.0f, kBlueprintMuted);
-    renderer.drawText("v", {preset.right() - 21.0f, preset.y + 8.0f}, 10.0f, kBlueprintMuted);
-
-    const NUIRect modeChip{preset.right() + 16.0f, preset.y, 54.0f, 30.0f};
-    const NUIRect fftChip{modeChip.right() + 2.0f, modeChip.y, 54.0f, 30.0f};
-    renderer.fillRoundedRect(modeChip, 12.0f, kAccentPurple.withAlpha(0.12f));
-    renderer.strokeRoundedRect(modeChip, 12.0f, 1.0f, kAccentPurple.withAlpha(0.36f));
-    renderer.drawText("A / B", {modeChip.x + 15.0f, modeChip.y + 9.0f}, 9.5f, kBlueprintText);
-    renderer.fillRoundedRect(fftChip, 12.0f, kBlueprintPanel.withAlpha(0.76f));
-    renderer.strokeRoundedRect(fftChip, 12.0f, 1.0f, kBlueprintDim.withAlpha(0.55f));
-    renderer.drawText("A > B", {fftChip.x + 13.0f, fftChip.y + 9.0f}, 9.5f, kBlueprintMuted);
-
-    const float iconY = titleBar.y + 15.0f;
-    for (int i = 0; i < 4; ++i) {
-        const NUIRect icon{titleBar.right() - 146.0f + static_cast<float>(i) * 36.0f, iconY, 27.0f, 27.0f};
-        renderer.fillRoundedRect(icon, 7.0f, NUIColor(0.050f, 0.047f, 0.071f, 0.86f));
-        renderer.strokeRoundedRect(icon, 7.0f, 1.0f, kBlueprintDim.withAlpha(0.62f));
-    }
-    renderer.drawText("S", {titleBar.right() - 137.0f, iconY + 8.0f}, 9.0f, kBlueprintMuted);
-    renderer.drawText("M", {titleBar.right() - 101.0f, iconY + 8.0f}, 9.0f, kBlueprintMuted);
-    renderer.drawText("R", {titleBar.right() - 65.0f, iconY + 8.0f}, 9.0f, kBlueprintMuted);
-
-    float closeX = titleBar.right() - kCloseSize - 10.0f;
-    float closeY = titleBar.y + (kTitleHeight - kCloseSize) * 0.5f;
-    renderer.fillCircle({closeX + kCloseSize * 0.5f, closeY + kCloseSize * 0.5f}, 13.0f,
-                        NUIColor(0.12f, 0.105f, 0.15f, 0.76f));
-    renderer.drawLine({closeX + 4.0f, closeY + 4.0f}, {closeX + 12.0f, closeY + 12.0f}, 1.5f,
-                      kBlueprintMuted);
-    renderer.drawLine({closeX + 12.0f, closeY + 4.0f}, {closeX + 4.0f, closeY + 12.0f}, 1.5f,
-                      kBlueprintMuted);
-    renderer.drawLine({titleBar.x + 14.0f, titleBar.bottom()}, {titleBar.right() - 14.0f, titleBar.bottom()},
-                      1.0f, kBlueprintLine.withAlpha(0.24f));
 }
 
 void AestraEQEditor::drawBlueprintGrid(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -944,14 +887,12 @@ void AestraEQEditor::drawDynamicSection(NUIRenderer& renderer, const NUIRect& bo
     renderer.fillRoundedRect({gr.x, gr.y + gr.height * 0.48f, gr.width, gr.height * 0.52f}, 2.0f, kAccentPurple.withAlpha(0.82f));
 }
 
-void AestraEQEditor::onRender(NUIRenderer& renderer) {
+void AestraEQEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
     updateSpectrumSnapshot();
     auto bounds = getBounds();
     drawBlueprintGrid(renderer, bounds);
-    renderer.strokeRoundedRect(bounds, kRadius, 1.2f, kBlueprintLine.withAlpha(0.44f));
 
-    drawTitleBar(renderer);
-    const float graphTop = bounds.y + kTitleHeight + 12.0f;
+    const float graphTop = bounds.y + AestraPanelWindow::TITLE_BAR_H + 12.0f;
     const float sideW = 104.0f;
     const float filterW = 118.0f;
     const float gap = 8.0f;
@@ -967,7 +908,7 @@ void AestraEQEditor::onRender(NUIRenderer& renderer) {
     drawResponseCurve(renderer, graphPanel);
     drawFilterGuardPanel(renderer, lpfPanel, false);
     drawInputOutputPanel(renderer, outputPanel, true);
-    drawUtilityStrip(renderer, {bounds.x + kPadding, bounds.y + kTitleHeight + kCurveHeight + 20.0f,
+    drawUtilityStrip(renderer, {bounds.x + kPadding, bounds.y + AestraPanelWindow::TITLE_BAR_H + kCurveHeight + 20.0f,
                                 bounds.width - kPadding * 2.0f, 48.0f});
 
     if (!m_bands.empty()) {
@@ -1001,19 +942,6 @@ int AestraEQEditor::hitTestBand(float x, float y) const {
         if (m_bands[i].bounds.contains({x, y})) return static_cast<int>(i);
     }
     return -1;
-}
-
-bool AestraEQEditor::hitTestCloseButton(float x, float y) const {
-    auto bounds = getBounds();
-    NUIRect closeRect(bounds.right() - kCloseSize - 10.0f,
-                      bounds.y + (kTitleHeight - kCloseSize) * 0.5f, kCloseSize, kCloseSize);
-    return closeRect.contains({x, y});
-}
-
-bool AestraEQEditor::hitTestTitleBar(float x, float y) const {
-    auto bounds = getBounds();
-    NUIRect titleBar(bounds.x, bounds.y, bounds.width - 32.0f, kTitleHeight);
-    return titleBar.contains({x, y});
 }
 
 AestraEQEditor::BandControl::DragTarget AestraEQEditor::hitTestSlider(float x, float y, const BandControl& band) const {
@@ -1085,6 +1013,9 @@ std::string AestraEQEditor::qLabel(float norm, uint32_t type) const {
 
 bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
+
+    if (AestraPanelWindow::onMouseEvent(event)) return true;
+
     auto bounds = getBounds();
     bool isDraggingBand = std::any_of(m_bands.begin(), m_bands.end(),
                                       [](const BandControl& band) { return band.dragging; });
@@ -1103,11 +1034,7 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    if (event.pressed && event.button == NUIMouseButton::Left && !contains && !m_isDraggingWindow && !isDraggingBand) {
-        if (m_onClose) m_onClose();
-        return false;
-    }
-    if (!contains && !m_isDraggingWindow && !isDraggingBand) return false;
+    if (!contains && !isDraggingWindow() && !isDraggingBand) return false;
 
     if (event.wheelDelta != 0.0f) {
         int graphBandIdx = hitTestGraphNode(event.position.x, event.position.y);
@@ -1168,17 +1095,6 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        if (hitTestCloseButton(event.position.x, event.position.y)) {
-            if (m_onClose) m_onClose();
-            return true;
-        }
-        if (hitTestTitleBar(event.position.x, event.position.y)) {
-            m_isDraggingWindow = true;
-            m_dragStartPos = event.position;
-            m_windowStartPos = {bounds.x, bounds.y};
-            return true;
-        }
-
         int graphBandIdx = hitTestGraphNode(event.position.x, event.position.y);
         if (graphBandIdx >= 0) {
             m_selectedBand = graphBandIdx;
@@ -1215,18 +1131,6 @@ bool AestraEQEditor::onMouseEvent(const NUIMouseEvent& event) {
         if (!event.pressed && event.button == NUIMouseButton::Left) {
             m_draggingGraphBand = -1;
         }
-        return true;
-    }
-
-    if (m_isDraggingWindow && !event.pressed && event.button == NUIMouseButton::Left) {
-        m_isDraggingWindow = false;
-        return true;
-    }
-    if (m_isDraggingWindow) {
-        float dx = event.position.x - m_dragStartPos.x;
-        float dy = event.position.y - m_dragStartPos.y;
-        setBounds(m_windowStartPos.x + dx, m_windowStartPos.y + dy, bounds.width, bounds.height);
-        layoutControls();
         return true;
     }
 

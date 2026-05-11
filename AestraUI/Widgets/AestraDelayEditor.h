@@ -1,24 +1,23 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "NUIComponent.h"
+#include "AestraPanelWindow.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace AestraUI {
 
-class AestraDelayEditor : public NUIComponent {
+class AestraDelayEditor : public AestraPanelWindow {
 public:
     explicit AestraDelayEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
-    void onRender(NUIRenderer& renderer) override;
+    void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
-    using NUIComponent::onResize;
+    void onResize(int width, int height) override;
+    using AestraPanelWindow::onResize;
     void onResize() { layoutControls(); }
-    void setOnClose(std::function<void()> cb) { m_onClose = std::move(cb); }
 
 private:
     struct Knob {
@@ -34,49 +33,53 @@ private:
         float dragStartValue = 0.0f;
     };
 
-    struct DivisionButton {
-        int index = 0;
+    struct TierButton {
         std::string label;
         NUIRect bounds;
+        bool hovered = false;
     };
 
     void buildControls();
     void layoutControls();
-    void drawTitleBar(NUIRenderer& renderer);
-    void drawPillSwitches(NUIRenderer& renderer);
-    void drawDivisionGrid(NUIRenderer& renderer);
-    void drawKnob(NUIRenderer& renderer, const Knob& k);
-    void drawMixSlider(NUIRenderer& renderer);
+    void drawPillSwitches(NUIRenderer& renderer, float wx, float wy);
+    void drawSyncPanel(NUIRenderer& renderer, float wx, float wy);
+    void drawKnob(NUIRenderer& renderer, const Knob& k, float wx, float wy);
+    void drawMixSlider(NUIRenderer& renderer, float wx, float wy);
     void updateKnobValue(int idx, float v);
     std::string formattedValue(uint32_t paramId) const;
-    int hitTestKnob(float x, float y) const;
-    int hitTestDivision(float x, float y) const;
-    bool hitTestCloseButton(float x, float y) const;
-    bool hitTestTitleBar(float x, float y) const;
+    int hitTestKnob(float localX, float localY) const;
+    int hitTestBaseButton(float localX, float localY) const;
+    int hitTestModifierButton(float localX, float localY) const;
+
+    int computeDivisionIndex(int baseIdx, int modifierIdx) const;
+    void divisionIndexToBaseModifier(int divisionIdx, int& baseIdx, int& modifierIdx) const;
+    void applySyncSelection();
+    std::string syncReadoutText() const;
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
     std::vector<Knob> m_knobs;
-    std::vector<DivisionButton> m_divisionButtons;
-    std::function<void()> m_onClose;
+    std::vector<TierButton> m_baseButtons;
+    std::vector<TierButton> m_modifierButtons;
 
     NUIRect m_freeRect;
     NUIRect m_syncRect;
     NUIRect m_stereoRect;
     NUIRect m_pingPongRect;
     NUIRect m_mixSliderRect;
+    NUIRect m_syncReadoutRect;
 
     int m_hoveredKnob = -1;
-    bool m_isDraggingWindow = false;
+    int m_hoveredBaseButton = -1;
+    int m_hoveredModifierButton = -1;
+    int m_syncBaseIndex = 1;      // default 1/8
+    int m_syncModifierIndex = 0;  // default Straight
     bool m_draggingMix = false;
-    NUIPoint m_dragStartPos;
-    NUIPoint m_windowStartPos;
 
     static constexpr float kWinW = 620.0f;
     static constexpr float kWinH = 360.0f;
-    static constexpr float kTitleH = 54.0f;
     static constexpr float kPad = 20.0f;
     static constexpr float kRadius = 15.0f;
-    static constexpr float kKnobSize = 58.0f;
+    static constexpr float kKnobSize = 50.0f;
 };
 
 } // namespace AestraUI

@@ -658,8 +658,13 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
 
     // Master gets a slightly different tone to distinguish it (optional, but good for hierarchy)
     if (m_channelId == 0) {
-        // Subtle highlight for master
-        renderer.strokeRoundedRect(bounds, radius, 1.0f, m_masterBorder); 
+        // Subtle accent-tinted vertical gradient for visual hierarchy
+        const NUIColor accent = NUIThemeManager::getInstance().getColor("primary");
+        renderer.fillRoundedRect(bounds, radius,
+                                  accent.withAlpha(0.04f));
+        renderer.fillRectGradient({bounds.x, bounds.y, bounds.width, 90.0f},
+                                   accent.withAlpha(0.10f), accent.withAlpha(0.0f), true);
+        renderer.strokeRoundedRect(bounds, radius, 1.0f, m_masterBorder);
     }
 
     if (selected) {

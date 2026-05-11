@@ -23,7 +23,6 @@ constexpr uint32_t kMode = 10;
 constexpr float kPi = 3.14159265358979323846f;
 constexpr float kTwoPi = kPi * 2.0f;
 
-NUIColor verbPanelBg() { return NUIColor(0.031f, 0.041f, 0.050f, 0.997f); }
 NUIColor verbSurfaceBg() { return NUIColor(0.038f, 0.049f, 0.060f, 0.985f); }
 NUIColor verbInsetBg() { return NUIColor(0.018f, 0.024f, 0.031f, 0.965f); }
 NUIColor verbGold() { return NUIColor(0.94f, 0.66f, 0.34f, 1.0f); }
@@ -76,6 +75,8 @@ float protectedLeftDockEdge(const NUIComponent* root, const NUIComponent* self, 
 AestraVerbEditor::AestraVerbEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
     : m_instance(std::move(instance)) {
     setId("AestraVerbEditor");
+    setPanelTitle("Aestra Verb");
+    setBadgeText("Reverb");
     setSize(kWinW, kWinH);
     m_modes = {{
         {"Room", 0, {}, false},
@@ -171,7 +172,9 @@ void AestraVerbEditor::layoutControls() {
         setBounds(b.x, b.y, kWinW, kWinH);
         b = getBounds();
     }
-    enforceBoundsInParent(!m_userPositioned);
+    if (!isDraggingWindow()) {
+        enforceBoundsInParent(!m_userPositioned);
+    }
     b = getBounds();
 
     const float presetX = b.x + kPad;
@@ -247,7 +250,7 @@ void AestraVerbEditor::onResize(int width, int height) {
     (void)width;
     (void)height;
     layoutControls();
-    NUIComponent::onResize(width, height);
+    AestraPanelWindow::onResize(width, height);
 }
 
 void AestraVerbEditor::enforceBoundsInParent(bool recenterWhenPossible) {
@@ -303,39 +306,6 @@ void AestraVerbEditor::enforceBoundsInParent(bool recenterWhenPossible) {
         std::abs(current.width - targetW) > 0.5f || std::abs(current.height - targetH) > 0.5f) {
         setBounds(std::round(targetX), std::round(targetY), std::round(targetW), std::round(targetH));
     }
-}
-
-void AestraVerbEditor::drawTitleBar(NUIRenderer& renderer) {
-    auto b = getBounds();
-    auto& theme = NUIThemeManager::getInstance();
-    NUIRect titleBar(b.x, b.y, b.width, kTitleH);
-    renderer.fillRoundedRect(titleBar, kRadius, verbPanelBg());
-    renderer.drawLine({titleBar.x + 18.0f, titleBar.bottom() - 1.0f},
-                      {titleBar.right() - 18.0f, titleBar.bottom() - 1.0f}, 1.0f, NUIColor(1, 1, 1, 0.055f));
-
-    const float titleSize = 17.0f;
-    const auto aestraSize = renderer.measureText("AESTRA", titleSize);
-    const auto gapSize = renderer.measureText(" ", titleSize);
-    const auto verbSize = renderer.measureText("VERB", titleSize);
-    const float titleGap = std::max(8.0f, gapSize.width * 1.35f);
-    const float totalW = aestraSize.width + titleGap + verbSize.width;
-    const float titleX = titleBar.x + (titleBar.width - totalW) * 0.5f;
-    const float titleY = std::round(renderer.calculateTextY({titleBar.x, titleBar.y + 2.0f, titleBar.width, titleBar.height - 4.0f}, titleSize));
-    renderer.drawText("AESTRA", {titleX, titleY}, titleSize, verbGold().withAlpha(0.94f));
-    renderer.drawText("VERB", {titleX + aestraSize.width + titleGap, titleY}, titleSize,
-                      verbAccent().withAlpha(0.94f));
-
-    float cx = titleBar.right() - 33.0f, cy = titleBar.y + 21.0f;
-    const NUIRect closeRect(cx - 8.0f, cy - 7.0f, 28.0f, 28.0f);
-    renderer.fillRoundedRect(closeRect, 9.0f, NUIColor(1, 1, 1, m_closePressed ? 0.090f : (m_closeHovered ? 0.060f : 0.025f)));
-    if (m_closeFocused) {
-        renderer.strokeRoundedRect(closeRect, 9.0f, 1.0f, verbAccent().withAlpha(0.34f));
-    }
-    const float closeAlpha = m_closePressed ? 0.96f : (m_closeHovered ? 0.86f : 0.72f);
-    renderer.drawLine({cx + 1.0f, cy + 1.0f}, {cx + 11.0f, cy + 11.0f}, 1.75f,
-                      theme.getColor("textPrimary").withAlpha(closeAlpha));
-    renderer.drawLine({cx + 11.0f, cy + 1.0f}, {cx + 1.0f, cy + 11.0f}, 1.75f,
-                      theme.getColor("textPrimary").withAlpha(closeAlpha));
 }
 
 void AestraVerbEditor::drawPresetStrip(NUIRenderer& renderer, NUIColor accent) {
@@ -628,7 +598,7 @@ void AestraVerbEditor::drawAnalysisPanels(NUIRenderer& renderer, NUIColor accent
 }
 
 void AestraVerbEditor::onUpdate(double deltaTime) {
-    NUIComponent::onUpdate(deltaTime);
+    AestraPanelWindow::onUpdate(deltaTime);
     if (auto* parent = getParent()) {
         const auto parentBounds = parent->getBounds();
         const bool parentChanged = !m_haveParentSnapshot ||
@@ -636,7 +606,7 @@ void AestraVerbEditor::onUpdate(double deltaTime) {
             std::abs(parentBounds.y - m_lastParentBounds.y) > 0.5f ||
             std::abs(parentBounds.width - m_lastParentBounds.width) > 0.5f ||
             std::abs(parentBounds.height - m_lastParentBounds.height) > 0.5f;
-        if (parentChanged && !m_isDraggingWindow) {
+        if (parentChanged && !isDraggingWindow()) {
             m_lastParentBounds = parentBounds;
             m_haveParentSnapshot = true;
             enforceBoundsInParent(!m_userPositioned);
@@ -684,12 +654,9 @@ void AestraVerbEditor::drawSectionLabels(NUIRenderer& renderer) {
                       verbAccent().withAlpha(0.50f));
 }
 
-void AestraVerbEditor::onRender(NUIRenderer& renderer) {
+void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
     auto b = getBounds();
     NUIColor accent = verbAccent();
-    renderer.fillRoundedRect(b, kRadius, verbPanelBg());
-    renderer.strokeRoundedRect(b, kRadius, 1.0f, NUIColor(1, 1, 1, 0.115f));
-    drawTitleBar(renderer);
     drawPresetStrip(renderer, accent);
     drawModeSelector(renderer, accent);
     const float mainX = editorContentX(b);
@@ -735,14 +702,6 @@ bool AestraVerbEditor::hitTestMix(float x, float y) const {
     return m_mixBounds.contains({x, y});
 }
 
-bool AestraVerbEditor::hitTestCloseButton(float x, float y) const {
-    return NUIRect(getBounds().right() - 58, getBounds().y + 8, 44, 36).contains({x, y});
-}
-
-bool AestraVerbEditor::hitTestTitleBar(float x, float y) const {
-    return NUIRect(getBounds().x, getBounds().y, getBounds().width - 32, kTitleH).contains({x, y});
-}
-
 void AestraVerbEditor::updateParameter(uint32_t paramId, float v) {
     if (!m_instance) return;
     m_instance->setParameter(paramId, std::clamp(v, 0.0f, 1.0f));
@@ -774,6 +733,12 @@ void AestraVerbEditor::applyPreset(const PresetButton& preset) {
 
 bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
+
+    // Let base class handle title bar / close / drag first
+    if (AestraPanelWindow::onMouseEvent(event)) {
+        return true;
+    }
+
     auto b = getBounds();
     const bool isDraggingKnob = std::any_of(m_knobs.begin(), m_knobs.end(),
                                             [](const Knob& knob) { return knob.dragging; });
@@ -783,43 +748,35 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         const int mh = contains ? hitTestMode(event.position.x, event.position.y) : -1;
         const int ph = contains ? hitTestPreset(event.position.x, event.position.y) : -1;
         const bool mixHovered = contains && hitTestMix(event.position.x, event.position.y);
-        const bool closeHovered = contains && hitTestCloseButton(event.position.x, event.position.y);
         if (h == m_hoveredKnob && mh == m_hoveredMode && ph == m_hoveredPreset &&
-            mixHovered == m_mixHovered && closeHovered == m_closeHovered) {
+            mixHovered == m_mixHovered) {
             return;
         }
         m_hoveredKnob = h;
         m_hoveredMode = mh;
         m_hoveredPreset = ph;
         m_mixHovered = mixHovered;
-        m_closeHovered = closeHovered;
         for (size_t i = 0; i < m_knobs.size(); ++i) m_knobs[i].hovered = (static_cast<int>(i) == h);
         for (size_t i = 0; i < m_modes.size(); ++i) m_modes[i].hovered = (static_cast<int>(i) == mh);
         for (size_t i = 0; i < m_presets.size(); ++i) m_presets[i].hovered = (static_cast<int>(i) == ph);
         setDirty(true);
     };
-    if (!m_isDraggingWindow && !isDraggingKnob && !m_draggingMix) {
+    if (!isDraggingWindow() && !isDraggingKnob && !m_draggingMix) {
         updateHoverState();
     }
     if (event.released) {
-        if (m_pressedMode != -1 || m_pressedPreset != -1 || m_closePressed) {
+        if (m_pressedMode != -1 || m_pressedPreset != -1) {
             m_pressedMode = -1;
             m_pressedPreset = -1;
-            m_closePressed = false;
             setDirty(true);
         }
     }
-    if (event.pressed && event.button == NUIMouseButton::Left && !contains && !m_isDraggingWindow && !isDraggingKnob && !m_draggingMix) {
-        if (m_onClose) m_onClose();
-        return false;
-    }
-    if (!contains && !m_isDraggingWindow && !isDraggingKnob && !m_draggingMix) {
-        if (m_hoveredKnob != -1 || m_hoveredMode != -1 || m_hoveredPreset != -1 || m_mixHovered || m_closeHovered) {
+    if (!contains && !isDraggingWindow() && !isDraggingKnob && !m_draggingMix) {
+        if (m_hoveredKnob != -1 || m_hoveredMode != -1 || m_hoveredPreset != -1 || m_mixHovered) {
             m_hoveredKnob = -1;
             m_hoveredMode = -1;
             m_hoveredPreset = -1;
             m_mixHovered = false;
-            m_closeHovered = false;
             for (auto& knob : m_knobs) knob.hovered = false;
             for (auto& mode : m_modes) mode.hovered = false;
             for (auto& preset : m_presets) preset.hovered = false;
@@ -829,29 +786,6 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        if (hitTestCloseButton(event.position.x, event.position.y)) {
-            m_closePressed = true;
-            m_closeFocused = true;
-            m_mixFocused = false;
-            m_focusedKnob = -1;
-            m_focusedMode = -1;
-            m_focusedPreset = -1;
-            setDirty(true);
-            if (m_onClose) m_onClose();
-            return true;
-        }
-        if (hitTestTitleBar(event.position.x, event.position.y)) {
-            m_mixFocused = false;
-            m_closeFocused = false;
-            m_focusedKnob = -1;
-            m_focusedMode = -1;
-            m_focusedPreset = -1;
-            m_userPositioned = true;
-            m_isDraggingWindow = true;
-            m_dragStartPos = event.position;
-            m_windowStartPos = {b.x, b.y};
-            return true;
-        }
         const int modeIdx = hitTestMode(event.position.x, event.position.y);
         if (modeIdx >= 0) {
             const auto mode = m_modes[static_cast<size_t>(modeIdx)].mode;
@@ -860,7 +794,6 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
             m_focusedKnob = -1;
             m_focusedPreset = -1;
             m_mixFocused = false;
-            m_closeFocused = false;
             updateParameter(kMode, static_cast<float>(mode) / 2.0f);
             return true;
         }
@@ -871,14 +804,12 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
             m_focusedKnob = -1;
             m_focusedMode = -1;
             m_mixFocused = false;
-            m_closeFocused = false;
             applyPreset(m_presets[static_cast<size_t>(presetIdx)]);
             return true;
         }
         if (hitTestMix(event.position.x, event.position.y)) {
             m_draggingMix = true;
             m_mixFocused = true;
-            m_closeFocused = false;
             m_focusedKnob = -1;
             m_focusedMode = -1;
             m_focusedPreset = -1;
@@ -891,23 +822,11 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
             m_focusedMode = -1;
             m_focusedPreset = -1;
             m_mixFocused = false;
-            m_closeFocused = false;
             m_knobs[static_cast<size_t>(kIdx)].dragging = true;
             m_knobs[static_cast<size_t>(kIdx)].dragStartY = event.position.y;
             m_knobs[static_cast<size_t>(kIdx)].dragStartValue = m_knobs[static_cast<size_t>(kIdx)].value;
             return true;
         }
-    }
-
-    if (m_isDraggingWindow) {
-        if (event.released && event.button == NUIMouseButton::Left) {
-            m_isDraggingWindow = false;
-            return true;
-        }
-        setBounds(m_windowStartPos.x + event.position.x - m_dragStartPos.x,
-                  m_windowStartPos.y + event.position.y - m_dragStartPos.y, b.width, b.height);
-        layoutControls();
-        return true;
     }
 
     if (m_draggingMix) {

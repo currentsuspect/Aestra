@@ -279,6 +279,7 @@ public:
 
     // Send Management
     void addSend(uint32_t channelId);
+    void addSend(uint32_t channelId, uint32_t targetId);
     void removeSend(uint32_t channelId, int sendIndex);
     void setSendLevel(uint32_t channelId, int sendIndex, float linearGain);
     void setSendDestination(uint32_t channelId, int sendIndex, uint32_t targetId);
@@ -286,6 +287,10 @@ public:
     void setSendSidechainOnly(uint32_t channelId, int sendIndex, bool sidechainOnly);
     void setMainOutputDestination(uint32_t channelId, uint32_t targetId);
     std::string getRoutingWarning(uint32_t channelId) const;
+
+    // Mute / Solo
+    void toggleMute(uint32_t channelId);
+    void toggleSolo(uint32_t channelId);
 
     // Insert Management
     void setInsertBypass(uint32_t channelId, int slotIndex, bool bypassed);

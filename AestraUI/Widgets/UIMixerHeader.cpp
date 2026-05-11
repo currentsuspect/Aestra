@@ -122,22 +122,35 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
     const float routeFont = m_isMaster ? 10.0f : 9.5f;
 
     if (m_isMaster) {
-        // The master strip reads better when title + subtitle are treated as one
-        // vertically centered stack instead of using the generic track split.
-        constexpr float MASTER_NAME_H = 14.0f;
+        // Master strip: eyebrow label + large title, vertically centered as a stack.
+        // The eyebrow ("MAIN BUS") signals this is the global mix bus, not just a strip.
+        constexpr float EYEBROW_H = 10.0f;
+        constexpr float MASTER_NAME_H = 16.0f;
         constexpr float MASTER_ROUTE_H = 11.0f;
-        constexpr float MASTER_GAP = 1.5f;
-        const float stackH = m_route.empty()
-            ? MASTER_NAME_H
-            : (MASTER_NAME_H + MASTER_GAP + MASTER_ROUTE_H);
+        constexpr float STACK_GAP = 2.0f;
+
+        const float stackH = EYEBROW_H + STACK_GAP + MASTER_NAME_H +
+                              (m_route.empty() ? 0.0f : STACK_GAP + MASTER_ROUTE_H);
         const float stackY = textRect.y + std::max(0.0f, (textRect.height - stackH) * 0.5f) - 1.0f;
 
-        NUIRect nameRect{textRect.x, stackY, textRect.width, MASTER_NAME_H};
-        renderer.drawTextCentered(m_name, nameRect, nameFont, m_selected ? m_selectedText : m_text);
+        // Eyebrow
+        NUIColor eyebrowColor = trackColor.withAlpha(0.85f);
+        NUIRect eyebrowRect{textRect.x, stackY, textRect.width, EYEBROW_H};
+        renderer.drawTextCentered("MAIN BUS", eyebrowRect, 9.0f, eyebrowColor);
 
+        // Title
+        NUIRect nameRect{textRect.x, stackY + EYEBROW_H + STACK_GAP,
+                          textRect.width, MASTER_NAME_H};
+        renderer.drawTextCentered(m_name, nameRect, 14.0f,
+                                  m_selected ? m_selectedText : m_text);
+
+        // Subtitle
         if (!m_route.empty()) {
-            NUIRect routeRect{textRect.x, stackY + MASTER_NAME_H + MASTER_GAP, textRect.width, MASTER_ROUTE_H};
-            renderer.drawTextCentered(m_route, routeRect, routeFont, m_textSecondary);
+            NUIRect routeRect{textRect.x,
+                              stackY + EYEBROW_H + STACK_GAP + MASTER_NAME_H + STACK_GAP,
+                              textRect.width, MASTER_ROUTE_H};
+            renderer.drawTextCentered(m_route, routeRect, routeFont,
+                                      m_textSecondary.withAlpha(0.88f));
         }
         return;
     }

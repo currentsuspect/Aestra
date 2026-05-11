@@ -1,0 +1,85 @@
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+#pragma once
+
+#include "NUIComponent.h"
+#include "NUITypes.h"
+#include <functional>
+#include <string>
+
+namespace AestraUI {
+
+/**
+ * @brief Unified panel chrome for all child windows (plugin editors, Settings, etc.).
+ *
+ * Renders a 32 px title bar with:
+ *   - background: --color-background-primary
+ *   - bottom border: 0.5 px solid --color-border-tertiary
+ *   - title: 12 px, weight 500, --color-text-secondary, uppercase, left-aligned x=12
+ *   - optional close button (right-aligned x=width-28)
+ *   - optional badge pill (right of title)
+ *
+ * Derived classes override drawContent() to render inside the content area below the bar.
+ */
+class AestraPanelWindow : public NUIComponent {
+public:
+    AestraPanelWindow();
+    ~AestraPanelWindow() override = default;
+
+    void onRender(NUIRenderer& renderer) override;
+    bool onMouseEvent(const NUIMouseEvent& event) override;
+
+    void setPanelTitle(const std::string& title);
+    void setBadgeText(const std::string& text);   // empty = no badge
+    void setOnClose(std::function<void()> callback) { m_onClose = std::move(callback); }
+    void setCloseOnOutsideClick(bool close) { m_closeOnOutsideClick = close; }
+    bool isDraggingWindow() const { return m_isDraggingWindow; }
+
+    // Derived classes render here; rect is the global content area (below title bar)
+    virtual void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {}
+
+    // Called when a title-bar drag ends (before m_isDraggingWindow is cleared)
+    virtual void onDragEnd() {}
+
+    // Helpers
+    static constexpr float TITLE_BAR_H = 32.0f;
+    static constexpr float kRadius = 14.0f;
+    NUIRect getContentRect() const;
+    bool hitTestCloseButton(float x, float y) const;
+    bool hitTestTitleBar(float x, float y) const;
+
+    void setEnforceParentBounds(bool enforce) { m_enforceParentBounds = enforce; }
+    void enforceBoundsInParent(float safeMargin = 14.0f);
+
+    void onUpdate(double deltaTime) override;
+
+protected:
+    // Window dragging from title bar
+    bool m_isDraggingWindow = false;
+    NUIPoint m_dragStartPos;
+    NUIPoint m_windowStartPos;
+
+    bool m_enforceParentBounds = false;
+    bool m_userPositioned = false;
+    bool m_haveParentSnapshot = false;
+    NUIRect m_lastParentBounds;
+
+private:
+    void cacheThemeColors();
+    void drawTitleBar(NUIRenderer& renderer);
+
+    std::string m_title;
+    std::string m_badgeText;
+    std::function<void()> m_onClose;
+    bool m_closeOnOutsideClick = true;
+    bool m_closeHovered = false;
+    bool m_closePressed = false;
+
+    NUIColor m_bg;
+    NUIColor m_border;
+    NUIColor m_textSecondary;
+    NUIColor m_textTertiary;
+    NUIColor m_closeHover;
+    NUIColor m_closeActive;
+};
+
+} // namespace AestraUI

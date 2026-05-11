@@ -459,26 +459,25 @@ void TrackUIComponent::generateWaveformCache(int, int) {
 // SECTION: Waveform & Clip Drawing
 // =============================================================================
 
-// Draw waveform for a specific clip
+// Draw waveform for a specific clip using zoom-aware LOD peaks.
 void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
                                           const ClipInstance& clip, float offsetRatio, float visibleRatio) {
     if (!m_trackManager) return;
 
-    // Resolve audio data through Pattern and Source managers
     auto& patternMgr = m_trackManager->getPatternManager();
     auto& sourceMgr = m_trackManager->getSourceManager();
-    
+
     auto pattern = patternMgr.getPattern(clip.patternId);
     if (!pattern || !pattern->isAudio()) return;
-    
+
     auto audioPayload = std::get_if<AudioSlicePayload>(&pattern->payload);
     if (!audioPayload) return;
-    
+
     auto source = sourceMgr.getSource(audioPayload->audioSourceId);
     if (!source || !source->isReady()) {
         return;
     }
-    
+
     auto bufferPtr = source->getBuffer();
     if (!bufferPtr || bufferPtr->numFrames == 0) {
         return;
@@ -486,183 +485,166 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
 
     const auto& audioData = *bufferPtr;
 
-    int width = static_cast<int>(bounds.width);
-    int height = static_cast<int>(bounds.height);
-    
-    int centerY = static_cast<int>(bounds.y + height / 2);
-    
-    // Calculate sample range to draw
-    // IMPORTANT: Include sourceStart offset for split clips
+    float width = bounds.width;
+    float height = bounds.height;
+    if (width <= 0.0f || height <= 0.0f) return;
+
     size_t numChannels = audioData.numChannels;
     size_t totalFrames = audioData.numFrames;
-    
-    // sourceStart is the sample offset where this clip's audio begins
-    // (non-zero after splitting - the second clip starts partway into the audio)
+
+    // sourceStart conversion (project rate -> source rate)
     SampleIndex sourceOffset = clip.edits.sourceStart;
-    
-    // Calculate frames needed for the visible clip duration (based on durationBeats)
-    // The audio buffer for this clip conceptually spans from sourceOffset to sourceOffset + clipFrames
     double sampleRate = source->getSampleRate();
     double bpm = m_trackManager ? m_trackManager->getPlaylistModel().getBPM() : 120.0;
     double secondsPerBeat = 60.0 / bpm;
     double clipDurationSeconds = clip.durationBeats * secondsPerBeat;
     size_t clipFrames = static_cast<size_t>(clipDurationSeconds * sampleRate);
-    
-    // CRITICAL SAFETY: Clamp clipFrames to actual audio buffer size
-    // This fixes crash when sample rate mismatch causes calculated clip length > actual buffer
     if (clipFrames > totalFrames) {
         clipFrames = totalFrames;
     }
-    
-    // CONVERT sourceStart from Project Rate to Source Rate
-    // The PlaylistModel stores sourceStart in PROJECT sample rate (to keep timeline consistent)
-    // But we need to index into the SOURCE audio buffer which might be different (e.g. 44.1 vs 48k)
+
     double projectSampleRate = m_trackManager ? m_trackManager->getPlaylistModel().getProjectSampleRate() : 48000.0;
-    
-    // Scale sourceOffset to match source's actual sample rate
-    // e.g. If Project=48k, Source=44.1k:  96000 samples (2s) -> 88200 samples
     size_t scaledSourceOffset = static_cast<size_t>(std::round(static_cast<double>(sourceOffset) * (sampleRate / projectSampleRate)));
-    
-    // SAFETY: Clamp scaled offset to valid range
     if (scaledSourceOffset >= totalFrames) {
         scaledSourceOffset = 0;
     }
-    
-    // Apply the visible portion (offsetRatio, visibleRatio) to the clip's logical frame range
+
     size_t startFrame = scaledSourceOffset + static_cast<size_t>(offsetRatio * clipFrames);
     size_t endFrame = scaledSourceOffset + static_cast<size_t>((offsetRatio + visibleRatio) * clipFrames);
-    
-    // SAFETY: Clamp to actual buffer bounds
     startFrame = std::min(startFrame, totalFrames);
     endFrame = std::min(endFrame, totalFrames);
-    
-    // SAFETY: Ensure startFrame <= endFrame
-    if (startFrame > endFrame) {
-        return; // Invalid range, skip drawing
-    }
-    
+    if (startFrame >= endFrame) return;
+
     size_t visibleFrames = endFrame - startFrame;
-    if (visibleFrames == 0 || width <= 0) return;
-    
-    // Build waveform as points
-    std::vector<AestraUI::NUIPoint> topPoints;
-    std::vector<AestraUI::NUIPoint> bottomPoints;
-    topPoints.reserve(static_cast<size_t>(width));
-    bottomPoints.reserve(static_cast<size_t>(width));
-    
-    const float verticalPadding = 3.0f;
-    const float halfHeight = std::max(1.0f, (height * 0.5f) - verticalPadding);
+    if (visibleFrames == 0) return;
 
     // Use precomputed waveform peaks only. Do not calculate peaks during render.
     auto waveformCache = source->getWaveformCache();
     if (!waveformCache || !waveformCache->isReady()) {
+        // Fallback: faint center line
+        float centerY = bounds.y + height * 0.5f;
+        renderer.drawLine(
+            AestraUI::NUIPoint(bounds.x, centerY),
+            AestraUI::NUIPoint(bounds.x + width, centerY),
+            1.0f,
+            AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.04f));
         return;
     }
 
-    const int pixelWidth = std::max(1, width);
-    const size_t targetBarCount = std::max<size_t>(1, static_cast<size_t>(pixelWidth / 2));
+    // Determine bar count: roughly one bar per 2 pixels, matching existing density
+    const int numBars = std::max(1, static_cast<int>(width / 2));
 
-    std::vector<Aestra::Audio::WaveformPeak> peaksL;
-    waveformCache->getPeaksForRange(0, startFrame, startFrame + visibleFrames, pixelWidth, peaksL);
+    // Reusable member buffers avoid per-frame allocations
+    m_waveformPeaksL.clear();
+    m_waveformPeaksR.clear();
 
-    std::vector<Aestra::Audio::WaveformPeak> peaksR;
+    waveformCache->getPeaksForRange(0, startFrame, endFrame, numBars, m_waveformPeaksL);
     if (numChannels > 1) {
-        waveformCache->getPeaksForRange(1, startFrame, startFrame + visibleFrames, pixelWidth, peaksR);
+        waveformCache->getPeaksForRange(1, startFrame, endFrame, numBars, m_waveformPeaksR);
     }
 
-    const size_t rawCount = static_cast<size_t>(pixelWidth);
-    topPoints.reserve(targetBarCount);
-    bottomPoints.reserve(targetBarCount);
+    // Stereo split-lane if height allows
+    constexpr float kMinSplitHeight = 32.0f;
+    bool useStereoSplit = (numChannels >= 2) && (height >= kMinSplitHeight);
 
-    for (size_t bar = 0; bar < targetBarCount; ++bar) {
-        const size_t start = (bar * rawCount) / targetBarCount;
-        size_t end = ((bar + 1) * rawCount) / targetBarCount;
-        if (end <= start) {
-            end = std::min(rawCount, start + 1);
+    if (useStereoSplit) {
+        float halfH = height * 0.5f;
+        // Left channel in top half
+        drawChannelWaveform(renderer, bounds.x, bounds.y, width, halfH, m_waveformPeaksL);
+        // Right channel in bottom half
+        drawChannelWaveform(renderer, bounds.x, bounds.y + halfH, width, halfH, m_waveformPeaksR);
+    } else {
+        // Combined: aggregate channels per bar
+        drawCombinedWaveform(renderer, bounds, m_waveformPeaksL, m_waveformPeaksR, numChannels);
+    }
+}
+
+void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,
+                                            const std::vector<Aestra::Audio::WaveformPeak>& peaks) {
+    if (peaks.empty() || w <= 0.0f || h <= 0.0f) return;
+
+    const float centerY = y + h * 0.5f;
+    const float halfDrawH = std::max(1.0f, h * 0.5f - 2.0f);
+    const int numBars = static_cast<int>(peaks.size());
+    const float barStep = w / static_cast<float>(numBars);
+
+    const AestraUI::NUIColor topColor(1.0f, 1.0f, 1.0f, 0.24f);
+    const AestraUI::NUIColor bottomColor(1.0f, 1.0f, 1.0f, 0.10f);
+    const AestraUI::NUIColor peakColor(1.0f, 1.0f, 1.0f, 0.42f);
+    const AestraUI::NUIColor centerLineColor(1.0f, 1.0f, 1.0f, 0.08f);
+
+    for (int i = 0; i < numBars; ++i) {
+        const auto& peak = peaks[i];
+        float normMin = std::max(-1.0f, std::min(1.0f, peak.min));
+        float normMax = std::max(-1.0f, std::min(1.0f, peak.max));
+
+        float topY = centerY - normMax * halfDrawH;
+        float bottomY = centerY - normMin * halfDrawH;
+
+        // Minimum nonzero visual height for quiet audio; true silence stays at center
+        float barHeight = bottomY - topY;
+        if (barHeight > 0.0f && barHeight < 1.5f) {
+            float mid = (topY + bottomY) * 0.5f;
+            topY = mid - 0.75f;
+            bottomY = mid + 0.75f;
         }
-        float sumVal = 0.0f;
-        size_t sumCount = 0;
 
-        for (size_t xi = start; xi < end; ++xi) {
-            float val = 0.0f;
-            if (xi < peaksL.size()) {
-                const float absMin = std::abs(peaksL[xi].min);
-                const float absMax = std::abs(peaksL[xi].max);
-                val = std::max(absMin, absMax);
-            }
+        float barX = x + i * barStep + barStep * 0.5f;
 
-            if (numChannels > 1 && xi < peaksR.size()) {
-                const float absMin = std::abs(peaksR[xi].min);
-                const float absMax = std::abs(peaksR[xi].max);
-                val = std::max(val, std::max(absMin, absMax));
-            }
-
-            sumVal += val;
-            ++sumCount;
-        }
-
-        const float avgVal = (sumCount > 0) ? (sumVal / static_cast<float>(sumCount)) : 0.0f;
-        const float env = std::pow(std::min(1.0f, avgVal), 0.75f);
-        float topY = static_cast<float>(centerY) - env * halfHeight;
-        float bottomY = static_cast<float>(centerY) + env * halfHeight;
-
-        if (bottomY - topY < 1.0f) {
-            topY = static_cast<float>(centerY) - 0.5f;
-            bottomY = static_cast<float>(centerY) + 0.5f;
-        }
-
-        const float normalizedX = (static_cast<float>(bar) + 0.5f) / static_cast<float>(targetBarCount);
-        const float x = bounds.x + normalizedX * bounds.width;
-        topPoints.push_back(AestraUI::NUIPoint(x, topY));
-        bottomPoints.push_back(AestraUI::NUIPoint(x, bottomY));
+        renderer.drawLine(AestraUI::NUIPoint(barX, centerY), AestraUI::NUIPoint(barX, topY), 1.0f, topColor);
+        renderer.drawLine(AestraUI::NUIPoint(barX, centerY), AestraUI::NUIPoint(barX, bottomY), 1.0f, bottomColor);
+        renderer.drawLine(AestraUI::NUIPoint(barX, topY), AestraUI::NUIPoint(barX, bottomY), 1.0f, peakColor);
     }
 
-    if (!topPoints.empty()) {
-        const float centerYf = static_cast<float>(centerY);
-        const AestraUI::NUIColor topFillColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.22f);
-        const AestraUI::NUIColor bottomFillColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.09f);
-        const AestraUI::NUIColor peakColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.38f);
-        const AestraUI::NUIColor centerLineColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.10f);
-        const float lineWidth = 1.0f;
+    renderer.drawLine(AestraUI::NUIPoint(x, centerY), AestraUI::NUIPoint(x + w, centerY), 1.0f, centerLineColor);
+}
 
-        for (size_t i = 0; i < topPoints.size(); ++i) {
-            const float x = topPoints[i].x;
-            const float topY = topPoints[i].y;
-            const float bottomY = bottomPoints[i].y;
+void TrackUIComponent::drawCombinedWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
+                                             const std::vector<Aestra::Audio::WaveformPeak>& peaksL,
+                                             const std::vector<Aestra::Audio::WaveformPeak>& peaksR,
+                                             size_t numChannels) {
+    if (peaksL.empty() || bounds.width <= 0.0f || bounds.height <= 0.0f) return;
 
-            // Top half — brighter
-            renderer.drawLine(
-                AestraUI::NUIPoint(x, centerYf),
-                AestraUI::NUIPoint(x, topY),
-                lineWidth,
-                topFillColor
-            );
-            // Bottom half — dimmer reflection
-            renderer.drawLine(
-                AestraUI::NUIPoint(x, centerYf),
-                AestraUI::NUIPoint(x, bottomY),
-                lineWidth,
-                bottomFillColor
-            );
-            // Peak line across full height
-            renderer.drawLine(
-                AestraUI::NUIPoint(x, topY),
-                AestraUI::NUIPoint(x, bottomY),
-                lineWidth,
-                peakColor
-            );
+    const float centerY = bounds.y + bounds.height * 0.5f;
+    const float halfDrawH = std::max(1.0f, bounds.height * 0.5f - 3.0f);
+    const int numBars = static_cast<int>(peaksL.size());
+    const float barStep = bounds.width / static_cast<float>(numBars);
+
+    const AestraUI::NUIColor topColor(1.0f, 1.0f, 1.0f, 0.24f);
+    const AestraUI::NUIColor bottomColor(1.0f, 1.0f, 1.0f, 0.10f);
+    const AestraUI::NUIColor peakColor(1.0f, 1.0f, 1.0f, 0.42f);
+    const AestraUI::NUIColor centerLineColor(1.0f, 1.0f, 1.0f, 0.08f);
+
+    for (int i = 0; i < numBars; ++i) {
+        float minVal = peaksL[i].min;
+        float maxVal = peaksL[i].max;
+        if (numChannels > 1 && i < static_cast<int>(peaksR.size())) {
+            minVal = std::min(minVal, peaksR[i].min);
+            maxVal = std::max(maxVal, peaksR[i].max);
         }
 
-        // Centerline
-        const float startX = topPoints.front().x;
-        const float endX = topPoints.back().x;
-        renderer.drawLine(
-            AestraUI::NUIPoint(startX, centerYf),
-            AestraUI::NUIPoint(endX, centerYf),
-            1.0f,
-            centerLineColor
-        );
+        float normMin = std::max(-1.0f, std::min(1.0f, minVal));
+        float normMax = std::max(-1.0f, std::min(1.0f, maxVal));
+
+        float topY = centerY - normMax * halfDrawH;
+        float bottomY = centerY - normMin * halfDrawH;
+
+        float barHeight = bottomY - topY;
+        if (barHeight > 0.0f && barHeight < 1.5f) {
+            float mid = (topY + bottomY) * 0.5f;
+            topY = mid - 0.75f;
+            bottomY = mid + 0.75f;
+        }
+
+        float barX = bounds.x + i * barStep + barStep * 0.5f;
+
+        renderer.drawLine(AestraUI::NUIPoint(barX, centerY), AestraUI::NUIPoint(barX, topY), 1.0f, topColor);
+        renderer.drawLine(AestraUI::NUIPoint(barX, centerY), AestraUI::NUIPoint(barX, bottomY), 1.0f, bottomColor);
+        renderer.drawLine(AestraUI::NUIPoint(barX, topY), AestraUI::NUIPoint(barX, bottomY), 1.0f, peakColor);
     }
+
+    renderer.drawLine(AestraUI::NUIPoint(bounds.x, centerY), AestraUI::NUIPoint(bounds.x + bounds.width, centerY),
+                      1.0f, centerLineColor);
 }
 
 void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
