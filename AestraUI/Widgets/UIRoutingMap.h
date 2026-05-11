@@ -184,6 +184,14 @@ private:
     NUIRect m_searchRect{0, 0, 0, 0};
     bool m_searchHovered{false};
     bool m_searchFocused{false};
+    std::vector<int> m_searchMatches;       // indices into m_nodes
+    int m_searchHoveredMatch{-1};           // dropdown item index (-1 = none)
+    NUIRect m_searchDropdownRects[5];       // hit rects for up to 5 suggestions
+    float m_searchCaretTimer{0.0f};
+    bool m_searchCaretVisible{true};
+
+    // Edge right-click context menu
+    std::shared_ptr<AestraUI::NUIContextMenu> m_edgeContextMenu;
 
     // Animation / live signal state
     float m_livePulsePhase{0.0f};
@@ -248,6 +256,7 @@ private:
     int hitTestInputPort(const NUIPoint& p) const;
     void renderMiniOverview(NUIRenderer& renderer);
     void renderInspector(NUIRenderer& renderer);
+    void recomputeSearchMatches();
 
     std::function<void()> m_onDoubleClick;
     std::function<void(uint32_t)> m_onNodeSelected;
