@@ -657,7 +657,7 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     // Shared vertical midline for the slot row — center everything around it
     const float slotMid = slotRect.y + slotRect.height * 0.5f;
 
-    // Slot Number (Left side, stylistic) — centered on slotMid, not pinned to slotRect.y
+    // Slot Number (Left side, stylistic) — centered on slotMid
     char numBuf[8];
     std::snprintf(numBuf, sizeof(numBuf), "%d", index + 1);
     const float chipH = 14.0f;
@@ -666,25 +666,29 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     renderer.strokeRoundedRect(indexChip, 7.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
     renderer.drawTextCentered(numBuf, indexChip, 9.0f, Colors::textDisabled.withAlpha(0.68f));
 
+    // Available text area to the right of the chip
+    const float textX = slotRect.x + 36.0f;
+    const float textW = slotRect.width - 36.0f - 8.0f;
+
     if (slot.isEmpty) {
         const float textSize = isHovered ? 10.0f : 9.5f;
         const NUIColor textColor = isHovered
             ? Colors::textPrimary
             : Colors::textDisabled.withAlpha(0.56f);
-        // Baseline offset so the text looks centered on the slot midline
-        const float baseline = slotMid + textSize * 0.25f;
-        renderer.drawText(isHovered ? "+ Add Insert" : "Empty slot",
-                          {slotRect.x + 36.0f, baseline},
-                          textSize, textColor);
+        // Single line centered on slotMid — same mechanism as the chip text
+        const NUIRect textRect{textX, slotMid - 10.0f, textW, 20.0f};
+        renderer.drawTextCentered(isHovered ? "+ Add Insert" : "Empty slot",
+                                  textRect, textSize, textColor);
     } else {
-        // Plugin Name — first of two lines, shift up slightly
+        // Two lines centered around slotMid
         NUIColor nameColor = slot.bypassed ? Colors::textDisabled.withAlpha(0.6f) : Colors::textPrimary;
-        renderer.drawText(slot.name, {slotRect.x + 36.0f, slotMid - 1.5f + 10.5f * 0.25f}, 10.5f, nameColor);
-        // Status — second line, shift down slightly
-        renderer.drawText(slot.bypassed ? "Bypassed" : "Active",
-                          {slotRect.x + 36.0f, slotMid + 4.0f + 8.5f * 0.25f},
-                          8.5f,
-                          slot.bypassed ? Colors::textDisabled.withAlpha(0.72f) : Colors::accentPrimary.withAlpha(0.78f));
+        const NUIRect nameRect{textX, slotMid - 11.0f, textW, 11.0f};
+        renderer.drawTextCentered(slot.name, nameRect, 10.5f, nameColor);
+
+        const NUIRect statusRect{textX, slotMid, textW, 10.0f};
+        renderer.drawTextCentered(slot.bypassed ? "Bypassed" : "Active",
+                                  statusRect, 8.5f,
+                                  slot.bypassed ? Colors::textDisabled.withAlpha(0.72f) : Colors::accentPrimary.withAlpha(0.78f));
         
         // Active indicator / Bypass toggle
         float rightEdge = slotRect.x + slotRect.width;
