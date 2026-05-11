@@ -680,13 +680,18 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, cardH};
         renderer.fillRoundedRect(summaryCard, 12.0f, m_tabBg.withAlpha(0.46f));
         renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, accent.withAlpha(0.16f));
-        // Vertically center the two-line text block inside the card
-        const float cardMid = summaryCard.y + cardH * 0.5f;
+        // Vertically center the two-line text block inside the card.
+        // Treat both lines as a single block, then center the block.
+        const float titleH = 9.5f;
+        const float gap = 4.0f;
+        const float subH = 10.5f;
+        const float blockH = titleH + gap + subH;
+        const float blockTop = summaryCard.y + (cardH - blockH) * 0.5f;
         renderer.drawText("Insert Status",
-                          {summaryCard.x + 10.0f, cardMid - 9.0f},
+                          {summaryCard.x + 10.0f, blockTop + titleH},
                           9.5f, m_textSecondary.withAlpha(0.94f));
         renderer.drawText(buf,
-                          {summaryCard.x + 10.0f, cardMid + 9.0f},
+                          {summaryCard.x + 10.0f, blockTop + titleH + gap + subH},
                           10.5f, m_text.withAlpha(0.96f));
 
         // Rack is rendered by renderChildren() if visible
