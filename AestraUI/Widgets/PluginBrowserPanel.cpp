@@ -737,7 +737,7 @@ NUIRect EffectChainRack::slotRectForTop(float slotY) const {
     return {bounds.x + 8.0f, slotY, bounds.width - 16.0f, SLOT_HEIGHT - 6.0f};
 }
 
-NUIRect EffectChainRack::slotRectForIndex(int index) const {
+NUIRect EffectChainRack::getSlotBounds(int index) const {
     auto bounds = getBounds();
     return slotRectForTop(bounds.y + 8.0f + index * SLOT_HEIGHT - m_scrollOffset);
 }
@@ -782,14 +782,14 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     // Hit Testing Helpers
     auto isOverKnob = [&](int index) {
         if (index < 0) return false;
-        NUIRect slotRect = slotRectForIndex(index);
+        NUIRect slotRect = getSlotBounds(index);
         float knobX = slotRect.x + slotRect.width - 22.0f; 
         return (mx >= knobX - 2 && mx <= knobX + 22) && (my >= slotRect.y + 2 && my <= slotRect.y + 26);
     };
 
     auto isOverBypass = [&](int index) {
         if (index < 0) return false;
-        NUIRect slotRect = slotRectForIndex(index);
+        NUIRect slotRect = getSlotBounds(index);
         float knobX = slotRect.x + slotRect.width - 22.0f;
         return (mx >= knobX - 20 && mx <= knobX - 2) && (my >= slotRect.y + 2 && my <= slotRect.y + 26);
     };
