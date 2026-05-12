@@ -555,7 +555,21 @@ void NUITextInput::drawText(NUIRenderer& renderer)
         }
 
         float textY = std::round(renderer.calculateTextY(textRect, fontSize));
-        renderer.drawText(displayText, NUIPoint(std::round(textRect.x), textY), fontSize, textColor_);
+
+        // Calculate text X position based on justification
+        float textX = std::round(textRect.x);
+        if (justification_ == Justification::Center)
+        {
+            auto textSize = renderer.measureText(displayText, fontSize);
+            textX = std::round(textRect.x + (textRect.width - textSize.width) / 2.0f);
+        }
+        else if (justification_ == Justification::Right)
+        {
+            auto textSize = renderer.measureText(displayText, fontSize);
+            textX = std::round(textRect.right() - textSize.width);
+        }
+
+        renderer.drawText(displayText, NUIPoint(textX, textY), fontSize, textColor_);
     }
     else
     {
@@ -632,7 +646,7 @@ void NUITextInput::drawCaret(NUIRenderer& renderer)
 void NUITextInput::drawPlaceholder(NUIRenderer& renderer)
 {
     if (placeholderText_.empty()) return;
-    
+
     NUIRect bounds = getBounds();
     // Use full height for vertical centering; horizontal padding for icon clearance
     NUIRect textRect(bounds.x + padding_, bounds.y,
@@ -642,8 +656,13 @@ void NUITextInput::drawPlaceholder(NUIRenderer& renderer)
     float fontSize = themeManager.getFontSize("m");
     float textY = std::round(renderer.calculateTextY(textRect, fontSize));
 
+    // Always center placeholder regardless of justification setting
+    // This allows placeholder to be centered while typing remains left-aligned
+    auto textSize = renderer.measureText(placeholderText_, fontSize);
+    float textX = std::round(textRect.x + (textRect.width - textSize.width) / 2.0f);
+
     // Draw placeholder with reduced opacity if not already handled by color
-    renderer.drawText(placeholderText_, NUIPoint(std::round(textRect.x), textY), fontSize, placeholderColor_);
+    renderer.drawText(placeholderText_, NUIPoint(textX, textY), fontSize, placeholderColor_);
 }
 
 void NUITextInput::invalidateLayout()
@@ -695,6 +714,8 @@ NUIPoint NUITextInput::getTextPosition(int characterIndex) const
     if (layoutLines_.empty()) return NUIPoint(0, 0);
 
     NUIRect bounds = getBounds();
+    NUIRect textRect(bounds.x + padding_, bounds.y,
+                     bounds.width - padding_ * 2, bounds.height);
 
     // Find which line contains this character
     for (const auto& line : layoutLines_)
@@ -709,7 +730,24 @@ NUIPoint NUITextInput::getTextPosition(int characterIndex) const
                 x = line.charX[column];
             }
 
-            return NUIPoint(bounds.x + padding_ + x, getLineRenderY(line));
+            // Apply justification offset for single-line
+            float baseX = bounds.x + padding_;
+            if (!multiline_ || layoutLines_.size() <= 1)
+            {
+                if (justification_ == Justification::Center)
+                {
+                    // Get total text width for this line
+                    float totalWidth = line.charX.empty() ? 0.0f : line.charX.back();
+                    baseX = std::round(textRect.x + (textRect.width - totalWidth) / 2.0f);
+                }
+                else if (justification_ == Justification::Right)
+                {
+                    float totalWidth = line.charX.empty() ? 0.0f : line.charX.back();
+                    baseX = std::round(textRect.right() - totalWidth);
+                }
+            }
+
+            return NUIPoint(baseX + x, getLineRenderY(line));
         }
     }
 
@@ -721,7 +759,24 @@ NUIPoint NUITextInput::getTextPosition(int characterIndex) const
         if (characterIndex == lastLine.endIndex)
         {
             float x = lastLine.charX.empty() ? 0.0f : lastLine.charX.back();
-            return NUIPoint(bounds.x + padding_ + x, getLineRenderY(lastLine));
+
+            // Apply justification offset for single-line
+            float baseX = bounds.x + padding_;
+            if (!multiline_ || layoutLines_.size() <= 1)
+            {
+                if (justification_ == Justification::Center)
+                {
+                    float totalWidth = lastLine.charX.empty() ? 0.0f : lastLine.charX.back();
+                    baseX = std::round(textRect.x + (textRect.width - totalWidth) / 2.0f);
+                }
+                else if (justification_ == Justification::Right)
+                {
+                    float totalWidth = lastLine.charX.empty() ? 0.0f : lastLine.charX.back();
+                    baseX = std::round(textRect.right() - totalWidth);
+                }
+            }
+
+            return NUIPoint(baseX + x, getLineRenderY(lastLine));
         }
     }
 
@@ -733,9 +788,46 @@ int NUITextInput::getCharacterIndexAtPosition(const NUIPoint& position) const
     if (layoutLines_.empty()) return 0;
 
     NUIRect bounds = getBounds();
+    NUIRect textRect(bounds.x + padding_, bounds.y,
+                     bounds.width - padding_ * 2, bounds.height);
+
     float relativeX = position.x - (bounds.x + padding_);
     float relativeY = position.y - (bounds.y + padding_);
-    
+
+    // For single-line mode the text is vertically centered, not at bounds.y + padding_.
+    // Adjust relativeY so it aligns with the actual text baseline.
+    if (!multiline_ || layoutLines_.size() <= 1) {
+        if (!layoutLines_.empty()) {
+            relativeY = position.y - getLineRenderY(layoutLines_[0]);
+        }
+    }
+
+    // Adjust relativeX for justification (single-line only)
+    if (!multiline_ || layoutLines_.size() <= 1)
+    {
+        if (justification_ == Justification::Center)
+        {
+            // Calculate text offset
+            float totalWidth = 0.0f;
+            if (!layoutLines_.empty())
+            {
+                totalWidth = layoutLines_[0].charX.empty() ? 0.0f : layoutLines_[0].charX.back();
+            }
+            float textOffset = (textRect.width - totalWidth) / 2.0f;
+            relativeX -= textOffset;
+        }
+        else if (justification_ == Justification::Right)
+        {
+            float totalWidth = 0.0f;
+            if (!layoutLines_.empty())
+            {
+                totalWidth = layoutLines_[0].charX.empty() ? 0.0f : layoutLines_[0].charX.back();
+            }
+            float textOffset = textRect.width - totalWidth;
+            relativeX -= textOffset;
+        }
+    }
+
     // Find which line we're on vertically
     for (const auto& line : layoutLines_)
     {
@@ -949,8 +1041,8 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
         default:
             // Only handle character input if it wasn't a special key we handled above
             // AND it's a valid printable character
-            char c = event.character;
-            
+            auto c = static_cast<unsigned char>(event.character);
+
             if (c >= 32 && c != 127) // 32=Space, 127=DEL
             {
                 insertCharacter(c);
@@ -1116,6 +1208,21 @@ int NUITextInput::getColumnInLine(int caretPos, int lineIndex) const
 float NUITextInput::getLineRenderY(const TextLine& line) const
 {
     NUIRect bounds = getBounds();
+    NUIRect textRect(bounds.x + padding_, bounds.y,
+                     bounds.width - padding_ * 2, bounds.height);
+
+    // For single-line, vertically center within textRect (same as drawText)
+    if (!multiline_ || layoutLines_.size() <= 1)
+    {
+        auto& themeManager = NUIThemeManager::getInstance();
+        float fontSize = themeManager.getFontSize("m");
+        // Use the same vertical centering as drawText: calculateTextY handles baseline
+        // For coordinate-space consistency with multiline, use bounds.y + padding_ + line.y
+        // line.y is 0 for single-line, so this is equivalent to bounds.y + padding_
+        return bounds.y + padding_ + line.y;
+    }
+
+    // For multiline, use the accumulated line offset
     return bounds.y + padding_ + line.y;
 }
 

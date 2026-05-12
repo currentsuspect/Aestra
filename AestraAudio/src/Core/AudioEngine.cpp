@@ -361,11 +361,33 @@ void AudioEngine::setChannelSlotMap(std::shared_ptr<const ChannelSlotMap> slotMa
 void AudioEngine::refreshSamplerCache() {
     auto* unitMgr = m_unitManager.load(std::memory_order_acquire);
     if (unitMgr) {
-        SamplerCacheSnapshot snapshot;
-        refreshSamplerCacheToSnapshot(*unitMgr, snapshot);
-        m_cachedSamplerOwners = std::move(snapshot.owners);
-        m_cachedSamplers = snapshot.samplers;
-        m_cachedSamplerCount.store(snapshot.count, std::memory_order_release);
+        auto newCache = std::make_shared<SamplerCacheData>();
+        refreshSamplerCacheToSnapshot(*unitMgr, *newCache);
+
+        // Double-buffer swap: atomically publish new cache
+        auto retired = std::move(m_samplerCacheOwned);
+        m_samplerCacheOwned = std::move(newCache);
+        m_samplerCacheRaw.store(m_samplerCacheOwned.get(), std::memory_order_release);
+        m_cachedSamplerCount.store(m_samplerCacheOwned->count, std::memory_order_release);
+
+        // Retire old cache via garbage collector
+        GarbageCollector::instance().release(std::move(retired), "AudioEngine::SamplerCache");
+    }
+}
+
+void AudioEngine::refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheData& cache) {
+    auto snapshotObj = mgr.getAudioSnapshot();
+    if (snapshotObj) {
+        for (const auto& unitState : snapshotObj->units) {
+            if (cache.count >= cache.samplers.size()) {
+                break;
+            }
+            auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unitState.plugin);
+            if (sampler) {
+                cache.owners[cache.count] = sampler;
+                cache.samplers[cache.count++] = sampler.get();
+            }
+        }
     }
 }
 
@@ -416,10 +438,12 @@ void AudioEngine::drainDeferredResourcesForShutdown() {
 }
 
 void AudioEngine::resetCachedSamplerVoicesRt() noexcept {
-    const size_t cachedCount = m_cachedSamplerCount.load(std::memory_order_acquire);
-    for (size_t i = 0; i < cachedCount && i < m_cachedSamplers.size(); ++i) {
-        if (m_cachedSamplers[i]) {
-            m_cachedSamplers[i]->requestHardResetVoices();
+    auto* cache = m_samplerCacheRaw.load(std::memory_order_acquire);
+    if (!cache) return;
+    const size_t cachedCount = cache->count;
+    for (size_t i = 0; i < cachedCount && i < cache->samplers.size(); ++i) {
+        if (cache->samplers[i]) {
+            cache->samplers[i]->requestHardResetVoices();
         }
     }
 }
@@ -428,10 +452,12 @@ void AudioEngine::syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept {
     if (m_lastSyncedArsenalSampleRate == sampleRate) {
         return;
     }
-    const size_t cachedCount = m_cachedSamplerCount.load(std::memory_order_acquire);
-    for (size_t i = 0; i < cachedCount && i < m_cachedSamplers.size(); ++i) {
-        if (m_cachedSamplers[i]) {
-            m_cachedSamplers[i]->setSampleRate(static_cast<double>(sampleRate));
+    auto* cache = m_samplerCacheRaw.load(std::memory_order_acquire);
+    if (!cache) return;
+    const size_t cachedCount = cache->count;
+    for (size_t i = 0; i < cachedCount && i < cache->samplers.size(); ++i) {
+        if (cache->samplers[i]) {
+            cache->samplers[i]->setSampleRate(static_cast<double>(sampleRate));
         }
     }
     m_lastSyncedArsenalSampleRate = sampleRate;

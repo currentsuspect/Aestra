@@ -439,11 +439,16 @@ bool NUIRendererGL::initialize(int width, int height) {
             "C:/Windows/Fonts/meiryo.ttc",
             "C:/Windows/Fonts/msgothic.ttc",
         };
+        bool cjkFontLoaded = false;
         for (const auto& path : cjkFallbackPaths) {
             if (FT_New_Face(ftLibrary_, path.c_str(), 0, &ftCJKFace_) == 0) {
                 AESTRA_LOG_DEBUG("CJK fallback font loaded: " + path);
+                cjkFontLoaded = true;
                 break;
             }
+        }
+        if (!cjkFontLoaded) {
+            AESTRA_LOG_WARNING("No CJK fallback font found. CJK characters may not render correctly.");
         }
 
     // Set initial state
@@ -2376,6 +2381,11 @@ bool NUIRendererGL::tryAddGlyphToAtlas(uint32_t codepoint, FT_Face face, int atl
             atlasRowHeight = 0;
         }
         if (atlasY + height + padding >= fontAtlasHeight_) {
+            static bool atlasFullWarningLogged = false;
+            if (!atlasFullWarningLogged) {
+                AESTRA_LOG_WARNING("Font atlas is full. Additional glyphs will not be rendered.");
+                atlasFullWarningLogged = true;
+            }
             return false; // atlas full
         }
 

@@ -8,6 +8,7 @@
 #include "ChannelSlotMap.h"
 #include "ContinuousParamBuffer.h"
 #include "EngineState.h"
+#include "GarbageCollector.h"
 #include "Interpolators.h"
 #include "DSP/TruePeakMeter.h"
 #include "MasterSafetyLimiter.h"
@@ -64,6 +65,14 @@ class AudioEngine {
     friend class AudioExporter; // Allow access for offline rendering/export
 public:
     static constexpr size_t kMaxCachedSamplers = 64;
+
+    // Sampler cache data structures (public for function declarations)
+    struct SamplerCacheData {
+        std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> samplers{};
+        std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> owners{};
+        size_t count = 0;
+    };
+
     struct SamplerCacheSnapshot {
         std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> samplers{};
         std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> owners{};
@@ -321,10 +330,21 @@ public:
         m_cachedSamplers = cache.samplers;
         m_cachedSamplerOwners = cache.owners;
         m_cachedSamplerCount.store(cache.count, std::memory_order_release);
+
+        // Update new thread-safe cache as well
+        auto newCache = std::make_shared<SamplerCacheData>();
+        if (mgr) {
+            refreshSamplerCacheToSnapshot(*mgr, *newCache);
+        }
+        auto retired = std::move(m_samplerCacheOwned);
+        m_samplerCacheOwned = std::move(newCache);
+        m_samplerCacheRaw.store(m_samplerCacheOwned.get(), std::memory_order_release);
+        GarbageCollector::instance().release(std::move(retired), "AudioEngine::SamplerCache");
     }
 
     // Internal helper: populate a cache snapshot from a specific UnitManager
-    void refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheSnapshot& snapshot);
+    void refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheData& cache);
+    void refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheSnapshot& snapshot); // Legacy compatibility
     /** @brief Bind the pattern playback engine used for scheduled MIDI. */
     void setPatternPlaybackEngine(PatternPlaybackEngine* engine) {
         m_patternEngine.store(engine, std::memory_order_release);
@@ -848,9 +868,12 @@ private:
 
     // Legacy separate fields kept for backward compatibility during transition
     // TODO: remove these once all readers migrated to m_unitManagerSnapshot
+    // Using double-buffering with atomic pointer swap for thread safety
+    std::shared_ptr<SamplerCacheData> m_samplerCacheOwned{std::make_shared<SamplerCacheData>()};
+    std::atomic<SamplerCacheData*> m_samplerCacheRaw{m_samplerCacheOwned.get()};
     std::array<Plugins::SamplerPlugin*, kMaxCachedSamplers> m_cachedSamplers{};
     std::array<std::shared_ptr<Plugins::SamplerPlugin>, kMaxCachedSamplers> m_cachedSamplerOwners{};
-    std::atomic<size_t> m_cachedSamplerCount{0};
+    std::atomic<size_t> m_cachedSamplerCount{0}; // Kept for compatibility
     std::atomic<uint64_t> m_lastDeferredResourceCollectionNs{0};
 
 public:
