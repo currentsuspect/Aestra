@@ -748,8 +748,8 @@ class GraphicsAPI {
 
 ```strat
 Priority Matrix:
-  1. VST3 (85% market share) - MUST HAVE (SDK now source-available)
-    - Pros: Industry standard, feature-rich
+  1. VST3 (85% market share) - MUST HAVE (MIT Licensed - fully open source)
+    - Pros: Industry standard, feature-rich, fully open
     - Cons: Windows/macOS only no linux
     - Mitigation: Linux VST3 support is coming soon, own plugin system
     
