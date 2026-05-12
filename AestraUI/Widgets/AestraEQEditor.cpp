@@ -620,14 +620,16 @@ void AestraEQEditor::analyzerWorkerMain() {
         std::array<float, kSpectrumBins> nextMagnitudes{};
         std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> windowedSamples{};
 
+        const float sampleDivisor = sampleCount > 1 ? static_cast<float>(sampleCount - 1) : 1.0f;
         for (size_t n = 0; n < sampleCount; ++n) {
-            const float window = 0.5f - 0.5f * std::cos((2.0f * kPi * static_cast<float>(n)) /
-                                                        static_cast<float>(sampleCount - 1));
+            const float window = 0.5f - 0.5f * std::cos((2.0f * kPi * static_cast<float>(n)) / sampleDivisor);
             windowedSamples[n] = analyzerWindow[n] * window;
         }
 
-        for (size_t bin = 0; bin < nextMagnitudes.size(); ++bin) {
-            const float norm = static_cast<float>(bin) / static_cast<float>(nextMagnitudes.size() - 1);
+        const size_t magCount = nextMagnitudes.size();
+        const float magDivisor = magCount > 1 ? static_cast<float>(magCount - 1) : 1.0f;
+        for (size_t bin = 0; bin < magCount; ++bin) {
+            const float norm = static_cast<float>(bin) / magDivisor;
             const float targetHz = std::pow(10.0f,
                                             std::log10(20.0f) +
                                                 norm * (std::log10(20000.0f) - std::log10(20.0f)));
@@ -673,11 +675,13 @@ void AestraEQEditor::drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& 
     const float width = right - left;
     const float height = bottom - top;
 
-    for (size_t i = 0; i < m_spectrumMagnitudes.size(); ++i) {
-        const float t = static_cast<float>(i) / static_cast<float>(m_spectrumMagnitudes.size() - 1);
+    const size_t specCount = m_spectrumMagnitudes.size();
+    const float specDivisor = specCount > 1 ? static_cast<float>(specCount - 1) : 1.0f;
+    for (size_t i = 0; i < specCount; ++i) {
+        const float t = static_cast<float>(i) / specDivisor;
         const float x = left + t * width;
-        const float nextT = static_cast<float>(i + 1) / static_cast<float>(m_spectrumMagnitudes.size() - 1);
-        const float nextX = (i + 1 < m_spectrumMagnitudes.size()) ? (left + nextT * width) : right;
+        const float nextT = static_cast<float>(i + 1) / specDivisor;
+        const float nextX = (i + 1 < specCount) ? (left + nextT * width) : right;
         const float barWidth = std::max(1.0f, nextX - x);
         const float currentMag = std::clamp(m_spectrumMagnitudes[i], 0.0f, 1.0f);
         const float nextMag = (i + 1 < m_spectrumMagnitudes.size())

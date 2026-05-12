@@ -96,13 +96,13 @@ std::shared_ptr<NUISVGDocument> NUISVGParser::parse(const std::string& svgConten
     auto res = picture->load(svgContent.data(), static_cast<uint32_t>(svgContent.size()), "svg");
     if (res != tvg::Result::Success) {
         std::cerr << "ThorVG: Failed to parse SVG content (length: " << svgContent.length() << " bytes)" << std::endl;
-        tvg::Paint::rel(picture);
+        if (picture) tvg::Paint::rel(picture);
         return nullptr;
     }
 
     float pw = 0.0f, ph = 0.0f;
     picture->size(&pw, &ph);
-    tvg::Paint::rel(picture);
+    if (picture) tvg::Paint::rel(picture);
 
     auto doc = std::make_shared<NUISVGDocument>();
     doc->setSVGContent(svgContent);
@@ -148,7 +148,14 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg,
     // ------------------------------------------------------------------------
     // 1. Cache lookup
     // ------------------------------------------------------------------------
-    NUISVGCache::CacheKey key{&svg, w, h, tintColor};
+    // Use SVG content string for cache key to avoid dangling pointer issues
+    std::string svgContent;
+    if (svg.getSourceType() == NUISVGDocument::SourceType::Memory) {
+        svgContent = svg.getSVGContent();
+    } else {
+        svgContent = svg.getFilePath(); // Fallback to file path for file-based SVGs
+    }
+    NUISVGCache::CacheKey key{svgContent, w, h, tintColor};
     auto* cached = svgCache.get(key);
 
     if (cached) {
@@ -198,7 +205,7 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg,
     } else {
         std::string content = readFileToString(svg.getFilePath());
         if (content.empty()) {
-            tvg::Paint::rel(picture);
+            if (picture) tvg::Paint::rel(picture);
             return;
         }
         loadRes = picture->load(content.data(), static_cast<uint32_t>(content.size()), "svg", nullptr, true);
@@ -206,7 +213,7 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg,
 
     if (loadRes != tvg::Result::Success) {
         std::cerr << "ThorVG: Failed to load SVG" << std::endl;
-        tvg::Paint::rel(picture);
+        if (picture) tvg::Paint::rel(picture);
         return;
     }
 
@@ -224,26 +231,27 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg,
     auto addRes = canvas->add(picture);
     if (addRes != tvg::Result::Success) {
         std::cerr << "ThorVG: Canvas::add failed" << std::endl;
+        // canvas->remove() handles cleanup; do NOT call Paint::rel() after it
         canvas->remove(picture);
-        tvg::Paint::rel(picture);
         return;
     }
 
     canvas->draw();
     canvas->sync();
     canvas->remove(picture);
-    tvg::Paint::rel(picture);
+    // Don't call Paint::rel() here - canvas->remove() handles cleanup
 
     // ------------------------------------------------------------------------
     // 3. Tinting
     // ------------------------------------------------------------------------
     if (tintColor.a > 0.0f) {
-        uint8_t tintR = static_cast<uint8_t>(std::clamp(tintColor.r, 0.0f, 1.0f) * 255.0f);
-        uint8_t tintG = static_cast<uint8_t>(std::clamp(tintColor.g, 0.0f, 1.0f) * 255.0f);
-        uint8_t tintB = static_cast<uint8_t>(std::clamp(tintColor.b, 0.0f, 1.0f) * 255.0f);
-        uint8_t tintA = static_cast<uint8_t>(std::clamp(tintColor.a, 0.0f, 1.0f) * 255.0f);
+        uint8_t tintR = static_cast<uint8_t>(std::max(0.0f, std::min(tintColor.r, 1.0f)) * 255.0f);
+        uint8_t tintG = static_cast<uint8_t>(std::max(0.0f, std::min(tintColor.g, 1.0f)) * 255.0f);
+        uint8_t tintB = static_cast<uint8_t>(std::max(0.0f, std::min(tintColor.b, 1.0f)) * 255.0f);
+        uint8_t tintA = static_cast<uint8_t>(std::max(0.0f, std::min(tintColor.a, 1.0f)) * 255.0f);
 
-        for (int i = 0; i < w * h; ++i) {
+        const size_t pixelCount = static_cast<size_t>(w) * static_cast<size_t>(h);
+        for (size_t i = 0; i < pixelCount; ++i) {
             uint8_t* pixel = reinterpret_cast<uint8_t*>(&buffer[i]);
             uint8_t srcA = pixel[3];
             if (srcA == 0) continue;
@@ -261,9 +269,11 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg,
     rgba.resize(static_cast<size_t>(w) * h * 4);
     std::memcpy(rgba.data(), buffer.data(), rgba.size());
 
-    svgCache.put(key, std::move(rgba), w, h, &renderer);
+    // Build storage key with owned string copy (only on cache miss)
+    NUISVGCache::CacheKey storageKey{std::string(svgContent), w, h, tintColor};
+    svgCache.put(storageKey, std::move(rgba), w, h, &renderer);
 
-    auto* entry = svgCache.get(key);
+    auto* entry = svgCache.get(storageKey);
     if (entry) {
         entry->textureId = renderer.createTexture(entry->rgba.data(), entry->width, entry->height);
         if (entry->textureId != 0) {

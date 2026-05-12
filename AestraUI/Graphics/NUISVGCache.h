@@ -5,6 +5,8 @@
 #include <vector>
 #include <unordered_map>
 #include <chrono>
+#include <string_view>
+#include <cmath>
 
 namespace AestraUI {
 
@@ -22,22 +24,23 @@ class NUIRenderer;
 class NUISVGCache {
 public:
     /**
-     * Key for cache lookup based on document, dimensions, and tint color.
+     * Key for cache lookup based on document content, dimensions, and tint color.
+     * Uses SVG content string instead of pointer to avoid dangling pointer issues.
      */
     struct CacheKey {
-        const NUISVGDocument* doc;
+        std::string svgContent;
         int width;
         int height;
         NUIColor tint;
-        
+
         bool operator==(const CacheKey& other) const {
-            return doc == other.doc && 
-                   width == other.width && 
-                   height == other.height && 
-                   tint.r == other.tint.r &&
-                   tint.g == other.tint.g &&
-                   tint.b == other.tint.b &&
-                   tint.a == other.tint.a;
+            return svgContent == other.svgContent &&
+                   width == other.width &&
+                   height == other.height &&
+                   std::abs(tint.r - other.tint.r) < 1e-5f &&
+                   std::abs(tint.g - other.tint.g) < 1e-5f &&
+                   std::abs(tint.b - other.tint.b) < 1e-5f &&
+                   std::abs(tint.a - other.tint.a) < 1e-5f;
         }
     };
     
@@ -47,14 +50,14 @@ public:
     struct CacheKeyHash {
         size_t operator()(const CacheKey& k) const {
             // Combine hashes of all key components
-            size_t h1 = std::hash<const void*>()(k.doc);
+            size_t h1 = std::hash<std::string>()(k.svgContent);
             size_t h2 = std::hash<int>()(k.width);
             size_t h3 = std::hash<int>()(k.height);
             size_t h4 = std::hash<float>()(k.tint.r);
             size_t h5 = std::hash<float>()(k.tint.g);
             size_t h6 = std::hash<float>()(k.tint.b);
             size_t h7 = std::hash<float>()(k.tint.a);
-            
+
             // Simple hash combination
             return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4) ^ (h6 << 5) ^ (h7 << 6);
         }
@@ -83,6 +86,12 @@ public:
      * Updates lastUsed timestamp on cache hit.
      */
     CacheEntry* get(const CacheKey& key);
+
+    /**
+     * Lookup by SVG content string_view (avoids copying content string on every lookup).
+     * For small caches this linear scan is cheaper than string allocation.
+     */
+    CacheEntry* get(std::string_view svgContent, int w, int h, const NUIColor& tint);
     
     /**
      * Store rasterization in cache.

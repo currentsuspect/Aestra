@@ -231,8 +231,9 @@ void AestraCompEditor::drawControl(NUIRenderer& renderer, const Control& control
     const float start = kPi * 0.75f;
     const float sweep = kPi * 1.5f * control.value;
     std::array<NUIPoint, 30> arc{};
+    const float arcDivisor = arc.size() > 1 ? static_cast<float>(arc.size() - 1) : 1.0f;
     for (size_t i = 0; i < arc.size(); ++i) {
-        const float t = static_cast<float>(i) / static_cast<float>(arc.size() - 1);
+        const float t = static_cast<float>(i) / arcDivisor;
         const float a = start + sweep * t;
         arc[i] = {cx + std::cos(a) * (r + 5.0f), cy + std::sin(a) * (r + 5.0f)};
     }

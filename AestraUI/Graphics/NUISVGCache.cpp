@@ -14,6 +14,23 @@ NUISVGCache::CacheEntry* NUISVGCache::get(const CacheKey& key) {
     return nullptr;
 }
 
+NUISVGCache::CacheEntry* NUISVGCache::get(std::string_view svgContent, int w, int h, const NUIColor& tint) {
+    for (auto& pair : cache_) {
+        const auto& k = pair.first;
+        if (k.svgContent == svgContent &&
+            k.width == w &&
+            k.height == h &&
+            std::abs(k.tint.r - tint.r) < 1e-5f &&
+            std::abs(k.tint.g - tint.g) < 1e-5f &&
+            std::abs(k.tint.b - tint.b) < 1e-5f &&
+            std::abs(k.tint.a - tint.a) < 1e-5f) {
+            pair.second.lastUsed = std::chrono::steady_clock::now();
+            return &pair.second;
+        }
+    }
+    return nullptr;
+}
+
 void NUISVGCache::put(const CacheKey& key, std::vector<unsigned char>&& rgba, int w, int h, NUIRenderer* renderer) {
     // If cache is full, remove oldest entry
     if (cache_.size() >= maxEntries_) {
