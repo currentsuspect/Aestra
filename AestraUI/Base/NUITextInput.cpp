@@ -544,7 +544,7 @@ void NUITextInput::drawText(NUIRenderer& renderer)
 
     if (!multiline_ || layoutLines_.size() <= 1)
     {
-        // Single-line fast path: vertically center within component bounds
+        // Single-line fast path: use the same widget-space Y mapping as caret/hit-testing.
         NUIRect textRect(bounds.x + padding_, bounds.y,
                          bounds.width - padding_ * 2, bounds.height);
 
@@ -554,7 +554,11 @@ void NUITextInput::drawText(NUIRenderer& renderer)
             displayText = std::string(text_.length(), passwordCharacter_);
         }
 
-        float textY = std::round(renderer.calculateTextY(textRect, fontSize));
+        float textY = std::round(bounds.y + padding_);
+        if (!layoutLines_.empty())
+        {
+            textY = std::round(getLineRenderY(layoutLines_.front()));
+        }
 
         // Calculate text X position based on justification
         float textX = std::round(textRect.x);
@@ -794,8 +798,8 @@ int NUITextInput::getCharacterIndexAtPosition(const NUIPoint& position) const
     float relativeX = position.x - (bounds.x + padding_);
     float relativeY = position.y - (bounds.y + padding_);
 
-    // For single-line mode the text is vertically centered, not at bounds.y + padding_.
-    // Adjust relativeY so it aligns with the actual text baseline.
+    // Keep single-line hit testing aligned with the same widget-space mapping used
+    // by getTextPosition()/drawText().
     if (!multiline_ || layoutLines_.size() <= 1) {
         if (!layoutLines_.empty()) {
             relativeY = position.y - getLineRenderY(layoutLines_[0]);
@@ -868,14 +872,15 @@ int NUITextInput::getCharacterIndexAtPosition(const NUIPoint& position) const
 
 bool NUITextInput::isValidCharacter(char character) const
 {
+    const unsigned char uc = static_cast<unsigned char>(character);
     switch (inputType_)
     {
         case InputType::Number:
-            return std::isdigit(character) || character == '.' || character == '-';
+            return std::isdigit(uc) || character == '.' || character == '-';
         case InputType::Email:
-            return std::isalnum(character) || character == '@' || character == '.' || character == '_' || character == '-';
+            return std::isalnum(uc) || character == '@' || character == '.' || character == '_' || character == '-';
         case InputType::URL:
-            return std::isalnum(character) || character == '.' || character == '/' || character == ':' || character == '?' || character == '&' || character == '=';
+            return std::isalnum(uc) || character == '.' || character == '/' || character == ':' || character == '?' || character == '&' || character == '=';
         default:
             return true;
     }

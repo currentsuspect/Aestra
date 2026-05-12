@@ -145,6 +145,9 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
     const uint64_t blockStart = ctx.globalPos;
     const uint64_t blockEnd = blockStart + numFrames;
     const double outputRate = static_cast<double>(ctx.sampleRate);
+    if (outputRate <= 0.0) {
+        return;
+    }
     double* dstBase = outputBuffer + bufferOffset * 2;
 
     // Cache loop-invariant atomic before clip loop — avoids redundant loads per clip.

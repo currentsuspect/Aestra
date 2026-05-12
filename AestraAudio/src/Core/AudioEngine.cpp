@@ -1886,6 +1886,10 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     // redundant loads (12 loads x N tracks per audio block).
     // These values are stable for the duration of a single renderGraph() call.
     const uint32_t cachedSampleRate = m_sampleRate.load(std::memory_order_relaxed);
+    if (cachedSampleRate == 0) {
+        m_telemetry.incrementUnderruns();
+        return;
+    }
     auto* cachedSlotMap = m_channelSlotMapRaw.load(std::memory_order_acquire);
     auto* cachedParams = m_continuousParamsRaw.load(std::memory_order_acquire);
     auto* cachedSnaps = m_meterSnapshotsRaw.load(std::memory_order_relaxed);
@@ -3127,7 +3131,8 @@ void AudioEngine::calculateLatencyCompensation() {
     m_latencyDirty = false;
 
     if (maxLatency > 0) {
-        double latencyMs = (maxLatency * 1000.0) / m_sampleRate.load(std::memory_order_relaxed);
+        const uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
+        double latencyMs = (sr > 0) ? ((maxLatency * 1000.0) / sr) : 0.0;
         Aestra::Log::info("[PDC] Max latency = " + std::to_string(maxLatency) + " samples (" +
                          std::to_string(latencyMs) + " ms)");
     }

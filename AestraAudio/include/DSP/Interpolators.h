@@ -95,14 +95,23 @@ struct CubicInterpolator {
                                    double phase,             // Fractional position in source
                                    float& outL, float& outR) // Output samples
     {
+        if (totalFrames <= 0 || !data) {
+            outL = 0.0f;
+            outR = 0.0f;
+            return;
+        }
+
         const int64_t idx = static_cast<int64_t>(phase);
         const double frac = phase - static_cast<double>(idx);
 
+        // Clamp idx to valid range to prevent under/overflow on negative phase or empty buffers.
+        const int64_t clampedIdx = (idx < 0) ? 0 : (idx >= totalFrames ? totalFrames - 1 : idx);
+
         // 4-point indices with safe bounds
-        const int64_t i0 = (idx > 0) ? idx - 1 : 0;
-        const int64_t i1 = idx;
-        const int64_t i2 = (idx + 1 < totalFrames) ? idx + 1 : totalFrames - 1;
-        const int64_t i3 = (idx + 2 < totalFrames) ? idx + 2 : totalFrames - 1;
+        const int64_t i0 = (clampedIdx > 0) ? clampedIdx - 1 : 0;
+        const int64_t i1 = clampedIdx;
+        const int64_t i2 = (clampedIdx + 1 < totalFrames) ? clampedIdx + 1 : totalFrames - 1;
+        const int64_t i3 = (clampedIdx + 2 < totalFrames) ? clampedIdx + 2 : totalFrames - 1;
 
         // Load samples as double for precision
         const double l0 = static_cast<double>(data[i0 * 2]);
