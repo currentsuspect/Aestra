@@ -480,13 +480,15 @@ void UIRoutingMap::onUpdate(double deltaTime) {
     // Rebuild graph if channel count or selection changed
     size_t channelCount = m_viewModel->getChannelCount();
     int32_t selectedId = m_viewModel->getSelectedChannelId();
+    // Normalize -1 (no selection) to sentinel 0xFFFFFFFFu for stable comparison
+    uint32_t selectedIdU = (selectedId < 0) ? 0xFFFFFFFFu : static_cast<uint32_t>(selectedId);
     if (m_graphDirty ||
         m_lastChannelCount != static_cast<uint32_t>(channelCount) ||
-        m_lastSelectedId != static_cast<uint32_t>(selectedId)) {
+        m_lastSelectedId != selectedIdU) {
         rebuildGraph();
         m_graphDirty = false;
         m_lastChannelCount = static_cast<uint32_t>(channelCount);
-        m_lastSelectedId = static_cast<uint32_t>(selectedId);
+        m_lastSelectedId = selectedIdU;
         repaint();
     } else {
         // Just refresh live meters / mute / solo each frame without rebuild
@@ -1288,12 +1290,8 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
     }
 }
 
-void UIRoutingMap::drawEdge(NUIRenderer& renderer, const Edge& edge, float scale) {
-    (void)edge;
-    (void)scale;
-    (void)renderer;
-    // Rendering handled inline in renderMinimap / renderFullPanel
-}
+// Note: edge rendering is handled inline in renderMinimap / renderFullPanel.
+// The old drawEdge() stub has been removed.
 
 void UIRoutingMap::drawBezier(NUIRenderer& renderer, const NUIPoint& a, const NUIPoint& b,
                                float thickness, const NUIColor& color, bool dashed) {

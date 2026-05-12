@@ -130,6 +130,7 @@ std::shared_ptr<NUISVGDocument> NUISVGParser::parseFile(const std::string& fileP
 // NUISVGRenderer Implementation
 // ============================================================================
 
+// Global SVG cache — safe because all NUI rendering is single-threaded on the UI thread.
 static NUISVGCache svgCache;
 
 void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg, const NUIRect& bounds) {
@@ -231,8 +232,10 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg,
     auto addRes = canvas->add(picture);
     if (addRes != tvg::Result::Success) {
         std::cerr << "ThorVG: Canvas::add failed" << std::endl;
-        // canvas->remove() handles cleanup; do NOT call Paint::rel() after it
+        // canvas->remove() handles cleanup for successfully-added paints;
+        // for a failed add we must release the picture ourselves.
         canvas->remove(picture);
+        tvg::Paint::rel(picture);
         return;
     }
 

@@ -48,15 +48,21 @@ public:
      * Hash function for CacheKey.
      */
     struct CacheKeyHash {
+        // Quantize float to an integer bucket so that epsilon-equal values hash the same.
+        static int quantize(float v) {
+            return static_cast<int>(std::round(v * 1e5f));
+        }
+
         size_t operator()(const CacheKey& k) const {
             // Combine hashes of all key components
             size_t h1 = std::hash<std::string>()(k.svgContent);
             size_t h2 = std::hash<int>()(k.width);
             size_t h3 = std::hash<int>()(k.height);
-            size_t h4 = std::hash<float>()(k.tint.r);
-            size_t h5 = std::hash<float>()(k.tint.g);
-            size_t h6 = std::hash<float>()(k.tint.b);
-            size_t h7 = std::hash<float>()(k.tint.a);
+            // Use quantized tint values so hash agrees with epsilon equality
+            size_t h4 = std::hash<int>()(quantize(k.tint.r));
+            size_t h5 = std::hash<int>()(quantize(k.tint.g));
+            size_t h6 = std::hash<int>()(quantize(k.tint.b));
+            size_t h7 = std::hash<int>()(quantize(k.tint.a));
 
             // Simple hash combination
             return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4) ^ (h6 << 5) ^ (h7 << 6);

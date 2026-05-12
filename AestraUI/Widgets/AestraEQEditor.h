@@ -82,7 +82,8 @@ private:
     std::string qLabel(float norm, uint32_t type) const;
     void analyzerWorkerMain();
 
-    std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
+    // Immutable after construction — worker thread captures this reference safely
+    const std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
     std::vector<BandControl> m_bands;
     int m_hoveredBand = -1;
     int m_selectedBand = -1;

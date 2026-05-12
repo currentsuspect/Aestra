@@ -255,7 +255,6 @@ private:
     int hitTestOutputPort(const NUIPoint& p) const;
 
     void drawNode(NUIRenderer& renderer, const Node& node, float scale);
-    void drawEdge(NUIRenderer& renderer, const Edge& edge, float scale);
     void drawBezier(NUIRenderer& renderer, const NUIPoint& a, const NUIPoint& b, float thickness, const NUIColor& color, bool dashed);
     void drawDotGrid(NUIRenderer& renderer);
 
