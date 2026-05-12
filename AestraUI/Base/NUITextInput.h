@@ -3,10 +3,24 @@
 
 #include "NUIComponent.h"
 #include "NUITypes.h"
+#include <chrono>
 #include <functional>
 #include <string>
 
 namespace AestraUI {
+
+/**
+ * Text layout line — canonical navigation structure
+ * INVARIANT: charX.size() >= 1 (always contains at least position 0.0f)
+ */
+struct TextLine {
+    int startIndex = 0;      // inclusive char index in full text
+    int endIndex = 0;        // exclusive char index (excludes newline)
+    float y = 0.0f;          // baseline Y position (local text-space, offset from top)
+    float height = 0.0f;     // line height
+
+    std::vector<float> charX;  // x position per char relative to line start
+};
 
 /**
  * NUITextInput - A text input field component
@@ -169,6 +183,16 @@ protected:
     virtual NUIPoint getTextPosition(int characterIndex) const;
     virtual int getCharacterIndexAtPosition(const NUIPoint& position) const;
 
+    // Layout helpers (overridable / testable)
+    void invalidateLayout();
+    int findLineForCaret(int caretPos) const;
+    int getColumnInLine(int caretPos, int lineIndex) const;
+    static bool isWordChar(char c);
+
+    // Coordinate-space helpers: convert local text-space -> widget-space
+    float getLineRenderY(const TextLine& line) const;
+    NUIPoint getCaretRenderPosition() const;
+
     // Input validation
     virtual bool isValidCharacter(char character) const;
     virtual bool isValidText(const std::string& text) const;
@@ -184,7 +208,7 @@ private:
     void deleteCharacter(int direction);
     void insertCharacter(char character);
     void triggerTextChange();
-    
+
     // Enhanced drawing methods
     void drawEnhancedBackground(NUIRenderer& renderer);
     void drawAnimatedCaret(NUIRenderer& renderer);
@@ -233,19 +257,25 @@ private:
     bool isHovered_ = false;
     bool isPressed_ = false;
     bool showCaret_ = true;
-    double caretBlinkTime_ = 0.0;
+    std::chrono::steady_clock::time_point blinkStartTime_;
     
     // Validation state
     bool hasValidationError_ = false;
     bool hasValidationSuccess_ = false;
 
-    // Text layout cache
-    std::vector<std::string> lines_;
-    std::vector<float> lineHeights_;
-    std::vector<float> charWidths_; // Cache for hit testing and cursor positioning
-    mutable bool needsLayoutUpdate_ = true;
+protected:
+    // Text layout model — canonical navigation structure
+    // INVARIANT: Every TextLine must have charX.size() >= 1 (at least position 0.0f)
+    std::vector<TextLine> layoutLines_;
+    mutable bool needsStructuralLayoutUpdate_ = true;  // text content changed
+    mutable bool needsMeasurementUpdate_ = true;      // renderer/font changed
     float totalTextHeight_ = 0.0f;
 
+    // Preferred column for vertical movement (maintains column on uneven lines)
+    // Updated only during horizontal navigation, not document mutation
+    int preferredColumn_ = 0;
+
+private:
     // Callbacks
     std::function<void(const std::string&)> onTextChangeCallback_;
     std::function<void()> onReturnKeyCallback_;

@@ -13,9 +13,10 @@ namespace AestraUI {
 NUITextInput::NUITextInput(const std::string& text)
     : NUIComponent()
     , text_(text)
+    , blinkStartTime_(std::chrono::steady_clock::now())
 {
     setSize(200, 30); // Default size
-    updateTextLayout();
+    invalidateLayout();
 }
 
 void NUITextInput::onRender(NUIRenderer& renderer)
@@ -23,26 +24,65 @@ void NUITextInput::onRender(NUIRenderer& renderer)
     if (!isVisible()) return;
 
     // Calculate layout if needed (requires renderer)
-    if (needsLayoutUpdate_) {
-        // Clear and rebuild char positions (cumulative widths)
-        charWidths_.clear();
-        std::string displayText = text_;
-        if (inputType_ == InputType::Password) {
-            displayText = std::string(text_.length(), passwordCharacter_);
-        }
-
+    if (needsStructuralLayoutUpdate_) {
+        updateTextLayout();
+    }
+    
+    // Complete layout measurements when renderer is available
+    if (needsMeasurementUpdate_) {
         auto& themeManager = NUIThemeManager::getInstance();
         float fontSize = themeManager.getFontSize("m");
         
-        charWidths_.push_back(0.0f); // Position of char 0
+        totalTextHeight_ = 0.0f;
         
-        // Measure character by character to build cumulative positions
-        for (int i = 1; i <= static_cast<int>(displayText.length()); ++i) {
-            auto size = renderer.measureText(displayText.substr(0, i), fontSize);
-            charWidths_.push_back(size.width);
+        for (auto& line : layoutLines_)
+        {
+            // Calculate line height
+            if (line.endIndex > line.startIndex)
+            {
+                std::string lineText = text_.substr(line.startIndex, line.endIndex - line.startIndex);
+                if (inputType_ == InputType::Password) {
+                    lineText = std::string(line.endIndex - line.startIndex, passwordCharacter_);
+                }
+                auto size = renderer.measureText(lineText, fontSize);
+                line.height = size.height;
+            }
+            else
+            {
+                // Empty line
+                auto metrics = renderer.getFontMetrics(fontSize);
+                line.height = metrics.lineHeight;
+            }
+            
+            line.y = totalTextHeight_;
+            
+            // Build per-line character X positions (O(n) per line, not O(n²))
+            line.charX.clear();
+            line.charX.push_back(0.0f);  // INVARIANT: always at least position 0.0f
+            
+            if (line.endIndex > line.startIndex)
+            {
+                std::string lineText = text_.substr(line.startIndex, line.endIndex - line.startIndex);
+                if (inputType_ == InputType::Password) {
+                    lineText = std::string(line.endIndex - line.startIndex, passwordCharacter_);
+                }
+                
+                float cumulativeX = 0.0f;
+                
+                // Measure each character individually to avoid O(n²) substring remeasurement
+                for (int j = line.startIndex; j < line.endIndex; ++j)
+                {
+                    std::string singleChar = lineText.substr(j - line.startIndex, 1);
+                    auto size = renderer.measureText(singleChar, fontSize);
+                    cumulativeX += size.width;
+                    line.charX.push_back(cumulativeX);
+                }
+            }
+            
+            totalTextHeight_ += line.height;
         }
         
-        needsLayoutUpdate_ = false;
+        needsMeasurementUpdate_ = false;
     }
 
     // Enhanced background with inner shadows and focus glow
@@ -140,13 +180,13 @@ void NUITextInput::onFocusGained()
 {
     NUIComponent::onFocusGained();
     showCaret_ = true;
-    caretBlinkTime_ = 0.0;
-    
+    blinkStartTime_ = std::chrono::steady_clock::now();
+
     if (onFocusGainedCallback_)
     {
         onFocusGainedCallback_();
     }
-    
+
     setDirty(true);
 }
 
@@ -182,7 +222,7 @@ void NUITextInput::setText(const std::string& text)
     if (text_ != text)
     {
         text_ = text;
-        updateTextLayout();
+        invalidateLayout();
         setCaretPosition(static_cast<int>(text_.length()));
         clearSelection();
         triggerTextChange();
@@ -193,7 +233,7 @@ void NUITextInput::setText(const std::string& text)
 void NUITextInput::setPlaceholderText(const std::string& placeholder)
 {
     placeholderText_ = placeholder;
-    needsLayoutUpdate_ = true;
+    invalidateLayout();
     setDirty(true);
 }
 
@@ -212,21 +252,21 @@ void NUITextInput::setInputType(InputType type)
 void NUITextInput::setJustification(Justification justification)
 {
     justification_ = justification;
-    updateTextLayout();
+    invalidateLayout();
     setDirty(true);
 }
 
 void NUITextInput::setMultiline(bool multiline)
 {
     multiline_ = multiline;
-    updateTextLayout();
+    invalidateLayout();
     setDirty(true);
 }
 
 void NUITextInput::setWordWrap(bool wordWrap)
 {
     wordWrap_ = wordWrap;
-    updateTextLayout();
+    invalidateLayout();
     setDirty(true);
 }
 
@@ -255,6 +295,7 @@ void NUITextInput::setCaretPosition(int position)
 {
     int textLength = static_cast<int>(text_.length());
     caretPosition_ = std::clamp(position, 0, textLength);
+    blinkStartTime_ = std::chrono::steady_clock::now();
     setDirty(true);
 }
 
@@ -285,7 +326,7 @@ void NUITextInput::setMaxLength(int maxLength)
     if (maxLength_ > 0 && static_cast<int>(text_.length()) > maxLength_)
     {
         text_ = text_.substr(0, maxLength_);
-        updateTextLayout();
+        invalidateLayout();
         setCaretPosition(static_cast<int>(text_.length()));
         clearSelection();
         setDirty(true);
@@ -374,7 +415,7 @@ void NUITextInput::setBorderRadius(float radius)
 void NUITextInput::setPadding(float padding)
 {
     padding_ = padding;
-    updateTextLayout();
+    invalidateLayout();
     setDirty(true);
 }
 
@@ -436,7 +477,7 @@ void NUITextInput::insertText(const std::string& text)
     // Move caret to end of inserted text
     setCaretPosition(caretPosition_ + static_cast<int>(text.length()));
     
-    updateTextLayout();
+    invalidateLayout();
     triggerTextChange();
     setDirty(true);
 }
@@ -448,7 +489,7 @@ void NUITextInput::deleteSelectedText()
     text_.erase(selectionStart_, selectionEnd_ - selectionStart_);
     setCaretPosition(selectionStart_);
     clearSelection();
-    updateTextLayout();
+    invalidateLayout();
     triggerTextChange();
     setDirty(true);
 }
@@ -463,7 +504,7 @@ void NUITextInput::deleteText(int start, int end)
     {
         text_.erase(start, end - start);
         setCaretPosition(start);
-        updateTextLayout();
+        invalidateLayout();
         triggerTextChange();
         setDirty(true);
     }
@@ -496,28 +537,51 @@ void NUITextInput::drawBackground(NUIRenderer& renderer)
 void NUITextInput::drawText(NUIRenderer& renderer)
 {
     if (text_.empty()) return;
-    
+
     NUIRect bounds = getBounds();
-    NUIRect textRect(bounds.x + padding_, bounds.y,
-                    bounds.width - padding_ * 2, bounds.height);
-
-    // Get display text (masked for password)
-    std::string displayText = text_;
-    if (inputType_ == InputType::Password)
-    {
-        displayText = std::string(text_.length(), passwordCharacter_);
-    }
-
     auto& themeManager = NUIThemeManager::getInstance();
     float fontSize = themeManager.getFontSize("m");
-    float textY = std::round(renderer.calculateTextY(textRect, fontSize));
 
-    renderer.drawText(displayText, NUIPoint(std::round(textRect.x), textY), fontSize, textColor_);
+    if (!multiline_ || layoutLines_.size() <= 1)
+    {
+        // Single-line fast path: vertically center within component bounds
+        NUIRect textRect(bounds.x + padding_, bounds.y,
+                         bounds.width - padding_ * 2, bounds.height);
+
+        std::string displayText = text_;
+        if (inputType_ == InputType::Password)
+        {
+            displayText = std::string(text_.length(), passwordCharacter_);
+        }
+
+        float textY = std::round(renderer.calculateTextY(textRect, fontSize));
+        renderer.drawText(displayText, NUIPoint(std::round(textRect.x), textY), fontSize, textColor_);
+    }
+    else
+    {
+        // Multiline path: render each logical line at its local Y offset
+        for (const auto& line : layoutLines_)
+        {
+            if (line.startIndex >= line.endIndex)
+                continue; // Empty lines occupy space but render nothing
+
+            std::string lineText = text_.substr(line.startIndex, line.endIndex - line.startIndex);
+            if (inputType_ == InputType::Password)
+            {
+                lineText = std::string(line.endIndex - line.startIndex, passwordCharacter_);
+            }
+
+            float textX = std::round(bounds.x + padding_);
+            float textY = std::round(getLineRenderY(line));
+
+            renderer.drawText(lineText, NUIPoint(textX, textY), fontSize, textColor_);
+        }
+    }
 }
 
 void NUITextInput::drawSelection(NUIRenderer& renderer)
 {
-    if (!hasSelection_ || charWidths_.empty()) return;
+    if (!hasSelection_ || layoutLines_.empty()) return;
     
     NUIRect bounds = getBounds();
     NUIRect textRect(bounds.x + padding_, bounds.y,
@@ -526,26 +590,43 @@ void NUITextInput::drawSelection(NUIRenderer& renderer)
     int start = std::max(0, std::min(selectionStart_, selectionEnd_));
     int end = std::max(0, std::max(selectionStart_, selectionEnd_));
     
-    // Clamp to available metrics
-    if (start >= static_cast<int>(charWidths_.size())) start = static_cast<int>(charWidths_.size()) - 1;
-    if (end >= static_cast<int>(charWidths_.size())) end = static_cast<int>(charWidths_.size()) - 1;
-    
-    float startX = charWidths_[start];
-    float endX = charWidths_[end];
-    
-    NUIRect selectionRect = textRect;
-    selectionRect.x += startX;
-    selectionRect.width = endX - startX;
-    
-    // Draw selection highlight
-    renderer.fillRoundedRect(selectionRect, 2.0f, selectionColor_.withAlpha(0.4f));
+    // Find lines that intersect with selection
+    for (const auto& line : layoutLines_)
+    {
+        // Skip lines that don't intersect with selection
+        if (end < line.startIndex || start > line.endIndex)
+            continue;
+        
+        // Calculate intersection for this line
+        int lineStart = std::max(start, line.startIndex);
+        int lineEnd = std::min(end, line.endIndex);
+        
+        if (lineStart >= lineEnd)
+            continue;
+        
+        // Get X positions for this line
+        int startCol = lineStart - line.startIndex;
+        int endCol = lineEnd - line.startIndex;
+        
+        float startX = (startCol >= 0 && startCol < static_cast<int>(line.charX.size())) 
+                      ? line.charX[startCol] : 0.0f;
+        float endX = (endCol >= 0 && endCol < static_cast<int>(line.charX.size())) 
+                    ? line.charX[endCol] : line.charX.back();
+        
+        NUIRect selectionRect;
+        selectionRect.x = textRect.x + startX;
+        selectionRect.y = std::round(getLineRenderY(line));
+        selectionRect.width = endX - startX;
+        selectionRect.height = line.height;
+        
+        // Draw selection highlight
+        renderer.fillRoundedRect(selectionRect, 2.0f, selectionColor_.withAlpha(0.4f));
+    }
 }
 
 void NUITextInput::drawCaret(NUIRenderer& renderer)
 {
     if (!isFocused() || !showCaret_) return;
-    
-    // TODO: Implement caret rendering if distinct from animated caret
 }
 
 void NUITextInput::drawPlaceholder(NUIRenderer& renderer)
@@ -565,59 +646,132 @@ void NUITextInput::drawPlaceholder(NUIRenderer& renderer)
     renderer.drawText(placeholderText_, NUIPoint(std::round(textRect.x), textY), fontSize, placeholderColor_);
 }
 
+void NUITextInput::invalidateLayout()
+{
+    needsStructuralLayoutUpdate_ = true;
+    needsMeasurementUpdate_ = true;
+}
+
 void NUITextInput::updateTextLayout()
 {
-    // Basic text sizing fallback (cleared by onRender)
-    lines_.clear();
-    lineHeights_.clear();
+    // This method only rebuilds structural layout (line splits)
+    // Measurement is deferred to onRender() when renderer is available
+    if (!needsStructuralLayoutUpdate_) return;
     
-    if (multiline_)
-    {
-        lines_.push_back(text_);
-        lineHeights_.push_back(20.0f);
-    }
-    else
-    {
-        lines_.push_back(text_);
-        lineHeights_.push_back(20.0f);
-    }
-    
+    layoutLines_.clear();
     totalTextHeight_ = 0.0f;
-    for (float height : lineHeights_)
+    
+    int textLength = static_cast<int>(text_.length());
+    int lineStart = 0;
+    
+    // Split by explicit \n, preserve empty lines
+    for (int i = 0; i <= textLength; ++i)
     {
-        totalTextHeight_ += height;
+        bool isBreak = (i == textLength) || (text_[i] == '\n');
+        
+        if (isBreak)
+        {
+            TextLine line;
+            line.startIndex = lineStart;
+            line.endIndex = i;  // exclusive, excludes newline itself
+            line.y = totalTextHeight_;  // will be calculated in onRender
+            
+            // Reserve space for charX, will be populated in onRender
+            // INVARIANT: Always push at least position 0.0f
+            line.charX.push_back(0.0f);
+            line.charX.reserve(line.endIndex - line.startIndex + 1);
+            
+            layoutLines_.push_back(line);
+            lineStart = i + 1;  // skip the newline itself
+        }
     }
-    needsLayoutUpdate_ = true;
+    
+    needsStructuralLayoutUpdate_ = false;
+    // Note: needsMeasurementUpdate_ remains true for onRender to complete
 }
 
 NUIPoint NUITextInput::getTextPosition(int characterIndex) const
 {
-    return NUIPoint(0, 0); // Not implemented yet
+    if (layoutLines_.empty()) return NUIPoint(0, 0);
+
+    NUIRect bounds = getBounds();
+
+    // Find which line contains this character
+    for (const auto& line : layoutLines_)
+    {
+        if (characterIndex >= line.startIndex && characterIndex < line.endIndex)
+        {
+            float x = 0.0f;
+            int column = characterIndex - line.startIndex;
+
+            if (column >= 0 && column < static_cast<int>(line.charX.size()))
+            {
+                x = line.charX[column];
+            }
+
+            return NUIPoint(bounds.x + padding_ + x, getLineRenderY(line));
+        }
+    }
+
+    // EOF or line end position
+    if (!layoutLines_.empty())
+    {
+        const auto& lastLine = layoutLines_.back();
+        // Check if caret is at the very end of the last line
+        if (characterIndex == lastLine.endIndex)
+        {
+            float x = lastLine.charX.empty() ? 0.0f : lastLine.charX.back();
+            return NUIPoint(bounds.x + padding_ + x, getLineRenderY(lastLine));
+        }
+    }
+
+    return NUIPoint(0, 0);
 }
 
 int NUITextInput::getCharacterIndexAtPosition(const NUIPoint& position) const
 {
-    // If we haven't calculated layout yet, we can't accurately hit test.
-    // Fallback or use approximating. Since this is usually called after render or on click (after first render),
-    // we should rely on cached charWidths_.
-    if (charWidths_.empty()) return 0;
-    
+    if (layoutLines_.empty()) return 0;
+
     NUIRect bounds = getBounds();
     float relativeX = position.x - (bounds.x + padding_);
+    float relativeY = position.y - (bounds.y + padding_);
     
-    // Find closest character index
-    int bestIndex = 0;
-    float minDiff = std::abs(relativeX - charWidths_[0]);
-    
-    for (size_t i = 1; i < charWidths_.size(); ++i) {
-        float diff = std::abs(relativeX - charWidths_[i]);
-        if (diff < minDiff) {
-            minDiff = diff;
-            bestIndex = static_cast<int>(i);
+    // Find which line we're on vertically
+    for (const auto& line : layoutLines_)
+    {
+        if (relativeY >= line.y && relativeY < line.y + line.height)
+        {
+            // Horizontal clamping for correctness and performance
+            if (relativeX <= 0.0f)
+                return line.startIndex;
+
+            if (line.charX.size() > 1 && relativeX >= line.charX.back())
+                return line.endIndex;
+
+            // Find closest character index in this line
+            int bestIndex = line.startIndex;
+            float minDiff = std::abs(relativeX - line.charX[0]);
+
+            for (size_t i = 1; i < line.charX.size(); ++i)
+            {
+                float diff = std::abs(relativeX - line.charX[i]);
+                if (diff < minDiff)
+                {
+                    minDiff = diff;
+                    bestIndex = line.startIndex + static_cast<int>(i);
+                }
+            }
+
+            return bestIndex;
         }
     }
-    
-    return bestIndex;
+
+    // Above the first line -> beginning of text
+    if (relativeY < 0.0f && !layoutLines_.empty())
+        return layoutLines_.front().startIndex;
+
+    // Below the last line -> EOF
+    return static_cast<int>(text_.length());
 }
 
 bool NUITextInput::isValidCharacter(char character) const
@@ -810,6 +964,17 @@ void NUITextInput::moveCaret(int direction, bool extendSelection)
     int newPos = caretPosition_ + direction;
     newPos = std::clamp(newPos, 0, static_cast<int>(text_.length()));
     
+    // Update preferred column during horizontal movement
+    if (layoutLines_.empty())
+    {
+        preferredColumn_ = newPos;
+    }
+    else
+    {
+        int currentLine = findLineForCaret(newPos);
+        preferredColumn_ = getColumnInLine(newPos, currentLine);
+    }
+    
     if (extendSelection)
     {
         if (selectionStart_ == selectionEnd_)
@@ -827,14 +992,136 @@ void NUITextInput::moveCaret(int direction, bool extendSelection)
     setCaretPosition(newPos);
 }
 
-void NUITextInput::moveCaretToLine(int line, bool extendSelection)
+void NUITextInput::moveCaretToLine(int lineDelta, bool extendSelection)
 {
-    // TODO: Implement line-based caret movement
+    if (!multiline_ || layoutLines_.empty()) return;
+    
+    int currentLine = findLineForCaret(caretPosition_);
+    int currentColumn = getColumnInLine(caretPosition_, currentLine);
+    
+    int targetLine = std::clamp(currentLine + lineDelta, 0, static_cast<int>(layoutLines_.size()) - 1);
+    
+    // Clamp column to target line length
+    const auto& targetLineLayout = layoutLines_[targetLine];
+    int targetLineLength = targetLineLayout.endIndex - targetLineLayout.startIndex;
+    int targetColumn = std::min(preferredColumn_, targetLineLength);
+    
+    int newCaretPos = targetLineLayout.startIndex + targetColumn;
+    newCaretPos = std::clamp(newCaretPos, 0, static_cast<int>(text_.length()));
+    
+    if (extendSelection)
+    {
+        if (selectionStart_ == selectionEnd_)
+        {
+            selectionStart_ = caretPosition_;
+        }
+        selectionEnd_ = newCaretPos;
+        hasSelection_ = true;
+    }
+    else
+    {
+        clearSelection();
+    }
+    
+    setCaretPosition(newCaretPos);
 }
 
 void NUITextInput::moveCaretToWord(int direction, bool extendSelection)
 {
-    // TODO: Implement word-based caret movement
+    int textLength = static_cast<int>(text_.length());
+    int pos = caretPosition_;
+    
+    if (direction > 0)  // Ctrl+Right: move to next word start
+    {
+        // Skip current word chars
+        while (pos < textLength && isWordChar(text_[pos]))
+        {
+            ++pos;
+        }
+        
+        // Skip separators
+        while (pos < textLength && !isWordChar(text_[pos]))
+        {
+            ++pos;
+        }
+    }
+    else  // Ctrl+Left: move to previous word start
+    {
+        // Move backward over separators
+        while (pos > 0 && !isWordChar(text_[pos - 1]))
+        {
+            --pos;
+        }
+        
+        // Move backward over word chars
+        while (pos > 0 && isWordChar(text_[pos - 1]))
+        {
+            --pos;
+        }
+    }
+    
+    pos = std::clamp(pos, 0, textLength);
+    
+    if (extendSelection)
+    {
+        if (selectionStart_ == selectionEnd_)
+        {
+            selectionStart_ = caretPosition_;
+        }
+        selectionEnd_ = pos;
+        hasSelection_ = true;
+    }
+    else
+    {
+        clearSelection();
+    }
+    
+    setCaretPosition(pos);
+}
+
+bool NUITextInput::isWordChar(char c)
+{
+    return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+}
+
+int NUITextInput::findLineForCaret(int caretPos) const
+{
+    if (layoutLines_.empty()) return 0;
+    
+    for (size_t i = 0; i < layoutLines_.size(); ++i)
+    {
+        const auto& line = layoutLines_[i];
+        
+        // Use < for endIndex to avoid ambiguity at line boundaries
+        // Special case: caret at line end (endIndex) is considered part of that line
+        if (caretPos >= line.startIndex && caretPos <= line.endIndex)
+        {
+            return static_cast<int>(i);
+        }
+    }
+    
+    // EOF — return last line
+    return static_cast<int>(layoutLines_.size()) - 1;
+}
+
+int NUITextInput::getColumnInLine(int caretPos, int lineIndex) const
+{
+    if (lineIndex < 0 || lineIndex >= static_cast<int>(layoutLines_.size()))
+        return 0;
+
+    const auto& line = layoutLines_[lineIndex];
+    return caretPos - line.startIndex;
+}
+
+float NUITextInput::getLineRenderY(const TextLine& line) const
+{
+    NUIRect bounds = getBounds();
+    return bounds.y + padding_ + line.y;
+}
+
+NUIPoint NUITextInput::getCaretRenderPosition() const
+{
+    return getTextPosition(caretPosition_);
 }
 
 void NUITextInput::deleteCharacter(int direction)
@@ -849,7 +1136,7 @@ void NUITextInput::deleteCharacter(int direction)
         text_.erase(caretPosition_, 1);
     }
     
-    updateTextLayout();
+    invalidateLayout();
     triggerTextChange();
     setDirty(true);
 }
@@ -861,7 +1148,8 @@ void NUITextInput::insertCharacter(char character)
     
     text_.insert(caretPosition_, 1, character);
     setCaretPosition(caretPosition_ + 1);
-    updateTextLayout();
+    
+    invalidateLayout();
     triggerTextChange();
     setDirty(true);
 }
@@ -955,48 +1243,43 @@ void NUITextInput::drawEnhancedBackground(NUIRenderer& renderer)
 void NUITextInput::drawAnimatedCaret(NUIRenderer& renderer)
 {
     if (!isFocused() || !showCaret_) return;
-    
-    // Animated blinking caret
-    static auto startTime = std::chrono::high_resolution_clock::now();
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime);
-    
+
+    // Per-instance blinking caret using steady_clock for monotonic timing
+    auto currentTime = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - blinkStartTime_);
+
     // Blink every 500ms
     bool shouldShow = (elapsed.count() % 1000) < 500;
     if (!shouldShow) return;
-    
+
     NUIRect bounds = getBounds();
     NUIRect textRect(bounds.x + padding_, bounds.y,
                      bounds.width - padding_ * 2, bounds.height);
 
     auto& themeManager = NUIThemeManager::getInstance();
     const float fontSize = themeManager.getFontSize("m");
-    const float textY = std::round(renderer.calculateTextY(textRect, fontSize));
     const auto metrics = renderer.getFontMetrics(fontSize);
     const float caretHeight = std::max(1.0f, std::round(metrics.lineHeight));
 
-    // Match caret X to the rendered text width rather than a fixed monospace advance.
-    const float textX = std::round(textRect.x);
-    float caretX = textX;
-    
-    // Use cached widths if available
-    if (!charWidths_.empty()) {
-        const int caretIndex = std::clamp(caretPosition_, 0, static_cast<int>(charWidths_.size()) - 1);
-        caretX = std::round(textX + charWidths_[caretIndex]);
-    }
-    else if (!text_.empty()) {
-        std::string displayText = text_;
-        if (inputType_ == InputType::Password) {
-            displayText = std::string(text_.length(), passwordCharacter_);
-        }
+    // Find which line contains the caret
+    int currentLine = findLineForCaret(caretPosition_);
+    if (currentLine < 0 || currentLine >= static_cast<int>(layoutLines_.size()))
+        return;
 
-        const int caretIndex = std::clamp(caretPosition_, 0, static_cast<int>(displayText.length()));
-        const auto prefixSize = renderer.measureText(displayText.substr(0, caretIndex), fontSize);
-        caretX = std::round(textX + prefixSize.width);
+    const auto& line = layoutLines_[currentLine];
+
+    // Get caret X position for this line
+    int column = getColumnInLine(caretPosition_, currentLine);
+    float caretX = textRect.x;
+
+    if (column >= 0 && column < static_cast<int>(line.charX.size()))
+    {
+        caretX = std::round(textRect.x + line.charX[column]);
     }
-    
+
+    const float caretY = std::round(getLineRenderY(line));
+
     // Slim caret with subtle glow
-    const float caretY = textY;
     NUIRect glowRect(caretX - 0.5f, caretY - 1, 2, caretHeight + 2);
     renderer.fillRoundedRect(glowRect, 1.0f, focusedBorderColor_.withAlpha(0.22f));
 

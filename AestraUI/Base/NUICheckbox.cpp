@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUICheckbox.h"
 #include "NUIRenderer.h"
+#include "NUITheme.h"
 #include <algorithm>
 #include <cmath>
 
@@ -462,17 +463,18 @@ void NUICheckbox::drawRadio(NUIRenderer& renderer)
 void NUICheckbox::drawText(NUIRenderer& renderer)
 {
     if (text_.empty()) return;
-    
+
     NUIRect bounds = getBounds();
-    
-    // Calculate text position
+    auto theme = getTheme();
+    float fontSize = theme ? theme->getFontSize("checkbox.label", 13.0f) : 13.0f;
+
+    NUISize textSize = renderer.measureText(text_, fontSize);
+
+    // Calculate text position: to the right of the checkbox square, vertically centered
     float textX = bounds.x + checkboxSize_ + textMargin_;
-    float textY = bounds.y + bounds.height * 0.5f;
-    
-    // TODO: Implement text rendering when NUIFont is available
-    // For now, this is a placeholder
-    // renderer.setColor(textColor_);
-    // renderer.drawText(text_, textX, textY, textAlignment_);
+    float textY = bounds.y + (bounds.height - textSize.height) * 0.5f;
+
+    renderer.drawText(text_, NUIPoint(textX, textY), fontSize, textColor_);
 }
 
 bool NUICheckbox::isPointOnCheckbox(const NUIPoint& point) const

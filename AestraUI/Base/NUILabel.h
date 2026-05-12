@@ -3,9 +3,12 @@
 
 #include "NUIComponent.h"
 #include "NUITypes.h"
+#include <memory>
 #include <string>
 
 namespace AestraUI {
+
+class NUIFont;
 
 /**
  * NUILabel - A text display component
@@ -33,9 +36,8 @@ public:
     void setText(const std::string& text);
     const std::string& getText() const { return text_; }
 
-    // TODO: Implement font support when NUIFont is available
-    // void setFont(const NUIFont& font);
-    // const NUIFont& getFont() const { return font_; }
+    void setFont(std::shared_ptr<NUIFont> font);
+    std::shared_ptr<NUIFont> getFont() const { return m_font; }
 
     void setTextColor(const NUIColor& color);
     NUIColor getTextColor() const { return textColor_; }
@@ -78,7 +80,7 @@ public:
 
 private:
     std::string text_;
-    // NUIFont font_; // TODO: Add back when NUIFont is available
+    std::shared_ptr<NUIFont> m_font { nullptr };  // Stored for future NUIFont integration
     NUIColor textColor_ = NUIColor::fromHex(0xffffffff);
     float fontSize_ = 14.0f;
     Alignment alignment_ = Alignment::Left;

@@ -112,12 +112,11 @@ void NUILabel::setText(const std::string& text)
     }
 }
 
-// TODO: Implement font setting when NUIFont is available
-// void NUILabel::setFont(const NUIFont& font)
-// {
-//     font_ = font;
-//     repaint();
-// }
+void NUILabel::setFont(std::shared_ptr<NUIFont> font)
+{
+    m_font = font;
+    repaint();
+}
 
 void NUILabel::setTextColor(const NUIColor& color)
 {
