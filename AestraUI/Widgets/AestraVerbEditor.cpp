@@ -627,8 +627,10 @@ void AestraVerbEditor::onUpdate(double deltaTime) {
     const float targetModePosition = static_cast<float>(std::clamp(static_cast<int>(std::round(getParamValue(kMode) * 2.0f)), 0, 2));
     const float modeDiff = targetModePosition - m_modeIndicatorPosition;
     if (std::abs(modeDiff) > 0.001f) {
-        m_modeIndicatorPosition += modeDiff * 12.0f * static_cast<float>(deltaTime);
-        if (std::abs(targetModePosition - m_modeIndicatorPosition) < 0.01f) {
+        const float step = modeDiff * 12.0f * static_cast<float>(deltaTime);
+        // Clamp step magnitude to avoid overshooting the target
+        m_modeIndicatorPosition += std::copysign(std::min(std::abs(step), std::abs(modeDiff)), modeDiff);
+        if (std::abs(targetModePosition - m_modeIndicatorPosition) < 0.001f) {
             m_modeIndicatorPosition = targetModePosition;
         }
         setDirty(true);
