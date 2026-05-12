@@ -16,8 +16,8 @@ We envision a world where music creation is barrier-free, where the only limit i
 
 ## Join Us
 
-- **Discord**: [Join our community](https://discord.gg/your-invite-link)
-- **GitHub**: [Contribute to the project](https://github.com/yourusername/Aestra-daw)
-- **Support Us**: [Patreon](https://patreon.com/Aestra-daw) | [GitHub Sponsors](https://github.com/sponsors/yourusername) | [Ko-fi](https://ko-fi.com/Aestradaw)
+- **Discord**: [Join our community](https://discord.gg/aestra)
+- **GitHub**: [View the source code](https://github.com/currentsuspect/Aestra)
+- **Support Us**: [GitHub Sponsors](https://github.com/sponsors/currentsuspect) | [Ko-fi](https://ko-fi.com/aestra)
 
 *Last updated: October 30, 2025*
