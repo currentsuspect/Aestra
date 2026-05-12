@@ -118,7 +118,7 @@ if(AESTRA_PLATFORM_LINUX)
         -Wno-maybe-uninitialized
         -Wno-switch
         -Wno-format-truncation
-        -Wno-reorder
+        $<$<COMPILE_LANGUAGE:CXX>:-Wno-reorder>
     )
 endif()
 
