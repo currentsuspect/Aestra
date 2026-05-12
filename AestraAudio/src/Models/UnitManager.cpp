@@ -310,8 +310,36 @@ UnitID UnitManager::duplicateUnit(UnitID sourceId) {
         dst->defaultPatternId = newPatternId;
     }
 
-    // Plugin instance: do NOT copy shared_ptr — leave null
-    // Caller responsible for re-instantiating from pluginId + pluginState if needed
+    // Re-instantiate plugin if source has one
+    if (!src->pluginId.empty() && !src->pluginState.empty()) {
+        auto& pluginManager = PluginManager::getInstance();
+        auto newPlugin = pluginManager.createInstanceById(src->pluginId);
+        if (newPlugin) {
+            const double sampleRate = m_sampleRate.load(std::memory_order_relaxed);
+            const uint32_t blockSize = m_blockSize.load(std::memory_order_relaxed);
+            if (newPlugin->initialize(sampleRate > 0 ? sampleRate : 48000.0,
+                                      blockSize > 0 ? blockSize : 512)) {
+                if (newPlugin->loadState(src->pluginState)) {
+                    dst->plugin = newPlugin;
+                    dst->pluginId = src->pluginId;
+                    dst->pluginState = src->pluginState;
+                    applySamplerDefaultsForUnitType(*dst);
+                    if ((dst->enabled || dst->isEnabled) && !newPlugin->isActive()) {
+                        newPlugin->activate();
+                    }
+                } else {
+                    Log::warning("[UnitManager] Failed to load plugin state for duplicated unit " +
+                                std::to_string(newId));
+                }
+            } else {
+                Log::warning("[UnitManager] Failed to initialize plugin for duplicated unit " +
+                            std::to_string(newId));
+            }
+        } else {
+            Log::warning("[UnitManager] Failed to create plugin instance for duplicated unit " +
+                        std::to_string(newId) + " with plugin ID: " + src->pluginId);
+        }
+    }
 
     publishSnapshot();
     return newId;
@@ -342,8 +370,9 @@ bool UnitManager::removeUnit(UnitID id) {
     }
 
     m_unitOrder.erase(orderIt);
+    bool erased = m_units.erase(id) > 0;
     publishSnapshot();
-    return m_units.erase(id) > 0;
+    return erased;
 }
 
 void UnitManager::clear() {

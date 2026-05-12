@@ -993,6 +993,8 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
 
     if (usesPianoRollForType(type) && hasPattern) {
         m_rowContextMenu->addItem("Open in Piano Roll", [this]() {
+            // Verify unit still exists (defensive check against use-after-free)
+            if (!m_manager.getUnit(m_unitId)) return;
             if (m_onOpenPatternEditor && m_patternId.isValid()) {
                 m_onOpenPatternEditor(m_patternId);
             }
@@ -1005,31 +1007,37 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
 
         if (hasSample) {
             m_rowContextMenu->addItem("Replace Sample", [this]() {
+                if (!m_manager.getUnit(m_unitId)) return;
                 if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
             });
         } else {
             m_rowContextMenu->addItem("Load Sample", [this]() {
+                if (!m_manager.getUnit(m_unitId)) return;
                 if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
             });
         }
     }
     if (type == Aestra::Audio::UnitType::Audio) {
         m_rowContextMenu->addItem("Load Audio Clip", [this]() {
+            if (!m_manager.getUnit(m_unitId)) return;
             if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
         });
     }
 
     m_rowContextMenu->addSeparator();
     m_rowContextMenu->addItem("Rename", [this]() {
+        if (!m_manager.getUnit(m_unitId)) return;
         if (m_nameLabel) m_nameLabel->beginRename();
     });
 
     m_rowContextMenu->addItem("Duplicate Unit", [this]() {
+        if (!m_manager.getUnit(m_unitId)) return;
         if (m_onDuplicateUnit) m_onDuplicateUnit(m_unitId);
     });
 
     m_rowContextMenu->addSeparator();
     m_rowContextMenu->addItem("Delete Unit", [this, pos]() {
+        if (!m_manager.getUnit(m_unitId)) return;
         showDeleteConfirmation(pos);
     });
 
@@ -1039,6 +1047,8 @@ void UnitRow::showRowContextMenu(const NUIPoint& pos) {
 void UnitRow::showDeleteConfirmation(const NUIPoint& pos) {
     auto confirm = std::make_shared<NUIContextMenu>();
     confirm->addItem("Confirm Delete", [this]() {
+        // Verify unit still exists (defensive check against use-after-free)
+        if (!m_manager.getUnit(m_unitId)) return;
         if (m_onDeleteUnit) m_onDeleteUnit(m_unitId);
     });
     confirm->addItem("Cancel", []() {});
