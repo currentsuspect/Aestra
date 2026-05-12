@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIProgressBar.h"
 #include "NUIRenderer.h"
+#include "NUITheme.h"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -313,15 +314,21 @@ void NUIProgressBar::drawIndeterminateProgress(NUIRenderer& renderer)
 void NUIProgressBar::drawText(NUIRenderer& renderer)
 {
     if (!textVisible_) return;
-    
+
     std::string text = getDisplayText();
     if (text.empty()) return;
-    
+
     NUIRect bounds = getBounds();
-    NUIPoint textPos = bounds.center();
-    
-    // TODO: Implement text rendering when NUIFont is available
-    // renderer.drawText(text, textPos, NUITextAlignment::Center, textColor_);
+    auto theme = getTheme();
+    float fontSize = theme ? theme->getFontSize("progressbar.label", 11.0f) : 11.0f;
+
+    NUISize textSize = renderer.measureText(text, fontSize);
+
+    // Centered over the full bar
+    float x = bounds.x + (bounds.width - textSize.width) * 0.5f;
+    float y = bounds.y + (bounds.height - textSize.height) * 0.5f;
+
+    renderer.drawText(text, NUIPoint(x, y), fontSize, textColor_);
 }
 
 double NUIProgressBar::applyEasing(double t) const

@@ -939,6 +939,23 @@ else()
     message(STATUS "PianoRollInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# NUITextInput Layout / Caret / Selection regression tests
+# Guard on target presence because headless/CI disables AestraUI targets.
+if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUITextInputLayoutTest.cpp")
+    add_executable(NUITextInputLayoutTest AestraUI/NUITextInputLayoutTest.cpp)
+    target_link_libraries(NUITextInputLayoutTest PRIVATE AestraUI_Core AestraPlat)
+    target_include_directories(NUITextInputLayoutTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraPlat/include
+    )
+    add_test(NAME NUITextInputLayoutTest COMMAND NUITextInputLayoutTest)
+    set_tests_properties(NUITextInputLayoutTest PROPERTIES LABELS "ui;textinput;regression")
+    message(STATUS "NUITextInputLayoutTest added - multiline layout/caret regression tests")
+else()
+    message(STATUS "NUITextInputLayoutTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # =============================================================================
 # Commands Tests (Phase 2 - Undo/Redo System)
 # =============================================================================

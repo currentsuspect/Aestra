@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUISlider.h"
 #include "NUIRenderer.h"
+#include "NUITheme.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -374,9 +375,25 @@ void NUISlider::drawSliderThumb(NUIRenderer& renderer)
 void NUISlider::drawSliderText(NUIRenderer& renderer)
 {
     if (!textBoxVisible_) return;
-    
-    // TODO: Implement text rendering when NUIFont is available
-    // For now, this is a placeholder
+
+    NUIRect bounds = getBounds();
+    auto theme = getTheme();
+    NUIColor textColor = theme ? theme->getText() : NUIColor::fromHex(0xffffffff);
+    float fontSize = theme ? theme->getFontSize("slider.value", 11.0f) : 11.0f;
+
+    // Format value
+    auto s = std::to_string(value_);
+    s.erase(s.find_last_not_of('0') + 1);
+    if (s.back() == '.') s.pop_back();
+    std::string valueText = s + textValueSuffix_;
+
+    NUISize textSize = renderer.measureText(valueText, fontSize);
+
+    // Centered horizontally, 4px above the bottom edge of the track area
+    float x = bounds.x + (bounds.width - textSize.width) * 0.5f;
+    float y = bounds.y + bounds.height - textSize.height - 4.0f;
+
+    renderer.drawText(valueText, NUIPoint(x, y), fontSize, textColor);
 }
 
 bool NUISlider::isPointOnSlider(const NUIPoint& point) const
