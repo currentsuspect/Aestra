@@ -2,10 +2,11 @@
 #pragma once
 
 #include "NUIComponent.h"
-#include "NUITextInput.h"
 #include "NUIDragDrop.h"
 #include "UnitManager.h"
 #include "PatternSource.h" // For PatternID (value type, can't forward-declare)
+#include "UnitNameLabel.h"
+#include "NUIContextMenu.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -33,6 +34,7 @@ public:
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
+    void onResize(int width, int height) override;
 
     // IDropTarget interface
     DropFeedback onDragEnter(const DragData& data, const NUIPoint& position) override;
@@ -64,7 +66,13 @@ public:
     std::function<void(Aestra::Audio::PatternID)> m_onPatternEdited;
     /** @brief Callback used to open the full Piano Roll editor. */
     std::function<void(Aestra::Audio::PatternID)> m_onOpenPatternEditor;
-    
+    /** @brief Callback fired when the unit name is renamed. */
+    std::function<void(Aestra::Audio::UnitID, const std::string&)> m_onRenameUnit;
+    /** @brief Callback fired when the unit is deleted via context menu. */
+    std::function<void(Aestra::Audio::UnitID)> m_onDeleteUnit;
+    /** @brief Callback fired when the unit is duplicated via context menu. */
+    std::function<void(Aestra::Audio::UnitID)> m_onDuplicateUnit;
+
     void setOnDragStart(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDragStart = cb; }
     void setOnDrop(std::function<void(Aestra::Audio::UnitID, int)> cb) { m_onDrop = cb; }
     void setOnRequestColorPicker(std::function<void()> cb) { m_onRequestColorPicker = cb; }
@@ -74,6 +82,9 @@ public:
     void setOnPluginDropped(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onPluginDropped = cb; }
     void setOnPatternEdited(std::function<void(Aestra::Audio::PatternID)> cb) { m_onPatternEdited = cb; }
     void setOnOpenPatternEditor(std::function<void(Aestra::Audio::PatternID)> cb) { m_onOpenPatternEditor = cb; }
+    void setOnRenameUnit(std::function<void(Aestra::Audio::UnitID, const std::string&)> cb) { m_onRenameUnit = cb; }
+    void setOnDeleteUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDeleteUnit = cb; }
+    void setOnDuplicateUnit(std::function<void(Aestra::Audio::UnitID)> cb) { m_onDuplicateUnit = cb; }
     
     /**
      * @brief Set the visible step count for the sequencer section.
@@ -126,9 +137,10 @@ private:
     int m_mixerChannel = -1;
 
     // === Internal State ===
-    void startEditing(const NUIRect& rect);
-    void stopEditing(bool save);
-    
+    void layoutNameLabel();
+    void showRowContextMenu(const NUIPoint& pos);
+    void showDeleteConfirmation(const NUIPoint& pos);
+
     // === Layout Constants (Premium v2) ===
     static constexpr float ROW_HEIGHT = 56.0f;
     static constexpr float CONTROL_WIDTH = 312.0f;
@@ -158,32 +170,29 @@ private:
     bool m_isStepEditing = false;
     int m_stepEditStart = -1;
     int m_stepEditEndExclusive = -1;
-    
-    // Inline name editing
-    bool m_isEditingName = false;
-    std::string m_editBuffer;
-    long long m_lastClickTimeMs = 0;
+
     long long m_lastClipClickTimeMs = 0; // For double-click on clip/waveform area
-    
+
     // === Helpers ===
     void drawContent(NUIRenderer& renderer); // Main drawing logic (cached)
     void drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds);
     void drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds);
     void drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds);
-    
+
     void handleControlClick(const NUIMouseEvent& event, const NUIRect& bounds);
     void handleContextClick(const NUIMouseEvent& event, const NUIRect& bounds);
-    
+
     // Icon drawing helpers
     void drawPowerIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
     void drawArmIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
     void drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
     void drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active);
     void drawGearIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active); // [NEW]
-    
+
     // Internal components
-    std::shared_ptr<NUITextInput> m_nameInput;
-    
+    std::shared_ptr<UnitNameLabel> m_nameLabel;
+    std::shared_ptr<NUIContextMenu> m_rowContextMenu;
+
     // Cache management
     bool m_needsCacheUpdate = true;
     void invalidateVisuals() { m_needsCacheUpdate = true; repaint(); }

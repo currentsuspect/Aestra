@@ -23,7 +23,33 @@ bool usesPianoRollForType(Aestra::Audio::UnitType type)
 {
     return type == Aestra::Audio::UnitType::Instrument;
 }
+
+AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
+    AestraUI::NUIComponent* root = component;
+    while (root && root->getParent()) {
+        root = root->getParent();
+    }
+    return root;
 }
+
+void detachContextMenu(const std::shared_ptr<AestraUI::NUIContextMenu>& menu) {
+    if (!menu) return;
+    if (auto* parent = menu->getParent()) {
+        parent->removeChild(menu);
+    }
+}
+
+void attachAndShowContextMenu(AestraUI::NUIComponent* owner,
+                              const std::shared_ptr<AestraUI::NUIContextMenu>& menu,
+                              const AestraUI::NUIPoint& position) {
+    if (!owner || !menu) return;
+    AestraUI::NUIComponent* root = getRootComponent(owner);
+    if (!root) root = owner;
+    root->addChild(menu);
+    menu->showAt(position);
+    root->repaint();
+}
+} // namespace
 
 UnitRow::UnitRow(std::shared_ptr<Aestra::Audio::TrackManager> trackManager, Aestra::Audio::UnitManager& manager, Aestra::Audio::UnitID unitId, Aestra::Audio::PatternID patternId)
     : m_trackManager(trackManager), m_manager(manager), m_unitId(unitId), m_patternId(patternId)
@@ -75,6 +101,24 @@ void UnitRow::updateState() {
             m_sourceSummary = "Empty";
         }
     }
+
+    // Ensure name label exists and stays in sync
+    if (!m_nameLabel) {
+        m_nameLabel = std::make_shared<UnitNameLabel>(m_name, m_type);
+        addChild(m_nameLabel);
+        layoutNameLabel();
+
+        m_nameLabel->m_onOpenEditor = [this]() {
+            if (m_onEditUnit) m_onEditUnit(m_unitId);
+        };
+        m_nameLabel->m_onRename = [this](const std::string& name) {
+            if (m_onRenameUnit) m_onRenameUnit(m_unitId, name);
+        };
+    } else {
+        m_nameLabel->setUnitName(m_name);
+        m_nameLabel->setUnitType(m_type);
+    }
+
     invalidateVisuals();
 }
 
@@ -264,16 +308,7 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                         3.0f,
                         m_isEnabled ? NUIColor(0.38f, 0.90f, 0.48f, 1.0f) : NUIColor(0.42f, 0.42f, 0.48f, 1.0f));
 
-    std::string displayName = m_name.empty() ? ("Unit " + std::to_string(static_cast<unsigned long long>(m_unitId))) : m_name;
-    renderer.drawText(displayName,
-                      NUIPoint(nameX + 10.0f, bounds.y + 11.0f),
-                      12.0f,
-                      theme.getColor("textPrimary").withAlpha(0.92f));
-
-    renderer.drawText(m_groupLabel,
-                      NUIPoint(nameX + 10.0f, bounds.y + 27.0f),
-                      9.0f,
-                      theme.getColor("textSecondary").withAlpha(0.5f));
+    // Name + type label are rendered by the UnitNameLabel child component.
 
     const float pillY = centerY - 10.0f;
     const NUIRect muteRect(bounds.x + bounds.width - 92.0f, pillY, 24.0f, 20.0f);
@@ -494,6 +529,17 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 }
 
 bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
+    // Forward to UnitNameLabel first (same local-coordinate transform as old m_nameInput)
+    if (m_nameLabel) {
+        auto bounds = getBounds();
+        NUIMouseEvent localEvent = event;
+        localEvent.position.x -= bounds.x;
+        localEvent.position.y -= bounds.y;
+        if (m_nameLabel->onMouseEvent(localEvent)) {
+            return true;
+        }
+    }
+
     auto bounds = getBounds();
     const NUIRect localDragRect(6.0f, 6.0f, 32.0f, 44.0f);
     const NUIRect localControlRect(42.0f, 0.0f, std::min(310.0f, bounds.width * 0.42f), 56.0f);
@@ -545,18 +591,6 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
         invalidateVisuals();
     };
 
-    // Forward events to active input widget (convert to local space)
-    if (m_isEditingName && m_nameInput) {
-        NUIMouseEvent localEvent = event;
-        localEvent.position.x -= bounds.x;
-        localEvent.position.y -= bounds.y;
-        
-        // Let input widget handle the event (and potentially take focus)
-        if (m_nameInput->onMouseEvent(localEvent)) {
-            return true;
-        }
-    }
-    
     // === Scroll Handling ===
     if (std::abs(event.wheelDelta) > 0.0f) {
         // Only scroll if hovering over context area (right of controls)
@@ -666,23 +700,15 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
             }
         }
         
-        // === Right-click ===
+        // === Right-click (row body, outside name label which is handled by UnitNameLabel child) ===
         if (event.button == NUIMouseButton::Right) {
             if (bounds.contains(event.position)) {
-                if (localDragRect.contains(localPoint)) {
-                    if (m_onRequestColorPicker) m_onRequestColorPicker();
-                    return true;
-                }
-                if (localContextRect.contains(localPoint)) {
-                    m_stepCount = (m_stepCount == 16) ? 32 : (m_stepCount == 32) ? 64 : 16;
-                    if (m_stepCount == 16) m_scrollX = 0; // Reset scroll for small count
-                    invalidateVisuals();
-                    return true;
-                }
+                showRowContextMenu(event.position);
+                return true;
             }
         }
     }
-    
+
     // === Release drag ===
     if (!event.pressed && m_isDragging) {
         m_isDragging = false;
@@ -690,51 +716,6 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     }
     
     return false;
-}
-
-void UnitRow::startEditing(const NUIRect& rect) {
-    if (m_isEditingName && m_nameInput) return;
-    
-    m_isEditingName = true;
-    m_nameInput = std::make_shared<NUITextInput>(m_name);
-    m_nameInput->setBounds(rect);
-    // m_nameInput->setFontSize(13.0f); // Not supported
-    m_nameInput->setTextColor(NUIThemeManager::getInstance().getColor("textPrimary"));
-    m_nameInput->setBackgroundColor(NUIThemeManager::getInstance().getColor("inputBgDefault"));
-    m_nameInput->setBorderColor(NUIThemeManager::getInstance().getColor("inputBorderFocus"));
-    m_nameInput->setBorderWidth(1.0f);
-    m_nameInput->setBorderRadius(3.0f);
-    m_nameInput->setFocusedBorderColor(NUIThemeManager::getInstance().getColor("accentPrimary"));
-    
-    // Callbacks
-    m_nameInput->setOnReturnKey([this]() { stopEditing(true); });
-    m_nameInput->setOnEscapeKey([this]() { stopEditing(false); });
-    // Note: onFocusLost might trigger when clicking grid, handled safely
-    m_nameInput->setOnFocusLost([this]() { stopEditing(true); });
-    
-    addChild(m_nameInput);
-    m_nameInput->setFocused(true);
-    m_nameInput->setCaretPosition(static_cast<int>(m_name.length()));
-    m_nameInput->selectAll();
-    
-    invalidateVisuals();
-}
-
-void UnitRow::stopEditing(bool save) {
-    if (!m_nameInput) return;
-    
-    if (save) {
-        std::string newName = m_nameInput->getText();
-        if (newName != m_name) {
-            m_manager.setUnitName(m_unitId, newName);
-            updateState();
-        }
-    }
-    
-    removeChild(m_nameInput);
-    m_nameInput.reset();
-    m_isEditingName = false;
-    invalidateVisuals();
 }
 
 void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& bounds) {
@@ -768,14 +749,6 @@ void UnitRow::handleControlClick(const NUIMouseEvent& event, const NUIRect& boun
         updateState();
         invalidateVisuals();
         return;
-    }
-
-    auto now = std::chrono::steady_clock::now();
-    long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-    bool manualDoubleClick = (nowMs - m_lastClickTimeMs < 500);
-    m_lastClickTimeMs = nowMs;
-    if (manualDoubleClick || event.doubleClick) {
-        startEditing(NUIRect(22.0f, 8.0f, std::max(120.0f, bounds.width - 120.0f), 22.0f));
     }
 }
 
@@ -872,10 +845,9 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
 
 
 bool UnitRow::onKeyEvent(const NUIKeyEvent& event) {
-    if (m_isEditingName && m_nameInput) {
-        // Forward to input widget
-        return m_nameInput->onKeyEvent(event);
-    }
+    // Key events are forwarded to children automatically by NUIComponent.
+    // The UnitNameLabel (when renaming) receives them via its NUITextInput child.
+    (void)event;
     return false;
 }
 
@@ -884,7 +856,7 @@ bool UnitRow::onKeyEvent(const NUIKeyEvent& event) {
 //==============================================================================
 
 UnitRow::~UnitRow() {
-    // Unregister from drop targets
+    detachContextMenu(m_rowContextMenu);
     NUIDragDropManager::getInstance().unregisterDropTarget(this);
 }
 
@@ -989,6 +961,88 @@ DropResult UnitRow::onDrop(const DragData& data, const NUIPoint& position) {
 
 NUIRect UnitRow::getDropBounds() const {
     return getBounds();
+}
+
+void UnitRow::onResize(int width, int height) {
+    (void)width;
+    (void)height;
+    layoutNameLabel();
+}
+
+void UnitRow::layoutNameLabel() {
+    if (!m_nameLabel) return;
+    auto bounds = getBounds();
+    float controlWidth = std::min(310.0f, bounds.width * 0.42f);
+    float labelX = 54.0f; // 42 (control block) + 12 (name indent)
+    float labelWidth = std::max(80.0f, controlWidth - 100.0f);
+    m_nameLabel->setBounds(NUIRect(labelX, 8.0f, labelWidth, 30.0f));
+}
+
+void UnitRow::showRowContextMenu(const NUIPoint& pos) {
+    detachContextMenu(m_rowContextMenu);
+
+    bool hasPattern = false;
+    Aestra::Audio::UnitType type = Aestra::Audio::UnitType::Sampler;
+    if (auto* unit = m_manager.getUnit(m_unitId)) {
+        hasPattern = unit->defaultPatternId.isValid();
+        type = unit->type;
+    }
+
+    m_rowContextMenu = std::make_shared<NUIContextMenu>();
+    m_rowContextMenu->setOnHide([this]() { detachContextMenu(m_rowContextMenu); });
+
+    if (usesPianoRollForType(type) && hasPattern) {
+        m_rowContextMenu->addItem("Open in Piano Roll", [this]() {
+            if (m_onOpenPatternEditor && m_patternId.isValid()) {
+                m_onOpenPatternEditor(m_patternId);
+            }
+        });
+    }
+    if (usesStepSequencerForType(type)) {
+        bool hasSample = false;
+        if (auto* unit = m_manager.getUnit(m_unitId))
+            hasSample = !unit->audioClipPath.empty();
+
+        if (hasSample) {
+            m_rowContextMenu->addItem("Replace Sample", [this]() {
+                if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
+            });
+        } else {
+            m_rowContextMenu->addItem("Load Sample", [this]() {
+                if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
+            });
+        }
+    }
+    if (type == Aestra::Audio::UnitType::Audio) {
+        m_rowContextMenu->addItem("Load Audio Clip", [this]() {
+            if (m_onLoadUnitSample) m_onLoadUnitSample(m_unitId);
+        });
+    }
+
+    m_rowContextMenu->addSeparator();
+    m_rowContextMenu->addItem("Rename", [this]() {
+        if (m_nameLabel) m_nameLabel->beginRename();
+    });
+
+    m_rowContextMenu->addItem("Duplicate Unit", [this]() {
+        if (m_onDuplicateUnit) m_onDuplicateUnit(m_unitId);
+    });
+
+    m_rowContextMenu->addSeparator();
+    m_rowContextMenu->addItem("Delete Unit", [this, pos]() {
+        showDeleteConfirmation(pos);
+    });
+
+    attachAndShowContextMenu(this, m_rowContextMenu, pos);
+}
+
+void UnitRow::showDeleteConfirmation(const NUIPoint& pos) {
+    auto confirm = std::make_shared<NUIContextMenu>();
+    confirm->addItem("Confirm Delete", [this]() {
+        if (m_onDeleteUnit) m_onDeleteUnit(m_unitId);
+    });
+    confirm->addItem("Cancel", []() {});
+    attachAndShowContextMenu(this, confirm, pos);
 }
 
 } // namespace AestraUI

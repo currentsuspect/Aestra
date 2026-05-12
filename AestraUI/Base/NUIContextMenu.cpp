@@ -145,6 +145,7 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
 
     // Check if mouse is within our global bounds
     if (!menuBounds.contains(event.position)) {
+        if (event.pressed) hide(); // dismiss on click outside, don't consume the event
         return false;
     }
 

@@ -257,6 +257,11 @@ private:
         const std::unordered_map<uint32_t, FontData>* cache;
     };
     AtlasInfo selectAtlas(float fontSize) const;
+    bool tryAddGlyphToAtlas(uint32_t codepoint, FT_Face face, int atlasFontSize,
+                            uint32_t atlasTextureId,
+                            std::unordered_map<uint32_t, FontData>& cache,
+                            int& atlasX, int& atlasY, int& atlasRowHeight);
+    bool tryLoadFallbackGlyph(uint32_t codepoint, int atlasSize);
 
     // REMOVED: renderCharacterImproved (replaced by atlas rendering)
     
@@ -409,6 +414,7 @@ private:
 
     FT_Library ftLibrary_;
     FT_Face ftFace_;
+    FT_Face ftCJKFace_ = nullptr;
     
     // Projection matrix (orthographic)
     float projectionMatrix_[16];
