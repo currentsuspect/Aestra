@@ -41,8 +41,9 @@ void drawVerbArc(NUIRenderer& renderer,
     if (endAngle - startAngle <= 0.001f) return;
 
     std::array<NUIPoint, 49> points{};
+    const float pointsDivisor = points.size() > 1 ? static_cast<float>(points.size() - 1) : 1.0f;
     for (size_t i = 0; i < points.size(); ++i) {
-        const float t = static_cast<float>(i) / static_cast<float>(points.size() - 1);
+        const float t = static_cast<float>(i) / pointsDivisor;
         const float angle = startAngle + (endAngle - startAngle) * t;
         points[i] = {center.x + std::cos(angle) * radius, center.y + std::sin(angle) * radius};
     }
@@ -554,8 +555,9 @@ void AestraVerbEditor::drawAnalysisPanels(NUIRenderer& renderer, NUIColor accent
     const float predelay = getParamValue(kPredelay);
     const float modRateForResponse = getParamValue(kModRate);
     const float modDepthForResponse = getParamValue(kModDepth);
+    const float topDivisor = top.size() > 1 ? static_cast<float>(top.size() - 1) : 1.0f;
     for (size_t i = 0; i < top.size(); ++i) {
-        const float t = static_cast<float>(i) / static_cast<float>(top.size() - 1);
+        const float t = static_cast<float>(i) / topDivisor;
         const float x = response.x + 44.0f + t * (response.width - 58.0f);
         const float tailSlope = 34.0f + decay * 30.0f;
         const float darkTilt = damping * 12.0f * t;
