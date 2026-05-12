@@ -12,7 +12,7 @@ the freedoms typically associated with open source licenses (e.g., MIT, GPL, Apa
 Third-Party Components:
 - FreeType (SIL Open Font License, Version 2.13.1)
 - GLAD (MIT License) 
-- NanoSVG (MIT License)
+- ThorVG (MIT License)
 - MiniAudio (MIT License)
 - RtAudio (MIT License)
 - VST3 SDK (Proprietary License from Steinberg)

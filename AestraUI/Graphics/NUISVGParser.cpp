@@ -4,98 +4,76 @@
 #include "NUISVGCache.h"
 #include <fstream>
 #include <sstream>
-#include <cctype>
-#include <cmath>
-#include <algorithm>
 #include <iostream>
+#include <algorithm>
+#include <cstring>
 
-// Include NanoSVG with implementation
-#define NANOSVG_IMPLEMENTATION
-#include "../External/nanosvg.h"
-
-// Include NanoSVG rasterizer with implementation
-#define NANOSVGRAST_IMPLEMENTATION
-#include "../External/nanosvgrast.h"
+#include <thorvg.h>
 
 namespace AestraUI {
-
-// Static cache instance for SVG rasterization
-static NUISVGCache svgCache;
 
 // ============================================================================
 // NUISVGDocument Implementation
 // ============================================================================
-
-NUISVGDocument::~NUISVGDocument() {
-    if (nsvgImage_) {
-        nsvgDelete(nsvgImage_);
-        nsvgImage_ = nullptr;
-    }
-}
+//
+// NOTE (architecture): NUISVGDocument stores the raw SVG string (or file path)
+// rather than a parsed ThorVG scene graph (tvg::Picture).  This means every
+// cache miss triggers a re-parse.  For Aestra's current usage — small UI
+// icons <1 KB — this overhead is negligible.  If larger SVGs are introduced
+// (e.g. preset artwork, splash screens), consider caching the parsed
+// tvg::Picture (or its rasterized output) instead of the source string.
+// ============================================================================
 
 NUISVGDocument::NUISVGDocument(NUISVGDocument&& other) noexcept
-    : paths_(std::move(other.paths_))
+    : svgContent_(std::move(other.svgContent_))
+    , filePath_(std::move(other.filePath_))
+    , sourceType_(other.sourceType_)
     , viewBox_(other.viewBox_)
     , hasViewBox_(other.hasViewBox_)
     , width_(other.width_)
     , height_(other.height_)
-    , nsvgImage_(other.nsvgImage_)
 {
-    other.nsvgImage_ = nullptr;
 }
 
 NUISVGDocument& NUISVGDocument::operator=(NUISVGDocument&& other) noexcept {
     if (this != &other) {
-        // Clean up existing NSVGimage
-        if (nsvgImage_) {
-            nsvgDelete(nsvgImage_);
-        }
-        
-        // Move data from other
-        paths_ = std::move(other.paths_);
+        svgContent_ = std::move(other.svgContent_);
+        filePath_ = std::move(other.filePath_);
+        sourceType_ = other.sourceType_;
         viewBox_ = other.viewBox_;
         hasViewBox_ = other.hasViewBox_;
         width_ = other.width_;
         height_ = other.height_;
-        nsvgImage_ = other.nsvgImage_;
-        
-        // Ensure other's pointer is null
-        other.nsvgImage_ = nullptr;
     }
     return *this;
 }
 
 // ============================================================================
-// Helper Functions
+// Helper: read file into string
 // ============================================================================
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-static std::string trim(const std::string& str) {
-    size_t start = 0;
-    size_t end = str.length();
-    
-    while (start < end && std::isspace(str[start])) start++;
-    while (end > start && std::isspace(str[end - 1])) end--;
-    
-    return str.substr(start, end - start);
+static std::string readFileToString(const std::string& filePath) {
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file) return {};
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    return ss.str();
 }
 
-static std::vector<std::string> split(const std::string& str, char delimiter) {
-    std::vector<std::string> tokens;
-    std::stringstream ss(str);
-    std::string token;
-    
-    while (std::getline(ss, token, delimiter)) {
-        token = trim(token);
-        if (!token.empty()) {
-            tokens.push_back(token);
+// ============================================================================
+// ThorVG initialization (0 threads — DAW-safe)
+// ============================================================================
+
+static bool ensureThorVGInitialized() {
+    static bool initialized = []() {
+        auto res = tvg::Initializer::init(0);
+        if (res != tvg::Result::Success) {
+            std::cerr << "ThorVG: Initializer::init failed" << std::endl;
+            return false;
         }
-    }
-    
-    return tokens;
+        return true;
+    }();
+    return initialized;
 }
 
 // ============================================================================
@@ -103,309 +81,188 @@ static std::vector<std::string> split(const std::string& str, char delimiter) {
 // ============================================================================
 
 std::shared_ptr<NUISVGDocument> NUISVGParser::parse(const std::string& svgContent) {
-    // NanoSVG requires null-terminated mutable string
-    std::vector<char> buffer(svgContent.begin(), svgContent.end());
-    buffer.push_back('\0');
-    
-    // Parse with NanoSVG
-    NSVGimage* image = nsvgParse(buffer.data(), "px", 96.0f);
-    
-    if (!image) {
-        std::cerr << "NanoSVG: Failed to parse SVG content (length: " << svgContent.length() << " bytes)" << std::endl;
+    if (!ensureThorVGInitialized()) {
         return nullptr;
     }
-    
-    // Create document
+
+    // Use ThorVG to probe dimensions without a full render.
+    // We create a temporary 1x1 canvas just to load and inspect the picture.
+    auto picture = tvg::Picture::gen();
+    if (!picture) {
+        std::cerr << "ThorVG: Failed to create picture" << std::endl;
+        return nullptr;
+    }
+
+    auto res = picture->load(svgContent.data(), static_cast<uint32_t>(svgContent.size()), "svg");
+    if (res != tvg::Result::Success) {
+        std::cerr << "ThorVG: Failed to parse SVG content (length: " << svgContent.length() << " bytes)" << std::endl;
+        tvg::Paint::rel(picture);
+        return nullptr;
+    }
+
+    float pw = 0.0f, ph = 0.0f;
+    picture->size(&pw, &ph);
+    tvg::Paint::rel(picture);
+
     auto doc = std::make_shared<NUISVGDocument>();
-    doc->setSize(image->width, image->height);
-    doc->setViewBox(0, 0, image->width, image->height);
-    doc->setNSVGImage(image);
-    
+    doc->setSVGContent(svgContent);
+    doc->setSize(pw, ph);
+    doc->setViewBox(0.0f, 0.0f, pw, ph);
+
     return doc;
 }
 
 std::shared_ptr<NUISVGDocument> NUISVGParser::parseFile(const std::string& filePath) {
-    // Parse with NanoSVG
-    NSVGimage* image = nsvgParseFromFile(filePath.c_str(), "px", 96.0f);
-    
-    if (!image) {
-        std::cerr << "NanoSVG: Failed to parse SVG file: " << filePath << std::endl;
+    std::string content = readFileToString(filePath);
+    if (content.empty()) {
+        std::cerr << "ThorVG: Failed to read SVG file: " << filePath << std::endl;
         return nullptr;
     }
-    
-    // Create document
-    auto doc = std::make_shared<NUISVGDocument>();
-    doc->setSize(image->width, image->height);
-    doc->setViewBox(0, 0, image->width, image->height);
-    doc->setNSVGImage(image);
-    
+
+    auto doc = parse(content);
+    if (doc) {
+        doc->setFilePath(filePath);
+    }
     return doc;
-}
-
-std::shared_ptr<NUISVGPath> NUISVGParser::parsePath(const std::string& pathData) {
-    auto path = std::make_shared<NUISVGPath>();
-    
-    std::string data = pathData;
-    size_t i = 0;
-    
-    while (i < data.length()) {
-        // Skip whitespace
-        while (i < data.length() && std::isspace(data[i])) i++;
-        if (i >= data.length()) break;
-        
-        char cmd = data[i++];
-        
-        // Parse numbers following the command
-        std::string numStr;
-        while (i < data.length() && (std::isdigit(data[i]) || data[i] == '.' || data[i] == '-' || data[i] == ',' || std::isspace(data[i]))) {
-            if (data[i] != ',') {
-                numStr += data[i];
-            } else {
-                numStr += ' ';
-            }
-            i++;
-        }
-        
-        auto numbers = parseNumbers(numStr);
-        
-        switch (cmd) {
-            case 'M': // MoveTo (absolute)
-            case 'm': // MoveTo (relative)
-                if (numbers.size() >= 2) {
-                    NUISVGCommand moveCmd(NUISVGCommandType::MoveTo);
-                    moveCmd.params = {numbers[0], numbers[1]};
-                    path->addCommand(moveCmd);
-                }
-                break;
-                
-            case 'L': // LineTo (absolute)
-            case 'l': // LineTo (relative)
-                if (numbers.size() >= 2) {
-                    NUISVGCommand lineCmd(NUISVGCommandType::LineTo);
-                    lineCmd.params = {numbers[0], numbers[1]};
-                    path->addCommand(lineCmd);
-                }
-                break;
-                
-            case 'H': // Horizontal line (absolute)
-            case 'h': // Horizontal line (relative)
-                if (numbers.size() >= 1) {
-                    NUISVGCommand lineCmd(NUISVGCommandType::LineTo);
-                    lineCmd.params = {numbers[0], 0.0f}; // Y will be handled by renderer
-                    path->addCommand(lineCmd);
-                }
-                break;
-                
-            case 'V': // Vertical line (absolute)
-            case 'v': // Vertical line (relative)
-                if (numbers.size() >= 1) {
-                    NUISVGCommand lineCmd(NUISVGCommandType::LineTo);
-                    lineCmd.params = {0.0f, numbers[0]}; // X will be handled by renderer
-                    path->addCommand(lineCmd);
-                }
-                break;
-                
-            case 'C': // Cubic Bezier (absolute)
-            case 'c': // Cubic Bezier (relative)
-                if (numbers.size() >= 6) {
-                    NUISVGCommand curveCmd(NUISVGCommandType::CurveTo);
-                    curveCmd.params = {numbers[0], numbers[1], numbers[2], numbers[3], numbers[4], numbers[5]};
-                    path->addCommand(curveCmd);
-                }
-                break;
-                
-            case 'Z': // ClosePath
-            case 'z':
-                path->addCommand(NUISVGCommand(NUISVGCommandType::ClosePath));
-                break;
-        }
-    }
-    
-    return path;
-}
-
-NUIColor NUISVGParser::parseColor(const std::string& colorStr) {
-    std::string color = trim(colorStr);
-    
-    // Handle hex colors
-    if (color[0] == '#') {
-        std::string hex = color.substr(1);
-        unsigned int value = std::stoul(hex, nullptr, 16);
-        
-        if (hex.length() == 6) {
-            float r = ((value >> 16) & 0xFF) / 255.0f;
-            float g = ((value >> 8) & 0xFF) / 255.0f;
-            float b = (value & 0xFF) / 255.0f;
-            return NUIColor(r, g, b, 1.0f);
-        }
-    }
-    
-    // Handle named colors
-    if (color == "black") return NUIColor::black();
-    if (color == "white") return NUIColor::white();
-    if (color == "red") return NUIColor(1.0f, 0.0f, 0.0f, 1.0f);
-    if (color == "green") return NUIColor(0.0f, 1.0f, 0.0f, 1.0f);
-    if (color == "blue") return NUIColor(0.0f, 0.0f, 1.0f, 1.0f);
-    
-    // Default to black
-    return NUIColor::black();
-}
-
-std::vector<float> NUISVGParser::parseNumbers(const std::string& str) {
-    std::vector<float> numbers;
-    std::stringstream ss(str);
-    float num;
-    
-    while (ss >> num) {
-        numbers.push_back(num);
-    }
-    
-    return numbers;
-}
-
-NUISVGTransform NUISVGParser::parseTransform(const std::string& transformStr) {
-    NUISVGTransform transform;
-    
-    // Parse translate(x, y) or translate(x y)
-    size_t translatePos = transformStr.find("translate(");
-    if (translatePos != std::string::npos) {
-        translatePos += 10; // Skip "translate("
-        size_t endPos = transformStr.find(")", translatePos);
-        if (endPos != std::string::npos) {
-            std::string params = transformStr.substr(translatePos, endPos - translatePos);
-            auto numbers = parseNumbers(params);
-            if (numbers.size() >= 1) {
-                transform.translateX = numbers[0];
-                if (numbers.size() >= 2) {
-                    transform.translateY = numbers[1];
-                }
-            }
-        }
-    }
-    
-    // Parse scale(x, y) or scale(x)
-    size_t scalePos = transformStr.find("scale(");
-    if (scalePos != std::string::npos) {
-        scalePos += 6; // Skip "scale("
-        size_t endPos = transformStr.find(")", scalePos);
-        if (endPos != std::string::npos) {
-            std::string params = transformStr.substr(scalePos, endPos - scalePos);
-            auto numbers = parseNumbers(params);
-            if (numbers.size() >= 1) {
-                transform.scaleX = numbers[0];
-                transform.scaleY = numbers.size() >= 2 ? numbers[1] : numbers[0];
-            }
-        }
-    }
-    
-    // Parse rotate(angle)
-    size_t rotatePos = transformStr.find("rotate(");
-    if (rotatePos != std::string::npos) {
-        rotatePos += 7; // Skip "rotate("
-        size_t endPos = transformStr.find(")", rotatePos);
-        if (endPos != std::string::npos) {
-            std::string params = transformStr.substr(rotatePos, endPos - rotatePos);
-            auto numbers = parseNumbers(params);
-            if (numbers.size() >= 1) {
-                transform.rotation = numbers[0];
-            }
-        }
-    }
-    
-    return transform;
 }
 
 // ============================================================================
 // NUISVGRenderer Implementation
 // ============================================================================
 
+static NUISVGCache svgCache;
+
 void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg, const NUIRect& bounds) {
-    // Call the tinted version with no tint (alpha = 0)
     render(renderer, svg, bounds, NUIColor(1.0f, 1.0f, 1.0f, 0.0f));
 }
 
-void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg, const NUIRect& bounds, const NUIColor& tintColor) {
-    // Get NSVGimage pointer from document
-    NSVGimage* image = svg.getNSVGImage();
-    if (!image) {
-        std::cerr << "NanoSVG: No image data in SVG document" << std::endl;
-        return;
-    }
-    
-    // Calculate target dimensions from bounds
+void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg,
+                            const NUIRect& bounds, const NUIColor& tintColor) {
     int w = static_cast<int>(bounds.width);
     int h = static_cast<int>(bounds.height);
-    
+
     if (w <= 0 || h <= 0) {
-        // std::cerr << "NanoSVG: Invalid render dimensions: " << w << "x" << h << std::endl;
         return;
     }
-    
-    // Create CacheKey from document, dimensions, and tint color
+
+    // ------------------------------------------------------------------------
+    // 1. Cache lookup
+    // ------------------------------------------------------------------------
     NUISVGCache::CacheKey key{&svg, w, h, tintColor};
-    
-    // Check cache for existing entry before rasterizing
     auto* cached = svgCache.get(key);
-    
+
     if (cached) {
-        // Check if texture is already uploaded
         if (cached->textureId == 0) {
-             cached->textureId = renderer.createTexture(cached->rgba.data(), cached->width, cached->height);
+            cached->textureId = renderer.createTexture(cached->rgba.data(), cached->width, cached->height);
         }
-        
-        // Draw using persistent texture
         if (cached->textureId != 0) {
             renderer.drawTexture(cached->textureId, bounds, NUIRect(0, 0, cached->width, cached->height));
         }
         return;
     }
-    
-    // If cache miss, rasterize and store result in cache
-    
-    // Calculate scale factor to maintain aspect ratio
-    float scaleX = bounds.width / image->width;
-    float scaleY = bounds.height / image->height;
-    float scale = std::min(scaleX, scaleY);
-    
-    // Allocate RGBA buffer (width × height × 4 bytes) - initialize to transparent
-    std::vector<unsigned char> rgba(w * h * 4, 0);  // Explicitly zero-initialize for transparency
-    
-    // Create NSVGrasterizer
-    NSVGrasterizer* rast = nsvgCreateRasterizer();
-    if (!rast) {
-        std::cerr << "NanoSVG: Failed to create rasterizer" << std::endl;
+
+    // ------------------------------------------------------------------------
+    // 2. ThorVG rasterization
+    // ------------------------------------------------------------------------
+    if (!ensureThorVGInitialized()) {
         return;
     }
-    
-    // Call nsvgRasterize with appropriate parameters
-    nsvgRasterize(rast, image, 0, 0, scale, rgba.data(), w, h, w * 4);
-    
-    // Delete rasterizer
-    nsvgDeleteRasterizer(rast);
-    
-    // Apply color tinting if specified.
-    // Replace source RGB with tint RGB so "white tint" produces true white icons
-    // even when the SVG source path color is black.
+
+    auto canvas = tvg::SwCanvas::gen();
+    if (!canvas) {
+        std::cerr << "ThorVG: Failed to create SwCanvas" << std::endl;
+        return;
+    }
+
+    // ThorVG ARGB8888S on little-endian gives byte order R,G,B,A — matches GL_RGBA.
+    std::vector<uint32_t> buffer(static_cast<size_t>(w) * h, 0);
+    auto targetRes = canvas->target(buffer.data(), static_cast<uint32_t>(w),
+                                    static_cast<uint32_t>(w), static_cast<uint32_t>(h),
+                                    tvg::ColorSpace::ARGB8888S);
+    if (targetRes != tvg::Result::Success) {
+        std::cerr << "ThorVG: SwCanvas::target failed" << std::endl;
+        return;
+    }
+
+    auto picture = tvg::Picture::gen();
+    if (!picture) {
+        std::cerr << "ThorVG: Failed to create picture" << std::endl;
+        return;
+    }
+
+    // Load SVG (always from memory to avoid FILE_IO dependency)
+    tvg::Result loadRes;
+    if (svg.getSourceType() == NUISVGDocument::SourceType::Memory) {
+        const auto& content = svg.getSVGContent();
+        loadRes = picture->load(content.data(), static_cast<uint32_t>(content.size()), "svg", nullptr, true);
+    } else {
+        std::string content = readFileToString(svg.getFilePath());
+        if (content.empty()) {
+            tvg::Paint::rel(picture);
+            return;
+        }
+        loadRes = picture->load(content.data(), static_cast<uint32_t>(content.size()), "svg", nullptr, true);
+    }
+
+    if (loadRes != tvg::Result::Success) {
+        std::cerr << "ThorVG: Failed to load SVG" << std::endl;
+        tvg::Paint::rel(picture);
+        return;
+    }
+
+    // Scale to fit bounds while preserving aspect ratio
+    float pw = 0.0f, ph = 0.0f;
+    picture->size(&pw, &ph);
+    if (pw > 0.0f && ph > 0.0f) {
+        float scaleX = bounds.width / pw;
+        float scaleY = bounds.height / ph;
+        float scale = std::min(scaleX, scaleY);
+        picture->scale(scale);
+    }
+
+    // Render
+    auto addRes = canvas->add(picture);
+    if (addRes != tvg::Result::Success) {
+        std::cerr << "ThorVG: Canvas::add failed" << std::endl;
+        canvas->remove(picture);
+        tvg::Paint::rel(picture);
+        return;
+    }
+
+    canvas->draw();
+    canvas->sync();
+    canvas->remove(picture);
+    tvg::Paint::rel(picture);
+
+    // ------------------------------------------------------------------------
+    // 3. Tinting
+    // ------------------------------------------------------------------------
     if (tintColor.a > 0.0f) {
-        const unsigned char tintR = static_cast<unsigned char>(std::clamp(tintColor.r, 0.0f, 1.0f) * 255.0f);
-        const unsigned char tintG = static_cast<unsigned char>(std::clamp(tintColor.g, 0.0f, 1.0f) * 255.0f);
-        const unsigned char tintB = static_cast<unsigned char>(std::clamp(tintColor.b, 0.0f, 1.0f) * 255.0f);
-        const float tintA = std::clamp(tintColor.a, 0.0f, 1.0f);
+        uint8_t tintR = static_cast<uint8_t>(std::clamp(tintColor.r, 0.0f, 1.0f) * 255.0f);
+        uint8_t tintG = static_cast<uint8_t>(std::clamp(tintColor.g, 0.0f, 1.0f) * 255.0f);
+        uint8_t tintB = static_cast<uint8_t>(std::clamp(tintColor.b, 0.0f, 1.0f) * 255.0f);
+        uint8_t tintA = static_cast<uint8_t>(std::clamp(tintColor.a, 0.0f, 1.0f) * 255.0f);
+
         for (int i = 0; i < w * h; ++i) {
-            const int idx = i * 4;
-            const unsigned char srcA = rgba[idx + 3];
+            uint8_t* pixel = reinterpret_cast<uint8_t*>(&buffer[i]);
+            uint8_t srcA = pixel[3];
             if (srcA == 0) continue;
-            rgba[idx + 0] = tintR;
-            rgba[idx + 1] = tintG;
-            rgba[idx + 2] = tintB;
-            rgba[idx + 3] = static_cast<unsigned char>(static_cast<float>(srcA) * tintA);
+            pixel[0] = tintR;
+            pixel[1] = tintG;
+            pixel[2] = tintB;
+            pixel[3] = static_cast<uint8_t>((static_cast<uint16_t>(srcA) * tintA) / 255);
         }
     }
-    
-    // Store result in cache (pass renderer for potential eviction cleanup)
+
+    // ------------------------------------------------------------------------
+    // 4. Cache + texture upload
+    // ------------------------------------------------------------------------
+    std::vector<unsigned char> rgba;
+    rgba.resize(static_cast<size_t>(w) * h * 4);
+    std::memcpy(rgba.data(), buffer.data(), rgba.size());
+
     svgCache.put(key, std::move(rgba), w, h, &renderer);
-    
-    // Retrieve entry from cache after storing to create texture immediately
+
     auto* entry = svgCache.get(key);
     if (entry) {
         entry->textureId = renderer.createTexture(entry->rgba.data(), entry->width, entry->height);
@@ -413,99 +270,6 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg, co
             renderer.drawTexture(entry->textureId, bounds, NUIRect(0, 0, entry->width, entry->height));
         }
     }
-}
-
-void NUISVGRenderer::renderPath(NUIRenderer& renderer, const NUISVGPath& path, const NUIRect& bounds, const NUIRect& viewBox) {
-    const auto& commands = path.getCommands();
-    if (commands.empty()) return;
-    
-    NUIPoint currentPoint(0, 0);
-    NUIPoint startPoint(0, 0);
-    std::vector<NUIPoint> pathPoints;
-    
-    // Get transform if present
-    const NUISVGTransform& transform = path.getTransform();
-    
-    // Collect all points for fill rendering
-    for (const auto& cmd : commands) {
-        switch (cmd.type) {
-            case NUISVGCommandType::MoveTo:
-                if (cmd.params.size() >= 2) {
-                    NUIPoint p(cmd.params[0], cmd.params[1]);
-                    // Apply transform first, then viewBox transform
-                    if (path.hasTransform()) {
-                        p = transform.apply(p);
-                    }
-                    currentPoint = transformPoint(p, viewBox, bounds);
-                    startPoint = currentPoint;
-                    pathPoints.push_back(currentPoint);
-                }
-                break;
-                
-            case NUISVGCommandType::LineTo:
-                if (cmd.params.size() >= 2) {
-                    NUIPoint p(cmd.params[0], cmd.params[1]);
-                    // Apply transform first, then viewBox transform
-                    if (path.hasTransform()) {
-                        p = transform.apply(p);
-                    }
-                    NUIPoint nextPoint = transformPoint(p, viewBox, bounds);
-                    pathPoints.push_back(nextPoint);
-                    currentPoint = nextPoint;
-                }
-                break;
-                
-            case NUISVGCommandType::ClosePath:
-                if (!pathPoints.empty()) {
-                    NUIPoint lastPoint = pathPoints.back();
-                    if (lastPoint.x != startPoint.x || lastPoint.y != startPoint.y) {
-                        pathPoints.push_back(startPoint);
-                    }
-                }
-                currentPoint = startPoint;
-                break;
-                
-            default:
-                break;
-        }
-    }
-    
-    // Render fill if present - use triangle fan for convex polygons
-    if (path.hasFill() && pathPoints.size() >= 3) {
-        // Calculate bounding box for the filled shape
-        float minX = pathPoints[0].x, maxX = pathPoints[0].x;
-        float minY = pathPoints[0].y, maxY = pathPoints[0].y;
-        
-        for (const auto& p : pathPoints) {
-            minX = std::min(minX, p.x);
-            maxX = std::max(maxX, p.x);
-            minY = std::min(minY, p.y);
-            maxY = std::max(maxY, p.y);
-        }
-        
-        // For simple filled shapes, use fillRect as approximation
-        // This works well for rectangles and simple polygons
-        NUIRect fillBounds(minX, minY, maxX - minX, maxY - minY);
-        renderer.fillRect(fillBounds, path.getFillColor());
-    }
-    
-    // Render stroke
-    if (path.hasStroke() && pathPoints.size() >= 2) {
-        for (size_t i = 0; i < pathPoints.size() - 1; ++i) {
-            renderer.drawLine(pathPoints[i], pathPoints[i + 1], path.getStrokeWidth(), path.getStrokeColor());
-        }
-    }
-}
-
-NUIPoint NUISVGRenderer::transformPoint(const NUIPoint& point, const NUIRect& viewBox, const NUIRect& bounds) {
-    // Transform from viewBox coordinates to bounds coordinates
-    float scaleX = bounds.width / viewBox.width;
-    float scaleY = bounds.height / viewBox.height;
-    
-    float x = bounds.x + (point.x - viewBox.x) * scaleX;
-    float y = bounds.y + (point.y - viewBox.y) * scaleY;
-    
-    return NUIPoint(x, y);
 }
 
 } // namespace AestraUI

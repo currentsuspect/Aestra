@@ -299,7 +299,7 @@ cmake --build build --config Release
 
 - **RtAudio** - Audio I/O (MIT license)
 - **FreeType** - Font rendering (FreeType license)
-- **nanosvg** - SVG parsing (zlib license)
+- **ThorVG** - SVG parsing and rasterization (MIT license)
 - **GLAD** - OpenGL loader (MIT license)
 
 All dependencies are commercial-safe and properly attributed.
