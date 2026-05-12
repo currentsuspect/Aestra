@@ -266,6 +266,10 @@ void WindowPanel::onResize(int width, int height) {
 bool WindowPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled()) return false;
 
+    if (event.pressed) {
+        bringToFront();
+    }
+
     if (m_resizing) {
         if (event.released && event.button == AestraUI::NUIMouseButton::Left) {
             m_resizing = false;

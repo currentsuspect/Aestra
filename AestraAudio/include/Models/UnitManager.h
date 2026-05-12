@@ -222,6 +222,12 @@ public:
      * @return Identifier of the created unit.
      */
     UnitID createUnit(const std::string& name, UnitGroup group = UnitGroup::Unknown);
+    /**
+     * @brief Duplicate an existing unit, copying its state and pattern.
+     * @param sourceId Unit identifier to duplicate.
+     * @return Identifier of the new unit, or 0 if the source is missing.
+     */
+    UnitID duplicateUnit(UnitID sourceId);
 
     /**
      * @brief Get the number of units in display order.

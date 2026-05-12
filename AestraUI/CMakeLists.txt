@@ -126,6 +126,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/UIRoutingMap.cpp
     Widgets/UnitRow.h
     Widgets/UnitRow.cpp
+    Widgets/UnitNameLabel.h
+    Widgets/UnitNameLabel.cpp
     Widgets/UnitColorPicker.h
     Widgets/UnitColorPicker.cpp
     Widgets/UIItemSelector.h

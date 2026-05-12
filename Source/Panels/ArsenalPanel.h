@@ -76,6 +76,8 @@ public:
     void setOnRequestPatternEditor(std::function<void(PatternID)> cb) { m_onRequestPatternEditor = cb; }
     /** @brief Set the callback used to request sample loading. */
     void setOnRequestLoadSample(std::function<void(UnitID)> cb) { m_onRequestLoadSample = cb; }
+    /** @brief Set the callback used to open the sample editor. */
+    void setOnRequestSampleEditor(std::function<void(UnitID)> cb) { m_onRequestSampleEditor = cb; }
     /** @brief Set the callback used for generic plugin drops. */
     void setOnPluginDropped(std::function<void(const std::string&)> cb) { m_onPluginDropped = cb; }
     /** @brief Set the callback used for plugin drops onto a specific unit. */
@@ -157,6 +159,7 @@ private:
     std::function<void(UnitID)> m_onRequestEditor;
     std::function<void(PatternID)> m_onRequestPatternEditor;
     std::function<void(UnitID)> m_onRequestLoadSample;
+    std::function<void(UnitID)> m_onRequestSampleEditor;
     std::function<void(const std::string&)> m_onPluginDropped;
     std::function<void(UnitID, const std::string&)> m_onPluginDroppedToUnit;
     std::function<void(UnitID, const std::string&)> m_onSampleDroppedToUnit;

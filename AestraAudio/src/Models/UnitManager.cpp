@@ -280,6 +280,43 @@ UnitID UnitManager::createUnit(const std::string& name, UnitGroup group) {
     return createUnit(name, unitTypeFromGroup(group));
 }
 
+UnitID UnitManager::duplicateUnit(UnitID sourceId) {
+    const auto* src = getUnit(sourceId);
+    if (!src) return 0;
+
+    UnitID newId = createUnit(src->name + " Copy", src->type);
+    auto* dst = getUnit(newId);
+    if (!dst) return 0;
+
+    // Copy scalar state
+    dst->enabled          = src->enabled;
+    dst->targetMixerRoute = src->targetMixerRoute;
+    dst->routeMode        = src->routeMode;
+    dst->bridgeMode       = src->bridgeMode;
+    dst->color            = src->color;
+    dst->isMuted          = src->isMuted;
+    dst->isSolo           = src->isSolo;
+    dst->isArmed          = src->isArmed;
+    dst->group            = src->group;
+    dst->audioClipPath    = src->audioClipPath;
+    dst->audioDurationSeconds  = src->audioDurationSeconds;
+    dst->audioPreviewWaveform  = src->audioPreviewWaveform;
+    dst->pluginId         = src->pluginId;
+    dst->pluginState      = src->pluginState;
+
+    // Duplicate pattern if source has one
+    if (src->defaultPatternId.isValid() && m_patternManager) {
+        PatternID newPatternId = m_patternManager->clonePattern(src->defaultPatternId);
+        dst->defaultPatternId = newPatternId;
+    }
+
+    // Plugin instance: do NOT copy shared_ptr — leave null
+    // Caller responsible for re-instantiating from pluginId + pluginState if needed
+
+    publishSnapshot();
+    return newId;
+}
+
 void UnitManager::reorderUnit(UnitID id, size_t newIndex) {
     auto it = std::find(m_unitOrder.begin(), m_unitOrder.end(), id);
     if (it == m_unitOrder.end()) {

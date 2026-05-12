@@ -425,7 +425,27 @@ bool NUIRendererGL::initialize(int width, int height) {
             useSDFText_ = false;
             AESTRA_LOG_DEBUG("Using bitmap text renderer");
         }
-    
+
+        // Load CJK fallback face (no atlas — glyphs added on demand)
+        static const std::vector<std::string> cjkFallbackPaths = {
+            // Linux
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+            // macOS
+            "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/Hiragino Sans GB.ttc",
+            // Windows
+            "C:/Windows/Fonts/meiryo.ttc",
+            "C:/Windows/Fonts/msgothic.ttc",
+        };
+        for (const auto& path : cjkFallbackPaths) {
+            if (FT_New_Face(ftLibrary_, path.c_str(), 0, &ftCJKFace_) == 0) {
+                AESTRA_LOG_DEBUG("CJK fallback font loaded: " + path);
+                break;
+            }
+        }
+
     // Set initial state
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -471,6 +491,10 @@ void NUIRendererGL::shutdown() {
         fontCacheSmall_.clear();
         fontCacheXSmall_.clear();
         
+        if (ftCJKFace_) {
+            FT_Done_Face(ftCJKFace_);
+            ftCJKFace_ = nullptr;
+        }
         FT_Done_Face(ftFace_);
         FT_Done_FreeType(ftLibrary_);
         fontInitialized_ = false;
@@ -1954,7 +1978,17 @@ NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
                     if (codepoint == 0) break;
                     
                     auto it = atlas.cache->find(codepoint);
-                    if (it == atlas.cache->end()) continue;
+                    if (it == atlas.cache->end()) {
+                        if (tryLoadFallbackGlyph(codepoint, atlas.atlasSize)) {
+                            it = atlas.cache->find(codepoint);
+                        }
+                    }
+                    if (it == atlas.cache->end()) {
+                        // Advance by replacement width so measurement matches rendering
+                        totalWidth += fontSize * 0.6f;
+                        previousGlyph = 0;
+                        continue;
+                    }
 
                     const FontData& glyph = it->second;
 
@@ -2300,6 +2334,139 @@ charSet.push_back(0x23F9); // ⏹ Stop
     return true;
 }
 
+bool NUIRendererGL::tryAddGlyphToAtlas(uint32_t codepoint, FT_Face face, int atlasFontSize,
+    uint32_t atlasTextureId, std::unordered_map<uint32_t, FontData>& cache,
+    int& atlasX, int& atlasY, int& atlasRowHeight)
+{
+    if (!face) return false;
+
+    if (FT_Set_Pixel_Sizes(face, 0, atlasFontSize) != 0) {
+        return false;
+    }
+
+    FT_UInt glyphIndex = FT_Get_Char_Index(face, codepoint);
+    if (glyphIndex == 0) {
+        return false;
+    }
+
+    const int loadFlagsBase = FT_LOAD_DEFAULT | FT_LOAD_FORCE_AUTOHINT;
+    const int loadFlagsLCD = loadFlagsBase | FT_LOAD_TARGET_LCD;
+    const int loadFlagsGray = loadFlagsBase | FT_LOAD_TARGET_LIGHT;
+    int loadFlags = fontUseLCD_ ? loadFlagsLCD : loadFlagsGray;
+
+    if (FT_Load_Glyph(face, glyphIndex, loadFlags)) {
+        return false;
+    }
+
+    const FT_Render_Mode renderMode = fontUseLCD_ ? FT_RENDER_MODE_LCD : FT_RENDER_MODE_NORMAL;
+    if (FT_Render_Glyph(face->glyph, renderMode)) {
+        return false;
+    }
+
+    FT_Bitmap* bitmap = &face->glyph->bitmap;
+    const bool glyphIsLCD = fontUseLCD_ && (bitmap->pixel_mode == FT_PIXEL_MODE_LCD);
+    int width = glyphIsLCD ? (bitmap->width / 3) : bitmap->width;
+    int height = bitmap->rows;
+    const int padding = 3;
+
+    if (width > 0 && height > 0) {
+        if (atlasX + width + padding >= fontAtlasWidth_) {
+            atlasX = 0;
+            atlasY += atlasRowHeight + padding;
+            atlasRowHeight = 0;
+        }
+        if (atlasY + height + padding >= fontAtlasHeight_) {
+            return false; // atlas full
+        }
+
+        std::vector<unsigned char> rgba(static_cast<size_t>(width * height * 4), 0);
+        const int rowStride = std::abs(bitmap->pitch);
+        const bool flipRows = bitmap->pitch < 0;
+        const unsigned char* base = flipRows
+            ? bitmap->buffer + static_cast<long>(rowStride) * (height - 1)
+            : bitmap->buffer;
+        for (int y = 0; y < height; ++y) {
+            const unsigned char* srcRow = flipRows
+                ? base - static_cast<long>(y * rowStride)
+                : base + static_cast<long>(y * rowStride);
+            for (int x = 0; x < width; ++x) {
+                unsigned char r = 0, g = 0, b = 0, a = 0;
+                if (glyphIsLCD) {
+                    r = srcRow[x * 3 + 0];
+                    g = srcRow[x * 3 + 1];
+                    b = srcRow[x * 3 + 2];
+                    a = std::max({r, g, b});
+                } else {
+                    r = g = b = 255;
+                    a = srcRow[x];
+                }
+                size_t dst = static_cast<size_t>(y * width + x) * 4;
+                rgba[dst + 0] = r;
+                rgba[dst + 1] = g;
+                rgba[dst + 2] = b;
+                rgba[dst + 3] = a;
+            }
+        }
+
+        glBindTexture(GL_TEXTURE_2D, atlasTextureId);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexSubImage2D(
+            GL_TEXTURE_2D, 0,
+            atlasX, atlasY,
+            width, height,
+            GL_RGBA, GL_UNSIGNED_BYTE,
+            rgba.data()
+        );
+    }
+
+    FontData charData;
+    charData.textureId = atlasTextureId;
+    charData.glyphIndex = glyphIndex;
+    charData.width = width;
+    charData.height = height;
+    charData.bearingX = face->glyph->bitmap_left;
+    charData.bearingY = face->glyph->bitmap_top;
+    charData.advance = face->glyph->advance.x;
+    float invW = 1.0f / fontAtlasWidth_;
+    float invH = 1.0f / fontAtlasHeight_;
+    charData.u0 = atlasX * invW;
+    charData.v0 = atlasY * invH;
+    charData.u1 = (atlasX + width) * invW;
+    charData.v1 = (atlasY + height) * invH;
+
+    cache[codepoint] = charData;
+
+    if (width > 0 && height > 0) {
+        atlasX += width + padding;
+        atlasRowHeight = std::max(atlasRowHeight, height);
+    }
+
+    return true;
+}
+
+bool NUIRendererGL::tryLoadFallbackGlyph(uint32_t codepoint, int atlasSize) {
+    if (!ftCJKFace_) return false;
+
+    if (atlasSize == atlasFontSize_) {
+        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
+            fontAtlasTextureId_, fontCache_,
+            fontAtlasX_, fontAtlasY_, fontAtlasRowHeight_);
+    } else if (atlasSize == atlasFontSizeMedium_) {
+        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
+            fontAtlasTextureIdMedium_, fontCacheMedium_,
+            fontAtlasXMedium_, fontAtlasYMedium_, fontAtlasRowHeightMedium_);
+    } else if (atlasSize == atlasFontSizeSmall_) {
+        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
+            fontAtlasTextureIdSmall_, fontCacheSmall_,
+            fontAtlasXSmall_, fontAtlasYSmall_, fontAtlasRowHeightSmall_);
+    } else if (atlasSize == atlasFontSizeXSmall_) {
+        return tryAddGlyphToAtlas(codepoint, ftCJKFace_, atlasSize,
+            fontAtlasTextureIdXSmall_, fontCacheXSmall_,
+            fontAtlasXXSmall_, fontAtlasYXSmall_, fontAtlasRowHeightXSmall_);
+    }
+    return false;
+}
+
 void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& position, float fontSize, const NUIColor& color) {
     AESTRA_ZONE("Text_Render");
     if (!fontInitialized_) {
@@ -2387,12 +2554,19 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
 
         auto it = atlas.cache->find(codepoint);
         if (it == atlas.cache->end()) {
-             continue;
+            if (tryLoadFallbackGlyph(codepoint, atlas.atlasSize)) {
+                it = atlas.cache->find(codepoint);
+            }
         }
-        
-        
+        if (it == atlas.cache->end()) {
+            // Still missing — advance by replacement width so layout doesn't collapse
+            x += fontSize * 0.6f;
+            previousGlyph = 0;
+            continue;
+        }
+
         const FontData& ch = it->second;
-        
+
         // Apply kerning for better spacing
         if (fontHasKerning_ && previousGlyph != 0 && ch.glyphIndex != 0) {
             FT_Vector kerning = {0, 0};

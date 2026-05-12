@@ -244,12 +244,22 @@ void ArsenalPanel::refreshUnits() {
             if (!m_trackManager) return;
             auto& unitMgr = m_trackManager->getUnitManager();
             const auto* unit = unitMgr.getUnit(id);
-            if (unit && !unit->pluginId.empty() && unit->plugin) {
+            if (!unit) return;
+            if (!unit->pluginId.empty() && unit->plugin) {
                 // Unit has a plugin — open plugin editor
                 if (m_onRequestEditor) m_onRequestEditor(id);
-            } else if (unit && unit->defaultPatternId.isValid()) {
+            } else if (unit->defaultPatternId.isValid()) {
                 // Unit has a default pattern — open Piano Roll
                 if (m_onRequestPatternEditor) m_onRequestPatternEditor(unit->defaultPatternId);
+            } else if ((unit->type == UnitType::Sampler ||
+                        unit->type == UnitType::PitchedSampler) &&
+                       !unit->audioClipPath.empty()) {
+                // Sample loaded — open sample editor
+                if (m_onRequestSampleEditor) m_onRequestSampleEditor(id);
+            } else if (unit->type == UnitType::Sampler ||
+                       unit->type == UnitType::PitchedSampler) {
+                // No sample — open file browser to load one
+                if (m_onRequestLoadSample) m_onRequestLoadSample(id);
             }
         });
 
@@ -280,7 +290,24 @@ void ArsenalPanel::refreshUnits() {
                 m_onRequestPatternEditor(patternId);
             }
         });
-        
+        row->setOnRenameUnit([this](UnitID id, const std::string& name) {
+            if (!m_trackManager) return;
+            m_trackManager->getUnitManager().setUnitName(id, name);
+            refreshUnits();
+        });
+        row->setOnDeleteUnit([this](UnitID id) {
+            m_selectedUnitId = id;
+            removeSelectedUnit();
+        });
+        row->setOnDuplicateUnit([this](UnitID id) {
+            if (!m_trackManager) return;
+            UnitID newId = m_trackManager->getUnitManager().duplicateUnit(id);
+            if (newId != 0) {
+                m_selectedUnitId = newId;
+                refreshUnits();
+            }
+        });
+
         m_listContainer->addChild(row);
         m_unitRows.push_back(row);
         
@@ -336,8 +363,17 @@ bool ArsenalPanel::removeSelectedUnit() {
     auto& unitMgr = m_trackManager->getUnitManager();
     auto unitIDs = unitMgr.getAllUnitIDs();
     if (unitIDs.size() <= 1) {
-        Log::warning("[Arsenal] Refusing to remove the last unit");
-        return false;
+        // Last unit — reset to fresh default instead of refusing
+        UnitID oldId = m_selectedUnitId;
+        unitMgr.removeUnit(oldId);
+        removeUnitNotes(oldId);
+        UnitID newId = unitMgr.createUnit();
+        m_selectedUnitId = newId;
+        refreshUnits();
+        if (m_onSelectedUnitChanged && m_selectedUnitId != 0) {
+            m_onSelectedUnitChanged(m_selectedUnitId);
+        }
+        return true;
     }
 
     auto it = std::find(unitIDs.begin(), unitIDs.end(), m_selectedUnitId);
