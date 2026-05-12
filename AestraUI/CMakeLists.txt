@@ -186,6 +186,10 @@ target_include_directories(AestraUI_Core PUBLIC
 # The main application mixer widgets depend on AestraAudio + AestraCore headers.
 # Keep this PRIVATE so AestraUI can still be consumed as a standalone library
 # when these widgets are not used.
+target_link_libraries(AestraUI_Core PUBLIC
+    thorvg
+)
+
 target_include_directories(AestraUI_Core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../AestraCore/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../AestraAudio/include
@@ -207,6 +211,11 @@ target_include_directories(AestraUI_Core PRIVATE
 )
 
 # FreeType dependency removed - handled by MSDF text renderer
+
+# =============================================================================
+# ThorVG — SVG rasterization engine (vendored)
+# =============================================================================
+add_subdirectory(External/thorvg)
 
 # =============================================================================
 # GLAD - OpenGL Loader
