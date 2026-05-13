@@ -339,6 +339,7 @@ FileBrowser::FileBrowser()
     });
     searchInput_->setOnEscapeKey([this]() {
         searchInput_->clear();
+        searchInput_->setFocused(false);
         applyFilter();
     });
     searchInput_->setMaxLength(512);
