@@ -233,8 +233,10 @@ private:
     // Diagnostics (atomic counters)
     std::atomic<uint32_t> m_overflowCounter;
     std::atomic<uint32_t> m_processedCounter;
-    uint64_t m_lastRefillFrame{0}; // [NEW] Detect loop wraps
-    std::atomic<int> m_refillCounter{0};
+    uint64_t m_lastRefillFrame{0}; // Detect loop wraps
+
+    // Pre-allocated scratch buffer for refillWindow (reserved at init, never reallocates)
+    std::vector<ScheduledEvent> m_scratchEvents;
 
     // Helpers
     uint16_t getChannelForUnit(UnitID unitId) const;
