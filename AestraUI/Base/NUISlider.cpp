@@ -2,11 +2,18 @@
 #include "NUISlider.h"
 #include "NUIRenderer.h"
 #include "NUITheme.h"
+#include "../Platform/NUIPlatformBridge.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
 namespace AestraUI {
+
+// Sensitivity constants for rotary knob drag
+namespace {
+    constexpr float COARSE_DRAG_SENSITIVITY = 0.005f;  // 0.5% per pixel
+    constexpr float FINE_DRAG_SENSITIVITY = 0.0005f;   // 0.05% per pixel
+}
 
 NUISlider::NUISlider(const std::string& name)
     : NUIComponent()
@@ -47,6 +54,7 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isEnabled() || !isVisible()) return false;
     const bool isOverSlider = isPointOnSlider(event.position);
+    const bool isRotary = (style_ == Style::Rotary);
 
     if (event.doubleClick && event.pressed && event.button == NUIMouseButton::Left)
     {
@@ -62,6 +70,15 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
     {
         if (event.released && event.button == NUIMouseButton::Left)
         {
+            // Rotary cleanup: exit relative mode and restore cursor
+            if (isRotary && platformBridge_)
+            {
+                platformBridge_->setMouseCapture(false);
+                platformBridge_->setCursorPosition(static_cast<int>(dragOrigin_.x), static_cast<int>(dragOrigin_.y));
+                platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
+                dragEndTime_ = 0.0; // Will be set in triggerDragEnd for tooltip fade
+            }
+
             isDragging_ = false;
             triggerDragEnd();
             setDirty(true);
@@ -71,7 +88,24 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
         {
             if (valueChangeMode_ != ValueChangeMode::Click)
             {
-                updateValueFromMousePosition(event.position);
+                // Rotary: use delta-based drag with cursor capture
+                if (isRotary && platformBridge_)
+                {
+                    // Check modifier state for fine-tuning (can change mid-drag)
+                    isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != NUIModifiers::None;
+
+                    // When SDL_SetRelativeMouseMode is enabled, event.position contains relative deltas
+                    // Use position directly as delta for rotary knobs
+                    // dy: negative = up = increase value
+                    float sensitivity = isFineDrag_ ? FINE_DRAG_SENSITIVITY : COARSE_DRAG_SENSITIVITY;
+                    float delta = -event.position.y * sensitivity * (maxValue_ - minValue_);
+                    setValue(std::clamp(getValue() + delta, minValue_, maxValue_));
+                }
+                else
+                {
+                    // Linear or no platform bridge: use absolute position (existing behavior)
+                    updateValueFromMousePosition(event.position);
+                }
             }
             return true;
         }
@@ -86,13 +120,33 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
         isDragging_ = true;
         lastMousePosition_ = event.position;
         valueWhenDragStarted_ = value_;
-        
+
+        // Rotary-specific cursor capture setup
+        if (isRotary && platformBridge_)
+        {
+            // Capture cursor origin before entering relative mode
+            dragOrigin_ = event.position;
+
+            // Check for fine-tuning modifier at drag start
+            isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != NUIModifiers::None;
+
+            // Enter relative mouse mode (cursor hidden, deltas only)
+            platformBridge_->setMouseCapture(true);
+
+            // Switch cursor to grabbing style
+            platformBridge_->setCursorStyle(NUICursorStyle::Grabbing);
+        }
+
         // Click mode updates only on click, drag mode updates only while dragging.
         if (valueChangeMode_ == ValueChangeMode::Normal || valueChangeMode_ == ValueChangeMode::Click)
         {
-            updateValueFromMousePosition(event.position);
+            // For rotary with cursor capture, initial value update is handled by delta logic
+            if (!isRotary || !platformBridge_)
+            {
+                updateValueFromMousePosition(event.position);
+            }
         }
-        
+
         triggerDragStart();
         setDirty(true);
         return true;
@@ -246,6 +300,11 @@ void NUISlider::setOnDragStart(std::function<void()> callback)
 void NUISlider::setOnDragEnd(std::function<void()> callback)
 {
     onDragEndCallback_ = callback;
+}
+
+void NUISlider::setPlatformBridge(NUIPlatformBridge* bridge)
+{
+    platformBridge_ = bridge;
 }
 
 double NUISlider::valueToProportionOfLength(double value) const
@@ -480,6 +539,9 @@ void NUISlider::triggerDragStart()
 
 void NUISlider::triggerDragEnd()
 {
+    // Record drag end time for tooltip fade-out (Commit 2)
+    dragEndTime_ = 1.0; // Placeholder: will use actual timestamp in Commit 2
+
     if (onDragEndCallback_)
     {
         onDragEndCallback_();

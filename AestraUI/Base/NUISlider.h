@@ -120,6 +120,10 @@ public:
     void setOnDragStart(std::function<void()> callback);
     void setOnDragEnd(std::function<void()> callback);
 
+    // Platform bridge access for rotary cursor capture
+    void setPlatformBridge(class NUIPlatformBridge* bridge);
+    class NUIPlatformBridge* getPlatformBridge() const { return platformBridge_; }
+
     // Utility
     double valueToProportionOfLength(double value) const;
     double proportionOfLengthToValue(double proportion) const;
@@ -186,6 +190,14 @@ private:
     bool isHovered_ = false;
     NUIPoint lastMousePosition_;
     double valueWhenDragStarted_ = 0.0;
+
+    // Rotary cursor capture state
+    NUIPoint dragOrigin_;              // Cursor position at drag start
+    bool isFineDrag_ = false;          // True when modifier held for fine-tuning
+    double dragEndTime_ = 0.0;        // Timestamp for tooltip fade-out
+
+    // Platform bridge for cursor capture (rotary knobs only)
+    class NUIPlatformBridge* platformBridge_ = nullptr;
 
     // Snapping
     bool snapToMousePosition_ = false;

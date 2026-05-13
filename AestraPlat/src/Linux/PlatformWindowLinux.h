@@ -59,6 +59,9 @@ public:
     void setCursorVisible(bool visible) override;
     void setCursorPosition(int x, int y) override;
 
+    // Mouse Capture
+    void setMouseCapture(bool captured) override;
+
     // Modifier key state query
     KeyModifiers getCurrentModifiers() const override;
 
