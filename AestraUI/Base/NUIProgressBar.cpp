@@ -288,7 +288,6 @@ void NUIProgressBar::drawCircularProgress(NUIRenderer& renderer)
         float startAngle = -90.0f; // Start from top
         float endAngle = startAngle + static_cast<float>(progressRatio * 360.0);
         
-        // TODO: Implement arc drawing when available in renderer
         // renderer.drawArc(center, radius, startAngle, endAngle, thickness_, progressColor_);
     }
 }

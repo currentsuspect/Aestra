@@ -1101,7 +1101,6 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
          if (idx != -1 && !notes_[idx].isDeleted) {
              auto oldNotes = notes_;
              notes_.erase(notes_.begin() + idx);
-             // pushUndo("Erase", oldNotes, notes_); // TODO: Batch Undo
              commitNotes();
              repaint();
          }

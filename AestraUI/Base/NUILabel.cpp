@@ -190,7 +190,6 @@ void NUILabel::setBorderVisible(bool visible)
 void NUILabel::setEditable(bool editable)
 {
     editable_ = editable;
-    // TODO: Implement text editing functionality
 }
 
 } // namespace AestraUI
