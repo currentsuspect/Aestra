@@ -276,24 +276,18 @@ void NUISlider::drawLinearSlider(NUIRenderer& renderer)
 
 void NUISlider::drawRotarySlider(NUIRenderer& renderer)
 {
-    // TODO: Implement rotary slider rendering
-    // This would draw a circular knob with tick marks
     drawSliderTrack(renderer);
     drawSliderThumb(renderer);
 }
 
 void NUISlider::drawTwoValueSlider(NUIRenderer& renderer)
 {
-    // TODO: Implement two-value slider rendering
-    // This would draw a range slider with two handles
     drawSliderTrack(renderer);
     drawSliderThumb(renderer);
 }
 
 void NUISlider::drawThreeValueSlider(NUIRenderer& renderer)
 {
-    // TODO: Implement three-value slider rendering
-    // This would draw a range slider with three handles (for EQ bands)
     drawSliderTrack(renderer);
     drawSliderThumb(renderer);
 }

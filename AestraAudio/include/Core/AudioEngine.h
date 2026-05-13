@@ -56,9 +56,6 @@ class SamplerPlugin; // Forward declare for RT cache
  * - Multiple interpolation quality modes
  * - Proper headroom management
  * - Soft limiting to prevent digital clipping
- *
- * TODO: Future Architecture "Hybrid Engine" (See AESTRA_HYBRID_ENGINE_DESIGN.md)
- * Goal: Decouple rendering logic to support concurrent "Draft" (RT) and "Master" (Background) graphs.
  */
 class AudioEngine {
     friend class AudioRenderer; // Allow access to private members during hybrid engine transition

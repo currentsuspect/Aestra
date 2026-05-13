@@ -1287,10 +1287,6 @@ private:
     float m_mudHpStateL = 0.0f;
     float m_mudHpStateR = 0.0f;
 
-    // TODO: separate hi/lo damping (kHFDamping + kLFDamping) for more tonal control
-    // TODO: Convolution mode — IR loader using same drag system as Arsenal
-    // TODO: Early reflections as discrete pre-FDN tapped delay line network
-
 #ifdef AESTRA_REVERB_PROFILE
     mutable std::array<StageProfileData, static_cast<size_t>(ProfileStage::kStageCount)> m_profileData{};
 #endif

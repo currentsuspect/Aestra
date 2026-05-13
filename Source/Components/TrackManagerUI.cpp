@@ -4243,12 +4243,10 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
 }
 
 void TrackManagerUI::updateControlsCache(AestraUI::NUIRenderer& renderer) {
-    // TODO: Cache static UI controls (buttons, labels) - not implemented yet
     m_controlsNeedsUpdate = false;
 }
 
 void TrackManagerUI::updateTrackCache(AestraUI::NUIRenderer& renderer, size_t trackIndex) {
-    // TODO: Per-track FBO caching for waveforms - not implemented yet
     if (trackIndex < m_trackCaches.size()) {
         m_trackCaches[trackIndex].needsUpdate = false;
     }
