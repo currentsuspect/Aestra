@@ -151,6 +151,9 @@ private:
     void triggerValueChange();
     void triggerDragStart();
     void triggerDragEnd();
+
+    // Tooltip rendering for rotary knobs
+    std::string formatValueForTooltip(double value) const;
     
     // Enhanced drawing methods
     void drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& trackRect);

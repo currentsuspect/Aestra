@@ -4,7 +4,10 @@
 #include "NUITheme.h"
 #include "../Platform/NUIPlatformBridge.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
+#include <iomanip>
+#include <sstream>
 #include <vector>
 
 namespace AestraUI {
@@ -13,6 +16,7 @@ namespace AestraUI {
 namespace {
     constexpr float COARSE_DRAG_SENSITIVITY = 0.005f;  // 0.5% per pixel
     constexpr float FINE_DRAG_SENSITIVITY = 0.0005f;   // 0.05% per pixel
+    constexpr double TOOLTIP_FADE_DURATION = 0.4;      // 400ms fade-out
 }
 
 NUISlider::NUISlider(const std::string& name)
@@ -76,7 +80,6 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
                 platformBridge_->setMouseCapture(false);
                 platformBridge_->setCursorPosition(static_cast<int>(dragOrigin_.x), static_cast<int>(dragOrigin_.y));
                 platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
-                dragEndTime_ = 0.0; // Will be set in triggerDragEnd for tooltip fade
             }
 
             isDragging_ = false;
@@ -327,6 +330,17 @@ double NUISlider::snapValue(double value) const
     return value;
 }
 
+std::string NUISlider::formatValueForTooltip(double value) const
+{
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(1);
+    oss << value;
+    if (!textValueSuffix_.empty()) {
+        oss << " " << textValueSuffix_;
+    }
+    return oss.str();
+}
+
 void NUISlider::drawLinearSlider(NUIRenderer& renderer)
 {
     drawSliderTrack(renderer);
@@ -337,6 +351,59 @@ void NUISlider::drawRotarySlider(NUIRenderer& renderer)
 {
     drawSliderTrack(renderer);
     drawSliderThumb(renderer);
+
+    // Render value tooltip during drag and fade-out
+    if (style_ == Style::Rotary && (isDragging_ || dragEndTime_ > 0.0))
+    {
+        double currentTime = std::chrono::duration<double>(
+            std::chrono::steady_clock::now().time_since_epoch()
+        ).count();
+
+        double opacity = 1.0;
+        if (!isDragging_ && dragEndTime_ > 0.0)
+        {
+            double elapsed = currentTime - dragEndTime_;
+            if (elapsed >= TOOLTIP_FADE_DURATION)
+            {
+                dragEndTime_ = 0.0; // Fade complete
+                return;
+            }
+            opacity = 1.0 - (elapsed / TOOLTIP_FADE_DURATION);
+
+            // Trigger repaint during fade for smooth animation
+            setDirty(true);
+        }
+
+        // Calculate tooltip position (8px below knob center)
+        NUIRect bounds = getBounds();
+        float knobCenterX = bounds.x + bounds.width / 2.0f;
+        float knobCenterY = bounds.y + bounds.height / 2.0f;
+        float pillY = knobCenterY + std::min(bounds.width, bounds.height) / 2.0f + 8.0f;
+
+        // Get formatted value
+        std::string label = formatValueForTooltip(value_);
+
+        // Calculate pill dimensions
+        float pillPadding = 6.0f;
+        float pillHeight = 18.0f;
+        float fontSize = 10.0f;
+        // Estimate text width (rough approximation)
+        float pillWidth = static_cast<float>(label.length()) * 7.0f + pillPadding * 2.0f;
+
+        NUIRect pillRect(knobCenterX - pillWidth / 2.0f, pillY, pillWidth, pillHeight);
+
+        // Draw pill background with opacity
+        NUIColor bgColor = NUIColor::fromHex(0xff2a2d32);
+        bgColor.a = static_cast<uint8_t>(255 * opacity * 0.8f); // 80% opacity max
+        renderer.fillRoundedRect(pillRect, 4.0f, bgColor);
+
+        // Draw text with opacity
+        NUIColor textColor = NUIColor::fromHex(0xffffffff);
+        textColor.a = static_cast<uint8_t>(255 * opacity);
+        float textX = pillRect.x + pillWidth / 2.0f;
+        float textY = pillRect.y + pillHeight / 2.0f - fontSize / 2.0f;
+        renderer.drawText(label, NUIPoint(textX, textY), fontSize, textColor);
+    }
 }
 
 void NUISlider::drawTwoValueSlider(NUIRenderer& renderer)
@@ -539,8 +606,10 @@ void NUISlider::triggerDragStart()
 
 void NUISlider::triggerDragEnd()
 {
-    // Record drag end time for tooltip fade-out (Commit 2)
-    dragEndTime_ = 1.0; // Placeholder: will use actual timestamp in Commit 2
+    // Record drag end time for tooltip fade-out
+    dragEndTime_ = std::chrono::duration<double>(
+        std::chrono::steady_clock::now().time_since_epoch()
+    ).count();
 
     if (onDragEndCallback_)
     {
