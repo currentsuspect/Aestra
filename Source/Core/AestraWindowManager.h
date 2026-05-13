@@ -207,6 +207,11 @@ private:
 
     // Input State
     std::function<void(TransportAction)> m_transportCallback;
+    // SVG overlay cursor position cache. Updated by AWM mouse move callback.
+    // Post-warp divergence from SDL getCursorPosition() is intentional —
+    // renderCustomCursor now polls the authoritative platform position
+    // (getCursorPosition) rather than this cache. This cache is kept for
+    // legacy delta computations and fallback if the platform query fails.
     int m_lastMouseX{0};
     int m_lastMouseY{0};
     AestraUI::NUIModifiers m_keyModifiers{AestraUI::NUIModifiers::None};
