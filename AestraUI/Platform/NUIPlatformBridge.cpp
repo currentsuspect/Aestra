@@ -80,7 +80,12 @@ void NUIPlatformBridge::destroy() {
 
 void NUIPlatformBridge::setupEventBridges() {
     m_capsLockLatched = m_window && m_window->getCurrentModifiers().capsLock;
-    // Mouse move
+    // CALLBACK ORDER CONTRACT: This bridge handler fires FIRST on every mouse move
+    // (cache update, flag checks, cursorCaptured setup). Then the external
+    // m_mouseMoveCallback (set by AestraWindowManager) fires SECOND.
+    // Do not flatten or reorder — bridge state must be current before
+    // AWM routing logic reads it. AWM registration is at line 194 of
+    // AestraWindowManager.cpp.
     m_window->setMouseMoveCallback([this](int x, int y) {
         if (m_mousePositionFilter) {
             m_mousePositionFilter(x, y);

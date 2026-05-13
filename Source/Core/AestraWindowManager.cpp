@@ -191,6 +191,11 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     m_customWindow->setWindowHandle(m_window.get());
 
     // Input Callbacks
+    // CALLBACK ORDER CONTRACT: This AWM callback fires SECOND on every mouse move.
+    // NUIPlatformBridge's internal handler fires FIRST (cache update, flag checks,
+    // cursorCaptured setup). That handler is at line 84 of NUIPlatformBridge.cpp.
+    // Do not move this registration before the bridge's — bridge state must be
+    // current before AWM routing logic reads it.
     m_window->setMouseMoveCallback([this](int x, int y) {
         m_lastMouseX = x;
         m_lastMouseY = y;
