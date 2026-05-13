@@ -17,8 +17,8 @@ constexpr float kPi = 3.14159265358979323846f;
 
 NUIColor surfaceBg() { return NUIColor(0.052f, 0.056f, 0.064f, 0.980f); }
 NUIColor insetBg() { return NUIColor(0.018f, 0.020f, 0.024f, 0.960f); }
-// TODO: migrate plugin knob accent from teal to Aestra purple
 NUIColor amber() { return NUIColor(0.95f, 0.62f, 0.25f, 1.0f); }
+NUIColor purple() { return NUIColor(0.55f, 0.38f, 0.92f, 1.0f); }
 NUIColor teal() { return NUIColor(0.22f, 0.76f, 0.68f, 1.0f); }
 NUIColor red() { return NUIColor(0.92f, 0.28f, 0.22f, 1.0f); }
 
@@ -197,7 +197,7 @@ void AestraCompEditor::drawLevelMeter(NUIRenderer& renderer,
     const NUIRect track(bounds.x + 48.0f, bounds.y + 10.0f, bounds.width - 60.0f, 8.0f);
     renderer.fillRoundedRect(track, 4.0f, insetBg());
     renderer.fillRoundedRect({track.x, track.y, track.width * norm, track.height}, 4.0f,
-                             (label == "IN" ? teal() : amber()).withAlpha(0.86f));
+                             (label == "IN" ? purple() : amber()).withAlpha(0.86f));
     renderer.strokeRoundedRect(bounds, 8.0f, 1.0f, NUIColor(1, 1, 1, 0.065f));
     renderer.drawText(label, {bounds.x + 14.0f, bounds.y + 9.0f}, 8.0f,
                       theme.getColor("textPrimary").withAlpha(0.82f));
@@ -215,7 +215,7 @@ void AestraCompEditor::drawControl(NUIRenderer& renderer, const Control& control
                            control.paramId == Aestra::Audio::Plugins::AestraComp::kRatio ||
                            control.paramId == Aestra::Audio::Plugins::AestraComp::kAttack ||
                            control.paramId == Aestra::Audio::Plugins::AestraComp::kRelease;
-    const NUIColor accent = isPrimary ? teal() : teal().withAlpha(0.72f);
+    const NUIColor accent = isPrimary ? purple() : purple().withAlpha(0.72f);
 
     renderer.fillRoundedRect(control.bounds, 9.0f, hot ? NUIColor(0.070f, 0.078f, 0.085f, 0.99f) : surfaceBg());
     renderer.strokeRoundedRect(control.bounds, 9.0f, 1.0f, hot ? accent.withAlpha(0.42f) : NUIColor(1, 1, 1, 0.060f));
