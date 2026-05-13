@@ -554,11 +554,7 @@ void NUITextInput::drawText(NUIRenderer& renderer)
             displayText = std::string(text_.length(), passwordCharacter_);
         }
 
-        float textY = std::round(bounds.y + padding_);
-        if (!layoutLines_.empty())
-        {
-            textY = std::round(getLineRenderY(layoutLines_.front()));
-        }
+        float textY = std::round(renderer.calculateTextY(textRect, fontSize));
 
         // Calculate text X position based on justification
         float textX = std::round(textRect.x);
@@ -1389,7 +1385,13 @@ void NUITextInput::drawAnimatedCaret(NUIRenderer& renderer)
         caretX = std::round(textRect.x + line.charX[column]);
     }
 
-    const float caretY = std::round(getLineRenderY(line));
+    // Use calculateTextY for proper baseline alignment in single-line mode
+    float caretY;
+    if (!multiline_ || layoutLines_.size() <= 1) {
+        caretY = std::round(renderer.calculateTextY(textRect, fontSize));
+    } else {
+        caretY = std::round(getLineRenderY(line));
+    }
 
     // Slim caret with subtle glow
     NUIRect glowRect(caretX - 0.5f, caretY - 1, 2, caretHeight + 2);

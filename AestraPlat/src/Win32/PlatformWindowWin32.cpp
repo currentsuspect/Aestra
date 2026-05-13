@@ -1049,6 +1049,13 @@ void PlatformWindowWin32::requestClose() {
     }
 }
 
+void PlatformWindowWin32::requestFocus() {
+    if (m_hwnd) {
+        SetForegroundWindow(m_hwnd);
+        SetFocus(m_hwnd);
+    }
+}
+
 KeyCode PlatformWindowWin32::translateKeyCode(WPARAM wParam, LPARAM lParam) {
     // Handle extended keys
     bool extended = (lParam & (1 << 24)) != 0;

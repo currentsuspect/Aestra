@@ -1547,8 +1547,11 @@ void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
     case Audio::ViewType::PianoRoll:
         if (m_viewState.pianoRollOpen != open) {
             m_viewState.pianoRollOpen = open;
-            if (m_pianoRollPanel)
+            if (m_pianoRollPanel) {
                 m_pianoRollPanel->setVisible(open);
+                if (open)
+                    m_pianoRollPanel->bringToFront();
+            }
             changed = true;
         }
         break;
@@ -1557,7 +1560,10 @@ void AestraContent::setViewOpen(Audio::ViewType view, bool open) {
             m_viewState.sequencerOpen = open;
             if (m_sequencerPanel) {
                 m_sequencerPanel->setVisible(open);
-                if (!open) {
+                if (open) {
+                    m_sequencerPanel->registerDropTargets(true);
+                    m_sequencerPanel->bringToFront();
+                } else {
                     m_sequencerPanel->unregisterDropTargets();
                 }
             }
@@ -1907,6 +1913,7 @@ void AestraContent::setViewFocus(ViewFocus focus) {
                 AestraUI::NUIRect allowed = computeAllowedRectForPanels();
                 m_routingMapPanel->setBounds(allowed);
                 m_routingMapPanel->setVisible(true);
+                m_routingMapPanel->bringToFront();
                 m_routingMapPanel->setDirty(true);
             }
             // Keep mixer visible so user still sees context

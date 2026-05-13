@@ -252,6 +252,8 @@ public:
     virtual void setCloseCallback(std::function<void()> callback) = 0;
     /** @brief Set the focus-change callback. */
     virtual void setFocusCallback(std::function<void(bool focused)> callback) = 0;
+    /** @brief Request the window to be brought to front and gain focus. */
+    virtual void requestFocus() = 0;
     /** @brief Set the DPI-change callback. */
     virtual void setDPIChangeCallback(std::function<void(float dpiScale)> callback) = 0;
 };

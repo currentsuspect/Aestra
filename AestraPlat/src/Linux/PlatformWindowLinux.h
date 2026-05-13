@@ -78,6 +78,7 @@ public:
     }
     void setCloseCallback(std::function<void()> callback) override { m_closeCallback = callback; }
     void setFocusCallback(std::function<void(bool focused)> callback) override { m_focusCallback = callback; }
+    void requestFocus() override;
     void setDPIChangeCallback(std::function<void(float dpiScale)> callback) override { m_dpiChangeCallback = callback; }
 
 private:
