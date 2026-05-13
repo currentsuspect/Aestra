@@ -427,6 +427,11 @@ void AestraWindowManager::setContent(std::shared_ptr<AestraContent> content) {
         m_content->getTrackManagerUI()->setPlatformWindow(m_window.get());
     }
 
+    // Pass platform bridge to content (for plugin editors)
+    if (m_content && m_window) {
+        m_content->setPlatformBridge(m_window.get());
+    }
+
     if (m_window) {
         m_window->setMousePositionFilter([this](int& x, int& y) {
             if (!m_content) return;
@@ -724,6 +729,11 @@ void AestraWindowManager::initializeCustomCursors() {
 
 void AestraWindowManager::renderCustomCursor() {
     if (!m_renderer) return;
+    
+    // Skip rendering custom cursor when hidden style is active
+    if (m_window && m_window->getCursorStyle() == AestraUI::NUICursorStyle::Hidden) {
+        return;
+    }
 
     std::shared_ptr<AestraUI::NUIIcon> cursorIcon;
     float offsetX = 0.0f, offsetY = 0.0f;
@@ -769,8 +779,17 @@ void AestraWindowManager::renderCustomCursor() {
     }
 
     if (cursorIcon) {
-        float x = static_cast<float>(m_lastMouseX) + offsetX;
-        float y = static_cast<float>(m_lastMouseY) + offsetY;
+        // Use authoritative platform cursor position rather than cached event coords.
+        // This prevents stale-position renders after programmatic warps (e.g. slider drag-end).
+        float cursorX = static_cast<float>(m_lastMouseX);
+        float cursorY = static_cast<float>(m_lastMouseY);
+        if (m_window) {
+            auto pos = m_window->getCursorPosition();
+            cursorX = pos.x;
+            cursorY = pos.y;
+        }
+        float x = cursorX + offsetX;
+        float y = cursorY + offsetY;
         cursorIcon->setBounds(AestraUI::NUIRect(x, y, size, size));
         cursorIcon->onRender(*m_renderer);
     }

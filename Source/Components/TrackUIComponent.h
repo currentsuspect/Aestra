@@ -16,6 +16,10 @@
 #include <memory>
 #include <map>
 
+namespace AestraUI {
+class NUIPlatformBridge;
+}
+
 namespace Aestra {
 namespace Audio {
 
@@ -83,6 +87,9 @@ public:
 
     // Audition integration
     void setOnSendToAudition(std::function<void()> callback) { m_onSendToAuditionCallback = callback; }
+
+    // Platform bridge for cursor capture (volume knob)
+    void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) { m_platformBridge = bridge; }
 
     
     // Selection state
@@ -243,6 +250,11 @@ private:
     AestraUI::NUIPoint m_volumeKnobDragStartPos;
     float m_volumeKnobDragStartValue = 0.0f;
     AestraUI::NUIRect m_volumeKnobBounds;
+
+    // Cursor capture state for volume knob (hidden cursor + lock-on)
+    AestraUI::NUIPlatformBridge* m_platformBridge = nullptr;
+    AestraUI::NUIPoint m_volumeWarpOrigin;
+    float m_volumeLastDragY = 0.0f;
 
     // UI callbacks
     void onVolumeChanged(float volume);

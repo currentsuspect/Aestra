@@ -2,6 +2,7 @@
 #pragma once
 
 #include "AestraPanelWindow.h"
+#include "NUISlider.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
 #include <memory>
@@ -18,19 +19,15 @@ public:
     void onResize(int width, int height) override;
     using AestraPanelWindow::onResize;
     void onResize() { layoutControls(); }
+    void setPlatformBridge(NUIPlatformBridge* bridge) override;
 
 private:
-    struct Knob {
+    struct KnobControl {
+        std::shared_ptr<NUISlider> slider;
         std::string label;
         uint32_t paramId = 0;
-        float value = 0.5f;
         bool readOnly = false;
         NUIRect bounds;
-        NUIRect knobRect;
-        bool dragging = false;
-        bool hovered = false;
-        float dragStartY = 0.0f;
-        float dragStartValue = 0.0f;
     };
 
     struct TierButton {
@@ -43,11 +40,9 @@ private:
     void layoutControls();
     void drawPillSwitches(NUIRenderer& renderer, float wx, float wy);
     void drawSyncPanel(NUIRenderer& renderer, float wx, float wy);
-    void drawKnob(NUIRenderer& renderer, const Knob& k, float wx, float wy);
+    void drawKnob(NUIRenderer& renderer, const KnobControl& k, float wx, float wy);
     void drawMixSlider(NUIRenderer& renderer, float wx, float wy);
-    void updateKnobValue(int idx, float v);
     std::string formattedValue(uint32_t paramId) const;
-    int hitTestKnob(float localX, float localY) const;
     int hitTestBaseButton(float localX, float localY) const;
     int hitTestModifierButton(float localX, float localY) const;
 
@@ -57,7 +52,7 @@ private:
     std::string syncReadoutText() const;
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
-    std::vector<Knob> m_knobs;
+    std::vector<KnobControl> m_knobs;
     std::vector<TierButton> m_baseButtons;
     std::vector<TierButton> m_modifierButtons;
 
@@ -68,7 +63,6 @@ private:
     NUIRect m_mixSliderRect;
     NUIRect m_syncReadoutRect;
 
-    int m_hoveredKnob = -1;
     int m_hoveredBaseButton = -1;
     int m_hoveredModifierButton = -1;
     int m_syncBaseIndex = 1;      // default 1/8

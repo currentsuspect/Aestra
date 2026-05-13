@@ -102,7 +102,11 @@ void NUIPlatformBridge::setupEventBridges() {
         m_lastMouseY = y;
 
         if (m_mouseMoveCallback) {
-            m_mouseMoveCallback(x, y);
+            // Skip external callback during cursor capture to prevent hover effects,
+            // cursor icon changes, and tooltip triggers in AestraWindowManager.
+            if (m_currentCursorStyle != NUICursorStyle::Hidden) {
+                m_mouseMoveCallback(x, y);
+            }
         }
 
         // Forward to root component for hover effects
@@ -115,6 +119,7 @@ void NUIPlatformBridge::setupEventBridges() {
             event.pressed = false;
             event.released = false;
             event.wheelDelta = 0.0f;
+            event.cursorCaptured = (m_currentCursorStyle == NUICursorStyle::Hidden);
             if (m_window) {
                 auto mods = m_window->getCurrentModifiers();
                 mods.capsLock = mods.capsLock || m_capsLockLatched;
@@ -158,6 +163,7 @@ void NUIPlatformBridge::setupEventBridges() {
             event.pressed = pressed;
             event.released = !pressed;
             event.wheelDelta = 0.0f;
+            event.cursorCaptured = (m_currentCursorStyle == NUICursorStyle::Hidden);
             if (m_window) {
                 auto mods = m_window->getCurrentModifiers();
                 mods.capsLock = mods.capsLock || m_capsLockLatched;
@@ -186,6 +192,7 @@ void NUIPlatformBridge::setupEventBridges() {
             event.pressed = false;
             event.released = false;
             event.wheelDelta = delta;
+            event.cursorCaptured = (m_currentCursorStyle == NUICursorStyle::Hidden);
             // Query current modifier state for Shift+scroll zoom support
             if (m_window) {
                 auto mods = m_window->getCurrentModifiers();
@@ -485,6 +492,16 @@ void NUIPlatformBridge::setCursorPosition(int x, int y) {
     if (m_window) {
         m_window->setCursorPosition(x, y);
     }
+    m_lastMouseX = x;
+    m_lastMouseY = y;
+}
+
+NUIPoint NUIPlatformBridge::getCursorPosition() const {
+    int x = 0, y = 0;
+    if (m_window) {
+        m_window->getCursorPosition(x, y);
+    }
+    return NUIPoint(static_cast<float>(x), static_cast<float>(y));
 }
 
 void NUIPlatformBridge::setMouseCapture(bool captured) {
@@ -498,7 +515,7 @@ void NUIPlatformBridge::setCursorStyle(NUICursorStyle style) {
     
 #ifdef _WIN32
     HCURSOR cursor = NULL;
-    
+
     // Use system cursor IDs directly - LoadCursor auto-selects A/W
     switch (style) {
         case NUICursorStyle::Arrow:      cursor = ::LoadCursor(NULL, IDC_ARROW); break;
@@ -514,16 +531,32 @@ void NUIPlatformBridge::setCursorStyle(NUICursorStyle style) {
         case NUICursorStyle::ResizeAll:  cursor = ::LoadCursor(NULL, IDC_SIZEALL); break;
         case NUICursorStyle::NotAllowed: cursor = ::LoadCursor(NULL, IDC_NO); break;
         case NUICursorStyle::Grab:       cursor = ::LoadCursor(NULL, IDC_HAND); break;
-        case NUICursorStyle::Grabbing:   cursor = ::LoadCursor(NULL, IDC_HAND); break;
+        case NUICursorStyle::Grabbing:   cursor = :: LoadCursor(NULL, IDC_HAND); break;
         case NUICursorStyle::Hidden:
+            NUIComponent::setCursorCaptureActive(true);
+            if (m_window) m_window->setCursorClip(true);
             ::SetCursor(NULL);
             return;
         default: cursor = ::LoadCursor(NULL, IDC_ARROW); break;
     }
-    
+
     if (cursor) {
         ::SetCursor(cursor);
     }
+    if (m_window) m_window->setCursorClip(false);
+    NUIComponent::setCursorCaptureActive(false);
+#else
+    // Linux/macOS: handle Hidden style via SDL
+    if (style == NUICursorStyle::Hidden) {
+        NUIComponent::setCursorCaptureActive(true);
+        if (m_window) {
+            m_window->setCursorVisible(false);
+            m_window->setCursorClip(true);
+        }
+        return;
+    }
+    if (m_window) m_window->setCursorClip(false);
+    NUIComponent::setCursorCaptureActive(false);
 #endif
 }
 

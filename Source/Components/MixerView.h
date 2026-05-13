@@ -7,6 +7,10 @@
 #include <memory>
 #include <vector>
 
+namespace AestraUI {
+    class NUIPlatformBridge;
+}
+
 namespace Aestra {
 namespace Audio {
 
@@ -25,10 +29,13 @@ public:
     void setTrack(std::shared_ptr<Track> track) { m_track = track; }
     std::shared_ptr<Track> getTrack() const { return m_track; }
 
+    void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
+
 private:
     std::shared_ptr<Track> m_track;
     TrackManager* m_trackManager; // For coordinating solo exclusivity
-    
+    AestraUI::NUIPlatformBridge* m_platformBridge = nullptr;
+
     // UI Controls
     std::shared_ptr<AestraUI::Fader> m_volumeFader;
     std::shared_ptr<AestraUI::PanKnob> m_panKnob;
@@ -56,16 +63,19 @@ public:
 class MixerView : public AestraUI::NUIComponent {
 public:
     MixerView(std::shared_ptr<TrackManager> trackManager);
-    
+
     void onRender(AestraUI::NUIRenderer& renderer) override;
     void onResize(int width, int height) override;
-    
+
     void refreshChannels();  // Rebuild channel strips when tracks change
+
+    void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;
     std::vector<std::shared_ptr<ChannelStrip>> m_channelStrips;
-    
+    AestraUI::NUIPlatformBridge* m_platformBridge = nullptr;
+
     float m_channelWidth{80.0f};  // Width of each channel strip
     float m_scrollOffset{0.0f};   // Horizontal scroll offset
     

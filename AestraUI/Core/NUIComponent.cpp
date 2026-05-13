@@ -19,6 +19,7 @@ namespace {
 
 // Define static tooltip state
 TooltipState NUIComponent::s_tooltipState;
+bool NUIComponent::s_cursorCaptureActive = false;
 
 
 
@@ -104,7 +105,7 @@ bool NUIComponent::onMouseEvent(const NUIMouseEvent& event) {
     bool shouldBeHovered = isWithinBounds;
 
     // Update hover state if it changed
-    if (wasHovered != shouldBeHovered) {
+    if (wasHovered != shouldBeHovered && !event.cursorCaptured) {
         // Store the mouse position when hover state changes for tooltip positioning
         if (shouldBeHovered && !tooltipText_.empty()) {
             s_tooltipState.hoverPos = event.position;
@@ -372,6 +373,7 @@ void NUIComponent::clearFocusedComponent() {
 }
 
 void NUIComponent::setHovered(bool hovered) {
+    if (s_cursorCaptureActive) return;
     if (hovered_ != hovered) {
         hovered_ = hovered;
         if (hovered) {
@@ -476,7 +478,10 @@ void NUIComponent::setTooltip(const std::string& text) {
     tooltipText_ = text;
 }
 
-void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner) {
+void NUIComponent::showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner, bool force) {
+    // Suppress all tooltips during hidden-cursor drag unless forced
+    if (!force && s_cursorCaptureActive) return;
+
     const bool wasActive = s_tooltipState.active;
     s_tooltipState.text = text;
     s_tooltipState.position = position;

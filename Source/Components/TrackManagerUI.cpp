@@ -1401,6 +1401,9 @@ void TrackManagerUI::refreshTracks() {
         trackUI->setTimelineScrollOffset(m_timelineScrollOffset);
         trackUI->setSnapSetting(m_snapSetting); // Sync snap setting for resize
 
+        // Pass platform bridge for cursor capture (volume knob)
+        trackUI->setPlatformBridge(m_window);
+
         m_trackUIComponents.push_back(trackUI);
         addChild(trackUI);
     } // Close lane loop
@@ -1713,10 +1716,11 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
 
     // Render tool cursor (Split, Paint, AND trim resize cursor)
     // renderToolCursor handles: trim edges, split tool, paint tool
-    renderToolCursor(renderer, m_lastMousePos);
-
-    // Minimap edge-resize cursor (custom overlay) - has internal exclusion for other cursors
-    renderMinimapResizeCursor(renderer, m_lastMousePos);
+    // Skip custom tool/minimap cursor rendering during hidden-cursor drag
+    if (!m_window || m_window->getCursorStyle() != AestraUI::NUICursorStyle::Hidden) {
+        renderToolCursor(renderer, m_lastMousePos);
+        renderMinimapResizeCursor(renderer, m_lastMousePos);
+    }
 
     // Render selection box if currently drawing one
     if (m_isDrawingSelectionBox) {
@@ -2472,54 +2476,55 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // Update toolbar bounds before checking hover (critical!)
     updateToolbarBounds();
 
-    // Update toolbar hover states
-    bool oldMenuHovered = m_menuHovered;
-    bool oldAddHovered = m_addTrackHovered;
-    bool oldSelectHovered = m_selectToolHovered;
-    bool oldSplitHovered = m_splitToolHovered;
-    bool oldMultiSelectHovered = m_multiSelectToolHovered;
-    bool oldFollowHovered = m_followPlayheadHovered;
+    if (!event.cursorCaptured) {
+        // Update toolbar hover states
+        bool oldMenuHovered = m_menuHovered;
+        bool oldAddHovered = m_addTrackHovered;
+        bool oldSelectHovered = m_selectToolHovered;
+        bool oldSplitHovered = m_splitToolHovered;
+        bool oldMultiSelectHovered = m_multiSelectToolHovered;
+        bool oldFollowHovered = m_followPlayheadHovered;
 
-    m_menuHovered = m_menuIconBounds.contains(event.position);
-    m_addTrackHovered = m_addTrackBounds.contains(event.position);
-    m_selectToolHovered = m_selectToolBounds.contains(event.position);
-    m_splitToolHovered = m_splitToolBounds.contains(event.position);
-    m_multiSelectToolHovered = m_multiSelectToolBounds.contains(event.position);
-    m_followPlayheadHovered = m_followPlayheadBounds.contains(event.position);
+        m_menuHovered = m_menuIconBounds.contains(event.position);
+        m_addTrackHovered = m_addTrackBounds.contains(event.position);
+        m_selectToolHovered = m_selectToolBounds.contains(event.position);
+        m_splitToolHovered = m_splitToolBounds.contains(event.position);
+        m_multiSelectToolHovered = m_multiSelectToolBounds.contains(event.position);
+        m_followPlayheadHovered = m_followPlayheadBounds.contains(event.position);
 
-    // Toolbar Tooltips
-    bool anyToolbarHovered = m_menuHovered || m_addTrackHovered || m_selectToolHovered || m_splitToolHovered ||
-                             m_multiSelectToolHovered || m_followPlayheadHovered;
-    bool anyOldHovered = oldMenuHovered || oldAddHovered || oldSelectHovered || oldSplitHovered ||
-                         oldMultiSelectHovered || oldFollowHovered;
+        // Toolbar Tooltips
+        bool anyToolbarHovered = m_menuHovered || m_addTrackHovered || m_selectToolHovered || m_splitToolHovered ||
+                                 m_multiSelectToolHovered || m_followPlayheadHovered;
+        bool anyOldHovered = oldMenuHovered || oldAddHovered || oldSelectHovered || oldSplitHovered ||
+                             oldMultiSelectHovered || oldFollowHovered;
 
-    if (m_toolbarBounds.contains(event.position) && anyToolbarHovered) {
-        std::string tooltipText;
-        if (m_menuHovered && !oldMenuHovered)
-            tooltipText = "Menu";
-        else if (m_addTrackHovered && !oldAddHovered)
-            tooltipText = "Add Track";
-        else if (m_selectToolHovered && !oldSelectHovered)
-            tooltipText = "Select Tool (V)";
-        else if (m_splitToolHovered && !oldSplitHovered)
-            tooltipText = "Split Tool (B)";
-        else if (m_multiSelectToolHovered && !oldMultiSelectHovered)
-            tooltipText = "Multi-Select Tool";
-        else if (m_followPlayheadHovered && !oldFollowHovered)
-            tooltipText = "Follow Playhead";
-
-        if (!tooltipText.empty()) {
-            AestraUI::NUIComponent::showRemoteTooltip(tooltipText, event.position, this);
+        if (m_toolbarBounds.contains(event.position) && anyToolbarHovered) {
+            std::string tooltipText;
+            if (m_menuHovered && !oldMenuHovered)
+                tooltipText = "Menu";
+            else if (m_addTrackHovered && !oldAddHovered)
+                tooltipText = "Add Track";
+            else if (m_selectToolHovered && !oldSelectHovered)
+                tooltipText = "Select Tool";
+            else if (m_splitToolHovered && !oldSplitHovered)
+                tooltipText = "Split Tool";
+            else if (m_multiSelectToolHovered && !oldMultiSelectHovered)
+                tooltipText = "Multi-Select Tool";
+            else if (m_followPlayheadHovered && !oldFollowHovered)
+                tooltipText = "Follow Playhead";
+            if (!tooltipText.empty()) {
+                AestraUI::NUIComponent::showRemoteTooltip(tooltipText, event.position, this);
+            }
+        } else if (!anyToolbarHovered && anyOldHovered) {
+            AestraUI::NUIComponent::hideRemoteTooltip(this);
         }
-    } else if (m_toolbarBounds.contains(event.position) && anyOldHovered && !anyToolbarHovered) {
-        AestraUI::NUIComponent::hideRemoteTooltip(this);
-    }
 
-    // Toolbar is rendered outside the playlist cache; don't invalidate the cache on hover.
-    if (m_menuHovered != oldMenuHovered || m_addTrackHovered != oldAddHovered ||
-        m_selectToolHovered != oldSelectHovered || m_splitToolHovered != oldSplitHovered ||
-        m_multiSelectToolHovered != oldMultiSelectHovered || m_followPlayheadHovered != oldFollowHovered) {
-        setDirty(true);
+        // Toolbar is rendered outside the playlist cache; don't invalidate the cache on hover.
+        if (m_menuHovered != oldMenuHovered || m_addTrackHovered != oldAddHovered ||
+            m_selectToolHovered != oldSelectHovered || m_splitToolHovered != oldSplitHovered ||
+            m_multiSelectToolHovered != oldMultiSelectHovered || m_followPlayheadHovered != oldFollowHovered) {
+            setDirty(true);
+        }
     }
 
     // === CONTEXT MENU Handling ===

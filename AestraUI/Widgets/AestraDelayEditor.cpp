@@ -28,6 +28,15 @@ AestraDelayEditor::AestraDelayEditor(std::shared_ptr<Aestra::Audio::IPluginInsta
     buildControls();
 }
 
+void AestraDelayEditor::setPlatformBridge(NUIPlatformBridge* bridge) {
+    AestraPanelWindow::setPlatformBridge(bridge);
+    for (auto& knob : m_knobs) {
+        if (knob.slider) {
+            knob.slider->setPlatformBridge(bridge);
+        }
+    }
+}
+
 void AestraDelayEditor::buildControls() {
     m_knobs.clear();
     m_baseButtons.clear();
@@ -35,22 +44,37 @@ void AestraDelayEditor::buildControls() {
     if (!m_instance) return;
 
     using Delay = Aestra::Audio::Plugins::AestraDelay;
-    struct Meta { const char* label; uint32_t id; bool readOnly; };
+    struct Meta { const char* label; uint32_t id; bool readOnly; float defaultValue; };
     const Meta meta[] = {
-        {"Time", Delay::kTime, false},
-        {"Feedback", Delay::kFeedback, false},
-        {"Damping", Delay::kDamping, false},
-        {"Stereo", Delay::kStereoShift, false},
-        {"Mod Rate", Delay::kModRate, false},
-        {"Mod Depth", Delay::kModDepth, false},
+        {"Time", Delay::kTime, false, 0.25f},
+        {"Feedback", Delay::kFeedback, false, 0.3f},
+        {"Damping", Delay::kDamping, false, 0.2f},
+        {"Stereo", Delay::kStereoShift, false, 0.5f},
+        {"Mod Rate", Delay::kModRate, false, 0.1f},
+        {"Mod Depth", Delay::kModDepth, false, 0.0f},
     };
 
     for (const auto& item : meta) {
-        Knob k;
+        KnobControl k;
         k.label = item.label;
         k.paramId = item.id;
-        k.value = m_instance->getParameter(item.id);
         k.readOnly = item.readOnly;
+
+        auto slider = std::make_shared<NUISlider>();
+        slider->setStyle(NUISlider::Style::Rotary);
+        slider->setRange(0.0, 1.0);
+        slider->setValue(std::clamp(m_instance->getParameter(item.id), 0.0f, 1.0f));
+        slider->setPlatformBridge(getPlatformBridge());
+
+        slider->setOnValueChange([this, paramId = item.id](double value) {
+            if (m_instance) {
+                m_instance->setParameter(paramId, static_cast<float>(std::clamp(value, 0.0, 1.0)));
+                repaint();
+            }
+        });
+
+        k.slider = slider;
+        addChild(slider);
         m_knobs.push_back(k);
     }
 
@@ -107,7 +131,10 @@ void AestraDelayEditor::layoutControls() {
         const float x = contentX + static_cast<float>(col) * (cellW + cellGap);
         const float y = knobY + static_cast<float>(row) * (cellH + 10.0f);
         m_knobs[i].bounds = {x, y, cellW, cellH};
-        m_knobs[i].knobRect = {x + (cellW - kKnobSize) * 0.5f, y + 16.0f, kKnobSize, kKnobSize};
+        const NUIRect knobRect = {x + (cellW - kKnobSize) * 0.5f, y + 16.0f, kKnobSize, kKnobSize};
+        if (m_knobs[i].slider) {
+            m_knobs[i].slider->setBounds(knobRect);
+        }
     }
 
     // Sync panel replaces the Time knob (index 0) in sync mode
@@ -238,15 +265,14 @@ std::string AestraDelayEditor::formattedValue(uint32_t paramId) const {
     return m_instance->getParameterDisplay(paramId);
 }
 
-void AestraDelayEditor::drawKnob(NUIRenderer& renderer, const Knob& k, float wx, float wy) {
+void AestraDelayEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, float wx, float wy) {
     auto& theme = NUIThemeManager::getInstance();
+    const float value = k.slider ? static_cast<float>(k.slider->getValue()) : 0.0f;
     const NUIColor knobAccent = k.readOnly ? cyanAccent() : accent();
     NUIRect bounds = offsetRect(k.bounds, wx, wy);
-    NUIRect knobRect = offsetRect(k.knobRect, wx, wy);
-    renderer.fillRoundedRect(bounds, 10.0f,
-        k.hovered || k.dragging ? NUIColor(0.13f, 0.115f, 0.17f, 0.98f) : cardBg());
-    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f,
-        k.hovered || k.dragging ? knobAccent.withAlpha(0.55f) : NUIColor(1, 1, 1, 0.06f));
+    NUIRect knobRect = k.slider ? offsetRect(k.slider->getBounds(), wx, wy) : NUIRect();
+    renderer.fillRoundedRect(bounds, 10.0f, cardBg());
+    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, NUIColor(1, 1, 1, 0.06f));
 
     const float cx = knobRect.center().x;
     const float cy = knobRect.center().y;
@@ -256,7 +282,7 @@ void AestraDelayEditor::drawKnob(NUIRenderer& renderer, const Knob& k, float wx,
     renderer.strokeCircle({cx, cy}, r, 1.0f, knobAccent.withAlpha(0.32f));
 
     const float sa = kPi * 0.75f;
-    const float ea = sa + k.value * kPi * 1.5f;
+    const float ea = sa + value * kPi * 1.5f;
     for (int i = 0; i < 34; ++i) {
         const float a1 = sa + (ea - sa) * static_cast<float>(i) / 34.0f;
         const float a2 = sa + (ea - sa) * static_cast<float>(i + 1) / 34.0f;
@@ -265,9 +291,8 @@ void AestraDelayEditor::drawKnob(NUIRenderer& renderer, const Knob& k, float wx,
                           3.0f, knobAccent.withAlpha(k.readOnly ? 0.40f : 0.82f));
     }
 
-    const float pa = sa + k.value * kPi * 1.5f;
-    renderer.fillCircle({cx + std::cos(pa) * (r - 7.0f), cy + std::sin(pa) * (r - 7.0f)}, 3.2f,
-                        k.dragging ? NUIColor(1, 1, 1, 1) : knobAccent);
+    const float pa = sa + value * kPi * 1.5f;
+    renderer.fillCircle({cx + std::cos(pa) * (r - 7.0f), cy + std::sin(pa) * (r - 7.0f)}, 3.2f, knobAccent);
     renderer.drawText(k.label, {bounds.x + 8.0f, bounds.y + 5.0f}, 9.0f, theme.getColor("textPrimary"));
     const std::string valueStr = formattedValue(k.paramId);
     const float valueW = renderer.measureText(valueStr, 8.0f).width;
@@ -302,19 +327,11 @@ void AestraDelayEditor::drawContent(NUIRenderer& renderer, const NUIRect& conten
     using Delay = Aestra::Audio::Plugins::AestraDelay;
     const bool sync = m_instance && m_instance->getParameter(Delay::kSyncMode) > 0.5f;
     for (size_t i = 0; i < m_knobs.size(); ++i) {
-        if (m_instance) m_knobs[i].value = m_instance->getParameter(m_knobs[i].paramId);
         // Hide Time knob (index 0) in sync mode
         if (sync && i == 0) continue;
         drawKnob(renderer, m_knobs[i], wx, wy);
     }
     drawMixSlider(renderer, wx, wy);
-}
-
-int AestraDelayEditor::hitTestKnob(float localX, float localY) const {
-    for (size_t i = 0; i < m_knobs.size(); ++i) {
-        if (!m_knobs[i].readOnly && m_knobs[i].bounds.contains({localX, localY})) return static_cast<int>(i);
-    }
-    return -1;
 }
 
 int AestraDelayEditor::hitTestBaseButton(float localX, float localY) const {
@@ -384,13 +401,6 @@ void AestraDelayEditor::applySyncSelection() {
     setDirty(true);
 }
 
-void AestraDelayEditor::updateKnobValue(int idx, float v) {
-    if (idx < 0 || idx >= static_cast<int>(m_knobs.size()) || !m_instance) return;
-    m_knobs[idx].value = std::clamp(v, 0.0f, 1.0f);
-    m_instance->setParameter(m_knobs[idx].paramId, m_knobs[idx].value);
-    setDirty(true);
-}
-
 bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (!isVisible()) return false;
 
@@ -403,9 +413,8 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
     const float mx = event.position.x - b.x;
     const float my = event.position.y - b.y;
     const bool contains = b.contains(event.position);
-    const bool draggingKnob = std::any_of(m_knobs.begin(), m_knobs.end(), [](const Knob& k) { return k.dragging; });
 
-    if (!contains && !isDraggingWindow() && !draggingKnob && !m_draggingMix) return false;
+    if (!contains && !isDraggingWindow() && !m_draggingMix) return false;
 
     using Delay = Aestra::Audio::Plugins::AestraDelay;
     if (event.pressed && event.button == NUIMouseButton::Left) {
@@ -459,13 +468,6 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
                 return true;
             }
         }
-        const int kIdx = hitTestKnob(mx, my);
-        if (kIdx >= 0) {
-            m_knobs[static_cast<size_t>(kIdx)].dragging = true;
-            m_knobs[static_cast<size_t>(kIdx)].dragStartY = event.position.y;
-            m_knobs[static_cast<size_t>(kIdx)].dragStartValue = m_knobs[static_cast<size_t>(kIdx)].value;
-            return true;
-        }
     }
 
     if (m_draggingMix && m_instance) {
@@ -480,25 +482,7 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
 
-    for (size_t i = 0; i < m_knobs.size(); ++i) {
-        if (m_knobs[i].dragging) {
-            updateKnobValue(static_cast<int>(i),
-                m_knobs[i].dragStartValue + (m_knobs[i].dragStartY - event.position.y) / 150.0f);
-            if (!event.pressed && event.button == NUIMouseButton::Left) m_knobs[i].dragging = false;
-            return true;
-        }
-    }
-
     if (!event.pressed && !event.released) {
-        const int h = contains ? hitTestKnob(mx, my) : -1;
-        if (h != m_hoveredKnob) {
-            m_hoveredKnob = h;
-            for (size_t i = 0; i < m_knobs.size(); ++i) {
-                m_knobs[i].hovered = static_cast<int>(i) == h;
-            }
-            setDirty(true);
-        }
-
         // Sync panel hover tracking
         if (m_instance && m_instance->getParameter(Delay::kSyncMode) > 0.5f) {
             const int hb = hitTestBaseButton(mx, my);
@@ -523,7 +507,8 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    return contains;
+    // Let NUISlider children handle their own mouse events
+    return NUIComponent::onMouseEvent(event);
 }
 
 } // namespace AestraUI

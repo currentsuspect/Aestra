@@ -133,14 +133,14 @@ void UIMixerPanel::refreshChannels()
     for (size_t i = 0; i < channelCount; ++i) {
         auto* channel = m_viewModel->getChannelByIndex(i);
         if (!channel) continue;
-        auto strip = std::make_shared<UIMixerStrip>(channel->id, static_cast<int>(i + 1), 
-                                                    m_viewModel.get(), 
-                                                    m_trackManager->getMeterSnapshots(), 
+        auto strip = std::make_shared<UIMixerStrip>(channel->id, static_cast<int>(i + 1),
+                                                    m_viewModel.get(),
+                                                    m_trackManager->getMeterSnapshots(),
                                                     m_trackManager->getContinuousParams());
         strip->onFXClicked = [this](uint32_t channelId) {
             showPluginDropdown(channelId);
         };
-        
+
         // Wire fader to CommandHistory for undo/redo
         uint32_t chId = channel->id;
         int slotIdx = channel->slotIndex;
@@ -205,6 +205,14 @@ void UIMixerPanel::refreshChannels()
     }
 
     layoutMeters();
+}
+
+void UIMixerPanel::setPlatformBridge(NUIPlatformBridge* bridge)
+{
+    for (auto& strip : m_strips) {
+        if (strip) strip->setPlatformBridge(bridge);
+    }
+    if (m_masterStrip) m_masterStrip->setPlatformBridge(bridge);
 }
 
 void UIMixerPanel::layoutMeters()

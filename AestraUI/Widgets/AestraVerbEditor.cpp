@@ -97,27 +97,51 @@ AestraVerbEditor::AestraVerbEditor(std::shared_ptr<Aestra::Audio::IPluginInstanc
     buildControls();
 }
 
+void AestraVerbEditor::setPlatformBridge(NUIPlatformBridge* bridge) {
+    AestraPanelWindow::setPlatformBridge(bridge);
+    for (auto& knob : m_knobs) {
+        if (knob.slider) {
+            knob.slider->setPlatformBridge(bridge);
+        }
+    }
+}
+
 void AestraVerbEditor::buildControls() {
     m_knobs.clear();
     if (!m_instance) return;
 
-    struct Meta { const char* label; uint32_t id; };
+    struct Meta { const char* label; uint32_t id; float defaultValue; };
     const Meta metas[] = {
-        {"Predelay", kPredelay},
-        {"Size", kSize},
-        {"Decay", kDecay},
-        {"Damping", kDamping},
-        {"Diffusion", kDiffusion},
-        {"Mod Rate", kModRate},
-        {"Mod Depth", kModDepth},
-        {"Width", kWidth}
+        {"Predelay", kPredelay, 0.02f},
+        {"Size", kSize, 0.52f},
+        {"Decay", kDecay, 0.56f},
+        {"Damping", kDamping, 0.50f},
+        {"Diffusion", kDiffusion, 0.64f},
+        {"Mod Rate", kModRate, 0.42f},
+        {"Mod Depth", kModDepth, 0.14f},
+        {"Width", kWidth, 0.68f}
     };
 
     for (const auto& meta : metas) {
-        Knob k;
+        KnobControl k;
         k.label = meta.label;
         k.paramId = meta.id;
-        k.value = getParamValue(meta.id);
+
+        auto slider = std::make_shared<NUISlider>();
+        slider->setStyle(NUISlider::Style::Rotary);
+        slider->setRange(0.0, 1.0);
+        slider->setValue(std::clamp(getParamValue(meta.id), 0.0f, 1.0f));
+        slider->setPlatformBridge(getPlatformBridge());
+
+        slider->setOnValueChange([this, paramId = meta.id](double value) {
+            if (m_instance) {
+                updateParameter(paramId, static_cast<float>(std::clamp(value, 0.0, 1.0)));
+                repaint();
+            }
+        });
+
+        k.slider = slider;
+        addChild(slider);
         m_knobs.push_back(k);
     }
     layoutControls();
@@ -211,7 +235,8 @@ void AestraVerbEditor::layoutControls() {
         if (k.paramId == kDecay) {
             const float macroSize = std::min(174.0f, centerW - 10.0f);
             k.bounds = NUIRect(centerX, mainY + 8.0f, centerW, 198.0f);
-            k.knobRect = NUIRect(centerX + (centerW - macroSize) * 0.5f, mainY + 18.0f, macroSize, macroSize);
+            const NUIRect knobRect = NUIRect(centerX + (centerW - macroSize) * 0.5f, mainY + 18.0f, macroSize, macroSize);
+            if (k.slider) k.slider->setBounds(knobRect);
             continue;
         }
 
@@ -239,7 +264,8 @@ void AestraVerbEditor::layoutControls() {
             }
         }
         k.bounds = NUIRect(x, y, w, 50.0f);
-        k.knobRect = NUIRect(x + 6.0f, y + 2.0f, smallKnob, smallKnob);
+        const NUIRect knobRect = NUIRect(x + 6.0f, y + 2.0f, smallKnob, smallKnob);
+        if (k.slider) k.slider->setBounds(knobRect);
     }
 
     m_mixBounds = NUIRect(centerX + 10.0f, mainY + 214.0f, centerW - 20.0f, 30.0f);
@@ -427,31 +453,27 @@ void AestraVerbEditor::drawModeSelector(NUIRenderer& renderer, NUIColor accent) 
     }
 }
 
-void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const Knob& k, NUIColor accent) {
+void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, NUIColor accent) {
     auto& theme = NUIThemeManager::getInstance();
-    const float cx = k.knobRect.center().x;
-    const float cy = k.knobRect.center().y;
-    const float r = std::clamp(std::min(k.knobRect.width, k.knobRect.height) * 0.34f, 10.0f, 18.0f);
-    const bool focused = m_focusedKnob >= 0 && m_focusedKnob < static_cast<int>(m_knobs.size()) &&
-        m_knobs[static_cast<size_t>(m_focusedKnob)].paramId == k.paramId;
-    const bool active = k.dragging;
-    const bool hover = k.hovered;
+    const NUIRect knobRect = k.slider ? k.slider->getBounds() : NUIRect();
+    const float cx = knobRect.center().x;
+    const float cy = knobRect.center().y;
+    const float r = std::clamp(std::min(knobRect.width, knobRect.height) * 0.34f, 10.0f, 18.0f);
+    const bool active = k.slider ? k.slider->isDragging() : false;
+    const bool hover = k.slider ? k.slider->isHovered() : false;
     const float stateLift = active ? 1.0f : (hover ? 0.55f : 0.0f);
-    const float focusAlpha = focused ? 0.28f : 0.0f;
 
     if (k.paramId == kDecay) {
-        const float macroR = k.knobRect.width * 0.40f;
+        const float macroR = knobRect.width * 0.40f;
         const float startAngle = kPi * 0.75f;
         const float sweep = kPi * 1.50f;
-        const float endAngle = startAngle + k.value * sweep;
+        const float value = k.slider ? k.slider->getValue() : 0.0;
+        const float endAngle = startAngle + value * sweep;
         renderer.fillCircle({cx, cy}, macroR + 13.0f, NUIColor(0.006f, 0.008f, 0.011f, 0.68f));
         renderer.fillCircle({cx, cy}, macroR + 7.0f, verbInsetBg().withAlpha(0.98f));
         renderer.drawShadow(NUIRect{cx - macroR, cy - macroR, macroR * 2.0f, macroR * 2.0f}, 0.0f, 3.0f, 8.0f,
                             NUIColor(0, 0, 0, 0.46f));
         renderer.strokeCircle({cx, cy}, macroR + 17.0f, 1.0f, accent.withAlpha(0.10f + stateLift * 0.07f));
-        if (focused) {
-            renderer.strokeCircle({cx, cy}, macroR + 22.0f, 1.0f, accent.withAlpha(focusAlpha));
-        }
         for (int tick = 0; tick < 48; ++tick) {
             const float a = kPi * 0.73f + static_cast<float>(tick) / 47.0f * kPi * 1.54f;
             const float inner = macroR + 18.0f;
@@ -467,16 +489,16 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const Knob& k, NUIColor a
         renderer.fillCircle({cx, cy}, macroR * 0.78f, hover ? verbSurfaceBg().withAlpha(1.0f) : NUIColor(0.036f, 0.043f, 0.052f, 1.0f));
         renderer.fillCircle({cx - macroR * 0.18f, cy - macroR * 0.22f}, macroR * 0.23f, NUIColor(1, 1, 1, 0.030f + stateLift * 0.018f));
         renderer.strokeCircle({cx, cy}, macroR * 0.78f, 1.0f, NUIColor(1, 1, 1, 0.095f + stateLift * 0.045f));
-        const float pa = startAngle + k.value * sweep;
+        const float pa = startAngle + value * sweep;
         renderer.drawLine({cx + std::cos(pa) * (macroR - 14.0f), cy + std::sin(pa) * (macroR - 14.0f)},
                           {cx + std::cos(pa) * (macroR - 3.0f), cy + std::sin(pa) * (macroR - 3.0f)}, 4.0f,
                           verbGold().withAlpha(active ? 1.0f : (hover ? 0.98f : 0.92f)));
         const float seconds = 0.3f + getParamValue(kDecay) * 9.7f;
-        std::ostringstream value;
-        value << std::fixed << std::setprecision(2) << seconds;
+        std::ostringstream valueStr;
+        valueStr << std::fixed << std::setprecision(2) << seconds;
         renderer.drawTextCentered("DECAY", {k.bounds.x, k.bounds.y + 70.0f, k.bounds.width, 18.0f}, 12.0f,
                                   accent.withAlpha(0.82f + stateLift * 0.12f));
-        renderer.drawTextCentered(value.str(), {k.bounds.x, k.bounds.y + 94.0f, k.bounds.width, 56.0f}, 42.0f,
+        renderer.drawTextCentered(valueStr.str(), {k.bounds.x, k.bounds.y + 94.0f, k.bounds.width, 56.0f}, 42.0f,
                                   theme.getColor("textPrimary").withAlpha(active ? 1.0f : (hover ? 0.97f : 0.94f)));
         renderer.drawTextCentered("s", {k.bounds.x, k.bounds.y + 143.0f, k.bounds.width, 20.0f}, 16.0f,
                                   accent.withAlpha(0.80f + stateLift * 0.12f));
@@ -488,19 +510,17 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const Knob& k, NUIColor a
     renderer.fillCircle({cx, cy}, r * 0.76f, hover ? verbSurfaceBg().withAlpha(1.0f) : NUIColor(0.034f, 0.040f, 0.049f, 1.0f));
     renderer.strokeCircle({cx, cy}, r * 0.76f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.09f + stateLift * 0.045f));
     renderer.fillCircle({cx - r * 0.19f, cy - r * 0.22f}, r * 0.25f, NUIColor(1, 1, 1, 0.026f + stateLift * 0.016f));
-    if (focused) {
-        renderer.strokeCircle({cx, cy}, r + 12.0f, 1.0f, accent.withAlpha(0.24f));
-    }
 
     const float startAngle = kPi * 0.75f;
     const float sweep = kPi * 1.5f;
-    const float endAngle = startAngle + k.value * sweep;
+    const float value = k.slider ? k.slider->getValue() : 0.0;
+    const float endAngle = startAngle + value * sweep;
     drawVerbArc(renderer, {cx, cy}, r, startAngle, startAngle + sweep, 3.0f, NUIColor(1, 1, 1, 0.12f + stateLift * 0.025f));
     drawVerbArc(renderer, {cx, cy}, r, startAngle, endAngle, 3.0f, accent.withAlpha(0.86f + stateLift * 0.11f));
-    const float pa = startAngle + k.value * kPi * 1.5f;
+    const float pa = startAngle + value * kPi * 1.5f;
     renderer.drawLine({cx, cy}, {cx + std::cos(pa) * (r * 0.56f), cy + std::sin(pa) * (r * 0.56f)}, 2.0f,
                       NUIColor(1.0f, 1.0f, 1.0f, active ? 0.98f : (hover ? 0.92f : 0.84f)));
-    const float textX = k.knobRect.right() + 13.0f;
+    const float textX = knobRect.right() + 13.0f;
     renderer.drawText(k.label, {textX, k.bounds.y + 12.0f}, 10.5f,
                       theme.getColor("textPrimary").withAlpha(0.74f + stateLift * 0.12f));
     renderer.drawText(formatParameterValue(k.paramId), {textX, k.bounds.y + 31.0f}, 11.0f,
@@ -681,13 +701,6 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
     drawAnalysisPanels(renderer, accent);
 }
 
-int AestraVerbEditor::hitTestKnob(float x, float y) const {
-    for (size_t i = 0; i < m_knobs.size(); ++i) {
-        if (m_knobs[i].bounds.contains({x, y})) return static_cast<int>(i);
-    }
-    return -1;
-}
-
 int AestraVerbEditor::hitTestMode(float x, float y) const {
     for (size_t i = 0; i < m_modes.size(); ++i) {
         if (m_modes[i].bounds.contains({x, y})) return static_cast<int>(i);
@@ -710,17 +723,12 @@ void AestraVerbEditor::updateParameter(uint32_t paramId, float v) {
     if (!m_instance) return;
     m_instance->setParameter(paramId, std::clamp(v, 0.0f, 1.0f));
     for (auto& k : m_knobs) {
-        if (k.paramId == paramId) {
-            k.value = getParamValue(paramId);
+        if (k.paramId == paramId && k.slider) {
+            k.slider->setValue(getParamValue(paramId));
             break;
         }
     }
     setDirty(true);
-}
-
-void AestraVerbEditor::updateKnobValue(int idx, float v) {
-    if (idx < 0 || idx >= static_cast<int>(m_knobs.size()) || !m_instance) return;
-    updateParameter(m_knobs[idx].paramId, v);
 }
 
 void AestraVerbEditor::applyPreset(const PresetButton& preset) {
@@ -744,28 +752,22 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     auto b = getBounds();
-    const bool isDraggingKnob = std::any_of(m_knobs.begin(), m_knobs.end(),
-                                            [](const Knob& knob) { return knob.dragging; });
     const bool contains = b.contains(event.position);
     const auto updateHoverState = [&]() {
-        const int h = contains ? hitTestKnob(event.position.x, event.position.y) : -1;
         const int mh = contains ? hitTestMode(event.position.x, event.position.y) : -1;
         const int ph = contains ? hitTestPreset(event.position.x, event.position.y) : -1;
         const bool mixHovered = contains && hitTestMix(event.position.x, event.position.y);
-        if (h == m_hoveredKnob && mh == m_hoveredMode && ph == m_hoveredPreset &&
-            mixHovered == m_mixHovered) {
+        if (mh == m_hoveredMode && ph == m_hoveredPreset && mixHovered == m_mixHovered) {
             return;
         }
-        m_hoveredKnob = h;
         m_hoveredMode = mh;
         m_hoveredPreset = ph;
         m_mixHovered = mixHovered;
-        for (size_t i = 0; i < m_knobs.size(); ++i) m_knobs[i].hovered = (static_cast<int>(i) == h);
         for (size_t i = 0; i < m_modes.size(); ++i) m_modes[i].hovered = (static_cast<int>(i) == mh);
         for (size_t i = 0; i < m_presets.size(); ++i) m_presets[i].hovered = (static_cast<int>(i) == ph);
         setDirty(true);
     };
-    if (!isDraggingWindow() && !isDraggingKnob && !m_draggingMix) {
+    if (!isDraggingWindow() && !m_draggingMix) {
         updateHoverState();
     }
     if (event.released) {
@@ -775,13 +777,11 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
             setDirty(true);
         }
     }
-    if (!contains && !isDraggingWindow() && !isDraggingKnob && !m_draggingMix) {
-        if (m_hoveredKnob != -1 || m_hoveredMode != -1 || m_hoveredPreset != -1 || m_mixHovered) {
-            m_hoveredKnob = -1;
+    if (!contains && !isDraggingWindow() && !m_draggingMix) {
+        if (m_hoveredMode != -1 || m_hoveredPreset != -1 || m_mixHovered) {
             m_hoveredMode = -1;
             m_hoveredPreset = -1;
             m_mixHovered = false;
-            for (auto& knob : m_knobs) knob.hovered = false;
             for (auto& mode : m_modes) mode.hovered = false;
             for (auto& preset : m_presets) preset.hovered = false;
             setDirty(true);
@@ -795,7 +795,6 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
             const auto mode = m_modes[static_cast<size_t>(modeIdx)].mode;
             m_pressedMode = mode;
             m_focusedMode = mode;
-            m_focusedKnob = -1;
             m_focusedPreset = -1;
             m_mixFocused = false;
             updateParameter(kMode, static_cast<float>(mode) / 2.0f);
@@ -805,7 +804,6 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         if (presetIdx >= 0) {
             m_pressedPreset = presetIdx;
             m_focusedPreset = presetIdx;
-            m_focusedKnob = -1;
             m_focusedMode = -1;
             m_mixFocused = false;
             applyPreset(m_presets[static_cast<size_t>(presetIdx)]);
@@ -814,21 +812,9 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         if (hitTestMix(event.position.x, event.position.y)) {
             m_draggingMix = true;
             m_mixFocused = true;
-            m_focusedKnob = -1;
             m_focusedMode = -1;
             m_focusedPreset = -1;
             updateParameter(kMix, (event.position.x - m_mixTrack.x) / std::max(1.0f, m_mixTrack.width));
-            return true;
-        }
-        const int kIdx = hitTestKnob(event.position.x, event.position.y);
-        if (kIdx >= 0) {
-            m_focusedKnob = kIdx;
-            m_focusedMode = -1;
-            m_focusedPreset = -1;
-            m_mixFocused = false;
-            m_knobs[static_cast<size_t>(kIdx)].dragging = true;
-            m_knobs[static_cast<size_t>(kIdx)].dragStartY = event.position.y;
-            m_knobs[static_cast<size_t>(kIdx)].dragStartValue = m_knobs[static_cast<size_t>(kIdx)].value;
             return true;
         }
     }
@@ -841,17 +827,6 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
         updateParameter(kMix, (event.position.x - m_mixTrack.x) / std::max(1.0f, m_mixTrack.width));
         return true;
-    }
-
-    for (size_t i = 0; i < m_knobs.size(); ++i) {
-        if (m_knobs[i].dragging) {
-            updateKnobValue(static_cast<int>(i),
-                std::clamp(m_knobs[i].dragStartValue + (m_knobs[i].dragStartY - event.position.y) / 150.0f, 0.0f, 1.0f));
-            if (event.released && event.button == NUIMouseButton::Left) {
-                m_knobs[i].dragging = false;
-            }
-            return true;
-        }
     }
 
     if (!event.pressed && !event.released) {

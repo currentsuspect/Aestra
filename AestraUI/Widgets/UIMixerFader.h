@@ -8,6 +8,9 @@
 
 namespace AestraUI {
 
+// Forward declaration
+class NUIPlatformBridge;
+
 /**
  * @brief Vertical dB fader widget for the modern mixer UI.
  *
@@ -33,6 +36,9 @@ public:
 
     std::function<void(float db)> onValueChanged;
 
+    // Platform bridge for cursor warp (infinite drag)
+    void setPlatformBridge(NUIPlatformBridge* bridge);
+
 private:
     float m_minDb{-90.0f};
     float m_maxDb{6.0f};
@@ -43,6 +49,11 @@ private:
     bool m_dragLatched{false};
     NUIPoint m_dragStartPos{};
     float m_dragStartDb{0.0f};
+
+    // Cursor-warp state (infinite drag)
+    NUIPlatformBridge* m_platformBridge = nullptr;
+    NUIPoint m_warpOrigin{};      // Integer-snapped window position at drag start
+    float m_lastDragY;            // Last cursor Y position for frame-to-frame delta
 
     // Cached value string (updated only on value change)
     float m_cachedDbValue{1000.0f};

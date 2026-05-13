@@ -3,6 +3,7 @@
 
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
+#include "../Platform/NUIPlatformBridge.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -175,12 +176,19 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     }
 }
 
+void UIMixerFader::setPlatformBridge(NUIPlatformBridge* bridge)
+{
+    m_platformBridge = bridge;
+}
+
 bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;
 
     auto bounds = getBounds();
-    setHovered(bounds.contains(event.position));
+    if (!event.cursorCaptured) {
+        setHovered(bounds.contains(event.position));
+    }
     if (!bounds.contains(event.position) && !m_dragging) return false;
 
     // Double-click reset
@@ -213,22 +221,79 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
         }
 
         m_dragStartDb = m_valueDb;
+
+        // Cursor-warp setup for infinite drag
+        if (m_platformBridge) {
+            // Initialize drag origin and tracking
+            m_warpOrigin = event.position;
+            m_lastDragY = event.position.y;
+            m_platformBridge->setCursorStyle(NUICursorStyle::Hidden);
+        }
+
         return true;
     }
 
     if (event.released && event.button == NUIMouseButton::Left && m_dragging) {
         m_dragging = false;
         m_dragLatched = false;
+
+        if (m_platformBridge) {
+            // Warp cursor to the fader handle position (matches current value),
+            // not to the click origin — user expects cursor at the slider thumb.
+            auto bounds = getBounds();
+            const float trackTop = bounds.y + TOP_PAD;
+            const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
+            const float trackHeight = std::max(1.0f, trackBottom - trackTop);
+            const float norm = (m_valueDb - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb));
+            const float filledH = std::clamp(norm, 0.0f, 1.0f) * trackHeight;
+            const float handleY = std::clamp(trackBottom - filledH - HANDLE_HEIGHT * 0.5f,
+                                             trackTop - HANDLE_HEIGHT * 0.5f,
+                                             trackBottom - HANDLE_HEIGHT * 0.5f);
+            const float handleW = 32.0f;
+            const float handleX = bounds.x + (bounds.width - handleW) * 0.5f;
+
+            m_platformBridge->setCursorPosition(
+                static_cast<int>(handleX + handleW * 0.5f),
+                static_cast<int>(handleY + HANDLE_HEIGHT * 0.5f));
+            m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
+        }
+
         return true;
     }
 
     // Dragging (mouse move events set button = None)
     if (m_dragging && event.button == NUIMouseButton::None) {
+        // Cursor-warp mode: use frame-to-frame delta
+        if (m_platformBridge) {
+            // Compute frame-to-frame delta
+            float dy = event.position.y - m_lastDragY;
+            m_lastDragY = event.position.y;
+
+            // Invert Y for fader: up = positive
+            const float deltaPx = -dy;
+            const float trackTop = bounds.y + TOP_PAD;
+            const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
+            const float trackHeight = std::max(1.0f, trackBottom - trackTop);
+            const float dbPerPixel = (m_maxDb - m_minDb) / trackHeight;
+
+            // Reduced sensitivity for cursor-warp mode
+            float sensitivity = (event.modifiers & NUIModifiers::Shift) ? 0.1f : 0.5f;
+            float nextDb = m_valueDb + deltaPx * dbPerPixel * sensitivity;
+
+            if ((event.modifiers & NUIModifiers::Ctrl) || (event.modifiers & NUIModifiers::Alt)) {
+                nextDb = std::round(nextDb / SNAP_DB) * SNAP_DB;
+            }
+
+            setValueDb(nextDb);
+            return true;
+        }
+
+        // Non-warp mode: use drag start position with latching
+        const float deltaPx = m_dragStartPos.y - event.position.y;
         const float trackTop = bounds.y + TOP_PAD;
         const float trackBottom = bounds.y + bounds.height - BOTTOM_PAD;
         const float trackHeight = std::max(1.0f, trackBottom - trackTop);
         const float dbPerPixel = (m_maxDb - m_minDb) / trackHeight;
-        const float deltaPx = (m_dragStartPos.y - event.position.y);
         const float absDelta = std::abs(deltaPx);
 
         float sensitivity = 1.0f;

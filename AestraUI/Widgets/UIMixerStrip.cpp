@@ -9,6 +9,7 @@
 #include "MeterSnapshot.h"
 #include "Plugin/AestraComp.h"
 #include "../../AestraCore/include/AestraLog.h"
+#include "../Platform/NUIPlatformBridge.h"
 
 #include <algorithm>
 #include <cmath>
@@ -374,6 +375,14 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
     }
 
     layoutChildren();
+}
+
+void UIMixerStrip::setPlatformBridge(NUIPlatformBridge* bridge)
+{
+    if (m_trimKnob) m_trimKnob->setPlatformBridge(bridge);
+    if (m_panKnob) m_panKnob->setPlatformBridge(bridge);
+    if (m_widthKnob) m_widthKnob->setPlatformBridge(bridge);
+    if (m_fader) m_fader->setPlatformBridge(bridge);
 }
 
 void UIMixerStrip::cacheThemeColors()

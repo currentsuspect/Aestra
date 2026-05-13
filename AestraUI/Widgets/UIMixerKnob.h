@@ -8,6 +8,8 @@
 
 namespace AestraUI {
 
+// Forward declaration
+class NUIPlatformBridge;
 
 enum class UIMixerKnobType { Trim, Pan, Width, Send };
 
@@ -35,6 +37,9 @@ public:
 
     std::function<void(float)> onValueChanged;
 
+    // Platform bridge for cursor warp (infinite drag)
+    void setPlatformBridge(NUIPlatformBridge* bridge);
+
 private:
     UIMixerKnobType m_type;
     float m_value{0.0f};
@@ -44,6 +49,11 @@ private:
     NUIPoint m_dragStartPos{};
     float m_dragStartValue{0.0f};
     DragAxis m_dragAxis{DragAxis::Undecided};
+
+    // Cursor-warp state (infinite drag)
+    NUIPlatformBridge* m_platformBridge = nullptr;
+    NUIPoint m_warpOrigin{};      // Integer-snapped window position at drag start
+    float m_lastDragY;            // Last cursor Y position for frame-to-frame delta
 
     // Cached formatted value string (tooltip)
     float m_cachedValue{1234567.0f};

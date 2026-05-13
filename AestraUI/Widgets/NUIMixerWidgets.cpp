@@ -3,6 +3,7 @@
 
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
+#include "../Platform/NUIPlatformBridge.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -460,6 +461,14 @@ ChannelStrip::ChannelStrip()
     addChild(soloButton_);
     addChild(armButton_);
     addChild(meterStrip_);
+}
+
+void ChannelStrip::setPlatformBridge(NUIPlatformBridge* bridge)
+{
+    m_platformBridge = bridge;
+    if (panKnob_) {
+        panKnob_->setPlatformBridge(bridge);
+    }
 }
 
 void ChannelStrip::onRender(NUIRenderer& renderer)

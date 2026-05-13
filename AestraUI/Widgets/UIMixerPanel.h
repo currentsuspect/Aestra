@@ -7,6 +7,7 @@
 #include "UIMixerStrip.h"
 #include "UIMixerInspector.h"
 #include "UIMixerPluginDropdown.h"
+#include "Base/NUISlider.h"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -66,6 +67,11 @@ public:
      * @brief Get the inspector.
      */
     UIMixerInspector* getInspector() { return m_inspector.get(); }
+
+    /**
+     * @brief Set platform bridge for cursor warping on mixer knobs/faders.
+     */
+    void setPlatformBridge(class NUIPlatformBridge* bridge);
 
 private:
     bool channelLayoutMatchesViewModel() const;

@@ -393,13 +393,30 @@ void PlatformWindowLinux::setCursorVisible(bool visible) {
 
 void PlatformWindowLinux::setCursorPosition(int x, int y) {
     if (m_window) {
-        SDL_WarpMouseInWindow(m_window, x, y);
+        SDL_WarpMouseInWindow(m_window, x, y); // window-relative, matches getCursorPosition()
     }
 }
 
+void PlatformWindowLinux::getCursorPosition(int& x, int& y) const {
+    SDL_GetMouseState(&x, &y);
+}
+
 void PlatformWindowLinux::setMouseCapture(bool captured) {
+    // No-op — cursor capture handled via warp in NUISlider
+    // SDL_SetRelativeMouseMode removed: focus-dependent, unreliable
+    (void)captured;
+}
+
+void PlatformWindowLinux::setCursorClip(bool clipped) {
     if (m_window) {
-        SDL_SetRelativeMouseMode(captured ? SDL_TRUE : SDL_FALSE);
+        if (clipped) {
+            int w, h;
+            SDL_GetWindowSize(m_window, &w, &h);
+            SDL_Rect rect = {0, 0, w, h};
+            SDL_SetWindowMouseRect(m_window, &rect);
+        } else {
+            SDL_SetWindowMouseRect(m_window, nullptr);
+        }
     }
 }
 

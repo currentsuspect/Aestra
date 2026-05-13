@@ -42,6 +42,15 @@ AestraCompEditor::AestraCompEditor(std::shared_ptr<Aestra::Audio::IPluginInstanc
     buildControls();
 }
 
+void AestraCompEditor::setPlatformBridge(NUIPlatformBridge* bridge) {
+    AestraPanelWindow::setPlatformBridge(bridge);
+    for (auto& control : m_controls) {
+        if (control.slider) {
+            control.slider->setPlatformBridge(bridge);
+        }
+    }
+}
+
 void AestraCompEditor::buildControls() {
     m_controls.clear();
     if (!m_instance) return;
@@ -50,26 +59,42 @@ void AestraCompEditor::buildControls() {
     struct Meta {
         const char* label;
         uint32_t id;
+        float defaultValue;
     };
 
     const Meta controls[] = {
-        {"Threshold", Comp::kThreshold},
-        {"Ratio", Comp::kRatio},
-        {"Attack", Comp::kAttack},
-        {"Release", Comp::kRelease},
-        {"Knee", Comp::kKnee},
-        {"Makeup", Comp::kMakeup},
-        {"Mix", Comp::kMix},
-        {"Input", Comp::kInputGain},
-        {"Output", Comp::kOutputGain},
-        {"Detector HPF", Comp::kDetectorHPF},
+        {"Threshold", Comp::kThreshold, 0.6667f},
+        {"Ratio", Comp::kRatio, 0.1579f},
+        {"Attack", Comp::kAttack, 0.0991f},
+        {"Release", Comp::kRelease, 0.1414f},
+        {"Knee", Comp::kKnee, 0.0f},
+        {"Makeup", Comp::kMakeup, 0.0f},
+        {"Mix", Comp::kMix, 1.0f},
+        {"Input", Comp::kInputGain, 0.5f},
+        {"Output", Comp::kOutputGain, 0.5f},
+        {"Detector HPF", Comp::kDetectorHPF, 0.0f},
     };
 
     for (const auto& item : controls) {
-        Control control;
+        KnobControl control;
         control.label = item.label;
         control.paramId = item.id;
-        control.value = std::clamp(m_instance->getParameter(item.id), 0.0f, 1.0f);
+
+        auto slider = std::make_shared<NUISlider>();
+        slider->setStyle(NUISlider::Style::Rotary);
+        slider->setRange(0.0, 1.0);
+        slider->setValue(std::clamp(m_instance->getParameter(item.id), 0.0f, 1.0f));
+        slider->setPlatformBridge(getPlatformBridge());
+
+        slider->setOnValueChange([this, paramId = item.id](double value) {
+            if (m_instance) {
+                m_instance->setParameter(paramId, static_cast<float>(std::clamp(value, 0.0, 1.0)));
+                repaint();
+            }
+        });
+
+        control.slider = slider;
+        addChild(slider);
         m_controls.push_back(control);
     }
 
@@ -106,7 +131,10 @@ void AestraCompEditor::layoutControls() {
         const float y = gridY + (row == 0 ? 0.0f : cellHPrimary + gapY);
         const float knobSz = (row == 0) ? kKnobSizePrimary : kKnobSizeSecondary;
         m_controls[i].bounds = NUIRect(x, y, cellW, cellH);
-        m_controls[i].knobRect = NUIRect(x + (cellW - knobSz) * 0.5f, y + 21.0f, knobSz, knobSz);
+        const NUIRect knobRect = NUIRect(x + (cellW - knobSz) * 0.5f, y + 21.0f, knobSz, knobSz);
+        if (m_controls[i].slider) {
+            m_controls[i].slider->setBounds(knobRect);
+        }
     }
 }
 
@@ -120,8 +148,9 @@ void AestraCompEditor::onResize(int width, int height) {
 void AestraCompEditor::syncControlsFromPlugin() {
     if (!m_instance) return;
     for (auto& control : m_controls) {
-        if (control.dragging) continue;
-        control.value = std::clamp(m_instance->getParameter(control.paramId), 0.0f, 1.0f);
+        if (control.slider) {
+            control.slider->setValue(std::clamp(m_instance->getParameter(control.paramId), 0.0f, 1.0f));
+        }
     }
 }
 
@@ -208,28 +237,29 @@ std::string AestraCompEditor::valueText(uint32_t paramId) const {
     return m_instance->getParameterDisplay(paramId);
 }
 
-void AestraCompEditor::drawControl(NUIRenderer& renderer, const Control& control) {
+void AestraCompEditor::drawControl(NUIRenderer& renderer, const KnobControl& control) {
     auto& theme = NUIThemeManager::getInstance();
-    const bool hot = control.hovered || control.dragging;
+    const float value = control.slider ? static_cast<float>(control.slider->getValue()) : 0.0f;
     const bool isPrimary = control.paramId == Aestra::Audio::Plugins::AestraComp::kThreshold ||
                            control.paramId == Aestra::Audio::Plugins::AestraComp::kRatio ||
                            control.paramId == Aestra::Audio::Plugins::AestraComp::kAttack ||
                            control.paramId == Aestra::Audio::Plugins::AestraComp::kRelease;
     const NUIColor accent = isPrimary ? purple() : purple().withAlpha(0.72f);
 
-    renderer.fillRoundedRect(control.bounds, 9.0f, hot ? NUIColor(0.070f, 0.078f, 0.085f, 0.99f) : surfaceBg());
-    renderer.strokeRoundedRect(control.bounds, 9.0f, 1.0f, hot ? accent.withAlpha(0.42f) : NUIColor(1, 1, 1, 0.060f));
+    renderer.fillRoundedRect(control.bounds, 9.0f, surfaceBg());
+    renderer.strokeRoundedRect(control.bounds, 9.0f, 1.0f, NUIColor(1, 1, 1, 0.060f));
 
-    const float cx = control.knobRect.center().x;
-    const float cy = control.knobRect.center().y;
-    const float knobRadius = std::min(control.knobRect.width, control.knobRect.height) * 0.5f;
+    const NUIRect knobRect = control.slider ? control.slider->getBounds() : NUIRect();
+    const float cx = knobRect.center().x;
+    const float cy = knobRect.center().y;
+    const float knobRadius = std::min(knobRect.width, knobRect.height) * 0.5f;
     const float r = knobRadius * 0.70f;
-    renderer.fillCircle({cx, cy}, r + 7.0f, accent.withAlpha(hot ? 0.16f : 0.08f));
+    renderer.fillCircle({cx, cy}, r + 7.0f, accent.withAlpha(0.08f));
     renderer.fillCircle({cx, cy}, r, insetBg());
     renderer.strokeCircle({cx, cy}, r + 3.0f, 2.0f, NUIColor(1, 1, 1, 0.08f));
 
     const float start = kPi * 0.75f;
-    const float sweep = kPi * 1.5f * control.value;
+    const float sweep = kPi * 1.5f * value;
     std::array<NUIPoint, 30> arc{};
     const float arcDivisor = arc.size() > 1 ? static_cast<float>(arc.size() - 1) : 1.0f;
     for (size_t i = 0; i < arc.size(); ++i) {
@@ -267,21 +297,6 @@ void AestraCompEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
     }
 }
 
-int AestraCompEditor::hitTestControl(float x, float y) const {
-    for (size_t i = 0; i < m_controls.size(); ++i) {
-        if (m_controls[i].bounds.contains({x, y})) return static_cast<int>(i);
-    }
-    return -1;
-}
-
-void AestraCompEditor::updateControlValue(int idx, float normalizedValue) {
-    if (idx < 0 || idx >= static_cast<int>(m_controls.size()) || !m_instance) return;
-    const float value = std::clamp(normalizedValue, 0.0f, 1.0f);
-    m_controls[idx].value = value;
-    m_instance->setParameter(m_controls[idx].paramId, value);
-    repaint();
-}
-
 void AestraCompEditor::setBypassed(bool bypassed) {
     if (!m_instance) return;
     m_instance->setParameter(Aestra::Audio::Plugins::AestraComp::kBypass, bypassed ? 1.0f : 0.0f);
@@ -301,48 +316,28 @@ bool AestraCompEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     auto b = getBounds();
-    const bool draggingControl = std::any_of(m_controls.begin(), m_controls.end(),
-                                             [](const Control& control) { return control.dragging; });
     const bool contains = b.contains(event.position);
-    if (!contains && !isDraggingWindow() && !draggingControl) return false;
+    if (!contains && !isDraggingWindow()) return false;
 
+    // Handle bypass button
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (m_bypassRect.contains(event.position)) {
             setBypassed(!isBypassed());
             return true;
         }
-
-        const int idx = hitTestControl(event.position.x, event.position.y);
-        if (idx >= 0) {
-            m_controls[idx].dragging = true;
-            m_controls[idx].dragStartY = event.position.y;
-            m_controls[idx].dragStartValue = m_controls[idx].value;
-            return true;
-        }
     }
 
-    for (size_t i = 0; i < m_controls.size(); ++i) {
-        if (!m_controls[i].dragging) continue;
-        const float delta = (m_controls[i].dragStartY - event.position.y) / 150.0f;
-        updateControlValue(static_cast<int>(i), m_controls[i].dragStartValue + delta);
-        if (!event.pressed && event.button == NUIMouseButton::Left) m_controls[i].dragging = false;
-        return true;
-    }
-
+    // Handle bypass hover state
     if (!event.pressed && !event.released) {
-        const int hover = contains ? hitTestControl(event.position.x, event.position.y) : -1;
         const bool bypassHover = contains && m_bypassRect.contains(event.position);
-        if (hover != m_hoveredControl || bypassHover != m_bypassHovered) {
-            m_hoveredControl = hover;
+        if (bypassHover != m_bypassHovered) {
             m_bypassHovered = bypassHover;
-            for (size_t i = 0; i < m_controls.size(); ++i) {
-                m_controls[i].hovered = static_cast<int>(i) == hover;
-            }
             repaint();
         }
     }
 
-    return contains;
+    // Let NUISlider children handle their own mouse events
+    return NUIComponent::onMouseEvent(event);
 }
 
 } // namespace AestraUI

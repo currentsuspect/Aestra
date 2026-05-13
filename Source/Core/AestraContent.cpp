@@ -516,6 +516,9 @@ AestraContent::AestraContent() {
         setDirty(true);
     });
     m_overlayLayer->addChild(m_mixerPanel);
+    if (m_platformBridge) {
+        m_mixerPanel->setPlatformBridge(m_platformBridge);
+    }
 
     // Create routing map full-panel overlay (launched from mixer inspector minimap)
     m_routingMapPanel = std::make_shared<AestraUI::UIRoutingMap>(AestraUI::UIRoutingMap::Mode::FullPanel);
@@ -2723,6 +2726,12 @@ void AestraContent::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
     m_platformBridge = bridge;
     if (m_trackManagerUI) {
         m_trackManagerUI->setPlatformWindow(bridge);
+    }
+    if (m_pluginController) {
+        m_pluginController->setPlatformBridge(bridge);
+    }
+    if (m_mixerPanel) {
+        m_mixerPanel->setPlatformBridge(bridge);
     }
 }
 

@@ -124,6 +124,10 @@ public:
     void setPlatformBridge(class NUIPlatformBridge* bridge);
     class NUIPlatformBridge* getPlatformBridge() const { return platformBridge_; }
 
+    // State query methods
+    bool isDragging() const { return isDragging_; }
+    bool isHovered() const { return isHovered_; }
+
     // Utility
     double valueToProportionOfLength(double value) const;
     double proportionOfLengthToValue(double proportion) const;
@@ -195,7 +199,8 @@ private:
     double valueWhenDragStarted_ = 0.0;
 
     // Rotary cursor capture state
-    NUIPoint dragOrigin_;              // Cursor position at drag start
+    NUIPoint dragOrigin_;              // Cursor position at drag start (window-relative)
+    float m_lastDragY;                 // Last cursor Y position for frame-to-frame delta
     bool isFineDrag_ = false;          // True when modifier held for fine-tuning
     double dragEndTime_ = 0.0;        // Timestamp for tooltip fade-out
 

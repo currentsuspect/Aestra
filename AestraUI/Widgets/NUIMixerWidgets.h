@@ -14,6 +14,8 @@
 
 namespace AestraUI {
 
+class NUIPlatformBridge;
+
 class Fader : public NUISlider {
 public:
     Fader();
@@ -153,6 +155,9 @@ public:
     void addInsert();
     void addSend();
 
+    void setPlatformBridge(NUIPlatformBridge* bridge);
+    NUIPlatformBridge* getPlatformBridge() const { return m_platformBridge; }
+
 private:
     std::shared_ptr<Fader> fader_;
     std::shared_ptr<PanKnob> panKnob_;
@@ -163,6 +168,7 @@ private:
     std::shared_ptr<MeterStrip> meterStrip_;
     std::vector<std::shared_ptr<InsertSlot>> inserts_;
     std::vector<std::shared_ptr<UIMixerSend>> sends_;
+    NUIPlatformBridge* m_platformBridge = nullptr;
 };
 
 class MixerPanel : public NUIComponent {
