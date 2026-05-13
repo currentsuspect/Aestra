@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PreviewEngine.h"
 
+#include "RealtimeThreadGuard.h"
 #include "AestraLog.h"
 #include "FastMath.h"
 #include "MiniAudioDecoder.h"
@@ -230,6 +231,12 @@ void PreviewEngine::setOutputSampleRate(double sr) {
 }
 
 void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
+    // WARNING: This function acquires a mutex and is NOT RT-safe.
+    // Must not be called from the audio callback thread.
+    // If wired into a new audio path, first refactor to remove the
+    // mutex in the completion handler below.
+    reportRealtimeMisuse("PreviewEngine::process");
+
     auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
     if (!voice || !voice->playing.load(std::memory_order_acquire) || !interleavedOutput) {
         return;
