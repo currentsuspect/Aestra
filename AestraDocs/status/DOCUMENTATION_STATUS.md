@@ -39,7 +39,7 @@
 - ✅ `docs/ICON_QUALITY_GUIDE.md` - Icon quality standards
 - ✅ `docs/IMPLEMENTATION_GUIDE.md` - Implementation details
 - ✅ `docs/MSAA_IMPLEMENTATION_GUIDE.md` - MSAA setup
-- ✅ `docs/NANOSVG_INTEGRATION.md` - SVG integration
+- ✅ `docs/THORVG_INTEGRATION.md` - SVG integration
 - ✅ `docs/Aestra_COLOR_SYSTEM.md` - Color system
 - ✅ `docs/OPENGL_NEXT_STEPS.md` - OpenGL roadmap
 - ✅ `docs/OPENGL_RENDERER_COMPLETE.md` - Renderer completion
