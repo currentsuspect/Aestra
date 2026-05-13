@@ -1,10 +1,15 @@
 # Aestra Product Roadmap
 
 **Status:** Internal — Execution plan
-**Last Updated:** 2026-04-11
+**Last Updated:** 2026-05-14
 **Owner:** Dylan
 
-Cross-ref: Technical roadmap at `docs/technical/roadmap.md`, Task list at `docs/technical/v1_beta_task_list.md`
+Cross-ref:
+- Technical roadmap: `docs/technical/roadmap.md`
+- Task list: `docs/technical/v1_beta_task_list.md`
+- Architecture audit: `architecture/ARCHITECTURE_AUDIT_2026Q2.md`
+- Audio-quality plan: `Path-to-All-A.md` (per-grade action plan)
+- PDC v2 design: `PDC-v2-Design.md` (currently in flight)
 
 ---
 
@@ -56,9 +61,13 @@ Technical work: project save/load, autosave/recovery, undo/redo consistency.
 - [x] AutosaveManager with crash-safe writes
 - [x] CommandHistory fully wired across core UX
 - [x] CommandTransaction for multi-step undo
-- [ ] Routing bugs (send smoothing, cycle detection) — in progress
+- [x] Routing bugs (send smoothing, cycle detection) — fixed 2026-04-11
+- [ ] **PDC v2 — graph-aware solver + engine integration (in flight, see `PDC-v2-Design.md`)**
+- [ ] Project schema v1 fixture corpus + roundtrip test (audit §3.2)
 - [ ] Group bus tracks
 - [ ] Return/aux tracks
+
+**Audio-quality work running in parallel** — see Path-to-All-A. PDC v2 is the gating item for Phase 3.
 
 ---
 
@@ -72,7 +81,11 @@ Technical work: recording hardening, export trust, stress tests.
 - [ ] Multitrack recording validation
 - [ ] Export parity tests through routing
 - [ ] Device stress tests (low-spec Linux machines)
-- [ ] PDC (plugin delay compensation) through routing
+- [x] PDC v1 (flat-chain compensation) — shipped; see `AudioEngine::calculateLatencyCompensation`
+- [ ] **PDC v2 phases P4–P10 complete** (graph-aware, sidechain, smooth recompute, mute stability, oversize buffer, dual reported-latency, domain plumbing)
+- [ ] True Peak export validation — meter is integrated (`AudioEngine.cpp:1174-1179`); needs export-side ceiling enforcement
+- [ ] Oversampling infrastructure for nonlinear DSP (AestraComp, safety limiter)
+- [ ] Centralized export bit-depth conversion + mandatory dither
 
 ---
 
@@ -88,6 +101,9 @@ Technical work: freeze, bug fixes, performance optimization.
 - [ ] Linux packaging (AppImage, .deb, AUR)
 - [ ] Crash reporter
 - [ ] Documentation for public launch
+- [ ] Architecture audit P0/P1 items resolved (license layering, RT guard consolidation, AudioEngine fallback singleton)
+- [ ] All audio-quality grades ≥ A (see `Path-to-All-A.md`)
+- [ ] Pan Law configurability (settings UI)
 
 ---
 
@@ -164,6 +180,29 @@ Technical work: freeze, bug fixes, performance optimization.
 - Mobile/tablet beta (Founders first)
 - Plugin marketplace (third-party plugins)
 - Community sound pack submissions
+
+---
+
+## Audio Quality Status (as of 2026-05-14)
+
+The 12-layer scorecard from `implementation/audio_quality_executive_summary.md`, updated with current state:
+
+| # | Layer | Current | Target | Path |
+|---|-------|--------:|-------:|------|
+| 1 | Signal Integrity | A | A | Regression test only |
+| 2 | Resampling Quality | A- | A | `sinc64-optimization-tasks.md` |
+| 3 | Timing Integrity | A+ | A+ | Hold |
+| 4 | Plugin Delay Compensation | **C** (v1 ships, v2 in flight) | A+ | **`PDC-v2-Design.md` P4a/P4b currently active** |
+| 5 | Automation Smoothing | A+ | A+ | Hold |
+| 6 | Denormal Handling | A+ | A+ | Move FTZ/DAZ to thread-entry (audit §2.6) |
+| 7 | Clipping Behavior | B+ | A | True Peak export ceiling + soft-limiter polish |
+| 8 | Intersample Peaks | A- (meter live in RT) | A | Wire meter into export validation |
+| 9 | Dithering / Export | A- | A | Centralize bit-depth conversion + mandatory 16-bit dither |
+| 10 | CPU Efficiency | A+ | A+ | Hold |
+| 11 | Pan Law | A- | A | User-selectable pan law |
+| 12 | Oversampling (nonlinear DSP) | C | A | Reusable `Oversampler` for AestraComp + limiter |
+
+Full per-layer plan with file citations: see [`Path-to-All-A.md`](Path-to-All-A.md).
 
 ---
 

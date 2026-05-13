@@ -24,11 +24,10 @@
 - Quality gates
 
 ### For Technical Review
-👉 **Start here:** [`../../labs/audio_quality_comprehensive_audit.md`](../../labs/audio_quality_comprehensive_audit.md)
-- 11-layer quality analysis
-- Code evidence for each finding
-- Detailed gap analysis
-- Competitive positioning
+👉 **Start here:** [`audio_quality_master_plan.md`](audio_quality_master_plan.md) and [`../architecture/ARCHITECTURE_AUDIT_2026Q2.md`](../architecture/ARCHITECTURE_AUDIT_2026Q2.md)
+- 11-layer quality analysis lives in the master plan
+- Cross-module audit findings in the 2026Q2 architecture audit
+- The historical `labs/audio_quality_comprehensive_audit.md` was retired; see git history if needed
 
 ---
 
@@ -57,7 +56,8 @@ audio_quality_fix/
 │       └── Success metrics
 │
 ├── 🔍 COMPREHENSIVE AUDIT (Technical Deep Dive)
-│   └── ../../labs/audio_quality_comprehensive_audit.md
+│   └── ../architecture/ARCHITECTURE_AUDIT_2026Q2.md  (cross-module)
+│       and audio_quality_master_plan.md             (audio-specific)
 │       ├── 1. Signal Integrity (Grade: A)
 │       ├── 2. Resampling Quality (Grade: A-)
 │       ├── 3. Timing Integrity (Grade: A+)
@@ -122,7 +122,7 @@ audio_quality_fix/
 ---
 
 ### Path 2: Technical Review
-1. Read: `../../labs/audio_quality_comprehensive_audit.md` (30 min)
+1. Read: `audio_quality_master_plan.md` and `../architecture/ARCHITECTURE_AUDIT_2026Q2.md` (30 min)
 2. Read: `audio_quality_master_plan.md` (20 min)
 3. Read: `pdc_implementation_plan.md` (30 min)
 4. Read: `true_peak_implementation_plan.md` (20 min)
@@ -234,7 +234,7 @@ audio_quality_fix/
 ### Technical Questions
 - Review: `pdc_implementation_plan.md` for PDC details
 - Review: `true_peak_implementation_plan.md` for metering details
-- Review: `audio_quality_comprehensive_audit.md` for evidence
+- Review: `audio_quality_master_plan.md` and `../architecture/ARCHITECTURE_AUDIT_2026Q2.md` for evidence
 
 ### Planning Questions
 - Review: `audio_quality_master_plan.md` for schedule

@@ -21,7 +21,7 @@ These are the user-facing workflows that must work before routing is "done":
 
 ## Phase 1: Fix Known Bugs (Do First — unblocks everything else)
 
-These bugs were found 2026-04-11 in the routing render loop. Full details in `routing-bugs-found-2026-04-11.md`.
+These bugs were found 2026-04-11 in the routing render loop.
 
 - [ ] **BUG-1 (P0):** Send gains not smoothed — apply `LinearSmoothedValue` to send gains like main volume
 - [ ] **BUG-2 (P0):** No cycle detection in routing graph — detect and warn, prevent silent tracks

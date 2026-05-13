@@ -331,7 +331,7 @@ Result: Perfect phase alignment
 
 ## Documents Available
 
-1. ✅ **Comprehensive Audit** (`labs/audio_quality_comprehensive_audit.md`)
+1. ✅ **Architecture Audit** (`../architecture/ARCHITECTURE_AUDIT_2026Q2.md`) — replaces the retired `labs/audio_quality_comprehensive_audit.md`
    - 11-layer quality analysis
    - Detailed findings
    - Evidence and code references
