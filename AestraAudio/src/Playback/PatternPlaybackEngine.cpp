@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved.
 #include "PatternPlaybackEngine.h"
 
+#include "RealtimeThreadGuard.h"
 #include "../../AestraCore/include/AestraLog.h"
 #include "Plugin/SamplerPlugin.h"
 
@@ -138,6 +139,13 @@ uint16_t PatternPlaybackEngine::getChannelForUnit(UnitID unitId) const {
 }
 
 void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, int lookaheadSamples) {
+    // RT safety: this method must NOT be called from the audio callback.
+    // It acquires a mutex, allocates from scratch buffer, and calls pattern lookup.
+    // See performNonRealtimeMaintenance() for the correct call site.
+    if (reportRealtimeMisuse("PatternPlaybackEngine::refillWindow")) {
+        return;
+    }
+
     uint64_t windowEnd = currentFrame + lookaheadSamples;
 
     std::lock_guard<std::mutex> lock(m_mutex);
