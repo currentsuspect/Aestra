@@ -95,7 +95,7 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
                 if (isRotary && platformBridge_)
                 {
                     // Check modifier state for fine-tuning (can change mid-drag)
-                    isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != NUIModifiers::None;
+                    isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != 0;
 
                     // When SDL_SetRelativeMouseMode is enabled, event.position contains relative deltas
                     // Use position directly as delta for rotary knobs
@@ -131,7 +131,7 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
             dragOrigin_ = event.position;
 
             // Check for fine-tuning modifier at drag start
-            isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != NUIModifiers::None;
+            isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != 0;
 
             // Enter relative mouse mode (cursor hidden, deltas only)
             platformBridge_->setMouseCapture(true);
