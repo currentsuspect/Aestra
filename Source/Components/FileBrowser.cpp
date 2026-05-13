@@ -337,6 +337,10 @@ FileBrowser::FileBrowser()
     searchInput_->setOnTextChange([this](const std::string& text) {
         applyFilter();
     });
+    searchInput_->setOnEscapeKey([this]() {
+        searchInput_->clear();
+        applyFilter();
+    });
     searchInput_->setMaxLength(512);
     searchInput_->setTextColor(themeManager.getColor("textPrimary"));
     searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
