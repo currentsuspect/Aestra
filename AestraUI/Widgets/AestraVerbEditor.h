@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 #include "AestraPanelWindow.h"
+#include "NUISlider.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
 #include <array>
@@ -20,13 +21,14 @@ public:
     using AestraPanelWindow::onResize;
     void onResize() { layoutControls(); }
     void onDragEnd() override { m_userPositioned = true; }
+    void setPlatformBridge(NUIPlatformBridge* bridge) override;
 
 private:
-    struct Knob {
-        std::string label; uint32_t paramId = 0; float value = 0.5f;
-        NUIRect bounds, knobRect;
-        bool dragging = false, hovered = false;
-        float dragStartY = 0, dragStartValue = 0;
+    struct KnobControl {
+        std::shared_ptr<NUISlider> slider;
+        std::string label;
+        uint32_t paramId = 0;
+        NUIRect bounds;
     };
     struct ModeButton {
         std::string label;
@@ -53,33 +55,29 @@ private:
     };
     void buildControls();
     void layoutControls();
-    void drawKnob(NUIRenderer& renderer, const Knob& k, NUIColor accent);
+    void drawKnob(NUIRenderer& renderer, const KnobControl& k, NUIColor accent);
     void drawModeSelector(NUIRenderer& renderer, NUIColor accent);
     void drawMixSlider(NUIRenderer& renderer, NUIColor accent);
     void drawSectionLabels(NUIRenderer& renderer);
     void drawPresetStrip(NUIRenderer& renderer, NUIColor accent);
     void drawAnalysisPanels(NUIRenderer& renderer, NUIColor accent);
     void enforceBoundsInParent(bool recenterWhenPossible);
-    int hitTestKnob(float x, float y) const;
     int hitTestMode(float x, float y) const;
     int hitTestPreset(float x, float y) const;
     bool hitTestMix(float x, float y) const;
-    void updateKnobValue(int idx, float v);
     void updateParameter(uint32_t paramId, float v);
     void applyPreset(const PresetButton& preset);
     float getParamValue(uint32_t paramId) const;
     std::string formatParameterValue(uint32_t paramId) const;
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
-    std::vector<Knob> m_knobs;
+    std::vector<KnobControl> m_knobs;
     std::array<ModeButton, 3> m_modes;
     std::array<PresetButton, 4> m_presets;
     NUIRect m_mixBounds;
     NUIRect m_mixTrack;
-    int m_hoveredKnob = -1;
     int m_hoveredMode = -1;
     int m_hoveredPreset = -1;
-    int m_focusedKnob = -1;
     int m_focusedMode = -1;
     int m_focusedPreset = -1;
     int m_pressedMode = -1;

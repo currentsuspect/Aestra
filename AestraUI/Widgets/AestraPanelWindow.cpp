@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraPanelWindow.h"
+#include "../Platform/NUIPlatformBridge.h"
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
 #include <algorithm>
@@ -33,6 +34,11 @@ void AestraPanelWindow::setBadgeText(const std::string& text)
 {
     m_badgeText = text;
     setDirty(true);
+}
+
+void AestraPanelWindow::setPlatformBridge(NUIPlatformBridge* bridge)
+{
+    m_platformBridge = bridge;
 }
 
 NUIRect AestraPanelWindow::getContentRect() const

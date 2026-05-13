@@ -74,11 +74,32 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
     {
         if (event.released && event.button == NUIMouseButton::Left)
         {
-            // Rotary cleanup: exit relative mode and restore cursor
-            if (isRotary && platformBridge_)
+            // Cleanup: restore cursor to knob center (current position) and show cursor
+            if (platformBridge_)
             {
-                platformBridge_->setMouseCapture(false);
-                platformBridge_->setCursorPosition(static_cast<int>(dragOrigin_.x), static_cast<int>(dragOrigin_.y));
+                if (isRotary) {
+                    // Knob: warp to center — cursor appears where the knob is
+                    auto bounds = getBounds();
+                    platformBridge_->setCursorPosition(
+                        static_cast<int>(bounds.x + bounds.width * 0.5f),
+                        static_cast<int>(bounds.y + bounds.height * 0.5f));
+                } else {
+                    // Linear: warp to thumb position (matches current value)
+                    auto b = getBounds();
+                    if (orientation_ == Orientation::Horizontal) {
+                        float inset = std::min(sliderRadius_, b.width * 0.5f);
+                        float usableWidth = std::max(0.0f, b.width - inset * 2.0f);
+                        platformBridge_->setCursorPosition(
+                            static_cast<int>(b.x + inset + usableWidth * valueToProportionOfLength(value_)),
+                            static_cast<int>(b.y + b.height * 0.5f));
+                    } else {
+                        float inset = std::min(sliderRadius_, b.height * 0.5f);
+                        float usableHeight = std::max(0.0f, b.height - inset * 2.0f);
+                        platformBridge_->setCursorPosition(
+                            static_cast<int>(b.x + b.width * 0.5f),
+                            static_cast<int>(b.y + inset + usableHeight * (1.0f - valueToProportionOfLength(value_))));
+                    }
+                }
                 platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
             }
 
@@ -91,17 +112,19 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
         {
             if (valueChangeMode_ != ValueChangeMode::Click)
             {
-                // Rotary: use delta-based drag with cursor capture
+                // Rotary: frame-to-frame delta with hidden cursor
                 if (isRotary && platformBridge_)
                 {
                     // Check modifier state for fine-tuning (can change mid-drag)
                     isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != 0;
 
-                    // When SDL_SetRelativeMouseMode is enabled, event.position contains relative deltas
-                    // Use position directly as delta for rotary knobs
-                    // dy: negative = up = increase value
+                    // Compute frame-to-frame delta
+                    float dy = event.position.y - m_lastDragY;
+                    m_lastDragY = event.position.y;
+
                     float sensitivity = isFineDrag_ ? FINE_DRAG_SENSITIVITY : COARSE_DRAG_SENSITIVITY;
-                    float delta = -event.position.y * sensitivity * (maxValue_ - minValue_);
+                    float delta = -dy * sensitivity * (maxValue_ - minValue_);
+
                     setValue(std::clamp(getValue() + delta, minValue_, maxValue_));
                 }
                 else
@@ -127,17 +150,15 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
         // Rotary-specific cursor capture setup
         if (isRotary && platformBridge_)
         {
-            // Capture cursor origin before entering relative mode
+            // Initialize drag origin and tracking
             dragOrigin_ = event.position;
+            m_lastDragY = event.position.y;
 
             // Check for fine-tuning modifier at drag start
             isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != 0;
 
-            // Enter relative mouse mode (cursor hidden, deltas only)
-            platformBridge_->setMouseCapture(true);
-
-            // Switch cursor to grabbing style
-            platformBridge_->setCursorStyle(NUICursorStyle::Grabbing);
+            // Hide cursor (this gives the "infinite travel" feel)
+            platformBridge_->setCursorStyle(NUICursorStyle::Hidden);
         }
 
         // Click mode updates only on click, drag mode updates only while dragging.
@@ -160,12 +181,14 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
 
 void NUISlider::onMouseEnter()
 {
+    if (platformBridge_ && platformBridge_->getCursorStyle() == NUICursorStyle::Hidden) return;
     isHovered_ = true;
     setDirty(true);
 }
 
 void NUISlider::onMouseLeave()
 {
+    if (platformBridge_ && platformBridge_->getCursorStyle() == NUICursorStyle::Hidden) return;
     isHovered_ = false;
     setDirty(true);
 }

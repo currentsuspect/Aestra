@@ -190,7 +190,7 @@ public:
                     newHover = static_cast<int>(hoverIndex);
                 }
             }
-            if (newHover != hoveredIndex_) {
+            if (newHover != hoveredIndex_ && !event.cursorCaptured) {
                 hoveredIndex_ = newHover;
                 setDirty(true);
             }

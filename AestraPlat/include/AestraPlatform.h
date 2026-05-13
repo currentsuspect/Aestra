@@ -227,8 +227,14 @@ public:
     /** @brief Warp the cursor to a screen-space position. */
     virtual void setCursorPosition(int x, int y) = 0;
 
+    /** @brief Query the current cursor position in screen-space coordinates. */
+    virtual void getCursorPosition(int& x, int& y) const = 0;
+
     /** @brief Capture or release the mouse for drag operations outside the window. */
     virtual void setMouseCapture(bool captured) {}
+
+    /** @brief Clip cursor to window bounds (for hidden-cursor drag to prevent escape). */
+    virtual void setCursorClip(bool clipped) {}
 
     /** @brief Query current modifier-key state for wheel and gesture events. */
     virtual KeyModifiers getCurrentModifiers() const = 0;

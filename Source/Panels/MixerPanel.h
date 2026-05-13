@@ -14,6 +14,7 @@ class MixerViewModel;
 }
 
 namespace AestraUI {
+class NUIPlatformBridge;
 class UIMixerPanel;
 }
 
@@ -33,6 +34,8 @@ public:
     void refreshChannels();
     std::shared_ptr<MixerViewModel> getViewModel() const { return m_viewModel; }
     std::shared_ptr<AestraUI::UIMixerPanel> getMixerUI() const { return m_newMixer; }
+
+    void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
 
 private:
     std::shared_ptr<TrackManager> m_trackManager;

@@ -1471,7 +1471,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         bool isInsideList = (event.position.x >= listX && event.position.x <= listX + listW &&
                              event.position.y >= listY && event.position.y <= listY + listHeight);
 
-        if (!isInsideList) {
+        if (!event.cursorCaptured && !isInsideList) {
             // Outside list area - clear hover and tooltip
             if (hoveredIndex_ != -1) {
                 hoveredIndex_ = -1;
@@ -1480,7 +1480,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             AestraUI::NUIComponent::hideRemoteTooltip(this);
         }
 
-	    if (isInsideList) {
+        if (!event.cursorCaptured && isInsideList) {
 
 
         // Calculate which item is being hovered
@@ -3109,6 +3109,8 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
 }
 
 bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const BrowserLayout& layout) {
+    if (event.cursorCaptured) return false;
+
     const bool insideNav = layout.navPane.contains(event.position);
     int newHovered = -1;
     if (insideNav) {

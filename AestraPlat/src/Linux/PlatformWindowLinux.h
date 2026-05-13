@@ -58,9 +58,13 @@ public:
     // Cursor control
     void setCursorVisible(bool visible) override;
     void setCursorPosition(int x, int y) override;
+    void getCursorPosition(int& x, int& y) const override;
 
     // Mouse Capture
     void setMouseCapture(bool captured) override;
+
+    // Cursor Clip
+    void setCursorClip(bool clipped) override;
 
     // Modifier key state query
     KeyModifiers getCurrentModifiers() const override;

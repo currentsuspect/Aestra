@@ -3,6 +3,7 @@
 
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
+#include "../Platform/NUIPlatformBridge.h"
 
 #include <algorithm>
 #include <cmath>
@@ -258,12 +259,19 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
 
 }
 
+void UIMixerKnob::setPlatformBridge(NUIPlatformBridge* bridge)
+{
+    m_platformBridge = bridge;
+}
+
 bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;
 
     const auto b = getBounds();
-    setHovered(b.contains(event.position));
+    if (!event.cursorCaptured) {
+        setHovered(b.contains(event.position));
+    }
     if (!b.contains(event.position) && !m_dragging) return false;
 
     // Double-click reset
@@ -278,6 +286,15 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
         m_dragStartPos = event.position;
         m_dragStartValue = m_value;
         m_dragAxis = DragAxis::Undecided;
+
+        // Cursor-warp setup for infinite drag
+        if (m_platformBridge) {
+            // Initialize drag origin and tracking
+            m_warpOrigin = event.position;
+            m_lastDragY = event.position.y;
+            m_platformBridge->setCursorStyle(NUICursorStyle::Hidden);
+        }
+
         updateGlobalTooltip();
         repaint();
         return true;
@@ -286,6 +303,16 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
     if (event.released && event.button == NUIMouseButton::Left && m_dragging) {
         m_dragging = false;
         m_dragAxis = DragAxis::Undecided;
+
+        if (m_platformBridge) {
+            // Warp cursor to knob center (matches current value position)
+            auto bounds = getBounds();
+            m_platformBridge->setCursorPosition(
+                static_cast<int>(bounds.x + bounds.width * 0.5f),
+                static_cast<int>(bounds.y + bounds.height * 0.5f));
+            m_platformBridge->setCursorStyle(NUICursorStyle::Arrow);
+        }
+
         NUIComponent::hideRemoteTooltip(this);
         repaint();
         return true;
@@ -293,8 +320,35 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
 
     // Dragging (mouse move events set button = None)
     if (m_dragging && event.button == NUIMouseButton::None) {
-        const float dx = (event.position.x - m_dragStartPos.x);
-        const float dy = (m_dragStartPos.y - event.position.y); 
+        // Cursor-warp mode: use frame-to-frame delta
+        if (m_platformBridge) {
+            // Compute frame-to-frame delta
+            float dy = event.position.y - m_lastDragY;
+            m_lastDragY = event.position.y;
+
+            // Reduced sensitivity for cursor-warp mode since every pixel counts
+            float sensitivity = (event.modifiers & NUIModifiers::Shift) ? 0.11f : 0.5f;
+            float delta = -dy * sensitivity; // Invert Y: up = positive
+
+            // Apply type-specific scaling
+            if (m_type == UIMixerKnobType::Trim) {
+                delta *= 0.11f;
+            } else if (m_type == UIMixerKnobType::Send) {
+                delta *= 0.004f;
+            } else if (m_type == UIMixerKnobType::Width) {
+                delta *= 0.008f;
+            } else {
+                delta *= 0.0048f;
+            }
+
+            setValue(m_value + delta);
+            updateGlobalTooltip();
+            return true;
+        }
+
+        // Non-warp mode: use drag start position with axis detection
+        float dx = event.position.x - m_dragStartPos.x;
+        float dy = m_dragStartPos.y - event.position.y;
         const float absDx = std::abs(dx);
         const float absDy = std::abs(dy);
 

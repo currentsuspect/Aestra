@@ -2,6 +2,7 @@
 #include "MixerView.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "Commands/SetVolumeCommand.h"
@@ -83,8 +84,16 @@ ChannelStrip::ChannelStrip(std::shared_ptr<Track> track, TrackManager* trackMana
     // Initialize state
     if (m_track) m_soloButton->setOn(m_track->isSoloed());
     addChild(m_soloButton);
-    
+
     layoutControls();
+}
+
+void ChannelStrip::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge)
+{
+    m_platformBridge = bridge;
+    if (m_panKnob) {
+        m_panKnob->setPlatformBridge(bridge);
+    }
 }
 
 void ChannelStrip::onRender(AestraUI::NUIRenderer& renderer) {
@@ -308,7 +317,7 @@ void MixerView::refreshChannels() {
     for (const auto& track : channelsSnapshot) {
         if (track && track->getName() != "Preview") {  // Skip preview track
             auto channelStrip = std::make_shared<ChannelStrip>(std::shared_ptr<MixerChannel>(track, [](MixerChannel*){}), m_trackManager.get());
-            
+
             // Map to playlist lane if it's a regular track
             if (track->getChannelId() != 0) {
                 if (laneIndex < playlist.getLaneCount()) {
@@ -316,7 +325,8 @@ void MixerView::refreshChannels() {
                      laneIndex++;
                 }
             }
-            
+
+            channelStrip->setPlatformBridge(m_platformBridge);
             m_channelStrips.push_back(channelStrip);
             addChild(channelStrip);
         }
@@ -324,6 +334,14 @@ void MixerView::refreshChannels() {
     
     layoutChannels();
     Log::info("Mixer: Created " + std::to_string(m_channelStrips.size()) + " channel strips");
+}
+
+void MixerView::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge)
+{
+    m_platformBridge = bridge;
+    for (auto& strip : m_channelStrips) {
+        strip->setPlatformBridge(bridge);
+    }
 }
 
 void MixerView::layoutChannels() {

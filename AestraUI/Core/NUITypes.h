@@ -431,6 +431,7 @@ struct NUIMouseEvent {
     bool pressed = false;
     bool released = false;
     bool doubleClick = false;
+    bool cursorCaptured = false;  // True during hidden-cursor drag; components should skip hover/tooltip updates
 };
 
 struct NUIKeyEvent {

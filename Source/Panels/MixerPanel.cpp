@@ -4,6 +4,7 @@
 #include "MixerViewModel.h"
 #include "Events/Connection.h"
 #include "../AestraUI/Widgets/UIMixerPanel.h"
+#include "../AestraUI/Base/NUISlider.h"
 #include "../App/ServiceLocator.h"
 #include "AudioDeviceManager.h"
 
@@ -73,4 +74,9 @@ void MixerPanel::refreshChannels()
     }
     
     m_newMixer->refreshChannels();
+}
+
+void MixerPanel::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge)
+{
+    if (m_newMixer) m_newMixer->setPlatformBridge(bridge);
 }

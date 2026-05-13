@@ -6,6 +6,9 @@
 #include "PluginBrowserPanel.h"
 #include "GenericPluginEditor.h"
 
+// Forward declaration
+class NUIPlatformBridge;
+
 // AestraAudio includes
 #include <PluginHost.h>
 #include <PluginScanner.h>
@@ -181,6 +184,12 @@ public:
      */
     void setOnScanComplete(std::function<void(int pluginCount)> callback);
 
+    /**
+     * @brief Set the platform bridge for cursor capture
+     * @param bridge Platform bridge to propagate to plugin editors
+     */
+    void setPlatformBridge(NUIPlatformBridge* bridge);
+
     // Convert PluginInfo to PluginListItem for UI
     PluginListItem convertToListItem(const Aestra::Audio::PluginInfo& info) const;
 
@@ -189,6 +198,9 @@ private:
     // Backend references
     Aestra::Audio::PluginScanner* m_scanner = nullptr;
     Aestra::Audio::PluginManager* m_manager = nullptr;
+    
+    // Platform bridge for cursor capture
+    NUIPlatformBridge* m_platformBridge = nullptr;
     
     // Bound widgets
     PluginBrowserPanel* m_browser = nullptr;

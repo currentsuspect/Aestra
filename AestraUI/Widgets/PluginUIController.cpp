@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginUIController.h"
+#include "../Platform/NUIPlatformBridge.h"
 #include "UIMixerPluginDropdown.h"
 #include "GenericPluginEditor.h"
 #include "AestraEQEditor.h"
@@ -344,6 +345,7 @@ void PluginUIController::openPluginEditor(
             if (m_popupLayer) m_popupLayer->removeChild(ed);
             m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
         });
+        ed->setPlatformBridge(m_platformBridge);
         editor = ed;
     } else if (pluginId == "com.Aestrastudios.comp") {
         auto ed = std::make_shared<AestraCompEditor>(instance);
@@ -351,6 +353,7 @@ void PluginUIController::openPluginEditor(
             if (m_popupLayer) m_popupLayer->removeChild(ed);
             m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
         });
+        ed->setPlatformBridge(m_platformBridge);
         editor = ed;
     } else if (pluginId == "com.Aestrastudios.verb") {
         auto ed = std::make_shared<AestraVerbEditor>(instance);
@@ -358,6 +361,7 @@ void PluginUIController::openPluginEditor(
             if (m_popupLayer) m_popupLayer->removeChild(ed);
             m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
         });
+        ed->setPlatformBridge(m_platformBridge);
         editor = ed;
     } else if (pluginId == "com.Aestrastudios.delay") {
         auto ed = std::make_shared<AestraDelayEditor>(instance);
@@ -365,6 +369,7 @@ void PluginUIController::openPluginEditor(
             if (m_popupLayer) m_popupLayer->removeChild(ed);
             m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
         });
+        ed->setPlatformBridge(m_platformBridge);
         editor = ed;
     } else {
         auto ed = std::make_shared<GenericPluginEditor>(instance);
@@ -426,6 +431,11 @@ void PluginUIController::openPluginEditor(
 void PluginUIController::setOnScanComplete(
     std::function<void(int)> callback) {
     m_onScanComplete = std::move(callback);
+}
+
+void PluginUIController::setPlatformBridge(NUIPlatformBridge* bridge)
+{
+    m_platformBridge = bridge;
 }
 
 PluginListItem PluginUIController::convertToListItem(

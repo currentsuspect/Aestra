@@ -162,6 +162,7 @@ private:
     
     // Static Global Tooltip State
     static TooltipState s_tooltipState;
+    static bool s_cursorCaptureActive;
     
     std::shared_ptr<NUITheme> theme_;
     
@@ -171,10 +172,12 @@ public:
     std::string getTooltip() const { return tooltipText_; }
     
     // Global Tooltip Management
-    static void showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner = nullptr);
+    static void showRemoteTooltip(const std::string& text, const NUIPoint& position, const void* owner = nullptr, bool force = false);
     static void hideRemoteTooltip(const void* owner = nullptr);
     static void renderGlobalTooltip(NUIRenderer& renderer);
     static void updateGlobalTooltip(double deltaTime);
+    static void setCursorCaptureActive(bool active) { s_cursorCaptureActive = active; }
+    static bool isCursorCaptureActive() { return s_cursorCaptureActive; }
 
 };
 

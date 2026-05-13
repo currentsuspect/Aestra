@@ -951,6 +951,13 @@ void PlatformWindowWin32::setCursorPosition(int x, int y) {
     SetCursorPos(x, y);
 }
 
+void PlatformWindowWin32::getCursorPosition(int& x, int& y) const {
+    POINT pt;
+    GetCursorPos(&pt);
+    x = pt.x;
+    y = pt.y;
+}
+
 // =============================================================================
 // Window State
 // =============================================================================

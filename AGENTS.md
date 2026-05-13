@@ -45,7 +45,7 @@ These rules override convenience.
 - Do not change serialization/project format casually. Treat persistence changes as high-risk.
 - Do not “fix” dead/commented code unless the task explicitly targets it.
 
-When unsure, prefer reporting uncertainty over guessing.
+When unsure, prefer reporting uncertainty over guessing. When the user's intent is ambiguous or unclear, ask for clarification rather than assuming.
 
 ---
 

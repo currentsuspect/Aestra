@@ -44,6 +44,9 @@ public:
     bool onMouseEvent(const NUIMouseEvent& event) override;
     uint32_t getChannelId() const { return m_channelId; }
 
+    // Platform bridge propagation for cursor warp
+    void setPlatformBridge(NUIPlatformBridge* bridge);
+
     /// Bounds of the FX summary (Add Insert) button in strip-local space.
     NUIRect getFXSummaryBounds() const;
 

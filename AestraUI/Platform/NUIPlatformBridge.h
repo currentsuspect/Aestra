@@ -110,6 +110,7 @@ public:
     // Cursor control
     void setCursorVisible(bool visible);
     void setCursorPosition(int x, int y);
+    NUIPoint getCursorPosition() const;         // Get current absolute cursor position
     void setCursorStyle(NUICursorStyle style);  // Set cursor appearance
     NUICursorStyle getCursorStyle() const;       // Get current cursor style
     

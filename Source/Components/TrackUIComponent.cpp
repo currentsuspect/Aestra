@@ -1916,7 +1916,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         // Volume knob mouse handling
         {
             const bool isOver = m_volumeKnobBounds.contains(event.position);
-            if (m_volumeKnobHovered != isOver) {
+            if (!event.cursorCaptured && m_volumeKnobHovered != isOver) {
                 m_volumeKnobHovered = isOver;
                 if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
             }
@@ -1925,30 +1925,51 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_isDraggingVolumeKnob = true;
                 m_volumeKnobDragStartPos = event.position;
                 m_volumeKnobDragStartValue = m_volumeKnobValue;
+
+                // Cursor capture: hide system cursor for infinite drag
+                if (m_platformBridge) {
+                    m_volumeWarpOrigin = event.position;
+                    m_volumeLastDragY = event.position.y;
+                    m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Hidden);
+                }
+
                 if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
                 handledByControls = true;
             } else if (event.released && event.button == AestraUI::NUIMouseButton::Left && m_isDraggingVolumeKnob) {
                 m_isDraggingVolumeKnob = false;
                 AestraUI::NUIComponent::hideRemoteTooltip(this);
+
+                // Restore cursor to knob center (matches current value position)
+                if (m_platformBridge) {
+                    m_platformBridge->setCursorPosition(
+                        static_cast<int>(m_volumeKnobBounds.x + m_volumeKnobBounds.width * 0.5f),
+                        static_cast<int>(m_volumeKnobBounds.y + m_volumeKnobBounds.height * 0.5f));
+                    m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
+                }
+
                 if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
                 handledByControls = true;
             } else if (m_isDraggingVolumeKnob && event.button == AestraUI::NUIMouseButton::None) {
-                // Dragging: vertical motion changes volume (up = louder)
-                float dy = m_volumeKnobDragStartPos.y - event.position.y;
+                // Dragging: frame-to-frame delta (up = louder)
+                float dy = m_volumeLastDragY - event.position.y;
+                m_volumeLastDragY = event.position.y;
                 float delta = dy * 0.008f;
                 if (event.modifiers & AestraUI::NUIModifiers::Shift) {
                     delta *= 0.25f;
                 }
-                float newValue = std::clamp(m_volumeKnobDragStartValue + delta, 0.0f, 1.5f);
+                float newValue = std::clamp(m_volumeKnobValue + delta, 0.0f, 1.5f);
                 if (std::abs(newValue - m_volumeKnobValue) > 1e-5f) {
                     m_volumeKnobValue = newValue;
                     if (m_channel && m_trackManager) {
                         m_trackManager->getCommandHistory().pushAndExecute(
                             std::make_shared<Aestra::Audio::SetVolumeCommand>(*m_channel, newValue));
                     }
-                    // Show tooltip with percentage
+                    // Show tooltip at knob position
                     int pct = static_cast<int>(std::round(newValue * 100.0f));
-                    AestraUI::NUIComponent::showRemoteTooltip("Vol " + std::to_string(pct) + "%", event.position, this);
+                    AestraUI::NUIPoint tipPos(
+                        m_volumeKnobBounds.x + m_volumeKnobBounds.width * 0.5f,
+                        m_volumeKnobBounds.y - 4.0f);
+                    AestraUI::NUIComponent::showRemoteTooltip("Vol " + std::to_string(pct) + "%", tipPos, this, true);
                     if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
                 }
                 handledByControls = true;
@@ -1957,7 +1978,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
         if (m_volumeFader) {
             const bool isOver = m_volumeFader->getBounds().contains(event.position);
-            if (m_volumeFader->isHovered() != isOver) {
+            if (!event.cursorCaptured && m_volumeFader->isHovered() != isOver) {
                 m_volumeFader->setHovered(isOver);
             }
             handledByControls = m_volumeFader->onMouseEvent(event) || handledByControls;
@@ -1966,19 +1987,24 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         handledByControls = routeControlButton(m_soloButton) || handledByControls;
         handledByControls = routeControlButton(m_recordButton) || handledByControls;
 
-        if (isInsideBounds && m_volumeFader && m_volumeFader->getBounds().contains(event.position)) {
-            AestraUI::NUIComponent::showRemoteTooltip("Track Volume", event.position, this);
-        } else if (isInsideBounds && m_muteButton && m_muteButton->getBounds().contains(event.position)) {
-            AestraUI::NUIComponent::showRemoteTooltip("Mute Track (M)", event.position, this);
-        } else if (isInsideBounds && m_soloButton && m_soloButton->getBounds().contains(event.position)) {
-            AestraUI::NUIComponent::showRemoteTooltip("Solo Track (S)", event.position, this);
-        } else if (isInsideBounds && m_recordButton && m_recordButton->getBounds().contains(event.position)) {
-            AestraUI::NUIComponent::showRemoteTooltip("Arm for Recording (O)", event.position, this);
-        } else if (isInsideBounds && m_volumeKnobHovered) {
-            int pct = static_cast<int>(std::round(m_volumeKnobValue * 100.0f));
-            AestraUI::NUIComponent::showRemoteTooltip("Vol " + std::to_string(pct) + "%", event.position, this);
-        } else if (isInsideBounds) {
-            AestraUI::NUIComponent::hideRemoteTooltip(this);
+        if (!event.cursorCaptured && isInsideBounds) {
+            if (m_volumeFader && m_volumeFader->getBounds().contains(event.position)) {
+                AestraUI::NUIComponent::showRemoteTooltip("Track Volume", event.position, this);
+            } else if (m_muteButton && m_muteButton->getBounds().contains(event.position)) {
+                AestraUI::NUIComponent::showRemoteTooltip("Mute Track (M)", event.position, this);
+            } else if (m_soloButton && m_soloButton->getBounds().contains(event.position)) {
+                AestraUI::NUIComponent::showRemoteTooltip("Solo Track (S)", event.position, this);
+            } else if (m_recordButton && m_recordButton->getBounds().contains(event.position)) {
+                AestraUI::NUIComponent::showRemoteTooltip("Arm for Recording (O)", event.position, this);
+            } else if (m_volumeKnobHovered) {
+                int pct = static_cast<int>(std::round(m_volumeKnobValue * 100.0f));
+                AestraUI::NUIPoint tipPos(
+                    m_volumeKnobBounds.x + m_volumeKnobBounds.width * 0.5f,
+                    m_volumeKnobBounds.y - 4.0f);
+                AestraUI::NUIComponent::showRemoteTooltip("Vol " + std::to_string(pct) + "%", tipPos, this, true);
+            } else {
+                AestraUI::NUIComponent::hideRemoteTooltip(this);
+            }
         }
 
         if (event.pressed && event.button == AestraUI::NUIMouseButton::Right &&

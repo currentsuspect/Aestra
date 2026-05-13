@@ -8,6 +8,9 @@
 
 namespace AestraUI {
 
+// Forward declaration
+class NUIPlatformBridge;
+
 /**
  * @brief Unified panel chrome for all child windows (plugin editors, Settings, etc.).
  *
@@ -50,6 +53,10 @@ public:
     void setEnforceParentBounds(bool enforce) { m_enforceParentBounds = enforce; }
     void enforceBoundsInParent(float safeMargin = 14.0f);
 
+    // Platform bridge access for cursor capture (rotary knobs, etc.)
+    virtual void setPlatformBridge(NUIPlatformBridge* bridge);
+    NUIPlatformBridge* getPlatformBridge() const { return m_platformBridge; }
+
     void onUpdate(double deltaTime) override;
 
 protected:
@@ -62,6 +69,9 @@ protected:
     bool m_userPositioned = false;
     bool m_haveParentSnapshot = false;
     NUIRect m_lastParentBounds;
+
+    // Platform bridge for cursor capture
+    NUIPlatformBridge* m_platformBridge = nullptr;
 
 private:
     void cacheThemeColors();
