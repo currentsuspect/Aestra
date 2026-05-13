@@ -76,6 +76,7 @@ public:
     void setDPIChangeCallback(std::function<void(float)> callback) override { m_dpiChangeCallback = callback; }
 
     void requestClose() override;
+    void requestFocus() override;
 
 private:
     // Window procedure

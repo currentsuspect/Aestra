@@ -172,7 +172,9 @@ bool PlatformWindowLinux::pollEvents() {
         case SDL_MOUSEWHEEL:
             if (m_mouseWheelCallback) {
                 float delta = static_cast<float>(e.wheel.y);
-                const bool horizontalGesture = (e.wheel.y == 0 && e.wheel.x != 0);
+                // Use magnitude comparison to detect horizontal vs vertical gestures
+                // This handles touchpads that may report both axes for the same gesture
+                const bool horizontalGesture = (std::abs(e.wheel.x) > std::abs(e.wheel.y));
                 if (horizontalGesture) {
                     // SDL wheel.x > 0 means scroll right, map to negative delta so consumers
                     // that do target -= wheelDelta move view content to the right.
@@ -255,6 +257,21 @@ void PlatformWindowLinux::show() {
         SDL_ShowWindow(m_window);
         m_isWindowVisible = true;
         m_isWindowMapped = true;
+    }
+}
+
+void PlatformWindowLinux::requestFocus() {
+    if (m_window) {
+#if defined(SDL_VIDEO_DRIVER_X11)
+        Display* display = nullptr;
+        ::Window x11Window = 0;
+        if (getX11WindowInfo(m_window, display, x11Window)) {
+            XRaiseWindow(display, x11Window);
+            XSetInputFocus(display, x11Window, RevertToNone, CurrentTime);
+            XFlush(display);
+        }
+#endif
+        SDL_RaiseWindow(m_window);
     }
 }
 

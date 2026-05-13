@@ -36,7 +36,7 @@ namespace {
 
 constexpr float kPreviewPanelHeight = 90.0f;
 constexpr float BROWSER_SEARCH_ROW_H = 28.0f;
-constexpr float BROWSER_TOP_PAD = 8.0f;
+constexpr float BROWSER_TOP_PAD = 7.0f;
 constexpr float BROWSER_CONTENT_GAP = 8.0f;
 constexpr float BROWSER_NAV_ROW_H = 28.0f;
 constexpr float BROWSER_LIST_HEADER_H = 52.0f;
