@@ -1718,7 +1718,16 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
     // renderToolCursor handles: trim edges, split tool, paint tool
     // Skip custom tool/minimap cursor rendering during hidden-cursor drag
     if (!m_window || m_window->getCursorStyle() != AestraUI::NUICursorStyle::Hidden) {
+        // CURSOR PIPELINE BYPASS: renderToolCursor draws directly on renderer at
+        // m_lastMousePos. Outside both SVG cursor system and SDL cursor system.
+        // Suppressed here rather than through cursor abstraction — intentional.
+        // See renderMinimapResizeCursor below for identical pattern.
         renderToolCursor(renderer, m_lastMousePos);
+
+        // CURSOR PIPELINE BYPASS: renderMinimapResizeCursor draws directly on
+        // renderer at m_lastMousePos. Outside both SVG cursor system and SDL
+        // cursor system. Suppressed here rather than through cursor abstraction.
+        // See renderToolCursor above for identical pattern.
         renderMinimapResizeCursor(renderer, m_lastMousePos);
     }
 
