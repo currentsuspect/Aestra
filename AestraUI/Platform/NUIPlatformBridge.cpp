@@ -90,19 +90,27 @@ void NUIPlatformBridge::setupEventBridges() {
             return;
         }
 
-        // Store mouse position for wheel events
+        // Calculate delta from last position
+        // Note: When SDL_SetRelativeMouseMode is enabled, x/y are already relative deltas
+        // In that case, this calculation will give us the change in relative motion (usually zero or small)
+        // which is acceptable for components that don't use cursor capture
+        float deltaX = static_cast<float>(x - m_lastMouseX);
+        float deltaY = static_cast<float>(y - m_lastMouseY);
+
+        // Store mouse position for wheel events and delta calculation
         m_lastMouseX = x;
         m_lastMouseY = y;
-        
+
         if (m_mouseMoveCallback) {
             m_mouseMoveCallback(x, y);
         }
-        
+
         // Forward to root component for hover effects
         if (m_rootComponent) {
             NUIMouseEvent event;
             event.type = NUIMouseEventType::Move;
             event.position = {static_cast<float>(x), static_cast<float>(y)};
+            event.delta = {deltaX, deltaY};
             event.button = NUIMouseButton::None;
             event.pressed = false;
             event.released = false;
@@ -112,7 +120,7 @@ void NUIPlatformBridge::setupEventBridges() {
                 mods.capsLock = mods.capsLock || m_capsLockLatched;
                 event.modifiers = convertModifiers(mods);
             }
-            
+
             m_rootComponent->onMouseEvent(event);
         }
     });

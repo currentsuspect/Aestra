@@ -397,6 +397,12 @@ void PlatformWindowLinux::setCursorPosition(int x, int y) {
     }
 }
 
+void PlatformWindowLinux::setMouseCapture(bool captured) {
+    if (m_window) {
+        SDL_SetRelativeMouseMode(captured ? SDL_TRUE : SDL_FALSE);
+    }
+}
+
 KeyModifiers PlatformWindowLinux::getCurrentModifiers() const {
     KeyModifiers mods = getModifiers(SDL_GetModState());
     if (m_syntheticShiftForHorizontalWheel) {
