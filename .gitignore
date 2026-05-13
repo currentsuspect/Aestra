@@ -190,6 +190,12 @@ autosave.aes
 crash_flag
 runtime_log.txt
 build_log.txt
+log.txt
+Doxyfile.backup
+
+# Lab benchmark/test outputs (keep program.md, LAB_BOOK.md, EVALS.md, sessions/, findings/)
+labs/*/results/*
+!labs/*/results/.gitkeep
 *.json.trace
 autosave.*
 
