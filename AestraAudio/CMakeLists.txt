@@ -381,6 +381,9 @@ add_library(AestraAudioCore STATIC
     ${AESTRA_AUDIO_CORE_HEADERS}
 )
 
+# Define NDEBUG for VST3 SDK compatibility (required by fdebug.h)
+target_compile_definitions(AestraAudioCore PRIVATE NDEBUG)
+
 # Enable miniaudio for fast audio decoding (MP3, FLAC, etc.)
 set(AESTRA_USE_MINIAUDIO ON)
 
