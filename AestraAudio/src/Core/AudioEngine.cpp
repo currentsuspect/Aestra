@@ -412,6 +412,17 @@ void AudioEngine::performNonRealtimeMaintenance() {
         return;
     }
 
+    // Pattern engine lookahead refill (non-RT, runs every main loop iteration)
+    auto* patEng = m_patternEngine.load(std::memory_order_acquire);
+    if (patEng && m_transportPlaying.load(std::memory_order_relaxed)) {
+        constexpr int LOOKAHEAD_SAMPLES = 4096; // ~85ms at 48kHz — covers main loop jitter
+        uint64_t currentFrame = m_globalSamplePos.load(std::memory_order_relaxed);
+        uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
+        if (sr > 0) {
+            patEng->refillWindow(currentFrame, static_cast<int>(sr), LOOKAHEAD_SAMPLES);
+        }
+    }
+
     constexpr uint64_t kCollectionIntervalNs = 500000000ull;
     const uint64_t nowNs = static_cast<uint64_t>(
         std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch())
@@ -1771,10 +1782,6 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             // Pop MIDI from Pattern Engine (only while transport is playing)
             auto* patEng = m_patternEngine.load(std::memory_order_acquire);
             if (isPlaying && patEng) {
-                constexpr int LOOKAHEAD_SAMPLES = 2048; // ~40ms at 48kHz
-                const uint32_t sampleRate = m_sampleRate.load(std::memory_order_relaxed);
-                // Timeline playback needs to refill the pattern scheduler too, not just consume it.
-                patEng->refillWindow(blockStart, static_cast<int>(sampleRate), LOOKAHEAD_SAMPLES);
                 patEng->processAudio(blockStart, static_cast<int>(numFrames), unitMidiRoutes.data(),
                                      unitMidiRouteCount);
             }
@@ -2836,10 +2843,8 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
         ++bufIdx;
     }
 
-    // Refill and process pattern MIDI events while playing, or during offline bounce
+    // Process pattern MIDI events while playing, or during offline bounce
     if (transportPlaying || targetBuffer != nullptr) {
-        constexpr int LOOKAHEAD_SAMPLES = 2048; // ~40ms at 48kHz
-        patternEngine->refillWindow(currentFrame, static_cast<int>(sampleRate), LOOKAHEAD_SAMPLES);
         patternEngine->processAudio(currentFrame, static_cast<int>(numFrames), unitMidiRoutes.data(),
                                     unitMidiRouteCount);
     }

@@ -78,6 +78,7 @@ PatternPlaybackEngine::PatternPlaybackEngine(TimelineClock* clock, PatternManage
     for (auto& flag : m_instanceCancelled) {
         flag.store(false, std::memory_order_relaxed);
     }
+    m_scratchEvents.reserve(1024);
 }
 
 void PatternPlaybackEngine::schedulePatternInstance(PatternID pid, double startBeat, uint32_t instanceId,
@@ -148,9 +149,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
     }
     m_lastRefillFrame = currentFrame;
 
-    bool shouldLog = (m_refillCounter.fetch_add(1, std::memory_order_relaxed) % 100 == 0);
-    std::vector<ScheduledEvent> pendingEvents;
-    pendingEvents.reserve(512);
+    m_scratchEvents.clear();
 
     for (auto& inst : m_activeInstances) {
         // Skip cancelled instances
@@ -161,23 +160,13 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
         // Get pattern events
         auto* pattern = m_patternManager->getPattern(inst.patternId);
         if (!pattern) {
-            if (shouldLog)
-                Aestra::Log::info("[PatternPlayback] Pattern not found: " + std::to_string(inst.patternId.value));
             continue;
         }
         if (!pattern->isMidi()) {
-            if (shouldLog)
-                Aestra::Log::info("[PatternPlayback] Pattern is not MIDI: " + std::to_string(inst.patternId.value));
             continue;
         }
 
         auto& midi = std::get<MidiPayload>(pattern->payload);
-        if (shouldLog && !midi.notes.empty()) {
-            Aestra::Log::info("[PatternPlayback] Processing Pattern " + std::to_string(inst.patternId.value) +
-                              " with " + std::to_string(midi.notes.size()) +
-                              " notes. sourceWindow=[" + std::to_string(inst.sourceStartBeat) +
-                              ", " + std::to_string(inst.sourceEndBeat) + ")");
-        }
 
         const uint64_t previousScheduledThroughFrame = inst.scheduledThroughFrame;
         const uint64_t scheduleFromFrame = std::max(currentFrame, previousScheduledThroughFrame);
@@ -230,7 +219,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 onEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 onEvent.data2 = toMidiVelocity(note.velocity);
                 onEvent.priority = 1;
-                pendingEvents.push_back(onEvent);
+                m_scratchEvents.push_back(onEvent);
             } else if (noteFrame < scheduleFromFrame && offFrame > scheduleFromFrame &&
                        noteFrame >= previousScheduledThroughFrame) {
                 // Playback entered while this note was already active; start it immediately at the buffer edge once.
@@ -243,7 +232,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 resumeOnEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 resumeOnEvent.data2 = toMidiVelocity(note.velocity);
                 resumeOnEvent.priority = 1;
-                pendingEvents.push_back(resumeOnEvent);
+                m_scratchEvents.push_back(resumeOnEvent);
             }
 
             if (!suppressNoteOff && offFrame >= scheduleFromFrame && offFrame < windowEnd) {
@@ -256,15 +245,15 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 offEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 offEvent.data2 = 0;
                 offEvent.priority = 0;
-                pendingEvents.push_back(offEvent);
+                m_scratchEvents.push_back(offEvent);
             }
         }
 
         inst.scheduledThroughFrame = windowEnd;
     }
 
-    std::sort(pendingEvents.begin(), pendingEvents.end(), eventComesBefore);
-    for (const auto& event : pendingEvents) {
+    std::sort(m_scratchEvents.begin(), m_scratchEvents.end(), eventComesBefore);
+    for (const auto& event : m_scratchEvents) {
         if (!m_rtQueue.push(event)) {
             m_overflowCounter.fetch_add(1, std::memory_order_relaxed);
         }
