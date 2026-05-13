@@ -121,7 +121,9 @@ public:
     /** @brief Render the current custom cursor. */
     void renderCustomCursor();
     /** @brief Update cursor visibility and style. */
-    void updateCursorState(bool focused, AestraUI::NUICursorStyle style);
+    // updateCursorState removed — was dead code, never called.
+    // If restoring, check cursorCaptureActive in NUIPlatformBridge first:
+    // hidden-cursor drag now owns cursor suppression, not this method.
 
     // Callbacks setters (forwarded to Bridge)
     void setCloseCallback(std::function<void()> cb) { if (m_window) m_window->setCloseCallback(cb); }

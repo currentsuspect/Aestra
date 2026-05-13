@@ -795,16 +795,12 @@ void AestraWindowManager::renderCustomCursor() {
     }
 }
 
-void AestraWindowManager::updateCursorState(bool focused, AestraUI::NUICursorStyle style) {
-    m_windowFocused = focused;
-    m_activeCursorStyle = style;
-    if (focused) {
-        if (m_useCustomCursor && m_window) m_window->setCursorVisible(false);
-    } else {
-        m_keyModifiers = AestraUI::NUIModifiers::None;
-        AestraUI::NUIComponent::clearFocusedComponent();
-    }
-}
+// updateCursorState removed — was dead code, never called.
+// Cursor suppression during hidden-cursor drag is now owned by:
+//   NUIPlatformBridge::setCursorStyle (sets s_cursorCaptureActive)
+//   NUIComponent::setHovered / showRemoteTooltip (check the flag)
+//   Individual component onMouseEvent overrides (check event.cursorCaptured)
+// See NUIComponent.h for the global flag, NUITypes.h for the event field.
 
 // =============================================================================
 // Window State Capture/Restore for Persistence (Issue #120)
