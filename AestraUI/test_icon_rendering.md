@@ -58,7 +58,7 @@ The application window should display:
 ### Test Procedure
 1. Created automated test program (AestraUI_CustomSVGTest)
 2. Built and ran test successfully
-3. Verified SVG parsing with NanoSVG
+3. Verified SVG parsing with ThorVG
 4. Tested at multiple icon sizes
 
 ### Custom SVG File Tested
@@ -86,9 +86,9 @@ The application window should display:
 - Visual verification shows pause icon renders correctly
 
 ### Key Achievement
-The filled rectangles in test_pause.svg now render correctly with NanoSVG integration.
+The filled rectangles in test_pause.svg now render correctly with ThorVG integration.
 This was broken in the previous custom parser implementation, validating the success
-of the NanoSVG integration.
+of the ThorVG integration.
 
 
 

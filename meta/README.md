@@ -44,7 +44,7 @@ Various task summaries documenting completed features:
 - `64BIT_MULTITHREAD_SUMMARY.md` — 64-bit multithreading implementation
 - `ADAPTIVE_FPS_SUMMARY.md` — Adaptive FPS system implementation
 - `ICON_INTEGRATION_SUMMARY.md` — SVG icon system integration
-- `NANOSVG_INTEGRATION_TEST_SUMMARY.md` — NanoSVG integration testing
+- `THORVG_INTEGRATION_TEST_SUMMARY.md` — ThorVG integration testing
 - `THEME_UPDATE_SUMMARY.md` — Theme system updates
 - `TRANSPORT_BAR_FIX_SUMMARY.md` — Transport bar bug fixes
 
