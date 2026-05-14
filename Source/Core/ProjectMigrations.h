@@ -38,12 +38,11 @@ public:
      */
     static const std::vector<Migration>& getMigrations() {
         static std::vector<Migration> migrations = {
-            // Example migration (uncomment when needed):
-            // {
-            //     1, 2,
-            //     migrateV1ToV2,
-            //     "Convert old clip format to new ClipInstance schema"
-            // },
+            {
+                1, 2,
+                migrateV1ToV2,
+                "No-op migration marker for v2 schema baseline"
+            },
         };
         return migrations;
     }
@@ -83,6 +82,10 @@ public:
     }
 
 private:
+    static bool migrateV1ToV2(JSON&) {
+        return true;
+    }
+
     // =========================================================================
     // Migration Functions
     // =========================================================================

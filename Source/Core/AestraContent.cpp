@@ -39,6 +39,7 @@
 
 // Audio includes
 #include "../AestraCore/include/AestraLog.h"
+#include "../AestraAudio/include/Commands/CommandRegistry.h"
 #include "AudioEngine.h"
 #include "ChannelSlotMap.h"
 #include "ClipSource.h"
@@ -52,6 +53,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -128,6 +130,9 @@ AestraContent::AestraContent() {
 
     // Create track manager for multi-track functionality
     m_trackManager = std::make_shared<TrackManager>();
+
+    // Initialize Muse command registry with TrackManager dependencies
+    Aestra::Audio::CommandRegistry::initialize(m_trackManager.get());
 
     // TrackManager is owned by AestraContent, and the destructor clears this stored callback before teardown.
     m_trackManager->setStopPreviewCallback([this]() { stopSoundPreview(); });
@@ -2737,6 +2742,7 @@ void AestraContent::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
 
 void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
     m_audioEngine = engine;
+    Aestra::Audio::CommandRegistry::setAudioEngine(engine);
     if (m_pianoRollPanel) {
         m_pianoRollPanel->setAudioEngine(m_audioEngine);
     }
@@ -3476,4 +3482,43 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     }
 
     return false;
+}
+
+Aestra::Audio::CommandResult AestraContent::executeMuseCommand(const std::string& input) {
+    if (!m_trackManager) {
+        Aestra::Audio::CommandResult err;
+        err.status = Aestra::Audio::CommandStatus::ExecutionError;
+        err.message = "no track manager available";
+        return err;
+    }
+
+    auto& history = m_trackManager->getCommandHistory();
+    Aestra::Audio::CommandResult result = m_commandParser.parse(input, history);
+
+    if (m_sessionLog) {
+        // Build resolved args map from the parsed input
+        std::unordered_map<std::string, std::string> resolvedArgs;
+        std::istringstream stream(input);
+        std::string token;
+        bool first = true;
+        while (stream >> token) {
+            if (first) {
+                first = false;
+                continue;
+            }
+            if (token.size() >= 3 && token[0] == '-' && token[1] == '-') {
+                std::string key = token.substr(2);
+                if (stream >> token) {
+                    resolvedArgs[key] = token;
+                }
+            }
+        }
+        m_sessionLog->append(result, resolvedArgs, input);
+    }
+
+    return result;
+}
+
+void AestraContent::setMuseSessionDirectory(const std::string& path) {
+    m_sessionLog = std::make_unique<Aestra::Audio::SessionLog>(path + "/muse_commands.jsonl");
 }

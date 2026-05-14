@@ -34,7 +34,7 @@ namespace {
     // - Increment CURRENT when making breaking changes
     // - MIN_SUPPORTED is the oldest version we can still load
     // - Future migration code can handle MIN_SUPPORTED <= version <= CURRENT
-    constexpr int PROJECT_VERSION_CURRENT = 1;
+    constexpr int PROJECT_VERSION_CURRENT = 2;
     constexpr int PROJECT_VERSION_MIN_SUPPORTED = 1;
     constexpr size_t PROJECT_HISTORY_MAX_ENTRIES = 50;
     constexpr uintmax_t PROJECT_MAX_FILE_BYTES = 64ull * 1024ull * 1024ull;
