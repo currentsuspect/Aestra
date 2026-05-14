@@ -7,11 +7,11 @@
 #include "NUIMixerWidgets.h"
 #include "PluginBrowserPanel.h"
 #include "MixerViewModel.h"
+#include "TrackColorPalette.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <sstream>
 #include <vector>
 
 namespace AestraUI {
@@ -27,39 +27,29 @@ namespace {
     constexpr float ROW_RADIUS = 12.0f;
     constexpr float INPUT_METER_H = 12.0f;
     constexpr float IO_CARD_RADIUS = 14.0f;
-    constexpr float HEADER_RADIUS = 16.0f;
+    constexpr float HEADER_RADIUS = 12.0f;
     constexpr float IO_DROPDOWN_H = 22.0f;
-    constexpr float SEND_STATUS_CARD_H = 56.0f;
-    constexpr float SEND_OUTPUT_CARD_H = 86.0f;
+    constexpr float SEND_STATUS_CARD_H = 50.0f;
+    constexpr float SEND_OUTPUT_CARD_H = 70.0f;
     constexpr float SEND_ROUTE_MAP_H = 116.0f;
 
-    // Global rule: split text into lines that each fit within maxWidth.
-    // Used for multi-line descriptive text so nothing bleeds past panel edges.
-    std::vector<std::string> wrapText(NUIRenderer& renderer, const std::string& text,
-                                       float fontSize, float maxWidth)
+    std::string fitText(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth)
     {
-        std::vector<std::string> lines;
-        if (text.empty()) return lines;
-
-        std::string currentLine;
-        std::istringstream stream(text);
-        std::string word;
-
-        while (stream >> word) {
-            std::string test = currentLine.empty() ? word : currentLine + " " + word;
-            if (renderer.measureText(test, fontSize).width <= maxWidth) {
-                currentLine = std::move(test);
-            } else {
-                if (!currentLine.empty()) {
-                    lines.push_back(std::move(currentLine));
-                }
-                currentLine = word;
-            }
+        if (text.empty() || renderer.measureText(text, fontSize).width <= maxWidth) {
+            return text;
         }
-        if (!currentLine.empty()) {
-            lines.push_back(std::move(currentLine));
+
+        constexpr const char* ellipsis = "...";
+        const float ellipsisW = renderer.measureText(ellipsis, fontSize).width;
+        if (ellipsisW >= maxWidth) {
+            return ellipsis;
         }
-        return lines;
+
+        std::string out = text;
+        while (!out.empty() && renderer.measureText(out, fontSize).width + ellipsisW > maxWidth) {
+            out.pop_back();
+        }
+        return out + ellipsis;
     }
 
 }
@@ -247,15 +237,14 @@ void UIMixerInspector::layoutHitRects()
     }
 
     if (m_ioInputDropdown) {
-        // Place dropdown below the ioHeader card (48 px) so it never overlaps hint text
-        float currentY = contentY + 54.0f;
-        m_ioInputDropdown->setBounds(x + 10.0f, currentY, w - 20.0f, IO_DROPDOWN_H);
+        const float dropdownY = contentY + 68.0f;
+        m_ioInputDropdown->setBounds(x + 12.0f, dropdownY, w - 24.0f, IO_DROPDOWN_H);
     }
     if (m_mainOutputDropdown) {
-        const float dropdownW = std::min(w - 20.0f, std::floor(w * 0.62f));
+        const float dropdownW = w - 20.0f;
         // Position inside the outputHeader card, below the MAIN PATH label
         // Layout: status card (SEND_STATUS_CARD_H) + 8 gap + outputHeader top (10 title) + 22 (label space)
-        const float dropdownY = contentY + SEND_STATUS_CARD_H + 8.0f + 36.0f;
+        const float dropdownY = contentY + SEND_STATUS_CARD_H + 8.0f + 38.0f;
         m_mainOutputDropdown->setBounds(x + 10.0f, dropdownY, dropdownW, IO_DROPDOWN_H);
     }
 }
@@ -276,7 +265,7 @@ void UIMixerInspector::onResize(int width, int height)
     const auto b = getBounds();
     const float contentTop = PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
     if (m_effectRack) {
-        // Inserts tab: summary card is 52px tall, rack must start below it
+        // Inserts tab: keep the rack clear of the header breadcrumb/output line.
         const float topPad = (m_activeTab == Tab::Inserts) ? 60.0f : 10.0f;
         float rackH = std::max(0.0f, b.height - contentTop - topPad - PAD);
         m_effectRack->setBounds(b.x + PAD, b.y + contentTop + topPad, b.width - PAD * 2.0f, rackH);
@@ -571,9 +560,18 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                                1.0f,
                                NUIColor::white().withAlpha(0.022f));
 
+    NUIColor titleAccent = accent;
+    if (channel && channel->trackColorIndex >= 0) {
+        uint32_t argb = paletteIndexToARGB(channel->trackColorIndex);
+        float a = ((argb >> 24) & 0xFF) / 255.0f;
+        float r = ((argb >> 16) & 0xFF) / 255.0f;
+        float g = ((argb >> 8) & 0xFF) / 255.0f;
+        float b = (argb & 0xFF) / 255.0f;
+        titleAccent = NUIColor(r, g, b, a);
+    }
     const NUIRect titleChip{headerRect.x + 10.0f, headerRect.y + 10.0f, 56.0f, 18.0f};
     renderer.fillRoundedRect(titleChip, 9.0f, m_bg.withAlpha(0.34f));
-    renderer.strokeRoundedRect(titleChip, 9.0f, 1.0f, accent.withAlpha(0.22f));
+    renderer.strokeRoundedRect(titleChip, 9.0f, 1.0f, titleAccent.withAlpha(0.22f));
     renderer.drawTextCentered(channel->id == 0 ? "BUS" : "TRACK", titleChip, 10.0f, m_textSecondary.withAlpha(0.95f));
 
     renderer.drawText(m_cachedHeaderTitle, {headerRect.x + 10.0f, headerRect.y + 30.0f}, 12.5f, m_text);
@@ -636,24 +634,17 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         } else {
             std::snprintf(buf, sizeof(buf), "%d insert%s active", fxCount, fxCount == 1 ? "" : "s");
         }
-        const float cardH = 52.0f; // fixed height so centering math has room to work
+        const float cardH = 48.0f;
         const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, cardH};
-        renderer.fillRoundedRect(summaryCard, 12.0f, m_tabBg.withAlpha(0.46f));
-        renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, accent.withAlpha(0.16f));
-        // TODO: vertically center Insert Status card text — blockStartY method not landing, revisit
-        // Vertically center the two-line text block inside the card.
-        // Treat both lines as a single block, then center the block.
-        const float titleH = 9.5f;
-        const float gap = 4.0f;
-        const float subH = 10.5f;
-        const float blockH = titleH + gap + subH;
-        const float blockTop = summaryCard.y + (cardH - blockH) * 0.5f;
-        renderer.drawText("Insert Status",
-                          {summaryCard.x + 10.0f, blockTop + titleH},
-                          9.5f, m_textSecondary.withAlpha(0.94f));
+        renderer.fillRoundedRect(summaryCard, 10.0f, m_tabBg.withAlpha(0.42f));
+        renderer.strokeRoundedRect(summaryCard, 10.0f, 1.0f, accent.withAlpha(0.15f));
+
+        renderer.drawText("INSERTS",
+                          {summaryCard.x + 12.0f, summaryCard.y + 9.0f},
+                          9.0f, m_textSecondary.withAlpha(0.72f));
         renderer.drawText(buf,
-                          {summaryCard.x + 10.0f, blockTop + titleH + gap + subH},
-                          10.5f, m_text.withAlpha(0.96f));
+                          {summaryCard.x + 12.0f, summaryCard.y + 24.0f},
+                          11.0f, m_text.withAlpha(0.96f));
 
         // Rack is rendered by renderChildren() if visible
     } else if (m_activeTab == Tab::Sends) {
@@ -663,33 +654,33 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
 
         // === Status card: cleaner two-line layout (label + count) ===
         const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, SEND_STATUS_CARD_H};
-        renderer.fillRoundedRect(summaryCard, 12.0f, m_tabBg.withAlpha(0.46f));
+        renderer.fillRoundedRect(summaryCard, 10.0f, m_tabBg.withAlpha(0.42f));
         const NUIColor summaryStroke = hasRoutingWarning
             ? NUIThemeManager::getInstance().getColor("warning").withAlpha(0.45f)
             : accent.withAlpha(0.18f);
-        renderer.strokeRoundedRect(summaryCard, 12.0f, 1.0f, summaryStroke);
+        renderer.strokeRoundedRect(summaryCard, 10.0f, 1.0f, summaryStroke);
 
         // Eyebrow label
-        renderer.drawText("SENDS", {summaryCard.x + 12.0f, summaryCard.y + 9.0f}, 9.5f,
-                          m_textSecondary.withAlpha(0.7f));
+        renderer.drawText("SENDS", {summaryCard.x + 12.0f, summaryCard.y + 8.0f}, 9.0f,
+                          m_textSecondary.withAlpha(0.72f));
 
         // Primary value (right side: count, left side: descriptor)
         if (sendCount == 0) {
             renderer.drawText("No sends configured",
-                              {summaryCard.x + 12.0f, summaryCard.y + 26.0f},
-                              13.0f, m_text.withAlpha(0.94f));
+                              {summaryCard.x + 12.0f, summaryCard.y + 25.0f},
+                              11.5f, m_text.withAlpha(0.94f));
         } else {
             char buf[64];
             std::snprintf(buf, sizeof(buf), "%d send%s active", sendCount, sendCount == 1 ? "" : "s");
             renderer.drawText(buf,
-                              {summaryCard.x + 12.0f, summaryCard.y + 26.0f},
-                              13.0f, m_text.withAlpha(0.96f));
+                              {summaryCard.x + 12.0f, summaryCard.y + 25.0f},
+                              11.5f, m_text.withAlpha(0.96f));
         }
 
         // Warning row (only if applicable)
         if (hasRoutingWarning) {
             renderer.drawText(routingWarning,
-                              {summaryCard.x + 12.0f, summaryCard.y + 43.0f},
+                              {summaryCard.x + 12.0f, summaryCard.y + 38.0f},
                               10.0f,
                               NUIThemeManager::getInstance().getColor("warning").withAlpha(0.92f));
         }
@@ -697,13 +688,13 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         // === Main Output card: tighter, no overlapping hint ===
         const NUIRect outputHeader{contentRect.x, summaryCard.bottom() + 8.0f,
                                     contentRect.width, SEND_OUTPUT_CARD_H};
-        renderer.fillRoundedRect(outputHeader, 14.0f, m_tabBg.withAlpha(0.40f));
-        renderer.strokeRoundedRect(outputHeader, 14.0f, 1.0f, m_border.withAlpha(0.36f));
+        renderer.fillRoundedRect(outputHeader, 10.0f, m_tabBg.withAlpha(0.36f));
+        renderer.strokeRoundedRect(outputHeader, 10.0f, 1.0f, m_border.withAlpha(0.30f));
 
         // Eyebrow
         renderer.drawText("MAIN PATH",
-                          {outputHeader.x + 12.0f, outputHeader.y + 9.0f}, 9.5f,
-                          m_textSecondary.withAlpha(0.7f));
+                          {outputHeader.x + 12.0f, outputHeader.y + 9.0f}, 9.0f,
+                          m_textSecondary.withAlpha(0.72f));
 
         // Title
         renderer.drawText("Main Output",
@@ -718,7 +709,7 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         }
 
         float currentY = routingCard.bottom() + 12.0f - m_scrollOffset;
-        const float sendH = 102.0f;
+        const float sendH = 124.0f;
         const float gap = 10.0f;
 
         for (auto& widget : m_sendWidgets) {
@@ -749,37 +740,52 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         if (isMaster) {
              renderer.drawTextCentered("Master Output is fixed to Hardware Output 1/2", contentRect, 11.0f, m_textSecondary);
         } else if (m_activeTab == Tab::IO) {
-             const NUIRect ioHeader{contentRect.x, contentRect.y, contentRect.width, 48.0f};
-             renderer.fillRoundedRect(ioHeader, 14.0f, m_tabBg.withAlpha(0.40f));
-             renderer.strokeRoundedRect(ioHeader, 14.0f, 1.0f, m_border.withAlpha(0.36f));
-             renderer.drawText("Audio Input", {ioHeader.x + 10.0f, ioHeader.y + 10.0f}, 11.5f, m_text);
-             renderer.drawText("Pick a source, then verify the live level before record.",
-                               {ioHeader.x + 10.0f, ioHeader.y + 25.0f}, 9.0f, m_textSecondary.withAlpha(0.94f));
+             const NUIRect sourceCard{contentRect.x, contentRect.y, contentRect.width, 102.0f};
+             renderer.drawShadow(sourceCard, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.10f));
+             renderer.fillRoundedRect(sourceCard, 12.0f, m_tabBg.withAlpha(0.46f));
+             renderer.strokeRoundedRect(sourceCard, 12.0f, 1.0f, accent.withAlpha(0.20f));
 
-             // Dropdown is now below the ioHeader (positioned in onResize); infoCard follows after it.
-             const float infoTop = contentRect.y + 84.0f;
-             const NUIRect infoCard{contentRect.x, infoTop, contentRect.width, 100.0f};
-             renderer.drawShadow(infoCard, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.10f));
-             renderer.fillRoundedRect(infoCard, IO_CARD_RADIUS, m_tabBg.withAlpha(0.62f));
-             renderer.strokeRoundedRect(infoCard, IO_CARD_RADIUS, 1.0f, m_border.withAlpha(0.46f));
-             renderer.strokeRoundedRect({infoCard.x + 1.0f, infoCard.y + 1.0f, infoCard.width - 2.0f, infoCard.height - 2.0f},
-                                        std::max(0.0f, IO_CARD_RADIUS - 1.0f),
-                                        1.0f,
-                                        NUIColor::white().withAlpha(0.02f));
+             renderer.drawText("AUDIO INPUT", {sourceCard.x + 12.0f, sourceCard.y + 9.0f}, 9.0f,
+                               m_textSecondary.withAlpha(0.72f));
+             renderer.drawText("Choose source", {sourceCard.x + 12.0f, sourceCard.y + 25.0f}, 12.0f,
+                               m_text.withAlpha(0.96f));
+             renderer.drawText("Verify level before recording.",
+                               {sourceCard.x + 12.0f, sourceCard.y + 42.0f}, 9.0f,
+                               m_textSecondary.withAlpha(0.76f));
 
-             const float labelX = infoCard.x + 12.0f;
-             const float valueX = infoCard.x + 70.0f;
-             renderer.drawText("Source", {labelX, infoCard.y + 12.0f}, 9.0f, m_textSecondary);
-             renderer.drawText(channel->inputSourceName, {valueX, infoCard.y + 10.0f}, 10.0f, m_text);
+             const float metaY = sourceCard.y + 77.0f;
+             renderer.drawText("Source", {sourceCard.x + 12.0f, metaY}, 8.5f,
+                               m_textSecondary.withAlpha(0.70f));
+             renderer.drawText(fitText(renderer, channel->inputSourceName, 9.5f, 72.0f),
+                               {sourceCard.x + 58.0f, metaY - 1.0f}, 9.5f, m_text.withAlpha(0.92f));
 
              const std::string monitorMode = channel->monitored ? "Arm + Monitor" : "Arm Only";
-             renderer.drawText("Mode", {labelX, infoCard.y + 30.0f}, 9.0f, m_textSecondary);
-             renderer.drawText(monitorMode, {valueX, infoCard.y + 28.0f}, 10.0f, m_text);
+             renderer.drawText("Mode", {sourceCard.x + 122.0f, metaY}, 8.5f,
+                               m_textSecondary.withAlpha(0.70f));
+             renderer.drawText(fitText(renderer, monitorMode, 9.5f, sourceCard.right() - sourceCard.x - 166.0f),
+                               {sourceCard.x + 158.0f, metaY - 1.0f}, 9.5f, m_text.withAlpha(0.92f));
 
-             renderer.drawText("Signal", {labelX, infoCard.y + 56.0f}, 9.0f, m_textSecondary);
-             const NUIRect meterRect{labelX, infoCard.y + 72.0f, infoCard.width - 24.0f, INPUT_METER_H};
-             renderer.fillRoundedRect(meterRect, 6.0f, m_bg.withAlpha(0.62f));
-             renderer.strokeRoundedRect(meterRect, 6.0f, 1.0f, m_border.withAlpha(0.60f));
+             const float signalTop = sourceCard.bottom() + 10.0f;
+             const NUIRect signalCard{contentRect.x, signalTop, contentRect.width, 74.0f};
+             renderer.fillRoundedRect(signalCard, 12.0f, m_tabBg.withAlpha(0.38f));
+             renderer.strokeRoundedRect(signalCard, 12.0f, 1.0f, m_border.withAlpha(0.34f));
+
+             const float peakDb = (channel->inputPeak > 0.0001f)
+                 ? (20.0f * std::log10(channel->inputPeak))
+                 : -90.0f;
+             char peakBuf[64];
+             std::snprintf(peakBuf, sizeof(peakBuf), "%.1f dBFS", peakDb);
+             renderer.drawText("SIGNAL", {signalCard.x + 12.0f, signalCard.y + 10.0f}, 9.0f,
+                               m_textSecondary.withAlpha(0.72f));
+             renderer.drawText(peakBuf,
+                               {signalCard.right() - 12.0f - renderer.measureText(peakBuf, 9.5f).width,
+                                signalCard.y + 9.0f},
+                               9.5f,
+                               m_textSecondary.withAlpha(0.86f));
+
+             const NUIRect meterRect{signalCard.x + 12.0f, signalCard.y + 34.0f, signalCard.width - 24.0f, 13.0f};
+             renderer.fillRoundedRect(meterRect, 6.5f, m_bg.withAlpha(0.62f));
+             renderer.strokeRoundedRect(meterRect, 6.5f, 1.0f, m_border.withAlpha(0.45f));
 
              const float fillWidth = std::clamp(channel->inputPeak, 0.0f, 1.0f) * meterRect.width;
              if (fillWidth > 1.0f) {
@@ -791,28 +797,9 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
                  renderer.fillRoundedRect({meterRect.x, meterRect.y, fillWidth, meterRect.height}, 6.0f, meterColor.withAlpha(0.95f));
              }
 
-             const float peakDb = (channel->inputPeak > 0.0001f)
-                 ? (20.0f * std::log10(channel->inputPeak))
-                 : -90.0f;
-             char peakBuf[64];
-             std::snprintf(peakBuf, sizeof(peakBuf), "%.1f dBFS", peakDb);
-             renderer.drawText(peakBuf,
-                               {meterRect.right() - renderer.measureText(peakBuf, 9.0f).width, infoCard.y + 54.0f},
-                               9.0f,
-                               m_textSecondary);
-
-             // Hint text: wrap to panel width so it never overflows the boundary
-             const float hintX = contentRect.x + 12.0f;
-             const float hintY = infoCard.bottom() + 12.0f;
-             const float hintW = contentRect.width - 24.0f;
-             auto hintLines = wrapText(renderer,
-                                        "If this meter is flat or pinned, fix the input path before recording.",
-                                        9.0f, hintW);
-             for (size_t i = 0; i < hintLines.size(); ++i) {
-                 renderer.drawText(hintLines[i],
-                                   {hintX, hintY + static_cast<float>(i) * 12.0f},
-                                   9.0f, m_textSecondary.withAlpha(0.88f));
-             }
+             renderer.drawText("Flat or clipped input usually means the selected source needs attention.",
+                               {signalCard.x + 12.0f, signalCard.y + 55.0f},
+                               8.5f, m_textSecondary.withAlpha(0.72f));
         }
     }
 
