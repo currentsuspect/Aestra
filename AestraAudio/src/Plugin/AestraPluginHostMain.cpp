@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include <algorithm>
+#include <csignal>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -126,7 +127,31 @@ struct ClapOutputEvents {
     bool (*tryPush)(const ClapOutputEvents* list, const ClapEventHeader* event);
 };
 
+struct ClapEventMidi {
+    ClapEventHeader header;
+    uint16_t portIndex;
+    uint8_t data[3];
+};
+
+struct ClapOstream {
+    void* ctx;
+    int64_t (*write)(const ClapOstream* stream, const void* buffer, uint64_t size);
+};
+
+struct ClapIstream {
+    void* ctx;
+    int64_t (*read)(const ClapIstream* stream, void* buffer, uint64_t size);
+};
+
+struct ClapPluginState {
+    bool (*save)(const ClapPlugin* plugin, const ClapOstream* stream);
+    bool (*load)(const ClapPlugin* plugin, const ClapIstream* stream);
+};
+
+constexpr uint16_t kClapCoreEventSpaceId = 0;
+constexpr uint16_t kClapEventMidi = 10;
 constexpr const char* kClapPluginFactoryId = "clap.plugin-factory";
+constexpr const char* kClapExtState = "clap.state";
 constexpr const char* kProbeFirstClapPluginId = "__aestra_probe_first__";
 
 bool isClapVersionCompatible(const ClapVersion& version) {
@@ -144,10 +169,52 @@ const ClapEventHeader* emptyInputEventsGet(const ClapInputEvents* list, uint32_t
     return nullptr;
 }
 
+uint32_t midiInputEventsSize(const ClapInputEvents* list) {
+    const auto* events = list ? static_cast<const std::vector<ClapEventMidi>*>(list->ctx) : nullptr;
+    return events ? static_cast<uint32_t>(events->size()) : 0;
+}
+
+const ClapEventHeader* midiInputEventsGet(const ClapInputEvents* list, uint32_t index) {
+    const auto* events = list ? static_cast<const std::vector<ClapEventMidi>*>(list->ctx) : nullptr;
+    if (!events || index >= events->size()) {
+        return nullptr;
+    }
+    return &(*events)[index].header;
+}
+
 bool dropOutputEvent(const ClapOutputEvents* list, const ClapEventHeader* event) {
     (void)list;
     (void)event;
     return true;
+}
+
+int64_t writeStateStream(const ClapOstream* stream, const void* buffer, uint64_t size) {
+    auto* out = stream ? static_cast<std::vector<uint8_t>*>(stream->ctx) : nullptr;
+    if (!out || (!buffer && size != 0)) {
+        return -1;
+    }
+    const auto* bytes = static_cast<const uint8_t*>(buffer);
+    out->insert(out->end(), bytes, bytes + size);
+    return static_cast<int64_t>(size);
+}
+
+struct StateReadContext {
+    const std::vector<uint8_t>* data{nullptr};
+    size_t offset{0};
+};
+
+int64_t readStateStream(const ClapIstream* stream, void* buffer, uint64_t size) {
+    auto* ctx = stream ? static_cast<StateReadContext*>(stream->ctx) : nullptr;
+    if (!ctx || !ctx->data || (!buffer && size != 0)) {
+        return -1;
+    }
+    const size_t available = ctx->offset < ctx->data->size() ? ctx->data->size() - ctx->offset : 0;
+    const size_t toRead = std::min<size_t>(available, static_cast<size_t>(size));
+    if (toRead > 0) {
+        std::memcpy(buffer, ctx->data->data() + ctx->offset, toRead);
+        ctx->offset += toRead;
+    }
+    return static_cast<int64_t>(toRead);
 }
 
 const void* hostGetExtension(const ClapHost* host, const char* extensionId) {
@@ -181,6 +248,7 @@ struct ClapModule {
     uint32_t maxBlockSize = 0;
     std::vector<float> inputStorage[2];
     std::vector<float> outputStorage[2];
+    std::vector<ClapEventMidi> midiEvents;
     float* inputPlanes[2] = {nullptr, nullptr};
     float* outputPlanes[2] = {nullptr, nullptr};
     ClapInputEvents emptyInputEvents = {nullptr, emptyInputEventsSize, emptyInputEventsGet};
@@ -299,6 +367,7 @@ struct ClapModule {
         for (auto& storage : outputStorage) {
             storage.assign(maxBlockSize, 0.0f);
         }
+        midiEvents.reserve(1024);
         inputPlanes[0] = inputStorage[0].data();
         inputPlanes[1] = inputStorage[1].data();
         outputPlanes[0] = outputStorage[0].data();
@@ -330,7 +399,7 @@ struct ClapModule {
     }
 
     bool process(const std::vector<float>& interleavedInput, uint32_t channels, uint32_t frames,
-                 std::vector<float>& interleavedOutput) {
+                 const std::vector<uint8_t>* midiData, size_t midiBytes, std::vector<float>& interleavedOutput) {
         if (!active || !plugin || channels == 0 || channels > 2 || frames == 0 || frames > maxBlockSize) {
             return false;
         }
@@ -341,6 +410,28 @@ struct ClapModule {
                     (ch < channels) ? interleavedInput[static_cast<size_t>(frame) * channels + ch] : 0.0f;
             }
         }
+
+        midiEvents.clear();
+        if (midiData && midiBytes <= midiData->size() && (midiBytes % 8) == 0) {
+            for (size_t offset = 0; offset < midiBytes; offset += 8) {
+                const uint8_t size = (*midiData)[offset + 4];
+                if (size != 3) {
+                    continue;
+                }
+                uint32_t sampleOffset = 0;
+                std::memcpy(&sampleOffset, midiData->data() + offset, sizeof(sampleOffset));
+                ClapEventMidi event{};
+                event.header.size = sizeof(event);
+                event.header.time = std::min<uint32_t>(sampleOffset, frames > 0 ? frames - 1 : 0);
+                event.header.spaceId = kClapCoreEventSpaceId;
+                event.header.type = kClapEventMidi;
+                event.header.flags = 0;
+                event.portIndex = 0;
+                std::memcpy(event.data, midiData->data() + offset + 5, 3);
+                midiEvents.push_back(event);
+            }
+        }
+        ClapInputEvents midiInputEvents = {&midiEvents, midiInputEventsSize, midiInputEventsGet};
 
         ClapAudioBuffer inputBuffer = {};
         inputBuffer.data32 = inputPlanes;
@@ -362,7 +453,7 @@ struct ClapModule {
         processData.audioOutputs = &outputBuffer;
         processData.audioInputsCount = 1;
         processData.audioOutputsCount = 1;
-        processData.inEvents = &emptyInputEvents;
+        processData.inEvents = midiEvents.empty() ? &emptyInputEvents : &midiInputEvents;
         processData.outEvents = &outputEvents;
 
         if (plugin->process(plugin, &processData) == kClapProcessError) {
@@ -376,6 +467,35 @@ struct ClapModule {
             }
         }
         return true;
+    }
+
+    bool saveState(std::vector<uint8_t>& stateData) {
+        stateData.clear();
+        if (!plugin || !plugin->getExtension) {
+            return false;
+        }
+        auto* state = static_cast<const ClapPluginState*>(plugin->getExtension(plugin, kClapExtState));
+        if (!state || !state->save) {
+            return false;
+        }
+        ClapOstream stream = {&stateData, writeStateStream};
+        return state->save(plugin, &stream);
+    }
+
+    bool loadState(const std::vector<uint8_t>& stateData) {
+        if (stateData.empty()) {
+            return true;
+        }
+        if (!plugin || !plugin->getExtension) {
+            return false;
+        }
+        auto* state = static_cast<const ClapPluginState*>(plugin->getExtension(plugin, kClapExtState));
+        if (!state || !state->load) {
+            return false;
+        }
+        StateReadContext ctx{&stateData, 0};
+        ClapIstream stream = {&ctx, readStateStream};
+        return state->load(plugin, &stream);
     }
 
     bool scanMetadata(const std::string& path, const ClapPluginDescriptor*& descriptor, std::string& error) {
@@ -460,6 +580,22 @@ std::string hexEncodeBytes(const void* data, size_t size) {
     return out;
 }
 
+bool hexDecodeRaw(const std::string& input, std::vector<uint8_t>& output) {
+    if ((input.size() % 2) != 0) {
+        return false;
+    }
+    output.resize(input.size() / 2);
+    for (size_t i = 0; i < output.size(); ++i) {
+        const int hi = hexValue(input[i * 2]);
+        const int lo = hexValue(input[i * 2 + 1]);
+        if (hi < 0 || lo < 0) {
+            return false;
+        }
+        output[i] = static_cast<uint8_t>((hi << 4) | lo);
+    }
+    return true;
+}
+
 bool hexDecodeFloats(const std::string& input, std::vector<float>& output) {
     if ((input.size() % 2) != 0) {
         return false;
@@ -485,6 +621,20 @@ std::string hexEncodeString(const std::string& input) {
     return hexEncodeBytes(input.data(), input.size());
 }
 
+void fatalSignalHandler(int signal) noexcept {
+    std::_Exit(128 + signal);
+}
+
+void installFatalSignalHandlers() noexcept {
+    std::signal(SIGSEGV, fatalSignalHandler);
+    std::signal(SIGABRT, fatalSignalHandler);
+    std::signal(SIGILL, fatalSignalHandler);
+    std::signal(SIGFPE, fatalSignalHandler);
+#ifdef SIGBUS
+    std::signal(SIGBUS, fatalSignalHandler);
+#endif
+}
+
 void reply(const std::string& line) {
     std::cout << line << '\n';
     std::cout.flush();
@@ -496,10 +646,14 @@ int main(int argc, char** argv) {
     (void)argc;
     (void)argv;
 
+    installFatalSignalHandlers();
+
     bool loaded = false;
     bool active = false;
     uint32_t maxBlockSize = 0;
     std::vector<float> processBuffer;
+    std::vector<uint8_t> midiBuffer;
+    std::vector<uint8_t> stateBuffer;
     std::string line;
 #ifndef _WIN32
     ClapModule clapModule;
@@ -557,9 +711,11 @@ int main(int argc, char** argv) {
             input >> format >> idHex >> pathHex;
             const std::string id = hexDecode(idHex);
             const std::string path = hexDecode(pathHex);
+#ifdef AESTRA_ENABLE_TEST_HOOKS
             if (id == "__aestra_test_crash__") {
                 std::abort();
             }
+#endif
             if (format != "vst3" && format != "clap") {
                 reply("ERR unsupported-format");
                 continue;
@@ -615,6 +771,45 @@ int main(int argc, char** argv) {
             clapModule.deactivate();
 #endif
             reply("OK INACTIVE");
+        } else if (command == "SAVESTATE") {
+            if (!loaded) {
+                reply("ERR not-loaded");
+                continue;
+            }
+#ifndef _WIN32
+            if (clapModule.plugin) {
+                stateBuffer.clear();
+                if (!clapModule.saveState(stateBuffer)) {
+                    reply("ERR state-unavailable");
+                    continue;
+                }
+                reply("OK " + hexEncodeBytes(stateBuffer.data(), stateBuffer.size()));
+                continue;
+            }
+#endif
+            reply("OK ");
+        } else if (command == "LOADSTATE") {
+            if (!loaded) {
+                reply("ERR not-loaded");
+                continue;
+            }
+            std::string stateHex;
+            input >> stateHex;
+            if (!hexDecodeRaw(stateHex, stateBuffer)) {
+                reply("ERR invalid-state");
+                continue;
+            }
+#ifndef _WIN32
+            if (clapModule.plugin) {
+                if (!clapModule.loadState(stateBuffer)) {
+                    reply("ERR state-load-failed");
+                    continue;
+                }
+                reply("OK STATE");
+                continue;
+            }
+#endif
+            reply(stateBuffer.empty() ? "OK STATE" : "ERR state-unavailable");
         } else if (command == "SHUTDOWN") {
             active = false;
             loaded = false;
@@ -630,7 +825,7 @@ int main(int argc, char** argv) {
             return 0;
         } else if (command == "STATUS") {
             reply(active ? "OK ACTIVE" : (loaded ? "OK LOADED" : "OK EMPTY"));
-        } else if (command == "PROCESS") {
+        } else if (command == "PROCESS" || command == "PROCESSMIDI") {
             if (!loaded || !active) {
                 reply("ERR inactive");
                 continue;
@@ -638,7 +833,11 @@ int main(int argc, char** argv) {
             uint32_t channels = 0;
             uint32_t frames = 0;
             std::string payloadHex;
+            std::string midiHex;
             input >> channels >> frames >> payloadHex;
+            if (command == "PROCESSMIDI") {
+                input >> midiHex;
+            }
             if (channels == 0 || channels > 2 || frames == 0 || frames > maxBlockSize) {
                 reply("ERR invalid-process-size");
                 continue;
@@ -648,11 +847,17 @@ int main(int argc, char** argv) {
                 reply("ERR invalid-process-payload");
                 continue;
             }
+            midiBuffer.clear();
+            if (command == "PROCESSMIDI" && !hexDecodeRaw(midiHex, midiBuffer)) {
+                reply("ERR invalid-midi-payload");
+                continue;
+            }
 
 #ifndef _WIN32
             if (clapModule.plugin) {
                 std::vector<float> processed;
-                if (!clapModule.process(processBuffer, channels, frames, processed)) {
+                const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
+                if (!clapModule.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
                     reply("ERR clap-process-failed");
                     continue;
                 }
