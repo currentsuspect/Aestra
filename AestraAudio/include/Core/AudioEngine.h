@@ -20,12 +20,9 @@
 #include <cstdint>
 #include <vector>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h> // ALLOW_PLATFORM_INCLUDE
-#endif
 #include "AudioGraphState.h"
 #include "AudioRenderer.h"
+#include "LatencyTopology.h"
 #include "MetronomeEngine.h"     // [NEW]
 #include "Models/TrackManager.h" // [NEW] For headless rendering
 
@@ -248,7 +245,44 @@ public:
      * @brief Get current max project latency in samples
      */
     uint32_t getMaxProjectLatency() const;
-    
+
+    /**
+     * @brief Access the most recently solved PDC topology.
+     *
+     * Returns a snapshot of the artifact produced by `solveLatency()` during the
+     * last `calculateLatencyCompensation()` call. NOT RT-SAFE: read from main /
+     * control thread only.
+     *
+     * Architectural contract (PDC-v2-Design §4.0): the engine consumes this
+     * topology read-only. Tests and tools may inspect it for diagnostics and
+     * solver-vs-state equivalence checks.
+     */
+    SolvedLatencyTopology getLastSolvedLatencyTopology() const;
+
+    /**
+     * @brief PDC v2 (P4b.2): per-track per-edge compensation snapshot for tests
+     *        and tooling. NOT RT-SAFE: read from main / control thread only.
+     *
+     * Returns the compensation sample counts and buffer-capacity-mask values
+     * that the off-RT apply pass wrote into TrackRTState for the given track
+     * index. The buffer contents themselves are not exposed; only the values
+     * the RT-side P4b.3 consumer will read.
+     */
+    struct TrackEdgeDelaySnapshot {
+        struct EdgeSlotSnapshot {
+            uint32_t compensationSamples{0};
+            uint32_t capacityMask{0};
+            size_t bufferBytes{0};
+            /// RT-side write cursor (frames). Increments only when the RT path
+            /// applies this edge's delay (i.e., comp > 0 and buffer is ready).
+            uint32_t writePos{0};
+        };
+        EdgeSlotSnapshot mainOutEdgeDelay;
+        std::vector<EdgeSlotSnapshot> sendEdgeDelays;
+        bool valid{false};
+    };
+    TrackEdgeDelaySnapshot getTrackEdgeDelaySnapshot(size_t trackIndex) const;
+
     /**
      * @brief Mark latency as dirty (needs recalculation)
      * Called internally when plugins change
@@ -710,6 +744,9 @@ private:
         double* dest{nullptr};
         SmoothedParamD* gainL{nullptr};
         SmoothedParamD* gainR{nullptr};
+        /// PDC v2 (P4b.3): per-edge compensation slot for this send. Optional —
+        /// nullptr or comp==0 means "no delay, mix directly".
+        EdgeDelayState* edgeDelay{nullptr};
     };
     std::vector<PreparedSendRoute> m_preparedRoutesScratch;
 
@@ -1002,6 +1039,20 @@ private:
     bool m_latencyCompensationEnabled{true};
     uint32_t m_maxProjectLatency{0};
     bool m_latencyDirty{true};  // Recalculate on next safe opportunity
+    // PDC v2 (P3): double-buffered, lock-free publish of SolvedLatencyTopology.
+    //
+    // The off-RT recompute writes the new topology to the inactive slot, then
+    // flips m_activeSolvedTopologyIndex with release ordering. Readers (off-RT
+    // tools, tests, P4 RT path) load the index with acquire ordering and read
+    // from that slot. No mutex on the read path.
+    //
+    // NOTE: this index is deliberately separate from m_activeRenderTrackIndex.
+    // PDC-v2 §9 suggested sharing the audio-graph atomic so both flip together;
+    // unifying is deferred to P4+ once the engine reads compensation values
+    // through SolvedLatencyTopology rather than directly from TrackRTState.
+    std::array<SolvedLatencyTopology, 2> m_solvedTopologies;
+    std::atomic<int> m_activeSolvedTopologyIndex{0};
+    uint64_t m_latencyGraphGeneration{0};
 };
 
 } // namespace Audio
