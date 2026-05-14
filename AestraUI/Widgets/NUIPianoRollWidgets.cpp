@@ -471,10 +471,9 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
     // CLIP: Prevent left bleeding
     renderer.setClipRect(b);
     
-    // Darker, more professional background
-    auto bg = NUIColor(0.08f, 0.08f, 0.10f, 1.0f); 
-    auto textCol = NUIColor(0.7f, 0.7f, 0.75f, 1.0f);
-    auto tickCol = NUIColor(0.35f, 0.35f, 0.40f, 1.0f);
+    auto bg = NUIColor(0.06f, 0.06f, 0.08f, 1.0f);
+    auto textCol = NUIColor(0.78f, 0.78f, 0.84f, 1.0f);
+    auto tickCol = NUIColor(0.42f, 0.42f, 0.48f, 1.0f);
     auto borderCol = NUIColor(0.0f, 0.0f, 0.0f, 0.5f);
     
     renderer.fillRect(b, bg);
@@ -507,7 +506,7 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
             renderer.drawLine(NUIPoint(x, b.y + b.height * 0.5f), NUIPoint(x, b.y + b.height), 1.0f, tickCol);
             
             // Label
-            renderer.drawText(std::to_string(barNum), NUIPoint(x + 4, b.y + 2), 11.0f, textCol);
+            renderer.drawText(std::to_string(barNum), NUIPoint(x + 4, b.y + 4), 11.5f, textCol);
         } else {
             // Beat: Short Tick
             renderer.drawLine(NUIPoint(x, b.y + b.height * 0.75f), NUIPoint(x, b.y + b.height), 1.0f, tickCol.withAlpha(0.6f));
