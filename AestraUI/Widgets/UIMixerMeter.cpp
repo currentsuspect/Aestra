@@ -329,10 +329,18 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     
     if (hasLufs && hasPeak) {
         // Master channel: Show LUFS on top, dB below
-        char lufsBuf[32];
-        char dbBuf[32];
-        std::snprintf(lufsBuf, sizeof(lufsBuf), "%.1f LUFS", m_integratedLufs);
-        std::snprintf(dbBuf, sizeof(dbBuf), "%.1f dB", peak);
+        if (std::abs(m_integratedLufs - m_cachedLufs) > 0.05f) {
+            m_cachedLufs = m_integratedLufs;
+            char buf[32];
+            std::snprintf(buf, sizeof(buf), "%.1f LUFS", m_integratedLufs);
+            m_cachedLufsStr = buf;
+        }
+        if (std::abs(peak - m_cachedDbPeak) > 0.05f) {
+            m_cachedDbPeak = peak;
+            char buf[32];
+            std::snprintf(buf, sizeof(buf), "%.1f dB", peak);
+            m_cachedDbStr = buf;
+        }
         
         // Each line gets half the text area (12px each with 24px total)
         float lineHeight = TEXT_HEIGHT * 0.5f;
@@ -344,7 +352,7 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
             bounds.width,
             lineHeight
         };
-        renderer.drawTextCentered(lufsBuf, lufsRect, 10.0f, m_colorPeakHold);
+        renderer.drawTextCentered(m_cachedLufsStr, lufsRect, 10.0f, m_colorPeakHold);
         
         // dB below - secondary readout
         NUIRect dbRect = {
@@ -353,12 +361,16 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
             bounds.width,
             lineHeight
         };
-        renderer.drawTextCentered(dbBuf, dbRect, 9.0f, m_colorPeakHold.withAlpha(0.75f));
+        renderer.drawTextCentered(m_cachedDbStr, dbRect, 9.0f, m_colorPeakHold.withAlpha(0.75f));
         
     } else if (hasPeak) {
         // Regular tracks: Show Peak dB only with "dB" suffix
-        char buf[32];
-        std::snprintf(buf, sizeof(buf), "%.1f dB", peak);
+        if (std::abs(peak - m_cachedDbPeak) > 0.05f) {
+            m_cachedDbPeak = peak;
+            char buf[32];
+            std::snprintf(buf, sizeof(buf), "%.1f dB", peak);
+            m_cachedDbStr = buf;
+        }
         
         // Center vertically in the text area
         NUIRect textRect = {
@@ -367,7 +379,7 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
             bounds.width,
             12.0f
         };
-        renderer.drawTextCentered(buf, textRect, 11.0f, m_colorPeakHold);
+        renderer.drawTextCentered(m_cachedDbStr, textRect, 11.0f, m_colorPeakHold);
     }
 
     // Render children

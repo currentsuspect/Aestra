@@ -1998,10 +1998,20 @@ NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
                     const FontData& glyph = it->second;
 
                     if (fontHasKerning_ && previousGlyph != 0 && glyph.glyphIndex != 0) {
-                        FT_Vector kerning = {0, 0};
-                        if (FT_Get_Kerning(ftFace_, previousGlyph, glyph.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
-                            totalWidth += (kerning.x / 64.0f) * scale;
+                        const uint64_t kernKey = (static_cast<uint64_t>(previousGlyph) << 32) | glyph.glyphIndex;
+                        auto kernIt = kerningCache_.find(kernKey);
+                        float kernUnits;
+                        if (kernIt != kerningCache_.end()) {
+                            kernUnits = kernIt->second;
+                        } else {
+                            FT_Vector kerning = {0, 0};
+                            kernUnits = 0.0f;
+                            if (FT_Get_Kerning(ftFace_, previousGlyph, glyph.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
+                                kernUnits = static_cast<float>(kerning.x);
+                            }
+                            kerningCache_[kernKey] = kernUnits;
                         }
+                        totalWidth += (kernUnits / 64.0f) * scale;
                     }
 
                     totalWidth += (glyph.advance / 64.0f) * scale;
@@ -2577,11 +2587,18 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
 
         const FontData& ch = it->second;
 
-        // Apply kerning for better spacing
+        // Apply kerning for better spacing (cached to avoid repeated FT_Get_Kerning)
         if (fontHasKerning_ && previousGlyph != 0 && ch.glyphIndex != 0) {
-            FT_Vector kerning = {0, 0};
-            if (FT_Get_Kerning(ftFace_, previousGlyph, ch.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
-                x += (kerning.x >> 6) * scale;
+            const uint64_t kernKey = (static_cast<uint64_t>(previousGlyph) << 32) | ch.glyphIndex;
+            auto kernIt = kerningCache_.find(kernKey);
+            if (kernIt != kerningCache_.end()) {
+                x += (kernIt->second / 64.0f) * scale;
+            } else {
+                FT_Vector kerning = {0, 0};
+                if (FT_Get_Kerning(ftFace_, previousGlyph, ch.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
+                    kerningCache_[kernKey] = static_cast<float>(kerning.x);
+                    x += (kerning.x >> 6) * scale;
+                }
             }
         }
         previousGlyph = ch.glyphIndex;

@@ -154,6 +154,12 @@ private:
      * @brief Cache theme colors from the theme manager.
      */
     void cacheThemeColors();
+
+    // Cached formatted strings to avoid snprintf + heap alloc in render path
+    float m_cachedDbPeak{-200.0f};
+    float m_cachedLufs{-200.0f};
+    std::string m_cachedDbStr;
+    std::string m_cachedLufsStr;
 };
 
 } // namespace AestraUI
