@@ -193,7 +193,6 @@ bool UIMixerHeader::onMouseEvent(const NUIMouseEvent& event)
         }
         m_colorMenu->clear();
 
-        auto header = m_colorMenu;
         for (int i = 0; i < PALETTE_SIZE; ++i) {
             const bool selected = (i == m_colorIndex);
             std::string label = PALETTE_NAMES[i];
@@ -205,14 +204,14 @@ bool UIMixerHeader::onMouseEvent(const NUIMouseEvent& event)
                 repaint();
                 if (onColorChanged) onColorChanged(i);
             });
-            header->addItem(item);
+            m_colorMenu->addItem(item);
         }
 
-        NUIPoint globalPos = localToGlobal(event.position);
         NUIComponent* root = this;
         while (root->getParent()) root = root->getParent();
         root->addChild(m_colorMenu);
-        m_colorMenu->showAt(globalPos);
+        m_colorMenu->showAt(event.position);
+        root->repaint();
         return true;
     }
 
