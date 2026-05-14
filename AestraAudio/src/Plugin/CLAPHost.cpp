@@ -12,6 +12,11 @@
 
 // CLAP SDK includes
 #include <clap/clap.h>
+#include <clap/events.h>
+#include <clap/ext/state.h>
+
+#include <algorithm>
+#include <array>
 #include <cstring>
 
 namespace Aestra {
@@ -74,6 +79,57 @@ static clap_host_params createHostParams() {
     return params;
 }
 static clap_host_params g_hostParams = createHostParams();
+
+struct ClapInputEventList {
+    const clap_event_midi* events{nullptr};
+    uint32_t count{0};
+};
+
+struct StateReadContext {
+    const std::vector<uint8_t>* data{nullptr};
+    size_t offset{0};
+};
+
+uint32_t inputEventsSize(const clap_input_events* list) {
+    const auto* ctx = list ? static_cast<const ClapInputEventList*>(list->ctx) : nullptr;
+    return ctx ? ctx->count : 0;
+}
+
+const clap_event_header* inputEventsGet(const clap_input_events* list, uint32_t index) {
+    const auto* ctx = list ? static_cast<const ClapInputEventList*>(list->ctx) : nullptr;
+    if (!ctx || !ctx->events || index >= ctx->count) {
+        return nullptr;
+    }
+    return &ctx->events[index].header;
+}
+
+bool dropOutputEvent(const clap_output_events*, const clap_event_header*) {
+    return true;
+}
+
+int64_t writeStateStream(const clap_ostream* stream, const void* buffer, uint64_t size) {
+    auto* out = stream ? static_cast<std::vector<uint8_t>*>(stream->ctx) : nullptr;
+    if (!out || (!buffer && size != 0)) {
+        return -1;
+    }
+    const auto* bytes = static_cast<const uint8_t*>(buffer);
+    out->insert(out->end(), bytes, bytes + size);
+    return static_cast<int64_t>(size);
+}
+
+int64_t readStateStream(const clap_istream* stream, void* buffer, uint64_t size) {
+    auto* ctx = stream ? static_cast<StateReadContext*>(stream->ctx) : nullptr;
+    if (!ctx || !ctx->data || (!buffer && size != 0)) {
+        return -1;
+    }
+    const size_t available = ctx->offset < ctx->data->size() ? ctx->data->size() - ctx->offset : 0;
+    const size_t toRead = std::min<size_t>(available, static_cast<size_t>(size));
+    if (toRead > 0) {
+        std::memcpy(buffer, ctx->data->data() + ctx->offset, toRead);
+        ctx->offset += toRead;
+    }
+    return static_cast<int64_t>(toRead);
+}
 
 const void* hostGetExtension(const clap_host* /*host*/, const char* extension_id) {
     // [SEC-FIX] Guard against null extension_id from malicious plugins.
@@ -246,8 +302,7 @@ bool CLAPPluginInstance::load(const std::filesystem::path& path, int pluginIndex
 
     m_loaded = true;
     Log::info("CLAP: Loaded plugin: " + m_info.name + " (" + m_info.vendor + ")");
-    Log::warning("CLAP support is experimental. MIDI input, plugin state save/load, "
-                 "and host callbacks are not fully implemented for this plugin.");
+    Log::warning("CLAP support is experimental. Host callbacks are not fully implemented for this plugin.");
 
     return true;
 }
@@ -330,8 +385,31 @@ void CLAPPluginInstance::process(const float* const* inputs, float** outputs, ui
         return;
     }
 
-    (void)midiInput;
     (void)midiOutput;
+
+    static constexpr size_t kMaxClapMidiEvents = 1024;
+    std::array<clap_event_midi, kMaxClapMidiEvents> midiEvents{};
+    ClapInputEventList inputEventList{};
+    if (midiInput) {
+        const size_t eventCount = std::min(midiInput->getEventCount(), kMaxClapMidiEvents);
+        for (size_t i = 0; i < eventCount; ++i) {
+            const auto& event = midiInput->getEvent(i);
+            if (event.size != 3) {
+                continue;
+            }
+            clap_event_midi& clapEvent = midiEvents[inputEventList.count++];
+            clapEvent.header.size = sizeof(clapEvent);
+            clapEvent.header.time = std::min<uint32_t>(event.sampleOffset, numFrames > 0 ? numFrames - 1 : 0);
+            clapEvent.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+            clapEvent.header.type = CLAP_EVENT_MIDI;
+            clapEvent.header.flags = 0;
+            clapEvent.port_index = 0;
+            std::memcpy(clapEvent.data, event.data, sizeof(clapEvent.data));
+        }
+        inputEventList.events = midiEvents.data();
+    }
+    clap_input_events inputEvents = {&inputEventList, inputEventsSize, inputEventsGet};
+    clap_output_events outputEvents = {nullptr, dropOutputEvent};
 
     // Setup audio buffers
     clap_audio_buffer inputBuffer = {};
@@ -355,8 +433,8 @@ void CLAPPluginInstance::process(const float* const* inputs, float** outputs, ui
     process.audio_outputs = &outputBuffer;
     process.audio_inputs_count = 1;
     process.audio_outputs_count = 1;
-    process.in_events = nullptr; // CLAP MIDI not implemented — events are silently dropped.
-    process.out_events = nullptr;
+    process.in_events = &inputEvents;
+    process.out_events = &outputEvents;
 
     m_plugin->process(m_plugin, &process);
 }
@@ -393,26 +471,14 @@ float CLAPPluginInstance::getParameter(uint32_t id) const {
 }
 
 void CLAPPluginInstance::setParameter(uint32_t id, float value) {
-    if (!m_plugin)
+    (void)id;
+    (void)value;
+    if (!m_plugin || !m_host)
         return;
 
-    auto hostParams = static_cast<const clap_host_params*>(m_host.get_extension(&m_host, CLAP_EXT_PARAMS));
+    auto hostParams = static_cast<const clap_host_params*>(m_host->get_extension(m_host, CLAP_EXT_PARAMS));
     if (hostParams && hostParams->request_flush) {
-        // Queue the parameter change for the host to flush during process
-        clap_param_gesture_event gesture;
-        gesture.header.size = sizeof(gesture);
-        gesture.header.type = CLAP_EVENT_PARAM_VALUE;
-        gesture.param_id = id;
-        gesture.value = static_cast<double>(value);
-        gesture.cookie = nullptr;
-
-        hostParams->request_flush(&m_host);
-    }
-
-    // Also try direct set via plugin params if available
-    auto params = static_cast<const clap_plugin_params*>(m_plugin->get_extension(m_plugin, CLAP_EXT_PARAMS));
-    if (params) {
-        params->set_value(m_plugin, id, static_cast<double>(value));
+        hostParams->request_flush(m_host);
     }
 }
 
@@ -435,18 +501,36 @@ std::string CLAPPluginInstance::getParameterDisplay(uint32_t id) const {
 }
 
 std::vector<uint8_t> CLAPPluginInstance::saveState() const {
-    // CLAP state save is not yet implemented (requires clap_plugin_state extension).
-    // Returning empty — project will not preserve CLAP plugin state across save/load.
-    Log::warning("CLAP: saveState() not implemented for '" + m_info.name + "'; plugin state will not be persisted.");
-    return {};
+    if (!m_plugin) {
+        return {};
+    }
+
+    auto state = static_cast<const clap_plugin_state*>(m_plugin->get_extension(m_plugin, CLAP_EXT_STATE));
+    if (!state || !state->save) {
+        return {};
+    }
+
+    std::vector<uint8_t> data;
+    clap_ostream stream = {&data, writeStateStream};
+    if (!state->save(m_plugin, &stream)) {
+        return {};
+    }
+    return data;
 }
 
-bool CLAPPluginInstance::loadState(const std::vector<uint8_t>& state) {
-    // CLAP state load is not yet implemented (requires clap_plugin_state extension).
-    if (!state.empty()) {
-        Log::warning("CLAP: loadState() not implemented for '" + m_info.name + "'; saved state cannot be restored.");
+bool CLAPPluginInstance::loadState(const std::vector<uint8_t>& stateData) {
+    if (!m_plugin || stateData.empty()) {
+        return stateData.empty();
     }
-    return false;
+
+    auto state = static_cast<const clap_plugin_state*>(m_plugin->get_extension(m_plugin, CLAP_EXT_STATE));
+    if (!state || !state->load) {
+        return false;
+    }
+
+    StateReadContext ctx{&stateData, 0};
+    clap_istream stream = {&ctx, readStateStream};
+    return state->load(m_plugin, &stream);
 }
 
 bool CLAPPluginInstance::hasEditor() const {
