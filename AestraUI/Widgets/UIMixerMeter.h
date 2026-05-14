@@ -117,7 +117,7 @@ private:
     static constexpr float METER_GAP = 2.0f;      // Gap between L and R bars
     static constexpr float CLIP_HEIGHT = 6.0f;   // Height of clip indicator
     static constexpr float PEAK_OVERLAY_HEIGHT = 2.0f; // Height of fast peak overlay marker
-    static constexpr float PEAK_HOLD_HEIGHT = 2.0f; // Height of peak hold line
+    static constexpr float PEAK_HOLD_HEIGHT = 1.0f; // Height of peak hold line
 
     // dB thresholds for color zones
     static constexpr float DB_YELLOW_THRESHOLD = -12.0f;
