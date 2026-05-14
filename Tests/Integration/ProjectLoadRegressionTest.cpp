@@ -451,6 +451,30 @@ void testUnresolvedRouteTargetNonFatal() {
     std::filesystem::remove_all(testDir);
 }
 
+void testV1FixtureMigratesToCurrentVersion() {
+    std::cout << "[TEST] v1 fixture migrates to current project version..." << std::endl;
+
+    auto fixturePath = std::filesystem::path(AESTRA_PROJECT_FIXTURE_DIR) / "v1_minimal.aes";
+    assert(std::filesystem::exists(fixturePath));
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(fixturePath.string(), trackManager);
+    assert(result.ok);
+    assert(trackManager->getChannelCount() == 1);
+
+    auto laneIds = trackManager->getPlaylistModel().getLaneIDs();
+    assert(laneIds.size() == 1);
+    auto* lane = trackManager->getPlaylistModel().getLane(laneIds[0]);
+    assert(lane);
+    assert(lane->name == "Migrated Track");
+
+    std::string saved = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0).contents;
+    assert(saved.find("\"version\": 2") != std::string::npos ||
+           saved.find("\"version\":2") != std::string::npos);
+
+    std::cout << "[PASS] v1 fixture migrates to current project version" << std::endl;
+}
+
 void testAutomationTarget256DoesNotWrapToVolume() {
     std::cout << "[TEST] AutomationTarget 256 does not wrap to Volume..." << std::endl;
 
@@ -550,6 +574,7 @@ int main() {
     testUnitManagerSurvivesFailedLoad();
     testMissingAudioFileNonDestructive();
     testUnresolvedRouteTargetNonFatal();
+    testV1FixtureMigratesToCurrentVersion();
     testAutomationTarget256DoesNotWrapToVolume();
 
     std::cout << "=== All tests passed ===" << std::endl;
