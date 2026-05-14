@@ -4,6 +4,7 @@
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
 #include "MixerViewModel.h"
+#include "TrackColorPalette.h"
 #include "ContinuousParamBuffer.h"
 #include "ChannelSlotMap.h"
 #include "MeterSnapshot.h"
@@ -549,11 +550,12 @@ void UIMixerStrip::onUpdate(double deltaTime)
             invalidateStaticCache();
         }
         m_header->setRouteName(stripRoute);
-        if (m_cachedTrackColorArgb != channel->trackColor) {
-            m_cachedTrackColorArgb = channel->trackColor;
+        uint32_t resolvedColor = paletteIndexToARGB(channel->trackColorIndex);
+        if (m_cachedTrackColorArgb != resolvedColor) {
+            m_cachedTrackColorArgb = resolvedColor;
             invalidateStaticCache();
         }
-        m_header->setTrackColor(channel->trackColor);
+        m_header->setTrackColor(resolvedColor);
         m_header->setSelected(selected);
     }
 

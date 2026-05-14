@@ -5,6 +5,7 @@
 #include "AudioDeviceManager.h"
 #include "../App/ServiceLocator.h"
 #include "../Core/AestraAudioController.h"
+#include "../../AestraUI/Widgets/TrackColorPalette.h"
 #include <cstdio>
 #include <unordered_map>
 
@@ -17,7 +18,7 @@ MixerViewModel::MixerViewModel() {
     m_master->slotIndex = Audio::ChannelSlotMap::MASTER_SLOT_INDEX;
     m_master->name = "MASTER";
     m_master->routeName = "Output";
-    m_master->trackColor = 0xFF8B7FFF; // Aestra purple
+    m_master->trackColorIndex = 1; // Soft Purple (matches Aestra brand)
 }
 
 void MixerViewModel::refreshInputs(const Aestra::Audio::AudioDeviceManager& deviceManager) {
@@ -176,7 +177,6 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             auto& existing = m_channels[it->second];
             existing->id = info.id;
             existing->name = info.name;
-            existing->trackColor = info.color;
             existing->slotIndex = info.slot;
             existing->channel = info.channel;
             existing->muted = info.muted;
@@ -203,7 +203,10 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             channel->slotIndex = info.slot;
             channel->channel = info.channel;
             channel->name = info.name;
-            channel->trackColor = info.color;
+            channel->trackColorIndex = AestraUI::nearestPaletteIndex(info.color);
+            if (channel->trackColorIndex < 0) {
+                channel->trackColorIndex = static_cast<int>(newChannels.size()) % AestraUI::PALETTE_SIZE;
+            }
             channel->muted = info.muted;
             channel->soloed = info.soloed;
             channel->armed = info.armed;

@@ -38,7 +38,7 @@ struct ChannelViewModel {
     Audio::MixerChannel* channel{nullptr};   ///< Raw pointer for state sync/toggles (UI thread)
 
     std::string name;                    ///< Display name
-    uint32_t trackColor{0xFF808080};     ///< Track color (ARGB)
+    int trackColorIndex{-1};             ///< Palette index (-1 = unset, 0-7 = palette)
     std::string routeName{"Master"};     ///< Output routing name
     uint32_t mainOutputId{0};            ///< 0 = Master, otherwise channel ID
     bool masterSendEnabled{true};        ///< True when audible main path reaches master directly

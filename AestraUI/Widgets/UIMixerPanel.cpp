@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIMixerPanel.h"
 #include "UIMixerStrip.h"
+#include "TrackColorPalette.h"
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "MixerViewModel.h"
@@ -347,7 +348,7 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         for (size_t i = 0; i < m_strips.size(); ++i) {
             const auto* channel = m_viewModel ? m_viewModel->getChannelById(m_strips[i]->getChannelId()) : nullptr;
             const bool selected = m_viewModel && m_viewModel->getSelectedChannelId() == static_cast<int32_t>(m_strips[i]->getChannelId());
-            const NUIColor stripColor = channel ? colorFromArgb(channel->trackColor, selected ? 0.95f : 0.82f)
+            const NUIColor stripColor = channel ? colorFromArgb(paletteIndexToARGB(channel->trackColorIndex), selected ? 0.95f : 0.82f)
                                                 : m_separatorColor.withAlpha(0.52f);
 
             const float activityDb = channel ? std::max(channel->smoothedPeakL, channel->smoothedPeakR) : -72.0f;

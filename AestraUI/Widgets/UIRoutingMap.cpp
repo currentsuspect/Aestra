@@ -4,6 +4,7 @@
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
 #include "MixerViewModel.h"
+#include "TrackColorPalette.h"
 #include "AestraLog.h"
 
 #include <algorithm>
@@ -136,7 +137,7 @@ void UIRoutingMap::rebuildGraph() {
         node.id = ch->id;
         node.type = Node::Track;
         node.label = ch->name.empty() ? ("Track " + std::to_string(i + 1)) : ch->name;
-        node.color = ch->trackColor;
+        node.color = paletteIndexToARGB(ch->trackColorIndex);
         node.insertCount = ch->fxCount;
         node.muted = ch->muted;
         node.soloed = ch->soloed;
@@ -219,7 +220,7 @@ void UIRoutingMap::rebuildFocusedGraph(const Aestra::ChannelViewModel* selected)
     node.id = selected->id;
     node.type = Node::Track;
     node.label = selected->name.empty() ? "Track" : selected->name;
-    node.color = selected->trackColor;
+    node.color = paletteIndexToARGB(selected->trackColorIndex);
     node.insertCount = selected->fxCount;
     node.muted = selected->muted;
     node.soloed = selected->soloed;
@@ -264,7 +265,7 @@ void UIRoutingMap::rebuildFocusedGraph(const Aestra::ChannelViewModel* selected)
                 tn.label = (targetId == 0)
                                 ? std::string("MASTER")
                                 : (target->name.empty() ? std::string("Bus") : target->name);
-                tn.color = target->trackColor;
+                tn.color = paletteIndexToARGB(target->trackColorIndex);
                 tn.insertCount = target->fxCount;
                 tn.muted = target->muted;
                 tn.soloed = target->soloed;
@@ -543,22 +544,25 @@ void UIRoutingMap::renderMinimap(NUIRenderer& renderer) {
                                               : m_border.withAlpha(0.35f));
 
     // Reserve a small header strip for label + expand hint
-    constexpr float kHeaderH = 18.0f;
+    constexpr float kHeaderH = 20.0f;
     NUIRect canvasArea{bounds.x + 6.0f, bounds.y + kHeaderH,
                         bounds.width - 12.0f, bounds.height - kHeaderH - 6.0f};
 
     // Header label (left)
-    renderer.drawText("ROUTING", {bounds.x + 10.0f, bounds.y + 4.0f}, 9.5f,
+    renderer.drawText("ROUTING", {bounds.x + 10.0f, bounds.y + 5.0f}, 9.0f,
                       m_textSecondary.withAlpha(0.7f));
 
     // Expand hint (right) — pulses subtly on hover
     {
-        std::string hint = widgetHovered ? "Double-click to expand ↗"
-                                         : "Double-click to expand";
-        float hintW = renderer.measureText(hint, 9.5f).width;
+        std::string hint = widgetHovered ? "Expand" : "Open map";
+        float hintW = renderer.measureText(hint, 9.0f).width;
         float alpha = widgetHovered ? 0.95f : 0.55f;
-        renderer.drawText(hint, {bounds.right() - hintW - 10.0f, bounds.y + 4.0f},
-                          9.5f, m_accent.withAlpha(alpha));
+        const float labelRight = bounds.x + 10.0f + renderer.measureText("ROUTING", 9.0f).width + 12.0f;
+        const float hintX = bounds.right() - hintW - 28.0f;
+        if (hintX > labelRight) {
+            renderer.drawText(hint, {hintX, bounds.y + 5.0f},
+                              9.0f, m_accent.withAlpha(alpha));
+        }
     }
 
     float scale = 1.0f;
@@ -639,8 +643,8 @@ void UIRoutingMap::renderMinimap(NUIRenderer& renderer) {
         // Label
         float fontSize = std::min(10.0f, nh * 0.45f);
         std::string label = fitLabel(renderer, node.label, fontSize, nw - 12.0f);
-        renderer.drawText(label, {nx + 6.0f, ny + nh * 0.5f - fontSize * 0.35f},
-                           fontSize, m_text.withAlpha(0.92f));
+        renderer.drawTextCentered(label, {nx + 5.0f, ny, nw - 10.0f, nh},
+                                  fontSize, m_text.withAlpha(0.92f));
 
         // Output port
         renderer.strokeCircle({nx + nw, ny + nh * 0.5f}, kMinimapPortRadius, 1.0f,
@@ -658,11 +662,11 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     NUIRect shadow{bounds.x + 3.0f, bounds.y + 6.0f, bounds.width, bounds.height};
     renderer.fillRoundedRect(shadow, kCornerRadius, NUIColor(0.0f, 0.0f, 0.0f, 0.55f));
 
-    // Solid dark card so the workspace doesn't bleed through
-    renderer.fillRoundedRect(bounds, kCornerRadius, NUIColor(0.07f, 0.06f, 0.10f, 1.0f));
+    // Solid dark card so the workspace doesn't bleed through.
+    renderer.fillRoundedRect(bounds, kCornerRadius, NUIColor(0.045f, 0.045f, 0.060f, 1.0f));
 
-    // Subtle accent gradient overlay near the top for depth
-    NUIColor gradTop = m_accent.withAlpha(0.06f);
+    // Subtle accent wash near the top for depth.
+    NUIColor gradTop = m_accent.withAlpha(0.035f);
     NUIColor gradBot = NUIColor(0.0f, 0.0f, 0.0f, 0.0f);
     renderer.fillRectGradient({bounds.x, bounds.y, bounds.width, 120.0f}, gradTop, gradBot, true);
 
@@ -676,7 +680,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
                       1.0f, m_border.withAlpha(0.25f));
 
     // Title
-    renderer.drawText("ROUTING MAP", {bounds.x + 18.0f, bounds.y + 14.0f}, 14.0f,
+    renderer.drawText("ROUTING MAP", {bounds.x + 18.0f, bounds.y + 10.0f}, 13.0f,
                       m_text.withAlpha(0.95f));
 
     // Subtitle: show counts
@@ -686,63 +690,58 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
             if (n.type == Node::Track) ++trackCount;
         std::string subtitle = std::to_string(trackCount) + (trackCount == 1 ? " track  ·  " : " tracks  ·  ") +
                                std::to_string(m_edges.size()) + (m_edges.size() == 1 ? " connection" : " connections");
-        float titleW = renderer.measureText("ROUTING MAP", 14.0f).width;
-        renderer.drawText(subtitle, {bounds.x + 18.0f + titleW + 14.0f, bounds.y + 16.0f},
-                          11.0f, m_textSecondary.withAlpha(0.7f));
+        float titleW = renderer.measureText("ROUTING MAP", 13.0f).width;
+        renderer.drawText(subtitle, {bounds.x + 18.0f + titleW + 14.0f, bounds.y + 12.0f},
+                          10.5f, m_textSecondary.withAlpha(0.66f));
     }
 
-    // Hint: "Esc / double-click minimap to close"
-    {
-        std::string hint = "Esc to close";
-        float hintW = renderer.measureText(hint, 11.0f).width;
-        renderer.drawText(hint, {bounds.right() - 130.0f - hintW, bounds.y + 16.0f},
-                          11.0f, m_textSecondary.withAlpha(0.55f));
-    }
-
-    // Fit-to-view button
+    // Toolbar buttons: keep everything in one row so controls don't crowd the canvas.
     std::string fitBtnLabel = "Fit";
-    float fitW = renderer.measureText(fitBtnLabel, 11.0f).width + 20.0f;
+    float fitW = renderer.measureText(fitBtnLabel, 10.0f).width + 18.0f;
     m_fitButtonRect = NUIRect{bounds.right() - fitW - 14.0f, bounds.y + 10.0f, fitW, 22.0f};
     renderer.fillRoundedRect(m_fitButtonRect, 5.0f,
-                             m_fitHovered ? m_accent.withAlpha(0.22f) : m_bg.withAlpha(0.45f));
+                             m_fitHovered ? m_accent.withAlpha(0.20f) : m_bg.withAlpha(0.34f));
     renderer.strokeRoundedRect(m_fitButtonRect, 5.0f, 1.0f,
-                               m_fitHovered ? m_accent.withAlpha(0.65f) : m_border.withAlpha(0.35f));
-    renderer.drawTextCentered(fitBtnLabel, m_fitButtonRect, 11.0f,
+                               m_fitHovered ? m_accent.withAlpha(0.58f) : m_border.withAlpha(0.30f));
+    renderer.drawTextCentered(fitBtnLabel, m_fitButtonRect, 10.0f,
                               m_fitHovered ? m_accent.withAlpha(0.98f) : m_textSecondary.withAlpha(0.9f));
 
-    // Reset layout button
     std::string resetLabel = "Reset";
-    float resetW = renderer.measureText(resetLabel, 11.0f).width + 20.0f;
+    float resetW = renderer.measureText(resetLabel, 10.0f).width + 18.0f;
     m_resetButtonRect = NUIRect{m_fitButtonRect.x - resetW - 8.0f, bounds.y + 10.0f, resetW, 22.0f};
     renderer.fillRoundedRect(m_resetButtonRect, 5.0f,
-                             m_resetHovered ? m_accent.withAlpha(0.22f) : m_bg.withAlpha(0.45f));
+                             m_resetHovered ? m_accent.withAlpha(0.20f) : m_bg.withAlpha(0.34f));
     renderer.strokeRoundedRect(m_resetButtonRect, 5.0f, 1.0f,
-                               m_resetHovered ? m_accent.withAlpha(0.65f) : m_border.withAlpha(0.35f));
-    renderer.drawTextCentered(resetLabel, m_resetButtonRect, 11.0f,
+                               m_resetHovered ? m_accent.withAlpha(0.58f) : m_border.withAlpha(0.30f));
+    renderer.drawTextCentered(resetLabel, m_resetButtonRect, 10.0f,
                               m_resetHovered ? m_accent.withAlpha(0.98f) : m_textSecondary.withAlpha(0.9f));
 
-    // Collapse button
     std::string collapseLabel = "Collapse";
-    float collapseW = renderer.measureText(collapseLabel, 12.0f).width + 28.0f;
-    m_collapseButtonRect = NUIRect{bounds.right() - collapseW - 14.0f,
-                                     bounds.y + 36.0f,
-                                     collapseW, 24.0f};
-    renderer.fillRoundedRect(m_collapseButtonRect, 6.0f,
-                               m_collapseHovered ? m_accent.withAlpha(0.22f) : m_bg.withAlpha(0.45f));
-    renderer.strokeRoundedRect(m_collapseButtonRect, 6.0f, 1.0f,
-                               m_collapseHovered ? m_accent.withAlpha(0.65f) : m_border.withAlpha(0.35f));
-    renderer.drawTextCentered(collapseLabel, m_collapseButtonRect, 12.0f,
+    float collapseW = renderer.measureText(collapseLabel, 10.0f).width + 20.0f;
+    m_collapseButtonRect = NUIRect{m_resetButtonRect.x - collapseW - 8.0f, bounds.y + 10.0f, collapseW, 22.0f};
+    renderer.fillRoundedRect(m_collapseButtonRect, 5.0f,
+                               m_collapseHovered ? m_accent.withAlpha(0.20f) : m_bg.withAlpha(0.34f));
+    renderer.strokeRoundedRect(m_collapseButtonRect, 5.0f, 1.0f,
+                               m_collapseHovered ? m_accent.withAlpha(0.58f) : m_border.withAlpha(0.30f));
+    renderer.drawTextCentered(collapseLabel, m_collapseButtonRect, 10.0f,
                               m_collapseHovered ? m_accent.withAlpha(0.98f) : m_textSecondary.withAlpha(0.9f));
+
+    {
+        std::string hint = "Esc";
+        float hintW = renderer.measureText(hint, 10.0f).width;
+        renderer.drawText(hint, {m_collapseButtonRect.x - hintW - 14.0f, bounds.y + 13.0f},
+                          10.0f, m_textSecondary.withAlpha(0.48f));
+    }
 
     // Search bar in title bar
     {
         float searchX = bounds.x + bounds.width * 0.5f - 100.0f;
         float searchW = 200.0f;
         m_searchRect = NUIRect{searchX, bounds.y + 10.0f, searchW, 22.0f};
-        NUIColor searchBg = m_searchFocused ? m_bgSecondary.withAlpha(0.7f) : m_bgSecondary.withAlpha(0.45f);
+        NUIColor searchBg = m_searchFocused ? m_bgSecondary.withAlpha(0.68f) : m_bgSecondary.withAlpha(0.38f);
         renderer.fillRoundedRect(m_searchRect, 5.0f, searchBg);
         renderer.strokeRoundedRect(m_searchRect, 5.0f, 1.0f,
-                                   m_searchFocused ? m_accent.withAlpha(0.55f) : m_border.withAlpha(0.3f));
+                                   m_searchFocused ? m_accent.withAlpha(0.52f) : m_border.withAlpha(0.26f));
         std::string searchDisplay = m_searchQuery.empty() ? "Search nodes..." : m_searchQuery;
         NUIColor searchTextCol = m_searchQuery.empty() ? m_textSecondary.withAlpha(0.45f) : m_text.withAlpha(0.85f);
         renderer.drawText(searchDisplay, {searchX + 8.0f, bounds.y + 13.0f}, 11.0f, searchTextCol);
@@ -787,11 +786,14 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
         }
     }
 
-    // Legend: line type guide (bottom-left of title bar)
+    // Legend: line type guide, separated from the title counts.
     {
         float legX = bounds.x + 18.0f;
-        float legY = bounds.y + 30.0f;
+        float legY = bounds.y + 28.0f;
         float dot = 3.0f;
+        NUIRect legendBg{legX - 6.0f, legY - 3.0f, 150.0f, 15.0f};
+        renderer.fillRoundedRect(legendBg, 5.0f, m_bg.withAlpha(0.26f));
+        renderer.strokeRoundedRect(legendBg, 5.0f, 1.0f, m_border.withAlpha(0.14f));
         // Solid = main path
         renderer.fillCircle({legX + dot, legY + 4.0f}, dot, m_textSecondary.withAlpha(0.7f));
         renderer.drawText("Route", {legX + 10.0f, legY}, 9.0f, m_textSecondary.withAlpha(0.55f));
@@ -819,7 +821,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
 
     // Reduce edge density visual when there are many connections
     const float edgeAlphaScale = (m_edges.size() > 20)
-                                     ? std::max(0.35f, 20.0f / static_cast<float>(m_edges.size()))
+                                     ? std::max(0.22f, 16.0f / static_cast<float>(m_edges.size()))
                                      : 1.0f;
 
     // Precompute hover-to-trace masks if hovering a node
@@ -896,10 +898,10 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
         bool inTraceNode = m_traceUpstreamMask[srcIdx] || m_traceDownstreamMask[srcIdx] ||
                            m_traceUpstreamMask[dstIdx] || m_traceDownstreamMask[dstIdx];
 
-        const float baseA = edge.hovered ? 0.95f : 0.55f * edgeAlphaScale * dimFactor;
+        const float baseA = edge.hovered ? 0.88f : 0.36f * edgeAlphaScale * dimFactor;
         NUIColor color = m_textSecondary.withAlpha(baseA);
-        if (edge.type == Edge::SendPath) color = m_textInfo.withAlpha(edge.hovered ? 0.95f : 0.65f * edgeAlphaScale * dimFactor);
-        if (edge.type == Edge::SidechainPath) color = m_warning.withAlpha(edge.hovered ? 0.95f : 0.72f * edgeAlphaScale * dimFactor);
+        if (edge.type == Edge::SendPath) color = m_textInfo.withAlpha(edge.hovered ? 0.90f : 0.46f * edgeAlphaScale * dimFactor);
+        if (edge.type == Edge::SidechainPath) color = m_warning.withAlpha(edge.hovered ? 0.90f : 0.52f * edgeAlphaScale * dimFactor);
 
         if (inTrace) {
             color = NUIColor(m_accent.r, m_accent.g, m_accent.b, 0.85f);
@@ -907,15 +909,15 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
             if (edge.type == Edge::SidechainPath) color = NUIColor(m_warning.r, m_warning.g, m_warning.b, 0.85f);
         }
 
-        float thickness = edge.hovered ? 2.2f : 1.25f;
-        if (inTrace) thickness = 2.5f;
+        float thickness = edge.hovered ? 1.8f : 0.9f;
+        if (inTrace) thickness = 2.2f;
         bool dashed = edge.type != Edge::MainPath;
         if (sourceMuted) dashed = true;
 
         drawBezier(renderer, {sx, sy}, {dx_, dy_}, thickness, color, dashed);
 
         // Live-wire pulse on MainPath edges with signal
-        if (edge.type == Edge::MainPath && src->peakDb > -60.0f && !src->muted && !soloSuppressed) {
+        if (m_edges.size() <= 24 && edge.type == Edge::MainPath && src->peakDb > -60.0f && !src->muted && !soloSuppressed) {
             drawLivePulse(renderer, {sx, sy}, {dx_, dy_}, src->peakDb);
         }
 
@@ -1068,9 +1070,9 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
                         ((node.color >> 24) & 0xFF) / 255.0f);
 
     if (m_mode == Mode::FullPanel) {
-        // Drop shadow under each node — pure black for proper elevation
+        // Drop shadow under each node for separation without making the grid muddy.
         renderer.fillRoundedRect({nx + 1.0f, ny + 3.0f, nw, nh}, radius,
-                                  NUIColor(0.0f, 0.0f, 0.0f, 0.50f));
+                                  NUIColor(0.0f, 0.0f, 0.0f, 0.34f));
 
         // Master node uses accent-tinted fill so it's visually distinct as the destination
         NUIColor bgBot, bgTop;
@@ -1081,10 +1083,10 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
                                   : NUIColor(0.25f, 0.18f, 0.36f, 1.0f);
         } else {
             // Track nodes: elevated dark fill
-            bgBot = node.hovered ? NUIColor(0.16f, 0.15f, 0.20f, 1.0f)
-                                  : NUIColor(0.13f, 0.12f, 0.17f, 1.0f);
-            bgTop = node.hovered ? NUIColor(0.22f, 0.20f, 0.27f, 1.0f)
-                                  : NUIColor(0.18f, 0.16f, 0.22f, 1.0f);
+            bgBot = node.hovered ? NUIColor(0.135f, 0.135f, 0.165f, 1.0f)
+                                  : NUIColor(0.095f, 0.095f, 0.125f, 1.0f);
+            bgTop = node.hovered ? NUIColor(0.175f, 0.165f, 0.205f, 1.0f)
+                                  : NUIColor(0.125f, 0.120f, 0.155f, 1.0f);
         }
         renderer.fillRoundedRect(nodeRect, radius, bgBot);
         renderer.fillRectGradient({nx, ny, nw, nh * 0.6f}, bgTop, bgBot, true);
@@ -1096,7 +1098,7 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
         // Hover/selection/solo accent border
         bool isSelected = (m_viewModel &&
                            static_cast<int32_t>(node.id) == m_viewModel->getSelectedChannelId());
-        NUIColor borderColor = m_border.withAlpha(0.45f);
+        NUIColor borderColor = m_border.withAlpha(0.30f);
         float borderThick = 1.0f;
         if (node.soloed) {
             borderColor = m_warning.withAlpha(0.9f);   // gold = soloed
@@ -1105,7 +1107,7 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
             borderColor = m_accent.withAlpha(0.85f);
             borderThick = 1.5f;
         } else if (node.hovered) {
-            borderColor = m_accent.withAlpha(0.6f);
+            borderColor = m_accent.withAlpha(0.56f);
             borderThick = 1.25f;
         }
         renderer.strokeRoundedRect(nodeRect, radius, borderThick, borderColor);
@@ -1138,7 +1140,7 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
                                       subFont, m_textSecondary.withAlpha(0.72f));
         } else {
             // Track node: color strip + name + sub-label, left-aligned
-            renderer.fillRect({nx, ny + 4.0f, 4.0f, nh - 8.0f}, stripColor);
+            renderer.fillRoundedRect({nx, ny + 5.0f, 4.0f, nh - 10.0f}, 2.0f, stripColor.withAlpha(0.92f));
 
             const bool showName = nh >= 22.0f && nw > 50.0f;
             const bool showSubLabel = nh >= 40.0f && nw > 50.0f;
@@ -1367,8 +1369,8 @@ void UIRoutingMap::drawBezier(NUIRenderer& renderer, const NUIPoint& a, const NU
 void UIRoutingMap::drawDotGrid(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     constexpr float spacing = 24.0f;
-    constexpr float dotRadius = 1.0f;
-    NUIColor dotColor = m_border.withAlpha(0.08f);
+    constexpr float dotRadius = 0.8f;
+    NUIColor dotColor = m_border.withAlpha(0.055f);
 
     float startX = std::floor((bounds.x - m_cameraX) / spacing) * spacing + m_cameraX;
     float startY = std::floor((bounds.y - m_cameraY) / spacing) * spacing + m_cameraY;
