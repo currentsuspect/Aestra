@@ -162,6 +162,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Core/AudioDeviceManager.cpp
     src/Core/AutosaveManager.cpp
     src/Core/ArsenalProcessingContext.cpp
+    src/Core/LatencyTopology.cpp
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
     src/Core/ProjectValidator.cpp
@@ -221,6 +222,11 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/MoveNoteCommand.cpp
     src/Commands/ResizeNoteCommand.cpp
     src/Commands/NoteDiff.cpp
+    src/Commands/MuseGrammar.cpp
+    src/Commands/CommandParser.cpp
+    src/Commands/CommandRegistry.cpp
+    src/Commands/SessionLog.cpp
+    src/Commands/MuseStubs.cpp
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp
@@ -277,6 +283,7 @@ endif()
 set(AESTRA_AUDIO_CORE_HEADERS
     include/Core/AudioGraphBuilder.h
     include/Core/AudioEngine.h
+    include/Core/LatencyTopology.h
     include/Core/PlaybackGraphController.h
     include/Core/ArsenalProcessingContext.h
     include/Core/MasterSafetyLimiter.h
@@ -350,6 +357,12 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Commands/MoveNoteCommand.h
     include/Commands/ResizeNoteCommand.h
     include/Commands/NoteDiff.h
+    include/Commands/MuseGrammar.h
+    include/Commands/CommandResult.h
+    include/Commands/CommandParser.h
+    include/Commands/CommandRegistry.h
+    include/Commands/SessionLog.h
+    include/Commands/MuseStubs.h
 
     # Headless / batch processing
     include/Headless/HeadlessMusicGenerator.h
@@ -492,6 +505,10 @@ add_executable(AestraPluginHost
 set_target_properties(AestraPluginHost PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
+
+if(AESTRA_ENABLE_TESTS)
+    target_compile_definitions(AestraPluginHost PRIVATE AESTRA_ENABLE_TEST_HOOKS)
+endif()
 
 # ENFORCEMENT: AestraAudioCore MUST NOT link Windows libraries
 # We can check this by property retrieval (not easy at config time for implicit libs)

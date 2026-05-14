@@ -4,6 +4,7 @@
 #include "PluginHost.h"
 
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -37,7 +38,7 @@ public:
     void setParameter(uint32_t id, float value) override;
     std::string getParameterDisplay(uint32_t id) const override;
 
-    std::vector<uint8_t> saveState() const override { return {}; }
+    std::vector<uint8_t> saveState() const override;
     bool loadState(const std::vector<uint8_t>& state) override;
 
     bool hasEditor() const override { return false; }
@@ -57,11 +58,13 @@ public:
     bool isCrashed() const override { return m_crashed.load(std::memory_order_acquire); }
 
 private:
-    bool sendCommand(const std::string& command, std::string* response = nullptr);
+    bool sendCommand(const std::string& command, std::string* response = nullptr,
+                     std::chrono::milliseconds timeout = std::chrono::milliseconds(500));
     void startWorker();
     void stopWorker();
     void workerLoop();
     bool processBlockInHelper(const std::vector<float>& input, uint32_t channels, uint32_t frames,
+                              const std::vector<uint8_t>& midiData, size_t midiBytes,
                               std::vector<float>& output);
     void markCrashed();
     void passThrough(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
@@ -88,6 +91,9 @@ private:
     std::vector<float> m_workerInput;
     std::vector<float> m_workerOutput;
     std::vector<float> m_readyOutput;
+    std::vector<uint8_t> m_pendingMidiData;
+    std::vector<uint8_t> m_workerMidiData;
+    std::atomic<size_t> m_pendingMidiBytes{0};
     std::atomic<uint32_t> m_pendingFrames{0};
     std::atomic<uint32_t> m_readyFrames{0};
     std::atomic<uint8_t> m_pendingState{0};
