@@ -67,6 +67,8 @@ private:
     NUIColor m_text;
     NUIColor m_textSecondary;
 
+    static constexpr float FADER_FLOOR_THRESHOLD = -60.0f;
+
     void cacheThemeColors();
     void updateCachedText();
     float clampDb(float db) const;

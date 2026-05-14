@@ -59,9 +59,9 @@ void UIMixerFader::updateCachedText()
     }
     m_cachedDbValue = m_valueDb;
 
-    // "-∞" below -89.5 dB
-    if (m_valueDb <= (m_minDb + 0.5f)) {
-        m_cachedText = "-\xE2\x88\x9E";
+    // "−∞" at or below silence floor
+    if (m_valueDb <= FADER_FLOOR_THRESHOLD) {
+        m_cachedText = "\xE2\x88\x92\xE2\x88\x9E";
         return;
     }
 
