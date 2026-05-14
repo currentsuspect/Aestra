@@ -60,6 +60,22 @@ int hexValue(char c) {
     return -1;
 }
 
+bool hexDecodeRaw(const std::string& input, std::vector<uint8_t>& output) {
+    if ((input.size() % 2) != 0) {
+        return false;
+    }
+    output.resize(input.size() / 2);
+    for (size_t i = 0; i < output.size(); ++i) {
+        const int hi = hexValue(input[i * 2]);
+        const int lo = hexValue(input[i * 2 + 1]);
+        if (hi < 0 || lo < 0) {
+            return false;
+        }
+        output[i] = static_cast<uint8_t>((hi << 4) | lo);
+    }
+    return true;
+}
+
 bool hexDecodeBytes(const std::string& input, std::vector<float>& output) {
     if ((input.size() % 2) != 0) {
         return false;
@@ -273,7 +289,7 @@ bool PluginHostProcess::readLine(std::string& line, std::chrono::milliseconds ti
                 return true;
             }
             line.push_back(ch);
-            if (line.size() > 8192) {
+            if (line.size() > 16ull * 1024ull * 1024ull) {
                 return false;
             }
         } else {
@@ -311,7 +327,7 @@ bool OutOfProcessPluginInstance::load() {
     command << "LOAD " << formatToken(m_info.format) << " " << hexEncode(m_info.id) << " "
             << hexEncode(m_info.path.string());
     std::string response;
-    if (!sendCommand(command.str(), &response) || response.find("OK") != 0) {
+    if (!sendCommand(command.str(), &response, std::chrono::seconds(30)) || response.find("OK") != 0) {
         markCrashed();
         Log::error("[PluginHost] Helper failed to load plugin: " + m_info.name);
         return false;
@@ -332,6 +348,9 @@ bool OutOfProcessPluginInstance::initialize(double sampleRate, uint32_t maxBlock
     m_workerInput.assign(capacity, 0.0f);
     m_workerOutput.assign(capacity, 0.0f);
     m_readyOutput.assign(capacity, 0.0f);
+    m_pendingMidiData.assign(MidiBuffer::kMaxEvents * 8, 0);
+    m_workerMidiData.assign(MidiBuffer::kMaxEvents * 8, 0);
+    m_pendingMidiBytes.store(0, std::memory_order_release);
     m_pendingFrames.store(0, std::memory_order_release);
     m_readyFrames.store(0, std::memory_order_release);
     m_pendingState.store(0, std::memory_order_release);
@@ -375,7 +394,6 @@ void OutOfProcessPluginInstance::deactivate() {
 void OutOfProcessPluginInstance::process(const float* const* inputs, float** outputs, uint32_t numInputChannels,
                                          uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* midiInput,
                                          MidiBuffer* midiOutput) {
-    (void)midiInput;
     if (midiOutput) {
         midiOutput->clear();
     }
@@ -420,6 +438,24 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
                 m_pendingInput[index] = (inputs && ch < numInputChannels && inputs[ch]) ? inputs[ch][frame] : 0.0f;
             }
         }
+        size_t midiBytes = 0;
+        if (midiInput) {
+            const size_t maxEvents = m_pendingMidiData.size() / 8;
+            const size_t eventCount = std::min(midiInput->getEventCount(), maxEvents);
+            for (size_t i = 0; i < eventCount; ++i) {
+                const auto& event = midiInput->getEvent(i);
+                if (event.size != 3 || midiBytes + 8 > m_pendingMidiData.size()) {
+                    continue;
+                }
+                const uint32_t sampleOffset =
+                    std::min<uint32_t>(event.sampleOffset, numFrames > 0 ? numFrames - 1 : 0);
+                std::memcpy(m_pendingMidiData.data() + midiBytes, &sampleOffset, sizeof(sampleOffset));
+                m_pendingMidiData[midiBytes + 4] = event.size;
+                std::memcpy(m_pendingMidiData.data() + midiBytes + 5, event.data, 3);
+                midiBytes += 8;
+            }
+        }
+        m_pendingMidiBytes.store(midiBytes, std::memory_order_release);
         m_pendingFrames.store(numFrames, std::memory_order_release);
         m_pendingState.store(2, std::memory_order_release);
     }
@@ -444,8 +480,37 @@ std::string OutOfProcessPluginInstance::getParameterDisplay(uint32_t id) const {
     return {};
 }
 
+std::vector<uint8_t> OutOfProcessPluginInstance::saveState() const {
+    if (!m_process || !m_process->isRunning()) {
+        return {};
+    }
+    std::string response;
+    auto* self = const_cast<OutOfProcessPluginInstance*>(this);
+    if (!self->sendCommand("SAVESTATE", &response, std::chrono::seconds(5))) {
+        return {};
+    }
+    constexpr const char* kPrefix = "OK ";
+    if (response.compare(0, 3, kPrefix) != 0) {
+        return {};
+    }
+    std::vector<uint8_t> state;
+    if (!hexDecodeRaw(response.substr(3), state)) {
+        return {};
+    }
+    return state;
+}
+
 bool OutOfProcessPluginInstance::loadState(const std::vector<uint8_t>& state) {
-    return state.empty();
+    if (state.empty()) {
+        return true;
+    }
+    if (!m_process || !m_process->isRunning()) {
+        return false;
+    }
+    std::ostringstream command;
+    command << "LOADSTATE " << hexEncodeBytes(state.data(), state.size());
+    std::string response;
+    return sendCommand(command.str(), &response, std::chrono::seconds(5)) && response.find("OK") == 0;
 }
 
 bool OutOfProcessPluginInstance::openEditor(void* parentWindow) {
@@ -466,7 +531,8 @@ void OutOfProcessPluginInstance::resetWatchdog() {
     }
 }
 
-bool OutOfProcessPluginInstance::sendCommand(const std::string& command, std::string* response) {
+bool OutOfProcessPluginInstance::sendCommand(const std::string& command, std::string* response,
+                                                 std::chrono::milliseconds timeout) {
     std::lock_guard<std::mutex> lock(m_ipcMutex);
     if (!m_process || !m_process->isRunning()) {
         return false;
@@ -475,7 +541,7 @@ bool OutOfProcessPluginInstance::sendCommand(const std::string& command, std::st
         return false;
     }
     std::string localResponse;
-    if (!m_process->readLine(localResponse, std::chrono::milliseconds(500))) {
+    if (!m_process->readLine(localResponse, timeout)) {
         return false;
     }
     if (response) {
@@ -515,14 +581,19 @@ void OutOfProcessPluginInstance::workerLoop() {
         }
 
         const uint32_t frames = m_pendingFrames.load(std::memory_order_acquire);
+        const size_t midiBytes = m_pendingMidiBytes.load(std::memory_order_acquire);
         const size_t sampleCount = static_cast<size_t>(frames) * m_transportChannels;
         if (sampleCount <= m_workerInput.size()) {
             std::copy_n(m_pendingInput.data(), sampleCount, m_workerInput.data());
         }
+        if (midiBytes <= m_workerMidiData.size()) {
+            std::copy_n(m_pendingMidiData.data(), midiBytes, m_workerMidiData.data());
+        }
         m_pendingState.store(0, std::memory_order_release);
 
-        if (sampleCount > m_workerInput.size() ||
-            !processBlockInHelper(m_workerInput, m_transportChannels, frames, m_workerOutput)) {
+        if (sampleCount > m_workerInput.size() || midiBytes > m_workerMidiData.size() ||
+            !processBlockInHelper(m_workerInput, m_transportChannels, frames, m_workerMidiData, midiBytes,
+                                  m_workerOutput)) {
             markCrashed();
             continue;
         }
@@ -538,14 +609,21 @@ void OutOfProcessPluginInstance::workerLoop() {
 }
 
 bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& input, uint32_t channels,
-                                                      uint32_t frames, std::vector<float>& output) {
+                                                      uint32_t frames, const std::vector<uint8_t>& midiData,
+                                                      size_t midiBytes, std::vector<float>& output) {
     const size_t sampleCount = static_cast<size_t>(channels) * frames;
     if (sampleCount > input.size()) {
         return false;
     }
     std::ostringstream command;
-    command << "PROCESS " << channels << " " << frames << " "
-            << hexEncodeBytes(input.data(), sampleCount * sizeof(float));
+    if (midiBytes > 0) {
+        command << "PROCESSMIDI " << channels << " " << frames << " "
+                << hexEncodeBytes(input.data(), sampleCount * sizeof(float)) << " "
+                << hexEncodeBytes(midiData.data(), midiBytes);
+    } else {
+        command << "PROCESS " << channels << " " << frames << " "
+                << hexEncodeBytes(input.data(), sampleCount * sizeof(float));
+    }
     std::string response;
     if (!sendCommand(command.str(), &response)) {
         return false;

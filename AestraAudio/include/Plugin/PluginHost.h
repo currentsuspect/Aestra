@@ -310,6 +310,8 @@ class MidiBuffer {
 public:
     MidiBuffer() = default;
 
+    static constexpr size_t kMaxEvents = 1024;
+
     // Explicit copy logic since atomic deletes default copy/move
     MidiBuffer(const MidiBuffer& other) {
         // Not strictly thread safe to copy other while it's being written,
@@ -317,14 +319,14 @@ public:
         // Copy events
         uint32_t count = other.m_eventCount.load(std::memory_order_acquire);
         m_eventCount.store(count, std::memory_order_release);
-        std::memcpy(m_events, other.m_events, sizeof(Event) * MAX_EVENTS);
+        std::memcpy(m_events, other.m_events, sizeof(Event) * kMaxEvents);
     }
 
     MidiBuffer& operator=(const MidiBuffer& other) {
         if (this != &other) {
             uint32_t count = other.m_eventCount.load(std::memory_order_acquire);
             m_eventCount.store(count, std::memory_order_release);
-            std::memcpy(m_events, other.m_events, sizeof(Event) * MAX_EVENTS);
+            std::memcpy(m_events, other.m_events, sizeof(Event) * kMaxEvents);
         }
         return *this;
     }
@@ -333,7 +335,7 @@ public:
     MidiBuffer(MidiBuffer&& other) noexcept {
         uint32_t count = other.m_eventCount.load(std::memory_order_acquire);
         m_eventCount.store(count, std::memory_order_release);
-        std::memcpy(m_events, other.m_events, sizeof(Event) * MAX_EVENTS);
+        std::memcpy(m_events, other.m_events, sizeof(Event) * kMaxEvents);
         // Reset other not strictly needed but good practice
         other.m_eventCount.store(0, std::memory_order_release);
     }
@@ -347,7 +349,7 @@ public:
     void addEvent(uint32_t sampleOffset, const uint8_t* data, uint8_t size) {
         if (size <= 3 && data != nullptr) {
             uint32_t index = m_eventCount.load(std::memory_order_acquire);
-            while (index < MAX_EVENTS) {
+            while (index < kMaxEvents) {
                 const uint32_t desired = index + 1;
                 if (!m_eventCount.compare_exchange_weak(index, desired,
                                                         std::memory_order_acq_rel,
@@ -368,7 +370,7 @@ public:
     bool isEmpty() const { return m_eventCount.load(std::memory_order_acquire) == 0; }
     size_t getEventCount() const {
         size_t count = m_eventCount.load(std::memory_order_acquire);
-        return count > MAX_EVENTS ? MAX_EVENTS : count;
+        return count > kMaxEvents ? kMaxEvents : count;
     }
     const Event& getEvent(size_t index) const { return m_events[index]; }
 
@@ -393,8 +395,7 @@ public:
     const Event* end() const { return &m_events[getEventCount()]; }
 
 private:
-    static constexpr size_t MAX_EVENTS = 1024;
-    Event m_events[MAX_EVENTS];
+    Event m_events[kMaxEvents];
     std::atomic<uint32_t> m_eventCount{0};
 };
 

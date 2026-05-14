@@ -37,6 +37,8 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
+constexpr uint32_t kScanCacheSchemaVersion = 2;
+
 bool isVisiblePlugin(const PluginInfo& plugin) {
     return plugin.format != PluginFormat::Internal || InternalPluginRegistry::instance().isPluginAvailable(plugin.id);
 }
@@ -391,7 +393,11 @@ void PluginScanner::scanAsync(ScanProgressCallback progressCallback, ScanComplet
                 std::lock_guard<std::mutex> lock(m_mutex);
                 m_scannedPlugins = std::move(results);
             }
+        } catch (const std::exception& e) {
+            Log::warning("[PluginScanner] Async scan failed: " + std::string(e.what()));
+            success = false;
         } catch (...) {
+            Log::warning("[PluginScanner] Async scan failed with unknown exception");
             success = false;
         }
 
@@ -547,7 +553,7 @@ bool PluginScanner::saveScanCache(const std::filesystem::path& cachePath) const 
         const char magic[4] = {'N', 'P', 'S', 'C'}; // Aestra Plugin Scan Cache
         file.write(magic, 4);
 
-        uint32_t version = 2; // v2: includes file mtime for integrity (SEC-RTM-006)
+        uint32_t version = kScanCacheSchemaVersion;
         file.write(reinterpret_cast<const char*>(&version), sizeof(version));
 
         // Write plugin count
@@ -586,7 +592,11 @@ bool PluginScanner::saveScanCache(const std::filesystem::path& cachePath) const 
         }
 
         return true;
+    } catch (const std::exception& e) {
+        Log::warning("[PluginScanner] Failed to save scan cache: " + std::string(e.what()));
+        return false;
     } catch (...) {
+        Log::warning("[PluginScanner] Failed to save scan cache with unknown exception");
         return false;
     }
 }
@@ -608,7 +618,7 @@ bool PluginScanner::loadScanCache(const std::filesystem::path& cachePath) {
 
         uint32_t version;
         file.read(reinterpret_cast<char*>(&version), sizeof(version));
-        if (version != 1 && version != 2)
+        if (version != kScanCacheSchemaVersion)
             return false;
 
         // Read plugin count
@@ -685,7 +695,11 @@ bool PluginScanner::loadScanCache(const std::filesystem::path& cachePath) {
         mergeBuiltInPlugins(plugins);
         m_scannedPlugins = std::move(plugins);
         return true;
+    } catch (const std::exception& e) {
+        Log::warning("[PluginScanner] Failed to load scan cache: " + std::string(e.what()));
+        return false;
     } catch (...) {
+        Log::warning("[PluginScanner] Failed to load scan cache with unknown exception");
         return false;
     }
 }
@@ -708,7 +722,12 @@ bool PluginScanner::isPluginModified(const std::filesystem::path& pluginPath) co
     try {
         auto currentTime = std::filesystem::last_write_time(pluginPath);
         return currentTime != it->second;
+    } catch (const std::exception& e) {
+        Log::warning("[PluginScanner] Failed to check plugin timestamp: " + pluginPath.string() + ": " +
+                     std::string(e.what()));
+        return true;
     } catch (...) {
+        Log::warning("[PluginScanner] Failed to check plugin timestamp: " + pluginPath.string());
         return true;
     }
 }
@@ -792,8 +811,14 @@ void PluginScanner::scanDirectory(const std::filesystem::path& dir, std::vector<
                 }
             }
         }
-    } catch (const std::filesystem::filesystem_error&) {
-        // Skip directories we can't access
+    } catch (const std::filesystem::filesystem_error& e) {
+        Log::warning("[PluginScanner] Skipping inaccessible plugin directory " + dir.string() + ": " +
+                     std::string(e.what()));
+    } catch (const std::exception& e) {
+        Log::warning("[PluginScanner] Failed while scanning directory " + dir.string() + ": " +
+                     std::string(e.what()));
+    } catch (...) {
+        Log::warning("[PluginScanner] Failed while scanning directory " + dir.string());
     }
 }
 
@@ -863,8 +888,11 @@ int PluginScanner::countPluginFiles() const {
                     ++count;
                 }
             }
+        } catch (const std::exception& e) {
+            Log::warning("[PluginScanner] Failed while counting plugins in " + path.string() + ": " +
+                         std::string(e.what()));
         } catch (...) {
-            // Skip inaccessible directories
+            Log::warning("[PluginScanner] Failed while counting plugins in " + path.string());
         }
     }
 

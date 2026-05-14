@@ -4,10 +4,37 @@
 #include "RealtimeThreadGuard.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 namespace Aestra {
 namespace Audio {
+
+namespace {
+bool processPluginNoexcept(IPluginInstance& plugin, const float* const* inputs, float** outputs,
+                           uint32_t numInputChannels, uint32_t numOutputChannels, uint32_t numFrames) noexcept {
+    try {
+        plugin.process(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+void sanitizeFloatBuffers(float** buffer, uint32_t numChannels, uint32_t numFrames) noexcept {
+    for (uint32_t ch = 0; ch < numChannels; ++ch) {
+        float* channel = buffer[ch];
+        if (!channel) {
+            continue;
+        }
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            if (!std::isfinite(channel[i])) {
+                channel[i] = 0.0f;
+            }
+        }
+    }
+}
+}
 
 EffectChain::EffectChain() = default;
 EffectChain::~EffectChain() = default;
@@ -302,9 +329,14 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
 
         // If fully wet, process directly
         if (dryWet >= 0.999f) {
-            // Process in-place
-            plugin->process(processInputs, buffer, processInputChannels, numChannels, numFrames);
-            // printf("[EffectChain] Processed plugin %s (Wet)\n", plugin->getInfo().name.c_str());
+            const bool processed =
+                processPluginNoexcept(*plugin, processInputs, buffer, processInputChannels, numChannels, numFrames);
+            if (!processed) {
+                for (uint32_t ch = 0; ch < numChannels; ++ch) {
+                    std::fill(buffer[ch], buffer[ch] + numFrames, 0.0f);
+                }
+            }
+            sanitizeFloatBuffers(buffer, numChannels, numFrames);
         }
         // If not fully wet, need to blend
         else if (dryWet > 0.001f) {
@@ -312,8 +344,14 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
             const size_t requiredDry = static_cast<size_t>(numFrames) * static_cast<size_t>(blendChannels);
             if (m_dryBuffer.size() < requiredDry) {
                 // Not prepared (or prepared for a smaller block). Stay RT-safe: no allocation.
-                // Fallback: process fully wet rather than crashing or dropping audio.
-                plugin->process(processInputs, buffer, processInputChannels, numChannels, numFrames);
+                const bool processed =
+                processPluginNoexcept(*plugin, processInputs, buffer, processInputChannels, numChannels, numFrames);
+                if (!processed) {
+                    for (uint32_t ch = 0; ch < numChannels; ++ch) {
+                        std::fill(buffer[ch], buffer[ch] + numFrames, 0.0f);
+                    }
+                }
+                sanitizeFloatBuffers(buffer, numChannels, numFrames);
                 continue;
             }
 
@@ -322,8 +360,15 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
                 std::memcpy(m_dryBuffer.data() + ch * numFrames, buffer[ch], numFrames * sizeof(float));
             }
 
-            // Process wet
-            plugin->process(processInputs, buffer, processInputChannels, numChannels, numFrames);
+            const bool processed =
+                processPluginNoexcept(*plugin, processInputs, buffer, processInputChannels, numChannels, numFrames);
+            if (!processed) {
+                for (uint32_t ch = 0; ch < blendChannels; ++ch) {
+                    std::memcpy(buffer[ch], m_dryBuffer.data() + ch * numFrames, numFrames * sizeof(float));
+                }
+                continue;
+            }
+            sanitizeFloatBuffers(buffer, numChannels, numFrames);
 
             // Blend dry/wet
             float wetGain = dryWet;
@@ -397,7 +442,14 @@ void EffectChainSnapshot::process(float** buffer, uint32_t numChannels, uint32_t
 
         // If fully wet, process directly
         if (dryWet >= 0.999f) {
-            plugin->process(processInputs, buffer, processInputChannels, numChannels, numFrames);
+            const bool processed =
+                processPluginNoexcept(*plugin, processInputs, buffer, processInputChannels, numChannels, numFrames);
+            if (!processed) {
+                for (uint32_t ch = 0; ch < numChannels; ++ch) {
+                    std::fill(buffer[ch], buffer[ch] + numFrames, 0.0f);
+                }
+            }
+            sanitizeFloatBuffers(buffer, numChannels, numFrames);
         }
         // If not fully wet, need to blend
         else if (dryWet > 0.001f) {
@@ -408,8 +460,15 @@ void EffectChainSnapshot::process(float** buffer, uint32_t numChannels, uint32_t
                 std::memcpy(dryBuffer + ch * numFrames, buffer[ch], numFrames * sizeof(float));
             }
 
-            // Process wet
-            plugin->process(processInputs, buffer, processInputChannels, numChannels, numFrames);
+            const bool processed =
+                processPluginNoexcept(*plugin, processInputs, buffer, processInputChannels, numChannels, numFrames);
+            if (!processed) {
+                for (uint32_t ch = 0; ch < blendChannels; ++ch) {
+                    std::memcpy(buffer[ch], dryBuffer + ch * numFrames, numFrames * sizeof(float));
+                }
+                continue;
+            }
+            sanitizeFloatBuffers(buffer, numChannels, numFrames);
 
             // Blend dry/wet
             float wetGain = dryWet;
