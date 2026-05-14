@@ -144,13 +144,18 @@ public:
             const float outputLinear = dbToLinear(bipolarGainDbFromNorm(m_outputGainSmoothed));
             const float mix = std::clamp(m_mixSmoothed, 0.0f, 1.0f);
 
+            const float attackCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * attackSec));
+            const float releaseCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * releaseSec));
+            const float rmsCoeff = std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * kRmsWindowSec));
+            const float makeupOut = makeupLinear * outputLinear;
+
             for (uint32_t i = blockStart; i < blockEnd; ++i) {
             const float rawL = readInput(inputs, numInputChannels, 0, i);
             const float rawR = stereo ? readInput(inputs, numInputChannels, 1, i) : rawL;
             const float dryL = sanitizeSample(rawL);
             const float dryR = sanitizeSample(rawR);
-            const float inL = sanitizeSample(dryL * inputLinear);
-            const float inR = sanitizeSample(dryR * inputLinear);
+            const float inL = dryL * inputLinear;
+            const float inR = dryR * inputLinear;
             blockInputPeak = std::max(blockInputPeak, std::max(std::abs(inL), std::abs(inR)));
 
             float detL = inL;
@@ -165,12 +170,9 @@ public:
             }
 
             const float powerInstant = (detL * detL + detR * detR) * 0.5f;
-            const float rmsCoeff = std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * kRmsWindowSec));
             m_rmsEnvelope = powerInstant + rmsCoeff * (m_rmsEnvelope - powerInstant);
             const float detector = std::sqrt(m_rmsEnvelope);
 
-            const float attackCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * attackSec));
-            const float releaseCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * releaseSec));
             const float coeff = detector > env ? attackCoeff : releaseCoeff;
             env = coeff * env + (1.0f - coeff) * detector;
             if (!std::isfinite(env) || env < 1.0e-12f) env = 0.0f;
@@ -180,10 +182,10 @@ public:
             const float reductionLinear = dbToLinear(reductionDb);
             blockGainReductionDb = std::max(blockGainReductionDb, -reductionDb);
 
-            const float wetL = sanitizeSample(inL * reductionLinear * makeupLinear);
-            const float wetR = sanitizeSample(inR * reductionLinear * makeupLinear);
-            const float outL = sanitizeSample((dryL * (1.0f - mix) + wetL * mix) * outputLinear);
-            const float outR = sanitizeSample((dryR * (1.0f - mix) + wetR * mix) * outputLinear);
+            const float wetL = (inL * reductionLinear) * makeupLinear;
+            const float wetR = (inR * reductionLinear) * makeupLinear;
+            const float outL = (dryL * (1.0f - mix) + wetL * mix) * outputLinear;
+            const float outR = (dryR * (1.0f - mix) + wetR * mix) * outputLinear;
             blockOutputPeak = std::max(blockOutputPeak, std::max(std::abs(outL), std::abs(outR)));
 
             if (numOutputChannels > 0 && outputs[0]) outputs[0][i] = flushDenormal(outL);
