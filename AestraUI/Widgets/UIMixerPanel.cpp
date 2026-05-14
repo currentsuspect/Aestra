@@ -220,7 +220,7 @@ void UIMixerPanel::layoutMeters()
     auto bounds = getBounds();
     const NUIRect minimapRect = getMinimapRect();
     const float stripY = minimapRect.bottom() + MINIMAP_GAP;
-    const float stripHeight = std::max(1.0f, bounds.bottom() - stripY - PADDING);
+    const float stripHeight = std::max(MIXER_MIN_CHANNEL_HEIGHT, bounds.bottom() - stripY - PADDING);
 
     // Layout master strip on the right.
     const float masterX = bounds.x + bounds.width - MASTER_STRIP_WIDTH; // No padding

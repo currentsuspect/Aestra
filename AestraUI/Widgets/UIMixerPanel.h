@@ -117,6 +117,7 @@ private:
     static constexpr float INSPECTOR_WIDTH = 236.0f;
     static constexpr float MINIMAP_HEIGHT = 22.0f;
     static constexpr float MINIMAP_GAP = 6.0f;
+    static constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
 
     // Cached theme colors
     NUIColor m_backgroundColor;
