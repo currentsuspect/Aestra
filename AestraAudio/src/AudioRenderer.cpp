@@ -22,6 +22,31 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
+bool processPluginNoexcept(IPluginInstance& plugin, const float* const* inputs, float** outputs,
+                           uint32_t numInputChannels, uint32_t numOutputChannels, uint32_t numFrames,
+                           const MidiBuffer* midiInput, MidiBuffer* midiOutput) noexcept {
+    try {
+        plugin.process(inputs, outputs, numInputChannels, numOutputChannels, numFrames, midiInput, midiOutput);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+void sanitizeFloatBuffers(float** buffer, uint32_t numChannels, uint32_t numFrames) noexcept {
+    for (uint32_t ch = 0; ch < numChannels; ++ch) {
+        float* channel = buffer[ch];
+        if (!channel) {
+            continue;
+        }
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            if (!std::isfinite(channel[i])) {
+                channel[i] = 0.0f;
+            }
+        }
+    }
+}
+
 static constexpr double PI_D = 3.14159265358979323846;
 static constexpr double QUARTER_PI_D = PI_D * 0.25;
 
@@ -362,7 +387,13 @@ void AudioRenderer::renderArsenalUnitsForTrack(uint32_t trackIndex, double* trac
             MidiBuffer* mIn =
                 (bIdx < engineRef.m_unitMidiBuffers.size()) ? &engineRef.m_unitMidiBuffers[bIdx] : nullptr;
             MidiBuffer mOut;
-            u.plugin->process(ins, outs, 2, 2, ctx.numFrames, mIn, &mOut);
+            const bool processed = processPluginNoexcept(*u.plugin, ins, outs, 2, 2, ctx.numFrames, mIn, &mOut);
+            if (!processed) {
+                std::fill(engineRef.m_pluginBufferF.begin(),
+                          engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2, 0.0f);
+            } else {
+                sanitizeFloatBuffers(outs, 2, ctx.numFrames);
+            }
 
             double* dst = trackBuffer + (size_t)ctx.bufferOffset * 2;
             for (uint32_t i = 0; i < ctx.numFrames; ++i) {
@@ -394,7 +425,13 @@ void AudioRenderer::processArsenalUnits(const Context& ctx, AudioEngine& engineR
             MidiBuffer* mIn =
                 (bIdx < engineRef.m_unitMidiBuffers.size()) ? &engineRef.m_unitMidiBuffers[bIdx] : nullptr;
             MidiBuffer mOut;
-            u.plugin->process(ins, outs, 2, 2, ctx.numFrames, mIn, &mOut);
+            const bool processed = processPluginNoexcept(*u.plugin, ins, outs, 2, 2, ctx.numFrames, mIn, &mOut);
+            if (!processed) {
+                std::fill(engineRef.m_pluginBufferF.begin(),
+                          engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2, 0.0f);
+            } else {
+                sanitizeFloatBuffers(outs, 2, ctx.numFrames);
+            }
 
             double* dst = ctx.masterBuffer + (size_t)ctx.bufferOffset * 2;
             for (uint32_t i = 0; i < ctx.numFrames; ++i) {
