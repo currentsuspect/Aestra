@@ -339,9 +339,13 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         }
         if (std::abs(peak - m_cachedDbPeak) > 0.05f) {
             m_cachedDbPeak = peak;
-            char buf[32];
-            std::snprintf(buf, sizeof(buf), "%.1f dB", peak);
-            m_cachedDbStr = buf;
+            if (peak <= DB_MIN) {
+                m_cachedDbStr = "\xE2\x88\x92\xE2\x88\x9E";
+            } else {
+                char buf[32];
+                std::snprintf(buf, sizeof(buf), "%.1f dB", peak);
+                m_cachedDbStr = buf;
+            }
         }
         
         // Each line gets half the text area (12px each with 24px total)
@@ -366,12 +370,16 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         renderer.drawTextCentered(m_cachedDbStr, dbRect, 9.0f, m_colorPeakHold.withAlpha(0.75f));
         
     } else if (hasPeak) {
-        // Regular tracks: Show Peak dB only with "dB" suffix
+        // Regular tracks: Show Peak dB or −∞ at silence floor
         if (std::abs(peak - m_cachedDbPeak) > 0.05f) {
             m_cachedDbPeak = peak;
-            char buf[32];
-            std::snprintf(buf, sizeof(buf), "%.1f dB", peak);
-            m_cachedDbStr = buf;
+            if (peak <= DB_MIN) {
+                m_cachedDbStr = "\xE2\x88\x92\xE2\x88\x9E";
+            } else {
+                char buf[32];
+                std::snprintf(buf, sizeof(buf), "%.1f dB", peak);
+                m_cachedDbStr = buf;
+            }
         }
         
         // Center vertically in the text area
