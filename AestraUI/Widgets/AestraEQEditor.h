@@ -3,14 +3,12 @@
 
 #include "AestraPanelWindow.h"
 #include "NUIComponent.h"
-#include "NUIContextMenu.h"
 #include "NUITypes.h"
 #include "Plugin/AestraEQ.h"
 #include "PluginHost.h"
 
 #include <array>
 #include <condition_variable>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -30,65 +28,70 @@ public:
     void onResize() { layoutControls(); }
 
 private:
-    struct BandControl {
+    enum class Knob { None, Freq, Gain, Q };
+
+    struct Band {
         uint32_t enableId = 0;
         uint32_t freqId = 0;
         uint32_t gainId = 0;
         uint32_t qId = 0;
         std::string name;
-        bool enabled = true;
+        std::string typeName;
+        bool enabled = false;
+        bool usesGain = true;
+        bool usesSlope = false;
         float freq = 0.5f;
         float gain = 0.5f;
         float q = 0.5f;
-        uint32_t type = 0;
-        bool usesGain = true;
-        bool usesSlope = false;
-        NUIRect bounds;
-        NUIRect freqSlider;
-        NUIRect gainSlider;
-        NUIRect qSlider;
+        NUIRect cardBounds;
         NUIRect freqKnob;
         NUIRect gainKnob;
         NUIRect qKnob;
-        bool dragging = false;
-        enum DragTarget { None, Freq, Gain, Q } dragTarget = None;
-        float dragStartX = 0;
-        float dragStartValue = 0;
-        bool hovered = false;
     };
 
-    void buildControls();
+    void buildBands();
     void layoutControls();
+    void syncBandsFromPlugin();
+
+    void drawBypassPill(NUIRenderer& renderer);
     void drawResponseCurve(NUIRenderer& renderer, const NUIRect& bounds);
-    void drawBlueprintGrid(NUIRenderer& renderer, const NUIRect& bounds);
-    void drawUtilityStrip(NUIRenderer& renderer, const NUIRect& bounds);
-    void drawInputOutputPanel(NUIRenderer& renderer, const NUIRect& bounds, bool output);
-    void drawFilterGuardPanel(NUIRenderer& renderer, const NUIRect& bounds, bool highPass);
-    void drawDynamicSection(NUIRenderer& renderer, const NUIRect& bounds);
-    void updateSpectrumSnapshot();
     void drawSpectrumBackdrop(NUIRenderer& renderer, const NUIRect& bounds);
-    NUIRect responseGraphBounds(const NUIRect& outerBounds) const;
-    bool usesGainAxis(const BandControl& band) const;
-    NUIPoint graphNodePosition(const BandControl& band, const NUIRect& graphBounds) const;
-    int hitTestGraphNode(float x, float y) const;
-    void updateBandFromGraphPosition(int bandIndex, const NUIPoint& position);
-    void drawBandPanel(NUIRenderer& renderer, const BandControl& band);
-    void updateBandValue(int bandIndex, BandControl::DragTarget target, float normalizedValue);
-    int hitTestBand(float x, float y) const;
-    BandControl::DragTarget hitTestSlider(float x, float y, const BandControl& band) const;
-    std::string typeLabel(uint32_t type) const;
-    std::string bandFreqLabel(size_t bandIdx, float norm) const;
-    std::string gainLabel(float norm) const;
-    std::string qLabel(float norm, uint32_t type) const;
+    void drawBandCard(NUIRenderer& renderer, size_t idx);
+    void drawKnob(NUIRenderer& renderer, const NUIRect& bounds, float value, bool active, const NUIColor& accent);
+
+    void updateSpectrumSnapshot();
     void analyzerWorkerMain();
 
-    // Immutable after construction — worker thread captures this reference safely
+    NUIRect graphInnerBounds(const NUIRect& outer) const;
+    NUIPoint graphNodePosition(size_t bandIdx, const NUIRect& graphBounds) const;
+    int hitTestGraphNode(float x, float y) const;
+    void updateBandFromGraphPosition(int bandIdx, const NUIPoint& position);
+    int hitTestBandCard(float x, float y, Knob& outKnob) const;
+    void setBandValue(int bandIdx, Knob target, float normalizedValue);
+
+    std::string formatFreq(size_t bandIdx, float norm) const;
+    std::string formatGain(float norm) const;
+    std::string formatQ(float norm) const;
+    std::string formatSlope(float norm) const;
+    bool isBypassed() const;
+    void setBypassed(bool bypassed);
+
     const std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
-    std::vector<BandControl> m_bands;
+    std::vector<Band> m_bands;
+
+    NUIRect m_graphBounds;
+    NUIRect m_lastGraphInner;
+    NUIRect m_bypassRect;
+
     int m_hoveredBand = -1;
     int m_selectedBand = -1;
     int m_draggingGraphBand = -1;
-    NUIRect m_lastResponseBounds;
+    int m_draggingCardBand = -1;
+    Knob m_draggingKnob = Knob::None;
+    float m_dragStartY = 0.0f;
+    float m_dragStartValue = 0.0f;
+    bool m_bypassHovered = false;
+
     std::array<float, 160> m_spectrumMagnitudes{};
     std::array<float, Aestra::Audio::Plugins::AestraEQ::kAnalyzerWindowSize> m_analyzerWindow{};
     std::array<float, 160> m_workerResultMagnitudes{};
@@ -103,12 +106,11 @@ private:
     uint64_t m_pendingAnalyzerSerial = 0;
     uint64_t m_workerRequestedSerial = 0;
     uint64_t m_workerResultSerial = 0;
-    std::shared_ptr<NUIContextMenu> m_bandTypeMenu;
 
-    static constexpr float kWindowWidth = 1180.0f;
-    static constexpr float kWindowHeight = 660.0f;
-    static constexpr float kCurveHeight = 238.0f;
-    static constexpr float kPadding = 12.0f;
+    static constexpr float kWinW = 820.0f;
+    static constexpr float kWinH = 500.0f;
+    static constexpr float kPad = 18.0f;
+    static constexpr float kCurveH = 220.0f;
     static constexpr size_t kNumBands = 6;
 };
 
