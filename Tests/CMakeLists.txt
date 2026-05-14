@@ -176,6 +176,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectLoadRegressionTest.cpp
         ${CMAKE_SOURCE_DIR}/Source
     )
     target_compile_definitions(ProjectLoadRegressionTest PRIVATE
+        AESTRA_PROJECT_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Fixtures/ProjectFormat"
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
     add_test(NAME ProjectLoadRegressionTest COMMAND ProjectLoadRegressionTest)

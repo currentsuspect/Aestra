@@ -78,4 +78,98 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CU
     )
 endif()
 
+# PDC v2 P1 — scaffolding tests (see AestraDocs/PDC-v2-Design.md §12)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
+    add_executable(PDCFlatChainTest PDCFlatChainTest.cpp)
+    target_link_libraries(PDCFlatChainTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(PDCFlatChainTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME PDCFlatChainTest COMMAND PDCFlatChainTest)
+    set_tests_properties(PDCFlatChainTest PROPERTIES
+        LABELS "headless;pdc;regression"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCSolverPurityTest.cpp")
+    add_executable(PDCSolverPurityTest PDCSolverPurityTest.cpp)
+    target_link_libraries(PDCSolverPurityTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(PDCSolverPurityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME PDCSolverPurityTest COMMAND PDCSolverPurityTest)
+    set_tests_properties(PDCSolverPurityTest PROPERTIES
+        LABELS "headless;pdc;solver"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# PDC v2 P4a — graph-aware solver tests (solver level; engine RT path in P4b)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCBusChainTest.cpp")
+    add_executable(PDCBusChainTest PDCBusChainTest.cpp)
+    target_link_libraries(PDCBusChainTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(PDCBusChainTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME PDCBusChainTest COMMAND PDCBusChainTest)
+    set_tests_properties(PDCBusChainTest PROPERTIES
+        LABELS "headless;pdc;solver"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCBranchingConvergenceTest.cpp")
+    add_executable(PDCBranchingConvergenceTest PDCBranchingConvergenceTest.cpp)
+    target_link_libraries(PDCBranchingConvergenceTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(PDCBranchingConvergenceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME PDCBranchingConvergenceTest COMMAND PDCBranchingConvergenceTest)
+    set_tests_properties(PDCBranchingConvergenceTest PROPERTIES
+        LABELS "headless;pdc;solver;regression"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# PDC v2 P4b.3 — RT path exercises per-send compensation via processBlock
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCRTConsumptionTest.cpp")
+    add_executable(PDCRTConsumptionTest PDCRTConsumptionTest.cpp)
+    target_link_libraries(PDCRTConsumptionTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(PDCRTConsumptionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME PDCRTConsumptionTest COMMAND PDCRTConsumptionTest)
+    set_tests_properties(PDCRTConsumptionTest PROPERTIES
+        LABELS "headless;pdc;engine;rt"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# PDC v2 P4b.1 — engine populates LatencyGraph::edges from real project routing
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCEngineEdgeConstructionTest.cpp")
+    add_executable(PDCEngineEdgeConstructionTest PDCEngineEdgeConstructionTest.cpp)
+    target_link_libraries(PDCEngineEdgeConstructionTest PRIVATE AestraAudio AestraCore)
+    target_include_directories(PDCEngineEdgeConstructionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME PDCEngineEdgeConstructionTest COMMAND PDCEngineEdgeConstructionTest)
+    set_tests_properties(PDCEngineEdgeConstructionTest PROPERTIES
+        LABELS "headless;pdc;engine"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 message(STATUS "Headless tests enabled - AudioEngine API implemented")

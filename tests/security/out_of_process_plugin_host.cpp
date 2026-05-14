@@ -103,6 +103,36 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+    MidiBuffer midi;
+    midi.addNoteOn(1, 60, 100, 1);
+    float midiInL[4] = {0.11f, 0.22f, 0.33f, 0.44f};
+    float midiInR[4] = {-0.11f, -0.22f, -0.33f, -0.44f};
+    const float* midiInputs[2] = {midiInL, midiInR};
+    std::memset(outL, 0, sizeof(outL));
+    std::memset(outR, 0, sizeof(outR));
+    instance->process(midiInputs, outputs, 2, 2, 4, &midi, nullptr);
+    if (std::memcmp(nextInL, outL, sizeof(nextInL)) != 0 || std::memcmp(nextInR, outR, sizeof(nextInR)) != 0) {
+        std::cerr << "isolated plugin proxy did not survive MIDI-bearing process command\n";
+        return 1;
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    std::memset(outL, 0, sizeof(outL));
+    std::memset(outR, 0, sizeof(outR));
+    instance->process(nextInputs, outputs, 2, 2, 4);
+    if (std::memcmp(midiInL, outL, sizeof(midiInL)) != 0 || std::memcmp(midiInR, outR, sizeof(midiInR)) != 0) {
+        std::cerr << "isolated plugin proxy did not return helper-processed MIDI block output\n";
+        return 1;
+    }
+
+    if (!instance->saveState().empty() || !instance->loadState({}) ||
+        instance->loadState(std::vector<uint8_t>{1, 2, 3})) {
+        std::cerr << "isolated plugin proxy state protocol handling failed for echo helper\n";
+        return 1;
+    }
+
     auto crashed = create(factory, makeInfo("__aestra_test_crash__"));
     if (crashed) {
         std::cerr << "crashing plugin should not produce a usable instance\n";

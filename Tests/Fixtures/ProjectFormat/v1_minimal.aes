@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "tempo": 120.0,
+  "playhead": 0.0,
+  "sources": [],
+  "patterns": [],
+  "lanes": [
+    {
+      "name": "Migrated Track",
+      "color": "4294967295",
+      "volume": 1.0,
+      "pan": 0.0,
+      "clips": []
+    }
+  ],
+  "arsenal": {"nextId": 1, "units": []}
+}
