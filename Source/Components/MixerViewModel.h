@@ -153,7 +153,7 @@ public:
     static constexpr float LOW_RELEASE_MS = 450.0f;
     static constexpr float DISPLAY_ATTACK_MS = 5.0f;
     static constexpr float DISPLAY_RELEASE_MS = 300.0f;
-    static constexpr float PEAK_HOLD_MS = 750.0f;      ///< Time before peak hold decays
+    static constexpr float PEAK_HOLD_MS = 2000.0f;     ///< Time before peak hold decays
     static constexpr float PEAK_DECAY_MS = 1500.0f;    ///< Peak hold decay time
 
     MixerViewModel();

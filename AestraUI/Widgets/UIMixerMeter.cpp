@@ -221,11 +221,13 @@ void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
         float peakY = meterArea.y + meterArea.height * (1.0f - peakNorm);
         
         // Clamp to meter area
-        peakY = std::max(meterArea.y, std::min(peakY, meterArea.y + meterArea.height - PEAK_OVERLAY_HEIGHT));
+        peakY = std::max(meterArea.y, std::min(peakY, meterArea.y + meterArea.height - PEAK_HOLD_HEIGHT));
         
-        // Draw hold line (using the brighter 'textPrimary' color defined in cacheThemeColors)
-        const NUIColor& holdColor = m_dimmed ? m_colorPeakOverlayDim : m_colorPeakHold;
-        renderer.fillRect(NUIRect{meterArea.x, peakY, meterArea.width, PEAK_OVERLAY_HEIGHT}, holdColor);
+        // Draw hold line (white 0.85 alpha, 1px thick)
+        const NUIColor holdColor = m_dimmed
+            ? m_colorPeakOverlayDim
+            : NUIColor(1.0f, 1.0f, 1.0f, 0.85f);
+        renderer.fillRect(NUIRect{meterArea.x, peakY, meterArea.width, PEAK_HOLD_HEIGHT}, holdColor);
     }
 
     (void)peakOverlayDb; // Unused in this mode (bars are already showing fast peak)
