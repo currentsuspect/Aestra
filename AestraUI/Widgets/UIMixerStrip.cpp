@@ -28,10 +28,11 @@ namespace {
     constexpr float GAP = 8.0f;
     constexpr float SIDE_INSET = 4.0f;
     constexpr float SECTION_GAP = 8.0f;
-    constexpr float METER_W = 28.0f;
+    constexpr float METER_W = 22.0f;
     constexpr float MASTER_METER_W = 36.0f;
 
     constexpr float SELECT_TOP_H = 3.0f;
+    constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
 
     std::string compactRouteName(uint32_t targetId, const std::string& targetName)
     {
@@ -421,12 +422,6 @@ void UIMixerStrip::layoutChildren()
 
     // Input Dropdown Removed from Strip Layout
 
-    const bool hasButtons = (m_buttons && m_buttons->isVisible());
-    if (hasButtons) {
-        m_buttons->setBounds(contentX, y, contentW, BUTTONS_H);
-        y += BUTTONS_H + GAP;
-    }
-
     // Three-knob row: Trim + Pan + Width (channel controls grouped together)
     const bool showTrim = (m_trimKnob && m_trimKnob->isVisible());
     const bool showPan = (m_panKnob && m_panKnob->isVisible());
@@ -449,8 +444,18 @@ void UIMixerStrip::layoutChildren()
         y += KNOB_H + SECTION_GAP;
     }
 
+    // M/S/R buttons moved below knobs, above FX summary
+    const bool hasButtons = (m_buttons && m_buttons->isVisible());
+    if (hasButtons) {
+        m_buttons->setBounds(contentX, y, contentW, BUTTONS_H);
+        y += BUTTONS_H + 6.0f;
+    }
+
     // FX Summary (Add Insert) below the channel controls
     if (m_fxSummary && m_fxSummary->isVisible()) {
+        if (m_channelId == 0) {
+            y += 10.0f;
+        }
         m_fxSummary->setBounds(contentX, y, contentW, FX_H);
         y += FX_H + SECTION_GAP;
     }
@@ -800,9 +805,6 @@ void UIMixerStrip::renderStaticLayer(NUIRenderer& renderer)
     if (m_trimKnob && m_trimKnob->isVisible()) {
         m_trimKnob->onRender(renderer);
     }
-    if (m_fxSummary && m_fxSummary->isVisible()) {
-        m_fxSummary->onRender(renderer);
-    }
     if (m_panKnob && m_panKnob->isVisible()) {
         m_panKnob->onRender(renderer);
     }
@@ -811,6 +813,9 @@ void UIMixerStrip::renderStaticLayer(NUIRenderer& renderer)
     }
     if (m_buttons && m_buttons->isVisible()) {
         m_buttons->onRender(renderer);
+    }
+    if (m_fxSummary && m_fxSummary->isVisible()) {
+        m_fxSummary->onRender(renderer);
     }
     if (m_fader && m_fader->isVisible()) {
         m_fader->onRender(renderer);
