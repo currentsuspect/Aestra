@@ -195,16 +195,12 @@ bool UIMixerHeader::onMouseEvent(const NUIMouseEvent& event)
 
         for (int i = 0; i < PALETTE_SIZE; ++i) {
             const bool selected = (i == m_colorIndex);
-            std::string label = PALETTE_NAMES[i];
-            auto item = std::make_shared<NUIContextMenuItem>(label, NUIContextMenuItem::Type::Radio);
-            item->setChecked(selected);
-            item->setOnClick([this, i]() {
+            m_colorMenu->addRadioItem(PALETTE_NAMES[i], "color", selected, [this, i]() {
                 m_colorIndex = i;
                 m_trackColorArgb = paletteIndexToARGB(i);
                 repaint();
                 if (onColorChanged) onColorChanged(i);
             });
-            m_colorMenu->addItem(item);
         }
 
         NUIComponent* root = this;
