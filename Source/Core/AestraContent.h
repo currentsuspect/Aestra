@@ -22,6 +22,9 @@
 #include "PatternSource.h"
 #include "OverlayLayer.h"
 #include "../AestraAudio/include/Models/UnitManager.h"
+#include "../AestraAudio/include/Commands/CommandParser.h"
+#include "../AestraAudio/include/Commands/CommandResult.h"
+#include "../AestraAudio/include/Commands/SessionLog.h"
 #include "Events/Connection.h"
 #include <memory>
 #include <string>
@@ -266,6 +269,12 @@ public:
     /** @brief Open a pattern in the piano-roll editor. */
     void openPatternInPianoRoll(Aestra::Audio::PatternID patternId);
 
+    /** @brief Execute a Muse CLI command string through the grammar/parser pipeline. */
+    Aestra::Audio::CommandResult executeMuseCommand(const std::string& input);
+
+    /** @brief Set the session directory for the Muse command log. */
+    void setMuseSessionDirectory(const std::string& path);
+
 private:
     Aestra::Audio::UnitID resolveEditingUnitForPattern(Aestra::Audio::PatternID patternId) const;
     ViewFocus resolveTransportFocus() const;
@@ -373,4 +382,7 @@ private:
 
     void openSampleEditorForUnit(Aestra::Audio::UnitID unitId, const std::string& samplePath);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
+
+    Aestra::Audio::CommandParser m_commandParser;
+    std::unique_ptr<Aestra::Audio::SessionLog> m_sessionLog;
 };
