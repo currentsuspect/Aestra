@@ -24,6 +24,7 @@ public:
     static constexpr uint32_t kStateMagicV2 = 0x444C5902; // 'DLY' v2
     static constexpr uint32_t kStateMagicV1 = 0x444C5901; // 'DLY' v1
     static constexpr uint32_t kMaxDelaySec = 2;
+    static constexpr uint32_t kBlockSize = 16;
 
     enum Param : uint32_t {
         kTime = 0,       // 10ms to 2000ms
@@ -71,8 +72,11 @@ public:
         const uint32_t maxSamples = std::max<uint32_t>(
             1u,
             static_cast<uint32_t>(std::ceil(static_cast<double>(kMaxDelaySec) * m_sampleRate)) + 4u);
-        m_bufL.assign(maxSamples, 0.0f);
-        m_bufR.assign(maxSamples, 0.0f);
+        uint32_t bufSize = 1;
+        while (bufSize < maxSamples) bufSize <<= 1u;
+        m_bufferMask = static_cast<int>(bufSize) - 1;
+        m_bufL.assign(bufSize, 0.0f);
+        m_bufR.assign(bufSize, 0.0f);
 
         resetRuntimeState();
         snapSmoothedParamsToTargets();
@@ -127,7 +131,8 @@ public:
 
         const float smoothingCoeff = 1.0f - std::exp(
             -1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * 0.005f));
-        const int bufSize = static_cast<int>(m_bufL.size());
+        const float invSampleRate = 1.0f / static_cast<float>(m_sampleRate);
+        const int bufMask = m_bufferMask;
         int pos = m_pos;
         uint64_t pingPongSampleCounter = m_pingPongSampleCounter;
         float lfoPhase = m_lfoPhase;
@@ -135,9 +140,11 @@ public:
         float filtR = m_filtR;
 
         constexpr float pi = 3.14159265358979323846f;
+        constexpr float twoPi = 2.0f * pi;
 
-        for (uint32_t i = 0; i < numFrames; ++i) {
+        for (uint32_t blockStart = 0; blockStart < numFrames; blockStart += kBlockSize) {
             smoothParams(smoothingCoeff);
+            const uint32_t blockEnd = std::min(blockStart + kBlockSize, numFrames);
 
             const float freeTimeSec = 0.01f + m_timeSmoothed * 1.99f;
             const bool sync = m_params[kSyncMode].load(std::memory_order_relaxed) > 0.5f;
@@ -151,64 +158,68 @@ public:
             const float mix = std::clamp(m_mixSmoothed, 0.0f, 1.0f);
             const bool pingPong = m_params[kStereoMode].load(std::memory_order_relaxed) > 0.5f;
 
-            const float maxShiftMs = std::min(delayMs * 0.5f, 500.0f * 1000.0f / static_cast<float>(m_sampleRate));
+            const float maxShiftMs = std::min(delayMs * 0.5f, 500.0f * 1000.0f * invSampleRate);
             const float stereoOffsetMs = stereoShift * maxShiftMs;
             const float effectiveDelayMsL = std::max(delayMs - stereoOffsetMs, 10.0f);
             const float effectiveDelayMsR = std::max(delayMs + stereoOffsetMs, 10.0f);
-            const float delaySamplesL = std::clamp(
+            const float delaySamplesBaseL = std::clamp(
                 effectiveDelayMsL * static_cast<float>(m_sampleRate) / 1000.0f,
                 1.0f,
-                static_cast<float>(bufSize - 2));
-            const float delaySamplesR = std::clamp(
+                static_cast<float>((bufMask + 1) - 2));
+            const float delaySamplesBaseR = std::clamp(
                 effectiveDelayMsR * static_cast<float>(m_sampleRate) / 1000.0f,
                 1.0f,
-                static_cast<float>(bufSize - 2));
-
-            lfoPhase += modRate / static_cast<float>(m_sampleRate);
-            if (lfoPhase >= 1.0f) lfoPhase -= std::floor(lfoPhase);
+                static_cast<float>((bufMask + 1) - 2));
             const float maxModSamples = std::min(
-                std::min(delaySamplesL, delaySamplesR) * 0.25f,
+                std::min(delaySamplesBaseL, delaySamplesBaseR) * 0.25f,
                 static_cast<float>(m_sampleRate) * 0.0005f);
-            const float lfo = std::sin(2.0f * pi * lfoPhase) * modDepth * maxModSamples;
+            const float pingPongPeriodBase = std::max(1.0f, std::round((delaySamplesBaseL + delaySamplesBaseR) * 0.5f));
 
-            const float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
-            const float inR = (numInputChannels > 1 && inputs[1]) ? inputs[1][i] : inL;
-            const float monoIn = (inL + inR) * 0.5f;
-            const auto pingPongPeriod = static_cast<uint64_t>(
-                std::max(1.0f, std::round((delaySamplesL + delaySamplesR) * 0.5f)));
-            const bool pingPongInjectLeft = ((pingPongSampleCounter / pingPongPeriod) & 1ULL) == 0ULL;
+            for (uint32_t i = blockStart; i < blockEnd; ++i) {
+                lfoPhase += modRate * invSampleRate;
+                if (lfoPhase >= 1.0f) lfoPhase -= 1.0f;
+                const float lfo = std::sin(twoPi * lfoPhase) * modDepth * maxModSamples;
 
-            const float delayOutL = readDelayLine(m_bufL, pos, delaySamplesL + lfo);
-            const float delayOutR = readDelayLine(m_bufR, pos, delaySamplesR - lfo);
+                const float delaySamplesL = delaySamplesBaseL + lfo;
+                const float delaySamplesR = delaySamplesBaseR - lfo;
 
-            constexpr float kPingPongBleed = 0.18f;
-            constexpr float kPingPongBleedNorm = 1.0f / (1.0f + kPingPongBleed);
-            const float wetL = pingPong ? (delayOutL + delayOutR * kPingPongBleed) * kPingPongBleedNorm : delayOutL;
-            const float wetR = pingPong ? (delayOutR + delayOutL * kPingPongBleed) * kPingPongBleedNorm : delayOutR;
+                const float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
+                const float inR = (numInputChannels > 1 && inputs[1]) ? inputs[1][i] : inL;
+                const float monoIn = (inL + inR) * 0.5f;
+                const bool pingPongInjectLeft = ((pingPongSampleCounter / static_cast<uint64_t>(pingPongPeriodBase)) & 1ULL) == 0ULL;
 
-            const float fbSourceL = pingPong ? delayOutR : delayOutL;
-            const float fbSourceR = pingPong ? delayOutL : delayOutR;
-            const float dampedL = fbSourceL * (1.0f - damping) + filtL * damping;
-            const float dampedR = fbSourceR * (1.0f - damping) + filtR * damping;
-            filtL = dampedL;
-            filtR = dampedR;
+                const float delayOutL = readDelayLine(m_bufL, pos, delaySamplesL, bufMask);
+                const float delayOutR = readDelayLine(m_bufR, pos, delaySamplesR, bufMask);
 
-            if (pingPong) {
-                m_bufL[pos] = sanitizeDelayValue((pingPongInjectLeft ? monoIn : 0.0f) + dampedL * feedback);
-                m_bufR[pos] = sanitizeDelayValue((pingPongInjectLeft ? 0.0f : monoIn) + dampedR * feedback);
-            } else {
-                m_bufL[pos] = sanitizeDelayValue(inL + dampedL * feedback);
-                m_bufR[pos] = sanitizeDelayValue(inR + dampedR * feedback);
+                constexpr float kPingPongBleed = 0.18f;
+                constexpr float kPingPongBleedNorm = 1.0f / (1.0f + kPingPongBleed);
+                const float wetL = pingPong ? (delayOutL + delayOutR * kPingPongBleed) * kPingPongBleedNorm : delayOutL;
+                const float wetR = pingPong ? (delayOutR + delayOutL * kPingPongBleed) * kPingPongBleedNorm : delayOutR;
+
+                const float fbSourceL = pingPong ? delayOutR : delayOutL;
+                const float fbSourceR = pingPong ? delayOutL : delayOutR;
+                const float dampedL = fbSourceL * (1.0f - damping) + filtL * damping;
+                const float dampedR = fbSourceR * (1.0f - damping) + filtR * damping;
+                filtL = dampedL;
+                filtR = dampedR;
+
+                if (pingPong) {
+                    m_bufL[pos] = sanitizeDelayValue((pingPongInjectLeft ? monoIn : 0.0f) + dampedL * feedback);
+                    m_bufR[pos] = sanitizeDelayValue((pingPongInjectLeft ? 0.0f : monoIn) + dampedR * feedback);
+                } else {
+                    m_bufL[pos] = sanitizeDelayValue(inL + dampedL * feedback);
+                    m_bufR[pos] = sanitizeDelayValue(inR + dampedR * feedback);
+                }
+
+                pos = (pos + 1) & bufMask;
+                ++pingPongSampleCounter;
+
+                const float outL = inL * (1.0f - mix) + wetL * mix;
+                const float outR = inR * (1.0f - mix) + wetR * mix;
+
+                if (numOutputChannels > 0 && outputs[0]) outputs[0][i] = outL;
+                if (numOutputChannels > 1 && outputs[1]) outputs[1][i] = outR;
             }
-
-            pos = (pos + 1) % bufSize;
-            ++pingPongSampleCounter;
-
-            const float outL = inL * (1.0f - mix) + wetL * mix;
-            const float outR = inR * (1.0f - mix) + wetR * mix;
-
-            if (numOutputChannels > 0 && outputs[0]) outputs[0][i] = outL;
-            if (numOutputChannels > 1 && outputs[1]) outputs[1][i] = outR;
         }
 
         m_lfoPhase = lfoPhase;
@@ -404,21 +415,17 @@ private:
         return std::clamp(x, -64.0f, 64.0f);
     }
 
-    static float readDelayLine(const std::vector<float>& buffer, int writePos, float delaySamples) {
-        const int bufferSize = static_cast<int>(buffer.size());
-        if (bufferSize <= 1) return 0.0f;
-
-        const float safeDelay = std::max(delaySamples, 0.0f);
-        float readPosF = static_cast<float>(writePos) - safeDelay;
-        readPosF = std::fmod(readPosF, static_cast<float>(bufferSize));
-        if (!std::isfinite(readPosF)) return 0.0f;
-        if (readPosF < 0.0f) readPosF += static_cast<float>(bufferSize);
-        if (readPosF >= static_cast<float>(bufferSize)) readPosF -= static_cast<float>(bufferSize);
-
-        const int i0 = std::clamp(static_cast<int>(readPosF), 0, bufferSize - 1);
-        const int i1 = (i0 + 1) % bufferSize;
-        const float frac = std::clamp(readPosF - static_cast<float>(i0), 0.0f, 1.0f);
-        return buffer[static_cast<size_t>(i0)] * (1.0f - frac) + buffer[static_cast<size_t>(i1)] * frac;
+    static float readDelayLine(const std::vector<float>& buffer, int writePos, float delaySamples, int mask) {
+        float readPosF = static_cast<float>(writePos) - std::max(delaySamples, 0.0f);
+        int i0 = static_cast<int>(readPosF);
+        if (i0 < 0) i0 = (i0 + 1) & mask;
+        else i0 &= mask;
+        const int i1 = (i0 + 1) & mask;
+        if (i0 >= static_cast<int>(buffer.size()) || i1 >= static_cast<int>(buffer.size())) return 0.0f;
+        const float frac = readPosF - std::floor(readPosF);
+        const float a = buffer[static_cast<size_t>(i0)];
+        const float b = buffer[static_cast<size_t>(i1)];
+        return a + (b - a) * frac;
     }
 
     float getSyncedDelaySeconds() const {
@@ -464,6 +471,7 @@ private:
 
     std::vector<float> m_bufL;
     std::vector<float> m_bufR;
+    int m_bufferMask = 0;
     int m_pos = 0;
     uint64_t m_pingPongSampleCounter = 0;
     float m_lfoPhase = 0.0f;
