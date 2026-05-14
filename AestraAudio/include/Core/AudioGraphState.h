@@ -2,7 +2,9 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -23,6 +25,46 @@ struct SmoothedParamD {
     void setTarget(double t) { target = t; }
     // Snap to target immediately
     void snap() { current = target; }
+};
+
+/**
+ * @brief Per-outgoing-edge compensation state for graph-aware PDC (v2 P4b.2+).
+ *
+ * Owned by `TrackRTState`. One slot for the track's mainOutputId edge, one per
+ * send. Storage is a power-of-two heap-allocated ring buffer so RT-side index
+ * arithmetic can use mask-based wraparound.
+ *
+ * RT safety (P4b.3): the buffer pointer + sizing fields are atomically
+ * published by the off-RT apply pass. The audio thread reads them via
+ * acquire-load and uses the captured snapshot for the entire block. When the
+ * off-RT apply pass grows a buffer, the previous allocation is retired into
+ * `retiredBuffer` and kept alive for one full recompute cycle; this gives the
+ * audio thread a guaranteed-valid pointer for any block in flight at the
+ * moment of growth.
+ *
+ * NOT copyable (atomic members); moved-from state is invalid for RT use.
+ */
+struct EdgeDelayState {
+    EdgeDelayState() = default;
+    EdgeDelayState(const EdgeDelayState&) = delete;
+    EdgeDelayState& operator=(const EdgeDelayState&) = delete;
+    EdgeDelayState(EdgeDelayState&&) = delete;
+    EdgeDelayState& operator=(EdgeDelayState&&) = delete;
+
+    /** @brief Samples of delay to apply (0 = no compensation). RT reads. */
+    std::atomic<uint32_t> compensationSamples{0};
+    /** @brief Ring-buffer capacity minus one (power of two semantics). */
+    std::atomic<uint32_t> capacityMask{0};
+    /** @brief Stereo-interleaved buffer pointer (capacityMask+1 frames). RT reads. */
+    std::atomic<float*> bufferPtr{nullptr};
+    /** @brief RT-side write cursor (frame count); RT updates each block; off-RT zeroes on growth. */
+    uint32_t writePos{0};
+
+    // Off-RT-owned storage. RT never touches these directly; it goes through
+    // bufferPtr.
+    std::unique_ptr<float[]> ownedBuffer;
+    /** @brief Previous allocation kept alive one generation to outlive in-flight RT blocks. */
+    std::unique_ptr<float[]> retiredBuffer;
 };
 
 struct TrackRTState {
@@ -55,6 +97,16 @@ struct TrackRTState {
     std::array<float, 32768> compensationBuffer{}; // 16384 frames * 2 channels
     uint32_t compensationWritePos{0};
     uint32_t compensationReadPos{0};
+
+    // PDC v2 (P4b.2/P4b.3): per-outgoing-edge compensation state. Populated
+    // off-RT by AudioEngine::calculateLatencyCompensation() from
+    // SolvedLatencyTopology::edges; consumed RT-side in processBlock.
+    //
+    // Stored by unique_ptr because EdgeDelayState contains std::atomic members
+    // (non-movable). Lazily allocated by the apply pass when an edge actually
+    // needs compensation. A nullptr means "no compensation for this edge".
+    std::unique_ptr<EdgeDelayState> mainOutEdgeDelay;
+    std::vector<std::unique_ptr<EdgeDelayState>> sendEdgeDelays;
 };
 
 struct RuntimeConnection {
