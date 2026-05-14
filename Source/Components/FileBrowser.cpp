@@ -134,6 +134,39 @@ std::string ellipsizeMiddle(NUIRenderer& renderer, const std::string& text, floa
     return bestStr;
 }
 
+std::string ellipsizeEnd(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
+    if (text.empty()) return text;
+    if (maxWidth <= 0.0f) return "";
+
+    if (renderer.measureText(text, fontSize).width <= maxWidth) return text;
+
+    constexpr const char* kEllipsis = "...";
+    const float ellipsisW = renderer.measureText(kEllipsis, fontSize).width;
+    if (ellipsisW >= maxWidth) return text;
+
+    static constexpr size_t MIN_VISIBLE = 24;
+    const size_t startChars = std::min(MIN_VISIBLE, text.size());
+    std::string minCandidate = text.substr(0, startChars) + kEllipsis;
+    if (renderer.measureText(minCandidate, fontSize).width > maxWidth) return minCandidate;
+
+    int low = static_cast<int>(startChars);
+    int high = static_cast<int>(text.size());
+    std::string best = minCandidate;
+
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        std::string candidate = text.substr(0, mid) + kEllipsis;
+        if (renderer.measureText(candidate, fontSize).width <= maxWidth) {
+            best = candidate;
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+
+    return best;
+}
+
 std::filesystem::path canonicalOrNormalized(const std::filesystem::path& p) {
     std::error_code ec;
     std::filesystem::path canonical = std::filesystem::weakly_canonical(p, ec);
@@ -1017,13 +1050,9 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
                       {layout.listHeader.right(), layout.listHeader.bottom()},
                       1.0f, border);
     const NUIRect columnRow(layout.listHeader.x, layout.listHeader.y + 28.0f, layout.listHeader.width, 23.0f);
-    const float kindX = layout.listHeader.right() - 56.0f;
     renderer.drawText("Name", {layout.listHeader.x + 12.0f,
                                std::round(renderer.calculateTextY(columnRow, 12.0f))},
                       11.5f, themeManager.getColor("textSecondary").withAlpha(0.62f));
-    renderer.drawText("Kind", {kindX,
-                               std::round(renderer.calculateTextY(columnRow, 11.5f))},
-                      11.5f, themeManager.getColor("textSecondary").withAlpha(0.54f));
 }
 
 void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -2484,11 +2513,10 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         }
         contentX += 20.0f;
 
-        const float kindX = itemRect.right() - 56.0f;
-        const float maxTextWidth = std::max(0.0f, kindX - contentX - 8.0f);
+        const float maxTextWidth = std::max(0.0f, itemRect.right() - contentX - 12.0f);
         std::string displayName = item->name;
         if (renderer.measureText(displayName, labelFont).width > maxTextWidth) {
-            displayName = ellipsizeMiddle(renderer, displayName, labelFont, maxTextWidth);
+            displayName = ellipsizeEnd(renderer, displayName, labelFont, maxTextWidth);
             item->isTruncated = true;
         } else {
             item->isTruncated = false;
@@ -2498,10 +2526,6 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
                           labelFont,
                           selected ? themeManager.getColor("textPrimary")
                                    : item->isDirectory ? folderText : text);
-        renderer.drawText(item->isDirectory ? "Folder" : "Audio",
-                          {kindX, std::round(renderer.calculateTextY(itemRect, 10.0f))},
-                          10.0f,
-                          muted.withAlpha(selected ? 0.75f : 0.52f));
     }
 
     renderer.clearClipRect();
