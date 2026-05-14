@@ -1,0 +1,2 @@
+AestraAudio/src/Playback/PreviewEngine.cpp:549: Mutex usage (check for locks in RT) found in critical section candidate: 'std::lock_guard<std::mutex> lock(m_completedPathMutex);'
+AestraAudio/src/Playback/PreviewEngine.cpp:549: Lock guard usage found in critical section candidate: 'std::lock_guard<std::mutex> lock(m_completedPathMutex);'

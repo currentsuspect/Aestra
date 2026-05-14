@@ -9,10 +9,10 @@
 namespace AestraUI {
 
 namespace {
-    constexpr float BTN_W = 22.0f;
-    constexpr float BTN_H = 18.0f;
-    constexpr float BTN_GAP = 4.0f;
-    constexpr float BTN_RADIUS = 7.0f;
+    constexpr float BTN_W = 24.0f;
+    constexpr float BTN_H = 20.0f;
+    constexpr float BTN_GAP = 5.0f;
+    constexpr float BTN_RADIUS = 8.0f;
 }
 
 UIMixerButtonRow::UIMixerButtonRow()
@@ -132,8 +132,8 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
         NUIColor border = m_border;
 
         if (active) {
-            bg = activeBg.withAlpha(0.18f);
-            border = activeBg.withAlpha(0.65f);
+            bg = activeBg.withAlpha(0.32f);
+            border = activeBg.withAlpha(0.85f);
             textColor = (i == 2) ? m_textOnRed : m_textOnBright;
         } else if (hovered) {
             bg = theme.getColor("buttonBgHover").withAlpha(0.99f);

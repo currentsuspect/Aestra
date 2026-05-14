@@ -187,6 +187,7 @@ browser_settings.json
 aestra_profile.json
 autosave.aes
 *.aes
+!Tests/Fixtures/**/*.aes
 crash_flag
 runtime_log.txt
 build_log.txt
