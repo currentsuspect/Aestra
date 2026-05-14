@@ -39,6 +39,9 @@ NUIComponent::~NUIComponent() {
 void NUIComponent::onRender(NUIRenderer& renderer) {
     if (!visible_) return;
     
+    // Skip rendering leaf components that haven't changed
+    if (!dirty_ && children_.empty()) return;
+    
     // Render children
     renderChildren(renderer);
     

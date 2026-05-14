@@ -412,6 +412,10 @@ private:
     mutable std::unordered_map<TextMeasurementKey, NUISize, TextMeasurementKeyHash> textMeasurementCache_;
     static constexpr size_t kTextMeasurementCacheMaxSize = 256;
 
+    // Kerning cache: key = (prevGlyph << 32) | currGlyph, value = kerning.x in font units (26.6 FP)
+    // Eliminates repeated FT_Get_Kerning calls for the same glyph pair in the render path
+    mutable std::unordered_map<uint64_t, float> kerningCache_;
+
     FT_Library ftLibrary_;
     FT_Face ftFace_;
     FT_Face ftCJKFace_ = nullptr;
