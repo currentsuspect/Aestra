@@ -15,6 +15,11 @@
 #include "UnitManager.h"
 #include "miniaudio.h"
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h> // ALLOW_PLATFORM_INCLUDE
+#endif
+
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -26,6 +31,7 @@
 #include <immintrin.h> // AVX/SSE for high-performance mixing
 #endif
 #include <map>
+#include <unordered_map>
 
 // Denormal protection macros
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
@@ -44,6 +50,23 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
+std::atomic<uint64_t> g_rtMisuseCount{0};
+std::atomic<uint64_t> g_rtMisuseReportedCount{0};
+std::atomic<const char*> g_rtMisuseLastApi{nullptr};
+
+void recordRealtimeMisuse(const char* apiName) noexcept {
+    g_rtMisuseLastApi.store(apiName, std::memory_order_relaxed);
+    g_rtMisuseCount.fetch_add(1, std::memory_order_relaxed);
+}
+
+void installRealtimeMisuseHandler() noexcept {
+    static std::atomic<bool> installed{false};
+    bool expected = false;
+    if (installed.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+        setRealtimeMisuseHandler(&recordRealtimeMisuse);
+    }
+}
+
 inline double clampD(double v, double lo, double hi) {
     return (v < lo) ? lo : (v > hi) ? hi : v;
 }
@@ -228,6 +251,11 @@ void AudioEngine::applyPendingCommands() {
             m_unitAuditionState.active = true;
             break;
         }
+        // MUSE-WIRING: LoadProjectState / UpdateClipState / StartPreview / StopPreview
+        // must never be handled on the RT audio thread — they involve I/O, allocation,
+        // thread joins, or async decode. They are intentionally dropped here; route them
+        // to the UI/main thread before reaching the audio queue. Do NOT add logging here
+        // (AGENTS.md §10 forbids logging in the RT path).
         default:
             break;
         }
@@ -410,6 +438,16 @@ void AudioEngine::refreshSamplerCacheToSnapshot(UnitManager& mgr, SamplerCacheSn
 void AudioEngine::performNonRealtimeMaintenance() {
     if (reportRealtimeMisuse("AudioEngine::performNonRealtimeMaintenance")) {
         return;
+    }
+
+    const uint64_t rtMisuseCount = g_rtMisuseCount.load(std::memory_order_relaxed);
+    const uint64_t reportedCount = g_rtMisuseReportedCount.load(std::memory_order_relaxed);
+    if (rtMisuseCount != reportedCount) {
+        g_rtMisuseReportedCount.store(rtMisuseCount, std::memory_order_relaxed);
+        const char* apiName = g_rtMisuseLastApi.load(std::memory_order_relaxed);
+        Aestra::Log::warning("[RTGuard] Non-real-time API reached audio thread: " +
+                             std::string(apiName ? apiName : "unknown") + " (count=" +
+                             std::to_string(rtMisuseCount) + ")");
     }
 
     // Pattern engine lookahead refill (non-RT, runs every main loop iteration)
@@ -1254,7 +1292,11 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
             buf.assign(requiredSize, 0.0);
         }
         if (m_trackState.size() != kMaxTracks) {
-            m_trackState.assign(kMaxTracks, TrackRTState{});
+            // TrackRTState contains std::unique_ptr members (PDC v2 P4b.3) and
+            // is move-only. Use resize() so elements are default-constructed in
+            // place rather than copy-assigned.
+            m_trackState.clear();
+            m_trackState.resize(kMaxTracks);
         }
 
         // Pre-allocate all RT graph scratch vectors to avoid heap allocation in renderGraph.
@@ -1428,6 +1470,7 @@ const AudioEngine::BiquadCoeff AudioEngine::kKWeightRLB = {
  * used for integrated LUFS calculation.
  */
 AudioEngine::AudioEngine() {
+    installRealtimeMisuseHandler();
     g_audioEngineInstance = this; // [NEW] Register singleton
 
     if (g_audioEngineInstance == nullptr) {
@@ -2481,6 +2524,12 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                 route.source = send.postFader ? buffer.data() : state.preFaderBuffer.data();
                 route.gainL = &state.sendGainL[sendIndex];
                 route.gainR = &state.sendGainR[sendIndex];
+                // PDC v2 (P4b.3): look up the per-edge compensation slot for
+                // this send. nullptr means "no compensation"; treated as a fast
+                // path in the consume loop below.
+                route.edgeDelay = (sendIndex < state.sendEdgeDelays.size())
+                                      ? state.sendEdgeDelays[sendIndex].get()
+                                      : nullptr;
 
                 if (send.sidechainOnly && send.targetChannelId != 0xFFFFFFFFu && slotMap) {
                     const uint32_t scDestSlot = slotMap->getSlotIndex(send.targetChannelId);
@@ -2515,12 +2564,61 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
 
             for (const auto& route : m_preparedRoutesScratch) {
+                // Fast path: no per-edge compensation. v1 behavior.
+                EdgeDelayState* const edge = route.edgeDelay;
+                const uint32_t edgeComp = edge ? edge->compensationSamples.load(std::memory_order_acquire) : 0u;
+                if (!edge || edgeComp == 0u) {
+                    for (uint32_t i = 0; i < numFrames; ++i) {
+                        const double sendGainL = route.gainL->next();
+                        const double sendGainR = route.gainR->next();
+                        route.dest[i * 2] += route.source[i * 2] * sendGainL;
+                        route.dest[i * 2 + 1] += route.source[i * 2 + 1] * sendGainR;
+                    }
+                    continue;
+                }
+
+                // PDC v2 (P4b.3): per-edge ring-buffer delay path.
+                // Acquire the buffer pointer + mask in one block-stable snapshot.
+                float* const buf = edge->bufferPtr.load(std::memory_order_acquire);
+                const uint32_t mask = edge->capacityMask.load(std::memory_order_acquire);
+                if (!buf || mask == 0u) {
+                    // Buffer not yet committed; fall back to direct mix this block.
+                    for (uint32_t i = 0; i < numFrames; ++i) {
+                        const double sendGainL = route.gainL->next();
+                        const double sendGainR = route.gainR->next();
+                        route.dest[i * 2] += route.source[i * 2] * sendGainL;
+                        route.dest[i * 2 + 1] += route.source[i * 2 + 1] * sendGainR;
+                    }
+                    continue;
+                }
+                const uint32_t capacityFrames = mask + 1u;
+                if (edgeComp >= capacityFrames) {
+                    // Defensive: requested delay exceeds buffer (should not
+                    // happen — off-RT sizes buffer to delay + headroom). Fall
+                    // back to direct mix rather than read garbage.
+                    for (uint32_t i = 0; i < numFrames; ++i) {
+                        const double sendGainL = route.gainL->next();
+                        const double sendGainR = route.gainR->next();
+                        route.dest[i * 2] += route.source[i * 2] * sendGainL;
+                        route.dest[i * 2 + 1] += route.source[i * 2 + 1] * sendGainR;
+                    }
+                    continue;
+                }
+                uint32_t writePos = edge->writePos;
                 for (uint32_t i = 0; i < numFrames; ++i) {
                     const double sendGainL = route.gainL->next();
                     const double sendGainR = route.gainR->next();
-                    route.dest[i * 2] += route.source[i * 2] * sendGainL;
-                    route.dest[i * 2 + 1] += route.source[i * 2 + 1] * sendGainR;
+                    const uint32_t w = writePos & mask;
+                    buf[w * 2] = static_cast<float>(route.source[i * 2]);
+                    buf[w * 2 + 1] = static_cast<float>(route.source[i * 2 + 1]);
+                    const uint32_t r = (writePos + capacityFrames - edgeComp) & mask;
+                    const double delayedL = static_cast<double>(buf[r * 2]);
+                    const double delayedR = static_cast<double>(buf[r * 2 + 1]);
+                    route.dest[i * 2] += delayedL * sendGainL;
+                    route.dest[i * 2 + 1] += delayedR * sendGainR;
+                    ++writePos;
                 }
+                edge->writePos = writePos;
             }
         }
 
@@ -3074,9 +3172,24 @@ bool AudioEngine::initialize() {
 // ============================================================================
 
 void AudioEngine::calculateLatencyCompensation() {
+    // PDC v2 (P2): pipeline is
+    //   build LatencyGraph (off-RT) -> solveLatency() -> apply to RT state.
+    // The solver is a pure function (see AestraAudio/src/Core/LatencyTopology.cpp).
+    // P2 produces a flat solution exactly matching v1; graph-aware DFS lands in P4.
+
     if (!m_latencyCompensationEnabled) {
         m_maxProjectLatency = 0;
         m_latencyDirty = false;
+        // Publish a zero topology via the double-buffer flip so off-RT readers
+        // observe a consistent disabled state.
+        {
+            const int prevIdx = m_activeSolvedTopologyIndex.load(std::memory_order_relaxed);
+            const int inactiveIdx = 1 - prevIdx;
+            SolvedLatencyTopology empty;
+            empty.generation = ++m_latencyGraphGeneration;
+            m_solvedTopologies[inactiveIdx] = std::move(empty);
+            m_activeSolvedTopologyIndex.store(inactiveIdx, std::memory_order_release);
+        }
         return;
     }
 
@@ -3088,59 +3201,299 @@ void AudioEngine::calculateLatencyCompensation() {
 
     const size_t trackCount = trackManager->getChannelCount();
 
-    // 1. Find max latency across all active tracks
-    uint32_t maxLatency = 0;
+    // 1. Build LatencyGraph from current routing state.
+    //
+    // P4b.1: edges populated from MixerChannel::getSends() and mainOutputId.
+    // A synthetic master node is appended so sends/routes to master are
+    // represented in the graph. Master intrinsic latency is 0 for P4b.1; P9
+    // (G6) will populate it with real master-FX latency.
+    //
+    // Note: edges are computed off-RT and consumed only by the off-RT solver
+    // for now (P4b.1). The RT path still applies only per-node
+    // `outputCompensationSamples` to TrackRTState; P4b.2 wires per-edge
+    // compensation into processBlock.
+    constexpr uint32_t kMasterSentinelId = 0xFFFFFFFFu;
+
+    LatencyGraph graph;
+    graph.generation = ++m_latencyGraphGeneration;
+    graph.nodes.reserve(trackCount + 1);
+    // Parallel: nodeIndex -> trackIndex, so apply pass can map back without a search.
+    std::vector<size_t> nodeTrackIdx;
+    nodeTrackIdx.reserve(trackCount + 1);
+    // Map: channelId -> node index, for translating send targets to graph edges.
+    std::unordered_map<uint32_t, size_t> channelIdToNodeIdx;
+    channelIdToNodeIdx.reserve(trackCount + 1);
+
+    // Track-local edge bookkeeping for the P4b.2 apply pass: which entries in
+    // graph.edges correspond to each track's mainOutputId edge and each of its
+    // sends. Sends are tracked by their slot index so they map back to
+    // TrackRTState::sendEdgeDelays without re-walking getSends().
+    struct TrackEdgeIndices {
+        size_t mainOutEdgeIdx = static_cast<size_t>(-1);
+        std::vector<std::pair<size_t, size_t>> sendEdgeBySlot; // {sendSlot, edgeIdx}
+    };
+    std::vector<TrackEdgeIndices> trackEdgeIndices(trackCount);
+
     for (size_t i = 0; i < trackCount; ++i) {
         auto* channel = trackManager->getChannel(i);
         if (!channel) continue;
-
-        bool muted = channel->isMuted();
-        if (muted) continue;
-
-        uint32_t trackLatency = channel->getEffectChain().getTotalLatency();
-        maxLatency = std::max(maxLatency, trackLatency);
+        LatencyGraph::Node node;
+        node.channelId = channel->getChannelId();
+        node.intrinsicLatency = channel->getEffectChain().getTotalLatency();
+        node.muted = channel->isMuted();
+        node.domain = LatencyDomain::FullyCompensated;
+        const size_t nodeIdx = graph.nodes.size();
+        graph.nodes.push_back(node);
+        nodeTrackIdx.push_back(i);
+        channelIdToNodeIdx[node.channelId] = nodeIdx;
     }
 
-    m_maxProjectLatency = maxLatency;
+    // Synthetic master node. NOT mapped to a track index (nodeTrackIdx gets a
+    // sentinel for it so the apply pass skips it).
+    const size_t masterNodeIdx = graph.nodes.size();
+    {
+        LatencyGraph::Node masterNode;
+        masterNode.channelId = kMasterSentinelId;
+        masterNode.intrinsicLatency = 0; // P9 (G6) will populate from master FX.
+        masterNode.muted = false;
+        masterNode.domain = LatencyDomain::FullyCompensated;
+        graph.nodes.push_back(masterNode);
+        nodeTrackIdx.push_back(static_cast<size_t>(-1));
+        channelIdToNodeIdx[kMasterSentinelId] = masterNodeIdx;
+    }
 
-    // 2. Update RT state for each track
+    // Build edges from each track's mainOutputId (primary output) and sends.
+    // Muted sends are excluded from the audible routing graph; this matches the
+    // engine's render-time behavior in renderGraph() / addTrackEdge().
+    for (size_t i = 0; i < trackCount; ++i) {
+        auto* channel = trackManager->getChannel(i);
+        if (!channel) continue;
+        const auto srcIt = channelIdToNodeIdx.find(channel->getChannelId());
+        if (srcIt == channelIdToNodeIdx.end()) continue;
+        const size_t srcNodeIdx = srcIt->second;
+
+        // Primary output (mainOutputId). Implicit audible edge.
+        const uint32_t mainOut = channel->getMainOutputId();
+        if (auto mit = channelIdToNodeIdx.find(mainOut); mit != channelIdToNodeIdx.end()) {
+            if (mit->second != srcNodeIdx) {
+                LatencyGraph::Edge edge;
+                edge.srcNodeIdx = static_cast<uint32_t>(srcNodeIdx);
+                edge.dstNodeIdx = static_cast<uint32_t>(mit->second);
+                edge.sidechainOnly = false;
+                trackEdgeIndices[i].mainOutEdgeIdx = graph.edges.size();
+                graph.edges.push_back(edge);
+            }
+        }
+
+        // Explicit sends. Skip muted sends; preserve sidechainOnly flag so
+        // the solver can keep sidechain edges out of audio path latency (G2/P5).
+        const auto sends = channel->getSends();
+        for (size_t sendSlot = 0; sendSlot < sends.size(); ++sendSlot) {
+            const auto& send = sends[sendSlot];
+            if (send.mute) continue;
+            const auto dit = channelIdToNodeIdx.find(send.targetChannelId);
+            if (dit == channelIdToNodeIdx.end()) continue;
+            if (dit->second == srcNodeIdx) continue; // self-loops dropped at the source.
+            LatencyGraph::Edge edge;
+            edge.srcNodeIdx = static_cast<uint32_t>(srcNodeIdx);
+            edge.dstNodeIdx = static_cast<uint32_t>(dit->second);
+            edge.sidechainOnly = send.sidechainOnly;
+            trackEdgeIndices[i].sendEdgeBySlot.emplace_back(sendSlot, graph.edges.size());
+            graph.edges.push_back(edge);
+        }
+    }
+
+    // 2. Solve. Pure function. Off-RT.
+    const SolvedLatencyTopology topology = solveLatency(graph);
+
+    // 3. Apply solution to RT state (preserving existing ring-buffer behavior).
+    m_maxProjectLatency = topology.projectAlignmentLatency;
+
     int activeIdx = m_activeRenderTrackIndex.load(std::memory_order_relaxed);
     auto& rtStates = m_graphStates[activeIdx].trackStates;
-
     if (rtStates.size() < trackCount) {
         rtStates.resize(trackCount);
     }
 
-    for (size_t i = 0; i < trackCount && i < rtStates.size(); ++i) {
-        auto* channel = trackManager->getChannel(i);
-        if (!channel) continue;
+    for (size_t n = 0; n < topology.nodes.size(); ++n) {
+        const size_t trackIdx = nodeTrackIdx[n];
+        if (trackIdx >= rtStates.size()) continue;
+        const auto& sol = topology.nodes[n];
 
-        uint32_t trackLatency = channel->getEffectChain().getTotalLatency();
-        uint32_t compensationDelay = maxLatency - trackLatency;
+        auto& rtState = rtStates[trackIdx];
+        const uint32_t prevDelay = rtState.compensationDelaySamples;
+        rtState.pluginLatencySamples = sol.intrinsicLatency;
+        rtState.compensationDelaySamples = sol.outputCompensationSamples;
 
-        auto& rtState = rtStates[i];
-        rtState.pluginLatencySamples = trackLatency;
-        rtState.compensationDelaySamples = compensationDelay;
-
-        if (compensationDelay > 0) {
+        // v1 parity: reset the ring buffer when the delay changes. P6 (G3 smooth
+        // recompute) will replace this with a sample-hold / crossfade migration.
+        if (sol.outputCompensationSamples != prevDelay && sol.outputCompensationSamples > 0) {
             rtState.compensationBuffer.fill(0.0f);
             rtState.compensationWritePos = 0;
             rtState.compensationReadPos = 0;
         }
     }
 
-    // 3. Update graph state metadata
-    m_graphStates[activeIdx].maxProjectLatencySamples = maxLatency;
+    // 3b. P4b.2/P4b.3: Apply per-edge compensation values into TrackRTState's
+    //     per-edge slots. RT-safety contract:
+    //       * EdgeDelayState contains atomics; publish via release-store.
+    //       * Buffer growth: allocate new array, retire old into retiredBuffer
+    //         so any RT block in flight can finish reading. RT acquire-loads
+    //         the buffer pointer at block entry.
+    //       * compensationSamples / capacityMask atomically set after the
+    //         buffer pointer so an acquiring reader observes a consistent slot.
+    auto ensureEdgeCapacity = [](std::unique_ptr<EdgeDelayState>& slotPtr,
+                                 uint32_t requiredSamples,
+                                 uint32_t extraHeadroom) {
+        if (requiredSamples == 0) {
+            // Zero out the active comp value; keep any existing buffer alive
+            // so a follow-up grow can complete without a fresh allocation.
+            if (slotPtr) {
+                slotPtr->compensationSamples.store(0, std::memory_order_release);
+            }
+            return;
+        }
+        if (!slotPtr) {
+            slotPtr = std::make_unique<EdgeDelayState>();
+        }
+        // Round up to power of two >= required + extraHeadroom to give the RT
+        // path room for one block of writes ahead of reads.
+        uint32_t needed = requiredSamples + extraHeadroom;
+        uint32_t capacity = 1;
+        while (capacity < needed) capacity <<= 1;
+        const size_t bufferFrames = capacity;
+        const size_t bufferSamples = bufferFrames * 2u; // stereo interleaved
+
+        const uint32_t currentMask = slotPtr->capacityMask.load(std::memory_order_relaxed);
+        const bool needGrowth = (currentMask + 1u) < bufferFrames || slotPtr->bufferPtr.load(std::memory_order_relaxed) == nullptr;
+
+        if (needGrowth) {
+            // Retire the previous owning array. The single-deep retirement
+            // queue is enough: between two off-RT recomputes the RT thread has
+            // produced (and consumed) at least one block, so the previously-
+            // retired buffer is no longer referenced by any in-flight block.
+            slotPtr->retiredBuffer = std::move(slotPtr->ownedBuffer);
+            slotPtr->ownedBuffer = std::unique_ptr<float[]>(new float[bufferSamples]());
+            slotPtr->writePos = 0;
+            // Publish: write pointer first, then mask (acquire-side reads
+            // mask via the same critical section).
+            slotPtr->bufferPtr.store(slotPtr->ownedBuffer.get(), std::memory_order_release);
+            slotPtr->capacityMask.store(static_cast<uint32_t>(bufferFrames - 1), std::memory_order_release);
+        }
+        slotPtr->compensationSamples.store(requiredSamples, std::memory_order_release);
+    };
+
+    // One block of headroom is enough since the RT path will only ever look up
+    // values written within the current or previous block.
+    const uint32_t maxBlock = m_maxBufferFrames.load(std::memory_order_relaxed);
+    const uint32_t kEdgeHeadroomSamples = maxBlock > 0 ? maxBlock : 1024;
+
+    for (size_t i = 0; i < trackCount && i < rtStates.size(); ++i) {
+        auto& state = rtStates[i];
+        const auto& bookkeeping = trackEdgeIndices[i];
+
+        // mainOutputId edge -> mainOutEdgeDelay slot.
+        if (bookkeeping.mainOutEdgeIdx != static_cast<size_t>(-1) &&
+            bookkeeping.mainOutEdgeIdx < topology.edges.size()) {
+            const auto& edgeSol = topology.edges[bookkeeping.mainOutEdgeIdx];
+            ensureEdgeCapacity(state.mainOutEdgeDelay, edgeSol.compensationSamples, kEdgeHeadroomSamples);
+        } else {
+            ensureEdgeCapacity(state.mainOutEdgeDelay, 0, kEdgeHeadroomSamples);
+        }
+
+        // Sends -> sendEdgeDelays[slot].
+        // Grow the per-track vector if a send slot beyond current size is targeted.
+        size_t maxSendSlot = 0;
+        bool anySendSlot = false;
+        for (const auto& pair : bookkeeping.sendEdgeBySlot) {
+            if (!anySendSlot || pair.first > maxSendSlot) maxSendSlot = pair.first;
+            anySendSlot = true;
+        }
+        if (anySendSlot && state.sendEdgeDelays.size() <= maxSendSlot) {
+            state.sendEdgeDelays.resize(maxSendSlot + 1);
+        }
+        // Zero out comp on any slots not touched this generation (e.g., sends removed).
+        for (auto& slotPtr : state.sendEdgeDelays) {
+            if (slotPtr) {
+                slotPtr->compensationSamples.store(0, std::memory_order_release);
+            }
+        }
+        for (const auto& pair : bookkeeping.sendEdgeBySlot) {
+            const size_t sendSlot = pair.first;
+            const size_t edgeIdx = pair.second;
+            if (sendSlot >= state.sendEdgeDelays.size()) continue;
+            if (edgeIdx >= topology.edges.size()) continue;
+            const auto& edgeSol = topology.edges[edgeIdx];
+            ensureEdgeCapacity(state.sendEdgeDelays[sendSlot], edgeSol.compensationSamples, kEdgeHeadroomSamples);
+        }
+    }
+
+    // 4. Update RT-side graph state metadata (v1 contract preserved).
+    m_graphStates[activeIdx].maxProjectLatencySamples = topology.projectAlignmentLatency;
     m_graphStates[activeIdx].latencyCompensationEnabled = m_latencyCompensationEnabled;
+
+    // 5. Publish the solved topology via the lock-free double-buffer flip.
+    //    Write to the inactive slot, then store the index with release ordering
+    //    so readers acquire a fully-constructed topology.
+    {
+        const int prevIdx = m_activeSolvedTopologyIndex.load(std::memory_order_relaxed);
+        const int inactiveIdx = 1 - prevIdx;
+        m_solvedTopologies[inactiveIdx] = topology;
+        m_activeSolvedTopologyIndex.store(inactiveIdx, std::memory_order_release);
+    }
 
     m_latencyDirty = false;
 
-    if (maxLatency > 0) {
+    if (topology.projectAlignmentLatency > 0) {
         const uint32_t sr = m_sampleRate.load(std::memory_order_relaxed);
-        double latencyMs = (sr > 0) ? ((maxLatency * 1000.0) / sr) : 0.0;
-        Aestra::Log::info("[PDC] Max latency = " + std::to_string(maxLatency) + " samples (" +
-                         std::to_string(latencyMs) + " ms)");
+        double latencyMs = (sr > 0) ? ((topology.projectAlignmentLatency * 1000.0) / sr) : 0.0;
+        Aestra::Log::info("[PDC] Max latency = " + std::to_string(topology.projectAlignmentLatency) +
+                         " samples (" + std::to_string(latencyMs) + " ms)");
     }
+
+    // Off-RT: log any solver warnings once per generation.
+    for (const auto& warning : topology.warnings) {
+        Aestra::Log::warning("[PDC] " + warning);
+    }
+}
+
+SolvedLatencyTopology AudioEngine::getLastSolvedLatencyTopology() const {
+    // Lock-free read: acquire the active index, copy the slot. The writer
+    // released the slot before flipping the index, so the snapshot we see is
+    // fully constructed.
+    const int idx = m_activeSolvedTopologyIndex.load(std::memory_order_acquire);
+    return m_solvedTopologies[idx];
+}
+
+AudioEngine::TrackEdgeDelaySnapshot AudioEngine::getTrackEdgeDelaySnapshot(size_t trackIndex) const {
+    TrackEdgeDelaySnapshot snap;
+    const int activeIdx = m_activeRenderTrackIndex.load(std::memory_order_acquire);
+    const auto& rtStates = m_graphStates[activeIdx].trackStates;
+    if (trackIndex >= rtStates.size()) {
+        return snap; // valid = false
+    }
+    const auto& state = rtStates[trackIndex];
+    snap.valid = true;
+
+    auto fillSlot = [](const std::unique_ptr<EdgeDelayState>& slotPtr) {
+        TrackEdgeDelaySnapshot::EdgeSlotSnapshot s;
+        if (!slotPtr) return s;
+        s.compensationSamples = slotPtr->compensationSamples.load(std::memory_order_acquire);
+        s.capacityMask = slotPtr->capacityMask.load(std::memory_order_acquire);
+        const uint32_t capFrames = (s.capacityMask == 0 && slotPtr->bufferPtr.load(std::memory_order_acquire) == nullptr)
+                                       ? 0u
+                                       : (s.capacityMask + 1u);
+        s.bufferBytes = static_cast<size_t>(capFrames) * 2u * sizeof(float);
+        s.writePos = slotPtr->writePos;
+        return s;
+    };
+
+    snap.mainOutEdgeDelay = fillSlot(state.mainOutEdgeDelay);
+    snap.sendEdgeDelays.reserve(state.sendEdgeDelays.size());
+    for (const auto& slot : state.sendEdgeDelays) {
+        snap.sendEdgeDelays.push_back(fillSlot(slot));
+    }
+    return snap;
 }
 
 void AudioEngine::setLatencyCompensationEnabled(bool enabled) {
