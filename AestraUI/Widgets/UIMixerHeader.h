@@ -3,6 +3,8 @@
 
 #include "NUIComponent.h"
 #include "NUITypes.h"
+#include "TrackColorPalette.h"
+#include "NUIContextMenu.h"
 #include <string>
 
 namespace AestraUI {
@@ -15,19 +17,27 @@ public:
     UIMixerHeader();
 
     void onRender(NUIRenderer& renderer) override;
+    bool onMouseEvent(const NUIMouseEvent& event) override;
 
     void setTrackName(std::string name);
     void setRouteName(std::string route);
     void setTrackColor(uint32_t argb);
+    void setTrackColorIndex(int index);
     void setSelected(bool selected);
     void setIsMaster(bool isMaster);
+
+    // Fired when user picks a color from the context menu
+    std::function<void(int colorIndex)> onColorChanged;
 
 private:
     std::string m_name;
     std::string m_route;
+    int m_colorIndex{-1};
     uint32_t m_trackColorArgb{0xFF808080};
     bool m_selected{false};
     bool m_isMaster{false};
+
+    std::shared_ptr<NUIContextMenu> m_colorMenu;
 
     // Cached theme colors
     NUIColor m_text;

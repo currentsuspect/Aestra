@@ -59,6 +59,13 @@ void UIMixerHeader::setTrackColor(uint32_t argb)
     repaint();
 }
 
+void UIMixerHeader::setTrackColorIndex(int index)
+{
+    if (m_colorIndex == index) return;
+    m_colorIndex = index;
+    setTrackColor(paletteIndexToARGB(index));
+}
+
 void UIMixerHeader::setSelected(bool selected)
 {
     if (m_selected == selected) return;
@@ -173,6 +180,43 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
                                   routeFont,
                                   m_selected ? m_textSecondary.withAlpha(0.96f) : m_textSecondary.withAlpha(0.88f));
     }
+}
+
+bool UIMixerHeader::onMouseEvent(const NUIMouseEvent& event)
+{
+    if (!isVisible() || !isEnabled()) return false;
+
+    if (event.pressed && event.button == NUIMouseButton::Right) {
+        if (!m_colorMenu) {
+            m_colorMenu = std::make_shared<NUIContextMenu>();
+            m_colorMenu->setCloseOnSelection(true);
+        }
+        m_colorMenu->clear();
+
+        auto header = m_colorMenu;
+        for (int i = 0; i < PALETTE_SIZE; ++i) {
+            const bool selected = (i == m_colorIndex);
+            std::string label = PALETTE_NAMES[i];
+            auto item = std::make_shared<NUIContextMenuItem>(label, NUIContextMenuItem::Type::Radio);
+            item->setChecked(selected);
+            item->setOnClick([this, i]() {
+                m_colorIndex = i;
+                m_trackColorArgb = paletteIndexToARGB(i);
+                repaint();
+                if (onColorChanged) onColorChanged(i);
+            });
+            header->addItem(item);
+        }
+
+        NUIPoint globalPos = localToGlobal(event.position);
+        NUIComponent* root = this;
+        while (root->getParent()) root = root->getParent();
+        root->addChild(m_colorMenu);
+        m_colorMenu->showAt(globalPos);
+        return true;
+    }
+
+    return false;
 }
 
 } // namespace AestraUI

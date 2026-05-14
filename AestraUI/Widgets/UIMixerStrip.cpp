@@ -173,6 +173,13 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
 
     m_header = std::make_shared<UIMixerHeader>();
     m_header->setIsMaster(m_channelId == 0);
+    m_header->onColorChanged = [this](int index) {
+        if (!m_viewModel) return;
+        auto* channel = m_viewModel->getChannelById(m_channelId);
+        if (!channel) return;
+        channel->trackColorIndex = index;
+        invalidateStaticCache();
+    };
     addChild(m_header);
 
     // Input Selector REMOVED (Moved to Inspector)
@@ -550,12 +557,11 @@ void UIMixerStrip::onUpdate(double deltaTime)
             invalidateStaticCache();
         }
         m_header->setRouteName(stripRoute);
-        uint32_t resolvedColor = paletteIndexToARGB(channel->trackColorIndex);
-        if (m_cachedTrackColorArgb != resolvedColor) {
-            m_cachedTrackColorArgb = resolvedColor;
+        if (m_cachedTrackColorArgb != static_cast<uint32_t>(channel->trackColorIndex + 1)) {
+            m_cachedTrackColorArgb = static_cast<uint32_t>(channel->trackColorIndex + 1);
             invalidateStaticCache();
         }
-        m_header->setTrackColor(resolvedColor);
+        m_header->setTrackColorIndex(channel->trackColorIndex);
         m_header->setSelected(selected);
     }
 
