@@ -138,7 +138,7 @@ private:
     // Helpers
     void handleMidiEvent(const MidiBuffer::Event& event, double baseRate);
     void renderVoice(Voice& voice, float* outL, float* outR, uint32_t frames);
-    float getEnvelopeLevel(Voice& voice, double dt);
+    float getEnvelopeLevel(Voice& voice, double dt, float attack, float decay, float sustain, float release);
 };
 
 } // namespace Plugins
