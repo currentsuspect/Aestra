@@ -271,6 +271,15 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     // Source Rate correction
     double baseRate = (double)currentData->rate / m_sampleRate;
 
+    // Preload per-block constants from atomics (UI thread writes, audio thread reads)
+    // These change rarely — loading once eliminates per-voice per-sample atomic traffic
+    const float attackMs = std::max(m_params[kParamAttack].load(std::memory_order_relaxed), 0.001f);
+    const float decayMs = std::max(m_params[kParamDecay].load(std::memory_order_relaxed), 0.001f);
+    const float sustainLevel = m_params[kParamSustain].load(std::memory_order_relaxed);
+    const float releaseMs = std::max(m_params[kParamRelease].load(std::memory_order_relaxed), 0.001f);
+    const float cachedGlideTimeMs = m_glideTimeMs.load(std::memory_order_relaxed);
+    const double invSampleRate = 1.0 / m_sampleRate;
+
     // Events
     uint32_t eventIdx = 0;
     size_t eventCount = midiInput ? midiInput->getEventCount() : 0;
@@ -329,12 +338,11 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
                 continue;
 
             if (v.glideActive) {
-                const float glideTimeMs = m_glideTimeMs.load(std::memory_order_relaxed);
-                if (glideTimeMs <= 0.0f) {
+                if (cachedGlideTimeMs <= 0.0f) {
                     v.playbackRate = v.targetPlaybackRate;
                     v.glideActive = false;
                 } else {
-                    const double glideSamples = std::max(1.0, (static_cast<double>(glideTimeMs) * m_sampleRate) / 1000.0);
+                    const double glideSamples = std::max(1.0, (static_cast<double>(cachedGlideTimeMs) * m_sampleRate) / 1000.0);
                     const double glideCoeff = 1.0 - std::exp(-1.0 / glideSamples);
                     v.playbackRate += (v.targetPlaybackRate - v.playbackRate) * glideCoeff;
                     if (std::abs(v.targetPlaybackRate - v.playbackRate) < 1.0e-5) {
@@ -345,11 +353,9 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             }
 
             // In one-shot mode there may be no note-off; trigger a timed release near the end
-            // so ADSR remains meaningful for per-hit shaping.
             if (!loopEnabled && v.stage != EnvStage::Release && v.stage != EnvStage::Off) {
                 const double framesToEnd = endFrame - v.position;
-                const float releaseSec = std::max(m_params[kParamRelease].load(std::memory_order_relaxed), 0.001f);
-                const double releaseFrames = releaseSec * m_sampleRate;
+                const double releaseFrames = static_cast<double>(releaseMs) * m_sampleRate;
                 if (framesToEnd <= releaseFrames) {
                     v.stage = EnvStage::Release;
                     v.stageTime = 0.0;
@@ -357,8 +363,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
                 }
             }
 
-            // Envelope
-            float env = getEnvelopeLevel(v, 1.0 / m_sampleRate);
+            // Envelope (uses preloaded ADSR — no atomic loads)
+            float env = getEnvelopeLevel(v, invSampleRate, attackMs, decayMs, sustainLevel, releaseMs);
             if (v.stage == EnvStage::Off) {
                 v.active = false;
                 activeVoiceCountDirty = true;
@@ -371,7 +377,9 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             }
             if (v.position >= endFrame) {
                 if (loopEnabled) {
-                    v.position = startFrame + std::fmod(v.position - startFrame, loopLength);
+                    const double offset = v.position - startFrame;
+                    const double wraps = std::floor(offset / loopLength);
+                    v.position = startFrame + offset - wraps * loopLength;
                 } else {
                     v.active = false;
                     activeVoiceCountDirty = true;
@@ -519,46 +527,37 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
     }
 }
 
-float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt) {
+float SamplerPlugin::getEnvelopeLevel(Voice& v, double dt, float attack, float decay, float sustain, float release) {
     v.stageTime += dt;
-
-    float a = m_params[kParamAttack].load(std::memory_order_relaxed);
-    float d = m_params[kParamDecay].load(std::memory_order_relaxed);
-    float s = m_params[kParamSustain].load(std::memory_order_relaxed);
-    float r = m_params[kParamRelease].load(std::memory_order_relaxed);
-
-    a = std::max(a, 0.001f);
-    d = std::max(d, 0.001f);
-    r = std::max(r, 0.001f);
 
     switch (v.stage) {
     case EnvStage::Attack:
-        if (v.stageTime >= a) {
+        if (v.stageTime >= attack) {
             v.stage = EnvStage::Decay;
             v.stageTime = 0.0;
             v.currentGain = 1.0f;
         } else {
-            v.currentGain = v.stageTime / a;
+            v.currentGain = static_cast<float>(v.stageTime / attack);
         }
         break;
     case EnvStage::Decay:
-        if (v.stageTime >= d) {
+        if (v.stageTime >= decay) {
             v.stage = EnvStage::Sustain;
             v.stageTime = 0.0;
-            v.currentGain = s;
+            v.currentGain = sustain;
         } else {
-            v.currentGain = 1.0f - (v.stageTime / d) * (1.0f - s);
+            v.currentGain = 1.0f - static_cast<float>(v.stageTime / decay) * (1.0f - sustain);
         }
         break;
     case EnvStage::Sustain:
-        v.currentGain = s;
+        v.currentGain = sustain;
         break;
     case EnvStage::Release:
-        if (v.stageTime >= r) {
+        if (v.stageTime >= release) {
             v.stage = EnvStage::Off;
             v.currentGain = 0.0f;
         } else {
-            v.currentGain = v.releaseGain * (1.0f - v.stageTime / r);
+            v.currentGain = v.releaseGain * static_cast<float>(1.0 - v.stageTime / release);
         }
         break;
     case EnvStage::Off:

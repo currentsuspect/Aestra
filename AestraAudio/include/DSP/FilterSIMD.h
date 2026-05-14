@@ -78,20 +78,21 @@ namespace FilterSIMD {
  */
 inline void processBlockStereoSSE(float* left, float* right, uint32_t numSamples, StereoFilterState& state,
                                   const StereoFilterCoeffs& coeffs) noexcept {
-    // Load coefficients into registers
-    __m128 vB0 = _mm_set_ps(0.0f, 0.0f, coeffs.b0[1], coeffs.b0[0]);
-    __m128 vB1 = _mm_set_ps(0.0f, 0.0f, coeffs.b1[1], coeffs.b1[0]);
-    __m128 vB2 = _mm_set_ps(0.0f, 0.0f, coeffs.b2[1], coeffs.b2[0]);
-    __m128 vA1 = _mm_set_ps(0.0f, 0.0f, coeffs.a1[1], coeffs.a1[0]);
-    __m128 vA2 = _mm_set_ps(0.0f, 0.0f, coeffs.a2[1], coeffs.a2[0]);
+    // Load coefficients via 64-bit load (avoids _mm_set_ps scalar reconstruction)
+    __m128 vB0 = _mm_castsi128_ps(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&coeffs.b0[0])));
+    __m128 vB1 = _mm_castsi128_ps(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&coeffs.b1[0])));
+    __m128 vB2 = _mm_castsi128_ps(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&coeffs.b2[0])));
+    __m128 vA1 = _mm_castsi128_ps(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&coeffs.a1[0])));
+    __m128 vA2 = _mm_castsi128_ps(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(&coeffs.a2[0])));
 
     // Load state
-    __m128 vX1 = _mm_set_ps(0.0f, 0.0f, state.x1[1], state.x1[0]);
-    __m128 vX2 = _mm_set_ps(0.0f, 0.0f, state.x2[1], state.x2[0]);
+    __m128 vX1 = _mm_castsi128_ps(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(state.x1)));
+    __m128 vX2 = _mm_castsi128_ps(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(state.x2)));
 
     for (uint32_t i = 0; i < numSamples; ++i) {
-        // Load L+R input
-        __m128 vIn = _mm_set_ps(0.0f, 0.0f, right[i], left[i]);
+        // Pack L+R into a 64-bit temp for single-load efficiency
+        float lr[2] = { left[i], right[i] };
+        __m128 vIn = _mm_castsi128_ps(_mm_loadl_epi64(reinterpret_cast<const __m128i*>(lr)));
 
         // Direct Form II Transposed:
         // output = b0 * input + x1
@@ -107,7 +108,7 @@ inline void processBlockStereoSSE(float* left, float* right, uint32_t numSamples
         vX1 = vNewX1;
         vX2 = vNewX2;
 
-        // Extract and store output
+        // Extract and store L+R from low 64 bits of vOut
         alignas(16) float out[4];
         _mm_store_ps(out, vOut);
         left[i] = out[0];
@@ -115,13 +116,8 @@ inline void processBlockStereoSSE(float* left, float* right, uint32_t numSamples
     }
 
     // Store state back
-    alignas(16) float stateOut[4];
-    _mm_store_ps(stateOut, vX1);
-    state.x1[0] = stateOut[0];
-    state.x1[1] = stateOut[1];
-    _mm_store_ps(stateOut, vX2);
-    state.x2[0] = stateOut[0];
-    state.x2[1] = stateOut[1];
+    _mm_storel_epi64(reinterpret_cast<__m128i*>(state.x1), _mm_castps_si128(vX1));
+    _mm_storel_epi64(reinterpret_cast<__m128i*>(state.x2), _mm_castps_si128(vX2));
 }
 
 #endif // AESTRA_FILTER_HAS_SSE

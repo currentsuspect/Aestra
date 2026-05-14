@@ -66,9 +66,23 @@ public:
     }
 
     void process(float* buffer, uint32_t numFrames) {
+        const float b0 = m_b0, b1 = m_b1, b2 = m_b2;
+        const float a1 = m_a1, a2 = m_a2;
+        float z1 = m_z1, z2 = m_z2;
         for (uint32_t i = 0; i < numFrames; ++i) {
-            buffer[i] = process(buffer[i]);
+            const float in = buffer[i];
+            if (!std::isfinite(in)) {
+                z1 = z2 = 0.0f;
+                buffer[i] = 0.0f;
+                continue;
+            }
+            const float out = b0 * in + z1;
+            z1 = b1 * in - a1 * out + z2;
+            z2 = b2 * in - a2 * out;
+            buffer[i] = out;
         }
+        m_z1 = z1;
+        m_z2 = z2;
     }
 
 private:
@@ -321,9 +335,8 @@ public:
             const uint32_t blockEnd = std::min(sampleOffset + kBlockSize, numFrames);
             const uint32_t blockFrames = blockEnd - sampleOffset;
 
-            smoothParameters(smoothCoeff);
-            const bool smoothingPending = hasPendingSmoothedParameterChanges();
-            if (m_filtersDirty.exchange(smoothingPending, std::memory_order_acq_rel) || smoothingPending) {
+            const bool smoothingPending = smoothParametersAndCheckPending(smoothCoeff);
+            if (m_filtersDirty.exchange(false, std::memory_order_acq_rel) || smoothingPending) {
                 rebuildAllCoefficients();
             }
 
@@ -754,26 +767,19 @@ static uint32_t bandV1EnableId(uint32_t band) {
     }
 
     // ---- Smoothing ----
-    void smoothParameters(float coeff) {
+    // Combines smoothing and pending-change check into a single pass
+    // to avoid a redundant 22-param iteration per block.
+    bool smoothParametersAndCheckPending(float coeff) {
+        bool changed = false;
         for (uint32_t i = 0; i < kV1ParamCount; ++i) {
             if (i == kParamBypass) continue;
             const float target = m_params[i].load(std::memory_order_relaxed);
             float current = m_smoothed[i].load(std::memory_order_relaxed);
             current += (target - current) * coeff;
             m_smoothed[i].store(current, std::memory_order_relaxed);
+            changed = changed || (std::abs(target - current) > 1.0e-4f);
         }
-    }
-
-    bool hasPendingSmoothedParameterChanges() const {
-        for (uint32_t i = 0; i < kV1ParamCount; ++i) {
-            if (i == kParamBypass) continue;
-            const float target = m_params[i].load(std::memory_order_relaxed);
-            const float current = m_smoothed[i].load(std::memory_order_relaxed);
-            if (std::abs(target - current) > 1.0e-4f) {
-                return true;
-            }
-        }
-        return false;
+        return changed;
     }
 
     // ---- Coefficient rebuild ----
