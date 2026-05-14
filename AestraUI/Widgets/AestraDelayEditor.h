@@ -38,6 +38,7 @@ private:
 
     void buildControls();
     void layoutControls();
+    void drawBypassPill(NUIRenderer& renderer);
     void drawPillSwitches(NUIRenderer& renderer, float wx, float wy);
     void drawSyncPanel(NUIRenderer& renderer, float wx, float wy);
     void drawKnob(NUIRenderer& renderer, const KnobControl& k, float wx, float wy);
@@ -60,8 +61,10 @@ private:
     NUIRect m_syncRect;
     NUIRect m_stereoRect;
     NUIRect m_pingPongRect;
+    NUIRect m_bypassRect;
     NUIRect m_mixSliderRect;
     NUIRect m_syncReadoutRect;
+    bool m_bypassHovered = false;
 
     int m_hoveredBaseButton = -1;
     int m_hoveredModifierButton = -1;
@@ -70,7 +73,7 @@ private:
     bool m_draggingMix = false;
 
     static constexpr float kWinW = 620.0f;
-    static constexpr float kWinH = 360.0f;
+    static constexpr float kWinH = 400.0f;
     static constexpr float kPad = 20.0f;
     static constexpr float kRadius = 15.0f;
     static constexpr float kKnobSize = 50.0f;
