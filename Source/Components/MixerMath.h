@@ -60,7 +60,7 @@ inline float linearToDb(float linear) {
  * @return Formatted string (e.g., "-12.5", "0.0", "-∞")
  */
 inline std::string formatDb(float db) {
-    if (db <= DB_SILENCE_THRESHOLD) return "-\xE2\x88\x9E"; // UTF-8 infinity symbol
+    if (db <= DB_SILENCE_THRESHOLD) return "\xE2\x88\x92\xE2\x88\x9E"; // UTF-8 infinity symbol
     char buf[16];
     std::snprintf(buf, sizeof(buf), "%.1f", db);
     return buf;
