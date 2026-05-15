@@ -150,6 +150,14 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
 
     std::lock_guard<std::mutex> lock(m_mutex);
 
+    // Process deferred flush from audio thread
+    if (m_flushRequested.exchange(false, std::memory_order_acq_rel)) {
+        for (auto& inst : m_activeInstances) {
+            inst.scheduledThroughFrame = 0;
+        }
+        m_lastRefillFrame = 0;
+    }
+
     if (currentFrame < m_lastRefillFrame) {
         for (auto& inst : m_activeInstances) {
             inst.scheduledThroughFrame = 0;
@@ -268,40 +276,6 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
     }
 }
 
-void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize,
-                                         std::map<UnitID, MidiBuffer*>& unitMidiBuffers) {
-    ScheduledEvent ev;
-
-    while (m_rtQueue.peek(ev)) {
-        // Check if event is in current buffer
-        if (ev.sampleFrame >= currentFrame + static_cast<uint64_t>(bufferSize)) {
-            break; // Event is in the future
-        }
-
-        // Check cancellation flag (RT-safe)
-        if (m_instanceCancelled[ev.instanceId].load(std::memory_order_acquire)) {
-            m_rtQueue.pop();
-            continue; // Skip cancelled events
-        }
-
-        // Calculate offset in buffer
-        int offset = static_cast<int>(ev.sampleFrame - currentFrame);
-        offset = std::max(0, std::min(offset, bufferSize - 1));
-
-        // Route to Unit
-        if (ev.unitId != 0) {
-            auto it = unitMidiBuffers.find(ev.unitId);
-            if (it != unitMidiBuffers.end() && it->second) {
-                uint8_t data[3] = {ev.statusByte, ev.data1, ev.data2};
-                it->second->addEvent(static_cast<uint32_t>(offset), data, 3);
-                m_processedCounter.fetch_add(1, std::memory_order_relaxed);
-            }
-        }
-
-        m_rtQueue.pop();
-    }
-}
-
 void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, const UnitMidiRoute* routes,
                                          size_t routeCount) noexcept {
     if (!routes || routeCount == 0 || bufferSize <= 0) {
@@ -348,15 +322,15 @@ void PatternPlaybackEngine::processAudio(uint64_t currentFrame, int bufferSize, 
 }
 
 void PatternPlaybackEngine::flush() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    for (auto& inst : m_activeInstances) {
-        inst.scheduledThroughFrame = 0;
-    }
-    ScheduledEvent ev;
-    while (m_rtQueue.peek(ev)) {
-        m_rtQueue.pop();
-    }
-    m_lastRefillFrame = 0;
+    // RT-safe: set atomic flag for deferred processing by non-RT maintenance.
+    // The SPSC queue and m_activeInstances are only safely mutable from the
+    // control thread, so actual drain/reset happens in refillWindow().
+    m_flushRequested.store(true, std::memory_order_release);
+
+    // Drain the RT queue lock-free from the producer side.
+    // Resetting m_head to m_tail is safe because the consumer (audio thread)
+    // only reads m_tail, and any events pushed after this reset are legitimate.
+    m_rtQueue.forceDrain();
 }
 
 } // namespace Audio

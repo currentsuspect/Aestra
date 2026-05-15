@@ -86,24 +86,6 @@ private:
         return true;
     }
 
-    // =========================================================================
-    // Migration Functions
-    // =========================================================================
-
-    // Example: Migrate from v1 to v2
-    // static bool migrateV1ToV2(JSON& root) {
-    //     // Rename old field to new field
-    //     if (root.has("clips")) {
-    //         JSON newClips = JSON::array();
-    //         for (size_t i = 0; i < root["clips"].size(); ++i) {
-    //             JSON clip = root["clips"][i];
-    //             // Transform clip...
-    //             newClips.push(clip);
-    //         }
-    //         root.set("clips", newClips);
-    //     }
-    //     return true;
-    // }
 };
 
 } // namespace Aestra

@@ -3872,19 +3872,6 @@ bool FileBrowser::handleSearchBoxMouseEvent(const NUIMouseEvent& event) {
     return false;
 }
 
-// setPreviewPanelVisible removed - functionality moved to FilePreviewPanel
-/*
-void FileBrowser::setPreviewPanelVisible(bool visible) {
-    if (previewPanelVisible_ == visible) return;
-    previewPanelVisible_ = visible;
-
-    // Trigger layout update and ensuring scrolling is clamped
-    NUIRect b = getBounds();
-    onResize(b.width, b.height);
-    invalidateCache();
-}
-*/
-
 // renderPreviewPanel is implemented at the bottom of this file
 
 std::string FileBrowser::getSearchQuery() const {

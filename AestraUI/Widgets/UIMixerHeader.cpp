@@ -185,6 +185,7 @@ void UIMixerHeader::onRender(NUIRenderer& renderer)
 bool UIMixerHeader::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;
+    if (!getBounds().contains(event.position)) return false;
 
     if (event.pressed && event.button == NUIMouseButton::Right) {
         if (!m_colorMenu) {

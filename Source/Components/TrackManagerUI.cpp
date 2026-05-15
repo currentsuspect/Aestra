@@ -166,37 +166,6 @@ TrackManagerUI::TrackManagerUI(std::shared_ptr<TrackManager> trackManager)
     // Defer track UI creation to first render for instant startup.
     // refreshTracks() will be called lazily in onRender() via m_needsTrackRefresh.
 
-    // Register as observer of the playlist model to handle dynamic changes
-    // TODO: addChangeObserver not yet implemented in PlaylistModel
-    // m_trackManager->getPlaylistModel().addChangeObserver([this]() {
-    //     if (m_suppressPlaylistRefresh) return;
-    //
-    //     Log::info("[TrackManagerUI] Playlist model changed, refreshing UI...");
-    //     refreshTracks();
-    //     invalidateCache();
-    //     scheduleTimelineMinimapRebuild();
-    //     setDirty(true);
-    //
-    //     // Auto-update loop region if in "Project" mode (preset 6)
-    //     if (m_loopPreset == 6 && m_trackManager) {
-    //         double projectEndBeat = m_trackManager->getPlaylistModel().getTotalDurationBeats();
-    //         if (projectEndBeat > 0.001) {
-    //             // Update internal loop markers
-    //             m_loopStartBeat = 0.0;
-    //             m_loopEndBeat = projectEndBeat;
-    //             m_loopEnabled = true;
-    //
-    //             // Notify audio engine to update loop region
-    //             if (m_onLoopRegionUpdate) {
-    //                 m_onLoopRegionUpdate(0.0, projectEndBeat);
-    //             }
-    //
-    //             Log::info("[TrackManagerUI] Project loop auto-updated: 0 to " + std::to_string(projectEndBeat) + "
-    //             beats");
-    //         }
-    //     }
-    // });
-
     // Create tool icons
     createToolIcons();
 

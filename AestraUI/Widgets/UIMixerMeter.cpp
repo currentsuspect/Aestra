@@ -316,7 +316,7 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     }
     
     // Draw Value Readout (Top)
-    // Master: Show both LUFS (top line) and Peak dB (bottom line)
+    // Master: Peak dB primary, LUFS secondary (below, smaller, dimmed)
     // Tracks: Show Peak dB only
     
     // Get peak value (used for both master and regular tracks)
@@ -330,11 +330,11 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
     bool hasLufs = (m_integratedLufs > -100.0f);
     
     if (hasLufs && hasPeak) {
-        // Master channel: Show LUFS on top, dB below
+        // Master channel: Peak dB primary, LUFS secondary below
         if (std::abs(m_integratedLufs - m_cachedLufs) > 0.05f) {
             m_cachedLufs = m_integratedLufs;
             char buf[32];
-            std::snprintf(buf, sizeof(buf), "%.1f LUFS", m_integratedLufs);
+            std::snprintf(buf, sizeof(buf), "%.1f", m_integratedLufs);
             m_cachedLufsStr = buf;
         }
         if (std::abs(peak - m_cachedDbPeak) > 0.05f) {
@@ -351,23 +351,24 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         // Each line gets half the text area (12px each with 24px total)
         float lineHeight = TEXT_HEIGHT * 0.5f;
         
-        // LUFS on top - slightly larger, primary readout
-        NUIRect lufsRect = {
+        // Peak dB on top - primary readout, same weight as track meters
+        NUIRect dbRect = {
             bounds.x,
             bounds.y + 1.0f,  // Small top padding
             bounds.width,
             lineHeight
         };
-        renderer.drawTextCentered(m_cachedLufsStr, lufsRect, 10.0f, m_colorPeakHold);
+        renderer.drawTextCentered(m_cachedDbStr, dbRect, 11.0f, m_colorPeakHold);
         
-        // dB below - secondary readout
-        NUIRect dbRect = {
+        // LUFS below - secondary readout, smaller, dimmed, with label prefix
+        NUIRect lufsRect = {
             bounds.x,
             bounds.y + lineHeight,
             bounds.width,
             lineHeight
         };
-        renderer.drawTextCentered(m_cachedDbStr, dbRect, 9.0f, m_colorPeakHold.withAlpha(0.75f));
+        std::string lufsLabel = "LUFS " + m_cachedLufsStr;
+        renderer.drawTextCentered(lufsLabel, lufsRect, 7.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.45f));
         
     } else if (hasPeak) {
         // Regular tracks: Show Peak dB or −∞ at silence floor

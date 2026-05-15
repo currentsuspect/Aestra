@@ -114,7 +114,8 @@ void MixerChannel::processAudio(float* outputBuffer, uint32_t numFrames, double 
 
     // Process through insert effect chain (if any plugins loaded)
     // Pass 3: Use snapshot for RT-safety when available
-    if (m_effectChainSnapshot && m_effectChainSnapshot->getActiveSlotCount() > 0) {
+    auto snapshot = std::atomic_load(&m_effectChainSnapshot);
+    if (snapshot && snapshot->getActiveSlotCount() > 0) {
         // Audio buffer is interleaved stereo (LRLRLRLR...)
         // Plugins expect planar format (LL...LL, RR...RR)
         // So we need to de-interleave -> process -> re-interleave
@@ -130,7 +131,7 @@ void MixerChannel::processAudio(float* outputBuffer, uint32_t numFrames, double 
 
         float* channels[2] = {m_leftChannelBuf.data(), m_rightChannelBuf.data()};
 
-        m_effectChainSnapshot->process(channels, 2, numFrames, nullptr, 0, m_dryChannelBuf.data());
+        snapshot->process(channels, 2, numFrames, nullptr, 0, m_dryChannelBuf.data());
 
         for (uint32_t i = 0; i < numFrames; ++i) {
             outputBuffer[i * 2] = m_leftChannelBuf[i];

@@ -1232,9 +1232,10 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
                 auto readout = meterSnapshots->readSnapshot(slotIndex);
                 
                 // Use peak levels (linear 0..1+), average L/R for mono display
+                // Note: MeterSnapshotBuffer already reports post-fader levels,
+                // do NOT multiply by track volume again.
                 float level = (readout.peakL + readout.peakR) * 0.5f;
-                level = level * m_channel->getVolume(); // Scale by track volume
-                
+
                 if (level > 0.001f) {
                     level = std::min(1.0f, std::max(0.0f, level));
                     float visualLevel = std::pow(level, 0.5f); // Perceptual scaling
@@ -1599,52 +1600,6 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
              }
         }
     }
-
-    // DISABLED: LOOP REGION HIGHLIGHT (using blue ruler/grid highlight instead)
-    /*
-    if (m_loopEnabled && m_loopEndBeat > m_loopStartBeat) {
-        // Convert loop beats to pixel positions
-        float loopStartX = gridStartX + (static_cast<float>(m_loopStartBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-        float loopEndX = gridStartX + (static_cast<float>(m_loopEndBeat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-        
-        // Clamp to grid bounds
-        float drawStartX = std::max(loopStartX, gridStartX);
-        float drawEndX = std::min(loopEndX, gridEndX);
-        float loopWidth = drawEndX - drawStartX;
-        
-        if (loopWidth > 0 && drawStartX < gridEndX) {
-            // Glass-colored loop region highlight
-            AestraUI::NUIColor loopFillColor = themeManager.getColor("accentCyan").withAlpha(0.08f);
-            renderer.fillRect(
-                AestraUI::NUIRect(drawStartX, bounds.y, loopWidth, bounds.height),
-                loopFillColor
-            );
-            
-            // Draw loop boundary markers (vertical lines at start and end)
-            AestraUI::NUIColor loopMarkerColor = themeManager.getColor("accentCyan").withAlpha(0.6f);
-            
-            // Start marker (if visible)
-            if (loopStartX >= gridStartX && loopStartX <= gridEndX) {
-                renderer.drawLine(
-                    AestraUI::NUIPoint(loopStartX, bounds.y),
-                    AestraUI::NUIPoint(loopStartX, bounds.y + bounds.height),
-                    2.0f,
-                    loopMarkerColor
-                );
-            }
-            
-            // End marker (if visible)
-            if (loopEndX >= gridStartX && loopEndX <= gridEndX) {
-                renderer.drawLine(
-                    AestraUI::NUIPoint(loopEndX, bounds.y),
-                    AestraUI::NUIPoint(loopEndX, bounds.y + bounds.height),
-                    2.0f,
-                    loopMarkerColor
-                );
-            }
-        }
-    }
-    */
 
     // 2. GRID LINES SYNCED TO RULER LABEL INTERVAL
     // Mirror the ruler's barStride logic exactly so major grid lines always align

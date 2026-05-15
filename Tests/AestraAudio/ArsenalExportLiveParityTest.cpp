@@ -162,6 +162,9 @@ ScenarioResult runScenario(const std::filesystem::path& tempRoot,
 
     uint32_t rendered = 0;
     while (rendered < totalFrames) {
+        // Maintain pattern engine lookahead (normally called by performNonRealtimeMaintenance)
+        tm->getPatternPlaybackEngine().refillWindow(
+            rendered, static_cast<int>(kSampleRate), static_cast<int>(kSampleRate));
         const uint32_t framesThisBlock = std::min(kBlockSize, totalFrames - rendered);
         std::fill(liveBlock.begin(), liveBlock.end(), 0.0f);
         engine.processBlock(liveBlock.data(), nullptr, framesThisBlock, 0.0);
@@ -285,6 +288,9 @@ void runMixedScenario(const std::filesystem::path& tempRoot, float trackVolume) 
 
     uint32_t rendered = 0;
     while (rendered < totalFrames) {
+        // Maintain pattern engine lookahead (normally called by performNonRealtimeMaintenance)
+        tm->getPatternPlaybackEngine().refillWindow(
+            rendered, static_cast<int>(kSampleRate), static_cast<int>(kSampleRate));
         const uint32_t framesThisBlock = std::min(kBlockSize, totalFrames - rendered);
         std::fill(liveBlock.begin(), liveBlock.end(), 0.0f);
         engine.processBlock(liveBlock.data(), nullptr, framesThisBlock, 0.0);

@@ -3108,6 +3108,12 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         ctx.isOffline = true;
         ctx.isolatedTrackIndex = isolatedTrackIndex;
 
+        // Refill pattern engine lookahead (normally done by performNonRealtimeMaintenance)
+        auto* patEng = m_patternEngine.load(std::memory_order_acquire);
+        if (patEng) {
+            patEng->refillWindow(currentFrame, static_cast<int>(sampleRate), static_cast<int>(blockSize));
+        }
+
         // Render
         m_rtRenderer.renderBlock(ctx, graphState, *this);
 

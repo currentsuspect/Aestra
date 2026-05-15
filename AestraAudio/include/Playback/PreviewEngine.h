@@ -65,7 +65,7 @@ private:
         double fadeOutPos{0.0};
         std::atomic<bool> stopRequested{false};
         std::atomic<double> seekRequestSeconds{-1.0}; // -1.0 = no seek
-        bool fadeOutActive{false};
+        std::atomic<bool> fadeOutActive{false};
         std::atomic<bool> playing{false};
         std::atomic<bool> bufferReady{false}; // True when buffer is decoded and ready
     };

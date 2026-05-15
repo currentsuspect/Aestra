@@ -453,9 +453,6 @@ private:
     ::AestraUI::NUIRect m_dropPreviewRect; // Visual preview rectangle
 
     // === SNAP-TO-GRID ===
-    // === SNAP-TO-GRID (Legacy - preserved for compatibility but shadowed by m_snapSetting) ===
-    // bool m_snapEnabled = true;           // Snap to grid enabled by default
-    // int m_snapDivision = 4;              // Snap to beats (1=bar, 4=beat, 16=16th, etc.)
 
     bool m_followPlayhead = false;              // Whether timeline automatically scrolls to follow playhead
     FollowMode m_followMode = FollowMode::Page; // Default logic

@@ -148,6 +148,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/AestraVerbEditor.cpp
     Widgets/AestraDelayEditor.h
     Widgets/AestraDelayEditor.cpp
+    Widgets/AestraDriftEditor.h
+    Widgets/AestraDriftEditor.cpp
 )
 
 if(AESTRAUI_ENABLE_PREMIUM_EDITORS)

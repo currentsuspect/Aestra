@@ -939,9 +939,6 @@ void MixerViewModel::moveInsert(uint32_t channelId, int fromSlot, int toSlot) {
 // ... inside removeInsert ...
 
 void MixerViewModel::removeInsert(uint32_t channelId, int slot) {
-    // auto wrapper = Aestra::ServiceLocator::get<AestraAudioController>();
-    // if (!wrapper) return; // REMOVED: This was blocking the delete!
-    
     if (auto* ch = getChannelById(channelId)) {
         // Validate bounds
         if (slot < 0 || slot >= static_cast<int>(ch->inserts.size())) {

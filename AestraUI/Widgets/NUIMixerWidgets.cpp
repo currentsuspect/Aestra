@@ -300,9 +300,7 @@ void UIMixerSend::onRender(NUIRenderer& renderer)
 
     const char* sendKind = m_muted ? "Muted" : (m_sidechainOnly ? "SC" : "Audio");
     const float kindW = renderer.measureText(sendKind, 8.0f).width + 12.0f;
-    float chipRight = b.right() - 8.0f;
-
-    const NUIRect kindChip{chipRight - kindW, b.y + 8.0f, kindW, 15.0f};
+    const NUIRect kindChip{b.right() - kindW - 10.0f, b.y + 8.0f, kindW, 15.0f};
     renderer.fillRoundedRect(kindChip,
                              7.5f,
                              m_muted ? theme.getColor("warning").withAlpha(0.12f)
@@ -313,7 +311,6 @@ void UIMixerSend::onRender(NUIRenderer& renderer)
                                m_muted ? theme.getColor("warning").withAlpha(0.22f)
                                        : theme.getColor("borderSubtle").withAlpha(0.18f));
     renderer.drawTextCentered(sendKind, kindChip, 8.0f, theme.getColor("textSecondary").withAlpha(0.92f));
-    chipRight -= kindW + 4.0f;
 
     char levelBuf[32];
     const float level = std::max(0.0001f, levelKnob_ ? levelKnob_->getValue() : 1.0f);
@@ -323,26 +320,33 @@ void UIMixerSend::onRender(NUIRenderer& renderer)
     } else {
         std::snprintf(levelBuf, sizeof(levelBuf), "%.1f dB", db);
     }
-    renderer.drawText(levelBuf, {b.right() - 120.0f, b.y + 11.0f}, 8.5f, theme.getColor("textPrimary").withAlpha(0.90f));
 
-    const float knobSize = 22.0f;
+    const float knobSize = 26.0f;
     const float deleteBtnSize = 20.0f;
     const float modeW = 64.0f;
-    const float typeW = 70.0f;
-    const NUIRect knobRect{b.right() - 64.0f, b.y + 14.0f, knobSize, knobSize};
-    const NUIRect deleteRect{b.x + 10.0f, b.y + 68.0f, deleteBtnSize, deleteBtnSize};
-    const NUIRect modeGroupRect{b.x + 40.0f, b.y + 67.0f, modeW, 24.0f};
-    const NUIRect typeGroupRect{modeGroupRect.right() + 10.0f, b.y + 67.0f, typeW, 24.0f};
+    const float typeW = 64.0f;
+    const NUIRect knobRect{b.right() - 42.0f, b.y + 48.0f, knobSize, knobSize};
+    const NUIRect comboRect{b.x + 12.0f, b.y + 52.0f, b.width - 66.0f, 22.0f};
+    const NUIRect deleteRect{b.x + 12.0f, b.bottom() - 30.0f, deleteBtnSize, deleteBtnSize};
+    const NUIRect modeGroupRect{deleteRect.right() + 10.0f, b.bottom() - 31.0f, modeW, 24.0f};
+    const NUIRect typeGroupRect{modeGroupRect.right() + 8.0f, b.bottom() - 31.0f, typeW, 24.0f};
     const NUIRect modeRect{modeGroupRect.x, modeGroupRect.y + 8.0f, modeW, 16.0f};
     const NUIRect typeRect{typeGroupRect.x, typeGroupRect.y + 8.0f, typeW, 16.0f};
-    const NUIRect comboRect{b.x + 40.0f, b.y + 32.0f, b.width - 40.0f - 78.0f, 22.0f};
 
-    renderer.drawText("Destination", {comboRect.x, b.y + 17.0f}, 7.5f, theme.getColor("textSecondary").withAlpha(0.76f));
+    renderer.drawText("SEND", {indexChip.right() + 8.0f, b.y + 11.0f}, 8.5f,
+                      theme.getColor("textSecondary").withAlpha(0.74f));
+    const float levelW = renderer.measureText(levelBuf, 8.0f).width;
+    renderer.drawText(levelBuf,
+                      {knobRect.x + knobRect.width * 0.5f - levelW * 0.5f, b.y + 27.0f},
+                      8.0f, theme.getColor("textPrimary").withAlpha(0.86f));
+
+    renderer.drawText("Destination", {comboRect.x, b.y + 38.0f}, 7.5f, theme.getColor("textSecondary").withAlpha(0.76f));
     if (m_modeEditable) {
-        renderer.drawText("Tap", {modeGroupRect.x, modeGroupRect.y - 1.0f}, 7.25f, theme.getColor("textSecondary").withAlpha(0.76f));
+        renderer.drawText("Tap", {modeGroupRect.x, modeGroupRect.y - 10.0f}, 7.25f,
+                          theme.getColor("textSecondary").withAlpha(0.76f));
     }
-    renderer.drawText("Send", {typeGroupRect.x, typeGroupRect.y - 1.0f}, 7.25f, theme.getColor("textSecondary").withAlpha(0.76f));
-    renderer.drawText("Level", {knobRect.x - 2.0f, b.y + 8.0f}, 7.5f, theme.getColor("textSecondary").withAlpha(0.76f));
+    renderer.drawText("Send", {typeGroupRect.x, typeGroupRect.y - 10.0f}, 7.25f,
+                      theme.getColor("textSecondary").withAlpha(0.76f));
 
     levelKnob_->setBounds(knobRect);
     destSelector_->setBounds(comboRect);

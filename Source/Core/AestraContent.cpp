@@ -1191,8 +1191,6 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
     renderer.drawLine({contentArea.x, contentArea.bottom()}, {contentArea.right(), contentArea.bottom()}, 1.0f,
                       contentBorder);
 
-    renderChildren(renderer);
-
     // Resize affordance rails for docked browser dividers.
     const auto drawDividerRail = [&renderer, &themeManager](const auto& component) {
         if (!component || !component->isVisible()) {
@@ -1200,23 +1198,28 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
         }
         const auto edge = component->getGlobalBounds();
         const float x = std::round(edge.right()) + 0.5f;
-        const float y0 = edge.y + 3.0f;
-        const float y1 = edge.bottom() - 3.0f;
+        const float y0 = edge.y + 12.0f;
+        const float y1 = edge.bottom() - 12.0f;
         if (y1 <= y0) {
             return;
         }
 
-        const auto base = themeManager.getColor("border").withAlpha(0.95f);
-        const auto accent = themeManager.getColor("primary").withAlpha(0.36f);
+        const auto base = themeManager.getColor("border").withAlpha(0.60f);
+        const auto accent = themeManager.getColor("primary").withAlpha(0.52f);
         renderer.drawLine({x, y0}, {x, y1}, 1.0f, base);
-        renderer.drawLine({x + 1.0f, y0 + 8.0f}, {x + 1.0f, y1 - 8.0f}, 1.0f, accent);
-
         const float cy = (y0 + y1) * 0.5f;
+        const AestraUI::NUIRect handle{x - 3.0f, cy - 18.0f, 7.0f, 36.0f};
+        renderer.fillRoundedRect(handle, 3.5f, themeManager.getColor("backgroundSecondary").withAlpha(0.78f));
+        renderer.strokeRoundedRect(handle, 3.5f, 1.0f, accent.withAlpha(0.55f));
         for (int i = -1; i <= 1; ++i) {
             const float gy = cy + static_cast<float>(i) * 7.0f;
-            renderer.drawLine({x - 2.0f, gy}, {x + 2.0f, gy}, 1.0f, accent.withAlpha(0.8f));
+            renderer.drawLine({x - 1.5f, gy}, {x + 1.5f, gy}, 1.0f, accent.withAlpha(0.82f));
         }
     };
+
+    if (m_workspaceLayer && m_workspaceLayer->isVisible()) {
+        m_workspaceLayer->onRender(renderer);
+    }
 
     if (m_fileBrowser && m_fileBrowser->isVisible()) {
         drawDividerRail(m_fileBrowser);
@@ -1225,6 +1228,10 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
     }
     if (m_patternBrowser && m_patternBrowser->isVisible()) {
         drawDividerRail(m_patternBrowser);
+    }
+
+    if (m_overlayLayer && m_overlayLayer->isVisible()) {
+        m_overlayLayer->onRender(renderer);
     }
 }
 
@@ -1333,7 +1340,7 @@ void AestraContent::onResize(int width, int height) {
         float fbHeight = height - fbTop;
 
         if (showPreviewDock) {
-            const float previewHeight = 52.0f;
+            const float previewHeight = 68.0f;
             const float navWidth = std::clamp(fileBrowserWidth * 0.34f, 118.0f, 188.0f);
             const float previewWidth = std::max(0.0f, fileBrowserWidth - navWidth);
 
@@ -1502,6 +1509,10 @@ void AestraContent::onResize(int width, int height) {
 bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     if (!isVisible() || !isEnabled()) {
         return false;
+    }
+
+    if (!m_browserResizing && event.pressed && m_overlayLayer && m_overlayLayer->onMouseEvent(event)) {
+        return true;
     }
 
     if (m_browserResizing) {
