@@ -8,6 +8,7 @@
 #include "Plugin/AestraComp.h"
 #include "Plugin/AestraVerb.h"
 #include "Plugin/AestraDelay.h"
+#include "Plugin/AestraDrift.h"
 
 #include <mutex>
 
@@ -115,6 +116,26 @@ const PluginInfo& delayInfo() {
     return info;
 }
 
+const PluginInfo& driftInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.drift";
+        p.name = "Aestra Drift";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Pitch Shifter";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = true;
+        return p;
+    }();
+    return info;
+}
+
 namespace {
 void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
     if (!instance) {
@@ -133,6 +154,8 @@ void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
         verb->setInfo(info);
     } else if (auto delay = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraDelay>(instance)) {
         delay->setInfo(info);
+    } else if (auto drift = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraDrift>(instance)) {
+        drift->setInfo(info);
     }
 }
 
@@ -159,6 +182,7 @@ void registerCoreBuiltIns() {
         registry.registerPlugin(makeRegistration<Plugins::AestraComp>(compInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraVerb>(verbInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraDelay>(delayInfo()));
+        registry.registerPlugin(makeRegistration<Plugins::AestraDrift>(driftInfo()));
     });
 }
 

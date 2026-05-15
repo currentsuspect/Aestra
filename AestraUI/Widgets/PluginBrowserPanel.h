@@ -74,6 +74,7 @@ public:
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
+    void onFocusLost() override;
     void onUpdate(double deltaTime) override;
     
     // ==============================
@@ -194,6 +195,8 @@ private:
                          int index, float yOffset);
     void renderScanProgress(NUIRenderer& renderer);
     int hitTestRow(int y) const;
+    NUIRect getSearchRect() const;
+    NUIRect getScanButtonRect() const;
     
     // Data
     std::vector<PluginListItem> m_allPlugins;
@@ -207,6 +210,7 @@ private:
     // UI State
     int m_selectedIndex = -1;
     int m_hoveredIndex = -1;
+    bool m_searchFocused = false;
     float m_scrollOffset = 0.0f;
     float m_targetScrollOffset = 0.0f;
     
@@ -236,7 +240,7 @@ private:
     
     // Layout constants
     static constexpr float ROW_HEIGHT = 42.0f;
-    static constexpr float HEADER_HEIGHT = 44.0f;
+    static constexpr float HEADER_HEIGHT = 54.0f;
     static constexpr float TAB_HEIGHT = 34.0f;
     static constexpr float SEARCH_HEIGHT = 40.0f;
 };

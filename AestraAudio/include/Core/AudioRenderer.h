@@ -54,13 +54,6 @@ static constexpr uint32_t CLIP_EDGE_FADE_SAMPLES = 128;
      */
     /**
      * @brief Pass 1: Handle Arsenal MIDI timing and pattern scheduling.
-     *
-     * Current architecture: Arsenal MIDI scheduling participates in the main
-     * engine render path. Timeline remains arrangement/export authority.
-     */
-    void processArsenalMidi(const Context& ctx, AudioEngine& engineRef);
-
-    /**
      * @brief Pass 2: Main graph render (Clips + Plugins + Effects).
      */
     void renderBlock(const Context& ctx, AudioGraphState& state, AudioEngine& engineRef);

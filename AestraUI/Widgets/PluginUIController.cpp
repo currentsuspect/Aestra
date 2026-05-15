@@ -8,6 +8,7 @@
 #include "AestraCompEditor.h"
 #include "AestraVerbEditor.h"
 #include "AestraDelayEditor.h"
+#include "AestraDriftEditor.h"
 
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
 #include "RumblePluginEditor.h"
@@ -371,6 +372,14 @@ void PluginUIController::openPluginEditor(
         });
         ed->setPlatformBridge(m_platformBridge);
         editor = ed;
+    } else if (pluginId == "com.Aestrastudios.drift") {
+        auto ed = std::make_shared<AestraDriftEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
+        });
+        ed->setPlatformBridge(m_platformBridge);
+        editor = ed;
     } else {
         auto ed = std::make_shared<GenericPluginEditor>(instance);
         ed->setOnClose([this, ed]() {
@@ -387,6 +396,8 @@ void PluginUIController::openPluginEditor(
 
         if (auto delay = std::dynamic_pointer_cast<AestraDelayEditor>(editorComp)) {
             delay->onResize();
+        } else if (auto drift = std::dynamic_pointer_cast<AestraDriftEditor>(editorComp)) {
+            drift->onResize();
         } else if (auto eq = std::dynamic_pointer_cast<AestraEQEditor>(editorComp)) {
             eq->onResize();
         } else if (auto verb = std::dynamic_pointer_cast<AestraVerbEditor>(editorComp)) {

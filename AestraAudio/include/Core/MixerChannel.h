@@ -240,7 +240,7 @@ public:
 
     /** @brief Set the effect chain snapshot for RT-safe processing (deprecated - snapshots are now owned by EffectChain). */
     void setEffectChainSnapshot(std::shared_ptr<const EffectChainSnapshot> snapshot) {
-        m_effectChainSnapshot = std::move(snapshot);
+        std::atomic_store(&m_effectChainSnapshot, std::move(snapshot));
     }
     /** @brief Get the current effect chain snapshot (Pass 3: returns canonical snapshot from EffectChain). */
     std::shared_ptr<const EffectChainSnapshot> getEffectChainSnapshot() const {

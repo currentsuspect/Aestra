@@ -1,5 +1,6 @@
 #include "UnitManager.h"
 
+#include "GarbageCollector.h"
 #include "Models/PatternManager.h"
 #include "IO/MetadataParser.h"
 #include "IO/MiniAudioDecoder.h"
@@ -233,7 +234,11 @@ void UnitManager::publishSnapshot() {
         snapshot->units.push_back(state);
     }
 
-    std::atomic_store(&m_publishedSnapshot, snapshot);
+    // Retire old snapshot through GC so the audio thread never dereferences freed memory.
+    auto old = std::atomic_exchange(&m_publishedSnapshot, snapshot);
+    if (old) {
+        GarbageCollector::instance().release(old, "UnitManager::AudioArsenalSnapshot");
+    }
 }
 
 std::shared_ptr<const AudioArsenalSnapshot> UnitManager::getAudioSnapshot() const {

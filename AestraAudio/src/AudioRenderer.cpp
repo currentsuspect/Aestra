@@ -332,8 +332,29 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
     const AudioGraph& graph = engineRef.engineState().activeGraph();
     if (track.trackIndex < graph.tracks.size()) {
         const auto& gt = graph.tracks[track.trackIndex];
+
+        // Read continuous params (fader/trim/pan) for export parity with real-time engine
+        double volTarget = static_cast<double>(gt.volume);
+        double panTarget = clampD(static_cast<double>(gt.pan), -1.0, 1.0);
+
+        auto* continuous = engineRef.m_continuousParamsRaw.load(std::memory_order_acquire);
+        auto* slotMap = engineRef.m_channelSlotMapRaw.load(std::memory_order_acquire);
+        if (continuous && slotMap) {
+            const uint32_t slot = slotMap->getSlotIndex(gt.trackId);
+            if (slot != ChannelSlotMap::INVALID_SLOT) {
+                float faderDb = 0.0f;
+                float panParam = 0.0f;
+                float trimDb = 0.0f;
+                continuous->read(slot, faderDb, panParam, trimDb);
+                const double faderDbClamped = clampD(static_cast<double>(faderDb), -90.0, 6.0);
+                const double trimDbClamped = clampD(static_cast<double>(trimDb), -24.0, 24.0);
+                volTarget *= dbToLinearD(faderDbClamped) * dbToLinearD(trimDbClamped);
+                panTarget = clampD(panTarget + static_cast<double>(panParam), -1.0, 1.0);
+            }
+        }
+
         double gainL, gainR;
-        fastPanGainsD(clampD(gt.pan, -1.0, 1.0), (double)gt.volume, gainL, gainR);
+        fastPanGainsD(panTarget, volTarget, gainL, gainR);
         state.gainL.setTarget(gainL);
         state.gainR.setTarget(gainR);
     }
@@ -344,30 +365,6 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
     }
     state.gainL.snap();
     state.gainR.snap();
-}
-
-void AudioRenderer::processArsenalMidi(const Context& ctx, AudioEngine& engineRef) {
-    auto* pe = engineRef.m_patternEngine.load(std::memory_order_acquire);
-    ArsenalProcessingContext arsenal(engineRef.m_unitManager.load(std::memory_order_acquire), pe);
-    if (!pe || !arsenal.unitManager() || ctx.sampleRate == 0)
-        return;
-    auto snap = arsenal.getSnapshot();
-    if (!snap || snap->units.empty())
-        return;
-
-    std::array<PatternPlaybackEngine::UnitMidiRoute, 256> routes{};
-    size_t count = 0, bIdx = 0;
-    for (const auto& u : snap->units) {
-        if (count >= 256 || bIdx >= engineRef.m_unitMidiBuffers.size())
-            break;
-        // engineRef.m_unitMidiBuffers[bIdx].clear(); // REMOVED: Handled externally
-        routes[count++] = {static_cast<UnitID>(u.id), &engineRef.m_unitMidiBuffers[bIdx]};
-        bIdx++;
-    }
-    if (engineRef.m_transportPlaying.load(std::memory_order_relaxed)) {
-        pe->refillWindow(ctx.globalPos, (int)ctx.sampleRate, 2048);
-        pe->processAudio(ctx.globalPos, (int)ctx.numFrames, routes.data(), count);
-    }
 }
 
 void AudioRenderer::renderArsenalUnitsForTrack(uint32_t trackIndex, double* trackBuffer, const Context& ctx,

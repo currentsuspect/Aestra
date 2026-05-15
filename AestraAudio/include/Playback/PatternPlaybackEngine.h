@@ -11,7 +11,6 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <map>
 #include <mutex>
 #include <vector>
 
@@ -98,6 +97,18 @@ public:
     }
 
     /**
+     * @brief Drain all items from the producer side (RT-safe).
+     *
+     * Resets the write head to the current read tail, discarding all queued
+     * items.  Only safe to call from the producer thread when the consumer
+     * thread is known to be idle or tolerant of an empty queue.
+     */
+    void forceDrain() {
+        uint32_t tail = m_tail.load(std::memory_order_acquire);
+        m_head.store(tail, std::memory_order_release);
+    }
+
+    /**
      * @brief Get the current queue occupancy.
      * @return Number of queued items.
      */
@@ -173,15 +184,7 @@ public:
 
     /**
      * Process audio callback (RT-safe, audio thread only)
-     * @param currentFrame Current transport frame.
-     * @param bufferSize Number of frames in the current audio callback.
-     * @param unitMidiBuffers Routing map from unit ID to MIDI buffer.
-     */
-    void processAudio(uint64_t currentFrame, int bufferSize, std::map<UnitID, MidiBuffer*>& unitMidiBuffers);
-
-    /**
-     * Process audio callback (RT-safe, audio thread only)
-     * Allocation-free alternative to std::map routing.
+     * Allocation-free array-based MIDI routing.
      * @param currentFrame Current transport frame.
      * @param bufferSize Number of frames in the current audio callback.
      * @param routes Route array for unit MIDI fanout.
@@ -234,6 +237,9 @@ private:
     std::atomic<uint32_t> m_overflowCounter;
     std::atomic<uint32_t> m_processedCounter;
     uint64_t m_lastRefillFrame{0}; // Detect loop wraps
+
+    // RT-safe flush: audio thread sets this flag, non-RT maintenance drains the queue.
+    std::atomic<bool> m_flushRequested{false};
 
     // Pre-allocated scratch buffer for refillWindow (reserved at init, never reallocates)
     std::vector<ScheduledEvent> m_scratchEvents;

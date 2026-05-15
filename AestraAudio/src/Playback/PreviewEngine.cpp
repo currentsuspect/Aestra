@@ -24,6 +24,12 @@
 namespace Aestra {
 namespace Audio {
 
+// Preview gain normalize: ensures preview output has built-in headroom
+// relative to 0dBFS, matching the audio engine's effective unity gain path
+// (which includes ~-3dB pan law, fader, and trim stages).
+// This prevents the preview from sounding hotter than track playback.
+static constexpr float kPreviewGainNormalizeDb = -1.0f;
+
 PreviewEngine::PreviewEngine()
     : m_activeVoice(nullptr), m_outputSampleRate(48000.0), m_globalGainDb(0.0f), m_decodeGeneration(0),
       m_workerRunning(true) // Initialize running state
@@ -87,7 +93,8 @@ PreviewResult PreviewEngine::startVoiceWithBuffer(std::shared_ptr<AudioBuffer> b
     voice->durationSeconds =
         (sampleRate > 0 && buffer->numFrames > 0) ? (static_cast<double>(buffer->numFrames) / sampleRate) : 0.0;
     voice->maxPlaySeconds = maxSeconds;
-    voice->gain = dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed));
+    const float totalGain = dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed)) * dbToLinear(kPreviewGainNormalizeDb);
+    voice->gain = totalGain;
     voice->phaseFrames = 0.0;
     voice->elapsedSeconds = 0.0;
     voice->fadeInPos = 0.0;
@@ -192,7 +199,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
     // Cache miss: Create voice immediately for pending playback
     auto voice = std::make_shared<PreviewVoice>();
     voice->path = path;
-    voice->gain = dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed));
+    voice->gain = dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed)) * dbToLinear(kPreviewGainNormalizeDb);
     voice->maxPlaySeconds = maxSeconds;
     voice->phaseFrames = 0.0;
     voice->elapsedSeconds = 0.0;
@@ -281,6 +288,12 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
     const float gain = voice->gain;
     const uint32_t srcChannels = voice->channels;
 
+    // Mono sources duplicate to stereo with no pan-law attenuation,
+    // making them ~+3 dB hotter than the audio engine's centered track path.
+    // Apply center-pan constant-power attenuation (~-3 dB per channel) to match.
+    constexpr float kCenterPanLawGain = 0.7071067811865475f; // sqrt(2)/2
+    const float effectiveGain = gain * ((srcChannels == 1) ? kCenterPanLawGain : 1.0f);
+
     uint32_t i = 0;
 
 #if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
@@ -324,7 +337,7 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
     // --- SIMD LOOP (Process 4 frames at a time) ---
     // Safety Limit: ensuring phase + 4*ratio + lookahead(2) is within [0, totalFrames-1]
     const uint64_t safeLimit = totalFrames > 6 ? totalFrames - 5 : 0;
-    const __m128 vGain = _mm_set1_ps(gain);
+    const __m128 vGain = _mm_set1_ps(effectiveGain);
 
     // Only run SIMD loop if not fading (fades modify gain per-sample)
     bool isFading = (voice->fadeInPos < fadeInSamples) || (voice->stopRequested.load(std::memory_order_relaxed)) ||
@@ -467,7 +480,7 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
         float outL, outR;
 
         // Calculate dynamic gain (Fade In/Out)
-        float currentGain = gain;
+        float currentGain = effectiveGain;
         if (voice->fadeOutActive) {
             float f = 1.0f - (static_cast<float>(voice->fadeOutPos) / fadeOutSamples);
             if (f < 0.0f)

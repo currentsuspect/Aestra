@@ -61,7 +61,9 @@ private:
     bool waveformQueued_ = false;
     
     // Layout
+    bool isSeekDragging_ = false;
     NUIRect playButtonBounds_;
+    NUIRect scrubberBounds_;
 
     // Callbacks
     std::function<void(const FileItem&)> onPlay_;
@@ -71,6 +73,7 @@ private:
     // Icons
     std::shared_ptr<NUIIcon> folderIcon_;
     std::shared_ptr<NUIIcon> fileIcon_;
+    std::shared_ptr<NUIIcon> audioFileIcon_;
     std::shared_ptr<NUIIcon> playIcon_;
     std::shared_ptr<NUIIcon> stopIcon_;
 };
