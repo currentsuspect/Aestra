@@ -75,6 +75,7 @@ private:
     size_t pendingWaveformFileSize_ = 0;
     double pendingWaveformDelay_ = 0.0;
     bool waveformQueued_ = false;
+    std::atomic<bool> waveformJustCompleted_{false};
     
     // Layout
     bool isSeekDragging_ = false;
