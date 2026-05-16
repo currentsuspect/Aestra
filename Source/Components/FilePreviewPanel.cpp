@@ -220,6 +220,10 @@ float FilePreviewPanel::getRequiredHeight() const {
 void FilePreviewPanel::onUpdate(double deltaTime) {
     NUIComponent::onUpdate(deltaTime);
 
+    if (waveformJustCompleted_.exchange(false)) {
+        setDirty(true);
+    }
+
     if (isLoading_) {
         loadingAnimationTime_ += static_cast<float>(deltaTime);
         setDirty(true);
@@ -269,13 +273,13 @@ void FilePreviewPanel::waveformWorker(const std::string& path, uint64_t generati
         if (generation == currentGeneration_.load(std::memory_order_acquire)) {
             waveformData_ = std::move(waveform);
             isLoading_ = false;
-            setDirty(true);
+            waveformJustCompleted_.store(true);
         }
     } else {
         std::lock_guard<std::mutex> lock(waveformMutex_);
         if (generation == currentGeneration_.load(std::memory_order_acquire)) {
             isLoading_ = false;
-            setDirty(true);
+            waveformJustCompleted_.store(true);
         }
     }
 }
