@@ -2749,6 +2749,9 @@ void AestraContent::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
     if (m_mixerPanel) {
         m_mixerPanel->setPlatformBridge(bridge);
     }
+    if (m_pianoRollPanel) {
+        m_pianoRollPanel->setPlatformBridge(bridge);
+    }
 }
 
 void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
@@ -3342,6 +3345,19 @@ void AestraContent::refreshProjectViews() {
     if (m_trackManagerUI) {
         m_trackManagerUI->refreshTracks();
         m_trackManagerUI->invalidateCache();
+        m_trackManagerUI->buildAllWaveformCaches();
+    }
+
+    if (m_mixerPanel) {
+        m_mixerPanel->refreshChannels();
+        // Select the master channel so the inspector effect rack binds on next update
+        auto viewModel = m_mixerPanel->getViewModel();
+        if (viewModel && viewModel->getSelectedChannelId() < 0) {
+            if (auto* ch = viewModel->getMaster()) {
+                viewModel->setSelectedChannelId(static_cast<int32_t>(ch->id));
+                m_lastSelectedChannelId = 0xFFFFFFFFu;
+            }
+        }
     }
 
     if (m_patternBrowser) {
@@ -3394,6 +3410,16 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     }
     if (!event.pressed)
         return false;
+
+    // Forward to piano roll when it has keyboard focus — its local undo/redo
+    // and note shortcuts must take priority over global handlers
+    if (m_pianoRollPanel && m_pianoRollPanel->isVisible()) {
+        if (auto* focused = AestraUI::NUIComponent::getFocusedComponent()) {
+            // Check if focused component is within the piano roll hierarchy
+            if (m_pianoRollPanel->handleKeyEvent(event))
+                return true;
+        }
+    }
 
     // Global Undo/Redo — intercept BEFORE any panel processes it
     // This prevents text inputs from capturing Ctrl+Z and ensures

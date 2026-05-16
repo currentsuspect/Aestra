@@ -81,6 +81,8 @@ public:
      * @param engine Audio engine pointer, or nullptr to disable engine sync.
      */
     void setAudioEngine(AudioEngine* engine) { m_audioEngine = engine; }
+    void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
+    bool handleKeyEvent(const AestraUI::NUIKeyEvent& event);
     
 private:
     void adjustPatternLengthBars(int barsDelta);

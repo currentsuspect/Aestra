@@ -178,6 +178,9 @@ UIMixerStrip::UIMixerStrip(uint32_t channelId,
         auto* channel = m_viewModel->getChannelById(m_channelId);
         if (!channel) return;
         channel->trackColorIndex = index;
+        if (channel->channel) {
+            channel->channel->setTrackColorIndex(index);
+        }
         invalidateStaticCache();
     };
     addChild(m_header);

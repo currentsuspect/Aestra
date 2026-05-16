@@ -10,6 +10,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <chrono>
 
 namespace Aestra {
 
@@ -211,8 +212,8 @@ void TransportBar::createButtons() {
         btn->setSize(32, 32);
         
         btn->setBackgroundColor(AestraUI::NUIColor::transparent());
-        btn->setHoverColor(theme.getColor("surfaceRaised").withAlpha(0.88f));
-        btn->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.24f));
+        btn->setHoverColor(theme.getColor("primary").withAlpha(0.06f));
+        btn->setPressedColor(theme.getColor("primary").withAlpha(0.12f));
         btn->setBorderEnabled(false);
         btn->setCornerRadius(6.0f);
         btn->setGlowEnabled(false);
@@ -541,6 +542,19 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         bool isPlaying = (m_state == TransportState::Playing);
         auto currentIcon = isPlaying ? m_pauseIcon : m_playIcon;
         renderGlassButton(m_playButton, currentIcon, isPlaying, false, true);
+
+        // Breathing glow when playing — subtle pulse so user can see transport is active
+        if (isPlaying) {
+            auto now = std::chrono::steady_clock::now();
+            float timeSec = std::chrono::duration<float>(now.time_since_epoch()).count();
+            float pulse = (std::sin(timeSec * 3.0f) * 0.5f + 0.5f); // 0..1 oscillation ~0.5Hz
+            AestraUI::NUIRect playRect = m_playButton->getBounds();
+            renderer.drawShadow(
+                {playRect.x, playRect.y, playRect.width, playRect.height},
+                4.0f, 1.0f, 6.0f,
+                themeManager.getColor("accentPrimary").withAlpha(0.08f + pulse * 0.06f)
+            );
+        }
     }
 
     // Stop
@@ -730,7 +744,7 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     renderer.drawLine({bounds.x, bounds.bottom() - 1.0f},
                       {bounds.right(), bounds.bottom() - 1.0f},
                       1.0f,
-                      themeManager.getColor("border").withAlpha(0.92f));
+                      themeManager.getColor("border").withAlpha(0.52f));
     
     const float leftEdge = islandRect.x + islandPadding;
     const float topInset = 6.0f;
@@ -738,8 +752,8 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     const float available = islandRect.height - topInset - bottomInset;
     const float groupH = std::max(0.0f, std::min(36.0f, available));
     const float groupY = islandRect.y + topInset;
-    const auto groupBg = themeManager.getColor("surfaceTertiary").withAlpha(0.42f);
-    const auto groupBorder = themeManager.getColor("border").withAlpha(0.46f);
+    const auto groupBg = themeManager.getColor("surfaceTertiary").withAlpha(0.56f);
+    const auto groupBorder = themeManager.getColor("border").withAlpha(0.52f);
     const auto drawGroup = [&](float x, float w) {
         if (w <= 0.0f) {
             return;
@@ -763,7 +777,7 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     const float sep3X = sep2X + groupSpacing * 0.5f + infoWidth + (groupSpacing * 0.5f);
     const float sepTop = islandRect.y + 8.0f;
     const float sepBottom = islandRect.bottom() - 8.0f;
-    const auto sepColor = themeManager.getColor("borderSubtle").withAlpha(0.46f);
+    const auto sepColor = themeManager.getColor("borderSubtle").withAlpha(0.58f);
     renderer.drawLine({sep1X, sepTop}, {sep1X, sepBottom}, 1.0f, sepColor);
     renderer.drawLine({sep2X, sepTop}, {sep2X, sepBottom}, 1.0f, sepColor);
     renderer.drawLine({sep3X, sepTop}, {sep3X, sepBottom}, 1.0f, sepColor);

@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIPianoRollWidgets.h"
+#include "../Platform/NUIPlatformBridge.h"
 #include "../Common/MusicHelpers.h"
 #include "../Helpers/PianoRollInteraction.h"
 #include "NUIDropdown.h"
@@ -89,19 +90,15 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
     
     renderer.setClipRect(b);
     
-    const auto laneBg = NUIColor(0.11f, 0.12f, 0.16f, 1.0f);
-    const auto whiteKey = NUIColor(0.94f, 0.94f, 0.95f, 1.0f);
-    const auto whiteKeyTop = whiteKey.lightened(0.035f);
-    const auto whiteKeyBottom = whiteKey.darkened(0.045f);
-    const auto blackKey = NUIColor(0.12f, 0.13f, 0.16f, 1.0f);
-    const auto blackKeyTop = blackKey.lightened(0.05f);
-    const auto blackKeyBottom = blackKey.darkened(0.08f);
-    const auto whiteBorder = NUIColor(0.14f, 0.16f, 0.20f, 0.18f);
-    const auto blackBorder = NUIColor(0.0f, 0.0f, 0.0f, 0.55f);
-    const auto keySeparator = NUIColor(0.08f, 0.09f, 0.12f, 0.26f);
-    const auto rootAccent = themeManager.getColor("accentPrimary").withAlpha(0.55f);
-    const auto whiteText = NUIColor(0.18f, 0.20f, 0.26f, 0.92f);
-    const auto blackText = NUIColor(0.84f, 0.88f, 0.96f, 0.72f);
+    const auto laneBg = themeManager.getColor("surfaceSecondary");
+    const auto whiteKey = themeManager.getColor("surfaceRaised").withAlpha(0.6f);
+    const auto blackKey = themeManager.getColor("backgroundSecondary").darkened(0.04f);
+    const auto whiteBorder = themeManager.getColor("border").withAlpha(0.2f);
+    const auto blackBorder = themeManager.getColor("border").withAlpha(0.4f);
+    const auto keySeparator = themeManager.getColor("border").withAlpha(0.1f);
+    const auto rootAccent = themeManager.getColor("accentPrimary").withAlpha(0.45f);
+    const auto whiteText = themeManager.getColor("textSecondary");
+    const auto blackText = themeManager.getColor("textSecondary").withAlpha(0.7f);
     
     int startPitch = 127 - static_cast<int>((scrollY_) / keyHeight_);
     int endPitch = 127 - static_cast<int>((scrollY_ + b.height) / keyHeight_);
@@ -120,37 +117,21 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
         bool isBlack = isBlackKey(p);
 
         if (isBlack) {
-            for (int i = 0; i < 3; ++i) {
-               float f = i / 2.0f;
-               renderer.fillRect(
-                   NUIRect(keyRect.x, keyRect.y + (i * keyRect.height / 3.0f), keyRect.width, keyRect.height / 3.0f),
-                   NUIColor::lerp(blackKeyTop, blackKeyBottom, f)
-               );
-            }
+            renderer.fillRect(keyRect, blackKey);
             renderer.strokeRect(keyRect, 1.0f, blackBorder);
-            renderer.fillRect(NUIRect(keyRect.x + 1.0f, keyRect.y + 1.0f, keyRect.width - 2.0f, 2.0f),
-                              NUIColor::white().withAlpha(0.035f));
         } else {
-            for (int i = 0; i < 3; ++i) {
-               float f = i / 2.0f;
-               renderer.fillRect(
-                   NUIRect(keyRect.x, keyRect.y + (i * keyRect.height / 3.0f), keyRect.width, keyRect.height / 3.0f),
-                   NUIColor::lerp(whiteKeyTop, whiteKeyBottom, f)
-               );
-            }
+            renderer.fillRect(keyRect, whiteKey);
             renderer.strokeRect(keyRect, 1.0f, whiteBorder);
-            renderer.fillRect(NUIRect(keyRect.x + 1.0f, keyRect.y + 1.0f, keyRect.width - 2.0f, 2.0f),
-                              NUIColor::white().withAlpha(0.08f));
         }
 
         renderer.drawLine(NUIPoint(b.x, y + keyHeight_), NUIPoint(b.x + b.width, y + keyHeight_), 1.0f, keySeparator);
 
-        // Show note label for every pitch row
         if (keyHeight_ >= 14.0f) {
             std::string lbl = getNoteLabel(p);
-            float txtY = y + (keyHeight_ * 0.5f) - 5.0f;
             float fontSize = (keyHeight_ >= 20.0f) ? 10.0f : 8.0f;
-            float txtX = isBlack ? (b.x + 4.0f) : (b.x + 7.0f);
+            auto dim = renderer.measureText(lbl, fontSize);
+            float txtY = y + (keyHeight_ - dim.height) * 0.5f;
+            float txtX = isBlack ? (b.x + 6.0f) : (b.x + 8.0f);
             renderer.drawText(lbl, NUIPoint(txtX, txtY), fontSize, isBlack ? blackText : whiteText);
         }
 
@@ -277,19 +258,17 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     
     const auto panelBg = theme.getColor("surfaceRaised").darkened(0.06f).withAlpha(0.98f);
-    const auto panelTop = panelBg.lightened(0.025f).withAlpha(0.7f);
     const auto border = theme.getColor("border").withAlpha(0.28f);
     renderer.fillRoundedRect(b, 7.0f, panelBg);
-    renderer.fillRoundedRect({b.x + 1.0f, b.y + 1.0f, b.width - 2.0f, b.height * 0.45f}, 6.0f, panelTop);
     renderer.strokeRoundedRect(b, 7.0f, 1.0f, border);
-
+    
     // View Rect
     float x1 = b.x + beatToX(startBeat_);
     float w = beatToX(viewDuration_);
     NUIRect viewRect(x1, b.y + 2, w, b.height - 4);
     
-    auto thumbCol = theme.getColor("accentPrimary").withAlpha(0.035f);
-    auto borderCol = theme.getColor("accentPrimary").withAlpha(0.62f);
+    auto thumbCol = theme.getColor("accentPrimary").withAlpha(0.06f);
+    auto borderCol = theme.getColor("accentPrimary").withAlpha(0.42f);
     
     renderer.fillRoundedRect(viewRect, 5.0f, thumbCol);
     renderer.strokeRoundedRect(viewRect, 5.0f, 1.0f, borderCol);
@@ -344,16 +323,13 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     }
     
     // Handles (Visual only, logic in mouse)
-    const float handleW = 8.0f;
+    const float handleW = 4.0f;
     const float handleH = std::max(8.0f, b.height - 8.0f);
-    const auto handleFill = NUIColor::white().withAlpha(0.30f);
-    const auto handleStroke = borderCol.withAlpha(0.95f);
+    const auto handleFill = borderCol.withAlpha(0.5f);
     NUIRect leftHandle(x1 + 2.0f, b.y + 4.0f, handleW, handleH);
-    NUIRect rightHandle(x1 + w - handleW - 2.0f, b.y + 4.0f, handleW, handleH);
-    renderer.fillRoundedRect(leftHandle, 3.0f, handleFill);
-    renderer.strokeRoundedRect(leftHandle, 3.0f, 1.0f, handleStroke);
-    renderer.fillRoundedRect(rightHandle, 3.0f, handleFill);
-    renderer.strokeRoundedRect(rightHandle, 3.0f, 1.0f, handleStroke);
+    NUIRect rightHandle(x1 + w - 6.0f, b.y + 4.0f, handleW, handleH);
+    renderer.fillRoundedRect(leftHandle, 2.0f, handleFill);
+    renderer.fillRoundedRect(rightHandle, 2.0f, handleFill);
 }
 
 bool PianoRollMinimap::onMouseEvent(const NUIMouseEvent& event) {
@@ -684,7 +660,6 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     
     renderer.fillRect(b, themeManager.getColor("surfaceRaised").withAlpha(0.98f));
-    renderer.fillRect({b.x, b.y, b.width, b.height * 0.55f}, themeManager.getColor("surfaceRaised").lightened(0.03f).withAlpha(0.55f));
     renderer.drawLine(NUIPoint(b.x, b.y + b.height), NUIPoint(b.x + b.width, b.y + b.height), 1.0f, themeManager.getColor("border").withAlpha(0.24f));
 
     // Let child buttons keep input/hit-testing, but draw our custom toolbar chrome and glyphs after them.
@@ -701,7 +676,7 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
 
     auto idleBg = themeManager.getColor("buttonBgDefault").withAlpha(0.94f);
     auto hoverBg = themeManager.getColor("buttonBgHover").withAlpha(0.98f);
-    auto activeBg = themeManager.getColor("buttonBgActive").withAlpha(0.98f);
+    auto activeBg = themeManager.getColor("buttonBgActive");
     auto borderCol = themeManager.getColor("border").withAlpha(0.24f);
     auto iconIdle = themeManager.getColor("textPrimary").withAlpha(0.86f);
     auto iconActive = themeManager.getColor("textPrimary");
@@ -721,13 +696,10 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
             bg = hoverBg;
         }
 
-        renderer.drawShadow(btn->getBounds(), 0.0f, 4.0f, 10.0f, NUIColor(0, 0, 0, 0.10f));
-        renderer.fillRoundedRect(btn->getBounds(), radius, bg);
-        renderer.strokeRoundedRect(btn->getBounds(), radius, 1.0f, border);
-        renderer.fillRoundedRect({btn->getBounds().x + 1.0f, btn->getBounds().y + 1.0f,
-                                  btn->getBounds().width - 2.0f, btn->getBounds().height * 0.45f},
-                                 std::max(0.0f, radius - 2.0f),
-                                 NUIColor::white().withAlpha(isActive ? 0.08f : 0.04f));
+        if (isActive || btn->isHovered()) {
+            renderer.fillRoundedRect(btn->getBounds(), radius, bg);
+            renderer.strokeRoundedRect(btn->getBounds(), radius, 1.0f, border);
+        }
 
         if (icon) {
             const float iconSz = 16.0f;
@@ -851,11 +823,11 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
 
     renderer.fillRect(b, themeManager.getColor("backgroundSecondary"));
 
-    auto rowBlackKey = NUIColor(0.0f, 0.0f, 0.0f, 0.16f);
+    auto rowBlackKey = themeManager.getColor("surfaceRaised").withAlpha(0.12f);
     auto rowRootKey = themeManager.getColor("accentPrimary").withAlpha(0.05f);
     
-    auto gridBeat = themeManager.getColor("border").withAlpha(0.08f);
-    auto gridBar = themeManager.getColor("border").withAlpha(0.18f);
+    auto gridBeat = themeManager.getColor("border").withAlpha(0.06f);
+    auto gridBar = themeManager.getColor("border").withAlpha(0.14f);
 
     // 1. Draw Rows (Matching Keys)
     int startPitch = 127 - static_cast<int>((scrollY_) / keyHeight_);
@@ -961,8 +933,9 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     // CLIP TO BOUNDS
     renderer.setClipRect(b);
     
-    auto noteColor = NUIColor(0.58f, 0.66f, 0.93f, 0.88f);
-    auto noteColorSelected = NUIColor(0.78f, 0.84f, 1.0f, 0.96f);
+    // Note colors — purple base (theme.primary), lighter purple for selected
+    auto noteColor = NUIColor(0.545f, 0.498f, 1.0f, 0.88f);         // #8B7FFF
+    auto noteColorSelected = NUIColor(0.72f, 0.66f, 1.0f, 0.97f);   // lighter purple
     
     // 1. GHOST NOTES (Read-only backgrounds)
     for (const auto& ghost : ghostPatterns_) {
@@ -1011,20 +984,34 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         NUIRect r(x, y + 1, std::max(6.0f, w), h - 2);
         
         NUIColor baseColor = n.selected ? noteColorSelected : noteColor;
-        NUIColor glowColor = baseColor.withAlpha(0.18f);
         NUIColor coreColor = baseColor.withAlpha(0.92f);
         NUIColor edgeColor = n.selected
-                                 ? NUIColor::white().withAlpha(0.26f)
-                                 : themeManager.getColor("border").withAlpha(0.26f);
+                                 ? NUIColor::white().withAlpha(0.55f)
+                                 : themeManager.getColor("border").withAlpha(0.40f);
+        NUIColor glowColor = n.selected
+                                 ? noteColorSelected.withAlpha(0.65f)
+                                 : baseColor.withAlpha(0.18f);
 
-        float velFactor = 0.3f + n.velocity * 0.7f;
+        // Spec 6: compressed velocity range — quiet notes still read clearly
+        float velFactor = 0.85f + n.velocity * 0.15f;
         coreColor = coreColor.withAlpha(coreColor.a * velFactor);
 
         renderer.drawShadow(NUIRect(r.x, r.y + 1.0f, r.width, r.height), 0.0f, 3.0f, 8.0f, NUIColor(0, 0, 0, 0.10f));
         renderer.fillRoundedRect(NUIRect(r.x, r.y, r.width, r.height), 6.0f, coreColor);
-        renderer.fillRoundedRect(NUIRect(r.x + 1.0f, r.y + 1.0f, r.width - 2.0f, r.height * 0.42f), 5.0f, NUIColor::white().withAlpha(n.selected ? 0.18f : 0.11f));
+        // Spec 6: thinner specular — top 20%, 7-9% alpha
+        renderer.fillRoundedRect(NUIRect(r.x + 1.0f, r.y + 1.0f, r.width - 2.0f, r.height * 0.20f), 5.0f, NUIColor::white().withAlpha(n.selected ? 0.09f : 0.07f));
         renderer.strokeRoundedRect(r, 6.0f, 1.0f, edgeColor);
         renderer.fillRoundedRect(NUIRect(r.x + 2.0f, r.bottom() - 3.0f, std::max(8.0f, r.width - 4.0f), 1.5f), 0.75f, glowColor);
+
+        // Spec 6: right-edge resize affordance on hover
+        if (static_cast<int>(&n - &notes_[0]) == hoveredNoteIndex_ && hoverOnRightEdge_) {
+            NUIRect affordance(r.right() - 3.0f, r.y, 3.0f, r.height);
+            NUIColor affordanceColor = coreColor;
+            affordanceColor.r *= 0.68f;
+            affordanceColor.g *= 0.68f;
+            affordanceColor.b *= 0.68f;
+            renderer.fillRoundedRect(affordance, 1.5f, affordanceColor);
+        }
 
         // [FEATURE] Render pitch name label inside the note block
         // Minimum width threshold: hide label if note is too narrow to avoid overflow
@@ -1044,8 +1031,14 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         }
     }
 
+    // Rubber-band selection rectangle (already normalized during drag)
+    if (state_ == State::SelectingBox && selectionRect_.width > 0 && selectionRect_.height > 0) {
+        renderer.fillRoundedRect(selectionRect_, 2.0f, NUIColor(0.545f, 0.498f, 1.0f, 0.15f));
+        renderer.strokeRoundedRect(selectionRect_, 2.0f, 1.0f, NUIColor(0.545f, 0.498f, 1.0f, 0.55f));
+    }
+
     renderer.clearClipRect();
-    
+
     // Cleanup Deleted Notes
     bool cleanNeeded = false;
     for (const auto& n : notes_) { 
@@ -1071,11 +1064,50 @@ int PianoRollNoteLayer::findNoteAt(float localX, float localY) {
 }
 
 bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
-    if (state_ == State::None && !getBounds().contains(event.position)) return false;
+    if (state_ == State::None && !getBounds().contains(event.position)) {
+        // Reset hover when leaving bounds
+        if (hoveredNoteIndex_ != -1) {
+            hoveredNoteIndex_ = -1;
+            hoverOnRightEdge_ = false;
+            if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
+        }
+        return false;
+    }
 
     auto b = getBounds();
     float localX = event.position.x - b.x + scrollX_;
     float localY = event.position.y - b.y + scrollY_;
+
+    // --- HOVER / SMART CURSOR (no button activity) ---
+    if (state_ == State::None && !event.pressed && !event.released) {
+        int hitIdx = findNoteAt(localX, localY);
+        if (hitIdx == -1) {
+            if (hoveredNoteIndex_ != -1) {
+                hoveredNoteIndex_ = -1;
+                hoverOnRightEdge_ = false;
+                repaint();
+            }
+            if (platformBridge_) {
+                platformBridge_->setCursorStyle(
+                    tool_ == GlobalTool::Pencil ? NUICursorStyle::Crosshair : NUICursorStyle::Arrow);
+            }
+        } else {
+            const auto& n = notes_[hitIdx];
+            float nx = b.x + static_cast<float>(n.startBeat * pixelsPerBeat_) - scrollX_;
+            float nw = static_cast<float>(n.durationBeats * pixelsPerBeat_);
+            float edgeZone = std::min(10.0f, nw * 0.30f);
+            bool onEdge = (event.position.x >= nx + nw - edgeZone);
+
+            if (hoveredNoteIndex_ != hitIdx || hoverOnRightEdge_ != onEdge) {
+                hoveredNoteIndex_ = hitIdx;
+                hoverOnRightEdge_ = onEdge;
+                repaint();
+            }
+            if (platformBridge_) {
+                platformBridge_->setCursorStyle(onEdge ? NUICursorStyle::ResizeEW : NUICursorStyle::Grab);
+            }
+        }
+    }
 
     // --- RIGHT CLICK / ERASER (FAST ERASE) ---
     if (event.button == NUIMouseButton::Right) {
@@ -1108,6 +1140,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
 
     // --- LEFT CLICK HANDLING ---
     if (event.pressed && event.button == NUIMouseButton::Left) {
+        setFocused(true); // Gain keyboard focus for shortcuts
         int clickedIndex = findNoteAt(localX, localY);
         
         // DOUBLE CLICK: Add / Delete
@@ -1205,38 +1238,79 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         // Interact with Existing Note (Move/Resize/Select)
         if (clickedIndex != -1) {
             bool wasSelected = notes_[clickedIndex].selected;
-            
-            // Shift = Add Range (or just Add for now)
+
             // Ctrl = Toggle
             if (event.modifiers & NUIModifiers::Ctrl) {
                 notes_[clickedIndex].selected = !wasSelected;
-                return true; // Toggle and return
+                return true;
             }
-            else if (event.modifiers & NUIModifiers::Shift) {
-                notes_[clickedIndex].selected = true; 
-            } else {
-                if (!wasSelected) {
-                    // Clicked unselected note without modifiers -> clear others and select this
-                    for (auto& N : notes_) N.selected = false;
-                    notes_[clickedIndex].selected = true;
+
+            // Alt+drag: clone selection and drag copies — skip selection logic
+            if (event.modifiers & NUIModifiers::Alt) {
+                copyDragIndices_.clear();
+
+                // Clone all selected notes
+                std::vector<int> selectedIndices;
+                for (int i = 0; i < static_cast<int>(notes_.size()); ++i) {
+                    if (notes_[i].selected && !notes_[i].isDeleted)
+                        selectedIndices.push_back(i);
                 }
-                // If clicked selected note, keep others selected (for potential group move)
+
+                // Deselect originals, create clones, select clones
+                for (int idx : selectedIndices) {
+                    notes_[idx].selected = false;
+                    MidiNote clone = notes_[idx];
+                    clone.selected = true;
+                    clone.isDeleted = false;
+                    notes_.push_back(clone);
+                    copyDragIndices_.push_back(static_cast<int>(notes_.size()) - 1);
+                }
+
+                if (copyDragIndices_.empty()) return true;
+
+                // Snapshot AFTER cloning so dragStartNotes_ includes clones
+                dragStartNotes_ = notes_;
+
+                state_ = State::CopyDragging;
+                dragStartPos_ = event.position;
+                dragStartScrollX_ = scrollX_;
+                dragStartScrollY_ = scrollY_;
+                if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Grabbing);
+                repaint();
+                return true;
             }
+
+            // Shift = add to selection
+            if (event.modifiers & NUIModifiers::Shift) {
+                notes_[clickedIndex].selected = true;
+            } else if (!wasSelected) {
+                // Clicked unselected note without modifiers -> clear others and select this
+                for (auto& N : notes_) N.selected = false;
+                notes_[clickedIndex].selected = true;
+            }
+            // If clicked selected note, keep others selected (for group move)
 
             const auto& n = notes_[clickedIndex];
             float nx = static_cast<float>(n.startBeat * pixelsPerBeat_);
             float nw = static_cast<float>(n.durationBeats * pixelsPerBeat_);
-            
+
             // Smart Edge Detection
-            float edgeZone = std::min(10.0f, nw * 0.3f); 
+            float edgeZone = std::min(10.0f, nw * 0.3f);
             bool isRightEdge = (localX >= nx + nw - edgeZone);
-            
+
             state_ = isRightEdge ? State::Resizing : State::Moving;
             dragStartPos_ = event.position;
             dragStartScrollX_ = scrollX_;
             dragStartScrollY_ = scrollY_;
-            dragStartNotes_ = notes_; 
-            
+            dragStartNotes_ = notes_;
+
+            // Spec 2: adopt clicked note's length for subsequent placement
+            lastNoteDuration_ = notes_[clickedIndex].durationBeats;
+
+            if (platformBridge_) {
+                platformBridge_->setCursorStyle(isRightEdge ? NUICursorStyle::ResizeEW : NUICursorStyle::Grabbing);
+            }
+
             repaint();
             return true;
         }
@@ -1266,14 +1340,13 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         });
         
         if (state_ == State::SelectingBox) {
-            float w = event.position.x - dragStartPos_.x;
-            float h = event.position.y - dragStartPos_.y;
-            selectionRect_ = NUIRect(dragStartPos_.x, dragStartPos_.y, w, h);
-            
-            // Normalize for intersection check
-            NUIRect norm = selectionRect_;
+            // Normalize at storage so render sees positive dimensions
+            float rawW = event.position.x - dragStartPos_.x;
+            float rawH = event.position.y - dragStartPos_.y;
+            NUIRect norm(dragStartPos_.x, dragStartPos_.y, rawW, rawH);
             if (norm.width < 0) { norm.x += norm.width; norm.width *= -1; }
             if (norm.height < 0) { norm.y += norm.height; norm.height *= -1; }
+            selectionRect_ = norm;
             
             // Select Intersecting Notes (marquee adds to selection during drag)
             for (auto& n : notes_) {
@@ -1332,13 +1405,33 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         else if (state_ == State::Resizing) {
             float dx = (event.position.x - dragStartPos_.x) + (scrollX_ - dragStartScrollX_);
             double beatDelta = dx / pixelsPerBeat_;
-            
+
             for (size_t i = 0; i < notes_.size(); ++i) {
                 if (dragStartNotes_[i].selected) {
                     double newDur = dragStartNotes_[i].durationBeats + beatDelta;
                     notes_[i].durationBeats = std::max(0.125, snapToGrid(newDur));
                 }
             }
+            repaint();
+            return true;
+        }
+        else if (state_ == State::CopyDragging) {
+            float dx = (event.position.x - dragStartPos_.x) + (scrollX_ - dragStartScrollX_);
+            float dy = (event.position.y - dragStartPos_.y) + (scrollY_ - dragStartScrollY_);
+
+            double beatDelta = dx / pixelsPerBeat_;
+            int pitchDelta = -static_cast<int>(dy / keyHeight_);
+
+            for (int idx : copyDragIndices_) {
+                if (idx >= 0 && idx < static_cast<int>(notes_.size())) {
+                    double newStart = dragStartNotes_[idx].startBeat + beatDelta;
+                    notes_[idx].startBeat = std::max(0.0, snapToGrid(newStart));
+                    int newPitch = dragStartNotes_[idx].pitch + pitchDelta;
+                    newPitch = std::clamp(newPitch, 0, 127);
+                    notes_[idx].pitch = snapPitchToScale(newPitch);
+                }
+            }
+            commitNotes();
             repaint();
             return true;
         }
@@ -1351,6 +1444,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             // and notes inside the box were selected during drag.
             state_ = State::None;
             selectionRect_ = NUIRect(0, 0, 0, 0);
+            if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
             repaint();
             return true;
         }
@@ -1362,10 +1456,12 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             } else if (state_ == State::Resizing) {
                 for (const auto& n : notes_) { if (n.selected) { lastNoteDuration_ = n.durationBeats; break; } }
             }
-            
-            pushUndo("Edit", dragStartNotes_, notes_);
+
+            pushUndo(state_ == State::CopyDragging ? "Alt+Drag Copy" : "Edit", dragStartNotes_, notes_);
             state_ = State::None;
             paintingNoteIndex_ = -1;
+            copyDragIndices_.clear();
+            if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
             commitNotes();
             repaint();
             return true;
@@ -1419,20 +1515,25 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
             return true;
         }
         else if (ctrl && event.keyCode == NUIKeyCode::V) {
-            // Paste (Offset by 1 beat for visibility)
+            // Spec 5: Paste at playhead position
             if (s_noteClipboard.empty()) return true;
-            
+
             auto oldNotes = notes_; // Snapshot
 
             // Deselect current
             for (auto& n : notes_) n.selected = false;
-            
-            double offset = 1.0; 
-            
+
+            // Find earliest note in clipboard, offset so it lands at playhead
+            double earliest = s_noteClipboard[0].startBeat;
+            for (const auto& n : s_noteClipboard) {
+                if (n.startBeat < earliest) earliest = n.startBeat;
+            }
+            double offset = playheadBeat_ - earliest;
+
             for (auto n : s_noteClipboard) {
                 n.startBeat += offset;
                 n.selected = true;
-                n.isDeleted = false; 
+                n.isDeleted = false;
                 notes_.push_back(n);
             }
             pushUndo("Paste", oldNotes, notes_);
@@ -1747,6 +1848,8 @@ void PianoRollNoteLayer::updateEdgeScrolling(float mouseX, float mouseY, const N
 }
 void PianoRollNoteLayer::setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb) { onNotesChanged_ = cb; }
 
+void PianoRollNoteLayer::setPlatformBridge(NUIPlatformBridge* bridge) { platformBridge_ = bridge; }
+
 // =============================================================================
 // PianoRollControlPanel (Velocity)
 // =============================================================================
@@ -1894,7 +1997,7 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     auto& themeManager = NUIThemeManager::getInstance();
     
     renderer.fillRect(b, themeManager.getColor("surfaceRaised").darkened(0.08f).withAlpha(0.98f));
-    renderer.fillRect({b.x, b.y, b.width, b.height * 0.35f}, themeManager.getColor("surfaceRaised").lightened(0.015f).withAlpha(0.28f));
+    // Removed highlight gradient for flatter style
     renderer.drawLine(NUIPoint(b.x, b.y), NUIPoint(b.x + b.width, b.y), 1.0f, themeManager.getColor("border").withAlpha(0.28f));
     
     // Sidebar Area (Left)
@@ -1903,7 +2006,9 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     
     renderer.fillRect(sidebarRect, themeManager.getColor("surfaceSecondary").withAlpha(0.72f));
     renderer.drawLine(NUIPoint(sidebarRect.right(), sidebarRect.y), NUIPoint(sidebarRect.right(), sidebarRect.bottom()), 1.0f, themeManager.getColor("border").withAlpha(0.22f));
-    renderer.drawText("Velocity", NUIPoint(b.x + 8, b.y + 15), themeManager.getFontSize("s"), themeManager.getColor("textSecondary").withAlpha(0.68f));
+    
+    auto textDim = renderer.measureText("VELOCITY", themeManager.getFontSize("xs"));
+    renderer.drawText("VELOCITY", NUIPoint(b.x + (sidebarW - textDim.width) * 0.5f, b.y + (b.height - textDim.height) * 0.5f), themeManager.getFontSize("xs"), themeManager.getColor("textSecondary").withAlpha(0.68f));
     
     auto layer = noteLayer_.lock();
     if (!layer || !isVisible()) return;
@@ -2437,6 +2542,10 @@ void PianoRollView::setSnapToScale(bool enabled) {
     if (m_notes) {
         m_notes->setSnapToScale(enabled);
     }
+}
+
+void PianoRollView::setPlatformBridge(NUIPlatformBridge* bridge) {
+    if (m_notes) m_notes->setPlatformBridge(bridge);
 }
 
 void PianoRollView::setPatternName(const std::string& name) {

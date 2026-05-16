@@ -242,7 +242,7 @@ private:
     static constexpr float ROW_HEIGHT = 42.0f;
     static constexpr float HEADER_HEIGHT = 54.0f;
     static constexpr float TAB_HEIGHT = 34.0f;
-    static constexpr float SEARCH_HEIGHT = 40.0f;
+    static constexpr float SEARCH_HEIGHT = 0.0f;
 };
 
 /**

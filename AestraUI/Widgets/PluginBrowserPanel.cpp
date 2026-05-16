@@ -76,7 +76,7 @@ void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
     
     renderHeader(renderer);
     renderTabs(renderer);
-    renderSearchBar(renderer);
+    // renderSearchBar(renderer); // Removed as per requested to use unified search
     renderPluginList(renderer);
     
     if (m_scanning) {

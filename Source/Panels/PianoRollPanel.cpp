@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios – All Rights Reserved. Licensed for personal & educational use only.
 #include "PianoRollPanel.h"
+#include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "AudioEngine.h"
 #include "AudioCommandQueue.h"
 #include "PatternManager.h"
@@ -79,6 +80,15 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     }
 
     setContent(m_pianoRoll);
+}
+
+void PianoRollPanel::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
+    if (m_pianoRoll) m_pianoRoll->setPlatformBridge(bridge);
+}
+
+bool PianoRollPanel::handleKeyEvent(const AestraUI::NUIKeyEvent& event) {
+    if (!m_pianoRoll) return false;
+    return m_pianoRoll->onKeyEvent(event);
 }
 
 

@@ -130,6 +130,10 @@ public:
     void setColor(uint32_t color);
     /** @brief Get the UI accent color. */
     uint32_t getColor() const { return m_color; }
+    /** @brief Set the track color palette index (-1 = unset). */
+    void setTrackColorIndex(int index) { m_trackColorIndex = index; }
+    /** @brief Get the track color palette index (-1 = unset). */
+    int getTrackColorIndex() const { return m_trackColorIndex; }
 
     /** @brief Set channel output volume. */
     void setVolume(float volume);
@@ -200,6 +204,7 @@ public:
     /** @brief Set callback used to refresh input monitoring snapshots after route-affecting changes.
      * NOTE: Must be set before audio engine processing starts. Caller is responsible for thread safety. */
     void setInputMonitoringStateChangedCallback(std::function<void()> cb) {
+        std::lock_guard<std::mutex> lock(m_monitoringCallbackMutex);
         m_inputMonitoringStateChanged = std::move(cb);
     }
 
@@ -222,7 +227,7 @@ public:
     uint32_t getMainOutputId() const { return m_mainOutputId; }
 
     /** @brief Get a copy of the current send list. Thread-safe: caller must not be RT. */
-    std::vector<AudioRoute> getSends() const; // Returns c std::vector<AudioRoute> getSends() const; // Returns copy
+    std::vector<AudioRoute> getSends() const;
     /** @brief Add a send route. */
     void addSend(const AudioRoute& route);
     /** @brief Remove a send route by index. */
@@ -255,6 +260,7 @@ private:
     AestraUUID m_uuid;
     uint32_t m_channelId;
     uint32_t m_color;
+    int m_trackColorIndex{-1};
 
     // Audio parameters (atomic for thread safety)
     std::atomic<float> m_volume{1.0f};
@@ -282,6 +288,9 @@ private:
     std::vector<float> m_dryChannelBuf;
 
     std::function<void(const AudioQueueCommand&)> m_commandSink;
+
+    // Input monitoring callback — protected by its own mutex (not m_sendMutex)
+    mutable std::mutex m_monitoringCallbackMutex;
     std::function<void()> m_inputMonitoringStateChanged;
 
     // Pre-allocated deinterleave buffers for RT-safe effect processing
@@ -293,14 +302,13 @@ private:
     uint32_t m_mainOutputId{0xFFFFFFFF};
 
     // Aux Sends / Direct Outs
-    // Aux Sends / Direct Outs
     mutable std::mutex m_sendMutex;
     std::vector<AudioRoute> m_sends;
 
     void notifyInputMonitoringStateChanged() {
         std::function<void()> cb;
         {
-            std::lock_guard<std::mutex> lock(m_sendMutex);
+            std::lock_guard<std::mutex> lock(m_monitoringCallbackMutex);
             cb = m_inputMonitoringStateChanged;
         }
         if (cb) {
