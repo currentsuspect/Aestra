@@ -373,6 +373,7 @@ private:
         Painting,       // Creating a new note (Drag extends duration)
         Moving,         // Moving existing note(s)
         Resizing,       // Resizing existing note(s) (Right edge)
+        ResizingLeft,   // Resizing from left edge (moves start, keeps end)
         SelectingBox,   // Dragging selection rectangle
         Erasing,        // Eraser Box/Hover
         CopyDragging    // Alt+drag copy of selection
@@ -382,6 +383,7 @@ private:
     // Smart Cursor hover state
     int hoveredNoteIndex_ = -1;
     bool hoverOnRightEdge_ = false;
+    bool hoverOnLeftEdge_ = false;
 
     // Alt+drag copy state
     std::vector<int> copyDragIndices_;

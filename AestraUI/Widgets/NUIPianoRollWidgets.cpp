@@ -1003,14 +1003,18 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         renderer.strokeRoundedRect(r, 6.0f, 1.0f, edgeColor);
         renderer.fillRoundedRect(NUIRect(r.x + 2.0f, r.bottom() - 3.0f, std::max(8.0f, r.width - 4.0f), 1.5f), 0.75f, glowColor);
 
-        // Spec 6: right-edge resize affordance on hover
-        if (static_cast<int>(&n - &notes_[0]) == hoveredNoteIndex_ && hoverOnRightEdge_) {
-            NUIRect affordance(r.right() - 3.0f, r.y, 3.0f, r.height);
+        // Edge resize affordance on hover
+        if (static_cast<int>(&n - &notes_[0]) == hoveredNoteIndex_ && (hoverOnRightEdge_ || hoverOnLeftEdge_)) {
             NUIColor affordanceColor = coreColor;
             affordanceColor.r *= 0.68f;
             affordanceColor.g *= 0.68f;
             affordanceColor.b *= 0.68f;
-            renderer.fillRoundedRect(affordance, 1.5f, affordanceColor);
+            if (hoverOnRightEdge_) {
+                renderer.fillRoundedRect(NUIRect(r.right() - 3.0f, r.y, 3.0f, r.height), 1.5f, affordanceColor);
+            }
+            if (hoverOnLeftEdge_) {
+                renderer.fillRoundedRect(NUIRect(r.x, r.y, 3.0f, r.height), 1.5f, affordanceColor);
+            }
         }
 
         // [FEATURE] Render pitch name label inside the note block
@@ -1069,6 +1073,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         if (hoveredNoteIndex_ != -1) {
             hoveredNoteIndex_ = -1;
             hoverOnRightEdge_ = false;
+            hoverOnLeftEdge_ = false;
             if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
         }
         return false;
@@ -1085,6 +1090,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             if (hoveredNoteIndex_ != -1) {
                 hoveredNoteIndex_ = -1;
                 hoverOnRightEdge_ = false;
+                hoverOnLeftEdge_ = false;
                 repaint();
             }
             if (platformBridge_) {
@@ -1096,15 +1102,20 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             float nx = b.x + static_cast<float>(n.startBeat * pixelsPerBeat_) - scrollX_;
             float nw = static_cast<float>(n.durationBeats * pixelsPerBeat_);
             float edgeZone = std::min(10.0f, nw * 0.30f);
-            bool onEdge = (event.position.x >= nx + nw - edgeZone);
+            bool onLeftEdge = (event.position.x <= nx + edgeZone);
+            bool onRightEdge = (event.position.x >= nx + nw - edgeZone);
 
-            if (hoveredNoteIndex_ != hitIdx || hoverOnRightEdge_ != onEdge) {
+            if (hoveredNoteIndex_ != hitIdx || hoverOnRightEdge_ != onRightEdge || hoverOnLeftEdge_ != onLeftEdge) {
                 hoveredNoteIndex_ = hitIdx;
-                hoverOnRightEdge_ = onEdge;
+                hoverOnRightEdge_ = onRightEdge;
+                hoverOnLeftEdge_ = onLeftEdge;
                 repaint();
             }
             if (platformBridge_) {
-                platformBridge_->setCursorStyle(onEdge ? NUICursorStyle::ResizeEW : NUICursorStyle::Grab);
+                if (onLeftEdge || onRightEdge)
+                    platformBridge_->setCursorStyle(NUICursorStyle::ResizeEW);
+                else
+                    platformBridge_->setCursorStyle(NUICursorStyle::Grab);
             }
         }
     }
@@ -1247,6 +1258,8 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
 
             // Alt+drag: clone selection and drag copies — skip selection logic
             if (event.modifiers & NUIModifiers::Alt) {
+                // Ensure clicked note is part of the selection
+                notes_[clickedIndex].selected = true;
                 copyDragIndices_.clear();
 
                 // Clone all selected notes
@@ -1294,11 +1307,18 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             float nx = static_cast<float>(n.startBeat * pixelsPerBeat_);
             float nw = static_cast<float>(n.durationBeats * pixelsPerBeat_);
 
-            // Smart Edge Detection
+            // Smart Edge Detection — left and right
             float edgeZone = std::min(10.0f, nw * 0.3f);
+            bool isLeftEdge = (localX <= nx + edgeZone);
             bool isRightEdge = (localX >= nx + nw - edgeZone);
 
-            state_ = isRightEdge ? State::Resizing : State::Moving;
+            if (isLeftEdge)
+                state_ = State::ResizingLeft;
+            else if (isRightEdge)
+                state_ = State::Resizing;
+            else
+                state_ = State::Moving;
+
             dragStartPos_ = event.position;
             dragStartScrollX_ = scrollX_;
             dragStartScrollY_ = scrollY_;
@@ -1308,7 +1328,8 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             lastNoteDuration_ = notes_[clickedIndex].durationBeats;
 
             if (platformBridge_) {
-                platformBridge_->setCursorStyle(isRightEdge ? NUICursorStyle::ResizeEW : NUICursorStyle::Grabbing);
+                platformBridge_->setCursorStyle(
+                    (isLeftEdge || isRightEdge) ? NUICursorStyle::ResizeEW : NUICursorStyle::Grabbing);
             }
 
             repaint();
@@ -1415,6 +1436,29 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             repaint();
             return true;
         }
+        else if (state_ == State::ResizingLeft) {
+            // Left-edge resize: move start, adjust duration to keep end fixed
+            float dx = (event.position.x - dragStartPos_.x) + (scrollX_ - dragStartScrollX_);
+            double beatDelta = dx / pixelsPerBeat_;
+
+            for (size_t i = 0; i < notes_.size(); ++i) {
+                if (dragStartNotes_[i].selected) {
+                    double origStart = dragStartNotes_[i].startBeat;
+                    double origEnd = origStart + dragStartNotes_[i].durationBeats;
+                    double newStart = std::max(0.0, snapToGrid(origStart + beatDelta));
+                    double newDur = origEnd - newStart;
+                    if (newDur < 0.125) {
+                        newDur = 0.125;
+                        newStart = origEnd - 0.125;
+                        if (newStart < 0.0) newStart = 0.0;
+                    }
+                    notes_[i].startBeat = newStart;
+                    notes_[i].durationBeats = newDur;
+                }
+            }
+            repaint();
+            return true;
+        }
         else if (state_ == State::CopyDragging) {
             float dx = (event.position.x - dragStartPos_.x) + (scrollX_ - dragStartScrollX_);
             float dy = (event.position.y - dragStartPos_.y) + (scrollY_ - dragStartScrollY_);
@@ -1453,7 +1497,7 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             // Update Memory
             if (state_ == State::Painting && paintingNoteIndex_ != -1) {
                 lastNoteDuration_ = notes_[paintingNoteIndex_].durationBeats;
-            } else if (state_ == State::Resizing) {
+            } else if (state_ == State::Resizing || state_ == State::ResizingLeft) {
                 for (const auto& n : notes_) { if (n.selected) { lastNoteDuration_ = n.durationBeats; break; } }
             }
 
