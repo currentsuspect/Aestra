@@ -969,18 +969,8 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         
         if (x + w < b.x || y + h < b.y || y > b.y + b.height) continue;
         
-        // Animation Logic (Scale)
-        float animScale = n.isDeleted ? std::max(0.0f, n.animationScale - 0.2f) : 1.0f;
-        if (n.isDeleted) {
-            // Const-cast hack or mutable is needed if we modify inside render loop, 
-            // but for this codebase it seems we modify 'n' directly? 
-            // Actually 'n' is const ref here. 
-            // Assuming the original code worked, let's respect the structure but we can't modify const ref.
-            // Original code likely had 'n' as non-const or mutable. 
-            // Since I can't see the struct def, I will assume visual logic only here.
-        }
-
-        if (n.isDeleted && animScale <= 0.01f) continue;
+        // Skip deleted notes
+        if (n.isDeleted) continue;
         
         NUIRect r(x, y + 1, std::max(6.0f, w), h - 2);
         
