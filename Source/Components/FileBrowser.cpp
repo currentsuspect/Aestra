@@ -361,7 +361,6 @@ FileBrowser::FileBrowser()
     setSize(defaultWidth, defaultHeight);
 
     // Initialize search input
-    // Initialize search input
     searchInput_ = std::make_shared<NUITextInput>();
     searchInput_->setPlaceholderText("Search library...");
     addChild(searchInput_);
@@ -381,7 +380,7 @@ FileBrowser::FileBrowser()
     searchInput_->setPadding(12.0f);
     searchInput_->setBorderRadius(0.0f);
     searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
-    searchInput_->setBorderColor(themeManager.getColor("textSecondary").withAlpha(0.35f)); // Use textSecondary for a visible grey
+    searchInput_->setBorderColor(themeManager.getColor("textSecondary").withAlpha(0.35f));
     searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
     searchInput_->setBorderWidth(2.0f);
 
@@ -764,7 +763,9 @@ void FileBrowser::processScanResults() {
 FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     NUIRect bounds = getBounds();
     const float effectiveW = effectiveWidth_ > 0.0f ? effectiveWidth_ : bounds.width;
-    const float headerH = BROWSER_TOP_PAD + BROWSER_SEARCH_ROW_H;
+    // Search bar fills the top gap (no BROWSER_TOP_PAD), inset 2px on sides
+    const float searchH = BROWSER_SEARCH_ROW_H;
+    const float headerH = searchH;
     const float contentY = bounds.y + headerH;
     const float contentH = std::max(0.0f, bounds.height - headerH);
     const float navW = std::clamp(effectiveW * 0.34f, 118.0f, 188.0f);
@@ -772,8 +773,8 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     const float listW = std::max(0.0f, effectiveW - navW);
 
     BrowserLayout layout;
-    layout.search = NUIRect(bounds.x + 2.0f, bounds.y + BROWSER_TOP_PAD + 2.0f,
-                            std::max(0.0f, effectiveW - 4.0f), BROWSER_SEARCH_ROW_H - 4.0f);
+    layout.search = NUIRect(bounds.x + 2.0f, bounds.y + 2.0f,
+                            std::max(0.0f, effectiveW - 4.0f), searchH - 4.0f);
     layout.navPane = NUIRect(bounds.x, contentY, navW, contentH);
     layout.listHeader = NUIRect(listX, contentY, listW, BROWSER_LIST_HEADER_H);
     layout.list = NUIRect(listX, contentY + BROWSER_LIST_HEADER_H,
@@ -1115,7 +1116,10 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     if (!renderCache || !renderCache->isEnabled()) {
         // Fallback: Immediate render
         renderStaticContent(renderer, bounds);
+        // Clip children to prevent search bar spillover during resize
+        renderer.setClipRect(bounds);
         renderChildren(renderer);
+        renderer.clearClipRect();
         return;
     }
 
@@ -1159,7 +1163,10 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
 
     // Render interactive children (Search Input, Popup Menus) ON TOP of the cache
     // These handle their own dirtiness and shouldn't trigger full cache rebuilds
+    // Clip children to prevent search bar spillover during resize
+    renderer.setClipRect(bounds);
     renderChildren(renderer);
+    renderer.clearClipRect();
 
     if (searchInput_ && searchInput_->isVisible()) {
         auto& themeManager = NUIThemeManager::getInstance();
@@ -1263,13 +1270,11 @@ void FileBrowser::onResize(int width, int height) {
 
         searchInput_->setTextColor(textColor_);
         searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
-        searchInput_->setBorderColor(themeManager.getColor("border").withAlpha(0.28f));
+        searchInput_->setBorderColor(themeManager.getColor("textSecondary").withAlpha(0.35f));
         searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
         searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
         searchInput_->setPadding(12.0f);
         searchInput_->setBorderRadius(0.0f);
-        searchInput_->setBorderColor(themeManager.getColor("textSecondary").withAlpha(0.35f)); // Use textSecondary for a visible grey
-        searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
         searchInput_->setBorderWidth(2.0f);
     }
 
