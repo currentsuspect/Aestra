@@ -426,7 +426,15 @@ AestraContent::AestraContent() {
             m_previewEngine->stop();
             double fullDuration = m_previewEngine->getDuration();
             if (fullDuration <= 0.0) fullDuration = 300.0;
-            auto result = m_previewEngine->play(m_currentPreviewFile, 0.0f, fullDuration);
+            float rate = 1.0f;
+            if (m_previewPanel && m_previewPanel->isBpmSyncEnabled()) {
+                int fileBpm = 0;
+                int projectBpm = m_audioEngine ? static_cast<int>(m_audioEngine->getBPM()) : 120;
+                if (fileBpm > 0 && projectBpm > 0) {
+                    rate = std::clamp(static_cast<float>(projectBpm) / static_cast<float>(fileBpm), 0.5f, 2.0f);
+                }
+            }
+            auto result = m_previewEngine->play(m_currentPreviewFile, 0.0f, fullDuration, rate);
             if (result == Audio::PreviewResult::Success || result == Audio::PreviewResult::Pending) {
                 m_previewIsPlaying = true;
                 m_previewStartTime = std::chrono::steady_clock::now();
@@ -2982,7 +2990,15 @@ void AestraContent::playSoundPreview(const AestraUI::FileItem& file) {
     }
 
     m_previewDuration = 8.0;
-    auto result = m_previewEngine->play(file.path, 0.0f, m_previewDuration);
+    float playbackRate = 1.0f;
+    if (m_previewPanel && m_previewPanel->isBpmSyncEnabled() && m_previewPanel->isLoopEnabled()) {
+        int fileBpm = file.detectedBpm;
+        int projectBpm = m_audioEngine ? static_cast<int>(m_audioEngine->getBPM()) : 120;
+        if (fileBpm > 0 && projectBpm > 0) {
+            playbackRate = std::clamp(static_cast<float>(projectBpm) / static_cast<float>(fileBpm), 0.5f, 2.0f);
+        }
+    }
+    auto result = m_previewEngine->play(file.path, 0.0f, m_previewDuration, playbackRate);
 
     if (result == PreviewResult::Success || result == PreviewResult::Pending) {
         m_previewIsPlaying = true;
@@ -3169,12 +3185,9 @@ void AestraContent::updateSoundPreview() {
         }
 
         if (!m_previewEngine->isPlaying()) {
-            // Preview ended naturally — notify panel for loop handling before stopping
             if (m_previewPanel) {
                 m_previewPanel->onPreviewEnded();
             }
-            // onPreviewEnded() may have restarted playback via replay callback;
-            // only stop if the panel didn't re-trigger playback
             if (!m_previewEngine->isPlaying()) {
                 stopSoundPreview();
             }
@@ -3186,6 +3199,7 @@ void AestraContent::updateSoundPreview() {
             }
         }
     }
+    updatePreviewPlayhead();
 }
 
 void AestraContent::seekSoundPreview(double seconds) {
