@@ -119,12 +119,20 @@ FilePreviewPanel::FilePreviewPanel() {
     playIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24' fill='currentColor'><path d='M8 5v14l11-7z'/></svg>");
 
     stopIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24' fill='currentColor'><path d='M6 6h12v12H6z'/></svg>");
+
+    loopIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z'/></svg>");
+
+    bpmSyncIcon_ = std::make_shared<NUIIcon>("<svg viewBox='0 0 24 24' fill='currentColor'><path d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z'/></svg>");
 }
 
 void FilePreviewPanel::setFile(const FileItem* file) {
     hasCurrentFile_ = file != nullptr;
+    m_currentFilePath.clear();
+    m_currentFileBpm = 0;
     if (file) {
         currentFile_ = *file;
+        m_currentFilePath = file->path;
+        m_currentFileBpm = file->detectedBpm;
     } else {
         currentFile_ = FileItem();
     }
@@ -195,6 +203,20 @@ void FilePreviewPanel::setDuration(double seconds) {
     }
 }
 
+void FilePreviewPanel::onPreviewEnded() {
+    if (m_loopEnabled && !m_currentFilePath.empty()) {
+        if (onReplay_) onReplay_();
+    } else {
+        isPlaying_ = false;
+        playheadPosition_ = 0.0;
+        setDirty(true);
+    }
+}
+
+float FilePreviewPanel::getRequiredHeight() const {
+    return getBounds().height + kTransportBarHeight;
+}
+
 void FilePreviewPanel::onUpdate(double deltaTime) {
     NUIComponent::onUpdate(deltaTime);
 
@@ -247,11 +269,13 @@ void FilePreviewPanel::waveformWorker(const std::string& path, uint64_t generati
         if (generation == currentGeneration_.load(std::memory_order_acquire)) {
             waveformData_ = std::move(waveform);
             isLoading_ = false;
+            setDirty(true);
         }
     } else {
         std::lock_guard<std::mutex> lock(waveformMutex_);
         if (generation == currentGeneration_.load(std::memory_order_acquire)) {
             isLoading_ = false;
+            setDirty(true);
         }
     }
 }
@@ -324,8 +348,9 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     // === AUDIO FILE STATE ===
     const float padL = 14.0f;
     const float padR = 14.0f;
-    const float padB = 10.0f; // bottom padding for scrubber
+    const float transportH = 18.0f;
     const float scrubberH = 3.0f;
+    const float padB = 8.0f; // bottom padding below scrubber
     const float playBtnSize = 30.0f;
     const float playBtnX = bounds.x + padL;
     const float centerY = bounds.y + bounds.height * 0.5f;
@@ -333,7 +358,10 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     // Play button bounds
     playButtonBounds_ = NUIRect(playBtnX, centerY - playBtnSize * 0.5f, playBtnSize, playBtnSize);
 
-    // Scrubber bounds (full width minus padding)
+    // Transport bar positioned above scrubber
+    const float transportY = bounds.bottom() - padB - scrubberH - transportH - 2.0f;
+
+    // Scrubber bounds (full width minus padding, at bottom)
     scrubberBounds_ = NUIRect(bounds.x + padL, bounds.bottom() - padB - scrubberH,
                               std::max(0.0f, bounds.width - padL - padR), scrubberH);
 
@@ -473,6 +501,72 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         );
     }
 
+    // -- Transport bar (above scrubber) --
+    const float btnSize = 16.0f;
+    float tx = bounds.x + padL;
+
+    // Play/Stop already rendered above; add Stop button next
+    stopButtonBounds_ = NUIRect(tx, transportY, btnSize, btnSize);
+    if (stopIcon_) {
+        stopIcon_->setBounds(NUIRect(tx + 1.5f, transportY + 1.5f, 13.0f, 13.0f));
+        stopIcon_->setColor(theme.getColor("textPrimary").withAlpha(0.75f));
+        stopIcon_->onRender(renderer);
+    }
+    tx += btnSize + 8.0f;
+
+    // Loop button
+    loopButtonBounds_ = NUIRect(tx, transportY, btnSize, btnSize);
+    if (m_loopEnabled) {
+        renderer.fillRoundedRect(loopButtonBounds_, 3.0f, accent.withAlpha(0.25f));
+        renderer.strokeRoundedRect(loopButtonBounds_, 3.0f, 1.0f, accent.withAlpha(0.5f));
+    } else {
+        renderer.strokeRoundedRect(loopButtonBounds_, 3.0f, 1.0f, theme.getColor("border").withAlpha(0.35f));
+    }
+    if (loopIcon_) {
+        loopIcon_->setBounds(NUIRect(tx + 1.5f, transportY + 1.5f, 13.0f, 13.0f));
+        loopIcon_->setColor(m_loopEnabled ? accent : theme.getColor("textSecondary").withAlpha(0.5f));
+        loopIcon_->onRender(renderer);
+    }
+    tx += btnSize + 8.0f;
+
+    // BPM sync button
+    bpmSyncButtonBounds_ = NUIRect(tx, transportY, btnSize, btnSize);
+    if (m_bpmSyncEnabled) {
+        renderer.fillRoundedRect(bpmSyncButtonBounds_, 3.0f, NUIColor(0.204f, 0.835f, 0.600f, 0.25f));
+        renderer.strokeRoundedRect(bpmSyncButtonBounds_, 3.0f, 1.0f, NUIColor(0.204f, 0.835f, 0.600f, 0.5f));
+    } else {
+        renderer.strokeRoundedRect(bpmSyncButtonBounds_, 3.0f, 1.0f, theme.getColor("border").withAlpha(0.35f));
+    }
+    if (bpmSyncIcon_) {
+        bpmSyncIcon_->setBounds(NUIRect(tx + 1.5f, transportY + 1.5f, 13.0f, 13.0f));
+        bpmSyncIcon_->setColor(m_bpmSyncEnabled ? NUIColor(0.204f, 0.835f, 0.600f, 1.0f) : theme.getColor("textSecondary").withAlpha(0.5f));
+        bpmSyncIcon_->onRender(renderer);
+    }
+    tx += btnSize + 12.0f;
+
+    // Time display
+    std::string timeStr = formatTimeShort(playheadPosition_) + " / " + formatTimeShort(duration_);
+    renderer.drawText(timeStr, {tx, transportY + 2.0f}, 10.0f, theme.getColor("textSecondary").withAlpha(0.45f));
+
+    // BPM display (right-aligned)
+    if (m_currentFileBpm > 0) {
+        float rate = 1.0f;
+        if (m_bpmSyncEnabled && m_projectBpm > 0) {
+            rate = std::clamp(static_cast<float>(m_projectBpm) / static_cast<float>(m_currentFileBpm), 0.5f, 2.0f);
+        }
+        char bpmBuf[32];
+        std::snprintf(bpmBuf, sizeof(bpmBuf), "%d BPM", m_currentFileBpm);
+        std::string bpmStr = bpmBuf;
+        if (m_bpmSyncEnabled && m_projectBpm > 0) {
+            char rateBuf[16];
+            std::snprintf(rateBuf, sizeof(rateBuf), "  x%.2f", rate);
+            bpmStr += rateBuf;
+        }
+        auto bpmSize = renderer.measureText(bpmStr, 10.0f);
+        renderer.drawText(bpmStr, {bounds.right() - padR - bpmSize.width, transportY + 2.0f}, 10.0f,
+                          m_bpmSyncEnabled ? NUIColor(0.204f, 0.835f, 0.600f, 0.9f) : theme.getColor("textSecondary").withAlpha(0.35f));
+    }
+
     // -- Loading spinner overlay (small, near play button) --
     bool loading = false;
     {
@@ -507,6 +601,16 @@ bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
         return false;
+    }
+
+    if (event.type == NUIMouseEventType::Move) {
+        if (stopButtonBounds_.contains(event.position)) {
+            showRemoteTooltip("Stop preview", event.position, this);
+        } else if (loopButtonBounds_.contains(event.position)) {
+            showRemoteTooltip(m_loopEnabled ? "Loop: On" : "Loop: Off", event.position, this);
+        } else if (bpmSyncButtonBounds_.contains(event.position)) {
+            showRemoteTooltip(m_bpmSyncEnabled ? "BPM Sync: On" : "BPM Sync: Off", event.position, this);
+        }
     }
 
     auto seekFromPosition = [&](const NUIPoint& pos) {
@@ -544,6 +648,28 @@ bool FilePreviewPanel::onMouseEvent(const NUIMouseEvent& event) {
         if (scrubberBounds_.contains(event.position) && duration_ > 0.0) {
             isSeekDragging_ = true;
             seekFromPosition(event.position);
+            setDirty(true);
+            return true;
+        }
+
+        // Stop button
+        if (stopButtonBounds_.contains(event.position)) {
+            if (onStop_) onStop_();
+            playheadPosition_ = 0.0;
+            setDirty(true);
+            return true;
+        }
+
+        // Loop button
+        if (loopButtonBounds_.contains(event.position)) {
+            m_loopEnabled = !m_loopEnabled;
+            setDirty(true);
+            return true;
+        }
+
+        // BPM sync button
+        if (bpmSyncButtonBounds_.contains(event.position)) {
+            m_bpmSyncEnabled = !m_bpmSyncEnabled;
             setDirty(true);
             return true;
         }
