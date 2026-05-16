@@ -90,9 +90,9 @@ void PianoRollKeyLane::onRender(NUIRenderer& renderer) {
     
     renderer.setClipRect(b);
     
-    const auto laneBg = themeManager.getColor("surfaceSecondary");
-    const auto whiteKey = themeManager.getColor("surfaceRaised").withAlpha(0.6f);
-    const auto blackKey = themeManager.getColor("backgroundSecondary").darkened(0.04f);
+    const auto laneBg = themeManager.getColor("backgroundSecondary");
+    const auto whiteKey = themeManager.getColor("surfaceRaised").withAlpha(0.50f);
+    const auto blackKey = themeManager.getColor("backgroundPrimary").darkened(0.04f);
     const auto whiteBorder = themeManager.getColor("border").withAlpha(0.2f);
     const auto blackBorder = themeManager.getColor("border").withAlpha(0.4f);
     const auto keySeparator = themeManager.getColor("border").withAlpha(0.1f);
@@ -257,7 +257,7 @@ void PianoRollMinimap::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& theme = NUIThemeManager::getInstance();
     
-    const auto panelBg = theme.getColor("surfaceRaised").darkened(0.06f).withAlpha(0.98f);
+    const auto panelBg = theme.getColor("backgroundSecondary").withAlpha(0.95f);
     const auto border = theme.getColor("border").withAlpha(0.28f);
     renderer.fillRoundedRect(b, 7.0f, panelBg);
     renderer.strokeRoundedRect(b, 7.0f, 1.0f, border);
@@ -443,14 +443,15 @@ bool PianoRollRuler::onMouseEvent(const NUIMouseEvent& event) {
 void PianoRollRuler::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
     auto b = getBounds();
+    auto& themeManager = NUIThemeManager::getInstance();
     
     // CLIP: Prevent left bleeding
     renderer.setClipRect(b);
     
-    auto bg = NUIColor(0.06f, 0.06f, 0.08f, 1.0f);
-    auto textCol = NUIColor(0.78f, 0.78f, 0.84f, 1.0f);
-    auto tickCol = NUIColor(0.42f, 0.42f, 0.48f, 1.0f);
-    auto borderCol = NUIColor(0.0f, 0.0f, 0.0f, 0.5f);
+    auto bg = themeManager.getColor("backgroundSecondary");
+    auto textCol = themeManager.getColor("textPrimary").withAlpha(0.78f);
+    auto tickCol = themeManager.getColor("textSecondary").withAlpha(0.42f);
+    auto borderCol = themeManager.getColor("border").withAlpha(0.50f);
     
     renderer.fillRect(b, bg);
     
@@ -659,8 +660,8 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& themeManager = NUIThemeManager::getInstance();
     
-    renderer.fillRect(b, themeManager.getColor("surfaceRaised").withAlpha(0.98f));
-    renderer.drawLine(NUIPoint(b.x, b.y + b.height), NUIPoint(b.x + b.width, b.y + b.height), 1.0f, themeManager.getColor("border").withAlpha(0.24f));
+    renderer.fillRect(b, themeManager.getColor("backgroundSecondary"));
+    renderer.drawLine(NUIPoint(b.x, b.y + b.height), NUIPoint(b.x + b.width, b.y + b.height), 1.0f, themeManager.getColor("border").withAlpha(0.35f));
 
     // Let child buttons keep input/hit-testing, but draw our custom toolbar chrome and glyphs after them.
     renderChildren(renderer);
@@ -821,10 +822,10 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     // CLIP TO BOUNDS to prevent bleeding
     renderer.setClipRect(b);
 
-    renderer.fillRect(b, themeManager.getColor("backgroundSecondary"));
+    renderer.fillRect(b, themeManager.getColor("backgroundPrimary"));
 
-    auto rowBlackKey = themeManager.getColor("surfaceRaised").withAlpha(0.12f);
-    auto rowRootKey = themeManager.getColor("accentPrimary").withAlpha(0.05f);
+    auto rowBlackKey = themeManager.getColor("surfaceRaised").withAlpha(0.08f);
+    auto rowRootKey = themeManager.getColor("accentPrimary").withAlpha(0.04f);
     
     auto gridBeat = themeManager.getColor("border").withAlpha(0.06f);
     auto gridBar = themeManager.getColor("border").withAlpha(0.14f);
@@ -1407,14 +1408,22 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         else if (state_ == State::Moving) {
             float dx = (event.position.x - dragStartPos_.x) + (scrollX_ - dragStartScrollX_);
             float dy = (event.position.y - dragStartPos_.y) + (scrollY_ - dragStartScrollY_);
-            
+
             double beatDelta = dx / pixelsPerBeat_;
             int pitchDelta = -static_cast<int>(dy / keyHeight_);
-            
+
+            // Clamp beatDelta so the leftmost selected note doesn't go below 0
+            double minStart = std::numeric_limits<double>::max();
+            for (size_t i = 0; i < notes_.size(); ++i) {
+                if (dragStartNotes_[i].selected)
+                    minStart = std::min(minStart, dragStartNotes_[i].startBeat);
+            }
+            if (minStart + beatDelta < 0.0)
+                beatDelta = -minStart;
+
             for (size_t i = 0; i < notes_.size(); ++i) {
                 if (dragStartNotes_[i].selected) {
-                    double newStart = dragStartNotes_[i].startBeat + beatDelta;
-                    notes_[i].startBeat = std::max(0.0, snapToGrid(newStart));
+                    notes_[i].startBeat = snapToGrid(dragStartNotes_[i].startBeat + beatDelta);
                     int newPitch = dragStartNotes_[i].pitch + pitchDelta;
                     newPitch = std::clamp(newPitch, 0, 127);
                     notes_[i].pitch = snapPitchToScale(newPitch);
@@ -1466,10 +1475,18 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             double beatDelta = dx / pixelsPerBeat_;
             int pitchDelta = -static_cast<int>(dy / keyHeight_);
 
+            // Clamp beatDelta so the leftmost clone doesn't go below 0
+            double minStart = std::numeric_limits<double>::max();
+            for (int idx : copyDragIndices_) {
+                if (idx >= 0 && idx < static_cast<int>(dragStartNotes_.size()))
+                    minStart = std::min(minStart, dragStartNotes_[idx].startBeat);
+            }
+            if (minStart + beatDelta < 0.0)
+                beatDelta = -minStart;
+
             for (int idx : copyDragIndices_) {
                 if (idx >= 0 && idx < static_cast<int>(notes_.size())) {
-                    double newStart = dragStartNotes_[idx].startBeat + beatDelta;
-                    notes_[idx].startBeat = std::max(0.0, snapToGrid(newStart));
+                    notes_[idx].startBeat = snapToGrid(dragStartNotes_[idx].startBeat + beatDelta);
                     int newPitch = dragStartNotes_[idx].pitch + pitchDelta;
                     newPitch = std::clamp(newPitch, 0, 127);
                     notes_[idx].pitch = snapPitchToScale(newPitch);
@@ -2040,15 +2057,15 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     auto b = getBounds();
     auto& themeManager = NUIThemeManager::getInstance();
     
-    renderer.fillRect(b, themeManager.getColor("surfaceRaised").darkened(0.08f).withAlpha(0.98f));
-    // Removed highlight gradient for flatter style
-    renderer.drawLine(NUIPoint(b.x, b.y), NUIPoint(b.x + b.width, b.y), 1.0f, themeManager.getColor("border").withAlpha(0.28f));
+    renderer.fillRect(b, themeManager.getColor("backgroundSecondary"));
+    // Top border to separate from grid
+    renderer.drawLine(NUIPoint(b.x, b.y), NUIPoint(b.x + b.width, b.y), 1.0f, themeManager.getColor("border").withAlpha(0.35f));
     
     // Sidebar Area (Left)
     float sidebarW = 60.0f; 
     NUIRect sidebarRect(b.x, b.y, sidebarW, b.height);
     
-    renderer.fillRect(sidebarRect, themeManager.getColor("surfaceSecondary").withAlpha(0.72f));
+    renderer.fillRect(sidebarRect, themeManager.getColor("backgroundPrimary").withAlpha(0.60f));
     renderer.drawLine(NUIPoint(sidebarRect.right(), sidebarRect.y), NUIPoint(sidebarRect.right(), sidebarRect.bottom()), 1.0f, themeManager.getColor("border").withAlpha(0.22f));
     
     auto textDim = renderer.measureText("VELOCITY", themeManager.getFontSize("xs"));
@@ -2242,7 +2259,7 @@ PianoRollView::PianoRollView()
 
 void PianoRollView::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRect(getBounds(), theme.getColor("surfaceRaised").darkened(0.08f).withAlpha(0.98f));
+    renderer.fillRect(getBounds(), theme.getColor("backgroundPrimary"));
     NUIComponent::onRender(renderer);
 
     // Draw playhead
