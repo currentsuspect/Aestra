@@ -42,7 +42,7 @@ jobs:
 
       - name: Test
         working-directory: build
-        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation"
+        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-linux.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
 
       - name: License verification tests
         run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure

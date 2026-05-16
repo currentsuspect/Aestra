@@ -19,6 +19,12 @@
 #include <windows.h> // ALLOW_PLATFORM_INCLUDE
 #endif
 
+#if __cplusplus >= 202002L || (defined(_MSVC_LANG) && _MSVC_LANG >= 202002L)
+    #define AESTRA_UNLIKELY [[unlikely]]
+#else
+    #define AESTRA_UNLIKELY
+#endif
+
 namespace Aestra {
 
 // =============================================================================
@@ -70,7 +76,7 @@ public:
         size_t currentWrite = writeIndex.load(std::memory_order_relaxed);
         size_t nextWrite = mask(currentWrite + 1);
 
-        if (nextWrite == readIndex.load(std::memory_order_acquire)) [[unlikely]] {
+        if (nextWrite == readIndex.load(std::memory_order_acquire)) AESTRA_UNLIKELY {
             return false; // Buffer full
         }
 
@@ -83,7 +89,7 @@ public:
     [[nodiscard]] bool pop(T& item) {
         size_t currentRead = readIndex.load(std::memory_order_relaxed);
 
-        if (currentRead == writeIndex.load(std::memory_order_acquire)) [[unlikely]] {
+        if (currentRead == writeIndex.load(std::memory_order_acquire)) AESTRA_UNLIKELY {
             return false; // Buffer empty
         }
 
@@ -98,7 +104,7 @@ public:
     [[nodiscard]] bool popMoveAndClear(T& item) {
         size_t currentRead = readIndex.load(std::memory_order_relaxed);
 
-        if (currentRead == writeIndex.load(std::memory_order_acquire)) [[unlikely]] {
+        if (currentRead == writeIndex.load(std::memory_order_acquire)) AESTRA_UNLIKELY {
             return false; // Buffer empty
         }
 
