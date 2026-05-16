@@ -55,13 +55,13 @@ public:
     ScopedConnection& operator=(const ScopedConnection&) = delete;
     ScopedConnection(ScopedConnection&& other) noexcept
         : m_connection(std::move(other.m_connection)) {
-        other.m_connection.disconnect();
+        other.m_connection.m_disconnect = nullptr;
     }
     ScopedConnection& operator=(ScopedConnection&& other) noexcept {
         if (this != &other) {
             disconnect();
             m_connection = std::move(other.m_connection);
-            other.m_connection.disconnect();
+            other.m_connection.m_disconnect = nullptr;
         }
         return *this;
     }

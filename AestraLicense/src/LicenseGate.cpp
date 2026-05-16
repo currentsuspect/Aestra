@@ -22,10 +22,10 @@
 #include <vector>
 
 #ifdef _WIN32
+#include <windows.h>
 #include <dpapi.h>
 #include <intrin.h>
 #include <sodium.h>
-#include <windows.h>
 #elif defined(__APPLE__)
 #include <Security/Security.h>
 #include <sodium.h>
