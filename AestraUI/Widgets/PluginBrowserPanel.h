@@ -187,6 +187,7 @@ public:
 private:
     // Internal methods
     void applyFilters();
+    void renderHeaderBar(NUIRenderer& renderer);
     void renderHeader(NUIRenderer& renderer);
     void renderTabs(NUIRenderer& renderer);
     void renderSearchBar(NUIRenderer& renderer);
@@ -240,8 +241,8 @@ private:
     
     // Layout constants
     static constexpr float ROW_HEIGHT = 36.0f;
-    static constexpr float HEADER_HEIGHT = 48.0f;
-    static constexpr float TAB_HEIGHT = 30.0f;
+    static constexpr float HEADER_BAR_HEIGHT = 52.0f;  // Matches FileBrowser list header
+    static constexpr float TAB_HEIGHT = 28.0f;
     static constexpr float SEARCH_HEIGHT = 0.0f;
 };
 
