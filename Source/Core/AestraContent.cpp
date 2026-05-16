@@ -421,6 +421,20 @@ AestraContent::AestraContent() {
     m_previewPanel->setOnPlay([this](const AestraUI::FileItem& file) { playSoundPreview(file); });
     m_previewPanel->setOnStop([this]() { stopSoundPreview(); });
     m_previewPanel->setOnSeek([this](double seconds) { seekSoundPreview(seconds); });
+    m_previewPanel->setOnReplay([this]() {
+        // Loop replay: bypass stopSoundPreview() and setFile() to avoid waveform regeneration.
+        // Directly re-trigger playback on the already-cached file.
+        if (m_previewEngine && !m_currentPreviewFile.empty()) {
+            m_previewEngine->stop();
+            auto result = m_previewEngine->play(m_currentPreviewFile, 0.0f, m_previewDuration);
+            if (result == Audio::PreviewResult::Success || result == Audio::PreviewResult::Pending) {
+                m_previewIsPlaying = true;
+                m_previewStartTime = std::chrono::steady_clock::now();
+                if (m_previewPanel)
+                    m_previewPanel->setPlaying(true);
+            }
+        }
+    });
     m_workspaceLayer->addChild(m_previewPanel);
 
     // Link file selection to preview panel
@@ -1348,11 +1362,12 @@ void AestraContent::onResize(int width, int height) {
         float fbHeight = height - fbTop;
 
         if (showPreviewDock) {
-            const float previewHeight = 68.0f;
+            const float previewHeight = 68.0f + AestraUI::FilePreviewPanel::kTransportBarHeight;
+            fbHeight -= previewHeight;
             const float navWidth = std::clamp(fileBrowserWidth * 0.34f, 118.0f, 188.0f);
             const float previewWidth = std::max(0.0f, fileBrowserWidth - navWidth);
 
-            m_previewPanel->setBounds(AestraUI::NUIAbsolute(contentBounds, navWidth, fbTop + fbHeight - previewHeight,
+            m_previewPanel->setBounds(AestraUI::NUIAbsolute(contentBounds, navWidth, fbTop + fbHeight,
                                                             previewWidth, previewHeight));
         }
 
@@ -2976,15 +2991,16 @@ void AestraContent::playSoundPreview(const AestraUI::FileItem& file) {
         if (m_fileBrowser)
             m_fileBrowser->setActivePlaybackPath(file.path);
 
-        if (result == PreviewResult::Success) {
-            AESTRA_LOG_DEBUG("Sound preview started (cache hit)");
-            if (m_previewPanel)
-                m_previewPanel->setPlaying(true);
-        } else {
+        if (m_previewPanel)
+            m_previewPanel->setPlaying(true);
+
+        if (result == PreviewResult::Pending) {
             if (m_previewPanel) {
                 m_previewPanel->setLoading(true);
             }
             AESTRA_LOG_DEBUG("Sound preview pending (async decode)");
+        } else {
+            AESTRA_LOG_DEBUG("Sound preview started (cache hit)");
         }
     } else {
         AESTRA_LOG_WARNING("Failed to load preview audio: " + file.path);
@@ -3153,7 +3169,15 @@ void AestraContent::updateSoundPreview() {
         }
 
         if (!m_previewEngine->isPlaying()) {
-            stopSoundPreview();
+            // Preview ended naturally — notify panel for loop handling before stopping
+            if (m_previewPanel) {
+                m_previewPanel->onPreviewEnded();
+            }
+            // onPreviewEnded() may have restarted playback via replay callback;
+            // only stop if the panel didn't re-trigger playback
+            if (!m_previewEngine->isPlaying()) {
+                stopSoundPreview();
+            }
         } else {
             auto currentTime = std::chrono::steady_clock::now();
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(currentTime - m_previewStartTime);
