@@ -1363,7 +1363,9 @@ void AestraContent::onResize(int width, int height) {
             float navW = m_fileBrowser->getNavPaneWidth();
             float pbLeft = navW;
             float pbWidth = std::max(0.0f, fileBrowserWidth - navW);
-            float pbTop = sidebarTopY;
+            // Align plugin browser with file browser content area (below search bar)
+            constexpr float searchH = 28.0f;
+            float pbTop = sidebarTopY + searchH;
             float pbHeight = height - pbTop;
             m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, pbLeft, pbTop - contentBounds.y, pbWidth, pbHeight));
             m_pluginBrowser->setVisible(true);
