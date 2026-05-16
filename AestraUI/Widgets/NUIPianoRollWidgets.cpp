@@ -1543,14 +1543,14 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
 
         if (event.keyCode == NUIKeyCode::Delete || event.keyCode == NUIKeyCode::Backspace) {
             auto oldNotes = notes_; // Snapshot
-            bool anyDeleted = false;
-            for (auto& n : notes_) {
-                if (n.selected && !n.isDeleted) {
-                    n.isDeleted = true;
-                    anyDeleted = true;
-                }
-            }
-            if (anyDeleted) {
+
+            // Erase-remove: actually delete selected notes from the vector
+            notes_.erase(
+                std::remove_if(notes_.begin(), notes_.end(),
+                    [](const MidiNote& n) { return n.selected; }),
+                notes_.end());
+
+            if (notes_.size() != oldNotes.size()) {
                 pushUndo("Delete", oldNotes, notes_);
                 commitNotes();
                 repaint();

@@ -100,11 +100,26 @@ public:
     // Filtering & Search
     // ==============================
     
+    enum class PluginTypeFilter { All, Effects, Instruments };
+    enum class PluginFormatFilter { All, VST3, CLAP };
+    
     /**
-     * @brief Set filter type
+     * @brief Set type filter (All, Effects, Instruments)
      */
-    void setFilter(PluginFilterType filter);
-    PluginFilterType getFilter() const { return m_filterType; }
+    void setTypeFilter(PluginTypeFilter filter);
+    PluginTypeFilter getTypeFilter() const { return m_typeFilter; }
+    
+    /**
+     * @brief Set format filter (All, VST3, CLAP)
+     */
+    void setFormatFilter(PluginFormatFilter filter);
+    PluginFormatFilter getFormatFilter() const { return m_formatFilter; }
+    
+    /**
+     * @brief Toggle favorites-only filter
+     */
+    void setShowFavoritesOnly(bool show);
+    bool getShowFavoritesOnly() const { return m_showFavoritesOnly; }
     
     /**
      * @brief Set search query
@@ -188,16 +203,21 @@ private:
     // Internal methods
     void applyFilters();
     void renderHeaderBar(NUIRenderer& renderer);
-    void renderHeader(NUIRenderer& renderer);
-    void renderTabs(NUIRenderer& renderer);
-    void renderSearchBar(NUIRenderer& renderer);
+    void renderFilterPills(NUIRenderer& renderer);
     void renderPluginList(NUIRenderer& renderer);
     void renderPluginRow(NUIRenderer& renderer, const PluginListItem& plugin, 
                          int index, float yOffset);
     void renderScanProgress(NUIRenderer& renderer);
     int hitTestRow(int y) const;
-    NUIRect getSearchRect() const;
     NUIRect getScanButtonRect() const;
+    
+    // Filter pill hit testing
+    struct FilterPillHit {
+        enum Type { None, TypeAll, TypeFX, TypeInst, FormatVST3, FormatCLAP, Fav } type;
+        NUIRect bounds;
+    };
+    std::vector<FilterPillHit> m_filterPillHits;
+    int m_hoveredPillIndex = -1;
     
     // Data
     std::vector<PluginListItem> m_allPlugins;
@@ -206,7 +226,9 @@ private:
     
     // Search & Filter
     std::string m_searchQuery;
-    PluginFilterType m_filterType = PluginFilterType::All;
+    PluginTypeFilter m_typeFilter = PluginTypeFilter::All;
+    PluginFormatFilter m_formatFilter = PluginFormatFilter::All;
+    bool m_showFavoritesOnly = false;
     
     // UI State
     int m_selectedIndex = -1;
@@ -221,9 +243,6 @@ private:
     std::string m_scanStatus;
     
     mutable std::recursive_mutex m_uiMutex; // Safe UI updates from background threads (recursive for callback calls)
-    
-    // Tab state
-    int m_activeTab = 0;
     
     // Callbacks
     std::function<void(const PluginListItem&)> m_onPluginSelected;
@@ -240,9 +259,8 @@ private:
     NUIPoint m_dragStartPos;
     
     // Layout constants
-    static constexpr float ROW_HEIGHT = 36.0f;
-    static constexpr float HEADER_BAR_HEIGHT = 52.0f;  // Matches FileBrowser list header
-    static constexpr float TAB_HEIGHT = 28.0f;
+    static constexpr float ROW_HEIGHT = 34.0f;
+    static constexpr float HEADER_BAR_HEIGHT = 44.0f;  // Compact header with pills
     static constexpr float SEARCH_HEIGHT = 0.0f;
 };
 
