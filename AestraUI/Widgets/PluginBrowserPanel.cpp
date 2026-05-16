@@ -70,12 +70,10 @@ void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
     std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     auto bounds = getBounds();
     
-    // Background - matches FileBrowser panel style
     renderer.fillRect(bounds, Colors::panelBackground);
     
-    // Render header bar with integrated filter pills
     renderHeaderBar(renderer);
-    
+    renderFilterBar(renderer);
     renderPluginList(renderer);
     
     if (m_scanning) {
@@ -87,17 +85,11 @@ void PluginBrowserPanel::renderHeaderBar(NUIRenderer& renderer) {
     auto bounds = getBounds();
     constexpr float headerH = HEADER_BAR_HEIGHT;
     
-    // Header background
     renderer.fillRect({bounds.x, bounds.y, bounds.width, headerH}, Colors::panelTop);
     renderer.drawLine({bounds.x, bounds.y + headerH}, {bounds.right(), bounds.y + headerH}, 1.0f, Colors::divider);
     
-    // Title
     renderer.drawText("Plugins", {bounds.x + 14.0f, bounds.y + 15.0f}, 12.0f, Colors::textPrimary.withAlpha(0.82f));
     
-    // Filter pills area - compact inline filters
-    renderFilterPills(renderer);
-    
-    // Scan button
     NUIRect scanBtn = getScanButtonRect();
     if (m_scanning) {
         renderer.fillRoundedRect(scanBtn, 5.0f, Colors::buttonBackground.withAlpha(0.50f));
@@ -111,56 +103,57 @@ void PluginBrowserPanel::renderHeaderBar(NUIRenderer& renderer) {
     }
 }
 
-void PluginBrowserPanel::renderFilterPills(NUIRenderer& renderer) {
+void PluginBrowserPanel::renderFilterBar(NUIRenderer& renderer) {
     auto bounds = getBounds();
+    float barY = bounds.y + HEADER_BAR_HEIGHT;
     m_filterPillHits.clear();
     
-    float x = bounds.x + 72.0f;  // After "Plugins" title
-    const float y = bounds.y + 12.0f;
-    const float pillH = 20.0f;
-    const float gap = 4.0f;
+    renderer.fillRect({bounds.x, barY, bounds.width, FILTER_BAR_HEIGHT}, Colors::panelTop);
+    renderer.drawLine({bounds.x, barY + FILTER_BAR_HEIGHT}, {bounds.right(), barY + FILTER_BAR_HEIGHT}, 1.0f, Colors::divider);
+    
+    float x = bounds.x + 12.0f;
+    const float y = barY + 6.0f;
+    const float pillH = 24.0f;
+    const float gap = 6.0f;
     
     auto drawPill = [&](const std::string& label, bool active, FilterPillHit::Type type) {
-        float w = std::max(28.0f, renderer.measureText(label, 9.5f).width + 12.0f);
+        float w = std::max(32.0f, renderer.measureText(label, 10.0f).width + 16.0f);
         NUIRect rect = {x, y, w, pillH};
         
         if (active) {
-            renderer.fillRoundedRect(rect, 10.0f, Colors::accentPrimary.withAlpha(0.20f));
-            renderer.strokeRoundedRect(rect, 10.0f, 1.0f, Colors::accentPrimary.withAlpha(0.45f));
+            renderer.fillRoundedRect(rect, 12.0f, Colors::accentPrimary.withAlpha(0.22f));
+            renderer.strokeRoundedRect(rect, 12.0f, 1.0f, Colors::accentPrimary.withAlpha(0.50f));
         } else {
-            renderer.fillRoundedRect(rect, 10.0f, Colors::buttonBackground.withAlpha(0.40f));
-            renderer.strokeRoundedRect(rect, 10.0f, 1.0f, Colors::panelBorder.withAlpha(0.30f));
+            renderer.fillRoundedRect(rect, 12.0f, Colors::buttonBackground.withAlpha(0.45f));
+            renderer.strokeRoundedRect(rect, 12.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
         }
         
-        NUIColor textColor = active ? Colors::textPrimary.withAlpha(0.92f) : Colors::textSecondary.withAlpha(0.65f);
-        auto measured = renderer.measureText(label, 9.5f);
-        renderer.drawText(label, {rect.x + (rect.width - measured.width) * 0.5f, rect.y + 5.0f}, 9.5f, textColor);
+        NUIColor textColor = active ? Colors::textPrimary.withAlpha(0.94f) : Colors::textSecondary.withAlpha(0.70f);
+        auto measured = renderer.measureText(label, 10.0f);
+        renderer.drawText(label, {rect.x + (rect.width - measured.width) * 0.5f, rect.y + 6.0f}, 10.0f, textColor);
         
         m_filterPillHits.push_back({type, rect});
         x += w + gap;
     };
     
-    // Type filters
     drawPill("All", m_typeFilter == PluginTypeFilter::All && m_formatFilter == PluginFormatFilter::All && !m_showFavoritesOnly, FilterPillHit::TypeAll);
     drawPill("FX", m_typeFilter == PluginTypeFilter::Effects, FilterPillHit::TypeFX);
     drawPill("Inst", m_typeFilter == PluginTypeFilter::Instruments, FilterPillHit::TypeInst);
     
-    x += 6.0f;  // Extra gap between groups
+    x += 4.0f;
     
-    // Format filters
     drawPill("VST3", m_formatFilter == PluginFormatFilter::VST3, FilterPillHit::FormatVST3);
     drawPill("CLAP", m_formatFilter == PluginFormatFilter::CLAP, FilterPillHit::FormatCLAP);
     
-    x += 6.0f;
+    x += 4.0f;
     
-    // Favorites
     drawPill("★", m_showFavoritesOnly, FilterPillHit::Fav);
 }
 
 void PluginBrowserPanel::renderPluginList(NUIRenderer& renderer) {
     auto bounds = getBounds();
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + 4.0f;
-    float listHeight = bounds.height - HEADER_BAR_HEIGHT - 4.0f;
+    float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
+    float listHeight = bounds.height - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
     
     renderer.setClipRect({bounds.x + 8.0f, listTop, bounds.width - 16.0f, listHeight});
     
@@ -231,10 +224,10 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
 
 void PluginBrowserPanel::renderScanProgress(NUIRenderer& renderer) {
     auto bounds = getBounds();
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + 4.0f;
+    float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
     
     renderer.fillRect({bounds.x, listTop, bounds.width,
-                      bounds.height - HEADER_BAR_HEIGHT - 4.0f},
+                      bounds.height - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f},
                      Colors::panelBackground.withAlpha(0.82f));
     
     float barWidth = bounds.width - 40;
@@ -295,7 +288,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
         
         // Plugin list clicks (Press down)
-        float listTop = bounds.y + HEADER_BAR_HEIGHT + 4.0f;
+        float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
         if (insideBounds && my >= listTop) {
             int rowIndex = hitTestRow(static_cast<int>(my));
             if (rowIndex >= 0 && rowIndex < static_cast<int>(m_filteredPlugins.size())) {
@@ -385,7 +378,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
     }
     
     // Hover tracking
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + 4.0f;
+    float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
     if (insideBounds && my >= listTop) {
         m_hoveredIndex = hitTestRow(static_cast<int>(my));
     } else {
@@ -394,7 +387,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
     
     // Scroll handling
     if (insideBounds && event.wheelDelta != 0.0f) {
-        float listHeight = bounds.height - HEADER_BAR_HEIGHT - 4.0f;
+        float listHeight = bounds.height - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
         float contentHeight = m_filteredPlugins.size() * ROW_HEIGHT;
         float maxScroll = std::max(0.0f, contentHeight - listHeight);
         
@@ -620,7 +613,7 @@ NUIRect PluginBrowserPanel::getScanButtonRect() const {
 
 int PluginBrowserPanel::hitTestRow(int y) const {
     auto bounds = getBounds();
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + 4.0f;
+    float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
     
     if (y < listTop) return -1;
     
