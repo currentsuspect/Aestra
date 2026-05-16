@@ -108,6 +108,7 @@ private:
     bool m_bpmSyncEnabled = false;
     int m_projectBpm = 0;
     int m_currentFileBpm = 0;
+    std::string m_currentFileKey;
     std::string m_currentFilePath;
 };
 

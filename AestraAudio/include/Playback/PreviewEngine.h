@@ -36,7 +36,7 @@ public:
     PreviewEngine(const PreviewEngine&) = delete;
     PreviewEngine& operator=(const PreviewEngine&) = delete;
 
-    PreviewResult play(const std::string& path, float gainDb = -6.0f, double maxSeconds = 30.0);
+    PreviewResult play(const std::string& path, float gainDb = -6.0f, double maxSeconds = 30.0, float playbackRate = 1.0f);
     void stop();
     void seek(double seconds); // New seek method
     void setOutputSampleRate(double sr);
@@ -49,6 +49,7 @@ public:
     double getPlaybackPosition() const; // New method
     double getDuration() const;
     void handleDeferredCompletion();
+    float getCurrentPlaybackRate() const { return m_playbackRate.load(std::memory_order_relaxed); }
 
 private:
     struct PreviewVoice {
@@ -82,6 +83,7 @@ private:
     std::shared_ptr<PreviewVoice> m_activeVoice;
     std::atomic<double> m_outputSampleRate;
     std::atomic<float> m_globalGainDb;
+    std::atomic<float> m_playbackRate{1.0f};
     std::function<void(const std::string&)> m_onComplete;
 
     // Deferred completion (audio thread -> main thread)

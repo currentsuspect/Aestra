@@ -5,17 +5,18 @@
 #include "NUIDragDrop.h"
 #include "NUIContextMenu.h"
 #include "NUIThemeSystem.h"
+#include "../../AestraCore/include/AestraJSON.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstring>
 #include <iostream>
 #include <cstdio>
+#include <filesystem>
 #include "../../AestraCore/include/AestraLog.h"
 
 namespace AestraUI {
 
-// Theme colors (inline)
 // Theme colors (inline)
 // ============================================================================
 
@@ -36,6 +37,30 @@ namespace Colors {
     static const NUIColor listHover = NUIColor::white().withAlpha(0.045f);
     static const NUIColor listSelected = NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(0.16f);
     static const NUIColor divider = NUIThemeManager::getInstance().getColor("border").withAlpha(0.48f);
+
+    // Type dot colors
+    static const NUIColor typeEffect    = NUIColor(0.376f, 0.647f, 0.980f, 1.0f);  // #60a5fa
+    static const NUIColor typeInstrument = NUIColor(0.204f, 0.835f, 0.600f, 1.0f); // #34d399
+    static const NUIColor typeAnalyzer  = NUIColor(0.961f, 0.620f, 0.043f, 1.0f);  // #f59e0b
+    static const NUIColor typeMidi      = NUIColor(0.957f, 0.447f, 0.714f, 1.0f);  // #f472b6
+
+    // Format badge colors
+    static const NUIColor badgeVst3Bg   = NUIColor(0.655f, 0.545f, 0.980f, 0.20f);
+    static const NUIColor badgeVst3Text = NUIColor(0.655f, 0.545f, 0.980f, 1.0f);
+    static const NUIColor badgeClapBg   = NUIColor(0.204f, 0.835f, 0.600f, 0.20f);
+    static const NUIColor badgeClapText = NUIColor(0.204f, 0.835f, 0.600f, 1.0f);
+    static const NUIColor badgeIntBg    = NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
+    static const NUIColor badgeIntText  = NUIColor(1.0f, 1.0f, 1.0f, 0.40f);
+
+    // Active pill
+    static const NUIColor pillActiveBg  = NUIColor(0.486f, 0.227f, 0.929f, 1.0f);  // #7c3aed filled
+    static const NUIColor pillActiveText = NUIColor(1.0f, 1.0f, 1.0f, 1.0f);
+    static const NUIColor pillInactiveBorder = NUIColor(1.0f, 1.0f, 1.0f, 0.15f);
+    static const NUIColor pillInactiveText = NUIColor(1.0f, 1.0f, 1.0f, 0.60f);
+
+    // Favorite star
+    static const NUIColor starActive    = NUIColor(0.655f, 0.545f, 0.980f, 1.0f);  // #a78bfa
+    static const NUIColor starGhost     = NUIColor(0.655f, 0.545f, 0.980f, 0.35f);
 }
 
 namespace {
@@ -56,6 +81,14 @@ std::string fitText(NUIRenderer& renderer, const std::string& text, float fontSi
     }
     return out + ellipsis;
 }
+
+static std::filesystem::path getFavoritesPath() {
+    const char* home = getenv("HOME");
+    if (!home) home = "/tmp";
+    auto dir = std::filesystem::path(home) / ".config" / "aestra";
+    std::filesystem::create_directories(dir);
+    return dir / "favorites.json";
+}
 }
 
 // ============================================================================
@@ -64,18 +97,52 @@ std::string fitText(NUIRenderer& renderer, const std::string& text, float fontSi
 
 PluginBrowserPanel::PluginBrowserPanel() {
     setSize(300, 500);
+    loadFavorites();
+}
+
+void PluginBrowserPanel::loadFavorites() {
+    m_favoritesSet.clear();
+    auto path = getFavoritesPath();
+    std::ifstream f(path);
+    if (!f.is_open()) return;
+    std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    f.close();
+    if (content.empty()) return;
+    try {
+        Aestra::JSON j = Aestra::JSON::parse(content);
+        if (j.has("favorites") && j["favorites"].isArray()) {
+            auto arr = j["favorites"].asArray();
+            for (size_t i = 0; i < arr.size(); ++i) {
+                if (arr[i].isString()) {
+                    m_favoritesSet.insert(arr[i].asString());
+                }
+            }
+        }
+    } catch (...) {}
+}
+
+void PluginBrowserPanel::saveFavorites() {
+    Aestra::JSON j = Aestra::JSON::object();
+    j.set("version", Aestra::JSON(1.0));
+    Aestra::JSON arr = Aestra::JSON::array();
+    for (const auto& id : m_favoritesSet) {
+        arr.push(Aestra::JSON(id));
+    }
+    j.set("favorites", arr);
+    std::ofstream f(getFavoritesPath());
+    if (f.is_open()) f << j.toString(2);
 }
 
 void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
     std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     auto bounds = getBounds();
-    
+
     renderer.fillRect(bounds, Colors::panelBackground);
-    
+
     renderHeaderBar(renderer);
     renderFilterBar(renderer);
     renderPluginList(renderer);
-    
+
     if (m_scanning) {
         renderScanProgress(renderer);
     }
@@ -84,12 +151,12 @@ void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
 void PluginBrowserPanel::renderHeaderBar(NUIRenderer& renderer) {
     auto bounds = getBounds();
     constexpr float headerH = HEADER_BAR_HEIGHT;
-    
+
     renderer.fillRect({bounds.x, bounds.y, bounds.width, headerH}, Colors::panelTop);
     renderer.drawLine({bounds.x, bounds.y + headerH}, {bounds.right(), bounds.y + headerH}, 1.0f, Colors::divider);
-    
+
     renderer.drawText("Plugins", {bounds.x + 14.0f, bounds.y + 15.0f}, 12.0f, Colors::textPrimary.withAlpha(0.82f));
-    
+
     NUIRect scanBtn = getScanButtonRect();
     if (m_scanning) {
         renderer.fillRoundedRect(scanBtn, 5.0f, Colors::buttonBackground.withAlpha(0.50f));
@@ -107,136 +174,180 @@ void PluginBrowserPanel::renderFilterBar(NUIRenderer& renderer) {
     auto bounds = getBounds();
     float barY = bounds.y + HEADER_BAR_HEIGHT;
     m_filterPillHits.clear();
-    
+
     renderer.fillRect({bounds.x, barY, bounds.width, FILTER_BAR_HEIGHT}, Colors::panelTop);
     renderer.drawLine({bounds.x, barY + FILTER_BAR_HEIGHT}, {bounds.right(), barY + FILTER_BAR_HEIGHT}, 1.0f, Colors::divider);
-    
+
     float x = bounds.x + 12.0f;
-    const float y = barY + 6.0f;
-    const float pillH = 24.0f;
+    const float y = barY + 7.0f;
+    const float pillH = 22.0f;
     const float gap = 6.0f;
-    
+
     auto drawPill = [&](const std::string& label, bool active, FilterPillHit::Type type) {
-        float w = std::max(32.0f, renderer.measureText(label, 10.0f).width + 16.0f);
+        float w = std::max(32.0f, renderer.measureText(label, 11.0f).width + 20.0f);
         NUIRect rect = {x, y, w, pillH};
-        
+
         if (active) {
-            renderer.fillRoundedRect(rect, 12.0f, Colors::accentPrimary.withAlpha(0.22f));
-            renderer.strokeRoundedRect(rect, 12.0f, 1.0f, Colors::accentPrimary.withAlpha(0.50f));
+            renderer.fillRoundedRect(rect, 11.0f, Colors::pillActiveBg);
         } else {
-            renderer.fillRoundedRect(rect, 12.0f, Colors::buttonBackground.withAlpha(0.45f));
-            renderer.strokeRoundedRect(rect, 12.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
+            renderer.strokeRoundedRect(rect, 11.0f, 1.0f, Colors::pillInactiveBorder);
         }
-        
-        NUIColor textColor = active ? Colors::textPrimary.withAlpha(0.94f) : Colors::textSecondary.withAlpha(0.70f);
-        auto measured = renderer.measureText(label, 10.0f);
-        renderer.drawText(label, {rect.x + (rect.width - measured.width) * 0.5f, rect.y + 6.0f}, 10.0f, textColor);
-        
+
+        NUIColor textColor = active ? Colors::pillActiveText : Colors::pillInactiveText;
+        auto measured = renderer.measureText(label, 11.0f);
+        renderer.drawText(label, {rect.x + (rect.width - measured.width) * 0.5f, rect.y + 4.5f}, 11.0f, textColor);
+
         m_filterPillHits.push_back({type, rect});
         x += w + gap;
     };
-    
-    drawPill("All", m_typeFilter == PluginTypeFilter::All && m_formatFilter == PluginFormatFilter::All && !m_showFavoritesOnly, FilterPillHit::TypeAll);
+
+    bool allActive = (m_typeFilter == PluginTypeFilter::All && m_formatFilter == PluginFormatFilter::All && !m_showFavoritesOnly);
+    drawPill("All", allActive, FilterPillHit::TypeAll);
     drawPill("FX", m_typeFilter == PluginTypeFilter::Effects, FilterPillHit::TypeFX);
     drawPill("Inst", m_typeFilter == PluginTypeFilter::Instruments, FilterPillHit::TypeInst);
-    
+
     x += 4.0f;
-    
+
     drawPill("VST3", m_formatFilter == PluginFormatFilter::VST3, FilterPillHit::FormatVST3);
     drawPill("CLAP", m_formatFilter == PluginFormatFilter::CLAP, FilterPillHit::FormatCLAP);
-    
+
     x += 4.0f;
-    
-    drawPill("★", m_showFavoritesOnly, FilterPillHit::Fav);
+
+    drawPill(m_showFavoritesOnly ? "\xe2\x98\x85 Faves" : "\xe2\x98\x85", m_showFavoritesOnly, FilterPillHit::Fav);
 }
 
 void PluginBrowserPanel::renderPluginList(NUIRenderer& renderer) {
     auto bounds = getBounds();
     float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
     float listHeight = bounds.height - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
-    
+
     renderer.setClipRect({bounds.x + 8.0f, listTop, bounds.width - 16.0f, listHeight});
-    
+
+    // Rebuild star rects each render
+    m_starRects.assign(m_filteredPlugins.size(), NUIRect{});
+
     float yOffset = listTop - m_scrollOffset;
-    
+
     for (size_t i = 0; i < m_filteredPlugins.size(); ++i) {
         if (yOffset + ROW_HEIGHT > listTop && yOffset < listTop + listHeight) {
             renderPluginRow(renderer, m_filteredPlugins[i], static_cast<int>(i), yOffset);
         }
         yOffset += ROW_HEIGHT;
     }
-    
+
     if (m_filteredPlugins.empty() && !m_scanning) {
-        renderer.drawText("No plugins found", 
-                         {bounds.x + bounds.width / 2 - 50, listTop + listHeight / 2 - 10}, 
-                         12.0f, Colors::textDisabled);
+        float centerY = listTop + listHeight * 0.5f;
+        renderer.drawText("No plugins found",
+                         {bounds.x + bounds.width * 0.5f - 55, centerY - 14},
+                         13.0f, Colors::textPrimary.withAlpha(0.85f));
+        renderer.drawText("Click Scan to discover installed plugins",
+                         {bounds.x + bounds.width * 0.5f - 105, centerY + 4},
+                         11.0f, Colors::textSecondary.withAlpha(0.40f));
+
+        // Show Scan button only if never scanned (allPlugins empty)
+        if (m_allPlugins.empty()) {
+            NUIRect scanBtn = {bounds.x + bounds.width * 0.5f - 30, centerY + 22, 60, 24};
+            renderer.fillRoundedRect(scanBtn, 6.0f, Colors::accentPrimary.withAlpha(0.25f));
+            renderer.strokeRoundedRect(scanBtn, 6.0f, 1.0f, Colors::accentPrimary.withAlpha(0.50f));
+            auto label = renderer.measureText("Scan", 11.0f);
+            renderer.drawText("Scan", {scanBtn.x + (scanBtn.width - label.width) * 0.5f, scanBtn.y + 5.5f}, 11.0f, Colors::accentPrimary);
+        }
     }
-    
+
     renderer.clearClipRect();
 }
 
-void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer, 
-                                           const PluginListItem& plugin,
-                                           int index, float yOffset) {
+void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
+                                            const PluginListItem& plugin,
+                                            int index, float yOffset) {
     auto bounds = getBounds();
     NUIRect rowRect = {bounds.x + 10, yOffset + 2.0f, bounds.width - 20, ROW_HEIGHT - 4.0f};
-    
-    // Row background - match FileBrowser style
+
+    // Row background
     if (index == m_selectedIndex) {
         renderer.fillRoundedRect(rowRect, 6.0f, Colors::listSelected);
-        renderer.fillRoundedRect({rowRect.x, rowRect.y + 4.0f, 2.0f, rowRect.height - 8.0f},
-                                 1.0f,
+        renderer.fillRoundedRect({rowRect.x, rowRect.y + 4.0f, 3.0f, rowRect.height - 8.0f},
+                                 1.5f,
                                  Colors::accentPrimary.withAlpha(0.85f));
     } else if (index == m_hoveredIndex) {
         renderer.fillRoundedRect(rowRect, 6.0f, Colors::listHover);
     }
-    
-    // Favorite star
-    float textX = rowRect.x + 12;
+
+    // Star rect (for hit-testing)
+    float starX = rowRect.x + 4;
+    float starY = rowRect.y + (rowRect.height - 14) * 0.5f;
+    float starSize = 14.0f;
+    m_starRects[index] = {starX, starY, starSize, starSize};
+
+    // Render star
     if (plugin.isFavorite) {
-        renderer.drawText("★", {rowRect.x + 8, rowRect.y + 5}, 11.0f, Colors::accentWarning.withAlpha(0.85f));
-        textX = rowRect.x + 20;
+        renderer.drawText("\xe2\x98\x85", {starX + 1, starY + 1}, 12.0f, Colors::starActive);
+    } else if (index == m_hoveredRow) {
+        renderer.drawText("\xe2\x98\x85", {starX + 1, starY + 1}, 12.0f, Colors::starGhost);
     }
-    
-    // Full width for plugin info (no badges)
-    const float textMaxW = rowRect.width - (textX - rowRect.x) - 8.0f;
-    
-    // Plugin name
-    std::string name = fitText(renderer, plugin.name, 11.5f, textMaxW);
-    renderer.drawText(name, {textX, rowRect.y + 6}, 11.5f, Colors::textPrimary.withAlpha(0.90f));
-    
-    // Vendor/type metadata with format indicator
-    std::string vendorMeta = plugin.vendor;
-    if (!plugin.typeName.empty()) {
-        vendorMeta += " · " + plugin.typeName;
-    }
-    // Add small format indicator
+
+    // Type dot
+    float dotX = rowRect.x + 22;
+    float dotY = rowRect.y + (rowRect.height - 8) * 0.5f;
+    NUIColor dotColor = Colors::textDisabled.withAlpha(0.3f);
+    if (plugin.typeName == "Effect") dotColor = Colors::typeEffect;
+    else if (plugin.typeName == "Instrument") dotColor = Colors::typeInstrument;
+    else if (plugin.typeName == "Analyzer") dotColor = Colors::typeAnalyzer;
+    else if (plugin.typeName == "MIDI") dotColor = Colors::typeMidi;
+    renderer.fillRoundedRect({dotX, dotY, 8.0f, 8.0f}, 4.0f, dotColor);
+
+    // Name
+    float nameX = dotX + 14;
+    const float badgeW = 28.0f; // reserved for format badge
+    const float nameMaxW = rowRect.width - (nameX - rowRect.x) - badgeW - 8.0f;
+    std::string name = fitText(renderer, plugin.name, 13.0f, nameMaxW);
+    renderer.drawText(name, {nameX, rowRect.y + 5}, 13.0f, Colors::textPrimary.withAlpha(0.90f));
+
+    // Format badge (right-aligned)
+    float badgeX = rowRect.right() - badgeW - 4;
+    float badgeY = rowRect.y + (rowRect.height - 16) * 0.5f;
+    NUIRect badgeRect = {badgeX, badgeY, 0, 16};
+    NUIColor badgeBg = Colors::badgeIntBg;
+    NUIColor badgeText = Colors::badgeIntText;
+    std::string badgeLabel = "Int";
     if (plugin.formatStr == "VST3") {
-        vendorMeta += " · V3";
+        badgeLabel = "V3";
+        badgeBg = Colors::badgeVst3Bg;
+        badgeText = Colors::badgeVst3Text;
     } else if (plugin.formatStr.find("CLAP") != std::string::npos) {
-        vendorMeta += " · CL";
-    } else if (plugin.formatStr == "Int") {
-        vendorMeta += " · Int";
+        badgeLabel = "CL";
+        badgeBg = Colors::badgeClapBg;
+        badgeText = Colors::badgeClapText;
     }
-    vendorMeta = fitText(renderer, vendorMeta, 9.0f, textMaxW);
-    renderer.drawText(vendorMeta, {textX, rowRect.y + 19}, 9.0f, Colors::textSecondary.withAlpha(0.60f));
+    float badgeLabelW = renderer.measureText(badgeLabel, 9.0f).width;
+    badgeRect.width = badgeLabelW + 10;
+    badgeRect.x = rowRect.right() - badgeRect.width - 4;
+    renderer.fillRoundedRect(badgeRect, 4.0f, badgeBg);
+    renderer.drawText(badgeLabel, {badgeRect.x + (badgeRect.width - badgeLabelW) * 0.5f, badgeRect.y + 2.5f}, 9.0f, badgeText);
+
+    // Vendor · type (muted, between name and badge)
+    float vendorMaxW = badgeRect.x - nameX - 12;
+    std::string vendorMeta = plugin.vendor;
+    if (!plugin.typeName.empty()) vendorMeta += " · " + plugin.typeName;
+    vendorMeta = fitText(renderer, vendorMeta, 10.0f, vendorMaxW);
+    renderer.drawText(vendorMeta, {nameX, rowRect.y + 19}, 10.0f, Colors::textSecondary.withAlpha(0.45f));
 }
 
 void PluginBrowserPanel::renderScanProgress(NUIRenderer& renderer) {
     auto bounds = getBounds();
     float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
-    
+
     renderer.fillRect({bounds.x, listTop, bounds.width,
-                      bounds.height - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f},
-                     Colors::panelBackground.withAlpha(0.82f));
-    
+                       bounds.height - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f},
+                      Colors::panelBackground.withAlpha(0.82f));
+
     float barWidth = bounds.width - 40;
     float barX = bounds.x + 20;
     float barY = listTop + 60;
-    
+
     renderer.fillRoundedRect({barX, barY, barWidth, 8}, 4.0f, Colors::buttonBackground);
     renderer.fillRoundedRect({barX, barY, barWidth * m_scanProgress, 8}, 4.0f, Colors::accentPrimary);
-    
+
     std::string status = m_scanStatus.empty() ? "Scanning plugins..." : m_scanStatus;
     renderer.drawText(status, {barX, barY - 20}, 12.0f, Colors::textPrimary);
 }
@@ -244,13 +355,13 @@ void PluginBrowserPanel::renderScanProgress(NUIRenderer& renderer) {
 bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
     // Early exit if not visible - don't lock mutex or consume events
     if (!isVisible()) return false;
-    
+
     std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     auto bounds = getBounds();
     float mx = event.position.x;
     float my = event.position.y;
     const bool insideBounds = bounds.contains(event.position);
-    
+
     // Click handling
     if (event.pressed && event.button == NUIMouseButton::Left) {
         // Filter pill clicks
@@ -286,12 +397,18 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
                 return true;
             }
         }
-        
+
         // Plugin list clicks (Press down)
         float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
         if (insideBounds && my >= listTop) {
             int rowIndex = hitTestRow(static_cast<int>(my));
             if (rowIndex >= 0 && rowIndex < static_cast<int>(m_filteredPlugins.size())) {
+                // Check star hit first
+                if (rowIndex < static_cast<int>(m_starRects.size()) && m_starRects[rowIndex].contains(mx, my)) {
+                    toggleFavorite(m_filteredPlugins[rowIndex].id);
+                    repaint();
+                    return true;
+                }
                 m_searchFocused = false;
                 repaint();
                 // Initiate potential drag or click
@@ -301,7 +418,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
                 return true;
             }
         }
-        
+
         // Scan button (ignore if already scanning)
         NUIRect scanBtn = getScanButtonRect();
         if (insideBounds &&
@@ -325,7 +442,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
                 // Check for double-click (same index within 300ms)
                 auto now = std::chrono::steady_clock::now();
                 double elapsed = std::chrono::duration<double>(now.time_since_epoch()).count() - m_lastClickTime;
-                
+
                 if (m_pressedIndex == m_lastClickIndex && elapsed < 0.3) {
                     // Double-click detected - trigger load
                     if (m_onPluginLoadRequested) {
@@ -354,20 +471,20 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
             float dx = event.position.x - m_dragStartPos.x;
             float dy = event.position.y - m_dragStartPos.y;
             float dist = std::sqrt(dx*dx + dy*dy);
-            
+
             if (dist > 5.0f) {
                 // Start Drag
                 if (m_pressedIndex >= 0 && m_pressedIndex < static_cast<int>(m_filteredPlugins.size())) {
                     const auto& plugin = m_filteredPlugins[m_pressedIndex];
-                    
+
                     AestraUI::DragData data;
                     data.type = AestraUI::DragDataType::Plugin;
                     data.displayName = plugin.name;
                     data.sourceClipIdString = plugin.id;
                     data.customData = plugin;
-                    
+
                     AestraUI::NUIDragDropManager::getInstance().beginDrag(data, m_dragStartPos, this);
-                    
+
                     // Consume interaction
                     m_isPressed = false;
                     m_pressedIndex = -1;
@@ -376,27 +493,29 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
             }
         }
     }
-    
+
     // Hover tracking
     float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
     if (insideBounds && my >= listTop) {
         m_hoveredIndex = hitTestRow(static_cast<int>(my));
+        m_hoveredRow = m_hoveredIndex;
     } else {
         m_hoveredIndex = -1;
+        m_hoveredRow = -1;
     }
-    
+
     // Scroll handling
     if (insideBounds && event.wheelDelta != 0.0f) {
         float listHeight = bounds.height - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
         float contentHeight = m_filteredPlugins.size() * ROW_HEIGHT;
         float maxScroll = std::max(0.0f, contentHeight - listHeight);
-        
+
         m_targetScrollOffset -= event.wheelDelta * 40.0f;
         if (m_targetScrollOffset < 0.0f) m_targetScrollOffset = 0.0f;
         if (m_targetScrollOffset > maxScroll) m_targetScrollOffset = maxScroll;
         return true;
     }
-    
+
     // Consume event if mouse is within our bounds to prevent click-through
     return insideBounds;
 }
@@ -455,7 +574,7 @@ void PluginBrowserPanel::setPluginList(const std::vector<PluginListItem>& plugin
     std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     m_allPlugins = plugins;
     for (auto& p : m_allPlugins) {
-        p.isFavorite = std::find(m_favorites.begin(), m_favorites.end(), p.id) != m_favorites.end();
+        p.isFavorite = m_favoritesSet.count(p.id) > 0;
     }
     applyFilters();
 }
@@ -482,7 +601,7 @@ void PluginBrowserPanel::setSearchQuery(const std::string& query) {
 
 void PluginBrowserPanel::applyFilters() {
     m_filteredPlugins.clear();
-    
+
     for (const auto& p : m_allPlugins) {
         // Type filter
         bool passType = true;
@@ -492,7 +611,7 @@ void PluginBrowserPanel::applyFilters() {
             passType = (p.typeName == "Instrument");
         }
         if (!passType) continue;
-        
+
         // Format filter
         bool passFormat = true;
         if (m_formatFilter == PluginFormatFilter::VST3) {
@@ -501,34 +620,34 @@ void PluginBrowserPanel::applyFilters() {
             passFormat = (p.formatStr.find("CLAP") != std::string::npos);
         }
         if (!passFormat) continue;
-        
+
         // Favorites filter
         if (m_showFavoritesOnly && !p.isFavorite) continue;
-        
+
         // Search filter
         if (!m_searchQuery.empty()) {
             std::string lowerQuery = m_searchQuery;
             std::transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(), ::tolower);
-            
+
             std::string lowerName = p.name;
             std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
-            
+
             std::string lowerVendor = p.vendor;
             std::transform(lowerVendor.begin(), lowerVendor.end(), lowerVendor.begin(), ::tolower);
-            
+
             if (lowerName.find(lowerQuery) == std::string::npos &&
                 lowerVendor.find(lowerQuery) == std::string::npos) {
                 continue;
             }
         }
-        
+
         m_filteredPlugins.push_back(p);
     }
-    
+
     if (m_selectedIndex >= static_cast<int>(m_filteredPlugins.size())) {
         m_selectedIndex = -1;
     }
-    
+
     m_scrollOffset = 0.0f;
     m_targetScrollOffset = 0.0f;
 }
@@ -554,33 +673,24 @@ void PluginBrowserPanel::clearSelection() {
 }
 
 void PluginBrowserPanel::toggleFavorite(const std::string& pluginId) {
-    auto it = std::find(m_favorites.begin(), m_favorites.end(), pluginId);
-    if (it != m_favorites.end()) {
-        m_favorites.erase(it);
+    if (m_favoritesSet.count(pluginId)) {
+        m_favoritesSet.erase(pluginId);
     } else {
-        m_favorites.push_back(pluginId);
+        m_favoritesSet.insert(pluginId);
     }
-    
-    for (auto& p : m_allPlugins) {
-        if (p.id == pluginId) {
-            p.isFavorite = !p.isFavorite;
-            break;
-        }
-    }
-    for (auto& p : m_filteredPlugins) {
-        if (p.id == pluginId) {
-            p.isFavorite = !p.isFavorite;
-            break;
-        }
-    }
+    bool isFav = m_favoritesSet.count(pluginId) > 0;
+    auto patch = [&](std::vector<PluginListItem>& list) {
+        for (auto& p : list)
+            if (p.id == pluginId) { p.isFavorite = isFav; break; }
+    };
+    patch(m_allPlugins);
+    patch(m_filteredPlugins);
+    saveFavorites();
+    applyFilters();
 }
 
-void PluginBrowserPanel::setFavorites(const std::vector<std::string>& favorites) {
-    m_favorites = favorites;
-    for (auto& p : m_allPlugins) {
-        p.isFavorite = std::find(m_favorites.begin(), m_favorites.end(), p.id) != m_favorites.end();
-    }
-    applyFilters();
+std::vector<std::string> PluginBrowserPanel::getFavorites() const {
+    return std::vector<std::string>(m_favoritesSet.begin(), m_favoritesSet.end());
 }
 
 void PluginBrowserPanel::setOnPluginSelected(std::function<void(const PluginListItem&)> callback) {
@@ -614,9 +724,9 @@ NUIRect PluginBrowserPanel::getScanButtonRect() const {
 int PluginBrowserPanel::hitTestRow(int y) const {
     auto bounds = getBounds();
     float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
-    
+
     if (y < listTop) return -1;
-    
+
     int row = static_cast<int>((y - listTop + m_scrollOffset) / ROW_HEIGHT);
     if (row < 0 || row >= static_cast<int>(m_filteredPlugins.size())) {
         return -1;
@@ -630,7 +740,7 @@ int PluginBrowserPanel::hitTestRow(int y) const {
 
 EffectChainRack::EffectChainRack() {
     setId("EffectChainRack");
-    
+
     for (auto& slot : m_slots) {
         slot.name = "Empty";
         slot.isEmpty = true;
@@ -641,18 +751,18 @@ EffectChainRack::EffectChainRack() {
 
 void EffectChainRack::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
-    
+
     renderer.fillRoundedRect(bounds, 10.0f, Colors::panelBackground.withAlpha(0.94f));
     renderer.fillRoundedRect({bounds.x, bounds.y, bounds.width, 28.0f}, 10.0f, Colors::panelTop.withAlpha(0.62f));
     renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, Colors::panelBorder.withAlpha(0.84f));
-    
+
     // Enable clipping
     renderer.setClipRect(bounds);
-    
+
     for (int i = 0; i < MAX_SLOTS; ++i) {
         renderSlot(renderer, i, bounds.y + 8 + i * SLOT_HEIGHT - m_scrollOffset);
     }
-    
+
     renderer.clearClipRect();
 
     // Render Drag Ghost
@@ -660,12 +770,12 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
         float ghostY = m_currentMousePos.y - (SLOT_HEIGHT * 0.5f);
         renderSlot(renderer, m_draggingSlotIndex, ghostY);
     }
-    
+
 }
 
 void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset) {
     NUIRect slotRect = slotRectForTop(yOffset);
-    
+
     const auto& slot = m_slots[index];
     const bool isHovered = (index == m_hoveredSlot);
 
@@ -674,7 +784,7 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     NUIColor borderColor;
     // Drag Reorder: If this is the source slot, render faintly
     bool isBeingDragged = (m_isDraggingReorder && index == m_draggingSlotIndex);
-    
+
     if (slot.isEmpty && !isBeingDragged) {
         // Empty Slot: Subtle transparency or very faint glass
         // Using Aestra "Deep Glass" tokens if available, otherwise manual
@@ -764,7 +874,7 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
                               8.5f,
                               Colors::textDisabled.withAlpha(0.72f));
         }
-        
+
         // Active indicator / Bypass toggle
         float rightEdge = slotRect.x + slotRect.width;
         float knobSize = 18.0f;
@@ -773,7 +883,7 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
 
         // Dry/Wet Knob Rendering
         NUIRect knobRect = {knobX, knobY, knobSize, knobSize};
-        
+
         // Helper to draw arc
         auto drawArcPoly = [&](float startAngle, float endAngle, float width, NUIColor col) {
             NUIPoint center = knobRect.center();
@@ -794,20 +904,20 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
 
         // Background Arc
         drawArcPoly(0.75f * 3.14159f, 2.25f * 3.14159f, 2.0f, Colors::textDisabled.withAlpha(0.2f));
-        
+
         // Value Arc (Dim if bypassed)
         float startAng = 0.75f * 3.14159f;
         float range = 1.5f * 3.14159f;
         float endAng = startAng + range * slot.dryWet;
         NUIColor arcColor = slot.bypassed ? Colors::textDisabled.withAlpha(0.3f) : Colors::accentPrimary;
         drawArcPoly(startAng, endAng, 2.0f, arcColor);
-        
+
         // Bypass Indicator (Dot left of knob)
         // Center vertically better
         float dotSize = 6.0f;
         float dotY = slotRect.y + (slotRect.height - dotSize) * 0.5f;
         NUIRect statusDot = {knobX - 12, dotY, dotSize, dotSize};
-        
+
         if (!slot.bypassed) {
             // Active: LED On
         renderer.fillRoundedRect(statusDot, 3.0f, Colors::accentPrimary);
@@ -836,7 +946,7 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     m_currentMousePos = event.position;
 
     auto bounds = getBounds();
-    
+
     // Early exit if mouse is outside our bounds and not dragging
     // Need to allow events if we are capturing mouse (like dragging knob or slot)
     bool isCapturing = (m_activeKnobSlot != -1 || m_draggingSlotIndex != -1);
@@ -851,27 +961,27 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     // Wheel support (Scroll)
     if (std::abs(event.wheelDelta) > 0.001f && m_activeKnobSlot == -1) {
         m_scrollOffset -= event.wheelDelta * 20.0f;
-        
+
         // Clamp scroll
         float contentHeight = MAX_SLOTS * SLOT_HEIGHT + 10;
         float viewHeight = getBounds().height;
         m_scrollOffset = std::clamp(m_scrollOffset, 0.0f, std::max(0.0f, contentHeight - viewHeight));
-        
+
         repaint();
         return true;
     }
 
     float my = event.position.y;
     float mx = event.position.x;
-    
+
     // Update hover
     m_hoveredSlot = hitTestSlot(my);
-    
+
     // Hit Testing Helpers
     auto isOverKnob = [&](int index) {
         if (index < 0) return false;
         NUIRect slotRect = getSlotBounds(index);
-        float knobX = slotRect.x + slotRect.width - 22.0f; 
+        float knobX = slotRect.x + slotRect.width - 22.0f;
         return (mx >= knobX - 2 && mx <= knobX + 22) && (my >= slotRect.y + 2 && my <= slotRect.y + 26);
     };
 
@@ -888,13 +998,13 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
             m_activeKnobSlot = -1;
             return true;
         }
-        
+
         // Handle Reorder Drop or Click
         if (m_isDraggingReorder && m_draggingSlotIndex != -1) {
              // Fix: Must account for scroll offset to map visual position back to slot index
              float contentY = event.position.y - (bounds.y + 8) + m_scrollOffset;
              int currentTarget = static_cast<int>(contentY / SLOT_HEIGHT);
-             
+
              if (currentTarget >= 0 && currentTarget < MAX_SLOTS && currentTarget != m_draggingSlotIndex) {
                  if (m_onSlotMoveRequested) {
                      m_onSlotMoveRequested(m_draggingSlotIndex, currentTarget);
@@ -921,25 +1031,25 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
         if (dist > 5.0f && !m_isDraggingReorder) {
             m_isDraggingReorder = true;
         }
-        
+
         // Allow Move/Drag/None buttons to update the drag
         if (event.type == NUIMouseEventType::Drag || event.button == NUIMouseButton::Left || event.button == NUIMouseButton::None) {
              repaint();
              return true;
         }
     }
-    
+
     // KNOB DRAG Handling
-    if (m_activeKnobSlot != -1) { 
+    if (m_activeKnobSlot != -1) {
         const float dx = event.position.x - m_dragStartPos.x;
         const float dy = m_dragStartPos.y - event.position.y; // Up is positive (Values go up as mouse goes up)
         const float dragDelta = dx + dy;
-        
-        float sensitivity = 0.005f; 
+
+        float sensitivity = 0.005f;
         if (event.modifiers & NUIModifiers::Shift) sensitivity *= 0.1f;
-        
+
         float newValue = std::clamp(m_dragStartValue + dragDelta * sensitivity, 0.0f, 1.0f);
-        
+
         if (std::abs(newValue - m_slots[m_activeKnobSlot].dryWet) > 0.001f) {
             m_slots[m_activeKnobSlot].dryWet = newValue;
             if (m_onSlotMixChanged) {
@@ -956,12 +1066,12 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (slotIdx >= 0 && slotIdx < MAX_SLOTS) {
              // 1. Knob Hit Test
-             if (isOverKnob(slotIdx)) { 
+             if (isOverKnob(slotIdx)) {
                  if (!m_slots[slotIdx].isEmpty) {
                      m_activeKnobSlot = slotIdx;
                      m_dragStartValue = m_slots[slotIdx].dryWet;
-                     m_dragStartPos = event.position; 
-                     return true; 
+                     m_dragStartPos = event.position;
+                     return true;
                  }
              }
              // 2. Bypass Hit Test
@@ -981,10 +1091,10 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
                  auto now = std::chrono::steady_clock::now();
                  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_lastClickTime).count();
                  bool isDoubleClick = (slotIdx == m_lastClickSlot && elapsed < 300);
-                  
+
                   m_lastClickTime = now;
                   m_lastClickSlot = slotIdx;
-                  
+
                   if (isDoubleClick) {
                      if (!m_slots[slotIdx].isEmpty) {
                         if (m_onSlotClicked) m_onSlotClicked(slotIdx);
@@ -1009,13 +1119,13 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
             if (m_contextMenu) {
                 if (m_contextMenu->getParent()) m_contextMenu->getParent()->removeChild(m_contextMenu);
                 // Also try local remove just in case
-                removeChild(m_contextMenu); 
+                removeChild(m_contextMenu);
                 m_contextMenu = nullptr;
             }
-            
+
             m_contextMenuSlot = slotIdx;
             m_contextMenu = std::make_shared<NUIContextMenu>();
-            
+
             // DELETE ACTION
             auto deleteItem = std::make_shared<NUIContextMenuItem>("Delete", NUIContextMenuItem::Type::Normal);
             deleteItem->setOnClick([this]() {
@@ -1034,11 +1144,11 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
                 m_contextMenuSlot = -1;
             });
             m_contextMenu->addItem(deleteItem);
-            
+
             // BYPASS ACTION
             bool currentBypass = m_slots[slotIdx].bypassed;
             auto bypassItem = std::make_shared<NUIContextMenuItem>(
-                currentBypass ? "Enable" : "Bypass", 
+                currentBypass ? "Enable" : "Bypass",
                 NUIContextMenuItem::Type::Normal
             );
             bypassItem->setOnClick([this, slotIdx, currentBypass]() {
@@ -1056,16 +1166,16 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
                 repaint();
             });
             m_contextMenu->addItem(bypassItem);
-            
+
             // ADD TO ROOT (The only robust way to handle context menus to avoid clipping and coordinate hell)
             NUIComponent* root = this;
             while (root->getParent()) {
                 root = root->getParent();
             }
-            
+
             if (root) {
                 root->addChild(m_contextMenu);
-                // NUIContextMenu::showAt calls setPosition. 
+                // NUIContextMenu::showAt calls setPosition.
                 // Since we are adding to Root, Absolute Position == Relative Position.
                 // So passing event.position (Absolute) is correct.
                 m_contextMenu->showAt(event.position);
@@ -1075,31 +1185,32 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
                 addChild(m_contextMenu);
                 m_contextMenu->showAt(event.position);
             }
-            
+
             repaint();
             return true;
         }
     }
-    
+
     // If we are hovering a valid slot, consume the event to prevent 'fall-through' to parent
     // which might think we are hovering "Add Send" or other overlapped widgets.
     if (m_hoveredSlot != -1) {
         return true;
     }
-    
+
     return false;
 }
-    
+
+
 
 
 void EffectChainRack::setSlot(int index, const EffectSlotInfo& info) {
     if (index >= 0 && index < MAX_SLOTS) {
         m_slots[index] = info;
-        
+
         // Apply Override Logic
         if (m_bypassOverride[index] != -1) {
             bool forcedState = (m_bypassOverride[index] == 1);
-            
+
             // If backend matches override, we are synced -> Clear override
             if (info.bypassed == forcedState) {
                 m_bypassOverride[index] = -1;

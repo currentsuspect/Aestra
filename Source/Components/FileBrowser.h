@@ -36,6 +36,7 @@ enum class FileType {
     WavFile,
     Mp3File,
     FlacFile,
+    MidiFile,
     Unknown
 };
 
@@ -75,7 +76,8 @@ struct FileItem {
     mutable bool cacheValid = false;
     mutable bool isTruncated = false;
     mutable int searchScore = 0;
-    
+    int detectedBpm = 0;
+
     FileItem()
         : type(FileType::Unknown), isDirectory(false), size(0) {}
 
@@ -226,6 +228,12 @@ public:
 
     void setOnNavActionSelected(std::function<void(BrowserNavAction)> callback) { onNavActionSelected_ = callback; }
 
+    // Drop target support for Places section
+    bool isPointOverPlacesSection(float x, float y) const;
+    void onDropFileToPlaces(const std::string& path);
+    void setDragOverPlaces(bool over) { m_isDragOverPlaces = over; }
+    bool isDragOverPlaces() const { return m_isDragOverPlaces; }
+
 	private:
 	    void loadDirectoryContents();
 	    void loadFolderContents(FileItem* item);
@@ -306,6 +314,13 @@ public:
 	    void pushToHistory(const std::string& path);
 	    void navigateBack();
 	    void navigateForward();
+
+        // Legacy settings migration (v1 pipe-separated → v2 JSON)
+        void migrateLegacySettings(const std::string& filePath);
+
+        // Auto-preview + keyboard helpers
+        void tryAutoPreview();
+        void scrollToSelected();
 
     // File management
     std::string currentPath_;
@@ -450,6 +465,12 @@ public:
     int dragSourceIndex_ = -1;             // Index of file being dragged
     NUIPoint dragStartPos_;                // Position where drag started
     bool dragPotential_ = false;           // True when mouse down, waiting for threshold
+
+    // Drop target state for Places section
+    bool m_isDragOverPlaces = false;
+
+    // Auto-preview on keyboard navigation
+    bool m_autoPreviewEnabled = true;
 };
 
 } // namespace AestraUI
