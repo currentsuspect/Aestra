@@ -88,16 +88,6 @@ std::string formatTimeShort(double seconds) {
     return std::string(buffer);
 }
 
-std::string formatFileSize(size_t size) {
-    if (size < 1024) {
-        return std::to_string(size) + " B";
-    }
-    if (size < 1024 * 1024) {
-        return std::to_string(size / 1024) + " KB";
-    }
-    return std::to_string(size / (1024 * 1024)) + " MB";
-}
-
 std::string fileExtensionUpper(const std::string& path) {
     std::string ext = std::filesystem::path(path).extension().string();
     std::transform(ext.begin(), ext.end(), ext.begin(), ::toupper);
@@ -433,9 +423,8 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     auto& icon = isPlaying_ ? stopIcon_ : playIcon_;
     if (icon) {
         float iconSize = 13.0f;
-        float offsetX = isPlaying_ ? 0.0f : 0.5f; // nudge play slightly right
-        float iconX = std::floor(playButtonBounds_.x + (playButtonBounds_.width - iconSize) * 0.5f + offsetX);
-        float iconY = std::floor(playButtonBounds_.y + (playButtonBounds_.height - iconSize) * 0.5f + (isPlaying_ ? 0.0f : 0.0f));
+        float iconX = std::floor(playButtonBounds_.x + (playButtonBounds_.width - iconSize) * 0.5f);
+        float iconY = std::floor(playButtonBounds_.y + (playButtonBounds_.height - iconSize) * 0.5f);
 
         icon->setBounds(NUIRect(iconX, iconY, iconSize, iconSize));
         icon->setColor(isPlaying_ ? NUIColor::white() : theme.getColor("textPrimary").withAlpha(0.85f));
@@ -457,8 +446,19 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     std::string displayName = truncateToWidth(renderer, currentFile_.name, 12.5f, nameMaxW);
     renderer.drawText(displayName, NUIPoint(nameX, infoTopY), 12.5f, theme.getColor("textPrimary").withAlpha(0.92f));
 
-    std::string meta = formatFileSize(currentFile_.size) + "  " + fileExtensionUpper(currentFile_.path);
-    renderer.drawText(meta, NUIPoint(nameX, infoTopY + 15.0f), 10.0f, theme.getColor("textSecondary").withAlpha(0.55f));
+    // BPM and key info line
+    std::string infoLine;
+    if (m_currentFileBpm > 0) {
+        infoLine = std::to_string(m_currentFileBpm) + " BPM";
+    }
+    if (!m_currentFileKey.empty()) {
+        if (!infoLine.empty()) infoLine += "  ";
+        infoLine += m_currentFileKey;
+    }
+    if (infoLine.empty()) {
+        infoLine = fileExtensionUpper(currentFile_.path);
+    }
+    renderer.drawText(infoLine, NUIPoint(nameX, infoTopY + 15.0f), 10.0f, theme.getColor("textSecondary").withAlpha(0.55f));
 
     // -- Time / Duration --
     if (timeX > nameX + 40.0f) {
@@ -509,15 +509,6 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
     // -- Transport bar (above scrubber) --
     const float btnSize = 16.0f;
     float tx = bounds.x + padL;
-
-    // Play/Stop already rendered above; add Stop button next
-    stopButtonBounds_ = NUIRect(tx, transportY, btnSize, btnSize);
-    if (stopIcon_) {
-        stopIcon_->setBounds(NUIRect(tx + 1.5f, transportY + 1.5f, 13.0f, 13.0f));
-        stopIcon_->setColor(theme.getColor("textPrimary").withAlpha(0.75f));
-        stopIcon_->onRender(renderer);
-    }
-    tx += btnSize + 8.0f;
 
     // Loop button
     loopButtonBounds_ = NUIRect(tx, transportY, btnSize, btnSize);

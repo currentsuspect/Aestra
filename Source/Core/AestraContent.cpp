@@ -422,11 +422,11 @@ AestraContent::AestraContent() {
     m_previewPanel->setOnStop([this]() { stopSoundPreview(); });
     m_previewPanel->setOnSeek([this](double seconds) { seekSoundPreview(seconds); });
     m_previewPanel->setOnReplay([this]() {
-        // Loop replay: bypass stopSoundPreview() and setFile() to avoid waveform regeneration.
-        // Directly re-trigger playback on the already-cached file.
         if (m_previewEngine && !m_currentPreviewFile.empty()) {
             m_previewEngine->stop();
-            auto result = m_previewEngine->play(m_currentPreviewFile, 0.0f, m_previewDuration);
+            double fullDuration = m_previewEngine->getDuration();
+            if (fullDuration <= 0.0) fullDuration = 300.0;
+            auto result = m_previewEngine->play(m_currentPreviewFile, 0.0f, fullDuration);
             if (result == Audio::PreviewResult::Success || result == Audio::PreviewResult::Pending) {
                 m_previewIsPlaying = true;
                 m_previewStartTime = std::chrono::steady_clock::now();
