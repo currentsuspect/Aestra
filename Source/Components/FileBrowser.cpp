@@ -367,6 +367,9 @@ FileBrowser::FileBrowser()
 
     // Bind search callback
     searchInput_->setOnTextChange([this](const std::string& text) {
+        if (onSearchTextChanged_) {
+            onSearchTextChanged_(text);
+        }
         applyFilter();
     });
     searchInput_->setOnEscapeKey([this]() {
