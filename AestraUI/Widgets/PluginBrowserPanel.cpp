@@ -73,10 +73,9 @@ void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
     // Background - matches FileBrowser panel style
     renderer.fillRect(bounds, Colors::panelBackground);
     
-    // Render header bar matching left panel style
+    // Render header bar with integrated filter pills
     renderHeaderBar(renderer);
     
-    renderTabs(renderer);
     renderPluginList(renderer);
     
     if (m_scanning) {
@@ -86,89 +85,82 @@ void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
 
 void PluginBrowserPanel::renderHeaderBar(NUIRenderer& renderer) {
     auto bounds = getBounds();
-    constexpr float headerH = 52.0f;  // Match FileBrowser list header height
+    constexpr float headerH = HEADER_BAR_HEIGHT;
     
-    // Header background - matches FileBrowser style
+    // Header background
     renderer.fillRect({bounds.x, bounds.y, bounds.width, headerH}, Colors::panelTop);
     renderer.drawLine({bounds.x, bounds.y + headerH}, {bounds.right(), bounds.y + headerH}, 1.0f, Colors::divider);
     
-    // Title - matches FileBrowser's folder name style
-    renderer.drawText("Plugins", {bounds.x + 16.0f, bounds.y + 16.0f}, 12.0f, Colors::textPrimary.withAlpha(0.76f));
+    // Title
+    renderer.drawText("Plugins", {bounds.x + 14.0f, bounds.y + 15.0f}, 12.0f, Colors::textPrimary.withAlpha(0.82f));
     
-    // Scan button - smaller, positioned like FileBrowser's sort button
-    NUIRect scanBtn = {bounds.right() - 62.0f, bounds.y + 15.0f, 48.0f, 22.0f};
+    // Filter pills area - compact inline filters
+    renderFilterPills(renderer);
     
+    // Scan button
+    NUIRect scanBtn = getScanButtonRect();
     if (m_scanning) {
-        renderer.fillRoundedRect(scanBtn, 6.0f, Colors::buttonBackground.withAlpha(0.60f));
+        renderer.fillRoundedRect(scanBtn, 5.0f, Colors::buttonBackground.withAlpha(0.50f));
         auto dots = renderer.measureText("...", 10.0f);
-        renderer.drawText("...", {scanBtn.x + (scanBtn.width - dots.width) * 0.5f, scanBtn.y + 6}, 10.0f, Colors::textDisabled);
+        renderer.drawText("...", {scanBtn.x + (scanBtn.width - dots.width) * 0.5f, scanBtn.y + 5}, 10.0f, Colors::textDisabled);
     } else {
-        renderer.fillRoundedRect(scanBtn, 6.0f, Colors::buttonBackground);
-        renderer.strokeRoundedRect(scanBtn, 6.0f, 1.0f, Colors::panelBorder);
+        renderer.fillRoundedRect(scanBtn, 5.0f, Colors::buttonBackground);
+        renderer.strokeRoundedRect(scanBtn, 5.0f, 1.0f, Colors::panelBorder);
         auto label = renderer.measureText("Scan", 10.0f);
-        renderer.drawText("Scan", {scanBtn.x + (scanBtn.width - label.width) * 0.5f, scanBtn.y + 6}, 10.0f, Colors::textSecondary.withAlpha(0.82f));
+        renderer.drawText("Scan", {scanBtn.x + (scanBtn.width - label.width) * 0.5f, scanBtn.y + 5}, 10.0f, Colors::textSecondary.withAlpha(0.82f));
     }
 }
 
-void PluginBrowserPanel::renderTabs(NUIRenderer& renderer) {
+void PluginBrowserPanel::renderFilterPills(NUIRenderer& renderer) {
     auto bounds = getBounds();
-    float y = bounds.y + HEADER_BAR_HEIGHT;
+    m_filterPillHits.clear();
     
-    const char* tabLabels[] = {"All", "FX", "Inst", "VST3", "CLAP", "Fav"};
-    const int tabCount = 6;
+    float x = bounds.x + 72.0f;  // After "Plugins" title
+    const float y = bounds.y + 12.0f;
+    const float pillH = 20.0f;
     const float gap = 4.0f;
-    const float totalWidth = bounds.width - 24.0f;
-    float tabWidth = (totalWidth - gap * (tabCount - 1)) / tabCount;
     
-    for (int i = 0; i < tabCount; ++i) {
-        NUIRect tabRect = {bounds.x + 12.0f + i * (tabWidth + gap), y, tabWidth, TAB_HEIGHT};
+    auto drawPill = [&](const std::string& label, bool active, FilterPillHit::Type type) {
+        float w = std::max(28.0f, renderer.measureText(label, 9.5f).width + 12.0f);
+        NUIRect rect = {x, y, w, pillH};
         
-        if (i == m_activeTab) {
-            renderer.fillRoundedRect(tabRect, 6.0f, Colors::accentPrimary.withAlpha(0.18f));
-            renderer.strokeRoundedRect(tabRect, 6.0f, 1.0f, Colors::accentPrimary.withAlpha(0.42f));
+        if (active) {
+            renderer.fillRoundedRect(rect, 10.0f, Colors::accentPrimary.withAlpha(0.20f));
+            renderer.strokeRoundedRect(rect, 10.0f, 1.0f, Colors::accentPrimary.withAlpha(0.45f));
         } else {
-            renderer.fillRoundedRect(tabRect, 6.0f, Colors::buttonBackground.withAlpha(0.50f));
-            renderer.strokeRoundedRect(tabRect, 6.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
+            renderer.fillRoundedRect(rect, 10.0f, Colors::buttonBackground.withAlpha(0.40f));
+            renderer.strokeRoundedRect(rect, 10.0f, 1.0f, Colors::panelBorder.withAlpha(0.30f));
         }
         
-        const float fontSize = 10.0f;
-        auto measured = renderer.measureText(tabLabels[i], fontSize);
-        NUIColor tabColor = (i == m_activeTab) ? Colors::textPrimary.withAlpha(0.92f) : Colors::textSecondary.withAlpha(0.72f);
-        renderer.drawText(tabLabels[i],
-                         {tabRect.x + (tabRect.width - measured.width) * 0.5f, tabRect.y + 8.0f},
-                         fontSize, tabColor);
-    }
-}
-
-void PluginBrowserPanel::renderSearchBar(NUIRenderer& renderer) {
-    NUIRect searchRect = getSearchRect();
-    renderer.fillRoundedRect(searchRect, 9.0f, Colors::inputBackground.withAlpha(0.92f));
-    renderer.strokeRoundedRect(searchRect, 9.0f, 1.0f,
-                               m_searchFocused ? Colors::accentPrimary.withAlpha(0.72f)
-                                               : Colors::panelBorder.withAlpha(0.66f));
+        NUIColor textColor = active ? Colors::textPrimary.withAlpha(0.92f) : Colors::textSecondary.withAlpha(0.65f);
+        auto measured = renderer.measureText(label, 9.5f);
+        renderer.drawText(label, {rect.x + (rect.width - measured.width) * 0.5f, rect.y + 5.0f}, 9.5f, textColor);
+        
+        m_filterPillHits.push_back({type, rect});
+        x += w + gap;
+    };
     
-    if (m_searchQuery.empty()) {
-        renderer.drawText("Search plugins...", {searchRect.x + 12, searchRect.y + 6},
-                         11.0f, Colors::textDisabled);
-    } else {
-        renderer.drawText(fitText(renderer, m_searchQuery, 11.0f, searchRect.width - 24.0f),
-                          {searchRect.x + 12, searchRect.y + 6},
-                          11.0f, Colors::textPrimary);
-    }
-    if (m_searchFocused) {
-        const std::string visibleQuery = fitText(renderer, m_searchQuery, 11.0f, searchRect.width - 30.0f);
-        const float caretX = searchRect.x + 12.0f + renderer.measureText(visibleQuery, 11.0f).width + 2.0f;
-        renderer.drawLine({std::min(caretX, searchRect.right() - 10.0f), searchRect.y + 6.0f},
-                          {std::min(caretX, searchRect.right() - 10.0f), searchRect.bottom() - 6.0f},
-                          1.0f,
-                          Colors::accentPrimary.withAlpha(0.90f));
-    }
+    // Type filters
+    drawPill("All", m_typeFilter == PluginTypeFilter::All && m_formatFilter == PluginFormatFilter::All && !m_showFavoritesOnly, FilterPillHit::TypeAll);
+    drawPill("FX", m_typeFilter == PluginTypeFilter::Effects, FilterPillHit::TypeFX);
+    drawPill("Inst", m_typeFilter == PluginTypeFilter::Instruments, FilterPillHit::TypeInst);
+    
+    x += 6.0f;  // Extra gap between groups
+    
+    // Format filters
+    drawPill("VST3", m_formatFilter == PluginFormatFilter::VST3, FilterPillHit::FormatVST3);
+    drawPill("CLAP", m_formatFilter == PluginFormatFilter::CLAP, FilterPillHit::FormatCLAP);
+    
+    x += 6.0f;
+    
+    // Favorites
+    drawPill("★", m_showFavoritesOnly, FilterPillHit::Fav);
 }
 
 void PluginBrowserPanel::renderPluginList(NUIRenderer& renderer) {
     auto bounds = getBounds();
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + TAB_HEIGHT + 6.0f;
-    float listHeight = bounds.height - HEADER_BAR_HEIGHT - TAB_HEIGHT - 6.0f;
+    float listTop = bounds.y + HEADER_BAR_HEIGHT + 4.0f;
+    float listHeight = bounds.height - HEADER_BAR_HEIGHT - 4.0f;
     
     renderer.setClipRect({bounds.x + 8.0f, listTop, bounds.width - 16.0f, listHeight});
     
@@ -209,49 +201,40 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
     // Favorite star
     float textX = rowRect.x + 12;
     if (plugin.isFavorite) {
-        renderer.drawText("*", {rowRect.x + 8, rowRect.y + 6}, 13.0f, Colors::accentWarning);
-        textX = rowRect.x + 22;
+        renderer.drawText("★", {rowRect.x + 8, rowRect.y + 5}, 11.0f, Colors::accentWarning.withAlpha(0.85f));
+        textX = rowRect.x + 20;
     }
     
-    // Calculate badge area
-    const bool isCLAP = (plugin.formatStr.find("CLAP") != std::string::npos);
-    const float badgeWidth = isCLAP ? 42.0f : 28.0f;
-    const float badgeX = rowRect.x + rowRect.width - badgeWidth - 10.0f;
-    const float textMaxW = std::max(24.0f, badgeX - textX - 8.0f);
+    // Full width for plugin info (no badges)
+    const float textMaxW = rowRect.width - (textX - rowRect.x) - 8.0f;
     
     // Plugin name
     std::string name = fitText(renderer, plugin.name, 11.5f, textMaxW);
-    renderer.drawText(name, {textX, rowRect.y + 7}, 11.5f, Colors::textPrimary.withAlpha(0.90f));
+    renderer.drawText(name, {textX, rowRect.y + 6}, 11.5f, Colors::textPrimary.withAlpha(0.90f));
     
-    // Vendor/type metadata
+    // Vendor/type metadata with format indicator
     std::string vendorMeta = plugin.vendor;
     if (!plugin.typeName.empty()) {
         vendorMeta += " · " + plugin.typeName;
     }
+    // Add small format indicator
+    if (plugin.formatStr == "VST3") {
+        vendorMeta += " · V3";
+    } else if (plugin.formatStr.find("CLAP") != std::string::npos) {
+        vendorMeta += " · CL";
+    } else if (plugin.formatStr == "Int") {
+        vendorMeta += " · Int";
+    }
     vendorMeta = fitText(renderer, vendorMeta, 9.0f, textMaxW);
-    renderer.drawText(vendorMeta, {textX, rowRect.y + 21}, 9.0f, Colors::textSecondary.withAlpha(0.68f));
-    
-    // Format badge - subtler styling
-    NUIRect badge = {badgeX, rowRect.y + 9, badgeWidth, 16};
-    
-    NUIColor badgeBg = (plugin.formatStr == "VST3") 
-        ? Colors::accentPrimary.withAlpha(0.14f)
-        : Colors::accentSecondary.withAlpha(0.14f);
-    NUIColor badgeBorder = (plugin.formatStr == "VST3")
-        ? Colors::accentPrimary.withAlpha(0.32f)
-        : Colors::accentSecondary.withAlpha(0.32f);
-    
-    renderer.fillRoundedRect(badge, 4.0f, badgeBg);
-    renderer.strokeRoundedRect(badge, 4.0f, 1.0f, badgeBorder);
-    renderer.drawTextCentered(plugin.formatStr, badge, 8.5f, Colors::textPrimary.withAlpha(0.82f));
+    renderer.drawText(vendorMeta, {textX, rowRect.y + 19}, 9.0f, Colors::textSecondary.withAlpha(0.60f));
 }
 
 void PluginBrowserPanel::renderScanProgress(NUIRenderer& renderer) {
     auto bounds = getBounds();
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + TAB_HEIGHT + 6.0f;
+    float listTop = bounds.y + HEADER_BAR_HEIGHT + 4.0f;
     
     renderer.fillRect({bounds.x, listTop, bounds.width,
-                      bounds.height - HEADER_BAR_HEIGHT - TAB_HEIGHT - 6.0f},
+                      bounds.height - HEADER_BAR_HEIGHT - 4.0f},
                      Colors::panelBackground.withAlpha(0.82f));
     
     float barWidth = bounds.width - 40;
@@ -277,41 +260,42 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
     
     // Click handling
     if (event.pressed && event.button == NUIMouseButton::Left) {
-        if (insideBounds && getSearchRect().contains(event.position)) {
-            m_searchFocused = true;
-            setFocused(true);
-            repaint();
-            return true;
-        }
-
-        // Tab clicks
-        float tabY = bounds.y + HEADER_BAR_HEIGHT;
-        const float gap = 4.0f;
-        const float totalWidth = bounds.width - 24.0f;
-        const float tabWidth = (totalWidth - gap * 5.0f) / 6.0f;
-        if (insideBounds && my >= tabY && my < tabY + TAB_HEIGHT) {
-            for (int tabIndex = 0; tabIndex < 6; ++tabIndex) {
-                NUIRect tabRect = {bounds.x + 12.0f + tabIndex * (tabWidth + gap), tabY, tabWidth, TAB_HEIGHT};
-                if (tabRect.contains(event.position)) {
-                    m_searchFocused = false;
-                    m_activeTab = tabIndex;
-                    
-                    PluginFilterType filters[] = {
-                        PluginFilterType::All,
-                        PluginFilterType::Effects,
-                        PluginFilterType::Instruments,
-                        PluginFilterType::VST3,
-                        PluginFilterType::CLAP,
-                        PluginFilterType::Favorites
-                    };
-                    setFilter(filters[tabIndex]);
-                    return true;
+        // Filter pill clicks
+        for (size_t i = 0; i < m_filterPillHits.size(); ++i) {
+            if (m_filterPillHits[i].bounds.contains(event.position)) {
+                m_searchFocused = false;
+                switch (m_filterPillHits[i].type) {
+                    case FilterPillHit::TypeAll:
+                        m_typeFilter = PluginTypeFilter::All;
+                        m_formatFilter = PluginFormatFilter::All;
+                        m_showFavoritesOnly = false;
+                        break;
+                    case FilterPillHit::TypeFX:
+                        m_typeFilter = (m_typeFilter == PluginTypeFilter::Effects) ? PluginTypeFilter::All : PluginTypeFilter::Effects;
+                        break;
+                    case FilterPillHit::TypeInst:
+                        m_typeFilter = (m_typeFilter == PluginTypeFilter::Instruments) ? PluginTypeFilter::All : PluginTypeFilter::Instruments;
+                        break;
+                    case FilterPillHit::FormatVST3:
+                        m_formatFilter = (m_formatFilter == PluginFormatFilter::VST3) ? PluginFormatFilter::All : PluginFormatFilter::VST3;
+                        break;
+                    case FilterPillHit::FormatCLAP:
+                        m_formatFilter = (m_formatFilter == PluginFormatFilter::CLAP) ? PluginFormatFilter::All : PluginFormatFilter::CLAP;
+                        break;
+                    case FilterPillHit::Fav:
+                        m_showFavoritesOnly = !m_showFavoritesOnly;
+                        break;
+                    default:
+                        break;
                 }
+                applyFilters();
+                repaint();
+                return true;
             }
         }
         
         // Plugin list clicks (Press down)
-        float listTop = bounds.y + HEADER_BAR_HEIGHT + TAB_HEIGHT + 6.0f;
+        float listTop = bounds.y + HEADER_BAR_HEIGHT + 4.0f;
         if (insideBounds && my >= listTop) {
             int rowIndex = hitTestRow(static_cast<int>(my));
             if (rowIndex >= 0 && rowIndex < static_cast<int>(m_filteredPlugins.size())) {
@@ -401,7 +385,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
     }
     
     // Hover tracking
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + TAB_HEIGHT + 6.0f;
+    float listTop = bounds.y + HEADER_BAR_HEIGHT + 4.0f;
     if (insideBounds && my >= listTop) {
         m_hoveredIndex = hitTestRow(static_cast<int>(my));
     } else {
@@ -410,7 +394,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
     
     // Scroll handling
     if (insideBounds && event.wheelDelta != 0.0f) {
-        float listHeight = bounds.height - HEADER_BAR_HEIGHT - TAB_HEIGHT - 6.0f;
+        float listHeight = bounds.height - HEADER_BAR_HEIGHT - 4.0f;
         float contentHeight = m_filteredPlugins.size() * ROW_HEIGHT;
         float maxScroll = std::max(0.0f, contentHeight - listHeight);
         
@@ -483,8 +467,18 @@ void PluginBrowserPanel::setPluginList(const std::vector<PluginListItem>& plugin
     applyFilters();
 }
 
-void PluginBrowserPanel::setFilter(PluginFilterType filter) {
-    m_filterType = filter;
+void PluginBrowserPanel::setTypeFilter(PluginTypeFilter filter) {
+    m_typeFilter = filter;
+    applyFilters();
+}
+
+void PluginBrowserPanel::setFormatFilter(PluginFormatFilter filter) {
+    m_formatFilter = filter;
+    applyFilters();
+}
+
+void PluginBrowserPanel::setShowFavoritesOnly(bool show) {
+    m_showFavoritesOnly = show;
     applyFilters();
 }
 
@@ -497,29 +491,28 @@ void PluginBrowserPanel::applyFilters() {
     m_filteredPlugins.clear();
     
     for (const auto& p : m_allPlugins) {
+        // Type filter
         bool passType = true;
-        switch (m_filterType) {
-            case PluginFilterType::Effects:
-                passType = (p.typeName == "Effect");
-                break;
-            case PluginFilterType::Instruments:
-                passType = (p.typeName == "Instrument");
-                break;
-            case PluginFilterType::VST3:
-                passType = (p.formatStr == "VST3");
-                break;
-            case PluginFilterType::CLAP:
-                passType = (p.formatStr.find("CLAP") != std::string::npos);
-                break;
-            case PluginFilterType::Favorites:
-                passType = p.isFavorite;
-                break;
-            default:
-                break;
+        if (m_typeFilter == PluginTypeFilter::Effects) {
+            passType = (p.typeName == "Effect");
+        } else if (m_typeFilter == PluginTypeFilter::Instruments) {
+            passType = (p.typeName == "Instrument");
         }
-        
         if (!passType) continue;
         
+        // Format filter
+        bool passFormat = true;
+        if (m_formatFilter == PluginFormatFilter::VST3) {
+            passFormat = (p.formatStr == "VST3");
+        } else if (m_formatFilter == PluginFormatFilter::CLAP) {
+            passFormat = (p.formatStr.find("CLAP") != std::string::npos);
+        }
+        if (!passFormat) continue;
+        
+        // Favorites filter
+        if (m_showFavoritesOnly && !p.isFavorite) continue;
+        
+        // Search filter
         if (!m_searchQuery.empty()) {
             std::string lowerQuery = m_searchQuery;
             std::transform(lowerQuery.begin(), lowerQuery.end(), lowerQuery.begin(), ::tolower);
@@ -620,20 +613,14 @@ void PluginBrowserPanel::setScanStatus(const std::string& status) {
     m_scanStatus = status;
 }
 
-NUIRect PluginBrowserPanel::getSearchRect() const {
-    auto bounds = getBounds();
-    const float y = bounds.y + HEADER_BAR_HEIGHT + TAB_HEIGHT + 4.0f;
-    return {bounds.x + 10.0f, y, bounds.width - 20.0f, 28.0f};
-}
-
 NUIRect PluginBrowserPanel::getScanButtonRect() const {
     auto bounds = getBounds();
-    return {bounds.x + bounds.width - 74.0f, bounds.y + 16.0f, 54.0f, 22.0f};
+    return {bounds.right() - 58.0f, bounds.y + 12.0f, 46.0f, 20.0f};
 }
 
 int PluginBrowserPanel::hitTestRow(int y) const {
     auto bounds = getBounds();
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + TAB_HEIGHT + 6.0f;
+    float listTop = bounds.y + HEADER_BAR_HEIGHT + 4.0f;
     
     if (y < listTop) return -1;
     
