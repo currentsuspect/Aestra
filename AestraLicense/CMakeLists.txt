@@ -59,7 +59,7 @@ elseif(APPLE)
 
     target_include_directories(AestraLicense PRIVATE ${LIBSODIUM_INCLUDE_DIRS})
     target_link_libraries(AestraLicense PRIVATE ${LIBSODIUM_LIBRARY})
-    target_link_libraries(AestraLicense PUBLIC "-framework Security")
+    target_link_libraries(AestraLicense PUBLIC "-framework Security" "-framework CoreFoundation")
     target_compile_options(AestraLicense PRIVATE ${LIBSODIUM_CFLAGS_OTHER})
 else()
     find_package(PkgConfig REQUIRED)
