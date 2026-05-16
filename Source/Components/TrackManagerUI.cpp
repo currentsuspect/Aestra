@@ -4331,9 +4331,9 @@ void TrackManagerUI::deleteSelectedClip() {
 AestraUI::DropFeedback TrackManagerUI::onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
     Log::info("[TrackManagerUI] Drag entered");
 
-    // Accept file drops, audio clip moves, and plugins
+    // Accept file drops, audio clip moves, plugins, and MIDI clips
     if (data.type != AestraUI::DragDataType::File && data.type != AestraUI::DragDataType::AudioClip &&
-        data.type != AestraUI::DragDataType::Plugin) {
+        data.type != AestraUI::DragDataType::Plugin && data.type != AestraUI::DragDataType::MidiClip) {
         return AestraUI::DropFeedback::Invalid;
     }
 
@@ -4802,6 +4802,15 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             result.message = "Failed to create source";
         }
 
+        clearDropPreview();
+        return result;
+    }
+
+    // 5b. Handle MIDI Clip Drop (stub — full MIDI track creation is a future spec)
+    if (data.type == AestraUI::DragDataType::MidiClip) {
+        Log::info("[TrackManagerUI] MIDI drag received: " + data.filePath + " — MIDI track creation not yet implemented");
+        result.accepted = false;
+        result.message = "MIDI track creation not yet implemented";
         clearDropPreview();
         return result;
     }

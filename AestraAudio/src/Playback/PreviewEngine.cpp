@@ -185,9 +185,12 @@ void PreviewEngine::workerLoop() {
     }
 }
 
-PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double maxSeconds) {
+PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double maxSeconds, float playbackRate) {
     // Stop any currently playing preview
     stop();
+
+    // Clamp playback rate to [0.5, 2.0]
+    m_playbackRate.store(std::clamp(playbackRate, 0.5f, 2.0f), std::memory_order_relaxed);
 
     // Fast path: Check if buffer is already cached (no filesystem stat)
     auto cachedBuffer = SamplePool::getInstance().tryGetCached(path);
@@ -281,7 +284,7 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
         voice->fadeInPos = 0.0; // Smooth transition
     }
 
-    const double ratio = voice->sampleRate / streamRate;
+    const double ratio = (voice->sampleRate / streamRate) * m_playbackRate.load(std::memory_order_relaxed);
     const uint64_t totalFrames = buffer->numFrames;
     const float* data = buffer->data.data();
     double phase = voice->phaseFrames;
