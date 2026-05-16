@@ -76,6 +76,7 @@ public:
     void invalidateAllCaches();
 
     void invalidateCache(); // Keep for compatibility
+    void buildAllWaveformCaches();
 
     // Solo coordination (exclusive solo behavior)
     void onTrackSoloToggled(TrackUIComponent* soloedTrack);

@@ -794,20 +794,23 @@ bool ProjectSerializer::save(const std::string& path,
                              double tempo,
                              double playheadSeconds,
                              const UIState* uiState) {
-    // Create backup of existing file before overwriting
     namespace fs = std::filesystem;
+
+    // Serialize first — if this fails, we never touch the existing file
+    auto ser = serialize(trackManager, tempo, playheadSeconds, 2, uiState);
+    if (!ser.ok) return false;
+
+    // Only create backup once we know serialization succeeded
     if (fs::exists(path)) {
         fs::path backupPath = path;
         backupPath += ".bak";
         std::error_code ec;
         fs::copy_file(path, backupPath, fs::copy_options::overwrite_existing, ec);
         if (ec) {
-            Log::warning("Could not create backup: " + ec.message());
+            Log::warning("Backup creation failed (non-fatal): " + ec.message());
         }
     }
 
-    auto ser = serialize(trackManager, tempo, playheadSeconds, 2, uiState);
-    if (!ser.ok) return false;
     if (!writeAtomicallyImpl(path, ser.contents)) {
         Log::error("Project save failed: " + path);
         return false;
@@ -1048,7 +1051,13 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         }
     }
     
-    // Log missing assets but don't fail - we'll load what we can
+    // Deduplicate missing assets
+    {
+        std::sort(result.missingAssets.begin(), result.missingAssets.end());
+        result.missingAssets.erase(
+            std::unique(result.missingAssets.begin(), result.missingAssets.end()),
+            result.missingAssets.end());
+    }
     if (!result.missingAssets.empty()) {
         Log::warning("[ProjectLoad] " + std::to_string(result.missingAssets.size()) + 
                      " audio file(s) not found - clips will appear without waveforms");
@@ -1106,357 +1115,430 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
     auto batch = playlist.scopedBatchUpdate();
 
+    // Save snapshot of current state to a rollback file BEFORE clearing.
+    // If the new load fails, we restore from this file to avoid leaving
+    // the project in an empty/corrupted state.
+    // Skip rollback creation when loading a rollback file itself (prevents recursion).
+    std::string rollbackPath;
+    const bool isRollbackLoad = (path.find(".rollback") != std::string::npos);
+    if (!isRollbackLoad) {
+        SerializeResult preloadSnapshot;
+        try {
+            preloadSnapshot = serialize(trackManager, result.tempo, result.playhead, 0, nullptr);
+        } catch (...) {
+            Log::warning("[ProjectLoad] Could not create preload snapshot — rollback unavailable");
+        }
+        if (preloadSnapshot.ok && !preloadSnapshot.contents.empty()) {
+            namespace fs = std::filesystem;
+            fs::path tmpPath = fs::path(path).string() + ".rollback";
+            if (writeAtomicallyImpl(tmpPath.string(), preloadSnapshot.contents)) {
+                rollbackPath = tmpPath.string();
+            } else {
+                Log::warning("[ProjectLoad] Could not write rollback file — recovery unavailable");
+            }
+        }
+    }
+
 #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
     Log::info("[ProjectLoad] Clearing existing state");
 #endif
 
-    playlist.clear();
-    sourceManager.clear();
-    patternManager.clear();
-    trackManager->clearAllChannels();
-
-    // 2. Load Sources (and decode audio files)
-    std::unordered_map<uint32_t, ClipSourceID> idMap;
-    if (root.has("sources")) {
-        const JSON& sj = root["sources"];
-    #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
-        Log::info("[ProjectLoad] Loading sources count=" + std::to_string(sj.size()));
-    #endif
-        for (size_t i = 0; i < sj.size(); ++i) {
-            uint32_t oldId = static_cast<uint32_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
-            std::string storedPath = boundedStringOr(sj[i], "path", "", PROJECT_MAX_PATH_BYTES);
-            if (oldId == 0 || storedPath.empty()) {
-                continue;
-            }
-            std::filesystem::path resolvedPath = resolveProjectAssetPath(projectPath, storedPath);
-            const std::string sourcePath = storedPath; // Use original storedPath for serialization
-            const std::string filePath = resolvedPath.string(); // Use resolvedPath only for file I/O
-            ClipSourceID newId = sourceManager.getOrCreateSource(sourcePath);
-            idMap[oldId] = newId;
-            const bool assetReadable =
-                std::filesystem::exists(resolvedPath) && std::filesystem::is_regular_file(resolvedPath);
-            if (!assetReadable) {
-                result.missingAssets.push_back(storedPath);
-                Log::warning("[ProjectLoad] Missing or unreadable audio asset: " + storedPath);
-            }
-            
-            // Actually decode the audio file and load into source
-            ClipSource* source = sourceManager.getSource(newId);
-            if (source && !source->isReady() && assetReadable && isRegularDecodableAsset(resolvedPath)) {
-                std::vector<float> decodedData;
-                uint32_t sampleRate = 0;
-                uint32_t numChannels = 0;
-                
-                Log::info("[ProjectLoad] Decoding audio: " + filePath);
-                if (decodeAudioFile(filePath, decodedData, sampleRate, numChannels, nullptr)) {
-                    auto buffer = std::make_shared<AudioBufferData>();
-                    buffer->interleavedData = std::move(decodedData);
-                    buffer->sampleRate = sampleRate;
-                    buffer->numChannels = numChannels;
-                    if (numChannels == 0) {
-                        Log::warning("[ProjectLoad] Audio file reports 0 channels: " + filePath);
-                        buffer->numChannels = 1;
-                    }
-                    buffer->numFrames = buffer->interleavedData.size() / buffer->numChannels;
-                    source->setBuffer(buffer);
-                    Log::info("[ProjectLoad] Loaded audio: " + filePath + 
-                              " (" + std::to_string(buffer->numFrames) + " frames, " + 
-                              std::to_string(sampleRate) + " Hz)");
-                } else {
-                    Log::warning("[ProjectLoad] Failed to decode: " + filePath + " — creating silent mono fallback");
+    try {
+        playlist.clear();
+        sourceManager.clear();
+        patternManager.clear();
+        trackManager->clearAllChannels();
+    
+        // 2. Load Sources (and decode audio files)
+        std::unordered_map<uint32_t, ClipSourceID> idMap;
+        if (root.has("sources")) {
+            const JSON& sj = root["sources"];
+        #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
+            Log::info("[ProjectLoad] Loading sources count=" + std::to_string(sj.size()));
+        #endif
+            for (size_t i = 0; i < sj.size(); ++i) {
+                uint32_t oldId = static_cast<uint32_t>(finiteNumberOr(sj[i], "id", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                std::string storedPath = boundedStringOr(sj[i], "path", "", PROJECT_MAX_PATH_BYTES);
+                if (oldId == 0 || storedPath.empty()) {
+                    continue;
+                }
+                std::filesystem::path resolvedPath = resolveProjectAssetPath(projectPath, storedPath);
+                const std::string sourcePath = storedPath; // Use original storedPath for serialization
+                const std::string filePath = resolvedPath.string(); // Use resolvedPath only for file I/O
+                ClipSourceID newId = sourceManager.getOrCreateSource(sourcePath);
+                idMap[oldId] = newId;
+                const bool assetReadable =
+                    std::filesystem::exists(resolvedPath) && std::filesystem::is_regular_file(resolvedPath);
+                if (!assetReadable) {
                     result.missingAssets.push_back(storedPath);
-                    auto fallback = std::make_shared<AudioBufferData>();
-                    fallback->numChannels = 1;
-                    fallback->sampleRate = 44100;
-                    fallback->numFrames = 0;
-                    source->setBuffer(fallback);
+                    Log::warning("[ProjectLoad] Missing or unreadable audio asset: " + storedPath);
                 }
-            }
-        }
-    }
-
-    // 5. Load Arsenal Units (must load before patterns - patterns reference unitId in MIDI note data)
-    if (root.has("arsenal")) {
-        trackManager->getUnitManager().loadFromJSON(root["arsenal"]);
-    }
-
-    // 3. Load Patterns
-    std::unordered_map<uint64_t, PatternID> patternMap;
-    if (root.has("patterns")) {
-        const JSON& pj = root["patterns"];
-    #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
-        Log::info("[ProjectLoad] Loading patterns count=" + std::to_string(pj.size()));
-    #endif
-        for (size_t i = 0; i < pj.size(); ++i) {
-            uint64_t oldId = static_cast<uint64_t>(finiteNumberOr(pj[i], "id", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
-            std::string name = boundedStringOr(pj[i], "name", "Pattern", PROJECT_MAX_STRING_BYTES);
-            double length = finiteNumberOr(pj[i], "length", 4.0, 0.0001, 1000000.0);
-            std::string type = boundedStringOr(pj[i], "type", "midi", PROJECT_MAX_STRING_BYTES);
-            if (oldId == 0) {
-                continue;
-            }
-
-            if (type == "audio") {
-                uint32_t oldSrcId = static_cast<uint32_t>(
-                    finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
-                if (idMap.count(oldSrcId)) {
-                    AudioSlicePayload payload;
-                    payload.audioSourceId = idMap[oldSrcId];
-                    if (pj[i].has("slices")) {
-                        const JSON& slj = pj[i]["slices"];
-                        for (size_t s = 0; s < slj.size(); ++s) {
-                            if (!slj[s].isObject()) continue;
-                            payload.slices.push_back({
-                                finiteNumberOr(slj[s], "start", 0.0, 0.0, 1.0e15),
-                                finiteNumberOr(slj[s], "length", 0.0, 0.0, 1.0e15)
-                            });
+                
+                // Actually decode the audio file and load into source
+                ClipSource* source = sourceManager.getSource(newId);
+                if (source && !source->isReady() && assetReadable && isRegularDecodableAsset(resolvedPath)) {
+                    std::vector<float> decodedData;
+                    uint32_t sampleRate = 0;
+                    uint32_t numChannels = 0;
+                    
+                    Log::info("[ProjectLoad] Decoding audio: " + filePath);
+                    if (decodeAudioFile(filePath, decodedData, sampleRate, numChannels, nullptr)) {
+                        auto buffer = std::make_shared<AudioBufferData>();
+                        buffer->interleavedData = std::move(decodedData);
+                        buffer->sampleRate = sampleRate;
+                        buffer->numChannels = numChannels;
+                        if (numChannels == 0) {
+                            Log::warning("[ProjectLoad] Audio file reports 0 channels: " + filePath);
+                            buffer->numChannels = 1;
                         }
-                    }
-                    PatternID newId = patternManager.createAudioPattern(name, length, payload);
-                    patternMap[oldId] = newId;
-                }
-            } else {
-                MidiPayload payload;
-                if (pj[i].has("notes") && pj[i]["notes"].isArray()) {
-                    const JSON& notes = pj[i]["notes"];
-                    payload.notes.reserve(notes.size());
-                    for (size_t n = 0; n < notes.size(); ++n) {
-                        if (!notes[n].isObject()) continue;
-                        MidiNote note;
-                        note.pitch = static_cast<int>(finiteNumberOr(notes[n], "pitch", 60.0, 0.0, 127.0));
-                        note.startBeat = finiteNumberOr(notes[n], "startBeat", 0.0, 0.0, 1000000.0);
-                        note.durationBeats = finiteNumberOr(notes[n], "durationBeats", 0.25, 0.0, 1000000.0);
-                        note.velocity = static_cast<float>(finiteNumberOr(notes[n], "velocity", 1.0, 0.0, 1.0));
-                        note.unitId = static_cast<uint64_t>(
-                            finiteNumberOr(notes[n], "unitId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
-                        note.pitchOffset = static_cast<int8_t>(finiteNumberOr(notes[n], "pitchOffset", 0.0, -128.0, 127.0));
-                        note.gate = static_cast<float>(finiteNumberOr(notes[n], "gate", 1.0, 0.0, 1.0));
-                        if (notes[n].has("slide")) note.slide = notes[n]["slide"].asBool();
-                        payload.notes.push_back(note);
-                    }
-                }
-                PatternID newId = patternManager.createMidiPattern(name, length, payload);
-                patternMap[oldId] = newId;
-
-                // Deserialize scale context if present
-                if (pj[i].has("scale") && pj[i]["scale"].isObject()) {
-                    const JSON& scaleJson = pj[i]["scale"];
-                    ScaleContext ctx;
-                    ctx.rootKey = static_cast<int>(finiteNumberOr(scaleJson, "rootKey", 0.0, -12.0, 24.0));
-                    if (scaleJson.has("scaleKind") && scaleJson["scaleKind"].isString()) {
-                        auto kind = scaleKindFromString(scaleJson["scaleKind"].asString());
-                        if (kind.has_value()) {
-                            ctx.scaleKind = kind.value();
-                        }
-                    }
-                    if (scaleJson.has("snapToScale") && scaleJson["snapToScale"].isBool()) {
-                        ctx.snapToScale = scaleJson["snapToScale"].asBool();
-                    }
-                    if (ctx.hasNonDefaultValues()) {
-                        PatternSource* pattern = patternManager.getPattern(newId);
-                        if (pattern) {
-                            pattern->scaleOverride = ctx;
-                        }
+                        buffer->numFrames = buffer->interleavedData.size() / buffer->numChannels;
+                        source->setBuffer(buffer);
+                        Log::info("[ProjectLoad] Loaded audio: " + filePath + 
+                                  " (" + std::to_string(buffer->numFrames) + " frames, " + 
+                                  std::to_string(sampleRate) + " Hz)");
+                    } else {
+                        Log::warning("[ProjectLoad] Failed to decode: " + filePath + " — creating silent mono fallback");
+                        result.missingAssets.push_back(storedPath);
+                        auto fallback = std::make_shared<AudioBufferData>();
+                        fallback->numChannels = 1;
+                        fallback->sampleRate = 44100;
+                        fallback->numFrames = 0;
+                        source->setBuffer(fallback);
                     }
                 }
             }
         }
-    }
-
-    // 4. Load Lanes and Clips
-    if (root.has("lanes")) {
-        const JSON& lj = root["lanes"];
-    #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
-        Log::info("[ProjectLoad] Loading lanes count=" + std::to_string(lj.size()));
-    #endif
-        for (size_t i = 0; i < lj.size(); ++i) {
-    #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
-            Log::info("[ProjectLoad] Lane[" + std::to_string(i) + "] name='" + lj[i]["name"].asString() + "'");
-    #endif
-            const std::string laneName = boundedStringOr(lj[i], "name", "Track", PROJECT_MAX_STRING_BYTES);
-            PlaylistLaneID laneId = playlist.createLane(laneName);
-            MixerChannel* channel = trackManager->addChannel(laneName);
-            if (auto* lane = playlist.getLane(laneId)) {
-                if (lj[i].has("color") && lj[i]["color"].isString()) {
-                    try {
-                        lane->colorRGBA = static_cast<uint32_t>(std::stoul(lj[i]["color"].asString()));
-                    } catch (const std::exception&) {
-                        lane->colorRGBA = 0xFFFFFFFF;
+    
+        // 5. Load Arsenal Units (must load before patterns - patterns reference unitId in MIDI note data)
+        if (root.has("arsenal")) {
+            trackManager->getUnitManager().loadFromJSON(root["arsenal"]);
+        }
+    
+        // 3. Load Patterns
+        std::unordered_map<uint64_t, PatternID> patternMap;
+        if (root.has("patterns")) {
+            const JSON& pj = root["patterns"];
+        #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
+            Log::info("[ProjectLoad] Loading patterns count=" + std::to_string(pj.size()));
+        #endif
+            for (size_t i = 0; i < pj.size(); ++i) {
+                uint64_t oldId = static_cast<uint64_t>(finiteNumberOr(pj[i], "id", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
+                std::string name = boundedStringOr(pj[i], "name", "Pattern", PROJECT_MAX_STRING_BYTES);
+                double length = finiteNumberOr(pj[i], "length", 4.0, 0.0001, 1000000.0);
+                std::string type = boundedStringOr(pj[i], "type", "midi", PROJECT_MAX_STRING_BYTES);
+                if (oldId == 0) {
+                    continue;
+                }
+    
+                if (type == "audio") {
+                    uint32_t oldSrcId = static_cast<uint32_t>(
+                        finiteNumberOr(pj[i], "sourceId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
+                    if (idMap.count(oldSrcId)) {
+                        AudioSlicePayload payload;
+                        payload.audioSourceId = idMap[oldSrcId];
+                        if (pj[i].has("slices")) {
+                            const JSON& slj = pj[i]["slices"];
+                            for (size_t s = 0; s < slj.size(); ++s) {
+                                if (!slj[s].isObject()) continue;
+                                payload.slices.push_back({
+                                    finiteNumberOr(slj[s], "start", 0.0, 0.0, 1.0e15),
+                                    finiteNumberOr(slj[s], "length", 0.0, 0.0, 1.0e15)
+                                });
+                            }
+                        }
+                        PatternID newId = patternManager.createAudioPattern(name, length, payload);
+                        patternMap[oldId] = newId;
                     }
-                } else if (lj[i].has("color") && lj[i]["color"].isNumber()) {
-                    lane->colorRGBA = static_cast<uint32_t>(lj[i]["color"].asNumber());
                 } else {
-                    lane->colorRGBA = 0xFFFFFFFF;
-                }
-                lane->volume = static_cast<float>(finiteNumberOr(lj[i], "volume", 1.0, 0.0, 4.0));
-                lane->pan = static_cast<float>(finiteNumberOr(lj[i], "pan", 0.0, -1.0, 1.0));
-                lane->muted = lj[i].has("mute") && lj[i]["mute"].isBool() && lj[i]["mute"].asBool();
-                lane->solo = lj[i].has("solo") && lj[i]["solo"].isBool() && lj[i]["solo"].asBool();
-
-                if (channel) {
-                    channel->setName(lane->name);
-                    channel->setColor(lane->colorRGBA);
-                    channel->setVolume(lane->volume);
-                    channel->setPan(lane->pan);
-                    channel->setMute(lane->muted);
-                    channel->setSolo(lane->solo);
-
-                    if (lj[i].has("routing") && lj[i]["routing"].isObject()) {
-                        const JSON& rj = lj[i]["routing"];
-                        const uint32_t mainOutputId = (rj.has("mainOutputId") && rj["mainOutputId"].isNumber())
-                            ? static_cast<uint32_t>(rj["mainOutputId"].asNumber())
-                            : 0u;
-                        channel->setMainOutputId(mainOutputId == 0 ? 0xFFFFFFFFu : mainOutputId);
-
-                        if (rj.has("sends") && rj["sends"].isArray()) {
-                            const JSON& sj = rj["sends"];
-                            for (size_t s = 0; s < sj.size(); ++s) {
-                                if (!sj[s].isObject()) continue;
-                                if (!sj[s].has("targetId") || !sj[s]["targetId"].isNumber()) continue;
-                                AudioRoute route;
-                                const uint32_t targetId = static_cast<uint32_t>(sj[s]["targetId"].asNumber());
-                                route.targetChannelId = (targetId == 0) ? 0xFFFFFFFFu : targetId;
-                                if (sj[s].has("gain") && sj[s]["gain"].isNumber()) route.gain = static_cast<float>(sj[s]["gain"].asNumber());
-                                if (sj[s].has("pan") && sj[s]["pan"].isNumber()) route.pan = static_cast<float>(sj[s]["pan"].asNumber());
-                                if (sj[s].has("postFader") && sj[s]["postFader"].isBool()) route.postFader = sj[s]["postFader"].asBool();
-                                if (sj[s].has("mute") && sj[s]["mute"].isBool()) route.mute = sj[s]["mute"].asBool();
-                                if (sj[s].has("sidechainOnly") && sj[s]["sidechainOnly"].isBool()) route.sidechainOnly = sj[s]["sidechainOnly"].asBool();
-                                channel->addSend(route);
+                    MidiPayload payload;
+                    if (pj[i].has("notes") && pj[i]["notes"].isArray()) {
+                        const JSON& notes = pj[i]["notes"];
+                        payload.notes.reserve(notes.size());
+                        for (size_t n = 0; n < notes.size(); ++n) {
+                            if (!notes[n].isObject()) continue;
+                            MidiNote note;
+                            note.pitch = static_cast<int>(finiteNumberOr(notes[n], "pitch", 60.0, 0.0, 127.0));
+                            note.startBeat = finiteNumberOr(notes[n], "startBeat", 0.0, 0.0, 1000000.0);
+                            note.durationBeats = finiteNumberOr(notes[n], "durationBeats", 0.25, 0.0, 1000000.0);
+                            note.velocity = static_cast<float>(finiteNumberOr(notes[n], "velocity", 1.0, 0.0, 1.0));
+                            note.unitId = static_cast<uint64_t>(
+                                finiteNumberOr(notes[n], "unitId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
+                            note.pitchOffset = static_cast<int8_t>(finiteNumberOr(notes[n], "pitchOffset", 0.0, -128.0, 127.0));
+                            note.gate = static_cast<float>(finiteNumberOr(notes[n], "gate", 1.0, 0.0, 1.0));
+                            if (notes[n].has("slide")) note.slide = notes[n]["slide"].asBool();
+                            payload.notes.push_back(note);
+                        }
+                    }
+                    PatternID newId = patternManager.createMidiPattern(name, length, payload);
+                    patternMap[oldId] = newId;
+    
+                    // Deserialize scale context if present
+                    if (pj[i].has("scale") && pj[i]["scale"].isObject()) {
+                        const JSON& scaleJson = pj[i]["scale"];
+                        ScaleContext ctx;
+                        ctx.rootKey = static_cast<int>(finiteNumberOr(scaleJson, "rootKey", 0.0, -12.0, 24.0));
+                        if (scaleJson.has("scaleKind") && scaleJson["scaleKind"].isString()) {
+                            auto kind = scaleKindFromString(scaleJson["scaleKind"].asString());
+                            if (kind.has_value()) {
+                                ctx.scaleKind = kind.value();
+                            }
+                        }
+                        if (scaleJson.has("snapToScale") && scaleJson["snapToScale"].isBool()) {
+                            ctx.snapToScale = scaleJson["snapToScale"].asBool();
+                        }
+                        if (ctx.hasNonDefaultValues()) {
+                            PatternSource* pattern = patternManager.getPattern(newId);
+                            if (pattern) {
+                                pattern->scaleOverride = ctx;
                             }
                         }
                     }
-
-                    if (lj[i].has("effectChainStateHex") && lj[i]["effectChainStateHex"].isString()) {
-                        const auto effectState = hexToBytes(lj[i]["effectChainStateHex"].asString());
-                        if (!effectState.empty()) {
+                }
+            }
+        }
+    
+        // 4. Load Lanes and Clips
+        if (root.has("lanes")) {
+            const JSON& lj = root["lanes"];
+        #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
+            Log::info("[ProjectLoad] Loading lanes count=" + std::to_string(lj.size()));
+        #endif
+            for (size_t i = 0; i < lj.size(); ++i) {
+        #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
+                Log::info("[ProjectLoad] Lane[" + std::to_string(i) + "] name='" + lj[i]["name"].asString() + "'");
+        #endif
+                const std::string laneName = boundedStringOr(lj[i], "name", "Track", PROJECT_MAX_STRING_BYTES);
+                PlaylistLaneID laneId = playlist.createLane(laneName);
+                if (!laneId.isValid()) {
+                    Log::warning("[ProjectLoad] Failed to create lane '" + laneName + "' — skipping");
+                    continue;
+                }
+                MixerChannel* channel = trackManager->addChannel(laneName);
+                if (!channel) {
+                    Log::warning("[ProjectLoad] Failed to create channel for lane '" + laneName + "' — removing lane");
+                    playlist.removeLane(laneId);
+                    continue;
+                }
+                if (auto* lane = playlist.getLane(laneId)) {
+                    if (lj[i].has("color") && lj[i]["color"].isString()) {
+                        try {
+                            lane->colorRGBA = static_cast<uint32_t>(std::stoull(lj[i]["color"].asString()) & 0xFFFFFFFFu);
+                        } catch (const std::exception&) {
+                            lane->colorRGBA = 0xFFFFFFFF;
+                        }
+                    } else if (lj[i].has("color") && lj[i]["color"].isNumber()) {
+                        lane->colorRGBA = static_cast<uint32_t>(std::llround(lj[i]["color"].asNumber()) & 0xFFFFFFFFu);
+                    } else {
+                        lane->colorRGBA = 0xFFFFFFFF;
+                    }
+                    lane->volume = static_cast<float>(finiteNumberOr(lj[i], "volume", 1.0, 0.0, 4.0));
+                    lane->pan = static_cast<float>(finiteNumberOr(lj[i], "pan", 0.0, -1.0, 1.0));
+                    lane->muted = lj[i].has("mute") && lj[i]["mute"].isBool() && lj[i]["mute"].asBool();
+                    lane->solo = lj[i].has("solo") && lj[i]["solo"].isBool() && lj[i]["solo"].asBool();
+    
+                    if (channel) {
+                        channel->setName(lane->name);
+                        channel->setColor(lane->colorRGBA);
+                        channel->setVolume(lane->volume);
+                        channel->setPan(lane->pan);
+                        channel->setMute(lane->muted);
+                        channel->setSolo(lane->solo);
+    
+                        if (lj[i].has("routing") && lj[i]["routing"].isObject()) {
+                            const JSON& rj = lj[i]["routing"];
+                            const uint32_t mainOutputId = (rj.has("mainOutputId") && rj["mainOutputId"].isNumber())
+                                ? static_cast<uint32_t>(rj["mainOutputId"].asNumber())
+                                : 0u;
+                            channel->setMainOutputId(mainOutputId == 0 ? 0xFFFFFFFFu : mainOutputId);
+    
+                            if (rj.has("sends") && rj["sends"].isArray()) {
+                                const JSON& sj = rj["sends"];
+                                for (size_t s = 0; s < sj.size(); ++s) {
+                                    if (!sj[s].isObject()) continue;
+                                    if (!sj[s].has("targetId") || !sj[s]["targetId"].isNumber()) continue;
+                                    AudioRoute route;
+                                    const uint32_t targetId = static_cast<uint32_t>(sj[s]["targetId"].asNumber());
+                                    route.targetChannelId = (targetId == 0) ? 0xFFFFFFFFu : targetId;
+                                    if (sj[s].has("gain") && sj[s]["gain"].isNumber()) route.gain = static_cast<float>(sj[s]["gain"].asNumber());
+                                    if (sj[s].has("pan") && sj[s]["pan"].isNumber()) route.pan = static_cast<float>(sj[s]["pan"].asNumber());
+                                    if (sj[s].has("postFader") && sj[s]["postFader"].isBool()) route.postFader = sj[s]["postFader"].asBool();
+                                    if (sj[s].has("mute") && sj[s]["mute"].isBool()) route.mute = sj[s]["mute"].asBool();
+                                    if (sj[s].has("sidechainOnly") && sj[s]["sidechainOnly"].isBool()) route.sidechainOnly = sj[s]["sidechainOnly"].asBool();
+                                    channel->addSend(route);
+                                }
+                            }
+                        }
+    
+                        {
                             auto& pluginManager = PluginManager::getInstance();
                             auto& chain = channel->getEffectChain();
                             chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
-                            if (!chain.loadState(effectState, pluginManager)) {
-                                Log::warning("[ProjectLoad] Failed to restore effect chain on lane: " + lane->name);
+                            if (lj[i].has("effectChainStateHex") && lj[i]["effectChainStateHex"].isString()) {
+                                const auto effectState = hexToBytes(lj[i]["effectChainStateHex"].asString());
+                                if (!effectState.empty()) {
+                                    if (!chain.loadState(effectState, pluginManager)) {
+                                        Log::warning("[ProjectLoad] Failed to restore effect chain on lane: " + lane->name);
+                                    }
+                                }
                             }
                         }
                     }
-                }
-
-                if (lj[i].has("automation")) {
-                    const JSON& aj = lj[i]["automation"];
-                    double projectBPM = root.has("tempo") ? root["tempo"].asNumber() : 120.0;
-                    // Automation point sample positions are serialized in project-rate
-                    // coordinates. Serializer code must stay on PlaylistModel's sample
-                    // rate; device/output sample rate belongs only in the audio I/O layer.
-                    double projectSampleRate = playlist.getProjectSampleRate();
-                    double samplesPerBeat = (projectSampleRate * 60.0) / std::max(projectBPM, 1.0);
-                    for (size_t a = 0; a < aj.size(); ++a) {
-                        if (!aj[a].isObject()) continue;
-                        std::string param = boundedStringOr(aj[a], "param", "", PROJECT_MAX_STRING_BYTES);
-                        auto target = automationTargetFromRawInt(
-                            static_cast<int>(finiteNumberOr(aj[a], "targetEnum", 0.0, 0.0, 255.0)));
-                        // Warn for unrecognized targets (preserved non-fatally).
-                        // AutomationTarget is uint8_t; known values are Volume(0), Pan(1), Custom(255).
-                        // Unknown enums are kept as-is — the renderer is responsible for skipping them.
-                        {
-                            const int rawTarget = static_cast<int>(target);
-                            if (rawTarget != 0 && rawTarget != 1 && rawTarget != 255) {
-                                Log::warning("[ProjectLoad] Automation curve '" + param +
-                                             "' has unrecognized target enum " + std::to_string(rawTarget) +
-                                             "; curve preserved but may be skipped at runtime.");
+    
+                    if (lj[i].has("automation")) {
+                        const JSON& aj = lj[i]["automation"];
+                        double projectBPM = root.has("tempo") ? root["tempo"].asNumber() : 120.0;
+                        // Automation point sample positions are serialized in project-rate
+                        // coordinates. Serializer code must stay on PlaylistModel's sample
+                        // rate; device/output sample rate belongs only in the audio I/O layer.
+                        double projectSampleRate = playlist.getProjectSampleRate();
+                        double samplesPerBeat = (projectSampleRate * 60.0) / std::max(projectBPM, 1.0);
+                        for (size_t a = 0; a < aj.size(); ++a) {
+                            if (!aj[a].isObject()) continue;
+                            std::string param = boundedStringOr(aj[a], "param", "", PROJECT_MAX_STRING_BYTES);
+                            auto target = automationTargetFromRawInt(
+                                static_cast<int>(finiteNumberOr(aj[a], "targetEnum", 0.0, 0.0, 255.0)));
+                            // Warn for unrecognized targets (preserved non-fatally).
+                            // AutomationTarget is uint8_t; known values are Volume(0), Pan(1), Custom(255).
+                            // Unknown enums are kept as-is — the renderer is responsible for skipping them.
+                            {
+                                const int rawTarget = static_cast<int>(target);
+                                if (rawTarget != 0 && rawTarget != 1 && rawTarget != 255) {
+                                    Log::warning("[ProjectLoad] Automation curve '" + param +
+                                                 "' has unrecognized target enum " + std::to_string(rawTarget) +
+                                                 "; curve preserved but may be skipped at runtime.");
+                                }
                             }
+                            
+                            AutomationCurve curve(param, target);
+                            curve.setDefaultValue(finiteNumberOr(aj[a], "default", 0.0, -1.0e6, 1.0e6));
+                            
+                            if (!aj[a].has("points") || !aj[a]["points"].isArray()) continue;
+                            const JSON& pts = aj[a]["points"];
+                            for (size_t p = 0; p < pts.size(); ++p) {
+                                if (!pts[p].isObject()) continue;
+                                curve.addPoint(finiteNumberOr(pts[p], "b", 0.0, 0.0, 1000000.0),
+                                             finiteNumberOr(pts[p], "v", 0.0, -1.0e6, 1.0e6),
+                                             samplesPerBeat,
+                                             static_cast<float>(finiteNumberOr(pts[p], "c", 0.0, -1.0e6, 1.0e6)));
+                            }
+                            lane->automationCurves.push_back(curve);
                         }
-                        
-                        AutomationCurve curve(param, target);
-                        curve.setDefaultValue(finiteNumberOr(aj[a], "default", 0.0, -1.0e6, 1.0e6));
-                        
-                        if (!aj[a].has("points") || !aj[a]["points"].isArray()) continue;
-                        const JSON& pts = aj[a]["points"];
-                        for (size_t p = 0; p < pts.size(); ++p) {
-                            if (!pts[p].isObject()) continue;
-                            curve.addPoint(finiteNumberOr(pts[p], "b", 0.0, 0.0, 1000000.0),
-                                         finiteNumberOr(pts[p], "v", 0.0, -1.0e6, 1.0e6),
-                                         samplesPerBeat,
-                                         static_cast<float>(finiteNumberOr(pts[p], "c", 0.0, -1.0e6, 1.0e6)));
-                        }
-                        lane->automationCurves.push_back(curve);
                     }
-                }
-
-                if (lj[i].has("clips")) {
-                    const JSON& cj = lj[i]["clips"];
-#if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
-                    Log::info("[ProjectLoad]  clips count=" + std::to_string(cj.size()));
-#endif
-                    for (size_t c = 0; c < cj.size(); ++c) {
-                        if (!cj[c].isObject()) continue;
-                        uint64_t oldPatId = static_cast<uint64_t>(
-                            finiteNumberOr(cj[c], "patternId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
-                        if (patternMap.count(oldPatId)) {
-                            ClipInstance clip;
-                            clip.id = ClipInstanceID::fromString(boundedStringOr(cj[c], "id", "", PROJECT_MAX_STRING_BYTES));
-                            clip.patternId = patternMap[oldPatId];
-                            clip.sourceId = clip.patternId.value;
-                            clip.startBeat = finiteNumberOr(cj[c], "start", 0.0, 0.0, 1000000.0);
-                            clip.durationBeats = finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
-                            clip.sourceOffset = finiteNumberOr(cj[c], "sourceOffset", 0.0, 0.0, 1000000.0);
-                            clip.name = boundedStringOr(cj[c], "name", "", PROJECT_MAX_STRING_BYTES);
-                            if (cj[c].has("color") && cj[c]["color"].isString()) {
-                                try {
-                                    clip.colorRGBA = static_cast<uint32_t>(std::stoul(cj[c]["color"].asString()));
-                                } catch (const std::exception&) {
+    
+                    if (lj[i].has("clips")) {
+                        const JSON& cj = lj[i]["clips"];
+    #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
+                        Log::info("[ProjectLoad]  clips count=" + std::to_string(cj.size()));
+    #endif
+                        for (size_t c = 0; c < cj.size(); ++c) {
+                            if (!cj[c].isObject()) continue;
+                            uint64_t oldPatId = static_cast<uint64_t>(
+                                finiteNumberOr(cj[c], "patternId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
+                            if (patternMap.count(oldPatId)) {
+                                ClipInstance clip;
+                                clip.id = ClipInstanceID::fromString(boundedStringOr(cj[c], "id", "", PROJECT_MAX_STRING_BYTES));
+                                clip.patternId = patternMap[oldPatId];
+                                clip.sourceId = clip.patternId.value;
+                                clip.startBeat = finiteNumberOr(cj[c], "start", 0.0, 0.0, 1000000.0);
+                                clip.durationBeats = finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
+                                clip.sourceOffset = finiteNumberOr(cj[c], "sourceOffset", 0.0, 0.0, 1000000.0);
+                                clip.name = boundedStringOr(cj[c], "name", "", PROJECT_MAX_STRING_BYTES);
+                                if (cj[c].has("color") && cj[c]["color"].isString()) {
+                                    try {
+                                        clip.colorRGBA = static_cast<uint32_t>(std::stoull(cj[c]["color"].asString()) & 0xFFFFFFFFu);
+                                    } catch (const std::exception&) {
+                                        clip.colorRGBA = 0xFFFFFFFF;
+                                    }
+                                } else if (cj[c].has("color") && cj[c]["color"].isNumber()) {
+                                    clip.colorRGBA = static_cast<uint32_t>(std::llround(cj[c]["color"].asNumber()) & 0xFFFFFFFFu);
+                                } else {
                                     clip.colorRGBA = 0xFFFFFFFF;
                                 }
-                            } else if (cj[c].has("color") && cj[c]["color"].isNumber()) {
-                                clip.colorRGBA = static_cast<uint32_t>(cj[c]["color"].asNumber());
+    
+                                if (cj[c].has("edits")) {
+                                    const JSON& ej = cj[c]["edits"];
+                                    clip.edits.gainLinear = static_cast<float>(finiteNumberOr(ej, "gain", 1.0, 0.0, 16.0));
+                                    clip.edits.pan = static_cast<float>(finiteNumberOr(ej, "pan", 0.0, -1.0, 1.0));
+                                    clip.edits.muted = ej.has("muted") && ej["muted"].isBool() && ej["muted"].asBool();
+                                    clip.edits.playbackRate = static_cast<float>(
+                                        finiteNumberOr(ej, "playbackRate", 1.0, 0.01, 100.0));
+                                    clip.edits.fadeInBeats = finiteNumberOr(ej, "fadeIn", 0.0, 0.0, 1000000.0);
+                                    clip.edits.fadeOutBeats = finiteNumberOr(ej, "fadeOut", 0.0, 0.0, 1000000.0);
+                                    clip.edits.sourceStart = finiteNumberOr(ej, "sourceStart", 0.0, 0.0, 1.0e15);
+                                }
+                                playlist.addClip(laneId, clip);
                             } else {
-                                clip.colorRGBA = 0xFFFFFFFF;
+                                Log::warning("[ProjectLoad] Clip references missing pattern " + std::to_string(oldPatId) +
+                                            " — clip dropped from lane '" + laneName + "'");
                             }
-
-                            if (cj[c].has("edits")) {
-                                const JSON& ej = cj[c]["edits"];
-                                clip.edits.gainLinear = static_cast<float>(finiteNumberOr(ej, "gain", 1.0, 0.0, 16.0));
-                                clip.edits.pan = static_cast<float>(finiteNumberOr(ej, "pan", 0.0, -1.0, 1.0));
-                                clip.edits.muted = ej.has("muted") && ej["muted"].isBool() && ej["muted"].asBool();
-                                clip.edits.playbackRate = static_cast<float>(
-                                    finiteNumberOr(ej, "playbackRate", 1.0, 0.01, 100.0));
-                                clip.edits.fadeInBeats = finiteNumberOr(ej, "fadeIn", 0.0, 0.0, 1000000.0);
-                                clip.edits.fadeOutBeats = finiteNumberOr(ej, "fadeOut", 0.0, 0.0, 1000000.0);
-                                clip.edits.sourceStart = finiteNumberOr(ej, "sourceStart", 0.0, 0.0, 1.0e15);
-                            }
-                            playlist.addClip(laneId, clip);
                         }
                     }
                 }
             }
         }
-    }
-
-    // PHASE 7: Validate send routing targets.
-    // Unresolved sends are non-fatal — the audio runtime silently ignores them
-    // via INVALID_SLOT checks. This warning helps diagnose silent routing loss.
-    {
-        std::unordered_set<uint32_t> validChannelIds;
-        validChannelIds.insert(0xFFFFFFFFu); // master
-        for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
-            if (auto* ch = trackManager->getChannel(ci)) {
-                validChannelIds.insert(ch->getChannelId());
+    
+        // PHASE 7: Validate send routing targets.
+        // Unresolved sends are non-fatal — the audio runtime silently ignores them
+        // via INVALID_SLOT checks. This warning helps diagnose silent routing loss.
+        {
+            std::unordered_set<uint32_t> validChannelIds;
+            validChannelIds.insert(0xFFFFFFFFu); // master
+            for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
+                if (auto* ch = trackManager->getChannel(ci)) {
+                    validChannelIds.insert(ch->getChannelId());
+                }
             }
-        }
-        for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
-            auto* channel = trackManager->getChannel(ci);
-            if (!channel) continue;
-            for (const auto& send : channel->getSends()) {
-                if (!validChannelIds.count(send.targetChannelId)) {
-                    Log::warning("[ProjectLoad] Send from '" + channel->getName() +
-                                 "' targets channel ID " + std::to_string(send.targetChannelId) +
-                                 " which does not exist; send will be silent.");
+            for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
+                auto* channel = trackManager->getChannel(ci);
+                if (!channel) continue;
+                for (const auto& send : channel->getSends()) {
+                    if (!validChannelIds.count(send.targetChannelId)) {
+                        Log::warning("[ProjectLoad] Send from '" + channel->getName() +
+                                     "' targets channel ID " + std::to_string(send.targetChannelId) +
+                                     " which does not exist; send will be silent.");
+                    }
                 }
             }
         }
+    
+        // PHASE 8: Final rebind pass - verify all references
+        #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
+        Log::info("[ProjectLoad] Final rebind pass");
+        #endif
+    
+    } // end try (Phase 4 commit)
+    catch (const std::exception& e) {
+        result.errorMessage = std::string("Project load failed at Phase 4: ") + e.what();
+        Log::error("[ProjectLoad] " + result.errorMessage);
+
+        // Attempt to restore previous state from rollback file.
+        if (!rollbackPath.empty()) {
+            namespace fs = std::filesystem;
+            Log::warning("[ProjectLoad] Attempting to restore previous state from rollback");
+            try {
+                LoadResult rollbackResult = load(rollbackPath, trackManager);
+                if (rollbackResult.ok) {
+                    Log::info("[ProjectLoad] Rollback successful — previous state restored");
+                } else {
+                    Log::error("[ProjectLoad] Rollback failed: " + rollbackResult.errorMessage);
+                }
+            } catch (const std::exception& restoreEx) {
+                Log::error("[ProjectLoad] Rollback threw exception: " + std::string(restoreEx.what()));
+            }
+            // Clean up rollback file regardless of outcome
+            std::error_code rmEc;
+            fs::remove(rollbackPath, rmEc);
+        }
+
+        return result;
     }
 
-    // PHASE 8: Final rebind pass - verify all references
-    #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
-    Log::info("[ProjectLoad] Final rebind pass");
-    #endif
+    // Success — clean up rollback file
+    if (!rollbackPath.empty()) {
+        namespace fs = std::filesystem;
+        std::error_code rmEc;
+        fs::remove(rollbackPath, rmEc);
+    }
 
     result.ok = true;
     Log::info("Project loaded: " + path);

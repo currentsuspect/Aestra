@@ -207,6 +207,15 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         } else {
             m_activeCursorStyle = AestraUI::NUICursorStyle::Arrow;
         }
+
+        // Let per-component cursor overrides (e.g. piano roll smart cursor) take precedence
+        if (m_window) {
+            auto bridgeStyle = m_window->getCursorStyle();
+            if (bridgeStyle != AestraUI::NUICursorStyle::Arrow &&
+                bridgeStyle != AestraUI::NUICursorStyle::Hidden) {
+                m_activeCursorStyle = bridgeStyle;
+            }
+        }
         
         // RecoveryDialog is modal - consume mouse move when visible
         if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
@@ -271,6 +280,10 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         if (key == static_cast<int>(Aestra::KeyCode::Control)) { // 17
             if (pressed) currentMods |= static_cast<int>(NM::Ctrl);
             else currentMods &= ~static_cast<int>(NM::Ctrl);
+        }
+        if (key == static_cast<int>(Aestra::KeyCode::Alt)) { // 18
+            if (pressed) currentMods |= static_cast<int>(NM::Alt);
+            else currentMods &= ~static_cast<int>(NM::Alt);
         }
         
         m_keyModifiers = static_cast<NM>(currentMods);

@@ -276,9 +276,9 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "arsenalAccent") return theme.accentCyan;                         // Accent for highlights
     
     // Grid Tokens (for TrackManagerUI/TrackUIComponent)
-    if (colorName == "gridBar") return NUIColor::white().withAlpha(0.07f);              // Bar line
-    if (colorName == "gridBeat") return NUIColor::white().withAlpha(0.04f);             // Beat line
-    if (colorName == "gridSubdivision") return NUIColor::white().withAlpha(0.03f);      // Sub-beat line
+    if (colorName == "gridBar") return NUIColor::white().withAlpha(0.10f);              // Bar line (enhanced visibility)
+    if (colorName == "gridBeat") return NUIColor::white().withAlpha(0.06f);             // Beat line (enhanced visibility)
+    if (colorName == "gridSubdivision") return NUIColor::white().withAlpha(0.035f);     // Sub-beat line
     
     // Waveform Preview Tokens
     if (colorName == "waveformFill") return theme.accentCyan.withAlpha(0.7f);          // Waveform fill color
@@ -516,10 +516,10 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     // ========================================================================
 
     // --- Surface Hierarchy ---
-    theme.backgroundPrimary   = NUIColor::fromHex(0x0d0d12);
+    theme.backgroundPrimary   = NUIColor::fromHex(0x0a0a0f);  // Deeper void for timeline backdrop
     theme.backgroundSecondary = NUIColor::fromHex(0x111116);
-    theme.surfaceTertiary     = NUIColor::fromHex(0x16161e);
-    theme.surfaceRaised       = NUIColor::fromHex(0x1e1e28);
+    theme.surfaceTertiary     = NUIColor::fromHex(0x181822);  // More contrast from background for controls
+    theme.surfaceRaised       = NUIColor::fromHex(0x20202c);  // Slightly brighter for raised elements
 
     // Legacy aliases
     theme.background    = theme.backgroundPrimary;
@@ -555,17 +555,17 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     theme.textCritical  = theme.error;
 
     // --- Borders & Dividers ---
-    theme.borderSubtle   = NUIColor::fromHex(0x1e1e28, 0.86f);
-    theme.border         = NUIColor::fromHex(0x1e1e28);
+    theme.borderSubtle   = NUIColor::fromHex(0x2a2a38, 0.90f);  // Brighter for visible row dividers
+    theme.border         = NUIColor::fromHex(0x2a2a38);          // Structural separator edge
     theme.borderActive   = theme.primary;
-    theme.divider        = NUIColor::fromHex(0x1e1e28, 0.95f);
-    theme.outline        = NUIColor::fromHex(0x2a2a36);
-    theme.outlineVariant = NUIColor::fromHex(0x1e1e28, 0.80f);
+    theme.divider        = NUIColor::fromHex(0x242430, 0.95f);
+    theme.outline        = NUIColor::fromHex(0x323244);
+    theme.outlineVariant = NUIColor::fromHex(0x242430, 0.80f);
 
     // --- Glass Aesthetic ---
-    theme.glassHover  = NUIColor::white().withAlpha(0.030f);
-    theme.glassBorder = NUIColor::white().withAlpha(0.080f);
-    theme.glassActive = theme.primary.withAlpha(0.14f);
+    theme.glassHover  = NUIColor::white().withAlpha(0.040f);
+    theme.glassBorder = NUIColor::white().withAlpha(0.105f);  // Brighter glass edge
+    theme.glassActive = theme.primary.withAlpha(0.16f);
 
     // --- Buttons (backlit key gradient feel) ---
     theme.buttonBgDefault  = NUIColor::fromHex(0x111116);

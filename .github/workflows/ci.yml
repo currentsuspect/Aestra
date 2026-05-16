@@ -188,9 +188,8 @@ jobs:
           curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" --data @discord_payload.json "$DISCORD_WEBHOOK"
 
   build-macos:
-    name: macOS (Clang, advisory)
+    name: macOS (Clang)
     runs-on: macos-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with:

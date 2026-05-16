@@ -261,6 +261,8 @@ struct PianoRollCommand {
     std::vector<MidiNote> notesAfter;
 };
 
+class NUIPlatformBridge;
+
 // -----------------------------------------------------------------------------
 // PianoRollNoteLayer: Handles Rendering and Editing of Notes
 // Contains Logic for: Painting, Selecting, Moving, Resizing
@@ -336,7 +338,9 @@ public:
     void setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb);
     /** @brief Set the default unit assigned to newly created notes. */
     void setDefaultUnitId(uint64_t unitId) { defaultUnitId_ = unitId; }
-    
+
+    /** @brief Set the platform bridge for cursor style changes. */
+    void setPlatformBridge(NUIPlatformBridge* bridge);
 
 
 private:
@@ -364,15 +368,24 @@ private:
     float lastNoteVelocity_ = 0.79f; // Default velocity (0-1 float, ~MIDI 100)
 
     // Interaction State
-    enum class State {
+    enum class State : uint8_t {
         None,
         Painting,       // Creating a new note (Drag extends duration)
         Moving,         // Moving existing note(s)
         Resizing,       // Resizing existing note(s) (Right edge)
         SelectingBox,   // Dragging selection rectangle
-        Erasing         // Eraser Box/Hover
+        Erasing,        // Eraser Box/Hover
+        CopyDragging    // Alt+drag copy of selection
     };
     State state_ = State::None;
+
+    // Smart Cursor hover state
+    int hoveredNoteIndex_ = -1;
+    bool hoverOnRightEdge_ = false;
+
+    // Alt+drag copy state
+    std::vector<int> copyDragIndices_;
+    NUIPlatformBridge* platformBridge_ = nullptr;
     
     NUIPoint dragStartPos_;
     float dragStartScrollX_ = 0.0f;
@@ -482,6 +495,9 @@ public:
     void setTool(GlobalTool tool);
     void setScale(int root, ScaleType type);
     void setSnapToScale(bool enabled);
+
+    /** @brief Set platform bridge for cursor style changes (forwarded to note layer). */
+    void setPlatformBridge(NUIPlatformBridge* bridge);
     
 private:
     std::shared_ptr<PianoRollKeyLane> m_keys;

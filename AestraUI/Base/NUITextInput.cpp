@@ -1217,10 +1217,11 @@ float NUITextInput::getLineRenderY(const TextLine& line) const
     {
         auto& themeManager = NUIThemeManager::getInstance();
         float fontSize = themeManager.getFontSize("m");
-        // Use the same vertical centering as drawText: calculateTextY handles baseline
-        // For coordinate-space consistency with multiline, use bounds.y + padding_ + line.y
-        // line.y is 0 for single-line, so this is equivalent to bounds.y + padding_
-        return bounds.y + padding_ + line.y;
+        
+        // Inline calculateTextY logic since we don't have renderer access here
+        // Standard fallback metrics: lineHeight = fontSize
+        float lineHeight = fontSize;
+        return std::round(textRect.y + (textRect.height - lineHeight) * 0.5f);
     }
 
     // For multiline, use the accumulated line offset
@@ -1327,22 +1328,20 @@ void NUITextInput::drawEnhancedBackground(NUIRenderer& renderer)
     
     // Border with validation highlighting
     NUIColor borderColor = borderColor_;
-    float borderWidth = 1.0f;
+    float borderWidth = borderWidth_; // Use component's border width, not hardcoded
     
     if (isFocused())
     {
         borderColor = focusedBorderColor_;
-        borderWidth = 2.0f;
+        // When focused, maintain width but change color
     }
     else if (hasValidationError_)
     {
         borderColor = NUIColor::fromHex(0xff4444); // Red for errors
-        borderWidth = 2.0f;
     }
     else if (hasValidationSuccess_)
     {
         borderColor = NUIColor::fromHex(0x44ff44); // Green for success
-        borderWidth = 2.0f;
     }
     
     renderer.strokeRoundedRect(bounds, borderRadius_, borderWidth, borderColor);

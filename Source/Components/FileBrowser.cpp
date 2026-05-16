@@ -379,10 +379,11 @@ FileBrowser::FileBrowser()
     searchInput_->setTextColor(themeManager.getColor("textPrimary"));
     searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
     searchInput_->setPadding(12.0f);
-    searchInput_->setBorderRadius(4.0f);
+    searchInput_->setBorderRadius(0.0f);
     searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
-    searchInput_->setBorderColor(themeManager.getColor("border").withAlpha(0.28f));
+    searchInput_->setBorderColor(themeManager.getColor("textSecondary").withAlpha(0.35f)); // Use textSecondary for a visible grey
     searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
+    searchInput_->setBorderWidth(2.0f);
 
     // Initialize icons with improved visibility for Liminal Dark v2.0
     // Use inline SVG content for reliable icon loading
@@ -771,8 +772,8 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     const float listW = std::max(0.0f, effectiveW - navW);
 
     BrowserLayout layout;
-    layout.search = NUIRect(listX + 8.0f, bounds.y + BROWSER_TOP_PAD,
-                            std::max(0.0f, listW - 16.0f), BROWSER_SEARCH_ROW_H);
+    layout.search = NUIRect(bounds.x + 2.0f, bounds.y + BROWSER_TOP_PAD + 2.0f,
+                            std::max(0.0f, effectiveW - 4.0f), BROWSER_SEARCH_ROW_H - 4.0f);
     layout.navPane = NUIRect(bounds.x, contentY, navW, contentH);
     layout.listHeader = NUIRect(listX, contentY, listW, BROWSER_LIST_HEADER_H);
     layout.list = NUIRect(listX, contentY + BROWSER_LIST_HEADER_H,
@@ -791,15 +792,16 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     auto& themeManager = NUIThemeManager::getInstance();
     navHits_.clear();
 
-    const NUIColor paneBg(0.061f, 0.064f, 0.079f, 1.0f);
-    const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.46f);
-    const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.76f);
-    const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.44f);
-    const NUIColor selectedBg = themeManager.getColor("accentPrimary").withAlpha(0.18f);
-    const NUIColor hoverBg = NUIColor::white().withAlpha(0.055f);
-    const NUIColor divider = themeManager.getColor("border").withAlpha(0.36f);
+    const NUIColor paneBg = themeManager.getColor("backgroundSecondary");
+    const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.58f);  // Stronger section headers
+    const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.78f);
+    const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
+    const NUIColor selectedBg = themeManager.getColor("primary").withAlpha(0.16f);  // More prominent selection
+    const NUIColor hoverBg = NUIColor::white().withAlpha(0.065f);
+    const NUIColor divider = themeManager.getColor("border").withAlpha(0.48f);  // Sharper panel edge
 
     renderer.fillRect(layout.navPane, paneBg);
+    renderer.setClipRect(layout.navPane);
     renderer.drawLine({layout.navPane.right(), layout.navPane.y},
                       {layout.navPane.right(), layout.navPane.bottom()},
                       1.0f, divider);
@@ -1004,6 +1006,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         drawRow(BrowserNavAction::CustomPlace, label, -1, place);
     }
     drawRow(BrowserNavAction::AddFolder, "+ Add Folder...");
+    renderer.clearClipRect();
 }
 
 void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& layout) {
@@ -1264,7 +1267,10 @@ void FileBrowser::onResize(int width, int height) {
         searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
         searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
         searchInput_->setPadding(12.0f);
-        searchInput_->setBorderRadius(4.0f);
+        searchInput_->setBorderRadius(0.0f);
+        searchInput_->setBorderColor(themeManager.getColor("textSecondary").withAlpha(0.35f)); // Use textSecondary for a visible grey
+        searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
+        searchInput_->setBorderWidth(2.0f);
     }
 
     itemHeight_ = BROWSER_LIST_ROW_H;

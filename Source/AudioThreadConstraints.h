@@ -214,9 +214,9 @@ struct AudioThreadStats {
  * if called from the audio thread.
  * 
  * @param size Size of allocation in bytes
- * @param source Optional string describing the source (file:line or function)
+ * @param source String describing the source (file:line or function)
  */
-#define AESTRA_TRACK_ALLOCATION(size) \
+#define AESTRA_TRACK_ALLOCATION(size, source) \
     do { \
         auto& stats = Aestra::Audio::AudioThreadStats::instance(); \
         stats.totalAllocations.fetch_add(1, std::memory_order_relaxed); \
@@ -224,6 +224,7 @@ struct AudioThreadStats {
         if (Aestra::Audio::isAudioThread()) { \
             stats.allocationViolations.fetch_add(1, std::memory_order_relaxed); \
             /* Debug break in MSVC: __debugbreak(); */ \
+            (void)(source); \
         } \
     } while(0)
 
@@ -263,7 +264,7 @@ struct AudioThreadStats {
 #define AESTRA_ASSERT_AUDIO_THREAD() ((void)0)
 #define AESTRA_AUDIO_THREAD_SAFE
 #define AESTRA_NOT_AUDIO_THREAD_SAFE
-#define AESTRA_TRACK_ALLOCATION(size) ((void)0)
+#define AESTRA_TRACK_ALLOCATION(size, source) ((void)0)
 #define AESTRA_TRACK_DEALLOCATION() ((void)0)
 #define AESTRA_TRACK_LOCK() ((void)0)
 #define AESTRA_TRACK_FILE_IO() ((void)0)

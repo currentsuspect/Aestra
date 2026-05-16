@@ -207,6 +207,9 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             if (channel->trackColorIndex < 0) {
                 channel->trackColorIndex = static_cast<int>(newChannels.size()) % AestraUI::PALETTE_SIZE;
             }
+            if (channel->channel) {
+                channel->channel->setTrackColorIndex(channel->trackColorIndex);
+            }
             channel->muted = info.muted;
             channel->soloed = info.soloed;
             channel->armed = info.armed;

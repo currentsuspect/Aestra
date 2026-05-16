@@ -17,7 +17,7 @@ title = "Aestra gitleaks config"
 [[rules]]
   id = "Aestra-private-key-block"
   description = "Private key block"
-  regex = '''-----BEGIN (RSA|OPENSSH|EC) PRIVATE KEY-----'''
+  regex = '''-----BEGIN (RSA|OPENSSH|EC|DSA|ENCRYPTED) PRIVATE KEY-----'''
   entropy = 0
   keywords = ["PRIVATE KEY"]
 
@@ -27,3 +27,66 @@ title = "Aestra gitleaks config"
   regex = '''\bsk-[A-Za-z0-9][A-Za-z0-9_-]{20,}\b'''
   entropy = 3.5
   keywords = ["sk-"]
+
+[[rules]]
+  id = "Aestra-aws-access-key"
+  description = "AWS Access Key ID"
+  regex = '''\bAKIA[0-9A-Z]{16}\b'''
+  entropy = 3.0
+  keywords = ["AKIA"]
+
+[[rules]]
+  id = "Aestra-aws-secret-key"
+  description = "AWS Secret Access Key"
+  regex = '''(?i)aws[_\-]?secret[_\-]?access[_\-]?key\s*=\s*['"][A-Za-z0-9/+=]{40}['"]'''
+  entropy = 4.0
+  keywords = ["aws_secret", "aws-secret"]
+
+[[rules]]
+  id = "Aestra-github-token"
+  description = "GitHub Personal Access Token"
+  regex = '''\bghp_[A-Za-z0-9_]{36,}\b'''
+  entropy = 3.5
+  keywords = ["ghp_"]
+
+[[rules]]
+  id = "Aestra-github-oauth"
+  description = "GitHub OAuth Access Token"
+  regex = '''\bgho_[A-Za-z0-9_]{36,}\b'''
+  entropy = 3.5
+  keywords = ["gho_"]
+
+[[rules]]
+  id = "Aestra-generic-api-key"
+  description = "Generic API key assignment"
+  regex = '''(?i)(api[_\-]?key|apikey|api[_\-]?secret)\s*[:=]\s*['"][A-Za-z0-9]{20,}['"]'''
+  entropy = 3.5
+  keywords = ["api_key", "apikey", "api-secret"]
+
+[[rules]]
+  id = "Aestra-jwt-token"
+  description = "JWT token"
+  regex = '''eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}'''
+  entropy = 3.0
+  keywords = ["eyJ"]
+
+[[rules]]
+  id = "Aestra-base64-encoded-secret"
+  description = "Base64-encoded secret (potential)"
+  regex = '''(?i)(password|passwd|pwd|secret|token|credential)\s*[:=]\s*['"][A-Za-z0-9+/]{32,}={0,2}['"]'''
+  entropy = 4.0
+  keywords = ["password", "secret", "token", "credential"]
+
+[[rules]]
+  id = "Aestra-discord-webhook"
+  description = "Discord webhook URL"
+  regex = '''https://discord(?:app)?\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]{20,}'''
+  entropy = 3.0
+  keywords = ["discord", "webhook"]
+
+[[rules]]
+  id = "Aestra-slack-token"
+  description = "Slack token or webhook"
+  regex = '''xox[baprs]-[0-9]{10,13}-[A-Za-z0-9-]+'''
+  entropy = 3.0
+  keywords = ["xoxb", "xoxp", "xoxa", "xoxr", "xoxs"]
