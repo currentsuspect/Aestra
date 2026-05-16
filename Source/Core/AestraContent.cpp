@@ -328,10 +328,10 @@ AestraContent::AestraContent() {
             float navW = m_fileBrowser->getNavPaneWidth();
             auto fbBounds = m_fileBrowser->getBounds();
             float pbWidth = std::max(0.0f, fbBounds.width - navW);
-            // Match FileBrowser's content area (below search bar)
-            constexpr float headerOffset = 28.0f;
+            // Align with file browser content area (below search bar)
+            constexpr float searchH = 28.0f;
             m_pluginBrowser->setBounds(
-                AestraUI::NUIRect(fbBounds.x + navW, fbBounds.y + headerOffset, pbWidth, fbBounds.height - headerOffset));
+                AestraUI::NUIRect(fbBounds.x + navW, fbBounds.y + searchH, pbWidth, fbBounds.height - searchH));
         }
     });
 
@@ -1365,9 +1365,9 @@ void AestraContent::onResize(int width, int height) {
             float navW = m_fileBrowser->getNavPaneWidth();
             float pbLeft = navW;
             float pbWidth = std::max(0.0f, fileBrowserWidth - navW);
-            // Match FileBrowser's content area start (below search bar + header)
-            constexpr float headerOffset = 28.0f;  // Search bar height
-            float pbTop = sidebarTopY + headerOffset;
+            // Align with file browser content area (below search bar)
+            constexpr float searchH = 28.0f;
+            float pbTop = sidebarTopY + searchH;
             float pbHeight = height - pbTop;
             m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, pbLeft, pbTop - contentBounds.y, pbWidth, pbHeight));
             m_pluginBrowser->setVisible(true);

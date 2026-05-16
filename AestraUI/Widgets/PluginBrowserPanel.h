@@ -203,7 +203,7 @@ private:
     // Internal methods
     void applyFilters();
     void renderHeaderBar(NUIRenderer& renderer);
-    void renderFilterPills(NUIRenderer& renderer);
+    void renderFilterBar(NUIRenderer& renderer);
     void renderPluginList(NUIRenderer& renderer);
     void renderPluginRow(NUIRenderer& renderer, const PluginListItem& plugin, 
                          int index, float yOffset);
@@ -260,7 +260,8 @@ private:
     
     // Layout constants
     static constexpr float ROW_HEIGHT = 34.0f;
-    static constexpr float HEADER_BAR_HEIGHT = 44.0f;  // Compact header with pills
+    static constexpr float HEADER_BAR_HEIGHT = 44.0f;
+    static constexpr float FILTER_BAR_HEIGHT = 36.0f;
     static constexpr float SEARCH_HEIGHT = 0.0f;
 };
 
