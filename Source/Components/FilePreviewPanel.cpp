@@ -10,7 +10,6 @@
 
 #include "MiniAudioDecoder.h"
 #include "AudioFileValidator.h"
-#include "../AestraCore/include/AestraLog.h"
 
 namespace AestraUI {
 
@@ -127,7 +126,6 @@ FilePreviewPanel::FilePreviewPanel() {
 }
 
 void FilePreviewPanel::setFile(const FileItem* file) {
-    AESTRA_LOG_INFO("[Waveform] setFile: path=" + (file ? file->path : "null") + " genBefore=" + std::to_string(currentGeneration_.load()));
     hasCurrentFile_ = file != nullptr;
     m_currentFilePath.clear();
     m_currentFileBpm = 0;
@@ -165,7 +163,6 @@ void FilePreviewPanel::setFile(const FileItem* file) {
             waveformQueued_ = true;
         }
     }
-    AESTRA_LOG_INFO("[Waveform] setFile done: genAfter=" + std::to_string(currentGeneration_.load()) + " queued=" + std::to_string(waveformQueued_));
     setDirty(true);
 }
 
@@ -225,7 +222,6 @@ void FilePreviewPanel::onUpdate(double deltaTime) {
     NUIComponent::onUpdate(deltaTime);
 
     if (waveformJustCompleted_.exchange(false)) {
-        AESTRA_LOG_INFO("[Waveform] onUpdate: saw completed flag, calling setDirty");
         setDirty(true);
     }
 
@@ -260,11 +256,7 @@ void FilePreviewPanel::generateWaveform(const std::string& path, size_t fileSize
 }
 
 void FilePreviewPanel::waveformWorker(const std::string& path, uint64_t generation) {
-    AESTRA_LOG_INFO("[Waveform] Worker start: gen=" + std::to_string(generation) + " currentGen=" + std::to_string(currentGeneration_.load()));
-    if (generation != currentGeneration_.load(std::memory_order_acquire)) {
-        AESTRA_LOG_INFO("[Waveform] Worker early exit: gen mismatch");
-        return;
-    }
+    if (generation != currentGeneration_.load(std::memory_order_acquire)) return;
 
     std::vector<float> audioData;
     uint32_t sampleRate = 0;
@@ -273,10 +265,7 @@ void FilePreviewPanel::waveformWorker(const std::string& path, uint64_t generati
     constexpr uint64_t kPreviewMaxFrames = 48000 * 24;
     bool success = Aestra::Audio::decodeAudioPreview(path, audioData, sampleRate, numChannels, kPreviewMaxFrames);
 
-    if (generation != currentGeneration_.load(std::memory_order_acquire)) {
-        AESTRA_LOG_INFO("[Waveform] Worker late exit: gen mismatch after decode");
-        return;
-    }
+    if (generation != currentGeneration_.load(std::memory_order_acquire)) return;
 
     if (success && !audioData.empty()) {
         std::vector<float> waveform = generateWaveformFromAudio(audioData, numChannels, 1024);
@@ -286,16 +275,12 @@ void FilePreviewPanel::waveformWorker(const std::string& path, uint64_t generati
             waveformData_ = std::move(waveform);
             isWaveformLoading_ = false;
             waveformJustCompleted_.store(true);
-            AESTRA_LOG_INFO("[Waveform] Worker complete: gen=" + std::to_string(generation) + " size=" + std::to_string(waveformData_.size()) + " isWaveformLoading=false");
-        } else {
-            AESTRA_LOG_INFO("[Waveform] Worker rejected: gen changed during lock");
         }
     } else {
         std::lock_guard<std::mutex> lock(waveformMutex_);
         if (generation == currentGeneration_.load(std::memory_order_acquire)) {
             isWaveformLoading_ = false;
             waveformJustCompleted_.store(true);
-            AESTRA_LOG_INFO("[Waveform] Worker decode failed: gen=" + std::to_string(generation) + " success=" + std::to_string(success));
         }
     }
 }
@@ -393,22 +378,9 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
 
     // -- Background waveform (full-width, subtle) --
     bool hasData = false;
-    size_t wfSize = 0;
-    bool loadingState = false;
-    uint64_t renderGen = 0;
     {
         std::lock_guard<std::mutex> lock(waveformMutex_);
         hasData = !waveformData_.empty();
-        wfSize = waveformData_.size();
-        loadingState = isLoading_;
-        renderGen = currentGeneration_.load();
-    }
-
-    static bool lastHasData = false;
-    if (hasData != lastHasData || !hasData) {
-        AESTRA_LOG_INFO("[Waveform] onRender: hasData=" + std::to_string(hasData) + " size=" + std::to_string(wfSize) +
-                         " isLoading=" + std::to_string(loadingState) + " gen=" + std::to_string(renderGen));
-        lastHasData = hasData;
     }
 
     if (hasData) {
