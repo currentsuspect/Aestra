@@ -121,6 +121,7 @@ public:
     void setOnFileOpened(std::function<void(const FileItem&)> callback) { onFileOpened_ = callback; }
     void setOnPathChanged(std::function<void(const std::string&)> callback) { onPathChanged_ = callback; }
     void setOnSoundPreview(std::function<void(const FileItem&)> callback) { onSoundPreview_ = callback; }
+    void setOnSearchTextChanged(std::function<void(const std::string&)> callback) { onSearchTextChanged_ = callback; }
     
     // Loading state control (for external async operations)
     void setLoadingPlayback(bool loading) { 
@@ -429,6 +430,7 @@ public:
     std::function<void(const FileItem&)> onFileOpened_;
     std::function<void(const std::string&)> onPathChanged_;
     std::function<void(const FileItem&)> onSoundPreview_;
+    std::function<void(const std::string&)> onSearchTextChanged_;
     std::function<void(BrowserNavAction)> onNavActionSelected_;
     
     // Theme colors
