@@ -65,6 +65,7 @@ private:
     
     bool isPlaying_ = false;
     bool isLoading_ = false;
+    bool isWaveformLoading_ = false;
     float loadingAnimationTime_ = 0.0f;
     double playheadPosition_ = 0.0;
     double duration_ = 0.0;
