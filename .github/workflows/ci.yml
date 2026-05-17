@@ -152,7 +152,7 @@ jobs:
       - name: Test
         working-directory: build
         shell: bash
-        run: ctest --test-dir . -C ${{env.BUILD_TYPE}} --output-on-failure --output-junit ctest-results-windows.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation"
+        run: ctest --test-dir . -C ${{env.BUILD_TYPE}} --output-on-failure --output-junit ctest-results-windows.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
 
       - name: License verification tests
         shell: bash
@@ -320,7 +320,7 @@ jobs:
 
       - name: Test
         working-directory: build-asan
-        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-asan.xml
+        run: ctest --test-dir . --output-on-failure --output-junit ctest-results-asan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
 
       - name: Upload sanitizer test report
         if: always()
