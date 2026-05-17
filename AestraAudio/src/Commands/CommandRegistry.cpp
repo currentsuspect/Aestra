@@ -43,8 +43,11 @@ std::optional<std::string_view> requireFlag(const std::unordered_map<std::string
 }
 
 // Safe parsing helpers that return std::nullopt on malformed input
+// Reject leading/trailing whitespace, non-finite floats, and negative unsigned strings
 std::optional<int> safeStoi(std::string_view s) {
     if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
     try {
         size_t pos = 0;
         int val = std::stoi(std::string(s), &pos);
@@ -57,6 +60,8 @@ std::optional<int> safeStoi(std::string_view s) {
 
 std::optional<float> safeStof(std::string_view s) {
     if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
     try {
         size_t pos = 0;
         float val = std::stof(std::string(s), &pos);
@@ -70,6 +75,8 @@ std::optional<float> safeStof(std::string_view s) {
 
 std::optional<unsigned long long> safeStoull(std::string_view s) {
     if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
     if (s.front() == '-') return std::nullopt;
     try {
         size_t pos = 0;

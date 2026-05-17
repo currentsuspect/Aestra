@@ -4,12 +4,16 @@
 
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 
-// Replicate the helpers from CommandRegistry.cpp for isolated testing
+// IMPORTANT: Keep these helpers in sync with CommandRegistry.cpp
+// Last synced: 2026-05-17 (PR #222)
+// If CommandRegistry.cpp helpers change, mirror those changes here.
+// (Consider extracting to a shared header if more tests need these.)
 namespace Aestra {
 namespace Audio {
 namespace {
@@ -22,6 +26,8 @@ std::optional<std::string_view> requireFlag(const std::unordered_map<std::string
 
 std::optional<int> safeStoi(std::string_view s) {
     if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
     try {
         size_t pos = 0;
         int val = std::stoi(std::string(s), &pos);
@@ -34,6 +40,8 @@ std::optional<int> safeStoi(std::string_view s) {
 
 std::optional<float> safeStof(std::string_view s) {
     if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
     try {
         size_t pos = 0;
         float val = std::stof(std::string(s), &pos);
@@ -47,6 +55,8 @@ std::optional<float> safeStof(std::string_view s) {
 
 std::optional<unsigned long long> safeStoull(std::string_view s) {
     if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
     if (s.front() == '-') return std::nullopt;
     try {
         size_t pos = 0;
@@ -73,7 +83,7 @@ TEST(safeStoi_valid_integers) {
     if (safeStoi("-7") != -7) FAIL("negative");
     if (safeStoi("0") != 0) FAIL("zero");
     if (safeStoi("2147483647") != 2147483647) FAIL("INT_MAX");
-    if (safeStoi("-2147483648") != -2147483648) FAIL("INT_MIN");
+    if (safeStoi("-2147483648") != std::numeric_limits<int>::min()) FAIL("INT_MIN");
     PASS();
 }
 
@@ -104,6 +114,7 @@ TEST(safeStof_rejects_malformed) {
     if (safeStof("abc").has_value()) FAIL("letters");
     if (safeStof("3.14abc").has_value()) FAIL("trailing");
     if (safeStof(" 3.14").has_value()) FAIL("leading space");
+    if (safeStof("3.14 ").has_value()) FAIL("trailing space");
     PASS();
 }
 
@@ -127,6 +138,7 @@ TEST(safeStoull_valid_unsigned) {
 TEST(safeStoull_rejects_negative) {
     if (safeStoull("-1").has_value()) FAIL("-1");
     if (safeStoull("-42").has_value()) FAIL("-42");
+    if (safeStoull(" -1").has_value()) FAIL("leading space then minus");
     PASS();
 }
 
@@ -134,6 +146,8 @@ TEST(safeStoull_rejects_malformed) {
     if (safeStoull("").has_value()) FAIL("empty");
     if (safeStoull("abc").has_value()) FAIL("letters");
     if (safeStoull("42abc").has_value()) FAIL("trailing");
+    if (safeStoull(" 42").has_value()) FAIL("leading space");
+    if (safeStoull("42 ").has_value()) FAIL("trailing space");
     PASS();
 }
 
