@@ -710,7 +710,10 @@ void UnitManager::loadFromJSON(const JSON& json) {
                 // Load state BEFORE activation to ensure plugin is ready before processing audio.
                 // This matches EffectChain lifecycle: create -> initialize -> loadState -> activate.
                 if (!unit.pluginState.empty()) {
-                    unit.plugin->loadState(unit.pluginState);
+                    if (!unit.plugin->loadState(unit.pluginState)) {
+                        Aestra::Log::warning("[UnitManager] Failed to load state for unit " +
+                                             std::to_string(unit.id) + " — using default state");
+                    }
                 }
 
                 if (unit.enabled || unit.isEnabled) {

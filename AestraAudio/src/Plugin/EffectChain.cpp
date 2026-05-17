@@ -612,7 +612,10 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         auto instance = manager.createInstanceById(pluginId);
         if (instance) {
             instance->initialize(m_sampleRate, m_maxBlockSize);
-            instance->loadState(pluginState);
+            if (!instance->loadState(pluginState)) {
+                Aestra::Log::warning("[EffectChain] Failed to load state for plugin slot " +
+                                     std::to_string(i) + " — using default state");
+            }
             instance->activate();
 
             m_slots[i].plugin = std::move(instance);
