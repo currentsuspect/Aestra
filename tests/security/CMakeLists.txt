@@ -97,10 +97,10 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
     target_sources(SecStoulCrash PRIVATE ${REPO_ROOT}/Source/Core/ProjectSerializer.cpp)
     target_sources(SecDivZero PRIVATE ${REPO_ROOT}/Source/Core/ProjectSerializer.cpp)
 
-    target_link_libraries(SecStoulCrash PRIVATE AestraAudio AestraCore AestraPlat)
-    target_link_libraries(SecDivZero PRIVATE AestraAudio AestraCore AestraPlat)
-    target_link_libraries(SecSamplerPath PRIVATE AestraAudio AestraCore AestraPlat)
-    target_link_libraries(SecShellEscape PRIVATE AestraPlat AestraCore)
+    target_link_libraries(SecStoulCrash PRIVATE AestraAudio AestraPlat)
+    target_link_libraries(SecDivZero PRIVATE AestraAudio AestraPlat)
+    target_link_libraries(SecSamplerPath PRIVATE AestraAudio AestraPlat)
+    target_link_libraries(SecShellEscape PRIVATE AestraPlat)
     target_link_libraries(SecJsonDos PRIVATE AestraCore)
 
     target_include_directories(SecStoulCrash PRIVATE
@@ -207,7 +207,7 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
         ${REPO_ROOT}/AestraCore/include
         ${REPO_ROOT}/AestraPlat/include
     )
-    target_link_libraries(SecProjectLoadHardening PRIVATE AestraAudio AestraCore AestraPlat)
+    target_link_libraries(SecProjectLoadHardening PRIVATE AestraAudio AestraPlat)
 endif()
 
 if(TARGET AestraLicense)
