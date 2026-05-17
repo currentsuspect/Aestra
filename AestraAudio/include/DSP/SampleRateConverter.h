@@ -205,13 +205,11 @@ public:
     SampleRateConverter() = default;
     ~SampleRateConverter() = default;
 
-    // Non-copyable (contains internal state)
+    // Non-copyable, non-movable (contains internal state)
     SampleRateConverter(const SampleRateConverter&) = delete;
     SampleRateConverter& operator=(const SampleRateConverter&) = delete;
-
-    // Move is allowed
-    SampleRateConverter(SampleRateConverter&&) = default;
-    SampleRateConverter& operator=(SampleRateConverter&&) = default;
+    SampleRateConverter(SampleRateConverter&&) = delete;
+    SampleRateConverter& operator=(SampleRateConverter&&) = delete;
 
     // =========================================================================
     // Configuration

@@ -190,9 +190,12 @@ public:
 
             if (numOutputChannels > 0 && outputs[0]) outputs[0][i] = flushDenormal(outL);
             if (numOutputChannels > 1 && outputs[1]) outputs[1][i] = flushDenormal(outR);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
             for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
                 if (outputs[ch]) outputs[ch][i] = 0.0f;
             }
+#pragma GCC diagnostic pop
             }
         }
 

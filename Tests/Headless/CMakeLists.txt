@@ -8,7 +8,7 @@ add_executable(HeadlessOfflineRenderer
     HeadlessOfflineRenderer.cpp
     ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
 )
-target_link_libraries(HeadlessOfflineRenderer PRIVATE AestraAudio AestraCore)
+target_link_libraries(HeadlessOfflineRenderer PRIVATE AestraAudio)
 target_include_directories(HeadlessOfflineRenderer PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
     ${CMAKE_SOURCE_DIR}/AestraAudio/include
@@ -29,7 +29,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OfflineRenderRegressionTest.cpp")
     add_executable(OfflineRenderRegressionTest
         OfflineRenderRegressionTest.cpp
     )
-    target_link_libraries(OfflineRenderRegressionTest PRIVATE AestraAudio AestraCore)
+    target_link_libraries(OfflineRenderRegressionTest PRIVATE AestraAudio)
     target_include_directories(OfflineRenderRegressionTest PRIVATE
         ${CMAKE_SOURCE_DIR}/Source
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
@@ -49,7 +49,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CU
     add_executable(RumbleRenderTest
         RumbleRenderTest.cpp
     )
-    target_link_libraries(RumbleRenderTest PRIVATE AestraPremiumPlugins AestraAudioCore AestraCore)
+    target_link_libraries(RumbleRenderTest PRIVATE AestraPremiumPlugins AestraAudioCore)
     target_include_directories(RumbleRenderTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -66,7 +66,7 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CU
     add_executable(RumbleArsenalAudibleTest
         RumbleArsenalAudibleTest.cpp
     )
-    target_link_libraries(RumbleArsenalAudibleTest PRIVATE AestraAudioCore AestraPremiumPlugins AestraCore)
+    target_link_libraries(RumbleArsenalAudibleTest PRIVATE AestraAudioCore AestraPremiumPlugins)
     target_include_directories(RumbleArsenalAudibleTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -81,7 +81,7 @@ endif()
 # PDC v2 P1 — scaffolding tests (see AestraDocs/PDC-v2-Design.md §12)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     add_executable(PDCFlatChainTest PDCFlatChainTest.cpp)
-    target_link_libraries(PDCFlatChainTest PRIVATE AestraAudio AestraCore)
+    target_link_libraries(PDCFlatChainTest PRIVATE AestraAudio)
     target_include_directories(PDCFlatChainTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -96,7 +96,7 @@ endif()
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCSolverPurityTest.cpp")
     add_executable(PDCSolverPurityTest PDCSolverPurityTest.cpp)
-    target_link_libraries(PDCSolverPurityTest PRIVATE AestraAudio AestraCore)
+    target_link_libraries(PDCSolverPurityTest PRIVATE AestraAudio)
     target_include_directories(PDCSolverPurityTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -112,7 +112,7 @@ endif()
 # PDC v2 P4a — graph-aware solver tests (solver level; engine RT path in P4b)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCBusChainTest.cpp")
     add_executable(PDCBusChainTest PDCBusChainTest.cpp)
-    target_link_libraries(PDCBusChainTest PRIVATE AestraAudio AestraCore)
+    target_link_libraries(PDCBusChainTest PRIVATE AestraAudio)
     target_include_directories(PDCBusChainTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -127,7 +127,7 @@ endif()
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCBranchingConvergenceTest.cpp")
     add_executable(PDCBranchingConvergenceTest PDCBranchingConvergenceTest.cpp)
-    target_link_libraries(PDCBranchingConvergenceTest PRIVATE AestraAudio AestraCore)
+    target_link_libraries(PDCBranchingConvergenceTest PRIVATE AestraAudio)
     target_include_directories(PDCBranchingConvergenceTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -143,7 +143,7 @@ endif()
 # PDC v2 P4b.3 — RT path exercises per-send compensation via processBlock
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCRTConsumptionTest.cpp")
     add_executable(PDCRTConsumptionTest PDCRTConsumptionTest.cpp)
-    target_link_libraries(PDCRTConsumptionTest PRIVATE AestraAudio AestraCore)
+    target_link_libraries(PDCRTConsumptionTest PRIVATE AestraAudio)
     target_include_directories(PDCRTConsumptionTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -159,7 +159,7 @@ endif()
 # PDC v2 P4b.1 — engine populates LatencyGraph::edges from real project routing
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCEngineEdgeConstructionTest.cpp")
     add_executable(PDCEngineEdgeConstructionTest PDCEngineEdgeConstructionTest.cpp)
-    target_link_libraries(PDCEngineEdgeConstructionTest PRIVATE AestraAudio AestraCore)
+    target_link_libraries(PDCEngineEdgeConstructionTest PRIVATE AestraAudio)
     target_include_directories(PDCEngineEdgeConstructionTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include

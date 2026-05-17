@@ -20,7 +20,7 @@ bool approxEqual(float a, float b, float epsilon = 1.0e-5f) {
     return std::fabs(a - b) <= epsilon;
 }
 
-std::vector<float> makeStereoFixture() {
+[[maybe_unused]] std::vector<float> makeStereoFixture() {
     return {
         0.10f, -0.20f,
         0.30f,  0.50f,

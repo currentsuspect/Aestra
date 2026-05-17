@@ -469,7 +469,7 @@ static std::string generateMarkdownReport(const std::vector<MaterialResult>& res
 int main() {
     const float sampleRate = 48000.0f;
     const std::string outDir = "labs/reverb/quality/session_017a_material";
-    std::system(("mkdir -p " + outDir).c_str());
+    (void)std::system(("mkdir -p " + outDir).c_str());
 
     struct SourceDef {
         std::string name;

@@ -455,6 +455,9 @@ void Filter::updateCoefficientsInternal() {
     case FilterType::AllPass:
         calculateAllPass(m_targetCoeffs[0], w0, alpha);
         break;
+
+    case FilterType::Count:
+        break;
     }
 
     // Copy to right channel if linked
