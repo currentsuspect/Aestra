@@ -3056,6 +3056,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
 
     uint64_t currentFrame = startSample;
     uint64_t framesRemaining = totalFrames;
+    bool writeError = false;
 
     // Playback stopped at start of function
     m_transportPlaying.store(false, std::memory_order_relaxed); // Ensure redundant enforce
@@ -3133,6 +3134,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         if (result != MA_SUCCESS || framesWritten != framesThisBlock) {
             Aestra::Log::error("[AudioEngine] Write error during bounce: result=" + std::to_string(result) +
                                ", written=" + std::to_string(framesWritten));
+            writeError = true;
             break;
         }
 
@@ -3145,6 +3147,13 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     // Restore playback state
     if (wasPlaying)
         setTransportPlaying(true);
+
+    if (writeError) {
+        // Clean up partial file on write error
+        std::remove(outputPath.c_str());
+        Aestra::Log::error("[AudioEngine] Bounce failed — partial file removed: " + outputPath);
+        return false;
+    }
 
     Aestra::Log::info("[AudioEngine] Bounce complete.");
     return true;
