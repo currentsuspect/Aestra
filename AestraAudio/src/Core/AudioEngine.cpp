@@ -3137,6 +3137,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         ma_uint64 framesWritten = 0;
         ma_result result = MA_ERROR;
         if (forceWriteErrorForTests && wroteAnyFrames && !forcedWriteErrorTriggered) {
+            // Test hook: deterministically fail after one successful write block.
             forcedWriteErrorTriggered = true;
             result = MA_ERROR;
             framesWritten = 0;
@@ -3167,10 +3168,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     if (writeError) {
         // Clean up partial file on write error
         const int removeResult = std::remove(outputPath.c_str());
-        int removeErrno = 0;
-        if (removeResult != 0) {
-            removeErrno = errno;
-        }
+        const int removeErrno = errno;
         if (removeResult == 0) {
             Aestra::Log::error("[AudioEngine] Bounce failed — partial file removed: " + outputPath);
         } else {
