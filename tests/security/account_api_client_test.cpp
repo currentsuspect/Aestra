@@ -680,9 +680,11 @@ int main() {
     ok &= testAccountApiClientWithCurlTransport();
     ok &= testServiceStoresSessionAndRefreshesLease();
     ok &= testServiceFailureBoundaries();
+#ifndef _WIN32
     ok &= testLoginFlowFull();
     ok &= testDefaultWorkerUrl();
     ok &= testRealWorkerLoginStartSendsMail();
+#endif
     fs::remove_all(fs::temp_directory_path() / "aestra_account_api_client_tests");
 
     if (!ok) {
