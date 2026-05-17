@@ -101,7 +101,7 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
     target_link_libraries(SecDivZero PRIVATE AestraAudio AestraPlat)
     target_link_libraries(SecSamplerPath PRIVATE AestraAudio AestraPlat)
     target_link_libraries(SecShellEscape PRIVATE AestraPlat)
-    target_link_libraries(SecJsonDos PRIVATE
+    target_link_libraries(SecJsonDos PRIVATE)
 
     target_include_directories(SecStoulCrash PRIVATE
         ${REPO_ROOT}/Source
@@ -148,53 +148,53 @@ if(TARGET AestraAudio AND TARGET AestraCore AND TARGET AestraPlat)
         ${REPO_ROOT}/Source/Core
         ${REPO_ROOT}/AestraCore/include
     )
-    target_link_libraries(SecJsonParserHardening PRIVATE
-    target_link_libraries(SecLicenseProfileHardening PRIVATE
+    target_link_libraries(SecJsonParserHardening PRIVATE)
+    target_link_libraries(SecLicenseProfileHardening PRIVATE)
 
     target_include_directories(SecEnvVarValidation PRIVATE
         ${REPO_ROOT}/AestraCore/include
     )
-    target_link_libraries(SecEnvVarValidation PRIVATE
+    target_link_libraries(SecEnvVarValidation PRIVATE)
 
     target_include_directories(SecAutosaveRecoveryGuard PRIVATE
         ${REPO_ROOT}/Source/Core
         ${REPO_ROOT}/AestraCore/include
         ${REPO_ROOT}/AestraAudio/include
     )
-    target_link_libraries(SecAutosaveRecoveryGuard PRIVATE
+    target_link_libraries(SecAutosaveRecoveryGuard PRIVATE)
 
     target_include_directories(SecFlacVendorlenBounds PRIVATE
         ${REPO_ROOT}/AestraCore/include
         ${REPO_ROOT}/AestraAudio/include
         ${REPO_ROOT}/AestraAudio/include/IO
     )
-    target_link_libraries(SecFlacVendorlenBounds PRIVATE
+    target_link_libraries(SecFlacVendorlenBounds PRIVATE)
 
     target_include_directories(SecCacheMtimeIntegrity PRIVATE
         ${REPO_ROOT}/AestraCore/include
     )
-    target_link_libraries(SecCacheMtimeIntegrity PRIVATE
+    target_link_libraries(SecCacheMtimeIntegrity PRIVATE)
 
     target_include_directories(SecPluginTrustedPath PRIVATE
         ${REPO_ROOT}/AestraAudio/include
         ${REPO_ROOT}/AestraAudio/include/Plugin
         ${REPO_ROOT}/AestraCore/include
     )
-    target_link_libraries(SecPluginTrustedPath PRIVATE AestraAudio
+    target_link_libraries(SecPluginTrustedPath PRIVATE AestraAudio)
 
     target_include_directories(SecOutOfProcessPluginHost PRIVATE
         ${REPO_ROOT}/AestraAudio/include
         ${REPO_ROOT}/AestraAudio/include/Plugin
         ${REPO_ROOT}/AestraCore/include
     )
-    target_link_libraries(SecOutOfProcessPluginHost PRIVATE AestraAudio
+    target_link_libraries(SecOutOfProcessPluginHost PRIVATE AestraAudio)
 
     target_include_directories(SecPluginScanIsolation PRIVATE
         ${REPO_ROOT}/AestraAudio/include
         ${REPO_ROOT}/AestraAudio/include/Plugin
         ${REPO_ROOT}/AestraCore/include
     )
-    target_link_libraries(SecPluginScanIsolation PRIVATE AestraAudio
+    target_link_libraries(SecPluginScanIsolation PRIVATE AestraAudio)
 
     target_sources(SecProjectLoadHardening PRIVATE ${REPO_ROOT}/Source/Core/ProjectSerializer.cpp)
     target_include_directories(SecProjectLoadHardening PRIVATE
@@ -235,7 +235,7 @@ if(TARGET AestraLicense)
         ${REPO_ROOT}/AestraLicense/include
         ${REPO_ROOT}/AestraCore/include
     )
-    target_link_libraries(SecAccountEndToEndSmoke PRIVATE AestraLicense
+    target_link_libraries(SecAccountEndToEndSmoke PRIVATE AestraLicense)
 
     target_include_directories(SecAccountSessionCache PRIVATE
         ${REPO_ROOT}/AestraLicense/include
