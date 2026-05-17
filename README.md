@@ -12,7 +12,7 @@
 
 Aestra is currently on a public `0.x` pre-beta line. The current roadmap target is **v1 Beta in December 2026**.
 
-As of April 2026, the repo is in active engineering mode rather than release-polish mode. The most reliable currently verified paths are:
+As of May 2026, the repo is in active engineering mode rather than release-polish mode. The most reliable currently verified paths are:
 
 - Internal built-in plugin discovery through the normal manager/factory path
 - `Aestra Rumble` instantiation, state save/restore, and project round-trips
