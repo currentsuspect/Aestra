@@ -457,6 +457,44 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
     std::cout << "[INFO] Bounce: full peak=" << fullPeak << " iso0 peak=" << iso0Peak
               << " iso1 peak=" << iso1Peak << "\n";
 }
+
+void runBounceWriteFailureCleanupScenario(const std::filesystem::path& tempRoot) {
+#if defined(_WIN32)
+    (void)tempRoot;
+    std::cout << "[INFO] Bounce write-failure cleanup scenario skipped on Windows\n";
+#else
+    auto tm = std::make_shared<TrackManager>();
+    tm->setOutputSampleRate(static_cast<double>(kSampleRate));
+    tm->getPlaylistModel().setBPM(kBpm);
+
+    AudioEngine engine;
+    require(engine.initialize(), "AudioEngine initialize failed in write-error scenario");
+    engine.setSampleRate(kSampleRate);
+    engine.setBufferConfig(kBlockSize, kChannels);
+    engine.setTrackManager(tm);
+    engine.setBPM(static_cast<float>(kBpm));
+    engine.setGraph(AudioGraphBuilder::buildFromTrackManager(*tm));
+    engine.setUnitManager(&tm->getUnitManager());
+    engine.setPatternPlaybackEngine(&tm->getPatternPlaybackEngine());
+    engine.setPatternPlaybackMode(true, kRenderBeats);
+    engine.setGlobalSamplePos(0);
+    engine.setMetronomeEnabled(false);
+    engine.setAuditionModeEnabled(false);
+
+    const std::filesystem::path outputPath = tempRoot / "bounce_write_error_cleanup.wav";
+    std::error_code ec;
+    std::filesystem::remove(outputPath, ec);
+    require(setenv("AESTRA_TEST_FORCE_BOUNCE_WRITE_ERROR", "1", 1) == 0, "Failed to set bounce write-error test env");
+
+    const bool bounced = engine.bounceRangeToWav(0.0, kRenderBeats, outputPath.string(), -1);
+    unsetenv("AESTRA_TEST_FORCE_BOUNCE_WRITE_ERROR");
+
+    require(!bounced, "bounceRangeToWav should fail when encoder write fails");
+    require(!std::filesystem::exists(outputPath), "Bounce output path should be removed after write failure");
+
+    std::cout << "[INFO] Bounce write-failure cleanup scenario passed\n";
+#endif
+}
 } // namespace
 
 int main() {
@@ -495,6 +533,9 @@ int main() {
     // correct output for the selected track and excludes non-selected paths.
     std::cout << "[INFO] Case 5: Isolated-track bounce (full vs isolated)\n";
     runIsolatedBounceScenario(tempRoot);
+
+    std::cout << "[INFO] Case 6: Write-failure cleanup (false return + partial file cleanup)\n";
+    runBounceWriteFailureCleanupScenario(tempRoot);
 
     std::cout << "[PASS] ArsenalExportLiveParityTest\n";
     return 0;

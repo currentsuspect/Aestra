@@ -22,8 +22,10 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cerrno>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <queue>
@@ -3057,6 +3059,8 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     uint64_t currentFrame = startSample;
     uint64_t framesRemaining = totalFrames;
     bool writeError = false;
+    const bool forceWriteErrorForTests = std::getenv("AESTRA_TEST_FORCE_BOUNCE_WRITE_ERROR") != nullptr;
+    bool forcedWriteErrorTriggered = false;
 
     // Playback stopped at start of function
     m_transportPlaying.store(false, std::memory_order_relaxed); // Ensure redundant enforce
@@ -3131,6 +3135,11 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         // Write
         ma_uint64 framesWritten = 0;
         ma_result result = ma_encoder_write_pcm_frames(&encoder, floatBuffer.data(), framesThisBlock, &framesWritten);
+        if (forceWriteErrorForTests && !forcedWriteErrorTriggered) {
+            forcedWriteErrorTriggered = true;
+            result = MA_ERROR;
+            framesWritten = 0;
+        }
         if (result != MA_SUCCESS || framesWritten != framesThisBlock) {
             Aestra::Log::error("[AudioEngine] Write error during bounce: result=" + std::to_string(result) +
                                ", written=" + std::to_string(framesWritten));
@@ -3150,8 +3159,13 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
 
     if (writeError) {
         // Clean up partial file on write error
-        std::remove(outputPath.c_str());
-        Aestra::Log::error("[AudioEngine] Bounce failed — partial file removed: " + outputPath);
+        const int removeResult = std::remove(outputPath.c_str());
+        if (removeResult == 0) {
+            Aestra::Log::error("[AudioEngine] Bounce failed — partial file removed: " + outputPath);
+        } else {
+            Aestra::Log::error("[AudioEngine] Bounce failed — could not remove partial file: " + outputPath +
+                               " (errno=" + std::to_string(errno) + ")");
+        }
         return false;
     }
 
