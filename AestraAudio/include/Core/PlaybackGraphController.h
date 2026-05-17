@@ -31,9 +31,8 @@ public:
 
     PlaybackGraphController(const PlaybackGraphController&) = delete;
     PlaybackGraphController& operator=(const PlaybackGraphController&) = delete;
-
-    PlaybackGraphController(PlaybackGraphController&&) = default;
-    PlaybackGraphController& operator=(PlaybackGraphController&&) = default;
+    PlaybackGraphController(PlaybackGraphController&&) = delete;
+    PlaybackGraphController& operator=(PlaybackGraphController&&) = delete;
 
     /**
      * @brief Check if a rebuild has been requested.

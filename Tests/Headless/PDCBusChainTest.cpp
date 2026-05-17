@@ -3,9 +3,9 @@
 // latency propagation (G1 partial: solver only; engine RT path in P4b).
 //
 // Topology:
-//   TrackA (intrinsic 256) --\
-//                              >--> Bus (intrinsic 512) --> Master (intrinsic 0)
-//   TrackB (intrinsic 0)   --/
+//   TrackA (intrinsic 256) ---+
+//                              +--> Bus (intrinsic 512) --> Master (intrinsic 0)
+//   TrackB (intrinsic 0)   ---+
 //
 // Expected solver output:
 //   * downstream(Bus)   = 0 (only edge to Master, Master intrinsic 0)
