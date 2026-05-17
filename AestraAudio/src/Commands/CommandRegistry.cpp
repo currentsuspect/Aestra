@@ -17,6 +17,7 @@
 
 #include <cctype>
 #include <cmath>
+#include <exception>
 #include <optional>
 #include <string>
 #include <string_view>
