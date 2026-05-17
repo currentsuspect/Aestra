@@ -72,8 +72,8 @@ std::optional<unsigned long long> safeStoull(std::string_view s) {
 } // namespace Audio
 } // namespace Aestra
 
-#define TEST(name) std::cout << "  " << name << "... "; bool name()
-#define PASS() do { std::cout << "PASS" << std::endl; return true; } while(0)
+#define TEST(name) bool name()
+#define PASS() return true
 #define FAIL(msg) do { std::cout << "FAIL: " << msg << std::endl; return false; } while(0)
 
 using namespace Aestra::Audio;
@@ -172,7 +172,13 @@ int main() {
     int passed = 0, failed = 0;
 
     auto run = [&](const char* name, bool (*fn)()) {
-        if (fn()) passed++; else failed++;
+        std::cout << "  " << name << "... ";
+        if (fn()) {
+            std::cout << "PASS" << std::endl;
+            passed++;
+        } else {
+            failed++;
+        }
     };
 
     run("safeStoi_valid_integers", safeStoi_valid_integers);

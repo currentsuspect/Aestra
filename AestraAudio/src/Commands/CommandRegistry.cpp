@@ -19,6 +19,7 @@
 #include <cmath>
 #include <optional>
 #include <string>
+#include <string_view>
 
 namespace Aestra {
 namespace Audio {
@@ -26,7 +27,7 @@ namespace Audio {
 namespace {
 // Mirror of CommandParser bool spellings — keep in sync with
 // CommandParser::convertAndValidateValue (FlagType::Bool).
-bool parseFlagBool(const std::string& s) {
+bool parseFlagBool(std::string_view s) {
     std::string lower;
     lower.reserve(s.size());
     for (char c : s) {
@@ -195,7 +196,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!trackOpt) return nullptr;
         auto stateRaw = requireFlag(flags, "state");
         if (!stateRaw) return nullptr;
-        bool state = parseFlagBool(std::string(*stateRaw));
+        bool state = parseFlagBool(*stateRaw);
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
         return std::make_unique<SetMuteCommand>(*ch, state);
@@ -208,7 +209,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!trackOpt) return nullptr;
         auto stateRaw = requireFlag(flags, "state");
         if (!stateRaw) return nullptr;
-        bool state = parseFlagBool(std::string(*stateRaw));
+        bool state = parseFlagBool(*stateRaw);
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
         return std::make_unique<SetSoloCommand>(*ch, state);
