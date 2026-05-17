@@ -3135,14 +3135,16 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
 
         // Write
         ma_uint64 framesWritten = 0;
-        ma_result result = ma_encoder_write_pcm_frames(&encoder, floatBuffer.data(), framesThisBlock, &framesWritten);
-        if (result == MA_SUCCESS && framesWritten == framesThisBlock) {
-            wroteAnyFrames = true;
-        }
+        ma_result result = MA_ERROR;
         if (forceWriteErrorForTests && wroteAnyFrames && !forcedWriteErrorTriggered) {
             forcedWriteErrorTriggered = true;
             result = MA_ERROR;
             framesWritten = 0;
+        } else {
+            result = ma_encoder_write_pcm_frames(&encoder, floatBuffer.data(), framesThisBlock, &framesWritten);
+            if (result == MA_SUCCESS && framesWritten == framesThisBlock) {
+                wroteAnyFrames = true;
+            }
         }
         if (result != MA_SUCCESS || framesWritten != framesThisBlock) {
             Aestra::Log::error("[AudioEngine] Write error during bounce: result=" + std::to_string(result) +
@@ -3165,7 +3167,10 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     if (writeError) {
         // Clean up partial file on write error
         const int removeResult = std::remove(outputPath.c_str());
-        const int removeErrno = (removeResult != 0) ? errno : 0;
+        int removeErrno = 0;
+        if (removeResult != 0) {
+            removeErrno = errno;
+        }
         if (removeResult == 0) {
             Aestra::Log::error("[AudioEngine] Bounce failed — partial file removed: " + outputPath);
         } else {
