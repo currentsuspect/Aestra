@@ -3167,7 +3167,12 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
 
     if (writeError) {
         // Clean up partial file on write error
+#ifdef _WIN32
+        std::wstring widePath = pathStringToWide(outputPath);
+        const int removeResult = _wremove(widePath.c_str());
+#else
         const int removeResult = std::remove(outputPath.c_str());
+#endif
         const int removeErrno = errno;
         if (removeResult == 0) {
             Aestra::Log::error("[AudioEngine] Bounce failed — partial file removed: " + outputPath);
