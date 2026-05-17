@@ -3014,6 +3014,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
 bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::string& outputPath, int32_t trackId) {
     if (endBeat <= startBeat)
         return false;
+    m_lastBounceWroteAnyFramesForTests.store(false, std::memory_order_relaxed);
 
     // 1. Calculate length
     double sampleRate = (double)m_sampleRate.load(std::memory_order_relaxed);
@@ -3060,6 +3061,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     bool writeError = false;
     const bool forceWriteErrorForTests = m_forceBounceWriteErrorForTests.load(std::memory_order_relaxed);
     bool forcedWriteErrorTriggered = false;
+    bool wroteAnyFrames = false;
 
     // Playback stopped at start of function
     m_transportPlaying.store(false, std::memory_order_relaxed); // Ensure redundant enforce
@@ -3134,7 +3136,10 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         // Write
         ma_uint64 framesWritten = 0;
         ma_result result = ma_encoder_write_pcm_frames(&encoder, floatBuffer.data(), framesThisBlock, &framesWritten);
-        if (forceWriteErrorForTests && !forcedWriteErrorTriggered) {
+        if (result == MA_SUCCESS && framesWritten == framesThisBlock) {
+            wroteAnyFrames = true;
+        }
+        if (forceWriteErrorForTests && wroteAnyFrames && !forcedWriteErrorTriggered) {
             forcedWriteErrorTriggered = true;
             result = MA_ERROR;
             framesWritten = 0;
@@ -3151,6 +3156,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     }
 
     ma_encoder_uninit(&encoder);
+    m_lastBounceWroteAnyFramesForTests.store(wroteAnyFrames, std::memory_order_relaxed);
 
     // Restore playback state
     if (wasPlaying)
@@ -3159,11 +3165,12 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     if (writeError) {
         // Clean up partial file on write error
         const int removeResult = std::remove(outputPath.c_str());
+        const int removeErrno = (removeResult != 0) ? errno : 0;
         if (removeResult == 0) {
             Aestra::Log::error("[AudioEngine] Bounce failed — partial file removed: " + outputPath);
         } else {
             Aestra::Log::error("[AudioEngine] Bounce failed — could not remove partial file: " + outputPath +
-                               " (errno=" + std::to_string(errno) + ")");
+                               " (errno=" + std::to_string(removeErrno) + ")");
         }
         return false;
     }

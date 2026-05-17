@@ -459,10 +459,6 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
 }
 
 void runBounceWriteFailureCleanupScenario(const std::filesystem::path& tempRoot) {
-#if defined(_WIN32)
-    (void)tempRoot;
-    std::cout << "[INFO] Bounce write-failure cleanup scenario skipped on Windows\n";
-#else
     auto tm = std::make_shared<TrackManager>();
     tm->setOutputSampleRate(static_cast<double>(kSampleRate));
     tm->getPlaylistModel().setBPM(kBpm);
@@ -490,10 +486,11 @@ void runBounceWriteFailureCleanupScenario(const std::filesystem::path& tempRoot)
     engine.setForceBounceWriteErrorForTests(false);
 
     require(!bounced, "bounceRangeToWav should fail when encoder write fails");
+    require(engine.didLastBounceWriteAnyFramesForTests(),
+            "Write-error scenario should fail only after at least one block was written");
     require(!std::filesystem::exists(outputPath), "Bounce output path should be removed after write failure");
 
     std::cout << "[INFO] Bounce write-failure cleanup scenario passed\n";
-#endif
 }
 } // namespace
 
