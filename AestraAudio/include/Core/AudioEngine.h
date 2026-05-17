@@ -428,6 +428,10 @@ public:
     void setTestToneEnabled(bool enabled) { m_testToneEnabled.store(enabled, std::memory_order_relaxed); }
     /** @brief Check whether the internal test tone is enabled. */
     bool isTestToneEnabled() const { return m_testToneEnabled.load(std::memory_order_relaxed); }
+    /** @brief Test hook: force bounce write error on first write attempt. */
+    void setForceBounceWriteErrorForTests(bool enabled) {
+        m_forceBounceWriteErrorForTests.store(enabled, std::memory_order_relaxed);
+    }
 
     /** @brief Get the waveform-history buffer capacity in frames. */
     uint32_t getWaveformHistoryCapacity() const { return m_waveformHistoryFrames.load(std::memory_order_relaxed); }
@@ -890,6 +894,7 @@ private:
 
     // Test Tone State
     std::atomic<bool> m_testToneEnabled{false};
+    std::atomic<bool> m_forceBounceWriteErrorForTests{false};
     double m_testTonePhase{0.0};
 
     // Dependencies

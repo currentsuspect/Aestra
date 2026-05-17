@@ -25,7 +25,6 @@
 #include <cerrno>
 #include <chrono>
 #include <cmath>
-#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <queue>
@@ -3059,7 +3058,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     uint64_t currentFrame = startSample;
     uint64_t framesRemaining = totalFrames;
     bool writeError = false;
-    const bool forceWriteErrorForTests = std::getenv("AESTRA_TEST_FORCE_BOUNCE_WRITE_ERROR") != nullptr;
+    const bool forceWriteErrorForTests = m_forceBounceWriteErrorForTests.load(std::memory_order_relaxed);
     bool forcedWriteErrorTriggered = false;
 
     // Playback stopped at start of function
