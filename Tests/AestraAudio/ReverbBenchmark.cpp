@@ -24,6 +24,9 @@ using namespace Aestra::Audio::DSP;
 // Prevent dead-code elimination
 volatile float g_sink = 0.0f;
 
+// Forward declarations
+static std::string jsonEscape(const std::string& value);
+
 // ============================================================================
 // CLI parsing
 // ============================================================================
