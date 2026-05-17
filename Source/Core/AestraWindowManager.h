@@ -15,6 +15,7 @@
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "NUIMenuBar.h"
 #include "NUIContextMenu.h"
+#include "TransportTypes.h"
 
 // Forward declarations
 namespace Aestra {
@@ -44,7 +45,7 @@ public:
         bool fullscreen;
     };
 
-    enum class TransportAction { Stop, Play, Pause };
+    using TransportAction = Aestra::TransportAction;
 
     /** @brief Initialize the window, renderer, and root component. */
     bool initialize(const WindowConfig& config);
