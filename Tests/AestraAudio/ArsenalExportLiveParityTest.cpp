@@ -484,10 +484,10 @@ void runBounceWriteFailureCleanupScenario(const std::filesystem::path& tempRoot)
     const std::filesystem::path outputPath = tempRoot / "bounce_write_error_cleanup.wav";
     std::error_code ec;
     std::filesystem::remove(outputPath, ec);
-    require(setenv("AESTRA_TEST_FORCE_BOUNCE_WRITE_ERROR", "1", 1) == 0, "Failed to set bounce write-error test env");
+    engine.setForceBounceWriteErrorForTests(true);
 
     const bool bounced = engine.bounceRangeToWav(0.0, kRenderBeats, outputPath.string(), -1);
-    unsetenv("AESTRA_TEST_FORCE_BOUNCE_WRITE_ERROR");
+    engine.setForceBounceWriteErrorForTests(false);
 
     require(!bounced, "bounceRangeToWav should fail when encoder write fails");
     require(!std::filesystem::exists(outputPath), "Bounce output path should be removed after write failure");
