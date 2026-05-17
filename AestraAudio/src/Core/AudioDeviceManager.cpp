@@ -302,7 +302,7 @@ void AudioDeviceManager::getLatencyCompensationValues(double& inputLatencyMs, do
     const_cast<AudioStreamConfig&>(m_currentConfig).outputLatencyMs = outputLatencyMs;
 }
 
-static bool configsEqual(const AudioStreamConfig& a, const AudioStreamConfig& b) {
+[[maybe_unused]] static bool configsEqual(const AudioStreamConfig& a, const AudioStreamConfig& b) {
     return a.deviceId == b.deviceId &&
            a.inputDeviceId == b.inputDeviceId &&
            a.sampleRate == b.sampleRate &&

@@ -584,6 +584,8 @@ std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
     return result;
 }
 #elif defined(__APPLE__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 std::vector<unsigned char> loadLeaseFromPrimarySecretStore() {
     const std::string service(kServiceName);
     const std::string account(kAccountName);
@@ -758,8 +760,9 @@ bool saveLeaseToPrimarySecretStore(const std::vector<unsigned char>& blob) {
 
     return SecKeychainAddGenericPassword(nullptr, static_cast<UInt32>(service.size()), service.c_str(),
                                          static_cast<UInt32>(account.size()), account.c_str(),
-                                         static_cast<UInt32>(blob.size()), blob.data(), nullptr) == errSecSuccess;
+                                          static_cast<UInt32>(blob.size()), blob.data(), nullptr) == errSecSuccess;
 }
+#pragma clang diagnostic pop
 #else
 bool saveLeaseToPrimarySecretStore(const std::vector<unsigned char>& blob) {
     static const SecretSchema schema = {
