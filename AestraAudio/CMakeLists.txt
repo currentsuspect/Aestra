@@ -398,37 +398,9 @@ add_library(AestraAudioCore STATIC
 # Do NOT apply to entire target — preserves assertions in Aestra audio code
 if(AESTRA_HAS_VST3)
     set_source_files_properties(
-        ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/hostclasses.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/plugprovider.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/common/memorystream.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/vst/utility/stringconvert.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/common/commonstringconvert.cpp
-        ${VST3_SDK_DIR}/public.sdk/source/vst/vstinitiids.cpp
-        ${VST3_SDK_DIR}/base/source/fdebug.cpp
-        ${VST3_SDK_DIR}/base/source/fobject.cpp
-        ${VST3_SDK_DIR}/base/source/fstring.cpp
-        ${VST3_SDK_DIR}/pluginterfaces/base/funknown.cpp
-        ${VST3_SDK_DIR}/pluginterfaces/base/ustring.cpp
-        ${VST3_SDK_DIR}/pluginterfaces/base/coreiids.cpp
+        ${VST3_HOST_SOURCES}
         PROPERTIES COMPILE_DEFINITIONS NDEBUG
     )
-    if(WIN32)
-        set_source_files_properties(
-            ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_win32.cpp
-            PROPERTIES COMPILE_DEFINITIONS NDEBUG
-        )
-    elseif(APPLE)
-        set_source_files_properties(
-            ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_mac.mm
-            PROPERTIES COMPILE_DEFINITIONS NDEBUG
-        )
-    else()
-        set_source_files_properties(
-            ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module_linux.cpp
-            PROPERTIES COMPILE_DEFINITIONS NDEBUG
-        )
-    endif()
 endif()
 
 # Enable miniaudio for fast audio decoding (MP3, FLAC, etc.)
