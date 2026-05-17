@@ -16,8 +16,11 @@
 #include "AestraUUID.h"
 
 #include <cctype>
+#include <cmath>
+#include <exception>
 #include <optional>
 #include <string>
+#include <string_view>
 
 namespace Aestra {
 namespace Audio {
@@ -25,7 +28,7 @@ namespace Audio {
 namespace {
 // Mirror of CommandParser bool spellings — keep in sync with
 // CommandParser::convertAndValidateValue (FlagType::Bool).
-bool parseFlagBool(const std::string& s) {
+bool parseFlagBool(std::string_view s) {
     std::string lower;
     lower.reserve(s.size());
     for (char c : s) {
@@ -34,45 +37,57 @@ bool parseFlagBool(const std::string& s) {
     return lower == "true" || lower == "1" || lower == "yes";
 }
 
-// Safe parsing helpers that return std::nullopt on malformed input
-std::optional<int> safeStoi(const std::string& s) {
-    try {
-        size_t pos = 0;
-        int val = std::stoi(s, &pos);
-        if (pos != s.size()) return std::nullopt; // trailing characters
-        return val;
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
-
-std::optional<float> safeStof(const std::string& s) {
-    try {
-        size_t pos = 0;
-        float val = std::stof(s, &pos);
-        if (pos != s.size()) return std::nullopt;
-        return val;
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
-
-std::optional<unsigned long long> safeStoull(const std::string& s) {
-    try {
-        size_t pos = 0;
-        unsigned long long val = std::stoull(s, &pos);
-        if (pos != s.size()) return std::nullopt;
-        return val;
-    } catch (const std::exception&) {
-        return std::nullopt;
-    }
-}
-
-// Helper to safely get a flag value, returns nullopt if missing
-std::optional<std::string> getFlag(const std::unordered_map<std::string, std::string>& flags, const char* key) {
+// Safe flag lookup — returns nullopt if key is missing
+std::optional<std::string_view> requireFlag(const std::unordered_map<std::string, std::string>& flags, const char* key) {
     auto it = flags.find(key);
     if (it == flags.end()) return std::nullopt;
     return it->second;
+}
+
+// Safe parsing helpers that return std::nullopt on malformed input
+// Reject leading/trailing whitespace, non-finite floats, and negative unsigned strings
+std::optional<int> safeStoi(std::string_view s) {
+    if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
+    try {
+        size_t pos = 0;
+        int val = std::stoi(std::string(s), &pos);
+        if (pos != s.size()) return std::nullopt;
+        return val;
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
+std::optional<float> safeStof(std::string_view s) {
+    if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
+    try {
+        size_t pos = 0;
+        float val = std::stof(std::string(s), &pos);
+        if (pos != s.size()) return std::nullopt;
+        if (!std::isfinite(val)) return std::nullopt;
+        return val;
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
+std::optional<unsigned long long> safeStoull(std::string_view s) {
+    if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
+    if (s.front() == '-') return std::nullopt;
+    try {
+        size_t pos = 0;
+        unsigned long long val = std::stoull(std::string(s), &pos);
+        if (pos != s.size()) return std::nullopt;
+        return val;
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
 }
 
 AudioEngine* s_audioEngine = nullptr;
@@ -113,7 +128,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
     reg.registerCommand("set_bpm", [](const auto& flags) -> std::unique_ptr<ICommand> {
         AudioEngine* engine = getAudioEngine();
         if (!engine) return nullptr;
-        auto valueOpt = safeStof(flags.at("value"));
+        auto valueRaw = requireFlag(flags, "value");
+        if (!valueRaw) return nullptr;
+        auto valueOpt = safeStof(*valueRaw);
         if (!valueOpt) return nullptr;
         return std::make_unique<SetBpmCommand>(*engine, *valueOpt);
     });
@@ -156,13 +173,17 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
     });
 
     reg.registerCommand("delete_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        auto trackOpt = safeStoi(flags.at("track"));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
         if (!trackOpt) return nullptr;
         return std::make_unique<DeleteTrackCommand>(*tm, *trackOpt);
     });
 
     reg.registerCommand("rename_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        auto trackOpt = safeStoi(flags.at("track"));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
         if (!trackOpt) return nullptr;
         auto nameIt = flags.find("name");
         if (nameIt == flags.end()) return nullptr;
@@ -170,27 +191,39 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
     });
 
     reg.registerCommand("mute_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        auto trackOpt = safeStoi(flags.at("track"));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
         if (!trackOpt) return nullptr;
-        bool state = parseFlagBool(flags.at("state"));
+        auto stateRaw = requireFlag(flags, "state");
+        if (!stateRaw) return nullptr;
+        bool state = parseFlagBool(*stateRaw);
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
         return std::make_unique<SetMuteCommand>(*ch, state);
     });
 
     reg.registerCommand("solo_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        auto trackOpt = safeStoi(flags.at("track"));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
         if (!trackOpt) return nullptr;
-        bool state = parseFlagBool(flags.at("state"));
+        auto stateRaw = requireFlag(flags, "state");
+        if (!stateRaw) return nullptr;
+        bool state = parseFlagBool(*stateRaw);
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
         return std::make_unique<SetSoloCommand>(*ch, state);
     });
 
     reg.registerCommand("set_volume", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        auto trackOpt = safeStoi(flags.at("track"));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
         if (!trackOpt) return nullptr;
-        auto valueOpt = safeStof(flags.at("value"));
+        auto valueRaw = requireFlag(flags, "value");
+        if (!valueRaw) return nullptr;
+        auto valueOpt = safeStof(*valueRaw);
         if (!valueOpt) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
@@ -198,9 +231,13 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
     });
 
     reg.registerCommand("set_pan", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        auto trackOpt = safeStoi(flags.at("track"));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
         if (!trackOpt) return nullptr;
-        auto valueOpt = safeStof(flags.at("value"));
+        auto valueRaw = requireFlag(flags, "value");
+        if (!valueRaw) return nullptr;
+        auto valueOpt = safeStof(*valueRaw);
         if (!valueOpt) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
@@ -210,9 +247,13 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
     // ===== Clip (5) =====
     reg.registerCommand("add_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
         if (!pm) return nullptr;
-        auto trackOpt = safeStoi(flags.at("track"));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
         if (!trackOpt) return nullptr;
-        auto barOpt = safeStoi(flags.at("bar"));
+        auto barRaw = requireFlag(flags, "bar");
+        if (!barRaw) return nullptr;
+        auto barOpt = safeStoi(*barRaw);
         if (!barOpt) return nullptr;
 
         PlaylistLaneID laneId = pm->getLaneId(static_cast<size_t>(*trackOpt));
@@ -238,7 +279,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
 
     reg.registerCommand("delete_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
         if (!pm) return nullptr;
-        auto idOpt = safeStoi(flags.at("id"));
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = safeStoi(*idRaw);
         if (!idOpt) return nullptr;
         ClipInstanceID clipId;
         clipId.low = static_cast<uint64_t>(*idOpt);
@@ -247,11 +290,17 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
 
     reg.registerCommand("move_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
         if (!pm) return nullptr;
-        auto idOpt = safeStoi(flags.at("id"));
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = safeStoi(*idRaw);
         if (!idOpt) return nullptr;
-        auto trackOpt = safeStoi(flags.at("track"));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
         if (!trackOpt) return nullptr;
-        auto startOpt = safeStof(flags.at("start"));
+        auto startRaw = requireFlag(flags, "start");
+        if (!startRaw) return nullptr;
+        auto startOpt = safeStof(*startRaw);
         if (!startOpt) return nullptr;
 
         ClipInstanceID clipId;
@@ -262,9 +311,13 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
 
     reg.registerCommand("duplicate_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
         if (!pm) return nullptr;
-        auto idOpt = safeStoi(flags.at("id"));
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = safeStoi(*idRaw);
         if (!idOpt) return nullptr;
-        auto barOpt = safeStoi(flags.at("bar"));
+        auto barRaw = requireFlag(flags, "bar");
+        if (!barRaw) return nullptr;
+        auto barOpt = safeStoi(*barRaw);
         if (!barOpt) return nullptr;
 
         ClipInstanceID clipId;
@@ -274,11 +327,17 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
 
     reg.registerCommand("trim_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
         if (!pm) return nullptr;
-        auto idOpt = safeStoi(flags.at("id"));
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = safeStoi(*idRaw);
         if (!idOpt) return nullptr;
-        auto startOpt = safeStof(flags.at("start"));
+        auto startRaw = requireFlag(flags, "start");
+        if (!startRaw) return nullptr;
+        auto startOpt = safeStof(*startRaw);
         if (!startOpt) return nullptr;
-        auto endOpt = safeStof(flags.at("end"));
+        auto endRaw = requireFlag(flags, "end");
+        if (!endRaw) return nullptr;
+        auto endOpt = safeStof(*endRaw);
         if (!endOpt) return nullptr;
 
         ClipInstanceID clipId;
