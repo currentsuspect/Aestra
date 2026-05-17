@@ -907,11 +907,11 @@ set_tests_properties(AestraDelayUpgradeTest PROPERTIES LABELS "audio;plugins;del
 
 # Platform DPI Test
 add_executable(PlatformDPITest AestraPlat/PlatformDPITest.cpp)
-target_link_libraries(PlatformDPITest PRIVATE AestraPlat AestraCore)
+target_link_libraries(PlatformDPITest PRIVATE AestraPlat)
 
 # Platform Window Test  
 add_executable(PlatformWindowTest AestraPlat/PlatformWindowTest.cpp)
-target_link_libraries(PlatformWindowTest PRIVATE AestraPlat AestraCore)
+target_link_libraries(PlatformWindowTest PRIVATE AestraPlat)
 
 # =============================================================================
 # AestraUI Tests
