@@ -1028,10 +1028,11 @@ AestraContent::AestraContent() {
 
     // Create Focus Toggle Buttons
     auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const auto& themeProps = theme.getCurrentTheme();
     m_viewToggle =
         std::make_shared<AestraUI::NUISegmentedControl>(std::vector<std::string>{"Arsenal", "Timeline", "Audition"});
-    m_viewToggle->setCornerRadius(12.0f);
-    m_viewToggle->setAccentColor(AestraUI::NUIColor(0.36f, 0.25f, 0.58f, 1.0f));
+    m_viewToggle->setCornerRadius(themeProps.radiusL);             // tokenized: 12.0
+    m_viewToggle->setAccentColor(theme.getColor("primary"));        // tokenized: theme accent
     m_viewToggle->setOnSelectionChanged([this](size_t index) {
         ViewFocus newFocus;
         switch (index) {
@@ -1297,26 +1298,32 @@ void AestraContent::onResize(int width, int height) {
     }
 
     if (m_viewToggle) {
-        auto rootBounds = getBounds();
-        float toggleWidth = 310.0f;
-        float toggleHeight = 24.0f;
-        float yPos = 4.0f;
+        // The view toggle is parented to the custom title bar (32px tall by default).
+        // Center it horizontally in the window and vertically in the title bar.
+        constexpr float kViewToggleWidth = 310.0f;
+        constexpr float kViewToggleHeight = 24.0f;
+        constexpr float kTitleBarHeight = 32.0f;
+        const float yPos = std::round((kTitleBarHeight - kViewToggleHeight) * 0.5f);
 
-        float centerX = rootBounds.width / 2.0f;
-        float startX = centerX - toggleWidth / 2.0f;
+        const auto rootBounds = getBounds();
+        const float centerX = rootBounds.width * 0.5f;
+        const float startX = std::round(centerX - kViewToggleWidth * 0.5f);
 
-        m_viewToggle->setBounds(AestraUI::NUIRect(startX, yPos, toggleWidth, toggleHeight));
+        m_viewToggle->setBounds(AestraUI::NUIRect(startX, yPos, kViewToggleWidth, kViewToggleHeight));
     }
 
     if (m_scopeLabel) {
-        float labelY = 15.0f;
+        constexpr float kScopeLabelWidth = 150.0f;
+        constexpr float kScopeLabelHeight = 30.0f;
+        const float labelY = 15.0f;
         float labelX = 365.0f;
         if (m_viewToggle) {
             const auto toggleBounds = m_viewToggle->getBounds();
             labelX = toggleBounds.right() + 12.0f;
         }
-        labelX = std::min(labelX, std::max(0.0f, contentBounds.width - 160.0f));
-        m_scopeLabel->setBounds(AestraUI::NUIAbsolute(contentBounds, labelX, labelY, 150.0f, 30.0f));
+        labelX = std::min(labelX, std::max(0.0f, contentBounds.width - kScopeLabelWidth - 10.0f));
+        m_scopeLabel->setBounds(
+            AestraUI::NUIAbsolute(contentBounds, labelX, labelY, kScopeLabelWidth, kScopeLabelHeight));
     }
 
     const float maxFileBrowserWidth = std::max(kMinFileBrowserWidth, std::min(width * 0.42f, 560.0f));
