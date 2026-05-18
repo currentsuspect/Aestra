@@ -129,19 +129,20 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     setId("PatternBrowserPanel");
     
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    
+    const auto& themeProps = themeManager.getCurrentTheme();
+
     // Cache theme colors
-    m_backgroundColor = AestraUI::NUIColor(0.073f, 0.078f, 0.094f, 1.0f);
+    m_backgroundColor = themeManager.getColor("backgroundSecondary");
     m_textColor = themeManager.getColor("textPrimary");
-    m_borderColor = AestraUI::NUIColor::white().withAlpha(0.075f);
-    m_selectedColor = AestraUI::NUIColor(0.486f, 0.361f, 0.749f, 1.0f);
-    
+    m_borderColor = themeManager.getColor("borderSubtle").withAlpha(0.075f);
+    m_selectedColor = themeManager.getColor("accentPrimary");
+
     // Initialize Toggle Switch
     m_modeToggle = std::make_shared<AestraUI::NUISegmentedControl>(
         std::vector<std::string>{"Clips", "Patterns"}
     );
-    m_modeToggle->setCornerRadius(10.0f);
-    m_modeToggle->setAccentColor(AestraUI::NUIColor(0.36f, 0.25f, 0.58f, 1.0f));
+    m_modeToggle->setCornerRadius(themeProps.radiusM + 2.0f);
+    m_modeToggle->setAccentColor(themeManager.getColor("accentPrimary"));
     m_modeToggle->setSelectedIndex(static_cast<size_t>(m_mode), false);
     m_modeToggle->setVisible(false);
     m_modeToggle->setOnSelectionChanged([this](size_t index) {
@@ -423,10 +424,11 @@ void PatternBrowserPanel::renderHeader(AestraUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
     AestraUI::NUIRect headerRect(bounds.x, bounds.y, bounds.width, m_headerHeight);
     auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const auto& themeProps = theme.getCurrentTheme();
 
-    renderer.fillRect(headerRect, AestraUI::NUIColor(0.073f, 0.078f, 0.094f, 1.0f));
+    renderer.fillRect(headerRect, theme.getColor("backgroundSecondary"));
     renderer.fillRect({headerRect.x, headerRect.y, headerRect.width, 1.0f},
-                      AestraUI::NUIColor::white().withAlpha(0.018f));
+                      theme.getColor("borderSubtle").withAlpha(0.018f));
     renderer.drawLine(
         AestraUI::NUIPoint(bounds.x, bounds.y + m_headerHeight),
         AestraUI::NUIPoint(bounds.x + bounds.width, bounds.y + m_headerHeight),
@@ -436,7 +438,7 @@ void PatternBrowserPanel::renderHeader(AestraUI::NUIRenderer& renderer) {
     // Render footer background and separator
     AestraUI::NUIRect footerRect(bounds.x, bounds.bottom() - m_footerHeight, bounds.width, m_footerHeight);
     if (m_footerHeight > 0.0f) {
-        renderer.fillRect(footerRect, AestraUI::NUIColor(0.073f, 0.078f, 0.094f, 1.0f));
+        renderer.fillRect(footerRect, theme.getColor("backgroundSecondary"));
         renderer.drawLine(
             AestraUI::NUIPoint(bounds.x, footerRect.y),
             AestraUI::NUIPoint(bounds.x + bounds.width, footerRect.y),
@@ -448,7 +450,7 @@ void PatternBrowserPanel::renderHeader(AestraUI::NUIRenderer& renderer) {
     const std::string title = (m_mode == BrowserMode::Clips ? "Clips (" : "Patterns (") + std::to_string(itemCount) + ")";
     renderer.drawText(title,
                       AestraUI::NUIPoint(bounds.x + 10.0f, bounds.y + 12.0f),
-                      12.5f,
+                      themeProps.fontSizeXS,
                       theme.getColor("textPrimary").withAlpha(0.78f));
     
     // Mode toggle is rendered by addChild mechanism automatically
@@ -484,22 +486,23 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
     
     if (isEmpty) {
         auto& theme = AestraUI::NUIThemeManager::getInstance();
+        const auto& themeProps = theme.getCurrentTheme();
         const bool dropActive = m_isDragOver;
         const bool compactRail = bounds.width < 170.0f;
         if (compactRail) {
-            renderer.fillRect(listRect, AestraUI::NUIColor(0.073f, 0.078f, 0.094f, 1.0f));
+            renderer.fillRect(listRect, theme.getColor("backgroundSecondary"));
             const AestraUI::NUIRect chip{
                 bounds.x + 10.0f,
                 bounds.y + m_headerHeight + 16.0f,
                 std::max(0.0f, bounds.width - 20.0f),
                 32.0f
             };
-            renderer.fillRoundedRect(chip, 5.0f,
+            renderer.fillRoundedRect(chip, themeProps.radiusS + 1.0f,
                                      dropActive ? theme.getColor("accentPrimary").withAlpha(0.16f)
-                                                : AestraUI::NUIColor::white().withAlpha(0.025f));
-            renderer.strokeRoundedRect(chip, 5.0f, 1.0f,
+                                                : theme.getColor("borderSubtle").withAlpha(0.025f));
+            renderer.strokeRoundedRect(chip, themeProps.radiusS + 1.0f, 1.0f,
                                        dropActive ? theme.getColor("accentPrimary").withAlpha(0.38f)
-                                                  : AestraUI::NUIColor::white().withAlpha(0.070f));
+                                                  : theme.getColor("borderSubtle").withAlpha(0.070f));
             renderer.drawTextCentered(dropActive ? "Drop" : (m_mode == BrowserMode::Patterns ? "Patterns" : "Clips"),
                                       chip,
                                       10.5f,
@@ -581,8 +584,8 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
                 144.0f,
                 18.0f
             };
-            renderer.fillRoundedRect(routeChip, 9.0f, theme.getColor("accentPrimary").withAlpha(dropActive ? 0.26f : 0.14f));
-            renderer.strokeRoundedRect(routeChip, 9.0f, 1.0f, theme.getColor("accentPrimary").withAlpha(0.34f));
+            renderer.fillRoundedRect(routeChip, themeProps.radiusM + 1.0f, theme.getColor("accentPrimary").withAlpha(dropActive ? 0.26f : 0.14f));
+            renderer.strokeRoundedRect(routeChip, themeProps.radiusM + 1.0f, 1.0f, theme.getColor("accentPrimary").withAlpha(0.34f));
             renderer.drawTextCentered("AUTO-ROUTE TO TIMELINE", routeChip, 9.0f, theme.getColor("textPrimary").withAlpha(0.92f));
         }
         return;
@@ -634,12 +637,13 @@ void PatternBrowserPanel::renderClipList(AestraUI::NUIRenderer& renderer) {
 void PatternBrowserPanel::renderPatternItem(AestraUI::NUIRenderer& renderer, const PatternEntry& entry, float y, bool selected, bool hovered) {
     auto bounds = getBounds();
     auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const auto& themeProps = theme.getCurrentTheme();
     const AestraUI::NUIRect cardRect = computeBinCardRect(bounds, y, m_itemHeight);
-    const AestraUI::NUIColor accentPurple(0.486f, 0.361f, 0.749f, 1.0f); // #7c5cbf
-    
+    const auto accent = theme.getColor("accentPrimary");
+
     if (selected) {
-        renderer.fillRoundedRect(cardRect, kCardRadius, accentPurple.withAlpha(0.15f));
-        renderer.strokeRoundedRect(cardRect, kCardRadius, 1.0f, accentPurple.withAlpha(0.46f));
+        renderer.fillRoundedRect(cardRect, kCardRadius, accent.withAlpha(0.15f));
+        renderer.strokeRoundedRect(cardRect, kCardRadius, 1.0f, accent.withAlpha(0.46f));
     } else if (hovered) {
         renderer.fillRoundedRect(cardRect, kCardRadius, theme.getColor("hover").withAlpha(0.07f));
         renderer.strokeRoundedRect(cardRect, kCardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.20f));
@@ -649,12 +653,12 @@ void PatternBrowserPanel::renderPatternItem(AestraUI::NUIRenderer& renderer, con
     }
 
     renderer.fillRect(AestraUI::NUIRect(cardRect.x, cardRect.y, kAccentStripWidth, cardRect.height),
-                      accentPurple.withAlpha(selected ? 0.95f : 0.72f));
-    
+                      accent.withAlpha(selected ? 0.95f : 0.72f));
+
     // Type icon using NUIIcon
     float iconX = cardRect.x + 12.0f;
     float iconY = cardRect.y + (cardRect.height - 16.0f) / 2.0f;
-    
+
     // Ensure icons use theme colors (white/secondary) unless selected
     AestraUI::NUIColor iconColor = selected ? theme.getColor("primary") : theme.getColor("textSecondary");
     m_midiIcon->setColor(iconColor);
@@ -667,26 +671,26 @@ void PatternBrowserPanel::renderPatternItem(AestraUI::NUIRenderer& renderer, con
         m_audioIcon->setBounds(AestraUI::NUIRect(iconX, iconY, 16, 16));
         m_audioIcon->onRender(renderer);
     }
-    
-    // Name (12px standard font)
-    renderer.drawText(entry.name, AestraUI::NUIPoint(cardRect.x + 34.0f, cardRect.y + 8.5f), 
-                      12.5f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.90f));
+
+    // Name
+    renderer.drawText(entry.name, AestraUI::NUIPoint(cardRect.x + 34.0f, cardRect.y + 8.5f),
+                      themeProps.fontSizeXS, theme.getColor("textPrimary").withAlpha(0.90f));
 
     std::stringstream ss;
     ss << std::fixed << std::setprecision(1) << entry.lengthBeats << "b";
     renderer.drawText(ss.str(),
                       AestraUI::NUIPoint(cardRect.right() - 56.0f, cardRect.y + 8.5f),
-                      10.0f,
-                      AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.50f));
+                      themeProps.fontSizeXS,
+                      theme.getColor("textSecondary").withAlpha(0.50f));
 
     renderer.fillCircle(AestraUI::NUIPoint(cardRect.right() - 12.0f, cardRect.center().y),
                         2.0f,
-                        accentPurple.withAlpha(entry.isPlacedOnTimeline ? 1.0f : 0.20f));
+                        accent.withAlpha(entry.isPlacedOnTimeline ? 1.0f : 0.20f));
 
     if (hovered && m_playIcon) {
         const AestraUI::NUIRect playButton = computePlayButtonRect(cardRect);
-        renderer.fillRoundedRect(playButton, 8.0f, theme.getColor("backgroundTertiary").withAlpha(0.80f));
-        renderer.strokeRoundedRect(playButton, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.38f));
+        renderer.fillRoundedRect(playButton, themeProps.radiusM, theme.getColor("backgroundTertiary").withAlpha(0.80f));
+        renderer.strokeRoundedRect(playButton, themeProps.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.38f));
         m_playIcon->setBounds(AestraUI::NUIRect(playButton.x + 3.5f, playButton.y + 3.0f, 10.0f, 10.0f));
         m_playIcon->setColor(theme.getColor("textPrimary").withAlpha(0.92f));
         m_playIcon->onRender(renderer);
@@ -904,12 +908,13 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool selected, bool hovered) {
     auto bounds = getBounds();
     auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const auto& themeProps = theme.getCurrentTheme();
     const AestraUI::NUIRect cardRect = computeBinCardRect(bounds, y, m_itemHeight);
-    const AestraUI::NUIColor accentPurple(0.486f, 0.361f, 0.749f, 1.0f); // #7c5cbf
+    const auto accent = theme.getColor("accentPrimary");
 
     if (selected) {
-        renderer.fillRoundedRect(cardRect, kCardRadius, accentPurple.withAlpha(0.16f));
-        renderer.strokeRoundedRect(cardRect, kCardRadius, 1.0f, accentPurple.withAlpha(0.46f));
+        renderer.fillRoundedRect(cardRect, kCardRadius, accent.withAlpha(0.16f));
+        renderer.strokeRoundedRect(cardRect, kCardRadius, 1.0f, accent.withAlpha(0.46f));
     } else if (hovered) {
         renderer.fillRoundedRect(cardRect, kCardRadius, theme.getColor("hover").withAlpha(0.07f));
         renderer.strokeRoundedRect(cardRect, kCardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.20f));
@@ -919,7 +924,7 @@ void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const 
     }
 
     renderer.fillRect(AestraUI::NUIRect(cardRect.x, cardRect.y, kAccentStripWidth, cardRect.height),
-                      accentPurple.withAlpha(selected ? 0.95f : 0.72f));
+                      accent.withAlpha(selected ? 0.95f : 0.72f));
 
     // Icon
     float iconX = cardRect.x + 12.0f;
@@ -938,26 +943,26 @@ void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const 
 
     renderer.drawText(displayName,
                      AestraUI::NUIPoint(cardRect.x + 34.0f, cardRect.y + 8.5f),
-                     12.5f,
-                     AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.90f));
-    
+                     themeProps.fontSizeXS,
+                     theme.getColor("textPrimary").withAlpha(0.90f));
+
     // Duration
     std::stringstream ss;
     ss << std::fixed << std::setprecision(1) << entry.duration << "s";
     std::string durStr = ss.str();
     renderer.drawText(durStr,
                       AestraUI::NUIPoint(cardRect.right() - 56.0f, cardRect.y + 8.5f),
-                      10.0f,
-                      AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.50f));
+                      themeProps.fontSizeXS,
+                      theme.getColor("textSecondary").withAlpha(0.50f));
 
     renderer.fillCircle(AestraUI::NUIPoint(cardRect.right() - 12.0f, cardRect.center().y),
                         2.0f,
-                        accentPurple.withAlpha(entry.isPlacedOnTimeline ? 1.0f : 0.20f));
+                        accent.withAlpha(entry.isPlacedOnTimeline ? 1.0f : 0.20f));
 
     if (hovered && m_playIcon) {
         const AestraUI::NUIRect playButton = computePlayButtonRect(cardRect);
-        renderer.fillRoundedRect(playButton, 8.0f, theme.getColor("backgroundTertiary").withAlpha(0.80f));
-        renderer.strokeRoundedRect(playButton, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.38f));
+        renderer.fillRoundedRect(playButton, themeProps.radiusM, theme.getColor("backgroundTertiary").withAlpha(0.80f));
+        renderer.strokeRoundedRect(playButton, themeProps.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.38f));
         m_playIcon->setBounds(AestraUI::NUIRect(playButton.x + 3.5f, playButton.y + 3.0f, 10.0f, 10.0f));
         m_playIcon->setColor(theme.getColor("textPrimary").withAlpha(0.92f));
         m_playIcon->onRender(renderer);
