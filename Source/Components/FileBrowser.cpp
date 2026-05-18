@@ -835,7 +835,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         std::string upper = label;
         std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
         NUIRect labelRect(layout.navPane.x + themeProps.spacingM, y, layout.navPane.width - themeProps.spacingM * 2.0f, 22.0f);
-        renderer.drawText(upper, {labelRect.x, std::round(renderer.calculateTextY(labelRect, 10.0f))}, 10.0f, sectionColor);
+        renderer.drawText(upper, {labelRect.x, std::round(renderer.calculateTextY(labelRect, themeProps.fontSizeXS))}, themeProps.fontSizeXS, sectionColor);
         if (label == "Collections") {
             // Small up-chevron replacing "^" text glyph
             const float upCx = layout.navPane.right() - 14.0f;
