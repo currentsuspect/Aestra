@@ -326,11 +326,11 @@ void TrackUIComponent::updateUI() {
 
     const AestraUI::NUIColor inactiveBg = AestraUI::NUIColor::transparent();
     const AestraUI::NUIColor inactiveHover = AestraUI::NUIColor::transparent();
-    const AestraUI::NUIColor inactiveText = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.50f);
-    const AestraUI::NUIColor activeText = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.96f);
-    const AestraUI::NUIColor muteActive = AestraUI::NUIColor::fromHex(0xe8a838, 0.92f);
-    const AestraUI::NUIColor soloActive = AestraUI::NUIColor::fromHex(0x3dbb6e, 0.92f);
-    const AestraUI::NUIColor recordActive = AestraUI::NUIColor::fromHex(0xe85454, 0.92f);
+    const AestraUI::NUIColor inactiveText = themeManager.getColor("textSecondary");
+    const AestraUI::NUIColor activeText = themeManager.getColor("textPrimary").withAlpha(0.96f);
+    const AestraUI::NUIColor muteActive = themeManager.getColor("warning").withAlpha(0.92f);
+    const AestraUI::NUIColor soloActive = themeManager.getColor("success").withAlpha(0.92f);
+    const AestraUI::NUIColor recordActive = themeManager.getColor("error").withAlpha(0.92f);
 
     if (m_muteButton) {
         m_muteButton->setToggled(m_channel->isMuted());
@@ -991,7 +991,8 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
                     if (noteRect.x + noteRect.width > clipBounds.x + clipBounds.width) {
                         noteRect.width = (clipBounds.x + clipBounds.width) - noteRect.x;
                     }
-                    renderer.fillRoundedRect(noteRect, 2.0f, AestraUI::NUIColor(1.0f, 0.985f, 0.93f, isSelected ? 0.88f : 0.78f));
+                    const auto& themeProps = themeManager.getCurrentTheme();
+                    renderer.fillRoundedRect(noteRect, themeProps.radiusXS, AestraUI::NUIColor(1.0f, 0.985f, 0.93f, isSelected ? 0.88f : 0.78f));
                     if (noteRect.width > 6.0f && noteRect.height > 2.5f) {
                         renderer.fillRoundedRect(
                             {noteRect.x + 1.0f, noteRect.y + 1.0f, std::max(0.0f, noteRect.width - 2.0f), std::max(0.0f, noteRect.height - 2.0f)},
@@ -1224,8 +1225,9 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
                     AestraUI::NUIColor meterColor = themeManager.getColor("success").withAlpha(0.055f);
                     if (visualLevel > 0.8f) meterColor = themeManager.getColor("error").withAlpha(0.08f);
                     else if (visualLevel > 0.5f) meterColor = themeManager.getColor("warning").withAlpha(0.075f);
-                    
-                    renderer.fillRoundedRect(meterRect, 4.0f, meterColor);
+
+                    const auto& themeProps = themeManager.getCurrentTheme();
+                    renderer.fillRoundedRect(meterRect, themeProps.radiusS, meterColor);
                 }
             }
         }
@@ -1373,7 +1375,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
     if (m_channel) {
         const auto textIdle = themeManager.getColor("textPrimary").withAlpha(isHovered() ? 0.74f : 0.60f);
         const auto muteActive = themeManager.getColor("warning").withAlpha(0.92f);
-        const auto soloActive = themeManager.getColor("primary").withAlpha(0.92f);
+        const auto soloActive = themeManager.getColor("success").withAlpha(0.92f);
         const auto recordActive = themeManager.getColor("error").withAlpha(0.92f);
         const float fontSize = 11.0f;
 
