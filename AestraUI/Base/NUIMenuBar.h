@@ -41,12 +41,17 @@ public:
     void onRender(NUIRenderer& renderer) override {
         auto bounds = getBounds();
         auto& theme = NUIThemeManager::getInstance();
-        
-        NUIColor textColor = theme.getColor("textPrimary").withAlpha(0.84f);
-        NUIColor hoverColor = theme.getColor("accentPrimary").withAlpha(0.10f);
+        const auto& props = theme.getCurrentTheme();
 
-        float fontSize = 12.0f;
-        float paddingX = 11.0f;
+        const NUIColor textIdle = theme.getColor("textPrimary").withAlpha(0.78f);
+        const NUIColor textHover = theme.getColor("textPrimary").withAlpha(0.96f);
+        const NUIColor hoverBg = theme.getColor("accentPrimary").withAlpha(0.14f);
+        const NUIColor hoverStroke = theme.getColor("accentPrimary").withAlpha(0.22f);
+
+        const float fontSize = props.fontSizeXS;            // tokenized: 12.0
+        const float paddingX = props.spacingS + 3.0f;       // tokenized: 11.0 (8 + 3)
+        const float gap = 2.0f;
+        const float radius = props.radiusS + 1.0f;          // tokenized: 5.0 (4 + 1)
         float x = bounds.x;
 
         // Calculate and render each menu item
@@ -58,17 +63,17 @@ public:
             NUIRect itemRect(x, bounds.y + 2.0f, sz.width + paddingX * 2, bounds.height - 4.0f);
             itemRects_.push_back(itemRect);
 
-            // Draw hover background
-            if (hoveredIndex_ == static_cast<int>(i)) {
-                renderer.fillRoundedRect(itemRect, 5.0f, hoverColor);
+            const bool hovered = (hoveredIndex_ == static_cast<int>(i));
+            if (hovered) {
+                renderer.fillRoundedRect(itemRect, radius, hoverBg);
+                renderer.strokeRoundedRect(itemRect, radius, 1.0f, hoverStroke);
             }
 
-            // Draw text centered
-            renderer.drawTextCentered(item.label, itemRect, fontSize, textColor);
+            renderer.drawTextCentered(item.label, itemRect, fontSize, hovered ? textHover : textIdle);
 
-            x += itemRect.width + 2.0f; // 2px gap between items
+            x += itemRect.width + gap;
         }
-        
+
         NUIComponent::onRender(renderer);
     }
     
