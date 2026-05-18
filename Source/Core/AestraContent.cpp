@@ -1277,7 +1277,7 @@ void AestraContent::onResize(int width, int height) {
         m_overlayLayer->setBounds(contentBounds);
 
     // DYNAMIC LAYOUT: Timeline-first hierarchy
-    const float transportHeight = 56.0f;
+    const float transportHeight = layout.transportBarHeight;
     float sidebarTopY = transportHeight; // Keep primary content aligned under transport
 
     bool isAuditionMode = (m_viewFocus == ViewFocus::Audition);
