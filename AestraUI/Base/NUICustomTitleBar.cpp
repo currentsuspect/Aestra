@@ -126,22 +126,24 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
     
     // Get theme colors
     auto& themeManager = NUIThemeManager::getInstance();
-    NUIColor bgColor = NUIColor::fromHex(0x0d0d12);
-    
-    // Draw title bar background - flat and minimal.
+    const auto& props = themeManager.getCurrentTheme();
+
+    // Draw title bar background - flat and minimal, slightly raised over canvas.
+    const NUIColor bgColor = themeManager.getColor("backgroundSecondary");
     renderer.fillRect(bounds, bgColor);
     renderer.drawLine({bounds.x, bounds.bottom() - 1.0f},
                       {bounds.right(), bounds.bottom() - 1.0f},
                       1.0f,
                       themeManager.getColor("borderSubtle").withAlpha(0.42f));
-    
+
     // Draw window controls
     drawWindowControls(renderer);
 
     const auto text = themeManager.getColor("textPrimary").withAlpha(0.90f);
     const auto muted = themeManager.getColor("textSecondary").withAlpha(0.58f);
     const auto accent = themeManager.getColor("accentPrimary");
-    const float userFont = 12.0f;
+    const auto verifiedAccent = themeManager.getColor("success");
+    const float userFont = props.fontSizeXS; // 12.0
     const std::string status = membershipStatus_;
     const NUISize statusSize = renderer.measureText(status, userFont);
     constexpr float badgeW = 96.0f;
@@ -158,10 +160,25 @@ void NUICustomTitleBar::onRender(NUIRenderer& renderer) {
                       {statusX, sharedBaselineY},
                       userFont, muted);
 
-    const float verifiedAlpha = membershipVerified_ ? 0.40f : 0.24f;
-    renderer.fillRoundedRect(badge, 8.0f, accent.withAlpha(membershipVerified_ ? 0.075f : 0.035f));
-    renderer.strokeRoundedRect(badge, 8.0f, 1.0f, accent.withAlpha(verifiedAlpha));
-    renderer.drawTextCentered(membershipTier_, badge, 11.0f, text.withAlpha(0.84f));
+    const float badgeRadius = props.radiusM; // 8.0
+    const NUIColor badgeFill = membershipVerified_
+        ? accent.withAlpha(0.10f)
+        : accent.withAlpha(0.04f);
+    const NUIColor badgeStroke = membershipVerified_
+        ? accent.withAlpha(0.50f)
+        : accent.withAlpha(0.24f);
+    renderer.fillRoundedRect(badge, badgeRadius, badgeFill);
+    renderer.strokeRoundedRect(badge, badgeRadius, 1.0f, badgeStroke);
+
+    if (membershipVerified_) {
+        // Subtle status dot on the leading edge of the badge to reinforce verified state.
+        const float dotRadius = 3.0f;
+        const NUIPoint dotCenter(badge.x + 10.0f, badge.y + badge.height * 0.5f);
+        renderer.fillCircle(dotCenter, dotRadius, verifiedAccent.withAlpha(0.92f));
+        renderer.fillCircle(dotCenter, dotRadius * 0.45f, NUIColor::white().withAlpha(0.55f));
+    }
+
+    renderer.drawTextCentered(membershipTier_, badge, props.fontSizeS - 2.0f, text.withAlpha(membershipVerified_ ? 0.92f : 0.78f));
     
     // Render custom children (NUIMenuBar, view toggle, etc.)
     renderChildren(renderer);
