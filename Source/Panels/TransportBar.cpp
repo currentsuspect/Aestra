@@ -35,8 +35,7 @@ TransportBar::TransportBar()
     , m_position(0.0)
 {
     createIcons();
-    createIcons();
-    
+
     // Create modular info container FIRST so it's behind the buttons (Z-order)
     // This fixed the issue where InfoContainer blocked clicks to Transport buttons
     m_infoContainer = std::make_shared<TransportInfoContainer>();
@@ -479,7 +478,7 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         // Setup Colors
         AestraUI::NUIColor currentBg = glassBg;
         AestraUI::NUIColor currentBorder = glassBorder;
-        AestraUI::NUIColor iconColor = iconGrey.withAlpha(0.35f);
+        AestraUI::NUIColor iconColor = iconGrey.withAlpha(0.55f);
         
         // LOGIC: Glassy Look (Reverted per user request)
         // Active = Purple Tint Glass + Purple Icon
@@ -754,13 +753,14 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     const float groupY = islandRect.y + topInset;
     const auto groupBg = themeManager.getColor("surfaceTertiary").withAlpha(0.56f);
     const auto groupBorder = themeManager.getColor("border").withAlpha(0.52f);
+    const float groupRadius = themeManager.getCurrentTheme().radiusS + 2.0f; // tokenized: 6.0
     const auto drawGroup = [&](float x, float w) {
         if (w <= 0.0f) {
             return;
         }
         AestraUI::NUIRect groupRect(std::round(x), std::round(groupY), std::round(w), groupH);
-        renderer.fillRoundedRect(groupRect, 6.0f, groupBg);
-        renderer.strokeRoundedRect(groupRect, 6.0f, 1.0f, groupBorder);
+        renderer.fillRoundedRect(groupRect, groupRadius, groupBg);
+        renderer.strokeRoundedRect(groupRect, groupRadius, 1.0f, groupBorder);
     };
 
     const float g1X = leftEdge - 6.0f;
