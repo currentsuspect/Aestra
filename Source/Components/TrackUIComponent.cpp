@@ -973,16 +973,17 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
                 );
             }
             
+            const auto& themeProps = themeManager.getCurrentTheme();
             for (const auto& n : midiPayload.notes) {
                 float noteStartX = fullClipBounds.x + (n.startBeat / pattern->lengthBeats) * fullClipBounds.width;
                 float noteWidth = (n.durationBeats / pattern->lengthBeats) * fullClipBounds.width;
-                
+
                 float normalizedPitch = (float)(n.pitch - minPitch) / pitchRange;
                 float noteY = noteAreaY + noteAreaHeight * (1.0f - normalizedPitch) - laneHeight;
                 float noteHeight = std::max(2.0f, laneHeight - 1.5f);
-                
+
                 AestraUI::NUIRect noteRect(noteStartX, noteY, std::max(1.0f, noteWidth), std::max(1.0f, noteHeight));
-                
+
                 if (noteRect.x + noteRect.width > clipBounds.x && noteRect.x < clipBounds.x + clipBounds.width) {
                     if (noteRect.x < clipBounds.x) {
                         noteRect.width -= (clipBounds.x - noteRect.x);
@@ -991,7 +992,6 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
                     if (noteRect.x + noteRect.width > clipBounds.x + clipBounds.width) {
                         noteRect.width = (clipBounds.x + clipBounds.width) - noteRect.x;
                     }
-                    const auto& themeProps = themeManager.getCurrentTheme();
                     renderer.fillRoundedRect(noteRect, themeProps.radiusXS, AestraUI::NUIColor(1.0f, 0.985f, 0.93f, isSelected ? 0.88f : 0.78f));
                     if (noteRect.width > 6.0f && noteRect.height > 2.5f) {
                         renderer.fillRoundedRect(

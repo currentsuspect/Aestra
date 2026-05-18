@@ -2108,7 +2108,7 @@ void AestraContent::toggleArsenalPanel() {
 AestraUI::NUIRect AestraContent::computeSafeRect() const {
     AestraUI::NUIRect bounds = getBounds();
 
-    float transportHeight = 60.0f;
+    float transportHeight = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().transportBarHeight;
     if (m_transportBar)
         transportHeight = m_transportBar->getHeight();
 
@@ -2160,7 +2160,7 @@ AestraUI::NUIRect AestraContent::computeAllowedRectForPanels() const {
 AestraUI::NUIRect AestraContent::computeMaximizedRect() const {
     AestraUI::NUIRect bounds = getBounds();
 
-    float transportHeight = 60.0f;
+    float transportHeight = AestraUI::NUIThemeManager::getInstance().getLayoutDimensions().transportBarHeight;
     if (m_transportBar)
         transportHeight = m_transportBar->getHeight();
 

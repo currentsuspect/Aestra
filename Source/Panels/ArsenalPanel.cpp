@@ -917,7 +917,7 @@ void ArsenalPanel::drawUnitTypePicker(NUIRenderer& renderer) {
                                    cardWidth,
                                    cardHeight);
 
-    const float pickerRadius = themeProps.radiusL - 2.0f;
+    const float pickerRadius = std::max(themeProps.radiusL - 2.0f, 0.0f);
     renderer.fillRoundedRect(m_unitTypePickerRect, pickerRadius, theme.getColor("backgroundSecondary").withAlpha(0.98f));
     renderer.strokeRoundedRect(m_unitTypePickerRect, pickerRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.9f));
 
