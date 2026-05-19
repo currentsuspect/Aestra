@@ -1454,7 +1454,7 @@ AudioEngine::BiquadCoeff AudioEngine::computeKWeightPreFilter(double sampleRate)
     const double gainDb = 3.999843853973347;
 
     // RBJ high-shelf form using bilinear transform of the BS.1770 prototype.
-    const double K = std::tan(M_PI * f0 / fs);
+    const double K = std::tan(PI_D * f0 / fs);
     const double K2 = K * K;
     const double Vh = std::pow(10.0, gainDb / 20.0);
     const double Vb = std::sqrt(Vh);
@@ -1494,7 +1494,7 @@ AudioEngine::BiquadCoeff AudioEngine::computeKWeightRLB(double sampleRate) {
     double Q = 0.5;
 
     // Bilinear transform pre-warping
-    double K = std::tan(M_PI * f0 / fs);
+    double K = std::tan(PI_D * f0 / fs);
     double K2 = K * K;
     double norm = 1.0 + K / Q + K2;
 

@@ -26,6 +26,14 @@ AudioExporter::AudioExporter(AudioEngine& engine, TrackManager& trackManager)
 AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManager& trackManager,
                                                   double startBeat, double endBeat,
                                                   const std::string& outputPath, int32_t trackId) {
+    if (trackId >= 0) {
+        AudioExporter::Result unsupported;
+        unsupported.outputPath = outputPath;
+        unsupported.errorMessage =
+            "Isolated-track bounce is not yet supported by AudioExporter::bounceToWav";
+        return unsupported;
+    }
+
     AudioExporter exporter(engine, trackManager);
     Config config;
     config.outputPath = outputPath;
@@ -295,6 +303,13 @@ double AudioExporter::computeRenderDurationBeats(const Config& config, double& o
 
     switch (config.scope) {
         case RenderScope::FullSong:
+            if (config.endBeat > config.startBeat) {
+                outStartBeat = std::max(0.0, config.startBeat);
+                const double boundedEndBeat =
+                    (totalBeats > 0.0) ? std::min(config.endBeat, totalBeats) : config.endBeat;
+                const double duration = boundedEndBeat - outStartBeat;
+                return duration > 0.0 ? duration : 0.0;
+            }
             outStartBeat = 0.0;
             return totalBeats > 0.0 ? totalBeats : 0.0;
 
