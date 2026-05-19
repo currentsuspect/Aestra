@@ -1444,22 +1444,38 @@ void AudioEngine::captureWaveformHistory(const float* interleavedOutput, uint32_
 // Sample-rate-aware LUFS K-weighting coefficients via bilinear transform
 // ITU-R BS.1770-4 specification
 AudioEngine::BiquadCoeff AudioEngine::computeKWeightPreFilter(double sampleRate) {
-    // High-shelf filter: 4.0 kHz, Q=1.0, gain=4.0 dB
-    double fs = sampleRate;
-    double f0 = 4000.0;
-    double Q = 1.0;
-    double gain = 4.0;
+    // ITU-R BS.1770 K-weighting pre-filter analog prototype
+    // Reference design parameters chosen so the 48 kHz digital coefficients match:
+    // b0=1.53512485958697, b1=-2.69169618940638, b2=1.19839281085285,
+    // a1=-1.69065929318241, a2=0.73248077421585
+    const double fs = sampleRate;
+    const double f0 = 1681.974450955533;
+    const double Q = 0.7071752369554196;
+    const double gainDb = 3.999843853973347;
 
-    // Bilinear transform pre-warping
-    double K = std::tan(M_PI * f0 / fs);
-    double K2 = K * K;
-    double norm = 1.0 + K / Q + K2;
+    // RBJ high-shelf form using bilinear transform of the BS.1770 prototype.
+    const double K = std::tan(M_PI * f0 / fs);
+    const double K2 = K * K;
+    const double Vh = std::pow(10.0, gainDb / 20.0);
+    const double Vb = std::sqrt(Vh);
+    const double norm = 1.0 + K / Q + K2;
 
-    double b0 = (gain * K2 + std::sqrt(2.0 * gain) * K + 1.0) / norm;
-    double b1 = 2.0 * (K2 - 1.0) / norm;
-    double b2 = (gain * K2 - std::sqrt(2.0 * gain) * K + 1.0) / norm;
-    double a1 = 2.0 * (K2 - 1.0) / norm;
-    double a2 = (1.0 - K / Q + K2) / norm;
+    const double b0 = (Vh + Vb * K / Q + K2) / norm;
+    const double b1 = 2.0 * (K2 - Vh) / norm;
+    const double b2 = (Vh - Vb * K / Q + K2) / norm;
+    const double a1 = 2.0 * (K2 - 1.0) / norm;
+    const double a2 = (1.0 - K / Q + K2) / norm;
+
+#ifndef NDEBUG
+    if (std::abs(fs - 48000.0) < 1e-9) {
+        const double tolerance = 1e-12;
+        assert(std::abs(b0 - 1.53512485958697) < tolerance);
+        assert(std::abs(b1 - (-2.69169618940638)) < tolerance);
+        assert(std::abs(b2 - 1.19839281085285) < tolerance);
+        assert(std::abs(a1 - (-1.69065929318241)) < tolerance);
+        assert(std::abs(a2 - 0.73248077421585) < tolerance);
+    }
+#endif
 
     return {b0, b1, b2, a1, a2};
 }
