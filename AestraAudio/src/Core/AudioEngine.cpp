@@ -42,14 +42,19 @@
     _mm_setcsr(oldMXCSR | 0x8040); // Set DAZ and FTZ flags
 
 #define RESTORE_DENORMALS _mm_setcsr(oldMXCSR);
-#elif defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
-// ARM64: set FPCR.FZ (bit 24) to flush denormals to zero
+#elif defined(__aarch64__) && !defined(_MSC_VER)
+// ARM64 on GCC/Clang-style compilers: set FPCR.FZ (bit 24) to flush denormals to zero
 #define DISABLE_DENORMALS           \
     uint64_t oldFPCR;               \
     __asm__ volatile("mrs %0, fpcr" : "=r"(oldFPCR)); \
     __asm__ volatile("msr fpcr, %0" :: "r"(oldFPCR | (1ULL << 24)));
 
 #define RESTORE_DENORMALS __asm__ volatile("msr fpcr, %0" :: "r"(oldFPCR));
+#elif defined(_M_ARM64) || defined(_M_ARM64EC)
+// MSVC ARM64/ARM64EC does not support GCC/Clang-style inline asm.
+// TODO: replace this no-op path with a supported FPCR intrinsic/system-register implementation.
+#define DISABLE_DENORMALS
+#define RESTORE_DENORMALS
 #else
 // Other architectures: no denormal control
 #define DISABLE_DENORMALS
