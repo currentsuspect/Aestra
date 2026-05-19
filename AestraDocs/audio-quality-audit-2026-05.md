@@ -637,10 +637,10 @@ project format, or plugin-ABI changes. All are RT-safe.
 | 1 | TPDF dither at export PCM_16/PCM_24 with uncorrelated L/R and symmetric range | P1 | `AudioExporter.cpp` | DONE |
 | 2 | Replace `SmoothedParamD` exp+snap with linear-ramp-per-block for track, master, and send gains | P1 | `AudioGraphState.h`, `AudioRenderer.cpp`, `AudioEngine.cpp` | DONE |
 | 3 | Fix/merge offline render authorities; make export-vs-bounce parity testable | P1 | `AudioExporter.cpp`, `AudioEngine.cpp`, `AudioRenderer.cpp` | DONE (master bounce only; isolated track bounce TODO) |
-| 4 | Fix `bounceRangeToWav` null `ctx.graph` and add clip bounce regression | P1 | `AudioEngine.cpp`, `AudioRenderer.cpp` | TODO |
-| 5 | Sample-rate-aware K-weighted LUFS coefficients via bilinear transform | P1 | `AudioEngine.h`, `AudioEngine.cpp` | TODO |
+| 4 | Fix `bounceRangeToWav` null `ctx.graph` and add clip bounce regression | P1 | `AudioEngine.cpp`, `AudioRenderer.cpp` | DONE |
+| 5 | Sample-rate-aware K-weighted LUFS coefficients via bilinear transform | P1 | `AudioEngine.h`, `AudioEngine.cpp` | IN PROGRESS |
 | 6 | Remove inline master TPDF from float output path | P2 | `AudioEngine.cpp` | TODO |
-| 7 | ARM64 denormal protection (`FPCR.FZ`) | P1 (ARM only) | `AudioRT.h`, `AudioEngine.cpp` | TODO |
+| 7 | ARM64 denormal protection (`FPCR.FZ`) | P1 (ARM only) | `AudioRT.h`, `AudioEngine.cpp` | DONE |
 | 8 | Fix `IntelligentDithering::NoiseShaper` IIR (separate input vs output state) and rename its bit-depth enum | P2 | `IntelligentDithering.h` | TODO |
 | 9 | Symmetric PCM_24 range (`* 8388608`, clamp `[-8388608, 8388607]`) | P2 | `AudioExporter.cpp` (covered by slice 1) | DONE |
 | 10 | Skip pre-fader sends when fail-safe disables `preFaderBuffer` | P2 | `AudioEngine.cpp` | DONE |

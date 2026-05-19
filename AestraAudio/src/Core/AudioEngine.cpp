@@ -1037,12 +1037,12 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
         // --- LUFS Filtering (Per-Sample) ---
         // Stage 1 (High Shelf)
-        double f1L = m_loudnessState.f1L.process(L, kKWeightPreFilter);
-        double f1R = m_loudnessState.f1R.process(R, kKWeightPreFilter);
+        double f1L = m_loudnessState.f1L.process(L, m_dynamicKWeightPreFilter);
+        double f1R = m_loudnessState.f1R.process(R, m_dynamicKWeightPreFilter);
 
         // Stage 2 (RLB High Pass)
-        double f2L = m_loudnessState.f2L.process(f1L, kKWeightRLB);
-        double f2R = m_loudnessState.f2R.process(f1R, kKWeightRLB);
+        double f2L = m_loudnessState.f2L.process(f1L, m_dynamicKWeightRLB);
+        double f2R = m_loudnessState.f2R.process(f1R, m_dynamicKWeightRLB);
 
         // Accumulate Energy
         m_loudnessState.blockEnergySum += (f2L * f2L) + (f2R * f2R);
@@ -1459,6 +1459,50 @@ void AudioEngine::captureWaveformHistory(const float* interleavedOutput, uint32_
 }
 
 // --- Constants ---
+// Sample-rate-aware LUFS K-weighting coefficients via bilinear transform
+// ITU-R BS.1770-4 specification
+AudioEngine::BiquadCoeff AudioEngine::computeKWeightPreFilter(double sampleRate) {
+    // High-shelf filter: 4.0 kHz, Q=1.0, gain=4.0 dB
+    double fs = sampleRate;
+    double f0 = 4000.0;
+    double Q = 1.0;
+    double gain = 4.0;
+
+    // Bilinear transform pre-warping
+    double K = std::tan(M_PI * f0 / fs);
+    double K2 = K * K;
+    double norm = 1.0 + K / Q + K2;
+
+    double b0 = (gain * K2 + std::sqrt(2.0 * gain) * K + 1.0) / norm;
+    double b1 = 2.0 * (K2 - 1.0) / norm;
+    double b2 = (gain * K2 - std::sqrt(2.0 * gain) * K + 1.0) / norm;
+    double a1 = 2.0 * (K2 - 1.0) / norm;
+    double a2 = (1.0 - K / Q + K2) / norm;
+
+    return {b0, b1, b2, a1, a2};
+}
+
+AudioEngine::BiquadCoeff AudioEngine::computeKWeightRLB(double sampleRate) {
+    // High-pass filter: 150 Hz, Q=0.7071
+    double fs = sampleRate;
+    double f0 = 150.0;
+    double Q = 0.7071;
+
+    // Bilinear transform pre-warping
+    double K = std::tan(M_PI * f0 / fs);
+    double K2 = K * K;
+    double norm = 1.0 + K / Q + K2;
+
+    double b0 = 1.0 / norm;
+    double b1 = -2.0 / norm;
+    double b2 = 1.0 / norm;
+    double a1 = 2.0 * (K2 - 1.0) / norm;
+    double a2 = (1.0 - K / Q + K2) / norm;
+
+    return {b0, b1, b2, a1, a2};
+}
+
+// Fallback to 48 kHz coefficients for compatibility
 const AudioEngine::BiquadCoeff AudioEngine::kKWeightPreFilter = {
     1.53512485958697, -2.69169618940638, 1.19839281085285, // b0, b1, b2
     -1.69065929318241, 0.73248077421585                    // a1, a2
@@ -1491,6 +1535,10 @@ AudioEngine::AudioEngine() {
 
     // Initialize telemetry
     m_telemetry.cycleHz.store(0);
+
+    // Initialize sample-rate-aware LUFS coefficients at default 48 kHz
+    m_dynamicKWeightPreFilter = computeKWeightPreFilter(48000.0);
+    m_dynamicKWeightRLB = computeKWeightRLB(48000.0);
 
     m_loudnessState.integratedLufs.store(-144.0f); // Force silence init
     m_loudnessState.momentaryLufs.store(-144.0f);
