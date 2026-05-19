@@ -39,8 +39,9 @@ struct SmoothedParamD {
 
     void beginRamp(uint32_t samples) {
         // Sanitize both current and target before computing step
-        if (!std::isfinite(current)) current = 0.0;
-        if (!std::isfinite(target)) target = 0.0;
+        // Mirror setTarget behavior: fall back to the other finite value to avoid clicks
+        if (!std::isfinite(current)) current = std::isfinite(target) ? target : 0.0;
+        if (!std::isfinite(target)) target = current;
 
         if (samples == 0 || current == target) {
             current = target;
