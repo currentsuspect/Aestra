@@ -1,3 +1,4 @@
+// © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
 #include <algorithm>
@@ -41,8 +42,8 @@ inline double sanitizeAndClamp(float sample) noexcept {
 
 inline int16_t quantizePcm16(float sample, double dither) noexcept {
     const double scaled = (sanitizeAndClamp(sample) + dither) * kPcm16Scale;
-    const long value = std::lrint(scaled);
-    const long clamped = std::clamp(value, -32768L, 32767L);
+    const int64_t value = std::lrint(scaled);
+    const int64_t clamped = std::clamp(value, static_cast<int64_t>(-32768), static_cast<int64_t>(32767));
     return static_cast<int16_t>(clamped);
 }
 
@@ -52,8 +53,8 @@ inline int16_t quantizePcm16Dithered(float sample, TpdfDither& dither) noexcept 
 
 inline int32_t quantizePcm24(float sample, double dither) noexcept {
     const double scaled = (sanitizeAndClamp(sample) + dither) * kPcm24Scale;
-    const long value = std::lrint(scaled);
-    const long clamped = std::clamp(value, -8388608L, 8388607L);
+    const int64_t value = std::lrint(scaled);
+    const int64_t clamped = std::clamp(value, static_cast<int64_t>(-8388608), static_cast<int64_t>(8388607));
     return static_cast<int32_t>(clamped);
 }
 
