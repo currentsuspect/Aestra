@@ -116,9 +116,9 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     Log::info("OpenGL context created");
 
     // Initialize UI renderer (this will initialize GLAD internally)
+    std::unique_ptr<NUIRendererGL> glRenderer;
     try {
-        // Use raw pointer for initialization to avoid unique_ptr casting issues
-        auto* glRenderer = new NUIRendererGL();
+        glRenderer = std::make_unique<NUIRendererGL>();
 
         // CRITICAL: Get the ACTUAL client size after window creation
         int actualWidth = 0, actualHeight = 0;
@@ -126,7 +126,6 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         Log::info("Renderer init with actual client size: " + std::to_string(actualWidth) + "x" + std::to_string(actualHeight));
 
         if (!glRenderer->initialize(actualWidth, actualHeight)) {
-            delete glRenderer; // Clean up on failure
             Log::error("Failed to initialize UI renderer");
             return false;
         }
@@ -140,8 +139,8 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         glRenderer->setCachingEnabled(true);
 #endif
 
-        // Transfer ownership to unique_ptr
-        m_renderer.reset(glRenderer);
+        // Transfer ownership to member
+        m_renderer = std::move(glRenderer);
 
         Log::info("UI renderer initialized");
     }
