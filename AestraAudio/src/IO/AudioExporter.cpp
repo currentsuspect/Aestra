@@ -47,7 +47,7 @@ AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManag
     config.outputPath = outputPath;
     config.startBeat = startBeat;
     config.endBeat = endBeat;
-    config.scope = RenderScope::FullSong;
+    config.scope = RenderScope::Selection;
     config.sampleRate = engine.getSampleRate();
     config.bitDepth = BitDepth::Float_32;
     config.numChannels = 2;

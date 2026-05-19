@@ -1451,18 +1451,18 @@ AudioEngine::BiquadCoeff AudioEngine::computeKWeightPreFilter(double sampleRate)
     const double fs = sampleRate;
     const double f0 = 1681.974450955533;
     const double Q = 0.7071752369554196;
-    const double gainDb = 3.999843853973347;
+    const double gainDb = 4.0; // 4.0 dB per BS.1770
 
     // RBJ high-shelf form using bilinear transform of the BS.1770 prototype.
+    // A = 10^(gain/40) per the standard (not linear gain)
     const double K = std::tan(PI_D * f0 / fs);
     const double K2 = K * K;
-    const double Vh = std::pow(10.0, gainDb / 20.0);
-    const double Vb = std::sqrt(Vh);
+    const double A = std::pow(10.0, gainDb / 40.0);
     const double norm = 1.0 + K / Q + K2;
 
-    const double b0 = (Vh + Vb * K / Q + K2) / norm;
-    const double b1 = 2.0 * (K2 - Vh) / norm;
-    const double b2 = (Vh - Vb * K / Q + K2) / norm;
+    const double b0 = (A + K / Q + K2) / norm;
+    const double b1 = 2.0 * (K2 - A) / norm;
+    const double b2 = (A - K / Q + K2) / norm;
     const double a1 = 2.0 * (K2 - 1.0) / norm;
     const double a2 = (1.0 - K / Q + K2) / norm;
 

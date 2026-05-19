@@ -33,7 +33,8 @@ struct SmoothedParamD {
 
     void setTarget(double t) {
         // Sanitize target to prevent NaN/Inf propagation
-        target = std::isfinite(t) ? t : 0.0;
+        // Fall back to current value to avoid audible clicks
+        target = std::isfinite(t) ? t : current;
     }
 
     void beginRamp(uint32_t samples) {
