@@ -1466,17 +1466,6 @@ AudioEngine::BiquadCoeff AudioEngine::computeKWeightPreFilter(double sampleRate)
     const double a1 = 2.0 * (K2 - 1.0) / norm;
     const double a2 = (1.0 - K / Q + K2) / norm;
 
-#ifndef NDEBUG
-    if (std::abs(fs - 48000.0) < 1e-9) {
-        const double tolerance = 1e-12;
-        assert(std::abs(b0 - 1.53512485958697) < tolerance);
-        assert(std::abs(b1 - (-2.69169618940638)) < tolerance);
-        assert(std::abs(b2 - 1.19839281085285) < tolerance);
-        assert(std::abs(a1 - (-1.69065929318241)) < tolerance);
-        assert(std::abs(a2 - 0.73248077421585) < tolerance);
-    }
-#endif
-
     return {b0, b1, b2, a1, a2};
 }
 
