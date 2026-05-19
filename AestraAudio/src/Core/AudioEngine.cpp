@@ -6,6 +6,7 @@
 #include "AuditionEngine.h"
 #include "EffectChain.h" // [NEW]
 #include "GarbageCollector.h"
+#include "IO/AudioExporter.h"
 #include "PathUtils.h" // [NEW] For robust path conversion
 #include "PatternPlaybackEngine.h"
 #include "Playback/PreviewEngine.h"
@@ -1382,10 +1383,6 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         m_waveformWriteIndex.store(0, std::memory_order_relaxed);
     }
 
-    // Initialize smoothing coefficients based on requested buffer size
-    const uint32_t coeffFrames = std::max<uint32_t>(1, maxFrames);
-    m_smoothedMasterGain.coeff = 1.0 / static_cast<double>(coeffFrames);
-
     // Critical: Buffers may have moved after resize. Re-swizzle the pointers.
     if (needAlloc) {
         compileGraph();
@@ -2025,6 +2022,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                           static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
             state.sendGainL[sendIndex].setTarget(targetL);
             state.sendGainR[sendIndex].setTarget(targetR);
+            state.sendGainL[sendIndex].beginRamp(numFrames);
+            state.sendGainR[sendIndex].beginRamp(numFrames);
         }
 
         if (!processActive) {
@@ -2426,6 +2425,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         fastPanGainsD(panTarget, volTarget, tL, tR);
         state.gainL.setTarget(tL);
         state.gainR.setTarget(tR);
+        state.gainL.beginRamp(numFrames);
+        state.gainR.beginRamp(numFrames);
 
         const double* trackData = buffer.data();
         double peakTrackL = 0.0;
@@ -2518,6 +2519,9 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
                 const auto& send = track.sends[sendIndex];
                 if (send.mute) {
+                    continue;
+                }
+                if (!send.postFader && !hasPreFaderSend) {
                     continue;
                 }
 
@@ -2644,13 +2648,6 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
         }
 
-        // Snap smoothed params to target for next block
-        state.gainL.snap();
-        state.gainR.snap();
-        for (size_t sendIndex = 0; sendIndex < state.sendGainL.size(); ++sendIndex) {
-            state.sendGainL[sendIndex].snap();
-            state.sendGainR[sendIndex].snap();
-        }
     }
 
     if (unitSnapshot) {
@@ -3016,6 +3013,24 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         return false;
     m_lastBounceWroteAnyFramesForTests.store(false, std::memory_order_relaxed);
 
+    // Delegate to AudioExporter for master bounce (trackId == -1) to use authoritative offline path
+    // with master-stage processing and dithering. Isolated track bounce (trackId >= 0) uses the
+    // existing renderBlock path for now until AudioExporter gains isolated track support.
+    if (trackId < 0) {
+        auto trackMgr = m_trackManager.lock();
+        if (!trackMgr) {
+            Aestra::Log::error("[AudioEngine] bounceRangeToWav: trackManager not available");
+            return false;
+        }
+        auto result = Audio::AudioExporter::bounceToWav(*this, *trackMgr, startBeat, endBeat, outputPath, -1);
+        if (!result.success) {
+            Aestra::Log::error("[AudioEngine] bounceRangeToWav failed: " + result.errorMessage);
+            return false;
+        }
+        return true;
+    }
+
+    // Isolated track bounce: use existing renderBlock path (TODO: consolidate when AudioExporter adds isolated track support)
     // 1. Calculate length
     double sampleRate = (double)m_sampleRate.load(std::memory_order_relaxed);
     float bpm = m_metronomeEngine.getBPM();
@@ -3089,12 +3104,9 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     // trackId parameter is the persistent track lane index.
     // isolatedTrackIndex is used to compare against unit.routeId (which is also the lane index).
     // Use trackId directly when >= 0 for the comparison.
-    int32_t isolatedTrackIndex = -1;
-    if (trackId >= 0) {
-        isolatedTrackIndex = trackId;
-    }
+    int32_t isolatedTrackIndex = trackId;
 
-    Aestra::Log::info("[AudioEngine] Starting bounce: " + std::to_string(totalFrames) + " frames.");
+    Aestra::Log::info("[AudioEngine] Starting isolated track bounce: " + std::to_string(totalFrames) + " frames.");
 
     while (framesRemaining > 0) {
         uint32_t framesThisBlock = (uint32_t)std::min((uint64_t)blockSize, framesRemaining);
@@ -3163,7 +3175,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
 
     // Restore playback state
     if (wasPlaying)
-        setTransportPlaying(true);
+        m_transportPlaying.store(true, std::memory_order_relaxed);
 
     if (writeError) {
         // Clean up partial file on write error
@@ -3183,7 +3195,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         return false;
     }
 
-    Aestra::Log::info("[AudioEngine] Bounce complete.");
+    Aestra::Log::info("[AudioEngine] Isolated track bounce complete: " + outputPath);
     return true;
 }
 

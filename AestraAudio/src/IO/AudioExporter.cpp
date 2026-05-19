@@ -23,6 +23,22 @@ AudioExporter::AudioExporter(AudioEngine& engine, TrackManager& trackManager)
 {
 }
 
+AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManager& trackManager,
+                                                  double startBeat, double endBeat,
+                                                  const std::string& outputPath, int32_t trackId) {
+    AudioExporter exporter(engine, trackManager);
+    Config config;
+    config.outputPath = outputPath;
+    config.startBeat = startBeat;
+    config.endBeat = endBeat;
+    config.scope = RenderScope::FullSong;
+    config.sampleRate = engine.getSampleRate();
+    config.bitDepth = BitDepth::Float_32;
+    config.numChannels = 2;
+    config.tailSeconds = 0.0;
+    return exporter.render(config);
+}
+
 AudioExporter::Result AudioExporter::render(const Config& config) {
     Result result;
     result.outputPath = config.outputPath;
@@ -125,6 +141,9 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // Pre-allocate render buffers
     m_renderBufferD.resize(static_cast<size_t>(RENDER_BLOCK_FRAMES) * config.numChannels);
     m_renderBufferF.resize(static_cast<size_t>(RENDER_BLOCK_FRAMES) * config.numChannels);
+    m_exportDither.setSeed(static_cast<uint32_t>(startSample) ^
+                           (static_cast<uint32_t>(config.sampleRate) * 0x9E3779B9u) ^
+                           static_cast<uint32_t>(config.bitDepth));
 
     // Save original engine state
     uint32_t originalSampleRate = m_engine.getSampleRate();
@@ -362,19 +381,15 @@ bool AudioExporter::writeSamples(std::ofstream& file, const float* buffer,
     } else if constexpr (std::is_same_v<SampleType, int16_t>) {
         std::vector<int16_t> converted(frames * channels);
         for (size_t i = 0; i < frames * channels; ++i) {
-            float sample = std::clamp(buffer[i], -1.0f, 1.0f);
-            converted[i] = static_cast<int16_t>(sample * 32767.0f);
+            converted[i] = ExportQuantization::quantizePcm16Dithered(buffer[i], m_exportDither);
         }
         file.write(reinterpret_cast<const char*>(converted.data()),
                    converted.size() * sizeof(int16_t));
     } else if constexpr (std::is_same_v<SampleType, int32_t>) {
         std::vector<uint8_t> converted(frames * channels * 3);
         for (size_t i = 0; i < frames * channels; ++i) {
-            float sample = std::clamp(buffer[i], -1.0f, 1.0f);
-            const int32_t packed24 = static_cast<int32_t>(sample * 8388607.0f);
-            converted[i * 3 + 0] = static_cast<uint8_t>(packed24 & 0xFF);
-            converted[i * 3 + 1] = static_cast<uint8_t>((packed24 >> 8) & 0xFF);
-            converted[i * 3 + 2] = static_cast<uint8_t>((packed24 >> 16) & 0xFF);
+            const int32_t packed24 = ExportQuantization::quantizePcm24Dithered(buffer[i], m_exportDither);
+            ExportQuantization::storePcm24LittleEndian(packed24, converted.data() + i * 3);
         }
         file.write(reinterpret_cast<const char*>(converted.data()), converted.size());
     }

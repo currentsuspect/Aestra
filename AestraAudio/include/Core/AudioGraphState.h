@@ -15,16 +15,37 @@ namespace Audio {
 struct SmoothedParamD {
     double current{1.0};
     double target{1.0};
-    double coeff{0.001}; // Per-sample coefficient
+    double step{0.0};
+    uint32_t samplesRemaining{0};
 
     inline double next() {
-        current += coeff * (target - current);
+        if (samplesRemaining > 0) {
+            current += step;
+            --samplesRemaining;
+            if (samplesRemaining == 0) {
+                current = target;
+                step = 0.0;
+            }
+        }
         return current;
     }
 
     void setTarget(double t) { target = t; }
-    // Snap to target immediately
-    void snap() { current = target; }
+    void beginRamp(uint32_t samples) {
+        if (samples == 0 || current == target) {
+            current = target;
+            step = 0.0;
+            samplesRemaining = 0;
+            return;
+        }
+        samplesRemaining = samples;
+        step = (target - current) / static_cast<double>(samples);
+    }
+    void snap() {
+        current = target;
+        step = 0.0;
+        samplesRemaining = 0;
+    }
 };
 
 /**
