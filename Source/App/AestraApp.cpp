@@ -752,17 +752,16 @@ void AestraApp::setupCallbacks() {
         startExport();
     });
 
-    m_windowManager->setTransportCallback([this](AestraWindowManager::TransportAction action) {
+    m_windowManager->setTransportCallback([this](Aestra::TransportAction action) {
         if (!m_content) return;
-        using Action = AestraWindowManager::TransportAction;
 
-        if (action == Action::Play) {
+        if (action == Aestra::TransportAction::Play) {
             m_content->requestTransportPlay();
         }
-        else if (action == Action::Pause) {
+        else if (action == Aestra::TransportAction::Pause) {
             m_content->pauseFromCurrentFocus();
         }
-        else if (action == Action::Stop) {
+        else if (action == Aestra::TransportAction::Stop) {
             m_content->stopFromCurrentFocus(false);
         }
     });

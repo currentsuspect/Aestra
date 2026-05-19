@@ -6,6 +6,7 @@
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "SettingsDialog.h"
 #include "UnifiedHUD.h"
+#include "TransportTypes.h"
 #include "../AestraPlat/include/AestraPlatform.h"
 #if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
 #include "AccountSession.h"
@@ -25,7 +26,7 @@ class AestraContent;
  */
 class AestraRootComponent : public NUIComponent {
 public:
-    enum class TransportAction { Stop, Play, Pause };
+    using TransportAction = Aestra::TransportAction;
 
 private:
     std::shared_ptr<NUICustomWindow> m_rootCustomWindow;
