@@ -215,6 +215,9 @@ jobs:
         working-directory: build
         run: ctest --test-dir . --output-on-failure --output-junit ctest-results-macos.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
 
+      - name: License verification tests
+        run: ctest --test-dir build -R "SecLicenseGateSignature|SecLicenseProfileHardening|SecJsonParserHardening" --output-on-failure
+
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
