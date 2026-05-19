@@ -3150,6 +3150,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     std::vector<double> blockBuffer(blockSize * 2); // Stereo
     std::vector<float> floatBuffer(blockSize * 2);  // For writing
 
+    bool writeError = false;
     uint64_t currentFrame = startSample;
     uint64_t framesRemaining = totalFrames;
     bool writeError = false;
