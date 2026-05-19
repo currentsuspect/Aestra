@@ -2,6 +2,7 @@
 
 #include "PluginManager.h"
 #include "RealtimeThreadGuard.h"
+#include "AestraLog.h"
 
 #include <algorithm>
 #include <cmath>
