@@ -211,6 +211,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         auto stateRaw = requireFlag(flags, "state");
         if (!stateRaw) return nullptr;
         bool state = parseFlagBool(*stateRaw);
+        if (*trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
         return std::make_unique<SetSoloCommand>(*ch, state);
@@ -225,6 +226,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!valueRaw) return nullptr;
         auto valueOpt = safeStof(*valueRaw);
         if (!valueOpt) return nullptr;
+        if (*trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
         return std::make_unique<SetVolumeCommand>(*ch, *valueOpt);
@@ -239,6 +241,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!valueRaw) return nullptr;
         auto valueOpt = safeStof(*valueRaw);
         if (!valueOpt) return nullptr;
+        if (*trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
         return std::make_unique<SetPanCommand>(*ch, *valueOpt);
