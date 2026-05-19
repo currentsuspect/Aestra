@@ -1811,7 +1811,8 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
             "Tracks: " + std::to_string(m_trackManager ? m_trackManager->getTrackCount() -
                                                              (m_trackManager->getTrackCount() > 0 ? 1 : 0)
                                                        : 0); // Exclude preview track
-        const float infoFont = 12.0f;
+        const auto& themeProps = themeManager.getCurrentTheme();
+        const float infoFont = themeProps.fontSizeXS;
         auto infoSize = renderer.measureText(infoText, infoFont);
 
         // Ensure text doesn't exceed available width and position with proper margin
@@ -1836,10 +1837,14 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     }
 
     // Render Static Track Content (with Viewport Culling AND Clipping)
-    const float headerHeight = 38.0f;
-    const float horizontalScrollbarHeight = 24.0f;
-    const float rulerHeight = 28.0f;
-    const float scrollbarWidth = 15.0f;
+    constexpr float kHeaderHeight = 38.0f;
+    constexpr float kHScrollbarHeight = 24.0f;
+    constexpr float kRulerHeight = 28.0f;
+    constexpr float kScrollbarWidth = 15.0f;
+    const float headerHeight = kHeaderHeight;
+    const float horizontalScrollbarHeight = kHScrollbarHeight;
+    const float rulerHeight = kRulerHeight;
+    const float scrollbarWidth = kScrollbarWidth;
 
     // Calculate viewport bounds for culling
     const float viewportTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
@@ -1918,10 +1923,14 @@ void TrackManagerUI::renderTrackManagerDynamic(AestraUI::NUIRenderer& renderer) 
     const auto& layout = themeManager.getLayoutDimensions();
 
     if (m_playlistVisible) {
-        const float headerHeight = 38.0f;
-        const float horizontalScrollbarHeight = 24.0f;
-        const float rulerHeight = 28.0f;
-        const float scrollbarWidth = 15.0f;
+        constexpr float kHeaderHeight = 38.0f;
+        constexpr float kHScrollbarHeight = 24.0f;
+        constexpr float kRulerHeight = 28.0f;
+        constexpr float kScrollbarWidth = 15.0f;
+        const float headerHeight = kHeaderHeight;
+        const float horizontalScrollbarHeight = kHScrollbarHeight;
+        const float rulerHeight = kRulerHeight;
+        const float scrollbarWidth = kScrollbarWidth;
 
         const float viewportTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
         const float viewportHeight =
