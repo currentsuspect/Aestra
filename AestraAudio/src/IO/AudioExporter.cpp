@@ -35,6 +35,12 @@ AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManag
     }
 
     // Validate beat range
+    if (!std::isfinite(startBeat) || !std::isfinite(endBeat)) {
+        AudioExporter::Result invalid;
+        invalid.outputPath = outputPath;
+        invalid.errorMessage = "Invalid beat range: non-finite beat input";
+        return invalid;
+    }
     if (endBeat <= startBeat) {
         AudioExporter::Result invalid;
         invalid.outputPath = outputPath;

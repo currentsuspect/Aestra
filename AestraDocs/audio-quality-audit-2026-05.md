@@ -14,33 +14,33 @@ Tags: `STRENGTH`, `RISK`, `BUG`, `MISSING`. Severities `P0`-`P3`.
 ## 0. TL;DR — Highest-impact issues
 
 1. **`P1` — Export PCM_16 / PCM_24 has no dither, no noise shaping**
-   (`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/IO/AudioExporter.cpp:362-380`).
+   (`AestraAudio/src/IO/AudioExporter.cpp:362-380`).
    Truncation-only quantization is the #1 audible "DAW sounds worse on
    delivery" surface.
 2. **`P1` — Track gain smoother is broken across blocks**
-   (`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioGraphState.h:14-28`,
-    `@/home/currentsuspect/Dev/Aestra/AestraAudio/src/AudioRenderer.cpp:355-368`).
+   (`AestraAudio/include/Core/AudioGraphState.h:14-28`,
+    `AestraAudio/src/AudioRenderer.cpp:355-368`).
    Per-sample one-pole `coeff=0.001` then `snap()` to target every block: the
    smoother never converges inside a block, so fast fader moves step at block
    boundaries.
 3. **`P1` — K-weighted LUFS coefficients are hard-coded at 48 kHz**
-   (`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:1456-1464`).
+   (`AestraAudio/src/Core/AudioEngine.cpp:1456-1464`).
    LUFS readout drifts with sample rate.
 4. **`P2` — Inline master TPDF dither is mono and lives in the float path**
-   (`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:1013-1026`).
+   (`AestraAudio/src/Core/AudioEngine.cpp:1013-1026`).
    Same noise on L+R, applied to a float buffer that has no quantization step.
 5. **`P1` — Denormal protection is x86-only**
-   (`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:36-47`,
-    `@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioRT.h:27-37`).
+   (`AestraAudio/src/Core/AudioEngine.cpp:36-47`,
+    `AestraAudio/include/Core/AudioRT.h:27-37`).
    ARM64 `FPCR.FZ` is not enabled.
 6. **`P2` — `IntelligentDithering::NoiseShaper` IIR uses input state for output
-   feedback coefficients** (`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/DSP/IntelligentDithering.h:47-57`).
+   feedback coefficients** (`AestraAudio/include/DSP/IntelligentDithering.h:47-57`).
    Currently unused on the live path; latent landmine.
 7. **`P2` — PCM_24 conversion uses `* 8388607.0f` (asymmetric)**
-   (`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/IO/AudioExporter.cpp:370-380`).
+   (`AestraAudio/src/IO/AudioExporter.cpp:370-380`).
    Under-uses negative range, ~0.12 dB headroom loss.
 8. **`P3` — Dither RNG re-seeded every block** from `m_globalSamplePos`
-   (`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:951-953`):
+   (`AestraAudio/src/Core/AudioEngine.cpp:951-953`):
    noise becomes deterministically tonal at static positions.
 
 Each item has a small, RT-safe fix. None require architectural changes,
@@ -79,9 +79,9 @@ processBlock
 ```
 
 Offline rendering goes through `AudioRenderer::renderBlock`
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/AudioRenderer.cpp`) and
+(`AestraAudio/src/AudioRenderer.cpp`) and
 `AudioExporter::render`
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/IO/AudioExporter.cpp`).
+(`AestraAudio/src/IO/AudioExporter.cpp`).
 
 ---
 
@@ -92,22 +92,22 @@ Offline rendering goes through `AudioRenderer::renderBlock`
 - Master bus is `std::vector<double>` (`m_masterBufferD`).
 - Per-track render buffers are `std::vector<std::vector<double>>`.
 - Output cast to `float` happens **once** at
-  `@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:1051`.
+  `AestraAudio/src/Core/AudioEngine.cpp:1051`.
 - Plugin scratch buffers are `float` (VST3/CLAP ABI compatibility).
 - No int accumulators anywhere in the render hot path.
 
 ### STRENGTH — NaN/Inf containment
 
 - Per-sample sanitize on master output
-  (`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:964-978`).
+  (`AestraAudio/src/Core/AudioEngine.cpp:964-978`).
 - Plugin output sanitize after every plugin call via `sanitizeFloatBuffers`
-  (`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/AudioRenderer.cpp:36-48`).
+  (`AestraAudio/src/AudioRenderer.cpp:36-48`).
 - Plugin `process` wrapped in `processPluginNoexcept`
-  (`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/AudioRenderer.cpp:25-34`).
+  (`AestraAudio/src/AudioRenderer.cpp:25-34`).
 
 ### BUG / P1 — Export PCM bit-depth conversion is undithered
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/IO/AudioExporter.cpp:362-380`:
+`AestraAudio/src/IO/AudioExporter.cpp:362-380`:
 
 ```cpp
 // PCM_16
@@ -131,10 +131,10 @@ quiet tails (-60 dB and below). Required fix:
 
 `std::clamp(buffer[i], -1.0f, 1.0f)` happens at PCM write. Inter-sample peaks
 that ride between samples will hard-clip after 4× reconstruction at the DAC.
-True-peak meter exists (`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/DSP/TruePeakMeter.h`)
+True-peak meter exists (`AestraAudio/include/DSP/TruePeakMeter.h`)
 and is wired to export validation
 (`Config::validateTruePeak`, `failOnTruePeakExceeded` at
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/IO/AudioExporter.h:90-107`),
+`AestraAudio/include/IO/AudioExporter.h:90-107`),
 but no automatic attenuation. Acceptable — leave to the user's master chain.
 
 ---
@@ -143,7 +143,7 @@ but no automatic attenuation. Acceptable — leave to the user's master chain.
 
 ### STRENGTH — Polyphase Sinc resampling
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/DSP/Interpolators.h:507-710`:
+`AestraAudio/include/DSP/Interpolators.h:507-710`:
 
 - `Sinc64Turbo`: 64-tap, 2048 phases, Kaiser β=12 (~144 dB target SNR)
 - Phase interpolation between adjacent quantized phases
@@ -155,7 +155,7 @@ but no automatic attenuation. Acceptable — leave to the user's master chain.
 
 ### STRENGTH — Clip resample phase math
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/AudioRenderer.cpp:155-325`:
+`AestraAudio/src/AudioRenderer.cpp:155-325`:
 phase is anchored to absolute timeline math at the start of each block
 (`phase = clip.sampleOffset + (start - clip.startSample) * ratio`), then
 incremented `phase += ratio` per sample. No cross-block accumulation drift.
@@ -163,11 +163,11 @@ incremented `phase += ratio` per sample. No cross-block accumulation drift.
 ### STRENGTH — Pan law
 
 sin/cos constant-power, -3 dB at center
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/AudioRenderer.cpp:63-67`).
+(`AestraAudio/src/AudioRenderer.cpp:63-67`).
 
 ### BUG / P1 — K-weighted LUFS coefficients are 48 kHz only
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:1456-1464`:
+`AestraAudio/src/Core/AudioEngine.cpp:1456-1464`:
 
 ```cpp
 const AudioEngine::BiquadCoeff AudioEngine::kKWeightPreFilter = {
@@ -189,19 +189,19 @@ Fix: bilinear transform from the analog prototype each time
 
 ### STRENGTH — LUFS biquad form
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioEngine.h:931-941`:
+`AestraAudio/include/Core/AudioEngine.h:931-941`:
 Direct Form II, double-precision state, FTZ-protected on x86.
 
 ### STRENGTH — Master safety limiter
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/MasterSafetyLimiter.h`:
+`AestraAudio/include/Core/MasterSafetyLimiter.h`:
 DC blocker (≈30 Hz at 48 kHz) → soft knee from 0.85 → exponential shaping to
 0.95 ceiling → ±1.25 hard clamp. NaN/Inf replaced with 0. Documented as
 safety, not mastering.
 
 ### BUG / P2 — `IntelligentDithering::NoiseShaper` IIR is broken
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/DSP/IntelligentDithering.h:47-57`:
+`AestraAudio/include/DSP/IntelligentDithering.h:47-57`:
 
 ```cpp
 shapedL = b0 * errorL + b1 * z1L + b2 * z2L - a1 * z1L - a2 * z2L;
@@ -216,9 +216,9 @@ path; fix or remove to prevent accidental wiring.
 
 ### RISK / P1 — Denormal protection is x86-only
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:36-47`
+`AestraAudio/src/Core/AudioEngine.cpp:36-47`
 `DISABLE_DENORMALS` sets MXCSR only on x86. The helper at
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioRT.h:27-37` is
+`AestraAudio/include/Core/AudioRT.h:27-37` is
 also x86-only and is not called from `processBlock` (macro form is used).
 
 ARM64 should set `FPCR.FZ` (bit 24). Any per-sample IIR (DC blocker, LUFS
@@ -232,31 +232,31 @@ without it.
 ### STRENGTH — Snapshot graph, lock-free commands
 
 - `AudioGraphState` is published via index swap with acquire/release
-  (`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioEngine.h:783-786`).
+  (`AestraAudio/include/Core/AudioEngine.h:783-786`).
 - Commands flow through `AudioCommandQueue` with bounded RT drain.
 - Off-RT PDC solver publishes `SolvedLatencyTopology` via the same
   double-buffered atomic-index pattern
-  (`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioEngine.h:1042-1055`).
+  (`AestraAudio/include/Core/AudioEngine.h:1042-1055`).
 
 ### STRENGTH — Transport edge detection
 
 Edge flags (`m_transportRestartRequested`, `m_transportStopRequested`,
 `m_transportHardStopRequested`) ensure stop→play and double-stop within a
 single block are not lost
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:156-200`).
+(`AestraAudio/src/Core/AudioEngine.cpp:156-200`).
 
 ### STRENGTH — Loop-split rendering
 
 `renderGraph` is invoked twice across a loop boundary with proper position
 re-anchoring; pattern flush is performed on the wrap
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:791-806`).
+(`AestraAudio/src/Core/AudioEngine.cpp:791-806`).
 
 ### STRENGTH — Plugin Delay Compensation (PDC) v2
 
 - Per-track latency reported and stored in `TrackRTState.pluginLatencySamples`.
 - Per-edge `EdgeDelayState` buffers double-buffered with retired-allocation
   keep-alive
-  (`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioGraphState.h:47-68`).
+  (`AestraAudio/include/Core/AudioGraphState.h:47-68`).
 - Solver topology is published via atomic index flip; engine reads with
   acquire. Audit hooks exist for tests
   (`AudioEngine::getLastSolvedLatencyTopology`,
@@ -264,7 +264,7 @@ re-anchoring; pattern flush is performed on the wrap
 
 ### RISK / P3 — Compensation buffer fixed at 16384 frames
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioGraphState.h:97`:
+`AestraAudio/include/Core/AudioGraphState.h:97`:
 `std::array<float, 32768> compensationBuffer{}` — 16384 frames stereo.
 
 At 96 kHz this is ~170 ms; at 192 kHz it is ~85 ms. A heavy linear-phase EQ
@@ -277,7 +277,7 @@ ring buffer, which grows off-RT. Leave as-is; documented in `PDC-v2-Design.md`.
 
 ### BUG / P1 — Track gain smoother never converges within a block, then snaps
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioGraphState.h:14-28`:
+`AestraAudio/include/Core/AudioGraphState.h:14-28`:
 
 ```cpp
 struct SmoothedParamD {
@@ -293,7 +293,7 @@ struct SmoothedParamD {
 ```
 
 Used in `AudioRenderer::processTrackEffects`
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/AudioRenderer.cpp:355-368`):
+(`AestraAudio/src/AudioRenderer.cpp:355-368`):
 
 ```cpp
 state.gainL.setTarget(gainL);
@@ -318,7 +318,7 @@ This is exactly the zipper-replacement-creating-zippers pattern. The master
 gain already uses the correct pattern (`linear ramp finishing at target,
 no snap`):
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:924-928,1054`:
+`AestraAudio/src/Core/AudioEngine.cpp:924-928,1054`:
 
 ```cpp
 const double gainDelta = (targetGain - currentGain) / static_cast<double>(numFrames);
@@ -338,12 +338,12 @@ snap, converges exactly at the last sample.
 
 ### STRENGTH — Preview ducking smoothing
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:872-901`:
+`AestraAudio/src/Core/AudioEngine.cpp:872-901`:
 Linear fade with 50 ms time constant; both directions clamped to target.
 
 ### RISK / P3 — `ContinuousParamBuffer` reads use bitcast atomics
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/DSP/ContinuousParamBuffer.h`:
+`AestraAudio/include/DSP/ContinuousParamBuffer.h`:
 Per-block read is fine. Per-sample read would be wrong because of partial
 update visibility; today we read once per block, set target, then smooth.
 Correct.
@@ -354,7 +354,7 @@ Correct.
 
 ### BUG / P2 — Master inline TPDF is mono and lives in float path
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:1013-1026`:
+`AestraAudio/src/Core/AudioEngine.cpp:1013-1026`:
 
 ```cpp
 float r1 = m_ditherRng.nextFloat();
@@ -381,7 +381,7 @@ Fix path:
 
 ### RISK / P3 — RNG re-seeded every block from `m_globalSamplePos`
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:951-953`:
+`AestraAudio/src/Core/AudioEngine.cpp:951-953`:
 
 ```cpp
 m_ditherRng.setSeed(static_cast<uint32_t>(m_globalSamplePos.load()) ^ 0x9E3779B9);
@@ -392,7 +392,7 @@ deterministically tonal. Move to once-per-render or once-per-export.
 
 ### STRENGTH — True-peak metering on export
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/IO/AudioExporter.h:90-107`:
+`AestraAudio/include/IO/AudioExporter.h:90-107`:
 `validateTruePeak`, `truePeakCeilingdBTP`, `failOnTruePeakExceeded`. Wired to
 the same `TruePeakMeter` used at runtime.
 
@@ -403,7 +403,7 @@ the same `TruePeakMeter` used at runtime.
 ### STRENGTH — Zero-alloc in hot path
 
 - All buffers pre-allocated in `setBufferConfig`
-  (`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:1223-`).
+  (`AestraAudio/src/Core/AudioEngine.cpp:1223-`).
 - RT scratch vectors sized to `kMaxTracks` and never resized in `renderGraph`.
 - Plugin scratch buffers pre-sized for the worst-case block.
 - Send routing uses a pre-sized `PreparedSendRoute` scratch.
@@ -411,7 +411,7 @@ the same `TruePeakMeter` used at runtime.
 ### STRENGTH — Bounded command drain
 
 ≤16 commands per block keeps callback latency bounded
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:173-200`).
+(`AestraAudio/src/Core/AudioEngine.cpp:173-200`).
 
 ### STRENGTH — Per-block telemetry, no per-sample atomics
 
@@ -420,12 +420,12 @@ Counters (NaN, clip) accumulate locally and `fetch_add` once at block end.
 ### STRENGTH — Plugin exception isolation
 
 `processPluginNoexcept` catches all exceptions, treats as silence
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/AudioRenderer.cpp:25-34`).
+(`AestraAudio/src/AudioRenderer.cpp:25-34`).
 
 ### RISK / P2 — `MetronomeEngine::loadClickSounds` does file I/O guarded by
 transport state
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioEngine.h:316-322`
+`AestraAudio/include/Core/AudioEngine.h:316-322`
 guards file I/O when transport is playing, but not when it is paused mid-render.
 Safe today because it's a UI action and the UI calls this off-thread, but the
 guard is incomplete. Out of scope for this audit.
@@ -446,7 +446,7 @@ guard is incomplete. Out of scope for this audit.
 
 `g_realtimeAudioThreadDepth` TLS counter + `reportRealtimeMisuse` hook
 publishes telemetry when blocking APIs are called from the audio thread
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/RealtimeThreadGuard.h`).
+(`AestraAudio/include/RealtimeThreadGuard.h`).
 
 ### STRENGTH — Underrun telemetry
 
@@ -463,10 +463,10 @@ quality controls are.
 
 ### BUG / P1 — `bounceRangeToWav` calls `AudioRenderer::renderBlock` without `ctx.graph`
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:3100-3108`
+`AestraAudio/src/Core/AudioEngine.cpp:3100-3108`
 constructs an `AudioRenderer::Context` but does not set `ctx.graph`.
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/AudioRenderer.cpp:163`
+`AestraAudio/src/AudioRenderer.cpp:163`
 then does:
 
 ```cpp
@@ -487,14 +487,14 @@ Required fix:
 ### RISK / P1 — There are two offline render authorities with different output stages
 
 `AudioExporter::render` says it uses `AudioRenderer::renderBlock` in comments
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/IO/AudioExporter.cpp:163`),
+(`AestraAudio/src/IO/AudioExporter.cpp:163`),
 but actually calls:
 
 ```cpp
 m_engine.processBlock(m_renderBufferF.data(), nullptr, framesThisBlock, 0.0);
 ```
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:3013-3150`
+`AestraAudio/src/Core/AudioEngine.cpp:3013-3150`
 `bounceRangeToWav` instead calls `m_rtRenderer.renderBlock`, then writes float
 samples directly through miniaudio.
 
@@ -520,13 +520,13 @@ The first audit called out `AudioRenderer::processTrackEffects`, but the live
 `AudioEngine::renderGraph` path also uses `SmoothedParamD::next()` for track
 and send gains, then snaps all smoothers at the block boundary:
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:2464-2468`
+`AestraAudio/src/Core/AudioEngine.cpp:2464-2468`
 uses `state.gainL.next()` / `state.gainR.next()`.
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:2571-2610`
+`AestraAudio/src/Core/AudioEngine.cpp:2571-2610`
 uses `route.gainL->next()` / `route.gainR->next()` for sends.
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:2646-2652`
+`AestraAudio/src/Core/AudioEngine.cpp:2646-2652`
 then snaps both track and send smoothers.
 
 So the smoothing fix must cover:
@@ -538,7 +538,7 @@ So the smoothing fix must cover:
 
 ### BUG / P2 — Pre-fader send fail-safe can still route from an empty buffer
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:2446-2462`
+`AestraAudio/src/Core/AudioEngine.cpp:2446-2462`
 detects insufficient `preFaderBuffer` capacity and sets `hasPreFaderSend =
 false`, but route construction later still does:
 
@@ -547,7 +547,7 @@ route.source = send.postFader ? buffer.data() : state.preFaderBuffer.data();
 ```
 
 for every non-muted send
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:2523-2525`).
+(`AestraAudio/src/Core/AudioEngine.cpp:2523-2525`).
 
 Normal operation should reserve enough capacity in `setBufferConfig`, but an
 oversized callback or bad driver block can turn a fail-safe into an invalid read
@@ -560,14 +560,14 @@ Required fix:
 
 ### RISK / P2 — `DitheringMode` is defined twice in the same namespace
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Drivers/AudioDriverTypes.h:15`
+`AestraAudio/include/Drivers/AudioDriverTypes.h:15`
 defines:
 
 ```cpp
 enum class DitheringMode { None, Triangular, HighPass, NoiseShaped };
 ```
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/DSP/IntelligentDithering.h:14-18`
+`AestraAudio/include/DSP/IntelligentDithering.h:14-18`
 also defines `enum class DitheringMode` in `Aestra::Audio` with different
 enumerators:
 
@@ -593,13 +593,13 @@ Required fix:
 ### RISK / P2 — High-pass and noise-shaped dither modes are UI/API-visible but not implemented in the live path
 
 `AudioEngine::processBlock` checks only `ditherMode != DitheringMode::None`
-(`@/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:1013`)
+(`AestraAudio/src/Core/AudioEngine.cpp:1013`)
 and always applies the same mono 24-bit TPDF noise. `DitheringMode::HighPass`
 and `DitheringMode::NoiseShaped` are therefore behavioral aliases for
 `Triangular` in the live path.
 
 `QualityPreset::HighFidelity` and `QualityPreset::Mastering` select those modes
-in `@/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/MixerChannel.h:86-91`,
+in `AestraAudio/include/Core/MixerChannel.h:86-91`,
 so the public quality preset semantics overstate the actual engine behavior.
 
 Required fix:
@@ -611,7 +611,7 @@ Required fix:
 
 ### RISK / P3 — `AudioExporter` contains stale master-stage API and unused render buffers
 
-`@/home/currentsuspect/Dev/Aestra/AestraAudio/include/IO/AudioExporter.h:240-280`
+`AestraAudio/include/IO/AudioExporter.h:240-280`
 declares `applyMasterOutputStage`, `m_renderBufferD`, DC blockers, and an
 `std::mt19937` dither RNG, but the current implementation writes
 `m_renderBufferF` from `processBlock` and never calls `applyMasterOutputStage`.
