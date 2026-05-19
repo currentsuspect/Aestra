@@ -636,7 +636,7 @@ project format, or plugin-ABI changes. All are RT-safe.
 |---|-------|----------|-------|--------|
 | 1 | TPDF dither at export PCM_16/PCM_24 with uncorrelated L/R and symmetric range | P1 | `AudioExporter.cpp` | DONE |
 | 2 | Replace `SmoothedParamD` exp+snap with linear-ramp-per-block for track, master, and send gains | P1 | `AudioGraphState.h`, `AudioRenderer.cpp`, `AudioEngine.cpp` | DONE |
-| 3 | Fix/merge offline render authorities; make export-vs-bounce parity testable | P1 | `AudioExporter.cpp`, `AudioEngine.cpp`, `AudioRenderer.cpp` | DONE (master bounce only; isolated track bounce TODO) |
+| 3 | Fix/merge offline render authorities; make export-vs-bounce parity testable | P1 | `AudioExporter.cpp`, `AudioEngine.cpp`, `AudioRenderer.cpp` | IN PROGRESS — master bounce done; isolated track bounce TODO (`AudioExporter` not yet supported) |
 | 4 | Fix `bounceRangeToWav` null `ctx.graph` and add clip bounce regression | P1 | `AudioEngine.cpp`, `AudioRenderer.cpp` | DONE |
 | 5 | Sample-rate-aware K-weighted LUFS coefficients via bilinear transform | P1 | `AudioEngine.h`, `AudioEngine.cpp` | DONE |
 | 6 | Remove inline master TPDF from float output path | P2 | `AudioEngine.cpp` | DONE |
@@ -650,7 +650,7 @@ Validation per slice:
 - Build `AestraAudioCore`, `AudioExporter`-dependent targets
 - Run relevant test binaries (audio engine / exporter / smoothed param)
 - Bypass parity for #2 (no DSP change when target == current)
-- 48 kHz LUFS regression for #3 (must match the literature on the existing rate)
+- 48 kHz LUFS regression for #5 (must match the literature on the existing rate)
 - Export null test for #1 (input float == int->float roundtrip ± dither LSB)
 
 ---
