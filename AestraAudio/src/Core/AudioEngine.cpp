@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cerrno>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -3013,6 +3014,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
 bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::string& outputPath, int32_t trackId) {
     if (endBeat <= startBeat)
         return false;
+    m_lastBounceWroteAnyFramesForTests.store(false, std::memory_order_relaxed);
 
     // 1. Calculate length
     double sampleRate = (double)m_sampleRate.load(std::memory_order_relaxed);
@@ -3056,6 +3058,10 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
 
     uint64_t currentFrame = startSample;
     uint64_t framesRemaining = totalFrames;
+    bool writeError = false;
+    const bool forceWriteErrorForTests = m_forceBounceWriteErrorForTests.load(std::memory_order_relaxed);
+    bool forcedWriteErrorTriggered = false;
+    bool wroteAnyFrames = false;
 
     // Playback stopped at start of function
     m_transportPlaying.store(false, std::memory_order_relaxed); // Ensure redundant enforce
@@ -3129,10 +3135,22 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
 
         // Write
         ma_uint64 framesWritten = 0;
-        ma_result result = ma_encoder_write_pcm_frames(&encoder, floatBuffer.data(), framesThisBlock, &framesWritten);
+        ma_result result = MA_ERROR;
+        if (forceWriteErrorForTests && wroteAnyFrames && !forcedWriteErrorTriggered) {
+            // Test hook: deterministically fail after one successful write block.
+            forcedWriteErrorTriggered = true;
+            result = MA_ERROR;
+            framesWritten = 0;
+        } else {
+            result = ma_encoder_write_pcm_frames(&encoder, floatBuffer.data(), framesThisBlock, &framesWritten);
+            if (result == MA_SUCCESS && framesWritten == framesThisBlock) {
+                wroteAnyFrames = true;
+            }
+        }
         if (result != MA_SUCCESS || framesWritten != framesThisBlock) {
             Aestra::Log::error("[AudioEngine] Write error during bounce: result=" + std::to_string(result) +
                                ", written=" + std::to_string(framesWritten));
+            writeError = true;
             break;
         }
 
@@ -3141,10 +3159,29 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     }
 
     ma_encoder_uninit(&encoder);
+    m_lastBounceWroteAnyFramesForTests.store(wroteAnyFrames, std::memory_order_relaxed);
 
     // Restore playback state
     if (wasPlaying)
         setTransportPlaying(true);
+
+    if (writeError) {
+        // Clean up partial file on write error
+#ifdef _WIN32
+        std::wstring widePath = pathStringToWide(outputPath);
+        const int removeResult = _wremove(widePath.c_str());
+#else
+        const int removeResult = std::remove(outputPath.c_str());
+#endif
+        const int removeErrno = errno;
+        if (removeResult == 0) {
+            Aestra::Log::error("[AudioEngine] Bounce failed — partial file removed: " + outputPath);
+        } else {
+            Aestra::Log::error("[AudioEngine] Bounce failed — could not remove partial file: " + outputPath +
+                               " (errno=" + std::to_string(removeErrno) + ")");
+        }
+        return false;
+    }
 
     Aestra::Log::info("[AudioEngine] Bounce complete.");
     return true;
