@@ -42,8 +42,16 @@
     _mm_setcsr(oldMXCSR | 0x8040); // Set DAZ and FTZ flags
 
 #define RESTORE_DENORMALS _mm_setcsr(oldMXCSR);
+#elif defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
+// ARM64: set FPCR.FZ (bit 24) to flush denormals to zero
+#define DISABLE_DENORMALS           \
+    uint64_t oldFPCR;               \
+    __asm__ volatile("mrs %0, fpcr" : "=r"(oldFPCR)); \
+    __asm__ volatile("msr fpcr, %0" :: "r"(oldFPCR | (1ULL << 24)));
+
+#define RESTORE_DENORMALS __asm__ volatile("msr fpcr, %0" :: "r"(oldFPCR));
 #else
-// Non-x86: no denormal control needed (ARM FPU handles this differently)
+// Other architectures: no denormal control
 #define DISABLE_DENORMALS
 #define RESTORE_DENORMALS
 #endif
@@ -3121,8 +3129,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         ctx.bufferOffset = 0;
         ctx.globalPos = currentFrame;
         ctx.sampleRate = (uint32_t)sampleRate;
-        // ctx.graph is usually accessed via EngineState or we assume graphState has everything.
-        // AudioRenderer uses `graphState` passed in.
+        ctx.graph = &m_state.activeGraph();
         ctx.isOffline = true;
         ctx.isolatedTrackIndex = isolatedTrackIndex;
 
