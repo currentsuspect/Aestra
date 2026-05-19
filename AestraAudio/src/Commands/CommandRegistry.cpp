@@ -79,6 +79,7 @@ std::optional<uint64_t> safeStoull(std::string_view s) {
     if (s.empty()) return std::nullopt;
     if (std::isspace(static_cast<unsigned char>(s.front())) ||
         std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
+    if (s.front() == '-') return std::nullopt; // std::stoull wraps negatives to huge values
     try {
         size_t pos = 0;
         uint64_t val = std::stoull(std::string(s), &pos);
