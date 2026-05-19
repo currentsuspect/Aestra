@@ -198,6 +198,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         auto stateRaw = requireFlag(flags, "state");
         if (!stateRaw) return nullptr;
         bool state = parseFlagBool(*stateRaw);
+        if (!trackOpt.has_value() || *trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
         return std::make_unique<SetMuteCommand>(*ch, state);
@@ -255,6 +256,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!barRaw) return nullptr;
         auto barOpt = safeStoi(*barRaw);
         if (!barOpt) return nullptr;
+        if (*trackOpt < 0) return nullptr;
 
         PlaylistLaneID laneId = pm->getLaneId(static_cast<size_t>(*trackOpt));
         if (!laneId.isValid())
@@ -282,7 +284,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
         auto idOpt = safeStoi(*idRaw);
-        if (!idOpt) return nullptr;
+        if (!idOpt || *idOpt < 0) return nullptr;
+
         ClipInstanceID clipId;
         clipId.low = static_cast<uint64_t>(*idOpt);
         return std::make_unique<RemoveClipCommand>(*pm, clipId);
@@ -293,11 +296,12 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
         auto idOpt = safeStoi(*idRaw);
-        if (!idOpt) return nullptr;
+        if (!idOpt || *idOpt < 0) return nullptr;
         auto trackRaw = requireFlag(flags, "track");
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
         if (!trackOpt) return nullptr;
+        if (*trackOpt < 0) return nullptr;
         auto startRaw = requireFlag(flags, "start");
         if (!startRaw) return nullptr;
         auto startOpt = safeStof(*startRaw);
@@ -314,7 +318,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
         auto idOpt = safeStoi(*idRaw);
-        if (!idOpt) return nullptr;
+        if (!idOpt || *idOpt < 0) return nullptr;
         auto barRaw = requireFlag(flags, "bar");
         if (!barRaw) return nullptr;
         auto barOpt = safeStoi(*barRaw);
@@ -330,7 +334,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         auto idRaw = requireFlag(flags, "id");
         if (!idRaw) return nullptr;
         auto idOpt = safeStoi(*idRaw);
-        if (!idOpt) return nullptr;
+        if (!idOpt || *idOpt < 0) return nullptr;
         auto startRaw = requireFlag(flags, "start");
         if (!startRaw) return nullptr;
         auto startOpt = safeStof(*startRaw);

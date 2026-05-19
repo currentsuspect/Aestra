@@ -3,6 +3,7 @@
 
 #include <array>
 #include <atomic>
+#include <cmath>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -30,8 +31,16 @@ struct SmoothedParamD {
         return current;
     }
 
-    void setTarget(double t) { target = t; }
+    void setTarget(double t) {
+        // Sanitize target to prevent NaN/Inf propagation
+        target = std::isfinite(t) ? t : 0.0;
+    }
+
     void beginRamp(uint32_t samples) {
+        // Sanitize both current and target before computing step
+        if (!std::isfinite(current)) current = 0.0;
+        if (!std::isfinite(target)) target = 0.0;
+
         if (samples == 0 || current == target) {
             current = target;
             step = 0.0;
@@ -40,6 +49,13 @@ struct SmoothedParamD {
         }
         samplesRemaining = samples;
         step = (target - current) / static_cast<double>(samples);
+
+        // Validate step is finite, otherwise bypass ramp
+        if (!std::isfinite(step)) {
+            step = 0.0;
+            samplesRemaining = 0;
+            current = target;
+        }
     }
     void snap() {
         current = target;

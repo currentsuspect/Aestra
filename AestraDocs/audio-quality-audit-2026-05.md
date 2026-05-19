@@ -54,7 +54,7 @@ plugin ABI changes, project format changes, or graph topology changes.
 single audio-thread entry from `AudioDeviceManager` (RtAudio, ALSA, WASAPI,
 CoreAudio).
 
-```
+```text
 processBlock
   ├── ScopedRealtimeAudioThread       (TLS depth → RT misuse detection)
   ├── DISABLE_DENORMALS               (x86 MXCSR FTZ+DAZ; no-op elsewhere)
@@ -309,7 +309,7 @@ state.gainR.snap();
 With `coeff=0.001`, a typical 64–1024 sample block does not converge before
 `snap()` forces it to target. So a moving fader produces:
 
-```
+```text
 ramp ramp ramp ramp …  STEP  ramp ramp …  STEP  …
                        ↑ block boundary
 ```
