@@ -4,6 +4,7 @@
 
 #include <cctype>
 #include <cmath>
+#include <cstdint>
 #include <exception>
 #include <iostream>
 #include <limits>
@@ -13,7 +14,7 @@
 #include <unordered_map>
 
 // IMPORTANT: Keep these helpers in sync with CommandRegistry.cpp
-// Last synced: 2026-05-17 (PR #222)
+// Last synced: 2026-05-19 (PR #226)
 // If CommandRegistry.cpp helpers change, mirror those changes here.
 // (Consider extracting to a shared header if more tests need these.)
 namespace Aestra {
@@ -55,14 +56,14 @@ std::optional<float> safeStof(std::string_view s) {
     }
 }
 
-std::optional<unsigned long long> safeStoull(std::string_view s) {
+std::optional<uint64_t> safeStoull(std::string_view s) {
     if (s.empty()) return std::nullopt;
     if (std::isspace(static_cast<unsigned char>(s.front())) ||
         std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
     if (s.front() == '-') return std::nullopt;
     try {
         size_t pos = 0;
-        unsigned long long val = std::stoull(std::string(s), &pos);
+        uint64_t val = std::stoull(std::string(s), &pos);
         if (pos != s.size()) return std::nullopt;
         return val;
     } catch (const std::exception&) {

@@ -2076,15 +2076,20 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
         }
 
-        for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
-            double targetL = 0.0;
-            double targetR = 0.0;
-            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
-            state.sendGainL[sendIndex].setTarget(targetL);
-            state.sendGainR[sendIndex].setTarget(targetR);
-            state.sendGainL[sendIndex].beginRamp(numFrames);
-            state.sendGainR[sendIndex].beginRamp(numFrames);
+        if (!muted) {
+            for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
+                if (track.sends[sendIndex].mute) {
+                    continue;
+                }
+                double targetL = 0.0;
+                double targetR = 0.0;
+                fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                              static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
+                state.sendGainL[sendIndex].setTarget(targetL);
+                state.sendGainR[sendIndex].setTarget(targetR);
+                state.sendGainL[sendIndex].beginRamp(numFrames);
+                state.sendGainR[sendIndex].beginRamp(numFrames);
+            }
         }
 
         if (!processActive) {
