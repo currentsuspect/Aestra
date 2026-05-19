@@ -34,6 +34,14 @@ AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManag
         return unsupported;
     }
 
+    // Validate beat range
+    if (endBeat <= startBeat) {
+        AudioExporter::Result invalid;
+        invalid.outputPath = outputPath;
+        invalid.errorMessage = "Invalid beat range: endBeat must be greater than startBeat";
+        return invalid;
+    }
+
     AudioExporter exporter(engine, trackManager);
     Config config;
     config.outputPath = outputPath;
