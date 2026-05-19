@@ -597,7 +597,6 @@ private:
         // Returns uniform float [0, 1)
         inline float nextFloat() { return (next() & 0xFFFFFF) * (1.0f / 16777216.0f); }
     };
-    mutable FastRNG m_ditherRng;
     std::atomic<DitheringMode> m_ditheringMode{DitheringMode::Triangular}; // Default TPDF
 
     TrackRTState& ensureTrackState(uint32_t trackId);

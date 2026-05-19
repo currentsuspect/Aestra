@@ -955,11 +955,6 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     double& masterLfStateR = m_meterLfStateR[ChannelSlotMap::MASTER_SLOT_INDEX];
 
     const bool limiterOn = m_safetyLimiterEnabled.load(std::memory_order_relaxed);
-    const DitheringMode ditherMode = m_ditheringMode.load(std::memory_order_relaxed);
-
-    // Deterministic Dithering: Seed RNG with global timeline position
-    // This ensures that bouncing the same project twice produces identical bits.
-    m_ditherRng.setSeed(static_cast<uint32_t>(m_globalSamplePos.load(std::memory_order_relaxed)) ^ 0x9E3779B9);
 
     // Signal integrity counters (local, then atomic update at end)
     uint32_t nanCount = 0;
@@ -1015,24 +1010,6 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
             sumLR += L * R;
             sumLL += L * L;
             sumRR += R * R;
-        }
-
-        // Dithering (Triangular Probability Density Function - TPDF)
-        // Magnitude = 1 LSB at 24-bit (~ -144dB)
-        // Even for float32 output, this prevents truncation noise if converted later
-        if (ditherMode != DitheringMode::None) {
-            // Generate two uniform randoms [0, 1)
-            float r1 = m_ditherRng.nextFloat();
-            float r2 = m_ditherRng.nextFloat();
-            // TPDF = (rand() - rand()) * LSB_Magnitude
-            // 24-bit LSB = 1.0 / 8388608.0 (approx 1.19e-7)
-            constexpr double LSB_24 = 1.0 / 8388608.0;
-
-            // Apply magnitude logic based on mode (future expansion for Noise Shaping)
-            double noise = (static_cast<double>(r1) - static_cast<double>(r2)) * LSB_24;
-
-            L += noise;
-            R += noise;
         }
 
         // --- LUFS Filtering (Per-Sample) ---

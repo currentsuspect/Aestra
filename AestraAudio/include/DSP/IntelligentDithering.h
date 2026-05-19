@@ -24,9 +24,13 @@ enum class DitheringMode {
  * Attenuates dither noise in the 2-5kHz range where hearing is most sensitive.
  */
 struct NoiseShaper {
-    // Filter state
-    float z1L = 0.0f, z2L = 0.0f;
-    float z1R = 0.0f, z2R = 0.0f;
+    // Input state (x[n-1], x[n-2])
+    float x1L = 0.0f, x2L = 0.0f;
+    float x1R = 0.0f, x2R = 0.0f;
+
+    // Output state (y[n-1], y[n-2])
+    float y1L = 0.0f, y2L = 0.0f;
+    float y1R = 0.0f, y2R = 0.0f;
 
     // F-weighted noise shaping coefficients (optimized for 44.1/48kHz)
     // These attenuate mid-frequencies where ear is most sensitive
@@ -46,17 +50,23 @@ struct NoiseShaper {
      */
     inline void process(float errorL, float errorR, float& shapedL, float& shapedR) noexcept {
         // 2nd order IIR: y[n] = b0*x[n] + b1*x[n-1] + b2*x[n-2] - a1*y[n-1] - a2*y[n-2]
-        shapedL = b0 * errorL + b1 * z1L + b2 * z2L - a1 * z1L - a2 * z2L;
-        shapedR = b0 * errorR + b1 * z1R + b2 * z2R - a1 * z1R - a2 * z2R;
+        shapedL = b0 * errorL + b1 * x1L + b2 * x2L - a1 * y1L - a2 * y2L;
+        shapedR = b0 * errorR + b1 * x1R + b2 * x2R - a1 * y1R - a2 * y2R;
 
-        // Update state
-        z2L = z1L;
-        z1L = errorL;
-        z2R = z1R;
-        z1R = errorR;
+        // Update input state (shift)
+        x2L = x1L;
+        x1L = errorL;
+        x2R = x1R;
+        x1R = errorR;
+
+        // Update output state (shift)
+        y2L = y1L;
+        y1L = shapedL;
+        y2R = y1R;
+        y1R = shapedR;
     }
 
-    void reset() noexcept { z1L = z2L = z1R = z2R = 0.0f; }
+    void reset() noexcept { x1L = x2L = x1R = x2R = y1L = y2L = y1R = y2R = 0.0f; }
 };
 
 /**
