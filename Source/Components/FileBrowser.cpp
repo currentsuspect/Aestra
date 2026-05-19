@@ -184,24 +184,6 @@ std::string mapKeyForPath(const std::string& path) {
     return s;
 }
 
-bool parseFloatValue(const std::string& text, float& out) {
-    char* endPtr = nullptr;
-    const char* begin = text.c_str();
-    const float parsed = std::strtof(begin, &endPtr);
-    if (endPtr == begin || *endPtr != '\0') return false;
-    out = parsed;
-    return true;
-}
-
-bool parseIntValue(const std::string& text, int& out) {
-    char* endPtr = nullptr;
-    const char* begin = text.c_str();
-    const long parsed = std::strtol(begin, &endPtr, 10);
-    if (endPtr == begin || *endPtr != '\0') return false;
-    out = static_cast<int>(parsed);
-    return true;
-}
-
 bool isPathUnderRoot(const std::filesystem::path& candidatePath, const std::filesystem::path& rootPath) {
     const std::string candidate = normalizedPathForCompare(candidatePath);
     std::string root = normalizedPathForCompare(rootPath);
@@ -818,6 +800,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                       1.0f, themeManager.getColor("border").withAlpha(0.40f));
 
     // Folder name at top (like breadcrumb on the right)
+    const auto& themeProps = themeManager.getCurrentTheme();
     std::string folderName = "Browse";
     if (!currentPath_.empty()) {
         std::filesystem::path p(currentPath_);
@@ -825,9 +808,9 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         if (folderName.empty()) folderName = currentPath_;
     }
     renderer.drawText(folderName,
-                      {navHeader.x + 16.0f, std::round(renderer.calculateTextY(
-                          NUIRect(navHeader.x, navHeader.y + 5.0f, navHeader.width, 20.0f), 12.0f))},
-                      12.0f, themeManager.getColor("textPrimary").withAlpha(0.76f));
+                      {navHeader.x + themeProps.spacingM, std::round(renderer.calculateTextY(
+                          NUIRect(navHeader.x, navHeader.y + 5.0f, navHeader.width, 20.0f), themeProps.fontSizeXS))},
+                      themeProps.fontSizeXS, themeManager.getColor("textPrimary").withAlpha(0.76f));
 
     // Inner divider (like right header)
     renderer.drawLine({navHeader.x, navHeader.y + 27.0f},
@@ -851,8 +834,8 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     auto drawSection = [&](const std::string& label) {
         std::string upper = label;
         std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
-        NUIRect labelRect(layout.navPane.x + 16.0f, y, layout.navPane.width - 32.0f, 22.0f);
-        renderer.drawText(upper, {labelRect.x, std::round(renderer.calculateTextY(labelRect, 10.0f))}, 10.0f, sectionColor);
+        NUIRect labelRect(layout.navPane.x + themeProps.spacingM, y, layout.navPane.width - themeProps.spacingM * 2.0f, 22.0f);
+        renderer.drawText(upper, {labelRect.x, std::round(renderer.calculateTextY(labelRect, themeProps.fontSizeXS))}, themeProps.fontSizeXS, sectionColor);
         if (label == "Collections") {
             // Small up-chevron replacing "^" text glyph
             const float upCx = layout.navPane.right() - 14.0f;
@@ -949,16 +932,16 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                               (action != BrowserNavAction::CustomPlace || activeNavPath_ == path);
         const bool hovered = hoveredNavIndex_ == hitIndex;
         if (selected) {
-            renderer.fillRoundedRect(row, 4.0f, selectedBg);
+            renderer.fillRoundedRect(row, themeProps.radiusS, selectedBg);
             renderer.fillRoundedRect({row.x, row.y + 4.0f, 2.0f, row.height - 8.0f},
                                      1.0f,
                                      themeManager.getColor("accentPrimary").withAlpha(0.92f));
         } else if (hovered) {
-            renderer.fillRoundedRect(row, 4.0f, hoverBg);
+            renderer.fillRoundedRect(row, themeProps.radiusS, hoverBg);
         }
         drawIcon(row, action, selected);
-        renderer.drawText(label, {row.x + 33.0f, std::round(renderer.calculateTextY(row, 13.0f))},
-                          13.0f, selected ? themeManager.getColor("textPrimary").withAlpha(0.90f) : rowText);
+        renderer.drawText(label, {row.x + 33.0f, std::round(renderer.calculateTextY(row, themeProps.fontSizeS))},
+                          themeProps.fontSizeS, selected ? themeManager.getColor("textPrimary").withAlpha(0.90f) : rowText);
         if (count > 0) {
             const std::string countText = std::to_string(count);
             const auto countSize = renderer.measureText(countText, 11.0f);
@@ -1049,9 +1032,10 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
     const float crumbRight = layout.listHeader.right() - 28.0f;
     const NUIRect crumb(crumbX, layout.listHeader.y + 5.0f,
                         std::max(0.0f, crumbRight - crumbX), 20.0f);
+    const auto& themeProps = themeManager.getCurrentTheme();
     renderer.drawText(crumbText,
-                      {crumb.x, std::round(renderer.calculateTextY(crumb, 12.0f))},
-                      12.0f,
+                      {crumb.x, std::round(renderer.calculateTextY(crumb, themeProps.fontSizeXS))},
+                      themeProps.fontSizeXS,
                       text.withAlpha(0.76f));
 
     // Breadcrumb arrow (replaces ">" text glyph)
@@ -1088,9 +1072,10 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
 
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, bounds.height);
 
-    renderer.fillRect(fileBrowserBounds, NUIColor(0.086f, 0.092f, 0.108f, 1.0f));
+    renderer.fillRect(fileBrowserBounds, themeManager.getColor("backgroundPrimary"));
 
-    const float cornerRadius = 8.0f;
+    const auto& themeProps = themeManager.getCurrentTheme();
+    const float cornerRadius = themeProps.radiusM;
 
     NUIRect topClip = fileBrowserBounds;
     topClip.height -= cornerRadius;
@@ -2580,7 +2565,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.82f);
     const NUIColor folderText = themeManager.getColor("textPrimary").withAlpha(0.92f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.56f);
-    const float labelFont = 12.5f;
+    const auto& themeProps = themeManager.getCurrentTheme();
+    const float labelFont = themeProps.fontSizeS;
     const float rowIndentStep = 18.0f;
 
     for (int i = firstVisibleIndex; i < lastVisibleIndex; ++i) {

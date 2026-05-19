@@ -112,8 +112,9 @@ void drawArsenalChip(AestraUI::NUIRenderer& renderer,
                      const AestraUI::NUIColor& textColor,
                      float fontSize = 9.0f)
 {
-    renderer.fillRoundedRect(rect, 5.0f, fill);
-    renderer.strokeRoundedRect(rect, 5.0f, 1.0f, stroke);
+    const float chipRadius = AestraUI::NUIThemeManager::getInstance().getCurrentTheme().radiusS + 1.0f;
+    renderer.fillRoundedRect(rect, chipRadius, fill);
+    renderer.strokeRoundedRect(rect, chipRadius, 1.0f, stroke);
     renderer.drawTextCentered(text, rect, fontSize, textColor);
 }
 } // namespace
@@ -548,9 +549,10 @@ void ArsenalPanel::onRender(NUIRenderer& renderer) {
             }
         }
     }
+    const auto& themeProps = theme.getCurrentTheme();
     renderer.drawText(patternName,
                       NUIPoint(bounds.x + 12.0f, bounds.y + 5.0f),
-                      12.0f,
+                      themeProps.fontSizeXS,
                       theme.getColor("textPrimary").withAlpha(0.9f));
     renderer.drawText(patternName + " · " + trackContext,
                       NUIPoint(bounds.x + 12.0f, bounds.y + 16.0f),
@@ -797,9 +799,14 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     const bool decEnabled = bars > kArsenalMinPatternBars;
     const bool incEnabled = bars < kArsenalMaxPatternBars;
 
+    const auto& themeProps = theme.getCurrentTheme();
+    const float cardRadius = themeProps.radiusM;
+    const float pillRadius = themeProps.radiusS + 1.0f;
+    const auto disabledText = theme.getColor("textDisabled");
+
     const NUIRect leftCard(bounds.x + 4.0f, bounds.y + 1.0f, std::max(216.0f, controlWidth - 10.0f), bounds.height - 2.0f);
-    renderer.fillRoundedRect(leftCard, 8.0f, theme.getColor("backgroundSecondary").withAlpha(0.92f));
-    renderer.strokeRoundedRect(leftCard, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.85f));
+    renderer.fillRoundedRect(leftCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.92f));
+    renderer.strokeRoundedRect(leftCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.85f));
 
     m_barsDecrementRect = NUIRect(leftCard.x + 10.0f, leftCard.y + 4.0f, 18.0f, leftCard.height - 8.0f);
     m_barsValueRect = NUIRect(m_barsDecrementRect.right() + 4.0f, leftCard.y + 4.0f, 56.0f, leftCard.height - 8.0f);
@@ -808,17 +815,17 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     const auto pillFill = theme.getColor("surfaceTertiary").withAlpha(0.78f);
     const auto pillStroke = theme.getColor("borderSubtle").withAlpha(0.85f);
     const auto pillText = theme.getColor("textSecondary").withAlpha(0.9f);
-    renderer.fillRoundedRect(m_barsDecrementRect, 5.0f, pillFill);
-    renderer.strokeRoundedRect(m_barsDecrementRect, 5.0f, 1.0f, pillStroke);
-    renderer.drawTextCentered("-", m_barsDecrementRect, 10.5f, decEnabled ? pillText : NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
+    renderer.fillRoundedRect(m_barsDecrementRect, pillRadius, pillFill);
+    renderer.strokeRoundedRect(m_barsDecrementRect, pillRadius, 1.0f, pillStroke);
+    renderer.drawTextCentered("-", m_barsDecrementRect, 10.5f, decEnabled ? pillText : disabledText);
 
-    renderer.fillRoundedRect(m_barsValueRect, 5.0f, pillFill);
-    renderer.strokeRoundedRect(m_barsValueRect, 5.0f, 1.0f, pillStroke);
+    renderer.fillRoundedRect(m_barsValueRect, pillRadius, pillFill);
+    renderer.strokeRoundedRect(m_barsValueRect, pillRadius, 1.0f, pillStroke);
     renderer.drawTextCentered(std::to_string(bars) + " Bars", m_barsValueRect, 8.5f, pillText);
 
-    renderer.fillRoundedRect(m_barsIncrementRect, 5.0f, pillFill);
-    renderer.strokeRoundedRect(m_barsIncrementRect, 5.0f, 1.0f, pillStroke);
-    renderer.drawTextCentered("+", m_barsIncrementRect, 10.5f, incEnabled ? pillText : NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
+    renderer.fillRoundedRect(m_barsIncrementRect, pillRadius, pillFill);
+    renderer.strokeRoundedRect(m_barsIncrementRect, pillRadius, 1.0f, pillStroke);
+    renderer.drawTextCentered("+", m_barsIncrementRect, 10.5f, incEnabled ? pillText : disabledText);
 
     const float contentBadgeWidth = contentLabel == "Piano Roll" ? 74.0f : 62.0f;
     const NUIRect contentBadge(m_barsIncrementRect.right() + 8.0f, leftCard.y + 4.0f, contentBadgeWidth, leftCard.height - 8.0f);
@@ -839,52 +846,53 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
                     8.25f);
 
     const NUIRect gridCard(gridStartX - 2.0f, bounds.y + 1.0f, std::max(0.0f, availWidth + 4.0f), bounds.height - 2.0f);
-    renderer.fillRoundedRect(gridCard, 8.0f, theme.getColor("backgroundSecondary").withAlpha(0.82f));
-    renderer.strokeRoundedRect(gridCard, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
-    
+    renderer.fillRoundedRect(gridCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.82f));
+    renderer.strokeRoundedRect(gridCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
+
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
     float indicatorHeight = PROGRESS_HEADER_HEIGHT - 10.0f;
     float indicatorY = bounds.y + 5.0f;
-    
+    const float indicatorRadius = themeProps.radiusXS + 0.5f;
+
     // Scanlines/Clipping: Clip to header bounds to prevent overflow
     renderer.setClipRect(bounds);
-    
+
     // Draw step indicators
     for (int i = 0; i < m_stepCount; ++i) {
         float stepX = gridStartX + (i * stepWidth) + 2.0f;
         float indicatorWidth = stepWidth - 4.0f;
-        
+
         NUIRect indicatorRect(stepX, indicatorY, indicatorWidth, indicatorHeight);
-        
+
         // Base color: more visible background
         NUIColor bgColor = theme.getColor("surfaceTertiary").withAlpha(0.5f);
-        
+
         // Bar/beat markers
         bool isBarStart = (i % 4 == 0);
         if (isBarStart) {
             bgColor = bgColor.lightened(0.1f);
         }
-        
-        renderer.fillRoundedRect(indicatorRect, 2.5f, bgColor);
-        
+
+        renderer.fillRoundedRect(indicatorRect, indicatorRadius, bgColor);
+
         // Highlight current playing step
         if (i == m_currentPlayStep) {
             NUIColor playColor = theme.getColor("accentPrimary");
-            renderer.fillRoundedRect(indicatorRect, 2.5f, playColor);
-            
+            renderer.fillRoundedRect(indicatorRect, indicatorRadius, playColor);
+
             // Glow effect
-            NUIRect glowRect(indicatorRect.x - 1, indicatorRect.y - 1, 
+            NUIRect glowRect(indicatorRect.x - 1, indicatorRect.y - 1,
                            indicatorRect.width + 2, indicatorRect.height + 2);
-            renderer.strokeRoundedRect(glowRect, 3.0f, 1.0f, playColor.withAlpha(0.6f));
+            renderer.strokeRoundedRect(glowRect, themeProps.radiusXS + 1.0f, 1.0f, playColor.withAlpha(0.6f));
         }
         // Show progress for steps already played in current loop
         else if (m_currentPlayStep >= 0 && i < m_currentPlayStep) {
             NUIColor playedColor = theme.getColor("accentPrimary").withAlpha(0.5f);
-            renderer.fillRoundedRect(indicatorRect, 2.5f, playedColor);
+            renderer.fillRoundedRect(indicatorRect, indicatorRadius, playedColor);
         }
-        
+
         // Subtle border
-        renderer.strokeRoundedRect(indicatorRect, 2.5f, 0.5f, 
+        renderer.strokeRoundedRect(indicatorRect, indicatorRadius, 0.5f,
                                    theme.getColor("borderSubtle").withAlpha(0.6f));
 
         if (isBarStart) {
@@ -897,6 +905,7 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
 
 void ArsenalPanel::drawUnitTypePicker(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
+    const auto& themeProps = theme.getCurrentTheme();
     if (m_addUnitButtonRect.width <= 0.0f || m_addUnitButtonRect.height <= 0.0f) {
         return;
     }
@@ -908,8 +917,9 @@ void ArsenalPanel::drawUnitTypePicker(NUIRenderer& renderer) {
                                    cardWidth,
                                    cardHeight);
 
-    renderer.fillRoundedRect(m_unitTypePickerRect, 10.0f, theme.getColor("backgroundSecondary").withAlpha(0.98f));
-    renderer.strokeRoundedRect(m_unitTypePickerRect, 10.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.9f));
+    const float pickerRadius = std::max(themeProps.radiusL - 2.0f, 0.0f);
+    renderer.fillRoundedRect(m_unitTypePickerRect, pickerRadius, theme.getColor("backgroundSecondary").withAlpha(0.98f));
+    renderer.strokeRoundedRect(m_unitTypePickerRect, pickerRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.9f));
 
     const float padding = 10.0f;
     const float gap = 8.0f;
@@ -925,10 +935,10 @@ void ArsenalPanel::drawUnitTypePicker(NUIRenderer& renderer) {
                            m_unitTypePickerRect.y + padding + row * (cellHeight + gap),
                            cellWidth,
                            cellHeight);
-        renderer.fillRoundedRect(cell, 8.0f, theme.getColor("surfaceTertiary").withAlpha(0.8f));
-        renderer.strokeRoundedRect(cell, 8.0f, 1.0f, theme.getColor("borderSubtle").withAlpha(0.72f));
-        renderer.drawText(icons[i], NUIPoint(cell.x + 10.0f, cell.y + 11.0f), 13.0f, theme.getColor("accentPrimary").withAlpha(0.9f));
-        renderer.drawText(unitTypeDisplayName(types[i]), NUIPoint(cell.x + 32.0f, cell.y + 10.0f), 11.0f, theme.getColor("textPrimary").withAlpha(0.95f));
+        renderer.fillRoundedRect(cell, themeProps.radiusM, theme.getColor("surfaceTertiary").withAlpha(0.8f));
+        renderer.strokeRoundedRect(cell, themeProps.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.72f));
+        renderer.drawText(icons[i], NUIPoint(cell.x + 10.0f, cell.y + 11.0f), themeProps.fontSizeS - 1.0f, theme.getColor("accentPrimary").withAlpha(0.9f));
+        renderer.drawText(unitTypeDisplayName(types[i]), NUIPoint(cell.x + 32.0f, cell.y + 10.0f), themeProps.fontSizeXS - 1.0f, theme.getColor("textPrimary").withAlpha(0.95f));
         renderer.drawText(unitTypeDescription(types[i]), NUIPoint(cell.x + 10.0f, cell.y + 28.0f), 8.5f, theme.getColor("textSecondary").withAlpha(0.68f));
     }
 }
