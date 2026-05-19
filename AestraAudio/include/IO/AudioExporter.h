@@ -262,9 +262,6 @@ private:
     bool writeSamples(std::ofstream& file, const float* buffer,
                       size_t frames, uint32_t channels);
 
-    // Master output processing (matches playback path)
-    void applyMasterOutputStage(float* buffer, uint32_t numFrames);
-
     // Compute render duration in beats from config + playlist
     double computeRenderDurationBeats(const Config& config, double& outStartBeat);
 
@@ -281,8 +278,7 @@ private:
     std::chrono::steady_clock::time_point m_lastProgressTime;
     std::chrono::milliseconds m_progressInterval{100};
 
-    // Render buffers (double for internal, float for output)
-    std::vector<double> m_renderBufferD;
+    // Render buffer (float for output)
     std::vector<float> m_renderBufferF;
 
     // Peak tracking
