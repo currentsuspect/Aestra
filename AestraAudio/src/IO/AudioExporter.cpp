@@ -47,7 +47,10 @@ AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManag
     config.outputPath = outputPath;
     config.startBeat = startBeat;
     config.endBeat = endBeat;
-    config.scope = RenderScope::Selection;
+    // Use FullSong scope — computeRenderDurationBeats now handles beat ranges
+    // under FullSong. Selection scope reads startTimeSeconds/endTimeSeconds
+    // which bounceToWav does not set, causing zero-duration renders.
+    config.scope = RenderScope::FullSong;
     config.sampleRate = engine.getSampleRate();
     config.bitDepth = BitDepth::Float_32;
     config.numChannels = 2;
