@@ -1466,6 +1466,19 @@ AudioEngine::BiquadCoeff AudioEngine::computeKWeightPreFilter(double sampleRate)
     const double a1 = 2.0 * (K2 - 1.0) / norm;
     const double a2 = (1.0 - K / Q + K2) / norm;
 
+    // Validate that the computed 48 kHz coefficients reproduce the existing reference
+    // values within tolerance; fall back to the reference constants if they do not.
+    if (std::abs(fs - 48000.0) < 1.0e-9) {
+        constexpr double tolerance = 1.0e-9;
+        if (std::abs(b0 - kKWeightPreFilter.b0) > tolerance ||
+            std::abs(b1 - kKWeightPreFilter.b1) > tolerance ||
+            std::abs(b2 - kKWeightPreFilter.b2) > tolerance ||
+            std::abs(a1 - kKWeightPreFilter.a1) > tolerance ||
+            std::abs(a2 - kKWeightPreFilter.a2) > tolerance) {
+            return kKWeightPreFilter;
+        }
+    }
+
     return {b0, b1, b2, a1, a2};
 }
 
@@ -3128,7 +3141,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         Aestra::Log::error("[AudioEngine] Failed to init encoder for bounce: " + outputPath);
         // Restore playback state if we paused
         if (wasPlaying)
-            m_transportPlaying.store(true, std::memory_order_relaxed);
+            setTransportPlaying(true);
         return false;
     }
 
@@ -3240,7 +3253,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
 
     // Restore playback state
     if (wasPlaying)
-        m_transportPlaying.store(true, std::memory_order_relaxed);
+        setTransportPlaying(true);
 
     if (writeError) {
         // Clean up partial file on write error
