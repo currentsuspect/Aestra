@@ -1051,6 +1051,15 @@ target_include_directories(CommandTransactionTest PRIVATE
 add_test(NAME CommandTransactionTest COMMAND CommandTransactionTest)
 set_tests_properties(CommandTransactionTest PROPERTIES LABELS "commands;phase2")
 
+# CommandRegistry Parse Safety Test (regression for #197)
+add_executable(CommandRegistryParseSafetyTest Commands/CommandRegistryParseSafetyTest.cpp)
+target_include_directories(CommandRegistryParseSafetyTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CommandRegistryParseSafetyTest COMMAND CommandRegistryParseSafetyTest)
+set_tests_properties(CommandRegistryParseSafetyTest PROPERTIES LABELS "commands;regression")
+
 # Rumble State Test (requires runtime plugin system)
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
     add_executable(RumbleStateTest Commands/RumbleStateTest.cpp)

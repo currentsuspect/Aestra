@@ -2,6 +2,7 @@
 #pragma once
 
 #include <atomic>
+#include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -372,7 +373,10 @@ public:
         size_t count = m_eventCount.load(std::memory_order_acquire);
         return count > kMaxEvents ? kMaxEvents : count;
     }
-    const Event& getEvent(size_t index) const { return m_events[index]; }
+    const Event& getEvent(size_t index) const {
+        assert(index < kMaxEvents);
+        return m_events[index];
+    }
 
     /**
      * @brief Helper to add a Note On event

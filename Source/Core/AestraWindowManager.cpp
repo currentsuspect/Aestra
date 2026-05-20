@@ -116,9 +116,9 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     Log::info("OpenGL context created");
 
     // Initialize UI renderer (this will initialize GLAD internally)
+    std::unique_ptr<NUIRendererGL> glRenderer;
     try {
-        // Use raw pointer for initialization to avoid unique_ptr casting issues
-        auto* glRenderer = new NUIRendererGL();
+        glRenderer = std::make_unique<NUIRendererGL>();
 
         // CRITICAL: Get the ACTUAL client size after window creation
         int actualWidth = 0, actualHeight = 0;
@@ -126,7 +126,6 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         Log::info("Renderer init with actual client size: " + std::to_string(actualWidth) + "x" + std::to_string(actualHeight));
 
         if (!glRenderer->initialize(actualWidth, actualHeight)) {
-            delete glRenderer; // Clean up on failure
             Log::error("Failed to initialize UI renderer");
             return false;
         }
@@ -140,8 +139,8 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         glRenderer->setCachingEnabled(true);
 #endif
 
-        // Transfer ownership to unique_ptr
-        m_renderer.reset(glRenderer);
+        // Transfer ownership to member
+        m_renderer = std::move(glRenderer);
 
         Log::info("UI renderer initialized");
     }
@@ -392,21 +391,9 @@ bool AestraWindowManager::processEvents() {
 void AestraWindowManager::setTransportCallback(std::function<void(TransportAction)> cb) {
     m_transportCallback = std::move(cb);
     if (m_rootComponent) {
-        m_rootComponent->setTransportCallback([this](AestraRootComponent::TransportAction action) {
-            if (!m_transportCallback) {
-                return;
-            }
-
-            switch (action) {
-                case AestraRootComponent::TransportAction::Play:
-                    m_transportCallback(TransportAction::Play);
-                    break;
-                case AestraRootComponent::TransportAction::Pause:
-                    m_transportCallback(TransportAction::Pause);
-                    break;
-                case AestraRootComponent::TransportAction::Stop:
-                    m_transportCallback(TransportAction::Stop);
-                    break;
+        m_rootComponent->setTransportCallback([this](TransportAction action) {
+            if (m_transportCallback) {
+                m_transportCallback(action);
             }
         });
     }
@@ -417,22 +404,8 @@ void AestraWindowManager::setContent(std::shared_ptr<AestraContent> content) {
     if (m_rootComponent) {
         m_rootComponent->setContent(m_content.get());
         if (m_transportCallback) {
-            m_rootComponent->setTransportCallback([this](AestraRootComponent::TransportAction action) {
-                if (!m_transportCallback) {
-                    return;
-                }
-
-                switch (action) {
-                    case AestraRootComponent::TransportAction::Play:
-                        m_transportCallback(TransportAction::Play);
-                        break;
-                    case AestraRootComponent::TransportAction::Pause:
-                        m_transportCallback(TransportAction::Pause);
-                        break;
-                    case AestraRootComponent::TransportAction::Stop:
-                        m_transportCallback(TransportAction::Stop);
-                        break;
-                }
+            m_rootComponent->setTransportCallback([this](TransportAction action) {
+                m_transportCallback(action);
             });
         }
     }

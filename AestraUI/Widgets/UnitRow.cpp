@@ -149,9 +149,10 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     NUIRect cardBounds = bounds;
     cardBounds.height = 56.0f;
 
-    const float radius = 7.0f;
-    NUIColor cardBg(0.101f, 0.101f, 0.141f, 1.0f);
-    NUIColor border(1.0f, 1.0f, 1.0f, 0.08f);
+    const auto& themeProps = theme.getCurrentTheme();
+    const float radius = std::max(0.0f, themeProps.radiusM - 1.0f);
+    NUIColor cardBg = theme.getColor("backgroundSecondary");
+    NUIColor border = theme.getColor("border").withAlpha(0.08f);
     if (m_isDropHighlighted) {
         cardBg = theme.getColor("accentPrimary").withAlpha(0.18f);
         border = theme.getColor("accentPrimary").withAlpha(0.95f);
@@ -159,7 +160,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
         cardBg = theme.getColor("accentPrimary").withAlpha(0.14f);
         border = theme.getColor("accentPrimary").withAlpha(0.55f);
     } else if (m_isHovered) {
-        cardBg = NUIColor(0.12f, 0.12f, 0.17f, 1.0f);
+        cardBg = theme.getColor("surfaceRaised");
         border = theme.getColor("accentPrimary").withAlpha(0.22f);
     }
 
@@ -232,12 +233,12 @@ void UnitRow::drawArmIcon(NUIRenderer& renderer, const NUIRect& bounds, bool act
 void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
     auto& theme = NUIThemeManager::getInstance();
     
-    NUIColor bgColor = active ? NUIColor(1.0f, 0.6f, 0.2f, 1.0f) : theme.getColor("backgroundPrimary");
+    NUIColor bgColor = active ? theme.getColor("warning") : theme.getColor("backgroundPrimary");
     NUIColor textColor = active ? NUIColor(0.0f, 0.0f, 0.0f, 1.0f) : theme.getColor("textSecondary");
     NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
-    
+
     // Circular Button
-    float radius = theme.getRadius("radiusXS") * 2.0f; 
+    float radius = theme.getRadius("radiusXS") * 2.0f;
     renderer.fillRoundedRect(bounds, radius, bgColor);
     // Glow if active
     if (active) {
@@ -245,20 +246,20 @@ void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     } else {
         renderer.strokeRoundedRect(bounds, radius, 1.0f, borderColor);
     }
-    
+
     // "M" label centered
     renderer.drawTextCentered("M", bounds, 10.0f, textColor);
 }
 
 void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
     auto& theme = NUIThemeManager::getInstance();
-    
-    NUIColor bgColor = active ? NUIColor(1.0f, 0.85f, 0.2f, 1.0f) : theme.getColor("backgroundPrimary");
+
+    NUIColor bgColor = active ? theme.getColor("success") : theme.getColor("backgroundPrimary");
     NUIColor textColor = active ? NUIColor(0.0f, 0.0f, 0.0f, 1.0f) : theme.getColor("textSecondary");
     NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
-    
+
     // Circular Button
-    float radius = theme.getRadius("radiusXS") * 2.0f; 
+    float radius = theme.getRadius("radiusXS") * 2.0f;
     renderer.fillRoundedRect(bounds, radius, bgColor);
     // Glow if active
     if (active) {
@@ -266,7 +267,7 @@ void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     } else {
         renderer.strokeRoundedRect(bounds, radius, 1.0f, borderColor);
     }
-    
+
     // "S" label centered
     renderer.drawTextCentered("S", bounds, 10.0f, textColor);
 }
@@ -306,7 +307,7 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
 
     renderer.fillCircle(NUIPoint(nameX, bounds.y + 18.0f),
                         3.0f,
-                        m_isEnabled ? NUIColor(0.38f, 0.90f, 0.48f, 1.0f) : NUIColor(0.42f, 0.42f, 0.48f, 1.0f));
+                        m_isEnabled ? theme.getColor("success") : theme.getColor("textDisabled"));
 
     // Name + type label are rendered by the UnitNameLabel child component.
 
@@ -336,8 +337,9 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         float velocity{1.0f};
     };
 
+    const auto& themeProps = theme.getCurrentTheme();
     const NUIRect contentCard(bounds.x, bounds.y, std::max(0.0f, bounds.width), std::max(0.0f, bounds.height));
-    renderer.fillRoundedRect(contentCard, 6.0f, NUIColor(0.074f, 0.074f, 0.102f, 1.0f));
+    renderer.fillRoundedRect(contentCard, themeProps.radiusS + 2.0f, theme.getColor("backgroundPrimary"));
 
     const float lanePadding = 6.0f;
     const NUIRect timelineStrip(contentCard.x + lanePadding,
@@ -386,9 +388,9 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     activeSteps.erase(std::unique(activeSteps.begin(), activeSteps.end()), activeSteps.end());
 
     if (m_type == Aestra::Audio::UnitType::Sampler) {
-        const NUIColor inactiveFill(0.133f, 0.133f, 0.184f, 1.0f);
-        const NUIColor inactiveStroke(1.0f, 1.0f, 1.0f, 0.10f);
-        const NUIColor activeFill(0.486f, 0.361f, 0.749f, 1.0f);
+        const NUIColor inactiveFill = theme.getColor("surfaceTertiary");
+        const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.10f);
+        const NUIColor activeFill = theme.getColor("primary");
         const float cellGap = 3.0f;
         const float cellRadius = 3.0f;
         const float cellHeight = std::max(10.0f, timelineStrip.height - 6.0f);
@@ -411,13 +413,13 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 renderer.drawLine(NUIPoint(markerX, timelineStrip.y + 2.0f),
                                   NUIPoint(markerX, timelineStrip.bottom() - 2.0f),
                                   1.0f,
-                                  NUIColor(1.0f, 1.0f, 1.0f, 0.12f));
+                                  theme.getColor("border").withAlpha(0.12f));
             }
         }
     } else if (m_type == Aestra::Audio::UnitType::PitchedSampler) {
-        const NUIColor inactiveFill(0.133f, 0.133f, 0.184f, 1.0f);
-        const NUIColor inactiveStroke(1.0f, 1.0f, 1.0f, 0.10f);
-        const NUIColor activeFill(0.486f, 0.361f, 0.749f, 1.0f);
+        const NUIColor inactiveFill = theme.getColor("surfaceTertiary");
+        const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.10f);
+        const NUIColor activeFill = theme.getColor("primary");
         const NUIColor pitchText = theme.getColor("textSecondary").withAlpha(0.72f);
         const float cellGap = 3.0f;
         const float topHeight = std::max(8.0f, timelineStrip.height * 0.58f);
@@ -466,7 +468,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             renderer.drawLine(NUIPoint(timelineStrip.x, y),
                               NUIPoint(timelineStrip.right(), y),
                               1.0f,
-                              NUIColor(1.0f, 1.0f, 1.0f, 0.07f));
+                              theme.getColor("border").withAlpha(0.07f));
         }
 
         int minPitch = noteSpans[0].pitch;
@@ -478,8 +480,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         minPitch = std::max(0, minPitch - 2);
         maxPitch = std::min(127, maxPitch + 2);
         const int pitchRange = std::max(12, maxPitch - minPitch);
-        const NUIColor noteFill(0.486f, 0.361f, 0.749f, 0.88f);
-        const NUIColor noteStroke(1.0f, 1.0f, 1.0f, 0.10f);
+        const NUIColor noteFill = theme.getColor("primary").withAlpha(0.88f);
+        const NUIColor noteStroke = theme.getColor("border").withAlpha(0.10f);
         const float noteHeight = 4.0f;
 
         for (const auto& span : noteSpans) {
@@ -501,7 +503,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
             const float midY = timelineStrip.y + timelineStrip.height * 0.5f;
             const float ampScale = std::max(4.0f, timelineStrip.height * 0.42f);
             const float binWidth = timelineStrip.width / static_cast<float>(m_audioPreviewWaveform.size());
-            const NUIColor waveColor(0.486f, 0.361f, 0.749f, 0.9f);
+            const NUIColor waveColor = theme.getColor("primary").withAlpha(0.9f);
 
             for (size_t i = 0; i < m_audioPreviewWaveform.size(); ++i) {
                 const float x = timelineStrip.x + static_cast<float>(i) * binWidth;

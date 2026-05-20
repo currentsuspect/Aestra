@@ -16,7 +16,11 @@
 #include "AestraUUID.h"
 
 #include <cctype>
+#include <cmath>
+#include <exception>
+#include <optional>
 #include <string>
+#include <string_view>
 
 namespace Aestra {
 namespace Audio {
@@ -24,13 +28,66 @@ namespace Audio {
 namespace {
 // Mirror of CommandParser bool spellings — keep in sync with
 // CommandParser::convertAndValidateValue (FlagType::Bool).
-bool parseFlagBool(const std::string& s) {
+bool parseFlagBool(std::string_view s) {
     std::string lower;
     lower.reserve(s.size());
     for (char c : s) {
         lower.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
     }
     return lower == "true" || lower == "1" || lower == "yes";
+}
+
+// Safe flag lookup — returns nullopt if key is missing
+std::optional<std::string_view> requireFlag(const std::unordered_map<std::string, std::string>& flags, const char* key) {
+    auto it = flags.find(key);
+    if (it == flags.end()) return std::nullopt;
+    return it->second;
+}
+
+// Safe parsing helpers that return std::nullopt on malformed input
+// Reject leading/trailing whitespace, non-finite floats, and negative unsigned strings
+std::optional<int> safeStoi(std::string_view s) {
+    if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
+    try {
+        size_t pos = 0;
+        int val = std::stoi(std::string(s), &pos);
+        if (pos != s.size()) return std::nullopt;
+        return val;
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
+std::optional<float> safeStof(std::string_view s) {
+    if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
+    try {
+        size_t pos = 0;
+        float val = std::stof(std::string(s), &pos);
+        if (pos != s.size()) return std::nullopt;
+        if (!std::isfinite(val)) return std::nullopt;
+        return val;
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+}
+
+std::optional<unsigned long long> safeStoull(std::string_view s) {
+    if (s.empty()) return std::nullopt;
+    if (std::isspace(static_cast<unsigned char>(s.front())) ||
+        std::isspace(static_cast<unsigned char>(s.back()))) return std::nullopt;
+    if (s.front() == '-') return std::nullopt;
+    try {
+        size_t pos = 0;
+        unsigned long long val = std::stoull(std::string(s), &pos);
+        if (pos != s.size()) return std::nullopt;
+        return val;
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
 }
 
 AudioEngine* s_audioEngine = nullptr;
@@ -71,8 +128,11 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
     reg.registerCommand("set_bpm", [](const auto& flags) -> std::unique_ptr<ICommand> {
         AudioEngine* engine = getAudioEngine();
         if (!engine) return nullptr;
-        float value = std::stof(flags.at("value"));
-        return std::make_unique<SetBpmCommand>(*engine, value);
+        auto valueRaw = requireFlag(flags, "value");
+        if (!valueRaw) return nullptr;
+        auto valueOpt = safeStof(*valueRaw);
+        if (!valueOpt) return nullptr;
+        return std::make_unique<SetBpmCommand>(*engine, *valueOpt);
     });
 
     reg.registerCommand("play", [](const auto&) -> std::unique_ptr<ICommand> {
@@ -113,65 +173,105 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
     });
 
     reg.registerCommand("delete_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        int trackIndex = std::stoi(flags.at("track"));
-        return std::make_unique<DeleteTrackCommand>(*tm, trackIndex);
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt) return nullptr;
+        return std::make_unique<DeleteTrackCommand>(*tm, *trackOpt);
     });
 
     reg.registerCommand("rename_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        int trackIndex = std::stoi(flags.at("track"));
-        return std::make_unique<RenameTrackCommand>(*tm, trackIndex, flags.at("name"));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt) return nullptr;
+        auto nameIt = flags.find("name");
+        if (nameIt == flags.end()) return nullptr;
+        return std::make_unique<RenameTrackCommand>(*tm, *trackOpt, nameIt->second);
     });
 
     reg.registerCommand("mute_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        int trackIndex = std::stoi(flags.at("track"));
-        bool state = parseFlagBool(flags.at("state"));
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(trackIndex));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt) return nullptr;
+        auto stateRaw = requireFlag(flags, "state");
+        if (!stateRaw) return nullptr;
+        bool state = parseFlagBool(*stateRaw);
+        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
         return std::make_unique<SetMuteCommand>(*ch, state);
     });
 
     reg.registerCommand("solo_track", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        int trackIndex = std::stoi(flags.at("track"));
-        bool state = parseFlagBool(flags.at("state"));
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(trackIndex));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt) return nullptr;
+        auto stateRaw = requireFlag(flags, "state");
+        if (!stateRaw) return nullptr;
+        bool state = parseFlagBool(*stateRaw);
+        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
         return std::make_unique<SetSoloCommand>(*ch, state);
     });
 
     reg.registerCommand("set_volume", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        int trackIndex = std::stoi(flags.at("track"));
-        float value = std::stof(flags.at("value"));
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(trackIndex));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt) return nullptr;
+        auto valueRaw = requireFlag(flags, "value");
+        if (!valueRaw) return nullptr;
+        auto valueOpt = safeStof(*valueRaw);
+        if (!valueOpt) return nullptr;
+        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
-        return std::make_unique<SetVolumeCommand>(*ch, value);
+        return std::make_unique<SetVolumeCommand>(*ch, *valueOpt);
     });
 
     reg.registerCommand("set_pan", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
-        int trackIndex = std::stoi(flags.at("track"));
-        float value = std::stof(flags.at("value"));
-        MixerChannel* ch = tm->getChannel(static_cast<size_t>(trackIndex));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt) return nullptr;
+        auto valueRaw = requireFlag(flags, "value");
+        if (!valueRaw) return nullptr;
+        auto valueOpt = safeStof(*valueRaw);
+        if (!valueOpt) return nullptr;
+        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
         if (!ch) return nullptr;
-        return std::make_unique<SetPanCommand>(*ch, value);
+        return std::make_unique<SetPanCommand>(*ch, *valueOpt);
     });
 
     // ===== Clip (5) =====
     reg.registerCommand("add_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
         if (!pm) return nullptr;
-        int trackIndex = std::stoi(flags.at("track"));
-        double bar = static_cast<double>(std::stoi(flags.at("bar")));
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt) return nullptr;
+        auto barRaw = requireFlag(flags, "bar");
+        if (!barRaw) return nullptr;
+        auto barOpt = safeStoi(*barRaw);
+        if (!barOpt) return nullptr;
 
-        PlaylistLaneID laneId = pm->getLaneId(static_cast<size_t>(trackIndex));
+        PlaylistLaneID laneId = pm->getLaneId(static_cast<size_t>(*trackOpt));
         if (!laneId.isValid())
             return nullptr;
 
         ClipInstance clip;
-        clip.startBeat = (bar - 1) * 4.0;
+        clip.startBeat = (*barOpt - 1) * 4.0;
         clip.durationBeats = 4.0;
-        clip.name = flags.at("file");
+        auto fileIt = flags.find("file");
+        if (fileIt == flags.end()) return nullptr;
+        clip.name = fileIt->second;
 
-        auto it = flags.find("source");
-        if (it != flags.end()) {
-            clip.sourceId = std::stoull(it->second);
+        auto srcIt = flags.find("source");
+        if (srcIt != flags.end()) {
+            auto srcOpt = safeStoull(srcIt->second);
+            if (!srcOpt) return nullptr;
+            clip.sourceId = *srcOpt;
         }
 
         return std::make_unique<AddClipCommand>(*pm, laneId, clip);
@@ -179,43 +279,70 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
 
     reg.registerCommand("delete_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
         if (!pm) return nullptr;
-        int id = std::stoi(flags.at("id"));
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = safeStoi(*idRaw);
+        if (!idOpt) return nullptr;
         ClipInstanceID clipId;
-        clipId.low = static_cast<uint64_t>(id);
+        clipId.low = static_cast<uint64_t>(*idOpt);
         return std::make_unique<RemoveClipCommand>(*pm, clipId);
     });
 
     reg.registerCommand("move_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
         if (!pm) return nullptr;
-        int id = std::stoi(flags.at("id"));
-        int trackIndex = std::stoi(flags.at("track"));
-        double start = static_cast<double>(std::stof(flags.at("start")));
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = safeStoi(*idRaw);
+        if (!idOpt) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt) return nullptr;
+        auto startRaw = requireFlag(flags, "start");
+        if (!startRaw) return nullptr;
+        auto startOpt = safeStof(*startRaw);
+        if (!startOpt) return nullptr;
 
         ClipInstanceID clipId;
-        clipId.low = static_cast<uint64_t>(id);
-        PlaylistLaneID laneId = pm->getLaneId(static_cast<size_t>(trackIndex));
-        return std::make_unique<MoveClipCommand>(*pm, clipId, start, laneId);
+        clipId.low = static_cast<uint64_t>(*idOpt);
+        PlaylistLaneID laneId = pm->getLaneId(static_cast<size_t>(*trackOpt));
+        return std::make_unique<MoveClipCommand>(*pm, clipId, *startOpt, laneId);
     });
 
     reg.registerCommand("duplicate_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
         if (!pm) return nullptr;
-        int id = std::stoi(flags.at("id"));
-        int bar = std::stoi(flags.at("bar"));
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = safeStoi(*idRaw);
+        if (!idOpt) return nullptr;
+        auto barRaw = requireFlag(flags, "bar");
+        if (!barRaw) return nullptr;
+        auto barOpt = safeStoi(*barRaw);
+        if (!barOpt) return nullptr;
 
         ClipInstanceID clipId;
-        clipId.low = static_cast<uint64_t>(id);
-        return std::make_unique<DuplicateClipCommand>(*pm, clipId, static_cast<double>(bar));
+        clipId.low = static_cast<uint64_t>(*idOpt);
+        return std::make_unique<DuplicateClipCommand>(*pm, clipId, static_cast<double>(*barOpt));
     });
 
     reg.registerCommand("trim_clip", [pm](const auto& flags) -> std::unique_ptr<ICommand> {
         if (!pm) return nullptr;
-        int id = std::stoi(flags.at("id"));
-        double start = static_cast<double>(std::stof(flags.at("start")));
-        double end = static_cast<double>(std::stof(flags.at("end")));
+        auto idRaw = requireFlag(flags, "id");
+        if (!idRaw) return nullptr;
+        auto idOpt = safeStoi(*idRaw);
+        if (!idOpt) return nullptr;
+        auto startRaw = requireFlag(flags, "start");
+        if (!startRaw) return nullptr;
+        auto startOpt = safeStof(*startRaw);
+        if (!startOpt) return nullptr;
+        auto endRaw = requireFlag(flags, "end");
+        if (!endRaw) return nullptr;
+        auto endOpt = safeStof(*endRaw);
+        if (!endOpt) return nullptr;
 
         ClipInstanceID clipId;
-        clipId.low = static_cast<uint64_t>(id);
-        return std::make_unique<TrimClipCommand>(*pm, clipId, start, end);
+        clipId.low = static_cast<uint64_t>(*idOpt);
+        return std::make_unique<TrimClipCommand>(*pm, clipId, *startOpt, *endOpt);
     });
 }
 
