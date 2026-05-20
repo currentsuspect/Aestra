@@ -413,15 +413,18 @@ CI is part of the product contract.
 
 Typical workflows may include:
 
-| Workflow                           | Purpose                     |
-| ---------------------------------- | --------------------------- |
-| `ci.yml`                           | Main build/test matrix      |
-| `public-ci.yml`                    | Public branch guard         |
-| `docs-check.yml`                   | Documentation validation    |
-| `deploy-docs.yml`                  | Public docs deployment      |
-| `gitleaks.yml` / `gitleaks-pr.yml` | Secret scanning             |
-| `api-docs.yml`                     | Doxygen/API docs            |
-| `private-release.yml`              | Manual/private release flow |
+| Workflow                           | Purpose                          |
+| ---------------------------------- | -------------------------------- |
+| `ci.yml`                           | Main build/test gate (push/PR)   |
+| `nightly.yml`                      | Scheduled nightly build + tests  |
+| `public-ci.yml`                    | Public branch guard (Windows)    |
+| `docs-check.yml`                   | Documentation validation         |
+| `deploy-docs.yml`                  | Public docs deployment           |
+| `gitleaks.yml` / `gitleaks-pr.yml` | Secret scanning                  |
+| `api-docs.yml`                     | Doxygen/API docs                 |
+| `aestra-reverb-simd-lab.yml`       | Reverb SIMD lab (develop/audio)  |
+| `dsp-benchmark.yml`                | DSP benchmark (develop/DSP)      |
+| `private-release.yml`              | Manual/private release flow      |
 
 General CI rules:
 
@@ -736,3 +739,87 @@ Both `event.type` and `event.pressed`/`released` patterns are valid going forwar
 * Do not modify FreeType warning suppressions without explicit reason.
 * Do not delete `main` or `develop`.
 * Do not claim success without evidence.
+
+---
+
+## 27. Versioning and Tagging Policy
+
+Aestra uses semantic versioning with phase suffixes.
+
+### Version Scheme
+
+```text
+v0.MINOR.PATCH-alpha    — active development (current phase)
+v0.MINOR.PATCH-beta     — public beta (target: Dec 2026)
+v1.0.0                  — initial public release
+```
+
+MINOR increments on meaningful milestones: new plugin tiers, major engine work,
+major architecture changes, or hardening milestones.
+PATCH increments on hotfixes or minor maintenance between milestones.
+
+### Tag Rules
+
+* All release tags must be **annotated** (`git tag -a`), never lightweight.
+* Annotated tags must include a real message summarizing the milestone.
+* Tags live on `main` only — cut after a milestone branch has been merged.
+* Do not tag mid-feature, mid-fix, or on merge-conflict-resolution commits.
+* Do not create premature major-version tags (e.g. `v1.0.0` before beta).
+
+### Creating a Tag
+
+```bash
+git tag -a v0.4.0-alpha -m "Hardening milestone: security audit, audio quality session, repo hygiene"
+git push origin v0.4.0-alpha
+```
+
+### Release History
+
+See `RELEASES.md` for the current tag inventory, milestone history, and release status.
+Do not duplicate that table in this file.
+
+### What Agents Must Not Do
+
+* Do not create or delete tags without explicit instruction.
+* Do not push tags.
+* Do not use lightweight tags for milestones.
+* Do not recreate deleted premature version tags.
+
+---
+
+## 28. Nightly Builds
+
+Nightly builds run on a schedule via `nightly.yml` and are the primary canary
+for regressions not caught by push/PR CI.
+
+### Schedule
+
+`nightly.yml` runs daily at 2:00 AM EAT (23:00 UTC) on `develop`.
+
+### Scope
+
+* Headless build only (`AESTRA_HEADLESS_ONLY=ON`, `Aestra_CORE_MODE=ON`)
+* Checks out `develop` explicitly (scheduled workflows run from the default branch by default)
+* Test suite via `ctest`, excluding `SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient` (same as ci.yml sanitizer job)
+* ASan + UBSan enabled (`RelWithDebInfo` build type) with linker flags and runtime options aligned to ci.yml's sanitizer job
+* Build artifacts retained for 7 days
+
+### On Failure
+
+Nightly failure automatically opens a GitHub issue labeled `nightly-failure`
+with a link to the failing run. Do not suppress or close these issues without
+resolving the underlying cause.
+
+### What Agents Must Not Do
+
+* Do not remove the `nightly-failure` issue label or auto-open logic.
+* Do not add a schedule trigger to `ci.yml` — nightly scope belongs in `nightly.yml`.
+* Do not reduce artifact retention below 7 days without explicit approval.
+* Do not disable ASan/UBSan on nightly without explicit approval and a written reason.
+* Do not remove the `ref: develop` from the checkout step — scheduled workflows default to the repository's default branch, not develop.
+* Do not remove the ctest `-E` exclusion filter without confirming those tests pass under ASan/UBSan.
+
+### What Agents May Do
+
+* Add additional nightly steps (e.g. macOS matrix, DSP benchmarks) when explicitly tasked.
+* Adjust cron timing when explicitly asked.
