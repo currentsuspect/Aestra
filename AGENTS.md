@@ -773,14 +773,10 @@ git tag -a v0.4.0-alpha -m "Hardening milestone: security audit, audio quality s
 git push origin v0.4.0-alpha
 ```
 
-### Existing Tags
+### Release History
 
-| Tag                  | Status   | Notes                                     |
-| -------------------- | -------- | ----------------------------------------- |
-| `v0.1.0-foundation`  | Keep     | Historical engine foundation, Oct 2025    |
-| `v0.1.0-alpha`       | Deleted  | Redundant with foundation tag             |
-| `v1.0.0`             | Deleted  | Premature — do not recreate until release |
-| `v0.4.0-alpha`       | Current  | Hardening milestone, May 2026             |
+See `RELEASES.md` for the current tag inventory, milestone history, and release status.
+Do not duplicate that table in this file.
 
 ### What Agents Must Not Do
 
