@@ -4,6 +4,46 @@ All notable changes to this project will be documented in this file.
 
 The public repository is currently on a `0.x` pre-beta line. The release target tracked in the roadmap is **v1 Beta in December 2026**.
 
+## v0.4.0-alpha — Hardening Milestone (2026-05-20)
+
+### Security
+- Full security audit — 11 findings, 8 fixed, 3 deferred with justification
+- Project load path hardened (structure, numeric, path, compression bomb validation)
+- Crash recovery hardened with opaque flag file and stale backup skip
+- Archive extraction path traversal protection
+- `MixerSettingsSerializationTest` disabled (heap exploitation vector)
+
+### Audio Quality
+- BS.1770 K-weighting for true-peak metering
+- Proper TPDF dither for 16-bit/24-bit export
+- Export quantization uses `std::lrint` (was truncation)
+- Denormal protection via `AESTRA_FTZ_MANUAL`
+- Removed Boost dependency
+
+### RT Safety
+- `GarbageCollector::flush()` lock-free
+- GC retirement from audio thread via SPSC ring buffer
+- `Mixer::m_effectChainSnapshot` race fixed
+- `fadeOutActive` atomic (was torn)
+- `EngineSupervisor` for audio thread liveness
+- `RTGuard` for RT-safety violation detection
+- `AsyncCleanupManager` for deferred resource cleanup
+
+### Build / CI
+- Nightly build workflow (`nightly.yml`) with ASan/UBSan, auto-issue on failure
+- Versioning/tagging policy (AGENTS.md §27) and nightly policy (AGENTS.md §28)
+- macOS CI test exclusions aligned (#229, #230)
+- CodeRabbit review fixes (#236, #237)
+
+### Known Issues (P0 beta-blockers)
+- OOP plugin parameters are no-ops (#238)
+- Autosave serializer data race (#239)
+- Routing: gain smoothing, cycle detection, RT allocation (#240, #241, #243)
+- CLAP MIDI input unimplemented (#244)
+- Full list: 69 issues at https://github.com/users/currentsuspect/projects/3
+
+---
+
 ## [Unreleased]
 
 ### Fixed

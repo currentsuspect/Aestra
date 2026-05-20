@@ -30,10 +30,17 @@ v1.0.0                  — initial public release
 
 ### v0.4.0-alpha — Hardening Milestone (May 2026)
 
-- Security audit
-- Audio quality session (BS.1770 K-weighting, dither, export quantization, denormal protection)
-- Repo hygiene mega-pass
-- CI: nightly builds, versioning/tagging policy
+**Security audit** — 11 findings, 8 fixed (project load hardening, crash recovery, archive extraction), 3 deferred with justification.
+
+**Audio quality** — BS.1770 K-weighting, TPDF dither, export quantization fix, denormal protection, Boost removal.
+
+**RT safety** — Lock-free GC flush, SPSC retirement, effect chain snapshot race fix, fadeOutActive atomic, EngineSupervisor, RTGuard, AsyncCleanupManager.
+
+**CI/CD** — Nightly builds with ASan/UBSan, versioning/tagging policy, macOS test exclusions, CodeRabbit review fixes.
+
+**Project infrastructure** — 69 issues opened with full taxonomy, GitHub Projects board with 5 sprints through December beta.
+
+**Known P0 beta-blockers** — OOP plugin parameters no-ops (#238), autosave data race (#239), routing bugs (#240-#243), CLAP MIDI unimplemented (#244).
 
 ### v0.1.0-foundation — Engine Foundation (Oct 2025)
 
