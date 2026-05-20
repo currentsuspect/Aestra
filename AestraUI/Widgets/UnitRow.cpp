@@ -150,7 +150,7 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
     cardBounds.height = 56.0f;
 
     const auto& themeProps = theme.getCurrentTheme();
-    const float radius = themeProps.radiusM - 1.0f;
+    const float radius = std::max(0.0f, themeProps.radiusM - 1.0f);
     NUIColor cardBg = theme.getColor("backgroundSecondary");
     NUIColor border = theme.getColor("border").withAlpha(0.08f);
     if (m_isDropHighlighted) {

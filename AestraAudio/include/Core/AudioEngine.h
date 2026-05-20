@@ -428,7 +428,7 @@ public:
     void setTestToneEnabled(bool enabled) { m_testToneEnabled.store(enabled, std::memory_order_relaxed); }
     /** @brief Check whether the internal test tone is enabled. */
     bool isTestToneEnabled() const { return m_testToneEnabled.load(std::memory_order_relaxed); }
-    /** @brief Test hook: force bounce write error on first write attempt. */
+    /** @brief Test hook: force bounce write error after one successful full-block write. */
     void setForceBounceWriteErrorForTests(bool enabled) {
         m_forceBounceWriteErrorForTests.store(enabled, std::memory_order_relaxed);
     }

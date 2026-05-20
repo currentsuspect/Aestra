@@ -46,6 +46,10 @@ jobs:
             -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
             -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
 
+      - name: Capture develop SHA
+        id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Build
         run: cmake --build build-nightly --parallel
 
@@ -66,6 +70,7 @@ jobs:
         with:
           script: |
             const date = new Date().toISOString().split('T')[0];
+            const sha = '${{ steps.sha.outputs.sha }}';
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -74,7 +79,7 @@ jobs:
               body: [
                 `Nightly build failed on \`develop\`.\n`,
                 `**Run:** ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-                `**Commit:** ${context.sha}`,
+                `**Commit:** ${sha}`,
                 `**Date:** ${date}`,
                 ``,
                 `Investigate the failing run and resolve before closing this issue.`
