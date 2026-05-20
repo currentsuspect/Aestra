@@ -2,10 +2,12 @@
 // CommandRegistry Parse Safety Tests
 // Tests: safeStoi, safeStof, safeStoull, requireFlag — malformed input handling
 
+#include <cctype>
 #include <cmath>
 #include <iostream>
 #include <limits>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
