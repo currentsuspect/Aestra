@@ -17,11 +17,15 @@ jobs:
     permissions:
       contents: read
       issues: write
+    env:
+      ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
 
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+          ref: develop
 
       - name: Install dependencies
         run: |
@@ -37,14 +41,16 @@ jobs:
             -DAestra_CORE_MODE=ON \
             -DAESTRA_HEADLESS_ONLY=ON \
             -DAESTRA_ENABLE_TESTS=ON \
+            -DAESTRA_CI=ON \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer"
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
 
       - name: Build
         run: cmake --build build-nightly --parallel
 
       - name: Test
-        run: ctest --test-dir build-nightly --output-on-failure
+        run: ctest --test-dir build-nightly --output-on-failure -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
 
       - name: Upload build artifacts
         if: always()

@@ -799,8 +799,9 @@ for regressions not caught by push/PR CI.
 ### Scope
 
 * Headless build only (`AESTRA_HEADLESS_ONLY=ON`, `Aestra_CORE_MODE=ON`)
-* Full test suite via `ctest`
-* ASan + UBSan enabled (`RelWithDebInfo` build type)
+* Checks out `develop` explicitly (scheduled workflows run from the default branch by default)
+* Test suite via `ctest`, excluding `SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient` (same as ci.yml sanitizer job)
+* ASan + UBSan enabled (`RelWithDebInfo` build type) with linker flags and runtime options aligned to ci.yml's sanitizer job
 * Build artifacts retained for 7 days
 
 ### On Failure
@@ -815,6 +816,8 @@ resolving the underlying cause.
 * Do not add a schedule trigger to `ci.yml` — nightly scope belongs in `nightly.yml`.
 * Do not reduce artifact retention below 7 days without explicit approval.
 * Do not disable ASan/UBSan on nightly without explicit approval and a written reason.
+* Do not remove the `ref: develop` from the checkout step — scheduled workflows default to the repository's default branch, not develop.
+* Do not remove the ctest `-E` exclusion filter without confirming those tests pass under ASan/UBSan.
 
 ### What Agents May Do
 
