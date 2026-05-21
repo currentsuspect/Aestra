@@ -13,6 +13,12 @@ AsyncCleanupManager::~AsyncCleanupManager() {
 }
 
 bool AsyncCleanupManager::enqueueCleanup(uint64_t pluginId, CleanupFn fn, void* context) noexcept {
+    // Reject null functions
+    if (!fn) return false;
+
+    // Reject enqueues after shutdown begins
+    if (!m_accepting.load(std::memory_order_acquire)) return false;
+
     const size_t write = m_writeIndex.load(std::memory_order_relaxed);
     const size_t read = m_readIndex.load(std::memory_order_acquire);
 
@@ -40,6 +46,8 @@ void AsyncCleanupManager::start() {
 }
 
 void AsyncCleanupManager::stop() {
+    // Stop accepting new enqueues first (release so producers see this)
+    m_accepting.store(false, std::memory_order_release);
     m_running.store(false, std::memory_order_relaxed);
     if (m_thread.joinable()) {
         m_thread.join();
