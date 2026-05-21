@@ -28,16 +28,16 @@ static void testConcurrentViolationRecording() {
             // Reset this thread's audit data
             g_rtAuditData = {};
 
-            // Signal ready and wait for all threads
+            // Signal ready and wait for all threads (yield to avoid burning CPU)
             ready.fetch_add(1, std::memory_order_relaxed);
             while (ready.load(std::memory_order_relaxed) < NUM_THREADS) {
-                // spin
+                std::this_thread::yield();
             }
 
             // Record violations
             for (int i = 0; i < VIOLATIONS_PER_THREAD; i++) {
                 recordRTViolation(RTViolationType::Allocation,
-                                  reinterpret_cast<void*>(static_cast<uintptr_t>(t * 10000 + i)),
+                                  nullptr,
                                   static_cast<size_t>(i));
             }
 
@@ -84,7 +84,7 @@ static void testMixedWorkload() {
         // Simulate some allocations (violations)
         for (int a = 0; a < ALLOCATIONS_PER_CALLBACK; a++) {
             recordRTViolation(RTViolationType::Allocation,
-                              reinterpret_cast<void*>(static_cast<uintptr_t>(cb * 100 + a)),
+                              nullptr,
                               256);
         }
     }
@@ -105,7 +105,7 @@ static void testCircularBufferStress() {
     constexpr size_t TOTAL = MAX_LOCAL_VIOLATIONS * 3;
     for (size_t i = 0; i < TOTAL; i++) {
         recordRTViolation(RTViolationType::Allocation,
-                          reinterpret_cast<void*>(i),
+                          nullptr,
                           i * 10);
     }
 

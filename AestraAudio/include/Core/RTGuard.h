@@ -55,7 +55,8 @@ struct ThreadLocalRTAudit {
     RTViolationEvent lastEvents[MAX_LOCAL_VIOLATIONS];
 };
 
-/// Thread-local audit data, only active in AESTRA_AUDIT_MODE builds
+/// Thread-local audit data. Always available for testing/diagnostics.
+/// The allocation override that populates it is gated behind AESTRA_AUDIT_MODE.
 extern thread_local ThreadLocalRTAudit g_rtAuditData;
 
 // Reuse existing RT thread guard from RealtimeThreadGuard.h

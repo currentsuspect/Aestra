@@ -16,6 +16,14 @@ thread_local ThreadLocalRTAudit g_rtAuditData;
 #include <cstdlib>
 #include <new>
 
+// Cross-platform return address intrinsic
+#if defined(_MSC_VER)
+#include <intrin.h>
+#define AESTRA_RETURN_ADDRESS() _ReturnAddress()
+#else
+#define AESTRA_RETURN_ADDRESS() __builtin_return_address(0)
+#endif
+
 // Track if we're inside our own override to prevent reentrancy
 static thread_local bool g_inOverride = false;
 
@@ -23,7 +31,7 @@ void* operator new(std::size_t size) {
     if (!g_inOverride && Aestra::Audio::isRealtimeAudioThread()) {
         g_inOverride = true;
         Aestra::Audio::recordRTViolation(Aestra::Audio::RTViolationType::Allocation,
-                                          __builtin_return_address(0), size);
+                                          AESTRA_RETURN_ADDRESS(), size);
         g_inOverride = false;
     }
     void* ptr = std::malloc(size);
@@ -35,7 +43,7 @@ void operator delete(void* ptr) noexcept {
     if (!g_inOverride && Aestra::Audio::isRealtimeAudioThread()) {
         g_inOverride = true;
         Aestra::Audio::recordRTViolation(Aestra::Audio::RTViolationType::Deallocation,
-                                          __builtin_return_address(0));
+                                          AESTRA_RETURN_ADDRESS());
         g_inOverride = false;
     }
     std::free(ptr);
@@ -45,5 +53,7 @@ void operator delete(void* ptr) noexcept {
 void operator delete(void* ptr, std::size_t) noexcept {
     operator delete(ptr);
 }
+
+#undef AESTRA_RETURN_ADDRESS
 
 #endif // AESTRA_AUDIT_MODE
