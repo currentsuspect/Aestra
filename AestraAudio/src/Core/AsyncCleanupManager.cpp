@@ -12,26 +12,30 @@ AsyncCleanupManager::~AsyncCleanupManager() {
     stop();
 }
 
-bool AsyncCleanupManager::enqueueCleanup(uint64_t pluginId, std::function<void()> cleanupFn) noexcept {
+bool AsyncCleanupManager::enqueueCleanup(uint64_t pluginId, CleanupFn fn, void* context) noexcept {
     const size_t write = m_writeIndex.load(std::memory_order_relaxed);
     const size_t read = m_readIndex.load(std::memory_order_acquire);
 
-    // Check if queue is full
+    // Check if queue is full (unsigned subtraction wraps correctly for monotonic indices)
     if (write - read >= kQueueCapacity) {
         return false;
     }
 
     auto& task = m_queue[write % kQueueCapacity];
     task.pluginId = pluginId;
-    task.fn = std::move(cleanupFn);
+    task.fn = fn;
+    task.context = context;
 
     m_writeIndex.store(write + 1, std::memory_order_release);
     return true;
 }
 
 void AsyncCleanupManager::start() {
-    if (m_running.load(std::memory_order_relaxed)) return;
-    m_running.store(true, std::memory_order_relaxed);
+    // Use compare_exchange_strong to prevent double-start race
+    bool expected = false;
+    if (!m_running.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+        return;  // Already running
+    }
     m_thread = std::thread(&AsyncCleanupManager::cleanupThreadFunc, this);
 }
 
@@ -55,8 +59,9 @@ void AsyncCleanupManager::cleanupThreadFunc() {
 
         auto& task = m_queue[read % kQueueCapacity];
         if (task.fn) {
-            task.fn();
+            task.fn(task.context);
             task.fn = nullptr;
+            task.context = nullptr;
         }
         m_readIndex.store(read + 1, std::memory_order_release);
         m_processedCount.fetch_add(1, std::memory_order_relaxed);
@@ -70,8 +75,9 @@ void AsyncCleanupManager::cleanupThreadFunc() {
 
         auto& task = m_queue[read % kQueueCapacity];
         if (task.fn) {
-            task.fn();
+            task.fn(task.context);
             task.fn = nullptr;
+            task.context = nullptr;
         }
         m_readIndex.store(read + 1, std::memory_order_release);
         m_processedCount.fetch_add(1, std::memory_order_relaxed);

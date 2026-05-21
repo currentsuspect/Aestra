@@ -3,11 +3,13 @@
 
 #include <atomic>
 #include <cstdint>
-#include <functional>
 #include <thread>
 
 namespace Aestra {
 namespace Audio {
+
+/// Cleanup function type — uses function pointer + context to avoid std::function heap allocation
+using CleanupFn = void (*)(void* context);
 
 /**
  * Lock-free, background cleanup manager for quarantined plugin instances.
@@ -19,9 +21,9 @@ namespace Audio {
  *
  * Uses a fixed-size SPSC (Single-Producer, Single-Consumer) ring buffer
  * for lock-free communication from the audio thread to the cleanup thread.
+ * The enqueue path is lock-free and allocation-free (function pointer + context).
  *
- * The cleanup thread runs at below-normal priority and processes one item
- * per cycle to avoid CPU spikes.
+ * The cleanup thread processes one item per cycle to avoid CPU spikes.
  */
 class AsyncCleanupManager {
 public:
@@ -36,14 +38,15 @@ public:
 
     /**
      * Enqueue a cleanup task from the audio thread.
-     * Lock-free, wait-free. Returns false if queue is full.
-     * Thread-safe: called from audio thread only.
+     * Lock-free and allocation-free. Returns false if queue is full.
+     * The cleanup function is a plain function pointer (no std::function).
      */
-    bool enqueueCleanup(uint64_t pluginId, std::function<void()> cleanupFn) noexcept;
+    bool enqueueCleanup(uint64_t pluginId, CleanupFn fn, void* context) noexcept;
 
     /**
      * Start the background cleanup thread.
      * Must be called before any enqueue operations.
+     * Thread-safe: uses compare_exchange_strong to prevent double-start.
      */
     void start();
 
@@ -56,6 +59,7 @@ public:
     /**
      * Get the number of pending cleanup tasks.
      * Thread-safe: lock-free atomic read.
+     * Note: unsigned subtraction wraps correctly for monotonic indices.
      */
     size_t getPendingCount() const noexcept {
         return m_writeIndex.load(std::memory_order_relaxed) -
@@ -66,12 +70,15 @@ public:
      * Get the total number of cleanup tasks processed.
      * Thread-safe: lock-free atomic read.
      */
-    uint64_t getProcessedCount() const noexcept { return m_processedCount.load(std::memory_order_relaxed); }
+    [[nodiscard]] uint64_t getProcessedCount() const noexcept {
+        return m_processedCount.load(std::memory_order_relaxed);
+    }
 
 private:
     struct CleanupTask {
         uint64_t pluginId{0};
-        std::function<void()> fn;
+        CleanupFn fn{nullptr};
+        void* context{nullptr};
     };
 
     void cleanupThreadFunc();
