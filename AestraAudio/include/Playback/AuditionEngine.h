@@ -237,6 +237,9 @@ public:
 
 private:
     void loadCurrentTrack(bool startPlayback);
+    /// Internal: decode and publish track. Caller must NOT hold m_queueMutex.
+    void loadCurrentTrackImpl(const std::string& filePath, double lastPosition, bool isTimeline,
+                              const std::string& title, bool startPlayback);
     // Queue (UI thread only - no RT access)
     std::vector<AuditionQueueItem> m_queue;
     int32_t m_currentIndex{-1};

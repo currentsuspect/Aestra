@@ -182,62 +182,94 @@ std::optional<AuditionQueueItem> AuditionEngine::getCurrentItem() const {
 }
 
 void AuditionEngine::nextTrack() {
-    std::lock_guard<std::mutex> lock(m_queueMutex);
-    if (m_queue.empty())
-        return;
+    std::string filePath;
+    double lastPosition = 0.0;
+    bool isTimeline = false;
+    std::string title;
+    {
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        if (m_queue.empty())
+            return;
 
-    if (m_shuffle.load()) {
-        // Random next
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_int_distribution<size_t> dist(0, m_queue.size() - 1);
-        m_currentIndex = static_cast<int32_t>(dist(gen));
-    } else {
-        m_currentIndex++;
-        if (m_currentIndex >= static_cast<int32_t>(m_queue.size())) {
-            if (m_repeatMode == RepeatMode::All) {
-                m_currentIndex = 0;
-            } else {
-                m_currentIndex = static_cast<int32_t>(m_queue.size()) - 1;
-                pause();
-                return;
+        if (m_shuffle.load()) {
+            std::random_device rd;
+            std::mt19937 gen(rd());
+            std::uniform_int_distribution<size_t> dist(0, m_queue.size() - 1);
+            m_currentIndex = static_cast<int32_t>(dist(gen));
+        } else {
+            m_currentIndex++;
+            if (m_currentIndex >= static_cast<int32_t>(m_queue.size())) {
+                if (m_repeatMode == RepeatMode::All) {
+                    m_currentIndex = 0;
+                } else {
+                    m_currentIndex = static_cast<int32_t>(m_queue.size()) - 1;
+                    pause();
+                    return;
+                }
             }
         }
-    }
 
-    loadCurrentTrack(true);
+        const auto& item = m_queue[static_cast<size_t>(m_currentIndex)];
+        filePath = item.filePath;
+        lastPosition = item.lastPosition;
+        isTimeline = item.isFromTimeline;
+        title = item.title;
+    }
+    loadCurrentTrackImpl(filePath, lastPosition, isTimeline, title, true);
 }
 
 void AuditionEngine::previousTrack() {
-    std::lock_guard<std::mutex> lock(m_queueMutex);
-    if (m_queue.empty())
-        return;
+    std::string filePath;
+    double lastPosition = 0.0;
+    bool isTimeline = false;
+    std::string title;
+    {
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        if (m_queue.empty())
+            return;
 
-    // If more than 3 seconds into track, restart current track
-    if (m_positionSeconds.load() > 3.0) {
-        seekSeconds(0.0);
-        return;
-    }
-
-    m_currentIndex--;
-    if (m_currentIndex < 0) {
-        if (m_repeatMode == RepeatMode::All) {
-            m_currentIndex = static_cast<int32_t>(m_queue.size()) - 1;
-        } else {
-            m_currentIndex = 0;
+        // If more than 3 seconds into track, restart current track
+        if (m_positionSeconds.load() > 3.0) {
+            seekSeconds(0.0);
+            return;
         }
-    }
 
-    loadCurrentTrack(true);
+        m_currentIndex--;
+        if (m_currentIndex < 0) {
+            if (m_repeatMode == RepeatMode::All) {
+                m_currentIndex = static_cast<int32_t>(m_queue.size()) - 1;
+            } else {
+                m_currentIndex = 0;
+            }
+        }
+
+        const auto& item = m_queue[static_cast<size_t>(m_currentIndex)];
+        filePath = item.filePath;
+        lastPosition = item.lastPosition;
+        isTimeline = item.isFromTimeline;
+        title = item.title;
+    }
+    loadCurrentTrackImpl(filePath, lastPosition, isTimeline, title, true);
 }
 
 void AuditionEngine::jumpToTrack(size_t index) {
-    std::lock_guard<std::mutex> lock(m_queueMutex);
-    if (index >= m_queue.size())
-        return;
+    std::string filePath;
+    double lastPosition = 0.0;
+    bool isTimeline = false;
+    std::string title;
+    {
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        if (index >= m_queue.size())
+            return;
 
-    m_currentIndex = static_cast<int32_t>(index);
-    loadCurrentTrack(true);
+        m_currentIndex = static_cast<int32_t>(index);
+        const auto& item = m_queue[index];
+        filePath = item.filePath;
+        lastPosition = item.lastPosition;
+        isTimeline = item.isFromTimeline;
+        title = item.title;
+    }
+    loadCurrentTrackImpl(filePath, lastPosition, isTimeline, title, true);
 }
 
 // === Transport Control ===
@@ -247,8 +279,21 @@ void AuditionEngine::play() {
         jumpToTrack(0);
     } else if (m_currentIndex >= 0 && !std::atomic_load_explicit(&m_currentSource, std::memory_order_acquire)) {
         // Track selected but not yet decoded — decode now (lazy load)
-        std::lock_guard<std::mutex> lock(m_queueMutex);
-        loadCurrentTrack(true);
+        std::string filePath;
+        double lastPosition = 0.0;
+        bool isTimeline = false;
+        std::string title;
+        {
+            std::lock_guard<std::mutex> lock(m_queueMutex);
+            if (m_currentIndex < 0 || m_currentIndex >= static_cast<int32_t>(m_queue.size()))
+                return;
+            const auto& item = m_queue[static_cast<size_t>(m_currentIndex)];
+            filePath = item.filePath;
+            lastPosition = item.lastPosition;
+            isTimeline = item.isFromTimeline;
+            title = item.title;
+        }
+        loadCurrentTrackImpl(filePath, lastPosition, isTimeline, title, true);
     }
 
     bool wasPlaying = m_isPlaying.exchange(true);
@@ -462,7 +507,7 @@ void AuditionEngine::loadCurrentTrack(bool startPlayback) {
     double lastPosition = 0.0;
     bool isTimeline = false;
     std::string title;
-    
+
     {
         std::lock_guard<std::mutex> lock(m_queueMutex);
         if (m_currentIndex < 0 || m_currentIndex >= static_cast<int32_t>(m_queue.size())) {
@@ -477,6 +522,12 @@ void AuditionEngine::loadCurrentTrack(bool startPlayback) {
         title = item.title;
     }
 
+    loadCurrentTrackImpl(filePath, lastPosition, isTimeline, title, startPlayback);
+}
+
+void AuditionEngine::loadCurrentTrackImpl(const std::string& filePath, double lastPosition,
+                                           bool isTimeline, const std::string& title,
+                                           bool startPlayback) {
     if (isTimeline) {
         // TODO: Render timeline track to temp buffer
         Log::info("[AuditionEngine] Loading timeline track: " + title);
