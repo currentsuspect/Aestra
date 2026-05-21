@@ -1139,3 +1139,161 @@ if(AESTRA_ENABLE_TESTS AND EXISTS ${CMAKE_SOURCE_DIR}/tests/security/CMakeLists.
 endif()
 
 message(STATUS "Tests configured - see Tests/ directory")
+
+# =============================================================================
+# Missing Test Registration (GitHub #250)
+# =============================================================================
+
+# Memory Benchmark (integration)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/MemoryBenchmark.cpp")
+    add_executable(MemoryBenchmark Integration/MemoryBenchmark.cpp)
+    target_link_libraries(MemoryBenchmark PRIVATE AestraAudioCore)
+    target_include_directories(MemoryBenchmark PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
+# Delay Line Test (Audio/)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Audio/DelayLineTest.cpp")
+    add_executable(DelayLineTest Audio/DelayLineTest.cpp)
+    target_link_libraries(DelayLineTest PRIVATE AestraAudioCore)
+    target_include_directories(DelayLineTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME DelayLineTest COMMAND DelayLineTest)
+    set_tests_properties(DelayLineTest PROPERTIES LABELS "audio;dsp;delay")
+endif()
+
+# AudioEngine Diagnostics Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioEngineDiagnosticsTest.cpp")
+    add_executable(AudioEngineDiagnosticsTest AestraAudio/AudioEngineDiagnosticsTest.cpp)
+    target_link_libraries(AudioEngineDiagnosticsTest PRIVATE AestraAudio)
+    target_include_directories(AudioEngineDiagnosticsTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AudioEngineDiagnosticsTest COMMAND AudioEngineDiagnosticsTest)
+    set_tests_properties(AudioEngineDiagnosticsTest PROPERTIES LABELS "audio;engine;diagnostics")
+endif()
+
+# True Peak Meter Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TruePeakMeterTest.cpp")
+    add_executable(TruePeakMeterTest AestraAudio/TruePeakMeterTest.cpp)
+    target_link_libraries(TruePeakMeterTest PRIVATE AestraAudio)
+    target_include_directories(TruePeakMeterTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TruePeakMeterTest COMMAND TruePeakMeterTest)
+    set_tests_properties(TruePeakMeterTest PROPERTIES LABELS "audio;dsp;metering")
+endif()
+
+# Piano Roll Edge Case Stress Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PianoRollEdgeCaseStressTest.cpp")
+    add_executable(PianoRollEdgeCaseStressTest AestraAudio/PianoRollEdgeCaseStressTest.cpp)
+    target_link_libraries(PianoRollEdgeCaseStressTest PRIVATE AestraAudioCore)
+    target_include_directories(PianoRollEdgeCaseStressTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PianoRollEdgeCaseStressTest COMMAND PianoRollEdgeCaseStressTest)
+    set_tests_properties(PianoRollEdgeCaseStressTest PROPERTIES LABELS "audio;pianoroll;stress")
+endif()
+
+# Plugin Host Stress Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PluginHostStressTest.cpp")
+    add_executable(PluginHostStressTest AestraAudio/PluginHostStressTest.cpp)
+    target_link_libraries(PluginHostStressTest PRIVATE AestraAudio)
+    target_include_directories(PluginHostStressTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PluginHostStressTest COMMAND PluginHostStressTest)
+    set_tests_properties(PluginHostStressTest PROPERTIES LABELS "audio;plugin;stress")
+endif()
+
+# Transport Stress Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TransportStressTest.cpp")
+    add_executable(TransportStressTest AestraAudio/TransportStressTest.cpp)
+    target_link_libraries(TransportStressTest PRIVATE AestraAudio)
+    target_include_directories(TransportStressTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TransportStressTest COMMAND TransportStressTest)
+    set_tests_properties(TransportStressTest PROPERTIES LABELS "audio;transport;stress")
+endif()
+
+# Pathological Chaos Stress Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PathologicalChaosStressTest.cpp")
+    add_executable(PathologicalChaosStressTest AestraAudio/PathologicalChaosStressTest.cpp)
+    target_link_libraries(PathologicalChaosStressTest PRIVATE AestraAudio)
+    target_include_directories(PathologicalChaosStressTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PathologicalChaosStressTest COMMAND PathologicalChaosStressTest)
+    set_tests_properties(PathologicalChaosStressTest PROPERTIES LABELS "audio;stress;chaos")
+endif()
+
+# Mixer Channel Stress Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/MixerChannelStressTest.cpp")
+    add_executable(MixerChannelStressTest AestraAudio/MixerChannelStressTest.cpp)
+    target_link_libraries(MixerChannelStressTest PRIVATE AestraAudio)
+    target_include_directories(MixerChannelStressTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MixerChannelStressTest COMMAND MixerChannelStressTest)
+    set_tests_properties(MixerChannelStressTest PROPERTIES LABELS "audio;mixer;stress")
+endif()
+
+# Track Manager Stress Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/TrackManagerStressTest.cpp")
+    add_executable(TrackManagerStressTest AestraAudio/TrackManagerStressTest.cpp)
+    target_link_libraries(TrackManagerStressTest PRIVATE AestraAudio)
+    target_include_directories(TrackManagerStressTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME TrackManagerStressTest COMMAND TrackManagerStressTest)
+    set_tests_properties(TrackManagerStressTest PROPERTIES LABELS "audio;trackmanager;stress")
+endif()
+
+# File Browser Stress Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/FileBrowserStressTest.cpp")
+    add_executable(FileBrowserStressTest AestraAudio/FileBrowserStressTest.cpp)
+    target_link_libraries(FileBrowserStressTest PRIVATE AestraAudioCore)
+    target_include_directories(FileBrowserStressTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME FileBrowserStressTest COMMAND FileBrowserStressTest)
+    set_tests_properties(FileBrowserStressTest PROPERTIES LABELS "audio;filebrowser;stress")
+endif()
+
+# Realtime Scheduling Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RealtimeSchedulingTest.cpp")
+    add_executable(RealtimeSchedulingTest AestraAudio/RealtimeSchedulingTest.cpp)
+    target_link_libraries(RealtimeSchedulingTest PRIVATE AestraAudioCore)
+    target_include_directories(RealtimeSchedulingTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RealtimeSchedulingTest COMMAND RealtimeSchedulingTest)
+    set_tests_properties(RealtimeSchedulingTest PROPERTIES LABELS "audio;realtime;scheduling")
+endif()
+
+# Latency Compensation Test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/LatencyCompensationTest.cpp")
+    add_executable(LatencyCompensationTest AestraAudio/LatencyCompensationTest.cpp)
+    target_link_libraries(LatencyCompensationTest PRIVATE AestraAudio)
+    target_include_directories(LatencyCompensationTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME LatencyCompensationTest COMMAND LatencyCompensationTest)
+    set_tests_properties(LatencyCompensationTest PROPERTIES LABELS "audio;latency;pdc")
+endif()
