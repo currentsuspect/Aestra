@@ -1381,6 +1381,21 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         m_waveformWriteIndex.store(0, std::memory_order_relaxed);
     }
 
+    // Initialize smoothing coefficients based on requested buffer size
+    const uint32_t coeffFrames = std::max<uint32_t>(1, maxFrames);
+    const double smoothCoeff = 1.0 / static_cast<double>(coeffFrames);
+    m_smoothedMasterGain.coeff = smoothCoeff;
+
+    // Set send gain smoother coefficients to converge within one block.
+    // Without this, the default coeff=0.001 only converges ~23% per block,
+    // and the snap() at block end creates a ~77% discontinuity (click).
+    for (size_t i = 0; i < kMaxTracks; ++i) {
+        for (auto& s : m_trackState[i].sendGainL)
+            s.coeff = smoothCoeff;
+        for (auto& s : m_trackState[i].sendGainR)
+            s.coeff = smoothCoeff;
+    }
+
     // Critical: Buffers may have moved after resize. Re-swizzle the pointers.
     if (needAlloc) {
         compileGraph();
