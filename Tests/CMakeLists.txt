@@ -572,6 +572,24 @@ target_include_directories(AestraMixerChannelScratchBufferTest PRIVATE
 add_test(NAME AestraMixerChannelScratchBufferTest COMMAND AestraMixerChannelScratchBufferTest)
 set_tests_properties(AestraMixerChannelScratchBufferTest PROPERTIES LABELS "audio;plugin;regression")
 
+# AudioEngineDiagnostics Test
+add_executable(AestraAudioEngineDiagnosticsTest AestraAudio/AudioEngineDiagnosticsTest.cpp)
+target_link_libraries(AestraAudioEngineDiagnosticsTest PRIVATE AestraAudio)
+target_include_directories(AestraAudioEngineDiagnosticsTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+)
+add_test(NAME AestraAudioEngineDiagnosticsTest COMMAND AestraAudioEngineDiagnosticsTest)
+set_tests_properties(AestraAudioEngineDiagnosticsTest PROPERTIES LABELS "audio;diagnostics;rt-safety")
+
+# PathologicalChaosStressTest
+add_executable(AestraPathologicalChaosStressTest AestraAudio/PathologicalChaosStressTest.cpp)
+target_link_libraries(AestraPathologicalChaosStressTest PRIVATE AestraAudio)
+target_include_directories(AestraPathologicalChaosStressTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+)
+add_test(NAME AestraPathologicalChaosStressTest COMMAND AestraPathologicalChaosStressTest)
+set_tests_properties(AestraPathologicalChaosStressTest PROPERTIES LABELS "audio;stress;rt-safety")
+
 # Watchdog Test (requires VST3 SDK headers)
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")
     add_executable(AestraWatchdogTest AestraAudio/WatchdogTest.cpp)
