@@ -1144,7 +1144,8 @@ message(STATUS "Tests configured - see Tests/ directory")
 # Missing Test Registration (GitHub #250)
 # =============================================================================
 
-# Memory Benchmark (integration)
+# Memory Benchmark (integration) — build-only, not registered with CTest.
+# Intentionally excluded from CI test runs; run manually for profiling.
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/MemoryBenchmark.cpp")
     add_executable(MemoryBenchmark Integration/MemoryBenchmark.cpp)
     target_link_libraries(MemoryBenchmark PRIVATE AestraAudioCore)
@@ -1274,7 +1275,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/FileBrowserStressTest.cpp")
     set_tests_properties(FileBrowserStressTest PROPERTIES LABELS "audio;filebrowser;stress")
 endif()
 
-# Realtime Scheduling Test
+# Realtime Scheduling Test (Linux-only: uses sched_getscheduler, RLIMIT_RTPRIO, /proc/self/status)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RealtimeSchedulingTest.cpp")
     add_executable(RealtimeSchedulingTest AestraAudio/RealtimeSchedulingTest.cpp)
     target_link_libraries(RealtimeSchedulingTest PRIVATE AestraAudioCore)
@@ -1282,8 +1283,10 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/RealtimeSchedulingTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
-    add_test(NAME RealtimeSchedulingTest COMMAND RealtimeSchedulingTest)
-    set_tests_properties(RealtimeSchedulingTest PROPERTIES LABELS "audio;realtime;scheduling")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_test(NAME RealtimeSchedulingTest COMMAND RealtimeSchedulingTest)
+        set_tests_properties(RealtimeSchedulingTest PROPERTIES LABELS "audio;realtime;scheduling")
+    endif()
 endif()
 
 # Latency Compensation Test
