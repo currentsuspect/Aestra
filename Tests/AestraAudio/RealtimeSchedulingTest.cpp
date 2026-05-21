@@ -1,6 +1,16 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // Realtime Scheduling Test — verifies Linux audio thread has proper RT scheduling.
 // Tests scheduling policy, priority, and mlockall status.
+// Linux-only: sched_getscheduler/sched_setscheduler, RLIMIT_RTPRIO, /proc/self/status
+// are not available on Windows or macOS.
+
+#if !defined(__linux__)
+#include <iostream>
+int main() {
+    std::cout << "RealtimeSchedulingTest: skipped (Linux-only test)" << std::endl;
+    return 0;
+}
+#else
 
 #include <cstring>
 #include <fstream>
@@ -221,3 +231,5 @@ int main() {
 
     return g_fails > 0 ? 1 : 0;
 }
+
+#endif // __linux__
