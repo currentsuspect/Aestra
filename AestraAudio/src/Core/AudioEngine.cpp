@@ -22,6 +22,7 @@
 #endif
 
 #include <algorithm>
+#include <cstdlib>
 #include <cassert>
 #include <cerrno>
 #include <chrono>
