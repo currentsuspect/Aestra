@@ -25,6 +25,7 @@ For the most truthful current status, start with:
 - [docs/technical/roadmap.md](docs/technical/roadmap.md)
 - [docs/technical/testing_ci.md](docs/technical/testing_ci.md)
 - [meta/CHANGELOGS/CHANGELOG_2026Q1.md](meta/CHANGELOGS/CHANGELOG_2026Q1.md)
+- [meta/CHANGELOGS/CHANGELOG_2026Q2.md](meta/CHANGELOGS/CHANGELOG_2026Q2.md)
 
 ## Repository Layout
 
