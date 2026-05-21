@@ -540,8 +540,8 @@ void AuditionEngine::loadCurrentTrackImpl(const std::string& filePath, double la
     Log::info("[AuditionEngine] Queuing async decode: " + filePath + " (gen=" + std::to_string(gen) + ")");
 
     // Fire-and-forget decode on a detached thread — UI thread returns immediately.
-    // Captures are by value (safe for detached thread).
-    std::thread([this, filePath, lastPosition, startPlayback, gen]() {
+    // All captures are by value (safe for detached thread).
+    std::thread([this, filePath, lastPosition, title, startPlayback, gen]() {
         std::vector<float> decodedData;
         uint32_t sr = 0;
         uint32_t ch = 0;
@@ -587,7 +587,11 @@ void AuditionEngine::loadCurrentTrackImpl(const std::string& filePath, double la
         m_positionSeconds.store(clampedStart, std::memory_order_release);
         m_cachedDurationSeconds.store(duration, std::memory_order_release);
 
-        notifyTrackChanged();
+        // Notify callback directly (don't use notifyTrackChanged — it reads m_queue
+        // without the lock, which is unsafe from a background thread).
+        if (m_onTrackChanged) {
+            m_onTrackChanged(AuditionQueueItem{.filePath = filePath, .title = title});
+        }
 
         if (startPlayback && !m_isPlaying.load(std::memory_order_relaxed)) {
             m_isPlaying.store(true, std::memory_order_release);
