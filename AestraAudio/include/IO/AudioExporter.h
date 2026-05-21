@@ -3,6 +3,7 @@
 
 #include "../Core/AudioEngine.h"
 #include "../Models/TrackManager.h"
+#include "IO/AudioExportQuantization.h"
 #include <string>
 #include <functional>
 #include <atomic>
@@ -175,7 +176,11 @@ public:
     // =============================================================================
 
     /**
-     * @brief Render the project to an audio file
+     * @brief Render the project to an audio file using the full live engine path (processBlock).
+     *
+     * This is the authoritative offline render implementation with master-stage processing,
+     * dithering, and gain smoothing. @ref bounceRangeToWav delegates to this method.
+     *
      * @param config Export configuration
      * @return Result with success status and metadata
      *
@@ -183,6 +188,26 @@ public:
      * For UI responsiveness, run this on a background thread.
      */
     Result render(const Config& config);
+
+    /**
+     * @brief Convenience helper matching AudioEngine::bounceRangeToWav signature.
+     *
+     * This static helper creates an AudioExporter instance and renders the specified
+     * range using the authoritative offline path (processBlock with master-stage processing
+     * and dithering). Used by AudioEngine::bounceRangeToWav to consolidate offline render
+     * authorities.
+     *
+     * @param engine Audio engine reference
+     * @param trackManager Track manager reference
+     * @param startBeat Start position in beats
+     * @param endBeat End position in beats
+     * @param outputPath Output WAV file path
+     * @param trackId Track ID for isolated bounce, or -1 for master output
+     * @return Result with success status
+     */
+    static Result bounceToWav(AudioEngine& engine, TrackManager& trackManager,
+                              double startBeat, double endBeat,
+                              const std::string& outputPath, int32_t trackId = -1);
 
     /**
      * @brief Cancel an in-progress render
@@ -237,9 +262,6 @@ private:
     bool writeSamples(std::ofstream& file, const float* buffer,
                       size_t frames, uint32_t channels);
 
-    // Master output processing (matches playback path)
-    void applyMasterOutputStage(float* buffer, uint32_t numFrames);
-
     // Compute render duration in beats from config + playlist
     double computeRenderDurationBeats(const Config& config, double& outStartBeat);
 
@@ -256,8 +278,7 @@ private:
     std::chrono::steady_clock::time_point m_lastProgressTime;
     std::chrono::milliseconds m_progressInterval{100};
 
-    // Render buffers (double for internal, float for output)
-    std::vector<double> m_renderBufferD;
+    // Render buffer (float for output)
     std::vector<float> m_renderBufferF;
 
     // Peak tracking
@@ -277,7 +298,7 @@ private:
     };
     DCBlockerD m_dcBlockerL;
     DCBlockerD m_dcBlockerR;
-    std::mt19937 m_ditherRng;
+    ExportQuantization::TpdfDither m_exportDither;
 };
 
 } // namespace Audio
