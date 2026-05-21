@@ -671,6 +671,13 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             ljs.set("mute", JSON(lane->muted));
             ljs.set("solo", JSON(lane->solo));
             if (const auto* channel = trackManager->getChannel(laneIndex)) {
+                // MixerChannel state not covered by PlaylistLane
+                ljs.set("soloSafe", JSON(channel->isSoloSafe()));
+                ljs.set("armed", JSON(channel->isArmed()));
+                ljs.set("monitorInput", JSON(channel->isMonitoringEnabled()));
+                ljs.set("inputChannelIndex", JSON(static_cast<double>(channel->getInputChannelIndex())));
+                ljs.set("width", JSON(static_cast<double>(channel->getWidth())));
+                ljs.set("trackColorIndex", JSON(static_cast<double>(channel->getTrackColorIndex())));
                 JSON routingJson = JSON::object();
                 const uint32_t mainOutputId = channel->getMainOutputId();
                 routingJson.set("mainOutputId", JSON(static_cast<double>(mainOutputId == 0xFFFFFFFFu ? 0u : mainOutputId)));
@@ -1343,7 +1350,21 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         channel->setPan(lane->pan);
                         channel->setMute(lane->muted);
                         channel->setSolo(lane->solo);
-    
+
+                        // MixerChannel state (not on PlaylistLane)
+                        if (lj[i].has("soloSafe") && lj[i]["soloSafe"].isBool())
+                            channel->setSoloSafe(lj[i]["soloSafe"].asBool());
+                        if (lj[i].has("armed") && lj[i]["armed"].isBool())
+                            channel->setArmed(lj[i]["armed"].asBool());
+                        if (lj[i].has("monitorInput") && lj[i]["monitorInput"].isBool())
+                            channel->setMonitoringEnabled(lj[i]["monitorInput"].asBool());
+                        if (lj[i].has("inputChannelIndex") && lj[i]["inputChannelIndex"].isNumber())
+                            channel->setInputChannelIndex(static_cast<int>(lj[i]["inputChannelIndex"].asNumber()));
+                        if (lj[i].has("width") && lj[i]["width"].isNumber())
+                            channel->setWidth(static_cast<float>(lj[i]["width"].asNumber()));
+                        if (lj[i].has("trackColorIndex") && lj[i]["trackColorIndex"].isNumber())
+                            channel->setTrackColorIndex(static_cast<int>(lj[i]["trackColorIndex"].asNumber()));
+
                         if (lj[i].has("routing") && lj[i]["routing"].isObject()) {
                             const JSON& rj = lj[i]["routing"];
                             const uint32_t mainOutputId = (rj.has("mainOutputId") && rj["mainOutputId"].isNumber())
