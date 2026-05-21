@@ -590,7 +590,10 @@ void AuditionEngine::loadCurrentTrackImpl(const std::string& filePath, double la
         // Notify callback directly (don't use notifyTrackChanged — it reads m_queue
         // without the lock, which is unsafe from a background thread).
         if (m_onTrackChanged) {
-            m_onTrackChanged(AuditionQueueItem{.filePath = filePath, .title = title});
+            AuditionQueueItem item;
+            item.filePath = filePath;
+            item.title = title;
+            m_onTrackChanged(item);
         }
 
         if (startPlayback && !m_isPlaying.load(std::memory_order_relaxed)) {
