@@ -1522,6 +1522,29 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             }
         }
     
+        // PHASE 7b: Push loaded volume/pan to ContinuousParamBuffer.
+        // setVolume/setPan writes to m_volume/m_pan and sends a command via
+        // m_commandSink, but during load m_commandSink is null. The UIMixerPanel
+        // fader reads from ContinuousParamBuffer (dB), so we must push explicitly.
+        {
+            auto* continuous = trackManager->getContinuousParams().get();
+            auto* slotMap = trackManager->getChannelSlotMapRaw();
+            if (continuous && slotMap) {
+                for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
+                    auto* channel = trackManager->getChannel(ci);
+                    if (!channel) continue;
+                    const uint32_t slot = slotMap->getSlotIndex(channel->getChannelId());
+                    if (slot >= ContinuousParamBuffer::MAX_SLOTS) continue;
+
+                    const float linearVol = channel->getVolume();
+                    const float faderDb = (linearVol <= 0.0f) ? -90.0f
+                                          : 20.0f * std::log10(linearVol);
+                    continuous->setFaderDb(slot, faderDb);
+                    continuous->setPan(slot, channel->getPan());
+                }
+            }
+        }
+
         // PHASE 8: Final rebind pass - verify all references
         #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
         Log::info("[ProjectLoad] Final rebind pass");
