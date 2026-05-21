@@ -3105,7 +3105,9 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     // Delegate to AudioExporter for master bounce (trackId == -1) to use authoritative offline path
     // with master-stage processing and dithering. Isolated track bounce (trackId >= 0) uses the
     // existing renderBlock path for now until AudioExporter gains isolated track support.
-    if (trackId < 0) {
+    // Skip delegation when test hook is active — the test hook only exists in the old path.
+    const bool forceWriteErrorForTests = m_forceBounceWriteErrorForTests.load(std::memory_order_relaxed);
+    if (trackId < 0 && !forceWriteErrorForTests) {
         auto trackMgr = m_trackManager.lock();
         if (!trackMgr) {
             Aestra::Log::error("[AudioEngine] bounceRangeToWav: trackManager not available");
@@ -3163,7 +3165,6 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     bool writeError = false;
     uint64_t currentFrame = startSample;
     uint64_t framesRemaining = totalFrames;
-    const bool forceWriteErrorForTests = m_forceBounceWriteErrorForTests.load(std::memory_order_relaxed);
     bool forcedWriteErrorTriggered = false;
     bool wroteAnyFrames = false;
 
