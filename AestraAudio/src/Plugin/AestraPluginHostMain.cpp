@@ -50,7 +50,7 @@ constexpr ClapProcessStatus kClapProcessError = 0;
 // CLAP core constants (from clap/include/clap/)
 constexpr const char* kClapPluginFactoryId = "clap.plugin-factory";
 constexpr uint16_t kClapCoreEventSpaceId = 0;
-constexpr uint16_t kClapEventMidi = 0;
+constexpr uint16_t kClapEventMidi = 10;
 
 struct ClapHost {
     ClapVersion clapVersion;
