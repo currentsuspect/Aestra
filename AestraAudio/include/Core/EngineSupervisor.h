@@ -146,10 +146,11 @@ private:
         uint32_t timeoutCount() const noexcept { return (flags.load(std::memory_order_relaxed) >> 2) & 0xFFu; }
 
         void setBypassed(bool v) noexcept {
-            auto f = flags.load(std::memory_order_relaxed);
+            uint32_t expected = flags.load(std::memory_order_relaxed);
+            uint32_t desired;
             do {
-                f = v ? (f | 1u) : (f & ~1u);
-            } while (!flags.compare_exchange_weak(f, f, std::memory_order_relaxed));
+                desired = v ? (expected | 1u) : (expected & ~1u);
+            } while (!flags.compare_exchange_weak(expected, desired, std::memory_order_relaxed));
         }
 
         void setQuarantined() noexcept {
@@ -158,14 +159,15 @@ private:
         }
 
         uint32_t incrementTimeout(uint32_t threshold) noexcept {
-            auto f = flags.load(std::memory_order_relaxed);
+            uint32_t expected = flags.load(std::memory_order_relaxed);
+            uint32_t desired;
             uint32_t count;
             do {
-                count = ((f >> 2) & 0xFFu) + 1;
+                count = ((expected >> 2) & 0xFFu) + 1;
                 if (count > 255) count = 255;
-                f = (f & ~(0xFFu << 2)) | (count << 2);
-                if (count >= threshold) f |= 1u;  // auto-bypass
-            } while (!flags.compare_exchange_weak(f, f, std::memory_order_relaxed));
+                desired = (expected & ~(0xFFu << 2)) | (count << 2);
+                if (count >= threshold) desired |= 1u;  // auto-bypass
+            } while (!flags.compare_exchange_weak(expected, desired, std::memory_order_relaxed));
             return count;
         }
 
@@ -189,6 +191,7 @@ private:
 
     static constexpr uint32_t kStudioTimeoutThreshold = 5;
     static constexpr uint32_t kLiveTimeoutThreshold = 2;
+    static constexpr uint32_t kOfflineTimeoutThreshold = 1;  ///< Strictest: halt on first timeout
     static constexpr double kDefaultDecayFactor = 0.95;
 };
 

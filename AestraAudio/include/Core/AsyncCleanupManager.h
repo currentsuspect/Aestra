@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <cstdint>
 #include <thread>
@@ -58,12 +59,13 @@ public:
 
     /**
      * Get the number of pending cleanup tasks.
-     * Thread-safe: lock-free atomic read.
-     * Note: unsigned subtraction wraps correctly for monotonic indices.
+     * Thread-safe: lock-free atomic reads with acquire ordering for consistency.
+     * Clamps to zero to avoid underflow if readIndex briefly leads writeIndex.
      */
     size_t getPendingCount() const noexcept {
-        return m_writeIndex.load(std::memory_order_relaxed) -
-               m_readIndex.load(std::memory_order_relaxed);
+        const size_t write = m_writeIndex.load(std::memory_order_acquire);
+        const size_t read = m_readIndex.load(std::memory_order_acquire);
+        return write >= read ? write - read : 0;
     }
 
     /**
@@ -88,6 +90,7 @@ private:
     std::atomic<size_t> m_readIndex{0};
     std::atomic<uint64_t> m_processedCount{0};
     std::atomic<bool> m_running{false};
+    std::atomic<bool> m_accepting{true};  ///< false after stop() begins — rejects new enqueues
     std::thread m_thread;
 };
 

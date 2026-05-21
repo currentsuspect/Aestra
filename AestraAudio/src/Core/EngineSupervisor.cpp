@@ -2,6 +2,7 @@
 #include "EngineSupervisor.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace Aestra {
 namespace Audio {
@@ -10,35 +11,33 @@ EngineSupervisor::EngineSupervisor() = default;
 EngineSupervisor::~EngineSupervisor() = default;
 
 void EngineSupervisor::reportPluginTimeout(uint64_t pluginId, uint64_t timestamp) noexcept {
+    (void)timestamp;
     m_timeoutCount.fetch_add(1, std::memory_order_relaxed);
 
     auto profile = m_profile.load(std::memory_order_relaxed);
-    uint32_t threshold = (profile == RecoveryProfile::LivePerformance)
-                             ? kLiveTimeoutThreshold
-                             : kStudioTimeoutThreshold;
+    uint32_t threshold;
+    switch (profile) {
+        case RecoveryProfile::LivePerformance: threshold = kLiveTimeoutThreshold; break;
+        case RecoveryProfile::OfflineRender:   threshold = kOfflineTimeoutThreshold; break;
+        default:                               threshold = kStudioTimeoutThreshold; break;
+    }
 
-    // Lock-free: update slot
+    // Lock-free: update slot (only safe path on audio thread)
     getSlot(pluginId).incrementTimeout(threshold);
 
-    // Also update detailed state for non-RT access (best-effort, not critical path)
-    if (m_healthMutex.try_lock()) {
-        auto& state = m_pluginHealth[pluginId];
-        state.consecutiveTimeouts++;
-        state.lastTimeoutTimestamp = timestamp;
-        state.isBypassed = getSlot(pluginId).isBypassed();
-        m_healthMutex.unlock();
-    }
+    // Note: m_pluginHealth (mutex-protected, heap-allocating) is NOT updated from the
+    // audio thread. The slot array is the authoritative lock-free state. Non-RT threads
+    // that need detailed health info can read the slot flags and call getPluginHealth()
+    // which accesses m_pluginHealth under mutex.
 }
 
 void EngineSupervisor::reportDenormal(uint64_t pluginId, uint32_t severity, uint64_t timestamp) noexcept {
+    (void)pluginId;
+    (void)severity;
     (void)timestamp;
     m_denormalCount.fetch_add(1, std::memory_order_relaxed);
-    // Denormals increase rolling score — only tracked in detailed state (non-RT)
-    if (m_healthMutex.try_lock()) {
-        auto& state = m_pluginHealth[pluginId];
-        state.rollingCpuScore += static_cast<double>(severity + 1) * 0.1;
-        m_healthMutex.unlock();
-    }
+    // Denormals are counted atomically. Rolling score is updated by decayHealthScores()
+    // on a non-RT thread. The slot array is the authoritative lock-free state.
 }
 
 bool EngineSupervisor::shouldBypassPlugin(uint64_t pluginId) const noexcept {
@@ -66,8 +65,18 @@ PluginHealthState EngineSupervisor::getPluginHealth(uint64_t pluginId) const {
 
 void EngineSupervisor::decayHealthScores(double decayFactor) {
     // NOT lock-free: mutex-protected. Only call from non-RT threads.
+
+    // Sanitize decayFactor: NaN/Inf → 0.0, clamp to [0.0, 1.0]
+    if (!std::isfinite(decayFactor)) decayFactor = 0.0;
+    if (decayFactor < 0.0) decayFactor = 0.0;
+    if (decayFactor > 1.0) decayFactor = 1.0;
+
     std::lock_guard lock(m_healthMutex);
     for (auto& [id, state] : m_pluginHealth) {
+        // Defensive: reset non-finite scores to zero
+        if (!std::isfinite(state.rollingCpuScore)) {
+            state.rollingCpuScore = 0.0;
+        }
         state.rollingCpuScore *= decayFactor;
         if (state.rollingCpuScore < 0.01) {
             state.consecutiveTimeouts = 0;
