@@ -34,12 +34,17 @@ private:
     std::shared_ptr<UnifiedHUD> m_rootUnifiedHUD;
     class AestraContent* m_rootContent{nullptr};
     std::function<void(TransportAction)> m_rootTransportCallback;
+    std::function<void()> m_rootSaveCallback;
 
 public:
     AestraRootComponent() = default;
     
     void setTransportCallback(std::function<void(TransportAction)> cb) {
         m_rootTransportCallback = cb;
+    }
+
+    void setSaveCallback(std::function<void()> cb) {
+        m_rootSaveCallback = cb;
     }
     
     void setContent(class AestraContent* content) {
