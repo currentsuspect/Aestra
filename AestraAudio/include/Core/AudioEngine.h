@@ -146,9 +146,13 @@ public:
         m_truePeakLAtomic.store(0.0f, std::memory_order_relaxed);
         m_truePeakRAtomic.store(0.0f, std::memory_order_relaxed);
 
-        // Recompute LUFS K-weighting coefficients for new sample rate
-        m_dynamicKWeightPreFilter = computeKWeightPreFilter(static_cast<double>(sampleRate));
-        m_dynamicKWeightRLB = computeKWeightRLB(static_cast<double>(sampleRate));
+        // Recompute LUFS K-weighting coefficients for new sample rate.
+        // Write into the inactive slot, then publish by flipping the index.
+        const uint32_t active = m_activeKWeightIndex.load(std::memory_order_relaxed);
+        const uint32_t inactive = 1u - active;
+        m_kWeightPreFilterSlots[inactive] = computeKWeightPreFilter(static_cast<double>(sampleRate));
+        m_kWeightRlbSlots[inactive] = computeKWeightRLB(static_cast<double>(sampleRate));
+        m_activeKWeightIndex.store(inactive, std::memory_order_release);
     }
     /** @brief Get the active sample rate used by the engine. */
     uint32_t getSampleRate() const { return m_sampleRate.load(std::memory_order_relaxed); }
@@ -1046,9 +1050,12 @@ private:
     static BiquadCoeff computeKWeightPreFilter(double sampleRate);
     static BiquadCoeff computeKWeightRLB(double sampleRate);
 
-    // Dynamic coefficients computed at current sample rate
-    BiquadCoeff m_dynamicKWeightPreFilter;
-    BiquadCoeff m_dynamicKWeightRLB;
+    // Dynamic K-weighting coefficients — double-buffered for lock-free publication.
+    // setSampleRate() writes into the inactive slot, then atomically flips the index.
+    // processBlock() loads the index with acquire and reads from the active slot.
+    BiquadCoeff m_kWeightPreFilterSlots[2];
+    BiquadCoeff m_kWeightRlbSlots[2];
+    std::atomic<uint32_t> m_activeKWeightIndex{0};
 
     TrackRTState m_dummyTrackState; // [FIX] Replaces static local to remove priority inversion risk
     std::atomic<bool> m_loggedRoutingCycleWarning{false};

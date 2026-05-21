@@ -51,10 +51,13 @@
 
 #define RESTORE_DENORMALS __asm__ volatile("msr fpcr, %0" :: "r"(oldFPCR));
 #elif defined(_M_ARM64) || defined(_M_ARM64EC)
-// MSVC ARM64/ARM64EC does not support GCC/Clang-style inline asm.
-// TODO: replace this no-op path with a supported FPCR intrinsic/system-register implementation.
-#define DISABLE_DENORMALS
-#define RESTORE_DENORMALS
+// MSVC ARM64: use _ReadStatusReg/_WriteStatusReg to toggle FPCR.FZ (bit 24, flush-to-zero)
+#include <intrin.h>
+#define DISABLE_DENORMALS           \
+    uint64_t oldFPCR = _ReadStatusReg(0x4020); \
+    _WriteStatusReg(0x4020, oldFPCR | (1ULL << 24));
+
+#define RESTORE_DENORMALS _WriteStatusReg(0x4020, oldFPCR);
 #else
 // Other architectures: no denormal control
 #define DISABLE_DENORMALS
@@ -1018,13 +1021,18 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         }
 
         // --- LUFS Filtering (Per-Sample) ---
+        // Load active K-weight slot with acquire (published by setSampleRate with release)
+        const uint32_t kwIdx = m_activeKWeightIndex.load(std::memory_order_acquire);
+        const BiquadCoeff& kwPre = m_kWeightPreFilterSlots[kwIdx];
+        const BiquadCoeff& kwRlb = m_kWeightRlbSlots[kwIdx];
+
         // Stage 1 (High Shelf)
-        double f1L = m_loudnessState.f1L.process(L, m_dynamicKWeightPreFilter);
-        double f1R = m_loudnessState.f1R.process(R, m_dynamicKWeightPreFilter);
+        double f1L = m_loudnessState.f1L.process(L, kwPre);
+        double f1R = m_loudnessState.f1R.process(R, kwPre);
 
         // Stage 2 (RLB High Pass)
-        double f2L = m_loudnessState.f2L.process(f1L, m_dynamicKWeightRLB);
-        double f2R = m_loudnessState.f2R.process(f1R, m_dynamicKWeightRLB);
+        double f2L = m_loudnessState.f2L.process(f1L, kwRlb);
+        double f2R = m_loudnessState.f2R.process(f1R, kwRlb);
 
         // Accumulate Energy
         m_loudnessState.blockEnergySum += (f2L * f2L) + (f2R * f2R);
@@ -1555,8 +1563,10 @@ AudioEngine::AudioEngine() {
     m_telemetry.cycleHz.store(0);
 
     // Initialize sample-rate-aware LUFS coefficients at default 48 kHz
-    m_dynamicKWeightPreFilter = computeKWeightPreFilter(48000.0);
-    m_dynamicKWeightRLB = computeKWeightRLB(48000.0);
+    // Both slots get the same initial values; index 0 is active
+    m_kWeightPreFilterSlots[0] = m_kWeightPreFilterSlots[1] = computeKWeightPreFilter(48000.0);
+    m_kWeightRlbSlots[0] = m_kWeightRlbSlots[1] = computeKWeightRLB(48000.0);
+    m_activeKWeightIndex.store(0, std::memory_order_relaxed);
 
     m_loudnessState.integratedLufs.store(-144.0f); // Force silence init
     m_loudnessState.momentaryLufs.store(-144.0f);
@@ -3153,7 +3163,6 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     bool writeError = false;
     uint64_t currentFrame = startSample;
     uint64_t framesRemaining = totalFrames;
-    bool writeError = false;
     const bool forceWriteErrorForTests = m_forceBounceWriteErrorForTests.load(std::memory_order_relaxed);
     bool forcedWriteErrorTriggered = false;
     bool wroteAnyFrames = false;
