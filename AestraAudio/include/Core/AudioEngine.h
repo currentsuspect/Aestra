@@ -145,6 +145,10 @@ public:
         m_truePeakMeter.initialize(sampleRate);
         m_truePeakLAtomic.store(0.0f, std::memory_order_relaxed);
         m_truePeakRAtomic.store(0.0f, std::memory_order_relaxed);
+
+        // Recompute LUFS K-weighting coefficients for new sample rate
+        m_dynamicKWeightPreFilter = computeKWeightPreFilter(static_cast<double>(sampleRate));
+        m_dynamicKWeightRLB = computeKWeightRLB(static_cast<double>(sampleRate));
     }
     /** @brief Get the active sample rate used by the engine. */
     uint32_t getSampleRate() const { return m_sampleRate.load(std::memory_order_relaxed); }
@@ -593,7 +597,6 @@ private:
         // Returns uniform float [0, 1)
         inline float nextFloat() { return (next() & 0xFFFFFF) * (1.0f / 16777216.0f); }
     };
-    mutable FastRNG m_ditherRng;
     std::atomic<DitheringMode> m_ditheringMode{DitheringMode::Triangular}; // Default TPDF
 
     TrackRTState& ensureTrackState(uint32_t trackId);
@@ -1035,9 +1038,17 @@ public:
 
 private:
     std::atomic<bool> m_loudnessResetRequested{false};
-    // Pre-computed filter coefficients (static)
+    // Pre-computed filter coefficients (static 48 kHz fallback)
     static const BiquadCoeff kKWeightPreFilter; // HS
     static const BiquadCoeff kKWeightRLB;       // HPF
+
+    // Sample-rate-aware coefficient computation via bilinear transform
+    static BiquadCoeff computeKWeightPreFilter(double sampleRate);
+    static BiquadCoeff computeKWeightRLB(double sampleRate);
+
+    // Dynamic coefficients computed at current sample rate
+    BiquadCoeff m_dynamicKWeightPreFilter;
+    BiquadCoeff m_dynamicKWeightRLB;
 
     TrackRTState m_dummyTrackState; // [FIX] Replaces static local to remove priority inversion risk
     std::atomic<bool> m_loggedRoutingCycleWarning{false};

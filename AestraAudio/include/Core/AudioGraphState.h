@@ -3,6 +3,7 @@
 
 #include <array>
 #include <atomic>
+#include <cmath>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -15,16 +16,54 @@ namespace Audio {
 struct SmoothedParamD {
     double current{1.0};
     double target{1.0};
-    double coeff{0.001}; // Per-sample coefficient
+    double step{0.0};
+    uint32_t samplesRemaining{0};
 
     inline double next() {
-        current += coeff * (target - current);
+        if (samplesRemaining > 0) {
+            current += step;
+            --samplesRemaining;
+            if (samplesRemaining == 0) {
+                current = target;
+                step = 0.0;
+            }
+        }
         return current;
     }
 
-    void setTarget(double t) { target = t; }
-    // Snap to target immediately
-    void snap() { current = target; }
+    void setTarget(double t) {
+        // Sanitize target to prevent NaN/Inf propagation
+        // Fall back to current value to avoid audible clicks
+        target = std::isfinite(t) ? t : current;
+    }
+
+    void beginRamp(uint32_t samples) {
+        // Sanitize both current and target before computing step
+        // Mirror setTarget behavior: fall back to the other finite value to avoid clicks
+        if (!std::isfinite(current)) current = std::isfinite(target) ? target : 0.0;
+        if (!std::isfinite(target)) target = current;
+
+        if (samples == 0 || current == target) {
+            current = target;
+            step = 0.0;
+            samplesRemaining = 0;
+            return;
+        }
+        samplesRemaining = samples;
+        step = (target - current) / static_cast<double>(samples);
+
+        // Validate step is finite, otherwise bypass ramp
+        if (!std::isfinite(step)) {
+            step = 0.0;
+            samplesRemaining = 0;
+            current = target;
+        }
+    }
+    void snap() {
+        current = target;
+        step = 0.0;
+        samplesRemaining = 0;
+    }
 };
 
 /**

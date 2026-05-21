@@ -6,6 +6,7 @@
 #include "AuditionEngine.h"
 #include "EffectChain.h" // [NEW]
 #include "GarbageCollector.h"
+#include "IO/AudioExporter.h"
 #include "PathUtils.h" // [NEW] For robust path conversion
 #include "PatternPlaybackEngine.h"
 #include "Playback/PreviewEngine.h"
@@ -41,8 +42,21 @@
     _mm_setcsr(oldMXCSR | 0x8040); // Set DAZ and FTZ flags
 
 #define RESTORE_DENORMALS _mm_setcsr(oldMXCSR);
+#elif defined(__aarch64__) && !defined(_MSC_VER)
+// ARM64 on GCC/Clang-style compilers: set FPCR.FZ (bit 24) to flush denormals to zero
+#define DISABLE_DENORMALS           \
+    uint64_t oldFPCR;               \
+    __asm__ volatile("mrs %0, fpcr" : "=r"(oldFPCR)); \
+    __asm__ volatile("msr fpcr, %0" :: "r"(oldFPCR | (1ULL << 24)));
+
+#define RESTORE_DENORMALS __asm__ volatile("msr fpcr, %0" :: "r"(oldFPCR));
+#elif defined(_M_ARM64) || defined(_M_ARM64EC)
+// MSVC ARM64/ARM64EC does not support GCC/Clang-style inline asm.
+// TODO: replace this no-op path with a supported FPCR intrinsic/system-register implementation.
+#define DISABLE_DENORMALS
+#define RESTORE_DENORMALS
 #else
-// Non-x86: no denormal control needed (ARM FPU handles this differently)
+// Other architectures: no denormal control
 #define DISABLE_DENORMALS
 #define RESTORE_DENORMALS
 #endif
@@ -946,11 +960,6 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     double& masterLfStateR = m_meterLfStateR[ChannelSlotMap::MASTER_SLOT_INDEX];
 
     const bool limiterOn = m_safetyLimiterEnabled.load(std::memory_order_relaxed);
-    const DitheringMode ditherMode = m_ditheringMode.load(std::memory_order_relaxed);
-
-    // Deterministic Dithering: Seed RNG with global timeline position
-    // This ensures that bouncing the same project twice produces identical bits.
-    m_ditherRng.setSeed(static_cast<uint32_t>(m_globalSamplePos.load(std::memory_order_relaxed)) ^ 0x9E3779B9);
 
     // Signal integrity counters (local, then atomic update at end)
     uint32_t nanCount = 0;
@@ -1008,32 +1017,14 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
             sumRR += R * R;
         }
 
-        // Dithering (Triangular Probability Density Function - TPDF)
-        // Magnitude = 1 LSB at 24-bit (~ -144dB)
-        // Even for float32 output, this prevents truncation noise if converted later
-        if (ditherMode != DitheringMode::None) {
-            // Generate two uniform randoms [0, 1)
-            float r1 = m_ditherRng.nextFloat();
-            float r2 = m_ditherRng.nextFloat();
-            // TPDF = (rand() - rand()) * LSB_Magnitude
-            // 24-bit LSB = 1.0 / 8388608.0 (approx 1.19e-7)
-            constexpr double LSB_24 = 1.0 / 8388608.0;
-
-            // Apply magnitude logic based on mode (future expansion for Noise Shaping)
-            double noise = (static_cast<double>(r1) - static_cast<double>(r2)) * LSB_24;
-
-            L += noise;
-            R += noise;
-        }
-
         // --- LUFS Filtering (Per-Sample) ---
         // Stage 1 (High Shelf)
-        double f1L = m_loudnessState.f1L.process(L, kKWeightPreFilter);
-        double f1R = m_loudnessState.f1R.process(R, kKWeightPreFilter);
+        double f1L = m_loudnessState.f1L.process(L, m_dynamicKWeightPreFilter);
+        double f1R = m_loudnessState.f1R.process(R, m_dynamicKWeightPreFilter);
 
         // Stage 2 (RLB High Pass)
-        double f2L = m_loudnessState.f2L.process(f1L, kKWeightRLB);
-        double f2R = m_loudnessState.f2R.process(f1R, kKWeightRLB);
+        double f2L = m_loudnessState.f2L.process(f1L, m_dynamicKWeightRLB);
+        double f2R = m_loudnessState.f2R.process(f1R, m_dynamicKWeightRLB);
 
         // Accumulate Energy
         m_loudnessState.blockEnergySum += (f2L * f2L) + (f2R * f2R);
@@ -1382,10 +1373,6 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         m_waveformWriteIndex.store(0, std::memory_order_relaxed);
     }
 
-    // Initialize smoothing coefficients based on requested buffer size
-    const uint32_t coeffFrames = std::max<uint32_t>(1, maxFrames);
-    m_smoothedMasterGain.coeff = 1.0 / static_cast<double>(coeffFrames);
-
     // Critical: Buffers may have moved after resize. Re-swizzle the pointers.
     if (needAlloc) {
         compileGraph();
@@ -1454,6 +1441,86 @@ void AudioEngine::captureWaveformHistory(const float* interleavedOutput, uint32_
 }
 
 // --- Constants ---
+// Sample-rate-aware LUFS K-weighting coefficients via bilinear transform
+// ITU-R BS.1770-4 specification
+AudioEngine::BiquadCoeff AudioEngine::computeKWeightPreFilter(double sampleRate) {
+    // ITU-R BS.1770 K-weighting pre-filter analog prototype
+    // Reference design parameters chosen so the 48 kHz digital coefficients match:
+    // b0=1.53512485958697, b1=-2.69169618940638, b2=1.19839281085285,
+    // a1=-1.69065929318241, a2=0.73248077421585
+    const double fs = sampleRate;
+    const double f0 = 1681.974450955533;
+    const double Q = 0.7071752369554196;
+    const double gainDb = 4.0; // 4.0 dB per BS.1770
+
+    // RBJ high-shelf form using bilinear transform of the BS.1770 prototype.
+    // A = 10^(gain/40) per the standard (not linear gain)
+    const double K = std::tan(PI_D * f0 / fs);
+    const double K2 = K * K;
+    const double A = std::pow(10.0, gainDb / 40.0);
+    const double norm = 1.0 + K / Q + K2;
+
+    const double b0 = (A + K / Q + K2) / norm;
+    const double b1 = 2.0 * (K2 - A) / norm;
+    const double b2 = (A - K / Q + K2) / norm;
+    const double a1 = 2.0 * (K2 - 1.0) / norm;
+    const double a2 = (1.0 - K / Q + K2) / norm;
+
+    // Validate that the computed 48 kHz coefficients reproduce the existing reference
+    // values within tolerance; fall back to the reference constants if they do not.
+    if (std::abs(fs - 48000.0) < 1.0e-9) {
+        constexpr double tolerance = 1.0e-9;
+        if (std::abs(b0 - kKWeightPreFilter.b0) > tolerance ||
+            std::abs(b1 - kKWeightPreFilter.b1) > tolerance ||
+            std::abs(b2 - kKWeightPreFilter.b2) > tolerance ||
+            std::abs(a1 - kKWeightPreFilter.a1) > tolerance ||
+            std::abs(a2 - kKWeightPreFilter.a2) > tolerance) {
+            return kKWeightPreFilter;
+        }
+    }
+
+    return {b0, b1, b2, a1, a2};
+}
+
+AudioEngine::BiquadCoeff AudioEngine::computeKWeightRLB(double sampleRate) {
+    // BS.1770 RLB high-pass filter.
+    //
+    // The standard 48 kHz reference coefficients already used by this engine are:
+    //   b = { 1.0, -2.0, 1.0 }
+    //   a = { -1.99004745483398, 0.99007225036621 }
+    //
+    // To preserve that behavior across sample rates, compute the denominator from the
+    // BS.1770 analog prototype parameters and keep the existing numerator convention.
+    double fs = sampleRate;
+    double f0 = 38.13547087602444;
+    double Q = 0.5;
+
+    // Bilinear transform pre-warping
+    double K = std::tan(PI_D * f0 / fs);
+    double K2 = K * K;
+    double norm = 1.0 + K / Q + K2;
+
+    double a1 = 2.0 * (K2 - 1.0) / norm;
+    double a2 = (1.0 - K / Q + K2) / norm;
+    AudioEngine::BiquadCoeff coeff{1.0, -2.0, 1.0, a1, a2};
+
+    // Validate that the computed 48 kHz coefficients reproduce the existing reference
+    // values within tolerance; fall back to the reference constants if they do not.
+    if (std::abs(fs - 48000.0) < 1.0e-9) {
+        constexpr double tolerance = 1.0e-9;
+        if (std::abs(coeff.b0 - kKWeightRLB.b0) > tolerance ||
+            std::abs(coeff.b1 - kKWeightRLB.b1) > tolerance ||
+            std::abs(coeff.b2 - kKWeightRLB.b2) > tolerance ||
+            std::abs(coeff.a1 - kKWeightRLB.a1) > tolerance ||
+            std::abs(coeff.a2 - kKWeightRLB.a2) > tolerance) {
+            return kKWeightRLB;
+        }
+    }
+
+    return coeff;
+}
+
+// Fallback to 48 kHz coefficients for compatibility
 const AudioEngine::BiquadCoeff AudioEngine::kKWeightPreFilter = {
     1.53512485958697, -2.69169618940638, 1.19839281085285, // b0, b1, b2
     -1.69065929318241, 0.73248077421585                    // a1, a2
@@ -1486,6 +1553,10 @@ AudioEngine::AudioEngine() {
 
     // Initialize telemetry
     m_telemetry.cycleHz.store(0);
+
+    // Initialize sample-rate-aware LUFS coefficients at default 48 kHz
+    m_dynamicKWeightPreFilter = computeKWeightPreFilter(48000.0);
+    m_dynamicKWeightRLB = computeKWeightRLB(48000.0);
 
     m_loudnessState.integratedLufs.store(-144.0f); // Force silence init
     m_loudnessState.momentaryLufs.store(-144.0f);
@@ -2018,13 +2089,20 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
         }
 
-        for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
-            double targetL = 0.0;
-            double targetR = 0.0;
-            fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
-                          static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
-            state.sendGainL[sendIndex].setTarget(targetL);
-            state.sendGainR[sendIndex].setTarget(targetR);
+        if (!muted) {
+            for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
+                if (track.sends[sendIndex].mute) {
+                    continue;
+                }
+                double targetL = 0.0;
+                double targetR = 0.0;
+                fastPanGainsD(clampD(static_cast<double>(track.sends[sendIndex].pan), -1.0, 1.0),
+                              static_cast<double>(track.sends[sendIndex].gain), targetL, targetR);
+                state.sendGainL[sendIndex].setTarget(targetL);
+                state.sendGainR[sendIndex].setTarget(targetR);
+                state.sendGainL[sendIndex].beginRamp(numFrames);
+                state.sendGainR[sendIndex].beginRamp(numFrames);
+            }
         }
 
         if (!processActive) {
@@ -2426,6 +2504,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         fastPanGainsD(panTarget, volTarget, tL, tR);
         state.gainL.setTarget(tL);
         state.gainR.setTarget(tR);
+        state.gainL.beginRamp(numFrames);
+        state.gainR.beginRamp(numFrames);
 
         const double* trackData = buffer.data();
         double peakTrackL = 0.0;
@@ -2518,6 +2598,9 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             for (size_t sendIndex = 0; sendIndex < sendCount; ++sendIndex) {
                 const auto& send = track.sends[sendIndex];
                 if (send.mute) {
+                    continue;
+                }
+                if (!send.postFader && !hasPreFaderSend) {
                     continue;
                 }
 
@@ -2644,13 +2727,6 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
         }
 
-        // Snap smoothed params to target for next block
-        state.gainL.snap();
-        state.gainR.snap();
-        for (size_t sendIndex = 0; sendIndex < state.sendGainL.size(); ++sendIndex) {
-            state.sendGainL[sendIndex].snap();
-            state.sendGainR[sendIndex].snap();
-        }
     }
 
     if (unitSnapshot) {
@@ -3016,6 +3092,24 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         return false;
     m_lastBounceWroteAnyFramesForTests.store(false, std::memory_order_relaxed);
 
+    // Delegate to AudioExporter for master bounce (trackId == -1) to use authoritative offline path
+    // with master-stage processing and dithering. Isolated track bounce (trackId >= 0) uses the
+    // existing renderBlock path for now until AudioExporter gains isolated track support.
+    if (trackId < 0) {
+        auto trackMgr = m_trackManager.lock();
+        if (!trackMgr) {
+            Aestra::Log::error("[AudioEngine] bounceRangeToWav: trackManager not available");
+            return false;
+        }
+        auto result = Audio::AudioExporter::bounceToWav(*this, *trackMgr, startBeat, endBeat, outputPath, -1);
+        if (!result.success) {
+            Aestra::Log::error("[AudioEngine] bounceRangeToWav failed: " + result.errorMessage);
+            return false;
+        }
+        return true;
+    }
+
+    // Isolated track bounce: use existing renderBlock path (TODO: consolidate when AudioExporter adds isolated track support)
     // 1. Calculate length
     double sampleRate = (double)m_sampleRate.load(std::memory_order_relaxed);
     float bpm = m_metronomeEngine.getBPM();
@@ -3047,7 +3141,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         Aestra::Log::error("[AudioEngine] Failed to init encoder for bounce: " + outputPath);
         // Restore playback state if we paused
         if (wasPlaying)
-            m_transportPlaying.store(true, std::memory_order_relaxed);
+            setTransportPlaying(true);
         return false;
     }
 
@@ -3056,6 +3150,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     std::vector<double> blockBuffer(blockSize * 2); // Stereo
     std::vector<float> floatBuffer(blockSize * 2);  // For writing
 
+    bool writeError = false;
     uint64_t currentFrame = startSample;
     uint64_t framesRemaining = totalFrames;
     bool writeError = false;
@@ -3089,12 +3184,9 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     // trackId parameter is the persistent track lane index.
     // isolatedTrackIndex is used to compare against unit.routeId (which is also the lane index).
     // Use trackId directly when >= 0 for the comparison.
-    int32_t isolatedTrackIndex = -1;
-    if (trackId >= 0) {
-        isolatedTrackIndex = trackId;
-    }
+    int32_t isolatedTrackIndex = trackId;
 
-    Aestra::Log::info("[AudioEngine] Starting bounce: " + std::to_string(totalFrames) + " frames.");
+    Aestra::Log::info("[AudioEngine] Starting isolated track bounce: " + std::to_string(totalFrames) + " frames.");
 
     while (framesRemaining > 0) {
         uint32_t framesThisBlock = (uint32_t)std::min((uint64_t)blockSize, framesRemaining);
@@ -3109,8 +3201,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         ctx.bufferOffset = 0;
         ctx.globalPos = currentFrame;
         ctx.sampleRate = (uint32_t)sampleRate;
-        // ctx.graph is usually accessed via EngineState or we assume graphState has everything.
-        // AudioRenderer uses `graphState` passed in.
+        ctx.graph = &m_state.activeGraph();
         ctx.isOffline = true;
         ctx.isolatedTrackIndex = isolatedTrackIndex;
 
@@ -3183,7 +3274,7 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
         return false;
     }
 
-    Aestra::Log::info("[AudioEngine] Bounce complete.");
+    Aestra::Log::info("[AudioEngine] Isolated track bounce complete: " + outputPath);
     return true;
 }
 

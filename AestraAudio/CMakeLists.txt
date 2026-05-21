@@ -313,6 +313,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/DSP/Oscillator.h
     include/Playback/MetronomeEngine.h
     include/IO/PathUtils.h
+    include/IO/AudioExportQuantization.h
     include/IO/AudioExporter.h
     include/Playback/PreviewEngine.h
     include/IO/SamplePool.h
@@ -408,6 +409,13 @@ if(AESTRA_HAS_VST3)
         ${VST3_HOST_SOURCES}
         PROPERTIES COMPILE_DEFINITIONS NDEBUG
     )
+    # Suppress VST3 SDK warnings (external dependency, not under our control)
+    if(NOT MSVC)
+        set_source_files_properties(
+            ${VST3_HOST_SOURCES}
+            PROPERTIES COMPILE_FLAGS "-Wno-class-memaccess -Wno-deprecated-declarations -Wno-format -Wno-extra"
+        )
+    endif()
 endif()
 
 # Enable miniaudio for fast audio decoding (MP3, FLAC, etc.)
