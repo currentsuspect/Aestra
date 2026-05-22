@@ -163,8 +163,8 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
               "SampleRate: " + std::to_string(config.sampleRate) + ", " +
               "BitDepth: " + bitDepthToString(config.bitDepth));
 
-    // Pre-allocate render buffer
-    m_renderBufferF.resize(static_cast<size_t>(RENDER_BLOCK_FRAMES) * config.numChannels);
+    // Pre-allocate render buffer — always stereo (processBlock renders 2ch)
+    m_renderBufferF.resize(static_cast<size_t>(RENDER_BLOCK_FRAMES) * 2u);
     m_exportDither.setSeed(static_cast<uint32_t>(startSample) ^
                            (static_cast<uint32_t>(config.sampleRate) * 0x9E3779B9u) ^
                            static_cast<uint32_t>(config.bitDepth));
