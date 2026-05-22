@@ -296,6 +296,7 @@ struct ClapModule {
 
     void close() {
         deactivate();
+        paramsExt = nullptr;
         if (plugin && plugin->destroy) {
             plugin->destroy(plugin);
         }
