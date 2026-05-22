@@ -9,9 +9,11 @@
 #include <atomic>
 #include <cctype>
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 
 namespace {
@@ -44,7 +46,7 @@ uint64_t boundedUint64Or(const Aestra::JSON& object, const char* key, uint64_t f
         return fallback;
     }
     const double value = object[key].asNumber();
-    if (value < 0.0) {
+    if (!std::isfinite(value) || value < 0.0 || value > static_cast<double>(std::numeric_limits<uint64_t>::max())) {
         return fallback;
     }
     return static_cast<uint64_t>(value);
@@ -101,7 +103,16 @@ std::filesystem::path resolveManifestSnapshotPath(const std::string& projectPath
     if (path.is_absolute()) {
         return path.lexically_normal();
     }
-    return (fs::path(TakeManager::getTakesDirectory(projectPath)) / path).lexically_normal();
+    path = (fs::path(TakeManager::getTakesDirectory(projectPath)) / path).lexically_normal();
+    const fs::path takesDir = fs::path(TakeManager::getTakesDirectory(projectPath)).lexically_normal();
+    const std::string takesDirStr = takesDir.string();
+    const std::string pathStr = path.string();
+    if (pathStr.size() < takesDirStr.size() ||
+        pathStr.compare(0, takesDirStr.size(), takesDirStr) != 0 ||
+        (pathStr.size() > takesDirStr.size() && pathStr[takesDirStr.size()] != '/')) {
+        return {};
+    }
+    return path;
 }
 
 TakeManager::Manifest makeErrorManifest(const std::string& projectPath, const std::string& error) {
@@ -253,8 +264,16 @@ TakeManager::Manifest TakeManager::loadManifest(const std::string& projectPath) 
         return makeErrorManifest(projectPath, "Takes manifest is not valid JSON");
     }
 
-    const int version =
-        root.has("version") && root["version"].isNumber() ? static_cast<int>(root["version"].asNumber()) : 0;
+    const int version = [&]() -> int {
+        if (!root.has("version") || !root["version"].isNumber()) {
+            return 0;
+        }
+        const double v = root["version"].asNumber();
+        if (!std::isfinite(v) || v < 1.0 || v > static_cast<double>(std::numeric_limits<int>::max())) {
+            return 0;
+        }
+        return static_cast<int>(v);
+    }();
     if (version < 1 || version > TAKE_MANIFEST_VERSION) {
         return makeErrorManifest(projectPath, "Unsupported Takes manifest version");
     }
@@ -395,6 +414,9 @@ TakeManager::Result TakeManager::createTake(const std::string& projectPath, cons
     }
 
     Manifest manifest = ensured.manifest;
+    if (manifest.takes.size() >= TAKE_MAX_ENTRIES) {
+        return makeResult(false, "Maximum number of takes reached (" + std::to_string(TAKE_MAX_ENTRIES) + ")", manifest);
+    }
     const std::string effectiveParentId = parentId.empty() ? manifest.activeTakeId : sanitizeIdPart(parentId);
 
     TakeEntry take;

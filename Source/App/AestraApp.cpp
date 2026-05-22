@@ -430,9 +430,16 @@ void AestraApp::buildMenuBar() {
 
             const auto manifest = TakeManager::loadManifest(m_projectPath);
             if (!manifest.ok) {
-                auto emptyItem = std::make_shared<AestraUI::NUIContextMenuItem>("No Takes Yet");
-                emptyItem->setEnabled(false);
-                takesMenu->addItem(emptyItem);
+                if (manifest.errorMessage == "No Takes manifest") {
+                    auto emptyItem = std::make_shared<AestraUI::NUIContextMenuItem>("No Takes Yet");
+                    emptyItem->setEnabled(false);
+                    takesMenu->addItem(emptyItem);
+                } else {
+                    Log::warning("[Takes] Could not load manifest: " + manifest.errorMessage);
+                    auto errItem = std::make_shared<AestraUI::NUIContextMenuItem>("Error loading takes");
+                    errItem->setEnabled(false);
+                    takesMenu->addItem(errItem);
+                }
             } else {
                 size_t count = 0;
                 for (const auto& take : manifest.takes) {
@@ -1174,13 +1181,15 @@ bool AestraApp::saveProjectToPath(const std::string& path) {
                                             playhead,
                                             &uiState);
     if (ok && path == m_projectPath) {
-        saveActiveTakeSnapshot(&uiState);
-    }
-    if (ok && path == m_projectPath) {
-        m_content->getTrackManager()->setModified(false);
-        m_autoSaveManager.markClean();
-        syncRecordingProjectPath(m_content, m_projectPath);
-        updateWindowTitle();
+        if (saveActiveTakeSnapshot(&uiState)) {
+            m_content->getTrackManager()->setModified(false);
+            m_autoSaveManager.markClean();
+            syncRecordingProjectPath(m_content, m_projectPath);
+            updateWindowTitle();
+        } else {
+            Log::warning("[Takes] Project saved but take snapshot failed, keeping dirty state");
+            return false;
+        }
     }
     return ok;
 }
@@ -1280,12 +1289,20 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId)
 
     auto activeResult = TakeManager::setActiveTake(m_projectPath, takeId);
     if (!activeResult.ok) {
+        auto rollback = loadProjectFromPath(m_projectPath, m_projectPath);
+        if (!rollback.ok) {
+            Log::error("[Takes] CRITICAL: Failed to rollback after failed Take switch: " + rollback.errorMessage);
+        }
         result.ok = false;
         result.errorMessage = activeResult.errorMessage;
         return result;
     }
 
     if (!saveProject()) {
+        auto rollback = loadProjectFromPath(m_projectPath, m_projectPath);
+        if (!rollback.ok) {
+            Log::error("[Takes] CRITICAL: Failed to rollback after failed mirror save: " + rollback.errorMessage);
+        }
         result.ok = false;
         result.errorMessage = "Switched Take but could not mirror it to the canonical project file";
         return result;

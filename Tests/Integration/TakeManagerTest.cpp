@@ -5,26 +5,30 @@
 #include "../../Source/Core/ProjectSerializer.h"
 #include "Models/TrackManager.h"
 
+#include <atomic>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <thread>
 
 namespace {
 
 std::filesystem::path makeTempDir() {
+    static std::atomic<uint64_t> counter{0};
     auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
     std::filesystem::create_directories(base);
 
-    for (int i = 0; i < 1000; ++i) {
-        auto candidate = base / ("TakeManager_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
+    const auto tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+    for (int attempt = 0; attempt < 100; ++attempt) {
+        auto candidate = base / ("TakeManager_" + std::to_string(tid) + "_" + std::to_string(counter.fetch_add(1)));
+        std::error_code ec;
+        if (std::filesystem::create_directories(candidate, ec)) {
             return candidate;
         }
     }
 
-    auto fallback = base / "TakeManager_fallback";
+    auto fallback = base / ("TakeManager_fallback_" + std::to_string(counter.fetch_add(1)));
     std::filesystem::create_directories(fallback);
     return fallback;
 }
