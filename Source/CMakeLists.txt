@@ -23,6 +23,8 @@ set(Aestra_SOURCES
 	Core/AestraContent.h
 	Core/AestraContent.cpp
 	Core/ProjectSerializer.cpp
+	Core/TakeManager.h
+	Core/TakeManager.cpp
 	Core/Preferences.h
 	Core/Preferences.cpp
 	Core/UIState.h

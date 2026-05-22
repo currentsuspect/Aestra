@@ -83,6 +83,11 @@ private:
     ProjectSerializer::LoadResult loadProject();
     bool saveProject();
     bool saveProjectToPath(const std::string& path);
+    ProjectSerializer::SerializeResult serializeCurrentProject(int indentSpaces,
+                                                               const ProjectSerializer::UIState* uiState = nullptr) const;
+    bool saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState = nullptr);
+    bool createTakeFromCurrentProject();
+    ProjectSerializer::LoadResult switchToTake(const std::string& takeId);
     void reinitAutosaveManager();
     ProjectSerializer::UIState captureUIState() const;
     void applyUIState(const ProjectSerializer::UIState& state);
