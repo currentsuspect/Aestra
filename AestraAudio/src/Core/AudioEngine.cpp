@@ -3098,7 +3098,7 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
 // =================================================================================================
 
 bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::string& outputPath, int32_t trackId) {
-    if (endBeat <= startBeat)
+    if (!std::isfinite(startBeat) || !std::isfinite(endBeat) || endBeat <= startBeat)
         return false;
     m_lastBounceWroteAnyFramesForTests.store(false, std::memory_order_relaxed);
 
