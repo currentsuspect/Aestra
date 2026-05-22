@@ -49,9 +49,17 @@ struct NoiseShaper {
      * @param shapedR Output shaped right error
      */
     inline void process(float errorL, float errorR, float& shapedL, float& shapedR) noexcept {
+        // Guard against NaN/Inf poisoning the IIR state
+        if (!std::isfinite(errorL)) errorL = 0.0f;
+        if (!std::isfinite(errorR)) errorR = 0.0f;
+
         // 2nd order IIR: y[n] = b0*x[n] + b1*x[n-1] + b2*x[n-2] - a1*y[n-1] - a2*y[n-2]
         shapedL = b0 * errorL + b1 * x1L + b2 * x2L - a1 * y1L - a2 * y2L;
         shapedR = b0 * errorR + b1 * x1R + b2 * x2R - a1 * y1R - a2 * y2R;
+
+        // Clamp outputs to prevent Inf from amplification
+        if (!std::isfinite(shapedL)) { shapedL = 0.0f; reset(); }
+        if (!std::isfinite(shapedR)) { shapedR = 0.0f; reset(); }
 
         // Update input state (shift)
         x2L = x1L;

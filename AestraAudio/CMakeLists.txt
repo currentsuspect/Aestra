@@ -410,10 +410,11 @@ if(AESTRA_HAS_VST3)
         PROPERTIES COMPILE_DEFINITIONS NDEBUG
     )
     # Suppress VST3 SDK warnings (external dependency, not under our control)
+    # Use APPEND_STRING to avoid clobbering -fobjc-arc on module_mac.mm
     if(NOT MSVC)
         set_source_files_properties(
             ${VST3_HOST_SOURCES}
-            PROPERTIES COMPILE_FLAGS "-Wno-class-memaccess -Wno-deprecated-declarations -Wno-format -Wno-extra"
+            APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-class-memaccess -Wno-deprecated-declarations -Wno-format -Wno-extra"
         )
     endif()
 endif()
