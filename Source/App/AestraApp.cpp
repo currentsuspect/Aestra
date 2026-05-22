@@ -21,6 +21,7 @@
 #include "../Settings/ExportDialog.h"
 #include "PluginManager.h"
 #include "AudioGraphBuilder.h"
+#include "TakeManager.h"
 #include "../../AestraAudio/include/Core/PlaybackGraphController.h"
 #include "../../AestraAudio/include/IO/AudioExporter.h"
 
@@ -58,6 +59,11 @@ void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content, con
     if (auto trackManager = content->getTrackManager()) {
         trackManager->setRecordingProjectPath(projectPath);
     }
+}
+
+std::string takeMenuLabel(const TakeManager::TakeEntry& take) {
+    const std::string name = take.name.empty() ? take.id : take.name;
+    return take.active ? ("[current] " + name) : name;
 }
 }
 
@@ -402,6 +408,50 @@ void AestraApp::buildMenuBar() {
                 }
             }
         });
+
+        auto takesMenu = std::make_shared<AestraUI::NUIContextMenu>();
+        const bool hasProjectContext = m_content && m_content->getTrackManager() && !m_projectPath.empty();
+        if (!hasProjectContext) {
+            auto emptyItem = std::make_shared<AestraUI::NUIContextMenuItem>("No Active Project");
+            emptyItem->setEnabled(false);
+            takesMenu->addItem(emptyItem);
+        } else {
+            takesMenu->addItem("Create Take from Current State", [this]() {
+                if (!createTakeFromCurrentProject()) {
+                    Log::error("Failed to create Take");
+                }
+            });
+            takesMenu->addItem("Save Active Take", [this]() {
+                if (!saveProject()) {
+                    Log::error("Failed to save active Take");
+                }
+            });
+            takesMenu->addSeparator();
+
+            const auto manifest = TakeManager::loadManifest(m_projectPath);
+            if (!manifest.ok) {
+                auto emptyItem = std::make_shared<AestraUI::NUIContextMenuItem>("No Takes Yet");
+                emptyItem->setEnabled(false);
+                takesMenu->addItem(emptyItem);
+            } else {
+                size_t count = 0;
+                for (const auto& take : manifest.takes) {
+                    if (count++ >= 20)
+                        break;
+                    auto item = std::make_shared<AestraUI::NUIContextMenuItem>(takeMenuLabel(take));
+                    item->setEnabled(!take.active);
+                    item->setOnClick([this, takeId = take.id]() {
+                        auto result = switchToTake(takeId);
+                        if (!result.ok) {
+                            Log::error("Failed to switch Take: " + takeId + " (" + result.errorMessage + ")");
+                        }
+                    });
+                    takesMenu->addItem(item);
+                }
+            }
+        }
+
+        menu->addSubmenu("Takes", takesMenu);
 
         auto historyMenu = std::make_shared<AestraUI::NUIContextMenu>();
         const auto historyEntries = ProjectSerializer::listHistory(m_projectPath);
@@ -1028,6 +1078,7 @@ ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& 
         if (auto trackManager = m_content->getTrackManager()) {
             trackManager->setPosition(result.playhead);
             trackManager->setPlayStartPosition(result.playhead);
+            trackManager->getCommandHistory().clear();
             trackManager->setModified(false);
         }
 
@@ -1085,6 +1136,21 @@ bool AestraApp::saveProject() {
     return saveProjectToPath(m_projectPath);
 }
 
+ProjectSerializer::SerializeResult AestraApp::serializeCurrentProject(int indentSpaces,
+                                                                      const ProjectSerializer::UIState* uiState) const {
+    ProjectSerializer::SerializeResult result;
+    if (!m_content || !m_content->getTrackManager()) {
+        return result;
+    }
+
+    const double tempo = (m_audioController && m_audioController->getEngine())
+        ? static_cast<double>(m_audioController->getEngine()->getBPM())
+        : (m_content->getTransportBar() ? static_cast<double>(m_content->getTransportBar()->getTempo()) : 120.0);
+    const double playhead = m_content->getTrackManager()->getPosition();
+
+    return ProjectSerializer::serialize(m_content->getTrackManager(), tempo, playhead, indentSpaces, uiState);
+}
+
 bool AestraApp::saveProjectToPath(const std::string& path) {
     if (!m_content || !m_content->getTrackManager()) {
         Log::warning("Cannot save project without an active TrackManager");
@@ -1108,12 +1174,125 @@ bool AestraApp::saveProjectToPath(const std::string& path) {
                                             playhead,
                                             &uiState);
     if (ok && path == m_projectPath) {
+        saveActiveTakeSnapshot(&uiState);
+    }
+    if (ok && path == m_projectPath) {
         m_content->getTrackManager()->setModified(false);
         m_autoSaveManager.markClean();
         syncRecordingProjectPath(m_content, m_projectPath);
         updateWindowTitle();
     }
     return ok;
+}
+
+bool AestraApp::saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState) {
+    if (m_projectPath.empty() || !m_content || !m_content->getTrackManager()) {
+        return false;
+    }
+
+    ProjectSerializer::UIState capturedState;
+    const ProjectSerializer::UIState* state = uiState;
+    if (!state) {
+        capturedState = captureUIState();
+        state = &capturedState;
+    }
+
+    auto ser = serializeCurrentProject(2, state);
+    if (!ser.ok || ser.contents.empty()) {
+        Log::warning("[Takes] Could not serialize active Take");
+        return false;
+    }
+
+    auto result = TakeManager::saveActiveTake(m_projectPath, ser.contents);
+    if (!result.ok) {
+        Log::warning("[Takes] Could not save active Take: " + result.errorMessage);
+        return false;
+    }
+    return true;
+}
+
+bool AestraApp::createTakeFromCurrentProject() {
+    if (m_projectPath.empty() || !m_content || !m_content->getTrackManager()) {
+        return false;
+    }
+
+    if (!saveProject()) {
+        return false;
+    }
+
+    const auto uiState = captureUIState();
+    auto ser = serializeCurrentProject(2, &uiState);
+    if (!ser.ok || ser.contents.empty()) {
+        Log::warning("[Takes] Could not serialize project while creating Take");
+        return false;
+    }
+
+    const auto manifest = TakeManager::loadManifest(m_projectPath);
+    const std::string takeName = "Take " + std::to_string(manifest.ok ? manifest.takes.size() + 1 : 2);
+    auto result = TakeManager::createTake(m_projectPath, ser.contents, takeName);
+    if (!result.ok) {
+        Log::warning("[Takes] Could not create Take: " + result.errorMessage);
+        return false;
+    }
+
+    Log::info("[Takes] Active Take: " + result.take.name);
+    return true;
+}
+
+ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId) {
+    ProjectSerializer::LoadResult result;
+    if (takeId.empty()) {
+        result.errorMessage = "Take id is empty";
+        return result;
+    }
+    if (m_projectPath.empty()) {
+        result.errorMessage = "Project path is empty";
+        return result;
+    }
+
+    if (!saveProject()) {
+        result.errorMessage = "Could not save the current Take before switching";
+        return result;
+    }
+
+    const auto manifest = TakeManager::loadManifest(m_projectPath);
+    if (!manifest.ok) {
+        result.errorMessage = manifest.errorMessage;
+        return result;
+    }
+
+    const auto* take = manifest.findTake(takeId);
+    if (!take) {
+        result.errorMessage = "Take not found: " + takeId;
+        return result;
+    }
+
+    const std::string snapshotPath = TakeManager::resolveSnapshotPath(m_projectPath, *take);
+    if (snapshotPath.empty() || !std::filesystem::exists(snapshotPath)) {
+        result.errorMessage = "Take snapshot is missing: " + snapshotPath;
+        return result;
+    }
+
+    result = loadProjectFromPath(snapshotPath, m_projectPath);
+    if (!result.ok) {
+        return result;
+    }
+
+    auto activeResult = TakeManager::setActiveTake(m_projectPath, takeId);
+    if (!activeResult.ok) {
+        result.ok = false;
+        result.errorMessage = activeResult.errorMessage;
+        return result;
+    }
+
+    if (!saveProject()) {
+        result.ok = false;
+        result.errorMessage = "Switched Take but could not mirror it to the canonical project file";
+        return result;
+    }
+
+    Log::info("[Takes] Switched to Take: " + activeResult.take.name);
+    return result;
 }
 
 void AestraApp::reinitAutosaveManager() {
