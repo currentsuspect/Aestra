@@ -204,3 +204,6 @@ autosave.*
 
 # Cloudflare email routing temp files
 .cf-email-routing-*
+# Audit cache files (regenerated on each run)
+.aestra/audit/*.json
+!.aestra/audit/snapshots/
