@@ -403,10 +403,14 @@ bool AutosaveManager::performAutosave() {
         }
     }
     
+    // Atomic replace: on POSIX, rename() atomically replaces the target.
+    // On Windows, we must remove first (no atomic rename-over-existing in std::filesystem).
+#ifdef _WIN32
     if (fs::exists(target, ec)) {
         fs::remove(target, ec);
     }
-    
+#endif
+
     fs::rename(tmp, target, ec);
     if (ec) {
         notifyError("Autosave failed: cannot replace target file");
