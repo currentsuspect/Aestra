@@ -322,7 +322,9 @@ double AudioExporter::computeRenderDurationBeats(const Config& config, double& o
         case RenderScope::FullSong:
             if (config.endBeat > config.startBeat) {
                 outStartBeat = std::max(0.0, config.startBeat);
-                const double boundedEndBeat = std::min(config.endBeat, std::max(0.0, totalBeats));
+                const double boundedEndBeat =
+                    (totalBeats > 0.0) ? std::min(config.endBeat, totalBeats)
+                                       : config.endBeat;
                 const double duration = boundedEndBeat - outStartBeat;
                 return duration > 0.0 ? duration : 0.0;
             }
