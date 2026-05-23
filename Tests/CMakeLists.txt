@@ -582,13 +582,17 @@ add_test(NAME AestraAudioEngineDiagnosticsTest COMMAND AestraAudioEngineDiagnost
 set_tests_properties(AestraAudioEngineDiagnosticsTest PROPERTIES LABELS "audio;diagnostics;rt-safety")
 
 # PathologicalChaosStressTest
-add_executable(AestraPathologicalChaosStressTest AestraAudio/PathologicalChaosStressTest.cpp)
-target_link_libraries(AestraPathologicalChaosStressTest PRIVATE AestraAudio)
-target_include_directories(AestraPathologicalChaosStressTest PRIVATE
-    ${CMAKE_SOURCE_DIR}/AestraAudio/include
-)
-add_test(NAME AestraPathologicalChaosStressTest COMMAND AestraPathologicalChaosStressTest)
-set_tests_properties(AestraPathologicalChaosStressTest PROPERTIES LABELS "audio;stress;rt-safety")
+if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/PathologicalChaosStressTest.cpp")
+    add_executable(AestraPathologicalChaosStressTest AestraAudio/PathologicalChaosStressTest.cpp)
+    target_link_libraries(AestraPathologicalChaosStressTest PRIVATE AestraAudio)
+    target_include_directories(AestraPathologicalChaosStressTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    )
+    add_test(NAME AestraPathologicalChaosStressTest COMMAND AestraPathologicalChaosStressTest)
+    set_tests_properties(AestraPathologicalChaosStressTest PROPERTIES LABELS "audio;stress;rt-safety")
+else()
+    message(STATUS "AestraPathologicalChaosStressTest skipped (source file not found)")
+endif()
 
 # AudioQualityRegressionTest
 add_executable(AestraAudioQualityRegressionTest AestraAudio/AudioQualityRegressionTest.cpp)
