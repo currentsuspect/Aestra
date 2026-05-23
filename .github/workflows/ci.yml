@@ -299,15 +299,10 @@ jobs:
         with:
           submodules: false
 
-      - name: Setup CMake
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: "3.28"
-
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libgtest-dev
+          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libgtest-dev cmake
 
       - name: Configure
         run: >
