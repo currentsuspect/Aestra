@@ -22,6 +22,7 @@
 #endif
 
 #include <algorithm>
+#include <cstdlib>
 #include <cassert>
 #include <cerrno>
 #include <chrono>
@@ -121,11 +122,12 @@ inline void addMidiPanic(Aestra::Audio::MidiBuffer& buf) {
 static AudioEngine* g_audioEngineInstance = nullptr;
 
 AudioEngine& AudioEngine::getInstance() {
-    // Assert if null in debug builds
     if (!g_audioEngineInstance) {
-        // Critical error - engine not created yet
-        static AudioEngine fallback; // Emergency fallback
-        return fallback;
+        // Engine not registered — this is a programming error.
+        // In debug builds, assert to catch it early. In release, log and abort.
+        Aestra::Log::error("[AudioEngine] getInstance() called before engine was created!");
+        assert(g_audioEngineInstance && "AudioEngine::getInstance() called before engine was created");
+        std::abort();
     }
     return *g_audioEngineInstance;
 }
@@ -1547,11 +1549,7 @@ const AudioEngine::BiquadCoeff AudioEngine::kKWeightRLB = {
  */
 AudioEngine::AudioEngine() {
     installRealtimeMisuseHandler();
-    g_audioEngineInstance = this; // [NEW] Register singleton
-
-    if (g_audioEngineInstance == nullptr) {
-        g_audioEngineInstance = this;
-    }
+    g_audioEngineInstance = this; // Register singleton
     Aestra::Log::info("[AudioEngine] Created (Original Ctor). Ptr: " +
                       std::to_string(reinterpret_cast<uintptr_t>(this)));
 
