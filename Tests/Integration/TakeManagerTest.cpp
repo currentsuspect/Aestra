@@ -99,7 +99,10 @@ int main() {
             "Failed to write canonical project");
 
     auto init = TakeManager::ensureManifest(projectPath.string(), mainContents, "Main");
-    require(init.ok, "Failed to initialize Takes manifest");
+    if (!init.ok) {
+        std::cerr << "[FAIL] Failed to initialize Takes manifest: " << init.errorMessage << "\n";
+        std::exit(1);
+    }
     require(init.manifest.takes.size() == 1, "Expected initial manifest to contain one take");
     require(init.manifest.activeTakeId == "main", "Expected Main take to be active");
     require(std::filesystem::exists(TakeManager::resolveSnapshotPath(projectPath.string(), init.take)),
