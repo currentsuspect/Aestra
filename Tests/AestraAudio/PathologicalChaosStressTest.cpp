@@ -24,7 +24,7 @@ static void testConcurrentViolationRecording() {
 
     std::vector<std::thread> threads;
     for (int t = 0; t < NUM_THREADS; t++) {
-        threads.emplace_back([&ready, t] {
+        threads.emplace_back([&, t] {
             // Reset this thread's audit data
             g_rtAuditData = {};
 
