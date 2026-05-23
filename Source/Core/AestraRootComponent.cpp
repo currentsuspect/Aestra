@@ -6,6 +6,13 @@
 #include "../AestraCore/include/AestraLog.h"
 
 bool AestraRootComponent::onKeyEvent(const NUIKeyEvent& event) {
+    // 0. Ctrl+S — save project (highest priority, before any panel)
+    if (event.pressed && (event.modifiers & NUIModifiers::Ctrl) &&
+        event.keyCode == NUIKeyCode::S && m_rootSaveCallback) {
+        m_rootSaveCallback();
+        return true;
+    }
+
     // 1. Global app-level shortcuts (Ctrl+Z, Ctrl+Y, Space) — BEFORE focused component
     if (m_rootContent) {
         if (m_rootContent->onKeyEvent(event)) {

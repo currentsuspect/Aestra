@@ -6,6 +6,10 @@ It is intentionally strict. Aestra is a native C++ DAW with real-time audio cons
 
 Read this file before making changes.
 
+## Philosophy
+
+Before working on Aestra, read [`philosophy.md`](philosophy.md). It defines the product vision, the people we build for, and the engineering values that underpin every decision here. When this policy and philosophy conflict on direction, philosophy wins. When this policy and philosophy conflict on safety, this policy wins.
+
 ---
 
 ## 1. Scope

@@ -166,7 +166,10 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Core/MixerBus.cpp
     src/Core/MixerChannel.cpp
     src/Core/ProjectValidator.cpp
-    
+    src/Core/EngineSupervisor.cpp
+    src/Core/AsyncCleanupManager.cpp
+    src/Core/RTGuard.cpp
+
     # Playback
     src/Playback/AuditionEngine.cpp
     src/Playback/PreviewEngine.cpp
@@ -296,6 +299,10 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Core/AudioDeviceManager.h
     include/Core/AutosaveManager.h
     include/Core/ProjectValidator.h
+    include/Core/AudioEngineDiagnostics.h
+    include/Core/EngineSupervisor.h
+    include/Core/AsyncCleanupManager.h
+    include/Core/RTGuard.h
     include/Drivers/IAudioDriver.h
     include/Drivers/AudioDriver.h           # Legacy/Base types
     include/Drivers/AudioDriverTypes.h
@@ -306,6 +313,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/DSP/Oscillator.h
     include/Playback/MetronomeEngine.h
     include/IO/PathUtils.h
+    include/IO/AudioExportQuantization.h
     include/IO/AudioExporter.h
     include/Playback/PreviewEngine.h
     include/IO/SamplePool.h
@@ -401,6 +409,14 @@ if(AESTRA_HAS_VST3)
         ${VST3_HOST_SOURCES}
         PROPERTIES COMPILE_DEFINITIONS NDEBUG
     )
+    # Suppress VST3 SDK warnings (external dependency, not under our control)
+    # Use APPEND_STRING to avoid clobbering -fobjc-arc on module_mac.mm
+    if(NOT MSVC)
+        set_source_files_properties(
+            ${VST3_HOST_SOURCES}
+            APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-class-memaccess -Wno-deprecated-declarations -Wno-format -Wno-extra"
+        )
+    endif()
 endif()
 
 # Enable miniaudio for fast audio decoding (MP3, FLAC, etc.)

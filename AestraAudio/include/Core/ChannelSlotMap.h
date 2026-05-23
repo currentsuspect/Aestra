@@ -1,9 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <memory>
-#include <unordered_map>
 #include <vector>
 
 namespace Aestra {
@@ -24,6 +24,11 @@ class MixerChannel;
  * - After rebuild(), getSlotIndex() and getChannelId() are safe to call from any thread
  *   (read-only access to immutable data after rebuild)
  *
+ * RT Safety:
+ * - No heap allocation in any method. All storage is fixed-size std::array.
+ * - getSlotIndex() is O(n) with n <= 127 (linear scan), deterministic and cache-friendly.
+ * - getChannelId() is O(1) direct index lookup.
+ *
  * Requirements: 12.5 - Each channel control parameter SHALL be identified by stable
  * (channelId, paramId) pairs for automation readiness.
  */
@@ -38,7 +43,10 @@ public:
     /// Maximum number of channel slots (excluding master)
     static constexpr uint32_t MAX_CHANNEL_SLOTS = 127;
 
-    ChannelSlotMap() = default;
+    /// Total array size (slots 0..126 + master at 127)
+    static constexpr uint32_t ARRAY_SIZE = MAX_CHANNEL_SLOTS + 1;
+
+    ChannelSlotMap() : m_slotToId{}, m_channelCount{0} { m_slotToId.fill(INVALID_SLOT); }
     ~ChannelSlotMap() = default;
 
     // Copyable (UI snapshots) and movable
@@ -65,7 +73,8 @@ public:
     /**
      * @brief Get the dense slot index for a channel ID.
      *
-     * O(1) lookup. Safe to call from audio thread after rebuild().
+     * O(n) linear scan, n <= 127. Deterministic, no hash computation.
+     * Safe to call from audio thread after rebuild().
      *
      * @param channelId The track/channel ID
      * @return Dense slot index, or INVALID_SLOT if not found
@@ -75,7 +84,7 @@ public:
     /**
      * @brief Get the channel ID for a dense slot index.
      *
-     * O(1) lookup. Safe to call from audio thread after rebuild().
+     * O(1) direct index lookup. Safe to call from audio thread after rebuild().
      *
      * @param slotIndex Dense slot index (0..MAX_CHANNEL_SLOTS-1)
      * @return Channel ID, or INVALID_SLOT if not found
@@ -103,9 +112,11 @@ public:
     void clear();
 
 private:
-    std::unordered_map<uint32_t, uint32_t> m_idToSlot; ///< channelId -> slotIndex
-    std::unordered_map<uint32_t, uint32_t> m_slotToId; ///< slotIndex -> channelId
-    uint32_t m_channelCount{0};                        ///< Number of mapped channels
+    /// Slot-to-ID: direct index lookup. m_slotToId[slot] = channelId, or INVALID_SLOT.
+    std::array<uint32_t, ARRAY_SIZE> m_slotToId;
+
+    /// Number of mapped channels (excluding master)
+    uint32_t m_channelCount{0};
 };
 
 } // namespace Audio

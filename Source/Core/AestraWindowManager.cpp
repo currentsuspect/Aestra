@@ -399,6 +399,15 @@ void AestraWindowManager::setTransportCallback(std::function<void(TransportActio
     }
 }
 
+void AestraWindowManager::setSaveCallback(std::function<void()> cb) {
+    m_saveCallback = std::move(cb);
+    if (m_rootComponent) {
+        m_rootComponent->setSaveCallback([this]() {
+            if (m_saveCallback) m_saveCallback();
+        });
+    }
+}
+
 void AestraWindowManager::setContent(std::shared_ptr<AestraContent> content) {
     m_content = content;
     if (m_rootComponent) {
@@ -406,6 +415,11 @@ void AestraWindowManager::setContent(std::shared_ptr<AestraContent> content) {
         if (m_transportCallback) {
             m_rootComponent->setTransportCallback([this](TransportAction action) {
                 m_transportCallback(action);
+            });
+        }
+        if (m_saveCallback) {
+            m_rootComponent->setSaveCallback([this]() {
+                if (m_saveCallback) m_saveCallback();
             });
         }
     }

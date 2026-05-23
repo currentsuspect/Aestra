@@ -8,15 +8,13 @@ namespace Aestra {
 namespace Audio {
 
 void ChannelSlotMap::rebuild(const std::vector<std::unique_ptr<MixerChannel>>& channels) {
-    m_idToSlot.clear();
-    m_slotToId.clear();
+    m_slotToId.fill(INVALID_SLOT);
     m_channelCount = 0;
 
     uint32_t slot = 0;
     for (const auto& channel : channels) {
         if (channel && slot < MAX_CHANNEL_SLOTS) {
             uint32_t channelId = channel->getChannelId();
-            m_idToSlot[channelId] = slot;
             m_slotToId[slot] = channelId;
             ++slot;
         }
@@ -25,22 +23,28 @@ void ChannelSlotMap::rebuild(const std::vector<std::unique_ptr<MixerChannel>>& c
 }
 
 uint32_t ChannelSlotMap::getSlotIndex(uint32_t channelId) const {
-    auto it = m_idToSlot.find(channelId);
-    return (it != m_idToSlot.end()) ? it->second : INVALID_SLOT;
+    // Linear scan of at most 127 entries. Deterministic, cache-friendly,
+    // no hash computation. Called from RT path but n is tiny.
+    const uint32_t count = m_channelCount;
+    for (uint32_t i = 0; i < count; ++i) {
+        if (m_slotToId[i] == channelId)
+            return i;
+    }
+    return INVALID_SLOT;
 }
 
 uint32_t ChannelSlotMap::getChannelId(uint32_t slotIndex) const {
-    auto it = m_slotToId.find(slotIndex);
-    return (it != m_slotToId.end()) ? it->second : INVALID_SLOT;
+    if (slotIndex >= ARRAY_SIZE)
+        return INVALID_SLOT;
+    return m_slotToId[slotIndex];
 }
 
 bool ChannelSlotMap::hasChannel(uint32_t channelId) const {
-    return m_idToSlot.find(channelId) != m_idToSlot.end();
+    return getSlotIndex(channelId) != INVALID_SLOT;
 }
 
 void ChannelSlotMap::clear() {
-    m_idToSlot.clear();
-    m_slotToId.clear();
+    m_slotToId.fill(INVALID_SLOT);
     m_channelCount = 0;
 }
 
