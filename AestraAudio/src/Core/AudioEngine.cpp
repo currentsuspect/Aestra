@@ -1383,6 +1383,9 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         m_waveformWriteIndex.store(0, std::memory_order_relaxed);
     }
 
+    // Note: SmoothedParamD uses beginRamp(samples), not a coeff field.
+    // Send gain smoothers are initialized via beginRamp() at the point of use (line ~2126).
+
     // Critical: Buffers may have moved after resize. Re-swizzle the pointers.
     if (needAlloc) {
         compileGraph();
