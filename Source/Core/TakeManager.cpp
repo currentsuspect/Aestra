@@ -348,6 +348,12 @@ TakeManager::Result TakeManager::ensureManifest(const std::string& projectPath,
         return makeResult(true, "", existing, existing.activeTake() ? *existing.activeTake() : TakeEntry{});
     }
 
+    // Only bootstrap a new manifest when the file simply doesn't exist.
+    // Any other load error (corrupt JSON, too large, etc.) is a real failure.
+    if (existing.errorMessage != "No Takes manifest") {
+        return makeResult(false, existing.errorMessage, existing);
+    }
+
     Manifest manifest;
     manifest.ok = true;
     manifest.projectPath = projectPath;
