@@ -47,6 +47,11 @@ struct ClapEventHeader;
 using ClapProcessStatus = int32_t;
 constexpr ClapProcessStatus kClapProcessError = 0;
 
+// CLAP core constants (from clap/include/clap/)
+constexpr const char* kClapPluginFactoryId = "clap.plugin-factory";
+constexpr uint16_t kClapCoreEventSpaceId = 0;
+constexpr uint16_t kClapEventMidi = 10;
+
 struct ClapHost {
     ClapVersion clapVersion;
     void* hostData;
@@ -148,10 +153,38 @@ struct ClapPluginState {
     bool (*load)(const ClapPlugin* plugin, const ClapIstream* stream);
 };
 
-constexpr uint16_t kClapCoreEventSpaceId = 0;
-constexpr uint16_t kClapEventMidi = 10;
-constexpr const char* kClapPluginFactoryId = "clap.plugin-factory";
+struct ClapParamInfo {
+    uint32_t id;
+    uint32_t flags;
+    const void* cookie;
+    char name[256];
+    char module[256];
+    double minValue;
+    double maxValue;
+    double defaultValue;
+    char unit[32];
+    uint32_t valueCount;
+    int32_t stepCount;
+};
+
+constexpr uint32_t kClapParamIsAutomatable = (1u << 0);
+constexpr uint32_t kClapParamIsReadOnly = (1u << 1);
+constexpr uint32_t kClapParamIsBypass = (1u << 2);
+constexpr uint32_t kClapParamIsHidden = (1u << 3);
+constexpr uint32_t kClapParamIsAdvanced = (1u << 4);
+
+struct ClapPluginParams {
+    uint32_t (*count)(const ClapPlugin* plugin);
+    bool (*getParamInfo)(const ClapPlugin* plugin, uint32_t paramIndex, ClapParamInfo* info);
+    double (*getParamValue)(const ClapPlugin* plugin, uint32_t paramId);
+    bool (*getParamValueById)(const ClapPlugin* plugin, const ClapParamInfo* paramInfo, double* value);
+    bool (*valueToText)(const ClapPlugin* plugin, uint32_t paramId, double value, char* display, uint32_t size);
+    bool (*textToValue)(const ClapPlugin* plugin, uint32_t paramId, const char* display, double* value);
+    void (*flush)(const ClapPlugin* plugin, const void* inChanges, const void* outChanges);
+};
+
 constexpr const char* kClapExtState = "clap.state";
+constexpr const char* kClapExtParams = "clap.params";
 constexpr const char* kProbeFirstClapPluginId = "__aestra_probe_first__";
 
 bool isClapVersionCompatible(const ClapVersion& version) {
@@ -253,6 +286,7 @@ struct ClapModule {
     float* outputPlanes[2] = {nullptr, nullptr};
     ClapInputEvents emptyInputEvents = {nullptr, emptyInputEventsSize, emptyInputEventsGet};
     ClapOutputEvents outputEvents = {nullptr, dropOutputEvent};
+    const ClapPluginParams* paramsExt = nullptr;
 
     ~ClapModule() { close(); }
 
@@ -262,6 +296,7 @@ struct ClapModule {
 
     void close() {
         deactivate();
+        paramsExt = nullptr;
         if (plugin && plugin->destroy) {
             plugin->destroy(plugin);
         }
@@ -351,6 +386,9 @@ struct ClapModule {
             error = "clap-plugin-init-failed";
             close();
             return false;
+        }
+        if (plugin->getExtension) {
+            paramsExt = static_cast<const ClapPluginParams*>(plugin->getExtension(plugin, kClapExtParams));
         }
         return true;
     }
