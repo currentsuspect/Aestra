@@ -237,6 +237,12 @@ public:
 
 private:
     void loadCurrentTrack(bool startPlayback);
+    /// Internal: decode and publish track. Caller must NOT hold m_queueMutex.
+    /// Spawns a background thread for the actual decode to keep the UI responsive.
+    void loadCurrentTrackImpl(const std::string& filePath, double lastPosition, bool isTimeline,
+                              const std::string& title, bool startPlayback);
+    /// Generation counter: incremented on each load request so stale decode results are discarded
+    std::atomic<uint64_t> m_loadGeneration{0};
     // Queue (UI thread only - no RT access)
     std::vector<AuditionQueueItem> m_queue;
     int32_t m_currentIndex{-1};
