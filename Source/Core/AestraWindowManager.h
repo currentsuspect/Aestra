@@ -130,6 +130,7 @@ public:
     void setCloseCallback(std::function<void()> cb) { if (m_window) m_window->setCloseCallback(cb); }
     void setResizeCallback(std::function<void(int, int)> cb) { if (m_window) m_window->setResizeCallback(cb); }
     void setTransportCallback(std::function<void(TransportAction)> cb);
+    void setSaveCallback(std::function<void()> cb);
     // ... others handled internally or exposed as needed
 
     /** @brief Get the last known mouse x position. */
@@ -208,6 +209,7 @@ private:
 
     // Input State
     std::function<void(TransportAction)> m_transportCallback;
+    std::function<void()> m_saveCallback;
     // SVG overlay cursor position cache. Updated by AWM mouse move callback.
     // Post-warp divergence from SDL getCursorPosition() is intentional —
     // renderCustomCursor now polls the authoritative platform position

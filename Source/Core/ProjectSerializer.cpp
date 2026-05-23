@@ -671,6 +671,13 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             ljs.set("mute", JSON(lane->muted));
             ljs.set("solo", JSON(lane->solo));
             if (const auto* channel = trackManager->getChannel(laneIndex)) {
+                // MixerChannel state not covered by PlaylistLane
+                ljs.set("soloSafe", JSON(channel->isSoloSafe()));
+                ljs.set("armed", JSON(channel->isArmed()));
+                ljs.set("monitorInput", JSON(channel->isMonitoringEnabled()));
+                ljs.set("inputChannelIndex", JSON(static_cast<double>(channel->getInputChannelIndex())));
+                ljs.set("width", JSON(static_cast<double>(channel->getWidth())));
+                ljs.set("trackColorIndex", JSON(static_cast<double>(channel->getTrackColorIndex())));
                 JSON routingJson = JSON::object();
                 const uint32_t mainOutputId = channel->getMainOutputId();
                 routingJson.set("mainOutputId", JSON(static_cast<double>(mainOutputId == 0xFFFFFFFFu ? 0u : mainOutputId)));
@@ -1343,7 +1350,30 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         channel->setPan(lane->pan);
                         channel->setMute(lane->muted);
                         channel->setSolo(lane->solo);
-    
+
+                        // MixerChannel state (not on PlaylistLane)
+                        if (lj[i].has("soloSafe") && lj[i]["soloSafe"].isBool())
+                            channel->setSoloSafe(lj[i]["soloSafe"].asBool());
+                        if (lj[i].has("armed") && lj[i]["armed"].isBool())
+                            channel->setArmed(lj[i]["armed"].asBool());
+                        if (lj[i].has("monitorInput") && lj[i]["monitorInput"].isBool())
+                            channel->setMonitoringEnabled(lj[i]["monitorInput"].asBool());
+                        if (lj[i].has("inputChannelIndex") && lj[i]["inputChannelIndex"].isNumber()) {
+                            const double raw = lj[i]["inputChannelIndex"].asNumber();
+                            if (std::isfinite(raw))
+                                channel->setInputChannelIndex(std::clamp(static_cast<int>(raw), -2, 1024));
+                        }
+                        if (lj[i].has("width") && lj[i]["width"].isNumber()) {
+                            const double raw = lj[i]["width"].asNumber();
+                            if (std::isfinite(raw))
+                                channel->setWidth(static_cast<float>(std::clamp(raw, 0.0, 4.0)));
+                        }
+                        if (lj[i].has("trackColorIndex") && lj[i]["trackColorIndex"].isNumber()) {
+                            const double raw = lj[i]["trackColorIndex"].asNumber();
+                            if (std::isfinite(raw))
+                                channel->setTrackColorIndex(std::clamp(static_cast<int>(raw), -1, 1024));
+                        }
+
                         if (lj[i].has("routing") && lj[i]["routing"].isObject()) {
                             const JSON& rj = lj[i]["routing"];
                             const uint32_t mainOutputId = (rj.has("mainOutputId") && rj["mainOutputId"].isNumber())
@@ -1501,6 +1531,29 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             }
         }
     
+        // PHASE 7b: Push loaded volume/pan to ContinuousParamBuffer.
+        // setVolume/setPan writes to m_volume/m_pan and sends a command via
+        // m_commandSink, but during load m_commandSink is null. The UIMixerPanel
+        // fader reads from ContinuousParamBuffer (dB), so we must push explicitly.
+        {
+            auto* continuous = trackManager->getContinuousParams().get();
+            auto* slotMap = trackManager->getChannelSlotMapRaw();
+            if (continuous && slotMap) {
+                for (size_t ci = 0; ci < trackManager->getChannelCount(); ++ci) {
+                    auto* channel = trackManager->getChannel(ci);
+                    if (!channel) continue;
+                    const uint32_t slot = slotMap->getSlotIndex(channel->getChannelId());
+                    if (slot >= ContinuousParamBuffer::MAX_SLOTS) continue;
+
+                    const float linearVol = channel->getVolume();
+                    const float faderDb = (linearVol <= 0.0f) ? -90.0f
+                                          : 20.0f * std::log10(linearVol);
+                    continuous->setFaderDb(slot, faderDb);
+                    continuous->setPan(slot, channel->getPan());
+                }
+            }
+        }
+
         // PHASE 8: Final rebind pass - verify all references
         #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
         Log::info("[ProjectLoad] Final rebind pass");
