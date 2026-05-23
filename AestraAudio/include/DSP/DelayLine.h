@@ -27,6 +27,8 @@ public:
         m_delay = (delaySamples <= Capacity) ? delaySamples : Capacity;
         reset();
     }
+
+    static constexpr size_t BufferSize = Capacity + 1;
     
     /**
      * @brief Reset delay line to silence
@@ -46,13 +48,13 @@ public:
         m_buffer[m_writePos] = input;
         
         // Calculate read position (writePos - delay)
-        uint32_t readPos = (m_writePos + Capacity - m_delay) % Capacity;
-        
+        uint32_t readPos = (m_writePos + BufferSize - m_delay) % BufferSize;
+
         // Read delayed output
         T output = m_buffer[readPos];
-        
+
         // Advance write position
-        m_writePos = (m_writePos + 1) % Capacity;
+        m_writePos = (m_writePos + 1) % BufferSize;
         
         return output;
     }
@@ -71,7 +73,7 @@ public:
     uint32_t getCapacity() const noexcept { return Capacity; }
     
 private:
-    std::array<T, Capacity> m_buffer{};
+    std::array<T, BufferSize> m_buffer{};
     uint32_t m_writePos{0};
     uint32_t m_delay{0};
 };
