@@ -752,6 +752,10 @@ void AestraApp::setupCallbacks() {
         startExport();
     });
 
+    m_windowManager->setSaveCallback([this]() {
+        saveCurrentProject();
+    });
+
     m_windowManager->setTransportCallback([this](Aestra::TransportAction action) {
         if (!m_content) return;
 
