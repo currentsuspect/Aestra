@@ -85,10 +85,12 @@ struct AudioQualitySettings {
             dithering = DitheringMode::Triangular;
         } else if (p == QualityPreset::HighFidelity) {
             resampling = ResamplingMode::High;
-            dithering = DitheringMode::HighPass;
+            // TODO: Implement high-pass dither in live path. Currently aliases to Triangular.
+            dithering = DitheringMode::Triangular;
         } else if (p == QualityPreset::Mastering) {
             resampling = ResamplingMode::Perfect;
-            dithering = DitheringMode::NoiseShaped;
+            // TODO: Implement noise-shaped dither in live path. Currently aliases to Triangular.
+            dithering = DitheringMode::Triangular;
         }
     }
 };

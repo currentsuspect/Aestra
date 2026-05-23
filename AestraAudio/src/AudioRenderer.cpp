@@ -358,13 +358,13 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
         state.gainL.setTarget(gainL);
         state.gainR.setTarget(gainR);
     }
+    state.gainL.beginRamp(numFrames);
+    state.gainR.beginRamp(numFrames);
     double* self = track.selfBuffer + bufferOffset * 2;
     for (uint32_t i = 0; i < numFrames; ++i) {
         self[i * 2] *= state.gainL.next();
         self[i * 2 + 1] *= state.gainR.next();
     }
-    state.gainL.snap();
-    state.gainR.snap();
 }
 
 void AudioRenderer::renderArsenalUnitsForTrack(uint32_t trackIndex, double* trackBuffer, const Context& ctx,

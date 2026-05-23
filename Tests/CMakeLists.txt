@@ -590,6 +590,16 @@ target_include_directories(AestraPathologicalChaosStressTest PRIVATE
 add_test(NAME AestraPathologicalChaosStressTest COMMAND AestraPathologicalChaosStressTest)
 set_tests_properties(AestraPathologicalChaosStressTest PROPERTIES LABELS "audio;stress;rt-safety")
 
+# AudioQualityRegressionTest
+add_executable(AestraAudioQualityRegressionTest AestraAudio/AudioQualityRegressionTest.cpp)
+target_link_libraries(AestraAudioQualityRegressionTest PRIVATE AestraAudioCore)
+target_include_directories(AestraAudioQualityRegressionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraAudioQualityRegressionTest COMMAND AestraAudioQualityRegressionTest)
+set_tests_properties(AestraAudioQualityRegressionTest PROPERTIES LABELS "audio;quality;regression")
+
 # Watchdog Test (requires VST3 SDK headers)
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")
     add_executable(AestraWatchdogTest AestraAudio/WatchdogTest.cpp)
