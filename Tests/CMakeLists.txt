@@ -183,6 +183,33 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectLoadRegressionTest.cpp
     set_tests_properties(ProjectLoadRegressionTest PROPERTIES LABELS "integration;regression;routing")
 endif()
 
+# Takes manifest/snapshot regression test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/TakeManagerTest.cpp")
+    add_executable(TakeManagerTest
+        Integration/TakeManagerTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/TakeManager.cpp
+    )
+    target_link_libraries(TakeManagerTest PRIVATE AestraAudio)
+    target_include_directories(TakeManagerTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+    )
+    add_test(NAME TakeManagerTest COMMAND TakeManagerTest)
+    set_tests_properties(TakeManagerTest PROPERTIES LABELS "integration;takes;project")
+endif()
+
 # Plugin Scanner Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/PluginScanTest.cpp")
     add_executable(AestraPluginScanTest Integration/PluginScanTest.cpp)
