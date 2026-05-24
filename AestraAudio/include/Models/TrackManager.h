@@ -63,6 +63,12 @@ public:
         float volume{1.0f};
     };
 
+    /// @brief Immutable snapshot of a recording capture route for RT path.
+    struct RecordingCaptureRoute {
+        RecordingCapture* capture{nullptr};
+        int inputIndex{-1};
+    };
+
     /**
      * @brief Construct a track manager and wire its internal playback helpers.
      */
@@ -373,26 +379,35 @@ public:
      * @param input Input channel buffer.
      * @param frames Number of frames available in the input buffer.
      */
+    void publishRecordingCaptureSnapshot() {
+        const uint32_t inactive = 1u - m_activeRecordingCaptureSnapshot.load(std::memory_order_relaxed);
+        auto& snap = m_recordingCaptureSnapshots[inactive];
+        uint32_t count = 0;
+        for (const auto& [channelId, capture] : m_recordingCaptures) {
+            if (!capture || count >= kMaxRecordingTracks) {
+                break;
+            }
+            snap[count].capture = capture.get();
+            snap[count].inputIndex = capture->inputIndex;
+            ++count;
+        }
+        m_recordingCaptureRouteCounts[inactive].store(count, std::memory_order_release);
+        m_activeRecordingCaptureSnapshot.store(inactive, std::memory_order_release);
+    }
+
     void processInput(const float* input, uint32_t frames, AudioTelemetry* telemetry = nullptr) {
         if (!m_isCapturing.load(std::memory_order_relaxed) || !input || frames == 0 || m_inputChannelCount <= 0) {
             return;
         }
 
-        if (!m_recordingCaptureAccepting.load(std::memory_order_acquire)) {
+        // Read the immutable recording capture snapshot — avoids iterating the
+        // live m_channels / m_recordingCaptures containers on the RT thread.
+        const uint32_t snapIdx = m_activeRecordingCaptureSnapshot.load(std::memory_order_acquire);
+        const uint32_t routeCount = m_recordingCaptureRouteCounts[snapIdx].load(std::memory_order_acquire);
+        if (routeCount == 0) {
             return;
         }
-
-        struct RecordingWriteGuard {
-            explicit RecordingWriteGuard(std::atomic<uint32_t>& writersIn) : writers(writersIn) {
-                writers.fetch_add(1, std::memory_order_acq_rel);
-            }
-            ~RecordingWriteGuard() { writers.fetch_sub(1, std::memory_order_acq_rel); }
-            std::atomic<uint32_t>& writers;
-        } guard(m_recordingWriters);
-
-        if (!m_recordingCaptureAccepting.load(std::memory_order_acquire)) {
-            return;
-        }
+        const auto& routes = m_recordingCaptureSnapshots[snapIdx];
 
         const double captureBeat = getCurrentTransportBeat();
         const bool hasDeferredStart = m_hasDeferredRecordingStart.load(std::memory_order_acquire);
@@ -402,29 +417,24 @@ public:
         bool capturedAnyChannel = false;
         bool startedDeferredCapture = false;
 
-        for (const auto& channel : m_channels) {
-            if (!channel || !channel->isArmed()) {
+        for (uint32_t r = 0; r < routeCount; ++r) {
+            RecordingCapture* capture = routes[r].capture;
+            if (!capture) {
+                continue;
+            }
+            const int requestedInput = routes[r].inputIndex;
+            if (requestedInput < 0 && requestedInput != -2) {
                 continue;
             }
 
-            const int requestedInput = channel->getInputChannelIndex();
-            if (requestedInput == -1) {
+            const size_t capacity = capture->capacity;
+            if (capacity == 0 || !capture->samples) {
                 continue;
             }
 
-            auto captureIt = m_recordingCaptures.find(channel->getChannelId());
-            if (captureIt == m_recordingCaptures.end() || !captureIt->second) {
-                continue;
-            }
-            RecordingCapture& capture = *captureIt->second;
-            const size_t capacity = capture.capacity;
-            if (capacity == 0 || !capture.samples) {
-                continue;
-            }
-
-            size_t head = capture.headIndex.load(std::memory_order_relaxed);
-            size_t size = capture.size.load(std::memory_order_relaxed);
-            double startBeat = capture.startBeat.load(std::memory_order_relaxed);
+            size_t head = capture->headIndex.load(std::memory_order_relaxed);
+            size_t size = capture->size.load(std::memory_order_relaxed);
+            double startBeat = capture->startBeat.load(std::memory_order_relaxed);
             uint64_t droppedFrames = 0;
             uint32_t startFrame = 0;
             double effectiveCaptureBeat = captureBeat;
@@ -446,7 +456,7 @@ public:
 
             auto appendSample = [&](float sample) {
                 size_t writeIndex = (head + size) % capacity;
-                capture.samples[writeIndex].store(sample, std::memory_order_relaxed);
+                capture->samples[writeIndex].store(sample, std::memory_order_relaxed);
                 if (size < capacity) {
                     ++size;
                 } else {
@@ -478,19 +488,19 @@ public:
                 }
             }
             bool expectedStart = false;
-            if (capture.hasStarted.compare_exchange_strong(expectedStart, true, std::memory_order_acq_rel)) {
-                capture.startBeat.store(effectiveCaptureBeat, std::memory_order_release);
+            if (capture->hasStarted.compare_exchange_strong(expectedStart, true, std::memory_order_acq_rel)) {
+                capture->startBeat.store(effectiveCaptureBeat, std::memory_order_release);
                 if (hasDeferredStart) {
                     startedDeferredCapture = true;
                 }
             }
             if (droppedFrames > 0) {
                 startBeat += framesToBeats(static_cast<double>(droppedFrames));
-                capture.startBeat.store(startBeat, std::memory_order_release);
+                capture->startBeat.store(startBeat, std::memory_order_release);
             }
-            capture.headIndex.store(head, std::memory_order_release);
-            capture.size.store(size, std::memory_order_release);
-            capture.totalCapturedFrames.fetch_add(frames - startFrame, std::memory_order_relaxed);
+            capture->headIndex.store(head, std::memory_order_release);
+            capture->size.store(size, std::memory_order_release);
+            capture->totalCapturedFrames.fetch_add(frames - startFrame, std::memory_order_relaxed);
             capturedAnyChannel = true;
         }
 
@@ -1074,6 +1084,7 @@ private:
         m_recordingNoArmLogged = false;
         m_recordingCaptureAccepting.store(true, std::memory_order_release);
         m_isCapturing.store(true, std::memory_order_relaxed);
+        publishRecordingCaptureSnapshot();
         Log::info("[TrackManager] Recording session started. Armed tracks: " + std::to_string(getArmedTrackCount()) +
                   ", input channels: " + std::to_string(m_inputChannelCount));
     }
@@ -1090,6 +1101,11 @@ private:
         if (!writersDrained) {
             Log::warning("[TrackManager] Timed out waiting for recording writers to drain before finalizing capture.");
         }
+
+        // Publish empty snapshot so RT thread stops referencing captures.
+        m_recordingCaptureRouteCounts[0].store(0, std::memory_order_release);
+        m_recordingCaptureRouteCounts[1].store(0, std::memory_order_release);
+        m_activeRecordingCaptureSnapshot.store(0, std::memory_order_release);
 
         std::unordered_map<uint32_t, std::unique_ptr<RecordingCapture>> captures;
         double sessionStartBeat = 0.0;
@@ -1442,6 +1458,11 @@ private:
     std::array<RtInputMonitorRoute, 32> m_inputMonitorSnapshots[2]{};
     std::array<std::atomic<uint32_t>, 2> m_inputMonitorRouteCounts{};
     std::atomic<uint32_t> m_activeInputMonitorSnapshot{0};
+
+    static constexpr size_t kMaxRecordingTracks = 64;
+    std::array<RecordingCaptureRoute, kMaxRecordingTracks> m_recordingCaptureSnapshots[2]{};
+    std::array<std::atomic<uint32_t>, 2> m_recordingCaptureRouteCounts{};
+    std::atomic<uint32_t> m_activeRecordingCaptureSnapshot{0};
     double m_maxRecordingSeconds{15.0};
     double m_recordingSessionStartBeat{0.0};
     bool m_recordingSessionUsesPlacementOverride{false};
