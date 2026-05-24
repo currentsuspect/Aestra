@@ -97,7 +97,7 @@ struct EdgeDelayState {
     /** @brief Stereo-interleaved buffer pointer (capacityMask+1 frames). RT reads. */
     std::atomic<float*> bufferPtr{nullptr};
     /** @brief RT-side write cursor (frame count); RT updates each block; off-RT zeroes on growth. */
-    uint32_t writePos{0};
+    std::atomic<uint32_t> writePos{0};
 
     // Off-RT-owned storage. RT never touches these directly; it goes through
     // bufferPtr.

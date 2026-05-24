@@ -384,7 +384,10 @@ public:
         auto& snap = m_recordingCaptureSnapshots[inactive];
         uint32_t count = 0;
         for (const auto& [channelId, capture] : m_recordingCaptures) {
-            if (!capture || count >= kMaxRecordingTracks) {
+            if (!capture) {
+                continue;
+            }
+            if (count >= kMaxRecordingTracks) {
                 break;
             }
             snap[count].capture = capture.get();
@@ -407,6 +410,11 @@ public:
         if (routeCount == 0) {
             return;
         }
+
+        // Bracket snapshot access with writer count so finalizeCaptureSession()
+        // drains in-flight RT readers before destroying captures.
+        m_recordingWriters.fetch_add(1, std::memory_order_acq_rel);
+
         const auto& routes = m_recordingCaptureSnapshots[snapIdx];
 
         const double captureBeat = getCurrentTransportBeat();
@@ -512,6 +520,8 @@ public:
             (void)telemetry;
             m_recordingNoArmLogged = true;
         }
+
+        m_recordingWriters.fetch_sub(1, std::memory_order_acq_rel);
     }
 
     void publishInputMonitoringSnapshot() {
