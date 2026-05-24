@@ -430,7 +430,7 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
     // Preview mixing - reuse the same content snapshot
     if (content) {
         if (auto* previewEngine = content->getPreviewEngine()) {
-            previewEngine->process(outputBuffer, nFrames);
+            previewEngine->processRealtime(outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
         }
     }
 
