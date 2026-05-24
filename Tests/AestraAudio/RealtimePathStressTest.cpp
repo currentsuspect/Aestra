@@ -156,7 +156,7 @@ int main() {
         const auto start = std::chrono::steady_clock::now();
         engine.processBlock(engineOut.data(), nullptr, kFrames, 0.0);
         tracks.mixInputMonitoring(input.data(), monitorOut.data(), kFrames, kChannels);
-        preview.process(engineOut.data(), kFrames);
+        preview.processRealtime(engineOut.data(), kFrames, kChannels);
         sampler.process(nullptr, samplerOutputs, 0, 2, kFrames, block == 0 ? &midi : nullptr, nullptr);
         const auto elapsed = std::chrono::steady_clock::now() - start;
 

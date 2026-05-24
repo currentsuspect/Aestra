@@ -49,7 +49,7 @@ public:
     bool resizeEditor(int width, int height) override;
 
     const PluginInfo& getInfo() const override { return m_info; }
-    uint32_t getLatencySamples() const override { return 0; }
+    uint32_t getLatencySamples() const override { return m_maxBlockSize; }
     uint32_t getTailSamples() const override { return 0; }
 
     WatchdogStats getWatchdogStats() const override { return m_watchdogStats; }
@@ -64,8 +64,7 @@ private:
     void stopWorker();
     void workerLoop();
     bool processBlockInHelper(const std::vector<float>& input, uint32_t channels, uint32_t frames,
-                              const std::vector<uint8_t>& midiData, size_t midiBytes,
-                              std::vector<float>& output);
+                              const std::vector<uint8_t>& midiData, size_t midiBytes, std::vector<float>& output);
     void markCrashed();
     void passThrough(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
                      uint32_t numFrames) const;

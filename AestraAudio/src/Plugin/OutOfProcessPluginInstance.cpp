@@ -54,9 +54,12 @@ std::string hexEncodeBytes(const void* data, size_t size) {
 }
 
 int hexValue(char c) {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return 10 + c - 'a';
-    if (c >= 'A' && c <= 'F') return 10 + c - 'A';
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return 10 + c - 'a';
+    if (c >= 'A' && c <= 'F')
+        return 10 + c - 'A';
     return -1;
 }
 
@@ -398,10 +401,6 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
         midiOutput->clear();
     }
 
-    if (!m_process || !m_process->isRunning()) {
-        markCrashed();
-    }
-
     if (m_crashed.load(std::memory_order_acquire) || m_maxBlockSize == 0 || numFrames > m_maxBlockSize) {
         passThrough(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
         return;
@@ -447,8 +446,7 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
                 if (event.size != 3 || midiBytes + 8 > m_pendingMidiData.size()) {
                     continue;
                 }
-                const uint32_t sampleOffset =
-                    std::min<uint32_t>(event.sampleOffset, numFrames > 0 ? numFrames - 1 : 0);
+                const uint32_t sampleOffset = std::min<uint32_t>(event.sampleOffset, numFrames > 0 ? numFrames - 1 : 0);
                 std::memcpy(m_pendingMidiData.data() + midiBytes, &sampleOffset, sizeof(sampleOffset));
                 m_pendingMidiData[midiBytes + 4] = event.size;
                 std::memcpy(m_pendingMidiData.data() + midiBytes + 5, event.data, 3);
@@ -532,7 +530,7 @@ void OutOfProcessPluginInstance::resetWatchdog() {
 }
 
 bool OutOfProcessPluginInstance::sendCommand(const std::string& command, std::string* response,
-                                                 std::chrono::milliseconds timeout) {
+                                             std::chrono::milliseconds timeout) {
     std::lock_guard<std::mutex> lock(m_ipcMutex);
     if (!m_process || !m_process->isRunning()) {
         return false;
