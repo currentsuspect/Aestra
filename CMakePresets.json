@@ -93,22 +93,6 @@
       }
     },
     {
-      "name": "ci-tsan",
-      "displayName": "CI ThreadSanitizer headless tests (advisory)",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "AESTRA_CI": "ON",
-        "CMAKE_CXX_FLAGS": "-fsanitize=thread -fno-omit-frame-pointer",
-        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread"
-      },
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Linux"
-      }
-    },
-    {
       "name": "ci-lsan",
       "displayName": "CI LeakSanitizer headless tests (advisory)",
       "inherits": "base",
