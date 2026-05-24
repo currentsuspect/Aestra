@@ -368,33 +368,6 @@ public:
      */
     bool isUserScrubbing() const { return m_userScrubbing.load(std::memory_order_relaxed); }
 
-    /**
-     * @brief Publishes a double-buffered snapshot of active recording routes.
-     *
-     * Copies the current recording capture pointers into the inactive snapshot
-     * slot, then atomically flips the active index so the RT audio thread can
-     * read an immutable route list without locking.
-     *
-     * @note Must be called from the UI/command thread, not the audio thread.
-     */
-    void publishRecordingCaptureSnapshot() {
-        const uint32_t inactive = 1u - m_activeRecordingCaptureSnapshot.load(std::memory_order_relaxed);
-        auto& snap = m_recordingCaptureSnapshots[inactive];
-        uint32_t count = 0;
-        for (const auto& [channelId, capture] : m_recordingCaptures) {
-            if (!capture) {
-                continue;
-            }
-            if (count >= kMaxRecordingTracks) {
-                break;
-            }
-            snap[count].capture = capture.get();
-            snap[count].inputIndex = capture->inputIndex;
-            ++count;
-        }
-        m_recordingCaptureRouteCounts[inactive].store(count, std::memory_order_release);
-        m_activeRecordingCaptureSnapshot.store(inactive, std::memory_order_release);
-    }
     void processInput(const float* input, uint32_t frames, AudioTelemetry* telemetry = nullptr) {
         if (!m_isCapturing.load(std::memory_order_relaxed) || !input || frames == 0 || m_inputChannelCount <= 0) {
             return;
