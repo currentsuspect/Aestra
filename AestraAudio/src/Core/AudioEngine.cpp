@@ -3484,6 +3484,14 @@ void AudioEngine::calculateLatencyCompensation() {
         rtStates.resize(trackCount);
     }
 
+    // Also write to m_trackState (the "golden" state that renderGraph() reads
+    // via ensureTrackState()), not just the double-buffered m_graphStates slot.
+    // renderGraph() reads PDC state from m_trackState, so without this mirror
+    // the compensation values written below would be invisible on the RT path.
+    if (m_trackState.size() < trackCount) {
+        m_trackState.resize(trackCount);
+    }
+
     for (size_t n = 0; n < topology.nodes.size(); ++n) {
         const size_t trackIdx = nodeTrackIdx[n];
         if (trackIdx >= rtStates.size())
@@ -3494,6 +3502,14 @@ void AudioEngine::calculateLatencyCompensation() {
         const uint32_t prevDelay = rtState.compensationDelaySamples;
         rtState.pluginLatencySamples = sol.intrinsicLatency;
         rtState.compensationDelaySamples = sol.outputCompensationSamples;
+
+        // Mirror to m_trackState so renderGraph() (which reads through
+        // ensureTrackState() -> m_trackState) observes the same values.
+        if (trackIdx < m_trackState.size()) {
+            auto& goldenState = m_trackState[trackIdx];
+            goldenState.pluginLatencySamples = sol.intrinsicLatency;
+            goldenState.compensationDelaySamples = sol.outputCompensationSamples;
+        }
 
         // v1 parity: reset the ring buffer when the delay changes. P6 (G3 smooth
         // recompute) will replace this with a sample-hold / crossfade migration.
@@ -3559,48 +3575,61 @@ void AudioEngine::calculateLatencyCompensation() {
     const uint32_t maxBlock = m_maxBufferFrames.load(std::memory_order_relaxed);
     const uint32_t kEdgeHeadroomSamples = maxBlock > 0 ? maxBlock : 1024;
 
-    for (size_t i = 0; i < trackCount && i < rtStates.size(); ++i) {
-        auto& state = rtStates[i];
-        const auto& bookkeeping = trackEdgeIndices[i];
+    // P4b.2/P4b.3: Per-edge compensation must be allocated in m_trackState because
+    // renderGraph() reads edge delays from ensureTrackState() -> m_trackState, not
+    // from the double-buffered m_graphStates. The m_graphStates[activeIdx] copy
+    // intentionally does NOT own separate EdgeDelayState objects — they contain a
+    // non-atomic writePos that the RT thread updates each block, and duplicating
+    // them would cause both the writePos divergence and the ownership/teardown race.
+    //
+    // getTrackEdgeDelaySnapshot() reads from m_graphStates for diagnostic tooling;
+    // it returns the scalar atomic values that are correct in either copy.
+    auto applyEdgeDelays = [&](std::vector<TrackRTState>& target) {
+        for (size_t i = 0; i < trackCount && i < target.size(); ++i) {
+            auto& state = target[i];
+            const auto& bookkeeping = trackEdgeIndices[i];
 
-        // mainOutputId edge -> mainOutEdgeDelay slot.
-        if (bookkeeping.mainOutEdgeIdx != static_cast<size_t>(-1) &&
-            bookkeeping.mainOutEdgeIdx < topology.edges.size()) {
-            const auto& edgeSol = topology.edges[bookkeeping.mainOutEdgeIdx];
-            ensureEdgeCapacity(state.mainOutEdgeDelay, edgeSol.compensationSamples, kEdgeHeadroomSamples);
-        } else {
-            ensureEdgeCapacity(state.mainOutEdgeDelay, 0, kEdgeHeadroomSamples);
-        }
+            if (bookkeeping.mainOutEdgeIdx != static_cast<size_t>(-1) &&
+                bookkeeping.mainOutEdgeIdx < topology.edges.size()) {
+                const auto& edgeSol = topology.edges[bookkeeping.mainOutEdgeIdx];
+                ensureEdgeCapacity(state.mainOutEdgeDelay, edgeSol.compensationSamples, kEdgeHeadroomSamples);
+            } else {
+                ensureEdgeCapacity(state.mainOutEdgeDelay, 0, kEdgeHeadroomSamples);
+            }
 
-        // Sends -> sendEdgeDelays[slot].
-        // Grow the per-track vector if a send slot beyond current size is targeted.
-        size_t maxSendSlot = 0;
-        bool anySendSlot = false;
-        for (const auto& pair : bookkeeping.sendEdgeBySlot) {
-            if (!anySendSlot || pair.first > maxSendSlot)
-                maxSendSlot = pair.first;
-            anySendSlot = true;
-        }
-        if (anySendSlot && state.sendEdgeDelays.size() <= maxSendSlot) {
-            state.sendEdgeDelays.resize(maxSendSlot + 1);
-        }
-        // Zero out comp on any slots not touched this generation (e.g., sends removed).
-        for (auto& slotPtr : state.sendEdgeDelays) {
-            if (slotPtr) {
-                slotPtr->compensationSamples.store(0, std::memory_order_release);
+            size_t maxSendSlot = 0;
+            bool anySendSlot = false;
+            for (const auto& pair : bookkeeping.sendEdgeBySlot) {
+                if (!anySendSlot || pair.first > maxSendSlot)
+                    maxSendSlot = pair.first;
+                anySendSlot = true;
+            }
+            if (anySendSlot && state.sendEdgeDelays.size() <= maxSendSlot) {
+                state.sendEdgeDelays.resize(maxSendSlot + 1);
+            }
+            for (auto& slotPtr : state.sendEdgeDelays) {
+                if (slotPtr) {
+                    slotPtr->compensationSamples.store(0, std::memory_order_release);
+                }
+            }
+            for (const auto& pair : bookkeeping.sendEdgeBySlot) {
+                const size_t sendSlot = pair.first;
+                const size_t edgeIdx = pair.second;
+                if (sendSlot >= state.sendEdgeDelays.size())
+                    continue;
+                if (edgeIdx >= topology.edges.size())
+                    continue;
+                const auto& edgeSol = topology.edges[edgeIdx];
+                ensureEdgeCapacity(state.sendEdgeDelays[sendSlot], edgeSol.compensationSamples, kEdgeHeadroomSamples);
             }
         }
-        for (const auto& pair : bookkeeping.sendEdgeBySlot) {
-            const size_t sendSlot = pair.first;
-            const size_t edgeIdx = pair.second;
-            if (sendSlot >= state.sendEdgeDelays.size())
-                continue;
-            if (edgeIdx >= topology.edges.size())
-                continue;
-            const auto& edgeSol = topology.edges[edgeIdx];
-            ensureEdgeCapacity(state.sendEdgeDelays[sendSlot], edgeSol.compensationSamples, kEdgeHeadroomSamples);
-        }
+    };
+    // Apply to m_trackState (RT render path reads from here via ensureTrackState()).
+    if (m_trackState.size() >= trackCount) {
+        applyEdgeDelays(m_trackState);
     }
+    // Apply to m_graphStates[activeIdx] (getTrackEdgeDelaySnapshot reads from here).
+    applyEdgeDelays(rtStates);
 
     // 4. Update RT-side graph state metadata (v1 contract preserved).
     m_graphStates[activeIdx].maxProjectLatencySamples = topology.projectAlignmentLatency;
@@ -3641,15 +3670,26 @@ SolvedLatencyTopology AudioEngine::getLastSolvedLatencyTopology() const {
 
 AudioEngine::TrackEdgeDelaySnapshot AudioEngine::getTrackEdgeDelaySnapshot(size_t trackIndex) const {
     TrackEdgeDelaySnapshot snap;
+
+    // Read ring-buffer sizing from m_graphStates (off-RT mirror) and
+    // per-block writePos from m_trackState (canonical RT writer side).
     const int activeIdx = m_activeRenderTrackIndex.load(std::memory_order_acquire);
     const auto& rtStates = m_graphStates[activeIdx].trackStates;
     if (trackIndex >= rtStates.size()) {
-        return snap; // valid = false
+        return snap;
     }
     const auto& state = rtStates[trackIndex];
     snap.valid = true;
 
-    auto fillSlot = [](const std::unique_ptr<EdgeDelayState>& slotPtr) {
+    // writePos is updated on m_trackState by the RT thread each block.
+    // m_graphStates edge delays do not have double-buffered EdgeDelayState
+    // objects (see step 4 notes); their writePos is stale, so we overlay
+    // from m_trackState when available.
+    const auto* goldenState =
+        (trackIndex < m_trackState.size()) ? &m_trackState[trackIndex] : nullptr;
+
+    // Overlay writePos from m_trackState where the RT thread updates it.
+    auto fillSlot = [](const std::unique_ptr<EdgeDelayState>& slotPtr) -> TrackEdgeDelaySnapshot::EdgeSlotSnapshot {
         TrackEdgeDelaySnapshot::EdgeSlotSnapshot s;
         if (!slotPtr)
             return s;
@@ -3665,9 +3705,19 @@ AudioEngine::TrackEdgeDelaySnapshot AudioEngine::getTrackEdgeDelaySnapshot(size_
     };
 
     snap.mainOutEdgeDelay = fillSlot(state.mainOutEdgeDelay);
+    // Overlay writePos from goldenState (m_trackState) if available, since the
+    // RT thread only updates writePos on the m_trackState-owned EdgeDelayState.
+    if (goldenState && goldenState->mainOutEdgeDelay) {
+        snap.mainOutEdgeDelay.writePos = goldenState->mainOutEdgeDelay->writePos;
+    }
+
     snap.sendEdgeDelays.reserve(state.sendEdgeDelays.size());
-    for (const auto& slot : state.sendEdgeDelays) {
-        snap.sendEdgeDelays.push_back(fillSlot(slot));
+    for (size_t i = 0; i < state.sendEdgeDelays.size(); ++i) {
+        auto s = fillSlot(state.sendEdgeDelays[i]);
+        if (goldenState && i < goldenState->sendEdgeDelays.size() && goldenState->sendEdgeDelays[i]) {
+            s.writePos = goldenState->sendEdgeDelays[i]->writePos;
+        }
+        snap.sendEdgeDelays.push_back(s);
     }
     return snap;
 }
