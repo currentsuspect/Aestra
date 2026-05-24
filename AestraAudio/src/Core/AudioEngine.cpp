@@ -1228,6 +1228,9 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         m_truePeakMeter.processStereo(outputBuffer, numFrames);
         m_truePeakLAtomic.store(m_truePeakMeter.getTruePeakL(), std::memory_order_relaxed);
         m_truePeakRAtomic.store(m_truePeakMeter.getTruePeakR(), std::memory_order_relaxed);
+    } else {
+        m_truePeakLAtomic.store(0.0f, std::memory_order_relaxed);
+        m_truePeakRAtomic.store(0.0f, std::memory_order_relaxed);
     }
 
     // Telemetry (lightweight counter only on RT thread)
@@ -1594,6 +1597,11 @@ AudioEngine::AudioEngine() {
 AudioEngine::~AudioEngine() {
     if (auto trackMgr = m_trackManager.lock()) {
         trackMgr->setChannelPrepareCallback(nullptr);
+        for (size_t i = 0; i < trackMgr->getChannelCount(); ++i) {
+            if (auto* ch = trackMgr->getChannel(i)) {
+                ch->setEffectChainLatencyCallback(nullptr);
+            }
+        }
     }
     stopLoudnessWorker();
     if (g_audioEngineInstance == this) {
@@ -2716,7 +2724,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     }
                     continue;
                 }
-                uint32_t writePos = edge->writePos;
+                uint32_t writePos = edge->writePos.load(std::memory_order_relaxed);
                 for (uint32_t i = 0; i < numFrames; ++i) {
                     const double sendGainL = route.gainL->next();
                     const double sendGainR = route.gainR->next();
@@ -2730,7 +2738,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     route.dest[i * 2 + 1] += delayedR * sendGainR;
                     ++writePos;
                 }
-                edge->writePos = writePos;
+                edge->writePos.store(writePos, std::memory_order_release);
             }
         }
 
@@ -3561,7 +3569,7 @@ void AudioEngine::calculateLatencyCompensation() {
             // retired buffer is no longer referenced by any in-flight block.
             slotPtr->retiredBuffer = std::move(slotPtr->ownedBuffer);
             slotPtr->ownedBuffer = std::unique_ptr<float[]>(new float[bufferSamples]());
-            slotPtr->writePos = 0;
+            slotPtr->writePos.store(0, std::memory_order_release);
             // Publish: write pointer first, then mask (acquire-side reads
             // mask via the same critical section).
             slotPtr->bufferPtr.store(slotPtr->ownedBuffer.get(), std::memory_order_release);
@@ -3700,7 +3708,7 @@ AudioEngine::TrackEdgeDelaySnapshot AudioEngine::getTrackEdgeDelaySnapshot(size_
                 ? 0u
                 : (s.capacityMask + 1u);
         s.bufferBytes = static_cast<size_t>(capFrames) * 2u * sizeof(float);
-        s.writePos = slotPtr->writePos;
+        s.writePos = slotPtr->writePos.load(std::memory_order_acquire);
         return s;
     };
 
@@ -3708,14 +3716,14 @@ AudioEngine::TrackEdgeDelaySnapshot AudioEngine::getTrackEdgeDelaySnapshot(size_
     // Overlay writePos from goldenState (m_trackState) if available, since the
     // RT thread only updates writePos on the m_trackState-owned EdgeDelayState.
     if (goldenState && goldenState->mainOutEdgeDelay) {
-        snap.mainOutEdgeDelay.writePos = goldenState->mainOutEdgeDelay->writePos;
+        snap.mainOutEdgeDelay.writePos = goldenState->mainOutEdgeDelay->writePos.load(std::memory_order_acquire);
     }
 
     snap.sendEdgeDelays.reserve(state.sendEdgeDelays.size());
     for (size_t i = 0; i < state.sendEdgeDelays.size(); ++i) {
         auto s = fillSlot(state.sendEdgeDelays[i]);
         if (goldenState && i < goldenState->sendEdgeDelays.size() && goldenState->sendEdgeDelays[i]) {
-            s.writePos = goldenState->sendEdgeDelays[i]->writePos;
+            s.writePos = goldenState->sendEdgeDelays[i]->writePos.load(std::memory_order_acquire);
         }
         snap.sendEdgeDelays.push_back(s);
     }

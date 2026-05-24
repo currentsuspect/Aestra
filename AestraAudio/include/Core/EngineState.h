@@ -101,7 +101,15 @@ public:
                 return m_graphs[static_cast<size_t>(i)];
             }
         }
-        return m_graphs[static_cast<size_t>((active + 1) % kGraphSlots)];
+        // All non-active slots have readers — spin until one frees.
+        while (true) {
+            for (int i = 0; i < kGraphSlots; ++i) {
+                if (i != active && m_readers[static_cast<size_t>(i)].load(std::memory_order_acquire) == 0) {
+                    return m_graphs[static_cast<size_t>(i)];
+                }
+            }
+            std::this_thread::yield();
+        }
     }
 
 private:

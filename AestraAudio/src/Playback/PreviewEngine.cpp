@@ -99,8 +99,6 @@ PreviewResult PreviewEngine::startVoiceWithBuffer(std::shared_ptr<AudioBuffer> b
     voice->elapsedSeconds = 0.0;
     voice->fadeInPos = 0.0;
     voice->fadeOutPos = 0.0;
-    voice->fadeInPos = 0.0;
-    voice->fadeOutPos = 0.0;
     voice->stopRequested.store(false, std::memory_order_release);
     voice->seekRequestSeconds.store(-1.0, std::memory_order_release);
     voice->fadeOutActive = false;
@@ -208,7 +206,6 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
     voice->phaseFrames = 0.0;
     voice->elapsedSeconds = 0.0;
     voice->fadeInPos = 0.0;
-    voice->fadeOutPos = 0.0;
     voice->fadeOutPos = 0.0;
     voice->stopRequested.store(false, std::memory_order_release);
     voice->seekRequestSeconds.store(-1.0, std::memory_order_release);
