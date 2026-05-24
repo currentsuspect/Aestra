@@ -356,7 +356,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     env:
-      LSAN_OPTIONS: suppressions=.lsan-suppressions:print_suppressions=0:halt_on_error=1
+      LSAN_OPTIONS: suppressions=${{ github.workspace }}/.lsan-suppressions:print_suppressions=0:halt_on_error=1
     steps:
       - uses: actions/checkout@v4
         with:
