@@ -4,6 +4,8 @@
 #include "AudioGraph.h"
 
 #include <atomic>
+#include <mutex>
+#include <thread>
 
 namespace Aestra {
 namespace Audio {
@@ -16,23 +18,123 @@ namespace Audio {
  */
 class EngineState {
 public:
+    /**
+     * @brief RAII handle that pins a specific graph slot for reading.
+     *
+     * Acquires a reader count on construction and releases it on destruction,
+     * allowing the audio thread to read an immutable graph snapshot without
+     * blocking. Move-only — copying is disabled to prevent double-release.
+     *
+     * @see activeGraphRead()
+     */
+    class GraphReadHandle {
+    public:
+        GraphReadHandle() = default;
+        GraphReadHandle(const GraphReadHandle&) = delete;
+        GraphReadHandle& operator=(const GraphReadHandle&) = delete;
+
+        /** @brief Move-constructs from another handle, transferring ownership. */
+        GraphReadHandle(GraphReadHandle&& other) noexcept : m_state(other.m_state), m_index(other.m_index) {
+            other.m_state = nullptr;
+            other.m_index = -1;
+        }
+
+        /** @brief Move-assigns from another handle, releasing the current slot first. */
+        GraphReadHandle& operator=(GraphReadHandle&& other) noexcept {
+            if (this != &other) {
+                release();
+                m_state = other.m_state;
+                m_index = other.m_index;
+                other.m_state = nullptr;
+                other.m_index = -1;
+            }
+            return *this;
+        }
+
+        /** @brief Releases the reader count on the pinned slot. */
+        ~GraphReadHandle() { release(); }
+
+        /** @brief Returns a const reference to the pinned graph snapshot. */
+        const AudioGraph& get() const noexcept { return m_state->m_graphs[m_index]; }
+
+    private:
+        friend class EngineState;
+
+        GraphReadHandle(const EngineState* state, int index) noexcept : m_state(state), m_index(index) {}
+
+        void release() noexcept {
+            if (m_state && m_index >= 0) {
+                m_state->m_readers[static_cast<size_t>(m_index)].fetch_sub(1, std::memory_order_release);
+                m_state = nullptr;
+                m_index = -1;
+            }
+        }
+
+        const EngineState* m_state{nullptr};
+        int m_index{-1};
+    };
+
+    /**
+     * @brief Acquires a read handle to the currently active graph slot.
+     *
+     * Spins until it can atomically increment the reader count on the active
+     * slot without racing a concurrent swap. The returned handle releases the
+     * count automatically when it goes out of scope.
+     *
+     * @return A move-only handle whose get() returns the active AudioGraph.
+     */
+    GraphReadHandle activeGraphRead() const noexcept {
+        for (;;) {
+            const int index = m_activeIndex.load(std::memory_order_acquire);
+            m_readers[static_cast<size_t>(index)].fetch_add(1, std::memory_order_acquire);
+            if (index == m_activeIndex.load(std::memory_order_acquire)) {
+                return GraphReadHandle(this, index);
+            }
+            m_readers[static_cast<size_t>(index)].fetch_sub(1, std::memory_order_release);
+        }
+    }
+
     const AudioGraph& activeGraph() const noexcept { return m_graphs[m_activeIndex.load(std::memory_order_acquire)]; }
 
     void swapGraph(const AudioGraph& next) {
-        const int inactive = 1 - m_activeIndex.load(std::memory_order_relaxed);
-        m_graphs[inactive] = next; // copy/move from builder thread
-        m_activeIndex.store(inactive, std::memory_order_release);
+        std::lock_guard<std::mutex> lock(m_swapMutex);
+        int target = -1;
+        while (target < 0) {
+            const int active = m_activeIndex.load(std::memory_order_acquire);
+            for (int i = 0; i < kGraphSlots; ++i) {
+                if (i != active && m_readers[static_cast<size_t>(i)].load(std::memory_order_acquire) == 0) {
+                    target = i;
+                    break;
+                }
+            }
+            if (target < 0) {
+                std::this_thread::yield();
+            }
+        }
+        m_graphs[static_cast<size_t>(target)] = next; // copy/move from builder thread
+        m_activeIndex.store(target, std::memory_order_release);
     }
 
     // Non-RT access for initialization or inspection.
     AudioGraph& mutableInactiveGraph() {
-        const int inactive = 1 - m_activeIndex.load(std::memory_order_relaxed);
-        return m_graphs[inactive];
+        for (;;) {
+            const int active = m_activeIndex.load(std::memory_order_acquire);
+            for (int i = 0; i < kGraphSlots; ++i) {
+                if (i != active && m_readers[static_cast<size_t>(i)].load(std::memory_order_acquire) == 0) {
+                    return m_graphs[static_cast<size_t>(i)];
+                }
+            }
+            std::this_thread::yield();
+        }
     }
 
 private:
-    AudioGraph m_graphs[2];
+    static constexpr int kGraphSlots = 3;
+
+    AudioGraph m_graphs[kGraphSlots];
     std::atomic<int> m_activeIndex{0};
+    mutable std::atomic<uint32_t> m_readers[kGraphSlots]{};
+    std::mutex m_swapMutex;
 };
 
 } // namespace Audio

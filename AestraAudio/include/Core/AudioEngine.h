@@ -4,32 +4,30 @@
 #include "AestraThreading.h"
 #include "AudioCommandQueue.h"
 #include "AudioDriverTypes.h"
+#include "AudioGraphState.h"
+#include "AudioRenderer.h"
 #include "AudioTelemetry.h"
 #include "ChannelSlotMap.h"
 #include "ContinuousParamBuffer.h"
+#include "DSP/TruePeakMeter.h"
 #include "EngineState.h"
 #include "GarbageCollector.h"
 #include "Interpolators.h"
-#include "DSP/TruePeakMeter.h"
+#include "LatencyTopology.h"
 #include "MasterSafetyLimiter.h"
 #include "MeterSnapshot.h"
-#include "PluginHost.h" // For MidiBuffer [NEW]
+#include "MetronomeEngine.h"     // [NEW]
+#include "Models/TrackManager.h" // [NEW] For headless rendering
+#include "PluginHost.h"          // For MidiBuffer [NEW]
 
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
-#include <vector>
-
-#include "AudioGraphState.h"
-#include "AudioRenderer.h"
-#include "LatencyTopology.h"
-#include "MetronomeEngine.h"     // [NEW]
-#include "Models/TrackManager.h" // [NEW] For headless rendering
-
-#include <array>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -228,13 +226,13 @@ public:
     }
 
     // === Plugin Delay Compensation ===
-    
+
     /**
      * @brief Calculate and apply plugin delay compensation across all tracks
-     * 
+     *
      * Computes max latency, sets compensation delays, and publishes new snapshot.
      * NOT RT-SAFE: Call from main thread only.
-     * 
+     *
      * Triggers:
      * - Plugin load/unload
      * - Plugin bypass toggle
@@ -242,13 +240,13 @@ public:
      * - Track enable/disable
      */
     void calculateLatencyCompensation();
-    
+
     /**
      * @brief Enable/disable global latency compensation
      */
     void setLatencyCompensationEnabled(bool enabled);
     bool isLatencyCompensationEnabled() const;
-    
+
     /**
      * @brief Get current max project latency in samples
      */
@@ -417,9 +415,7 @@ public:
         m_truePeakMeteringEnabled.store(enabled, std::memory_order_relaxed);
     }
     /** @brief Whether true-peak metering is currently enabled. */
-    bool isTruePeakMeteringEnabled() const {
-        return m_truePeakMeteringEnabled.load(std::memory_order_relaxed);
-    }
+    bool isTruePeakMeteringEnabled() const { return m_truePeakMeteringEnabled.load(std::memory_order_relaxed); }
     /** @brief Reset true-peak running max (does not disturb FIR history). */
     void clearTruePeakHold() {
         m_truePeakMeter.clearPeaks();
@@ -521,9 +517,7 @@ public:
             for (size_t i = 0; i < channelCount; ++i) {
                 if (auto* channel = current->getChannel(i)) {
                     prepareChannel(*channel);
-                    channel->setEffectChainLatencyCallback([this]() {
-                        calculateLatencyCompensation();
-                    });
+                    channel->setEffectChainLatencyCallback([this]() { calculateLatencyCompensation(); });
                 }
             }
             calculateLatencyCompensation();
@@ -583,6 +577,7 @@ private:
     static constexpr size_t kMaxSendsPerTrack = 256; // Matches PROJECT_MAX_SENDS_PER_LANE
     static constexpr size_t kMaxEdgesPerTrack = 16;  // Conservative max routing edges per track
     static constexpr uint32_t kWaveformHistoryFramesDefault = 2048;
+    static constexpr uint32_t kInternalRenderChannels = 2;
 
     // Fast Xorshift32 RNG for dither
     struct FastRNG {
@@ -1066,7 +1061,7 @@ private:
     // === Plugin Delay Compensation State ===
     bool m_latencyCompensationEnabled{true};
     uint32_t m_maxProjectLatency{0};
-    bool m_latencyDirty{true};  // Recalculate on next safe opportunity
+    bool m_latencyDirty{true}; // Recalculate on next safe opportunity
     // PDC v2 (P3): double-buffered, lock-free publish of SolvedLatencyTopology.
     //
     // The off-RT recompute writes the new topology to the inactive slot, then

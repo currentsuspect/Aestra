@@ -75,6 +75,10 @@ constexpr float kResizeHitWidth = 6.0f;
 // =============================================================================
 
 AestraContent::~AestraContent() {
+    if (m_audioEngine) {
+        m_audioEngine->setPreviewEngine(nullptr);
+    }
+
     // TrackManager may be shared outside this component; clear the stored owner callback before member teardown.
     if (m_trackManager) {
         m_trackManager->setStopPreviewCallback(nullptr);
@@ -1080,6 +1084,9 @@ AestraContent::AestraContent() {
 
     // Initialize preview engine
     m_previewEngine = std::make_unique<PreviewEngine>();
+    if (m_audioEngine) {
+        m_audioEngine->setPreviewEngine(m_previewEngine.get());
+    }
     m_previewIsPlaying = false;
     m_previewDuration = 8.0;
 
@@ -2795,8 +2802,15 @@ void AestraContent::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
 }
 
 void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
+    // Detach preview from old engine before overwriting m_audioEngine
+    if (m_audioEngine && m_previewEngine) {
+        m_audioEngine->setPreviewEngine(nullptr);
+    }
     m_audioEngine = engine;
     Aestra::Audio::CommandRegistry::setAudioEngine(engine);
+    if (m_audioEngine && m_previewEngine) {
+        m_audioEngine->setPreviewEngine(m_previewEngine.get());
+    }
     if (m_pianoRollPanel) {
         m_pianoRollPanel->setAudioEngine(m_audioEngine);
     }
