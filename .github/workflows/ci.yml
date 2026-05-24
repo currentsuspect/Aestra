@@ -345,5 +345,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ctest-results-tsan
-          path: build-tsan/ctest-results-tsan.xml
+          path: build/ci-tsan/ctest-results-tsan.xml
           if-no-files-found: ignore

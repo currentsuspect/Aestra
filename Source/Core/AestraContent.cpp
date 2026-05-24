@@ -2802,6 +2802,10 @@ void AestraContent::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
 }
 
 void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
+    // Detach preview from old engine before overwriting m_audioEngine
+    if (m_audioEngine && m_previewEngine) {
+        m_audioEngine->setPreviewEngine(nullptr);
+    }
     m_audioEngine = engine;
     Aestra::Audio::CommandRegistry::setAudioEngine(engine);
     if (m_audioEngine && m_previewEngine) {

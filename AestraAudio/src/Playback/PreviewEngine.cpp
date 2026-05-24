@@ -568,9 +568,13 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
     if (finished) {
         voice->playing.store(false, std::memory_order_release);
         PreviewVoice* expected = nullptr;
-        m_completedVoice.compare_exchange_strong(expected, voice.get(), std::memory_order_acq_rel,
-                                                 std::memory_order_relaxed);
-        m_completionPending.store(true, std::memory_order_release);
+        if (m_completedVoice.compare_exchange_strong(expected, voice.get(), std::memory_order_acq_rel,
+                                                     std::memory_order_relaxed)) {
+            m_completionPending.store(true, std::memory_order_release);
+        }
+        // If CAS failed, another completion is already pending —
+        // handleDeferredCompletion() will fire for that voice; this voice's
+        // completion is close enough in time to share the same callback path.
     }
 }
 

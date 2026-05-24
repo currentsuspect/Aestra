@@ -94,7 +94,7 @@ void AudioRenderer::renderBlock(const Context& ctx, AudioGraphState& state, Audi
         renderArsenalUnitsForTrack(track.trackIndex, track.selfBuffer, ctx, engineRef);
 
         // 2. Process Effects (In-Place) -> track.selfBuffer
-        processTrackEffects(track, state, ctx.numFrames, ctx.bufferOffset, engineRef);
+        processTrackEffects(track, state, ctx.numFrames, ctx.bufferOffset, engineRef, *ctx.graph);
 
         // 3. Calculate Track Meter Peaks (post-fader)
         if (!ctx.isOffline && track.selfBuffer && snaps && slotMap && track.trackIndex < ctx.graph->tracks.size()) {
@@ -323,12 +323,10 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
 }
 
 void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphState& graphState, uint32_t numFrames,
-                                        uint32_t bufferOffset, AudioEngine& engineRef) {
+                                        uint32_t bufferOffset, AudioEngine& engineRef, const AudioGraph& graph) {
     if (track.trackIndex >= graphState.trackStates.size())
         return;
     TrackRTState& state = graphState.trackStates[track.trackIndex];
-    auto graphRead = engineRef.engineState().activeGraphRead();
-    const AudioGraph& graph = graphRead.get();
     if (track.trackIndex < graph.tracks.size()) {
         const auto& gt = graph.tracks[track.trackIndex];
 
