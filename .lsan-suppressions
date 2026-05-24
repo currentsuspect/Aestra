@@ -1,0 +1,17 @@
+# ---------------------------------------------------------------
+# Aestra LSAN suppression file
+#
+# LeakSanitizer CI is an advisory regression detector for
+# unbounded or accidental allocations. It is NOT a "zero leaks"
+# gate — DAW-style applications intentionally extend the lifetime
+# of audio graphs, plugin graphs, and UI caches.
+#
+# Rules:
+#   - Suppress only after seeing real stack traces in CI
+#   - Add a comment linking to the owning source location
+#   - If the leak is accidental, FIX THE CODE, don't suppress it
+#   - Mark intentional retentions in code with AESTRA_LEAK_INTENTIONAL
+# ---------------------------------------------------------------
+
+# Google Test internal allocations (not our code)
+leak:testing::internal

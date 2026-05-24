@@ -1604,6 +1604,8 @@ AudioEngine::~AudioEngine() {
         }
     }
     stopLoudnessWorker();
+    delete m_unitManagerSnapshot.load(std::memory_order_relaxed);
+    m_unitManagerSnapshot.store(nullptr, std::memory_order_relaxed);
     if (g_audioEngineInstance == this) {
         g_audioEngineInstance = nullptr; // [NEW] Clear singleton
     }
