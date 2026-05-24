@@ -63,12 +63,6 @@ public:
         float volume{1.0f};
     };
 
-    /// @brief Immutable snapshot of a recording capture route for RT path.
-    struct RecordingCaptureRoute {
-        RecordingCapture* capture{nullptr};
-        int inputIndex{-1};
-    };
-
     /**
      * @brief Construct a track manager and wire its internal playback helpers.
      */
@@ -401,11 +395,20 @@ public:
         m_recordingCaptureRouteCounts[inactive].store(count, std::memory_order_release);
         m_activeRecordingCaptureSnapshot.store(inactive, std::memory_order_release);
     }
-
     void processInput(const float* input, uint32_t frames, AudioTelemetry* telemetry = nullptr) {
         if (!m_isCapturing.load(std::memory_order_relaxed) || !input || frames == 0 || m_inputChannelCount <= 0) {
             return;
         }
+
+        // Increment writer count BEFORE reading snapshot index so
+        // finalizeCaptureSession() cannot destroy the snapshot while we read it.
+        m_recordingWriters.fetch_add(1, std::memory_order_acq_rel);
+
+        // RAII guard: ensures writer count is always decremented on any exit path.
+        struct WriterGuard {
+            std::atomic<uint32_t>& writers;
+            ~WriterGuard() { writers.fetch_sub(1, std::memory_order_acq_rel); }
+        } writerGuard{m_recordingWriters};
 
         // Read the immutable recording capture snapshot — avoids iterating the
         // live m_channels / m_recordingCaptures containers on the RT thread.
@@ -414,10 +417,6 @@ public:
         if (routeCount == 0) {
             return;
         }
-
-        // Bracket snapshot access with writer count so finalizeCaptureSession()
-        // drains in-flight RT readers before destroying captures.
-        m_recordingWriters.fetch_add(1, std::memory_order_acq_rel);
 
         const auto& routes = m_recordingCaptureSnapshots[snapIdx];
 
@@ -524,8 +523,7 @@ public:
             (void)telemetry;
             m_recordingNoArmLogged = true;
         }
-
-        m_recordingWriters.fetch_sub(1, std::memory_order_acq_rel);
+        // writerGuard destructor handles m_recordingWriters.fetch_sub
     }
 
     void publishInputMonitoringSnapshot() {
@@ -996,6 +994,31 @@ public:
     }
 
 private:
+    /// @brief Immutable snapshot of a recording capture route for RT path.
+    struct RecordingCaptureRoute {
+        RecordingCapture* capture{nullptr};
+        int inputIndex{-1};
+    };
+
+    void publishRecordingCaptureSnapshot() {
+        const uint32_t inactive = 1u - m_activeRecordingCaptureSnapshot.load(std::memory_order_relaxed);
+        auto& snap = m_recordingCaptureSnapshots[inactive];
+        uint32_t count = 0;
+        for (const auto& [channelId, capture] : m_recordingCaptures) {
+            if (!capture) {
+                continue;
+            }
+            if (count >= kMaxRecordingTracks) {
+                break;
+            }
+            snap[count].capture = capture.get();
+            snap[count].inputIndex = capture->inputIndex;
+            ++count;
+        }
+        m_recordingCaptureRouteCounts[inactive].store(count, std::memory_order_release);
+        m_activeRecordingCaptureSnapshot.store(inactive, std::memory_order_release);
+    }
+
     static double quantizePatternLengthBeats(double contentEndBeat) {
         constexpr double kBeatsPerBar = 4.0;
         constexpr double kBarsPerPatternBlock = 4.0;
