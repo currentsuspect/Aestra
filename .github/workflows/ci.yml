@@ -317,6 +317,9 @@ jobs:
     name: ThreadSanitizer (TSan, advisory)
     runs-on: ubuntu-latest
     continue-on-error: true
+    permissions:
+      contents: read
+      actions: write
     env:
       TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:suppress_equal_stacks=1
     steps:
@@ -355,6 +358,9 @@ jobs:
     name: LeakSanitizer (LSan, advisory)
     runs-on: ubuntu-latest
     continue-on-error: true
+    permissions:
+      contents: read
+      actions: write
     env:
       LSAN_OPTIONS: suppressions=${{ github.workspace }}/.lsan-suppressions:print_suppressions=0:halt_on_error=1
     steps:
