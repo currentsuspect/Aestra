@@ -73,6 +73,7 @@ struct SmoothedParamD {
     }
     /** @brief Snap current to target immediately, cancelling any active ramp. */
     void snap() {
+        // Sanitize target before assigning — same contract as setTarget()/beginRamp()
         if (!std::isfinite(target)) target = std::isfinite(current) ? current : 0.0;
         current = target;
         step = 0.0;
