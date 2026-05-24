@@ -41,8 +41,14 @@ struct SmoothedParamD {
     /** @brief Set a new target value. NaN/Inf are replaced with current to avoid clicks. */
     void setTarget(double t) {
         // Sanitize target to prevent NaN/Inf propagation
-        // Fall back to current value to avoid audible clicks
-        target = std::isfinite(t) ? t : current;
+        // Fall back to current value, then to 0.0, to guarantee finite output
+        if (std::isfinite(t)) {
+            target = t;
+        } else if (std::isfinite(current)) {
+            target = current;
+        } else {
+            target = 0.0;
+        }
     }
 
     /**
