@@ -36,11 +36,24 @@ public:
     PreviewEngine(const PreviewEngine&) = delete;
     PreviewEngine& operator=(const PreviewEngine&) = delete;
 
-    PreviewResult play(const std::string& path, float gainDb = -6.0f, double maxSeconds = 30.0, float playbackRate = 1.0f);
+    PreviewResult play(const std::string& path, float gainDb = -6.0f, double maxSeconds = 30.0,
+                       float playbackRate = 1.0f);
     void stop();
     void seek(double seconds); // New seek method
     void setOutputSampleRate(double sr);
     void process(float* interleavedOutput, uint32_t numFrames);
+
+    /**
+     * @brief RT-safe preview mix into the engine's interleaved output buffer.
+     *
+     * Called from the audio callback. Mixes decoded preview samples directly
+     * into the provided output buffer with no allocation or locking.
+     *
+     * @param interleavedOutput Destination buffer (interleaved, already sized).
+     * @param numFrames         Number of frames to render.
+     * @param outputChannels    Channel count of the destination buffer.
+     */
+    void processRealtime(float* interleavedOutput, uint32_t numFrames, uint32_t outputChannels);
     bool isPlaying() const;
     bool isBufferReady() const; // True when buffer is decoded and ready for playback
     void setOnComplete(std::function<void(const std::string& path)> callback);
@@ -88,6 +101,7 @@ private:
 
     // Deferred completion (audio thread -> main thread)
     std::atomic<bool> m_completionPending{false};
+    std::atomic<PreviewVoice*> m_completedVoice{nullptr};
     std::string m_completedPathStr;
     std::mutex m_completedPathMutex;
 

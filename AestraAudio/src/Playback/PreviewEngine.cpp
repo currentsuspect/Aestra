@@ -1,7 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PreviewEngine.h"
 
-#include "RealtimeThreadGuard.h"
 #include "AestraLog.h"
 #include "FastMath.h"
 #include "MiniAudioDecoder.h"
@@ -93,12 +92,11 @@ PreviewResult PreviewEngine::startVoiceWithBuffer(std::shared_ptr<AudioBuffer> b
     voice->durationSeconds =
         (sampleRate > 0 && buffer->numFrames > 0) ? (static_cast<double>(buffer->numFrames) / sampleRate) : 0.0;
     voice->maxPlaySeconds = maxSeconds;
-    const float totalGain = dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed)) * dbToLinear(kPreviewGainNormalizeDb);
+    const float totalGain =
+        dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed)) * dbToLinear(kPreviewGainNormalizeDb);
     voice->gain = totalGain;
     voice->phaseFrames = 0.0;
     voice->elapsedSeconds = 0.0;
-    voice->fadeInPos = 0.0;
-    voice->fadeOutPos = 0.0;
     voice->fadeInPos = 0.0;
     voice->fadeOutPos = 0.0;
     voice->stopRequested.store(false, std::memory_order_release);
@@ -202,12 +200,12 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
     // Cache miss: Create voice immediately for pending playback
     auto voice = std::make_shared<PreviewVoice>();
     voice->path = path;
-    voice->gain = dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed)) * dbToLinear(kPreviewGainNormalizeDb);
+    voice->gain =
+        dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed)) * dbToLinear(kPreviewGainNormalizeDb);
     voice->maxPlaySeconds = maxSeconds;
     voice->phaseFrames = 0.0;
     voice->elapsedSeconds = 0.0;
     voice->fadeInPos = 0.0;
-    voice->fadeOutPos = 0.0;
     voice->fadeOutPos = 0.0;
     voice->stopRequested.store(false, std::memory_order_release);
     voice->seekRequestSeconds.store(-1.0, std::memory_order_release);
@@ -241,12 +239,13 @@ void PreviewEngine::setOutputSampleRate(double sr) {
 }
 
 void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
-    // WARNING: This function acquires a mutex and is NOT RT-safe.
-    // Must not be called from the audio callback thread.
-    // If wired into a new audio path, first refactor to remove the
-    // mutex in the completion handler below.
-    reportRealtimeMisuse("PreviewEngine::process");
+    processRealtime(interleavedOutput, numFrames, 2);
+}
 
+void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames, uint32_t outputChannels) {
+    if (outputChannels == 0) {
+        return;
+    }
     auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
     if (!voice || !voice->playing.load(std::memory_order_acquire) || !interleavedOutput) {
         return;
@@ -346,7 +345,7 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
     bool isFading = (voice->fadeInPos < fadeInSamples) || (voice->stopRequested.load(std::memory_order_relaxed)) ||
                     voice->fadeOutActive;
 
-    if (!isFading && safeLimit > 0) {
+    if (outputChannels == 2 && !isFading && safeLimit > 0) {
         for (; i + 4 <= numFrames; i += 4) {
             if (static_cast<uint64_t>(phase + ratio * 4.0) >= safeLimit) {
                 break;
@@ -446,7 +445,8 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
                 __m128 vOver = _mm_sub_ps(vAbs, vThreshold);
                 __m128 vSaturated = _mm_add_ps(vThreshold, _mm_div_ps(vOver, _mm_add_ps(vOne, vOver)));
                 __m128 vResult = _mm_or_ps(vSign, vSaturated); // apply sign
-                return _mm_or_ps(_mm_and_ps(vMask, vResult), _mm_andnot_ps(vMask, x)); // blend: limit where hot, pass-through where clean
+                return _mm_or_ps(_mm_and_ps(vMask, vResult),
+                                 _mm_andnot_ps(vMask, x)); // blend: limit where hot, pass-through where clean
             };
 
             vDestLo = simdSoftLimit(vDestLo);
@@ -534,19 +534,25 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
 
         // Soft limiter: transparent below threshold, saturates only excess
         // Preserves preview accuracy — signal sounds like itself until it clips
-        float rawL = interleavedOutput[i * 2] + outL * currentGain;
-        float rawR = interleavedOutput[i * 2 + 1] + outR * currentGain;
-
         auto softLimit = [](float x, float threshold) -> float {
             float abs_x = std::abs(x);
-            if (abs_x <= threshold) return x; // clean pass-through
+            if (abs_x <= threshold)
+                return x; // clean pass-through
             float sign = x > 0.0f ? 1.0f : -1.0f;
             float over = abs_x - threshold;
             return sign * (threshold + over / (1.0f + over)); // only saturates excess
         };
 
-        interleavedOutput[i * 2] = softLimit(rawL, 0.85f);
-        interleavedOutput[i * 2 + 1] = softLimit(rawR, 0.85f);
+        const size_t frameBase = static_cast<size_t>(i) * outputChannels;
+        if (outputChannels == 1) {
+            const float previewMono = (outL + outR) * 0.5f * currentGain;
+            interleavedOutput[frameBase] = softLimit(interleavedOutput[frameBase] + previewMono, 0.85f);
+        } else {
+            const float rawL = interleavedOutput[frameBase] + outL * currentGain;
+            const float rawR = interleavedOutput[frameBase + 1] + outR * currentGain;
+            interleavedOutput[frameBase] = softLimit(rawL, 0.85f);
+            interleavedOutput[frameBase + 1] = softLimit(rawR, 0.85f);
+        }
 
         phase += ratio;
     }
@@ -561,15 +567,14 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
     bool finished = voice->fadeOutActive && (voice->fadeOutPos >= fadeOutSamples);
     if (finished) {
         voice->playing.store(false, std::memory_order_release);
-        {
-            std::lock_guard<std::mutex> lock(m_completedPathMutex);
-            m_completedPathStr = voice->path;
+        PreviewVoice* expected = nullptr;
+        if (m_completedVoice.compare_exchange_strong(expected, voice.get(), std::memory_order_acq_rel,
+                                                     std::memory_order_relaxed)) {
+            m_completionPending.store(true, std::memory_order_release);
         }
-        m_completionPending.store(true, std::memory_order_release);
-        // Clear only if still the active voice
-        std::shared_ptr<PreviewVoice> expected = voice;
-        std::atomic_compare_exchange_strong_explicit(&m_activeVoice, &expected, std::shared_ptr<PreviewVoice>(),
-                                                     std::memory_order_acq_rel, std::memory_order_relaxed);
+        // If CAS failed, another completion is already pending —
+        // handleDeferredCompletion() will fire for that voice; this voice's
+        // completion is close enough in time to share the same callback path.
     }
 }
 
@@ -614,12 +619,24 @@ double PreviewEngine::getDuration() const {
 
 void PreviewEngine::handleDeferredCompletion() {
     if (m_completionPending.exchange(false, std::memory_order_acq_rel)) {
+        PreviewVoice* completed = m_completedVoice.exchange(nullptr, std::memory_order_acq_rel);
+        auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+        if (!completed || !voice || voice.get() != completed) {
+            return;
+        }
+
         std::string path;
         {
             std::lock_guard<std::mutex> lock(m_completedPathMutex);
+            m_completedPathStr = voice->path;
             path = m_completedPathStr;
         }
-        if (m_onComplete) {
+
+        std::shared_ptr<PreviewVoice> expected = voice;
+        std::atomic_compare_exchange_strong_explicit(&m_activeVoice, &expected, std::shared_ptr<PreviewVoice>(),
+                                                     std::memory_order_acq_rel, std::memory_order_relaxed);
+
+        if (!path.empty() && m_onComplete) {
             m_onComplete(path);
         }
     }
