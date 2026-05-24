@@ -214,6 +214,12 @@ constexpr float SILENCE_THRESHOLD = -96.0f; // dB
 // Array size
 #define AESTRA_ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
+// Document intentional allocation that outlives normal scope.
+// Use alongside LSAN suppressions so the connection between
+// code and suppression is auditable. Compiles to nothing.
+// Usage: AESTRA_LEAK_INTENTIONAL("AudioEngine global graph pool")
+#define AESTRA_LEAK_INTENTIONAL(reason) static_cast<void>(reason)
+
 // =============================================================================
 // Version Information
 // =============================================================================

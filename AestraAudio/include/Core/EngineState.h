@@ -117,14 +117,8 @@ public:
 
     // Non-RT access for initialization or inspection.
     AudioGraph& mutableInactiveGraph() {
-        const int active = m_activeIndex.load(std::memory_order_relaxed);
-        for (int i = 0; i < kGraphSlots; ++i) {
-            if (i != active && m_readers[static_cast<size_t>(i)].load(std::memory_order_acquire) == 0) {
-                return m_graphs[static_cast<size_t>(i)];
-            }
-        }
-        // All non-active slots have readers — spin until one frees.
-        while (true) {
+        for (;;) {
+            const int active = m_activeIndex.load(std::memory_order_acquire);
             for (int i = 0; i < kGraphSlots; ++i) {
                 if (i != active && m_readers[static_cast<size_t>(i)].load(std::memory_order_acquire) == 0) {
                     return m_graphs[static_cast<size_t>(i)];
