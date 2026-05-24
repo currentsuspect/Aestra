@@ -1,0 +1,1978 @@
+{
+  "issues": [
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "1d76db",
+          "description": "CI/CD pipeline changes",
+          "id": "LA_kwDOP-wNtc8AAAACkCoYyg",
+          "name": "type: ci"
+        },
+        {
+          "color": "0e8a16",
+          "description": "CI/CD infrastructure",
+          "id": "LA_kwDOP-wNtc8AAAACkCodUA",
+          "name": "comp: ci"
+        }
+      ],
+      "milestone": null,
+      "number": 288,
+      "state": "OPEN",
+      "title": "Repo-wide GitHub Actions SHA pinning pass",
+      "updatedAt": "2026-05-20T19:04:51Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "8b949e",
+          "description": "Post-beta, deferred, v1+, known-but-not-now",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVwQ",
+          "name": "priority: low"
+        },
+        {
+          "color": "0075ca",
+          "description": "New feature or enhancement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoW-g",
+          "name": "type: feature"
+        },
+        {
+          "color": "0e8a16",
+          "description": "UI framework, rendering, themes",
+          "id": "LA_kwDOP-wNtc8AAAACkCocgg",
+          "name": "comp: ui"
+        },
+        {
+          "color": "8b949e",
+          "description": "Explicitly deferred to later milestone",
+          "id": "LA_kwDOP-wNtc8AAAACkCoiuA",
+          "name": "status: deferred"
+        }
+      ],
+      "milestone": null,
+      "number": 287,
+      "state": "OPEN",
+      "title": "Font creation from theme blocked on NUIFont copy semantics",
+      "updatedAt": "2026-05-20T19:06:29Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "8b949e",
+          "description": "Post-beta, deferred, v1+, known-but-not-now",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVwQ",
+          "name": "priority: low"
+        },
+        {
+          "color": "0075ca",
+          "description": "New feature or enhancement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoW-g",
+          "name": "type: feature"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Licensing, tiers, supporter infrastructure",
+          "id": "LA_kwDOP-wNtc8AAAACkCoeJA",
+          "name": "comp: monetization"
+        },
+        {
+          "color": "8b949e",
+          "description": "Explicitly deferred to later milestone",
+          "id": "LA_kwDOP-wNtc8AAAACkCoiuA",
+          "name": "status: deferred"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtKwg",
+          "name": "feature"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtqww",
+          "name": "ui"
+        }
+      ],
+      "milestone": null,
+      "number": 286,
+      "state": "OPEN",
+      "title": "Cloud sync not implemented — UI stub exists, no backend",
+      "updatedAt": "2026-05-20T19:06:18Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "1d76db",
+          "description": "CI/CD pipeline changes",
+          "id": "LA_kwDOP-wNtc8AAAACkCoYyg",
+          "name": "type: ci"
+        },
+        {
+          "color": "0e8a16",
+          "description": "CI/CD infrastructure",
+          "id": "LA_kwDOP-wNtc8AAAACkCodUA",
+          "name": "comp: ci"
+        }
+      ],
+      "milestone": null,
+      "number": 285,
+      "state": "OPEN",
+      "title": "No sanitizer coverage for Windows or macOS in CI",
+      "updatedAt": "2026-05-20T19:04:49Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 284,
+      "state": "OPEN",
+      "title": "Crash flag write lacks fsync",
+      "updatedAt": "2026-05-20T19:04:33Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtqww",
+          "name": "ui"
+        }
+      ],
+      "milestone": null,
+      "number": 283,
+      "state": "OPEN",
+      "title": "trackColorIndex not persisted in project files",
+      "updatedAt": "2026-05-20T19:04:09Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "0075ca",
+          "description": "New feature or enhancement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoW-g",
+          "name": "type: feature"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        }
+      ],
+      "milestone": null,
+      "number": 282,
+      "state": "OPEN",
+      "title": "Audition engine: no clip seeking, no timeline track preview",
+      "updatedAt": "2026-05-20T19:06:34Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "006b75",
+          "description": "Performance improvement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoZmg",
+          "name": "type: perf"
+        },
+        {
+          "color": "0e8a16",
+          "description": "DSP processing, plugins, effects",
+          "id": "LA_kwDOP-wNtc8AAAACkCobkQ",
+          "name": "comp: dsp"
+        }
+      ],
+      "milestone": null,
+      "number": 281,
+      "state": "OPEN",
+      "title": "7 labs lack benchmark lanes — performance decisions unreliable",
+      "updatedAt": "2026-05-20T19:06:32Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 280,
+      "state": "OPEN",
+      "title": "UIState/Preferences use non-atomic remove+rename",
+      "updatedAt": "2026-05-20T19:03:50Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "7057ff",
+          "description": "Code restructuring without behavior change",
+          "id": "LA_kwDOP-wNtc8AAAACkCoX5A",
+          "name": "type: refactor"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 279,
+      "state": "OPEN",
+      "title": "ProjectValidator uses naive string search instead of JSON parsing",
+      "updatedAt": "2026-05-20T19:03:43Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        }
+      ],
+      "milestone": null,
+      "number": 278,
+      "state": "OPEN",
+      "title": "Sample editor ping-pong loop mode shares engine path — not actually implemented",
+      "updatedAt": "2026-05-20T19:06:40Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "0075ca",
+          "description": "New feature or enhancement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoW-g",
+          "name": "type: feature"
+        },
+        {
+          "color": "0e8a16",
+          "description": "UI framework, rendering, themes",
+          "id": "LA_kwDOP-wNtc8AAAACkCocgg",
+          "name": "comp: ui"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtKwg",
+          "name": "feature"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtqww",
+          "name": "ui"
+        }
+      ],
+      "milestone": null,
+      "number": 277,
+      "state": "OPEN",
+      "title": "Content panel missing track selection UI",
+      "updatedAt": "2026-05-20T19:04:05Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "UI framework, rendering, themes",
+          "id": "LA_kwDOP-wNtc8AAAACkCocgg",
+          "name": "comp: ui"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtqww",
+          "name": "ui"
+        }
+      ],
+      "milestone": null,
+      "number": 276,
+      "state": "OPEN",
+      "title": "Mixer panel BPM display disconnected from transport",
+      "updatedAt": "2026-05-20T19:03:24Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "UI framework, rendering, themes",
+          "id": "LA_kwDOP-wNtc8AAAACkCocgg",
+          "name": "comp: ui"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtqww",
+          "name": "ui"
+        }
+      ],
+      "milestone": null,
+      "number": 275,
+      "state": "OPEN",
+      "title": "Text word wrapping unimplemented — wrapText() ignores maxWidth",
+      "updatedAt": "2026-05-20T19:03:11Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 274,
+      "state": "OPEN",
+      "title": "History directory has no disk-usage cap — 200MB project = 10GB .history",
+      "updatedAt": "2026-05-20T19:06:37Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 273,
+      "state": "OPEN",
+      "title": "Roundtrip tests check structure not values — numeric fidelity untested",
+      "updatedAt": "2026-05-20T19:02:59Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        }
+      ],
+      "milestone": null,
+      "number": 272,
+      "state": "OPEN",
+      "title": "Headless music generator tempo not wired to TrackManager",
+      "updatedAt": "2026-05-20T19:02:00Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 271,
+      "state": "OPEN",
+      "title": "Autosave interval hardcoded to 60s — user preference ignored",
+      "updatedAt": "2026-05-20T19:02:03Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        }
+      ],
+      "milestone": null,
+      "number": 270,
+      "state": "OPEN",
+      "title": "CLAP host callbacks no-op — plugin restart/parameter/flush requests ignored",
+      "updatedAt": "2026-05-20T19:02:04Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "UI framework, rendering, themes",
+          "id": "LA_kwDOP-wNtc8AAAACkCocgg",
+          "name": "comp: ui"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtqww",
+          "name": "ui"
+        }
+      ],
+      "milestone": null,
+      "number": 269,
+      "state": "OPEN",
+      "title": "OpenGL batch renderer flush() is a no-op — geometry accumulated but never drawn",
+      "updatedAt": "2026-05-20T19:01:48Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "1d76db",
+          "description": "CI/CD pipeline changes",
+          "id": "LA_kwDOP-wNtc8AAAACkCoYyg",
+          "name": "type: ci"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 268,
+      "state": "OPEN",
+      "title": "SerializationCompatibilityTest commented out in CMakeLists.txt",
+      "updatedAt": "2026-05-20T19:01:35Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "0075ca",
+          "description": "New feature or enhancement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoW-g",
+          "name": "type: feature"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Platform abstraction, windowing, OS-specific",
+          "id": "LA_kwDOP-wNtc8AAAACkCogUQ",
+          "name": "comp: platform"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtKwg",
+          "name": "feature"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtqww",
+          "name": "ui"
+        }
+      ],
+      "milestone": null,
+      "number": 267,
+      "state": "OPEN",
+      "title": "macOS platform unimplemented — createWindow returns nullptr",
+      "updatedAt": "2026-05-20T19:01:28Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "7057ff",
+          "description": "Code restructuring without behavior change",
+          "id": "LA_kwDOP-wNtc8AAAACkCoX5A",
+          "name": "type: refactor"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 266,
+      "state": "OPEN",
+      "title": "ProjectSerializer lives in UI tier — layering violation, headless builds need it",
+      "updatedAt": "2026-05-20T19:00:46Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 264,
+      "state": "OPEN",
+      "title": "Asset references are paths not hashes — moved samples load silently wrong",
+      "updatedAt": "2026-05-20T19:00:30Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 263,
+      "state": "OPEN",
+      "title": "No content integrity check on project load — corrupt files load silently",
+      "updatedAt": "2026-05-20T19:00:39Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "006b75",
+          "description": "Performance improvement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoZmg",
+          "name": "type: perf"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Audio routing, sends, buses, sidechain",
+          "id": "LA_kwDOP-wNtc8AAAACkCofcQ",
+          "name": "comp: routing"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCsWTg",
+          "name": "rt-safety"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCsm3Q",
+          "name": "performance"
+        }
+      ],
+      "milestone": null,
+      "number": 262,
+      "state": "OPEN",
+      "title": "Routing: per-sample send iteration instead of batched (BUG-5)",
+      "updatedAt": "2026-05-20T19:00:24Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Audio routing, sends, buses, sidechain",
+          "id": "LA_kwDOP-wNtc8AAAACkCofcQ",
+          "name": "comp: routing"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCsUug",
+          "name": "dsp"
+        }
+      ],
+      "milestone": null,
+      "number": 261,
+      "state": "OPEN",
+      "title": "Routing: send pan uses different pan law than main pan (BUG-3)",
+      "updatedAt": "2026-05-20T19:00:20Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "0075ca",
+          "description": "New feature or enhancement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoW-g",
+          "name": "type: feature"
+        },
+        {
+          "color": "0e8a16",
+          "description": "UI framework, rendering, themes",
+          "id": "LA_kwDOP-wNtc8AAAACkCocgg",
+          "name": "comp: ui"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtKwg",
+          "name": "feature"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCtqww",
+          "name": "ui"
+        }
+      ],
+      "milestone": null,
+      "number": 259,
+      "state": "OPEN",
+      "title": "Theme JSON loading unimplemented — custom theming impossible",
+      "updatedAt": "2026-05-20T18:59:56Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "7057ff",
+          "description": "Code restructuring without behavior change",
+          "id": "LA_kwDOP-wNtc8AAAACkCoX5A",
+          "name": "type: refactor"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        }
+      ],
+      "milestone": null,
+      "number": 258,
+      "state": "OPEN",
+      "title": "windows.h leak in AudioEngine.h — macro pollution on Windows",
+      "updatedAt": "2026-05-20T19:00:33Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "UI framework, rendering, themes",
+          "id": "LA_kwDOP-wNtc8AAAACkCocgg",
+          "name": "comp: ui"
+        }
+      ],
+      "milestone": null,
+      "number": 256,
+      "state": "OPEN",
+      "title": "Audio settings page device enumeration freezes UI",
+      "updatedAt": "2026-05-20T19:06:43Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "5319e7",
+          "description": "Security, reliability, RT safety improvements",
+          "id": "LA_kwDOP-wNtc8AAAACkCoXbw",
+          "name": "type: hardening"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Platform abstraction, windowing, OS-specific",
+          "id": "LA_kwDOP-wNtc8AAAACkCogUQ",
+          "name": "comp: platform"
+        }
+      ],
+      "milestone": null,
+      "number": 255,
+      "state": "OPEN",
+      "title": "Linux RT scheduling — audio thread has no realtime priority",
+      "updatedAt": "2026-05-20T19:06:47Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "0075ca",
+          "description": "New feature or enhancement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoW-g",
+          "name": "type: feature"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Licensing, tiers, supporter infrastructure",
+          "id": "LA_kwDOP-wNtc8AAAACkCoeJA",
+          "name": "comp: monetization"
+        },
+        {
+          "color": "b60205",
+          "description": "Must resolve before December beta",
+          "id": "LA_kwDOP-wNtc8AAAACkCojLw",
+          "name": "beta-blocker"
+        }
+      ],
+      "milestone": null,
+      "number": 254,
+      "state": "OPEN",
+      "title": "App activation/sign-in flow stubbed — can't gate features on license tier",
+      "updatedAt": "2026-05-20T19:06:50Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        }
+      ],
+      "milestone": null,
+      "number": 253,
+      "state": "OPEN",
+      "title": "Headless music generator incomplete — patterns/clips never reach audio engine",
+      "updatedAt": "2026-05-20T18:58:58Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        },
+        {
+          "color": "b60205",
+          "description": "Must resolve before December beta",
+          "id": "LA_kwDOP-wNtc8AAAACkCojLw",
+          "name": "beta-blocker"
+        }
+      ],
+      "milestone": null,
+      "number": 252,
+      "state": "OPEN",
+      "title": "5 empty model stub files — PatternManager, ClipSource, AudioClip, PlaylistTrack unimplemented",
+      "updatedAt": "2026-05-20T19:06:53Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "7057ff",
+          "description": "Code restructuring without behavior change",
+          "id": "LA_kwDOP-wNtc8AAAACkCoX5A",
+          "name": "type: refactor"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCsWTg",
+          "name": "rt-safety"
+        }
+      ],
+      "milestone": null,
+      "number": 251,
+      "state": "OPEN",
+      "title": "Deprecated std::atomic_load on shared_ptr — 14+ call sites, breaks on C++26",
+      "updatedAt": "2026-05-20T18:58:33Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "5319e7",
+          "description": "Security, reliability, RT safety improvements",
+          "id": "LA_kwDOP-wNtc8AAAACkCoXbw",
+          "name": "type: hardening"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        },
+        {
+          "color": "b60205",
+          "description": "Must resolve before December beta",
+          "id": "LA_kwDOP-wNtc8AAAACkCojLw",
+          "name": "beta-blocker"
+        }
+      ],
+      "milestone": null,
+      "number": 249,
+      "state": "OPEN",
+      "title": "Migration framework unproven — first real migration ships on user data",
+      "updatedAt": "2026-05-20T19:06:57Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "DSP processing, plugins, effects",
+          "id": "LA_kwDOP-wNtc8AAAACkCobkQ",
+          "name": "comp: dsp"
+        },
+        {
+          "color": "b60205",
+          "description": "Must resolve before December beta",
+          "id": "LA_kwDOP-wNtc8AAAACkCojLw",
+          "name": "beta-blocker"
+        }
+      ],
+      "milestone": null,
+      "number": 248,
+      "state": "OPEN",
+      "title": "Plugin NaN/Inf only validated at master output — one bad plugin corrupts mix",
+      "updatedAt": "2026-05-20T19:07:01Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        },
+        {
+          "color": "b60205",
+          "description": "Must resolve before December beta",
+          "id": "LA_kwDOP-wNtc8AAAACkCojLw",
+          "name": "beta-blocker"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCsWTg",
+          "name": "rt-safety"
+        }
+      ],
+      "milestone": null,
+      "number": 247,
+      "state": "OPEN",
+      "title": "Plugin crash protection Linux-only — misbehaving plugins crash the DAW",
+      "updatedAt": "2026-05-20T18:57:54Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        },
+        {
+          "color": "b60205",
+          "description": "Must resolve before December beta",
+          "id": "LA_kwDOP-wNtc8AAAACkCojLw",
+          "name": "beta-blocker"
+        }
+      ],
+      "milestone": null,
+      "number": 245,
+      "state": "OPEN",
+      "title": "No fsync in any write path — power loss can lose save files",
+      "updatedAt": "2026-05-20T18:57:54Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "d73a49",
+          "description": "Crashes, data loss, security holes, broken core loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoUdw",
+          "name": "priority: critical"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        },
+        {
+          "color": "b60205",
+          "description": "Must resolve before December beta",
+          "id": "LA_kwDOP-wNtc8AAAACkCojLw",
+          "name": "beta-blocker"
+        }
+      ],
+      "milestone": null,
+      "number": 244,
+      "state": "OPEN",
+      "title": "CLAP MIDI input unimplemented — CLAP instruments cannot receive notes",
+      "updatedAt": "2026-05-20T18:57:04Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "d73a49",
+          "description": "Crashes, data loss, security holes, broken core loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoUdw",
+          "name": "priority: critical"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Audio routing, sends, buses, sidechain",
+          "id": "LA_kwDOP-wNtc8AAAACkCofcQ",
+          "name": "comp: routing"
+        },
+        {
+          "color": "b60205",
+          "description": "Must resolve before December beta",
+          "id": "LA_kwDOP-wNtc8AAAACkCojLw",
+          "name": "beta-blocker"
+        }
+      ],
+      "milestone": null,
+      "number": 241,
+      "state": "OPEN",
+      "title": "Routing: no cycle detection — can silently mute tracks (BUG-2)",
+      "updatedAt": "2026-05-20T18:56:20Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "d73a49",
+          "description": "Crashes, data loss, security holes, broken core loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoUdw",
+          "name": "priority: critical"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        },
+        {
+          "color": "b60205",
+          "description": "Must resolve before December beta",
+          "id": "LA_kwDOP-wNtc8AAAACkCojLw",
+          "name": "beta-blocker"
+        },
+        {
+          "color": "ededed",
+          "description": "",
+          "id": "LA_kwDOP-wNtc8AAAACkCsWTg",
+          "name": "rt-safety"
+        }
+      ],
+      "milestone": null,
+      "number": 239,
+      "state": "OPEN",
+      "title": "Autosave serializer reads shared state from background thread — data race",
+      "updatedAt": "2026-05-20T18:56:28Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "d73a49",
+          "description": "Crashes, data loss, security holes, broken core loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoUdw",
+          "name": "priority: critical"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        },
+        {
+          "color": "b60205",
+          "description": "Must resolve before December beta",
+          "id": "LA_kwDOP-wNtc8AAAACkCojLw",
+          "name": "beta-blocker"
+        }
+      ],
+      "milestone": null,
+      "number": 238,
+      "state": "OPEN",
+      "title": "OOP plugin parameters are no-ops — third-party plugins can't be controlled",
+      "updatedAt": "2026-05-20T18:56:51Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "0075ca",
+          "description": "New feature or enhancement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoW-g",
+          "name": "type: feature"
+        },
+        {
+          "color": "0e8a16",
+          "description": "DSP processing, plugins, effects",
+          "id": "LA_kwDOP-wNtc8AAAACkCobkQ",
+          "name": "comp: dsp"
+        }
+      ],
+      "milestone": null,
+      "number": 228,
+      "state": "OPEN",
+      "title": "Oversampling for nonlinear DSP (AestraComp, limiter)",
+      "updatedAt": "2026-05-20T18:53:02Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Export/bounce/offline render",
+          "id": "LA_kwDOP-wNtc8AAAACkCofGw",
+          "name": "comp: export"
+        }
+      ],
+      "milestone": null,
+      "number": 227,
+      "state": "OPEN",
+      "title": "Isolated track bounce lacks master-stage processing and dithering",
+      "updatedAt": "2026-05-20T18:52:55Z"
+    },
+    {
+      "assignees": [
+        {
+          "databaseId": 166509033,
+          "id": "U_kgDOCey56Q",
+          "login": "currentsuspect",
+          "name": "Dylan Makori"
+        }
+      ],
+      "labels": [
+        {
+          "color": "0075ca",
+          "description": "New feature or enhancement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoW-g",
+          "name": "type: feature"
+        },
+        {
+          "color": "0e8a16",
+          "description": "UI framework, rendering, themes",
+          "id": "LA_kwDOP-wNtc8AAAACkCocgg",
+          "name": "comp: ui"
+        }
+      ],
+      "milestone": null,
+      "number": 225,
+      "state": "OPEN",
+      "title": "Theme token completeness: add titleBarHeight / viewToggle dimensions to LayoutDimensions",
+      "updatedAt": "2026-05-20T18:53:02Z"
+    },
+    {
+      "assignees": [
+        {
+          "databaseId": 166509033,
+          "id": "U_kgDOCey56Q",
+          "login": "currentsuspect",
+          "name": "Dylan Makori"
+        }
+      ],
+      "labels": [
+        {
+          "color": "0075ca",
+          "description": "New feature or enhancement",
+          "id": "LA_kwDOP-wNtc8AAAACkCoW-g",
+          "name": "type: feature"
+        },
+        {
+          "color": "0e8a16",
+          "description": "UI framework, rendering, themes",
+          "id": "LA_kwDOP-wNtc8AAAACkCocgg",
+          "name": "comp: ui"
+        }
+      ],
+      "milestone": null,
+      "number": 224,
+      "state": "OPEN",
+      "title": "Theme token completeness: add spacingSExtra / radiusSExtra tokens (NUIMenuBar follow-up)",
+      "updatedAt": "2026-05-20T18:53:03Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 213,
+      "state": "OPEN",
+      "title": "P2: ProjectSerializer silently drops clips for orphaned patterns — data loss with only log warning",
+      "updatedAt": "2026-05-20T18:52:55Z"
+    },
+    {
+      "assignees": [
+        {
+          "databaseId": 166509033,
+          "id": "U_kgDOCey56Q",
+          "login": "currentsuspect",
+          "name": "Dylan Makori"
+        }
+      ],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 211,
+      "state": "OPEN",
+      "title": "P2: EffectChain binary format has no version migration — all saved chains break on format change",
+      "updatedAt": "2026-05-20T18:52:57Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "DSP processing, plugins, effects",
+          "id": "LA_kwDOP-wNtc8AAAACkCobkQ",
+          "name": "comp: dsp"
+        }
+      ],
+      "milestone": null,
+      "number": 210,
+      "state": "OPEN",
+      "title": "P2: reinterpret_cast on serialized DSP state — endianness and alignment risk",
+      "updatedAt": "2026-05-20T18:52:58Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "DSP processing, plugins, effects",
+          "id": "LA_kwDOP-wNtc8AAAACkCobkQ",
+          "name": "comp: dsp"
+        }
+      ],
+      "milestone": null,
+      "number": 207,
+      "state": "OPEN",
+      "title": "P2: Plugin output and clip audio mixed without NaN/Inf validation",
+      "updatedAt": "2026-05-20T18:52:59Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e99830",
+          "description": "Quality improvements, non-critical features, polish",
+          "id": "LA_kwDOP-wNtc8AAAACkCoVTw",
+          "name": "priority: medium"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        }
+      ],
+      "milestone": null,
+      "number": 206,
+      "state": "OPEN",
+      "title": "P2: 6 unimplemented CLAP host callback stubs in CLAPHost.cpp",
+      "updatedAt": "2026-05-20T18:52:16Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "0075ca",
+          "description": "Documentation changes",
+          "id": "LA_kwDOP-wNtc8AAAACkCoYZQ",
+          "name": "type: docs"
+        }
+      ],
+      "milestone": null,
+      "number": 204,
+      "state": "OPEN",
+      "title": "P2: 6 empty stub class headers — dead code in AestraAudio/Models/",
+      "updatedAt": "2026-05-20T18:53:03Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Project save/load, autosave, migration",
+          "id": "LA_kwDOP-wNtc8AAAACkCoc1g",
+          "name": "comp: serialization"
+        }
+      ],
+      "milestone": null,
+      "number": 203,
+      "state": "OPEN",
+      "title": "P1: ProjectSerializer::asString() without type guard crashes on corrupted JSON",
+      "updatedAt": "2026-05-20T18:52:09Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "1d76db",
+          "description": "CI/CD pipeline changes",
+          "id": "LA_kwDOP-wNtc8AAAACkCoYyg",
+          "name": "type: ci"
+        },
+        {
+          "color": "0e8a16",
+          "description": "CI/CD infrastructure",
+          "id": "LA_kwDOP-wNtc8AAAACkCodUA",
+          "name": "comp: ci"
+        }
+      ],
+      "milestone": null,
+      "number": 201,
+      "state": "OPEN",
+      "title": "P1: CI excludes 3 critical security tests on Linux and Windows",
+      "updatedAt": "2026-05-20T18:52:07Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "e4502a",
+          "description": "Beta blocker features, notable regressions, bad UX on north star loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoU0w",
+          "name": "priority: high"
+        },
+        {
+          "color": "d73a49",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACkCoWjQ",
+          "name": "type: bug"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        }
+      ],
+      "milestone": null,
+      "number": 200,
+      "state": "OPEN",
+      "title": "P1: VST3Host stores shared_ptr as void* — leak on exception and bypasses ref counting",
+      "updatedAt": "2026-05-20T18:53:01Z"
+    },
+    {
+      "assignees": [],
+      "labels": [
+        {
+          "color": "d73a4a",
+          "description": "Something isn't working",
+          "id": "LA_kwDOP-wNtc8AAAACMdrkVg",
+          "name": "bug"
+        },
+        {
+          "color": "d73a49",
+          "description": "Crashes, data loss, security holes, broken core loop",
+          "id": "LA_kwDOP-wNtc8AAAACkCoUdw",
+          "name": "priority: critical"
+        },
+        {
+          "color": "5319e7",
+          "description": "Security, reliability, RT safety improvements",
+          "id": "LA_kwDOP-wNtc8AAAACkCoXbw",
+          "name": "type: hardening"
+        },
+        {
+          "color": "0e8a16",
+          "description": "Core audio engine, processBlock, transport",
+          "id": "LA_kwDOP-wNtc8AAAACkCobOg",
+          "name": "comp: audio-engine"
+        }
+      ],
+      "milestone": null,
+      "number": 196,
+      "state": "OPEN",
+      "title": "P0: AudioEngine::processBlock reads m_state.activeGraph() without synchronization in audio thread",
+      "updatedAt": "2026-05-20T18:52:59Z"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "snapshot_timestamp": 1779552259.0969687,
+  "total_open": 57
+}
