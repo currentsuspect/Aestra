@@ -1108,7 +1108,6 @@ private:
 
     void finalizeCaptureSession() {
         m_recordingCaptureAccepting.store(false, std::memory_order_release);
-        m_isCapturing.store(false, std::memory_order_relaxed);
         const auto waitDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(250);
         bool writersDrained = m_recordingWriters.load(std::memory_order_acquire) == 0;
         while (!writersDrained && std::chrono::steady_clock::now() < waitDeadline) {
@@ -1116,8 +1115,15 @@ private:
             writersDrained = m_recordingWriters.load(std::memory_order_acquire) == 0;
         }
         if (!writersDrained) {
-            Log::warning("[TrackManager] Timed out waiting for recording writers to drain before finalizing capture.");
+            Log::warning("[TrackManager] Timed out waiting for recording writers to drain before finalizing capture. "
+                         "Deferring teardown — retry on next disarm.");
+            // Leave m_isCapturing, snapshots, captures, and session fields intact.
+            // processInput() callers still in-flight continue to hold valid pointers.
+            m_recordingCaptureAccepting.store(true, std::memory_order_release);
+            return;
         }
+
+        m_isCapturing.store(false, std::memory_order_relaxed);
 
         // Publish empty snapshot so RT thread stops referencing captures.
         m_recordingCaptureRouteCounts[0].store(0, std::memory_order_release);
