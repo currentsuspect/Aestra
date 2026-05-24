@@ -1,0 +1,106 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "description": "Canonical label taxonomy for Aestra issue tracker",
+    "frozen_at": "2026-05-23",
+    "rules": {
+      "type_single": true,
+      "priority_single": true,
+      "status_single": true,
+      "comp_multi": true,
+      "every_issue_requires": ["type", "priority", "comp"]
+    }
+  },
+  "categories": {
+    "type": {
+      "prefix": "type:",
+      "description": "Nature of the change",
+      "cardinality": "single",
+      "required": true,
+      "values": [
+        {"name": "type: bug", "description": "Something isn't working"},
+        {"name": "type: feature", "description": "New feature or enhancement"},
+        {"name": "type: hardening", "description": "Security, reliability, RT safety improvements"},
+        {"name": "type: refactor", "description": "Code restructuring without behavior change"},
+        {"name": "type: docs", "description": "Documentation changes"},
+        {"name": "type: ci", "description": "CI/CD pipeline changes"},
+        {"name": "type: security", "description": "Security vulnerability or audit finding"},
+        {"name": "type: perf", "description": "Performance improvement"}
+      ]
+    },
+    "priority": {
+      "prefix": "priority:",
+      "description": "Severity/urgency",
+      "cardinality": "single",
+      "required": true,
+      "values": [
+        {"name": "priority: critical", "description": "Crashes, data loss, security holes, broken core loop"},
+        {"name": "priority: high", "description": "Beta blocker features, notable regressions, bad UX on north star loop"},
+        {"name": "priority: medium", "description": "Quality improvements, non-critical features, polish"},
+        {"name": "priority: low", "description": "Post-beta, deferred, v1+, known-but-not-now"}
+      ]
+    },
+    "comp": {
+      "prefix": "comp:",
+      "description": "Affected subsystem",
+      "cardinality": "multi",
+      "required": true,
+      "values": [
+        {"name": "comp: arsenal", "description": "Arsenal instrument/sampler system"},
+        {"name": "comp: audio-engine", "description": "Core audio engine, processBlock, transport"},
+        {"name": "comp: dsp", "description": "DSP processing, plugins, effects"},
+        {"name": "comp: serialization", "description": "Project save/load, autosave, migration"},
+        {"name": "comp: ui", "description": "UI framework, rendering, themes"},
+        {"name": "comp: ci", "description": "CI/CD infrastructure"},
+        {"name": "comp: muse", "description": "Muse CLI/command system"},
+        {"name": "comp: monetization", "description": "Licensing, tiers, supporter infrastructure"},
+        {"name": "comp: telemetry", "description": "Crash reporting, analytics, diagnostics"},
+        {"name": "comp: export", "description": "Export/bounce/offline render"},
+        {"name": "comp: routing", "description": "Audio routing, sends, buses, sidechain"},
+        {"name": "comp: recording", "description": "Audio recording, takes, arming"},
+        {"name": "comp: platform", "description": "Platform abstraction, windowing, OS-specific"}
+      ]
+    },
+    "status": {
+      "prefix": "status:",
+      "description": "Current workflow state",
+      "cardinality": "single",
+      "required": false,
+      "values": [
+        {"name": "status: blocked", "description": "Blocked by dependency or external factor"},
+        {"name": "status: deferred", "description": "Explicitly deferred to later milestone"},
+        {"name": "status: in-progress", "description": "Actively being worked on"},
+        {"name": "status: needs-review", "description": "Needs code or design review"},
+        {"name": "status: needs-spec", "description": "Needs specification before implementation"}
+      ]
+    }
+  },
+  "flags": {
+    "description": "Special labels outside the category system",
+    "values": [
+      {"name": "beta-blocker", "description": "Must resolve before December beta"},
+      {"name": "nightly-failure", "description": "Nightly build or test failure"},
+      {"name": "good first issue", "description": "Good for newcomers"},
+      {"name": "help wanted", "description": "Extra attention is needed"},
+      {"name": "duplicate", "description": "This issue or pull request already exists"},
+      {"name": "wontfix", "description": "This will not be worked on"},
+      {"name": "invalid", "description": "This doesn't seem right"},
+      {"name": "question", "description": "Further information is requested"}
+    ]
+  },
+  "deprecated": {
+    "description": "Legacy labels to migrate — kept for backwards compatibility but should not appear on new issues",
+    "migration_map": {
+      "bug": {"target": "type: bug", "confidence": "exact"},
+      "feature": {"target": "type: feature", "confidence": "exact"},
+      "ui": {"target": "comp: ui", "confidence": "exact"},
+      "dsp": {"target": "comp: dsp", "confidence": "exact"},
+      "plugin": {"target": "comp: audio-engine", "confidence": "best-guess", "note": "Could also be comp: dsp; manual review suggested"},
+      "performance": {"target": "type: perf", "confidence": "exact"},
+      "documentation": {"target": "type: docs", "confidence": "exact"},
+      "audio-thread": {"target": "comp: audio-engine", "confidence": "exact"},
+      "rt-safety": {"target": "type: hardening", "confidence": "exact"},
+      "breaking-change": {"target": null, "confidence": "needs-review", "note": "No direct canonical equivalent. Could be type: hardening or type: refactor depending on context."}
+    }
+  }
+}

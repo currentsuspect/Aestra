@@ -1,2 +1,132 @@
-AestraAudio/src/Playback/PreviewEngine.cpp:549: Mutex usage (check for locks in RT) found in critical section candidate: 'std::lock_guard<std::mutex> lock(m_completedPathMutex);'
-AestraAudio/src/Playback/PreviewEngine.cpp:549: Lock guard usage found in critical section candidate: 'std::lock_guard<std::mutex> lock(m_completedPathMutex);'
+========================================================================
+AESTRA PR TRACEABILITY REPORT — Phase 1c
+Generated: 2026-05-23 23:13:26 UTC
+Scope: last 92 merged PRs
+========================================================================
+
+=== SECTION 1: OVERALL LINKAGE ===
+------------------------------------------------------------------------
+  Merged PRs analyzed:       92
+  With Fixes #N:             15 (16.3%)
+  With any issue reference:  25 (27.2%)
+  No issue reference:        67 (72.8%)
+
+=== SECTION 2: MONTHLY LINKAGE TREND ===
+------------------------------------------------------------------------
+  2025-10:   8 PRs, 0 linked (0.0%) ########
+  2025-11:  10 PRs, 0 linked (0.0%) ##########
+  2025-12:   3 PRs, 0 linked (0.0%) ###
+  2026-01:  13 PRs, 0 linked (0.0%) #############
+  2026-03:   4 PRs, 0 linked (0.0%) ####
+  2026-04:  18 PRs, 0 linked (0.0%) ##################
+  2026-05:  36 PRs, 15 linked (41.7%) ##############################
+
+=== SECTION 3: SUBSYSTEM EXPOSURE ===
+------------------------------------------------------------------------
+Subsystem                  Total  Orphaned  Orphan%
+--------------------------------------------------
+  unknown                       63        52    82.5%
+  comp: ci                      56        44    78.6%
+  comp: audio-engine            45        28    62.2%
+  comp: ui                      32        25    78.1%
+  comp: serialization           29        19    65.5%
+  comp: dsp                     16        13    81.2%
+  comp: platform                 6         6   100.0%
+
+=== SECTION 4: ISSUE TRACEABILITY ===
+------------------------------------------------------------------------
+  Closed issues analyzed:       48
+  With linked PR:               15 (31.2%)
+  No traceable resolution:      33
+
+  Closed issues without traceable resolution:
+    #265 — No RT-violation handler in production — RT safety violations
+           Labels: bug, priority: high, type: hardening
+    #260 — Global -Wno-maybe-uninitialized suppression hides real bugs 
+           Labels: bug, priority: high, type: hardening
+    #257 — Dead RT-thread guard infrastructure — AudioThreadConstraints
+           Labels: bug, priority: high, type: hardening
+    #235 — chore: repo-wide GitHub Actions SHA pinning pass
+    #212 — P2: No sanitizer coverage for Windows or macOS in CI
+           Labels: bug, priority: medium, type: ci
+    #205 — P1: Global -Wno-maybe-uninitialized suppression hides real b
+           Labels: bug, priority: high, type: hardening
+    #159 — [P1] Validate multitrack recording, count-in, and monitoring
+    #158 — [P2] Stabilize piano roll edit trust and minimap behavior
+    #157 — [P1] Add export vs playback parity regression coverage
+    #156 — TrackManager::processInput: real-time audio thread safety re
+    #129 — Fix CI format-check failures across codebase
+    #125 — [P2] Clean up Windows UUID format warnings (C4477)
+           Labels: bug
+    #124 — [P1] Improve macOS CI lane from early guard-fail to meaningf
+    #123 — [P2] Scrollbar interaction and input consistency improvement
+    #122 — [P1] Fix file browser clipping/bleed and tree alignment
+           Labels: bug
+    ... and 18 more
+
+=== SECTION 5: ORPHANED PR DETAILS (top 20 by size) ===
+------------------------------------------------------------------------
+  #192 — Merge develop to main — CI green, May 2026
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-05-17
+  #191 — test: demo PR from AestraGitHub tool v3
+       Files: 100, Comps: comp: audio-engine, comp: dsp, comp: platform
+       Author: currentsuspect, Merged: 2026-05-13
+  #190 — Enhance Arsenal processing context and optimize reverb performanc
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-05-03
+  #186 — develop → main: repo hygiene, CI hardening, v1 beta feature work
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-04-25
+  #172 — Polish plugin editors and popup layout
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-04-08
+  #167 — develop snapshot: EPIC K device resilience + UI fixes
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-04-05
+  #150 — Stabilize export flow, Rumble, and Arsenal pattern editing
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-04-01
+  #140 — Maintenance: CI/CD improvements, code quality, and build fixes
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-03-23
+  #74 —  major rebranding of the project from "Nomad" to "Aestra" across 
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-01-17
+  #66 — Nomad Audit & Math Optimization
+       Files: 100, Comps: comp: ci, unknown
+       Author: app/google-labs-jules, Merged: 2026-01-11
+  #59 — docs: Bolt — audit & fixes (Doxygen, READMEs, changelog, doc-chec
+       Files: 100, Comps: comp: ci, comp: ui, unknown
+       Author: app/google-labs-jules, Merged: 2026-01-03
+  #55 — Major enhancements to plugin hosting and audio engine capabilitie
+       Files: 100, Comps: comp: ci, unknown
+       Author: currentsuspect, Merged: 2026-01-04
+  #53 — New audio engine infrastructure, improved UI/UX and device manage
+       Files: 100, Comps: comp: ci, unknown
+       Author: currentsuspect, Merged: 2025-12-22
+  #34 — groundwork for a modern, professional-grade audio engine architec
+       Files: 100, Comps: comp: ui, unknown
+       Author: currentsuspect, Merged: 2025-12-07
+  #24 — Major UI Components and Architecture Documentation from Develop t
+       Files: 100, Comps: comp: ci, comp: ui, unknown
+       Author: currentsuspect, Merged: 2025-11-02
+  #179 — Polish routing inspector and live send behavior
+       Files: 90, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-04-11
+  #155 — Polish piano roll UI and sidebar surfaces
+       Files: 56, Comps: comp: audio-engine, comp: ci, comp: serialization
+       Author: currentsuspect, Merged: 2026-04-02
+  #145 — feat: implement CommandHistory and CommandTransaction
+       Files: 49, Comps: comp: audio-engine, comp: ci, comp: platform
+       Author: currentsuspect, Merged: 2026-03-27
+  #177 — Polish renderer, EQ, and mixer UX
+       Files: 46, Comps: comp: audio-engine, comp: dsp, comp: serialization
+       Author: currentsuspect, Merged: 2026-04-09
+  #144 — fix: resolve API mismatches and add low-memory build preset
+       Files: 46, Comps: comp: audio-engine, comp: ci, comp: platform
+       Author: currentsuspect, Merged: 2026-03-27
+       ... and 44 more
+
+========================================================================
+END OF REPORT
