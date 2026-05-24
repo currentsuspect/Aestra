@@ -631,6 +631,16 @@ target_include_directories(AestraAudioQualityRegressionTest PRIVATE
 add_test(NAME AestraAudioQualityRegressionTest COMMAND AestraAudioQualityRegressionTest)
 set_tests_properties(AestraAudioQualityRegressionTest PROPERTIES LABELS "audio;quality;regression")
 
+# AudioEngine output channel safety regression test
+add_executable(AestraAudioEngineOutputChannelTest AestraAudio/AudioEngineOutputChannelTest.cpp)
+target_link_libraries(AestraAudioEngineOutputChannelTest PRIVATE AestraAudioCore)
+target_include_directories(AestraAudioEngineOutputChannelTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraAudioEngineOutputChannelTest COMMAND AestraAudioEngineOutputChannelTest)
+set_tests_properties(AestraAudioEngineOutputChannelTest PROPERTIES LABELS "audio;rt-safety;regression")
+
 # Watchdog Test (requires VST3 SDK headers)
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")
     add_executable(AestraWatchdogTest AestraAudio/WatchdogTest.cpp)

@@ -222,8 +222,7 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
 
             if (fadeInFrames > 0) {
                 for (uint32_t i = 0; i < fadeInFrames; ++i) {
-                    const double fade =
-                        static_cast<double>(start + i - clip.startSample) / CLIP_EDGE_FADE_SAMPLES;
+                    const double fade = static_cast<double>(start + i - clip.startSample) / CLIP_EDGE_FADE_SAMPLES;
                     dst[i * 2] += static_cast<double>(src[i * 2]) * clipGainD * fade;
                     dst[i * 2 + 1] += static_cast<double>(src[i * 2 + 1]) * clipGainD * fade;
                 }
@@ -239,8 +238,7 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
             if (framesToRender > std::max(fadeOutBegin, fadeInFrames)) {
                 const uint32_t fadeOutStart = std::max(fadeOutBegin, fadeInFrames);
                 for (uint32_t i = fadeOutStart; i < framesToRender; ++i) {
-                    const double fade =
-                        static_cast<double>(clip.endSample - (start + i)) / CLIP_EDGE_FADE_SAMPLES;
+                    const double fade = static_cast<double>(clip.endSample - (start + i)) / CLIP_EDGE_FADE_SAMPLES;
                     dst[i * 2] += static_cast<double>(src[i * 2]) * clipGainD * fade;
                     dst[i * 2 + 1] += static_cast<double>(src[i * 2 + 1]) * clipGainD * fade;
                 }
@@ -266,7 +264,7 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
                 break;
             default: {
                 static_assert(static_cast<int>(Interpolators::InterpolationQuality::Sinc64) == 4,
-                             "All InterpolationQuality values must be handled above");
+                              "All InterpolationQuality values must be handled above");
                 interpolateFunc = Interpolators::Sinc64Turbo::interpolate;
                 break;
             }
@@ -329,7 +327,8 @@ void AudioRenderer::processTrackEffects(const RenderTrack& track, AudioGraphStat
     if (track.trackIndex >= graphState.trackStates.size())
         return;
     TrackRTState& state = graphState.trackStates[track.trackIndex];
-    const AudioGraph& graph = engineRef.engineState().activeGraph();
+    auto graphRead = engineRef.engineState().activeGraphRead();
+    const AudioGraph& graph = graphRead.get();
     if (track.trackIndex < graph.tracks.size()) {
         const auto& gt = graph.tracks[track.trackIndex];
 
@@ -386,8 +385,8 @@ void AudioRenderer::renderArsenalUnitsForTrack(uint32_t trackIndex, double* trac
             MidiBuffer mOut;
             const bool processed = processPluginNoexcept(*u.plugin, ins, outs, 2, 2, ctx.numFrames, mIn, &mOut);
             if (!processed) {
-                std::fill(engineRef.m_pluginBufferF.begin(),
-                          engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2, 0.0f);
+                std::fill(engineRef.m_pluginBufferF.begin(), engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2,
+                          0.0f);
             } else {
                 sanitizeFloatBuffers(outs, 2, ctx.numFrames);
             }
@@ -424,8 +423,8 @@ void AudioRenderer::processArsenalUnits(const Context& ctx, AudioEngine& engineR
             MidiBuffer mOut;
             const bool processed = processPluginNoexcept(*u.plugin, ins, outs, 2, 2, ctx.numFrames, mIn, &mOut);
             if (!processed) {
-                std::fill(engineRef.m_pluginBufferF.begin(),
-                          engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2, 0.0f);
+                std::fill(engineRef.m_pluginBufferF.begin(), engineRef.m_pluginBufferF.begin() + ctx.numFrames * 2,
+                          0.0f);
             } else {
                 sanitizeFloatBuffers(outs, 2, ctx.numFrames);
             }
