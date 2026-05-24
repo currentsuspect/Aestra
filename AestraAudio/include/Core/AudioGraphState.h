@@ -73,6 +73,7 @@ struct SmoothedParamD {
     }
     /** @brief Snap current to target immediately, cancelling any active ramp. */
     void snap() {
+        if (!std::isfinite(target)) target = std::isfinite(current) ? current : 0.0;
         current = target;
         step = 0.0;
         samplesRemaining = 0;

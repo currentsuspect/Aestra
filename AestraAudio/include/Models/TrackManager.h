@@ -1096,6 +1096,13 @@ private:
         }
         clearNextCapturePlacementStartBeat();
         m_recordingNoArmLogged = false;
+        const size_t armedCount = m_recordingCaptures.size();
+        if (armedCount > kMaxRecordingTracks) {
+            Log::warning("[TrackManager] Armed track count (" + std::to_string(armedCount) +
+                         ") exceeds kMaxRecordingTracks (" + std::to_string(kMaxRecordingTracks) +
+                         "). Only the first " + std::to_string(kMaxRecordingTracks) +
+                         " will be captured in the snapshot.");
+        }
         m_recordingCaptureAccepting.store(true, std::memory_order_release);
         m_isCapturing.store(true, std::memory_order_relaxed);
         publishRecordingCaptureSnapshot();
