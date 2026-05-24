@@ -1,204 +1,132 @@
 ========================================================================
-AESTRA ISSUE TRACKER AUDIT REPORT — Phase 1a
-Generated: 2026-05-23 22:48:41 UTC
-Schema version: 1
+AESTRA PR TRACEABILITY REPORT — Phase 1c
+Generated: 2026-05-23 23:13:26 UTC
+Scope: last 92 merged PRs
 ========================================================================
 
-SUMMARY
+=== SECTION 1: OVERALL LINKAGE ===
 ------------------------------------------------------------------------
-  Total open issues:        57
-  Label issues:             3
-  Likely-fixed (needs close): 0
-  Stale issues:             0
-  Needs domain expert:      9
-  Sprint-ready issues:      43
-  Dead file references:     0
+  Merged PRs analyzed:       92
+  With Fixes #N:             15 (16.3%)
+  With any issue reference:  25 (27.2%)
+  No issue reference:        67 (72.8%)
 
-A. LABEL HYGIENE VIOLATIONS
+=== SECTION 2: MONTHLY LINKAGE TREND ===
 ------------------------------------------------------------------------
-  #239 — Autosave serializer reads shared state from background thread — data r
-       Labels: priority: critical, type: bug, type: hardening, comp: serialization, beta-blocker
-       ⚠  multiple-type-labels:type: bug,type: hardening
+  2025-10:   8 PRs, 0 linked (0.0%) ########
+  2025-11:  10 PRs, 0 linked (0.0%) ##########
+  2025-12:   3 PRs, 0 linked (0.0%) ###
+  2026-01:  13 PRs, 0 linked (0.0%) #############
+  2026-03:   4 PRs, 0 linked (0.0%) ####
+  2026-04:  18 PRs, 0 linked (0.0%) ##################
+  2026-05:  36 PRs, 15 linked (41.7%) ##############################
 
-  #247 — Plugin crash protection Linux-only — misbehaving plugins crash the DAW
-       Labels: priority: high, type: bug, type: hardening, comp: audio-engine, beta-blocker
-       ⚠  multiple-type-labels:type: bug,type: hardening
-
-  #251 — Deprecated std::atomic_load on shared_ptr — 14+ call sites, breaks on 
-       Labels: priority: high, type: hardening, type: refactor, comp: audio-engine
-       ⚠  multiple-type-labels:type: hardening,type: refactor
-
-
-B. LIKELY-FIXED ISSUES (needs verification)
+=== SECTION 3: SUBSYSTEM EXPOSURE ===
 ------------------------------------------------------------------------
-  (none)
+Subsystem                  Total  Orphaned  Orphan%
+--------------------------------------------------
+  unknown                       63        52    82.5%
+  comp: ci                      56        44    78.6%
+  comp: audio-engine            45        28    62.2%
+  comp: ui                      32        25    78.1%
+  comp: serialization           29        19    65.5%
+  comp: dsp                     16        13    81.2%
+  comp: platform                 6         6   100.0%
 
-C. STALE ISSUES
+=== SECTION 4: ISSUE TRACEABILITY ===
 ------------------------------------------------------------------------
-  (none)
+  Closed issues analyzed:       48
+  With linked PR:               15 (31.2%)
+  No traceable resolution:      33
 
-D. SPRINT-READY ISSUES
+  Closed issues without traceable resolution:
+    #265 — No RT-violation handler in production — RT safety violations
+           Labels: bug, priority: high, type: hardening
+    #260 — Global -Wno-maybe-uninitialized suppression hides real bugs 
+           Labels: bug, priority: high, type: hardening
+    #257 — Dead RT-thread guard infrastructure — AudioThreadConstraints
+           Labels: bug, priority: high, type: hardening
+    #235 — chore: repo-wide GitHub Actions SHA pinning pass
+    #212 — P2: No sanitizer coverage for Windows or macOS in CI
+           Labels: bug, priority: medium, type: ci
+    #205 — P1: Global -Wno-maybe-uninitialized suppression hides real b
+           Labels: bug, priority: high, type: hardening
+    #159 — [P1] Validate multitrack recording, count-in, and monitoring
+    #158 — [P2] Stabilize piano roll edit trust and minimap behavior
+    #157 — [P1] Add export vs playback parity regression coverage
+    #156 — TrackManager::processInput: real-time audio thread safety re
+    #129 — Fix CI format-check failures across codebase
+    #125 — [P2] Clean up Windows UUID format warnings (C4477)
+           Labels: bug
+    #124 — [P1] Improve macOS CI lane from early guard-fail to meaningf
+    #123 — [P2] Scrollbar interaction and input consistency improvement
+    #122 — [P1] Fix file browser clipping/bleed and tree alignment
+           Labels: bug
+    ... and 18 more
+
+=== SECTION 5: ORPHANED PR DETAILS (top 20 by size) ===
 ------------------------------------------------------------------------
-  #196 — P0: AudioEngine::processBlock reads m_state.activeGraph() without sync
-       priority: critical, type: hardening, comp: audio-engine
-
-  #200 — P1: VST3Host stores shared_ptr as void* — leak on exception and bypass
-       priority: high, type: bug, comp: audio-engine
-
-  #201 — P1: CI excludes 3 critical security tests on Linux and Windows
-       priority: high, type: ci, comp: ci
-
-  #203 — P1: ProjectSerializer::asString() without type guard crashes on corrup
-       priority: high, type: bug, comp: serialization
-
-  #204 — P2: 6 empty stub class headers — dead code in AestraAudio/Models/
-       priority: medium, type: docs, comp: audio-engine
-
-  #211 — P2: EffectChain binary format has no version migration — all saved cha
-       priority: medium, type: bug, comp: serialization
-
-  #213 — P2: ProjectSerializer silently drops clips for orphaned patterns — dat
-       priority: medium, type: bug, comp: serialization
-
-  #224 — Theme token completeness: add spacingSExtra / radiusSExtra tokens (NUI
-       priority: medium, type: feature, comp: ui
-
-  #225 — Theme token completeness: add titleBarHeight / viewToggle dimensions t
-       priority: medium, type: feature, comp: ui
-
-  #227 — Isolated track bounce lacks master-stage processing and dithering
-       priority: medium, type: bug, comp: export
-
-  #228 — Oversampling for nonlinear DSP (AestraComp, limiter)
-       priority: medium, type: feature, comp: dsp
-
-  #238 — OOP plugin parameters are no-ops — third-party plugins can't be contro
-       priority: critical, type: bug, comp: audio-engine, beta-blocker
-
-  #245 — No fsync in any write path — power loss can lose save files
-       priority: high, type: bug, comp: serialization, beta-blocker
-
-  #248 — Plugin NaN/Inf only validated at master output — one bad plugin corrup
-       priority: high, type: bug, comp: dsp, beta-blocker
-
-  #249 — Migration framework unproven — first real migration ships on user data
-       priority: high, type: hardening, comp: serialization, beta-blocker
-
-  #252 — 5 empty model stub files — PatternManager, ClipSource, AudioClip, Play
-       priority: high, type: bug, comp: audio-engine, beta-blocker
-
-  #253 — Headless music generator incomplete — patterns/clips never reach audio
-       priority: high, type: bug, comp: audio-engine
-
-  #254 — App activation/sign-in flow stubbed — can't gate features on license t
-       priority: high, type: feature, comp: monetization, beta-blocker
-
-  #255 — Linux RT scheduling — audio thread has no realtime priority
-       priority: high, type: hardening, comp: platform
-
-  #256 — Audio settings page device enumeration freezes UI
-       priority: high, type: bug, comp: ui
-
-  #258 — windows.h leak in AudioEngine.h — macro pollution on Windows
-       priority: high, type: refactor, comp: audio-engine
-
-  #259 — Theme JSON loading unimplemented — custom theming impossible
-       priority: high, type: feature, comp: ui
-
-  #263 — No content integrity check on project load — corrupt files load silent
-       priority: high, type: bug, comp: serialization
-
-  #264 — Asset references are paths not hashes — moved samples load silently wr
-       priority: high, type: bug, comp: serialization
-
-  #266 — ProjectSerializer lives in UI tier — layering violation, headless buil
-       priority: high, type: refactor, comp: serialization
-
-  #267 — macOS platform unimplemented — createWindow returns nullptr
-       priority: high, type: feature, comp: ui, comp: platform
-
-  #268 — SerializationCompatibilityTest commented out in CMakeLists.txt
-       priority: high, type: ci, comp: serialization
-
-  #269 — OpenGL batch renderer flush() is a no-op — geometry accumulated but ne
-       priority: high, type: bug, comp: ui
-
-  #271 — Autosave interval hardcoded to 60s — user preference ignored
-       priority: medium, type: bug, comp: serialization
-
-  #272 — Headless music generator tempo not wired to TrackManager
-       priority: high, type: bug, comp: audio-engine
-
-  #273 — Roundtrip tests check structure not values — numeric fidelity untested
-       priority: medium, type: bug, comp: serialization
-
-  #274 — History directory has no disk-usage cap — 200MB project = 10GB .histor
-       priority: medium, type: bug, comp: serialization
-
-  #275 — Text word wrapping unimplemented — wrapText() ignores maxWidth
-       priority: medium, type: bug, comp: ui
-
-  #276 — Mixer panel BPM display disconnected from transport
-       priority: medium, type: bug, comp: ui
-
-  #277 — Content panel missing track selection UI
-       priority: medium, type: feature, comp: ui
-
-  #278 — Sample editor ping-pong loop mode shares engine path — not actually im
-       priority: medium, type: bug, comp: audio-engine
-
-  #279 — ProjectValidator uses naive string search instead of JSON parsing
-       priority: medium, type: refactor, comp: serialization
-
-  #280 — UIState/Preferences use non-atomic remove+rename
-       priority: medium, type: bug, comp: serialization
-
-  #282 — Audition engine: no clip seeking, no timeline track preview
-       priority: medium, type: feature, comp: audio-engine
-
-  #283 — trackColorIndex not persisted in project files
-       priority: medium, type: bug, comp: ui, comp: serialization
-
-  #284 — Crash flag write lacks fsync
-       priority: medium, type: bug, comp: serialization
-
-  #285 — No sanitizer coverage for Windows or macOS in CI
-       priority: medium, type: ci, comp: ci
-
-  #288 — Repo-wide GitHub Actions SHA pinning pass
-       priority: medium, type: ci, comp: ci
-
-
-E. ISSUES WITH DEAD FILE REFERENCES
-------------------------------------------------------------------------
-  (none)
-
-F. VERIFICATION MODE DISTRIBUTION
-------------------------------------------------------------------------
-  headless-verifiable: 20
-  analysis-only: 16
-  ui-required: 12
-  human-required: 9
-
-G. SPRINT READINESS DISTRIBUTION
-------------------------------------------------------------------------
-  sprint-ready: 43
-  requires-domain-expert: 9
-  needs-triage: 3
-  not-sprint-material: 2
-
-H. SUBSYSTEM HOTSPOTS
-------------------------------------------------------------------------
-  comp: serialization        17 #################
-  comp: audio-engine         15 ###############
-  comp: ui                   12 ############
-  comp: dsp                   6 ######
-  comp: ci                    3 ###
-  comp: routing               3 ###
-  comp: monetization          2 ##
-  comp: platform              2 ##
-  comp: export                1 #
+  #192 — Merge develop to main — CI green, May 2026
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-05-17
+  #191 — test: demo PR from AestraGitHub tool v3
+       Files: 100, Comps: comp: audio-engine, comp: dsp, comp: platform
+       Author: currentsuspect, Merged: 2026-05-13
+  #190 — Enhance Arsenal processing context and optimize reverb performanc
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-05-03
+  #186 — develop → main: repo hygiene, CI hardening, v1 beta feature work
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-04-25
+  #172 — Polish plugin editors and popup layout
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-04-08
+  #167 — develop snapshot: EPIC K device resilience + UI fixes
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-04-05
+  #150 — Stabilize export flow, Rumble, and Arsenal pattern editing
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-04-01
+  #140 — Maintenance: CI/CD improvements, code quality, and build fixes
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-03-23
+  #74 —  major rebranding of the project from "Nomad" to "Aestra" across 
+       Files: 100, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-01-17
+  #66 — Nomad Audit & Math Optimization
+       Files: 100, Comps: comp: ci, unknown
+       Author: app/google-labs-jules, Merged: 2026-01-11
+  #59 — docs: Bolt — audit & fixes (Doxygen, READMEs, changelog, doc-chec
+       Files: 100, Comps: comp: ci, comp: ui, unknown
+       Author: app/google-labs-jules, Merged: 2026-01-03
+  #55 — Major enhancements to plugin hosting and audio engine capabilitie
+       Files: 100, Comps: comp: ci, unknown
+       Author: currentsuspect, Merged: 2026-01-04
+  #53 — New audio engine infrastructure, improved UI/UX and device manage
+       Files: 100, Comps: comp: ci, unknown
+       Author: currentsuspect, Merged: 2025-12-22
+  #34 — groundwork for a modern, professional-grade audio engine architec
+       Files: 100, Comps: comp: ui, unknown
+       Author: currentsuspect, Merged: 2025-12-07
+  #24 — Major UI Components and Architecture Documentation from Develop t
+       Files: 100, Comps: comp: ci, comp: ui, unknown
+       Author: currentsuspect, Merged: 2025-11-02
+  #179 — Polish routing inspector and live send behavior
+       Files: 90, Comps: comp: audio-engine, comp: ci, comp: dsp
+       Author: currentsuspect, Merged: 2026-04-11
+  #155 — Polish piano roll UI and sidebar surfaces
+       Files: 56, Comps: comp: audio-engine, comp: ci, comp: serialization
+       Author: currentsuspect, Merged: 2026-04-02
+  #145 — feat: implement CommandHistory and CommandTransaction
+       Files: 49, Comps: comp: audio-engine, comp: ci, comp: platform
+       Author: currentsuspect, Merged: 2026-03-27
+  #177 — Polish renderer, EQ, and mixer UX
+       Files: 46, Comps: comp: audio-engine, comp: dsp, comp: serialization
+       Author: currentsuspect, Merged: 2026-04-09
+  #144 — fix: resolve API mismatches and add low-memory build preset
+       Files: 46, Comps: comp: audio-engine, comp: ci, comp: platform
+       Author: currentsuspect, Merged: 2026-03-27
+       ... and 44 more
 
 ========================================================================
 END OF REPORT
-========================================================================

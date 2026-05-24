@@ -84,7 +84,7 @@ def get_project_node_id(project_number):
         }}
     """)
     if not data:
-        return None
+        return None, None
     nodes = data.get("data", {}).get("user", {}).get("projectsV2", {}).get("nodes", [])
     for n in nodes:
         if n and n.get("number") == project_number:
@@ -191,7 +191,7 @@ def fetch_project_items(project_id, force=False):
 def fetch_open_issues():
     """Get all open issues from the repo."""
     output = run_gh("issue", "list", "--state", "open",
-                    "--limit", "100",
+                    "--limit", "1000",
                     "--json", "number,title,labels,state,assignees,updatedAt",
                     timeout=30)
     if not output:
@@ -305,17 +305,24 @@ def check_canonical_labels(labels, schema):
         if label in dep_map:
             issues.append(f"deprecated:{label}")
 
-    # Check required categories
-    has_type = any(l.startswith("type:") for l in labels)
-    has_priority = any(l.startswith("priority:") for l in labels)
-    has_comp = any(l.startswith("comp:") for l in labels)
+    # Check required categories with cardinality
+    count_type = sum(1 for l in labels if l.startswith("type:"))
+    count_priority = sum(1 for l in labels if l.startswith("priority:"))
+    count_comp = sum(1 for l in labels if l.startswith("comp:"))
+    count_status = sum(1 for l in labels if l.startswith("status:"))
 
-    if not has_type:
+    if count_type == 0:
         issues.append("missing-type")
-    if not has_priority:
+    elif count_type > 1:
+        issues.append("multiple-type")
+    if count_priority == 0:
         issues.append("missing-priority")
-    if not has_comp:
+    elif count_priority > 1:
+        issues.append("multiple-priority")
+    if count_comp == 0:
         issues.append("missing-comp")
+    if count_status > 1:
+        issues.append("multiple-status")
 
     # Check unknown labels
     for label in labels:

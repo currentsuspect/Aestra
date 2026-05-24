@@ -195,6 +195,7 @@ class TraceabilityAnalyzer:
         if MERGED_PRS_CACHE.exists() and (time.time() - MERGED_PRS_CACHE.stat().st_mtime) < 3600:
             with open(MERGED_PRS_CACHE) as f:
                 self.prs = json.load(f)
+            self.prs = self.prs[:self.pr_limit]
         else:
             self.prs = fetch_merged_prs(self.pr_limit)
             if self.prs:
@@ -237,16 +238,14 @@ class TraceabilityAnalyzer:
                     "type": "fix",
                 }
 
-            # Get files if orphaned or for hotspot analysis
+            # Get files for subsystem exposure analysis
             files = self.pr_files_cache.get(str(num))
             if files is None:
-                # Only fetch for orphaned PRs or in batches
-                if not fix_refs:
-                    files = fetch_pr_files(num)
-                    self.pr_files_cache[str(num)] = files
-                    if len(self.pr_files_cache) % 10 == 0:
-                        with open(PR_FILES_CACHE, "w") as f:
-                            json.dump(self.pr_files_cache, f, indent=2)
+                files = fetch_pr_files(num)
+                self.pr_files_cache[str(num)] = files
+                if len(self.pr_files_cache) % 10 == 0:
+                    with open(PR_FILES_CACHE, "w") as f:
+                        json.dump(self.pr_files_cache, f, indent=2)
 
             comps = guess_comps_from_files(files or [])
 

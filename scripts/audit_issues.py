@@ -60,7 +60,7 @@ def fetch_all_issues():
     """Fetch all open issues with full metadata via gh."""
     print("Fetching open issues...")
     output = run_gh("issue", "list", "--state", "open",
-                    "--limit", "100",
+                    "--limit", "1000",
                     "--json", "number,title,labels,state,assignees,updatedAt,milestone,body,comments,url",
                     timeout=60)
     if not output:
@@ -333,7 +333,7 @@ def analyze_issue(issue, schema, caches):
 
     result["audit"]["label_issues"] = label_issues
     result["audit"]["suggested_labels"] = _suggest_labels(
-        issue, labels, canonical, deprecated_found, deprecated_map
+        issue, labels, canonical, deprecated_found, deprecated_map, label_issues
     )
 
     # --- File References ---
@@ -440,11 +440,13 @@ def analyze_issue(issue, schema, caches):
     return result
 
 
-def _suggest_labels(issue, labels, canonical, deprecated_found, deprecated_map):
+def _suggest_labels(issue, labels, canonical, deprecated_found, deprecated_map, violations=None):
     """Suggest label corrections based on pattern."""
     suggestions = []
+    if violations is None:
+        violations = []
 
-    if "missing-type" in str(labels) or not [l for l in labels if l.startswith("type:")]:
+    if "missing-type" in violations:
         body = issue.get("body", "") or ""
         body_lower = body.lower()
         title_lower = issue.get("title", "").lower()
@@ -462,13 +464,13 @@ def _suggest_labels(issue, labels, canonical, deprecated_found, deprecated_map):
         elif any(w in title_lower for w in ["hardening", "safety", "rt", "realtime", "protect"]):
             suggestions.append("type: hardening")
 
-    if "missing-priority" in str(labels):
+    if "missing-priority" in violations:
         if any(l.startswith("comp:") and "beta-blocker" in labels for l in labels):
             suggestions.append("priority: high")
         elif "bug" in deprecated_found:
             suggestions.append("priority: medium")
 
-    if "missing-comp" in str(labels):
+    if "missing-comp" in violations:
         body = issue.get("body", "") or ""
         for dep in deprecated_found:
             target = deprecated_map.get(dep, {}).get("target")
@@ -549,7 +551,7 @@ def build_caches(issues, schema):
 
     needs_fetch = []
     for issue in issues:
-        n = issue["number"]
+        n = str(issue["number"])
         if n not in caches["prs"] or n not in caches["commits"]:
             needs_fetch.append(n)
 

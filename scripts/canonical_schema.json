@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "version": 1,
+    "version": "1.0.0",
     "description": "Canonical label taxonomy for Aestra issue tracker",
     "frozen_at": "2026-05-23",
     "rules": {
