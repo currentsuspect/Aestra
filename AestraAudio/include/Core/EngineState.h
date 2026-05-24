@@ -18,17 +18,28 @@ namespace Audio {
  */
 class EngineState {
 public:
+    /**
+     * @brief RAII handle that pins a specific graph slot for reading.
+     *
+     * Acquires a reader count on construction and releases it on destruction,
+     * allowing the audio thread to read an immutable graph snapshot without
+     * blocking. Move-only — copying is disabled to prevent double-release.
+     *
+     * @see activeGraphRead()
+     */
     class GraphReadHandle {
     public:
         GraphReadHandle() = default;
         GraphReadHandle(const GraphReadHandle&) = delete;
         GraphReadHandle& operator=(const GraphReadHandle&) = delete;
 
+        /** @brief Move-constructs from another handle, transferring ownership. */
         GraphReadHandle(GraphReadHandle&& other) noexcept : m_state(other.m_state), m_index(other.m_index) {
             other.m_state = nullptr;
             other.m_index = -1;
         }
 
+        /** @brief Move-assigns from another handle, releasing the current slot first. */
         GraphReadHandle& operator=(GraphReadHandle&& other) noexcept {
             if (this != &other) {
                 release();
@@ -40,8 +51,10 @@ public:
             return *this;
         }
 
+        /** @brief Releases the reader count on the pinned slot. */
         ~GraphReadHandle() { release(); }
 
+        /** @brief Returns a const reference to the pinned graph snapshot. */
         const AudioGraph& get() const noexcept { return m_state->m_graphs[m_index]; }
 
     private:
@@ -61,6 +74,15 @@ public:
         int m_index{-1};
     };
 
+    /**
+     * @brief Acquires a read handle to the currently active graph slot.
+     *
+     * Spins until it can atomically increment the reader count on the active
+     * slot without racing a concurrent swap. The returned handle releases the
+     * count automatically when it goes out of scope.
+     *
+     * @return A move-only handle whose get() returns the active AudioGraph.
+     */
     GraphReadHandle activeGraphRead() const noexcept {
         for (;;) {
             const int index = m_activeIndex.load(std::memory_order_acquire);

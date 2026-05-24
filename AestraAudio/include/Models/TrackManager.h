@@ -375,9 +375,13 @@ public:
     bool isUserScrubbing() const { return m_userScrubbing.load(std::memory_order_relaxed); }
 
     /**
-     * @brief Process interleaved hardware input for armed tracks.
-     * @param input Input channel buffer.
-     * @param frames Number of frames available in the input buffer.
+     * @brief Publishes a double-buffered snapshot of active recording routes.
+     *
+     * Copies the current recording capture pointers into the inactive snapshot
+     * slot, then atomically flips the active index so the RT audio thread can
+     * read an immutable route list without locking.
+     *
+     * @note Must be called from the UI/command thread, not the audio thread.
      */
     void publishRecordingCaptureSnapshot() {
         const uint32_t inactive = 1u - m_activeRecordingCaptureSnapshot.load(std::memory_order_relaxed);

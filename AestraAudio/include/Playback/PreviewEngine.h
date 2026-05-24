@@ -42,6 +42,17 @@ public:
     void seek(double seconds); // New seek method
     void setOutputSampleRate(double sr);
     void process(float* interleavedOutput, uint32_t numFrames);
+
+    /**
+     * @brief RT-safe preview mix into the engine's interleaved output buffer.
+     *
+     * Called from the audio callback. Mixes decoded preview samples directly
+     * into the provided output buffer with no allocation or locking.
+     *
+     * @param interleavedOutput Destination buffer (interleaved, already sized).
+     * @param numFrames         Number of frames to render.
+     * @param outputChannels    Channel count of the destination buffer.
+     */
     void processRealtime(float* interleavedOutput, uint32_t numFrames, uint32_t outputChannels);
     bool isPlaying() const;
     bool isBufferReady() const; // True when buffer is decoded and ready for playback
