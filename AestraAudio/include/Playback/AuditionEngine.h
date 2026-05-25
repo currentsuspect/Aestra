@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include "AestraAtomicSharedPtr.h"
 #include <mutex>
 #include <optional>
 #include <string>
@@ -290,7 +291,7 @@ private:
     // RT-safe source pointer (C++17 atomic shared_ptr via std::atomic_load/store)
     // NOTE: C++20+ has std::atomic<std::shared_ptr<T>> with member .load()/.store()
     //       C++17 requires free functions std::atomic_load_explicit/std::atomic_store_explicit
-    std::shared_ptr<ClipSource> m_currentSource;
+    AtomicSharedPtr<ClipSource> m_currentSource;
 
     // DSP
     AuditionDSPPreset m_currentPreset{AuditionDSPPreset::Bypass()};
