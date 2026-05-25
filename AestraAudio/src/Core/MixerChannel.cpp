@@ -114,7 +114,7 @@ void MixerChannel::processAudio(float* outputBuffer, uint32_t numFrames, double 
 
     // Process through insert effect chain (if any plugins loaded)
     // Pass 3: Use snapshot for RT-safety when available
-    auto snapshot = std::atomic_load(&m_effectChainSnapshot);
+    auto snapshot = m_effectChainSnapshot.load();
     if (snapshot && snapshot->getActiveSlotCount() > 0) {
         // Audio buffer is interleaved stereo (LRLRLRLR...)
         // Plugins expect planar format (LL...LL, RR...RR)

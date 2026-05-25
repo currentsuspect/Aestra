@@ -13,6 +13,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include "AestraAtomicSharedPtr.h"
 #include <string>
 #include <vector>
 
@@ -247,7 +248,7 @@ public:
 
     /** @brief Set the effect chain snapshot for RT-safe processing (deprecated - snapshots are now owned by EffectChain). */
     void setEffectChainSnapshot(std::shared_ptr<const EffectChainSnapshot> snapshot) {
-        std::atomic_store(&m_effectChainSnapshot, std::move(snapshot));
+        m_effectChainSnapshot.store(std::move(snapshot));
     }
     /** @brief Get the current effect chain snapshot (Pass 3: returns canonical snapshot from EffectChain). */
     std::shared_ptr<const EffectChainSnapshot> getEffectChainSnapshot() const {
@@ -284,7 +285,7 @@ private:
     EffectChain m_effectChain;
 
     // Pass 3: Snapshot for RT-safe processing (updated by AudioGraph publication)
-    std::shared_ptr<const EffectChainSnapshot> m_effectChainSnapshot{nullptr};
+    AtomicSharedPtr<const EffectChainSnapshot> m_effectChainSnapshot{nullptr};
 
     // Dry buffer for RT-safe dry/wet mixing in snapshot processing
     std::vector<float> m_dryChannelBuf;

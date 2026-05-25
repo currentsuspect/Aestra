@@ -7,6 +7,7 @@
 #include <condition_variable>
 #include <functional>
 #include <memory>
+#include "AestraAtomicSharedPtr.h"
 #include <mutex>
 #include <optional>
 #include <string>
@@ -94,7 +95,7 @@ private:
     PreviewResult startVoiceWithBuffer(std::shared_ptr<AudioBuffer> buffer, const std::string& path, float gainDb,
                                        double maxSeconds);
 
-    std::shared_ptr<PreviewVoice> m_activeVoice;
+    AtomicSharedPtr<PreviewVoice> m_activeVoice;
     std::atomic<double> m_outputSampleRate;
     std::atomic<float> m_globalGainDb;
     std::atomic<float> m_playbackRate{1.0f};

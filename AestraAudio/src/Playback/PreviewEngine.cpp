@@ -113,7 +113,7 @@ PreviewResult PreviewEngine::startVoiceWithBuffer(std::shared_ptr<AudioBuffer> b
     voice->bufferReady.store(true, std::memory_order_release);
     voice->playing.store(true, std::memory_order_release);
 
-    std::atomic_store_explicit(&m_activeVoice, voice, std::memory_order_release);
+    m_activeVoice.store(voice);
     Log::info("PreviewEngine: Playing '" + path + "' (" + std::to_string(sampleRate) + " Hz, " +
               std::to_string(voice->durationSeconds) + " sec)");
     return PreviewResult::Success;
@@ -167,7 +167,7 @@ void PreviewEngine::workerLoop() {
         // 4. Update Voice
         auto voice = job.voice;
         // Verify voice is still active (redundant with generation but safe)
-        auto currentVoice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+        auto currentVoice = m_activeVoice.load();
         if (currentVoice.get() != voice.get()) {
             voice->playing.store(false, std::memory_order_release);
             continue;
@@ -215,7 +215,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
     voice->playing.store(true, std::memory_order_release);      // Voice is active
 
     // Set as active voice immediately (will output silence until buffer ready)
-    std::atomic_store_explicit(&m_activeVoice, voice, std::memory_order_release);
+    m_activeVoice.store(voice);
 
     // Start async decode (non-blocking)
     decodeAsync(path, voice, maxSeconds);
@@ -225,7 +225,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
 }
 
 void PreviewEngine::stop() {
-    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    auto voice = m_activeVoice.load();
     if (voice) {
         voice->stopRequested.store(true, std::memory_order_release);
         voice->fadeOutActive = true;
@@ -247,7 +247,7 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
     if (outputChannels == 0) {
         return;
     }
-    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    auto voice = m_activeVoice.load();
     if (!voice || !voice->playing.load(std::memory_order_acquire) || !interleavedOutput) {
         return;
     }
@@ -580,12 +580,12 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
 }
 
 bool PreviewEngine::isPlaying() const {
-    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    auto voice = m_activeVoice.load();
     return voice && voice->playing.load(std::memory_order_acquire);
 }
 
 bool PreviewEngine::isBufferReady() const {
-    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    auto voice = m_activeVoice.load();
     return voice && voice->bufferReady.load(std::memory_order_acquire);
 }
 
@@ -602,26 +602,26 @@ float PreviewEngine::getGlobalPreviewVolume() const {
 }
 
 void PreviewEngine::seek(double seconds) {
-    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    auto voice = m_activeVoice.load();
     if (voice) {
         voice->seekRequestSeconds.store(seconds, std::memory_order_release);
     }
 }
 
 double PreviewEngine::getPlaybackPosition() const {
-    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    auto voice = m_activeVoice.load();
     return voice ? voice->elapsedSeconds : 0.0;
 }
 
 double PreviewEngine::getDuration() const {
-    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    auto voice = m_activeVoice.load();
     return voice ? voice->durationSeconds : 0.0;
 }
 
 void PreviewEngine::handleDeferredCompletion() {
     if (m_completionPending.exchange(false, std::memory_order_acq_rel)) {
         PreviewVoice* completed = m_completedVoice.exchange(nullptr, std::memory_order_acq_rel);
-        auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+        auto voice = m_activeVoice.load();
         if (!completed || !voice || voice.get() != completed) {
             return;
         }
@@ -634,7 +634,7 @@ void PreviewEngine::handleDeferredCompletion() {
         }
 
         std::shared_ptr<PreviewVoice> expected = voice;
-        std::atomic_compare_exchange_strong_explicit(&m_activeVoice, &expected, std::shared_ptr<PreviewVoice>(),
+        m_activeVoice.compare_exchange_strong(expected, std::shared_ptr<PreviewVoice>(),
                                                      std::memory_order_acq_rel, std::memory_order_relaxed);
 
         if (!path.empty() && m_onComplete) {

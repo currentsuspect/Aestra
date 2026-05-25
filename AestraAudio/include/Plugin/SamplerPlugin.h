@@ -6,6 +6,7 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include "AestraAtomicSharedPtr.h"
 #include <mutex>
 #include <string>
 #include <vector>
@@ -101,7 +102,7 @@ private:
 
     // Shared Ptr accessed atomically (C++11/17 free functions)
     // No mutex needed for access anymore!
-    std::shared_ptr<SampleData> m_data;
+    AtomicSharedPtr<SampleData> m_data;
 
     // Parameters
     enum ParamID { kParamAttack = 0, kParamDecay, kParamSustain, kParamRelease, kParamPitch, kParamCount };
