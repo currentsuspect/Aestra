@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "AutosaveManager.h"
+#include "AestraFile.h"
 #include "AestraLog.h"
 
 #include <filesystem>
@@ -401,6 +402,8 @@ bool AutosaveManager::performAutosave() {
             fs::remove(tmp, ec);
             return false;
         }
+        // Sync to disk before atomic rename to prevent data loss on crash
+        Aestra::syncOfstream(out, tmp.string());
     }
     
     // Atomic replace: on POSIX, rename() atomically replaces the target.

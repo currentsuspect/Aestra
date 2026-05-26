@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "AudioExporter.h"
+#include "AestraFile.h"
 #include "AestraLog.h"
 
 #include <fstream>
@@ -274,6 +275,8 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         // Rewrite WAV header with actual frame count
         file.seekp(0, std::ios::beg);
         writeWavHeader(file, config, result.framesRendered);
+        file.flush();
+        Aestra::fsyncPath(config.outputPath);
         file.close();
 
         result.success = true;
