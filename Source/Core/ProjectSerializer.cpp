@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
 #include "ProjectMigrations.h"
+#include "AestraFile.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
 #include "PluginManager.h"
@@ -450,6 +451,8 @@ static bool writeAtomicallyImpl(const std::string& path, const std::string& cont
             Log::error("Project save failed: write error: " + tmp.string());
             return false;
         }
+        // Sync to disk before atomic rename to prevent data loss on crash
+        Aestra::syncOfstream(out, tmp.string());
     }
 
 #ifdef _WIN32
