@@ -12,6 +12,7 @@ namespace License {
 
 namespace {
 constexpr int kSchemaVersion = 1;
+constexpr std::uintmax_t kMaxAccountCacheBytes = 64u * 1024u;
 
 std::filesystem::path defaultDataDir() {
     if (const char* envDir = std::getenv("AESTRA_DATA_DIR")) {
@@ -151,6 +152,13 @@ LocalAccountCache::LocalAccountCache(std::filesystem::path cachePath) : m_cacheP
 
 LocalAccountCacheLoadResult LocalAccountCache::load() const {
     LocalAccountCacheLoadResult result;
+    std::error_code sizeEc;
+    const std::uintmax_t cacheSize = std::filesystem::file_size(m_cachePath, sizeEc);
+    if (!sizeEc && cacheSize > kMaxAccountCacheBytes) {
+        result.status = LocalAccountCacheLoadStatus::Malformed;
+        return result;
+    }
+
     std::ifstream file(m_cachePath, std::ios::binary);
     if (!file.good()) {
         result.status = LocalAccountCacheLoadStatus::Missing;
@@ -212,22 +220,29 @@ bool LocalAccountCache::save(const LocalAccountRecord& record) const {
     }
 
     try {
+        std::ostringstream payload;
+        payload << "{\n"
+                << "  \"schema_version\": " << kSchemaVersion << ",\n"
+                << "  \"user_id\": \"" << escapeJsonString(record.identity.userId) << "\",\n"
+                << "  \"email\": \"" << escapeJsonString(record.identity.email) << "\",\n"
+                << "  \"display_name\": \"" << escapeJsonString(record.identity.displayName) << "\",\n"
+                << "  \"avatar_url\": \"" << escapeJsonString(record.identity.avatarUrl) << "\",\n"
+                << "  \"session_token\": \"" << escapeJsonString(record.sessionToken) << "\",\n"
+                << "  \"last_sync_unix\": " << record.lastSyncUnix << ",\n"
+                << "  \"session_state\": \"" << accountSessionStateToString(record.state) << "\"\n"
+                << "}\n";
+        const std::string serialized = payload.str();
+        if (serialized.size() > kMaxAccountCacheBytes) {
+            return false;
+        }
+
         std::filesystem::create_directories(m_cachePath.parent_path());
 
         std::ofstream file(m_cachePath, std::ios::binary | std::ios::trunc);
         if (!file.good()) {
             return false;
         }
-        file << "{\n"
-             << "  \"schema_version\": " << kSchemaVersion << ",\n"
-             << "  \"user_id\": \"" << escapeJsonString(record.identity.userId) << "\",\n"
-             << "  \"email\": \"" << escapeJsonString(record.identity.email) << "\",\n"
-             << "  \"display_name\": \"" << escapeJsonString(record.identity.displayName) << "\",\n"
-             << "  \"avatar_url\": \"" << escapeJsonString(record.identity.avatarUrl) << "\",\n"
-             << "  \"session_token\": \"" << escapeJsonString(record.sessionToken) << "\",\n"
-             << "  \"last_sync_unix\": " << record.lastSyncUnix << ",\n"
-             << "  \"session_state\": \"" << accountSessionStateToString(record.state) << "\"\n"
-             << "}\n";
+        file << serialized;
         return file.good();
     } catch (const std::exception&) {
         return false;

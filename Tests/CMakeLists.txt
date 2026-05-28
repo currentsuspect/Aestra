@@ -20,6 +20,22 @@ else()
 endif()
 
 # =============================================================================
+# License Tests
+# =============================================================================
+
+if(TARGET AestraLicense)
+    add_executable(LocalAccountCacheTest AestraLicense/LocalAccountCacheTest.cpp)
+    target_link_libraries(LocalAccountCacheTest PRIVATE AestraLicense)
+    target_include_directories(LocalAccountCacheTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraLicense/include
+    )
+    add_test(NAME LocalAccountCacheTest COMMAND LocalAccountCacheTest)
+    set_tests_properties(LocalAccountCacheTest PROPERTIES LABELS "license;account;security")
+else()
+    message(STATUS "LocalAccountCacheTest skipped (AestraLicense target unavailable)")
+endif()
+
+# =============================================================================
 # Integration Tests (Cross-Module)
 # =============================================================================
 
