@@ -20,7 +20,7 @@ jobs:
     name: Linux (GCC)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
 
@@ -74,7 +74,7 @@ jobs:
     name: Windows (MSVC)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
 
@@ -181,7 +181,7 @@ jobs:
     name: macOS (Clang)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
 
@@ -235,7 +235,7 @@ jobs:
     name: Formatting (advisory)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Install clang-format
         run: |
@@ -255,7 +255,7 @@ jobs:
     name: Static Analysis (clang-tidy, advisory)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Install dependencies
         run: |
@@ -280,7 +280,7 @@ jobs:
       ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
 
@@ -320,7 +320,7 @@ jobs:
     env:
       TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:suppress_equal_stacks=1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
           persist-credentials: false
@@ -358,7 +358,7 @@ jobs:
     env:
       LSAN_OPTIONS: suppressions=${{ github.workspace }}/.lsan-suppressions:print_suppressions=0:halt_on_error=1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
           persist-credentials: false

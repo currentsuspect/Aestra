@@ -28,6 +28,7 @@ public:
     void registerPlugin(Registration registration);
 
     std::vector<PluginInfo> listAvailablePlugins() const;
+    bool isRegisteredPlugin(const std::string& pluginId) const;
     bool isPluginAvailable(const std::string& pluginId) const;
     PluginInstancePtr createInstance(const std::string& pluginId) const;
 
