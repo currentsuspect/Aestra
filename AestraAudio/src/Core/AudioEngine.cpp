@@ -2563,6 +2563,16 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         double* lfStateL = publishTrackSnapshot ? &m_meterLfStateL[slot] : nullptr;
         double* lfStateR = publishTrackSnapshot ? &m_meterLfStateR[slot] : nullptr;
 
+        const bool routesMainToMaster = track.mainOutputId == 0xFFFFFFFFu;
+        double* mainDestBuffer = nullptr;
+        if (!routesMainToMaster && audibleEligible && slotMap) {
+            const uint32_t destSlot = slotMap->getSlotIndex(track.mainOutputId);
+            if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks && destSlot != trackIdx &&
+                (!anySolo || m_rtAudibleEligible[destSlot])) {
+                mainDestBuffer = m_trackBuffersD[destSlot].data();
+            }
+        }
+
         bool hasPreFaderSend = std::any_of(track.sends.begin(), track.sends.end(),
                                            [](const auto& send) { return !send.mute && !send.postFader; });
         const size_t preFaderSize = static_cast<size_t>(numFrames) * 2u;
@@ -2595,17 +2605,12 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             buffer[i * 2 + 1] = outR;
 
             if (!muted) {
-                if (audibleEligible && track.mainOutputId == 0xFFFFFFFFu) {
+                if (audibleEligible && routesMainToMaster) {
                     masterBuf[i * 2] += outL;
                     masterBuf[i * 2 + 1] += outR;
-                } else if (audibleEligible && slotMap) {
-                    const uint32_t destSlot = slotMap->getSlotIndex(track.mainOutputId);
-                    if (destSlot != ChannelSlotMap::INVALID_SLOT && destSlot < availableTracks &&
-                        destSlot != trackIdx && (!anySolo || m_rtAudibleEligible[destSlot])) {
-                        auto& destBuffer = m_trackBuffersD[destSlot];
-                        destBuffer[i * 2] += outL;
-                        destBuffer[i * 2 + 1] += outR;
-                    }
+                } else if (mainDestBuffer) {
+                    mainDestBuffer[i * 2] += outL;
+                    mainDestBuffer[i * 2 + 1] += outR;
                 }
             }
 
