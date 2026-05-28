@@ -101,15 +101,34 @@ std::filesystem::path resolveManifestSnapshotPath(const std::string& projectPath
     namespace fs = std::filesystem;
     fs::path path(snapshotPath);
     if (path.is_absolute()) {
-        return path.lexically_normal();
+        return {};
     }
-    path = (fs::path(TakeManager::getTakesDirectory(projectPath)) / path).lexically_normal();
     const fs::path takesDir = fs::path(TakeManager::getTakesDirectory(projectPath)).lexically_normal();
-    const std::string takesDirStr = takesDir.string();
-    const std::string pathStr = path.string();
-    if (pathStr.size() < takesDirStr.size() ||
-        pathStr.compare(0, takesDirStr.size(), takesDirStr) != 0 ||
-        (pathStr.size() > takesDirStr.size() && pathStr[takesDirStr.size()] != '/' && pathStr[takesDirStr.size()] != '\\')) {
+    path = (takesDir / path).lexically_normal();
+
+    std::string takesDirStr = takesDir.generic_string();
+    std::string pathStr = path.generic_string();
+#ifdef _WIN32
+    std::transform(takesDirStr.begin(), takesDirStr.end(), takesDirStr.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::transform(pathStr.begin(), pathStr.end(), pathStr.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+#endif
+    while (takesDirStr.size() > 1 && takesDirStr.back() == '/') {
+        takesDirStr.pop_back();
+    }
+    if (pathStr.size() > 2 && pathStr.compare(pathStr.size() - 2, 2, "/.") == 0) {
+        pathStr.resize(pathStr.size() - 2);
+    }
+    while (pathStr.size() > 1 && pathStr.back() == '/') {
+        pathStr.pop_back();
+    }
+    if (pathStr == takesDirStr) {
+        return {};
+    }
+    if (pathStr != takesDirStr && (pathStr.size() <= takesDirStr.size() ||
+                                   pathStr.compare(0, takesDirStr.size(), takesDirStr) != 0 ||
+                                   pathStr[takesDirStr.size()] != '/')) {
         return {};
     }
     return path;

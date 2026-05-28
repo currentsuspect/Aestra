@@ -40,7 +40,11 @@ namespace {
 constexpr uint32_t kScanCacheSchemaVersion = 2;
 
 bool isVisiblePlugin(const PluginInfo& plugin) {
-    return plugin.format != PluginFormat::Internal || InternalPluginRegistry::instance().isPluginAvailable(plugin.id);
+    auto& registry = InternalPluginRegistry::instance();
+    if (plugin.format == PluginFormat::Internal) {
+        return registry.isPluginAvailable(plugin.id);
+    }
+    return !registry.isRegisteredPlugin(plugin.id);
 }
 
 void sanitizeInternalPlugins(std::vector<PluginInfo>& plugins) {
@@ -56,6 +60,8 @@ void mergeBuiltInPlugins(std::vector<PluginInfo>& plugins) {
                                      [&](const PluginInfo& existing) { return existing.id == builtIn.id; });
         if (it == plugins.end()) {
             plugins.push_back(std::move(builtIn));
+        } else {
+            *it = std::move(builtIn);
         }
     }
     sanitizeInternalPlugins(plugins);

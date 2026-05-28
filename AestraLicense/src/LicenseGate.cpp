@@ -9,12 +9,14 @@
 #include <atomic>
 #include <cctype>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <sstream>
@@ -44,6 +46,7 @@ namespace License {
 
 namespace {
 constexpr int64_t kLeasePeriodSeconds = 604800;
+constexpr double kMaxExactJsonInteger = 9007199254740991.0;
 constexpr size_t kSecretBoxNonceBytes = 24;
 constexpr size_t kSecretBoxMacBytes = 16;
 constexpr const char* kBackupFileName = "lease.bin";
@@ -279,6 +282,16 @@ bool parseLeasePayload(const std::string& payload, LeaseRecord& out) {
     if (!json.has("revocation_epoch") || !json["revocation_epoch"].isNumber())
         return false;
 
+    auto readInt64 = [](const Aestra::JSON& value, int64_t& outValue) {
+        const double number = value.asNumber();
+        if (!std::isfinite(number) || std::trunc(number) != number || number < -kMaxExactJsonInteger ||
+            number > kMaxExactJsonInteger) {
+            return false;
+        }
+        outValue = static_cast<int64_t>(number);
+        return true;
+    };
+
     LeaseRecord lease;
     lease.licenseId = json["license_id"].asString();
     lease.userId = json["user_id"].asString();
@@ -292,12 +305,15 @@ bool parseLeasePayload(const std::string& payload, LeaseRecord& out) {
         return false;
     }
     lease.deviceHash = json["device_hash"].asString();
-    lease.issuedAt = static_cast<int64_t>(json["issued_at"].asNumber());
-    lease.expiresAt = static_cast<int64_t>(json["expires_at"].asNumber());
+    if (!readInt64(json["issued_at"], lease.issuedAt) || !readInt64(json["expires_at"], lease.expiresAt) ||
+        !readInt64(json["revocation_epoch"], lease.revocationEpoch)) {
+        return false;
+    }
     lease.gracePolicy = json["grace_policy"].asString();
-    lease.revocationEpoch = static_cast<int64_t>(json["revocation_epoch"].asNumber());
 
-    if (lease.expiresAt != lease.issuedAt + kLeasePeriodSeconds) {
+    if (lease.issuedAt < 0 || lease.expiresAt < lease.issuedAt ||
+        lease.issuedAt > (std::numeric_limits<int64_t>::max)() - kLeasePeriodSeconds ||
+        lease.expiresAt != lease.issuedAt + kLeasePeriodSeconds) {
         return false;
     }
 
@@ -682,6 +698,29 @@ bool verifyLeaseSignature(const std::string& payload, const std::vector<unsigned
     return verifyEd25519Detached(payload, signature, AESTRA_LICENSE_PUBKEY);
 }
 
+bool leaseTierAllowedForBuild(const LeaseRecord& lease) {
+#ifdef AESTRA_LICENSE_ENABLE_PREMIUM_LEASES
+    (void)lease;
+    return true;
+#else
+    return lease.tier == LicenseTier::Core;
+#endif
+}
+
+bool leaseStatusAtNow(const LeaseRecord& lease, EntitlementStatus& status) {
+    const int64_t now = nowSeconds();
+    if (lease.expiresAt > (std::numeric_limits<int64_t>::max)() - kLeasePeriodSeconds) {
+        status = EntitlementStatus::Expired;
+        return false;
+    }
+    if (now > (lease.expiresAt + kLeasePeriodSeconds)) {
+        status = EntitlementStatus::Expired;
+        return false;
+    }
+    status = now > lease.expiresAt ? EntitlementStatus::Grace : EntitlementStatus::Valid;
+    return true;
+}
+
 bool saveLeaseToEncryptedBackup(const std::vector<unsigned char>& blob, const DeviceFingerprint& fingerprint) {
 #ifdef _WIN32
     (void)blob;
@@ -844,16 +883,18 @@ EntitlementStatus loadAndVerifyLease(LeaseRecord& outLease) {
     if (lease.gracePolicy != "restrict") {
         return EntitlementStatus::ParseError;
     }
+    if (!leaseTierAllowedForBuild(lease)) {
+        return EntitlementStatus::ParseError;
+    }
     if (lease.revocationEpoch != 0) {
         return EntitlementStatus::Revoked;
     }
 
-    const int64_t now = nowSeconds();
-    if (now > (lease.expiresAt + kLeasePeriodSeconds)) {
+    EntitlementStatus status = EntitlementStatus::Missing;
+    if (!leaseStatusAtNow(lease, status)) {
         return EntitlementStatus::Expired;
     }
 
-    const EntitlementStatus status = now > lease.expiresAt ? EntitlementStatus::Grace : EntitlementStatus::Valid;
     outLease = std::move(lease);
     return status;
 }
@@ -933,11 +974,6 @@ void LicenseGate::refreshAsync() {
     if (const char* envUrl = std::getenv("AESTRA_ACCOUNT_API_BASE_URL")) {
         baseUrl = envUrl;
     }
-#ifdef AESTRA_DEV_WORKER_URL
-    else {
-        baseUrl = AESTRA_DEV_WORKER_URL;
-    }
-#endif
     if (baseUrl.empty()) {
         return;
     }
@@ -961,8 +997,10 @@ void LicenseGate::refreshAsync() {
     if (!parseLeasePayload(result.canonical, lease)) {
         return;
     }
-    const EntitlementStatus status =
-        nowSeconds() > lease.expiresAt ? EntitlementStatus::Grace : EntitlementStatus::Valid;
+    EntitlementStatus status = EntitlementStatus::Missing;
+    if (!leaseStatusAtNow(lease, status)) {
+        return;
+    }
     applyLeaseToGateState(lease, status);
 }
 
@@ -993,9 +1031,16 @@ bool LicenseGate::installLeaseBlobForRefresh(const std::string& leaseBlob, std::
         message = "Lease policy is unsupported.";
         return false;
     }
+    if (!leaseTierAllowedForBuild(lease)) {
+        message = "Premium leases are not enabled in this build.";
+        return false;
+    }
 
-    const EntitlementStatus status =
-        nowSeconds() > lease.expiresAt ? EntitlementStatus::Grace : EntitlementStatus::Valid;
+    EntitlementStatus status = EntitlementStatus::Missing;
+    if (!leaseStatusAtNow(lease, status)) {
+        message = "Lease is expired.";
+        return false;
+    }
     if (!saveLeaseToPrimarySecretStore(blob) && !saveLeaseToEncryptedBackup(blob, fingerprint)) {
         message = "Unable to store refreshed lease.";
         return false;

@@ -29,11 +29,14 @@ target_link_libraries(AestraLicense
         AestraCore
 )
 
+if(AESTRA_LICENSE_ENABLE_PREMIUM_LEASES)
+    target_compile_definitions(AestraLicense PRIVATE AESTRA_LICENSE_ENABLE_PREMIUM_LEASES=1)
+endif()
+
 find_package(CURL QUIET)
 if(CURL_FOUND)
     target_link_libraries(AestraLicense PRIVATE CURL::libcurl)
     target_compile_definitions(AestraLicense PRIVATE AESTRA_LICENSE_HAS_CURL=1)
-    target_compile_definitions(AestraLicense PRIVATE AESTRA_DEV_WORKER_URL="https://aestra-license-signing.makoridylan.workers.dev")
 else()
     message(STATUS "AestraLicense: libcurl not found; native account HTTP transport will report unavailable.")
 endif()
