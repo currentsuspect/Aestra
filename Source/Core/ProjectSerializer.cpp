@@ -169,13 +169,59 @@ namespace {
                ext == ".ogg" || ext == ".aiff" || ext == ".aif" || ext == ".m4a";
     }
 
-    std::filesystem::path resolveProjectAssetPath(const std::filesystem::path& projectPath,
-                                                  const std::string& storedPath) {
-        std::filesystem::path assetPath(storedPath);
-        if (assetPath.is_relative() && projectPath.has_parent_path()) {
-            assetPath = projectPath.parent_path() / assetPath;
+    std::filesystem::path projectAssetRoot(const std::filesystem::path& projectPath) {
+        std::filesystem::path root = projectPath.has_parent_path() ? projectPath.parent_path() : std::filesystem::path(".");
+        return root.lexically_normal();
+    }
+
+    std::filesystem::path stableAbsolutePath(const std::filesystem::path& path) {
+        std::error_code ec;
+        std::filesystem::path resolved = std::filesystem::weakly_canonical(path, ec);
+        if (!ec) {
+            return resolved.lexically_normal();
         }
-        return assetPath.lexically_normal();
+
+        ec.clear();
+        resolved = std::filesystem::absolute(path, ec);
+        if (ec) {
+            return {};
+        }
+        return resolved.lexically_normal();
+    }
+
+    bool pathIsUnderDirectory(const std::filesystem::path& root, const std::filesystem::path& candidate) {
+        const std::filesystem::path stableRoot = stableAbsolutePath(root);
+        const std::filesystem::path stableCandidate = stableAbsolutePath(candidate);
+        if (stableRoot.empty() || stableCandidate.empty()) {
+            return false;
+        }
+
+        const std::filesystem::path relative = stableCandidate.lexically_relative(stableRoot);
+        if (relative.empty() || relative.is_absolute()) {
+            return stableCandidate == stableRoot;
+        }
+        for (const auto& part : relative) {
+            if (part == "..") {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool resolveProjectAssetPath(const std::filesystem::path& projectPath,
+                                 const std::string& storedPath,
+                                 std::filesystem::path& resolvedPath) {
+        const std::filesystem::path root = projectAssetRoot(projectPath);
+        std::filesystem::path assetPath(storedPath);
+        if (assetPath.is_relative()) {
+            assetPath = root / assetPath;
+        }
+        resolvedPath = assetPath.lexically_normal();
+        if (!pathIsUnderDirectory(root, resolvedPath)) {
+            resolvedPath.clear();
+            return false;
+        }
+        return true;
     }
 
     bool isRegularDecodableAsset(const std::filesystem::path& path) {
@@ -1050,8 +1096,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         for (size_t i = 0; i < sj.size(); ++i) {
             if (!sj[i].has("path")) continue;
             std::string storedPath = sj[i]["path"].asString();
-            std::filesystem::path filePath = resolveProjectAssetPath(projectPath, storedPath);
-            if (!std::filesystem::exists(filePath) || !std::filesystem::is_regular_file(filePath)) {
+            std::filesystem::path filePath;
+            if (!resolveProjectAssetPath(projectPath, storedPath, filePath)) {
+                result.missingAssets.push_back(storedPath);
+                Log::warning("[ProjectLoad] Blocked audio asset outside project: " + storedPath);
+            } else if (!std::filesystem::exists(filePath) || !std::filesystem::is_regular_file(filePath)) {
                 result.missingAssets.push_back(storedPath);
                 Log::warning("[ProjectLoad] Missing or unreadable audio asset: " + storedPath);
             }
@@ -1169,14 +1218,18 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 if (oldId == 0 || storedPath.empty()) {
                     continue;
                 }
-                std::filesystem::path resolvedPath = resolveProjectAssetPath(projectPath, storedPath);
+                std::filesystem::path resolvedPath;
                 const std::string sourcePath = storedPath; // Use original storedPath for serialization
-                const std::string filePath = resolvedPath.string(); // Use resolvedPath only for file I/O
                 ClipSourceID newId = sourceManager.getOrCreateSource(sourcePath);
                 idMap[oldId] = newId;
-                const bool assetReadable =
+                const bool assetPathAllowed = resolveProjectAssetPath(projectPath, storedPath, resolvedPath);
+                const bool assetReadable = assetPathAllowed &&
                     std::filesystem::exists(resolvedPath) && std::filesystem::is_regular_file(resolvedPath);
-                if (!assetReadable) {
+                const std::string filePath = resolvedPath.string(); // Use resolvedPath only for file I/O
+                if (!assetPathAllowed) {
+                    result.missingAssets.push_back(storedPath);
+                    Log::warning("[ProjectLoad] Blocked audio asset outside project: " + storedPath);
+                } else if (!assetReadable) {
                     result.missingAssets.push_back(storedPath);
                     Log::warning("[ProjectLoad] Missing or unreadable audio asset: " + storedPath);
                 }
