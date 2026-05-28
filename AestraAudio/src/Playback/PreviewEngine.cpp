@@ -28,6 +28,17 @@ namespace Audio {
 // (which includes ~-3dB pan law, fader, and trim stages).
 // This prevents the preview from sounding hotter than track playback.
 static constexpr float kPreviewGainNormalizeDb = -1.0f;
+static constexpr double kPreviewDecodeDefaultSeconds = 30.0;
+static constexpr double kPreviewDecodeHardMaxSeconds = 60.0;
+
+namespace {
+double previewDecodeSecondsLimit(double maxSeconds) {
+    if (!std::isfinite(maxSeconds) || maxSeconds <= 0.0) {
+        maxSeconds = kPreviewDecodeDefaultSeconds;
+    }
+    return std::min(maxSeconds, kPreviewDecodeHardMaxSeconds);
+}
+} // namespace
 
 PreviewEngine::PreviewEngine()
     : m_activeVoice(nullptr), m_outputSampleRate(48000.0), m_globalGainDb(0.0f), m_decodeGeneration(0),
@@ -57,26 +68,23 @@ float PreviewEngine::dbToLinear(float db) const {
 }
 
 std::shared_ptr<AudioBuffer> PreviewEngine::loadBuffer(const std::string& path, uint32_t& sampleRate,
-                                                       uint32_t& channels) {
-    auto loader = [path, &sampleRate, &channels](AudioBuffer& out) -> bool {
-        std::vector<float> decoded;
-        uint32_t sr = 0;
-        uint32_t ch = 0;
+                                                       uint32_t& channels, double maxSeconds) {
+    std::vector<float> decoded;
+    uint32_t sr = 0;
+    uint32_t ch = 0;
+    if (!decodeAudioPreview(path, decoded, sr, ch, previewDecodeSecondsLimit(maxSeconds))) {
+        return nullptr;
+    }
 
-        if (decodeAudioFile(path, decoded, sr, ch)) {
-            out.data.swap(decoded);
-            out.sampleRate = sr;
-            out.channels = ch;
-            out.numFrames = out.channels ? out.data.size() / out.channels : 0;
-            out.sourcePath = path;
-            sampleRate = sr;
-            channels = ch;
-            return true;
-        }
-        return false;
-    };
-
-    return SamplePool::getInstance().acquire(path, loader);
+    auto buffer = std::make_shared<AudioBuffer>();
+    buffer->data.swap(decoded);
+    buffer->sampleRate = sr;
+    buffer->channels = ch;
+    buffer->numFrames = buffer->channels ? buffer->data.size() / buffer->channels : 0;
+    buffer->sourcePath = path;
+    sampleRate = sr;
+    channels = ch;
+    return buffer;
 }
 
 PreviewResult PreviewEngine::startVoiceWithBuffer(std::shared_ptr<AudioBuffer> buffer, const std::string& path,
@@ -111,14 +119,14 @@ PreviewResult PreviewEngine::startVoiceWithBuffer(std::shared_ptr<AudioBuffer> b
     return PreviewResult::Success;
 }
 
-void PreviewEngine::decodeAsync(const std::string& path, std::shared_ptr<PreviewVoice> voice) {
+void PreviewEngine::decodeAsync(const std::string& path, std::shared_ptr<PreviewVoice> voice, double maxSeconds) {
     // Increment generation - any in-flight decodes with older generation will be discarded
     uint64_t thisGeneration = m_decodeGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
 
     // Queue job for worker thread
     {
         std::lock_guard<std::mutex> lock(m_workerMutex);
-        m_pendingJob = DecodeJob{path, voice, thisGeneration};
+        m_pendingJob = DecodeJob{path, voice, thisGeneration, maxSeconds};
         // Always overwrite pending job - we only care about the latest UI interaction
     }
     m_workerCV.notify_one();
@@ -147,7 +155,7 @@ void PreviewEngine::workerLoop() {
 
         // 2. Decode
         uint32_t sr = 0, ch = 0;
-        auto buffer = loadBuffer(job.path, sr, ch);
+        auto buffer = loadBuffer(job.path, sr, ch, job.maxSeconds);
 
         // 3. Late Generation Check (Correctness)
         if (m_decodeGeneration.load(std::memory_order_acquire) != job.generation) {
@@ -190,14 +198,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
     // Clamp playback rate to [0.5, 2.0]
     m_playbackRate.store(std::clamp(playbackRate, 0.5f, 2.0f), std::memory_order_relaxed);
 
-    // Fast path: Check if buffer is already cached (no filesystem stat)
-    auto cachedBuffer = SamplePool::getInstance().tryGetCached(path);
-    if (cachedBuffer && cachedBuffer->numFrames > 0) {
-        // Cache hit! Instant playback
-        return startVoiceWithBuffer(cachedBuffer, path, gainDb, maxSeconds);
-    }
-
-    // Cache miss: Create voice immediately for pending playback
+    // Create voice immediately for pending playback
     auto voice = std::make_shared<PreviewVoice>();
     voice->path = path;
     voice->gain =
@@ -217,7 +218,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
     std::atomic_store_explicit(&m_activeVoice, voice, std::memory_order_release);
 
     // Start async decode (non-blocking)
-    decodeAsync(path, voice);
+    decodeAsync(path, voice, maxSeconds);
 
     Log::info("PreviewEngine: Async decode started for '" + path + "'");
     return PreviewResult::Pending;
