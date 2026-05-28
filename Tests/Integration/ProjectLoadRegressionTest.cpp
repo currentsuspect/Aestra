@@ -7,6 +7,7 @@
 #include "Models/PatternSource.h"
 #include "Models/TrackManager.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -337,6 +338,58 @@ void testMissingAudioFileNonDestructive() {
     assert(!result.missingAssets.empty());
 
     std::cout << "[PASS] Missing audio file is non-destructive" << std::endl;
+
+    std::filesystem::remove_all(testDir);
+}
+
+void testProjectAssetTraversalDoesNotDecodeOutsideFile() {
+    std::cout << "[TEST] Project asset traversal does not decode outside file..." << std::endl;
+
+    auto testDir = makeTempDir();
+    std::filesystem::path projectDir = testDir / "project";
+    std::filesystem::create_directories(projectDir);
+    std::filesystem::path outsideWav = testDir / "private.wav";
+    std::filesystem::path testProject = projectDir / "project.aes";
+
+    assert(writeMinimalWavMono16(outsideWav, 44100, 4410));
+
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [{"id": 1, "path": "../private.wav", "name": "Outside Audio"}],
+        "patterns": [
+            {"id": 1, "name": "Outside Pattern", "type": "audio", "length": 4.0, "sourceId": 1, "slices": []}
+        ],
+        "lanes": [
+            {
+                "name": "Track 1",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "clips": []
+            }
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+    assert(result.ok);
+    assert(std::find(result.missingAssets.begin(), result.missingAssets.end(), "../private.wav") !=
+           result.missingAssets.end());
+
+    const auto sourceIds = trackManager->getSourceManager().getAllSourceIDs();
+    assert(sourceIds.size() == 1);
+    const ClipSource* source = trackManager->getSourceManager().getSource(sourceIds.front());
+    assert(source != nullptr);
+    assert(!source->isReady());
+
+    std::cout << "[PASS] Project asset traversal does not decode outside file" << std::endl;
 
     std::filesystem::remove_all(testDir);
 }
@@ -696,6 +749,7 @@ int main() {
     testFailedValidationDoesNotClear();
     testUnitManagerSurvivesFailedLoad();
     testMissingAudioFileNonDestructive();
+    testProjectAssetTraversalDoesNotDecodeOutsideFile();
     testUnresolvedRouteTargetNonFatal();
     testV1FixtureMigratesToCurrentVersion();
     testAutomationTarget256DoesNotWrapToVolume();
