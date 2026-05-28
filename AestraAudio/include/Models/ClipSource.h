@@ -68,6 +68,8 @@ public:
 
     ClipSourceID getID() const { return m_id; }
 
+    uint64_t getContentRevision() const { return m_contentRevision; }
+
     bool isValid() const { return m_buffer && m_buffer->isValid(); }
 
     bool isReady() const { return isValid(); }
@@ -76,7 +78,11 @@ public:
     void setName(const std::string& name) { m_name = name; }
     void setFilePath(const std::string& path) { m_filePath = path; }
 
-    void setBuffer(std::shared_ptr<AudioBufferData> buffer) { m_buffer = std::move(buffer); }
+    void setBuffer(std::shared_ptr<AudioBufferData> buffer) {
+        m_buffer = std::move(buffer);
+        m_waveformCache.reset();
+        ++m_contentRevision;
+    }
 
     std::shared_ptr<WaveformCache> getWaveformCache() const { return m_waveformCache; }
     void setWaveformCache(std::shared_ptr<WaveformCache> cache) { m_waveformCache = std::move(cache); }
@@ -87,6 +93,7 @@ private:
     std::string m_filePath;
     std::shared_ptr<AudioBufferData> m_buffer;
     std::shared_ptr<WaveformCache> m_waveformCache;
+    uint64_t m_contentRevision{0};
 };
 
 } // namespace Audio
