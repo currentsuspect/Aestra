@@ -639,13 +639,10 @@ bool testLoginFlowFull() {
     return ok;
 }
 
-bool testDefaultWorkerUrl() {
+bool testAccountApiRequiresExplicitBaseUrl() {
     const AccountApiConfig config = accountApiConfigFromEnvironment();
     bool ok = true;
-    ok &= expect(!config.baseUrl.empty(), "accountApiConfigFromEnvironment returns non-empty default URL");
-    ok &= expect(config.baseUrl.find("workers.dev") != std::string::npos ||
-                     config.baseUrl.find("localhost") != std::string::npos,
-                 "default URL points to the dev Worker");
+    ok &= expect(config.baseUrl.empty(), "accountApiConfigFromEnvironment requires explicit base URL");
     return ok;
 }
 
@@ -682,7 +679,7 @@ int main() {
     ok &= testServiceFailureBoundaries();
 #ifndef _WIN32
     ok &= testLoginFlowFull();
-    ok &= testDefaultWorkerUrl();
+    ok &= testAccountApiRequiresExplicitBaseUrl();
     ok &= testRealWorkerLoginStartSendsMail();
 #endif
     fs::remove_all(fs::temp_directory_path() / "aestra_account_api_client_tests");

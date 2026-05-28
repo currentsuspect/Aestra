@@ -423,6 +423,14 @@ describe("D1 account refresh storage boundary", () => {
     expect(state.seenSessionTokenHashes[0]).not.toBe("session-a");
   });
 
+  it("rejects future-issued refresh requests", async () => {
+    const state = await stateFor("session-a");
+    const env = await makeD1Env(state);
+    const response = await refresh(env, "session-a", { issued_at: Math.floor(Date.now() / 1000) + 3600 });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "invalid_request" } });
+  });
+
   it("rejects missing, invalid, expired, and revoked sessions", async () => {
     const validState = await stateFor("session-a");
     const validEnv = await makeD1Env(validState);

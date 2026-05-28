@@ -13,10 +13,12 @@ permissions:
 jobs:
   build-sign-package:
     runs-on: windows-2022
+    environment: private-release
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          persist-credentials: false
       - name: Ensure premium/build present
         shell: pwsh
         run: |
@@ -51,8 +53,14 @@ jobs:
           }
       - name: Package artifacts
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ github.event.inputs.version }}
         run: |
-          $name = "AestraStudioPlus-${{ github.event.inputs.version }}.zip"
+          if ($env:RELEASE_VERSION -notmatch '^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$') {
+            Write-Error "Invalid release version: $env:RELEASE_VERSION"
+            exit 1
+          }
+          $name = "AestraStudioPlus-$env:RELEASE_VERSION.zip"
           Compress-Archive -Path build\**\*.exe,build\**\*.dll -DestinationPath $name
           echo "PACKAGE_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Upload Release
