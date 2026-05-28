@@ -2,9 +2,13 @@
 
 #include "Core/ArsenalProcessingContext.h"
 #include "Models/UnitManager.h"
+#include "Plugin/PluginManager.h"
 
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <vector>
 
 namespace {
 void require(bool cond, const char* msg) {
@@ -12,6 +16,93 @@ void require(bool cond, const char* msg) {
         std::cerr << "[FAIL] " << msg << "\n";
         std::exit(1);
     }
+}
+
+void writeString(std::ofstream& file, const std::string& value) {
+    const auto len = static_cast<uint32_t>(value.size());
+    file.write(reinterpret_cast<const char*>(&len), sizeof(len));
+    file.write(value.data(), len);
+}
+
+std::filesystem::path writeExternalPluginCache() {
+    using namespace Aestra::Audio;
+
+    const auto dir = std::filesystem::temp_directory_path() / "aestra-arsenal-policy-test";
+    std::filesystem::create_directories(dir);
+    const auto pluginPath = dir / "external-instrument.vst3";
+    {
+        std::ofstream plugin(pluginPath, std::ios::binary);
+        plugin << "synthetic";
+    }
+
+    const auto cachePath = dir / "plugin-cache.bin";
+    std::ofstream file(cachePath, std::ios::binary);
+    const char magic[4] = {'N', 'P', 'S', 'C'};
+    file.write(magic, sizeof(magic));
+    const uint32_t version = 2;
+    const uint32_t count = 1;
+    file.write(reinterpret_cast<const char*>(&version), sizeof(version));
+    file.write(reinterpret_cast<const char*>(&count), sizeof(count));
+
+    writeString(file, "com.vendor.external-instrument");
+    writeString(file, "External Instrument");
+    writeString(file, "Vendor");
+    writeString(file, "1.0.0");
+    writeString(file, "Instrument");
+    writeString(file, pluginPath.string());
+
+    const PluginFormat format = PluginFormat::VST3;
+    const PluginType type = PluginType::Instrument;
+    const uint32_t numAudioInputs = 0;
+    const uint32_t numAudioOutputs = 2;
+    const bool hasMidiInput = true;
+    const bool hasMidiOutput = false;
+    const bool hasEditor = false;
+    file.write(reinterpret_cast<const char*>(&format), sizeof(format));
+    file.write(reinterpret_cast<const char*>(&type), sizeof(type));
+    file.write(reinterpret_cast<const char*>(&numAudioInputs), sizeof(numAudioInputs));
+    file.write(reinterpret_cast<const char*>(&numAudioOutputs), sizeof(numAudioOutputs));
+    file.write(reinterpret_cast<const char*>(&hasMidiInput), sizeof(hasMidiInput));
+    file.write(reinterpret_cast<const char*>(&hasMidiOutput), sizeof(hasMidiOutput));
+    file.write(reinterpret_cast<const char*>(&hasEditor), sizeof(hasEditor));
+
+    std::error_code ec;
+    const auto mtime = std::filesystem::last_write_time(pluginPath, ec);
+    const uint64_t mtimeBits = ec ? 0 : static_cast<uint64_t>(mtime.time_since_epoch().count());
+    file.write(reinterpret_cast<const char*>(&mtimeBits), sizeof(mtimeBits));
+    file.close();
+    return cachePath;
+}
+
+void verifyExternalPluginJsonPreservesMetadataWithoutInstance() {
+    using namespace Aestra::Audio;
+
+    const auto cachePath = writeExternalPluginCache();
+    require(PluginManager::getInstance().getScanner().loadScanCache(cachePath),
+            "Failed to load synthetic external plugin cache");
+
+    UnitManager manager;
+    Aestra::JSON root = Aestra::JSON::object();
+    root.set("nextId", Aestra::JSON(2.0));
+    Aestra::JSON units = Aestra::JSON::array();
+    Aestra::JSON unit = Aestra::JSON::object();
+    unit.set("id", Aestra::JSON(1.0));
+    unit.set("name", Aestra::JSON("External"));
+    unit.set("enabled", Aestra::JSON(true));
+    unit.set("targetMixerRoute", Aestra::JSON(-1.0));
+    unit.set("pluginId", Aestra::JSON("com.vendor.external-instrument"));
+    unit.set("pluginStateHex", Aestra::JSON("0102FE"));
+    units.push(unit);
+    root.set("units", units);
+
+    manager.loadFromJSON(root);
+
+    const UnitInfo* loaded = manager.getUnit(1);
+    require(loaded != nullptr, "External plugin unit failed to load");
+    require(loaded->pluginId == "com.vendor.external-instrument", "External plugin ID should be preserved");
+    require(loaded->pluginState == std::vector<uint8_t>({0x01, 0x02, 0xFE}),
+            "External plugin state should be preserved");
+    require(!loaded->plugin, "External plugin must not auto-instantiate from project JSON");
 }
 } // namespace
 
@@ -94,6 +185,8 @@ int main() {
     clapPlugin.format = PluginFormat::CLAP;
     require(!shouldRestoreArsenalPluginFromProject(clapPlugin),
             "Project load must not auto-instantiate CLAP Arsenal plugins from untrusted JSON");
+
+    verifyExternalPluginJsonPreservesMetadataWithoutInstance();
 
     std::cout << "[PASS] ArsenalRouteModePolicyTest\n";
     return 0;
