@@ -183,6 +183,33 @@ namespace {
         return hasDecodableAudioExtension(path) && std::filesystem::is_regular_file(path, ec) && !ec;
     }
 
+    std::filesystem::path makePrivateRollbackPath() {
+        namespace fs = std::filesystem;
+
+        std::error_code ec;
+        fs::path base = fs::temp_directory_path(ec);
+        if (ec || base.empty()) {
+            return {};
+        }
+        base /= "Aestra";
+        base /= "project-load-rollback";
+
+        fs::create_directories(base, ec);
+        if (ec) {
+            return {};
+        }
+#ifndef _WIN32
+        fs::permissions(base, fs::perms::owner_all, fs::perm_options::replace, ec);
+        if (ec) {
+            return {};
+        }
+#endif
+
+        const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+        const auto seq = g_projectHistoryCounter.fetch_add(1, std::memory_order_relaxed);
+        return base / ("rollback-" + std::to_string(stamp) + "-" + std::to_string(seq) + ".aes.rollback");
+    }
+
     bool validArraySection(const JSON& root, const char* key, size_t maxCount, std::string& error, bool required = false) {
         if (!root.has(key)) {
             if (required) {
@@ -1122,7 +1149,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
     auto batch = playlist.scopedBatchUpdate();
 
-    // Save snapshot of current state to a rollback file BEFORE clearing.
+    // Save snapshot of current state to a private rollback file BEFORE clearing.
     // If the new load fails, we restore from this file to avoid leaving
     // the project in an empty/corrupted state.
     // Skip rollback creation when loading a rollback file itself (prevents recursion).
@@ -1137,8 +1164,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         }
         if (preloadSnapshot.ok && !preloadSnapshot.contents.empty()) {
             namespace fs = std::filesystem;
-            fs::path tmpPath = fs::path(path).string() + ".rollback";
-            if (writeAtomicallyImpl(tmpPath.string(), preloadSnapshot.contents)) {
+            fs::path tmpPath = makePrivateRollbackPath();
+            if (!tmpPath.empty() && writeAtomicallyImpl(tmpPath.string(), preloadSnapshot.contents)) {
                 rollbackPath = tmpPath.string();
             } else {
                 Log::warning("[ProjectLoad] Could not write rollback file — recovery unavailable");
