@@ -646,6 +646,15 @@ void testMixerLaneStateNumbersClampBeforeCast() {
                 "width": 1e100,
                 "trackColorIndex": 1e100,
                 "clips": []
+            },
+            {
+                "name": "Track 2",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "inputChannelIndex": -1e100,
+                "trackColorIndex": -1e100,
+                "clips": []
             }
         ],
         "arsenal": {"nextId": 1, "units": []}
@@ -658,13 +667,18 @@ void testMixerLaneStateNumbersClampBeforeCast() {
     auto trackManager = std::make_shared<TrackManager>();
     auto result = ProjectSerializer::load(testProject.string(), trackManager);
     assert(result.ok);
-    assert(trackManager->getChannelCount() == 1);
+    assert(trackManager->getChannelCount() == 2);
 
     auto* channel = trackManager->getChannel(0);
     assert(channel != nullptr);
     assert(channel->getInputChannelIndex() == 1024);
     assert(channel->getTrackColorIndex() == 1024);
     assert(std::abs(channel->getWidth() - 4.0f) < 1e-6f);
+
+    auto* negativeChannel = trackManager->getChannel(1);
+    assert(negativeChannel != nullptr);
+    assert(negativeChannel->getInputChannelIndex() == -2);
+    assert(negativeChannel->getTrackColorIndex() == -1);
 
     std::cout << "[PASS] Mixer lane state numbers clamp before cast" << std::endl;
 
