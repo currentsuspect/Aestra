@@ -19,6 +19,11 @@
 
 namespace Aestra {
 namespace Audio {
+
+bool shouldRestoreArsenalPluginFromProject(const PluginInfo& plugin) noexcept {
+    return plugin.format == PluginFormat::Internal;
+}
+
 namespace {
 UnitGroup unitGroupForType(UnitType type) {
     switch (type) {
@@ -701,7 +706,13 @@ void UnitManager::loadFromJSON(const JSON& json) {
         }
 
         if (!unit.pluginId.empty()) {
-            unit.plugin = pluginManager.createInstanceById(unit.pluginId);
+            const PluginInfo* pluginInfo = pluginManager.findPlugin(unit.pluginId);
+            if (pluginInfo && shouldRestoreArsenalPluginFromProject(*pluginInfo)) {
+                unit.plugin = pluginManager.createInstance(*pluginInfo);
+            } else if (pluginInfo) {
+                Aestra::Log::warning("[UnitManager] Skipping external Arsenal plugin restore from project for unit " +
+                                     std::to_string(unit.id) + ": " + unit.pluginId);
+            }
             if (unit.plugin) {
                 double sr = m_sampleRate.load(std::memory_order_relaxed);
                 uint32_t blockSize = m_blockSize.load(std::memory_order_relaxed);

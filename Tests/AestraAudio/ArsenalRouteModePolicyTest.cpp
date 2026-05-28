@@ -76,6 +76,25 @@ int main() {
             "Saved policy units array invalid");
     require(saved["units"][0].has("routeMode"), "Serialized unit should include routeMode compatibility field");
 
+    PluginInfo internalPlugin{};
+    internalPlugin.id = "com.Aestrastudios.sampler";
+    internalPlugin.name = "Aestra Sampler";
+    internalPlugin.format = PluginFormat::Internal;
+    require(shouldRestoreArsenalPluginFromProject(internalPlugin),
+            "Project load may restore first-party/internal Arsenal plugins");
+
+    PluginInfo vstPlugin = internalPlugin;
+    vstPlugin.id = "com.vendor.instrument";
+    vstPlugin.format = PluginFormat::VST3;
+    require(!shouldRestoreArsenalPluginFromProject(vstPlugin),
+            "Project load must not auto-instantiate VST3 Arsenal plugins from untrusted JSON");
+
+    PluginInfo clapPlugin = internalPlugin;
+    clapPlugin.id = "com.vendor.clap-instrument";
+    clapPlugin.format = PluginFormat::CLAP;
+    require(!shouldRestoreArsenalPluginFromProject(clapPlugin),
+            "Project load must not auto-instantiate CLAP Arsenal plugins from untrusted JSON");
+
     std::cout << "[PASS] ArsenalRouteModePolicyTest\n";
     return 0;
 }
