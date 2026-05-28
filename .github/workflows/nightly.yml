@@ -16,7 +16,8 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-      issues: write
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
     env:
       ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
@@ -26,6 +27,11 @@ jobs:
         with:
           submodules: false
           ref: develop
+          persist-credentials: false
+
+      - name: Capture develop SHA
+        id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
         run: |
@@ -46,10 +52,6 @@ jobs:
             -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
             -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
 
-      - name: Capture develop SHA
-        id: sha
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
       - name: Build
         run: cmake --build build-nightly --parallel
 
@@ -64,13 +66,21 @@ jobs:
           path: build-nightly/
           retention-days: 7
 
+  open-issue-on-failure:
+    name: Open Nightly Failure Issue
+    runs-on: ubuntu-latest
+    needs: nightly-headless
+    if: ${{ always() && needs.nightly-headless.result == 'failure' }}
+    permissions:
+      issues: write
+
+    steps:
       - name: Open issue on failure
-        if: failure()
         uses: actions/github-script@v7
         with:
           script: |
             const date = new Date().toISOString().split('T')[0];
-            const sha = '${{ steps.sha.outputs.sha }}';
+            const sha = '${{ needs.nightly-headless.outputs.sha || 'develop checkout unavailable' }}';
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
