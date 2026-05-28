@@ -464,7 +464,8 @@ void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
     uint32_t previewRate = 0;
     uint32_t previewChannels = 0;
     constexpr uint64_t kPreviewMaxFrames = 48000 * 24;
-    if (decodeAudioPreview(path, previewAudio, previewRate, previewChannels, kPreviewMaxFrames)) {
+    constexpr double kPreviewMaxSeconds = static_cast<double>(kPreviewMaxFrames) / 48000.0;
+    if (decodeAudioPreview(path, previewAudio, previewRate, previewChannels, kPreviewMaxSeconds)) {
         u->audioPreviewWaveform = generatePreviewWaveform(previewAudio, previewChannels);
         if (u->audioDurationSeconds <= 0.0 && previewRate > 0 && previewChannels > 0) {
             u->audioDurationSeconds = static_cast<double>(previewAudio.size()) / static_cast<double>(previewRate * previewChannels);

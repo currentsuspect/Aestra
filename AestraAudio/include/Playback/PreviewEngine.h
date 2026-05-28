@@ -84,12 +84,13 @@ private:
         std::atomic<bool> bufferReady{false}; // True when buffer is decoded and ready
     };
 
-    std::shared_ptr<AudioBuffer> loadBuffer(const std::string& path, uint32_t& sampleRate, uint32_t& channels);
+    std::shared_ptr<AudioBuffer> loadBuffer(const std::string& path, uint32_t& sampleRate, uint32_t& channels,
+                                            double maxSeconds);
     void downmixToStereo(std::vector<float>& data, uint32_t inChannels);
     float dbToLinear(float db) const;
 
     // Async decode support
-    void decodeAsync(const std::string& path, std::shared_ptr<PreviewVoice> voice);
+    void decodeAsync(const std::string& path, std::shared_ptr<PreviewVoice> voice, double maxSeconds);
     PreviewResult startVoiceWithBuffer(std::shared_ptr<AudioBuffer> buffer, const std::string& path, float gainDb,
                                        double maxSeconds);
 
@@ -111,6 +112,7 @@ private:
         std::string path;
         std::shared_ptr<PreviewVoice> voice;
         uint64_t generation;
+        double maxSeconds;
     };
 
     std::thread m_workerThread;
