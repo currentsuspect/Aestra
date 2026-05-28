@@ -712,6 +712,9 @@ void UnitManager::loadFromJSON(const JSON& json) {
             } else if (pluginInfo) {
                 Aestra::Log::warning("[UnitManager] Skipping external Arsenal plugin restore from project for unit " +
                                      std::to_string(unit.id) + ": " + unit.pluginId);
+            } else {
+                Aestra::Log::warning("[UnitManager] Missing Arsenal plugin during project restore for unit " +
+                                     std::to_string(unit.id) + ": " + unit.pluginId);
             }
             if (unit.plugin) {
                 double sr = m_sampleRate.load(std::memory_order_relaxed);

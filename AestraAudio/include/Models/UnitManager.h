@@ -41,6 +41,9 @@ constexpr ArsenalRouteMode arsenalRouteModeFromRouteId(int routeId) noexcept {
     return routeId < 0 ? ArsenalRouteMode::PreviewToMaster : ArsenalRouteMode::RoutedToTimelineTrack;
 }
 
+/**
+ * @brief Return true when a project-loaded Arsenal plugin may be instantiated automatically.
+ */
 bool shouldRestoreArsenalPluginFromProject(const PluginInfo& plugin) noexcept;
 
 enum class UnitGroup : uint32_t {
