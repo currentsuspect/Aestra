@@ -676,6 +676,11 @@ add_executable(AestraWavLoaderTest AestraAudio/WavLoaderTest.cpp)
 target_link_libraries(AestraWavLoaderTest PRIVATE AestraAudio)
 add_test(NAME AestraWavLoaderTest COMMAND AestraWavLoaderTest)
 
+# Audition Engine lifecycle regression
+add_executable(AestraAuditionEngineLifecycleTest AestraAudio/AuditionEngineLifecycleTest.cpp)
+target_link_libraries(AestraAuditionEngineLifecycleTest PRIVATE AestraAudio)
+add_test(NAME AestraAuditionEngineLifecycleTest COMMAND AestraAuditionEngineLifecycleTest)
+
 # SamplePool Test
 add_executable(SamplePoolTest AestraAudio/SamplePoolTest.cpp)
 target_link_libraries(SamplePoolTest PRIVATE AestraAudio)
