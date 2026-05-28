@@ -7,8 +7,8 @@ import {
   revokeSessionToken,
 } from "./accountStore";
 import { EntitlementRepositoryError, getEntitlementForAccount } from "./entitlementRepository";
-import { LoginChallengeError, createLoginChallenge, verifyLoginChallenge } from "./loginChallengeStore";
-import { MailerError, sendLoginChallenge } from "./mailer";
+import { LoginChallengeError, createLoginChallenge, deleteLoginChallenge, verifyLoginChallenge } from "./loginChallengeStore";
+import { MailerError, assertLoginMailerConfigured, sendLoginChallenge } from "./mailer";
 import { buildSignedEntitlementRefreshResponse, parseAccountRefreshRequest } from "./refreshResponse";
 import { SignRequestError } from "./schema";
 import { issueAccountSession } from "./sessionIssuer";
@@ -66,13 +66,28 @@ function readEmail(input: unknown): string {
   return email;
 }
 
+function loginStartSourceKey(request: Request): string | undefined {
+  return request.headers.get("cf-connecting-ip") ??
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    undefined;
+}
+
 export async function handleLoginStart(request: Request, env: Env, jsonResponse: JsonResponder,
                                        errorResponse: ErrorResponder): Promise<Response> {
   try {
     const nowSeconds = Math.floor(Date.now() / 1000);
     const email = readEmail(await parseJson(request));
-    const challenge = await createLoginChallenge(env, email, nowSeconds);
-    const delivery = await sendLoginChallenge(env, email, challenge);
+    assertLoginMailerConfigured(env);
+    const challenge = await createLoginChallenge(env, email, nowSeconds, {
+      sourceKey: loginStartSourceKey(request),
+    });
+    let delivery;
+    try {
+      delivery = await sendLoginChallenge(env, email, challenge);
+    } catch (error) {
+      await deleteLoginChallenge(env, challenge.id).catch(() => undefined);
+      throw error;
+    }
     return jsonResponse({
       ok: true,
       challenge_id: challenge.id,
