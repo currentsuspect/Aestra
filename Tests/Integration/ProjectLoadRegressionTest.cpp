@@ -519,6 +519,7 @@ void testV1FixtureMigratesToCurrentVersion() {
     assert(roundTripLane->clips[0].name == "Migrated Clip");
     assert(std::abs(roundTripLane->clips[0].startBeat - 4.0) < 1e-9);
     assert(std::abs(roundTripLane->clips[0].durationBeats - 8.0) < 1e-9);
+    assert(std::abs(roundTripLane->clips[0].sourceOffset - 0.5) < 1e-9);
 
     auto roundTripPatterns = roundTripManager->getPatternManager().getAllPatterns();
     assert(roundTripPatterns.size() == 1);
@@ -526,6 +527,10 @@ void testV1FixtureMigratesToCurrentVersion() {
     assert(roundTripPatterns[0]->isMidi());
     assert(roundTripPatterns[0]->name == "V1 MIDI Pattern");
     assert(roundTripPatterns[0]->getMidiNotes().size() == 2);
+    assert(roundTripPatterns[0]->getMidiNotes()[0].pitch == 60);
+    assert(std::abs(roundTripPatterns[0]->getMidiNotes()[0].velocity - 0.75f) < 1e-6f);
+    assert(roundTripPatterns[0]->getMidiNotes()[1].pitch == 64);
+    assert(std::abs(roundTripPatterns[0]->getMidiNotes()[1].velocity - 0.5f) < 1e-6f);
 
     std::filesystem::remove_all(testDir);
 
