@@ -848,6 +848,17 @@ target_include_directories(ArsenalRouteModePolicyTest PRIVATE
 add_test(NAME ArsenalRouteModePolicyTest COMMAND ArsenalRouteModePolicyTest)
 set_tests_properties(ArsenalRouteModePolicyTest PROPERTIES LABELS "audio;arsenal;policy")
 
+if(NOT WIN32)
+    add_executable(PluginScannerSigpipeTest AestraAudio/PluginScannerSigpipeTest.cpp)
+    target_link_libraries(PluginScannerSigpipeTest PRIVATE AestraAudioCore)
+    target_include_directories(PluginScannerSigpipeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PluginScannerSigpipeTest COMMAND PluginScannerSigpipeTest)
+    set_tests_properties(PluginScannerSigpipeTest PROPERTIES LABELS "audio;plugin;security")
+endif()
+
 # Arsenal bridge-mode terminology contract test (Phase 2B policy-only)
 add_executable(ArsenalBridgeContractTest AestraAudio/ArsenalBridgeContractTest.cpp)
 target_link_libraries(ArsenalBridgeContractTest PRIVATE)
