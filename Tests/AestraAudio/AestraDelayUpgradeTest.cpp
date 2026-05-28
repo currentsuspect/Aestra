@@ -5,7 +5,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <iostream>
+#include <limits>
 #include <vector>
 
 using Aestra::Audio::Plugins::AestraDelay;
@@ -39,6 +42,10 @@ size_t peakIndexInRange(const std::vector<float>& buffer, size_t begin, size_t e
         }
     }
     return best;
+}
+
+void writeFloat(std::vector<uint8_t>& bytes, size_t offset, float value) {
+    std::memcpy(bytes.data() + offset, &value, sizeof(float));
 }
 
 bool testSyncedEighthAt120Bpm() {
@@ -257,6 +264,44 @@ bool testDryPathIsNotSaturatedAtZeroMix() {
     return true;
 }
 
+bool testNanStateDoesNotEnterParametersOrProcessing() {
+    AestraDelay delay;
+    delay.initialize(48000.0, 512);
+    delay.setParameter(AestraDelay::kTime, 0.25f);
+    delay.setParameter(AestraDelay::kMix, 1.0f);
+
+    std::vector<uint8_t> state = delay.saveState();
+    constexpr size_t kParamOffset = sizeof(uint32_t) * 2;
+    writeFloat(state, kParamOffset + sizeof(float) * AestraDelay::kTime, std::numeric_limits<float>::quiet_NaN());
+    writeFloat(state, kParamOffset + sizeof(float) * AestraDelay::kFeedback, 0.0f);
+
+    AestraDelay restored;
+    restored.initialize(48000.0, 512);
+    if (!restored.loadState(state)) {
+        std::cerr << "AestraDelay rejected otherwise valid state containing a NaN parameter.\n";
+        return false;
+    }
+    if (restored.getParameter(AestraDelay::kTime) != 0.25f) {
+        std::cerr << "AestraDelay accepted NaN time parameter from state.\n";
+        return false;
+    }
+
+    restored.activate();
+    std::vector<float> inL(1024, 0.0f);
+    std::vector<float> inR(1024, 0.0f);
+    inL[0] = 1.0f;
+    inR[0] = 1.0f;
+
+    auto out = processStereo(restored, inL, inR);
+    for (size_t i = 0; i < out.left.size(); ++i) {
+        if (!std::isfinite(out.left[i]) || !std::isfinite(out.right[i])) {
+            std::cerr << "NaN state produced non-finite output at sample " << i << ".\n";
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 int main() {
@@ -268,6 +313,7 @@ int main() {
     if (!testHotWetRepeatIsClean()) return 1;
     if (!testModulationMaxStaysFinite()) return 1;
     if (!testDryPathIsNotSaturatedAtZeroMix()) return 1;
+    if (!testNanStateDoesNotEnterParametersOrProcessing()) return 1;
     std::cout << "All AestraDelay upgrade tests passed.\n";
     return 0;
 }
