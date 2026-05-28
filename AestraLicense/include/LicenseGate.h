@@ -1,6 +1,5 @@
 #pragma once
 
-#include "AestraLicensePublicKey.h"
 #include "EntitlementProfile.h"
 #include "LicenseRefreshClient.h"
 #include "LicenseTier.h"

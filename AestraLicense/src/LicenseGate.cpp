@@ -1,5 +1,6 @@
 #include "LicenseGate.h"
 
+#include "AestraLicensePublicKey.h"
 #include "AestraJSON.h"
 #include "HttpTransport.h"
 #include "LocalAccountCache.h"

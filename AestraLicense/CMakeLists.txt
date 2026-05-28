@@ -30,12 +30,12 @@ target_link_libraries(AestraLicense
 )
 
 set(AESTRA_LICENSE_DEV_PUBLIC_KEY_HEX "bf30bfb9e66ff349bb96922b26e92fb860272adc2413f15b4052bc8b56800f58")
-set(AESTRA_LICENSE_PUBLIC_KEY_HEX "" CACHE STRING "Ed25519 license verification public key as 64 lowercase/uppercase hex characters")
-set(AESTRA_LICENSE_EFFECTIVE_PUBLIC_KEY_HEX "${AESTRA_LICENSE_PUBLIC_KEY_HEX}")
+set(AESTRA_LICENSE_ENV_PUBLIC_KEY_HEX "$ENV{AESTRA_LICENSE_PUBLIC_KEY_HEX}")
+set(AESTRA_LICENSE_EFFECTIVE_PUBLIC_KEY_HEX "${AESTRA_LICENSE_ENV_PUBLIC_KEY_HEX}")
 
 if(AESTRA_LICENSE_ENABLE_PREMIUM_LEASES)
     if("${AESTRA_LICENSE_EFFECTIVE_PUBLIC_KEY_HEX}" STREQUAL "")
-        message(FATAL_ERROR "AESTRA_LICENSE_ENABLE_PREMIUM_LEASES requires -DAESTRA_LICENSE_PUBLIC_KEY_HEX=<64 hex chars>.")
+        message(FATAL_ERROR "AESTRA_LICENSE_ENABLE_PREMIUM_LEASES requires environment variable AESTRA_LICENSE_PUBLIC_KEY_HEX=<64 hex chars>.")
     endif()
 else()
     if("${AESTRA_LICENSE_EFFECTIVE_PUBLIC_KEY_HEX}" STREQUAL "")
@@ -63,16 +63,18 @@ foreach(index RANGE 0 31)
     endif()
     string(APPEND AESTRA_LICENSE_PUBLIC_KEY_BYTES "0x${byte_hex}")
 endforeach()
-set(AESTRA_LICENSE_PUBLIC_KEY_LABEL "configured")
 if(AESTRA_LICENSE_PUBLIC_KEY_HEX_LOWER STREQUAL AESTRA_LICENSE_DEV_PUBLIC_KEY_HEX)
     set(AESTRA_LICENSE_PUBLIC_KEY_LABEL "AESTRA_DEV_TEST_PUBKEY_V3")
+else()
+    string(SUBSTRING "${AESTRA_LICENSE_PUBLIC_KEY_HEX_LOWER}" 0 8 _key_prefix)
+    set(AESTRA_LICENSE_PUBLIC_KEY_LABEL "prod-${_key_prefix}")
 endif()
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/AestraLicensePublicKey.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/generated/AestraLicensePublicKey.h
     @ONLY
 )
-target_include_directories(AestraLicense PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/generated)
+target_include_directories(AestraLicense PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 if(AESTRA_LICENSE_ENABLE_PREMIUM_LEASES)
     target_compile_definitions(AestraLicense PRIVATE AESTRA_LICENSE_ENABLE_PREMIUM_LEASES=1)
