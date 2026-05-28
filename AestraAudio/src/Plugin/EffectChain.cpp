@@ -22,7 +22,7 @@ bool processPluginNoexcept(IPluginInstance& plugin, const float* const* inputs, 
     }
 }
 
-void sanitizeFloatBuffers(float** buffer, uint32_t numChannels, uint32_t numFrames) noexcept {
+bool buffersAreFinite(float** buffer, uint32_t numChannels, uint32_t numFrames) noexcept {
     for (uint32_t ch = 0; ch < numChannels; ++ch) {
         float* channel = buffer[ch];
         if (!channel) {
@@ -30,12 +30,68 @@ void sanitizeFloatBuffers(float** buffer, uint32_t numChannels, uint32_t numFram
         }
         for (uint32_t i = 0; i < numFrames; ++i) {
             if (!std::isfinite(channel[i])) {
-                channel[i] = 0.0f;
+                return false;
             }
         }
     }
+    return true;
 }
+
+void clearFloatBuffers(float** buffer, uint32_t numChannels, uint32_t numFrames) noexcept {
+    for (uint32_t ch = 0; ch < numChannels; ++ch) {
+        if (buffer[ch]) {
+            std::fill(buffer[ch], buffer[ch] + numFrames, 0.0f);
+        }
+    }
 }
+
+bool isFaultBypassed(const std::shared_ptr<EffectSlotFaultState>& faultState) noexcept {
+    return faultState && faultState->bypassedByNonFiniteOutput.load(std::memory_order_acquire);
+}
+
+void clearFaultState(const std::shared_ptr<EffectSlotFaultState>& faultState) noexcept {
+    if (!faultState) {
+        return;
+    }
+    faultState->bypassedByNonFiniteOutput.store(false, std::memory_order_release);
+    faultState->nonFiniteOutputCount.store(0, std::memory_order_release);
+}
+
+void markNonFiniteOutputFault(const std::shared_ptr<EffectSlotFaultState>& faultState) noexcept {
+    if (!faultState) {
+        return;
+    }
+    faultState->nonFiniteOutputCount.fetch_add(1, std::memory_order_acq_rel);
+    faultState->bypassedByNonFiniteOutput.store(true, std::memory_order_release);
+}
+
+void copyFaultState(const std::shared_ptr<EffectSlotFaultState>& dst,
+                    const std::shared_ptr<EffectSlotFaultState>& src) noexcept {
+    if (!dst) {
+        return;
+    }
+    if (!src) {
+        clearFaultState(dst);
+        return;
+    }
+    dst->bypassedByNonFiniteOutput.store(src->bypassedByNonFiniteOutput.load(std::memory_order_acquire),
+                                         std::memory_order_release);
+    dst->nonFiniteOutputCount.store(src->nonFiniteOutputCount.load(std::memory_order_acquire),
+                                    std::memory_order_release);
+}
+
+void restoreDryChannels(float** buffer, const float* dryBuffer, uint32_t numChannels, uint32_t blendChannels,
+                        uint32_t numFrames) noexcept {
+    for (uint32_t ch = 0; ch < blendChannels; ++ch) {
+        std::memcpy(buffer[ch], dryBuffer + ch * numFrames, numFrames * sizeof(float));
+    }
+    for (uint32_t ch = blendChannels; ch < numChannels; ++ch) {
+        if (buffer[ch]) {
+            std::fill(buffer[ch], buffer[ch] + numFrames, 0.0f);
+        }
+    }
+}
+} // namespace
 
 EffectChain::EffectChain() = default;
 EffectChain::~EffectChain() = default;
@@ -74,6 +130,7 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
     m_slots[slotIndex].plugin = std::move(plugin);
     m_slots[slotIndex].bypassed.store(false);
     m_slots[slotIndex].dryWetMix.store(1.0f);
+    clearFaultState(m_slots[slotIndex].faultState);
 
     publishSnapshot();
     if (m_onLatencyChanged) {
@@ -92,6 +149,7 @@ PluginInstancePtr EffectChain::removePlugin(size_t slotIndex) {
 
     auto plugin = std::move(m_slots[slotIndex].plugin);
     m_slots[slotIndex].plugin = nullptr;
+    clearFaultState(m_slots[slotIndex].faultState);
 
     publishSnapshot();
     if (m_onLatencyChanged) {
@@ -120,10 +178,12 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
     m_slots[toSlot].plugin = std::move(m_slots[fromSlot].plugin);
     m_slots[toSlot].bypassed.store(m_slots[fromSlot].bypassed.load());
     m_slots[toSlot].dryWetMix.store(m_slots[fromSlot].dryWetMix.load());
+    copyFaultState(m_slots[toSlot].faultState, m_slots[fromSlot].faultState);
 
     m_slots[fromSlot].plugin = nullptr;
     m_slots[fromSlot].bypassed.store(false);
     m_slots[fromSlot].dryWetMix.store(1.0f);
+    clearFaultState(m_slots[fromSlot].faultState);
 
     publishSnapshot();
     return true;
@@ -142,6 +202,7 @@ bool EffectChain::swapPlugins(size_t slot1, size_t slot2) {
     }
 
     std::swap(m_slots[slot1].plugin, m_slots[slot2].plugin);
+    std::swap(m_slots[slot1].faultState, m_slots[slot2].faultState);
 
     bool bypass1 = m_slots[slot1].bypassed.load();
     float mix1 = m_slots[slot1].dryWetMix.load();
@@ -204,6 +265,7 @@ void EffectChain::clear() {
         slot.plugin = nullptr;
         slot.bypassed.store(false);
         slot.dryWetMix.store(1.0f);
+        clearFaultState(slot.faultState);
     }
     publishSnapshot();
 }
@@ -214,6 +276,9 @@ void EffectChain::clear() {
 
 void EffectChain::setSlotBypassed(size_t slotIndex, bool bypassed) {
     if (slotIndex < MAX_SLOTS) {
+        if (!bypassed) {
+            clearFaultState(m_slots[slotIndex].faultState);
+        }
         m_slots[slotIndex].bypassed.store(bypassed, std::memory_order_release);
         if (!reportRealtimeMisuse("EffectChain::setSlotBypassed")) {
             publishSnapshot();
@@ -228,7 +293,22 @@ bool EffectChain::isSlotBypassed(size_t slotIndex) const {
     if (slotIndex >= MAX_SLOTS) {
         return true;
     }
-    return m_slots[slotIndex].bypassed.load(std::memory_order_acquire);
+    return m_slots[slotIndex].bypassed.load(std::memory_order_acquire) ||
+           isFaultBypassed(m_slots[slotIndex].faultState);
+}
+
+bool EffectChain::isSlotBypassedByNonFiniteOutput(size_t slotIndex) const {
+    if (slotIndex >= MAX_SLOTS) {
+        return false;
+    }
+    return isFaultBypassed(m_slots[slotIndex].faultState);
+}
+
+uint64_t EffectChain::getSlotNonFiniteOutputCount(size_t slotIndex) const {
+    if (slotIndex >= MAX_SLOTS || !m_slots[slotIndex].faultState) {
+        return 0;
+    }
+    return m_slots[slotIndex].faultState->nonFiniteOutputCount.load(std::memory_order_acquire);
 }
 
 // ==============================
@@ -281,8 +361,8 @@ void EffectChain::prepare(double sampleRate, uint32_t maxBlockSize) {
     publishSnapshot();
 }
 
-void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFrames,
-                          const float* const* sidechainInputs, uint32_t numSidechainChannels) {
+void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFrames, const float* const* sidechainInputs,
+                          uint32_t numSidechainChannels) {
     // Skip if entire chain is bypassed
     if (m_chainBypassed.load(std::memory_order_acquire)) {
         return;
@@ -291,7 +371,7 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
     // Process each slot in sequence
     for (const auto& slot : m_slots) {
         // Skip empty or bypassed slots
-        if (slot.isEmpty() || slot.bypassed.load(std::memory_order_acquire)) {
+        if (slot.isEmpty() || slot.bypassed.load(std::memory_order_acquire) || isFaultBypassed(slot.faultState)) {
             continue;
         }
 
@@ -333,11 +413,11 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
             const bool processed =
                 processPluginNoexcept(*plugin, processInputs, buffer, processInputChannels, numChannels, numFrames);
             if (!processed) {
-                for (uint32_t ch = 0; ch < numChannels; ++ch) {
-                    std::fill(buffer[ch], buffer[ch] + numFrames, 0.0f);
-                }
+                clearFloatBuffers(buffer, numChannels, numFrames);
+            } else if (!buffersAreFinite(buffer, numChannels, numFrames)) {
+                markNonFiniteOutputFault(slot.faultState);
+                clearFloatBuffers(buffer, numChannels, numFrames);
             }
-            sanitizeFloatBuffers(buffer, numChannels, numFrames);
         }
         // If not fully wet, need to blend
         else if (dryWet > 0.001f) {
@@ -346,13 +426,13 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
             if (m_dryBuffer.size() < requiredDry) {
                 // Not prepared (or prepared for a smaller block). Stay RT-safe: no allocation.
                 const bool processed =
-                processPluginNoexcept(*plugin, processInputs, buffer, processInputChannels, numChannels, numFrames);
+                    processPluginNoexcept(*plugin, processInputs, buffer, processInputChannels, numChannels, numFrames);
                 if (!processed) {
-                    for (uint32_t ch = 0; ch < numChannels; ++ch) {
-                        std::fill(buffer[ch], buffer[ch] + numFrames, 0.0f);
-                    }
+                    clearFloatBuffers(buffer, numChannels, numFrames);
+                } else if (!buffersAreFinite(buffer, numChannels, numFrames)) {
+                    markNonFiniteOutputFault(slot.faultState);
+                    clearFloatBuffers(buffer, numChannels, numFrames);
                 }
-                sanitizeFloatBuffers(buffer, numChannels, numFrames);
                 continue;
             }
 
@@ -364,12 +444,14 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
             const bool processed =
                 processPluginNoexcept(*plugin, processInputs, buffer, processInputChannels, numChannels, numFrames);
             if (!processed) {
-                for (uint32_t ch = 0; ch < blendChannels; ++ch) {
-                    std::memcpy(buffer[ch], m_dryBuffer.data() + ch * numFrames, numFrames * sizeof(float));
-                }
+                restoreDryChannels(buffer, m_dryBuffer.data(), numChannels, blendChannels, numFrames);
                 continue;
             }
-            sanitizeFloatBuffers(buffer, numChannels, numFrames);
+            if (!buffersAreFinite(buffer, numChannels, numFrames)) {
+                markNonFiniteOutputFault(slot.faultState);
+                restoreDryChannels(buffer, m_dryBuffer.data(), numChannels, blendChannels, numFrames);
+                continue;
+            }
 
             // Blend dry/wet
             float wetGain = dryWet;
@@ -393,8 +475,8 @@ void EffectChain::process(float** buffer, uint32_t numChannels, uint32_t numFram
 // ==============================
 
 void EffectChainSnapshot::process(float** buffer, uint32_t numChannels, uint32_t numFrames,
-                                   const float* const* sidechainInputs, uint32_t numSidechainChannels,
-                                   float* dryBuffer) const {
+                                  const float* const* sidechainInputs, uint32_t numSidechainChannels,
+                                  float* dryBuffer) const {
     // Skip if entire chain is bypassed
     if (isChainBypassed) {
         return;
@@ -405,7 +487,7 @@ void EffectChainSnapshot::process(float** buffer, uint32_t numChannels, uint32_t
         const auto& slot = m_slots[slotIdx];
 
         // Skip empty or bypassed slots
-        if (slot.isEmpty() || slot.bypassed) {
+        if (slot.isEmpty() || slot.bypassed || isFaultBypassed(slot.faultState)) {
             continue;
         }
 
@@ -446,11 +528,11 @@ void EffectChainSnapshot::process(float** buffer, uint32_t numChannels, uint32_t
             const bool processed =
                 processPluginNoexcept(*plugin, processInputs, buffer, processInputChannels, numChannels, numFrames);
             if (!processed) {
-                for (uint32_t ch = 0; ch < numChannels; ++ch) {
-                    std::fill(buffer[ch], buffer[ch] + numFrames, 0.0f);
-                }
+                clearFloatBuffers(buffer, numChannels, numFrames);
+            } else if (!buffersAreFinite(buffer, numChannels, numFrames)) {
+                markNonFiniteOutputFault(slot.faultState);
+                clearFloatBuffers(buffer, numChannels, numFrames);
             }
-            sanitizeFloatBuffers(buffer, numChannels, numFrames);
         }
         // If not fully wet, need to blend
         else if (dryWet > 0.001f) {
@@ -464,12 +546,14 @@ void EffectChainSnapshot::process(float** buffer, uint32_t numChannels, uint32_t
             const bool processed =
                 processPluginNoexcept(*plugin, processInputs, buffer, processInputChannels, numChannels, numFrames);
             if (!processed) {
-                for (uint32_t ch = 0; ch < blendChannels; ++ch) {
-                    std::memcpy(buffer[ch], dryBuffer + ch * numFrames, numFrames * sizeof(float));
-                }
+                restoreDryChannels(buffer, dryBuffer, numChannels, blendChannels, numFrames);
                 continue;
             }
-            sanitizeFloatBuffers(buffer, numChannels, numFrames);
+            if (!buffersAreFinite(buffer, numChannels, numFrames)) {
+                markNonFiniteOutputFault(slot.faultState);
+                restoreDryChannels(buffer, dryBuffer, numChannels, blendChannels, numFrames);
+                continue;
+            }
 
             // Blend dry/wet
             float wetGain = dryWet;
@@ -566,6 +650,7 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
 
         if (!hasPlugin) {
             m_slots[i].plugin = nullptr;
+            clearFaultState(m_slots[i].faultState);
             continue;
         }
 
@@ -614,14 +699,15 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
         if (instance) {
             instance->initialize(m_sampleRate, m_maxBlockSize);
             if (!instance->loadState(pluginState)) {
-                Aestra::Log::warning("[EffectChain] Failed to load state for plugin slot " +
-                                     std::to_string(i) + " — using default state");
+                Aestra::Log::warning("[EffectChain] Failed to load state for plugin slot " + std::to_string(i) +
+                                     " — using default state");
             }
             instance->activate();
 
             m_slots[i].plugin = std::move(instance);
             m_slots[i].bypassed.store(bypassed);
             m_slots[i].dryWetMix.store(dryWet);
+            clearFaultState(m_slots[i].faultState);
         }
     }
 
@@ -637,7 +723,7 @@ uint32_t EffectChain::getTotalLatency() const {
     uint32_t total = 0;
 
     for (const auto& slot : m_slots) {
-        if (!slot.isEmpty() && !slot.bypassed.load() && slot.plugin) {
+        if (!slot.isEmpty() && !slot.bypassed.load() && !isFaultBypassed(slot.faultState) && slot.plugin) {
             total += slot.plugin->getLatencySamples();
         }
     }

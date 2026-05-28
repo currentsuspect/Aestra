@@ -5,14 +5,16 @@
 #include "Plugin/SamplerPlugin.h"
 #include "RealtimeThreadGuard.h"
 
+#include <array>
 #include <atomic>
+#include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <vector>
-
-#include <cassert>
-#define require(cond, msg) assert(cond && msg)
+#define require(cond, msg) assert((cond) && (msg))
 
 using namespace Aestra::Audio;
 
@@ -22,6 +24,98 @@ std::atomic<int> g_rtMisuseCount{0};
 void countRtMisuse(const char*) noexcept {
     g_rtMisuseCount.fetch_add(1, std::memory_order_relaxed);
 }
+
+class TestEffectPlugin : public IPluginInstance {
+public:
+    explicit TestEffectPlugin(const char* id) {
+        m_info.id = id;
+        m_info.name = id;
+        m_info.vendor = "Aestra Tests";
+        m_info.version = "1.0";
+        m_info.category = "Test";
+        m_info.format = PluginFormat::Internal;
+        m_info.type = PluginType::Effect;
+        m_info.numAudioInputs = 2;
+        m_info.numAudioOutputs = 2;
+    }
+
+    bool initialize(double, uint32_t) override { return true; }
+    void shutdown() override {}
+    void activate() override { m_active = true; }
+    void deactivate() override { m_active = false; }
+    bool isActive() const override { return m_active; }
+
+    std::vector<PluginParameter> getParameters() const override { return {}; }
+    uint32_t getParameterCount() const override { return 0; }
+    float getParameter(uint32_t) const override { return 0.0f; }
+    void setParameter(uint32_t, float) override {}
+    std::string getParameterDisplay(uint32_t) const override { return {}; }
+
+    std::vector<uint8_t> saveState() const override { return {}; }
+    bool loadState(const std::vector<uint8_t>&) override { return true; }
+
+    bool hasEditor() const override { return false; }
+    bool openEditor(void*) override { return false; }
+    void closeEditor() override {}
+    bool isEditorOpen() const override { return false; }
+    std::pair<int, int> getEditorSize() const override { return {0, 0}; }
+    bool resizeEditor(int, int) override { return false; }
+
+    const PluginInfo& getInfo() const override { return m_info; }
+    uint32_t getLatencySamples() const override { return 0; }
+    uint32_t getTailSamples() const override { return 0; }
+    WatchdogStats getWatchdogStats() const override { return {}; }
+    void resetWatchdog() override {}
+    bool isBypassedByWatchdog() const override { return false; }
+    bool isCrashed() const override { return false; }
+
+protected:
+    PluginInfo m_info;
+    bool m_active = false;
+};
+
+class NonFiniteOutputPlugin final : public TestEffectPlugin {
+public:
+    NonFiniteOutputPlugin() : TestEffectPlugin("test.nonfinite-output") {}
+
+    void process(const float* const*, float** outputs, uint32_t, uint32_t numOutputChannels, uint32_t numFrames,
+                 const MidiBuffer*, MidiBuffer*) override {
+        ++processCalls;
+        for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
+            for (uint32_t i = 0; i < numFrames; ++i) {
+                outputs[ch][i] = std::numeric_limits<float>::quiet_NaN();
+            }
+        }
+    }
+
+    int processCalls = 0;
+};
+
+class FiniteProbePlugin final : public TestEffectPlugin {
+public:
+    FiniteProbePlugin() : TestEffectPlugin("test.finite-probe") {}
+
+    void process(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
+                 uint32_t numFrames, const MidiBuffer*, MidiBuffer*) override {
+        ++processCalls;
+        for (uint32_t ch = 0; ch < numInputChannels; ++ch) {
+            for (uint32_t i = 0; i < numFrames; ++i) {
+                if (!std::isfinite(inputs[ch][i])) {
+                    sawNonFiniteInput = true;
+                }
+            }
+        }
+
+        for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
+            for (uint32_t i = 0; i < numFrames; ++i) {
+                outputs[ch][i] = 0.25f;
+            }
+        }
+    }
+
+    int processCalls = 0;
+    bool sawNonFiniteInput = false;
+};
 
 void emptyChainSnapshotHasNoPlugins() {
     EffectChain chain;
@@ -260,6 +354,59 @@ void snapshotPublicationAfterAllMutations() {
     std::cout << "PASS: snapshotPublicationAfterAllMutations\n";
 }
 
+void snapshotQuarantinesNonFinitePluginBeforeDownstreamProcessing() {
+    constexpr uint32_t kChannels = 2;
+    constexpr uint32_t kFrames = 8;
+
+    EffectChain chain;
+    chain.prepare(48000.0, kFrames);
+
+    auto poison = std::make_shared<NonFiniteOutputPlugin>();
+    auto probe = std::make_shared<FiniteProbePlugin>();
+    chain.insertPlugin(0, poison);
+    chain.insertPlugin(1, probe);
+
+    auto snapshot = chain.getSnapshot();
+    require(snapshot != nullptr, "snapshotQuarantinesNonFinitePlugin: snapshot is null");
+
+    std::array<float, kFrames> left{};
+    std::array<float, kFrames> right{};
+    for (uint32_t i = 0; i < kFrames; ++i) {
+        left[i] = 0.5f;
+        right[i] = -0.5f;
+    }
+
+    float* channels[kChannels] = {left.data(), right.data()};
+    std::array<float, kFrames * kChannels> dryBuffer{};
+
+    snapshot->process(channels, kChannels, kFrames, nullptr, 0, dryBuffer.data());
+
+    require(poison->processCalls == 1, "snapshotQuarantinesNonFinitePlugin: poison not processed once");
+    require(probe->processCalls == 1, "snapshotQuarantinesNonFinitePlugin: downstream not processed");
+    require(!probe->sawNonFiniteInput, "snapshotQuarantinesNonFinitePlugin: downstream saw non-finite input");
+    require(chain.isSlotBypassed(0), "snapshotQuarantinesNonFinitePlugin: poisoned slot not bypassed");
+    require(chain.isSlotBypassedByNonFiniteOutput(0),
+            "snapshotQuarantinesNonFinitePlugin: poisoned slot missing non-finite fault");
+    require(chain.getSlotNonFiniteOutputCount(0) == 1, "snapshotQuarantinesNonFinitePlugin: fault count mismatch");
+    for (uint32_t ch = 0; ch < kChannels; ++ch) {
+        for (uint32_t i = 0; i < kFrames; ++i) {
+            require(std::isfinite(channels[ch][i]), "snapshotQuarantinesNonFinitePlugin: output is non-finite");
+            require(channels[ch][i] == 0.25f, "snapshotQuarantinesNonFinitePlugin: downstream output mismatch");
+        }
+    }
+
+    snapshot->process(channels, kChannels, kFrames, nullptr, 0, dryBuffer.data());
+    require(poison->processCalls == 1, "snapshotQuarantinesNonFinitePlugin: quarantined plugin processed again");
+    require(probe->processCalls == 2,
+            "snapshotQuarantinesNonFinitePlugin: downstream should keep processing after quarantine");
+
+    chain.setSlotBypassed(0, false);
+    require(!chain.isSlotBypassedByNonFiniteOutput(0),
+            "snapshotQuarantinesNonFinitePlugin: manual unbypass did not clear fault");
+
+    std::cout << "PASS: snapshotQuarantinesNonFinitePluginBeforeDownstreamProcessing\n";
+}
+
 } // namespace
 
 int main() {
@@ -275,6 +422,7 @@ int main() {
     realtimeMisuseGuardsStillWork();
     getSnapshotReturnsPublishedSnapshot();
     snapshotPublicationAfterAllMutations();
+    snapshotQuarantinesNonFinitePluginBeforeDownstreamProcessing();
 
     std::cout << "\n=== All EffectChainSnapshot tests passed ===\n";
     return 0;
