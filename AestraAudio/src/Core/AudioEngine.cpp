@@ -30,7 +30,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <queue>
-#if defined(_MSC_VER) || defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
 #include <immintrin.h> // AVX/SSE for high-performance mixing
 #endif
 #include <map>
@@ -52,13 +52,9 @@
 
 #define RESTORE_DENORMALS __asm__ volatile("msr fpcr, %0" ::"r"(oldFPCR));
 #elif defined(_M_ARM64) || defined(_M_ARM64EC)
-// MSVC ARM64: use _ReadStatusReg/_WriteStatusReg to toggle FPCR.FZ (bit 24, flush-to-zero)
-#include <intrin.h>
-#define DISABLE_DENORMALS                      \
-    uint64_t oldFPCR = _ReadStatusReg(0x4020); \
-    _WriteStatusReg(0x4020, oldFPCR | (1ULL << 24));
-
-#define RESTORE_DENORMALS _WriteStatusReg(0x4020, oldFPCR);
+// MSVC ARM64/ARM64EC: avoid raw _ReadStatusReg/_WriteStatusReg literals in the audio callback.
+#define DISABLE_DENORMALS
+#define RESTORE_DENORMALS
 #else
 // Other architectures: no denormal control
 #define DISABLE_DENORMALS
