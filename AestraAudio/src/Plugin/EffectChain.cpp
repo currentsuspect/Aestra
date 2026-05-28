@@ -65,21 +65,6 @@ void markNonFiniteOutputFault(const std::shared_ptr<EffectSlotFaultState>& fault
     faultState->bypassedByNonFiniteOutput.store(true, std::memory_order_release);
 }
 
-void copyFaultState(const std::shared_ptr<EffectSlotFaultState>& dst,
-                    const std::shared_ptr<EffectSlotFaultState>& src) noexcept {
-    if (!dst) {
-        return;
-    }
-    if (!src) {
-        clearFaultState(dst);
-        return;
-    }
-    dst->bypassedByNonFiniteOutput.store(src->bypassedByNonFiniteOutput.load(std::memory_order_acquire),
-                                         std::memory_order_release);
-    dst->nonFiniteOutputCount.store(src->nonFiniteOutputCount.load(std::memory_order_acquire),
-                                    std::memory_order_release);
-}
-
 void restoreDryChannels(float** buffer, const float* dryBuffer, uint32_t numChannels, uint32_t blendChannels,
                         uint32_t numFrames) noexcept {
     for (uint32_t ch = 0; ch < blendChannels; ++ch) {
@@ -130,7 +115,7 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
     m_slots[slotIndex].plugin = std::move(plugin);
     m_slots[slotIndex].bypassed.store(false);
     m_slots[slotIndex].dryWetMix.store(1.0f);
-    clearFaultState(m_slots[slotIndex].faultState);
+    m_slots[slotIndex].faultState = std::make_shared<EffectSlotFaultState>();
 
     publishSnapshot();
     if (m_onLatencyChanged) {
@@ -149,7 +134,7 @@ PluginInstancePtr EffectChain::removePlugin(size_t slotIndex) {
 
     auto plugin = std::move(m_slots[slotIndex].plugin);
     m_slots[slotIndex].plugin = nullptr;
-    clearFaultState(m_slots[slotIndex].faultState);
+    m_slots[slotIndex].faultState = std::make_shared<EffectSlotFaultState>();
 
     publishSnapshot();
     if (m_onLatencyChanged) {
@@ -178,12 +163,15 @@ bool EffectChain::movePlugin(size_t fromSlot, size_t toSlot) {
     m_slots[toSlot].plugin = std::move(m_slots[fromSlot].plugin);
     m_slots[toSlot].bypassed.store(m_slots[fromSlot].bypassed.load());
     m_slots[toSlot].dryWetMix.store(m_slots[fromSlot].dryWetMix.load());
-    copyFaultState(m_slots[toSlot].faultState, m_slots[fromSlot].faultState);
+    m_slots[toSlot].faultState = std::move(m_slots[fromSlot].faultState);
+    if (!m_slots[toSlot].faultState) {
+        m_slots[toSlot].faultState = std::make_shared<EffectSlotFaultState>();
+    }
 
     m_slots[fromSlot].plugin = nullptr;
     m_slots[fromSlot].bypassed.store(false);
     m_slots[fromSlot].dryWetMix.store(1.0f);
-    clearFaultState(m_slots[fromSlot].faultState);
+    m_slots[fromSlot].faultState = std::make_shared<EffectSlotFaultState>();
 
     publishSnapshot();
     return true;
@@ -265,7 +253,7 @@ void EffectChain::clear() {
         slot.plugin = nullptr;
         slot.bypassed.store(false);
         slot.dryWetMix.store(1.0f);
-        clearFaultState(slot.faultState);
+        slot.faultState = std::make_shared<EffectSlotFaultState>();
     }
     publishSnapshot();
 }
@@ -650,7 +638,7 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
 
         if (!hasPlugin) {
             m_slots[i].plugin = nullptr;
-            clearFaultState(m_slots[i].faultState);
+            m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
             continue;
         }
 
@@ -707,7 +695,7 @@ bool EffectChain::loadState(const std::vector<uint8_t>& state, PluginManager& ma
             m_slots[i].plugin = std::move(instance);
             m_slots[i].bypassed.store(bypassed);
             m_slots[i].dryWetMix.store(dryWet);
-            clearFaultState(m_slots[i].faultState);
+            m_slots[i].faultState = std::make_shared<EffectSlotFaultState>();
         }
     }
 
@@ -723,7 +711,7 @@ uint32_t EffectChain::getTotalLatency() const {
     uint32_t total = 0;
 
     for (const auto& slot : m_slots) {
-        if (!slot.isEmpty() && !slot.bypassed.load() && !isFaultBypassed(slot.faultState) && slot.plugin) {
+        if (!slot.isEmpty() && !slot.bypassed.load() && slot.plugin) {
             total += slot.plugin->getLatencySamples();
         }
     }
