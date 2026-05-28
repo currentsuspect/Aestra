@@ -522,8 +522,24 @@ bool OutOfProcessPluginInstance::resizeEditor(int width, int height) {
     return false;
 }
 
+IPluginInstance::WatchdogStats OutOfProcessPluginInstance::getWatchdogStats() const {
+    WatchdogStats stats;
+    stats.maxExecutionTimeNs = static_cast<double>(m_watchdogMaxExecutionTimeNs.load(std::memory_order_relaxed));
+    stats.avgExecutionTimeNs = static_cast<double>(m_watchdogAvgExecutionTimeNs.load(std::memory_order_relaxed));
+    stats.violationCount = m_watchdogViolationCount.load(std::memory_order_relaxed);
+    stats.isBypassed = m_watchdogBypassed.load(std::memory_order_acquire);
+    return stats;
+}
+
+bool OutOfProcessPluginInstance::isBypassedByWatchdog() const {
+    return m_watchdogBypassed.load(std::memory_order_acquire);
+}
+
 void OutOfProcessPluginInstance::resetWatchdog() {
-    m_watchdogStats = WatchdogStats{};
+    m_watchdogMaxExecutionTimeNs.store(0, std::memory_order_release);
+    m_watchdogAvgExecutionTimeNs.store(0, std::memory_order_release);
+    m_watchdogViolationCount.store(0, std::memory_order_release);
+    m_watchdogBypassed.store(false, std::memory_order_release);
     if (m_process && m_process->isRunning()) {
         m_crashed.store(false, std::memory_order_release);
     }
@@ -636,8 +652,8 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
 void OutOfProcessPluginInstance::markCrashed() {
     m_crashed.store(true, std::memory_order_release);
     m_active.store(false, std::memory_order_release);
-    m_watchdogStats.isBypassed = true;
-    m_watchdogStats.violationCount++;
+    m_watchdogBypassed.store(true, std::memory_order_release);
+    m_watchdogViolationCount.fetch_add(1, std::memory_order_acq_rel);
 }
 
 void OutOfProcessPluginInstance::passThrough(const float* const* inputs, float** outputs, uint32_t numInputChannels,
