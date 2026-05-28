@@ -28,7 +28,13 @@ jobs:
         uses: lukka/get-cmake@latest
       - name: Configure (full)
         shell: pwsh
+        env:
+          AESTRA_LICENSE_PUBLIC_KEY_HEX: ${{ secrets.AESTRA_LICENSE_PUBLIC_KEY_HEX }}
         run: |
+          if ($env:AESTRA_LICENSE_PUBLIC_KEY_HEX -notmatch '^[0-9A-Fa-f]{64}$') {
+            Write-Error "AESTRA_LICENSE_PUBLIC_KEY_HEX must be configured as 64 hex characters."
+            exit 1
+          }
           New-Item -ItemType Directory -Force -Path build | Out-Null
           cmake -S . -B build -DAestra_CORE_MODE=OFF -DAESTRA_LICENSE_ENABLE_PREMIUM_LEASES=ON -DCMAKE_BUILD_TYPE=Release
       - name: Build
