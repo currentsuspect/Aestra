@@ -292,6 +292,13 @@ bool EffectChain::isSlotBypassedByNonFiniteOutput(size_t slotIndex) const {
     return isFaultBypassed(m_slots[slotIndex].faultState);
 }
 
+void EffectChain::setChainBypassed(bool bypassed) {
+    m_chainBypassed.store(bypassed, std::memory_order_release);
+    if (!reportRealtimeMisuse("EffectChain::setChainBypassed")) {
+        publishSnapshot();
+    }
+}
+
 uint64_t EffectChain::getSlotNonFiniteOutputCount(size_t slotIndex) const {
     if (slotIndex >= MAX_SLOTS || !m_slots[slotIndex].faultState) {
         return 0;
