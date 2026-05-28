@@ -5,6 +5,7 @@
 #include "MiniAudioDecoder.h"
 #include "PluginManager.h"
 #include "Music/ScaleContext.h"
+#include <array>
 #include <atomic>
 #include <algorithm>
 #include <cctype>
@@ -51,7 +52,39 @@ namespace {
     constexpr size_t PROJECT_MAX_STRING_BYTES = 4096;
     constexpr size_t PROJECT_MAX_PATH_BYTES = 32768;
     constexpr size_t PROJECT_MAX_EFFECT_STATE_HEX_BYTES = 4ull * 1024ull * 1024ull;
+    constexpr size_t PROJECT_LOAD_WARNING_LIMIT_PER_CATEGORY = 64;
     std::atomic<uint64_t> g_projectHistoryCounter{0};
+
+    enum class ProjectLoadWarningCategory : size_t {
+        ReferenceClip = 0,
+        ReferenceUnit,
+        MissingAsset,
+        LaneCreate,
+        EffectChain,
+        AutomationTarget,
+        DroppedClip,
+        SendRoute,
+        Count
+    };
+
+    class ProjectLoadWarningLimiter {
+    public:
+        void warning(ProjectLoadWarningCategory category,
+                     const std::string& message,
+                     const std::string& suppressedSummary) {
+            const size_t index = static_cast<size_t>(category);
+            size_t& count = m_counts[index];
+            if (count < PROJECT_LOAD_WARNING_LIMIT_PER_CATEGORY) {
+                Log::warning(message);
+            } else if (count == PROJECT_LOAD_WARNING_LIMIT_PER_CATEGORY) {
+                Log::warning(suppressedSummary);
+            }
+            ++count;
+        }
+
+    private:
+        std::array<size_t, static_cast<size_t>(ProjectLoadWarningCategory::Count)> m_counts{};
+    };
 
     std::string bytesToHex(const std::vector<uint8_t>& bytes) {
         std::ostringstream oss;
@@ -944,6 +977,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     std::unordered_map<uint64_t, std::string> patternNames;
     std::unordered_set<uint64_t> orphanClipPatternIds;
     std::unordered_set<uint64_t> orphanNoteUnitIds;
+    ProjectLoadWarningLimiter warningLimiter;
 
     if (root.has("sources")) {
         const JSON& sj = root["sources"];
@@ -987,8 +1021,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     finiteNumberOr(cj[c], "patternId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
                 if (patternId != 0 && !allPatternIds.count(patternId)) {
                     orphanClipPatternIds.insert(patternId);
-                    Log::warning("[ProjectLoad] Clip references missing pattern " + std::to_string(patternId) +
-                               " - clip will be preserved with placeholder");
+                    warningLimiter.warning(
+                        ProjectLoadWarningCategory::ReferenceClip,
+                        "[ProjectLoad] Clip references missing pattern " + std::to_string(patternId) +
+                            " - clip will be preserved with placeholder",
+                        "[ProjectLoad] Additional missing-pattern clip reference warnings suppressed.");
                 }
             }
         }
@@ -1006,8 +1043,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         finiteNumberOr(notes[n], "unitId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
                     if (unitId != 0 && !allUnitIds.count(unitId)) {
                         orphanNoteUnitIds.insert(unitId);
-                        Log::warning("[ProjectLoad] MIDI note references missing Arsenal unit " + std::to_string(unitId) +
-                                   " - note preserved but unit reference unresolved");
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::ReferenceUnit,
+                            "[ProjectLoad] MIDI note references missing Arsenal unit " + std::to_string(unitId) +
+                                " - note preserved but unit reference unresolved",
+                            "[ProjectLoad] Additional missing-Arsenal-unit MIDI note warnings suppressed.");
                     }
                 }
             }
@@ -1053,7 +1093,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             std::filesystem::path filePath = resolveProjectAssetPath(projectPath, storedPath);
             if (!std::filesystem::exists(filePath) || !std::filesystem::is_regular_file(filePath)) {
                 result.missingAssets.push_back(storedPath);
-                Log::warning("[ProjectLoad] Missing or unreadable audio asset: " + storedPath);
+                warningLimiter.warning(
+                    ProjectLoadWarningCategory::MissingAsset,
+                    "[ProjectLoad] Missing or unreadable audio asset: " + storedPath,
+                    "[ProjectLoad] Additional missing or unreadable audio asset warnings suppressed.");
             }
         }
     }
@@ -1178,7 +1221,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     std::filesystem::exists(resolvedPath) && std::filesystem::is_regular_file(resolvedPath);
                 if (!assetReadable) {
                     result.missingAssets.push_back(storedPath);
-                    Log::warning("[ProjectLoad] Missing or unreadable audio asset: " + storedPath);
+                    warningLimiter.warning(
+                        ProjectLoadWarningCategory::MissingAsset,
+                        "[ProjectLoad] Missing or unreadable audio asset: " + storedPath,
+                        "[ProjectLoad] Additional missing or unreadable audio asset warnings suppressed.");
                 }
                 
                 // Actually decode the audio file and load into source
@@ -1204,7 +1250,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                   " (" + std::to_string(buffer->numFrames) + " frames, " + 
                                   std::to_string(sampleRate) + " Hz)");
                     } else {
-                        Log::warning("[ProjectLoad] Failed to decode: " + filePath + " — creating silent mono fallback");
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::MissingAsset,
+                            "[ProjectLoad] Failed to decode: " + filePath + " — creating silent mono fallback",
+                            "[ProjectLoad] Additional audio decode failure warnings suppressed.");
                         result.missingAssets.push_back(storedPath);
                         auto fallback = std::make_shared<AudioBufferData>();
                         fallback->numChannels = 1;
@@ -1317,12 +1366,18 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 const std::string laneName = boundedStringOr(lj[i], "name", "Track", PROJECT_MAX_STRING_BYTES);
                 PlaylistLaneID laneId = playlist.createLane(laneName);
                 if (!laneId.isValid()) {
-                    Log::warning("[ProjectLoad] Failed to create lane '" + laneName + "' — skipping");
+                    warningLimiter.warning(
+                        ProjectLoadWarningCategory::LaneCreate,
+                        "[ProjectLoad] Failed to create lane '" + laneName + "' — skipping",
+                        "[ProjectLoad] Additional lane creation failure warnings suppressed.");
                     continue;
                 }
                 MixerChannel* channel = trackManager->addChannel(laneName);
                 if (!channel) {
-                    Log::warning("[ProjectLoad] Failed to create channel for lane '" + laneName + "' — removing lane");
+                    warningLimiter.warning(
+                        ProjectLoadWarningCategory::LaneCreate,
+                        "[ProjectLoad] Failed to create channel for lane '" + laneName + "' — removing lane",
+                        "[ProjectLoad] Additional lane channel creation failure warnings suppressed.");
                     playlist.removeLane(laneId);
                     continue;
                 }
@@ -1412,7 +1467,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 const auto effectState = hexToBytes(lj[i]["effectChainStateHex"].asString());
                                 if (!effectState.empty()) {
                                     if (!chain.loadState(effectState, pluginManager)) {
-                                        Log::warning("[ProjectLoad] Failed to restore effect chain on lane: " + lane->name);
+                                        warningLimiter.warning(
+                                            ProjectLoadWarningCategory::EffectChain,
+                                            "[ProjectLoad] Failed to restore effect chain on lane: " + lane->name,
+                                            "[ProjectLoad] Additional effect chain restore warnings suppressed.");
                                     }
                                 }
                             }
@@ -1438,9 +1496,12 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             {
                                 const int rawTarget = static_cast<int>(target);
                                 if (rawTarget != 0 && rawTarget != 1 && rawTarget != 255) {
-                                    Log::warning("[ProjectLoad] Automation curve '" + param +
-                                                 "' has unrecognized target enum " + std::to_string(rawTarget) +
-                                                 "; curve preserved but may be skipped at runtime.");
+                                    warningLimiter.warning(
+                                        ProjectLoadWarningCategory::AutomationTarget,
+                                        "[ProjectLoad] Automation curve '" + param +
+                                            "' has unrecognized target enum " + std::to_string(rawTarget) +
+                                            "; curve preserved but may be skipped at runtime.",
+                                        "[ProjectLoad] Additional unrecognized automation target warnings suppressed.");
                                 }
                             }
                             
@@ -1503,8 +1564,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 }
                                 playlist.addClip(laneId, clip);
                             } else {
-                                Log::warning("[ProjectLoad] Clip references missing pattern " + std::to_string(oldPatId) +
-                                            " — clip dropped from lane '" + laneName + "'");
+                                warningLimiter.warning(
+                                    ProjectLoadWarningCategory::DroppedClip,
+                                    "[ProjectLoad] Clip references missing pattern " + std::to_string(oldPatId) +
+                                        " — clip dropped from lane '" + laneName + "'",
+                                    "[ProjectLoad] Additional dropped clip missing-pattern warnings suppressed.");
                             }
                         }
                     }
@@ -1528,9 +1592,12 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 if (!channel) continue;
                 for (const auto& send : channel->getSends()) {
                     if (!validChannelIds.count(send.targetChannelId)) {
-                        Log::warning("[ProjectLoad] Send from '" + channel->getName() +
-                                     "' targets channel ID " + std::to_string(send.targetChannelId) +
-                                     " which does not exist; send will be silent.");
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::SendRoute,
+                            "[ProjectLoad] Send from '" + channel->getName() +
+                                "' targets channel ID " + std::to_string(send.targetChannelId) +
+                                " which does not exist; send will be silent.",
+                            "[ProjectLoad] Additional unresolved send route warnings suppressed.");
                     }
                 }
             }

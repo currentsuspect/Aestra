@@ -14,12 +14,34 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <string>
+#include <vector>
 
 using namespace Aestra;
 using namespace Aestra::Audio;
 
 namespace {
+
+class CapturingLogger : public ILogger {
+public:
+    void log(LogLevel level, const std::string& message) override {
+        if (level >= minLevel) {
+            entries.push_back({level, message});
+        }
+    }
+
+    void setLevel(LogLevel level) override { minLevel = level; }
+    LogLevel getLevel() const override { return minLevel; }
+
+    struct Entry {
+        LogLevel level;
+        std::string message;
+    };
+
+    LogLevel minLevel{LogLevel::Trace};
+    std::vector<Entry> entries;
+};
 
 bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, int numSamples) {
     if (sampleRate <= 0 || numSamples <= 0)
@@ -685,6 +707,71 @@ void testMixerLaneStateNumbersClampBeforeCast() {
     std::filesystem::remove_all(testDir);
 }
 
+void testProjectLoadWarningsAreBounded() {
+    std::cout << "[TEST] Project load warnings are bounded..." << std::endl;
+
+    auto testDir = makeTempDir();
+    std::filesystem::path testProject = testDir / "project.aes";
+
+    std::ostringstream lanes;
+    for (int i = 0; i < 100; ++i) {
+        if (i > 0) lanes << ",";
+        lanes << R"({
+                "name": "Track )" << i << R"(",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "routing": {"sends": [{"targetId": )" << (100000 + i) << R"(, "gain": 1.0}]},
+                "clips": []
+            })";
+    }
+
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [],
+        "lanes": [)" + lanes.str() + R"(],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto previousLogger = Log::getLogger();
+    auto capture = std::make_shared<CapturingLogger>();
+    Log::init(capture);
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+
+    Log::init(previousLogger);
+
+    assert(result.ok);
+    size_t sendWarnings = 0;
+    size_t suppressedWarnings = 0;
+    for (const auto& entry : capture->entries) {
+        if (entry.level != LogLevel::Warning) {
+            continue;
+        }
+        if (entry.message.find("Send from '") != std::string::npos) {
+            ++sendWarnings;
+        }
+        if (entry.message.find("Additional unresolved send route warnings suppressed") != std::string::npos) {
+            ++suppressedWarnings;
+        }
+    }
+
+    assert(sendWarnings == 64);
+    assert(suppressedWarnings == 1);
+
+    std::cout << "[PASS] Project load warnings are bounded" << std::endl;
+
+    std::filesystem::remove_all(testDir);
+}
+
 }
 
 int main() {
@@ -700,6 +787,7 @@ int main() {
     testV1FixtureMigratesToCurrentVersion();
     testAutomationTarget256DoesNotWrapToVolume();
     testMixerLaneStateNumbersClampBeforeCast();
+    testProjectLoadWarningsAreBounded();
 
     std::cout << "=== All tests passed ===" << std::endl;
     return 0;
