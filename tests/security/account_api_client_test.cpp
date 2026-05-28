@@ -6,6 +6,7 @@
 #include "MembershipViewModel.h"
 
 #include <cctype>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -26,6 +27,43 @@ using namespace Aestra::License;
 namespace fs = std::filesystem;
 
 namespace {
+class ScopedEnvironmentVariable {
+public:
+    explicit ScopedEnvironmentVariable(const char* name) : m_name(name) {
+        if (const char* value = std::getenv(name)) {
+            m_hadValue = true;
+            m_value = value;
+        }
+    }
+
+    ~ScopedEnvironmentVariable() { restore(); }
+
+    void unset() const {
+#ifdef _WIN32
+        _putenv_s(m_name.c_str(), "");
+#else
+        unsetenv(m_name.c_str());
+#endif
+    }
+
+private:
+    void restore() const {
+#ifdef _WIN32
+        _putenv_s(m_name.c_str(), m_hadValue ? m_value.c_str() : "");
+#else
+        if (m_hadValue) {
+            setenv(m_name.c_str(), m_value.c_str(), 1);
+        } else {
+            unsetenv(m_name.c_str());
+        }
+#endif
+    }
+
+    std::string m_name;
+    bool m_hadValue = false;
+    std::string m_value;
+};
+
 struct CapturedRequest {
     std::string method;
     std::string url;
@@ -640,6 +678,8 @@ bool testLoginFlowFull() {
 }
 
 bool testAccountApiRequiresExplicitBaseUrl() {
+    ScopedEnvironmentVariable baseUrl("AESTRA_ACCOUNT_API_BASE_URL");
+    baseUrl.unset();
     const AccountApiConfig config = accountApiConfigFromEnvironment();
     bool ok = true;
     ok &= expect(config.baseUrl.empty(), "accountApiConfigFromEnvironment requires explicit base URL");

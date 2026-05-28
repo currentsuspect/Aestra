@@ -115,6 +115,9 @@ int main() {
     malicious.snapshotPath = "../outside.aes";
     require(TakeManager::resolveSnapshotPath(projectPath.string(), malicious).empty(),
             "Parent-relative take snapshot paths must be rejected");
+    malicious.snapshotPath = ".";
+    require(TakeManager::resolveSnapshotPath(projectPath.string(), malicious).empty(),
+            "Directory-only take snapshot paths must be rejected");
 #ifndef _WIN32
     malicious.snapshotPath = "../takes_project.takes\\outside.aes";
     require(TakeManager::resolveSnapshotPath(projectPath.string(), malicious).empty(),

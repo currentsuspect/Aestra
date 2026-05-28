@@ -46,6 +46,7 @@ namespace License {
 
 namespace {
 constexpr int64_t kLeasePeriodSeconds = 604800;
+constexpr double kMaxExactJsonInteger = 9007199254740991.0;
 constexpr size_t kSecretBoxNonceBytes = 24;
 constexpr size_t kSecretBoxMacBytes = 16;
 constexpr const char* kBackupFileName = "lease.bin";
@@ -283,8 +284,8 @@ bool parseLeasePayload(const std::string& payload, LeaseRecord& out) {
 
     auto readInt64 = [](const Aestra::JSON& value, int64_t& outValue) {
         const double number = value.asNumber();
-        if (!std::isfinite(number) || number < static_cast<double>(std::numeric_limits<int64_t>::min()) ||
-            number > static_cast<double>(std::numeric_limits<int64_t>::max())) {
+        if (!std::isfinite(number) || std::trunc(number) != number || number < -kMaxExactJsonInteger ||
+            number > kMaxExactJsonInteger) {
             return false;
         }
         outValue = static_cast<int64_t>(number);
@@ -311,7 +312,7 @@ bool parseLeasePayload(const std::string& payload, LeaseRecord& out) {
     lease.gracePolicy = json["grace_policy"].asString();
 
     if (lease.issuedAt < 0 || lease.expiresAt < lease.issuedAt ||
-        lease.issuedAt > std::numeric_limits<int64_t>::max() - kLeasePeriodSeconds ||
+        lease.issuedAt > (std::numeric_limits<int64_t>::max)() - kLeasePeriodSeconds ||
         lease.expiresAt != lease.issuedAt + kLeasePeriodSeconds) {
         return false;
     }
@@ -708,7 +709,7 @@ bool leaseTierAllowedForBuild(const LeaseRecord& lease) {
 
 bool leaseStatusAtNow(const LeaseRecord& lease, EntitlementStatus& status) {
     const int64_t now = nowSeconds();
-    if (lease.expiresAt > std::numeric_limits<int64_t>::max() - kLeasePeriodSeconds) {
+    if (lease.expiresAt > (std::numeric_limits<int64_t>::max)() - kLeasePeriodSeconds) {
         status = EntitlementStatus::Expired;
         return false;
     }

@@ -117,6 +117,15 @@ std::filesystem::path resolveManifestSnapshotPath(const std::string& projectPath
     while (takesDirStr.size() > 1 && takesDirStr.back() == '/') {
         takesDirStr.pop_back();
     }
+    if (pathStr.size() > 2 && pathStr.compare(pathStr.size() - 2, 2, "/.") == 0) {
+        pathStr.resize(pathStr.size() - 2);
+    }
+    while (pathStr.size() > 1 && pathStr.back() == '/') {
+        pathStr.pop_back();
+    }
+    if (pathStr == takesDirStr) {
+        return {};
+    }
     if (pathStr != takesDirStr && (pathStr.size() <= takesDirStr.size() ||
                                    pathStr.compare(0, takesDirStr.size(), takesDirStr) != 0 ||
                                    pathStr[takesDirStr.size()] != '/')) {

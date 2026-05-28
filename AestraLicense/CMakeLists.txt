@@ -29,6 +29,10 @@ target_link_libraries(AestraLicense
         AestraCore
 )
 
+if(AESTRA_LICENSE_ENABLE_PREMIUM_LEASES)
+    target_compile_definitions(AestraLicense PRIVATE AESTRA_LICENSE_ENABLE_PREMIUM_LEASES=1)
+endif()
+
 find_package(CURL QUIET)
 if(CURL_FOUND)
     target_link_libraries(AestraLicense PRIVATE CURL::libcurl)

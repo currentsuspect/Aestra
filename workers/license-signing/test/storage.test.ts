@@ -431,6 +431,16 @@ describe("D1 account refresh storage boundary", () => {
     expect(await response.json()).toMatchObject({ error: { code: "invalid_request" } });
   });
 
+  it("accepts refresh requests within allowed client clock skew", async () => {
+    const state = await stateFor("session-a");
+    const env = await makeD1Env(state);
+    const response = await refresh(env, "session-a", { issued_at: Math.floor(Date.now() / 1000) + 300 });
+    expect(response.status).toBe(200);
+    const body = await response.json() as { payload: LeasePayload; lease_blob: string };
+    expect(body.payload.tier).toBe("Core");
+    expect(body.lease_blob).toBeTruthy();
+  });
+
   it("rejects missing, invalid, expired, and revoked sessions", async () => {
     const validState = await stateFor("session-a");
     const validEnv = await makeD1Env(validState);
