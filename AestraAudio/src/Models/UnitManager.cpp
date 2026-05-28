@@ -58,10 +58,28 @@ std::string arsenalRouteModeName(ArsenalRouteMode routeMode) {
     }
 }
 
+std::optional<ArsenalRouteMode> arsenalRouteModeFromNumber(const JSON& routeModeJson) {
+    if (!routeModeJson.isNumber()) {
+        return std::nullopt;
+    }
+
+    const double raw = routeModeJson.asNumber();
+    if (!std::isfinite(raw) || std::floor(raw) != raw) {
+        return std::nullopt;
+    }
+
+    switch (static_cast<int>(raw)) {
+    case static_cast<int>(ArsenalRouteMode::PreviewToMaster): return ArsenalRouteMode::PreviewToMaster;
+    case static_cast<int>(ArsenalRouteMode::RoutedToTimelineTrack): return ArsenalRouteMode::RoutedToTimelineTrack;
+    case static_cast<int>(ArsenalRouteMode::Draft): return ArsenalRouteMode::Draft;
+    default: return std::nullopt;
+    }
+}
+
 std::optional<ArsenalRouteMode> arsenalRouteModeFromJson(const JSON& routeModeJson) {
     if (routeModeJson.isObject()) {
-        if (routeModeJson.has("id")) {
-            return static_cast<ArsenalRouteMode>(routeModeJson["id"].asInt());
+        if (routeModeJson.has("id") && routeModeJson["id"].isNumber()) {
+            return arsenalRouteModeFromNumber(routeModeJson["id"]);
         }
         if (routeModeJson.has("name")) {
             const std::string name = routeModeJson["name"].asString();
@@ -70,7 +88,7 @@ std::optional<ArsenalRouteMode> arsenalRouteModeFromJson(const JSON& routeModeJs
             if (name == "Draft") return ArsenalRouteMode::Draft;
         }
     } else if (routeModeJson.isNumber()) {
-        return static_cast<ArsenalRouteMode>(routeModeJson.asInt());
+        return arsenalRouteModeFromNumber(routeModeJson);
     } else if (routeModeJson.isString()) {
         const std::string name = routeModeJson.asString();
         if (name == "PreviewToMaster") return ArsenalRouteMode::PreviewToMaster;
