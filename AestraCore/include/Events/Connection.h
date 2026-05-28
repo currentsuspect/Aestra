@@ -71,7 +71,10 @@ public:
         : m_connection(std::move(conn)) {}
 
     /** @brief Release ownership without disconnecting. */
-    void reset() noexcept { m_connection = Connection{}; }
+    void reset() noexcept {
+        disconnect();
+        m_connection = Connection{};
+    }
 
     /** @brief Disconnect and assign new connection. */
     void reset(Connection conn) noexcept {
@@ -153,7 +156,9 @@ public:
 
     /** @brief Emit the signal to all current subscribers. */
     void emit(const T& event) {
-        for (auto& callback : m_callbacks) {
+        // Copy callbacks to prevent iterator invalidation if callbacks modify the signal
+        auto callbacks = m_callbacks;
+        for (auto& callback : callbacks) {
             if (callback) {
                 callback(event);
             }
@@ -162,7 +167,9 @@ public:
 
     /** @brief Emit without payload (for void T or default construction). */
     void emit() {
-        for (auto& callback : m_callbacks) {
+        // Copy callbacks to prevent iterator invalidation if callbacks modify the signal
+        auto callbacks = m_callbacks;
+        for (auto& callback : callbacks) {
             if (callback) {
                 callback(T{});
             }
@@ -201,7 +208,9 @@ public:
     }
 
     void emit() {
-        for (auto& callback : m_callbacks) {
+        // Copy callbacks to prevent iterator invalidation if callbacks modify the signal
+        auto callbacks = m_callbacks;
+        for (auto& callback : callbacks) {
             if (callback) {
                 callback();
             }

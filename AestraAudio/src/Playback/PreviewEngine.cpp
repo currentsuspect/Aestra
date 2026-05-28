@@ -106,6 +106,7 @@ PreviewResult PreviewEngine::startVoiceWithBuffer(std::shared_ptr<AudioBuffer> b
     voice->playing.store(true, std::memory_order_release);
 
     std::atomic_store_explicit(&m_activeVoice, voice, std::memory_order_release);
+    m_activeVoiceRaw.store(voice.get(), std::memory_order_release);
     Log::info("PreviewEngine: Playing '" + path + "' (" + std::to_string(sampleRate) + " Hz, " +
               std::to_string(voice->durationSeconds) + " sec)");
     return PreviewResult::Success;
@@ -215,6 +216,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
 
     // Set as active voice immediately (will output silence until buffer ready)
     std::atomic_store_explicit(&m_activeVoice, voice, std::memory_order_release);
+    m_activeVoiceRaw.store(voice.get(), std::memory_order_release);
 
     // Start async decode (non-blocking)
     decodeAsync(path, voice);
@@ -224,7 +226,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
 }
 
 void PreviewEngine::stop() {
-    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    PreviewVoice* voice = m_activeVoiceRaw.load(std::memory_order_acquire);
     if (voice) {
         voice->stopRequested.store(true, std::memory_order_release);
         voice->fadeOutActive = true;
@@ -246,7 +248,7 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
     if (outputChannels == 0) {
         return;
     }
-    auto voice = std::atomic_load_explicit(&m_activeVoice, std::memory_order_acquire);
+    PreviewVoice* voice = m_activeVoiceRaw.load(std::memory_order_acquire);
     if (!voice || !voice->playing.load(std::memory_order_acquire) || !interleavedOutput) {
         return;
     }
@@ -568,7 +570,7 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
     if (finished) {
         voice->playing.store(false, std::memory_order_release);
         PreviewVoice* expected = nullptr;
-        if (m_completedVoice.compare_exchange_strong(expected, voice.get(), std::memory_order_acq_rel,
+        if (m_completedVoice.compare_exchange_strong(expected, voice, std::memory_order_acq_rel,
                                                      std::memory_order_relaxed)) {
             m_completionPending.store(true, std::memory_order_release);
         }

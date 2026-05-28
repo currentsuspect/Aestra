@@ -339,6 +339,14 @@ private:
      */
     mutable std::shared_ptr<AudioArsenalSnapshot> m_publishedSnapshot{std::make_shared<AudioArsenalSnapshot>()};
 
+    /**
+     * @brief Raw pointer cache for RT-safe access.
+     *
+     * Updated atomically by publishSnapshot() after publishing the shared_ptr.
+     * Read by getAudioSnapshot() on the audio thread to avoid atomic_load on shared_ptr.
+     */
+    mutable std::atomic<const AudioArsenalSnapshot*> m_publishedSnapshotRaw{nullptr};
+
 public:
     void setSampleRate(double rate) { m_sampleRate.store(rate, std::memory_order_relaxed); }
     void setBlockSize(uint32_t size) { m_blockSize.store(size, std::memory_order_relaxed); }

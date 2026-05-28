@@ -123,13 +123,16 @@ void PlatformUtilsWin32::setClipboardText(const std::string& text) const {
 
     EmptyClipboard();
 
-    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, text.size() + 1);
-    if (hMem) {
-        char* pMem = (char*)GlobalLock(hMem);
-        if (pMem) {
-            memcpy(pMem, text.c_str(), text.size() + 1);
-            GlobalUnlock(hMem);
-            SetClipboardData(CF_TEXT, hMem);
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, nullptr, 0);
+    if (wlen > 0) {
+        HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, wlen * sizeof(wchar_t));
+        if (hMem) {
+            wchar_t* pMem = static_cast<wchar_t*>(GlobalLock(hMem));
+            if (pMem) {
+                MultiByteToWideChar(CP_UTF8, 0, text.c_str(), -1, pMem, wlen);
+                GlobalUnlock(hMem);
+                SetClipboardData(CF_UNICODETEXT, hMem);
+            }
         }
     }
 
@@ -142,11 +145,15 @@ std::string PlatformUtilsWin32::getClipboardText() const {
     }
 
     std::string result;
-    HANDLE hData = GetClipboardData(CF_TEXT);
+    HANDLE hData = GetClipboardData(CF_UNICODETEXT);
     if (hData) {
-        char* pData = (char*)GlobalLock(hData);
+        wchar_t* pData = static_cast<wchar_t*>(GlobalLock(hData));
         if (pData) {
-            result = std::string(pData);
+            int len = WideCharToMultiByte(CP_UTF8, 0, pData, -1, nullptr, 0, nullptr, nullptr);
+            if (len > 0) {
+                result.resize(len - 1);
+                WideCharToMultiByte(CP_UTF8, 0, pData, -1, &result[0], len, nullptr, nullptr);
+            }
             GlobalUnlock(hData);
         }
     }
@@ -179,9 +186,16 @@ size_t PlatformUtilsWin32::getSystemMemory() const {
 std::string PlatformUtilsWin32::getAppDataPath(const std::string& appName) const {
     char path[MAX_PATH];
     if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, path))) {
-        return std::string(path) + "\\" + appName;
+        std::string fullPath = std::string(path) + "\\" + appName;
+        if (!CreateDirectoryA(fullPath.c_str(), nullptr)) {
+            DWORD err = GetLastError();
+            if (err != ERROR_ALREADY_EXISTS) {
+                AESTRA_LOG_ERROR("Failed to create app data directory: " + fullPath);
+                return std::string(".");
+            }
+        }
+        return fullPath;
     }
-    // Fallback to current directory
     return std::string(".");
 }
 

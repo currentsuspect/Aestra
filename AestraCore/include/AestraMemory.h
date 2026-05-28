@@ -116,12 +116,16 @@ public:
      *
      * NOT thread-safe — caller must ensure no concurrent allocate() calls.
      * Typical use: reset on UI/idle thread after audio thread is done.
+     *
+     * @param zero If true, zero the buffer (default: false for performance).
      */
-    void reset() noexcept {
+    void reset(bool zero = false) noexcept {
         m_offset.store(0, std::memory_order_relaxed);
         m_peak.store(0, std::memory_order_relaxed);
         m_allocCount.store(0, std::memory_order_relaxed);
-        std::memset(m_buffer, 0, m_capacity);
+        if (zero) {
+            std::memset(m_buffer, 0, m_capacity);
+        }
     }
 
     /** @return Total capacity in bytes. */

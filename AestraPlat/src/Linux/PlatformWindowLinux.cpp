@@ -1,6 +1,7 @@
 #include "PlatformWindowLinux.h"
 
 #include <SDL2/SDL_syswm.h>
+#include <cmath>
 #include <iostream>
 #if defined(SDL_VIDEO_DRIVER_X11)
 #include <X11/Xlib.h>
@@ -112,18 +113,21 @@ bool PlatformWindowLinux::pollEvents() {
                         // Check DPI change
                         int dw, dh;
                         SDL_GL_GetDrawableSize(m_window, &dw, &dh);
-                        float newScale = (float)dw / e.window.data1;
-                        if (abs(newScale - m_dpiScale) > 0.01f) {
-                            m_dpiScale = newScale;
-                            if (m_dpiChangeCallback)
-                                m_dpiChangeCallback(m_dpiScale);
+                        if (e.window.data1 > 0) {
+                            float newScale = static_cast<float>(dw) / static_cast<float>(e.window.data1);
+                            if (std::abs(newScale - m_dpiScale) > 0.01f) {
+                                m_dpiScale = newScale;
+                                if (m_dpiChangeCallback)
+                                    m_dpiChangeCallback(m_dpiScale);
+                            }
                         }
                     }
                     break;
                 case SDL_WINDOWEVENT_CLOSE:
                     if (m_closeCallback)
                         m_closeCallback();
-                    break;
+                    m_shouldClose = true;
+                    return false;
                 case SDL_WINDOWEVENT_FOCUS_GAINED:
                     if (m_focusCallback)
                         m_focusCallback(true);
@@ -197,16 +201,39 @@ bool PlatformWindowLinux::pollEvents() {
 
         case SDL_TEXTINPUT:
             if (m_charCallback) {
-                // Primitive UTF-8 decoding for single codepoint (simplified)
-                // In real app, might need full UTF8 decoder, but SDL gives char array
-                // For now pass the first byte if ASCII, or handle full utf8
-                // Aestras might expect unicode. e.text.text is char[32] utf8
-                // We'll just cast first byte for now if we don't have a decoder handy,
-                // or implement a quick one.
-                unsigned char* p = (unsigned char*)e.text.text;
-                if (*p < 0x80)
-                    m_charCallback(*p);
-                // TODO: Proper UTF8 decoding
+                // Proper UTF-8 decoding
+                const unsigned char* p = reinterpret_cast<const unsigned char*>(e.text.text);
+                uint32_t codepoint = 0;
+                int bytes = 0;
+
+                if (*p < 0x80) {
+                    // ASCII
+                    codepoint = *p;
+                    bytes = 1;
+                } else if ((*p & 0xE0) == 0xC0) {
+                    codepoint = *p & 0x1F;
+                    bytes = 2;
+                } else if ((*p & 0xF0) == 0xE0) {
+                    codepoint = *p & 0x0F;
+                    bytes = 3;
+                } else if ((*p & 0xF8) == 0xF0) {
+                    codepoint = *p & 0x07;
+                    bytes = 4;
+                } else {
+                    break; // Invalid UTF-8 leading byte
+                }
+
+                for (int i = 1; i < bytes; ++i) {
+                    if ((p[i] & 0xC0) != 0x80)
+                        break; // Invalid continuation byte
+                    codepoint = (codepoint << 6) | (p[i] & 0x3F);
+                }
+
+                // Reject surrogates
+                if (codepoint >= 0xD800 && codepoint <= 0xDFFF)
+                    break;
+
+                m_charCallback(codepoint);
             }
             break;
         }
@@ -323,6 +350,7 @@ bool PlatformWindowLinux::isMinimized() const {
 void PlatformWindowLinux::requestClose() {
     if (m_closeCallback)
         m_closeCallback();
+    m_shouldClose = true;
 }
 
 void PlatformWindowLinux::setFullscreen(bool fullscreen) {

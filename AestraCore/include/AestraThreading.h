@@ -255,6 +255,8 @@ public:
                 __builtin_ia32_pause();
 #elif defined(__aarch64__)
                 asm volatile("yield" ::: "memory");
+#else
+                std::this_thread::yield();
 #endif
             }
             if (spinCount < maxSpin) {
@@ -304,7 +306,10 @@ public:
 
     // Prepare a batch of tasks. Call from RT thread.
     void dispatch(uint32_t count, void* context, void** taskDataArray, TaskFunc func, Barrier* syncBarrier) {
-        assert(m_activeTasks.load(std::memory_order_relaxed) == 0 && "Dispatch while previous batch still active");
+        // Wait for previous batch to complete before dispatching new work
+        while (m_activeTasks.load(std::memory_order_acquire) > 0) {
+            std::this_thread::yield();
+        }
         m_taskFunc = func;
         m_context = context;
         m_taskData = taskDataArray;

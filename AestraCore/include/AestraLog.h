@@ -62,9 +62,14 @@ private:
 
     std::string getTimestamp() const {
         auto now = std::time(nullptr);
-        auto tm = *std::localtime(&now);
+        struct tm tm_buf;
+#ifdef _WIN32
+        localtime_s(&tm_buf, &now);
+#else
+        localtime_r(&now, &tm_buf);
+#endif
         std::stringstream ss;
-        ss << std::put_time(&tm, "%H:%M:%S");
+        ss << std::put_time(&tm_buf, "%H:%M:%S");
         return ss.str();
     }
 
@@ -130,9 +135,14 @@ private:
 
     std::string getTimestamp() const {
         auto now = std::time(nullptr);
-        auto tm = *std::localtime(&now);
+        struct tm tm_buf;
+#ifdef _WIN32
+        localtime_s(&tm_buf, &now);
+#else
+        localtime_r(&now, &tm_buf);
+#endif
         std::stringstream ss;
-        ss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+        ss << std::put_time(&tm_buf, "%Y-%m-%d %H:%M:%S");
         return ss.str();
     }
 

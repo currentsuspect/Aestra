@@ -94,6 +94,8 @@ private:
                                        double maxSeconds);
 
     std::shared_ptr<PreviewVoice> m_activeVoice;
+    // RT-safe raw pointer cache for m_activeVoice
+    std::atomic<PreviewVoice*> m_activeVoiceRaw{nullptr};
     std::atomic<double> m_outputSampleRate;
     std::atomic<float> m_globalGainDb;
     std::atomic<float> m_playbackRate{1.0f};

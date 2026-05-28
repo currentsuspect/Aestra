@@ -52,9 +52,20 @@ NUISVGDocument& NUISVGDocument::operator=(NUISVGDocument&& other) noexcept {
 // Helper: read file into string
 // ============================================================================
 
+static constexpr size_t kMaxSVGFileSize = 10 * 1024 * 1024; // 10 MB limit
+
 static std::string readFileToString(const std::string& filePath) {
     std::ifstream file(filePath, std::ios::binary);
     if (!file) return {};
+
+    // Check file size before reading
+    file.seekg(0, std::ios::end);
+    auto fileSize = file.tellg();
+    if (fileSize <= 0 || static_cast<size_t>(fileSize) > kMaxSVGFileSize) {
+        return {};
+    }
+    file.seekg(0);
+
     std::ostringstream ss;
     ss << file.rdbuf();
     return ss.str();
@@ -145,6 +156,11 @@ void NUISVGRenderer::render(NUIRenderer& renderer, const NUISVGDocument& svg,
     if (w <= 0 || h <= 0) {
         return;
     }
+
+    // Clamp dimensions to prevent excessive memory allocation
+    constexpr int kMaxSVGRasterDimension = 4096;
+    w = std::min(w, kMaxSVGRasterDimension);
+    h = std::min(h, kMaxSVGRasterDimension);
 
     // ------------------------------------------------------------------------
     // 1. Cache lookup

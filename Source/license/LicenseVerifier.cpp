@@ -12,10 +12,14 @@ namespace Aestra {
 
 namespace {
 	// Public key placeholder (Ed25519/ECDSA). Real verification implemented in private repo.
+	// NOTE: This is a MOCK key for development/testing. Production builds must use the real key.
 	static constexpr const char* kPublicKeyPem =
 		"-----BEGIN PUBLIC KEY-----\n"
 		"MOCK_PUBLIC_KEY_PLACEHOLDER\n"
 		"-----END PUBLIC KEY-----\n";
+
+	// Maximum profile file size (1 MB)
+	static constexpr size_t kMaxProfileFileSize = 1024 * 1024;
 
 	std::string getHomeDir() {
 		#ifdef _WIN32
@@ -27,7 +31,10 @@ namespace {
 			return std::string("C:\\Users\\Public");
 		#else
 			char* home = std::getenv("HOME");
-			return home ? std::string(home) : std::string("/");
+			if (home && *home) return std::string(home);
+			// Fallback to /tmp instead of / to avoid writing to root filesystem
+			AESTRA_LOG_WARNING("HOME environment variable not set, falling back to /tmp");
+			return std::string("/tmp");
 		#endif
 	}
 }
@@ -74,6 +81,16 @@ UserProfile loadProfile() {
 	if (!f.good()) {
 		return profile; // fallback defaults
 	}
+
+	// Check file size before reading
+	f.seekg(0, std::ios::end);
+	auto fileSize = f.tellg();
+	if (fileSize <= 0 || static_cast<size_t>(fileSize) > kMaxProfileFileSize) {
+		AESTRA_LOG_WARNING("[LicenseVerifier] Profile file too large or empty: " + path);
+		return profile;
+	}
+	f.seekg(0);
+
 	std::stringstream buffer; buffer << f.rdbuf();
 	try {
 		Aestra::JSON j = Aestra::JSON::parse(buffer.str());

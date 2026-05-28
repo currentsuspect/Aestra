@@ -241,14 +241,18 @@ void UnitManager::publishSnapshot() {
 
     // Retire old snapshot through GC so the audio thread never dereferences freed memory.
     auto old = std::atomic_exchange(&m_publishedSnapshot, snapshot);
+    // Update raw pointer cache for RT-safe access
+    m_publishedSnapshotRaw.store(snapshot.get(), std::memory_order_release);
     if (old) {
         GarbageCollector::instance().release(old, "UnitManager::AudioArsenalSnapshot");
     }
 }
 
 std::shared_ptr<const AudioArsenalSnapshot> UnitManager::getAudioSnapshot() const {
-    auto snapshot = std::atomic_load(&m_publishedSnapshot);
-    return std::const_pointer_cast<const AudioArsenalSnapshot>(snapshot);
+    // RT-safe: read raw pointer instead of atomic_load on shared_ptr
+    const AudioArsenalSnapshot* raw = m_publishedSnapshotRaw.load(std::memory_order_acquire);
+    // Return a shared_ptr that doesn't own the memory (the GC handles lifetime)
+    return std::shared_ptr<const AudioArsenalSnapshot>(std::shared_ptr<const AudioArsenalSnapshot>{}, raw);
 }
 
 UnitInfo* UnitManager::getUnit(UnitID id) {

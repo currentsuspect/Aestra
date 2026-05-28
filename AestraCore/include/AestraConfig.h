@@ -55,6 +55,10 @@ namespace Aestra {
 #define AESTRA_COMPILER_MSVC 0
 #define AESTRA_COMPILER_GCC 1
 #define AESTRA_COMPILER_CLANG 0
+#else
+#define AESTRA_COMPILER_MSVC 0
+#define AESTRA_COMPILER_GCC 0
+#define AESTRA_COMPILER_CLANG 0
 #endif
 
 // Architecture detection

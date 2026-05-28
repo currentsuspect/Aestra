@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 // Tests that memory profiling macros accurately report allocation counts and sizes.
 
-#include "../../AestraCore/include/AestraUnifiedProfiler.h"
+#include "AestraUnifiedProfiler.h"
 
 #include <cstring>
 #include <iostream>

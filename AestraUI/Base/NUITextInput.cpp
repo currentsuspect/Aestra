@@ -1003,7 +1003,14 @@ void NUITextInput::handleKeyInput(const NUIKeyEvent& event)
             {
                 if (!readOnly_) {
                     if (auto* utils = Aestra::Platform::getUtils()) {
-                        insertText(utils->getClipboardText());
+                        std::string clipboardText = utils->getClipboardText();
+                        // Truncate clipboard text to maxLength
+                        if (maxLength_ > 0 && static_cast<int>(clipboardText.length()) > maxLength_ - static_cast<int>(text_.length())) {
+                            int remaining = maxLength_ - static_cast<int>(text_.length());
+                            if (remaining <= 0) break;
+                            clipboardText.resize(static_cast<size_t>(remaining));
+                        }
+                        insertText(clipboardText);
                     }
                 }
                 break;

@@ -113,11 +113,15 @@ void Preferences::save() {
         }
     }
     
-    // Replace existing file
-    if (std::filesystem::exists(prefPath, ec)) {
-        std::filesystem::remove(prefPath, ec);
-    }
+    // Atomic rename-overwrite (works on both POSIX and Windows)
+    // On POSIX, rename() atomically replaces the target if it exists.
+    // On Windows, MoveFileExW with MOVEFILE_REPLACE_EXISTING does the same.
     std::filesystem::rename(tmpPath, prefPath, ec);
+    if (ec) {
+        Log::warning("[Preferences] Atomic rename failed, attempting remove+rename: " + ec.message());
+        std::filesystem::remove(prefPath, ec);
+        std::filesystem::rename(tmpPath, prefPath, ec);
+    }
     
     // Save recent files separately
     JSON recentJson = JSON::object();
@@ -138,10 +142,12 @@ void Preferences::save() {
         }
     }
     
-    if (std::filesystem::exists(recentPath, ec)) {
-        std::filesystem::remove(recentPath, ec);
-    }
     std::filesystem::rename(recentTmpPath, recentPath, ec);
+    if (ec) {
+        Log::warning("[Preferences] Atomic rename failed for recent files: " + ec.message());
+        std::filesystem::remove(recentPath, ec);
+        std::filesystem::rename(recentTmpPath, recentPath, ec);
+    }
     
     Log::info("[Preferences] Saved to: " + prefPath);
 }

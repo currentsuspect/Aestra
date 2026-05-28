@@ -93,7 +93,7 @@ bool NUIComponent::onMouseEvent(const NUIMouseEvent& event) {
             eventHandledBySelf = true;
         }
 
-        if (onMouseMove) {
+        if (event.type == NUIMouseEventType::Move && onMouseMove) {
             onMouseMove(event);
         }
 

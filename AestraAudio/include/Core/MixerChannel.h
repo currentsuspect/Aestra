@@ -247,7 +247,8 @@ public:
 
     /** @brief Set the effect chain snapshot for RT-safe processing (deprecated - snapshots are now owned by EffectChain). */
     void setEffectChainSnapshot(std::shared_ptr<const EffectChainSnapshot> snapshot) {
-        std::atomic_store(&m_effectChainSnapshot, std::move(snapshot));
+        std::atomic_store(&m_effectChainSnapshot, snapshot);
+        m_effectChainSnapshotRaw.store(snapshot.get(), std::memory_order_release);
     }
     /** @brief Get the current effect chain snapshot (Pass 3: returns canonical snapshot from EffectChain). */
     std::shared_ptr<const EffectChainSnapshot> getEffectChainSnapshot() const {
@@ -285,6 +286,8 @@ private:
 
     // Pass 3: Snapshot for RT-safe processing (updated by AudioGraph publication)
     std::shared_ptr<const EffectChainSnapshot> m_effectChainSnapshot{nullptr};
+    // RT-safe raw pointer cache
+    std::atomic<const EffectChainSnapshot*> m_effectChainSnapshotRaw{nullptr};
 
     // Dry buffer for RT-safe dry/wet mixing in snapshot processing
     std::vector<float> m_dryChannelBuf;

@@ -1127,7 +1127,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     // the project in an empty/corrupted state.
     // Skip rollback creation when loading a rollback file itself (prevents recursion).
     std::string rollbackPath;
-    const bool isRollbackLoad = (path.find(".rollback") != std::string::npos);
+    const std::string rollbackExt = ".rollback";
+    const bool isRollbackLoad = (path.size() >= rollbackExt.size() &&
+                                 path.compare(path.size() - rollbackExt.size(), rollbackExt.size(), rollbackExt) == 0);
     if (!isRollbackLoad) {
         SerializeResult preloadSnapshot;
         try {
@@ -1377,7 +1379,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         if (lj[i].has("routing") && lj[i]["routing"].isObject()) {
                             const JSON& rj = lj[i]["routing"];
                             const uint32_t mainOutputId = (rj.has("mainOutputId") && rj["mainOutputId"].isNumber())
-                                ? static_cast<uint32_t>(rj["mainOutputId"].asNumber())
+                                ? static_cast<uint32_t>(finiteNumberOr(rj, "mainOutputId", 0.0, 0.0, static_cast<double>(UINT32_MAX)))
                                 : 0u;
                             channel->setMainOutputId(mainOutputId == 0 ? 0xFFFFFFFFu : mainOutputId);
     
@@ -1387,10 +1389,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                     if (!sj[s].isObject()) continue;
                                     if (!sj[s].has("targetId") || !sj[s]["targetId"].isNumber()) continue;
                                     AudioRoute route;
-                                    const uint32_t targetId = static_cast<uint32_t>(sj[s]["targetId"].asNumber());
+                                    const uint32_t targetId = static_cast<uint32_t>(finiteNumberOr(sj[s], "targetId", 0.0, 0.0, static_cast<double>(UINT32_MAX)));
                                     route.targetChannelId = (targetId == 0) ? 0xFFFFFFFFu : targetId;
-                                    if (sj[s].has("gain") && sj[s]["gain"].isNumber()) route.gain = static_cast<float>(sj[s]["gain"].asNumber());
-                                    if (sj[s].has("pan") && sj[s]["pan"].isNumber()) route.pan = static_cast<float>(sj[s]["pan"].asNumber());
+                                    if (sj[s].has("gain") && sj[s]["gain"].isNumber()) route.gain = static_cast<float>(std::clamp(sj[s]["gain"].asNumber(), 0.0, 10.0));
+                                    if (sj[s].has("pan") && sj[s]["pan"].isNumber()) route.pan = static_cast<float>(std::clamp(sj[s]["pan"].asNumber(), -1.0, 1.0));
                                     if (sj[s].has("postFader") && sj[s]["postFader"].isBool()) route.postFader = sj[s]["postFader"].asBool();
                                     if (sj[s].has("mute") && sj[s]["mute"].isBool()) route.mute = sj[s]["mute"].asBool();
                                     if (sj[s].has("sidechainOnly") && sj[s]["sidechainOnly"].isBool()) route.sidechainOnly = sj[s]["sidechainOnly"].asBool();

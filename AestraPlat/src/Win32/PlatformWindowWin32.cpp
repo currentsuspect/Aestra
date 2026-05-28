@@ -41,7 +41,6 @@ PlatformWindowWin32::~PlatformWindowWin32() {
 
 bool PlatformWindowWin32::create(const WindowDesc& desc) {
     m_title = desc.title;
-    m_title = desc.title;
     m_width = desc.width;
     m_height = desc.height;
     m_isBorderless = !desc.decorated;

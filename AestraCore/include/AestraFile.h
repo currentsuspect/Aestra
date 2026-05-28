@@ -110,7 +110,10 @@ public:
             return "";
 
         file.seekg(0, std::ios::end);
-        size_t size = file.tellg();
+        auto pos = file.tellg();
+        if (pos == std::streampos(-1))
+            return "";
+        size_t size = static_cast<size_t>(pos);
         file.seekg(0);
 
         std::string content(size, '\0');

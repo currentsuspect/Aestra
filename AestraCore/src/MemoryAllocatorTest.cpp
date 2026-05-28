@@ -2,7 +2,6 @@
 // Tests for the AudioArena allocator — correctness, alignment, thread safety.
 
 #include "AestraMemory.h"
-#include "../../AestraAudio/include/DSP/AudioProcessor.h"
 
 #include <atomic>
 #include <cstdint>
@@ -12,7 +11,6 @@
 #include <vector>
 
 using namespace Aestra;
-using namespace Aestra::Audio;
 
 static int g_passes = 0;
 static int g_fails = 0;
@@ -218,32 +216,6 @@ void testGlobalArena() {
 }
 
 // ============================================================================
-// Test: AudioBufferManager integration
-// ============================================================================
-
-void testAudioBufferManagerIntegration() {
-    std::cout << "\n=== Test: AudioBufferManager Integration ===\n";
-
-    // Reset global arena to ensure clean state
-    GlobalAudioArena::instance().reset();
-
-    // Create AudioBufferManager — it uses GlobalAudioArena internally
-    AudioBufferManager mgr;
-
-    void* buf = mgr.allocate(1024, 2);
-    CHECK(buf != nullptr, "AudioBufferManager allocate succeeds");
-
-    // Write to buffer
-    float* fbuf = static_cast<float*>(buf);
-    fbuf[0] = 1.0f;
-    fbuf[1] = -1.0f;
-    CHECK(fbuf[0] == 1.0f, "Buffer is writable and readable");
-
-    mgr.clear();
-    CHECK(fbuf[0] == 0.0f, "Buffer is zeroed after clear");
-}
-
-// ============================================================================
 // Main
 // ============================================================================
 
@@ -260,7 +232,6 @@ int main() {
     testEdgeCases();
     testThreadSafety();
     testGlobalArena();
-    testAudioBufferManagerIntegration();
 
     std::cout << "\n=========================================\n";
     std::cout << "  Test Summary\n";

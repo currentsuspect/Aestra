@@ -94,6 +94,7 @@ private:
     bool m_isFullscreen = false;
     bool m_isWindowVisible = true;
     bool m_isWindowMapped = true;
+    bool m_shouldClose = false;
     float m_dpiScale = 1.0f;
     mutable bool m_syntheticShiftForHorizontalWheel = false;
 

@@ -67,11 +67,13 @@ void UIState::save() {
         out.flush();
     }
     
-    // Replace existing file
-    if (std::filesystem::exists(path, ec)) {
-        std::filesystem::remove(path, ec);
-    }
+    // Atomic rename-overwrite (works on both POSIX and Windows)
     std::filesystem::rename(tmpPath, path, ec);
+    if (ec) {
+        Log::warning("[UIState] Atomic rename failed, attempting remove+rename: " + ec.message());
+        std::filesystem::remove(path, ec);
+        std::filesystem::rename(tmpPath, path, ec);
+    }
     
     Log::info("[UIState] Saved to: " + path);
 }

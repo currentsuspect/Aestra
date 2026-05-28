@@ -182,6 +182,8 @@ bool SamplerPlugin::loadSample(const std::string& path) {
     // Atomic Swap (Thread-Safe, Lock-Free-ish)
     // std::atomic_exchange uses standard atomics for shared_ptr
     auto oldData = std::atomic_exchange(&m_data, newData);
+    // Update raw pointer cache for RT-safe access
+    m_dataRaw.store(newData.get(), std::memory_order_release);
 
     // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
     GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
@@ -210,6 +212,7 @@ bool SamplerPlugin::normalizeSample(float targetPeak) {
     }
 
     auto oldData = std::atomic_exchange(&m_data, edited);
+    m_dataRaw.store(edited.get(), std::memory_order_release);
     GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
     return true;
 }
@@ -236,6 +239,7 @@ bool SamplerPlugin::reverseSample() {
     }
 
     auto oldData = std::atomic_exchange(&m_data, edited);
+    m_dataRaw.store(edited.get(), std::memory_order_release);
     GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
     return true;
 }
@@ -263,8 +267,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         }
     }
 
-    // Thread-safe access to sample data
-    auto currentData = std::atomic_load(&m_data);
+    // Thread-safe access to sample data (RT-safe: uses raw pointer cache)
+    const SampleData* currentData = m_dataRaw.load(std::memory_order_acquire);
     if (!currentData || currentData->data.empty())
         return;
 
@@ -431,7 +435,8 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
         if (m_monoMode.load(std::memory_order_relaxed)) {
             double noteStartFrame = 0.0;
-            if (auto currentData = std::atomic_load(&m_data); currentData && currentData->channels > 0) {
+            const SampleData* currentData = m_dataRaw.load(std::memory_order_acquire);
+            if (currentData && currentData->channels > 0) {
                 const double totalFrames = static_cast<double>(currentData->data.size() / currentData->channels);
                 noteStartFrame = std::clamp(static_cast<double>(m_loopStartNorm.load(std::memory_order_relaxed)), 0.0, 0.999) *
                                  std::max(1.0, totalFrames - 1.0);
@@ -468,8 +473,9 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
         const int maxVoices = std::clamp(m_maxVoices.load(std::memory_order_relaxed), 1, kMaxVoices);
         double noteStartFrame = 0.0;
-        if (auto currentData = std::atomic_load(&m_data); currentData && currentData->channels > 0) {
-            const double totalFrames = static_cast<double>(currentData->data.size() / currentData->channels);
+        const SampleData* currentData2 = m_dataRaw.load(std::memory_order_acquire);
+        if (currentData2 && currentData2->channels > 0) {
+            const double totalFrames = static_cast<double>(currentData2->data.size() / currentData2->channels);
             noteStartFrame = std::clamp(static_cast<double>(m_loopStartNorm.load(std::memory_order_relaxed)), 0.0, 0.999) *
                              std::max(1.0, totalFrames - 1.0);
         }

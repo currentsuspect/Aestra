@@ -111,19 +111,20 @@ void UnifiedProfiler::popZone(const char* name) {
 
     // Find matching zone in stack (pop until found)
     for (auto it = m_zoneStack.rbegin(); it != m_zoneStack.rend(); ++it) {
-        if (it->zone.name == name) {
+        // Use string comparison for safety - pointer comparison can fail across TUs
+        if (it->zone.name && name && std::strcmp(it->zone.name, name) == 0) {
             it->zone.endUs = endUs;
             it->zone.durationUs = endUs - it->zone.startUs;
 
             // Accumulate to current frame stats by zone name
             double durationUs = static_cast<double>(it->zone.durationUs);
-            if (std::string(name) == "UI_Update") {
+            if (std::strcmp(name, "UI_Update") == 0) {
                 m_currentFrame.uiUpdateUs += durationUs;
-            } else if (std::string(name) == "Render_Prep") {
+            } else if (std::strcmp(name, "Render_Prep") == 0) {
                 m_currentFrame.renderPrepUs += durationUs;
-            } else if (std::string(name) == "GPU_Submit") {
+            } else if (std::strcmp(name, "GPU_Submit") == 0) {
                 m_currentFrame.gpuSubmitUs += durationUs;
-            } else if (std::string(name) == "Input_Poll") {
+            } else if (std::strcmp(name, "Input_Poll") == 0) {
                 m_currentFrame.inputPollUs += durationUs;
             }
 

@@ -11,6 +11,7 @@
 
 #include "AestraLog.h"
 
+#include <cstring>
 #include <iomanip>
 #include <sstream>
 #include <thread>
@@ -53,18 +54,19 @@ void Profiler::endZone(const char* name) {
 
     // Find matching zone in stack (pop until found)
     for (auto it = m_zoneStack.rbegin(); it != m_zoneStack.rend(); ++it) {
-        if (it->name == name) {
+        // Use string comparison for safety - pointer comparison can fail across TUs
+        if (it->name && name && std::strcmp(it->name, name) == 0) {
             it->endUs = endUs;
             double durationUs = static_cast<double>(endUs - it->startUs);
 
             // Accumulate to current frame stats by zone name
-            if (std::string(name) == "UI_Update") {
+            if (std::strcmp(name, "UI_Update") == 0) {
                 m_currentFrame.uiUpdateUs += durationUs;
-            } else if (std::string(name) == "Render_Prep") {
+            } else if (std::strcmp(name, "Render_Prep") == 0) {
                 m_currentFrame.renderPrepUs += durationUs;
-            } else if (std::string(name) == "GPU_Submit") {
+            } else if (std::strcmp(name, "GPU_Submit") == 0) {
                 m_currentFrame.gpuSubmitUs += durationUs;
-            } else if (std::string(name) == "Input_Poll") {
+            } else if (std::strcmp(name, "Input_Poll") == 0) {
                 m_currentFrame.inputPollUs += durationUs;
             }
 

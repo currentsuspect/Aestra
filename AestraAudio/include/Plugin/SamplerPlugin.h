@@ -103,6 +103,9 @@ private:
     // No mutex needed for access anymore!
     std::shared_ptr<SampleData> m_data;
 
+    // RT-safe raw pointer cache for m_data
+    std::atomic<const SampleData*> m_dataRaw{nullptr};
+
     // Parameters
     enum ParamID { kParamAttack = 0, kParamDecay, kParamSustain, kParamRelease, kParamPitch, kParamCount };
     std::array<std::atomic<float>, kParamCount> m_params;

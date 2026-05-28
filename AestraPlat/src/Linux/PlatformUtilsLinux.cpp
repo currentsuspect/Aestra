@@ -1,5 +1,6 @@
 #include "PlatformUtilsLinux.h"
 
+#include "../../../AestraCore/include/AestraLog.h"
 #include <SDL2/SDL.h>
 #include <cstdlib>
 #include <cstring>
@@ -94,7 +95,7 @@ std::string PlatformUtilsLinux::saveFileDialog(const SaveFileDialogOptions& opti
 }
 
 std::string PlatformUtilsLinux::selectFolderDialog(const std::string& title) const {
-    std::cerr << "Linux Folder Dialog not fully implemented. Returning empty string." << std::endl;
+    AESTRA_LOG_WARNING("Linux Folder Dialog not fully implemented. Returning empty string.");
     return "";
 }
 
@@ -129,6 +130,13 @@ size_t PlatformUtilsLinux::getSystemMemory() const {
 }
 
 std::string PlatformUtilsLinux::getAppDataPath(const std::string& appName) const {
+    // Sanitize appName to prevent path traversal
+    if (appName.empty() || appName.find("..") != std::string::npos || appName.find('/') != std::string::npos ||
+        appName.find('\\') != std::string::npos) {
+        AESTRA_LOG_ERROR("Invalid app name for getAppDataPath: " + appName);
+        return "";
+    }
+
     const char* xdg = std::getenv("XDG_DATA_HOME");
     std::filesystem::path path;
     if (xdg && *xdg) {
@@ -138,18 +146,20 @@ std::string PlatformUtilsLinux::getAppDataPath(const std::string& appName) const
         if (home && *home) {
             path = std::filesystem::path(home) / ".local" / "share";
         } else {
-            return "/tmp/" + appName;
+            AESTRA_LOG_WARNING("Could not determine app data path - HOME and XDG_DATA_HOME not set");
+            return "";
         }
     }
 
     path /= appName;
 
     std::error_code ec;
-    if (!std::filesystem::exists(path)) {
-        std::filesystem::create_directories(path, ec);
-        std::filesystem::permissions(path, std::filesystem::perms::owner_all, std::filesystem::perm_options::replace,
-                                     ec);
+    std::filesystem::create_directories(path, ec);
+    if (ec) {
+        AESTRA_LOG_ERROR("Failed to create app data directory: " + ec.message());
+        return "";
     }
+    std::filesystem::permissions(path, std::filesystem::perms::owner_all, std::filesystem::perm_options::replace, ec);
 
     return path.string();
 }

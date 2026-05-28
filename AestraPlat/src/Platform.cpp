@@ -38,10 +38,12 @@ IPlatformWindow* Platform::createWindow() {
 #ifdef AESTRA_HAS_SDL2
     return new PlatformWindowLinux();
 #else
+    AESTRA_LOG_ERROR("Linux platform not supported without SDL2");
     return nullptr;
 #endif
 #elif AESTRA_PLATFORM_MACOS
-    return nullptr; // TODO
+    AESTRA_LOG_ERROR("macOS platform not yet implemented - createWindow() returning nullptr");
+    return nullptr;
 #endif
 }
 

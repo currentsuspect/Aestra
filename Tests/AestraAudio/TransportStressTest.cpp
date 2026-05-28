@@ -1,7 +1,8 @@
 // © 2025 Aestra Studios — All Rights Reserved.
-// Standalone stress test for Transport edge cases
+// Transport stress test - validates TimelineClock edge cases
 
-#include "Playback/TimelineClock.h"
+#include "../../AestraAudio/include/Playback/TimelineClock.h"
+
 #include <cstdio>
 #include <cstdint>
 #include <cmath>
@@ -16,159 +17,95 @@ static int testsFailed = 0;
 #define PASS(msg) do { printf("PASS: %s\n", msg); testsPassed++; } while(0)
 #define FAIL(msg) do { printf("FAIL: %s\n", msg); testsFailed++; } while(0)
 
-void test_rapid_start_stop() {
-    // Simulate rapid start/stop cycles
-    bool isPlaying = false;
-    int cycles = 0;
+void test_tempo_setting() {
+    TimelineClock clock(120.0);
 
-    for (int i = 0; i < 100; i++) {
-        isPlaying = !isPlaying;  // Toggle
-        cycles++;
-    }
+    if (std::abs(clock.getCurrentTempo() - 120.0) > 0.01) { FAIL("initial tempo"); return; }
+    PASS("Initial tempo - OK");
 
-    if (cycles != 100) { FAIL("rapid start/stop cycles"); return; }
-    PASS("Rapid start/stop cycles - OK");
+    clock.setTempo(140.0);
+    if (std::abs(clock.getCurrentTempo() - 140.0) > 0.01) { FAIL("tempo change"); return; }
+    PASS("Tempo change - OK");
 }
 
-void test_seek_while_playing() {
-    // Simulate seek position during playback
-    bool isPlaying = true;
-    double position = 0.0;
-    double seekTarget = 100.0;
+void test_beat_to_seconds_conversion() {
+    TimelineClock clock(120.0);
 
-    if (isPlaying) {
-        position = seekTarget;  // Simulate seek
-    }
+    // At 120 BPM, 1 beat = 0.5 seconds
+    double seconds = clock.secondsAtBeat(1.0);
+    if (std::abs(seconds - 0.5) > 0.01) { FAIL("beat to seconds"); return; }
+    PASS("Beat to seconds conversion - OK");
 
-    if (position != seekTarget) { FAIL("seek while playing"); return; }
-    PASS("Seek while playing - OK");
+    // 2 beats = 1 second
+    seconds = clock.secondsAtBeat(2.0);
+    if (std::abs(seconds - 1.0) > 0.01) { FAIL("2 beats to seconds"); return; }
+    PASS("2 beats to seconds - OK");
 }
 
-void test_seek_to_position_0() {
-    // Seek to position 0 during playback
-    bool isPlaying = true;
-    double position = 50.0;
+void test_beat_to_sample_conversion() {
+    TimelineClock clock(120.0);
+    int sampleRate = 48000;
 
-    // Simulate seek to 0
-    position = 0.0;
-
-    if (position != 0.0) { FAIL("seek to position 0"); return; }
-    PASS("Seek to position 0 during playback - OK");
+    // At 120 BPM, 1 beat = 0.5 seconds = 24000 samples
+    uint64_t samples = clock.sampleFrameAtBeat(1.0, sampleRate);
+    if (samples != 24000) { FAIL("beat to samples"); return; }
+    PASS("Beat to sample conversion - OK");
 }
 
-void test_loop_region_bounds() {
-    // Loop region where loop end < loop start
-    double loopStart = 100.0;
-    double loopEnd = 50.0;  // Invalid: end < start
+void test_sample_to_beat_conversion() {
+    TimelineClock clock(120.0);
+    int sampleRate = 48000;
 
-    // Should handle invalid loop region gracefully
-    // Typically, this would be clamped or the region would be ignored
-    bool isValid = (loopEnd > loopStart);
-
-    if (isValid) { FAIL("loop region invalid accepted"); return; }
-    PASS("Loop region end < start - detected as invalid");
-
-    // Fix: swap if invalid
-    if (loopEnd < loopStart) {
-        double temp = loopStart;
-        loopStart = loopEnd;
-        loopEnd = temp;
-    }
-
-    if (loopEnd <= loopStart) { FAIL("loop region fix failed"); return; }
-    PASS("Loop region fixed via swap - OK");
+    // 24000 samples at 48000 Hz = 0.5 seconds = 1 beat at 120 BPM
+    double beat = clock.beatAtSampleFrame(24000, sampleRate);
+    if (std::abs(beat - 1.0) > 0.01) { FAIL("sample to beat"); return; }
+    PASS("Sample to beat conversion - OK");
 }
 
-void test_bpm_change_during_playback() {
-    // BPM change during active playback
-    bool isPlaying = true;
-    double bpm = 120.0;
-    double newBpm = 140.0;
+void test_tempo_map() {
+    TimelineClock clock(120.0);
 
-    // Simulate BPM change during playback
-    if (isPlaying) {
-        bpm = newBpm;
-    }
+    std::vector<TempoChange> map = {
+        {0.0, 120.0},
+        {4.0, 140.0},
+        {8.0, 100.0}
+    };
+    clock.setTempoMap(map);
 
-    if (bpm != newBpm) { FAIL("BPM change during playback"); return; }
-    PASS("BPM change during active playback - OK");
+    // Tempo at beat 0 should be 120
+    double tempo0 = clock.getTempoAtBeat(0.0);
+    if (std::abs(tempo0 - 120.0) > 0.01) { FAIL("tempo map beat 0"); return; }
+    PASS("Tempo map beat 0 - OK");
 
-    // Verify BPM is in valid range
-    if (bpm < 20.0 || bpm > 500.0) { FAIL("BPM out of range"); return; }
-    PASS("BPM in valid range (20-500)");
-}
+    // Tempo at beat 5 should be 140
+    double tempo5 = clock.getTempoAtBeat(5.0);
+    if (std::abs(tempo5 - 140.0) > 0.01) { FAIL("tempo map beat 5"); return; }
+    PASS("Tempo map beat 5 - OK");
 
-void test_bpm_extremes() {
-    // Test BPM at extremes
-    double minBpm = 20.0;
-    double maxBpm = 500.0;
-    double zeroBpm = 0.0;
-
-    if (minBpm < 20.0 || minBpm > 500.0) { FAIL("min BPM"); return; }
-    PASS("Min BPM (20) - accepted");
-
-    if (maxBpm < 20.0 || maxBpm > 500.0) { FAIL("max BPM"); return; }
-    PASS("Max BPM (500) - accepted");
-
-    // Zero BPM should be invalid - test code rejects it
-    bool rejected = (zeroBpm <= 0.0);
-    if (!rejected) { FAIL("zero BPM accepted"); return; }
-    PASS("Zero BPM - rejected");
-}
-
-void test_time_signature_change() {
-    // Time signature change during playback
-    bool isPlaying = true;
-    int numerator = 4;
-    int denominator = 4;
-
-    // Change to 6/8
-    if (isPlaying) {
-        numerator = 6;
-        denominator = 8;
-    }
-
-    if (numerator != 6 || denominator != 8) { FAIL("time sig change"); return; }
-    PASS("Time signature change during playback - OK");
-}
-
-void test_position_at_end() {
-    // Position at project end
-    double maxPosition = 1e12;  // Very large beat number
-    double position = maxPosition;
-
-    // Should handle, but may overflow in display
-    if (position <= 0.0) { FAIL("position at end"); return; }
-    PASS("Position at max project end - accepted");
+    // Tempo at beat 10 should be 100
+    double tempo10 = clock.getTempoAtBeat(10.0);
+    if (std::abs(tempo10 - 100.0) > 0.01) { FAIL("tempo map beat 10"); return; }
+    PASS("Tempo map beat 10 - OK");
 }
 
 int main() {
-    printf("=== Transport Edge Case Stress Tests ===\n\n");
+    printf("=========================================\n");
+    printf("  Transport Stress Tests\n");
+    printf("=========================================\n");
 
-    printf("1. Rapid start/stop cycles\n");
-    test_rapid_start_stop();
+    test_tempo_setting();
+    test_beat_to_seconds_conversion();
+    test_beat_to_sample_conversion();
+    test_sample_to_beat_conversion();
+    test_tempo_map();
 
-    printf("\n2. Seek while playing\n");
-    test_seek_while_playing();
+    printf("\n=========================================\n");
+    printf("  Test Summary\n");
+    printf("=========================================\n");
+    printf("  Passed: %d\n", testsPassed);
+    printf("  Failed: %d\n", testsFailed);
+    printf("  Total:  %d\n", testsPassed + testsFailed);
+    printf("=========================================\n");
 
-    printf("\n3. Seek to position 0 during playback\n");
-    test_seek_to_position_0();
-
-    printf("\n4. Loop region bounds\n");
-    test_loop_region_bounds();
-
-    printf("\n5. BPM change during playback\n");
-    test_bpm_change_during_playback();
-
-    printf("\n6. BPM extremes\n");
-    test_bpm_extremes();
-
-    printf("\n7. Time signature change\n");
-    test_time_signature_change();
-
-    printf("\n8. Position at end\n");
-    test_position_at_end();
-
-    printf("\n=== Results: %d passed, %d failed ===\n", testsPassed, testsFailed);
     return testsFailed > 0 ? 1 : 0;
 }

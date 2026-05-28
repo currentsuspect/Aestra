@@ -1,4 +1,4 @@
-// Â© 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 /**
  * @file AestraProfiler.h
  * @brief Lightweight performance profiler for AESTRA
@@ -13,6 +13,9 @@
 
 #pragma once
 
+// Include the unified profiler which defines ScopedTimer and AESTRA_ZONE
+#include "AestraUnifiedProfiler.h"
+
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -21,19 +24,6 @@
 #include <vector>
 
 namespace Aestra {
-
-/**
- * @brief High-precision timer using steady_clock
- */
-class ScopedTimer {
-public:
-    ScopedTimer(const char* name);
-    ~ScopedTimer();
-
-private:
-    const char* m_name;
-    std::chrono::steady_clock::time_point m_start;
-};
 
 /**
  * @brief Frame timing statistics
@@ -145,10 +135,3 @@ private:
 };
 
 } // namespace Aestra
-
-// Macro for easy zone timing
-#ifdef AESTRA_ENABLE_PROFILING
-#define AESTRA_ZONE(name) Aestra::ScopedTimer __Aestra_zone_##__LINE__(name)
-#else
-#define AESTRA_ZONE(name) ((void)0)
-#endif

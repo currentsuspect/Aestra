@@ -76,15 +76,15 @@ public:
     }
 
     size_t size() const {
-        if (type_ == Type::Array)
+        if (type_ == Type::Array && arrayValue_)
             return arrayValue_->size();
-        if (type_ == Type::Object)
+        if (type_ == Type::Object && objectValue_)
             return objectValue_->size();
         return 0;
     }
 
     JSON& operator[](size_t index) {
-        if (type_ != Type::Array || index >= arrayValue_->size()) {
+        if (type_ != Type::Array || !arrayValue_ || index >= arrayValue_->size()) {
             static JSON null;
             return null;
         }
@@ -92,8 +92,8 @@ public:
     }
 
     const JSON& operator[](size_t index) const {
-        if (type_ != Type::Array || index >= arrayValue_->size()) {
-            static JSON null;
+        if (type_ != Type::Array || !arrayValue_ || index >= arrayValue_->size()) {
+            static const JSON null;
             return null;
         }
         return (*arrayValue_)[index];
@@ -114,7 +114,7 @@ public:
     }
 
     JSON& operator[](const std::string& key) {
-        if (type_ != Type::Object) {
+        if (type_ != Type::Object || !objectValue_) {
             static JSON null;
             return null;
         }
@@ -122,13 +122,13 @@ public:
     }
 
     const JSON& operator[](const std::string& key) const {
-        if (type_ != Type::Object) {
-            static JSON null;
+        if (type_ != Type::Object || !objectValue_) {
+            static const JSON null;
             return null;
         }
         auto it = objectValue_->find(key);
         if (it == objectValue_->end()) {
-            static JSON null;
+            static const JSON null;
             return null;
         }
         return it->second;

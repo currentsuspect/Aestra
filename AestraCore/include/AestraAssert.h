@@ -62,7 +62,8 @@ inline void assertHandler(const char* expr, const char* file, int line, const ch
         if (AESTRA_UNLIKELY(!(expr))) {                                         \
             std::stringstream ss;                                               \
             ss << __VA_ARGS__;                                                  \
-            Aestra::assertHandler(#expr, __FILE__, __LINE__, ss.str().c_str()); \
+            auto msg = ss.str();                                                \
+            Aestra::assertHandler(#expr, __FILE__, __LINE__, msg.c_str());      \
         }                                                                       \
     } while (0)
 
