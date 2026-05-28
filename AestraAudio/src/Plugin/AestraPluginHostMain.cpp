@@ -11,6 +11,10 @@
 #include <string>
 #include <vector>
 
+#ifdef AESTRA_HAS_VST3
+#include "Plugin/VST3Host.h"
+#endif
+
 #ifndef _WIN32
 #include <dlfcn.h>
 #endif
@@ -579,6 +583,154 @@ struct ClapModule {
 };
 #endif
 
+#ifdef AESTRA_HAS_VST3
+struct Vst3Module {
+    std::shared_ptr<Aestra::Audio::VST3PluginInstance> plugin;
+    uint32_t maxBlockSize = 0;
+    std::vector<float> inputStorage[2];
+    std::vector<float> outputStorage[2];
+    Aestra::Audio::MidiBuffer midiInput;
+
+    ~Vst3Module() { close(); }
+
+    Vst3Module() = default;
+    Vst3Module(const Vst3Module&) = delete;
+    Vst3Module& operator=(const Vst3Module&) = delete;
+
+    void close() {
+        if (plugin) {
+            plugin->shutdown();
+            plugin->unload();
+            plugin.reset();
+        }
+        maxBlockSize = 0;
+        for (auto& storage : inputStorage) {
+            storage.clear();
+        }
+        for (auto& storage : outputStorage) {
+            storage.clear();
+        }
+        midiInput.clear();
+    }
+
+    bool load(const std::string& path, const std::string& pluginId, std::string& error) {
+        close();
+
+        Aestra::Audio::PluginInfo info;
+        info.id = pluginId;
+        info.name = pluginId;
+        info.vendor = "Unknown";
+        info.version = {};
+        info.category = {};
+        info.format = Aestra::Audio::PluginFormat::VST3;
+        info.type = Aestra::Audio::PluginType::Effect;
+        info.path = path;
+        info.numAudioInputs = 2;
+        info.numAudioOutputs = 2;
+
+        plugin = Aestra::Audio::VST3PluginFactory::createInstance(info);
+        if (!plugin || !plugin->isLoaded()) {
+            plugin.reset();
+            error = "vst3-load-failed";
+            return false;
+        }
+        return true;
+    }
+
+    bool initialize(double sampleRate, uint32_t blockSize, std::string& error) {
+        if (!plugin || sampleRate <= 0.0 || blockSize == 0 || blockSize > 65536) {
+            error = "invalid-vst3-init";
+            return false;
+        }
+        if (!plugin->initialize(sampleRate, blockSize)) {
+            error = "vst3-initialize-failed";
+            return false;
+        }
+        maxBlockSize = blockSize;
+        for (auto& storage : inputStorage) {
+            storage.assign(maxBlockSize, 0.0f);
+        }
+        for (auto& storage : outputStorage) {
+            storage.assign(maxBlockSize, 0.0f);
+        }
+        return true;
+    }
+
+    bool activate() {
+        if (!plugin) {
+            return false;
+        }
+        plugin->activate();
+        return plugin->isActive();
+    }
+
+    void deactivate() {
+        if (plugin) {
+            plugin->deactivate();
+        }
+    }
+
+    bool process(const std::vector<float>& interleavedInput, uint32_t channels, uint32_t frames,
+                 const std::vector<uint8_t>* midiData, size_t midiBytes, std::vector<float>& interleavedOutput) {
+        if (!plugin || !plugin->isActive() || channels == 0 || channels > 2 || frames == 0 || frames > maxBlockSize ||
+            interleavedInput.size() < static_cast<size_t>(channels) * frames) {
+            return false;
+        }
+
+        for (uint32_t ch = 0; ch < 2; ++ch) {
+            std::fill(outputStorage[ch].begin(), outputStorage[ch].begin() + frames, 0.0f);
+            for (uint32_t frame = 0; frame < frames; ++frame) {
+                inputStorage[ch][frame] =
+                    (ch < channels) ? interleavedInput[static_cast<size_t>(frame) * channels + ch] : 0.0f;
+            }
+        }
+
+        midiInput.clear();
+        if (midiData && midiBytes <= midiData->size() && (midiBytes % 8) == 0) {
+            for (size_t offset = 0; offset < midiBytes; offset += 8) {
+                const uint8_t size = (*midiData)[offset + 4];
+                if (size == 0 || size > 3) {
+                    continue;
+                }
+                uint32_t sampleOffset = 0;
+                std::memcpy(&sampleOffset, midiData->data() + offset, sizeof(sampleOffset));
+                midiInput.addEvent(std::min<uint32_t>(sampleOffset, frames - 1), midiData->data() + offset + 5, size);
+            }
+        }
+
+        const float* inputPlanes[2] = {inputStorage[0].data(), inputStorage[1].data()};
+        float* outputPlanes[2] = {outputStorage[0].data(), outputStorage[1].data()};
+        plugin->process(inputPlanes, outputPlanes, channels, channels, frames,
+                        midiInput.isEmpty() ? nullptr : &midiInput, nullptr);
+        if (plugin->isCrashed()) {
+            return false;
+        }
+
+        interleavedOutput.resize(static_cast<size_t>(channels) * frames);
+        for (uint32_t frame = 0; frame < frames; ++frame) {
+            for (uint32_t ch = 0; ch < channels; ++ch) {
+                interleavedOutput[static_cast<size_t>(frame) * channels + ch] = outputStorage[ch][frame];
+            }
+        }
+        return true;
+    }
+
+    std::vector<uint8_t> saveState() const {
+        if (!plugin) {
+            return {};
+        }
+        return plugin->saveState();
+    }
+
+    bool loadState(const std::vector<uint8_t>& stateData) {
+        if (!plugin) {
+            return false;
+        }
+        return plugin->loadState(stateData);
+    }
+};
+#endif
+
 int hexValue(char c) {
     if (c >= '0' && c <= '9')
         return c - '0';
@@ -696,6 +848,9 @@ int main(int argc, char** argv) {
 #ifndef _WIN32
     ClapModule clapModule;
 #endif
+#ifdef AESTRA_HAS_VST3
+    Vst3Module vst3Module;
+#endif
 
     while (std::getline(std::cin, line)) {
         std::istringstream input(line);
@@ -764,6 +919,9 @@ int main(int argc, char** argv) {
             }
 #ifndef _WIN32
             if (format == "clap" && id != "__aestra_test_echo__") {
+#ifdef AESTRA_HAS_VST3
+                vst3Module.close();
+#endif
                 std::string error;
                 if (!clapModule.load(path, id, error)) {
                     reply("ERR " + error);
@@ -771,6 +929,20 @@ int main(int argc, char** argv) {
                 }
             } else {
                 clapModule.close();
+            }
+#endif
+#ifdef AESTRA_HAS_VST3
+            if (format == "vst3" && id != "__aestra_test_echo__") {
+#ifndef _WIN32
+                clapModule.close();
+#endif
+                std::string error;
+                if (!vst3Module.load(path, id, error)) {
+                    reply("ERR " + error);
+                    continue;
+                }
+            } else {
+                vst3Module.close();
             }
 #endif
             loaded = true;
@@ -795,18 +967,36 @@ int main(int argc, char** argv) {
                 }
             }
 #endif
+#ifdef AESTRA_HAS_VST3
+            if (vst3Module.plugin) {
+                std::string error;
+                if (!vst3Module.initialize(sampleRate, maxBlockSize, error)) {
+                    reply("ERR " + error);
+                    continue;
+                }
+            }
+#endif
             reply("OK INIT");
         } else if (command == "ACTIVATE") {
             if (!loaded) {
                 reply("ERR not-loaded");
                 continue;
             }
+#ifdef AESTRA_HAS_VST3
+            if (vst3Module.plugin && !vst3Module.activate()) {
+                reply("ERR vst3-activate-failed");
+                continue;
+            }
+#endif
             active = true;
             reply("OK ACTIVE");
         } else if (command == "DEACTIVATE") {
             active = false;
 #ifndef _WIN32
             clapModule.deactivate();
+#endif
+#ifdef AESTRA_HAS_VST3
+            vst3Module.deactivate();
 #endif
             reply("OK INACTIVE");
         } else if (command == "SAVESTATE") {
@@ -821,6 +1011,13 @@ int main(int argc, char** argv) {
                     reply("ERR state-unavailable");
                     continue;
                 }
+                reply("OK " + hexEncodeBytes(stateBuffer.data(), stateBuffer.size()));
+                continue;
+            }
+#endif
+#ifdef AESTRA_HAS_VST3
+            if (vst3Module.plugin) {
+                stateBuffer = vst3Module.saveState();
                 reply("OK " + hexEncodeBytes(stateBuffer.data(), stateBuffer.size()));
                 continue;
             }
@@ -847,6 +1044,16 @@ int main(int argc, char** argv) {
                 continue;
             }
 #endif
+#ifdef AESTRA_HAS_VST3
+            if (vst3Module.plugin) {
+                if (!vst3Module.loadState(stateBuffer)) {
+                    reply("ERR state-load-failed");
+                    continue;
+                }
+                reply("OK STATE");
+                continue;
+            }
+#endif
             reply(stateBuffer.empty() ? "OK STATE" : "ERR state-unavailable");
         } else if (command == "SHUTDOWN") {
             active = false;
@@ -854,10 +1061,16 @@ int main(int argc, char** argv) {
 #ifndef _WIN32
             clapModule.close();
 #endif
+#ifdef AESTRA_HAS_VST3
+            vst3Module.close();
+#endif
             reply("OK SHUTDOWN");
         } else if (command == "EXIT") {
 #ifndef _WIN32
             clapModule.close();
+#endif
+#ifdef AESTRA_HAS_VST3
+            vst3Module.close();
 #endif
             reply("OK EXIT");
             return 0;
@@ -897,6 +1110,19 @@ int main(int argc, char** argv) {
                 const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
                 if (!clapModule.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
                     reply("ERR clap-process-failed");
+                    continue;
+                }
+                const size_t byteCount = static_cast<size_t>(channels) * frames * sizeof(float);
+                reply("OK " + hexEncodeBytes(processed.data(), byteCount));
+                continue;
+            }
+#endif
+#ifdef AESTRA_HAS_VST3
+            if (vst3Module.plugin) {
+                std::vector<float> processed;
+                const std::vector<uint8_t>* midiData = midiBuffer.empty() ? nullptr : &midiBuffer;
+                if (!vst3Module.process(processBuffer, channels, frames, midiData, midiBuffer.size(), processed)) {
+                    reply("ERR vst3-process-failed");
                     continue;
                 }
                 const size_t byteCount = static_cast<size_t>(channels) * frames * sizeof(float);

@@ -13,8 +13,8 @@
 
 // VST3 SDK includes
 #include "pluginterfaces/base/funknown.h"
-#include "pluginterfaces/base/ipluginbase.h"
 #include "pluginterfaces/base/ibstream.h"
+#include "pluginterfaces/base/ipluginbase.h"
 #include "pluginterfaces/gui/iplugview.h"
 #include "pluginterfaces/vst/ivstaudioprocessor.h"
 #include "pluginterfaces/vst/ivstcomponent.h"
@@ -69,6 +69,8 @@ static bool SafeProcessCall(IAudioProcessor* processor, ProcessData& data) {
         return false; // Crashed
     }
 #else
+    // POSIX signal recovery is process-global and not realtime-safe. Linux/macOS
+    // crash containment is provided by OutOfProcessPluginInstance instead.
     processor->process(data);
     return true;
 #endif
@@ -117,6 +119,8 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
 
         m_module = new VST3::Hosting::Module::Ptr(std::move(module));
         auto& mod = *static_cast<VST3::Hosting::Module::Ptr*>(m_module);
+        m_hostApplication = new HostApplication();
+        auto hostApplication = static_cast<HostApplication*>(m_hostApplication);
 
         // Get the factory
         auto factory = mod->getFactory();
@@ -172,7 +176,7 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
 
         // Initialize component
         auto comp = static_cast<IComponent*>(m_component);
-        if (comp->initialize(nullptr) != kResultOk) {
+        if (comp->initialize(hostApplication) != kResultOk) {
             Log::error("VST3: Failed to initialize component: " + m_info.name);
             unload();
             return false;
@@ -196,7 +200,7 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
                 if (editController) {
                     m_controller = editController.take();
                     auto ctrl = static_cast<IEditController*>(m_controller);
-                    ctrl->initialize(nullptr);
+                    ctrl->initialize(hostApplication);
                 }
             }
         }
@@ -207,15 +211,11 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
         m_info.numAudioInputs = discoveredInputs > 0 ? discoveredInputs : 2;
         m_info.numAudioOutputs = discoveredOutputs > 0 ? discoveredOutputs : 2;
 
-        // Check for editor
-        if (m_controller) {
-            auto ctrl = static_cast<IEditController*>(m_controller);
-            auto view = ctrl->createView("editor");
-            m_info.hasEditor = (view != nullptr);
-            if (view) {
-                view->release();
-            }
-        }
+        // Do not instantiate the editor during plugin load. Some Linux VST3s
+        // allocate UI/toolkit state or crash when createView() is called from a
+        // headless scan/load path. openEditor()/getEditorSize() create the view
+        // only when the UI explicitly requests it.
+        m_info.hasEditor = (m_controller != nullptr);
 
         m_loaded = true;
         Log::info("VST3: Loaded plugin: " + m_info.name + " (" + m_info.vendor + ")");
@@ -266,6 +266,11 @@ void VST3PluginInstance::unload() {
     if (m_module) {
         delete static_cast<VST3::Hosting::Module::Ptr*>(m_module);
         m_module = nullptr;
+    }
+
+    if (m_hostApplication) {
+        delete static_cast<HostApplication*>(m_hostApplication);
+        m_hostApplication = nullptr;
     }
 
     m_loaded = false;
@@ -337,7 +342,7 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
     }
 
     // Watchdog Check
-    if (m_watchdogStats.isBypassed || m_crashed) {
+    if (m_watchdogBypassed.load(std::memory_order_acquire) || m_crashed.load(std::memory_order_acquire)) {
         // Clear outputs to silence
         for (uint32_t i = 0; i < numOutputChannels; ++i) {
             if (outputs[i]) {
@@ -379,12 +384,18 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
         int32 count = 0;
 
         tresult addEvent(Event& e) override {
-            if (count < 256) { events[count++] = e; return kResultOk; }
+            if (count < 256) {
+                events[count++] = e;
+                return kResultOk;
+            }
             return kOutOfMemory;
         }
         int32 getEventCount() override { return count; }
         tresult getEvent(int32 index, Event& e) override {
-            if (index >= 0 && index < count) { e = events[index]; return kResultOk; }
+            if (index >= 0 && index < count) {
+                e = events[index];
+                return kResultOk;
+            }
             return kInvalidArgument;
         }
         uint32 addRef() override { return 1; }
@@ -436,12 +447,18 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
         int32 count = 0;
 
         tresult addEvent(Event& e) override {
-            if (count < 256) { events[count++] = e; return kResultOk; }
+            if (count < 256) {
+                events[count++] = e;
+                return kResultOk;
+            }
             return kOutOfMemory;
         }
         int32 getEventCount() override { return count; }
         tresult getEvent(int32 index, Event& e) override {
-            if (index >= 0 && index < count) { e = events[index]; return kResultOk; }
+            if (index >= 0 && index < count) {
+                e = events[index];
+                return kResultOk;
+            }
             return kInvalidArgument;
         }
         uint32 addRef() override { return 1; }
@@ -456,12 +473,8 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
     bool success = SafeProcessCall(processor, data);
 
     if (!success) {
-        m_crashed = true;
-#ifdef _WIN32
-        Log::error("VST3: CRASH DETECTED in " + m_info.name + "! (Access Violation trapped)");
-#else
-        Log::error("VST3: Crash detected (Signal trapped)");
-#endif
+        m_crashed.store(true, std::memory_order_release);
+        m_crashReportPending.store(true, std::memory_order_release);
 
         // Silence output buffers immediately
         for (uint32_t i = 0; i < numOutputChannels; ++i) {
@@ -473,13 +486,24 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
 
     auto endTime = std::chrono::high_resolution_clock::now();
     double durationNs = std::chrono::duration<double, std::nano>(endTime - startTime).count();
+    const auto durationNsU64 = durationNs > 0.0 ? static_cast<uint64_t>(durationNs) : 0;
 
     // Update stats
-    if (durationNs > m_watchdogStats.maxExecutionTimeNs) {
-        m_watchdogStats.maxExecutionTimeNs = durationNs;
+    if (durationNsU64 > m_watchdogMaxExecutionTimeNs.load(std::memory_order_relaxed)) {
+        m_watchdogMaxExecutionTimeNs.store(durationNsU64, std::memory_order_relaxed);
+    }
+
+    const auto previousAvg = m_watchdogAvgExecutionTimeNs.load(std::memory_order_relaxed);
+    uint64_t nextAvg = durationNsU64;
+    if (previousAvg != 0) {
+        if (durationNsU64 > previousAvg) {
+            nextAvg = previousAvg + ((durationNsU64 - previousAvg) / 100);
+        } else {
+            nextAvg = previousAvg - ((previousAvg - durationNsU64) / 100);
+        }
     }
     // Exponential moving average (alpha ~ 0.01)
-    m_watchdogStats.avgExecutionTimeNs = m_watchdogStats.avgExecutionTimeNs * 0.99 + durationNs * 0.01;
+    m_watchdogAvgExecutionTimeNs.store(nextAvg, std::memory_order_relaxed);
 
     // Check budget
     // Budget is the duration of the audio block itself
@@ -489,17 +513,19 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
     // A stricter budget might be 80% to leave room for other tracks.
     // For now, let's use 100% of the block time.
     if (durationNs > budgetNs) {
-        m_watchdogStats.violationCount++;
+        const auto violationCount = m_watchdogViolationCount.fetch_add(1, std::memory_order_acq_rel) + 1;
 
-        if (m_watchdogStats.violationCount > WATCHDOG_VIOLATION_LIMIT) {
-            m_watchdogStats.isBypassed = true;
-            Log::error("VST3: Plugin " + m_info.name + " exceeded time budget " +
-                       std::to_string(WATCHDOG_VIOLATION_LIMIT) + " times. Auto-bypassing.");
+        if (violationCount > WATCHDOG_VIOLATION_LIMIT) {
+            const bool wasBypassed = m_watchdogBypassed.exchange(true, std::memory_order_acq_rel);
+            if (!wasBypassed) {
+                m_watchdogReportPending.store(true, std::memory_order_release);
+            }
         }
     } else {
         // Slowly decay violation count if behaving well (optional recovery)
-        if (m_watchdogStats.violationCount > 0) {
-            m_watchdogStats.violationCount--;
+        const auto violationCount = m_watchdogViolationCount.load(std::memory_order_relaxed);
+        if (violationCount > 0) {
+            m_watchdogViolationCount.store(violationCount - 1, std::memory_order_relaxed);
         }
     }
 
@@ -508,18 +534,14 @@ void VST3PluginInstance::process(const float* const* inputs, float** outputs, ui
         for (int32 i = 0; i < outputEvents.count; ++i) {
             const Event& ev = outputEvents.events[i];
             if (ev.type == Event::kNoteOnEvent) {
-                uint8_t data[3] = {
-                    static_cast<uint8_t>(0x90 | (ev.noteOn.channel & 0x0F)),
-                    static_cast<uint8_t>(ev.noteOn.pitch),
-                    static_cast<uint8_t>(ev.noteOn.velocity * 127.0f)
-                };
+                uint8_t data[3] = {static_cast<uint8_t>(0x90 | (ev.noteOn.channel & 0x0F)),
+                                   static_cast<uint8_t>(ev.noteOn.pitch),
+                                   static_cast<uint8_t>(ev.noteOn.velocity * 127.0f)};
                 midiOutput->addEvent(ev.sampleOffset, data, 3);
             } else if (ev.type == Event::kNoteOffEvent) {
-                uint8_t data[3] = {
-                    static_cast<uint8_t>(0x80 | (ev.noteOff.channel & 0x0F)),
-                    static_cast<uint8_t>(ev.noteOff.pitch),
-                    static_cast<uint8_t>(ev.noteOff.velocity * 127.0f)
-                };
+                uint8_t data[3] = {static_cast<uint8_t>(0x80 | (ev.noteOff.channel & 0x0F)),
+                                   static_cast<uint8_t>(ev.noteOff.pitch),
+                                   static_cast<uint8_t>(ev.noteOff.velocity * 127.0f)};
                 midiOutput->addEvent(ev.sampleOffset, data, 3);
             }
         }
@@ -579,29 +601,35 @@ std::vector<uint8_t> VST3PluginInstance::saveState() const {
         FUnknown* i = nullptr;
 
         MemStream() { addRef(); }
-        ~MemStream() { if (i) i->release(); }
+        ~MemStream() {
+            if (i)
+                i->release();
+        }
 
         tresult write(void* buffer, int32 numBytes, int32* numBytesWritten) override {
             if (!buffer || numBytes < 0 || pos < 0) {
-                if (numBytesWritten) *numBytesWritten = 0;
+                if (numBytesWritten)
+                    *numBytesWritten = 0;
                 return kInvalidArgument;
             }
             // [SEC-FIX] Cap stream size to prevent malicious plugins from exhausting memory.
             constexpr int64_t MAX_MEMSTREAM_SIZE = 256LL * 1024 * 1024; // 256 MiB
-            if (pos > MAX_MEMSTREAM_SIZE || numBytes > MAX_MEMSTREAM_SIZE ||
-                pos + numBytes > MAX_MEMSTREAM_SIZE) {
-                if (numBytesWritten) *numBytesWritten = 0;
+            if (pos > MAX_MEMSTREAM_SIZE || numBytes > MAX_MEMSTREAM_SIZE || pos + numBytes > MAX_MEMSTREAM_SIZE) {
+                if (numBytesWritten)
+                    *numBytesWritten = 0;
                 return kInvalidArgument;
             }
             if (pos + numBytes > static_cast<int64_t>(data.size()))
                 data.resize(pos + numBytes);
             std::memcpy(data.data() + pos, buffer, numBytes);
-            if (numBytesWritten) *numBytesWritten = numBytes;
+            if (numBytesWritten)
+                *numBytesWritten = numBytes;
             pos += numBytes;
             return kResultOk;
         }
         tresult read(void* buffer, int32 numBytes, int32* numBytesRead) override {
-            if (numBytesRead) *numBytesRead = 0;
+            if (numBytesRead)
+                *numBytesRead = 0;
             if (!buffer || numBytes < 0 || pos < 0) {
                 return kInvalidArgument;
             }
@@ -612,33 +640,47 @@ std::vector<uint8_t> VST3PluginInstance::saveState() const {
             if (toRead > 0) {
                 std::memcpy(buffer, data.data() + pos, toRead);
             }
-            if (numBytesRead) *numBytesRead = toRead;
+            if (numBytesRead)
+                *numBytesRead = toRead;
             pos += toRead;
             return kResultOk;
         }
         tresult seek(int64 pos, int32 type, int64* result) override {
-            if (type == kIBSeekSet) this->pos = pos;
-            else if (type == kIBSeekCur) this->pos += pos;
-            else if (type == kIBSeekEnd) this->pos = static_cast<int64_t>(data.size()) + pos;
-            else return kInvalidArgument;
+            if (type == kIBSeekSet)
+                this->pos = pos;
+            else if (type == kIBSeekCur)
+                this->pos += pos;
+            else if (type == kIBSeekEnd)
+                this->pos = static_cast<int64_t>(data.size()) + pos;
+            else
+                return kInvalidArgument;
             this->pos = std::max<int64_t>(0, std::min<int64_t>(this->pos, static_cast<int64_t>(data.size())));
-            if (result) *result = this->pos;
+            if (result)
+                *result = this->pos;
             return kResultOk;
         }
         tresult tell(int64* pos) override {
-            if (pos) *pos = this->pos;
+            if (pos)
+                *pos = this->pos;
             return kResultOk;
         }
         uint32 addRef() override { return ++refCount; }
         uint32 release() override {
             uint32 r = --refCount;
-            if (r == 0) { /* don't delete - stack allocated */ return 0; }
+            if (r == 0) { /* don't delete - stack allocated */
+                return 0;
+            }
             return r;
         }
         tresult queryInterface(const TUID iid, void** obj) override {
-            if (iid == IBStream::iid || iid == FUnknown::iid) { *obj = static_cast<IBStream*>(this); addRef(); return kResultOk; }
+            if (iid == IBStream::iid || iid == FUnknown::iid) {
+                *obj = static_cast<IBStream*>(this);
+                addRef();
+                return kResultOk;
+            }
             return kNoInterface;
         }
+
     private:
         uint32 refCount = 0;
     } stream;
@@ -665,7 +707,8 @@ bool VST3PluginInstance::loadState(const std::vector<uint8_t>& state) {
 
         tresult write(void*, int32, int32*) override { return kNotImplemented; }
         tresult read(void* buffer, int32 numBytes, int32* numBytesRead) override {
-            if (numBytesRead) *numBytesRead = 0;
+            if (numBytesRead)
+                *numBytesRead = 0;
             if (!buffer || numBytes < 0 || pos < 0) {
                 return kInvalidArgument;
             }
@@ -676,26 +719,46 @@ bool VST3PluginInstance::loadState(const std::vector<uint8_t>& state) {
             if (toRead > 0) {
                 std::memcpy(buffer, data.data() + pos, toRead);
             }
-            if (numBytesRead) *numBytesRead = toRead;
+            if (numBytesRead)
+                *numBytesRead = toRead;
             pos += toRead;
             return kResultOk;
         }
         tresult seek(int64 p, int32 type, int64* result) override {
-            if (type == kIBSeekSet) pos = p;
-            else if (type == kIBSeekCur) pos += p;
-            else if (type == kIBSeekEnd) pos = static_cast<int64_t>(data.size()) + p;
-            else return kInvalidArgument;
+            if (type == kIBSeekSet)
+                pos = p;
+            else if (type == kIBSeekCur)
+                pos += p;
+            else if (type == kIBSeekEnd)
+                pos = static_cast<int64_t>(data.size()) + p;
+            else
+                return kInvalidArgument;
             pos = std::max<int64_t>(0, std::min<int64_t>(pos, static_cast<int64_t>(data.size())));
-            if (result) *result = pos;
+            if (result)
+                *result = pos;
             return kResultOk;
         }
-        tresult tell(int64* p) override { if (p) *p = pos; return kResultOk; }
+        tresult tell(int64* p) override {
+            if (p)
+                *p = pos;
+            return kResultOk;
+        }
         uint32 addRef() override { return ++refCount; }
-        uint32 release() override { uint32 r = --refCount; if (r == 0) return 0; return r; }
+        uint32 release() override {
+            uint32 r = --refCount;
+            if (r == 0)
+                return 0;
+            return r;
+        }
         tresult queryInterface(const TUID iid, void** obj) override {
-            if (iid == IBStream::iid || iid == FUnknown::iid) { *obj = static_cast<IBStream*>(this); addRef(); return kResultOk; }
+            if (iid == IBStream::iid || iid == FUnknown::iid) {
+                *obj = static_cast<IBStream*>(this);
+                addRef();
+                return kResultOk;
+            }
             return kNoInterface;
         }
+
     private:
         uint32 refCount = 0;
     } stream(state);
@@ -816,10 +879,52 @@ void VST3PluginInstance::setupProcessing() {
     // Called after initialize to prepare buffers
 }
 
+IPluginInstance::WatchdogStats VST3PluginInstance::getWatchdogStats() const {
+    reportDeferredRealtimeEvents();
+
+    WatchdogStats stats;
+    stats.maxExecutionTimeNs = static_cast<double>(m_watchdogMaxExecutionTimeNs.load(std::memory_order_relaxed));
+    stats.avgExecutionTimeNs = static_cast<double>(m_watchdogAvgExecutionTimeNs.load(std::memory_order_relaxed));
+    stats.violationCount = m_watchdogViolationCount.load(std::memory_order_relaxed);
+    stats.isBypassed = m_watchdogBypassed.load(std::memory_order_acquire);
+    return stats;
+}
+
+bool VST3PluginInstance::isBypassedByWatchdog() const {
+    reportDeferredRealtimeEvents();
+    return m_watchdogBypassed.load(std::memory_order_acquire);
+}
+
+bool VST3PluginInstance::isCrashed() const {
+    reportDeferredRealtimeEvents();
+    return m_crashed.load(std::memory_order_acquire);
+}
+
 void VST3PluginInstance::resetWatchdog() {
-    m_watchdogStats = WatchdogStats(); // Reset to zero
-    m_crashed = false;                 // Reset crash state
+    reportDeferredRealtimeEvents();
+    m_watchdogMaxExecutionTimeNs.store(0, std::memory_order_release);
+    m_watchdogAvgExecutionTimeNs.store(0, std::memory_order_release);
+    m_watchdogViolationCount.store(0, std::memory_order_release);
+    m_watchdogBypassed.store(false, std::memory_order_release);
+    m_crashed.store(false, std::memory_order_release);
+    m_watchdogReportPending.store(false, std::memory_order_release);
+    m_crashReportPending.store(false, std::memory_order_release);
     Log::info("VST3: Watchdog reset for " + m_info.name);
+}
+
+void VST3PluginInstance::reportDeferredRealtimeEvents() const {
+    if (m_crashReportPending.exchange(false, std::memory_order_acq_rel)) {
+#ifdef _WIN32
+        Log::error("VST3: CRASH DETECTED in " + m_info.name + "! (Access Violation trapped)");
+#else
+        Log::error("VST3: Crash detected in " + m_info.name);
+#endif
+    }
+
+    if (m_watchdogReportPending.exchange(false, std::memory_order_acq_rel)) {
+        Log::error("VST3: Plugin " + m_info.name + " exceeded time budget " + std::to_string(WATCHDOG_VIOLATION_LIMIT) +
+                   " times. Auto-bypassing.");
+    }
 }
 
 // ============================================================================
@@ -884,8 +989,32 @@ std::shared_ptr<VST3PluginInstance> VST3PluginFactory::createInstance(const Plug
         return nullptr;
     }
 
+    int classIndex = 0;
+    if (!info.id.empty()) {
+        bool foundRequestedClass = false;
+        std::string errorMsg;
+        auto module = VST3::Hosting::Module::create(info.path.string(), errorMsg);
+        if (module) {
+            auto factory = module->getFactory();
+            if (factory.get()) {
+                auto classInfos = factory.classInfos();
+                for (size_t i = 0; i < classInfos.size(); ++i) {
+                    const auto& classInfo = classInfos[i];
+                    if (classInfo.category() == kVstAudioEffectClass && classInfo.ID().toString() == info.id) {
+                        classIndex = static_cast<int>(i);
+                        foundRequestedClass = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!foundRequestedClass) {
+            return nullptr;
+        }
+    }
+
     auto instance = std::make_shared<VST3PluginInstance>();
-    if (!instance->load(info.path)) {
+    if (!instance->load(info.path, classIndex)) {
         return nullptr;
     }
 
