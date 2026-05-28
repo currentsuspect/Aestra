@@ -30,14 +30,28 @@
 #include <cstdlib>
 #include <cstring>
 #include <queue>
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+#if defined(__x86_64__) || (defined(_M_X64) && !defined(_M_ARM64EC)) || defined(__i386__) || defined(_M_IX86)
 #include <immintrin.h> // AVX/SSE for high-performance mixing
+#endif
+#if defined(_M_ARM64) || defined(_M_ARM64EC)
+#include <intrin.h>
 #endif
 #include <map>
 #include <unordered_map>
 
 // Denormal protection macros
-#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+#if (defined(_M_ARM64) || defined(_M_ARM64EC)) && defined(ARM64_FPCR)
+// MSVC ARM64/ARM64EC: use the toolchain-defined FPCR register selector, never a raw literal.
+#define DISABLE_DENORMALS                           \
+    uint64_t oldFPCR = _ReadStatusReg(ARM64_FPCR);  \
+    _WriteStatusReg(ARM64_FPCR, oldFPCR | (1ULL << 24));
+
+#define RESTORE_DENORMALS _WriteStatusReg(ARM64_FPCR, oldFPCR);
+#elif defined(_M_ARM64) || defined(_M_ARM64EC)
+// Older MSVC ARM64 toolsets without ARM64_FPCR: avoid unsafe raw status-register literals.
+#define DISABLE_DENORMALS
+#define RESTORE_DENORMALS
+#elif defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
 #define DISABLE_DENORMALS        \
     int oldMXCSR = _mm_getcsr(); \
     _mm_setcsr(oldMXCSR | 0x8040); // Set DAZ and FTZ flags
@@ -51,10 +65,6 @@
     __asm__ volatile("msr fpcr, %0" ::"r"(oldFPCR | (1ULL << 24)));
 
 #define RESTORE_DENORMALS __asm__ volatile("msr fpcr, %0" ::"r"(oldFPCR));
-#elif defined(_M_ARM64) || defined(_M_ARM64EC)
-// MSVC ARM64/ARM64EC: avoid raw _ReadStatusReg/_WriteStatusReg literals in the audio callback.
-#define DISABLE_DENORMALS
-#define RESTORE_DENORMALS
 #else
 // Other architectures: no denormal control
 #define DISABLE_DENORMALS
