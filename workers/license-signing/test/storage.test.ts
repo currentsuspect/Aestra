@@ -70,6 +70,7 @@ type D1State = {
     created_at: number;
     expires_at: number;
     used_at: number | null;
+    metadata_json: string | null;
   }>;
   seenSessionTokenHashes: string[];
 };
@@ -112,6 +113,13 @@ class FakeD1Statement {
         email: account.email,
         display_name: account.display_name,
         status: account.status,
+      } as T;
+    }
+    if (this.sql.includes("COUNT(*) AS recent_count") && this.sql.includes("FROM account_login_challenges")) {
+      const metadataJson = this.args[0] as string;
+      const windowStart = this.args[1] as number;
+      return {
+        recent_count: this.state.challenges.filter((row) => row.metadata_json === metadataJson && row.created_at > windowStart).length,
       } as T;
     }
     if (this.sql.includes("FROM account_login_challenges")) {
@@ -157,7 +165,11 @@ class FakeD1Statement {
         created_at: this.args[3] as number,
         expires_at: this.args[4] as number,
         used_at: null,
+        metadata_json: this.args[5] as string | null,
       });
+    } else if (this.sql.includes("DELETE FROM account_login_challenges")) {
+      const id = this.args[0] as string;
+      this.state.challenges = this.state.challenges.filter((row) => !(row.id === id && row.status === "pending"));
     } else if (this.sql.includes("UPDATE account_login_challenges SET attempts = attempts + 1")) {
       const id = this.args[0] as string;
       const challenge = this.state.challenges.find((row) => row.id === id);
@@ -347,10 +359,10 @@ async function refresh(env: Env, token: string, body: Record<string, unknown> = 
   }), env);
 }
 
-async function loginStart(env: Env, email: string) {
+async function loginStart(env: Env, email: string, headers: Record<string, string> = {}) {
   return worker.fetch(new Request("https://example.test/v1/account/login/start", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify({ email }),
   }), env);
 }
@@ -782,6 +794,7 @@ describe("D1 account login and session issuance boundary", () => {
     const response = await loginStart(prodLikeEnv, "user@example.test");
     expect(response.status).toBe(500);
     expect(await response.json()).toMatchObject({ error: { code: "mailer_unconfigured" } });
+    expect(state.challenges).toHaveLength(0);
   });
 
   it("does not return fixture login codes in configured mailer mode", async () => {
@@ -792,6 +805,7 @@ describe("D1 account login and session issuance boundary", () => {
     expect(response.status).toBe(500);
     const body = await response.json() as { ok: boolean; error?: { code: string } };
     expect(body.error?.code).toBe("resend_key_missing");
+    expect(state.challenges).toHaveLength(0);
   });
 
   it("does not reveal whether an account exists when starting login", async () => {
@@ -808,6 +822,19 @@ describe("D1 account login and session issuance boundary", () => {
     expect(missingBody.ok).toBe(true);
     expect(existingBody.fixture_code).toHaveLength(6);
     expect(missingBody.fixture_code).toHaveLength(6);
+  });
+
+  it("limits login challenge storage growth per request source", async () => {
+    const state = emptyState();
+    const env = await makeLoginEnv(state);
+    for (let i = 0; i < 20; ++i) {
+      const response = await loginStart(env, `target-${i}@example.test`, { "cf-connecting-ip": "203.0.113.8" });
+      expect(response.status).toBe(200);
+    }
+    const limited = await loginStart(env, "target-20@example.test", { "cf-connecting-ip": "203.0.113.8" });
+    expect(limited.status).toBe(429);
+    expect(await limited.json()).toMatchObject({ error: { code: "login_start_rate_limited" } });
+    expect(state.challenges).toHaveLength(20);
   });
 
   it("verifies a challenge, creates a Core account, returns a raw session once, and stores only token hash", async () => {

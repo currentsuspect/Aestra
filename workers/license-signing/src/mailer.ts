@@ -17,11 +17,22 @@ export type LoginDelivery = {
   exposeCode: boolean;
 };
 
-async function resendSend(env: Env, toEmail: string, code: string, expiresAt: number): Promise<void> {
-  const apiKey = env.AESTRA_RESEND_API_KEY;
-  if (!apiKey) {
-    throw new MailerError(500, "resend_key_missing", "AESTRA_RESEND_API_KEY is not set");
+export function assertLoginMailerConfigured(env: Env): void {
+  if (env.AESTRA_LOGIN_MAILER_MODE === "fixture") {
+    return;
   }
+  if ((env.AESTRA_LOGIN_MAILER_MODE as string | undefined) === "configured" || env.AESTRA_LOGIN_MAILER_MODE === "smtp") {
+    if (!env.AESTRA_RESEND_API_KEY) {
+      throw new MailerError(500, "resend_key_missing", "AESTRA_RESEND_API_KEY is not set");
+    }
+    return;
+  }
+
+  throw new MailerError(500, "mailer_unconfigured", "login mailer is not configured");
+}
+
+async function resendSend(env: Env, toEmail: string, code: string, expiresAt: number): Promise<void> {
+  assertLoginMailerConfigured(env);
 
   const expiresMinutes = Math.ceil((expiresAt * 1000 - Date.now()) / 60000);
   const html = buildLoginEmail(code, expiresMinutes);
@@ -29,7 +40,7 @@ async function resendSend(env: Env, toEmail: string, code: string, expiresAt: nu
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${apiKey}`,
+      "Authorization": `Bearer ${env.AESTRA_RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -147,6 +158,7 @@ function buildLoginEmail(code: string, expiresMinutes: number): string {
 
 export async function sendLoginChallenge(env: Env, email: string, challenge: CreatedLoginChallenge):
     Promise<LoginDelivery> {
+  assertLoginMailerConfigured(env);
   if (env.AESTRA_LOGIN_MAILER_MODE === "fixture") {
     return { exposeCode: true };
   }
@@ -154,6 +166,5 @@ export async function sendLoginChallenge(env: Env, email: string, challenge: Cre
     await resendSend(env, email, challenge.code, challenge.expiresAt);
     return { exposeCode: false };
   }
-
   throw new MailerError(500, "mailer_unconfigured", "login mailer is not configured");
 }
