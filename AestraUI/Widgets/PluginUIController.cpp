@@ -266,10 +266,12 @@ void PluginUIController::refreshRackDisplay(EffectChainRack* rack) {
             info.name = instance->getInfo().name;
             info.isEmpty = false;
             info.bypassed = chain->isSlotBypassed(i);
+            info.nonFiniteOutputFault = chain->isSlotBypassedByNonFiniteOutput(i);
         } else {
             info.name = "Empty";
             info.isEmpty = true;
             info.bypassed = false;
+            info.nonFiniteOutputFault = false;
         }
         
         rack->setSlot(i, info);

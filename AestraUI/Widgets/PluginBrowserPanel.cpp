@@ -852,7 +852,7 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
         }
     } else {
         // Name line plus state indicators. Active state is shown by the purple dot;
-        // only bypass needs a text label.
+        // bypass and auto-quarantine need a text label.
         NUIColor nameColor = slot.bypassed ? Colors::textDisabled.withAlpha(0.6f) : Colors::textPrimary;
         if (slot.bypassed) {
             const NUIRect nameRect{textX, slotMid - rowH, textW, rowH};
@@ -869,10 +869,12 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
 
         if (slot.bypassed) {
             const NUIRect statusRect{textX, slotMid, textW, rowH};
-            renderer.drawText("Bypassed",
-                              {statusRect.x, statusRect.y + 2.0f},
-                              8.5f,
-                              Colors::textDisabled.withAlpha(0.72f));
+            const bool autoFaulted = slot.nonFiniteOutputFault;
+            const char* statusText = autoFaulted ? "Output fault" : "Bypassed";
+            const NUIColor statusColor = autoFaulted
+                                             ? NUIThemeManager::getInstance().getColor("warning").withAlpha(0.92f)
+                                             : Colors::textDisabled.withAlpha(0.72f);
+            renderer.drawText(statusText, {statusRect.x, statusRect.y + 2.0f}, 8.5f, statusColor);
         }
 
         // Active indicator / Bypass toggle
