@@ -68,6 +68,9 @@ public:
         // layer manages its own autosave location (e.g., global app-data
         // autosave independent of project path).
         std::string autosavePathOverride;
+
+        // Optional callback invoked after an autosave has been committed.
+        std::function<void(const std::string& autosavePath)> onAutosaveCommitted;
     };
     
     struct RecoveryInfo {

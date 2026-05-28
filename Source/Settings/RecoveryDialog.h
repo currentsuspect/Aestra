@@ -66,6 +66,10 @@ public:
      * @return True if autosave exists and is valid
      */
     static bool detectAutosave(const std::string& autosavePath, std::string& outTimestamp);
+    static bool detectAutosave(const std::string& autosavePath,
+                               const std::string& recoveryMarkerPath,
+                               const std::string& expectedSessionToken,
+                               std::string& outTimestamp);
     
 private:
     std::string m_autosavePath;
