@@ -4248,15 +4248,19 @@ void TrackManagerUI::buildAllWaveformCaches() {
         if (src && src->isReady() && !src->getWaveformCache()) {
             ++queued;
             m_waveformBuilder.buildAsync(
-                *src, [weakSelf, src](std::shared_ptr<Aestra::Audio::WaveformCache> cache) {
+                *src, [weakSelf, srcId](std::shared_ptr<Aestra::Audio::WaveformCache> cache) {
                     if (!cache) return;
                     auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
                     if (!self) return;
 
                     std::lock_guard<std::mutex> lock(self->m_pendingTasksMutex);
-                    self->m_pendingTasks.push_back([weakSelf, src, cache]() {
+                    self->m_pendingTasks.push_back([weakSelf, srcId, cache]() {
                         auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
                         if (!self) return;
+                        if (!self->m_trackManager) return;
+
+                        auto* src = self->m_trackManager->getSourceManager().getSource(srcId);
+                        if (!src) return;
 
                         src->setWaveformCache(cache);
                         self->invalidateCache();
@@ -4760,16 +4764,22 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
 
                                 // Trigger waveform cache build
                                 self->m_waveformBuilder.buildAsync(
-                                    *src, [weakSelf, src](std::shared_ptr<Aestra::Audio::WaveformCache> cache) {
+                                    *src, [weakSelf, sourceId](std::shared_ptr<Aestra::Audio::WaveformCache> cache) {
                                         if (cache) {
                                             auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
                                             if (!self)
                                                 return;
 
                                             std::lock_guard<std::mutex> lock(self->m_pendingTasksMutex);
-                                            self->m_pendingTasks.push_back([weakSelf, src, cache]() {
+                                            self->m_pendingTasks.push_back([weakSelf, sourceId, cache]() {
                                                 auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
                                                 if (!self)
+                                                    return;
+                                                if (!self->m_trackManager)
+                                                    return;
+
+                                                auto* src = self->m_trackManager->getSourceManager().getSource(sourceId);
+                                                if (!src)
                                                     return;
 
                                                 src->setWaveformCache(cache);
