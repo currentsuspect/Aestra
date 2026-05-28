@@ -910,6 +910,17 @@ target_include_directories(AestraEQTest PRIVATE
 add_test(NAME AestraEQTest COMMAND AestraEQTest)
 set_tests_properties(AestraEQTest PROPERTIES LABELS "audio;plugins;eq")
 
+# Aestra Drift Plugin State Test
+add_executable(AestraDriftStateTest AestraAudio/AestraDriftStateTest.cpp)
+target_link_libraries(AestraDriftStateTest PRIVATE AestraAudio)
+target_include_directories(AestraDriftStateTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraDriftStateTest COMMAND AestraDriftStateTest)
+set_tests_properties(AestraDriftStateTest PROPERTIES LABELS "audio;plugins;drift;security")
+
 # Aestra Comp Phase 0 Test
 add_executable(AestraCompPhase0Test AestraAudio/AestraCompPhase0Test.cpp)
 target_link_libraries(AestraCompPhase0Test PRIVATE AestraAudio)
