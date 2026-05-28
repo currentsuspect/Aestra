@@ -9,6 +9,7 @@
 #include "Plugin/InternalPluginRegistry.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <cctype>
 #include <chrono>
 #include <cstdlib>
@@ -155,6 +156,26 @@ std::string defaultPluginHostPath() {
 }
 
 #ifndef _WIN32
+class ScopedSigpipeIgnore {
+public:
+    ScopedSigpipeIgnore() {
+        struct sigaction action {};
+        action.sa_handler = SIG_IGN;
+        sigemptyset(&action.sa_mask);
+        m_valid = sigaction(SIGPIPE, &action, &m_previous) == 0;
+    }
+
+    ~ScopedSigpipeIgnore() {
+        if (m_valid) {
+            sigaction(SIGPIPE, &m_previous, nullptr);
+        }
+    }
+
+private:
+    struct sigaction m_previous {};
+    bool m_valid{false};
+};
+
 bool sendAll(int fd, const std::string& line) {
     std::string framed = line;
     framed.push_back('\n');
@@ -162,6 +183,9 @@ bool sendAll(int fd, const std::string& line) {
     size_t remaining = framed.size();
     while (remaining > 0) {
         const ssize_t written = write(fd, data, remaining);
+        if (written < 0 && errno == EINTR) {
+            continue;
+        }
         if (written <= 0) {
             return false;
         }
@@ -203,6 +227,7 @@ std::vector<PluginInfo> scanClapMetadataOutOfProcess(const std::filesystem::path
     return {};
 #else
     const std::string hostPath = defaultPluginHostPath();
+    ScopedSigpipeIgnore sigpipeIgnore;
     int inPipe[2] = {-1, -1};
     int outPipe[2] = {-1, -1};
     if (pipe(inPipe) != 0 || pipe(outPipe) != 0) {
