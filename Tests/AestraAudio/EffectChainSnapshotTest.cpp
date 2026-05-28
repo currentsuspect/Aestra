@@ -407,6 +407,69 @@ void snapshotQuarantinesNonFinitePluginBeforeDownstreamProcessing() {
     std::cout << "PASS: snapshotQuarantinesNonFinitePluginBeforeDownstreamProcessing\n";
 }
 
+void movedPluginCarriesFaultStateForInFlightSnapshots() {
+    constexpr uint32_t kChannels = 2;
+    constexpr uint32_t kFrames = 8;
+
+    EffectChain chain;
+    chain.prepare(48000.0, kFrames);
+
+    auto poison = std::make_shared<NonFiniteOutputPlugin>();
+    chain.insertPlugin(0, poison);
+
+    auto inFlightSnapshot = chain.getSnapshot();
+    require(inFlightSnapshot != nullptr, "movedPluginCarriesFaultState: snapshot is null");
+
+    require(chain.movePlugin(0, 2), "movedPluginCarriesFaultState: move failed");
+    require(!chain.isSlotBypassedByNonFiniteOutput(2), "movedPluginCarriesFaultState: destination pre-faulted");
+
+    std::array<float, kFrames> left{};
+    std::array<float, kFrames> right{};
+    float* channels[kChannels] = {left.data(), right.data()};
+    std::array<float, kFrames * kChannels> dryBuffer{};
+
+    inFlightSnapshot->process(channels, kChannels, kFrames, nullptr, 0, dryBuffer.data());
+
+    require(poison->processCalls == 1, "movedPluginCarriesFaultState: in-flight snapshot did not process poison");
+    require(chain.isSlotBypassedByNonFiniteOutput(2),
+            "movedPluginCarriesFaultState: moved plugin destination did not receive in-flight fault");
+    require(!chain.isSlotBypassedByNonFiniteOutput(0),
+            "movedPluginCarriesFaultState: empty source slot received moved plugin fault");
+
+    std::cout << "PASS: movedPluginCarriesFaultStateForInFlightSnapshots\n";
+}
+
+void replacingPluginIsolatedFromInFlightSnapshotFaults() {
+    constexpr uint32_t kChannels = 2;
+    constexpr uint32_t kFrames = 8;
+
+    EffectChain chain;
+    chain.prepare(48000.0, kFrames);
+
+    auto oldPoison = std::make_shared<NonFiniteOutputPlugin>();
+    auto replacement = std::make_shared<FiniteProbePlugin>();
+    chain.insertPlugin(0, oldPoison);
+
+    auto inFlightSnapshot = chain.getSnapshot();
+    require(inFlightSnapshot != nullptr, "replacingPluginIsolated: snapshot is null");
+
+    require(chain.insertPlugin(0, replacement), "replacingPluginIsolated: replacement insert failed");
+    require(!chain.isSlotBypassedByNonFiniteOutput(0), "replacingPluginIsolated: replacement pre-faulted");
+
+    std::array<float, kFrames> left{};
+    std::array<float, kFrames> right{};
+    float* channels[kChannels] = {left.data(), right.data()};
+    std::array<float, kFrames * kChannels> dryBuffer{};
+
+    inFlightSnapshot->process(channels, kChannels, kFrames, nullptr, 0, dryBuffer.data());
+
+    require(oldPoison->processCalls == 1, "replacingPluginIsolated: in-flight snapshot did not process old plugin");
+    require(!chain.isSlotBypassedByNonFiniteOutput(0),
+            "replacingPluginIsolated: stale snapshot fault quarantined replacement plugin");
+
+    std::cout << "PASS: replacingPluginIsolatedFromInFlightSnapshotFaults\n";
+}
+
 } // namespace
 
 int main() {
@@ -423,6 +486,8 @@ int main() {
     getSnapshotReturnsPublishedSnapshot();
     snapshotPublicationAfterAllMutations();
     snapshotQuarantinesNonFinitePluginBeforeDownstreamProcessing();
+    movedPluginCarriesFaultStateForInFlightSnapshots();
+    replacingPluginIsolatedFromInFlightSnapshotFaults();
 
     std::cout << "\n=== All EffectChainSnapshot tests passed ===\n";
     return 0;
