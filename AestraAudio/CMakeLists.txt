@@ -92,6 +92,7 @@ if(EXISTS ${VST3_SDK_DIR}/pluginterfaces AND EXISTS ${VST3_SDK_DIR}/public.sdk)
     set(VST3_HOST_SOURCES
         ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/hostclasses.cpp
+        ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/pluginterfacesupport.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/plugprovider.cpp
         ${VST3_SDK_DIR}/public.sdk/source/common/memorystream.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/utility/stringconvert.cpp
@@ -530,6 +531,11 @@ set_target_properties(AestraPluginHost PROPERTIES
 
 if(AESTRA_ENABLE_TESTS)
     target_compile_definitions(AestraPluginHost PRIVATE AESTRA_ENABLE_TEST_HOOKS)
+endif()
+
+if(AESTRA_HAS_VST3)
+    target_compile_definitions(AestraPluginHost PRIVATE AESTRA_HAS_VST3)
+    target_link_libraries(AestraPluginHost PRIVATE AestraAudioCore)
 endif()
 
 # ENFORCEMENT: AestraAudioCore MUST NOT link Windows libraries

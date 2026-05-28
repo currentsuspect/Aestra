@@ -3,6 +3,7 @@
 
 #include "PluginHost.h"
 
+#include <atomic>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -95,20 +96,23 @@ public:
     uint32_t getTailSamples() const override;
 
     // Watchdog implementation
-    WatchdogStats getWatchdogStats() const override { return m_watchdogStats; }
+    WatchdogStats getWatchdogStats() const override;
     void resetWatchdog() override;
-    bool isBypassedByWatchdog() const override { return m_watchdogStats.isBypassed; }
-    bool isCrashed() const override { return m_crashed; }
+    bool isBypassedByWatchdog() const override;
+    bool isCrashed() const override;
 
 private:
     bool m_loaded = false;
     bool m_active = false;
     bool m_editorOpen = false;
-    bool m_crashed = false;
 
     // Watchdog state
-    WatchdogStats m_watchdogStats;
     static constexpr uint64_t WATCHDOG_VIOLATION_LIMIT = 50; // Bypass after 50 violations
+    std::atomic<uint64_t> m_watchdogMaxExecutionTimeNs{0};
+    std::atomic<uint64_t> m_watchdogAvgExecutionTimeNs{0};
+    std::atomic<uint64_t> m_watchdogViolationCount{0};
+    std::atomic<bool> m_watchdogBypassed{false};
+    std::atomic<bool> m_crashed{false};
 
     PluginInfo m_info;
 
@@ -116,12 +120,13 @@ private:
     uint32_t m_maxBlockSize = 512;
 
     // VST3 SDK objects (using void* to avoid header pollution, cast in .cpp)
-    void* m_module = nullptr;     // VST3::Hosting::Module
-    void* m_factory = nullptr;    // IPluginFactory*
-    void* m_component = nullptr;  // IComponent*
-    void* m_processor = nullptr;  // IAudioProcessor*
-    void* m_controller = nullptr; // IEditController*
-    void* m_plugView = nullptr;   // IPlugView* (editor)
+    void* m_module = nullptr;          // VST3::Hosting::Module
+    void* m_factory = nullptr;         // IPluginFactory*
+    void* m_hostApplication = nullptr; // VST3::HostApplication
+    void* m_component = nullptr;       // IComponent*
+    void* m_processor = nullptr;       // IAudioProcessor*
+    void* m_controller = nullptr;      // IEditController*
+    void* m_plugView = nullptr;        // IPlugView* (editor)
 
     // Audio buffers for VST3 ProcessData
     std::vector<float*> m_inputBuffers;
@@ -135,6 +140,10 @@ private:
     // Internal helpers
     void buildParameterCache() const;
     void setupProcessing();
+    void reportDeferredRealtimeEvents() const;
+
+    mutable std::atomic<bool> m_watchdogReportPending{false};
+    mutable std::atomic<bool> m_crashReportPending{false};
 };
 
 /**
