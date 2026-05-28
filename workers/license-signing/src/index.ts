@@ -81,7 +81,9 @@ const worker = {
       }
 
       try {
-        return jsonResponse(await buildSignedLeaseResponse(parseSignRequest(await parseJson(request)), env, false));
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        return jsonResponse(await buildSignedLeaseResponse(parseSignRequest(await parseJson(request), nowSeconds), env,
+          false, nowSeconds));
       } catch (error) {
         if (error instanceof SignRequestError) {
           return errorResponse(400, "invalid_request", error.message, error.issues);
@@ -100,7 +102,9 @@ const worker = {
       }
 
       try {
-        return jsonResponse(await buildSignedLeaseResponse(parseSignRequest(await parseJson(request)), env, true));
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        return jsonResponse(await buildSignedLeaseResponse(parseSignRequest(await parseJson(request), nowSeconds), env,
+          true, nowSeconds));
       } catch (error) {
         if (error instanceof SignRequestError) {
           return errorResponse(400, "invalid_request", error.message, error.issues);

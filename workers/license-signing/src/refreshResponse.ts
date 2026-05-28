@@ -53,9 +53,10 @@ export function parseAccountRefreshRequest(input: unknown, nowSeconds: number): 
   return { deviceHash: deviceHash as string, issuedAt };
 }
 
-export async function buildSignedLeaseResponse(payload: LeasePayload, env: Env, includeLeaseBlob: boolean):
+export async function buildSignedLeaseResponse(payload: LeasePayload, env: Env, includeLeaseBlob: boolean,
+                                               nowSeconds?: number):
     Promise<Record<string, unknown>> {
-  const validatedPayload = parseSignRequest(payload);
+  const validatedPayload = parseSignRequest(payload, nowSeconds);
   const canonical = canonicalizeLease(validatedPayload);
   const signatureHex = await signCanonicalLease(canonical, env);
   return {
