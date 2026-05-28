@@ -642,6 +642,12 @@ void AuditionEngine::decodeWorkerLoop() {
             newSource->setFilePath(job.filePath);
             newSource->setBuffer(bufferData);
 
+            if (m_loadGeneration.load(std::memory_order_acquire) != job.generation) {
+                Log::info("[AuditionEngine] Discarding stale decode before publish (gen=" +
+                          std::to_string(job.generation) + ")");
+                continue;
+            }
+
             Log::info("[AuditionEngine] Source loaded: " + std::to_string(bufferData->durationSeconds()) + "s");
 
             // Atomic publish to RT thread
@@ -659,6 +665,12 @@ void AuditionEngine::decodeWorkerLoop() {
             (duration > 0.0) ? std::clamp(job.lastPosition, 0.0, duration) : std::max(0.0, job.lastPosition);
         m_positionSeconds.store(clampedStart, std::memory_order_release);
         m_cachedDurationSeconds.store(duration, std::memory_order_release);
+
+        if (m_loadGeneration.load(std::memory_order_acquire) != job.generation) {
+            Log::info("[AuditionEngine] Discarding stale decode before callbacks (gen=" +
+                      std::to_string(job.generation) + ")");
+            continue;
+        }
 
         std::function<void(const AuditionQueueItem&)> onTrackChanged;
         std::function<void(bool)> onPlaybackStateChanged;
