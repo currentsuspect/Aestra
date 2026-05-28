@@ -4,6 +4,7 @@
 #include "../AestraCore/include/AestraLog.h"
 #include <chrono>
 #include <ctime>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
 
@@ -53,6 +54,25 @@ bool RecoveryDialog::detectAutosave(const std::string& autosavePath, std::string
         Log::warning("[Recovery] Error checking autosave: " + std::string(e.what()));
         return false;
     }
+}
+
+bool RecoveryDialog::detectAutosave(const std::string& autosavePath,
+                                    const std::string& recoveryMarkerPath,
+                                    const std::string& expectedSessionToken,
+                                    std::string& outTimestamp) {
+    if (expectedSessionToken.empty()) {
+        return false;
+    }
+
+    std::ifstream marker(recoveryMarkerPath, std::ios::binary);
+    std::string markerToken;
+    std::getline(marker, markerToken);
+    if (markerToken != expectedSessionToken) {
+        Log::warning("[Recovery] Ignoring autosave without matching recovery marker");
+        return false;
+    }
+
+    return detectAutosave(autosavePath, outTimestamp);
 }
 
 void RecoveryDialog::show(const std::string& autosavePath, ResponseCallback callback) {
