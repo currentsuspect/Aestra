@@ -624,6 +624,53 @@ void testAutomationTarget256DoesNotWrapToVolume() {
     std::filesystem::remove_all(testDir);
 }
 
+void testMixerLaneStateNumbersClampBeforeCast() {
+    std::cout << "[TEST] Mixer lane state numbers clamp before cast..." << std::endl;
+
+    auto testDir = makeTempDir();
+    std::filesystem::path testProject = testDir / "project.aes";
+
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [],
+        "lanes": [
+            {
+                "name": "Track 1",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "inputChannelIndex": 2147483648,
+                "width": 1e100,
+                "trackColorIndex": 1e100,
+                "clips": []
+            }
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+    assert(result.ok);
+    assert(trackManager->getChannelCount() == 1);
+
+    auto* channel = trackManager->getChannel(0);
+    assert(channel != nullptr);
+    assert(channel->getInputChannelIndex() == 1024);
+    assert(channel->getTrackColorIndex() == 1024);
+    assert(std::abs(channel->getWidth() - 4.0f) < 1e-6f);
+
+    std::cout << "[PASS] Mixer lane state numbers clamp before cast" << std::endl;
+
+    std::filesystem::remove_all(testDir);
+}
+
 }
 
 int main() {
@@ -638,6 +685,7 @@ int main() {
     testUnresolvedRouteTargetNonFatal();
     testV1FixtureMigratesToCurrentVersion();
     testAutomationTarget256DoesNotWrapToVolume();
+    testMixerLaneStateNumbersClampBeforeCast();
 
     std::cout << "=== All tests passed ===" << std::endl;
     return 0;

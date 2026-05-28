@@ -1359,19 +1359,15 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         if (lj[i].has("monitorInput") && lj[i]["monitorInput"].isBool())
                             channel->setMonitoringEnabled(lj[i]["monitorInput"].asBool());
                         if (lj[i].has("inputChannelIndex") && lj[i]["inputChannelIndex"].isNumber()) {
-                            const double raw = lj[i]["inputChannelIndex"].asNumber();
-                            if (std::isfinite(raw))
-                                channel->setInputChannelIndex(std::clamp(static_cast<int>(raw), -2, 1024));
+                            channel->setInputChannelIndex(
+                                static_cast<int>(finiteNumberOr(lj[i], "inputChannelIndex", -2.0, -2.0, 1024.0)));
                         }
                         if (lj[i].has("width") && lj[i]["width"].isNumber()) {
-                            const double raw = lj[i]["width"].asNumber();
-                            if (std::isfinite(raw))
-                                channel->setWidth(static_cast<float>(std::clamp(raw, 0.0, 4.0)));
+                            channel->setWidth(static_cast<float>(finiteNumberOr(lj[i], "width", 1.0, 0.0, 4.0)));
                         }
                         if (lj[i].has("trackColorIndex") && lj[i]["trackColorIndex"].isNumber()) {
-                            const double raw = lj[i]["trackColorIndex"].asNumber();
-                            if (std::isfinite(raw))
-                                channel->setTrackColorIndex(std::clamp(static_cast<int>(raw), -1, 1024));
+                            channel->setTrackColorIndex(
+                                static_cast<int>(finiteNumberOr(lj[i], "trackColorIndex", -1.0, -1.0, 1024.0)));
                         }
 
                         if (lj[i].has("routing") && lj[i]["routing"].isObject()) {
