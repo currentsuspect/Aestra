@@ -219,6 +219,7 @@ public:
 
     void setParameter(uint32_t id, float value) override {
         if (id >= kParamCount) return;
+        if (!std::isfinite(value)) return;
         const float clampedValue = std::clamp(value, 0.0f, 1.0f);
         m_params[id].store(clampedValue, std::memory_order_relaxed);
         if (id == kDetectorHPF) {
