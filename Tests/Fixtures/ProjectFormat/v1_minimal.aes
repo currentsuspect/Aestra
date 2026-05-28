@@ -1,16 +1,36 @@
 {
   "version": 1,
-  "tempo": 120.0,
-  "playhead": 0.0,
+  "tempo": 133.5,
+  "playhead": 2.25,
   "sources": [],
-  "patterns": [],
+  "patterns": [
+    {
+      "id": 1,
+      "name": "V1 MIDI Pattern",
+      "type": "midi",
+      "length": 8.0,
+      "notes": [
+        {"pitch": 60, "startBeat": 0.0, "durationBeats": 1.0, "velocity": 0.75},
+        {"pitch": 64, "startBeat": 1.0, "durationBeats": 0.5, "velocity": 0.5}
+      ]
+    }
+  ],
   "lanes": [
     {
       "name": "Migrated Track",
       "color": "4294967295",
       "volume": 1.0,
       "pan": 0.0,
-      "clips": []
+      "clips": [
+        {
+          "id": "v1-fixture-clip",
+          "patternId": 1,
+          "start": 4.0,
+          "duration": 8.0,
+          "sourceOffset": 0.5,
+          "name": "Migrated Clip"
+        }
+      ]
     }
   ],
   "arsenal": {"nextId": 1, "units": []}

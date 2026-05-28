@@ -8,10 +8,12 @@
 #include "Models/TrackManager.h"
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <string>
 
 using namespace Aestra;
@@ -457,9 +459,17 @@ void testV1FixtureMigratesToCurrentVersion() {
     auto fixturePath = std::filesystem::path(AESTRA_PROJECT_FIXTURE_DIR) / "v1_minimal.aes";
     assert(std::filesystem::exists(fixturePath));
 
+    std::ifstream fixtureIn(fixturePath);
+    std::string fixtureJson((std::istreambuf_iterator<char>(fixtureIn)), std::istreambuf_iterator<char>());
+    assert(fixtureJson.find("\"version\": 1") != std::string::npos ||
+           fixtureJson.find("\"version\":1") != std::string::npos);
+
     auto trackManager = std::make_shared<TrackManager>();
     auto result = ProjectSerializer::load(fixturePath.string(), trackManager);
     assert(result.ok);
+    assert(result.errorMessage.empty());
+    assert(std::abs(result.tempo - 133.5) < 1e-9);
+    assert(std::abs(result.playhead - 2.25) < 1e-9);
     assert(trackManager->getChannelCount() == 1);
 
     auto laneIds = trackManager->getPlaylistModel().getLaneIDs();
@@ -467,10 +477,62 @@ void testV1FixtureMigratesToCurrentVersion() {
     auto* lane = trackManager->getPlaylistModel().getLane(laneIds[0]);
     assert(lane);
     assert(lane->name == "Migrated Track");
+    assert(lane->clips.size() == 1);
+    assert(lane->clips[0].name == "Migrated Clip");
+    assert(std::abs(lane->clips[0].startBeat - 4.0) < 1e-9);
+    assert(std::abs(lane->clips[0].durationBeats - 8.0) < 1e-9);
+    assert(std::abs(lane->clips[0].sourceOffset - 0.5) < 1e-9);
+
+    auto patterns = trackManager->getPatternManager().getAllPatterns();
+    assert(patterns.size() == 1);
+    assert(patterns[0]);
+    assert(patterns[0]->isMidi());
+    assert(patterns[0]->name == "V1 MIDI Pattern");
+    assert(std::abs(patterns[0]->lengthBeats - 8.0) < 1e-9);
+    assert(patterns[0]->getMidiNotes().size() == 2);
+    assert(patterns[0]->getMidiNotes()[0].pitch == 60);
+    assert(std::abs(patterns[0]->getMidiNotes()[0].velocity - 0.75f) < 1e-6f);
 
     std::string saved = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0).contents;
     assert(saved.find("\"version\": 2") != std::string::npos ||
            saved.find("\"version\":2") != std::string::npos);
+
+    auto testDir = makeTempDir();
+    auto migratedPath = testDir / "v1_migrated_roundtrip.aes";
+    std::ofstream migratedOut(migratedPath);
+    migratedOut << saved;
+    migratedOut.close();
+
+    auto roundTripManager = std::make_shared<TrackManager>();
+    auto roundTripResult = ProjectSerializer::load(migratedPath.string(), roundTripManager);
+    assert(roundTripResult.ok);
+    assert(roundTripResult.errorMessage.empty());
+    assert(std::abs(roundTripResult.tempo - 133.5) < 1e-9);
+    assert(std::abs(roundTripResult.playhead - 2.25) < 1e-9);
+
+    auto roundTripLaneIds = roundTripManager->getPlaylistModel().getLaneIDs();
+    assert(roundTripLaneIds.size() == 1);
+    auto* roundTripLane = roundTripManager->getPlaylistModel().getLane(roundTripLaneIds[0]);
+    assert(roundTripLane);
+    assert(roundTripLane->name == "Migrated Track");
+    assert(roundTripLane->clips.size() == 1);
+    assert(roundTripLane->clips[0].name == "Migrated Clip");
+    assert(std::abs(roundTripLane->clips[0].startBeat - 4.0) < 1e-9);
+    assert(std::abs(roundTripLane->clips[0].durationBeats - 8.0) < 1e-9);
+    assert(std::abs(roundTripLane->clips[0].sourceOffset - 0.5) < 1e-9);
+
+    auto roundTripPatterns = roundTripManager->getPatternManager().getAllPatterns();
+    assert(roundTripPatterns.size() == 1);
+    assert(roundTripPatterns[0]);
+    assert(roundTripPatterns[0]->isMidi());
+    assert(roundTripPatterns[0]->name == "V1 MIDI Pattern");
+    assert(roundTripPatterns[0]->getMidiNotes().size() == 2);
+    assert(roundTripPatterns[0]->getMidiNotes()[0].pitch == 60);
+    assert(std::abs(roundTripPatterns[0]->getMidiNotes()[0].velocity - 0.75f) < 1e-6f);
+    assert(roundTripPatterns[0]->getMidiNotes()[1].pitch == 64);
+    assert(std::abs(roundTripPatterns[0]->getMidiNotes()[1].velocity - 0.5f) < 1e-6f);
+
+    std::filesystem::remove_all(testDir);
 
     std::cout << "[PASS] v1 fixture migrates to current project version" << std::endl;
 }
