@@ -174,11 +174,13 @@ public:
 
     void shutdown() override {}
     void activate() override {
-        m_active.store(true, std::memory_order_relaxed);
-        clearBuffers(true);
+        if (!m_active.load(std::memory_order_acquire)) {
+            clearBuffers(true);
+            m_active.store(true, std::memory_order_release);
+        }
     }
-    void deactivate() override { m_active.store(false, std::memory_order_relaxed); }
-    bool isActive() const override { return m_active.load(std::memory_order_relaxed); }
+    void deactivate() override { m_active.store(false, std::memory_order_release); }
+    bool isActive() const override { return m_active.load(std::memory_order_acquire); }
 
     void process(const float* const* inputs, float** outputs,
                  uint32_t numInputChannels, uint32_t numOutputChannels,
@@ -187,14 +189,13 @@ public:
         (void)midiInput;
         (void)midiOutput;
 
-        if (!m_active.load(std::memory_order_relaxed) ||
+        if (!m_active.load(std::memory_order_acquire) ||
             m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
             copyDry(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
             return;
         }
 
-        // RT-safe: prepareDelayLines only runs in activate()/loadState(), never concurrently with process()
-        // No lock needed - audio thread reads current state, control thread updates atomically
+        // Buffer storage is rebuilt only while inactive. Runtime control changes are atomic scalars.
 
         if (m_predelayL.empty() || m_delayLines[0].empty()) {
             copyDry(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
@@ -614,7 +615,9 @@ public:
         for (size_t i = 0; i < std::min<size_t>(availableParams, kParamCount); ++i) {
             setParameter(static_cast<uint32_t>(i), params[i]);
         }
-        prepareDelayLines(false);
+        if (!m_active.load(std::memory_order_acquire)) {
+            prepareDelayLines(false);
+        }
         return true;
     }
 

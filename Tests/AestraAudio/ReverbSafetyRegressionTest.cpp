@@ -3,10 +3,12 @@
 #include "AestraVerb.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <vector>
 
 using Aestra::Audio::Plugins::AestraVerb;
@@ -207,6 +209,55 @@ bool runHighFrequencyBuildupChecks() {
     return ok;
 }
 
+bool runActiveLoadStateSafetyCheck() {
+    AestraVerb verb;
+    verb.initialize(kSampleRate, 128);
+    setUsableDefaults(verb, 1);
+    verb.activate();
+
+    const std::vector<uint8_t> state = verb.saveState();
+    std::atomic<bool> stop{false};
+    std::atomic<bool> renderOk{true};
+
+    std::thread audioThread([&]() {
+        std::vector<float> inL(128, 0.0f);
+        std::vector<float> inR(128, 0.0f);
+        std::vector<float> outL(128, 0.0f);
+        std::vector<float> outR(128, 0.0f);
+        inL[0] = 0.5f;
+        inR[0] = 0.5f;
+
+        while (!stop.load(std::memory_order_acquire)) {
+            const float* inputs[2] = {inL.data(), inR.data()};
+            float* outputs[2] = {outL.data(), outR.data()};
+            verb.process(inputs, outputs, 2, 2, static_cast<uint32_t>(inL.size()));
+            for (size_t i = 0; i < outL.size(); ++i) {
+                if (!std::isfinite(outL[i]) || !std::isfinite(outR[i])) {
+                    renderOk.store(false, std::memory_order_release);
+                    stop.store(true, std::memory_order_release);
+                    break;
+                }
+            }
+            inL[0] = 0.0f;
+            inR[0] = 0.0f;
+        }
+    });
+
+    bool ok = true;
+    for (int i = 0; i < 1000; ++i) {
+        ok &= require(verb.loadState(state), "active state load failed");
+        if (!ok || !renderOk.load(std::memory_order_acquire)) {
+            break;
+        }
+    }
+
+    stop.store(true, std::memory_order_release);
+    audioThread.join();
+
+    ok &= require(renderOk.load(std::memory_order_acquire), "active state load render produced NaN/Inf");
+    return ok;
+}
+
 } // namespace
 
 int main() {
@@ -215,6 +266,7 @@ int main() {
     ok &= runParameterExtremeChecks();
     ok &= runModeSwitchAndDeterminismChecks();
     ok &= runHighFrequencyBuildupChecks();
+    ok &= runActiveLoadStateSafetyCheck();
 
     if (!ok) {
         return 1;
