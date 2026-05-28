@@ -247,7 +247,7 @@ bool runPreviewDecodeLimitTest() {
     std::vector<float> audio;
     uint32_t sampleRate = 0;
     uint32_t channels = 0;
-    const bool ok = decodeAudioPreview(path, audio, sampleRate, channels, 4);
+    const bool ok = decodeAudioPreview(path, audio, sampleRate, channels, 4.0 / 48000.0);
     fs::remove(path);
 
     if (!ok || sampleRate != 48000 || channels != 2 || audio.size() != 8) {
