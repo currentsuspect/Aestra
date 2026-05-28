@@ -347,14 +347,8 @@ bool loadWithMiniAudio(const std::string& filePath, std::vector<float>& audioDat
     ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 0, 0);
     ma_decoder decoder;
 #ifdef _WIN32
-    if (ma_decoder_init_file_w(pathStringToWide(filePath).c_str(), &config, &decoder) != MA_SUCCESS) {
-        const uint64_t fallbackMaxFrames = static_cast<uint64_t>(std::ceil(maxSeconds * 192000.0));
-        if (!loadWithMediaFoundation(filePath, audioData, sampleRate, numChannels, nullptr, fallbackMaxFrames)) {
-            return false;
-        }
-        forceStereo(audioData, numChannels);
-        return true;
-    }
+    if (ma_decoder_init_file_w(pathStringToWide(filePath).c_str(), &config, &decoder) != MA_SUCCESS)
+        return false;
 #else
     if (ma_decoder_init_file(filePath.c_str(), &config, &decoder) != MA_SUCCESS)
         return false;

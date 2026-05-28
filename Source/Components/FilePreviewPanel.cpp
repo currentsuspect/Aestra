@@ -253,7 +253,8 @@ void FilePreviewPanel::waveformWorker(const std::string& path, uint64_t generati
     uint32_t numChannels = 0;
 
     constexpr uint64_t kPreviewMaxFrames = 48000 * 24;
-    bool success = Aestra::Audio::decodeAudioPreview(path, audioData, sampleRate, numChannels, kPreviewMaxFrames);
+    constexpr double kPreviewMaxSeconds = static_cast<double>(kPreviewMaxFrames) / 48000.0;
+    bool success = Aestra::Audio::decodeAudioPreview(path, audioData, sampleRate, numChannels, kPreviewMaxSeconds);
 
     if (generation != currentGeneration_.load(std::memory_order_acquire)) return;
 
