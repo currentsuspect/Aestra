@@ -18,6 +18,7 @@ public:
     std::string getName() const override { return "Add Clip"; }
     size_t getSizeInBytes() const override { return sizeof(*this); }
     bool changesProjectState() const override { return true; }
+    bool isUndoable() const override { return m_executed; }
 
     std::string serialize() const override;
     std::string type() const override { return "add_clip"; }

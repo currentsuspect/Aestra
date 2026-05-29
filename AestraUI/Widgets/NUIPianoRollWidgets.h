@@ -142,6 +142,11 @@ class NUIContextMenu; // Forward declaration
 // -----------------------------------------------------------------------------
 class PianoRollToolbar : public NUIComponent {
 public:
+    struct PatternChoice {
+        int value = 0;
+        std::string label;
+    };
+
     /** @brief Create the internal piano-roll toolbar. */
     PianoRollToolbar();
     
@@ -155,7 +160,11 @@ public:
     /** @brief Bind the note layer controlled by the toolbar tools. */
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> notes); // To set tools directly
     void setPatternLengthBeats(double beats);
+    void setPatternChoices(const std::vector<PatternChoice>& choices, int selectedValue);
     void setOnAdjustPatternLength(std::function<void(int barsDelta)> cb) { onAdjustPatternLength_ = std::move(cb); }
+    void setOnPatternChoiceSelected(std::function<void(int patternValue)> cb) {
+        onPatternChoiceSelected_ = std::move(cb);
+    }
     /** @brief Get the currently open context menu, if any. */
     std::shared_ptr<NUIComponent> getActiveContextMenu() const { return m_activeContextMenu; }
     /** @brief Close and remove the currently open context menu, if any. */
@@ -173,6 +182,7 @@ private:
     std::shared_ptr<NUIButton> m_eraserBtn;
     std::shared_ptr<NUIButton> m_lengthDownBtn;
     std::shared_ptr<NUIButton> m_lengthUpBtn;
+    std::shared_ptr<NUIDropdown> m_patternDropdown;
     
     GlobalTool activeTool_ = GlobalTool::Pencil;
     
@@ -189,6 +199,8 @@ private:
     
     std::shared_ptr<NUIComponent> m_activeContextMenu;
     std::function<void(int barsDelta)> onAdjustPatternLength_;
+    std::function<void(int patternValue)> onPatternChoiceSelected_;
+    bool m_updatingPatternDropdown = false;
 
     void closeActiveContextMenu();
     
@@ -196,7 +208,7 @@ private:
     void setActiveTool(GlobalTool tool);
     
     std::string m_patternName = "New Pattern";
-    double m_patternLengthBeats = 16.0;
+    double m_patternLengthBeats = 8.0;
     std::shared_ptr<NUILabel> m_patternLabel;
 };
 
@@ -470,6 +482,7 @@ public:
     void setNotes(const std::vector<MidiNote>& notes);
     const std::vector<MidiNote>& getNotes() const;
     void setPatternName(const std::string& name);
+    void setPatternChoices(const std::vector<PianoRollToolbar::PatternChoice>& choices, int selectedValue);
     void setPatternLengthBeats(double beats);
     void setPlayheadBeat(double beat, bool follow = false);
     void setTotalDurationBeats(double beats);
@@ -489,6 +502,7 @@ public:
     /** @brief Forward preview note callback to key lane. */
     void setOnPreviewNote(std::function<void(int pitch, int velocity)> cb);
     void setOnAdjustPatternLength(std::function<void(int barsDelta)> cb);
+    void setOnPatternChoiceSelected(std::function<void(int patternValue)> cb);
 
     void setPixelsPerBeat(float ppb);
     void setBeatsPerBar(int bpb);
@@ -525,7 +539,7 @@ private:
     float m_targetScrollY;
     double m_playheadBeat = 0.0;
     double m_totalDurationBeats = 400.0;
-    double m_patternLengthBeats = 16.0;
+    double m_patternLengthBeats = 8.0;
     bool m_showLocalMinimap = true;
 
     std::function<bool()> m_isPlayingCallback;

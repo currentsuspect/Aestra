@@ -4487,13 +4487,19 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
 
     // 2. Resolve target lane
     PlaylistLaneID targetLaneId;
+    bool createdTargetLane = false;
+    uint32_t createdChannelId = 0;
     if (laneIndex == static_cast<int>(laneCount)) {
         // Create new lane if dropping at the end
         targetLaneId = playlist.createLane("Lane " + std::to_string(laneIndex + 1));
+        createdTargetLane = targetLaneId.isValid();
 
         // Ensure we also have a mixer channel (we maintain 1:1 mapping for now)
         if (m_trackManager->getChannelCount() <= static_cast<size_t>(laneIndex)) {
-            m_trackManager->addChannel("Channel " + std::to_string(m_trackManager->getChannelCount() + 1));
+            if (auto* channel =
+                    m_trackManager->addChannel("Channel " + std::to_string(m_trackManager->getChannelCount() + 1))) {
+                createdChannelId = channel->getChannelId();
+            }
         }
 
         Log::info("[TrackManagerUI] Created new lane " + std::to_string(laneIndex) + " for drop.");
@@ -4621,7 +4627,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
             // Helper to create clip once source is ready. Async decode and queued tasks capture only weakSelf so
             // they cannot call back into a destroyed TrackManagerUI.
             auto createClipFromSource = [weakSelf, sourceId, displayName = data.displayName, targetLaneId,
-                                         timePositionBeats]() {
+                                         createdTargetLane, createdChannelId, timePositionBeats]() {
                 auto self = std::dynamic_pointer_cast<TrackManagerUI>(weakSelf.lock());
                 if (!self || !self->m_trackManager)
                     return;
@@ -4644,17 +4650,39 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     self->m_onClipLibraryChanged();
                 }
 
-                if (!source || !source->isReady())
+                auto rollbackCreatedTrack = [&]() {
+                    if (!createdTargetLane) {
+                        return;
+                    }
+                    if (createdChannelId != 0) {
+                        self->m_trackManager->removeChannelById(createdChannelId);
+                    }
+                    self->m_trackManager->getPlaylistModel().removeLane(targetLaneId);
+                    self->refreshTracks();
+                    self->invalidateCache();
+                    self->scheduleTimelineMinimapRebuild();
+                };
+
+                if (!source || !source->isReady()) {
+                    rollbackCreatedTrack();
                     return;
+                }
 
                 double durationSeconds = source->getDurationSeconds();
                 double durationBeats = self->secondsToBeats(durationSeconds);
+                if (!std::isfinite(durationSeconds) || durationSeconds <= 0.0 ||
+                    !std::isfinite(durationBeats) || durationBeats <= 0.0) {
+                    rollbackCreatedTrack();
+                    Log::error("[TrackManagerUI] Invalid decoded duration for imported source");
+                    return;
+                }
                 Log::info("[TrackManagerUI] Duration: " + std::to_string(durationSeconds) +
                           "s, beats: " + std::to_string(durationBeats));
 
                 // Create Audio Pattern
                 AudioSlicePayload payload;
                 payload.audioSourceId = sourceId;
+                payload.durationSeconds = durationSeconds;
                 payload.slices.push_back({0.0, static_cast<double>(source->getNumFrames())});
 
                 auto& patternManager = self->m_trackManager->getPatternManager();
@@ -4668,17 +4696,25 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     clip.id = ClipInstanceID::generate();
                     clip.startBeat = timePositionBeats;
                     clip.durationBeats = durationBeats;
+                    clip.durationSeconds = durationSeconds;
                     clip.patternId = patternId;
                     clip.sourceId = patternId.value;
 
                     auto cmd = std::make_shared<AddClipCommand>(playlist, targetLaneId, clip);
                     self->m_trackManager->getCommandHistory().pushAndExecute(cmd);
+                    if (!playlist.getClip(clip.id)) {
+                        patternManager.removePattern(patternId);
+                        rollbackCreatedTrack();
+                        Log::error("[TrackManagerUI] Failed to add imported clip to target lane; removed orphan audio pattern");
+                        return;
+                    }
 
                     self->refreshTracks();
                     self->invalidateCache();
                     self->scheduleTimelineMinimapRebuild();
                     Log::info("[TrackManagerUI] Clip added successfully via command");
                 } else {
+                    rollbackCreatedTrack();
                     Log::error("[TrackManagerUI] PatternManager::createAudioPattern failed");
                 }
             };

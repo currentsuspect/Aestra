@@ -69,6 +69,7 @@ public:
     TrackManager() : m_patternPlaybackEngine(&m_timelineClock, &m_patternManager, &m_unitManager) {
         m_continuousParams = std::make_shared<ContinuousParamBuffer>();
         m_channelSlotMap = std::make_shared<ChannelSlotMap>();
+        m_playlistModel.setPatternManager(&m_patternManager);
         // Wire up playlist model to trigger audio graph rebuild when clips change
         m_playlistModel.setClipChangedCallback(
             [this](const ClipInstanceID&) { requestAudioGraphRebuild(GraphDirtyReason::TimelineChanged); });
@@ -1187,6 +1188,8 @@ private:
         if (durationBeats <= 0.0) {
             return;
         }
+        const double durationSeconds =
+            static_cast<double>(conditionedSamples.size()) / std::max(1.0, m_inputSampleRate);
         const float playbackGain = computeRecordedTakeGain(conditionedSamples);
 
         auto buffer = std::make_shared<AudioBufferData>();
@@ -1215,6 +1218,7 @@ private:
 
         AudioSlicePayload payload;
         payload.audioSourceId = sourceId;
+        payload.durationSeconds = durationSeconds;
         payload.slices.push_back({0.0, static_cast<double>(buffer->numFrames)});
 
         PatternID patternId = m_patternManager.createAudioPattern(takeName, durationBeats, payload);
@@ -1228,6 +1232,7 @@ private:
         clip.name = takeName;
         clip.startBeat = startBeat;
         clip.durationBeats = durationBeats;
+        clip.durationSeconds = durationSeconds;
         clip.patternId = patternId;
         clip.sourceId = patternId.value;
         clip.edits.gain = playbackGain;
