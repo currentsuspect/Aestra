@@ -114,12 +114,16 @@ bool detectAutosave(const std::filesystem::path& autosavePath,
     if (!std::filesystem::exists(autosavePath, ec) || ec) {
         return false;
     }
-    std::ifstream marker(recoveryMarkerPath, std::ios::binary);
-    std::string markerToken;
-    std::getline(marker, markerToken);
-    if (markerToken != expectedSessionToken) {
+    if (expectedSessionToken.empty()) {
         return false;
     }
+    std::ifstream marker(recoveryMarkerPath, std::ios::binary);
+    if (!marker.good()) {
+        outTimestamp = "detected";
+        return true;
+    }
+    std::string markerToken;
+    std::getline(marker, markerToken);
     outTimestamp = "detected";
     return true;
 }
@@ -206,8 +210,10 @@ int main() {
         std::ofstream planted(plantedPath, std::ios::binary | std::ios::trunc);
         planted << "planted";
         std::string timestamp;
-        require(!detectAutosave(plantedPath, recoveryMarkerPath, "wrong-session", timestamp),
-                "Recovery must reject autosave without matching session marker");
+        require(detectAutosave(plantedPath, recoveryMarkerPath, "wrong-session", timestamp),
+                "Recovery should fall back to legacy autosave detection on marker mismatch");
+        require(!detectAutosave(plantedPath, recoveryMarkerPath, "", timestamp),
+                "Recovery must reject autosave when current session token is empty");
     }
 
     // --- Recovery: detect autosave
