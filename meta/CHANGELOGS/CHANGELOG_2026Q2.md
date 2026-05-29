@@ -9,6 +9,7 @@ All notable changes for Aestra in Q2 2026 are documented here.
 - Take snapshot paths confined within project `.takes` directory — traversal regression coverage
 - Scanned/cache plugins can no longer shadow registered internal plugin IDs
 - Hard-coded dev account API fallback removed — stale/future/premium lease rejection in default builds
+- Account refresh `issued_at` handling hardened; private release workflow token exposure fixed (#338)
 - Production key required for premium leases
 - Arsenal project plugin restore restricted to registered IDs only
 - CLAP scanner helper writes guarded from SIGPIPE

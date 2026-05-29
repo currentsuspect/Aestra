@@ -44,6 +44,44 @@ The public repository is currently on a `0.x` pre-beta line. The release target 
 
 ---
 
+## v0.5.0-alpha — Feature & CI Milestone (2026-05-23)
+
+11 PRs merged (#291–#305). Multi-take recording system, CLAP parameter support, audio quality fixes, CI hardening.
+
+### Takes System
+
+- Multi-take recording with manifest, snapshots, transactional switching
+- Path traversal guards on take snapshot paths
+- UI integration for take management
+
+### CLAP Hosting
+
+- `ClapParamInfo` and `ClapPluginParams` structs for CLAP parameter enumeration
+- CLAP core constant definitions
+- Null `paramsExt` fix — prevents crash when plugin lacks parameter extension
+
+### Audio Quality
+
+- K-weight race fix — metering filter state no longer torn under concurrent access
+- ARM64 denormal handling — `fpcr` register access guarded for MSVC ARM64
+- Send gain smoother coefficient fix — correct smoothing time constant
+- Audition queue deadlock fix — lock ordering corrected
+- Autosave atomic rename — crash-safe save via POSIX rename
+
+### CI / Build
+
+- Removed `jwlawson/actions-setup-cmake@v2` from all CI jobs — uses system CMake
+- DelayLine off-by-one fix — `Capacity+1` buffer allocation
+- Windows path separator fix in test fixtures
+- 13 previously unregistered test files added to CMakeLists
+- Platform guards for Windows/Linux/macOS-specific code paths
+
+### Documentation
+
+- v0.5.0-alpha added to RELEASES.md
+
+---
+
 ## v0.6.0-alpha — Security & RT Hardening (2026-05-29)
 
 26 PRs merged. Security hardening across the plugin host, license gate, and project loader. RT-safety fixes for waveform callbacks, preview decodes, mixer state, and the master limiter. Plugin host crash resilience and non-finite output quarantine. Callback-safety architecture (triple-buffer graph, routing snapshot, PDC edge ownership, TSan CI). Sprint 2 tracking issues resolved.
