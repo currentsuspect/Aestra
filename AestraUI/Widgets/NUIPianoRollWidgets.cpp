@@ -610,16 +610,26 @@ void PianoRollToolbar::setupUI() {
     m_eraserBtn = std::make_shared<NUIButton>("");
     m_eraserBtn->setOnClick([this](){ setActiveTool(GlobalTool::Eraser); });
 
+    m_patternDropdown = std::make_shared<NUIDropdown>();
+    m_patternDropdown->setPlaceholderText("Pattern");
+    m_patternDropdown->setMaxVisibleItems(8);
+    m_patternDropdown->setItemHeight(24.0f);
+    m_patternDropdown->setOnSelectionChanged([this](int, int value, const std::string&) {
+        if (!m_updatingPatternDropdown && onPatternChoiceSelected_) {
+            onPatternChoiceSelected_(value);
+        }
+    });
+
     m_lengthDownBtn = std::make_shared<NUIButton>("");
-    m_lengthDownBtn->setTooltip("Shorten Pattern By 4 Bars");
+    m_lengthDownBtn->setTooltip("Shorten Pattern By 2 Bars");
     m_lengthDownBtn->setOnClick([this]() {
-        if (onAdjustPatternLength_) onAdjustPatternLength_(-4);
+        if (onAdjustPatternLength_) onAdjustPatternLength_(-2);
     });
 
     m_lengthUpBtn = std::make_shared<NUIButton>("");
-    m_lengthUpBtn->setTooltip("Extend Pattern By 4 Bars");
+    m_lengthUpBtn->setTooltip("Extend Pattern By 2 Bars");
     m_lengthUpBtn->setOnClick([this]() {
-        if (onAdjustPatternLength_) onAdjustPatternLength_(4);
+        if (onAdjustPatternLength_) onAdjustPatternLength_(2);
     });
     
     // Icons
@@ -641,6 +651,7 @@ void PianoRollToolbar::setupUI() {
     addChild(m_ptrBtn);
     addChild(m_pencilBtn);
     addChild(m_eraserBtn);
+    addChild(m_patternDropdown);
     addChild(m_lengthDownBtn);
     addChild(m_lengthUpBtn);
 }
@@ -651,7 +662,22 @@ void PianoRollToolbar::setPatternName(const std::string& name) {
 }
 
 void PianoRollToolbar::setPatternLengthBeats(double beats) {
-    m_patternLengthBeats = std::max(4.0, beats);
+    m_patternLengthBeats = std::max(8.0, beats);
+    repaint();
+}
+
+void PianoRollToolbar::setPatternChoices(const std::vector<PatternChoice>& choices, int selectedValue) {
+    if (!m_patternDropdown) {
+        return;
+    }
+
+    m_updatingPatternDropdown = true;
+    m_patternDropdown->clearItems();
+    for (const auto& choice : choices) {
+        m_patternDropdown->addItem(choice.label, choice.value);
+    }
+    m_patternDropdown->setSelectedByValue(selectedValue);
+    m_updatingPatternDropdown = false;
     repaint();
 }
 
@@ -730,6 +756,19 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
     renderButton(m_pencilBtn, m_pencilIcon, activeTool_ == GlobalTool::Pencil);
     renderButton(m_eraserBtn, m_eraserIcon, activeTool_ == GlobalTool::Eraser);
 
+    float patternDropdownRight = currentX;
+    if (m_patternDropdown) {
+        currentX += 4.0f;
+        renderer.drawLine(NUIPoint(currentX, currentY + 4), NUIPoint(currentX, currentY + buttonSize - 4), 1.0f, borderCol.withAlpha(0.45f));
+        currentX += 10.0f;
+
+        const float dropdownW = 190.0f;
+        m_patternDropdown->setBounds(NUIRect(currentX, currentY, dropdownW, buttonSize));
+        m_patternDropdown->onRender(renderer);
+        patternDropdownRight = currentX + dropdownW;
+        currentX += dropdownW + buttonSpacing;
+    }
+
     currentX += 4.0f;
     renderer.drawLine(NUIPoint(currentX, currentY + 4), NUIPoint(currentX, currentY + buttonSize - 4), 1.0f, borderCol.withAlpha(0.45f));
     currentX += 10.0f;
@@ -756,9 +795,15 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
 
     // Editing Pattern Label (Right Side)
     if (!m_patternName.empty()) {
+        const float labelLeft = std::max(patternDropdownRight + 10.0f, currentX + 6.0f);
+        const float labelRight = b.right() - innerPad - 4.0f;
+        const float maxLabelWidth = labelRight - labelLeft;
+        if (maxLabelWidth < 24.0f) {
+            return;
+        }
+
         std::string labelStr = m_patternName;
         float fontSize = 10.0f;
-        const float maxLabelWidth = std::max(120.0f, b.width * 0.28f);
         auto measured = renderer.measureText(labelStr, fontSize);
         while (measured.width > maxLabelWidth && labelStr.length() > 3) {
             labelStr.pop_back();
@@ -770,7 +815,7 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
             labelStr += "...";
         }
         auto size = renderer.measureText(labelStr, fontSize);
-        float lx = b.right() - size.width - innerPad - 4.0f;
+        float lx = std::max(labelLeft, labelRight - size.width);
         renderer.drawText(labelStr, NUIPoint(lx, currentY + (buttonSize - size.height) * 0.5f + 2.0f), fontSize, themeManager.getColor("textSecondary").withAlpha(0.72f));
     }
 
@@ -2603,8 +2648,14 @@ void PianoRollView::setPatternName(const std::string& name) {
     if (m_toolbar) m_toolbar->setPatternName(name);
 }
 
+void PianoRollView::setPatternChoices(const std::vector<PianoRollToolbar::PatternChoice>& choices, int selectedValue) {
+    if (m_toolbar) {
+        m_toolbar->setPatternChoices(choices, selectedValue);
+    }
+}
+
 void PianoRollView::setPatternLengthBeats(double beats) {
-    m_patternLengthBeats = std::max(16.0, beats);
+    m_patternLengthBeats = std::max(8.0, beats);
     if (m_toolbar) {
         m_toolbar->setPatternLengthBeats(m_patternLengthBeats);
     }
@@ -2639,7 +2690,7 @@ void PianoRollView::setPlayheadBeat(double beat, bool follow) {
 }
 
 void PianoRollView::setTotalDurationBeats(double beats) {
-    m_totalDurationBeats = std::max(16.0, beats);
+    m_totalDurationBeats = std::max(8.0, beats);
     m_patternLengthBeats = m_totalDurationBeats;
     if (m_toolbar) {
         m_toolbar->setPatternLengthBeats(m_patternLengthBeats);
@@ -2651,6 +2702,12 @@ void PianoRollView::setTotalDurationBeats(double beats) {
 void PianoRollView::setOnAdjustPatternLength(std::function<void(int barsDelta)> cb) {
     if (m_toolbar) {
         m_toolbar->setOnAdjustPatternLength(std::move(cb));
+    }
+}
+
+void PianoRollView::setOnPatternChoiceSelected(std::function<void(int patternValue)> cb) {
+    if (m_toolbar) {
+        m_toolbar->setOnPatternChoiceSelected(std::move(cb));
     }
 }
 

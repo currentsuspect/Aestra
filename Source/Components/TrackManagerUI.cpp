@@ -4655,6 +4655,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 // Create Audio Pattern
                 AudioSlicePayload payload;
                 payload.audioSourceId = sourceId;
+                payload.durationSeconds = durationSeconds;
                 payload.slices.push_back({0.0, static_cast<double>(source->getNumFrames())});
 
                 auto& patternManager = self->m_trackManager->getPatternManager();
@@ -4668,11 +4669,17 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                     clip.id = ClipInstanceID::generate();
                     clip.startBeat = timePositionBeats;
                     clip.durationBeats = durationBeats;
+                    clip.durationSeconds = durationSeconds;
                     clip.patternId = patternId;
                     clip.sourceId = patternId.value;
 
                     auto cmd = std::make_shared<AddClipCommand>(playlist, targetLaneId, clip);
                     self->m_trackManager->getCommandHistory().pushAndExecute(cmd);
+                    if (!playlist.getClip(clip.id)) {
+                        patternManager.removePattern(patternId);
+                        Log::error("[TrackManagerUI] Failed to add imported clip to target lane; removed orphan audio pattern");
+                        return;
+                    }
 
                     self->refreshTracks();
                     self->invalidateCache();

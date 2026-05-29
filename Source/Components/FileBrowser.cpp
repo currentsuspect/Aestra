@@ -901,6 +901,9 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
             case BrowserNavAction::Plugins:
                 drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/><path d="M9 2.8V6"/><path d="M15 2.8V6"/><path d="M9 18v3.2"/><path d="M15 18v3.2"/><path d="M2.8 9H6"/><path d="M2.8 15H6"/><path d="M18 9h3.2"/><path d="M18 15h3.2"/></svg>)");
                 break;
+            case BrowserNavAction::Patterns:
+                drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8"/><path d="M8 13h5"/><circle cx="16" cy="13" r="1.5"/></svg>)");
+                break;
             case BrowserNavAction::Clips:
                 drawSvgIcon(R"(<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M10 9.5l5 2.5-5 2.5v-5z"/></svg>)");
                 break;
@@ -977,6 +980,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     drawRow(BrowserNavAction::Instruments, "Instruments");
     drawRow(BrowserNavAction::AudioEffects, "Effects");
     drawRow(BrowserNavAction::Plugins, "Plugins");
+    drawRow(BrowserNavAction::Patterns, "Patterns");
     drawRow(BrowserNavAction::Clips, "Clips");
     drawRow(BrowserNavAction::Samples, "Samples");
     drawDivider();
@@ -3376,6 +3380,10 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
             applyFilter();
             break;
         }
+        case BrowserNavAction::Patterns:
+            activeTagFilter_.clear();
+            setFilter(QuickFilter::All);
+            break;
         case BrowserNavAction::Clips: {
             auto path = std::filesystem::path(rootPath_) / "User Library" / "Clips";
             std::filesystem::create_directories(path);

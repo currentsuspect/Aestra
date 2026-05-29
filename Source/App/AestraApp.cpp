@@ -805,6 +805,14 @@ void AestraApp::connectAudioToUI() {
             }
             if (m_content) {
                 m_content->setPluginTempo(bpm);
+                if (auto trackManager = m_content->getTrackManager()) {
+                    trackManager->getPlaylistModel().setBPM(bpm);
+                    trackManager->getTimelineClock().setTempo(bpm);
+                    trackManager->getPatternPlaybackEngine().flush();
+                }
+                if (auto trackManagerUI = m_content->getTrackManagerUI()) {
+                    trackManagerUI->invalidateCache();
+                }
             }
         });
 
@@ -1015,10 +1023,23 @@ void AestraApp::shutdown() {
 
     uiState.save();
 
+    if (m_audioController) {
+        m_audioController->stopStream();
+        m_audioController->closeStream();
+    }
+
+    // AestraContent owns UI-facing preview state and detaches it from AudioEngine
+    // in its destructor. Destroy content while the engine still exists.
+    if (m_windowManager) {
+        m_windowManager->shutdown();
+    }
+    m_content.reset();
+
     Aestra::Audio::PluginManager::getInstance().shutdown();
 
-    m_audioController->shutdown();
-    m_windowManager->shutdown();
+    if (m_audioController) {
+        m_audioController->shutdown();
+    }
 
     Platform::shutdown();
     Log::info("Aestra shutdown complete");
@@ -1033,11 +1054,28 @@ void AestraApp::shutdown() {
 
 // Project Helpers
 void AestraApp::requestClose() {
+    if (m_pendingClose) {
+        if (m_windowManager) {
+            auto dialog = m_windowManager->getConfirmationDialog();
+            if (dialog && dialog->isDialogVisible()) {
+                if (auto* root = m_windowManager->getRootComponent()) {
+                    dialog->setBounds(root->getBounds());
+                    root->removeChild(dialog);
+                    root->addChild(dialog);
+                }
+                return;
+            }
+        }
+        m_pendingClose = false;
+    }
+
     auto trackManager = m_content ? m_content->getTrackManager() : nullptr;
     if (!trackManager || !trackManager->isModified()) {
         m_running = false;
         return;
     }
+
+    m_pendingClose = true;
 
     // Emergency autosave before showing close dialog — if the app is force-killed
     // while the dialog is open, the autosave is still recoverable.
@@ -1047,16 +1085,20 @@ void AestraApp::requestClose() {
     }
 
     if (!m_windowManager) {
+        m_pendingClose = false;
         return;
     }
 
     auto dialog = m_windowManager->getConfirmationDialog();
     if (!dialog) {
-        return;
+        dialog = std::make_shared<ConfirmationDialog>();
+        m_windowManager->setConfirmationDialog(dialog);
     }
 
     if (auto* root = m_windowManager->getRootComponent()) {
         dialog->setBounds(root->getBounds());
+        root->removeChild(dialog);
+        root->addChild(dialog);
     }
 
     dialog->show("Unsaved Changes",
@@ -1066,6 +1108,8 @@ void AestraApp::requestClose() {
                      case Aestra::DialogResponse::Save:
                          if (saveProject()) {
                              m_running = false;
+                         } else {
+                             m_pendingClose = false;
                          }
                          break;
                      case Aestra::DialogResponse::DontSave: {
@@ -1082,6 +1126,7 @@ void AestraApp::requestClose() {
                      case Aestra::DialogResponse::Cancel:
                      case Aestra::DialogResponse::None:
                      default:
+                         m_pendingClose = false;
                          break;
                      }
                  });
@@ -1121,6 +1166,9 @@ ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& 
 
     if (m_content) {
         if (auto trackManager = m_content->getTrackManager()) {
+            trackManager->getPlaylistModel().setBPM(result.tempo);
+            trackManager->getTimelineClock().setTempo(result.tempo);
+            trackManager->getPatternPlaybackEngine().flush();
             trackManager->setPosition(result.playhead);
             trackManager->setPlayStartPosition(result.playhead);
             trackManager->getCommandHistory().clear();

@@ -86,6 +86,7 @@ public:
     
 private:
     void adjustPatternLengthBars(int barsDelta);
+    void rebuildPatternSwitcher();
     void updateGhostChannels();
     void rebuildTimelineMinimap();
     void layoutTimelineMinimap();
@@ -99,11 +100,12 @@ private:
     PatternID m_currentPatternId;
     UnitID m_editingUnitId{0};
     std::function<void(PatternID)> m_onPatternEdited;
-    double m_patternDurationBeats{16.0};
+    double m_patternDurationBeats{8.0};
 
     // Undo/redo support
     std::vector<MidiNote> m_notesBeforeEdit; // Captured state before user edits
     bool m_applyingUndoRedo{false};           // Guard flag to prevent re-entry
+    bool m_wasVisible{false};
 };
 
 } // namespace Audio

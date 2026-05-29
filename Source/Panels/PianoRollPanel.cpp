@@ -22,8 +22,8 @@ using namespace Aestra::Audio;
 namespace {
 double quantizePatternLengthBeats(double contentEndBeat) {
     constexpr double kBeatsPerBar = 4.0;
-    constexpr double kBarsPerPatternBlock = 4.0;
-    constexpr double kPatternBlockBeats = kBeatsPerBar * kBarsPerPatternBlock; // 16 beats = 4 bars
+    constexpr double kBarsPerPatternBlock = 2.0;
+    constexpr double kPatternBlockBeats = kBeatsPerBar * kBarsPerPatternBlock; // 8 beats = 2 bars
 
     const double safeContentEnd = std::max(0.0, contentEndBeat);
     const double blocksNeeded = std::max(1.0, std::ceil(safeContentEnd / kPatternBlockBeats));
@@ -50,6 +50,14 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
     m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
     m_pianoRoll->setOnAdjustPatternLength([this](int barsDelta) {
         adjustPatternLengthBars(barsDelta);
+    });
+    m_pianoRoll->setOnPatternChoiceSelected([this](int patternValue) {
+        PatternID patternId(static_cast<uint64_t>(std::max(0, patternValue)));
+        if (!patternId.isValid() || patternId == m_currentPatternId) {
+            return;
+        }
+        savePattern();
+        loadPattern(patternId);
     });
 
     // Setup playback state check and note preview
@@ -159,7 +167,7 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
             longestBeat = std::max(longestBeat, note.startBeat + note.durationBeats);
         }
         const double quantizedLengthBeats = quantizePatternLengthBeats(longestBeat);
-        const double resolvedLengthBeats = std::max(16.0, std::max(pattern->lengthBeats, quantizedLengthBeats));
+        const double resolvedLengthBeats = std::max(8.0, std::max(pattern->lengthBeats, quantizedLengthBeats));
         if (std::abs(resolvedLengthBeats - pattern->lengthBeats) > 0.001) {
             pm.applyPatch(patternId, [resolvedLengthBeats](PatternSource& p) {
                 p.lengthBeats = resolvedLengthBeats;
@@ -171,6 +179,7 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
         m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
         m_pianoRoll->setTotalDurationBeats(m_patternDurationBeats);
         m_pianoRoll->setPatternName(sourceLabel);
+        rebuildPatternSwitcher();
         setTitle("PIANO ROLL - " + pattern->name);
 
         // Capture note state for undo/redo diff detection
@@ -302,7 +311,7 @@ void PianoRollPanel::adjustPatternLengthBars(int barsDelta) {
 
     const double minLengthBeats = quantizePatternLengthBeats(contentEndBeat);
     const double requestedLengthBeats = m_patternDurationBeats + (static_cast<double>(barsDelta) * 4.0);
-    const double newLengthBeats = std::max(16.0, std::max(minLengthBeats, requestedLengthBeats));
+    const double newLengthBeats = std::max(8.0, std::max(minLengthBeats, requestedLengthBeats));
 
     if (std::abs(newLengthBeats - m_patternDurationBeats) <= 0.001) {
         m_pianoRoll->setPatternLengthBeats(m_patternDurationBeats);
@@ -336,6 +345,10 @@ void PianoRollPanel::setEditingUnit(UnitID unitId) {
 
 void PianoRollPanel::onUpdate(double deltaTime) {
     WindowPanel::onUpdate(deltaTime);
+    if (isVisible() && !m_wasVisible) {
+        rebuildPatternSwitcher();
+    }
+    m_wasVisible = isVisible();
     if (isVisible()) {
         updateGhostChannels();
         if (m_trackManager && m_pianoRoll) {
@@ -365,6 +378,31 @@ void PianoRollPanel::onUpdate(double deltaTime) {
 
         }
     }
+}
+
+void PianoRollPanel::rebuildPatternSwitcher() {
+    if (!m_trackManager || !m_pianoRoll) {
+        return;
+    }
+
+    std::vector<AestraUI::PianoRollToolbar::PatternChoice> choices;
+    auto patterns = m_trackManager->getPatternManager().getAllPatterns();
+    choices.reserve(patterns.size());
+    for (const auto& pattern : patterns) {
+        if (!pattern || !pattern->isMidi()) {
+            continue;
+        }
+        std::string label = pattern->name.empty() ? ("Pattern " + std::to_string(pattern->id.value)) : pattern->name;
+        choices.push_back({static_cast<int>(pattern->id.value), std::move(label)});
+    }
+
+    std::sort(choices.begin(), choices.end(), [](const auto& lhs, const auto& rhs) {
+        if (lhs.label != rhs.label) {
+            return lhs.label < rhs.label;
+        }
+        return lhs.value < rhs.value;
+    });
+    m_pianoRoll->setPatternChoices(choices, static_cast<int>(m_currentPatternId.value));
 }
 
 void PianoRollPanel::layoutTimelineMinimap() {
