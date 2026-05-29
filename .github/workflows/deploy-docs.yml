@@ -65,7 +65,7 @@ jobs:
     if: >
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
       && github.ref == 'refs/heads/main'
-      && vars.ENABLE_GITHUB_PAGES != 'false'
+      && vars.DISABLE_GITHUB_PAGES != 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
