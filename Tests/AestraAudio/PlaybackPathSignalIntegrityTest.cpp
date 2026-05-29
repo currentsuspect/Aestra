@@ -188,6 +188,8 @@ void kneeMonotonicity() {
         float r = 0.0f;
         limiter.process(l, r);
         assert(l >= previous);
+        assert(l <= Aestra::Audio::MasterSafetyLimiter::kKneeStart +
+                        t * Aestra::Audio::MasterSafetyLimiter::kKneeRange);
         assert(l <= Aestra::Audio::MasterSafetyLimiter::kCeiling);
         previous = l;
     }
@@ -264,7 +266,7 @@ void mainAudioEngineSafetyLimiterChangesHotMasterOutput() {
 
     assert(rawPeak > 0.99f);
     assert(limitedPeak >= Aestra::Audio::MasterSafetyLimiter::kKneeStart);
-    assert(limitedPeak >= rawPeak);
+    assert(limitedPeak <= rawPeak);
     assert(limitedPeak <= static_cast<float>(Aestra::Audio::MasterSafetyLimiter::OUTPUT_CEILING) + 1.0e-4f);
     std::cout << "PASS: main AudioEngine safety limiter preserves hot legal output, rawPeak=" << rawPeak
               << ", limitedPeak=" << limitedPeak << "\n";
@@ -276,10 +278,10 @@ int main() {
     const fs::path coldPath = fs::temp_directory_path() / "Aestra_playback_path_cold.wav";
     const fs::path hotPath = fs::temp_directory_path() / "Aestra_playback_path_hot.wav";
     assert(writeConstantPcm16Wav(coldPath, 0.50f));
-    assert(writeConstantPcm16Wav(hotPath, 0.95f));
+    assert(writeConstantPcm16Wav(hotPath, 0.985f));
 
     const float coldDecoded = static_cast<float>(std::lrint(0.50f * 32767.0f)) / 32768.0f;
-    const float hotDecoded = static_cast<float>(std::lrint(0.95f * 32767.0f)) / 32768.0f;
+    const float hotDecoded = static_cast<float>(std::lrint(0.985f * 32767.0f)) / 32768.0f;
 
     belowKneePassthrough();
     kneeEntryPassthrough();

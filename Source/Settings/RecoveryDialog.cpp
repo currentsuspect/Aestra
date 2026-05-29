@@ -65,11 +65,21 @@ bool RecoveryDialog::detectAutosave(const std::string& autosavePath,
     }
 
     std::ifstream marker(recoveryMarkerPath, std::ios::binary);
+    if (!marker.good()) {
+        Log::warning("[Recovery] Recovery marker missing; falling back to legacy autosave detection");
+        return detectAutosave(autosavePath, outTimestamp);
+    }
+
     std::string markerToken;
     std::getline(marker, markerToken);
+    if (marker.fail() && !marker.eof()) {
+        Log::warning("[Recovery] Recovery marker unreadable; falling back to legacy autosave detection");
+        return detectAutosave(autosavePath, outTimestamp);
+    }
+
     if (markerToken != expectedSessionToken) {
-        Log::warning("[Recovery] Ignoring autosave without matching recovery marker");
-        return false;
+        Log::warning("[Recovery] Recovery marker does not match current session; falling back to legacy autosave detection");
+        return detectAutosave(autosavePath, outTimestamp);
     }
 
     return detectAutosave(autosavePath, outTimestamp);

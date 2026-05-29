@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 
 namespace Aestra {
@@ -24,9 +25,12 @@ public:
         return limited;
     }
 
-    void process(float& L, float& R) {
+    bool process(float& L, float& R) {
+        const float inL = L;
+        const float inR = R;
         L = apply(L);
         R = apply(R);
+        return (L != inL) || (R != inR);
     }
 
     void reset() {}
@@ -36,7 +40,8 @@ public:
     static constexpr float kCeiling = 0.9997f;
     static constexpr float kKneeRange = kCeiling - kKneeStart;
 
-    // Backward-compatible aliases for older tests/tools.
+    // Compilation-compatible aliases. Values intentionally reflect the
+    // reshaped limiter, not the old 0.85/0.95 thresholds.
     static constexpr double SOFT_KNEE_START = kKneeStart;
     static constexpr double OUTPUT_CEILING = kCeiling;
 
@@ -58,7 +63,7 @@ public:
         if (a >= kCeiling) {
             return std::copysign(kCeiling, s);
         }
-        return std::copysign(softKnee(a), s);
+        return std::copysign(std::min(softKnee(a), a), s);
     }
 
     static double apply(double s) {
@@ -76,7 +81,8 @@ public:
 
         const double t = (a - static_cast<double>(kKneeStart)) / static_cast<double>(kKneeRange);
         const double shaped = t * t * (3.0 - 2.0 * t);
-        return std::copysign(static_cast<double>(kKneeStart) + shaped * static_cast<double>(kKneeRange), s);
+        const double soft = static_cast<double>(kKneeStart) + shaped * static_cast<double>(kKneeRange);
+        return std::copysign(std::min(soft, a), s);
     }
 };
 
