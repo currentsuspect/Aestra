@@ -188,6 +188,7 @@ int main() {
     std::ifstream crashFlagIn(crashFlagPath, std::ios::binary);
     std::string recoverySessionToken;
     std::getline(crashFlagIn, recoverySessionToken);
+    crashFlagIn.close();
     require(isCrashedSession(crashFlagPath), "Crash flag should exist after write");
     require(!recoverySessionToken.empty(), "Crash flag should contain recovery session token");
     std::cout << "[INFO] Crash flag written: " << crashFlagPath.string() << "\n";
