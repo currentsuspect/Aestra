@@ -855,6 +855,9 @@ if(NOT WIN32)
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
+    if(AESTRA_HAS_CLAP)
+        target_compile_definitions(PluginScannerSigpipeTest PRIVATE AESTRA_TEST_HAS_CLAP=1)
+    endif()
     add_test(NAME PluginScannerSigpipeTest COMMAND PluginScannerSigpipeTest)
     set_tests_properties(PluginScannerSigpipeTest PROPERTIES LABELS "audio;plugin;security")
 endif()
