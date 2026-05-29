@@ -1,7 +1,6 @@
 #include "Commands/AddClipCommand.h"
 
 #include "AestraAudio.h"
-#include <stdexcept>
 #include <sstream>
 
 namespace Aestra {
@@ -20,10 +19,7 @@ void AddClipCommand::execute() {
     }
 
     const ClipInstanceID addedId = m_playlist.addClip(m_laneId, m_clip);
-    if (!addedId.isValid()) {
-        throw std::runtime_error("AddClipCommand failed: target lane not found");
-    }
-    m_executed = true;
+    m_executed = addedId.isValid();
 }
 
 void AddClipCommand::undo() {
@@ -40,10 +36,7 @@ void AddClipCommand::redo() {
 
     // Re-add using the exact same ID so it restores state correctly
     const ClipInstanceID addedId = m_playlist.addClip(m_laneId, m_clip);
-    if (!addedId.isValid()) {
-        throw std::runtime_error("AddClipCommand redo failed: target lane not found");
-    }
-    m_executed = true;
+    m_executed = addedId.isValid();
 }
 
 std::string AddClipCommand::serialize() const {

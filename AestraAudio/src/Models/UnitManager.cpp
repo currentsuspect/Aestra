@@ -7,6 +7,7 @@
 #include "Plugin/BuiltInPlugins.h"
 #include "Plugin/PluginManager.h"
 #include "Plugin/SamplerPlugin.h"
+#include "AestraJSON.h"
 #include "AestraLog.h"
 
 #include <algorithm>
@@ -25,6 +26,17 @@ bool shouldRestoreArsenalPluginFromProject(const PluginInfo& plugin) noexcept {
 }
 
 namespace {
+bool samplerStateHasSamplePath(const std::vector<uint8_t>& state) {
+    if (state.empty()) {
+        return false;
+    }
+
+    const std::string text(state.begin(), state.end());
+    const auto json = Aestra::JSON::parse(text);
+    return json.isObject() && json.has("samplePath") && json["samplePath"].isString() &&
+           !json["samplePath"].asString().empty();
+}
+
 UnitGroup unitGroupForType(UnitType type) {
     switch (type) {
     case UnitType::Instrument: return UnitGroup::Synth;
@@ -724,8 +736,11 @@ void UnitManager::loadFromJSON(const JSON& json) {
 
                 // Load state BEFORE activation to ensure plugin is ready before processing audio.
                 // This matches EffectChain lifecycle: create -> initialize -> loadState -> activate.
+                bool stateLoaded = true;
+                const bool samplerStateIncludesSamplePath = samplerStateHasSamplePath(unit.pluginState);
                 if (!unit.pluginState.empty()) {
                     if (!unit.plugin->loadState(unit.pluginState)) {
+                        stateLoaded = false;
                         Aestra::Log::warning("[UnitManager] Failed to load state for unit " +
                                              std::to_string(unit.id) + " — using default state");
                     }
@@ -733,7 +748,7 @@ void UnitManager::loadFromJSON(const JSON& json) {
 
                 // Older project saves kept the sampler file only in UnitInfo::audioClipPath.
                 // Rehydrate that path so restored MIDI has sample data even when pluginState lacks samplePath.
-                if (!unit.audioClipPath.empty()) {
+                if (!unit.audioClipPath.empty() && (!samplerStateIncludesSamplePath || !stateLoaded)) {
                     if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit.plugin)) {
                         if (sampler->loadSample(unit.audioClipPath)) {
                             unit.pluginState = sampler->saveState();
