@@ -826,6 +826,8 @@ void AudioSettingsPage::loadSettings() {
         }
         else if (key == "master_limiter") {
             m_softClippingToggle->setOn(val == 1);
+            if (m_audioEngine)
+                m_audioEngine->setSafetyLimiterEnabled(val == 1);
         }
         else if (key == "multi_threading") {
             m_multiThreadingToggle->setOn(val == 1);

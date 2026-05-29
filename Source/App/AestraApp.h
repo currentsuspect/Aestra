@@ -93,6 +93,9 @@ private:
     void applyUIState(const ProjectSerializer::UIState& state);
     void updateWindowTitle();
     void startExport();
+    static std::string getRecoveryMarkerPath(const std::string& autosavePath);
+    static std::string readCrashFlagToken();
+    void writeRecoveryMarkerForAutosave(const std::string& autosavePath) const;
 
 private:
     std::unique_ptr<AestraWindowManager> m_windowManager;
@@ -114,6 +117,8 @@ private:
 
     // Recovery state (for deferred project loading during startup)
     std::string m_pendingAutosavePath;
+    std::string m_recoverySessionToken;
+    std::string m_previousRecoverySessionToken;
     bool m_recoveryHandled{false};
 
     // Lifetime token — set to false during shutdown so async callbacks can bail

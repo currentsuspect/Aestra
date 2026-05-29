@@ -4,6 +4,7 @@
 #include "../AestraCore/include/AestraLog.h"
 #include <chrono>
 #include <ctime>
+#include <fstream>
 #include <iomanip>
 #include <sstream>
 
@@ -53,6 +54,35 @@ bool RecoveryDialog::detectAutosave(const std::string& autosavePath, std::string
         Log::warning("[Recovery] Error checking autosave: " + std::string(e.what()));
         return false;
     }
+}
+
+bool RecoveryDialog::detectAutosave(const std::string& autosavePath,
+                                    const std::string& recoveryMarkerPath,
+                                    const std::string& expectedSessionToken,
+                                    std::string& outTimestamp) {
+    if (expectedSessionToken.empty()) {
+        return false;
+    }
+
+    std::ifstream marker(recoveryMarkerPath, std::ios::binary);
+    if (!marker.good()) {
+        Log::warning("[Recovery] Recovery marker missing; falling back to legacy autosave detection");
+        return detectAutosave(autosavePath, outTimestamp);
+    }
+
+    std::string markerToken;
+    std::getline(marker, markerToken);
+    if (marker.fail() && !marker.eof()) {
+        Log::warning("[Recovery] Recovery marker unreadable; falling back to legacy autosave detection");
+        return detectAutosave(autosavePath, outTimestamp);
+    }
+
+    if (markerToken != expectedSessionToken) {
+        Log::warning("[Recovery] Recovery marker does not match current session; falling back to legacy autosave detection");
+        return detectAutosave(autosavePath, outTimestamp);
+    }
+
+    return detectAutosave(autosavePath, outTimestamp);
 }
 
 void RecoveryDialog::show(const std::string& autosavePath, ResponseCallback callback) {
