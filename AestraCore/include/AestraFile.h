@@ -2,13 +2,94 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <io.h>
+#include <windows.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+
 namespace Aestra {
+
+// Sync a file path to disk. Use after writing critical data (project save,
+// autosave, export) to ensure data survives a crash.
+inline bool fsyncPath(const std::string& path) {
+#ifdef _WIN32
+    const auto nativePath = std::filesystem::path(path).wstring();
+    HANDLE h = CreateFileW(nativePath.c_str(), GENERIC_WRITE,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (h == INVALID_HANDLE_VALUE)
+        return false;
+    bool ok = FlushFileBuffers(h) != 0;
+    CloseHandle(h);
+    return ok;
+#else
+    int fd = open(path.c_str(), O_WRONLY);
+    if (fd < 0)
+        return false;
+#ifdef __APPLE__
+    bool ok = fcntl(fd, F_FULLFSYNC) == 0;
+#else
+    bool ok = fsync(fd) == 0;
+#endif
+    close(fd);
+    return ok;
+#endif
+}
+
+inline bool fsyncParentDirectory(const std::string& path) {
+    namespace fs = std::filesystem;
+    fs::path parent = fs::path(path).parent_path();
+    if (parent.empty())
+        parent = ".";
+
+#ifdef _WIN32
+    const auto nativePath = parent.wstring();
+    HANDLE h = CreateFileW(nativePath.c_str(), GENERIC_READ,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    if (h == INVALID_HANDLE_VALUE)
+        return false;
+    bool ok = FlushFileBuffers(h) != 0;
+    CloseHandle(h);
+    return ok;
+#else
+    int fd = open(parent.c_str(), O_RDONLY | O_DIRECTORY);
+    if (fd < 0)
+        return false;
+#ifdef __APPLE__
+    bool ok = fcntl(fd, F_FULLFSYNC) == 0;
+#else
+    bool ok = fsync(fd) == 0;
+#endif
+    close(fd);
+    return ok;
+#endif
+}
+
+// Sync an ofstream flush+fsync. Call after writing and before rename.
+inline bool syncOfstream(std::ofstream& stream, const std::string& path) {
+    stream.flush();
+    if (!stream)
+        return false;
+    return fsyncPath(path);
+}
 
 // =============================================================================
 // File Abstraction Layer
@@ -71,6 +152,16 @@ public:
             return false;
         stream_.write(static_cast<const char*>(buffer), size);
         return stream_.good();
+    }
+
+    // Sync file data to disk (fsync on POSIX, FlushFileBuffers on Windows)
+    bool sync() {
+        if (!isOpen_)
+            return false;
+        stream_.flush();
+        if (!stream_)
+            return false;
+        return Aestra::fsyncPath(path_);
     }
 
     // Get file size
