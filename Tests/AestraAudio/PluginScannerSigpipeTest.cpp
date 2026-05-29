@@ -7,6 +7,10 @@
 #include <fstream>
 #include <iostream>
 
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
 namespace {
 void require(bool cond, const char* msg) {
     if (!cond) {
@@ -30,6 +34,18 @@ std::filesystem::path makeTempDir() {
     std::filesystem::create_directories(fallback);
     return fallback;
 }
+
+#ifndef _WIN32
+std::string findFalseExecutable() {
+    const char* candidates[] = {"/bin/false", "/usr/bin/false", "/usr/local/bin/false"};
+    for (const char* candidate : candidates) {
+        if (access(candidate, X_OK) == 0) {
+            return candidate;
+        }
+    }
+    return {};
+}
+#endif
 } // namespace
 
 int main() {
@@ -44,9 +60,16 @@ int main() {
         out << "not a clap plugin";
     }
 
+    const std::string falseExecutable = findFalseExecutable();
+    if (falseExecutable.empty()) {
+        std::cout << "[SKIP] PluginScannerSigpipeTest: no false executable found\n";
+        std::filesystem::remove_all(dir);
+        return 0;
+    }
+
     const char* previous = std::getenv("AESTRA_PLUGIN_HOST_PATH");
     const std::string previousValue = previous ? previous : "";
-    setenv("AESTRA_PLUGIN_HOST_PATH", "/bin/false", 1);
+    setenv("AESTRA_PLUGIN_HOST_PATH", falseExecutable.c_str(), 1);
 
     Aestra::Audio::PluginScanner scanner;
     const auto plugins = scanner.rescanPlugin(clapPath);
@@ -59,9 +82,14 @@ int main() {
 
     std::filesystem::remove_all(dir);
 
+#ifdef AESTRA_TEST_HAS_CLAP
+    require(plugins.empty(), "Broken out-of-process CLAP scan should not return plugin metadata");
+#else
     if (!plugins.empty()) {
         require(plugins.front().format == Aestra::Audio::PluginFormat::CLAP, "Fallback plugin format should be CLAP");
+        require(plugins.front().id == "broken", "Core fallback should only use the broken CLAP filename");
     }
+#endif
 
     std::cout << "[PASS] PluginScannerSigpipeTest\n";
     return 0;
