@@ -39,7 +39,9 @@ HeadlessMusicGenerator& HeadlessMusicGenerator::createProject(const std::string&
 
 HeadlessMusicGenerator& HeadlessMusicGenerator::setTempo(double bpm) {
     m_tempo = bpm;
-    // m_trackManager.getTimelineClock().setTempo(bpm);  // TODO: Set tempo on track manager
+    m_trackManager.getPlaylistModel().setBPM(bpm);
+    m_trackManager.getTimelineClock().setTempo(bpm);
+    m_trackManager.getPatternPlaybackEngine().flush();
     m_engine.setBPM(static_cast<float>(bpm));
     return *this;
 }

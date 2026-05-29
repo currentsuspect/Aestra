@@ -97,9 +97,11 @@ bool PlatformWindowLinux::pollEvents() {
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
-            if (m_closeCallback)
+            if (m_closeCallback) {
                 m_closeCallback();
-            return false; // Or let the app decide via callback
+                return true;
+            }
+            return false;
 
         case SDL_WINDOWEVENT:
             if (e.window.windowID == SDL_GetWindowID(m_window)) {

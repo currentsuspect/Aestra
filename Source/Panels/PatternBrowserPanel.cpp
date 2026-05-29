@@ -193,7 +193,7 @@ PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
     m_createButton->setOnClick([this]() {
         if (m_trackManager) {
             MidiPayload payload;
-            auto id = m_trackManager->getPatternManager().createMidiPattern("New Pattern", 4.0, payload);
+            auto id = m_trackManager->getPatternManager().createMidiPattern("New Pattern", 8.0, payload);
             refreshPatterns();
             m_selectedPatternId = id;
             if (m_onPatternSelected) m_onPatternSelected(id);

@@ -45,6 +45,11 @@ public:
     virtual bool changesProjectState() const { return true; }
 
     /**
+     * @brief Whether the most recent execute/redo produced an undoable change.
+     */
+    virtual bool isUndoable() const { return true; }
+
+    /**
      * @brief Serialize command to JSON string for persistence
      * @return JSON representation of command data
      */
