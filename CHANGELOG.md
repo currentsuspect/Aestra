@@ -142,7 +142,7 @@ The public repository is currently on a `0.x` pre-beta line. The release target 
 
 - LeakSanitizer (LSan) advisory CI job added (#312)
 - API docs quality workflow Graphviz dependency fixed (#337)
-- GitHub Pages deploy gate removed — deploy now fires on every main push (#369)
+- GitHub Pages deploy gate changed from opt-in to opt-out — deploy fires on every main push unless `DISABLE_GITHUB_PAGES` is set to `'true'` (#369)
 
 ### Sprint 2 Tracking Issues Resolved
 

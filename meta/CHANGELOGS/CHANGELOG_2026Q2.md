@@ -58,7 +58,7 @@ All notable changes for Aestra in Q2 2026 are documented here.
 
 - LeakSanitizer (LSan) advisory CI job
 - API docs quality workflow Graphviz dependency fix
-- GitHub Pages deploy gate removed
+- GitHub Pages deploy gate changed from opt-in to opt-out (`DISABLE_GITHUB_PAGES != 'true'`)
 
 ### Sprint 2 Resolved
 

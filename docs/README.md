@@ -18,7 +18,7 @@ If you want the most accurate current picture, start with:
 - [Roadmap](technical/roadmap.md)
 - [Testing & CI](technical/testing_ci.md)
 - [Rumble MVP Plan](technical/RUMBLE_MVP_PLAN.md)
-- [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md)
+- [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q2.md)
 
 ## 🎯 What is Aestra?
 
@@ -50,7 +50,7 @@ Aestra is a source-available digital audio workstation under active development.
 - **[Roadmap](technical/roadmap.md)** — High-level milestones and current execution plan
 - **[Testing & CI](technical/testing_ci.md)** — Current confidence suite and verification workflow
 - **[CI Workflows Map](technical/ci_workflows.md)** — What runs in GitHub Actions, what is blocking vs preview
-- **[Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md)** — Current milestone history
+- **[Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q2.md)** — Current milestone history
 - **[License Reference](about/license-reference.md)** — Licensing information and ASSAL v1.1 details
 
 ### 📝 Templates
@@ -80,7 +80,7 @@ Aestra is a source-available digital audio workstation under active development.
 
 ### For Maintainers
 1. Review [Roadmap](technical/roadmap.md) for project milestones
-2. Check [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q1.md) for recent milestone history
+2. Check [Current Changelog](../meta/CHANGELOGS/CHANGELOG_2026Q2.md) for recent milestone history
 3. Check [License Reference](about/license-reference.md) for ASSAL v1.1 details
 4. Use [Issue Template](TEMPLATE/ISSUE_TEMPLATE.md) for documentation issues
 
