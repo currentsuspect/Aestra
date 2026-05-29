@@ -40,10 +40,14 @@ inline bool fsyncPath(const std::string& path) {
     CloseHandle(h);
     return ok;
 #else
-    int fd = open(path.c_str(), O_RDONLY);
+    int fd = open(path.c_str(), O_WRONLY);
     if (fd < 0)
         return false;
+#ifdef __APPLE__
+    bool ok = fcntl(fd, F_FULLFSYNC) == 0;
+#else
     bool ok = fsync(fd) == 0;
+#endif
     close(fd);
     return ok;
 #endif
@@ -69,7 +73,11 @@ inline bool fsyncParentDirectory(const std::string& path) {
     int fd = open(parent.c_str(), O_RDONLY | O_DIRECTORY);
     if (fd < 0)
         return false;
+#ifdef __APPLE__
+    bool ok = fcntl(fd, F_FULLFSYNC) == 0;
+#else
     bool ok = fsync(fd) == 0;
+#endif
     close(fd);
     return ok;
 #endif
