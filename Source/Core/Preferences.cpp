@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Preferences.h"
+#include "AestraFile.h"
 #include "AestraPlatform.h"
 #include "AestraLog.h"
 
@@ -8,6 +9,52 @@
 #include <fstream>
 
 namespace Aestra {
+
+namespace {
+bool writeTextAtomically(const std::string& path, const std::string& contents, const std::string& label) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    fs::path target(path);
+    fs::path tmp = target;
+    tmp += ".tmp";
+
+    {
+        std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
+        if (!out) {
+            Log::warning("[Preferences] Failed to open " + label + " temp file");
+            return false;
+        }
+        out.write(contents.data(), static_cast<std::streamsize>(contents.size()));
+        if (!Aestra::syncOfstream(out, tmp.string())) {
+            Log::warning("[Preferences] Failed to sync " + label + " temp file");
+            out.close();
+            fs::remove(tmp, ec);
+            return false;
+        }
+    }
+
+#ifdef _WIN32
+    if (fs::exists(target, ec)) {
+        fs::remove(target, ec);
+    }
+    ec.clear();
+#endif
+    fs::rename(tmp, target, ec);
+    if (ec) {
+        Log::warning("[Preferences] Failed to replace " + label + " file: " + ec.message());
+        fs::remove(tmp, ec);
+        return false;
+    }
+
+#ifndef _WIN32
+    if (!Aestra::fsyncParentDirectory(target.string())) {
+        Log::warning("[Preferences] Failed to sync " + label + " directory");
+        return false;
+    }
+#endif
+    return true;
+}
+} // namespace
 
 // =============================================================================
 // Singleton
@@ -101,23 +148,7 @@ void Preferences::save() {
     
     // Save preferences atomically
     std::string jsonStr = toJson().toString(2);
-    
-    std::error_code ec;
-    std::filesystem::path tmpPath = prefPath + ".tmp";
-    
-    {
-        std::ofstream out(tmpPath, std::ios::binary | std::ios::trunc);
-        if (out) {
-            out.write(jsonStr.data(), static_cast<std::streamsize>(jsonStr.size()));
-            out.flush();
-        }
-    }
-    
-    // Replace existing file
-    if (std::filesystem::exists(prefPath, ec)) {
-        std::filesystem::remove(prefPath, ec);
-    }
-    std::filesystem::rename(tmpPath, prefPath, ec);
+    bool savedPreferences = writeTextAtomically(prefPath, jsonStr, "preferences");
     
     // Save recent files separately
     JSON recentJson = JSON::object();
@@ -128,20 +159,11 @@ void Preferences::save() {
     recentJson.set("recentFiles", filesArray);
     
     std::string recentJsonStr = recentJson.toString(2);
-    std::filesystem::path recentTmpPath = recentPath + ".tmp";
-    
-    {
-        std::ofstream out(recentTmpPath, std::ios::binary | std::ios::trunc);
-        if (out) {
-            out.write(recentJsonStr.data(), static_cast<std::streamsize>(recentJsonStr.size()));
-            out.flush();
-        }
+    bool savedRecent = writeTextAtomically(recentPath, recentJsonStr, "recent files");
+
+    if (!savedPreferences || !savedRecent) {
+        return;
     }
-    
-    if (std::filesystem::exists(recentPath, ec)) {
-        std::filesystem::remove(recentPath, ec);
-    }
-    std::filesystem::rename(recentTmpPath, recentPath, ec);
     
     Log::info("[Preferences] Saved to: " + prefPath);
 }

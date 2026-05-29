@@ -4,12 +4,19 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
 
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <io.h>
 #include <windows.h>
 #else
@@ -23,8 +30,10 @@ namespace Aestra {
 // autosave, export) to ensure data survives a crash.
 inline bool fsyncPath(const std::string& path) {
 #ifdef _WIN32
-    HANDLE h = CreateFileA(path.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
-                           FILE_ATTRIBUTE_NORMAL, nullptr);
+    const auto nativePath = std::filesystem::path(path).wstring();
+    HANDLE h = CreateFileW(nativePath.c_str(), GENERIC_WRITE,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (h == INVALID_HANDLE_VALUE)
         return false;
     bool ok = FlushFileBuffers(h) != 0;
@@ -32,6 +41,32 @@ inline bool fsyncPath(const std::string& path) {
     return ok;
 #else
     int fd = open(path.c_str(), O_RDONLY);
+    if (fd < 0)
+        return false;
+    bool ok = fsync(fd) == 0;
+    close(fd);
+    return ok;
+#endif
+}
+
+inline bool fsyncParentDirectory(const std::string& path) {
+    namespace fs = std::filesystem;
+    fs::path parent = fs::path(path).parent_path();
+    if (parent.empty())
+        parent = ".";
+
+#ifdef _WIN32
+    const auto nativePath = parent.wstring();
+    HANDLE h = CreateFileW(nativePath.c_str(), GENERIC_READ,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    if (h == INVALID_HANDLE_VALUE)
+        return false;
+    bool ok = FlushFileBuffers(h) != 0;
+    CloseHandle(h);
+    return ok;
+#else
+    int fd = open(parent.c_str(), O_RDONLY | O_DIRECTORY);
     if (fd < 0)
         return false;
     bool ok = fsync(fd) == 0;
@@ -116,6 +151,8 @@ public:
         if (!isOpen_)
             return false;
         stream_.flush();
+        if (!stream_)
+            return false;
         return Aestra::fsyncPath(path_);
     }
 
