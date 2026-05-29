@@ -288,11 +288,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         file.close();
 #ifndef _WIN32
         if (!Aestra::fsyncParentDirectory(config.outputPath)) {
-            result.errorMessage = "Failed to sync exported WAV directory";
-            result.success = false;
-            std::remove(config.outputPath.c_str());
-            updateProgress(1.0f);
-            return result;
+            Log::warning("[Export] Failed to sync exported WAV directory; keeping completed export");
         }
 #endif
 
