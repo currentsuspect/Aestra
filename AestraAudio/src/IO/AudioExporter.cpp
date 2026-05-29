@@ -7,6 +7,7 @@
 #include <fstream>
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <limits>
@@ -276,8 +277,24 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
         file.seekp(0, std::ios::beg);
         writeWavHeader(file, config, result.framesRendered);
         file.flush();
-        Aestra::fsyncPath(config.outputPath);
+        if (!file || !Aestra::fsyncPath(config.outputPath)) {
+            result.errorMessage = "Failed to sync exported WAV to disk";
+            result.success = false;
+            file.close();
+            std::remove(config.outputPath.c_str());
+            updateProgress(1.0f);
+            return result;
+        }
         file.close();
+#ifndef _WIN32
+        if (!Aestra::fsyncParentDirectory(config.outputPath)) {
+            result.errorMessage = "Failed to sync exported WAV directory";
+            result.success = false;
+            std::remove(config.outputPath.c_str());
+            updateProgress(1.0f);
+            return result;
+        }
+#endif
 
         result.success = true;
         result.durationSeconds = static_cast<double>(result.framesRendered) / config.sampleRate;

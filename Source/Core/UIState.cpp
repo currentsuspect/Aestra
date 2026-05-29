@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "UIState.h"
+#include "AestraFile.h"
 #include "AestraLog.h"
 #include "AestraPlatform.h"
 #include <filesystem>
@@ -64,14 +65,34 @@ void UIState::save() {
             return;
         }
         out.write(jsonStr.data(), static_cast<std::streamsize>(jsonStr.size()));
-        out.flush();
+        if (!Aestra::syncOfstream(out, tmpPath.string())) {
+            Log::warning("[UIState] Failed to sync UI state file");
+            out.close();
+            std::filesystem::remove(tmpPath, ec);
+            return;
+        }
     }
     
     // Replace existing file
+#ifdef _WIN32
     if (std::filesystem::exists(path, ec)) {
         std::filesystem::remove(path, ec);
     }
+#endif
+    ec.clear();
     std::filesystem::rename(tmpPath, path, ec);
+    if (ec) {
+        Log::warning("[UIState] Failed to replace UI state file: " + ec.message());
+        std::filesystem::remove(tmpPath, ec);
+        return;
+    }
+
+#ifndef _WIN32
+    if (!Aestra::fsyncParentDirectory(path)) {
+        Log::warning("[UIState] Failed to sync UI state directory");
+        return;
+    }
+#endif
     
     Log::info("[UIState] Saved to: " + path);
 }

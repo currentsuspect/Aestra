@@ -403,7 +403,12 @@ bool AutosaveManager::performAutosave() {
             return false;
         }
         // Sync to disk before atomic rename to prevent data loss on crash
-        Aestra::syncOfstream(out, tmp.string());
+        if (!Aestra::syncOfstream(out, tmp.string())) {
+            notifyError("Autosave failed: sync error");
+            out.close();
+            fs::remove(tmp, ec);
+            return false;
+        }
     }
     
     // Atomic replace: on POSIX, rename() atomically replaces the target.
@@ -420,6 +425,13 @@ bool AutosaveManager::performAutosave() {
         fs::remove(tmp, ec);
         return false;
     }
+
+#ifndef _WIN32
+    if (!Aestra::fsyncParentDirectory(target.string())) {
+        notifyError("Autosave failed: directory sync error");
+        return false;
+    }
+#endif
     
     m_lastAutosaveTime = std::chrono::steady_clock::now();
     
