@@ -32,6 +32,9 @@ void CommandHistory::pushAndExecute(std::shared_ptr<ICommand> cmd) {
         std::cerr << "Command execution failed: " << e.what() << std::endl;
         return;
     }
+    if (!cmd->isUndoable()) {
+        return;
+    }
 
     bool stateChanged = false;
     {

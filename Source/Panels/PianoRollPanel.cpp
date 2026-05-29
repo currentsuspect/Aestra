@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include <random>
 #include <algorithm>
+#include <limits>
 
 using namespace Aestra::Audio;
 
@@ -52,11 +53,36 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
         adjustPatternLengthBars(barsDelta);
     });
     m_pianoRoll->setOnPatternChoiceSelected([this](int patternValue) {
-        PatternID patternId(static_cast<uint64_t>(std::max(0, patternValue)));
+        if (patternValue < 0) {
+            return;
+        }
+        PatternID patternId(static_cast<uint64_t>(patternValue));
         if (!patternId.isValid() || patternId == m_currentPatternId) {
             return;
         }
         savePattern();
+        UnitID resolvedUnitId = 0;
+        if (const auto* pattern = m_trackManager->getPatternManager().getPattern(patternId);
+            pattern && pattern->isMidi()) {
+            const auto& midiPayload = std::get<MidiPayload>(pattern->payload);
+            const auto noteIt = std::find_if(midiPayload.notes.begin(), midiPayload.notes.end(),
+                                             [](const MidiNote& note) { return note.unitId != 0; });
+            if (noteIt != midiPayload.notes.end()) {
+                resolvedUnitId = noteIt->unitId;
+            }
+        }
+        if (resolvedUnitId == 0) {
+            for (const auto unitId : m_trackManager->getUnitManager().getAllUnitIDs()) {
+                const auto* unit = m_trackManager->getUnitManager().getUnit(unitId);
+                if (unit && unit->defaultPatternId == patternId) {
+                    resolvedUnitId = unitId;
+                    break;
+                }
+            }
+        }
+        if (resolvedUnitId != 0 && resolvedUnitId != m_editingUnitId) {
+            setEditingUnit(resolvedUnitId);
+        }
         loadPattern(patternId);
     });
 
@@ -388,8 +414,25 @@ void PianoRollPanel::rebuildPatternSwitcher() {
     std::vector<AestraUI::PianoRollToolbar::PatternChoice> choices;
     auto patterns = m_trackManager->getPatternManager().getAllPatterns();
     choices.reserve(patterns.size());
+    const auto* editingUnit = m_editingUnitId != 0 ? m_trackManager->getUnitManager().getUnit(m_editingUnitId) : nullptr;
     for (const auto& pattern : patterns) {
         if (!pattern || !pattern->isMidi()) {
+            continue;
+        }
+        if (m_editingUnitId != 0 && pattern->id != m_currentPatternId &&
+            (!editingUnit || editingUnit->defaultPatternId != pattern->id)) {
+            const auto& midiPayload = std::get<MidiPayload>(pattern->payload);
+            const bool hasEditingUnitNotes = std::any_of(midiPayload.notes.begin(), midiPayload.notes.end(),
+                                                         [this](const MidiNote& note) {
+                                                             return note.unitId == m_editingUnitId;
+                                                         });
+            if (!hasEditingUnitNotes) {
+                continue;
+            }
+        }
+        if (pattern->id.value > static_cast<uint64_t>(std::numeric_limits<int>::max())) {
+            Log::warning("[PianoRollPanel] Skipping pattern with ID outside dropdown range: " +
+                         std::to_string(pattern->id.value));
             continue;
         }
         std::string label = pattern->name.empty() ? ("Pattern " + std::to_string(pattern->id.value)) : pattern->name;
@@ -402,7 +445,10 @@ void PianoRollPanel::rebuildPatternSwitcher() {
         }
         return lhs.value < rhs.value;
     });
-    m_pianoRoll->setPatternChoices(choices, static_cast<int>(m_currentPatternId.value));
+    const int selectedValue = m_currentPatternId.value <= static_cast<uint64_t>(std::numeric_limits<int>::max())
+                                  ? static_cast<int>(m_currentPatternId.value)
+                                  : -1;
+    m_pianoRoll->setPatternChoices(choices, selectedValue);
 }
 
 void PianoRollPanel::layoutTimelineMinimap() {

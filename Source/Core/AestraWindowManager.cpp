@@ -512,7 +512,8 @@ void AestraWindowManager::setSettingsDialog(std::shared_ptr<Aestra::SettingsDial
 
 void AestraWindowManager::setConfirmationDialog(std::shared_ptr<Aestra::ConfirmationDialog> dialog) {
     m_confirmationDialog = dialog;
-    if (m_rootComponent) m_rootComponent->addChild(m_confirmationDialog);
+    m_confirmationDialogRaised = false;
+    if (m_rootComponent && m_confirmationDialog) m_rootComponent->addChild(m_confirmationDialog);
 }
 
 void AestraWindowManager::setRecoveryDialog(std::shared_ptr<Aestra::RecoveryDialog> dialog) {
@@ -655,6 +656,16 @@ void AestraWindowManager::render() {
 
     m_renderer->clear(bgColor);
     m_renderer->beginFrame();
+    if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+        m_confirmationDialog->setBounds(m_rootComponent->getBounds());
+        if (!m_confirmationDialogRaised) {
+            m_rootComponent->removeChild(m_confirmationDialog);
+            m_rootComponent->addChild(m_confirmationDialog);
+            m_confirmationDialogRaised = true;
+        }
+    } else {
+        m_confirmationDialogRaised = false;
+    }
     m_rootComponent->onRender(*m_renderer);
     NUIDragDropManager::getInstance().renderDragGhost(*m_renderer);
 
@@ -666,16 +677,6 @@ void AestraWindowManager::render() {
             m_recoveryDialog->setBounds(m_rootComponent->getBounds());
         }
         m_recoveryDialog->onRender(*m_renderer);
-    }
-
-    // Render close confirmation explicitly at the top level. It is also a root
-    // child for input handling, but drawing it last avoids being hidden behind
-    // app overlays that are added later in startup.
-    if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
-        if (m_rootComponent) {
-            m_confirmationDialog->setBounds(m_rootComponent->getBounds());
-        }
-        m_confirmationDialog->onRender(*m_renderer);
     }
 
     if (m_useCustomCursor && m_windowFocused) {

@@ -182,6 +182,7 @@ private:
 
     std::shared_ptr<Aestra::SettingsDialog> m_settingsDialog;
     std::shared_ptr<Aestra::ConfirmationDialog> m_confirmationDialog;
+    bool m_confirmationDialogRaised{false};
     std::shared_ptr<Aestra::RecoveryDialog> m_recoveryDialog;
     std::shared_ptr<UnifiedHUD> m_unifiedHUD;
     std::shared_ptr<class ExportDialog> m_exportDialog;

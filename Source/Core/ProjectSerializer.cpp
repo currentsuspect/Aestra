@@ -741,6 +741,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                                                        ? clip.durationSeconds
                                                        : clip.durationBeats * 60.0 / std::max(tempo, 1.0);
                     cjs.set("durationSeconds", JSON(durationSeconds));
+                    cjs.set("sourceOffsetSeconds", JSON(clip.sourceOffsetSeconds));
                 } else {
                     cjs.set("duration", JSON(clip.durationBeats));
                 }
@@ -1523,11 +1524,20 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                             finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
                                         clip.durationSeconds = legacyDurationBeats * 60.0 / std::max(result.tempo, 1.0);
                                     }
+                                    clip.sourceOffsetSeconds =
+                                        finiteNumberOr(cj[c], "sourceOffsetSeconds", 0.0, 0.0, 1000000.0);
+                                    if (clip.sourceOffsetSeconds <= 0.0) {
+                                        const double legacySourceOffsetBeats =
+                                            finiteNumberOr(cj[c], "sourceOffset", 0.0, 0.0, 1000000.0);
+                                        clip.sourceOffsetSeconds =
+                                            legacySourceOffsetBeats * 60.0 / std::max(result.tempo, 1.0);
+                                    }
                                     clip.durationBeats = playlist.secondsToBeats(clip.durationSeconds);
+                                    clip.sourceOffset = playlist.secondsToBeats(clip.sourceOffsetSeconds);
                                 } else {
                                     clip.durationBeats = finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
+                                    clip.sourceOffset = finiteNumberOr(cj[c], "sourceOffset", 0.0, 0.0, 1000000.0);
                                 }
-                                clip.sourceOffset = finiteNumberOr(cj[c], "sourceOffset", 0.0, 0.0, 1000000.0);
                                 clip.name = boundedStringOr(cj[c], "name", "", PROJECT_MAX_STRING_BYTES);
                                 if (cj[c].has("color") && cj[c]["color"].isString()) {
                                     try {

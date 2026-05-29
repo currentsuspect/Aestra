@@ -225,12 +225,22 @@ public:
      * @param duration New clip duration in beats.
      */
     void setClipDuration(const ClipInstanceID& clipId, double duration) {
-        auto* clip = getClip(clipId);
-        if (clip) {
+        bool changed = false;
+        {
+            std::unique_lock<std::shared_mutex> lock(m_mutex);
+            auto* clip = getClipInternal(clipId);
+            if (!clip) {
+                return;
+            }
+
             clip->durationBeats = duration;
-            if (isAudioClip(*clip) && duration > 0.0) {
+            if (isAudioClipUnlocked(*clip) && duration > 0.0) {
                 clip->durationSeconds = beatToSeconds(duration);
             }
+            changed = true;
+        }
+
+        if (changed) {
             notifyClipChanged(clipId);
         }
     }
@@ -342,6 +352,7 @@ public:
         newClip.durationBeats = clip->endBeat() - splitBeat;
         newClip.sourceId = clip->sourceId;
         newClip.sourceOffset = clip->sourceOffset + (splitBeat - clip->startBeat);
+        newClip.sourceOffsetSeconds = clip->sourceOffsetSeconds;
         newClip.edits = clip->edits;
         newClip.edits.fadeInBeats = 0.0f; // Clear fades at split point
 
@@ -349,6 +360,8 @@ public:
         clip->durationBeats = splitBeat - clip->startBeat;
         clip->edits.fadeOutBeats = 0.0f;
         if (isAudioClipUnlocked(*clip)) {
+            const double splitOffsetSeconds = beatToSeconds(splitBeat - clip->startBeat);
+            newClip.sourceOffsetSeconds = clip->sourceOffsetSeconds + splitOffsetSeconds;
             clip->durationSeconds = beatToSeconds(clip->durationBeats);
             newClip.durationSeconds = beatToSeconds(newClip.durationBeats);
         }
@@ -462,8 +475,11 @@ public:
                         continue;
                     }
                     const double newDurationBeats = secondsToBeatsUnlocked(clip.durationSeconds);
-                    if (std::abs(newDurationBeats - clip.durationBeats) > 1.0e-9) {
+                    const double newSourceOffsetBeats = secondsToBeatsUnlocked(clip.sourceOffsetSeconds);
+                    if (std::abs(newDurationBeats - clip.durationBeats) > 1.0e-9 ||
+                        std::abs(newSourceOffsetBeats - clip.sourceOffset) > 1.0e-9) {
                         clip.durationBeats = newDurationBeats;
+                        clip.sourceOffset = newSourceOffsetBeats;
                         changedClips.push_back(clip.id);
                     }
                 }
