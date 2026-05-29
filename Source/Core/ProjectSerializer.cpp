@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
 #include "ProjectMigrations.h"
+#include "AestraFile.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
 #include "PluginManager.h"
@@ -450,6 +451,13 @@ static bool writeAtomicallyImpl(const std::string& path, const std::string& cont
             Log::error("Project save failed: write error: " + tmp.string());
             return false;
         }
+        // Sync to disk before atomic rename to prevent data loss on crash
+        if (!Aestra::syncOfstream(out, tmp.string())) {
+            Log::error("Project save failed: sync error: " + tmp.string());
+            out.close();
+            fs::remove(tmp, ec);
+            return false;
+        }
     }
 
 #ifdef _WIN32
@@ -467,6 +475,11 @@ static bool writeAtomicallyImpl(const std::string& path, const std::string& cont
         Log::error("Project save failed: cannot replace target: " + target.string() + " (" + ec.message() + ")");
         // Best-effort cleanup
         fs::remove(tmp, ec);
+        return false;
+    }
+
+    if (!Aestra::fsyncParentDirectory(target.string())) {
+        Log::error("Project save failed: directory sync error: " + target.parent_path().string());
         return false;
     }
 #endif
