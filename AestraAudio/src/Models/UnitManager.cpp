@@ -252,14 +252,14 @@ void UnitManager::publishSnapshot() {
     }
 
     // Retire old snapshot through GC so the audio thread never dereferences freed memory.
-    auto old = m_publishedSnapshot.exchange( snapshot);
+    auto old = m_publishedSnapshot.exchange(snapshot, std::memory_order_acq_rel);
     if (old) {
         GarbageCollector::instance().release(old, "UnitManager::AudioArsenalSnapshot");
     }
 }
 
 std::shared_ptr<const AudioArsenalSnapshot> UnitManager::getAudioSnapshot() const {
-    auto snapshot = m_publishedSnapshot.load();
+    auto snapshot = m_publishedSnapshot.load(std::memory_order_acquire);
     return std::const_pointer_cast<const AudioArsenalSnapshot>(snapshot);
 }
 

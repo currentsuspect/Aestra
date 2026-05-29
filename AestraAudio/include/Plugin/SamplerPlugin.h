@@ -137,7 +137,8 @@ private:
     std::array<Voice, kMaxVoices> m_voices;
 
     // Helpers
-    void handleMidiEvent(const MidiBuffer::Event& event, double baseRate);
+    void handleMidiEvent(const MidiBuffer::Event& event, double baseRate,
+                         const std::shared_ptr<SampleData>& currentData);
     void renderVoice(Voice& voice, float* outL, float* outR, uint32_t frames);
     float getEnvelopeLevel(Voice& voice, double dt, float attack, float decay, float sustain, float release);
 };
