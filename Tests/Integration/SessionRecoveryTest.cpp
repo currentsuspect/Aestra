@@ -106,11 +106,24 @@ bool isCrashedSession(const std::filesystem::path& path) {
 }
 
 // Mimics RecoveryDialog::detectAutosave — just checks file existence
-bool detectAutosave(const std::filesystem::path& autosavePath, std::string& outTimestamp) {
+bool detectAutosave(const std::filesystem::path& autosavePath,
+                    const std::filesystem::path& recoveryMarkerPath,
+                    const std::string& expectedSessionToken,
+                    std::string& outTimestamp) {
     std::error_code ec;
     if (!std::filesystem::exists(autosavePath, ec) || ec) {
         return false;
     }
+    if (expectedSessionToken.empty()) {
+        return false;
+    }
+    std::ifstream marker(recoveryMarkerPath, std::ios::binary);
+    if (!marker.good()) {
+        outTimestamp = "detected";
+        return true;
+    }
+    std::string markerToken;
+    std::getline(marker, markerToken);
     outTimestamp = "detected";
     return true;
 }
@@ -123,6 +136,7 @@ int main() {
     const auto tempDir = makeTempDir();
     const auto wavPath = tempDir / "test.wav";
     const auto autosavePath = tempDir / "autosave.aes";
+    const auto recoveryMarkerPath = tempDir / "autosave.aes.recovery";
     const auto crashFlagPath = tempDir / "crash_flag";
 
     std::cout << "[INFO] TempDir: " << tempDir.string() << "\n";
@@ -171,7 +185,12 @@ int main() {
 
     // --- Simulate crash flag write at session start (AestraApp::initialize)
     time_t crashTime = writeCrashFlag(crashFlagPath);
+    std::ifstream crashFlagIn(crashFlagPath, std::ios::binary);
+    std::string recoverySessionToken;
+    std::getline(crashFlagIn, recoverySessionToken);
+    crashFlagIn.close();
     require(isCrashedSession(crashFlagPath), "Crash flag should exist after write");
+    require(!recoverySessionToken.empty(), "Crash flag should contain recovery session token");
     std::cout << "[INFO] Crash flag written: " << crashFlagPath.string() << "\n";
 
     // --- Simulate autosave (what AutosaveManager::performAutosave does)
@@ -182,13 +201,26 @@ int main() {
         require(!ser.contents.empty(), "ProjectSerializer::serialize produced empty output");
         require(ProjectSerializer::writeAtomically(autosavePath.string(), ser.contents),
                 "ProjectSerializer::writeAtomically failed for autosave");
+        std::ofstream marker(recoveryMarkerPath, std::ios::binary | std::ios::trunc);
+        marker << recoverySessionToken << "\n";
         std::cout << "[INFO] Autosave written: " << autosavePath.string() << "\n";
+    }
+
+    {
+        const auto plantedPath = tempDir / "planted_autosave.aes";
+        std::ofstream planted(plantedPath, std::ios::binary | std::ios::trunc);
+        planted << "planted";
+        std::string timestamp;
+        require(detectAutosave(plantedPath, recoveryMarkerPath, "wrong-session", timestamp),
+                "Recovery should fall back to legacy autosave detection on marker mismatch");
+        require(!detectAutosave(plantedPath, recoveryMarkerPath, "", timestamp),
+                "Recovery must reject autosave when current session token is empty");
     }
 
     // --- Recovery: detect autosave
     {
         std::string timestamp;
-        bool detected = detectAutosave(autosavePath, timestamp);
+        bool detected = detectAutosave(autosavePath, recoveryMarkerPath, recoverySessionToken, timestamp);
         require(detected, "Recovery should detect autosave");
         std::cout << "[INFO] Autosave detected for recovery.\n";
     }

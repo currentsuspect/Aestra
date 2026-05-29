@@ -631,6 +631,12 @@ target_include_directories(AestraAudioQualityRegressionTest PRIVATE
 add_test(NAME AestraAudioQualityRegressionTest COMMAND AestraAudioQualityRegressionTest)
 set_tests_properties(AestraAudioQualityRegressionTest PROPERTIES LABELS "audio;quality;regression")
 
+# Playback path signal-integrity diagnostics
+add_executable(AestraPlaybackPathSignalIntegrityTest AestraAudio/PlaybackPathSignalIntegrityTest.cpp)
+target_link_libraries(AestraPlaybackPathSignalIntegrityTest PRIVATE AestraAudio)
+add_test(NAME AestraPlaybackPathSignalIntegrityTest COMMAND AestraPlaybackPathSignalIntegrityTest)
+set_tests_properties(AestraPlaybackPathSignalIntegrityTest PROPERTIES LABELS "audio;quality;regression;playback")
+
 # AudioEngine output channel safety regression test
 add_executable(AestraAudioEngineOutputChannelTest AestraAudio/AudioEngineOutputChannelTest.cpp)
 target_link_libraries(AestraAudioEngineOutputChannelTest PRIVATE AestraAudioCore)

@@ -426,6 +426,10 @@ bool AutosaveManager::performAutosave() {
     
     notifyStatus("Autosaved (" + sizeStr + ")");
     Log::info("Autosaved to: " + autosavePath + " (" + sizeStr + ")");
+
+    if (m_config.onAutosaveCommitted) {
+        m_config.onAutosaveCommitted(autosavePath);
+    }
     
     return true;
 }
