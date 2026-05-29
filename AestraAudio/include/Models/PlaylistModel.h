@@ -8,6 +8,7 @@
 #include "SourceManager.h"
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <mutex>
 #include <shared_mutex>
@@ -227,6 +228,9 @@ public:
         auto* clip = getClip(clipId);
         if (clip) {
             clip->durationBeats = duration;
+            if (isAudioClip(*clip) && duration > 0.0) {
+                clip->durationSeconds = beatToSeconds(duration);
+            }
             notifyClipChanged(clipId);
         }
     }
@@ -344,6 +348,10 @@ public:
         // Trim original clip
         clip->durationBeats = splitBeat - clip->startBeat;
         clip->edits.fadeOutBeats = 0.0f;
+        if (isAudioClipUnlocked(*clip)) {
+            clip->durationSeconds = beatToSeconds(clip->durationBeats);
+            newClip.durationSeconds = beatToSeconds(newClip.durationBeats);
+        }
 
         // Add new clip
         m_lanes[laneIdxIt->second].clips.push_back(newClip);
@@ -439,7 +447,33 @@ public:
     /**
      * @brief Set BPM
      */
-    void setBPM(double bpm) { m_bpm = bpm; }
+    void setBPM(double bpm) {
+        if (!std::isfinite(bpm) || bpm <= 0.0) {
+            return;
+        }
+
+        std::vector<ClipInstanceID> changedClips;
+        {
+            std::unique_lock<std::shared_mutex> lock(m_mutex);
+            m_bpm = bpm;
+            for (auto& lane : m_lanes) {
+                for (auto& clip : lane.clips) {
+                    if (!isAudioClipUnlocked(clip) || clip.durationSeconds <= 0.0) {
+                        continue;
+                    }
+                    const double newDurationBeats = secondsToBeatsUnlocked(clip.durationSeconds);
+                    if (std::abs(newDurationBeats - clip.durationBeats) > 1.0e-9) {
+                        clip.durationBeats = newDurationBeats;
+                        changedClips.push_back(clip.id);
+                    }
+                }
+            }
+        }
+
+        for (const auto& clipId : changedClips) {
+            notifyClipChanged(clipId);
+        }
+    }
 
     /**
      * @brief Get BPM
@@ -455,6 +489,11 @@ public:
 
     double secondsToBeats(double seconds) const {
         return seconds * m_bpm / 60.0;
+    }
+
+    bool isAudioClip(const ClipInstance& clip) const {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        return isAudioClipUnlocked(clip);
     }
 
     double getTotalDurationBeats() const {
@@ -501,6 +540,17 @@ public:
         clip.durationBeats = durationBeats;
         clip.patternId = patternId;
         clip.sourceId = patternId.value; // Store pattern ID in sourceId for now
+        if (m_patternManager) {
+            const auto* pattern = m_patternManager->getPattern(patternId);
+            if (pattern && pattern->isAudio()) {
+                const auto& payload = std::get<AudioSlicePayload>(pattern->payload);
+                if (payload.durationSeconds > 0.0) {
+                    clip.durationSeconds = payload.durationSeconds;
+                } else {
+                    clip.durationSeconds = beatToSeconds(durationBeats);
+                }
+            }
+        }
 
         m_lanes[it->second].clips.push_back(clip);
         m_clipLaneMap[clip.id] = laneId;
@@ -607,6 +657,18 @@ private:
     double m_bpm{120.0};
     double m_projectSampleRate{48000.0}; // Default, configurable
     PatternManager* m_patternManager{nullptr};
+
+    bool isAudioClipUnlocked(const ClipInstance& clip) const {
+        if (!m_patternManager || !clip.patternId.isValid()) {
+            return false;
+        }
+        const auto* pattern = m_patternManager->getPattern(clip.patternId);
+        return pattern && pattern->isAudio();
+    }
+
+    double secondsToBeatsUnlocked(double seconds) const {
+        return seconds * m_bpm / 60.0;
+    }
 
     ClipInstance* getClipInternal(const ClipInstanceID& clipId) {
         auto laneIt = m_clipLaneMap.find(clipId);

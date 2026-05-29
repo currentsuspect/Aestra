@@ -226,6 +226,16 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             m_recoveryDialog->onMouseEvent(event);
             return;
         }
+
+        if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+            AestraUI::NUIMouseEvent event;
+            event.type = AestraUI::NUIMouseEventType::Move;
+            event.position = AestraUI::NUIPoint(static_cast<float>(x), static_cast<float>(y));
+            event.button = AestraUI::NUIMouseButton::None;
+            event.pressed = false;
+            m_confirmationDialog->onMouseEvent(event);
+            return;
+        }
         
         // Drag & Drop (convert to float for NUI)
         if (m_content) {
@@ -244,6 +254,18 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.pressed = pressed;
             m_recoveryDialog->onMouseEvent(event);
             return; // Block all other mouse handling while recovery dialog is shown
+        }
+
+        if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+            AestraUI::NUIMouseEvent event;
+            event.type = pressed ? AestraUI::NUIMouseEventType::Down : AestraUI::NUIMouseEventType::Up;
+            event.position = AestraUI::NUIPoint(static_cast<float>(m_lastMouseX), static_cast<float>(m_lastMouseY));
+            event.button = (button == 0) ? AestraUI::NUIMouseButton::Left :
+                          (button == 1) ? AestraUI::NUIMouseButton::Right : AestraUI::NUIMouseButton::Middle;
+            event.pressed = pressed;
+            event.released = !pressed;
+            m_confirmationDialog->onMouseEvent(event);
+            return;
         }
         
         if (!pressed) { // Release
@@ -294,6 +316,16 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.pressed = pressed;
             m_recoveryDialog->onKeyEvent(event);
             return; // Block all other key handling while recovery dialog is shown
+        }
+
+        if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+            AestraUI::NUIKeyEvent event;
+            event.keyCode = convertToNUIKeyCode(key);
+            event.pressed = pressed;
+            event.released = !pressed;
+            event.modifiers = m_keyModifiers;
+            m_confirmationDialog->onKeyEvent(event);
+            return;
         }
 
         // Dispatch to Content / Focused widgets for both press and release so
@@ -634,6 +666,16 @@ void AestraWindowManager::render() {
             m_recoveryDialog->setBounds(m_rootComponent->getBounds());
         }
         m_recoveryDialog->onRender(*m_renderer);
+    }
+
+    // Render close confirmation explicitly at the top level. It is also a root
+    // child for input handling, but drawing it last avoids being hidden behind
+    // app overlays that are added later in startup.
+    if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
+        if (m_rootComponent) {
+            m_confirmationDialog->setBounds(m_rootComponent->getBounds());
+        }
+        m_confirmationDialog->onRender(*m_renderer);
     }
 
     if (m_useCustomCursor && m_windowFocused) {

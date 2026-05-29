@@ -154,23 +154,19 @@ bool SamplerPlugin::loadSample(const std::string& path) {
         return false;
     }
 
-    // Convert planar to interleaved for Sinc64Turbo
-    // Decoder produces: [L0,L1,L2...,R0,R1,R2...] or [L0,L1,L2...] for mono
-    // Need: [L0,R0,L1,R1,L2,R2...] (always stereo for Sinc64Turbo)
+    // Decode output is interleaved. Keep stereo data in-place and only upmix
+    // mono defensively for callers that bypass decodeAudioFile's forceStereo().
     const size_t numFrames = data.size() / std::max<uint32_t>(channels, 1);
-    std::vector<float> interleaved(numFrames * 2);
-    if (channels == 2) {
-        for (size_t i = 0; i < numFrames; ++i) {
-            interleaved[i * 2] = data[i];
-            interleaved[i * 2 + 1] = data[numFrames + i];
-        }
-    } else {
+    if (channels == 1) {
+        std::vector<float> interleaved(numFrames * 2);
         for (size_t i = 0; i < numFrames; ++i) {
             interleaved[i * 2] = data[i];
             interleaved[i * 2 + 1] = data[i];
         }
+        data = std::move(interleaved);
+    } else if (channels != 2) {
+        return false;
     }
-    data = std::move(interleaved);
 
     // Prepare new data container
     auto newData = std::make_shared<SampleData>();

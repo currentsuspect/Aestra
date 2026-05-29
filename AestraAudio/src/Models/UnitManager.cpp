@@ -731,6 +731,19 @@ void UnitManager::loadFromJSON(const JSON& json) {
                     }
                 }
 
+                // Older project saves kept the sampler file only in UnitInfo::audioClipPath.
+                // Rehydrate that path so restored MIDI has sample data even when pluginState lacks samplePath.
+                if (!unit.audioClipPath.empty()) {
+                    if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit.plugin)) {
+                        if (sampler->loadSample(unit.audioClipPath)) {
+                            unit.pluginState = sampler->saveState();
+                        } else {
+                            Aestra::Log::warning("[UnitManager] Failed to reload sampler audio for unit " +
+                                                 std::to_string(unit.id) + ": " + unit.audioClipPath);
+                        }
+                    }
+                }
+
                 if (unit.enabled || unit.isEnabled) {
                     unit.plugin->activate();
                 }

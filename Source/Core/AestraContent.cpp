@@ -324,11 +324,21 @@ AestraContent::AestraContent() {
         playSoundPreview(file);
     });
     m_fileBrowser->setOnNavActionSelected([this](AestraUI::FileBrowser::BrowserNavAction action) {
-        if (!m_pluginBrowser)
-            return;
-        bool isPlugins = (action == AestraUI::FileBrowser::BrowserNavAction::Plugins);
-        m_pluginBrowser->setVisible(isPlugins);
-        if (isPlugins && m_fileBrowser) {
+        const bool isPlugins = (action == AestraUI::FileBrowser::BrowserNavAction::Plugins);
+        const bool isPatterns = (action == AestraUI::FileBrowser::BrowserNavAction::Patterns);
+        if (m_pluginBrowser) {
+            m_pluginBrowser->setVisible(isPlugins);
+        }
+        if (m_patternBrowser) {
+            if (isPatterns) {
+                m_patternBrowser->showPatternsTab();
+                m_patternBrowser->refreshPatterns();
+                m_patternBrowser->setVisible(true);
+            } else {
+                m_patternBrowser->setVisible(false);
+            }
+        }
+        if (isPlugins && m_fileBrowser && m_pluginBrowser) {
             float navW = m_fileBrowser->getNavPaneWidth();
             auto fbBounds = m_fileBrowser->getBounds();
             float pbWidth = std::max(0.0f, fbBounds.width - navW);
@@ -337,6 +347,7 @@ AestraContent::AestraContent() {
             m_pluginBrowser->setBounds(
                 AestraUI::NUIRect(fbBounds.x + navW, fbBounds.y + searchH, pbWidth, fbBounds.height - searchH));
         }
+        onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     });
 
     m_fileBrowser->setOnSearchTextChanged([this](const std::string& text) {
@@ -1340,7 +1351,11 @@ void AestraContent::onResize(int width, int height) {
     }
 
     const size_t browserTab = m_browserToggle ? m_browserToggle->getSelectedIndex() : 0;
-    const bool browserPatternTabActive = browserTab == 2;
+    const auto activeNavAction =
+        m_fileBrowser ? m_fileBrowser->getActiveNavAction() : AestraUI::FileBrowser::BrowserNavAction::Sounds;
+    const bool legacyPatternTabActive = browserTab == 2;
+    const bool patternNavActive = activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Patterns;
+    const bool browserPatternTabActive = legacyPatternTabActive || patternNavActive;
     const bool clipsTabActive = browserTab == 3;
 
     const bool compactPatternDock = m_patternBrowser && m_patternBrowser->usesCompactRail();
@@ -1369,7 +1384,7 @@ void AestraContent::onResize(int width, int height) {
         m_patternBrowserWidthPref = patternBrowserWidth;
     }
 
-    const bool filesTabActive = browserTab == 0;
+    const bool filesTabActive = browserTab == 0 && !browserPatternTabActive;
     const bool pluginBrowserVisible = m_pluginBrowser && m_pluginBrowser->isVisible();
     const bool showPreviewDock = m_previewPanel && filesTabActive && m_fileBrowser && m_fileBrowser->isVisible() &&
                                  !pluginBrowserVisible && m_previewPanel->hasFileSelection();
@@ -1417,10 +1432,17 @@ void AestraContent::onResize(int width, int height) {
     }
 
     if (m_patternBrowser) {
-        if (browserPatternTabActive || clipsTabActive) {
+        if (legacyPatternTabActive || clipsTabActive) {
             float clipTop = sidebarTopY;
             m_patternBrowser->setBounds(
                 AestraUI::NUIAbsolute(contentBounds, 0.0f, clipTop, fileBrowserWidth, height - clipTop));
+        } else if (patternNavActive && m_fileBrowser) {
+            const float navW = m_fileBrowser->getNavPaneWidth();
+            constexpr float searchH = 28.0f;
+            const float patternTop = sidebarTopY + searchH;
+            const float patternWidth = std::max(0.0f, fileBrowserWidth - navW);
+            m_patternBrowser->setBounds(
+                AestraUI::NUIAbsolute(contentBounds, navW, patternTop, patternWidth, height - patternTop));
         } else {
             float patternBrowserX = fileBrowserWidth;
             float pbY = isAuditionMode ? 0.0f : transportHeight;
@@ -2010,7 +2032,10 @@ void AestraContent::setViewFocus(ViewFocus focus) {
             if (m_transportBar)
                 m_transportBar->setVisible(true);
             const size_t browserTab = m_browserToggle ? m_browserToggle->getSelectedIndex() : 0;
-            const bool showBrowserPatternPane = focus == ViewFocus::Timeline && (browserTab == 2 || browserTab == 3);
+            const bool patternNavActive =
+                m_fileBrowser && m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Patterns;
+            const bool showBrowserPatternPane =
+                focus == ViewFocus::Timeline && (browserTab == 2 || browserTab == 3 || patternNavActive);
             if (m_patternBrowser)
                 m_patternBrowser->setVisible(showBrowserPatternPane);
             if (m_waveformVisualizer)
@@ -3108,6 +3133,7 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     auto& patternManager = m_trackManager->getPatternManager();
     AudioSlicePayload payload;
     payload.audioSourceId = sourceId;
+    payload.durationSeconds = durationSeconds;
     AudioSlice slice;
     slice.startOffset = 0.0;
     slice.duration = durationSeconds;
@@ -3143,7 +3169,20 @@ void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
     double playheadPositionSeconds = m_transportBar ? m_transportBar->getPosition() : 0.0;
     double startBeat = m_trackManager->getPlaylistModel().secondsToBeats(playheadPositionSeconds);
 
-    playlist.addClipFromPattern(targetLaneId, patternId, startBeat, durationBeats);
+    Aestra::Audio::ClipInstance clip;
+    clip.id = Aestra::Audio::ClipInstanceID::generate();
+    clip.patternId = patternId;
+    clip.sourceId = patternId.value;
+    clip.startBeat = startBeat;
+    clip.durationBeats = durationBeats;
+    clip.durationSeconds = durationSeconds;
+    clip.name = patternName;
+    const auto clipId = playlist.addClip(targetLaneId, clip);
+    if (!clipId.isValid()) {
+        patternManager.removePattern(patternId);
+        AESTRA_LOG_ERROR("Failed to add sample clip to arrangement; removed orphan pattern");
+        return;
+    }
 
     if (m_trackManagerUI) {
         m_trackManagerUI->refreshTracks();
