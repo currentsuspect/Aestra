@@ -2,6 +2,96 @@
 
 All notable changes for Aestra in Q2 2026 are documented here.
 
+## v0.6.0-alpha — Security & RT Hardening (2026-05-29)
+
+### Security
+
+- Take snapshot paths confined within project `.takes` directory — traversal regression coverage
+- Scanned/cache plugins can no longer shadow registered internal plugin IDs
+- Hard-coded dev account API fallback removed — stale/future/premium lease rejection in default builds
+- Account refresh `issued_at` handling hardened; private release workflow token exposure fixed (#338)
+- Production key required for premium leases
+- Arsenal project plugin restore restricted to registered IDs only
+- CLAP scanner helper writes guarded from SIGPIPE
+- Nightly workflow token permissions limited to minimum required
+
+### RT Safety
+
+- Stale waveform source callbacks eliminated
+- Async preview decodes bounded
+- Audition decode worker lifetime owned explicitly
+- Render main output slot lookup cached per graph compile
+- Mixer lane state clamped before cast
+- OpenGL kerning cache bounded
+- MSVC ARM64 denormal register access made safe
+- AestraVerb active state rebuilds guarded
+- Graph dirty UI signal guarded
+- Master safety limiter reshaped to transparent cubic Hermite knee
+
+### Plugin Hosting
+
+- VST3 host crash handling hardened — real VST3 processing in plugin helper
+- Plugin proxy watchdog state made atomic
+- Non-finite plugin output quarantined (NaN/Inf detection)
+- Effect-chain fault state ownership fixed
+
+### Callback Safety
+
+- Triple-buffer `EngineState` with `GraphReadHandle` for RT graph access
+- `RecordingCaptureRoute` double-buffered snapshot for input capture
+- PDC edge state ownership fixed
+- TSan CI added for callback-safety regression detection
+
+### Serialization / Project Persistence
+
+- Pattern restore and timeline persistence fixed
+- BPM changes synced through playlist/timeline/pattern playback
+- Arsenal sampler audio restored from `audioClipPath` for legacy states
+- Migration framework proven with v1 fixture roundtrip
+
+### Recovery
+
+- Autosave crash session binding
+- Session recovery test fixed on Windows
+
+### CI / Build
+
+- LeakSanitizer (LSan) advisory CI job
+- API docs quality workflow Graphviz dependency fix
+- GitHub Pages deploy gate changed from opt-in to opt-out (`DISABLE_GITHUB_PAGES != 'true'`)
+
+### Sprint 2 Resolved
+
+- `std::atomic_load` on `shared_ptr` deprecated (#331)
+- Plugin crash protection verified Linux-only (#334)
+- Plugin NaN/Inf validation moved to master output (#333)
+- Migration framework proven (#332)
+- fsync absence documented, deferred to post-beta (#335)
+
+### Known Issues (as of v0.6.0-alpha)
+
+- OOP plugin parameters are no-ops (#238) — P0
+- Autosave serializer data race (#239) — P0
+- Routing gain smoothing, cycle detection, RT allocation (#240, #241, #243) — P0
+- CLAP MIDI input unimplemented (#244) — P0
+- Full list: https://github.com/users/currentsuspect/projects/3
+
+---
+
+## v0.5.0-alpha — Feature & CI Milestone (2026-05-23)
+
+**Takes system** — Multi-take recording with manifest, snapshots, transactional switching, path traversal guards, and UI integration.
+
+**CLAP parameter support** — ClapParamInfo, ClapPluginParams structs, CLAP core constant definitions, null paramsExt fix.
+
+**Audio quality** — K-weight race fix, ARM64 denormals, send gain smoother coefficient fix, audition queue deadlock fix, autosave atomic rename.
+
+**CI hardening** — Removed jwlawson/actions-setup-cmake@v2 from all jobs, system cmake, DelayLine off-by-one fix (Capacity+1 buffer), Windows path separator fix, 13 tests registered, platform guards.
+
+**PRs merged** — #291-#305 (11 PRs), develop→main merge (#304, 51 commits).
+
+---
+
 ## v0.4.0-alpha — Hardening Milestone (2026-05-20)
 
 ### Security
