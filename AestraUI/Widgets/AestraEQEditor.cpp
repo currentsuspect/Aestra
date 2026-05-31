@@ -824,8 +824,6 @@ void AestraEQEditor::appendLegacyBand(uint32_t slotIndex) {
 
     if (eq) {
         const auto snapshot = eq->getDynamicBandSlotSnapshot(slotIndex);
-        if (!snapshot.enabled)
-            return;
         b.slotIndex = snapshot.slotIndex;
         b.legacySlot = snapshot.legacySlot;
         b.typeName = b.name + " \u00B7 " + filterTypeLabel(snapshot.type, slot.typeLabel);
@@ -909,8 +907,6 @@ void AestraEQEditor::syncBandsFromPlugin() {
     auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance);
     if (eq) {
         for (uint32_t slot = 0; slot < Aestra::Audio::Plugins::AestraEQ::kLegacyBandCount; ++slot) {
-            if (!eq->isDynamicBandSlotEnabled(slot))
-                continue;
             const auto found = std::find_if(m_bands.begin(), m_bands.end(),
                                             [slot](const Band& band) { return band.slotIndex == slot; });
             if (found == m_bands.end()) {
@@ -970,7 +966,9 @@ void AestraEQEditor::syncBandsFromPlugin() {
     }
     if (eq) {
         m_bands.erase(std::remove_if(m_bands.begin(), m_bands.end(),
-                                     [eq](const Band& band) { return !eq->isDynamicBandSlotEnabled(band.slotIndex); }),
+                                     [eq](const Band& band) {
+                                         return !band.legacySlot && !eq->isDynamicBandSlotEnabled(band.slotIndex);
+                                     }),
                       m_bands.end());
         if (m_selectedBand >= static_cast<int>(m_bands.size()))
             m_selectedBand = m_bands.empty() ? -1 : static_cast<int>(m_bands.size()) - 1;

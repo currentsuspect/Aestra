@@ -280,6 +280,12 @@ std::string fixed(double value, int precision = 3) {
     return out.str();
 }
 
+std::string formatJsonNumber(double value, int precision = 3) {
+    if (!std::isfinite(value))
+        return "null";
+    return fixed(value, precision);
+}
+
 std::string escapeForMarkdownTable(std::string value) {
     std::string escaped;
     escaped.reserve(value.size());
@@ -385,14 +391,14 @@ bool writeJson(const std::string& path, const std::vector<CaseResult>& results) 
         const auto& result = results[i];
         out << "    {\n";
         out << "      \"name\": \"" << escapeForJson(result.name) << "\",\n";
-        out << "      \"peak_in\": " << fixed(result.peakIn, 6) << ",\n";
-        out << "      \"rms_in\": " << fixed(result.rmsIn, 6) << ",\n";
-        out << "      \"peak_out\": " << fixed(result.peakOut, 6) << ",\n";
-        out << "      \"rms_out\": " << fixed(result.rmsOut, 6) << ",\n";
-        out << "      \"rumble_delta_db\": " << fixed(result.rumbleDeltaDb, 3) << ",\n";
-        out << "      \"mud_delta_db\": " << fixed(result.mudDeltaDb, 3) << ",\n";
-        out << "      \"presence_delta_db\": " << fixed(result.presenceDeltaDb, 3) << ",\n";
-        out << "      \"air_delta_db\": " << fixed(result.airDeltaDb, 3) << ",\n";
+        out << "      \"peak_in\": " << formatJsonNumber(result.peakIn, 6) << ",\n";
+        out << "      \"rms_in\": " << formatJsonNumber(result.rmsIn, 6) << ",\n";
+        out << "      \"peak_out\": " << formatJsonNumber(result.peakOut, 6) << ",\n";
+        out << "      \"rms_out\": " << formatJsonNumber(result.rmsOut, 6) << ",\n";
+        out << "      \"rumble_delta_db\": " << formatJsonNumber(result.rumbleDeltaDb, 3) << ",\n";
+        out << "      \"mud_delta_db\": " << formatJsonNumber(result.mudDeltaDb, 3) << ",\n";
+        out << "      \"presence_delta_db\": " << formatJsonNumber(result.presenceDeltaDb, 3) << ",\n";
+        out << "      \"air_delta_db\": " << formatJsonNumber(result.airDeltaDb, 3) << ",\n";
         out << "      \"nan_inf_count\": " << result.nanInfCount << ",\n";
         out << "      \"sane\": " << (result.sane ? "true" : "false") << "\n";
         out << "    }" << (i + 1 == results.size() ? "\n" : ",\n");

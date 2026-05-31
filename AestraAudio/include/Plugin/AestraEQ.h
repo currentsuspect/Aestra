@@ -1079,7 +1079,13 @@ public:
         const uint64_t serial = m_publishedAnalyzerSerial[sourceIdx][modeIdx].load(std::memory_order_acquire);
         if (serial == 0) return false;
         const uint32_t page = m_publishedAnalyzerPage[sourceIdx][modeIdx].load(std::memory_order_acquire);
+        const uint64_t pageSerial = m_analyzerPageSerial[sourceIdx][modeIdx][page].load(std::memory_order_acquire);
+        if ((pageSerial & 1u) != 0u) return false;
         out = m_analyzerPages[sourceIdx][modeIdx][page];
+        const uint64_t pageSerialAfter = m_analyzerPageSerial[sourceIdx][modeIdx][page].load(std::memory_order_acquire);
+        const uint64_t serialAfter = m_publishedAnalyzerSerial[sourceIdx][modeIdx].load(std::memory_order_acquire);
+        const uint32_t pageAfter = m_publishedAnalyzerPage[sourceIdx][modeIdx].load(std::memory_order_acquire);
+        if (pageSerialAfter != pageSerial || serialAfter != serial || pageAfter != page) return false;
         if (outSerial) *outSerial = serial;
         return true;
     }
@@ -1696,7 +1702,6 @@ private:
         for (uint32_t i = 0; i < kV1BandCount; ++i) {
             m_bandEnabled[i].store(getParameter(bandV1EnableId(i)) > 0.5f, std::memory_order_relaxed);
         }
-        resetDynamicBandSlots();
     }
 
     void resetDynamicBandSlots() {
@@ -2325,7 +2330,8 @@ private:
             if (!m_runtimeBandEnabled[band] ||
                 m_runtimeBandTypes[band] != type ||
                 m_runtimeBandStages[band] != stages ||
-                m_runtimeBandModes[band] != slotStereoMode(band)) {
+                m_runtimeBandModes[band] != slotStereoMode(band) ||
+                m_runtimeBandSoloAudition[band] != soloAudition) {
                 resetBandFilterStates(band);
             }
             m_bandStages[band].store(stages, std::memory_order_relaxed);
@@ -2504,9 +2510,15 @@ private:
             };
 
             for (uint32_t mode = 0; mode < kAnalyzerStereoModeCount; ++mode) {
+                if (m_analyzerWritePos[sourceIdx][mode] == 0) {
+                    m_analyzerPageSerial[sourceIdx][mode][m_analyzerWritePage[sourceIdx][mode]].fetch_add(
+                        1, std::memory_order_acq_rel);
+                }
                 m_analyzerPages[sourceIdx][mode][m_analyzerWritePage[sourceIdx][mode]]
                                [m_analyzerWritePos[sourceIdx][mode]++] = samples[mode];
                 if (m_analyzerWritePos[sourceIdx][mode] >= kAnalyzerWindowSize) {
+                    m_analyzerPageSerial[sourceIdx][mode][m_analyzerWritePage[sourceIdx][mode]].fetch_add(
+                        1, std::memory_order_release);
                     m_publishedAnalyzerPage[sourceIdx][mode].store(m_analyzerWritePage[sourceIdx][mode],
                                                                    std::memory_order_release);
                     m_publishedAnalyzerSerial[sourceIdx][mode].fetch_add(1, std::memory_order_release);
@@ -2569,6 +2581,8 @@ private:
         m_publishedAnalyzerPage{};
     std::array<std::array<std::atomic<uint64_t>, kAnalyzerStereoModeCount>, kAnalyzerSourceCount>
         m_publishedAnalyzerSerial{};
+    std::array<std::array<std::array<std::atomic<uint64_t>, 2>, kAnalyzerStereoModeCount>, kAnalyzerSourceCount>
+        m_analyzerPageSerial{};
     std::array<std::array<uint32_t, kAnalyzerStereoModeCount>, kAnalyzerSourceCount> m_analyzerWritePage{};
     std::array<std::array<uint32_t, kAnalyzerStereoModeCount>, kAnalyzerSourceCount> m_analyzerWritePos{};
 };

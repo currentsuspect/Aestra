@@ -173,9 +173,23 @@ void verifyEQCurrentProjectRoundTrip(const std::filesystem::path& path) {
     eq->setParameter(Plugins::AestraEQ::kParamOutputGain, 0.75f);
     eq->setParameter(Plugins::AestraEQ::kParamPolarityInvert, 1.0f);
     require(eq->setDynamicBandSlot(Plugins::AestraEQ::kLegacyBandCount,
-                                   {true, Plugins::FilterType::Notch, Plugins::AestraEQ::StereoMode::Mid, 0.62f, 0.40f,
-                                    0.35f, false, true, 0.72f, 0.44f, 0.18f, 0.12f, 0.60f, false,
-                                    Plugins::FilterType::BandPass, 0.31f, 0.44f}),
+                                   {/* enabled */ true,
+                                    /* type */ Plugins::FilterType::Notch,
+                                    /* stereoMode */ Plugins::AestraEQ::StereoMode::Mid,
+                                    /* frequencyNorm */ 0.62f,
+                                    /* gainNorm */ 0.40f,
+                                    /* qOrSlopeNorm */ 0.35f,
+                                    /* usesSlope */ false,
+                                    /* dynamicEnabled */ true,
+                                    /* targetGainNorm */ 0.72f,
+                                    /* thresholdNorm */ 0.44f,
+                                    /* kneeNorm */ 0.18f,
+                                    /* attackNorm */ 0.12f,
+                                    /* releaseNorm */ 0.60f,
+                                    /* sidechainLinked */ false,
+                                    /* sidechainType */ Plugins::FilterType::BandPass,
+                                    /* sidechainFrequencyNorm */ 0.31f,
+                                    /* sidechainQNorm */ 0.44f}),
             "Failed to configure dynamic project EQ slot");
 
     um1.attachPlugin(eqUnit, BuiltInPlugins::eqInfo().id, eq);
