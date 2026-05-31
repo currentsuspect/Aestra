@@ -182,6 +182,8 @@ private:
     void applyCompareSlot(uint32_t slot);
     void switchCompareSlot(uint32_t slot);
     void copyCompareSlotToOther();
+    static float dynamicTypeNormFromClipboardType(float typeNorm, bool legacyDomain);
+    static Aestra::Audio::Plugins::FilterType clipboardFilterType(float typeNorm, bool legacyDomain);
 
     std::string formatFreq(size_t bandIdx, float norm) const;
     std::string formatGain(float norm) const;
@@ -311,13 +313,20 @@ private:
     std::atomic<uint32_t> m_analyzerCollisionStrengthIndex{1};
     std::atomic<uint32_t> m_analyzerTiltIndex{2};
     uint32_t m_compareActiveSlot = 0;
-    std::array<std::array<float, Aestra::Audio::Plugins::AestraEQ::kParamCount>, 2> m_compareSlots{};
+    struct CompareSlot {
+        std::array<float, Aestra::Audio::Plugins::AestraEQ::kParamCount> params{};
+        std::array<Aestra::Audio::Plugins::AestraEQ::DynamicBandSlotSnapshot,
+                   Aestra::Audio::Plugins::AestraEQ::kMaxDynamicBands>
+            dynamicSlots{};
+    };
+    std::array<CompareSlot, 2> m_compareSlots{};
     struct BandClipboard {
         bool valid = false;
         bool enabled = false;
         bool hasGain = false;
         bool usesSlope = false;
         bool hasType = false;
+        bool typeUsesLegacyDomain = false;
         bool hasStereo = false;
         float freq = 0.5f;
         float freqHz = 1000.0f;
