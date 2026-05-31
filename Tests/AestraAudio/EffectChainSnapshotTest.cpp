@@ -1,9 +1,9 @@
 // © 2025 Aestra Studios — All Rights Reserved.
 // Test EffectChainSnapshot creation and behavior
 
-#include "Plugin/EffectChain.h"
 #include "Plugin/AestraEQ.h"
 #include "Plugin/BuiltInPlugins.h"
+#include "Plugin/EffectChain.h"
 #include "Plugin/PluginManager.h"
 #include "Plugin/SamplerPlugin.h"
 #include "RealtimeThreadGuard.h"
@@ -473,7 +473,7 @@ void replacingPluginIsolatedFromInFlightSnapshotFaults() {
     std::cout << "PASS: replacingPluginIsolatedFromInFlightSnapshotFaults\n";
 }
 
-void eqV5StateRoundTripsThroughEffectChain() {
+void eqCurrentStateRoundTripsThroughEffectChain() {
     BuiltInPlugins::registerCoreBuiltIns();
 
     EffectChain chain;
@@ -492,35 +492,50 @@ void eqV5StateRoundTripsThroughEffectChain() {
     eq->setParameter(Plugins::AestraEQ::kParamOutputGain, 0.75f);
     eq->setParameter(Plugins::AestraEQ::kParamPolarityInvert, 1.0f);
 
-    require(chain.insertPlugin(0, eq), "eqV5StateRoundTripsThroughEffectChain: insert failed");
+    require(chain.insertPlugin(0, eq), "eqCurrentStateRoundTripsThroughEffectChain: insert failed");
+    require(eq->setDynamicBandSlot(Plugins::AestraEQ::kLegacyBandCount,
+                                   {true, Plugins::FilterType::Bell, Plugins::AestraEQ::StereoMode::Side, 0.58f, 0.35f,
+                                    0.42f, false, true, 0.70f, 0.46f, 0.16f, 0.14f, 0.62f, false,
+                                    Plugins::FilterType::BandPass, 0.28f, 0.39f}),
+            "eqCurrentStateRoundTripsThroughEffectChain: dynamic slot setup failed");
     chain.setSlotBypassed(0, true);
     chain.setSlotDryWetMix(0, 0.42f);
 
     const auto state = chain.saveState();
 
     auto& manager = PluginManager::getInstance();
-    require(manager.initialize(), "eqV5StateRoundTripsThroughEffectChain: PluginManager initialize failed");
+    require(manager.initialize(), "eqCurrentStateRoundTripsThroughEffectChain: PluginManager initialize failed");
 
     EffectChain restored;
     restored.prepare(48000.0, 512);
-    require(restored.loadState(state, manager), "eqV5StateRoundTripsThroughEffectChain: load failed");
-    require(restored.getActiveSlotCount() == 1, "eqV5StateRoundTripsThroughEffectChain: active slot count mismatch");
-    require(restored.isSlotBypassed(0), "eqV5StateRoundTripsThroughEffectChain: bypass not restored");
+    require(restored.loadState(state, manager), "eqCurrentStateRoundTripsThroughEffectChain: load failed");
+    require(restored.getActiveSlotCount() == 1,
+            "eqCurrentStateRoundTripsThroughEffectChain: active slot count mismatch");
+    require(restored.isSlotBypassed(0), "eqCurrentStateRoundTripsThroughEffectChain: bypass not restored");
     require(std::abs(restored.getSlotDryWetMix(0) - 0.42f) < 0.001f,
-            "eqV5StateRoundTripsThroughEffectChain: dry/wet not restored");
+            "eqCurrentStateRoundTripsThroughEffectChain: dry/wet not restored");
 
     auto restoredEq = std::dynamic_pointer_cast<Plugins::AestraEQ>(restored.getPlugin(0));
-    require(restoredEq != nullptr, "eqV5StateRoundTripsThroughEffectChain: restored plugin is not EQ");
+    require(restoredEq != nullptr, "eqCurrentStateRoundTripsThroughEffectChain: restored plugin is not EQ");
     require(std::abs(restoredEq->getParameter(Plugins::AestraEQ::kParamBell1Type) - (1.0f / 3.0f)) < 0.001f,
-            "eqV5StateRoundTripsThroughEffectChain: Bell1 type not restored");
+            "eqCurrentStateRoundTripsThroughEffectChain: Bell1 type not restored");
     require(std::abs(restoredEq->getParameter(Plugins::AestraEQ::kParamBell2Type) - (2.0f / 3.0f)) < 0.001f,
-            "eqV5StateRoundTripsThroughEffectChain: Bell2 type not restored");
+            "eqCurrentStateRoundTripsThroughEffectChain: Bell2 type not restored");
     require(std::abs(restoredEq->getParameter(Plugins::AestraEQ::kParamOutputGain) - 0.75f) < 0.001f,
-            "eqV5StateRoundTripsThroughEffectChain: output gain not restored");
+            "eqCurrentStateRoundTripsThroughEffectChain: output gain not restored");
     require(restoredEq->getParameter(Plugins::AestraEQ::kParamPolarityInvert) == 1.0f,
-            "eqV5StateRoundTripsThroughEffectChain: polarity not restored");
+            "eqCurrentStateRoundTripsThroughEffectChain: polarity not restored");
+    const auto restoredDynamic = restoredEq->getDynamicBandSlotSnapshot(Plugins::AestraEQ::kLegacyBandCount);
+    require(restoredDynamic.enabled && restoredDynamic.dynamicEnabled,
+            "eqCurrentStateRoundTripsThroughEffectChain: dynamic slot not restored");
+    require(restoredDynamic.stereoMode == Plugins::AestraEQ::StereoMode::Side,
+            "eqCurrentStateRoundTripsThroughEffectChain: dynamic stereo mode not restored");
+    require(!restoredDynamic.sidechainLinked,
+            "eqCurrentStateRoundTripsThroughEffectChain: dynamic sidechain link not restored");
+    require(std::abs(restoredDynamic.sidechainFrequencyNorm - 0.28f) < 0.001f,
+            "eqCurrentStateRoundTripsThroughEffectChain: dynamic sidechain frequency not restored");
 
-    std::cout << "PASS: eqV5StateRoundTripsThroughEffectChain\n";
+    std::cout << "PASS: eqCurrentStateRoundTripsThroughEffectChain\n";
 }
 
 } // namespace
@@ -541,7 +556,7 @@ int main() {
     snapshotQuarantinesNonFinitePluginBeforeDownstreamProcessing();
     movedPluginCarriesFaultStateForInFlightSnapshots();
     replacingPluginIsolatedFromInFlightSnapshotFaults();
-    eqV5StateRoundTripsThroughEffectChain();
+    eqCurrentStateRoundTripsThroughEffectChain();
 
     std::cout << "\n=== All EffectChainSnapshot tests passed ===\n";
     return 0;

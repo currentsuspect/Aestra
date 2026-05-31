@@ -2,6 +2,7 @@
 // AestraEQTest — V1 contract tests for the 6-band parametric EQ.
 
 #include "Plugin/AestraEQ.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -55,7 +56,8 @@ float maxAbsDiff(const float* a, const float* b, uint32_t frames) {
     float maxDiff = 0.0f;
     for (uint32_t i = 0; i < frames; ++i) {
         float diff = std::abs(a[i] - b[i]);
-        if (diff > maxDiff) maxDiff = diff;
+        if (diff > maxDiff)
+            maxDiff = diff;
     }
     return maxDiff;
 }
@@ -72,15 +74,15 @@ float graphNormForHz(float hz) {
     return std::clamp(static_cast<float>(std::log10(std::max(hz, 20.0f) / 20.0f) / 3.0), 0.0f, 1.0f);
 }
 
-template <typename T>
-std::vector<uint8_t> toBytes(const T& value) {
+template <typename T> std::vector<uint8_t> toBytes(const T& value) {
     const auto* ptr = reinterpret_cast<const uint8_t*>(&value);
     return std::vector<uint8_t>(ptr, ptr + sizeof(T));
 }
 
 bool hasNaNOrInf(const float* buffer, uint32_t frames) {
     for (uint32_t i = 0; i < frames; ++i) {
-        if (!std::isfinite(buffer[i])) return true;
+        if (!std::isfinite(buffer[i]))
+            return true;
     }
     return false;
 }
@@ -105,24 +107,15 @@ void processBlocks(AestraEQ& eq, const float* input, float* output, uint32_t tot
     }
 }
 
-void processStereoBlock(AestraEQ& eq,
-                        const float* leftIn,
-                        const float* rightIn,
-                        float* leftOut,
-                        float* rightOut,
+void processStereoBlock(AestraEQ& eq, const float* leftIn, const float* rightIn, float* leftOut, float* rightOut,
                         uint32_t frames) {
     const float* inputs[] = {leftIn, rightIn};
     float* outputs[] = {leftOut, rightOut};
     eq.process(inputs, outputs, 2, 2, frames);
 }
 
-void processStereoBlocks(AestraEQ& eq,
-                         const float* leftIn,
-                         const float* rightIn,
-                         float* leftOut,
-                         float* rightOut,
-                         uint32_t totalFrames,
-                         uint32_t blockSize) {
+void processStereoBlocks(AestraEQ& eq, const float* leftIn, const float* rightIn, float* leftOut, float* rightOut,
+                         uint32_t totalFrames, uint32_t blockSize) {
     for (uint32_t offset = 0; offset < totalFrames; offset += blockSize) {
         const uint32_t frames = std::min(blockSize, totalFrames - offset);
         processStereoBlock(eq, leftIn + offset, rightIn + offset, leftOut + offset, rightOut + offset, frames);
@@ -147,15 +140,13 @@ bool testDirectConstructionSafeDefaults() {
     // Direct construction should not crash; params should be initialized
     float bypass = eq.getParameter(AestraEQ::kParamBypass);
     float bell1Gain = eq.getParameter(AestraEQ::kParamBell1Gain);
-    return report("Direct construction safe defaults",
-        bypass == 0.0f && bell1Gain == 0.5f);
+    return report("Direct construction safe defaults", bypass == 0.0f && bell1Gain == 0.5f);
 }
 
 bool testParameterDescriptorCount() {
     AestraEQ eq;
     auto params = eq.getParameters();
-    return report("Descriptor count matches EQ parameter count",
-        params.size() == AestraEQ::kParamCount);
+    return report("Descriptor count matches EQ parameter count", params.size() == AestraEQ::kParamCount);
 }
 
 bool testParameterDescriptorTypeExposedForMiddleBands() {
@@ -188,6 +179,18 @@ bool testPositiveGainDisplaysPlusPrefix() {
     const bool ok = eq.getParameterDisplay(AestraEQ::kParamBell1Gain) == "+3.0dB" &&
                     eq.getParameterDisplay(AestraEQ::kParamOutputGain) == "+3.0dB";
     return report("Positive gain display includes plus prefix", ok);
+}
+
+bool testGainAndSlopeDisplayFormatting() {
+    AestraEQ eq;
+    eq.setParameter(AestraEQ::kParamOutputGain, (-6.0f + 18.0f) / 36.0f);
+    eq.setParameter(AestraEQ::kParamHPFSlope, 0.0f);
+    eq.setParameter(AestraEQ::kParamLPFSlope, 1.0f);
+
+    const bool ok = eq.getParameterDisplay(AestraEQ::kParamOutputGain) == "-6.0dB" &&
+                    eq.getParameterDisplay(AestraEQ::kParamHPFSlope) == "6 dB/oct" &&
+                    eq.getParameterDisplay(AestraEQ::kParamLPFSlope) == "96 dB/oct";
+    return report("Gain and slope display formatting is stable", ok);
 }
 
 bool testHasEditorTrue() {
@@ -292,7 +295,7 @@ bool testHPFAttenuatesLowFreq() {
     eq.activate();
 
     eq.setParameter(AestraEQ::kParamHPFEnable, 1.0f);
-    eq.setParameter(AestraEQ::kParamHPFFreq, 0.392f); // 80 Hz
+    eq.setParameter(AestraEQ::kParamHPFFreq, 0.392f);  // 80 Hz
     eq.setParameter(AestraEQ::kParamHPFSlope, 0.333f); // 24 dB/oct
     eq.setParameter(AestraEQ::kParamLShEnable, 0.0f);
     eq.setParameter(AestraEQ::kParamBell1Enable, 0.0f);
@@ -324,7 +327,7 @@ bool testLPFAttenuatesHighFreq() {
     eq.setParameter(AestraEQ::kParamBell2Enable, 0.0f);
     eq.setParameter(AestraEQ::kParamHShEnable, 0.0f);
     eq.setParameter(AestraEQ::kParamLPFEnable, 1.0f);
-    eq.setParameter(AestraEQ::kParamLPFFreq, 0.0f); // 1000 Hz
+    eq.setParameter(AestraEQ::kParamLPFFreq, 0.0f);  // 1000 Hz
     eq.setParameter(AestraEQ::kParamLPFSlope, 1.0f); // 96 dB/oct
     eq.setParameter(AestraEQ::kParamBypass, 0.0f);
 
@@ -351,7 +354,7 @@ bool testLowShelfBoostsBass() {
     eq.setParameter(AestraEQ::kParamLShEnable, 1.0f);
     eq.setParameter(AestraEQ::kParamLShFreq, 0.370f); // 200 Hz
     eq.setParameter(AestraEQ::kParamLShGain, 0.833f); // +12 dB
-    eq.setParameter(AestraEQ::kParamLShQ, 0.061f); // 0.707
+    eq.setParameter(AestraEQ::kParamLShQ, 0.061f);    // 0.707
     eq.setParameter(AestraEQ::kParamBell1Enable, 0.0f);
     eq.setParameter(AestraEQ::kParamBell2Enable, 0.0f);
     eq.setParameter(AestraEQ::kParamHShEnable, 0.0f);
@@ -385,7 +388,7 @@ bool testHighShelfBoostsTreble() {
     eq.setParameter(AestraEQ::kParamHShEnable, 1.0f);
     eq.setParameter(AestraEQ::kParamHShFreq, 0.5f); // ~4.5kHz
     eq.setParameter(AestraEQ::kParamHShGain, 1.0f); // +18 dB
-    eq.setParameter(AestraEQ::kParamHShQ, 0.061f); // 0.707
+    eq.setParameter(AestraEQ::kParamHShQ, 0.061f);  // 0.707
     eq.setParameter(AestraEQ::kParamLPFEnable, 0.0f);
     eq.setParameter(AestraEQ::kParamBypass, 0.0f);
 
@@ -414,7 +417,7 @@ bool testBellBoost() {
     eq.setParameter(AestraEQ::kParamBell1Enable, 1.0f);
     eq.setParameter(AestraEQ::kParamBell1Freq, 0.430f); // 500 Hz
     eq.setParameter(AestraEQ::kParamBell1Gain, 0.833f); // +12 dB
-    eq.setParameter(AestraEQ::kParamBell1Q, 0.091f); // Q 1.0
+    eq.setParameter(AestraEQ::kParamBell1Q, 0.091f);    // Q 1.0
     eq.setParameter(AestraEQ::kParamBell2Enable, 0.0f);
     eq.setParameter(AestraEQ::kParamHShEnable, 0.0f);
     eq.setParameter(AestraEQ::kParamLPFEnable, 0.0f);
@@ -445,7 +448,7 @@ bool testBellCut() {
     eq.setParameter(AestraEQ::kParamBell1Enable, 1.0f);
     eq.setParameter(AestraEQ::kParamBell1Freq, 0.430f); // 500 Hz
     eq.setParameter(AestraEQ::kParamBell1Gain, 0.167f); // -12 dB
-    eq.setParameter(AestraEQ::kParamBell1Q, 0.091f); // Q 1.0
+    eq.setParameter(AestraEQ::kParamBell1Q, 0.091f);    // Q 1.0
     eq.setParameter(AestraEQ::kParamBell2Enable, 0.0f);
     eq.setParameter(AestraEQ::kParamHShEnable, 0.0f);
     eq.setParameter(AestraEQ::kParamLPFEnable, 0.0f);
@@ -473,26 +476,26 @@ bool testExtremeValuesNoNaN() {
 
     // Set all bands to extreme values
     eq.setParameter(AestraEQ::kParamHPFEnable, 1.0f);
-    eq.setParameter(AestraEQ::kParamHPFFreq, 1.0f); // 500 Hz
+    eq.setParameter(AestraEQ::kParamHPFFreq, 1.0f);  // 500 Hz
     eq.setParameter(AestraEQ::kParamHPFSlope, 1.0f); // 96 dB/oct
     eq.setParameter(AestraEQ::kParamLShEnable, 1.0f);
     eq.setParameter(AestraEQ::kParamLShFreq, 0.0f); // 40 Hz
     eq.setParameter(AestraEQ::kParamLShGain, 1.0f); // +18 dB
-    eq.setParameter(AestraEQ::kParamLShQ, 1.0f); // Q 10.0
+    eq.setParameter(AestraEQ::kParamLShQ, 1.0f);    // Q 10.0
     eq.setParameter(AestraEQ::kParamBell1Enable, 1.0f);
     eq.setParameter(AestraEQ::kParamBell1Freq, 1.0f); // 8000 Hz
     eq.setParameter(AestraEQ::kParamBell1Gain, 0.0f); // -18 dB
-    eq.setParameter(AestraEQ::kParamBell1Q, 1.0f); // Q 10.0
+    eq.setParameter(AestraEQ::kParamBell1Q, 1.0f);    // Q 10.0
     eq.setParameter(AestraEQ::kParamBell2Enable, 1.0f);
     eq.setParameter(AestraEQ::kParamBell2Freq, 0.0f); // 200 Hz
     eq.setParameter(AestraEQ::kParamBell2Gain, 1.0f); // +18 dB
-    eq.setParameter(AestraEQ::kParamBell2Q, 0.0f); // Q 0.1
+    eq.setParameter(AestraEQ::kParamBell2Q, 0.0f);    // Q 0.1
     eq.setParameter(AestraEQ::kParamHShEnable, 1.0f);
     eq.setParameter(AestraEQ::kParamHShFreq, 0.0f); // 2000 Hz
     eq.setParameter(AestraEQ::kParamHShGain, 0.0f); // -18 dB
-    eq.setParameter(AestraEQ::kParamHShQ, 1.0f); // Q 10.0
+    eq.setParameter(AestraEQ::kParamHShQ, 1.0f);    // Q 10.0
     eq.setParameter(AestraEQ::kParamLPFEnable, 1.0f);
-    eq.setParameter(AestraEQ::kParamLPFFreq, 0.0f); // 1000 Hz
+    eq.setParameter(AestraEQ::kParamLPFFreq, 0.0f);  // 1000 Hz
     eq.setParameter(AestraEQ::kParamLPFSlope, 1.0f); // 96 dB/oct
     eq.setParameter(AestraEQ::kParamBypass, 0.0f);
 
@@ -673,8 +676,7 @@ bool testLegacyV2StateLoadDefaultsNewTypes() {
                           eq.getParameter(AestraEQ::kParamBell2Type) == 0.0f &&
                           std::abs(eq.getParameter(AestraEQ::kParamOutputGain) - 0.5f) < 0.001f &&
                           eq.getParameter(AestraEQ::kParamPolarityInvert) == 0.0f;
-    return report("Legacy V2 state loads with Bell type defaults and migrated slopes",
-                  loaded && defaults && migrated);
+    return report("Legacy V2 state loads with Bell type defaults and migrated slopes", loaded && defaults && migrated);
 }
 
 bool testLegacyV1StateLoad() {
@@ -686,11 +688,11 @@ bool testLegacyV1StateLoad() {
     // Set band 0 as LowCut at 200Hz
     v1.enabled[0] = 1;
     v1.types[0] = static_cast<uint8_t>(FilterType::LowCut);
-    v1.params[0] = 1.0f; // enable
+    v1.params[0] = 1.0f;        // enable
     v1.params[1] = 1.0f / 7.0f; // type = LowCut
-    v1.params[2] = 0.5f; // freq
-    v1.params[3] = 0.5f; // gain
-    v1.params[4] = 0.0f; // legacy 12 dB/oct slope
+    v1.params[2] = 0.5f;        // freq
+    v1.params[3] = 0.5f;        // gain
+    v1.params[4] = 0.0f;        // legacy 12 dB/oct slope
 
     // Set band 2 as Bell
     v1.enabled[2] = 1;
@@ -913,9 +915,11 @@ bool testAnalyzerPublishesStereoPlacementWindows() {
     std::array<float, AestraEQ::kAnalyzerWindowSize> right{};
     std::array<float, AestraEQ::kAnalyzerWindowSize> mid{};
     std::array<float, AestraEQ::kAnalyzerWindowSize> side{};
-    const bool hasStereo = eq.getAnalyzerWindow(stereo, nullptr, AestraEQ::AnalyzerSource::Pre, AestraEQ::StereoMode::Stereo);
+    const bool hasStereo =
+        eq.getAnalyzerWindow(stereo, nullptr, AestraEQ::AnalyzerSource::Pre, AestraEQ::StereoMode::Stereo);
     const bool hasLeft = eq.getAnalyzerWindow(left, nullptr, AestraEQ::AnalyzerSource::Pre, AestraEQ::StereoMode::Left);
-    const bool hasRight = eq.getAnalyzerWindow(right, nullptr, AestraEQ::AnalyzerSource::Pre, AestraEQ::StereoMode::Right);
+    const bool hasRight =
+        eq.getAnalyzerWindow(right, nullptr, AestraEQ::AnalyzerSource::Pre, AestraEQ::StereoMode::Right);
     const bool hasMid = eq.getAnalyzerWindow(mid, nullptr, AestraEQ::AnalyzerSource::Pre, AestraEQ::StereoMode::Mid);
     const bool hasSide = eq.getAnalyzerWindow(side, nullptr, AestraEQ::AnalyzerSource::Pre, AestraEQ::StereoMode::Side);
 
@@ -925,12 +929,8 @@ bool testAnalyzerPublishesStereoPlacementWindows() {
     const float midRms = calculateRMS(mid.data(), static_cast<uint32_t>(mid.size()));
     const float sideRms = calculateRMS(side.data(), static_cast<uint32_t>(side.size()));
 
-    const bool levels =
-        leftRms > 0.20f &&
-        rightRms < 0.001f &&
-        std::abs(stereoRms - leftRms * 0.5f) < 0.02f &&
-        std::abs(midRms - leftRms * 0.5f) < 0.02f &&
-        std::abs(sideRms - leftRms * 0.5f) < 0.02f;
+    const bool levels = leftRms > 0.20f && rightRms < 0.001f && std::abs(stereoRms - leftRms * 0.5f) < 0.02f &&
+                        std::abs(midRms - leftRms * 0.5f) < 0.02f && std::abs(sideRms - leftRms * 0.5f) < 0.02f;
 
     return report("Analyzer publishes ST/L/R/M/S placement windows",
                   hasStereo && hasLeft && hasRight && hasMid && hasSide && levels);
@@ -1080,14 +1080,14 @@ bool testDynamicBandStereoPlacementProcessesLeftAndRight() {
         eq.setParameter(AestraEQ::kParamLPFEnable, 0.0f);
         const float freqNorm = static_cast<float>(std::log10(1000.0 / 20.0) / 3.0);
         const bool set = eq.setDynamicBandSlot(AestraEQ::kLegacyBandCount, {
-            true,
-            FilterType::Bell,
-            mode,
-            freqNorm,
-            1.0f,
-            0.2f,
-            false,
-        });
+                                                                               true,
+                                                                               FilterType::Bell,
+                                                                               mode,
+                                                                               freqNorm,
+                                                                               1.0f,
+                                                                               0.2f,
+                                                                               false,
+                                                                           });
         if (!set) {
             eq.setParameter(AestraEQ::kParamBypass, 1.0f);
         }
@@ -1128,14 +1128,14 @@ bool testDynamicBandStereoPlacementProcessesMidAndSide() {
         eq.setParameter(AestraEQ::kParamLPFEnable, 0.0f);
         const float freqNorm = static_cast<float>(std::log10(1000.0 / 20.0) / 3.0);
         const bool set = eq.setDynamicBandSlot(AestraEQ::kLegacyBandCount, {
-            true,
-            FilterType::Bell,
-            mode,
-            freqNorm,
-            1.0f,
-            0.2f,
-            false,
-        });
+                                                                               true,
+                                                                               FilterType::Bell,
+                                                                               mode,
+                                                                               freqNorm,
+                                                                               1.0f,
+                                                                               0.2f,
+                                                                               false,
+                                                                           });
         if (!set) {
             eq.setParameter(AestraEQ::kParamBypass, 1.0f);
         }
@@ -1188,26 +1188,14 @@ bool testLegacyBandSlotMetadata() {
     const auto lp = AestraEQ::legacyBandSlot(5);
     const auto clamped = AestraEQ::legacyBandSlot(999);
 
-    const bool ok = AestraEQ::kLegacyBandCount == AestraEQ::kV1BandCount &&
-                    AestraEQ::kMaxDynamicBands == 24 &&
-                    std::strcmp(hp.id, "HP") == 0 &&
-                    hp.enableId == AestraEQ::kParamHPFEnable &&
-                    hp.freqId == AestraEQ::kParamHPFFreq &&
-                    hp.gainId == 0 &&
-                    hp.qId == AestraEQ::kParamHPFSlope &&
-                    hp.typeId == 0 &&
-                    hp.stereoModeId == AestraEQ::kParamHPFStereoMode &&
-                    hp.defaultType == FilterType::LowCut &&
-                    hp.usesSlope &&
-                    std::strcmp(b1.id, "B1") == 0 &&
-                    b1.typeId == AestraEQ::kParamBell1Type &&
-                    b1.gainId == AestraEQ::kParamBell1Gain &&
-                    b1.defaultType == FilterType::Bell &&
-                    !b1.usesSlope &&
-                    std::strcmp(lp.id, "LP") == 0 &&
-                    lp.defaultType == FilterType::HighCut &&
-                    lp.usesSlope &&
-                    std::strcmp(clamped.id, "LP") == 0;
+    const bool ok = AestraEQ::kLegacyBandCount == AestraEQ::kV1BandCount && AestraEQ::kMaxDynamicBands == 24 &&
+                    std::strcmp(hp.id, "HP") == 0 && hp.enableId == AestraEQ::kParamHPFEnable &&
+                    hp.freqId == AestraEQ::kParamHPFFreq && hp.gainId == 0 && hp.qId == AestraEQ::kParamHPFSlope &&
+                    hp.typeId == 0 && hp.stereoModeId == AestraEQ::kParamHPFStereoMode &&
+                    hp.defaultType == FilterType::LowCut && hp.usesSlope && std::strcmp(b1.id, "B1") == 0 &&
+                    b1.typeId == AestraEQ::kParamBell1Type && b1.gainId == AestraEQ::kParamBell1Gain &&
+                    b1.defaultType == FilterType::Bell && !b1.usesSlope && std::strcmp(lp.id, "LP") == 0 &&
+                    lp.defaultType == FilterType::HighCut && lp.usesSlope && std::strcmp(clamped.id, "LP") == 0;
 
     return report("Legacy band slot metadata maps the six V1 bands", ok);
 }
@@ -1251,27 +1239,16 @@ bool testDynamicBandSlotDefaultsAreNeutralForFutureSlots() {
     const auto dynamic = AestraEQ::dynamicBandSlotDefaults(AestraEQ::kLegacyBandCount);
     const auto last = AestraEQ::dynamicBandSlotDefaults(AestraEQ::kMaxDynamicBands - 1);
 
-    const bool legacyOk = !hp.enabled &&
-                          hp.type == FilterType::LowCut &&
-                          hp.stereoMode == AestraEQ::StereoMode::Stereo &&
-                          hp.usesSlope &&
-                          !b1.enabled &&
-                          b1.type == FilterType::Bell &&
-                          std::abs(b1.gainNorm - 0.5f) < 0.001f &&
-                          !b1.usesSlope;
+    const bool legacyOk = !hp.enabled && hp.type == FilterType::LowCut &&
+                          hp.stereoMode == AestraEQ::StereoMode::Stereo && hp.usesSlope && !b1.enabled &&
+                          b1.type == FilterType::Bell && std::abs(b1.gainNorm - 0.5f) < 0.001f && !b1.usesSlope;
 
-    const bool dynamicOk = !dynamic.enabled &&
-                           dynamic.type == FilterType::Bell &&
-                           dynamic.stereoMode == AestraEQ::StereoMode::Stereo &&
-                           std::abs(dynamic.frequencyNorm - 0.5f) < 0.001f &&
-                           std::abs(dynamic.gainNorm - 0.5f) < 0.001f &&
-                           std::abs(dynamic.qOrSlopeNorm - AestraEQ::defaultParameterValue(AestraEQ::kParamBell1Q)) <
-                               0.001f &&
-                           !dynamic.usesSlope &&
-                           !last.enabled &&
-                           last.type == FilterType::Bell &&
-                           last.stereoMode == AestraEQ::StereoMode::Stereo &&
-                           !last.usesSlope;
+    const bool dynamicOk =
+        !dynamic.enabled && dynamic.type == FilterType::Bell && dynamic.stereoMode == AestraEQ::StereoMode::Stereo &&
+        std::abs(dynamic.frequencyNorm - 0.5f) < 0.001f && std::abs(dynamic.gainNorm - 0.5f) < 0.001f &&
+        std::abs(dynamic.qOrSlopeNorm - AestraEQ::defaultParameterValue(AestraEQ::kParamBell1Q)) < 0.001f &&
+        !dynamic.usesSlope && !last.enabled && last.type == FilterType::Bell &&
+        last.stereoMode == AestraEQ::StereoMode::Stereo && !last.usesSlope;
 
     return report("Dynamic band defaults keep future slots neutral", legacyOk && dynamicOk);
 }
@@ -1302,26 +1279,17 @@ bool testDynamicBandSlotSnapshotReportsLegacyAndFutureSlots() {
     const auto dynamic = eq.getDynamicBandSlotSnapshot(AestraEQ::kLegacyBandCount);
     const auto clamped = eq.getDynamicBandSlotSnapshot(999);
 
-    const bool legacyOk = legacy.slotIndex == 2 &&
-                          legacy.legacySlot &&
-                          !legacy.enabled &&
-                          legacy.type == FilterType::Notch &&
-                          legacy.stereoMode == AestraEQ::StereoMode::Side &&
+    const bool legacyOk = legacy.slotIndex == 2 && legacy.legacySlot && !legacy.enabled &&
+                          legacy.type == FilterType::Notch && legacy.stereoMode == AestraEQ::StereoMode::Side &&
                           std::abs(legacy.frequencyNorm - 0.75f) < 0.001f &&
                           std::abs(legacy.gainNorm - 0.25f) < 0.001f &&
-                          std::abs(legacy.qOrSlopeNorm - 0.35f) < 0.001f &&
-                          !legacy.usesSlope;
+                          std::abs(legacy.qOrSlopeNorm - 0.35f) < 0.001f && !legacy.usesSlope;
 
-    const bool dynamicOk = dynamic.slotIndex == AestraEQ::kLegacyBandCount &&
-                           !dynamic.legacySlot &&
-                           !dynamic.enabled &&
-                           dynamic.type == FilterType::Bell &&
-                           dynamic.stereoMode == AestraEQ::StereoMode::Stereo &&
+    const bool dynamicOk = dynamic.slotIndex == AestraEQ::kLegacyBandCount && !dynamic.legacySlot && !dynamic.enabled &&
+                           dynamic.type == FilterType::Bell && dynamic.stereoMode == AestraEQ::StereoMode::Stereo &&
                            std::abs(dynamic.frequencyNorm - 0.5f) < 0.001f &&
-                           std::abs(dynamic.gainNorm - 0.5f) < 0.001f &&
-                           !dynamic.usesSlope &&
-                           clamped.slotIndex == AestraEQ::kMaxDynamicBands - 1 &&
-                           !clamped.legacySlot &&
+                           std::abs(dynamic.gainNorm - 0.5f) < 0.001f && !dynamic.usesSlope &&
+                           clamped.slotIndex == AestraEQ::kMaxDynamicBands - 1 && !clamped.legacySlot &&
                            clamped.type == FilterType::Bell;
 
     return report("Dynamic band snapshots expose legacy live values and future defaults", legacyOk && dynamicOk);
@@ -1337,38 +1305,26 @@ bool testDynamicBandGraphCreationDefaultsClampClickedPoint() {
     const auto clampedLow = AestraEQ::dynamicBandGraphCreationDefaults(-1.0f, -0.25f);
     const auto clampedHigh = AestraEQ::dynamicBandGraphCreationDefaults(2.0f, 4.0f);
 
-    const bool createdOk = created.enabled &&
-                           created.type == FilterType::Bell &&
-                           created.stereoMode == AestraEQ::StereoMode::Stereo &&
-                           std::abs(created.frequencyNorm - 0.25f) < 0.001f &&
-                           std::abs(created.gainNorm - 0.75f) < 0.001f &&
-                           std::abs(created.qOrSlopeNorm - AestraEQ::defaultParameterValue(AestraEQ::kParamBell1Q)) <
-                               0.001f &&
-                           !created.usesSlope;
+    const bool createdOk =
+        created.enabled && created.type == FilterType::Bell && created.stereoMode == AestraEQ::StereoMode::Stereo &&
+        std::abs(created.frequencyNorm - 0.25f) < 0.001f && std::abs(created.gainNorm - 0.75f) < 0.001f &&
+        std::abs(created.qOrSlopeNorm - AestraEQ::defaultParameterValue(AestraEQ::kParamBell1Q)) < 0.001f &&
+        !created.usesSlope;
     const bool frequencyAwareOk =
-        lowCut.type == FilterType::LowCut &&
-        lowCut.usesSlope &&
-        std::abs(lowCut.gainNorm - 0.5f) < 0.001f &&
+        lowCut.type == FilterType::LowCut && lowCut.usesSlope && std::abs(lowCut.gainNorm - 0.5f) < 0.001f &&
         std::abs(lowCut.qOrSlopeNorm - AestraEQ::defaultParameterValue(AestraEQ::kParamHPFSlope)) < 0.001f &&
-        lowShelf.type == FilterType::LowShelf &&
-        !lowShelf.usesSlope &&
-        std::abs(lowShelf.gainNorm - 0.70f) < 0.001f &&
-        lowMidNotch.type == FilterType::Notch &&
-        !lowMidNotch.usesSlope &&
-        std::abs(lowMidNotch.gainNorm - 0.5f) < 0.001f &&
-        highShelf.type == FilterType::HighShelf &&
-        !highShelf.usesSlope &&
-        std::abs(highShelf.gainNorm - 0.30f) < 0.001f &&
-        highCut.type == FilterType::HighCut &&
-        highCut.usesSlope &&
-        std::abs(highCut.gainNorm - 0.5f) < 0.001f &&
+        lowShelf.type == FilterType::LowShelf && !lowShelf.usesSlope && std::abs(lowShelf.gainNorm - 0.70f) < 0.001f &&
+        lowMidNotch.type == FilterType::Notch && !lowMidNotch.usesSlope &&
+        std::abs(lowMidNotch.gainNorm - 0.5f) < 0.001f && highShelf.type == FilterType::HighShelf &&
+        !highShelf.usesSlope && std::abs(highShelf.gainNorm - 0.30f) < 0.001f && highCut.type == FilterType::HighCut &&
+        highCut.usesSlope && std::abs(highCut.gainNorm - 0.5f) < 0.001f &&
         std::abs(highCut.qOrSlopeNorm - AestraEQ::defaultParameterValue(AestraEQ::kParamLPFSlope)) < 0.001f;
-    const bool clampedOk = std::abs(clampedLow.frequencyNorm - 0.0f) < 0.001f &&
-                           std::abs(clampedLow.gainNorm - 0.5f) < 0.001f &&
-                           std::abs(clampedHigh.frequencyNorm - 1.0f) < 0.001f &&
-                           std::abs(clampedHigh.gainNorm - 0.5f) < 0.001f;
+    const bool clampedOk =
+        std::abs(clampedLow.frequencyNorm - 0.0f) < 0.001f && std::abs(clampedLow.gainNorm - 0.5f) < 0.001f &&
+        std::abs(clampedHigh.frequencyNorm - 1.0f) < 0.001f && std::abs(clampedHigh.gainNorm - 0.5f) < 0.001f;
 
-    return report("Dynamic band graph creation defaults clamp clicked point", createdOk && frequencyAwareOk && clampedOk);
+    return report("Dynamic band graph creation defaults clamp clicked point",
+                  createdOk && frequencyAwareOk && clampedOk);
 }
 
 bool testResetToEmptyStateClearsAllBands() {
@@ -1405,20 +1361,15 @@ bool testDynamicBandGraphClickAllocatesNextAvailableSlot() {
     const auto firstSnapshot = eq.getDynamicBandSlotSnapshot(static_cast<uint32_t>(first));
     const auto secondSnapshot = eq.getDynamicBandSlotSnapshot(static_cast<uint32_t>(second));
 
-    const bool firstOk = first == static_cast<int32_t>(AestraEQ::kLegacyBandCount) &&
-                         firstSnapshot.slotIndex == AestraEQ::kLegacyBandCount &&
-                         !firstSnapshot.legacySlot &&
-                         firstSnapshot.enabled &&
-                         firstSnapshot.type == FilterType::Bell &&
-                         firstSnapshot.stereoMode == AestraEQ::StereoMode::Stereo &&
-                         std::abs(firstSnapshot.frequencyNorm - 0.25f) < 0.001f &&
-                         std::abs(firstSnapshot.gainNorm - 0.75f) < 0.001f &&
-                         std::abs(firstSnapshot.qOrSlopeNorm -
-                                  AestraEQ::defaultParameterValue(AestraEQ::kParamBell1Q)) < 0.001f &&
-                         !firstSnapshot.usesSlope;
+    const bool firstOk =
+        first == static_cast<int32_t>(AestraEQ::kLegacyBandCount) &&
+        firstSnapshot.slotIndex == AestraEQ::kLegacyBandCount && !firstSnapshot.legacySlot && firstSnapshot.enabled &&
+        firstSnapshot.type == FilterType::Bell && firstSnapshot.stereoMode == AestraEQ::StereoMode::Stereo &&
+        std::abs(firstSnapshot.frequencyNorm - 0.25f) < 0.001f && std::abs(firstSnapshot.gainNorm - 0.75f) < 0.001f &&
+        std::abs(firstSnapshot.qOrSlopeNorm - AestraEQ::defaultParameterValue(AestraEQ::kParamBell1Q)) < 0.001f &&
+        !firstSnapshot.usesSlope;
 
-    const bool secondOk = second == static_cast<int32_t>(AestraEQ::kLegacyBandCount + 1) &&
-                          secondSnapshot.enabled &&
+    const bool secondOk = second == static_cast<int32_t>(AestraEQ::kLegacyBandCount + 1) && secondSnapshot.enabled &&
                           std::abs(secondSnapshot.frequencyNorm - 0.40f) < 0.001f &&
                           std::abs(secondSnapshot.gainNorm - 0.60f) < 0.001f;
 
@@ -1438,26 +1389,23 @@ bool testDynamicBandsAllowMultipleSameFilterType() {
         AestraEQ::defaultParameterValue(AestraEQ::kParamBell1Q),
         false,
     });
-    const int32_t second = eq.createDynamicBandSlot({
-        true,
-        FilterType::Bell,
-        AestraEQ::StereoMode::Stereo,
-        graphNormForHz(1400.0f),
-        0.30f,
-        AestraEQ::defaultParameterValue(AestraEQ::kParamBell1Q),
-        false,
-    }, static_cast<uint32_t>(first));
+    const int32_t second = eq.createDynamicBandSlot(
+        {
+            true,
+            FilterType::Bell,
+            AestraEQ::StereoMode::Stereo,
+            graphNormForHz(1400.0f),
+            0.30f,
+            AestraEQ::defaultParameterValue(AestraEQ::kParamBell1Q),
+            false,
+        },
+        static_cast<uint32_t>(first));
 
     const auto a = eq.getDynamicBandSlotSnapshot(static_cast<uint32_t>(first));
     const auto b = eq.getDynamicBandSlotSnapshot(static_cast<uint32_t>(second));
     const bool ok = first == static_cast<int32_t>(AestraEQ::kLegacyBandCount) &&
-                    second == static_cast<int32_t>(AestraEQ::kLegacyBandCount + 1) &&
-                    a.enabled &&
-                    b.enabled &&
-                    !a.legacySlot &&
-                    !b.legacySlot &&
-                    a.type == FilterType::Bell &&
-                    b.type == FilterType::Bell;
+                    second == static_cast<int32_t>(AestraEQ::kLegacyBandCount + 1) && a.enabled && b.enabled &&
+                    !a.legacySlot && !b.legacySlot && a.type == FilterType::Bell && b.type == FilterType::Bell;
 
     return report("Dynamic bands allow multiple same filter type", ok);
 }
@@ -1471,13 +1419,9 @@ bool testDynamicBandSlotClearReopensSlotForGraphClick() {
     const int32_t reused = eq.createDynamicBandAtGraphPoint(0.55f, 0.45f);
     const auto snapshot = eq.getDynamicBandSlotSnapshot(static_cast<uint32_t>(reused));
 
-    const bool ok = first == static_cast<int32_t>(AestraEQ::kLegacyBandCount) &&
-                    cleared &&
-                    reused == first &&
-                    snapshot.enabled &&
-                    std::abs(snapshot.frequencyNorm - 0.55f) < 0.001f &&
-                    std::abs(snapshot.gainNorm - 0.45f) < 0.001f &&
-                    !eq.clearDynamicBandSlot(0);
+    const bool ok = first == static_cast<int32_t>(AestraEQ::kLegacyBandCount) && cleared && reused == first &&
+                    snapshot.enabled && std::abs(snapshot.frequencyNorm - 0.55f) < 0.001f &&
+                    std::abs(snapshot.gainNorm - 0.45f) < 0.001f && !eq.clearDynamicBandSlot(0);
 
     return report("Dynamic band clear reopens slot for graph click", ok);
 }
@@ -1505,9 +1449,7 @@ bool testDynamicBandContributesToMagnitudeResponse() {
 
     const double bandDb = slot >= 0 ? eq.getBandMagnitudeResponseDb(static_cast<uint32_t>(slot), 1000.0) : 0.0;
     const double totalDb = eq.getMagnitudeResponseDb(1000.0);
-    const bool ok = slot == static_cast<int32_t>(AestraEQ::kLegacyBandCount) &&
-                    bandDb > 8.0 &&
-                    totalDb > 8.0;
+    const bool ok = slot == static_cast<int32_t>(AestraEQ::kLegacyBandCount) && bandDb > 8.0 && totalDb > 8.0;
 
     return report("Dynamic band contributes to magnitude response", ok);
 }
@@ -1595,8 +1537,7 @@ bool testDynamicBandDetectorDrivesTargetGain() {
     const float dynamicRms = calculateRMS(dynamicOut.data() + tailOffset, frames - tailOffset);
     const float envelopeAmount = dynamicEq.getDynamicBandEnvelopeAmount(static_cast<uint32_t>(dynamicSlot));
     const bool ok = staticSlot == static_cast<int32_t>(AestraEQ::kLegacyBandCount) &&
-                    dynamicSlot == static_cast<int32_t>(AestraEQ::kLegacyBandCount) &&
-                    envelopeAmount > 0.40f &&
+                    dynamicSlot == static_cast<int32_t>(AestraEQ::kLegacyBandCount) && envelopeAmount > 0.40f &&
                     dynamicRms > staticRms * 1.8f;
 
     return report("Dynamic band detector drives target gain", ok);
@@ -1650,8 +1591,7 @@ bool testDynamicBandUnlinkedDetectorCanTriggerDifferentRange() {
     std::vector<float> unlinkedOut(frames, 0.0f);
     for (uint32_t i = 0; i < frames; ++i) {
         const double t = static_cast<double>(i) / kSampleRate;
-        input[i] = static_cast<float>(0.45 * std::sin(kTau * 120.0 * t) +
-                                      0.02 * std::sin(kTau * 1000.0 * t));
+        input[i] = static_cast<float>(0.45 * std::sin(kTau * 120.0 * t) + 0.02 * std::sin(kTau * 1000.0 * t));
     }
 
     processBlocks(linkedEq, input.data(), linkedOut.data(), frames, kBlockSize);
@@ -1690,16 +1630,17 @@ bool testDisabledDynamicBandsDoNotAlterOutput() {
     withDisabled.setParameter(AestraEQ::kParamLPFEnable, 0.0f);
 
     for (uint32_t slot = AestraEQ::kLegacyBandCount; slot < AestraEQ::kMaxDynamicBands; ++slot) {
-        const bool set = withDisabled.setDynamicBandSlot(slot, {
-            false,
-            slot % 3u == 0u ? FilterType::Tilt : (slot % 3u == 1u ? FilterType::Notch : FilterType::Bell),
-            slot % 2u == 0u ? AestraEQ::StereoMode::Mid : AestraEQ::StereoMode::Side,
-            static_cast<float>(slot - AestraEQ::kLegacyBandCount) /
-                static_cast<float>(AestraEQ::kMaxDynamicBands - AestraEQ::kLegacyBandCount - 1u),
-            slot % 2u == 0u ? 1.0f : 0.0f,
-            slot % 2u == 0u ? 1.0f : 0.0f,
-            false,
-        });
+        const bool set = withDisabled.setDynamicBandSlot(
+            slot, {
+                      false,
+                      slot % 3u == 0u ? FilterType::Tilt : (slot % 3u == 1u ? FilterType::Notch : FilterType::Bell),
+                      slot % 2u == 0u ? AestraEQ::StereoMode::Mid : AestraEQ::StereoMode::Side,
+                      static_cast<float>(slot - AestraEQ::kLegacyBandCount) /
+                          static_cast<float>(AestraEQ::kMaxDynamicBands - AestraEQ::kLegacyBandCount - 1u),
+                      slot % 2u == 0u ? 1.0f : 0.0f,
+                      slot % 2u == 0u ? 1.0f : 0.0f,
+                      false,
+                  });
         if (!set) {
             return report("Disabled dynamic bands do not alter output", false);
         }
@@ -1748,15 +1689,16 @@ bool testAllTwentyFourBandsActiveRemainFinite() {
     for (uint32_t slot = AestraEQ::kLegacyBandCount; slot < AestraEQ::kMaxDynamicBands; ++slot) {
         const float t = static_cast<float>(slot - AestraEQ::kLegacyBandCount) /
                         static_cast<float>(AestraEQ::kMaxDynamicBands - AestraEQ::kLegacyBandCount - 1u);
-        const bool set = eq.setDynamicBandSlot(slot, {
-            true,
-            slot % 5u == 0u ? FilterType::Tilt : (slot % 5u == 1u ? FilterType::Notch : FilterType::Bell),
-            static_cast<AestraEQ::StereoMode>(slot % 5u),
-            t,
-            slot % 2u == 0u ? 0.92f : 0.08f,
-            0.84f,
-            false,
-        });
+        const bool set = eq.setDynamicBandSlot(
+            slot, {
+                      true,
+                      slot % 5u == 0u ? FilterType::Tilt : (slot % 5u == 1u ? FilterType::Notch : FilterType::Bell),
+                      static_cast<AestraEQ::StereoMode>(slot % 5u),
+                      t,
+                      slot % 2u == 0u ? 0.92f : 0.08f,
+                      0.84f,
+                      false,
+                  });
         if (!set) {
             return report("All 24 active bands remain finite", false);
         }
@@ -1772,16 +1714,13 @@ bool testAllTwentyFourBandsActiveRemainFinite() {
     std::vector<float> output(frames, 0.0f);
     for (uint32_t i = 0; i < frames; ++i) {
         const double t = static_cast<double>(i) / kSampleRate;
-        input[i] = static_cast<float>(0.08 * std::sin(kTau * 110.0 * t) +
-                                      0.05 * std::sin(kTau * 1000.0 * t) +
+        input[i] = static_cast<float>(0.08 * std::sin(kTau * 110.0 * t) + 0.05 * std::sin(kTau * 1000.0 * t) +
                                       0.03 * std::sin(kTau * 6700.0 * t));
     }
     processBlocks(eq, input.data(), output.data(), frames, kBlockSize);
 
-    const bool ok = !hasNaNOrInf(silenceOut.data(), frames) &&
-                    maxAbsValue(silenceOut.data(), frames) < 1.0e-6f &&
-                    !hasNaNOrInf(output.data(), frames) &&
-                    maxAbsValue(output.data(), frames) < 1.0e5f;
+    const bool ok = !hasNaNOrInf(silenceOut.data(), frames) && maxAbsValue(silenceOut.data(), frames) < 1.0e-6f &&
+                    !hasNaNOrInf(output.data(), frames) && maxAbsValue(output.data(), frames) < 1.0e5f;
     return report("All 24 active bands remain finite", ok);
 }
 
@@ -1793,13 +1732,7 @@ bool testDynamicBandStateRoundTrip() {
     const float freqNorm = static_cast<float>(std::log10(1000.0 / 20.0) / 3.0);
     const int32_t slotA = eq.createDynamicBandAtGraphPoint(freqNorm, 0.833f);
     auto dynamicDefaults = AestraEQ::DynamicBandSlotDefaults{
-        true,
-        FilterType::Notch,
-        AestraEQ::StereoMode::Mid,
-        0.62f,
-        0.40f,
-        0.35f,
-        false,
+        true, FilterType::Notch, AestraEQ::StereoMode::Mid, 0.62f, 0.40f, 0.35f, false,
     };
     dynamicDefaults.dynamicEnabled = true;
     dynamicDefaults.targetGainNorm = 0.78f;
@@ -1820,31 +1753,19 @@ bool testDynamicBandStateRoundTrip() {
 
     const auto a = restored.getDynamicBandSlotSnapshot(static_cast<uint32_t>(slotA));
     const auto b = restored.getDynamicBandSlotSnapshot(static_cast<uint32_t>(slotB));
-    const bool ok = loaded &&
-                    state.size() == sizeof(EQStateBlobV8) &&
+    const bool ok = loaded && state.size() == sizeof(EQStateBlobV8) &&
                     std::abs(restored.getParameter(AestraEQ::kParamOutputGain) - 0.75f) < 0.001f &&
                     slotA == static_cast<int32_t>(AestraEQ::kLegacyBandCount) &&
-                    slotB == static_cast<int32_t>(AestraEQ::kLegacyBandCount + 1) &&
-                    a.enabled &&
-                    a.type == FilterType::Bell &&
-                    std::abs(a.frequencyNorm - freqNorm) < 0.001f &&
-                    std::abs(a.gainNorm - 0.833f) < 0.001f &&
-                    b.enabled &&
-                    b.type == FilterType::Notch &&
-                    b.stereoMode == AestraEQ::StereoMode::Mid &&
-                    std::abs(b.frequencyNorm - 0.62f) < 0.001f &&
-                    std::abs(b.qOrSlopeNorm - 0.35f) < 0.001f &&
-                    b.dynamicEnabled &&
-                    std::abs(b.targetGainNorm - 0.78f) < 0.001f &&
-                    std::abs(b.thresholdNorm - 0.42f) < 0.001f &&
-                    std::abs(b.kneeNorm - 0.24f) < 0.001f &&
-                    std::abs(b.attackNorm - 0.16f) < 0.001f &&
-                    std::abs(b.releaseNorm - 0.58f) < 0.001f &&
-                    !b.sidechainLinked &&
-                    b.sidechainType == FilterType::BandPass &&
-                    std::abs(b.sidechainFrequencyNorm - 0.31f) < 0.001f &&
-                    std::abs(b.sidechainQNorm - 0.44f) < 0.001f &&
-                    restored.getMagnitudeResponseDb(1000.0) > 8.0;
+                    slotB == static_cast<int32_t>(AestraEQ::kLegacyBandCount + 1) && a.enabled &&
+                    a.type == FilterType::Bell && std::abs(a.frequencyNorm - freqNorm) < 0.001f &&
+                    std::abs(a.gainNorm - 0.833f) < 0.001f && b.enabled && b.type == FilterType::Notch &&
+                    b.stereoMode == AestraEQ::StereoMode::Mid && std::abs(b.frequencyNorm - 0.62f) < 0.001f &&
+                    std::abs(b.qOrSlopeNorm - 0.35f) < 0.001f && b.dynamicEnabled &&
+                    std::abs(b.targetGainNorm - 0.78f) < 0.001f && std::abs(b.thresholdNorm - 0.42f) < 0.001f &&
+                    std::abs(b.kneeNorm - 0.24f) < 0.001f && std::abs(b.attackNorm - 0.16f) < 0.001f &&
+                    std::abs(b.releaseNorm - 0.58f) < 0.001f && !b.sidechainLinked &&
+                    b.sidechainType == FilterType::BandPass && std::abs(b.sidechainFrequencyNorm - 0.31f) < 0.001f &&
+                    std::abs(b.sidechainQNorm - 0.44f) < 0.001f && restored.getMagnitudeResponseDb(1000.0) > 8.0;
 
     return report("Dynamic band state round-trips in V8", ok);
 }
@@ -1871,10 +1792,7 @@ bool testLegacyV7DynamicBandStateLoadsWithDynamicDefaults() {
     restored.initialize(kSampleRate, kBlockSize);
     const bool loaded = restored.loadState(state);
     const auto snapshot = restored.getDynamicBandSlotSnapshot(AestraEQ::kLegacyBandCount);
-    const bool ok = loaded &&
-                    snapshot.enabled &&
-                    !snapshot.dynamicEnabled &&
-                    snapshot.sidechainLinked &&
+    const bool ok = loaded && snapshot.enabled && !snapshot.dynamicEnabled && snapshot.sidechainLinked &&
                     std::abs(snapshot.sidechainFrequencyNorm - snapshot.frequencyNorm) < 0.001f &&
                     std::abs(snapshot.sidechainQNorm - snapshot.qOrSlopeNorm) < 0.001f;
 
@@ -1996,36 +1914,36 @@ bool testClearingSoloedDynamicBandClearsSoloState() {
     eq.setSoloBandSlot(slot);
     const bool cleared = eq.clearDynamicBandSlot(static_cast<uint32_t>(slot));
 
-    return report("Clearing soloed dynamic band clears solo state",
-                  slot >= 0 && cleared && eq.getSoloBandSlot() == -1);
+    return report("Clearing soloed dynamic band clears solo state", slot >= 0 && cleared && eq.getSoloBandSlot() == -1);
 }
 
 bool testDisablingSoloedDynamicBandClearsSoloState() {
     AestraEQ eq;
     eq.initialize(kSampleRate, kBlockSize);
     const int32_t slot = eq.createDynamicBandAtGraphPoint(graphNormForHz(900.0f), 0.80f);
-    const bool disabled = eq.setDynamicBandSlot(static_cast<uint32_t>(slot), {
-        false,
-        FilterType::Bell,
-        AestraEQ::StereoMode::Stereo,
-        graphNormForHz(900.0f),
-        0.80f,
-        0.20f,
-        false,
-    });
+    const bool enabled = eq.setDynamicBandSlot(static_cast<uint32_t>(slot), {
+                                                                                true,
+                                                                                FilterType::Bell,
+                                                                                AestraEQ::StereoMode::Stereo,
+                                                                                graphNormForHz(900.0f),
+                                                                                0.80f,
+                                                                                0.20f,
+                                                                                false,
+                                                                            });
     eq.setSoloBandSlot(slot);
+    const bool soloLatched = eq.getSoloBandSlot() == slot;
     const bool disabledAgain = eq.setDynamicBandSlot(static_cast<uint32_t>(slot), {
-        false,
-        FilterType::Bell,
-        AestraEQ::StereoMode::Stereo,
-        graphNormForHz(900.0f),
-        0.80f,
-        0.20f,
-        false,
-    });
+                                                                                      false,
+                                                                                      FilterType::Bell,
+                                                                                      AestraEQ::StereoMode::Stereo,
+                                                                                      graphNormForHz(900.0f),
+                                                                                      0.80f,
+                                                                                      0.20f,
+                                                                                      false,
+                                                                                  });
 
     return report("Disabling soloed dynamic band clears solo state",
-                  slot >= 0 && disabled && disabledAgain && eq.getSoloBandSlot() == -1);
+                  slot >= 0 && enabled && soloLatched && disabledAgain && eq.getSoloBandSlot() == -1);
 }
 
 bool testAllDynamicBandStateRoundTrip() {
@@ -2034,14 +1952,8 @@ bool testAllDynamicBandStateRoundTrip() {
 
     bool created = true;
     static constexpr FilterType kDynamicRoundTripTypes[] = {
-        FilterType::LowCut,
-        FilterType::LowShelf,
-        FilterType::Bell,
-        FilterType::Notch,
-        FilterType::BandPass,
-        FilterType::Tilt,
-        FilterType::HighShelf,
-        FilterType::HighCut,
+        FilterType::LowCut,   FilterType::LowShelf, FilterType::Bell,      FilterType::Notch,
+        FilterType::BandPass, FilterType::Tilt,     FilterType::HighShelf, FilterType::HighCut,
     };
     for (uint32_t slot = AestraEQ::kLegacyBandCount; slot < AestraEQ::kMaxDynamicBands; ++slot) {
         const float t = static_cast<float>(slot - AestraEQ::kLegacyBandCount) /
@@ -2050,14 +1962,14 @@ bool testAllDynamicBandStateRoundTrip() {
             kDynamicRoundTripTypes[slot % (sizeof(kDynamicRoundTripTypes) / sizeof(kDynamicRoundTripTypes[0]))];
         const auto mode = static_cast<AestraEQ::StereoMode>(slot % 5u);
         created &= eq.setDynamicBandSlot(slot, {
-            true,
-            type,
-            mode,
-            std::clamp(0.06f + t * 0.88f, 0.0f, 1.0f),
-            std::clamp(0.15f + t * 0.70f, 0.0f, 1.0f),
-            std::clamp(0.20f + t * 0.55f, 0.0f, 1.0f),
-            false,
-        });
+                                                   true,
+                                                   type,
+                                                   mode,
+                                                   std::clamp(0.06f + t * 0.88f, 0.0f, 1.0f),
+                                                   std::clamp(0.15f + t * 0.70f, 0.0f, 1.0f),
+                                                   std::clamp(0.20f + t * 0.55f, 0.0f, 1.0f),
+                                                   false,
+                                               });
     }
 
     const auto state = eq.saveState();
@@ -2100,9 +2012,7 @@ bool testLegacyV6StateClearsDynamicSlots() {
 
     const bool loaded = eq.loadState(toBytes(legacy));
     const auto snapshot = eq.getDynamicBandSlotSnapshot(static_cast<uint32_t>(slot));
-    const bool ok = slot == static_cast<int32_t>(AestraEQ::kLegacyBandCount) &&
-                    loaded &&
-                    !snapshot.enabled &&
+    const bool ok = slot == static_cast<int32_t>(AestraEQ::kLegacyBandCount) && loaded && !snapshot.enabled &&
                     eq.findNextAvailableDynamicBandSlot() == slot;
 
     return report("Legacy V6 state clears dynamic slots", ok);
@@ -2123,6 +2033,7 @@ int main() {
     testParameterDescriptorTypeExposedForMiddleBands();
     testNeutralGainDisplaysCleanZero();
     testPositiveGainDisplaysPlusPrefix();
+    testGainAndSlopeDisplayFormatting();
     testHasEditorTrue();
     testParameterCount();
     testLegacyBandSlotMetadata();

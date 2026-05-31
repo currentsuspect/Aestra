@@ -3699,6 +3699,7 @@ void AestraEQEditor::copyBandToClipboard(int idx) {
         bd.legacySlot && bd.stereoId != 0 ? m_instance->getParameter(bd.stereoId) : quantizeStereoNorm(bd.stereoNorm);
     m_bandClipboard.dynamicEnabled = bd.dynamicEnabled;
     m_bandClipboard.targetGain = bd.targetGain;
+    m_bandClipboard.dynamicAmount = bd.dynamicAmount;
     m_bandClipboard.dynamicThreshold = bd.dynamicThreshold;
     m_bandClipboard.dynamicKnee = bd.dynamicKnee;
     m_bandClipboard.dynamicAttack = bd.dynamicAttack;
@@ -3726,6 +3727,7 @@ bool AestraEQEditor::pasteClipboardToBand(int idx) {
         }
         bd.dynamicEnabled = m_bandClipboard.dynamicEnabled;
         bd.targetGain = m_bandClipboard.targetGain;
+        bd.dynamicAmount = m_bandClipboard.dynamicAmount;
         bd.dynamicThreshold = m_bandClipboard.dynamicThreshold;
         bd.dynamicKnee = m_bandClipboard.dynamicKnee;
         bd.dynamicAttack = m_bandClipboard.dynamicAttack;
