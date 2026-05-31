@@ -536,6 +536,22 @@ float quantizeTypeNorm(float norm) {
     return best;
 }
 
+float legacyTypeNorm(Aestra::Audio::Plugins::FilterType type) {
+    using FilterType = Aestra::Audio::Plugins::FilterType;
+    switch (type) {
+    case FilterType::Bell:
+        return 0.0f;
+    case FilterType::Notch:
+        return 1.0f / 3.0f;
+    case FilterType::BandPass:
+        return 2.0f / 3.0f;
+    case FilterType::Tilt:
+        return 1.0f;
+    default:
+        return 0.0f;
+    }
+}
+
 const char* middleBandTypeName(float norm) {
     const int idx = std::clamp(static_cast<int>(std::round(quantizeTypeNorm(norm) * 3.0f)), 0, 3);
     static const char* names[] = {"Bell", "Notch", "Band Pass", "Tilt"};
@@ -774,11 +790,6 @@ void AestraEQEditor::buildBands() {
     auto eq = std::dynamic_pointer_cast<EQ>(m_instance);
 
     for (size_t i = 0; i < kNumBands; ++i) {
-        if (eq) {
-            const auto snapshot = eq->getDynamicBandSlotSnapshot(static_cast<uint32_t>(i));
-            if (!snapshot.enabled)
-                continue;
-        }
         appendLegacyBand(static_cast<uint32_t>(i));
     }
     if (eq) {
@@ -3803,7 +3814,7 @@ bool AestraEQEditor::pasteClipboardToBand(int idx) {
     m_instance->setParameter(bd.freqId, bandNormFromHz(bd.slotIndex, m_bandClipboard.freqHz));
     if (bd.typeId != 0 && m_bandClipboard.hasType) {
         const auto type = clipboardFilterType(m_bandClipboard.type, m_bandClipboard.typeUsesLegacyDomain);
-        m_instance->setParameter(bd.typeId, quantizeTypeNorm(filterTypeNorm(type)));
+        m_instance->setParameter(bd.typeId, legacyTypeNorm(type));
     }
     if (bd.stereoId != 0 && m_bandClipboard.hasStereo) {
         m_instance->setParameter(bd.stereoId, quantizeStereoNorm(m_bandClipboard.stereo));

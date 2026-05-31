@@ -1271,15 +1271,10 @@ public:
                                                 std::memory_order_relaxed);
         m_dynamicBandSidechainFreqs[slot].store(defaults.sidechainFrequencyNorm, std::memory_order_relaxed);
         m_dynamicBandSidechainQs[slot].store(defaults.sidechainQNorm, std::memory_order_relaxed);
-        m_dynamicEnvelopeAmounts[slot] = 0.0f;
         m_dynamicEnvelopeMeters[slot].store(0.0f, std::memory_order_relaxed);
         snapDynamicBandSmoothing(slot);
         m_bandEnabled[slot].store(false, std::memory_order_relaxed);
         m_bandStages[slot].store(0u, std::memory_order_relaxed);
-        m_runtimeBandEnabled[slot] = false;
-        m_runtimeBandTypes[slot] = FilterType::Bell;
-        m_runtimeBandModes[slot] = StereoMode::Stereo;
-        m_runtimeBandStages[slot] = 0u;
         if (m_soloBand.load(std::memory_order_acquire) == static_cast<int32_t>(slot)) {
             m_soloBand.store(-1, std::memory_order_release);
         }
@@ -2279,6 +2274,7 @@ private:
                     }
                 }
                 m_bandStages[band].store(0u, std::memory_order_relaxed);
+                m_dynamicEnvelopeAmounts[band] = 0.0f;
                 m_runtimeBandEnabled[band] = false;
                 m_runtimeBandTypes[band] = type;
                 m_runtimeBandModes[band] = slotStereoMode(band);
