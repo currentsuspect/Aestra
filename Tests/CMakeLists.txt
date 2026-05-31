@@ -956,6 +956,29 @@ target_include_directories(AestraEQTest PRIVATE
 add_test(NAME AestraEQTest COMMAND AestraEQTest)
 set_tests_properties(AestraEQTest PROPERTIES LABELS "audio;plugins;eq")
 
+# Aestra EQ Measurement Test
+add_executable(AestraEQMeasurementTest AestraAudio/AestraEQMeasurementTest.cpp)
+target_link_libraries(AestraEQMeasurementTest PRIVATE AestraAudio)
+target_include_directories(AestraEQMeasurementTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraEQMeasurementTest COMMAND AestraEQMeasurementTest)
+set_tests_properties(AestraEQMeasurementTest PROPERTIES LABELS "audio;plugins;eq;measurement")
+
+# Aestra EQ Material Lab
+add_executable(AestraEQMaterialLab AestraAudio/AestraEQMaterialLab.cpp)
+target_link_libraries(AestraEQMaterialLab PRIVATE AestraAudio)
+target_include_directories(AestraEQMaterialLab PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+target_compile_definitions(AestraEQMaterialLab
+    PRIVATE AESTRA_LAB_OUTPUT_DIR="${CMAKE_BINARY_DIR}/labs/eq/quality"
+)
+
 # Aestra Comp Phase 0 Test
 add_executable(AestraCompPhase0Test AestraAudio/AestraCompPhase0Test.cpp)
 target_link_libraries(AestraCompPhase0Test PRIVATE AestraAudio)

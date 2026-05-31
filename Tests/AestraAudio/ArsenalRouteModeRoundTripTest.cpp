@@ -4,11 +4,16 @@
 
 #include "Models/TrackManager.h"
 #include "Models/UnitManager.h"
+#include "Plugin/AestraEQ.h"
+#include "Plugin/BuiltInPlugins.h"
+#include "Plugin/PluginManager.h"
 
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
 
 namespace {
@@ -147,12 +152,83 @@ void verifyLegacyRouteIdOnlyProjectLoad(const std::filesystem::path& path) {
     require(track->routeMode == ArsenalRouteMode::RoutedToTimelineTrack,
             "Legacy track unit routeMode should resolve from routeId");
 }
+
+void verifyEQV5ProjectRoundTrip(const std::filesystem::path& path) {
+    using namespace Aestra::Audio;
+    BuiltInPlugins::registerCoreBuiltIns();
+    require(PluginManager::getInstance().initialize(), "Failed to initialize PluginManager");
+
+    auto tm1 = std::make_shared<TrackManager>();
+    tm1->getPlaylistModel().setPatternManager(&tm1->getPatternManager());
+
+    UnitManager& um1 = tm1->getUnitManager();
+    const UnitID eqUnit = um1.createUnit("Project EQ", UnitType::Audio);
+    auto eq = std::make_shared<Plugins::AestraEQ>();
+    eq->setInfo(BuiltInPlugins::eqInfo());
+    require(eq->initialize(48000.0, 512), "Failed to initialize project EQ");
+    eq->setParameter(Plugins::AestraEQ::kParamBell1Enable, 1.0f);
+    eq->setParameter(Plugins::AestraEQ::kParamBell1Freq, 0.43f);
+    eq->setParameter(Plugins::AestraEQ::kParamBell1Q, 0.35f);
+    eq->setParameter(Plugins::AestraEQ::kParamBell1Type, 1.0f / 3.0f);
+    eq->setParameter(Plugins::AestraEQ::kParamBell2Enable, 1.0f);
+    eq->setParameter(Plugins::AestraEQ::kParamBell2Freq, 0.66f);
+    eq->setParameter(Plugins::AestraEQ::kParamBell2Q, 0.50f);
+    eq->setParameter(Plugins::AestraEQ::kParamBell2Type, 2.0f / 3.0f);
+    eq->setParameter(Plugins::AestraEQ::kParamOutputGain, 0.75f);
+    eq->setParameter(Plugins::AestraEQ::kParamPolarityInvert, 1.0f);
+
+    um1.attachPlugin(eqUnit, BuiltInPlugins::eqInfo().id, eq);
+    um1.captureUnitPluginState(eqUnit);
+
+    require(ProjectSerializer::save(path.string(), tm1, 120.0, 0.0), "Failed to save EQ project");
+    const std::string saved = readFile(path);
+    require(saved.find("\"pluginStateHex\"") != std::string::npos,
+            "EQ plugin state should be serialized in project");
+
+    auto tm2 = std::make_shared<TrackManager>();
+    tm2->getPlaylistModel().setPatternManager(&tm2->getPatternManager());
+    const auto loadResult = ProjectSerializer::load(path.string(), tm2);
+    require(loadResult.ok, "Failed to load EQ project");
+
+    UnitManager& um2 = tm2->getUnitManager();
+    require(um2.getUnitPluginId(eqUnit) == BuiltInPlugins::eqInfo().id, "EQ plugin id mismatch after project load");
+    auto restoredEq = std::dynamic_pointer_cast<Plugins::AestraEQ>(um2.getUnitPlugin(eqUnit));
+    require(restoredEq != nullptr, "EQ plugin instance missing after project load");
+    require(std::abs(restoredEq->getParameter(Plugins::AestraEQ::kParamBell1Type) - (1.0f / 3.0f)) < 0.001f,
+            "Bell 1 type should round-trip as Notch through project state");
+    require(std::abs(restoredEq->getParameter(Plugins::AestraEQ::kParamBell2Type) - (2.0f / 3.0f)) < 0.001f,
+            "Bell 2 type should round-trip as Band Pass through project state");
+    require(std::abs(restoredEq->getParameter(Plugins::AestraEQ::kParamOutputGain) - 0.75f) < 0.001f,
+            "Output gain should round-trip through project state");
+    require(restoredEq->getParameter(Plugins::AestraEQ::kParamPolarityInvert) == 1.0f,
+            "Polarity invert should round-trip through project state");
+
+    const auto secondPath = path.parent_path() / "eq_v5_roundtrip_2.aes";
+    require(ProjectSerializer::save(secondPath.string(), tm2, 120.0, 0.0), "Failed to save reloaded EQ project");
+
+    auto tm3 = std::make_shared<TrackManager>();
+    tm3->getPlaylistModel().setPatternManager(&tm3->getPatternManager());
+    const auto secondLoadResult = ProjectSerializer::load(secondPath.string(), tm3);
+    require(secondLoadResult.ok, "Failed to reload EQ project");
+
+    auto secondRestoredEq = std::dynamic_pointer_cast<Plugins::AestraEQ>(tm3->getUnitManager().getUnitPlugin(eqUnit));
+    require(secondRestoredEq != nullptr, "EQ plugin instance missing after second project load");
+    require(std::abs(secondRestoredEq->getParameter(Plugins::AestraEQ::kParamBell1Type) - (1.0f / 3.0f)) < 0.001f,
+            "Bell 1 type drifted across repeated project round-trip saves");
+    require(std::abs(secondRestoredEq->getParameter(Plugins::AestraEQ::kParamBell2Type) - (2.0f / 3.0f)) < 0.001f,
+            "Bell 2 type drifted across repeated project round-trip saves");
+    require(std::abs(secondRestoredEq->getParameter(Plugins::AestraEQ::kParamOutputGain) - 0.75f) < 0.001f,
+            "Output gain drifted across repeated project round-trip saves");
+    require(secondRestoredEq->getParameter(Plugins::AestraEQ::kParamPolarityInvert) == 1.0f,
+            "Polarity invert drifted across repeated project round-trip saves");
+}
 } // namespace
 
 int main() {
     const TempDir tempDir{makeTempDir()};
     verifyCurrentProjectRoundTrip(tempDir.path / "current_roundtrip.aes");
     verifyLegacyRouteIdOnlyProjectLoad(tempDir.path / "legacy_routeid_only.aes");
+    verifyEQV5ProjectRoundTrip(tempDir.path / "eq_v5_roundtrip.aes");
 
     std::cout << "[PASS] ArsenalRouteModeRoundTripTest\n";
     return 0;
