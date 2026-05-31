@@ -1276,7 +1276,6 @@ public:
         snapDynamicBandSmoothing(slot);
         m_bandEnabled[slot].store(false, std::memory_order_relaxed);
         m_bandStages[slot].store(0u, std::memory_order_relaxed);
-        resetBandFilterStates(slot);
         m_runtimeBandEnabled[slot] = false;
         m_runtimeBandTypes[slot] = FilterType::Bell;
         m_runtimeBandModes[slot] = StereoMode::Stereo;

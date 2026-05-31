@@ -1286,7 +1286,12 @@ void AestraEQEditor::captureCompareSlot(uint32_t slot) {
     if (!m_instance || slot >= m_compareSlots.size())
         return;
     for (uint32_t i = 0; i < Aestra::Audio::Plugins::AestraEQ::kParamCount; ++i) {
-        m_compareSlots[slot][i] = m_instance->getParameter(i);
+        m_compareSlots[slot].params[i] = m_instance->getParameter(i);
+    }
+    if (auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance)) {
+        for (uint32_t i = 0; i < Aestra::Audio::Plugins::AestraEQ::kMaxDynamicBands; ++i) {
+            m_compareSlots[slot].dynamicSlots[i] = eq->getDynamicBandSlotSnapshot(i);
+        }
     }
 }
 
@@ -1294,7 +1299,29 @@ void AestraEQEditor::applyCompareSlot(uint32_t slot) {
     if (!m_instance || slot >= m_compareSlots.size())
         return;
     for (uint32_t i = 0; i < Aestra::Audio::Plugins::AestraEQ::kParamCount; ++i) {
-        m_instance->setParameter(i, m_compareSlots[slot][i]);
+        m_instance->setParameter(i, m_compareSlots[slot].params[i]);
+    }
+    if (auto eq = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraEQ>(m_instance)) {
+        for (uint32_t i = Aestra::Audio::Plugins::AestraEQ::kLegacyBandCount;
+             i < Aestra::Audio::Plugins::AestraEQ::kMaxDynamicBands; ++i) {
+            const auto& snapshot = m_compareSlots[slot].dynamicSlots[i];
+            if (!snapshot.enabled) {
+                eq->clearDynamicBandSlot(i);
+                continue;
+            }
+            Aestra::Audio::Plugins::AestraEQ::DynamicBandSlotDefaults defaults{
+                snapshot.enabled,        snapshot.type,
+                snapshot.stereoMode,     snapshot.frequencyNorm,
+                snapshot.gainNorm,       snapshot.qOrSlopeNorm,
+                snapshot.usesSlope,      snapshot.dynamicEnabled,
+                snapshot.targetGainNorm, snapshot.thresholdNorm,
+                snapshot.kneeNorm,       snapshot.attackNorm,
+                snapshot.releaseNorm,    snapshot.sidechainLinked,
+                snapshot.sidechainType,  snapshot.sidechainFrequencyNorm,
+                snapshot.sidechainQNorm,
+            };
+            eq->setDynamicBandSlot(i, defaults);
+        }
     }
     syncBandsFromPlugin();
     setDirty(true);
@@ -1313,6 +1340,25 @@ void AestraEQEditor::copyCompareSlotToOther() {
     captureCompareSlot(m_compareActiveSlot);
     m_compareSlots[target] = m_compareSlots[m_compareActiveSlot];
     setDirty(true);
+}
+
+float AestraEQEditor::dynamicTypeNormFromClipboardType(float typeNorm, bool legacyDomain) {
+    return filterTypeNorm(clipboardFilterType(typeNorm, legacyDomain));
+}
+
+Aestra::Audio::Plugins::FilterType AestraEQEditor::clipboardFilterType(float typeNorm, bool legacyDomain) {
+    using FilterType = Aestra::Audio::Plugins::FilterType;
+    if (!legacyDomain)
+        return filterTypeFromNorm(typeNorm);
+
+    const int idx = std::clamp(static_cast<int>(std::round(quantizeTypeNorm(typeNorm) * 3.0f)), 0, 3);
+    static constexpr FilterType legacyTypes[] = {
+        FilterType::Bell,
+        FilterType::Notch,
+        FilterType::BandPass,
+        FilterType::Tilt,
+    };
+    return legacyTypes[idx];
 }
 
 void AestraEQEditor::drawBypassPill(NUIRenderer& renderer) {
@@ -3292,7 +3338,11 @@ void AestraEQEditor::setBandValue(int idx, Knob target, float v) {
             }
         } else if (bd.usesSlope) {
             bd.q = quantizeSlopeNorm(v);
-            m_instance->setParameter(bd.qId, bd.q);
+            if (bd.legacySlot) {
+                m_instance->setParameter(bd.qId, bd.q);
+            } else {
+                writeDynamicBandSnapshot(idx);
+            }
         } else {
             bd.q = v;
             if (bd.legacySlot) {
@@ -3689,6 +3739,7 @@ void AestraEQEditor::copyBandToClipboard(int idx) {
     m_bandClipboard.hasGain = bd.usesGain && (bd.gainId != 0 || !bd.legacySlot);
     m_bandClipboard.usesSlope = bd.usesSlope;
     m_bandClipboard.hasType = bd.typeId != 0 || !bd.legacySlot;
+    m_bandClipboard.typeUsesLegacyDomain = bd.legacySlot;
     m_bandClipboard.hasStereo = bd.stereoId != 0 || !bd.legacySlot;
     m_bandClipboard.freq = bd.freq;
     m_bandClipboard.freqHz = bd.legacySlot ? bandFreqHz(bd.slotIndex, bd.freq) : graphFreqHz(bd.freq);
@@ -3720,7 +3771,7 @@ bool AestraEQEditor::pasteClipboardToBand(int idx) {
         bd.gain = std::clamp(m_bandClipboard.gain, 0.0f, 1.0f);
         bd.q = std::clamp(m_bandClipboard.q, 0.0f, 1.0f);
         if (m_bandClipboard.hasType) {
-            bd.typeNorm = std::clamp(m_bandClipboard.type, 0.0f, 1.0f);
+            bd.typeNorm = dynamicTypeNormFromClipboardType(m_bandClipboard.type, m_bandClipboard.typeUsesLegacyDomain);
         }
         if (m_bandClipboard.hasStereo) {
             bd.stereoNorm = quantizeStereoNorm(m_bandClipboard.stereo);
@@ -3751,7 +3802,8 @@ bool AestraEQEditor::pasteClipboardToBand(int idx) {
     m_instance->setParameter(bd.enableId, m_bandClipboard.enabled ? 1.0f : 0.0f);
     m_instance->setParameter(bd.freqId, bandNormFromHz(bd.slotIndex, m_bandClipboard.freqHz));
     if (bd.typeId != 0 && m_bandClipboard.hasType) {
-        m_instance->setParameter(bd.typeId, quantizeTypeNorm(m_bandClipboard.type));
+        const auto type = clipboardFilterType(m_bandClipboard.type, m_bandClipboard.typeUsesLegacyDomain);
+        m_instance->setParameter(bd.typeId, quantizeTypeNorm(filterTypeNorm(type)));
     }
     if (bd.stereoId != 0 && m_bandClipboard.hasStereo) {
         m_instance->setParameter(bd.stereoId, quantizeStereoNorm(m_bandClipboard.stereo));
