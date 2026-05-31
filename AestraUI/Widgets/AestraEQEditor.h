@@ -32,7 +32,18 @@ public:
 
 private:
     enum class Knob { None, Enable, Freq, Gain, Q, Type, Stereo };
-    enum class BandMenuAction { Reset, InvertGain, ToggleDynamic, SplitLR, SplitMS, Duplicate, Delete, Copy, Paste, ClearAll };
+    enum class BandMenuAction {
+        Reset,
+        InvertGain,
+        ToggleDynamic,
+        SplitLR,
+        SplitMS,
+        Duplicate,
+        Delete,
+        Copy,
+        Paste,
+        ClearAll
+    };
     enum class NodeQuickAction { TypePrev = 0, TypeNext, Stereo, Solo, Duplicate, Delete, Count };
 
     struct Band {
@@ -316,6 +327,7 @@ private:
         float stereo = 0.0f;
         bool dynamicEnabled = false;
         float targetGain = 0.5f;
+        float dynamicAmount = 0.0f;
         float dynamicThreshold = 0.5f;
         float dynamicKnee = 0.10f;
         float dynamicAttack = 0.18f;
