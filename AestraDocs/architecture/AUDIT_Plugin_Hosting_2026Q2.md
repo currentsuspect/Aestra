@@ -48,7 +48,7 @@ void OutOfProcessPluginInstance::setParameter(uint32_t id, float value) {
 
 **This is the entire implementation.** It silently discards every parameter change. Because `HybridPluginFactory` routes all third-party VST3 and CLAP through OOP by default (`PluginManager.cpp:69`), this means:
 
-1. User loads a third-party Serum, Phase Plant, FabFilter, etc.
+1. User loads a third-party synth, effect, or EQ plugin.
 2. Plugin loads. Audio passes through correctly.
 3. User turns any knob, automates any parameter, loads any preset.
 4. **Nothing reaches the plugin.** The audio output is fixed at whatever the plugin's default state was at load.
