@@ -52,7 +52,7 @@ Visual design is cognitive design. Beauty shapes emotion, focus, fatigue, and tr
 
 **We care about:** visual clarity, motion with meaning, hierarchy and readability, coherent interaction language.
 
-**We do not care about:** visual noise, flashy motion for its own sake, gamer UI, clutter, inconsistent interaction patterns. Aestra must not feel enterprise-ey, hostile to beginners, or creatively interruptive.
+**We do not care about:** visual noise, flashy motion for its own sake, gamer UI, clutter, inconsistent interaction patterns. Aestra must not feel enterprise-y, hostile to beginners, or creatively interruptive.
 
 ---
 

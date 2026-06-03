@@ -58,7 +58,7 @@ Preferred workflow:
 git status --short
 git branch --show-current
 git rev-parse --short HEAD
-````
+```
 
 ### Branching
 
