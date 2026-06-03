@@ -60,6 +60,12 @@ git branch --show-current
 git rev-parse --short HEAD
 ````
 
+### Branching
+
+- Branch from `develop`.
+- Never commit directly to `main` or `develop`.
+- Merge flow: `feature/*` → `develop` → `main`.
+
 ---
 
 ## 4. Required Final Report Format
@@ -593,13 +599,6 @@ git push origin v0.4.0-alpha
 
 See `RELEASES.md` for the current tag inventory, milestone history, and release status.
 Do not duplicate that table in this file.
-
-### What Agents Must Not Do
-
-* Do not create or delete tags without explicit instruction.
-* Do not push tags.
-* Do not use lightweight tags for milestones.
-* Do not recreate deleted premature version tags.
 
 ---
 
