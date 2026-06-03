@@ -2,10 +2,6 @@
 
 This file defines how AI agents, bots, and automation tools should work inside the Aestra repository.
 
-It is intentionally strict. Aestra is a native C++ DAW with real-time audio constraints, project persistence, CI requirements, and source-available licensing. Small mistakes can cause crashes, data loss, broken exports, leaked private assets, or misleading public claims.
-
-Read this file before making changes.
-
 ## Philosophy
 
 Before working on Aestra, read [`philosophy.md`](philosophy.md). It defines the product vision, the people we build for, and the engineering values that underpin every decision here. When this policy and philosophy conflict on direction, philosophy wins. When this policy and philosophy conflict on safety, this policy wins.
@@ -14,25 +10,13 @@ Before working on Aestra, read [`philosophy.md`](philosophy.md). It defines the 
 
 ## 1. Scope
 
-This policy applies to:
-
-- Codex
-- Cursor
-- Copilot
-- CodeRabbit
-- ChatGPT-generated patches
-- Local automation scripts
-- Any bot-generated or AI-assisted contribution
+This policy applies to any bot-generated or AI-assisted contribution.
 
 Agents must keep changes small, reviewable, factual, and aligned with the real repository state.
-
-Do not invent roadmap claims, release status, architecture facts, benchmark results, or test results.
 
 ---
 
 ## 2. Non-Negotiable Rules
-
-These rules override convenience.
 
 - Do not delete, rename, reset, force-push, or rewrite `main` or `develop`.
 - Do not commit or push unless explicitly asked.
@@ -48,8 +32,6 @@ These rules override convenience.
 - Do not silence CodeRabbit, clang-tidy, compiler, sanitizer, or CI findings without a clear technical reason.
 - Do not change serialization/project format casually. Treat persistence changes as high-risk.
 - Do not “fix” dead/commented code unless the task explicitly targets it.
-
-When unsure, prefer reporting uncertainty over guessing. When the user's intent is ambiguous or unclear, ask for clarification rather than assuming.
 
 ---
 
@@ -76,9 +58,13 @@ Preferred workflow:
 git status --short
 git branch --show-current
 git rev-parse --short HEAD
-````
+```
 
-Do not proceed with destructive Git operations unless explicitly requested.
+### Branching
+
+- Branch from `develop`.
+- Never commit directly to `main` or `develop`.
+- Merge flow: `feature/*` → `develop` → `main`.
 
 ---
 
@@ -114,8 +100,6 @@ Every completed agent session must report:
 - Remaining risks:
 - Follow-up work:
 ```
-
-Never claim “all green” unless the relevant command was actually run and passed.
 
 ---
 
@@ -275,22 +259,6 @@ Follow `.clang-format` and `.clang-tidy`.
 | Files            | `PascalCase.h/.cpp` | `AudioEngine.cpp`      |
 | Namespace        | `Aestra`            | `Aestra::AudioEngine`  |
 
-### Include Layout
-
-Headers are organized by domain under `AestraAudio/include/`, including:
-
-* `Core/`
-* `DSP/`
-* `Models/`
-* `Playback/`
-* `IO/`
-* `Drivers/`
-* `Plugin/`
-* `Commands/`
-* `Headless/`
-
-Prefer existing locations and naming patterns.
-
 ---
 
 ## 10. Real-Time Audio Rules
@@ -333,8 +301,6 @@ Common safe communication pattern:
 UI/threaded command path -> SPSC queue/ring buffer -> audio thread consumes bounded commands
 ```
 
-Do not “just add a mutex” to fix audio-thread races.
-
 ---
 
 ## 11. DSP Rules
@@ -373,8 +339,6 @@ When touching save/load, project roundtrip, migration, clips, tracks, routes, pl
 * Fail loudly and diagnostically on corrupt/unresolvable critical state.
 * Add or update roundtrip/regression tests.
 * Validate both UI and headless/backend paths where applicable.
-
-Never treat “the UI still opens” as sufficient validation for project persistence.
 
 ---
 
@@ -458,12 +422,6 @@ Do not modify, regenerate, normalize, delete, or include changes to these files 
 
 If they change during local testing, revert them before finalizing unless the task explicitly requires updating them.
 
-Recommended check:
-
-```bash
-git status --short
-```
-
 ---
 
 ## 16. Known Dead or Sensitive Areas
@@ -502,8 +460,6 @@ Use:
 * `AestraDocs/` for internal design notes, architecture reports, implementation plans, and status documents.
 * `labs/` for experiments, generated evidence, quality reports, and benchmark artifacts.
 
-Do not put temporary project status into `AGENTS.md`.
-
 ---
 
 ## 18. Security and Licensing
@@ -528,18 +484,6 @@ Security-sensitive areas include:
 * Network access
 * Crash recovery
 * Export/write paths
-
-Vulnerability reports should go to:
-
-```text
-security@aestra.studio
-```
-
-Use subject format:
-
-```text
-SECURITY: [summary]
-```
 
 ---
 
@@ -566,8 +510,6 @@ com.Aestrastudios.verb
 com.Aestrastudios.delay
 ```
 
-Do not rename IDs without explicit migration work.
-
 ---
 
 ## 20. Export/Bounce Rules
@@ -588,18 +530,7 @@ Always report whether live/export parity was affected.
 
 ---
 
-## 21. Git and PR Hygiene
-
-### Commits
-
-* Keep commits surgical.
-* Group by concern.
-* Do not mix formatting-only changes with functional changes unless requested.
-* Do not include unrelated cleanup.
-* Do not commit generated files unless they are expected artifacts.
-* Do not commit local machine paths, caches, or runtime noise.
-
-### Pull Requests
+## 21. Pull Requests
 
 PRs should include:
 
@@ -608,17 +539,6 @@ PRs should include:
 * Testing performed
 * Docs updated?
 * Risk/rollback notes
-
-Do not merge bot-generated PRs blindly.
-
-### Branch Protection
-
-Never delete or rewrite:
-
-* `main`
-* `develop`
-
-Treat both as protected even if local Git allows the operation.
 
 ---
 
@@ -644,109 +564,7 @@ Unacceptable responses:
 
 ---
 
-## 23. Agent Decision Rules
-
-When choosing between options:
-
-Prefer:
-
-* Small patches over rewrites
-* Existing patterns over new frameworks
-* Explicit errors over silent failure
-* Deterministic behavior over cleverness
-* Headless validation over UI-only validation
-* Compatibility over convenience
-* Clear diagnostics over vague success
-* Real test evidence over assumptions
-
-Avoid:
-
-* Large speculative refactors
-* “While I’m here” cleanup
-* Premature abstraction
-* UI-only fixes for backend bugs
-* Backend-only fixes that leave UI state misleading
-* Serialization changes without migration
-* Performance claims without measurements
-
----
-
-## 24. Public Roadmap and Status Claims
-
-Do not add or update public claims about:
-
-* Release dates
-* Beta status
-* Pricing
-* Premium features
-* Cloud features
-* Benchmarks
-* Supported platforms
-* Plugin compatibility
-* Security guarantees
-* “Production-ready” status
-
-unless explicitly requested and supported by repository evidence.
-
-Status belongs in dedicated docs or reports, not in this file.
-
----
-
-## 25. Known Framework Debt
-
-### NUIPlatformBridge `NUIMouseEvent::type` — FIXED
-
-`NUIMouseEvent::type` is now populated correctly by `AestraUI/Platform/NUIPlatformBridge.cpp` and `Source/Core/AestraWindowManager.cpp` as of 2026-05-11. Use freely.
-
-Historical context: the field was previously left as `NUIMouseEventType::None` at every construction site, causing components that checked `event.type` to silently fail. The following components were affected and have been verified:
-
-* `MembershipSettingsPage` — now uses `event.pressed` directly (works regardless).
-* `AestraHistoryPanel` — `event.type` checks for Move/Scroll now fire correctly.
-* `NUIApp::handleMouseEvent` — adaptive FPS type checks now match correctly.
-* `UnitRow` — step-editing type checks are now functional (redundant with `pressed`/`released` but no longer dead).
-* `PluginBrowserPanel` — drag type check remains dead (`Drag` is not emitted by the bridge), but the `button == Left` path covers actual drag logic.
-
-Both `event.type` and `event.pressed`/`released` patterns are valid going forward.
-
----
-
-## 26. DO
-
-* Use `Aestra_CORE_MODE=ON` for public-facing builds.
-* Use `AESTRA_HEADLESS_ONLY=ON` when UI is not needed.
-* Gate hardware/device tests behind `AESTRA_ENABLE_RUNTIME_TESTS`.
-* Match docs to actual code and CI behavior.
-* Keep changes surgical.
-* Review automation output like human code.
-* Use clang-format and clang-tidy where practical.
-* Check existing components before adding new ones.
-* Preserve protected branches.
-* Report exact tests and commands.
-* Be honest about skipped validation.
-* Fail loudly on dangerous states.
-* Protect realtime audio constraints.
-
----
-
-## 26. DON'T
-
-* Do not blindly merge bot PRs.
-* Do not invent unsupported process, release, benchmark, or roadmap claims.
-* Do not add global AVX/AVX2/AVX512 flags.
-* Do not commit runtime state changes unless explicitly requested.
-* Do not use or revive dead code casually.
-* Do not make blocking calls in the audio thread.
-* Do not allocate memory in audio callbacks.
-* Do not override review findings without justification.
-* Do not use hidden automation-only feature flows.
-* Do not weaken secret scanning.
-* Do not modify FreeType warning suppressions without explicit reason.
-* Do not delete `main` or `develop`.
-* Do not claim success without evidence.
-
----
-
-## 27. Versioning and Tagging Policy
+## 23. Versioning and Tagging Policy
 
 Aestra uses semantic versioning with phase suffixes.
 
@@ -782,19 +600,9 @@ git push origin v0.4.0-alpha
 See `RELEASES.md` for the current tag inventory, milestone history, and release status.
 Do not duplicate that table in this file.
 
-### What Agents Must Not Do
-
-* Do not create or delete tags without explicit instruction.
-* Do not push tags.
-* Do not use lightweight tags for milestones.
-* Do not recreate deleted premature version tags.
-
 ---
 
-## 28. Nightly Builds
-
-Nightly builds run on a schedule via `nightly.yml` and are the primary canary
-for regressions not caught by push/PR CI.
+## 24. Nightly Builds
 
 ### Schedule
 
@@ -822,8 +630,3 @@ resolving the underlying cause.
 * Do not disable ASan/UBSan on nightly without explicit approval and a written reason.
 * Do not remove the `ref: develop` from the checkout step — scheduled workflows default to the repository's default branch, not develop.
 * Do not remove the ctest `-E` exclusion filter without confirming those tests pass under ASan/UBSan.
-
-### What Agents May Do
-
-* Add additional nightly steps (e.g. macOS matrix, DSP benchmarks) when explicitly tasked.
-* Adjust cron timing when explicitly asked.
