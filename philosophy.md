@@ -116,4 +116,4 @@ The measure of Muse is invisibility — whether the user felt helped or handled.
 
 ---
 
-*This document is the root. When requirements conflict, return here.*
+*This document is the root for product direction. For safety constraints, follow `AGENTS.md`.*
