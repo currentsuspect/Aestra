@@ -12,13 +12,20 @@
 namespace Aestra {
 namespace Audio {
 
-// Double-precision smoothed parameter for zero-zipper automation
+/**
+ * @brief Double-precision linear-ramp parameter smoother for zipper-free automation.
+ *
+ * Advances one sample at a time via next(). Call beginRamp() after setTarget()
+ * to start a finite-length linear ramp; snap() jumps immediately.
+ * NaN/Inf values are sanitized at every entry point to prevent propagation.
+ */
 struct SmoothedParamD {
-    double current{1.0};
-    double target{1.0};
-    double step{0.0};
-    uint32_t samplesRemaining{0};
+    double current{1.0};      ///< Current output value.
+    double target{1.0};       ///< Target value the ramp is heading toward.
+    double step{0.0};         ///< Per-sample increment (0 when idle).
+    uint32_t samplesRemaining{0}; ///< Frames left in the current ramp.
 
+    /** @brief Advance the smoother by one sample and return the current value. */
     inline double next() {
         if (samplesRemaining > 0) {
             current += step;
@@ -31,12 +38,23 @@ struct SmoothedParamD {
         return current;
     }
 
+    /** @brief Set a new target value. NaN/Inf are replaced with current to avoid clicks. */
     void setTarget(double t) {
         // Sanitize target to prevent NaN/Inf propagation
-        // Fall back to current value to avoid audible clicks
-        target = std::isfinite(t) ? t : current;
+        // Fall back to current value, then to 0.0, to guarantee finite output
+        if (std::isfinite(t)) {
+            target = t;
+        } else if (std::isfinite(current)) {
+            target = current;
+        } else {
+            target = 0.0;
+        }
     }
 
+    /**
+     * @brief Begin a linear ramp from current to target over @p samples frames.
+     * @param samples Number of frames for the ramp. 0 or already-at-target snaps immediately.
+     */
     void beginRamp(uint32_t samples) {
         // Sanitize both current and target before computing step
         // Mirror setTarget behavior: fall back to the other finite value to avoid clicks
@@ -59,7 +77,10 @@ struct SmoothedParamD {
             current = target;
         }
     }
+    /** @brief Snap current to target immediately, cancelling any active ramp. */
     void snap() {
+        // Sanitize target before assigning — same contract as setTarget()/beginRamp()
+        if (!std::isfinite(target)) target = std::isfinite(current) ? current : 0.0;
         current = target;
         step = 0.0;
         samplesRemaining = 0;
@@ -97,7 +118,7 @@ struct EdgeDelayState {
     /** @brief Stereo-interleaved buffer pointer (capacityMask+1 frames). RT reads. */
     std::atomic<float*> bufferPtr{nullptr};
     /** @brief RT-side write cursor (frame count); RT updates each block; off-RT zeroes on growth. */
-    uint32_t writePos{0};
+    std::atomic<uint32_t> writePos{0};
 
     // Off-RT-owned storage. RT never touches these directly; it goes through
     // bufferPtr.

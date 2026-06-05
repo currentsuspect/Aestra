@@ -133,6 +133,12 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    auto missingVst3 = create(factory, makeInfo("com.aestra.missing-vst3"));
+    if (missingVst3) {
+        std::cerr << "missing real VST3 plugin should not fall back to echo processing\n";
+        return 1;
+    }
+
     auto crashed = create(factory, makeInfo("__aestra_test_crash__"));
     if (crashed) {
         std::cerr << "crashing plugin should not produce a usable instance\n";

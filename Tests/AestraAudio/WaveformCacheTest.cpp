@@ -2,6 +2,7 @@
 
 #include "WaveformCache.h"
 
+#include <cstdint>
 #include <cmath>
 #include <iostream>
 #include <string>
@@ -207,6 +208,37 @@ bool testCacheSharing() {
     return true;
 }
 
+bool testSourceRevisionTracksBufferContent() {
+    ClipSource source(ClipSourceID{1}, "Test");
+    auto first = std::make_shared<AudioBufferData>();
+    first->interleavedData = {0.1f, -0.2f};
+    first->numChannels = 1;
+    first->numFrames = 2;
+    first->sampleRate = 48000;
+
+    const uint64_t initialRevision = source.getContentRevision();
+    source.setBuffer(first);
+    if (source.getContentRevision() != initialRevision + 1U) return fail("setBuffer should increment source revision");
+
+    WaveformCacheBuilder builder;
+    auto cache = builder.buildSync(source);
+    if (!cache || !cache->isReady()) return fail("sync build should produce cache before buffer replacement");
+    source.setWaveformCache(cache);
+    if (source.getWaveformCache() != cache) return fail("cache should be stored before buffer replacement");
+
+    auto second = std::make_shared<AudioBufferData>();
+    second->interleavedData = {0.3f, -0.4f};
+    second->numChannels = 1;
+    second->numFrames = 2;
+    second->sampleRate = 48000;
+
+    source.setBuffer(second);
+    if (source.getContentRevision() != initialRevision + 2U) return fail("second setBuffer should increment revision");
+    if (source.getWaveformCache()) return fail("buffer replacement should clear stale waveform cache");
+
+    return true;
+}
+
 // 7. Failure safety
 bool testFailureSafety() {
     WaveformCache cache;
@@ -310,6 +342,7 @@ int main() {
     ok &= testLodSelection();
     ok &= testVisibleRangeClipping();
     ok &= testCacheSharing();
+    ok &= testSourceRevisionTracksBufferContent();
     ok &= testFailureSafety();
     ok &= testNanInfSanitization();
     ok &= testVeryShortFile();

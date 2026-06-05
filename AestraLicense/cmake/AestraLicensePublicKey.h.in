@@ -1,0 +1,13 @@
+#pragma once
+
+namespace Aestra {
+namespace License {
+
+inline constexpr unsigned char AESTRA_LICENSE_PUBKEY[32] = {
+    @AESTRA_LICENSE_PUBLIC_KEY_BYTES@
+};
+
+inline constexpr const char* AESTRA_LICENSE_PUBLIC_KEY_LABEL = "@AESTRA_LICENSE_PUBLIC_KEY_LABEL@";
+
+} // namespace License
+} // namespace Aestra

@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "ProjectSerializer.h"
 #include "ProjectMigrations.h"
+#include "AestraFile.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "MiniAudioDecoder.h"
 #include "PluginManager.h"
@@ -450,6 +451,13 @@ static bool writeAtomicallyImpl(const std::string& path, const std::string& cont
             Log::error("Project save failed: write error: " + tmp.string());
             return false;
         }
+        // Sync to disk before atomic rename to prevent data loss on crash
+        if (!Aestra::syncOfstream(out, tmp.string())) {
+            Log::error("Project save failed: sync error: " + tmp.string());
+            out.close();
+            fs::remove(tmp, ec);
+            return false;
+        }
     }
 
 #ifdef _WIN32
@@ -467,6 +475,11 @@ static bool writeAtomicallyImpl(const std::string& path, const std::string& cont
         Log::error("Project save failed: cannot replace target: " + target.string() + " (" + ec.message() + ")");
         // Best-effort cleanup
         fs::remove(tmp, ec);
+        return false;
+    }
+
+    if (!Aestra::fsyncParentDirectory(target.string())) {
+        Log::error("Project save failed: directory sync error: " + target.parent_path().string());
         return false;
     }
 #endif
@@ -615,6 +628,9 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
             pjs.set("type", JSON("audio"));
             const auto& payload = std::get<AudioSlicePayload>(p->payload);
             pjs.set("sourceId", JSON(static_cast<double>(payload.audioSourceId.value)));
+            if (payload.durationSeconds > 0.0) {
+                pjs.set("durationSeconds", JSON(payload.durationSeconds));
+            }
             
             JSON slicesArray = JSON::array();
             for (const auto& slice : payload.slices) {
@@ -731,7 +747,17 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 const uint64_t serializedPatternId = clip.patternId.value != 0 ? clip.patternId.value : clip.sourceId;
                 cjs.set("patternId", JSON(static_cast<double>(serializedPatternId)));
                 cjs.set("start", JSON(clip.startBeat));
-                cjs.set("duration", JSON(clip.durationBeats));
+                const auto* clipPattern = patternManager.getPattern(clip.patternId);
+                const bool isAudioClip = clipPattern && clipPattern->isAudio();
+                if (isAudioClip) {
+                    const double durationSeconds = clip.durationSeconds > 0.0
+                                                       ? clip.durationSeconds
+                                                       : clip.durationBeats * 60.0 / std::max(tempo, 1.0);
+                    cjs.set("durationSeconds", JSON(durationSeconds));
+                    cjs.set("sourceOffsetSeconds", JSON(clip.sourceOffsetSeconds));
+                } else {
+                    cjs.set("duration", JSON(clip.durationBeats));
+                }
                 cjs.set("sourceOffset", JSON(clip.sourceOffset));
                 cjs.set("name", JSON(clip.name));
                 cjs.set("color", JSON(std::to_string(clip.colorRGBA)));
@@ -1155,6 +1181,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         sourceManager.clear();
         patternManager.clear();
         trackManager->clearAllChannels();
+        playlist.setPatternManager(&patternManager);
+        playlist.setBPM(result.tempo);
     
         // 2. Load Sources (and decode audio files)
         std::unordered_map<uint32_t, ClipSourceID> idMap;
@@ -1243,6 +1271,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     if (idMap.count(oldSrcId)) {
                         AudioSlicePayload payload;
                         payload.audioSourceId = idMap[oldSrcId];
+                        payload.durationSeconds = finiteNumberOr(pj[i], "durationSeconds", 0.0, 0.0, 1000000.0);
                         if (pj[i].has("slices")) {
                             const JSON& slj = pj[i]["slices"];
                             for (size_t s = 0; s < slj.size(); ++s) {
@@ -1303,6 +1332,29 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 }
             }
         }
+
+        // Arsenal unit default patterns are serialized with project-file IDs.
+        // Patterns are recreated during load, so rebind units to the new runtime IDs
+        // after both unit and pattern stores have been restored.
+        {
+            auto& unitManager = trackManager->getUnitManager();
+            for (UnitID unitId : unitManager.getAllUnitIDs()) {
+                auto* unit = unitManager.getUnit(unitId);
+                if (!unit || !unit->defaultPatternId.isValid()) {
+                    continue;
+                }
+
+                auto remapped = patternMap.find(unit->defaultPatternId.value);
+                if (remapped != patternMap.end()) {
+                    unit->defaultPatternId = remapped->second;
+                } else if (!patternManager.getPattern(unit->defaultPatternId)) {
+                    Log::warning("[ProjectLoad] Arsenal unit " + std::to_string(unitId) +
+                                 " references missing default pattern " +
+                                 std::to_string(unit->defaultPatternId.value) + "; clearing association.");
+                    unit->defaultPatternId = PatternID{};
+                }
+            }
+        }
     
         // 4. Load Lanes and Clips
         if (root.has("lanes")) {
@@ -1360,18 +1412,23 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             channel->setMonitoringEnabled(lj[i]["monitorInput"].asBool());
                         if (lj[i].has("inputChannelIndex") && lj[i]["inputChannelIndex"].isNumber()) {
                             const double raw = lj[i]["inputChannelIndex"].asNumber();
-                            if (std::isfinite(raw))
-                                channel->setInputChannelIndex(std::clamp(static_cast<int>(raw), -2, 1024));
+                            if (std::isfinite(raw)) {
+                                channel->setInputChannelIndex(
+                                    static_cast<int>(std::clamp(raw, -2.0, 1024.0)));
+                            }
                         }
                         if (lj[i].has("width") && lj[i]["width"].isNumber()) {
                             const double raw = lj[i]["width"].asNumber();
-                            if (std::isfinite(raw))
+                            if (std::isfinite(raw)) {
                                 channel->setWidth(static_cast<float>(std::clamp(raw, 0.0, 4.0)));
+                            }
                         }
                         if (lj[i].has("trackColorIndex") && lj[i]["trackColorIndex"].isNumber()) {
                             const double raw = lj[i]["trackColorIndex"].asNumber();
-                            if (std::isfinite(raw))
-                                channel->setTrackColorIndex(std::clamp(static_cast<int>(raw), -1, 1024));
+                            if (std::isfinite(raw)) {
+                                channel->setTrackColorIndex(
+                                    static_cast<int>(std::clamp(raw, -1.0, 1024.0)));
+                            }
                         }
 
                         if (lj[i].has("routing") && lj[i]["routing"].isObject()) {
@@ -1470,8 +1527,30 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 clip.patternId = patternMap[oldPatId];
                                 clip.sourceId = clip.patternId.value;
                                 clip.startBeat = finiteNumberOr(cj[c], "start", 0.0, 0.0, 1000000.0);
-                                clip.durationBeats = finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
-                                clip.sourceOffset = finiteNumberOr(cj[c], "sourceOffset", 0.0, 0.0, 1000000.0);
+                                const auto* loadedPattern = patternManager.getPattern(clip.patternId);
+                                const bool isAudioClip = loadedPattern && loadedPattern->isAudio();
+                                if (isAudioClip) {
+                                    clip.durationSeconds =
+                                        finiteNumberOr(cj[c], "durationSeconds", 0.0, 0.0, 1000000.0);
+                                    if (clip.durationSeconds <= 0.0) {
+                                        const double legacyDurationBeats =
+                                            finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
+                                        clip.durationSeconds = legacyDurationBeats * 60.0 / std::max(result.tempo, 1.0);
+                                    }
+                                    clip.sourceOffsetSeconds =
+                                        finiteNumberOr(cj[c], "sourceOffsetSeconds", 0.0, 0.0, 1000000.0);
+                                    if (clip.sourceOffsetSeconds <= 0.0) {
+                                        const double legacySourceOffsetBeats =
+                                            finiteNumberOr(cj[c], "sourceOffset", 0.0, 0.0, 1000000.0);
+                                        clip.sourceOffsetSeconds =
+                                            legacySourceOffsetBeats * 60.0 / std::max(result.tempo, 1.0);
+                                    }
+                                    clip.durationBeats = playlist.secondsToBeats(clip.durationSeconds);
+                                    clip.sourceOffset = playlist.secondsToBeats(clip.sourceOffsetSeconds);
+                                } else {
+                                    clip.durationBeats = finiteNumberOr(cj[c], "duration", 0.0, 0.0, 1000000.0);
+                                    clip.sourceOffset = finiteNumberOr(cj[c], "sourceOffset", 0.0, 0.0, 1000000.0);
+                                }
                                 clip.name = boundedStringOr(cj[c], "name", "", PROJECT_MAX_STRING_BYTES);
                                 if (cj[c].has("color") && cj[c]["color"].isString()) {
                                     try {

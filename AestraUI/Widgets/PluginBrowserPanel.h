@@ -277,6 +277,7 @@ public:
         bool isEmpty = true;    ///< No plugin loaded
         float dryWet = 1.0f;    ///< Dry/Wet mix (0.0 - 1.0), default 1.0 (Wet)
         bool pendingRemoval = false; ///< UI is waiting for engine to confirm removal
+        bool nonFiniteOutputFault = false; ///< Auto-bypassed after unsafe plugin output
     };
 
     EffectChainRack();

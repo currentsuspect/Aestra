@@ -9,6 +9,7 @@
 #include "Plugin/InternalPluginRegistry.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <cctype>
 #include <chrono>
 #include <cstdlib>
@@ -40,7 +41,11 @@ namespace {
 constexpr uint32_t kScanCacheSchemaVersion = 2;
 
 bool isVisiblePlugin(const PluginInfo& plugin) {
-    return plugin.format != PluginFormat::Internal || InternalPluginRegistry::instance().isPluginAvailable(plugin.id);
+    auto& registry = InternalPluginRegistry::instance();
+    if (plugin.format == PluginFormat::Internal) {
+        return registry.isPluginAvailable(plugin.id);
+    }
+    return !registry.isRegisteredPlugin(plugin.id);
 }
 
 void sanitizeInternalPlugins(std::vector<PluginInfo>& plugins) {
@@ -56,6 +61,8 @@ void mergeBuiltInPlugins(std::vector<PluginInfo>& plugins) {
                                      [&](const PluginInfo& existing) { return existing.id == builtIn.id; });
         if (it == plugins.end()) {
             plugins.push_back(std::move(builtIn));
+        } else {
+            *it = std::move(builtIn);
         }
     }
     sanitizeInternalPlugins(plugins);
@@ -149,13 +156,60 @@ std::string defaultPluginHostPath() {
 }
 
 #ifndef _WIN32
+class ScopedSigpipeBlock {
+public:
+    ScopedSigpipeBlock() {
+        sigset_t mask;
+        sigemptyset(&mask);
+        sigaddset(&mask, SIGPIPE);
+        m_valid = pthread_sigmask(SIG_BLOCK, &mask, &m_previous) == 0;
+    }
+
+    ~ScopedSigpipeBlock() {
+        if (m_valid) {
+            pthread_sigmask(SIG_SETMASK, &m_previous, nullptr);
+        }
+    }
+
+    bool isValid() const { return m_valid; }
+
+private:
+    sigset_t m_previous {};
+    bool m_valid{false};
+};
+
+bool isSigpipePending() {
+    sigset_t pending;
+    return sigpending(&pending) == 0 && sigismember(&pending, SIGPIPE) == 1;
+}
+
+void consumePendingSigpipe() {
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGPIPE);
+    int signal = 0;
+    sigwait(&mask, &signal);
+}
+
 bool sendAll(int fd, const std::string& line) {
+    ScopedSigpipeBlock sigpipeBlock;
+    if (!sigpipeBlock.isValid()) {
+        return false;
+    }
+
     std::string framed = line;
     framed.push_back('\n');
     const char* data = framed.data();
     size_t remaining = framed.size();
     while (remaining > 0) {
+        const bool sigpipeWasPending = isSigpipePending();
         const ssize_t written = write(fd, data, remaining);
+        if (written < 0 && errno == EINTR) {
+            continue;
+        }
+        if (written < 0 && errno == EPIPE && !sigpipeWasPending) {
+            consumePendingSigpipe();
+        }
         if (written <= 0) {
             return false;
         }
@@ -165,7 +219,7 @@ bool sendAll(int fd, const std::string& line) {
     return true;
 }
 
-bool readLineWithTimeout(int fd, pid_t pid, std::string& line, std::chrono::milliseconds timeout) {
+bool readLineWithTimeout(int fd, pid_t pid, std::string& line, std::chrono::milliseconds timeout, bool& childReaped) {
     line.clear();
     const auto deadline = std::chrono::steady_clock::now() + timeout;
     while (std::chrono::steady_clock::now() < deadline) {
@@ -182,12 +236,35 @@ bool readLineWithTimeout(int fd, pid_t pid, std::string& line, std::chrono::mill
         } else {
             int status = 0;
             if (waitpid(pid, &status, WNOHANG) == pid) {
+                childReaped = true;
                 return false;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
     return false;
+}
+
+bool waitForChildExit(pid_t pid, int& status, int attempts, std::chrono::milliseconds delay) {
+    for (int i = 0; i < attempts; ++i) {
+        const pid_t waitResult = waitpid(pid, &status, WNOHANG);
+        if (waitResult == pid) {
+            return true;
+        }
+        if (waitResult < 0 && errno == ECHILD) {
+            return true;
+        }
+        if (waitResult < 0 && errno == EINTR) {
+            continue;
+        }
+        std::this_thread::sleep_for(delay);
+    }
+    return false;
+}
+
+void reapChildAfterKill(pid_t pid, int& status) {
+    while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
+    }
 }
 #endif
 
@@ -230,8 +307,9 @@ std::vector<PluginInfo> scanClapMetadataOutOfProcess(const std::filesystem::path
     std::vector<PluginInfo> result;
     const std::string command = "SCAN clap " + hexEncodeString(path.string());
     std::string response;
+    bool childReaped = false;
     if (sendAll(inPipe[1], command) &&
-        readLineWithTimeout(outPipe[0], pid, response, std::chrono::milliseconds(1000)) &&
+        readLineWithTimeout(outPipe[0], pid, response, std::chrono::milliseconds(1000), childReaped) &&
         response.compare(0, 3, "OK ") == 0) {
         std::istringstream fields(response.substr(3));
         std::string idHex;
@@ -262,14 +340,17 @@ std::vector<PluginInfo> scanClapMetadataOutOfProcess(const std::filesystem::path
     close(inPipe[1]);
     close(outPipe[0]);
     int status = 0;
-    for (int i = 0; i < 10; ++i) {
-        if (waitpid(pid, &status, WNOHANG) == pid) {
-            return result;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    if (childReaped) {
+        return result;
     }
-    kill(pid, SIGTERM);
-    waitpid(pid, &status, 0);
+    if (waitForChildExit(pid, status, 10, std::chrono::milliseconds(10))) {
+        return result;
+    }
+    if (kill(pid, SIGTERM) == 0 && waitForChildExit(pid, status, 10, std::chrono::milliseconds(10))) {
+        return result;
+    }
+    kill(pid, SIGKILL);
+    reapChildAfterKill(pid, status);
     return result;
 #endif
 }

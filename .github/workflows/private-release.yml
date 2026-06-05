@@ -13,10 +13,12 @@ permissions:
 jobs:
   build-sign-package:
     runs-on: windows-2022
+    environment: private-release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: recursive
+          persist-credentials: false
       - name: Ensure premium/build present
         shell: pwsh
         run: |
@@ -26,9 +28,15 @@ jobs:
         uses: lukka/get-cmake@latest
       - name: Configure (full)
         shell: pwsh
+        env:
+          AESTRA_LICENSE_PUBLIC_KEY_HEX: ${{ secrets.AESTRA_LICENSE_PUBLIC_KEY_HEX }}
         run: |
+          if ($env:AESTRA_LICENSE_PUBLIC_KEY_HEX -notmatch '^[0-9A-Fa-f]{64}$') {
+            Write-Error "AESTRA_LICENSE_PUBLIC_KEY_HEX must be configured as 64 hex characters."
+            exit 1
+          }
           New-Item -ItemType Directory -Force -Path build | Out-Null
-          cmake -S . -B build -DAestra_CORE_MODE=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B build -DAestra_CORE_MODE=OFF -DAESTRA_LICENSE_ENABLE_PREMIUM_LEASES=ON -DCMAKE_BUILD_TYPE=Release
       - name: Build
         shell: pwsh
         run: cmake --build build --config Release --parallel
@@ -51,8 +59,14 @@ jobs:
           }
       - name: Package artifacts
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ github.event.inputs.version }}
         run: |
-          $name = "AestraStudioPlus-${{ github.event.inputs.version }}.zip"
+          if ($env:RELEASE_VERSION -notmatch '^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$') {
+            Write-Error "Invalid release version: $env:RELEASE_VERSION"
+            exit 1
+          }
+          $name = "AestraStudioPlus-$env:RELEASE_VERSION.zip"
           Compress-Archive -Path build\**\*.exe,build\**\*.dll -DestinationPath $name
           echo "PACKAGE_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Upload Release

@@ -16,10 +16,22 @@ namespace Aestra {
 namespace Audio {
 
 AuditionEngine::AuditionEngine() {
+    m_decodeWorkerThread = std::thread(&AuditionEngine::decodeWorkerLoop, this);
     Log::info("[AuditionEngine] Created");
 }
 
 AuditionEngine::~AuditionEngine() {
+    cancelPendingDecodes();
+    {
+        std::lock_guard<std::mutex> lock(m_decodeWorkerMutex);
+        m_decodeWorkerRunning = false;
+        m_pendingDecodeJob.reset();
+    }
+    m_decodeWorkerCV.notify_one();
+    if (m_decodeWorkerThread.joinable()) {
+        m_decodeWorkerThread.join();
+    }
+
     stop();
     Log::info("[AuditionEngine] Destroyed");
 }
@@ -71,8 +83,11 @@ void AuditionEngine::addToQueue(const std::string& filePath, bool isReference) {
             shouldPreload = true;
         }
 
-        onQueueUpdated = m_onQueueUpdated;
         Log::info("[AuditionEngine] addToQueue complete");
+    }
+    {
+        std::lock_guard<std::mutex> callbackLock(m_callbackMutex);
+        onQueueUpdated = m_onQueueUpdated;
     }
 
     Log::info("[AuditionEngine] Calling onQueueUpdated...");
@@ -105,10 +120,11 @@ void AuditionEngine::addTimelineTrack(uint32_t trackId, const std::string& track
 
 void AuditionEngine::clearQueue() {
     std::lock_guard<std::mutex> lock(m_queueMutex);
+    cancelPendingDecodes();
     stop();
     m_queue.clear();
     m_currentIndex = -1;
-    std::atomic_store_explicit(&m_currentSource, std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
+    m_currentSource.store(std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
     Log::info("[AuditionEngine] Queue cleared");
 }
 
@@ -124,7 +140,7 @@ void AuditionEngine::removeFromQueue(size_t index) {
 
         if (m_queue.empty()) {
             m_currentIndex = -1;
-            std::atomic_store_explicit(&m_currentSource, std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
+            m_currentSource.store(std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
             m_positionSeconds.store(0.0, std::memory_order_release);
             m_cachedDurationSeconds.store(0.0, std::memory_order_release);
             m_isPlaying.store(false, std::memory_order_release);
@@ -137,6 +153,9 @@ void AuditionEngine::removeFromQueue(size_t index) {
             shouldReloadCurrent = true;
         }
 
+    }
+    {
+        std::lock_guard<std::mutex> callbackLock(m_callbackMutex);
         onQueueUpdated = m_onQueueUpdated;
     }
 
@@ -168,6 +187,9 @@ void AuditionEngine::moveQueueItem(size_t fromIndex, size_t toIndex) {
             ++m_currentIndex;
         }
 
+    }
+    {
+        std::lock_guard<std::mutex> callbackLock(m_callbackMutex);
         onQueueUpdated = m_onQueueUpdated;
     }
     if (onQueueUpdated) onQueueUpdated();
@@ -277,7 +299,7 @@ void AuditionEngine::jumpToTrack(size_t index) {
 void AuditionEngine::play() {
     if (m_currentIndex < 0 && !m_queue.empty()) {
         jumpToTrack(0);
-    } else if (m_currentIndex >= 0 && !std::atomic_load_explicit(&m_currentSource, std::memory_order_acquire)) {
+    } else if (m_currentIndex >= 0 && !m_currentSource.load(std::memory_order_acquire)) {
         // Track selected but not yet decoded — decode now (lazy load)
         std::string filePath;
         double lastPosition = 0.0;
@@ -297,8 +319,13 @@ void AuditionEngine::play() {
     }
 
     bool wasPlaying = m_isPlaying.exchange(true);
-    if (!wasPlaying && m_onPlaybackStateChanged) {
-        m_onPlaybackStateChanged(true);
+    std::function<void(bool)> onPlaybackStateChanged;
+    {
+        std::lock_guard<std::mutex> callbackLock(m_callbackMutex);
+        onPlaybackStateChanged = m_onPlaybackStateChanged;
+    }
+    if (!wasPlaying && onPlaybackStateChanged) {
+        onPlaybackStateChanged(true);
     }
 
     Log::info("[AuditionEngine] Play");
@@ -306,8 +333,13 @@ void AuditionEngine::play() {
 
 void AuditionEngine::pause() {
     bool wasPlaying = m_isPlaying.exchange(false);
-    if (wasPlaying && m_onPlaybackStateChanged) {
-        m_onPlaybackStateChanged(false);
+    std::function<void(bool)> onPlaybackStateChanged;
+    {
+        std::lock_guard<std::mutex> callbackLock(m_callbackMutex);
+        onPlaybackStateChanged = m_onPlaybackStateChanged;
+    }
+    if (wasPlaying && onPlaybackStateChanged) {
+        onPlaybackStateChanged(false);
     }
 
     Log::info("[AuditionEngine] Pause");
@@ -317,8 +349,13 @@ void AuditionEngine::stop() {
     m_isPlaying.store(false);
     m_positionSeconds.store(0.0);
 
-    if (m_onPlaybackStateChanged) {
-        m_onPlaybackStateChanged(false);
+    std::function<void(bool)> onPlaybackStateChanged;
+    {
+        std::lock_guard<std::mutex> callbackLock(m_callbackMutex);
+        onPlaybackStateChanged = m_onPlaybackStateChanged;
+    }
+    if (onPlaybackStateChanged) {
+        onPlaybackStateChanged(false);
     }
 
     Log::info("[AuditionEngine] Stop");
@@ -333,7 +370,7 @@ void AuditionEngine::togglePlayPause() {
 }
 
 void AuditionEngine::seekNormalized(double position) {
-    auto currentSource = std::atomic_load_explicit(&m_currentSource, std::memory_order_acquire);
+    auto currentSource = m_currentSource.load(std::memory_order_acquire);
     if (currentSource) {
         double duration = getDurationSeconds();
         seekSeconds(position * duration);
@@ -350,8 +387,13 @@ void AuditionEngine::seekSeconds(double seconds) {
     //     m_currentSource->setPosition(seconds);
     // }
 
-    if (m_onPositionChanged) {
-        m_onPositionChanged(seconds);
+    std::function<void(double)> onPositionChanged;
+    {
+        std::lock_guard<std::mutex> callbackLock(m_callbackMutex);
+        onPositionChanged = m_onPositionChanged;
+    }
+    if (onPositionChanged) {
+        onPositionChanged(seconds);
     }
 }
 
@@ -372,7 +414,7 @@ double AuditionEngine::getPositionSeconds() const {
 }
 
 double AuditionEngine::getDurationSeconds() const {
-    auto currentSource = std::atomic_load_explicit(&m_currentSource, std::memory_order_acquire);
+    auto currentSource = m_currentSource.load(std::memory_order_acquire);
     if (currentSource) {
         return currentSource->getDurationSeconds();
     }
@@ -404,7 +446,7 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     // RT-safe atomic load - bumps refcount, keeps object alive for this scope
     // NOTE: C++17 uses free function std::atomic_load_explicit()
     //       C++20+ has member syntax: std::atomic<std::shared_ptr<T>>::load()
-    auto currentSource = std::atomic_load_explicit(&m_currentSource, std::memory_order_acquire);
+    auto currentSource = m_currentSource.load(std::memory_order_acquire);
     if (!currentSource) {
         return;
     }
@@ -511,7 +553,7 @@ void AuditionEngine::loadCurrentTrack(bool startPlayback) {
     {
         std::lock_guard<std::mutex> lock(m_queueMutex);
         if (m_currentIndex < 0 || m_currentIndex >= static_cast<int32_t>(m_queue.size())) {
-            std::atomic_store_explicit(&m_currentSource, std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
+            m_currentSource.store(std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
             return;
         }
 
@@ -539,22 +581,52 @@ void AuditionEngine::loadCurrentTrackImpl(const std::string& filePath, double la
 
     Log::info("[AuditionEngine] Queuing async decode: " + filePath + " (gen=" + std::to_string(gen) + ")");
 
-    // Fire-and-forget decode on a detached thread — UI thread returns immediately.
-    // All captures are by value (safe for detached thread).
-    std::thread([this, filePath, lastPosition, title, startPlayback, gen]() {
+    {
+        std::lock_guard<std::mutex> lock(m_decodeWorkerMutex);
+        m_pendingDecodeJob = DecodeJob{filePath, lastPosition, false, title, startPlayback, gen};
+    }
+    m_decodeWorkerCV.notify_one();
+}
+
+void AuditionEngine::cancelPendingDecodes() {
+    m_loadGeneration.fetch_add(1, std::memory_order_acq_rel);
+    {
+        std::lock_guard<std::mutex> lock(m_decodeWorkerMutex);
+        m_pendingDecodeJob.reset();
+    }
+    m_decodeWorkerCV.notify_one();
+}
+
+void AuditionEngine::decodeWorkerLoop() {
+    while (true) {
+        DecodeJob job;
+        {
+            std::unique_lock<std::mutex> lock(m_decodeWorkerMutex);
+            m_decodeWorkerCV.wait(lock, [this] { return m_pendingDecodeJob.has_value() || !m_decodeWorkerRunning; });
+            if (!m_decodeWorkerRunning) {
+                return;
+            }
+            job = std::move(*m_pendingDecodeJob);
+            m_pendingDecodeJob.reset();
+        }
+
+        if (m_loadGeneration.load(std::memory_order_acquire) != job.generation) {
+            continue;
+        }
+
         std::vector<float> decodedData;
         uint32_t sr = 0;
         uint32_t ch = 0;
 
-        if (!decodeAudioFile(filePath, decodedData, sr, ch)) {
-            Log::error("[AuditionEngine] Failed to decode file: " + filePath);
-            return;
+        if (!decodeAudioFile(job.filePath, decodedData, sr, ch)) {
+            Log::error("[AuditionEngine] Failed to decode file: " + job.filePath);
+            continue;
         }
 
         // Discard stale results (user clicked something else)
-        if (m_loadGeneration.load(std::memory_order_acquire) != gen) {
-            Log::info("[AuditionEngine] Discarding stale decode (gen=" + std::to_string(gen) + ")");
-            return;
+        if (m_loadGeneration.load(std::memory_order_acquire) != job.generation) {
+            Log::info("[AuditionEngine] Discarding stale decode (gen=" + std::to_string(job.generation) + ")");
+            continue;
         }
 
         // Create AudioBufferData
@@ -567,46 +639,65 @@ void AuditionEngine::loadCurrentTrackImpl(const std::string& filePath, double la
         try {
             ClipSourceID id{0};
             auto newSource = std::make_shared<ClipSource>(id, "AuditionSource");
-            newSource->setFilePath(filePath);
+            newSource->setFilePath(job.filePath);
             newSource->setBuffer(bufferData);
+
+            if (m_loadGeneration.load(std::memory_order_acquire) != job.generation) {
+                Log::info("[AuditionEngine] Discarding stale decode before publish (gen=" +
+                          std::to_string(job.generation) + ")");
+                continue;
+            }
 
             Log::info("[AuditionEngine] Source loaded: " + std::to_string(bufferData->durationSeconds()) + "s");
 
             // Atomic publish to RT thread
-            std::atomic_store_explicit(&m_currentSource, newSource, std::memory_order_release);
+            m_currentSource.store(newSource, std::memory_order_release);
 
         } catch (const std::exception& e) {
             Log::error("[AuditionEngine] Exception creating source: " + std::string(e.what()));
-            std::atomic_store_explicit(&m_currentSource, std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
+            m_currentSource.store(std::shared_ptr<ClipSource>(nullptr), std::memory_order_release);
             m_cachedDurationSeconds.store(0.0, std::memory_order_release);
-            return;
+            continue;
         }
 
-        const double duration = getDurationSeconds();
-        const double clampedStart = (duration > 0.0) ? std::clamp(lastPosition, 0.0, duration) : std::max(0.0, lastPosition);
+        const double duration = bufferData->durationSeconds();
+        const double clampedStart =
+            (duration > 0.0) ? std::clamp(job.lastPosition, 0.0, duration) : std::max(0.0, job.lastPosition);
         m_positionSeconds.store(clampedStart, std::memory_order_release);
         m_cachedDurationSeconds.store(duration, std::memory_order_release);
 
-        // Notify callback directly (don't use notifyTrackChanged — it reads m_queue
-        // without the lock, which is unsafe from a background thread).
-        if (m_onTrackChanged) {
-            AuditionQueueItem item;
-            item.filePath = filePath;
-            item.title = title;
-            m_onTrackChanged(item);
+        if (m_loadGeneration.load(std::memory_order_acquire) != job.generation) {
+            Log::info("[AuditionEngine] Discarding stale decode before callbacks (gen=" +
+                      std::to_string(job.generation) + ")");
+            continue;
         }
 
-        if (startPlayback && !m_isPlaying.load(std::memory_order_relaxed)) {
+        std::function<void(const AuditionQueueItem&)> onTrackChanged;
+        std::function<void(bool)> onPlaybackStateChanged;
+        {
+            std::lock_guard<std::mutex> lock(m_callbackMutex);
+            onTrackChanged = m_onTrackChanged;
+            onPlaybackStateChanged = m_onPlaybackStateChanged;
+        }
+
+        if (onTrackChanged) {
+            AuditionQueueItem item;
+            item.filePath = job.filePath;
+            item.title = job.title;
+            onTrackChanged(item);
+        }
+
+        if (job.startPlayback && !m_isPlaying.load(std::memory_order_relaxed)) {
             m_isPlaying.store(true, std::memory_order_release);
-            if (m_onPlaybackStateChanged) {
-                m_onPlaybackStateChanged(true);
+            if (onPlaybackStateChanged) {
+                onPlaybackStateChanged(true);
             }
         }
-    }).detach();
+    }
 }
 
 std::shared_ptr<ClipSource> AuditionEngine::getCurrentSource() const {
-    return std::atomic_load_explicit(&m_currentSource, std::memory_order_acquire);
+    return m_currentSource.load(std::memory_order_acquire);
 }
 
 void AuditionEngine::applyDSPChain(float* buffer, uint32_t numFrames, uint32_t numChannels) {
@@ -846,8 +937,20 @@ void AuditionEngine::handleDeferredTrackTransition() {
 }
 
 void AuditionEngine::notifyTrackChanged() {
-    if (m_onTrackChanged && m_currentIndex >= 0 && m_currentIndex < static_cast<int32_t>(m_queue.size())) {
-        m_onTrackChanged(m_queue[static_cast<size_t>(m_currentIndex)]);
+    std::optional<AuditionQueueItem> item;
+    {
+        std::lock_guard<std::mutex> lock(m_queueMutex);
+        if (m_currentIndex >= 0 && m_currentIndex < static_cast<int32_t>(m_queue.size())) {
+            item = m_queue[static_cast<size_t>(m_currentIndex)];
+        }
+    }
+    std::function<void(const AuditionQueueItem&)> onTrackChanged;
+    {
+        std::lock_guard<std::mutex> callbackLock(m_callbackMutex);
+        onTrackChanged = m_onTrackChanged;
+    }
+    if (item && onTrackChanged) {
+        onTrackChanged(*item);
     }
 }
 

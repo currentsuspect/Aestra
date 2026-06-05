@@ -106,6 +106,36 @@ static float normalizeSmallTextSize(float requestedSize, float alpha) {
     return requestedSize;
 }
 
+float NUIRendererGL::getKerningUnits(FT_Face face, uint32_t previousGlyph, uint32_t currentGlyph) const {
+    if (!face || !FT_HAS_KERNING(face) || previousGlyph == 0 || currentGlyph == 0) {
+        return 0.0f;
+    }
+
+    const KerningCacheKey kernKey{face, previousGlyph, currentGlyph};
+    auto kernIt = kerningCache_.find(kernKey);
+    if (kernIt != kerningCache_.end()) {
+        return kernIt->second;
+    }
+
+    FT_Vector kerning = {0, 0};
+    float kernUnits = 0.0f;
+    if (FT_Get_Kerning(face, static_cast<FT_UInt>(previousGlyph), static_cast<FT_UInt>(currentGlyph),
+                       FT_KERNING_DEFAULT, &kerning) == 0) {
+        kernUnits = static_cast<float>(kerning.x);
+    }
+
+    if (kerningCache_.size() >= kKerningCacheMaxSize) {
+        // Keep memory bounded without LRU bookkeeping in the text hot path.
+        auto it = kerningCache_.begin();
+        for (size_t i = 0; i < kKerningCacheMaxSize / 2 && it != kerningCache_.end(); ++i) {
+            it = kerningCache_.erase(it);
+        }
+    }
+
+    kerningCache_[kernKey] = kernUnits;
+    return kernUnits;
+}
+
 // ============================================================================
 // Shader Sources (embedded)
 // ============================================================================
@@ -1985,6 +2015,7 @@ NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
                 float totalWidth = 0.0f;
                 float scale = fontSize / static_cast<float>(atlas.atlasSize);
                 FT_UInt previousGlyph = 0;
+                FT_Face previousFace = nullptr;
 
                 // UTF-8 decode loop
                 size_t index = 0;
@@ -2002,30 +2033,19 @@ NUISize NUIRendererGL::measureText(const std::string& text, float fontSize) {
                         // Advance by replacement width so measurement matches rendering
                         totalWidth += fontSize * 0.6f;
                         previousGlyph = 0;
+                        previousFace = nullptr;
                         continue;
                     }
 
                     const FontData& glyph = it->second;
 
-                    if (fontHasKerning_ && previousGlyph != 0 && glyph.glyphIndex != 0) {
-                        const uint64_t kernKey = (static_cast<uint64_t>(previousGlyph) << 32) | glyph.glyphIndex;
-                        auto kernIt = kerningCache_.find(kernKey);
-                        float kernUnits;
-                        if (kernIt != kerningCache_.end()) {
-                            kernUnits = kernIt->second;
-                        } else {
-                            FT_Vector kerning = {0, 0};
-                            kernUnits = 0.0f;
-                            if (FT_Get_Kerning(ftFace_, previousGlyph, glyph.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
-                                kernUnits = static_cast<float>(kerning.x);
-                            }
-                            kerningCache_[kernKey] = kernUnits;
-                        }
-                        totalWidth += (kernUnits / 64.0f) * scale;
+                    if (previousFace == glyph.face && previousGlyph != 0 && glyph.glyphIndex != 0) {
+                        totalWidth += (getKerningUnits(glyph.face, previousGlyph, glyph.glyphIndex) / 64.0f) * scale;
                     }
 
                     totalWidth += (glyph.advance / 64.0f) * scale;
                     previousGlyph = glyph.glyphIndex;
+                    previousFace = glyph.face;
                 }
 
                 result = {totalWidth, atlas.lineHeight * scale};
@@ -2071,6 +2091,7 @@ bool NUIRendererGL::loadFont(const std::string& fontPath) {
         return false;
     }
     defaultFontPath_ = fontPath;
+    kerningCache_.clear();
 
     fontHasKerning_ = FT_HAS_KERNING(ftFace_) != 0;
 
@@ -2265,6 +2286,7 @@ charSet.push_back(0x23F9); // ⏹ Stop
 
             FontData charData;
             charData.textureId = atlasTextureId;
+            charData.face = ftFace_;
             charData.glyphIndex = glyphIndex;
             charData.width = width;
             charData.height = height;
@@ -2451,6 +2473,7 @@ bool NUIRendererGL::tryAddGlyphToAtlas(uint32_t codepoint, FT_Face face, int atl
 
     FontData charData;
     charData.textureId = atlasTextureId;
+    charData.face = face;
     charData.glyphIndex = glyphIndex;
     charData.width = width;
     charData.height = height;
@@ -2563,6 +2586,7 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
     float x = std::round(position.x);
     float baseline = std::round(position.y);
     FT_UInt previousGlyph = 0;
+    FT_Face previousFace = nullptr;
     // Calculate total bounds for debug
 
     float minX = 1e9f, minY = 1e9f, maxX = -1e9f, maxY = -1e9f;
@@ -2592,26 +2616,18 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
             // Still missing — advance by replacement width so layout doesn't collapse
             x += fontSize * 0.6f;
             previousGlyph = 0;
+            previousFace = nullptr;
             continue;
         }
 
         const FontData& ch = it->second;
 
         // Apply kerning for better spacing (cached to avoid repeated FT_Get_Kerning)
-        if (fontHasKerning_ && previousGlyph != 0 && ch.glyphIndex != 0) {
-            const uint64_t kernKey = (static_cast<uint64_t>(previousGlyph) << 32) | ch.glyphIndex;
-            auto kernIt = kerningCache_.find(kernKey);
-            if (kernIt != kerningCache_.end()) {
-                x += (kernIt->second / 64.0f) * scale;
-            } else {
-                FT_Vector kerning = {0, 0};
-                if (FT_Get_Kerning(ftFace_, previousGlyph, ch.glyphIndex, FT_KERNING_DEFAULT, &kerning) == 0) {
-                    kerningCache_[kernKey] = static_cast<float>(kerning.x);
-                    x += (kerning.x >> 6) * scale;
-                }
-            }
+        if (previousFace == ch.face && previousGlyph != 0 && ch.glyphIndex != 0) {
+            x += (getKerningUnits(ch.face, previousGlyph, ch.glyphIndex) / 64.0f) * scale;
         }
         previousGlyph = ch.glyphIndex;
+        previousFace = ch.face;
         
         // Scale glyph metrics from the atlas to the target size
         float scaledBearingX = ch.bearingX * scale;

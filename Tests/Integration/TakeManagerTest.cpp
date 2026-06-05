@@ -108,6 +108,22 @@ int main() {
     require(std::filesystem::exists(TakeManager::resolveSnapshotPath(projectPath.string(), init.take)),
             "Initial take snapshot was not written");
 
+    TakeManager::TakeEntry malicious = init.take;
+    malicious.snapshotPath = (tempDir / "outside.aes").string();
+    require(TakeManager::resolveSnapshotPath(projectPath.string(), malicious).empty(),
+            "Absolute take snapshot paths must be rejected");
+    malicious.snapshotPath = "../outside.aes";
+    require(TakeManager::resolveSnapshotPath(projectPath.string(), malicious).empty(),
+            "Parent-relative take snapshot paths must be rejected");
+    malicious.snapshotPath = ".";
+    require(TakeManager::resolveSnapshotPath(projectPath.string(), malicious).empty(),
+            "Directory-only take snapshot paths must be rejected");
+#ifndef _WIN32
+    malicious.snapshotPath = "../takes_project.takes\\outside.aes";
+    require(TakeManager::resolveSnapshotPath(projectPath.string(), malicious).empty(),
+            "POSIX backslash-prefixed take path escapes must be rejected");
+#endif
+
     renameProjectLane(trackManager, "Variation Lane");
     const std::string variationContents = serializeProject(trackManager);
     auto created = TakeManager::createTake(projectPath.string(), variationContents, "Drum Bus Experiment");

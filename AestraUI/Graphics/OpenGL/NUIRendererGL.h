@@ -2,11 +2,9 @@
 #pragma once
 
 #include "../NUIRenderer.h"
-#include "../NUIFont.h"
 #include "../NUITextRendererSDF.h"
-#include "../NUITextRenderer.h"
-#include "../NUITextRendererGDI.h"
-#include "../NUITextRendererModern.h"
+#include <ft2build.h>
+#include FT_FREETYPE_H
 #include "NUIRenderBatch.h"
 #include "NUIDirtyRegion.h"
 #include "NUIRenderCache.h"
@@ -230,10 +228,12 @@ private:
     
     // High-quality text rendering helpers
     float getDPIScale();
+    float getKerningUnits(FT_Face face, uint32_t previousGlyph, uint32_t currentGlyph) const;
     
     // FreeType text rendering (moved here so AtlasInfo can reference it)
     struct FontData {
         uint32_t textureId; // Atlas texture id
+        FT_Face face = nullptr; // Source face for glyph-index kerning lookups
         uint32_t glyphIndex = 0; // FreeType glyph index for kerning
         int width = 0;
         int height = 0;
@@ -245,6 +245,27 @@ private:
         float v0 = 0.0f;
         float u1 = 0.0f;
         float v1 = 0.0f;
+    };
+
+    struct KerningCacheKey {
+        FT_Face face = nullptr;
+        uint32_t previousGlyph = 0;
+        uint32_t currentGlyph = 0;
+
+        bool operator==(const KerningCacheKey& other) const {
+            return face == other.face &&
+                   previousGlyph == other.previousGlyph &&
+                   currentGlyph == other.currentGlyph;
+        }
+    };
+
+    struct KerningCacheKeyHash {
+        size_t operator()(const KerningCacheKey& key) const noexcept {
+            size_t hash = std::hash<uintptr_t>{}(reinterpret_cast<uintptr_t>(key.face));
+            hash ^= std::hash<uint32_t>{}(key.previousGlyph) + 0x9e3779b9u + (hash << 6u) + (hash >> 2u);
+            hash ^= std::hash<uint32_t>{}(key.currentGlyph) + 0x9e3779b9u + (hash << 6u) + (hash >> 2u);
+            return hash;
+        }
     };
     
     // Atlas selection helper (consolidates duplicated logic)
@@ -412,9 +433,10 @@ private:
     mutable std::unordered_map<TextMeasurementKey, NUISize, TextMeasurementKeyHash> textMeasurementCache_;
     static constexpr size_t kTextMeasurementCacheMaxSize = 256;
 
-    // Kerning cache: key = (prevGlyph << 32) | currGlyph, value = kerning.x in font units (26.6 FP)
+    // Kerning cache: key = source face + glyph pair, value = kerning.x in font units (26.6 FP)
     // Eliminates repeated FT_Get_Kerning calls for the same glyph pair in the render path
-    mutable std::unordered_map<uint64_t, float> kerningCache_;
+    mutable std::unordered_map<KerningCacheKey, float, KerningCacheKeyHash> kerningCache_;
+    static constexpr size_t kKerningCacheMaxSize = 4096;
 
     FT_Library ftLibrary_;
     FT_Face ftFace_;

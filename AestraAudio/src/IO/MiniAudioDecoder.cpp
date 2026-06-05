@@ -26,6 +26,10 @@ namespace Aestra {
 namespace Audio {
 
 namespace {
+// ~192 MB at float32: enough for several minutes of stereo/96 kHz audio while
+// keeping corrupt length reports from forcing multi-GB allocations.
+constexpr size_t kMaxDecodedSamples = 48000000;
+
 void downmixToStereoImpl(const std::vector<float>& input, uint32_t inChannels, std::vector<float>& output) {
     if (inChannels == 0)
         return;
@@ -210,7 +214,8 @@ bool loadWav(const std::string& filePath, std::vector<float>& audioData, uint32_
 
 #ifdef _WIN32
 bool loadWithMediaFoundation(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate,
-                             uint32_t& numChannels, std::function<void(float)> progressCallback) {
+                             uint32_t& numChannels, std::function<void(float)> progressCallback,
+                             uint64_t maxFrames = 0) {
     // Each decode is independent - Media Foundation is thread-safe
     // Stale decodes are discarded at the PreviewEngine level via generation counter
 
@@ -279,15 +284,29 @@ bool loadWithMediaFoundation(const std::string& filePath, std::vector<float>& au
         BYTE* data;
         DWORD len;
         if (SUCCEEDED(buf->Lock(&data, nullptr, &len))) {
+            const size_t sampleCount = len / sizeof(float);
+            size_t samplesToCopy = sampleCount;
+            if (maxFrames > 0) {
+                const size_t maxSamples = static_cast<size_t>(maxFrames) * static_cast<size_t>(ch);
+                if (audioData.size() >= maxSamples) {
+                    buf->Unlock();
+                    break;
+                }
+                samplesToCopy = std::min(samplesToCopy, maxSamples - audioData.size());
+            }
+
             size_t prev = audioData.size();
-            audioData.resize(prev + (len / sizeof(float)));
-            std::memcpy(audioData.data() + prev, data, len);
+            audioData.resize(prev + samplesToCopy);
+            std::memcpy(audioData.data() + prev, data, samplesToCopy * sizeof(float));
             buf->Unlock();
 
             if (progressCallback && duration > 0) {
                 LONGLONG timestamp = 0;
                 sample->GetSampleTime(&timestamp);
                 progressCallback(static_cast<float>(timestamp) / static_cast<float>(duration));
+            }
+            if (maxFrames > 0 && audioData.size() >= static_cast<size_t>(maxFrames) * static_cast<size_t>(ch)) {
+                break;
             }
         }
     }
@@ -334,9 +353,25 @@ bool loadWithMiniAudio(const std::string& filePath, std::vector<float>& audioDat
     if (ma_decoder_init_file(filePath.c_str(), &config, &decoder) != MA_SUCCESS)
         return false;
 #endif
-    ma_uint64 len;
-    ma_decoder_get_length_in_pcm_frames(&decoder, &len);
-    audioData.resize(static_cast<size_t>(len) * decoder.outputChannels);
+    ma_uint64 len = 0;
+    if (ma_decoder_get_length_in_pcm_frames(&decoder, &len) != MA_SUCCESS || len == 0 ||
+        decoder.outputChannels == 0 || decoder.outputChannels > 64 || decoder.outputSampleRate == 0) {
+        ma_decoder_uninit(&decoder);
+        return false;
+    }
+    const ma_uint32 cappedChannels = std::max<ma_uint32>(decoder.outputChannels, 2);
+    if (len > static_cast<ma_uint64>(std::numeric_limits<size_t>::max() / decoder.outputChannels) ||
+        len > static_cast<ma_uint64>(std::numeric_limits<size_t>::max() / cappedChannels)) {
+        ma_decoder_uninit(&decoder);
+        return false;
+    }
+    const size_t sampleCount = static_cast<size_t>(len) * static_cast<size_t>(decoder.outputChannels);
+    const size_t postStereoSampleCount = static_cast<size_t>(len) * static_cast<size_t>(cappedChannels);
+    if (postStereoSampleCount > kMaxDecodedSamples) {
+        ma_decoder_uninit(&decoder);
+        return false;
+    }
+    audioData.resize(sampleCount);
 
     ma_uint64 totalRead = 0;
     const ma_uint64 chunkSize = 4096 * 4; // Read in chunks to report progress
@@ -395,9 +430,13 @@ bool decodeAudioFile(const std::string& filePath, std::vector<float>& audioData,
 }
 
 bool decodeAudioPreview(const std::string& filePath, std::vector<float>& audioData, uint32_t& sampleRate,
-                        uint32_t& numChannels, uint64_t maxFrames) {
+                        uint32_t& numChannels, double maxSeconds) {
 #if defined(AESTRA_USE_MINIAUDIO)
-    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 0, 0);
+    if (!std::isfinite(maxSeconds) || maxSeconds <= 0.0) {
+        return false;
+    }
+
+    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 2, 0);
     ma_decoder decoder;
 #ifdef _WIN32
     if (ma_decoder_init_file_w(pathStringToWide(filePath).c_str(), &config, &decoder) != MA_SUCCESS)
@@ -407,13 +446,24 @@ bool decodeAudioPreview(const std::string& filePath, std::vector<float>& audioDa
         return false;
 #endif
 
-    ma_uint64 totalFrames = 0;
-    if (ma_decoder_get_length_in_pcm_frames(&decoder, &totalFrames) != MA_SUCCESS || totalFrames == 0) {
-        totalFrames = maxFrames;
+    if (decoder.outputSampleRate == 0 || decoder.outputChannels != 2) {
+        ma_decoder_uninit(&decoder);
+        return false;
     }
 
-    const ma_uint64 framesToRead = std::min<ma_uint64>(totalFrames, std::max<ma_uint64>(1024, maxFrames));
-    audioData.resize(static_cast<size_t>(framesToRead) * decoder.outputChannels);
+    ma_uint64 totalFrames = 0;
+    if (ma_decoder_get_length_in_pcm_frames(&decoder, &totalFrames) != MA_SUCCESS || totalFrames == 0) {
+        totalFrames = static_cast<ma_uint64>(std::ceil(maxSeconds * static_cast<double>(decoder.outputSampleRate)));
+    }
+
+    const ma_uint64 maxFrames = static_cast<ma_uint64>(std::ceil(maxSeconds * static_cast<double>(decoder.outputSampleRate)));
+    const ma_uint64 framesToRead = std::min<ma_uint64>(totalFrames, maxFrames);
+    if (framesToRead == 0 ||
+        framesToRead > static_cast<ma_uint64>(std::numeric_limits<size_t>::max() / decoder.outputChannels)) {
+        ma_decoder_uninit(&decoder);
+        return false;
+    }
+    audioData.resize(static_cast<size_t>(framesToRead) * static_cast<size_t>(decoder.outputChannels));
 
     ma_uint64 framesRead = 0;
     if (ma_decoder_read_pcm_frames(&decoder, audioData.data(), framesToRead, &framesRead) != MA_SUCCESS) {
@@ -431,10 +481,9 @@ bool decodeAudioPreview(const std::string& filePath, std::vector<float>& audioDa
     }
 
     audioData.resize(static_cast<size_t>(framesRead) * numChannels);
-    forceStereo(audioData, numChannels);
     return true;
 #else
-    (void) maxFrames;
+    (void) maxSeconds;
     return decodeAudioFile(filePath, audioData, sampleRate, numChannels, nullptr);
 #endif
 }

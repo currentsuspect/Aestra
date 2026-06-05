@@ -121,7 +121,7 @@ bool SamplerPlugin::initialize(double sampleRate, uint32_t maxBlockSize) {
 void SamplerPlugin::shutdown() {
     m_active = false;
     // Force release of data to ensure cleanup
-    auto old = std::atomic_exchange(&m_data, std::shared_ptr<SampleData>(nullptr));
+    auto old = m_data.exchange(std::shared_ptr<SampleData>(nullptr), std::memory_order_acq_rel);
     GarbageCollector::instance().release(old, "SamplerPlugin::SampleData shutdown");
 }
 
@@ -154,23 +154,19 @@ bool SamplerPlugin::loadSample(const std::string& path) {
         return false;
     }
 
-    // Convert planar to interleaved for Sinc64Turbo
-    // Decoder produces: [L0,L1,L2...,R0,R1,R2...] or [L0,L1,L2...] for mono
-    // Need: [L0,R0,L1,R1,L2,R2...] (always stereo for Sinc64Turbo)
+    // Decode output is interleaved. Keep stereo data in-place and only upmix
+    // mono defensively for callers that bypass decodeAudioFile's forceStereo().
     const size_t numFrames = data.size() / std::max<uint32_t>(channels, 1);
-    std::vector<float> interleaved(numFrames * 2);
-    if (channels == 2) {
-        for (size_t i = 0; i < numFrames; ++i) {
-            interleaved[i * 2] = data[i];
-            interleaved[i * 2 + 1] = data[numFrames + i];
-        }
-    } else {
+    if (channels == 1) {
+        std::vector<float> interleaved(numFrames * 2);
         for (size_t i = 0; i < numFrames; ++i) {
             interleaved[i * 2] = data[i];
             interleaved[i * 2 + 1] = data[i];
         }
+        data = std::move(interleaved);
+    } else if (channels != 2) {
+        return false;
     }
-    data = std::move(interleaved);
 
     // Prepare new data container
     auto newData = std::make_shared<SampleData>();
@@ -181,7 +177,7 @@ bool SamplerPlugin::loadSample(const std::string& path) {
 
     // Atomic Swap (Thread-Safe, Lock-Free-ish)
     // std::atomic_exchange uses standard atomics for shared_ptr
-    auto oldData = std::atomic_exchange(&m_data, newData);
+    auto oldData = m_data.exchange(newData, std::memory_order_acq_rel);
 
     // Safely dispose of old data via Garbage Collector (avoids delete on Audio Thread)
     GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
@@ -190,7 +186,7 @@ bool SamplerPlugin::loadSample(const std::string& path) {
 }
 
 bool SamplerPlugin::normalizeSample(float targetPeak) {
-    auto currentData = std::atomic_load(&m_data);
+    auto currentData = m_data.load(std::memory_order_acquire);
     if (!currentData || currentData->data.empty()) {
         return false;
     }
@@ -209,13 +205,13 @@ bool SamplerPlugin::normalizeSample(float targetPeak) {
         s *= gain;
     }
 
-    auto oldData = std::atomic_exchange(&m_data, edited);
+    auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
     GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
     return true;
 }
 
 bool SamplerPlugin::reverseSample() {
-    auto currentData = std::atomic_load(&m_data);
+    auto currentData = m_data.load(std::memory_order_acquire);
     if (!currentData || currentData->data.empty() || currentData->channels == 0) {
         return false;
     }
@@ -235,7 +231,7 @@ bool SamplerPlugin::reverseSample() {
         }
     }
 
-    auto oldData = std::atomic_exchange(&m_data, edited);
+    auto oldData = m_data.exchange(edited, std::memory_order_acq_rel);
     GarbageCollector::instance().release(oldData, "SamplerPlugin::SampleData");
     return true;
 }
@@ -264,7 +260,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     }
 
     // Thread-safe access to sample data
-    auto currentData = std::atomic_load(&m_data);
+    auto currentData = m_data.load(std::memory_order_acquire);
     if (!currentData || currentData->data.empty())
         return;
 
@@ -309,7 +305,7 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
         while (midiInput && eventIdx < eventCount) {
             const auto& e = midiInput->getEvent(eventIdx);
             if (e.sampleOffset == i) {
-                handleMidiEvent(e, baseRate);
+                handleMidiEvent(e, baseRate, currentData);
                 activeVoiceCountDirty = true;
                 eventIdx++;
             } else if (e.sampleOffset < i) {
@@ -416,7 +412,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
     }
 }
 
-void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseRate) {
+void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseRate,
+                                    const std::shared_ptr<SampleData>& currentData) {
     uint8_t status = event.data[0] & 0xF0;
     uint8_t note = event.data[1];
     uint8_t velocity = event.data[2];
@@ -431,7 +428,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
         if (m_monoMode.load(std::memory_order_relaxed)) {
             double noteStartFrame = 0.0;
-            if (auto currentData = std::atomic_load(&m_data); currentData && currentData->channels > 0) {
+            if (currentData && currentData->channels > 0) {
                 const double totalFrames = static_cast<double>(currentData->data.size() / currentData->channels);
                 noteStartFrame = std::clamp(static_cast<double>(m_loopStartNorm.load(std::memory_order_relaxed)), 0.0, 0.999) *
                                  std::max(1.0, totalFrames - 1.0);
@@ -468,7 +465,7 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
 
         const int maxVoices = std::clamp(m_maxVoices.load(std::memory_order_relaxed), 1, kMaxVoices);
         double noteStartFrame = 0.0;
-        if (auto currentData = std::atomic_load(&m_data); currentData && currentData->channels > 0) {
+        if (currentData && currentData->channels > 0) {
             const double totalFrames = static_cast<double>(currentData->data.size() / currentData->channels);
             noteStartFrame = std::clamp(static_cast<double>(m_loopStartNorm.load(std::memory_order_relaxed)), 0.0, 0.999) *
                              std::max(1.0, totalFrames - 1.0);
@@ -623,7 +620,7 @@ std::vector<uint8_t> SamplerPlugin::saveState() const {
 
     // Sample Path
     {
-        auto current = std::atomic_load(&m_data);
+        auto current = m_data.load(std::memory_order_acquire);
         if (current && !current->path.empty()) {
             json.set("samplePath", Aestra::JSON(current->path));
         }

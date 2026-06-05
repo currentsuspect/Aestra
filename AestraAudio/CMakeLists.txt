@@ -92,6 +92,7 @@ if(EXISTS ${VST3_SDK_DIR}/pluginterfaces AND EXISTS ${VST3_SDK_DIR}/public.sdk)
     set(VST3_HOST_SOURCES
         ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/module.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/hostclasses.cpp
+        ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/pluginterfacesupport.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/hosting/plugprovider.cpp
         ${VST3_SDK_DIR}/public.sdk/source/common/memorystream.cpp
         ${VST3_SDK_DIR}/public.sdk/source/vst/utility/stringconvert.cpp
@@ -180,7 +181,6 @@ set(AESTRA_AUDIO_CORE_SOURCES
     # Models
     src/Models/TrackManager.cpp
     src/Models/PlaylistModel.cpp
-    # src/Models/SelectionModel.cpp  # TODO: Rewrite for new PlaylistModel API (uses obsolete getAllClipsInRange, etc.)
     src/Models/UnitManager.cpp
     src/Models/PatternManager.cpp
     src/Models/ClipSource.cpp
@@ -324,7 +324,6 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Models/PatternSource.h
     include/Models/ClipInstance.h
     include/Models/PatternManager.h
-    include/Models/AudioClip.h
     include/IO/MiniAudioDecoder.h
     include/Models/PlaylistTrack.h
     # Multi-clip playlist system
@@ -333,12 +332,8 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Models/PlaylistModel.h
     include/Models/PlaylistRuntimeSnapshot.h
     include/Models/PlaylistMixer.h
-    # include/Models/SelectionModel.h  # TODO: Fix - references non-existent PlaylistClip.h
     include/IO/WaveformCache.h
-    include/Models/PlaylistGeometry.h
     include/Models/PlaylistSerializer.h
-    include/Models/MultiClipPlaylist.h
-    include/Models/ArsenalUnit.h
     include/Models/UnitManager.h
     include/Music/ScaleContext.h
 
@@ -374,9 +369,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
 
     # Headless / batch processing
     include/Headless/HeadlessMusicGenerator.h
-    
-    src/DummyAudioDriver.h
-    
+
     src/DummyAudioDriver.h
     # Plugin hosting system
     include/Plugin/PluginHost.h
@@ -530,6 +523,11 @@ set_target_properties(AestraPluginHost PROPERTIES
 
 if(AESTRA_ENABLE_TESTS)
     target_compile_definitions(AestraPluginHost PRIVATE AESTRA_ENABLE_TEST_HOOKS)
+endif()
+
+if(AESTRA_HAS_VST3)
+    target_compile_definitions(AestraPluginHost PRIVATE AESTRA_HAS_VST3)
+    target_link_libraries(AestraPluginHost PRIVATE AestraAudioCore)
 endif()
 
 # ENFORCEMENT: AestraAudioCore MUST NOT link Windows libraries

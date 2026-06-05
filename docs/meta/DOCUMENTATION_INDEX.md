@@ -28,7 +28,7 @@ Welcome to the comprehensive documentation hub for **Aestra**! This guide helps 
 6. **[🎛️ Rumble MVP](../technical/RUMBLE_MVP_PLAN.md)** - Internal instrument slice status
 
 ### For Project Management
-1. **[📋 Current Changelog](../../meta/CHANGELOGS/CHANGELOG_2026Q1.md)** - Current 2026 milestone history
+1. **[📋 Current Changelog](../../meta/CHANGELOGS/CHANGELOG_2026Q2.md)** - Current 2026 milestone history
 2. **[📚 Historical Meta Archive](../../meta/README.md)** - Older summaries, bug-fix notes, and archive context
 3. **[📜 License Reference](../about/license-reference.md)** - Licensing details
 4. **[🤝 Community](../community/)** - Support and guidelines
@@ -74,7 +74,7 @@ Welcome to the comprehensive documentation hub for **Aestra**! This guide helps 
 - **[Generated Docs](../../docs/api-reference/html/index.html)** - Doxygen-generated docs (generate with `doxygen Doxyfile`)
 
 ### 📋 **Release Information**
-- **[Current Changelog](../../meta/CHANGELOGS/CHANGELOG_2026Q1.md)** - Current 2026 milestone history
+- **[Current Changelog](../../meta/CHANGELOGS/CHANGELOG_2026Q2.md)** - Current 2026 milestone history
 - **[Historical Changelog Snapshot](../../meta/CHANGELOGS/CHANGELOG_2025Q1.md)** - Older release-era changelog
 - **[Historical Meta Archive](../../meta/README.md)** - Archived work logs, bug notes, and task summaries
 - **[Milestone Updates](../../meta/README.md)** - Entry point for archived implementation notes
@@ -111,7 +111,7 @@ Welcome to the comprehensive documentation hub for **Aestra**! This guide helps 
 
 ### 📊 **For Project Managers**
 1. Review [Roadmap](../technical/roadmap.md)
-2. Check [Current Changelog](../../meta/CHANGELOGS/CHANGELOG_2026Q1.md)
+2. Check [Current Changelog](../../meta/CHANGELOGS/CHANGELOG_2026Q2.md)
 3. Read [Development Logs](../../meta/SESSION_SUMMARY_DEC2024.md) for archive context
 4. Understand [Milestones](../technical/roadmap.md#roadmap-phases-now--dec-2026)
 

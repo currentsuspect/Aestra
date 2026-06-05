@@ -18,8 +18,8 @@ void AddClipCommand::execute() {
         m_clip.id = ClipInstanceID::generate();
     }
 
-    m_playlist.addClip(m_laneId, m_clip);
-    m_executed = true;
+    const ClipInstanceID addedId = m_playlist.addClip(m_laneId, m_clip);
+    m_executed = addedId.isValid();
 }
 
 void AddClipCommand::undo() {
@@ -35,8 +35,8 @@ void AddClipCommand::redo() {
         return;
 
     // Re-add using the exact same ID so it restores state correctly
-    m_playlist.addClip(m_laneId, m_clip);
-    m_executed = true;
+    const ClipInstanceID addedId = m_playlist.addClip(m_laneId, m_clip);
+    m_executed = addedId.isValid();
 }
 
 std::string AddClipCommand::serialize() const {

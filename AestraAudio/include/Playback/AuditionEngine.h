@@ -12,12 +12,15 @@
  */
 
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include "AestraAtomicSharedPtr.h"
 #include <mutex>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "ClipResampler.h"
@@ -216,13 +219,25 @@ public:
 
     // === Callbacks ===
 
-    void setOnTrackChanged(std::function<void(const AuditionQueueItem&)> cb) { m_onTrackChanged = std::move(cb); }
+    void setOnTrackChanged(std::function<void(const AuditionQueueItem&)> cb) {
+        std::lock_guard<std::mutex> lock(m_callbackMutex);
+        m_onTrackChanged = std::move(cb);
+    }
 
-    void setOnPlaybackStateChanged(std::function<void(bool isPlaying)> cb) { m_onPlaybackStateChanged = std::move(cb); }
+    void setOnPlaybackStateChanged(std::function<void(bool isPlaying)> cb) {
+        std::lock_guard<std::mutex> lock(m_callbackMutex);
+        m_onPlaybackStateChanged = std::move(cb);
+    }
 
-    void setOnPositionChanged(std::function<void(double seconds)> cb) { m_onPositionChanged = std::move(cb); }
+    void setOnPositionChanged(std::function<void(double seconds)> cb) {
+        std::lock_guard<std::mutex> lock(m_callbackMutex);
+        m_onPositionChanged = std::move(cb);
+    }
 
-    void setOnQueueUpdated(std::function<void()> cb) { m_onQueueUpdated = std::move(cb); }
+    void setOnQueueUpdated(std::function<void()> cb) {
+        std::lock_guard<std::mutex> lock(m_callbackMutex);
+        m_onQueueUpdated = std::move(cb);
+    }
 
     // === Audio Processing ===
 
@@ -237,12 +252,30 @@ public:
 
 private:
     void loadCurrentTrack(bool startPlayback);
-    /// Internal: decode and publish track. Caller must NOT hold m_queueMutex.
-    /// Spawns a background thread for the actual decode to keep the UI responsive.
+    /// Internal: queue decode and publish track. Caller must NOT hold m_queueMutex.
     void loadCurrentTrackImpl(const std::string& filePath, double lastPosition, bool isTimeline,
                               const std::string& title, bool startPlayback);
+    void decodeWorkerLoop();
+
+    struct DecodeJob {
+        std::string filePath;
+        double lastPosition{0.0};
+        bool isTimeline{false};
+        std::string title;
+        bool startPlayback{false};
+        uint64_t generation{0};
+    };
+
+    void cancelPendingDecodes();
+
     /// Generation counter: incremented on each load request so stale decode results are discarded
     std::atomic<uint64_t> m_loadGeneration{0};
+    std::thread m_decodeWorkerThread;
+    std::mutex m_decodeWorkerMutex;
+    std::condition_variable m_decodeWorkerCV;
+    std::optional<DecodeJob> m_pendingDecodeJob;
+    bool m_decodeWorkerRunning{true};
+
     // Queue (UI thread only - no RT access)
     std::vector<AuditionQueueItem> m_queue;
     int32_t m_currentIndex{-1};
@@ -258,7 +291,7 @@ private:
     // RT-safe source pointer (C++17 atomic shared_ptr via std::atomic_load/store)
     // NOTE: C++20+ has std::atomic<std::shared_ptr<T>> with member .load()/.store()
     //       C++17 requires free functions std::atomic_load_explicit/std::atomic_store_explicit
-    std::shared_ptr<ClipSource> m_currentSource;
+    AtomicSharedPtr<ClipSource> m_currentSource;
 
     // DSP
     AuditionDSPPreset m_currentPreset{AuditionDSPPreset::Bypass()};
@@ -308,6 +341,7 @@ private:
     std::function<void(bool)> m_onPlaybackStateChanged;
     std::function<void(double)> m_onPositionChanged;
     std::function<void()> m_onQueueUpdated;
+    mutable std::mutex m_callbackMutex;
 
     // Internal helpers
     void loadCurrentTrack();

@@ -238,6 +238,27 @@ bool runInvalidMetadataTest() {
     return true;
 }
 
+bool runPreviewDecodeLimitTest() {
+    std::cout << "Test 6: Preview decode frame limit...";
+    std::vector<int32_t> samples(100, 1024);
+    std::string path = makeTempPath("Aestra_preview_limit.wav");
+    writeTestWav(path, 16, 48000, 1, samples, false);
+
+    std::vector<float> audio;
+    uint32_t sampleRate = 0;
+    uint32_t channels = 0;
+    const bool ok = decodeAudioPreview(path, audio, sampleRate, channels, 4.0 / 48000.0);
+    fs::remove(path);
+
+    if (!ok || sampleRate != 48000 || channels != 2 || audio.size() != 8) {
+        std::cout << " FAILED (SR: " << sampleRate << " CH: " << channels << " Size: " << audio.size() << ")\n";
+        return false;
+    }
+
+    std::cout << " OK\n";
+    return true;
+}
+
 } // namespace
 
 int main() {
@@ -247,6 +268,7 @@ int main() {
     success &= run24BitTest();
     success &= run32BitPcmTest();
     success &= runInvalidMetadataTest();
+    success &= runPreviewDecodeLimitTest();
 
     if (success) {
         std::cout << "All WAV loader tests passed.\n";

@@ -5,6 +5,7 @@
 
 #include <array>
 #include <atomic>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -17,12 +18,21 @@ class PluginManager;
 class EffectChainSnapshot;
 
 /**
+ * @brief RT-visible automatic bypass state for unsafe plugin output.
+ */
+struct EffectSlotFaultState {
+    std::atomic<bool> bypassedByNonFiniteOutput{false};
+    std::atomic<uint64_t> nonFiniteOutputCount{0};
+};
+
+/**
  * @brief Single slot in an effect chain
  */
 struct EffectSlot {
     PluginInstancePtr plugin;           ///< Plugin instance (nullptr = empty)
     std::atomic<bool> bypassed{false};  ///< Bypass this slot
     std::atomic<float> dryWetMix{1.0f}; ///< 0.0 = dry only, 1.0 = wet only
+    std::shared_ptr<EffectSlotFaultState> faultState{std::make_shared<EffectSlotFaultState>()};
 
     bool isEmpty() const { return plugin == nullptr; }
 };
@@ -166,6 +176,16 @@ public:
     bool isSlotBypassed(size_t slotIndex) const;
 
     /**
+     * @brief Check if a slot was automatically bypassed after unsafe non-finite output.
+     */
+    bool isSlotBypassedByNonFiniteOutput(size_t slotIndex) const;
+
+    /**
+     * @brief Number of times a slot produced non-finite output and was quarantined.
+     */
+    uint64_t getSlotNonFiniteOutputCount(size_t slotIndex) const;
+
+    /**
      * @brief Bypass entire chain
      */
     void setChainBypassed(bool bypassed) { m_chainBypassed.store(bypassed); }
@@ -293,9 +313,10 @@ private:
  * so plugin instances stay alive while any snapshot exists.
  */
 struct EffectChainSnapshotSlot {
-    PluginInstancePtr plugin;    ///< Plugin instance (copied shared_ptr)
-    bool bypassed;               ///< Bypass state (copied value)
-    float dryWetMix;            ///< Dry/wet mix (copied value)
+    PluginInstancePtr plugin;                         ///< Plugin instance (copied shared_ptr)
+    bool bypassed;                                    ///< Bypass state (copied value)
+    float dryWetMix;                                  ///< Dry/wet mix (copied value)
+    std::shared_ptr<EffectSlotFaultState> faultState; ///< Shared RT-visible fault state
 
     bool isEmpty() const { return plugin == nullptr; }
 };
@@ -320,6 +341,7 @@ public:
             m_slots[i].plugin = slots[i].plugin;
             m_slots[i].bypassed = slots[i].bypassed.load(std::memory_order_acquire);
             m_slots[i].dryWetMix = slots[i].dryWetMix.load(std::memory_order_acquire);
+            m_slots[i].faultState = slots[i].faultState;
         }
         m_slotCount = MAX_SLOTS;
     }

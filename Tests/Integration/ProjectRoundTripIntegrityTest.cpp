@@ -6,15 +6,19 @@
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
 #include "Models/TrackManager.h"
+#include "Plugin/PluginHost.h"
+#include "Plugin/PluginManager.h"
 
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <string>
-#include <vector>
 #include <regex>
+#include <string>
+#include <variant>
+#include <vector>
 
 namespace {
 
@@ -264,6 +268,148 @@ void testArsenalUnitsRoundTrip() {
 
     compareProjectSemantic(firstSave, secondSave, "arsenal_units");
     std::filesystem::remove_all(testDir);
+}
+
+void testArsenalDefaultPatternRebindsAfterLoad() {
+    std::cout << "[TEST] Arsenal default pattern rebinds after load..." << std::endl;
+
+    auto testDir = makeTempDir();
+    std::filesystem::path testProject = testDir / "project.aes";
+
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [
+            {"id": 10, "name": "Other Pattern", "type": "midi", "length": 8.0, "notes": []},
+            {"id": 42, "name": "Sampler Restored Pattern", "type": "midi", "length": 8.0,
+             "notes": [{"pitch": 60, "startBeat": 0.0, "durationBeats": 1.0, "velocity": 1.0,
+                        "unitId": 7, "pitchOffset": 0, "gate": 1.0, "slide": false}]}
+        ],
+        "lanes": [],
+        "arsenal": {
+            "nextId": 8,
+            "units": [{
+                "id": 7,
+                "name": "Sampler 1",
+                "enabled": true,
+                "targetMixerRoute": -1,
+                "timelineLaneAssignment": -1,
+                "color": "4286611584",
+                "muted": false,
+                "solo": false,
+                "armed": false,
+                "audioClipPath": "",
+                "audioDurationSeconds": 0.0,
+                "defaultPatternId": 42,
+                "group": {"id": 2, "name": "Drums"},
+                "type": {"id": 1, "name": "Sampler"}
+            }]
+        }
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto tm = std::make_shared<Aestra::Audio::TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), tm);
+    assert(result.ok);
+
+    const auto* unit = tm->getUnitManager().getUnit(7);
+    assert(unit);
+    assert(unit->defaultPatternId.isValid());
+    assert(unit->defaultPatternId.value != 42);
+
+    const auto* pattern = tm->getPatternManager().getPattern(unit->defaultPatternId);
+    assert(pattern);
+    assert(pattern->name == "Sampler Restored Pattern");
+    assert(std::holds_alternative<Aestra::Audio::MidiPayload>(pattern->payload));
+    const auto& payload = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
+    assert(payload.notes.size() == 1);
+    assert(payload.notes[0].unitId == 7);
+
+    std::filesystem::remove_all(testDir);
+}
+
+void testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad() {
+    std::cout << "[TEST] Arsenal sampler audioClipPath rehydrates plugin after load..." << std::endl;
+
+    auto& pluginManager = Aestra::Audio::PluginManager::getInstance();
+    assert(pluginManager.initialize());
+
+    auto testDir = makeTempDir();
+    std::filesystem::path testWav = testDir / "sampler.wav";
+    std::filesystem::path testProject = testDir / "project.aes";
+    assert(writeMinimalWavMono16(testWav, 48000, 4800));
+
+    const std::string wavPath = testWav.generic_string();
+    std::string projectJson = R"({
+        "version": 2,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [
+            {"id": 1, "name": "Sampler Pattern", "type": "midi", "length": 8.0,
+             "notes": [{"pitch": 60, "startBeat": 0.0, "durationBeats": 1.0, "velocity": 1.0,
+                        "unitId": 1, "pitchOffset": 0, "gate": 1.0, "slide": false}]}
+        ],
+        "lanes": [],
+        "arsenal": {
+            "nextId": 2,
+            "units": [{
+                "id": 1,
+                "name": "Sampler 1",
+                "enabled": true,
+                "targetMixerRoute": 0,
+                "timelineLaneAssignment": 0,
+                "color": "4286611584",
+                "muted": false,
+                "solo": false,
+                "armed": false,
+                "audioClipPath": ")" + wavPath + R"(",
+                "audioDurationSeconds": 0.1,
+                "defaultPatternId": 1,
+                "pluginId": "com.Aestrastudios.sampler",
+                "pluginStateHex": "7b22706172616d73223a5b302e3030312c322c312c302e3030312c305d2c22726f6f744d6964694e6f7465223a36307d",
+                "group": {"id": 2, "name": "Drums"},
+                "type": {"id": 1, "name": "Sampler"}
+            }]
+        }
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto tm = std::make_shared<Aestra::Audio::TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), tm);
+    assert(result.ok);
+
+    auto plugin = tm->getUnitManager().getUnitPlugin(1);
+    assert(plugin);
+    assert(plugin->isActive());
+
+    constexpr uint32_t kFrames = 256;
+    std::vector<float> left(kFrames, 0.0f);
+    std::vector<float> right(kFrames, 0.0f);
+    float* outputs[2] = {left.data(), right.data()};
+
+    Aestra::Audio::MidiBuffer midi;
+    const uint8_t noteOn[3] = {0x90, 60, 127};
+    midi.addEvent(0, noteOn, 3);
+    plugin->process(nullptr, outputs, 0, 2, kFrames, &midi, nullptr);
+
+    float peak = 0.0f;
+    for (uint32_t i = 0; i < kFrames; ++i) {
+        peak = std::max(peak, std::abs(left[i]));
+        peak = std::max(peak, std::abs(right[i]));
+    }
+    assert(peak > 1.0e-5f);
+
+    std::filesystem::remove_all(testDir);
+    std::cout << "[PASS] Arsenal sampler audioClipPath rehydrates plugin after load" << std::endl;
 }
 
 void testMissingPatternReferenceDoesNotCompound() {
@@ -539,6 +685,123 @@ void testLegacyProjectWithoutAutomation() {
     std::filesystem::remove_all(testDir);
 }
 
+void testAudioClipDurationSecondsMigrationAndTempoRecompute() {
+    std::cout << "[TEST] Audio clip duration seconds migration and tempo recompute..." << std::endl;
+
+    auto testDir = makeTempDir();
+    std::filesystem::path testProject = testDir / "project_audio_duration_migration.aes";
+
+    const std::string legacyJson = R"({
+        "version": 1,
+        "tempo": 120,
+        "playhead": 0,
+        "sources": [
+            {"id": 1, "path": "missing_audio.wav"}
+        ],
+        "patterns": [
+            {"id": 1, "name": "Audio Pattern", "type": "audio", "length": 4.0,
+             "sourceId": 1, "slices": [{"start": 0.0, "length": 44100.0}]},
+            {"id": 2, "name": "Midi Pattern", "type": "midi", "length": 4.0,
+             "notes": [{"pitch": 60, "startBeat": 0.0, "durationBeats": 1.0, "velocity": 1.0}]}
+        ],
+        "lanes": [
+            {"id": "lane-1", "name": "Track 1", "clips": [
+                {"id": "clip-audio", "patternId": 1, "start": 0.0, "duration": 4.0, "name": "Audio Clip"},
+                {"id": "clip-midi", "patternId": 2, "start": 4.0, "duration": 4.0, "name": "Midi Clip"}
+            ]}
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject, std::ios::binary | std::ios::trunc);
+    out << legacyJson;
+    out.close();
+
+    auto tm = std::make_shared<Aestra::Audio::TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), tm);
+    assert(result.ok);
+
+    auto laneIds = tm->getPlaylistModel().getLaneIDs();
+    assert(!laneIds.empty());
+    auto* lane = tm->getPlaylistModel().getLane(laneIds[0]);
+    assert(lane);
+    assert(lane->clips.size() == 2);
+
+    auto* audioPattern = tm->getPatternManager().getPattern(lane->clips[0].patternId);
+    auto* midiPattern = tm->getPatternManager().getPattern(lane->clips[1].patternId);
+    assert(audioPattern && audioPattern->isAudio());
+    assert(midiPattern && midiPattern->isMidi());
+    assert(std::abs(lane->clips[0].durationSeconds - 2.0) < 1.0e-9);
+    assert(std::abs(lane->clips[0].durationBeats - 4.0) < 1.0e-9);
+    assert(std::abs(lane->clips[1].durationBeats - 4.0) < 1.0e-9);
+
+    tm->getPlaylistModel().setBPM(60.0);
+    lane = tm->getPlaylistModel().getLane(laneIds[0]);
+    assert(lane);
+    assert(std::abs(lane->clips[0].durationSeconds - 2.0) < 1.0e-9);
+    assert(std::abs(lane->clips[0].durationBeats - 2.0) < 1.0e-9);
+    assert(std::abs(lane->clips[1].durationBeats - 4.0) < 1.0e-9);
+
+    std::string saved = serializeProject(*tm, 60.0, 0.0);
+    assert(saved.find("\"durationSeconds\"") != std::string::npos);
+
+    std::cout << "[PASS] Audio clip duration seconds migration and tempo recompute" << std::endl;
+    std::filesystem::remove_all(testDir);
+}
+
+void testAudioClipPlacementHelperPersistsClipAndDurationSeconds() {
+    std::cout << "[TEST] Audio clip placement helper persists clip and duration seconds..." << std::endl;
+
+    auto testDir = makeTempDir();
+    std::filesystem::path testWav = testDir / "placed_audio.wav";
+    std::filesystem::path testProject = testDir / "project_audio_placement.aes";
+    assert(writeMinimalWavMono16(testWav, 48000, 48000));
+
+    auto tm1 = std::make_shared<Aestra::Audio::TrackManager>();
+    auto& sourceManager = tm1->getSourceManager();
+    const Aestra::Audio::ClipSourceID sourceId = sourceManager.getOrCreateSource(testWav.string());
+    assert(sourceId.isValid());
+
+    Aestra::Audio::AudioSlicePayload payload;
+    payload.audioSourceId = sourceId;
+    payload.durationSeconds = 1.0;
+    payload.slices.push_back({0.0, 1.0, 0.0, 48000.0});
+
+    auto& patternManager = tm1->getPatternManager();
+    const auto patternId = patternManager.createAudioPattern("Placed Audio", 2.0, payload);
+    assert(patternId.isValid());
+
+    auto& playlist = tm1->getPlaylistModel();
+    const auto laneId = playlist.createLane("Audio Lane");
+    const auto clipId = playlist.addClipFromPattern(laneId, patternId, 4.0, 2.0);
+    assert(clipId.isValid());
+
+    const auto* clip = playlist.getClip(clipId);
+    assert(clip);
+    assert(std::abs(clip->durationSeconds - 1.0) < 1.0e-9);
+
+    std::string firstSave = serializeProject(*tm1, 120.0, 0.0);
+    assert(firstSave.find("\"durationSeconds\"") != std::string::npos);
+
+    std::ofstream out(testProject, std::ios::binary | std::ios::trunc);
+    out << firstSave;
+    out.close();
+
+    auto tm2 = std::make_shared<Aestra::Audio::TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), tm2);
+    assert(result.ok);
+
+    const auto loadedLaneId = tm2->getPlaylistModel().getLaneId(0);
+    const auto* loadedLane = tm2->getPlaylistModel().getLane(loadedLaneId);
+    assert(loadedLane);
+    assert(loadedLane->clips.size() == 1);
+    assert(std::abs(loadedLane->clips[0].durationSeconds - 1.0) < 1.0e-9);
+    assert(std::abs(loadedLane->clips[0].durationBeats - 2.0) < 1.0e-9);
+
+    std::cout << "[PASS] Audio clip placement helper persists clip and duration seconds" << std::endl;
+    std::filesystem::remove_all(testDir);
+}
+
 }
 
 int main() {
@@ -547,10 +810,14 @@ int main() {
     testEmptyProjectRoundTrip();
     testSourcesLanesClipsPatternsRoundTrip();
     testArsenalUnitsRoundTrip();
+    testArsenalDefaultPatternRebindsAfterLoad();
+    testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad();
     testMissingPatternReferenceDoesNotCompound();
     testMultipleRoundTripCycles();
     testAutomationRoundTrip();
     testLegacyProjectWithoutAutomation();
+    testAudioClipDurationSecondsMigrationAndTempoRecompute();
+    testAudioClipPlacementHelperPersistsClipAndDurationSeconds();
 
     std::cout << "=== All tests passed ===" << std::endl;
     return 0;

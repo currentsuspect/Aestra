@@ -5,6 +5,7 @@ import { parseSignRequest, SignRequestError } from "./schema";
 import { signCanonicalLease, type Env } from "./signing";
 
 const LEASE_PERIOD_SECONDS = 604800;
+const MAX_CLIENT_CLOCK_SKEW_SECONDS = 300;
 
 export type AccountRefreshRequest = {
   deviceHash: string;
@@ -38,6 +39,8 @@ export function parseAccountRefreshRequest(input: unknown, nowSeconds: number): 
   if (issuedAtValue !== undefined) {
     if (typeof issuedAtValue !== "number" || !Number.isSafeInteger(issuedAtValue) || issuedAtValue < 0) {
       issues.push("issued_at must be a non-negative safe integer when present");
+    } else if (issuedAtValue > nowSeconds + MAX_CLIENT_CLOCK_SKEW_SECONDS) {
+      issues.push("issued_at must not be in the future");
     } else {
       issuedAt = issuedAtValue;
     }

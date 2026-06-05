@@ -7,6 +7,7 @@
 #include "Plugin/BuiltInPlugins.h"
 #include "Plugin/PluginManager.h"
 #include "Plugin/SamplerPlugin.h"
+#include "AestraJSON.h"
 #include "AestraLog.h"
 
 #include <algorithm>
@@ -19,7 +20,23 @@
 
 namespace Aestra {
 namespace Audio {
+
+bool shouldRestoreArsenalPluginFromProject(const PluginInfo& plugin) noexcept {
+    return plugin.format == PluginFormat::Internal;
+}
+
 namespace {
+bool samplerStateHasSamplePath(const std::vector<uint8_t>& state) {
+    if (state.empty()) {
+        return false;
+    }
+
+    const std::string text(state.begin(), state.end());
+    const auto json = Aestra::JSON::parse(text);
+    return json.isObject() && json.has("samplePath") && json["samplePath"].isString() &&
+           !json["samplePath"].asString().empty();
+}
+
 UnitGroup unitGroupForType(UnitType type) {
     switch (type) {
     case UnitType::Instrument: return UnitGroup::Synth;
@@ -235,14 +252,14 @@ void UnitManager::publishSnapshot() {
     }
 
     // Retire old snapshot through GC so the audio thread never dereferences freed memory.
-    auto old = std::atomic_exchange(&m_publishedSnapshot, snapshot);
+    auto old = m_publishedSnapshot.exchange(snapshot, std::memory_order_acq_rel);
     if (old) {
         GarbageCollector::instance().release(old, "UnitManager::AudioArsenalSnapshot");
     }
 }
 
 std::shared_ptr<const AudioArsenalSnapshot> UnitManager::getAudioSnapshot() const {
-    auto snapshot = std::atomic_load(&m_publishedSnapshot);
+    auto snapshot = m_publishedSnapshot.load(std::memory_order_acquire);
     return std::const_pointer_cast<const AudioArsenalSnapshot>(snapshot);
 }
 
@@ -459,7 +476,8 @@ void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
     uint32_t previewRate = 0;
     uint32_t previewChannels = 0;
     constexpr uint64_t kPreviewMaxFrames = 48000 * 24;
-    if (decodeAudioPreview(path, previewAudio, previewRate, previewChannels, kPreviewMaxFrames)) {
+    constexpr double kPreviewMaxSeconds = static_cast<double>(kPreviewMaxFrames) / 48000.0;
+    if (decodeAudioPreview(path, previewAudio, previewRate, previewChannels, kPreviewMaxSeconds)) {
         u->audioPreviewWaveform = generatePreviewWaveform(previewAudio, previewChannels);
         if (u->audioDurationSeconds <= 0.0 && previewRate > 0 && previewChannels > 0) {
             u->audioDurationSeconds = static_cast<double>(previewAudio.size()) / static_cast<double>(previewRate * previewChannels);
@@ -701,7 +719,16 @@ void UnitManager::loadFromJSON(const JSON& json) {
         }
 
         if (!unit.pluginId.empty()) {
-            unit.plugin = pluginManager.createInstanceById(unit.pluginId);
+            const PluginInfo* pluginInfo = pluginManager.findPlugin(unit.pluginId);
+            if (pluginInfo && shouldRestoreArsenalPluginFromProject(*pluginInfo)) {
+                unit.plugin = pluginManager.createInstance(*pluginInfo);
+            } else if (pluginInfo) {
+                Aestra::Log::warning("[UnitManager] Skipping external Arsenal plugin restore from project for unit " +
+                                     std::to_string(unit.id) + ": " + unit.pluginId);
+            } else {
+                Aestra::Log::warning("[UnitManager] Missing Arsenal plugin during project restore for unit " +
+                                     std::to_string(unit.id) + ": " + unit.pluginId);
+            }
             if (unit.plugin) {
                 double sr = m_sampleRate.load(std::memory_order_relaxed);
                 uint32_t blockSize = m_blockSize.load(std::memory_order_relaxed);
@@ -709,10 +736,26 @@ void UnitManager::loadFromJSON(const JSON& json) {
 
                 // Load state BEFORE activation to ensure plugin is ready before processing audio.
                 // This matches EffectChain lifecycle: create -> initialize -> loadState -> activate.
+                bool stateLoaded = true;
+                const bool samplerStateIncludesSamplePath = samplerStateHasSamplePath(unit.pluginState);
                 if (!unit.pluginState.empty()) {
                     if (!unit.plugin->loadState(unit.pluginState)) {
+                        stateLoaded = false;
                         Aestra::Log::warning("[UnitManager] Failed to load state for unit " +
                                              std::to_string(unit.id) + " — using default state");
+                    }
+                }
+
+                // Older project saves kept the sampler file only in UnitInfo::audioClipPath.
+                // Rehydrate that path so restored MIDI has sample data even when pluginState lacks samplePath.
+                if (!unit.audioClipPath.empty() && (!samplerStateIncludesSamplePath || !stateLoaded)) {
+                    if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(unit.plugin)) {
+                        if (sampler->loadSample(unit.audioClipPath)) {
+                            unit.pluginState = sampler->saveState();
+                        } else {
+                            Aestra::Log::warning("[UnitManager] Failed to reload sampler audio for unit " +
+                                                 std::to_string(unit.id) + ": " + unit.audioClipPath);
+                        }
                     }
                 }
 

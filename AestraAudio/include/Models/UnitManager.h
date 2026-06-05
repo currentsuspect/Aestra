@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include "AestraAtomicSharedPtr.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -40,6 +41,11 @@ enum class ArsenalRouteMode : uint8_t {
 constexpr ArsenalRouteMode arsenalRouteModeFromRouteId(int routeId) noexcept {
     return routeId < 0 ? ArsenalRouteMode::PreviewToMaster : ArsenalRouteMode::RoutedToTimelineTrack;
 }
+
+/**
+ * @brief Return true when a project-loaded Arsenal plugin may be instantiated automatically.
+ */
+bool shouldRestoreArsenalPluginFromProject(const PluginInfo& plugin) noexcept;
 
 enum class UnitGroup : uint32_t {
     Unknown = 0,
@@ -332,7 +338,7 @@ private:
      * Read by getAudioSnapshot() on the audio thread via atomic_load.
      * Release semantics on store ensures the audio thread never sees a partial snapshot.
      */
-    mutable std::shared_ptr<AudioArsenalSnapshot> m_publishedSnapshot{std::make_shared<AudioArsenalSnapshot>()};
+    mutable AtomicSharedPtr<AudioArsenalSnapshot> m_publishedSnapshot{std::make_shared<AudioArsenalSnapshot>()};
 
 public:
     void setSampleRate(double rate) { m_sampleRate.store(rate, std::memory_order_relaxed); }

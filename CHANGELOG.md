@@ -44,6 +44,131 @@ The public repository is currently on a `0.x` pre-beta line. The release target 
 
 ---
 
+## v0.5.0-alpha — Feature & CI Milestone (2026-05-23)
+
+11 PRs merged (#291–#305). Multi-take recording system, CLAP parameter support, audio quality fixes, CI hardening.
+
+### Takes System
+
+- Multi-take recording with manifest, snapshots, transactional switching
+- Path traversal guards on take snapshot paths
+- UI integration for take management
+
+### CLAP Hosting
+
+- `ClapParamInfo` and `ClapPluginParams` structs for CLAP parameter enumeration
+- CLAP core constant definitions
+- Null `paramsExt` fix — prevents crash when plugin lacks parameter extension
+
+### Audio Quality
+
+- K-weight race fix — metering filter state no longer torn under concurrent access
+- ARM64 denormal handling — `fpcr` register access guarded for MSVC ARM64
+- Send gain smoother coefficient fix — correct smoothing time constant
+- Audition queue deadlock fix — lock ordering corrected
+- Autosave atomic rename — crash-safe save via POSIX rename
+
+### CI / Build
+
+- Removed `jwlawson/actions-setup-cmake@v2` from all CI jobs — uses system CMake
+- DelayLine off-by-one fix — `Capacity+1` buffer allocation
+- Windows path separator fix in test fixtures
+- 13 previously unregistered test files added to CMakeLists
+- Platform guards for Windows/Linux/macOS-specific code paths
+
+### Documentation
+
+- v0.5.0-alpha added to RELEASES.md
+
+---
+
+## v0.6.0-alpha — Security & RT Hardening (2026-05-29)
+
+26 PRs merged. Security hardening across the plugin host, license gate, and project loader. RT-safety fixes for waveform callbacks, preview decodes, mixer state, and the master limiter. Plugin host crash resilience and non-finite output quarantine. Callback-safety architecture (triple-buffer graph, routing snapshot, PDC edge ownership, TSan CI). Sprint 2 tracking issues resolved.
+
+### Security
+
+- Take snapshot paths confined within project `.takes` directory — traversal regression coverage (#338)
+- Scanned/cache plugins can no longer shadow registered internal plugin IDs (#338)
+- Hard-coded dev account API fallback removed — stale/future/premium lease rejection in default builds (#338)
+- Account refresh `issued_at` handling hardened; private release workflow token exposure fixed (#338)
+- Production key required for premium leases (#339)
+- Arsenal project plugin restore restricted to registered IDs only (#340)
+- CLAP scanner helper writes guarded from SIGPIPE (#365)
+- Nightly workflow token permissions limited to minimum required (#347)
+
+### RT Safety
+
+- Stale waveform source callbacks eliminated — preview engine no longer holds dangling lambdas (#341)
+- Async preview decodes bounded — prevents unbounded work accumulation on the audio thread (#342)
+- Audition decode worker lifetime owned explicitly — no more race on teardown (#343)
+- Render main output slot lookup cached per graph compile — removes per-block map lookup (#346)
+- Mixer lane state clamped before cast — prevents undefined values from reaching the audio path (#345)
+- OpenGL kerning cache bounded — prevents unbounded growth in glyph atlas (#350)
+- MSVC ARM64 denormal register access made safe — no more direct `fpcr` manipulation (#344)
+- AestraVerb active state rebuilds guarded — prevents spurious re-initialization during bypass transitions (#360)
+- Graph dirty UI signal guarded — prevents UI-triggered graph rebuilds from racing the audio thread (#358)
+- Master safety limiter reshaped to transparent cubic Hermite knee (0.98 → 0.9997 ceiling clamp) — never boosts input, preserves recovery compatibility (#367)
+
+### Plugin Hosting
+
+- VST3 host crash handling hardened — plugin helper runs real VST3 processing instead of stub (#334)
+- Plugin proxy watchdog state made atomic — prevents torn reads under concurrent access (#334)
+- Non-finite plugin output quarantined — NaN/Inf detected and reported instead of propagating (#333)
+- Effect-chain fault state ownership fixed — fault markers scoped correctly to prevent cross-channel bleed (#333)
+
+### Callback Safety
+
+- Triple-buffer `EngineState` with `GraphReadHandle` protecting RT graph access (#310)
+- `RecordingCaptureRoute` double-buffered snapshot — input capture reads immutable snapshot instead of live state (#310)
+- PDC edge state ownership fixed — latency compensation no longer races graph recompile (#310)
+- TSan CI added for callback-safety regression detection (#310)
+
+### Serialization / Project Persistence
+
+- Pattern restore and timeline persistence fixed — patterns survive project round-trips correctly (#368)
+- BPM changes synced through playlist/timeline/pattern playback — audio clip duration preserved in seconds (#368)
+- Arsenal sampler audio restored from `audioClipPath` when legacy plugin state lacks `samplePath` (#368)
+- Audio clip placement hardened — imports fail loudly instead of leaving orphan patterns (#368)
+- Migrated round-trip payload values asserted — migration framework validated against v1 fixtures (#332)
+- v1 project migration roundtrip proven — `ProjectRoundTripIntegrityTest` passing (#332)
+
+### Recovery
+
+- Autosave crash session binding — recovery autosaves tagged to crash session markers
+- Session recovery test fixed on Windows — path separator handling corrected
+
+### CI / Build
+
+- LeakSanitizer (LSan) advisory CI job added (#312)
+- API docs quality workflow Graphviz dependency fixed (#337)
+- GitHub Pages deploy gate changed from opt-in to opt-out — deploy fires on every main push unless `DISABLE_GITHUB_PAGES` is set to `'true'` (#369)
+
+### Sprint 2 Tracking Issues Resolved
+
+- `std::atomic_load` on `shared_ptr` deprecated — replaced with `std::atomic<std::shared_ptr>` or direct member access (#331)
+- Plugin crash protection verified Linux-only — Windows/macOS behavior documented (#334)
+- Plugin NaN/Inf validation moved to master output — per-plugin validation planned for post-beta (#333)
+- Migration framework proven with v1 fixture roundtrip (#332)
+- fsync absence in write paths documented — deferred to post-beta (#335)
+
+### Documentation
+
+- Issue audit system Phase 1a/1b/1c — taxonomy review and priority alignment (#308)
+- Doxygen coverage for callback-safety public API (#311)
+
+### Known Issues (as of v0.6.0-alpha)
+
+- OOP plugin parameters are no-ops (#238) — P0
+- Autosave serializer data race (#239) — P0
+- Routing gain smoothing, cycle detection, RT allocation (#240, #241, #243) — P0
+- CLAP MIDI input unimplemented (#244) — P0
+- 5 empty model stub files (#252) — P1
+- macOS platform unimplemented (#267) — P1
+- Full list: https://github.com/users/currentsuspect/projects/3
+
+---
+
 ## [Unreleased]
 
 ### Fixed

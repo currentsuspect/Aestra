@@ -70,7 +70,9 @@ struct ClipInstance {
     uint32_t colorRGBA{0xFFFFFFFF}; // Clip color
     double startBeat = 0.0;
     double durationBeats = 4.0;
-    double sourceOffset = 0.0; // Offset into source material
+    double durationSeconds = 0.0; // Canonical duration for audio clips; MIDI clips remain beat-native.
+    double sourceOffset = 0.0;        // Beat offset into source material.
+    double sourceOffsetSeconds = 0.0; // Canonical audio-source offset; MIDI clips remain beat-native.
 
     ClipEdits edits;
 

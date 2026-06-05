@@ -2148,12 +2148,20 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                             double endBeat = m_trimOriginalStart + m_trimOriginalDuration;
                             clip.startBeat = std::min(newStart, endBeat - 0.1); // Keep minimum duration
                             clip.durationBeats = endBeat - clip.startBeat;
+                            if (m_trackManager && m_trackManager->getPlaylistModel().isAudioClip(clip)) {
+                                clip.durationSeconds =
+                                    m_trackManager->getPlaylistModel().beatToSeconds(clip.durationBeats);
+                            }
                         } else if (m_trimEdge == TrimEdge::Right) {
                             // Trim right: change end position (duration)
                             double newEnd = m_trimOriginalStart + m_trimOriginalDuration + deltaBeats;
                             newEnd = snapBeatToGrid(newEnd); // Apply snap
                             
                             clip.durationBeats = std::max(0.1, newEnd - clip.startBeat);
+                            if (m_trackManager && m_trackManager->getPlaylistModel().isAudioClip(clip)) {
+                                clip.durationSeconds =
+                                    m_trackManager->getPlaylistModel().beatToSeconds(clip.durationBeats);
+                            }
                         }
                         
                         if (m_onCacheInvalidationCallback) {

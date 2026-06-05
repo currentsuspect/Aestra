@@ -199,6 +199,7 @@ public:
         Instruments,
         AudioEffects,
         Plugins,
+        Patterns,
         Clips,
         Samples,
         Packs,

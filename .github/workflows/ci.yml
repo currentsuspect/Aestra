@@ -20,7 +20,7 @@ jobs:
     name: Linux (GCC)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
 
@@ -74,7 +74,7 @@ jobs:
     name: Windows (MSVC)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
 
@@ -181,7 +181,7 @@ jobs:
     name: macOS (Clang)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
 
@@ -235,7 +235,7 @@ jobs:
     name: Formatting (advisory)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Install clang-format
         run: |
@@ -255,7 +255,7 @@ jobs:
     name: Static Analysis (clang-tidy, advisory)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
       - name: Install dependencies
         run: |
@@ -280,7 +280,7 @@ jobs:
       ASAN_OPTIONS: detect_leaks=0:halt_on_error=1
       UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: false
 
@@ -311,4 +311,77 @@ jobs:
         with:
           name: ctest-results-asan
           path: build-asan/ctest-results-asan.xml
+          if-no-files-found: ignore
+
+  tsan-linux:
+    name: ThreadSanitizer (TSan, advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1:suppress_equal_stacks=1
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev cmake
+
+      - name: Configure
+        run: cmake --preset ci-tsan
+
+      - name: Build
+        run: cmake --build --preset ci-tsan
+
+      - name: Test
+        working-directory: build/ci-tsan
+        run: ctest --output-on-failure --output-junit ctest-results-tsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+
+      - name: Upload TSan test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-results-tsan
+          path: build/ci-tsan/ctest-results-tsan.xml
+          if-no-files-found: ignore
+
+  lsan-linux:
+    # LeakSanitizer CI is an advisory regression detector for
+    # unbounded or accidental allocations. LSan is informational
+    # only; failure is expected to be non-blocking.
+    name: LeakSanitizer (LSan, advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      LSAN_OPTIONS: suppressions=${{ github.workspace }}/.lsan-suppressions:print_suppressions=0:halt_on_error=1
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev cmake
+
+      - name: Configure
+        run: cmake --preset ci-lsan
+
+      - name: Build
+        run: cmake --build --preset ci-lsan
+
+      - name: Test
+        working-directory: build/ci-lsan
+        run: ctest --output-on-failure --output-junit ctest-results-lsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+
+      - name: Upload LSan test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-results-lsan
+          path: build/ci-lsan/ctest-results-lsan.xml
           if-no-files-found: ignore

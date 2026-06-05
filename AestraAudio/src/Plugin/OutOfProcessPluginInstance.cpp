@@ -54,9 +54,12 @@ std::string hexEncodeBytes(const void* data, size_t size) {
 }
 
 int hexValue(char c) {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return 10 + c - 'a';
-    if (c >= 'A' && c <= 'F') return 10 + c - 'A';
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return 10 + c - 'a';
+    if (c >= 'A' && c <= 'F')
+        return 10 + c - 'A';
     return -1;
 }
 
@@ -398,10 +401,6 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
         midiOutput->clear();
     }
 
-    if (!m_process || !m_process->isRunning()) {
-        markCrashed();
-    }
-
     if (m_crashed.load(std::memory_order_acquire) || m_maxBlockSize == 0 || numFrames > m_maxBlockSize) {
         passThrough(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
         return;
@@ -447,8 +446,7 @@ void OutOfProcessPluginInstance::process(const float* const* inputs, float** out
                 if (event.size != 3 || midiBytes + 8 > m_pendingMidiData.size()) {
                     continue;
                 }
-                const uint32_t sampleOffset =
-                    std::min<uint32_t>(event.sampleOffset, numFrames > 0 ? numFrames - 1 : 0);
+                const uint32_t sampleOffset = std::min<uint32_t>(event.sampleOffset, numFrames > 0 ? numFrames - 1 : 0);
                 std::memcpy(m_pendingMidiData.data() + midiBytes, &sampleOffset, sizeof(sampleOffset));
                 m_pendingMidiData[midiBytes + 4] = event.size;
                 std::memcpy(m_pendingMidiData.data() + midiBytes + 5, event.data, 3);
@@ -524,15 +522,31 @@ bool OutOfProcessPluginInstance::resizeEditor(int width, int height) {
     return false;
 }
 
+IPluginInstance::WatchdogStats OutOfProcessPluginInstance::getWatchdogStats() const {
+    WatchdogStats stats;
+    stats.maxExecutionTimeNs = static_cast<double>(m_watchdogMaxExecutionTimeNs.load(std::memory_order_relaxed));
+    stats.avgExecutionTimeNs = static_cast<double>(m_watchdogAvgExecutionTimeNs.load(std::memory_order_relaxed));
+    stats.violationCount = m_watchdogViolationCount.load(std::memory_order_relaxed);
+    stats.isBypassed = m_watchdogBypassed.load(std::memory_order_acquire);
+    return stats;
+}
+
+bool OutOfProcessPluginInstance::isBypassedByWatchdog() const {
+    return m_watchdogBypassed.load(std::memory_order_acquire);
+}
+
 void OutOfProcessPluginInstance::resetWatchdog() {
-    m_watchdogStats = WatchdogStats{};
+    m_watchdogMaxExecutionTimeNs.store(0, std::memory_order_release);
+    m_watchdogAvgExecutionTimeNs.store(0, std::memory_order_release);
+    m_watchdogViolationCount.store(0, std::memory_order_release);
+    m_watchdogBypassed.store(false, std::memory_order_release);
     if (m_process && m_process->isRunning()) {
         m_crashed.store(false, std::memory_order_release);
     }
 }
 
 bool OutOfProcessPluginInstance::sendCommand(const std::string& command, std::string* response,
-                                                 std::chrono::milliseconds timeout) {
+                                             std::chrono::milliseconds timeout) {
     std::lock_guard<std::mutex> lock(m_ipcMutex);
     if (!m_process || !m_process->isRunning()) {
         return false;
@@ -638,8 +652,8 @@ bool OutOfProcessPluginInstance::processBlockInHelper(const std::vector<float>& 
 void OutOfProcessPluginInstance::markCrashed() {
     m_crashed.store(true, std::memory_order_release);
     m_active.store(false, std::memory_order_release);
-    m_watchdogStats.isBypassed = true;
-    m_watchdogStats.violationCount++;
+    m_watchdogBypassed.store(true, std::memory_order_release);
+    m_watchdogViolationCount.fetch_add(1, std::memory_order_acq_rel);
 }
 
 void OutOfProcessPluginInstance::passThrough(const float* const* inputs, float** outputs, uint32_t numInputChannels,

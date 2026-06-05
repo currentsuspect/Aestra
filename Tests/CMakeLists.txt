@@ -398,6 +398,32 @@ else()
     message(STATUS "AestraRealtimePathStressTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
+    add_executable(SamplerStereoParityTest AestraAudio/SamplerStereoParityTest.cpp)
+    target_link_libraries(SamplerStereoParityTest PRIVATE AestraAudio)
+    target_include_directories(SamplerStereoParityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerStereoParityTest COMMAND SamplerStereoParityTest)
+    set_tests_properties(SamplerStereoParityTest PROPERTIES LABELS "audio;sampler;regression")
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/PatternPlaybackTempoChangeTest.cpp")
+    add_executable(PatternPlaybackTempoChangeTest AestraAudio/PatternPlaybackTempoChangeTest.cpp)
+    target_link_libraries(PatternPlaybackTempoChangeTest PRIVATE AestraAudio)
+    target_include_directories(PatternPlaybackTempoChangeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME PatternPlaybackTempoChangeTest COMMAND PatternPlaybackTempoChangeTest)
+    set_tests_properties(PatternPlaybackTempoChangeTest PROPERTIES LABELS "audio;transport;pattern;regression")
+endif()
+
 # Sinc Interpolator Benchmark
 add_executable(AestraSincBenchmark AestraAudio/SincBenchmark.cpp)
 target_link_libraries(AestraSincBenchmark PRIVATE AestraAudioCore)
@@ -631,6 +657,22 @@ target_include_directories(AestraAudioQualityRegressionTest PRIVATE
 add_test(NAME AestraAudioQualityRegressionTest COMMAND AestraAudioQualityRegressionTest)
 set_tests_properties(AestraAudioQualityRegressionTest PROPERTIES LABELS "audio;quality;regression")
 
+# Playback path signal-integrity diagnostics
+add_executable(AestraPlaybackPathSignalIntegrityTest AestraAudio/PlaybackPathSignalIntegrityTest.cpp)
+target_link_libraries(AestraPlaybackPathSignalIntegrityTest PRIVATE AestraAudio)
+add_test(NAME AestraPlaybackPathSignalIntegrityTest COMMAND AestraPlaybackPathSignalIntegrityTest)
+set_tests_properties(AestraPlaybackPathSignalIntegrityTest PROPERTIES LABELS "audio;quality;regression;playback")
+
+# AudioEngine output channel safety regression test
+add_executable(AestraAudioEngineOutputChannelTest AestraAudio/AudioEngineOutputChannelTest.cpp)
+target_link_libraries(AestraAudioEngineOutputChannelTest PRIVATE AestraAudioCore)
+target_include_directories(AestraAudioEngineOutputChannelTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraAudioEngineOutputChannelTest COMMAND AestraAudioEngineOutputChannelTest)
+set_tests_properties(AestraAudioEngineOutputChannelTest PROPERTIES LABELS "audio;rt-safety;regression")
+
 # Watchdog Test (requires VST3 SDK headers)
 if(EXISTS "${CMAKE_SOURCE_DIR}/AestraAudio/External/vst3sdk/pluginterfaces/vst/ivstaudioprocessor.h")
     add_executable(AestraWatchdogTest AestraAudio/WatchdogTest.cpp)
@@ -665,6 +707,11 @@ endif()
 add_executable(AestraWavLoaderTest AestraAudio/WavLoaderTest.cpp)
 target_link_libraries(AestraWavLoaderTest PRIVATE AestraAudio)
 add_test(NAME AestraWavLoaderTest COMMAND AestraWavLoaderTest)
+
+# Audition Engine lifecycle regression
+add_executable(AestraAuditionEngineLifecycleTest AestraAudio/AuditionEngineLifecycleTest.cpp)
+target_link_libraries(AestraAuditionEngineLifecycleTest PRIVATE AestraAudio)
+add_test(NAME AestraAuditionEngineLifecycleTest COMMAND AestraAuditionEngineLifecycleTest)
 
 # SamplePool Test
 add_executable(SamplePoolTest AestraAudio/SamplePoolTest.cpp)
@@ -801,6 +848,20 @@ target_include_directories(ArsenalRouteModePolicyTest PRIVATE
 add_test(NAME ArsenalRouteModePolicyTest COMMAND ArsenalRouteModePolicyTest)
 set_tests_properties(ArsenalRouteModePolicyTest PROPERTIES LABELS "audio;arsenal;policy")
 
+if(NOT WIN32)
+    add_executable(PluginScannerSigpipeTest AestraAudio/PluginScannerSigpipeTest.cpp)
+    target_link_libraries(PluginScannerSigpipeTest PRIVATE AestraAudioCore)
+    target_include_directories(PluginScannerSigpipeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    if(AESTRA_HAS_CLAP)
+        target_compile_definitions(PluginScannerSigpipeTest PRIVATE AESTRA_TEST_HAS_CLAP=1)
+    endif()
+    add_test(NAME PluginScannerSigpipeTest COMMAND PluginScannerSigpipeTest)
+    set_tests_properties(PluginScannerSigpipeTest PROPERTIES LABELS "audio;plugin;security")
+endif()
+
 # Arsenal bridge-mode terminology contract test (Phase 2B policy-only)
 add_executable(ArsenalBridgeContractTest AestraAudio/ArsenalBridgeContractTest.cpp)
 target_link_libraries(ArsenalBridgeContractTest PRIVATE)
@@ -894,6 +955,29 @@ target_include_directories(AestraEQTest PRIVATE
 )
 add_test(NAME AestraEQTest COMMAND AestraEQTest)
 set_tests_properties(AestraEQTest PROPERTIES LABELS "audio;plugins;eq")
+
+# Aestra EQ Measurement Test
+add_executable(AestraEQMeasurementTest AestraAudio/AestraEQMeasurementTest.cpp)
+target_link_libraries(AestraEQMeasurementTest PRIVATE AestraAudio)
+target_include_directories(AestraEQMeasurementTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraEQMeasurementTest COMMAND AestraEQMeasurementTest)
+set_tests_properties(AestraEQMeasurementTest PROPERTIES LABELS "audio;plugins;eq;measurement")
+
+# Aestra EQ Material Lab
+add_executable(AestraEQMaterialLab AestraAudio/AestraEQMaterialLab.cpp)
+target_link_libraries(AestraEQMaterialLab PRIVATE AestraAudio)
+target_include_directories(AestraEQMaterialLab PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+target_compile_definitions(AestraEQMaterialLab
+    PRIVATE AESTRA_LAB_OUTPUT_DIR="${CMAKE_BINARY_DIR}/labs/eq/quality"
+)
 
 # Aestra Comp Phase 0 Test
 add_executable(AestraCompPhase0Test AestraAudio/AestraCompPhase0Test.cpp)

@@ -39,6 +39,11 @@ std::vector<PluginInfo> InternalPluginRegistry::listAvailablePlugins() const {
     return plugins;
 }
 
+bool InternalPluginRegistry::isRegisteredPlugin(const std::string& pluginId) const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_registrations.find(pluginId) != m_registrations.end();
+}
+
 bool InternalPluginRegistry::isPluginAvailable(const std::string& pluginId) const {
     std::lock_guard<std::mutex> lock(m_mutex);
     const auto it = m_registrations.find(pluginId);
