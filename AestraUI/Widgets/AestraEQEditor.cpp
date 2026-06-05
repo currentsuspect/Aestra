@@ -19,7 +19,6 @@ NUIColor accent() { return NUIColor(0.55f, 0.40f, 0.92f, 1.0f); }
 NUIColor accentSoft() { return NUIColor(0.55f, 0.40f, 0.92f, 0.35f); }
 NUIColor cardBg() { return NUIColor(0.085f, 0.080f, 0.115f, 0.95f); }
 NUIColor graphBg() { return NUIColor(0.045f, 0.043f, 0.064f, 0.96f); }
-NUIColor successCol() { return NUIColor(0.0f, 0.90f, 0.78f, 1.0f); }
 
 NUIColor bandColor(size_t i) {
     static const NUIColor colors[] = {

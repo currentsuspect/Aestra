@@ -12,10 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Options
 # =============================================================================
 
-option(AESTRAUI_BUILD_EXAMPLES "Build example applications" OFF)
 option(AESTRAUI_BUILD_OPENGL "Build OpenGL renderer" ON)
-option(AESTRAUI_BUILD_VULKAN "Build Vulkan renderer" OFF)
-option(AESTRAUI_BUILD_TESTS "Build unit tests" OFF)
 option(AESTRAUI_ENABLE_PREMIUM_EDITORS "Build private premium plugin editors" OFF)
 
 # =============================================================================
@@ -185,6 +182,10 @@ target_include_directories(AestraUI_Core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/Common
 )
 
+if(AESTRAUI_ENABLE_PREMIUM_EDITORS)
+    target_compile_definitions(AestraUI_Core PRIVATE AESTRAUI_ENABLE_PREMIUM_EDITORS)
+endif()
+
 # The main application mixer widgets depend on AestraAudio + AestraCore headers.
 # Keep this PRIVATE so AestraUI can still be consumed as a standalone library
 # when these widgets are not used.
@@ -322,32 +323,6 @@ if(AESTRAUI_BUILD_OPENGL)
 endif()
 
 # ============================================================================
-# Vulkan Renderer (Optional)
-# ============================================================================
-
-if(AESTRAUI_BUILD_VULKAN)
-    find_package(Vulkan REQUIRED)
-    
-    set(AESTRAUI_VULKAN_SOURCES
-        Graphics/Vulkan/NUIRendererVK.h
-        Graphics/Vulkan/NUIRendererVK.cpp
-    )
-    
-    add_library(AestraUI_Vulkan STATIC
-        ${AESTRAUI_VULKAN_SOURCES}
-    )
-    
-    target_link_libraries(AestraUI_Vulkan PUBLIC
-        AestraUI_Core
-        Vulkan::Vulkan
-    )
-    
-    target_include_directories(AestraUI_Vulkan PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-endif()
-
-# ============================================================================
 # Platform Layer (Now uses AestraPlat!)
 # ============================================================================
 
@@ -396,10 +371,6 @@ if(AESTRAUI_BUILD_OPENGL)
     target_link_libraries(AestraUI INTERFACE AestraUI_OpenGL)
 endif()
 
-if(AESTRAUI_BUILD_VULKAN)
-    target_link_libraries(AestraUI INTERFACE AestraUI_Vulkan)
-endif()
-
 # ============================================================================
 # Installation
 # ============================================================================
@@ -426,9 +397,7 @@ message(STATUS "Version: ${PROJECT_VERSION}")
 message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "")
 message(STATUS "Build Options:")
-message(STATUS "  Examples: ${AESTRAUI_BUILD_EXAMPLES}")
 message(STATUS "  OpenGL:   ${AESTRAUI_BUILD_OPENGL}")
-message(STATUS "  Vulkan:   ${AESTRAUI_BUILD_VULKAN}")
 message(STATUS "")
 message(STATUS "Platform: ${PLATFORM_NAME}")
 # CMAKE_SIZEOF_VOID_P is in bytes, multiply by 8 for bits
