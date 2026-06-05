@@ -20,7 +20,7 @@ target_include_directories(AestraCore PUBLIC
 
 # Enable profiling in all build types (lightweight enough for Release)
 target_compile_definitions(AestraCore PUBLIC
-    Aestra_ENABLE_PROFILING
+    AESTRA_ENABLE_PROFILING
     AESTRA_ENABLE_MEMORY_PROFILING
 )
 

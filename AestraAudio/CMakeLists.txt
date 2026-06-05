@@ -181,7 +181,6 @@ set(AESTRA_AUDIO_CORE_SOURCES
     # Models
     src/Models/TrackManager.cpp
     src/Models/PlaylistModel.cpp
-    # src/Models/SelectionModel.cpp  # TODO: Rewrite for new PlaylistModel API (uses obsolete getAllClipsInRange, etc.)
     src/Models/UnitManager.cpp
     src/Models/PatternManager.cpp
     src/Models/ClipSource.cpp
@@ -325,7 +324,6 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Models/PatternSource.h
     include/Models/ClipInstance.h
     include/Models/PatternManager.h
-    include/Models/AudioClip.h
     include/IO/MiniAudioDecoder.h
     include/Models/PlaylistTrack.h
     # Multi-clip playlist system
@@ -334,12 +332,8 @@ set(AESTRA_AUDIO_CORE_HEADERS
     include/Models/PlaylistModel.h
     include/Models/PlaylistRuntimeSnapshot.h
     include/Models/PlaylistMixer.h
-    # include/Models/SelectionModel.h  # TODO: Fix - references non-existent PlaylistClip.h
     include/IO/WaveformCache.h
-    include/Models/PlaylistGeometry.h
     include/Models/PlaylistSerializer.h
-    include/Models/MultiClipPlaylist.h
-    include/Models/ArsenalUnit.h
     include/Models/UnitManager.h
     include/Music/ScaleContext.h
 
@@ -375,9 +369,7 @@ set(AESTRA_AUDIO_CORE_HEADERS
 
     # Headless / batch processing
     include/Headless/HeadlessMusicGenerator.h
-    
-    src/DummyAudioDriver.h
-    
+
     src/DummyAudioDriver.h
     # Plugin hosting system
     include/Plugin/PluginHost.h

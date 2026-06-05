@@ -12,10 +12,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Options
 # =============================================================================
 
-option(AESTRAUI_BUILD_EXAMPLES "Build example applications" OFF)
 option(AESTRAUI_BUILD_OPENGL "Build OpenGL renderer" ON)
 option(AESTRAUI_BUILD_VULKAN "Build Vulkan renderer" OFF)
-option(AESTRAUI_BUILD_TESTS "Build unit tests" OFF)
 option(AESTRAUI_ENABLE_PREMIUM_EDITORS "Build private premium plugin editors" OFF)
 
 # =============================================================================
@@ -157,6 +155,10 @@ if(AESTRAUI_ENABLE_PREMIUM_EDITORS)
         Widgets/RumblePluginEditor.h
         Widgets/RumblePluginEditor.cpp
     )
+endif()
+
+if(AESTRAUI_ENABLE_PREMIUM_EDITORS)
+    target_compile_definitions(AestraUI_Core PRIVATE AESTRAUI_ENABLE_PREMIUM_EDITORS)
 endif()
 
 set(AESTRAUI_GRAPHICS_SOURCES
@@ -426,7 +428,6 @@ message(STATUS "Version: ${PROJECT_VERSION}")
 message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "")
 message(STATUS "Build Options:")
-message(STATUS "  Examples: ${AESTRAUI_BUILD_EXAMPLES}")
 message(STATUS "  OpenGL:   ${AESTRAUI_BUILD_OPENGL}")
 message(STATUS "  Vulkan:   ${AESTRAUI_BUILD_VULKAN}")
 message(STATUS "")
