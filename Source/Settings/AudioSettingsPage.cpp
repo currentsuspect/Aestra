@@ -320,13 +320,23 @@ void AudioSettingsPage::createUI() {
 
     m_sampleRateDropdown = createDropdown([this](int idx) {
         m_dirty = true;
-
         if (m_isInitializing || m_isPopulatingDeviceUI) return;
+        if (!m_audioManager) return;
 
-        if (m_audioManager) {
-            m_audioManager->setSampleRate((uint32_t)m_sampleRateDropdown->getSelectedValue());
+        uint32_t requested = (uint32_t)m_sampleRateDropdown->getSelectedValue();
+        bool ok = m_audioManager->setSampleRate(requested);
+
+        if (!ok) {
+            uint32_t current = m_audioEngine->getSampleRate();
+            m_isPopulatingDeviceUI = true;
+            m_sampleRateDropdown->setSelectedByValue((int)current);
+            m_isPopulatingDeviceUI = false;
+            m_dirty = false;
+            AESTRA_LOG_STREAM_WARNING << "[AudioSettingsPage] setSampleRate("
+                << requested << ") failed -- restored to " << current;
+        } else {
+            updateLatencyEstimate();
         }
-        updateLatencyEstimate();
     });
 
     m_bufferSizeDropdown = createDropdown([this](int idx) {
