@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::SampleEditorPanel::LoopPoints" name="Aestra::Audio::SampleEditorPanel::LoopPoints">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,108,209,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="35,5,86,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="74,42,102,107,97,109,69,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="111,5,200,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="147,44,118,109,113,107,142,42"/>
+</map>

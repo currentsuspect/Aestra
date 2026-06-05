@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::SetVolumeCommand::undo" name="Aestra::Audio::SetVolumeCommand::undo">
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,5,192,45"/>
+<area shape="rect" id="Node000002" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#aaf744d7a2a7d2450252424fb99c080cf" title="Set channel output volume." alt="" coords="240,5,447,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="192,23,227,23,227,28,192,28"/>
+</map>

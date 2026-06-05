@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioEngine::getWaveformHistoryCapacity" name="Aestra::Audio::AudioEngine::getWaveformHistoryCapacity">
+<area shape="rect" id="Node000001" title="Get the waveform&#45;history buffer capacity in frames." alt="" coords="240,5,463,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a9cd2ff0a44640c8c7c68543fc33f56d1" title="Advance workspace state and child&#45;panel updates." alt="" coords="5,13,192,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="226,28,192,28,192,23,226,23"/>
+</map>

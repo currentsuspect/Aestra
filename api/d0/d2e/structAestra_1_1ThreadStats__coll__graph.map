@@ -1,0 +1,20 @@
+<map id="Aestra::ThreadStats" name="Aestra::ThreadStats">
+<area shape="rect" id="Node000001" title="Thread&#45;specific profiling." alt="" coords="171,284,322,309"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,196,80,221"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="55,232,64,246,76,258,98,270,122,279,171,290,170,295,121,285,96,275,73,262,60,250,50,235"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="105,196,191,221"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="142,235,141,248,145,259,158,272,176,282,173,286,155,276,140,261,136,248,136,235"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="79,93,217,133"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="151,147,151,196,145,196,145,147"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="260,101,327,126"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="283,140,261,197,253,245,250,284,244,283,247,244,256,195,278,138"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="351,196,516,221"/>
+<area shape="poly" id="edge7_Node000007_Node000005" title=" " alt="" coords="317,133,364,170,408,194,406,198,361,174,314,137"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="541,196,601,221"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="531,229,433,263,321,287,320,281,431,257,529,224"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="397,230,273,286,271,281,395,225"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="369,101,498,126"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="436,140,436,196,431,196,431,140"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="414,5,453,31"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="436,44,436,101,431,101,431,44"/>
+</map>

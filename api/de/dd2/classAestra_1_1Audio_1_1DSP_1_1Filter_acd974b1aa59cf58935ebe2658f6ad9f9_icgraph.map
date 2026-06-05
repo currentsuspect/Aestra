@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::DSP::Filter::updateCoefficients" name="Aestra::Audio::DSP::Filter::updateCoefficients">
+<area shape="rect" id="Node000001" title="Force update coefficients (bypass smoothing)" alt="" coords="387,37,580,77"/>
+<area shape="rect" id="Node000002" href="$de/dd2/classAestra_1_1Audio_1_1DSP_1_1Filter.html#a90ac8a81f64348b8a6161c5ff28d6f5b" title="Prepare filter for new sample rate." alt="" coords="196,5,339,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="373,44,339,39,339,33,373,38"/>
+<area shape="rect" id="Node000004" href="$de/dd2/classAestra_1_1Audio_1_1DSP_1_1Filter.html#a3e73b6c0cfafedbf972360383d188206" title="Set filter type with optional transition smoothing." alt="" coords="196,69,339,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="373,76,339,81,339,76,373,71"/>
+<area shape="rect" id="Node000003" href="$de/dd2/classAestra_1_1Audio_1_1DSP_1_1Filter.html#a149d4aa61254ea498366365935ec10da" title="Construct filter with sample rate." alt="" coords="5,5,148,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="183,28,148,28,148,23,183,23"/>
+</map>

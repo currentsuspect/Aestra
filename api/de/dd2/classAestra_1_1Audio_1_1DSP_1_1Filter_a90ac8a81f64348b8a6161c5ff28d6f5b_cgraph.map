@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::DSP::Filter::prepare" name="Aestra::Audio::DSP::Filter::prepare">
+<area shape="rect" id="Node000001" title="Prepare filter for new sample rate." alt="" coords="5,37,148,77"/>
+<area shape="rect" id="Node000002" href="$de/dd2/classAestra_1_1Audio_1_1DSP_1_1Filter.html#ab5f97cc40f73befa09ef5f7a3eb3b71e" title="Reset filter state (clears memory)" alt="" coords="221,5,364,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="148,44,208,35,208,40,149,49"/>
+<area shape="rect" id="Node000003" href="$de/dd2/classAestra_1_1Audio_1_1DSP_1_1Filter.html#acd974b1aa59cf58935ebe2658f6ad9f9" title="Force update coefficients (bypass smoothing)" alt="" coords="196,69,389,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="149,65,183,70,182,76,148,71"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AudioCommandMessage" name="Aestra::Audio::AudioCommandMessage">
+<area shape="rect" id="Node000001" title="Audio command message." alt="" coords="14,108,235,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,132,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="74,44,78,64,86,83,104,106,100,109,81,85,73,65,69,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="157,5,207,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="174,45,155,85,140,109,136,107,150,83,170,42"/>
+</map>

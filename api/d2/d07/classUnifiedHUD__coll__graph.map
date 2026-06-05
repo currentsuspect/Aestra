@@ -1,0 +1,15 @@
+<map id="UnifiedHUD" name="UnifiedHUD">
+<area shape="rect" id="Node000001" title="Rocket Engine Profiler &#45; Professional DAW Performance HUD." alt="" coords="748,199,847,225"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="574,91,650,96,689,105,725,120,748,137,767,158,792,197,788,200,763,161,745,141,723,125,687,110,649,101,574,96"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="209,101,374,101,374,107,209,107"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,157,278,149,350,136,429,114,430,119,351,141,279,154,209,163"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="442,199,493,225"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="506,209,748,209,748,215,506,215"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="437,259,497,285"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="511,270,609,264,667,257,723,244,774,222,776,227,725,249,668,262,610,270,511,275"/>
+</map>

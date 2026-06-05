@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIRenderer::drawText" name="AestraUI::NUIRenderer::drawText">
+<area shape="rect" id="Node000001" title="Draw text at the given position." alt="" coords="255,5,424,45"/>
+<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#ad0272af2020e23cd94658d1e4beacfe5" title="Render the Arsenal panel and unit rows." alt="" coords="5,5,207,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="241,28,207,28,207,23,241,23"/>
+</map>

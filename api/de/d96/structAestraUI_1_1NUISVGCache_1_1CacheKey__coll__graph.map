@@ -1,0 +1,13 @@
+<map id="AestraUI::NUISVGCache::CacheKey" name="AestraUI::NUISVGCache::CacheKey">
+<area shape="rect" id="Node000001" title="Key for cache lookup based on document content, dimensions, and tint color." alt="" coords="95,255,273,295"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,152,118,177"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="82,190,90,210,102,229,134,252,131,257,98,232,85,213,77,192"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,152,72,152,72,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="165,152,203,177"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="187,191,187,254,181,254,181,191"/>
+<area shape="rect" id="Node000005" href="$d2/d25/structAestraUI_1_1NUIColor.html" title=" " alt="" coords="228,152,372,177"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="281,189,236,233,209,257,205,253,233,229,277,186"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="275,13,325,38"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="303,52,303,152,297,152,297,52"/>
+</map>

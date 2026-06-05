@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrimClipCommand" name="Aestra::Audio::TrimClipCommand">
+<area shape="rect" id="Node000001" title="Command to trim a clip&#39;s start/end positions." alt="" coords="5,79,243,104"/>
+<area shape="rect" id="Node000002" href="$d1/d5e/classAestra_1_1Audio_1_1ICommand.html" title="Abstract base class for all undoable operations." alt="" coords="30,5,218,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="127,44,127,79,121,79,121,44"/>
+</map>

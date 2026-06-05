@@ -1,0 +1,19 @@
+<map id="Aestra::Audio::MeterSnapshotBuffer" name="Aestra::Audio::MeterSnapshotBuffer">
+<area shape="rect" id="Node000001" title="Lock&#45;free meter snapshot buffer for audio→UI communication." alt="" coords="5,519,220,559"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="111,93,149,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="122,132,104,177,90,231,84,314,89,397,100,468,110,518,105,519,95,469,84,397,79,314,85,230,99,176,117,130"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="129,181,272,207"/>
+<area shape="poly" id="edge8_Node000008_Node000002" title=" " alt="" coords="150,127,193,179,189,182,146,131"/>
+<area shape="rect" id="Node000003" href="$dc/d6c/structAestra_1_1Audio_1_1MeterSnapshotBuffer_1_1Slot.html" title=" " alt="" coords="129,416,344,456"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="204,467,138,521,134,517,201,463"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="297,181,451,207"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="365,221,327,299,272,393,255,417,251,414,268,391,322,296,361,218"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="213,93,263,119"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="236,132,237,145,241,156,264,169,301,179,299,184,262,174,237,159,231,146,230,133"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="297,93,430,119"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="369,132,375,180,370,181,364,133"/>
+<area shape="poly" id="edge9_Node000008_Node000006" title=" " alt="" coords="331,127,224,183,222,179,328,123"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="344,5,383,31"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="366,45,366,93,361,93,361,45"/>
+<area shape="poly" id="edge7_Node000003_Node000008" title=" " alt="" coords="207,220,209,230,236,415,231,416,203,231,202,221"/>
+</map>

@@ -1,0 +1,8 @@
+<map id="Aestra::Audio::UnitManager::createUnit" name="Aestra::Audio::UnitManager::createUnit">
+<area shape="rect" id="Node000001" title="Create a unit with generated defaults." alt="" coords="255,37,456,77"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="398,26,383,19,355,16,331,18,317,23,312,29,314,36,309,38,306,28,314,18,330,13,355,11,384,14,400,21"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a76a3d808754d68b7b032b8ccc6965143" title="Create a unit with explicit display name and group." alt="" coords="5,5,207,45"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="241,45,207,41,207,36,241,40"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aff0e94c9370a5bc4754d2d123b070c26" title="Duplicate an existing unit, copying its state and pattern." alt="" coords="5,69,207,109"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="241,75,207,79,207,74,241,69"/>
+</map>

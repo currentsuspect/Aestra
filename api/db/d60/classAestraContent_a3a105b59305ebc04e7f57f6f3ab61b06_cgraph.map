@@ -1,0 +1,11 @@
+<map id="AestraContent::onRender" name="AestraContent::onRender">
+<area shape="rect" id="Node000001" title="Render the workspace and active overlays." alt="" coords="5,109,191,134"/>
+<area shape="rect" id="Node000002" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95" title="Draw a line." alt="" coords="239,5,408,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="125,106,238,55,254,48,257,53,240,60,127,111"/>
+<area shape="rect" id="Node000003" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4" title="Draw a filled rectangle." alt="" coords="239,69,408,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="188,106,225,101,225,106,188,111"/>
+<area shape="rect" id="Node000004" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289" title="Draw a filled rounded rectangle." alt="" coords="239,133,408,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="188,131,225,137,225,142,188,137"/>
+<area shape="rect" id="Node000005" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf" title="Draw a rounded rectangle outline." alt="" coords="239,197,408,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="127,132,240,183,257,190,254,195,238,188,125,137"/>
+</map>

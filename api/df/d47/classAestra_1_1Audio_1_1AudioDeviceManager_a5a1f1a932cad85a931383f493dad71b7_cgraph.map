@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioDeviceManager::startStream" name="Aestra::Audio::AudioDeviceManager::startStream">
+<area shape="rect" id="Node000001" title="Start audio processing." alt="" coords="5,5,204,45"/>
+<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#af3ce5f21cb3a5e924319c9b2c2c39577" title="Start the automatic driver health monitoring thread." alt="" coords="252,5,463,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,23,238,23,238,28,204,28"/>
+</map>

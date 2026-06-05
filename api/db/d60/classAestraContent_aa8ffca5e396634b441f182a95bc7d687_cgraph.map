@@ -1,0 +1,7 @@
+<map id="AestraContent::updateSoundPreview" name="AestraContent::updateSoundPreview">
+<area shape="rect" id="Node000001" title="Advance preview&#45;state bookkeeping." alt="" coords="5,37,213,77"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a148523f2593cf55bbf1087010ba6bcc1" title="Stop the active file&#45;browser preview." alt="" coords="276,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,42,262,36,263,41,214,47"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a2f4207ec65ca602457e5020c383db27a" title="Update the preview playhead visible in the UI." alt="" coords="261,69,481,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="214,67,248,72,248,77,213,73"/>
+</map>

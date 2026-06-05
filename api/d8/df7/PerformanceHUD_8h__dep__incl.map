@@ -1,0 +1,5 @@
+<map id="Source/HUD/PerformanceHUD.h" name="Source/HUD/PerformanceHUD.h">
+<area shape="rect" id="Node000001" title="F12&#45;toggleable performance overlay." alt="" coords="13,5,242,31"/>
+<area shape="rect" id="Node000002" href="$d4/d5f/PerformanceHUD_8cpp.html" title="Performance HUD implementation." alt="" coords="5,79,249,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="130,44,130,79,125,79,125,44"/>
+</map>

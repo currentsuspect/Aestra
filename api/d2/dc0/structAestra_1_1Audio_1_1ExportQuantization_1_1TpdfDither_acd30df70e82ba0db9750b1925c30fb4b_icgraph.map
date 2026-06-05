@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::ExportQuantization::TpdfDither::next" name="Aestra::Audio::ExportQuantization::TpdfDither::next">
+<area shape="rect" id="Node000001" title="Advance the xorshift32 state and return the raw 32&#45;bit output." alt="" coords="587,5,829,45"/>
+<area shape="rect" id="Node000002" href="$d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#a9cc707685ae5eb3528ccc7fc32decc6d" title="Return a uniform double in [0, 1) from the low 24 bits." alt="" coords="296,5,539,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="573,28,539,28,539,23,573,23"/>
+<area shape="rect" id="Node000003" href="$d2/dc0/structAestra_1_1Audio_1_1ExportQuantization_1_1TpdfDither.html#a67c747c829e2179e591325601f6088b6" title="Return a TPDF&#45;scaled dither sample in the range [&#45;lsb, +lsb]." alt="" coords="5,5,248,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="283,28,248,28,248,23,283,23"/>
+</map>

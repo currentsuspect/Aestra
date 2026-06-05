@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::StreamingDecoder::read" name="Aestra::Audio::StreamingDecoder::read">
+<area shape="rect" id="Node000001" title="Read available frames from the stream." alt="" coords="5,5,189,45"/>
+<area shape="rect" id="Node000002" href="$d9/d8e/classAestra_1_1Audio_1_1AudioRingBuffer.html#a9fd2c381ff6f51e0ddf75a110df768de" title="Read frames from the ring buffer (called by audio thread)" alt="" coords="237,5,420,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="190,23,223,23,223,28,190,28"/>
+</map>

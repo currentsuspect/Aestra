@@ -1,0 +1,5 @@
+<map id="Aestra::MixerViewModel::getSelectedChannel" name="Aestra::MixerViewModel::getSelectedChannel">
+<area shape="rect" id="Node000001" title="Get currently selected channel." alt="" coords="5,5,185,45"/>
+<area shape="rect" id="Node000002" href="$d3/d51/classAestra_1_1MixerViewModel.html#ac43c7f0354f795c8fdf0834c1bd3a0ba" title="Get channel by ID." alt="" coords="233,5,413,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="186,23,220,23,220,28,186,28"/>
+</map>

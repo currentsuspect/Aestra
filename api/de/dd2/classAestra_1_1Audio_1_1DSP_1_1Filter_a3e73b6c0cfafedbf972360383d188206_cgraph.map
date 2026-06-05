@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::DSP::Filter::setType" name="Aestra::Audio::DSP::Filter::setType">
+<area shape="rect" id="Node000001" title="Set filter type with optional transition smoothing." alt="" coords="5,5,148,45"/>
+<area shape="rect" id="Node000002" href="$de/dd2/classAestra_1_1Audio_1_1DSP_1_1Filter.html#acd974b1aa59cf58935ebe2658f6ad9f9" title="Force update coefficients (bypass smoothing)" alt="" coords="196,5,389,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="148,23,182,23,182,28,148,28"/>
+</map>

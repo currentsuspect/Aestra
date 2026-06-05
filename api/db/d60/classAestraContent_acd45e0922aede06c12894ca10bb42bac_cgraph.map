@@ -1,0 +1,31 @@
+<map id="AestraContent::setViewFocus" name="AestraContent::setViewFocus">
+<area shape="rect" id="Node000001" title="Set the active workspace mode." alt="" coords="5,217,217,242"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ab127c5e597ccf0ba3ec1f5b63e113b15" title="Compute the rectangle panels are allowed to occupy." alt="" coords="537,5,769,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="117,215,136,180,168,133,211,86,237,65,264,48,327,24,394,11,461,6,523,7,523,12,461,11,395,16,329,29,267,53,240,69,215,90,173,136,141,183,121,218"/>
+<area shape="rect" id="Node000005" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a3a6dd6f5101ab90e0921f31a13dc7155" title="Get the active sample rate used by the engine." alt="" coords="265,63,464,103"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="125,215,183,166,222,137,264,112,279,105,281,110,267,117,225,142,186,170,128,219"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#ad0290fd113d01c4f8cfcc66a6ac47794" title="Relayout the workspace after a host resize." alt="" coords="273,127,456,153"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="139,214,196,189,264,163,295,154,296,159,266,168,198,194,141,219"/>
+<area shape="rect" id="Node000009" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad9ed038084fc59841da8d282d29d0a3b" title="Immediate panic/reset (Double Stop)." alt="" coords="265,177,464,217"/>
+<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="212,214,251,209,252,214,212,219"/>
+<area shape="rect" id="Node000011" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a8c6dc848d86293b336304bcae17629f0" title="Bind the audition engine used by audition mode." alt="" coords="265,241,464,281"/>
+<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="212,239,252,244,251,250,212,245"/>
+<area shape="rect" id="Node000012" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4708fa8d989557c07217a8ff48484a69" title="Enable or disable audition mode." alt="" coords="265,305,464,345"/>
+<area shape="poly" id="edge13_Node000001_Node000012" title=" " alt="" coords="142,240,266,291,287,298,286,303,264,296,140,245"/>
+<area shape="rect" id="Node000013" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a1d47a21a48da22811eabfc9f49dab695" title="Enable or disable Arsenal pattern playback mode." alt="" coords="265,369,464,409"/>
+<area shape="poly" id="edge14_Node000001_Node000013" title=" " alt="" coords="126,240,184,295,223,327,267,355,279,361,277,366,264,360,220,331,180,299,123,244"/>
+<area shape="rect" id="Node000014" href="$db/d60/classAestraContent.html#a148523f2593cf55bbf1087010ba6bcc1" title="Stop the active file&#45;browser preview." alt="" coords="269,433,460,473"/>
+<area shape="poly" id="edge15_Node000001_Node000014" title=" " alt="" coords="122,241,142,276,174,324,216,375,267,419,276,425,273,429,264,423,213,379,170,327,138,279,117,244"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a747fc3bfb5c3b565623f999c228c9e75" title="Compute the safe workspace rectangle after chrome and sidebars." alt="" coords="841,13,1080,38"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="769,23,827,23,827,28,769,28"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a75c1ce436d0185fc1d0acf11d301ee83" title="Get the x coordinate of the visible browser edge." alt="" coords="867,95,1055,135"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="748,43,794,55,894,88,893,93,793,60,747,48"/>
+<area shape="poly" id="edge7_Node000006_Node000002" title=" " alt="" coords="436,125,463,112,477,99,486,85,494,69,510,55,523,48,525,53,514,60,499,73,490,87,481,102,465,117,438,130"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#ac3a61a9e4765aadb4e43f89145418a38" title="Clamp an overlay rectangle to the current allowed bounds." alt="" coords="557,69,749,109"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="437,125,543,106,544,111,438,130"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#ace0d73e7c0b8d912331716f8ff4eb1ee" title="Compute the maximized overlay rectangle." alt="" coords="512,134,793,159"/>
+<area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="456,139,498,140,498,146,456,145"/>
+<area shape="poly" id="edge9_Node000008_Node000004" title=" " alt="" coords="775,131,853,123,854,128,775,137"/>
+<area shape="rect" id="Node000010" href="$d7/da4/classAestra_1_1Audio_1_1EngineState.html#a8c10dfaa447b39a42842b9c9b4431e1d" title="Acquires a read handle to the currently active graph slot." alt="" coords="555,184,750,224"/>
+<area shape="poly" id="edge11_Node000009_Node000010" title=" " alt="" coords="464,197,541,199,541,204,464,202"/>
+</map>

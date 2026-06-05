@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::EffectChainSnapshot" name="Aestra::Audio::EffectChainSnapshot">
+<area shape="rect" id="Node000001" title="Immutable snapshot of an entire effect chain." alt="" coords="5,93,196,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="15,5,75,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="44,44,48,68,57,81,69,91,65,95,53,84,44,70,39,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="133,5,183,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="147,44,131,71,116,94,111,92,126,68,142,42"/>
+</map>

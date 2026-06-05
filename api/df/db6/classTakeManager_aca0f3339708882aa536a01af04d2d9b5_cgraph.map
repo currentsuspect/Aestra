@@ -1,0 +1,16 @@
+<map id="TakeManager::createTake" name="TakeManager::createTake">
+<area shape="rect" id="Node000001" title="Creates a new take snapshot." alt="" coords="5,70,192,95"/>
+<area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#a140b2004fb5dfb4ed837fb80d603f9da" title="Ensures a manifest exists, creating one with an initial take if needed." alt="" coords="240,70,457,95"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="192,80,226,80,226,85,192,85"/>
+<area shape="rect" id="Node000003" href="$da/d15/structTakeManager_1_1Manifest.html#ace9f7d3a0cb864d5d140d266f9e1af52" title="Returns the currently active take, or nullptr if none." alt="" coords="519,5,693,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="406,67,505,45,507,50,407,73"/>
+<area shape="rect" id="Node000004" href="$da/d15/structTakeManager_1_1Manifest.html#ac9df3e5450e4f9aee685e9814437d01f" title="Look up a take by its unique ID." alt="" coords="779,63,953,103"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="458,80,765,80,765,85,458,85"/>
+<area shape="rect" id="Node000005" href="$df/db6/classTakeManager.html#a80febfa550c9e4c5f35cdb15bd6ea6cc" title="Loads the manifest from disk." alt="" coords="505,121,707,146"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="415,93,528,115,527,121,414,98"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="672,118,766,99,767,105,673,123"/>
+<area shape="rect" id="Node000006" href="$df/db6/classTakeManager.html#acb75e1e71f374b7b3c85690629eaf607" title="Returns the manifest.json path for a given project." alt="" coords="755,127,977,153"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="707,133,741,134,741,139,707,139"/>
+<area shape="rect" id="Node000007" href="$df/db6/classTakeManager.html#acfe0e3332867ecd9c0c1ea8817706e57" title="Returns the takes/ directory path for a given project." alt="" coords="1025,127,1259,153"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="978,137,1011,137,1011,143,978,143"/>
+</map>

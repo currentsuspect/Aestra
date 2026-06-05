@@ -1,0 +1,5 @@
+<map id="Aestra::Events::ScopedConnection::disconnect" name="Aestra::Events::ScopedConnection::disconnect">
+<area shape="rect" id="Node000001" title="Disconnect the owned connection." alt="" coords="297,5,541,45"/>
+<area shape="rect" id="Node000002" href="$d3/d2a/classAestra_1_1Events_1_1ScopedConnection.html#acda6146d4251195ce0eaa3d482e18d1f" title="Disconnect and assign new connection." alt="" coords="5,5,249,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="283,28,250,28,250,23,283,23"/>
+</map>

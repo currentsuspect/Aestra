@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::HeadlessMusicGenerator::loadFourOnTheFloor" name="Aestra::Audio::HeadlessMusicGenerator::loadFourOnTheFloor">
+<area shape="rect" id="Node000001" title="Load a preset drum pattern (Four&#45;on&#45;the&#45;floor)" alt="" coords="5,5,232,45"/>
+<area shape="rect" id="Node000002" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a4c0f27d986bceab77e503a19fcefef63" title="Add a note to the current pattern." alt="" coords="280,5,495,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="232,23,266,23,266,28,232,28"/>
+</map>

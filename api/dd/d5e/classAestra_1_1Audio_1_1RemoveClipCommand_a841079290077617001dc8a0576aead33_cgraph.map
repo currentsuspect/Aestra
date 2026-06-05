@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::RemoveClipCommand::execute" name="Aestra::Audio::RemoveClipCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,69,201,109"/>
+<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae35de040bc40450f4e6447a663be5a23" title="Find which lane a clip belongs to." alt="" coords="249,5,455,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="181,67,260,46,262,51,182,72"/>
+<area shape="rect" id="Node000003" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a451289f1d5433a3c8793fb18b649b8fb" title="Get a clip by ID." alt="" coords="249,69,455,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="202,87,236,87,236,92,202,92"/>
+<area shape="rect" id="Node000004" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#af44a50346cebfd76b853283bacc24818" title="Remove a clip by ID." alt="" coords="249,133,455,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="182,107,262,127,260,133,181,112"/>
+</map>

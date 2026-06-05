@@ -1,0 +1,18 @@
+<map id="Aestra::Audio::AudioEngine" name="Aestra::Audio::AudioEngine">
+<area shape="rect" id="Node000001" title="Real&#45;time audio engine with 144dB dynamic range." alt="" coords="116,269,315,295"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,181,65,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="43,219,49,232,58,243,86,260,116,271,115,276,83,265,55,247,45,235,38,222"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="99,181,313,207"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="211,220,217,269,211,269,206,221"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="124,93,235,119"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="180,132,183,156,197,180,193,183,178,158,174,133"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="285,93,418,119"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="291,126,251,145,231,163,216,183,211,180,227,160,249,140,288,121"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="337,181,501,207"/>
+<area shape="poly" id="edge8_Node000007_Node000005" title=" " alt="" coords="370,128,391,156,411,179,407,183,387,159,366,131"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="332,5,371,31"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="354,45,354,93,349,93,349,45"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="391,216,331,248,261,272,259,267,329,243,389,211"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="466,93,517,119"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="482,132,464,159,438,183,434,179,460,156,478,129"/>
+</map>

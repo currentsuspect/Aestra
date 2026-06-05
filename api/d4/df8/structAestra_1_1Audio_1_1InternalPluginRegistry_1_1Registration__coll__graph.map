@@ -1,0 +1,23 @@
+<map id="Aestra::Audio::InternalPluginRegistry::Registration" name="Aestra::Audio::InternalPluginRegistry::Registration">
+<area shape="rect" id="Node000001" title=" " alt="" coords="473,344,679,384"/>
+<area shape="rect" id="Node000002" href="$d3/d65/structAestra_1_1Audio_1_1PluginInfo.html" title="Plugin metadata information." alt="" coords="277,249,459,274"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="405,278,538,341,536,346,403,282"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="87,131,113,175,132,197,153,215,182,230,213,242,277,254,276,260,212,247,180,235,151,220,128,201,109,178,83,134"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="142,95,250,120"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="211,131,239,173,279,215,306,233,335,246,333,251,304,238,276,219,235,176,207,134"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="274,95,366,120"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="330,133,356,217,366,248,361,249,351,218,325,134"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="391,95,441,120"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="413,134,389,218,376,250,371,248,384,216,408,133"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="465,95,540,120"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="497,134,479,176,465,199,449,219,425,238,400,251,397,246,422,233,445,215,461,196,474,174,492,132"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="613,95,664,120"/>
+<area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="642,134,635,178,626,200,611,219,594,232,578,240,546,244,512,242,471,244,430,251,429,246,470,239,512,236,546,238,576,235,591,228,607,215,621,198,630,176,637,133"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="483,241,669,281"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="579,295,579,344,573,344,573,295"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="693,249,832,274"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="739,285,684,322,631,346,629,341,681,318,737,281"/>
+</map>

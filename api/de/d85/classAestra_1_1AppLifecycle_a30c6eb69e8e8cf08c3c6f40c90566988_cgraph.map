@@ -1,0 +1,5 @@
+<map id="Aestra::AppLifecycle::isShuttingDown" name="Aestra::AppLifecycle::isShuttingDown">
+<area shape="rect" id="Node000001" title="Check if app is shutting down or terminated (thread&#45;safe)" alt="" coords="5,5,160,45"/>
+<area shape="rect" id="Node000002" href="$de/d85/classAestra_1_1AppLifecycle.html#ac95b13afbbd7c875055dde6938d3f37d" title="Get current state (thread&#45;safe)" alt="" coords="208,5,363,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="160,23,194,23,194,28,160,28"/>
+</map>

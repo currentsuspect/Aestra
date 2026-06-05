@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::LatencyGraph::Node" name="Aestra::Audio::LatencyGraph::Node">
+<area shape="rect" id="Node000001" title=" " alt="" coords="74,108,281,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="50,43,57,64,70,82,86,95,105,105,103,110,83,100,66,86,53,66,45,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="152,5,203,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="180,45,180,108,175,108,175,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="227,5,351,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="272,43,231,86,203,110,200,106,227,82,269,39"/>
+</map>

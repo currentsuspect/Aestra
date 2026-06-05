@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::pathStringToWide" name="Aestra::Audio::pathStringToWide">
+<area shape="rect" id="Node000001" title="Convert a raw string path to wide string for Windows APIs." alt="" coords="5,29,189,69"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="54,30,51,20,58,10,74,5,97,3,125,6,140,13,137,18,123,11,97,8,75,10,61,15,56,21,59,28"/>
+<area shape="rect" id="Node000002" href="$d4/dc5/PathUtils_8h.html#a1a9e2b7a8c75a2cf798595f66348e4ab" title="Convert a UTF&#45;8 string to wide string (UTF&#45;16 on Windows)" alt="" coords="237,37,428,62"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="190,47,223,47,223,52,190,52"/>
+<area shape="poly" id="edge3_Node000002_Node000002" title=" " alt="" coords="295,38,286,28,291,18,306,12,333,10,366,14,378,23,375,28,364,19,333,15,308,17,294,22,291,28,298,35"/>
+</map>

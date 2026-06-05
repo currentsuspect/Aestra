@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PluginManager::createInstanceAsync" name="Aestra::Audio::PluginManager::createInstanceAsync">
+<area shape="rect" id="Node000001" title="Create a new plugin instance asynchronously (or pseudo&#45;async)" alt="" coords="268,5,483,45"/>
+<area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a775c8c51275942e0b56912ab7bc5531b" title="Create instance by plugin ID asynchronously." alt="" coords="5,5,220,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="255,28,220,28,220,23,255,23"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="AestraUI::UnitRow::UnitRow" name="AestraUI::UnitRow::UnitRow">
+<area shape="rect" id="Node000001" title="Create a sequencer row for an Arsenal unit." alt="" coords="5,5,153,45"/>
+<area shape="rect" id="Node000002" href="$da/d6f/classAestraUI_1_1UnitRow.html#a463bb23535731d91ef746e1e6a82407f" title="Refresh cached unit state from the backing managers." alt="" coords="201,5,349,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="154,23,187,23,187,28,154,28"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="397,5,599,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="350,23,384,23,384,28,350,28"/>
+</map>

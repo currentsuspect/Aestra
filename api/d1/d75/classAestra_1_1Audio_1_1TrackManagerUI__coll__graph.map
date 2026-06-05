@@ -1,0 +1,15 @@
+<map id="Aestra::Audio::TrackManagerUI" name="Aestra::Audio::TrackManagerUI">
+<area shape="rect" id="Node000001" title="UI wrapper for TrackManager." alt="" coords="681,141,904,166"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="565,116,708,138,708,143,565,121"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="209,101,374,101,374,107,209,107"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,160,278,151,350,136,374,126,411,114,412,119,376,130,351,141,279,157,209,165"/>
+<area shape="rect" id="Node000006" href="$d3/d88/classAestraUI_1_1IDropTarget.html" title="Interface for components that can receive drops." alt="" coords="387,141,548,166"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="561,151,681,151,681,156,561,156"/>
+<area shape="rect" id="Node000007" href="$de/dfb/classAestra_1_1Events_1_1Signal_3_01void_01_4.html" title="Specialization for void signals (no event argument)." alt="" coords="385,191,549,231"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="562,191,719,163,720,169,563,197"/>
+</map>

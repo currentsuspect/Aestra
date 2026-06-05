@@ -1,0 +1,16 @@
+<map id="AestraAudio/include" name="AestraAudio/include">
+<area shape="rect" id="node2" href="dir_869790ce50e20159428c92cdc028206e.html" title="Commands" alt="" coords="749,63,845,88"/>
+<area shape="rect" id="node3" href="dir_463a1cb52050a68dec641340bb9b57a2.html" title="Core" alt="" coords="673,63,725,88"/>
+<area shape="rect" id="node5" href="dir_6c7ee16020c8cb2f592d67dc5f210c6c.html" title="DSP" alt="" coords="675,136,723,161"/>
+<area shape="poly" id="edge1" href="dir_000008_000014.html" alt="" coords="701,88,701,122,696,122,696,88"/>
+<area shape="rect" id="edge1-headlabel" href="dir_000008_000014.html" title="1" alt="" coords="702,110,712,125"/>
+<area shape="rect" id="node4" href="dir_9ec5c2ddc386ad60b856039bdb2aa30b.html" title="Drivers" alt="" coords="579,63,648,88"/>
+<area shape="rect" id="node6" href="dir_ed54fc46b5f423b2aa39c926c71828c2.html" title="Headless" alt="" coords="472,63,555,88"/>
+<area shape="rect" id="node7" href="dir_c738a77f80ec3ff27e73bf2670ab69e2.html" title="IO" alt="" coords="409,63,447,88"/>
+<area shape="rect" id="node8" href="dir_576aba8aa1c8352ba5bc537e2a1f44b5.html" title="Models" alt="" coords="315,63,384,88"/>
+<area shape="rect" id="node9" href="dir_d13ceb04236bd09e964b1dffdb3b6114.html" title="Music" alt="" coords="230,63,290,88"/>
+<area shape="rect" id="node10" href="dir_6f8ca725fe76c0734383945de128d29f.html" title="Playback" alt="" coords="125,63,206,88"/>
+<area shape="rect" id="node11" href="dir_a6cbdc1cbec1278345b46e71e886b225.html" title="Plugin" alt="" coords="38,63,101,88"/>
+<area shape="rect" id="clust2" href="dir_abdf151f50288a307116a45335cc5f3c.html" alt="" coords="27,52,949,172"/>
+<area shape="rect" id="clust1" href="dir_c6425668991841b1eb5113561560b5db.html" title="AestraAudio" alt="" coords="16,16,960,183"/>
+</map>

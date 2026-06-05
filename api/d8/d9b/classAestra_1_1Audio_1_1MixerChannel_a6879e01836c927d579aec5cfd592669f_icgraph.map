@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::MixerChannel::setSolo" name="Aestra::Audio::MixerChannel::setSolo">
+<area shape="rect" id="Node000001" title="Set solo state." alt="" coords="287,69,493,109"/>
+<area shape="rect" id="Node000002" href="$d2/d02/classAestra_1_1Audio_1_1SetSoloCommand.html#a229a705b672a2dd353d2973ee52935e4" title="Execute the command (first time)" alt="" coords="5,5,239,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="292,69,206,48,207,43,293,63"/>
+<area shape="rect" id="Node000003" href="$d2/d02/classAestra_1_1Audio_1_1SetSoloCommand.html#aac4a75174a18f7b719fae84874281ea5" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,69,239,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="273,92,239,92,239,87,273,87"/>
+<area shape="rect" id="Node000004" href="$d2/d02/classAestra_1_1Audio_1_1SetSoloCommand.html#a98527704e322964c9d897cd905402715" title="Undo the command." alt="" coords="5,133,239,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="293,115,207,136,206,131,292,110"/>
+</map>

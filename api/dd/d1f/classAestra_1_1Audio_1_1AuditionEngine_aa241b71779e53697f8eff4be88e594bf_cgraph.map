@@ -1,0 +1,8 @@
+<map id="Aestra::Audio::AuditionEngine::getPositionNormalized" name="Aestra::Audio::AuditionEngine::getPositionNormalized">
+<area shape="rect" id="Node000001" title="Get current position (0.0 &#45; 1.0 normalized)" alt="" coords="5,5,220,45"/>
+<area shape="rect" id="Node000002" href="$dd/d1f/classAestra_1_1Audio_1_1AuditionEngine.html#a22ccf4efd8457cd58131c7ead71da9e2" title="Get current track duration." alt="" coords="531,5,745,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,20,268,19,483,19,517,19,517,25,483,24,268,24,220,25"/>
+<area shape="rect" id="Node000003" href="$dd/d1f/classAestra_1_1Audio_1_1AuditionEngine.html#a0485fa16db82e527fa2be545ebbdba9b" title="Get current position in seconds." alt="" coords="268,33,483,73"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="220,34,255,38,254,43,220,39"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="483,39,517,36,517,41,483,45"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="AestraCore/include/PointerRegistry.h" name="AestraCore/include/PointerRegistry.h">
+<area shape="rect" id="Node000001" title="Runtime pointer validation for catching wiring bugs early." alt="" coords="177,5,323,45"/>
+<area shape="rect" id="Node000002" href="$dd/d52/PointerRegistry_8cpp_source.html" title=" " alt="" coords="5,93,252,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="211,55,148,95,145,91,208,51"/>
+<area shape="rect" id="Node000003" href="$db/d11/AestraApp_8cpp_source.html" title=" " alt="" coords="276,93,469,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="293,51,356,91,353,95,290,55"/>
+</map>

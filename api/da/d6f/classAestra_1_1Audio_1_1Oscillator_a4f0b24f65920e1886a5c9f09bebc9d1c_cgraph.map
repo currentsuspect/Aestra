@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Oscillator::Oscillator" name="Aestra::Audio::Oscillator::Oscillator">
+<area shape="rect" id="Node000001" title="Construct oscillator with sample rate." alt="" coords="5,5,184,45"/>
+<area shape="rect" id="Node000002" href="$da/d6f/classAestra_1_1Audio_1_1Oscillator.html#aa7c1a615322d5bfb97a672a39266f404" title="Set oscillator frequency." alt="" coords="232,5,411,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="185,23,218,23,218,28,185,28"/>
+</map>

@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::IAudioDriver" name="Aestra::Audio::IAudioDriver">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,127,204,152"/>
+<area shape="rect" id="Node000002" href="$d2/dc1/classAestra_1_1Audio_1_1ASIODriver.html" title="ASIO Driver implementation for low&#45;latency professional audio." alt="" coords="269,5,457,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="130,116,184,78,251,41,289,28,291,33,253,46,187,82,134,120"/>
+<area shape="rect" id="Node000003" href="$db/d2a/classAestra_1_1Audio_1_1DummyAudioDriver.html" title="Silent dummy driver that simulates an audio interface." alt="" coords="260,55,467,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="170,121,281,93,282,98,171,126"/>
+<area shape="rect" id="Node000004" href="$d2/d68/classAestra_1_1Audio_1_1NativeAudioDriver.html" title="Base class for native drivers (WASAPI, ASIO) Extends IAudioDriver with additional diagnostics and sta..." alt="" coords="265,119,462,159"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="218,137,264,137,264,142,218,142"/>
+<area shape="rect" id="Node000007" href="$d5/d20/classAestra_1_1Audio_1_1RtAudioBackend.html" title="RtAudio implementation of IAudioDriver." alt="" coords="252,184,475,209"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="177,152,306,181,305,187,176,158"/>
+<area shape="rect" id="Node000008" href="$d1/d81/classAestra_1_1Audio_1_1RtAudioDriver.html" title=" " alt="" coords="259,233,467,259"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="137,157,190,189,253,220,290,231,288,236,251,224,187,194,134,162"/>
+<area shape="rect" id="Node000005" href="$d1/db7/classAestra_1_1Audio_1_1WASAPIExclusiveDriver.html" title="WASAPI Exclusive Mode Driver." alt="" coords="523,87,753,127"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="475,124,522,118,523,123,476,129"/>
+<area shape="rect" id="Node000006" href="$d0/ddd/classAestra_1_1Audio_1_1WASAPISharedDriver.html" title="WASAPI Shared Mode Driver." alt="" coords="531,151,745,191"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="476,150,531,156,531,162,475,155"/>
+</map>

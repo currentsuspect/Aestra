@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::AudioEngine::isTransportPlaying" name="Aestra::Audio::AudioEngine::isTransportPlaying">
+<area shape="rect" id="Node000001" title="Check whether transport playback is active." alt="" coords="776,101,975,141"/>
+<area shape="rect" id="Node000002" href="$da/da3/classAestra_1_1Audio_1_1PlayCommand.html#a510fd7a6a2f7d268b16903198320080c" title="Execute the command (first time)" alt="" coords="515,5,727,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="818,98,727,60,692,48,694,43,729,55,820,93"/>
+<area shape="rect" id="Node000003" href="$db/d15/classAestra_1_1Audio_1_1StopCommand.html#ae157d35a9cb8c9febd3c9f4c1abdb8b5" title="Execute the command (first time)" alt="" coords="515,69,728,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="762,110,728,105,729,100,763,104"/>
+<area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a637ffa229f214a70f984a27632055cb7" title="Load downbeat and upbeat click samples for the metronome." alt="" coords="522,133,721,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="762,138,721,143,721,138,762,133"/>
+<area shape="rect" id="Node000005" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="517,197,726,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="820,150,729,188,694,200,692,195,727,183,818,145"/>
+<area shape="rect" id="Node000006" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="255,165,464,205"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="503,206,464,201,464,195,503,200"/>
+<area shape="rect" id="Node000008" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="252,229,467,269"/>
+<area shape="poly" id="edge7_Node000005_Node000008" title=" " alt="" coords="503,234,467,239,467,234,503,229"/>
+<area shape="rect" id="Node000007" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,165,204,205"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="241,188,204,188,204,183,241,183"/>
+</map>

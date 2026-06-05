@@ -1,0 +1,5 @@
+<map id="AestraUI::UnitRow::updateState" name="AestraUI::UnitRow::updateState">
+<area shape="rect" id="Node000001" title="Refresh cached unit state from the backing managers." alt="" coords="5,5,153,45"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="201,5,403,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="154,23,188,23,188,28,154,28"/>
+</map>

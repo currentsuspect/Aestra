@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::HybridPluginFactory::createPluginAsync" name="Aestra::Audio::HybridPluginFactory::createPluginAsync">
+<area shape="rect" id="Node000001" title="Request asynchronous creation of a plugin instance." alt="" coords="5,37,205,77"/>
+<area shape="rect" id="Node000002" href="$df/d30/classAestra_1_1Audio_1_1InProcessPluginFactory.html#aa9e59e5792ec7822c0419da349280423" title="Request asynchronous creation of a plugin instance." alt="" coords="253,5,489,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="205,43,239,39,240,44,206,48"/>
+<area shape="rect" id="Node000003" href="$d2/d86/classAestra_1_1Audio_1_1OutOfProcessPluginFactory.html#a584ec069fd9529e3757083cf5dc2e841" title="Request asynchronous creation of a plugin instance." alt="" coords="253,69,489,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="206,67,240,71,239,76,205,72"/>
+</map>

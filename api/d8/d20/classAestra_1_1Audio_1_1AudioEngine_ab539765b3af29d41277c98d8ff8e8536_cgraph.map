@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AudioEngine::getPlayhead" name="Aestra::Audio::AudioEngine::getPlayhead">
+<area shape="rect" id="Node000001" title="Get the current playhead position in beats." alt="" coords="5,37,204,77"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#af9ea6f00d65d1352cf858b6f9c57b42a" title="Get transport tempo in beats per minute." alt="" coords="252,5,451,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,42,238,37,239,43,205,47"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a6f72e62a0b319f51dc2430532a8e1969" title="Get the current transport position in samples." alt="" coords="252,69,451,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="205,68,239,72,238,77,204,73"/>
+</map>

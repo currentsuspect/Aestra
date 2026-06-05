@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PluginManager::shutdown" name="Aestra::Audio::PluginManager::shutdown">
+<area shape="rect" id="Node000001" title="Shutdown the plugin manager." alt="" coords="213,5,428,45"/>
+<area shape="rect" id="Node000002" href="$d6/d43/classAestraApp.html#a3e1e08e14a87156e2b9b82e5c6be23d3" title="Shutdown all subsystems." alt="" coords="5,13,165,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,28,165,28,165,23,200,23"/>
+</map>

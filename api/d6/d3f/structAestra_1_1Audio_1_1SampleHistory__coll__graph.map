@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::SampleHistory" name="Aestra::Audio::SampleHistory">
+<area shape="rect" id="Node000001" title="Ring buffer for input sample history." alt="" coords="5,137,219,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="16,5,91,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="50,45,48,79,51,96,57,112,68,125,83,135,80,139,65,129,52,115,46,97,43,79,45,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="145,5,196,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="168,45,159,79,144,115,126,139,121,136,139,112,154,77,163,43"/>
+</map>

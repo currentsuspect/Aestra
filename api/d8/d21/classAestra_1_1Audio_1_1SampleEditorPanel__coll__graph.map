@@ -1,0 +1,25 @@
+<map id="Aestra::Audio::SampleEditorPanel" name="Aestra::Audio::SampleEditorPanel">
+<area shape="rect" id="Node000001" title="Sample Editor panel for editing loaded audio samples." alt="" coords="1055,305,1259,345"/>
+<area shape="rect" id="Node000002" href="$dc/d3e/classAestra_1_1Audio_1_1WindowPanel.html" title="WindowPanel &#45; A dockable window panel with title bar." alt="" coords="611,91,815,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="829,107,879,115,931,127,983,145,1032,170,1071,200,1104,237,1147,304,1143,307,1099,240,1067,204,1029,174,981,150,930,133,878,120,828,113"/>
+<area shape="rect" id="Node000003" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="574,101,611,101,611,107,574,107"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="35,84,195,124"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="209,101,374,101,374,107,209,107"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="36,148,195,188"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="208,157,278,149,350,136,429,114,430,119,351,141,279,154,209,163"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="609,141,817,195"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="831,187,930,212,1032,247,1085,274,1129,303,1126,308,1082,279,1030,252,929,217,830,192"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="609,219,817,274"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="831,265,1055,305,1054,310,830,270"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="609,298,817,353"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="831,323,1054,323,1054,328,831,328"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="635,377,791,402"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="805,375,1030,343,1054,339,1055,344,1031,348,805,380"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="630,426,797,451"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="810,430,917,417,974,405,1030,389,1080,368,1124,343,1126,348,1083,373,1032,395,976,410,918,422,811,436"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="644,513,783,538"/>
+<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="796,532,851,533,912,528,973,515,1029,491,1070,459,1103,419,1128,378,1145,345,1149,347,1133,381,1108,422,1074,463,1032,496,974,520,912,533,851,538,796,537"/>
+</map>

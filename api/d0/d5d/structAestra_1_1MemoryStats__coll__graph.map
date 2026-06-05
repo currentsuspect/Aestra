@@ -1,0 +1,7 @@
+<map id="Aestra::MemoryStats" name="Aestra::MemoryStats">
+<area shape="rect" id="Node000001" title="Memory profiling data." alt="" coords="31,137,189,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,65,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="32,44,29,78,32,96,39,112,52,125,68,135,66,140,48,129,34,115,27,97,24,79,26,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="151,5,218,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="184,45,175,79,157,115,132,139,128,135,153,112,170,78,179,44"/>
+</map>

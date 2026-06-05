@@ -1,0 +1,21 @@
+<map id="Aestra::Audio::TrackManager::requestAudioGraphRebuild" name="Aestra::Audio::TrackManager::requestAudioGraphRebuild">
+<area shape="rect" id="Node000001" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="511,229,719,269"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ac8c006cf1d67aea3a2fdb1ca5e309f0c" title="Add a new channel." alt="" coords="251,69,459,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="583,221,529,171,496,146,461,124,435,112,437,107,464,119,500,141,533,167,587,217"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a90c9949239b50570e2bec600ec086550" title="Remove every track and reset the slot map." alt="" coords="251,133,459,173"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="556,226,462,188,426,176,428,171,464,183,558,221"/>
+<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aaf3ab32d42b520f16e02bfa469503fbe" title="Mark the live audio graph as requiring a rebuild." alt="" coords="251,197,459,237"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="497,237,459,233,460,228,497,232"/>
+<area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a9a8256dec957cc8340b4318255479f91" title="Remove the last added channel (for undo of addChannel)" alt="" coords="251,261,459,301"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="497,266,460,271,459,266,497,261"/>
+<area shape="rect" id="Node000009" href="$d3/d16/classAestra_1_1Audio_1_1PlaybackGraphController.html#aa9dc57ee2fd8a61e17fb9c346ed29b95" title="Request a graph rebuild (forwards to TrackManager)." alt="" coords="248,325,463,365"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="558,277,464,316,428,328,426,323,462,311,556,272"/>
+<area shape="rect" id="Node000010" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#acb294c03eb11bcff3fb70166a307b235" title="Construct a track manager and wire its internal playback helpers." alt="" coords="251,389,459,429"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="587,282,533,332,500,357,464,380,437,392,435,387,461,375,496,353,529,327,583,278"/>
+<area shape="rect" id="Node000003" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#a4439b06fc72f0560a8277aed0e34eda9" title="Add the channel if the command has not been executed yet." alt="" coords="5,5,200,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="262,68,181,48,183,43,263,63"/>
+<area shape="rect" id="Node000004" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html#ac9f3ce440ca3815801bf7378d29dcc80" title="Recreate the channel after an undo operation." alt="" coords="5,69,200,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="238,92,200,92,200,87,238,87"/>
+<area shape="rect" id="Node000005" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#a14e5d96d52b157bd446590c4a6ab42ed" title="Undo the command." alt="" coords="5,133,200,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="263,115,183,136,181,131,262,110"/>
+</map>

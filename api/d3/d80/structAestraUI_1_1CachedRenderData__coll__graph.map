@@ -1,0 +1,13 @@
+<map id="AestraUI::CachedRenderData" name="AestraUI::CachedRenderData">
+<area shape="rect" id="Node000001" title=" " alt="" coords="133,225,344,251"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,108,80,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="49,146,57,175,75,199,105,213,150,223,149,228,103,218,72,203,53,177,43,148"/>
+<area shape="rect" id="Node000003" href="$d7/db4/structAestraUI_1_1NUISize.html" title=" " alt="" coords="105,108,242,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="189,144,235,224,230,227,184,147"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="148,5,199,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="176,45,176,108,171,108,171,45"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="267,108,317,133"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="283,147,246,226,242,224,279,145"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="356,108,431,133"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="393,147,384,176,366,203,345,218,322,228,320,223,343,213,362,199,379,174,388,146"/>
+</map>

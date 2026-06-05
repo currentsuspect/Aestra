@@ -1,0 +1,23 @@
+<map id="Aestra::Audio::AudioDeviceManager::checkAndAutoScaleBuffer" name="Aestra::Audio::AudioDeviceManager::checkAndAutoScaleBuffer">
+<area shape="rect" id="Node000001" title="Check underrun rate and auto&#45;scale buffer if needed Call this periodically (e.g., every second) to mo..." alt="" coords="5,159,260,199"/>
+<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a5578f6243b8fb46f44dab152272f108f" title="Monitor active driver health and perform safety fallback if stalled." alt="" coords="308,63,516,103"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="185,156,307,112,330,104,332,110,309,117,187,161"/>
+<area shape="rect" id="Node000003" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#aee6ca4d0f38d2c11024f3888e09b1ac2" title="Check if stream is active." alt="" coords="577,5,776,45"/>
+<area shape="poly" id="edge6_Node000001_Node000003" title=" " alt="" coords="151,157,216,100,260,71,307,48,371,30,438,19,504,15,563,14,564,20,504,20,439,25,373,35,309,53,262,76,219,104,155,161"/>
+<area shape="rect" id="Node000005" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a59ff87f6eacda2f6d4a2ef7f3851a7ac" title="Close current audio stream." alt="" coords="313,127,511,167"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="260,161,298,157,299,162,260,167"/>
+<area shape="rect" id="Node000007" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a5f43c54eebe1a9600ca3a8df6936448a" title="Open audio stream with configuration." alt="" coords="313,191,511,231"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="260,191,299,195,298,200,260,196"/>
+<area shape="rect" id="Node000008" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a5a1f1a932cad85a931383f493dad71b7" title="Start audio processing." alt="" coords="313,319,511,359"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="158,197,223,250,265,279,309,304,325,311,322,316,307,309,262,283,220,254,154,201"/>
+<area shape="rect" id="Node000010" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a035f837c1320901be122e30661f72bb3" title="Stop audio processing." alt="" coords="313,255,511,295"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="187,196,309,240,332,248,330,253,307,245,185,201"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="504,60,570,46,571,51,506,65"/>
+<area shape="rect" id="Node000004" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#aeab1234c3d370e846eeda0bc2872f25b" title="Force switch to the internal dummy driver (e.g." alt="" coords="564,69,789,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="516,83,550,83,550,89,516,88"/>
+<area shape="rect" id="Node000006" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#adb6da257a490a04dfba8d46618b44a90" title="Stop the automatic driver health monitoring thread." alt="" coords="573,195,781,235"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="491,164,586,189,585,194,490,169"/>
+<area shape="rect" id="Node000009" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#af3ce5f21cb3a5e924319c9b2c2c39577" title="Start the automatic driver health monitoring thread." alt="" coords="571,319,782,359"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="512,336,558,336,558,341,512,341"/>
+<area shape="poly" id="edge11_Node000010_Node000006" title=" " alt="" coords="500,252,574,235,575,240,502,257"/>
+</map>

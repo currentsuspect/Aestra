@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::PluginManager::createInstance" name="Aestra::Audio::PluginManager::createInstance">
+<area shape="rect" id="Node000001" title="Create a new plugin instance." alt="" coords="772,37,987,77"/>
+<area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a44cee57644631d1a05358e91b0d4bd16" title="Create instance by plugin ID." alt="" coords="509,37,724,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="759,60,724,60,724,55,759,55"/>
+<area shape="rect" id="Node000003" href="$da/d71/classAestraUI_1_1PluginUIController.html#a212dbf3849e370089393c7b225bd33b2" title="Load a plugin into an effect slot." alt="" coords="257,5,461,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="495,45,461,41,462,35,496,40"/>
+<area shape="rect" id="Node000005" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aff7ac5cff4a8364180b68396b940569d" title="Load entire chain state." alt="" coords="264,69,455,109"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="496,75,455,80,455,75,495,70"/>
+<area shape="rect" id="Node000004" href="$da/d71/classAestraUI_1_1PluginUIController.html#a6f6aad77c64762f12e40f6899c8e0e8b" title="Bind an EffectChainRack to an audio EffectChain." alt="" coords="5,5,209,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="244,28,210,28,210,23,244,23"/>
+</map>

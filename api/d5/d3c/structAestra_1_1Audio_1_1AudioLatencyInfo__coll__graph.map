@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AudioLatencyInfo" name="Aestra::Audio::AudioLatencyInfo">
+<area shape="rect" id="Node000001" title="Audio latency metrics." alt="" coords="5,108,236,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="14,5,81,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="45,44,45,64,51,83,64,96,80,106,77,110,60,100,46,85,39,65,39,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="157,5,231,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="188,45,167,86,140,110,137,106,163,82,184,42"/>
+</map>

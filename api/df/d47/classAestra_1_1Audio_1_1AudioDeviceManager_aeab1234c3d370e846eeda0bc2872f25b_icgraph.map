@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AudioDeviceManager::switchToSafetyDriver" name="Aestra::Audio::AudioDeviceManager::switchToSafetyDriver">
+<area shape="rect" id="Node000001" title="Force switch to the internal dummy driver (e.g." alt="" coords="564,5,789,45"/>
+<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a5578f6243b8fb46f44dab152272f108f" title="Monitor active driver health and perform safety fallback if stalled." alt="" coords="308,5,516,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="550,28,516,28,516,23,550,23"/>
+<area shape="rect" id="Node000003" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#af7e84a07cb98d2939ceb1c0f6ccd62a6" title="Check underrun rate and auto&#45;scale buffer if needed Call this periodically (e.g., every second) to mo..." alt="" coords="5,5,260,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="294,28,260,28,260,23,294,23"/>
+</map>

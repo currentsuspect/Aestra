@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::Plugins::AestraDelay::getParameter" name="Aestra::Audio::Plugins::AestraDelay::getParameter">
+<area shape="rect" id="Node000001" title="Get current parameter value (normalized 0&#45;1)" alt="" coords="308,69,513,109"/>
+<area shape="rect" id="Node000002" href="$dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#aa1090348c29e19ce1c9fbdd63c92a23e" title="Get parameter value as display string." alt="" coords="5,5,260,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="309,69,219,48,221,43,310,64"/>
+<area shape="rect" id="Node000003" href="$dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#ae1a6b5be1f62cc5c08438288dc926560" title="Get tail length in samples (for effects like reverb)" alt="" coords="25,69,241,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="294,92,241,92,241,87,294,87"/>
+<area shape="rect" id="Node000004" href="$dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#a07e7d42db55a234865bd47743aa4ba25" title="Save plugin state to binary data." alt="" coords="41,133,224,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="310,115,221,136,219,131,309,110"/>
+</map>

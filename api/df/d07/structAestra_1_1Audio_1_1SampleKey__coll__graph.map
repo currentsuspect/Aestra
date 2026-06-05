@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::SampleKey" name="Aestra::Audio::SampleKey">
+<area shape="rect" id="Node000001" title=" " alt="" coords="31,183,222,208"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="87,132,100,157,118,181,113,184,95,160,82,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="143,95,217,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="169,134,153,160,137,184,133,181,148,157,164,131"/>
+</map>

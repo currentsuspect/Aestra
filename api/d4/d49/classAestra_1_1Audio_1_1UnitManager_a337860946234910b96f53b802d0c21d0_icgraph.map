@@ -1,0 +1,73 @@
+<map id="Aestra::Audio::UnitManager::getUnit" name="Aestra::Audio::UnitManager::getUnit">
+<area shape="rect" id="Node000001" title="Get a mutable unit by identifier." alt="" coords="775,809,976,849"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a736081f5fcc291f3a3a355315f487abd" title="Assign a unit to a Timeline lane for arrangement playback." alt="" coords="255,5,456,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="868,796,853,657,824,465,805,367,782,278,755,204,740,175,725,154,697,127,666,105,632,86,597,70,524,48,456,35,457,30,525,43,598,65,635,81,669,100,701,123,729,150,745,173,760,202,787,276,810,366,830,464,858,657,874,795"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#abe251e7c091035cef629fd12841c58f2" title="Attach a plugin instance to a unit." alt="" coords="255,69,456,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="867,796,849,672,819,502,799,417,777,338,752,274,725,230,697,203,666,179,596,143,524,118,456,103,457,98,525,113,598,138,669,175,701,199,729,226,756,272,782,337,804,415,824,501,855,671,872,795"/>
+<area shape="rect" id="Node000005" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a20281d7d2f76f2b7380b89cb65a8fe5c" title="Capture the current plugin state back into the unit model." alt="" coords="515,905,716,945"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="820,858,728,896,691,908,690,903,726,891,818,853"/>
+<area shape="rect" id="Node000006" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#afee8246d7fbcab1cca2460e44bd32f6c" title="Clear any Timeline lane assignment so the unit previews to master." alt="" coords="255,133,456,173"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="871,796,865,703,857,642,844,575,826,505,800,436,767,370,725,311,697,283,666,259,596,219,523,191,455,172,457,167,525,186,598,214,669,254,700,279,729,308,771,367,805,434,831,503,849,573,862,641,870,702,876,795"/>
+<area shape="rect" id="Node000007" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aff0e94c9370a5bc4754d2d123b070c26" title="Duplicate an existing unit, copying its state and pattern." alt="" coords="255,197,456,237"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="869,796,858,717,833,612,815,555,791,499,761,446,725,398,694,367,660,341,585,296,509,263,439,240,441,235,511,258,587,291,663,336,698,363,729,394,765,443,795,497,820,553,838,610,863,716,874,795"/>
+<area shape="rect" id="Node000008" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a82a1e326b2d555a4b7bbee755a30e0f5" title="Get the plugin instance attached to a unit." alt="" coords="515,969,716,1009"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="849,862,796,912,763,937,728,960,702,972,699,967,725,955,760,933,792,908,845,858"/>
+<area shape="rect" id="Node000009" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#ab2039c8a3d3d822087073c7860ae7582" title="Get the plugin identifier attached to a unit." alt="" coords="515,1033,716,1073"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="860,863,838,900,808,944,771,987,728,1024,706,1036,704,1031,725,1019,768,983,804,940,834,898,855,860"/>
+<area shape="rect" id="Node000010" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#ae45984bd34d72469951ff89015fedb45" title="Get the current Timeline lane assignment, or &#45;1 when none." alt="" coords="515,1097,716,1137"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="867,863,848,913,819,974,779,1035,755,1063,728,1087,709,1099,706,1095,725,1083,752,1059,775,1032,814,971,843,911,862,861"/>
+<area shape="rect" id="Node000011" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a3fd29dd84ab20417ff42a819288da544" title="Get the permanent unit type for a unit." alt="" coords="515,1161,716,1201"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="871,864,856,925,829,1003,810,1043,787,1083,760,1119,728,1151,711,1163,708,1159,725,1147,756,1116,783,1080,805,1041,824,1001,850,924,865,862"/>
+<area shape="rect" id="Node000012" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="515,408,716,448"/>
+<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="862,797,843,740,813,666,774,587,725,514,688,478,650,450,653,446,692,474,729,510,779,585,818,664,848,738,867,796"/>
+<area shape="rect" id="Node000017" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a267accfa4e098834b8952e18b7e4d416" title="Attach an audio clip path to a unit." alt="" coords="255,760,456,800"/>
+<area shape="poly" id="edge30_Node000001_Node000017" title=" " alt="" coords="826,806,779,784,726,768,657,758,586,756,518,759,457,766,456,760,517,754,586,751,657,753,727,763,780,779,828,801"/>
+<area shape="rect" id="Node000019" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a3452277bf4dabe8eb354f7b18177733f" title="Set enabled state for a unit." alt="" coords="255,504,456,544"/>
+<area shape="poly" id="edge32_Node000001_Node000019" title=" " alt="" coords="859,798,838,755,809,705,771,656,725,614,661,579,590,555,520,539,456,531,456,526,521,534,592,550,663,574,728,610,775,652,814,702,843,753,863,795"/>
+<area shape="rect" id="Node000020" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#afc60b6176a94026262e9468f1e87d87f" title="Set muted state for a unit." alt="" coords="255,568,456,608"/>
+<area shape="poly" id="edge34_Node000001_Node000020" title=" " alt="" coords="853,800,801,731,766,695,725,666,659,636,589,615,519,601,456,594,456,589,520,596,590,610,661,631,728,662,769,691,805,727,857,796"/>
+<area shape="rect" id="Node000021" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#ae942d80409bd0b66605e9b48f597b213" title="Replace the serialized plugin state blob for a unit." alt="" coords="255,632,456,672"/>
+<area shape="poly" id="edge37_Node000001_Node000021" title=" " alt="" coords="845,801,793,753,760,730,726,710,658,686,587,670,518,660,456,655,456,650,519,655,588,665,660,681,728,706,763,725,796,749,849,797"/>
+<area shape="rect" id="Node000022" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a8326e78c84fe3d2959b3a1e9da160015" title="Set solo state for a unit." alt="" coords="255,696,456,736"/>
+<area shape="poly" id="edge38_Node000001_Node000022" title=" " alt="" coords="836,803,786,771,726,744,657,727,587,718,518,713,456,713,456,708,518,708,587,712,658,722,728,739,788,766,839,799"/>
+<area shape="rect" id="Node000023" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a17dc231c335a5cf97a71c109c4f640e1" title="Refill lookahead window with events (non&#45;RT thread) Called periodically by scheduler." alt="" coords="504,1225,727,1265"/>
+<area shape="poly" id="edge27_Node000001_Node000023" title=" " alt="" coords="874,863,862,936,838,1031,819,1081,795,1130,765,1175,728,1215,712,1227,709,1223,725,1211,761,1172,790,1127,814,1079,832,1029,857,935,868,862"/>
+<area shape="rect" id="Node000024" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#af077d1b43324e0500f20a611f16da0ee" title="Serialize the manager to JSON." alt="" coords="515,1289,716,1329"/>
+<area shape="poly" id="edge28_Node000001_Node000024" title=" " alt="" coords="876,863,868,947,859,1001,846,1059,827,1118,802,1177,769,1231,728,1279,713,1291,709,1287,725,1275,765,1228,797,1174,822,1116,841,1057,854,1000,863,946,870,863"/>
+<area shape="rect" id="Node000025" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a14d066559a7400db00b60c51a4c33340" title="Set armed state for a unit." alt="" coords="515,1353,716,1393"/>
+<area shape="poly" id="edge29_Node000001_Node000025" title=" " alt="" coords="877,863,873,957,866,1019,854,1086,836,1155,809,1223,774,1287,729,1343,713,1355,710,1351,725,1339,770,1284,805,1221,831,1153,849,1085,861,1018,868,957,872,863"/>
+<area shape="rect" id="Node000026" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aadadb3b3da7eef73eb25ca5fc45518ab" title="Set the UI accent color for a unit." alt="" coords="515,1417,716,1457"/>
+<area shape="poly" id="edge31_Node000001_Node000026" title=" " alt="" coords="872,863,855,984,824,1146,805,1229,782,1303,757,1365,729,1407,713,1419,710,1415,725,1404,752,1362,777,1302,799,1227,819,1145,849,983,867,863"/>
+<area shape="rect" id="Node000027" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a29b6a0365013bbdaaea6791b633be488" title="Set the unit group classification." alt="" coords="515,1481,716,1521"/>
+<area shape="poly" id="edge33_Node000001_Node000027" title=" " alt="" coords="873,864,858,996,829,1178,809,1270,786,1354,759,1423,744,1450,729,1471,714,1483,711,1479,725,1467,740,1448,754,1421,781,1353,804,1269,823,1177,852,995,868,863"/>
+<area shape="rect" id="Node000028" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c71bd03338327cfbea2ce7c91cc8ba6" title="Set the display name for a unit." alt="" coords="515,841,716,881"/>
+<area shape="poly" id="edge35_Node000001_Node000028" title=" " alt="" coords="761,846,717,852,716,846,761,841"/>
+<area shape="rect" id="Node000029" href="$da/d6f/classAestraUI_1_1UnitRow.html#a463bb23535731d91ef746e1e6a82407f" title="Refresh cached unit state from the backing managers." alt="" coords="541,777,689,817"/>
+<area shape="poly" id="edge39_Node000001_Node000029" title=" " alt="" coords="761,818,689,809,690,804,761,813"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aa8c164ecb307961d9b6e747cdc27f590" title="Legacy alias for Timeline lane assignment." alt="" coords="5,5,207,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="241,28,207,28,207,23,241,23"/>
+<area shape="poly" id="edge12_Node000012_Node000002" title=" " alt="" coords="607,395,592,325,564,235,544,187,519,141,489,97,454,59,438,48,441,43,458,55,494,94,524,138,549,185,569,233,597,324,612,394"/>
+<area shape="poly" id="edge13_Node000012_Node000004" title=" " alt="" coords="603,395,585,337,555,264,512,188,485,154,454,123,437,112,440,107,458,119,489,150,516,185,560,261,590,335,608,394"/>
+<area shape="poly" id="edge16_Node000012_Node000006" title=" " alt="" coords="599,396,577,350,546,293,505,236,481,210,454,187,435,176,438,171,458,183,484,207,509,233,550,291,582,347,604,394"/>
+<area shape="poly" id="edge17_Node000012_Node000007" title=" " alt="" coords="582,400,502,315,480,284,470,271,454,258,421,240,423,235,458,254,474,268,484,281,506,312,586,396"/>
+<area shape="rect" id="Node000013" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a07011f72c8bbb0351bba034b53919422" title="Remove every unit from the manager." alt="" coords="255,312,456,352"/>
+<area shape="poly" id="edge14_Node000012_Node000013" title=" " alt="" coords="553,405,455,367,421,355,422,350,457,361,555,400"/>
+<area shape="rect" id="Node000014" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#ae487cbc1ef884ad19b37ea73e9dc60c4" title="Restore unit state from JSON." alt="" coords="5,283,207,323"/>
+<area shape="poly" id="edge18_Node000012_Node000014" title=" " alt="" coords="587,400,530,346,494,321,455,303,393,287,328,281,265,282,207,287,207,282,264,276,328,275,394,282,457,297,497,317,534,342,590,396"/>
+<area shape="rect" id="Node000015" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aa6f0bea20529d2f2e245860f2730c6cb" title="Remove a unit by identifier." alt="" coords="255,376,456,416"/>
+<area shape="poly" id="edge19_Node000012_Node000015" title=" " alt="" coords="501,417,456,411,457,406,501,411"/>
+<area shape="rect" id="Node000016" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a5043de1ff711e8d03b1ecc034bcf139d" title="Reorder a unit inside the display list." alt="" coords="255,440,456,480"/>
+<area shape="poly" id="edge20_Node000012_Node000016" title=" " alt="" coords="501,445,457,450,456,445,501,439"/>
+<area shape="poly" id="edge21_Node000012_Node000017" title=" " alt="" coords="609,462,592,523,562,601,542,641,518,681,490,718,458,750,440,762,437,758,454,746,486,714,513,678,537,639,557,599,587,522,604,461"/>
+<area shape="poly" id="edge23_Node000012_Node000019" title=" " alt="" coords="555,456,457,495,422,506,421,501,455,489,553,451"/>
+<area shape="poly" id="edge24_Node000012_Node000020" title=" " alt="" coords="586,460,529,510,494,536,457,558,431,570,428,566,455,554,491,531,526,505,583,456"/>
+<area shape="poly" id="edge25_Node000012_Node000021" title=" " alt="" coords="598,461,574,498,542,541,503,585,457,622,435,634,433,630,455,618,499,581,538,538,570,495,594,458"/>
+<area shape="poly" id="edge26_Node000012_Node000022" title=" " alt="" coords="605,462,584,511,552,572,510,633,485,661,458,686,438,698,435,694,454,682,482,657,506,630,548,569,579,509,600,460"/>
+<area shape="poly" id="edge15_Node000013_Node000014" title=" " alt="" coords="241,321,207,317,207,312,241,316"/>
+<area shape="rect" id="Node000018" href="$da/d6f/classAestraUI_1_1UnitRow.html#ab2a22e6d50638047c26ab0353bb49107" title="Called when drop occurs." alt="" coords="32,817,180,857"/>
+<area shape="poly" id="edge22_Node000017_Node000018" title=" " alt="" coords="255,806,181,823,179,818,254,801"/>
+<area shape="poly" id="edge36_Node000028_Node000018" title=" " alt="" coords="522,889,505,896,492,904,482,913,472,922,457,929,401,944,356,948,310,943,254,929,218,916,184,897,129,860,132,855,186,893,220,911,255,924,311,938,356,943,400,939,455,924,469,918,479,909,488,900,503,891,520,884"/>
+<area shape="poly" id="edge40_Node000029_Node000018" title=" " alt="" coords="528,808,456,815,180,835,180,830,456,809,528,803"/>
+<area shape="rect" id="Node000030" href="$da/d6f/classAestraUI_1_1UnitRow.html#a3fd8f3f2017082c5b9a30bc2b1301d44" title="Create a sequencer row for an Arsenal unit." alt="" coords="281,875,429,915"/>
+<area shape="poly" id="edge41_Node000029_Node000030" title=" " alt="" coords="529,823,505,832,481,845,457,858,413,877,411,872,455,854,479,840,503,827,527,818"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::MidiClipPlaybackInstance" name="Aestra::Audio::MidiClipPlaybackInstance">
+<area shape="rect" id="Node000001" title=" " alt="" coords="53,211,282,251"/>
+<area shape="rect" id="Node000002" href="$d0/dd3/structAestra_1_1Audio_1_1PatternID.html" title="Type&#45;safe identifier for patterns." alt="" coords="5,93,183,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="110,129,158,209,154,212,106,132"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="57,5,131,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="97,45,97,93,91,93,91,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="207,93,274,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="237,133,228,160,214,188,192,212,188,209,209,185,223,158,232,131"/>
+</map>

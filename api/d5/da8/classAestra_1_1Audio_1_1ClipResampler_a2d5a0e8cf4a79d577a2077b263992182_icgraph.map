@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::ClipResampler::getSample" name="Aestra::Audio::ClipResampler::getSample">
+<area shape="rect" id="Node000001" title="Get a resampled sample from interleaved audio data." alt="" coords="268,5,480,45"/>
+<area shape="rect" id="Node000002" href="$dd/d1f/classAestra_1_1Audio_1_1AuditionEngine.html#a00bfc6c5158cbf6cf35ec56ab0353873" title="Process audio block (called from audio thread)" alt="" coords="5,5,220,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="254,28,220,28,220,23,254,23"/>
+</map>

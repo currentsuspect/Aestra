@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::AestraEQ::saveState" name="Aestra::Audio::Plugins::AestraEQ::saveState">
+<area shape="rect" id="Node000001" title="Save plugin state to binary data." alt="" coords="5,5,169,45"/>
+<area shape="rect" id="Node000002" href="$db/d0e/classAestra_1_1Audio_1_1Plugins_1_1AestraEQ.html#a30e0a3e911583cdda0089cda52e8cb97" title="Get current parameter value (normalized 0&#45;1)" alt="" coords="217,5,404,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="170,23,204,23,204,28,170,28"/>
+</map>

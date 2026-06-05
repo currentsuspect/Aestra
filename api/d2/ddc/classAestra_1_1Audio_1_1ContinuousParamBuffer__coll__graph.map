@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::ContinuousParamBuffer" name="Aestra::Audio::ContinuousParamBuffer">
+<area shape="rect" id="Node000001" title="RT&#45;safe continuous parameter buffer for mixer controls." alt="" coords="5,123,196,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="15,5,75,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="42,44,42,71,48,98,57,110,69,121,65,125,53,114,44,100,36,72,37,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="125,5,191,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="153,45,131,100,117,124,112,121,126,97,148,43"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::ASIODriverScanner::getAvailabilityMessage" name="Aestra::Audio::ASIODriverScanner::getAvailabilityMessage">
+<area shape="rect" id="Node000001" title="Get user&#45;friendly message about ASIO availability." alt="" coords="5,5,240,45"/>
+<area shape="rect" id="Node000002" href="$d3/d97/classAestra_1_1Audio_1_1ASIODriverScanner.html#a7117c04021e241d77054f617d226e707" title="Scan system for installed ASIO drivers." alt="" coords="288,5,503,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="240,23,274,23,274,28,240,28"/>
+</map>

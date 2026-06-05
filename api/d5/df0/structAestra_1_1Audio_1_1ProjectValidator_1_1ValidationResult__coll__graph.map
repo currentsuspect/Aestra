@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::ProjectValidator::ValidationResult" name="Aestra::Audio::ProjectValidator::ValidationResult">
+<area shape="rect" id="Node000001" title=" " alt="" coords="104,447,324,487"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="125,329,303,384"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="217,398,217,446,211,446,211,398"/>
+<area shape="rect" id="Node000003" href="$df/da9/structAestra_1_1Audio_1_1ProjectValidator_1_1Issue.html" title=" " alt="" coords="5,212,225,252"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="141,261,195,327,191,331,137,265"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="29,95,105,120"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="69,133,71,160,79,187,96,210,91,213,74,189,66,161,64,134"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="129,95,216,120"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="164,134,127,213,122,211,159,131"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="103,5,242,45"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="175,59,175,94,170,94,170,59"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="249,219,379,245"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="298,258,238,331,234,327,293,254"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="295,95,333,120"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="317,134,317,219,311,219,311,134"/>
+</map>

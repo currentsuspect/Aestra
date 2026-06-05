@@ -1,0 +1,16 @@
+<map id="AestraUI::TooltipState" name="AestraUI::TooltipState">
+<area shape="rect" id="Node000001" title="Global Tooltip State." alt="" coords="256,229,419,255"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,125,118,150"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="86,161,100,184,119,203,142,213,176,221,256,232,255,237,175,226,140,218,116,208,95,187,82,164"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,125,72,125,72,59"/>
+<area shape="rect" id="Node000004" href="$dd/d25/structAestraUI_1_1NUIPoint.html" title=" " alt="" coords="266,125,409,150"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="340,164,340,229,335,229,335,164"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="208,13,259,38"/>
+<area shape="poly" id="edge7_Node000001_Node000005" title=" " alt="" coords="214,50,197,72,183,98,176,125,177,138,182,151,204,178,233,199,264,215,294,227,292,232,262,220,230,204,201,182,178,153,172,139,171,125,178,96,192,69,210,47"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="256,47,328,123,324,126,252,50"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="433,125,484,150"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="447,163,431,186,410,207,369,232,366,227,406,203,426,183,443,160"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="508,125,559,150"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="524,164,508,187,486,208,454,224,419,234,418,229,452,219,482,203,504,183,519,161"/>
+</map>

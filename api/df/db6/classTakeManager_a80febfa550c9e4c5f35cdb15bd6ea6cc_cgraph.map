@@ -1,0 +1,9 @@
+<map id="TakeManager::loadManifest" name="TakeManager::loadManifest">
+<area shape="rect" id="Node000001" title="Loads the manifest from disk." alt="" coords="5,42,207,67"/>
+<area shape="rect" id="Node000002" href="$da/d15/structTakeManager_1_1Manifest.html#ac9df3e5450e4f9aee685e9814437d01f" title="Look up a take by its unique ID." alt="" coords="279,5,453,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="207,41,266,34,266,39,207,46"/>
+<area shape="rect" id="Node000003" href="$df/db6/classTakeManager.html#acb75e1e71f374b7b3c85690629eaf607" title="Returns the manifest.json path for a given project." alt="" coords="255,70,477,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="207,63,241,67,241,72,207,68"/>
+<area shape="rect" id="Node000004" href="$df/db6/classTakeManager.html#acfe0e3332867ecd9c0c1ea8817706e57" title="Returns the takes/ directory path for a given project." alt="" coords="525,70,759,95"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="478,80,511,80,511,85,478,85"/>
+</map>

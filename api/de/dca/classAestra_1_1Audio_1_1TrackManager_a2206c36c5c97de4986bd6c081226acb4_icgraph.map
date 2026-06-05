@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackManager::stop" name="Aestra::Audio::TrackManager::stop">
+<area shape="rect" id="Node000001" title="Stop transport playback and return to the stored cue/start position." alt="" coords="261,5,469,45"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ab6b68f372de3313993120fd3de47e016" title="Stop Arsenal playback and optionally remain in pattern mode." alt="" coords="5,5,213,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,28,213,28,213,23,248,23"/>
+</map>

@@ -1,0 +1,12 @@
+<map id="Aestra::Audio::PluginScanner::getScannedPlugins" name="Aestra::Audio::PluginScanner::getScannedPlugins">
+<area shape="rect" id="Node000001" title="Get all scanned plugins." alt="" coords="772,37,981,77"/>
+<area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#abbaac8d8fef536d6949f29e0bfa126c6" title="Initialize the plugin manager." alt="" coords="509,5,724,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="758,45,724,41,725,36,759,40"/>
+<area shape="rect" id="Node000003" href="$da/d71/classAestraUI_1_1PluginUIController.html#a8450e13418e236d399fa787a67d7577f" title="Refresh browser plugin list from scanner." alt="" coords="515,69,719,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="759,75,719,79,719,74,758,69"/>
+<area shape="rect" id="Node000004" href="$da/d71/classAestraUI_1_1PluginUIController.html#ac2f14df05bbb73d7ee39f9c875192dab" title="Bind a PluginBrowserPanel to this controller." alt="" coords="5,69,209,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="501,89,461,88,257,88,209,89,209,84,257,83,461,83,501,83"/>
+<area shape="rect" id="Node000005" href="$da/d71/classAestraUI_1_1PluginUIController.html#a10606696ef2ab6682a594e1f970b3ac6" title="Start a plugin scan." alt="" coords="257,97,461,137"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="501,105,462,109,461,104,500,99"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="244,107,209,103,210,98,244,102"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::WaveformMipLevel::getPeakRange" name="Aestra::Audio::WaveformMipLevel::getPeakRange">
+<area shape="rect" id="Node000001" title="Get peaks for a range, merged." alt="" coords="277,37,485,77"/>
+<area shape="rect" id="Node000002" href="$d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a0b23ef894457773b89d8e8535a47e04c" title="Get peaks for drawing a range at specified zoom." alt="" coords="5,5,229,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="264,46,229,42,230,36,264,40"/>
+<area shape="rect" id="Node000003" href="$d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a002f9e75679c04a2b910673828c27e65" title="Get a single peak for quick display." alt="" coords="5,69,229,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="264,74,230,78,229,73,264,69"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioEngine::setLatencyCompensationEnabled" name="Aestra::Audio::AudioEngine::setLatencyCompensationEnabled">
+<area shape="rect" id="Node000001" title="Enable/disable global latency compensation." alt="" coords="5,5,252,45"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a0c30690eadea033ba723bcbca0c1d14c" title="Calculate and apply plugin delay compensation across all tracks." alt="" coords="300,5,535,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="252,23,286,23,286,28,252,28"/>
+</map>

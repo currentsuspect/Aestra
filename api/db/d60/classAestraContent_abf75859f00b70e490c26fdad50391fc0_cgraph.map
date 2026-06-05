@@ -1,0 +1,11 @@
+<map id="AestraContent::updatePanelDrag" name="AestraContent::updatePanelDrag">
+<area shape="rect" id="Node000001" title="Update the active overlay&#45;panel drag." alt="" coords="5,45,240,70"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ac3a61a9e4765aadb4e43f89145418a38" title="Clamp an overlay rectangle to the current allowed bounds." alt="" coords="308,5,500,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="234,42,294,35,294,40,235,47"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#ab127c5e597ccf0ba3ec1f5b63e113b15" title="Compute the rectangle panels are allowed to occupy." alt="" coords="288,69,520,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="235,67,275,72,274,77,234,73"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a747fc3bfb5c3b565623f999c228c9e75" title="Compute the safe workspace rectangle after chrome and sidebars." alt="" coords="568,47,807,73"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="520,75,554,71,555,76,521,80"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a75c1ce436d0185fc1d0acf11d301ee83" title="Get the x coordinate of the visible browser edge." alt="" coords="593,97,781,137"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="521,98,580,104,580,109,520,103"/>
+</map>

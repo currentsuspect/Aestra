@@ -1,0 +1,5 @@
+<map id="AestraContent::setPluginTempo" name="AestraContent::setPluginTempo">
+<area shape="rect" id="Node000001" title="Propagate transport tempo to tempo&#45;aware internal plugins." alt="" coords="5,5,188,45"/>
+<area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="236,5,451,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="188,23,222,23,222,28,188,28"/>
+</map>

@@ -1,0 +1,29 @@
+<map id="Source/OverlayLayer.h" name="Source/OverlayLayer.h">
+<area shape="rect" id="Node000001" title="Layer for overlays with pass&#45;through hit&#45;testing." alt="" coords="211,5,379,31"/>
+<area shape="rect" id="Node000002" href="$d9/d36/NUIComponent_8h_source.html" title=" " alt="" coords="97,79,335,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="284,33,241,71,237,68,280,29"/>
+<area shape="rect" id="Node000003" href="$dc/d90/NUITypes_8h_source.html" title=" " alt="" coords="326,152,421,177"/>
+<area shape="poly" id="edge15_Node000001_Node000003" title=" " alt="" coords="309,29,330,50,349,77,362,108,371,137,366,139,357,110,344,80,325,54,306,33"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="242,102,336,144,334,149,240,106"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="5,225,64,251"/>
+<area shape="poly" id="edge14_Node000002_Node000005" title=" " alt="" coords="203,107,62,219,58,214,200,102"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="88,225,165,251"/>
+<area shape="poly" id="edge13_Node000002_Node000006" title=" " alt="" coords="211,106,143,215,139,212,206,103"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="778,225,841,251"/>
+<area shape="poly" id="edge12_Node000002_Node000010" title=" " alt="" coords="265,101,765,223,764,228,264,107"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="189,225,256,251"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="350,180,261,222,259,217,348,175"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="326,177,217,198,78,228,77,222,216,193,325,172"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="334,180,179,224,178,219,333,175"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="281,225,367,251"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="367,179,342,216,338,213,363,176"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="391,225,454,251"/>
+<area shape="poly" id="edge7_Node000003_Node000008" title=" " alt="" coords="384,176,409,213,405,216,379,179"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="479,225,564,251"/>
+<area shape="poly" id="edge8_Node000003_Node000009" title=" " alt="" coords="398,175,486,217,484,222,396,180"/>
+<area shape="poly" id="edge9_Node000003_Node000010" title=" " alt="" coords="421,169,570,189,765,223,764,228,570,194,420,174"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="588,225,663,251"/>
+<area shape="poly" id="edge10_Node000003_Node000011" title=" " alt="" coords="415,175,575,220,574,225,413,180"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="687,225,753,251"/>
+<area shape="poly" id="edge11_Node000003_Node000012" title=" " alt="" coords="422,172,674,223,673,228,420,177"/>
+</map>

@@ -1,0 +1,12 @@
+<map id="Aestra::Audio::ASIO::ASIOTimeCode" name="Aestra::Audio::ASIO::ASIOTimeCode">
+<area shape="rect" id="Node000001" title=" " alt="" coords="83,211,231,251"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,115,72,141"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="45,153,50,170,59,185,74,198,92,208,90,213,71,202,55,188,45,172,39,155"/>
+<area shape="rect" id="Node000003" href="$dc/d04/structAestra_1_1Audio_1_1ASIO_1_1ASIOTimeStamp.html" title=" " alt="" coords="181,108,329,148"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="229,160,177,212,174,209,225,156"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="116,5,167,31"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="139,44,134,92,136,148,153,210,147,211,131,148,129,92,134,44"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="165,38,236,106,233,110,161,42"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="353,115,404,141"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="371,155,359,173,343,189,317,204,289,215,232,228,231,222,287,210,315,199,340,185,355,170,366,152"/>
+</map>

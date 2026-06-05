@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['validate_0',['validate',['../d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#ade37b96adfcfe9b84004e0086e390fa5',1,'Aestra::Audio::HeadlessMusicGenerator']]],
+  ['validateall_1',['validateAll',['../d9/dd3/classAestra_1_1PointerRegistry.html#a091fbfbe5d3f8c97f92e2967cde0d78c',1,'Aestra::PointerRegistry']]],
+  ['validatecontent_2',['validateContent',['../dc/d46/classAestra_1_1Audio_1_1ProjectValidator.html#a6639ec357e56e0274f2271c96140e42e',1,'Aestra::Audio::ProjectValidator']]],
+  ['validatedeviceconfig_3',['validateDeviceConfig',['../df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a099645077cfa3fb29d55a2b1041812e5',1,'Aestra::Audio::AudioDeviceManager']]],
+  ['validatefile_4',['validateFile',['../dc/d46/classAestra_1_1Audio_1_1ProjectValidator.html#ab5c5b9a2e498917daf8567bdf27fd6f8',1,'Aestra::Audio::ProjectValidator']]],
+  ['validatefileheader_5',['validateFileHeader',['../dd/d6c/classAestra_1_1Audio_1_1AudioFileValidator.html#afa2555f4e0c755598856f71ee166b6ff',1,'Aestra::Audio::AudioFileValidator']]],
+  ['validatetruepeak_6',['validateTruePeak',['../d2/d05/structAestra_1_1Audio_1_1AudioExporter_1_1Config.html#aeb616dd394921accf1af390533541b93',1,'Aestra::Audio::AudioExporter::Config']]],
+  ['validationresult_7',['ValidationResult',['../d1/d32/structAestra_1_1Audio_1_1ProjectValidator_1_1ValidationResult.html',1,'Aestra::Audio::ProjectValidator']]],
+  ['value_8',['value',['../df/d72/structAestra_1_1Audio_1_1MixerChannelID.html#ae2891007ca65f935ccdfb74578fcecc7',1,'Aestra::Audio::MixerChannelID']]],
+  ['vector2_9',['Vector2',['../d2/d46/structAestra_1_1Vector2.html',1,'Aestra']]],
+  ['vector3_10',['Vector3',['../db/d2f/structAestra_1_1Vector3.html',1,'Aestra']]],
+  ['vector4_11',['Vector4',['../d5/d17/structAestra_1_1Vector4.html',1,'Aestra']]],
+  ['vendor_12',['vendor',['../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html#ab915fc6eaff1b28b8976033332e3666b',1,'Aestra::Audio::PluginInfo::vendor'],['../d8/d1a/structAestraUI_1_1PluginListItem.html#a5cb593c36df116ba5cfeacf6f86d276f',1,'AestraUI::PluginListItem::vendor']]],
+  ['version_13',['version',['../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html#a597697581f0c70468c05754ab9fe9449',1,'Aestra::Audio::PluginInfo::version'],['../d8/d1a/structAestraUI_1_1PluginListItem.html#afedd9d41aee3e1df98cf20412a21ddea',1,'AestraUI::PluginListItem::version']]],
+  ['viewfocus_14',['ViewFocus',['../dc/dd6/AestraContent_8h.html#adcb0a7e988b7d2d5fc5ee5c1bddad1a3',1,'AestraContent.h']]],
+  ['viewstate_15',['ViewState',['../dc/dce/structAestraContent_1_1ViewState.html',1,'AestraContent']]],
+  ['violationcount_16',['violationCount',['../d7/d54/structAestra_1_1Audio_1_1IPluginInstance_1_1WatchdogStats.html#a2e635aa96a671f906aed113e505df8f3',1,'Aestra::Audio::IPluginInstance::WatchdogStats']]],
+  ['volume_17',['volume',['../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#aea0c21e1f7815e6425e45a27e2fe27e6',1,'Aestra::Audio::PlaylistLane']]],
+  ['vst3hosttestaccess_18',['VST3HostTestAccess',['../dc/daf/classAestra_1_1Audio_1_1VST3HostTestAccess.html',1,'Aestra::Audio']]],
+  ['vst3pluginfactory_19',['VST3PluginFactory',['../d3/ded/classAestra_1_1Audio_1_1VST3PluginFactory.html',1,'Aestra::Audio']]],
+  ['vst3plugininstance_20',['VST3PluginInstance',['../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html',1,'Aestra::Audio']]],
+  ['vubridge_21',['VUBridge',['../d3/de7/classAestraUI_1_1VUBridge.html',1,'AestraUI']]]
+];

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TestToneGenerator" name="Aestra::Audio::TestToneGenerator">
+<area shape="rect" id="Node000001" title="Simple test tone generator." alt="" coords="5,79,244,104"/>
+<area shape="rect" id="Node000002" href="$de/d12/classAestra_1_1Audio_1_1AudioProcessor.html" title="Base class for audio processors." alt="" coords="16,5,233,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="127,44,127,79,122,79,122,44"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::MixerChannel::getName" name="Aestra::Audio::MixerChannel::getName">
+<area shape="rect" id="Node000001" title="Get the display name shown in the UI." alt="" coords="259,37,465,77"/>
+<area shape="rect" id="Node000002" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#af90a9908fac33e06940460d03ddd9436" title="Execute the command (first time)" alt="" coords="11,5,205,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="245,45,205,40,206,35,246,40"/>
+<area shape="rect" id="Node000003" href="$dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html#a11da8593018d249a3c1e73433f4266bc" title="Execute the command (first time)" alt="" coords="5,69,211,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="245,75,211,79,211,74,245,69"/>
+</map>

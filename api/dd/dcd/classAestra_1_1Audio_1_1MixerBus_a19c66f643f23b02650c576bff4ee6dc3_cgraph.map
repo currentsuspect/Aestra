@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::MixerBus::process" name="Aestra::Audio::MixerBus::process">
+<area shape="rect" id="Node000001" title="Process audio through the bus." alt="" coords="5,5,183,45"/>
+<area shape="rect" id="Node000002" href="$dd/dcd/classAestra_1_1Audio_1_1MixerBus.html#ac36edb686f44236a42d9112c5bffc147" title="Clear the bus buffer to silence." alt="" coords="231,5,408,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="183,23,217,23,217,28,183,28"/>
+</map>

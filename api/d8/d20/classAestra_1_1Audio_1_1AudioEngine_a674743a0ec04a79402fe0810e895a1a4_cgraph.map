@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioEngine::clearTruePeakHold" name="Aestra::Audio::AudioEngine::clearTruePeakHold">
+<area shape="rect" id="Node000001" title="Reset true&#45;peak running max (does not disturb FIR history)." alt="" coords="5,5,204,45"/>
+<area shape="rect" id="Node000002" href="$dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#ad7ad3bb574698331fa4b25f520c269bc" title="Clear running peak accumulators only; preserve filter history." alt="" coords="252,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,23,238,23,238,28,204,28"/>
+</map>

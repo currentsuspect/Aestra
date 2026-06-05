@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::PatternBrowserPanel" name="Aestra::Audio::PatternBrowserPanel">
+<area shape="rect" id="Node000001" title=" " alt="" coords="106,167,322,207"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="23,93,208,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="142,125,192,164,189,169,139,129"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="118,59,118,93,113,93,113,59"/>
+<area shape="rect" id="Node000004" href="$d3/d88/classAestraUI_1_1IDropTarget.html" title="Interface for components that can receive drops." alt="" coords="232,93,393,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="289,129,239,169,236,164,286,125"/>
+</map>

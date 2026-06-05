@@ -1,0 +1,26 @@
+<map id="Aestra::Audio::LatencyGraph" name="Aestra::Audio::LatencyGraph">
+<area shape="rect" id="Node000001" title="Immutable input artifact for the PDC solver." alt="" coords="989,135,1196,160"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="701,120,867,175"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="880,145,989,145,989,150,880,150"/>
+<area shape="rect" id="Node000003" href="$d2/dba/structAestra_1_1Audio_1_1LatencyGraph_1_1Node.html" title=" " alt="" coords="281,189,488,229"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="501,199,588,189,677,175,700,170,701,175,678,181,588,195,502,204"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="30,115,105,140"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="119,134,258,165,327,186,326,191,257,170,118,139"/>
+<area shape="rect" id="Node000010" href="$d5/d7d/structAestra_1_1Audio_1_1LatencyGraph_1_1Edge.html" title=" " alt="" coords="281,114,488,154"/>
+<area shape="poly" id="edge10_Node000010_Node000004" title=" " alt="" coords="118,111,153,105,205,101,258,105,301,111,300,117,257,110,205,106,154,110,119,116"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="42,183,93,208"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="106,210,154,225,218,230,281,226,281,231,218,235,153,230,105,215"/>
+<area shape="poly" id="edge11_Node000010_Node000005" title=" " alt="" coords="106,193,177,190,257,179,299,167,339,152,341,157,301,172,258,185,177,196,106,199"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="5,261,129,287"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="143,266,199,259,257,249,331,226,333,231,258,254,200,265,143,271"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="320,16,449,41"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="419,46,463,69,513,90,558,101,594,105,631,108,678,115,702,121,701,126,677,121,630,113,594,111,557,107,511,95,460,74,416,51"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="701,41,867,96"/>
+<area shape="poly" id="edge12_Node000009_Node000007" title=" " alt="" coords="463,34,678,55,701,58,701,63,677,61,463,39"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="48,5,87,31"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="101,16,320,24,320,29,100,22"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="881,90,1043,132,1041,137,879,96"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="502,151,545,153,589,151,634,144,676,130,688,119,700,105,717,94,720,98,703,109,692,123,679,135,635,149,590,157,545,159,501,157"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="747,199,821,224"/>
+<area shape="poly" id="edge13_Node000001_Node000011" title=" " alt="" coords="834,198,1030,157,1031,163,835,204"/>
+</map>

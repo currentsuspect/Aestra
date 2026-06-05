@@ -1,0 +1,25 @@
+<map id="AestraUI::TimelineSummary" name="AestraUI::TimelineSummary">
+<area shape="rect" id="Node000001" title=" " alt="" coords="347,387,553,412"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="141,277,207,302"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="170,315,169,340,171,351,177,361,203,376,244,386,347,396,346,401,243,392,201,381,173,365,166,353,163,340,164,315"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="746,5,821,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="822,37,835,53,842,77,835,100,801,157,758,208,709,253,657,292,605,325,556,353,480,389,477,384,554,348,603,321,654,288,706,249,754,204,797,153,830,98,836,77,830,56,818,41"/>
+<area shape="rect" id="Node000005" href="$d3/df7/structAestraUI_1_1TimelineSummaryBucket.html" title=" " alt="" coords="355,123,561,163"/>
+<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="744,39,718,57,709,68,704,79,698,90,686,101,657,116,626,128,562,141,561,136,624,122,655,111,683,96,694,87,699,77,705,65,715,53,741,35"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="345,269,555,309"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="453,323,453,386,447,386,447,323"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="459,177,454,269,448,269,454,176"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="425,5,491,31"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="461,44,461,122,455,122,455,44"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="569,5,635,31"/>
+<area shape="poly" id="edge7_Node000005_Node000007" title=" " alt="" coords="601,46,592,74,575,100,557,114,537,125,535,120,554,110,571,97,587,72,596,44"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="301,5,351,31"/>
+<area shape="poly" id="edge11_Node000001_Node000008" title=" " alt="" coords="322,44,313,95,307,163,313,237,321,274,335,308,353,334,376,355,425,384,422,389,373,359,349,337,330,311,316,275,307,238,302,163,308,95,317,43"/>
+<area shape="poly" id="edge8_Node000005_Node000008" title=" " alt="" coords="338,42,354,70,376,97,411,120,408,125,372,101,350,73,334,45"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="5,130,135,155"/>
+<area shape="poly" id="edge9_Node000004_Node000009" title=" " alt="" coords="65,169,60,208,64,227,73,243,103,251,171,260,345,277,345,282,170,265,102,256,70,247,59,229,55,208,59,168"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="51,5,89,31"/>
+<area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="73,45,73,130,67,130,67,45"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="889,277,963,302"/>
+<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="917,316,898,343,871,365,846,375,814,383,732,394,641,399,554,401,554,396,641,394,732,388,813,378,845,370,869,360,894,339,912,313"/>
+</map>

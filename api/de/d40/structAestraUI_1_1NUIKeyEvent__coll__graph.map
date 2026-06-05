@@ -1,0 +1,11 @@
+<map id="AestraUI::NUIKeyEvent" name="AestraUI::NUIKeyEvent">
+<area shape="rect" id="Node000001" title=" " alt="" coords="150,123,321,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,108,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="71,42,89,71,116,97,141,110,168,120,166,125,138,115,112,101,85,74,66,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="133,5,239,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="185,44,185,71,192,97,202,110,215,120,212,125,198,114,188,100,180,72,179,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="263,5,314,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="282,45,258,100,245,124,240,121,253,97,277,43"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="355,5,406,31"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="378,45,366,74,347,101,325,115,302,125,300,120,323,110,343,97,362,71,373,43"/>
+</map>

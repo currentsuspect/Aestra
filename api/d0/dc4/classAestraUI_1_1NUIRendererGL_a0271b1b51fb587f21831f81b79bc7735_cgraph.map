@@ -1,0 +1,8 @@
+<map id="AestraUI::NUIRendererGL::drawPolyline" name="AestraUI::NUIRendererGL::drawPolyline">
+<area shape="rect" id="Node000001" title="Draw a polyline (connected line segments)." alt="" coords="5,35,192,75"/>
+<area shape="rect" id="Node000002" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#ad66fdf8729e47c299721aef9c0b5e2b1" title="Draw a line." alt="" coords="240,5,427,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="192,40,226,36,227,41,192,46"/>
+<area shape="rect" id="Node000003" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#afff07bab22dc914d10a930a539593797" title="Flush all pending draw calls immediately." alt="" coords="475,35,661,75"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="192,54,240,55,427,55,461,54,461,60,427,60,240,60,192,59"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="427,34,461,39,461,44,426,40"/>
+</map>

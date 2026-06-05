@@ -1,0 +1,21 @@
+<map id="AestraUI::TimelineMinimapBar" name="AestraUI::TimelineMinimapBar">
+<area shape="rect" id="Node000001" title=" " alt="" coords="871,261,1093,286"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="415,91,601,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="615,109,729,128,790,145,848,167,885,188,920,213,970,258,967,262,917,217,883,192,846,172,788,150,728,134,614,114"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="239,26,295,32,351,41,423,64,481,89,479,94,421,69,350,47,295,37,239,31"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="209,101,415,101,415,107,209,107"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,159,278,150,350,136,374,127,427,114,429,119,375,132,351,141,279,156,209,164"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="425,141,591,181"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="605,174,721,196,847,225,948,258,946,263,846,231,720,201,604,179"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="425,206,591,261"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="605,239,871,261,870,267,605,244"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="375,285,641,339"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="655,297,870,280,871,285,656,303"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="381,364,635,404"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="647,359,745,340,846,316,946,284,948,289,847,321,746,345,648,364"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="389,428,627,468"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="640,432,743,411,795,395,846,375,882,354,916,329,967,284,970,288,920,333,885,359,848,380,797,400,744,416,641,437"/>
+</map>

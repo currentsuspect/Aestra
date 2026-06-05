@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::MixerChannel::processAudio" name="Aestra::Audio::MixerChannel::processAudio">
+<area shape="rect" id="Node000001" title="Process this channel&#39;s audio for one callback block." alt="" coords="5,37,212,77"/>
+<area shape="rect" id="Node000002" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aa7203be9ece994006328496f606c7a6e" title="Get number of active (non&#45;empty) slots." alt="" coords="260,5,451,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,41,246,37,247,42,212,47"/>
+<area shape="rect" id="Node000003" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a2e3651b1109e292f881fc3d8a7d11b92" title="Process audio through the effect chain." alt="" coords="260,69,451,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="212,68,247,73,246,78,212,73"/>
+</map>

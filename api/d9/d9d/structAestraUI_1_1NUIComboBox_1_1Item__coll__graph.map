@@ -1,0 +1,9 @@
+<map id="AestraUI::NUIComboBox::Item" name="AestraUI::NUIComboBox::Item">
+<area shape="rect" id="Node000001" title=" " alt="" coords="31,197,212,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="88,132,116,196,111,198,83,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="143,95,193,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="160,134,132,198,127,196,155,132"/>
+</map>

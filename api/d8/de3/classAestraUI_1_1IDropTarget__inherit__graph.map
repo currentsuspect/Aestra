@@ -1,0 +1,13 @@
+<map id="AestraUI::IDropTarget" name="AestraUI::IDropTarget">
+<area shape="rect" id="Node000001" title="Interface for components that can receive drops." alt="" coords="5,120,167,145"/>
+<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html" title="The Arsenal: Unit&#45;Based Sequencer Window Standardized as a WindowPanel (v3.1)" alt="" coords="225,5,427,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="111,109,157,74,214,41,250,28,252,33,216,46,160,78,114,113"/>
+<area shape="rect" id="Node000003" href="$d6/de5/classAestra_1_1Audio_1_1PatternBrowserPanel.html" title=" " alt="" coords="218,55,434,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="152,114,241,93,242,98,154,119"/>
+<area shape="rect" id="Node000004" href="$d1/d11/classAestra_1_1Audio_1_1TrackManagerUI.html" title="UI wrapper for TrackManager." alt="" coords="215,120,437,145"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="180,130,214,130,214,135,180,135"/>
+<area shape="rect" id="Node000005" href="$d8/d29/classAestra_1_1AuditionPanel.html" title="Audition Mode panel &#45; immersive listening experience." alt="" coords="245,169,407,195"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="162,146,264,167,263,172,161,151"/>
+<area shape="rect" id="Node000006" href="$da/d6f/classAestraUI_1_1UnitRow.html" title=" " alt="" coords="255,219,397,244"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="118,151,163,178,216,204,256,216,254,221,214,208,160,183,115,155"/>
+</map>

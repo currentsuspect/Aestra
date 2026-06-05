@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::SourceManager::getSource" name="Aestra::Audio::SourceManager::getSource">
+<area shape="rect" id="Node000001" title="Get a source by ID." alt="" coords="272,37,491,77"/>
+<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ab1aa3e02093843cdf71d966a0d0ec2a6" title="Build a runtime snapshot for audio rendering." alt="" coords="12,5,217,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="258,45,217,40,218,35,259,40"/>
+<area shape="rect" id="Node000003" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a6fff22f797d8e03841f60afdcda1bf7a" title="Create or replace a source for a recorded take." alt="" coords="5,69,224,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="259,75,225,79,224,74,258,69"/>
+</map>

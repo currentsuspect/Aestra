@@ -1,0 +1,18 @@
+<map id="Aestra::Audio::AudioDeviceManager::isStreamRunning" name="Aestra::Audio::AudioDeviceManager::isStreamRunning">
+<area shape="rect" id="Node000001" title="Check if stream is active." alt="" coords="593,177,792,217"/>
+<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#af7e84a07cb98d2939ceb1c0f6ccd62a6" title="Check underrun rate and auto&#45;scale buffer if needed Call this periodically (e.g., every second) to mo..." alt="" coords="5,21,260,61"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="672,167,650,134,621,99,585,65,544,40,504,25,461,15,373,8,289,13,217,24,216,19,289,7,373,3,462,10,505,20,546,35,589,61,625,95,654,131,676,164"/>
+<area shape="rect" id="Node000003" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a5578f6243b8fb46f44dab152272f108f" title="Monitor active driver health and perform safety fallback if stalled." alt="" coords="323,49,531,89"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="653,171,603,136,544,104,513,92,515,87,546,99,606,131,656,166"/>
+<area shape="rect" id="Node000004" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a1ea2bee9d50a405dac5227bdd2ce971d" title="Update buffer size." alt="" coords="327,113,526,153"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="595,177,510,156,511,151,596,171"/>
+<area shape="rect" id="Node000005" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#aa5eaad6f9fba3e154672ce9c6d5834ee" title="Set preferred driver type." alt="" coords="308,177,545,217"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="580,200,546,200,546,195,580,195"/>
+<area shape="rect" id="Node000006" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#ad3e612185385910356099b84e3f1ef81" title="Update sample rate." alt="" coords="327,241,526,281"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="596,223,511,244,510,239,595,218"/>
+<area shape="rect" id="Node000007" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a8bd54d1a37184da68d86aa29debca400" title="Switch to a different audio device." alt="" coords="327,305,526,345"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="656,228,606,263,546,296,515,308,513,303,544,291,603,259,653,224"/>
+<area shape="rect" id="Node000008" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#aec5439d4b9ddf530856362542b6f2341" title="Switch to a different input device while preserving the current output device." alt="" coords="323,369,530,409"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="673,230,621,296,586,330,547,360,522,372,520,367,544,355,583,326,617,292,669,227"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="309,61,260,56,261,51,309,55"/>
+</map>

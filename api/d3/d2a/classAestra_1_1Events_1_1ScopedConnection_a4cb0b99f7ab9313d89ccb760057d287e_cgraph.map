@@ -1,0 +1,7 @@
+<map id="Aestra::Events::ScopedConnection::disconnect" name="Aestra::Events::ScopedConnection::disconnect">
+<area shape="rect" id="Node000001" title="Disconnect the owned connection." alt="" coords="5,37,249,77"/>
+<area shape="rect" id="Node000002" href="$d9/d88/classAestra_1_1Events_1_1Connection.html#a19fba9b39f7710a79a2925b2fd9a10cf" title="Check if this connection is still active." alt="" coords="297,5,495,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="249,40,283,36,284,41,250,45"/>
+<area shape="rect" id="Node000003" href="$d9/d88/classAestra_1_1Events_1_1Connection.html#a8c0150163aa5c39d1b52d349ab95da3e" title="Disconnect this subscription." alt="" coords="297,69,495,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="250,69,284,73,283,79,249,75"/>
+</map>

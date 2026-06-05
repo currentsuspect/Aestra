@@ -1,0 +1,9 @@
+<map id="AestraUI::NUIGlyph" name="AestraUI::NUIGlyph">
+<area shape="rect" id="Node000001" title="Represents a single glyph in the font atlas." alt="" coords="65,152,213,177"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="45,44,51,85,59,107,70,126,85,140,103,150,100,154,82,144,66,130,54,109,46,87,40,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="119,5,158,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="141,45,141,152,136,152,136,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="204,5,255,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="231,45,223,86,214,109,202,130,187,144,170,154,168,150,184,140,198,126,210,107,218,85,225,44"/>
+</map>

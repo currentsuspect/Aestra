@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::VST3PluginInstance::unload" name="Aestra::Audio::VST3PluginInstance::unload">
+<area shape="rect" id="Node000001" title="Unload the plugin." alt="" coords="244,5,435,45"/>
+<area shape="rect" id="Node000002" href="$d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#a3a3779387e51c4d68ecbd78129a6ab42" title="Load a VST3 plugin from file." alt="" coords="5,5,196,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="230,28,196,28,196,23,230,23"/>
+</map>

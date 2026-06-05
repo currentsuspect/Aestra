@@ -1,0 +1,11 @@
+<map id="Aestra::Migration" name="Aestra::Migration">
+<area shape="rect" id="Node000001" title=" " alt="" coords="79,212,213,237"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,102,44,127"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="33,140,43,164,59,186,77,200,99,209,96,214,75,204,55,190,38,167,28,142"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="69,95,223,135"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="149,148,149,211,143,211,143,148"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="248,102,335,127"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="271,139,209,190,170,214,167,210,206,186,268,135"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="222,5,361,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="294,59,294,102,289,102,289,59"/>
+</map>

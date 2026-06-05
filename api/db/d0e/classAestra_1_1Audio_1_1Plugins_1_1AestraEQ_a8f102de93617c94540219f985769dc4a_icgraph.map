@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::AestraEQ::setParameter" name="Aestra::Audio::Plugins::AestraEQ::setParameter">
+<area shape="rect" id="Node000001" title="Set parameter value (normalized 0&#45;1)" alt="" coords="217,5,403,45"/>
+<area shape="rect" id="Node000002" href="$db/d0e/classAestra_1_1Audio_1_1Plugins_1_1AestraEQ.html#ad1843accd94e7e6616ceb8e0c402236b" title="Load plugin state from binary data." alt="" coords="5,5,169,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,28,170,28,170,23,204,23"/>
+</map>

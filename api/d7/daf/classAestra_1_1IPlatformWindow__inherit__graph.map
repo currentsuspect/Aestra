@@ -1,0 +1,7 @@
+<map id="Aestra::IPlatformWindow" name="Aestra::IPlatformWindow">
+<area shape="rect" id="Node000001" title=" " alt="" coords="142,5,326,31"/>
+<area shape="rect" id="Node000002" href="$d2/d75/classAestra_1_1PlatformWindowLinux.html" title=" " alt="" coords="5,79,220,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,40,134,81,131,76,201,35"/>
+<area shape="rect" id="Node000003" href="$d4/d07/classAestra_1_1PlatformWindowWin32.html" title=" " alt="" coords="245,79,466,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="267,35,337,76,334,81,264,40"/>
+</map>

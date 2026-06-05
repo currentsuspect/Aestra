@@ -1,0 +1,5 @@
+<map id="AestraUI::UnitRow::onDragEnter" name="AestraUI::UnitRow::onDragEnter">
+<area shape="rect" id="Node000001" title="Called when drag enters the target area." alt="" coords="201,5,349,45"/>
+<area shape="rect" id="Node000002" href="$da/d6f/classAestraUI_1_1UnitRow.html#a418427e5297c487cb8be41d1102c3004" title="Called continuously while dragging over target." alt="" coords="5,5,153,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="187,28,154,28,154,23,187,23"/>
+</map>

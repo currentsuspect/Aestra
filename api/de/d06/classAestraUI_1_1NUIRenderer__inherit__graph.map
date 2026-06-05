@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIRenderer" name="AestraUI::NUIRenderer">
+<area shape="rect" id="Node000001" title="Abstract renderer interface for the Aestra UI framework." alt="" coords="14,5,183,31"/>
+<area shape="rect" id="Node000002" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html" title="OpenGL 3.3+ renderer implementation for Aestra UI." alt="" coords="5,79,192,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="101,44,101,79,96,79,96,44"/>
+</map>

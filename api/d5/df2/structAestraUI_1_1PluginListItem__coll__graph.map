@@ -1,0 +1,9 @@
+<map id="AestraUI::PluginListItem" name="AestraUI::PluginListItem">
+<area shape="rect" id="Node000001" title="Plugin list item for display in the browser." alt="" coords="35,271,213,296"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="71,134,66,187,69,217,78,245,88,258,102,268,98,273,85,262,74,248,64,218,61,187,66,133"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="149,95,200,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="175,134,165,187,148,248,135,271,130,269,143,246,160,186,169,133"/>
+</map>

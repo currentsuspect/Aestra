@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::PluginManager::createInstanceById" name="Aestra::Audio::PluginManager::createInstanceById">
+<area shape="rect" id="Node000001" title="Create instance by plugin ID." alt="" coords="5,37,220,77"/>
+<area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a48c405b4bbf034c8e2a8e3a2aab246b0" title="Create a new plugin instance." alt="" coords="268,5,483,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,42,254,37,255,43,220,47"/>
+<area shape="rect" id="Node000003" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a901766321e58187df55f0ff50294e1f6" title="Find plugin by ID." alt="" coords="268,69,483,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="220,68,255,72,254,77,220,73"/>
+<area shape="rect" id="Node000004" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a65732f310fa233a82cc026438959b555" title="Find plugin by ID." alt="" coords="531,69,740,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="483,87,517,87,517,92,483,92"/>
+</map>

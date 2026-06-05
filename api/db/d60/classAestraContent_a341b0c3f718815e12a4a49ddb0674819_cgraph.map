@@ -1,0 +1,7 @@
+<map id="AestraContent::playFromCurrentFocus" name="AestraContent::playFromCurrentFocus">
+<area shape="rect" id="Node000001" title="Start playback based on the current focus mode." alt="" coords="5,37,237,77"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a1d47a21a48da22811eabfc9f49dab695" title="Enable or disable Arsenal pattern playback mode." alt="" coords="285,5,484,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="237,41,272,36,272,42,238,46"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a148523f2593cf55bbf1087010ba6bcc1" title="Stop the active file&#45;browser preview." alt="" coords="289,69,480,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="238,69,276,73,275,79,237,74"/>
+</map>

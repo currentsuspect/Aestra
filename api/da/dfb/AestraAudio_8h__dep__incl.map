@@ -1,0 +1,25 @@
+<map id="AestraAudio/include/Core/AestraAudio.h" name="AestraAudio/include/Core/AestraAudio.h">
+<area shape="rect" id="Node000001" title="Main header for AestraAudio library." alt="" coords="387,5,539,45"/>
+<area shape="rect" id="Node000002" href="$d5/d2d/AddClipCommand_8cpp_source.html" title=" " alt="" coords="5,93,208,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="374,51,185,96,184,91,372,46"/>
+<area shape="rect" id="Node000003" href="$d4/d5c/CreateLaneCommand_8cpp_source.html" title=" " alt="" coords="232,93,435,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="424,56,363,95,360,91,421,51"/>
+<area shape="rect" id="Node000004" href="$d3/dce/AudioVisualizer_8h_source.html" title=" " alt="" coords="459,101,727,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="505,51,577,98,574,103,502,55"/>
+<area shape="rect" id="Node000007" href="$d1/d3d/AestraAudioController_8h_source.html" title=" " alt="" coords="833,101,1092,126"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="553,39,897,98,896,103,552,45"/>
+<area shape="rect" id="Node000005" href="$d3/d12/AudioVisualizer_8cpp_source.html" title=" " alt="" coords="175,189,457,214"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="544,133,354,191,352,186,542,128"/>
+<area shape="rect" id="Node000006" href="$dd/de4/AestraContent_8cpp.html" title="Main content area for Aestra &#45; Implementation." alt="" coords="481,189,705,214"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="596,140,596,188,591,188,591,140"/>
+<area shape="rect" id="Node000008" href="$d8/d97/AestraApp_8h_source.html" title=" " alt="" coords="729,189,908,214"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="933,135,840,191,837,186,930,131"/>
+<area shape="rect" id="Node000011" href="$d5/d10/MixerViewModel_8cpp_source.html" title=" " alt="" coords="932,181,1156,221"/>
+<area shape="poly" id="edge10_Node000007_Node000011" title=" " alt="" coords="985,134,1028,179,1024,183,981,138"/>
+<area shape="rect" id="Node000012" href="$dc/d21/AestraAudioController_8cpp_source.html" title=" " alt="" coords="1179,189,1453,214"/>
+<area shape="poly" id="edge11_Node000007_Node000012" title=" " alt="" coords="1024,127,1270,186,1268,191,1023,132"/>
+<area shape="rect" id="Node000009" href="$db/d11/AestraApp_8cpp_source.html" title=" " alt="" coords="622,269,815,295"/>
+<area shape="poly" id="edge8_Node000008_Node000009" title=" " alt="" coords="795,225,735,271,732,267,791,221"/>
+<area shape="rect" id="Node000010" href="$d5/de0/Main_8cpp.html" title="Aestra &#45; Main Application Entry Point." alt="" coords="839,269,998,295"/>
+<area shape="poly" id="edge9_Node000008_Node000010" title=" " alt="" coords="846,221,905,267,902,271,843,225"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::UnitState::getRouteMode" name="Aestra::Audio::UnitState::getRouteMode">
+<area shape="rect" id="Node000001" title="Effective route mode, preserving legacy route fields as authority until cleared." alt="" coords="236,37,415,77"/>
+<area shape="rect" id="Node000002" href="$d3/d38/structAestra_1_1Audio_1_1UnitState.html#aded0e8a17c75424bd3b91182bc33fb26" title="True when this unit currently routes to master preview path." alt="" coords="5,5,188,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="222,46,188,41,188,35,223,40"/>
+<area shape="rect" id="Node000003" href="$d3/d38/structAestra_1_1Audio_1_1UnitState.html#a7cd5098b5182f6bc6143118bbc49d5ac" title="True when this unit currently routes into the Timeline track path." alt="" coords="7,69,186,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="223,74,187,79,186,74,222,69"/>
+</map>

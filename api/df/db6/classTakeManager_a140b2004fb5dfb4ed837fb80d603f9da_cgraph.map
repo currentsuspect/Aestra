@@ -1,0 +1,14 @@
+<map id="TakeManager::ensureManifest" name="TakeManager::ensureManifest">
+<area shape="rect" id="Node000001" title="Ensures a manifest exists, creating one with an initial take if needed." alt="" coords="5,70,223,95"/>
+<area shape="rect" id="Node000002" href="$da/d15/structTakeManager_1_1Manifest.html#ace9f7d3a0cb864d5d140d266f9e1af52" title="Returns the currently active take, or nullptr if none." alt="" coords="285,5,458,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="171,67,271,45,272,50,172,73"/>
+<area shape="rect" id="Node000003" href="$da/d15/structTakeManager_1_1Manifest.html#ac9df3e5450e4f9aee685e9814437d01f" title="Look up a take by its unique ID." alt="" coords="545,63,718,103"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="223,80,531,80,531,85,223,85"/>
+<area shape="rect" id="Node000004" href="$df/db6/classTakeManager.html#a80febfa550c9e4c5f35cdb15bd6ea6cc" title="Loads the manifest from disk." alt="" coords="271,121,472,146"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="180,93,293,115,292,121,179,98"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="437,118,531,99,532,105,438,123"/>
+<area shape="rect" id="Node000005" href="$df/db6/classTakeManager.html#acb75e1e71f374b7b3c85690629eaf607" title="Returns the manifest.json path for a given project." alt="" coords="520,127,743,153"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="472,133,506,134,506,139,472,139"/>
+<area shape="rect" id="Node000006" href="$df/db6/classTakeManager.html#acfe0e3332867ecd9c0c1ea8817706e57" title="Returns the takes/ directory path for a given project." alt="" coords="791,127,1024,153"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="743,137,777,137,777,143,743,143"/>
+</map>

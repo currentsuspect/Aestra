@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::PatternPlaybackEngine::UnitMidiRoute" name="Aestra::Audio::PatternPlaybackEngine::UnitMidiRoute">
+<area shape="rect" id="Node000001" title="Route descriptor for allocation&#45;free MIDI fanout on the audio thread." alt="" coords="5,181,228,221"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="23,93,98,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="77,129,108,180,103,183,72,132"/>
+<area shape="rect" id="Node000003" href="$dc/d62/classAestra_1_1Audio_1_1MidiBuffer.html" title="Simple MIDI buffer for plugin processing." alt="" coords="122,93,306,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="194,130,138,183,135,179,190,126"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="184,5,244,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="217,45,217,93,211,93,211,45"/>
+</map>

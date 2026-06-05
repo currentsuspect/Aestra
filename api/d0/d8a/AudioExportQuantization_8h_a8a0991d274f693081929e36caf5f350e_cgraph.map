@@ -1,0 +1,4 @@
+<map id="Aestra::Audio::ExportQuantization::sanitizeAndClamp" name="Aestra::Audio::ExportQuantization::sanitizeAndClamp">
+<area shape="rect" id="Node000001" title="Sanitize a float sample: replace NaN/Inf with 0 and clamp to [&#45;1, 1]." alt="" coords="5,29,248,69"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="81,30,79,20,86,10,102,5,127,3,155,6,170,13,168,18,153,11,127,8,103,10,89,15,84,21,87,28"/>
+</map>

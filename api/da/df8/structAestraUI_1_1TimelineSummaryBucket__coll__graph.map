@@ -1,0 +1,11 @@
+<map id="AestraUI::TimelineSummaryBucket" name="AestraUI::TimelineSummaryBucket">
+<area shape="rect" id="Node000001" title=" " alt="" coords="158,123,365,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="44,44,48,72,54,85,62,97,77,106,99,115,158,127,157,132,98,120,74,111,58,101,49,88,43,74,39,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="156,5,223,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="186,45,186,71,193,97,203,110,217,121,214,125,200,114,188,100,180,72,181,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="300,5,367,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="330,45,320,72,306,100,286,124,282,121,302,97,315,70,325,43"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="421,5,472,31"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="444,45,433,74,413,101,390,116,366,127,364,122,388,111,409,97,428,71,439,43"/>
+</map>

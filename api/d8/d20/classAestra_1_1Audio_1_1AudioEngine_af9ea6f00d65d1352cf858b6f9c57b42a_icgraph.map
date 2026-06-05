@@ -1,0 +1,19 @@
+<map id="Aestra::Audio::AudioEngine::getBPM" name="Aestra::Audio::AudioEngine::getBPM">
+<area shape="rect" id="Node000001" title="Get transport tempo in beats per minute." alt="" coords="772,133,971,173"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ab539765b3af29d41277c98d8ff8e8536" title="Get the current playhead position in beats." alt="" coords="520,5,719,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="832,127,781,93,723,60,693,48,695,43,725,55,784,88,835,123"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a9274902c21392bdc5757a71c146978fe" title="Load an effect plugin onto the selected track." alt="" coords="525,69,713,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="778,132,698,112,699,107,779,127"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a47b1f6dcf3ff2e9196a7adeb2542d97c" title="Start preview playback for a file&#45;browser item." alt="" coords="524,133,715,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="758,156,715,156,715,151,758,151"/>
+<area shape="rect" id="Node000005" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="515,197,724,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="779,179,699,200,698,195,778,174"/>
+<area shape="rect" id="Node000009" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4ad10b6d3c3d40e7490eca3f02a6c676" title="Set the playhead position in beats." alt="" coords="520,261,719,301"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="835,184,784,219,725,252,695,264,693,259,723,247,781,214,832,179"/>
+<area shape="rect" id="Node000006" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="255,165,464,205"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="501,205,464,201,464,196,501,200"/>
+<area shape="rect" id="Node000008" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="252,229,467,269"/>
+<area shape="poly" id="edge7_Node000005_Node000008" title=" " alt="" coords="501,235,467,239,467,233,501,229"/>
+<area shape="rect" id="Node000007" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,165,204,205"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="241,188,204,188,204,183,241,183"/>
+</map>

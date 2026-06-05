@@ -1,0 +1,15 @@
+<map id="TakeManager::Manifest::findTake" name="TakeManager::Manifest::findTake">
+<area shape="rect" id="Node000001" title="Look up a take by its unique ID." alt="" coords="785,47,959,87"/>
+<area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#a140b2004fb5dfb4ed837fb80d603f9da" title="Ensures a manifest exists, creating one with an initial take if needed." alt="" coords="271,31,488,56"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="771,49,737,45,608,39,488,40,488,35,608,33,738,39,772,44"/>
+<area shape="rect" id="Node000005" href="$df/db6/classTakeManager.html#a80febfa550c9e4c5f35cdb15bd6ea6cc" title="Loads the manifest from disk." alt="" coords="536,55,737,80"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="771,70,737,70,737,65,771,65"/>
+<area shape="rect" id="Node000006" href="$df/db6/classTakeManager.html#a71f33af16beed38833247763572fb099" title="Switches the active take." alt="" coords="276,80,483,105"/>
+<area shape="poly" id="edge7_Node000001_Node000006" title=" " alt="" coords="772,91,738,95,605,102,483,100,483,95,605,96,737,90,771,86"/>
+<area shape="rect" id="Node000003" href="$df/db6/classTakeManager.html#aca0f3339708882aa536a01af04d2d9b5" title="Creates a new take snapshot." alt="" coords="21,5,207,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="256,34,207,30,208,24,257,29"/>
+<area shape="rect" id="Node000004" href="$df/db6/classTakeManager.html#af69296879493d1f9ba2977aeca314e0d" title="Overwrites the active take&#39;s snapshot with the current project state." alt="" coords="5,55,223,80"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="257,57,223,60,223,55,257,52"/>
+<area shape="poly" id="edge5_Node000005_Node000002" title=" " alt="" coords="522,59,488,56,488,51,523,54"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="522,81,483,85,482,80,522,76"/>
+</map>

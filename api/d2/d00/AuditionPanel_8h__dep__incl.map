@@ -1,0 +1,7 @@
+<map id="Source/Panels/AuditionPanel.h" name="Source/Panels/AuditionPanel.h">
+<area shape="rect" id="Node000001" title="Main UI panel for Audition Mode &#45; the &quot;Spotify for musicians&quot; experience." alt="" coords="134,5,351,31"/>
+<area shape="rect" id="Node000002" href="$dd/de4/AestraContent_8cpp.html" title="Main content area for Aestra &#45; Implementation." alt="" coords="5,79,229,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,40,139,81,137,76,209,35"/>
+<area shape="rect" id="Node000003" href="$d1/dd1/AuditionPanel_8cpp_source.html" title=" " alt="" coords="253,79,485,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="276,35,350,76,347,81,274,40"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="AestraContent::setViewOpen" name="AestraContent::setViewOpen">
+<area shape="rect" id="Node000001" title="Open or close a specific workspace overlay." alt="" coords="276,70,485,95"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#abc3ee4861acd0c5986598b967bb00e79" title="Open a pattern in the piano&#45;roll editor." alt="" coords="16,5,217,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="308,70,209,48,210,43,309,64"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#aa898dcc2a0431e3b72849883c2d72712" title="Show or hide the mixer panel." alt="" coords="5,70,228,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="262,85,228,85,228,80,262,80"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a64124c9937df91c649b1101e8fb4ab8b" title="Toggle visibility for a specific workspace overlay." alt="" coords="19,119,215,145"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="299,101,186,122,185,117,298,95"/>
+</map>

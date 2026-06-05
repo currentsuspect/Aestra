@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::Plugins::AestraVerb::getParameter" name="Aestra::Audio::Plugins::AestraVerb::getParameter">
+<area shape="rect" id="Node000001" title="Get current parameter value (normalized 0&#45;1)" alt="" coords="300,37,497,77"/>
+<area shape="rect" id="Node000002" href="$d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a6f607a87b5d9440ef0c79c99fde18f05" title="Get parameter value as display string." alt="" coords="5,5,252,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="286,47,252,43,253,37,287,41"/>
+<area shape="rect" id="Node000003" href="$d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html#a53a592f15df6c61658e86b73f3507cb4" title="Save plugin state to binary data." alt="" coords="41,69,216,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="286,73,217,82,216,76,286,68"/>
+</map>

@@ -1,0 +1,21 @@
+<map id="Aestra::Audio::HeadlessMusicGenerator::PatternData" name="Aestra::Audio::HeadlessMusicGenerator::PatternData">
+<area shape="rect" id="Node000001" title=" " alt="" coords="955,55,1169,95"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="699,13,785,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="799,31,955,56,954,61,798,37"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="223,5,362,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="376,23,699,23,699,28,376,28"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="705,62,779,87"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="794,72,955,72,955,77,794,77"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="623,111,861,166"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="874,110,961,92,962,97,875,115"/>
+<area shape="rect" id="Node000006" href="$df/d73/structAestra_1_1Audio_1_1HeadlessMusicGenerator_1_1Note.html" title=" " alt="" coords="185,93,400,133"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="414,117,623,129,622,135,414,123"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="5,57,72,82"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="86,75,186,92,185,97,85,80"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="5,106,72,131"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="86,115,185,113,185,118,86,120"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="228,161,357,186"/>
+<area shape="poly" id="edge8_Node000005_Node000009" title=" " alt="" coords="371,171,479,169,598,161,622,158,623,164,599,167,479,175,371,177"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="19,161,58,186"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="72,171,228,171,228,176,72,176"/>
+</map>

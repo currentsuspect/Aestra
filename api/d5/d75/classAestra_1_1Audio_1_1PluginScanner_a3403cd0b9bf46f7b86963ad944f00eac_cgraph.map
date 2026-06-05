@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PluginScanner::checkPathTrusted" name="Aestra::Audio::PluginScanner::checkPathTrusted">
+<area shape="rect" id="Node000001" title="Check if a plugin path is trusted (system + user&#45;configured)." alt="" coords="5,5,215,45"/>
+<area shape="rect" id="Node000002" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#ac753567299caa1f938d03e5daca0f6d5" title="Check if a plugin path is in a trusted system directory." alt="" coords="263,5,472,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="215,23,249,23,249,28,215,28"/>
+</map>

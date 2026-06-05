@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::WaveformCache::getQuickPeak" name="Aestra::Audio::WaveformCache::getQuickPeak">
+<area shape="rect" id="Node000001" title="Get a single peak for quick display." alt="" coords="5,37,229,77"/>
+<area shape="rect" id="Node000002" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#a0d898191af243ee635b386e65d0f9cd1" title="Get peaks for a range, merged." alt="" coords="277,37,485,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="229,55,264,55,264,60,229,60"/>
+<area shape="rect" id="Node000003" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#a2fa9c3119b302c36e3090ed22b5bd4a4" title="Get peak at index for channel." alt="" coords="537,5,745,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="485,42,523,37,524,42,486,47"/>
+<area shape="rect" id="Node000004" href="$d7/de7/structAestra_1_1Audio_1_1WaveformPeak.html#a6b133e5d5c6fb80fa2751cb5892f2074" title="Weighted RMS merge of two peaks." alt="" coords="533,69,749,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="486,67,520,72,519,77,485,73"/>
+</map>

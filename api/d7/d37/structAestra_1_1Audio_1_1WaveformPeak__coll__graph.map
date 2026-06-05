@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::WaveformPeak" name="Aestra::Audio::WaveformPeak">
+<area shape="rect" id="Node000001" title="A single min/max/rms peak triplet for waveform display." alt="" coords="5,123,221,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="45,5,96,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="79,43,97,98,109,121,104,124,92,100,74,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="120,5,195,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="151,44,130,100,121,123,116,121,126,98,146,43"/>
+</map>

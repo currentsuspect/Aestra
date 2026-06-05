@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::DuplicateClipCommand::undo" name="Aestra::Audio::DuplicateClipCommand::undo">
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,5,184,45"/>
+<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#af44a50346cebfd76b853283bacc24818" title="Remove a clip by ID." alt="" coords="232,5,437,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="184,23,218,23,218,28,184,28"/>
+</map>

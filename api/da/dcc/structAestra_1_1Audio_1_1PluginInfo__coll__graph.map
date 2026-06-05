@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::PluginInfo" name="Aestra::Audio::PluginInfo">
+<area shape="rect" id="Node000001" title="Plugin metadata information." alt="" coords="277,241,459,267"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="86,131,110,175,127,197,148,215,170,224,201,232,277,243,276,248,200,237,168,229,145,220,123,201,105,178,81,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="142,95,250,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="210,131,237,174,255,196,276,215,299,229,323,239,321,244,296,234,273,219,252,200,233,177,206,134"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="274,95,366,120"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="329,133,356,216,365,240,360,242,351,218,324,134"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="391,95,441,120"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="413,135,404,174,389,218,377,242,373,240,384,216,398,173,408,133"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="465,95,540,120"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="498,134,479,177,466,199,448,219,429,233,408,244,406,239,426,229,445,215,461,196,475,174,493,132"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="613,95,664,120"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="642,134,635,178,626,200,611,219,586,233,549,242,460,252,459,247,548,237,584,228,608,215,622,198,630,176,637,133"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PatternManager::applyPatch" name="Aestra::Audio::PatternManager::applyPatch">
+<area shape="rect" id="Node000001" title="Apply a mutation lambda to a pattern, creating it on demand." alt="" coords="5,5,225,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a14e806e03276c9b4ea16c838fab092d8" title="Get or create a pattern." alt="" coords="273,5,493,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="225,23,260,23,260,28,225,28"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::AestraUUID" name="Aestra::Audio::AestraUUID">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,55,199,80"/>
+<area shape="rect" id="Node000002" href="$dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html" title="Unique identifier for a clip instance." alt="" coords="251,5,462,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="181,49,290,28,291,33,182,55"/>
+<area shape="rect" id="Node000003" href="$df/d72/structAestra_1_1Audio_1_1MixerChannelID.html" title="Unique identifier for a Mixer Channel." alt="" coords="247,55,467,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="213,65,246,65,246,70,213,70"/>
+<area shape="rect" id="Node000004" href="$d4/d9c/structAestra_1_1Audio_1_1PlaylistLaneID.html" title="Unique identifier for a playlist lane (track row)" alt="" coords="251,104,462,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="182,80,291,101,290,107,181,85"/>
+</map>

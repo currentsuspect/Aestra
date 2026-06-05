@@ -1,0 +1,18 @@
+<map id="Aestra::Audio::RenderTrack" name="Aestra::Audio::RenderTrack">
+<area shape="rect" id="Node000001" title=" " alt="" coords="37,343,235,368"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,247,80,273"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="40,286,41,303,46,317,60,331,77,340,75,345,57,335,42,320,35,304,35,287"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="125,5,192,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="158,45,157,55,145,226,139,343,134,342,140,226,152,54,153,44"/>
+<area shape="rect" id="Node000005" href="$d4/d32/structAestra_1_1Audio_1_1RuntimeConnection.html" title=" " alt="" coords="173,137,419,163"/>
+<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="160,44,164,79,171,96,181,112,197,125,217,135,215,140,194,130,177,115,166,99,159,80,155,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="187,240,405,280"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="253,289,157,345,154,340,251,284"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="299,177,299,240,293,240,293,177"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="305,5,365,31"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="330,44,302,138,297,136,325,43"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="443,137,573,163"/>
+<area shape="poly" id="edge7_Node000004_Node000007" title=" " alt="" coords="474,171,334,242,332,238,472,167"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="489,5,527,31"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="511,44,511,137,505,137,505,44"/>
+</map>

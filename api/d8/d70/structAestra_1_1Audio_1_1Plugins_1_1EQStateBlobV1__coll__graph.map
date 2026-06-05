@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::Plugins::EQStateBlobV1" name="Aestra::Audio::Plugins::EQStateBlobV1">
+<area shape="rect" id="Node000001" title=" " alt="" coords="47,108,211,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="54,42,77,82,102,106,99,110,73,86,49,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="104,5,155,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="132,45,132,108,127,108,127,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="180,5,247,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="208,44,199,65,186,86,161,110,157,106,182,82,194,63,203,42"/>
+</map>

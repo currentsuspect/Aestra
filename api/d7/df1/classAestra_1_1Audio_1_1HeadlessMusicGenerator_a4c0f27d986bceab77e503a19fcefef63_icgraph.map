@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::HeadlessMusicGenerator::addNote" name="Aestra::Audio::HeadlessMusicGenerator::addNote">
+<area shape="rect" id="Node000001" title="Add a note to the current pattern." alt="" coords="280,69,495,109"/>
+<area shape="rect" id="Node000002" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a403b5491bee102349e4f548dbcdd9601" title="Load a preset bassline." alt="" coords="11,5,226,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="289,69,203,48,204,43,290,63"/>
+<area shape="rect" id="Node000003" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a303c7d6c3fd532b2a10596faddc71825" title="Load a preset drum pattern (Four&#45;on&#45;the&#45;floor)" alt="" coords="5,69,232,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="266,92,232,92,232,87,266,87"/>
+<area shape="rect" id="Node000004" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#ab727f644e8b37f8fb3cfa5039a8ff185" title="Load a preset hi&#45;hat pattern." alt="" coords="11,133,226,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="290,115,204,136,203,131,289,110"/>
+</map>

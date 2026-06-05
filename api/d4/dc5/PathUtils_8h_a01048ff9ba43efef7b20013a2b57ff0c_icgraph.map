@@ -1,0 +1,6 @@
+<map id="Aestra::Audio::makeUnicodePath" name="Aestra::Audio::makeUnicodePath">
+<area shape="rect" id="Node000001" title="Get a std::filesystem::path from a raw string, handling Unicode properly." alt="" coords="237,29,472,55"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="400,20,398,15,389,12,355,8,327,10,312,15,310,20,317,27,313,31,304,21,309,11,326,5,355,3,391,7,401,11,405,17"/>
+<area shape="rect" id="Node000002" href="$dc/d73/classAestra_1_1Audio_1_1StreamingDecoder.html#a6e7bd9cfc49510d7394c436ae7ea6d74" title="Start streaming a file." alt="" coords="5,22,189,62"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="224,45,189,45,189,39,224,39"/>
+</map>

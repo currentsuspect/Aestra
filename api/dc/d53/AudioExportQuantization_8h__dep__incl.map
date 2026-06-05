@@ -1,0 +1,19 @@
+<map id="AestraAudio/include/IO/AudioExportQuantization.h" name="AestraAudio/include/IO/AudioExportQuantization.h">
+<area shape="rect" id="Node000001" title="PCM quantization with optional triangular&#45;pdf dither for offline export." alt="" coords="531,5,750,45"/>
+<area shape="rect" id="Node000002" href="$d8/da6/AudioExporter_8h_source.html" title=" " alt="" coords="565,93,717,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="643,59,643,93,638,93,638,59"/>
+<area shape="rect" id="Node000003" href="$d0/d48/HeadlessMusicGenerator_8h_source.html" title=" " alt="" coords="97,181,361,221"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="552,136,320,184,318,179,551,131"/>
+<area shape="rect" id="Node000006" href="$df/dc3/AudioEngine_8cpp_source.html" title=" " alt="" coords="385,181,544,221"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="591,142,504,184,502,179,589,137"/>
+<area shape="rect" id="Node000007" href="$d0/dd9/AudioExporter_8cpp_source.html" title=" " alt="" coords="569,181,713,221"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="643,147,643,181,638,181,638,147"/>
+<area shape="rect" id="Node000008" href="$db/d11/AestraApp_8cpp_source.html" title=" " alt="" coords="737,189,931,214"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="697,137,809,186,807,191,695,141"/>
+<area shape="rect" id="Node000009" href="$da/d3c/ExportDialog_8cpp_source.html" title=" " alt="" coords="955,189,1193,214"/>
+<area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="731,130,1017,186,1016,191,730,135"/>
+<area shape="rect" id="Node000004" href="$d0/d01/HeadlessMusicGenerator_8cpp_source.html" title=" " alt="" coords="5,269,220,309"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="194,232,140,271,137,267,190,228"/>
+<area shape="rect" id="Node000005" href="$de/db1/HeadlessExportMain_8cpp.html" title="CLI tool for headless music generation and export." alt="" coords="244,269,445,309"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="267,228,321,267,317,271,264,232"/>
+</map>

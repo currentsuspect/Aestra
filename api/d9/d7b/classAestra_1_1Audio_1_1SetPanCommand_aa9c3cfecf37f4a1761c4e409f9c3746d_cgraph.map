@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::SetPanCommand::execute" name="Aestra::Audio::SetPanCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,37,233,77"/>
+<area shape="rect" id="Node000002" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a0c3b6cf51e90c76311e96a67cd27d5ea" title="Get stereo pan." alt="" coords="281,5,488,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="233,41,268,37,268,42,234,46"/>
+<area shape="rect" id="Node000003" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a74a65973ed6e8c59c769932888ad8967" title="Set stereo pan." alt="" coords="281,69,488,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="234,68,268,73,268,78,233,74"/>
+</map>

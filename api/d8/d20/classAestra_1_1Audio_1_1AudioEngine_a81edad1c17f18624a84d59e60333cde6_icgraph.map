@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioEngine::setPatternPlaybackEngine" name="Aestra::Audio::AudioEngine::setPatternPlaybackEngine">
+<area shape="rect" id="Node000001" title="Bind the pattern playback engine used for scheduled MIDI." alt="" coords="277,5,476,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a6379a65877487a2a804caae9de2732dd" title="Bind the live audio engine used by transport&#45;aware panels." alt="" coords="5,13,229,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="264,28,230,28,230,23,264,23"/>
+</map>

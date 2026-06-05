@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::AudioEngine::getMaxTruePeakdBTP" name="Aestra::Audio::AudioEngine::getMaxTruePeakdBTP">
+<area shape="rect" id="Node000001" title="Latest max&#45;channel true peak in dBTP (decibels True Peak)." alt="" coords="5,69,204,109"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#aebdfdbad3145cd170ab61495a9457951" title="Latest left&#45;channel true peak (linear, max&#45;hold since last clear)." alt="" coords="260,5,459,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="184,67,265,46,267,51,186,72"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a7ec9a8e1577c72c96b179fab3a0b6adf" title="Latest right&#45;channel true peak (linear, max&#45;hold since last clear)." alt="" coords="260,69,459,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="204,87,246,87,246,92,204,92"/>
+<area shape="rect" id="Node000004" href="$dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#a158ae11f93a62f4b5d4013f3a9815faa" title="Convert a linear peak value to dBTP, with a &#45;200 dB floor for silence." alt="" coords="252,133,467,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="186,107,267,127,265,133,184,112"/>
+</map>

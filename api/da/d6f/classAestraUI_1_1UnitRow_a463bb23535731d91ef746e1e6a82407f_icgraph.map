@@ -1,0 +1,7 @@
+<map id="AestraUI::UnitRow::updateState" name="AestraUI::UnitRow::updateState">
+<area shape="rect" id="Node000001" title="Refresh cached unit state from the backing managers." alt="" coords="201,37,349,77"/>
+<area shape="rect" id="Node000002" href="$da/d6f/classAestraUI_1_1UnitRow.html#ab2a22e6d50638047c26ab0353bb49107" title="Called when drop occurs." alt="" coords="5,5,153,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="187,46,153,40,154,35,188,40"/>
+<area shape="rect" id="Node000003" href="$da/d6f/classAestraUI_1_1UnitRow.html#a3fd8f3f2017082c5b9a30bc2b1301d44" title="Create a sequencer row for an Arsenal unit." alt="" coords="5,69,153,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="188,74,154,80,153,75,187,69"/>
+</map>

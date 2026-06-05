@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioDeviceManager::getStreamLatency" name="Aestra::Audio::AudioDeviceManager::getStreamLatency">
+<area shape="rect" id="Node000001" title="Get current stream latency." alt="" coords="307,13,513,53"/>
+<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a2877066eafba938bfbaee240e991e908" title="Get latency compensation values for recording." alt="" coords="5,5,259,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="293,35,259,35,259,30,293,30"/>
+</map>

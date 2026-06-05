@@ -1,0 +1,9 @@
+<map id="AestraUI::PianoRollToolbar::PatternChoice" name="AestraUI::PianoRollToolbar::PatternChoice">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,183,200,223"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="45,95,83,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="68,133,74,158,89,181,84,184,70,160,63,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="107,95,194,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="141,134,115,184,110,181,136,131"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="81,5,220,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="153,59,153,94,148,94,148,59"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::WaveformMipLevel::getInterpolatedPeak" name="Aestra::Audio::WaveformMipLevel::getInterpolatedPeak">
+<area shape="rect" id="Node000001" title="Get interpolated peak at fractional index (advisory: interpolation of min/max is not physically meani..." alt="" coords="5,5,213,45"/>
+<area shape="rect" id="Node000002" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#a2fa9c3119b302c36e3090ed22b5bd4a4" title="Get peak at index for channel." alt="" coords="261,5,469,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,23,248,23,248,28,213,28"/>
+</map>

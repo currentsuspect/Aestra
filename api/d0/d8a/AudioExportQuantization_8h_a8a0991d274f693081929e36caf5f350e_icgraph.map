@@ -1,0 +1,16 @@
+<map id="Aestra::Audio::ExportQuantization::sanitizeAndClamp" name="Aestra::Audio::ExportQuantization::sanitizeAndClamp">
+<area shape="rect" id="Node000001" title="Sanitize a float sample: replace NaN/Inf with 0 and clamp to [&#45;1, 1]." alt="" coords="587,73,829,113"/>
+<area shape="poly" id="edge9_Node000001_Node000001" title=" " alt="" coords="758,62,740,55,708,52,680,54,663,59,656,65,659,72,654,74,651,64,660,54,679,49,708,47,742,49,760,57"/>
+<area shape="rect" id="Node000002" href="$d0/d8a/AudioExportQuantization_8h.html#a3b99a92476910e1f345e558a3752a05b" title="Quantize a float sample to 16&#45;bit PCM with an explicit dither offset." alt="" coords="296,29,539,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="573,76,539,70,539,65,574,70"/>
+<area shape="rect" id="Node000004" href="$d0/d8a/AudioExportQuantization_8h.html#a4a8334350f2a8d849662b64225307c31" title="Quantize a float sample to 24&#45;bit PCM with an explicit dither offset." alt="" coords="296,117,539,157"/>
+<area shape="poly" id="edge5_Node000001_Node000004" title=" " alt="" coords="574,116,539,122,539,116,573,111"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="467,18,450,11,417,8,389,10,372,15,366,21,369,28,364,30,360,20,369,10,388,5,417,3,451,5,469,13"/>
+<area shape="rect" id="Node000003" href="$d0/d8a/AudioExportQuantization_8h.html#a090720a68961780484a96c90eedeb40e" title="Quantize a float sample to 16&#45;bit PCM with auto&#45;generated TPDF dither." alt="" coords="5,29,248,69"/>
+<area shape="poly" id="edge3_Node000002_Node000003" title=" " alt="" coords="283,52,248,52,248,47,283,47"/>
+<area shape="poly" id="edge4_Node000003_Node000003" title=" " alt="" coords="177,18,159,11,127,8,98,10,81,15,75,21,78,28,73,30,70,20,78,10,97,5,127,3,160,5,179,13"/>
+<area shape="poly" id="edge6_Node000004_Node000004" title=" " alt="" coords="467,106,450,99,417,96,389,98,372,103,366,109,369,116,364,118,360,108,369,98,388,93,417,91,451,93,469,101"/>
+<area shape="rect" id="Node000005" href="$d0/d8a/AudioExportQuantization_8h.html#a287255f4dfa3f21697b90ed5f0182a3a" title="Quantize a float sample to 24&#45;bit PCM with auto&#45;generated TPDF dither." alt="" coords="5,117,248,157"/>
+<area shape="poly" id="edge7_Node000004_Node000005" title=" " alt="" coords="283,140,248,140,248,135,283,135"/>
+<area shape="poly" id="edge8_Node000005_Node000005" title=" " alt="" coords="177,106,159,99,127,96,98,98,81,103,75,109,78,116,73,118,70,108,78,98,97,93,127,91,160,93,179,101"/>
+</map>

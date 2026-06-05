@@ -1,0 +1,8 @@
+<map id="Aestra::Audio::FastMath::fastPan" name="Aestra::Audio::FastMath::fastPan">
+<area shape="rect" id="Node000001" title="Fast constant&#45;power panning using polynomial approximation." alt="" coords="5,35,181,75"/>
+<area shape="rect" id="Node000002" href="$de/dee/namespaceAestra_1_1Audio_1_1FastMath.html#a392c449405c3fdd21706dbb4fd5df14e" title="Fast cosine approximation." alt="" coords="229,5,405,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="181,41,215,36,216,41,182,46"/>
+<area shape="rect" id="Node000003" href="$de/dee/namespaceAestra_1_1Audio_1_1FastMath.html#a602759081e528cd637b8e1991089dde5" title="Fast sine approximation using 5th&#45;order polynomial." alt="" coords="453,35,629,75"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="182,54,229,55,405,55,440,54,440,60,405,60,229,60,182,59"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="406,34,440,39,439,44,405,39"/>
+</map>

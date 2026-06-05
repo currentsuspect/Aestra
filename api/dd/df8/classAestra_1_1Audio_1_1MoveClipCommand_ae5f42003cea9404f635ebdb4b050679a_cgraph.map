@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::MoveClipCommand::undo" name="Aestra::Audio::MoveClipCommand::undo">
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,5,251,45"/>
+<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae79b3ac4edb3fcde6109d26c664490e1" title="Move a clip to a new position (and optionally new lane)" alt="" coords="299,5,504,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="251,23,285,23,285,28,251,28"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackManager::getContinuousParams" name="Aestra::Audio::TrackManager::getContinuousParams">
+<area shape="rect" id="Node000001" title="Get the continuous automation parameter buffer." alt="" coords="233,5,441,45"/>
+<area shape="rect" id="Node000002" href="$d3/d51/classAestra_1_1MixerViewModel.html#a9cb7570e827500d4cf667ba9877edeee" title="Sync channel list from engine state." alt="" coords="5,5,185,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,28,186,28,186,23,220,23"/>
+</map>

@@ -1,0 +1,15 @@
+<map id="AestraUI::UIMixerPluginDropdown" name="AestraUI::UIMixerPluginDropdown">
+<area shape="rect" id="Node000001" title="Compact plugin finder dropdown anchored to an Add Insert button." alt="" coords="816,155,1059,181"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="401,91,587,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="597,116,849,153,848,158,596,121"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,25,296,31,351,41,417,64,470,89,468,94,415,69,350,47,295,36,239,30"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="209,101,401,101,401,107,209,107"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,160,278,151,350,136,374,125,417,114,418,119,376,131,351,141,279,157,209,165"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="375,141,613,195"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="627,165,816,165,816,171,627,171"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="425,219,563,245"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="577,224,680,215,792,200,890,178,891,183,792,205,680,220,577,230"/>
+</map>

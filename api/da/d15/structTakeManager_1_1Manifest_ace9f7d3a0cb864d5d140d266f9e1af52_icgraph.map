@@ -1,0 +1,9 @@
+<map id="TakeManager::Manifest::activeTake" name="TakeManager::Manifest::activeTake">
+<area shape="rect" id="Node000001" title="Returns the currently active take, or nullptr if none." alt="" coords="536,23,709,63"/>
+<area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#a140b2004fb5dfb4ed837fb80d603f9da" title="Ensures a manifest exists, creating one with an initial take if needed." alt="" coords="271,31,488,56"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="522,46,488,46,488,41,522,41"/>
+<area shape="rect" id="Node000003" href="$df/db6/classTakeManager.html#aca0f3339708882aa536a01af04d2d9b5" title="Creates a new take snapshot." alt="" coords="21,5,207,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="256,34,207,30,208,24,257,29"/>
+<area shape="rect" id="Node000004" href="$df/db6/classTakeManager.html#af69296879493d1f9ba2977aeca314e0d" title="Overwrites the active take&#39;s snapshot with the current project state." alt="" coords="5,55,223,80"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="257,57,223,60,223,55,257,52"/>
+</map>

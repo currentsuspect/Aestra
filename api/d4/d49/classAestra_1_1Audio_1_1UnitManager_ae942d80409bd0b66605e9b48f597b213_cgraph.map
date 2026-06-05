@@ -1,0 +1,8 @@
+<map id="Aestra::Audio::UnitManager::setUnitPluginState" name="Aestra::Audio::UnitManager::setUnitPluginState">
+<area shape="rect" id="Node000001" title="Replace the serialized plugin state blob for a unit." alt="" coords="5,5,207,45"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="504,5,705,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="207,20,255,19,456,19,490,19,490,25,456,24,255,24,207,25"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="255,33,456,73"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="207,34,241,38,241,43,207,39"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="456,39,490,35,491,41,457,45"/>
+</map>

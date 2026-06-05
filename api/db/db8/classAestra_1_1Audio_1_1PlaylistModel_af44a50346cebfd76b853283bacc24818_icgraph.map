@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::PlaylistModel::removeClip" name="Aestra::Audio::PlaylistModel::removeClip">
+<area shape="rect" id="Node000001" title="Remove a clip by ID." alt="" coords="249,69,455,109"/>
+<area shape="rect" id="Node000002" href="$dd/d5e/classAestra_1_1Audio_1_1RemoveClipCommand.html#a841079290077617001dc8a0576aead33" title="Execute the command (first time)" alt="" coords="5,5,201,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="260,68,181,48,182,43,261,63"/>
+<area shape="rect" id="Node000003" href="$dd/d5e/classAestra_1_1Audio_1_1RemoveClipCommand.html#a57c49443c750eb1b11860ceefec3dd32" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,69,201,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="236,92,202,92,202,87,236,87"/>
+<area shape="rect" id="Node000004" href="$d1/d39/classAestra_1_1Audio_1_1DuplicateClipCommand.html#a62284e1edcaab77ec22928c115cc49a6" title="Undo the command." alt="" coords="14,133,193,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="261,115,182,136,181,131,260,110"/>
+</map>

@@ -1,0 +1,16 @@
+<map id="AestraContent::stopSoundPreview" name="AestraContent::stopSoundPreview">
+<area shape="rect" id="Node000001" title="Stop the active file&#45;browser preview." alt="" coords="533,152,724,192"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a628ba7ce29210444a59c970d269cd7c3" title="Load a sample into the currently selected track." alt="" coords="269,5,469,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="594,145,544,105,484,66,441,48,443,43,487,62,547,101,597,141"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="5,159,205,185"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="581,148,535,127,485,111,420,99,369,95,318,99,254,111,219,120,185,134,129,162,127,157,182,129,217,115,253,105,318,93,369,89,421,93,486,105,537,122,583,143"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a341b0c3f718815e12a4a49ddb0674819" title="Start playback based on the current focus mode." alt="" coords="253,120,485,160"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="519,161,485,157,486,152,520,156"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a47b1f6dcf3ff2e9196a7adeb2542d97c" title="Start preview playback for a file&#45;browser item." alt="" coords="274,184,465,224"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="520,188,465,195,464,190,519,183"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#acd45e0922aede06c12894ca10bb42bac" title="Set the active workspace mode." alt="" coords="263,249,475,274"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="577,201,486,239,440,251,439,246,484,233,575,196"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#aa8ffca5e396634b441f182a95bc7d687" title="Advance preview&#45;state bookkeeping." alt="" coords="265,299,473,339"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="599,204,549,247,487,288,455,301,453,296,484,283,546,243,596,200"/>
+<area shape="poly" id="edge6_Node000006_Node000003" title=" " alt="" coords="286,248,252,239,186,213,131,187,133,182,188,208,254,233,288,243"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::DSP::Filter::getGroupDelay" name="Aestra::Audio::DSP::Filter::getGroupDelay">
+<area shape="rect" id="Node000001" title="Get group delay at specific frequency." alt="" coords="5,5,175,45"/>
+<area shape="rect" id="Node000002" href="$de/dd2/classAestra_1_1Audio_1_1DSP_1_1Filter.html#aa6e5902a2a35de23a7fbe9c7a8e394b9" title="Calculate frequency response phase." alt="" coords="223,5,417,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="175,23,209,23,209,28,175,28"/>
+</map>

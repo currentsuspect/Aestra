@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PianoRollPanel::setEditingUnit" name="Aestra::Audio::PianoRollPanel::setEditingUnit">
+<area shape="rect" id="Node000001" title="Set the default unit assigned to newly created notes." alt="" coords="232,5,411,45"/>
+<area shape="rect" id="Node000002" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ae66c8a1f925037421cdb8bd97449bc7c" title="Create the piano&#45;roll editor bound to the shared track manager." alt="" coords="5,5,184,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="218,28,184,28,184,23,218,23"/>
+</map>

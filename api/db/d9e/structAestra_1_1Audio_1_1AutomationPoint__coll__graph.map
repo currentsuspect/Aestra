@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::AutomationPoint" name="Aestra::Audio::AutomationPoint">
+<area shape="rect" id="Node000001" title=" " alt="" coords="74,108,267,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="53,43,62,63,76,82,113,106,110,110,73,86,58,66,48,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="104,5,155,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="134,44,144,83,157,106,153,109,139,85,129,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="179,5,245,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="205,44,180,109,175,107,200,42"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="269,5,320,31"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="279,43,238,86,205,110,202,106,234,82,275,40"/>
+</map>

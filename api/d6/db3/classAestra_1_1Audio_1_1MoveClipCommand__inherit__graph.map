@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::MoveClipCommand" name="Aestra::Audio::MoveClipCommand">
+<area shape="rect" id="Node000001" title="Command to move a clip to a new position (and optionally a new lane)" alt="" coords="5,79,251,104"/>
+<area shape="rect" id="Node000002" href="$d1/d5e/classAestra_1_1Audio_1_1ICommand.html" title="Abstract base class for all undoable operations." alt="" coords="34,5,222,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="131,44,131,79,125,79,125,44"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::SampleRateConverter::hasSIMD" name="Aestra::Audio::SampleRateConverter::hasSIMD">
+<area shape="rect" id="Node000001" title="Check if SIMD acceleration is available." alt="" coords="249,5,445,45"/>
+<area shape="rect" id="Node000002" href="$da/d42/classAestra_1_1Audio_1_1SampleRateConverter.html#a7a1c9e737a9465d331bff29fbb862f5b" title="Configure the converter for a specific rate conversion." alt="" coords="5,5,201,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="236,28,201,28,201,23,236,23"/>
+</map>

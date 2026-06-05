@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::AestraDelay::setParameter" name="Aestra::Audio::Plugins::AestraDelay::setParameter">
+<area shape="rect" id="Node000001" title="Set parameter value (normalized 0&#45;1)" alt="" coords="232,5,436,45"/>
+<area shape="rect" id="Node000002" href="$dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#a0c211bec305b60a889c536470f5c0ea3" title="Load plugin state from binary data." alt="" coords="5,5,184,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="219,28,184,28,184,23,219,23"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::ASIODriverScanner::getInstalledDriverCount" name="Aestra::Audio::ASIODriverScanner::getInstalledDriverCount">
+<area shape="rect" id="Node000001" title="Get count of installed ASIO drivers." alt="" coords="261,5,499,45"/>
+<area shape="rect" id="Node000002" href="$d3/d97/classAestra_1_1Audio_1_1ASIODriverScanner.html#a19458d7ec25730cad9cc30cb3a66872e" title="Check if any ASIO drivers are installed." alt="" coords="5,5,213,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,28,213,28,213,23,248,23"/>
+</map>

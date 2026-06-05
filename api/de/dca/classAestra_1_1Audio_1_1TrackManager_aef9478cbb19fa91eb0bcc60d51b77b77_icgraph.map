@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::TrackManager::getChannel" name="Aestra::Audio::TrackManager::getChannel">
+<area shape="rect" id="Node000001" title="Get a channel by index." alt="" coords="285,197,493,237"/>
+<area shape="rect" id="Node000002" href="$d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a808cde6e5a45b7255833bcdab7ac081b" title="Build a render graph from the current TrackManager state." alt="" coords="5,5,237,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="365,188,311,123,276,89,236,60,212,48,214,43,239,55,279,84,315,119,369,185"/>
+<area shape="rect" id="Node000003" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html#af90a9908fac33e06940460d03ddd9436" title="Execute the command (first time)" alt="" coords="24,69,219,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="349,191,297,156,236,124,205,112,207,107,238,119,300,152,352,187"/>
+<area shape="rect" id="Node000004" href="$dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html#a11da8593018d249a3c1e73433f4266bc" title="Execute the command (first time)" alt="" coords="19,133,224,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="291,197,205,176,206,171,292,191"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a1eb296424f204b13f43040d5b0f84694" title="Get a track by zero&#45;based index." alt="" coords="17,197,225,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="272,220,226,220,226,215,272,215"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a7a07994039cc1a7eabcc8880e3e2736e" title="Get a track by zero&#45;based index." alt="" coords="17,261,225,301"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="292,243,206,264,205,259,291,238"/>
+<area shape="rect" id="Node000007" href="$dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html#a0fc40bffb0a77b376f1084cfbb8b2bd6" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="19,325,224,365"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="352,248,300,283,238,316,207,328,205,323,236,311,297,278,349,243"/>
+<area shape="rect" id="Node000008" href="$dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html#a5c2707474da43150b4d87297a58d5e86" title="Undo the command." alt="" coords="19,389,224,429"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="369,250,315,316,279,350,239,380,214,392,212,387,236,375,276,346,311,312,365,247"/>
+</map>

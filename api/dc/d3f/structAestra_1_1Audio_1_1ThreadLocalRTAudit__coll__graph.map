@@ -1,0 +1,15 @@
+<map id="Aestra::Audio::ThreadLocalRTAudit" name="Aestra::Audio::ThreadLocalRTAudit">
+<area shape="rect" id="Node000001" title="Thread&#45;local RT audit data." alt="" coords="75,240,271,280"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="165,5,239,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="201,44,187,138,177,240,172,239,182,137,195,44"/>
+<area shape="rect" id="Node000004" href="$d9/dbb/structAestra_1_1Audio_1_1RTViolationEvent.html" title="A single RT violation event with forensic diagnostic epoch info." alt="" coords="293,137,484,177"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="216,42,238,78,270,111,315,135,312,140,267,115,234,81,211,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,65,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="40,44,46,77,56,112,77,150,103,185,153,238,149,242,98,189,72,153,52,114,41,78,35,45"/>
+<area shape="poly" id="edge6_Node000004_Node000003" title=" " alt="" coords="51,41,80,78,99,96,121,111,160,127,194,131,230,131,274,135,293,138,293,143,274,140,229,136,194,136,159,132,118,116,96,100,76,82,47,44"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="337,186,214,242,212,238,335,181"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="469,5,519,31"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="480,44,428,115,408,139,404,135,424,112,476,41"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="317,5,444,31"/>
+<area shape="poly" id="edge7_Node000004_Node000006" title=" " alt="" coords="385,44,390,137,385,137,379,45"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::ArsenalPanel::unregisterDropTargets" name="Aestra::Audio::ArsenalPanel::unregisterDropTargets">
+<area shape="rect" id="Node000001" title="Unregister the panel and current rows from drag/drop." alt="" coords="504,37,705,77"/>
+<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#afcb4b10be1a700b9e7c2998f9d7c541f" title="Rebuild the UI rows from the current UnitManager state." alt="" coords="255,5,456,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="490,45,456,41,457,36,491,40"/>
+<area shape="rect" id="Node000004" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a9ebac6a3fb72a7a5332da7a397f4cadc" title="Destroy the Arsenal sequencer panel." alt="" coords="255,69,456,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="491,75,457,79,456,74,490,69"/>
+<area shape="rect" id="Node000003" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a054437827bbf8d4cda98b022cb03669e" title="Create the Arsenal sequencer panel." alt="" coords="5,5,207,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="241,28,207,28,207,23,241,23"/>
+</map>

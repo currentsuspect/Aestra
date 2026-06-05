@@ -1,0 +1,15 @@
+<map id="Aestra::Audio::AudioTelemetry::recordStableBlock" name="Aestra::Audio::AudioTelemetry::recordStableBlock">
+<area shape="rect" id="Node000001" title="B&#45;009: Record a successful (stable) audio block." alt="" coords="1019,37,1237,77"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a401079ac6501c3f1df6221fd7d596f84" title="Process a single audio block (driver callback entry)." alt="" coords="772,37,971,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1005,60,971,60,971,55,1005,55"/>
+<area shape="rect" id="Node000003" href="$df/d9b/classAestra_1_1Audio_1_1OfflineRenderHarness.html#afba75d85e5ce3e6fa95d137ec7d7c0d1" title="Process N blocks offline." alt="" coords="516,5,723,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="758,46,723,41,723,36,759,40"/>
+<area shape="rect" id="Node000004" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="515,69,724,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="759,74,724,79,724,73,758,69"/>
+<area shape="rect" id="Node000005" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="255,37,464,77"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="501,77,464,73,464,68,501,72"/>
+<area shape="rect" id="Node000007" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="252,101,467,141"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="501,107,467,111,467,105,501,101"/>
+<area shape="rect" id="Node000006" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,37,204,77"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="241,60,204,60,204,55,241,55"/>
+</map>

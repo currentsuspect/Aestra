@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::PlaylistModel::moveClip" name="Aestra::Audio::PlaylistModel::moveClip">
+<area shape="rect" id="Node000001" title="Move a clip to a new position (and optionally new lane)" alt="" coords="299,69,504,109"/>
+<area shape="rect" id="Node000002" href="$dd/df8/classAestra_1_1Audio_1_1MoveClipCommand.html#a02c3a687e1fe9ce3b691fdc863384fa8" title="Execute the command (first time)" alt="" coords="5,5,251,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="301,69,213,48,215,43,303,64"/>
+<area shape="rect" id="Node000003" href="$dd/df8/classAestra_1_1Audio_1_1MoveClipCommand.html#a5d01c2a7fe5ec0bdd2f673475dc1303c" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,69,251,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="285,92,251,92,251,87,285,87"/>
+<area shape="rect" id="Node000004" href="$dd/df8/classAestra_1_1Audio_1_1MoveClipCommand.html#ae5f42003cea9404f635ebdb4b050679a" title="Undo the command." alt="" coords="5,133,251,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="303,115,215,136,213,131,301,110"/>
+</map>

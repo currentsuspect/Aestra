@@ -1,0 +1,7 @@
+<map id="AestraUI::UIMixerPluginDropdown" name="AestraUI::UIMixerPluginDropdown">
+<area shape="rect" id="Node000001" title="Compact plugin finder dropdown anchored to an Add Insert button." alt="" coords="5,167,248,192"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="34,93,219,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="129,132,129,167,124,167,124,132"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="17,5,237,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="129,59,129,93,124,93,124,59"/>
+</map>

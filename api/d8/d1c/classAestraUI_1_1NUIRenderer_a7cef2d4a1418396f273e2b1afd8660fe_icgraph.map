@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIRenderer::calculateTextY" name="AestraUI::NUIRenderer::calculateTextY">
+<area shape="rect" id="Node000001" title="Calculate baseline&#45;aligned Y position for vertically centered text using measured size." alt="" coords="240,5,409,45"/>
+<area shape="rect" id="Node000002" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#a51ce416466511d58d05585fae224dc08" title="Draw text centered within a rectangle." alt="" coords="5,5,192,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="226,28,192,28,192,23,226,23"/>
+</map>

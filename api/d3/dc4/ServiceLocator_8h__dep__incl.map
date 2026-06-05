@@ -1,0 +1,11 @@
+<map id="Source/App/ServiceLocator.h" name="Source/App/ServiceLocator.h">
+<area shape="rect" id="Node000001" title="B&#45;003: Service locator for global services." alt="" coords="353,5,560,31"/>
+<area shape="rect" id="Node000002" href="$db/d11/AestraApp_8cpp_source.html" title=" " alt="" coords="5,86,199,111"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="393,36,154,89,153,83,391,31"/>
+<area shape="rect" id="Node000003" href="$d5/d10/MixerViewModel_8cpp_source.html" title=" " alt="" coords="223,79,447,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="429,41,366,81,363,76,426,36"/>
+<area shape="rect" id="Node000004" href="$d6/dda/MixerPanel_8cpp_source.html" title=" " alt="" coords="472,86,687,111"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="488,36,563,84,560,88,485,40"/>
+<area shape="rect" id="Node000005" href="$da/d3c/ExportDialog_8cpp_source.html" title=" " alt="" coords="711,86,949,111"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="525,31,776,83,775,89,524,36"/>
+</map>

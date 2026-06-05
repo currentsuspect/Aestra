@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::BasicGarbageCollector::drainUntilStable" name="Aestra::Audio::BasicGarbageCollector::drainUntilStable">
+<area shape="rect" id="Node000001" title="Run collect() until no additional objects are reclaimed." alt="" coords="5,5,212,45"/>
+<area shape="rect" id="Node000002" href="$d8/ddb/classAestra_1_1Audio_1_1BasicGarbageCollector.html#a03eef32bd307fef0483ca6ad18be353d" title="Run one cleanup pass." alt="" coords="260,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="212,23,246,23,246,28,212,28"/>
+</map>

@@ -1,0 +1,13 @@
+<map id="AestraUI::UnitColorPicker" name="AestraUI::UnitColorPicker">
+<area shape="rect" id="Node000001" title="A popup color picker with preset colors for Arsenal units." alt="" coords="663,117,849,142"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="574,111,663,119,662,124,574,116"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="209,101,374,101,374,107,209,107"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,160,278,151,350,136,374,126,411,114,412,119,376,130,351,141,279,157,209,165"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="442,141,493,166"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="507,152,569,153,638,149,700,139,701,145,639,155,569,158,507,158"/>
+</map>

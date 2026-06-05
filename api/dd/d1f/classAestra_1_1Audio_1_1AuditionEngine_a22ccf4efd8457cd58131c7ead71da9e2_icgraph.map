@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::AuditionEngine::getDurationSeconds" name="Aestra::Audio::AuditionEngine::getDurationSeconds">
+<area shape="rect" id="Node000001" title="Get current track duration." alt="" coords="531,57,745,97"/>
+<area shape="rect" id="Node000002" href="$dd/d1f/classAestra_1_1Audio_1_1AuditionEngine.html#aa241b71779e53697f8eff4be88e594bf" title="Get current position (0.0 &#45; 1.0 normalized)" alt="" coords="5,12,220,52"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="585,54,536,34,482,19,415,10,347,8,220,17,220,12,346,3,415,5,483,13,537,29,587,49"/>
+<area shape="rect" id="Node000003" href="$dd/d1f/classAestra_1_1Audio_1_1AuditionEngine.html#a0485fa16db82e527fa2be545ebbdba9b" title="Get current position in seconds." alt="" coords="268,28,483,68"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="517,67,483,63,483,57,517,61"/>
+<area shape="rect" id="Node000004" href="$dd/d1f/classAestra_1_1Audio_1_1AuditionEngine.html#a427645181a2068876d062f00bda35f2a" title="Seek to position (0.0 &#45; 1.0 normalized)" alt="" coords="5,101,220,141"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="517,90,220,115,220,110,517,85"/>
+<area shape="rect" id="Node000005" href="$dd/d1f/classAestra_1_1Audio_1_1AuditionEngine.html#afd8268c3b6bb9b8fb470e2473418bc02" title="Seek to position in seconds." alt="" coords="268,143,483,183"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="563,104,439,145,437,140,562,99"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="254,43,220,41,220,36,255,38"/>
+<area shape="poly" id="edge6_Node000005_Node000004" title=" " alt="" coords="254,146,220,141,221,136,255,141"/>
+</map>

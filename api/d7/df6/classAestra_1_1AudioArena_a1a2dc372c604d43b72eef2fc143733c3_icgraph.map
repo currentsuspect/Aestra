@@ -1,0 +1,5 @@
+<map id="Aestra::AudioArena::allocate" name="Aestra::AudioArena::allocate">
+<area shape="rect" id="Node000001" title="Allocate memory from the arena." alt="" coords="243,5,389,45"/>
+<area shape="rect" id="Node000002" href="$db/d30/classAestra_1_1GlobalAudioArena.html#a99dc04f4c1be6f68992f1e86421023f5" title="Convenience: allocate from global arena." alt="" coords="5,5,195,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="229,28,195,28,195,23,229,23"/>
+</map>

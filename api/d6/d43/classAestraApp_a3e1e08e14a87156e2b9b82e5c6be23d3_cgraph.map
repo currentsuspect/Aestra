@@ -1,0 +1,21 @@
+<map id="AestraApp::shutdown" name="AestraApp::shutdown">
+<area shape="rect" id="Node000001" title="Shutdown all subsystems." alt="" coords="5,205,165,230"/>
+<area shape="rect" id="Node000002" href="$d4/d29/classAestra_1_1ServiceLocator.html#a919f63336bdaa13306cf7de0b7345f16" title="Clear all registrations (for shutdown/testing)" alt="" coords="247,5,415,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="91,203,135,133,170,91,212,55,233,44,235,48,215,60,174,95,139,136,95,206"/>
+<area shape="rect" id="Node000003" href="$da/d68/classAestra_1_1Audio_1_1AutosaveManager.html#ab65ccc3a949219d93a68ac5c08a23abd" title="Force an immediate autosave (even if not dirty)" alt="" coords="213,69,448,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="98,202,146,162,178,139,212,119,229,112,231,116,215,124,181,143,149,166,102,207"/>
+<area shape="rect" id="Node000004" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="223,133,438,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="135,202,239,174,241,180,136,207"/>
+<area shape="rect" id="Node000005" href="$de/d85/classAestra_1_1AppLifecycle.html#ac6525d3fea04c4a4e56d9e08b2cb5af7" title="Get the singleton instance." alt="" coords="253,197,408,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="165,215,239,215,239,220,165,220"/>
+<area shape="rect" id="Node000006" href="$da/d68/classAestra_1_1Audio_1_1AutosaveManager.html#a77b0c312e21e3f3cc13143ad71fe0ce6" title="Shutdown the autosave manager (stops background thread)" alt="" coords="213,261,448,301"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="136,228,241,255,239,260,135,233"/>
+<area shape="rect" id="Node000007" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#ae12c05938b291151871537bd02c2c92e" title="Shutdown the plugin manager." alt="" coords="223,325,438,365"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="102,228,149,269,181,291,215,311,231,318,229,323,212,316,178,296,146,273,98,232"/>
+<area shape="rect" id="Node000010" href="$de/d85/classAestra_1_1AppLifecycle.html#a6d6ef7992961267d42e760e15b99275b" title="Transition to a new state." alt="" coords="253,389,408,429"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="95,229,139,299,174,340,215,375,241,389,239,393,212,380,170,344,135,302,91,232"/>
+<area shape="rect" id="Node000008" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#ad5fe1de8792d45ba78a8cbe5588a1cbd" title="Cancel scan and join the scanner thread." alt="" coords="496,293,705,333"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="438,330,482,325,483,330,438,335"/>
+<area shape="rect" id="Node000009" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#aeb4f0ed54698e1c2844a6792b6a1a256" title="Save scan results to cache file." alt="" coords="496,357,705,397"/>
+<area shape="poly" id="edge8_Node000007_Node000009" title=" " alt="" coords="438,355,483,361,482,366,438,361"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::ChannelSlotMap::getSlotIndex" name="Aestra::Audio::ChannelSlotMap::getSlotIndex">
+<area shape="rect" id="Node000001" title="Get the dense slot index for a channel ID." alt="" coords="248,37,443,77"/>
+<area shape="rect" id="Node000002" href="$de/d7e/classAestra_1_1Audio_1_1ChannelSlotMap.html#a4973387006cbb22b4d147c1900d411ad" title="Check if a channel ID is mapped." alt="" coords="5,5,200,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="234,45,200,41,201,36,235,40"/>
+<area shape="rect" id="Node000003" href="$d3/d51/classAestra_1_1MixerViewModel.html#a9cb7570e827500d4cf667ba9877edeee" title="Sync channel list from engine state." alt="" coords="13,69,193,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="235,75,193,80,193,75,234,69"/>
+</map>

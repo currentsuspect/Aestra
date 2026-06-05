@@ -1,0 +1,7 @@
+<map id="AestraUI::NUIFocusEvent" name="AestraUI::NUIFocusEvent">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,93,189,119"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="21,5,72,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="55,43,66,68,86,92,82,95,62,71,50,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="96,5,203,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="138,44,122,71,107,94,103,92,118,68,133,42"/>
+</map>

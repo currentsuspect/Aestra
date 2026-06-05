@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::WaveformSIMD::minMaxScalar" name="Aestra::Audio::WaveformSIMD::minMaxScalar">
+<area shape="rect" id="Node000001" title="Scalar fallback for min/max." alt="" coords="272,5,491,45"/>
+<area shape="rect" id="Node000002" href="$d7/d98/namespaceAestra_1_1Audio_1_1WaveformSIMD.html#a9e96d879b36a6acb6f91e4b0175a5dd8" title="Auto&#45;dispatched min/max computation." alt="" coords="5,5,224,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="258,28,224,28,224,23,258,23"/>
+</map>

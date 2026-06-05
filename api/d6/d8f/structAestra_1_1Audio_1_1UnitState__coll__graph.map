@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::UnitState" name="Aestra::Audio::UnitState">
+<area shape="rect" id="Node000001" title="Lightweight unit state used by the audio&#45;thread snapshot." alt="" coords="70,328,249,353"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,203,44,229"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="31,241,42,273,61,302,80,316,102,326,100,330,78,320,57,306,37,275,26,243"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="73,203,123,229"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="107,242,118,272,132,303,150,326,146,329,128,305,113,274,102,243"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="147,196,337,236"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="226,249,190,306,171,329,167,326,185,302,222,246"/>
+<area shape="rect" id="Node000005" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="67,93,283,119"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="192,129,232,194,228,197,187,132"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="307,93,465,119"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="361,129,269,198,266,194,358,125"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="367,5,405,31"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="389,45,389,93,383,93,383,45"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="361,203,507,229"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="404,238,341,271,266,306,199,330,197,325,264,302,338,266,401,233"/>
+</map>

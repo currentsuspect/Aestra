@@ -1,0 +1,25 @@
+<map id="AestraUI::AestraDriftEditor" name="AestraUI::AestraDriftEditor">
+<area shape="rect" id="Node000001" title=" " alt="" coords="1057,274,1252,299"/>
+<area shape="rect" id="Node000002" href="$d3/d27/classAestraUI_1_1AestraPanelWindow.html" title="Unified panel chrome for all child windows (plugin editors, Settings, etc.)." alt="" coords="793,274,1008,299"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1022,284,1057,284,1057,289,1022,289"/>
+<area shape="rect" id="Node000003" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="386,110,571,135"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="586,134,677,155,725,170,770,188,806,208,839,231,888,272,884,276,836,235,803,212,768,193,723,175,676,160,584,139"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="240,24,296,31,351,44,384,58,415,75,463,108,460,112,412,79,382,62,350,49,295,36,239,29"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="35,83,195,123"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="209,105,386,115,385,120,209,110"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="36,147,195,187"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="208,161,350,148,427,133,428,138,351,153,209,166"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="90,246,141,271"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="153,246,199,235,249,227,353,217,477,213,617,219,692,226,770,239,825,254,872,271,870,276,823,259,769,244,691,232,616,224,477,218,354,223,250,232,200,240,155,251"/>
+<area shape="rect" id="Node000009" href="$dd/d25/structAestraUI_1_1NUIPoint.html" title=" " alt="" coords="407,258,550,283"/>
+<area shape="poly" id="edge9_Node000009_Node000007" title=" " alt="" coords="155,257,407,266,407,271,154,263"/>
+<area shape="rect" id="Node000010" href="$da/d4e/structAestraUI_1_1NUIRect.html" title=" " alt="" coords="409,319,548,345"/>
+<area shape="poly" id="edge11_Node000010_Node000007" title=" " alt="" coords="146,277,193,305,250,328,290,336,332,339,409,338,409,343,331,344,290,341,249,333,191,310,143,281"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="453,386,504,411"/>
+<area shape="poly" id="edge7_Node000002_Node000008" title=" " alt="" coords="518,401,569,404,632,404,701,397,768,380,804,363,837,341,885,298,889,302,840,345,807,368,770,385,702,402,633,409,569,409,518,406"/>
+<area shape="poly" id="edge8_Node000002_Node000009" title=" " alt="" coords="564,271,793,280,793,285,564,277"/>
+<area shape="poly" id="edge10_Node000002_Node000010" title=" " alt="" coords="562,322,769,300,798,297,798,302,770,305,562,327"/>
+<area shape="rect" id="Node000011" href="$d2/d9e/classAestraUI_1_1NUIPlatformBridge.html" title="Bridge between AestraPlat and AestraUI Wraps AestraPlat&#39;s IPlatformWindow to work with AestraUI&#39;s exi..." alt="" coords="375,435,583,461"/>
+<area shape="poly" id="edge12_Node000002_Node000011" title=" " alt="" coords="596,456,639,455,683,450,727,440,768,424,810,397,845,362,872,326,890,298,894,301,876,329,849,365,813,401,771,429,728,445,684,455,639,460,596,461"/>
+</map>

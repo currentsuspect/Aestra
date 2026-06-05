@@ -1,0 +1,5 @@
+<map id="AestraContent::loadSampleIntoSelectedTrack" name="AestraContent::loadSampleIntoSelectedTrack">
+<area shape="rect" id="Node000001" title="Load a sample into the currently selected track." alt="" coords="5,5,205,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a148523f2593cf55bbf1087010ba6bcc1" title="Stop the active file&#45;browser preview." alt="" coords="253,5,444,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="206,23,239,23,239,28,206,28"/>
+</map>

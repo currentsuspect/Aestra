@@ -1,0 +1,21 @@
+var searchData=
+[
+  ['callbackbudgetms_0',['callbackBudgetMs',['../d5/d75/structAestra_1_1Audio_1_1AudioEngineDiagnostics.html#a67acdd009db8fb836af4a2b424b71588',1,'Aestra::Audio::AudioEngineDiagnostics']]],
+  ['callbackdurationms_1',['callbackDurationMs',['../d5/d75/structAestra_1_1Audio_1_1AudioEngineDiagnostics.html#a81ee0279f221206dd22ad9260817b7c0',1,'Aestra::Audio::AudioEngineDiagnostics']]],
+  ['capacitymask_2',['capacityMask',['../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html#a7da974b83c501c354c2c24df1eeeaf4f',1,'Aestra::Audio::EdgeDelayState']]],
+  ['capslock_3',['capsLock',['../de/d1d/structAestra_1_1KeyModifiers.html#ad034a8c68416c5224ebe0e7a55c8253c',1,'Aestra::KeyModifiers']]],
+  ['category_4',['category',['../d3/d65/structAestra_1_1Audio_1_1PluginInfo.html#ac2c0c10d8bde20ecfe147f0debb18c5c',1,'Aestra::Audio::PluginInfo::category'],['../d8/d1a/structAestraUI_1_1PluginListItem.html#a0e6344bbc346561505fa0fab511b217c',1,'AestraUI::PluginListItem::category']]],
+  ['channel_5',['channel',['../d4/d81/structAestra_1_1ChannelViewModel.html#ac01476ede27ea26ac0fe7567e7741ae9',1,'Aestra::ChannelViewModel']]],
+  ['channelid_6',['channelid',['../d2/dba/structAestra_1_1Audio_1_1LatencyGraph_1_1Node.html#ab5b59c5cdcae2c813515df4819c59397',1,'Aestra::Audio::LatencyGraph::Node::channelId'],['../d6/d3a/structAestra_1_1Audio_1_1SolvedLatencyTopology_1_1NodeSolution.html#a92bc663a8027f0b020af68b4a33a0bc6',1,'Aestra::Audio::SolvedLatencyTopology::NodeSolution::channelId']]],
+  ['channelidx_7',['channelIdx',['../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#a913ed408a2ff3856b90e941f5187b074',1,'Aestra::Audio::ScheduledEvent']]],
+  ['cliplatchl_8',['clipLatchL',['../d4/d81/structAestra_1_1ChannelViewModel.html#a028c2c17e94b16535ee30ada83b7db00',1,'Aestra::ChannelViewModel']]],
+  ['cliplatchr_9',['clipLatchR',['../d4/d81/structAestra_1_1ChannelViewModel.html#a7e98e2a041a4399a61aed31178f2e82a',1,'Aestra::ChannelViewModel']]],
+  ['clips_10',['clips',['../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#aef1b09294d60d430c22b885418642fbc',1,'Aestra::Audio::PlaylistLane']]],
+  ['color_11',['color',['../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ad681cd279871f5ad0e788650355332a1',1,'Aestra::Audio::UnitInfo::color'],['../d1/dc8/structAestraUI_1_1PianoRollNoteLayer_1_1GhostPattern.html#a1280ffa968007440d370dc57da03ed73',1,'AestraUI::PianoRollNoteLayer::GhostPattern::color']]],
+  ['colorrgba_12',['colorRGBA',['../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#a466e1b13a4393b058e94443c2a6696f5',1,'Aestra::Audio::PlaylistLane']]],
+  ['compensationsamples_13',['compensationsamples',['../d4/d74/structAestra_1_1Audio_1_1EdgeDelayState.html#a1f32446efdafd77b406d076371f97dfe',1,'Aestra::Audio::EdgeDelayState::compensationSamples'],['../dd/d89/structAestra_1_1Audio_1_1SolvedLatencyTopology_1_1EdgeSolution.html#a02216ef1b70972dab1d7ec3f75d547c6',1,'Aestra::Audio::SolvedLatencyTopology::EdgeSolution::compensationSamples']]],
+  ['control_14',['control',['../de/d1d/structAestra_1_1KeyModifiers.html#a729f4ce29fcfa8c47fe6a1af253339dc',1,'Aestra::KeyModifiers']]],
+  ['correlation_15',['correlation',['../d4/d81/structAestra_1_1ChannelViewModel.html#af321ec30ed47c906b5a3bfd8de4e79af',1,'Aestra::ChannelViewModel']]],
+  ['createdatms_16',['createdAtMs',['../d6/d74/structTakeManager_1_1TakeEntry.html#a7d41ebad87c59c74f83f9209f161de5c',1,'TakeManager::TakeEntry']]],
+  ['current_17',['current',['../d2/d99/structAestra_1_1Audio_1_1SmoothedParamD.html#a2a39843b33b1968bb781e406060f7365',1,'Aestra::Audio::SmoothedParamD']]]
+];

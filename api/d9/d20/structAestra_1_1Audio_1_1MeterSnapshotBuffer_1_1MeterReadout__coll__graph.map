@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::MeterSnapshotBuffer::MeterReadout" name="Aestra::Audio::MeterSnapshotBuffer::MeterReadout">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,240,220,280"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="25,5,75,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="46,45,39,80,36,124,39,171,54,215,63,227,75,238,72,242,59,231,49,217,34,172,30,124,34,79,41,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="150,5,201,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="178,45,173,124,164,171,148,217,133,241,129,238,144,215,158,170,167,123,173,45"/>
+</map>

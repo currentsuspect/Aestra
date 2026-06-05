@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::TruePeakMeter::linearToDbTp" name="Aestra::Audio::TruePeakMeter::linearToDbTp">
+<area shape="rect" id="Node000001" title="Convert a linear peak value to dBTP, with a &#45;200 dB floor for silence." alt="" coords="1019,37,1233,77"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#afbef8b6d9c81476518551a140070e32f" title="Latest max&#45;channel true peak in dBTP (decibels True Peak)." alt="" coords="772,37,971,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1005,60,971,60,971,55,1005,55"/>
+<area shape="rect" id="Node000003" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="515,37,724,77"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="758,60,724,60,724,55,758,55"/>
+<area shape="rect" id="Node000004" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="255,5,464,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="501,45,464,41,464,36,501,40"/>
+<area shape="rect" id="Node000006" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="252,69,467,109"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="501,75,467,79,467,73,501,69"/>
+<area shape="rect" id="Node000005" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,5,204,45"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="241,28,204,28,204,23,241,23"/>
+</map>

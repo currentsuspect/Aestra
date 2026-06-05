@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::DiagnosticEpoch" name="Aestra::Audio::DiagnosticEpoch">
+<area shape="rect" id="Node000001" title="Diagnostic epoch capturing the state at the start of a processing callback." alt="" coords="31,123,217,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="40,45,39,72,46,97,57,110,71,120,68,125,54,114,42,100,33,72,34,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="131,5,280,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="202,45,193,72,178,100,154,124,151,121,174,97,188,70,197,43"/>
+</map>

@@ -1,0 +1,24 @@
+<map id="Aestra::Audio::CommandSchema" name="Aestra::Audio::CommandSchema">
+<area shape="rect" id="Node000001" title=" " alt="" coords="373,388,609,413"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="417,95,504,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="472,132,475,143,486,216,492,287,494,388,489,388,487,287,481,217,470,145,467,134"/>
+<area shape="rect" id="Node000006" href="$d3/d6e/structAestra_1_1Audio_1_1FlagSchema.html" title=" " alt="" coords="223,197,421,223"/>
+<area shape="poly" id="edge6_Node000006_Node000002" title=" " alt="" coords="444,132,402,175,356,200,354,195,399,171,440,129"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="391,5,530,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="463,59,463,94,458,94,458,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="529,293,677,318"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="581,329,507,390,503,386,577,325"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="237,285,407,325"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="369,330,472,386,469,390,367,334"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="325,236,325,285,319,285,319,236"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="115,95,195,120"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="172,130,190,152,213,171,239,185,267,195,265,200,237,190,210,176,186,155,168,133"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="219,95,270,120"/>
+<area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="249,133,255,153,264,172,278,185,294,195,292,200,275,189,260,175,250,155,244,135"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="297,95,363,120"/>
+<area shape="poly" id="edge9_Node000006_Node000009" title=" " alt="" coords="331,134,326,198,320,197,325,134"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="5,197,135,223"/>
+<area shape="poly" id="edge10_Node000005_Node000010" title=" " alt="" coords="84,233,95,247,109,259,139,275,171,286,237,299,236,304,170,291,137,280,106,264,91,251,80,236"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="47,95,85,120"/>
+<area shape="poly" id="edge11_Node000010_Node000011" title=" " alt="" coords="69,134,70,173,72,197,66,197,65,173,64,134"/>
+</map>

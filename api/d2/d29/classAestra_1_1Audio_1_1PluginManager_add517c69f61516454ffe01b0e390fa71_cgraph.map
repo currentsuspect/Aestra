@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::PluginManager::getInstrumentPlugins" name="Aestra::Audio::PluginManager::getInstrumentPlugins">
+<area shape="rect" id="Node000001" title="Get all instrument plugins." alt="" coords="5,5,220,45"/>
+<area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#af65cee7dc449bfd7a2b017cc80f057ea" title="Get plugins by type." alt="" coords="268,5,483,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,23,254,23,254,28,220,28"/>
+<area shape="rect" id="Node000003" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a0c7838167fd9dafb09978a674ff30df8" title="Get plugins filtered by type." alt="" coords="531,5,740,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="483,23,517,23,517,28,483,28"/>
+</map>

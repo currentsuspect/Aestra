@@ -1,0 +1,10 @@
+<map id="Aestra::Audio::makeUnicodePath" name="Aestra::Audio::makeUnicodePath">
+<area shape="rect" id="Node000001" title="Get a std::filesystem::path from a raw string, handling Unicode properly." alt="" coords="5,37,240,62"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="81,38,72,28,77,18,94,12,123,10,159,14,169,19,173,24,168,27,166,23,157,19,123,15,95,17,80,22,78,28,85,35"/>
+<area shape="rect" id="Node000002" href="$d4/dc5/PathUtils_8h.html#a1567842971c631789eeeb0e992be5fa8" title="Convert a raw string path to wide string for Windows APIs." alt="" coords="288,29,472,69"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="240,47,274,47,274,52,240,52"/>
+<area shape="poly" id="edge3_Node000002_Node000002" title=" " alt="" coords="336,30,334,20,341,10,356,5,380,3,407,6,422,13,420,18,406,11,380,8,357,10,344,15,339,21,341,28"/>
+<area shape="rect" id="Node000003" href="$d4/dc5/PathUtils_8h.html#a1a9e2b7a8c75a2cf798595f66348e4ab" title="Convert a UTF&#45;8 string to wide string (UTF&#45;16 on Windows)" alt="" coords="520,37,711,62"/>
+<area shape="poly" id="edge4_Node000002_Node000003" title=" " alt="" coords="472,47,506,47,506,52,472,52"/>
+<area shape="poly" id="edge5_Node000003_Node000003" title=" " alt="" coords="577,38,569,28,573,18,589,12,615,10,648,14,661,23,658,28,646,19,615,15,590,17,577,22,574,28,581,35"/>
+</map>

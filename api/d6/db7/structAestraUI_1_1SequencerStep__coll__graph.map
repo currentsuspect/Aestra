@@ -1,0 +1,7 @@
+<map id="AestraUI::SequencerStep" name="AestraUI::SequencerStep">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,93,188,119"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="34,5,85,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="59,44,63,68,71,81,82,91,78,95,67,84,58,70,54,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="110,5,161,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="127,44,104,94,100,92,122,42"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::ASIO::ASIODriverInfo" name="Aestra::Audio::ASIO::ASIODriverInfo">
+<area shape="rect" id="Node000001" title=" " alt="" coords="74,108,222,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,56,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="38,43,46,63,58,82,73,95,91,106,89,110,70,100,54,86,41,66,33,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="123,5,173,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="151,45,151,108,145,108,145,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="241,5,303,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="268,45,259,66,245,86,228,100,209,110,206,106,225,95,241,82,254,63,263,43"/>
+</map>

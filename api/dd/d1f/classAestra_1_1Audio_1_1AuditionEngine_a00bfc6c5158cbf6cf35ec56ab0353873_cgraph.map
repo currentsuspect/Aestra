@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AuditionEngine::processBlock" name="Aestra::Audio::AuditionEngine::processBlock">
+<area shape="rect" id="Node000001" title="Process audio block (called from audio thread)" alt="" coords="5,37,220,77"/>
+<area shape="rect" id="Node000002" href="$d5/da8/classAestra_1_1Audio_1_1ClipResampler.html#a2d5a0e8cf4a79d577a2077b263992182" title="Get a resampled sample from interleaved audio data." alt="" coords="268,5,480,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,42,254,37,255,43,221,47"/>
+<area shape="rect" id="Node000003" href="$d5/da8/classAestra_1_1Audio_1_1ClipResampler.html#ab23d39e97455a48ffd1d92ee1921a0cb" title="Set resampling quality." alt="" coords="268,69,480,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="221,68,255,72,254,77,220,73"/>
+</map>

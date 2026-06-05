@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::ExportQuantization::quantizePcm24" name="Aestra::Audio::ExportQuantization::quantizePcm24">
+<area shape="rect" id="Node000001" title="Quantize a float sample to 24&#45;bit PCM with an explicit dither offset." alt="" coords="296,29,539,69"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="467,18,450,11,417,8,389,10,372,15,366,21,369,28,364,30,360,20,369,10,388,5,417,3,451,5,469,13"/>
+<area shape="rect" id="Node000002" href="$d0/d8a/AudioExportQuantization_8h.html#a287255f4dfa3f21697b90ed5f0182a3a" title="Quantize a float sample to 24&#45;bit PCM with auto&#45;generated TPDF dither." alt="" coords="5,29,248,69"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="283,52,248,52,248,47,283,47"/>
+<area shape="poly" id="edge3_Node000002_Node000002" title=" " alt="" coords="177,18,159,11,127,8,98,10,81,15,75,21,78,28,73,30,70,20,78,10,97,5,127,3,160,5,179,13"/>
+</map>

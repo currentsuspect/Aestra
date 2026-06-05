@@ -1,0 +1,5 @@
+<map id="AestraUI::UIMixerPanel::refreshChannels" name="AestraUI::UIMixerPanel::refreshChannels">
+<area shape="rect" id="Node000001" title="Refresh channel list from view model." alt="" coords="224,5,395,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestraUI_1_1UIMixerPanel.html#a94d68aa9c9b70bf0c2b941f13811e36d" title="Construct a mixer panel." alt="" coords="5,5,176,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="210,28,176,28,176,23,210,23"/>
+</map>

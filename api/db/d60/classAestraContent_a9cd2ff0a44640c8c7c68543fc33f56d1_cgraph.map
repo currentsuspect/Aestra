@@ -1,0 +1,9 @@
+<map id="AestraContent::onUpdate" name="AestraContent::onUpdate">
+<area shape="rect" id="Node000001" title="Advance workspace state and child&#45;panel updates." alt="" coords="5,70,192,95"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4a4c5a06259215ef717cd8505594bb51" title="Copy recent waveform history into an interleaved output buffer." alt="" coords="258,5,457,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="156,67,253,46,254,51,157,73"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a6d6a3b71a388ff56b576ca03c97be758" title="Get the shared track manager." alt="" coords="240,70,475,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="192,80,226,80,226,85,192,85"/>
+<area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a51f83d663477adc0b47f634111b3641f" title="Get the waveform&#45;history buffer capacity in frames." alt="" coords="246,120,469,160"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="157,93,254,114,253,120,156,98"/>
+</map>

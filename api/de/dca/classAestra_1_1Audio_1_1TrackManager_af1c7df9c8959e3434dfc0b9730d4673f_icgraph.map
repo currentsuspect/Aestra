@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackManager::hasPendingGraphRebuild" name="Aestra::Audio::TrackManager::hasPendingGraphRebuild">
+<area shape="rect" id="Node000001" title="Check if a rebuild has been requested (non&#45;consuming)." alt="" coords="268,5,476,45"/>
+<area shape="rect" id="Node000002" href="$d3/d16/classAestra_1_1Audio_1_1PlaybackGraphController.html#a8fd0d90581a2f0769610fa6d382f89bd" title="Check if a rebuild has been requested." alt="" coords="5,5,220,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="254,28,220,28,220,23,254,23"/>
+</map>

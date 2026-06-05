@@ -1,0 +1,18 @@
+<map id="Aestra::Audio::WaveformMipLevel" name="Aestra::Audio::WaveformMipLevel">
+<area shape="rect" id="Node000001" title="A single mipmap level of waveform peaks." alt="" coords="49,328,257,368"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="59,225,248,265"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="156,279,156,328,151,328,151,279"/>
+<area shape="rect" id="Node000003" href="$d7/de7/structAestra_1_1Audio_1_1WaveformPeak.html" title="A single min/max/rms peak triplet for waveform display." alt="" coords="249,123,465,148"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="358,162,351,184,338,203,305,216,249,229,248,223,304,210,334,199,346,182,352,161"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="332,5,383,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="360,44,360,123,355,123,355,44"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge7_Node000001_Node000005" title=" " alt="" coords="38,45,29,89,24,146,29,207,36,236,49,264,63,283,80,300,117,326,114,330,76,304,59,286,44,267,31,238,23,208,19,146,24,88,33,44"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="57,41,78,71,108,96,161,108,251,120,250,125,160,113,105,101,74,75,53,44"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="89,123,218,148"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="156,162,156,225,151,225,151,162"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="134,5,173,31"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="156,44,156,123,151,123,151,44"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="272,233,339,258"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="278,268,183,330,180,326,275,263"/>
+</map>

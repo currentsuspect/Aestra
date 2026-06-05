@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::DelayLine::process" name="Aestra::Audio::DelayLine::process">
+<area shape="rect" id="Node000001" title="Process a single sample through the delay line RT&#45;SAFE: No allocations, deterministic." alt="" coords="236,5,419,45"/>
+<area shape="rect" id="Node000002" href="$d7/d5c/classAestra_1_1Audio_1_1DelayLine.html#a257f570343edb1e5be2c081838bdf23d" title="Process a block of samples RT&#45;SAFE: No allocations, deterministic." alt="" coords="5,5,188,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="223,28,188,28,188,23,223,23"/>
+</map>

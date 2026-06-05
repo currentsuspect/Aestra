@@ -1,0 +1,20 @@
+<map id="Aestra::UnifiedZoneEntry" name="Aestra::UnifiedZoneEntry">
+<area shape="rect" id="Node000001" title="Zone timing entry with threading support Note: Defined before AdvancedFrameStats because it&#39;s used in..." alt="" coords="121,332,306,357"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,205,56,231"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="36,244,45,277,53,293,64,306,91,323,121,334,119,339,89,328,61,310,49,296,40,279,31,245"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="80,205,155,231"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="113,244,111,276,114,292,121,306,134,320,152,330,149,334,131,324,116,310,109,294,106,276,108,244"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="215,101,289,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="245,140,228,197,218,273,216,332,211,332,213,273,223,195,240,138"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="329,205,508,231"/>
+<area shape="poly" id="edge7_Node000007_Node000004" title=" " alt="" coords="284,131,401,203,398,207,281,136"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="534,205,621,231"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="555,242,504,278,441,310,373,330,306,340,306,335,372,325,439,306,502,273,552,237"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="508,93,647,133"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="580,147,580,205,575,205,575,147"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="389,240,234,334,231,330,387,236"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="351,101,484,126"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="420,140,421,205,416,205,415,140"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="398,5,437,31"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="420,44,420,101,415,101,415,44"/>
+</map>

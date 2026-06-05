@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::PatternManager::getOrCreatePattern" name="Aestra::Audio::PatternManager::getOrCreatePattern">
+<area shape="rect" id="Node000001" title="Get or create a pattern." alt="" coords="529,5,749,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#abee9e6cbed1f10357d030516169e842d" title="Apply a mutation lambda to a pattern, creating it on demand." alt="" coords="261,5,481,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="516,28,482,28,482,23,516,23"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a38dd0919971f99afdf36f03ec629ec38" title="Start Arsenal playback from beat zero for the supplied pattern." alt="" coords="5,5,213,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="248,28,213,28,213,23,248,23"/>
+</map>

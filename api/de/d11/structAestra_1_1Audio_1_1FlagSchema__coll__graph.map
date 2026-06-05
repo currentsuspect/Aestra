@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::FlagSchema" name="Aestra::Audio::FlagSchema">
+<area shape="rect" id="Node000001" title=" " alt="" coords="127,197,324,223"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="97,128,120,150,148,171,195,195,193,200,145,176,117,154,93,132"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="143,95,223,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="193,132,208,172,220,196,216,198,203,174,188,134"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="247,95,297,120"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="263,134,233,198,228,196,258,132"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="324,95,391,120"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="350,134,337,156,319,175,297,190,273,200,271,195,294,185,316,171,333,152,345,131"/>
+</map>

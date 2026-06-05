@@ -1,0 +1,10 @@
+<map id="Aestra::Audio::ExportQuantization::quantizePcm24Dithered" name="Aestra::Audio::ExportQuantization::quantizePcm24Dithered">
+<area shape="rect" id="Node000001" title="Quantize a float sample to 24&#45;bit PCM with auto&#45;generated TPDF dither." alt="" coords="5,29,248,69"/>
+<area shape="poly" id="edge5_Node000001_Node000001" title=" " alt="" coords="73,30,70,20,78,10,97,5,127,3,160,5,179,13,177,18,159,11,127,8,98,10,81,15,75,21,78,28"/>
+<area shape="rect" id="Node000002" href="$d0/d8a/AudioExportQuantization_8h.html#a4a8334350f2a8d849662b64225307c31" title="Quantize a float sample to 24&#45;bit PCM with an explicit dither offset." alt="" coords="296,29,539,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,47,282,47,282,52,248,52"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="364,30,360,20,369,10,388,5,417,3,451,5,469,13,467,18,450,11,417,8,389,10,372,15,366,21,369,28"/>
+<area shape="rect" id="Node000003" href="$d0/d8a/AudioExportQuantization_8h.html#a8a0991d274f693081929e36caf5f350e" title="Sanitize a float sample: replace NaN/Inf with 0 and clamp to [&#45;1, 1]." alt="" coords="587,29,829,69"/>
+<area shape="poly" id="edge3_Node000002_Node000003" title=" " alt="" coords="539,47,573,47,573,52,539,52"/>
+<area shape="poly" id="edge4_Node000003_Node000003" title=" " alt="" coords="654,30,651,20,660,10,679,5,708,3,742,5,760,13,758,18,740,11,708,8,680,10,663,15,656,21,659,28"/>
+</map>

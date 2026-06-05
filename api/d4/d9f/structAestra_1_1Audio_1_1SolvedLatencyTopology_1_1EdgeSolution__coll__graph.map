@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::SolvedLatencyTopology::EdgeSolution" name="Aestra::Audio::SolvedLatencyTopology::EdgeSolution">
+<area shape="rect" id="Node000001" title=" " alt="" coords="29,123,241,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="39,44,38,71,46,97,58,110,72,120,69,125,54,114,42,100,33,72,34,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="201,5,252,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="224,45,215,73,199,100,172,125,169,121,195,97,210,71,219,43"/>
+</map>

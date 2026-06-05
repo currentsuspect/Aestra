@@ -1,0 +1,16 @@
+<map id="TakeManager::saveActiveTake" name="TakeManager::saveActiveTake">
+<area shape="rect" id="Node000001" title="Overwrites the active take&#39;s snapshot with the current project state." alt="" coords="5,70,223,95"/>
+<area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#a140b2004fb5dfb4ed837fb80d603f9da" title="Ensures a manifest exists, creating one with an initial take if needed." alt="" coords="271,70,488,95"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="223,80,257,80,257,85,223,85"/>
+<area shape="rect" id="Node000003" href="$da/d15/structTakeManager_1_1Manifest.html#ace9f7d3a0cb864d5d140d266f9e1af52" title="Returns the currently active take, or nullptr if none." alt="" coords="550,5,723,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="437,67,536,45,537,50,438,73"/>
+<area shape="rect" id="Node000004" href="$da/d15/structTakeManager_1_1Manifest.html#ac9df3e5450e4f9aee685e9814437d01f" title="Look up a take by its unique ID." alt="" coords="810,63,983,103"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="489,80,796,80,796,85,489,85"/>
+<area shape="rect" id="Node000005" href="$df/db6/classTakeManager.html#a80febfa550c9e4c5f35cdb15bd6ea6cc" title="Loads the manifest from disk." alt="" coords="536,121,737,146"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="445,93,559,115,557,121,444,98"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="702,118,796,99,797,105,703,123"/>
+<area shape="rect" id="Node000006" href="$df/db6/classTakeManager.html#acb75e1e71f374b7b3c85690629eaf607" title="Returns the manifest.json path for a given project." alt="" coords="785,127,1008,153"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="738,133,772,134,772,139,737,139"/>
+<area shape="rect" id="Node000007" href="$df/db6/classTakeManager.html#acfe0e3332867ecd9c0c1ea8817706e57" title="Returns the takes/ directory path for a given project." alt="" coords="1056,127,1289,153"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="1008,137,1042,137,1042,143,1008,143"/>
+</map>

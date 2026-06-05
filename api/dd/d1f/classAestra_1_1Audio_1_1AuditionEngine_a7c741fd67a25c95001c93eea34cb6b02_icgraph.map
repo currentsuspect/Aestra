@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AuditionEngine::nextTrack" name="Aestra::Audio::AuditionEngine::nextTrack">
+<area shape="rect" id="Node000001" title="Move to next/previous track." alt="" coords="281,5,496,45"/>
+<area shape="rect" id="Node000002" href="$dd/d1f/classAestra_1_1Audio_1_1AuditionEngine.html#ad43e37885fd52c4beed0420afe951c35" title="Handle deferred track transition (call from main thread)" alt="" coords="5,5,233,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="268,28,233,28,233,23,268,23"/>
+</map>

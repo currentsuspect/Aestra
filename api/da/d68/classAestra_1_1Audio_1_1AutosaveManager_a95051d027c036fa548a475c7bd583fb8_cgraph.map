@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AutosaveManager::initialize" name="Aestra::Audio::AutosaveManager::initialize">
+<area shape="rect" id="Node000001" title="Initialize the autosave manager." alt="" coords="5,5,240,45"/>
+<area shape="rect" id="Node000002" href="$da/d68/classAestra_1_1Audio_1_1AutosaveManager.html#a77b0c312e21e3f3cc13143ad71fe0ce6" title="Shutdown the autosave manager (stops background thread)" alt="" coords="288,5,523,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="240,23,274,23,274,28,240,28"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::AudioRoute" name="Aestra::Audio::AudioRoute">
+<area shape="rect" id="Node000001" title=" " alt="" coords="87,123,279,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="47,44,54,72,70,97,88,110,110,120,107,125,85,115,66,100,49,74,42,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="157,5,208,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="185,44,185,123,180,123,180,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="232,5,283,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="252,45,240,72,223,100,200,124,196,121,219,97,235,70,247,43"/>
+</map>

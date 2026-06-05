@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::MixerChannel::isSoloed" name="Aestra::Audio::MixerChannel::isSoloed">
+<area shape="rect" id="Node000001" title="Check solo state." alt="" coords="287,5,493,45"/>
+<area shape="rect" id="Node000002" href="$d2/d02/classAestra_1_1Audio_1_1SetSoloCommand.html#a229a705b672a2dd353d2973ee52935e4" title="Execute the command (first time)" alt="" coords="5,5,239,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="273,28,239,28,239,23,273,23"/>
+</map>

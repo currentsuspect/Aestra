@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::RemovePluginCommand::undo" name="Aestra::Audio::RemovePluginCommand::undo">
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,37,216,77"/>
+<area shape="rect" id="Node000002" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a107c869111f74c0e34ea921eabea4e63" title="Access the insert&#45;effect chain." alt="" coords="264,5,471,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="216,42,250,37,251,43,216,47"/>
+<area shape="rect" id="Node000003" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aaff8505a90c35c0272cddbc5b378045e" title="Insert plugin into slot." alt="" coords="272,69,463,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="216,68,259,73,258,78,216,73"/>
+</map>

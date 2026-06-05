@@ -1,0 +1,5 @@
+<map id="AestraWindowManager::~AestraWindowManager" name="AestraWindowManager::~AestraWindowManager">
+<area shape="rect" id="Node000001" title="Tear down the native window, renderer, and owned UI hierarchy." alt="" coords="5,5,197,45"/>
+<area shape="rect" id="Node000002" href="$d6/de3/classAestraWindowManager.html#a7c044ce0d96e641324e9c420f529ca78" title="Shut down the window manager and release owned resources." alt="" coords="245,5,419,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="197,23,231,23,231,28,197,28"/>
+</map>

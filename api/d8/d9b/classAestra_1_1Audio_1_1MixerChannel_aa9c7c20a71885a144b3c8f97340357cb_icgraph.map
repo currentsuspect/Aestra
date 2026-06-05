@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::MixerChannel::setMute" name="Aestra::Audio::MixerChannel::setMute">
+<area shape="rect" id="Node000001" title="Set mute state." alt="" coords="292,69,499,109"/>
+<area shape="rect" id="Node000002" href="$d8/dbb/classAestra_1_1Audio_1_1SetMuteCommand.html#aafba69761969653fe8e695e02afe83eb" title="Execute the command (first time)" alt="" coords="5,5,244,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="296,69,209,48,210,43,297,63"/>
+<area shape="rect" id="Node000003" href="$d8/dbb/classAestra_1_1Audio_1_1SetMuteCommand.html#a16c7906554a2e14c2ad0e343f5b7dc5d" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,69,244,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="278,92,244,92,244,87,278,87"/>
+<area shape="rect" id="Node000004" href="$d8/dbb/classAestra_1_1Audio_1_1SetMuteCommand.html#a7a5fe44f81e07d015dd7cb4ad7de7a86" title="Undo the command." alt="" coords="5,133,244,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="297,115,210,136,209,131,296,110"/>
+</map>

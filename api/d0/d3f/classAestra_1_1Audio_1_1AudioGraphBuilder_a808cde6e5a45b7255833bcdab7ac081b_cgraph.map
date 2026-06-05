@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::AudioGraphBuilder::buildFromTrackManager" name="Aestra::Audio::AudioGraphBuilder::buildFromTrackManager">
+<area shape="rect" id="Node000001" title="Build a render graph from the current TrackManager state." alt="" coords="5,133,237,173"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aef9478cbb19fa91eb0bcc60d51b77b77" title="Get a channel by index." alt="" coords="285,5,493,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="151,131,211,93,284,55,302,48,304,52,286,60,214,98,154,135"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a099a5c98a6cc1822fd44c1ca47dfb073" title="Get the number of channels." alt="" coords="285,69,493,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="205,131,291,110,293,115,207,136"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="285,133,493,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="238,151,271,151,271,156,238,156"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="285,197,493,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="207,171,293,192,291,197,205,176"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae2a894b9df65e65c63cc1b05f4b2e2d1" title="Get the source manager." alt="" coords="285,261,493,301"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="154,171,214,209,286,247,304,254,302,259,284,252,211,214,151,176"/>
+</map>

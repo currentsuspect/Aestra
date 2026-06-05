@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::IAudioDriver::getDevices" name="Aestra::Audio::IAudioDriver::getDevices">
+<area shape="rect" id="Node000001" title="Get list of available output devices." alt="" coords="792,101,991,141"/>
+<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#ae53f5ef0d824641f1b8a020b1b121564" title="Get available audio devices." alt="" coords="545,101,744,141"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="778,124,744,124,744,119,778,119"/>
+<area shape="rect" id="Node000003" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#ab712df0b196565098f231bccd04ed415" title="Get default input device." alt="" coords="257,5,492,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="588,98,496,60,459,48,460,43,498,55,590,93"/>
+<area shape="rect" id="Node000004" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a1747ad32babc70ff5abcce500eca101c" title="Get default output device." alt="" coords="252,69,497,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="531,111,497,107,498,101,532,105"/>
+<area shape="rect" id="Node000005" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#aec5439d4b9ddf530856362542b6f2341" title="Switch to a different input device while preserving the current output device." alt="" coords="271,133,478,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="532,137,478,144,478,138,531,132"/>
+<area shape="rect" id="Node000006" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a099645077cfa3fb29d55a2b1041812e5" title="Validate if a device supports the given configuration." alt="" coords="261,197,488,237"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="590,150,498,188,460,200,459,195,496,183,588,145"/>
+<area shape="rect" id="Node000007" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#ad3e612185385910356099b84e3f1ef81" title="Update sample rate." alt="" coords="5,165,204,205"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="247,205,204,200,205,194,248,200"/>
+<area shape="rect" id="Node000008" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a8bd54d1a37184da68d86aa29debca400" title="Switch to a different audio device." alt="" coords="5,229,204,269"/>
+<area shape="poly" id="edge7_Node000006_Node000008" title=" " alt="" coords="248,235,205,240,204,235,247,230"/>
+</map>

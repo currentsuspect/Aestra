@@ -1,0 +1,21 @@
+<map id="AestraUI::AestraPanelWindow" name="AestraUI::AestraPanelWindow">
+<area shape="rect" id="Node000001" title="Unified panel chrome for all child windows (plugin editors, Settings, etc.)." alt="" coords="507,153,721,179"/>
+<area shape="rect" id="Node000004" href="$d9/d1e/classAestraUI_1_1AestraCompEditor.html" title=" " alt="" coords="775,5,979,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="635,141,692,90,728,63,768,40,798,28,800,33,770,44,731,67,695,94,638,145"/>
+<area shape="rect" id="Node000005" href="$dc/db9/classAestraUI_1_1AestraDelayEditor.html" title=" " alt="" coords="775,55,979,80"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="648,144,704,116,768,89,808,77,809,83,770,94,706,121,650,149"/>
+<area shape="rect" id="Node000006" href="$d8/d64/classAestraUI_1_1AestraDriftEditor.html" title=" " alt="" coords="779,104,974,129"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="695,148,808,127,809,132,696,153"/>
+<area shape="rect" id="Node000007" href="$de/d9b/classAestraUI_1_1AestraEQEditor.html" title=" " alt="" coords="785,153,969,179"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="735,163,785,163,785,169,735,169"/>
+<area shape="rect" id="Node000008" href="$d5/dd9/classAestraUI_1_1AestraVerbEditor.html" title=" " alt="" coords="779,203,974,228"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="696,179,809,200,808,205,695,184"/>
+<area shape="rect" id="Node000009" href="$da/dd5/classAestraUI_1_1GenericPluginEditor.html" title="Generic auto&#45;generated parameter UI for plugins." alt="" coords="769,252,984,277"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="650,183,706,211,770,238,809,249,808,255,768,243,704,216,648,188"/>
+<area shape="rect" id="Node000010" href="$dd/dad/classAestraUI_1_1RumblePluginEditor.html" title=" " alt="" coords="769,301,984,327"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="638,187,695,238,731,265,770,288,800,299,798,304,768,292,728,269,692,242,635,191"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="273,153,459,179"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="472,163,506,163,506,169,472,169"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,146,225,186"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="239,163,273,163,273,169,239,169"/>
+</map>

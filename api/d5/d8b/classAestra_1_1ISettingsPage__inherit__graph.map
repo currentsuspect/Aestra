@@ -1,0 +1,15 @@
+<map id="Aestra::ISettingsPage" name="Aestra::ISettingsPage">
+<area shape="rect" id="Node000001" title="Interface for a settings page in the unified Settings Dialog." alt="" coords="507,80,667,105"/>
+<area shape="rect" id="Node000004" href="$dd/df8/classAestra_1_1AppearanceSettingsPage.html" title=" " alt="" coords="717,5,950,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="627,72,714,39,759,28,760,33,715,45,629,77"/>
+<area shape="rect" id="Node000005" href="$d6/d60/classAestra_1_1AudioSettingsPage.html" title=" " alt="" coords="737,55,930,80"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="680,80,736,75,737,80,681,86"/>
+<area shape="rect" id="Node000006" href="$da/d07/classAestra_1_1GeneralSettingsPage.html" title=" " alt="" coords="730,104,937,129"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="681,99,730,104,730,109,680,104"/>
+<area shape="rect" id="Node000007" href="$d2/d27/classAestra_1_1MembershipSettingsPage.html" title=" " alt="" coords="715,153,952,179"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="630,108,715,139,761,151,760,156,714,145,628,113"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="273,80,459,105"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="472,90,506,90,506,95,472,95"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,73,225,113"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="239,90,273,90,273,95,239,95"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::RuntimeConnection" name="Aestra::Audio::RuntimeConnection">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,137,251,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="17,5,84,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="47,44,44,78,47,96,54,112,67,125,84,135,81,140,64,130,50,115,42,97,39,79,42,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="175,5,235,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="205,45,196,80,178,115,151,139,147,135,174,112,191,78,199,44"/>
+</map>

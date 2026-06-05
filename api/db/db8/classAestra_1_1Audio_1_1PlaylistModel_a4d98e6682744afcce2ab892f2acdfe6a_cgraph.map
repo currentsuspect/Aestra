@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::PlaylistModel::splitClip" name="Aestra::Audio::PlaylistModel::splitClip">
+<area shape="rect" id="Node000001" title="Split a clip at the given beat position." alt="" coords="5,5,211,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af099c463dfaefc7d884bb200b597b537" title="Clone an existing pattern and return the new ID." alt="" coords="259,5,479,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="211,23,245,23,245,28,211,28"/>
+<area shape="rect" id="Node000003" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="527,5,747,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="479,23,513,23,513,28,479,28"/>
+</map>

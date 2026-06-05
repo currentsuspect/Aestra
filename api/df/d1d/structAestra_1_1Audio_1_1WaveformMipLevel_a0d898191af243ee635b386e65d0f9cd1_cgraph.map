@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::WaveformMipLevel::getPeakRange" name="Aestra::Audio::WaveformMipLevel::getPeakRange">
+<area shape="rect" id="Node000001" title="Get peaks for a range, merged." alt="" coords="5,37,213,77"/>
+<area shape="rect" id="Node000002" href="$df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html#a2fa9c3119b302c36e3090ed22b5bd4a4" title="Get peak at index for channel." alt="" coords="265,5,473,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,42,251,37,252,42,214,47"/>
+<area shape="rect" id="Node000003" href="$d7/de7/structAestra_1_1Audio_1_1WaveformPeak.html#a6b133e5d5c6fb80fa2751cb5892f2074" title="Weighted RMS merge of two peaks." alt="" coords="261,69,477,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="214,67,248,72,247,77,213,73"/>
+</map>

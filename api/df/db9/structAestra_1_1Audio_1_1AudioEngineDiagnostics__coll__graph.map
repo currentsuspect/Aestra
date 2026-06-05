@@ -1,0 +1,14 @@
+<map id="Aestra::Audio::AudioEngineDiagnostics" name="Aestra::Audio::AudioEngineDiagnostics">
+<area shape="rect" id="Node000001" title="Multi&#45;tier audio engine diagnostics." alt="" coords="175,347,374,387"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,147,72,172"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="33,186,25,216,22,252,26,289,32,306,42,321,62,334,94,344,176,357,175,362,93,350,60,339,38,325,27,308,21,290,16,253,20,215,28,185"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="201,5,276,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="228,44,214,74,203,109,195,159,203,210,215,249,231,286,264,345,260,348,226,289,210,251,197,211,190,159,197,107,209,72,223,41"/>
+<area shape="rect" id="Node000005" href="$db/dbc/structAestra_1_1Audio_1_1DenormalEventInfo.html" title="Information about a denormal (subnormal) floating&#45;point event." alt="" coords="371,147,613,172"/>
+<area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="273,35,472,144,470,149,270,40"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="638,147,698,172"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="655,185,631,217,597,256,555,294,508,325,442,349,375,362,374,357,440,344,505,320,552,290,593,252,626,214,651,182"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="471,184,296,348,293,345,468,180"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="455,5,529,31"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="495,44,495,146,489,146,489,44"/>
+</map>

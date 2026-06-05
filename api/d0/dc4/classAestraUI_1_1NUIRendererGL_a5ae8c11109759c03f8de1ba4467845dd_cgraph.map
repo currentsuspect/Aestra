@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIRendererGL::drawTexture" name="AestraUI::NUIRendererGL::drawTexture">
+<area shape="rect" id="Node000001" title="Draw a texture/image." alt="" coords="5,5,192,45"/>
+<area shape="rect" id="Node000002" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#afff07bab22dc914d10a930a539593797" title="Flush all pending draw calls immediately." alt="" coords="240,5,427,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="192,23,226,23,226,28,192,28"/>
+</map>

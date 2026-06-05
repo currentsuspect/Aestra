@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AudioDeviceManager::validateDeviceConfig" name="Aestra::Audio::AudioDeviceManager::validateDeviceConfig">
+<area shape="rect" id="Node000001" title="Validate if a device supports the given configuration." alt="" coords="252,37,479,77"/>
+<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#ad3e612185385910356099b84e3f1ef81" title="Update sample rate." alt="" coords="5,5,204,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="238,44,204,40,204,35,239,39"/>
+<area shape="rect" id="Node000003" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a8bd54d1a37184da68d86aa29debca400" title="Switch to a different audio device." alt="" coords="5,69,204,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="239,76,204,80,204,75,238,70"/>
+</map>

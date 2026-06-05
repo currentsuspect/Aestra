@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::DelayLine::setDelay" name="Aestra::Audio::DelayLine::setDelay">
+<area shape="rect" id="Node000001" title="Set delay in samples (must be &lt;= Capacity) NOT RT&#45;SAFE: Call from main thread only." alt="" coords="5,5,188,45"/>
+<area shape="rect" id="Node000002" href="$d7/d5c/classAestra_1_1Audio_1_1DelayLine.html#a620415fe1d28dd3be0825882316c8e4b" title="Reset delay line to silence NOT RT&#45;SAFE: Call from main thread only." alt="" coords="236,5,419,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="188,23,222,23,222,28,188,28"/>
+</map>

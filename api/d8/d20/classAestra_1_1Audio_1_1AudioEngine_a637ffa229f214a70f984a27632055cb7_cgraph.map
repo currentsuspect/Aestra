@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AudioEngine::loadMetronomeClicks" name="Aestra::Audio::AudioEngine::loadMetronomeClicks">
+<area shape="rect" id="Node000001" title="Load downbeat and upbeat click samples for the metronome." alt="" coords="5,37,204,77"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#aded224ca7ad2e5e93a8bc4a59098963e" title="Check whether transport playback is active." alt="" coords="252,5,451,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,42,238,37,239,43,205,47"/>
+<area shape="rect" id="Node000003" href="$db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#a9b80000110113cc99566a8a831a385db" title="Load custom click sounds from WAV files." alt="" coords="255,69,447,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="205,68,242,72,241,78,204,73"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::RemovePluginCommand::execute" name="Aestra::Audio::RemovePluginCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="264,5,475,45"/>
+<area shape="rect" id="Node000002" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html#adbe1f47b96a9e9c970a036268a67959f" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,216,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="250,28,216,28,216,23,250,23"/>
+</map>

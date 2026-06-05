@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::NativeAudioDriver" name="Aestra::Audio::NativeAudioDriver">
+<area shape="rect" id="Node000001" title="Base class for native drivers (WASAPI, ASIO) Extends IAudioDriver with additional diagnostics and sta..." alt="" coords="6,79,203,119"/>
+<area shape="rect" id="Node000002" href="$d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html" title=" " alt="" coords="5,5,204,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="107,44,107,79,102,79,102,44"/>
+</map>

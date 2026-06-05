@@ -1,0 +1,9 @@
+<map id="AestraUI::NUIAdaptiveFPS::Config" name="AestraUI::NUIAdaptiveFPS::Config">
+<area shape="rect" id="Node000001" title="Configuration for adaptive FPS system." alt="" coords="121,152,313,192"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,72,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="40,44,46,86,53,108,66,126,92,146,122,158,120,163,89,150,62,130,49,110,40,88,35,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="198,5,237,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="220,44,220,152,215,152,215,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="397,5,448,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="425,45,419,88,410,110,395,130,363,146,314,159,313,154,361,141,392,126,405,108,413,86,420,44"/>
+</map>

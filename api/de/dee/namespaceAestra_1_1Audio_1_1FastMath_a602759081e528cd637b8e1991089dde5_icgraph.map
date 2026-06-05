@@ -1,0 +1,10 @@
+<map id="Aestra::Audio::FastMath::fastSin" name="Aestra::Audio::FastMath::fastSin">
+<area shape="rect" id="Node000001" title="Fast sine approximation using 5th&#45;order polynomial." alt="" coords="453,63,629,103"/>
+<area shape="rect" id="Node000002" href="$de/dee/namespaceAestra_1_1Audio_1_1FastMath.html#a392c449405c3fdd21706dbb4fd5df14e" title="Fast cosine approximation." alt="" coords="229,5,405,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="449,62,395,48,397,43,450,57"/>
+<area shape="rect" id="Node000003" href="$de/dee/namespaceAestra_1_1Audio_1_1FastMath.html#aece29e164acd5f06e3a65b998f00d46c" title="Fast constant&#45;power panning using polynomial approximation." alt="" coords="5,35,181,75"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="439,79,181,63,182,57,440,74"/>
+<area shape="rect" id="Node000004" href="$de/dee/namespaceAestra_1_1Audio_1_1FastMath.html#a8e929aaed93d7a9b75e3bfdec11f6b77" title="Compute both sin and cos simultaneously (faster than separate calls)" alt="" coords="229,120,405,160"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="450,109,397,123,395,117,449,104"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="216,41,182,46,181,40,215,36"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AudioEngine::setAuditionEngine" name="Aestra::Audio::AudioEngine::setAuditionEngine">
+<area shape="rect" id="Node000001" title="Bind the audition engine used by audition mode." alt="" coords="513,5,712,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#acd45e0922aede06c12894ca10bb42bac" title="Set the active workspace mode." alt="" coords="253,13,465,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="499,28,465,28,465,23,499,23"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="5,13,205,38"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,28,206,28,206,23,240,23"/>
+</map>

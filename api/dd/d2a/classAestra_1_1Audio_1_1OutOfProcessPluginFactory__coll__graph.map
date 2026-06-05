@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::OutOfProcessPluginFactory" name="Aestra::Audio::OutOfProcessPluginFactory">
+<area shape="rect" id="Node000001" title="Factory for loading native third&#45;party plugins behind a helper process." alt="" coords="7,79,212,119"/>
+<area shape="rect" id="Node000002" href="$dc/d24/classAestra_1_1Audio_1_1IPluginFactory.html" title="Interface for creating plugin instances." alt="" coords="5,5,213,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="112,44,112,79,107,79,107,44"/>
+</map>

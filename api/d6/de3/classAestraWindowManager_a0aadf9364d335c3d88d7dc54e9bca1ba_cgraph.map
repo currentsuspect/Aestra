@@ -1,0 +1,5 @@
+<map id="AestraWindowManager::render" name="AestraWindowManager::render">
+<area shape="rect" id="Node000001" title="Render the current UI frame." alt="" coords="5,5,179,45"/>
+<area shape="rect" id="Node000002" href="$d6/de3/classAestraWindowManager.html#a7ae60654f3abbb4adef1c2ffcb3ab9b4" title="Render the current custom cursor." alt="" coords="227,5,400,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="179,23,213,23,213,28,179,28"/>
+</map>

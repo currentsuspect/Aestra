@@ -1,0 +1,11 @@
+<map id="Aestra::AppLifecycle::getState" name="Aestra::AppLifecycle::getState">
+<area shape="rect" id="Node000001" title="Get current state (thread&#45;safe)" alt="" coords="411,69,565,109"/>
+<area shape="rect" id="Node000002" href="$de/d85/classAestra_1_1AppLifecycle.html#aa9fb72b10695bc6ef6e519d300992478" title="Check if initialization is complete (success or failure)" alt="" coords="208,5,363,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="410,68,348,48,350,43,412,63"/>
+<area shape="rect" id="Node000003" href="$de/d85/classAestra_1_1AppLifecycle.html#a30c6eb69e8e8cf08c3c6f40c90566988" title="Check if app is shutting down or terminated (thread&#45;safe)" alt="" coords="208,69,363,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="397,92,363,92,363,87,397,87"/>
+<area shape="rect" id="Node000004" href="$de/d85/classAestra_1_1AppLifecycle.html#a61c41979f1f2d6b61754d4d55a52b13f" title="Check if app is in a specific state (thread&#45;safe)" alt="" coords="208,133,363,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="412,116,350,136,348,131,410,111"/>
+<area shape="rect" id="Node000005" href="$de/d85/classAestra_1_1AppLifecycle.html#acea27f03657d616fc86c10a68422cd84" title="Check if app is running (thread&#45;safe)" alt="" coords="5,133,160,173"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="194,156,161,156,161,151,194,151"/>
+</map>

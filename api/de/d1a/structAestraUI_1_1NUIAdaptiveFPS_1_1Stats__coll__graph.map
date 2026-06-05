@@ -1,0 +1,9 @@
+<map id="AestraUI::NUIAdaptiveFPS::Stats" name="AestraUI::NUIAdaptiveFPS::Stats">
+<area shape="rect" id="Node000001" title="Get statistics for debugging." alt="" coords="101,137,293,177"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,72,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="42,44,48,79,55,96,66,112,83,125,103,136,100,141,80,130,62,115,51,99,43,81,36,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="172,5,223,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="200,44,200,137,195,137,195,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="301,5,339,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="320,45,312,80,304,99,293,115,277,129,259,140,257,135,274,125,289,112,299,96,307,79,315,44"/>
+</map>

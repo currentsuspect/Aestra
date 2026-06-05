@@ -1,0 +1,7 @@
+<map id="AestraUI::NUIApp" name="AestraUI::NUIApp">
+<area shape="rect" id="Node000001" title="Main application class for the Aestra UI framework." alt="" coords="109,108,244,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,172,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="118,53,167,106,164,109,114,57"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="197,13,335,38"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="249,50,216,86,191,110,187,106,212,82,245,47"/>
+</map>

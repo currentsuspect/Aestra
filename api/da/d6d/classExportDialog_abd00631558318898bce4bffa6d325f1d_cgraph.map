@@ -1,0 +1,7 @@
+<map id="ExportDialog::show" name="ExportDialog::show">
+<area shape="rect" id="Node000001" title="Show the dialog and bind it to a project and engine context." alt="" coords="5,45,153,70"/>
+<area shape="rect" id="Node000002" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a56c6d0d152d0fa0d0f1e1451db4424c0" title="Get the default export filename based on project name." alt="" coords="201,5,411,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="153,44,187,39,188,45,154,50"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a3a6dd6f5101ab90e0921f31a13dc7155" title="Get the active sample rate used by the engine." alt="" coords="207,69,405,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="154,65,194,71,193,76,153,70"/>
+</map>

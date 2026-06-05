@@ -1,0 +1,9 @@
+<map id="AestraContent::AestraContent" name="AestraContent::AestraContent">
+<area shape="rect" id="Node000001" title="Create the main application workspace component." alt="" coords="5,42,221,67"/>
+<area shape="rect" id="Node000002" href="$d9/d36/classAestra_1_1Events_1_1ScopedConnections.html#a67a32a3e73e32731f600b04790131001" title="Add a connection to be managed." alt="" coords="269,13,552,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="221,41,268,37,269,42,222,47"/>
+<area shape="rect" id="Node000004" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="303,63,518,103"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="222,62,289,69,289,74,221,67"/>
+<area shape="rect" id="Node000003" href="$d9/d88/classAestra_1_1Events_1_1Connection.html#a19fba9b39f7710a79a2925b2fd9a10cf" title="Check if this connection is still active." alt="" coords="600,5,797,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="552,23,586,23,586,28,552,28"/>
+</map>

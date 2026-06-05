@@ -1,0 +1,9 @@
+<map id="AestraUI::NUIRenderer::getFontMetrics" name="AestraUI::NUIRenderer::getFontMetrics">
+<area shape="rect" id="Node000001" title="Retrieve font metrics (scaled for the requested font size)." alt="" coords="468,37,637,77"/>
+<area shape="rect" id="Node000002" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a775bef147c377ce07bfeca99e04d7479" title="Calculate baseline&#45;aligned Y position for vertically centered text." alt="" coords="240,5,420,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="454,46,420,41,420,36,455,41"/>
+<area shape="rect" id="Node000003" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe" title="Calculate baseline&#45;aligned Y position for vertically centered text using measured size." alt="" coords="245,69,415,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="454,74,415,80,415,75,454,69"/>
+<area shape="rect" id="Node000004" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#a51ce416466511d58d05585fae224dc08" title="Draw text centered within a rectangle." alt="" coords="5,69,192,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="231,92,192,92,192,87,231,87"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::WASAPISharedDriver" name="Aestra::Audio::WASAPISharedDriver">
+<area shape="rect" id="Node000001" title="WASAPI Shared Mode Driver." alt="" coords="5,167,219,207"/>
+<area shape="rect" id="Node000002" href="$d2/d68/classAestra_1_1Audio_1_1NativeAudioDriver.html" title="Base class for native drivers (WASAPI, ASIO) Extends IAudioDriver with additional diagnostics and sta..." alt="" coords="13,79,211,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="115,133,115,166,109,166,109,133"/>
+<area shape="rect" id="Node000003" href="$d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html" title=" " alt="" coords="13,5,211,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="115,44,115,79,109,79,109,44"/>
+</map>

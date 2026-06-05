@@ -1,0 +1,19 @@
+var searchData=
+[
+  ['iaudiodriver_0',['IAudioDriver',['../d7/d78/classAestra_1_1Audio_1_1IAudioDriver.html',1,'Aestra::Audio']]],
+  ['icommand_1',['ICommand',['../d1/d5e/classAestra_1_1Audio_1_1ICommand.html',1,'Aestra::Audio']]],
+  ['idroptarget_2',['IDropTarget',['../d3/d88/classAestraUI_1_1IDropTarget.html',1,'AestraUI']]],
+  ['ilogger_3',['ILogger',['../d8/dc6/classAestra_1_1ILogger.html',1,'Aestra']]],
+  ['impl_4',['impl',['../d0/dce/structAestra_1_1Audio_1_1WaveformCacheBuilder_1_1Impl.html',1,'Aestra::Audio::WaveformCacheBuilder::Impl'],['../d2/d47/structAestraUI_1_1PluginEditorWindow_1_1Impl.html',1,'AestraUI::PluginEditorWindow::Impl']]],
+  ['inprocesspluginfactory_5',['InProcessPluginFactory',['../df/d30/classAestra_1_1Audio_1_1InProcessPluginFactory.html',1,'Aestra::Audio']]],
+  ['insertslot_6',['InsertSlot',['../d9/d5b/classAestraUI_1_1InsertSlot.html',1,'AestraUI']]],
+  ['insertviewmodel_7',['InsertViewModel',['../dd/d28/structAestra_1_1ChannelViewModel_1_1InsertViewModel.html',1,'Aestra::ChannelViewModel']]],
+  ['internalpluginregistry_8',['InternalPluginRegistry',['../de/d56/classAestra_1_1Audio_1_1InternalPluginRegistry.html',1,'Aestra::Audio']]],
+  ['iplatformutils_9',['IPlatformUtils',['../d5/d9d/classAestra_1_1IPlatformUtils.html',1,'Aestra']]],
+  ['iplatformwindow_10',['IPlatformWindow',['../d8/d57/classAestra_1_1IPlatformWindow.html',1,'Aestra']]],
+  ['ipluginfactory_11',['IPluginFactory',['../dc/d24/classAestra_1_1Audio_1_1IPluginFactory.html',1,'Aestra::Audio']]],
+  ['iplugininstance_12',['IPluginInstance',['../de/d54/classAestra_1_1Audio_1_1IPluginInstance.html',1,'Aestra::Audio']]],
+  ['isettingspage_13',['ISettingsPage',['../da/d9f/classAestra_1_1ISettingsPage.html',1,'Aestra']]],
+  ['issue_14',['Issue',['../df/da9/structAestra_1_1Audio_1_1ProjectValidator_1_1Issue.html',1,'Aestra::Audio::ProjectValidator']]],
+  ['item_15',['Item',['../d0/d85/structAestraUI_1_1NUIComboBox_1_1Item.html',1,'AestraUI::NUIComboBox']]]
+];

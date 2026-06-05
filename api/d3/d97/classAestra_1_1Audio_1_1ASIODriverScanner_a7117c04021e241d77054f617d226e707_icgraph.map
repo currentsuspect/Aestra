@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::ASIODriverScanner::scanInstalledDrivers" name="Aestra::Audio::ASIODriverScanner::scanInstalledDrivers">
+<area shape="rect" id="Node000001" title="Scan system for installed ASIO drivers." alt="" coords="547,37,761,77"/>
+<area shape="rect" id="Node000002" href="$d3/d97/classAestra_1_1Audio_1_1ASIODriverScanner.html#ab3e79f2a7297358bd32d30b30684e800" title="Get user&#45;friendly message about ASIO availability." alt="" coords="263,5,497,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="533,46,497,42,498,36,534,41"/>
+<area shape="rect" id="Node000003" href="$d3/d97/classAestra_1_1Audio_1_1ASIODriverScanner.html#a0ebd240c7fae701cb7590cd230439e17" title="Get count of installed ASIO drivers." alt="" coords="261,69,499,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="534,74,499,78,499,73,533,69"/>
+<area shape="rect" id="Node000004" href="$d3/d97/classAestra_1_1Audio_1_1ASIODriverScanner.html#a19458d7ec25730cad9cc30cb3a66872e" title="Check if any ASIO drivers are installed." alt="" coords="5,69,213,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="248,92,213,92,213,87,248,87"/>
+</map>

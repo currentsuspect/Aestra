@@ -1,0 +1,7 @@
+<map id="AestraContent::~AestraContent" name="AestraContent::~AestraContent">
+<area shape="rect" id="Node000001" title="Tear down the workspace and owned panels." alt="" coords="5,45,232,70"/>
+<area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="280,5,495,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="225,42,266,37,267,42,226,47"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#abc3848a6c2e6d39dad07fd7dcb7eca33" title="Bind the preview engine mixed into the main output." alt="" coords="288,69,487,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="226,67,275,73,274,79,225,73"/>
+</map>

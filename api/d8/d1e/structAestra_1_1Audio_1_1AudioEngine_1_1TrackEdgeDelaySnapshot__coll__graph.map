@@ -1,0 +1,18 @@
+<map id="Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot" name="Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot">
+<area shape="rect" id="Node000001" title="PDC v2 (P4b.2): per&#45;track per&#45;edge compensation snapshot for tests and tooling." alt="" coords="1076,113,1275,153"/>
+<area shape="rect" id="Node000002" href="$d1/d3a/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot_1_1EdgeSlotSnapshot.html" title=" " alt="" coords="277,99,476,154"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="490,125,1076,130,1076,135,490,130"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="720,25,915,95"/>
+<area shape="poly" id="edge5_Node000005_Node000002" title=" " alt="" coords="489,107,720,72,720,77,490,112"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,110,80,135"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="94,121,277,123,277,128,94,126"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="13,159,73,185"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="86,164,253,143,276,139,277,145,254,148,87,170"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="929,80,1077,111,1076,116,927,85"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="312,31,441,57"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="456,44,720,54,720,59,455,49"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="23,31,62,57"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="76,41,312,41,312,47,76,47"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="792,182,843,207"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="856,189,946,180,1051,164,1107,151,1108,156,1053,169,946,185,857,195"/>
+</map>

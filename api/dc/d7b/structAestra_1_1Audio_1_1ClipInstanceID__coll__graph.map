@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::ClipInstanceID" name="Aestra::Audio::ClipInstanceID">
+<area shape="rect" id="Node000001" title="Unique identifier for a clip instance." alt="" coords="5,183,216,208"/>
+<area shape="rect" id="Node000002" href="$db/d96/structAestra_1_1Audio_1_1AestraUUID.html" title=" " alt="" coords="14,108,207,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="113,148,113,182,108,182,108,148"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="73,5,148,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="113,45,113,108,108,108,108,45"/>
+</map>

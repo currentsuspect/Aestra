@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::Plugins::EQDynamicBandStateV8" name="Aestra::Audio::Plugins::EQDynamicBandStateV8">
+<area shape="rect" id="Node000001" title=" " alt="" coords="15,255,206,295"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,72,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="34,45,26,83,22,131,26,182,32,206,42,229,52,242,66,252,62,257,49,246,38,232,27,208,20,183,16,131,21,82,29,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="157,5,208,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="187,45,187,83,183,130,174,182,156,232,137,256,133,253,151,229,169,181,178,130,182,82,182,45"/>
+</map>

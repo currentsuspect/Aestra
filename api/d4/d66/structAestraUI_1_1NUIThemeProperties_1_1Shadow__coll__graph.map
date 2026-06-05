@@ -1,0 +1,8 @@
+<map id="AestraUI::NUIThemeProperties::Shadow" name="AestraUI::NUIThemeProperties::Shadow">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,273,227,313"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="91,5,141,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="116,45,110,119,109,211,116,273,111,274,104,211,104,119,110,44"/>
+<area shape="rect" id="Node000003" href="$d2/d25/structAestraUI_1_1NUIColor.html" title=" " alt="" coords="208,161,352,187"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="140,38,269,159,266,163,137,42"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="254,197,144,275,141,271,251,193"/>
+</map>

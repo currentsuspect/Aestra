@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioExporter::getDefaultExportName" name="Aestra::Audio::AudioExporter::getDefaultExportName">
+<area shape="rect" id="Node000001" title="Get the default export filename based on project name." alt="" coords="201,5,411,45"/>
+<area shape="rect" id="Node000002" href="$da/d6d/classExportDialog.html#abd00631558318898bce4bffa6d325f1d" title="Show the dialog and bind it to a project and engine context." alt="" coords="5,13,153,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="188,28,154,28,154,23,188,23"/>
+</map>

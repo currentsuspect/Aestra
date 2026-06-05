@@ -1,0 +1,9 @@
+<map id="AestraUI::PluginUIController" name="AestraUI::PluginUIController">
+<area shape="rect" id="Node000001" title="Controller that bridges plugin UI widgets to AestraAudio backend." alt="" coords="860,71,1064,97"/>
+<area shape="rect" id="Node000002" href="$dc/dcb/classAestra_1_1Events_1_1Signal.html" title=" " alt="" coords="457,7,676,62"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="690,47,860,69,859,74,689,53"/>
+<area shape="rect" id="Node000003" href="$dc/dcb/classAestra_1_1Events_1_1Signal.html" title="Template signal for typed callback subscriptions." alt="" coords="5,22,208,47"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="222,32,457,32,457,37,222,37"/>
+<area shape="rect" id="Node000004" href="$de/dfb/classAestra_1_1Events_1_1Signal_3_01void_01_4.html" title="Specialization for void signals (no event argument)." alt="" coords="485,87,649,127"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="662,99,836,89,860,88,860,93,836,95,663,104"/>
+</map>

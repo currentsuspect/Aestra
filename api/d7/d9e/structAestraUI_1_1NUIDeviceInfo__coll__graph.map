@@ -1,0 +1,9 @@
+<map id="AestraUI::NUIDeviceInfo" name="AestraUI::NUIDeviceInfo">
+<area shape="rect" id="Node000001" title=" " alt="" coords="10,108,190,133"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,56,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="41,43,62,82,86,106,82,110,58,86,37,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="81,5,119,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="103,45,103,108,97,108,97,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="196,5,247,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="218,45,208,66,194,86,174,100,151,110,149,105,171,96,190,82,204,64,213,43"/>
+</map>

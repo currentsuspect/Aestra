@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AudioEngine::setPreviewEngine" name="Aestra::Audio::AudioEngine::setPreviewEngine">
+<area shape="rect" id="Node000001" title="Bind the preview engine mixed into the main output." alt="" coords="280,23,479,63"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a6379a65877487a2a804caae9de2732dd" title="Bind the live audio engine used by transport&#45;aware panels." alt="" coords="7,5,231,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="266,35,231,32,231,26,266,30"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a423bec4c97784c56d31859425e026721" title="Tear down the workspace and owned panels." alt="" coords="5,55,232,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="266,56,232,60,232,54,266,51"/>
+</map>

@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::AudioQualitySettings" name="Aestra::Audio::AudioQualitySettings">
+<area shape="rect" id="Node000001" title=" " alt="" coords="329,146,531,186"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="25,5,135,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="150,20,227,33,268,44,307,60,338,78,368,101,413,144,409,148,364,105,335,83,304,64,266,49,226,38,149,25"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="13,55,147,80"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="162,75,233,88,306,107,351,125,392,144,390,148,349,129,305,113,231,94,161,80"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="21,104,139,129"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="154,123,306,143,329,147,329,152,305,149,153,128"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="15,153,145,179"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="159,163,329,163,329,169,159,169"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="5,203,155,228"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="168,202,305,183,329,180,329,185,306,189,169,207"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="55,259,105,284"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="119,267,205,259,255,249,304,236,356,211,400,184,403,188,359,216,306,240,257,255,206,264,119,273"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="30,308,130,333"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="144,318,223,310,265,299,304,284,338,262,368,236,413,184,417,188,372,239,341,266,307,288,266,304,224,315,144,324"/>
+</map>

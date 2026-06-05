@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot::EdgeSlotSnapshot" name="Aestra::Audio::AudioEngine::TrackEdgeDelaySnapshot::EdgeSlotSnapshot">
+<area shape="rect" id="Node000001" title=" " alt="" coords="33,123,231,177"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="40,45,39,71,46,97,69,121,65,124,42,100,33,72,34,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="193,5,253,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="220,45,210,72,195,100,173,124,169,121,191,97,206,70,215,43"/>
+</map>

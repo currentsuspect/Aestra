@@ -1,0 +1,16 @@
+<map id="AestraContent::syncViewState" name="AestraContent::syncViewState">
+<area shape="rect" id="Node000001" title="Synchronize overlay state into owned child views." alt="" coords="777,71,996,97"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ae6930f4ad43aea5913222619cb6924b3" title="Explicitly show or hide the Arsenal panel." alt="" coords="529,20,721,60"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="797,72,720,59,721,53,798,66"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#aa076399851deccb029cfbea3642d1725" title="Open or close a specific workspace overlay." alt="" coords="520,99,729,125"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="764,100,730,103,729,98,763,94"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a4feb8815fae20c321c2abde07f12879a" title="Toggle the Arsenal panel regardless of active mode." alt="" coords="254,5,467,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="515,37,467,34,468,29,515,31"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a64124c9937df91c649b1101e8fb4ab8b" title="Toggle visibility for a specific workspace overlay." alt="" coords="5,42,201,67"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="241,42,202,46,201,41,240,36"/>
+<area shape="poly" id="edge7_Node000005_Node000004" title=" " alt="" coords="506,102,201,68,202,63,507,96"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#abc3ee4861acd0c5986598b967bb00e79" title="Open a pattern in the piano&#45;roll editor." alt="" coords="260,120,461,160"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="506,127,462,132,461,127,506,122"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#aa898dcc2a0431e3b72849883c2d72712" title="Show or hide the mixer panel." alt="" coords="249,185,472,210"/>
+<area shape="poly" id="edge6_Node000005_Node000007" title=" " alt="" coords="583,133,473,175,425,187,424,182,471,169,581,128"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::AestraComp::getParameterDisplay" name="Aestra::Audio::Plugins::AestraComp::getParameterDisplay">
+<area shape="rect" id="Node000001" title="Get parameter value as display string." alt="" coords="5,5,260,45"/>
+<area shape="rect" id="Node000002" href="$d7/db4/classAestra_1_1Audio_1_1Plugins_1_1AestraComp.html#ac3643d77924395a8be58ee18b2419a5a" title="Get current parameter value (normalized 0&#45;1)" alt="" coords="308,5,515,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="260,23,294,23,294,28,260,28"/>
+</map>

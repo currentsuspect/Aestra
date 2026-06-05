@@ -1,0 +1,5 @@
+<map id="AestraContent::refreshPluginList" name="AestraContent::refreshPluginList">
+<area shape="rect" id="Node000001" title="Refresh the visible plugin list in the browser." alt="" coords="5,13,237,38"/>
+<area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="285,5,500,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="237,23,271,23,271,28,237,28"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="AestraUI::PluginEditorWindow::open" name="AestraUI::PluginEditorWindow::open">
+<area shape="rect" id="Node000001" title="Open editor for a plugin instance." alt="" coords="5,5,221,45"/>
+<area shape="rect" id="Node000002" href="$d6/d10/classAestraUI_1_1PluginEditorWindow.html#a8dd9beea4fa798f5bf868f7a7af9f1cf" title="Close the editor window." alt="" coords="269,5,485,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="221,23,256,23,256,28,221,28"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::WaveformDisplayComponent" name="Aestra::Audio::WaveformDisplayComponent">
+<area shape="rect" id="Node000001" title="Waveform display component with zoom and loop point overlays." alt="" coords="5,167,239,207"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="29,93,215,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="125,132,125,167,119,167,119,132"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="12,5,232,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="125,59,125,93,119,93,119,59"/>
+</map>

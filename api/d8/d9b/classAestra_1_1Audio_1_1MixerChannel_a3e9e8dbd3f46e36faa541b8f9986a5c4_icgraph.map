@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::MixerChannel::setName" name="Aestra::Audio::MixerChannel::setName">
+<area shape="rect" id="Node000001" title="Set the display name shown in the UI." alt="" coords="259,69,465,109"/>
+<area shape="rect" id="Node000002" href="$dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html#a11da8593018d249a3c1e73433f4266bc" title="Execute the command (first time)" alt="" coords="5,5,211,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="268,68,187,48,189,43,269,63"/>
+<area shape="rect" id="Node000003" href="$dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html#a0fc40bffb0a77b376f1084cfbb8b2bd6" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,69,211,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="245,92,211,92,211,87,245,87"/>
+<area shape="rect" id="Node000004" href="$dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html#a5c2707474da43150b4d87297a58d5e86" title="Undo the command." alt="" coords="5,133,211,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="269,115,189,136,187,131,268,110"/>
+</map>

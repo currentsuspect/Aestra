@@ -1,0 +1,5 @@
+<map id="ExportDialog::hide" name="ExportDialog::hide">
+<area shape="rect" id="Node000001" title="Hide the dialog and request cancellation of any active export." alt="" coords="244,5,387,31"/>
+<area shape="rect" id="Node000002" href="$da/d6d/classExportDialog.html#aefdac782ade0d831c23100d45ddd431d" title="Handle keyboard interaction for inputs and dismissal." alt="" coords="5,5,196,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="230,21,196,21,196,15,230,15"/>
+</map>

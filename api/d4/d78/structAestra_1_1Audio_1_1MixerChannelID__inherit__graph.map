@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::MixerChannelID" name="Aestra::Audio::MixerChannelID">
+<area shape="rect" id="Node000001" title="Unique identifier for a Mixer Channel." alt="" coords="5,79,225,104"/>
+<area shape="rect" id="Node000002" href="$db/d96/structAestra_1_1Audio_1_1AestraUUID.html" title=" " alt="" coords="19,5,212,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="118,44,118,79,113,79,113,44"/>
+</map>

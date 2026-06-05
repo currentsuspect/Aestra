@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::AestraDelay::getParameters" name="Aestra::Audio::Plugins::AestraDelay::getParameters">
+<area shape="rect" id="Node000001" title="Get all parameter descriptors." alt="" coords="227,5,439,45"/>
+<area shape="rect" id="Node000002" href="$dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#a9f686e420c56ccd25d958091ea1518b0" title="Initialize the plugin for processing." alt="" coords="5,5,179,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,28,179,28,179,23,213,23"/>
+</map>

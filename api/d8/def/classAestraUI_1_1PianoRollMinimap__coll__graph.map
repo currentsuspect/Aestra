@@ -1,0 +1,13 @@
+<map id="AestraUI::PianoRollMinimap" name="AestraUI::PianoRollMinimap">
+<area shape="rect" id="Node000001" title=" " alt="" coords="717,131,921,157"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="575,113,717,130,717,135,574,119"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="209,101,374,101,374,107,209,107"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,159,278,150,350,136,374,127,416,114,417,119,376,132,351,141,279,156,209,164"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="376,141,559,181"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="573,153,717,146,717,152,573,159"/>
+</map>

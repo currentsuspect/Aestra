@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::DuplicateClipCommand::redo" name="Aestra::Audio::DuplicateClipCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,69,184,109"/>
+<area shape="rect" id="Node000002" href="$d1/d39/classAestra_1_1Audio_1_1DuplicateClipCommand.html#a8d7b87fb078ef4dbb09d83b06d2460b2" title="Execute the command (first time)" alt="" coords="232,69,411,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="185,87,218,87,218,92,185,92"/>
+<area shape="rect" id="Node000003" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a8899913f7656d95490a6ba003cb81295" title="Add a clip to a lane." alt="" coords="459,5,664,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="396,67,472,46,473,51,398,72"/>
+<area shape="rect" id="Node000004" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ae35de040bc40450f4e6447a663be5a23" title="Find which lane a clip belongs to." alt="" coords="459,69,664,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="411,87,445,87,445,92,411,92"/>
+<area shape="rect" id="Node000005" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a451289f1d5433a3c8793fb18b649b8fb" title="Get a clip by ID." alt="" coords="459,133,664,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="398,107,473,127,472,132,396,112"/>
+</map>

@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::PianoRollPanel::PianoRollPanel" name="Aestra::Audio::PianoRollPanel::PianoRollPanel">
+<area shape="rect" id="Node000001" title="Create the piano&#45;roll editor bound to the shared track manager." alt="" coords="5,101,184,141"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a40feedfcfd8b528f84e5df72b29fed1d" title="Access the command queue used to communicate with the audio thread." alt="" coords="232,5,431,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="134,99,231,55,251,47,253,52,233,60,136,104"/>
+<area shape="rect" id="Node000003" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#a4a7cd23bfd85b3c2cafcd34e8a90691b" title="Load a pattern into the piano&#45;roll editor." alt="" coords="242,69,421,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="184,107,228,101,229,106,185,112"/>
+<area shape="rect" id="Node000004" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ae5851e1275e34b693d6bc2aa8efb9ba7" title="Persist the currently edited notes back to the pattern manager." alt="" coords="242,133,421,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="185,131,229,137,228,142,184,136"/>
+<area shape="rect" id="Node000006" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html#ad54d0aa6ab8faf7e98408cf3ef5aa773" title="Set the default unit assigned to newly created notes." alt="" coords="242,197,421,237"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="136,139,233,183,253,190,251,195,231,188,134,144"/>
+<area shape="rect" id="Node000005" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a1d47a21a48da22811eabfc9f49dab695" title="Enable or disable Arsenal pattern playback mode." alt="" coords="479,133,677,173"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="421,151,465,151,465,156,421,156"/>
+</map>

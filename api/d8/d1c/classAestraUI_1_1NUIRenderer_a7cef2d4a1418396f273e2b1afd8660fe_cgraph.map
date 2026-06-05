@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIRenderer::calculateTextY" name="AestraUI::NUIRenderer::calculateTextY">
+<area shape="rect" id="Node000001" title="Calculate baseline&#45;aligned Y position for vertically centered text using measured size." alt="" coords="5,5,175,45"/>
+<area shape="rect" id="Node000002" href="$d8/d1c/classAestraUI_1_1NUIRenderer.html#a65d6e0b19c83fbaca18c25e8082b1673" title="Retrieve font metrics (scaled for the requested font size)." alt="" coords="223,5,392,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="175,23,209,23,209,28,175,28"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::MidiBuffer::Event" name="Aestra::Audio::MidiBuffer::Event">
+<area shape="rect" id="Node000001" title=" " alt="" coords="12,108,196,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="41,44,41,64,46,83,56,95,68,106,64,110,52,99,42,85,36,65,35,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="132,5,199,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="158,44,138,85,122,109,117,106,134,83,154,42"/>
+</map>

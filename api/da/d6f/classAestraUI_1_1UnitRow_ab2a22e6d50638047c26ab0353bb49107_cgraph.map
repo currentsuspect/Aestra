@@ -1,0 +1,20 @@
+<map id="AestraUI::UnitRow::onDrop" name="AestraUI::UnitRow::onDrop">
+<area shape="rect" id="Node000001" title="Called when drop occurs." alt="" coords="5,228,153,268"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a267accfa4e098834b8952e18b7e4d416" title="Attach an audio clip path to a unit." alt="" coords="201,120,403,160"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="120,226,246,164,249,168,123,230"/>
+<area shape="rect" id="Node000007" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c71bd03338327cfbea2ce7c91cc8ba6" title="Set the display name for a unit." alt="" coords="201,228,403,268"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="154,245,188,245,188,251,154,251"/>
+<area shape="rect" id="Node000008" href="$da/d6f/classAestraUI_1_1UnitRow.html#a463bb23535731d91ef746e1e6a82407f" title="Refresh cached unit state from the backing managers." alt="" coords="228,292,376,332"/>
+<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="150,266,219,286,218,291,149,271"/>
+<area shape="rect" id="Node000003" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="453,5,667,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="338,118,450,62,485,48,486,53,452,66,340,122"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="717,213,919,253"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="361,117,426,101,504,89,588,88,630,94,670,106,708,124,742,149,794,201,790,205,738,153,705,129,668,110,629,99,588,93,505,94,427,106,362,122"/>
+<area shape="rect" id="Node000005" href="$d0/db8/classAestra_1_1Audio_1_1MetadataParser.html#a0ff4112d758059453e4919ccb97954f6" title="Extract metadata from an audio file." alt="" coords="451,120,669,160"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="403,137,437,137,437,143,403,143"/>
+<area shape="rect" id="Node000006" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="459,184,661,224"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="384,157,466,178,465,183,383,163"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="661,213,704,218,703,223,660,218"/>
+<area shape="poly" id="edge8_Node000007_Node000004" title=" " alt="" coords="403,242,703,234,703,239,403,248"/>
+<area shape="poly" id="edge10_Node000008_Node000004" title=" " alt="" coords="376,298,703,248,704,253,377,303"/>
+</map>

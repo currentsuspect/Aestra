@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::VST3PluginInstance::deactivate" name="Aestra::Audio::VST3PluginInstance::deactivate">
+<area shape="rect" id="Node000001" title="Deactivate the plugin Called when audio engine stops or plugin is disabled." alt="" coords="483,37,673,77"/>
+<area shape="rect" id="Node000002" href="$d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#a2ff25eb88329db8b42e7d00d5db43c8c" title="Shutdown the plugin, releasing all resources." alt="" coords="244,5,435,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="469,45,434,41,435,35,469,40"/>
+<area shape="rect" id="Node000003" href="$d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#ac17f09e6ad1263c54031f1fa8f9a993a" title="Unload the plugin." alt="" coords="244,69,435,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="469,75,435,79,434,74,469,69"/>
+<area shape="rect" id="Node000004" href="$d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#a3a3779387e51c4d68ecbd78129a6ab42" title="Load a VST3 plugin from file." alt="" coords="5,69,196,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="230,92,196,92,196,87,230,87"/>
+</map>

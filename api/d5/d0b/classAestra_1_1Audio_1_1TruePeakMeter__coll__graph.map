@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TruePeakMeter" name="Aestra::Audio::TruePeakMeter">
+<area shape="rect" id="Node000001" title="ITU&#45;R BS.1770&#45;4 inspired true peak meter." alt="" coords="5,123,220,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="75,5,150,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="115,44,115,123,110,123,110,44"/>
+</map>

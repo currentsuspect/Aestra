@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::VST3PluginInstance::shutdown" name="Aestra::Audio::VST3PluginInstance::shutdown">
+<area shape="rect" id="Node000001" title="Shutdown the plugin, releasing all resources." alt="" coords="5,5,196,45"/>
+<area shape="rect" id="Node000002" href="$d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html#a175480d8b4a3b79fb3e30c40bcd4a558" title="Deactivate the plugin Called when audio engine stops or plugin is disabled." alt="" coords="244,5,435,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="196,23,230,23,230,28,196,28"/>
+</map>

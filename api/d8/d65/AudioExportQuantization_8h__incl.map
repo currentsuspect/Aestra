@@ -1,0 +1,9 @@
+<map id="AestraAudio/include/IO/AudioExportQuantization.h" name="AestraAudio/include/IO/AudioExportQuantization.h">
+<area shape="rect" id="Node000001" title="PCM quantization with optional triangular&#45;pdf dither for offline export." alt="" coords="37,5,256,45"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,93,91,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="124,48,75,87,72,82,121,43"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="115,93,178,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="149,46,149,79,144,79,144,46"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="203,93,269,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="170,44,214,82,211,86,167,48"/>
+</map>

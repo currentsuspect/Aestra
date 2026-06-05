@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::DriverStatistics" name="Aestra::Audio::DriverStatistics">
+<area shape="rect" id="Node000001" title="Driver statistics for monitoring and benchmarking." alt="" coords="5,137,223,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="13,5,87,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="47,44,44,78,47,96,54,112,65,125,81,135,78,140,62,129,49,115,42,97,39,79,41,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="145,5,211,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="176,45,167,79,151,115,130,139,126,135,146,112,162,77,171,44"/>
+</map>

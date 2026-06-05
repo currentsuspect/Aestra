@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIRendererGL::resize" name="AestraUI::NUIRendererGL::resize">
+<area shape="rect" id="Node000001" title="Resize the viewport." alt="" coords="5,5,192,45"/>
+<area shape="rect" id="Node000002" href="$d3/d09/classAestraUI_1_1GlassmorphismPass.html#aee0dd4b61031cd51b0f8c41b284274ec" title="Resize internal FBOs." alt="" coords="240,5,457,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="192,23,226,23,226,28,192,28"/>
+</map>

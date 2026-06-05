@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::EffectChain::insertPlugin" name="Aestra::Audio::EffectChain::insertPlugin">
+<area shape="rect" id="Node000001" title="Insert plugin into slot." alt="" coords="516,69,707,109"/>
+<area shape="rect" id="Node000002" href="$df/dad/classAestra_1_1Audio_1_1AddPluginCommand.html#abd5f5c1a70cbf91fa71f6712f6cfb229" title="Execute the command (first time)" alt="" coords="271,5,454,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="519,68,440,48,442,43,521,63"/>
+<area shape="rect" id="Node000004" href="$da/d71/classAestraUI_1_1PluginUIController.html#a212dbf3849e370089393c7b225bd33b2" title="Load a plugin into an effect slot." alt="" coords="261,69,465,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="503,92,465,92,465,87,503,87"/>
+<area shape="rect" id="Node000006" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html#a1040b59218a9c9720ba5164d434396e9" title="Undo the command." alt="" coords="257,133,468,173"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="521,115,442,136,440,131,519,110"/>
+<area shape="rect" id="Node000003" href="$df/dad/classAestra_1_1Audio_1_1AddPluginCommand.html#aa7240f0b05e1610788d79c874847d148" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="16,5,199,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="258,28,199,28,199,23,258,23"/>
+<area shape="rect" id="Node000005" href="$da/d71/classAestraUI_1_1PluginUIController.html#a6f6aad77c64762f12e40f6899c8e0e8b" title="Bind an EffectChainRack to an audio EffectChain." alt="" coords="5,69,209,109"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="247,92,209,92,209,87,247,87"/>
+</map>

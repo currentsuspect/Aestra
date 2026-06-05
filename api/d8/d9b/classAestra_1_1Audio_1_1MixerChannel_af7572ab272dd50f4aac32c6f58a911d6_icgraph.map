@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::MixerChannel::getVolume" name="Aestra::Audio::MixerChannel::getVolume">
+<area shape="rect" id="Node000001" title="Get channel output volume." alt="" coords="240,5,447,45"/>
+<area shape="rect" id="Node000002" href="$d0/d26/classAestra_1_1Audio_1_1SetVolumeCommand.html#a169c9a689b650383cef130c238835356" title="Execute the command (first time)" alt="" coords="5,5,192,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="226,28,192,28,192,23,226,23"/>
+</map>

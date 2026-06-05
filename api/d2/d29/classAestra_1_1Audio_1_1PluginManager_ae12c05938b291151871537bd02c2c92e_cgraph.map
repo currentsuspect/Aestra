@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::PluginManager::shutdown" name="Aestra::Audio::PluginManager::shutdown">
+<area shape="rect" id="Node000001" title="Shutdown the plugin manager." alt="" coords="5,37,220,77"/>
+<area shape="rect" id="Node000002" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#ad5fe1de8792d45ba78a8cbe5588a1cbd" title="Cancel scan and join the scanner thread." alt="" coords="268,5,477,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="220,41,254,37,255,43,220,47"/>
+<area shape="rect" id="Node000003" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#aeb4f0ed54698e1c2844a6792b6a1a256" title="Save scan results to cache file." alt="" coords="268,69,477,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="220,68,255,72,254,77,220,73"/>
+</map>

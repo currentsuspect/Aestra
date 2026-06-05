@@ -1,0 +1,11 @@
+<map id="ProjectSerializer::PanelState" name="ProjectSerializer::PanelState">
+<area shape="rect" id="Node000001" title=" " alt="" coords="108,241,244,281"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="31,95,118,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="90,131,142,216,161,239,157,243,138,219,85,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,144,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="77,59,77,94,72,94,72,59"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="143,95,209,120"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="179,133,179,241,173,241,173,133"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="293,95,344,120"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="321,135,313,177,305,199,291,219,270,237,245,248,243,244,267,232,287,216,300,197,308,175,316,134"/>
+</map>

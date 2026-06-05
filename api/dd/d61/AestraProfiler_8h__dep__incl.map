@@ -1,0 +1,11 @@
+<map id="AestraCore/include/AestraProfiler.h" name="AestraCore/include/AestraProfiler.h">
+<area shape="rect" id="Node000001" title="Lightweight performance profiler for AESTRA." alt="" coords="289,5,434,45"/>
+<area shape="rect" id="Node000002" href="$d1/d00/AestraProfiler_8cpp.html" title="Legacy performance profiler implementation (for backward compatibility)" alt="" coords="5,101,240,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="297,52,155,103,154,98,295,47"/>
+<area shape="rect" id="Node000003" href="$dd/dd5/NUIRendererGL_8cpp_source.html" title=" " alt="" coords="264,93,459,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="364,59,364,93,359,93,359,59"/>
+<area shape="rect" id="Node000004" href="$d2/d1d/PerformanceHUD_8h.html" title="F12&#45;toggleable performance overlay." alt="" coords="483,101,712,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="427,48,567,98,565,103,425,53"/>
+<area shape="rect" id="Node000005" href="$d4/d5f/PerformanceHUD_8cpp.html" title="Performance HUD implementation." alt="" coords="475,181,719,207"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="600,140,600,181,595,181,595,140"/>
+</map>

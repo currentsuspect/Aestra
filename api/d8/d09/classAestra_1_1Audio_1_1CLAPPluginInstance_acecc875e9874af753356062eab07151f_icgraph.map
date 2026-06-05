@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::CLAPPluginInstance::closeEditor" name="Aestra::Audio::CLAPPluginInstance::closeEditor">
+<area shape="rect" id="Node000001" title="Close the plugin editor window." alt="" coords="483,5,673,45"/>
+<area shape="rect" id="Node000002" href="$d8/d09/classAestra_1_1Audio_1_1CLAPPluginInstance.html#a3dd624a4e525b26a021fc1b0af975a31" title="Unload the plugin." alt="" coords="244,5,435,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="469,28,435,28,435,23,469,23"/>
+<area shape="rect" id="Node000003" href="$d8/d09/classAestra_1_1Audio_1_1CLAPPluginInstance.html#a86e367e46e9a88b32b9f5e5cac1c3d77" title="Load a CLAP plugin from file." alt="" coords="5,5,196,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="230,28,196,28,196,23,230,23"/>
+</map>

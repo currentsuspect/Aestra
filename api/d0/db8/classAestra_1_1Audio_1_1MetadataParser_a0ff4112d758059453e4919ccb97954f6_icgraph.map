@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::MetadataParser::parse" name="Aestra::Audio::MetadataParser::parse">
+<area shape="rect" id="Node000001" title="Extract metadata from an audio file." alt="" coords="464,37,683,77"/>
+<area shape="rect" id="Node000002" href="$dd/d1f/classAestra_1_1Audio_1_1AuditionEngine.html#ade7dec8b5f95c35635c65aec6217fe5b" title="Add a file to the queue." alt="" coords="201,5,416,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="450,45,416,41,416,36,451,40"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a267accfa4e098834b8952e18b7e4d416" title="Attach an audio clip path to a unit." alt="" coords="208,69,409,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="451,75,410,80,409,75,450,70"/>
+<area shape="rect" id="Node000004" href="$da/d6f/classAestraUI_1_1UnitRow.html#ab2a22e6d50638047c26ab0353bb49107" title="Called when drop occurs." alt="" coords="5,69,153,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="195,92,153,92,153,87,195,87"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::UnitState::routesToMasterPreview" name="Aestra::Audio::UnitState::routesToMasterPreview">
+<area shape="rect" id="Node000001" title="True when this unit currently routes to master preview path." alt="" coords="5,5,188,45"/>
+<area shape="rect" id="Node000002" href="$d3/d38/structAestra_1_1Audio_1_1UnitState.html#acc5933c9825765e1158cfe9c9c9f5131" title="Effective route mode, preserving legacy route fields as authority until cleared." alt="" coords="236,5,415,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="189,23,222,23,222,28,189,28"/>
+</map>

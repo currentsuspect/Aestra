@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::Interpolators::Sinc16Turbo" name="Aestra::Audio::Interpolators::Sinc16Turbo">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,123,205,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="22,5,61,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="39,44,38,71,45,97,55,110,67,121,64,125,51,114,40,100,33,72,33,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="136,5,203,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="165,45,142,100,125,124,121,121,138,97,160,43"/>
+</map>

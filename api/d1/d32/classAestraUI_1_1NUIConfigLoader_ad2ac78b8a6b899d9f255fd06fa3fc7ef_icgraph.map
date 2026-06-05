@@ -1,0 +1,7 @@
+<map id="AestraUI::NUIConfigLoader::applyConfig" name="AestraUI::NUIConfigLoader::applyConfig">
+<area shape="rect" id="Node000001" title="Apply loaded configuration to current theme." alt="" coords="491,5,685,45"/>
+<area shape="rect" id="Node000002" href="$d1/d32/classAestraUI_1_1NUIConfigLoader.html#a1641a18fe59d8768a512e57e6a3379c5" title="Load configuration from YAML string." alt="" coords="248,5,443,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="477,28,443,28,443,23,477,23"/>
+<area shape="rect" id="Node000003" href="$d1/d32/classAestraUI_1_1NUIConfigLoader.html#a752acfcb658df76870e15ef68aacad7d" title="Load configuration from YAML file." alt="" coords="5,5,200,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="234,28,200,28,200,23,234,23"/>
+</map>

@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::CoherentDiagnosticsSnapshot" name="Aestra::Audio::CoherentDiagnosticsSnapshot">
+<area shape="rect" id="Node000001" title="Coherent diagnostics snapshot obtained via seqlock." alt="" coords="5,449,257,489"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="167,5,242,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="195,44,191,55,164,171,147,285,138,383,134,449,129,449,133,383,141,284,158,170,186,54,190,42"/>
+<area shape="rect" id="Node000003" href="$d5/d75/structAestra_1_1Audio_1_1AudioEngineDiagnostics.html" title="Multi&#45;tier audio engine diagnostics." alt="" coords="409,347,608,387"/>
+<area shape="poly" id="edge4_Node000003_Node000002" title=" " alt="" coords="202,45,197,80,195,123,201,168,219,209,239,235,262,258,317,296,375,325,430,344,428,349,373,329,314,301,259,262,235,239,214,212,196,169,190,123,191,79,196,44"/>
+<area shape="rect" id="Node000006" href="$db/dbc/structAestra_1_1Audio_1_1DenormalEventInfo.html" title="Information about a denormal (subnormal) floating&#45;point event." alt="" coords="387,147,630,172"/>
+<area shape="poly" id="edge7_Node000006_Node000002" title=" " alt="" coords="243,34,485,144,482,149,241,39"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="426,393,203,452,201,447,424,388"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="654,147,721,172"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="680,186,647,262,627,300,609,325,572,349,569,344,605,321,623,297,642,260,675,184"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="789,147,849,172"/>
+<area shape="poly" id="edge5_Node000003_Node000005" title=" " alt="" coords="826,185,827,217,824,254,814,292,792,325,762,341,716,353,608,365,608,360,715,348,760,336,788,321,809,290,819,253,822,217,820,186"/>
+<area shape="poly" id="edge6_Node000003_Node000006" title=" " alt="" coords="511,186,511,347,506,347,506,186"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="471,5,546,31"/>
+<area shape="poly" id="edge8_Node000006_Node000007" title=" " alt="" coords="511,44,511,146,506,146,506,44"/>
+</map>

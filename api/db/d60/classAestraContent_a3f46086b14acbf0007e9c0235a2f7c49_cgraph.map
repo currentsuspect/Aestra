@@ -1,0 +1,9 @@
+<map id="AestraContent::stopFromCurrentFocus" name="AestraContent::stopFromCurrentFocus">
+<area shape="rect" id="Node000001" title="Stop playback based on the current focus mode." alt="" coords="5,37,237,77"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad9ed038084fc59841da8d282d29d0a3b" title="Immediate panic/reset (Double Stop)." alt="" coords="285,5,484,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="237,41,272,36,272,42,238,46"/>
+<area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#abdcd39f3f1b15706d70b65eda08a0539" title="Set the current transport position in samples." alt="" coords="285,69,484,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="238,69,272,73,272,78,237,74"/>
+<area shape="rect" id="Node000003" href="$d7/da4/classAestra_1_1Audio_1_1EngineState.html#a8c10dfaa447b39a42842b9c9b4431e1d" title="Acquires a read handle to the currently active graph slot." alt="" coords="532,5,727,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="484,23,518,23,518,28,484,28"/>
+</map>

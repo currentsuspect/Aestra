@@ -1,0 +1,5 @@
+<map id="AestraUI::GlassmorphismPass::initialize" name="AestraUI::GlassmorphismPass::initialize">
+<area shape="rect" id="Node000001" title="Initialize FBOs and Shaders." alt="" coords="240,5,457,45"/>
+<area shape="rect" id="Node000002" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#ae57857c03ca54aa635daccdeb9d9c5ec" title="Initialize the renderer with the given viewport size." alt="" coords="5,5,192,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="226,28,192,28,192,23,226,23"/>
+</map>

@@ -1,0 +1,12 @@
+<map id="Aestra::Audio::UnitManager::loadFromJSON" name="Aestra::Audio::UnitManager::loadFromJSON">
+<area shape="rect" id="Node000001" title="Restore unit state from JSON." alt="" coords="5,63,207,103"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a07011f72c8bbb0351bba034b53919422" title="Remove every unit from the manager." alt="" coords="261,5,463,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="195,60,258,46,259,51,197,65"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="517,35,719,75"/>
+<area shape="poly" id="edge5_Node000001_Node000003" title=" " alt="" coords="207,75,504,58,504,64,207,80"/>
+<area shape="rect" id="Node000005" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="255,120,469,160"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="197,100,259,114,258,120,195,105"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="463,34,504,39,503,44,462,39"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="767,35,968,75"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="719,52,753,52,753,57,719,57"/>
+</map>

@@ -1,0 +1,12 @@
+<map id="Aestra::Audio::StreamingDecoder::start" name="Aestra::Audio::StreamingDecoder::start">
+<area shape="rect" id="Node000001" title="Start streaming a file." alt="" coords="5,29,189,69"/>
+<area shape="rect" id="Node000002" href="$d4/dc5/PathUtils_8h.html#a01048ff9ba43efef7b20013a2b57ff0c" title="Get a std::filesystem::path from a raw string, handling Unicode properly." alt="" coords="237,37,472,62"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="190,47,224,47,224,52,190,52"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="313,38,304,28,309,18,326,12,355,10,391,14,401,19,405,24,400,27,398,23,389,19,355,15,327,17,312,22,310,28,317,35"/>
+<area shape="rect" id="Node000003" href="$d4/dc5/PathUtils_8h.html#a1567842971c631789eeeb0e992be5fa8" title="Convert a raw string path to wide string for Windows APIs." alt="" coords="520,29,704,69"/>
+<area shape="poly" id="edge3_Node000002_Node000003" title=" " alt="" coords="472,47,506,47,506,52,472,52"/>
+<area shape="poly" id="edge4_Node000003_Node000003" title=" " alt="" coords="568,30,566,20,573,10,588,5,612,3,639,6,654,13,652,18,638,11,612,8,589,10,576,15,571,21,573,28"/>
+<area shape="rect" id="Node000004" href="$d4/dc5/PathUtils_8h.html#a1a9e2b7a8c75a2cf798595f66348e4ab" title="Convert a UTF&#45;8 string to wide string (UTF&#45;16 on Windows)" alt="" coords="752,37,943,62"/>
+<area shape="poly" id="edge5_Node000003_Node000004" title=" " alt="" coords="704,47,738,47,738,52,704,52"/>
+<area shape="poly" id="edge6_Node000004_Node000004" title=" " alt="" coords="809,38,801,28,805,18,821,12,847,10,880,14,893,23,890,28,878,19,847,15,822,17,809,22,806,28,813,35"/>
+</map>

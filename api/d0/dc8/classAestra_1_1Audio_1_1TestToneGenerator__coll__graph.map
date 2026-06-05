@@ -1,0 +1,18 @@
+<map id="Aestra::Audio::TestToneGenerator" name="Aestra::Audio::TestToneGenerator">
+<area shape="rect" id="Node000001" title="Simple test tone generator." alt="" coords="51,359,290,384"/>
+<area shape="rect" id="Node000002" href="$de/d12/classAestra_1_1Audio_1_1AudioProcessor.html" title="Base class for audio processors." alt="" coords="62,284,279,309"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="173,324,173,358,168,358,168,324"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,181,160,207"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="104,215,163,282,159,286,100,219"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="31,93,81,119"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="56,132,60,156,74,180,70,183,55,158,51,133"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="111,93,244,119"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="151,129,131,145,94,183,91,179,128,141,148,124"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="185,181,338,207"/>
+<area shape="poly" id="edge8_Node000007_Node000005" title=" " alt="" coords="192,129,211,155,242,179,239,183,207,159,188,133"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="158,5,197,31"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="180,45,180,93,175,93,175,45"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="244,219,183,286,179,282,240,215"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="272,93,323,119"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="290,133,269,182,264,180,285,131"/>
+</map>

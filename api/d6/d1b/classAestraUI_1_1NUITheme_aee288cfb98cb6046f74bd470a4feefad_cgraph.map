@@ -1,0 +1,5 @@
+<map id="AestraUI::NUITheme::loadFromFile" name="AestraUI::NUITheme::loadFromFile">
+<area shape="rect" id="Node000001" title="Load a theme from a JSON file." alt="" coords="5,5,160,45"/>
+<area shape="rect" id="Node000002" href="$d6/d1b/classAestraUI_1_1NUITheme.html#a569382f8ac1ea60e6ac69abb4162c671" title="Create the default dark theme." alt="" coords="208,5,363,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="160,23,194,23,194,28,160,28"/>
+</map>

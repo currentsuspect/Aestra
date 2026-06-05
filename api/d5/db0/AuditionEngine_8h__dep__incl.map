@@ -1,0 +1,14 @@
+<map id="AestraAudio/include/Playback/AuditionEngine.h" name="AestraAudio/include/Playback/AuditionEngine.h">
+<area shape="rect" id="Node000001" title="Dedicated audio engine for Audition Mode." alt="" coords="248,5,447,45"/>
+<area shape="rect" id="Node000002" href="$df/dc3/AudioEngine_8cpp_source.html" title=" " alt="" coords="5,93,164,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="278,52,143,96,141,91,276,47"/>
+<area shape="rect" id="Node000003" href="$d2/d66/AuditionEngine_8cpp_source.html" title=" " alt="" coords="189,93,375,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="327,58,299,95,294,91,323,55"/>
+<area shape="rect" id="Node000004" href="$dd/de4/AestraContent_8cpp.html" title="Main content area for Aestra &#45; Implementation." alt="" coords="301,181,525,207"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="370,56,390,92,405,141,413,181,408,182,400,142,385,94,366,58"/>
+<area shape="rect" id="Node000005" href="$d3/d97/AuditionPanel_8h.html" title="Main UI panel for Audition Mode &#45; the &quot;Spotify for musicians&quot; experience." alt="" coords="451,101,668,126"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="408,48,532,98,530,103,406,53"/>
+<area shape="poly" id="edge5_Node000005_Node000004" title=" " alt="" coords="527,135,436,183,433,179,524,130"/>
+<area shape="rect" id="Node000006" href="$d1/dd1/AuditionPanel_8cpp_source.html" title=" " alt="" coords="549,181,781,207"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="587,132,651,179,647,183,584,136"/>
+</map>

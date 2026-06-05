@@ -1,0 +1,5 @@
+<map id="AestraContent::loadInstrumentToArsenal" name="AestraContent::loadInstrumentToArsenal">
+<area shape="rect" id="Node000001" title="Load an instrument plugin into Arsenal." alt="" coords="5,5,228,45"/>
+<area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="276,5,491,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="228,23,263,23,263,28,228,28"/>
+</map>

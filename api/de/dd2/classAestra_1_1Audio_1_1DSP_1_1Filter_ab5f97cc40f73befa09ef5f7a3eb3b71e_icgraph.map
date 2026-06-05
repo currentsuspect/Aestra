@@ -1,0 +1,8 @@
+<map id="Aestra::Audio::DSP::Filter::reset" name="Aestra::Audio::DSP::Filter::reset">
+<area shape="rect" id="Node000001" title="Reset filter state (clears memory)" alt="" coords="387,5,529,45"/>
+<area shape="rect" id="Node000002" href="$de/dd2/classAestra_1_1Audio_1_1DSP_1_1Filter.html#a149d4aa61254ea498366365935ec10da" title="Construct filter with sample rate." alt="" coords="5,5,148,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="373,25,339,24,196,24,149,25,148,20,196,19,339,19,373,19"/>
+<area shape="rect" id="Node000003" href="$de/dd2/classAestra_1_1Audio_1_1DSP_1_1Filter.html#a90ac8a81f64348b8a6161c5ff28d6f5b" title="Prepare filter for new sample rate." alt="" coords="196,33,339,73"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="374,40,339,46,338,40,373,35"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="182,44,148,38,148,33,183,38"/>
+</map>

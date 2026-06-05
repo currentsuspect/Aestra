@@ -1,0 +1,9 @@
+<map id="AestraUI::PluginBrowserPanel::setOnPluginLoadRequested" name="AestraUI::PluginBrowserPanel::setOnPluginLoadRequested">
+<area shape="rect" id="Node000001" title="Set callback for plugin load (double click)" alt="" coords="509,37,724,77"/>
+<area shape="rect" id="Node000002" href="$da/d71/classAestraUI_1_1PluginUIController.html#ac2f14df05bbb73d7ee39f9c875192dab" title="Bind a PluginBrowserPanel to this controller." alt="" coords="257,5,461,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="495,45,461,41,462,35,496,40"/>
+<area shape="rect" id="Node000003" href="$da/d71/classAestraUI_1_1PluginUIController.html#afd31984a7eefb5b9f1881cc748fccbc0" title="Unbind the browser." alt="" coords="257,69,461,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="496,75,462,79,461,74,495,70"/>
+<area shape="rect" id="Node000004" href="$da/d71/classAestraUI_1_1PluginUIController.html#aa05f1e98e77b2502318b2163665bce90" title="Destroy the plugin UI controller and owned popup/editor widgets." alt="" coords="5,69,209,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="244,92,210,92,210,87,244,87"/>
+</map>

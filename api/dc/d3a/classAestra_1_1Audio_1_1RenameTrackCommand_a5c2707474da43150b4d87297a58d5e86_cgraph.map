@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::RenameTrackCommand::undo" name="Aestra::Audio::RenameTrackCommand::undo">
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,37,211,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aef9478cbb19fa91eb0bcc60d51b77b77" title="Get a channel by index." alt="" coords="259,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="210,42,245,37,245,43,211,47"/>
+<area shape="rect" id="Node000003" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a3e9e8dbd3f46e36faa541b8f9986a5c4" title="Set the display name shown in the UI." alt="" coords="259,69,466,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="211,68,246,72,246,77,210,73"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::EngineSupervisor" name="Aestra::Audio::EngineSupervisor">
+<area shape="rect" id="Node000001" title="Decoupled engine supervisor that coordinates plugin health, recovery policies, and asynchronous quara..." alt="" coords="5,93,236,119"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="91,5,151,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="123,45,123,93,118,93,118,45"/>
+</map>

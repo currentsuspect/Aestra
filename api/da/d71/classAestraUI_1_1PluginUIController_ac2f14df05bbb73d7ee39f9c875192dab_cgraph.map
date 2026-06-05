@@ -1,0 +1,24 @@
+<map id="AestraUI::PluginUIController::bindBrowser" name="AestraUI::PluginUIController::bindBrowser">
+<area shape="rect" id="Node000001" title="Bind a PluginBrowserPanel to this controller." alt="" coords="5,129,209,169"/>
+<area shape="rect" id="Node000002" href="$da/d71/classAestraUI_1_1PluginUIController.html#a8450e13418e236d399fa787a67d7577f" title="Refresh browser plugin list from scanner." alt="" coords="525,55,729,95"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="144,127,196,102,257,83,322,72,388,66,512,64,512,70,388,71,322,77,258,88,198,107,146,132"/>
+<area shape="rect" id="Node000005" href="$d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a777f1adff73f9c00b66716f9add64c03" title="Set callback for plugin load (double click)" alt="" coords="257,97,472,137"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="209,134,243,130,244,135,210,139"/>
+<area shape="rect" id="Node000006" href="$d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#ab087ea4f3058a66ddc54035a4da36fef" title="Set callback for scan request." alt="" coords="257,161,472,201"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="210,159,244,164,243,169,209,165"/>
+<area shape="rect" id="Node000007" href="$da/d71/classAestraUI_1_1PluginUIController.html#a10606696ef2ab6682a594e1f970b3ac6" title="Start a plugin scan." alt="" coords="263,225,467,265"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="153,167,258,211,281,219,279,224,256,216,151,172"/>
+<area shape="rect" id="Node000003" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#affcef3fc60ee455dd741b4a672df5155" title="Get all scanned plugins." alt="" coords="785,5,995,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="729,53,771,45,772,50,730,58"/>
+<area shape="rect" id="Node000004" href="$d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#af67938d1cdeccb1b9a9ddb12096ce77d" title="Set the list of available plugins." alt="" coords="783,69,997,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="730,78,769,80,769,85,729,83"/>
+<area shape="poly" id="edge7_Node000007_Node000002" title=" " alt="" coords="450,223,470,211,486,197,495,182,504,165,518,147,548,122,579,100,582,104,551,126,522,151,508,168,500,184,490,200,474,215,452,227"/>
+<area shape="rect" id="Node000008" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a262f97d26b294e814c7b4cb98a214771" title="Start async plugin scan." alt="" coords="523,161,732,201"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="447,223,531,202,532,207,448,228"/>
+<area shape="rect" id="Node000010" href="$d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#ad744a08ac456fd16e83ec716f3d89d1a" title="Set scanning state (shows progress indicator)" alt="" coords="520,225,735,265"/>
+<area shape="poly" id="edge10_Node000007_Node000010" title=" " alt="" coords="467,243,506,243,506,248,467,248"/>
+<area shape="rect" id="Node000011" href="$d8/d3b/classAestraUI_1_1PluginBrowserPanel.html#a20748d718ad38a4bb9da306c9c3326bb" title="Set scanning status text." alt="" coords="520,289,735,329"/>
+<area shape="poly" id="edge11_Node000007_Node000011" title=" " alt="" coords="448,263,532,283,531,289,447,268"/>
+<area shape="rect" id="Node000009" href="$d5/d75/classAestra_1_1Audio_1_1PluginScanner.html#a95a69922b4ac82c7d024078e09fbb6b9" title="Cancel ongoing async scan." alt="" coords="785,161,995,201"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="732,179,772,179,772,184,732,184"/>
+</map>

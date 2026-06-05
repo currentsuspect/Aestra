@@ -1,0 +1,13 @@
+<map id="AestraUI::NUIDragEvent" name="AestraUI::NUIDragEvent">
+<area shape="rect" id="Node000001" title=" " alt="" coords="221,225,399,251"/>
+<area shape="rect" id="Node000002" href="$dd/d25/structAestraUI_1_1NUIPoint.html" title=" " alt="" coords="5,108,148,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="99,141,132,171,174,199,207,213,242,223,241,228,206,218,171,204,129,176,95,145"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="51,5,102,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="79,45,79,108,74,108,74,45"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="172,108,304,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="255,143,305,224,301,227,250,146"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="329,108,435,133"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="372,147,340,203,322,227,318,224,336,200,368,144"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="459,108,510,133"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="477,147,460,177,434,203,409,218,382,228,381,223,407,213,431,199,455,173,472,144"/>
+</map>

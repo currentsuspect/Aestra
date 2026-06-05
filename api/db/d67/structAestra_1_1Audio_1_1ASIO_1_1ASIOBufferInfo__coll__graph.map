@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::ASIO::ASIOBufferInfo" name="Aestra::Audio::ASIO::ASIOBufferInfo">
+<area shape="rect" id="Node000001" title=" " alt="" coords="15,108,163,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,56,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="29,44,29,64,34,83,43,95,55,106,52,110,39,99,30,85,24,65,24,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="117,5,179,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="141,45,121,85,106,109,101,106,116,83,136,42"/>
+</map>

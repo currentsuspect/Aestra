@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::MasterSafetyLimiter" name="Aestra::Audio::MasterSafetyLimiter">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,123,209,163"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="26,5,77,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="49,44,48,71,55,98,64,110,76,121,72,125,60,114,50,100,43,72,44,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="131,5,198,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="160,45,138,100,123,124,119,121,133,97,155,43"/>
+</map>

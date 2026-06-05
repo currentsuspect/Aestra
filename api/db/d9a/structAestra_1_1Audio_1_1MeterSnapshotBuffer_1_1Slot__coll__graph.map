@@ -1,0 +1,16 @@
+<map id="Aestra::Audio::MeterSnapshotBuffer::Slot" name="Aestra::Audio::MeterSnapshotBuffer::Slot">
+<area shape="rect" id="Node000001" title=" " alt="" coords="62,416,277,456"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,181,160,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="85,220,92,300,103,347,122,391,143,414,139,417,118,393,98,348,87,301,80,221"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="31,93,81,119"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="56,132,60,156,74,180,70,183,55,158,51,133"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="108,93,241,119"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="151,129,134,145,95,183,91,179,130,141,148,125"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="185,181,327,207"/>
+<area shape="poly" id="edge7_Node000006_Node000004" title=" " alt="" coords="193,128,215,155,242,179,239,183,211,159,189,132"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="155,5,194,31"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="177,45,177,93,172,93,172,45"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="258,221,249,300,237,348,217,393,197,417,193,414,212,391,231,346,244,299,253,220"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="267,93,306,119"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="280,132,263,182,258,180,275,131"/>
+</map>

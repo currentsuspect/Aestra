@@ -1,0 +1,9 @@
+<map id="ProjectSerializer::SerializeResult" name="ProjectSerializer::SerializeResult">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,183,141,223"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="23,95,73,120"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="57,133,71,182,66,183,52,134"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="98,95,185,120"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="127,132,89,184,85,181,123,129"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="72,5,211,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="144,59,144,94,139,94,139,59"/>
+</map>

@@ -1,0 +1,9 @@
+<map id="AestraUI::EffectChainRack::setOnSlotClicked" name="AestraUI::EffectChainRack::setOnSlotClicked">
+<area shape="rect" id="Node000001" title="Callbacks." alt="" coords="509,37,701,77"/>
+<area shape="rect" id="Node000002" href="$da/d71/classAestraUI_1_1PluginUIController.html#a6f6aad77c64762f12e40f6899c8e0e8b" title="Bind an EffectChainRack to an audio EffectChain." alt="" coords="257,5,461,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="496,46,461,41,462,36,496,40"/>
+<area shape="rect" id="Node000003" href="$da/d71/classAestraUI_1_1PluginUIController.html#aa621f1e63bebf92ab4291f84a7107a2f" title="Unbind effect rack." alt="" coords="257,69,461,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="496,74,462,79,461,73,496,69"/>
+<area shape="rect" id="Node000004" href="$da/d71/classAestraUI_1_1PluginUIController.html#aa05f1e98e77b2502318b2163665bce90" title="Destroy the plugin UI controller and owned popup/editor widgets." alt="" coords="5,69,209,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="244,92,210,92,210,87,244,87"/>
+</map>

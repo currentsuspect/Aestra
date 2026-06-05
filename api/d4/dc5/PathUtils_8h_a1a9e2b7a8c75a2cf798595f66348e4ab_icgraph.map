@@ -1,0 +1,14 @@
+<map id="Aestra::Audio::utf8ToWide" name="Aestra::Audio::utf8ToWide">
+<area shape="rect" id="Node000001" title="Convert a UTF&#45;8 string to wide string (UTF&#45;16 on Windows)" alt="" coords="752,54,943,79"/>
+<area shape="poly" id="edge7_Node000001_Node000001" title=" " alt="" coords="890,45,878,36,847,33,822,35,809,40,806,45,813,52,809,56,801,46,805,36,821,30,847,27,880,31,893,41"/>
+<area shape="rect" id="Node000002" href="$d4/dc5/PathUtils_8h.html#a1567842971c631789eeeb0e992be5fa8" title="Convert a raw string path to wide string for Windows APIs." alt="" coords="520,47,704,87"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="738,69,704,69,704,64,738,64"/>
+<area shape="poly" id="edge6_Node000002_Node000002" title=" " alt="" coords="652,35,638,28,612,25,589,27,576,32,571,38,573,46,568,47,566,37,573,28,588,22,612,20,639,23,654,30"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="255,5,454,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="506,52,454,44,455,39,507,47"/>
+<area shape="rect" id="Node000004" href="$d4/dc5/PathUtils_8h.html#a01048ff9ba43efef7b20013a2b57ff0c" title="Get a std::filesystem::path from a raw string, handling Unicode properly." alt="" coords="237,94,472,119"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="507,86,437,97,436,91,506,80"/>
+<area shape="poly" id="edge4_Node000004_Node000004" title=" " alt="" coords="400,85,398,80,389,76,355,73,327,75,312,80,310,85,317,92,313,96,304,86,309,76,326,69,355,67,391,71,401,76,405,82"/>
+<area shape="rect" id="Node000005" href="$dc/d73/classAestra_1_1Audio_1_1StreamingDecoder.html#a6e7bd9cfc49510d7394c436ae7ea6d74" title="Start streaming a file." alt="" coords="5,87,189,127"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="224,109,189,109,189,104,224,104"/>
+</map>

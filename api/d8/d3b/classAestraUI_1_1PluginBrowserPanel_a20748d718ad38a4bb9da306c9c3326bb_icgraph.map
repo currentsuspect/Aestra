@@ -1,0 +1,7 @@
+<map id="AestraUI::PluginBrowserPanel::setScanStatus" name="AestraUI::PluginBrowserPanel::setScanStatus">
+<area shape="rect" id="Node000001" title="Set scanning status text." alt="" coords="509,5,724,45"/>
+<area shape="rect" id="Node000002" href="$da/d71/classAestraUI_1_1PluginUIController.html#a10606696ef2ab6682a594e1f970b3ac6" title="Start a plugin scan." alt="" coords="257,5,461,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="496,28,461,28,461,23,496,23"/>
+<area shape="rect" id="Node000003" href="$da/d71/classAestraUI_1_1PluginUIController.html#ac2f14df05bbb73d7ee39f9c875192dab" title="Bind a PluginBrowserPanel to this controller." alt="" coords="5,5,209,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="244,28,210,28,210,23,244,23"/>
+</map>

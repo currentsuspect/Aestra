@@ -1,0 +1,21 @@
+<map id="Aestra::Audio::PatternSource" name="Aestra::Audio::PatternSource">
+<area shape="rect" id="Node000001" title="Pattern source with variant payload." alt="" coords="651,160,857,185"/>
+<area shape="rect" id="Node000002" href="$d0/dd3/structAestra_1_1Audio_1_1PatternID.html" title="Type&#45;safe identifier for patterns." alt="" coords="272,9,449,35"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="464,29,545,46,587,58,628,74,662,93,694,116,742,158,738,162,691,120,660,98,626,79,586,63,544,51,462,35"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="37,5,112,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="126,16,272,18,272,23,126,21"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="317,61,404,87"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="418,78,517,93,627,118,681,137,727,157,725,162,679,142,626,123,516,98,417,83"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="5,55,144,95"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="158,72,317,72,317,77,158,78"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="327,111,394,136"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="408,125,627,150,677,157,676,163,626,155,408,130"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="335,160,387,185"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="400,170,650,170,650,175,400,175"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="233,209,488,264"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="501,211,675,183,676,188,502,216"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="341,288,380,313"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="393,293,487,273,557,254,626,229,726,183,729,188,628,234,559,259,489,278,394,298"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="272,338,449,378"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="462,341,544,320,586,305,625,286,661,262,694,234,740,184,744,187,698,238,665,266,628,291,588,310,546,325,464,346"/>
+</map>

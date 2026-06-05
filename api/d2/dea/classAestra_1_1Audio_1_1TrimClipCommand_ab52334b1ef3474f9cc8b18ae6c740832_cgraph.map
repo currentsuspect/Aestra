@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::TrimClipCommand::redo" name="Aestra::Audio::TrimClipCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,243,45"/>
+<area shape="rect" id="Node000002" href="$d2/dea/classAestra_1_1Audio_1_1TrimClipCommand.html#a86eb0d50134d7ab3d3195c90973a6889" title="Execute the command (first time)" alt="" coords="291,5,528,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="243,23,277,23,277,28,243,28"/>
+<area shape="rect" id="Node000003" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a451289f1d5433a3c8793fb18b649b8fb" title="Get a clip by ID." alt="" coords="576,5,781,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="528,23,562,23,562,28,528,28"/>
+</map>

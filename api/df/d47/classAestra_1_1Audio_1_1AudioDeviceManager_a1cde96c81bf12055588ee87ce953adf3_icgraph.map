@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioDeviceManager::getActiveDriverType" name="Aestra::Audio::AudioDeviceManager::getActiveDriverType">
+<area shape="rect" id="Node000001" title="Get active driver type." alt="" coords="281,5,500,45"/>
+<area shape="rect" id="Node000002" href="$df/d47/classAestra_1_1Audio_1_1AudioDeviceManager.html#a49ce785d7b72ee7efb2f19af884c2057" title="Check if we&#39;re using a fallback driver (not the preferred one)" alt="" coords="5,5,233,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="268,28,233,28,233,23,268,23"/>
+</map>

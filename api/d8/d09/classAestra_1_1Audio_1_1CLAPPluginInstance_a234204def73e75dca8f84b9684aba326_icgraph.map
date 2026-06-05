@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::CLAPPluginInstance::deactivate" name="Aestra::Audio::CLAPPluginInstance::deactivate">
+<area shape="rect" id="Node000001" title="Deactivate the plugin Called when audio engine stops or plugin is disabled." alt="" coords="483,37,673,77"/>
+<area shape="rect" id="Node000002" href="$d8/d09/classAestra_1_1Audio_1_1CLAPPluginInstance.html#a06b4b74acd32b88efe497c87582c46b6" title="Shutdown the plugin, releasing all resources." alt="" coords="244,5,435,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="469,45,434,41,435,35,469,40"/>
+<area shape="rect" id="Node000003" href="$d8/d09/classAestra_1_1Audio_1_1CLAPPluginInstance.html#a3dd624a4e525b26a021fc1b0af975a31" title="Unload the plugin." alt="" coords="244,69,435,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="469,75,435,79,434,74,469,69"/>
+<area shape="rect" id="Node000004" href="$d8/d09/classAestra_1_1Audio_1_1CLAPPluginInstance.html#a86e367e46e9a88b32b9f5e5cac1c3d77" title="Load a CLAP plugin from file." alt="" coords="5,69,196,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="230,92,196,92,196,87,230,87"/>
+</map>

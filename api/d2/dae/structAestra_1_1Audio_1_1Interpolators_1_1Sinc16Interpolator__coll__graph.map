@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::Interpolators::Sinc16Interpolator" name="Aestra::Audio::Interpolators::Sinc16Interpolator">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,108,205,148"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="33,5,71,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="50,45,51,64,56,83,75,106,71,109,51,85,45,65,45,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="127,5,193,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="152,45,133,85,119,109,115,106,128,83,147,42"/>
+</map>

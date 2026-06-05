@@ -1,0 +1,5 @@
+<map id="AestraUI::PluginUIController::unbindBrowser" name="AestraUI::PluginUIController::unbindBrowser">
+<area shape="rect" id="Node000001" title="Unbind the browser." alt="" coords="257,5,461,45"/>
+<area shape="rect" id="Node000002" href="$da/d71/classAestraUI_1_1PluginUIController.html#aa05f1e98e77b2502318b2163665bce90" title="Destroy the plugin UI controller and owned popup/editor widgets." alt="" coords="5,5,209,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="244,28,210,28,210,23,244,23"/>
+</map>

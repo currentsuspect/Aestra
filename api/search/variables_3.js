@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['data_0',['data',['../dc/d7e/structAestra_1_1Audio_1_1MidiBuffer_1_1Event.html#a247379836c673354b733cae7aeacf0e1',1,'Aestra::Audio::MidiBuffer::Event']]],
+  ['data1_1',['data1',['../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#ad6e805b0cdbe75fe45e47695562f7302',1,'Aestra::Audio::ScheduledEvent']]],
+  ['data2_2',['data2',['../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#a1faedd2dda17c8c1a830f7c53e2d8cf6',1,'Aestra::Audio::ScheduledEvent']]],
+  ['db_5fmax_3',['DB_MAX',['../db/d9f/namespaceAestra_1_1MixerMath.html#a6c80ec5570a93f626bf72272f17df93c',1,'Aestra::MixerMath']]],
+  ['db_5fmin_4',['DB_MIN',['../db/d9f/namespaceAestra_1_1MixerMath.html#a25e4117c1a67674d77b60e4fab6257a9',1,'Aestra::MixerMath']]],
+  ['db_5fsilence_5fthreshold_5',['DB_SILENCE_THRESHOLD',['../db/d9f/namespaceAestra_1_1MixerMath.html#a667d8ed3bd7b3fc3795f9b965828f275',1,'Aestra::MixerMath']]],
+  ['decorated_6',['decorated',['../d6/d3b/structAestra_1_1WindowDesc.html#a36deb4282569afb40b071f3b504d41f0',1,'Aestra::WindowDesc']]],
+  ['default_5fbase_5fsamples_5fper_5fpeak_7',['DEFAULT_BASE_SAMPLES_PER_PEAK',['../d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a7767dd50987cd8917e04248f33b84417',1,'Aestra::Audio::WaveformCache']]],
+  ['defaultextension_8',['defaultExtension',['../d0/da3/structAestra_1_1IPlatformUtils_1_1SaveFileDialogOptions.html#a6154f2c34123a411d43ca8c14a484112',1,'Aestra::IPlatformUtils::SaveFileDialogOptions']]],
+  ['defaultpath_9',['defaultPath',['../d0/da3/structAestra_1_1IPlatformUtils_1_1SaveFileDialogOptions.html#aee3e96636dbc241b3a7d2e7048dd2396',1,'Aestra::IPlatformUtils::SaveFileDialogOptions']]],
+  ['defaultpatternid_10',['defaultPatternId',['../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ae78ed36978e3b17323032a95432b8aea',1,'Aestra::Audio::UnitInfo']]],
+  ['defaultvalue_11',['defaultValue',['../d7/d5d/structAestra_1_1Audio_1_1PluginParameter.html#aec9dbc0caf32c95553c2df8cf814c7b0',1,'Aestra::Audio::PluginParameter']]],
+  ['description_12',['description',['../db/d44/structAestraUI_1_1PianoRollCommand.html#a887d266036c5117b89ac367e2535a54f',1,'AestraUI::PianoRollCommand']]],
+  ['deviceid_13',['deviceId',['../db/dd2/structAestra_1_1Audio_1_1AudioStreamConfig.html#a87e4a22535bccfad4dbeffa95a46cea7',1,'Aestra::Audio::AudioStreamConfig']]],
+  ['dispatchjitterms_14',['dispatchJitterMs',['../d5/d75/structAestra_1_1Audio_1_1AudioEngineDiagnostics.html#a1accf104bc2ccd5ed4cbbbeb59cc9326',1,'Aestra::Audio::AudioEngineDiagnostics']]],
+  ['dithering_15',['dithering',['../db/d69/structAestra_1_1Audio_1_1AudioQualitySettings.html#a584c0e7dc333a9010ac6c9095c971d87',1,'Aestra::Audio::AudioQualitySettings']]],
+  ['downstreamlatency_16',['downstreamLatency',['../d6/d3a/structAestra_1_1Audio_1_1SolvedLatencyTopology_1_1NodeSolution.html#a35921cb66d9e81bf61d2feaf838402f2',1,'Aestra::Audio::SolvedLatencyTopology::NodeSolution']]],
+  ['draggingview_17',['draggingView',['../dc/dce/structAestraContent_1_1ViewState.html#a14200ccec8f888c65a05da1e8237df12',1,'AestraContent::ViewState']]],
+  ['dragstartmouseoverlay_18',['dragStartMouseOverlay',['../dc/dce/structAestraContent_1_1ViewState.html#a125a31b315a7ecd6aadc9d9411c5ff94',1,'AestraContent::ViewState']]],
+  ['dragstartrect_19',['dragStartRect',['../dc/dce/structAestraContent_1_1ViewState.html#a9619ab3433b596297e4fdd1efb477142',1,'AestraContent::ViewState']]],
+  ['drywet_20',['dryWet',['../d4/da3/structAestraUI_1_1EffectChainRack_1_1EffectSlotInfo.html#a7568098e87fc328632b1226c3ad7db86',1,'AestraUI::EffectChainRack::EffectSlotInfo']]],
+  ['drywetmix_21',['drywetmix',['../dc/df2/structAestra_1_1Audio_1_1EffectSlot.html#a26e6c7db69bc2379befb79f073dd407f',1,'Aestra::Audio::EffectSlot::dryWetMix'],['../d4/d0e/structAestra_1_1Audio_1_1EffectChainSnapshotSlot.html#a128a5ca210e5438b0a56bc41ba2a33a5',1,'Aestra::Audio::EffectChainSnapshotSlot::dryWetMix']]],
+  ['durationseconds_22',['durationseconds',['../d5/dc1/structAestra_1_1Audio_1_1AudioExporter_1_1Result.html#a56a925ce2dd0b89f22d441ef286849a7',1,'Aestra::Audio::AudioExporter::Result::durationSeconds'],['../d2/d13/structExportDialog_1_1ExportJobResult.html#afc94a33679e403c83d8ebed5fd6f66aa',1,'ExportDialog::ExportJobResult::durationSeconds']]]
+];

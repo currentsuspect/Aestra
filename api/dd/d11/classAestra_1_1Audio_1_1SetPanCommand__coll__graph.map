@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::SetPanCommand" name="Aestra::Audio::SetPanCommand">
+<area shape="rect" id="Node000001" title="Command to change a channel&#39;s pan position." alt="" coords="5,79,233,104"/>
+<area shape="rect" id="Node000002" href="$d1/d5e/classAestra_1_1Audio_1_1ICommand.html" title="Abstract base class for all undoable operations." alt="" coords="25,5,213,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="122,44,122,79,117,79,117,44"/>
+</map>

@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::pathStringToWide" name="Aestra::Audio::pathStringToWide">
+<area shape="rect" id="Node000001" title="Convert a raw string path to wide string for Windows APIs." alt="" coords="520,47,704,87"/>
+<area shape="poly" id="edge5_Node000001_Node000001" title=" " alt="" coords="656,35,640,28,612,25,587,27,572,32,567,38,570,45,564,47,562,37,569,28,586,22,612,20,642,23,658,30"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="255,5,454,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="506,52,454,44,455,39,507,47"/>
+<area shape="rect" id="Node000003" href="$d4/dc5/PathUtils_8h.html#a01048ff9ba43efef7b20013a2b57ff0c" title="Get a std::filesystem::path from a raw string, handling Unicode properly." alt="" coords="237,94,472,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="507,86,437,97,436,91,506,80"/>
+<area shape="poly" id="edge3_Node000003_Node000003" title=" " alt="" coords="400,85,398,80,389,76,355,73,327,75,312,80,310,85,317,92,313,96,304,86,309,76,326,69,355,67,391,71,401,76,405,82"/>
+<area shape="rect" id="Node000004" href="$dc/d73/classAestra_1_1Audio_1_1StreamingDecoder.html#a6e7bd9cfc49510d7394c436ae7ea6d74" title="Start streaming a file." alt="" coords="5,87,189,127"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="224,109,189,109,189,104,224,104"/>
+</map>

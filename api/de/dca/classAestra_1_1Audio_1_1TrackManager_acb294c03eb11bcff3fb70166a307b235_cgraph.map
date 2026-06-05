@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::TrackManager::TrackManager" name="Aestra::Audio::TrackManager::TrackManager">
+<area shape="rect" id="Node000001" title="Construct a track manager and wire its internal playback helpers." alt="" coords="5,37,213,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="261,5,469,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,42,247,37,248,43,214,47"/>
+<area shape="rect" id="Node000003" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a8865c79ae9a55ae70d588e1f9f220b8c" title="Set pattern manager reference." alt="" coords="263,69,468,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="214,68,249,72,249,77,213,73"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::AudioFileValidator::hasValidAudioExtension" name="Aestra::Audio::AudioFileValidator::hasValidAudioExtension">
+<area shape="rect" id="Node000001" title="Check if file extension is a known audio format." alt="" coords="272,37,516,77"/>
+<area shape="rect" id="Node000002" href="$dd/d6c/classAestra_1_1Audio_1_1AudioFileValidator.html#a599bb3017e6601ea53da16eb57a926da" title="Get human&#45;readable description of why file was rejected." alt="" coords="5,5,224,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="258,44,224,40,224,35,259,39"/>
+<area shape="rect" id="Node000003" href="$dd/d6c/classAestra_1_1Audio_1_1AudioFileValidator.html#a714c8c458cf33f7fb0e1620623126c74" title="Check if a file is a valid audio file." alt="" coords="19,69,210,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="258,76,210,81,210,76,258,70"/>
+</map>

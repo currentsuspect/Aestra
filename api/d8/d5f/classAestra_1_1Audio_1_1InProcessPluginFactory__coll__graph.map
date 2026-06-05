@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::InProcessPluginFactory" name="Aestra::Audio::InProcessPluginFactory">
+<area shape="rect" id="Node000001" title="Default factory for loading plugins in the current process." alt="" coords="20,79,199,119"/>
+<area shape="rect" id="Node000002" href="$dc/d24/classAestra_1_1Audio_1_1IPluginFactory.html" title="Interface for creating plugin instances." alt="" coords="5,5,213,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="112,44,112,79,107,79,107,44"/>
+</map>

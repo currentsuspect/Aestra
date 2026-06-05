@@ -1,0 +1,7 @@
+<map id="AestraContent::setArsenalPanelVisible" name="AestraContent::setArsenalPanelVisible">
+<area shape="rect" id="Node000001" title="Explicitly show or hide the Arsenal panel." alt="" coords="511,5,703,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a4feb8815fae20c321c2abde07f12879a" title="Toggle the Arsenal panel regardless of active mode." alt="" coords="249,5,463,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="497,28,463,28,463,23,497,23"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a64124c9937df91c649b1101e8fb4ab8b" title="Toggle visibility for a specific workspace overlay." alt="" coords="5,13,201,38"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="236,28,202,28,202,23,236,23"/>
+</map>

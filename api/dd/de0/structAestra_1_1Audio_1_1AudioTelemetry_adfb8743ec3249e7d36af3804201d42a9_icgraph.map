@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioTelemetry::getThreadPriorityStatus" name="Aestra::Audio::AudioTelemetry::getThreadPriorityStatus">
+<area shape="rect" id="Node000001" title="B&#45;010: Get thread priority status." alt="" coords="272,5,491,45"/>
+<area shape="rect" id="Node000002" href="$dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ac20b10cdb35905bb003933bfb06b2130" title="B&#45;010: Check if all thread priority settings succeeded." alt="" coords="5,5,224,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="258,28,224,28,224,23,258,23"/>
+</map>

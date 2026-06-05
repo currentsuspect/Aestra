@@ -1,0 +1,5 @@
+<map id="Aestra::AppLifecycle::isState" name="Aestra::AppLifecycle::isState">
+<area shape="rect" id="Node000001" title="Check if app is in a specific state (thread&#45;safe)" alt="" coords="208,5,363,45"/>
+<area shape="rect" id="Node000002" href="$de/d85/classAestra_1_1AppLifecycle.html#acea27f03657d616fc86c10a68422cd84" title="Check if app is running (thread&#45;safe)" alt="" coords="5,5,160,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="194,28,161,28,161,23,194,23"/>
+</map>

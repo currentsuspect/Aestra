@@ -1,0 +1,9 @@
+<map id="Stats" name="Stats">
+<area shape="rect" id="Node000001" title=" " alt="" coords="119,167,174,192"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,72,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="40,44,45,93,53,118,66,141,91,160,120,171,118,176,89,165,62,144,48,120,39,94,35,45"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="113,5,180,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="149,44,149,166,144,166,144,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="205,5,243,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="226,45,218,93,210,119,197,144,184,158,170,169,167,164,181,154,192,141,205,117,213,92,220,44"/>
+</map>

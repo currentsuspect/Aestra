@@ -1,0 +1,13 @@
+<map id="AestraUI::UIMixerFader" name="AestraUI::UIMixerFader">
+<area shape="rect" id="Node000001" title="Vertical dB fader widget for the modern mixer UI." alt="" coords="724,123,895,149"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="376,91,561,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="575,111,724,125,724,131,575,117"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="239,23,296,30,351,41,406,64,450,89,447,94,404,69,350,47,295,35,239,29"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="209,101,376,101,376,107,209,107"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,160,278,151,350,136,374,126,411,114,413,119,376,130,351,141,279,157,209,165"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="375,141,563,166"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="576,148,700,143,724,141,724,146,700,148,577,153"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::PlaylistModel::buildRuntimeSnapshot" name="Aestra::Audio::PlaylistModel::buildRuntimeSnapshot">
+<area shape="rect" id="Node000001" title="Build a runtime snapshot for audio rendering." alt="" coords="5,37,211,77"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="259,5,479,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="211,42,245,38,246,43,211,47"/>
+<area shape="rect" id="Node000003" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a9df135788c4b7117579dc103b01d9f94" title="Get a source by ID." alt="" coords="259,69,478,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="211,67,246,72,245,77,211,73"/>
+</map>

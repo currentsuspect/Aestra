@@ -1,0 +1,5 @@
+<map id="Aestra::Events::ScopedConnections::add" name="Aestra::Events::ScopedConnections::add">
+<area shape="rect" id="Node000001" title="Add a connection to be managed." alt="" coords="5,13,288,38"/>
+<area shape="rect" id="Node000002" href="$d9/d88/classAestra_1_1Events_1_1Connection.html#a19fba9b39f7710a79a2925b2fd9a10cf" title="Check if this connection is still active." alt="" coords="336,5,533,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="288,23,322,23,322,28,288,28"/>
+</map>
