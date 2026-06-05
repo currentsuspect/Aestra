@@ -2,11 +2,9 @@
 #pragma once
 
 #include "../NUIRenderer.h"
-#include "../NUIFont.h"
 #include "../NUITextRendererSDF.h"
-#include "../NUITextRenderer.h"
-#include "../NUITextRendererGDI.h"
-#include "../NUITextRendererModern.h"
+#include <ft2build.h>
+#include FT_FREETYPE_H
 #include "NUIRenderBatch.h"
 #include "NUIDirtyRegion.h"
 #include "NUIRenderCache.h"

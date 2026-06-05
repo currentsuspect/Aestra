@@ -55,7 +55,6 @@ private:
 
     // ========== FLAC ==========
     static bool parseFLAC(const std::string& filePath, AudioMetadata& meta);
-    static std::string readVorbisComment(const uint8_t* data, size_t size, const std::string& key);
 
     // ========== WAV (Optional) ==========
     static bool parseWAV(const std::string& filePath, AudioMetadata& meta);
