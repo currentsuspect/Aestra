@@ -157,10 +157,6 @@ if(AESTRAUI_ENABLE_PREMIUM_EDITORS)
     )
 endif()
 
-if(AESTRAUI_ENABLE_PREMIUM_EDITORS)
-    target_compile_definitions(AestraUI_Core PRIVATE AESTRAUI_ENABLE_PREMIUM_EDITORS)
-endif()
-
 set(AESTRAUI_GRAPHICS_SOURCES
     Graphics/NUIRenderer.h
     Graphics/NUIRenderer.cpp
@@ -186,6 +182,10 @@ target_include_directories(AestraUI_Core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/Graphics
     ${CMAKE_CURRENT_SOURCE_DIR}/Common
 )
+
+if(AESTRAUI_ENABLE_PREMIUM_EDITORS)
+    target_compile_definitions(AestraUI_Core PRIVATE AESTRAUI_ENABLE_PREMIUM_EDITORS)
+endif()
 
 # The main application mixer widgets depend on AestraAudio + AestraCore headers.
 # Keep this PRIVATE so AestraUI can still be consumed as a standalone library
