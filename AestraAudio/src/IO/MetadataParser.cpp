@@ -432,13 +432,5 @@ bool MetadataParser::parseWAV(const std::string& filePath, AudioMetadata& meta) 
     return true;
 }
 
-std::string MetadataParser::readVorbisComment(const uint8_t* data, size_t size, const std::string& key) {
-    // Utility - not used directly but available for extension
-    (void)data;
-    (void)size;
-    (void)key;
-    return "";
-}
-
 } // namespace Audio
 } // namespace Aestra

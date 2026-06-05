@@ -27,15 +27,12 @@
 #include <map>
 #include <memory>
 
-// Remotery profiling (conditionally enabled via CMake)
-#ifdef AESTRA_ENABLE_REMOTERY
-#include "Remotery.h"
-#else
-// Stub macros when Remotery is disabled
+// Remotery profiling stubs (disabled)
 #define rmt_ScopedCPUSample(name, flags) ((void)0)
 #define rmt_BeginCPUSample(name, flags) ((void)0)
 #define rmt_EndCPUSample() ((void)0)
-#endif
+
+
 
 namespace {
 

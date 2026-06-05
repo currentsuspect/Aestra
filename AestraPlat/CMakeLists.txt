@@ -99,26 +99,6 @@ elseif(APPLE)
     # TODO: macOS frameworks (Cocoa, OpenGL, etc.)
 endif()
 
-# =============================================================================
-# Tests
-# =============================================================================
 # Tests moved to Tests/ directory - see Tests/CMakeLists.txt
-if(FALSE)  # Legacy tests - now centralized in Tests/
-option(AESTRA_BUILD_PLAT_TESTS "Build AestraPlat tests" ON)
-
-if(AESTRA_BUILD_PLAT_TESTS)
-    # Platform Window Test
-    add_executable(PlatformWindowTest src/Tests/PlatformWindowTest.cpp)
-    target_link_libraries(PlatformWindowTest PRIVATE AestraPlat)
-    
-    # Platform DPI Test
-    add_executable(PlatformDPITest src/Tests/PlatformDPITest.cpp)
-    target_link_libraries(PlatformDPITest PRIVATE AestraPlat)
-    
-    enable_testing()
-    add_test(NAME PlatformWindowTest COMMAND PlatformWindowTest)
-    add_test(NAME PlatformDPITest COMMAND PlatformDPITest)
-endif()
-endif()  # End legacy tests
 
 message(STATUS "AestraPlat configured for ${CMAKE_SYSTEM_NAME}")
