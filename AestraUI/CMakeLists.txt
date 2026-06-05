@@ -13,7 +13,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # =============================================================================
 
 option(AESTRAUI_BUILD_OPENGL "Build OpenGL renderer" ON)
-option(AESTRAUI_BUILD_VULKAN "Build Vulkan renderer" OFF)
 option(AESTRAUI_ENABLE_PREMIUM_EDITORS "Build private premium plugin editors" OFF)
 
 # =============================================================================
@@ -324,32 +323,6 @@ if(AESTRAUI_BUILD_OPENGL)
 endif()
 
 # ============================================================================
-# Vulkan Renderer (Optional)
-# ============================================================================
-
-if(AESTRAUI_BUILD_VULKAN)
-    find_package(Vulkan REQUIRED)
-    
-    set(AESTRAUI_VULKAN_SOURCES
-        Graphics/Vulkan/NUIRendererVK.h
-        Graphics/Vulkan/NUIRendererVK.cpp
-    )
-    
-    add_library(AestraUI_Vulkan STATIC
-        ${AESTRAUI_VULKAN_SOURCES}
-    )
-    
-    target_link_libraries(AestraUI_Vulkan PUBLIC
-        AestraUI_Core
-        Vulkan::Vulkan
-    )
-    
-    target_include_directories(AestraUI_Vulkan PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-endif()
-
-# ============================================================================
 # Platform Layer (Now uses AestraPlat!)
 # ============================================================================
 
@@ -398,10 +371,6 @@ if(AESTRAUI_BUILD_OPENGL)
     target_link_libraries(AestraUI INTERFACE AestraUI_OpenGL)
 endif()
 
-if(AESTRAUI_BUILD_VULKAN)
-    target_link_libraries(AestraUI INTERFACE AestraUI_Vulkan)
-endif()
-
 # ============================================================================
 # Installation
 # ============================================================================
@@ -429,7 +398,6 @@ message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "")
 message(STATUS "Build Options:")
 message(STATUS "  OpenGL:   ${AESTRAUI_BUILD_OPENGL}")
-message(STATUS "  Vulkan:   ${AESTRAUI_BUILD_VULKAN}")
 message(STATUS "")
 message(STATUS "Platform: ${PLATFORM_NAME}")
 # CMAKE_SIZEOF_VOID_P is in bytes, multiply by 8 for bits
