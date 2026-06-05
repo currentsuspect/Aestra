@@ -1251,7 +1251,7 @@ public:
     }
 
     bool isBandSoloed(uint32_t slot) const {
-        return slot < kMaxDynamicBands && getSoloBandSlot() == static_cast<int32_t>(slot);
+        return activeSoloBand() == static_cast<int32_t>(slot);
     }
 
     bool clearDynamicBandSlot(uint32_t slot) {
@@ -1633,7 +1633,7 @@ private:
 
     float slotFrequencyNorm(uint32_t slot) const {
         if (slot < kLegacyBandCount) {
-            return m_smoothed[bandV1FreqId(slot)].load(std::memory_order_relaxed);
+            return getParameter(bandV1FreqId(slot));
         }
         return m_dynamicBandFreqs[slot].load(std::memory_order_relaxed);
     }
@@ -1641,35 +1641,36 @@ private:
     float slotGainNorm(uint32_t slot) const {
         if (slot < kLegacyBandCount) {
             const FilterType type = slotFilterType(slot);
-            return filterTypeUsesGain(type) ? m_smoothed[bandV1GainId(slot)].load(std::memory_order_relaxed) : 0.5f;
+            return filterTypeUsesGain(type) ? getParameter(bandV1GainId(slot)) : 0.5f;
         }
         return m_dynamicBandGains[slot].load(std::memory_order_relaxed);
     }
 
     float slotQNorm(uint32_t slot) const {
         if (slot < kLegacyBandCount) {
-            return m_smoothed[bandV1QId(slot)].load(std::memory_order_relaxed);
+            return getParameter(bandV1QId(slot));
         }
         return m_dynamicBandQs[slot].load(std::memory_order_relaxed);
     }
 
     float slotFrequencyNormForProcessing(uint32_t slot) const {
         if (slot < kLegacyBandCount) {
-            return slotFrequencyNorm(slot);
+            return m_smoothed[bandV1FreqId(slot)].load(std::memory_order_relaxed);
         }
         return m_smoothedDynamicBandFreqs[slot].load(std::memory_order_relaxed);
     }
 
     float slotGainNormForProcessing(uint32_t slot) const {
         if (slot < kLegacyBandCount) {
-            return slotGainNorm(slot);
+            const FilterType type = slotFilterType(slot);
+            return filterTypeUsesGain(type) ? m_smoothed[bandV1GainId(slot)].load(std::memory_order_relaxed) : 0.5f;
         }
         return m_smoothedDynamicBandGains[slot].load(std::memory_order_relaxed);
     }
 
     float slotQNormForProcessing(uint32_t slot) const {
         if (slot < kLegacyBandCount) {
-            return slotQNorm(slot);
+            return m_smoothed[bandV1QId(slot)].load(std::memory_order_relaxed);
         }
         return m_smoothedDynamicBandQs[slot].load(std::memory_order_relaxed);
     }
@@ -1747,7 +1748,11 @@ private:
         if (parameterAffectsFilters(id)) {
             const uint32_t band = bandIndexForParam(id);
             if (band < kV1BandCount) {
-                m_bandEnabled[band].store(getParameter(bandV1EnableId(band)) > 0.5f, std::memory_order_relaxed);
+                const bool enabled = getParameter(bandV1EnableId(band)) > 0.5f;
+                m_bandEnabled[band].store(enabled, std::memory_order_relaxed);
+                if (!enabled && m_soloBand.load(std::memory_order_acquire) == static_cast<int32_t>(band)) {
+                    m_soloBand.store(-1, std::memory_order_release);
+                }
             }
             m_filtersDirty.store(true, std::memory_order_release);
         }
