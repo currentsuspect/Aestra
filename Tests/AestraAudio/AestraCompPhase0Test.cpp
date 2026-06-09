@@ -294,6 +294,75 @@ bool testStereoLinkAndSanitization() {
     return true;
 }
 
+bool testClassicFeedbackTopology() {
+    AestraComp comp;
+    configure(comp);
+    comp.setParameter(AestraComp::kCompMode, 1.0f / 2.0f);
+    comp.setParameter(AestraComp::kThreshold, thresholdNorm(-12.0f));
+    comp.setParameter(AestraComp::kRatio, ratioNorm(4.0f));
+    comp.setParameter(AestraComp::kAttack, attackNorm(0.1f));
+    comp.setParameter(AestraComp::kRelease, releaseNorm(10.0f));
+    std::vector<float> step(48000, 1.0f);
+    auto out = processMono(comp, step);
+    if (!(comp.getCurrentGainReductionDb() > 0.0f)) {
+        std::cerr << "classic mode produced no gain reduction\n";
+        return false;
+    }
+    if (!std::isfinite(out.back())) {
+        std::cerr << "classic mode produced non-finite output\n";
+        return false;
+    }
+    return true;
+}
+
+bool testOpticalModeDiffersFromClean() {
+    AestraComp cleanComp;
+    configure(cleanComp);
+    cleanComp.setParameter(AestraComp::kThreshold, thresholdNorm(-18.0f));
+    cleanComp.setParameter(AestraComp::kRatio, ratioNorm(6.0f));
+    std::vector<float> step(48000, 0.8f);
+    auto cleanOut = processMono(cleanComp, step);
+
+    AestraComp optComp;
+    configure(optComp);
+    optComp.setParameter(AestraComp::kCompMode, 2.0f / 2.0f);
+    optComp.setParameter(AestraComp::kThreshold, thresholdNorm(-18.0f));
+    optComp.setParameter(AestraComp::kRatio, ratioNorm(6.0f));
+    auto optOut = processMono(optComp, step);
+
+    const float cleanLast = cleanOut.back();
+    const float optLast = optOut.back();
+    if (std::abs(cleanLast - optLast) < 0.001f) {
+        std::cerr << "optical mode identical to clean: " << cleanLast << " vs " << optLast << "\n";
+        return false;
+    }
+    if (!std::isfinite(optLast)) {
+        std::cerr << "optical mode produced non-finite output\n";
+        return false;
+    }
+    return true;
+}
+
+bool testModeSwitchResetsFeedback() {
+    AestraComp comp;
+    configure(comp);
+    comp.setParameter(AestraComp::kCompMode, 1.0f / 2.0f);
+    comp.setParameter(AestraComp::kThreshold, thresholdNorm(-12.0f));
+    std::vector<float> step(24000, 1.0f);
+    (void)processMono(comp, step);
+
+    comp.setParameter(AestraComp::kCompMode, 0.0f);
+    std::vector<float> step2(256, 0.0f);
+    auto out = processMono(comp, step2);
+    for (float s : out) {
+        if (s != 0.0f) {
+            std::cerr << "mode switch produced transient on silence\n";
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 int main() {
@@ -306,6 +375,9 @@ int main() {
     if (!testMixAndGainControls()) return 1;
     if (!testDetectorHPFReducesLowFrequencyTriggering()) return 1;
     if (!testStereoLinkAndSanitization()) return 1;
+    if (!testClassicFeedbackTopology()) return 1;
+    if (!testOpticalModeDiffersFromClean()) return 1;
+    if (!testModeSwitchResetsFeedback()) return 1;
     std::cout << "All AestraComp V1 DSP tests passed.\n";
     return 0;
 }

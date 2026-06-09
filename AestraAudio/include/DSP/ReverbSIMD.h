@@ -433,8 +433,6 @@ inline void processDiffusersSSE(float& left, float& right,
     if (diffusionG <= 0.0001f) return;
     const __m128 vG = _mm_set1_ps(diffusionG);
     for (size_t stage = 0; stage < stageCount; ++stage) {
-        const float g = diffusionG;
-
         float* bufL = diffuserBuffersL[stage];
         float* bufR = diffuserBuffersR[stage];
         const int mask = diffuserMasks[stage];
@@ -443,7 +441,6 @@ inline void processDiffusersSSE(float& left, float& right,
         const int readP = (p - len) & mask;
 
         __m128 vIn = _mm_set_ps(0.0f, 0.0f, right, left);
-        __m128 vG = _mm_set1_ps(g);
         __m128 vDelayed = _mm_set_ps(0.0f, 0.0f, bufR[readP], bufL[readP]);
 
         __m128 vY = _mm_sub_ps(vDelayed, _mm_mul_ps(vG, vIn));

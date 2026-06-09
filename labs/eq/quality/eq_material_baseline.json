@@ -1,0 +1,61 @@
+{
+  "plugin_id": "com.Aestrastudios.eq",
+  "plugin_name": "Aestra EQ",
+  "baseline": "eq-v1-material-cases",
+  "sample_rate_hz": 48000,
+  "block_size": 512,
+  "materials": [
+    {
+      "name": "cleanup_mix",
+      "peak_in": 0.671662,
+      "rms_in": 0.230049,
+      "peak_out": 0.450948,
+      "rms_out": 0.143646,
+      "rumble_delta_db": -26.878,
+      "mud_delta_db": -4.105,
+      "presence_delta_db": 2.759,
+      "air_delta_db": 1.235,
+      "nan_inf_count": 0,
+      "sane": true
+    },
+    {
+      "name": "vocal_presence",
+      "peak_in": 0.535839,
+      "rms_in": 0.183676,
+      "peak_out": 0.517932,
+      "rms_out": 0.172788,
+      "rumble_delta_db": -5.427,
+      "mud_delta_db": -2.291,
+      "presence_delta_db": 3.708,
+      "air_delta_db": 1.686,
+      "nan_inf_count": 0,
+      "sane": true
+    },
+    {
+      "name": "resonance_notch",
+      "peak_in": 0.488771,
+      "rms_in": 0.224603,
+      "peak_out": 0.481050,
+      "rms_out": 0.128652,
+      "rumble_delta_db": 0.015,
+      "mud_delta_db": -14.612,
+      "presence_delta_db": 1.381,
+      "air_delta_db": 0.114,
+      "nan_inf_count": 0,
+      "sane": true
+    },
+    {
+      "name": "tilt_brighten",
+      "peak_in": 0.439366,
+      "rms_in": 0.163212,
+      "peak_out": 0.426360,
+      "rms_out": 0.136912,
+      "rumble_delta_db": -5.390,
+      "mud_delta_db": -5.285,
+      "presence_delta_db": 5.462,
+      "air_delta_db": 5.580,
+      "nan_inf_count": 0,
+      "sane": true
+    }
+  ]
+}

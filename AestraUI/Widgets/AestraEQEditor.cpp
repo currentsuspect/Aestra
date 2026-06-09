@@ -1960,8 +1960,15 @@ AestraEQEditor::FloatingBandPanelLayout AestraEQEditor::floatingBandPanelLayout(
     const auto& bd = m_bands[static_cast<size_t>(bandIdx)];
     const auto node = graphNodePosition(static_cast<size_t>(bandIdx), bounds);
     constexpr float kW = 178.0f;
+    constexpr float kRowH = 18.0f;
+    constexpr float kGap = 4.0f;
     const bool hasThirdRow = bd.usesGain && !bd.usesSlope;
-    const float kH = hasThirdRow ? 86.0f : 68.0f;
+    const bool hasDynamic = !bd.legacySlot && bd.usesGain && bd.dynamicEnabled;
+    const float baseH = hasThirdRow ? 86.0f : 68.0f;
+    const float dynRows = hasDynamic ? 4.0f : 0.0f;
+    const float dynSectionH = dynRows > 0.0f ? kGap + dynRows * kRowH + 6.0f : 0.0f;
+    const float kH = baseH + dynSectionH;
+
     const auto inner = graphInnerBounds(bounds);
     const bool nodeOnRight = node.x > inner.x + inner.width * 0.60f;
     const bool nodeInUpperHalf = node.y <= inner.y + inner.height * 0.50f;
@@ -1976,10 +1983,21 @@ AestraEQEditor::FloatingBandPanelLayout AestraEQEditor::floatingBandPanelLayout(
     layout.typeRect = {x + 34.0f, y + 4.0f, 76.0f, 17.0f};
     layout.stereoRect = {x + kW - 48.0f, y + 5.0f, 24.0f, 15.0f};
     layout.enableRect = {x + kW - 20.0f, y + 5.0f, 16.0f, 16.0f};
-    layout.freqRect = {x + 8.0f, y + 30.0f, kW - 16.0f, 18.0f};
-    layout.gainRect = {x + 8.0f, y + 48.0f, kW - 16.0f, 18.0f};
-    layout.qRect = {x + 8.0f, y + 66.0f, kW - 16.0f, 18.0f};
+    layout.freqRect = {x + 8.0f, y + 30.0f, kW - 16.0f, kRowH};
+    layout.gainRect = {x + 8.0f, y + 48.0f, kW - 16.0f, kRowH};
+    layout.qRect = {x + 8.0f, y + 66.0f, kW - 16.0f, kRowH};
     layout.hasQRow = bd.usesGain && !bd.usesSlope;
+
+    layout.hasDynamic = hasDynamic;
+    if (hasDynamic) {
+        const float dynStart = y + 30.0f + (hasThirdRow ? 3.0f : 2.0f) * kRowH + kGap;
+        layout.dynamicEnableRect = {x + 8.0f, dynStart, kW - 16.0f, kRowH};
+        layout.thresholdRect = {x + 8.0f, dynStart + 1.0f * kRowH, kW - 16.0f, kRowH};
+        layout.attackRect = {x + 8.0f, dynStart + 2.0f * kRowH, kW - 16.0f, kRowH};
+        layout.releaseRect = {x + 8.0f, dynStart + 3.0f * kRowH, kW - 16.0f, kRowH};
+        layout.kneeRect = NUIRect();
+        layout.targetGainRect = NUIRect();
+    }
     return layout;
 }
 
@@ -2717,6 +2735,45 @@ void AestraEQEditor::drawFloatingBandWindow(NUIRenderer& renderer, const NUIRect
     } else {
         drawRow(layout.gainRect, "Q", formatQ(bd.q), bd.q, Knob::Q);
     }
+
+    if (layout.hasDynamic) {
+        constexpr float kDynGap = 4.0f;
+        renderer.drawLine({r.x + 8.0f, layout.thresholdRect.y - kDynGap}, {r.right() - 8.0f, layout.thresholdRect.y - kDynGap},
+                          1.0f, c.withAlpha(0.12f));
+
+        const auto dynClamp = [](float v) { return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v); };
+        const auto dynTimeMs = [dynClamp](float norm, float minMs, float maxMs) {
+            const float clamped = dynClamp(norm);
+            return minMs * std::pow(maxMs / minMs, clamped);
+        };
+
+        const std::string dynLabel = bd.dynamicEnabled ? "DYN" : "DYN";
+        const NUIColor dynColor = bd.dynamicEnabled ? c.withAlpha(0.92f) : theme.getColor("textSecondary").withAlpha(0.40f);
+        renderer.drawText(dynLabel, {layout.dynamicEnableRect.x + 6.0f, layout.dynamicEnableRect.y + 3.0f}, 9.0f, dynColor);
+        renderer.fillCircle({layout.dynamicEnableRect.right() - 14.0f, layout.dynamicEnableRect.center().y}, 4.0f,
+                            bd.dynamicEnabled ? c.withAlpha(0.95f) : theme.getColor("textSecondary").withAlpha(0.25f));
+
+        const float thresholdDb = -72.0f + dynClamp(bd.dynamicThreshold) * 72.0f;
+        char thrBuf[24];
+        std::snprintf(thrBuf, sizeof(thrBuf), "%.1f dB", thresholdDb);
+        drawRow(layout.thresholdRect, "Thresh", thrBuf, bd.dynamicThreshold, Knob::Threshold);
+
+        const float attackMs = dynTimeMs(bd.dynamicAttack, 1.0f, 120.0f);
+        char atkBuf[24];
+        if (attackMs < 10.0f)
+            std::snprintf(atkBuf, sizeof(atkBuf), "%.2f ms", attackMs);
+        else
+            std::snprintf(atkBuf, sizeof(atkBuf), "%.1f ms", attackMs);
+        drawRow(layout.attackRect, "Attack", atkBuf, bd.dynamicAttack, Knob::Attack);
+
+        const float releaseMs = dynTimeMs(bd.dynamicRelease, 10.0f, 1200.0f);
+        char relBuf[24];
+        if (releaseMs < 100.0f)
+            std::snprintf(relBuf, sizeof(relBuf), "%.1f ms", releaseMs);
+        else
+            std::snprintf(relBuf, sizeof(relBuf), "%.0f ms", releaseMs);
+        drawRow(layout.releaseRect, "Release", relBuf, bd.dynamicRelease, Knob::Release);
+    }
 }
 
 void AestraEQEditor::drawBandTypeMenu(NUIRenderer& renderer) {
@@ -3396,6 +3453,46 @@ void AestraEQEditor::setBandValue(int idx, Knob target, float v) {
             const float cur = std::round(quantizeStereoNorm(bd.stereoNorm) * 4.0f);
             const float next = std::fmod(cur + 1.0f, 5.0f) / 4.0f;
             bd.stereoNorm = quantizeStereoNorm(next);
+            writeDynamicBandSnapshot(idx);
+        }
+        break;
+    case Knob::DynamicEnable:
+        bd.dynamicEnabled = v > 0.5f;
+        if (!bd.legacySlot) {
+            if (bd.sidechainLinked) {
+                bd.sidechainFreq = bd.freq;
+                bd.sidechainQ = bd.q;
+            }
+            writeDynamicBandSnapshot(idx);
+        }
+        break;
+    case Knob::Threshold:
+        bd.dynamicThreshold = v;
+        if (!bd.legacySlot) writeDynamicBandSnapshot(idx);
+        break;
+    case Knob::Knee:
+        bd.dynamicKnee = v;
+        if (!bd.legacySlot) writeDynamicBandSnapshot(idx);
+        break;
+    case Knob::Attack:
+        bd.dynamicAttack = v;
+        if (!bd.legacySlot) writeDynamicBandSnapshot(idx);
+        break;
+    case Knob::Release:
+        bd.dynamicRelease = v;
+        if (!bd.legacySlot) writeDynamicBandSnapshot(idx);
+        break;
+    case Knob::TargetGain:
+        bd.targetGain = v;
+        if (!bd.legacySlot) writeDynamicBandSnapshot(idx);
+        break;
+    case Knob::SidechainLinked:
+        bd.sidechainLinked = v > 0.5f;
+        if (!bd.legacySlot) {
+            if (bd.sidechainLinked) {
+                bd.sidechainFreq = bd.freq;
+                bd.sidechainQ = bd.q;
+            }
             writeDynamicBandSnapshot(idx);
         }
         break;
@@ -4301,9 +4398,13 @@ bool AestraEQEditor::handleFloatingBandPanelClick(const NUIMouseEvent& event) {
         m_draggingKnob = target;
         m_draggingLaneRect = lane;
         m_dragStartY = event.position.y;
-        m_dragStartValue = (target == Knob::Freq)   ? bd.freq
-                           : (target == Knob::Gain) ? (bd.usesSlope ? bd.q : bd.gain)
-                                                    : bd.q;
+        m_dragStartValue = (target == Knob::Freq)        ? bd.freq
+                           : (target == Knob::Gain)      ? (bd.usesSlope ? bd.q : bd.gain)
+                           : (target == Knob::Q)         ? bd.q
+                           : (target == Knob::Threshold) ? bd.dynamicThreshold
+                           : (target == Knob::Attack)    ? bd.dynamicAttack
+                           : (target == Knob::Release)   ? bd.dynamicRelease
+                                                         : bd.q;
         setBandValue(idx, target, normalizedFromLaneX(lane, event.position.x));
     };
     if (layout.freqRect.contains(event.position)) {
@@ -4317,6 +4418,30 @@ bool AestraEQEditor::handleFloatingBandPanelClick(const NUIMouseEvent& event) {
     if (layout.hasQRow && layout.qRect.contains(event.position)) {
         beginPanelLaneEdit(Knob::Q, layout.qRect);
         return true;
+    }
+    if (layout.hasDynamic) {
+        if (layout.dynamicEnableRect.contains(event.position)) {
+            bd.dynamicEnabled = !bd.dynamicEnabled;
+            if (bd.sidechainLinked) {
+                bd.sidechainFreq = bd.freq;
+                bd.sidechainQ = bd.q;
+            }
+            writeDynamicBandSnapshot(idx);
+            setDirty(true);
+            return true;
+        }
+        if (layout.thresholdRect.contains(event.position)) {
+            beginPanelLaneEdit(Knob::Threshold, layout.thresholdRect);
+            return true;
+        }
+        if (layout.attackRect.contains(event.position)) {
+            beginPanelLaneEdit(Knob::Attack, layout.attackRect);
+            return true;
+        }
+        if (layout.releaseRect.contains(event.position)) {
+            beginPanelLaneEdit(Knob::Release, layout.releaseRect);
+            return true;
+        }
     }
     return true;
 }
