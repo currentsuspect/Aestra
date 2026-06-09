@@ -1,8 +1,10 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AestraDelayEditor.h"
+
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "Plugin/AestraDelay.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -11,13 +13,19 @@ namespace AestraUI {
 
 namespace {
 constexpr float kPi = 3.14159265358979323846f;
-NUIColor accent() { return NUIColor(0.55f, 0.40f, 0.92f, 1.0f); }
-NUIColor cyanAccent() { return NUIColor(0.0f, 0.90f, 0.80f, 1.0f); }
-NUIColor cardBg() { return NUIColor(0.085f, 0.080f, 0.115f, 0.95f); }
+NUIColor accent() {
+    return NUIColor(0.55f, 0.40f, 0.92f, 1.0f);
+}
+NUIColor cyanAccent() {
+    return NUIColor(0.0f, 0.90f, 0.80f, 1.0f);
+}
+NUIColor cardBg() {
+    return NUIColor(0.085f, 0.080f, 0.115f, 0.95f);
+}
 NUIRect offsetRect(const NUIRect& r, float dx, float dy) {
     return NUIRect(r.x + dx, r.y + dy, r.width, r.height);
 }
-}
+} // namespace
 
 AestraDelayEditor::AestraDelayEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance)
     : m_instance(std::move(instance)) {
@@ -41,10 +49,16 @@ void AestraDelayEditor::buildControls() {
     m_knobs.clear();
     m_baseButtons.clear();
     m_modifierButtons.clear();
-    if (!m_instance) return;
+    if (!m_instance)
+        return;
 
     using Delay = Aestra::Audio::Plugins::AestraDelay;
-    struct Meta { const char* label; uint32_t id; bool readOnly; float defaultValue; };
+    struct Meta {
+        const char* label;
+        uint32_t id;
+        bool readOnly;
+        float defaultValue;
+    };
     const Meta meta[] = {
         {"Time", Delay::kTime, false, 0.25f},
         {"Feedback", Delay::kFeedback, false, 0.3f},
@@ -52,6 +66,8 @@ void AestraDelayEditor::buildControls() {
         {"Stereo", Delay::kStereoShift, false, 0.5f},
         {"Mod Rate", Delay::kModRate, false, 0.1f},
         {"Mod Depth", Delay::kModDepth, false, 0.0f},
+        {"Low Cut", Delay::kFeedbackHighpass, false, 0.0f},
+        {"Output", Delay::kOutputTrim, false, 0.5f},
     };
 
     for (const auto& item : meta) {
@@ -122,12 +138,12 @@ void AestraDelayEditor::layoutControls() {
     const float gridY = pillY + pillH + 14.0f;
 
     const float knobY = gridY + 16.0f;
-    const float cellGap = 14.0f;
-    const float cellW = (contentW - cellGap * 2.0f) / 3.0f;
+    const float cellGap = 12.0f;
+    const float cellW = (contentW - cellGap * 3.0f) / 4.0f;
     const float cellH = 84.0f;
     for (size_t i = 0; i < m_knobs.size(); ++i) {
-        const int row = static_cast<int>(i / 3);
-        const int col = static_cast<int>(i % 3);
+        const int row = static_cast<int>(i / 4);
+        const int col = static_cast<int>(i % 4);
         const float x = contentX + static_cast<float>(col) * (cellW + cellGap);
         const float y = knobY + static_cast<float>(row) * (cellH + 10.0f);
         m_knobs[i].bounds = {x, y, cellW, cellH};
@@ -155,13 +171,15 @@ void AestraDelayEditor::layoutControls() {
 
         const float baseBtnW = (syncPanelW - btnGap * 3.0f) / 4.0f;
         for (int i = 0; i < 4; ++i) {
-            m_baseButtons[i].bounds = {syncPanelX + static_cast<float>(i) * (baseBtnW + btnGap), syncPanelY, baseBtnW, btnH};
+            m_baseButtons[i].bounds = {syncPanelX + static_cast<float>(i) * (baseBtnW + btnGap), syncPanelY, baseBtnW,
+                                       btnH};
         }
 
         const float modBtnW = (syncPanelW - btnGap * 2.0f) / 3.0f;
         const float modRowY = syncPanelY + btnH + rowGap;
         for (int i = 0; i < 3; ++i) {
-            m_modifierButtons[i].bounds = {syncPanelX + static_cast<float>(i) * (modBtnW + btnGap), modRowY, modBtnW, btnH};
+            m_modifierButtons[i].bounds = {syncPanelX + static_cast<float>(i) * (modBtnW + btnGap), modRowY, modBtnW,
+                                           btnH};
         }
 
         const float readoutY = modRowY + btnH + readoutGap;
@@ -172,8 +190,7 @@ void AestraDelayEditor::layoutControls() {
     constexpr float kBypassW = 88.0f;
     constexpr float kBypassH = 26.0f;
     constexpr float kBypassRightPad = 44.0f;
-    m_bypassRect = NUIRect(b.right() - kBypassRightPad - kBypassW,
-                           b.y + AestraPanelWindow::TITLE_BAR_H + 6.0f,
+    m_bypassRect = NUIRect(b.right() - kBypassRightPad - kBypassW, b.y + AestraPanelWindow::TITLE_BAR_H + 6.0f,
                            kBypassW, kBypassH);
 
     m_mixSliderRect = {contentX, b.height - 42.0f, contentW, 32.0f};
@@ -182,7 +199,8 @@ void AestraDelayEditor::layoutControls() {
         using Delay = Aestra::Audio::Plugins::AestraDelay;
         const bool isSync = m_instance->getParameter(Delay::kSyncMode) > 0.5f;
         for (auto& k : m_knobs) {
-            if (k.paramId == Delay::kTime) k.readOnly = isSync;
+            if (k.paramId == Delay::kTime)
+                k.readOnly = isSync;
         }
     }
 }
@@ -193,7 +211,8 @@ void AestraDelayEditor::drawPillSwitches(NUIRenderer& renderer, float wx, float 
     const bool sync = m_instance && m_instance->getParameter(Delay::kSyncMode) > 0.5f;
     const bool ping = m_instance && m_instance->getParameter(Delay::kStereoMode) > 0.5f;
 
-    auto drawGroup = [&](const NUIRect& leftLocal, const NUIRect& rightLocal, const char* l, const char* r, bool rightActive, const NUIColor& activeColor) {
+    auto drawGroup = [&](const NUIRect& leftLocal, const NUIRect& rightLocal, const char* l, const char* r,
+                         bool rightActive, const NUIColor& activeColor) {
         NUIRect left = offsetRect(leftLocal, wx, wy);
         NUIRect right = offsetRect(rightLocal, wx, wy);
         const NUIRect outer(left.x, left.y, left.width + right.width, left.height);
@@ -202,7 +221,8 @@ void AestraDelayEditor::drawPillSwitches(NUIRenderer& renderer, float wx, float 
         auto seg = [&](const NUIRect& rect, const char* label, bool active) {
             renderer.fillRoundedRect(rect, 9.0f, active ? activeColor : NUIColor(0, 0, 0, 0));
             renderer.drawTextCentered(label, rect, 11.0f,
-                              active ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.86f));
+                                      active ? theme.getColor("textPrimary")
+                                             : theme.getColor("textSecondary").withAlpha(0.86f));
         };
         seg(left, l, !rightActive);
         seg(right, r, rightActive);
@@ -213,14 +233,15 @@ void AestraDelayEditor::drawPillSwitches(NUIRenderer& renderer, float wx, float 
 
     // Divider between time mode and channel mode groups
     const float dividerX = wx + m_syncRect.x + m_syncRect.width + 7.0f;
-    renderer.drawLine({dividerX, wy + m_syncRect.y + 6.0f},
-                      {dividerX, wy + m_syncRect.y + m_syncRect.height - 6.0f},
+    renderer.drawLine({dividerX, wy + m_syncRect.y + 6.0f}, {dividerX, wy + m_syncRect.y + m_syncRect.height - 6.0f},
                       1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.30f));
 }
 
 void AestraDelayEditor::drawSyncPanel(NUIRenderer& renderer, float wx, float wy) {
-    if (!m_instance || m_instance->getParameter(Aestra::Audio::Plugins::AestraDelay::kSyncMode) <= 0.5f) return;
-    if (m_baseButtons.empty() || m_modifierButtons.empty()) return;
+    if (!m_instance || m_instance->getParameter(Aestra::Audio::Plugins::AestraDelay::kSyncMode) <= 0.5f)
+        return;
+    if (m_baseButtons.empty() || m_modifierButtons.empty())
+        return;
 
     auto& theme = NUIThemeManager::getInstance();
 
@@ -230,8 +251,7 @@ void AestraDelayEditor::drawSyncPanel(NUIRenderer& renderer, float wx, float wy)
             renderer.fillRoundedRect(r, 6.0f, accent());
             renderer.drawTextCentered(btn.label, r, 9.5f, theme.getColor("textPrimary"));
         } else {
-            NUIColor fill = hovered ? NUIColor(0.10f, 0.095f, 0.14f, 0.92f)
-                                     : NUIColor(0.07f, 0.065f, 0.09f, 0.90f);
+            NUIColor fill = hovered ? NUIColor(0.10f, 0.095f, 0.14f, 0.92f) : NUIColor(0.07f, 0.065f, 0.09f, 0.90f);
             renderer.fillRoundedRect(r, 6.0f, fill);
             renderer.strokeRoundedRect(r, 6.0f, 1.0f, accent().withAlpha(0.32f));
             renderer.drawTextCentered(btn.label, r, 9.5f, theme.getColor("textSecondary").withAlpha(0.88f));
@@ -255,7 +275,8 @@ void AestraDelayEditor::drawSyncPanel(NUIRenderer& renderer, float wx, float wy)
 
 std::string AestraDelayEditor::syncReadoutText() const {
     using Delay = Aestra::Audio::Plugins::AestraDelay;
-    if (!m_instance) return {};
+    if (!m_instance)
+        return {};
     if (auto delay = std::dynamic_pointer_cast<Delay>(m_instance)) {
         int ms = static_cast<int>(std::round(delay->getEffectiveDelayMs()));
         return std::to_string(ms) + "ms";
@@ -264,7 +285,8 @@ std::string AestraDelayEditor::syncReadoutText() const {
 }
 
 std::string AestraDelayEditor::formattedValue(uint32_t paramId) const {
-    if (!m_instance) return {};
+    if (!m_instance)
+        return {};
     using Delay = Aestra::Audio::Plugins::AestraDelay;
     if (paramId == Delay::kTime) {
         if (auto delay = std::dynamic_pointer_cast<Delay>(m_instance)) {
@@ -297,16 +319,16 @@ void AestraDelayEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, fl
         const float a1 = sa + (ea - sa) * static_cast<float>(i) / 34.0f;
         const float a2 = sa + (ea - sa) * static_cast<float>(i + 1) / 34.0f;
         renderer.drawLine({cx + std::cos(a1) * (r - 3.0f), cy + std::sin(a1) * (r - 3.0f)},
-                          {cx + std::cos(a2) * (r - 3.0f), cy + std::sin(a2) * (r - 3.0f)},
-                          3.0f, knobAccent.withAlpha(k.readOnly ? 0.50f : 0.92f));
+                          {cx + std::cos(a2) * (r - 3.0f), cy + std::sin(a2) * (r - 3.0f)}, 3.0f,
+                          knobAccent.withAlpha(k.readOnly ? 0.50f : 0.92f));
     }
 
     const float pa = sa + value * kPi * 1.5f;
     renderer.fillCircle({cx + std::cos(pa) * (r - 7.0f), cy + std::sin(pa) * (r - 7.0f)}, 3.2f, knobAccent);
-    renderer.drawText(k.label, {bounds.x + 10.0f, bounds.y + 6.5f}, 10.5f, theme.getColor("textPrimary").withAlpha(0.90f));
+    renderer.drawText(k.label, {bounds.x + 10.0f, bounds.y + 6.5f}, 10.5f,
+                      theme.getColor("textPrimary").withAlpha(0.90f));
     const std::string valueStr = formattedValue(k.paramId);
-    renderer.drawText(valueStr, {bounds.x + 10.0f, bounds.bottom() - 15.5f}, 10.5f,
-                      knobAccent.withAlpha(0.96f));
+    renderer.drawText(valueStr, {bounds.x + 10.0f, bounds.bottom() - 15.5f}, 10.5f, knobAccent.withAlpha(0.96f));
 }
 
 void AestraDelayEditor::drawMixSlider(NUIRenderer& renderer, float wx, float wy) {
@@ -317,14 +339,14 @@ void AestraDelayEditor::drawMixSlider(NUIRenderer& renderer, float wx, float wy)
     const NUIRect track(mixRect.x + 38.0f, mixRect.y + 12.0f, mixRect.width - 78.0f, 8.0f);
     renderer.fillRoundedRect(mixRect, 10.0f, NUIColor(0.07f, 0.065f, 0.09f, 0.92f));
     renderer.strokeRoundedRect(mixRect, 10.0f, 1.0f, accent().withAlpha(0.35f));
-    renderer.drawText("Mix", {mixRect.x + 14.0f, mixRect.y + 10.0f}, 10.5f, theme.getColor("textPrimary").withAlpha(0.95f));
+    renderer.drawText("Mix", {mixRect.x + 14.0f, mixRect.y + 10.0f}, 10.5f,
+                      theme.getColor("textPrimary").withAlpha(0.95f));
     renderer.fillRoundedRect(track, 3.0f, NUIColor(1, 1, 1, 0.10f));
     renderer.fillRoundedRect({track.x, track.y, track.width * mix, track.height}, 3.0f, accent().withAlpha(0.92f));
     renderer.fillCircle({track.x + track.width * mix, track.center().y}, 9.0f, theme.getColor("textPrimary"));
     const std::string pctStr = std::to_string(static_cast<int>(std::round(mix * 100.0f))) + "%";
     const float pctW = renderer.measureText(pctStr, 10.0f).width;
-    renderer.drawText(pctStr,
-                      {mixRect.right() - 14.0f - pctW, mixRect.y + 10.0f}, 10.0f, accent().withAlpha(0.96f));
+    renderer.drawText(pctStr, {mixRect.right() - 14.0f - pctW, mixRect.y + 10.0f}, 10.0f, accent().withAlpha(0.96f));
 }
 
 void AestraDelayEditor::drawBypassPill(NUIRenderer& renderer) {
@@ -332,11 +354,13 @@ void AestraDelayEditor::drawBypassPill(NUIRenderer& renderer) {
     const bool bypassed = m_instance && m_instance->getParameter(Aestra::Audio::Plugins::AestraDelay::kBypass) > 0.5f;
     constexpr float kFont = 10.0f;
     if (bypassed) {
-        renderer.fillRoundedRect(m_bypassRect, 7.0f, NUIColor(0.92f, 0.28f, 0.22f).withAlpha(m_bypassHovered ? 0.94f : 0.78f));
+        renderer.fillRoundedRect(m_bypassRect, 7.0f,
+                                 NUIColor(0.92f, 0.28f, 0.22f).withAlpha(m_bypassHovered ? 0.94f : 0.78f));
         renderer.strokeRoundedRect(m_bypassRect, 7.0f, 1.0f, NUIColor(0.92f, 0.28f, 0.22f).withAlpha(0.50f));
         renderer.drawTextCentered("BYPASSED", m_bypassRect, kFont, theme.getColor("textPrimary"));
     } else {
-        renderer.fillRoundedRect(m_bypassRect, 7.0f, theme.getColor("success").withAlpha(m_bypassHovered ? 0.30f : 0.18f));
+        renderer.fillRoundedRect(m_bypassRect, 7.0f,
+                                 theme.getColor("success").withAlpha(m_bypassHovered ? 0.30f : 0.18f));
         renderer.strokeRoundedRect(m_bypassRect, 7.0f, 1.0f, theme.getColor("success").withAlpha(0.40f));
         renderer.drawTextCentered("ACTIVE", m_bypassRect, kFont, theme.getColor("success"));
     }
@@ -357,7 +381,8 @@ void AestraDelayEditor::drawContent(NUIRenderer& renderer, const NUIRect& conten
     const bool sync = m_instance && m_instance->getParameter(Delay::kSyncMode) > 0.5f;
     for (size_t i = 0; i < m_knobs.size(); ++i) {
         // Hide Time knob (index 0) in sync mode
-        if (sync && i == 0) continue;
+        if (sync && i == 0)
+            continue;
         drawKnob(renderer, m_knobs[i], wx, wy);
     }
     drawMixSlider(renderer, wx, wy);
@@ -365,14 +390,16 @@ void AestraDelayEditor::drawContent(NUIRenderer& renderer, const NUIRect& conten
 
 int AestraDelayEditor::hitTestBaseButton(float localX, float localY) const {
     for (size_t i = 0; i < m_baseButtons.size(); ++i) {
-        if (m_baseButtons[i].bounds.contains({localX, localY})) return static_cast<int>(i);
+        if (m_baseButtons[i].bounds.contains({localX, localY}))
+            return static_cast<int>(i);
     }
     return -1;
 }
 
 int AestraDelayEditor::hitTestModifierButton(float localX, float localY) const {
     for (size_t i = 0; i < m_modifierButtons.size(); ++i) {
-        if (m_modifierButtons[i].bounds.contains({localX, localY})) return static_cast<int>(i);
+        if (m_modifierButtons[i].bounds.contains({localX, localY}))
+            return static_cast<int>(i);
     }
     return -1;
 }
@@ -391,30 +418,65 @@ int AestraDelayEditor::computeDivisionIndex(int baseIdx, int modifierIdx) const 
 void AestraDelayEditor::divisionIndexToBaseModifier(int divisionIdx, int& baseIdx, int& modifierIdx) const {
     using Delay = Aestra::Audio::Plugins::AestraDelay;
     switch (divisionIdx) {
-    case Delay::kDiv1_4:   baseIdx = 0; modifierIdx = 0; break;
-    case Delay::kDiv1_8:   baseIdx = 1; modifierIdx = 0; break;
-    case Delay::kDiv1_16:  baseIdx = 2; modifierIdx = 0; break;
-    case Delay::kDiv1_32:  baseIdx = 3; modifierIdx = 0; break;
-    case Delay::kDiv1_4D:  baseIdx = 0; modifierIdx = 1; break;
-    case Delay::kDiv1_8D:  baseIdx = 1; modifierIdx = 1; break;
-    case Delay::kDiv1_16D: baseIdx = 2; modifierIdx = 1; break;
-    case Delay::kDiv1_4T:  baseIdx = 0; modifierIdx = 2; break;
-    case Delay::kDiv1_8T:  baseIdx = 1; modifierIdx = 2; break;
-    case Delay::kDiv1_16T: baseIdx = 2; modifierIdx = 2; break;
-    default:               baseIdx = 1; modifierIdx = 0; break;
+    case Delay::kDiv1_4:
+        baseIdx = 0;
+        modifierIdx = 0;
+        break;
+    case Delay::kDiv1_8:
+        baseIdx = 1;
+        modifierIdx = 0;
+        break;
+    case Delay::kDiv1_16:
+        baseIdx = 2;
+        modifierIdx = 0;
+        break;
+    case Delay::kDiv1_32:
+        baseIdx = 3;
+        modifierIdx = 0;
+        break;
+    case Delay::kDiv1_4D:
+        baseIdx = 0;
+        modifierIdx = 1;
+        break;
+    case Delay::kDiv1_8D:
+        baseIdx = 1;
+        modifierIdx = 1;
+        break;
+    case Delay::kDiv1_16D:
+        baseIdx = 2;
+        modifierIdx = 1;
+        break;
+    case Delay::kDiv1_4T:
+        baseIdx = 0;
+        modifierIdx = 2;
+        break;
+    case Delay::kDiv1_8T:
+        baseIdx = 1;
+        modifierIdx = 2;
+        break;
+    case Delay::kDiv1_16T:
+        baseIdx = 2;
+        modifierIdx = 2;
+        break;
+    default:
+        baseIdx = 1;
+        modifierIdx = 0;
+        break;
     }
 }
 
 void AestraDelayEditor::applySyncSelection() {
     using Delay = Aestra::Audio::Plugins::AestraDelay;
-    if (!m_instance) return;
+    if (!m_instance)
+        return;
     const int divIdx = computeDivisionIndex(m_syncBaseIndex, m_syncModifierIndex);
     m_instance->setParameter(Delay::kNoteDivision, Delay::noteDivisionParamFromIndex(divIdx));
     setDirty(true);
 }
 
 bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
-    if (!isVisible()) return false;
+    if (!isVisible())
+        return false;
 
     // Let base class handle title bar / close / drag first
     if (AestraPanelWindow::onMouseEvent(event)) {
@@ -436,7 +498,8 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
 
-    if (!contains && !isDraggingWindow() && !m_draggingMix) return false;
+    if (!contains && !isDraggingWindow() && !m_draggingMix)
+        return false;
 
     using Delay = Aestra::Audio::Plugins::AestraDelay;
     if (event.pressed && event.button == NUIMouseButton::Left) {
@@ -468,14 +531,16 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
                 if (base >= 0 && base != m_syncBaseIndex) {
                     m_syncBaseIndex = base;
                     // 1/32 has no dotted/triplet variants — reset modifier to Straight
-                    if (base == 3) m_syncModifierIndex = 0;
+                    if (base == 3)
+                        m_syncModifierIndex = 0;
                     applySyncSelection();
                     return true;
                 }
                 const int mod = hitTestModifierButton(mx, my);
                 if (mod >= 0 && mod != m_syncModifierIndex) {
                     // Prevent dotted/triplet on 1/32 base
-                    if (m_syncBaseIndex == 3 && mod != 0) return true;
+                    if (m_syncBaseIndex == 3 && mod != 0)
+                        return true;
                     m_syncModifierIndex = mod;
                     applySyncSelection();
                     return true;
@@ -523,8 +588,10 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
         } else if (m_hoveredBaseButton >= 0 || m_hoveredModifierButton >= 0) {
             m_hoveredBaseButton = -1;
             m_hoveredModifierButton = -1;
-            for (auto& btn : m_baseButtons) btn.hovered = false;
-            for (auto& btn : m_modifierButtons) btn.hovered = false;
+            for (auto& btn : m_baseButtons)
+                btn.hovered = false;
+            for (auto& btn : m_modifierButtons)
+                btn.hovered = false;
             setDirty(true);
         }
     }

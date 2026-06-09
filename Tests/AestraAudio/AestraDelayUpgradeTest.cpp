@@ -5,6 +5,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <vector>
 
@@ -17,9 +19,7 @@ struct StereoBuffer {
     std::vector<float> right;
 };
 
-StereoBuffer processStereo(AestraDelay& delay,
-                           const std::vector<float>& inL,
-                           const std::vector<float>& inR) {
+StereoBuffer processStereo(AestraDelay& delay, const std::vector<float>& inL, const std::vector<float>& inR) {
     StereoBuffer out{std::vector<float>(inL.size(), 0.0f), std::vector<float>(inL.size(), 0.0f)};
     const float* inputs[] = {inL.data(), inR.data()};
     float* outputs[] = {out.left.data(), out.right.data()};
@@ -65,8 +65,8 @@ bool testSyncedEighthAt120Bpm() {
     const size_t peak = peakIndexInRange(out.left, expected - 8, expected + 9);
     const float peakValue = std::abs(out.left[peak]);
     if (peakValue < 0.75f || std::abs(static_cast<int>(peak) - static_cast<int>(expected)) > 2) {
-        std::cerr << "Synced 1/8 delay missed grid. peak=" << peak
-                  << " value=" << peakValue << " expected=" << expected << "\n";
+        std::cerr << "Synced 1/8 delay missed grid. peak=" << peak << " value=" << peakValue << " expected=" << expected
+                  << "\n";
         return false;
     }
     return true;
@@ -97,8 +97,7 @@ bool testPingPongAlternates() {
     const float secondL = std::abs(out.left[960]);
     const float secondR = std::abs(out.right[960]);
 
-    if (firstL < 0.70f || firstR < 0.10f || firstR > 0.20f ||
-        secondR < 0.25f || secondL < 0.05f || secondL > 0.20f) {
+    if (firstL < 0.70f || firstR < 0.10f || firstR > 0.20f || secondR < 0.25f || secondL < 0.05f || secondL > 0.20f) {
         std::cerr << "Ping-pong image did not alternate with bleed. first L/R=" << firstL << "/" << firstR
                   << " second L/R=" << secondL << "/" << secondR << "\n";
         return false;
@@ -134,8 +133,8 @@ bool testPingPongSustainedInputDoesNotAccumulateLeft() {
 
     const float ratio = energyR > 1.0e-6f ? energyL / energyR : 999.0f;
     if (ratio < 0.8f || ratio > 1.25f) {
-        std::cerr << "Sustained ping-pong accumulated channel imbalance. energy L/R="
-                  << energyL << "/" << energyR << " ratio=" << ratio << "\n";
+        std::cerr << "Sustained ping-pong accumulated channel imbalance. energy L/R=" << energyL << "/" << energyR
+                  << " ratio=" << ratio << "\n";
         return false;
     }
     return true;
@@ -195,8 +194,7 @@ bool testHotWetRepeatIsClean() {
 
     auto out = processStereo(delay, inL, inR);
     if (std::abs(out.left[480] - 2.25f) > 1.0e-6f || std::abs(out.right[480] + 2.25f) > 1.0e-6f) {
-        std::cerr << "Hot wet repeat was altered. L=" << out.left[480]
-                  << " R=" << out.right[480] << "\n";
+        std::cerr << "Hot wet repeat was altered. L=" << out.left[480] << " R=" << out.right[480] << "\n";
         return false;
     }
     return true;
@@ -250,8 +248,102 @@ bool testDryPathIsNotSaturatedAtZeroMix() {
     std::vector<float> inR(512, -2.25f);
     auto out = processStereo(delay, inL, inR);
     if (std::abs(out.left.back() - 2.25f) > 1.0e-6f || std::abs(out.right.back() + 2.25f) > 1.0e-6f) {
-        std::cerr << "Dry path was altered at zero mix. L=" << out.left.back()
-                  << " R=" << out.right.back() << "\n";
+        std::cerr << "Dry path was altered at zero mix. L=" << out.left.back() << " R=" << out.right.back() << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool testOutputTrimAppliesAtZeroMix() {
+    AestraDelay delay;
+    delay.initialize(48000.0, 512);
+    delay.setParameter(AestraDelay::kMix, 0.0f);
+    delay.setParameter(AestraDelay::kOutputTrim, 1.0f);
+    delay.setParameter(AestraDelay::kBypass, 0.0f);
+    delay.activate();
+
+    std::vector<float> inL(64, 0.25f);
+    std::vector<float> inR(64, -0.25f);
+    auto out = processStereo(delay, inL, inR);
+    const float expected = 0.25f * std::pow(10.0f, 12.0f / 20.0f);
+    if (std::abs(out.left.back() - expected) > 1.0e-5f || std::abs(out.right.back() + expected) > 1.0e-5f) {
+        std::cerr << "Output trim did not apply at zero mix. L=" << out.left.back() << " R=" << out.right.back()
+                  << " expected=" << expected << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool testFeedbackHighpassReducesLowFrequencyRepeats() {
+    auto renderEnergy = [](float lowCut) {
+        AestraDelay delay;
+        delay.initialize(48000.0, 512);
+        delay.setParameter(AestraDelay::kTime, 0.0f);
+        delay.setParameter(AestraDelay::kFeedback, 0.85f);
+        delay.setParameter(AestraDelay::kDamping, 0.0f);
+        delay.setParameter(AestraDelay::kStereoShift, 0.5f);
+        delay.setParameter(AestraDelay::kModDepth, 0.0f);
+        delay.setParameter(AestraDelay::kMix, 1.0f);
+        delay.setParameter(AestraDelay::kFeedbackHighpass, lowCut);
+        delay.setParameter(AestraDelay::kOutputTrim, 0.5f);
+        delay.setParameter(AestraDelay::kBypass, 0.0f);
+        delay.activate();
+
+        std::vector<float> inL(4800, 0.0f);
+        std::vector<float> inR(4800, 0.0f);
+        for (size_t i = 0; i < 480; ++i) {
+            inL[i] = 1.0f;
+            inR[i] = 1.0f;
+        }
+
+        auto out = processStereo(delay, inL, inR);
+        float energy = 0.0f;
+        for (size_t i = 1440; i < out.left.size(); ++i) {
+            energy += std::abs(out.left[i]) + std::abs(out.right[i]);
+        }
+        return energy;
+    };
+
+    const float lowCutMin = renderEnergy(0.0f);
+    const float lowCutMax = renderEnergy(1.0f);
+    if (!(lowCutMax < lowCutMin * 0.45f)) {
+        std::cerr << "Feedback high-pass did not reduce low-frequency repeat energy. min/max=" << lowCutMin << "/"
+                  << lowCutMax << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool testVersion2StateLoadsWithNewDefaults() {
+    struct LegacyStateBlobV2 {
+        uint32_t magic;
+        uint32_t version;
+        float params[11];
+    } blob{};
+
+    blob.magic = AestraDelay::kStateMagicV2;
+    blob.version = 2;
+    blob.params[AestraDelay::kTime] = 0.2f;
+    blob.params[AestraDelay::kFeedback] = 0.4f;
+    blob.params[AestraDelay::kMix] = 0.7f;
+    blob.params[AestraDelay::kNoteDivision] = AestraDelay::noteDivisionParamFromIndex(AestraDelay::kDiv1_4);
+
+    std::vector<uint8_t> state(sizeof(blob));
+    std::memcpy(state.data(), &blob, sizeof(blob));
+
+    AestraDelay delay;
+    delay.initialize(48000.0, 512);
+    if (!delay.loadState(state)) {
+        std::cerr << "V2 state failed to load.\n";
+        return false;
+    }
+    if (std::abs(delay.getParameter(AestraDelay::kFeedbackHighpass) - 0.0f) > 1.0e-6f ||
+        std::abs(delay.getParameter(AestraDelay::kOutputTrim) - 0.5f) > 1.0e-6f ||
+        std::abs(delay.getParameter(AestraDelay::kMix) - 0.7f) > 1.0e-6f) {
+        std::cerr << "V2 migration defaults were not preserved. lowCut="
+                  << delay.getParameter(AestraDelay::kFeedbackHighpass)
+                  << " output=" << delay.getParameter(AestraDelay::kOutputTrim)
+                  << " mix=" << delay.getParameter(AestraDelay::kMix) << "\n";
         return false;
     }
     return true;
@@ -261,13 +353,26 @@ bool testDryPathIsNotSaturatedAtZeroMix() {
 
 int main() {
     std::cout << "AestraDelay Upgrade Tests\n";
-    if (!testSyncedEighthAt120Bpm()) return 1;
-    if (!testPingPongAlternates()) return 1;
-    if (!testPingPongSustainedInputDoesNotAccumulateLeft()) return 1;
-    if (!testHighFeedbackStaysFinite()) return 1;
-    if (!testHotWetRepeatIsClean()) return 1;
-    if (!testModulationMaxStaysFinite()) return 1;
-    if (!testDryPathIsNotSaturatedAtZeroMix()) return 1;
+    if (!testSyncedEighthAt120Bpm())
+        return 1;
+    if (!testPingPongAlternates())
+        return 1;
+    if (!testPingPongSustainedInputDoesNotAccumulateLeft())
+        return 1;
+    if (!testHighFeedbackStaysFinite())
+        return 1;
+    if (!testHotWetRepeatIsClean())
+        return 1;
+    if (!testModulationMaxStaysFinite())
+        return 1;
+    if (!testDryPathIsNotSaturatedAtZeroMix())
+        return 1;
+    if (!testOutputTrimAppliesAtZeroMix())
+        return 1;
+    if (!testFeedbackHighpassReducesLowFrequencyRepeats())
+        return 1;
+    if (!testVersion2StateLoadsWithNewDefaults())
+        return 1;
     std::cout << "All AestraDelay upgrade tests passed.\n";
     return 0;
 }
