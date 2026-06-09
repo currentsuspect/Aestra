@@ -31,7 +31,7 @@ public:
     void onResize() { layoutControls(); }
 
 private:
-    enum class Knob { None, Enable, Freq, Gain, Q, Type, Stereo };
+    enum class Knob { None, Enable, Freq, Gain, Q, Type, Stereo, DynamicEnable, Threshold, Attack, Release };
     enum class BandMenuAction {
         Reset,
         InvertGain,
@@ -96,6 +96,13 @@ private:
         NUIRect gainRect;
         NUIRect qRect;
         bool hasQRow = false;
+        bool hasDynamic = false;
+        NUIRect dynamicEnableRect;
+        NUIRect thresholdRect;
+        NUIRect kneeRect;
+        NUIRect attackRect;
+        NUIRect releaseRect;
+        NUIRect targetGainRect;
     };
 
     void buildBands();

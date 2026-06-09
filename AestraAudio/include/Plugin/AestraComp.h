@@ -24,6 +24,26 @@ public:
     static constexpr uint32_t kStateMagicV2 = 0x434D5002; // 'CMP' v2
     static constexpr uint32_t kStateMagicV1 = 0x434D5001; // 'CMP' v1
 
+    // FFT spectrum data for analyzer display
+    static constexpr uint32_t kFftSize = 2048;
+    static constexpr uint32_t kFftBins = kFftSize / 2 + 1; // 1025
+    static constexpr uint32_t kFftStages = []() constexpr {
+        uint32_t n = kFftSize, s = 0;
+        while (n > 1) { n >>= 1; ++s; }
+        return s;
+    }(); // log2(2048) = 11
+
+    struct FftSpectrum {
+        float inputBins[kFftBins]{};
+        float outputBins[kFftBins]{};
+    };
+
+    enum CompMode : uint32_t {
+        kModeClean = 0,
+        kModeClassic = 1,
+        kModeOptical = 2,
+    };
+
     enum Param : uint32_t {
         kThreshold = 0, // -60 dB to 0 dB
         kRatio,        // 1:1 to 20:1
@@ -36,6 +56,7 @@ public:
         kInputGain,    // -24 dB to +24 dB
         kOutputGain,   // -24 dB to +24 dB
         kDetectorHPF,  // Off, then 20 Hz to 500 Hz
+        kCompMode,     // 0=Clean, 1=Classic, 2=Optical
         kParamCount,
 
         // Deprecated aliases. These names are kept so older tests and helpers still
@@ -84,6 +105,7 @@ public:
         resetRuntimeState();
         snapSmoothedParamsToTargets();
         updateDetectorHPF();
+        updateRmsCoeff();
         return true;
     }
 
@@ -94,6 +116,7 @@ public:
         resetRuntimeState();
         snapSmoothedParamsToTargets();
         updateDetectorHPF();
+        updateRmsCoeff();
     }
 
     void deactivate() override { m_active.store(false, std::memory_order_relaxed); }
@@ -130,6 +153,10 @@ public:
         float blockOutputPeak = 0.0f;
         float blockGainReductionDb = 0.0f;
 
+        // FFT accumulation — mono sum of input and output
+        float fftInBlock[kBlockSize]{};
+        float fftOutBlock[kBlockSize]{};
+
         for (uint32_t blockStart = 0; blockStart < numFrames; blockStart += kBlockSize) {
             smoothParams(smoothingCoeff);
             const uint32_t blockEnd = std::min(blockStart + kBlockSize, numFrames);
@@ -144,9 +171,16 @@ public:
             const float outputLinear = dbToLinear(bipolarGainDbFromNorm(m_outputGainSmoothed));
             const float mix = std::clamp(m_mixSmoothed, 0.0f, 1.0f);
 
+            const uint32_t prevMode = m_mode;
+            const float rawMode = m_params[kCompMode].load(std::memory_order_relaxed) * 2.0f;
+            m_mode = static_cast<uint32_t>(rawMode + 0.5f);
+            if (m_mode != prevMode) {
+                m_feedbackL = 0.0f;
+                m_feedbackR = 0.0f;
+            }
+
             const float attackCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * attackSec));
             const float releaseCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * releaseSec));
-            const float rmsCoeff = std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * kRmsWindowSec));
             const float makeupOut = makeupLinear * outputLinear;
 
             for (uint32_t i = blockStart; i < blockEnd; ++i) {
@@ -158,24 +192,60 @@ public:
             const float inR = dryR * inputLinear;
             blockInputPeak = std::max(blockInputPeak, std::max(std::abs(inL), std::abs(inR)));
 
-            float detL = inL;
-            float detR = inR;
+            float detInputL, detInputR;
+            if (m_mode == kModeClassic) {
+                detInputL = m_feedbackL;
+                detInputR = m_feedbackR;
+            } else {
+                detInputL = inL;
+                detInputR = inR;
+            }
+
+            float detL = detInputL;
+            float detR = detInputR;
             if (m_detectorHPFEnabled) {
                 detL = m_hpfA0 * detL + m_hpfA1 * hpfXL + m_hpfB1 * hpfYL;
-                hpfXL = inL;
+                hpfXL = detInputL;
                 hpfYL = detL;
                 detR = m_hpfA0 * detR + m_hpfA1 * hpfXR + m_hpfB1 * hpfYR;
-                hpfXR = inR;
+                hpfXR = detInputR;
                 hpfYR = detR;
             }
 
             const float powerInstant = (detL * detL + detR * detR) * 0.5f;
-            m_rmsEnvelope = powerInstant + rmsCoeff * (m_rmsEnvelope - powerInstant);
+            float sampleRmsCoeff;
+            if (m_mode == kModeOptical) {
+                static constexpr float kOpticalWindowMin = 0.005f;
+                static constexpr float kOpticalWindowMax = 0.030f;
+                static constexpr float kOpticalEnvelopeRef = 0.1f;
+                float t = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
+                float window = kOpticalWindowMax - t * (kOpticalWindowMax - kOpticalWindowMin);
+                // Gate exp() — only recompute when window changes by >0.5ms
+                if (std::abs(window - m_prevOpticalWindow) > 0.0005f || m_prevOpticalWindow < 0.0f) {
+                    m_prevOpticalWindow = window;
+                    m_opticalRmsCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * window));
+                }
+                sampleRmsCoeff = m_opticalRmsCoeff;
+            } else {
+                sampleRmsCoeff = m_rmsCoeff;
+                m_prevOpticalWindow = -1.0f; // force recompute on next optical entry
+            }
+            m_rmsEnvelope = powerInstant + sampleRmsCoeff * (m_rmsEnvelope - powerInstant);
             const float detector = std::sqrt(m_rmsEnvelope);
 
-            const float coeff = detector > env ? attackCoeff : releaseCoeff;
+            float aCoeff, rCoeff;
+            if (m_mode == kModeOptical) {
+                static constexpr float kOpticalEnvelopeRef = 0.1f;
+                float grNorm = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
+                aCoeff = attackCoeff * (1.0f + grNorm * 2.0f);
+                rCoeff = releaseCoeff * (1.0f - grNorm * 0.5f);
+            } else {
+                aCoeff = attackCoeff;
+                rCoeff = releaseCoeff;
+            }
+            const float coeff = detector > env ? aCoeff : rCoeff;
             env = coeff * env + (1.0f - coeff) * detector;
-            if (!std::isfinite(env) || env < 1.0e-12f) env = 0.0f;
+            if (env != env || env < 1.0e-12f) env = 0.0f; // NaN check + denormal flush
 
             const float detectorDb = linearToDb(env);
             const float reductionDb = computeGainReductionDb(detectorDb, thresholdDb, ratio, kneeDb);
@@ -188,6 +258,16 @@ public:
             const float outR = (dryR * (1.0f - mix) + wetR * mix) * outputLinear;
             blockOutputPeak = std::max(blockOutputPeak, std::max(std::abs(outL), std::abs(outR)));
 
+            // Accumulate mono sum for FFT
+            const uint32_t fftIdx = i - blockStart;
+            fftInBlock[fftIdx] = (inL + inR) * 0.5f;
+            fftOutBlock[fftIdx] = (outL + outR) * 0.5f;
+
+            if (m_mode == kModeClassic) {
+                m_feedbackL = outL;
+                m_feedbackR = outR;
+            }
+
             if (numOutputChannels > 0 && outputs[0]) outputs[0][i] = flushDenormal(outL);
             if (numOutputChannels > 1 && outputs[1]) outputs[1][i] = flushDenormal(outR);
 #pragma GCC diagnostic push
@@ -197,6 +277,9 @@ public:
             }
 #pragma GCC diagnostic pop
             }
+
+            // Feed block samples into FFT pipeline
+            processFftBlock(fftInBlock, fftOutBlock, blockEnd - blockStart);
         }
 
         m_env = env;
@@ -254,6 +337,7 @@ public:
             { kInputGain, "Input Gain", "IN", "dB", 0.5f, 0.0f, 1.0f, true },
             { kOutputGain, "Output Gain", "OUT", "dB", 0.5f, 0.0f, 1.0f, true },
             { kDetectorHPF, "Detector HPF", "HPF", "Hz", 0.0f, 0.0f, 1.0f, true },
+            { kCompMode, "Mode", "MODE", "", 0.0f, 0.0f, 1.0f, true },
         };
     }
 
@@ -278,6 +362,12 @@ public:
         case kDetectorHPF:
             if (v <= 0.001f) return "Off";
             return std::to_string(static_cast<int>(std::round(detectorHPFHzFromNorm(v)))) + "Hz";
+        case kCompMode: {
+            auto mode = static_cast<uint32_t>(std::round(std::clamp(v * 2.0f, 0.0f, 2.0f)));
+            if (mode == kModeClassic) return "Classic";
+            if (mode == kModeOptical) return "Optical";
+            return "Clean";
+        }
         default: return "";
         }
     }
@@ -285,22 +375,19 @@ public:
     std::vector<uint8_t> saveState() const override {
         struct Blob {
             uint32_t magic = kStateMagicV2;
-            uint32_t version = 3;
+            uint32_t version = 4;
             float params[kLegacyParamCount] = {};
         } blob;
 
         for (uint32_t i = 0; i < kParamCount; ++i) {
             blob.params[i] = getParameter(i);
         }
-        blob.params[kLegacyAutoReleaseIndex] = 0.0f;
         blob.params[kLegacyRangeIndex] = 0.0f;
         blob.params[kLegacyLookaheadIndex] = 0.0f;
         blob.params[kLegacyStereoLinkIndex] = 1.0f;
         blob.params[kLegacyStereoLinkLawIndex] = 0.0f;
-        blob.params[kLegacySCHPFIndex] = getParameter(kDetectorHPF);
         blob.params[kLegacySCLPFIndex] = 0.0f;
         blob.params[kLegacySCListenIndex] = 0.0f;
-        blob.params[kLegacyOutputTrimIndex] = getParameter(kOutputGain);
         blob.params[kLegacyStyleIndex] = 0.0f;
         blob.params[kLegacyQualityIndex] = 0.5f;
 
@@ -327,10 +414,16 @@ public:
             for (uint32_t i = 0; i < std::min<uint32_t>(8, kParamCount); ++i) {
                 setParameter(i, blob.params[i]);
             }
-            if (blob.version >= 3) {
+            if (blob.version >= 4) {
                 setParameter(kInputGain, isNormalized(blob.params[kInputGain]) ? blob.params[kInputGain] : 0.5f);
                 setParameter(kOutputGain, isNormalized(blob.params[kOutputGain]) ? blob.params[kOutputGain] : 0.5f);
                 setParameter(kDetectorHPF, isNormalized(blob.params[kDetectorHPF]) ? blob.params[kDetectorHPF] : 0.0f);
+                setParameter(kCompMode, isNormalized(blob.params[kCompMode]) ? blob.params[kCompMode] : 0.0f);
+            } else if (blob.version >= 3) {
+                setParameter(kInputGain, isNormalized(blob.params[kInputGain]) ? blob.params[kInputGain] : 0.5f);
+                setParameter(kOutputGain, isNormalized(blob.params[kOutputGain]) ? blob.params[kOutputGain] : 0.5f);
+                setParameter(kDetectorHPF, isNormalized(blob.params[kDetectorHPF]) ? blob.params[kDetectorHPF] : 0.0f);
+                setParameter(kCompMode, 0.0f);
             } else {
                 setParameter(kInputGain, 0.5f);
                 setParameter(kOutputGain,
@@ -338,6 +431,7 @@ public:
                                                                                : 0.5f);
                 setParameter(kDetectorHPF,
                              isNormalized(blob.params[kLegacySCHPFIndex]) ? blob.params[kLegacySCHPFIndex] : 0.0f);
+                setParameter(kCompMode, 0.0f);
             }
             return true;
         }
@@ -366,7 +460,7 @@ public:
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return {560, 390}; }
+    std::pair<int, int> getEditorSize() const override { return {680, 555}; }
     bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
@@ -383,6 +477,10 @@ public:
     float getInputLevel() const { return m_inputLevel.load(std::memory_order_relaxed); }
     float getOutputLevel() const { return m_outputLevel.load(std::memory_order_relaxed); }
 
+    FftSpectrum getFftSpectrum() const {
+        return m_fftBuffers[m_fftReadIndex.load(std::memory_order_acquire)];
+    }
+
 private:
     static constexpr float kMinDb = -120.0f;
     static constexpr float kMaxSample = 16.0f;
@@ -395,19 +493,29 @@ private:
         }
         snapSmoothedParamsToTargets();
         updateDetectorHPF();
+        updateRmsCoeff();
     }
 
     void resetRuntimeState() {
         m_env = 0.0f;
         m_rmsEnvelope = 0.0f;
+        m_rmsCoeff = 0.0f;
         m_hpfXL = 0.0f;
         m_hpfYL = 0.0f;
         m_hpfXR = 0.0f;
         m_hpfYR = 0.0f;
+        m_feedbackL = 0.0f;
+        m_feedbackR = 0.0f;
         m_currentGainReductionDb.store(0.0f, std::memory_order_relaxed);
         m_inputLevel.store(0.0f, std::memory_order_relaxed);
         m_outputLevel.store(0.0f, std::memory_order_relaxed);
         m_hasProcessed.store(false, std::memory_order_relaxed);
+        m_fftWritePos = 0;
+        m_fftBuffers[0] = {};
+        m_fftBuffers[1] = {};
+        m_fftReadIndex.store(0, std::memory_order_relaxed);
+        initHannWindow();
+        updateRmsCoeff();
     }
 
     void snapSmoothedParamsToTargets() {
@@ -453,6 +561,142 @@ private:
         m_hpfB1 = alpha;
     }
 
+    void updateRmsCoeff() {
+        m_rmsCoeff = std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * kRmsWindowSec));
+    }
+
+    void initHannWindow() {
+        for (uint32_t i = 0; i < kFftSize; ++i) {
+            m_hannWindow[i] = 0.5f * (1.0f - std::cos(2.0f * 3.14159265358979323846f
+                                                         * static_cast<float>(i) / static_cast<float>(kFftSize - 1)));
+        }
+        for (uint32_t len = 2, stage = 0; stage < kFftStages; len <<= 1, ++stage) {
+            const float angle = -2.0f * 3.14159265358979323846f / static_cast<float>(len);
+            m_twiddleRe[stage] = std::cos(angle);
+            m_twiddleIm[stage] = std::sin(angle);
+        }
+    }
+
+    void processFftBlock(const float* input, const float* output, uint32_t count) {
+        uint32_t remaining = count;
+        uint32_t inOffset = 0;
+        while (remaining > 0) {
+            const uint32_t space = kFftSize - m_fftWritePos;
+            const uint32_t toCopy = std::min(remaining, space);
+            for (uint32_t i = 0; i < toCopy; ++i) {
+                m_fftAccumInput[m_fftWritePos + i] = input[inOffset + i];
+                m_fftAccumOutput[m_fftWritePos + i] = output[inOffset + i];
+            }
+            m_fftWritePos += toCopy;
+            inOffset += toCopy;
+            remaining -= toCopy;
+            if (m_fftWritePos >= kFftSize) {
+                publishFft();
+                m_fftWritePos = 0;
+            }
+        }
+    }
+
+    void publishFft() {
+        const uint32_t writeSlot = m_fftReadIndex.load(std::memory_order_relaxed) ^ 1u;
+        FftSpectrum& spec = m_fftBuffers[writeSlot];
+
+        constexpr float kMinPower = 1.0e-24f;
+        constexpr float kMinDb = -90.0f;
+        constexpr float kInvN = 1.0f / static_cast<float>(kFftSize);
+        constexpr float kInvN2 = kInvN * kInvN;
+
+        // Process input spectrum
+        {
+            float* z = m_fftScratch;
+            for (uint32_t i = 0; i < kFftSize; ++i) {
+                z[i * 2] = m_fftAccumInput[i] * m_hannWindow[i];
+                z[i * 2 + 1] = 0.0f;
+            }
+            computeComplexFft(z, kFftSize);
+            for (uint32_t i = 0; i < kFftBins; ++i) {
+                const float re = z[i * 2];
+                const float im = z[i * 2 + 1];
+                const float power = std::max((re * re + im * im) * kInvN2, kMinPower);
+                spec.inputBins[i] = fastPowerToDb(power);
+            }
+        }
+
+        // Process output spectrum
+        {
+            float* z = m_fftScratch;
+            for (uint32_t i = 0; i < kFftSize; ++i) {
+                z[i * 2] = m_fftAccumOutput[i] * m_hannWindow[i];
+                z[i * 2 + 1] = 0.0f;
+            }
+            computeComplexFft(z, kFftSize);
+            for (uint32_t i = 0; i < kFftBins; ++i) {
+                const float re = z[i * 2];
+                const float im = z[i * 2 + 1];
+                const float power = std::max((re * re + im * im) * kInvN2, kMinPower);
+                spec.outputBins[i] = fastPowerToDb(power);
+            }
+        }
+
+        m_fftReadIndex.store(writeSlot, std::memory_order_release);
+    }
+
+    // Fast power-to-dB: 10*log10(power) via IEEE 754 bit trick for log2
+    static float fastPowerToDb(float power) {
+        // Reinterpret float as int to extract exponent
+        uint32_t bits;
+        std::memcpy(&bits, &power, sizeof(bits));
+        const int exponent = static_cast<int>((bits >> 23) & 0xFF) - 127;
+        // Clear exponent, set to mantissa in [0.5, 1.0)
+        bits = (bits & 0x007FFFFF) | 0x3F800000;
+        float mantissa;
+        std::memcpy(&mantissa, &bits, sizeof(mantissa));
+        // Polynomial approx of log2(mantissa) on [0.5, 1.0]
+        // log2(x) ≈ x - 1 - 0.3413*(x-1)^2 for x in [0.5, 1.0]
+        const float x = mantissa - 1.0f;
+        const float log2approx = x - 0.3413f * x * x;
+        const float log2val = static_cast<float>(exponent) + log2approx;
+        // 10*log10(power) = 10 * log2(power) / log2(10) = 3.01029995664 * log2(power)
+        return 3.01029995664f * log2val;
+    }
+
+    void computeComplexFft(float* z, uint32_t n) {
+        // Bit-reversal permutation
+        for (uint32_t i = 1, j = 0; i < n; ++i) {
+            uint32_t bit = n >> 1;
+            for (; j & bit; bit >>= 1) j ^= bit;
+            j ^= bit;
+            if (i < j) {
+                std::swap(z[i * 2], z[j * 2]);
+                std::swap(z[i * 2 + 1], z[j * 2 + 1]);
+            }
+        }
+
+        // Cooley-Tukey butterfly with precomputed twiddle factors
+        for (uint32_t len = 2, stage = 0; len <= n; len <<= 1, ++stage) {
+            const float wRe = m_twiddleRe[stage];
+            const float wIm = m_twiddleIm[stage];
+            for (uint32_t i = 0; i < n; i += len) {
+                float curRe = 1.0f, curIm = 0.0f;
+                for (uint32_t j = 0; j < len / 2; ++j) {
+                    const uint32_t u = i + j;
+                    const uint32_t v = u + len / 2;
+                    const float vRe = z[v * 2];
+                    const float vIm = z[v * 2 + 1];
+                    const float tRe = curRe * vRe - curIm * vIm;
+                    const float tIm = curRe * vIm + curIm * vRe;
+                    z[v * 2] = z[u * 2] - tRe;
+                    z[v * 2 + 1] = z[u * 2 + 1] - tIm;
+                    z[u * 2] += tRe;
+                    z[u * 2 + 1] += tIm;
+                    const float newCurRe = curRe * wRe - curIm * wIm;
+                    curIm = curRe * wIm + curIm * wRe;
+                    curRe = newCurRe;
+                }
+            }
+        }
+    }
+
     static void copyOrClear(const float* const* inputs, float** outputs,
                             uint32_t numInputChannels, uint32_t numOutputChannels,
                             uint32_t numFrames) {
@@ -489,7 +733,7 @@ private:
     }
 
     static float dbToLinear(float db) {
-        return std::pow(10.0f, db / 20.0f);
+        return std::exp(db * 0.11512925464970229f); // ln(10)/20
     }
 
     static float thresholdDbFromNorm(float value) { return -60.0f + std::clamp(value, 0.0f, 1.0f) * 60.0f; }
@@ -537,6 +781,7 @@ private:
 
     float m_env = 0.0f;
     float m_rmsEnvelope = 0.0f;
+    float m_rmsCoeff = 0.0f;
     float m_hpfXL = 0.0f;
     float m_hpfYL = 0.0f;
     float m_hpfXR = 0.0f;
@@ -545,6 +790,11 @@ private:
     float m_hpfA1 = 0.0f;
     float m_hpfB1 = 0.0f;
     bool m_detectorHPFEnabled = false;
+    float m_feedbackL = 0.0f;
+    float m_feedbackR = 0.0f;
+    uint32_t m_mode = 0;
+    float m_prevOpticalWindow = -1.0f;
+    float m_opticalRmsCoeff = 0.0f;
 
     float m_thresholdSmoothed = 0.6667f;
     float m_ratioSmoothed = 0.1579f;
@@ -559,6 +809,17 @@ private:
     std::atomic<float> m_currentGainReductionDb{0.0f};
     std::atomic<float> m_inputLevel{0.0f};
     std::atomic<float> m_outputLevel{0.0f};
+
+    // FFT analyzer state
+    float m_hannWindow[kFftSize]{};
+    float m_twiddleRe[kFftStages]{};
+    float m_twiddleIm[kFftStages]{};
+    float m_fftAccumInput[kFftSize]{};
+    float m_fftAccumOutput[kFftSize]{};
+    float m_fftScratch[kFftSize * 2]{};
+    uint32_t m_fftWritePos = 0;
+    FftSpectrum m_fftBuffers[2]{};
+    std::atomic<uint32_t> m_fftReadIndex{0};
 };
 
 } // namespace Plugins

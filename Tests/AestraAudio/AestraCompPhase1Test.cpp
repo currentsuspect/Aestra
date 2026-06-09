@@ -28,7 +28,7 @@ bool testPublicParameterSurface() {
 
     const char* expected[] = {
         "Threshold", "Ratio", "Attack", "Release", "Makeup Gain", "Knee",
-        "Mix", "Bypass", "Input Gain", "Output Gain", "Detector HPF",
+        "Mix", "Bypass", "Input Gain", "Output Gain", "Detector HPF", "Mode",
     };
 
     for (uint32_t i = 0; i < AestraComp::kParamCount; ++i) {
