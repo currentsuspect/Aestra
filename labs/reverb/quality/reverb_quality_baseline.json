@@ -1,4 +1,5 @@
 {
+  "schema_version": "1.0.0",
   "sampleRate": 48000,
   "frames": 8192,
   "modes": [

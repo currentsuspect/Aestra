@@ -460,7 +460,7 @@ public:
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return {560, 390}; }
+    std::pair<int, int> getEditorSize() const override { return {680, 555}; }
     bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
@@ -477,7 +477,7 @@ public:
     float getInputLevel() const { return m_inputLevel.load(std::memory_order_relaxed); }
     float getOutputLevel() const { return m_outputLevel.load(std::memory_order_relaxed); }
 
-    const FftSpectrum& getFftSpectrum() const {
+    FftSpectrum getFftSpectrum() const {
         return m_fftBuffers[m_fftReadIndex.load(std::memory_order_acquire)];
     }
 

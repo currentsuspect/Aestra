@@ -62,7 +62,8 @@ AestraCompEditor::AestraCompEditor(std::shared_ptr<Aestra::Audio::IPluginInstanc
     constexpr float kMaxFreq = 20000.0f;
     constexpr float kLogMin = std::log(kMinFreq);
     constexpr float kLogRange = std::log(kMaxFreq) - kLogMin;
-    const float binHz = 48000.0f / static_cast<float>(Aestra::Audio::Plugins::AestraComp::kFftSize);
+    const float sampleRate = 48000.0f;
+    const float binHz = sampleRate / static_cast<float>(Aestra::Audio::Plugins::AestraComp::kFftSize);
     for (int i = 0; i < kLogFreqLutSize; ++i) {
         const float t = static_cast<float>(i) / static_cast<float>(kLogFreqLutSize - 1);
         const float freq = kMinFreq * std::exp(t * kLogRange);
@@ -221,7 +222,7 @@ void AestraCompEditor::onUpdate(double deltaTime) {
         m_outputDisplay = smoothMeter(m_outputDisplay, out, 0.55f, 0.16f);
 
         // Read FFT spectrum with exponential smoothing
-        const auto& fft = comp->getFftSpectrum();
+        const auto fft = comp->getFftSpectrum();
         constexpr float kSpectrumSmooth = 0.35f;
         for (uint32_t i = 0; i < kDisplayBins; ++i) {
             m_inputSpectrum[i] += (fft.inputBins[i] - m_inputSpectrum[i]) * kSpectrumSmooth;
