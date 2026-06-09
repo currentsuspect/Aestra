@@ -1,4 +1,5 @@
 {
+  "schema_version": "1.0.0",
   "plugin_id": "com.Aestrastudios.eq",
   "plugin_name": "Aestra EQ",
   "baseline": "eq-v1-material-cases",

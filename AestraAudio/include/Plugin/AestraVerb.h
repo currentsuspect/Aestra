@@ -341,7 +341,10 @@ public:
             AESTRA_PROFILE_STAGE(kParamSmooth);
             if (smoothCountdown == 0) {
                 for (uint32_t p = 0; p < kParamCount; ++p) {
-                    if (p == kBypass || p == kMode || p == kFreeze) continue;
+                    if (p == kBypass || p == kMode || p == kFreeze) {
+                        smoothedParams[p] = m_params[p].load(std::memory_order_relaxed);
+                        continue;
+                    }
                     const float target = m_params[p].load(std::memory_order_relaxed);
                     smoothedParams[p] += (target - smoothedParams[p]) * blockSmoothingCoeff;
                 }
@@ -727,7 +730,7 @@ public:
             return (idx >= 0 && idx < kModeCount) ? modeNames[idx] : "Room";
         }
         case kLowCut: {
-            const float hz = v < 0.001f ? 20.0f : 20.0f * std::pow(1000.0f, v);
+            const float hz = v < 0.001f ? 20.0f : 20.0f * std::pow(100.0f, v);
             return std::to_string(static_cast<int>(hz)) + "Hz";
         }
         case kHighCut: {
@@ -1255,6 +1258,9 @@ private:
         m_lowDampState.fill(0.0f);
         m_predelayPos = 0;
         m_earlyPos = 0;
+
+        m_chaoticPhase = 0.0f;
+        m_chaoticWowState = 0.0f;
 
         if (randomizeLfos) {
             std::mt19937 rng{0xAE57A000u}; // deterministic seed for reproducible tests

@@ -1963,9 +1963,12 @@ AestraEQEditor::FloatingBandPanelLayout AestraEQEditor::floatingBandPanelLayout(
     constexpr float kRowH = 18.0f;
     constexpr float kGap = 4.0f;
     const bool hasThirdRow = bd.usesGain && !bd.usesSlope;
-    const bool hasDynamic = !bd.legacySlot && bd.usesGain && bd.dynamicEnabled;
+    const bool supportsDynamic = !bd.legacySlot && bd.usesGain;
+    const bool dynamicExpanded = supportsDynamic && bd.dynamicEnabled;
+    const float dynToggleRows = supportsDynamic ? 1.0f : 0.0f;
+    const float dynExpandedRows = dynamicExpanded ? 3.0f : 0.0f;
+    const float dynRows = dynToggleRows + dynExpandedRows;
     const float baseH = hasThirdRow ? 86.0f : 68.0f;
-    const float dynRows = hasDynamic ? 4.0f : 0.0f;
     const float dynSectionH = dynRows > 0.0f ? kGap + dynRows * kRowH + 6.0f : 0.0f;
     const float kH = baseH + dynSectionH;
 
@@ -1988,13 +1991,15 @@ AestraEQEditor::FloatingBandPanelLayout AestraEQEditor::floatingBandPanelLayout(
     layout.qRect = {x + 8.0f, y + 66.0f, kW - 16.0f, kRowH};
     layout.hasQRow = bd.usesGain && !bd.usesSlope;
 
-    layout.hasDynamic = hasDynamic;
-    if (hasDynamic) {
-        const float dynStart = y + 30.0f + (hasThirdRow ? 3.0f : 2.0f) * kRowH + kGap;
-        layout.dynamicEnableRect = {x + 8.0f, dynStart, kW - 16.0f, kRowH};
-        layout.thresholdRect = {x + 8.0f, dynStart + 1.0f * kRowH, kW - 16.0f, kRowH};
-        layout.attackRect = {x + 8.0f, dynStart + 2.0f * kRowH, kW - 16.0f, kRowH};
-        layout.releaseRect = {x + 8.0f, dynStart + 3.0f * kRowH, kW - 16.0f, kRowH};
+    layout.hasDynamic = supportsDynamic;
+    layout.dynamicEnableRect = supportsDynamic
+        ? NUIRect{x + 8.0f, y + 30.0f + (hasThirdRow ? 3.0f : 2.0f) * kRowH + kGap, kW - 16.0f, kRowH}
+        : NUIRect();
+    if (dynamicExpanded) {
+        const float dynStart = layout.dynamicEnableRect.y + 1.0f * kRowH;
+        layout.thresholdRect = {x + 8.0f, dynStart, kW - 16.0f, kRowH};
+        layout.attackRect = {x + 8.0f, dynStart + 1.0f * kRowH, kW - 16.0f, kRowH};
+        layout.releaseRect = {x + 8.0f, dynStart + 2.0f * kRowH, kW - 16.0f, kRowH};
         layout.kneeRect = NUIRect();
         layout.targetGainRect = NUIRect();
     }

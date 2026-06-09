@@ -421,12 +421,10 @@ public:
     bool loadState(const std::vector<uint8_t>& state) override {
         if (state.size() < sizeof(uint32_t) * 2)
             return false;
-        struct Header {
-            uint32_t magic;
-            uint32_t version;
-        };
-        const auto* header = reinterpret_cast<const Header*>(state.data());
-        if (header->magic == kStateMagicV3) {
+        struct Header { uint32_t magic; uint32_t version; };
+        Header header_local;
+        std::memcpy(&header_local, state.data(), sizeof(header_local));
+        if (header_local.magic == kStateMagicV3) {
             struct StateBlobV3 {
                 uint32_t magic;
                 uint32_t version;
@@ -434,13 +432,14 @@ public:
             };
             if (state.size() < sizeof(StateBlobV3))
                 return false;
-            const auto* blob = reinterpret_cast<const StateBlobV3*>(state.data());
+            StateBlobV3 blob_local;
+            std::memcpy(&blob_local, state.data(), sizeof(blob_local));
             for (uint32_t i = 0; i < kParamCount; ++i)
-                setParameter(i, blob->params[i]);
+                setParameter(i, blob_local.params[i]);
             snapSmoothedParamsToTargets();
             return true;
         }
-        if (header->magic == kStateMagicV2) {
+        if (header_local.magic == kStateMagicV2) {
             struct LegacyStateBlobV2 {
                 uint32_t magic;
                 uint32_t version;
@@ -448,15 +447,16 @@ public:
             };
             if (state.size() < sizeof(LegacyStateBlobV2))
                 return false;
-            const auto* blob = reinterpret_cast<const LegacyStateBlobV2*>(state.data());
+            LegacyStateBlobV2 blob_local;
+            std::memcpy(&blob_local, state.data(), sizeof(blob_local));
             for (uint32_t i = 0; i < 11; ++i)
-                setParameter(i, blob->params[i]);
+                setParameter(i, blob_local.params[i]);
             setParameter(kFeedbackHighpass, 0.0f);
             setParameter(kOutputTrim, 0.5f);
             snapSmoothedParamsToTargets();
             return true;
         }
-        if (header->magic == kStateMagicV1) {
+        if (header_local.magic == kStateMagicV1) {
             struct StateBlobV1 {
                 uint32_t magic;
                 uint32_t version;
@@ -464,9 +464,15 @@ public:
             };
             if (state.size() < sizeof(StateBlobV1))
                 return false;
-            const auto* blob = reinterpret_cast<const StateBlobV1*>(state.data());
+            StateBlobV1 blob_local;
+            std::memcpy(&blob_local, state.data(), sizeof(blob_local));
+            {
+                const auto defaults = getParameters();
+                for (uint32_t i = 0; i < kParamCount; ++i)
+                    setParameter(i, defaults[i].defaultValue);
+            }
             for (uint32_t i = 0; i < 8; ++i)
-                setParameter(i, blob->params[i]);
+                setParameter(i, blob_local.params[i]);
             snapSmoothedParamsToTargets();
             return true;
         }

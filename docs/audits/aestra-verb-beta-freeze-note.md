@@ -1,16 +1,17 @@
 # Aestra Verb Beta Freeze Note
 
-Status: FREEZE REOPENED — Group B1/B2/B4 delivered (2026-06-08)
+Status: FREEZE REOPENED — Group B1/B2/B3/B4/B5/B6 delivered (2026-06-09)
 
 Reopened and delivered: 6 new modes (Cathedral, Chamber, Bright Hall, Ambience, Scoring, Smooth Plate),
-post-reverb EQ (kLowCut + kHighCut), freeze button (kFreeze), state format v3→v4 with backward migration.
+post-reverb EQ (kLowCut + kHighCut), freeze button (kFreeze), attack/shape (kAttack, kShape),
+predelay sync (kPredelaySync), mod character (kModCharacter), state format v3→v5 with backward migration.
 
 Reviewed from `develop` at `26c7f680200fb80a7b7154d89380a9bba4fbdcfc`.
 
-## Current Parameter Set (v4)
+## Current Parameter Set (v5)
 
-14 parameters: Decay, Damping, Predelay, Width, Mix, Bypass, Size, Diffusion, Mod Rate, Mod Depth,
-Mode (9 modes), Low Cut, High Cut, Freeze.
+18 parameters: Decay, Damping, Predelay, Width, Mix, Bypass, Size, Diffusion, Mod Rate, Mod Depth,
+Mode (9 modes), Low Cut, High Cut, Freeze, Attack, Shape, Pre Sync, Mod Character.
 
 ## Locked Behavior
 
@@ -18,7 +19,7 @@ Mode (9 modes), Low Cut, High Cut, Freeze.
   compensation, mud cleanup, Plate post-allpass, and Plate resonance cut are locked unless a real bug is found.
 - Existing safety clamp and sanitization behavior remains protected.
 - SIMD dispatch behavior remains scalar/SSE/AVX2/NEON compatible through the existing `ReverbSIMD` path.
-- State format v4 is now the canonical version. v1/v2/v3 states load with new params at defaults.
+- State format v5 is now the canonical version. v1/v2/v3/v4 states load with new params at defaults.
 
 ## Allowed Future Polish
 
