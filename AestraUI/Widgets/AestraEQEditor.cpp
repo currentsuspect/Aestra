@@ -3475,10 +3475,6 @@ void AestraEQEditor::setBandValue(int idx, Knob target, float v) {
         bd.dynamicThreshold = v;
         if (!bd.legacySlot) writeDynamicBandSnapshot(idx);
         break;
-    case Knob::Knee:
-        bd.dynamicKnee = v;
-        if (!bd.legacySlot) writeDynamicBandSnapshot(idx);
-        break;
     case Knob::Attack:
         bd.dynamicAttack = v;
         if (!bd.legacySlot) writeDynamicBandSnapshot(idx);
@@ -3486,20 +3482,6 @@ void AestraEQEditor::setBandValue(int idx, Knob target, float v) {
     case Knob::Release:
         bd.dynamicRelease = v;
         if (!bd.legacySlot) writeDynamicBandSnapshot(idx);
-        break;
-    case Knob::TargetGain:
-        bd.targetGain = v;
-        if (!bd.legacySlot) writeDynamicBandSnapshot(idx);
-        break;
-    case Knob::SidechainLinked:
-        bd.sidechainLinked = v > 0.5f;
-        if (!bd.legacySlot) {
-            if (bd.sidechainLinked) {
-                bd.sidechainFreq = bd.freq;
-                bd.sidechainQ = bd.q;
-            }
-            writeDynamicBandSnapshot(idx);
-        }
         break;
     default:
         break;

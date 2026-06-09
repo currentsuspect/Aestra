@@ -526,20 +526,26 @@ void AestraCompEditor::drawControl(NUIRenderer& renderer, const KnobControl& con
 
 void AestraCompEditor::drawUtilityButtons(NUIRenderer& renderer, NUIColor accent) {
     auto& theme = NUIThemeManager::getInstance();
-    struct BtnInfo { NUIRect bounds; bool on; bool hov; const char* label; };
+    struct BtnInfo { NUIRect bounds; bool on; bool hov; const char* label; bool disabled; };
     BtnInfo btns[] = {
-        {m_bypassRect, isBypassed(), m_bypassHovered, "BYP"},
-        {m_autoRect, m_autoEnabled, m_autoHovered, "AUTO"},
-        {m_linkRect, m_linkEnabled, m_linkHovered, "LINK"},
-        {m_mixLockRect, m_mixLocked, m_mixLockHovered, "MIX LOCK"},
-        {m_resetRect, false, m_resetHovered, "RESET"},
+        {m_bypassRect, isBypassed(), m_bypassHovered, "BYP", false},
+        {m_autoRect, m_autoEnabled, m_autoHovered, "AUTO", true},
+        {m_linkRect, m_linkEnabled, m_linkHovered, "LINK", true},
+        {m_mixLockRect, m_mixLocked, m_mixLockHovered, "MIX LOCK", true},
+        {m_resetRect, false, m_resetHovered, "RESET", false},
     };
 
     for (auto& btn : btns) {
         const bool byp = btn.label[0] == 'B' && btn.label[1] == 'Y';
         const NUIColor activeAccent = byp ? NUIColor(0.92f, 0.28f, 0.22f, 1.0f) : accent;
 
-        if (btn.on) {
+        if (btn.disabled) {
+            const float dim = 0.50f;
+            const NUIColor bg = NUIColor(0.022f * dim, 0.022f * dim, 0.028f * dim, 0.60f);
+            renderer.fillRoundedRect(btn.bounds, 5.0f, bg);
+            renderer.strokeRoundedRect(btn.bounds, 5.0f, 1.0f, NUIColor(1, 1, 1, 0.06f));
+            renderer.drawTextCentered(btn.label, btn.bounds, 9.0f, NUIColor(1, 1, 1, 0.25f));
+        } else if (btn.on) {
             renderer.fillRoundedRect({btn.bounds.x - 1.5f, btn.bounds.y - 1.5f,
                                       btn.bounds.width + 3.0f, btn.bounds.height + 3.0f},
                                      6.5f, activeAccent.withAlpha(0.10f));
@@ -615,9 +621,6 @@ bool AestraCompEditor::onMouseEvent(const NUIMouseEvent& event) {
     // Click handlers
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (m_bypassRect.contains(event.position)) { setBypassed(!isBypassed()); return true; }
-        if (m_autoRect.contains(event.position)) { m_autoEnabled = !m_autoEnabled; setDirty(true); return true; }
-        if (m_linkRect.contains(event.position)) { m_linkEnabled = !m_linkEnabled; setDirty(true); return true; }
-        if (m_mixLockRect.contains(event.position)) { m_mixLocked = !m_mixLocked; setDirty(true); return true; }
         if (m_resetRect.contains(event.position)) {
             for (auto& c : m_controls) {
                 if (c.slider) {
