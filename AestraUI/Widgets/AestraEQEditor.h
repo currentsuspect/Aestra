@@ -31,7 +31,7 @@ public:
     void onResize() { layoutControls(); }
 
 private:
-    enum class Knob { None, Enable, Freq, Gain, Q, Type, Stereo, DynamicEnable, Threshold, Knee, Attack, Release, TargetGain, SidechainLinked };
+    enum class Knob { None, Enable, Freq, Gain, Q, Type, Stereo, DynamicEnable, Threshold, Attack, Release };
     enum class BandMenuAction {
         Reset,
         InvertGain,
