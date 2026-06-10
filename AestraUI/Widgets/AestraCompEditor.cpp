@@ -273,10 +273,11 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent)
     renderer.drawLine({b.x + 6.0f, b.y + 1.0f}, {b.x + b.width - 6.0f, b.y + 1.0f},
                       1.0f, NUIColor(1, 1, 1, 0.06f));
 
-    // Spectrum analyzer — log frequency axis, -90 to 0 dB
+    // Spectrum analyzer — log frequency axis, kFftDisplayMinDb to 0 dB
     {
-        constexpr float kMinDb = -90.0f;
-        constexpr float kDbRange = 90.0f;
+        using Comp = Aestra::Audio::Plugins::AestraComp;
+        constexpr float kMinDb = Comp::kFftDisplayMinDb;
+        constexpr float kDbRange = -Comp::kFftDisplayMinDb;
         const int numCols = std::min(static_cast<int>(curveW), kMaxCurvePixels);
         if (numCols > 0) {
             m_numSpectrumPts = numCols + 1;
@@ -355,7 +356,10 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent)
     renderer.drawText(kneeBuf, {statsX + 6.0f, b.y + 108.0f}, 14.0f, NUIColor(1, 1, 1, 0.88f));
 
     // Axis labels
-    renderer.drawText("-60", {b.x + 4.0f, curveBottom - 6.0f}, 7.0f, dimText());
+    char axisBottom[16]{};
+    std::snprintf(axisBottom, sizeof(axisBottom), "%.0f",
+                  static_cast<double>(Aestra::Audio::Plugins::AestraComp::kFftDisplayMinDb));
+    renderer.drawText(axisBottom, {b.x + 4.0f, curveBottom - 6.0f}, 7.0f, dimText());
     renderer.drawText("0 dB", {b.x + 6.0f, curveTop + 2.0f}, 7.0f, dimText());
 
     // 1:1 reference line
@@ -368,12 +372,14 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent)
 
     // Build transfer curve path
     constexpr int kCurveSteps = 128;
+    constexpr float kDbFloor = Aestra::Audio::Plugins::AestraComp::kFftDisplayMinDb;
+    constexpr float kDbRange = -kDbFloor;
     for (int i = 0; i <= kCurveSteps; ++i) {
         const float t = static_cast<float>(i) / static_cast<float>(kCurveSteps);
-        const float inputDb = -60.0f + t * 60.0f;
+        const float inputDb = kDbFloor + t * kDbRange;
         const float outputDb = compTransferDb(inputDb, thrDb, ratio, kneeDb);
         const float x = curveLeft + t * curveW;
-        const float yNorm = std::clamp((outputDb + 60.0f) / 60.0f, 0.0f, 1.0f);
+        const float yNorm = std::clamp((outputDb - kDbFloor) / kDbRange, 0.0f, 1.0f);
         const float y = curveBottom - yNorm * curveH;
         m_curvePts[i] = {x, y};
     }
@@ -385,7 +391,7 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent)
     // Knee point
     const float kneeX = thrX;
     const float kneeOutDb = compTransferDb(thrDb, thrDb, ratio, kneeDb);
-    const float kneeYNorm = std::clamp((kneeOutDb + 60.0f) / 60.0f, 0.0f, 1.0f);
+    const float kneeYNorm = std::clamp((kneeOutDb - kDbFloor) / kDbRange, 0.0f, 1.0f);
     const float kneeY = curveBottom - kneeYNorm * curveH;
     renderer.fillCircle({kneeX, kneeY}, 4.0f, accent);
     char kneeLabelBuf[16]{};
