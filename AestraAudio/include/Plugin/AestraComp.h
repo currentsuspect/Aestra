@@ -32,6 +32,7 @@ public:
         while (n > 1) { n >>= 1; ++s; }
         return s;
     }(); // log2(2048) = 11
+    static constexpr float kFftDisplayMinDb = -48.0f;
 
     struct FftSpectrum {
         float inputBins[kFftBins]{};
