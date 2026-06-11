@@ -9,6 +9,7 @@
 #include "AestraVerbEditor.h"
 #include "AestraDelayEditor.h"
 #include "AestraDriftEditor.h"
+#include "AestraLimitEditor.h"
 
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
 #include "RumblePluginEditor.h"
@@ -376,6 +377,14 @@ void PluginUIController::openPluginEditor(
         editor = ed;
     } else if (pluginId == "com.Aestrastudios.drift") {
         auto ed = std::make_shared<AestraDriftEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
+        });
+        ed->setPlatformBridge(m_platformBridge);
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.limiter") {
+        auto ed = std::make_shared<AestraLimitEditor>(instance);
         ed->setOnClose([this, ed]() {
             if (m_popupLayer) m_popupLayer->removeChild(ed);
             m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
