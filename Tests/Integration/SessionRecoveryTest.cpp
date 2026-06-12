@@ -181,9 +181,11 @@ int main() {
 
     // --- Simulate crash flag write at session start (AestraApp::initialize)
     time_t crashTime = writeCrashFlag(crashFlagPath);
-    std::ifstream crashFlagIn(crashFlagPath, std::ios::binary);
     std::string recoverySessionToken;
-    std::getline(crashFlagIn, recoverySessionToken);
+    {
+        std::ifstream crashFlagIn(crashFlagPath, std::ios::binary);
+        std::getline(crashFlagIn, recoverySessionToken);
+    }
     require(isCrashedSession(crashFlagPath), "Crash flag should exist after write");
     require(!recoverySessionToken.empty(), "Crash flag should contain recovery session token");
     std::cout << "[INFO] Crash flag written: " << crashFlagPath.string() << "\n";
