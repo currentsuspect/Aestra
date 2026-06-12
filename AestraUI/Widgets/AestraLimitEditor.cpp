@@ -6,6 +6,7 @@
 #include "Plugin/AestraLimit.h"
 
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <cmath>
 #include <cstring>
@@ -426,7 +427,11 @@ bool AestraLimitEditor::onMouseEvent(const NUIMouseEvent& event) {
     if (event.pressed && event.button == NUIMouseButton::Left && event.doubleClick) {
         for (auto& c : m_controls) {
             if (c.slider && c.slider->getBounds().contains({event.position.x, event.position.y})) {
-                const float def = m_instance->getParameters()[c.paramId].defaultValue;
+                const auto params = m_instance->getParameters();
+                float def = 0.0f;
+                for (const auto& p : params) {
+                    if (p.id == c.paramId) { def = p.defaultValue; break; }
+                }
                 m_instance->setParameter(c.paramId, def);
                 c.slider->setValue(def);
                 setDirty(true);
