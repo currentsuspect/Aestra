@@ -76,6 +76,7 @@ add_test(NAME SecFlacVendorlenBounds COMMAND SecFlacVendorlenBounds)
 add_test(NAME SecCacheMtimeIntegrity COMMAND SecCacheMtimeIntegrity)
 add_test(NAME SecPluginTrustedPath COMMAND SecPluginTrustedPath)
 add_test(NAME SecOutOfProcessPluginHost COMMAND SecOutOfProcessPluginHost $<TARGET_FILE:AestraPluginHost>)
+set_tests_properties(SecOutOfProcessPluginHost PROPERTIES SKIP_RETURN_CODE 77)
 find_file(AESTRA_CLAP_TEST_PLUGIN
     NAMES lsp-plugins.clap
     PATHS
