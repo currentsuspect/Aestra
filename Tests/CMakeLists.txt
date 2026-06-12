@@ -1039,6 +1039,17 @@ target_include_directories(AestraDelayUpgradeTest PRIVATE
 add_test(NAME AestraDelayUpgradeTest COMMAND AestraDelayUpgradeTest)
 set_tests_properties(AestraDelayUpgradeTest PROPERTIES LABELS "audio;plugins;delay;upgrade")
 
+# Aestra Limit Test
+add_executable(AestraLimitTest AestraAudio/AestraLimitTest.cpp)
+target_link_libraries(AestraLimitTest PRIVATE AestraAudio)
+target_include_directories(AestraLimitTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraLimitTest COMMAND AestraLimitTest)
+set_tests_properties(AestraLimitTest PROPERTIES LABELS "audio;plugins;limiter")
+
 # Serialization Compatibility Test (Requires GTest)
 # add_executable(AestraSerializationCompatibilityTest AestraAudio/SerializationCompatibilityTest.cpp)
 # target_link_libraries(AestraSerializationCompatibilityTest PRIVATE AestraAudio)
