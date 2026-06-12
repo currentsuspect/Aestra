@@ -264,7 +264,7 @@ public:
 
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override {
-        return static_cast<uint32_t>(std::ceil(kLookaheadMs * m_sampleRate * 0.001));
+        return m_lookaheadSamples;
     }
     uint32_t getTailSamples() const override { return 0; }
     WatchdogStats getWatchdogStats() const override { return {}; }
