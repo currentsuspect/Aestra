@@ -415,6 +415,8 @@ void PluginUIController::openPluginEditor(
             verb->onResize();
         } else if (auto comp = std::dynamic_pointer_cast<AestraCompEditor>(editorComp)) {
             comp->onResize();
+        } else if (auto limit = std::dynamic_pointer_cast<AestraLimitEditor>(editorComp)) {
+            limit->onResize(static_cast<int>(width), static_cast<int>(height));
         } else if (auto generic = std::dynamic_pointer_cast<GenericPluginEditor>(editorComp)) {
             generic->onResize();
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS

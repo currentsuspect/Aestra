@@ -154,7 +154,7 @@ public:
             } else {
                 const float releaseMs = autoRelease
                     ? m_autoReleaseMs
-                    : releaseMsFromNorm(m_params[kRelease].load(std::memory_order_relaxed));
+                    : releaseMsFromNorm(m_releaseSmoothed);
                 const float releaseCoeff = std::exp(-m_oneOverSampleRateMs / releaseMs);
                 m_appliedGainDb = releaseCoeff * m_appliedGainDb
                                   + (1.0f - releaseCoeff) * targetGainDb;
@@ -248,7 +248,7 @@ public:
         };
         Blob blob{};
         std::memcpy(&blob, state.data(), sizeof(blob));
-        (void)blob.version;
+        if (blob.version < 1 || blob.version > 1) return false;
         for (uint32_t i = 0; i < kParamCount; ++i) {
             setParameter(i, blob.params[i]);
         }
@@ -313,8 +313,8 @@ private:
 
     void updateDensity(float monoSum) {
         const float inputSq = monoSum * monoSum;
-        m_shortEma = inputSq + m_alphaShort * (m_shortEma - inputSq);
-        m_longEma  = inputSq + m_alphaLong  * (m_longEma  - inputSq);
+        m_shortEma = m_alphaShort * inputSq + (1.0f - m_alphaShort) * m_shortEma;
+        m_longEma  = m_alphaLong  * inputSq + (1.0f - m_alphaLong)  * m_longEma;
     }
 
     void computeAutoReleaseMs() {
@@ -336,8 +336,8 @@ private:
     }
 
     void updateLookaheadSize() {
-        const uint32_t newSize = std::max(1u, static_cast<uint32_t>(
-            std::ceil(kLookaheadMs * 0.001 * m_sampleRate)));
+        const uint32_t newSize = std::max(1u, std::min(kMaxLookaheadSamples,
+            static_cast<uint32_t>(std::ceil(kLookaheadMs * 0.001 * m_sampleRate))));
         if (newSize != m_lookaheadSize) {
             m_lookaheadSize = newSize;
             m_lookaheadSamples = newSize;

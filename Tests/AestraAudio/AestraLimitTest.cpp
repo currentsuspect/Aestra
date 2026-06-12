@@ -53,6 +53,18 @@ float peakAmplitude(const std::vector<float>& buf) {
     return peak;
 }
 
+float oversampledPeak(const std::vector<float>& buf, uint32_t osRatio) {
+    float peak = 0.0f;
+    for (size_t i = 0; i + 1 < buf.size(); ++i) {
+        for (uint32_t t = 0; t < osRatio; ++t) {
+            const float frac = static_cast<float>(t) / static_cast<float>(osRatio);
+            const float interp = buf[i] + frac * (buf[i + 1] - buf[i]);
+            peak = std::max(peak, std::abs(interp));
+        }
+    }
+    return peak;
+}
+
 bool testBypassPassesAudioUnchanged() {
     AestraLimit lim;
     initAndActivate(lim);
@@ -99,7 +111,9 @@ bool testTruePeakDoesNotExceedCeiling() {
     const auto inR = makeSine(kBlockSize, 1000.0f, 1.0f, kSampleRate);
     auto out = processStereo(lim, inL, inR);
 
-    float outPeak = std::max(peakAmplitude(out.left), peakAmplitude(out.right));
+    const float peakL = oversampledPeak(out.left, AestraLimit::kOsRatio);
+    const float peakR = oversampledPeak(out.right, AestraLimit::kOsRatio);
+    float outPeak = std::max(peakL, peakR);
     return outPeak <= internalCeilingLinear + 0.01f;
 }
 
@@ -115,8 +129,10 @@ bool testGainReductionApplied() {
     const auto inR = makeSine(kBlockSize, 1000.0f, 1.0f, kSampleRate);
     auto out = processStereo(lim, inL, inR);
 
+    const float ceilingDb = -24.0f + 0.25f * 24.0f;
+    const float expectedMax = std::pow(10.0f, ceilingDb / 20.0f) + 0.05f;
     const float outPeak = peakAmplitude(out.left);
-    return outPeak < 0.9f;
+    return outPeak < expectedMax;
 }
 
 bool testStateSaveLoadRoundtrip() {
