@@ -18,6 +18,7 @@ using Aestra::Audio::Plugins::AestraComp;
 namespace {
 
 void writeFloat(std::vector<uint8_t>& bytes, size_t offset, float value) {
+    assert(offset + sizeof(float) <= bytes.size() && "writeFloat: offset out of bounds");
     std::memcpy(bytes.data() + offset, &value, sizeof(float));
 }
 
@@ -123,7 +124,9 @@ bool testNanStateDoesNotEnterParametersOrProcessing() {
     comp.setParameter(AestraComp::kMix, 1.0f);
 
     std::vector<uint8_t> state = comp.saveState();
+    // Layout: magic (uint32_t) + version (uint32_t) + params[]
     constexpr size_t kParamOffset = sizeof(uint32_t) * 2;
+    static_assert(kParamOffset == 8, "saveState header layout changed — update kParamOffset");
     writeFloat(state, kParamOffset + sizeof(float) * AestraComp::kThreshold,
                std::numeric_limits<float>::quiet_NaN());
     writeFloat(state, kParamOffset + sizeof(float) * AestraComp::kMakeup,
