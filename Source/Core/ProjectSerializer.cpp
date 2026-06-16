@@ -59,7 +59,9 @@ namespace {
         ReferenceClip = 0,
         ReferenceUnit,
         MissingAsset,
+        MissingAssetDecode,
         LaneCreate,
+        LaneCreateChannel,
         EffectChain,
         AutomationTarget,
         DroppedClip,
@@ -1251,7 +1253,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                   std::to_string(sampleRate) + " Hz)");
                     } else {
                         warningLimiter.warning(
-                            ProjectLoadWarningCategory::MissingAsset,
+                            ProjectLoadWarningCategory::MissingAssetDecode,
                             "[ProjectLoad] Failed to decode: " + filePath + " — creating silent mono fallback",
                             "[ProjectLoad] Additional audio decode failure warnings suppressed.");
                         result.missingAssets.push_back(storedPath);
@@ -1375,7 +1377,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 MixerChannel* channel = trackManager->addChannel(laneName);
                 if (!channel) {
                     warningLimiter.warning(
-                        ProjectLoadWarningCategory::LaneCreate,
+                        ProjectLoadWarningCategory::LaneCreateChannel,
                         "[ProjectLoad] Failed to create channel for lane '" + laneName + "' — removing lane",
                         "[ProjectLoad] Additional lane channel creation failure warnings suppressed.");
                     playlist.removeLane(laneId);
