@@ -14,8 +14,9 @@
 #include "LocalAccountCache.h"
 #include "MembershipViewModel.h"
 #endif
-#include <memory>
+#include <algorithm>
 #include <functional>
+#include <memory>
 
 using namespace AestraUI;
 
@@ -35,6 +36,8 @@ private:
     class AestraContent* m_rootContent{nullptr};
     std::function<void(TransportAction)> m_rootTransportCallback;
     std::function<void()> m_rootSaveCallback;
+    static constexpr double kMembershipBadgeRefreshIntervalSeconds = 1.0;
+    double m_membershipBadgeRefreshSeconds = kMembershipBadgeRefreshIntervalSeconds;
 
 public:
     AestraRootComponent() = default;
@@ -70,7 +73,7 @@ public:
     }
     
     void onUpdate(double deltaTime) override {
-        updateMembershipBadge();
+        updateMembershipBadge(deltaTime);
         NUIComponent::updateGlobalTooltip(deltaTime);
         NUIComponent::onUpdate(deltaTime);
     }
@@ -104,10 +107,16 @@ public:
     }
 
 private:
-    void updateMembershipBadge() {
+    void updateMembershipBadge(double deltaTime) {
         if (!m_rootCustomWindow || !m_rootCustomWindow->getTitleBar()) {
             return;
         }
+        if (m_membershipBadgeRefreshSeconds < kMembershipBadgeRefreshIntervalSeconds) {
+            m_membershipBadgeRefreshSeconds +=
+                std::max(std::min(deltaTime, kMembershipBadgeRefreshIntervalSeconds), 0.0);
+            return;
+        }
+        m_membershipBadgeRefreshSeconds = 0.0;
 
         std::string tier = "Core";
         std::string status = "Signed out";
