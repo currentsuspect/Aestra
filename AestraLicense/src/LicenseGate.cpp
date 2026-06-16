@@ -47,6 +47,7 @@ namespace License {
 
 namespace {
 constexpr int64_t kLeasePeriodSeconds = 604800;
+constexpr int64_t kMaxLeaseClockSkewSeconds = 300;
 constexpr double kMaxExactJsonInteger = 9007199254740991.0;
 constexpr size_t kSecretBoxNonceBytes = 24;
 constexpr size_t kSecretBoxMacBytes = 16;
@@ -710,6 +711,14 @@ bool leaseTierAllowedForBuild(const LeaseRecord& lease) {
 
 bool leaseStatusAtNow(const LeaseRecord& lease, EntitlementStatus& status) {
     const int64_t now = nowSeconds();
+    const int64_t latestAllowedIssueTime =
+        now > (std::numeric_limits<int64_t>::max)() - kMaxLeaseClockSkewSeconds
+            ? (std::numeric_limits<int64_t>::max)()
+            : now + kMaxLeaseClockSkewSeconds;
+    if (lease.issuedAt > latestAllowedIssueTime) {
+        status = EntitlementStatus::InvalidSignature;
+        return false;
+    }
     if (lease.expiresAt > (std::numeric_limits<int64_t>::max)() - kLeasePeriodSeconds) {
         status = EntitlementStatus::Expired;
         return false;
@@ -893,7 +902,7 @@ EntitlementStatus loadAndVerifyLease(LeaseRecord& outLease) {
 
     EntitlementStatus status = EntitlementStatus::Missing;
     if (!leaseStatusAtNow(lease, status)) {
-        return EntitlementStatus::Expired;
+        return status;
     }
 
     outLease = std::move(lease);
@@ -1039,7 +1048,7 @@ bool LicenseGate::installLeaseBlobForRefresh(const std::string& leaseBlob, std::
 
     EntitlementStatus status = EntitlementStatus::Missing;
     if (!leaseStatusAtNow(lease, status)) {
-        message = "Lease is expired.";
+        message = status == EntitlementStatus::InvalidSignature ? "Lease is not yet valid." : "Lease is expired.";
         return false;
     }
     if (!saveLeaseToPrimarySecretStore(blob) && !saveLeaseToEncryptedBackup(blob, fingerprint)) {
