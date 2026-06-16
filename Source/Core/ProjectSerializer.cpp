@@ -199,10 +199,11 @@ namespace {
             return {};
         }
 #ifndef _WIN32
+        // On shared /tmp, permissions may fail if another user owns the dir.
+        // Treat this as non-fatal — the dir exists and we can still write to it
+        // if the umask allows; only the chmod fails.
         fs::permissions(base, fs::perms::owner_all, fs::perm_options::replace, ec);
-        if (ec) {
-            return {};
-        }
+        ec.clear(); // non-fatal
 #endif
 
         const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
@@ -858,6 +859,12 @@ bool ProjectSerializer::save(const std::string& path,
 
 ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                                       const std::shared_ptr<TrackManager>& trackManager) {
+    return load(path, trackManager, path);
+}
+
+ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
+                                                      const std::shared_ptr<TrackManager>& trackManager,
+                                                      const std::string& assetBasePath) {
     LoadResult result;
     if (!trackManager) {
         result.errorMessage = "Invalid track manager";
@@ -868,6 +875,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         return result;
     }
     const std::filesystem::path projectPath(path);
+    const std::filesystem::path assetRoot(assetBasePath);
 
 #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
     Log::info(std::string("[ProjectLoad] Begin: ") + path);
@@ -1077,7 +1085,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         for (size_t i = 0; i < sj.size(); ++i) {
             if (!sj[i].has("path")) continue;
             std::string storedPath = sj[i]["path"].asString();
-            std::filesystem::path filePath = resolveProjectAssetPath(projectPath, storedPath);
+            std::filesystem::path filePath = resolveProjectAssetPath(assetRoot, storedPath);
             if (!std::filesystem::exists(filePath) || !std::filesystem::is_regular_file(filePath)) {
                 result.missingAssets.push_back(storedPath);
                 Log::warning("[ProjectLoad] Missing or unreadable audio asset: " + storedPath);
@@ -1196,7 +1204,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 if (oldId == 0 || storedPath.empty()) {
                     continue;
                 }
-                std::filesystem::path resolvedPath = resolveProjectAssetPath(projectPath, storedPath);
+                std::filesystem::path resolvedPath = resolveProjectAssetPath(assetRoot, storedPath);
                 const std::string sourcePath = storedPath; // Use original storedPath for serialization
                 const std::string filePath = resolvedPath.string(); // Use resolvedPath only for file I/O
                 ClipSourceID newId = sourceManager.getOrCreateSource(sourcePath);
@@ -1596,7 +1604,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             namespace fs = std::filesystem;
             Log::warning("[ProjectLoad] Attempting to restore previous state from rollback");
             try {
-                LoadResult rollbackResult = load(rollbackPath, trackManager);
+                LoadResult rollbackResult = load(rollbackPath, trackManager, path);
                 if (rollbackResult.ok) {
                     Log::info("[ProjectLoad] Rollback successful — previous state restored");
                 } else {

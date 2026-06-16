@@ -106,6 +106,12 @@ public:
     static LoadResult load(const std::string& path,
                            const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager);
 
+    // Load with explicit asset base path (used for rollback loads where the
+    // file is in a temp directory but assets are relative to the original project).
+    static LoadResult load(const std::string& path,
+                           const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager,
+                           const std::string& assetBasePath);
+
     static std::string getHistoryDirectory(const std::string& projectPath);
     static std::vector<HistoryEntry> listHistory(const std::string& projectPath);
 };
