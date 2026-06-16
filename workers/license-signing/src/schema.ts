@@ -1,7 +1,7 @@
 import type { LeasePayload, LicenseTier } from "./canonicalLease";
+import { MAX_CLIENT_CLOCK_SKEW_SECONDS } from "./constants";
 
 const LEASE_PERIOD_SECONDS = 604800;
-const MAX_CLIENT_CLOCK_SKEW_SECONDS = 300;
 const MAX_STRING_LENGTH = 512;
 const MAX_ARRAY_LENGTH = 64;
 const MAX_ISSUE_COUNT = 32;
