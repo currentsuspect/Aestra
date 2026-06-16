@@ -188,7 +188,7 @@ public:
     /**
      * @brief Bypass entire chain
      */
-    void setChainBypassed(bool bypassed) { m_chainBypassed.store(bypassed); }
+    void setChainBypassed(bool bypassed);
     bool isChainBypassed() const { return m_chainBypassed.load(); }
 
     // ==============================
