@@ -9,12 +9,18 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
 using Aestra::Audio::Plugins::AestraComp;
 
 namespace {
+
+void writeFloat(std::vector<uint8_t>& bytes, size_t offset, float value) {
+    assert(offset + sizeof(float) <= bytes.size() && "writeFloat: offset out of bounds");
+    std::memcpy(bytes.data() + offset, &value, sizeof(float));
+}
 
 bool testPublicParameterSurface() {
     AestraComp comp;
@@ -110,6 +116,50 @@ bool testInvalidStateFailsSafely() {
     return true;
 }
 
+bool testNanStateDoesNotEnterParametersOrProcessing() {
+    AestraComp comp;
+    comp.initialize(48000.0, 256);
+    comp.setParameter(AestraComp::kThreshold, 0.25f);
+    comp.setParameter(AestraComp::kRatio, 0.5f);
+    comp.setParameter(AestraComp::kMix, 1.0f);
+
+    std::vector<uint8_t> state = comp.saveState();
+    // Layout: magic (uint32_t) + version (uint32_t) + params[]
+    constexpr size_t kParamOffset = sizeof(uint32_t) * 2;
+    static_assert(kParamOffset == 8, "saveState header layout changed — update kParamOffset");
+    writeFloat(state, kParamOffset + sizeof(float) * AestraComp::kThreshold,
+               std::numeric_limits<float>::quiet_NaN());
+    writeFloat(state, kParamOffset + sizeof(float) * AestraComp::kMakeup,
+               std::numeric_limits<float>::infinity());
+
+    AestraComp restored;
+    restored.initialize(48000.0, 256);
+    if (!restored.loadState(state)) {
+        std::cerr << "state with non-finite compressor params failed to load\n";
+        return false;
+    }
+    if (!std::isfinite(restored.getParameter(AestraComp::kThreshold)) ||
+        !std::isfinite(restored.getParameter(AestraComp::kMakeup))) {
+        std::cerr << "non-finite compressor state entered parameters\n";
+        return false;
+    }
+
+    restored.activate();
+    std::vector<float> input(1024, 0.5f);
+    std::vector<float> output(input.size(), 0.0f);
+    const float* inputs[] = {input.data()};
+    float* outputs[] = {output.data()};
+    restored.process(inputs, outputs, 1, 1, static_cast<uint32_t>(input.size()));
+
+    for (float sample : output) {
+        if (!std::isfinite(sample)) {
+            std::cerr << "non-finite compressor output after loading poisoned state\n";
+            return false;
+        }
+    }
+    return true;
+}
+
 bool testProcessPathDoesNotResizeKnownBuffers() {
     // V1 has no RMS window, lookahead, delay, or sidechain-listen buffers. This
     // test protects the visible contract by processing after initialization with
@@ -157,6 +207,7 @@ int main() {
     if (!testNormalizedWritesClamp()) return 1;
     if (!testStateRoundTrip()) return 1;
     if (!testInvalidStateFailsSafely()) return 1;
+    if (!testNanStateDoesNotEnterParametersOrProcessing()) return 1;
     if (!testProcessPathDoesNotResizeKnownBuffers()) return 1;
     if (!testBuiltInMetadata()) return 1;
     std::cout << "All AestraComp V1 parameter/state tests passed.\n";
