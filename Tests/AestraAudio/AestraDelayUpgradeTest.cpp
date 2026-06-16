@@ -45,6 +45,7 @@ size_t peakIndexInRange(const std::vector<float>& buffer, size_t begin, size_t e
 }
 
 void writeFloat(std::vector<uint8_t>& bytes, size_t offset, float value) {
+    assert(offset + sizeof(float) <= bytes.size() && "writeFloat: offset out of bounds");
     std::memcpy(bytes.data() + offset, &value, sizeof(float));
 }
 
