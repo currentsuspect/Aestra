@@ -1224,8 +1224,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 idMap[oldId] = newId;
                 const bool assetPathAllowed = resolveProjectAssetPath(projectPath, storedPath, resolvedPath);
                 const bool assetReadable = assetPathAllowed &&
+                    !resolvedPath.empty() &&
                     std::filesystem::exists(resolvedPath) && std::filesystem::is_regular_file(resolvedPath);
-                const std::string filePath = resolvedPath.string(); // Use resolvedPath only for file I/O
+                const std::string filePath = assetPathAllowed ? resolvedPath.string() : std::string{}; // Use resolvedPath only for file I/O
                 if (!assetPathAllowed) {
                     result.missingAssets.push_back(storedPath);
                     Log::warning("[ProjectLoad] Blocked audio asset outside project: " + storedPath);

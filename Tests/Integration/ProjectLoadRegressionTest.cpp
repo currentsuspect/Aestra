@@ -394,6 +394,100 @@ void testProjectAssetTraversalDoesNotDecodeOutsideFile() {
     std::filesystem::remove_all(testDir);
 }
 
+void testAbsolutePathOutsideProjectBlocked() {
+    std::cout << "[TEST] Absolute path outside project is blocked..." << std::endl;
+
+    auto testDir = makeTempDir();
+    std::filesystem::path projectDir = testDir / "project";
+    std::filesystem::create_directories(projectDir);
+    std::filesystem::path outsideWav = testDir / "private.wav";
+    std::filesystem::path testProject = projectDir / "project.aes";
+
+    assert(writeMinimalWavMono16(outsideWav, 44100, 4410));
+
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [{"id": 1, "path": "/etc/shadow", "name": "Outside Audio"}],
+        "patterns": [
+            {"id": 1, "name": "Outside Pattern", "type": "audio", "length": 4.0, "sourceId": 1, "slices": []}
+        ],
+        "lanes": [
+            {
+                "name": "Track 1",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "clips": []
+            }
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+    assert(result.ok);
+    assert(std::find(result.missingAssets.begin(), result.missingAssets.end(), "/etc/shadow") !=
+           result.missingAssets.end());
+
+    std::cout << "[PASS] Absolute path outside project is blocked" << std::endl;
+    std::filesystem::remove_all(testDir);
+}
+
+void testSamePrefixEscapeBlocked() {
+    std::cout << "[TEST] Same-prefix path escape is blocked..." << std::endl;
+
+    auto testDir = makeTempDir();
+    std::filesystem::path projectDir = testDir / "project";
+    std::filesystem::create_directories(projectDir);
+    // Create a file in a sibling dir that shares the project prefix
+    std::filesystem::path siblingDir = testDir / "project-secret";
+    std::filesystem::create_directories(siblingDir);
+    std::filesystem::path siblingWav = siblingDir / "stolen.wav";
+    std::filesystem::path testProject = projectDir / "project.aes";
+
+    assert(writeMinimalWavMono16(siblingWav, 44100, 4410));
+
+    // Use a path that resolves to the sibling directory
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [{"id": 1, "path": "../project-secret/stolen.wav", "name": "Outside Audio"}],
+        "patterns": [
+            {"id": 1, "name": "Outside Pattern", "type": "audio", "length": 4.0, "sourceId": 1, "slices": []}
+        ],
+        "lanes": [
+            {
+                "name": "Track 1",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "clips": []
+            }
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+    assert(result.ok);
+    assert(std::find(result.missingAssets.begin(), result.missingAssets.end(), "../project-secret/stolen.wav") !=
+           result.missingAssets.end());
+
+    std::cout << "[PASS] Same-prefix path escape is blocked" << std::endl;
+    std::filesystem::remove_all(testDir);
+}
+
 void testUnresolvedRouteTargetNonFatal() {
     std::cout << "[TEST] Unresolved send routing targets are non-fatal..." << std::endl;
 
@@ -750,6 +844,8 @@ int main() {
     testUnitManagerSurvivesFailedLoad();
     testMissingAudioFileNonDestructive();
     testProjectAssetTraversalDoesNotDecodeOutsideFile();
+    testAbsolutePathOutsideProjectBlocked();
+    testSamePrefixEscapeBlocked();
     testUnresolvedRouteTargetNonFatal();
     testV1FixtureMigratesToCurrentVersion();
     testAutomationTarget256DoesNotWrapToVolume();
