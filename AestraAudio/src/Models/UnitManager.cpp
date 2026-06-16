@@ -13,6 +13,7 @@
 #include <atomic>
 #include <cctype>
 #include <cmath>
+#include <limits>
 #include <iomanip>
 #include <optional>
 #include <sstream>
@@ -64,7 +65,9 @@ std::optional<ArsenalRouteMode> arsenalRouteModeFromNumber(const JSON& routeMode
     }
 
     const double raw = routeModeJson.asNumber();
-    if (!std::isfinite(raw) || std::floor(raw) != raw) {
+    if (!std::isfinite(raw) || std::floor(raw) != raw ||
+        raw < static_cast<double>(std::numeric_limits<int>::min()) ||
+        raw > static_cast<double>(std::numeric_limits<int>::max())) {
         return std::nullopt;
     }
 
