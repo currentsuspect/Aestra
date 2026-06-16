@@ -163,17 +163,18 @@ std::string AestraApp::readCrashFlagToken() {
     return token;
 }
 
-void AestraApp::writeRecoveryMarkerForAutosave(const std::string& autosavePath) const {
+bool AestraApp::writeRecoveryMarkerForAutosave(const std::string& autosavePath) const {
     if (m_recoverySessionToken.empty()) {
-        return;
+        return false;
     }
 
     std::ofstream out(getRecoveryMarkerPath(autosavePath), std::ios::binary | std::ios::trunc);
     if (!out) {
         Log::warning("[Recovery] Failed to write autosave recovery marker");
-        return;
+        return false;
     }
     out << m_recoverySessionToken << "\n";
+    return true;
 }
 
 bool AestraApp::initialize(const std::string& projectPath) {
@@ -313,8 +314,8 @@ void AestraApp::initializeAutosave(bool enabled) {
     config.enabled = enabled;
     config.autosaveInterval = std::chrono::seconds(60);
     config.autosavePathOverride = getAutosavePath();
-    config.onAutosaveCommitted = [this](const std::string& autosavePath) {
-        writeRecoveryMarkerForAutosave(autosavePath);
+    config.onAutosaveCommitted = [this](const std::string& autosavePath) -> bool {
+        return writeRecoveryMarkerForAutosave(autosavePath);
     };
     config.serializer = [this](std::string& outData) -> bool {
         if (!m_content || !m_content->getTrackManager()) return false;
@@ -1355,8 +1356,8 @@ void AestraApp::reinitAutosaveManager() {
     config.enabled = m_autoSaveManager.isEnabled();
     config.autosaveInterval = std::chrono::seconds(60);
     config.autosavePathOverride = getAutosavePath();
-    config.onAutosaveCommitted = [this](const std::string& autosavePath) {
-        writeRecoveryMarkerForAutosave(autosavePath);
+    config.onAutosaveCommitted = [this](const std::string& autosavePath) -> bool {
+        return writeRecoveryMarkerForAutosave(autosavePath);
     };
     config.serializer = [this](std::string& outData) -> bool {
         if (!m_content || !m_content->getTrackManager()) return false;

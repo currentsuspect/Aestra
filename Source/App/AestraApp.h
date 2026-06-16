@@ -95,7 +95,7 @@ private:
     void startExport();
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
-    void writeRecoveryMarkerForAutosave(const std::string& autosavePath) const;
+    bool writeRecoveryMarkerForAutosave(const std::string& autosavePath) const;
 
 private:
     std::unique_ptr<AestraWindowManager> m_windowManager;
