@@ -63,12 +63,11 @@ async function assertSourceQuota(env: Env, sourceKey: string | null, nowSeconds:
 
   const db = requireD1(env);
   const windowStart = nowSeconds - 60 * 60;
-  const metadataJson = JSON.stringify({ source: sourceKey });
   const row = await db.prepare(`
       SELECT COUNT(*) AS recent_count
       FROM account_login_challenges
-      WHERE metadata_json = ? AND created_at > ?
-    `).bind(metadataJson, windowStart).first<SourceQuotaRow>();
+      WHERE JSON_EXTRACT(metadata_json, '$.source') = ? AND created_at > ?
+    `).bind(sourceKey, windowStart).first<SourceQuotaRow>();
 
   if (Number(row?.recent_count ?? 0) >= MAX_CHALLENGES_PER_SOURCE_HOUR) {
     throw new LoginChallengeError(429, "login_start_rate_limited", "login challenge creation is rate limited");

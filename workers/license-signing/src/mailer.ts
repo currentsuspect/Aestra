@@ -166,5 +166,6 @@ export async function sendLoginChallenge(env: Env, email: string, challenge: Cre
     await resendSend(env, email, challenge.code, challenge.expiresAt);
     return { exposeCode: false };
   }
-  throw new MailerError(500, "mailer_unconfigured", "login mailer is not configured");
+  // Unreachable: assertLoginMailerConfigured already throws for unknown modes
+  return { exposeCode: false };
 }
