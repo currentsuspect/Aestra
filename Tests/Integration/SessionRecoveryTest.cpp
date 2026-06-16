@@ -105,13 +105,20 @@ bool isCrashedSession(const std::filesystem::path& path) {
     return std::filesystem::exists(path, ec);
 }
 
-// Mimics RecoveryDialog::detectAutosave — just checks file existence
+// Mimics RecoveryDialog::detectAutosave — mirrors production logic
+// Checks: non-empty token, marker file match, autosave exists and non-empty
 bool detectAutosave(const std::filesystem::path& autosavePath,
                     const std::filesystem::path& recoveryMarkerPath,
                     const std::string& expectedSessionToken,
                     std::string& outTimestamp) {
+    if (expectedSessionToken.empty()) {
+        return false;
+    }
     std::error_code ec;
     if (!std::filesystem::exists(autosavePath, ec) || ec) {
+        return false;
+    }
+    if (std::filesystem::file_size(autosavePath, ec) == 0 || ec) {
         return false;
     }
     std::ifstream marker(recoveryMarkerPath, std::ios::binary);
@@ -203,16 +210,25 @@ int main() {
         std::cout << "[INFO] Autosave written: " << autosavePath.string() << "\n";
     }
 
+    // --- Test: planted autosave with its own missing marker is rejected
     {
         const auto plantedPath = tempDir / "planted_autosave.aes";
+        const auto plantedMarkerPath = std::filesystem::path(plantedPath.string() + ".recovery");
         std::ofstream planted(plantedPath, std::ios::binary | std::ios::trunc);
         planted << "planted";
         std::string timestamp;
-        require(!detectAutosave(plantedPath, recoveryMarkerPath, "wrong-session", timestamp),
-                "Recovery must reject autosave without matching session marker");
+        // Marker file does not exist — must reject
+        require(!detectAutosave(plantedPath, plantedMarkerPath, "wrong-session", timestamp),
+                "Recovery must reject planted autosave without matching session marker");
+        // Create marker with wrong content — must still reject
+        std::ofstream wrongMarker(plantedMarkerPath, std::ios::binary | std::ios::trunc);
+        wrongMarker << "mismatched-token";
+        wrongMarker.close();
+        require(!detectAutosave(plantedPath, plantedMarkerPath, recoverySessionToken, timestamp),
+                "Recovery must reject planted autosave with mismatched marker content");
     }
 
-    // --- Recovery: detect autosave
+    // --- Recovery: detect autosave (uses production RecoveryDialog::detectAutosave)
     {
         std::string timestamp;
         bool detected = detectAutosave(autosavePath, recoveryMarkerPath, recoverySessionToken, timestamp);

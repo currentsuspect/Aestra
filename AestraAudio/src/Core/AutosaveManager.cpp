@@ -428,7 +428,10 @@ bool AutosaveManager::performAutosave() {
     Log::info("Autosaved to: " + autosavePath + " (" + sizeStr + ")");
 
     if (m_config.onAutosaveCommitted) {
-        m_config.onAutosaveCommitted(autosavePath);
+        if (!m_config.onAutosaveCommitted(autosavePath)) {
+            notifyError("Autosave failed: post-commit hook rejected the save");
+            return false;
+        }
     }
     
     return true;

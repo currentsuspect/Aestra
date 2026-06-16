@@ -70,7 +70,8 @@ public:
         std::string autosavePathOverride;
 
         // Optional callback invoked after an autosave has been committed.
-        std::function<void(const std::string& autosavePath)> onAutosaveCommitted;
+        // Must return true if the commit is considered successful.
+        std::function<bool(const std::string& autosavePath)> onAutosaveCommitted;
     };
     
     struct RecoveryInfo {
