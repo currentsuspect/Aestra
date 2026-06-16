@@ -1,11 +1,11 @@
 import { canonicalizeLease, type LeasePayload } from "./canonicalLease";
 import type { AccountAuthContext } from "./accountAuth";
 import type { EntitlementRecord } from "./entitlementRepository";
+import { MAX_CLIENT_CLOCK_SKEW_SECONDS } from "./constants";
 import { parseSignRequest, SignRequestError } from "./schema";
 import { signCanonicalLease, type Env } from "./signing";
 
 const LEASE_PERIOD_SECONDS = 604800;
-const MAX_CLIENT_CLOCK_SKEW_SECONDS = 300;
 
 export type AccountRefreshRequest = {
   deviceHash: string;
@@ -53,9 +53,10 @@ export function parseAccountRefreshRequest(input: unknown, nowSeconds: number): 
   return { deviceHash: deviceHash as string, issuedAt };
 }
 
-export async function buildSignedLeaseResponse(payload: LeasePayload, env: Env, includeLeaseBlob: boolean):
+export async function buildSignedLeaseResponse(payload: LeasePayload, env: Env, includeLeaseBlob: boolean,
+                                               nowSeconds?: number):
     Promise<Record<string, unknown>> {
-  const validatedPayload = parseSignRequest(payload);
+  const validatedPayload = parseSignRequest(payload, nowSeconds);
   const canonical = canonicalizeLease(validatedPayload);
   const signatureHex = await signCanonicalLease(canonical, env);
   return {
