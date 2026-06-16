@@ -112,10 +112,8 @@ private:
             return;
         }
         if (m_membershipBadgeRefreshSeconds < kMembershipBadgeRefreshIntervalSeconds) {
-            if (deltaTime > 0.0) {
-                m_membershipBadgeRefreshSeconds +=
-                    std::min(deltaTime, kMembershipBadgeRefreshIntervalSeconds);
-            }
+            m_membershipBadgeRefreshSeconds +=
+                std::max(std::min(deltaTime, kMembershipBadgeRefreshIntervalSeconds), 0.0);
             return;
         }
         m_membershipBadgeRefreshSeconds = 0.0;

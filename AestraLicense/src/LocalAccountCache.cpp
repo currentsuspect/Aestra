@@ -154,7 +154,12 @@ LocalAccountCacheLoadResult LocalAccountCache::load() const {
     LocalAccountCacheLoadResult result;
     std::error_code sizeEc;
     const std::uintmax_t cacheSize = std::filesystem::file_size(m_cachePath, sizeEc);
-    if (!sizeEc && cacheSize > kMaxAccountCacheBytes) {
+    if (sizeEc) {
+        // file_size failed (special file, FUSE mount, etc.) — treat as unreadable
+        result.status = LocalAccountCacheLoadStatus::Missing;
+        return result;
+    }
+    if (cacheSize > kMaxAccountCacheBytes) {
         result.status = LocalAccountCacheLoadStatus::Malformed;
         return result;
     }
