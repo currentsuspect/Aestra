@@ -2835,8 +2835,10 @@ void AudioEngine::compileGraph() {
 
     // Use double-buffering: Write to inactive index
     const int inactiveIdx = 1 - m_activeRenderTrackIndex.load(std::memory_order_relaxed);
-    auto& targetOrder = m_graphStates[inactiveIdx].renderTracks;
+    auto& targetState = m_graphStates[inactiveIdx];
+    auto& targetOrder = targetState.renderTracks;
     targetOrder.clear();
+    targetState.trackStates.clear();
 
     auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_relaxed);
     if (!slotMap)
@@ -2860,7 +2862,11 @@ void AudioEngine::compileGraph() {
         rt.trackIndex = idx;
         rt.selfBuffer = m_trackBuffersD[idx].data();
 
-        // --- Main Output Routing ---
+        // Ensure trackStates has an entry for this track
+        if (idx >= targetState.trackStates.size()) {
+            targetState.trackStates.resize(idx + 1);
+        }
+
         // --- Main Output Routing ---
         // Phase 4: Real-time Fader Support
         // We set connection gain to 1.0 (Unity) because Volume/Pan will be applied
@@ -3240,8 +3246,9 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     while (framesRemaining > 0) {
         uint32_t framesThisBlock = (uint32_t)std::min((uint64_t)blockSize, framesRemaining);
 
-        // Zero buffer
+        // Zero buffers
         std::fill(blockBuffer.begin(), blockBuffer.end(), 0.0);
+        std::fill(m_masterBufferD.begin(), m_masterBufferD.begin() + static_cast<size_t>(framesThisBlock) * 2, 0.0);
 
         // Setup Context
         AudioRenderer::Context ctx;
@@ -3263,6 +3270,12 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
 
         // Render
         m_rtRenderer.renderBlock(ctx, graphState, *this);
+
+        // renderBlock routes tracks to m_masterBufferD via activeConnections.
+        // Copy the result to blockBuffer before processing Arsenal units.
+        for (size_t i = 0; i < static_cast<size_t>(framesThisBlock) * 2; ++i) {
+            blockBuffer[i] = m_masterBufferD[i];
+        }
 
         // Process Arsenal pattern playback (MIDI buffer pop + unit render).
         // renderBlock handles PreviewToMaster; this call processes track-routed

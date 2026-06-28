@@ -304,6 +304,17 @@ public:
     void setChannelSlotMapShared(std::shared_ptr<ChannelSlotMap> slotMap) { m_channelSlotMap = slotMap; }
 
     /**
+     * @brief Build a channel slot map from the current channel list and share it.
+     * Creates a ChannelSlotMap, rebuilds it from internal channels, and publishes
+     * it via setChannelSlotMapShared. Safe to call before audio processing starts.
+     */
+    void buildAndShareSlotMap() {
+        auto slotMap = std::make_shared<ChannelSlotMap>();
+        slotMap->rebuild(m_channels);
+        m_channelSlotMap = slotMap;
+    }
+
+    /**
      * @brief Set playhead position
      * @param position New UI playhead position in seconds.
      */
