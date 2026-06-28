@@ -1045,6 +1045,56 @@ set_tests_properties(AestraDelayUpgradeTest PROPERTIES LABELS "audio;plugins;del
 # add_test(NAME AestraSerializationCompatibilityTest COMMAND AestraSerializationCompatibilityTest)
 
 # =============================================================================
+# Audio Quality Tests (S-Tier validation suite, Spec §3, §8, §15)
+# =============================================================================
+
+# Summing Engine Test — Verifies N-track digital summing accuracy
+# against mathematical reference. Pass: RMS error < -140 dB.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SummingEngineTest.cpp")
+    add_executable(SummingEngineTest AestraAudio/SummingEngineTest.cpp)
+    target_link_libraries(SummingEngineTest PRIVATE AestraAudio)
+    target_include_directories(SummingEngineTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SummingEngineTest COMMAND SummingEngineTest)
+    set_tests_properties(SummingEngineTest PROPERTIES LABELS "audio;quality;summing;s-tier")
+endif()
+
+# Golden Reference Test — Signal-level regression against in-memory
+# mathematical reference for 1kHz, 440Hz, 10kHz, and impulse signals.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/GoldenReferenceTest.cpp")
+    add_executable(GoldenReferenceTest AestraAudio/GoldenReferenceTest.cpp)
+    target_link_libraries(GoldenReferenceTest PRIVATE AestraAudio)
+    target_include_directories(GoldenReferenceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME GoldenReferenceTest COMMAND GoldenReferenceTest)
+    set_tests_properties(GoldenReferenceTest PROPERTIES LABELS "audio;quality;golden;s-tier")
+endif()
+
+# Export/Bounce Parity Test — Master bounce must equal sum of isolated
+# track bounces to within -80 dB RMS (accounting for master stage processing).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ExportBounceParityTest.cpp")
+    add_executable(ExportBounceParityTest AestraAudio/ExportBounceParityTest.cpp)
+    target_link_libraries(ExportBounceParityTest PRIVATE AestraAudio)
+    target_include_directories(ExportBounceParityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ExportBounceParityTest COMMAND ExportBounceParityTest)
+    set_tests_properties(ExportBounceParityTest PROPERTIES LABELS "audio;quality;export;s-tier")
+endif()
+
+# =============================================================================
 # AestraPlat Tests
 # =============================================================================
 
