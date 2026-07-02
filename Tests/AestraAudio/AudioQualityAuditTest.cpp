@@ -16,9 +16,11 @@
 #include "Models/TrackManager.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cmath>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -60,7 +62,13 @@ static std::vector<float> renderSine(
     tm->setOutputSampleRate(static_cast<double>(sampleRate));
     tm->addChannel("QualityTest");
 
-    std::string path = "/tmp/quality_audit_src.wav";
+    // Portable temp path with a per-run unique name (avoids collisions in
+    // parallel test runs; the source is in-memory, path is metadata only)
+    static const std::string path =
+        (std::filesystem::temp_directory_path() /
+         ("aestra_quality_audit_src_" +
+          std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) +
+          ".wav")).string();
     ClipSourceID srcId = tm->getSourceManager().createRecordedSource(
         path, "quality_src", buf);
     double durationSec = static_cast<double>(durationFrames) / sampleRate;
