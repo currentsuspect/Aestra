@@ -153,6 +153,23 @@ target_link_libraries(Aestra PRIVATE
 	-Wl,--start-group AestraAudio AestraAudioCore -Wl,--end-group
 )
 
+# Release-only optimization flags
+# Scoped to Release via generator expressions — never applied to Debug/RelWithDebInfo.
+# NO -ffast-math: codebase has ~15 std::isfinite()/std::isnan() guards in audio hot paths.
+# Enabling -ffast-math silently disables those guards (compiler optimizes them away).
+# -ffast-math is a separate project: audit guards, replace with fast-math-safe equivalents, test.
+if(NOT MSVC)
+    target_compile_options(Aestra PRIVATE
+        $<$<CONFIG:Release>:-O3>
+        $<$<CONFIG:Release>:-flto>
+        $<$<CONFIG:Release>:-fno-exceptions>
+        $<$<CONFIG:Release>:-fno-rtti>
+    )
+    target_link_options(Aestra PRIVATE
+        $<$<CONFIG:Release>:-flto>
+    )
+endif()
+
 # Include directories
 # Add all subdirectories so headers can be included without relative paths
 # This makes the codebase reorganization-proof - #include "ViewTypes.h" works from anywhere

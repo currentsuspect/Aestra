@@ -351,6 +351,36 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerBenchmark.cpp")
     # (#pragma / hasAVX() checks). Forcing -mavx2 breaks on CPUs without AVX2 support.
 endif()
 
+# Resampler War Test: deterministic SRC quality gate with optional references.
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+    pkg_check_modules(SAMPLERATE QUIET samplerate)
+    pkg_check_modules(SOXR QUIET soxr)
+endif()
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerWarTest.cpp")
+    add_executable(ResamplerWarTest Integration/ResamplerWarTest.cpp)
+    target_link_libraries(ResamplerWarTest PRIVATE AestraAudioCore)
+    target_include_directories(ResamplerWarTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(ResamplerWarTest PRIVATE AESTRA_SRC_TEST_ACCESS=1)
+    if(SAMPLERATE_FOUND)
+        target_link_libraries(ResamplerWarTest PRIVATE ${SAMPLERATE_LIBRARIES})
+        target_include_directories(ResamplerWarTest PRIVATE ${SAMPLERATE_INCLUDE_DIRS})
+        target_compile_options(ResamplerWarTest PRIVATE ${SAMPLERATE_CFLAGS_OTHER})
+        target_compile_definitions(ResamplerWarTest PRIVATE AESTRA_HAS_LIBSAMPLERATE=1)
+    endif()
+    if(SOXR_FOUND)
+        target_link_libraries(ResamplerWarTest PRIVATE ${SOXR_LIBRARIES})
+        target_include_directories(ResamplerWarTest PRIVATE ${SOXR_INCLUDE_DIRS})
+        target_compile_options(ResamplerWarTest PRIVATE ${SOXR_CFLAGS_OTHER})
+        target_compile_definitions(ResamplerWarTest PRIVATE AESTRA_HAS_SOXR=1)
+    endif()
+    add_test(NAME ResamplerWarTest COMMAND ResamplerWarTest)
+    set_tests_properties(ResamplerWarTest PROPERTIES LABELS "audio;dsp;resampler;quality")
+endif()
+
 # =============================================================================
 # AestraAudio Tests
 # =============================================================================
@@ -931,6 +961,7 @@ set_tests_properties(ArsenalBridgeModeRoundTripTest PROPERTIES LABELS "arsenal;p
 # Sample Rate Converter Test
 add_executable(AestraSampleRateConverterTest AestraAudio/SampleRateConverterTest.cpp)
 target_link_libraries(AestraSampleRateConverterTest PRIVATE AestraAudio)
+target_compile_definitions(AestraSampleRateConverterTest PRIVATE AESTRA_SRC_TEST_ACCESS=1)
 if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
     add_test(NAME AestraSampleRateConverterTest COMMAND AestraSampleRateConverterTest)
     set_tests_properties(AestraSampleRateConverterTest PROPERTIES LABELS "experimental;unstable")
@@ -1070,6 +1101,50 @@ set_tests_properties(AestraLimitTest PROPERTIES LABELS "audio;plugins;limiter")
 # add_executable(AestraSerializationCompatibilityTest AestraAudio/SerializationCompatibilityTest.cpp)
 # target_link_libraries(AestraSerializationCompatibilityTest PRIVATE AestraAudio)
 # add_test(NAME AestraSerializationCompatibilityTest COMMAND AestraSerializationCompatibilityTest)
+
+# =============================================================================
+# Audio Quality Tests (S-Tier validation suite, Spec §3, §8, §15)
+# =============================================================================
+
+# Summing Engine Test — Verifies N-track digital summing accuracy
+# against mathematical reference. Pass: RMS error < -140 dB.
+add_executable(SummingEngineTest AestraAudio/SummingEngineTest.cpp)
+target_link_libraries(SummingEngineTest PRIVATE AestraAudio)
+target_include_directories(SummingEngineTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SummingEngineTest COMMAND SummingEngineTest)
+set_tests_properties(SummingEngineTest PROPERTIES LABELS "audio;quality;summing;s-tier")
+
+# Golden Reference Test — Signal-level regression against in-memory
+# mathematical reference for 1kHz, 440Hz, 10kHz, and impulse signals.
+add_executable(GoldenReferenceTest AestraAudio/GoldenReferenceTest.cpp)
+target_link_libraries(GoldenReferenceTest PRIVATE AestraAudio)
+target_include_directories(GoldenReferenceTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME GoldenReferenceTest COMMAND GoldenReferenceTest)
+set_tests_properties(GoldenReferenceTest PROPERTIES LABELS "audio;quality;golden;s-tier")
+
+# Export/Bounce Parity Test — Master bounce must equal sum of isolated
+# track bounces to within -80 dB RMS (accounting for master stage processing).
+add_executable(ExportBounceParityTest AestraAudio/ExportBounceParityTest.cpp)
+target_link_libraries(ExportBounceParityTest PRIVATE AestraAudio)
+target_include_directories(ExportBounceParityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ExportBounceParityTest COMMAND ExportBounceParityTest)
+set_tests_properties(ExportBounceParityTest PROPERTIES LABELS "audio;quality;export;s-tier")
 
 # =============================================================================
 # AestraPlat Tests
