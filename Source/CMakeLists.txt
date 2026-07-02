@@ -162,6 +162,9 @@ if(NOT MSVC)
         $<$<CONFIG:Release>:-fno-exceptions>
         $<$<CONFIG:Release>:-fno-rtti>
     )
+    target_link_options(Aestra PRIVATE
+        $<$<CONFIG:Release>:-flto>
+    )
 endif()
 
 # Include directories
