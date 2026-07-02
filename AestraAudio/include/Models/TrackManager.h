@@ -305,13 +305,14 @@ public:
 
     /**
      * @brief Build a channel slot map from the current channel list and share it.
-     * Creates a ChannelSlotMap, rebuilds it from internal channels, and publishes
-     * it via setChannelSlotMapShared. Safe to call before audio processing starts.
+     * Rebuilds the published ChannelSlotMap in place so existing audio-engine
+     * consumers keep observing the current routing map.
      */
     void buildAndShareSlotMap() {
-        auto slotMap = std::make_shared<ChannelSlotMap>();
-        slotMap->rebuild(m_channels);
-        m_channelSlotMap = slotMap;
+        if (!m_channelSlotMap) {
+            m_channelSlotMap = std::make_shared<ChannelSlotMap>();
+        }
+        m_channelSlotMap->rebuild(m_channels);
     }
 
     /**

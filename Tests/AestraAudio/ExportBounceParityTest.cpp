@@ -193,8 +193,17 @@ int main() {
             return 1;
         }
 
-        size_t n = std::min(trackAudio.samples.size(), sumSamples.size());
-        for (size_t i = 0; i < n; ++i) {
+        if (trackAudio.sampleRate != masterAudio.sampleRate || trackAudio.channels != masterAudio.channels ||
+            trackAudio.samples.size() != masterAudio.samples.size()) {
+            std::cerr << "Track " << t << " bounce format/length mismatch: "
+                      << trackAudio.sampleRate << " Hz, " << trackAudio.channels << " ch, "
+                      << trackAudio.samples.size() << " samples vs master "
+                      << masterAudio.sampleRate << " Hz, " << masterAudio.channels << " ch, "
+                      << masterAudio.samples.size() << " samples\n";
+            return 1;
+        }
+
+        for (size_t i = 0; i < sumSamples.size(); ++i) {
             sumSamples[i] += trackAudio.samples[i];
         }
     }
@@ -206,11 +215,11 @@ int main() {
         std::cerr << "Not enough samples to skip fade-in\n";
         return 1;
     }
-    size_t compareFrames = std::min(sumSamples.size(), masterAudio.samples.size()) - kSkipSamples;
+    size_t compareSamples = masterAudio.samples.size() - kSkipSamples;
     std::vector<float> masterTrimmed(masterAudio.samples.begin() + static_cast<ptrdiff_t>(kSkipSamples),
-                                     masterAudio.samples.begin() + static_cast<ptrdiff_t>(kSkipSamples + compareFrames));
+                                     masterAudio.samples.begin() + static_cast<ptrdiff_t>(kSkipSamples + compareSamples));
     std::vector<float> sumTrimmed(sumSamples.begin() + static_cast<ptrdiff_t>(kSkipSamples),
-                                  sumSamples.begin() + static_cast<ptrdiff_t>(kSkipSamples + compareFrames));
+                                  sumSamples.begin() + static_cast<ptrdiff_t>(kSkipSamples + compareSamples));
 
     double rmsDb = computeRmsDb(masterTrimmed, sumTrimmed);
     float sumPeak = computePeak(sumTrimmed);

@@ -123,7 +123,7 @@ int main() {
     size_t compared = 0;
     float engPeak = 0.0f;
     float expPeak = 0.0f;
-    for (size_t i = startSample; i < engineOutput.size() && i < endSample; i += 2) {
+    for (size_t i = startSample; i < engineOutput.size() && i < expected.size() && i < endSample; ++i) {
         float e = engineOutput[i];
         float ex = static_cast<float>(expected[i]);
         engPeak = std::max(engPeak, std::abs(e));
@@ -137,7 +137,7 @@ int main() {
 
     std::cout << "Tracks: " << kNumTracks << "\n";
     std::cout << "Signal: " << static_cast<int>(kFrequencyHz) << " Hz @ " << kAmplitudeDbfs << " dBFS\n";
-    std::cout << "Compared frames: " << compared << " (trimmed " << kTrimStart
+    std::cout << "Compared samples: " << compared << " (trimmed " << kTrimStart
               << " start + " << kTrimEnd << " tail)\n";
     std::cout << "RMS error: " << rmsDb << " dB\n";
     std::cout << "Peak error: " << peakErr << " (linear)\n";
