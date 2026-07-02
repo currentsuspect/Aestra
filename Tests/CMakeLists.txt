@@ -1143,7 +1143,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioQualityAuditTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
     add_test(NAME AudioQualityAuditTest COMMAND AudioQualityAuditTest)
-    set_tests_properties(AudioQualityAuditTest PROPERTIES LABELS "audio;quality;audit;s-tier")
+    set_tests_properties(AudioQualityAuditTest PROPERTIES LABELS "audio;quality;audit;s-tier" TIMEOUT 180)
 endif()
 
 # AudioEngine Torture Test — stress harness: silence, NaN/Inf, extreme gain,
@@ -1157,8 +1157,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioEngineTortureTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
+    # In Debug configs the engine library keeps assert() live and
+    # AudioEngine::processBlock hard-asserts on NaN/Inf, so the poisoned-input
+    # cases must be skipped there. Tests compile with -UNDEBUG unconditionally
+    # (see top of this file), so the test cannot detect the engine's build
+    # config itself — pass it in explicitly.
+    target_compile_definitions(AudioEngineTortureTest PRIVATE
+        $<$<CONFIG:Debug>:AESTRA_ENGINE_ASSERTS_ACTIVE=1>)
     add_test(NAME AudioEngineTortureTest COMMAND AudioEngineTortureTest)
-    set_tests_properties(AudioEngineTortureTest PROPERTIES LABELS "audio;stress;torture;s-tier")
+    set_tests_properties(AudioEngineTortureTest PROPERTIES LABELS "audio;stress;torture;s-tier" TIMEOUT 300)
 endif()
 
 # Export/Bounce Parity Test — Master bounce must equal sum of isolated

@@ -132,7 +132,7 @@ static void testSilencePath() {
         return peak == 0.0f;
     });
 
-    // Extended silence processing: 10 seconds, 100 blocks
+    // Extended silence processing: 10 seconds (~1875 blocks at 48kHz/256f)
     TEST("Silence path — 10s sustained (no denormal buildup)", {
         auto eng = makeEngine(kSampleRate, kBlockSize);
         std::vector<float> out(static_cast<size_t>(kBlockSize) * kChannels);
@@ -162,6 +162,14 @@ static void testSilencePath() {
 }
 
 static void testNanInfInjection() {
+#ifdef AESTRA_ENGINE_ASSERTS_ACTIVE
+    // Set by Tests/CMakeLists.txt for Debug configs: the engine library keeps
+    // assert() live there and AudioEngine::processBlock hard-asserts on
+    // NaN/Inf, so poisoned-input cases would abort instead of reporting.
+    // The sanitize-and-recover contract is verified in Release/RelWithDebInfo
+    // runs (including the ASan/UBSan nightly).
+    std::printf("  SKIP  NaN/Inf injection cases (engine asserts active in Debug config)\n");
+#else
     // NaN on input must not propagate to output or corrupt engine state
     TEST("NaN input — engine produces finite output", {
         auto eng = makeEngine(kSampleRate, kBlockSize);
@@ -204,6 +212,7 @@ static void testNanInfInjection() {
         eng->processBlock(out.data(), nullptr, kBlockSize, 0.0);        // Recover
         return isFinite(out.data(), kBlockSize, kChannels);
     });
+#endif
 }
 
 static void testExtremeGainValues() {
@@ -230,7 +239,11 @@ static void testExtremeGainValues() {
         }
         std::vector<float> out(static_cast<size_t>(kBlockSize) * kChannels, 0.0f);
         eng->processBlock(out.data(), sigIn.data(), kBlockSize, 0.0);
-        return isFinite(out.data(), kBlockSize, kChannels);
+        if (!isFinite(out.data(), kBlockSize, kChannels))
+            return false;
+        // Engine output stage hard-clamps L/R to [-1, 1]; verify the bound
+        float peak = peakMagnitude(out.data(), kBlockSize, kChannels);
+        return peak <= 1.0f;
     });
 }
 
@@ -256,7 +269,7 @@ static void testBufferSizeReconfiguration() {
         auto eng = makeEngine(kSampleRate, 256);
         std::vector<float> out;
         std::mt19937 rng(42);
-        std::uniform_int_distribution<int> sizeDist(3, 12);
+        std::uniform_int_distribution<int> sizeDist(6, 12); // 64..4096, matching supported sizes
         for (int i = 0; i < 100; ++i) {
             uint32_t bs = 1u << sizeDist(rng);
             eng->setBufferConfig(bs, kChannels);
