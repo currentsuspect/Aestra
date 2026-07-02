@@ -197,8 +197,8 @@ public:
      * bounce (trackId >= 0) it renders only that track via AudioRenderer::renderBlock
      * without master-stage processing.
      *
-     * Used by AudioEngine::bounceRangeToWav to consolidate all offline render
-     * authorities through a single exporter path.
+     * This helper mirrors AudioEngine::bounceRangeToWav's public signature while
+     * returning richer export metadata to callers that need it.
      *
      * @param engine Audio engine reference
      * @param trackManager Track manager reference

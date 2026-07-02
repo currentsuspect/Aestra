@@ -47,6 +47,13 @@ AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManag
     if (trackId >= 0) {
         Result result;
         result.outputPath = outputPath;
+        trackManager.buildAndShareSlotMap();
+        if (auto slotMap = trackManager.getChannelSlotMapShared()) {
+            engine.setChannelSlotMap(slotMap);
+        } else {
+            result.errorMessage = "Isolated track bounce failed: missing channel slot map";
+            return result;
+        }
         bool ok = engine.bounceRangeToWav(startBeat, endBeat, outputPath, trackId);
         if (!ok) {
             result.errorMessage = "Isolated track bounce failed";
