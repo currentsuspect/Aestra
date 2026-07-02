@@ -31,7 +31,7 @@ Verify:
 
 Pass criteria:
 
-```
+```text
 Input sine wave:
 -1 dBFS @ 1kHz
 
@@ -68,7 +68,7 @@ Verify:
 
 Preferred internal pipeline:
 
-```
+```text
 Everything:
 32-bit float minimum
 
@@ -86,7 +86,7 @@ Create:
 
 100 identical sine tracks:
 
-```
+```text
 1kHz
 -20dBFS
 ```
@@ -107,7 +107,7 @@ Pass:
 
 Difference:
 
-```
+```text
 < -140dB RMS error
 ```
 
@@ -119,7 +119,7 @@ Test:
 
 Mono signal:
 
-```
+```text
 -6dBFS pink noise
 ```
 
@@ -147,7 +147,7 @@ Test:
 
 Audio through:
 
-```
+```text
 Track gain
 Clip gain
 Plugin gain
@@ -159,7 +159,7 @@ Compare:
 
 Expected:
 
-```
+```text
 Output = Input × gain coefficient
 ```
 
@@ -175,7 +175,7 @@ No:
 
 Push:
 
-```
+```text
 200 tracks
 each -3dBFS
 ```
@@ -192,7 +192,7 @@ No:
 
 Check:
 
-```
+```text
 Internal peak > 0dBFS
 ```
 
@@ -210,13 +210,13 @@ Test:
 
 Bypass:
 
-```
+```text
 Input → Plugin bypass
 ```
 
 must equal:
 
-```
+```text
 Input → no plugin
 ```
 
@@ -230,7 +230,7 @@ Measure:
 
 Impulse:
 
-```
+```text
 single sample spike
 ```
 
@@ -244,7 +244,7 @@ Output position
 
 Report:
 
-```
+```text
 Plugin latency: X samples
 ```
 
@@ -258,13 +258,13 @@ Render same project:
 
 Realtime:
 
-```
+```text
 Play → Record output
 ```
 
 Offline:
 
-```
+```text
 Export
 ```
 
@@ -274,7 +274,7 @@ Bit identical.
 
 Expected:
 
-```
+```text
 Difference = 0
 ```
 
@@ -288,19 +288,19 @@ Test:
 
 Volume automation:
 
-```
+```text
 -∞ → 0dB
 ```
 
 Fast:
 
-```
+```text
 10ms ramp
 ```
 
 Slow:
 
-```
+```text
 10 seconds
 ```
 
@@ -328,7 +328,7 @@ Verify:
 
 Latency:
 
-```
+```text
 input timestamp
 -
 record timestamp
@@ -379,7 +379,7 @@ Noise floor.
 
 Expected:
 
-```
+```text
 Below -140dBFS
 ```
 
@@ -417,7 +417,7 @@ Test:
 
 Very quiet signals:
 
-```
+```text
 -300dB sine
 ```
 
@@ -429,7 +429,7 @@ CPU spikes.
 
 Must have:
 
-```
+```text
 Denormal protection enabled
 ```
 
@@ -439,7 +439,7 @@ Denormal protection enabled
 
 Create:
 
-```
+```text
 tests/audio/reference/
 ```
 
@@ -453,13 +453,13 @@ Containing:
 
 Every engine change runs:
 
-```
+```text
 Aestra Audio Regression Suite
 ```
 
 Compare:
 
-```
+```text
 new.wav
 reference.wav
 ```

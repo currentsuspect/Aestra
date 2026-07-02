@@ -53,7 +53,10 @@ AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManag
             return result;
         }
         result.success = true;
-        result.framesRendered = 0; // Not tracked in delegated path
+        const double bpm = std::max(static_cast<double>(engine.getBPM()), 1.0);
+        result.durationSeconds = (endBeat - startBeat) * 60.0 / bpm;
+        result.framesRendered = static_cast<uint64_t>(
+            std::ceil(result.durationSeconds * static_cast<double>(engine.getSampleRate())));
         return result;
     }
 

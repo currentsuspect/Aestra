@@ -13,19 +13,19 @@ Build: `build-linux` (headless tests + full app, Release, `AESTRA_ENABLE_RUNTIME
 |---|------|--------|-------|-------|
 | 1 | Core Audio Engine Integrity | **PASS** w/ gaps | A− | Oscillator freq error: 0% @ 100/440/1000 Hz, 0.02% @ 5 kHz. No multi-SR plugin handoff test. No export-rate preservation test. |
 | 2 | Bit Depth Handling | **PASS** | A | PCM16/24 symmetric quantization verified. WAV loader passes 16/24/32-bit. TPDF dither deterministic + stereo-uncorrelated. |
-| 3 | Summing Engine | **UNTESTED** | C | No 100-track sine summation test exists. No reference math comparison. PerformanceTest measures timing (192-track safe) but not numerical summing accuracy. |
+| 3 | Summing Engine | **SCAFFOLDED POST-AUDIT** | C+ | This PR adds `SummingEngineTest` for deterministic math-reference summing coverage. The original audit run did not execute it, so the result is not claimed here. |
 | 4 | Pan Law | **PASS** w/ gaps | B | sin/cos constant-power -3dB center confirmed in source. No automated test measures center vs side energy or verifies user-selectable laws (-3/-4.5/-6 dB). |
 | 5 | Gain Stage Accuracy | **PASS** | A | Safety limiter knee/ceiling/disabled tests pass. SmoothedParamD linear ramp fix verified (P1 → DONE per prior audit). Master gain ramp uses correct per-block linear delta. |
 | 6 | Mixer Headroom | **PASS** w/ gaps | B | 200-track stress in PerformanceTest shows stable 76% load at 192 tracks. No test verifies internal >0 dBFS handling without wraparound/clipping. |
 | 7 | Plugin Processing | **PASS** | A | EQ (67 tests): bypass parity, latency=0, NaN/Inf containment, 44.1/96 kHz, silence stability. Comp (all pass): Phase0 contract + Phase1 parameter surface. Limiter: bypass <1e-6, ceiling clamp, latency reported. ReverbSIMD parity: scalar path OK (SSE unavailable on this host). |
-| 8 | Real-Time vs Offline | **PASS** w/ known risk | B | ArsenalExportLiveParityTest confirms live/export parity for PreviewToMaster and RoutedToTimelineTrack routing. File: `AestraDocs/audio-quality-audit-2026-05.md §9` flags 2 offline render authorities (P1 — Slice 3 in progress). Bounce tests pass with full/isolation/write-failure paths. |
+| 8 | Real-Time vs Offline | **PASS** w/ known risk | B | ArsenalExportLiveParityTest confirms live/export parity for PreviewToMaster and RoutedToTimelineTrack routing. File: `AestraDocs/audio-quality-audit-2026-05.md §9` flags 2 offline render authorities (P1 — Slice 3 in progress). Bounce tests pass with full/isolation/write-failure paths; this PR also adds `ExportBounceParityTest` for master vs isolated-track export parity. |
 | 9 | Automation Accuracy | **PASS** w/ gap | B | AutomationStressTest passes 12/12 deserialization edge cases. No real-time ramp smoothness test (zipper noise, click detection). Prior audit's P1 `SmoothedParamD` snap bug is DONE. |
 | 10 | Recording Path | **PASS** | B | State machine (arm/lifecycle/unarmed) passes. Full capture path requires audio hardware (loopback, timestamp measurement). |
 | 11 | Export Validation | **PASS** w/ gaps | B | TruePeakMeterTest passes. ArsenalExportLiveParityTest validates 48000 Hz, 2ch, 32-float export. No multi-format (16/24/FLAC/MP3) roundtrip test exists. |
 | 12 | Noise Floor | **UNTESTED** | C | No silence-project export test. Prior audit confirms NaN/Inf sanitization at master + per-plugin. Export dither P1 fixed. |
 | 13 | CPU Stress Stability | **PASS** w/ gate | A | SoakTest exists but requires `AESTRA_ENABLE_RUNTIME_TESTS=ON` (2hr default). PerformanceTest shows 192-track safe polyphony at 76% load, 224 tracks at 90% (FAIL threshold). |
 | 14 | Denormal Handling | **PASS** w/ known bug | B | ReverbSafetyRegressionTest: ALL PASS. `AestraDocs/audio-quality-audit-2026-05.md §3` flags ARM64 `FPCR.FZ` as P1/MISSING (Slice 7 DONE). Engine-level FTZ+DAZ on x86. Limiter EMA state zeroed on reset/bypass. |
-| 15 | Golden Reference Suite | **MISSING** | C | No `tests/audio/reference/` directory. No reference WAV files. No automated regression comparison (RMS/peak/spectrum). |
+| 15 | Golden Reference Suite | **SCAFFOLDED POST-AUDIT** | C+ | This PR adds `GoldenReferenceTest` with generated sine and impulse references. File-based reference WAVs and spectrum checks remain future work. |
 
 ---
 
@@ -34,7 +34,7 @@ Build: `build-linux` (headless tests + full app, Release, `AESTRA_ENABLE_RUNTIME
 ### §1 — Core Audio Engine Integrity
 
 **Oscillator frequency accuracy (build-linux/Tests/AestraOscillatorTest):**
-```
+```text
 100 Hz  → 100 Hz   (error: 0%)
 440 Hz  → 440 Hz   (error: 0%)
 1000 Hz → 1000 Hz  (error: 0%)
@@ -65,11 +65,11 @@ Build: `build-linux` (headless tests + full app, Release, `AESTRA_ENABLE_RUNTIME
 
 ### §3 — Summing Engine
 
-**No test exists.** The validation spec criterion is < -140 dB RMS error for 100 × 1 kHz -20 dBFS tracks summed vs Numpy reference.
+**Post-audit scaffold:** this PR adds `Tests/AestraAudio/SummingEngineTest.cpp`, registered as `SummingEngineTest`, to compare engine output against an in-memory mathematical summing reference.
 
-This is the single largest gap in the current test suite. Aestra's 64-bit double-precision master bus should theoretically achieve this, but it is *untested*.
+The original audit run did not execute that binary, so this report does not claim a pass result for it. A broader 100-track Numpy/reference-vector variant remains useful follow-up coverage.
 
-**Action:** Write `tests/audio/summing/test_100_tone_sum.py` (or C++ equivalent) that renders 100 tracks, compares against offline math, and reports dB error.
+**Action:** Extend the C++ scaffold or add `tests/audio/summing/test_100_tone_sum.py` to render 100 tracks, compare against offline math, and report dB error.
 
 ### §4 — Pan Law
 
@@ -98,7 +98,7 @@ This is the single largest gap in the current test suite. Aestra's 64-bit double
 ### §6 — Mixer Headroom
 
 **Performance polyphony (build-linux/Tests/AestraAudioPerformanceTest):**
-```
+```text
 32  tracks: 41.4% load  → OK
 64  tracks: 62.9% load  → OK
 96  tracks: 76.4% load  → OK
@@ -198,7 +198,9 @@ Exports format-validated at 48000 Hz, 2 channels, 32-bit float.
 
 ### §15 — Golden Reference Test Suite
 
-**Not implemented.** No `tests/audio/reference/` directory. No reference WAV files for sine, impulse, pink noise, white noise, or music stems. No regression tool that compares `new.wav` vs `reference.wav` with RMS/peak/spectrum metrics.
+**Post-audit scaffold:** this PR adds `Tests/AestraAudio/GoldenReferenceTest.cpp`, registered as `GoldenReferenceTest`, with generated sine and impulse reference signals compared through RMS, peak, and correlation metrics.
+
+The original audit run did not execute that binary, so this report does not claim a pass result for it. File-based reference WAVs for sine, impulse, pink noise, white noise, and music stems remain future work, as does spectrum-domain comparison.
 
 Existing lab WAV files in `labs/reverb/quality/` serve reverb quality measurement only, not general regression detection.
 
@@ -223,10 +225,10 @@ Existing lab WAV files in `labs/reverb/quality/` serve reverb quality measuremen
 
 ## Gap Analysis: What's Missing
 
-### Critical Gaps (no test exists, not even scaffolded)
+### Critical Gaps
 
-1. **§3 Summing Engine** — 100-track numerical accuracy test. Largest gap.
-2. **§15 Golden Reference Suite** — No regression framework. No reference WAVs.
+1. **§3 Summing Engine** — `SummingEngineTest` is now scaffolded in this PR; broader 100-track numerical accuracy coverage remains.
+2. **§15 Golden Reference Suite** — `GoldenReferenceTest` is now scaffolded in this PR; file-based reference WAVs and spectrum checks remain.
 3. **§12 Noise Floor** — No silence export → measure noise.
 
 ### Medium Gaps (partial coverage, needs expansion)
@@ -270,9 +272,9 @@ Based on this audit, Aestra earns:
 
 **Orchestration-grade trust** is achievable. The 64-bit engine, PDC v2, and RT safety are already S-tier quality. The three gaps preventing S-tier certification are:
 
-1. **Summing engine numerical accuracy** (§3) — write one test, likely PASS, instant confidence.
+1. **Summing engine numerical accuracy** (§3) — the new `SummingEngineTest` provides the first scaffold; broaden to 100-track coverage for certification.
 2. **Offline render authority unification** (§8/Slice 3) — already in progress.
-3. **Golden reference regression suite** (§15) — larger investment, prevents regression over time.
+3. **Golden reference regression suite** (§15) — the new `GoldenReferenceTest` provides the first scaffold; expand to file-based fixtures and spectrum checks.
 
 ---
 
@@ -283,7 +285,9 @@ Based on this audit, Aestra earns:
 
 ### Tests Executed (17 binaries, all PASS)
 
-```
+This PR also adds `SummingEngineTest`, `GoldenReferenceTest`, and `ExportBounceParityTest` in `Tests/CMakeLists.txt`. They were added after this audit run and are not counted in the 17 binaries below unless a later validation report lists them explicitly.
+
+```text
 AestraAudioQualityRegressionTest     — 4/4  PCM quantization, TPDF dither, SmoothedParam
 AestraPlaybackPathSignalIntegrityTest — 7/7  Safety limiter, audition/preview paths
 ArsenalExportLiveParityTest           — 6/6  Live/export/bounce parity for Arsenal

@@ -156,7 +156,7 @@ Rule: within any plugin struct, sort fields by access frequency in process(). Ho
 
 **Data path (verified):**
 
-```
+```text
 OS/Driver callback
   └─ audioCallback() receives interleaved stereo float
        └─ processBlock(outputBuffer, inputBuffer, numFrames)

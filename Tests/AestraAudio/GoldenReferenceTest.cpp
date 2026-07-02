@@ -168,8 +168,9 @@ std::vector<float> generateSineRef(double freqHz, float amplitude) {
 
 std::vector<float> generateImpulseRef(float amplitude) {
     std::vector<float> samples(static_cast<size_t>(kTestDurationFrames) * kChannels, 0.0f);
-    samples[0] = amplitude;
-    samples[1] = amplitude;
+    constexpr uint32_t kImpulseFrame = kBlockSize + 64;
+    samples[static_cast<size_t>(kImpulseFrame) * kChannels] = amplitude;
+    samples[static_cast<size_t>(kImpulseFrame) * kChannels + 1] = amplitude;
     return samples;
 }
 

@@ -2834,17 +2834,18 @@ void AudioEngine::compileGraph() {
     std::lock_guard<std::mutex> lock(m_graphMutex);
 
     // Use double-buffering: Write to inactive index
-    const int inactiveIdx = 1 - m_activeRenderTrackIndex.load(std::memory_order_relaxed);
+    const int activeIdx = m_activeRenderTrackIndex.load(std::memory_order_relaxed);
+    const int inactiveIdx = 1 - activeIdx;
     auto& targetState = m_graphStates[inactiveIdx];
     auto& targetOrder = targetState.renderTracks;
     targetOrder.clear();
-    targetState.trackStates.clear();
 
     auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_relaxed);
     if (!slotMap)
         return;
 
     targetOrder.reserve(slotMap->getChannelCount());
+    uint32_t maxTrackIndexPlusOne = 0;
 
     // Access the current graph snapshot
     auto graphRead = m_state.activeGraphRead();
@@ -2857,6 +2858,7 @@ void AudioEngine::compileGraph() {
         // Safety Check
         if (idx >= m_trackBuffersD.size())
             continue;
+        maxTrackIndexPlusOne = std::max(maxTrackIndexPlusOne, idx + 1);
 
         RenderTrack rt;
         rt.trackIndex = idx;
@@ -2938,6 +2940,7 @@ void AudioEngine::compileGraph() {
 
         targetOrder.push_back(rt);
     }
+    targetState.trackStates.resize(maxTrackIndexPlusOne);
 
     // Atomic Swap
     m_activeRenderTrackIndex.store(inactiveIdx, std::memory_order_release);
