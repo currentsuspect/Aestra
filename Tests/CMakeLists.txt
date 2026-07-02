@@ -915,6 +915,7 @@ set_tests_properties(ArsenalBridgeModeRoundTripTest PROPERTIES LABELS "arsenal;p
 # Sample Rate Converter Test
 add_executable(AestraSampleRateConverterTest AestraAudio/SampleRateConverterTest.cpp)
 target_link_libraries(AestraSampleRateConverterTest PRIVATE AestraAudio)
+target_compile_definitions(AestraSampleRateConverterTest PRIVATE AESTRA_SRC_TEST_ACCESS=1)
 if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
     add_test(NAME AestraSampleRateConverterTest COMMAND AestraSampleRateConverterTest)
     set_tests_properties(AestraSampleRateConverterTest PROPERTIES LABELS "experimental;unstable")

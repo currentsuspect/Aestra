@@ -354,6 +354,10 @@ public:
     void setSIMDEnabled(bool enabled) noexcept { m_simdEnabled.store(enabled, std::memory_order_relaxed); }
     bool isSIMDEnabled() const noexcept { return m_simdEnabled.load(std::memory_order_relaxed); }
 
+#ifdef AESTRA_SRC_TEST_ACCESS
+    const PolyphaseFilterBank* getFilterBankForTests() const noexcept { return getFilterBank(); }
+#endif
+
 private:
     // =========================================================================
     // Internal Methods
