@@ -335,6 +335,36 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerBenchmark.cpp")
     # (#pragma / hasAVX() checks). Forcing -mavx2 breaks on CPUs without AVX2 support.
 endif()
 
+# Resampler War Test: deterministic SRC quality gate with optional references.
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+    pkg_check_modules(SAMPLERATE QUIET samplerate)
+    pkg_check_modules(SOXR QUIET soxr)
+endif()
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerWarTest.cpp")
+    add_executable(ResamplerWarTest Integration/ResamplerWarTest.cpp)
+    target_link_libraries(ResamplerWarTest PRIVATE AestraAudioCore)
+    target_include_directories(ResamplerWarTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(ResamplerWarTest PRIVATE AESTRA_SRC_TEST_ACCESS=1)
+    if(SAMPLERATE_FOUND)
+        target_link_libraries(ResamplerWarTest PRIVATE ${SAMPLERATE_LIBRARIES})
+        target_include_directories(ResamplerWarTest PRIVATE ${SAMPLERATE_INCLUDE_DIRS})
+        target_compile_options(ResamplerWarTest PRIVATE ${SAMPLERATE_CFLAGS_OTHER})
+        target_compile_definitions(ResamplerWarTest PRIVATE AESTRA_HAS_LIBSAMPLERATE=1)
+    endif()
+    if(SOXR_FOUND)
+        target_link_libraries(ResamplerWarTest PRIVATE ${SOXR_LIBRARIES})
+        target_include_directories(ResamplerWarTest PRIVATE ${SOXR_INCLUDE_DIRS})
+        target_compile_options(ResamplerWarTest PRIVATE ${SOXR_CFLAGS_OTHER})
+        target_compile_definitions(ResamplerWarTest PRIVATE AESTRA_HAS_SOXR=1)
+    endif()
+    add_test(NAME ResamplerWarTest COMMAND ResamplerWarTest)
+    set_tests_properties(ResamplerWarTest PROPERTIES LABELS "audio;dsp;resampler;quality")
+endif()
+
 # =============================================================================
 # AestraAudio Tests
 # =============================================================================
