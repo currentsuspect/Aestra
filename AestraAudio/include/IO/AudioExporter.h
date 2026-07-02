@@ -16,14 +16,13 @@ namespace Audio {
 /**
  * @brief Offline audio export/render engine (v2.0)
  *
- * Renders the project to a WAV file using AudioRenderer::renderBlock() —
- * the same rendering path used by bounceRangeToWav() and real-time playback.
+ * Renders the project to a WAV file using AudioEngine::processBlock() for
+ * master bus output, or AudioRenderer::renderBlock() for isolated track output.
  *
- * Key differences from v1:
- * - Uses AudioRenderer::renderBlock() instead of AudioEngine::processBlock()
- * - Duration is computed from the actual playlist timeline
- * - Position advances correctly between blocks
- * - Master output stage (DC block, soft clip, dither) matches playback
+ * Key features:
+ * - Master-stage processing (safety limiter, hard clamp, LUFS, true-peak) on full mix
+ * - Isolated-track bounce via isolatedTrackIndex (no master stage)
+ * - TPDF dither on PCM_16/PCM_24 quantization
  * - Supports FullSong, LoopRegion, and Selection scopes
  *
  * Usage:
@@ -193,9 +192,13 @@ public:
      * @brief Convenience helper matching AudioEngine::bounceRangeToWav signature.
      *
      * This static helper creates an AudioExporter instance and renders the specified
-     * range using the authoritative offline path (processBlock with master-stage processing
-     * and dithering). Used by AudioEngine::bounceRangeToWav to consolidate offline render
-     * authorities.
+     * range. For master bounce (trackId == -1) it uses the authoritative offline path
+     * (processBlock with master-stage processing and dithering). For isolated track
+     * bounce (trackId >= 0) it renders only that track via AudioRenderer::renderBlock
+     * without master-stage processing.
+     *
+     * This helper mirrors AudioEngine::bounceRangeToWav's public signature while
+     * returning richer export metadata to callers that need it.
      *
      * @param engine Audio engine reference
      * @param trackManager Track manager reference
@@ -284,20 +287,7 @@ private:
     // Peak tracking
     std::atomic<float> m_peakLevel{0.0f};
 
-    // Master output state (per-render)
-    struct DCBlockerD {
-        double x1{0.0};
-        double y1{0.0};
-        static constexpr double R = 0.9997;
-        inline double process(double x) {
-            double y = x - x1 + R * y1;
-            x1 = x;
-            y1 = y;
-            return y;
-        }
-    };
-    DCBlockerD m_dcBlockerL;
-    DCBlockerD m_dcBlockerR;
+    // Dither state for PCM quantization
     ExportQuantization::TpdfDither m_exportDither;
 };
 
