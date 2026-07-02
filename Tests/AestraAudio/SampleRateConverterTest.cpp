@@ -5,9 +5,11 @@
 
 #include "AestraLog.h"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <complex>
 #include <iomanip>
 #include <iostream>
 #include <vector>
@@ -323,6 +325,77 @@ void testSIMDMatchesScalar() {
                "RMS=" + std::to_string(rms) + ", max=" + std::to_string(maxErr));
 }
 
+void testPhaseZeroSincRegression() {
+    std::cout << "\n=== Test: Phase-0 Sinc Kernel Regression ===\n";
+
+    SampleRateConverter src;
+    src.configure(48000, 44100, 1, SRCQuality::Sinc64);
+
+    const PolyphaseFilterBank* bank = src.getFilterBankForTests();
+    if (!bank || bank->numTaps == 0) {
+        recordTest("Phase-0 kernel is available", false, "No filter bank");
+        return;
+    }
+    recordTest("Phase-0 kernel is available", true, "Taps: " + std::to_string(bank->numTaps));
+
+    auto phaseSum = [&](uint32_t phase) {
+        double sum = 0.0;
+        for (uint32_t tap = 0; tap < bank->numTaps; ++tap) {
+            sum += bank->coeffs[phase][tap];
+        }
+        return sum;
+    };
+
+    auto responseMagnitude = [&](uint32_t phase, double normalizedFrequency) {
+        std::complex<double> h{0.0, 0.0};
+        for (uint32_t tap = 0; tap < bank->numTaps; ++tap) {
+            const double angle = -2.0 * PI * normalizedFrequency * static_cast<double>(tap);
+            h += static_cast<double>(bank->coeffs[phase][tap]) *
+                 std::complex<double>{std::cos(angle), std::sin(angle)};
+        }
+        return std::abs(h);
+    };
+
+    auto peakMagnitude = [&](uint32_t phase) {
+        double peak = 0.0;
+        for (uint32_t tap = 0; tap < bank->numTaps; ++tap) {
+            peak = std::max(peak, std::abs(static_cast<double>(bank->coeffs[phase][tap])));
+        }
+        return peak;
+    };
+
+    const double phase0Sum = phaseSum(0);
+    const double phase1Sum = phaseSum(1);
+    const double phase255Sum = phaseSum(SRCConstants::POLYPHASE_PHASES - 1);
+
+    recordTest("Phase-0 kernel DC sum is normalized", std::abs(phase0Sum - 1.0) < 1e-6,
+               "sum=" + std::to_string(phase0Sum));
+    recordTest("Neighboring phase DC sums remain normalized",
+               std::abs(phase1Sum - 1.0) < 1e-6 && std::abs(phase255Sum - 1.0) < 1e-6,
+               "phase1=" + std::to_string(phase1Sum) + ", phase255=" + std::to_string(phase255Sum));
+
+    const double phase0Peak = peakMagnitude(0);
+    const double neighborPeakMean =
+        0.5 * (peakMagnitude(1) + peakMagnitude(SRCConstants::POLYPHASE_PHASES - 1));
+    const double peakDelta = std::abs(phase0Peak - neighborPeakMean);
+    recordTest("Phase-0 impulse peak matches neighboring phases", peakDelta < 0.03,
+               "phase0=" + std::to_string(phase0Peak) + ", neighborMean=" + std::to_string(neighborPeakMean));
+
+    bool responseOk = true;
+    double worstDelta = 0.0;
+    for (double f : {0.0, 0.05, 0.10, 0.20, 0.35, 0.43}) {
+        const double mag0 = responseMagnitude(0, f);
+        const double neighborMag =
+            0.5 * (responseMagnitude(1, f) + responseMagnitude(SRCConstants::POLYPHASE_PHASES - 1, f));
+        const double delta = std::abs(mag0 - neighborMag);
+        worstDelta = std::max(worstDelta, delta);
+        responseOk = responseOk && delta < 0.02;
+    }
+
+    recordTest("Phase-0 magnitude response has no neighbor jump", responseOk,
+               "worstDelta=" + std::to_string(worstDelta));
+}
+
 void testMultiChannel() {
     std::cout << "\n=== Test: Multi-Channel (6ch surround) ===\n";
 
@@ -415,6 +488,7 @@ int main() {
     testReset();
     testVariableRatio();
     testSIMDMatchesScalar();
+    testPhaseZeroSincRegression();
     testPerformance();
 
     // Summary

@@ -314,15 +314,17 @@ void SampleRateConverter::generateFilterBank(SRCQuality quality) {
             double sinc = 1.0;
             if (std::abs(x) > 1e-10) {
                 const double pix = SRCConstants::PI * x * cutoff;
-                sinc = std::sin(pix) / (SRCConstants::PI * x); // sinc(x*cutoff) = sin(pi*x*cutoff)/(pi*x)
+                sinc = std::sin(pix) / (SRCConstants::PI * x * cutoff); // sinc(x*cutoff) = sin(pi*x*cutoff)/(pi*x*cutoff)
             } else {
-                sinc = cutoff; // limx->0 sin(pi*x*c)/(pi*x) = c
+                // sinc(cutoff*x) tends to 1 at x == 0; cutoff is applied by
+                // the nonzero argument and the per-phase normalization.
+                sinc = 1.0;
             }
 
             // Apply Kaiser window centered in the tap array
             const double window = kaiserWindow(tap, numTaps, kaiserBeta);
 
-            // Coefficient is sinc * window (cutoff already incorporated)
+            // Coefficient is sinc(cutoff*x) * window
             const double coeff = sinc * window;
             m_localFilterBank.coeffs[phase][tap] = static_cast<float>(coeff);
             sumWeight += coeff;
