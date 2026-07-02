@@ -1132,6 +1132,42 @@ target_include_directories(GoldenReferenceTest PRIVATE
 add_test(NAME GoldenReferenceTest COMMAND GoldenReferenceTest)
 set_tests_properties(GoldenReferenceTest PROPERTIES LABELS "audio;quality;golden;s-tier")
 
+# Audio Quality Audit — noise floor, THD+N, freq response, DC blocker, soft clipper
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioQualityAuditTest.cpp")
+    add_executable(AudioQualityAuditTest AestraAudio/AudioQualityAuditTest.cpp)
+    target_link_libraries(AudioQualityAuditTest PRIVATE AestraAudio)
+    target_include_directories(AudioQualityAuditTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AudioQualityAuditTest COMMAND AudioQualityAuditTest)
+    set_tests_properties(AudioQualityAuditTest PROPERTIES LABELS "audio;quality;audit;s-tier" TIMEOUT 180)
+endif()
+
+# AudioEngine Torture Test — stress harness: silence, NaN/Inf, extreme gain,
+# buffer switching, sample rate switching, transport hammering, multi-track load
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioEngineTortureTest.cpp")
+    add_executable(AudioEngineTortureTest AestraAudio/AudioEngineTortureTest.cpp)
+    target_link_libraries(AudioEngineTortureTest PRIVATE AestraAudio)
+    target_include_directories(AudioEngineTortureTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    # In Debug configs the engine library keeps assert() live and
+    # AudioEngine::processBlock hard-asserts on NaN/Inf, so the poisoned-input
+    # cases must be skipped there. Tests compile with -UNDEBUG unconditionally
+    # (see top of this file), so the test cannot detect the engine's build
+    # config itself — pass it in explicitly.
+    target_compile_definitions(AudioEngineTortureTest PRIVATE
+        $<$<CONFIG:Debug>:AESTRA_ENGINE_ASSERTS_ACTIVE=1>)
+    add_test(NAME AudioEngineTortureTest COMMAND AudioEngineTortureTest)
+    set_tests_properties(AudioEngineTortureTest PROPERTIES LABELS "audio;stress;torture;s-tier" TIMEOUT 300)
+endif()
+
 # Export/Bounce Parity Test — Master bounce must equal sum of isolated
 # track bounces to within -80 dB RMS (accounting for master stage processing).
 add_executable(ExportBounceParityTest AestraAudio/ExportBounceParityTest.cpp)
