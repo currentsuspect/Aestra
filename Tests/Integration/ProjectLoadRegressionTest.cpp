@@ -707,6 +707,82 @@ void testMixerLaneStateNumbersClampBeforeCast() {
     std::filesystem::remove_all(testDir);
 }
 
+void testTrackColorIndexRoundtrip() {
+    std::cout << "[TEST] trackColorIndex survives save/load roundtrip..." << std::endl;
+
+    auto testDir = makeTempDir();
+    std::filesystem::path testProject = testDir / "project.aes";
+
+    std::string projectJson = R"({
+        "version": 1,
+        "tempo": 120.0,
+        "playhead": 0.0,
+        "sources": [],
+        "patterns": [],
+        "lanes": [
+            {
+                "name": "Track 1",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "trackColorIndex": 5,
+                "clips": []
+            },
+            {
+                "name": "Track 2",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "trackColorIndex": 2,
+                "clips": []
+            },
+            {
+                "name": "Track 3",
+                "color": "4294967295",
+                "volume": 1.0,
+                "pan": 0.0,
+                "clips": []
+            }
+        ],
+        "arsenal": {"nextId": 1, "units": []}
+    })";
+
+    std::ofstream out(testProject);
+    out << projectJson;
+    out.close();
+
+    auto trackManager = std::make_shared<TrackManager>();
+    auto result = ProjectSerializer::load(testProject.string(), trackManager);
+    assert(result.ok);
+    assert(trackManager->getChannelCount() == 3);
+
+    assert(trackManager->getChannel(0)->getTrackColorIndex() == 5);
+    assert(trackManager->getChannel(1)->getTrackColorIndex() == 2);
+    // Lane without the field keeps the unset default.
+    assert(trackManager->getChannel(2)->getTrackColorIndex() == -1);
+
+    // Re-save and reload to verify the write side emits the field.
+    std::string saved = ProjectSerializer::serialize(trackManager, 120.0, 0.0, 0).contents;
+    assert(!saved.empty());
+
+    std::filesystem::path testProject2 = testDir / "project2.aes";
+    std::ofstream out2(testProject2);
+    out2 << saved;
+    out2.close();
+
+    auto trackManager2 = std::make_shared<TrackManager>();
+    auto result2 = ProjectSerializer::load(testProject2.string(), trackManager2);
+    assert(result2.ok);
+    assert(trackManager2->getChannelCount() == 3);
+    assert(trackManager2->getChannel(0)->getTrackColorIndex() == 5);
+    assert(trackManager2->getChannel(1)->getTrackColorIndex() == 2);
+    assert(trackManager2->getChannel(2)->getTrackColorIndex() == -1);
+
+    std::cout << "[PASS] trackColorIndex survives save/load roundtrip" << std::endl;
+
+    std::filesystem::remove_all(testDir);
+}
+
 void testProjectLoadWarningsAreBounded() {
     std::cout << "[TEST] Project load warnings are bounded..." << std::endl;
 
@@ -787,6 +863,7 @@ int main() {
     testV1FixtureMigratesToCurrentVersion();
     testAutomationTarget256DoesNotWrapToVolume();
     testMixerLaneStateNumbersClampBeforeCast();
+    testTrackColorIndexRoundtrip();
     testProjectLoadWarningsAreBounded();
 
     std::cout << "=== All tests passed ===" << std::endl;
