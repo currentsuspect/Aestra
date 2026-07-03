@@ -417,7 +417,6 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
 
     // Hoisted constants (invariant across all frames in this call)
     const double historySizeD = static_cast<double>(m_history.size);
-    const double historySizeMinus1 = historySizeD - 1.0;
     const double historySizeMinusHalfTaps = historySizeD - static_cast<double>(halfTaps);
     const double halfTapsD = static_cast<double>(halfTaps);
     const double polyPhaseScale = static_cast<double>(SRCConstants::POLYPHASE_PHASES);
@@ -461,9 +460,9 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
         const double srcPosMinusHalfTaps = srcPosition - halfTapsD;
         const double srcPosMinusHistorySize = srcPosition - historySizeMinusHalfTaps;
 
-        // Track historyPos directly: starts at historySizeMinus1 - srcNextDiff,
+        // Track historyPos directly: starts at historySizeD - srcNextDiff,
         // increases by invRatio each output sample iteration
-        double historyPos = historySizeMinus1 - srcNextDiff;
+        double historyPos = historySizeD - srcNextDiff;
 
         // Generate output samples while we have enough history
         while (outputFrames < maxOutputFrames) {
@@ -476,7 +475,7 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             if (nextOutputSrcPos < srcPosMinusHistorySize) {
                 nextOutputSrcPos = srcPosMinusHalfTaps;
                 srcNextDiff = srcPosition - nextOutputSrcPos;
-                historyPos = historySizeMinus1 - srcNextDiff;
+                historyPos = historySizeD - srcNextDiff;
             }
 
             const uint32_t intPos = static_cast<uint32_t>(historyPos);
