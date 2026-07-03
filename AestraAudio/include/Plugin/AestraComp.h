@@ -1,8 +1,11 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-// AestraComp V1 — zero-latency feed-forward compressor.
+// AestraComp V1 — feed-forward compressor. Zero latency with oversampling Off
+// (the default); 2x/4x oversampling adds DSP::Oversampler::kReportedLatency
+// samples, reported via getLatencySamples().
 
 #pragma once
 
+#include "DSP/Oversampler.h"
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
@@ -47,17 +50,18 @@ public:
 
     enum Param : uint32_t {
         kThreshold = 0, // -60 dB to 0 dB
-        kRatio,        // 1:1 to 20:1
-        kAttack,       // 0.1 ms to 100 ms
-        kRelease,      // 10 ms to 1000 ms
-        kMakeup,       // 0 dB to +24 dB
-        kKnee,         // 0 dB to 24 dB
-        kMix,          // 0% to 100%
+        kRatio,         // 1:1 to 20:1
+        kAttack,        // 0.1 ms to 100 ms
+        kRelease,       // 10 ms to 1000 ms
+        kMakeup,        // 0 dB to +24 dB
+        kKnee,          // 0 dB to 24 dB
+        kMix,           // 0% to 100%
         kBypass,
         kInputGain,    // -24 dB to +24 dB
         kOutputGain,   // -24 dB to +24 dB
         kDetectorHPF,  // Off, then 20 Hz to 500 Hz
         kCompMode,     // 0=Clean, 1=Classic, 2=Optical
+        kOversampling, // 0=Off, 1=2x, 2=4x (nonlinear stage anti-aliasing)
         kParamCount,
 
         // Deprecated aliases. These names are kept so older tests and helpers still
@@ -103,6 +107,8 @@ public:
         for (const auto& param : getParameters()) {
             m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
         }
+        applyOversamplingConfig();
+        m_oversamplingDirty.store(false, std::memory_order_release);
         resetRuntimeState();
         snapSmoothedParamsToTargets();
         updateDetectorHPF();
@@ -114,6 +120,8 @@ public:
 
     void activate() override {
         m_active.store(true, std::memory_order_relaxed);
+        applyOversamplingConfig();
+        m_oversamplingDirty.store(false, std::memory_order_release);
         resetRuntimeState();
         snapSmoothedParamsToTargets();
         updateDetectorHPF();
@@ -130,9 +138,20 @@ public:
         (void)midiInput;
         (void)midiOutput;
 
+        if (m_oversamplingDirty.exchange(false, std::memory_order_acq_rel)) {
+            applyOversamplingConfig();
+        }
+        const uint32_t osFactor = m_osFactor;
+
         if (!m_active.load(std::memory_order_relaxed) ||
             m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
-            copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+            if (osFactor <= 1u) {
+                copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+            } else {
+                // With oversampling active the plugin reports nonzero latency;
+                // internal bypass must delay by the same amount to stay aligned.
+                copyDelayed(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+            }
             return;
         }
 
@@ -180,8 +199,11 @@ public:
                 m_feedbackR = 0.0f;
             }
 
-            const float attackCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * attackSec));
-            const float releaseCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * releaseSec));
+            // Envelope coefficients live at the detector rate: native fs with
+            // oversampling Off, fs * factor when the nonlinear stage runs
+            // oversampled. m_detectorRate == (float)m_sampleRate for factor 1.
+            const float attackCoeff = std::exp(-1.0f / (m_detectorRate * attackSec));
+            const float releaseCoeff = std::exp(-1.0f / (m_detectorRate * releaseSec));
             const float makeupOut = makeupLinear * outputLinear;
 
             for (uint32_t i = blockStart; i < blockEnd; ++i) {
@@ -193,81 +215,54 @@ public:
             const float inR = dryR * inputLinear;
             blockInputPeak = std::max(blockInputPeak, std::max(std::abs(inL), std::abs(inR)));
 
-            float detInputL, detInputR;
-            if (m_mode == kModeClassic) {
-                detInputL = m_feedbackL;
-                detInputR = m_feedbackR;
-            } else {
-                detInputL = inL;
-                detInputR = inR;
-            }
-
-            float detL = detInputL;
-            float detR = detInputR;
-            if (m_detectorHPFEnabled) {
-                detL = m_hpfA0 * detL + m_hpfA1 * hpfXL + m_hpfB1 * hpfYL;
-                hpfXL = detInputL;
-                hpfYL = detL;
-                detR = m_hpfA0 * detR + m_hpfA1 * hpfXR + m_hpfB1 * hpfYR;
-                hpfXR = detInputR;
-                hpfYR = detR;
-            }
-
-            const float powerInstant = (detL * detL + detR * detR) * 0.5f;
-            float sampleRmsCoeff;
-            if (m_mode == kModeOptical) {
-                static constexpr float kOpticalWindowMin = 0.005f;
-                static constexpr float kOpticalWindowMax = 0.030f;
-                static constexpr float kOpticalEnvelopeRef = 0.1f;
-                float t = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
-                float window = kOpticalWindowMax - t * (kOpticalWindowMax - kOpticalWindowMin);
-                // Gate exp() — only recompute when window changes by >0.5ms
-                if (std::abs(window - m_prevOpticalWindow) > 0.0005f || m_prevOpticalWindow < 0.0f) {
-                    m_prevOpticalWindow = window;
-                    m_opticalRmsCoeff = std::exp(-1.0f / (static_cast<float>(m_sampleRate) * window));
+            float wetL = 0.0f;
+            float wetR = 0.0f;
+            float outL;
+            float outR;
+            if (osFactor <= 1u) {
+                processCore(inL, inR, attackCoeff, releaseCoeff, thresholdDb, ratio, kneeDb, makeupLinear, env, hpfXL,
+                            hpfYL, hpfXR, hpfYR, blockGainReductionDb, wetL, wetR);
+                outL = (dryL * (1.0f - mix) + wetL * mix) * outputLinear;
+                outR = (dryR * (1.0f - mix) + wetR * mix) * outputLinear;
+                if (m_mode == kModeClassic) {
+                    m_feedbackL = outL;
+                    m_feedbackR = outR;
                 }
-                sampleRmsCoeff = m_opticalRmsCoeff;
             } else {
-                sampleRmsCoeff = m_rmsCoeff;
-                m_prevOpticalWindow = -1.0f; // force recompute on next optical entry
+                // Oversampled nonlinear stage: detector + gain computer + VCA run
+                // at m_detectorRate; only the wet path is filtered, the dry path
+                // is delayed by the same amount so mix stays phase-aligned.
+                float osInL[4];
+                float osInR[4];
+                float osWetL[4];
+                float osWetR[4];
+                m_osL.upsample(inL, osInL);
+                m_osR.upsample(inR, osInR);
+                for (uint32_t sub = 0; sub < osFactor; ++sub) {
+                    processCore(osInL[sub], osInR[sub], attackCoeff, releaseCoeff, thresholdDb, ratio, kneeDb,
+                                makeupLinear, env, hpfXL, hpfYL, hpfXR, hpfYR, blockGainReductionDb, osWetL[sub],
+                                osWetR[sub]);
+                    if (m_mode == kModeClassic) {
+                        // Feedback topology needs an output estimate per subsample;
+                        // synthesize it from the oversampled dry/wet pair.
+                        m_feedbackL = (osInL[sub] * (1.0f - mix) + osWetL[sub] * mix) * outputLinear;
+                        m_feedbackR = (osInR[sub] * (1.0f - mix) + osWetR[sub] * mix) * outputLinear;
+                    }
+                }
+                wetL = m_osL.downsample(osWetL);
+                wetR = m_osR.downsample(osWetR);
+                float dryDelayedL;
+                float dryDelayedR;
+                pushDryDelay(dryL, dryR, dryDelayedL, dryDelayedR);
+                outL = (dryDelayedL * (1.0f - mix) + wetL * mix) * outputLinear;
+                outR = (dryDelayedR * (1.0f - mix) + wetR * mix) * outputLinear;
             }
-            m_rmsEnvelope = powerInstant + sampleRmsCoeff * (m_rmsEnvelope - powerInstant);
-            const float detector = std::sqrt(m_rmsEnvelope);
-
-            float aCoeff, rCoeff;
-            if (m_mode == kModeOptical) {
-                static constexpr float kOpticalEnvelopeRef = 0.1f;
-                float grNorm = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
-                aCoeff = attackCoeff * (1.0f + grNorm * 2.0f);
-                rCoeff = releaseCoeff * (1.0f - grNorm * 0.5f);
-            } else {
-                aCoeff = attackCoeff;
-                rCoeff = releaseCoeff;
-            }
-            const float coeff = detector > env ? aCoeff : rCoeff;
-            env = coeff * env + (1.0f - coeff) * detector;
-            if (env != env || env < 1.0e-12f) env = 0.0f; // NaN check + denormal flush
-
-            const float detectorDb = linearToDb(env);
-            const float reductionDb = computeGainReductionDb(detectorDb, thresholdDb, ratio, kneeDb);
-            const float reductionLinear = dbToLinear(reductionDb);
-            blockGainReductionDb = std::max(blockGainReductionDb, -reductionDb);
-
-            const float wetL = (inL * reductionLinear) * makeupLinear;
-            const float wetR = (inR * reductionLinear) * makeupLinear;
-            const float outL = (dryL * (1.0f - mix) + wetL * mix) * outputLinear;
-            const float outR = (dryR * (1.0f - mix) + wetR * mix) * outputLinear;
             blockOutputPeak = std::max(blockOutputPeak, std::max(std::abs(outL), std::abs(outR)));
 
             // Accumulate mono sum for FFT
             const uint32_t fftIdx = i - blockStart;
             fftInBlock[fftIdx] = (inL + inR) * 0.5f;
             fftOutBlock[fftIdx] = (outL + outR) * 0.5f;
-
-            if (m_mode == kModeClassic) {
-                m_feedbackL = outL;
-                m_feedbackR = outR;
-            }
 
             if (numOutputChannels > 0 && outputs[0]) outputs[0][i] = flushDenormal(outL);
             if (numOutputChannels > 1 && outputs[1]) outputs[1][i] = flushDenormal(outR);
@@ -309,6 +304,9 @@ public:
         if (id == kDetectorHPF) {
             m_detectorHPFDirty.store(true, std::memory_order_release);
         }
+        if (id == kOversampling) {
+            m_oversamplingDirty.store(true, std::memory_order_release);
+        }
 
         if (!m_hasProcessed.load(std::memory_order_relaxed)) {
             switch (id) {
@@ -328,18 +326,19 @@ public:
 
     std::vector<PluginParameter> getParameters() const override {
         return {
-            { kThreshold, "Threshold", "THR", "dB", 0.6667f, 0.0f, 1.0f, true },
-            { kRatio, "Ratio", "RAT", ":1", 0.1579f, 0.0f, 1.0f, true },
-            { kAttack, "Attack", "ATK", "ms", 0.0991f, 0.0f, 1.0f, true },
-            { kRelease, "Release", "REL", "ms", 0.1414f, 0.0f, 1.0f, true },
-            { kMakeup, "Makeup Gain", "MKP", "dB", 0.0f, 0.0f, 1.0f, true },
-            { kKnee, "Knee", "KNE", "dB", 0.0f, 0.0f, 1.0f, true },
-            { kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true },
-            { kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1 },
-            { kInputGain, "Input Gain", "IN", "dB", 0.5f, 0.0f, 1.0f, true },
-            { kOutputGain, "Output Gain", "OUT", "dB", 0.5f, 0.0f, 1.0f, true },
-            { kDetectorHPF, "Detector HPF", "HPF", "Hz", 0.0f, 0.0f, 1.0f, true },
-            { kCompMode, "Mode", "MODE", "", 0.0f, 0.0f, 1.0f, true },
+            {kThreshold, "Threshold", "THR", "dB", 0.6667f, 0.0f, 1.0f, true},
+            {kRatio, "Ratio", "RAT", ":1", 0.1579f, 0.0f, 1.0f, true},
+            {kAttack, "Attack", "ATK", "ms", 0.0991f, 0.0f, 1.0f, true},
+            {kRelease, "Release", "REL", "ms", 0.1414f, 0.0f, 1.0f, true},
+            {kMakeup, "Makeup Gain", "MKP", "dB", 0.0f, 0.0f, 1.0f, true},
+            {kKnee, "Knee", "KNE", "dB", 0.0f, 0.0f, 1.0f, true},
+            {kMix, "Mix", "MIX", "%", 1.0f, 0.0f, 1.0f, true},
+            {kBypass, "Bypass", "BYP", "", 0.0f, 0.0f, 1.0f, true, true, false, 1},
+            {kInputGain, "Input Gain", "IN", "dB", 0.5f, 0.0f, 1.0f, true},
+            {kOutputGain, "Output Gain", "OUT", "dB", 0.5f, 0.0f, 1.0f, true},
+            {kDetectorHPF, "Detector HPF", "HPF", "Hz", 0.0f, 0.0f, 1.0f, true},
+            {kCompMode, "Mode", "MODE", "", 0.0f, 0.0f, 1.0f, true},
+            {kOversampling, "Oversampling", "OS", "", 0.0f, 0.0f, 1.0f, true, false, false, 2},
         };
     }
 
@@ -370,6 +369,14 @@ public:
             if (mode == kModeOptical) return "Optical";
             return "Clean";
         }
+        case kOversampling: {
+            const uint32_t factor = oversamplingFactorFromNorm(v);
+            if (factor == 4u)
+                return "4x";
+            if (factor == 2u)
+                return "2x";
+            return "Off";
+        }
         default: return "";
         }
     }
@@ -377,14 +384,16 @@ public:
     std::vector<uint8_t> saveState() const override {
         struct Blob {
             uint32_t magic = kStateMagicV2;
-            uint32_t version = 4;
+            uint32_t version = 5;
             float params[kLegacyParamCount] = {};
         } blob;
 
+        // v5: slot 12 (formerly the unused legacy Range filler) now carries
+        // kOversampling. Older readers never consume slot 12, so v5 blobs
+        // load cleanly in pre-oversampling builds.
         for (uint32_t i = 0; i < kParamCount; ++i) {
             blob.params[i] = getParameter(i);
         }
-        blob.params[kLegacyRangeIndex] = 0.0f;
         blob.params[kLegacyLookaheadIndex] = 0.0f;
         blob.params[kLegacyStereoLinkIndex] = 1.0f;
         blob.params[kLegacyStereoLinkLawIndex] = 0.0f;
@@ -415,6 +424,12 @@ public:
             loadDefaults();
             for (uint32_t i = 0; i < std::min<uint32_t>(8, kParamCount); ++i) {
                 setParameter(i, blob.params[i]);
+            }
+            if (blob.version >= 5) {
+                setParameter(kOversampling,
+                             isNormalized(blob.params[kOversampling]) ? blob.params[kOversampling] : 0.0f);
+            } else {
+                setParameter(kOversampling, 0.0f);
             }
             if (blob.version >= 4) {
                 setParameter(kInputGain, isNormalized(blob.params[kInputGain]) ? blob.params[kInputGain] : 0.5f);
@@ -466,7 +481,13 @@ public:
     bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
-    uint32_t getLatencySamples() const override { return 0; }
+    uint32_t getLatencySamples() const override {
+        // NOTE: latency changes when kOversampling toggles Off <-> On, but the
+        // host currently only re-reads plugin latency on graph rebuild
+        // (insert/remove/bypass/reload) — see #270. Both oversampled modes
+        // report the same value so switching 2x <-> 4x never misaligns.
+        return m_reportedLatency.load(std::memory_order_relaxed);
+    }
     uint32_t getTailSamples() const override { return 256; }
     WatchdogStats getWatchdogStats() const override { return {}; }
     void resetWatchdog() override {}
@@ -498,6 +519,140 @@ private:
         updateRmsCoeff();
     }
 
+    /// One step of the nonlinear stage (detector -> envelope -> gain computer ->
+    /// VCA) at the detector rate. With oversampling Off this is called once per
+    /// input sample and matches the pre-oversampling implementation exactly;
+    /// with 2x/4x it is called once per subsample.
+    void processCore(float inL, float inR, float attackCoeff, float releaseCoeff, float thresholdDb, float ratio,
+                     float kneeDb, float makeupLinear, float& env, float& hpfXL, float& hpfYL, float& hpfXR,
+                     float& hpfYR, float& blockGainReductionDb, float& wetL, float& wetR) {
+        float detInputL, detInputR;
+        if (m_mode == kModeClassic) {
+            detInputL = m_feedbackL;
+            detInputR = m_feedbackR;
+        } else {
+            detInputL = inL;
+            detInputR = inR;
+        }
+
+        float detL = detInputL;
+        float detR = detInputR;
+        if (m_detectorHPFEnabled) {
+            detL = m_hpfA0 * detL + m_hpfA1 * hpfXL + m_hpfB1 * hpfYL;
+            hpfXL = detInputL;
+            hpfYL = detL;
+            detR = m_hpfA0 * detR + m_hpfA1 * hpfXR + m_hpfB1 * hpfYR;
+            hpfXR = detInputR;
+            hpfYR = detR;
+        }
+
+        const float powerInstant = (detL * detL + detR * detR) * 0.5f;
+        float sampleRmsCoeff;
+        if (m_mode == kModeOptical) {
+            static constexpr float kOpticalWindowMin = 0.005f;
+            static constexpr float kOpticalWindowMax = 0.030f;
+            static constexpr float kOpticalEnvelopeRef = 0.1f;
+            float t = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
+            float window = kOpticalWindowMax - t * (kOpticalWindowMax - kOpticalWindowMin);
+            // Gate exp() — only recompute when window changes by >0.5ms
+            if (std::abs(window - m_prevOpticalWindow) > 0.0005f || m_prevOpticalWindow < 0.0f) {
+                m_prevOpticalWindow = window;
+                m_opticalRmsCoeff = std::exp(-1.0f / (m_detectorRate * window));
+            }
+            sampleRmsCoeff = m_opticalRmsCoeff;
+        } else {
+            sampleRmsCoeff = m_rmsCoeff;
+            m_prevOpticalWindow = -1.0f; // force recompute on next optical entry
+        }
+        m_rmsEnvelope = powerInstant + sampleRmsCoeff * (m_rmsEnvelope - powerInstant);
+        const float detector = std::sqrt(m_rmsEnvelope);
+
+        float aCoeff, rCoeff;
+        if (m_mode == kModeOptical) {
+            static constexpr float kOpticalEnvelopeRef = 0.1f;
+            float grNorm = std::clamp(m_rmsEnvelope / kOpticalEnvelopeRef, 0.0f, 1.0f);
+            aCoeff = attackCoeff * (1.0f + grNorm * 2.0f);
+            rCoeff = releaseCoeff * (1.0f - grNorm * 0.5f);
+        } else {
+            aCoeff = attackCoeff;
+            rCoeff = releaseCoeff;
+        }
+        const float coeff = detector > env ? aCoeff : rCoeff;
+        env = coeff * env + (1.0f - coeff) * detector;
+        if (env != env || env < 1.0e-12f)
+            env = 0.0f; // NaN check + denormal flush
+
+        const float detectorDb = linearToDb(env);
+        const float reductionDb = computeGainReductionDb(detectorDb, thresholdDb, ratio, kneeDb);
+        const float reductionLinear = dbToLinear(reductionDb);
+        blockGainReductionDb = std::max(blockGainReductionDb, -reductionDb);
+
+        wetL = (inL * reductionLinear) * makeupLinear;
+        wetR = (inR * reductionLinear) * makeupLinear;
+    }
+
+    static uint32_t oversamplingFactorFromNorm(float value) {
+        const auto step = static_cast<uint32_t>(std::round(std::clamp(value * 2.0f, 0.0f, 2.0f)));
+        if (step == 2u)
+            return 4u;
+        if (step == 1u)
+            return 2u;
+        return 1u;
+    }
+
+    /// Reconfigure the oversampling stage from the current parameter value.
+    /// Bounded work (kernel design is a few thousand flops, no allocation), so
+    /// it is safe to run on the audio thread when the parameter changes.
+    void applyOversamplingConfig() {
+        const uint32_t factor = oversamplingFactorFromNorm(m_params[kOversampling].load(std::memory_order_relaxed));
+        m_osFactor = factor;
+        m_detectorRate = static_cast<float>(m_sampleRate) * static_cast<float>(factor);
+        if (factor > 1u) {
+            m_osL.prepare(factor);
+            m_osR.prepare(factor);
+        }
+        m_dryDelayL.fill(0.0f);
+        m_dryDelayR.fill(0.0f);
+        m_dryDelayPos = 0;
+        m_reportedLatency.store(factor > 1u ? DSP::Oversampler::kReportedLatency : 0u, std::memory_order_relaxed);
+        m_prevOpticalWindow = -1.0f;
+        updateRmsCoeff();
+        updateDetectorHPF();
+    }
+
+    void pushDryDelay(float inL, float inR, float& outL, float& outR) {
+        outL = m_dryDelayL[m_dryDelayPos];
+        outR = m_dryDelayR[m_dryDelayPos];
+        m_dryDelayL[m_dryDelayPos] = inL;
+        m_dryDelayR[m_dryDelayPos] = inR;
+        m_dryDelayPos = (m_dryDelayPos + 1u) % DSP::Oversampler::kReportedLatency;
+    }
+
+    /// Bypass copy delayed by the reported oversampling latency. Channels >= 2
+    /// pass through like copyOrClear (the active path zeroes them instead, which
+    /// matches the pre-oversampling bypass behavior).
+    void copyDelayed(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
+                     uint32_t numFrames) {
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            const float inL = readInput(inputs, numInputChannels, 0, i);
+            const float inR = readInput(inputs, numInputChannels, 1, i);
+            float outL;
+            float outR;
+            pushDryDelay(inL, inR, outL, outR);
+            if (numOutputChannels > 0 && outputs[0])
+                outputs[0][i] = outL;
+            if (numOutputChannels > 1 && outputs[1])
+                outputs[1][i] = outR;
+        }
+        for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
+            if (outputs[ch] && ch < numInputChannels && inputs[ch]) {
+                std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
+            } else if (outputs[ch]) {
+                std::memset(outputs[ch], 0, numFrames * sizeof(float));
+            }
+        }
+    }
+
     void resetRuntimeState() {
         m_env = 0.0f;
         m_rmsEnvelope = 0.0f;
@@ -508,6 +663,11 @@ private:
         m_hpfYR = 0.0f;
         m_feedbackL = 0.0f;
         m_feedbackR = 0.0f;
+        m_osL.reset();
+        m_osR.reset();
+        m_dryDelayL.fill(0.0f);
+        m_dryDelayR.fill(0.0f);
+        m_dryDelayPos = 0;
         m_currentGainReductionDb.store(0.0f, std::memory_order_relaxed);
         m_inputLevel.store(0.0f, std::memory_order_relaxed);
         m_outputLevel.store(0.0f, std::memory_order_relaxed);
@@ -556,16 +716,14 @@ private:
 
         const float frequency = detectorHPFHzFromNorm(raw);
         const float rc = 1.0f / (2.0f * 3.14159265358979323846f * frequency);
-        const float dt = 1.0f / static_cast<float>(m_sampleRate);
+        const float dt = 1.0f / m_detectorRate;
         const float alpha = rc / (rc + dt);
         m_hpfA0 = alpha;
         m_hpfA1 = -alpha;
         m_hpfB1 = alpha;
     }
 
-    void updateRmsCoeff() {
-        m_rmsCoeff = std::exp(-1.0f / std::max(1.0f, static_cast<float>(m_sampleRate) * kRmsWindowSec));
-    }
+    void updateRmsCoeff() { m_rmsCoeff = std::exp(-1.0f / std::max(1.0f, m_detectorRate * kRmsWindowSec)); }
 
     void initHannWindow() {
         for (uint32_t i = 0; i < kFftSize; ++i) {
@@ -797,6 +955,18 @@ private:
     uint32_t m_mode = 0;
     float m_prevOpticalWindow = -1.0f;
     float m_opticalRmsCoeff = 0.0f;
+
+    // Oversampling (issue #228). m_detectorRate is the rate the nonlinear
+    // stage runs at: (float)m_sampleRate * m_osFactor.
+    std::atomic<bool> m_oversamplingDirty{false};
+    std::atomic<uint32_t> m_reportedLatency{0};
+    uint32_t m_osFactor = 1;
+    float m_detectorRate = 48000.0f;
+    DSP::Oversampler m_osL;
+    DSP::Oversampler m_osR;
+    std::array<float, DSP::Oversampler::kReportedLatency> m_dryDelayL{};
+    std::array<float, DSP::Oversampler::kReportedLatency> m_dryDelayR{};
+    uint32_t m_dryDelayPos = 0;
 
     float m_thresholdSmoothed = 0.6667f;
     float m_ratioSmoothed = 0.1579f;
