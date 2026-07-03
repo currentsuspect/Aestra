@@ -172,4 +172,20 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCEngineEdgeConstructionTest.cpp")
     )
 endif()
 
+# Routing send parity — acceptance tests for BUG-3 (#261) and BUG-5 (#262)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RoutingSendPanParityTest.cpp")
+    add_executable(RoutingSendPanParityTest RoutingSendPanParityTest.cpp)
+    target_link_libraries(RoutingSendPanParityTest PRIVATE AestraAudio)
+    target_include_directories(RoutingSendPanParityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME RoutingSendPanParityTest COMMAND RoutingSendPanParityTest)
+    set_tests_properties(RoutingSendPanParityTest PROPERTIES
+        LABELS "headless;routing;dsp;regression"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 message(STATUS "Headless tests enabled - AudioEngine API implemented")
