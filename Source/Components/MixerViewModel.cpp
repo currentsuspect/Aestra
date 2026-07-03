@@ -203,12 +203,21 @@ void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
             channel->slotIndex = info.slot;
             channel->channel = info.channel;
             channel->name = info.name;
-            channel->trackColorIndex = AestraUI::nearestPaletteIndex(info.color);
-            if (channel->trackColorIndex < 0) {
-                channel->trackColorIndex = static_cast<int>(newChannels.size()) % AestraUI::PALETTE_SIZE;
-            }
-            if (channel->channel) {
-                channel->channel->setTrackColorIndex(channel->trackColorIndex);
+            // The engine channel's palette index is the persisted source of truth
+            // (restored by ProjectSerializer on load). Derive from the RGBA color
+            // only when unset, and only then write the derived value back —
+            // otherwise a rebuild after load would clobber the saved index.
+            const int persistedIndex = info.channel ? info.channel->getTrackColorIndex() : -1;
+            if (persistedIndex >= 0 && persistedIndex < AestraUI::PALETTE_SIZE) {
+                channel->trackColorIndex = persistedIndex;
+            } else {
+                channel->trackColorIndex = AestraUI::nearestPaletteIndex(info.color);
+                if (channel->trackColorIndex < 0) {
+                    channel->trackColorIndex = static_cast<int>(newChannels.size()) % AestraUI::PALETTE_SIZE;
+                }
+                if (channel->channel) {
+                    channel->channel->setTrackColorIndex(channel->trackColorIndex);
+                }
             }
             channel->muted = info.muted;
             channel->soloed = info.soloed;
