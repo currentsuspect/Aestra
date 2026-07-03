@@ -1,14 +1,15 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include <memory>
+#include "AestraAtomicSharedPtr.h"
+#include "AestraAudio.h"
+#include "AudioDeviceManager.h"
+#include "AudioEngine.h"
+
 #include <atomic>
+#include <memory>
 #include <string>
 #include <vector>
-
-#include "AestraAudio.h"
-#include "AudioEngine.h"
-#include "AudioDeviceManager.h"
 
 // Forward declarations
 class AestraContent;
@@ -61,5 +62,5 @@ private:
 
     // Weak UI reference plus atomically published ownership for callback routing.
     std::weak_ptr<AestraContent> m_content;
-    std::shared_ptr<AestraContent> m_rtContent;
+    Aestra::AtomicSharedPtr<AestraContent> m_rtContent;
 };
