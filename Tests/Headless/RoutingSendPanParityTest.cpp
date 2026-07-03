@@ -25,6 +25,7 @@
 #include "Plugin/EffectChain.h"
 #include "Plugin/PluginHost.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
