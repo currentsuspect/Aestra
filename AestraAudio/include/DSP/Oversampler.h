@@ -148,16 +148,26 @@ public:
     static constexpr uint32_t kLatency4x = (kStage1Taps - 1) / 2 + (kStage2Taps - 1) / 4; // 30
     static constexpr uint32_t kReportedLatency = kLatency4x;                              // both OS modes report this
 
-    /// Non-RT. factor must be 1, 2, or 4 (anything else falls back to 1).
-    void prepare(uint32_t factor) {
-        m_factor = (factor == 2u || factor == 4u) ? factor : 1u;
-        if (m_factor >= 2u) {
-            m_stage1.design(kStage1Taps, kKaiserBeta);
-        }
-        if (m_factor == 4u) {
-            m_stage2.design(kStage2Taps, kKaiserBeta);
-        }
+    /// Non-RT: design both stage kernels (factor-independent). Call once from
+    /// the owner's initialize/activate; after that setFactor() is enough.
+    void prepareKernels() {
+        m_stage1.design(kStage1Taps, kKaiserBeta);
+        m_stage2.design(kStage2Taps, kKaiserBeta);
+        m_kernelsReady = true;
         reset();
+    }
+
+    /// RT-safe factor switch: selects 1/2/4 (anything else falls back to 1)
+    /// and resets filter state. Requires prepareKernels() to have run.
+    void setFactor(uint32_t factor) {
+        m_factor = (m_kernelsReady && (factor == 2u || factor == 4u)) ? factor : 1u;
+        reset();
+    }
+
+    /// Non-RT convenience: design kernels and select the factor in one call.
+    void prepare(uint32_t factor) {
+        prepareKernels();
+        setFactor(factor);
     }
 
     void reset() {
@@ -223,6 +233,7 @@ private:
     std::array<float, kPadLen> m_padHist{};
     uint32_t m_padPos = 0;
     uint32_t m_factor = 1;
+    bool m_kernelsReady = false;
 };
 
 } // namespace DSP
