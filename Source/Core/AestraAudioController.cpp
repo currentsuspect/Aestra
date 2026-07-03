@@ -172,7 +172,7 @@ void AestraAudioController::shutdown() {
 
 void AestraAudioController::setContent(std::shared_ptr<AestraContent> content) {
     m_content = content;
-    std::atomic_store_explicit(&m_rtContent, std::move(content), std::memory_order_release);
+    m_rtContent.store(std::move(content), std::memory_order_release);
 }
 
 bool AestraAudioController::openDefaultStream(void* userData) {
@@ -282,7 +282,7 @@ bool AestraAudioController::startStream() {
     if (!m_initialized || !m_audioManager) return false;
     if (m_isAudioRunning) return true;
     if (auto content = m_content.lock()) {
-        std::atomic_store_explicit(&m_rtContent, content, std::memory_order_release);
+        m_rtContent.store(std::move(content), std::memory_order_release);
     }
 
     // 1. Get Actual Rate/Buffer from Driver (if any) BEFORE starting thread
@@ -310,7 +310,7 @@ bool AestraAudioController::startStream() {
             auto* controller = static_cast<AestraAudioController*>(user);
             if (controller) {
                 // Load once and reuse to avoid repeated atomic operations
-                auto content = std::atomic_load_explicit(&controller->m_rtContent, std::memory_order_acquire);
+                auto content = controller->m_rtContent.load(std::memory_order_acquire);
                 if (content) {
                     if (auto trackManager = content->getTrackManager()) {
                         trackManager->updateInputDiagnostics(input, n);
@@ -363,7 +363,7 @@ bool AestraAudioController::startStream() {
 void AestraAudioController::stopStream() {
     if (m_audioManager) m_audioManager->stopStream();
     m_isAudioRunning = false;
-    std::atomic_store_explicit(&m_rtContent, std::shared_ptr<AestraContent>{}, std::memory_order_release);
+    m_rtContent.store(nullptr, std::memory_order_release);
 }
 
 void AestraAudioController::closeStream() {
@@ -419,7 +419,7 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
     }
 
     // Load content snapshot once and reuse for the entire callback to avoid repeated atomic operations
-    auto content = std::atomic_load_explicit(&controller->m_rtContent, std::memory_order_acquire);
+    auto content = controller->m_rtContent.load(std::memory_order_acquire);
 
     if (inputBuffer && content) {
         if (auto trackManager = content->getTrackManager()) {
