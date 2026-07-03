@@ -107,6 +107,8 @@ public:
         for (const auto& param : getParameters()) {
             m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
         }
+        m_osL.prepareKernels();
+        m_osR.prepareKernels();
         applyOversamplingConfig();
         m_oversamplingDirty.store(false, std::memory_order_release);
         resetRuntimeState();
@@ -120,6 +122,8 @@ public:
 
     void activate() override {
         m_active.store(true, std::memory_order_relaxed);
+        m_osL.prepareKernels();
+        m_osR.prepareKernels();
         applyOversamplingConfig();
         m_oversamplingDirty.store(false, std::memory_order_release);
         resetRuntimeState();
@@ -601,20 +605,19 @@ private:
     }
 
     /// Reconfigure the oversampling stage from the current parameter value.
-    /// Bounded work (kernel design is a few thousand flops, no allocation), so
-    /// it is safe to run on the audio thread when the parameter changes.
+    /// Kernels are designed once in initialize/activate (non-RT); this path
+    /// only switches the factor, resets filter state, and rescales the
+    /// detector-rate coefficients, so it is safe on the audio thread.
     void applyOversamplingConfig() {
         const uint32_t factor = oversamplingFactorFromNorm(m_params[kOversampling].load(std::memory_order_relaxed));
-        m_osFactor = factor;
-        m_detectorRate = static_cast<float>(m_sampleRate) * static_cast<float>(factor);
-        if (factor > 1u) {
-            m_osL.prepare(factor);
-            m_osR.prepare(factor);
-        }
+        m_osL.setFactor(factor);
+        m_osR.setFactor(factor);
+        m_osFactor = m_osL.factor();
+        m_detectorRate = static_cast<float>(m_sampleRate) * static_cast<float>(m_osFactor);
         m_dryDelayL.fill(0.0f);
         m_dryDelayR.fill(0.0f);
         m_dryDelayPos = 0;
-        m_reportedLatency.store(factor > 1u ? DSP::Oversampler::kReportedLatency : 0u, std::memory_order_relaxed);
+        m_reportedLatency.store(m_osFactor > 1u ? DSP::Oversampler::kReportedLatency : 0u, std::memory_order_relaxed);
         m_prevOpticalWindow = -1.0f;
         updateRmsCoeff();
         updateDetectorHPF();
