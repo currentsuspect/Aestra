@@ -2807,7 +2807,7 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
     glUniform1i(primitiveShader_.primitiveTypeLoc, 0);
-    glUniform1i(primitiveShader_.outputLinearLoc, framebufferSRGBEnabled_ ? 1 : 0);
+    glUniform1i(primitiveShader_.outputLinearLoc, (framebufferSRGBEnabled_ && !renderingToLinearTarget_) ? 1 : 0);
     glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
     glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
     glUniform1f(primitiveShader_.textGammaLoc, 1.0f);
@@ -3042,6 +3042,17 @@ uint32_t NUIRendererGL::getGLTextureId(uint32_t textureId) const {
 }
 
 void NUIRendererGL::beginOffscreen(int width, int height) {
+    // Offscreen caches render into linear GL_RGBA8 textures where
+    // GL_FRAMEBUFFER_SRGB does NOT re-encode on write. The shader's
+    // sRGB->linear conversion (uOutputLinear) must therefore be disabled while
+    // rendering into them: values are stored as-authored (sRGB), and the
+    // conversion happens exactly once when the cached texture is composited to
+    // the sRGB screen. With the flag left on, cached content was linearized
+    // on the way in AND on the way out — one uncompensated pow(2.2) that
+    // crushed every dark color drawn through the cache (#observed as the
+    // timeline rendering far darker than its authored palette).
+    renderingToLinearTarget_ = true;
+
     // Backup current size and projection
     widthBackup_ = width_;
     heightBackup_ = height_;
@@ -3056,6 +3067,10 @@ void NUIRendererGL::beginOffscreen(int width, int height) {
 }
 
 void NUIRendererGL::endOffscreen() {
+    // Flush offscreen geometry before restoring the screen color-space mode.
+    flush();
+    renderingToLinearTarget_ = false;
+
     // Restore original projection and size
     width_ = widthBackup_;
     height_ = heightBackup_;
@@ -3095,7 +3110,7 @@ void NUIRendererGL::flush() {
     // Use shader
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
-    glUniform1i(primitiveShader_.outputLinearLoc, framebufferSRGBEnabled_ ? 1 : 0);
+    glUniform1i(primitiveShader_.outputLinearLoc, (framebufferSRGBEnabled_ && !renderingToLinearTarget_) ? 1 : 0);
     glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
     glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
     glUniform1f(primitiveShader_.textGammaLoc, 1.0f);

@@ -449,7 +449,13 @@ private:
     float projectionBackup_[16];
     int widthBackup_ = 0;
     int heightBackup_ = 0;
-    
+
+    // True while rendering into a linear (non-sRGB) offscreen target such as
+    // the FBO render cache. Disables the shader's sRGB->linear output
+    // conversion so cached content is stored as-authored and converted exactly
+    // once when composited to the sRGB screen (see beginOffscreen()).
+    bool renderingToLinearTarget_ = false;
+
     // Glassmorphism Pass
     GlassmorphismPass glassPass_; 
 };
