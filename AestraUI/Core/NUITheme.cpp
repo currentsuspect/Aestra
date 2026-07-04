@@ -13,13 +13,13 @@ namespace AestraUI {
 
 namespace {
 
-// Parses "#RRGGBB" or "#RRGGBBAA" (leading '#' optional). Returns false on
+// Parses "#RRGGBB" or "#RRGGBBAA" (leading '#' required). Returns false on
 // malformed input without touching `out`.
 bool parseHexColor(const std::string& text, NUIColor& out) {
-    std::string hex = text;
-    if (!hex.empty() && hex[0] == '#') {
-        hex.erase(0, 1);
+    if (text.empty() || text[0] != '#') {
+        return false;
     }
+    const std::string hex = text.substr(1);
     if (hex.size() != 6 && hex.size() != 8) {
         return false;
     }
