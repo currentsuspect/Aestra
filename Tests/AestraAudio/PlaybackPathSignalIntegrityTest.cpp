@@ -1,5 +1,6 @@
 #include "Core/AudioEngine.h"
 #include "Core/MasterSafetyLimiter.h"
+#include "DSP/PanLaw.h"
 #include "Playback/AuditionEngine.h"
 #include "Playback/PreviewEngine.h"
 
@@ -23,6 +24,7 @@ constexpr uint32_t kSampleRate = 48000;
 constexpr uint32_t kChannels = 2;
 constexpr uint32_t kFrames = 4096;
 constexpr uint32_t kBlockFrames = 2048;
+constexpr float kCenterPanLawGain = Aestra::Audio::PanLaw::kEqualPowerCenterGain;
 
 void writeUint32(std::ofstream& out, uint32_t value) {
     out.put(static_cast<char>(value & 0xFF));
@@ -128,32 +130,31 @@ float renderPreviewAverageTail(const fs::path& path, float gainDb) {
     return averageTail(out, 1024);
 }
 
-void auditionBypassIsUnityForSameRateSource(const fs::path& path, float decodedSample) {
+void auditionBypassMatchesCenteredTrackGain(const fs::path& path, float decodedSample) {
     const float audition = renderAuditionAverageTail(path);
-    assert(std::abs(audition - decodedSample) < 2.0e-4f);
-    std::cout << "PASS: audition bypass unity, tail average=" << audition << "\n";
+    const float expected = decodedSample * kCenterPanLawGain;
+    assert(std::abs(audition - expected) < 2.0e-4f);
+    std::cout << "PASS: audition bypass matches centered track gain, tail average=" << audition << "\n";
 }
 
-void previewIsUnityBelowLimiterAfterGainCompensation(const fs::path& path, float decodedSample) {
-    // PreviewEngine applies a built-in -1 dB normalization. +1 dB test gain
-    // cancels that so sub-threshold material should match the source after
-    // the 20 ms fade-in has completed, within the fast dB approximation error.
-    const float preview = renderPreviewAverageTail(path, 1.0f);
-    const float diff = std::abs(preview - decodedSample);
-    assert(diff < 1.0e-2f);
-    std::cout << "PASS: preview sub-threshold level after gain compensation, tail average=" << preview
-              << ", source=" << decodedSample << ", diff=" << diff << "\n";
+void previewMatchesCenteredTrackGainBelowLimiter(const fs::path& path, float decodedSample) {
+    const float preview = renderPreviewAverageTail(path, 0.0f);
+    const float expected = decodedSample * kCenterPanLawGain;
+    const float diff = std::abs(preview - expected);
+    assert(diff < 1.0e-3f);
+    std::cout << "PASS: preview matches centered track gain below limiter, tail average=" << preview
+              << ", expected=" << expected << ", diff=" << diff << "\n";
 }
 
-void previewLimiterChangesHotMaterialButAuditionBypassDoesNot(const fs::path& path, float decodedSample) {
+void previewLimiterChangesBoostedHotMaterialButAuditionBypassDoesNot(const fs::path& path, float decodedSample) {
     const float audition = renderAuditionAverageTail(path);
-    const float preview = renderPreviewAverageTail(path, 1.0f);
+    const float preview = renderPreviewAverageTail(path, 3.0f);
 
-    assert(std::abs(audition - decodedSample) < 2.0e-4f);
-    assert(preview < audition - 0.005f);
-    assert(preview > 0.90f);
-    std::cout << "PASS: preview limiter changed hot source, audition=" << audition << ", preview=" << preview
-              << "\n";
+    assert(std::abs(audition - decodedSample * kCenterPanLawGain) < 2.0e-4f);
+    assert(preview > 0.85f);
+    assert(preview < 0.98f);
+    std::cout << "PASS: preview limiter changed boosted hot source, audition=" << audition
+              << ", preview=" << preview << "\n";
 }
 
 void belowKneePassthrough() {
@@ -289,9 +290,9 @@ int main() {
     ceilingClamp();
     overCeilingClamp();
     limiterDisabledPassthrough();
-    auditionBypassIsUnityForSameRateSource(coldPath, coldDecoded);
-    previewIsUnityBelowLimiterAfterGainCompensation(coldPath, coldDecoded);
-    previewLimiterChangesHotMaterialButAuditionBypassDoesNot(hotPath, hotDecoded);
+    auditionBypassMatchesCenteredTrackGain(coldPath, coldDecoded);
+    previewMatchesCenteredTrackGainBelowLimiter(coldPath, coldDecoded);
+    previewLimiterChangesBoostedHotMaterialButAuditionBypassDoesNot(hotPath, hotDecoded);
     mainAudioEngineSafetyLimiterChangesHotMasterOutput();
 
     std::error_code ec;

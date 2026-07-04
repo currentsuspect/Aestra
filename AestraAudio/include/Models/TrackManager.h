@@ -7,6 +7,7 @@
 #include "../Core/ChannelSlotMap.h"
 #include "../Core/MixerChannel.h"
 #include "../DSP/ContinuousParamBuffer.h"
+#include "../DSP/PanLaw.h"
 #include "../Playback/PatternPlaybackEngine.h"
 #include "../Playback/TimelineClock.h"
 #include "../RealtimeThreadGuard.h"
@@ -597,7 +598,7 @@ public:
             return;
         }
 
-        const float monitorMixScale = 0.85f / static_cast<float>(monitoredCount);
+        const float monitorMixScale = PanLaw::kEqualPowerCenterGain / static_cast<float>(monitoredCount);
         for (uint32_t frame = 0; frame < frames; ++frame) {
             const size_t inputBaseIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount);
             float monitoredSample = 0.0f;
