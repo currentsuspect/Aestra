@@ -1862,11 +1862,9 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         if (trackBounds.bottom() < viewportTop || trackBounds.y > viewportBottom)
             continue;
 
-        // Alternating row shade
-        const bool isEven = (i % 2) == 0;
-        const AestraUI::NUIColor evenRowColor = AestraUI::NUIColor::black();
-        const AestraUI::NUIColor oddRowColor = AestraUI::NUIColor::black();
-        renderer.fillRect(trackBounds, isEven ? evenRowColor : oddRowColor);
+        // Uniform pure-black row base (owner direction: no row zebra; the bar
+        // zebra inside drawPlaylistGrid provides the only alternation).
+        renderer.fillRect(trackBounds, AestraUI::NUIColor::black());
 
         // Row separation is drawn once, softly, by TrackUIComponent::renderStatic.
         // The extra 1px white line that used to stack on top of it produced the
