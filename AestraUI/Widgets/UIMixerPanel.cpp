@@ -669,6 +669,11 @@ bool UIMixerPanel::loadPluginToChannel(Aestra::ChannelViewModel* vmChannel, cons
     if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
         m_trackManager->getCommandHistory().pushAndExecute(
             std::make_shared<Aestra::Audio::AddPluginCommand>(*vmChannel->channel, slot, std::move(instance)));
+        // The playback graph only picks up chain changes on rebuild (which also
+        // re-prepares chains with the live sample rate/block size) — without
+        // this, the plugin sits in the chain but never processes already-playing
+        // tracks until something else dirties the graph.
+        m_trackManager->requestAudioGraphRebuild(Aestra::Audio::GraphDirtyReason::EffectChainChanged);
         // Ensure inspector reflects the new insert
         if (m_inspector) {
             m_inspector->setActiveTab(UIMixerInspector::Tab::Inserts);
