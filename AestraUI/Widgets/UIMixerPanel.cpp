@@ -84,6 +84,10 @@ UIMixerPanel::UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
     refreshChannels();
 }
 
+UIMixerPanel::~UIMixerPanel() {
+    NUIDragDropManager::getInstance().unregisterDropTarget(this);
+}
+
 void UIMixerPanel::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
@@ -266,6 +270,8 @@ void UIMixerPanel::onResize(int width, int height)
 
 void UIMixerPanel::onUpdate(double deltaTime)
 {
+    ensureDropTargetRegistration();
+
     const float maxScroll = getChannelMaxScroll();
     m_targetScrollX = safeClampMixerScroll(m_targetScrollX, maxScroll);
 
@@ -290,6 +296,44 @@ void UIMixerPanel::onUpdate(double deltaTime)
 
     // Update children
     updateChildren(deltaTime);
+}
+
+void UIMixerPanel::ensureDropTargetRegistration() {
+    auto& dnd = NUIDragDropManager::getInstance();
+
+    // One-time registration (shared_from_this is unavailable in the constructor).
+    if (!m_dropTargetRegistered) {
+        try {
+            if (auto sharedThis = std::dynamic_pointer_cast<IDropTarget>(shared_from_this())) {
+                dnd.registerDropTarget(sharedThis);
+                m_dropTargetRegistered = true;
+            }
+        } catch (const std::bad_weak_ptr&) {
+            // Not yet owned by a shared_ptr; retry next frame.
+            return;
+        }
+    }
+
+    // The drop manager scans targets in reverse registration order and the
+    // mixer overlays the timeline, so re-register once per drag to move this
+    // panel to the back of the list — it must be checked before TrackManagerUI
+    // or plugin drops fall through to the lane geometry behind it (#395).
+    // onUpdate only runs while the mixer is shown; when hidden, the manager's
+    // visibility eligibility check skips this target entirely.
+    if (dnd.isDragging()) {
+        if (!m_dropOrderClaimedForDrag) {
+            try {
+                if (auto sharedThis = std::dynamic_pointer_cast<IDropTarget>(shared_from_this())) {
+                    dnd.unregisterDropTarget(this);
+                    dnd.registerDropTarget(sharedThis);
+                    m_dropOrderClaimedForDrag = true;
+                }
+            } catch (const std::bad_weak_ptr&) {}
+        }
+    } else {
+        m_dropOrderClaimedForDrag = false;
+        m_dropHoverChannelId = -1; // clear highlight if a drag ended without onDragLeave
+    }
 }
 
 void UIMixerPanel::renderSeparators(NUIRenderer& renderer)
@@ -409,6 +453,18 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
         }
     }
 
+    // Drop-target highlight for channel strips (#395) — inside the clip so it
+    // never bleeds into the inspector/master area.
+    if (m_dropHoverChannelId >= 0) {
+        const NUIColor accent = NUIThemeManager::getInstance().getColor("accentPrimary");
+        for (const auto& strip : m_strips) {
+            if (strip && strip->isVisible() && static_cast<int64_t>(strip->getChannelId()) == m_dropHoverChannelId) {
+                renderer.strokeRoundedRect(strip->getBounds(), 6.0f, 2.0f, accent);
+                break;
+            }
+        }
+    }
+
     if (clipEnabled) {
         renderer.clearClipRect();
     }
@@ -420,6 +476,13 @@ void UIMixerPanel::onRender(NUIRenderer& renderer)
     // Master strip renders on top / outside the clip.
     if (m_masterStrip && m_masterStrip->isVisible()) {
         m_masterStrip->onRender(renderer);
+    }
+
+    // Drop-target highlight for the master strip (rendered outside the clip).
+    if (m_dropHoverChannelId >= 0 && m_masterStrip && m_masterStrip->isVisible() &&
+        static_cast<int64_t>(m_masterStrip->getChannelId()) == m_dropHoverChannelId) {
+        const NUIColor accent = NUIThemeManager::getInstance().getColor("accentPrimary");
+        renderer.strokeRoundedRect(m_masterStrip->getBounds(), 6.0f, 2.0f, accent);
     }
 
     // Plugin dropdown renders as a floating overlay on top of everything.
@@ -576,21 +639,25 @@ void UIMixerPanel::showPluginDropdown(uint32_t channelId)
 
 void UIMixerPanel::loadPluginToSelectedChannel(const std::string& pluginId)
 {
-    if (!m_trackManager || !m_viewModel) return;
+    if (!m_viewModel)
+        return;
+    loadPluginToChannel(m_viewModel->getSelectedChannel(), pluginId);
+}
 
-    auto* vmChannel = m_viewModel->getSelectedChannel();
-    if (!vmChannel || !vmChannel->channel) return;
+bool UIMixerPanel::loadPluginToChannel(Aestra::ChannelViewModel* vmChannel, const std::string& pluginId) {
+    if (!m_trackManager || !vmChannel || !vmChannel->channel)
+        return false;
 
     auto& pm = Aestra::Audio::PluginManager::getInstance();
     auto instance = pm.createInstanceById(pluginId);
     if (!instance) {
         AESTRA_LOG_ERROR("Failed to create plugin instance for: " + pluginId);
-        return;
+        return false;
     }
 
     if (!instance->initialize(pm.getDefaultSampleRate(), pm.getDefaultBlockSize())) {
         AESTRA_LOG_ERROR("Failed to initialize plugin instance for: " + pluginId);
-        return;
+        return false;
     }
     if (auto delay = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraDelay>(instance)) {
         delay->setBPM(static_cast<float>(m_trackManager->getPlaylistModel().getBPM()));
@@ -602,13 +669,132 @@ void UIMixerPanel::loadPluginToSelectedChannel(const std::string& pluginId)
     if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
         m_trackManager->getCommandHistory().pushAndExecute(
             std::make_shared<Aestra::Audio::AddPluginCommand>(*vmChannel->channel, slot, std::move(instance)));
+        // The playback graph only picks up chain changes on rebuild (which also
+        // re-prepares chains with the live sample rate/block size) — without
+        // this, the plugin sits in the chain but never processes already-playing
+        // tracks until something else dirties the graph.
+        m_trackManager->requestAudioGraphRebuild(Aestra::Audio::GraphDirtyReason::EffectChainChanged);
         // Ensure inspector reflects the new insert
         if (m_inspector) {
             m_inspector->setActiveTab(UIMixerInspector::Tab::Inserts);
         }
-    } else {
-        AESTRA_LOG_WARNING("No empty effect slots on channel " + std::to_string(vmChannel->id));
+        return true;
     }
+
+    AESTRA_LOG_WARNING("No empty effect slots on channel " + std::to_string(vmChannel->id));
+    return false;
+}
+
+// ============================================================================
+// IDropTarget (#395) — plugin drops target the strip under the cursor
+// ============================================================================
+
+UIMixerStrip* UIMixerPanel::stripAt(const NUIPoint& position) const {
+    // The inspector and master strip are pinned on the right and render above
+    // scrolled channel strips — resolve them first so occluded strips can't win.
+    if (m_inspector && m_inspector->isVisible() && m_inspector->getBounds().contains(position)) {
+        return nullptr; // inspector is not a drop surface
+    }
+    if (m_masterStrip && m_masterStrip->isVisible() && m_masterStrip->getBounds().contains(position)) {
+        return m_masterStrip.get();
+    }
+
+    // Channel strips are clipped to the viewport left of the inspector.
+    auto panelBounds = getBounds();
+    const float masterX = panelBounds.x + panelBounds.width - MASTER_STRIP_WIDTH;
+    const float viewportRight = masterX - STRIP_SPACING - INSPECTOR_WIDTH - STRIP_SPACING;
+    if (position.x > viewportRight) {
+        return nullptr;
+    }
+
+    for (const auto& strip : m_strips) {
+        if (strip && strip->isVisible() && strip->getBounds().contains(position)) {
+            return strip.get();
+        }
+    }
+    return nullptr;
+}
+
+Aestra::ChannelViewModel* UIMixerPanel::channelForStrip(const UIMixerStrip* strip) const {
+    if (!strip || !m_viewModel)
+        return nullptr;
+    if (m_masterStrip && strip == m_masterStrip.get()) {
+        return m_viewModel->getMaster();
+    }
+    return m_viewModel->getChannelById(strip->getChannelId());
+}
+
+DropFeedback UIMixerPanel::onDragEnter(const DragData& data, const NUIPoint& position) {
+    return onDragOver(data, position);
+}
+
+DropFeedback UIMixerPanel::onDragOver(const DragData& data, const NUIPoint& position) {
+    m_dropHoverChannelId = -1;
+    if (data.type != DragDataType::Plugin) {
+        return DropFeedback::Invalid;
+    }
+    auto* strip = stripAt(position);
+    if (!strip || !channelForStrip(strip)) {
+        return DropFeedback::Invalid;
+    }
+    m_dropHoverChannelId = static_cast<int64_t>(strip->getChannelId());
+    return DropFeedback::Copy;
+}
+
+void UIMixerPanel::onDragLeave() {
+    m_dropHoverChannelId = -1;
+}
+
+DropResult UIMixerPanel::onDrop(const DragData& data, const NUIPoint& position) {
+    DropResult result;
+    m_dropHoverChannelId = -1;
+
+    // The mixer claims every drop over its bounds, including ones it rejects:
+    // letting a rejected drop fall through to the timeline behind the mixer is
+    // exactly the misrouting this target exists to prevent (#395).
+    if (data.type != DragDataType::Plugin) {
+        result.accepted = false;
+        result.message = "Only plugins can be dropped on the mixer";
+        return result;
+    }
+
+    auto* strip = stripAt(position);
+    auto* vmChannel = channelForStrip(strip);
+    if (!strip || !vmChannel) {
+        result.accepted = false;
+        result.message = "No mixer strip under drop";
+        return result;
+    }
+
+    const std::string& pluginId = data.sourceClipIdString;
+    if (pluginId.empty()) {
+        result.accepted = false;
+        result.message = "Drag data missing plugin id";
+        return result;
+    }
+
+    // Select the drop target so the inspector's Inserts tab shows the channel
+    // the plugin actually landed on — same call a strip click makes.
+    if (m_viewModel) {
+        m_viewModel->setSelectedChannelId(static_cast<int32_t>(strip->getChannelId()));
+    }
+
+    if (!loadPluginToChannel(vmChannel, pluginId)) {
+        result.accepted = false;
+        result.message = "Failed to load plugin (see log)";
+        return result;
+    }
+
+    result.accepted = true;
+    result.targetTrackIndex = static_cast<int>(vmChannel->id);
+    result.message = "Loaded " + (data.displayName.empty() ? pluginId : data.displayName) + " on '" +
+                     vmChannel->channel->getName() + "'";
+    Aestra::Log::info("[UIMixerPanel] Plugin drop: " + result.message);
+    return result;
+}
+
+NUIRect UIMixerPanel::getDropBounds() const {
+    return getBounds();
 }
 
 } // namespace AestraUI
