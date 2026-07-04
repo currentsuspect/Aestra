@@ -847,6 +847,13 @@ void AestraApp::finalizeAudioSetup() {
         }
         connectAudioToUI(); // Sync configs now that stream is open
         m_audioStreamReady = true;
+
+        // Re-wire the performance HUD in case the engine wasn't constructed
+        // yet when the HUD was created in initializeContent() (e.g. audio init
+        // failed at startup and recovered here). Idempotent when already set.
+        if (auto* hud = m_windowManager->getUnifiedHUD()) {
+            hud->setAudioEngine(m_audioController->getEngine());
+        }
     }
 }
 
