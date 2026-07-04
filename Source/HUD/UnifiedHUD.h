@@ -116,7 +116,10 @@ public:
 
     void onRender(AestraUI::NUIRenderer& renderer) override {
         if (!m_visible) return;
-        
+        // Zone the HUD's own cost so Render_Prep's ledger balances — the HUD
+        // draws dozens of text runs + two graphs (~1-2 ms observer overhead).
+        AESTRA_ZONE("HUD_Render");
+
         renderBackground(renderer);
         
         float y = getBounds().y + PADDING;

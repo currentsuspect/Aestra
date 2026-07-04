@@ -782,8 +782,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.58f);  // Stronger section headers
     const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.78f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
-    const NUIColor selectedBg = themeManager.getColor("primary").withAlpha(0.16f);  // More prominent selection
-    const NUIColor hoverBg = NUIColor::white().withAlpha(0.065f);
+    const NUIColor selectedBg = themeManager.getColor("primary").withAlpha(0.16f); // More prominent selection
     const NUIColor divider = themeManager.getColor("border").withAlpha(0.48f);  // Sharper panel edge
 
     renderer.fillRect(layout.navPane, paneBg);
@@ -931,17 +930,14 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
     auto drawRow = [&](BrowserNavAction action, const std::string& label, int count = -1, std::string path = {}) {
         NUIRect row(layout.navPane.x + 5.0f, y, std::max(0.0f, layout.navPane.width - 10.0f), BROWSER_NAV_ROW_H);
-        const bool selected = activeNavAction_ == action &&
-                              (action != BrowserNavAction::CustomPlace || activeNavPath_ == path);
-        const bool hovered = hoveredNavIndex_ == hitIndex;
+        const bool selected =
+            activeNavAction_ == action && (action != BrowserNavAction::CustomPlace || activeNavPath_ == path);
         if (selected) {
             renderer.fillRoundedRect(row, themeProps.radiusS, selectedBg);
-            renderer.fillRoundedRect({row.x, row.y + 4.0f, 2.0f, row.height - 8.0f},
-                                     1.0f,
+            renderer.fillRoundedRect({row.x, row.y + 4.0f, 2.0f, row.height - 8.0f}, 1.0f,
                                      themeManager.getColor("accentPrimary").withAlpha(0.92f));
-        } else if (hovered) {
-            renderer.fillRoundedRect(row, themeProps.radiusS, hoverBg);
         }
+        // Nav hover wash also lives in renderHoverOverlays(), outside the cache.
         drawIcon(row, action, selected);
         renderer.drawText(label, {row.x + 33.0f, std::round(renderer.calculateTextY(row, themeProps.fontSizeS))},
                           themeProps.fontSizeS, selected ? themeManager.getColor("textPrimary").withAlpha(0.90f) : rowText);
@@ -1111,6 +1107,41 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     renderer.drawLine({iconX + 7.5f, iconY + 1.5f}, {iconX + 10.5f, iconY + 4.5f}, 1.2f, searchIconColor);
 }
 
+void FileBrowser::renderHoverOverlays(NUIRenderer& renderer) {
+    auto& themeManager = NUIThemeManager::getInstance();
+    const auto& themeProps = themeManager.getCurrentTheme();
+
+    // File-list hover wash (parity with the old in-cache visual: skipped when
+    // the row is selected; translucent, so drawing it over the cached text is
+    // visually equivalent to the old under-text fill at this alpha).
+    if (hoveredIndex_ >= 0 && hoveredIndex_ != selectedIndex_) {
+        const auto& view = getActiveView();
+        if (hoveredIndex_ < static_cast<int>(view.size())) {
+            const BrowserLayout browserLayout = computeBrowserLayout();
+            NUIRect listClip = browserLayout.list;
+            const float scrollbarGutter = scrollbarVisible_ ? scrollbarWidth_ + 4.0f : 0.0f;
+            listClip.width = std::max(0.0f, listClip.width - scrollbarGutter);
+            const float itemY = listClip.y + (hoveredIndex_ * BROWSER_LIST_ROW_H) - scrollOffset_;
+            const NUIRect itemRect(listClip.x, itemY, listClip.width, BROWSER_LIST_ROW_H);
+            if (itemRect.bottom() > listClip.y && itemRect.y < listClip.bottom()) {
+                renderer.setClipRect(listClip);
+                renderer.fillRect(itemRect, NUIColor::white().withAlpha(0.045f));
+                renderer.clearClipRect();
+            }
+        }
+    }
+
+    // Nav-rail hover wash (skipped when the row is the active selection).
+    if (hoveredNavIndex_ >= 0 && hoveredNavIndex_ < static_cast<int>(navHits_.size())) {
+        const BrowserNavHit& hit = navHits_[hoveredNavIndex_];
+        const bool selected = activeNavAction_ == hit.action &&
+                              (hit.action != BrowserNavAction::CustomPlace || activeNavPath_ == hit.path);
+        if (!selected) {
+            renderer.fillRoundedRect(hit.bounds, themeProps.radiusS, NUIColor::white().withAlpha(0.065f));
+        }
+    }
+}
+
 void FileBrowser::onRender(NUIRenderer& renderer) {
     AESTRA_ZONE("FileBrowser_Render");
 
@@ -1124,6 +1155,7 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     if (!renderCache || !renderCache->isEnabled()) {
         // Fallback: Immediate render
         renderStaticContent(renderer, bounds);
+        renderHoverOverlays(renderer);
         // Clip children to prevent search bar spillover during resize
         renderer.setClipRect(bounds);
         renderChildren(renderer);
@@ -1168,6 +1200,10 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     } else {
         renderStaticContent(renderer, bounds);
     }
+
+    // Hover washes render every frame on top of the cached content — this is
+    // what lets hover changes skip cache rebuilds entirely.
+    renderHoverOverlays(renderer);
 
     // Render interactive children (Search Input, Popup Menus) ON TOP of the cache
     // These handle their own dirtiness and shouldn't trigger full cache rebuilds
@@ -1489,7 +1525,8 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             hoveredIndex_ = -1;
             dirty = true;
         }
-        if (dirty) invalidateCache();
+        if (dirty)
+            setDirty(true); // hover overlay only — no cache rebuild
         return false;
     }
 
@@ -1542,7 +1579,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             // Outside list area - clear hover and tooltip
             if (hoveredIndex_ != -1) {
                 hoveredIndex_ = -1;
-                invalidateCache();
+                setDirty(true); // hover overlay only — no cache rebuild
             }
             AestraUI::NUIComponent::hideRemoteTooltip(this);
         }
@@ -1577,8 +1614,8 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                     NUIComponent::hideRemoteTooltip(this);
                 }
 
-	            invalidateCache(); // Trigger redraw when hover state changes
-	        }
+                setDirty(true); // hover overlay only — no cache rebuild
+            }
 
             // Keep tooltip alive while hovering list items (not only on hover-change events).
             if (hoveredIndex_ >= 0 && hoveredIndex_ < static_cast<int>(view.size())) {
@@ -1965,7 +2002,7 @@ void FileBrowser::onMouseLeave() {
     if (hoveredIndex_ >= 0 || hoveredNavIndex_ >= 0) {
         hoveredIndex_ = -1;
         hoveredNavIndex_ = -1;
-        invalidateCache();
+        setDirty(true); // hover overlay only — no cache rebuild
     }
     NUIComponent::onMouseLeave();
 }
@@ -2564,7 +2601,6 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.72f);
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary");
     const NUIColor selectedRow = themeManager.getColor("accentPrimary").withAlpha(0.22f);
-    const NUIColor hoverRow = NUIColor::white().withAlpha(0.045f);
     const NUIColor gridLine = themeManager.getColor("border").withAlpha(0.14f);
     const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.82f);
     const NUIColor folderText = themeManager.getColor("textPrimary").withAlpha(0.92f);
@@ -2579,15 +2615,15 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
         NUIRect itemRect(listClip.x, itemY, listClip.width, itemHeight);
         const bool selected = i == selectedIndex_;
-        const bool hovered = i == hoveredIndex_;
         renderer.fillRect(itemRect, (i % 2 == 0) ? evenRow : oddRow);
         if (selected) {
             renderer.fillRect(itemRect, selectedRow);
             renderer.fillRect({itemRect.x, itemRect.y + 3.0f, 2.0f, itemRect.height - 6.0f},
                               themeManager.getColor("accentPrimary").withAlpha(0.85f));
-        } else if (hovered) {
-            renderer.fillRect(itemRect, hoverRow);
         }
+        // Hover wash is drawn by renderHoverOverlays() OUTSIDE the FBO cache —
+        // hover must never invalidate the cache (rebuilding the whole list per
+        // row crossing cost ~11 ms/frame of the mouse-active render budget).
         renderer.drawLine({itemRect.x, itemRect.bottom()}, {itemRect.right(), itemRect.bottom()}, 1.0f, gridLine);
 
         const FileItem* item = view[i];
@@ -3301,7 +3337,7 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
 
     if (newHovered != hoveredNavIndex_) {
         hoveredNavIndex_ = newHovered;
-        invalidateCache();
+        setDirty(true); // hover overlay only — no cache rebuild
     }
 
     if (!event.pressed || event.button != NUIMouseButton::Left || newHovered < 0 ||
