@@ -53,7 +53,7 @@ void testValidThemeApplies() {
     const std::string path = writeTempFile("theme_valid_test.json", R"({
         "colors": {
             "primary": "#ff0000",
-            "background": "00ff00",
+            "background": "#00ff00",
             "surface": "#0000ff80"
         },
         "dimensions": { "borderRadius": 3.5, "shadowNudge": -2.0 },
@@ -64,7 +64,7 @@ void testValidThemeApplies() {
     auto theme = NUITheme::loadFromFile(path);
     check(theme != nullptr, "theme is not null");
     check(colorsEqual(theme->getColor("primary"), NUIColor::fromHex(0xff0000)), "primary = #ff0000");
-    check(colorsEqual(theme->getColor("background"), NUIColor::fromHex(0x00ff00)), "background without '#' accepted");
+    check(colorsEqual(theme->getColor("background"), NUIColor::fromHex(0x00ff00)), "background = #00ff00");
     check(colorsEqual(theme->getColor("surface"), NUIColor::fromHex(0x0000ff, 128.0f / 255.0f)),
           "surface #RRGGBBAA alpha applied");
     check(nearlyEqual(theme->getDimension("borderRadius"), 3.5f), "borderRadius = 3.5");
@@ -123,6 +123,8 @@ void testInvalidEntriesKeepDefaults() {
             "primary": "#12345",
             "secondary": "not-a-color",
             "accent": 42,
+            "text": "aabbcc",
+            "textSecondary": "#abc",
             "error": "#ff00ff"
         },
         "dimensions": { "borderRadius": "twelve" },
@@ -134,6 +136,9 @@ void testInvalidEntriesKeepDefaults() {
     check(colorsEqual(theme->getColor("primary"), defaults->getColor("primary")), "5-digit hex rejected");
     check(colorsEqual(theme->getColor("secondary"), defaults->getColor("secondary")), "non-hex string rejected");
     check(colorsEqual(theme->getColor("accent"), defaults->getColor("accent")), "number-as-color rejected");
+    check(colorsEqual(theme->getColor("text"), defaults->getColor("text")), "hex without '#' rejected");
+    check(colorsEqual(theme->getColor("textSecondary"), defaults->getColor("textSecondary")),
+          "#RGB shorthand rejected");
     check(colorsEqual(theme->getColor("error"), NUIColor::fromHex(0xff00ff)), "valid sibling color applied");
     check(nearlyEqual(theme->getDimension("borderRadius"), defaults->getDimension("borderRadius")),
           "string-as-dimension rejected");
