@@ -75,10 +75,9 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
     const NUIRect& b = layout.bounds;
     if (b.isEmpty()) return;
 
-    // Piano-roll style glass shell.
+    // Glass shell — flat dark base. The old lightened top half was a frosty
+    // highlight that fought the neutral black/grey material language.
     renderer.fillRoundedRect(b, 7.0f, colors.glassFill);
-    renderer.fillRoundedRect(NUIRect(b.x + 1.0f, b.y + 1.0f, b.width - 2.0f, b.height * 0.45f), 6.0f,
-                             colors.glassFill.lightened(0.025f).withAlpha(0.70f));
     if (colors.glassBorder.a > 0.0f) {
         renderer.strokeRoundedRect(b, 7.0f, 1.0f, colors.glassBorder);
     }
