@@ -42,3 +42,15 @@ Source: UnifiedHUD (View → Performance Stats / F12), owner screenshot.
 4. **Fix HUD draw-call/tri counters** so future work has render-side numbers (ties into #269 rescope).
 
 Still to capture (owner): playback-with-meters state, browser-scroll state, process RSS.
+
+## Addendum — active state (same session, after FPS governor fix)
+
+Mouse-active + HUD open: **53.7 FPS against the 60 target, 14.12 ms frame** (Active: YES — governor wiring works; boost verified on mouse move and sustained through playback).
+
+| Zone | ms (active) | vs idle |
+|---|---|---|
+| Render_Prep | 17.78 | 8.77 |
+| FileBrowser_Render | **11.46** | 3.07 |
+| TrackMgrUI_Render | 3.79 | 3.04 |
+
+Key insight: the uncached FileBrowser costs **11.5 ms/frame under mouse activity** (hover-state repaints) — alone it nearly consumes the 16.6 ms budget at 60 FPS, which is why the target isn't reached. Roster item 2 (FileBrowser FBO cache) is promoted to the top payoff for perceived smoothness; item 1 (idle elision) remains the top battery/CPU win.

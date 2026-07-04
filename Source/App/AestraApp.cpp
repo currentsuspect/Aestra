@@ -913,6 +913,13 @@ void AestraApp::run() {
                    transportBar->syncTransportState(tm->isPlaying(), tm->isPaused(), tm->isRecordArmed());
                 }
                 updateWindowTitle();
+
+                // Playback needs the 60 FPS target for smooth playhead/meters;
+                // when stopped this decays back to the idle target via the
+                // governor's timeout.
+                if (auto* fps = m_windowManager->getAdaptiveFPS()) {
+                    fps->setAudioVisualizationActive(tm->isPlaying());
+                }
             }
 
             // Rebuild graph check - uses PlaybackGraphController for canonical drain
