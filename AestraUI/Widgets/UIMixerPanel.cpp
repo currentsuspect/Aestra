@@ -773,6 +773,12 @@ DropResult UIMixerPanel::onDrop(const DragData& data, const NUIPoint& position) 
         return result;
     }
 
+    // Select the drop target so the inspector's Inserts tab shows the channel
+    // the plugin actually landed on — same call a strip click makes.
+    if (m_viewModel) {
+        m_viewModel->setSelectedChannelId(static_cast<int32_t>(strip->getChannelId()));
+    }
+
     if (!loadPluginToChannel(vmChannel, pluginId)) {
         result.accepted = false;
         result.message = "Failed to load plugin (see log)";
