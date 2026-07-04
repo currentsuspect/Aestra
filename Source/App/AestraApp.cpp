@@ -306,6 +306,16 @@ void AestraApp::initializeContent() {
 
     m_windowManager->setContent(m_content);
     m_audioController->setContent(m_content);
+
+    // Performance HUD is created eagerly: it must exist independently of the
+    // lazily built settings dialogs, or F12 / View → Performance Stats are
+    // silent no-ops until the user happens to open Settings or Export first.
+    // The HUD itself is lightweight; the "heavy — deferred" rationale in
+    // buildSettingsAndDialogs() applies to the dialogs, not to this.
+    auto unifiedHUD = std::make_shared<UnifiedHUD>(m_windowManager->getAdaptiveFPS());
+    unifiedHUD->setVisible(false);
+    unifiedHUD->setAudioEngine(m_audioController->getEngine());
+    m_windowManager->setUnifiedHUD(unifiedHUD);
 }
 
 void AestraApp::initializeAutosave(bool enabled) {
@@ -372,10 +382,8 @@ void AestraApp::buildSettingsAndDialogs() {
     auto exportDialog = std::make_shared<ExportDialog>();
     m_windowManager->setExportDialog(exportDialog);
 
-    auto unifiedHUD = std::make_shared<UnifiedHUD>(m_windowManager->getAdaptiveFPS());
-    unifiedHUD->setVisible(false);
-    unifiedHUD->setAudioEngine(m_audioController->getEngine());
-    m_windowManager->setUnifiedHUD(unifiedHUD);
+    // Performance HUD is created in initializeContent() — it must not be tied
+    // to this lazily built path (see note there).
 }
 
 void AestraApp::ensureSettingsAndDialogs() {
