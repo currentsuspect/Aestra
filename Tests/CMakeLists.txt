@@ -1048,6 +1048,17 @@ target_include_directories(AestraCompPhase1Test PRIVATE
 add_test(NAME AestraCompPhase1Test COMMAND AestraCompPhase1Test)
 set_tests_properties(AestraCompPhase1Test PROPERTIES LABELS "audio;plugins;comp;phase1")
 
+# Aestra Comp Oversampling Test (#228)
+add_executable(AestraCompOversamplingTest AestraAudio/AestraCompOversamplingTest.cpp)
+target_link_libraries(AestraCompOversamplingTest PRIVATE AestraAudio)
+target_include_directories(AestraCompOversamplingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraCompOversamplingTest COMMAND AestraCompOversamplingTest)
+set_tests_properties(AestraCompOversamplingTest PROPERTIES LABELS "audio;plugins;comp;oversampling")
+
 # Aestra Comp Upgrade Test
 add_executable(AestraCompUpgradeTest AestraAudio/AestraCompUpgradeTest.cpp)
 target_link_libraries(AestraCompUpgradeTest PRIVATE AestraAudio)
