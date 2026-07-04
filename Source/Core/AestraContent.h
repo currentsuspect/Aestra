@@ -257,6 +257,9 @@ public:
     void seekSoundPreview(double seconds);
     /** @brief Check whether file preview playback is active. */
     bool isPlayingPreview() const;
+    /** @brief True while any non-transport audio playback drives visuals
+        (file preview or Audition engine) — used by idle frame elision. */
+    bool hasRealtimePlaybackVisuals() const;
     /** @brief Update the preview playhead visible in the UI. */
     void updatePreviewPlayhead();
     

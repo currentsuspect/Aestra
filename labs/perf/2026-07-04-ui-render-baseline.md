@@ -54,3 +54,12 @@ Mouse-active + HUD open: **53.7 FPS against the 60 target, 14.12 ms frame** (Act
 | TrackMgrUI_Render | 3.79 | 3.04 |
 
 Key insight: the uncached FileBrowser costs **11.5 ms/frame under mouse activity** (hover-state repaints) — alone it nearly consumes the 16.6 ms budget at 60 FPS, which is why the target isn't reached. Roster item 2 (FileBrowser FBO cache) is promoted to the top payoff for perceived smoothness; item 1 (idle elision) remains the top battery/CPU win.
+
+## Addendum 2 — idle frame elision result (owner-verified)
+
+With the elision gate (perf/idle-frame-elision): **idle CPU ~2%** (from ~30% of
+a core), instant wake on input/dirty/transport, HUD-open forces normal
+rendering as specified. Remaining active-state heat + occasional audio
+crackles are the next program targets — note the active-state capture earlier
+showed audio WCET 16.06 ms against a 10.67 ms buffer budget, which is where
+crackles live.

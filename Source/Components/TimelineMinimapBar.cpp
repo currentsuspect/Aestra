@@ -55,10 +55,38 @@ TimelineMinimapBar::TimelineMinimapBar()
     cacheThemeColors_();
 }
 
+namespace {
+inline bool rangesEqual(const TimelineRange& a, const TimelineRange& b) {
+    return a.start == b.start && a.end == b.end;
+}
+} // namespace
+
 void TimelineMinimapBar::setModel(const TimelineMinimapModel& model)
 {
+    // Only repaint when the model actually changed. setModel is called every
+    // frame from TrackManagerUI::onUpdate, and an unconditional repaint() kept
+    // the root component permanently dirty — which would defeat idle frame
+    // elision (labs/perf/idle-frame-elision-spec.md).
+    // The snapshot is referenced by pointer and its version can be bumped
+    // in place, so the last-seen version must be remembered by value —
+    // comparing old->version against new->version through the same pointer
+    // would always pass.
+    const TimelineMinimapModel& o = model_;
+    const uint64_t newSummaryVersion = model.summary ? model.summary->version : 0;
+    const bool sameSummary = (o.summary == model.summary) && (lastSeenSummaryVersion_ == newSummaryVersion);
+    const bool unchanged = sameSummary && rangesEqual(o.view, model.view) && o.playheadBeat == model.playheadBeat &&
+                           rangesEqual(o.loop, model.loop) && rangesEqual(o.selection, model.selection) &&
+                           o.marks == model.marks && o.markCount == model.markCount && o.mode == model.mode &&
+                           o.aggregation == model.aggregation && o.beatsPerBar == model.beatsPerBar &&
+                           o.showSelection == model.showSelection && o.showLoop == model.showLoop &&
+                           o.showMarkers == model.showMarkers && o.showDiagnostics == model.showDiagnostics &&
+                           o.showPlayhead == model.showPlayhead;
+
     model_ = model;
-    repaint();
+    lastSeenSummaryVersion_ = newSummaryVersion;
+    if (!unchanged) {
+        repaint();
+    }
 }
 
 void TimelineMinimapBar::onUpdate(double deltaTime)
