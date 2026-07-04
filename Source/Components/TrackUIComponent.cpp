@@ -1024,10 +1024,10 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
     const auto& layout = themeManager.getLayoutDimensions();
     
     // Zebra striping moved to TrackManagerUI for guaranteed rendering order
-    
-    AestraUI::NUIColor trackBgColor =
-        (m_rowIndex % 2 == 0) ? AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.014f)
-                              : AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.042f);
+
+    // No zebra: the grid is uniform pure black (owner direction). Only the
+    // selection/hover states below tint the row.
+    AestraUI::NUIColor trackBgColor = AestraUI::NUIColor::transparent();
 
     // Selection Highlight (Static base)
     if (isSelected()) {
@@ -1040,23 +1040,23 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
     // Apply background
     renderer.fillRect(bounds, trackBgColor);
 
-    // Faint bottom row divider for cleaner track separation
-    renderer.drawLine(
-        AestraUI::NUIPoint(bounds.x, bounds.bottom() - 1.0f),
-        AestraUI::NUIPoint(bounds.right(), bounds.bottom() - 1.0f),
-        1.0f,
-        themeManager.getColor("borderSubtle").withAlpha(0.38f)
-    );
+    // Faint bottom row divider for cleaner track separation.
+    // Kept deliberately soft — this is the only per-row separator (the old
+    // second line in TrackManagerUI stacked on top of it made the harsh grid).
+    renderer.drawLine(AestraUI::NUIPoint(bounds.x, bounds.bottom() - 1.0f),
+                      AestraUI::NUIPoint(bounds.right(), bounds.bottom() - 1.0f), 1.0f,
+                      themeManager.getColor("borderSubtle").withAlpha(0.20f));
     AestraUI::NUIColor borderColor = themeManager.getColor("border");
     
     float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
     
     if (m_isPrimaryForLane) {
         AestraUI::NUIRect controlBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
-        
+
         // Control Area base: elevated surface from palette.
-        AestraUI::NUIColor baseControlColor = themeManager.getColor("surfaceTertiary");
-        
+        // Near-black chrome per owner direction (was surfaceTertiary, read bluish-grey).
+        AestraUI::NUIColor baseControlColor(0.038f, 0.039f, 0.045f, 1.0f);
+
         // Static Control Area State
         if (m_channel) {
             if (m_selected) {
@@ -1069,10 +1069,18 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
                  baseControlColor = themeManager.getColor("surfaceRaised").withAlpha(0.70f);
              }
         }
-        
-        // Render Control Area Background
+
+        // Render Control Area Background with a soft vertical elevation gradient
+        // (state color stays the base; the gradient just adds depth). This runs
+        // inside the playlist FBO cache, so the extra fills cost nothing per frame.
         renderer.fillRect(controlBounds, baseControlColor);
-        
+        // Elevation via shade ONLY — no light component at all. Even ~1% white
+        // reads as a sheen on near-black (and this pipeline amplifies low-alpha
+        // fills), so depth comes purely from the darker bottom.
+        renderer.fillRectGradient(controlBounds, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f),
+                                  AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.070f),
+                                  /*vertical=*/true);
+
         // Separator Line (Bright Glass Border) between Controls and Timeline
         renderer.drawLine(
             AestraUI::NUIPoint(controlBounds.right(), controlBounds.y),
@@ -1475,7 +1483,8 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
                          m_channel->isArmed(), recordActive);
     }
 
-    // Track number marker (left of name): 10px, 40% white.
+    // Track number marker (left of name): fixed white — no dynamic dimming
+    // (professional, defined feel per owner direction).
     if (m_nameLabel && m_channel) {
         constexpr float stripWidth = 3.0f;
         uint32_t trackNumber = m_channel->getChannelId();
@@ -1485,13 +1494,9 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             trackNumber = parsedNumber;
         }
         const auto nameBounds = m_nameLabel->getBounds();
-        renderer.drawText(
-            std::to_string(trackNumber),
-            AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f, nameBounds.y + 2.0f),
-            10.5f,
-            AestraUI::NUIColor(1.0f, 1.0f, 1.0f, m_selected ? 0.70f : 0.46f)
-        );
-
+        renderer.drawText(std::to_string(trackNumber),
+                          AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f, nameBounds.y + 2.0f), 10.5f,
+                          AestraUI::NUIColor::white());
     }
 }
 
@@ -1513,36 +1518,30 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     if (gridWidth <= 0.0f) {
         return;
     }
-    
-    // 1. LOW-CONTRAST BAR SHADING
-    float pixelsPerBar = m_pixelsPerBeat * m_beatsPerBar;
-    int startBar = static_cast<int>(m_timelineScrollOffset / pixelsPerBar);
-    int endBar = static_cast<int>((m_timelineScrollOffset + gridWidth) / pixelsPerBar) + 1;
-    
-    for (int bar = startBar; bar <= endBar; ++bar) {
-        float x = gridStartX + (bar * pixelsPerBar) - m_timelineScrollOffset;
-        
-        // Zebra Striping: Draw slightly lighter background for odd bars
-        if (bar % 2 != 0) {
-             float rectX = x;
-             float rectW = pixelsPerBar;
-             
-             // Manual clipping for zebra striping
-             if (rectX < gridStartX) {
-                 rectW -= (gridStartX - rectX);
-                 rectX = gridStartX;
-             }
-             
-             if (rectX + rectW > gridEndX) {
-                 rectW = gridEndX - rectX;
-             }
-             
-             if (rectW > 0 && rectX < gridEndX) {
-                 renderer.fillRect(
-                     AestraUI::NUIRect(rectX, bounds.y, rectW, bounds.height), 
-                     AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.008f)
-                 );
-             }
+
+    // 1. BAR ZEBRA on pure black: odd bars lift to a whisper of grey. With the
+    // gamma-correct cache pipeline this renders at its authored subtlety
+    // (the old "frost" was the double-linearization amplifying it).
+    const float pixelsPerBar = m_pixelsPerBeat * m_beatsPerBar;
+    {
+        const int startBar = static_cast<int>(m_timelineScrollOffset / pixelsPerBar);
+        const int endBar = static_cast<int>((m_timelineScrollOffset + gridWidth) / pixelsPerBar) + 1;
+        for (int bar = startBar; bar <= endBar; ++bar) {
+            if (bar % 2 == 0)
+                continue;
+            float rectX = gridStartX + (bar * pixelsPerBar) - m_timelineScrollOffset;
+            float rectW = pixelsPerBar;
+            if (rectX < gridStartX) {
+                rectW -= (gridStartX - rectX);
+                rectX = gridStartX;
+            }
+            if (rectX + rectW > gridEndX) {
+                rectW = gridEndX - rectX;
+            }
+            if (rectW > 0.0f) {
+                renderer.fillRect(AestraUI::NUIRect(rectX, bounds.y, rectW, bounds.height),
+                                  AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.030f));
+            }
         }
     }
 
@@ -1561,10 +1560,11 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     const int firstVisibleBar = static_cast<int>(std::floor(startBeat / static_cast<double>(beatsPerBar))) - 1;
     const int lastVisibleBar = static_cast<int>(std::ceil(endBeat / static_cast<double>(beatsPerBar))) + 1;
 
-    // Grid hierarchy from palette tokens.
-    const AestraUI::NUIColor barLineColor = themeManager.getColor("border").withAlpha(0.48f);
-    const AestraUI::NUIColor beatLineColor = themeManager.getColor("borderSubtle").withAlpha(0.26f);
-    const AestraUI::NUIColor subBeatLineColor = themeManager.getColor("borderSubtle").withAlpha(0.11f);
+    // Inverted grid (owner direction): near-black lanes with grey lines, so the
+    // grid reads as light structure on dark instead of dark cuts on grey.
+    const AestraUI::NUIColor barLineColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.105f);
+    const AestraUI::NUIColor beatLineColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.055f);
+    const AestraUI::NUIColor subBeatLineColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.028f);
     const bool drawBeatSubdivisions = (m_pixelsPerBeat >= 10.0f);
     const bool drawFurtherSubdivisions = (m_pixelsPerBeat >= 54.0f);
 

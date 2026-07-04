@@ -1777,24 +1777,19 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
 
     // Draw background (control area + full grid area - no bounds restriction)
     AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
-    const AestraUI::NUIColor gridBgColor = AestraUI::NUIColor(0.070f, 0.075f, 0.090f, 1.0f);
-    const auto depthTop = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.025f);
-    const auto depthBottom = AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.08f);
+    const AestraUI::NUIColor gridBgColor = AestraUI::NUIColor::black(); // pure black grid (owner direction)
 
     if (m_playlistVisible) {
         // Background for control area (always visible)
         AestraUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
-        renderer.fillRect(controlBg, AestraUI::NUIColor(0.078f, 0.084f, 0.102f, 1.0f));
+        renderer.fillRect(controlBg, AestraUI::NUIColor(0.034f, 0.035f, 0.040f, 1.0f));
 
         // Background for grid area (match track background; zebra grid provides contrast)
         float scrollbarWidth = 15.0f;
         float gridWidth = bounds.width - controlAreaWidth - scrollbarWidth - 5;
         AestraUI::NUIRect gridBg(bounds.x + gridStartX, bounds.y, gridWidth, bounds.height);
         renderer.fillRect(gridBg, gridBgColor);
-        renderer.fillRect({gridBg.x, gridBg.y, gridBg.width, std::max(1.0f, gridBg.height * 0.12f)}, depthTop);
-        renderer.fillRect({gridBg.x, gridBg.bottom() - std::max(8.0f, gridBg.height * 0.10f), gridBg.width,
-                           std::max(8.0f, gridBg.height * 0.10f)},
-                          depthBottom);
+        // No depth bands: the grid is uniform pure black.
 
         // Draw border
         AestraUI::NUIColor borderColor = themeManager.getColor("border");
@@ -1869,14 +1864,13 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
 
         // Alternating row shade
         const bool isEven = (i % 2) == 0;
-        const AestraUI::NUIColor evenRowColor = AestraUI::NUIColor(0.070f, 0.075f, 0.090f, 1.0f);
-        const AestraUI::NUIColor oddRowColor = AestraUI::NUIColor(0.062f, 0.067f, 0.082f, 1.0f);
+        const AestraUI::NUIColor evenRowColor = AestraUI::NUIColor::black();
+        const AestraUI::NUIColor oddRowColor = AestraUI::NUIColor::black();
         renderer.fillRect(trackBounds, isEven ? evenRowColor : oddRowColor);
 
-        // 1px bottom border across full track width (control + grid)
-        renderer.drawLine(AestraUI::NUIPoint(trackBounds.x, trackBounds.bottom() - 1.0f),
-                          AestraUI::NUIPoint(trackBounds.right(), trackBounds.bottom() - 1.0f), 1.0f,
-                          AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.10f));
+        // Row separation is drawn once, softly, by TrackUIComponent::renderStatic.
+        // The extra 1px white line that used to stack on top of it produced the
+        // harsh horizontal grid the timeline was criticized for.
 
         track->renderStatic(renderer);
     }
@@ -1894,8 +1888,20 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
 
         float headerHeight = 38.0f;
         AestraUI::NUIRect headerRect(bounds.x, bounds.y, headerWidth, headerHeight);
-        renderer.fillRect(headerRect, AestraUI::NUIColor(0.078f, 0.084f, 0.102f, 1.0f));
-        // Removed gradient for flatter aesthetic
+        // Elevated header: base fill + soft vertical gradient + glass top edge.
+        // Rendered into the playlist FBO cache, so the richness is free per frame.
+        renderer.fillRect(headerRect, AestraUI::NUIColor(0.030f, 0.031f, 0.036f, 1.0f));
+        // Shade-only elevation — any white component reads as a sheen on this
+        // near-black chrome (owner direction: no light gradients anywhere).
+        renderer.fillRectGradient(headerRect, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f),
+                                  AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.075f),
+                                  /*vertical=*/true);
+        // Soft drop below the header so it reads as a raised surface.
+        const float shadowH = 7.0f;
+        renderer.fillRectGradient(AestraUI::NUIRect(headerRect.x, headerRect.bottom(), headerRect.width, shadowH),
+                                  AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.22f),
+                                  AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f),
+                                  /*vertical=*/true);
         const auto headerBorder = borderColor.withAlpha(0.50f);
         renderer.drawLine({headerRect.x, headerRect.y}, {headerRect.x, headerRect.bottom()}, 1.0f, headerBorder);
         renderer.drawLine({headerRect.right(), headerRect.y}, {headerRect.right(), headerRect.bottom()}, 1.0f,
@@ -3718,7 +3724,9 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     auto borderColor = AestraUI::NUIColor::white().withAlpha(0.075f);
     auto accentColor = AestraUI::NUIColor(0.486f, 0.361f, 0.749f, 1.0f);
 
-    auto glassBg = themeManager.getColor("backgroundPrimary").darkened(0.02f);
+    // Opaque near-black ruler material — identical across the full row and the
+    // grid shell so the corner over the track controls is flush by construction.
+    auto glassBg = AestraUI::NUIColor(0.012f, 0.012f, 0.016f, 1.0f);
     auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.014f);
 
     auto textCol = themeManager.getColor("textPrimary").withAlpha(0.86f);
@@ -3736,6 +3744,11 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     float gridWidth = std::max(0.0f, trackWidth - controlAreaWidth - 10.0f);
 
     AestraUI::NUIRect gridRulerRect(gridStartX, rulerBounds.y, gridWidth, rulerBounds.height);
+
+    // One material across the whole ruler row: fill the full row (including the
+    // corner over the track controls) with the ruler base so the left edge is
+    // flush with the rest of the ruler instead of showing the layer beneath.
+    renderer.fillRect(rulerBounds, glassBg);
 
     float cornerRadius = 3.0f;
     renderer.fillRoundedRect(gridRulerRect, cornerRadius, glassBg);
