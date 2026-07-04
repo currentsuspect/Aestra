@@ -434,11 +434,8 @@ void TrackUIComponent::updateTrackNameColors() {
         uint32_t trackId = m_channel->getChannelId();
         colorIndex = static_cast<int>((trackId - 1) % AestraUI::PALETTE_SIZE);
     }
-    uint32_t argb = AestraUI::paletteIndexToARGB(colorIndex);
-    float r = ((argb >> 16) & 0xFF) / 255.0f;
-    float g = ((argb >> 8) & 0xFF) / 255.0f;
-    float b = (argb & 0xFF) / 255.0f;
-    m_nameLabel->setTextColor(AestraUI::NUIColor(r, g, b, 0.82f));
+    m_nameLabel->setTextColor(
+        AestraUI::NUIColor::fromARGB(AestraUI::paletteIndexToARGB(colorIndex)).withAlpha(0.82f));
 }
 
 void TrackUIComponent::generateWaveformCache(int, int) {
@@ -809,17 +806,9 @@ AestraUI::NUIColor TrackUIComponent::resolveClipDisplayColor(const ClipInstance&
             uint32_t trackId = m_channel->getChannelId();
             colorIndex = static_cast<int>((trackId - 1) % AestraUI::PALETTE_SIZE);
         }
-        uint32_t argb = AestraUI::paletteIndexToARGB(colorIndex);
-        clipColor = AestraUI::NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f,
-                                       (argb & 0xFF) / 255.0f, 1.0f);
+        clipColor = AestraUI::NUIColor::fromARGB(AestraUI::paletteIndexToARGB(colorIndex));
     } else {
-        uint32_t color = clip.colorRGBA;
-        clipColor = AestraUI::NUIColor(
-            (color >> 16) & 0xFF,
-            (color >> 8) & 0xFF,
-            color & 0xFF,
-            (color >> 24) & 0xFF
-        ) / 255.0f;
+        clipColor = AestraUI::NUIColor::fromARGB(clip.colorRGBA);
     }
     return clipColor;
 }
