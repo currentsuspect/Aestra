@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <system_error>
 #include <thread>
 #include <vector>
@@ -65,12 +66,31 @@ bool writeTestWav(const std::string& path, uint32_t sampleRate, uint32_t frames)
     return true;
 }
 
+size_t currentRssKb() {
+#if defined(__linux__)
+    std::ifstream status("/proc/self/status");
+    std::string key;
+    while (status >> key) {
+        if (key == "VmRSS:") {
+            size_t valueKb = 0;
+            status >> valueKb;
+            return valueKb;
+        }
+        std::string restOfLine;
+        std::getline(status, restOfLine);
+    }
+#endif
+    return 0;
+}
+
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     constexpr uint32_t kSampleRate = 48000;
     constexpr uint32_t kFrames = 64;
     constexpr uint32_t kChannels = 2;
+    const bool lowMemoryProfile = argc > 1 && std::string(argv[1]) == "--low-memory-profile";
+    const int blockCount = lowMemoryProfile ? 512 : 256;
 
     // Use a guaranteed-writable temp directory instead of hardcoded /tmp/
     std::error_code ec;
@@ -143,8 +163,10 @@ int main() {
 
     const auto deadline = std::chrono::nanoseconds((static_cast<uint64_t>(kFrames) * 1000000000ull) / kSampleRate);
     uint64_t localOverruns = 0;
+    uint64_t lastCallbackNs = 0;
+    uint64_t maxCallbackNs = 0;
 
-    for (int block = 0; block < 256; ++block) {
+    for (int block = 0; block < blockCount; ++block) {
         if ((block % 7) == 0) {
             engine.setTransportPlaying(false);
             engine.setTransportPlaying(true);
@@ -159,6 +181,8 @@ int main() {
         preview.processRealtime(engineOut.data(), kFrames, kChannels);
         sampler.process(nullptr, samplerOutputs, 0, 2, kFrames, block == 0 ? &midi : nullptr, nullptr);
         const auto elapsed = std::chrono::steady_clock::now() - start;
+        lastCallbackNs = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count());
+        maxCallbackNs = std::max(maxCallbackNs, lastCallbackNs);
 
         if (elapsed > deadline) {
             ++localOverruns;
@@ -166,6 +190,17 @@ int main() {
     }
 
     const auto& tel = engine.telemetry();
+    const size_t rssKb = currentRssKb();
+    std::cout << "profile=" << (lowMemoryProfile ? "low-memory" : "standard") << "\n";
+    std::cout << "blocks=" << blockCount << "\n";
+    std::cout << "lastCallbackNs=" << lastCallbackNs << "\n";
+    std::cout << "maxCallbackNs=" << maxCallbackNs << "\n";
+    std::cout << "xruns=" << tel.getXruns() << "\n";
+    std::cout << "underruns=" << tel.getUnderruns() << "\n";
+    if (rssKb > 0) {
+        std::cout << "rssKb=" << rssKb << "\n";
+        std::cout << "rssMiB=" << (static_cast<double>(rssKb) / 1024.0) << "\n";
+    }
     std::cout << "localOverruns=" << localOverruns << "\n";
     std::cout << "engineOverruns=" << tel.getOverruns() << "\n";
     std::cout << "rtLockViolations=" << tel.getRtLockViolations() << "\n";

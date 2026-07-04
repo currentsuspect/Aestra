@@ -50,6 +50,7 @@ private:
     AudioDriverType m_driverType{AudioDriverType::UNKNOWN};
     std::atomic<AudioCallback> m_userCallback{nullptr};
     std::atomic<void*> m_userData{nullptr};
+    std::atomic<uint32_t> m_sampleRate{0};
     std::atomic<uint32_t> m_bufferSize{0};
     std::atomic<bool> m_callbackRtPriorityAttempted{false};
     DriverStatistics m_stats;

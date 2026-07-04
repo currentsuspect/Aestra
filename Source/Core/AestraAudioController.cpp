@@ -172,6 +172,10 @@ void AestraAudioController::shutdown() {
 
 void AestraAudioController::setContent(std::shared_ptr<AestraContent> content) {
     m_content = content;
+    Aestra::Audio::TrackManager* trackManager = content ? content->getTrackManager().get() : nullptr;
+    Aestra::Audio::PreviewEngine* previewEngine = content ? content->getPreviewEngine() : nullptr;
+    m_rtTrackManager.store(trackManager, std::memory_order_release);
+    m_rtPreviewEngine.store(previewEngine, std::memory_order_release);
     m_rtContent.store(std::move(content), std::memory_order_release);
 }
 
@@ -282,6 +286,8 @@ bool AestraAudioController::startStream() {
     if (!m_initialized || !m_audioManager) return false;
     if (m_isAudioRunning) return true;
     if (auto content = m_content.lock()) {
+        m_rtTrackManager.store(content->getTrackManager().get(), std::memory_order_release);
+        m_rtPreviewEngine.store(content->getPreviewEngine(), std::memory_order_release);
         m_rtContent.store(std::move(content), std::memory_order_release);
     }
 
@@ -309,13 +315,10 @@ bool AestraAudioController::startStream() {
         m_audioEngine->setInputCallback([](const float* input, uint32_t n, void* user) {
             auto* controller = static_cast<AestraAudioController*>(user);
             if (controller) {
-                // Load once and reuse to avoid repeated atomic operations
-                auto content = controller->m_rtContent.load(std::memory_order_acquire);
-                if (content) {
-                    if (auto trackManager = content->getTrackManager()) {
-                        trackManager->updateInputDiagnostics(input, n);
-                        trackManager->processInput(input, n, &controller->m_audioEngine->telemetry());
-                    }
+                auto* trackManager = controller->m_rtTrackManager.load(std::memory_order_acquire);
+                if (trackManager) {
+                    trackManager->updateInputDiagnostics(input, n);
+                    trackManager->processInput(input, n, &controller->m_audioEngine->telemetry());
                 }
             }
         }, this);
@@ -363,11 +366,16 @@ bool AestraAudioController::startStream() {
 void AestraAudioController::stopStream() {
     if (m_audioManager) m_audioManager->stopStream();
     m_isAudioRunning = false;
+    m_rtTrackManager.store(nullptr, std::memory_order_release);
+    m_rtPreviewEngine.store(nullptr, std::memory_order_release);
     m_rtContent.store(nullptr, std::memory_order_release);
 }
 
 void AestraAudioController::closeStream() {
     if (m_audioManager) m_audioManager->closeStream();
+    m_rtTrackManager.store(nullptr, std::memory_order_release);
+    m_rtPreviewEngine.store(nullptr, std::memory_order_release);
+    m_rtContent.store(nullptr, std::memory_order_release);
 }
 
 bool AestraAudioController::setBufferSize(uint32_t bufferSize) {
@@ -418,20 +426,14 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
         std::fill(outputBuffer, outputBuffer + static_cast<size_t>(nFrames) * outCh, 0.0f);
     }
 
-    // Load content snapshot once and reuse for the entire callback to avoid repeated atomic operations
-    auto content = controller->m_rtContent.load(std::memory_order_acquire);
-
-    if (inputBuffer && content) {
-        if (auto trackManager = content->getTrackManager()) {
-            trackManager->mixInputMonitoring(inputBuffer, outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
-        }
+    auto* trackManager = controller->m_rtTrackManager.load(std::memory_order_acquire);
+    if (inputBuffer && trackManager) {
+        trackManager->mixInputMonitoring(inputBuffer, outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
     }
 
-    // Preview mixing - reuse the same content snapshot
-    if (content) {
-        if (auto* previewEngine = content->getPreviewEngine()) {
-            previewEngine->processRealtime(outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
-        }
+    auto* previewEngine = controller->m_rtPreviewEngine.load(std::memory_order_acquire);
+    if (previewEngine) {
+        previewEngine->processRealtime(outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
     }
 
     if (controller->m_audioEngine) {
