@@ -158,12 +158,17 @@ target_link_libraries(Aestra PRIVATE
 # NO -ffast-math: codebase has ~15 std::isfinite()/std::isnan() guards in audio hot paths.
 # Enabling -ffast-math silently disables those guards (compiler optimizes them away).
 # -ffast-math is a separate project: audit guards, replace with fast-math-safe equivalents, test.
+# NO -fno-exceptions: the app relies on exception handling — Main.cpp's top-level
+# catch, AestraJSON's SEC-RTM-013 parse guards, and std file/parse paths all catch.
+# Disabling exceptions turns those throws into aborts.
+# NO -fno-rtti: Source UI files use std::dynamic_pointer_cast (e.g. dropdown
+# resolution in AudioSettingsPage::onRender), which requires RTTI.
+# Note: CI runs with AESTRA_CI=ON, which forces headless mode — the Aestra app
+# target (and these flags) are NOT exercised by CI. Validate app builds locally.
 if(NOT MSVC)
     target_compile_options(Aestra PRIVATE
         $<$<CONFIG:Release>:-O3>
         $<$<CONFIG:Release>:-flto>
-        $<$<CONFIG:Release>:-fno-exceptions>
-        $<$<CONFIG:Release>:-fno-rtti>
     )
     target_link_options(Aestra PRIVATE
         $<$<CONFIG:Release>:-flto>
