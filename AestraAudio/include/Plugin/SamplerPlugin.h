@@ -57,6 +57,7 @@ public:
 
     // Custom Methods
     bool loadSample(const std::string& path);
+    bool loadSampleData(const std::string& path, std::vector<float> data, uint32_t rate, uint32_t channels);
     void setSampleRate(double sampleRate) { m_sampleRate = sampleRate; }
     void setEnvelope(float attack, float decay, float sustain, float release) noexcept;
     void setCoarseSemitones(float semitones) noexcept;

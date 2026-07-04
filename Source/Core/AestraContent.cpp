@@ -38,8 +38,8 @@
 #include "TransportBar.h"
 
 // Audio includes
-#include "../AestraCore/include/AestraLog.h"
 #include "../AestraAudio/include/Commands/CommandRegistry.h"
+#include "../AestraCore/include/AestraLog.h"
 #include "AudioEngine.h"
 #include "ChannelSlotMap.h"
 #include "ClipSource.h"
@@ -54,6 +54,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <thread>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -891,16 +892,7 @@ AestraContent::AestraContent() {
 
             // 2. Perform Load
             AESTRA_LOG_DEBUG("Loading sample into Unit " + std::to_string(id) + ": " + file.path);
-            if (m_trackManager) {
-                auto& unitManager = m_trackManager->getUnitManager();
-                unitManager.setUnitEnabled(id, true);
-                unitManager.setUnitAudioClip(id, file.path);
-                if (m_sequencerPanel) {
-                    m_sequencerPanel->setSelectedUnit(id);
-                    m_sequencerPanel->refreshUnits();
-                }
-                openSampleEditorForUnit(id, file.path);
-            }
+            loadSampleIntoUnitAsync(id, file.path, true);
         });
     });
     m_sequencerPanel->setOnRequestSampleEditor([this](UnitID id) {
@@ -913,7 +905,7 @@ AestraContent::AestraContent() {
     m_sequencerPanel->setOnPluginDroppedToUnit(
         [this](UnitID unitId, const std::string& pluginId) { loadInstrumentIntoArsenalUnit(unitId, pluginId); });
     m_sequencerPanel->setOnSampleDroppedToUnit(
-        [this](UnitID unitId, const std::string& samplePath) { openSampleEditorForUnit(unitId, samplePath); });
+        [this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, true); });
     m_sequencerPanel->setOnSelectedUnitChanged([this](UnitID unitId) {
         if (m_pianoRollPanel) {
             m_pianoRollPanel->setEditingUnit(unitId);

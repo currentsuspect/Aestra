@@ -361,6 +361,9 @@ void AestraApp::buildSettingsAndDialogs() {
     audioPage->setOnStreamRestore([this]() {
          m_audioController->closeStream();
          m_audioStreamReady = false;
+         // Stream is restarting: let the RT-scheduling state be re-reported
+         // for the new stream (the audio thread re-verifies on first callback).
+         m_rtStateLogged = false;
          m_audioConfigSynced = false;
          if (m_audioController->openDefaultStream(nullptr)) {
              m_audioController->startStream();

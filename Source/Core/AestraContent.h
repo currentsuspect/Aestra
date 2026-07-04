@@ -12,23 +12,28 @@
 
 #pragma once
 
-#include "../AestraUI/Core/NUIComponent.h"
-#include "../AestraUI/Core/NUIThemeSystem.h"
-#include "NUISegmentedControl.h"
-#include "NUILabel.h"
-#include "../AestraUI/Widgets/UIRoutingMap.h"
-#include "ViewTypes.h"
-#include "TransportBar.h"
-#include "PatternSource.h"
-#include "OverlayLayer.h"
-#include "../AestraAudio/include/Models/UnitManager.h"
 #include "../AestraAudio/include/Commands/CommandParser.h"
 #include "../AestraAudio/include/Commands/CommandResult.h"
 #include "../AestraAudio/include/Commands/SessionLog.h"
+#include "../AestraAudio/include/Models/UnitManager.h"
+#include "../AestraUI/Core/NUIComponent.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Widgets/UIRoutingMap.h"
 #include "Events/Connection.h"
-#include <memory>
-#include <string>
+#include "NUILabel.h"
+#include "NUISegmentedControl.h"
+#include "OverlayLayer.h"
+#include "PatternSource.h"
+#include "TransportBar.h"
+#include "ViewTypes.h"
+
+#include <atomic>
 #include <chrono>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <vector>
 
 // Forward declarations - AestraUI
 namespace AestraUI {
@@ -251,6 +256,8 @@ public:
     void stopSoundPreview();
     /** @brief Load a sample into the currently selected track. */
     void loadSampleIntoSelectedTrack(const std::string& filePath);
+    /** @brief Decode and publish a sample to an Arsenal unit off the UI/drop path. */
+    void loadSampleIntoUnitAsync(Aestra::Audio::UnitID unitId, const std::string& samplePath, bool openEditorWhenReady);
     /** @brief Advance preview-state bookkeeping. */
     void updateSoundPreview();
     /** @brief Seek inside the active file preview. */
@@ -385,6 +392,12 @@ private:
 
     void openSampleEditorForUnit(Aestra::Audio::UnitID unitId, const std::string& samplePath);
     void syncSampleEditorToUnit(Aestra::Audio::UnitID unitId);
+    void enqueueMainThreadTask(std::function<void()> task);
+    void drainMainThreadTasks();
+
+    std::mutex m_mainThreadTasksMutex;
+    std::vector<std::function<void()>> m_mainThreadTasks;
+    std::atomic<uint64_t> m_sampleUnitLoadGeneration{0};
 
     Aestra::Audio::CommandParser m_commandParser;
     std::unique_ptr<Aestra::Audio::SessionLog> m_sessionLog;
