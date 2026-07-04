@@ -593,8 +593,7 @@ void UIMixerPanel::loadPluginToSelectedChannel(const std::string& pluginId)
         return;
     }
     if (auto delay = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraDelay>(instance)) {
-        // TODO: wire BPM from transport when available
-        delay->setBPM(120.0f);
+        delay->setBPM(static_cast<float>(m_trackManager->getPlaylistModel().getBPM()));
     }
     instance->activate();
 
