@@ -1217,6 +1217,24 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/TextRendererSTBSpaceTest.cpp")
     message(STATUS "TextRendererSTBSpaceTest added - Issue #121 regression test")
 endif()
 
+# NUITheme JSON loading test (Issue #259)
+# Compiles NUITheme.cpp directly (its only deps are header-only: NUITypes.h,
+# AestraJSON.h, AestraLog.h) so the test also runs in headless builds where
+# AestraUI targets are disabled.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeJSONTest.cpp")
+    add_executable(NUIThemeJSONTest
+        AestraUI/NUIThemeJSONTest.cpp
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core/NUITheme.cpp
+    )
+    target_include_directories(NUIThemeJSONTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME NUIThemeJSONTest COMMAND NUIThemeJSONTest)
+    set_tests_properties(NUIThemeJSONTest PROPERTIES LABELS "ui;theme")
+    message(STATUS "NUIThemeJSONTest added - Issue #259 theme JSON loading test")
+endif()
+
 # PianoRollInteraction Test - tests for pure helper functions
 # Guard on target presence because headless/CI disables AestraUI targets.
 if(TARGET AestraUI_Core)
