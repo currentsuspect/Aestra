@@ -23,11 +23,11 @@
  * - Services themselves must be thread-safe if accessed from multiple threads
  *
  * DESIGN NOTES:
- * - Keys are per-type static tag addresses, not typeid: the app target builds
- *   Release with -fno-rtti (Source/CMakeLists.txt), and newer GCC rejects
- *   typeid in template bodies under -fno-rtti. Tag addresses are unique per
- *   type within a single binary, which is all Aestra needs (statically linked,
- *   no services registered across shared-library boundaries).
+ * - Keys are per-type static tag addresses, not typeid, so this header stays
+ *   valid under -fno-rtti (newer GCC rejects typeid in template bodies even
+ *   uninstantiated). Tag addresses are unique per type within a single
+ *   binary, which is all Aestra needs (statically linked, no services
+ *   registered across shared-library boundaries).
  * - Services are stored as void* to allow any type
  * - Lifetime management is external (caller owns services)
  */
