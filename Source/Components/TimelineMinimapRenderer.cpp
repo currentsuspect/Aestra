@@ -235,9 +235,8 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
                  if (currentY + trackH > barBottom) break; 
                  
                  // Shared TRACK_PALETTE, same modulo as the track-color fallback
-                 const uint32_t argb = paletteIndexToARGB(static_cast<int>(i % PALETTE_SIZE));
-                 NUIColor lineTint(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f,
-                                   (argb & 0xFF) / 255.0f, 0.9f);
+                 const NUIColor lineTint =
+                     NUIColor::fromARGB(paletteIndexToARGB(static_cast<int>(i % PALETTE_SIZE))).withAlpha(0.9f);
 
                  NUIRect lineRect(x, currentY, 1.0f, trackH);
                  renderer.fillRect(lineRect, lineTint);
