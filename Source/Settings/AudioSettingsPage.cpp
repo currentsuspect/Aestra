@@ -649,7 +649,15 @@ void AudioSettingsPage::onUpdate(double deltaTime) {
     // Check for async device load completion
     if (m_deviceDataReady && !m_isLoadingDevices.load()) {
         m_deviceDataReady = false; // Consume the flag
-        onDeviceLoadComplete();
+        if (m_deviceReloadPending) {
+            // A refresh was requested while this load was in flight (e.g. the
+            // driver changed) — the results are stale. Discard them and
+            // re-enumerate; controls stay disabled with the loading indicator.
+            m_deviceReloadPending = false;
+            startAsyncDeviceLoad();
+        } else {
+            onDeviceLoadComplete();
+        }
     }
     
     // Animate loading indicator
@@ -808,8 +816,11 @@ void AudioSettingsPage::startAsyncDeviceLoad() {
     // This is the only path that may call getAvailableDriverTypes()/getDevices()
     // (blocking hardware enumeration) — keep those calls on the worker thread (#256).
 
-    // Don't start if already loading
+    // If a load is already in flight, don't drop this request — the in-flight
+    // results may be for a stale driver selection. Remember it and re-enumerate
+    // once the current load finishes (consumed in onUpdate()).
     if (m_isLoadingDevices.load()) {
+        m_deviceReloadPending = true;
         return;
     }
     
@@ -835,42 +846,65 @@ void AudioSettingsPage::startAsyncDeviceLoad() {
     
     m_deviceLoadThread = std::thread([this]() {
         CachedDeviceData data;
-        
-        // === Enumerate driver types ===
-        auto types = m_audioManager->getAvailableDriverTypes();
-        for (int i = 0; i < static_cast<int>(types.size()); ++i) {
-            std::string name = "Unknown";
-            if (types[i] == AudioDriverType::WASAPI_SHARED) name = "WASAPI Shared";
-            else if (types[i] == AudioDriverType::WASAPI_EXCLUSIVE) name = "WASAPI Exclusive";
-            else if (types[i] == AudioDriverType::ASIO_EXTERNAL) name = "ASIO (External)";
-            else if (types[i] == AudioDriverType::ASIO_Aestra) name = "ASIO (Aestra)";
-            else if (types[i] == AudioDriverType::DIRECTSOUND) name = "DirectSound";
-            else if (types[i] == AudioDriverType::RTAUDIO) name = "RtAudio (Auto)";
-            else if (types[i] == AudioDriverType::PULSEAUDIO) name = "PulseAudio";
-            else if (types[i] == AudioDriverType::ALSA) name = "ALSA";
-            else if (types[i] == AudioDriverType::JACK) name = "JACK";
-            
-            data.driverTypes.push_back({ name, static_cast<int>(types[i]) });
-        }
-        
-        // Fallback
-        if (data.driverTypes.empty()) {
-            data.driverTypes.push_back({ "DirectSound", static_cast<int>(AudioDriverType::DIRECTSOUND) });
-        }
-        
-        data.currentDriverType = static_cast<int>(m_audioManager->getActiveDriverType());
-        
-        // === Enumerate devices ===
-        auto devices = m_audioManager->getDevices();
-        for (const auto& dev : devices) {
-            if (dev.maxOutputChannels > 0) {
-                data.outputDevices.push_back({ dev.name, static_cast<int>(dev.id) });
+
+        // Backend enumeration can throw (e.g. RtAudio errors). An uncaught
+        // exception in a std::thread calls std::terminate, and the page would
+        // stay stuck in the loading state — catch, log, and publish fallback
+        // data so the UI always recovers.
+        try {
+            // === Enumerate driver types ===
+            auto types = m_audioManager->getAvailableDriverTypes();
+            for (int i = 0; i < static_cast<int>(types.size()); ++i) {
+                std::string name = "Unknown";
+                if (types[i] == AudioDriverType::WASAPI_SHARED)
+                    name = "WASAPI Shared";
+                else if (types[i] == AudioDriverType::WASAPI_EXCLUSIVE)
+                    name = "WASAPI Exclusive";
+                else if (types[i] == AudioDriverType::ASIO_EXTERNAL)
+                    name = "ASIO (External)";
+                else if (types[i] == AudioDriverType::ASIO_Aestra)
+                    name = "ASIO (Aestra)";
+                else if (types[i] == AudioDriverType::DIRECTSOUND)
+                    name = "DirectSound";
+                else if (types[i] == AudioDriverType::RTAUDIO)
+                    name = "RtAudio (Auto)";
+                else if (types[i] == AudioDriverType::PULSEAUDIO)
+                    name = "PulseAudio";
+                else if (types[i] == AudioDriverType::ALSA)
+                    name = "ALSA";
+                else if (types[i] == AudioDriverType::JACK)
+                    name = "JACK";
+
+                data.driverTypes.push_back({name, static_cast<int>(types[i])});
             }
-            if (dev.maxInputChannels > 0) {
-                data.inputDevices.push_back({ dev.name, static_cast<int>(dev.id) });
+
+            data.currentDriverType = static_cast<int>(m_audioManager->getActiveDriverType());
+
+            // === Enumerate devices ===
+            auto devices = m_audioManager->getDevices();
+            for (const auto& dev : devices) {
+                if (dev.maxOutputChannels > 0) {
+                    data.outputDevices.push_back({dev.name, static_cast<int>(dev.id)});
+                }
+                if (dev.maxInputChannels > 0) {
+                    data.inputDevices.push_back({dev.name, static_cast<int>(dev.id)});
+                }
             }
+
+            auto currentConfig = m_audioManager->getCurrentConfig();
+            data.currentDeviceId = static_cast<int>(currentConfig.deviceId);
+            data.currentInputDeviceId = static_cast<int>(currentConfig.inputDeviceId);
+            data.currentSampleRate = static_cast<int>(currentConfig.sampleRate);
+        } catch (const std::exception& e) {
+            Log::error(std::string("[AudioSettingsPage] Device enumeration failed: ") + e.what());
+        } catch (...) {
+            Log::error("[AudioSettingsPage] Device enumeration failed with unknown error");
         }
 
+        // Fallbacks apply to both the empty-hardware and the failure case
+        if (data.driverTypes.empty()) {
+            data.driverTypes.push_back({"DirectSound", static_cast<int>(AudioDriverType::DIRECTSOUND)});
+        }
         if (data.outputDevices.empty()) {
             data.outputDevices.push_back({ "No Output Devices Found", -1 });
         }
@@ -878,11 +912,6 @@ void AudioSettingsPage::startAsyncDeviceLoad() {
             data.inputDevices.push_back({ "No Input Devices Found", -1 });
         }
 
-        auto currentConfig = m_audioManager->getCurrentConfig();
-        data.currentDeviceId = static_cast<int>(currentConfig.deviceId);
-        data.currentInputDeviceId = static_cast<int>(currentConfig.inputDeviceId);
-        data.currentSampleRate = static_cast<int>(currentConfig.sampleRate);
-        
         // Store results thread-safely
         {
             std::lock_guard<std::mutex> lock(m_deviceDataMutex);

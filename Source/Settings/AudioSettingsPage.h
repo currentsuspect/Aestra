@@ -189,6 +189,11 @@ private:
     CachedDeviceData m_cachedDevices;
     std::atomic<bool> m_deviceDataReady{false};
 
+    // Set when startAsyncDeviceLoad() is called while a load is in flight
+    // (e.g. driver changed mid-enumeration); onUpdate() then discards the
+    // stale results and re-enumerates. UI-thread only, no synchronization needed.
+    bool m_deviceReloadPending{false};
+
     // Loading indicator
     std::shared_ptr<AestraUI::NUILabel> m_loadingLabel;
     float m_loadingAnimTimer{0.0f};
