@@ -62,6 +62,12 @@ public:
     AestraUI::NUIRenderer* getRenderer() { return m_renderer.get(); }
     /** @brief Get the root component attached to the window. */
     AestraRootComponent* getRootComponent() { return m_rootComponent.get(); }
+
+    /// True when some overlay needs rendering every frame regardless of
+    /// dirtiness: the performance HUD (needs fresh profiler samples), any
+    /// visible dialog, or an open menu. Used by idle frame elision
+    /// (labs/perf/idle-frame-elision-spec.md).
+    bool requiresContinuousRender() const;
     /** @brief Get the custom window chrome widget. */
     AestraUI::NUICustomWindow* getCustomWindow() { return m_customWindow.get(); }
     /** @brief Get the unified HUD overlay. */
