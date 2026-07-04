@@ -3344,6 +3344,10 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
     if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
         m_trackManager->getCommandHistory().pushAndExecute(
             std::make_shared<Aestra::Audio::AddPluginCommand>(*channel, slot, std::move(instance)));
+        // The playback graph only picks up chain changes on rebuild (which also
+        // re-prepares chains with the live sample rate/block size) — without this,
+        // the plugin never processes already-playing tracks.
+        m_trackManager->requestAudioGraphRebuild(Aestra::Audio::GraphDirtyReason::EffectChainChanged);
         AESTRA_LOG_DEBUG("Loaded effect to channel '" + channel->getName() + "' slot " + std::to_string(slot));
     } else {
         AESTRA_LOG_WARNING("No empty effect slots on channel '" + channel->getName() + "'");
