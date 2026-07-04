@@ -5,8 +5,14 @@
 #include "RtAudio.h"
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <thread>
+
+#ifdef __linux__
+#include <pthread.h>
+#endif
 
 namespace Aestra {
 namespace Audio {
@@ -45,6 +51,11 @@ private:
     static AudioDriverType apiToDriverType(RtAudio::Api api);
     static const char* apiName(RtAudio::Api api);
     std::string getDeviceName(unsigned int deviceId) const;
+#ifdef __linux__
+    void startRealtimePriorityWorker();
+    void stopRealtimePriorityWorker();
+    void applyLinuxRealtimePriority(pthread_t audioThreadId);
+#endif
 
     std::unique_ptr<RtAudio> m_rtAudio;
     AudioDriverType m_driverType{AudioDriverType::UNKNOWN};
@@ -53,6 +64,11 @@ private:
     std::atomic<uint32_t> m_sampleRate{0};
     std::atomic<uint32_t> m_bufferSize{0};
     std::atomic<bool> m_callbackRtPriorityAttempted{false};
+#ifdef __linux__
+    std::atomic<uintptr_t> m_audioThreadToken{0};
+    std::atomic<bool> m_rtPriorityWorkerStop{false};
+    std::thread m_rtPriorityWorker;
+#endif
     DriverStatistics m_stats;
     std::string m_lastError;
     struct AudioTelemetry* m_telemetry = nullptr; // RT-thread telemetry (atomic, lock-free)
