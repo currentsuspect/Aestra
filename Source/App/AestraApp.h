@@ -1,17 +1,18 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "AestraWindowManager.h"
-#include "AestraAudioController.h"
-#include "AestraContent.h"
-#include "ProjectSerializer.h"
-#include "AutosaveManager.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "../Core/UIState.h"
+#include "AestraAudioController.h"
+#include "AestraContent.h"
+#include "AestraWindowManager.h"
+#include "AutosaveManager.h"
+#include "ProjectSerializer.h"
 
+#include <chrono>
+#include <filesystem>
 #include <memory>
 #include <string>
-#include <filesystem>
 
 /**
  * @brief Main application class
@@ -63,6 +64,10 @@ private:
     void initializeContent();
     void initializeAutosave(bool enabled);
     void buildRecoveryDialog();              // lightweight — needed during startup
+    // Idle frame elision (labs/perf/idle-frame-elision-spec.md)
+    bool shouldRenderThisFrame();
+    std::chrono::steady_clock::time_point m_lastPresentedFrame{};
+
     void buildSettingsAndDialogs();          // heavy — deferred until first open
     void ensureSettingsAndDialogs();         // lazy guard
     void buildMenuBar();

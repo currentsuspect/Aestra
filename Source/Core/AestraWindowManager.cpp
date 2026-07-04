@@ -549,6 +549,22 @@ void AestraWindowManager::setExportDialog(std::shared_ptr<ExportDialog> dialog) 
     }
 }
 
+bool AestraWindowManager::requiresContinuousRender() const {
+    if (m_unifiedHUD && m_unifiedHUD->isVisible())
+        return true; // profiler needs fresh samples
+    if (m_activeMenu)
+        return true;
+    if (m_recoveryDialog && m_recoveryDialog->isDialogVisible())
+        return true;
+    if (m_confirmationDialog && m_confirmationDialog->isDialogVisible())
+        return true;
+    if (m_settingsDialog && m_settingsDialog->isVisible())
+        return true;
+    if (m_exportDialog && m_exportDialog->isVisible())
+        return true;
+    return false;
+}
+
 void AestraWindowManager::setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud) {
     m_unifiedHUD = hud;
     if (m_rootComponent) m_rootComponent->setUnifiedHUD(m_unifiedHUD);
