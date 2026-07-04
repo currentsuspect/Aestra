@@ -33,6 +33,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // Forward declarations - AestraUI
@@ -154,7 +155,7 @@ public:
     void toggleFileBrowser();
     /** @brief Synchronize overlay state into owned child views. */
     void syncViewState();
-    
+
     /** @brief Get the active browser column width. */
     float getBrowserWidth() const;
     /** @brief Set the active browser column width. */
@@ -171,7 +172,7 @@ public:
     void setViewFocus(ViewFocus focus);
     /** @brief Get the active workspace mode. */
     ViewFocus getViewFocus() const { return m_viewFocus; }
-    
+
     /** @brief Explicitly show or hide the Arsenal panel. */
     void setArsenalPanelVisible(bool visible);
     /** @brief Toggle the Arsenal panel regardless of active mode. */
@@ -269,7 +270,7 @@ public:
     bool hasRealtimePlaybackVisuals() const;
     /** @brief Update the preview playhead visible in the UI. */
     void updatePreviewPlayhead();
-    
+
     /** @brief Load an effect plugin onto the selected track. */
     void loadEffectToSelectedTrack(const std::string& pluginId);
     /** @brief Load an instrument plugin into Arsenal. */
@@ -336,17 +337,17 @@ private:
     std::shared_ptr<Aestra::Audio::TrackManagerUI> m_trackManagerUI;
     AestraUI::NUIPlatformBridge* m_platformBridge = nullptr;
     Aestra::Audio::AudioEngine* m_audioEngine = nullptr;
-    
+
     std::shared_ptr<Aestra::Audio::MixerPanel> m_mixerPanel;
     std::shared_ptr<Aestra::Audio::PianoRollPanel> m_pianoRollPanel;
     std::shared_ptr<Aestra::Audio::ArsenalPanel> m_sequencerPanel;
     std::shared_ptr<Aestra::Audio::AestraHistoryPanel> m_historyPanel;
     std::shared_ptr<AestraUI::PluginUIController> m_pluginController;
     std::shared_ptr<AestraUI::UIRoutingMap> m_routingMapPanel;
-    
+
     // Temp files for Audition (v4.0)
     std::vector<std::string> m_tempFiles;
-    
+
     // Audition Mode
     std::shared_ptr<Aestra::Audio::AuditionEngine> m_auditionEngine;
     std::shared_ptr<Aestra::AuditionPanel> m_auditionPanel;
@@ -354,20 +355,20 @@ private:
     std::unique_ptr<Aestra::Audio::PreviewEngine> m_previewEngine;
     bool m_spaceShortcutLatched{false};
     bool m_audioActive = false;
-    
+
     // View state
     ViewState m_viewState;
     ViewFocus m_viewFocus = ViewFocus::Timeline;
     ViewFocus m_previousViewFocus = ViewFocus::Timeline;
     uint32_t m_lastSelectedChannelId = 0xFFFFFFFFu;
-    
+
     // Sound preview state
     bool m_previewIsPlaying = false;
     std::chrono::steady_clock::time_point m_previewStartTime{};
     double m_previewDuration = 300.0;
     std::string m_currentPreviewFile;
     std::vector<float> m_transportWaveformScratch;
-    
+
     // Playback state persistence
     double m_savedTimelinePosition = 0.0;
     bool m_patternClipPreviewActive{false};
@@ -397,7 +398,8 @@ private:
 
     std::mutex m_mainThreadTasksMutex;
     std::vector<std::function<void()>> m_mainThreadTasks;
-    std::atomic<uint64_t> m_sampleUnitLoadGeneration{0};
+    std::mutex m_sampleUnitLoadGenerationsMutex;
+    std::unordered_map<Aestra::Audio::UnitID, uint64_t> m_sampleUnitLoadGenerations;
 
     Aestra::Audio::CommandParser m_commandParser;
     std::unique_ptr<Aestra::Audio::SessionLog> m_sessionLog;

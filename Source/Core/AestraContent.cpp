@@ -3172,7 +3172,11 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
         return;
     }
 
-    const uint64_t generation = m_sampleUnitLoadGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+    uint64_t generation = 0;
+    {
+        std::lock_guard<std::mutex> lock(m_sampleUnitLoadGenerationsMutex);
+        generation = ++m_sampleUnitLoadGenerations[unitId];
+    }
     auto weakSelf = weak_from_this();
 
     if (m_trackManager->getUnitManager().getUnit(unitId)) {
@@ -3229,8 +3233,12 @@ void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& sa
             if (!self || !self->m_trackManager) {
                 return;
             }
-            if (self->m_sampleUnitLoadGeneration.load(std::memory_order_acquire) != generation) {
-                return;
+            {
+                std::lock_guard<std::mutex> lock(self->m_sampleUnitLoadGenerationsMutex);
+                const auto generationIt = self->m_sampleUnitLoadGenerations.find(unitId);
+                if (generationIt == self->m_sampleUnitLoadGenerations.end() || generationIt->second != generation) {
+                    return;
+                }
             }
 
             auto& unitManager = self->m_trackManager->getUnitManager();

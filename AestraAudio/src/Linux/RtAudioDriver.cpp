@@ -1,9 +1,13 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "RtAudioDriver.h"
+
 #include "Core/AudioTelemetry.h"
 
-#include <iostream>
 #include <cerrno>
+#include <chrono>
+#include <iostream>
+#include <thread>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -15,6 +19,26 @@
 
 namespace Aestra {
 namespace Audio {
+
+#ifdef __linux__
+namespace {
+uintptr_t pthreadToToken(pthread_t threadId) {
+    if constexpr (std::is_pointer_v<pthread_t>) {
+        return reinterpret_cast<uintptr_t>(threadId);
+    } else {
+        return static_cast<uintptr_t>(threadId);
+    }
+}
+
+pthread_t tokenToPthread(uintptr_t threadToken) {
+    if constexpr (std::is_pointer_v<pthread_t>) {
+        return reinterpret_cast<pthread_t>(threadToken);
+    } else {
+        return static_cast<pthread_t>(threadToken);
+    }
+}
+} // namespace
+#endif
 
 RtAudioDriver::RtAudioDriver() {
     std::vector<RtAudio::Api> candidates;
@@ -138,6 +162,9 @@ void RtAudioDriver::closeStream() {
         return;
     }
 
+#ifdef __linux__
+    stopRealtimePriorityWorker();
+#endif
     if (m_rtAudio->isStreamRunning()) {
         stopStream();
     }
@@ -149,6 +176,9 @@ void RtAudioDriver::closeStream() {
     m_userData.store(nullptr, std::memory_order_relaxed);
     m_sampleRate.store(0, std::memory_order_relaxed);
     m_bufferSize.store(0, std::memory_order_relaxed);
+#ifdef __linux__
+    m_audioThreadToken.store(0, std::memory_order_relaxed);
+#endif
 }
 
 bool RtAudioDriver::startStream() {
@@ -161,7 +191,9 @@ bool RtAudioDriver::startStream() {
     }
 
 #ifdef __linux__
+    stopRealtimePriorityWorker();
     m_callbackRtPriorityAttempted.store(false, std::memory_order_release);
+    m_audioThreadToken.store(0, std::memory_order_release);
     if (m_telemetry) {
         m_telemetry->clearThreadPriorityStatus();
     }
@@ -181,10 +213,17 @@ bool RtAudioDriver::startStream() {
         return false;
     }
 
+#ifdef __linux__
+    startRealtimePriorityWorker();
+#endif
+
     return true;
 }
 
 void RtAudioDriver::stopStream() {
+#ifdef __linux__
+    stopRealtimePriorityWorker();
+#endif
     if (m_rtAudio && m_rtAudio->isStreamRunning()) {
         m_rtAudio->stopStream();
     }
@@ -211,20 +250,9 @@ int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsign
     auto* driver = static_cast<RtAudioDriver*>(userData);
 #ifdef __linux__
     bool expected = false;
-    if (driver && driver->m_callbackRtPriorityAttempted.compare_exchange_strong(expected, true,
-                                                                                std::memory_order_acq_rel)) {
-        struct sched_param param;
-        param.sched_priority = sched_get_priority_max(SCHED_FIFO);
-        param.sched_priority = (param.sched_priority + sched_get_priority_min(SCHED_FIFO)) / 2;
-        const int rtResult = pthread_setschedparam(pthread_self(), SCHED_FIFO, &param);
-        if (driver->m_telemetry) {
-            if (rtResult == 0) {
-                driver->m_telemetry->setThreadPriorityBit(0x01);
-                driver->m_telemetry->updateLinuxRtPriorityErrno(0);
-            } else {
-                driver->m_telemetry->updateLinuxRtPriorityErrno(rtResult);
-            }
-        }
+    if (driver &&
+        driver->m_callbackRtPriorityAttempted.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+        driver->m_audioThreadToken.store(pthreadToToken(pthread_self()), std::memory_order_release);
     }
 #endif
 
@@ -243,8 +271,8 @@ int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsign
     }
 
     driver->m_stats.callbackCount++;
-    int result = callback(static_cast<float*>(outputBuffer), static_cast<const float*>(inputBuffer), numFrames, streamTime,
-                    callbackUserData);
+    int result = callback(static_cast<float*>(outputBuffer), static_cast<const float*>(inputBuffer), numFrames,
+                          streamTime, callbackUserData);
 
     // Update telemetry (lock-free, RT-safe)
     if (driver->m_telemetry) {
@@ -258,10 +286,50 @@ int RtAudioDriver::rtAudioCallback(void* outputBuffer, void* inputBuffer, unsign
     return result;
 }
 
+#ifdef __linux__
+void RtAudioDriver::startRealtimePriorityWorker() {
+    stopRealtimePriorityWorker();
+    m_rtPriorityWorkerStop.store(false, std::memory_order_release);
+    m_rtPriorityWorker = std::thread([this]() {
+        for (int attempt = 0; attempt < 100 && !m_rtPriorityWorkerStop.load(std::memory_order_acquire); ++attempt) {
+            const uintptr_t audioThreadToken = m_audioThreadToken.load(std::memory_order_acquire);
+            if (audioThreadToken != 0) {
+                applyLinuxRealtimePriority(tokenToPthread(audioThreadToken));
+                return;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    });
+}
+
+void RtAudioDriver::stopRealtimePriorityWorker() {
+    m_rtPriorityWorkerStop.store(true, std::memory_order_release);
+    if (m_rtPriorityWorker.joinable()) {
+        m_rtPriorityWorker.join();
+    }
+}
+
+void RtAudioDriver::applyLinuxRealtimePriority(pthread_t audioThreadId) {
+    struct sched_param param;
+    param.sched_priority = sched_get_priority_max(SCHED_FIFO);
+    param.sched_priority = (param.sched_priority + sched_get_priority_min(SCHED_FIFO)) / 2;
+    const int rtResult = pthread_setschedparam(audioThreadId, SCHED_FIFO, &param);
+    if (m_telemetry) {
+        if (rtResult == 0) {
+            m_telemetry->setThreadPriorityBit(0x01);
+            m_telemetry->updateLinuxRtPriorityErrno(0);
+        } else {
+            m_telemetry->updateLinuxRtPriorityErrno(rtResult);
+        }
+    }
+}
+#endif
+
 bool RtAudioDriver::tryInitializeBackend(const std::vector<RtAudio::Api>& candidates) {
     for (RtAudio::Api api : candidates) {
         try {
-            auto candidate = (api == RtAudio::UNSPECIFIED) ? std::make_unique<RtAudio>() : std::make_unique<RtAudio>(api);
+            auto candidate =
+                (api == RtAudio::UNSPECIFIED) ? std::make_unique<RtAudio>() : std::make_unique<RtAudio>(api);
             candidate->setErrorCallback([](RtAudioErrorType type, const std::string& errorText) {
                 if (type != RTAUDIO_NO_ERROR && type != RTAUDIO_WARNING) {
                     std::cerr << "RtAudio Linux error: " << errorText << std::endl;
@@ -274,8 +342,7 @@ bool RtAudioDriver::tryInitializeBackend(const std::vector<RtAudio::Api>& candid
                 m_rtAudio = std::move(candidate);
                 return true;
             }
-        } catch (const std::exception&) {
-        }
+        } catch (const std::exception&) {}
     }
 
     return false;
