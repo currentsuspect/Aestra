@@ -252,6 +252,13 @@ namespace AestraUI {
             m_renderer->flush();
         }
 
+        // Flush pending screen-target geometry BEFORE binding the cache FBO —
+        // otherwise batched-but-unflushed draws from earlier in the frame would
+        // be emitted into the cache texture instead of the screen.
+        if (m_renderer) {
+            m_renderer->flush();
+        }
+
         // Save current FBO
         GLint currentFBO;
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &currentFBO);
