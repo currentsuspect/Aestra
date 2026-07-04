@@ -4,34 +4,37 @@
 /**
  * @file ServiceLocator.h
  * @brief B-003: Service locator for global services
- * 
+ *
  * Provides a centralized registry for application-wide services, replacing
  * scattered global singletons with a single point of access that can be
  * mocked for testing.
- * 
+ *
  * USAGE:
  *   // Registration (at startup):
  *   ServiceLocator::provide<IAudioEngine>(myAudioEngine);
- *   
+ *
  *   // Access (anywhere):
  *   auto* audio = ServiceLocator::get<IAudioEngine>();
  *   if (audio) audio->play();
- * 
+ *
  * THREAD SAFETY:
  * - Registration should only happen on MAIN THREAD during startup
  * - Lookups are thread-safe (read-only after startup)
  * - Services themselves must be thread-safe if accessed from multiple threads
- * 
+ *
  * DESIGN NOTES:
- * - Using type IDs avoids RTTI overhead
+ * - Keys are per-type static tag addresses, not typeid: the app target builds
+ *   Release with -fno-rtti (Source/CMakeLists.txt), and newer GCC rejects
+ *   typeid in template bodies under -fno-rtti. Tag addresses are unique per
+ *   type within a single binary, which is all Aestra needs (statically linked,
+ *   no services registered across shared-library boundaries).
  * - Services are stored as void* to allow any type
  * - Lifetime management is external (caller owns services)
  */
 
-#include <unordered_map>
-#include <typeindex>
-#include <mutex>
 #include <memory>
+#include <mutex>
+#include <unordered_map>
 
 namespace Aestra {
 
@@ -52,7 +55,7 @@ public:
     template<typename T>
     static void provide(T* service) {
         std::lock_guard<std::mutex> lock(getMutex());
-        getRegistry()[std::type_index(typeid(T))] = static_cast<void*>(service);
+        getRegistry()[serviceKey<T>()] = static_cast<void*>(service);
     }
     
     /**
@@ -77,7 +80,7 @@ public:
     template<typename T>
     static T* get() {
         std::lock_guard<std::mutex> lock(getMutex());
-        auto it = getRegistry().find(std::type_index(typeid(T)));
+        auto it = getRegistry().find(serviceKey<T>());
         if (it != getRegistry().end()) {
             return static_cast<T*>(it->second);
         }
@@ -99,7 +102,7 @@ public:
     template<typename T>
     static void remove() {
         std::lock_guard<std::mutex> lock(getMutex());
-        getRegistry().erase(std::type_index(typeid(T)));
+        getRegistry().erase(serviceKey<T>());
     }
     
     /**
@@ -111,11 +114,20 @@ public:
     }
 
 private:
-    static std::unordered_map<std::type_index, void*>& getRegistry() {
-        static std::unordered_map<std::type_index, void*> s_registry;
+    // Unique key per service type: the address of a per-instantiation static.
+    // RTTI-free equivalent of std::type_index for a statically linked binary.
+    using ServiceKey = const void*;
+
+    template <typename T> static ServiceKey serviceKey() {
+        static const char s_tag = 0;
+        return &s_tag;
+    }
+
+    static std::unordered_map<ServiceKey, void*>& getRegistry() {
+        static std::unordered_map<ServiceKey, void*> s_registry;
         return s_registry;
     }
-    
+
     static std::mutex& getMutex() {
         static std::mutex s_mutex;
         return s_mutex;
