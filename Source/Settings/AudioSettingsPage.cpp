@@ -290,8 +290,8 @@ void AudioSettingsPage::createUI() {
              m_audioManager->setPreferredDriverType((AudioDriverType)m_driverDropdown->getSelectedValue());
         }
 
-        // When driver changes, we need to update device list (and potentially switch backend)
-        updateDeviceList();
+        // When driver changes, re-enumerate devices off the UI thread (#256)
+        startAsyncDeviceLoad();
     });
 
     m_deviceDropdown = createDropdown([this](int idx) {
@@ -424,13 +424,26 @@ void AudioSettingsPage::createUI() {
     });
     addChild(m_testSoundButton);
     Log::info("[AudioSettingsPage] Test sound button created");
-    
+
     // Initial Population
-    // Trigger update logic ONCE without recursion loop
-    Log::info("[AudioSettingsPage] createUI components created. Updating driver list...");
-    updateDriverList();
-    Log::info("[AudioSettingsPage] Initial updateDriverList complete.");
-    
+    // Sample-rate and buffer-size lists are static; populate them now so
+    // loadSettings() below can restore the saved selections. Driver and device
+    // lists require hardware enumeration, which blocks — they are filled in by
+    // startAsyncDeviceLoad() (called from the constructor) off the UI thread (#256).
+    const auto& currentConfig = m_audioManager->getCurrentConfig();
+    m_sampleRateDropdown->addItem("44100 Hz", 44100);
+    m_sampleRateDropdown->addItem("48000 Hz", 48000);
+    m_sampleRateDropdown->addItem("88200 Hz", 88200);
+    m_sampleRateDropdown->addItem("96000 Hz", 96000);
+    m_sampleRateDropdown->setSelectedByValue((int)currentConfig.sampleRate);
+
+    for (int s : {64, 128, 256, 512, 1024, 2048}) {
+        m_bufferSizeDropdown->addItem(std::to_string(s) + " samples", s);
+    }
+    m_bufferSizeDropdown->setSelectedByValue((int)currentConfig.bufferSize);
+
+    updateLatencyEstimate();
+
     // Load persisted settings (overrides defaults if exists)
     // NOTE: loadSettings() is called BEFORE m_isInitializing is set to false.
     // This prevents loadSettings() from triggering openStream calls during startup.
@@ -518,8 +531,8 @@ bool AudioSettingsPage::hasUnsavedChanges() const {
 }
 
 void AudioSettingsPage::onShow() {
-    // Refresh device lists in case hardware changed
-    updateDriverList();
+    // Refresh device lists in case hardware changed — off the UI thread (#256)
+    startAsyncDeviceLoad();
 }
 
 void AudioSettingsPage::onHide() {
@@ -547,88 +560,6 @@ void AudioSettingsPage::updateLatencyEstimate() {
         m_latencyLabel->setText("Est. Latency: -- ms");
     }
 }
-
-void AudioSettingsPage::updateDriverList() {
-    m_driverDropdown->clearItems();
-    
-    // In a real scenario with multiple backends, we'd list them.
-    // Aestras AudioDeviceManager might handle WASAPI/ASIO as "Driver Types"
-    // For now, let's query available driver types
-    auto types = m_audioManager->getAvailableDriverTypes();
-    
-    // Map types to UI
-    for (size_t i = 0; i < types.size(); ++i) {
-        std::string name = "Unknown";
-        if (types[i] == AudioDriverType::WASAPI_SHARED) name = "WASAPI Shared";
-        else if (types[i] == AudioDriverType::WASAPI_EXCLUSIVE) name = "WASAPI Exclusive";
-        else if (types[i] == AudioDriverType::ASIO_EXTERNAL) name = "ASIO (External)";
-        else if (types[i] == AudioDriverType::ASIO_Aestra) name = "ASIO (Aestra)";
-        else if (types[i] == AudioDriverType::DIRECTSOUND) name = "DirectSound";
-        else if (types[i] == AudioDriverType::RTAUDIO) name = "RtAudio (Auto)";
-        else if (types[i] == AudioDriverType::PULSEAUDIO) name = "PulseAudio";
-        else if (types[i] == AudioDriverType::ALSA) name = "ALSA";
-        else if (types[i] == AudioDriverType::JACK) name = "JACK";
-        
-        m_driverDropdown->addItem(name, (int)types[i]);
-    }
-
-    if (types.empty()) {
-        // Fallback
-        m_driverDropdown->addItem("DirectSound", (int)AudioDriverType::DIRECTSOUND);
-    }
-    
-    // Select current driver type
-    auto currentType = m_audioManager->getActiveDriverType();
-    m_driverDropdown->setSelectedByValue((int)currentType);
-    
-    // Update dependent lists
-    updateDeviceList();
-}
-
-void AudioSettingsPage::updateDeviceList() {
-    m_deviceDropdown->clearItems();
-    m_inputDeviceDropdown->clearItems();
-    
-    auto devices = m_audioManager->getDevices();
-    for (const auto& dev : devices) {
-        if (dev.maxOutputChannels > 0) {
-            m_deviceDropdown->addItem(dev.name, (int)dev.id);
-        }
-        if (dev.maxInputChannels > 0) {
-            m_inputDeviceDropdown->addItem(dev.name, (int)dev.id);
-        }
-    }
-    
-    if (m_deviceDropdown->getItemCount() == 0) {
-        m_deviceDropdown->addItem("No Output Devices Found", -1);
-    }
-    if (m_inputDeviceDropdown->getItemCount() == 0) {
-        m_inputDeviceDropdown->addItem("No Input Devices Found", -1);
-    }
-    
-    // Select active device
-    auto currentConfig = m_audioManager->getCurrentConfig();
-    m_deviceDropdown->setSelectedByValue((int)currentConfig.deviceId);
-    m_inputDeviceDropdown->setSelectedByValue((int)currentConfig.inputDeviceId);
-    
-    // Update Standard Rates/Buffers if empty
-    if (m_sampleRateDropdown->getItemCount() == 0) {
-        m_sampleRateDropdown->addItem("44100 Hz", 44100);
-        m_sampleRateDropdown->addItem("48000 Hz", 48000);
-        m_sampleRateDropdown->addItem("88200 Hz", 88200);
-        m_sampleRateDropdown->addItem("96000 Hz", 96000);
-        m_sampleRateDropdown->setSelectedByValue((int)currentConfig.sampleRate);
-    }
-    
-    if (m_bufferSizeDropdown->getItemCount() == 0) {
-        std::vector<int> sizes = {64, 128, 256, 512, 1024, 2048};
-        for (int s : sizes) m_bufferSizeDropdown->addItem(std::to_string(s) + " samples", s);
-        m_bufferSizeDropdown->setSelectedByValue((int)currentConfig.bufferSize);
-    }
-    
-    updateLatencyEstimate();
-}
-
 
 // Layout
 void AudioSettingsPage::layoutComponents() {
@@ -874,11 +805,9 @@ void AudioSettingsPage::setPlayingTestSound(bool playing) {
 //==============================================================================
 
 void AudioSettingsPage::startAsyncDeviceLoad() {
-    // TODO: Async loading implemented but freeze still occurs. 
-    // Likely cause: AudioDeviceManager::getDevices() or getAvailableDriverTypes() 
-    // are blocking on the UI thread before we even get here (called from somewhere else?)
-    // Need to investigate initialization order and cache devices at app startup instead.
-    
+    // This is the only path that may call getAvailableDriverTypes()/getDevices()
+    // (blocking hardware enumeration) — keep those calls on the worker thread (#256).
+
     // Don't start if already loading
     if (m_isLoadingDevices.load()) {
         return;

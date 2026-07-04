@@ -86,8 +86,6 @@ public:
 private:
     void createUI();
     void layoutComponents();
-    void updateDriverList();
-    void updateDeviceList();
     void updateSampleRateList();
     void updateBufferSizeList();
     void updateLatencyEstimate();
@@ -189,8 +187,8 @@ private:
         int currentSampleRate = 48000;
     };
     CachedDeviceData m_cachedDevices;
-    bool m_deviceDataReady{false};
-    
+    std::atomic<bool> m_deviceDataReady{false};
+
     // Loading indicator
     std::shared_ptr<AestraUI::NUILabel> m_loadingLabel;
     float m_loadingAnimTimer{0.0f};
