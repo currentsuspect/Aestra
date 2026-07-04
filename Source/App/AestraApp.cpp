@@ -306,6 +306,16 @@ void AestraApp::initializeContent() {
 
     m_windowManager->setContent(m_content);
     m_audioController->setContent(m_content);
+
+    // Performance HUD is created eagerly: it must exist independently of the
+    // lazily built settings dialogs, or F12 / View → Performance Stats are
+    // silent no-ops until the user happens to open Settings or Export first.
+    // The HUD itself is lightweight; the "heavy — deferred" rationale in
+    // buildSettingsAndDialogs() applies to the dialogs, not to this.
+    auto unifiedHUD = std::make_shared<UnifiedHUD>(m_windowManager->getAdaptiveFPS());
+    unifiedHUD->setVisible(false);
+    unifiedHUD->setAudioEngine(m_audioController->getEngine());
+    m_windowManager->setUnifiedHUD(unifiedHUD);
 }
 
 void AestraApp::initializeAutosave(bool enabled) {
@@ -372,10 +382,8 @@ void AestraApp::buildSettingsAndDialogs() {
     auto exportDialog = std::make_shared<ExportDialog>();
     m_windowManager->setExportDialog(exportDialog);
 
-    auto unifiedHUD = std::make_shared<UnifiedHUD>(m_windowManager->getAdaptiveFPS());
-    unifiedHUD->setVisible(false);
-    unifiedHUD->setAudioEngine(m_audioController->getEngine());
-    m_windowManager->setUnifiedHUD(unifiedHUD);
+    // Performance HUD is created in initializeContent() — it must not be tied
+    // to this lazily built path (see note there).
 }
 
 void AestraApp::ensureSettingsAndDialogs() {
@@ -839,6 +847,13 @@ void AestraApp::finalizeAudioSetup() {
         }
         connectAudioToUI(); // Sync configs now that stream is open
         m_audioStreamReady = true;
+
+        // Re-wire the performance HUD in case the engine wasn't constructed
+        // yet when the HUD was created in initializeContent() (e.g. audio init
+        // failed at startup and recovered here). Idempotent when already set.
+        if (auto* hud = m_windowManager->getUnifiedHUD()) {
+            hud->setAudioEngine(m_audioController->getEngine());
+        }
     }
 }
 
@@ -905,6 +920,13 @@ void AestraApp::run() {
                    transportBar->syncTransportState(tm->isPlaying(), tm->isPaused(), tm->isRecordArmed());
                 }
                 updateWindowTitle();
+
+                // Playback needs the 60 FPS target for smooth playhead/meters;
+                // when stopped this decays back to the idle target via the
+                // governor's timeout.
+                if (auto* fps = m_windowManager->getAdaptiveFPS()) {
+                    fps->setAudioVisualizationActive(tm->isPlaying());
+                }
             }
 
             // Rebuild graph check - uses PlaybackGraphController for canonical drain
