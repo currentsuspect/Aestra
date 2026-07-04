@@ -76,6 +76,9 @@ private:
     void endDrag_();
 
     TimelineMinimapModel model_;
+    /// Version of model_.summary at the last setModel(), stored by value
+    /// (the snapshot pointer's contents mutate in place).
+    uint64_t lastSeenSummaryVersion_ = 0;
     TimelineMinimapRenderer renderer_;
     TimelineMinimapRenderColors colors_{};
 

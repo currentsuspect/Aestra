@@ -3283,6 +3283,14 @@ bool AestraContent::isPlayingPreview() const {
     return m_previewIsPlaying;
 }
 
+bool AestraContent::hasRealtimePlaybackVisuals() const {
+    if (m_previewIsPlaying)
+        return true;
+    if (m_auditionEngine && m_auditionEngine->isPlaying())
+        return true;
+    return false;
+}
+
 void AestraContent::updatePreviewPlayhead() {
     if (m_previewPanel && m_previewEngine) {
         m_previewPanel->setDuration(m_previewEngine->getDuration());
