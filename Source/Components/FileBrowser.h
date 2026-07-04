@@ -224,6 +224,10 @@ public:
     };
 
     BrowserLayout computeBrowserLayout() const;
+
+    /// Hover washes drawn per-frame OUTSIDE the FBO cache, so hover changes
+    /// never force a cache rebuild (see renderFileList / nav drawRow).
+    void renderHoverOverlays(NUIRenderer& renderer);
     float getNavPaneWidth() const;
     BrowserNavAction getActiveNavAction() const { return activeNavAction_; }
 

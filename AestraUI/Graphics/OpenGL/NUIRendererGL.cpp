@@ -3095,6 +3095,7 @@ void NUIRendererGL::endBatch() {
 
 void NUIRendererGL::flush() {
     AESTRA_ZONE("Renderer_Flush");
+    AESTRA_ZONE("Renderer_Flush");
     if (vertices_.empty()) {
         return;
     }
