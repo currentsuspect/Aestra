@@ -3299,12 +3299,23 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
     if (!m_trackManager)
         return;
 
-    // 2. Get first MixerChannel (track selection not implemented yet)
-    // TODO: Add track selection UI and pass selected index here
-    size_t trackIndex = 0;
-    auto channel = m_trackManager->getChannel(trackIndex);
+    // 2. Resolve the target channel: the selected track's mixer channel when a
+    //    track is selected (mirrors the sample-drop selection path), otherwise
+    //    fall back to the first channel. The shared_ptr keeps the selected
+    //    channel alive for the duration of this call.
+    MixerChannel* channel = nullptr;
+    std::shared_ptr<MixerChannel> selectedChannel;
+    if (m_trackManagerUI) {
+        if (auto* selectedTrack = m_trackManagerUI->getSelectedTrackUI()) {
+            selectedChannel = selectedTrack->getMixerChannel();
+            channel = selectedChannel.get();
+        }
+    }
     if (!channel) {
-        AESTRA_LOG_ERROR("Cannot load effect: No mixer channel at index " + std::to_string(trackIndex));
+        channel = m_trackManager->getChannel(0);
+    }
+    if (!channel) {
+        AESTRA_LOG_ERROR("Cannot load effect: no mixer channel available");
         return;
     }
 
@@ -3333,9 +3344,9 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
     if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
         m_trackManager->getCommandHistory().pushAndExecute(
             std::make_shared<Aestra::Audio::AddPluginCommand>(*channel, slot, std::move(instance)));
-        AESTRA_LOG_DEBUG("Loaded effect to Track " + std::to_string(trackIndex + 1) + " slot " + std::to_string(slot));
+        AESTRA_LOG_DEBUG("Loaded effect to channel '" + channel->getName() + "' slot " + std::to_string(slot));
     } else {
-        AESTRA_LOG_WARNING("No empty effect slots on Track " + std::to_string(trackIndex + 1));
+        AESTRA_LOG_WARNING("No empty effect slots on channel '" + channel->getName() + "'");
     }
 }
 
