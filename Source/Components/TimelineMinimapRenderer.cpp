@@ -3,6 +3,7 @@
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Widgets/TrackColorPalette.h"
 #include "TimelineMinimapModel.h"
 #include "TimelineSummaryCache.h"
 
@@ -208,19 +209,6 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
             }
         }
 
-        static const std::vector<NUIColor> brightColors = {
-            NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   // Yellow
-            NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   // Cyan
-            NUIColor(1.0f, 0.4f, 0.8f, 1.0f),   // Pink
-            NUIColor(0.6f, 1.0f, 0.2f, 1.0f),   // Lime
-            NUIColor(1.0f, 0.6f, 0.2f, 1.0f),   // Orange
-            NUIColor(0.4f, 0.8f, 1.0f, 1.0f),   // Blue
-            NUIColor(1.0f, 0.2f, 0.4f, 1.0f),   // Red
-            NUIColor(0.8f, 0.4f, 1.0f, 1.0f),   // Purple
-            NUIColor(1.0f, 0.9f, 0.1f, 1.0f),   // Yellow
-            NUIColor(0.1f, 0.9f, 0.6f, 1.0f)    // Teal
-        };
-
         const float x = map.x + static_cast<float>(px);
         const float normValue = (maxValue > 0.0f) ? std::clamp(value / maxValue, 0.0f, 1.0f) : 0.0f;
         if (normValue > 0.0f) {
@@ -246,8 +234,10 @@ void TimelineMinimapRenderer::render(NUIRenderer& renderer, const TimelineMinima
                  // Stop drawing if out of bounds (culling)
                  if (currentY + trackH > barBottom) break; 
                  
-                 // Use bright palette color consistent with track index
-                 NUIColor lineTint = brightColors[i % brightColors.size()].withAlpha(0.9f);
+                 // Shared TRACK_PALETTE, same modulo as the track-color fallback
+                 const uint32_t argb = paletteIndexToARGB(static_cast<int>(i % PALETTE_SIZE));
+                 NUIColor lineTint(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f,
+                                   (argb & 0xFF) / 255.0f, 0.9f);
 
                  NUIRect lineRect(x, currentY, 1.0f, trackH);
                  renderer.fillRect(lineRect, lineTint);
