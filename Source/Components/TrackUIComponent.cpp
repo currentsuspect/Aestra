@@ -91,6 +91,36 @@ AestraUI::NUIColor restrainDawColor(const AestraUI::NUIColor& color, float brigh
                               alpha >= 0.0f ? alpha : color.a);
 }
 
+// Waveform ink derived from the clip color so the waveform reads as part of
+// the clip rather than a white overlay: a deep shade of the clip hue on
+// bright clips, lifted toward white on dark ones.
+struct WaveformInk {
+    AestraUI::NUIColor rms;
+    AestraUI::NUIColor envTop;
+    AestraUI::NUIColor envBottom;
+    AestraUI::NUIColor centerLine;
+};
+
+WaveformInk deriveWaveformInk(const AestraUI::NUIColor& base) {
+    const float luma = (0.2126f * base.r) + (0.7152f * base.g) + (0.0722f * base.b);
+    WaveformInk ink;
+    // 0.40 keeps every TRACK_PALETTE color (restrained, selected or not) in
+    // the dark-ink branch; the light-ink branch is for genuinely dark custom
+    // channel colors
+    if (luma >= 0.40f) {
+        ink.rms = base.darkened(0.60f).withAlpha(0.82f);
+        ink.envTop = base.darkened(0.46f).withAlpha(0.48f);
+        ink.envBottom = base.darkened(0.46f).withAlpha(0.34f);
+        ink.centerLine = base.darkened(0.70f).withAlpha(0.18f);
+    } else {
+        ink.rms = AestraUI::NUIColor::lerp(base, AestraUI::NUIColor::white(), 0.72f).withAlpha(0.86f);
+        ink.envTop = AestraUI::NUIColor::lerp(base, AestraUI::NUIColor::white(), 0.45f).withAlpha(0.46f);
+        ink.envBottom = AestraUI::NUIColor::lerp(base, AestraUI::NUIColor::white(), 0.45f).withAlpha(0.32f);
+        ink.centerLine = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
+    }
+    return ink;
+}
+
 } // namespace
 
 // =============================================================================
@@ -478,29 +508,64 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     size_t visibleFrames = endFrame - startFrame;
     if (visibleFrames == 0) return;
 
-    // Use precomputed waveform peaks only. Do not calculate peaks during render.
-    auto waveformCache = source->getWaveformCache();
-    if (!waveformCache || !waveformCache->isReady()) {
-        // Fallback: faint center line
-        float centerY = bounds.y + height * 0.5f;
-        renderer.drawLine(
-            AestraUI::NUIPoint(bounds.x, centerY),
-            AestraUI::NUIPoint(bounds.x + width, centerY),
-            1.0f,
-            AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.04f));
+    // Waveform ink follows the clip's display color (same restrain as the
+    // clip fill so the hue matches exactly); selection lifts it slightly so
+    // the state reads on the waveform as well as the border
+    const bool clipSelected = (clip.id == m_activeClipId);
+    AestraUI::NUIColor clipTint = restrainDawColor(resolveClipDisplayColor(clip),
+                                                   clipSelected ? 0.95f : 0.90f,
+                                                   clipSelected ? 0.71f : 0.66f, 1.0f);
+    if (clipSelected) {
+        clipTint = clipTint.lightened(0.10f);
+    }
+
+    const double samplesPerPixel = static_cast<double>(visibleFrames) / static_cast<double>(width);
+
+    // Deep zoom: fewer source samples than pixels — draw the actual sample
+    // curve with sub-sample positioning instead of a peak envelope
+    if (samplesPerPixel <= 1.0) {
+        const double exactStart =
+            static_cast<double>(scaledSourceOffset) + static_cast<double>(offsetRatio) * static_cast<double>(clipFrames);
+        const double exactEnd = static_cast<double>(scaledSourceOffset) +
+                                static_cast<double>(offsetRatio + visibleRatio) * static_cast<double>(clipFrames);
+        drawSampleWaveform(renderer, bounds, audioData, exactStart,
+                           std::min(exactEnd, static_cast<double>(totalFrames)), clipTint);
         return;
     }
 
-    // Determine bar count: roughly one bar per 2 pixels, matching existing density
-    const int numBars = std::max(1, static_cast<int>(width / 2));
+    // One peak column per pixel: filled-strip rendering needs full density,
+    // and the mip cache makes per-pixel queries cheap at any zoom
+    const int numBars = std::max(1, static_cast<int>(width));
 
     // Reusable member buffers avoid per-frame allocations
     m_waveformPeaksL.clear();
     m_waveformPeaksR.clear();
 
-    waveformCache->getPeaksForRange(0, startFrame, endFrame, numBars, m_waveformPeaksL);
-    if (numChannels > 1) {
-        waveformCache->getPeaksForRange(1, startFrame, endFrame, numBars, m_waveformPeaksR);
+    if (samplesPerPixel < static_cast<double>(Aestra::Audio::WaveformCache::DEFAULT_BASE_SAMPLES_PER_PEAK)) {
+        // Zoomed past the finest mip level: compute peaks directly from the
+        // buffer. Bounded work — at most base-mip samples per visible pixel.
+        computeDirectPeaks(audioData, 0, startFrame, endFrame, numBars, m_waveformPeaksL);
+        if (numChannels > 1) {
+            computeDirectPeaks(audioData, 1, startFrame, endFrame, numBars, m_waveformPeaksR);
+        }
+    } else {
+        // Normal zoom: precomputed mip peaks only; no per-render scanning
+        auto waveformCache = source->getWaveformCache();
+        if (!waveformCache || !waveformCache->isReady()) {
+            // Fallback: faint center line
+            float centerY = bounds.y + height * 0.5f;
+            renderer.drawLine(
+                AestraUI::NUIPoint(bounds.x, centerY),
+                AestraUI::NUIPoint(bounds.x + width, centerY),
+                1.0f,
+                deriveWaveformInk(clipTint).centerLine);
+            return;
+        }
+
+        waveformCache->getPeaksForRange(0, startFrame, endFrame, numBars, m_waveformPeaksL);
+        if (numChannels > 1) {
+            waveformCache->getPeaksForRange(1, startFrame, endFrame, numBars, m_waveformPeaksR);
+        }
     }
 
     // Stereo split-lane if height allows
@@ -510,31 +575,54 @@ void TrackUIComponent::drawWaveformForClip(AestraUI::NUIRenderer& renderer, cons
     if (useStereoSplit) {
         float halfH = height * 0.5f;
         // Left channel in top half
-        drawChannelWaveform(renderer, bounds.x, bounds.y, width, halfH, m_waveformPeaksL);
+        drawChannelWaveform(renderer, bounds.x, bounds.y, width, halfH, m_waveformPeaksL, clipTint);
         // Right channel in bottom half
-        drawChannelWaveform(renderer, bounds.x, bounds.y + halfH, width, halfH, m_waveformPeaksR);
+        drawChannelWaveform(renderer, bounds.x, bounds.y + halfH, width, halfH, m_waveformPeaksR, clipTint);
     } else {
         // Combined: aggregate channels per bar
-        drawCombinedWaveform(renderer, bounds, m_waveformPeaksL, m_waveformPeaksR, numChannels);
+        drawCombinedWaveform(renderer, bounds, m_waveformPeaksL, m_waveformPeaksR, numChannels, clipTint);
     }
 }
 
 void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,
-                                            const std::vector<Aestra::Audio::WaveformPeak>& peaks) {
+                                            const std::vector<Aestra::Audio::WaveformPeak>& peaks,
+                                            const AestraUI::NUIColor& tint) {
     if (peaks.empty() || w <= 0.0f || h <= 0.0f) return;
 
     const float centerY = y + h * 0.5f;
     const float halfDrawH = std::max(1.0f, h * 0.5f - 2.0f);
-    const int numBars = static_cast<int>(peaks.size());
-    const float barStep = w / static_cast<float>(numBars);
+    const int numPoints = static_cast<int>(peaks.size());
 
-    // Subtle track-identity tint: warm off-white with slight purple hue
-    const AestraUI::NUIColor topColor(0.85f, 0.82f, 1.0f, 0.28f);
-    const AestraUI::NUIColor bottomColor(0.85f, 0.82f, 1.0f, 0.12f);
-    const AestraUI::NUIColor peakColor(0.90f, 0.88f, 1.0f, 0.48f);
-    const AestraUI::NUIColor centerLineColor(1.0f, 1.0f, 1.0f, 0.08f);
+    // Ink follows the clip color. Outer min/max envelope is translucent;
+    // inner RMS body is near-opaque — the two layers together give the dense
+    // "pro DAW" waveform read.
+    const WaveformInk ink = deriveWaveformInk(tint);
+    const AestraUI::NUIColor& envTopColor = ink.envTop;
+    const AestraUI::NUIColor& envBottomColor = ink.envBottom;
+    const AestraUI::NUIColor& rmsColor = ink.rms;
+    const AestraUI::NUIColor& centerLineColor = ink.centerLine;
 
-    for (int i = 0; i < numBars; ++i) {
+    // A strip needs two columns; degenerate spans draw a single bar
+    if (numPoints < 2) {
+        const auto& peak = peaks[0];
+        float normMin = std::max(-1.0f, std::min(1.0f, peak.min));
+        float normMax = std::max(-1.0f, std::min(1.0f, peak.max));
+        float topY = centerY - normMax * halfDrawH;
+        float bottomY = centerY - normMin * halfDrawH;
+        renderer.fillRect(AestraUI::NUIRect(x, topY, std::max(1.0f, w), std::max(1.0f, bottomY - topY)),
+                          envTopColor);
+        return;
+    }
+
+    const float step = w / static_cast<float>(numPoints);
+
+    // Layer 1: min/max envelope as a filled strip
+    m_waveformTopPts.clear();
+    m_waveformBottomPts.clear();
+    m_waveformTopPts.reserve(static_cast<size_t>(numPoints));
+    m_waveformBottomPts.reserve(static_cast<size_t>(numPoints));
+
+    for (int i = 0; i < numPoints; ++i) {
         const auto& peak = peaks[i];
         float normMin = std::max(-1.0f, std::min(1.0f, peak.min));
         float normMax = std::max(-1.0f, std::min(1.0f, peak.max));
@@ -544,18 +632,33 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
 
         // Minimum nonzero visual height for quiet audio; true silence stays at center
         float barHeight = bottomY - topY;
-        if (barHeight > 0.0f && barHeight < 1.5f) {
+        if (barHeight > 0.0f && barHeight < 1.0f) {
             float mid = (topY + bottomY) * 0.5f;
-            topY = mid - 0.75f;
-            bottomY = mid + 0.75f;
+            topY = mid - 0.5f;
+            bottomY = mid + 0.5f;
         }
 
-        float barX = x + i * barStep + barStep * 0.5f;
-
-        renderer.drawLine(AestraUI::NUIPoint(barX, centerY), AestraUI::NUIPoint(barX, topY), 1.0f, topColor);
-        renderer.drawLine(AestraUI::NUIPoint(barX, centerY), AestraUI::NUIPoint(barX, bottomY), 1.0f, bottomColor);
-        renderer.drawLine(AestraUI::NUIPoint(barX, topY), AestraUI::NUIPoint(barX, bottomY), 1.0f, peakColor);
+        float px = x + (static_cast<float>(i) + 0.5f) * step;
+        m_waveformTopPts.emplace_back(px, topY);
+        m_waveformBottomPts.emplace_back(px, bottomY);
     }
+
+    renderer.fillWaveformGradient(m_waveformTopPts.data(), m_waveformBottomPts.data(), numPoints, envTopColor,
+                                  envBottomColor);
+
+    // Layer 2: RMS body, clamped inside the envelope (asymmetric signals can
+    // have symmetric ±rms poke past the true min/max edge). Reuses the same
+    // point buffers in place: envelope Y is read before being overwritten.
+    for (int i = 0; i < numPoints; ++i) {
+        float rms = std::max(0.0f, std::min(1.0f, peaks[i].rms));
+        float rmsTopY = std::max(m_waveformTopPts[i].y, centerY - rms * halfDrawH);
+        float rmsBottomY = std::min(m_waveformBottomPts[i].y, centerY + rms * halfDrawH);
+        if (rmsBottomY < rmsTopY) rmsBottomY = rmsTopY;
+        m_waveformTopPts[i].y = rmsTopY;
+        m_waveformBottomPts[i].y = rmsBottomY;
+    }
+
+    renderer.fillWaveform(m_waveformTopPts.data(), m_waveformBottomPts.data(), numPoints, rmsColor);
 
     renderer.drawLine(AestraUI::NUIPoint(x, centerY), AestraUI::NUIPoint(x + w, centerY), 1.0f, centerLineColor);
 }
@@ -563,118 +666,179 @@ void TrackUIComponent::drawChannelWaveform(AestraUI::NUIRenderer& renderer, floa
 void TrackUIComponent::drawCombinedWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
                                              const std::vector<Aestra::Audio::WaveformPeak>& peaksL,
                                              const std::vector<Aestra::Audio::WaveformPeak>& peaksR,
-                                             size_t numChannels) {
+                                             size_t numChannels, const AestraUI::NUIColor& tint) {
     if (peaksL.empty() || bounds.width <= 0.0f || bounds.height <= 0.0f) return;
 
-    const float centerY = bounds.y + bounds.height * 0.5f;
-    const float halfDrawH = std::max(1.0f, bounds.height * 0.5f - 3.0f);
-    const int numBars = static_cast<int>(peaksL.size());
-    const float barStep = bounds.width / static_cast<float>(numBars);
-
-    // Subtle track-identity tint: warm off-white with slight purple hue
-    const AestraUI::NUIColor topColor(0.85f, 0.82f, 1.0f, 0.28f);
-    const AestraUI::NUIColor bottomColor(0.85f, 0.82f, 1.0f, 0.12f);
-    const AestraUI::NUIColor peakColor(0.90f, 0.88f, 1.0f, 0.48f);
-    const AestraUI::NUIColor centerLineColor(1.0f, 1.0f, 1.0f, 0.08f);
-
-    for (int i = 0; i < numBars; ++i) {
-        float minVal = peaksL[i].min;
-        float maxVal = peaksL[i].max;
-        if (numChannels > 1 && i < static_cast<int>(peaksR.size())) {
-            minVal = std::min(minVal, peaksR[i].min);
-            maxVal = std::max(maxVal, peaksR[i].max);
+    if (numChannels > 1 && !peaksR.empty()) {
+        // Merge channels per column (weighted-RMS merge), then render as one lane
+        m_waveformPeaksMerged = peaksL;
+        const size_t n = std::min(m_waveformPeaksMerged.size(), peaksR.size());
+        for (size_t i = 0; i < n; ++i) {
+            m_waveformPeaksMerged[i].merge(peaksR[i]);
         }
-
-        float normMin = std::max(-1.0f, std::min(1.0f, minVal));
-        float normMax = std::max(-1.0f, std::min(1.0f, maxVal));
-
-        float topY = centerY - normMax * halfDrawH;
-        float bottomY = centerY - normMin * halfDrawH;
-
-        float barHeight = bottomY - topY;
-        if (barHeight > 0.0f && barHeight < 1.5f) {
-            float mid = (topY + bottomY) * 0.5f;
-            topY = mid - 0.75f;
-            bottomY = mid + 0.75f;
-        }
-
-        float barX = bounds.x + i * barStep + barStep * 0.5f;
-
-        renderer.drawLine(AestraUI::NUIPoint(barX, centerY), AestraUI::NUIPoint(barX, topY), 1.0f, topColor);
-        renderer.drawLine(AestraUI::NUIPoint(barX, centerY), AestraUI::NUIPoint(barX, bottomY), 1.0f, bottomColor);
-        renderer.drawLine(AestraUI::NUIPoint(barX, topY), AestraUI::NUIPoint(barX, bottomY), 1.0f, peakColor);
+        drawChannelWaveform(renderer, bounds.x, bounds.y, bounds.width, bounds.height, m_waveformPeaksMerged, tint);
+    } else {
+        drawChannelWaveform(renderer, bounds.x, bounds.y, bounds.width, bounds.height, peaksL, tint);
     }
+}
 
-    renderer.drawLine(AestraUI::NUIPoint(bounds.x, centerY), AestraUI::NUIPoint(bounds.x + bounds.width, centerY),
-                      1.0f, centerLineColor);
+void TrackUIComponent::computeDirectPeaks(const Aestra::Audio::AudioBufferData& buffer, uint32_t channel,
+                                          size_t startFrame, size_t endFrame, int numColumns,
+                                          std::vector<Aestra::Audio::WaveformPeak>& outPeaks) {
+    outPeaks.clear();
+    if (numColumns <= 0 || buffer.numChannels == 0 || buffer.numFrames == 0) return;
+
+    endFrame = std::min(endFrame, static_cast<size_t>(buffer.numFrames));
+    if (startFrame >= endFrame) return;
+    channel = std::min(channel, buffer.numChannels - 1);
+
+    const float* data = buffer.interleavedData.data();
+    const size_t stride = buffer.numChannels;
+    const double framesPerColumn = static_cast<double>(endFrame - startFrame) / static_cast<double>(numColumns);
+
+    outPeaks.reserve(static_cast<size_t>(numColumns));
+    for (int col = 0; col < numColumns; ++col) {
+        size_t f0 = startFrame + static_cast<size_t>(static_cast<double>(col) * framesPerColumn);
+        size_t f1 = startFrame + static_cast<size_t>(static_cast<double>(col + 1) * framesPerColumn);
+        f0 = std::min(f0, endFrame - 1);
+        f1 = std::max(std::min(f1, endFrame), f0 + 1);
+
+        float minVal = data[f0 * stride + channel];
+        float maxVal = minVal;
+        double sumSq = 0.0;
+        for (size_t f = f0; f < f1; ++f) {
+            const float s = data[f * stride + channel];
+            minVal = std::min(minVal, s);
+            maxVal = std::max(maxVal, s);
+            sumSq += static_cast<double>(s) * s;
+        }
+
+        const uint32_t count = static_cast<uint32_t>(f1 - f0);
+        const float rms = static_cast<float>(std::sqrt(sumSq / static_cast<double>(count)));
+        outPeaks.emplace_back(minVal, maxVal, rms, count);
+        outPeaks.back().sanitize();
+    }
+}
+
+void TrackUIComponent::drawSampleWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
+                                          const Aestra::Audio::AudioBufferData& buffer, double startFrame,
+                                          double endFrame, const AestraUI::NUIColor& tint) {
+    const size_t numChannels = buffer.numChannels;
+    if (numChannels == 0 || buffer.numFrames == 0 || endFrame <= startFrame) return;
+    if (bounds.width <= 0.0f || bounds.height <= 0.0f) return;
+
+    const double pixelsPerSample = static_cast<double>(bounds.width) / (endFrame - startFrame);
+
+    const WaveformInk ink = deriveWaveformInk(tint);
+    const AestraUI::NUIColor lineColor = ink.rms.withAlpha(0.92f);
+    const AestraUI::NUIColor& centerLineColor = ink.centerLine;
+
+    long long firstFrame = static_cast<long long>(std::floor(startFrame));
+    long long lastFrame = static_cast<long long>(std::ceil(endFrame));
+    firstFrame = std::max(firstFrame, 0LL);
+    lastFrame = std::min(lastFrame, static_cast<long long>(buffer.numFrames) - 1);
+    if (lastFrame < firstFrame) return;
+
+    const float* data = buffer.interleavedData.data();
+    const size_t stride = numChannels;
+
+    auto drawLane = [&](float laneY, float laneH, int channel) {
+        const float centerY = laneY + laneH * 0.5f;
+        const float halfDrawH = std::max(1.0f, laneH * 0.5f - 2.0f);
+
+        m_waveformTopPts.clear();
+        for (long long f = firstFrame; f <= lastFrame; ++f) {
+            float s;
+            if (channel < 0) {
+                // Combined lane: mean of all channels
+                double acc = 0.0;
+                for (size_t ch = 0; ch < numChannels; ++ch) {
+                    acc += data[static_cast<size_t>(f) * stride + ch];
+                }
+                s = static_cast<float>(acc / static_cast<double>(numChannels));
+            } else {
+                s = data[static_cast<size_t>(f) * stride + static_cast<size_t>(channel)];
+            }
+            if (std::isnan(s) || std::isinf(s)) s = 0.0f;
+            s = std::max(-1.0f, std::min(1.0f, s));
+
+            float px = bounds.x + static_cast<float>((static_cast<double>(f) - startFrame) * pixelsPerSample);
+            px = std::max(bounds.x, std::min(bounds.x + bounds.width, px));
+            m_waveformTopPts.emplace_back(px, centerY - s * halfDrawH);
+        }
+
+        if (m_waveformTopPts.size() >= 2) {
+            renderer.drawPolyline(m_waveformTopPts.data(), static_cast<int>(m_waveformTopPts.size()), 1.5f,
+                                  lineColor);
+        }
+
+        // Sample dots once samples are far enough apart to read individually
+        if (pixelsPerSample >= 6.0) {
+            for (const auto& p : m_waveformTopPts) {
+                renderer.fillRect(AestraUI::NUIRect(p.x - 1.5f, p.y - 1.5f, 3.0f, 3.0f), lineColor);
+            }
+        }
+
+        renderer.drawLine(AestraUI::NUIPoint(bounds.x, centerY), AestraUI::NUIPoint(bounds.x + bounds.width, centerY),
+                          1.0f, centerLineColor);
+    };
+
+    constexpr float kMinSplitHeight = 32.0f;
+    if (numChannels >= 2 && bounds.height >= kMinSplitHeight) {
+        const float halfH = bounds.height * 0.5f;
+        drawLane(bounds.y, halfH, 0);
+        drawLane(bounds.y + halfH, halfH, 1);
+    } else {
+        drawLane(bounds.y, bounds.height, numChannels >= 2 ? -1 : 0);
+    }
+}
+
+AestraUI::NUIColor TrackUIComponent::resolveClipDisplayColor(const ClipInstance& clip) const {
+    auto& themeManager = AestraUI::NUIThemeManager::getInstance();
+    AestraUI::NUIColor clipColor = themeManager.getColor("primary");
+
+    if (!m_trackManager) return clipColor;
+    auto pattern = m_trackManager->getPatternManager().getPattern(clip.patternId);
+    if (!pattern) return clipColor;
+
+    // Same TRACK_PALETTE lookup as updateTrackNameColors, so clips, track
+    // names, and mixer strips all share one curated color per track
+    if (m_channel) {
+        int colorIndex = m_channel->getTrackColorIndex();
+        if (colorIndex < 0 || colorIndex >= AestraUI::PALETTE_SIZE) {
+            uint32_t trackId = m_channel->getChannelId();
+            colorIndex = static_cast<int>((trackId - 1) % AestraUI::PALETTE_SIZE);
+        }
+        uint32_t argb = AestraUI::paletteIndexToARGB(colorIndex);
+        clipColor = AestraUI::NUIColor(((argb >> 16) & 0xFF) / 255.0f, ((argb >> 8) & 0xFF) / 255.0f,
+                                       (argb & 0xFF) / 255.0f, 1.0f);
+    } else {
+        uint32_t color = clip.colorRGBA;
+        clipColor = AestraUI::NUIColor(
+            (color >> 16) & 0xFF,
+            (color >> 8) & 0xFF,
+            color & 0xFF,
+            (color >> 24) & 0xFF
+        ) / 255.0f;
+    }
+    return clipColor;
 }
 
 void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds,
                                             const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    
+
     const float clipRadius = 5.0f;
 
-    // Get clip color from pattern via PatternManager
-    AestraUI::NUIColor clipColor = themeManager.getColor("primary");
+    AestraUI::NUIColor clipColor = resolveClipDisplayColor(clip);
     std::string sampleName = "Clip";
     int patternRefCount = 1;  // How many clips share this pattern
     int patternInstanceIndex = 1;  // This clip's instance number
 
     if (m_trackManager) {
         if (auto pattern = m_trackManager->getPatternManager().getPattern(clip.patternId)) {
-            // Override clip color with Track Bright Color to match Strip & Name
-            if (m_channel) {
-                std::string trackName = m_channel->getName();
-                size_t spacePos = trackName.find(' ');
-                bool foundBrightColor = false;
-                
-                // Bright Color Palette
-                static const std::vector<AestraUI::NUIColor> brightColors = {
-                    AestraUI::NUIColor(1.0f, 0.8f, 0.2f, 1.0f),   
-                    AestraUI::NUIColor(0.2f, 1.0f, 0.8f, 1.0f),   
-                    AestraUI::NUIColor(1.0f, 0.4f, 0.8f, 1.0f),   
-                    AestraUI::NUIColor(0.6f, 1.0f, 0.2f, 1.0f),   
-                    AestraUI::NUIColor(1.0f, 0.6f, 0.2f, 1.0f),   
-                    AestraUI::NUIColor(0.4f, 0.8f, 1.0f, 1.0f),   
-                    AestraUI::NUIColor(1.0f, 0.2f, 0.4f, 1.0f),   
-                    AestraUI::NUIColor(0.8f, 0.4f, 1.0f, 1.0f),   
-                    AestraUI::NUIColor(1.0f, 0.9f, 0.1f, 1.0f),   
-                    AestraUI::NUIColor(0.1f, 0.9f, 0.6f, 1.0f)    
-                };
-
-                if (spacePos != std::string::npos) {
-                    uint32_t trackNumber = 0;
-                    if (parseTrailingTrackNumber(trackName, trackNumber)) {
-                        size_t colorIndex = (trackNumber - 1) % brightColors.size();
-                        clipColor = brightColors[colorIndex];
-                        foundBrightColor = true;
-                    }
-                    
-                    if (!foundBrightColor) {
-                       uint32_t trackId = m_channel->getChannelId();
-                       size_t colorIndex = (trackId - 1) % brightColors.size();
-                       clipColor = brightColors[colorIndex];
-                       foundBrightColor = true;
-                    }
-                }
-                
-                if (!foundBrightColor) {
-                    // Fallback to channel color if not using bright palette
-                    uint32_t c = m_channel->getColor();
-                    clipColor = AestraUI::NUIColor((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF, (c >> 24) & 0xFF) / 255.0f;
-                }
-            } else {
-                uint32_t color = clip.colorRGBA;
-                clipColor = AestraUI::NUIColor(
-                    (color >> 16) & 0xFF,
-                    (color >> 8) & 0xFF,
-                    color & 0xFF,
-                    (color >> 24) & 0xFF
-                ) / 255.0f;
-            }
             sampleName = pattern->name;
-            
+
             // Count how many clips reference this pattern across all lanes
             auto& playlist = m_trackManager->getPlaylistModel();
             int count = 0;
@@ -697,20 +861,22 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
     }
     
     bool clipSelected = (clip.id == m_activeClipId);
+    // Selection eases the base look up slightly; the border and glow carry
+    // the state so the fill doesn't visibly "pop" on click-and-hold
     const AestraUI::NUIColor clipBase = restrainDawColor(clipColor,
-                                                         clipSelected ? 1.02f : 0.90f,
-                                                         clipSelected ? 0.80f : 0.66f,
+                                                         clipSelected ? 0.95f : 0.90f,
+                                                         clipSelected ? 0.71f : 0.66f,
                                                          1.0f);
-    AestraUI::NUIColor tintFill = clipBase.withAlpha(clipSelected ? 0.80f : 0.64f);
+    AestraUI::NUIColor tintFill = clipBase.withAlpha(clipSelected ? 0.70f : 0.64f);
     renderer.fillRoundedRect(clipBounds, clipRadius, themeManager.getColor("backgroundPrimary").withAlpha(0.22f));
     renderer.fillRoundedRect(clipBounds, clipRadius, tintFill);
 
     AestraUI::NUIColor borderColor = clipBase.lightened(0.10f).withAlpha(clipSelected ? 0.94f : 0.58f);
     float borderWidth = 1.0f;
-    
+
     if (clipSelected) {
-        borderColor = clipBase.lightened(0.22f).withAlpha(0.92f);
-        borderWidth = 1.35f;
+        borderColor = clipBase.lightened(0.16f).withAlpha(0.88f);
+        borderWidth = 1.25f;
     }
     
     // Ghost instance check
@@ -726,16 +892,8 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
     // Subtle top inner highlight for depth
     renderer.fillRect({clipBounds.x + 3.0f, clipBounds.y + 1.0f, std::max(0.0f, clipBounds.width - 6.0f), 1.0f},
                       AestraUI::NUIColor::white().withAlpha(0.08f));
-    if (clipSelected) {
-        // Outer glow shadow for selected clips
-        renderer.drawShadow({clipBounds.x - 2.0f, clipBounds.y - 2.0f, clipBounds.width + 4.0f, clipBounds.height + 4.0f},
-                            clipRadius + 2.0f, 3.0f, 10.0f,
-                            clipBase.withAlpha(0.30f));
-        renderer.strokeRoundedRect({clipBounds.x - 1.0f, clipBounds.y - 1.0f, clipBounds.width + 2.0f, clipBounds.height + 2.0f},
-                                   clipRadius + 1.0f,
-                                   1.0f,
-                                   themeManager.getColor("accentPrimary").withAlpha(0.58f));
-    }
+    // Selection reads through the brighter border, fill, and waveform ink —
+    // no shadow or ring around the clip
 
     // 14px clip header bar with filename in clip color
     constexpr float kClipHeaderHeight = 14.0f;
@@ -746,7 +904,7 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
             std::max(0.0f, clipBounds.width - 2.0f),
             kClipHeaderHeight
         );
-        renderer.fillRoundedRect(headerRect, clipRadius - 1.0f, clipBase.withAlpha(clipSelected ? 0.60f : 0.46f));
+        renderer.fillRoundedRect(headerRect, clipRadius - 1.0f, clipBase.withAlpha(clipSelected ? 0.52f : 0.46f));
         // Header bottom edge highlight
         renderer.drawLine(
             AestraUI::NUIPoint(clipBounds.x + 4.0f, clipBounds.y + kClipHeaderHeight + 1.0f),
@@ -757,9 +915,17 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
 
         const std::string displayName = truncateClipLabel(sampleName, clipBounds.width - 16.0f, 6.0f);
         if (!displayName.empty()) {
+            // Vertically center the label in the header using real font
+            // metrics — drawText's y is the top of the line, not the baseline
+            constexpr float kClipLabelFontSize = 9.0f;
+            const auto metrics = renderer.getFontMetrics(kClipLabelFontSize);
+            const float textBoxH = (metrics.ascent > 0.0f && metrics.descent > 0.0f)
+                                       ? (metrics.ascent + metrics.descent)
+                                       : kClipLabelFontSize;
+            const float textY = headerRect.y + (headerRect.height - textBoxH) * 0.5f;
             renderer.drawText(displayName,
-                              AestraUI::NUIPoint(clipBounds.x + 6.0f, clipBounds.y + 3.0f),
-                              9.0f,
+                              AestraUI::NUIPoint(clipBounds.x + 6.0f, textY),
+                              kClipLabelFontSize,
                               AestraUI::NUIColor(1.0f, 1.0f, 1.0f, clipSelected ? 0.92f : 0.78f));
         }
     }
