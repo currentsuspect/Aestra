@@ -16,8 +16,8 @@ namespace {
 constexpr float kPi = 3.14159265358979323846f;
 
 
-NUIColor insetBg() { return NUIColor(0.018f, 0.020f, 0.024f, 0.960f); }
-NUIColor curveBg() { return NUIColor(0.035f, 0.037f, 0.042f, 1.0f); }
+NUIColor insetBg() { return NUIColor(0.02f, 0.02f, 0.02f, 0.960f); }
+NUIColor curveBg() { return NUIColor(0.037f, 0.037f, 0.037f, 1.0f); }
 NUIColor amber() { return NUIColor(0.88f, 0.63f, 0.14f, 1.0f); }
 NUIColor purple() { return NUIColor(0.50f, 0.35f, 0.94f, 1.0f); }
 NUIColor dimText() { return NUIColor(1.0f, 1.0f, 1.0f, 0.30f); }
@@ -266,7 +266,7 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent)
     // Zone backgrounds — curve gets its own bg, stats + modes get a slightly darker treatment
     renderer.fillRoundedRect({curveLeft - 4.0f, b.y, curveW + 8.0f, b.height}, 6.0f, curveBg());
     renderer.fillRoundedRect({statsX - 4.0f, b.y, kStatsW + kModesW + kDividerW + kRightMargin + 8.0f, b.height},
-                             6.0f, NUIColor(0.014f, 0.014f, 0.018f, 0.92f));
+                             6.0f, NUIColor(0.014f, 0.014f, 0.014f, 0.92f));
 
     renderer.strokeRoundedRect(b, 6.0f, 1.0f, NUIColor(1, 1, 1, 0.05f));
     // Subtle top highlight
@@ -424,7 +424,7 @@ void AestraCompEditor::drawTransferCurve(NUIRenderer& renderer, NUIColor accent)
             renderer.drawTextCentered(pillLabels[i], r, 9.5f, NUIColor(1, 1, 1, 0.98f));
         } else {
             // Body — deep dark inset
-            renderer.fillRoundedRect(r, 5.0f, NUIColor(0.018f, 0.018f, 0.024f, 0.90f));
+            renderer.fillRoundedRect(r, 5.0f, NUIColor(0.018f, 0.018f, 0.018f, 0.90f));
             // Top inner shadow
             renderer.drawLine({r.x + 5.0f, r.y + 1.0f}, {r.x + r.width - 5.0f, r.y + 1.0f},
                               0.5f, NUIColor(0, 0, 0, 0.30f));
@@ -443,7 +443,7 @@ void AestraCompEditor::drawMeters(NUIRenderer& renderer, NUIColor accent) {
 
     auto drawMeter = [&](float x, const char* label, float norm, NUIColor color) {
         const NUIRect meterBounds(x, b.y, thirdW, b.height);
-        renderer.fillRoundedRect(meterBounds, 5.0f, NUIColor(0.008f, 0.008f, 0.012f, 1.0f));
+        renderer.fillRoundedRect(meterBounds, 5.0f, NUIColor(0.008f, 0.008f, 0.008f, 1.0f));
         renderer.strokeRoundedRect(meterBounds, 5.0f, 1.0f, NUIColor(1, 1, 1, 0.055f));
 
         // Fill
@@ -562,8 +562,8 @@ void AestraCompEditor::drawUtilityButtons(NUIRenderer& renderer, NUIColor accent
             renderer.strokeRoundedRect(btn.bounds, 5.0f, 1.0f, activeAccent.withAlpha(0.80f));
             renderer.drawTextCentered(btn.label, btn.bounds, 9.0f, NUIColor(1, 1, 1, 0.95f));
         } else {
-            const NUIColor bg = btn.hov ? NUIColor(0.04f, 0.04f, 0.048f, 0.90f)
-                                        : NUIColor(0.022f, 0.022f, 0.028f, 0.90f);
+            const NUIColor bg = btn.hov ? NUIColor(0.041f, 0.041f, 0.041f, 0.90f)
+                                        : NUIColor(0.022f, 0.022f, 0.022f, 0.90f);
             renderer.fillRoundedRect(btn.bounds, 5.0f, bg);
             renderer.drawLine({btn.bounds.x + 5.0f, btn.bounds.y + 1.0f},
                               {btn.bounds.x + btn.bounds.width - 5.0f, btn.bounds.y + 1.0f},
