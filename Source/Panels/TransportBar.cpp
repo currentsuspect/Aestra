@@ -514,9 +514,9 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
 
         // Draw Button Background
         if (isHovered || isActive || isRecording) {
-            renderer.fillRoundedRect(buttonRect, 6.0f, currentBg);
+            renderer.fillRoundedRect(buttonRect, themeManager.getRadius("m"), currentBg);
             if (currentBorder.a > 0.0f) {
-                renderer.strokeRoundedRect(buttonRect, 6.0f, 1.0f, currentBorder);
+                renderer.strokeRoundedRect(buttonRect, themeManager.getRadius("m"), 1.0f, currentBorder);
             }
         }
         
@@ -742,7 +742,7 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     const float groupY = islandRect.y + topInset;
     const auto groupBg = themeManager.getColor("surfaceTertiary").withAlpha(0.56f);
     const auto groupBorder = themeManager.getColor("border").withAlpha(0.52f);
-    const float groupRadius = themeManager.getCurrentTheme().radiusS + 2.0f; // tokenized: 6.0
+    const float groupRadius = themeManager.getRadius("m"); // group shell corner
     const auto drawGroup = [&](float x, float w) {
         if (w <= 0.0f) {
             return;

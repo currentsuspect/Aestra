@@ -952,7 +952,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                           themeProps.fontSizeS, selected ? themeManager.getColor("textPrimary").withAlpha(0.90f) : rowText);
         if (count > 0) {
             const std::string countText = std::to_string(count);
-            const auto countSize = renderer.measureText(countText, 11.0f);
+            const auto countSize = renderer.measureText(countText, themeManager.getFontSize("s"));
             renderer.drawText(countText,
                               {row.right() - countSize.width - 8.0f, std::round(renderer.calculateTextY(row, 11.0f))},
                               11.0f,
@@ -1014,7 +1014,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         if (placesTop > 0 && placesBottom > placesTop) {
             NUIRect placesOverlay = {layout.navPane.x, placesTop, layout.navPane.width, placesBottom - placesTop};
             renderer.fillRect(placesOverlay, NUIColor(0.486f, 0.227f, 0.929f, 0.15f));
-            renderer.strokeRoundedRect(placesOverlay, 4.0f, 1.0f, NUIColor(0.486f, 0.227f, 0.929f, 0.6f));
+            renderer.strokeRoundedRect(placesOverlay, themeManager.getRadius("s"), 1.0f, NUIColor(0.486f, 0.227f, 0.929f, 0.6f));
         }
     }
 
@@ -1083,9 +1083,10 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
                       {layout.listHeader.right(), layout.listHeader.bottom()},
                       1.0f, border);
     const NUIRect columnRow(layout.listHeader.x, layout.listHeader.y + 28.0f, layout.listHeader.width, 23.0f);
+    const float columnFont = themeManager.getFontSize("s");
     renderer.drawText("Name", {layout.listHeader.x + 12.0f,
-                               std::round(renderer.calculateTextY(columnRow, 12.0f))},
-                      11.5f, themeManager.getColor("textSecondary").withAlpha(0.62f));
+                               std::round(renderer.calculateTextY(columnRow, columnFont))},
+                      columnFont, themeManager.getColor("textSecondary").withAlpha(0.62f));
 }
 
 void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -2623,7 +2624,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     if (scanningRoot_ && view.empty()) {
         renderer.setClipRect(listClip);
-        renderer.drawTextCentered("Loading...", listClip, 14.0f, themeManager.getColor("textPrimary").withAlpha(0.62f));
+        renderer.drawTextCentered("Loading...", listClip, themeManager.getFontSize("l"), themeManager.getColor("textPrimary").withAlpha(0.62f));
         renderer.clearClipRect();
         return;
     }
@@ -2636,8 +2637,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             : "Try another folder, collection, or search";
         NUIRect titleRect(listClip.x, listClip.y + listClip.height * 0.42f - 12.0f, listClip.width, 20.0f);
         NUIRect hintRect(listClip.x, titleRect.bottom() + 4.0f, listClip.width, 18.0f);
-        renderer.drawTextCentered(title, titleRect, 13.0f, themeManager.getColor("textPrimary").withAlpha(0.72f));
-        renderer.drawTextCentered(hint, hintRect, 11.0f, themeManager.getColor("textSecondary").withAlpha(0.58f));
+        renderer.drawTextCentered(title, titleRect, themeManager.getFontSize("l"), themeManager.getColor("textPrimary").withAlpha(0.72f));
+        renderer.drawTextCentered(hint, hintRect, themeManager.getFontSize("s"), themeManager.getColor("textSecondary").withAlpha(0.58f));
         renderer.clearClipRect();
         return;
     }
