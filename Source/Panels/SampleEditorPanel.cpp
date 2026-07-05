@@ -101,7 +101,7 @@ public:
         auto b = getBounds();
         auto& theme = NUIThemeManager::getInstance();
 
-        renderer.fillRect(b, NUIColor(0.045f, 0.045f, 0.065f, 1.0f));
+        renderer.fillRect(b, NUIColor(0.045f, 0.045f, 0.045f, 1.0f));
 
         const float pad = 8.0f;
         const float gutter = 6.0f;
@@ -150,7 +150,7 @@ void ADSRDisplayComponent::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
 
     // Background
-    renderer.fillRoundedRect(NUIRect(b.x, b.y, b.width, b.height), 5.0f, NUIColor(0.055f, 0.055f, 0.075f, 1.0f));
+    renderer.fillRoundedRect(NUIRect(b.x, b.y, b.width, b.height), 5.0f, NUIColor(0.055f, 0.055f, 0.055f, 1.0f));
     renderer.strokeRoundedRect(b, 5.0f, 1.0f, theme.getColor("secondary").withAlpha(0.22f));
 
     const auto g = calculateADSRGeometry(b, m_attack, m_decay, m_sustain, m_release);
@@ -401,7 +401,7 @@ void WaveformDisplayComponent::onRender(NUIRenderer& renderer) {
     renderer.setClipRect(b);
 
     // Background
-    renderer.fillRoundedRect(NUIRect(b.x, b.y, b.width, b.height), 5.0f, NUIColor(0.05f, 0.05f, 0.07f, 1.0f));
+    renderer.fillRoundedRect(NUIRect(b.x, b.y, b.width, b.height), 5.0f, NUIColor(0.05f, 0.05f, 0.05f, 1.0f));
     renderer.strokeRoundedRect(b, 5.0f, 1.0f, theme.getColor("secondary").withAlpha(0.24f));
 
     // Center line

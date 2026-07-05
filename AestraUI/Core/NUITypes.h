@@ -167,9 +167,9 @@ struct NUIColor {
     static NUIColor Info() { return NUIColor(0.1f, 0.6f, 0.8f, 1.0f); }
     
     // Dark theme colors
-    static NUIColor DarkBackground() { return NUIColor(0.1f, 0.1f, 0.15f, 1.0f); }
-    static NUIColor DarkSurface() { return NUIColor(0.15f, 0.15f, 0.2f, 1.0f); }
-    static NUIColor DarkBorder() { return NUIColor(0.3f, 0.3f, 0.35f, 1.0f); }
+    static NUIColor DarkBackground() { return NUIColor(0.1f, 0.1f, 0.1f, 1.0f); }
+    static NUIColor DarkSurface() { return NUIColor(0.15f, 0.15f, 0.15f, 1.0f); }
+    static NUIColor DarkBorder() { return NUIColor(0.3f, 0.3f, 0.3f, 1.0f); }
     static NUIColor DarkText() { return NUIColor(0.9f, 0.9f, 0.9f, 1.0f); }
     static NUIColor DarkTextSecondary() { return NUIColor(0.6f, 0.6f, 0.6f, 1.0f); }
     
