@@ -997,7 +997,6 @@ AestraUI::DropResult ArsenalPanel::onDrop(const AestraUI::DragData& data, const 
 
         unitMgr.setUnitName(targetUnit, filename);
         unitMgr.setUnitEnabled(targetUnit, true);
-        unitMgr.setUnitAudioClip(targetUnit, data.filePath);
         if (m_onSampleDroppedToUnit) {
             m_onSampleDroppedToUnit(targetUnit, data.filePath);
         }

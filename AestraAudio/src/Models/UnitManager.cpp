@@ -536,6 +536,59 @@ void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
     }
     publishSnapshot();
 }
+
+bool UnitManager::setUnitAudioClipFromDecoded(UnitID id, const std::string& path, std::vector<float> decodedData,
+                                              uint32_t sampleRate, uint32_t numChannels,
+                                              std::vector<float> previewWaveform, double durationSeconds) {
+    auto* u = getUnit(id);
+    if (!u) {
+        return false;
+    }
+
+    u->audioClipPath = path;
+    u->audioDurationSeconds = std::isfinite(durationSeconds) && durationSeconds > 0.0 ? durationSeconds : 0.0;
+    u->audioPreviewWaveform = std::move(previewWaveform);
+
+    if (path.empty()) {
+        publishSnapshot();
+        return true;
+    }
+
+    if (u->type == UnitType::Audio) {
+        u->group = UnitGroup::Audio;
+        publishSnapshot();
+        return true;
+    }
+
+    const std::string samplerId = BuiltInPlugins::samplerInfo().id;
+    if (!u->plugin || u->pluginId != samplerId) {
+        auto& pluginManager = PluginManager::getInstance();
+        auto samplerInstance = pluginManager.createInstanceById(samplerId);
+        if (samplerInstance) {
+            const double sr = m_sampleRate.load(std::memory_order_relaxed);
+            const uint32_t blockSize = m_blockSize.load(std::memory_order_relaxed);
+            if (samplerInstance->initialize(sr > 0 ? sr : 48000.0, blockSize > 0 ? blockSize : 512)) {
+                if ((u->enabled || u->isEnabled) && !samplerInstance->isActive()) {
+                    samplerInstance->activate();
+                }
+                u->pluginId = samplerId;
+                u->plugin = std::move(samplerInstance);
+                applySamplerDefaultsForUnitType(*u);
+            }
+        }
+    }
+
+    bool loaded = false;
+    if (auto sampler = std::dynamic_pointer_cast<Plugins::SamplerPlugin>(u->plugin)) {
+        loaded = sampler->loadSampleData(path, std::move(decodedData), sampleRate, numChannels);
+        if (loaded) {
+            u->pluginState = sampler->saveState();
+        }
+    }
+
+    publishSnapshot();
+    return loaded;
+}
 void UnitManager::setUnitColor(UnitID id, uint32_t color) { if (auto* u = getUnit(id)) u->color = color; }
 void UnitManager::setUnitGroup(UnitID id, UnitGroup group) { if (auto* u = getUnit(id)) u->group = std::move(group); }
 UnitType UnitManager::getUnitType(UnitID id) const {

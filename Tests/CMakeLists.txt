@@ -759,6 +759,11 @@ add_executable(AestraAuditionEngineLifecycleTest AestraAudio/AuditionEngineLifec
 target_link_libraries(AestraAuditionEngineLifecycleTest PRIVATE AestraAudio)
 add_test(NAME AestraAuditionEngineLifecycleTest COMMAND AestraAuditionEngineLifecycleTest)
 
+add_executable(PreviewAuditionGainParityTest AestraAudio/PreviewAuditionGainParityTest.cpp)
+target_link_libraries(PreviewAuditionGainParityTest PRIVATE AestraAudio)
+add_test(NAME PreviewAuditionGainParityTest COMMAND PreviewAuditionGainParityTest)
+set_tests_properties(PreviewAuditionGainParityTest PROPERTIES LABELS "audio;preview;audition;gain;regression")
+
 # SamplePool Test
 add_executable(SamplePoolTest AestraAudio/SamplePoolTest.cpp)
 target_link_libraries(SamplePoolTest PRIVATE AestraAudio)

@@ -177,7 +177,10 @@ public:
     bool isTransportPlaying() const { return m_transportPlaying.load(std::memory_order_relaxed); }
     /** @brief Replace the active audio graph and compile it for rendering. */
     void setGraph(const AudioGraph& graph) {
-        m_state.swapGraph(graph);
+        auto preparedGraph = graph;
+        finalizeAudioGraphRouting(preparedGraph);
+        prepareTrackStateForGraph(preparedGraph);
+        m_state.swapGraph(preparedGraph);
         compileGraph();
         m_graphGeneration.fetch_add(1, std::memory_order_release);
     }
@@ -600,6 +603,7 @@ private:
 
     TrackRTState& ensureTrackState(uint32_t trackId);
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset = 0);
+    void prepareTrackStateForGraph(const AudioGraph& graph);
     void applyPendingCommands();
     void applyPendingMetronomeCountInRt();
     void clearMetronomeCountInRt();

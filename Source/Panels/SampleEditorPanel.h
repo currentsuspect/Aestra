@@ -40,6 +40,8 @@ public:
 
     // Load a sample for editing
     void loadSample(const std::string& path);
+    void loadPreparedSample(const std::string& path, double sampleRate, uint32_t sampleLength,
+                            std::vector<float> waveformData);
 
     // ADSR parameters (0-1 normalized)
     struct ADSRParams {
