@@ -549,8 +549,8 @@ void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer) {
     const NUIRect tipRect(x, y, w, h);
     
     // Theme colors (matching minimap style)
-    const NUIColor bg = NUIColor(0.12f, 0.12f, 0.15f, 0.92f * s_tooltipState.alpha);
-    const NUIColor border = NUIColor(0.4f, 0.4f, 0.45f, 0.65f * s_tooltipState.alpha);
+    const NUIColor bg = NUIColor(0.12f, 0.12f, 0.12f, 0.92f * s_tooltipState.alpha);
+    const NUIColor border = NUIColor(0.4f, 0.4f, 0.4f, 0.65f * s_tooltipState.alpha);
     const NUIColor text = NUIColor(0.95f, 0.95f, 0.95f, 0.92f * s_tooltipState.alpha);
     
     renderer.fillRoundedRect(tipRect, kTooltipRadius, bg);

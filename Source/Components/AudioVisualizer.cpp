@@ -376,7 +376,7 @@ void AudioVisualizer::renderWaveform(NUIRenderer& renderer) {
     
     // Liminal Dark v2.0 background gradient - top: #121214 â†’ bottom: #18181b
     NUIColor topColor = backgroundColor_;  // #121214 - Deep charcoal
-    NUIColor bottomColor = NUIColor(0.094f, 0.094f, 0.106f, 1.0f);  // #18181b - Slightly lighter
+    NUIColor bottomColor = NUIColor(0.094f, 0.094f, 0.094f, 1.0f);  // #181818 - Slightly lighter
     
     // Draw gradient background
     for (int i = 0; i < static_cast<int>(bounds.height); ++i) {

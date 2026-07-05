@@ -172,7 +172,7 @@ void ChannelStrip::onRender(AestraUI::NUIRenderer& renderer) {
         
         // Meter background (Dark Slot)
         AestraUI::NUIRect meterBg(meterX, meterY, meterW, meterH);
-        renderer.fillRoundedRect(meterBg, 2.0f, AestraUI::NUIColor(0.05f, 0.05f, 0.08f, 0.8f));
+        renderer.fillRoundedRect(meterBg, 2.0f, AestraUI::NUIColor(0.05f, 0.05f, 0.05f, 0.8f));
         
         // Get current level (Mock/Placeholder)
         float level = m_track->getVolume(); // Simple mapping
@@ -274,7 +274,7 @@ void MixerView::onRender(AestraUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
     
     // Deep Void Background
-    auto bgColor = AestraUI::NUIColor::fromHex(0x050508); // Matches Playlist
+    auto bgColor = AestraUI::NUIColor::fromHex(0x050505); // Matches Playlist
     renderer.fillRect(bounds, bgColor);
     
     // Subtle Top Gradient (Header Shadow)

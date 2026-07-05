@@ -1037,7 +1037,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
     }
 
     const float clipRadius = 5.0f;
-    renderer.fillRoundedRect(clipBounds, clipRadius, AestraUI::NUIColor(0.07f, 0.072f, 0.09f, 0.96f));
+    renderer.fillRoundedRect(clipBounds, clipRadius, AestraUI::NUIColor(0.071f, 0.071f, 0.071f, 0.96f));
     renderer.fillRoundedRect(clipBounds, clipRadius, baseColor.withAlpha(isSelected ? 0.38f : 0.28f));
     renderer.strokeRoundedRect(
         clipBounds,

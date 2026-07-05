@@ -182,7 +182,7 @@ void TimelineMinimapBar::cacheThemeColors_()
     auto& theme = NUIThemeManager::getInstance();
     // Near-black shell matching the ruler material exactly (one continuous
     // band; the old surfaceRaised tint read blue against neighboring rows).
-    colors_.glassFill = NUIColor(0.012f, 0.012f, 0.016f, 0.98f);
+    colors_.glassFill = NUIColor(0.012f, 0.012f, 0.012f, 0.98f);
     colors_.glassBorder = theme.getColor("border").withAlpha(0.28f);
     colors_.cornerSeparator = theme.getColor("border").withAlpha(0.28f);
 
