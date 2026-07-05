@@ -1698,14 +1698,29 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     // gamma-correct cache pipeline this renders at its authored subtlety
     // (the old "frost" was the double-linearization amplifying it).
     const float pixelsPerBar = m_pixelsPerBeat * m_beatsPerBar;
+
+    // Ruler-synced bar stride, shared by the zebra and the grid lines below.
+    // Mirror TrackManagerUI::renderTimeRuler exactly so both always align
+    // with labeled bars (e.g., 1/9/17/25 at lower zoom).
+    const int beatsPerBar = std::max(1, m_beatsPerBar);
+    int barStride = 1;
+    const float minLabelSpacingPx = 28.0f; // matches TrackManagerUI::renderTimeRuler
+    while ((pixelsPerBar * static_cast<float>(barStride)) < minLabelSpacingPx && barStride < 128) {
+        barStride *= 2;
+    }
+
+    // Zebra alternates in stride-sized blocks, not single bars, so the
+    // light/dark rhythm holds a constant ~28-56px width at any zoom instead
+    // of collapsing into a dense barcode when bars get narrow.
     {
-        const int startBar = static_cast<int>(m_timelineScrollOffset / pixelsPerBar);
-        const int endBar = static_cast<int>((m_timelineScrollOffset + gridWidth) / pixelsPerBar) + 1;
-        for (int bar = startBar; bar <= endBar; ++bar) {
-            if (bar % 2 == 0)
+        const float pixelsPerBlock = pixelsPerBar * static_cast<float>(barStride);
+        const int startBlock = static_cast<int>(m_timelineScrollOffset / pixelsPerBlock);
+        const int endBlock = static_cast<int>((m_timelineScrollOffset + gridWidth) / pixelsPerBlock) + 1;
+        for (int block = startBlock; block <= endBlock; ++block) {
+            if (block % 2 == 0)
                 continue;
-            float rectX = gridStartX + (bar * pixelsPerBar) - m_timelineScrollOffset;
-            float rectW = pixelsPerBar;
+            float rectX = gridStartX + (block * pixelsPerBlock) - m_timelineScrollOffset;
+            float rectW = pixelsPerBlock;
             if (rectX < gridStartX) {
                 rectW -= (gridStartX - rectX);
                 rectX = gridStartX;
@@ -1718,16 +1733,6 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
                                   AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.030f));
             }
         }
-    }
-
-    // 2. GRID LINES SYNCED TO RULER LABEL INTERVAL
-    // Mirror the ruler's barStride logic exactly so major grid lines always align
-    // with labeled bars (e.g., 1/9/17/25 at lower zoom).
-    const int beatsPerBar = std::max(1, m_beatsPerBar);
-    int barStride = 1;
-    const float minLabelSpacingPx = 28.0f; // matches TrackManagerUI::renderTimeRuler
-    while ((pixelsPerBar * static_cast<float>(barStride)) < minLabelSpacingPx && barStride < 128) {
-        barStride *= 2;
     }
 
     const double startBeat = m_timelineScrollOffset / m_pixelsPerBeat;
