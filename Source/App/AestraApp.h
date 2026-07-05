@@ -132,4 +132,5 @@ private:
     // Startup optimization flags
     bool m_audioStreamReady = false;
     bool m_audioConfigSynced = false;
+    bool m_rtStateLogged = false;
 };

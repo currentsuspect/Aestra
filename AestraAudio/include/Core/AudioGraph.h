@@ -4,6 +4,7 @@
 #include "AutomationCurve.h"
 
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -72,13 +73,26 @@ struct TrackRenderState {
  * @brief Immutable graph snapshot consumed by the audio thread.
  */
 struct AudioGraph {
+    static constexpr size_t kInvalidTrackIndex = std::numeric_limits<size_t>::max();
+
     std::vector<TrackRenderState> tracks;
     bool anySolo{false};
     // Precomputed max end sample across all clips (engine sample rate).
     // Used for transport looping without scanning clips on the RT thread.
     uint64_t timelineEndSample{0};
     double bpm{120.0};
+
+    // Routing topology compiled off the audio thread.
+    std::vector<size_t> trackIndexById;
+    std::vector<std::vector<size_t>> audibleDownstream;
+    std::vector<std::vector<size_t>> audibleIncoming;
+    std::vector<std::vector<size_t>> sidechainIncoming;
+    std::vector<std::vector<size_t>> topologicalEdges;
+    std::vector<size_t> topologicalOrder;
+    bool hasRoutingCycle{false};
 };
+
+void finalizeAudioGraphRouting(AudioGraph& graph);
 
 } // namespace Audio
 } // namespace Aestra

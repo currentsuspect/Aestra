@@ -154,6 +154,14 @@ bool SamplerPlugin::loadSample(const std::string& path) {
         return false;
     }
 
+    return loadSampleData(path, std::move(data), rate, channels);
+}
+
+bool SamplerPlugin::loadSampleData(const std::string& path, std::vector<float> data, uint32_t rate, uint32_t channels) {
+    if (data.empty() || rate == 0 || channels == 0) {
+        return false;
+    }
+
     // Decode output is interleaved. Keep stereo data in-place and only upmix
     // mono defensively for callers that bypass decodeAudioFile's forceStereo().
     const size_t numFrames = data.size() / std::max<uint32_t>(channels, 1);

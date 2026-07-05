@@ -786,6 +786,30 @@ void SampleEditorPanel::loadSample(const std::string& path) {
     m_adsrDisplay->repaint();
 }
 
+void SampleEditorPanel::loadPreparedSample(const std::string& path, double sampleRate, uint32_t sampleLength,
+                                           std::vector<float> waveformData) {
+    if (!m_trackManager) {
+        return;
+    }
+
+    Log::info("[SampleEditor] Loading prepared sample: " + path);
+    m_sampleRate = sampleRate > 0.0 ? sampleRate : 44100.0;
+    m_sampleLength = sampleLength;
+    m_waveformData = std::move(waveformData);
+    if (m_waveformData.empty()) {
+        m_waveformData.resize(1000 * 2);
+        for (size_t i = 0; i < 1000; ++i) {
+            float t = static_cast<float>(i) / 1000.0f;
+            m_waveformData[i * 2] = std::sin(t * 20.0f) * 0.5f;
+            m_waveformData[i * 2 + 1] = -std::sin(t * 20.0f) * 0.5f;
+        }
+    }
+
+    m_waveformDisplay->setWaveformData(m_waveformData);
+    m_waveformDisplay->repaint();
+    m_adsrDisplay->repaint();
+}
+
 void SampleEditorPanel::setADSR(const ADSRParams& params) {
     m_adsr = params;
     m_adsrDisplay->setADSR(params.attack, params.decay, params.sustain, params.release);
