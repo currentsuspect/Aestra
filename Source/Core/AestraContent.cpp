@@ -29,6 +29,7 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
+#include "../AestraUI/Widgets/TrackColorPalette.h"
 
 // Component includes
 #include "AudioVisualizer.h"
@@ -2921,12 +2922,9 @@ void AestraContent::addDemoTracks() {
         m_trackManager->addChannel(name);
 
         if (auto* lane = playlist.getLane(laneId)) {
-            if (i % 3 == 1)
-                lane->colorRGBA = 0xFFbb86fc;
-            else if (i % 3 == 2)
-                lane->colorRGBA = 0xFF00bcd4;
-            else
-                lane->colorRGBA = 0xFF9a9aa3;
+            // Cycle the shared track palette so the lane strip matches the
+            // name ink and mixer tint derived from the same index.
+            lane->colorRGBA = AestraUI::TRACK_PALETTE[(i - 1) % AestraUI::PALETTE_SIZE];
 
             if (i == 1) {
                 AutomationCurve vol("Volume", AutomationTarget::Volume);

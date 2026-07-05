@@ -431,8 +431,9 @@ void TrackUIComponent::updateTrackNameColors() {
 
     int colorIndex = m_channel->getTrackColorIndex();
     if (colorIndex < 0 || colorIndex >= AestraUI::PALETTE_SIZE) {
+        // trackId is unsigned; guard id 0 or the subtraction wraps to UINT32_MAX.
         uint32_t trackId = m_channel->getChannelId();
-        colorIndex = static_cast<int>((trackId - 1) % AestraUI::PALETTE_SIZE);
+        colorIndex = static_cast<int>((trackId > 0 ? trackId - 1 : 0) % AestraUI::PALETTE_SIZE);
     }
     m_nameLabel->setTextColor(
         AestraUI::NUIColor::fromARGB(AestraUI::paletteIndexToARGB(colorIndex)).withAlpha(0.82f));
