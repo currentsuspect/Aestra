@@ -1698,6 +1698,9 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     // gamma-correct cache pipeline this renders at its authored subtlety
     // (the old "frost" was the double-linearization amplifying it).
     const float pixelsPerBar = m_pixelsPerBeat * m_beatsPerBar;
+    if (pixelsPerBar <= 0.0f) {
+        return; // degenerate zoom — no grid, and guards the divisions below
+    }
 
     // ==== FRACTAL GRID (owner direction: self-similar at every zoom) ====
     // Every level of the hierarchy — half-beats, beats, bars, bars×2^k —
@@ -1719,10 +1722,14 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     };
 
     const int beatsPerBar = std::max(1, m_beatsPerBar);
-    // Coarsest power-of-two bar stride with blocks >= kLevelFullPx, mirroring
-    // TrackManagerUI::renderTimeRuler so levels align with labeled bars.
+    // Coarsest power-of-two bar stride with blocks >= kLevelFullPx. Labeled
+    // ruler bars are always a multiple of this stride (same power-of-two
+    // ladder as TrackManagerUI::renderTimeRuler). The cap is not a zoom
+    // assumption — it only bounds the loop; 2^20 bars per block is far past
+    // any zoom the timeline can reach, so the zebra keeps handing off
+    // upward instead of densifying at extreme zoom-out.
     int barStride = 1;
-    while ((pixelsPerBar * static_cast<float>(barStride)) < kLevelFullPx && barStride < 128) {
+    while ((pixelsPerBar * static_cast<float>(barStride)) < kLevelFullPx && barStride < (1 << 20)) {
         barStride *= 2;
     }
 
