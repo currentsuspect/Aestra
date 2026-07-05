@@ -141,8 +141,8 @@ void RecoveryDialog::onRender(AestraUI::NUIRenderer& renderer) {
                      AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.6f));
     
     // Dialog background
-    renderer.fillRoundedRect(m_dialogRect, 8.0f, AestraUI::NUIColor(0.15f, 0.15f, 0.18f, 1.0f));
-    renderer.strokeRoundedRect(m_dialogRect, 8.0f, 1.0f, AestraUI::NUIColor(0.3f, 0.3f, 0.35f, 1.0f));
+    renderer.fillRoundedRect(m_dialogRect, 8.0f, AestraUI::NUIColor(0.15f, 0.15f, 0.15f, 1.0f));
+    renderer.strokeRoundedRect(m_dialogRect, 8.0f, 1.0f, AestraUI::NUIColor(0.3f, 0.3f, 0.3f, 1.0f));
     
     // Title
     float titleY = m_dialogRect.y + 25.0f;
