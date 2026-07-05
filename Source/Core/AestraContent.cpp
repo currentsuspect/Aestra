@@ -39,8 +39,8 @@
 #include "TransportBar.h"
 
 // Audio includes
-#include "../AestraCore/include/AestraLog.h"
 #include "../AestraAudio/include/Commands/CommandRegistry.h"
+#include "../AestraCore/include/AestraLog.h"
 #include "AudioEngine.h"
 #include "ChannelSlotMap.h"
 #include "ClipSource.h"
@@ -51,10 +51,12 @@
 #include "PreviewEngine.h"
 #include "TrackManager.h"
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <thread>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -69,6 +71,69 @@ constexpr float kMinFileBrowserWidth = 300.0f;
 constexpr float kMinPatternBrowserWidth = 96.0f;
 constexpr float kMinTrackAreaWidth = 420.0f;
 constexpr float kResizeHitWidth = 6.0f;
+
+std::vector<float> buildPreviewWaveform(const std::vector<float>& samples, uint32_t channels, size_t targetSize = 128) {
+    std::vector<float> waveform(targetSize, 0.0f);
+    if (samples.empty() || channels == 0 || targetSize == 0) {
+        return waveform;
+    }
+
+    const size_t totalFrames = samples.size() / channels;
+    if (totalFrames == 0) {
+        return waveform;
+    }
+
+    const double framesPerBin = static_cast<double>(totalFrames) / static_cast<double>(targetSize);
+    for (size_t bin = 0; bin < targetSize; ++bin) {
+        const size_t startFrame = static_cast<size_t>(static_cast<double>(bin) * framesPerBin);
+        const size_t endFrame =
+            std::min(totalFrames, static_cast<size_t>(static_cast<double>(bin + 1) * framesPerBin) + 1);
+
+        float peak = 0.0f;
+        for (size_t frame = startFrame; frame < endFrame; ++frame) {
+            float sum = 0.0f;
+            for (uint32_t ch = 0; ch < channels; ++ch) {
+                sum += std::abs(samples[frame * channels + ch]);
+            }
+            peak = std::max(peak, sum / static_cast<float>(channels));
+        }
+        waveform[bin] = std::min(1.0f, peak);
+    }
+
+    return waveform;
+}
+
+std::vector<float> buildEditorWaveform(const std::vector<float>& samples, uint32_t channels, uint32_t sampleLength,
+                                       size_t buckets = 1024) {
+    std::vector<float> waveform;
+    if (samples.empty() || channels == 0 || sampleLength == 0 || buckets == 0) {
+        return waveform;
+    }
+
+    const size_t framesPerBucket = std::max<size_t>(1, static_cast<size_t>(sampleLength) / buckets);
+    waveform.reserve(buckets * 2);
+    for (size_t bucket = 0; bucket < buckets; ++bucket) {
+        const size_t startFrame = bucket * framesPerBucket;
+        const size_t endFrame = std::min<size_t>(static_cast<size_t>(sampleLength), startFrame + framesPerBucket);
+        if (startFrame >= endFrame) {
+            waveform.push_back(0.0f);
+            waveform.push_back(0.0f);
+            continue;
+        }
+
+        float minV = 1.0f;
+        float maxV = -1.0f;
+        for (size_t frame = startFrame; frame < endFrame; ++frame) {
+            const size_t idx = frame * channels;
+            const float mono = (channels > 1) ? 0.5f * (samples[idx] + samples[idx + 1]) : samples[idx];
+            minV = std::min(minV, mono);
+            maxV = std::max(maxV, mono);
+        }
+        waveform.push_back(maxV);
+        waveform.push_back(minV);
+    }
+    return waveform;
+}
 } // namespace
 
 // =============================================================================
@@ -870,16 +935,7 @@ AestraContent::AestraContent() {
 
             // 2. Perform Load
             AESTRA_LOG_DEBUG("Loading sample into Unit " + std::to_string(id) + ": " + file.path);
-            if (m_trackManager) {
-                auto& unitManager = m_trackManager->getUnitManager();
-                unitManager.setUnitEnabled(id, true);
-                unitManager.setUnitAudioClip(id, file.path);
-                if (m_sequencerPanel) {
-                    m_sequencerPanel->setSelectedUnit(id);
-                    m_sequencerPanel->refreshUnits();
-                }
-                openSampleEditorForUnit(id, file.path);
-            }
+            loadSampleIntoUnitAsync(id, file.path, true);
         });
     });
     m_sequencerPanel->setOnRequestSampleEditor([this](UnitID id) {
@@ -892,7 +948,7 @@ AestraContent::AestraContent() {
     m_sequencerPanel->setOnPluginDroppedToUnit(
         [this](UnitID unitId, const std::string& pluginId) { loadInstrumentIntoArsenalUnit(unitId, pluginId); });
     m_sequencerPanel->setOnSampleDroppedToUnit(
-        [this](UnitID unitId, const std::string& samplePath) { openSampleEditorForUnit(unitId, samplePath); });
+        [this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, true); });
     m_sequencerPanel->setOnSelectedUnitChanged([this](UnitID unitId) {
         if (m_pianoRollPanel) {
             m_pianoRollPanel->setEditingUnit(unitId);
@@ -1093,6 +1149,7 @@ AestraContent::AestraContent() {
 // =============================================================================
 
 void AestraContent::onUpdate(double dt) {
+    drainMainThreadTasks();
     updatePendingCountIn();
 
     // Drive preview state: clears the pending-load spinner once the decode
@@ -3059,6 +3116,131 @@ void AestraContent::stopSoundPreview() {
         m_fileBrowser->setActivePlaybackPath("");
     }
     AESTRA_LOG_TRACE("Sound preview stopped");
+}
+
+void AestraContent::enqueueMainThreadTask(std::function<void()> task) {
+    if (!task) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m_mainThreadTasksMutex);
+    m_mainThreadTasks.push_back(std::move(task));
+}
+
+void AestraContent::drainMainThreadTasks() {
+    std::vector<std::function<void()>> tasks;
+    {
+        std::lock_guard<std::mutex> lock(m_mainThreadTasksMutex);
+        tasks.swap(m_mainThreadTasks);
+    }
+
+    for (auto& task : tasks) {
+        if (task) {
+            task();
+        }
+    }
+}
+
+void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& samplePath, bool openEditorWhenReady) {
+    if (!m_trackManager || unitId == 0 || samplePath.empty()) {
+        return;
+    }
+
+    uint64_t generation = 0;
+    {
+        std::lock_guard<std::mutex> lock(m_sampleUnitLoadGenerationsMutex);
+        generation = ++m_sampleUnitLoadGenerations[unitId];
+    }
+    auto weakSelf = weak_from_this();
+
+    if (m_trackManager->getUnitManager().getUnit(unitId)) {
+        std::string filename = std::filesystem::path(samplePath).stem().string();
+        if (!filename.empty()) {
+            m_trackManager->getUnitManager().setUnitName(unitId, filename);
+        }
+        m_trackManager->getUnitManager().setUnitEnabled(unitId, true);
+    }
+    if (m_sequencerPanel) {
+        m_sequencerPanel->setSelectedUnit(unitId);
+        m_sequencerPanel->refreshUnits();
+    }
+
+    std::thread([weakSelf, generation, unitId, samplePath, openEditorWhenReady]() {
+        std::vector<float> decodedData;
+        uint32_t sampleRate = 0;
+        uint32_t numChannels = 0;
+        const bool decoded = decodeAudioFile(samplePath, decodedData, sampleRate, numChannels);
+        const uint32_t sampleLength =
+            (decoded && numChannels > 0) ? static_cast<uint32_t>(decodedData.size() / numChannels) : 0;
+        std::vector<float> editorWaveform =
+            decoded ? buildEditorWaveform(decodedData, numChannels, sampleLength) : std::vector<float>();
+
+        std::vector<float> previewAudio;
+        uint32_t previewRate = 0;
+        uint32_t previewChannels = 0;
+        constexpr uint64_t kPreviewMaxFrames = 48000 * 24;
+        constexpr double kPreviewMaxSeconds = static_cast<double>(kPreviewMaxFrames) / 48000.0;
+        std::vector<float> previewWaveform;
+        double durationSeconds = 0.0;
+
+        if (decodeAudioPreview(samplePath, previewAudio, previewRate, previewChannels, kPreviewMaxSeconds)) {
+            previewWaveform = buildPreviewWaveform(previewAudio, previewChannels);
+            if (previewRate > 0 && previewChannels > 0) {
+                durationSeconds =
+                    static_cast<double>(previewAudio.size()) / static_cast<double>(previewRate * previewChannels);
+            }
+        }
+        if (durationSeconds <= 0.0 && sampleRate > 0 && numChannels > 0) {
+            durationSeconds = static_cast<double>(decodedData.size()) / static_cast<double>(sampleRate * numChannels);
+        }
+
+        auto self = std::dynamic_pointer_cast<AestraContent>(weakSelf.lock());
+        if (!self) {
+            return;
+        }
+
+        self->enqueueMainThreadTask([weakSelf, generation, unitId, samplePath, openEditorWhenReady, decoded,
+                                     decodedData = std::move(decodedData), sampleRate, numChannels,
+                                     sampleLength, editorWaveform = std::move(editorWaveform),
+                                     previewWaveform = std::move(previewWaveform), durationSeconds]() mutable {
+            auto self = std::dynamic_pointer_cast<AestraContent>(weakSelf.lock());
+            if (!self || !self->m_trackManager) {
+                return;
+            }
+            {
+                std::lock_guard<std::mutex> lock(self->m_sampleUnitLoadGenerationsMutex);
+                const auto generationIt = self->m_sampleUnitLoadGenerations.find(unitId);
+                if (generationIt == self->m_sampleUnitLoadGenerations.end() || generationIt->second != generation) {
+                    return;
+                }
+            }
+
+            auto& unitManager = self->m_trackManager->getUnitManager();
+            if (!decoded ||
+                !unitManager.setUnitAudioClipFromDecoded(unitId, samplePath, std::move(decodedData), sampleRate,
+                                                         numChannels, std::move(previewWaveform), durationSeconds)) {
+                AESTRA_LOG_ERROR("Failed to load sample into Unit " + std::to_string(unitId) + ": " + samplePath);
+                return;
+            }
+
+            if (self->m_sequencerPanel) {
+                self->m_sequencerPanel->setSelectedUnit(unitId);
+                self->m_sequencerPanel->refreshUnits();
+            }
+            if (openEditorWhenReady) {
+                self->m_sampleEditorUnitId = unitId;
+                self->syncSampleEditorToUnit(unitId);
+                if (self->m_sampleEditorPanel) {
+                    self->m_sampleEditorPanel->loadPreparedSample(samplePath, static_cast<double>(sampleRate),
+                                                                  sampleLength, std::move(editorWaveform));
+                    self->m_sampleEditorPanel->setVisible(true);
+                    self->m_sampleEditorPanel->bringToFront();
+                    self->m_sampleEditorPanel->setDirty(true);
+                }
+                self->onResize(static_cast<int>(self->getBounds().width), static_cast<int>(self->getBounds().height));
+            }
+            AESTRA_LOG_DEBUG("Sample loaded into Unit " + std::to_string(unitId) + " asynchronously: " + samplePath);
+        });
+    }).detach();
 }
 
 void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
