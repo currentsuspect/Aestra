@@ -1,7 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "MixerBus.h"
 
-#include "FastMath.h"
+#include "DSP/PanLaw.h"
 
 #include <algorithm>
 #include <cmath>
@@ -9,10 +9,6 @@
 
 namespace Aestra {
 namespace Audio {
-
-// Constants
-static constexpr float PI = 3.14159265358979323846f;
-static constexpr float SQRT2_OVER_2 = 0.70710678118654752440f; // sqrt(2)/2
 
 MixerBus::MixerBus(const char* name, uint32_t numChannels)
     : m_name(name), m_numChannels(numChannels), m_gain(1.0f), m_pan(0.0f), m_muted(false), m_soloed(false),
@@ -234,8 +230,7 @@ void MixerBus::setSolo(bool solo) {
 }
 
 void MixerBus::calculatePanGains(float pan, float& leftGain, float& rightGain) const {
-    // Fast constant power panning using polynomial approximation (~5x faster)
-    FastMath::fastPan(pan, leftGain, rightGain);
+    PanLaw::equalPower(pan, 1.0f, leftGain, rightGain);
 }
 
 // SimpleMixer implementation

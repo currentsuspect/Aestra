@@ -4,6 +4,7 @@
 #include "../../AestraCore/include/AestraLog.h"
 #include "../../AestraCore/include/AestraMath.h"
 #include "AuditionEngine.h"
+#include "DSP/PanLaw.h"
 #include "EffectChain.h" // [NEW]
 #include "GarbageCollector.h"
 #include "IO/AudioExporter.h"
@@ -103,11 +104,8 @@ inline double dbToLinearD(double db) {
     return std::pow(10.0, db / 20.0);
 }
 
-// Fast constant-power pan gains (replaces std::sin/cos)
 inline void fastPanGainsD(double pan, double vol, double& gainL, double& gainR) {
-    float p = (static_cast<float>(pan) + 1.0f) * 0.5f; // 0.0 to 1.0
-    gainL = static_cast<double>(std::cos(p * 1.57079632679f)) * vol;
-    gainR = static_cast<double>(std::sin(p * 1.57079632679f)) * vol;
+    PanLaw::equalPower(pan, vol, gainL, gainR);
 }
 
 inline void addMidiPanic(Aestra::Audio::MidiBuffer& buf) {
