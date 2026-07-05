@@ -5148,9 +5148,10 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
             if (displayName.length() > 18) {
                 displayName = displayName.substr(0, 15) + "...";
             }
-            const float labelTextY = headerRect.y + std::max(0.0f, (headerRect.height - 10.0f) * 0.5f);
+            const float clipLabelFont = themeManager.getFontSize("xs");
+            const float labelTextY = headerRect.y + std::max(0.0f, (headerRect.height - clipLabelFont) * 0.5f);
             AestraUI::NUIPoint textPos(clipPreview.x + 6.0f, labelTextY);
-            renderer.drawText(displayName, textPos, 10.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+            renderer.drawText(displayName, textPos, clipLabelFont, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
         }
     }
 }
@@ -5401,7 +5402,7 @@ void Aestra::Audio::TrackManagerUI::renderPendingImports(AestraUI::NUIRenderer& 
         // Text
         std::string progressStr = " (" + std::to_string((int)(item.progress * 100)) + "%)";
         std::string text = "ANALYZING: " + item.displayName + (item.progress > 0 ? progressStr : "");
-        float fontSize = 11.0f;
+        float fontSize = AestraUI::NUIThemeManager::getInstance().getFontSize("s");
         auto textSize = renderer.measureText(text, fontSize);
 
         // Center text in rect

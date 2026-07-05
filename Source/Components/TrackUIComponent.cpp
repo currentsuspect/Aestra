@@ -839,7 +839,7 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
                                             const AestraUI::NUIRect& fullClipBounds, const ClipInstance& clip) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
 
-    const float clipRadius = 5.0f;
+    const float clipRadius = themeManager.getRadius("s");
 
     AestraUI::NUIColor clipColor = resolveClipDisplayColor(clip);
     std::string sampleName = "Clip";
@@ -928,7 +928,7 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
         if (!displayName.empty()) {
             // Vertically center the label in the header using real font
             // metrics — drawText's y is the top of the line, not the baseline
-            constexpr float kClipLabelFontSize = 9.0f;
+            const float kClipLabelFontSize = themeManager.getFontSize("micro");
             const auto metrics = renderer.getFontMetrics(kClipLabelFontSize);
             const float textBoxH = (metrics.ascent > 0.0f && metrics.descent > 0.0f)
                                        ? (metrics.ascent + metrics.descent)
@@ -1058,7 +1058,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
         baseColor = baseColor.withAlpha(0.4f);
     }
 
-    const float clipRadius = 5.0f;
+    const float clipRadius = themeManager.getRadius("s");
     renderer.fillRoundedRect(clipBounds, clipRadius, AestraUI::NUIColor(0.071f, 0.071f, 0.071f, 0.96f));
     renderer.fillRoundedRect(clipBounds, clipRadius, baseColor.withAlpha(isSelected ? 0.38f : 0.28f));
     renderer.strokeRoundedRect(
@@ -1435,7 +1435,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         for(int i=0; i<dots; ++i) loadingText += ".";
         
         // Center text in control area
-        float fontSize = 11.0f;
+        float fontSize = themeManager.getFontSize("s");
         auto textSize = renderer.measureText(loadingText, fontSize);
         renderer.drawText(loadingText, 
                          AestraUI::NUIPoint(controlAreaBounds.x + (controlAreaBounds.width - textSize.width) * 0.5f, 
@@ -1670,8 +1670,8 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         }
         const auto nameBounds = m_nameLabel->getBounds();
         renderer.drawText(std::to_string(trackNumber),
-                          AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f, nameBounds.y + 2.0f), 10.5f,
-                          AestraUI::NUIColor::white());
+                          AestraUI::NUIPoint(controlAreaBounds.x + stripWidth + 8.0f, nameBounds.y + 2.0f),
+                          themeManager.getFontSize("xs"), AestraUI::NUIColor::white());
     }
 }
 
