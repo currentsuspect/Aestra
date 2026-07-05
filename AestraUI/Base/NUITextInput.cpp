@@ -1290,19 +1290,10 @@ void NUITextInput::triggerEscapeKey()
 void NUITextInput::drawEnhancedBackground(NUIRenderer& renderer)
 {
     NUIRect bounds = getBounds();
-    
-    // Focus glow effect
-    if (isFocused())
-    {
-        NUIRect glowRect = bounds;
-        glowRect.x -= 2;
-        glowRect.y -= 2;
-        glowRect.width += 4;
-        glowRect.height += 4;
-        renderer.fillRoundedRect(glowRect, borderRadius_ + 2,
-            focusedBorderColor_.withAlpha(0.3f));
-    }
-    
+
+    // No focus glow halo (owner direction: flat focus state) — the focused
+    // border color below is the focus indicator.
+
     // Inner shadow effect
     NUIRect innerShadowRect = bounds;
     innerShadowRect.x += 1;

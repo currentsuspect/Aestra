@@ -541,19 +541,8 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         bool isPlaying = (m_state == TransportState::Playing);
         auto currentIcon = isPlaying ? m_pauseIcon : m_playIcon;
         renderGlassButton(m_playButton, currentIcon, isPlaying, false, true);
-
-        // Breathing glow when playing — subtle pulse so user can see transport is active
-        if (isPlaying) {
-            auto now = std::chrono::steady_clock::now();
-            float timeSec = std::chrono::duration<float>(now.time_since_epoch()).count();
-            float pulse = (std::sin(timeSec * 3.0f) * 0.5f + 0.5f); // 0..1 oscillation ~0.5Hz
-            AestraUI::NUIRect playRect = m_playButton->getBounds();
-            renderer.drawShadow(
-                {playRect.x, playRect.y, playRect.width, playRect.height},
-                4.0f, 1.0f, 6.0f,
-                themeManager.getColor("accentPrimary").withAlpha(0.08f + pulse * 0.06f)
-            );
-        }
+        // No breathing shadow while playing (owner direction: flat active
+        // state) — the accent plate from renderGlassButton is the indicator.
     }
 
     // Stop
