@@ -17,6 +17,7 @@
 
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
+#include "../AestraUI/Graphics/NUISVGParser.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraUI/Widgets/TrackColorPalette.h"
@@ -25,6 +26,7 @@
 #include <cmath>
 #include <chrono>
 #include <string_view>
+#include <unordered_map>
 
 namespace Aestra {
 namespace Audio {
@@ -56,6 +58,25 @@ void attachAndShowContextMenu(AestraUI::NUIComponent* owner,
     menu->showAt(position);
     root->repaint();
 }
+
+// Track control glyphs (mute/solo/record/monitor). Parsed once, rasterized
+// and cached per size+tint by NUISVGRenderer, so per-frame cost is a texture
+// draw. Geometry is authored on a 24x24 grid like the toolbar icons.
+const AestraUI::NUISVGDocument* trackControlIcon(const char* svg) {
+    static std::unordered_map<const char*, std::shared_ptr<AestraUI::NUISVGDocument>> docs;
+    auto& doc = docs[svg];
+    if (!doc) doc = AestraUI::NUISVGParser::parse(svg);
+    return doc.get();
+}
+
+constexpr const char* kMuteIconSvg =
+    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 4.5v-15L8 9H4z" fill="#fff"/><path d="M16 9.5 21 14.5 M21 9.5 16 14.5" stroke="#fff" stroke-width="1.9" stroke-linecap="round" fill="none"/></svg>)";
+constexpr const char* kSoloIconSvg =
+    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.5a7.5 7.5 0 0 0-7.5 7.5v5.2a1.8 1.8 0 0 0 1.8 1.8h1.2a1 1 0 0 0 1-1v-4.2a1 1 0 0 0-1-1H6.5V12a5.5 5.5 0 0 1 11 0v.8h-1a1 1 0 0 0-1 1V18a1 1 0 0 0 1 1h1.2a1.8 1.8 0 0 0 1.8-1.8V12A7.5 7.5 0 0 0 12 4.5z" fill="#fff"/></svg>)";
+constexpr const char* kRecordIconSvg =
+    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="7.2" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.4" fill="#fff"/></svg>)";
+constexpr const char* kMonitorIconSvg =
+    R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h3.2l2.2-5.5 3.4 11 2.2-5.5H21" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>)";
 
 bool parseTrailingTrackNumber(const std::string& trackName, uint32_t& trackNumberOut) {
     const size_t numberPos = trackName.find_last_not_of("0123456789");
@@ -173,9 +194,9 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
         button->setCornerRadius(0.0f);
     };
 
-    // Create mute button
+    // Create mute button (glyph drawn by drawControlIcon; no text)
     m_muteButton = std::make_shared<AestraUI::NUIButton>();
-    m_muteButton->setText("M");
+    m_muteButton->setText("");
     configureFlatTrackButton(m_muteButton);
     m_muteButton->setToggleable(true);
     m_muteButton->setOnToggle([this](bool) { onMuteToggled(); });
@@ -184,7 +205,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
 
     // Create solo button
     m_soloButton = std::make_shared<AestraUI::NUIButton>();
-    m_soloButton->setText("S");
+    m_soloButton->setText("");
     configureFlatTrackButton(m_soloButton);
     m_soloButton->setToggleable(true);
     m_soloButton->setOnToggle([this](bool) { onSoloToggled(); });
@@ -193,7 +214,7 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
 
     // Create record button
     m_recordButton = std::make_shared<AestraUI::NUIButton>();
-    m_recordButton->setText("O");
+    m_recordButton->setText("");
     configureFlatTrackButton(m_recordButton);
     m_recordButton->setToggleable(true);
     m_recordButton->setOnToggle([this](bool) { onRecordToggled(); });
@@ -1196,12 +1217,8 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
     // Apply background
     renderer.fillRect(bounds, trackBgColor);
 
-    // Faint bottom row divider for cleaner track separation.
-    // Kept deliberately soft — this is the only per-row separator (the old
-    // second line in TrackManagerUI stacked on top of it made the harsh grid).
-    renderer.drawLine(AestraUI::NUIPoint(bounds.x, bounds.bottom() - 1.0f),
-                      AestraUI::NUIPoint(bounds.right(), bounds.bottom() - 1.0f), 1.0f,
-                      themeManager.getColor("borderSubtle").withAlpha(0.20f));
+    // Row separation is the light gap strip drawn by TrackManagerUI between
+    // lanes — no per-row line here, so separators never stack.
     AestraUI::NUIColor borderColor = themeManager.getColor("border");
     
     float controlAreaWidth = std::min(layout.trackControlsWidth, bounds.width);
@@ -1541,7 +1558,6 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
         const auto muteActive = themeManager.getColor("warning").withAlpha(0.92f);
         const auto soloActive = themeManager.getColor("success").withAlpha(0.92f);
         const auto recordActive = themeManager.getColor("error").withAlpha(0.92f);
-        const float fontSize = 11.0f;
 
         const auto drawButtonShell = [&](const std::shared_ptr<AestraUI::NUIButton>& button,
                                          bool active,
@@ -1565,22 +1581,25 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             }
         };
 
-        const auto drawControlLabel = [&](const std::shared_ptr<AestraUI::NUIButton>& button,
-                                          const std::string& label,
-                                          AestraUI::NUIColor color,
-                                          bool active,
-                                          AestraUI::NUIColor activeColor) {
+        const auto drawControlIcon = [&](const std::shared_ptr<AestraUI::NUIButton>& button,
+                                         const char* iconSvg,
+                                         AestraUI::NUIColor color,
+                                         bool active,
+                                         AestraUI::NUIColor activeColor) {
             if (!button) {
                 return;
             }
             drawButtonShell(button, active, activeColor);
+            const auto* doc = trackControlIcon(iconSvg);
+            if (!doc) {
+                return;
+            }
             const auto rect = button->getBounds();
-            const auto textSize = renderer.measureText(label, fontSize);
-            renderer.drawText(label,
-                              AestraUI::NUIPoint(rect.x + (rect.width - textSize.width) * 0.5f,
-                                                 std::round(renderer.calculateTextY(rect, fontSize))),
-                              fontSize,
-                              color);
+            const float iconSize = std::round(std::min(rect.width, rect.height) - 6.0f);
+            const AestraUI::NUIRect iconRect(std::round(rect.x + (rect.width - iconSize) * 0.5f),
+                                             std::round(rect.y + (rect.height - iconSize) * 0.5f),
+                                             iconSize, iconSize);
+            AestraUI::NUISVGRenderer::render(renderer, *doc, iconRect, color);
         };
 
         // Draw volume knob (replaces route button)
@@ -1630,13 +1649,13 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
             }
         }
 
-        drawControlLabel(m_muteButton, "M", m_channel->isMuted() ? muteActive : textIdle,
-                         m_channel->isMuted(), muteActive);
-        drawControlLabel(m_soloButton, "S", m_channel->isSoloed() ? soloActive : textIdle,
-                         m_channel->isSoloed(), soloActive);
-        drawControlLabel(m_recordButton, m_channel->isMonitoringEnabled() ? "I" : "R",
-                         m_channel->isArmed() ? recordActive : textIdle,
-                         m_channel->isArmed(), recordActive);
+        drawControlIcon(m_muteButton, kMuteIconSvg, m_channel->isMuted() ? muteActive : textIdle,
+                        m_channel->isMuted(), muteActive);
+        drawControlIcon(m_soloButton, kSoloIconSvg, m_channel->isSoloed() ? soloActive : textIdle,
+                        m_channel->isSoloed(), soloActive);
+        drawControlIcon(m_recordButton, m_channel->isMonitoringEnabled() ? kMonitorIconSvg : kRecordIconSvg,
+                        m_channel->isArmed() ? recordActive : textIdle,
+                        m_channel->isArmed(), recordActive);
     }
 
     // Track number marker (left of name): fixed white — no dynamic dimming

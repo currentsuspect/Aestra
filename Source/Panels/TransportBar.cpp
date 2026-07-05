@@ -500,10 +500,10 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
          }
 
         if (isPrimaryTransport) {
-            if (!isRecording && !isActive && !isHovered) {
-                currentBg = themeManager.getColor("buttonBgHover").withAlpha(0.64f);
-                currentBorder = themeManager.getColor("border").withAlpha(0.38f);
-            } else if (isActive && !isRecording) {
+            // No idle backing plate: primaries sit flush on the group shell
+            // exactly like the time display (owner direction). State still
+            // brings the tinted plate in on hover/active/record.
+            if (isActive && !isRecording) {
                 currentBg = themeManager.getColor("accentPrimary").withAlpha(0.22f);
                 currentBorder = themeManager.getColor("accentPrimary").withAlpha(0.46f);
             }
@@ -511,9 +511,9 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
                 iconColor = themeManager.getColor("textPrimary").withAlpha(isActive || isHovered ? 1.0f : 0.94f);
             }
         }
-        
+
         // Draw Button Background
-        if (isHovered || isActive || isRecording || isPrimaryTransport) {
+        if (isHovered || isActive || isRecording) {
             renderer.fillRoundedRect(buttonRect, 6.0f, currentBg);
             if (currentBorder.a > 0.0f) {
                 renderer.strokeRoundedRect(buttonRect, 6.0f, 1.0f, currentBorder);
