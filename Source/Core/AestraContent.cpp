@@ -1101,24 +1101,45 @@ void AestraContent::onUpdate(double dt) {
     // were frozen because nothing pumped the preview engine state.)
     updateSoundPreview();
 
-    // Sync track changes to MixerViewModel
+    // Sync the mixer view-model from the engine — but only while the mixer is
+    // visible and only when what it displays has actually changed. This block
+    // used to run every frame unconditionally AND redundantly (refreshChannels
+    // already calls syncFromEngine), so it re-dirtied the panel ~2x/frame even
+    // with the mixer closed, keeping the app off idle and hot with a plugin.
     auto tm = getTrackManager();
-    if (tm && m_mixerPanel) {
-        auto viewModel = m_mixerPanel->getViewModel();
-        if (viewModel) {
-            auto slotMap = tm->getChannelSlotMapRaw();
-            if (slotMap) {
-                viewModel->syncFromEngine(*tm, *slotMap);
-                m_mixerPanel->refreshChannels();
+    if (tm && m_mixerPanel && m_mixerPanel->isVisible() && m_mixerPanel->getViewModel()) {
+        // Cheap fingerprint of the displayed state: structural generation plus
+        // per-channel identity/state/level. Quantized levels so float noise
+        // doesn't force a resync; live values (automation, drags) still flip it.
+        uint64_t fp = tm->graphRebuildRequestGeneration() * 1099511628211ull;
+        const size_t channelCount = tm->getChannelCount();
+        fp = fp * 31 + channelCount;
+        for (size_t i = 0; i < channelCount; ++i) {
+            auto* ch = tm->getChannel(i);
+            if (!ch) continue;
+            uint64_t h = ch->getChannelId();
+            h = h * 31 + ch->getColor();
+            h = h * 31 + (static_cast<uint64_t>(ch->isMuted())
+                          | (static_cast<uint64_t>(ch->isSoloed()) << 1)
+                          | (static_cast<uint64_t>(ch->isArmed()) << 2)
+                          | (static_cast<uint64_t>(ch->isMonitoringEnabled()) << 3));
+            h = h * 31 + static_cast<uint64_t>(std::lround(ch->getVolume() * 1000.0f) & 0xFFFFF);
+            h = h * 31 + static_cast<uint64_t>(std::lround((ch->getPan() + 1.0f) * 1000.0f) & 0xFFFFF);
+            for (unsigned char c : ch->getName()) h = h * 31 + c;
+            fp ^= h + 0x9e3779b97f4a7c15ull + (fp << 6) + (fp >> 2);
+        }
 
-                // Force refresh the rack display if we have one bound
-                if (m_pluginController) {
-                    auto mixerUI = m_mixerPanel->getMixerUI();
-                    if (mixerUI) {
-                        auto inspector = mixerUI->getInspector();
-                        if (inspector && inspector->getEffectRack()) {
-                            m_pluginController->refreshRackDisplay(inspector->getEffectRack().get());
-                        }
+        if (fp != m_lastMixerFingerprint) {
+            m_lastMixerFingerprint = fp;
+            m_mixerPanel->refreshChannels(); // calls syncFromEngine internally
+
+            // Force refresh the rack display if we have one bound
+            if (m_pluginController) {
+                auto mixerUI = m_mixerPanel->getMixerUI();
+                if (mixerUI) {
+                    auto inspector = mixerUI->getInspector();
+                    if (inspector && inspector->getEffectRack()) {
+                        m_pluginController->refreshRackDisplay(inspector->getEffectRack().get());
                     }
                 }
             }
@@ -1156,10 +1177,11 @@ void AestraContent::onUpdate(double dt) {
         }
     }
 
-    // Update Mixer Meters (Real-time)
-    if (tm) {
+    // Update Mixer Meters (Real-time) — only while the mixer is visible; meters
+    // aren't shown otherwise, so smoothing them off-screen is wasted work.
+    if (tm && m_mixerPanel && m_mixerPanel->isVisible()) {
         auto snapshots = tm->getMeterSnapshots();
-        if (snapshots && m_mixerPanel) {
+        if (snapshots) {
             auto viewModel = m_mixerPanel->getViewModel();
             if (viewModel) {
                 viewModel->updateMeters(*snapshots, dt);
