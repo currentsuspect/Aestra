@@ -10,7 +10,10 @@ namespace Aestra {
 namespace Audio {
 
 MixerChannel::MixerChannel(const std::string& name, uint32_t channelId)
-    : m_name(name), m_uuid(AestraUUID::generate()), m_channelId(channelId), m_color(0xFF4080FF)
+    // 0 = color unset: the UI derives a palette color per track instead. A
+    // concrete default here would win nearestPaletteIndex() for every channel
+    // and pin all tracks to the same palette entry.
+    : m_name(name), m_uuid(AestraUUID::generate()), m_channelId(channelId), m_color(0)
 
 {
     // m_uuid.low = m_channelId; // REMOVED: Do not overwrite generated UUID with 0!
