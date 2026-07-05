@@ -359,9 +359,9 @@ FileBrowser::FileBrowser()
     searchInput_->setPadding(12.0f);
     searchInput_->setBorderRadius(0.0f);
     searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
-    searchInput_->setBorderColor(themeManager.getColor("textSecondary").withAlpha(0.35f));
+    searchInput_->setBorderColor(themeManager.getColor("border"));
     searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
-    searchInput_->setBorderWidth(2.0f);
+    searchInput_->setBorderWidth(1.0f);
 
     // Initialize icons with improved visibility for Liminal Dark v2.0
     // Use inline SVG content for reliable icon loading
@@ -748,7 +748,8 @@ void FileBrowser::processScanResults() {
 FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     NUIRect bounds = getBounds();
     const float effectiveW = effectiveWidth_ > 0.0f ? effectiveWidth_ : bounds.width;
-    // Search bar fills the top gap (no BROWSER_TOP_PAD), inset 2px on sides
+    // Search bar sits flush with the browser panel: full width, no insets,
+    // 1px reserved at the bottom for the divider line.
     const float searchH = BROWSER_SEARCH_ROW_H;
     const float headerH = searchH;
     const float contentY = bounds.y + headerH;
@@ -758,8 +759,7 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     const float listW = std::max(0.0f, effectiveW - navW);
 
     BrowserLayout layout;
-    layout.search = NUIRect(bounds.x + 2.0f, bounds.y + 2.0f,
-                            std::max(0.0f, effectiveW - 4.0f), searchH - 4.0f);
+    layout.search = NUIRect(bounds.x, bounds.y, std::max(0.0f, effectiveW), searchH - 1.0f);
     layout.navPane = NUIRect(bounds.x, contentY, navW, contentH);
     layout.listHeader = NUIRect(listX, contentY, listW, BROWSER_LIST_HEADER_H);
     layout.list = NUIRect(listX, contentY + BROWSER_LIST_HEADER_H,
@@ -1070,6 +1070,18 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     const BrowserLayout browserLayout = computeBrowserLayout();
     scrollbarTrackHeight_ = browserLayout.list.height;
 
+    // Keep the search input glued to the panel. onResize only fires on size
+    // changes, so a pure move (splitter drag, panel slide) would otherwise
+    // leave the input at its old absolute position while the panel renders
+    // at the new one. Diff before setting to avoid dirtying every frame.
+    if (searchInput_) {
+        const NUIRect cur = searchInput_->getBounds();
+        const NUIRect& tgt = browserLayout.search;
+        if (cur.x != tgt.x || cur.y != tgt.y || cur.width != tgt.width || cur.height != tgt.height) {
+            searchInput_->setBounds(tgt);
+        }
+    }
+
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, bounds.height);
 
     renderer.fillRect(fileBrowserBounds, themeManager.getColor("backgroundPrimary"));
@@ -1314,12 +1326,12 @@ void FileBrowser::onResize(int width, int height) {
 
         searchInput_->setTextColor(textColor_);
         searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
-        searchInput_->setBorderColor(themeManager.getColor("textSecondary").withAlpha(0.35f));
+        searchInput_->setBorderColor(themeManager.getColor("border"));
         searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
         searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
         searchInput_->setPadding(12.0f);
         searchInput_->setBorderRadius(0.0f);
-        searchInput_->setBorderWidth(2.0f);
+        searchInput_->setBorderWidth(1.0f);
     }
 
     itemHeight_ = BROWSER_LIST_ROW_H;
@@ -2677,19 +2689,10 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
                           selected ? themeManager.getColor("textPrimary")
                                    : item->isDirectory ? folderText : text);
 
-        // BPM column (right side, audio files only)
-        if (!item->isDirectory && item->detectedBpm > 0 &&
-            (activeQuickFilter_ == QuickFilter::Audio || activeQuickFilter_ == QuickFilter::All)) {
-            const float bpmW = 38.0f;
-            const float bpmX = itemRect.right() - bpmW - 12.0f;
-            std::string bpmStr = std::to_string(item->detectedBpm);
-            auto bpmSize = renderer.measureText(bpmStr, 10.0f);
-            renderer.drawText(bpmStr, {bpmX + (bpmW - bpmSize.width) * 0.5f,
-                                       std::round(renderer.calculateTextY(itemRect, 10.0f))},
-                              10.0f, muted);
-        }
+        // BPM stays in metadata (search/drag) but is not shown as a row
+        // column — owner direction: no number on the right of audio rows.
 
-        // Tag dots (between name and BPM)
+        // Tag dots (after name)
         if (!item->isDirectory) {
             const std::string key = mapKeyForPath(item->path);
             auto tagIt = tagsByPath_.find(key);
