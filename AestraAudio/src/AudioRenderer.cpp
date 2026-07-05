@@ -4,6 +4,7 @@
 #include "../../AestraCore/include/AestraMath.h"
 #include "ArsenalProcessingContext.h"
 #include "AudioEngine.h"
+#include "DSP/PanLaw.h"
 #include "EffectChain.h"
 #include "Interpolators.h"
 #include "PatternPlaybackEngine.h"
@@ -61,9 +62,7 @@ inline double clampD(double v, double lo, double hi) {
 }
 
 inline void fastPanGainsD(double pan, double vol, double& gainL, double& gainR) {
-    float p = (static_cast<float>(pan) + 1.0f) * 0.5f;
-    gainL = static_cast<double>(std::cos(p * 1.57079632679f)) * vol;
-    gainR = static_cast<double>(std::sin(p * 1.57079632679f)) * vol;
+    PanLaw::equalPower(pan, vol, gainL, gainR);
 }
 } // namespace
 

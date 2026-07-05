@@ -5,6 +5,7 @@
 #include "AestraLog.h"
 #include "ClipResampler.h" // Sinc64Turbo resampling
 #include "ClipSource.h"
+#include "DSP/PanLaw.h"
 #include "MetadataParser.h"
 #include "MiniAudioDecoder.h"
 
@@ -508,11 +509,13 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
         }
     }
 
-    // Apply Master Volume
-    float vol = m_volume.load(std::memory_order_relaxed);
-    if (vol < 1.0f) {
+    // Match the main engine's centered-track reference gain. Audition is a
+    // separate listening surface, but bypass should not be louder than placing
+    // the same file on a default centered track.
+    const float outputGain = m_volume.load(std::memory_order_relaxed) * PanLaw::kEqualPowerCenterGain;
+    if (outputGain != 1.0f) {
         for (uint32_t i = 0; i < numFrames * numChannels; ++i) {
-            output[i] *= vol;
+            output[i] *= outputGain;
         }
     }
 

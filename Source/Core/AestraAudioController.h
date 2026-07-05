@@ -63,4 +63,6 @@ private:
     // Weak UI reference plus atomically published ownership for callback routing.
     std::weak_ptr<AestraContent> m_content;
     Aestra::AtomicSharedPtr<AestraContent> m_rtContent;
+    std::atomic<Aestra::Audio::TrackManager*> m_rtTrackManager{nullptr};
+    std::atomic<Aestra::Audio::PreviewEngine*> m_rtPreviewEngine{nullptr};
 };

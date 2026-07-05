@@ -7,6 +7,7 @@
 #include "../Core/ChannelSlotMap.h"
 #include "../Core/MixerChannel.h"
 #include "../DSP/ContinuousParamBuffer.h"
+#include "../DSP/PanLaw.h"
 #include "../Playback/PatternPlaybackEngine.h"
 #include "../Playback/TimelineClock.h"
 #include "../RealtimeThreadGuard.h"
@@ -105,9 +106,9 @@ public:
             return nullptr;
         }
         // IDs start at 1 to avoid collision with Master (ID 0).
-        auto channel =
-            std::make_unique<MixerChannel>(name.empty() ? "Track " + std::to_string(m_channels.size() + 1) : name,
-                                           static_cast<uint32_t>(m_channels.size() + 1));
+        const uint32_t channelId = m_nextChannelId++;
+        auto channel = std::make_unique<MixerChannel>(
+            name.empty() ? "Track " + std::to_string(m_channels.size() + 1) : name, channelId);
         channel->setCommandSink(m_commandSink);
         channel->setInputMonitoringStateChangedCallback([this]() { publishInputMonitoringSnapshot(); });
         if (m_channelPrepareCallback) {
@@ -597,7 +598,7 @@ public:
             return;
         }
 
-        const float monitorMixScale = 0.85f / static_cast<float>(monitoredCount);
+        const float monitorMixScale = PanLaw::kEqualPowerCenterGain / static_cast<float>(monitoredCount);
         for (uint32_t frame = 0; frame < frames; ++frame) {
             const size_t inputBaseIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount);
             float monitoredSample = 0.0f;
@@ -893,6 +894,7 @@ public:
      */
     void clearAllChannels() {
         m_channels.clear();
+        m_nextChannelId = 1;
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         if (m_channelSlotMap) {
             m_channelSlotMap->clear();
@@ -1452,6 +1454,7 @@ private:
     }
 
     std::vector<std::unique_ptr<MixerChannel>> m_channels;
+    uint32_t m_nextChannelId{1};
     PlaylistModel m_playlistModel;
     PatternManager m_patternManager;
     SourceManager m_sourceManager;

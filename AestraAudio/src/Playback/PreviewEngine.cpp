@@ -2,6 +2,7 @@
 #include "PreviewEngine.h"
 
 #include "AestraLog.h"
+#include "DSP/PanLaw.h"
 #include "FastMath.h"
 #include "MiniAudioDecoder.h"
 #include "PathUtils.h"
@@ -23,11 +24,6 @@
 namespace Aestra {
 namespace Audio {
 
-// Preview gain normalize: ensures preview output has built-in headroom
-// relative to 0dBFS, matching the audio engine's effective unity gain path
-// (which includes ~-3dB pan law, fader, and trim stages).
-// This prevents the preview from sounding hotter than track playback.
-static constexpr float kPreviewGainNormalizeDb = -1.0f;
 static constexpr double kPreviewDecodeDefaultSeconds = 30.0;
 static constexpr double kPreviewDecodeHardMaxSeconds = 60.0;
 
@@ -100,8 +96,7 @@ PreviewResult PreviewEngine::startVoiceWithBuffer(std::shared_ptr<AudioBuffer> b
     voice->durationSeconds =
         (sampleRate > 0 && buffer->numFrames > 0) ? (static_cast<double>(buffer->numFrames) / sampleRate) : 0.0;
     voice->maxPlaySeconds = maxSeconds;
-    const float totalGain =
-        dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed)) * dbToLinear(kPreviewGainNormalizeDb);
+    const float totalGain = dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed));
     voice->gain = totalGain;
     voice->phaseFrames = 0.0;
     voice->elapsedSeconds = 0.0;
@@ -201,8 +196,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
     // Create voice immediately for pending playback
     auto voice = std::make_shared<PreviewVoice>();
     voice->path = path;
-    voice->gain =
-        dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed)) * dbToLinear(kPreviewGainNormalizeDb);
+    voice->gain = dbToLinear(gainDb + m_globalGainDb.load(std::memory_order_relaxed));
     voice->maxPlaySeconds = maxSeconds;
     voice->phaseFrames = 0.0;
     voice->elapsedSeconds = 0.0;
@@ -291,11 +285,7 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
     const float gain = voice->gain;
     const uint32_t srcChannels = voice->channels;
 
-    // Mono sources duplicate to stereo with no pan-law attenuation,
-    // making them ~+3 dB hotter than the audio engine's centered track path.
-    // Apply center-pan constant-power attenuation (~-3 dB per channel) to match.
-    constexpr float kCenterPanLawGain = 0.7071067811865475f; // sqrt(2)/2
-    const float effectiveGain = gain * ((srcChannels == 1) ? kCenterPanLawGain : 1.0f);
+    const float effectiveGain = gain * PanLaw::kEqualPowerCenterGain;
 
     uint32_t i = 0;
 

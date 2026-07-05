@@ -141,6 +141,10 @@ struct AudioTelemetry {
      * Called from audio thread startup to record priority configuration status.
      */
     void setThreadPriorityBit(uint32_t bit) noexcept { threadPriorityStatus.fetch_or(bit, std::memory_order_relaxed); }
+    /// Clear all priority bits — call from the stream starter before a
+    /// (re)start so the audio thread's first-callback verification publishes
+    /// the NEW stream's truth instead of a latched stale success.
+    void clearThreadPriorityStatus() noexcept { threadPriorityStatus.store(0, std::memory_order_relaxed); }
 
     /**
      * @brief B-010: Get thread priority status
