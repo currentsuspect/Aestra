@@ -1699,40 +1699,69 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     // (the old "frost" was the double-linearization amplifying it).
     const float pixelsPerBar = m_pixelsPerBeat * m_beatsPerBar;
 
-    // Ruler-synced bar stride, shared by the zebra and the grid lines below.
-    // Mirror TrackManagerUI::renderTimeRuler exactly so both always align
-    // with labeled bars (e.g., 1/9/17/25 at lower zoom).
+    // ==== FRACTAL GRID (owner direction: self-similar at every zoom) ====
+    // Every level of the hierarchy — half-beats, beats, bars, bars×2^k —
+    // fades purely as a function of its own pixel spacing. Zooming out
+    // dissolves the finest visible level while the next-coarser level takes
+    // its place, so the grid never pops and never collapses into a barcode;
+    // the same pattern just re-emerges one scale up, indefinitely.
+    constexpr float kLevelHidePx = 14.0f; // spacing below this: level invisible
+    constexpr float kLevelFullPx = 28.0f; // spacing at/above this: fully faded in
+    const auto levelFade = [](float spacingPx) {
+        return std::clamp((spacingPx - kLevelHidePx) / (kLevelFullPx - kLevelHidePx), 0.0f, 1.0f);
+    };
+    // One brightness law for every line: a newly-visible level starts at the
+    // sub-line strength and grows toward major strength as it widens.
+    const auto lineAlpha = [&](float spacingPx) {
+        const float strength =
+            0.028f + (0.105f - 0.028f) * std::clamp((spacingPx - kLevelFullPx) / (kLevelFullPx * 3.0f), 0.0f, 1.0f);
+        return strength * levelFade(spacingPx);
+    };
+
     const int beatsPerBar = std::max(1, m_beatsPerBar);
+    // Coarsest power-of-two bar stride with blocks >= kLevelFullPx, mirroring
+    // TrackManagerUI::renderTimeRuler so levels align with labeled bars.
     int barStride = 1;
-    const float minLabelSpacingPx = 28.0f; // matches TrackManagerUI::renderTimeRuler
-    while ((pixelsPerBar * static_cast<float>(barStride)) < minLabelSpacingPx && barStride < 128) {
+    while ((pixelsPerBar * static_cast<float>(barStride)) < kLevelFullPx && barStride < 128) {
         barStride *= 2;
     }
 
-    // Zebra alternates in stride-sized blocks, not single bars, so the
-    // light/dark rhythm holds a constant ~28-56px width at any zoom instead
-    // of collapsing into a dense barcode when bars get narrow.
+    // Zebra: crossfade two adjacent block levels so the coarse alternation
+    // continuously becomes the fine alternation while zooming (and vice
+    // versa) — the big strips turn into the small strips, never snapping.
     {
-        const float pixelsPerBlock = pixelsPerBar * static_cast<float>(barStride);
-        const int startBlock = static_cast<int>(m_timelineScrollOffset / pixelsPerBlock);
-        const int endBlock = static_cast<int>((m_timelineScrollOffset + gridWidth) / pixelsPerBlock) + 1;
-        for (int block = startBlock; block <= endBlock; ++block) {
-            if (block % 2 == 0)
-                continue;
-            float rectX = gridStartX + (block * pixelsPerBlock) - m_timelineScrollOffset;
-            float rectW = pixelsPerBlock;
-            if (rectX < gridStartX) {
-                rectW -= (gridStartX - rectX);
-                rectX = gridStartX;
+        constexpr float kZebraAlpha = 0.030f;
+        const auto drawZebraLevel = [&](int strideBars, float alpha) {
+            if (alpha <= 0.001f) {
+                return;
             }
-            if (rectX + rectW > gridEndX) {
-                rectW = gridEndX - rectX;
+            const float blockW = pixelsPerBar * static_cast<float>(strideBars);
+            const int startBlock = static_cast<int>(m_timelineScrollOffset / blockW);
+            const int endBlock = static_cast<int>((m_timelineScrollOffset + gridWidth) / blockW) + 1;
+            for (int block = startBlock; block <= endBlock; ++block) {
+                if (block % 2 == 0)
+                    continue;
+                float rectX = gridStartX + (block * blockW) - m_timelineScrollOffset;
+                float rectW = blockW;
+                if (rectX < gridStartX) {
+                    rectW -= (gridStartX - rectX);
+                    rectX = gridStartX;
+                }
+                if (rectX + rectW > gridEndX) {
+                    rectW = gridEndX - rectX;
+                }
+                if (rectW > 0.0f) {
+                    renderer.fillRect(AestraUI::NUIRect(rectX, bounds.y, rectW, bounds.height),
+                                      AestraUI::NUIColor(1.0f, 1.0f, 1.0f, alpha));
+                }
             }
-            if (rectW > 0.0f) {
-                renderer.fillRect(AestraUI::NUIRect(rectX, bounds.y, rectW, bounds.height),
-                                  AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.030f));
-            }
-        }
+        };
+        // fineT: 1 when the fine level is comfortably wide (56px blocks),
+        // 0 just as it would shrink past kLevelFullPx and hand off upward.
+        const float pixelsPerBlock = pixelsPerBar * static_cast<float>(barStride); // in [28, 56)
+        const float fineT = std::clamp((pixelsPerBlock - kLevelFullPx) / kLevelFullPx, 0.0f, 1.0f);
+        drawZebraLevel(barStride, kZebraAlpha * fineT);
+        drawZebraLevel(barStride * 2, kZebraAlpha * (1.0f - fineT));
     }
 
     const double startBeat = m_timelineScrollOffset / m_pixelsPerBeat;
@@ -1740,51 +1769,54 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     const int firstVisibleBar = static_cast<int>(std::floor(startBeat / static_cast<double>(beatsPerBar))) - 1;
     const int lastVisibleBar = static_cast<int>(std::ceil(endBeat / static_cast<double>(beatsPerBar))) + 1;
 
-    // Inverted grid (owner direction): near-black lanes with grey lines, so the
-    // grid reads as light structure on dark instead of dark cuts on grey.
-    const AestraUI::NUIColor barLineColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.105f);
-    const AestraUI::NUIColor beatLineColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.055f);
-    const AestraUI::NUIColor subBeatLineColor = AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.028f);
-    const bool drawBeatSubdivisions = (m_pixelsPerBeat >= 10.0f);
-    const bool drawFurtherSubdivisions = (m_pixelsPerBeat >= 54.0f);
+    // Inverted grid (owner direction): near-black lanes with grey lines, so
+    // the grid reads as light structure on dark. Line brightness comes from
+    // lineAlpha() so every level obeys the same fractal fade law: a bar line
+    // whose own level (largest power of two dividing its index) is too dense
+    // simply fades out instead of stacking into a barcode.
+    const auto drawGridLine = [&](float x, float alpha) {
+        renderer.drawLine(AestraUI::NUIPoint(x, bounds.y), AestraUI::NUIPoint(x, bounds.y + bounds.height), 1.0f,
+                          AestraUI::NUIColor(1.0f, 1.0f, 1.0f, alpha));
+    };
+    const float beatLineAlpha = lineAlpha(m_pixelsPerBeat);
+    const float halfBeatLineAlpha = lineAlpha(m_pixelsPerBeat * 0.5f);
 
     for (int bar = firstVisibleBar; bar <= lastVisibleBar; ++bar) {
         const float barX = gridStartX + (bar * pixelsPerBar) - m_timelineScrollOffset;
         if (barX >= gridStartX && barX <= gridEndX) {
-            const bool isPrimary = (barStride > 0) && (bar % barStride == 0);
-            renderer.drawLine(
-                AestraUI::NUIPoint(barX, bounds.y),
-                AestraUI::NUIPoint(barX, bounds.y + bounds.height),
-                isPrimary ? 1.05f : 1.0f,
-                isPrimary ? barLineColor : subBeatLineColor
-            );
-        }
-
-        // Unified subdivision visibility: beats at >=10 px, finer halves at >=30 px.
-        if (drawBeatSubdivisions) {
-            for (int beat = 1; beat < beatsPerBar; ++beat) {
-                const float beatX = barX + (beat * m_pixelsPerBeat);
-                if (beatX < gridStartX || beatX > gridEndX) continue;
-                renderer.drawLine(
-                    AestraUI::NUIPoint(beatX, bounds.y),
-                    AestraUI::NUIPoint(beatX, bounds.y + bounds.height),
-                    1.0f,
-                    beatLineColor
-                );
+            // Level = largest power of two dividing the bar index (bar 0 is
+            // effectively the coarsest — the timeline origin never fades).
+            int level = 20;
+            if (bar != 0) {
+                level = 0;
+                int b = std::abs(bar);
+                while ((b & 1) == 0 && level < 20) {
+                    b >>= 1;
+                    ++level;
+                }
+            }
+            const float levelSpacing = pixelsPerBar * static_cast<float>(1u << level);
+            const float alpha = lineAlpha(levelSpacing);
+            if (alpha > 0.001f) {
+                drawGridLine(barX, alpha);
             }
         }
 
-        if (drawFurtherSubdivisions) {
+        // Beats and half-beats are just the next levels down the same law.
+        if (beatLineAlpha > 0.001f) {
+            for (int beat = 1; beat < beatsPerBar; ++beat) {
+                const float beatX = barX + (beat * m_pixelsPerBeat);
+                if (beatX < gridStartX || beatX > gridEndX) continue;
+                drawGridLine(beatX, beatLineAlpha);
+            }
+        }
+
+        if (halfBeatLineAlpha > 0.001f) {
             const float halfBeatOffset = m_pixelsPerBeat * 0.5f;
             for (int beat = 0; beat < beatsPerBar; ++beat) {
                 const float subBeatX = barX + (beat * m_pixelsPerBeat) + halfBeatOffset;
                 if (subBeatX < gridStartX || subBeatX > gridEndX) continue;
-                renderer.drawLine(
-                    AestraUI::NUIPoint(subBeatX, bounds.y),
-                    AestraUI::NUIPoint(subBeatX, bounds.y + bounds.height),
-                    1.0f,
-                    subBeatLineColor
-                );
+                drawGridLine(subBeatX, halfBeatLineAlpha);
             }
         }
     }
