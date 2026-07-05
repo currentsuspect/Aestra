@@ -131,12 +131,13 @@ void BPMDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     // Small "BPM" label above the value
     renderer.drawTextCentered("BPM", {bounds.x, bounds.y, bounds.width, 10.0f},
-                                9.0f, themeManager.getColor("textSecondary").withAlpha(0.58f));
+                                themeManager.getFontSize("micro"),
+                                themeManager.getColor("textSecondary").withAlpha(0.58f));
     std::stringstream ss;
     ss << std::fixed << std::setprecision(2) << m_displayBPM;
     AestraUI::NUIColor bpmColor = m_isHovered ? themeManager.getColor("accentPrimary") : themeManager.getColor("textPrimary");
     renderer.drawTextCentered(ss.str(), {bounds.x, bounds.y + 9.0f, bounds.width, 19.0f},
-                              13.0f, bpmColor.withAlpha(0.95f));
+                              themeManager.getFontSize("l"), bpmColor.withAlpha(0.95f));
 }
 
 bool BPMDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
@@ -244,11 +245,11 @@ void TimerDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect bounds = getBounds();
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     // Inset readout well — barely visible glassy background
-    renderer.fillRoundedRect(bounds, 4.0f, themeManager.getColor("surfaceRaised").withAlpha(0.10f));
-    renderer.strokeRoundedRect(bounds, 4.0f, 1.0f, themeManager.getColor("border").withAlpha(0.18f));
+    renderer.fillRoundedRect(bounds, themeManager.getRadius("s"), themeManager.getColor("surfaceRaised").withAlpha(0.10f));
+    renderer.strokeRoundedRect(bounds, themeManager.getRadius("s"), 1.0f, themeManager.getColor("border").withAlpha(0.18f));
     std::string timeText = formatTime(m_currentTime);
     renderer.drawTextCentered(timeText, {bounds.x, bounds.y + 4.0f, bounds.width, 20.0f},
-                              15.0f, themeManager.getColor("textPrimary").withAlpha(0.95f));
+                              themeManager.getFontSize("xl"), themeManager.getColor("textPrimary").withAlpha(0.95f));
 }
 
 bool TimerDisplay::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
@@ -305,7 +306,7 @@ void TimeSignatureDisplay::onRender(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIColor textColor = m_isHovered ? themeManager.getColor("accentPrimary") : themeManager.getColor("textPrimary");
     std::string text = getDisplayText();
     renderer.drawTextCentered(text, {bounds.x, bounds.y + 6.0f, bounds.width, 18.0f},
-                              15.0f, textColor.withAlpha(0.95f));
+                              themeManager.getFontSize("xl"), textColor.withAlpha(0.95f));
 }
 
 

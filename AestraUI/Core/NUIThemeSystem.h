@@ -132,20 +132,27 @@ struct NUIThemeProperties {
     float spacingXL = 32.0f;
     float spacingXXL = 48.0f;
     
-    // Border radius
-    float radiusXS = 2.0f;
-    float radiusS = 4.0f;
-    float radiusM = 8.0f;
-    float radiusL = 12.0f;
-    float radiusXL = 16.0f;
-    float radiusXXL = 24.0f;
-    
-    // Typography - crisp UI text sizes (bumped +2px)
-    float fontSizeXS = 12.0f;
-    float fontSizeS = 13.0f;
-    float fontSizeM = 14.0f;
-    float fontSizeL = 16.0f;
-    float fontSizeXL = 18.0f;
+    // Border radius — "dense instrument" scale, recentered onto the 5-7px
+    // mass the UI actually uses (see AestraDocs/ui-type-space-grammar.md).
+    float radiusXS = 3.0f;
+    float radiusS = 5.0f;
+    float radiusM = 7.0f;
+    float radiusL = 10.0f;
+    float radiusXL = 14.0f;
+    float radiusXXL = 20.0f;
+
+    // Typography — "dense instrument" scale. A DAW lives at 9-14px, not the
+    // generic 12-18; steps are perceptually distinct (no 1px neighbours) and
+    // absorb the historical fractional drift. See the grammar doc.
+    float fontSizeMicro = 9.0f;   // meter ticks, tiny inline values
+    float fontSizeXS = 10.0f;     // dense/secondary labels — the workhorse
+    float fontSizeS = 11.0f;      // control labels, rows
+    float fontSizeM = 12.0f;      // primary body, list rows
+    float fontSizeL = 14.0f;      // section titles
+    float fontSizeXL = 16.0f;     // panel headers
+    float fontSizeDisplayS = 24.0f; // secondary numeric readouts
+    float fontSizeDisplayL = 32.0f; // primary numeric readouts (BPM/time)
+    // Legacy display tokens retained until their surfaces migrate.
     float fontSizeXXL = 22.0f;
     float fontSizeH1 = 26.0f;
     float fontSizeH2 = 22.0f;
