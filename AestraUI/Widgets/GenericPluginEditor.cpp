@@ -119,8 +119,8 @@ void GenericPluginEditor::drawParameter(NUIRenderer& renderer, const ParameterWi
                     LABEL_WIDTH + SLIDER_WIDTH + VALUE_WIDTH + PADDING * 3.0f + 12.0f,
                     PARAMETER_HEIGHT - 2.0f);
     renderer.fillRoundedRect(rowRect, 9.0f,
-        hovered || p.isDragging ? NUIColor(0.16f, 0.18f, 0.25f, 0.92f)
-                                : NUIColor(0.10f, 0.11f, 0.15f, 0.74f));
+        hovered || p.isDragging ? NUIColor(0.181f, 0.181f, 0.181f, 0.92f)
+                                : NUIColor(0.111f, 0.111f, 0.111f, 0.74f));
     renderer.strokeRoundedRect(rowRect, 9.0f, 1.0f,
         hovered || p.isDragging ? theme.getColor("accentPrimary").withAlpha(0.30f)
                                 : NUIColor(1.0f, 1.0f, 1.0f, 0.05f));
@@ -135,7 +135,7 @@ void GenericPluginEditor::drawParameter(NUIRenderer& renderer, const ParameterWi
     NUIRect track(offsetX + p.sliderBounds.x, trackY, 
                   p.sliderBounds.width, trackH);
 
-    renderer.fillRoundedRect(track, 3.0f, NUIColor(0.03f, 0.04f, 0.06f, 0.78f));
+    renderer.fillRoundedRect(track, 3.0f, NUIColor(0.039f, 0.039f, 0.039f, 0.78f));
 
     float fillWidth = track.width * p.normalizedValue;
     if (fillWidth > 0) {
