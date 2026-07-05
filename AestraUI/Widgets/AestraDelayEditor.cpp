@@ -20,7 +20,7 @@ NUIColor cyanAccent() {
     return NUIColor(0.0f, 0.90f, 0.80f, 1.0f);
 }
 NUIColor cardBg() {
-    return NUIColor(0.085f, 0.080f, 0.115f, 0.95f);
+    return NUIColor(0.084f, 0.084f, 0.084f, 0.95f);
 }
 NUIRect offsetRect(const NUIRect& r, float dx, float dy) {
     return NUIRect(r.x + dx, r.y + dy, r.width, r.height);
@@ -216,7 +216,7 @@ void AestraDelayEditor::drawPillSwitches(NUIRenderer& renderer, float wx, float 
         NUIRect left = offsetRect(leftLocal, wx, wy);
         NUIRect right = offsetRect(rightLocal, wx, wy);
         const NUIRect outer(left.x, left.y, left.width + right.width, left.height);
-        renderer.fillRoundedRect(outer, 10.0f, NUIColor(0.032f, 0.030f, 0.044f, 0.96f));
+        renderer.fillRoundedRect(outer, 10.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.96f));
         renderer.strokeRoundedRect(outer, 10.0f, 1.0f, accent().withAlpha(0.45f));
         auto seg = [&](const NUIRect& rect, const char* label, bool active) {
             renderer.fillRoundedRect(rect, 9.0f, active ? activeColor : NUIColor(0, 0, 0, 0));
@@ -251,7 +251,7 @@ void AestraDelayEditor::drawSyncPanel(NUIRenderer& renderer, float wx, float wy)
             renderer.fillRoundedRect(r, 6.0f, accent());
             renderer.drawTextCentered(btn.label, r, 9.5f, theme.getColor("textPrimary"));
         } else {
-            NUIColor fill = hovered ? NUIColor(0.10f, 0.095f, 0.14f, 0.92f) : NUIColor(0.07f, 0.065f, 0.09f, 0.90f);
+            NUIColor fill = hovered ? NUIColor(0.099f, 0.099f, 0.099f, 0.92f) : NUIColor(0.068f, 0.068f, 0.068f, 0.90f);
             renderer.fillRoundedRect(r, 6.0f, fill);
             renderer.strokeRoundedRect(r, 6.0f, 1.0f, accent().withAlpha(0.32f));
             renderer.drawTextCentered(btn.label, r, 9.5f, theme.getColor("textSecondary").withAlpha(0.88f));
@@ -310,7 +310,7 @@ void AestraDelayEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, fl
     const float cy = knobRect.center().y;
     const float r = kKnobSize * 0.40f;
     renderer.fillCircle({cx, cy}, r + 7.0f, knobAccent.withAlpha(0.07f));
-    renderer.fillCircle({cx, cy}, r, NUIColor(0.045f, 0.043f, 0.060f, 0.96f));
+    renderer.fillCircle({cx, cy}, r, NUIColor(0.045f, 0.045f, 0.045f, 0.96f));
     renderer.strokeCircle({cx, cy}, r, 1.0f, knobAccent.withAlpha(0.32f));
 
     const float sa = kPi * 0.75f;
@@ -337,7 +337,7 @@ void AestraDelayEditor::drawMixSlider(NUIRenderer& renderer, float wx, float wy)
     const float mix = m_instance ? m_instance->getParameter(Delay::kMix) : 0.0f;
     NUIRect mixRect = offsetRect(m_mixSliderRect, wx, wy);
     const NUIRect track(mixRect.x + 38.0f, mixRect.y + 12.0f, mixRect.width - 78.0f, 8.0f);
-    renderer.fillRoundedRect(mixRect, 10.0f, NUIColor(0.07f, 0.065f, 0.09f, 0.92f));
+    renderer.fillRoundedRect(mixRect, 10.0f, NUIColor(0.068f, 0.068f, 0.068f, 0.92f));
     renderer.strokeRoundedRect(mixRect, 10.0f, 1.0f, accent().withAlpha(0.35f));
     renderer.drawText("Mix", {mixRect.x + 14.0f, mixRect.y + 10.0f}, 10.5f,
                       theme.getColor("textPrimary").withAlpha(0.95f));

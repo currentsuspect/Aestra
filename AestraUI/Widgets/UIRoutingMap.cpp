@@ -663,7 +663,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     renderer.fillRoundedRect(shadow, kCornerRadius, NUIColor(0.0f, 0.0f, 0.0f, 0.55f));
 
     // Solid dark card so the workspace doesn't bleed through.
-    renderer.fillRoundedRect(bounds, kCornerRadius, NUIColor(0.045f, 0.045f, 0.060f, 1.0f));
+    renderer.fillRoundedRect(bounds, kCornerRadius, NUIColor(0.046f, 0.046f, 0.046f, 1.0f));
 
     // Subtle accent wash near the top for depth.
     NUIColor gradTop = m_accent.withAlpha(0.035f);
@@ -760,7 +760,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
             float itemH = 22.0f;
             float dropH = static_cast<float>(m_searchMatches.size()) * itemH + 4.0f;
             NUIRect dropRect{searchX, dropY, searchW, dropH};
-            renderer.fillRoundedRect(dropRect, 5.0f, NUIColor(0.09f, 0.08f, 0.12f, 0.98f));
+            renderer.fillRoundedRect(dropRect, 5.0f, NUIColor(0.085f, 0.085f, 0.085f, 0.98f));
             renderer.strokeRoundedRect(dropRect, 5.0f, 1.0f, m_border.withAlpha(0.35f));
             for (size_t i = 0; i < m_searchMatches.size() && i < 5; ++i) {
                 int nodeIdx = m_searchMatches[i];
@@ -1083,10 +1083,10 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
                                   : NUIColor(0.25f, 0.18f, 0.36f, 1.0f);
         } else {
             // Track nodes: elevated dark fill
-            bgBot = node.hovered ? NUIColor(0.135f, 0.135f, 0.165f, 1.0f)
-                                  : NUIColor(0.095f, 0.095f, 0.125f, 1.0f);
-            bgTop = node.hovered ? NUIColor(0.175f, 0.165f, 0.205f, 1.0f)
-                                  : NUIColor(0.125f, 0.120f, 0.155f, 1.0f);
+            bgBot = node.hovered ? NUIColor(0.137f, 0.137f, 0.137f, 1.0f)
+                                  : NUIColor(0.097f, 0.097f, 0.097f, 1.0f);
+            bgTop = node.hovered ? NUIColor(0.17f, 0.17f, 0.17f, 1.0f)
+                                  : NUIColor(0.124f, 0.124f, 0.124f, 1.0f);
         }
         renderer.fillRoundedRect(nodeRect, radius, bgBot);
         renderer.fillRectGradient({nx, ny, nw, nh * 0.6f}, bgTop, bgBot, true);
@@ -2270,7 +2270,7 @@ void UIRoutingMap::drawSendLevelLabel(NUIRenderer& renderer, const NUIPoint& a, 
     float textW = renderer.measureText(buf, fontSize).width;
     float textH = fontSize + 2.0f;
     NUIRect bg{mx - textW * 0.5f - 3.0f, my - textH * 0.5f, textW + 6.0f, textH};
-    renderer.fillRoundedRect(bg, 3.0f, NUIColor(0.07f, 0.06f, 0.10f, 0.85f));
+    renderer.fillRoundedRect(bg, 3.0f, NUIColor(0.065f, 0.065f, 0.065f, 0.85f));
     renderer.strokeRoundedRect(bg, 3.0f, 0.5f, m_borderSecondary.withAlpha(0.4f));
     renderer.drawTextCentered(buf, bg, fontSize, m_textSecondary.withAlpha(0.85f));
 }
@@ -2366,7 +2366,7 @@ void UIRoutingMap::renderMiniOverview(NUIRenderer& renderer) {
     float offsetY = insetY + insetH * 0.5f - (m_worldMinY + worldH * 0.5f) * scale;
 
     // Background
-    renderer.fillRoundedRect({insetX, insetY, insetW, insetH}, 6.0f, NUIColor(0.06f, 0.05f, 0.09f, 0.92f));
+    renderer.fillRoundedRect({insetX, insetY, insetW, insetH}, 6.0f, NUIColor(0.055f, 0.055f, 0.055f, 0.92f));
     renderer.strokeRoundedRect({insetX, insetY, insetW, insetH}, 6.0f, 1.0f, m_border.withAlpha(0.35f));
 
     // Draw all edges as thin faint lines
@@ -2394,7 +2394,7 @@ void UIRoutingMap::renderMiniOverview(NUIRenderer& renderer) {
         float ny = offsetY + node.y * scale;
         float nw = node.w * scale;
         float nh = node.h * scale;
-        NUIColor fill = NUIColor(0.18f, 0.16f, 0.22f, 0.85f);
+        NUIColor fill = NUIColor(0.169f, 0.169f, 0.169f, 0.85f);
         if (node.type == Node::Master) fill = NUIColor(0.25f, 0.18f, 0.36f, 0.85f);
         renderer.fillRoundedRect({nx, ny, nw, nh}, 2.0f, fill);
         renderer.strokeRoundedRect({nx, ny, nw, nh}, 2.0f, 0.5f, m_border.withAlpha(0.4f));
@@ -2454,7 +2454,7 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
     m_inspectorPanelRect = NUIRect{insetX, insetY, kInspectorW, insetH};
 
     // Background
-    renderer.fillRoundedRect(m_inspectorPanelRect, 8.0f, NUIColor(0.07f, 0.06f, 0.10f, 0.96f));
+    renderer.fillRoundedRect(m_inspectorPanelRect, 8.0f, NUIColor(0.065f, 0.065f, 0.065f, 0.96f));
     renderer.strokeRoundedRect(m_inspectorPanelRect, 8.0f, 1.0f, m_border.withAlpha(0.45f));
 
     // Clip content to panel interior (scrollable area)

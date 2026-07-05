@@ -83,7 +83,7 @@ void RumblePluginEditor::onResize(int width, int height) {
 
 void RumblePluginEditor::drawHero(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(bounds, kCardRadius, NUIColor(0.15f, 0.10f, 0.18f, 0.92f));
+    renderer.fillRoundedRect(bounds, kCardRadius, NUIColor(0.116f, 0.116f, 0.116f, 0.92f));
     renderer.strokeRoundedRect(bounds, kCardRadius, 1.0f, theme.getColor("accentPrimary").withAlpha(0.45f));
 
     renderer.drawText("Low-end first. Sweep and punch are derived from the current macros.",
@@ -95,8 +95,8 @@ void RumblePluginEditor::drawHero(NUIRenderer& renderer, const NUIRect& bounds) 
 void RumblePluginEditor::drawControl(NUIRenderer& renderer, const MacroControl& control, bool hovered) {
     auto& theme = NUIThemeManager::getInstance();
     const NUIColor accent = theme.getColor("accentPrimary");
-    const NUIColor cardColor = hovered || control.isDragging ? NUIColor(0.16f, 0.14f, 0.18f, 0.98f)
-                                                             : NUIColor(0.12f, 0.11f, 0.14f, 0.96f);
+    const NUIColor cardColor = hovered || control.isDragging ? NUIColor(0.147f, 0.147f, 0.147f, 0.98f)
+                                                             : NUIColor(0.114f, 0.114f, 0.114f, 0.96f);
 
     renderer.fillRoundedRect(control.cardBounds, kCardRadius, cardColor);
     renderer.strokeRoundedRect(control.cardBounds, kCardRadius, 1.0f,
@@ -111,7 +111,7 @@ void RumblePluginEditor::drawControl(NUIRenderer& renderer, const MacroControl& 
                       {control.cardBounds.x + 14.0f, control.cardBounds.y + 58.0f}, 10.0f,
                       accent.withAlpha(0.95f));
 
-    renderer.fillRoundedRect(control.trackBounds, 4.0f, NUIColor(0.02f, 0.02f, 0.03f, 0.78f));
+    renderer.fillRoundedRect(control.trackBounds, 4.0f, NUIColor(0.021f, 0.021f, 0.021f, 0.78f));
     const float filledWidth = std::max(0.0f, std::min(control.trackBounds.width, control.trackBounds.width * control.normalizedValue));
     if (filledWidth > 0.0f) {
         renderer.fillRoundedRect({control.trackBounds.x, control.trackBounds.y, filledWidth, control.trackBounds.height},
