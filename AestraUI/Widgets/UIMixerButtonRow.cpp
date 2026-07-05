@@ -152,7 +152,6 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
             renderer.drawGlow(visualRect, BTN_RADIUS, 0.6f, activeBg.withAlpha(0.45f));
         }
 
-        renderer.drawShadow(visualRect, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
         renderer.fillRoundedRect(visualRect, BTN_RADIUS, bg);
         renderer.strokeRoundedRect(visualRect, BTN_RADIUS, 1.0f, border);
         renderer.strokeRoundedRect({visualRect.x + 1.0f, visualRect.y + 1.0f, visualRect.width - 2.0f, visualRect.height - 2.0f},
