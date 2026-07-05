@@ -7,6 +7,7 @@
 #include "MixerViewModel.h"
 #include "MeterSnapshot.h"
 #include "Commands/SetVolumeCommand.h"
+#include "../../AestraCore/include/AestraUnifiedProfiler.h"
 #include "Commands/SetMuteCommand.h"
 #include "Commands/SetSoloCommand.h"
 #include "Commands/SetPanCommand.h"
@@ -369,6 +370,7 @@ void UIMixerPanel::renderSeparators(NUIRenderer& renderer)
 
 void UIMixerPanel::onRender(NUIRenderer& renderer)
 {
+    AESTRA_ZONE("Mixer_Render");
     auto bounds = getBounds();
 
     // Background
