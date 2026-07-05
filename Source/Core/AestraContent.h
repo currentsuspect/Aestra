@@ -353,7 +353,11 @@ private:
     ViewFocus m_viewFocus = ViewFocus::Timeline;
     ViewFocus m_previousViewFocus = ViewFocus::Timeline;
     uint32_t m_lastSelectedChannelId = 0xFFFFFFFFu;
-    
+    // Fingerprint of the mixer's displayed state; the per-frame engine->view
+    // sync only runs when this changes (see onUpdate), so an idle mixer stops
+    // re-dirtying every frame.
+    uint64_t m_lastMixerFingerprint = 0;
+
     // Sound preview state
     bool m_previewIsPlaying = false;
     std::chrono::steady_clock::time_point m_previewStartTime{};
