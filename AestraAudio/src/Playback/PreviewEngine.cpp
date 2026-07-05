@@ -239,21 +239,25 @@ void PreviewEngine::process(float* interleavedOutput, uint32_t numFrames) {
 
 void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames, uint32_t outputChannels) {
     if (outputChannels == 0) {
+        m_lastOutputPeak.store(0.0f, std::memory_order_release);
         return;
     }
     auto voice = m_activeVoice.load(std::memory_order_acquire);
     if (!voice || !voice->playing.load(std::memory_order_acquire) || !interleavedOutput) {
+        m_lastOutputPeak.store(0.0f, std::memory_order_release);
         return;
     }
 
     // Check if buffer is ready (async decode may still be in progress)
     if (!voice->bufferReady.load(std::memory_order_acquire)) {
         // Buffer not ready yet - output silence
+        m_lastOutputPeak.store(0.0f, std::memory_order_release);
         return;
     }
 
     auto buffer = voice->buffer;
     if (!buffer || buffer->data.empty() || buffer->sampleRate == 0) {
+        m_lastOutputPeak.store(0.0f, std::memory_order_release);
         return;
     }
 
@@ -286,6 +290,7 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
     const uint32_t srcChannels = voice->channels;
 
     const float effectiveGain = gain * PanLaw::kEqualPowerCenterGain;
+    float blockPreviewPeak = 0.0f;
 
     uint32_t i = 0;
 
@@ -413,6 +418,14 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
             vOutL = _mm_mul_ps(vOutL, vGain);
             vOutR = _mm_mul_ps(vOutR, vGain);
 
+            alignas(16) float peakL[4];
+            alignas(16) float peakR[4];
+            _mm_store_ps(peakL, _mm_andnot_ps(_mm_set1_ps(-0.0f), vOutL));
+            _mm_store_ps(peakR, _mm_andnot_ps(_mm_set1_ps(-0.0f), vOutR));
+            for (int peakIndex = 0; peakIndex < 4; ++peakIndex) {
+                blockPreviewPeak = std::max(blockPreviewPeak, std::max(peakL[peakIndex], peakR[peakIndex]));
+            }
+
             // Store Interleaved (L0 R0 L1 R1...)
             __m128 vLo = _mm_unpacklo_ps(vOutL, vOutR);
             __m128 vHi = _mm_unpackhi_ps(vOutL, vOutR);
@@ -537,8 +550,11 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
         const size_t frameBase = static_cast<size_t>(i) * outputChannels;
         if (outputChannels == 1) {
             const float previewMono = (outL + outR) * 0.5f * currentGain;
+            blockPreviewPeak = std::max(blockPreviewPeak, std::abs(previewMono));
             interleavedOutput[frameBase] = softLimit(interleavedOutput[frameBase] + previewMono, 0.85f);
         } else {
+            blockPreviewPeak =
+                std::max(blockPreviewPeak, std::max(std::abs(outL * currentGain), std::abs(outR * currentGain)));
             const float rawL = interleavedOutput[frameBase] + outL * currentGain;
             const float rawR = interleavedOutput[frameBase + 1] + outR * currentGain;
             interleavedOutput[frameBase] = softLimit(rawL, 0.85f);
@@ -558,6 +574,7 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
     bool finished = voice->fadeOutActive && (voice->fadeOutPos >= fadeOutSamples);
     if (finished) {
         voice->playing.store(false, std::memory_order_release);
+        blockPreviewPeak = 0.0f;
         PreviewVoice* expected = nullptr;
         if (m_completedVoice.compare_exchange_strong(expected, voice.get(), std::memory_order_acq_rel,
                                                      std::memory_order_relaxed)) {
@@ -567,11 +584,21 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
         // handleDeferredCompletion() will fire for that voice; this voice's
         // completion is close enough in time to share the same callback path.
     }
+    m_lastOutputPeak.store(blockPreviewPeak, std::memory_order_release);
 }
 
 bool PreviewEngine::isPlaying() const {
     auto voice = m_activeVoice.load(std::memory_order_acquire);
     return voice && voice->playing.load(std::memory_order_acquire);
+}
+
+bool PreviewEngine::isAudiblyPlaying() const {
+    constexpr float kAudiblePreviewThreshold = 1.0e-5f;
+    auto voice = m_activeVoice.load(std::memory_order_acquire);
+    return voice && voice->playing.load(std::memory_order_acquire) &&
+           !voice->stopRequested.load(std::memory_order_acquire) &&
+           voice->bufferReady.load(std::memory_order_acquire) &&
+           m_lastOutputPeak.load(std::memory_order_acquire) > kAudiblePreviewThreshold;
 }
 
 bool PreviewEngine::isBufferReady() const {
