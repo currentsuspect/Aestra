@@ -288,7 +288,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         }
 
         std::string emptyText = "Select a file to preview";
-        float fontSize = 12.0f;
+        float fontSize = theme.getFontSize("m");
         auto size = renderer.measureText(emptyText, fontSize);
         renderer.drawText(emptyText,
             NUIPoint(centerX - size.width * 0.5f, centerY + 18.0f),
@@ -320,8 +320,8 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
             name = name.substr(0, 32) + "...";
         }
 
-        renderer.drawText(name, NUIPoint(textX, textStartY + 2.0f), 13.0f, theme.getColor("textPrimary").withAlpha(0.88f));
-        renderer.drawText("Folder", NUIPoint(textX, textStartY + 14.0f + 5.0f), 10.0f, theme.getColor("textSecondary").withAlpha(0.55f));
+        renderer.drawText(name, NUIPoint(textX, textStartY + 2.0f), theme.getFontSize("l"), theme.getColor("textPrimary").withAlpha(0.88f));
+        renderer.drawText("Folder", NUIPoint(textX, textStartY + 14.0f + 5.0f), theme.getFontSize("xs"), theme.getColor("textSecondary").withAlpha(0.55f));
         return;
     }
 
@@ -424,8 +424,9 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
 
     float nameX = textX + iconSizeSmall + 6.0f;
     float nameMaxW = std::max(0.0f, textMaxWidth - iconSizeSmall - 6.0f);
-    std::string displayName = truncateToWidth(renderer, currentFile_.name, 12.5f, nameMaxW);
-    renderer.drawText(displayName, NUIPoint(nameX, infoTopY), 12.5f, theme.getColor("textPrimary").withAlpha(0.92f));
+    const float nameFont = theme.getFontSize("m");
+    std::string displayName = truncateToWidth(renderer, currentFile_.name, nameFont, nameMaxW);
+    renderer.drawText(displayName, NUIPoint(nameX, infoTopY), nameFont, theme.getColor("textPrimary").withAlpha(0.92f));
 
     // Metadata line only when the browser actually detected something —
     // no extension fallback (it's already part of the file name).
@@ -438,7 +439,7 @@ void FilePreviewPanel::onRender(NUIRenderer& renderer) {
         infoLine += m_currentFileKey;
     }
     if (!infoLine.empty()) {
-        renderer.drawText(infoLine, NUIPoint(nameX, infoTopY + 15.0f), 10.0f,
+        renderer.drawText(infoLine, NUIPoint(nameX, infoTopY + 15.0f), theme.getFontSize("xs"),
                           theme.getColor("textSecondary").withAlpha(0.55f));
     }
 

@@ -320,16 +320,19 @@ float NUIThemeManager::getRadius(const std::string& radiusName) const {
 float NUIThemeManager::getFontSize(const std::string& fontSizeName) const {
     const auto& theme = getCurrentTheme();
     
+    if (fontSizeName == "micro") return theme.fontSizeMicro;
     if (fontSizeName == "xs") return theme.fontSizeXS;
     if (fontSizeName == "s") return theme.fontSizeS;
     if (fontSizeName == "m") return theme.fontSizeM;
     if (fontSizeName == "l") return theme.fontSizeL;
     if (fontSizeName == "xl") return theme.fontSizeXL;
+    if (fontSizeName == "display-s") return theme.fontSizeDisplayS;
+    if (fontSizeName == "display-l") return theme.fontSizeDisplayL;
     if (fontSizeName == "xxl") return theme.fontSizeXXL;
     if (fontSizeName == "h1") return theme.fontSizeH1;
     if (fontSizeName == "h2") return theme.fontSizeH2;
     if (fontSizeName == "h3") return theme.fontSizeH3;
-    
+
     return theme.fontSizeM; // Default fallback
 }
 

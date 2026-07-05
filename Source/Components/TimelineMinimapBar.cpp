@@ -283,7 +283,8 @@ void TimelineMinimapBar::renderToggles_(NUIRenderer& renderer, const TimelineMin
 
         renderer.fillRoundedRect(toggleBounds_[i], kToggleRadius, fill);
         renderer.strokeRoundedRect(toggleBounds_[i], kToggleRadius, 1.0f, border);
-        renderer.drawTextCentered(kLabels[i], toggleBounds_[i], 9.5f, text);
+        renderer.drawTextCentered(kLabels[i], toggleBounds_[i],
+                                  NUIThemeManager::getInstance().getFontSize("micro"), text);
     }
 }
 
