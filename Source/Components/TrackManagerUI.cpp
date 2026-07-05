@@ -2724,7 +2724,8 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
             // Exponential zoom
             float zoomMultiplier = event.wheelDelta > 0 ? 1.15f : 0.87f;
-            float newPixelsPerBeat = safeClampFloat(m_targetPixelsPerBeat * zoomMultiplier, minPPB, 300.0f);
+            float newPixelsPerBeat =
+                safeClampFloat(m_targetPixelsPerBeat * zoomMultiplier, minPPB, kMaxTimelinePixelsPerBeat);
 
             m_targetPixelsPerBeat = newPixelsPerBeat;
             // Update immediate for snappiness (smooth zoom interpolation can be added later if needed)
@@ -3461,7 +3462,7 @@ void TrackManagerUI::resizeTimelineViewEdgeFromMinimap(AestraUI::TimelineMinimap
         return;
 
     constexpr float kMinPixelsPerBeat = 1.0f; // Allow extreme zoom-out for long clips
-    constexpr float kMaxPixelsPerBeat = 300.0f;
+    constexpr float kMaxPixelsPerBeat = kMaxTimelinePixelsPerBeat;
 
     const double domainStart = m_minimapDomainStartBeat;
     const double domainEnd = std::max(m_minimapDomainEndBeat, domainStart + 1.0);
@@ -3528,7 +3529,7 @@ void TrackManagerUI::zoomTimelineAroundBeat(double anchorBeat, float zoomMultipl
     float minPPB = std::max(1.0f, static_cast<float>(gridWidthPx / domainWidth));
 
     // Minimap zoom must feel immediate; keep the smooth-zoom system in sync by updating both.
-    const float newPixelsPerBeat = safeClampFloat(m_pixelsPerBeat * zoomMultiplier, minPPB, 300.0f);
+    const float newPixelsPerBeat = safeClampFloat(m_pixelsPerBeat * zoomMultiplier, minPPB, kMaxTimelinePixelsPerBeat);
     m_pixelsPerBeat = newPixelsPerBeat;
     m_targetPixelsPerBeat = newPixelsPerBeat;
 
