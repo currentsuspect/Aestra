@@ -1782,7 +1782,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     if (m_playlistVisible) {
         // Background for control area (always visible)
         AestraUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
-        renderer.fillRect(controlBg, AestraUI::NUIColor(0.034f, 0.035f, 0.040f, 1.0f));
+        renderer.fillRect(controlBg, AestraUI::NUIColor(0.035f, 0.035f, 0.035f, 1.0f));
 
         // Background for grid area (match track background; zebra grid provides contrast)
         float scrollbarWidth = 15.0f;
@@ -1888,7 +1888,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         AestraUI::NUIRect headerRect(bounds.x, bounds.y, headerWidth, headerHeight);
         // Elevated header: base fill + soft vertical gradient + glass top edge.
         // Rendered into the playlist FBO cache, so the richness is free per frame.
-        renderer.fillRect(headerRect, AestraUI::NUIColor(0.030f, 0.031f, 0.036f, 1.0f));
+        renderer.fillRect(headerRect, AestraUI::NUIColor(0.031f, 0.031f, 0.031f, 1.0f));
         // Shade-only elevation — any white component reads as a sheen on this
         // near-black chrome (owner direction: no light gradients anywhere).
         renderer.fillRectGradient(headerRect, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f),
@@ -3725,11 +3725,11 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
 
     // Opaque near-black ruler material — identical across the full row and the
     // grid shell so the corner over the track controls is flush by construction.
-    auto glassBg = AestraUI::NUIColor(0.012f, 0.012f, 0.016f, 1.0f);
+    auto glassBg = AestraUI::NUIColor(0.012f, 0.012f, 0.012f, 1.0f);
     auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.014f);
 
     auto textCol = themeManager.getColor("textPrimary").withAlpha(0.86f);
-    auto tickCol = AestraUI::NUIColor::fromHex(0x2c2c3b).withAlpha(0.82f);
+    auto tickCol = AestraUI::NUIColor::fromHex(0x2e2e2e).withAlpha(0.82f);
 
     // Restore layout definition
     const auto& layout = themeManager.getLayoutDimensions();
@@ -3824,7 +3824,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
                 float beatX = x + (beat * m_pixelsPerBeat);
 
                 float beatTickHeight = rulerBounds.height * 0.22f;
-                AestraUI::NUIColor beatTickColor = AestraUI::NUIColor::fromHex(0x242431).withAlpha(0.36f);
+                AestraUI::NUIColor beatTickColor = AestraUI::NUIColor::fromHex(0x262626).withAlpha(0.36f);
 
                 renderer.drawLine(AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height - beatTickHeight),
                                   AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height), 1.0f, beatTickColor);
@@ -4144,7 +4144,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
 
     AestraUI::NUIRect textureBounds(0, 0, static_cast<float>(width), static_cast<float>(height));
     AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
-    const AestraUI::NUIColor gridBgColor = AestraUI::NUIColor(0.08235f, 0.08235f, 0.11765f, 1.0f); // #15151e
+    const AestraUI::NUIColor gridBgColor = AestraUI::NUIColor(0.08235f, 0.08235f, 0.08235f, 1.0f); // #151515
     AestraUI::NUIColor borderColor = themeManager.getColor("border");
 
     // Draw background panels
@@ -4182,9 +4182,9 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     double maxExtentInBeats = maxExtent / secondsPerBeat;
 
     // Ruler Render: "Mature" Playlist Style
-    auto bg = AestraUI::NUIColor(0.08f, 0.08f, 0.10f, 1.0f);
+    auto bg = AestraUI::NUIColor(0.08f, 0.08f, 0.08f, 1.0f);
     auto textCol = AestraUI::NUIColor(0.82f, 0.82f, 0.82f, 1.0f); // bright gray for ruler labels
-    auto tickCol = AestraUI::NUIColor(0.45f, 0.45f, 0.50f, 1.0f); // visible tick marks
+    auto tickCol = AestraUI::NUIColor(0.45f, 0.45f, 0.45f, 1.0f); // visible tick marks
 
     // Draw ruler background
     renderer.fillRect(rulerRect, bg);
