@@ -3152,8 +3152,15 @@ void NUIRendererGL::flush() {
             || currentTextureId_ == fontAtlasTextureIdXSmall_);
         if (isFontAtlasTexture) {
             glUniform2f(primitiveShader_.textTexelSizeLoc, 1.0f / fontAtlasWidth_, 1.0f / fontAtlasHeight_);
-            glUniform1f(primitiveShader_.textSharpenLoc, 0.28f);
-            glUniform1f(primitiveShader_.textGammaLoc, 0.93f);
+            // The x-small/small atlases are supersampled down the hardest, so
+            // their stems average to a washed mid-grey. Fullness comes from the
+            // coverage lift (gamma < 1 thickens strokes uniformly); the unsharp
+            // mask stays gentle because a strong one undershoots and erodes thin
+            // features — the 'e' crossbar thins to a 'c' and edges go ragged.
+            const bool tinyAtlas = (currentTextureId_ == fontAtlasTextureIdXSmall_
+                                    || currentTextureId_ == fontAtlasTextureIdSmall_);
+            glUniform1f(primitiveShader_.textSharpenLoc, tinyAtlas ? 0.20f : 0.28f);
+            glUniform1f(primitiveShader_.textGammaLoc, tinyAtlas ? 0.74f : 0.93f);
         }
     }
     
