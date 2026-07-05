@@ -816,8 +816,17 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                       {navHeader.right(), navHeader.y + 27.0f},
                       1.0f, themeManager.getColor("border").withAlpha(0.65f));
 
+    // Scrollable content region below the fixed folder-name header. When the
+    // preview dock steals height the tail rows would clip; instead the content
+    // scrolls under the header exactly like the file list below it.
+    const float navContentTop = layout.navPane.y + 28.0f;
+    navViewportHeight_ = std::max(0.0f, layout.navPane.bottom() - navContentTop);
+    const float navMaxScroll = std::max(0.0f, navContentHeight_ - navViewportHeight_);
+    navScrollOffset_ = std::clamp(navScrollOffset_, 0.0f, navMaxScroll);
+    renderer.setClipRect(NUIRect(layout.navPane.x, navContentTop, layout.navPane.width, navViewportHeight_));
+
     // Start nav content at the same Y as the right column labels
-    float y = layout.navPane.y + 28.0f;
+    float y = navContentTop - navScrollOffset_;
     int hitIndex = 0;
 
     auto collectionCount = [&](const std::string& tag) {
@@ -1007,6 +1016,23 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
             renderer.fillRect(placesOverlay, NUIColor(0.486f, 0.227f, 0.929f, 0.15f));
             renderer.strokeRoundedRect(placesOverlay, 4.0f, 1.0f, NUIColor(0.486f, 0.227f, 0.929f, 0.6f));
         }
+    }
+
+    // Measure content for next frame's scroll clamp (y is post-offset screen
+    // space; add the offset back to recover the intrinsic content height).
+    navContentHeight_ = (y + navScrollOffset_) - navContentTop;
+
+    // Restore the full-pane clip and draw a thin scroll thumb when content
+    // overflows the (preview-shortened) viewport.
+    renderer.setClipRect(layout.navPane);
+    const float navOverflow = navContentHeight_ - navViewportHeight_;
+    if (navOverflow > 0.5f && navViewportHeight_ > 0.0f) {
+        const float sbW = 3.0f;
+        const float sbX = layout.navPane.right() - sbW - 2.0f;
+        const float thumbH = std::max(24.0f, navViewportHeight_ * (navViewportHeight_ / navContentHeight_));
+        const float thumbY = navContentTop + (navScrollOffset_ / navOverflow) * (navViewportHeight_ - thumbH);
+        renderer.fillRoundedRect(NUIRect(sbX, thumbY, sbW, thumbH), sbW * 0.5f,
+                                 themeManager.getColor("textSecondary").withAlpha(0.30f));
     }
 
     renderer.clearClipRect();
@@ -1506,6 +1532,19 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 
     if (handleNavigationMouseEvent(event, browserLayout)) {
         return true;
+    }
+
+    // === NAV PANE WHEEL (independent of the file list) ===
+    // Scroll the collections/categories/places column when it overflows —
+    // e.g. the preview dock is open and shortened the pane.
+    if (event.wheelDelta != 0 && browserLayout.navPane.contains(event.position)) {
+        const float navOverflow = std::max(0.0f, navContentHeight_ - navViewportHeight_);
+        if (navOverflow > 0.0f) {
+            navScrollOffset_ = std::clamp(navScrollOffset_ - event.wheelDelta * 3.0f * BROWSER_NAV_ROW_H,
+                                          0.0f, navOverflow);
+            invalidateCache();
+            return true;
+        }
     }
 
     // === MOUSE WHEEL SCROLLING (handle before bounds check so scrolling works on hover) ===
@@ -3327,7 +3366,10 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
 bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const BrowserLayout& layout) {
     if (event.cursorCaptured) return false;
 
-    const bool insideNav = layout.navPane.contains(event.position);
+    // Ignore the fixed folder-name header band: rows scrolled up under it are
+    // visually clipped, so they must not be clickable there either.
+    const float navContentTop = layout.navPane.y + 28.0f;
+    const bool insideNav = layout.navPane.contains(event.position) && event.position.y >= navContentTop;
     int newHovered = -1;
     if (insideNav) {
         for (int i = 0; i < static_cast<int>(navHits_.size()); ++i) {
