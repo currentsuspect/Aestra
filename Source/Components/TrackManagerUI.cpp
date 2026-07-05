@@ -1866,11 +1866,16 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         // zebra inside drawPlaylistGrid provides the only alternation).
         renderer.fillRect(trackBounds, AestraUI::NUIColor::black());
 
-        // Row separation is drawn once, softly, by TrackUIComponent::renderStatic.
-        // The extra 1px white line that used to stack on top of it produced the
-        // harsh horizontal grid the timeline was criticized for.
-
         track->renderStatic(renderer);
+
+        // Light separator strip filling the lane gap across the grid area
+        // (owner direction: the black gaps read as holes — lift them to a
+        // shade of white so rows stay legible). This is the only row
+        // separator; TrackUIComponent draws none.
+        const AestraUI::NUIRect gapRect(bounds.x + gridStartX, trackBounds.bottom(),
+                                        std::max(0.0f, trackWidth - gridStartX),
+                                        static_cast<float>(m_trackSpacing));
+        renderer.fillRect(gapRect, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.30f));
     }
 
     // Clear clip rect before drawing header/ruler (they should draw fully)
