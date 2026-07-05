@@ -56,6 +56,8 @@ public:
      */
     void processRealtime(float* interleavedOutput, uint32_t numFrames, uint32_t outputChannels);
     bool isPlaying() const;
+    bool isAudiblyPlaying() const;
+    float getLastOutputPeak() const { return m_lastOutputPeak.load(std::memory_order_relaxed); }
     bool isBufferReady() const; // True when buffer is decoded and ready for playback
     void setOnComplete(std::function<void(const std::string& path)> callback);
     void setGlobalPreviewVolume(float gainDb);
@@ -99,6 +101,7 @@ private:
     std::atomic<double> m_outputSampleRate;
     std::atomic<float> m_globalGainDb;
     std::atomic<float> m_playbackRate{1.0f};
+    std::atomic<float> m_lastOutputPeak{0.0f};
     std::function<void(const std::string&)> m_onComplete;
 
     // Deferred completion (audio thread -> main thread)

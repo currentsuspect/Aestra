@@ -265,6 +265,11 @@ public:
 
     void setMeterMode(MeterMode mode) { m_meterMode = mode; }
     MeterMode getMeterMode() const { return m_meterMode; }
+    void setPreviewDuckState(float gain, const std::string& sourceLabel);
+    void setPreviewDuckGain(float gain);
+    float getPreviewDuckGain() const { return m_previewDuckGain; }
+    const std::string& getPreviewDuckSourceLabel() const { return m_previewDuckSourceLabel; }
+    bool isPreviewDuckingActive() const { return m_previewDuckGain < 0.995f; }
 
     /** @brief Set CommandHistory for undo/redo on plugin operations. */
     void setCommandHistory(Audio::CommandHistory* ch) { m_commandHistory = ch; }
@@ -319,6 +324,9 @@ private:
 
     // Default: FL-style body (energy) + peak overlay line (UI draws peak separately).
     MeterMode m_meterMode{MeterMode::Technical};
+
+    float m_previewDuckGain{1.0f};
+    std::string m_previewDuckSourceLabel;
 
     /// CommandHistory pointer for undo/redo on plugin operations (optional)
     Audio::CommandHistory* m_commandHistory = nullptr;

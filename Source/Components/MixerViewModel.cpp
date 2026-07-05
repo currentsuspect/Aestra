@@ -91,6 +91,18 @@ void MixerViewModel::updateInputDiagnostics(const Audio::TrackManager& trackMana
     }
 }
 
+void MixerViewModel::setPreviewDuckGain(float gain) {
+    setPreviewDuckState(gain, {});
+}
+
+void MixerViewModel::setPreviewDuckState(float gain, const std::string& sourceLabel) {
+    if (!std::isfinite(gain)) {
+        gain = 1.0f;
+    }
+    m_previewDuckGain = std::clamp(gain, 0.0f, 1.0f);
+    m_previewDuckSourceLabel = m_previewDuckGain < 0.995f ? sourceLabel : std::string{};
+}
+
 void MixerViewModel::syncFromEngine(const Audio::TrackManager& trackManager,
                                      const Audio::ChannelSlotMap& slotMap) {
     auto continuousParams = trackManager.getContinuousParams();

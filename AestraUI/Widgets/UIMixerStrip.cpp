@@ -155,6 +155,20 @@ namespace {
 
         return {};
     }
+
+    std::string formatDuckGain(float gain, const std::string& sourceLabel)
+    {
+        const std::string prefix = sourceLabel.empty() ? "DUCK" : sourceLabel;
+        if (!std::isfinite(gain) || gain <= 0.0f) {
+            return prefix;
+        }
+        const float db = 20.0f * std::log10(std::clamp(gain, 1.0e-6f, 1.0f));
+        std::ostringstream out;
+        out.setf(std::ios::fixed);
+        out.precision(std::abs(db) >= 9.5f ? 0 : 1);
+        out << prefix << " " << db << "dB";
+        return out.str();
+    }
 }
 
 UIMixerStrip::UIMixerStrip(uint32_t channelId,
@@ -749,6 +763,20 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     */
 
     renderChildren(renderer);
+    if (m_channelId == 0 && m_viewModel && m_viewModel->isPreviewDuckingActive()) {
+        auto& theme = NUIThemeManager::getInstance();
+        const float duckGain = m_viewModel->getPreviewDuckGain();
+        const std::string label = formatDuckGain(duckGain, m_viewModel->getPreviewDuckSourceLabel());
+        const NUIColor accent = theme.getColor("warning");
+        const NUIColor text = theme.getColor("textPrimary");
+        const float badgeW = std::min(86.0f, std::max(66.0f, bounds.width - 20.0f));
+        const auto fxBounds = getFXSummaryBounds();
+        const float badgeY = fxBounds.height > 0.0f ? fxBounds.y + fxBounds.height + 6.0f : bounds.y + 72.0f;
+        const NUIRect badge(bounds.x + (bounds.width - badgeW) * 0.5f, badgeY, badgeW, 17.0f);
+        renderer.fillRoundedRect(badge, 5.0f, accent.withAlpha(0.18f));
+        renderer.strokeRoundedRect(badge, 5.0f, 1.0f, accent.withAlpha(0.52f));
+        renderer.drawTextCentered(label, badge, 8.4f, text.withAlpha(0.92f));
+    }
     if (channel && channel->muted) {
         renderer.fillRoundedRect(getBounds(), radius, m_mutedOverlay);
     }
