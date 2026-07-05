@@ -17,10 +17,10 @@ namespace {
 constexpr float kPi = 3.14159265358979323846f;
 
 NUIColor accentColor() { return NUIColor(0.95f, 0.60f, 0.12f, 1.0f); }
-NUIColor bgDark() { return NUIColor(0.018f, 0.020f, 0.024f, 0.96f); }
+NUIColor bgDark() { return NUIColor(0.02f, 0.02f, 0.02f, 0.96f); }
 NUIColor textDim() { return NUIColor(1.0f, 1.0f, 1.0f, 0.30f); }
 NUIColor textBright() { return NUIColor(1.0f, 1.0f, 1.0f, 0.88f); }
-NUIColor meterBg() { return NUIColor(0.008f, 0.008f, 0.012f, 1.0f); }
+NUIColor meterBg() { return NUIColor(0.008f, 0.008f, 0.008f, 1.0f); }
 
 float smoothMeter(float current, float target, float attack, float release) {
     const float coeff = target > current ? attack : release;
@@ -250,10 +250,10 @@ void AestraLimitEditor::drawKnob(NUIRenderer& renderer, const KnobControl& contr
     const NUIColor knobAccent = control.isPrimary ? accent : accent.withAlpha(0.72f);
 
     // Cell background
-    renderer.fillRoundedRect(control.bounds, 8.0f, NUIColor(0.035f, 0.035f, 0.040f, 0.96f));
+    renderer.fillRoundedRect(control.bounds, 8.0f, NUIColor(0.035f, 0.035f, 0.035f, 0.96f));
     renderer.strokeRoundedRect(control.bounds, 8.0f, 1.0f,
                                control.isPrimary ? NUIColor(0.28f, 0.18f, 0.06f, 1.0f)
-                                                 : NUIColor(0.118f, 0.118f, 0.133f, 1.0f));
+                                                 : NUIColor(0.119f, 0.119f, 0.119f, 1.0f));
 
     const NUIRect knobRect = control.slider ? control.slider->getBounds() : NUIRect();
     const float cx = knobRect.center().x;
@@ -315,8 +315,8 @@ void AestraLimitEditor::drawPill(NUIRenderer& renderer, NUIRect rect,
         renderer.strokeRoundedRect(rect, 5.0f, 1.0f, accent);
         renderer.drawTextCentered(label, rect, 9.5f, NUIColor(1, 1, 1, 0.97f));
     } else {
-        const NUIColor bg = hovered ? NUIColor(0.04f, 0.04f, 0.048f, 0.90f)
-                                    : NUIColor(0.022f, 0.022f, 0.028f, 0.90f);
+        const NUIColor bg = hovered ? NUIColor(0.041f, 0.041f, 0.041f, 0.90f)
+                                    : NUIColor(0.022f, 0.022f, 0.022f, 0.90f);
         renderer.fillRoundedRect(rect, 5.0f, bg);
         renderer.drawLine({rect.x + 5.0f, rect.y + 1.0f},
                           {rect.x + rect.width - 5.0f, rect.y + 1.0f},
