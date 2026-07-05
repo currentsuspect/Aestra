@@ -2635,22 +2635,31 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         float w = ch.width * scale;
         float h = ch.height * scale;
         
-        // Glyph positioning relative to baseline
-        // Allow sub-pixel positioning for smooth baseline alignment
-        float xpos = x + scaledBearingX;
-        float ypos = baseline - scaledBearingY; // Top of glyph
+        // Snap the glyph quad to the pixel grid so the bitmap atlas samples
+        // 1:1 — subpixel placement smears the tiny 9-12px labels into a jagged
+        // blur. Only the pen start was snapped before, so every glyph after the
+        // first drifted off-grid. All four edges are rounded from their true
+        // positions (not width-rounded), so each glyph spans whole pixels
+        // without accumulating drift; the pen advance keeps fractional width so
+        // kerning/spacing stay accurate.
+        const float gx = x + scaledBearingX;
+        const float gy = baseline - scaledBearingY; // Top of glyph
+        const float xpos = std::round(gx);
+        const float ypos = std::round(gy);
+        const float xposR = std::round(gx + w);
+        const float yposB = std::round(gy + h);
 
         minX = std::min(minX, xpos);
         minY = std::min(minY, ypos);
-        maxX = std::max(maxX, xpos + w);
-        maxY = std::max(maxY, ypos + h);
+        maxX = std::max(maxX, xposR);
+        maxY = std::max(maxY, yposB);
 
         // Draw textured quad for character
         // Type 4 = Bitmap Text
-        addVertex(xpos,     ypos + h, ch.u0, ch.v1, glyphColor, 0,0,0,0, 0,0,0, 4.0f); 
-        addVertex(xpos + w, ypos + h, ch.u1, ch.v1, glyphColor, 0,0,0,0, 0,0,0, 4.0f); 
-        addVertex(xpos + w, ypos,     ch.u1, ch.v0, glyphColor, 0,0,0,0, 0,0,0, 4.0f); 
-        addVertex(xpos,     ypos,     ch.u0, ch.v0, glyphColor, 0,0,0,0, 0,0,0, 4.0f);
+        addVertex(xpos,  yposB, ch.u0, ch.v1, glyphColor, 0,0,0,0, 0,0,0, 4.0f);
+        addVertex(xposR, yposB, ch.u1, ch.v1, glyphColor, 0,0,0,0, 0,0,0, 4.0f);
+        addVertex(xposR, ypos,  ch.u1, ch.v0, glyphColor, 0,0,0,0, 0,0,0, 4.0f);
+        addVertex(xpos,  ypos,  ch.u0, ch.v0, glyphColor, 0,0,0,0, 0,0,0, 4.0f);
         
         // Add indices for quad
         uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
@@ -3143,8 +3152,15 @@ void NUIRendererGL::flush() {
             || currentTextureId_ == fontAtlasTextureIdXSmall_);
         if (isFontAtlasTexture) {
             glUniform2f(primitiveShader_.textTexelSizeLoc, 1.0f / fontAtlasWidth_, 1.0f / fontAtlasHeight_);
-            glUniform1f(primitiveShader_.textSharpenLoc, 0.28f);
-            glUniform1f(primitiveShader_.textGammaLoc, 0.93f);
+            // The x-small/small atlases are supersampled down the hardest, so
+            // their stems average to a washed mid-grey. Fullness comes from the
+            // coverage lift (gamma < 1 thickens strokes uniformly); the unsharp
+            // mask stays gentle because a strong one undershoots and erodes thin
+            // features — the 'e' crossbar thins to a 'c' and edges go ragged.
+            const bool tinyAtlas = (currentTextureId_ == fontAtlasTextureIdXSmall_
+                                    || currentTextureId_ == fontAtlasTextureIdSmall_);
+            glUniform1f(primitiveShader_.textSharpenLoc, tinyAtlas ? 0.20f : 0.28f);
+            glUniform1f(primitiveShader_.textGammaLoc, tinyAtlas ? 0.74f : 0.93f);
         }
     }
     
