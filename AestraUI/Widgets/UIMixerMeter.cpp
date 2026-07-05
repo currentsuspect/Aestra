@@ -36,32 +36,56 @@ void UIMixerMeter::cacheThemeColors()
     m_colorClipOff = theme.getColor("borderSubtle").withAlpha(0.55f);
 }
 
+// Repaint only when a level moves by a visible amount. These setters are
+// called every frame from the strip; repainting unconditionally kept the
+// mixer (and the whole app) awake even while dead silent, defeating idle
+// elision. The stored value only advances once the drift crosses the
+// threshold, so slow decays still animate — in ~0.1 dB steps — rather than
+// freezing. kMeterRepaintEpsilonDb is sub-perceptual on a -60..0 dB scale.
+static constexpr float kMeterRepaintEpsilonDb = 0.1f;
+
 void UIMixerMeter::setLevels(float dbL, float dbR)
 {
-    m_peakL = std::max(DB_MIN, std::min(DB_MAX, dbL));
-    m_peakR = std::max(DB_MIN, std::min(DB_MAX, dbR));
-    repaint();
+    const float nl = std::max(DB_MIN, std::min(DB_MAX, dbL));
+    const float nr = std::max(DB_MIN, std::min(DB_MAX, dbR));
+    if (std::abs(nl - m_peakL) > kMeterRepaintEpsilonDb || std::abs(nr - m_peakR) > kMeterRepaintEpsilonDb) {
+        m_peakL = nl;
+        m_peakR = nr;
+        repaint();
+    }
 }
 
 void UIMixerMeter::setRmsLevels(float dbL, float dbR)
 {
-    m_rmsL = std::max(DB_MIN, std::min(DB_MAX, dbL));
-    m_rmsR = std::max(DB_MIN, std::min(DB_MAX, dbR));
-    repaint();
+    const float nl = std::max(DB_MIN, std::min(DB_MAX, dbL));
+    const float nr = std::max(DB_MIN, std::min(DB_MAX, dbR));
+    if (std::abs(nl - m_rmsL) > kMeterRepaintEpsilonDb || std::abs(nr - m_rmsR) > kMeterRepaintEpsilonDb) {
+        m_rmsL = nl;
+        m_rmsR = nr;
+        repaint();
+    }
 }
 
 void UIMixerMeter::setPeakOverlay(float peakDbL, float peakDbR)
 {
-    m_peakOverlayL = std::max(DB_MIN, std::min(DB_MAX, peakDbL));
-    m_peakOverlayR = std::max(DB_MIN, std::min(DB_MAX, peakDbR));
-    repaint();
+    const float nl = std::max(DB_MIN, std::min(DB_MAX, peakDbL));
+    const float nr = std::max(DB_MIN, std::min(DB_MAX, peakDbR));
+    if (std::abs(nl - m_peakOverlayL) > kMeterRepaintEpsilonDb || std::abs(nr - m_peakOverlayR) > kMeterRepaintEpsilonDb) {
+        m_peakOverlayL = nl;
+        m_peakOverlayR = nr;
+        repaint();
+    }
 }
 
 void UIMixerMeter::setPeakHold(float holdL, float holdR)
 {
-    m_peakHoldL = std::max(DB_MIN, std::min(DB_MAX, holdL));
-    m_peakHoldR = std::max(DB_MIN, std::min(DB_MAX, holdR));
-    repaint();
+    const float nl = std::max(DB_MIN, std::min(DB_MAX, holdL));
+    const float nr = std::max(DB_MIN, std::min(DB_MAX, holdR));
+    if (std::abs(nl - m_peakHoldL) > kMeterRepaintEpsilonDb || std::abs(nr - m_peakHoldR) > kMeterRepaintEpsilonDb) {
+        m_peakHoldL = nl;
+        m_peakHoldR = nr;
+        repaint();
+    }
 }
 
 void UIMixerMeter::setClipLatch(bool clipL, bool clipR)
