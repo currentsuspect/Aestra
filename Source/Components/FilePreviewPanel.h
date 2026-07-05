@@ -38,21 +38,7 @@ public:
     void setDuration(double seconds);
     bool hasFileSelection() const { return hasCurrentFile_ && !currentFile_.isDirectory; }
 
-    // Loop and BPM sync
-    void setLoopEnabled(bool loop) { m_loopEnabled = loop; setDirty(true); }
-    bool isLoopEnabled() const { return m_loopEnabled; }
-    void setBpmSyncEnabled(bool sync) { m_bpmSyncEnabled = sync; setDirty(true); }
-    bool isBpmSyncEnabled() const { return m_bpmSyncEnabled; }
-    void setProjectBpm(int bpm) { m_projectBpm = bpm; }
-    void setCurrentFileBpm(int bpm) { m_currentFileBpm = bpm; }
     void onPreviewEnded();
-
-    // Transport bar height (scrubber + 4px gap + bar + padding)
-    static constexpr float kTransportBarHeight = 26.0f;
-    float getRequiredHeight() const;
-
-    // Replay callback for loop (bypasses setFile / waveform regen)
-    void setOnReplay(std::function<void()> callback) { onReplay_ = callback; }
 
 private:
     void generateWaveform(const std::string& path, size_t fileSize);
@@ -83,16 +69,10 @@ private:
     NUIRect playButtonBounds_;
     NUIRect scrubberBounds_;
 
-    // Transport controls
-    NUIRect stopButtonBounds_;
-    NUIRect loopButtonBounds_;
-    NUIRect bpmSyncButtonBounds_;
-
     // Callbacks
     std::function<void(const FileItem&)> onPlay_;
     std::function<void()> onStop_;
     std::function<void(double)> onSeek_;
-    std::function<void()> onReplay_;
 
     // Icons
     std::shared_ptr<NUIIcon> folderIcon_;
@@ -100,13 +80,8 @@ private:
     std::shared_ptr<NUIIcon> audioFileIcon_;
     std::shared_ptr<NUIIcon> playIcon_;
     std::shared_ptr<NUIIcon> stopIcon_;
-    std::shared_ptr<NUIIcon> loopIcon_;
-    std::shared_ptr<NUIIcon> bpmSyncIcon_;
 
-    // Loop and BPM sync state
-    bool m_loopEnabled = false;
-    bool m_bpmSyncEnabled = false;
-    int m_projectBpm = 0;
+    // File metadata (from browser detection)
     int m_currentFileBpm = 0;
     std::string m_currentFileKey;
     std::string m_currentFilePath;
