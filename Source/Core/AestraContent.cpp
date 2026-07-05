@@ -437,28 +437,6 @@ AestraContent::AestraContent() {
     m_previewPanel->setOnPlay([this](const AestraUI::FileItem& file) { playSoundPreview(file); });
     m_previewPanel->setOnStop([this]() { stopSoundPreview(); });
     m_previewPanel->setOnSeek([this](double seconds) { seekSoundPreview(seconds); });
-    m_previewPanel->setOnReplay([this]() {
-        if (m_previewEngine && !m_currentPreviewFile.empty()) {
-            m_previewEngine->stop();
-            double fullDuration = m_previewEngine->getDuration();
-            if (fullDuration <= 0.0) fullDuration = 300.0;
-            float rate = 1.0f;
-            if (m_previewPanel && m_previewPanel->isBpmSyncEnabled()) {
-                int fileBpm = 0;
-                int projectBpm = m_audioEngine ? static_cast<int>(m_audioEngine->getBPM()) : 120;
-                if (fileBpm > 0 && projectBpm > 0) {
-                    rate = std::clamp(static_cast<float>(projectBpm) / static_cast<float>(fileBpm), 0.5f, 2.0f);
-                }
-            }
-            auto result = m_previewEngine->play(m_currentPreviewFile, 0.0f, fullDuration, rate);
-            if (result == Audio::PreviewResult::Success || result == Audio::PreviewResult::Pending) {
-                m_previewIsPlaying = true;
-                m_previewStartTime = std::chrono::steady_clock::now();
-                if (m_previewPanel)
-                    m_previewPanel->setPlaying(true);
-            }
-        }
-    });
     m_workspaceLayer->addChild(m_previewPanel);
 
     // Link file selection to preview panel
@@ -1117,6 +1095,12 @@ AestraContent::AestraContent() {
 void AestraContent::onUpdate(double dt) {
     updatePendingCountIn();
 
+    // Drive preview state: clears the pending-load spinner once the decode
+    // is ready, feeds playhead/duration to the panel, and stops at the end.
+    // (This existed but was never called — the panel's spinner and progress
+    // were frozen because nothing pumped the preview engine state.)
+    updateSoundPreview();
+
     // Sync track changes to MixerViewModel
     auto tm = getTrackManager();
     if (tm && m_mixerPanel) {
@@ -1400,13 +1384,12 @@ void AestraContent::onResize(int width, int height) {
         float fbHeight = height - fbTop;
 
         if (showPreviewDock) {
-            const float previewHeight = 68.0f + AestraUI::FilePreviewPanel::kTransportBarHeight;
+            // Full browser width: the dock previously started at the nav-pane
+            // edge, leaving an unpainted (black) strip under the nav pane.
+            const float previewHeight = 68.0f;
             fbHeight -= previewHeight;
-            const float navWidth = std::clamp(fileBrowserWidth * 0.34f, 118.0f, 188.0f);
-            const float previewWidth = std::max(0.0f, fileBrowserWidth - navWidth);
-
-            m_previewPanel->setBounds(AestraUI::NUIAbsolute(contentBounds, navWidth, fbTop + fbHeight,
-                                                            previewWidth, previewHeight));
+            m_previewPanel->setBounds(
+                AestraUI::NUIAbsolute(contentBounds, 0, fbTop + fbHeight, fileBrowserWidth, previewHeight));
         }
 
         m_fileBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, fbTop, fileBrowserWidth, fbHeight));
@@ -3034,15 +3017,7 @@ void AestraContent::playSoundPreview(const AestraUI::FileItem& file) {
     }
 
     m_previewDuration = 8.0;
-    float playbackRate = 1.0f;
-    if (m_previewPanel && m_previewPanel->isBpmSyncEnabled() && m_previewPanel->isLoopEnabled()) {
-        int fileBpm = file.detectedBpm;
-        int projectBpm = m_audioEngine ? static_cast<int>(m_audioEngine->getBPM()) : 120;
-        if (fileBpm > 0 && projectBpm > 0) {
-            playbackRate = std::clamp(static_cast<float>(projectBpm) / static_cast<float>(fileBpm), 0.5f, 2.0f);
-        }
-    }
-    auto result = m_previewEngine->play(file.path, 0.0f, m_previewDuration, playbackRate);
+    auto result = m_previewEngine->play(file.path, 0.0f, m_previewDuration);
 
     if (result == PreviewResult::Success || result == PreviewResult::Pending) {
         m_previewIsPlaying = true;
