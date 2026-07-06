@@ -1168,6 +1168,20 @@ target_include_directories(GoldenAudioRegressionTest PRIVATE
 add_test(NAME GoldenAudioRegressionTest COMMAND GoldenAudioRegressionTest)
 set_tests_properties(GoldenAudioRegressionTest PROPERTIES LABELS "audio;quality;golden;integrity;s-tier" TIMEOUT 180)
 
+# Realtime/Export Parity — realtime processBlock output vs offline
+# bounceRangeToWav output for the same session, plus the preview-ducking
+# export-contamination probe. Doc: AestraDocs/audio-integrity-infrastructure.md.
+add_executable(RealtimeExportParityTest AestraAudio/RealtimeExportParityTest.cpp)
+target_link_libraries(RealtimeExportParityTest PRIVATE AestraAudio)
+target_include_directories(RealtimeExportParityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RealtimeExportParityTest COMMAND RealtimeExportParityTest)
+set_tests_properties(RealtimeExportParityTest PROPERTIES LABELS "audio;quality;export;parity;integrity;s-tier" TIMEOUT 180)
+
 # Audio Quality Audit — noise floor, THD+N, freq response, DC blocker, soft clipper
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioQualityAuditTest.cpp")
     add_executable(AudioQualityAuditTest AestraAudio/AudioQualityAuditTest.cpp)

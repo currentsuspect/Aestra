@@ -206,8 +206,15 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // mismatches between playback and export.
     const bool wasMetronomeEnabled = m_engine.isMetronomeEnabled();
     const bool wasAuditionEnabled = m_engine.isAuditionModeEnabled();
+    // Preview ducking is a monitoring convenience and must never attenuate an
+    // offline render: an audible browser preview during export was measured to
+    // duck the exported file by the full configured attenuation
+    // (RealtimeExportParityTest, Export_Immune_To_Preview_Ducking).
+    const float wasPreviewDuckDb = m_engine.getPreviewDuckingAttenuationDb();
     m_engine.setMetronomeEnabled(false);
     m_engine.setAuditionModeEnabled(false);
+    m_engine.setPreviewDuckingAttenuationDb(0.0f);
+    m_engine.resetPreviewDuckForOfflineRender();
     m_engine.setGlobalSamplePos(startSample);
     m_engine.setTransportPlaying(true);
 
@@ -270,6 +277,9 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_trackManager.setOutputSampleRate(static_cast<double>(originalSampleRate));
     m_engine.setMetronomeEnabled(wasMetronomeEnabled);
     m_engine.setAuditionModeEnabled(wasAuditionEnabled);
+    // Restore the configured duck depth only; live playback re-smooths the
+    // duck gain naturally from the current preview state.
+    m_engine.setPreviewDuckingAttenuationDb(wasPreviewDuckDb);
     m_engine.setGlobalSamplePos(savedSamplePos);
     if (wasPlaying) {
         m_engine.setTransportPlaying(true);
