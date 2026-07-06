@@ -35,6 +35,16 @@ namespace {
     constexpr float SELECT_TOP_H = 3.0f;
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
 
+    // Resolve a palette index to a renderer colour (matches UIMixerHeader::colorFromARGB).
+    NUIColor trackColorFromIndex(int index)
+    {
+        const uint32_t argb = paletteIndexToARGB(index);
+        return NUIColor(((argb >> 16) & 0xFF) / 255.0f,
+                        ((argb >> 8) & 0xFF) / 255.0f,
+                        (argb & 0xFF) / 255.0f,
+                        ((argb >> 24) & 0xFF) / 255.0f);
+    }
+
     std::string compactRouteName(uint32_t targetId, const std::string& targetName)
     {
         if (targetId == 0 || targetName == "Master" || targetName == "MASTER") {
@@ -577,6 +587,17 @@ void UIMixerStrip::onUpdate(double deltaTime)
         if (m_cachedTrackColorArgb != static_cast<uint32_t>(channel->trackColorIndex + 1)) {
             m_cachedTrackColorArgb = static_cast<uint32_t>(channel->trackColorIndex + 1);
             invalidateStaticCache();
+
+            // Thread the track colour through the strip's accent controls so each
+            // channel reads as its own instrument. Master (id 0) keeps the neutral
+            // primary accent, and unset tracks fall back to the widget defaults.
+            if (m_channelId != 0 && channel->trackColorIndex >= 0) {
+                const NUIColor accent = trackColorFromIndex(channel->trackColorIndex);
+                if (m_fader) m_fader->setAccentColor(accent);
+                if (m_trimKnob) m_trimKnob->setAccentColor(accent);
+                if (m_panKnob) m_panKnob->setAccentColor(accent);
+                if (m_widthKnob) m_widthKnob->setAccentColor(accent);
+            }
         }
         m_header->setTrackColorIndex(channel->trackColorIndex);
         m_header->setSelected(selected);
