@@ -1291,6 +1291,21 @@ add_test(NAME ExportBounceParityTest COMMAND ExportBounceParityTest)
 set_tests_properties(ExportBounceParityTest PROPERTIES LABELS "audio;quality;export;s-tier")
 
 # =============================================================================
+# Audio Research Bench (Tests/Research)
+# =============================================================================
+# Scientific audio-quality measurement layer: deterministic signal generators
+# (SignalLab.h) + analysis routines (AudioMeasure.h), validated against
+# closed-form analytic expectations. Header-only, test-side, no engine deps.
+# Doc: AestraDocs/audio-research-bench.md.
+
+# Measurement Core Self-Test — proves the measurement layer itself (peak, RMS,
+# DC, tone fit/SINAD-style residual, THD, impulse stats, stereo correlation,
+# diff forensics) against analytic math before it is used to measure DSP.
+add_executable(MeasurementCoreSelfTest Research/MeasurementCoreSelfTest.cpp)
+add_test(NAME MeasurementCoreSelfTest COMMAND MeasurementCoreSelfTest)
+set_tests_properties(MeasurementCoreSelfTest PROPERTIES LABELS "audio;research;audio-research" TIMEOUT 120)
+
+# =============================================================================
 # AestraPlat Tests
 # =============================================================================
 
