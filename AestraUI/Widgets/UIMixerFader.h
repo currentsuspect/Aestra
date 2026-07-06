@@ -32,6 +32,9 @@ public:
     void setValueDb(float db);
     float getValueDb() const { return m_valueDb; }
 
+    // Per-channel accent: fill/handle-active colour follows the track colour.
+    void setAccentColor(const NUIColor& color) { m_trackFg = color; repaint(); }
+
     bool isDragging() const { return m_dragging; }
 
     std::function<void(float db)> onValueChanged;
