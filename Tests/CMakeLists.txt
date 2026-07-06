@@ -1153,6 +1153,21 @@ target_include_directories(GoldenReferenceTest PRIVATE
 add_test(NAME GoldenReferenceTest COMMAND GoldenReferenceTest)
 set_tests_properties(GoldenReferenceTest PROPERTIES LABELS "audio;quality;golden;s-tier")
 
+# Golden Audio Regression — analytic golden cases for the render path:
+# silence/empty project, impulse via master, multi-track gain+pan mix.
+# Harness: Tests/AestraAudio/GoldenAudio/GoldenAudioHarness.h.
+# Policy doc: AestraDocs/audio-integrity-infrastructure.md.
+add_executable(GoldenAudioRegressionTest AestraAudio/GoldenAudioRegressionTest.cpp)
+target_link_libraries(GoldenAudioRegressionTest PRIVATE AestraAudio)
+target_include_directories(GoldenAudioRegressionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME GoldenAudioRegressionTest COMMAND GoldenAudioRegressionTest)
+set_tests_properties(GoldenAudioRegressionTest PROPERTIES LABELS "audio;quality;golden;integrity;s-tier" TIMEOUT 180)
+
 # Audio Quality Audit — noise floor, THD+N, freq response, DC blocker, soft clipper
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioQualityAuditTest.cpp")
     add_executable(AudioQualityAuditTest AestraAudio/AudioQualityAuditTest.cpp)
