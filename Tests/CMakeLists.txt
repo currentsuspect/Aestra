@@ -1167,6 +1167,21 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioQualityAuditTest.cpp")
     set_tests_properties(AudioQualityAuditTest PROPERTIES LABELS "audio;quality;audit;s-tier" TIMEOUT 180)
 endif()
 
+# Audio Purity Audit — transparent path, summing, buffer invariance, hidden clipping, SRC invariants
+add_executable(AudioPurityAuditTest AestraAudio/AudioPurityAuditTest.cpp)
+target_link_libraries(AudioPurityAuditTest PRIVATE AestraAudio)
+target_include_directories(AudioPurityAuditTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AudioPurityAuditTest COMMAND AudioPurityAuditTest
+    --report ${CMAKE_BINARY_DIR}/audio-purity-report.json
+    --text-report ${CMAKE_BINARY_DIR}/audio-purity-report.txt)
+set_tests_properties(AudioPurityAuditTest PROPERTIES LABELS "audio;quality;audit;purity;s-tier" TIMEOUT 240)
+
 # AudioEngine Torture Test — stress harness: silence, NaN/Inf, extreme gain,
 # buffer switching, sample rate switching, transport hammering, multi-track load
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioEngineTortureTest.cpp")

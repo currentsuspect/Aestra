@@ -1087,13 +1087,14 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         m_loudnessState.blockEnergySum += (f2L * f2L) + (f2R * f2R);
         // -----------------------------------
 
-        // Hard clip as last resort (after limiter, before output)
-        L = std::clamp(L, -1.0, 1.0);
-        R = std::clamp(R, -1.0, 1.0);
-
-        // Track clipping events
-        if (std::abs(L) >= 0.999 || std::abs(R) >= 0.999) {
+        // Track output-boundary clips without mutating the limiter-disabled float path.
+        if (absL >= 0.999 || absR >= 0.999) {
             clipCount++;
+        }
+
+        if (limiterOn) {
+            L = std::clamp(L, -1.0, 1.0);
+            R = std::clamp(R, -1.0, 1.0);
         }
 
         const size_t frameBase = static_cast<size_t>(i) * numOutputChannels;
