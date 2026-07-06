@@ -372,11 +372,11 @@ jobs:
         run: cmake --preset ci-lsan
 
       - name: Build
-        run: cmake --build --preset ci-lsan
+        run: cmake --build --preset ci-lsan --parallel 2
 
       - name: Test
         working-directory: build/ci-lsan
-        run: ctest --output-on-failure --output-junit ctest-results-lsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+        run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-lsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
 
       - name: Upload LSan test report
         if: always()
