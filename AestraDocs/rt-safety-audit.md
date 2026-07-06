@@ -37,7 +37,7 @@ Offline export drives the same processBlock from the exporter thread
 
 | # | Finding | Evidence | Classification |
 |---|---|---|---|
-| 1 | Steady-state render path performs **zero heap allocations/frees** (3 tracks, fader/pan params, active insert, 186 blocks) | `RTAllocationTrapTest` | **verified safe** |
+| 1 | Render path performs **zero steady-state heap activity under tested conditions** (3 tracks, fader/pan params, active insert, 186 blocks) — with **one detected first-block 31-byte allocation when an active insert is present** (finding #3; zero absolutely without an insert). The claim is NOT unconditional until #3 is resolved. | `RTAllocationTrapTest` | **verified safe at steady state** |
 | 2 | Preview ducking attenuated offline exports by the full configured depth | `RealtimeExportParityTest` | **confirmed violation — FIXED** (AudioExporter save/disable/restore + duck-smoother snap) |
 | 3 | **1 allocation (31 bytes) in the first block after an active insert is added** — lazy init somewhere in the effect-chain path; xrun risk on the first callback after inserting a plugin during playback | `RTAllocationTrapTest` first-block counter (0 allocs without insert, 1 with) | **suspicious but unproven origin** — reproducible; origin hunt is follow-up (gdb conditional breakpoint on the trap) |
 | 4 | `AuditionEngine::processBlock` (RT, AudioEngine.cpp:722) invokes `m_onPositionChanged` — an arbitrary app-bound `std::function` — on the audio thread every 10th block (AuditionEngine.cpp:543-544) | grep + code read; **currently unbound in Source/** (no binder found) | **latent hazard by design** — safe today, one `setOnPositionChanged(ui_lambda)` away from UI work on the RT thread. Follow-up: route through an SPSC snapshot like meters |
