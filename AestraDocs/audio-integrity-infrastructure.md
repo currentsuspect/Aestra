@@ -164,6 +164,44 @@ driver behavior (tests run headless), Windows/macOS driver timing paths
   same 2-track gain+pan session are **identical to the bit** (max abs error
   = 0) on the compared overlap.
 
+### BUG (fixed): playlist timeline rate diverges from engine rate on non-48 kHz devices
+- **Evidence:** `SampleRateBufferTruthTest / CrossRate_48kClip_in_96kEngine` —
+  a 48 kHz clip in a 96 kHz engine played at the correct pitch but was
+  **truncated to half its duration** (first mismatch at ~0.477 s of a 1 s
+  clip; RMS −15 dB vs the analytic reference).
+- **Mechanism:** `PlaylistModel::m_projectSampleRate` (default 48000) is the
+  unit `buildRuntimeSnapshot()` uses to convert beats → engine samples.
+  The app forwards device-rate changes to `TrackManager::setOutputSampleRate`
+  in 4 places (`AestraAudioController.cpp:342`, `AestraApp.cpp:772`,
+  `HeadlessMain.cpp:351`, `AudioExporter.cpp:203`) — but **nothing in
+  `Source/` ever called `PlaylistModel::setProjectSampleRate`** (grep: the
+  only caller was a test working around it). On any non-48 kHz device, every
+  clip's timeline position and duration was wrong by the rate ratio.
+- **Fix (minimal):** `TrackManager::setOutputSampleRate` now forwards to
+  `getPlaylistModel().setProjectSampleRate(rate)`. One line; all existing
+  call sites become correct. Not a persistence change —
+  `m_projectSampleRate` is runtime-only (grep: `ProjectSerializer` only
+  reads it) and beats remain the project's source of truth.
+- **Post-fix:** the same cross-rate case measures **−118.3 dB RMS / 2.4e-6
+  maxAbs** against the analytic 96 kHz reference — the SRC path itself is
+  excellent; the defect was purely timeline math.
+
+### Preview/audition ownership boundary (area 6)
+- **Preview signal** joins the mix **only** in the device callback, additively,
+  after the engine block (`AestraAudioController.cpp:434-437`
+  `PreviewEngine::processRealtime`). The offline export path never executes
+  that code → exported audio structurally cannot contain preview signal.
+- **Audition signal** is mixed inside `processBlock` (AudioEngine.cpp:722)
+  but only when audition mode is enabled; `AudioExporter` disables it for the
+  render (and restores after).
+- **Preview ducking** was the one cross-boundary leak (computed inside
+  `processBlock` from `isAudiblyPlaying()`); fixed above and guarded by
+  `RealtimeExportParityTest / Export_Immune_To_Preview_Ducking`.
+- Rule going forward: monitoring conveniences (preview, audition, metronome,
+  ducking) may live in the realtime monitoring path but must be disabled or
+  neutralized by `AudioExporter::render` — that function is the single
+  checklist for "what must not reach an export."
+
 ### Finding (documented, not fixed): fresh-engine param-application latency
 - On a **freshly constructed** engine, values newly written to
   `ContinuousParamBuffer` do not reach the mix until after the first
@@ -179,3 +217,25 @@ driver behavior (tests run headless), Windows/macOS driver timing paths
 ## 7. RT-safety audit findings
 
 See `AestraDocs/rt-safety-audit.md` (PR-3).
+
+## 8. CI integration
+
+All integrity tests are plain CTest entries picked up by the existing
+`ci.yml`/`nightly.yml` `ctest` invocations — no workflow changes required.
+
+- **Run just this suite:** `ctest --test-dir build-linux -L integrity`
+- **Members + measured runtimes (dev machine, Release):**
+  `GoldenAudioRegressionTest` ~0.4 s · `RealtimeExportParityTest` ~0.4 s ·
+  `RTAllocationTrapTest` ~0.2 s · `CallbackDeadlineTelemetryTest` ~0.2 s ·
+  `SampleRateBufferTruthTest` ~1 s. Total ≈ 2 s — negligible CI cost, so
+  none are gated behind a separate preset.
+- Everything is headless/core-safe (no device, no UI); nothing added to the
+  runtime/experimental tiers.
+- Static RT sweep: `scripts/rt_safety_audit.sh --counts` (advisory, run on
+  demand; classified baseline in `rt-safety-audit.md`).
+- Updating golden expectations: they are analytic — change the expectation
+  math in the same PR as the deliberate engine change (§4). There are no
+  binary references to regenerate.
+- Failure messages: every comparison prints max abs error, RMS (dB), first
+  mismatching frame + channel + time, peaks, sample rate, rendered length,
+  and where to look — designed to be actionable from a CI log alone.
