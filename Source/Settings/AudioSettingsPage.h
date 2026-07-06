@@ -132,6 +132,9 @@ private:
     
     std::shared_ptr<AestraUI::NUILabel> m_softClippingLabel;
     std::shared_ptr<AestraUI::NUIToggle> m_softClippingToggle;
+
+    std::shared_ptr<AestraUI::NUILabel> m_previewDuckingLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_previewDuckingDropdown;
     
     std::shared_ptr<AestraUI::NUILabel> m_multiThreadingLabel;
     std::shared_ptr<AestraUI::NUIToggle> m_multiThreadingToggle;

@@ -265,6 +265,7 @@ void AudioSettingsPage::createUI() {
     m_ditheringLabel = createLabel("Dithering:");
     m_dcRemovalLabel = createLabel("DC Removal:");
     m_softClippingLabel = createLabel("Master Limiter:");
+    m_previewDuckingLabel = createLabel("Preview Ducking:");
     m_multiThreadingLabel = createLabel("Multi-threading:");
     m_threadCountLabel = createLabel("Thread Count:");
     
@@ -384,6 +385,16 @@ void AudioSettingsPage::createUI() {
     m_ditheringDropdown->addItem("Triangular (TPDF)", (int)DitheringMode::Triangular);
     m_ditheringDropdown->addItem("High Pass", (int)DitheringMode::HighPass);
     m_ditheringDropdown->addItem("Noise Shaped", (int)DitheringMode::NoiseShaped);
+
+    m_previewDuckingDropdown = createDropdown([this](int idx) {
+        (void)idx;
+        m_dirty = true;
+    });
+    m_previewDuckingDropdown->addItem("Off", 0);
+    m_previewDuckingDropdown->addItem("-3 dB", 3);
+    m_previewDuckingDropdown->addItem("-6 dB", 6);
+    m_previewDuckingDropdown->addItem("-9 dB", 9);
+    m_previewDuckingDropdown->setSelectedByValue(6);
     
     // Now safe to set quality preset which triggers callback
     m_qualityPresetDropdown->setSelectedIndex(1);
@@ -499,6 +510,7 @@ void AudioSettingsPage::applyChanges() {
         // m_audioEngine->setDCRemovalEnabled(m_dcRemovalToggle->isOn());
         
         m_audioEngine->setSafetyLimiterEnabled(m_softClippingToggle->isOn());
+        m_audioEngine->setPreviewDuckingAttenuationDb(static_cast<float>(m_previewDuckingDropdown->getSelectedValue()));
     }
     
     // Multi-threading
@@ -605,6 +617,7 @@ void AudioSettingsPage::layoutComponents() {
     // We'll give it the row height.
     layRow(m_dcRemovalLabel, m_dcRemovalToggle, x2); y += rowHeight + gap;
     layRow(m_softClippingLabel, m_softClippingToggle, x2); y += rowHeight + gap;
+    layRow(m_previewDuckingLabel, m_previewDuckingDropdown, x2); y += rowHeight + gap;
     layRow(m_multiThreadingLabel, m_multiThreadingToggle, x2); y += rowHeight + gap;
     
     // Conditionally show thread count if multithreading is enabled
@@ -694,6 +707,7 @@ void AudioSettingsPage::saveSettings() {
         file << "threads=" << m_threadCountInput->getValue() << "\n";
         file << "dc_removal=" << (m_dcRemovalToggle->isOn() ? "1" : "0") << "\n";
         file << "master_limiter=" << (m_softClippingToggle->isOn() ? "1" : "0") << "\n";
+        file << "preview_ducking_db=" << m_previewDuckingDropdown->getSelectedValue() << "\n";
         file << "multi_threading=" << (m_multiThreadingToggle->isOn() ? "1" : "0") << "\n";
         file.close();
         Log::info("[AudioSettingsPage] Settings saved to " + configPath.string());
@@ -777,6 +791,11 @@ void AudioSettingsPage::loadSettings() {
             m_softClippingToggle->setOn(val == 1);
             if (m_audioEngine)
                 m_audioEngine->setSafetyLimiterEnabled(val == 1);
+        }
+        else if (key == "preview_ducking_db") {
+            m_previewDuckingDropdown->setSelectedByValue(val);
+            if (m_audioEngine)
+                m_audioEngine->setPreviewDuckingAttenuationDb(static_cast<float>(m_previewDuckingDropdown->getSelectedValue()));
         }
         else if (key == "multi_threading") {
             m_multiThreadingToggle->setOn(val == 1);

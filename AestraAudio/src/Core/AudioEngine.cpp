@@ -75,6 +75,27 @@
 namespace Aestra {
 namespace Audio {
 
+void AudioEngine::setPreviewDuckingAttenuationDb(float attenuationDb) {
+    if (!std::isfinite(attenuationDb) || attenuationDb <= 0.0f) {
+        m_previewDuckingAttenuationDb.store(0.0f, std::memory_order_relaxed);
+        m_previewDuckTargetGain.store(1.0f, std::memory_order_relaxed);
+        return;
+    }
+
+    attenuationDb = std::clamp(attenuationDb, 0.0f, 24.0f);
+    const float targetGain = std::pow(10.0f, -attenuationDb / 20.0f);
+    m_previewDuckingAttenuationDb.store(attenuationDb, std::memory_order_relaxed);
+    m_previewDuckTargetGain.store(targetGain, std::memory_order_relaxed);
+}
+
+float AudioEngine::getPreviewDuckingAttenuationDb() const {
+    return m_previewDuckingAttenuationDb.load(std::memory_order_relaxed);
+}
+
+bool AudioEngine::isPreviewDuckingEnabled() const {
+    return m_previewDuckingAttenuationDb.load(std::memory_order_relaxed) > 0.0f;
+}
+
 namespace {
 std::atomic<uint64_t> g_rtMisuseCount{0};
 std::atomic<uint64_t> g_rtMisuseReportedCount{0};
@@ -902,22 +923,32 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     }
 
     // === Preview Ducking Gain Calculation ===
-    // When transport is playing and preview is active, duck transport by ~6dB
-    const double duckFadeTimeMs = 50.0; // ~50ms smooth fade
-    const double duckFadeSamples = (static_cast<double>(currentSampleRate) * duckFadeTimeMs) / 1000.0;
-    const double duckFadeDelta = 1.0 / std::max(duckFadeSamples, 1.0);
-
-    // Check if preview is active
-    bool previewIsActive = false;
+    // Duck transport only while preview has produced audible output. PreviewEngine
+    // may exist, decode, or be selected without being audible.
+    bool previewIsAudible = false;
     auto* preview = m_previewEngine.load(std::memory_order_relaxed);
     if (preview) {
-        previewIsActive = preview->isPlaying();
+        previewIsAudible = preview->isAudiblyPlaying();
     }
 
-    // Calculate target duck gain
-    // When preview + transport both playing: duck to 0.5 (-6dB)
-    // Otherwise: restore to 1.0 (0dB)
-    const double targetDuckGain = (previewIsActive && isPlaying) ? 0.5 : 1.0;
+    constexpr double duckAttackSeconds = 0.05; // 50ms linear attack
+    constexpr double duckReleaseSeconds = 0.12;
+    constexpr float duckHoldSeconds = 0.10f;
+    const float blockSeconds = static_cast<float>(numFrames) / static_cast<float>(std::max(currentSampleRate, 1u));
+    if (previewIsAudible && isPlaying) {
+        m_previewDuckHoldSecondsRemaining = duckHoldSeconds;
+    } else {
+        m_previewDuckHoldSecondsRemaining = std::max(0.0f, m_previewDuckHoldSecondsRemaining - blockSeconds);
+    }
+
+    const bool duckingEnabled = isPreviewDuckingEnabled();
+    const bool shouldDuckForPreview = duckingEnabled && isPlaying && m_previewDuckHoldSecondsRemaining > 0.0f;
+    const double targetDuckGain =
+        shouldDuckForPreview ? static_cast<double>(m_previewDuckTargetGain.load(std::memory_order_relaxed)) : 1.0;
+    const double fadeSeconds = targetDuckGain < static_cast<double>(m_smoothedPreviewDuckGain) ? duckAttackSeconds
+                                                                                               : duckReleaseSeconds;
+    const double duckFadeSamples = static_cast<double>(currentSampleRate) * fadeSeconds;
+    const double duckFadeDelta = static_cast<double>(numFrames) / std::max(duckFadeSamples, 1.0);
 
     // Smooth the duck gain transition
     double duckGain = m_smoothedPreviewDuckGain;
@@ -934,6 +965,10 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
     // Publish smoothed gain for external queries
     m_previewDuckGain.store(static_cast<float>(duckGain), std::memory_order_relaxed);
+    m_previewDuckSource.store(static_cast<uint8_t>((shouldDuckForPreview || duckGain < 0.995)
+                                                       ? PreviewDuckSource::BrowserPreview
+                                                       : PreviewDuckSource::None),
+                              std::memory_order_relaxed);
 
     // === Final Output Stage (double -> float with processing) ===
     // Pre-compute master gain for this block (avoid per-sample target update)

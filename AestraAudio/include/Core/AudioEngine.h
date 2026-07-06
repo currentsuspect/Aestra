@@ -468,8 +468,26 @@ public:
     /** @brief Bind the preview engine mixed into the main output. */
     void setPreviewEngine(PreviewEngine* engine) { m_previewEngine.store(engine, std::memory_order_relaxed); }
 
-    /** @brief Set preview ducking gain (0.0 = ducked by ~6dB, 1.0 = full volume). */
-    void setPreviewDuckGain(float gain) { m_previewDuckGain.store(gain, std::memory_order_relaxed); }
+    /** @brief Source currently responsible for transport ducking. */
+    enum class PreviewDuckSource : uint8_t {
+        None = 0,
+        BrowserPreview = 1,
+        Audition = 2,
+        ArsenalPreview = 3,
+    };
+
+    /** @brief Configure preview duck depth in positive dB; 0 disables ducking. Non-RT only. */
+    void setPreviewDuckingAttenuationDb(float attenuationDb);
+    /** @brief Configured preview duck depth in positive dB; 0 means disabled. */
+    float getPreviewDuckingAttenuationDb() const;
+    /** @brief Check whether preview ducking is enabled. */
+    bool isPreviewDuckingEnabled() const;
+    /** @brief Current transport duck gain caused by audible preview playback. */
+    float getPreviewDuckGain() const { return m_previewDuckGain.load(std::memory_order_relaxed); }
+    /** @brief Source currently responsible for the published preview duck gain. */
+    PreviewDuckSource getPreviewDuckSource() const {
+        return static_cast<PreviewDuckSource>(m_previewDuckSource.load(std::memory_order_relaxed));
+    }
 
     /**
      * @brief Render a range of the timeline (or a specific track) to a WAV file.
@@ -865,7 +883,11 @@ private:
 
     // Transport-aware preview ducking
     std::atomic<float> m_previewDuckGain{1.0f}; // Linear gain applied to transport when preview is active
-    float m_smoothedPreviewDuckGain{1.0f};      // Smoothed version for click-free transitions
+    std::atomic<float> m_previewDuckTargetGain{0.5f};
+    std::atomic<float> m_previewDuckingAttenuationDb{6.0f};
+    std::atomic<uint8_t> m_previewDuckSource{static_cast<uint8_t>(PreviewDuckSource::None)};
+    float m_smoothedPreviewDuckGain{1.0f}; // Smoothed version for click-free transitions
+    float m_previewDuckHoldSecondsRemaining{0.0f};
 
     // Recent output ring buffer for oscilloscope/mini-waveform displays.
     std::vector<float> m_waveformHistory;

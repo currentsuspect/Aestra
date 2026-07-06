@@ -1241,6 +1241,18 @@ void AestraContent::onUpdate(double dt) {
         if (snapshots) {
             auto viewModel = m_mixerPanel->getViewModel();
             if (viewModel) {
+                if (m_audioEngine) {
+                    const auto source = m_audioEngine->getPreviewDuckSource();
+                    std::string sourceLabel;
+                    if (source == Audio::AudioEngine::PreviewDuckSource::BrowserPreview) {
+                        sourceLabel = "PREVIEW";
+                    } else if (source == Audio::AudioEngine::PreviewDuckSource::Audition) {
+                        sourceLabel = "AUDITION";
+                    } else if (source == Audio::AudioEngine::PreviewDuckSource::ArsenalPreview) {
+                        sourceLabel = "ARSENAL";
+                    }
+                    viewModel->setPreviewDuckState(m_audioEngine->getPreviewDuckGain(), sourceLabel);
+                }
                 viewModel->updateMeters(*snapshots, dt);
             }
         }
