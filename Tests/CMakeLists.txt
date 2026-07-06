@@ -1305,6 +1305,34 @@ add_executable(MeasurementCoreSelfTest Research/MeasurementCoreSelfTest.cpp)
 add_test(NAME MeasurementCoreSelfTest COMMAND MeasurementCoreSelfTest)
 set_tests_properties(MeasurementCoreSelfTest PROPERTIES LABELS "audio;research;audio-research" TIMEOUT 120)
 
+# Resampler Quality Audit — measures BOTH resampling engines: the production
+# clip-playback path (Interpolators + phase accumulator, as run by
+# AudioRenderer/AuditionEngine/SamplerPlugin) and the streaming polyphase
+# SampleRateConverter (currently no production call sites), across a 5-pair
+# rate matrix (44.1<->48, 48<->96, 44.1->96). Gates cite measured evidence;
+# libsamplerate/soxr print optional non-gated diagnostics when present
+# (same optional pattern as ResamplerWarTest above).
+add_executable(ResamplerQualityAuditTest Research/ResamplerQualityAuditTest.cpp)
+target_link_libraries(ResamplerQualityAuditTest PRIVATE AestraAudioCore)
+target_include_directories(ResamplerQualityAuditTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+if(SAMPLERATE_FOUND)
+    target_link_libraries(ResamplerQualityAuditTest PRIVATE ${SAMPLERATE_LIBRARIES})
+    target_include_directories(ResamplerQualityAuditTest PRIVATE ${SAMPLERATE_INCLUDE_DIRS})
+    target_compile_options(ResamplerQualityAuditTest PRIVATE ${SAMPLERATE_CFLAGS_OTHER})
+    target_compile_definitions(ResamplerQualityAuditTest PRIVATE AESTRA_HAS_LIBSAMPLERATE=1)
+endif()
+if(SOXR_FOUND)
+    target_link_libraries(ResamplerQualityAuditTest PRIVATE ${SOXR_LIBRARIES})
+    target_include_directories(ResamplerQualityAuditTest PRIVATE ${SOXR_INCLUDE_DIRS})
+    target_compile_options(ResamplerQualityAuditTest PRIVATE ${SOXR_CFLAGS_OTHER})
+    target_compile_definitions(ResamplerQualityAuditTest PRIVATE AESTRA_HAS_SOXR=1)
+endif()
+add_test(NAME ResamplerQualityAuditTest COMMAND ResamplerQualityAuditTest)
+set_tests_properties(ResamplerQualityAuditTest PROPERTIES LABELS "audio;research;audio-research;resampler" TIMEOUT 180)
+
 # =============================================================================
 # AestraPlat Tests
 # =============================================================================

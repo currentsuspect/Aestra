@@ -475,7 +475,7 @@ void AuditionEngine::processBlock(float* output, uint32_t numFrames, uint32_t nu
     const int64_t totalFrames = static_cast<int64_t>(srcBuffer->numFrames);
     const uint32_t srcChannels = srcBuffer->numChannels;
 
-    // Process frames with SINC64 TURBO (mastering-grade quality)
+    // Process frames with Sinc64Turbo (measured quality: AestraDocs/audio-research-bench.md)
     for (uint32_t i = 0; i < numFrames; ++i) {
         // Calculate source frame position (fractional)
         double srcPosition = currentPos * srcRate;
