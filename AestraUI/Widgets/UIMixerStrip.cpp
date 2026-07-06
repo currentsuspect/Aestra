@@ -728,7 +728,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     }
 
     if (selected) {
-        renderer.drawShadow(bounds, 0.0f, 8.0f, 18.0f, m_selectedGlow.withAlpha(0.08f));
+        // Flat selection: no drop shadow — a tint + top highlight + outline only.
         renderer.fillRoundedRect(bounds, radius, m_selectedTint);
 
         renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
