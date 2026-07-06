@@ -657,18 +657,10 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     constexpr float kTitleBarH = 44.0f;
     constexpr float kCornerRadius = 12.0f;
 
-    // === Chrome: rounded card with shadow + opaque background ===
-    // Drop-shadow simulation: offset darker rect
-    NUIRect shadow{bounds.x + 3.0f, bounds.y + 6.0f, bounds.width, bounds.height};
-    renderer.fillRoundedRect(shadow, kCornerRadius, NUIColor(0.0f, 0.0f, 0.0f, 0.55f));
-
-    // Solid dark card so the workspace doesn't bleed through.
+    // === Chrome: flat rounded card ===
+    // Solid dark card so the workspace doesn't bleed through. Flat — no fake
+    // drop shadow, no depth gradient (matches the app's flat surface language).
     renderer.fillRoundedRect(bounds, kCornerRadius, NUIColor(0.046f, 0.046f, 0.046f, 1.0f));
-
-    // Subtle accent wash near the top for depth.
-    NUIColor gradTop = m_accent.withAlpha(0.035f);
-    NUIColor gradBot = NUIColor(0.0f, 0.0f, 0.0f, 0.0f);
-    renderer.fillRectGradient({bounds.x, bounds.y, bounds.width, 120.0f}, gradTop, gradBot, true);
 
     // Outer border
     renderer.strokeRoundedRect(bounds, kCornerRadius, 1.0f, m_border.withAlpha(0.55f));
@@ -820,8 +812,12 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     float canvasY = bounds.y + kTitleBarH;
 
     // Reduce edge density visual when there are many connections
+    // Idle edges are wiring, not content: on dense graphs they fade to a whisper
+    // so the map reads as nodes-first, and hover/trace/selection re-light the
+    // paths that matter. The old floor (0.22) let 50 converging edges stack into
+    // a solid grey fan at the master node.
     const float edgeAlphaScale = (m_edges.size() > 20)
-                                     ? std::max(0.22f, 16.0f / static_cast<float>(m_edges.size()))
+                                     ? std::max(0.10f, 10.0f / static_cast<float>(m_edges.size()))
                                      : 1.0f;
 
     // Precompute hover-to-trace masks if hovering a node
@@ -1070,30 +1066,18 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
                         ((node.color >> 24) & 0xFF) / 255.0f);
 
     if (m_mode == Mode::FullPanel) {
-        // Drop shadow under each node for separation without making the grid muddy.
-        renderer.fillRoundedRect({nx + 1.0f, ny + 3.0f, nw, nh}, radius,
-                                  NUIColor(0.0f, 0.0f, 0.0f, 0.34f));
-
-        // Master node uses accent-tinted fill so it's visually distinct as the destination
-        NUIColor bgBot, bgTop;
+        // Flat node fill — no shadow, gradient, or inner highlight. Hover reads
+        // as a single lighter fill; the master keeps its accent-tinted tone so
+        // the destination stays visually distinct.
+        NUIColor bg;
         if (node.type == Node::Master) {
-            bgBot = node.hovered ? NUIColor(0.22f, 0.16f, 0.32f, 1.0f)
-                                  : NUIColor(0.18f, 0.13f, 0.27f, 1.0f);
-            bgTop = node.hovered ? NUIColor(0.30f, 0.22f, 0.42f, 1.0f)
-                                  : NUIColor(0.25f, 0.18f, 0.36f, 1.0f);
+            bg = node.hovered ? NUIColor(0.22f, 0.16f, 0.32f, 1.0f)
+                              : NUIColor(0.18f, 0.13f, 0.27f, 1.0f);
         } else {
-            // Track nodes: elevated dark fill
-            bgBot = node.hovered ? NUIColor(0.137f, 0.137f, 0.137f, 1.0f)
-                                  : NUIColor(0.097f, 0.097f, 0.097f, 1.0f);
-            bgTop = node.hovered ? NUIColor(0.17f, 0.17f, 0.17f, 1.0f)
-                                  : NUIColor(0.124f, 0.124f, 0.124f, 1.0f);
+            bg = node.hovered ? NUIColor(0.137f, 0.137f, 0.137f, 1.0f)
+                              : NUIColor(0.097f, 0.097f, 0.097f, 1.0f);
         }
-        renderer.fillRoundedRect(nodeRect, radius, bgBot);
-        renderer.fillRectGradient({nx, ny, nw, nh * 0.6f}, bgTop, bgBot, true);
-
-        // Subtle inner highlight at the top edge for elevation
-        renderer.drawLine({nx + radius, ny + 1.0f}, {nx + nw - radius, ny + 1.0f},
-                          1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.10f));
+        renderer.fillRoundedRect(nodeRect, radius, bg);
 
         // Hover/selection/solo accent border
         bool isSelected = (m_viewModel &&
