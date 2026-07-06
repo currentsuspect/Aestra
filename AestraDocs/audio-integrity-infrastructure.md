@@ -108,7 +108,7 @@ deterministic silence render + one comparison + one CTest registration.
   case documents engine-legitimate processing (pan law, fades) which the
   expectation models explicitly, mirroring `GoldenReferenceTest`'s
   pan-law/trim handling.
-- **Measured baselines on develop @ 80bf87** (Linux, GCC, Release): silence and
+- **Measured baselines on develop @ 80fbbf87** (Linux, GCC, Release): silence and
   impulse render **bit-exact** (max abs error = 0); the 3-track gain+pan+
   bypassed-FX mix errs at one float ulp (5.96e-8, RMS −159.8 dB). Test
   thresholds (1e-6 / −120 dB) leave headroom for cross-platform FP/SIMD
