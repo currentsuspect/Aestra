@@ -33,7 +33,19 @@
 #include <new>
 #include <vector>
 
-#include <execinfo.h> // backtrace / backtrace_symbols_fd (glibc)
+// Backtrace forensics are glibc/libSystem-only. On other platforms (MSVC) the
+// trap still counts violations — it just can't name the culprit; run the test
+// on Linux for the backtrace.
+#if defined(__linux__) || defined(__APPLE__)
+#include <execinfo.h> // backtrace / backtrace_symbols_fd
+#define AESTRA_RT_TRAP_HAS_BACKTRACE 1
+#else
+#define AESTRA_RT_TRAP_HAS_BACKTRACE 0
+namespace {
+inline int backtrace(void**, int) { return 0; }
+inline void backtrace_symbols_fd(void* const*, int, int) {}
+} // namespace
+#endif
 
 // =============================================================================
 // Global allocation trap (test binary only)
