@@ -334,11 +334,11 @@ jobs:
         run: cmake --preset ci-tsan
 
       - name: Build
-        run: cmake --build --preset ci-tsan
+        run: cmake --build --preset ci-tsan --parallel 2
 
       - name: Test
         working-directory: build/ci-tsan
-        run: ctest --output-on-failure --output-junit ctest-results-tsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+        run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-tsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
 
       - name: Upload TSan test report
         if: always()
