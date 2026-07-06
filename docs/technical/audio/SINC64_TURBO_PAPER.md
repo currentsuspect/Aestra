@@ -7,7 +7,19 @@
 
 ## Abstract
 
-We present the **Aestra Polyphase Resampling Engine**, a multi-tier interpolation system achieving **mastering-grade quality (144dB SNR) through real-time (4.32 MFrame/sec)** using polyphase filter banks with symmetry exploitation and multi-architecture SIMD dispatch. This revision introduces **Sinc32Turbo**, a cache-friendly 64KB tier enabling 2× throughput for mixing scenarios while maintaining 100dB SNR—sufficient for all practical listening environments.
+We present the **Aestra Polyphase Resampling Engine**, a multi-tier interpolation system with a **144 dB SNR kernel design target at real-time throughput (4.32 MFrame/sec)** using polyphase filter banks with symmetry exploitation and multi-architecture SIMD dispatch. This revision introduces **Sinc32Turbo**, a cache-friendly 64KB tier enabling 2× throughput for mixing scenarios with a 100 dB SNR design target.
+
+> **Measured delivered performance (Audio Research Bench Phase 1, 2026-07).**
+> SNR figures in this paper are *kernel stopband design targets*. Bench-measured
+> delivered behavior of Sinc64Turbo (full-band single-tone residual SINAD, 1 kHz):
+> **~88 dB at fractional rate ratios** (bounded by nearest-phase LUT quantization,
+> not the kernel) and **~154 dB at exact 2:1 ratios**. The interpolators
+> reconstruct at the *source* Nyquist: **downsampling is not currently
+> anti-aliased by a ratio-aware low-pass**, so content between the output and
+> source Nyquist frequencies folds back into the output band. Passband level and
+> DC accuracy measure essentially exact (<1e-5 dB / ≤3e-8). Methodology, full
+> rate-matrix tables, and claim boundaries: `AestraDocs/audio-research-bench.md`
+> in the repository.
 
 ---
 
@@ -15,12 +27,12 @@ We present the **Aestra Polyphase Resampling Engine**, a multi-tier interpolatio
 
 ### Quality vs. Performance Tiers
 
-| Tier | Algorithm | Taps | Phases | Table Size | SNR | Use Case |
-|------|-----------|------|--------|------------|-----|----------|
+| Tier | Algorithm | Taps | Phases | Table Size | SNR (design target) | Use Case |
+|------|-----------|------|--------|------------|---------------------|----------|
 | **Fast** | Linear | 2 | — | — | ~60dB | Scrubbing, preview |
 | **Draft** | Sinc32Turbo | 32 | 1024 | 64KB (L1) | ~100dB | Mixing, muted tracks |
 | **Standard** | Cubic Hermite | 4 | — | — | ~80dB | General editing |
-| **High** | Sinc64Turbo | 64 | 2048 | 256KB (L2) | ~144dB | Mastering, export |
+| **High** | Sinc64Turbo | 64 | 2048 | 256KB (L2) | ~144dB (measured ~88 dB SINAD at fractional ratios) | Mixing, export |
 
 ### Cache Hierarchy Alignment
 
@@ -42,9 +54,9 @@ For mixing workflows where 50+ tracks may be pitch-shifted simultaneously:
 | **Table Size** | 64KB | 256KB | 4× smaller |
 | **Cache Level** | L1 | L2 | 3× faster access |
 | **Throughput** | ~8 MFrame/s | ~4 MFrame/s | 2× faster |
-| **SNR** | ~100dB | ~144dB | Imperceptible difference |
+| **SNR (design target)** | ~100dB | ~144dB | Imperceptible difference |
 
-At 100dB SNR, noise is 60dB below the quietest audible signal—well beyond human perception in a mix context.
+At the ~100 dB design target, kernel noise is far below perception in a mix context. (Delivered fractional-ratio SINAD is phase-LUT-bound for both tiers — see the measured-performance note in the Abstract.)
 
 ### Implementation
 
@@ -63,7 +75,7 @@ struct Sinc32Turbo {
 
 ---
 
-## 3. Sinc64Turbo: The Mastering Tier
+## 3. Sinc64Turbo: The High-Quality Tier
 
 ### Architecture
 
@@ -143,8 +155,8 @@ else /* scalar fallback */;
 - Buffer: 256 frames × 1000 blocks
 - Audio: 48kHz stereo random noise
 
-| Algorithm | MFrame/sec | Rel. Speed | SNR |
-|-----------|-----------|------------|-----|
+| Algorithm | MFrame/sec | Rel. Speed | SNR (design target) |
+|-----------|-----------|------------|---------------------|
 | Cubic (4-point) | 43.44 | — | ~80dB |
 | Sinc8 (8-point) | 9.41 | — | ~100dB |
 | Sinc64 Legacy | 1.63 | 1.0× | ~144dB |
@@ -164,17 +176,29 @@ else /* scalar fallback */;
 
 ### Frequency Response (64-tap)
 
-- Transition band: < 0.5% of Nyquist
-- Stopband attenuation: > 140 dB
-- Passband ripple: < 0.001 dB
+- Transition band: < 0.5% of Nyquist *(design model)*
+- Stopband attenuation: > 140 dB *(design model)*
+- Passband ripple: < 0.001 dB *(design model; passband level measured exact to <1e-5 dB at 1 kHz)*
 
 ### Distortion Metrics
 
-| Metric | Sinc64 | Sinc32 | Linear | Unit |
+The table below reflects the *filter design model*, not bench measurements.
+
+| Metric (design model) | Sinc64 | Sinc32 | Linear | Unit |
 |--------|--------|--------|--------|------|
 | THD+N | -144 | -100 | -60 | dB |
 | IMD | -140 | -96 | -55 | dB |
-| Aliasing | None | None | Audible | — |
+
+**Measured corrections (Audio Research Bench Phase 1, 2026-07 —
+`AestraDocs/audio-research-bench.md`):** delivered full-band single-tone residual
+(THD+N-style) for Sinc64Turbo is **~-88 dB at fractional rate ratios** (phase-LUT
+quantization bound; ~-154 dB at exact 2:1). IMD has not been bench-measured yet.
+Aliasing is **not** "None": the kernels reconstruct at the *source* Nyquist and no
+ratio-aware anti-alias low-pass is applied, so when downsampling, content between
+the output and source Nyquist frequencies folds back (measured near full scale for
+between-Nyquists probes); upsampling image rejection measured -60.5 to -68.2 dBc
+at 0.9-Nyquist probes and -21.7 dBc for a transition-band probe (44.1→48 kHz at
+21 kHz).
 
 ---
 
@@ -207,8 +231,10 @@ if (track.isSoloed() || isBouncing) {
 
 The Aestra Polyphase Resampling Engine proves that **adaptive quality switching** combined with **cache-aware design** enables:
 
-- **Sinc64Turbo**: Mastering-grade (144dB) at 4.32 MFrame/sec
-- **Sinc32Turbo**: Mixing-grade (100dB) at ~8 MFrame/sec, 2× faster
+- **Sinc64Turbo**: 144 dB-target kernel at 4.32 MFrame/sec (measured delivered
+  SINAD: ~88 dB at fractional rate ratios, ~154 dB at exact 2:1 — see the
+  measured-performance note in the Abstract)
+- **Sinc32Turbo**: 100 dB-target kernel at ~8 MFrame/s, 2× faster
 - **Multi-arch SIMD**: AVX2/SSE4.1/ARM NEON with runtime dispatch
 
 The key innovations:
@@ -240,7 +266,7 @@ The key innovations:
 | Sinc64Turbo | 71.91 ns        | ~13.9 MHz               | 0.48x    |
 
 **Analysis:**
-On modern AVX2 hardware, `Sinc64Turbo` achieves nearly 14 million stereo samples per second, providing massive headroom (approx 290x real-time at 48kHz). The cost of "Mastering Grade" resampling is now negligible for typical track counts.
+On modern AVX2 hardware, `Sinc64Turbo` achieves nearly 14 million stereo samples per second, providing massive headroom (approx 290x real-time at 48kHz). The cost of the highest-quality tier is now negligible for typical track counts.
 
 ---
 
