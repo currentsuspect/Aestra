@@ -1211,6 +1211,20 @@ target_include_directories(CallbackDeadlineTelemetryTest PRIVATE
 add_test(NAME CallbackDeadlineTelemetryTest COMMAND CallbackDeadlineTelemetryTest)
 set_tests_properties(CallbackDeadlineTelemetryTest PROPERTIES LABELS "audio;diagnostics;deadline;integrity" TIMEOUT 120)
 
+# Sample-Rate & Buffer Truth — 96 kHz impulse exactness, 48k-clip-in-96k-engine
+# SRC pitch/time truth, buffer-size independence sweep (64/193/512/1024/2048),
+# sentinel overwrite guarantee, exact post-clip silence.
+add_executable(SampleRateBufferTruthTest AestraAudio/SampleRateBufferTruthTest.cpp)
+target_link_libraries(SampleRateBufferTruthTest PRIVATE AestraAudio)
+target_include_directories(SampleRateBufferTruthTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SampleRateBufferTruthTest COMMAND SampleRateBufferTruthTest)
+set_tests_properties(SampleRateBufferTruthTest PROPERTIES LABELS "audio;quality;samplerate;buffers;integrity;s-tier" TIMEOUT 180)
+
 # Audio Quality Audit — noise floor, THD+N, freq response, DC blocker, soft clipper
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioQualityAuditTest.cpp")
     add_executable(AudioQualityAuditTest AestraAudio/AudioQualityAuditTest.cpp)
