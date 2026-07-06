@@ -241,7 +241,7 @@ static void testExtremeGainValues() {
         eng->processBlock(out.data(), sigIn.data(), kBlockSize, 0.0);
         if (!isFinite(out.data(), kBlockSize, kChannels))
             return false;
-        // Engine output stage hard-clamps L/R to [-1, 1]; verify the bound
+        // Default safety path bounds L/R to [-1, 1]; verify the bound.
         float peak = peakMagnitude(out.data(), kBlockSize, kChannels);
         return peak <= 1.0f;
     });
