@@ -56,6 +56,16 @@ void syntheticMathCase() {
     require(tel2.overruns.load() == 0, "no overrun counted when sample rate unknown");
     require(tel2.getCallbackBudgetNs() == 0, "budget reports 0 when sample rate unknown");
     require(tel2.getAverageCallbackNs() == 5'000'000, "average still tracked without budget context");
+
+    // Pair coherence (CodeRabbit, PR #430): after a valid frames/rate pair, a
+    // later call with sampleRate == 0 must not advance frames independently —
+    // the budget must keep reflecting a pair that actually co-occurred.
+    AudioTelemetry tel3;
+    tel3.recordCallbackDuration(1'000'000, 512, 48000);
+    tel3.recordCallbackDuration(1'000'000, 4096, 0); // rate unknown: pair must not move
+    require(tel3.lastBufferFrames.load() == 512, "frames not advanced by rate-less call");
+    require(tel3.getCallbackBudgetNs() == (512ull * 1000000000ull) / 48000ull,
+            "budget still reflects the last coherent frames/rate pair");
 }
 
 void liveSmokeCase() {
