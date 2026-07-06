@@ -443,19 +443,16 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
     const uint64_t cbEndCycles = Aestra::Audio::RT::readCycleCounter();
     if (controller->m_audioEngine && cbEndCycles > cbStartCycles) {
         auto& tel = controller->m_audioEngine->telemetry();
-        tel.lastBufferFrames.store(nFrames, std::memory_order_relaxed);
-        tel.lastSampleRate.store(static_cast<uint32_t>(actualRate), std::memory_order_relaxed);
         const uint64_t hz = tel.cycleHz.load(std::memory_order_relaxed);
         if (hz > 0) {
-           const uint64_t deltaCycles = cbEndCycles - cbStartCycles;
-           const uint64_t ns = (deltaCycles * 1000000000ull) / hz;
-           tel.lastCallbackNs.store(ns, std::memory_order_relaxed);
-           tel.updateMaxCallbackNs(ns);
-           const uint64_t deadlineNs =
-               (static_cast<uint64_t>(nFrames) * 1000000000ull) / static_cast<uint64_t>(actualRate);
-           if (deadlineNs > 0 && ns > deadlineNs) {
-               tel.incrementOverruns();
-           }
+            const uint64_t deltaCycles = cbEndCycles - cbStartCycles;
+            const uint64_t ns = (deltaCycles * 1000000000ull) / hz;
+            // Consolidated deadline accounting: last/max/avg duration, budget
+            // context, and over-budget counting (AudioTelemetry).
+            tel.recordCallbackDuration(ns, nFrames, static_cast<uint32_t>(actualRate));
+        } else {
+            tel.lastBufferFrames.store(nFrames, std::memory_order_relaxed);
+            tel.lastSampleRate.store(static_cast<uint32_t>(actualRate), std::memory_order_relaxed);
         }
     }
 
