@@ -12,6 +12,7 @@
 // Doc: AestraDocs/audio-research-bench.md
 #pragma once
 
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <vector>
@@ -29,10 +30,14 @@ struct Signal {
 
     uint32_t frames() const { return channels > 0 ? static_cast<uint32_t>(samples.size() / channels) : 0; }
 
+    // Tests build with -UNDEBUG (Tests/CMakeLists.txt), so these asserts stay live
+    // in every test configuration and catch out-of-range access at the source.
     float at(uint32_t frame, uint32_t channel) const {
+        assert(channel < channels && frame < frames());
         return samples[(static_cast<size_t>(frame) * channels) + channel];
     }
     float& at(uint32_t frame, uint32_t channel) {
+        assert(channel < channels && frame < frames());
         return samples[(static_cast<size_t>(frame) * channels) + channel];
     }
 };
