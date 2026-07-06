@@ -1182,6 +1182,21 @@ target_include_directories(RealtimeExportParityTest PRIVATE
 add_test(NAME RealtimeExportParityTest COMMAND RealtimeExportParityTest)
 set_tests_properties(RealtimeExportParityTest PROPERTIES LABELS "audio;quality;export;parity;integrity;s-tier" TIMEOUT 180)
 
+# RT Allocation Trap — overrides operator new/delete in the test binary and
+# renders a session; asserts ZERO steady-state heap activity on the audio
+# callback path (thread marked by ScopedRealtimeAudioThread in processBlock).
+# Findings doc: AestraDocs/rt-safety-audit.md.
+add_executable(RTAllocationTrapTest AestraAudio/RTAllocationTrapTest.cpp)
+target_link_libraries(RTAllocationTrapTest PRIVATE AestraAudio)
+target_include_directories(RTAllocationTrapTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RTAllocationTrapTest COMMAND RTAllocationTrapTest)
+set_tests_properties(RTAllocationTrapTest PROPERTIES LABELS "audio;rt-safety;integrity;s-tier" TIMEOUT 180)
+
 # Audio Quality Audit — noise floor, THD+N, freq response, DC blocker, soft clipper
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioQualityAuditTest.cpp")
     add_executable(AudioQualityAuditTest AestraAudio/AudioQualityAuditTest.cpp)
