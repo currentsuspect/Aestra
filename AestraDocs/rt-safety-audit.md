@@ -24,7 +24,9 @@ Offline export drives the same processBlock from the exporter thread
 
 - **`RTAllocationTrapTest`** — overrides global operator new/delete; renders a
   3-track session with fader/pan engaged and an active insert; asserts ZERO
-  steady-state heap activity while `isRealtimeAudioThread()`. Includes a
+  heap activity while `isRealtimeAudioThread()` — **from the first measured
+  block onward, no warmup exemption** (issue #432). Captures backtraces of the
+  first violations for forensics (resolve with `addr2line`). Includes a
   self-check proving the trap fires (it caught GCC's allocation elision faking
   a pass during development). Scope: C++ new/delete; NOT raw malloc, mutex
   waits, or syscalls.
@@ -37,9 +39,9 @@ Offline export drives the same processBlock from the exporter thread
 
 | # | Finding | Evidence | Classification |
 |---|---|---|---|
-| 1 | Render path performs **zero steady-state heap activity under tested conditions** (3 tracks, fader/pan params, active insert, 186 blocks) — with **one detected first-block 31-byte allocation when an active insert is present** (finding #3; zero absolutely without an insert). The claim is NOT unconditional until #3 is resolved. | `RTAllocationTrapTest` | **verified safe at steady state** |
+| 1 | Render path performs **zero heap activity from the first measured block onward** (3 tracks, fader/pan params, active insert, 187 blocks) — the former first-block exception (old finding #3) is resolved, so the claim is now unconditional under tested conditions | `RTAllocationTrapTest` (gate: `firstBlockAllocs == 0` too) | **verified safe** |
 | 2 | Preview ducking attenuated offline exports by the full configured depth | `RealtimeExportParityTest` | **confirmed violation — FIXED** (AudioExporter save/disable/restore + duck-smoother snap) |
-| 3 | **1 allocation (31 bytes) in the first block after an active insert is added** — lazy init somewhere in the effect-chain path; xrun risk on the first callback after inserting a plugin during playback | `RTAllocationTrapTest` first-block counter (0 allocs without insert, 1 with) | **suspicious but unproven origin** — reproducible; origin hunt is follow-up (gdb conditional breakpoint on the trap) |
+| 3 | **RESOLVED (issue #432):** the first-block 31-byte allocation was `BuiltInPlugins::samplerInfo()` (`BuiltInPlugins.cpp:20`) — a Meyers-singleton `PluginInfo` whose first call constructs `std::string` fields (only the `id` exceeds SSO → the 31 bytes) plus a `__cxa_guard` acquire, reached via `SamplerPlugin::getInfo()` from `EffectChainSnapshot::process()` (`EffectChain.cpp:500`) on the RT thread when the registry hadn't touched the static first. Fix: `EffectChain::insertPlugin()` prewarms `plugin->getInfo()` off-RT. Trap backtrace forensics + `addr2line` found it | trap backtrace → `addr2line`; post-fix run: first block 0/0/0 | **confirmed violation — FIXED** |
 | 4 | `AuditionEngine::processBlock` (RT, AudioEngine.cpp:722) invokes `m_onPositionChanged` — an arbitrary app-bound `std::function` — on the audio thread every 10th block (AuditionEngine.cpp:543-544) | grep + code read; **currently unbound in Source/** (no binder found) | **latent hazard by design** — safe today, one `setOnPositionChanged(ui_lambda)` away from UI work on the RT thread. Follow-up: route through an SPSC snapshot like meters |
 | 5 | `AuditionEngine::processBlock` body (439-546): no direct locks/logs/allocs; its 26 mutex sites live in queue/load helpers (`loadCurrentTrack` etc.) | windowed grep | **acceptable by design** (helpers are non-RT) |
 | 6 | `PatternPlaybackEngine::processAudio` drains its RT queue lock-free; the file's 3 locks are in non-RT mutators, and `refillWindow` is guarded by `reportRealtimeMisuse` and called from `performNonRealtimeMaintenance` | code read :279+, :96/:124/:151 | **acceptable by design** |
