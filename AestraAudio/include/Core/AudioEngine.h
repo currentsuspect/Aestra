@@ -490,6 +490,22 @@ public:
     }
 
     /**
+     * @brief Snap preview-duck smoothing to unity. Offline render only.
+     *
+     * Preview ducking is a monitoring convenience; it must never attenuate an
+     * offline render. AudioExporter disables the duck depth for the render,
+     * and calls this so an already-engaged duck's release tail (~120 ms)
+     * cannot bleed into the head of the exported file. Non-RT only — call
+     * while no realtime stream is driving processBlock.
+     */
+    void resetPreviewDuckForOfflineRender() {
+        m_smoothedPreviewDuckGain = 1.0f;
+        m_previewDuckHoldSecondsRemaining = 0.0f;
+        m_previewDuckGain.store(1.0f, std::memory_order_relaxed);
+        m_previewDuckSource.store(static_cast<uint8_t>(PreviewDuckSource::None), std::memory_order_relaxed);
+    }
+
+    /**
      * @brief Render a range of the timeline (or a specific track) to a WAV file.
      *
      * Uses miniaudio encoder and AudioRenderer for offline rendering.

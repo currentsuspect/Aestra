@@ -139,6 +139,43 @@ still needs ears), plugin-internal behavior beyond bypass/summing, hardware
 driver behavior (tests run headless), Windows/macOS driver timing paths
 (only compile-checked in CI).
 
-## 6. RT-safety audit findings
+## 6. Confirmed findings (PR-2)
+
+### BUG (fixed): preview ducking contaminated offline exports
+- **Evidence:** `RealtimeExportParityTest / Export_Immune_To_Preview_Ducking`
+  — with a real `PreviewEngine` audibly playing (pumped exactly as the device
+  callback pumps it) and 12 dB ducking configured, `bounceRangeToWav` produced
+  a file attenuated by exactly −12 dB relative to the clean export.
+- **Mechanism:** duck gain is computed inside `processBlock`
+  (`AudioEngine.cpp:925-971`) from `preview->isAudiblyPlaying()`;
+  `AudioExporter` forces `setTransportPlaying(true)`, so the duck engaged
+  during offline rendering.
+- **Fix (minimal):** `AudioExporter::render` now saves the configured duck
+  depth, sets it to 0, snaps the duck smoother to unity
+  (`AudioEngine::resetPreviewDuckForOfflineRender()` — also kills an
+  already-engaged duck's ~120 ms release tail), renders, and restores the
+  configured depth. Mirrors the exporter's existing metronome/audition
+  save-disable-restore. After the fix the ducked-preview export is
+  **bit-exact** with the clean export.
+
+### Steady-state realtime/export parity: BIT-EXACT
+- `RealtimeExportParityTest / Realtime_vs_Export_Parity`: the realtime
+  `processBlock` output and the offline `bounceRangeToWav` output for the
+  same 2-track gain+pan session are **identical to the bit** (max abs error
+  = 0) on the compared overlap.
+
+### Finding (documented, not fixed): fresh-engine param-application latency
+- On a **freshly constructed** engine, values newly written to
+  `ContinuousParamBuffer` do not reach the mix until after the first
+  `processBlock` (measured via RMS trajectory: first export block at unity
+  gain, all later blocks converged). At the exporter's 4096-frame block size
+  that is the first ~85 ms; at realtime block sizes it is ≤ ~11 ms.
+- **Classification: acceptable by design / test-only impact.** Real exports
+  run on the app's long-lived engine whose mixer state was applied long ago.
+  The parity test warms the engine (`warmupEngine`) to model that reality.
+  Left as a documented sharp edge for anyone constructing a fresh engine and
+  exporting immediately.
+
+## 7. RT-safety audit findings
 
 See `AestraDocs/rt-safety-audit.md` (PR-3).

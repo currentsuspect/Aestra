@@ -1,0 +1,271 @@
+// © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+// RealtimeExportParityTest — proves that the realtime playback path and the
+// offline export path produce the same audio for an equivalent session, and
+// that monitoring conveniences (preview ducking) cannot contaminate an export.
+//
+// Paths under test (see AestraDocs/audio-integrity-infrastructure.md §1):
+//   realtime: AudioEngine::processBlock driven block-by-block (as the device
+//             callback does) — rendered here via GoldenAudio::renderBlocks.
+//   offline:  AudioEngine::bounceRangeToWav → AudioExporter::render, which
+//             drives the same processBlock with metronome/audition disabled
+//             and writes Float_32 (no quantization/dither in the comparison).
+//
+// Case 2 probes a specific contamination vector: preview ducking is computed
+// INSIDE processBlock from PreviewEngine::isAudiblyPlaying(), and the export
+// forces transport playing — so an audible browser preview during an offline
+// export can attenuate the exported file. This test reproduces it headlessly
+// by pumping the preview exactly as the device callback would.
+
+#include "GoldenAudio/GoldenAudioHarness.h"
+
+#include "DSP/ContinuousParamBuffer.h"
+#include "IO/MiniAudioDecoder.h"
+#include "Playback/PreviewEngine.h"
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <thread>
+#include <vector>
+
+using namespace Aestra::Audio;
+using namespace GoldenAudio;
+namespace fs = std::filesystem;
+
+namespace {
+
+constexpr double kTau = 6.28318530717958647692;
+constexpr uint32_t kSeconds = 2;
+constexpr double kBeats = 4.0; // 2 s at 120 BPM
+
+std::vector<float> makeSine(double freqHz, float amplitude, uint32_t frames, uint32_t sampleRate) {
+    std::vector<float> s(static_cast<size_t>(frames) * 2, 0.0f);
+    for (uint32_t i = 0; i < frames; ++i) {
+        const float v = static_cast<float>(std::sin(kTau * freqHz * static_cast<double>(i) / sampleRate)) *
+                        amplitude;
+        s[static_cast<size_t>(i) * 2] = v;
+        s[static_cast<size_t>(i) * 2 + 1] = v;
+    }
+    return s;
+}
+
+// Minimal 16-bit WAV writer for the preview source file (same as
+// ExportBounceParityTest's inline writer).
+bool writeWav16(const fs::path& path, const std::vector<float>& interleaved, uint32_t frames,
+                uint32_t channels, uint32_t sampleRate) {
+    std::ofstream f(path.string(), std::ios::binary);
+    if (!f) return false;
+    auto write16 = [&](uint16_t v) { f.write(reinterpret_cast<const char*>(&v), 2); };
+    auto write32 = [&](uint32_t v) { f.write(reinterpret_cast<const char*>(&v), 4); };
+    const uint32_t dataSize = frames * channels * 2;
+    f.write("RIFF", 4); write32(36 + dataSize); f.write("WAVE", 4);
+    f.write("fmt ", 4); write32(16);
+    write16(1); write16(static_cast<uint16_t>(channels));
+    write32(sampleRate);
+    write32(sampleRate * channels * 2);
+    write16(static_cast<uint16_t>(channels * 2)); write16(16);
+    f.write("data", 4); write32(dataSize);
+    for (float s : interleaved) {
+        const int16_t v = static_cast<int16_t>(std::clamp(s, -1.0f, 1.0f) * 32767.0f);
+        write16(static_cast<uint16_t>(v));
+    }
+    return f.good();
+}
+
+std::shared_ptr<TrackManager> buildSession(const SessionConfig& cfg, uint32_t totalFrames) {
+    auto tm = std::make_shared<TrackManager>();
+    tm->setOutputSampleRate(static_cast<double>(cfg.sampleRate));
+    addAudioTrack(*tm, "ParityA", makeSine(440.0, 0.30f, totalFrames, cfg.sampleRate), totalFrames, cfg);
+    addAudioTrack(*tm, "ParityB", makeSine(660.0, 0.20f, totalFrames, cfg.sampleRate), totalFrames, cfg);
+    return tm;
+}
+
+void applyParams(AudioEngine& engine) {
+    auto params = std::make_shared<ContinuousParamBuffer>();
+    params->setFaderDb(0, -3.0f);
+    params->setPan(0, -0.4f);
+    params->setFaderDb(1, -6.0f);
+    params->setPan(1, 0.6f);
+    engine.setContinuousParams(params);
+}
+
+double rmsOf(const std::vector<float>& v) {
+    if (v.empty()) return 0.0;
+    double sumSq = 0.0;
+    for (float s : v) sumSq += static_cast<double>(s) * static_cast<double>(s);
+    return std::sqrt(sumSq / static_cast<double>(v.size()));
+}
+
+// Warm the engine's param/track state to steady state before the measured
+// render, then rewind. This mirrors the real app, where exports run on the
+// long-lived engine whose mixer state was applied long ago. (Finding, kept
+// deliberately out of this test's assertions: on a FRESH engine, freshly set
+// ContinuousParamBuffer values take one processBlock to reach the mix — at
+// the exporter's 4096-frame block size that is the first ~85 ms. Documented
+// in AestraDocs/audio-integrity-infrastructure.md; real exports are unaffected
+// because the app's engine is warm.)
+void warmupEngine(AudioEngine& engine, const SessionConfig& cfg) {
+    engine.setTransportPlaying(true);
+    std::vector<float> block(static_cast<size_t>(cfg.blockSize) * cfg.channels, 0.0f);
+    for (int i = 0; i < 8; ++i) {
+        std::fill(block.begin(), block.end(), 0.0f);
+        engine.processBlock(block.data(), nullptr, cfg.blockSize, 0.0);
+    }
+    engine.setTransportPlaying(false);
+    engine.setGlobalSamplePos(0);
+}
+
+bool runExport(const std::shared_ptr<TrackManager>& tm, const SessionConfig& cfg, const fs::path& outPath,
+               PreviewEngine* preview, float duckAttenuationDb, std::vector<float>& decodedOut) {
+    AudioEngine engine;
+    prepareEngine(engine, tm, cfg);
+    applyParams(engine);
+    warmupEngine(engine, cfg);
+    if (preview) {
+        engine.setPreviewEngine(preview);
+        engine.setPreviewDuckingAttenuationDb(duckAttenuationDb);
+    }
+
+    std::error_code ec;
+    fs::remove(outPath, ec);
+    if (!engine.bounceRangeToWav(0.0, kBeats, outPath.string(), -1)) {
+        std::cerr << "bounceRangeToWav failed for " << outPath << "\n";
+        return false;
+    }
+    uint32_t sr = 0, ch = 0;
+    if (!decodeAudioFile(outPath.string(), decodedOut, sr, ch)) {
+        std::cerr << "failed to decode " << outPath << "\n";
+        return false;
+    }
+    if (sr != cfg.sampleRate || ch != cfg.channels) {
+        std::cerr << "export format mismatch: " << sr << " Hz / " << ch << " ch, expected "
+                  << cfg.sampleRate << " Hz / " << cfg.channels << " ch\n";
+        return false;
+    }
+    return true;
+}
+
+// -----------------------------------------------------------------------------
+// Case 1: realtime processBlock output ≈ offline export output, same session
+// -----------------------------------------------------------------------------
+bool runParityCase(const std::shared_ptr<TrackManager>& tm, const SessionConfig& cfg,
+                   const std::vector<float>& cleanExport) {
+    const uint32_t totalFrames = cfg.sampleRate * kSeconds;
+
+    AudioEngine engine;
+    prepareEngine(engine, tm, cfg);
+    applyParams(engine);
+    warmupEngine(engine, cfg);
+    engine.setTransportPlaying(true);
+    std::vector<float> realtime = renderBlocks(engine, totalFrames, cfg);
+    engine.setTransportPlaying(false);
+
+    // Compare the overlap, past the transport fade-in both paths perform.
+    const size_t trimStart = static_cast<size_t>(cfg.blockSize) * 4 * cfg.channels;
+    const size_t n = std::min(realtime.size(), cleanExport.size());
+    if (n <= trimStart) {
+        std::cerr << "not enough overlap to compare (" << n << " samples)\n";
+        return false;
+    }
+    std::vector<float> rt(realtime.begin() + static_cast<ptrdiff_t>(trimStart),
+                          realtime.begin() + static_cast<ptrdiff_t>(n));
+    std::vector<float> ex(cleanExport.begin() + static_cast<ptrdiff_t>(trimStart),
+                          cleanExport.begin() + static_cast<ptrdiff_t>(n));
+
+    DiffReport r = compareBuffers(rt, ex, cfg.channels, cfg.sampleRate, 1e-6);
+    const bool pass = (r.rmsErrorDb <= -120.0) && (r.maxAbsError <= 1e-6);
+    printReport("Realtime_vs_Export_Parity", r, pass,
+                "RMS <= -120 dB and maxAbs <= 1e-6 on the trimmed overlap");
+    std::cout << "  realtime frames: " << realtime.size() / cfg.channels
+              << ", export frames: " << cleanExport.size() / cfg.channels << "\n";
+    return pass;
+}
+
+// -----------------------------------------------------------------------------
+// Case 2: an audible preview must NOT attenuate an offline export
+// -----------------------------------------------------------------------------
+bool runDuckContaminationCase(const std::shared_ptr<TrackManager>& tm, const SessionConfig& cfg,
+                              const std::vector<float>& cleanExport, const fs::path& tempRoot) {
+    // Build a real preview source and make it audibly playing, exactly as the
+    // device callback would: play() + pump processRealtime until the engine's
+    // audibility latch (output peak) is set.
+    const uint32_t previewFrames = cfg.sampleRate; // 1 s
+    const fs::path previewWav = tempRoot / "parity_preview_src.wav";
+    if (!writeWav16(previewWav, makeSine(330.0, 0.8f, previewFrames, cfg.sampleRate), previewFrames, 2,
+                    cfg.sampleRate)) {
+        std::cerr << "failed to write preview wav\n";
+        return false;
+    }
+
+    PreviewEngine preview;
+    preview.setOutputSampleRate(cfg.sampleRate);
+    preview.play(previewWav.string(), 0.0f, 10.0);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    std::vector<float> sink(static_cast<size_t>(cfg.blockSize) * cfg.channels, 0.0f);
+    while (!preview.isAudiblyPlaying() && std::chrono::steady_clock::now() < deadline) {
+        std::fill(sink.begin(), sink.end(), 0.0f);
+        preview.processRealtime(sink.data(), cfg.blockSize, cfg.channels);
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+    if (!preview.isAudiblyPlaying()) {
+        std::cerr << "could not bring preview to audible state; cannot probe contamination\n";
+        return false;
+    }
+
+    // Export with the audible preview registered and ducking enabled (12 dB),
+    // as it would be during normal app use.
+    std::vector<float> duckedExport;
+    if (!runExport(tm, cfg, tempRoot / "parity_ducked.wav", &preview, 12.0f, duckedExport)) return false;
+
+    const size_t trimStart = static_cast<size_t>(cfg.blockSize) * 4 * cfg.channels;
+    const size_t n = std::min(duckedExport.size(), cleanExport.size());
+    std::vector<float> ducked(duckedExport.begin() + static_cast<ptrdiff_t>(trimStart),
+                              duckedExport.begin() + static_cast<ptrdiff_t>(n));
+    std::vector<float> clean(cleanExport.begin() + static_cast<ptrdiff_t>(trimStart),
+                             cleanExport.begin() + static_cast<ptrdiff_t>(n));
+
+    const double duckedRms = rmsOf(ducked);
+    const double cleanRms = rmsOf(clean);
+    const double levelDeltaDb =
+        20.0 * std::log10(std::max(duckedRms, 1e-15) / std::max(cleanRms, 1e-15));
+
+    DiffReport r = compareBuffers(ducked, clean, cfg.channels, cfg.sampleRate, 1e-6);
+    const bool pass = (r.rmsErrorDb <= -120.0) && (r.maxAbsError <= 1e-6);
+    printReport("Export_Immune_To_Preview_Ducking", r, pass,
+                "export with audible preview must equal clean export (RMS <= -120 dB, maxAbs <= 1e-6)");
+    std::cout << "  export level delta vs clean: " << levelDeltaDb << " dB"
+              << (pass ? "" : "  <-- preview ducking contaminated the export") << "\n";
+    return pass;
+}
+
+} // namespace
+
+int main() {
+    std::cout << "=== Aestra Realtime/Export Parity Test ===\n\n";
+    const fs::path tempRoot = fs::temp_directory_path() / "aestra_rt_export_parity";
+    std::error_code ec;
+    fs::create_directories(tempRoot, ec);
+
+    SessionConfig cfg;
+    const uint32_t totalFrames = cfg.sampleRate * kSeconds;
+    auto tm = buildSession(cfg, totalFrames);
+
+    // Clean export once; both cases compare against it.
+    std::vector<float> cleanExport;
+    if (!runExport(tm, cfg, tempRoot / "parity_clean.wav", nullptr, 0.0f, cleanExport)) {
+        return 1;
+    }
+
+    int failures = 0;
+    if (!runParityCase(tm, cfg, cleanExport)) ++failures;
+    if (!runDuckContaminationCase(tm, cfg, cleanExport, tempRoot)) ++failures;
+
+    fs::remove_all(tempRoot, ec);
+    std::cout << "\n" << (failures == 0 ? "ALL PASS" : "FAILURES: " + std::to_string(failures)) << "\n";
+    return failures == 0 ? 0 : 1;
+}
