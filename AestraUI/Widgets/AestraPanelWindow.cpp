@@ -65,7 +65,15 @@ void AestraPanelWindow::drawTitleBar(NUIRenderer& renderer)
     auto b = getBounds();
     if (b.isEmpty()) return;
 
-    // Bottom border only — body fillRoundedRect already covered the top area
+    // Title bar fill: the transport bar's charcoal (backgroundSecondary), matching
+    // the docked-panel chrome so all panel windows read as one surface. Rounded
+    // top corners (to match the panel), squared at the bottom to sit flush on the
+    // body.
+    const NUIColor titleColor = NUIThemeManager::getInstance().getColor("backgroundSecondary");
+    renderer.fillRoundedRect({b.x, b.y, b.width, TITLE_BAR_H}, kRadius, titleColor);
+    renderer.fillRect({b.x, b.y + TITLE_BAR_H - kRadius, b.width, kRadius}, titleColor);
+
+    // Bottom separator border
     renderer.drawLine({b.x, b.y + TITLE_BAR_H - 0.5f},
                       {b.right(), b.y + TITLE_BAR_H - 0.5f},
                       0.5f, m_border);
