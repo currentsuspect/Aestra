@@ -3,8 +3,12 @@
 
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
+#include "../Graphics/NUISVGParser.h"
 
 #include <algorithm>
+#include <cmath>
+#include <memory>
+#include <unordered_map>
 
 namespace AestraUI {
 
@@ -13,6 +17,25 @@ namespace {
     constexpr float BTN_H = 20.0f;
     constexpr float BTN_GAP = 5.0f;
     constexpr float BTN_RADIUS = 8.0f;
+
+    // Mute/solo/record glyphs — authored on a 24x24 grid, identical to the
+    // track-header control icons (Source/Components/TrackUIComponent.cpp) so the
+    // mixer and the arrangement lanes speak one icon language.
+    constexpr const char* kMuteIconSvg =
+        R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 4.5v-15L8 9H4z" fill="#fff"/><path d="M16 9.5 21 14.5 M21 9.5 16 14.5" stroke="#fff" stroke-width="1.9" stroke-linecap="round" fill="none"/></svg>)";
+    constexpr const char* kSoloIconSvg =
+        R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 4.5a7.5 7.5 0 0 0-7.5 7.5v5.2a1.8 1.8 0 0 0 1.8 1.8h1.2a1 1 0 0 0 1-1v-4.2a1 1 0 0 0-1-1H6.5V12a5.5 5.5 0 0 1 11 0v.8h-1a1 1 0 0 0-1 1V18a1 1 0 0 0 1 1h1.2a1.8 1.8 0 0 0 1.8-1.8V12A7.5 7.5 0 0 0 12 4.5z" fill="#fff"/></svg>)";
+    constexpr const char* kRecordIconSvg =
+        R"(<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="7.2" fill="none" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="3.4" fill="#fff"/></svg>)";
+
+    // Parsed once, then rasterized+cached per size/tint by NUISVGRenderer, so the
+    // per-frame cost is a single texture draw.
+    const NUISVGDocument* mixerControlIcon(const char* svg) {
+        static std::unordered_map<const char*, std::shared_ptr<NUISVGDocument>> docs;
+        auto& doc = docs[svg];
+        if (!doc) doc = NUISVGParser::parse(svg);
+        return doc.get();
+    }
 }
 
 UIMixerButtonRow::UIMixerButtonRow()
@@ -95,7 +118,7 @@ void UIMixerButtonRow::onResize(int width, int height)
 
 void UIMixerButtonRow::onRender(NUIRenderer& renderer)
 {
-    static constexpr const char* labels[kButtonCount] = {"M", "S", "R"};
+    static constexpr const char* icons[kButtonCount] = {kMuteIconSvg, kSoloIconSvg, kRecordIconSvg};
     auto& theme = NUIThemeManager::getInstance();
 
     for (int i = 0; i < kButtonCount; ++i) {
@@ -147,18 +170,24 @@ void UIMixerButtonRow::onRender(NUIRenderer& renderer)
             bg = active ? activeBg.withAlpha(0.28f) : theme.getColor("buttonBgActive").withAlpha(0.99f);
         }
 
-        // Active glow behind pill
-        if (active) {
-            renderer.drawGlow(visualRect, BTN_RADIUS, 0.6f, activeBg.withAlpha(0.45f));
-        }
-
+        // Flat active state (no glow): the coloured fill + border + white icon
+        // carry the on-state, matching the flat-active language used elsewhere.
         renderer.fillRoundedRect(visualRect, BTN_RADIUS, bg);
         renderer.strokeRoundedRect(visualRect, BTN_RADIUS, 1.0f, border);
         renderer.strokeRoundedRect({visualRect.x + 1.0f, visualRect.y + 1.0f, visualRect.width - 2.0f, visualRect.height - 2.0f},
                                    std::max(0.0f, BTN_RADIUS - 1.0f),
                                    1.0f,
                                    NUIColor::white().withAlpha(0.025f));
-        renderer.drawTextCentered(labels[i], visualRect, 10.0f, textColor);
+        // Centre the glyph in the raw button bounds (not the half-pixel-inset
+        // visualRect) so the offsets stay symmetric integers — matches the
+        // track-header control icons exactly.
+        if (const auto* doc = mixerControlIcon(icons[i])) {
+            const float iconSize = std::round(std::min(rect.width, rect.height) - 6.0f);
+            const NUIRect iconRect(std::round(rect.x + (rect.width - iconSize) * 0.5f),
+                                   std::round(rect.y + (rect.height - iconSize) * 0.5f),
+                                   iconSize, iconSize);
+            NUISVGRenderer::render(renderer, *doc, iconRect, textColor);
+        }
     }
 }
 
