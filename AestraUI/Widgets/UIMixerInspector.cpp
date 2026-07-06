@@ -210,6 +210,13 @@ void UIMixerInspector::setActiveTab(Tab tab)
         m_routingMap->setVisible(m_activeTab == Tab::Sends);
     }
 
+    // Tab-dependent layout (rack top pad, dropdowns, add-fx row) is computed in
+    // onResize, but a tab switch doesn't fire a resize. Re-run it for the new tab
+    // so the effect rack doesn't keep the previous tab's Y and overlap the
+    // Inserts section header.
+    const auto b = getBounds();
+    onResize(static_cast<int>(b.width), static_cast<int>(b.height));
+
     repaint();
 }
 
@@ -265,8 +272,10 @@ void UIMixerInspector::onResize(int width, int height)
     const auto b = getBounds();
     const float contentTop = PAD + TAB_H + SECTION_GAP + HEADER_H + SECTION_GAP;
     if (m_effectRack) {
-        // Inserts tab: keep the rack clear of the header breadcrumb/output line.
-        const float topPad = (m_activeTab == Tab::Inserts) ? 60.0f : 10.0f;
+        // Inserts tab: tuck the rack directly under the "INSERTS" section header
+        // + divider (headerBaseY+16 line, ~+20 from contentRect top) so the
+        // header reads as the list's title rather than a floating card.
+        const float topPad = (m_activeTab == Tab::Inserts) ? 28.0f : 10.0f;
         float rackH = std::max(0.0f, b.height - contentTop - topPad - PAD);
         m_effectRack->setBounds(b.x + PAD, b.y + contentTop + topPad, b.width - PAD * 2.0f, rackH);
     }
@@ -569,14 +578,22 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         float b = (argb & 0xFF) / 255.0f;
         titleAccent = NUIColor(r, g, b, a);
     }
-    const NUIRect titleChip{headerRect.x + 10.0f, headerRect.y + 10.0f, 56.0f, 18.0f};
-    renderer.fillRoundedRect(titleChip, 9.0f, m_bg.withAlpha(0.34f));
-    renderer.strokeRoundedRect(titleChip, 9.0f, 1.0f, titleAccent.withAlpha(0.22f));
-    renderer.drawTextCentered(channel->id == 0 ? "BUS" : "TRACK", titleChip, 10.0f, m_textSecondary.withAlpha(0.95f));
+    // Channel identity: a colour swatch beside the name. The old TRACK/BUS word
+    // pill was redundant with the "Track 1" title right below it — you're already
+    // in the mixer inspector, and the master reads as MASTER and is visually
+    // distinct. The swatch gives this spot a real job: it ties the inspector to
+    // the selected strip's colour.
+    const float swatchSize = 12.0f;
+    // Vertically centre the swatch on the title's optical middle. drawText places
+    // by glyph-top and the atlas renders a touch lower, so the swatch sits ~4px
+    // below the title top to line up with the text centre rather than its cap.
+    const NUIRect swatch{headerRect.x + 12.0f, headerRect.y + 18.0f, swatchSize, swatchSize};
+    renderer.fillRoundedRect(swatch, 4.0f, titleAccent.withAlpha(0.92f));
+    renderer.strokeRoundedRect(swatch, 4.0f, 1.0f, NUIColor::white().withAlpha(0.10f));
 
-    renderer.drawText(m_cachedHeaderTitle, {headerRect.x + 10.0f, headerRect.y + 30.0f}, 12.5f, m_text);
+    renderer.drawText(m_cachedHeaderTitle, {headerRect.x + 30.0f, headerRect.y + 13.0f}, 13.5f, m_text);
     if (!m_cachedHeaderSubtitle.empty()) {
-        renderer.drawText(m_cachedHeaderSubtitle, {headerRect.x + 10.0f, headerRect.y + 45.0f}, 11.0f, m_textSecondary.withAlpha(0.95f));
+        renderer.drawText(m_cachedHeaderSubtitle, {headerRect.x + 12.0f, headerRect.y + 34.0f}, 11.0f, m_textSecondary.withAlpha(0.95f));
     }
     {
         // Signal-flow breadcrumb: dim inactive steps, accent the active one,
@@ -586,41 +603,47 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         int activeIdx = -1;
         switch (m_activeTab) {
             case Tab::Inserts:
-                flowSteps[flowCount++] = "Input";
-                flowSteps[flowCount++] = "Trim";
-                flowSteps[flowCount++] = "Inserts"; activeIdx = flowCount - 1;
-                flowSteps[flowCount++] = "Output";
+                flowSteps[flowCount++] = "INPUT";
+                flowSteps[flowCount++] = "TRIM";
+                flowSteps[flowCount++] = "INSERTS"; activeIdx = flowCount - 1;
+                flowSteps[flowCount++] = "OUTPUT";
                 break;
             case Tab::Sends:
-                flowSteps[flowCount++] = "Inserts";
-                flowSteps[flowCount++] = "Sends"; activeIdx = flowCount - 1;
-                flowSteps[flowCount++] = "Fader";
-                flowSteps[flowCount++] = "Output";
+                flowSteps[flowCount++] = "INSERTS";
+                flowSteps[flowCount++] = "SENDS"; activeIdx = flowCount - 1;
+                flowSteps[flowCount++] = "FADER";
+                flowSteps[flowCount++] = "OUTPUT";
                 break;
             case Tab::IO:
-                flowSteps[flowCount++] = "Input"; activeIdx = flowCount - 1;
-                flowSteps[flowCount++] = "Monitor";
-                flowSteps[flowCount++] = "Record";
+                flowSteps[flowCount++] = "INPUT"; activeIdx = flowCount - 1;
+                flowSteps[flowCount++] = "MONITOR";
+                flowSteps[flowCount++] = "RECORD";
                 break;
         }
 
         float cursorX = headerRect.x + 10.0f;
         const float baselineY = headerRect.y + 62.0f;
-        const float stepFont = 9.5f;
+        const float stepFont = 9.0f;
 
         for (int i = 0; i < flowCount; ++i) {
             const std::string step = flowSteps[i];
             const bool active = (i == activeIdx);
-            const NUIColor stepColor = active ? accent.withAlpha(0.95f)
-                                              : m_textSecondary.withAlpha(0.55f);
+            // Active step follows the channel's own colour and carries a short
+            // underline "you are here" marker; inactive steps recede.
+            const NUIColor stepColor = active ? titleAccent.withAlpha(0.98f)
+                                              : m_textSecondary.withAlpha(0.50f);
             renderer.drawText(step, {cursorX, baselineY}, stepFont, stepColor);
             const float textW = renderer.measureText(step, stepFont).width;
-            cursorX += textW + 6.0f;
+            if (active) {
+                renderer.fillRect({cursorX, baselineY + 13.0f, textW, 1.5f},
+                                  titleAccent.withAlpha(0.90f));
+            }
+            cursorX += textW + 7.0f;
 
             if (i < flowCount - 1) {
                 renderer.drawText("›", {cursorX, baselineY}, stepFont,
-                                  m_textSecondary.withAlpha(0.40f));
-                cursorX += renderer.measureText("›", stepFont).width + 6.0f;
+                                  m_textSecondary.withAlpha(0.35f));
+                cursorX += renderer.measureText("›", stepFont).width + 7.0f;
             }
         }
     }
@@ -634,19 +657,22 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         } else {
             std::snprintf(buf, sizeof(buf), "%d insert%s active", fxCount, fxCount == 1 ? "" : "s");
         }
-        const float cardH = 48.0f;
-        const NUIRect summaryCard{contentRect.x, contentRect.y, contentRect.width, cardH};
-        renderer.fillRoundedRect(summaryCard, 10.0f, m_tabBg.withAlpha(0.42f));
-        renderer.strokeRoundedRect(summaryCard, 10.0f, 1.0f, accent.withAlpha(0.15f));
-
+        // Section header for the rack below — a plain eyebrow + count with a
+        // hairline divider (no boxed card), so it clearly titles the slot list
+        // rather than floating as a separate compartment above it.
+        const float headerBaseY = contentRect.y + 4.0f;
         renderer.drawText("INSERTS",
-                          {summaryCard.x + 12.0f, summaryCard.y + 9.0f},
+                          {contentRect.x + 2.0f, headerBaseY},
                           9.0f, m_textSecondary.withAlpha(0.72f));
+        const float countW = renderer.measureText(buf, 9.5f).width;
         renderer.drawText(buf,
-                          {summaryCard.x + 12.0f, summaryCard.y + 24.0f},
-                          11.0f, m_text.withAlpha(0.96f));
+                          {contentRect.x + contentRect.width - countW - 2.0f, headerBaseY},
+                          9.5f, m_textSecondary.withAlpha(0.85f));
+        renderer.fillRect({contentRect.x + 2.0f, headerBaseY + 16.0f, contentRect.width - 4.0f, 1.0f},
+                          m_border.withAlpha(0.45f));
 
-        // Rack is rendered by renderChildren() if visible
+        // Rack is rendered by renderChildren() if visible, tucked right under
+        // the divider (see onResize topPad for the Inserts tab).
     } else if (m_activeTab == Tab::Sends) {
         const int sendCount = static_cast<int>(m_sendWidgets.size());
         const std::string routingWarning = m_viewModel ? m_viewModel->getRoutingWarning(channel->id) : std::string();
