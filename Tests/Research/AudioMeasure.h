@@ -224,12 +224,16 @@ struct ToneFit {
 /// Least-squares fit of a*sin(w n) + b*cos(w n) + c at a KNOWN frequency, solved via
 /// 3x3 normal equations in double precision. Exact for integer-cycle windows; use
 /// windows >= ~100 cycles when the cycle count is fractional.
+/// Unlike peak/rms/dcOffset, `channel` must name ONE valid channel (no -1 pooling —
+/// a tone fit across interleaved channels is not meaningful); invalid channels
+/// return an empty fit.
 inline ToneFit fitTone(const Signal& s, int channel, double freqHz, uint32_t startFrame = 0,
                        uint32_t endFrame = kToEnd) {
     clampWindow(s, startFrame, endFrame);
     const uint32_t n = endFrame - startFrame;
     ToneFit fit;
-    if (n < 8 || freqHz <= 0.0 || freqHz >= 0.5 * s.sampleRate) {
+    if (n < 8 || freqHz <= 0.0 || freqHz >= 0.5 * s.sampleRate || channel < 0 ||
+        static_cast<uint32_t>(channel) >= s.channels) {
         return fit;
     }
     const double w = kTau * freqHz / static_cast<double>(s.sampleRate);
@@ -342,9 +346,13 @@ struct ImpulseReport {
 };
 
 /// Characterize an impulse-like response on one channel. `relativeThresholdDb` sets the
-/// span cut (default -60 dB below the peak).
+/// span cut (default -60 dB below the peak). `channel` must name one valid channel
+/// (no -1 pooling); invalid channels return an empty report.
 inline ImpulseReport analyzeImpulse(const Signal& s, int channel, double relativeThresholdDb = -60.0) {
     ImpulseReport r;
+    if (channel < 0 || static_cast<uint32_t>(channel) >= s.channels) {
+        return r;
+    }
     const uint32_t n = s.frames();
     const uint32_t ch = static_cast<uint32_t>(channel);
     for (uint32_t i = 0; i < n; ++i) {
