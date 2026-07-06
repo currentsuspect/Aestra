@@ -1197,6 +1197,20 @@ target_include_directories(RTAllocationTrapTest PRIVATE
 add_test(NAME RTAllocationTrapTest COMMAND RTAllocationTrapTest)
 set_tests_properties(RTAllocationTrapTest PROPERTIES LABELS "audio;rt-safety;integrity;s-tier" TIMEOUT 180)
 
+# Callback Deadline Telemetry — validates AudioTelemetry::recordCallbackDuration
+# (avg/worst/budget/over-budget math) synthetically, plus a live smoke over
+# real processBlock timings.
+add_executable(CallbackDeadlineTelemetryTest AestraAudio/CallbackDeadlineTelemetryTest.cpp)
+target_link_libraries(CallbackDeadlineTelemetryTest PRIVATE AestraAudio)
+target_include_directories(CallbackDeadlineTelemetryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CallbackDeadlineTelemetryTest COMMAND CallbackDeadlineTelemetryTest)
+set_tests_properties(CallbackDeadlineTelemetryTest PROPERTIES LABELS "audio;diagnostics;deadline;integrity" TIMEOUT 120)
+
 # Audio Quality Audit — noise floor, THD+N, freq response, DC blocker, soft clipper
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioQualityAuditTest.cpp")
     add_executable(AudioQualityAuditTest AestraAudio/AudioQualityAuditTest.cpp)
