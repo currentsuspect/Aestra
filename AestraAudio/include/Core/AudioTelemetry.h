@@ -192,8 +192,11 @@ struct AudioTelemetry {
         updateMaxCallbackNs(ns);
         totalCallbackNs.fetch_add(ns, std::memory_order_relaxed);
         timedCallbackCount.fetch_add(1, std::memory_order_relaxed);
-        lastBufferFrames.store(frames, std::memory_order_relaxed);
+        // Publish frames and rate together only when the rate is valid, so
+        // getCallbackBudgetNs() never combines a frames/rate pair that did
+        // not actually co-occur (CodeRabbit review, PR #430).
         if (sampleRate > 0) {
+            lastBufferFrames.store(frames, std::memory_order_relaxed);
             lastSampleRate.store(sampleRate, std::memory_order_relaxed);
             const uint64_t budgetNs =
                 (static_cast<uint64_t>(frames) * 1000000000ull) / static_cast<uint64_t>(sampleRate);
