@@ -214,8 +214,19 @@ public:
     /**
      * @brief Set output sample rate
      * @param rate Output device sample rate in Hz.
+     *
+     * Also forwards to the playlist's project sample rate: that value is the
+     * timeline unit buildRuntimeSnapshot() uses to convert beats to engine
+     * samples, so it must track the engine output rate. When they diverge,
+     * clip positions and durations are wrong by the ratio on non-48 kHz
+     * devices (measured: a clip in a 96 kHz engine truncated to half its
+     * duration — SampleRateBufferTruthTest). Not persisted; beats remain the
+     * project's source of truth.
      */
-    void setOutputSampleRate(double rate) { m_outputSampleRate = rate; }
+    void setOutputSampleRate(double rate) {
+        m_outputSampleRate = rate;
+        m_playlistModel.setProjectSampleRate(rate);
+    }
 
     /**
      * @brief Set input sample rate
