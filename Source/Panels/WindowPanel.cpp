@@ -205,11 +205,13 @@ void WindowPanel::onRender(AestraUI::NUIRenderer& renderer) {
     // Unified panel shell + flat titlebar treatment
     const float windowRadius = theme.getRadius("m");
     auto bodyColor = theme.getColor("surfaceTertiary");
-    auto titleBarColor = theme.getColor("surfaceRaised");
+    // Title bar shares the transport bar's charcoal (backgroundSecondary) so all
+    // docked-panel chrome reads as one consistent surface.
+    auto titleBarColor = theme.getColor("backgroundSecondary");
     auto borderColor = theme.getColor("border");
 
-    renderer.drawShadow(bounds, 0.0f, 10.0f, 28.0f, AestraUI::NUIColor(0, 0, 0, 0.22f));
-    
+    // Flat: no panel drop shadow — border + surface separation carry the frame.
+
     // Draw content background
     if (!m_minimized) {
         renderer.fillRoundedRect(bounds, windowRadius, bodyColor);

@@ -74,7 +74,7 @@ UIMixerInspector::UIMixerInspector(Aestra::MixerViewModel* viewModel)
     });
     addChild(m_tabControl);
     m_tabControl->setSelectedIndex(static_cast<size_t>(m_activeTab), false);
-    m_tabControl->setAccentColor(NUIColor(0.62f, 0.58f, 0.98f, 1.0f));
+    m_tabControl->setAccentColor(NUIThemeManager::getInstance().getColor("primary"));
     
     // Bind Callbacks
     m_effectRack->setOnSlotBypassToggled([this](int slot, bool bypassed) {
@@ -185,12 +185,9 @@ void UIMixerInspector::setActiveTab(Tab tab)
     if (m_activeTab == tab) return;
     m_activeTab = tab;
 
-    NUIColor accent = NUIThemeManager::getInstance().getColor("accentPrimary");
-    switch (m_activeTab) {
-        case Tab::Inserts: accent = NUIColor(0.62f, 0.58f, 0.98f, 1.0f); break;
-        case Tab::Sends:   accent = NUIColor(0.42f, 0.86f, 0.92f, 1.0f); break;
-        case Tab::IO:      accent = NUIColor(0.90f, 0.74f, 0.50f, 1.0f); break;
-    }
+    // Active-tab accent is the app purple across all tabs — consistent with the
+    // transport/top-nav active state (was per-tab purple/cyan/amber).
+    const NUIColor accent = NUIThemeManager::getInstance().getColor("primary");
     if (m_tabControl) {
         m_tabControl->setAccentColor(accent);
         m_tabControl->setSelectedIndex(static_cast<size_t>(m_activeTab), false);
@@ -422,7 +419,7 @@ void UIMixerInspector::rebuildSendWidgets(const Aestra::ChannelViewModel* channe
     for (size_t i = 0; i < channel->sends.size(); ++i) {
         auto& sendData = channel->sends[i];
         auto widget = std::make_shared<UIMixerSend>();
-        widget->setAccentColor(NUIColor(0.42f, 0.86f, 0.92f, 0.92f));
+        widget->setAccentColor(NUIThemeManager::getInstance().getColor("primary").withAlpha(0.92f));
         
         widget->setSendIndex(static_cast<int>(i));
         widget->setLevel(sendData.gain);
@@ -491,19 +488,8 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
     const auto* channel = m_viewModel ? m_viewModel->getSelectedChannel() : nullptr;
     updateHeaderCache(channel);
 
-    NUIColor accent = NUIThemeManager::getInstance().getColor("accentPrimary");
-    switch (m_activeTab) {
-        case Tab::Inserts:
-            accent = NUIColor(0.62f, 0.58f, 0.98f, 1.0f);
-            break;
-        case Tab::Sends:
-            accent = NUIColor(0.42f, 0.86f, 0.92f, 1.0f);
-            break;
-        case Tab::IO:
-            accent = NUIColor(0.90f, 0.74f, 0.50f, 1.0f);
-            break;
-    }
-    
+    const NUIColor accent = NUIThemeManager::getInstance().getColor("primary");
+
     // Continuous sync for knobs to reflect automation/backend changes
     if (m_activeTab == Tab::Inserts && channel) {
         rebuildInsertRack(channel);
@@ -538,7 +524,6 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
             contentRect.width,
             std::min(emptyCardH, availableH)
         };
-        renderer.drawShadow(emptyCard, 0.0f, 4.0f, 14.0f, NUIColor(0, 0, 0, 0.12f));
         renderer.fillRoundedRect(emptyCard, HEADER_RADIUS, m_tabBg.withAlpha(0.62f));
         renderer.strokeRoundedRect(emptyCard, HEADER_RADIUS, 1.0f, m_border.withAlpha(0.42f));
         renderer.strokeRoundedRect({emptyCard.x + 1.0f, emptyCard.y + 1.0f, emptyCard.width - 2.0f, emptyCard.height - 2.0f},
@@ -561,7 +546,6 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
         return;
     }
 
-    renderer.drawShadow(headerRect, 0.0f, 4.0f, 14.0f, NUIColor(0, 0, 0, 0.12f));
     renderer.fillRoundedRect(headerRect, HEADER_RADIUS, m_tabBg.withAlpha(0.70f));
     renderer.strokeRoundedRect(headerRect, HEADER_RADIUS, 1.0f, m_border.withAlpha(0.50f));
     renderer.strokeRoundedRect({headerRect.x + 1.0f, headerRect.y + 1.0f, headerRect.width - 2.0f, headerRect.height - 2.0f},
@@ -767,7 +751,6 @@ void UIMixerInspector::onRender(NUIRenderer& renderer)
              renderer.drawTextCentered("Master Output is fixed to Hardware Output 1/2", contentRect, 11.0f, m_textSecondary);
         } else if (m_activeTab == Tab::IO) {
              const NUIRect sourceCard{contentRect.x, contentRect.y, contentRect.width, 102.0f};
-             renderer.drawShadow(sourceCard, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.10f));
              renderer.fillRoundedRect(sourceCard, 12.0f, m_tabBg.withAlpha(0.46f));
              renderer.strokeRoundedRect(sourceCard, 12.0f, 1.0f, accent.withAlpha(0.20f));
 
