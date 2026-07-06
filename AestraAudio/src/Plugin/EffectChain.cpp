@@ -110,6 +110,14 @@ bool EffectChain::insertPlugin(size_t slotIndex, PluginInstancePtr plugin) {
         if (!plugin->isActive()) {
             plugin->activate();
         }
+        // Prewarm getInfo() here, off the RT path. Several implementations
+        // (e.g. BuiltInPlugins::samplerInfo) return a function-local static
+        // whose FIRST call constructs std::string fields — a heap allocation
+        // plus a __cxa_guard acquire. EffectChainSnapshot::process() calls
+        // getInfo() per slot on the audio thread, so without this the first
+        // block after an insert pays that cost on the RT thread (measured:
+        // 1x31-byte alloc; RTAllocationTrapTest, issue #432).
+        (void)plugin->getInfo();
     }
 
     m_slots[slotIndex].plugin = std::move(plugin);
