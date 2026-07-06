@@ -33,6 +33,8 @@
 #include <new>
 #include <vector>
 
+#include <execinfo.h> // backtrace / backtrace_symbols_fd (glibc)
+
 // =============================================================================
 // Global allocation trap (test binary only)
 // =============================================================================
@@ -43,10 +45,33 @@ std::atomic<uint64_t> g_rtAllocCount{0};
 std::atomic<uint64_t> g_rtAllocBytes{0};
 std::atomic<uint64_t> g_rtFreeCount{0};
 
+// Forensics: capture backtraces for the first few RT allocations so a failure
+// names its culprit. backtrace() is prewarmed in main() BEFORE the trap arms
+// (its first call lazily loads libgcc, which allocates); the thread_local
+// guard prevents recursion if it ever allocates anyway.
+constexpr int kMaxTraceEvents = 4;
+constexpr int kMaxTraceDepth = 24;
+struct TraceEvent {
+    void* frames[kMaxTraceDepth];
+    int depth{0};
+    std::size_t size{0};
+};
+TraceEvent g_traceEvents[kMaxTraceEvents];
+std::atomic<int> g_traceCount{0};
+thread_local bool g_inTrap = false;
+
 inline void noteAlloc(std::size_t size) noexcept {
-    if (g_trapArmed.load(std::memory_order_relaxed) && Aestra::Audio::isRealtimeAudioThread()) {
+    if (g_trapArmed.load(std::memory_order_relaxed) && Aestra::Audio::isRealtimeAudioThread() &&
+        !g_inTrap) {
+        g_inTrap = true;
         g_rtAllocCount.fetch_add(1, std::memory_order_relaxed);
         g_rtAllocBytes.fetch_add(size, std::memory_order_relaxed);
+        const int slot = g_traceCount.fetch_add(1, std::memory_order_relaxed);
+        if (slot < kMaxTraceEvents) {
+            g_traceEvents[slot].size = size;
+            g_traceEvents[slot].depth = backtrace(g_traceEvents[slot].frames, kMaxTraceDepth);
+        }
+        g_inTrap = false;
     }
 }
 
@@ -127,6 +152,14 @@ std::vector<float> makeSine(double freqHz, float amplitude, uint32_t frames, uin
 int main() {
     std::cout << "=== Aestra RT Allocation Trap Test ===\n\n";
 
+    // Prewarm backtrace() before the trap arms: its first call lazily loads
+    // libgcc (which allocates). Off-RT and unarmed here, so it never taints
+    // the counters.
+    {
+        void* warm[4];
+        (void)backtrace(warm, 4);
+    }
+
     // Trap self-check: prove the override actually fires, so a zero result
     // below is meaningful. Allocate inside a marked RT scope and verify the
     // counters move.
@@ -153,6 +186,7 @@ int main() {
         g_rtAllocCount.store(0, std::memory_order_relaxed);
         g_rtAllocBytes.store(0, std::memory_order_relaxed);
         g_rtFreeCount.store(0, std::memory_order_relaxed);
+        g_traceCount.store(0, std::memory_order_relaxed);
     }
 
     SessionConfig cfg;
@@ -221,21 +255,31 @@ int main() {
     std::cout << "steady state (" << (numBlocks - 1) << " blocks): " << steadyAllocs << " allocs / "
               << steadyBytes << " bytes / " << steadyFrees << " frees\n";
 
-    const bool pass = (steadyAllocs == 0 && steadyFrees == 0);
+    // Forensics: dump captured backtraces of RT allocations. Resolve with
+    //   addr2line -e ./build-linux/Tests/RTAllocationTrapTest -f -C <addr...>
+    const int traces = std::min(g_traceCount.load(std::memory_order_relaxed), kMaxTraceEvents);
+    for (int t = 0; t < traces; ++t) {
+        std::cout << "\nRT allocation #" << t << " (" << g_traceEvents[t].size << " bytes) backtrace:\n";
+        backtrace_symbols_fd(g_traceEvents[t].frames, g_traceEvents[t].depth, 1);
+    }
+
+    // Unconditional gate (issue #432 acceptance): ZERO heap activity from the
+    // FIRST measured block onward, active insert included. The former
+    // first-block exemption is gone — its one known cause (lazy PluginInfo
+    // static init reaching the RT thread) is prewarmed off-RT in
+    // EffectChain::insertPlugin.
+    const bool pass =
+        (firstBlockAllocs == 0 && firstBlockFrees == 0 && steadyAllocs == 0 && steadyFrees == 0);
     if (!pass) {
-        std::cout << "\n[FAIL] heap activity on the audio callback path at steady state\n"
-                  << "  first violating block: " << firstSteadyViolationBlock << "\n"
-                  << "  Every allocation inside processBlock is an xrun risk (AGENTS §10).\n"
-                  << "  Find it: run this test under gdb with a breakpoint on the operator\n"
-                  << "  new in RTAllocationTrapTest.cpp conditioned on\n"
-                  << "  Aestra::Audio::isRealtimeAudioThread(), or use massif/heaptrack.\n";
-    } else {
-        std::cout << "\n[PASS] zero steady-state heap activity on the audio callback path\n";
-        if (firstBlockAllocs || firstBlockFrees) {
-            std::cout << "  note: first-block warmup performed " << firstBlockAllocs
-                      << " allocs — reported as a finding, not a failure (see\n"
-                      << "  AestraDocs/rt-safety-audit.md).\n";
+        std::cout << "\n[FAIL] heap activity on the audio callback path\n";
+        if (steadyAllocs || steadyFrees) {
+            std::cout << "  first violating steady-state block: " << firstSteadyViolationBlock << "\n";
         }
+        std::cout << "  Every allocation inside processBlock is an xrun risk (AGENTS §10).\n"
+                  << "  The backtraces above name the culprit; resolve in-binary frames with\n"
+                  << "  addr2line -e ./build-linux/Tests/RTAllocationTrapTest -f -C <addr>.\n";
+    } else {
+        std::cout << "\n[PASS] zero heap activity on the audio callback path, first block included\n";
     }
     return pass ? 0 : 1;
 }
