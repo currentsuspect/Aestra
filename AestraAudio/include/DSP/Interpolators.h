@@ -22,15 +22,24 @@ namespace Audio {
 /**
  * @brief High-precision interpolation functions for audio resampling.
  *
- * All functions use double precision internally for 144dB+ dynamic range.
- * Output is converted to float for the audio buffer.
+ * All functions use double precision internally; output is converted to float
+ * for the audio buffer.
  *
- * Quality Modes:
- * - Cubic:    4-point Catmull-Rom, ~80dB SNR, lowest CPU
- * - Sinc8:    8-point Blackman-windowed sinc, ~100dB SNR
- * - Sinc16:   16-point Kaiser-windowed sinc, ~120dB SNR
- * - Sinc32:   32-point Kaiser-windowed sinc, ~130dB SNR
- * - Sinc64:   64-point Kaiser-windowed sinc, ~144dB SNR (mastering)
+ * Quality modes (SNR figures are kernel stopband DESIGN TARGETS, not delivered
+ * resampling SINAD):
+ * - Cubic:    4-point Catmull-Rom, ~80dB target, lowest CPU
+ * - Sinc8:    8-point Blackman-windowed sinc, ~100dB target
+ * - Sinc16:   16-point Kaiser-windowed sinc, ~120dB target
+ * - Sinc32:   32-point Kaiser-windowed sinc, ~130dB target
+ * - Sinc64:   64-point Kaiser-windowed sinc, ~144dB stopband design target
+ *
+ * Measured delivered behavior (Audio Research Bench Phase 1, 2026-07; see
+ * AestraDocs/audio-research-bench.md): Sinc64Turbo full-band single-tone
+ * residual SINAD at 1 kHz is ~88 dB at FRACTIONAL rate ratios (bounded by
+ * nearest-phase LUT quantization, not the kernel) and ~154 dB at exact 2:1.
+ * These kernels reconstruct at the SOURCE Nyquist: downsampling is not
+ * anti-aliased by a ratio-aware low-pass, so content between the output and
+ * source Nyquist frequencies folds back into the output band.
  */
 
 namespace Interpolators {
@@ -496,12 +505,15 @@ struct Sinc32Interpolator {
 };
 
 // =============================================================================
-// Sinc64 (Perfect) - 64 point optimized Kaiser, ~144dB SNR
+// Sinc64 - 64 point optimized Kaiser, ~144dB stopband design target
 // =============================================================================
 
 // =============================================================================
-// Sinc64Turbo (The "Weapon") - 64 point Polyphase Filter Bank
-// 2048 phases, 144dB SNR, AVX2 Accelerated
+// Sinc64Turbo - 64 point Polyphase Filter Bank
+// 2048 phases, 144dB stopband design target, AVX2 Accelerated.
+// Measured delivered SINAD (1 kHz tone): ~88 dB at fractional rate ratios
+// (phase-LUT quantization bound), ~154 dB at exact 2:1.
+// See AestraDocs/audio-research-bench.md.
 // =============================================================================
 
 struct Sinc64Turbo {
@@ -851,12 +863,15 @@ struct Sinc64Interpolator {
 // Quality Enum for runtime selection
 // =============================================================================
 
+// SNR figures below are kernel design targets; measured delivered behavior is
+// documented in AestraDocs/audio-research-bench.md (Sinc64: ~88 dB SINAD at
+// fractional ratios, ~154 dB at exact 2:1).
 enum class InterpolationQuality {
-    Cubic,  // 4-point, ~80dB, lowest CPU
-    Sinc8,  // 8-point Blackman, ~100dB
-    Sinc16, // 16-point Kaiser, ~120dB (Ultra)
-    Sinc32, // 32-point Kaiser, ~130dB (Extreme)
-    Sinc64  // 64-point Kaiser, ~144dB (Perfect/Mastering)
+    Cubic,  // 4-point, ~80dB target, lowest CPU
+    Sinc8,  // 8-point Blackman, ~100dB target
+    Sinc16, // 16-point Kaiser, ~120dB target (Ultra)
+    Sinc32, // 32-point Kaiser, ~130dB target (Extreme)
+    Sinc64  // 64-point Kaiser, ~144dB stopband design target
 };
 
 // Runtime dispatch helper
