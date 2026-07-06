@@ -130,6 +130,7 @@ struct AudioPurityMetrics {
     double crestFactorOutputDb = 0.0;
     bool hasNaN = false;
     bool hasInf = false;
+    bool lengthMismatch = false;
     uint64_t clippedSamples = 0;
 };
 
@@ -304,10 +305,22 @@ AudioPurityMetrics measureDifference(const std::vector<float>& reference, const 
                                       size_t trimStartFrames = kDefaultTrimStartFrames,
                                       size_t trimEndFrames = kDefaultTrimEndFrames) {
     AudioPurityMetrics metrics;
+    if (reference.empty() || output.empty() || reference.size() != output.size()) {
+        metrics.lengthMismatch = true;
+        metrics.maxAbsError = std::numeric_limits<double>::infinity();
+        metrics.rmsError = std::numeric_limits<double>::infinity();
+        metrics.rmsErrorDbFS = std::numeric_limits<double>::infinity();
+        return metrics;
+    }
+
     const size_t frameCount = std::min(reference.size(), output.size()) / kChannels;
     const size_t startFrame = std::min(trimStartFrames, frameCount);
     const size_t endFrame = frameCount > trimEndFrames ? frameCount - trimEndFrames : frameCount;
     if (startFrame >= endFrame) {
+        metrics.lengthMismatch = true;
+        metrics.maxAbsError = std::numeric_limits<double>::infinity();
+        metrics.rmsError = std::numeric_limits<double>::infinity();
+        metrics.rmsErrorDbFS = std::numeric_limits<double>::infinity();
         return metrics;
     }
 
@@ -426,8 +439,9 @@ AudioPurityResult makeComparedResult(const std::string& name, const std::vector<
     result.classification = classification;
     result.notes = notes;
     result.metrics = measureDifference(reference, output, trimStartFrames, trimEndFrames);
-    const bool pass = !result.metrics.hasNaN && !result.metrics.hasInf && result.metrics.maxAbsError <= maxAbsTolerance &&
-                      result.metrics.rmsError <= rmsTolerance && result.metrics.sampleDelay == 0;
+    const bool pass = !result.metrics.lengthMismatch && !result.metrics.hasNaN && !result.metrics.hasInf &&
+                      result.metrics.maxAbsError <= maxAbsTolerance && result.metrics.rmsError <= rmsTolerance &&
+                      result.metrics.sampleDelay == 0;
     result.status = pass ? "PASS" : "FAIL";
     return result;
 }
@@ -620,6 +634,7 @@ AudioPurityResult runSrcPhaseZeroImpulse() {
     const uint32_t inputRate = 44100;
     const uint32_t outputRate = 48000;
     const uint32_t frames = 4096;
+    AudioPurityMetrics metrics;
     std::vector<double> peaks;
     for (uint32_t offset : {256u, 257u, 258u, 259u}) {
         const auto input = makeImpulse(frames, offset, 0.75);
@@ -631,12 +646,15 @@ AudioPurityResult runSrcPhaseZeroImpulse() {
         output.resize(static_cast<size_t>(written) * kChannels);
         double peak = 0.0;
         for (float sample : output) {
-            peak = std::max(peak, std::abs(static_cast<double>(sample)));
+            metrics.hasNaN = metrics.hasNaN || std::isnan(sample);
+            metrics.hasInf = metrics.hasInf || std::isinf(sample);
+            if (std::isfinite(sample)) {
+                peak = std::max(peak, std::abs(static_cast<double>(sample)));
+            }
         }
         peaks.push_back(peak);
     }
 
-    AudioPurityMetrics metrics;
     const auto [minIt, maxIt] = std::minmax_element(peaks.begin(), peaks.end());
     metrics.peakDeltaDb = linearToDb(*maxIt) - linearToDb(*minIt);
     AudioPurityResult result;
@@ -644,12 +662,17 @@ AudioPurityResult runSrcPhaseZeroImpulse() {
     result.classification = "resampler";
     result.metrics = metrics;
     result.notes = "compares adjacent impulse offsets to catch unique phase-zero gain jumps";
-    result.status = metrics.peakDeltaDb <= 0.01 ? "PASS" : (metrics.peakDeltaDb <= 3.0 ? "WARN" : "FAIL");
+    result.status = (metrics.hasNaN || metrics.hasInf) ? "FAIL"
+                                                        : (metrics.peakDeltaDb <= 0.01 ? "PASS"
+                                                                                       : (metrics.peakDeltaDb <= 3.0 ? "WARN" : "FAIL"));
     return result;
 }
 
-void writeTextReport(const std::filesystem::path& path, const std::vector<AudioPurityResult>& results) {
+bool writeTextReport(const std::filesystem::path& path, const std::vector<AudioPurityResult>& results) {
     std::ofstream out(path);
+    if (!out) {
+        return false;
+    }
     out << "============================================================\n";
     out << "Aestra Audio Purity Audit\n";
     out << "============================================================\n\n";
@@ -665,10 +688,15 @@ void writeTextReport(const std::filesystem::path& path, const std::vector<AudioP
         }
         out << "\n";
     }
+    out.flush();
+    return static_cast<bool>(out);
 }
 
-void writeJsonReport(const std::filesystem::path& path, const std::vector<AudioPurityResult>& results) {
+bool writeJsonReport(const std::filesystem::path& path, const std::vector<AudioPurityResult>& results) {
     std::ofstream out(path);
+    if (!out) {
+        return false;
+    }
     out << "{\n";
     out << "  \"audit\": \"AudioPurityAuditTest\",\n";
     out << "  \"engine\": \"Aestra\",\n";
@@ -703,11 +731,14 @@ void writeJsonReport(const std::filesystem::path& path, const std::vector<AudioP
         writeJsonNumber(out, "crestFactorOutputDb", result.metrics.crestFactorOutputDb);
         out << "      \"hasNaN\": " << (result.metrics.hasNaN ? "true" : "false") << ",\n";
         out << "      \"hasInf\": " << (result.metrics.hasInf ? "true" : "false") << ",\n";
+        out << "      \"lengthMismatch\": " << (result.metrics.lengthMismatch ? "true" : "false") << ",\n";
         out << "      \"clippedSamples\": " << result.metrics.clippedSamples << "\n";
         out << "    }" << (i + 1 == results.size() ? "\n" : ",\n");
     }
     out << "  ]\n";
     out << "}\n";
+    out.flush();
+    return static_cast<bool>(out);
 }
 
 std::filesystem::path defaultReportPath(const char* name) {
@@ -748,8 +779,12 @@ int main(int argc, char** argv) {
     results.push_back(runSrcSineQuality(44100, 96000, 10000.0));
     results.push_back(runSrcPhaseZeroImpulse());
 
-    writeJsonReport(jsonReport, results);
-    writeTextReport(textReport, results);
+    const bool wroteJsonReport = writeJsonReport(jsonReport, results);
+    const bool wroteTextReport = writeTextReport(textReport, results);
+    if (!wroteJsonReport || !wroteTextReport) {
+        std::cerr << "Failed to write audio purity audit report(s): " << jsonReport << " / " << textReport << "\n";
+        return 1;
+    }
 
     int passCount = 0;
     int warnCount = 0;
