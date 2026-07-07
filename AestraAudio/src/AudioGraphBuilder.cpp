@@ -122,6 +122,11 @@ void finalizeAudioGraphRouting(AudioGraph& graph) {
 }
 
 AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) {
+    // Phase 4 (F1): apply finished anti-alias prefilter results and queue missing
+    // work for downsampled clips BEFORE the snapshot resolves clip buffers, so this
+    // build picks up every copy that is ready (never blocks; fallback = original).
+    trackManager.ensureClipPrefilters();
+
     AudioGraph graph;
     const size_t channelCount = trackManager.getChannelCount();
     graph.tracks.reserve(channelCount);
