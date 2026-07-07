@@ -14,6 +14,11 @@
 //      (AudioEngine.cpp:2326, per-sample double-precision Kaiser sinc, no LUT) —
 //      NOT Sinc64Turbo. Phase 1's ~88 dB LUT-quantization floor therefore does NOT
 //      apply to mainline playback, which measures ~146-154 dB here.
+//      Phase 4: DOWNSAMPLED clips are additionally anti-aliased by the ClipPrefilter
+//      pipeline (worker-thread Kaiser low-pass at clip load / rate change; see
+//      AestraDocs/clip-prefilter-lifecycle.md) — the F1 downsampling gates in this
+//      test flipped from "KNOWN LIMITATION" to "< -95 dBc", and a dedicated case
+//      proves the non-blocking fallback (unfiltered until the copy is ready).
 //   2. Offline full-mix export: AudioEngine::bounceRangeToWav(trackId=-1) ->
 //      AudioExporter -> the same processBlock/renderGraph at a 4096-frame block size,
 //      written as Float_32. Same legacy kernel; proven sample-identical to realtime.
@@ -50,6 +55,7 @@
 
 #include "GoldenAudio/GoldenAudioHarness.h"
 
+#include "DSP/ClipPrefilter.h"
 #include "DSP/Interpolators.h"
 #include "DSP/PanLaw.h"
 #include "IO/MiniAudioDecoder.h"
@@ -117,10 +123,16 @@ void addAudioTrackAtRate(TrackManager& tm, const std::string& label, const AR::S
 }
 
 std::shared_ptr<TrackManager> buildSession(const std::string& label, const AR::Signal& clip,
-                                           const GA::SessionConfig& cfg) {
+                                           const GA::SessionConfig& cfg, bool waitForPrefilters = true) {
     auto tm = std::make_shared<TrackManager>();
     tm->setOutputSampleRate(static_cast<double>(cfg.sampleRate));
     addAudioTrackAtRate(*tm, label, clip, cfg);
+    if (waitForPrefilters) {
+        // Phase 4: queue + deterministically complete the anti-alias prefilter for
+        // downsampled clips before any render (no-op for same-rate/upsampling).
+        tm->ensureClipPrefilters();
+        tm->waitForClipPrefilters();
+    }
     return tm;
 }
 
@@ -174,6 +186,19 @@ AR::Signal resampleViaInterpolator(InterpFn fn, const AR::Signal& src, uint32_t 
     return out;
 }
 
+/// The Phase-4 anti-alias step, applied via the PRODUCTION ClipPrefilter functions:
+/// what a downsampled clip's buffer contains by the time the interpolator reads it.
+/// Returns the input unchanged when no prefilter applies (same-rate/upsampling).
+AR::Signal prefilterReplica(const AR::Signal& clip, uint32_t sessionRate) {
+    if (!ClipPrefilter::isNeeded(clip.sampleRate, sessionRate)) {
+        return clip;
+    }
+    const std::vector<double> h = ClipPrefilter::design(clip.sampleRate, sessionRate);
+    AR::Signal out = clip;
+    ClipPrefilter::apply(clip.samples.data(), out.samples.data(), clip.frames(), clip.channels, h);
+    return out;
+}
+
 /// Window [start, end) of a signal as a standalone Signal (for interior-only diffs).
 AR::Signal window(const AR::Signal& s, uint32_t startFrame, uint32_t endFrame) {
     AR::Signal w;
@@ -208,10 +233,15 @@ struct SessionPair {
 };
 
 const SessionPair kSessionPairs[] = {
-    // src     session   probe    artifact  down   turbo   ceiling (measured session: -21.7 / -1.1 / -0.0 / -63.3 dBc)
+    // src     session   probe    artifact  down   turbo   ceiling
+    // Upsampling ceilings unchanged (measured session: -21.7 / -63.3 dBc).
+    // Downsampling ceilings are the Phase-4 target: the clip prefilter must hold
+    // aliases below -95 dBc (measured through real sessions: -104.9 / -117.3 dBc;
+    // pre-Phase-4 these folded at -1.1 / -0.0 dBc — finding F1, now resolved on
+    // the mainline path).
     {44100, 48000, 21000.0, 23100.0, false, -21.7, -18.0},
-    {48000, 44100, 23000.0, 21100.0, true, -1.1, 1.0},
-    {96000, 48000, 30000.0, 18000.0, true, -0.0, 1.0},
+    {48000, 44100, 23000.0, 21100.0, true, -1.1, -95.0},
+    {96000, 48000, 30000.0, 18000.0, true, -0.0, -95.0},
     {48000, 96000, 21600.0, 26400.0, false, -60.5, -60.0},
 };
 
@@ -353,7 +383,8 @@ void auditSessionPair(AR::CheckSession& t, const SessionPair& p, const ControlBa
         std::printf("[MEASURE] %s 1kHz gain=%.9f (vs control %+.6f dB), sinad=%.1f dB\n", name.c_str(), gain,
                     gainVsControlDb, fit.sinadDb);
         // Gate 0.05 dB vs control: Phase 1 measured interpolator passband gain exact
-        // to <1e-5 dB; the session must not add level error on top.
+        // to <1e-5 dB, and the Phase-4 clip prefilter is passband-exact to <0.0001 dB
+        // (lab §9.3); the session must not add level error on top.
         t.expect((name + ": 1 kHz level matches control within 0.05 dB").c_str(),
                  std::abs(gainVsControlDb) < 0.05, "deltaDb=" + std::to_string(gainVsControlDb));
         // FINDING + gate 140 dB: measured 149.3 / 146.5 / 153.9 / 147.1 dB across the
@@ -361,8 +392,29 @@ void auditSessionPair(AR::CheckSession& t, const SessionPair& p, const ControlBa
         // (AudioEngine.cpp:2326), so it does NOT have Sinc64Turbo's ~88 dB LUT floor.
         // This gate deliberately fails if mainline clip rendering is ever switched to
         // the Turbo kernel (which would be a real, measurable quality regression).
+        // (Unaffected by the Phase-4 prefilter: 1 kHz is deep in its passband.)
         t.expect((name + ": 1 kHz residual SINAD > 140 dB (legacy exact-sinc kernel)").c_str(),
                  fit.sinadDb > 140.0, "sinadDb=" + std::to_string(fit.sinadDb));
+
+        // ---- length truth on the in-band tone (survives the anti-alias filter) ----
+        const double postPeak = AR::peak(out, -1, outClipFrames + 256, out.frames());
+        int64_t lastAudible = -1;
+        for (uint32_t i = outClipFrames + 255; i > 0; --i) {
+            if (std::abs(out.at(i, 0)) > 1e-4 || std::abs(out.at(i, 1)) > 1e-4) {
+                lastAudible = i;
+                break;
+            }
+        }
+        std::printf("[MEASURE] %s length: clip end expect frame %u, last audible=%lld, post-clip peak=%.2e\n",
+                    name.c_str(), outClipFrames, static_cast<long long>(lastAudible), postPeak);
+        t.expect((name + ": tone reaches the clip end (within edge fade)").c_str(),
+                 lastAudible >= static_cast<int64_t>(outClipFrames) - 130 &&
+                     lastAudible <= static_cast<int64_t>(outClipFrames) + 2,
+                 "lastAudible=" + std::to_string(lastAudible) + " expectedEnd=" + std::to_string(outClipFrames));
+        // Gate 1e-5: measured post-clip peak is exactly 0 (renderer writes silence
+        // past clip.endSample).
+        t.expect((name + ": silence after clip end").c_str(), postPeak < 1e-5,
+                 "postPeak=" + std::to_string(postPeak));
     }
 
     // ---- near-Nyquist probe: artifact level + IDENTITY null vs isolated replica ----
@@ -377,43 +429,41 @@ void auditSessionPair(AR::CheckSession& t, const SessionPair& p, const ControlBa
         // chain (clip amp * pan gain), matching Phase 1's dBc-vs-input convention.
         const double artifactDbc = AR::toDb(artifactAmp / (kAmp * panGain));
 
-        // Isolated replica of the MAINLINE kernel (legacy Sinc64Interpolator), measured
-        // live with the same window — the headline isolated-vs-full-session agreement
-        // figure. The Sinc64Turbo replica (what Phase 1 audited, and what the
-        // isolated-track bounce path still uses) is printed alongside as the
-        // kernel-split delta.
+        // Isolated replica of the MAINLINE pipeline: the PRODUCTION clip prefilter
+        // (downsampling pairs only; identity otherwise) followed by the legacy
+        // exact-sinc kernel — measured live with the same window. This is the
+        // headline isolated-vs-full-session agreement figure.
+        const AR::Signal filteredClip = prefilterReplica(clip, p.sessionRate);
         const AR::Signal isolated =
-            resampleViaInterpolator(Interp::Sinc64Interpolator::interpolate, clip, p.sessionRate);
+            resampleViaInterpolator(Interp::Sinc64Interpolator::interpolate, filteredClip, p.sessionRate);
         const double isoArtifactAmp = AR::toneAmplitude(isolated, 0, p.artifactHz, kWinSkip, winEnd);
         const double isoArtifactDbc = AR::toDb(isoArtifactAmp / kAmp);
-        const AR::Signal turbo =
-            resampleViaInterpolator(Interp::Sinc64Turbo::interpolate, clip, p.sessionRate);
-        const double turboArtifactDbc =
-            AR::toDb(AR::toneAmplitude(turbo, 0, p.artifactHz, kWinSkip, winEnd) / kAmp);
 
         std::printf("[MEASURE] %s probe %.0f Hz -> artifact %.0f Hz: session=%.2f dBc, "
-                    "isolated(legacy)=%.2f dBc (delta %.3f dB) | Sinc64Turbo=%.2f dBc "
-                    "(Phase-1 quoted %.1f dBc)\n",
+                    "isolated(prefilter+legacy)=%.2f dBc (delta %.3f dB) | pre-Phase-4 "
+                    "unfiltered path measured %.1f dBc\n",
                     name.c_str(), p.probeHz, p.artifactHz, artifactDbc, isoArtifactDbc,
-                    artifactDbc - isoArtifactDbc, turboArtifactDbc, p.turboArtifactDbc);
+                    artifactDbc - isoArtifactDbc, p.downsampling ? p.turboArtifactDbc : p.turboArtifactDbc);
 
-        // REGRESSION gate (one-sided): not hotter than the measured ceiling. A future
-        // anti-aliasing/imaging improvement lowers the artifact and still passes.
-        t.expect((name + (p.downsampling ? ": KNOWN LIMITATION - downsampling alias not above ceiling"
+        // Gate (one-sided): not hotter than the ceiling. Downsampling pairs carry the
+        // Phase-4 anti-alias target (< -95 dBc; measured -104.9 / -117.2 dBc through
+        // real sessions, vs -1.1 / -0.0 dBc before the clip prefilter — F1 resolved
+        // on this path). Upsampling ceilings are unchanged regression pins.
+        t.expect((name + (p.downsampling ? ": ANTI-ALIASED (Phase 4) - downsampling alias below -95 dBc"
                                          : ": upsampling image not above ceiling"))
                      .c_str(),
                  artifactDbc < p.artifactCeilingDbc,
                  "artifactDbc=" + std::to_string(artifactDbc) +
                      " ceiling=" + std::to_string(p.artifactCeilingDbc));
-        // AGREEMENT (characterization): session and legacy-replica artifact levels
-        // agree to 0.5 dB. This pins WHICH kernel the shipped mainline path runs.
-        // If mainline clip resampling intentionally changes (anti-aliasing, kernel
-        // unification), update this check and the research doc together (see header).
-        t.expectNear((name + ": isolated(legacy)-vs-session artifact agreement (dB)").c_str(), artifactDbc,
+        // AGREEMENT (characterization): session and replica artifact levels agree.
+        // This pins WHICH pipeline the shipped mainline path runs (prefilter+legacy
+        // kernel). If mainline clip resampling intentionally changes again, update
+        // this check and the research doc together (see header).
+        t.expectNear((name + ": isolated-vs-session artifact agreement (dB)").c_str(), artifactDbc,
                      isoArtifactDbc, 0.5);
 
-        // IDENTITY null: interior of the session render must equal the legacy-kernel
-        // replica scaled by the pan-law center gain, sample by sample.
+        // IDENTITY null: interior of the session render must equal the replica
+        // scaled by the pan-law center gain, sample by sample.
         AR::Signal expected = isolated;
         for (float& v : expected.samples) {
             v = static_cast<float>(static_cast<double>(v) * panGain);
@@ -421,12 +471,14 @@ void auditSessionPair(AR::CheckSession& t, const SessionPair& p, const ControlBa
         const AR::Signal outWin = window(out, kWinSkip, winEnd);
         const AR::Signal expWin = window(expected, kWinSkip, winEnd);
         const AR::DiffReport d = AR::diff(outWin, expWin, 1e-4);
-        std::printf("[MEASURE] %s identity null vs isolated(legacy)*panGain: maxErr=%.3e rmsErr=%.1f dB\n",
+        std::printf("[MEASURE] %s identity null vs isolated(prefilter+legacy)*panGain: maxErr=%.3e "
+                    "rmsErr=%.1f dB\n",
                     name.c_str(), d.maxAbsError, d.rmsErrorDb);
-        // Gates: measured -153.6 to -162.6 dB RMS across the four pairs, maxErr
+        // Gates: measured -153.6 to -275.6 dB RMS across the four pairs, maxErr
         // <= 9e-8 (renderGraph recomputes phase per block from the same closed form
         // the replica accumulates, AudioEngine.cpp:2086; the legacy kernel is
-        // phase-continuous, so ~1e-12 phase slack is invisible in float).
+        // phase-continuous, and the replica applies the identical production
+        // prefilter, so the pipelines are the same math end to end).
         const bool nullPass = d.rmsErrorDb < -120.0 && d.maxAbsError < 1e-5;
         if (!t.expect((name + ": IDENTITY - session render nulls against isolated replica").c_str(),
                       nullPass,
@@ -434,31 +486,52 @@ void auditSessionPair(AR::CheckSession& t, const SessionPair& p, const ControlBa
                           " maxAbs=" + std::to_string(d.maxAbsError))) {
             AR::printDiffForensics(name + " identity null", d, outWin, expWin);
         }
-
-        // ---- length truth: tone runs to the clip end, silence after ----
-        const uint32_t renderFrames = out.frames();
-        const double postPeak = AR::peak(out, -1, outClipFrames + 256, renderFrames);
-        int64_t lastAudible = -1;
-        for (uint32_t i = outClipFrames + 255; i > 0; --i) {
-            if (std::abs(out.at(i, 0)) > 1e-4 || std::abs(out.at(i, 1)) > 1e-4) {
-                lastAudible = i;
-                break;
-            }
-        }
-        std::printf("[MEASURE] %s length: clip end expect frame %u, last audible=%lld, post-clip peak=%.2e\n",
-                    name.c_str(), outClipFrames, static_cast<long long>(lastAudible), postPeak);
-        // The clip must fill its timeline slot: last audible frame within the 128-frame
-        // edge fade of the expected end (clip end is beats -> project samples, so a
-        // source-rate bookkeeping error shows up as a truncated or overlong tone).
-        t.expect((name + ": tone reaches the clip end (within edge fade)").c_str(),
-                 lastAudible >= static_cast<int64_t>(outClipFrames) - 130 &&
-                     lastAudible <= static_cast<int64_t>(outClipFrames) + 2,
-                 "lastAudible=" + std::to_string(lastAudible) + " expectedEnd=" + std::to_string(outClipFrames));
-        // Gate 1e-5: measured post-clip peak is exactly 0 (renderer writes silence
-        // past clip.endSample).
-        t.expect((name + ": silence after clip end").c_str(), postPeak < 1e-5,
-                 "postPeak=" + std::to_string(postPeak));
+        // (Length truth moved to the in-band 1 kHz render above: a between-Nyquists
+        // probe is REMOVED by the Phase-4 anti-alias filter, so it can no longer
+        // witness the clip end.)
     }
+}
+
+// =============================================================================
+// Case 2b: fallback transition — before the prefilter is ready, playback is the
+// pre-Phase-4 path; after wait + rebuild it is anti-aliased. Deterministic: the
+// filtered variant is only applied on the graph-build thread inside
+// ensureClipPrefilters(), so the FIRST graph build can never see it.
+// =============================================================================
+
+void runFallbackTransitionCase(AR::CheckSession& t) {
+    std::printf("\n--- fallback transition: 48k clip in 44.1k session, before/after prefilter ---\n");
+    GA::SessionConfig cfg;
+    cfg.sampleRate = 44100;
+    const uint32_t srcFrames = static_cast<uint32_t>(kClipSeconds * 48000);
+    const uint32_t outClipFrames = static_cast<uint32_t>(kClipSeconds * 44100);
+    const AR::Signal clip = AR::makeSine(48000, srcFrames, 23000.0, kAmp);
+    auto tm = buildSession("fallback", clip, cfg, /*waitForPrefilters=*/false);
+    const double panGain = static_cast<double>(PanLaw::kEqualPowerCenterGain);
+    const uint32_t winEnd = outClipFrames - kWinSkip;
+
+    // First-ever graph build: enqueues the job and renders with the ORIGINAL buffer.
+    const AR::Signal before =
+        renderSessionRealtime(tm, cfg, outClipFrames, Interp::InterpolationQuality::Sinc64);
+    const double beforeDbc =
+        AR::toDb(AR::toneAmplitude(before, 0, 21100.0, kWinSkip, winEnd) / (kAmp * panGain));
+
+    // Deterministic completion, then a fresh build picks the filtered copy up.
+    tm->waitForClipPrefilters();
+    const AR::Signal after =
+        renderSessionRealtime(tm, cfg, outClipFrames, Interp::InterpolationQuality::Sinc64);
+    const double afterDbc =
+        AR::toDb(AR::toneAmplitude(after, 0, 21100.0, kWinSkip, winEnd) / (kAmp * panGain));
+
+    std::printf("[MEASURE] fallback transition alias 21100 Hz: before=%.2f dBc, after=%.2f dBc\n",
+                beforeDbc, afterDbc);
+    // Before: the pre-Phase-4 characteristic (measured -1.1 dBc) — playback keeps
+    // running unfiltered rather than blocking while the copy is built.
+    t.expect("fallback: unfiltered render while prefilter pending (alias > -8 dBc)", beforeDbc > -8.0,
+             "beforeDbc=" + std::to_string(beforeDbc));
+    // After: the Phase-4 target on the same session object (measured -104.9 dBc).
+    t.expect("fallback: anti-aliased after wait + rebuild (alias < -95 dBc)", afterDbc < -95.0,
+             "afterDbc=" + std::to_string(afterDbc));
 }
 
 // =============================================================================
@@ -491,17 +564,21 @@ void runImpulseCases(AR::CheckSession& t) {
                     "preRms=%.2e tailRms=%.2e\n",
                     name.c_str(), r.peakAbs, static_cast<long long>(r.peakFrame), expectedPeakFrame,
                     static_cast<long long>(r.spanFrames), r.preSpanRms, r.tailRms);
+        // Position stays exact: the Phase-4 prefilter (applied on the 96->48
+        // downsampling pair only) compensates its integer group delay exactly.
         t.expect((name + ": impulse lands at the mapped session frame (+/-2)").c_str(),
                  std::abs(static_cast<double>(r.peakFrame) - expectedPeakFrame) <= 2.0,
                  "peakFrame=" + std::to_string(r.peakFrame));
-        // Span gate 160 output frames: Phase-1 isolated spans were 1 (96->48, exact
-        // 2:1) to 86 (44.1->96) frames; the session must not smear beyond that class.
+        // Span gate 160 output frames: measured 73 (96->48 — the anti-alias FIR's
+        // -60 dB response, the time-domain price of its designed transition; was 1
+        // pre-Phase-4) and 79 (48->96, upsampling, unchanged by Phase 4).
         t.expect((name + ": impulse -60 dB span < 160 frames").c_str(), r.spanFrames < 160,
                  "spanFrames=" + std::to_string(r.spanFrames));
 
-        // IDENTITY null against the legacy-kernel replica (same policy as the probe null).
-        AR::Signal expected =
-            resampleViaInterpolator(Interp::Sinc64Interpolator::interpolate, clip, ip.sessionRate);
+        // IDENTITY null against the prefilter+legacy replica (same policy as the
+        // probe null; prefilterReplica is the identity for the upsampling pair).
+        AR::Signal expected = resampleViaInterpolator(Interp::Sinc64Interpolator::interpolate,
+                                                      prefilterReplica(clip, ip.sessionRate), ip.sessionRate);
         for (float& v : expected.samples) {
             v = static_cast<float>(static_cast<double>(v) * PanLaw::kEqualPowerCenterGain);
         }
@@ -966,6 +1043,7 @@ int main() {
     for (const SessionPair& p : kSessionPairs) {
         auditSessionPair(t, p, control);
     }
+    runFallbackTransitionCase(t);
     runImpulseCases(t);
     runIsolatedBounceCase(t, tempRoot);
     runExportParityCases(t, tempRoot);
