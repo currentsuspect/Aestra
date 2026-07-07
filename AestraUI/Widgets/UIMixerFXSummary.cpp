@@ -75,7 +75,6 @@ void UIMixerFXSummary::onRender(NUIRenderer& renderer)
     if (m_pressed) {
         bg = NUIThemeManager::getInstance().getColor("buttonBgActive").withAlpha(0.99f);
     }
-    renderer.drawShadow(visualRect, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
     renderer.fillRoundedRect(visualRect, RADIUS, bg);
     const bool hasFx = (m_fxCount > 0);
     const NUIColor border = hasFx
