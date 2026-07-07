@@ -111,6 +111,11 @@ private:
         float sendLevelDb{0.0f};
         int sendIndex{-1}; // index into ChannelViewModel::sends (for send/sidechain edges)
         bool hovered{false};
+        // Y attachment within the target node (node-local, world units).
+        // Negative → use the node's default input pin. Assigned by
+        // updateEdgeAttachments() so many incoming wires spread along the
+        // node's edge instead of fanning into a single point.
+        float dstPinYOffset{-1.0f};
     };
 
     std::vector<Node> m_nodes;
@@ -244,6 +249,8 @@ private:
     void rebuildGraph();
     void rebuildFocusedGraph(const Aestra::ChannelViewModel* selected);
     void autoLayout();
+    void updateEdgeAttachments();
+    float edgeTargetY(const Edge& edge, const Node& dst) const;
     void computeWorldBounds();
     void fitToView();
     void clampCamera();
