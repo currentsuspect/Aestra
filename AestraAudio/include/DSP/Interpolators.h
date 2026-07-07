@@ -33,13 +33,21 @@ namespace Audio {
  * - Sinc32:   32-point Kaiser-windowed sinc, ~130dB target
  * - Sinc64:   64-point Kaiser-windowed sinc, ~144dB stopband design target
  *
- * Measured delivered behavior (Audio Research Bench Phase 1, 2026-07; see
- * AestraDocs/audio-research-bench.md): Sinc64Turbo full-band single-tone
- * residual SINAD at 1 kHz is ~88 dB at FRACTIONAL rate ratios (bounded by
- * nearest-phase LUT quantization, not the kernel) and ~154 dB at exact 2:1.
- * These kernels reconstruct at the SOURCE Nyquist: downsampling is not
- * anti-aliased by a ratio-aware low-pass, so content between the output and
- * source Nyquist frequencies folds back into the output band.
+ * Measured delivered behavior is PATH-SPECIFIC (Audio Research Bench Phases
+ * 1 + 2D, 2026-07; see AestraDocs/audio-research-bench.md §8):
+ * - MAINLINE session playback and full-mix export (AudioEngine::renderGraph)
+ *   dispatch quality Sinc64 to the legacy exact-sinc Sinc64Interpolator and
+ *   measured ~146-154 dB full-band single-tone residual SINAD at 1 kHz in
+ *   full-session tests (SessionResamplingTruthTest).
+ * - Sinc64Turbo consumers (isolated-track bounce via AudioRenderer,
+ *   SamplerPlugin, AuditionEngine/ClipResampler) measured ~88 dB at
+ *   FRACTIONAL rate ratios (bounded by nearest-phase LUT quantization, not
+ *   the kernel) and ~154 dB at exact 2:1. Phase 1's ~88 dB figure describes
+ *   these paths only, not Aestra resampling globally.
+ * ALL of these kernels reconstruct at the SOURCE Nyquist: on every measured
+ * path, downsampling is not anti-aliased by a ratio-aware low-pass, so
+ * content between the output and source Nyquist frequencies folds back into
+ * the output band.
  */
 
 namespace Interpolators {
@@ -864,8 +872,11 @@ struct Sinc64Interpolator {
 // =============================================================================
 
 // SNR figures below are kernel design targets; measured delivered behavior is
-// documented in AestraDocs/audio-research-bench.md (Sinc64: ~88 dB SINAD at
-// fractional ratios, ~154 dB at exact 2:1).
+// documented in AestraDocs/audio-research-bench.md and is path-specific:
+// quality Sinc64 measures ~146-154 dB SINAD through mainline playback/full-mix
+// export (renderGraph -> legacy exact-sinc Sinc64Interpolator) but ~88 dB at
+// fractional ratios through the Sinc64Turbo paths (isolated-track bounce,
+// sampler, audition). No path anti-aliases downsampling.
 enum class InterpolationQuality {
     Cubic,  // 4-point, ~80dB target, lowest CPU
     Sinc8,  // 8-point Blackman, ~100dB target
