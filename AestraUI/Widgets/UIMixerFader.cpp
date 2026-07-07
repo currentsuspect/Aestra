@@ -133,10 +133,8 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     NUIRect handleRect{handleX, handleY, handleW, handleH};
     float handleRad = 4.0f;
 
-    // Drop shadow for depth
-    renderer.drawShadow(handleRect, 0.0f, 2.0f, 6.0f, NUIColor(0, 0, 0, 0.4f));
-
-    // Handle Body (dark surface)
+    // Handle Body (dark surface) — flat, no drop shadow; the border + slit
+    // give it enough definition.
     renderer.fillRoundedRect(handleRect, handleRad, NUIColor(0.18f, 0.18f, 0.18f, 0.98f));
 
     // Handle Border (accent when active/hovered, subtle white otherwise)
