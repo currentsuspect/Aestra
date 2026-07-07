@@ -198,13 +198,18 @@ Can now claim (each backed by a gated measurement in `ResamplerQualityAuditTest`
   ≥140 dB (gated; 146.5–153.9 dB measured) full-band single-tone residual at 1 kHz
   (§8, legacy exact-sinc kernel). The ~88 dB Turbo floor applies to isolated-track
   bounce, sampler, and audition paths only (F2/F5/F6).
-* Offline full-mix export is sample-identical to realtime playback for
-  mismatched-rate sessions (nulls ≤ −164 dB RMS, maxErr 3e-8, gated at −120 dB).
+* Offline full-mix export matches realtime playback within measured bounds on the
+  tested cross-rate sessions (44.1↔48 kHz pairs: nulls ≤ −164 dB RMS, maxErr 3e-8,
+  gated at −120 dB; the 96 kHz pairs run the same code path but were not
+  export-diffed).
 * Transients do not smear ahead of their position (no measurable pre-echo beyond the
   64-frame kernel guard) and impulses land sample-accurately at the mapped position —
   confirmed through real sessions (§8.2).
 * A 44.1→48→44.1 round trip of passband material nulls below −90 dB (measured −95.5).
-* Upsampling image rejection is at least −55/−60 dBc at 0.9-Nyquist probes.
+* Upsampling image rejection at the measured 0.9-Nyquist probes: −60.5 dBc (48→96,
+  Turbo; −63.3 dBc via the mainline session path) and −68.2 dBc (44.1→96). This is
+  probe-specific, not a blanket guarantee — the 44.1→48 transition-band probe
+  measures only −21.7 dBc (F4).
 
 Cannot claim (and must not, until measured otherwise):
 
