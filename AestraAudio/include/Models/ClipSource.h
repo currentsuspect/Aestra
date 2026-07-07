@@ -82,10 +82,51 @@ public:
         m_buffer = std::move(buffer);
         m_waveformCache.reset();
         ++m_contentRevision;
+        clearFilteredVariant(); // new content invalidates any anti-aliased copy
     }
 
     std::shared_ptr<WaveformCache> getWaveformCache() const { return m_waveformCache; }
     void setWaveformCache(std::shared_ptr<WaveformCache> cache) { m_waveformCache = std::move(cache); }
+
+    // ---- Anti-aliased filtered variant (Phase 4, F1) -------------------------
+    // One optional low-pass-filtered copy of m_buffer, valid for exactly one
+    // (contentRevision, targetRate, filter spec) key. Produced off the audio
+    // thread by ClipPrefilterService; selected by PlaylistModel's runtime
+    // snapshot when a clip is DOWNSAMPLED into the session.
+    // THREADING CONTRACT: these fields are accessed ONLY on the model thread —
+    // the thread that mutates TrackManager state and pumps graph rebuilds (the
+    // app's main thread). That covers all three touch points: snapshot reads and
+    // ensureClipPrefilters writes (graph build) plus the clearFilteredVariant()
+    // in setBuffer above (import/project-load/record, same thread). The prefilter
+    // WORKER never touches ClipSource. No lock needed under this contract.
+
+    /// Filtered copy valid for `targetRate` and the CURRENT buffer content, or null.
+    std::shared_ptr<const AudioBufferData> getFilteredBufferFor(uint32_t targetRate) const {
+        if (m_filteredBuffer && m_filteredForRate == targetRate &&
+            m_filteredContentRevision == m_contentRevision) {
+            return m_filteredBuffer;
+        }
+        return nullptr;
+    }
+
+    void setFilteredVariant(std::shared_ptr<AudioBufferData> filtered, uint32_t targetRate,
+                            uint64_t contentRevision, uint32_t specVersion) {
+        m_filteredBuffer = std::move(filtered);
+        m_filteredForRate = targetRate;
+        m_filteredContentRevision = contentRevision;
+        m_filteredSpecVersion = specVersion;
+    }
+
+    void clearFilteredVariant() {
+        m_filteredBuffer.reset();
+        m_filteredForRate = 0;
+        m_filteredContentRevision = 0;
+        m_filteredSpecVersion = 0;
+    }
+
+    uint32_t filteredVariantRate() const { return m_filteredForRate; }
+    uint32_t filteredVariantSpec() const { return m_filteredSpecVersion; }
+    bool hasFilteredVariant() const { return m_filteredBuffer != nullptr; }
 
 private:
     ClipSourceID m_id;
@@ -94,6 +135,12 @@ private:
     std::shared_ptr<AudioBufferData> m_buffer;
     std::shared_ptr<WaveformCache> m_waveformCache;
     uint64_t m_contentRevision{0};
+
+    // Filtered-variant slot (see threading contract above).
+    std::shared_ptr<AudioBufferData> m_filteredBuffer;
+    uint32_t m_filteredForRate{0};
+    uint64_t m_filteredContentRevision{0};
+    uint32_t m_filteredSpecVersion{0};
 };
 
 } // namespace Audio

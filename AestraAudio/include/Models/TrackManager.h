@@ -12,6 +12,7 @@
 #include "../Playback/TimelineClock.h"
 #include "../RealtimeThreadGuard.h"
 #include "AestraLog.h"
+#include "ClipPrefilterService.h"
 #include "MeterSnapshot.h"
 #include "PatternManager.h"
 #include "PlaylistModel.h"
@@ -63,6 +64,12 @@ public:
         int inputIndex{-1};
         float volume{1.0f};
     };
+
+    /**
+     * @brief Destructor (out-of-line, TrackManager.cpp): documents that the
+     * prefilter worker joins first via member-declaration order.
+     */
+    ~TrackManager();
 
     /**
      * @brief Construct a track manager and wire its internal playback helpers.
@@ -1522,6 +1529,26 @@ private:
     bool m_recordingSessionUsesPlacementOverride{false};
     bool m_recordingNoArmLogged{false};
     std::string m_recordingProjectPath;
+
+    // Anti-aliased clip prefiltering (Phase 4, F1; AestraDocs/clip-prefilter-lifecycle.md).
+    // Declared LAST so it is destroyed FIRST: the worker joins while every member its
+    // completion callback touches (the graph-dirty atomics above) is still alive.
+    std::unique_ptr<ClipPrefilterService> m_clipPrefilterService;
+
+public:
+    /**
+     * @brief Drain finished anti-alias prefilter results into their sources, clear
+     * stale filtered variants, and queue missing work for downsampled clips.
+     * Called by AudioGraphBuilder before every runtime snapshot (graph-build thread).
+     */
+    void ensureClipPrefilters();
+
+    /**
+     * @brief Block the calling NON-AUDIO thread until all queued prefilter jobs are
+     * done, then apply them. Deterministic completion for offline render and tests.
+     * A graph rebuild is still required for the engine to pick the copies up.
+     */
+    void waitForClipPrefilters();
 };
 
 } // namespace Audio

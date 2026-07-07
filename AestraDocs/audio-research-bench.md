@@ -6,7 +6,9 @@ does not use Sinc64Turbo at all. Phase 2E complete (2026-07-07): isolated-track
 bounce kernel unified with mainline (**F6 resolved**, §8.3). Phase 3 complete
 (2026-07-07): downsampling anti-alias policy + prototype comparison (§9) —
 **decision: no production change yet; Option B (prefilter-at-load) is the measured
-winner and the recommended Phase 4 implementation.**
+winner and the recommended Phase 4 implementation.** Phase 4 complete (2026-07-07):
+clip prefilter implemented — **F1 resolved on the mainline paths** (§10; aliases now
+−104.9/−117.2 dBc, were −1.1/−0.0).
 Code: `Tests/Research/` (`SignalLab.h`, `AudioMeasure.h`, `MeasurementCoreSelfTest.cpp`,
 `ResamplerQualityAuditTest.cpp`, `SessionResamplingTruthTest.cpp`,
 `AntiAliasPolicyLab.cpp`). CTest labels: `research`, `audio-research`.
@@ -521,3 +523,69 @@ Implement Option B as **prefilter-at-load** behind the existing quality semantic
    already exist. `RTAllocationTrapTest` already fails the build if the filtering
    ever lands on the audio thread.
 5. Out of scope for Phase 4, revisit after: preview path (F7) and sampler (F8).
+
+---
+
+## 10. Phase 4 — downsampled-clip Kaiser prefilter (implemented 2026-07-07)
+
+Production implementation of §9's Option B. Lifecycle design (ownership, keying,
+invalidation, memory, fallback): `AestraDocs/clip-prefilter-lifecycle.md`.
+
+**What changed in production:** `DSP/ClipPrefilter` (Kaiser design + delay-compensated
+apply, pure functions), `ClipPrefilterService` (one lazily-started worker thread; jobs
+own their data; completion raises the atomic graph-dirty flag), a filtered-variant
+slot on `ClipSource` (graph-build-thread only), `TrackManager::ensureClipPrefilters/
+waitForClipPrefilters`, one selection point in `PlaylistModel::buildRuntimeSnapshot`
+(prefer the filtered copy when a clip is downsampled and the copy is ready), and the
+enqueue hook in `AudioGraphBuilder::buildFromTrackManager`. The interpolation kernels
+are untouched; the audio thread is untouched (no filtering, allocation, locking,
+logging, or blocking was added to it).
+
+### 10.1 Before → after (measured through real sessions, `SessionResamplingTruthTest`)
+
+| Scenario | Before (F1) | **After (Phase 4)** |
+| --- | --- | --- |
+| 48k clip in 44.1k session, 23 kHz probe → 21.1 kHz alias | −1.10 dBc | **−104.91 dBc** |
+| 96k clip in 48k session, 30 kHz probe → 18 kHz alias | −0.00 dBc | **−117.24 dBc** |
+| 44.1k in 48k (upsampling control) | −21.69 dBc image | −21.69 dBc (unchanged) |
+| 48k in 96k (upsampling control) | −63.29 dBc image | −63.29 dBc (unchanged) |
+| Same-rate control | exact | exact (unchanged) |
+
+Everything else re-proven end-to-end: 1 kHz gain matches control to 0.000000 dB and
+SINAD stays 146.5–153.9 dB (the prefilter is passband-exact); DC exact; clip length
+truth witnessed on the in-band tone; impulses land on the exact mapped frame (the
+FIR's integer group delay is compensated exactly; −60 dB span 73 output frames on
+96→48, the designed transition's time-domain cost); session renders null the
+production-prefilter + legacy-kernel replica at −153.6 to −275.6 dB RMS; full-mix
+export nulls realtime at −164/−175 dB with identical artifact levels (parity
+preserved by construction — one snapshot feeds playback, export, and isolated
+bounce). A dedicated transition case proves the non-blocking fallback: the first
+graph build renders unfiltered (−1.10 dBc) while the worker runs, and after
+completion + rebuild the same session measures −104.91 dBc.
+
+### 10.2 Cost
+
+CPU: one-time per clip per session rate, on the worker thread — the lab's measured
+prefilter pass is ~1–2 ms per second of clip audio (§9.4); steady-state playback
+cost is exactly the pre-Phase-4 cost (same kernels, same per-voice loop). Memory:
+one filtered copy per DOWNSAMPLED source at the current session rate (2× RAM for
+those clips only; cleared automatically when the rate stops qualifying; eviction
+policy deliberately deferred — see the lifecycle doc §6).
+
+### 10.3 Covered / uncovered
+
+Covered: realtime playback, full-mix export, isolated-track bounce — every path
+that reads the runtime snapshot. Uncovered (unchanged, documented): PreviewEngine
+(F7, own Cubic pipeline), SamplerPlugin pitch-up (F8), AuditionEngine, and exports
+at a rate different from the session rate (the exporter renders the current graph;
+pre-existing behavior). **F1 is resolved for the mainline paths.**
+
+### 10.4 Remaining risks / follow-ups
+
+* Filtered copies double RAM for downsampled clips; revisit with an eviction cap if
+  real sessions show pressure (lifecycle doc §6).
+* The graph pump (`PlaybackGraphController::drainIfDirty`) applies finished copies;
+  a headless embedder that never drains would stay on the fallback path (tests use
+  `waitForClipPrefilters()`).
+* Preview/sampler/audition still alias (F7/F8) — fold into this policy or document
+  as tiers, per §8.5(3).
