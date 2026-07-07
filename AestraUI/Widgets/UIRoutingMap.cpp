@@ -400,15 +400,29 @@ void UIRoutingMap::autoLayout() {
             masterNode->outputY = masterH * 0.5f;
         }
     } else {
-        // Full panel: snake into multiple columns when there are many tracks so
-        // the graph stays readable at high track counts. Master is anchored to
-        // the right of the last column.
+        // Full panel: flow-ordered columns instead of a rigid index grid.
+        // Tracks that other tracks feed (send/bus targets) gravitate toward the
+        // column nearest the master — horizontal position follows signal flow.
+        // Partial columns are vertically centred against the tallest one, and
+        // alternate columns get a half-row stagger so cross-column wires pass
+        // between nodes instead of colliding head-on.
         std::vector<Node*> tracks;
         Node* masterNode = nullptr;
         for (auto& n : m_nodes) {
             if (n.type == Node::Master) masterNode = &n;
             else tracks.push_back(&n);
         }
+
+        // Bus-like = target of at least one track-to-track edge (send or route).
+        std::unordered_map<uint32_t, int> inDegree;
+        for (const auto& e : m_edges) {
+            if (e.targetNodeId != 0) ++inDegree[e.targetNodeId];
+        }
+        std::stable_sort(tracks.begin(), tracks.end(), [&](const Node* a, const Node* b) {
+            const bool aBus = inDegree.find(a->id) != inDegree.end();
+            const bool bBus = inDegree.find(b->id) != inDegree.end();
+            return !aBus && bBus; // pure sources first, bus-like last (stable)
+        });
 
         const int trackCount = static_cast<int>(tracks.size());
         // Cap rows per column so vertical extent stays reasonable
@@ -418,16 +432,21 @@ void UIRoutingMap::autoLayout() {
 
         float trackW = kTrackNodeW;
         float trackH = kTrackNodeH;
-        // Tighter vertical spacing when multi-column
-        float vSpacing = (numColumns > 1) ? 14.0f : kTrackSpacing;
-        // Column horizontal stride
-        float colStride = trackW + 72.0f;
+        // Breathing room: a bit looser than the old grid in both axes
+        float vSpacing = (numColumns > 1) ? 18.0f : kTrackSpacing;
+        float colStride = trackW + 88.0f;
+        const float rowStride = trackH + vSpacing;
+        const float fullColH = rowsPerColumn * trackH + (rowsPerColumn - 1) * vSpacing;
 
         for (int i = 0; i < trackCount; ++i) {
-            int col = i / rowsPerColumn;
-            int row = i % rowsPerColumn;
+            const int col = i / rowsPerColumn;
+            const int row = i % rowsPerColumn;
+            const int rowsInCol = std::min(rowsPerColumn, trackCount - col * rowsPerColumn);
+            const float colH = rowsInCol * trackH + (rowsInCol - 1) * vSpacing;
+            const float yBase = (fullColH - colH) * 0.5f;              // centre partial columns
+            const float stagger = (col % 2 == 1) ? rowStride * 0.5f : 0.0f; // brick offset
             tracks[i]->x = static_cast<float>(col) * colStride;
-            tracks[i]->y = static_cast<float>(row) * (trackH + vSpacing);
+            tracks[i]->y = yBase + stagger + static_cast<float>(row) * rowStride;
             tracks[i]->w = trackW;
             tracks[i]->h = trackH;
             tracks[i]->outputX = trackW;
@@ -439,9 +458,8 @@ void UIRoutingMap::autoLayout() {
         if (masterNode) {
             // Master sits to the right of the last column
             float lastColX = static_cast<float>(numColumns - 1) * colStride;
-            masterNode->x = lastColX + trackW + 120.0f;
-            float colHeight = rowsPerColumn * trackH + (rowsPerColumn - 1) * vSpacing;
-            masterNode->y = colHeight * 0.5f - kMasterNodeH * 0.5f;
+            masterNode->x = lastColX + trackW + 140.0f;
+            masterNode->y = fullColH * 0.5f - kMasterNodeH * 0.5f;
             masterNode->w = kMasterNodeW;
             masterNode->h = kMasterNodeH;
             masterNode->inputX = 0.0f;
@@ -450,6 +468,55 @@ void UIRoutingMap::autoLayout() {
             masterNode->outputY = kMasterNodeH * 0.5f;
         }
     }
+}
+
+void UIRoutingMap::updateEdgeAttachments() {
+    // Spread incoming wires along each target node's left edge instead of
+    // terminating them all on a single pin — at 50 tracks the master turned
+    // into a solid grey fan. Attachments are ordered by the source's vertical
+    // position so wires arrive sorted and don't cross each other at the node.
+    std::unordered_map<uint32_t, const Node*> byId;
+    byId.reserve(m_nodes.size());
+    for (const auto& n : m_nodes) byId[n.id] = &n;
+
+    std::unordered_map<uint32_t, std::vector<size_t>> incoming;
+    for (size_t i = 0; i < m_edges.size(); ++i) {
+        incoming[m_edges[i].targetNodeId].push_back(i);
+    }
+
+    for (auto& [targetId, edgeIdxs] : incoming) {
+        auto dstIt = byId.find(targetId);
+        if (dstIt == byId.end()) continue;
+        const Node* dst = dstIt->second;
+
+        if (edgeIdxs.size() < 2) {
+            for (size_t i : edgeIdxs) m_edges[i].dstPinYOffset = -1.0f;
+            continue;
+        }
+
+        auto sourceY = [&](const Edge& e) {
+            auto it = byId.find(e.sourceNodeId);
+            return (it != byId.end()) ? it->second->y + it->second->outputY : 0.0f;
+        };
+        std::sort(edgeIdxs.begin(), edgeIdxs.end(), [&](size_t a, size_t b) {
+            const float ya = sourceY(m_edges[a]);
+            const float yb = sourceY(m_edges[b]);
+            if (ya != yb) return ya < yb;
+            return a < b; // stable tiebreak for equal heights
+        });
+
+        const float pad = dst->h * 0.16f;
+        const float span = dst->h - pad * 2.0f;
+        const float count = static_cast<float>(edgeIdxs.size());
+        for (size_t k = 0; k < edgeIdxs.size(); ++k) {
+            m_edges[edgeIdxs[k]].dstPinYOffset =
+                pad + span * ((static_cast<float>(k) + 0.5f) / count);
+        }
+    }
+}
+
+float UIRoutingMap::edgeTargetY(const Edge& edge, const Node& dst) const {
+    return dst.y + (edge.dstPinYOffset >= 0.0f ? edge.dstPinYOffset : dst.inputY);
 }
 
 void UIRoutingMap::onUpdate(double deltaTime) {
@@ -525,6 +592,9 @@ void UIRoutingMap::refreshLiveState() {
 }
 
 void UIRoutingMap::onRender(NUIRenderer& renderer) {
+    // Recompute per frame: attachment order depends on node positions, which
+    // change during drags. O(E log E) on ≤ a few hundred edges — negligible.
+    updateEdgeAttachments();
     if (m_mode == Mode::Minimap) {
         renderMinimap(renderer);
     } else {
@@ -611,7 +681,7 @@ void UIRoutingMap::renderMinimap(NUIRenderer& renderer) {
         if (!src || !dst) continue;
 
         NUIPoint a = worldToScreen(src->x + src->outputX, src->y + src->outputY);
-        NUIPoint b = worldToScreen(dst->x + dst->inputX, dst->y + dst->inputY);
+        NUIPoint b = worldToScreen(dst->x + dst->inputX, edgeTargetY(edge, *dst));
 
         NUIColor color = m_textSecondary.withAlpha(0.5f);
         if (edge.type == Edge::SendPath) color = m_textInfo.withAlpha(0.5f);
@@ -657,48 +727,44 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     constexpr float kTitleBarH = 44.0f;
     constexpr float kCornerRadius = 12.0f;
 
-    // === Chrome: rounded card with shadow + opaque background ===
-    // Drop-shadow simulation: offset darker rect
-    NUIRect shadow{bounds.x + 3.0f, bounds.y + 6.0f, bounds.width, bounds.height};
-    renderer.fillRoundedRect(shadow, kCornerRadius, NUIColor(0.0f, 0.0f, 0.0f, 0.55f));
-
-    // Solid dark card so the workspace doesn't bleed through.
+    // === Chrome: flat rounded card ===
+    // Solid dark card so the workspace doesn't bleed through. Flat — no fake
+    // drop shadow, no depth gradient (matches the app's flat surface language).
     renderer.fillRoundedRect(bounds, kCornerRadius, NUIColor(0.046f, 0.046f, 0.046f, 1.0f));
 
-    // Subtle accent wash near the top for depth.
-    NUIColor gradTop = m_accent.withAlpha(0.035f);
-    NUIColor gradBot = NUIColor(0.0f, 0.0f, 0.0f, 0.0f);
-    renderer.fillRectGradient({bounds.x, bounds.y, bounds.width, 120.0f}, gradTop, gradBot, true);
+    // === Title bar === charcoal (backgroundSecondary), matching the transport
+    // bar and every docked panel's chrome — rounded top, squared flush bottom.
+    NUIRect titleBar{bounds.x, bounds.y, bounds.width, kTitleBarH};
+    renderer.fillRoundedRect(titleBar, kCornerRadius, m_bgSecondary);
+    renderer.fillRect({bounds.x, bounds.y + kTitleBarH - kCornerRadius, bounds.width, kCornerRadius},
+                      m_bgSecondary);
+    renderer.drawLine({bounds.x, bounds.y + kTitleBarH - 0.5f},
+                      {bounds.right(), bounds.y + kTitleBarH - 0.5f},
+                      1.0f, m_border.withAlpha(0.5f));
 
-    // Outer border
+    // Outer border (after the title-bar fill so the top edge stays visible)
     renderer.strokeRoundedRect(bounds, kCornerRadius, 1.0f, m_border.withAlpha(0.55f));
 
-    // === Title bar ===
-    NUIRect titleBar{bounds.x, bounds.y, bounds.width, kTitleBarH};
-    renderer.drawLine({bounds.x + 12.0f, bounds.y + kTitleBarH},
-                      {bounds.x + bounds.width - 12.0f, bounds.y + kTitleBarH},
-                      1.0f, m_border.withAlpha(0.25f));
+    // Title — 12px secondary, same treatment as the docked-panel title bars
+    renderer.drawText("ROUTING MAP", {bounds.x + 14.0f, bounds.y + (kTitleBarH - 12.0f) * 0.5f},
+                      12.0f, m_textSecondary);
 
-    // Title
-    renderer.drawText("ROUTING MAP", {bounds.x + 18.0f, bounds.y + 10.0f}, 13.0f,
-                      m_text.withAlpha(0.95f));
-
-    // Subtitle: show counts
+    // Counts, dimmer, on the same line
     {
         size_t trackCount = 0;
         for (const auto& n : m_nodes)
             if (n.type == Node::Track) ++trackCount;
         std::string subtitle = std::to_string(trackCount) + (trackCount == 1 ? " track  ·  " : " tracks  ·  ") +
                                std::to_string(m_edges.size()) + (m_edges.size() == 1 ? " connection" : " connections");
-        float titleW = renderer.measureText("ROUTING MAP", 13.0f).width;
-        renderer.drawText(subtitle, {bounds.x + 18.0f + titleW + 14.0f, bounds.y + 12.0f},
-                          10.5f, m_textSecondary.withAlpha(0.66f));
+        float titleW = renderer.measureText("ROUTING MAP", 12.0f).width;
+        renderer.drawText(subtitle, {bounds.x + 14.0f + titleW + 12.0f, bounds.y + (kTitleBarH - 10.0f) * 0.5f},
+                          10.0f, m_textSecondary.withAlpha(0.55f));
     }
 
     // Toolbar buttons: keep everything in one row so controls don't crowd the canvas.
     std::string fitBtnLabel = "Fit";
     float fitW = renderer.measureText(fitBtnLabel, 10.0f).width + 18.0f;
-    m_fitButtonRect = NUIRect{bounds.right() - fitW - 14.0f, bounds.y + 10.0f, fitW, 22.0f};
+    m_fitButtonRect = NUIRect{bounds.right() - fitW - 14.0f, bounds.y + 11.0f, fitW, 22.0f};
     renderer.fillRoundedRect(m_fitButtonRect, 5.0f,
                              m_fitHovered ? m_accent.withAlpha(0.20f) : m_bg.withAlpha(0.34f));
     renderer.strokeRoundedRect(m_fitButtonRect, 5.0f, 1.0f,
@@ -708,7 +774,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
 
     std::string resetLabel = "Reset";
     float resetW = renderer.measureText(resetLabel, 10.0f).width + 18.0f;
-    m_resetButtonRect = NUIRect{m_fitButtonRect.x - resetW - 8.0f, bounds.y + 10.0f, resetW, 22.0f};
+    m_resetButtonRect = NUIRect{m_fitButtonRect.x - resetW - 8.0f, bounds.y + 11.0f, resetW, 22.0f};
     renderer.fillRoundedRect(m_resetButtonRect, 5.0f,
                              m_resetHovered ? m_accent.withAlpha(0.20f) : m_bg.withAlpha(0.34f));
     renderer.strokeRoundedRect(m_resetButtonRect, 5.0f, 1.0f,
@@ -718,7 +784,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
 
     std::string collapseLabel = "Collapse";
     float collapseW = renderer.measureText(collapseLabel, 10.0f).width + 20.0f;
-    m_collapseButtonRect = NUIRect{m_resetButtonRect.x - collapseW - 8.0f, bounds.y + 10.0f, collapseW, 22.0f};
+    m_collapseButtonRect = NUIRect{m_resetButtonRect.x - collapseW - 8.0f, bounds.y + 11.0f, collapseW, 22.0f};
     renderer.fillRoundedRect(m_collapseButtonRect, 5.0f,
                                m_collapseHovered ? m_accent.withAlpha(0.20f) : m_bg.withAlpha(0.34f));
     renderer.strokeRoundedRect(m_collapseButtonRect, 5.0f, 1.0f,
@@ -726,37 +792,33 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     renderer.drawTextCentered(collapseLabel, m_collapseButtonRect, 10.0f,
                               m_collapseHovered ? m_accent.withAlpha(0.98f) : m_textSecondary.withAlpha(0.9f));
 
-    {
-        std::string hint = "Esc";
-        float hintW = renderer.measureText(hint, 10.0f).width;
-        renderer.drawText(hint, {m_collapseButtonRect.x - hintW - 14.0f, bounds.y + 13.0f},
-                          10.0f, m_textSecondary.withAlpha(0.48f));
-    }
+    // (The floating "Esc" hint is gone — Esc still closes the panel; a loose
+    // keyboard hint in the chrome was clutter.)
 
     // Search bar in title bar
     {
         float searchX = bounds.x + bounds.width * 0.5f - 100.0f;
         float searchW = 200.0f;
-        m_searchRect = NUIRect{searchX, bounds.y + 10.0f, searchW, 22.0f};
+        m_searchRect = NUIRect{searchX, bounds.y + 11.0f, searchW, 22.0f};
         NUIColor searchBg = m_searchFocused ? m_bgSecondary.withAlpha(0.68f) : m_bgSecondary.withAlpha(0.38f);
         renderer.fillRoundedRect(m_searchRect, 5.0f, searchBg);
         renderer.strokeRoundedRect(m_searchRect, 5.0f, 1.0f,
                                    m_searchFocused ? m_accent.withAlpha(0.52f) : m_border.withAlpha(0.26f));
         std::string searchDisplay = m_searchQuery.empty() ? "Search nodes..." : m_searchQuery;
         NUIColor searchTextCol = m_searchQuery.empty() ? m_textSecondary.withAlpha(0.45f) : m_text.withAlpha(0.85f);
-        renderer.drawText(searchDisplay, {searchX + 8.0f, bounds.y + 13.0f}, 11.0f, searchTextCol);
+        renderer.drawText(searchDisplay, {searchX + 8.0f, bounds.y + 14.0f}, 11.0f, searchTextCol);
 
         // Blinking caret when focused
         if (m_searchFocused && m_searchCaretVisible) {
             float textW = renderer.measureText(m_searchQuery, 11.0f).width;
             float caretX = searchX + 8.0f + textW + 1.0f;
-            float caretY = bounds.y + 10.0f + (22.0f - 12.0f) * 0.5f;
+            float caretY = bounds.y + 11.0f + (22.0f - 12.0f) * 0.5f;
             renderer.fillRoundedRect(NUIRect{caretX, caretY, 1.5f, 12.0f}, 1.0f, m_text.withAlpha(0.9f));
         }
 
         // Dropdown suggestions (rendered below search bar)
         if (m_searchFocused && !m_searchMatches.empty()) {
-            float dropY = bounds.y + 10.0f + 22.0f + 2.0f;
+            float dropY = bounds.y + 11.0f + 22.0f + 2.0f;
             float itemH = 22.0f;
             float dropH = static_cast<float>(m_searchMatches.size()) * itemH + 4.0f;
             NUIRect dropRect{searchX, dropY, searchW, dropH};
@@ -786,28 +848,8 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
         }
     }
 
-    // Legend: line type guide, separated from the title counts.
-    {
-        float legX = bounds.x + 18.0f;
-        float legY = bounds.y + 28.0f;
-        float dot = 3.0f;
-        NUIRect legendBg{legX - 6.0f, legY - 3.0f, 150.0f, 15.0f};
-        renderer.fillRoundedRect(legendBg, 5.0f, m_bg.withAlpha(0.26f));
-        renderer.strokeRoundedRect(legendBg, 5.0f, 1.0f, m_border.withAlpha(0.14f));
-        // Solid = main path
-        renderer.fillCircle({legX + dot, legY + 4.0f}, dot, m_textSecondary.withAlpha(0.7f));
-        renderer.drawText("Route", {legX + 10.0f, legY}, 9.0f, m_textSecondary.withAlpha(0.55f));
-        float lw1 = renderer.measureText("Route", 9.0f).width + 18.0f;
-        // Dashed = send
-        float dx = legX + lw1;
-        renderer.strokeCircle({dx + dot, legY + 4.0f}, dot, 1.0f, m_textInfo.withAlpha(0.7f));
-        renderer.drawText("Send", {dx + 10.0f, legY}, 9.0f, m_textInfo.withAlpha(0.55f));
-        float lw2 = renderer.measureText("Send", 9.0f).width + 18.0f;
-        // Dashed orange = sidechain
-        float sx = legX + lw1 + lw2;
-        renderer.strokeCircle({sx + dot, legY + 4.0f}, dot, 1.0f, m_warning.withAlpha(0.7f));
-        renderer.drawText("Sidechain", {sx + 10.0f, legY}, 9.0f, m_warning.withAlpha(0.55f));
-    }
+    // (Edge-type legend now lives bottom-left over the canvas — see below,
+    // after the canvas clip is cleared — so the title bar stays uncluttered.)
 
     // === Canvas area (clipped) ===
     NUIRect canvasRect{bounds.x + 1.0f, bounds.y + kTitleBarH + 1.0f,
@@ -820,8 +862,12 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     float canvasY = bounds.y + kTitleBarH;
 
     // Reduce edge density visual when there are many connections
+    // Idle edges are wiring, not content: on dense graphs they fade to a whisper
+    // so the map reads as nodes-first, and hover/trace/selection re-light the
+    // paths that matter. The old floor (0.22) let 50 converging edges stack into
+    // a solid grey fan at the master node.
     const float edgeAlphaScale = (m_edges.size() > 20)
-                                     ? std::max(0.22f, 16.0f / static_cast<float>(m_edges.size()))
+                                     ? std::max(0.10f, 10.0f / static_cast<float>(m_edges.size()))
                                      : 1.0f;
 
     // Precompute hover-to-trace masks if hovering a node
@@ -884,7 +930,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
         float sx = bounds.x + (src->x + src->outputX) * m_zoom + m_cameraX;
         float sy = canvasY + (src->y + src->outputY) * m_zoom + m_cameraY;
         float dx_ = bounds.x + (dst->x + dst->inputX) * m_zoom + m_cameraX;
-        float dy_ = canvasY + (dst->y + dst->inputY) * m_zoom + m_cameraY;
+        float dy_ = canvasY + edgeTargetY(edge, *dst) * m_zoom + m_cameraY;
 
         // Mute/solo dimming logic
         bool soloSuppressed = m_anySoloed && !src->soloed && !dst->soloed;
@@ -940,7 +986,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
             float sx = bounds.x + (src->x + src->outputX) * m_zoom + m_cameraX;
             float sy = canvasY + (src->y + src->outputY) * m_zoom + m_cameraY;
             float dx_ = bounds.x + (dst->x + dst->inputX) * m_zoom + m_cameraX;
-            float dy_ = canvasY + (dst->y + dst->inputY) * m_zoom + m_cameraY;
+            float dy_ = canvasY + edgeTargetY(edge, *dst) * m_zoom + m_cameraY;
             // Glow behind
             drawBezier(renderer, {sx, sy}, {dx_, dy_}, 6.0f, m_accent.withAlpha(0.22f), false);
             // Bright core
@@ -1031,6 +1077,53 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
 
     renderer.clearClipRect();
 
+    // Edge-type legend — quiet chip in the canvas' bottom-left corner (the
+    // standard node-editor spot), out of the title bar. Pill sized to content;
+    // dot centres sit on the labels' optical middle.
+    {
+        constexpr float kLegFont = 9.0f;
+        constexpr float kDotR = 3.0f;
+        constexpr float kDotLabelGap = 6.0f;  // dot edge → label
+        constexpr float kItemGap = 16.0f;     // label end → next dot
+        constexpr float kPadX = 10.0f;
+        constexpr float kPadY = 5.0f;
+
+        struct LegendItem { const char* label; NUIColor color; bool hollow; };
+        const LegendItem items[3] = {
+            {"Route", m_textSecondary.withAlpha(0.70f), false},
+            {"Send", m_textInfo.withAlpha(0.70f), true},
+            {"Sidechain", m_warning.withAlpha(0.70f), true},
+        };
+
+        float labelW[3];
+        float contentW = 0.0f;
+        for (int i = 0; i < 3; ++i) {
+            labelW[i] = renderer.measureText(items[i].label, kLegFont).width;
+            contentW += kDotR * 2.0f + kDotLabelGap + labelW[i];
+            if (i < 2) contentW += kItemGap;
+        }
+
+        const float pillH = kLegFont + kPadY * 2.0f + 2.0f;
+        NUIRect legendBg{bounds.x + 14.0f, bounds.bottom() - pillH - 12.0f,
+                         contentW + kPadX * 2.0f, pillH};
+        renderer.fillRoundedRect(legendBg, 5.0f, NUIColor(0.046f, 0.046f, 0.046f, 0.85f));
+        renderer.strokeRoundedRect(legendBg, 5.0f, 1.0f, m_border.withAlpha(0.14f));
+
+        const float textY = legendBg.y + kPadY;
+        const float dotCY = textY + kLegFont * 0.55f; // optical middle of the label
+        float cx = legendBg.x + kPadX;
+        for (int i = 0; i < 3; ++i) {
+            if (items[i].hollow) {
+                renderer.strokeCircle({cx + kDotR, dotCY}, kDotR, 1.0f, items[i].color);
+            } else {
+                renderer.fillCircle({cx + kDotR, dotCY}, kDotR, items[i].color);
+            }
+            renderer.drawText(items[i].label, {cx + kDotR * 2.0f + kDotLabelGap, textY},
+                              kLegFont, items[i].color.withAlpha(0.60f));
+            cx += kDotR * 2.0f + kDotLabelGap + labelW[i] + kItemGap;
+        }
+    }
+
     // Left inspector panel
     renderInspector(renderer);
 
@@ -1070,30 +1163,18 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
                         ((node.color >> 24) & 0xFF) / 255.0f);
 
     if (m_mode == Mode::FullPanel) {
-        // Drop shadow under each node for separation without making the grid muddy.
-        renderer.fillRoundedRect({nx + 1.0f, ny + 3.0f, nw, nh}, radius,
-                                  NUIColor(0.0f, 0.0f, 0.0f, 0.34f));
-
-        // Master node uses accent-tinted fill so it's visually distinct as the destination
-        NUIColor bgBot, bgTop;
+        // Flat node fill — no shadow, gradient, or inner highlight. Hover reads
+        // as a single lighter fill; the master keeps its accent-tinted tone so
+        // the destination stays visually distinct.
+        NUIColor bg;
         if (node.type == Node::Master) {
-            bgBot = node.hovered ? NUIColor(0.22f, 0.16f, 0.32f, 1.0f)
-                                  : NUIColor(0.18f, 0.13f, 0.27f, 1.0f);
-            bgTop = node.hovered ? NUIColor(0.30f, 0.22f, 0.42f, 1.0f)
-                                  : NUIColor(0.25f, 0.18f, 0.36f, 1.0f);
+            bg = node.hovered ? NUIColor(0.22f, 0.16f, 0.32f, 1.0f)
+                              : NUIColor(0.18f, 0.13f, 0.27f, 1.0f);
         } else {
-            // Track nodes: elevated dark fill
-            bgBot = node.hovered ? NUIColor(0.137f, 0.137f, 0.137f, 1.0f)
-                                  : NUIColor(0.097f, 0.097f, 0.097f, 1.0f);
-            bgTop = node.hovered ? NUIColor(0.17f, 0.17f, 0.17f, 1.0f)
-                                  : NUIColor(0.124f, 0.124f, 0.124f, 1.0f);
+            bg = node.hovered ? NUIColor(0.137f, 0.137f, 0.137f, 1.0f)
+                              : NUIColor(0.097f, 0.097f, 0.097f, 1.0f);
         }
-        renderer.fillRoundedRect(nodeRect, radius, bgBot);
-        renderer.fillRectGradient({nx, ny, nw, nh * 0.6f}, bgTop, bgBot, true);
-
-        // Subtle inner highlight at the top edge for elevation
-        renderer.drawLine({nx + radius, ny + 1.0f}, {nx + nw - radius, ny + 1.0f},
-                          1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.10f));
+        renderer.fillRoundedRect(nodeRect, radius, bg);
 
         // Hover/selection/solo accent border
         bool isSelected = (m_viewModel &&
@@ -1428,12 +1509,12 @@ int UIRoutingMap::hitTestEdge(const NUIPoint& p) const {
             ax = bounds.x + (src->x + src->outputX) * m_zoom + m_cameraX;
             ay = canvasY + (src->y + src->outputY) * m_zoom + m_cameraY;
             bx = bounds.x + (dst->x + dst->inputX) * m_zoom + m_cameraX;
-            by = canvasY + (dst->y + dst->inputY) * m_zoom + m_cameraY;
+            by = canvasY + edgeTargetY(edge, *dst) * m_zoom + m_cameraY;
         } else {
             ax = m_minimapOffsetX + (src->x + src->outputX - m_minimapCenterX) * m_minimapScale;
             ay = m_minimapOffsetY + (src->y + src->outputY - m_minimapCenterY) * m_minimapScale;
             bx = m_minimapOffsetX + (dst->x + dst->inputX - m_minimapCenterX) * m_minimapScale;
-            by = m_minimapOffsetY + (dst->y + dst->inputY - m_minimapCenterY) * m_minimapScale;
+            by = m_minimapOffsetY + (edgeTargetY(edge, *dst) - m_minimapCenterY) * m_minimapScale;
         }
 
         float dx = std::abs(bx - ax);
@@ -2381,7 +2462,7 @@ void UIRoutingMap::renderMiniOverview(NUIRenderer& renderer) {
         float sx = offsetX + (src->x + src->outputX) * scale;
         float sy = offsetY + (src->y + src->outputY) * scale;
         float dx_ = offsetX + (dst->x + dst->inputX) * scale;
-        float dy_ = offsetY + (dst->y + dst->inputY) * scale;
+        float dy_ = offsetY + edgeTargetY(edge, *dst) * scale;
         NUIColor col = m_textSecondary.withAlpha(0.25f);
         if (edge.type == Edge::SendPath) col = m_textInfo.withAlpha(0.30f);
         if (edge.type == Edge::SidechainPath) col = m_warning.withAlpha(0.30f);
