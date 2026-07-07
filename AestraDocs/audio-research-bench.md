@@ -2,7 +2,8 @@
 
 Status: Phase 1 complete (2026-07-07). Phase 2D (full-session engine truth) complete
 (2026-07-07) — see §8, which **corrects the scope of F2**: mainline session playback
-does not use Sinc64Turbo at all.
+does not use Sinc64Turbo at all. Phase 2E complete (2026-07-07): isolated-track
+bounce kernel unified with mainline (**F6 resolved**, §8.3).
 Code: `Tests/Research/` (`SignalLab.h`, `AudioMeasure.h`, `MeasurementCoreSelfTest.cpp`,
 `ResamplerQualityAuditTest.cpp`, `SessionResamplingTruthTest.cpp`). CTest labels:
 `research`, `audio-research`.
@@ -155,9 +156,10 @@ comment overstates it; phase-error-induced residual also grows with signal frequ
 (not yet swept — see blind spots).
 **Phase 2D scope correction (F5, §8): this floor does NOT apply to mainline session
 playback or full-mix export**, which use the legacy exact-sinc kernel and measured
-146.5–153.9 dB through the whole engine. It DOES apply to the Sinc64Turbo consumers:
-the isolated-track bounce (measured 87.8 dB end-to-end, F6), the sampler (84.2 dB
-measured, §8.4), and AuditionEngine.
+146.5–153.9 dB through the whole engine. It DOES apply to the remaining Sinc64Turbo
+consumers: the sampler (84.2 dB measured, §8.4) and AuditionEngine. (It also applied
+to the isolated-track bounce — measured 87.8 dB end-to-end — until Phase 2E unified
+that path's kernel with mainline; F6, resolved.)
 
 **F3 — Streaming `SampleRateConverter` delivers only ~40–44 dB SINAD at fractional
 ratios** (39.7–44.3 dB measured; 127–142 dB at integer ratios), far below the
@@ -259,9 +261,9 @@ Cannot claim (and must not, until measured otherwise):
    error grows with frequency, so quantify SINAD vs frequency (100 Hz–20 kHz), not
    just at 1 kHz — this decides whether ~88 dB @1 kHz is ~68 dB @10 kHz.
 3. ~~**Engine-level resampling truth**~~ — **done** (Phase 2D, §8), and it changed the
-   picture: see F5/F6. New follow-ups it produced: unify the isolated-bounce kernel
-   (§8.5), and a wording pass on `Interpolators.h`/`ClipResampler.h`/
-   `SINC64_TURBO_PAPER.md` to path-scope the Phase-1 "~88 dB delivered" qualification.
+   picture: see F5/F6. Its follow-ups are also done: the isolated-bounce kernel is
+   unified (Phase 2E, F6 resolved) and the "~88 dB delivered" qualification is
+   path-scoped in `Interpolators.h`/`ClipResampler.h`/`SINC64_TURBO_PAPER.md`.
 4. **Downsampling anti-alias policy**: cost out a ratio-aware pre-filter for clip
    playback at non-1:1 rates (product decision informed by F1's numbers; see §8.5 for
    the post-Phase-2D framing).
@@ -289,7 +291,7 @@ by the test.
 | --- | --- | --- |
 | Realtime playback of a mismatched-rate clip | `processBlock` → `renderGraph` inline clip loop (AudioEngine.cpp:2066–2348) | **legacy `Sinc64Interpolator`** (exact double-precision Kaiser sinc, no LUT) |
 | Full-mix export / bounce (`trackId = -1`) | `bounceRangeToWav` → `AudioExporter` → same `processBlock`/`renderGraph` | **legacy `Sinc64Interpolator`** |
-| Isolated-track bounce (`trackId ≥ 0`) | `bounceRangeToWav` internal loop (AudioEngine.cpp:3102+) → `AudioRenderer::renderClipAudio` | **`Sinc64Turbo`** (2048-phase LUT) |
+| Isolated-track bounce (`trackId ≥ 0`) | `bounceRangeToWav` internal loop (AudioEngine.cpp:3102+) → `AudioRenderer::renderClipAudio` | ~~`Sinc64Turbo`~~ → **legacy `Sinc64Interpolator`** since Phase 2E (kernel table unified with renderGraph) |
 | File-browser preview | `PreviewEngine::processRealtime` (own per-voice loop, PreviewEngine.cpp:285+) | **own Cubic Hermite** — ignores the quality setting |
 | Sampler note playback (pitch ≠ root) | `SamplerPlugin::process` (SamplerPlugin.cpp:402) | **`Sinc64Turbo`** (hardcoded) |
 | Clip audition | `AuditionEngine` (AuditionEngine.cpp:497) | **`Sinc64Turbo`** (not separately measured at session level) |
@@ -330,18 +332,21 @@ mainline playback does not run — a wording follow-up is needed there and in
 `Interpolators.h`/`ClipResampler.h`, whose Phase-1 qualification ("delivered ~88 dB")
 is now known to be path-specific, not global.
 
-**F6 — Isolated-track bounce resamples with a different kernel than playback and
-full-mix export (KNOWN INCONSISTENCY, defect-class).** `bounceRangeToWav(trackId ≥ 0)`
-renders through `AudioRenderer::renderClipAudio` → `Sinc64Turbo`: measured 87.8 dB
-SINAD end-to-end vs 149.3 dB for the same 44.1k clip through the full-mix path — a
-61.5 dB quality split between two export flavors of identical content. Level and
-timing are unaffected (bounce is level-true to <0.001 dB). Both kernels are ≥16-bit
-clean, so this is inaudible for typical material, but it breaks the "offline export
-stays behaviorally aligned with live rendering" contract (AGENTS §20) in a measurable
-way. Pinned by a characterization gate that fails when the kernels are unified, so
-unification is a deliberate test-updating decision. Recommended direction: make the
-isolated bounce use the same renderGraph kernel (or unify both on one kernel after a
-CPU-budget decision).
+**F6 — RESOLVED (Phase 2E, 2026-07-07): isolated-track bounce resampled with a
+different kernel than playback and full-mix export.** As found in Phase 2D:
+`bounceRangeToWav(trackId ≥ 0)` rendered through `AudioRenderer::renderClipAudio` →
+`Sinc64Turbo`, measuring 87.8 dB SINAD end-to-end vs 149.3 dB for the same 44.1k clip
+through the full-mix path — a 61.5 dB quality split between two export flavors of
+identical content (level and timing were unaffected). **Fix:** Phase 2E replaced
+`renderClipAudio`'s Sinc32/Sinc64 dispatch rows (Turbo → legacy
+`Sinc32Interpolator`/`Sinc64Interpolator`), making its kernel table identical to
+`renderGraph`'s. The path is offline-only (single call site: the isolated-bounce loop
+in `bounceRangeToWav`), so the slower exact-sinc kernels carry no realtime cost.
+**Measured after:** isolated bounce 149.3 dB SINAD (was 87.8), agreeing with the
+full-mix path to 0.02 dB, level-true to <0.001 dB, and the bounced file **nulls
+against the full-mix realtime render at −176.0 dB RMS (maxErr 3e-8)**. The former
+KNOWN INCONSISTENCY characterization gate is replaced by unification gates (SINAD
+>140 dB, SINAD agreement ±3 dB, null ≤ −120 dB).
 
 **F7 — The file-browser preview has its own Cubic resampler and ignores the
 Resampling quality setting.** Measured through `PreviewEngine::processRealtime`:
@@ -367,9 +372,9 @@ content is a known sampler tradeoff; documented, not endorsed).
   Nyquist: 44.1k content above ~20.1 kHz images at up to −21.7 dBc (F4), and
   downsampled content between the Nyquists aliases at full level (F1: 48k-in-44.1k,
   96k-in-48k).
-* **Bouncing a soloed track:** quality silently drops to the Turbo 88 dB floor (F6) —
-  the only path where Phase 1's F2 number is what a user's rendered file actually
-  contains.
+* **Bouncing a soloed track:** since Phase 2E, identical to the full mix (nulls at
+  −176 dB; previously the one path where Phase 1's ~88 dB Turbo floor reached a
+  user's rendered file — F6, resolved).
 * **Previewing files in the browser:** Cubic tier regardless of settings (F7); 96k
   files preview with audible-in-principle aliasing of >24 kHz content.
 * **Pitching samples down** in the sampler: Turbo-class (fine). **Pitching
@@ -380,8 +385,8 @@ content is a known sampler tradeoff; documented, not endorsed).
 The engine-level numbers reframe Phase-2 target #4: mainline fractional-ratio SINAD is
 not the problem (147+ dB); the two real quality boundaries are **downsampling aliasing
 (F1)** — unchanged, present on every measured path — and **path inconsistency (F6/F7)**.
-Suggested order: (1) unify the isolated-bounce kernel with mainline (small, no product
-tradeoff, removes F6); (2) decide the ratio-aware low-pass policy for downsampling
+Suggested order: (1) ~~unify the isolated-bounce kernel with mainline~~ — **done**
+(Phase 2E, F6 resolved); (2) decide the ratio-aware low-pass policy for downsampling
 clips (F1) with the legacy kernel as the baseline — a polyphase pre-filter or
 kernel-cutoff scaling both fit the existing per-voice loop, but the CPU cost on the
 audio thread is the open product question; (3) fold the preview/sampler paths into
