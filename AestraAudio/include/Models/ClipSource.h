@@ -93,9 +93,12 @@ public:
     // (contentRevision, targetRate, filter spec) key. Produced off the audio
     // thread by ClipPrefilterService; selected by PlaylistModel's runtime
     // snapshot when a clip is DOWNSAMPLED into the session.
-    // THREADING CONTRACT: these fields are read and written ONLY on the
-    // graph-build thread (TrackManager::ensureClipPrefilters / snapshot build) —
-    // the prefilter worker never touches ClipSource. No lock needed.
+    // THREADING CONTRACT: these fields are accessed ONLY on the model thread —
+    // the thread that mutates TrackManager state and pumps graph rebuilds (the
+    // app's main thread). That covers all three touch points: snapshot reads and
+    // ensureClipPrefilters writes (graph build) plus the clearFilteredVariant()
+    // in setBuffer above (import/project-load/record, same thread). The prefilter
+    // WORKER never touches ClipSource. No lock needed under this contract.
 
     /// Filtered copy valid for `targetRate` and the CURRENT buffer content, or null.
     std::shared_ptr<const AudioBufferData> getFilteredBufferFor(uint32_t targetRate) const {
