@@ -422,8 +422,18 @@ public:
                     if (pattern && pattern->isAudio()) {
                         auto& audioPayload = std::get<AudioSlicePayload>(pattern->payload);
                         if (auto* source = sources.getSource(audioPayload.audioSourceId)) {
-                            clipInfo.audioData = const_cast<AudioBufferData*>(source->getRawBuffer());
-                            clipInfo.sharedAudioData = source->getSharedBuffer();
+                            // Phase 4 (F1): prefer the anti-aliased filtered copy when
+                            // this clip is DOWNSAMPLED into the session and the copy is
+                            // ready; otherwise the original buffer (pre-Phase-4 path).
+                            // The filtered copy keeps the SOURCE sample rate, so all
+                            // timing math below is identical either way.
+                            auto renderBuffer = source->getFilteredBufferFor(
+                                static_cast<uint32_t>(m_projectSampleRate));
+                            if (!renderBuffer) {
+                                renderBuffer = source->getSharedBuffer();
+                            }
+                            clipInfo.audioData = const_cast<AudioBufferData*>(renderBuffer.get());
+                            clipInfo.sharedAudioData = renderBuffer;
                             if (clipInfo.audioData) {
                                 clipInfo.sourceSampleRate = clipInfo.audioData->sampleRate;
                                 clipInfo.sourceChannels = clipInfo.audioData->numChannels;

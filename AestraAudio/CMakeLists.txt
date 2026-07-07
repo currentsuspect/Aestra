@@ -180,13 +180,14 @@ set(AESTRA_AUDIO_CORE_SOURCES
     
     # Models
     src/Models/TrackManager.cpp
+    src/Models/ClipPrefilterService.cpp
     src/Models/PlaylistModel.cpp
     src/Models/UnitManager.cpp
     src/Models/PatternManager.cpp
     src/Models/ClipSource.cpp
     src/Models/AudioClip.cpp
     src/Models/PlaylistTrack.cpp
-    
+
     # DSP
     src/DSP/AudioProcessor.cpp
     src/DSP/Filter.cpp
@@ -194,6 +195,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/DSP/ReverbSIMD.cpp
     src/DSP/SincAVX512.cpp
     src/DSP/SampleRateConverter.cpp
+    src/DSP/ClipPrefilter.cpp
     src/DSP/TruePeakMeter.cpp
 
     # IO
