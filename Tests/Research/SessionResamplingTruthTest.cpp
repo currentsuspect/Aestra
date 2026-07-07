@@ -19,9 +19,9 @@
 //      written as Float_32. Same legacy kernel; proven sample-identical to realtime.
 //   3. Offline ISOLATED-TRACK bounce: bounceRangeToWav(trackId>=0) takes a different
 //      loop (AudioEngine.cpp:3102+) through AudioRenderer::renderClipAudio
-//      (AudioRenderer.cpp:246-320), which dispatches Sinc64 -> Sinc64Turbo — the LUT
-//      kernel Phase 1 measured. KNOWN INCONSISTENCY pinned by this test: soloing a
-//      track for bounce resamples with a different kernel than playing/exporting it.
+//      (AudioRenderer.cpp:246+). Phase 2D found it dispatching Sinc64 -> Sinc64Turbo
+//      (~88 dB floor) — finding F6; Phase 2E unified its kernel table with
+//      renderGraph's, and this test now proves solo bounces match the full mix.
 //   4. Preview: PreviewEngine::processRealtime — its OWN resampler (per-voice
 //      `phase += ratio` with a Cubic Hermite kernel, PreviewEngine.cpp:285+), NOT the
 //      Interpolators dispatch and NOT affected by the user's quality setting.
@@ -517,17 +517,17 @@ void runImpulseCases(AR::CheckSession& t) {
 }
 
 // =============================================================================
-// Case 3b: isolated-track bounce — the OTHER offline path and the OTHER kernel
+// Case 3b: isolated-track bounce — the OTHER offline path, now kernel-unified
 // =============================================================================
 
-// bounceRangeToWav(trackId >= 0) renders through AudioRenderer::renderClipAudio,
-// which dispatches Sinc64 -> Sinc64Turbo (AudioRenderer.cpp:261) — not the legacy
-// exact-sinc kernel the full mix uses. This case pins that KNOWN INCONSISTENCY:
-// the same clip bounced solo carries the Turbo LUT floor (~88 dB) instead of the
-// mainline ~147 dB, i.e. two export flavors differ in resampling quality. If the
-// kernels are intentionally unified later, update this case + the research doc.
+// bounceRangeToWav(trackId >= 0) renders through AudioRenderer::renderClipAudio.
+// Phase 2D found it dispatching Sinc64 -> Sinc64Turbo (measured 87.8 dB SINAD)
+// while the full mix used the legacy exact-sinc kernel (149.3 dB) — finding F6.
+// Phase 2E unified the dispatch table with renderGraph's, so this case now PROVES
+// the unification: a solo bounce must match the full-mix render of the same
+// single-track session at mainline quality.
 void runIsolatedBounceCase(AR::CheckSession& t, const fs::path& tempRoot) {
-    std::printf("\n--- isolated-track bounce (trackId>=0): the AudioRenderer/Sinc64Turbo path ---\n");
+    std::printf("\n--- isolated-track bounce (trackId>=0): AudioRenderer path, kernel-unified (2E) ---\n");
     GA::SessionConfig cfg;
     cfg.sampleRate = 48000;
     const uint32_t srcRate = 44100;
@@ -568,22 +568,31 @@ void runIsolatedBounceCase(AR::CheckSession& t, const fs::path& tempRoot) {
     const AR::ToneFit fullFit = AR::fitTone(fullMix, 0, kToneHz, kWinSkip, winEnd);
 
     std::printf("[MEASURE] isolated bounce 44.1->48 1 kHz sinad=%.1f dB vs full-mix path %.1f dB "
-                "(kernel split: Sinc64Turbo vs legacy Sinc64Interpolator)\n",
+                "(unified legacy Sinc64Interpolator; pre-2E bounce measured 87.8 dB)\n",
                 fit.sinadDb, fullFit.sinadDb);
     t.expect("isolated bounce: output is present and level-true (fit amplitude)",
              std::abs(AR::toDb(fit.amplitude / (kAmp * PanLaw::kEqualPowerCenterGain))) < 0.1,
              "ampDb=" + std::to_string(AR::toDb(fit.amplitude / (kAmp * PanLaw::kEqualPowerCenterGain))));
-    // Turbo-class floor (Phase-1 isolated: 87.8-89.9 dB at fractional ratios).
-    // One-sided regression gate; a future kernel unification (improvement) passes.
-    t.expect("isolated bounce: 1 kHz residual SINAD > 84 dB", fit.sinadDb > 84.0,
+    // UNIFIED (Phase 2E): the bounce must deliver mainline-class quality, not the
+    // pre-unification Turbo floor (was 87.8 dB; mainline measured 146.5-153.9 dB).
+    t.expect("isolated bounce: 1 kHz residual SINAD > 140 dB (mainline kernel)", fit.sinadDb > 140.0,
              "sinadDb=" + std::to_string(fit.sinadDb));
-    // KNOWN INCONSISTENCY characterization: today the two offline flavors measurably
-    // differ. This check documents the split; it fails when the kernels are unified,
-    // which is the signal to update this test + AestraDocs/audio-research-bench.md.
-    t.expect("isolated bounce: KNOWN INCONSISTENCY - solo bounce uses the lower-floor Turbo kernel",
-             fit.sinadDb < fullFit.sinadDb - 20.0,
-             "bounceSinad=" + std::to_string(fit.sinadDb) +
-                 " fullMixSinad=" + std::to_string(fullFit.sinadDb));
+    // Agreement with the full-mix path for the same single-track session.
+    t.expectNear("isolated bounce: SINAD agrees with full-mix path (dB)", fit.sinadDb, fullFit.sinadDb,
+                 3.0);
+    // Strongest form: the bounced file nulls against the full-mix realtime render on
+    // the interior window (same clip, same kernel, same gain staging).
+    const AR::Signal bWin = window(bounced, kWinSkip, winEnd);
+    const AR::Signal fWin = window(fullMix, kWinSkip, winEnd);
+    const AR::DiffReport d = AR::diff(bWin, fWin, 1e-6);
+    std::printf("[MEASURE] isolated bounce null vs full-mix realtime: maxErr=%.3e rmsErr=%.1f dB\n",
+                d.maxAbsError, d.rmsErrorDb);
+    if (!t.expect("isolated bounce: nulls against the full-mix realtime render",
+                  d.rmsErrorDb < -120.0 && d.maxAbsError < 1e-5,
+                  "rmsErrDb=" + std::to_string(d.rmsErrorDb) +
+                      " maxAbs=" + std::to_string(d.maxAbsError))) {
+        AR::printDiffForensics("isolated bounce vs full mix", d, bWin, fWin);
+    }
 }
 
 // =============================================================================

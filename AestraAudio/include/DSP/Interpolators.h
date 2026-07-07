@@ -39,11 +39,12 @@ namespace Audio {
  *   dispatch quality Sinc64 to the legacy exact-sinc Sinc64Interpolator and
  *   measured ~146-154 dB full-band single-tone residual SINAD at 1 kHz in
  *   full-session tests (SessionResamplingTruthTest).
- * - Sinc64Turbo consumers (isolated-track bounce via AudioRenderer,
- *   SamplerPlugin, AuditionEngine/ClipResampler) measured ~88 dB at
- *   FRACTIONAL rate ratios (bounded by nearest-phase LUT quantization, not
- *   the kernel) and ~154 dB at exact 2:1. Phase 1's ~88 dB figure describes
- *   these paths only, not Aestra resampling globally.
+ * - Sinc64Turbo consumers (SamplerPlugin, AuditionEngine/ClipResampler)
+ *   measured ~88 dB at FRACTIONAL rate ratios (bounded by nearest-phase LUT
+ *   quantization, not the kernel) and ~154 dB at exact 2:1. Phase 1's ~88 dB
+ *   figure describes these paths only, not Aestra resampling globally.
+ *   (Isolated-track bounce was in this class until Phase 2E unified its
+ *   kernel table with renderGraph's — it now measures mainline-equivalent.)
  * ALL of these kernels reconstruct at the SOURCE Nyquist: on every measured
  * path, downsampling is not anti-aliased by a ratio-aware low-pass, so
  * content between the output and source Nyquist frequencies folds back into
@@ -873,10 +874,11 @@ struct Sinc64Interpolator {
 
 // SNR figures below are kernel design targets; measured delivered behavior is
 // documented in AestraDocs/audio-research-bench.md and is path-specific:
-// quality Sinc64 measures ~146-154 dB SINAD through mainline playback/full-mix
-// export (renderGraph -> legacy exact-sinc Sinc64Interpolator) but ~88 dB at
-// fractional ratios through the Sinc64Turbo paths (isolated-track bounce,
-// sampler, audition). No path anti-aliases downsampling.
+// quality Sinc64 measures ~146-154 dB SINAD through mainline playback and both
+// export flavors (renderGraph/AudioRenderer -> legacy exact-sinc
+// Sinc64Interpolator, unified in Phase 2E) but ~88 dB at fractional ratios
+// through the Sinc64Turbo paths (sampler, audition). No path anti-aliases
+// downsampling.
 enum class InterpolationQuality {
     Cubic,  // 4-point, ~80dB target, lowest CPU
     Sinc8,  // 8-point Blackman, ~100dB target

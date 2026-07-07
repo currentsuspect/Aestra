@@ -15,10 +15,11 @@ We present the **Aestra Polyphase Resampling Engine**, a multi-tier interpolatio
 > **~88 dB at fractional rate ratios** (bounded by nearest-phase LUT quantization,
 > not the kernel) and **~154 dB at exact 2:1 ratios**. That figure is
 > **path-specific, not a statement about all Aestra resampling**: full-session
-> measurement (Phase 2D) shows mainline session playback and full-mix export
-> currently dispatch the Sinc64 quality setting to the *legacy exact-sinc*
+> measurement (Phases 2D/2E) shows mainline session playback and both export
+> flavors (full-mix and isolated-track bounce, kernel-unified in Phase 2E)
+> dispatch the Sinc64 quality setting to the *legacy exact-sinc*
 > `Sinc64Interpolator` and measured **~146–154 dB** end-to-end; Sinc64Turbo is
-> what the isolated-track bounce, sampler, and audition paths run (~88 dB class).
+> what the sampler and audition paths run (~88 dB class).
 > The interpolators on **all** measured paths reconstruct at the *source*
 > Nyquist: **downsampling is not currently anti-aliased by a ratio-aware
 > low-pass**, so content between the output and source Nyquist frequencies folds
@@ -198,10 +199,10 @@ The table below reflects the *filter design model*, not bench measurements.
 `AestraDocs/audio-research-bench.md`):** delivered full-band single-tone residual
 (THD+N-style) for Sinc64Turbo is **~-88 dB at fractional rate ratios** (phase-LUT
 quantization bound; ~-154 dB at exact 2:1) — a path-specific figure: mainline
-session playback and full-mix export currently run the legacy exact-sinc
-`Sinc64Interpolator` and measured ~-146 to -154 dB end-to-end (doc §8); the ~-88 dB
-class applies to the Sinc64Turbo paths (isolated-track bounce, sampler, audition).
-IMD has not been bench-measured yet.
+session playback and both export flavors run the legacy exact-sinc
+`Sinc64Interpolator` (kernel-unified in Phase 2E) and measured ~-146 to -154 dB
+end-to-end (doc §8); the ~-88 dB class applies to the Sinc64Turbo paths (sampler,
+audition). IMD has not been bench-measured yet.
 Aliasing is **not** "None": the kernels reconstruct at the *source* Nyquist and no
 ratio-aware anti-alias low-pass is applied, so when downsampling, content between
 the output and source Nyquist frequencies folds back (measured near full scale for
