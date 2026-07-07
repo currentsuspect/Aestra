@@ -1333,6 +1333,32 @@ endif()
 add_test(NAME ResamplerQualityAuditTest COMMAND ResamplerQualityAuditTest)
 set_tests_properties(ResamplerQualityAuditTest PROPERTIES LABELS "audio;research;audio-research;resampler" TIMEOUT 180)
 
+# Anti-Alias Policy Lab (Phase 3) — test-side prototype comparison for finding F1
+# (downsampling anti-aliasing): baseline legacy kernel vs an integrated ratio-aware
+# cutoff-scaled sinc (Option A) vs a designed delay-compensated Kaiser prefilter
+# (Option B), plus optional libsamplerate/soxr references. No production DSP is
+# changed; results feed the product decision in AestraDocs/audio-research-bench.md §9.
+add_executable(AntiAliasPolicyLab Research/AntiAliasPolicyLab.cpp)
+target_link_libraries(AntiAliasPolicyLab PRIVATE AestraAudioCore)
+target_include_directories(AntiAliasPolicyLab PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+if(SAMPLERATE_FOUND)
+    target_link_libraries(AntiAliasPolicyLab PRIVATE ${SAMPLERATE_LIBRARIES})
+    target_include_directories(AntiAliasPolicyLab PRIVATE ${SAMPLERATE_INCLUDE_DIRS})
+    target_compile_options(AntiAliasPolicyLab PRIVATE ${SAMPLERATE_CFLAGS_OTHER})
+    target_compile_definitions(AntiAliasPolicyLab PRIVATE AESTRA_HAS_LIBSAMPLERATE=1)
+endif()
+if(SOXR_FOUND)
+    target_link_libraries(AntiAliasPolicyLab PRIVATE ${SOXR_LIBRARIES})
+    target_include_directories(AntiAliasPolicyLab PRIVATE ${SOXR_INCLUDE_DIRS})
+    target_compile_options(AntiAliasPolicyLab PRIVATE ${SOXR_CFLAGS_OTHER})
+    target_compile_definitions(AntiAliasPolicyLab PRIVATE AESTRA_HAS_SOXR=1)
+endif()
+add_test(NAME AntiAliasPolicyLab COMMAND AntiAliasPolicyLab)
+set_tests_properties(AntiAliasPolicyLab PROPERTIES LABELS "audio;research;audio-research;resampler" TIMEOUT 300)
+
 # Session Resampling Truth (Phase 2D) — proves the isolated resampler findings
 # through the actual shipped paths: realtime playback (TrackManager ->
 # AudioGraphBuilder -> AudioEngine::processBlock), offline export

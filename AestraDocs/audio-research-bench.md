@@ -3,11 +3,14 @@
 Status: Phase 1 complete (2026-07-07). Phase 2D (full-session engine truth) complete
 (2026-07-07) — see §8, which **corrects the scope of F2**: mainline session playback
 does not use Sinc64Turbo at all. Phase 2E complete (2026-07-07): isolated-track
-bounce kernel unified with mainline (**F6 resolved**, §8.3).
+bounce kernel unified with mainline (**F6 resolved**, §8.3). Phase 3 complete
+(2026-07-07): downsampling anti-alias policy + prototype comparison (§9) —
+**decision: no production change yet; Option B (prefilter-at-load) is the measured
+winner and the recommended Phase 4 implementation.**
 Code: `Tests/Research/` (`SignalLab.h`, `AudioMeasure.h`, `MeasurementCoreSelfTest.cpp`,
-`ResamplerQualityAuditTest.cpp`, `SessionResamplingTruthTest.cpp`). CTest labels:
-`research`, `audio-research`.
-Run: `ctest -L research` (~5 s total, CI-safe, headless).
+`ResamplerQualityAuditTest.cpp`, `SessionResamplingTruthTest.cpp`,
+`AntiAliasPolicyLab.cpp`). CTest labels: `research`, `audio-research`.
+Run: `ctest -L research` (~25 s total, CI-safe, headless).
 
 The Research Bench is a test-side scientific measurement layer. It is not a product
 feature, does not touch production DSP, and adds nothing to the audio callback path.
@@ -264,9 +267,10 @@ Cannot claim (and must not, until measured otherwise):
    picture: see F5/F6. Its follow-ups are also done: the isolated-bounce kernel is
    unified (Phase 2E, F6 resolved) and the "~88 dB delivered" qualification is
    path-scoped in `Interpolators.h`/`ClipResampler.h`/`SINC64_TURBO_PAPER.md`.
-4. **Downsampling anti-alias policy**: cost out a ratio-aware pre-filter for clip
-   playback at non-1:1 rates (product decision informed by F1's numbers; see §8.5 for
-   the post-Phase-2D framing).
+4. ~~**Downsampling anti-alias policy**~~ — **measured** (Phase 3, §9): Option B
+   (prefilter-at-load) wins on every axis; Option A (integrated cutoff scaling)
+   rejected on measured transition-band folding. No production change yet; Phase 4
+   implementation plan in §9.6.
 5. **IMD audit** (dual-tone through both engines) and **group delay** (fitTone phase
    across frequencies) — both cheap on the existing infrastructure.
 6. **SIMD parity** for Interpolators (scalar vs AVX2/AVX-512 dot products), mirroring
@@ -387,7 +391,133 @@ not the problem (147+ dB); the two real quality boundaries are **downsampling al
 (F1)** — unchanged, present on every measured path — and **path inconsistency (F6/F7)**.
 Suggested order: (1) ~~unify the isolated-bounce kernel with mainline~~ — **done**
 (Phase 2E, F6 resolved); (2) decide the ratio-aware low-pass policy for downsampling
-clips (F1) with the legacy kernel as the baseline — a polyphase pre-filter or
-kernel-cutoff scaling both fit the existing per-voice loop, but the CPU cost on the
-audio thread is the open product question; (3) fold the preview/sampler paths into
-whatever policy lands, or explicitly document them as lower tiers.
+clips (F1) — **measured in Phase 3 (§9)**: kernel-cutoff scaling was rejected on its
+transition-band folding; the prefilter-at-load architecture won and is specced for
+Phase 4 in §9.6; (3) fold the preview/sampler paths into whatever policy lands, or
+explicitly document them as lower tiers.
+
+---
+
+## 9. Phase 3 — downsampling anti-alias policy and prototype comparison (measured 2026-07-07)
+
+`AntiAliasPolicyLab` (test-side only; no production DSP changed) measures the two
+candidate architectures for fixing F1 against the shipped baseline, so the product
+decision is made from numbers. All figures are `[MEASURE]`/`[REF]` lines from that
+lab; conditions: 1 s stereo, amplitude 0.5, Release x86-64 Linux, double-precision
+prototypes.
+
+### 9.1 Policy framing — what anti-aliasing protects against, and where it matters
+
+When a clip's rate exceeds the session rate, source content between the two Nyquist
+frequencies folds back into the audible band as **inharmonic** tones (a 25 kHz
+component in a 48 kHz session becomes a 23 kHz tone; 40 kHz becomes 8 kHz — squarely
+audible). Ranked by user impact:
+
+1. **96 kHz clips in 48 kHz sessions — the severe case.** The fold band is a full
+   octave (24–48 kHz) and folds across the *entire* audible band. Hi-res sample
+   libraries and field recordings carry real energy there. Baseline today: folds at
+   −0.0 dBc (unattenuated).
+2. **48 kHz clips in 44.1 kHz sessions — the mild case.** Fold band is 22.05–24 kHz;
+   it folds only into 20.1–22.05 kHz, at the edge of hearing, and most 48 kHz program
+   material has little energy above 22 kHz. Baseline: −1.1 dBc, but of usually-tiny
+   content.
+3. **Offline export / isolated bounce** inherit whatever playback does (proven
+   sample-identical, §8) — export is where "print quality" expectations are highest.
+4. **Preview** (own Cubic path) and **sampler pitch-up** alias too (F7/F8) — lower
+   tiers by design; fixing them is follow-on work after the mainline policy lands.
+
+Proposed quality targets (this doc's recommendation, to be ratified by the owner):
+mainline playback + both export flavors share ONE policy (the §8 parity gates make
+split behavior a test failure by construction): fold-band rejection ≥ 95 dB with
+< 0.1 dB passband loss up to 0.9× destination Nyquist. Preview: unchanged (documented
+lower tier). Sampler: separate decision when the instrument roadmap needs it.
+
+### 9.2 Options measured
+
+| | Option A — integrated cutoff-scaled kernel | Option B — designed prefilter at clip load |
+| --- | --- | --- |
+| Mechanism | same windowed-sinc interpolation, sinc cutoff scaled by c = dstRate/srcRate (64/128 taps, Kaiser β=12, per-sample normalized, zero-phase) | Kaiser low-pass designed per (srcRate→dstRate) from a spec (pass 0.9× dst Nyquist, stop at dst Nyquist, 100 dB), applied ONCE to the clip at source rate, delay-compensated; then the **unchanged** legacy interpolator |
+| Where it would run | inside the per-voice `phase += ratio` loop (audio thread) | at clip load / session-rate change (worker thread) |
+| Memory | none (stateless) | one filtered copy of the clip (2× clip RAM transient; 1× steady if it replaces the original for the mismatched-rate session) |
+| RT-safety | safe but hot: all cost is on the audio thread | zero audio-thread change: playback code and cost are literally the baseline |
+| Filter size measured | 64 / 128 taps | 141 taps (48→44.1), 259 taps (96→48) |
+
+### 9.3 Measured quality matrix
+
+Alias rejection (probe → fold frequency, dBc vs input; baseline = shipped behavior):
+
+| Probe | Baseline | Option A 64t | Option A 128t | **Option B** | libsamplerate BEST | soxr VHQ |
+| --- | --- | --- | --- | --- | --- | --- |
+| 48→44.1, 22.5 kHz → 21.6 kHz | −0.3 | −10.5 | −17.1 | **−101.5** | — | — |
+| 48→44.1, 23 kHz → 21.1 kHz | −1.1 | −17.8 | −41.9 | **−104.9** | −163.7 | −200.6 |
+| 48→44.1, 23.5 kHz → 20.6 kHz | −2.9 | −28.3 | −123.1 | **−139.1** | — | — |
+| 96→48, 25 kHz → 23 kHz | −0.0 | −11.1 | −18.9 | **−105.6** | — | — |
+| 96→48, 30 kHz → 18 kHz | −0.0 | −117.6 | −123.8 | **−117.2** | −143.5 | −160.0 |
+| 96→48, 40 kHz → 8 kHz | −0.0 | −133.1 | −136.7 | **−127.7** | — | — |
+| 96→48, 47 kHz → 1 kHz | −0.0 | −135.9 | −140.6 | **−125.5** | — | — |
+
+Everything else measured (both pairs, all options): DC exact (≤1e-7), 1 kHz gain
+exact (<0.0001 dB), passband exact to <0.0001 dB — except Option A 64t, which droops
+**−0.294 dB at 21 kHz (96→48)**, its transition reaching into the passband. Impulses
+land on the mapped frame for every option (Option B's FIR group delay compensates
+exactly); −60 dB impulse spans: baseline 1–37, Option A 1, Option B 73 output frames.
+No pre-burst energy outside kernel support for any option (0.0 measured). Broadband
+noise level drops match the removed-band bound (−0.37 dB / −3.01 dB) within 0.3 dB.
+Bit-deterministic across runs. Controls: at same-rate and upsampling ratios every
+option is *exactly* the baseline (null ≤ 4.4e-16).
+
+**The decisive measurement:** Option A rejects only *deep* folds. Near the cutoff its
+transition band folds hot at any practical tap count — and for 48→44.1 (ratio 0.919)
+the **entire fold band is transition band**: −10.5 dBc at 128 taps for the worst
+probe. A narrow transition needs ~500+ taps, which multiplies its already-high
+audio-thread cost. Cutoff scaling alone cannot deliver the §9.1 target for
+near-unity ratios.
+
+### 9.4 CPU / memory (this machine, relative comparison only)
+
+| | Baseline | Option A 64t | Option A 128t | Option B (incl. one-time prefilter) |
+| --- | --- | --- | --- | --- |
+| 48→44.1 ns/output frame | 392 | 2032 (5.2×) | 4712 (12.0×) | 809 (2.1×) |
+| 96→48 ns/output frame | 310 | 2031 (6.6×) | 4292 (13.9×) | 1352 (4.4×) |
+
+Context: baseline ≈ 1.9% of one core per resampling stereo voice at 48 kHz; Option A
+64t ≈ 10%. A production Option A could replace the per-tap `std::sin` with a rotation
+recurrence (~2 muls/tap), but no CPU optimization fixes its transition-band folding.
+Option B's steady-state playback cost is **identical to baseline** (the interpolator
+is untouched); its entire cost is a one-time ~1–2 ms/s-of-clip filter pass at load
+plus the filtered copy in RAM — the relevant budget on a 4 GB target is memory, not
+CPU.
+
+### 9.5 Decision (Phase 3 gate)
+
+**No production change in this phase.** Option B is the clear architecture winner —
+it alone meets the §9.1 target (−101 to −139 dBc on every probe, passband exact,
+zero audio-thread cost or risk) — but a *minimal* production version still requires
+clip-lifecycle work that is not a small PR: filtered-copy management keyed by
+(clip, session rate), invalidation on device-rate change, a memory policy for the
+4 GB target, and consistency across playback/export/bounce. Landing that without
+design time would violate the "no broad rewrite / keep PRs small" constraints of
+this phase.
+
+**Rejected: Option A** (integrated cutoff scaling) — measured transition-band
+folding of −10.5 to −41.9 dBc at practical tap counts makes it unable to protect
+the 48→44.1 case at all, the passband droops at 64 taps, and it puts 5–14× cost on
+the audio thread. Not worth building.
+
+### 9.6 Recommended next phase (Phase 4)
+
+Implement Option B as **prefilter-at-load** behind the existing quality semantics:
+
+1. On clip load (or session-rate change), when `sourceRate > sessionRate`, run the
+   §9.2 Kaiser design (pass 0.9× dst Nyquist, stop at dst Nyquist, 100 dB) on a
+   worker thread and store the filtered buffer alongside/instead of the original.
+2. Playback/export/bounce read the filtered buffer through the *unchanged* kernels —
+   parity gates keep all three aligned for free.
+3. Memory policy: filtered copy replaces the original in the render graph for that
+   session rate (1× steady-state); regenerate on rate change.
+4. Regression tests: extend `SessionResamplingTruthTest` — the downsampling alias
+   gates flip from "KNOWN LIMITATION −1.1/−0.0 dBc" to "< −95 dBc"; the identity
+   nulls then compare against a prefiltered replica; parity/length/gain/DC gates
+   already exist. `RTAllocationTrapTest` already fails the build if the filtering
+   ever lands on the audio thread.
+5. Out of scope for Phase 4, revisit after: preview path (F7) and sampler (F8).
