@@ -31,8 +31,12 @@ source buffers into the runtime snapshot — that is the natural selection point
 
 * Storage: `ClipSource` gains one filtered slot
   (`m_filteredBuffer` + key fields). Exactly one filtered variant per source —
-  the current session rate only. The slot is only ever read/written on the
-  graph-build thread (see §7), so it needs no lock.
+  the current session rate only. The slot is accessed only on the MODEL thread
+  (the thread that mutates TrackManager state and pumps graph rebuilds — the
+  app's main thread): snapshot reads and `ensureClipPrefilters` writes at graph
+  build, plus the invalidating `clearFilteredVariant()` inside `setBuffer`
+  (import / project load / recorded takes, same thread). The prefilter worker
+  never touches it, so no lock is needed under this contract.
 * Computation: a new `ClipPrefilterService` (owned by `TrackManager`, declared
   as its last member so it shuts down first): one lazily-started worker thread
   with a mutex/cv job queue. The worker runs pure DSP on its own owned copies

@@ -443,7 +443,7 @@ void auditSessionPair(AR::CheckSession& t, const SessionPair& p, const ControlBa
                     "isolated(prefilter+legacy)=%.2f dBc (delta %.3f dB) | pre-Phase-4 "
                     "unfiltered path measured %.1f dBc\n",
                     name.c_str(), p.probeHz, p.artifactHz, artifactDbc, isoArtifactDbc,
-                    artifactDbc - isoArtifactDbc, p.downsampling ? p.turboArtifactDbc : p.turboArtifactDbc);
+                    artifactDbc - isoArtifactDbc, p.turboArtifactDbc);
 
         // Gate (one-sided): not hotter than the ceiling. Downsampling pairs carry the
         // Phase-4 anti-alias target (< -95 dBc; measured -104.9 / -117.2 dBc through
