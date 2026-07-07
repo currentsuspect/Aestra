@@ -5,8 +5,12 @@
 //
 //   1. The PRODUCTION clip-playback path: the Interpolators family (Cubic /
 //      Sinc64Turbo, etc.) driven by a `phase += ratio` accumulator. This is what
-//      AudioRenderer.cpp (clip mixing), AuditionEngine.cpp and SamplerPlugin.cpp
-//      actually run. The kernel cutoff sits at the SOURCE Nyquist and there is no
+//      AudioRenderer.cpp (isolated-track bounce), AuditionEngine.cpp and
+//      SamplerPlugin.cpp actually run. (Phase 2D correction: the MAINLINE session
+//      clip loop in AudioEngine::renderGraph dispatches Sinc64 to the legacy
+//      exact-sinc Sinc64Interpolator instead — measured end-to-end by
+//      SessionResamplingTruthTest; see AestraDocs/audio-research-bench.md §8.)
+//      The kernel cutoff sits at the SOURCE Nyquist and there is no
 //      ratio-aware anti-alias filtering: when downsampling, content between the two
 //      Nyquist frequencies is EXPECTED to alias. The audit pins that behavior as a
 //      measured characteristic (see AestraDocs/audio-research-bench.md), it does not
