@@ -244,7 +244,15 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
             }
         } else {
             using InterpFn = void (*)(const float*, int64_t, double, float&, float&);
-            InterpFn interpolateFunc = Interpolators::Sinc64Turbo::interpolate;
+            // Kernel table matches AudioEngine::renderGraph's clip loop exactly, so an
+            // isolated-track bounce (this renderer's only caller, via bounceRangeToWav
+            // trackId >= 0) resamples identically to mainline playback/full-mix export.
+            // Sinc32/Sinc64 previously dispatched to the Turbo LUT kernels here, giving
+            // solo bounces a measurably lower quality floor than the full mix (~88 dB vs
+            // ~147 dB SINAD at fractional ratios) — resolved F6, measured by
+            // SessionResamplingTruthTest; see AestraDocs/audio-research-bench.md §8.
+            // This path runs offline only, so the slower exact-sinc kernels are fine.
+            InterpFn interpolateFunc = Interpolators::Sinc64Interpolator::interpolate;
             switch (cachedInterpQuality) {
             case Interpolators::InterpolationQuality::Cubic:
                 interpolateFunc = Interpolators::CubicInterpolator::interpolate;
@@ -256,15 +264,15 @@ void AudioRenderer::renderClipAudio(double* outputBuffer, TrackRTState& state, u
                 interpolateFunc = Interpolators::Sinc16Interpolator::interpolate;
                 break;
             case Interpolators::InterpolationQuality::Sinc32:
-                interpolateFunc = Interpolators::Sinc32Turbo::interpolate;
+                interpolateFunc = Interpolators::Sinc32Interpolator::interpolate;
                 break;
             case Interpolators::InterpolationQuality::Sinc64:
-                interpolateFunc = Interpolators::Sinc64Turbo::interpolate;
+                interpolateFunc = Interpolators::Sinc64Interpolator::interpolate;
                 break;
             default: {
                 static_assert(static_cast<int>(Interpolators::InterpolationQuality::Sinc64) == 4,
                               "All InterpolationQuality values must be handled above");
-                interpolateFunc = Interpolators::Sinc64Turbo::interpolate;
+                interpolateFunc = Interpolators::Sinc64Interpolator::interpolate;
                 break;
             }
             }
