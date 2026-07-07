@@ -1333,6 +1333,25 @@ endif()
 add_test(NAME ResamplerQualityAuditTest COMMAND ResamplerQualityAuditTest)
 set_tests_properties(ResamplerQualityAuditTest PROPERTIES LABELS "audio;research;audio-research;resampler" TIMEOUT 180)
 
+# Session Resampling Truth (Phase 2D) — proves the isolated resampler findings
+# through the actual shipped paths: realtime playback (TrackManager ->
+# AudioGraphBuilder -> AudioEngine::processBlock), offline export
+# (bounceRangeToWav -> AudioExporter), PreviewEngine's own Cubic resampler,
+# and SamplerPlugin pitch-shift. Needs the full engine, so it links AestraAudio
+# (like SampleRateBufferTruthTest / RealtimeExportParityTest), not AestraAudioCore.
+add_executable(SessionResamplingTruthTest Research/SessionResamplingTruthTest.cpp)
+target_link_libraries(SessionResamplingTruthTest PRIVATE AestraAudio)
+target_include_directories(SessionResamplingTruthTest PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SessionResamplingTruthTest COMMAND SessionResamplingTruthTest)
+set_tests_properties(SessionResamplingTruthTest PROPERTIES LABELS "audio;research;audio-research;resampler" TIMEOUT 300)
+
 # =============================================================================
 # AestraPlat Tests
 # =============================================================================
