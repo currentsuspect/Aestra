@@ -544,8 +544,8 @@ void runLengthChecks(CheckSession& t) {
 // ---- CPU cost ---------------------------------------------------------------
 
 double timeNsPerFrame(Option o, const Signal& src, uint32_t dstRate, const DownPair* spec) {
-    // Median of 3 runs; wall clock on an otherwise idle process. These numbers are
-    // for RELATIVE comparison on one machine, not absolute benchmarks.
+    // Best (fastest) of 3 runs — least scheduler interference; wall clock on an
+    // otherwise idle process. For RELATIVE comparison on one machine, not benchmarks.
     double best = 1e18;
     uint32_t outFrames = 0;
     for (int run = 0; run < 3; ++run) {
