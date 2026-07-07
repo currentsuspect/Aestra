@@ -9,17 +9,22 @@
 
 We present the **Aestra Polyphase Resampling Engine**, a multi-tier interpolation system with a **144 dB SNR kernel design target at real-time throughput (4.32 MFrame/sec)** using polyphase filter banks with symmetry exploitation and multi-architecture SIMD dispatch. This revision introduces **Sinc32Turbo**, a cache-friendly 64KB tier enabling 2× throughput for mixing scenarios with a 100 dB SNR design target.
 
-> **Measured delivered performance (Audio Research Bench Phase 1, 2026-07).**
+> **Measured delivered performance (Audio Research Bench Phases 1 + 2D, 2026-07).**
 > SNR figures in this paper are *kernel stopband design targets*. Bench-measured
 > delivered behavior of Sinc64Turbo (full-band single-tone residual SINAD, 1 kHz):
 > **~88 dB at fractional rate ratios** (bounded by nearest-phase LUT quantization,
-> not the kernel) and **~154 dB at exact 2:1 ratios**. The interpolators
-> reconstruct at the *source* Nyquist: **downsampling is not currently
-> anti-aliased by a ratio-aware low-pass**, so content between the output and
-> source Nyquist frequencies folds back into the output band. Passband level and
-> DC accuracy measure essentially exact (<1e-5 dB / ≤3e-8). Methodology, full
-> rate-matrix tables, and claim boundaries: `AestraDocs/audio-research-bench.md`
-> in the repository.
+> not the kernel) and **~154 dB at exact 2:1 ratios**. That figure is
+> **path-specific, not a statement about all Aestra resampling**: full-session
+> measurement (Phase 2D) shows mainline session playback and full-mix export
+> currently dispatch the Sinc64 quality setting to the *legacy exact-sinc*
+> `Sinc64Interpolator` and measured **~146–154 dB** end-to-end; Sinc64Turbo is
+> what the isolated-track bounce, sampler, and audition paths run (~88 dB class).
+> The interpolators on **all** measured paths reconstruct at the *source*
+> Nyquist: **downsampling is not currently anti-aliased by a ratio-aware
+> low-pass**, so content between the output and source Nyquist frequencies folds
+> back into the output band. Passband level and DC accuracy measure essentially
+> exact (<1e-5 dB / ≤3e-8). Methodology, full rate-matrix tables, and claim
+> boundaries: `AestraDocs/audio-research-bench.md` in the repository.
 
 ---
 
@@ -189,10 +194,14 @@ The table below reflects the *filter design model*, not bench measurements.
 | THD+N | -144 | -100 | -60 | dB |
 | IMD | -140 | -96 | -55 | dB |
 
-**Measured corrections (Audio Research Bench Phase 1, 2026-07 —
+**Measured corrections (Audio Research Bench Phases 1 + 2D, 2026-07 —
 `AestraDocs/audio-research-bench.md`):** delivered full-band single-tone residual
 (THD+N-style) for Sinc64Turbo is **~-88 dB at fractional rate ratios** (phase-LUT
-quantization bound; ~-154 dB at exact 2:1). IMD has not been bench-measured yet.
+quantization bound; ~-154 dB at exact 2:1) — a path-specific figure: mainline
+session playback and full-mix export currently run the legacy exact-sinc
+`Sinc64Interpolator` and measured ~-146 to -154 dB end-to-end (doc §8); the ~-88 dB
+class applies to the Sinc64Turbo paths (isolated-track bounce, sampler, audition).
+IMD has not been bench-measured yet.
 Aliasing is **not** "None": the kernels reconstruct at the *source* Nyquist and no
 ratio-aware anti-alias low-pass is applied, so when downsampling, content between
 the output and source Nyquist frequencies folds back (measured near full scale for
