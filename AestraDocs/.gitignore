@@ -1,0 +1,4 @@
+# Obsidian per-user, volatile state — not shared vault config
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache

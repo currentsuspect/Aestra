@@ -1,13 +1,29 @@
 # Aestra Documentation Index
 
-**Quick navigation for all Aestra internal documentation.**
-Public/site docs live in `../docs/` and are not duplicated here.
+**The map of the internal docs vault.** This is the single front door — start here.
+Public/site docs live in [`../docs/`](../docs/) (mkdocs) and are not duplicated here.
 
-## Quick Start
+> Vault layout: every doc lives in a topic folder. The only files kept at the
+> vault **root** are the six design specs that source code cites by path
+> (see [Root specs](#root-specs-cited-by-source) — do not move them without
+> updating the citing `.cpp/.h/CMakeLists`).
+
+## Quick start
 - [Developer Guide](guides/DEVELOPER_GUIDE.md) — onboarding and philosophy
 - [Build Status](status/BUILD_STATUS.md) — current build state
 - [Branching Strategy](status/BRANCHING_STRATEGY.md) — git workflow
-- Root: [`../README.md`](../README.md) · [`../BUILD.md`](../BUILD.md) · [`../CONTRIBUTING.md`](../CONTRIBUTING.md) · [`../AGENTS.md`](../AGENTS.md)
+- [Beta Gameplan (2026-07)](product/beta-gameplan-2026-07.md) — the "never steer" plan
+- Root: [`../README.md`](../README.md) · [`../BUILD.md`](../BUILD.md) · [`../CONTRIBUTING.md`](../CONTRIBUTING.md) · [`../AGENTS.md`](../AGENTS.md) · [`../philosophy.md`](../philosophy.md)
+
+## Root specs (cited by source)
+These stay at the vault root because `.cpp/.h/CMakeLists.txt` reference them by
+path. Moving them breaks those citations.
+- [PDC v2 Design](PDC-v2-Design.md) — graph-aware plugin delay compensation
+- [Audio Research Bench](audio-research-bench.md) — resampler/DSP measurement log
+- [Audio Integrity Infrastructure](audio-integrity-infrastructure.md) — export/RT parity test policy
+- [Clip Prefilter Lifecycle](clip-prefilter-lifecycle.md) — anti-alias clip prefilter design
+- [RT Safety Audit](rt-safety-audit.md) — real-time allocation/lock findings
+- [UI Type & Space Grammar](ui-type-space-grammar.md) — type/radius/spacing scale
 
 ## Architecture
 - [**ARCHITECTURE_AUDIT_2026Q2**](architecture/ARCHITECTURE_AUDIT_2026Q2.md) — cross-module audit, prioritized findings
@@ -24,6 +40,28 @@ Public/site docs live in `../docs/` and are not duplicated here.
 - [Adaptive FPS Performance Diagnostic](systems/ADAPTIVE_FPS_PERFORMANCE_DIAGNOSTIC.md)
 - [Custom Window Integration](systems/CUSTOM_WINDOW_INTEGRATION.md)
 - [Dropdown System v2.0](systems/DROPDOWN_SYSTEM_V2.0.md)
+- [Optimization Notes](systems/OPTIMIZE.md)
+
+## Design specs (system-level)
+Behavioral/interaction specs for subsystems.
+- [Mixer Deep Undo](specs/mixer-deep-undo.md)
+- [Undo/Redo Trust Model](specs/undo-redo-trust.md)
+- [Piano Roll ↔ Arsenal Sync](specs/piano-roll-arsenal-sync.md)
+- [Transport-Aware Preview Ducking](specs/transport-aware-preview-ducking.md)
+- [Unbounded Timeline](specs/UNBOUNDED_TIMELINE.md)
+- [Routing Implementation Checklist](specs/Routing-Implementation-Checklist.md)
+
+## Audio quality
+- [Path to All-A](audio/Path-to-All-A.md) — audio-quality grade roadmap
+- [Audio Quality Validation Spec v1](audio/audio-quality-validation-spec-v1.md)
+- [Audio Quality Audit — 2026-05](audio/audio-quality-audit-2026-05.md) · [2026-06](audio/audio-quality-audit-2026-06.md)
+- [Sinc-64 Optimization Tasks](audio/sinc64-optimization-tasks.md)
+
+## UI & visual design
+- [Design Language](design/Design-Language.md)
+- [Design System](design/DESIGN_SYSTEM.md)
+- [UI Pass — 2026-05 Plan](design/UI_Pass_2026-05_Plan.md)
+- See also root spec: [UI Type & Space Grammar](ui-type-space-grammar.md)
 
 ## Guides
 - [Developer Guide](guides/DEVELOPER_GUIDE.md)
@@ -37,19 +75,10 @@ Public/site docs live in `../docs/` and are not duplicated here.
 
 ## Implementation plans
 - [Audio Quality — Master Plan](implementation/audio_quality_master_plan.md) · [Executive Summary](implementation/audio_quality_executive_summary.md)
-- [PDC Implementation Plan](implementation/pdc_implementation_plan.md) — see also [PDC v2 Design](PDC-v2-Design.md)
+- [PDC Implementation Plan](implementation/pdc_implementation_plan.md) — see also root spec [PDC v2 Design](PDC-v2-Design.md)
 - [True-Peak Implementation Plan](implementation/true_peak_implementation_plan.md)
+- [Refactor Plan 2026](implementation/Refactor-Plan-2026.md)
 - [`implementation/README.md`](implementation/README.md)
-
-## Design specs (system-level, in this directory)
-- [PDC v2 Design](PDC-v2-Design.md) — graph-aware plugin delay compensation
-- [Mixer Deep Undo](mixer-deep-undo.md)
-- [Piano Roll ↔ Arsenal Sync](piano-roll-arsenal-sync.md)
-- [Transport-Aware Preview Ducking](transport-aware-preview-ducking.md)
-- [Undo/Redo Trust Model](undo-redo-trust.md)
-- [Unbounded Timeline](UNBOUNDED_TIMELINE.md)
-- [Sinc-64 Optimization Tasks](sinc64-optimization-tasks.md)
-- [Routing Implementation Checklist](Routing-Implementation-Checklist.md)
 
 ## Aestra-Comp v2 (effort-tracked)
 - [Aestra-Comp v2 README](aestra-comp-v2/README.md)
@@ -58,12 +87,14 @@ Public/site docs live in `../docs/` and are not duplicated here.
 - Prompts: [Codex Phase 0](aestra-comp-v2/codex-phase-0-prompt.md) · [Codex Phase 1](aestra-comp-v2/codex-phase-1-prompt.md)
 
 ## Product & strategy (internal)
-- [Product Strategy](Product-Strategy.md)
-- [Product Roadmap](Roadmap-Product.md)
-- [Pricing & Card System](Pricing.md)
-- [Muse AI Spec](Muse-AI-Spec.md)
-- [Design Language](Design-Language.md)
-- [Design System](DESIGN_SYSTEM.md)
+- [Product Strategy](product/Product-Strategy.md)
+- [Product Roadmap](product/Roadmap-Product.md)
+- [Pricing & Card System](product/Pricing.md)
+- [Muse AI Spec](product/Muse-AI-Spec.md)
+- [Beta Gameplan (2026-07)](product/beta-gameplan-2026-07.md)
+
+## Security (internal)
+- [License Verification Architecture Audit](security/license-verification-audit.md) — **sensitive**: documents a known bypass; keep internal
 
 ## Project status
 - [Aestra Project Analysis](status/AESTRA_PROJECT_ANALYSIS.md)
@@ -71,13 +102,11 @@ Public/site docs live in `../docs/` and are not duplicated here.
 - [Build Status](status/BUILD_STATUS.md)
 - [Documentation Status](status/DOCUMENTATION_STATUS.md)
 - [Branching Strategy](status/BRANCHING_STRATEGY.md)
+- [Issue Governance Policy](status/issue-governance-policy.md)
 - [Screenshot Limitation](status/SCREENSHOT_LIMITATION.md)
 
 ## Bug reports
 - [`Bug Reports/`](Bug%20Reports/) — postmortems and triage notes
-
-## Refactor planning
-- [Refactor Plan 2026](Refactor%20Plan%202026.md)
 
 ## Module READMEs
 - [`../AestraCore/README.md`](../AestraCore/README.md)
@@ -90,10 +119,21 @@ Each lab under `../labs/<topic>/` has a `program.md`, `LAB_BOOK.md`, `EVALS.md`,
 
 ---
 
-**Conventions**
-- `architecture/` — design rationale and invariants
-- `systems/` — implementation-level descriptions of subsystems
-- `guides/` — how-to and reference
-- `implementation/` — active implementation plans
-- `status/` — point-in-time project status
-- Root of `AestraDocs/` — design specs and product/strategy
+**Folder conventions**
+
+| Folder | Holds |
+| ------ | ----- |
+| _(root)_ | Only the six design specs cited by source code |
+| `architecture/` | Design rationale and invariants |
+| `systems/` | Implementation-level descriptions of subsystems |
+| `specs/` | System-level behavioral/interaction design specs |
+| `audio/` | Audio-quality audits, validation specs, DSP task lists |
+| `design/` | Visual / UI design language and pass plans |
+| `guides/` | How-to and reference |
+| `implementation/` | Active implementation plans |
+| `product/` | Product strategy, pricing, roadmap, planning |
+| `security/` | Security audits (internal, sensitive) |
+| `status/` | Point-in-time project status and process governance |
+| `aestra-comp-v2/` | Effort-tracked plugin build |
+| `Bug Reports/` | Postmortems and triage notes |
+| `images/` | Diagram / screenshot assets |
