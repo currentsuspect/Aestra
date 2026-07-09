@@ -1362,10 +1362,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             const JSON& slj = pj[i]["slices"];
                             for (size_t s = 0; s < slj.size(); ++s) {
                                 if (!slj[s].isObject()) continue;
-                                payload.slices.push_back({
-                                    finiteNumberOr(slj[s], "start", 0.0, 0.0, 1.0e15),
-                                    finiteNumberOr(slj[s], "length", 0.0, 0.0, 1.0e15)
-                                });
+                                // Mirror the writer, which persists startSamples/lengthSamples
+                                // (AudioSlice fields 3-4). The old first-two-field aggregate
+                                // filled startOffset/duration instead, so slice sample data
+                                // zeroed out on the next save.
+                                AudioSlice slice;
+                                slice.startSamples = finiteNumberOr(slj[s], "start", 0.0, 0.0, 1.0e15);
+                                slice.lengthSamples = finiteNumberOr(slj[s], "length", 0.0, 0.0, 1.0e15);
+                                payload.slices.push_back(slice);
                             }
                         }
                         PatternID newId = patternManager.createAudioPattern(name, length, payload);
