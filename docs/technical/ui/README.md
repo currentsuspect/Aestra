@@ -19,7 +19,7 @@
 
 ## 🚀 Quick Start
 
-See the main [README.md](../../README.md) for getting started with AestraUI.
+See the main [repository README](https://github.com/currentsuspect/Aestra) for getting started with AestraUI.
 
 ## 📁 Code Structure
 

@@ -593,7 +593,7 @@ Before submitting documentation, verify:
 
 ## Additional Resources
 
-- **[Contributing Guide](../../CONTRIBUTING.md)** — How to contribute
+- **[Contributing Guide](https://github.com/currentsuspect/Aestra/blob/main/CONTRIBUTING.md)** — How to contribute
 - **[Coding Style Guide](coding-style.md)** — Code formatting rules
 - **[Bug Reports Guide](bug-reports.md)** — Reporting issues
 
