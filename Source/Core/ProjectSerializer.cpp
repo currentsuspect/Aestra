@@ -13,6 +13,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -88,6 +89,36 @@ namespace {
     private:
         std::array<size_t, static_cast<size_t>(ProjectLoadWarningCategory::Count)> m_counts{};
     };
+
+    // --- Content integrity (#263) -------------------------------------------
+    // FNV-1a 64-bit over the canonical compact serialization. Corruption
+    // detection only — keyless, so it authenticates nothing; it catches disk
+    // corruption, truncated writes, and accidental edits.
+    uint64_t fnv1a64(const std::string& data) {
+        uint64_t hash = 1469598103934665603ull;
+        for (const unsigned char c : data) {
+            hash ^= c;
+            hash *= 1099511628211ull;
+        }
+        return hash;
+    }
+
+    constexpr const char* INTEGRITY_ALGO = "fnv1a64";
+
+    // Computes the canonical content hash with the integrity hash field pinned
+    // to "" — save and load call this with an identical tree shape, so both
+    // hash identical bytes. NOTE: mutates root's integrity field; the caller
+    // either overwrites it with the real hash (save) or no longer needs it (load).
+    std::string computeIntegrityHashHex(JSON& root) {
+        JSON integrity = JSON::object();
+        integrity.set("algo", JSON(INTEGRITY_ALGO));
+        integrity.set("hash", JSON(""));
+        root.set("integrity", integrity);
+        const uint64_t hash = fnv1a64(root.toString(0));
+        char buf[17];
+        std::snprintf(buf, sizeof(buf), "%016llx", static_cast<unsigned long long>(hash));
+        return std::string(buf);
+    }
 
     std::string bytesToHex(const std::vector<uint8_t>& bytes) {
         std::ostringstream oss;
@@ -876,6 +907,17 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         root.set("ui", ui);
     }
 
+    // Content integrity (#263): stamp a canonical-content checksum so load can
+    // detect corruption. Must be the LAST field written — the hash covers every
+    // other field, computed with the hash slot pinned to "".
+    {
+        const std::string hashHex = computeIntegrityHashHex(root);
+        JSON integrity = JSON::object();
+        integrity.set("algo", JSON(INTEGRITY_ALGO));
+        integrity.set("hash", JSON(hashHex));
+        root.set("integrity", integrity);
+    }
+
     result.contents = root.toString(indentSpaces);
     result.ok = true;
     return result;
@@ -986,6 +1028,36 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
     Log::info("[ProjectLoad] Parsed JSON ok");
 #endif
+
+    // Content integrity (#263): verify the checksum BEFORE migrations mutate
+    // the tree. Files that predate the integrity field (or use an unknown
+    // algo) load as Unchecked with no warning — backward compatible. A
+    // mismatch loads non-destructively but loudly: the session may be
+    // recoverable, and holding it hostage would betray recovery obligations;
+    // structurally corrupt files still hard-fail through the validators below.
+    if (root.has("integrity") && root["integrity"].isObject()) {
+        const JSON& integrityField = root["integrity"];
+        const std::string storedAlgo =
+            integrityField.has("algo") && integrityField["algo"].isString() ? integrityField["algo"].asString() : "";
+        const std::string storedHash =
+            integrityField.has("hash") && integrityField["hash"].isString() ? integrityField["hash"].asString() : "";
+        if (storedAlgo == INTEGRITY_ALGO && storedHash.size() == 16) {
+            // Recompute over the canonical form (hash slot pinned to "") — this
+            // overwrites root's integrity field, which nothing downstream reads.
+            const std::string computedHash = computeIntegrityHashHex(root);
+            if (computedHash == storedHash) {
+                result.integrity = LoadIntegrity::Verified;
+            } else {
+                result.integrity = LoadIntegrity::Mismatch;
+                Log::error("[ProjectLoad] CONTENT INTEGRITY MISMATCH: file was modified or corrupted since save "
+                           "(stored " + storedHash + ", computed " + computedHash +
+                           "). Loading non-destructively — verify the session before overwriting backups.");
+            }
+        } else {
+            Log::info("[ProjectLoad] Integrity field present but unrecognized (algo='" + storedAlgo +
+                      "') — skipping verification.");
+        }
+    }
 
     // Version check
     int fileVersion = 0;
@@ -1118,8 +1190,20 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     }
 
     // Build structured report for reference validation issues
-    if (!orphanClipPatternIds.empty() || !orphanNoteUnitIds.empty()) {
+    if (!orphanClipPatternIds.empty() || !orphanNoteUnitIds.empty() ||
+        result.integrity == LoadIntegrity::Mismatch) {
         auto report = std::make_unique<ProjectLoadReport>();
+        if (result.integrity == LoadIntegrity::Mismatch) {
+            report->issues.push_back({
+                LoadIssueSeverity::Warning,
+                "integrity",
+                "Project content checksum mismatch - file was modified or corrupted since save; "
+                "loaded non-destructively, verify the session before overwriting backups",
+                0,
+                "",
+                ""
+            });
+        }
         for (const auto& pid : orphanClipPatternIds) {
             report->issues.push_back({
                 LoadIssueSeverity::Warning,
