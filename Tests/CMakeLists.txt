@@ -167,6 +167,35 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripIntegrityTest
     set_tests_properties(ProjectRoundTripIntegrityTest PROPERTIES LABELS "integration;serialization")
 endif()
 
+# Project Fixture Corpus Test — checked-in v1 files are the compatibility contract (#249)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectFixtureCorpusTest.cpp")
+    add_executable(ProjectFixtureCorpusTest
+        Integration/ProjectFixtureCorpusTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectFixtureCorpusTest PRIVATE AestraAudio)
+    target_include_directories(ProjectFixtureCorpusTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    target_compile_definitions(ProjectFixtureCorpusTest PRIVATE
+        AESTRA_PROJECT_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Fixtures/ProjectFormat"
+        $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
+    )
+    add_test(NAME ProjectFixtureCorpusTest COMMAND ProjectFixtureCorpusTest)
+    set_tests_properties(ProjectFixtureCorpusTest PROPERTIES LABELS "integration;serialization")
+endif()
+
 # Project Value Fidelity Test — numeric fields must roundtrip bit-exactly (#273)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectValueFidelityTest.cpp")
     add_executable(ProjectValueFidelityTest
