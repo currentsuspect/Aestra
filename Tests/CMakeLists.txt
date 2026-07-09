@@ -88,13 +88,12 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     target_compile_definitions(ProjectRoundTripTest PRIVATE
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
-    if(AESTRA_ENABLE_RUNTIME_TESTS)
-        add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
-        add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
-        set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;runtime")
-    else()
-message(STATUS "ProjectRoundTrip tests built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
-    endif()
+    # Registered unconditionally: exercises ProjectSerializer + TrackManager only —
+    # no audio device or host runtime needed (verified headless). Serialization is
+    # AGENTS.md §12 high-risk; roundtrip coverage must run on every CI build.
+    add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
+    add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
+    set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;serialization")
 endif()
 
 # Session Recovery Test (autosave + crash flag + recovery flow)
@@ -162,12 +161,10 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripIntegrityTest
     target_compile_definitions(ProjectRoundTripIntegrityTest PRIVATE
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
-    if(AESTRA_ENABLE_RUNTIME_TESTS)
-        add_test(NAME ProjectRoundTripIntegrityTest COMMAND ProjectRoundTripIntegrityTest)
-        set_tests_properties(ProjectRoundTripIntegrityTest PROPERTIES LABELS "integration;runtime")
-    else()
-        message(STATUS "ProjectRoundTripIntegrityTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
-    endif()
+    # Registered unconditionally: pure serializer/model roundtrip, no device
+    # dependency (verified headless). See ProjectRoundTripTest note above.
+    add_test(NAME ProjectRoundTripIntegrityTest COMMAND ProjectRoundTripIntegrityTest)
+    set_tests_properties(ProjectRoundTripIntegrityTest PROPERTIES LABELS "integration;serialization")
 endif()
 
 # Project Load Regression Tests (routing safety, missing references, non-destructive load)
@@ -1117,11 +1114,6 @@ target_include_directories(AestraLimitTest PRIVATE
 )
 add_test(NAME AestraLimitTest COMMAND AestraLimitTest)
 set_tests_properties(AestraLimitTest PROPERTIES LABELS "audio;plugins;limiter")
-
-# Serialization Compatibility Test (Requires GTest)
-# add_executable(AestraSerializationCompatibilityTest AestraAudio/SerializationCompatibilityTest.cpp)
-# target_link_libraries(AestraSerializationCompatibilityTest PRIVATE AestraAudio)
-# add_test(NAME AestraSerializationCompatibilityTest COMMAND AestraSerializationCompatibilityTest)
 
 # =============================================================================
 # Audio Quality Tests (S-Tier validation suite, Spec §3, §8, §15)
