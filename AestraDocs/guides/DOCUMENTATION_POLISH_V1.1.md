@@ -266,10 +266,10 @@ The coordinate system documentation is now production-ready and serves as a mode
 
 ## References
 
-- [AestraUI_COORDINATE_SYSTEM.md](AestraUI_COORDINATE_SYSTEM.md) - Complete guide
+- [AestraUI Coordinate System](../architecture/AESTRAUI_COORDINATE_SYSTEM.md) - Complete guide
 - [COORDINATE_UTILITIES_V1.1.md](COORDINATE_UTILITIES_V1.1.md) - Utility helpers
-- [COORDINATE_SYSTEM_QUICK_REF.md](../AestraUI/docs/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
-- [COMPONENT_CHECKLIST.md](../AestraUI/docs/COMPONENT_CHECKLIST.md) - Development checklist
+- [Coordinate System Quick Reference](../../docs/technical/ui/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
+- [Component Checklist](../../docs/technical/ui/COMPONENT_CHECKLIST.md) - Development checklist
 
 ---
 

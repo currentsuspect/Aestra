@@ -2,7 +2,7 @@
 # ========================================
 # 🧭 Aestra - Documentation Check Script
 # ========================================
-# Validates Doxygen builds, markdown links, and spelling.
+# Validates Doxygen builds, public and internal Markdown links, and spelling.
 # ----------------------------------------
 
 set -euo pipefail
@@ -56,34 +56,27 @@ fi
 # ----------------------------------------
 echo -e "\n${YELLOW}Checking Markdown Links...${NC}"
 
-CHECKER_CMD=()
 if command -v markdown-link-check &> /dev/null; then
-    CHECKER_CMD=(markdown-link-check)
-elif command -v npx &> /dev/null; then
-    CHECKER_CMD=(npx --yes markdown-link-check)
-fi
-
-if [ ${#CHECKER_CMD[@]} -gt 0 ]; then
     mapfile -d '' FILES < <(
-        find \
-            ./docs \
-            -type f -name "*.md" \
+        find ./docs -type f -name "*.md" \
             -not -path "./docs/api-reference/*" \
             -not -path "./docs/meta/*" \
-            -not -path "./docs/TEMPLATE/*" \
-            -print0
+            -not -path "./docs/TEMPLATE/*" -print0
+        find ./AestraDocs -type f -name "*.md" -print0
     )
 
     if [ ${#FILES[@]} -eq 0 ]; then
-        echo -e "${GREEN}✓ No markdown files matched scoped docs-check paths${NC}"
-    elif "${CHECKER_CMD[@]}" -q -c .markdown-link-check.json "${FILES[@]}" 2>/dev/null; then
+        echo -e "${GREEN}✓ No markdown files matched the docs-check paths${NC}"
+    elif markdown-link-check -q -c .markdown-link-check.json "${FILES[@]}"; then
         echo -e "${GREEN}✓ No broken links found${NC}"
     else
         echo -e "${RED}✗ Found broken links!${NC}"
         EXIT_CODE=1
     fi
 else
-    echo -e "${YELLOW}⚠ markdown-link-check not found, skipping link validation.${NC}"
+    echo -e "${RED}✗ markdown-link-check is required for link validation.${NC}"
+    echo "  Install it with: npm install -g markdown-link-check"
+    EXIT_CODE=1
 fi
 
 # ----------------------------------------

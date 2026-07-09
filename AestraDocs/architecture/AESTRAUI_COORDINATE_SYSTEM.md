@@ -542,8 +542,8 @@ renderer.invalidateRegion(invalidationArea);
 
 ## Related Documentation
 
-- [CUSTOM_WINDOW_INTEGRATION.md](CUSTOM_WINDOW_INTEGRATION.md) - Custom window and title bar setup
-- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - General development guidelines
+- [Custom Window Integration](../systems/CUSTOM_WINDOW_INTEGRATION.md) - Custom window and title bar setup
+- [Developer Guide](../guides/DEVELOPER_GUIDE.md) - General development guidelines
 - AestraUI/Core/NUIComponent.h - Component base class API
 
 ---
@@ -575,10 +575,10 @@ renderer.invalidateRegion(invalidationArea);
 
 ## Related Documentation
 
-- [CUSTOM_WINDOW_INTEGRATION.md](CUSTOM_WINDOW_INTEGRATION.md) - Custom window and title bar setup
-- [COORDINATE_UTILITIES_V1.1.md](COORDINATE_UTILITIES_V1.1.md) - Utility helpers for positioning
-- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - General development guidelines
-- [COMPONENT_CHECKLIST.md](../AestraUI/docs/COMPONENT_CHECKLIST.md) - Component development checklist
+- [Custom Window Integration](../systems/CUSTOM_WINDOW_INTEGRATION.md) - Custom window and title bar setup
+- [Coordinate Utilities v1.1](../guides/COORDINATE_UTILITIES_V1.1.md) - Utility helpers for positioning
+- [Developer Guide](../guides/DEVELOPER_GUIDE.md) - General development guidelines
+- [Component Checklist](../../docs/technical/ui/COMPONENT_CHECKLIST.md) - Component development checklist
 - AestraUI/Core/NUIComponent.h - Component base class API
 - AestraUI/Core/NUITypes.h - Coordinate utility functions
 
