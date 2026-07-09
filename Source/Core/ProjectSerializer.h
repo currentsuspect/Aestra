@@ -63,12 +63,27 @@ public:
         std::vector<PanelState> panels;
     };
 
+    /**
+     * @brief Content-integrity verdict for a loaded project file (#263).
+     *
+     * Corruption detection, NOT tamper-proofing: the checksum is keyless, so
+     * anyone can recompute it. It exists to catch disk corruption, truncated
+     * writes, and accidental edits — never to authenticate a file.
+     * - Unchecked: file predates the integrity field (or unknown algo) — no warning.
+     * - Verified:  stored checksum matches the recomputed one.
+     * - Mismatch:  content changed since save; load proceeds non-destructively
+     *              with a loud warning (structural corruption still hard-fails
+     *              through the existing validators).
+     */
+    enum class LoadIntegrity { Unchecked, Verified, Mismatch };
+
     struct LoadResult {
         bool ok{false};
         double tempo{120.0};
         double playhead{0.0};
         std::string errorMessage;
         std::vector<std::string> missingAssets;
+        LoadIntegrity integrity{LoadIntegrity::Unchecked};
 
         std::optional<UIState> ui;
         std::unique_ptr<::Aestra::ProjectLoadReport> report;
