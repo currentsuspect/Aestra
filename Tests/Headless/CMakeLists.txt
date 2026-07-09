@@ -78,6 +78,25 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CU
     )
 endif()
 
+# Live MIDI Input Test — live note input audible with transport stopped.
+# Core-mode: uses the built-in SamplerPlugin with an injected synthetic sample,
+# so it runs on every CI lane (no premium modules, no files, no devices).
+if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/LiveMidiInputTest.cpp")
+    add_executable(LiveMidiInputTest
+        LiveMidiInputTest.cpp
+    )
+    target_link_libraries(LiveMidiInputTest PRIVATE AestraAudioCore)
+    target_include_directories(LiveMidiInputTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME LiveMidiInputTest COMMAND LiveMidiInputTest)
+    set_tests_properties(LiveMidiInputTest PROPERTIES
+        LABELS "headless;arsenal;audio;midi"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # PDC v2 P1 — scaffolding tests (see AestraDocs/PDC-v2-Design.md §12)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     add_executable(PDCFlatChainTest PDCFlatChainTest.cpp)
