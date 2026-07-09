@@ -191,6 +191,7 @@ nav:
       - Overview: getting-started/index.md
       - Building Aestra: getting-started/building.md
       - Quickstart: getting-started/quickstart.md
+      - Validate Public Core Build: getting-started/validate-core-build.md
   - 🧩 Architecture:
       - System Overview: architecture/overview.md
       - Module Hierarchy: architecture/modules.md
