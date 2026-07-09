@@ -494,9 +494,12 @@ if(TARGET AestraCore)
     target_link_libraries(AestraAudioCore PUBLIC AestraCore)
 endif()
 
-if(TARGET AestraLicense)
-    target_link_libraries(AestraAudioCore PUBLIC AestraLicense)
-endif()
+# AestraAudioCore stays license-free: no AestraAudio source references any
+# AestraLicense symbol (grep-verified 2026-07-09), and a PUBLIC link here dragged
+# licensing into every headless/test/core consumer, contradicting core-mode
+# semantics (AGENTS.md §2; architecture audit 2026Q2 §1.1). Consumers that
+# genuinely need licensing (the app at Source/CMakeLists.txt, license tests)
+# link AestraLicense directly.
 target_link_libraries(AestraAudioCore PUBLIC AestraPlat)
 
 # macOS frameworks needed by VST3 hosting
