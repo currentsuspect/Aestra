@@ -106,7 +106,7 @@ For a headless tree:
 ctest --test-dir build-headless --output-on-failure
 ```
 
-There is also a helper script in [scripts/run-confidence-suite.sh](../../scripts/run-confidence-suite.sh).
+There is also a helper script in [scripts/run-confidence-suite.sh](https://github.com/currentsuspect/Aestra/blob/main/scripts/run-confidence-suite.sh).
 
 ## Notes on `Aestra_CORE_MODE`
 

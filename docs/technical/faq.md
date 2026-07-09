@@ -114,7 +114,7 @@ cmake -S . -B build -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_TESTS=ON -DCMAKE_BUILD
 4. **Build the project** - Follow build instructions
 5. **Configure your IDE** - Use `.clang-format` for code formatting
 
-See [Contributing Guide](../../CONTRIBUTING.md) for detailed setup.
+See [Contributing Guide](https://github.com/currentsuspect/Aestra/blob/main/CONTRIBUTING.md) for detailed setup.
 
 ## Contributing
 
@@ -127,7 +127,7 @@ Several ways to contribute:
 4. **Improve documentation** - Help make docs better
 5. **Test and provide feedback** - Try new features and report issues
 
-See [Contributing Guide](../../CONTRIBUTING.md) for details.
+See [Contributing Guide](https://github.com/currentsuspect/Aestra/blob/main/CONTRIBUTING.md) for details.
 
 ### Do I need to sign a CLA?
 
@@ -136,7 +136,7 @@ Yes. By submitting a pull request, you agree that:
 - You grant full rights to use, modify, and distribute your contributions
 - You waive ownership claims to your contributions
 
-This is necessary because Aestra is commercial software. See [Contributing Guide](../../CONTRIBUTING.md) for details.
+This is necessary because Aestra is commercial software. See [Contributing Guide](https://github.com/currentsuspect/Aestra/blob/main/CONTRIBUTING.md) for details.
 
 ### What kind of contributions are accepted?
 
@@ -347,7 +347,7 @@ cmake --build build --config Release
 Still have questions? Check these resources:
 
 - [Building Guide](../getting-started/building.md) - Detailed build instructions
-- [Contributing Guide](../../CONTRIBUTING.md) - How to contribute
+- [Contributing Guide](https://github.com/currentsuspect/Aestra/blob/main/CONTRIBUTING.md) - How to contribute
 - [Architecture Overview](../architecture/overview.md) - Technical deep dive
 - [Coding Style Guide](../developer/coding-style.md) - Code conventions
 - [Glossary](glossary.md) - Technical terminology
@@ -363,4 +363,4 @@ Still have questions? Check these resources:
 
 ---
 
-[← Return to Aestra Docs Index](../README.md)
+[← Return to Aestra Docs Home](../index.md)

@@ -436,8 +436,8 @@ commandQueue.push(AudioCommand::Start);  // Main thread
 
 - [Building Guide](../getting-started/building.md) - How to build Aestra
 - [Coding Style](../developer/coding-style.md) - Code conventions
-- [Contributing](../../CONTRIBUTING.md) - How to contribute
+- [Contributing](https://github.com/currentsuspect/Aestra/blob/main/CONTRIBUTING.md) - How to contribute
 
 ---
 
-[Return to Aestra Docs Index](../README.md)
+[Return to Aestra Docs Home](../index.md)

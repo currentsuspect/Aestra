@@ -35,7 +35,7 @@ Comprehensive reference for Aestra licensing, including the source-available lic
 - ❌ Source code is **NOT open-source** (cannot be used in other projects)
 - ✅ Contributions are **welcomed and credited**
 - 🤖 Premium features (Muse AI, plugins) will require paid licenses
-- 📜 Full license text available in [LICENSING.md](../../LICENSING.md)
+- 📜 Full license text available in [LICENSING.md](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md)
 
 ## Hybrid Licensing Model
 
@@ -111,7 +111,7 @@ Unauthorized use, copying, or distribution of Aestra will be prosecuted to the f
 **Ownership:**
 All title, ownership rights, and intellectual property rights in and to the Software, including all source code, documentation, designs, and associated materials, remain the exclusive property of Dylan Makori and Aestra Studios.
 
-**For the complete legal text, see:** [LICENSING.md](../../LICENSING.md)
+**For the complete legal text, see:** [LICENSING.md](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md)
 
 ### Third-Party Dependencies
 
@@ -277,7 +277,7 @@ While you grant full rights, we value contributions:
 
 **For contribution questions:**
 - 💬 GitHub Issues: Technical questions
-- 📖 Contributing Guide: [CONTRIBUTING.md](../../CONTRIBUTING.md)
+- 📖 Contributing Guide: [CONTRIBUTING.md](https://github.com/currentsuspect/Aestra/blob/main/CONTRIBUTING.md)
 
 ## Jurisdiction
 
@@ -292,14 +292,14 @@ While you grant full rights, we value contributions:
 
 ## Additional Resources
 
-- [Full License Text](../../LICENSING.md) - Complete ASSAL license terms
-- [Licensing Details](../../LICENSING.md) - Original licensing document
-- [Contributing Guide](../../CONTRIBUTING.md) - How to contribute
+- [Full License Text](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md) - Complete ASSAL license terms
+- [Licensing Details](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md) - Original licensing document
+- [Contributing Guide](https://github.com/currentsuspect/Aestra/blob/main/CONTRIBUTING.md) - How to contribute
 - [FAQ](../technical/faq.md) - General questions
 
 ## Legal Disclaimer
 
-This document provides a summary and reference for Aestra licensing. The complete legal terms are in [LICENSING.md](../../LICENSING.md). In case of conflict, the official license document takes precedence.
+This document provides a summary and reference for Aestra licensing. The complete legal terms are in [LICENSING.md](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md). In case of conflict, the official license document takes precedence.
 
 **Not legal advice**: This document is for informational purposes only and does not constitute legal advice. Consult an attorney for legal questions.
 
@@ -311,4 +311,4 @@ This document provides a summary and reference for Aestra licensing. The complet
 
 ---
 
-[Return to Aestra Docs Index](../README.md)
+[Return to Aestra Docs Home](../index.md)

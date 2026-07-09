@@ -16,6 +16,42 @@ repo_name: currentsuspect/Aestra
 repo_url: https://github.com/currentsuspect/Aestra
 edit_uri: edit/main/docs/
 
+# Keep repository-maintenance material out of the deployed site while retaining
+# specialist references that are intentionally reachable outside primary nav.
+exclude_docs: |
+  /README.md
+  /TEMPLATE/
+  /api-reference/
+  /meta/
+  /API_DOCUMENTATION_GUIDE.md
+
+not_in_nav: |
+  /CONTRIBUTING_CORE.md
+  /audits/
+  /developer/PROFILER_MIGRATION_GUIDE.md
+  /security/
+  /technical/LOADER_TODOS.md
+  /technical/THREADING_MODEL.md
+  /technical/TODO-E003-MacroCommand.md
+  /technical/ai-guide.md
+  /technical/command_model.md
+  /technical/audio/IMPLEMENTATION_COMPLETE.md
+  /technical/ui/ADAPTIVE_FPS_QUICKREF.md
+  /technical/ui/BUTTON_CUSTOMIZATION_GUIDE.md
+  /technical/ui/COMPONENT_CHECKLIST.md
+  /technical/ui/CUSTOM_WINDOW_INTEGRATION.md
+  /technical/ui/ICON_QUALITY_GUIDE.md
+  /technical/ui/MSAA_IMPLEMENTATION_GUIDE.md
+  /technical/ui/OPENGL_NEXT_STEPS.md
+  /technical/ui/OPENGL_RENDERER_COMPLETE.md
+  /technical/ui/PLATFORM_MIGRATION.md
+  /technical/ui/TESTING_NOTES.md
+  /technical/ui/TEXT_RENDERING_COMPLETE.md
+  /technical/ui/THEME_DEMO_GUIDE.md
+  /technical/ui/THORVG_INTEGRATION.md
+  /technical/ui/WINDOWS_SNAP_GUIDE.md
+  /technical/ui/WidgetDemoCatalog.md
+
 copyright: >
   Copyright © 2026 <strong>Aestra Studios</strong>.
   Crafted with precision by <a href="https://github.com/currentsuspect">Dylan Makori</a>.
@@ -237,8 +273,8 @@ nav:
   - 📡 API Reference:
       - Overview: api/index.md
   - 📋 Changelog:
-      - Release Notes: ../CHANGELOG.md
-      - 2025 Q1: ../meta/CHANGELOGS/CHANGELOG_2025Q1.md
+      - Release Notes: https://github.com/currentsuspect/Aestra/blob/main/CHANGELOG.md
+      - 2025 Q1: https://github.com/currentsuspect/Aestra/blob/main/meta/CHANGELOGS/CHANGELOG_2025Q1.md
   - 🌐 Community:
       - Code of Conduct: community/code-of-conduct.md
       - Support: community/support.md

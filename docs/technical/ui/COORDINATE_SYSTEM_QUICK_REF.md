@@ -143,7 +143,7 @@ colors:
 
 ## Full Documentation
 
-See [AESTRAUI_COORDINATE_SYSTEM.md](../../../AestraDocs/architecture/AESTRAUI_COORDINATE_SYSTEM.md) for complete guide with examples.
+See the [AestraUI Coordinate System](https://github.com/currentsuspect/Aestra/blob/main/AestraDocs/architecture/AESTRAUI_COORDINATE_SYSTEM.md) for complete guide with examples.
 
 ---
 
