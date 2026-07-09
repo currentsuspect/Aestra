@@ -8,7 +8,7 @@ Cross-ref:
 - Technical roadmap: `docs/technical/roadmap.md`
 - Task list: `docs/technical/v1_beta_task_list.md`
 - Architecture audit: `architecture/ARCHITECTURE_AUDIT_2026Q2.md`
-- Audio-quality plan: `Path-to-All-A.md` (per-grade action plan)
+- Audio-quality plan: `../audio/Path-to-All-A.md` (per-grade action plan)
 - PDC v2 design: `PDC-v2-Design.md` (currently in flight)
 
 ---
@@ -102,7 +102,7 @@ Technical work: freeze, bug fixes, performance optimization.
 - [ ] Crash reporter
 - [ ] Documentation for public launch
 - [ ] Architecture audit P0/P1 items resolved (license layering, RT guard consolidation, AudioEngine fallback singleton)
-- [ ] All audio-quality grades ≥ A (see `Path-to-All-A.md`)
+- [ ] All audio-quality grades ≥ A (see `../audio/Path-to-All-A.md`)
 - [ ] Pan Law configurability (settings UI)
 
 ---
@@ -202,7 +202,7 @@ The 12-layer scorecard from `implementation/audio_quality_executive_summary.md`,
 | 11 | Pan Law | A- | A | User-selectable pan law |
 | 12 | Oversampling (nonlinear DSP) | C | A | Reusable `Oversampler` for AestraComp + limiter |
 
-Full per-layer plan with file citations: see [`Path-to-All-A.md`](Path-to-All-A.md).
+Full per-layer plan with file citations: see [`Path-to-All-A.md`](../audio/Path-to-All-A.md).
 
 ---
 

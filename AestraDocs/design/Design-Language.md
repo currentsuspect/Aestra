@@ -233,7 +233,7 @@ track | reverb_send | reverb_return | master
 
 **Core principle:** Suggest, don't generate. Autocomplete, don't author.
 
-**See [Muse-AI-Spec.md](./Muse-AI-Spec.md) for full specification.**
+**See [Muse-AI-Spec.md](../product/Muse-AI-Spec.md) for full specification.**
 
 ---
 

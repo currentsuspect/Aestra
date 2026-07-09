@@ -54,14 +54,14 @@ There is currently no `scripts/install-hooks.sh` equivalent in the repo. On Linu
 - Keep each PR focused on one change area
 - Update docs when behavior, build steps, or contributor workflow changes
 - Add or update tests when behavior changes
-- Add a short note under `Unreleased` in [../../CHANGELOG.md](../../CHANGELOG.md) for notable changes
+- Add a short note under `Unreleased` in [CHANGELOG.md](https://github.com/currentsuspect/Aestra/blob/main/CHANGELOG.md) for notable changes
 
 ## Documentation Maintenance Rules
 
 - Prefer canonical docs in `docs/` over historical notes in `meta/`
 - Check relative links after editing Markdown
-- Run [../../scripts/docs-check.sh](../../scripts/docs-check.sh) when you change docs structure or links
-- Keep build instructions aligned with the root [../../CMakeLists.txt](../../CMakeLists.txt)
+- Run [scripts/docs-check.sh](https://github.com/currentsuspect/Aestra/blob/main/scripts/docs-check.sh) when you change docs structure or links
+- Keep build instructions aligned with the root [CMakeLists.txt](https://github.com/currentsuspect/Aestra/blob/main/CMakeLists.txt)
 
 If you touch public headers or API docs, regenerate documentation with:
 
@@ -94,5 +94,5 @@ Branch examples:
 
 ## Security and Licensing
 
-- Security issues should be reported privately per [../../SECURITY.md](../../SECURITY.md)
-- Contributions are accepted under the repository's ASSAL v1.1 terms in [../../LICENSING.md](../../LICENSING.md)
+- Security issues should be reported privately per [SECURITY.md](https://github.com/currentsuspect/Aestra/blob/main/SECURITY.md)
+- Contributions are accepted under the repository's ASSAL v1.1 terms in [LICENSING.md](https://github.com/currentsuspect/Aestra/blob/main/LICENSING.md)

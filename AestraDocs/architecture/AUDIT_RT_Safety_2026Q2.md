@@ -374,7 +374,7 @@ These five tests collectively prove the RT-safety claims and form `RTSafetyRegre
 4. **`NoExceptOnRtEntryTest`** — `static_assert(noexcept(engine.processBlock(...)))` for both `AudioEngine::processBlock` and `AudioRenderer::renderBlock`.
 5. **`RtAllocationCounterTest`** — render 1000 blocks; assert `AESTRA_MEMORY_ALLOC` counter delta is zero across the loop.
 
-Pairs with the "lock the A+" suite in [`Path-to-All-A.md`](../Path-to-All-A.md) §8.
+Pairs with the "lock the A+" suite in [`Path-to-All-A.md`](../audio/Path-to-All-A.md) §8.
 
 ---
 

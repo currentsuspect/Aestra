@@ -155,6 +155,6 @@ With the unified platform layer, we can now easily add:
 
 ## Related Documentation
 
-- [DPI Support Guide](../../../AestraPlat/docs/DPI_SUPPORT.md)
-- [AestraPlat Platform Interface](../../../AestraPlat/include/AestraPlatform.h)
-- [NUIPlatformBridge API](../../../AestraUI/Platform/NUIPlatformBridge.h)
+- [DPI Support Guide](https://github.com/currentsuspect/Aestra/blob/main/AestraPlat/docs/DPI_SUPPORT.md)
+- [AestraPlat Platform Interface](https://github.com/currentsuspect/Aestra/blob/main/AestraPlat/include/AestraPlatform.h)
+- [NUIPlatformBridge API](https://github.com/currentsuspect/Aestra/blob/main/AestraUI/Platform/NUIPlatformBridge.h)

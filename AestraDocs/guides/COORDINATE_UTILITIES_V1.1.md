@@ -321,9 +321,9 @@ cmake --build build --config Release --target Aestra_DAW
 
 ## References
 
-- [AestraUI_COORDINATE_SYSTEM.md](AestraUI_COORDINATE_SYSTEM.md) - Full coordinate system guide
-- [COORDINATE_SYSTEM_QUICK_REF.md](../AestraUI/docs/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
-- [NUITypes.h](../AestraUI/Core/NUITypes.h) - Utility function implementations
+- [AestraUI Coordinate System](../architecture/AESTRAUI_COORDINATE_SYSTEM.md) - Full coordinate system guide
+- [Coordinate System Quick Reference](../../docs/technical/ui/COORDINATE_SYSTEM_QUICK_REF.md) - Quick reference
+- [NUITypes.h](../../AestraUI/Core/NUITypes.h) - Utility function implementations
 
 ---
 

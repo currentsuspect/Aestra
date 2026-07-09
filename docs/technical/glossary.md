@@ -284,7 +284,7 @@ Rendering order of overlapping UI elements. Higher z-order renders on top.
 ## Related Terms
 
 ### Branching Strategy
-Git workflow defining how branches are created, named, and merged. See [Contributing Guide](../../CONTRIBUTING.md).
+Git workflow defining how branches are created, named, and merged. See [Contributing Guide](https://github.com/currentsuspect/Aestra/blob/main/CONTRIBUTING.md).
 
 ### Code Review
 Process of examining code changes before merging. Ensures quality and maintainability.
@@ -331,4 +331,4 @@ Test that verifies a single component in isolation. Helps catch bugs early.
 
 ---
 
-[Return to Aestra Docs Index](../README.md)
+[Return to Aestra Docs Home](../index.md)

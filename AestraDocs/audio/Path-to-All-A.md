@@ -3,7 +3,7 @@
 **Status:** Internal execution plan
 **Last Updated:** 2026-05-14
 **Owner:** Dylan
-**Companion docs:** [`implementation/audio_quality_executive_summary.md`](implementation/audio_quality_executive_summary.md), [`architecture/ARCHITECTURE_AUDIT_2026Q2.md`](architecture/ARCHITECTURE_AUDIT_2026Q2.md), [`PDC-v2-Design.md`](PDC-v2-Design.md)
+**Companion docs:** [`implementation/audio_quality_executive_summary.md`](../implementation/audio_quality_executive_summary.md), [`architecture/ARCHITECTURE_AUDIT_2026Q2.md`](../architecture/ARCHITECTURE_AUDIT_2026Q2.md), [`PDC-v2-Design.md`](../PDC-v2-Design.md)
 
 > Every layer that is below A gets a concrete plan with file citations, the test that proves it landed, and a target ship phase. Layers already at A+ get a regression test instead of a feature — to lock them.
 
