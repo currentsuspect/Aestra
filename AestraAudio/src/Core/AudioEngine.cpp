@@ -1946,7 +1946,13 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
                 drainLiveMidi(unitMidiRoutes.data(), unitMidiRouteCount);
             }
+        } else if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
+            // No routable units in Timeline mode: drain-and-drop so stale live
+            // events cannot pile up and land as a burst when units appear.
+            drainLiveMidi(nullptr, 0);
         }
+    } else if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
+        drainLiveMidi(nullptr, 0);
     }
 
     // Clear all per-track buffers for this block up front so routed audio can
@@ -3008,12 +3014,22 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     auto* patternEngine = m_patternEngine.load(std::memory_order_acquire);
     auto* unitManager = m_unitManager.load(std::memory_order_acquire);
 
-    if (!patternEngine || !unitManager)
+    if (!patternEngine || !unitManager) {
+        // Keep the live-queue safety net effective: drop stale live events so
+        // they cannot pile up and land as a burst when units appear later.
+        // Only the realtime block (targetBuffer == nullptr) may touch the
+        // SPSC queue — the offline bounce path runs on another thread.
+        if (targetBuffer == nullptr)
+            drainLiveMidi(nullptr, 0);
         return;
+    }
 
     const uint32_t sampleRate = m_sampleRate.load(std::memory_order_relaxed);
-    if (sampleRate == 0)
+    if (sampleRate == 0) {
+        if (targetBuffer == nullptr)
+            drainLiveMidi(nullptr, 0);
         return;
+    }
 
     // Sync logic moved after snapshot retrieval
 
@@ -3026,6 +3042,9 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     // Get Arsenal snapshot for RT-safe unit iteration
     auto snapshot = unitManager->getAudioSnapshot();
     if (!snapshot || snapshot->units.empty()) {
+        // No routable units: drain-and-drop live events (see note above).
+        if (targetBuffer == nullptr)
+            drainLiveMidi(nullptr, 0);
         return;
     }
 
@@ -3035,6 +3054,8 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     // Buffers must be pre-sized in setBufferConfig()
     if (m_unitBufferD.size() < requiredStereoSamples || m_pluginBufferF.size() < requiredStereoSamples ||
         m_silentBufferF.size() < numFrames) {
+        if (targetBuffer == nullptr)
+            drainLiveMidi(nullptr, 0);
         return;
     }
     // Always zero the silent buffer (just in case)
@@ -3066,7 +3087,12 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     // Live note input in Arsenal mode (this function early-returns unless
     // patternPlaybackMode, so this is the only drain per block here). Runs with
     // or without the transport — playing an instrument must not require play.
-    drainLiveMidi(unitMidiRoutes.data(), unitMidiRouteCount);
+    // Offline isolated-track bounce (targetBuffer set) runs on a non-RT thread
+    // while the realtime callback may still be live: it must never touch the
+    // single-consumer queue, which also keeps live notes out of bounced files.
+    if (targetBuffer == nullptr) {
+        drainLiveMidi(unitMidiRoutes.data(), unitMidiRouteCount);
+    }
 
     // Process each unit plugin
     bufIdx = 0;
