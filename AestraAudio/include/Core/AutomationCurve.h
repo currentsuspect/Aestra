@@ -131,12 +131,17 @@ struct AutomationCurve {
      * @param beat Beat position
      * @param samplesPerBeat Samples per beat for the current project tempo/rate
      * @param value Value at this point (normalized 0-1 for volume/pan)
-     * @param tension Curve tension (0-1, currently unused)
+     * @param tension Curve tension for serialization (rendering does not use it yet)
      */
-    void addPoint(double beat, float value, double samplesPerBeat, float /*tension*/ = 0.5f) {
+    void addPoint(double beat, float value, double samplesPerBeat, float tension = 0.5f) {
         AutomationPoint pt;
         pt.sample = static_cast<uint64_t>(beat * samplesPerBeat);
         pt.value = value;
+        // beat and curve are what ProjectSerializer persists — leaving them at
+        // their zero defaults made every point created through this API (loader,
+        // UI draw path) serialize at beat 0 on the next save.
+        pt.beat = beat;
+        pt.curve = tension;
 
         // Insert in sorted order
         auto it = points.begin();
