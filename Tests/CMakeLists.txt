@@ -167,6 +167,31 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripIntegrityTest
     set_tests_properties(ProjectRoundTripIntegrityTest PROPERTIES LABELS "integration;serialization")
 endif()
 
+# Project Value Fidelity Test — numeric fields must roundtrip bit-exactly (#273)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectValueFidelityTest.cpp")
+    add_executable(ProjectValueFidelityTest
+        Integration/ProjectValueFidelityTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectValueFidelityTest PRIVATE AestraAudio)
+    target_include_directories(ProjectValueFidelityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    add_test(NAME ProjectValueFidelityTest COMMAND ProjectValueFidelityTest)
+    set_tests_properties(ProjectValueFidelityTest PROPERTIES LABELS "integration;serialization")
+endif()
+
 # Project Load Regression Tests (routing safety, missing references, non-destructive load)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectLoadRegressionTest.cpp")
     add_executable(ProjectLoadRegressionTest
