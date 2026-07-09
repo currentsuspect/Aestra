@@ -3,10 +3,10 @@
 **The map of the internal docs vault.** This is the single front door — start here.
 Public/site docs live in [`../docs/`](../docs/) (mkdocs) and are not duplicated here.
 
-> Vault layout: every doc lives in a topic folder. The only files kept at the
-> vault **root** are the six design specs that source code cites by path
-> (see [Root specs](#root-specs-cited-by-source) — do not move them without
-> updating the citing `.cpp/.h/CMakeLists`).
+> Vault layout: every content doc lives in a topic folder. The vault **root**
+> is reserved for the six design specs that source code cites by path, plus the
+> `README.md` and `INDEX.md` navigation files (see [Root specs](#root-specs-cited-by-source)
+> — do not move cited specs without updating the citing `.cpp/.h/CMakeLists`).
 
 ## Quick start
 - [Developer Guide](guides/DEVELOPER_GUIDE.md) — onboarding and philosophy
@@ -123,7 +123,7 @@ Each lab under `../labs/<topic>/` has a `program.md`, `LAB_BOOK.md`, `EVALS.md`,
 
 | Folder | Holds |
 | ------ | ----- |
-| _(root)_ | Only the six design specs cited by source code |
+| _(root)_ | The six design specs cited by source code, plus `README.md` and `INDEX.md` navigation |
 | `architecture/` | Design rationale and invariants |
 | `systems/` | Implementation-level descriptions of subsystems |
 | `specs/` | System-level behavioral/interaction design specs |

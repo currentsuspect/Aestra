@@ -540,23 +540,6 @@ renderer.invalidateRegion(invalidationArea);
 
 ---
 
-## Related Documentation
-
-- [Custom Window Integration](../systems/CUSTOM_WINDOW_INTEGRATION.md) - Custom window and title bar setup
-- [Developer Guide](../guides/DEVELOPER_GUIDE.md) - General development guidelines
-- AestraUI/Core/NUIComponent.h - Component base class API
-
----
-
-## Summary
-
-**Remember:** AestraUI uses absolute screen coordinates for all components. Always add parent offsets when positioning children, and never reset position in `onResize()`. This pattern is critical for correct layout behavior.
-
----
-
-*"Absolute coordinates, absolute clarity."*
-
-
 ---
 
 ## Quick Reference Table
