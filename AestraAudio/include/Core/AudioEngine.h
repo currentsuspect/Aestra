@@ -13,6 +13,7 @@
 #include "EngineState.h"
 #include "GarbageCollector.h"
 #include "Interpolators.h"
+#include "Playback/LiveMidiQueue.h"
 #include "LatencyTopology.h"
 #include "MasterSafetyLimiter.h"
 #include "MeterSnapshot.h"
@@ -344,6 +345,21 @@ public:
     /** @brief Get the loop end position in beats. */
     double getLoopEndBeat() const { return m_loopEndBeat.load(std::memory_order_relaxed); }
 
+    /**
+     * @brief Post a live MIDI event (note input) for an Arsenal unit.
+     *
+     * Lock-free, allocation-free; safe to call from exactly ONE non-RT
+     * producer thread (the UI thread today — a hardware MIDI callback thread
+     * will get its own queue). Events are drained on the audio thread each
+     * block and delivered to the unit's plugin alongside pattern playback,
+     * with or without the transport running.
+     *
+     * @return false if the queue was full and the event was dropped.
+     */
+    bool postLiveMidiEvent(uint64_t unitId, uint8_t status, uint8_t data1, uint8_t data2) noexcept {
+        return m_liveMidiQueue.push(LiveMidiQueue::Event{unitId, status, data1, data2});
+    }
+
     /** @brief Enable or disable Arsenal pattern playback mode. */
     void setPatternPlaybackMode(bool enabled, double lengthBeats) {
         m_patternPlaybackMode.store(enabled, std::memory_order_relaxed);
@@ -647,6 +663,11 @@ private:
     void syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept;
     void injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
                                    uint32_t numFrames) noexcept;
+    void drainLiveMidi(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount) noexcept;
+
+    // Live note input (computer keyboard today, hardware MIDI later). One
+    // SPSC queue per producer thread; drained on the audio thread each block.
+    LiveMidiQueue m_liveMidiQueue;
 
     // Pre-allocated buffers for Arsenal unit processing (RT-safe)
     std::vector<double> m_unitBufferD;         // Stereo interleaved unit output

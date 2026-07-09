@@ -374,6 +374,30 @@ void AudioEngine::injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute
     }
 }
 
+void AudioEngine::drainLiveMidi(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount) noexcept {
+    LiveMidiQueue::Event ev;
+    if (!routes || routeCount == 0) {
+        // No routable units this block: drain and drop so the queue can never
+        // build a backlog of stale notes that would all fire at once later.
+        while (m_liveMidiQueue.pop(ev)) {
+        }
+        return;
+    }
+    // Bounded: pop() can return at most kCapacity events, and MidiBuffer::addEvent
+    // itself caps at kMaxEvents. No allocation, no locks.
+    while (m_liveMidiQueue.pop(ev)) {
+        for (size_t i = 0; i < routeCount; ++i) {
+            if (routes[i].unitId == static_cast<UnitID>(ev.unitId) && routes[i].midiBuffer != nullptr) {
+                const uint8_t data[3] = {ev.status, ev.data1, ev.data2};
+                // Offset 0: live events sound at the start of the block they
+                // were drained in (worst-case latency = one block).
+                routes[i].midiBuffer->addEvent(0, data, 3);
+                break;
+            }
+        }
+    }
+}
+
 void AudioEngine::setThreadCount(int count) {
     if (count < 1)
         count = 1;
@@ -1915,6 +1939,13 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
 
             injectPendingUnitAudition(unitMidiRoutes.data(), unitMidiRouteCount, numFrames);
+
+            // Live note input in Timeline mode. Gated on !patternPlaybackMode so
+            // exactly one path drains the queue per block — Arsenal mode drains
+            // inside processArsenalUnits (which self-gates on the same flag).
+            if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
+                drainLiveMidi(unitMidiRoutes.data(), unitMidiRouteCount);
+            }
         }
     }
 
@@ -3031,6 +3062,11 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     }
 
     injectPendingUnitAudition(unitMidiRoutes.data(), unitMidiRouteCount, numFrames);
+
+    // Live note input in Arsenal mode (this function early-returns unless
+    // patternPlaybackMode, so this is the only drain per block here). Runs with
+    // or without the transport — playing an instrument must not require play.
+    drainLiveMidi(unitMidiRoutes.data(), unitMidiRouteCount);
 
     // Process each unit plugin
     bufIdx = 0;
