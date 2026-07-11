@@ -51,6 +51,7 @@ namespace AestraUI {
 // Forward declarations - Aestra::Audio (includes panel classes)
 namespace Aestra::Audio {
     class AudioEngine;
+    class MidiInputService;
     class TrackManager;
     class TrackManagerUI;
     class PreviewEngine;
@@ -233,6 +234,8 @@ public:
     void setPlatformBridge(AestraUI::NUIPlatformBridge* bridge);
     /** @brief Bind the live audio engine used by transport-aware panels. */
     void setAudioEngine(Aestra::Audio::AudioEngine* engine);
+    /** @brief Bind hardware MIDI input; live notes follow the selected unit. */
+    void setMidiInput(Aestra::Audio::MidiInputService* midiInput);
     /** @brief Propagate transport tempo to tempo-aware internal plugins. */
     void setPluginTempo(float bpm);
     /** @brief Get the playback graph controller for canonical graph invalidation. */
@@ -337,6 +340,7 @@ private:
     std::shared_ptr<Aestra::Audio::TrackManagerUI> m_trackManagerUI;
     AestraUI::NUIPlatformBridge* m_platformBridge = nullptr;
     Aestra::Audio::AudioEngine* m_audioEngine = nullptr;
+    Aestra::Audio::MidiInputService* m_midiInput = nullptr;
 
     std::shared_ptr<Aestra::Audio::MixerPanel> m_mixerPanel;
     std::shared_ptr<Aestra::Audio::PianoRollPanel> m_pianoRollPanel;

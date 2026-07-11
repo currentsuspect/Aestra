@@ -302,6 +302,7 @@ void AestraApp::initializeContent() {
     if (m_audioController->getEngine()) {
         m_content->setAudioEngine(m_audioController->getEngine());
     }
+    m_content->setMidiInput(m_audioController->getMidiInput());
     syncRecordingProjectPath(m_content, m_projectPath);
 
     m_windowManager->setContent(m_content);

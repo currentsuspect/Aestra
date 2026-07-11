@@ -17,6 +17,7 @@
 #include "AuditionEngine.h" // Audition Mode backend
 #include "AuditionPanel.h"  // Audition Mode UI
 #include "Commands/PluginCommands.h"
+#include "MidiInputService.h"
 #include "MixerChannel.h"
 #include "MixerPanel.h"
 #include "PatternBrowserPanel.h"
@@ -952,6 +953,13 @@ AestraContent::AestraContent() {
     m_sequencerPanel->setOnSelectedUnitChanged([this](UnitID unitId) {
         if (m_pianoRollPanel) {
             m_pianoRollPanel->setEditingUnit(unitId);
+        }
+        // Live hardware MIDI follows the selected unit (musical-typing
+        // semantics). Every selection path — clicks, refreshes, pattern
+        // switches, programmatic setSelectedUnit — fires this callback,
+        // so this is the single target-tracking choke point.
+        if (m_midiInput) {
+            m_midiInput->setTargetUnit(unitId);
         }
     });
     m_sequencerPanel->setOnPatternEdited([this](PatternID patternId) {
@@ -2898,6 +2906,15 @@ void AestraContent::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
     }
     if (m_pianoRollPanel) {
         m_pianoRollPanel->setPlatformBridge(bridge);
+    }
+}
+
+void AestraContent::setMidiInput(Aestra::Audio::MidiInputService* midiInput) {
+    m_midiInput = midiInput;
+    // Push the current selection so a controller plays the right unit even if
+    // the user never re-selects after startup.
+    if (m_midiInput && m_sequencerPanel) {
+        m_midiInput->setTargetUnit(m_sequencerPanel->getSelectedUnitId());
     }
 }
 
