@@ -97,6 +97,26 @@ if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/LiveMidiInputT
     )
 endif()
 
+# Hardware MIDI Input Test — RtMidi message translation (pure) plus the
+# hardware SPSC queue path (AudioEngine::postHardwareMidiEvent) audible with
+# transport stopped. Uses only header-inline APIs, so it links AestraAudioCore
+# and runs on every CI lane regardless of MIDI backend presence.
+if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/HardwareMidiInputTest.cpp")
+    add_executable(HardwareMidiInputTest
+        HardwareMidiInputTest.cpp
+    )
+    target_link_libraries(HardwareMidiInputTest PRIVATE AestraAudioCore)
+    target_include_directories(HardwareMidiInputTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME HardwareMidiInputTest COMMAND HardwareMidiInputTest)
+    set_tests_properties(HardwareMidiInputTest PROPERTIES
+        LABELS "headless;arsenal;audio;midi"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # PDC v2 P1 — scaffolding tests (see AestraDocs/PDC-v2-Design.md §12)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     add_executable(PDCFlatChainTest PDCFlatChainTest.cpp)

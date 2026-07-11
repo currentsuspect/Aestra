@@ -375,24 +375,31 @@ void AudioEngine::injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute
 }
 
 void AudioEngine::drainLiveMidi(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount) noexcept {
+    // Drains both live-input queues (UI keyboard + hardware MIDI thread) — each
+    // is SPSC with this function as its sole consumer.
+    LiveMidiQueue* queues[2] = {&m_liveMidiQueue, &m_hardwareMidiQueue};
     LiveMidiQueue::Event ev;
     if (!routes || routeCount == 0) {
-        // No routable units this block: drain and drop so the queue can never
+        // No routable units this block: drain and drop so the queues can never
         // build a backlog of stale notes that would all fire at once later.
-        while (m_liveMidiQueue.pop(ev)) {
+        for (auto* queue : queues) {
+            while (queue->pop(ev)) {
+            }
         }
         return;
     }
-    // Bounded: pop() can return at most kCapacity events, and MidiBuffer::addEvent
-    // itself caps at kMaxEvents. No allocation, no locks.
-    while (m_liveMidiQueue.pop(ev)) {
-        for (size_t i = 0; i < routeCount; ++i) {
-            if (routes[i].unitId == static_cast<UnitID>(ev.unitId) && routes[i].midiBuffer != nullptr) {
-                const uint8_t data[3] = {ev.status, ev.data1, ev.data2};
-                // Offset 0: live events sound at the start of the block they
-                // were drained in (worst-case latency = one block).
-                routes[i].midiBuffer->addEvent(0, data, 3);
-                break;
+    // Bounded: pop() can return at most kCapacity events per queue, and
+    // MidiBuffer::addEvent itself caps at kMaxEvents. No allocation, no locks.
+    for (auto* queue : queues) {
+        while (queue->pop(ev)) {
+            for (size_t i = 0; i < routeCount; ++i) {
+                if (routes[i].unitId == static_cast<UnitID>(ev.unitId) && routes[i].midiBuffer != nullptr) {
+                    const uint8_t data[3] = {ev.status, ev.data1, ev.data2};
+                    // Offset 0: live events sound at the start of the block they
+                    // were drained in (worst-case latency = one block).
+                    routes[i].midiBuffer->addEvent(0, data, 3);
+                    break;
+                }
             }
         }
     }
