@@ -88,6 +88,8 @@ public:
     // Push state from authority
     void setViewToggled(Audio::ViewType view, bool active);
     void syncTransportState(bool playing, bool paused, bool recordArmed);
+    /** @brief Show computer-keyboard note-input state and base octave. */
+    void setMusicalTypingStatus(bool enabled, int octave);
 
     // Global Tool & Scale Callbacks
 
@@ -118,6 +120,7 @@ private:
     std::shared_ptr<AestraUI::NUIButton> m_playlistButton;
 
     std::shared_ptr<TransportInfoContainer> m_infoContainer;  // Modular info container
+    std::shared_ptr<AestraUI::NUILabel> m_musicalTypingLabel;
     
     // Icons
     std::shared_ptr<AestraUI::NUIIcon> m_playIcon;

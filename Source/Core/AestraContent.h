@@ -24,6 +24,7 @@
 #include "NUISegmentedControl.h"
 #include "OverlayLayer.h"
 #include "PatternSource.h"
+#include "MusicalTypingController.h"
 #include "TransportBar.h"
 #include "ViewTypes.h"
 
@@ -147,6 +148,8 @@ public:
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
     /** @brief Handle global keyboard shortcuts for the workspace. */
     bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override; // [NEW] Global shortcuts
+    /** @brief Release notes held by computer-keyboard musical typing. */
+    void releaseMusicalTypingNotes();
 
     /** @brief Open or close a specific workspace overlay. */
     void setViewOpen(Aestra::Audio::ViewType view, bool open);
@@ -357,6 +360,7 @@ private:
     std::shared_ptr<Aestra::AuditionPanel> m_auditionPanel;
 
     std::unique_ptr<Aestra::Audio::PreviewEngine> m_previewEngine;
+    Aestra::MusicalTypingController m_musicalTyping;
     bool m_spaceShortcutLatched{false};
     bool m_audioActive = false;
 
