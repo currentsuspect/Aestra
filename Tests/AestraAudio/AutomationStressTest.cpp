@@ -69,20 +69,24 @@ void test_out_of_range() {
     testsPassed++;
 }
 
-// 2a-IV: Sample rate mismatch (different SPB)
+// 2a-IV: Tempo/sample-rate independence. Points added at one samplesPerBeat
+// must evaluate identically at any other: beat is the authoritative domain.
+// (The old 0.594 expectation at beat 1.5 was computed FROM the mixed-domain
+// bug — stale sample cache vs current-tempo target — which shifted automation
+// after BPM changes. Beat-domain interpolation gives the musical midpoint.)
 void test_sample_rate_mismatch() {
     AutomationCurve curve;
     EXPECT_NO_CRASH(curve.addPoint(1.0, 0.5f, 480.0));
     EXPECT_NO_CRASH(curve.addPoint(2.0, 0.75f, 480.0));
 
-    // Query at same beat, diff sample rate
-    // Note: At 441 spb, beat 1.5 = sample 661.5, between points at 480 & 960
-    // Linear interp: 0.5 + (661.5-480)/(960-480)*(0.75-0.5) = 0.594
     EXPECT_NO_CRASH(float v1 = curve.getValueAtBeat(1.0, 441.0));
     EXPECT_FLOAT_EQ(curve.getValueAtBeat(1.0, 441.0), 0.5f, 0.01f);
 
+    // Midpoint between (1.0, 0.5) and (2.0, 0.75) regardless of tempo.
     EXPECT_NO_CRASH(float v2 = curve.getValueAtBeat(1.5, 441.0));
-    EXPECT_FLOAT_EQ(curve.getValueAtBeat(1.5, 441.0), 0.594f, 0.01f);
+    EXPECT_FLOAT_EQ(curve.getValueAtBeat(1.5, 441.0), 0.625f, 0.01f);
+    EXPECT_FLOAT_EQ(curve.getValueAtBeat(1.5, 480.0), 0.625f, 0.01f);
+    EXPECT_FLOAT_EQ(curve.getValueAtBeat(1.5), 0.625f, 0.01f);
 
     // Out of range queries
     EXPECT_NO_CRASH(float v3 = curve.getValueAtBeat(1000.0, 441.0));

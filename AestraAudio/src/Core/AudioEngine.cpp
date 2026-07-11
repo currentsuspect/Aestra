@@ -2039,16 +2039,17 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         double volTarget = static_cast<double>(track.volume) * gain;
         double panTarget = clampD(static_cast<double>(track.pan) + static_cast<double>(panParam), -1.0, 1.0);
 
-        // Apply Automation Override (v3.1)
+        // Apply Automation Override (v3.1). Beat-domain evaluation: the curve
+        // interpolates on point beats directly, so tempo changes and UI point
+        // drags (which edit beats) stay musically aligned.
         if (!track.automationCurves.empty() && cachedSampleRate > 0) {
             uint64_t globalPos = m_globalSamplePos.load(std::memory_order_relaxed);
-            const double samplesPerBeat = (static_cast<double>(cachedSampleRate) * 60.0) / std::max(graph.bpm, 1.0);
             double currentBeat = (static_cast<double>(globalPos) / cachedSampleRate) * (graph.bpm / 60.0);
             for (const auto& curve : track.automationCurves) {
                 if (curve.getAutomationTarget() == AutomationTarget::Volume) {
-                    volTarget = curve.getValueAtBeat(currentBeat, samplesPerBeat);
+                    volTarget = curve.getValueAtBeat(currentBeat);
                 } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
-                    panTarget = clampD(curve.getValueAtBeat(currentBeat, samplesPerBeat), -1.0, 1.0);
+                    panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
                 }
             }
         }

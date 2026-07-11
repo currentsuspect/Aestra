@@ -178,7 +178,9 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) 
             }
 
             auto& trackState = graph.tracks[laneIdx];
-            const auto& laneInfo = snapshot->lanes[laneIdx];
+            // Non-const: automationCurves below is genuinely moved out of the
+            // snapshot (std::move through a const ref silently copies).
+            auto& laneInfo = snapshot->lanes[laneIdx];
 
             for (const auto& clipInfo : laneInfo.clips) {
                 if (!clipInfo.isValid())
