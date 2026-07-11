@@ -174,6 +174,12 @@ bool AestraAudioController::initialize() {
 }
 
 void AestraAudioController::shutdown() {
+    // Detach the content's raw observer pointer before the service goes away:
+    // the content can outlive this shutdown (we hold a shared_ptr to it), and
+    // a late unit-selection callback must not touch a freed MidiInputService.
+    if (auto content = m_content.lock()) {
+        content->setMidiInput(nullptr);
+    }
     // Stop hardware MIDI first: cancels RtMidi callbacks so no producer can
     // touch the engine's queue once teardown proceeds.
     if (m_midiInput) {
