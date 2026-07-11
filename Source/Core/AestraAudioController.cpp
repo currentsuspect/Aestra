@@ -4,6 +4,7 @@
 #include "AudioThreadConstraints.h"
 #include "AudioRT.h"
 #include "AudioTelemetry.h"
+#include "MidiInputService.h"
 #include "PreviewEngine.h"
 #include "TrackManager.h"
 #include "AestraPlatform.h"
@@ -141,6 +142,7 @@ const AudioDeviceInfo* choosePreferredInputDevice(const std::vector<AudioDeviceI
 AestraAudioController::AestraAudioController() {
     m_audioManager = std::make_unique<AudioDeviceManager>();
     m_audioEngine = std::make_unique<AudioEngine>();
+    m_midiInput = std::make_unique<MidiInputService>();
 }
 
 AestraAudioController::~AestraAudioController() {
@@ -154,10 +156,29 @@ bool AestraAudioController::initialize() {
         return false;
     }
     Log::info("Audio engine initialized");
+
+    // Hardware MIDI input: the RtMidi callback thread is the single producer
+    // of the engine's hardware SPSC queue. The raw engine pointer is safe: the
+    // engine is created in our constructor and destroyed only in shutdown(),
+    // after the service has been stopped. Zero ports (or the core-mode stub)
+    // is a normal, silent outcome — play/edit must work without a controller.
+    if (m_midiInput && m_audioEngine) {
+        AudioEngine* engine = m_audioEngine.get();
+        const size_t midiPorts =
+            m_midiInput->start([engine](uint64_t unitId, uint8_t status, uint8_t data1, uint8_t data2) {
+                engine->postHardwareMidiEvent(unitId, status, data1, data2);
+            });
+        Log::info("Hardware MIDI input ports opened: " + std::to_string(midiPorts));
+    }
     return true;
 }
 
 void AestraAudioController::shutdown() {
+    // Stop hardware MIDI first: cancels RtMidi callbacks so no producer can
+    // touch the engine's queue once teardown proceeds.
+    if (m_midiInput) {
+        m_midiInput->stop();
+    }
     if (m_initialized && m_audioManager) {
         stopStream();
         closeStream();
@@ -165,6 +186,7 @@ void AestraAudioController::shutdown() {
     if (m_audioEngine) {
         m_audioEngine->drainDeferredResourcesForShutdown();
     }
+    m_midiInput.reset();
     m_audioEngine.reset();
     m_audioManager.reset();
     m_initialized = false;
