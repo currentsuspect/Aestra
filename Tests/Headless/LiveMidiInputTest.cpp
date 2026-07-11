@@ -65,11 +65,9 @@ int main() {
     auto sampler = std::make_shared<Plugins::SamplerPlugin>();
     require(sampler->initialize(sampleRate, blockSize), "SamplerPlugin failed to initialize");
     sampler->activate();
-    // Short release: with the 300 ms default, a one-shot sample shorter than
-    // the release time enters Release at trigger with releaseGain captured at 0
-    // and never sounds (filed as a sampler bug; this test targets the live-MIDI
-    // routing path, not that envelope quirk).
-    sampler->setEnvelope(0.005f, 0.05f, 0.8f, 0.05f);
+    // Default envelope on purpose: a 250 ms one-shot under the default 300 ms
+    // release is the #452 shape, so this doubles as engine-level regression
+    // coverage (primary coverage: SamplerOneShotEnvelopeTest).
     {
         const uint32_t sampleFrames = sampleRate / 4;
         std::vector<float> data(sampleFrames, 0.0f);

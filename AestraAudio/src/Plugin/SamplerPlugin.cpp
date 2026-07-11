@@ -356,19 +356,32 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
                 }
             }
 
-            // In one-shot mode there may be no note-off; trigger a timed release near the end
-            if (!loopEnabled && v.stage != EnvStage::Release && v.stage != EnvStage::Off) {
-                const double framesToEnd = endFrame - v.position;
-                const double releaseFrames = static_cast<double>(releaseMs) * m_sampleRate;
-                if (framesToEnd <= releaseFrames) {
-                    v.stage = EnvStage::Release;
-                    v.stageTime = 0.0;
-                    v.releaseGain = std::max(0.0f, v.currentGain);
+            // One-shot end-of-sample fade (#452). No note-off may ever arrive
+            // in one-shot mode, so fade toward the endpoint with a bounded,
+            // stateless multiplier on top of the normal ADSR — never by
+            // mutating the ADSR stage (the old code entered Release at
+            // trigger time for samples shorter than the release, capturing
+            // releaseGain from a still-zero attack: permanent silence).
+            //
+            // Units: v.position/endFrame are SOURCE frames; the configured
+            // release is OUTPUT time. Convert via |playbackRate|, and clamp
+            // the effective fade to the playable one-shot duration so short
+            // samples fade across what they have instead of starting at zero.
+            float oneShotTail = 1.0f;
+            if (!loopEnabled) {
+                const double absRate = std::abs(v.playbackRate);
+                if (absRate > 1.0e-9) {
+                    const double remainingOutputFrames = (endFrame - v.position) / absRate;
+                    const double configuredReleaseFrames = static_cast<double>(releaseMs) * m_sampleRate;
+                    const double playableOutputFrames = (endFrame - startFrame) / absRate;
+                    const double effectiveTailFrames =
+                        std::max(1.0, std::min(configuredReleaseFrames, playableOutputFrames));
+                    oneShotTail = static_cast<float>(std::clamp(remainingOutputFrames / effectiveTailFrames, 0.0, 1.0));
                 }
             }
 
             // Envelope (uses preloaded ADSR — no atomic loads)
-            float env = getEnvelopeLevel(v, invSampleRate, attackMs, decayMs, sustainLevel, releaseMs);
+            float env = getEnvelopeLevel(v, invSampleRate, attackMs, decayMs, sustainLevel, releaseMs) * oneShotTail;
             if (v.stage == EnvStage::Off) {
                 v.active = false;
                 activeVoiceCountDirty = true;
