@@ -2050,6 +2050,22 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     volTarget = curve.getValueAtBeat(currentBeat);
                 } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
                     panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
+                } else if (curve.getAutomationTarget() == AutomationTarget::Custom) {
+                    // Plugin-parameter automation. Internal-format plugins only:
+                    // their parameter storage is atomic, so a per-block
+                    // setParameter from this thread is lock-free and RT-safe.
+                    // Third-party formats are skipped until host param queues
+                    // exist (#467). Applied before the effect chain processes
+                    // this block, so the value is in effect for these frames.
+                    if (track.effectChainSnapshot && curve.effectSlot < EffectChainSnapshot::MAX_SLOTS) {
+                        const auto& slot = track.effectChainSnapshot->slot(curve.effectSlot);
+                        if (slot.plugin && slot.plugin->getInfo().format == PluginFormat::Internal) {
+                            const float value = curve.getValueAtBeat(currentBeat);
+                            if (std::isfinite(value)) {
+                                slot.plugin->setParameter(curve.paramId, value);
+                            }
+                        }
+                    }
                 }
             }
         }

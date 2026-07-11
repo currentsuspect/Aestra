@@ -249,8 +249,8 @@ void assertAllValues(Aestra::Audio::TrackManager& tm,
     }
 
     // Automation curve values — the addPoint identity bug zeroed these.
-    require(laneA->automationCurves.size() == 1, tag("automation curve count"));
-    if (laneA->automationCurves.size() == 1) {
+    require(laneA->automationCurves.size() == 2, tag("automation curve count"));
+    if (laneA->automationCurves.size() == 2) {
         const auto& curve = laneA->automationCurves[0];
         require(curve.getAutomationTarget() == AutomationTarget::Volume, tag("automation target"));
         requireExactF(curve.getDefaultValue(), 0.42f, tag("automation default"));
@@ -262,6 +262,18 @@ void assertAllValues(Aestra::Audio::TrackManager& tm,
             requireExactD(curve.points[1].beat, kAutoBeatFar, tag("automation point 2 beat"));
             requireExactF(curve.points[1].value, 0.9f, tag("automation point 2 value"));
             requireExactF(curve.points[1].curve, 0.5f, tag("automation point 2 tension"));
+        }
+
+        // Plugin-parameter curve: Custom slot/paramId addressing (#467).
+        const auto& param = laneA->automationCurves[1];
+        require(param.getAutomationTarget() == AutomationTarget::Custom, tag("param curve target"));
+        requireExactF(param.getDefaultValue(), 0.7f, tag("param curve default"));
+        require(param.effectSlot == 3, tag("param curve effectSlot"));
+        require(param.paramId == 17, tag("param curve paramId"));
+        require(param.points.size() == 1, tag("param curve point count"));
+        if (param.points.size() == 1) {
+            requireExactD(param.points[0].beat, 1.0, tag("param curve point beat"));
+            requireExactF(param.points[0].value, 0.33f, tag("param curve point value"));
         }
     }
 }
@@ -374,6 +386,14 @@ int main() {
         vol.addPoint(0.5, 0.1f, samplesPerBeat, 0.25f);
         vol.addPoint(kAutoBeatFar, 0.9f, samplesPerBeat, 0.5f);
         lane->automationCurves.push_back(vol);
+
+        // Plugin-parameter curve: slot/paramId addressing must roundtrip.
+        AutomationCurve param("cutoff", AutomationTarget::Custom);
+        param.setDefaultValue(0.7f);
+        param.effectSlot = 3;
+        param.paramId = 17;
+        param.addPoint(1.0, 0.33f, samplesPerBeat, 0.5f);
+        lane->automationCurves.push_back(param);
     }
 
     // Routing: A -> B send with awkward float gain.
