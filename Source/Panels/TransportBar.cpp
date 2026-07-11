@@ -43,6 +43,20 @@ TransportBar::TransportBar()
     
     createButtons();
 
+    m_musicalTypingLabel = std::make_shared<AestraUI::NUILabel>("KEYS C3");
+    m_musicalTypingLabel->setFontSize(11.0f);
+    m_musicalTypingLabel->setAlignment(AestraUI::NUILabel::Alignment::Center);
+    m_musicalTypingLabel->setTextColor(AestraUI::NUIThemeManager::getInstance().getColor("accentPrimary"));
+    m_musicalTypingLabel->setBackgroundVisible(true);
+    m_musicalTypingLabel->setBackgroundColor(
+        AestraUI::NUIThemeManager::getInstance().getColor("surfaceTertiary").withAlpha(0.72f));
+    m_musicalTypingLabel->setBorderVisible(true);
+    m_musicalTypingLabel->setBorderWidth(1.0f);
+    m_musicalTypingLabel->setBorderColor(
+        AestraUI::NUIThemeManager::getInstance().getColor("border").withAlpha(0.52f));
+    m_musicalTypingLabel->setTooltip("Computer keys: Caps Lock toggles, Up/Down shifts octave");
+    addChild(m_musicalTypingLabel);
+
     // Wire up BPM change callback from arrows
     if (m_infoContainer && m_infoContainer->getBPMDisplay()) {
         m_infoContainer->getBPMDisplay()->setOnBPMChange([this](float newBPM) {
@@ -414,6 +428,17 @@ void TransportBar::syncTransportState(bool playing, bool paused, bool recordArme
     }
 }
 
+void TransportBar::setMusicalTypingStatus(bool enabled, int octave) {
+    if (!m_musicalTypingLabel) {
+        return;
+    }
+    m_musicalTypingLabel->setText(enabled ? "KEYS C" + std::to_string(octave) : "KEYS OFF");
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    m_musicalTypingLabel->setTextColor(
+        enabled ? theme.getColor("accentPrimary") : theme.getColor("textSecondary").withAlpha(0.62f));
+    setDirty(true);
+}
+
 void TransportBar::updateButtonStates() {
     // Clear textual fallbacks (we render SVG icons instead)
     if (m_playButton) {
@@ -608,7 +633,8 @@ void TransportBar::layoutComponents() {
     float group4Width = (buttonSize * 4) + (spacing * 3);
 
     // Total Content Width
-    float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
+    float totalContentWidth =
+        group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
     float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
@@ -686,6 +712,18 @@ void TransportBar::layoutComponents() {
         // xCursor += buttonSize + spacing;
     }
 
+    if (m_musicalTypingLabel) {
+        constexpr float statusWidth = 82.0f;
+        constexpr float statusHeight = 24.0f;
+        const float statusX = islandX + islandWidth + 10.0f;
+        const bool hasRoom = statusX + statusWidth <= bounds.width - 8.0f;
+        m_musicalTypingLabel->setVisible(hasRoom);
+        if (hasRoom) {
+            m_musicalTypingLabel->setBounds(NUIAbsolute(
+                bounds, statusX, islandY + (islandHeight - statusHeight) * 0.5f, statusWidth, statusHeight));
+        }
+    }
+
     // Pass dimensions to Render via Theme or member not possible easily here without state.
     // We relying on onRender duplicating the math or us storing it?
     // Let's update onRender to match these hardcoded compaction values.
@@ -710,7 +748,8 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     float infoWidth = 260.0f;
     float group4Width = (buttonSize * 4) + (spacing * 3);
 
-    float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
+    float totalContentWidth =
+        group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
     float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
