@@ -14,6 +14,7 @@
 // Forward declarations
 class AestraContent;
 namespace Aestra::Audio {
+class MidiInputService;
 class PreviewEngine;
 class TrackManager;
 }
@@ -43,6 +44,7 @@ public:
     // Accessors
     Aestra::Audio::AudioEngine* getEngine() { return m_audioEngine.get(); }
     Aestra::Audio::AudioDeviceManager* getDeviceManager() { return m_audioManager.get(); }
+    Aestra::Audio::MidiInputService* getMidiInput() { return m_midiInput.get(); }
     const Aestra::Audio::AudioStreamConfig& getStreamConfig() const { return m_streamConfig; }
 
     // Helpers
@@ -55,6 +57,10 @@ public:
 private:
     std::unique_ptr<Aestra::Audio::AudioDeviceManager> m_audioManager;
     std::unique_ptr<Aestra::Audio::AudioEngine> m_audioEngine;
+    // Hardware MIDI input. Its RtMidi callback thread posts into the engine's
+    // hardware SPSC queue, so it must be stopped before m_audioEngine is
+    // destroyed (see shutdown()).
+    std::unique_ptr<Aestra::Audio::MidiInputService> m_midiInput;
 
     Aestra::Audio::AudioStreamConfig m_streamConfig;
     bool m_initialized{false};
