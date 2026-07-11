@@ -377,21 +377,27 @@ void AudioEngine::injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute
 void AudioEngine::drainLiveMidi(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount) noexcept {
     // Drains both live-input queues (UI keyboard + hardware MIDI thread) — each
     // is SPSC with this function as its sole consumer.
+    //
+    // Bounded work: a producer pushing concurrently can keep pop() succeeding
+    // past the queue's snapshot size, so every drain loop is capped at
+    // kCapacity events per queue per block. Overflow policy: events beyond the
+    // cap stay queued for the next block, and once a queue is full the
+    // producer's push() rejects — late live notes are dropped at the source,
+    // never accumulated (for live input, late is worse than lost).
     LiveMidiQueue* queues[2] = {&m_liveMidiQueue, &m_hardwareMidiQueue};
     LiveMidiQueue::Event ev;
     if (!routes || routeCount == 0) {
         // No routable units this block: drain and drop so the queues can never
         // build a backlog of stale notes that would all fire at once later.
         for (auto* queue : queues) {
-            while (queue->pop(ev)) {
+            for (uint32_t n = 0; n < LiveMidiQueue::kCapacity && queue->pop(ev); ++n) {
             }
         }
         return;
     }
-    // Bounded: pop() can return at most kCapacity events per queue, and
     // MidiBuffer::addEvent itself caps at kMaxEvents. No allocation, no locks.
     for (auto* queue : queues) {
-        while (queue->pop(ev)) {
+        for (uint32_t n = 0; n < LiveMidiQueue::kCapacity && queue->pop(ev); ++n) {
             for (size_t i = 0; i < routeCount; ++i) {
                 if (routes[i].unitId == static_cast<UnitID>(ev.unitId) && routes[i].midiBuffer != nullptr) {
                     const uint8_t data[3] = {ev.status, ev.data1, ev.data2};

@@ -7,6 +7,7 @@
 #include "RtMidi.h"
 #endif
 
+#include <mutex>
 #include <utility>
 
 namespace Aestra {
@@ -21,6 +22,12 @@ struct MidiInputService::Impl {
     };
     std::vector<Port> ports;
     MidiInputService* owner{nullptr};
+    // Each open port is its own RtMidiIn with its own callback thread, so with
+    // multiple ports rtCallback runs concurrently. The engine's hardware queue
+    // is SPSC; this mutex serializes sink invocations so the queue only ever
+    // sees one producer at a time. MIDI callback threads only — the audio
+    // thread never touches this lock.
+    std::mutex sinkMutex;
 
     static void rtCallback(double /*deltaTime*/, std::vector<unsigned char>* message, void* userData) {
         auto* self = static_cast<MidiInputService*>(userData);
@@ -33,6 +40,7 @@ struct MidiInputService::Impl {
         }
         const auto translated = MidiInputService::translateMessage(message->data(), message->size());
         if (translated.has_value()) {
+            const std::lock_guard<std::mutex> lock(self->m_impl->sinkMutex);
             self->m_sink(unit, translated->status, translated->data1, translated->data2);
         }
     }

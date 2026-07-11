@@ -17,17 +17,19 @@ namespace Audio {
  *
  * Opens every available MIDI input port ("all inputs" default, like most
  * DAWs) and translates channel-voice messages into live events posted through
- * the sink (AudioEngine::postHardwareMidiEvent). The RtMidi callback thread is
- * the single producer of the engine's hardware queue.
+ * the sink (AudioEngine::postHardwareMidiEvent).
  *
  * The target unit is an atomic the UI updates (same semantics as musical
  * typing: captured per event at callback time, so note-offs follow their
  * note-ons to the unit that received them... at the queue level each event
  * simply carries the unit current at arrival).
  *
- * Threading: start()/stop()/refreshPorts() are control-thread only. The sink
- * runs on RtMidi's callback thread and must be lock-free (posting to an SPSC
- * queue qualifies). No RT-audio-thread involvement here.
+ * Threading: start()/stop()/refreshPorts() are control-thread only. Each open
+ * port is its own RtMidiIn with its own callback thread; sink invocations are
+ * serialized by an internal mutex so the engine's hardware queue keeps its
+ * single-producer contract (one producer at a time, with the lock providing
+ * the ordering). The mutex is contended only between MIDI callback threads —
+ * the RT audio thread consumes the queue lock-free and never blocks here.
  */
 class MidiInputService {
 public:

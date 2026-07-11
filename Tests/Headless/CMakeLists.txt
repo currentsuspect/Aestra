@@ -101,7 +101,9 @@ endif()
 # hardware SPSC queue path (AudioEngine::postHardwareMidiEvent) audible with
 # transport stopped. Uses only header-inline APIs, so it links AestraAudioCore
 # and runs on every CI lane regardless of MIDI backend presence.
-if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/HardwareMidiInputTest.cpp")
+# No EXISTS guard: a missing source must fail configure, not silently skip
+# the test (review finding on #454).
+if(TARGET AestraAudioCore)
     add_executable(HardwareMidiInputTest
         HardwareMidiInputTest.cpp
     )
