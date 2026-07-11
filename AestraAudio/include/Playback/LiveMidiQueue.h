@@ -56,8 +56,12 @@ public:
         return true;
     }
 
-private:
+    // Public so consumers can bound their drain loops: a producer pushing
+    // concurrently can keep pop() succeeding past the queue's snapshot size,
+    // so "drain until empty" is not inherently bounded work.
     static constexpr uint32_t kCapacity = 512; // power of two; ~= 5s of frantic playing
+
+private:
     static constexpr uint32_t kMask = kCapacity - 1;
 
     std::array<Event, kCapacity> m_events{};
