@@ -12,7 +12,7 @@ Aestra is coherent at the level of belief and incoherent at the level of scope.
 
 It is not a toy DAW. Toy DAWs do not have golden-audio regressions, realtime/export parity tests, allocation traps, sample-rate truth tests, immutable project fixtures, true-peak measurement, background prefiltering, visible realtime scheduling status, or an explicit policy that session loss is a betrayal. Those are serious foundations.
 
-It is not yet a trustworthy production DAW either. A short one-shot—the basic material of hip-hop production—can currently render silence under the default release behavior ([issue #452](https://github.com/currentsuspect/Aestra/issues/452), [SamplerPlugin.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/Plugin/SamplerPlugin.cpp:359)). Loaded project objects can receive new runtime identities instead of preserving serialized ones ([ProjectSerializer.cpp](/home/currentsuspect/Dev/Aestra/Source/Core/ProjectSerializer.cpp:1423)). Third-party plugin parameters are no-ops in the isolation path ([OutOfProcessPluginInstance.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/Plugin/OutOfProcessPluginInstance.cpp:466)). The UI has only a handful of automated contracts, and one currently fails.
+It is not yet a trustworthy production DAW either. A short one-shot—the basic material of hip-hop production—can currently render silence under the default release behavior ([issue #452](https://github.com/currentsuspect/Aestra/issues/452), [SamplerPlugin.cpp](../../AestraAudio/src/Plugin/SamplerPlugin.cpp#L359)). Loaded project objects can receive new runtime identities instead of preserving serialized ones ([ProjectSerializer.cpp](../../Source/Core/ProjectSerializer.cpp#L1423)). Third-party plugin parameters are no-ops in the isolation path ([OutOfProcessPluginInstance.cpp](../../AestraAudio/src/Plugin/OutOfProcessPluginInstance.cpp#L466)). The UI has only a handful of automated contracts, and one currently fails.
 
 The strongest honest description today is:
 
@@ -20,7 +20,7 @@ The strongest honest description today is:
 
 It is more interesting than a DAW clone because it is converging on a specific promise: professional dignity on weak hardware. The best product hiding inside it is not “free Ableton with AI” or “FL Studio with better routing.” It is a low-resource, pattern-and-sample-first workstation where making, arranging, listening, exporting, and reopening are one trustworthy loop.
 
-The July beta gameplan is the most mature product document in the repository. Its finish line—play, record, arrange, mix, export, reopen identically on 4GB hardware—is correct, and its refusal to fund the “moat stack” first is exactly right ([beta-gameplan-2026-07.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/beta-gameplan-2026-07.md:11)).
+The July beta gameplan is the most mature product document in the repository. Its finish line—play, record, arrange, mix, export, reopen identically on 4GB hardware—is correct, and its refusal to fund the “moat stack” first is exactly right ([beta-gameplan-2026-07.md](../product/beta-gameplan-2026-07.md#L11)).
 
 The danger is that the older vision documents still romanticize metaphors, cards, AI, routing animation, and ecosystem breadth more than the actual producer loop. If that older vision regains control, Aestra can spend two years becoming a sophisticated collection of promising subsystems without becoming a DAW people trust with songs.
 
@@ -36,7 +36,7 @@ The repository says Aestra is:
 - Monetized through first-party plugins, supporter benefits, packs, and eventually Muse.
 - Designed around borrowed concepts such as Arsenal, Audition, Takes, routing maps, and C|E|A.
 
-That is stated directly in the product pitch ([Product-Strategy.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Product-Strategy.md:9)), free-core contract ([Product-Strategy.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Product-Strategy.md:54)), and target-audience definition ([Product-Strategy.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Product-Strategy.md:101)).
+That is stated directly in the product pitch ([Product-Strategy.md](../product/Product-Strategy.md#L9)), free-core contract ([Product-Strategy.md](../product/Product-Strategy.md#L54)), and target-audience definition ([Product-Strategy.md](../product/Product-Strategy.md#L101)).
 
 ### Implicit vision
 
@@ -63,7 +63,7 @@ That is a much stronger foundation.
 
 The emotional promise is dignity.
 
-The repository’s best sentence is not about features: it is about the producer with real ideas and no margin for software that fights them ([philosophy.md](/home/currentsuspect/Dev/Aestra/philosophy.md:17)).
+The repository’s best sentence is not about features: it is about the producer with real ideas and no margin for software that fights them ([philosophy.md](../../philosophy.md#L17)).
 
 The product should make that person feel:
 
@@ -89,7 +89,7 @@ The technical vision is unusually clear:
 - Graceful behavior on weak CPUs and low memory.
 - Isolation of third-party plugins when they cannot be trusted.
 
-The philosophy makes realtime safety and performance obligations rather than optimization projects ([philosophy.md](/home/currentsuspect/Dev/Aestra/philosophy.md:69)).
+The philosophy makes realtime safety and performance obligations rather than optimization projects ([philosophy.md](../../philosophy.md#L69)).
 
 ### Business/ecosystem vision
 
@@ -143,7 +143,7 @@ Protect the custom stack, but demand that each custom subsystem earn its mainten
 
 Why it is strong:
 
-This is the product thesis with the greatest strategic and moral force. It is not merely “runs efficiently.” It defines who Aestra respects. The target appears explicitly in the philosophy and in the roadmap’s i5-3337U/4GB hardening requirement ([Roadmap-Product.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Roadmap-Product.md:92)).
+This is the product thesis with the greatest strategic and moral force. It is not merely “runs efficiently.” It defines who Aestra respects. The target appears explicitly in the philosophy and in the roadmap’s i5-3337U/4GB hardening requirement ([Roadmap-Product.md](../product/Roadmap-Product.md#L92)).
 
 What it unlocks:
 
@@ -161,7 +161,7 @@ Calling the Folio “spiritual” while testing only small sessions at 512 frame
 
 Why it is strong:
 
-The actual callback enters a realtime guard, consumes lock-free commands, uses preallocated state, and sanitizes non-finite output ([AudioEngine.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:624)). The current out-of-process plugin path also refuses to block the callback: it consumes ready output, publishes pending input, and passes through when the worker is late ([OutOfProcessPluginInstance.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/Plugin/OutOfProcessPluginInstance.cpp:397)).
+The actual callback enters a realtime guard, consumes lock-free commands, uses preallocated state, and sanitizes non-finite output ([AudioEngine.cpp](../../AestraAudio/src/Core/AudioEngine.cpp#L624)). The current out-of-process plugin path also refuses to block the callback: it consumes ready output, publishes pending input, and passes through when the worker is late ([OutOfProcessPluginInstance.cpp](../../AestraAudio/src/Plugin/OutOfProcessPluginInstance.cpp#L397)).
 
 What it unlocks:
 
@@ -173,7 +173,7 @@ What it unlocks:
 
 What would ruin it:
 
-Allowing “small” exceptions, or relying on comments rather than traps. There are still two realtime-thread guard concepts, and the Source-layer one is effectively detached from the real callback ([ARCHITECTURE_AUDIT_2026Q2.md](/home/currentsuspect/Dev/Aestra/AestraDocs/architecture/ARCHITECTURE_AUDIT_2026Q2.md:42)). Consolidate them.
+Allowing “small” exceptions, or relying on comments rather than traps. There are still two realtime-thread guard concepts, and the Source-layer one is effectively detached from the real callback ([ARCHITECTURE_AUDIT_2026Q2.md](../architecture/ARCHITECTURE_AUDIT_2026Q2.md#L42)). Consolidate them.
 
 ### Audio integrity tests
 
@@ -181,7 +181,7 @@ Why they are strong:
 
 This is the best engineering decision in the repository.
 
-The selected golden, purity, sample-rate, allocation, resampling, export-parity, project-fixture, and value-fidelity tests all passed locally in this review. The checked-in v1 fixture is explicitly treated as immutable user-history evidence rather than a generated convenience ([ProjectFixtureCorpusTest.cpp](/home/currentsuspect/Dev/Aestra/Tests/Integration/ProjectFixtureCorpusTest.cpp:3)).
+The selected golden, purity, sample-rate, allocation, resampling, export-parity, project-fixture, and value-fidelity tests all passed locally in this review. The checked-in v1 fixture is explicitly treated as immutable user-history evidence rather than a generated convenience ([ProjectFixtureCorpusTest.cpp](../../Tests/Integration/ProjectFixtureCorpusTest.cpp#L3)).
 
 What it unlocks:
 
@@ -199,7 +199,7 @@ Grading isolated paths “A” while the producer-level path remains broken. A s
 
 Why it is strong:
 
-The measured idle-frame work reduced idle CPU from roughly 30% of one core to about 2% on the target-class box ([UI render baseline](/home/currentsuspect/Dev/Aestra/labs/perf/2026-07-04-ui-render-baseline.md:58)). That is not cosmetic optimization; it is the thesis made real.
+The measured idle-frame work reduced idle CPU from roughly 30% of one core to about 2% on the target-class box ([UI render baseline](../../labs/perf/2026-07-04-ui-render-baseline.md#L58)). That is not cosmetic optimization; it is the thesis made real.
 
 The timeline FBO cache, browser cache, batched waveforms, minimap work, dirty-state wakeup, and small-text rasterization are structural advantages.
 
@@ -211,7 +211,7 @@ Continuing to optimize isolated draw passes without measuring full-session input
 
 Why it is strong:
 
-A complete free core aligns the mission, distribution, and product story. The commitment that free users can make a professional album without watermarks is clear and worth protecting ([Pricing.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Pricing.md:9)).
+A complete free core aligns the mission, distribution, and product story. The commitment that free users can make a professional album without watermarks is clear and worth protecting ([Pricing.md](../product/Pricing.md#L9)).
 
 What it unlocks:
 
@@ -222,7 +222,7 @@ What it unlocks:
 
 What would ruin it:
 
-Subtle degradation instead of explicit gates: inferior export, missing recovery, crippled routing, reduced track counts, essential plugins removed from Core, cloud lock-in, or paid performance improvements. The optional Campus watermark contradicts the stated policy and should be deleted from the plan ([Pricing.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Pricing.md:93)).
+Subtle degradation instead of explicit gates: inferior export, missing recovery, crippled routing, reduced track counts, essential plugins removed from Core, cloud lock-in, or paid performance improvements. The optional Campus watermark contradicts the stated policy and should be deleted from the plan ([Pricing.md](../product/Pricing.md#L93)).
 
 ### Aestra-native plugins
 
@@ -251,7 +251,7 @@ The strongest concepts are the ones that clarify ownership:
 - Takes make experimentation reversible.
 - Timeline modes can alter detail without moving the user to another product.
 
-Arsenal already has explicit route semantics and tested live/export behavior ([Arsenal-Architecture.md](/home/currentsuspect/Dev/Aestra/AestraDocs/architecture/Arsenal-Architecture.md:19)). Takes are currently whole-project snapshots with a bounded, validated manifest—simple and appropriate ([TakeManager.h](/home/currentsuspect/Dev/Aestra/Source/Core/TakeManager.h:8)).
+Arsenal already has explicit route semantics and tested live/export behavior ([Arsenal-Architecture.md](../architecture/Arsenal-Architecture.md#L19)). Takes are currently whole-project snapshots with a bounded, validated manifest—simple and appropriate ([TakeManager.h](../../Source/Core/TakeManager.h#L8)).
 
 What would ruin them:
 
@@ -261,22 +261,22 @@ Making the metaphors more important than the actions. `DraftOnly`, `LinkedRack`,
 
 | Risk | Evidence and failure mode | Early decision | Action |
 |---|---|---|---|
-| The core loop loses to the “moat stack” | The old strategy calls Muse the monetization engine, cards the social moat, and borrowed metaphors the UX moat ([Product-Strategy.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Product-Strategy.md:28)). Meanwhile a basic short one-shot can be silent. This is how a visionary product becomes an elaborate demo. | Define Aestra’s moat as low-resource trust plus producer flow. Metaphors are implementation tools, not strategy. | **Fix now.** The July gameplan already makes the right correction. |
-| AudioEngine remains a permanent god object | `AudioEngine.cpp` is 3,802 lines; its header is 1,158. Renderer and exporter have friend access “during hybrid engine transition” ([AudioEngine.h](/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioEngine.h:56)). Every new transport, metering, preview, export, recording, and routing feature is attracted here. | Establish a narrow render context and explicit subsystem owners. Migrate incrementally; do not rewrite. | **Start seam now; migrate later.** |
-| Two graph authorities become impossible to reason about | The engine keeps `m_rtGraphState`, `m_rtRenderer`, and two `m_graphStates` ([AudioEngine.h](/home/currentsuspect/Dev/Aestra/AestraAudio/include/Core/AudioEngine.h:842)). PDC writes both double-buffered state and a separate “golden” `m_trackState` because the realtime path reads a different authority ([AudioEngine.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:3533)). | Declare one authoritative compiled render snapshot. Any legacy mirror must have a deletion milestone and parity assertion. | **Fix architecture now, migration over several PRs.** |
-| Preview, Audition, sampler, timeline, and export become different audio products | Audition exits the main callback early, bypassing the normal master/meter path ([AudioEngine.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:743)). The clip prefilter explicitly excludes Preview, Sampler, and Audition ([clip-prefilter-lifecycle.md](/home/currentsuspect/Dev/Aestra/AestraDocs/clip-prefilter-lifecycle.md:127)). Export at a different rate does not rebuild the graph’s prefilter selection ([clip-prefilter-lifecycle.md](/home/currentsuspect/Dev/Aestra/AestraDocs/clip-prefilter-lifecycle.md:94)). | Write one source-rate/render-rate policy and a required parity matrix for every audible path. Differences must be named product behavior, not accidents. | **Fix now.** |
-| Plugin hosting is advertised before it is a host | The OOP path preserves RT safety, but parameter access is empty and editors return false. CLAP restart, callback, rescan, clear, and flush requests remain TODOs ([CLAPHost.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/Plugin/CLAPHost.cpp:31)). Synchronous creation can block UI consumers ([PluginManager.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/Plugin/PluginManager.cpp:161)). | Native plugins define beta. Third-party hosting is experimental until parameters, state, latency, callbacks, GUI policy, crash recovery, and a compatibility corpus pass. | **Defer headline support.** |
-| Project identity is not stable enough for Takes or future collaboration | Versioning, checksums, fixtures, and value fidelity are now strong. But patterns are recreated with new IDs during load ([ProjectSerializer.cpp](/home/currentsuspect/Dev/Aestra/Source/Core/ProjectSerializer.cpp:1429)). Assets store path and name, not content identity ([ProjectSerializer.cpp](/home/currentsuspect/Dev/Aestra/Source/Core/ProjectSerializer.cpp:697)). History has a 50-file count but no byte budget ([ProjectSerializer.cpp](/home/currentsuspect/Dev/Aestra/Source/Core/ProjectSerializer.cpp:618)). | Preserve stable object IDs, hash assets, define managed-versus-referenced asset policy, and cap recovery storage by bytes. | **Fix now.** |
+| The core loop loses to the “moat stack” | The old strategy calls Muse the monetization engine, cards the social moat, and borrowed metaphors the UX moat ([Product-Strategy.md](../product/Product-Strategy.md#L28)). Meanwhile a basic short one-shot can be silent. This is how a visionary product becomes an elaborate demo. | Define Aestra’s moat as low-resource trust plus producer flow. Metaphors are implementation tools, not strategy. | **Fix now.** The July gameplan already makes the right correction. |
+| AudioEngine remains a permanent god object | `AudioEngine.cpp` is 3,802 lines; its header is 1,158. Renderer and exporter have friend access “during hybrid engine transition” ([AudioEngine.h](../../AestraAudio/include/Core/AudioEngine.h#L56)). Every new transport, metering, preview, export, recording, and routing feature is attracted here. | Establish a narrow render context and explicit subsystem owners. Migrate incrementally; do not rewrite. | **Start seam now; migrate later.** |
+| Two graph authorities become impossible to reason about | The engine keeps `m_rtGraphState`, `m_rtRenderer`, and two `m_graphStates` ([AudioEngine.h](../../AestraAudio/include/Core/AudioEngine.h#L842)). PDC writes both double-buffered state and a separate “golden” `m_trackState` because the realtime path reads a different authority ([AudioEngine.cpp](../../AestraAudio/src/Core/AudioEngine.cpp#L3533)). | Declare one authoritative compiled render snapshot. Any legacy mirror must have a deletion milestone and parity assertion. | **Fix architecture now, migration over several PRs.** |
+| Preview, Audition, sampler, timeline, and export become different audio products | Audition exits the main callback early, bypassing the normal master/meter path ([AudioEngine.cpp](../../AestraAudio/src/Core/AudioEngine.cpp#L743)). The clip prefilter explicitly excludes Preview, Sampler, and Audition ([clip-prefilter-lifecycle.md](../clip-prefilter-lifecycle.md#L127)). Export at a different rate does not rebuild the graph’s prefilter selection ([clip-prefilter-lifecycle.md](../clip-prefilter-lifecycle.md#L94)). | Write one source-rate/render-rate policy and a required parity matrix for every audible path. Differences must be named product behavior, not accidents. | **Fix now.** |
+| Plugin hosting is advertised before it is a host | The OOP path preserves RT safety, but parameter access is empty and editors return false. CLAP restart, callback, rescan, clear, and flush requests remain TODOs ([CLAPHost.cpp](../../AestraAudio/src/Plugin/CLAPHost.cpp#L31)). Synchronous creation can block UI consumers ([PluginManager.cpp](../../AestraAudio/src/Plugin/PluginManager.cpp#L161)). | Native plugins define beta. Third-party hosting is experimental until parameters, state, latency, callbacks, GUI policy, crash recovery, and a compatibility corpus pass. | **Defer headline support.** |
+| Project identity is not stable enough for Takes or future collaboration | Versioning, checksums, fixtures, and value fidelity are now strong. But patterns are recreated with new IDs during load ([ProjectSerializer.cpp](../../Source/Core/ProjectSerializer.cpp#L1429)). Assets store path and name, not content identity ([ProjectSerializer.cpp](../../Source/Core/ProjectSerializer.cpp#L697)). History has a 50-file count but no byte budget ([ProjectSerializer.cpp](../../Source/Core/ProjectSerializer.cpp#L618)). | Preserve stable object IDs, hash assets, define managed-versus-referenced asset policy, and cap recovery storage by bytes. | **Fix now.** |
 | The custom UI becomes an untestable monolith | `TrackManagerUI.cpp` is 5,427 lines, `FileBrowser.cpp` 4,497, and `AestraContent.cpp` 3,878. They mix presentation, input, dispatch, filesystem work, and cross-panel coordination. | Extract view models and interaction controllers at proven seams. Require behavior tests before moves. | **Monitor, with targeted extraction now.** |
-| Design-system forks become permanent | The older system calls for neon, glass, gradients, glow, “no-line” surfaces, Space Grotesk and Inter ([DESIGN_SYSTEM.md](/home/currentsuspect/Dev/Aestra/AestraDocs/design/DESIGN_SYSTEM.md:1)). Current code uses neutral chrome, Geist/Manrope, visible structural separators, flat states, but still contains legacy cyan/magenta/lime and glass/glow tokens ([NUIThemeSystem.cpp](/home/currentsuspect/Dev/Aestra/AestraUI/Core/NUIThemeSystem.cpp:521)). | Delete one of the two visual directions. Current flat-neutral direction should win. | **Fix grammar now; migrate opportunistically.** |
-| “Dense” becomes “tiny” | The new type grammar begins at 9px and uses 10px as a workhorse ([ui-type-space-grammar.md](/home/currentsuspect/Dev/Aestra/AestraDocs/ui-type-space-grammar.md:17)). On an old 1366×768 TN panel, low contrast and 9px labels can become illegibility, not professionalism. | Treat 9px as nonessential annotation only. Test at 100%, 125%, and 150% DPI on the actual Folio-class display. | **Fix now.** |
+| Design-system forks become permanent | The older system calls for neon, glass, gradients, glow, “no-line” surfaces, Space Grotesk and Inter ([DESIGN_SYSTEM.md](../design/DESIGN_SYSTEM.md#L1)). Current code uses neutral chrome, Geist/Manrope, visible structural separators, flat states, but still contains legacy cyan/magenta/lime and glass/glow tokens ([NUIThemeSystem.cpp](../../AestraUI/Core/NUIThemeSystem.cpp#L521)). | Delete one of the two visual directions. Current flat-neutral direction should win. | **Fix grammar now; migrate opportunistically.** |
+| “Dense” becomes “tiny” | The new type grammar begins at 9px and uses 10px as a workhorse ([ui-type-space-grammar.md](../ui-type-space-grammar.md#L17)). On an old 1366×768 TN panel, low contrast and 9px labels can become illegibility, not professionalism. | Treat 9px as nonessential annotation only. Test at 100%, 125%, and 150% DPI on the actual Folio-class display. | **Fix now.** |
 | Prefilter quality spends the RAM budget | The current design keeps an additional filtered copy per source. Its own estimate gives roughly 184MB extra for one four-minute 96k stereo file and has no eviction policy. | Introduce a global cache budget, LRU/priority eviction, telemetry, and deterministic fallback. | **Fix before long-session beta.** |
-| Graph/routing cost scales multiplicatively | Arsenal’s per-track rendering resolves units for each timeline track ([Arsenal-Architecture.md](/home/currentsuspect/Dev/Aestra/AestraDocs/architecture/Arsenal-Architecture.md:61)). At small scale this is fine; at dozens of tracks and units it risks repeated scans, refcount churn, and complex invalidation. | Pre-bucket routed units in the immutable graph snapshot and make graph-build cost visible. | **Measure now; optimize when the scale test proves it.** |
-| Paired atomics hide lifetime bugs | The input callback and callback-data pointer are loaded independently with relaxed ordering ([AudioEngine.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/Core/AudioEngine.cpp:628)). The concurrency audit correctly flags that a new callback can observe stale context on weaker memory models ([AUDIT_Threading_Concurrency_2026Q2.md](/home/currentsuspect/Dev/Aestra/AestraDocs/architecture/AUDIT_Threading_Concurrency_2026Q2.md:190)). | Publish correlated callback state as one immutable object or with a defined release/acquire protocol. | **Fix now; small and high leverage.** |
-| Platform indecision doubles the release surface | The product roadmap says Linux primary ([Roadmap-Product.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Roadmap-Product.md:110)); the technical roadmap says Windows-only for beta ([roadmap.md](/home/currentsuspect/Dev/Aestra/docs/technical/roadmap.md:112)); README advertises both. | Choose one public quality bar and describe the other honestly. | **Founder decision now.** |
-| The economic model is aspirational arithmetic | The pricing document says `$129 > $50 × 12 months = $600`, which is mathematically false ([Pricing.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Pricing.md:85)). It also assumes monthly packs, quarterly plugins, Muse, cloud, physical fulfillment, and 5–8% conversion. | Rebuild economics from production cost, support load, payment fees, regional pricing, churn, and realistic release cadence. | **Fix business model before public promises.** |
-| Cards undermine belonging | Grey, silver, gold, founder scarcity, header badges, Discord roles, levels, and glows turn financial tier into visible social hierarchy, despite claims otherwise ([Pricing.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Pricing.md:113)). For a product aimed at economically constrained producers, this is especially dangerous. | Make identity about creative contribution, not payment tier. Keep supporter recognition opt-in and peripheral. | **Kill or radically reduce.** |
-| Repository truth continues to drift | The beta plan itself says issue labels are stale ([beta-gameplan-2026-07.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/beta-gameplan-2026-07.md:24)). Live issues still describe work already merged, while docs describe an old CI profile. | Add a weekly verify/close pass and assign one canonical beta-status document. | **Fix operating discipline now.** |
+| Graph/routing cost scales multiplicatively | Arsenal’s per-track rendering resolves units for each timeline track ([Arsenal-Architecture.md](../architecture/Arsenal-Architecture.md#L61)). At small scale this is fine; at dozens of tracks and units it risks repeated scans, refcount churn, and complex invalidation. | Pre-bucket routed units in the immutable graph snapshot and make graph-build cost visible. | **Measure now; optimize when the scale test proves it.** |
+| Paired atomics hide lifetime bugs | The input callback and callback-data pointer are loaded independently with relaxed ordering ([AudioEngine.cpp](../../AestraAudio/src/Core/AudioEngine.cpp#L628)). The concurrency audit correctly flags that a new callback can observe stale context on weaker memory models ([AUDIT_Threading_Concurrency_2026Q2.md](../architecture/AUDIT_Threading_Concurrency_2026Q2.md#L190)). | Publish correlated callback state as one immutable object or with a defined release/acquire protocol. | **Fix now; small and high leverage.** |
+| Platform indecision doubles the release surface | The product roadmap says Linux primary ([Roadmap-Product.md](../product/Roadmap-Product.md#L110)); the technical roadmap says Windows-only for beta ([roadmap.md](../../docs/technical/roadmap.md#L112)); README advertises both. | Choose one public quality bar and describe the other honestly. | **Founder decision now.** |
+| The economic model is aspirational arithmetic | The pricing document says `$129 > $50 × 12 months = $600`, which is mathematically false ([Pricing.md](../product/Pricing.md#L85)). It also assumes monthly packs, quarterly plugins, Muse, cloud, physical fulfillment, and 5–8% conversion. | Rebuild economics from production cost, support load, payment fees, regional pricing, churn, and realistic release cadence. | **Fix business model before public promises.** |
+| Cards undermine belonging | Grey, silver, gold, founder scarcity, header badges, Discord roles, levels, and glows turn financial tier into visible social hierarchy, despite claims otherwise ([Pricing.md](../product/Pricing.md#L113)). For a product aimed at economically constrained producers, this is especially dangerous. | Make identity about creative contribution, not payment tier. Keep supporter recognition opt-in and peripheral. | **Kill or radically reduce.** |
+| Repository truth continues to drift | The beta plan itself says issue labels are stale ([beta-gameplan-2026-07.md](../product/beta-gameplan-2026-07.md#L24)). Live issues still describe work already merged, while docs describe an old CI profile. | Add a weekly verify/close pass and assign one canonical beta-status document. | **Fix operating discipline now.** |
 
 ## 5. Product Identity Review
 
@@ -290,7 +290,7 @@ Do not compete with:
 - Logic on bundled content, orchestration, and macOS integration.
 - Bitwig on universal modulation and modular sound design.
 
-Those are decade-scale traps. The technical roadmap already recognizes most of them ([roadmap.md](/home/currentsuspect/Dev/Aestra/docs/technical/roadmap.md:257)).
+Those are decade-scale traps. The technical roadmap already recognizes most of them ([roadmap.md](../../docs/technical/roadmap.md#L257)).
 
 Also do not compete by saying Aestra has “better UX” in the abstract. That is not credible until ordinary producers finish songs faster in it.
 
@@ -355,17 +355,17 @@ No account prompt. No card. No Muse teaser. No routing animation presented as th
 
 ## 6. UI / Visual Design Review
 
-The available checked-in screenshot is from May ([interface snapshot](/home/currentsuspect/Dev/Aestra/AestraDocs/images/aestra_daw_interface.png)) and predates major July work, so it should not be treated as a fully current visual record. The current code and recent PRs show a substantial move toward neutral chrome, flatter controls, filled waveforms, improved track identity, and clearer routing.
+The available checked-in screenshot is from May ([interface snapshot](../images/aestra_daw_interface.png)) and predates major July work, so it should not be treated as a fully current visual record. The current code and recent PRs show a substantial move toward neutral chrome, flatter controls, filled waveforms, improved track identity, and clearer routing.
 
 ### Density
 
 The direction is appropriate for a DAW. Aestra should feel like an instrument with persistent context, not a responsive web dashboard.
 
-The problem is confusing density with minimum size. Nine-pixel type, 20px controls, 46px lanes, a 300px browser, 236px track controls, and a 56px transport can fight each other on 1366×768 ([NUIThemeSystem.h](/home/currentsuspect/Dev/Aestra/AestraUI/Core/NUIThemeSystem.h:205)). The shell must be measured at the actual target resolution, not designed on a larger developer display and scaled down.
+The problem is confusing density with minimum size. Nine-pixel type, 20px controls, 46px lanes, a 300px browser, 236px track controls, and a 56px transport can fight each other on 1366×768 ([NUIThemeSystem.h](../../AestraUI/Core/NUIThemeSystem.h#L205)). The shell must be measured at the actual target resolution, not designed on a larger developer display and scaled down.
 
 ### Typography
 
-The current Geist-first rendering direction is better than the stale Space Grotesk/Inter plan ([NUIRendererGL.cpp](/home/currentsuspect/Dev/Aestra/AestraUI/Graphics/OpenGL/NUIRendererGL.cpp:394)). Geist is restrained and technical without becoming sci-fi.
+The current Geist-first rendering direction is better than the stale Space Grotesk/Inter plan ([NUIRendererGL.cpp](../../AestraUI/Graphics/OpenGL/NUIRendererGL.cpp#L394)). Geist is restrained and technical without becoming sci-fi.
 
 Recommendations:
 
@@ -431,7 +431,7 @@ Transport should be the calmest, most invariant part of the application.
 
 ### Browser
 
-The browser is strategically important because sample discovery is the front door for the target producer. Its FBO caching work is real—the pre-cache baseline showed up to 11.46ms spent in browser rendering during active input ([UI render baseline](/home/currentsuspect/Dev/Aestra/labs/perf/2026-07-04-ui-render-baseline.md:46)).
+The browser is strategically important because sample discovery is the front door for the target producer. Its FBO caching work is real—the pre-cache baseline showed up to 11.46ms spent in browser rendering during active input ([UI render baseline](../../labs/perf/2026-07-04-ui-render-baseline.md#L46)).
 
 Product rules:
 
@@ -501,7 +501,7 @@ Aestra needs warmer musical identity through track colors, waveforms, arrangemen
 
 ### What is genuinely strong
 
-The main full-mix export now calls the live `processBlock`, explicitly disables monitoring-only preview ducking, and preserves master processing ([AudioExporter.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/IO/AudioExporter.cpp:201)). That is the correct parity architecture.
+The main full-mix export now calls the live `processBlock`, explicitly disables monitoring-only preview ducking, and preserves master processing ([AudioExporter.cpp](../../AestraAudio/src/IO/AudioExporter.cpp#L201)). That is the correct parity architecture.
 
 The output path:
 
@@ -510,7 +510,7 @@ The output path:
 - Measures peaks and LUFS.
 - Maintains unclamped float output when the limiter is disabled.
 - Measures true peak during export.
-- Applies deterministic TPDF dither for PCM16/24 export ([AudioExporter.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/IO/AudioExporter.cpp:449)).
+- Applies deterministic TPDF dither for PCM16/24 export ([AudioExporter.cpp](../../AestraAudio/src/IO/AudioExporter.cpp#L449)).
 
 The resampling work is evidence-driven and now gives the main timeline path an off-RT Kaiser prefilter with strong measured alias rejection. The targeted trust tests all passed in this review.
 
@@ -536,13 +536,13 @@ A producer deciding whether to use a sample should not hear a materially differe
 
 #### Sampler
 
-The sampler uses Sinc64Turbo and velocity-squared gain ([SamplerPlugin.cpp](/home/currentsuspect/Dev/Aestra/AestraAudio/src/Plugin/SamplerPlugin.cpp:399)). Its short-one-shot release bug is a P0 product failure because hats, clicks, rims, and short kicks are central to the first user.
+The sampler uses Sinc64Turbo and velocity-squared gain ([SamplerPlugin.cpp](../../AestraAudio/src/Plugin/SamplerPlugin.cpp#L399)). Its short-one-shot release bug is a P0 product failure because hats, clicks, rims, and short kicks are central to the first user.
 
 The velocity curve also needs an explicit musical policy and regression—not an incidental square.
 
 #### Full export versus isolated bounce
 
-Full export uses the complete live path. Isolated-track bounce deliberately uses `AudioRenderer` without the master stage ([AudioExporter.h](/home/currentsuspect/Dev/Aestra/AestraAudio/include/IO/AudioExporter.h:16)).
+Full export uses the complete live path. Isolated-track bounce deliberately uses `AudioRenderer` without the master stage ([AudioExporter.h](../../AestraAudio/include/IO/AudioExporter.h#L16)).
 
 That is acceptable only if the product calls it “stems/pre-master track bounce.” It is not acceptable if users interpret it as “what I heard when soloing this track.”
 
@@ -583,7 +583,7 @@ The honest bar is:
 
 ### Durable parts
 
-The top-level module shape is correct: Core → platform/audio/UI → application. The architecture audit reached the same conclusion ([ARCHITECTURE_AUDIT_2026Q2.md](/home/currentsuspect/Dev/Aestra/AestraDocs/architecture/ARCHITECTURE_AUDIT_2026Q2.md:11)).
+The top-level module shape is correct: Core → platform/audio/UI → application. The architecture audit reached the same conclusion ([ARCHITECTURE_AUDIT_2026Q2.md](../architecture/ARCHITECTURE_AUDIT_2026Q2.md#L11)).
 
 Other durable choices:
 
@@ -599,7 +599,7 @@ Other durable choices:
 - OOP plugin isolation as a long-term host boundary.
 - Command-based undo architecture.
 
-The July project work is especially meaningful: current files are schema v2 with v1 support, a migration path, checksum verification, and an immutable v1 fixture corpus ([ProjectSerializer.cpp](/home/currentsuspect/Dev/Aestra/Source/Core/ProjectSerializer.cpp:35), [ProjectMigrations.h](/home/currentsuspect/Dev/Aestra/Source/Core/ProjectMigrations.h:39)).
+The July project work is especially meaningful: current files are schema v2 with v1 support, a migration path, checksum verification, and an immutable v1 fixture corpus ([ProjectSerializer.cpp](../../Source/Core/ProjectSerializer.cpp#L35), [ProjectMigrations.h](../../Source/Core/ProjectMigrations.h#L39)).
 
 ### Fragile parts
 
@@ -636,7 +636,7 @@ Carve interaction controllers and view models around current behavior. Avoid abs
 
 #### UI module boundary
 
-AestraUI’s CMake target includes Source and AestraAudio application paths privately ([AestraUI/CMakeLists.txt](/home/currentsuspect/Dev/Aestra/AestraUI/CMakeLists.txt:191)). Even where unused, this weakens the boundary. UI-core components should depend on small data/view interfaces rather than broad application include visibility.
+AestraUI’s CMake target includes Source and AestraAudio application paths privately ([AestraUI/CMakeLists.txt](../../AestraUI/CMakeLists.txt#L191)). Even where unused, this weakens the boundary. UI-core components should depend on small data/view interfaces rather than broad application include visibility.
 
 #### Takes
 
@@ -670,7 +670,7 @@ The timeline FBO and browser-cache work address measured hotspots rather than sp
 
 #### Realtime scheduling visibility
 
-On the target box, active realtime scheduling reduced UI-stress callback WCET to 2.55ms against a 10.67ms budget, with zero observed xruns ([rt-audio-scheduling-spec.md](/home/currentsuspect/Dev/Aestra/labs/perf/rt-audio-scheduling-spec.md:43)). More importantly, degraded scheduling is visible rather than silently presented as success.
+On the target box, active realtime scheduling reduced UI-stress callback WCET to 2.55ms against a 10.67ms budget, with zero observed xruns ([rt-audio-scheduling-spec.md](../../labs/perf/rt-audio-scheduling-spec.md#L43)). More importantly, degraded scheduling is visible rather than silently presented as success.
 
 #### Worker-thread sample preparation
 
@@ -803,15 +803,15 @@ Protect these as permanent gates:
 
 ### CI review
 
-The main CI runs headless build/tests on Linux, Windows, and macOS and now has a separate Linux application compile lane ([ci.yml](/home/currentsuspect/Dev/Aestra/.github/workflows/ci.yml:18), [ci.yml](/home/currentsuspect/Dev/Aestra/.github/workflows/ci.yml:73)). That is strong.
+The main CI runs headless build/tests on Linux, Windows, and macOS and now has a separate Linux application compile lane ([ci.yml](../../.github/workflows/ci.yml#L18), [ci.yml](../../.github/workflows/ci.yml#L73)). That is strong.
 
 Problems:
 
 - Formatting is advisory.
 - clang-tidy is advisory.
 - ASan/UBSan, TSan, and LSan are advisory.
-- Nightly is sanitizer-oriented but not performance-oriented ([nightly.yml](/home/currentsuspect/Dev/Aestra/.github/workflows/nightly.yml:12)).
-- The testing documentation still claims a narrow six-test default CI gate, contradicting the actual workflow ([testing_ci.md](/home/currentsuspect/Dev/Aestra/docs/technical/testing_ci.md:23)).
+- Nightly is sanitizer-oriented but not performance-oriented ([nightly.yml](../../.github/workflows/nightly.yml#L12)).
+- The testing documentation still claims a narrow six-test default CI gate, contradicting the actual workflow ([testing_ci.md](../../docs/technical/testing_ci.md#L23)).
 - UI behavior is not a CI contract beyond a few isolated tests.
 
 ### What to measure every PR
@@ -906,7 +906,7 @@ Premium plugins may be enough for the first stage. They are not automatically a 
 
 ### Muse
 
-The Muse spec contains good constraints: local inference, no automatic application, undoable actions, dismissible suggestions, and no cloud dependency ([Muse-AI-Spec.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Muse-AI-Spec.md:133)).
+The Muse spec contains good constraints: local inference, no automatic application, undoable actions, dismissible suggestions, and no cloud dependency ([Muse-AI-Spec.md](../product/Muse-AI-Spec.md#L133)).
 
 Muse should be:
 
@@ -929,7 +929,7 @@ Muse should not be:
 - Trained on user work by default.
 - A modal chatbot that competes with the DAW.
 
-The current spec calls Muse the primary subscription justification ([Muse-AI-Spec.md](/home/currentsuspect/Dev/Aestra/AestraDocs/product/Muse-AI-Spec.md:190)). The beta gameplan correctly reverses that. Muse must be upside.
+The current spec calls Muse the primary subscription justification ([Muse-AI-Spec.md](../product/Muse-AI-Spec.md#L190)). The beta gameplan correctly reverses that. Muse must be upside.
 
 ### Community as a technical feature
 
