@@ -149,6 +149,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/AestraDriftEditor.cpp
     Widgets/AestraLimitEditor.h
     Widgets/AestraLimitEditor.cpp
+    Widgets/AestraSatEditor.h
+    Widgets/AestraSatEditor.cpp
 )
 
 if(AESTRAUI_ENABLE_PREMIUM_EDITORS)

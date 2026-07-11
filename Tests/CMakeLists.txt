@@ -1198,6 +1198,17 @@ target_include_directories(AestraLimitTest PRIVATE
 add_test(NAME AestraLimitTest COMMAND AestraLimitTest)
 set_tests_properties(AestraLimitTest PROPERTIES LABELS "audio;plugins;limiter")
 
+# Aestra Sat Test
+add_executable(AestraSatTest AestraAudio/AestraSatTest.cpp)
+target_link_libraries(AestraSatTest PRIVATE AestraAudio)
+target_include_directories(AestraSatTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraSatTest COMMAND AestraSatTest)
+set_tests_properties(AestraSatTest PROPERTIES LABELS "audio;plugins;saturation")
+
 # =============================================================================
 # Audio Quality Tests (S-Tier validation suite, Spec §3, §8, §15)
 # =============================================================================
