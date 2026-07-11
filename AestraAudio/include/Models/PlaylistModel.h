@@ -447,6 +447,11 @@ public:
                 laneInfo.clips.push_back(clipInfo);
             }
 
+            // Automation rides the same snapshot as clips — this copy is what
+            // connects drawn/loaded curves to the render graph. It was missing
+            // entirely, so automation persisted and displayed but never played.
+            laneInfo.automationCurves = lane.automationCurves;
+
             snapshot->lanes.push_back(std::move(laneInfo));
         }
 

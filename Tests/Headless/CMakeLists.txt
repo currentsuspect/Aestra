@@ -139,6 +139,26 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# Automation Playback Test — end-to-end regression: lane automation curves
+# must reach the engine (snapshot copy), evaluate in the beat domain across
+# tempo changes, and follow UI point drags. Core-linked, every CI lane.
+# No EXISTS guard: a missing committed test source must fail configure.
+if(TARGET AestraAudioCore)
+    add_executable(AutomationPlaybackTest
+        AutomationPlaybackTest.cpp
+    )
+    target_link_libraries(AutomationPlaybackTest PRIVATE AestraAudioCore)
+    target_include_directories(AutomationPlaybackTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AutomationPlaybackTest COMMAND AutomationPlaybackTest)
+    set_tests_properties(AutomationPlaybackTest PROPERTIES
+        LABELS "headless;automation;audio;engine;regression"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # PDC v2 P1 — scaffolding tests (see AestraDocs/PDC-v2-Design.md §12)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     add_executable(PDCFlatChainTest PDCFlatChainTest.cpp)
