@@ -360,6 +360,17 @@ public:
         return m_liveMidiQueue.push(LiveMidiQueue::Event{unitId, status, data1, data2});
     }
 
+    /**
+     * @brief Post a live MIDI event from the hardware MIDI input thread.
+     *
+     * Same contract as postLiveMidiEvent, but on a separate SPSC queue whose
+     * single producer is the hardware MIDI callback thread (RtMidi). Both
+     * queues are drained together on the audio thread each block.
+     */
+    bool postHardwareMidiEvent(uint64_t unitId, uint8_t status, uint8_t data1, uint8_t data2) noexcept {
+        return m_hardwareMidiQueue.push(LiveMidiQueue::Event{unitId, status, data1, data2});
+    }
+
     /** @brief Enable or disable Arsenal pattern playback mode. */
     void setPatternPlaybackMode(bool enabled, double lengthBeats) {
         m_patternPlaybackMode.store(enabled, std::memory_order_relaxed);
@@ -665,9 +676,11 @@ private:
                                    uint32_t numFrames) noexcept;
     void drainLiveMidi(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount) noexcept;
 
-    // Live note input (computer keyboard today, hardware MIDI later). One
-    // SPSC queue per producer thread; drained on the audio thread each block.
+    // Live note input. One SPSC queue per producer thread — UI keyboard and
+    // the hardware MIDI callback thread — both drained on the audio thread
+    // each block by drainLiveMidi().
     LiveMidiQueue m_liveMidiQueue;
+    LiveMidiQueue m_hardwareMidiQueue;
 
     // Pre-allocated buffers for Arsenal unit processing (RT-safe)
     std::vector<double> m_unitBufferD;         // Stereo interleaved unit output
