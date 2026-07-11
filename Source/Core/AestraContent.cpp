@@ -28,6 +28,7 @@
 
 // AestraUI includes
 #include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Base/NUITextInput.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
 #include "../AestraUI/Widgets/TrackColorPalette.h"
@@ -142,6 +143,7 @@ std::vector<float> buildEditorWaveform(const std::vector<float>& samples, uint32
 // =============================================================================
 
 AestraContent::~AestraContent() {
+    m_musicalTyping.releaseAllNotes();
     if (m_audioEngine) {
         m_audioEngine->setPreviewEngine(nullptr);
     }
@@ -170,7 +172,10 @@ AestraContent::~AestraContent() {
     }
 }
 
-AestraContent::AestraContent() {
+AestraContent::AestraContent()
+    : m_musicalTyping([this](uint64_t unitId, uint8_t status, uint8_t data1, uint8_t data2) {
+        return m_audioEngine && m_audioEngine->postLiveMidiEvent(unitId, status, data1, data2);
+    }) {
     // Create layers
     m_workspaceLayer = std::make_shared<AestraUI::NUIComponent>();
     m_workspaceLayer->setId("WorkspaceLayer");
@@ -961,6 +966,7 @@ AestraContent::AestraContent() {
         if (m_midiInput) {
             m_midiInput->setTargetUnit(unitId);
         }
+        m_musicalTyping.setTargetUnit(unitId);
     });
     m_sequencerPanel->setOnPatternEdited([this](PatternID patternId) {
         if (m_patternBrowser) {
@@ -2919,11 +2925,13 @@ void AestraContent::setMidiInput(Aestra::Audio::MidiInputService* midiInput) {
 }
 
 void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
+    m_musicalTyping.releaseAllNotes();
     // Detach preview from old engine before overwriting m_audioEngine
     if (m_audioEngine && m_previewEngine) {
         m_audioEngine->setPreviewEngine(nullptr);
     }
     m_audioEngine = engine;
+    m_musicalTyping.setTargetUnit(m_sequencerPanel ? m_sequencerPanel->getSelectedUnitId() : 0);
     Aestra::Audio::CommandRegistry::setAudioEngine(engine);
     if (m_audioEngine && m_previewEngine) {
         m_audioEngine->setPreviewEngine(m_previewEngine.get());
@@ -3741,6 +3749,14 @@ void AestraContent::toggleHistoryPanel() {
 
 // Global Shortcuts
 bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
+    // A note release must win even if focus moved after its note-on; otherwise
+    // an editable field can consume the key-up and leave a stuck voice.
+    if (event.released && m_musicalTyping.handleKeyEvent(event)) {
+        if (m_transportBar) {
+            m_transportBar->setMusicalTypingStatus(m_musicalTyping.isEnabled(), m_musicalTyping.displayOctave());
+        }
+        return true;
+    }
     if (event.keyCode == AestraUI::NUIKeyCode::Space && event.released) {
         m_spaceShortcutLatched = false;
         return true;
@@ -3852,7 +3868,22 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         }
     }
 
+    // Standard text inputs own letter keys. Most dispatch paths already give
+    // focused widgets first refusal; this explicit guard also protects the
+    // root-component path, which routes global shortcuts before focus.
+    if (dynamic_cast<AestraUI::NUITextInput*>(AestraUI::NUIComponent::getFocusedComponent()) == nullptr &&
+        m_musicalTyping.handleKeyEvent(event)) {
+        if (m_transportBar) {
+            m_transportBar->setMusicalTypingStatus(m_musicalTyping.isEnabled(), m_musicalTyping.displayOctave());
+        }
+        return true;
+    }
+
     return false;
+}
+
+void AestraContent::releaseMusicalTypingNotes() {
+    m_musicalTyping.releaseAllNotes();
 }
 
 Aestra::Audio::CommandResult AestraContent::executeMuseCommand(const std::string& input) {

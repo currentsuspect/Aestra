@@ -13,8 +13,11 @@ bool AestraRootComponent::onKeyEvent(const NUIKeyEvent& event) {
         return true;
     }
 
-    // 1. Global app-level shortcuts (Ctrl+Z, Ctrl+Y, Space) — BEFORE focused component
-    if (m_rootContent) {
+    // 1. Global app-level shortcuts and key releases go first. Releases must
+    // reach musical typing even if focus moved after note-on.
+    const bool globalFirst = event.released || event.keyCode == NUIKeyCode::Space ||
+        (event.modifiers & NUIModifiers::Ctrl);
+    if (globalFirst && m_rootContent) {
         if (m_rootContent->onKeyEvent(event)) {
             return true;
         }
@@ -27,7 +30,12 @@ bool AestraRootComponent::onKeyEvent(const NUIKeyEvent& event) {
         }
     }
 
-    // 3. Fallback: F12 HUD toggle
+    // 3. Non-global fallback after the focused control declined the key.
+    if (!globalFirst && m_rootContent && m_rootContent->onKeyEvent(event)) {
+        return true;
+    }
+
+    // 4. Fallback: F12 HUD toggle
     if (event.pressed) {
         if (event.keyCode == NUIKeyCode::F12) {
             if (m_rootUnifiedHUD) {

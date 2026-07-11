@@ -36,6 +36,7 @@ namespace {
         if (key == static_cast<int>(KC::Tab)) return NUIKC::Tab;
         if (key == static_cast<int>(KC::Backspace)) return NUIKC::Backspace;
         if (key == static_cast<int>(KC::Delete)) return NUIKC::Delete;
+        if (key == static_cast<int>(KC::CapsLock)) return NUIKC::CapsLock;
 
         // Arrow keys
         if (key == static_cast<int>(KC::Left)) return NUIKC::Left;
@@ -353,7 +354,7 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.released = !pressed;
             event.modifiers = m_keyModifiers;
 
-            if (event.keyCode == AestraUI::NUIKeyCode::Space) {
+            if (event.keyCode == AestraUI::NUIKeyCode::Space || event.released) {
                 if (m_content->onKeyEvent(event))
                     return;
             }
@@ -411,6 +412,10 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     });
 
     m_window->setFocusCallback([this](bool focused) {
+         m_windowFocused = focused;
+         if (!focused && m_content) {
+             m_content->releaseMusicalTypingNotes();
+         }
          if (m_useCustomCursor && m_window) {
              m_window->setCursorVisible(!focused); // Hide if focused (drawn manually)
          }
