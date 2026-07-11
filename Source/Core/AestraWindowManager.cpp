@@ -354,7 +354,13 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.released = !pressed;
             event.modifiers = m_keyModifiers;
 
-            if (event.keyCode == AestraUI::NUIKeyCode::Space || event.released) {
+            // Global-first bucket mirrors AestraRootComponent: releases (note
+            // latches), Space, and Ctrl-chords (app shortcuts like Ctrl+Z must
+            // not be swallowed by a focused widget). Content only claims the
+            // undo/redo/history chords, so clipboard combos still reach
+            // focused text inputs.
+            if (event.keyCode == AestraUI::NUIKeyCode::Space || event.released ||
+                (event.modifiers & AestraUI::NUIModifiers::Ctrl)) {
                 if (m_content->onKeyEvent(event))
                     return;
             }

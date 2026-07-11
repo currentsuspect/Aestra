@@ -50,7 +50,7 @@ private:
 
     static int semitoneForKey(AestraUI::NUIKeyCode keyCode);
     bool post(uint64_t unitId, uint8_t status, uint8_t note, uint8_t velocity);
-    bool shiftOctave(int semitones);
+    void shiftOctave(int semitones);
 
     EventSink m_sink;
     std::unordered_map<int, ActiveNote> m_activeNotes;

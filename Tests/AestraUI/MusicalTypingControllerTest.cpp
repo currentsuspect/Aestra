@@ -94,6 +94,15 @@ int main() {
     }
     require(typing.baseMidiNote() == 96, "octave shift must clamp below MIDI 127 for upper row");
 
+    for (int i = 0; i < 20; ++i) {
+        typing.handleKeyEvent(press(AestraUI::NUIKeyCode::Down));
+        typing.handleKeyEvent(release(AestraUI::NUIKeyCode::Down));
+    }
+    require(typing.baseMidiNote() == 0, "octave shift must clamp at MIDI 0 for the lower row");
+    typing.handleKeyEvent(press(AestraUI::NUIKeyCode::Z));
+    require(events.back().status == 0x90 && events.back().note == 0, "lowest octave must still play valid notes");
+    typing.handleKeyEvent(release(AestraUI::NUIKeyCode::Z));
+
     std::cout << "[PASS] MusicalTypingControllerTest\n";
     return 0;
 }
