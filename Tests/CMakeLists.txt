@@ -1527,18 +1527,18 @@ else()
     message(STATUS "NUITextInputLayoutTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/MusicalTypingControllerTest.cpp")
-    add_executable(MusicalTypingControllerTest
-        AestraUI/MusicalTypingControllerTest.cpp
-        ${CMAKE_SOURCE_DIR}/Source/Core/MusicalTypingController.cpp
-    )
-    target_include_directories(MusicalTypingControllerTest PRIVATE
-        ${CMAKE_SOURCE_DIR}/Source/Core
-        ${CMAKE_SOURCE_DIR}/AestraUI/Core
-    )
-    add_test(NAME MusicalTypingControllerTest COMMAND MusicalTypingControllerTest)
-    set_tests_properties(MusicalTypingControllerTest PROPERTIES LABELS "ui;midi;regression")
-endif()
+# No EXISTS guard: a missing committed test source must fail configure, not
+# silently drop coverage (repo policy since #454/#463).
+add_executable(MusicalTypingControllerTest
+    AestraUI/MusicalTypingControllerTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/MusicalTypingController.cpp
+)
+target_include_directories(MusicalTypingControllerTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Core
+    ${CMAKE_SOURCE_DIR}/AestraUI/Core
+)
+add_test(NAME MusicalTypingControllerTest COMMAND MusicalTypingControllerTest)
+set_tests_properties(MusicalTypingControllerTest PROPERTIES LABELS "ui;midi;regression")
 
 # =============================================================================
 # Commands Tests (Phase 2 - Undo/Redo System)
