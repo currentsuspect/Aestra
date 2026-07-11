@@ -119,6 +119,26 @@ if(TARGET AestraAudioCore)
     )
 endif()
 
+# Sampler One-Shot Envelope Test — regression for #452: one-shot samples
+# shorter than the configured release must be audible with the DEFAULT
+# envelope. Drives SamplerPlugin directly; core-linked, every CI lane.
+# No EXISTS guard: a missing committed test source must fail configure.
+if(TARGET AestraAudioCore)
+    add_executable(SamplerOneShotEnvelopeTest
+        SamplerOneShotEnvelopeTest.cpp
+    )
+    target_link_libraries(SamplerOneShotEnvelopeTest PRIVATE AestraAudioCore)
+    target_include_directories(SamplerOneShotEnvelopeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerOneShotEnvelopeTest COMMAND SamplerOneShotEnvelopeTest)
+    set_tests_properties(SamplerOneShotEnvelopeTest PROPERTIES
+        LABELS "headless;sampler;audio;dsp;regression"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # PDC v2 P1 — scaffolding tests (see AestraDocs/PDC-v2-Design.md §12)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     add_executable(PDCFlatChainTest PDCFlatChainTest.cpp)
