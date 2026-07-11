@@ -24,6 +24,7 @@
 #include "Plugin/PluginHost.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -112,6 +113,74 @@ private:
     bool m_active{false};
 };
 
+// Gain effect whose single parameter (id 0) scales the signal. Parameter
+// storage is atomic, mirroring the internal-plugin contract that makes
+// per-block automation writes RT-safe. The reported format is configurable so
+// the test can prove non-Internal formats are NOT driven by Custom curves.
+class GainParamPlugin : public IPluginInstance {
+public:
+    explicit GainParamPlugin(PluginFormat format) {
+        m_info.id = "aestra.test.automation_gain";
+        m_info.name = "AutomationGain";
+        m_info.vendor = "Aestra Test";
+        m_info.version = "1.0";
+        m_info.category = "Test";
+        m_info.format = format;
+        m_info.type = PluginType::Effect;
+        m_info.numAudioInputs = 2;
+        m_info.numAudioOutputs = 2;
+    }
+
+    bool initialize(double, uint32_t) override { return true; }
+    void shutdown() override {}
+    void activate() override { m_active = true; }
+    void deactivate() override { m_active = false; }
+    bool isActive() const override { return m_active; }
+
+    void process(const float* const* /*inputs*/, float** outputs, uint32_t /*numInputChannels*/,
+                 uint32_t numOutputChannels, uint32_t numFrames, const MidiBuffer* = nullptr,
+                 MidiBuffer* = nullptr) override {
+        if (!outputs || numOutputChannels < 2 || !outputs[0] || !outputs[1]) {
+            return;
+        }
+        const float g = m_gain.load(std::memory_order_relaxed);
+        for (uint32_t k = 0; k < numFrames; ++k) {
+            outputs[0][k] *= g;
+            outputs[1][k] *= g;
+        }
+    }
+
+    std::vector<PluginParameter> getParameters() const override { return {{0, "Gain", "Gn", "", 1.0f, 0.0f, 1.0f}}; }
+    uint32_t getParameterCount() const override { return 1; }
+    float getParameter(uint32_t id) const override { return id == 0 ? m_gain.load(std::memory_order_relaxed) : 0.0f; }
+    void setParameter(uint32_t id, float value) override {
+        if (id == 0) {
+            m_gain.store(value, std::memory_order_relaxed);
+        }
+    }
+    std::string getParameterDisplay(uint32_t) const override { return {}; }
+    std::vector<uint8_t> saveState() const override { return {}; }
+    bool loadState(const std::vector<uint8_t>&) override { return true; }
+    bool hasEditor() const override { return false; }
+    bool openEditor(void*) override { return false; }
+    void closeEditor() override {}
+    bool isEditorOpen() const override { return false; }
+    std::pair<int, int> getEditorSize() const override { return {0, 0}; }
+    bool resizeEditor(int, int) override { return false; }
+    const PluginInfo& getInfo() const override { return m_info; }
+    uint32_t getLatencySamples() const override { return 0; }
+    uint32_t getTailSamples() const override { return 0; }
+    WatchdogStats getWatchdogStats() const override { return {}; }
+    void resetWatchdog() override {}
+    bool isBypassedByWatchdog() const override { return false; }
+    bool isCrashed() const override { return false; }
+
+private:
+    PluginInfo m_info{};
+    std::atomic<float> m_gain{1.0f};
+    bool m_active{false};
+};
+
 struct Rendered {
     std::vector<float> left;
     std::vector<float> right;
@@ -120,13 +189,18 @@ struct Rendered {
 
 // Builds a one-track project whose lane carries `curves`, sets the playlist
 // BPM to `renderBpm`, and renders `beats` beats of transport playback.
-Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double renderBpm, double beats) {
+// An optional extra effect is inserted at chain slot 1 (after the generator).
+Rendered renderWithAutomation(const std::vector<AutomationCurve>& curves, double renderBpm, double beats,
+                              std::shared_ptr<IPluginInstance> slot1Fx = nullptr) {
     auto trackManager = std::make_shared<TrackManager>();
     trackManager->setOutputSampleRate(static_cast<double>(kSampleRate));
 
     MixerChannel* src = trackManager->addChannel("src");
     require(src != nullptr, "addChannel failed");
     require(src->getEffectChain().insertPlugin(0, std::make_shared<SineGeneratorPlugin>()), "generator insert failed");
+    if (slot1Fx) {
+        require(src->getEffectChain().insertPlugin(1, std::move(slot1Fx)), "slot-1 effect insert failed");
+    }
 
     auto& playlist = trackManager->getPlaylistModel();
     playlist.setProjectSampleRate(static_cast<double>(kSampleRate));
@@ -266,6 +340,47 @@ int main() {
         require(rightEarly < 0.05 * leftEarly, "pan: hard-left region leaks right signal");
         require(rightLate > 1.0e-3, "pan: hard-right region has no right signal");
         require(leftLate < 0.05 * rightLate, "pan: hard-right region leaks left signal");
+    }
+
+    // ---------------- 5. Plugin-parameter automation (Custom target): a curve
+    // addressed at {effect slot 1, param 0} drives an Internal-format gain
+    // plugin — output fades even though volume/pan automation is absent.
+    {
+        AutomationCurve param("Gain", AutomationTarget::Custom);
+        param.setDefaultValue(1.0f);
+        param.effectSlot = 1;
+        param.paramId = 0;
+        param.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
+        param.addPoint(2.0, 1.0f, kSpbAt120, 0.5f);
+        param.addPoint(4.0, 0.0f, kSpbAt120, 0.5f);
+        const auto r =
+            renderWithAutomation({param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::Internal));
+        require(!r.hasInvalid, "param: output contains NaN/Inf");
+        const double loud = rmsWindow(r.left, 0.5, 1.5, 120.0);
+        const double mid = rmsWindow(r.left, 2.9, 3.1, 120.0);
+        const double silent = rmsWindow(r.left, 4.5, 5.5, 120.0);
+        std::cout << "param automation: loud=" << loud << " mid=" << mid << " tail=" << silent << "\n";
+        require(loud > 1.0e-3, "param automation region is silent");
+        require(mid > 0.35 * loud && mid < 0.65 * loud, "param automation midpoint is not ~half gain");
+        require(silent < 0.02 * loud, "param automation did not drive the plugin parameter");
+    }
+
+    // ---------------- 6. Third-party guard: the identical curve must NOT drive
+    // a non-Internal plugin (no host param queue yet — silently skipping is the
+    // contract until #467's third-party slice).
+    {
+        AutomationCurve param("Gain", AutomationTarget::Custom);
+        param.setDefaultValue(1.0f);
+        param.effectSlot = 1;
+        param.paramId = 0;
+        param.addPoint(0.0, 1.0f, kSpbAt120, 0.5f);
+        param.addPoint(4.0, 0.0f, kSpbAt120, 0.5f);
+        const auto r = renderWithAutomation({param}, 120.0, 6.0, std::make_shared<GainParamPlugin>(PluginFormat::VST3));
+        require(!r.hasInvalid, "guard: output contains NaN/Inf");
+        const double early = rmsWindow(r.left, 0.5, 1.5, 120.0);
+        const double late = rmsWindow(r.left, 4.5, 5.5, 120.0);
+        require(early > 1.0e-3, "guard: output is silent");
+        require(late > 0.8 * early, "guard: Custom curve drove a non-Internal plugin (RT-unsafe path)");
     }
 
     std::cout << "[PASS] AutomationPlaybackTest\n";

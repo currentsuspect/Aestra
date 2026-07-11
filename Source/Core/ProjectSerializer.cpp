@@ -820,7 +820,13 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 cj.set("param", JSON(curve.getTarget()));
                 cj.set("targetEnum", JSON(static_cast<double>(curve.getAutomationTarget())));
                 cj.set("default", JSON(curve.getDefaultValue()));
-                
+                if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
+                    // Plugin-parameter address (older builds ignore unknown keys;
+                    // loads without them default to slot 0 / param 0).
+                    cj.set("slot", JSON(static_cast<double>(curve.effectSlot)));
+                    cj.set("paramId", JSON(static_cast<double>(curve.paramId)));
+                }
+
                 JSON ptsJson = JSON::array();
                 for (const auto& p : curve.getPoints()) {
                     JSON pj = JSON::object();
@@ -1684,7 +1690,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             
                             AutomationCurve curve(param, target);
                             curve.setDefaultValue(finiteNumberOr(aj[a], "default", 0.0, -1.0e6, 1.0e6));
-                            
+                            // Plugin-parameter address (Custom target). Bounded:
+                            // slot to the effect-chain size, paramId defensively.
+                            curve.effectSlot = static_cast<uint32_t>(finiteNumberOr(aj[a], "slot", 0.0, 0.0, 9.0));
+                            curve.paramId = static_cast<uint32_t>(finiteNumberOr(aj[a], "paramId", 0.0, 0.0, 1.0e6));
+
                             if (!aj[a].has("points") || !aj[a]["points"].isArray()) continue;
                             const JSON& pts = aj[a]["points"];
                             for (size_t p = 0; p < pts.size(); ++p) {
