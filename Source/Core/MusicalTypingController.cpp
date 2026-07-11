@@ -83,14 +83,13 @@ int MusicalTypingController::semitoneForKey(AestraUI::NUIKeyCode keyCode) {
     }
 }
 
-bool MusicalTypingController::shiftOctave(int semitones) {
+void MusicalTypingController::shiftOctave(int semitones) {
     const int next = std::clamp(m_baseMidiNote + semitones, kMinimumBaseNote, kMaximumBaseNote);
     if (next == m_baseMidiNote) {
-        return true;
+        return;
     }
     releaseAllNotes();
     m_baseMidiNote = next;
-    return true;
 }
 
 bool MusicalTypingController::handleKeyEvent(const AestraUI::NUIKeyEvent& event) {
@@ -159,14 +158,14 @@ bool MusicalTypingController::handleKeyEvent(const AestraUI::NUIKeyEvent& event)
 }
 
 void MusicalTypingController::releaseAllNotes() {
-    for (auto it = m_activeNotes.begin(); it != m_activeNotes.end();) {
-        const ActiveNote active = it->second;
-        if (post(active.unitId, kNoteOff, active.note, 0)) {
-            it = m_activeNotes.erase(it);
-        } else {
-            ++it;
-        }
+    // Best-effort note-offs, then drop the latch unconditionally: keeping
+    // entries whose post() failed (null sink, full queue) would leave stale
+    // unit/note pairs that fire against a future sink instead of retrying.
+    for (const auto& [key, active] : m_activeNotes) {
+        (void)key;
+        post(active.unitId, kNoteOff, active.note, 0);
     }
+    m_activeNotes.clear();
 }
 
 } // namespace Aestra
