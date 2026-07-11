@@ -390,8 +390,7 @@ void AudioEngine::drainLiveMidi(PatternPlaybackEngine::UnitMidiRoute* routes, si
         // No routable units this block: drain and drop so the queues can never
         // build a backlog of stale notes that would all fire at once later.
         for (auto* queue : queues) {
-            for (uint32_t n = 0; n < LiveMidiQueue::kCapacity && queue->pop(ev); ++n) {
-            }
+            for (uint32_t n = 0; n < LiveMidiQueue::kCapacity && queue->pop(ev); ++n) {}
         }
         return;
     }
