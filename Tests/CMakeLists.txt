@@ -1267,6 +1267,18 @@ target_include_directories(AestraLFOTest PRIVATE
 add_test(NAME AestraLFOTest COMMAND AestraLFOTest)
 set_tests_properties(AestraLFOTest PROPERTIES LABELS "audio;plugins;lfo")
 
+# Plugin initialization contract — parameters must survive EffectChain::prepare()
+# re-initialize (sample-rate/device changes), across every internal effect.
+add_executable(PluginInitContractTest AestraAudio/PluginInitContractTest.cpp)
+target_link_libraries(PluginInitContractTest PRIVATE AestraAudio)
+target_include_directories(PluginInitContractTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PluginInitContractTest COMMAND PluginInitContractTest)
+set_tests_properties(PluginInitContractTest PROPERTIES LABELS "audio;plugins;lifecycle")
+
 # =============================================================================
 # Audio Quality Tests (S-Tier validation suite, Spec §3, §8, §15)
 # =============================================================================
