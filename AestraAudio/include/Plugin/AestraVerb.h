@@ -752,7 +752,13 @@ public:
         if (id >= kParamCount) return "";
         const float v = getParameter(id);
         switch (id) {
-        case kDecay: return std::to_string(static_cast<int>((0.3f + v * 9.7f) * 10.0f) / 10.0f) + "s";
+        case kDecay: {
+            // Truthful display: include the current mode's decay scalar
+            // (0.90-1.60) — the DSP uses (0.3 + v*9.7) * decayScalar, so a
+            // Cathedral "7.1s" was actually 11.4s before this was applied.
+            const float scalar = constantsForMode(currentMode()).decayScalar;
+            return std::to_string(static_cast<int>((0.3f + v * 9.7f) * scalar * 10.0f) / 10.0f) + "s";
+        }
         case kDamping: return std::to_string(static_cast<int>(v * 100)) + "%";
         case kPredelayMs: return std::to_string(static_cast<int>(v * kMaxPredelayMs)) + "ms";
         case kWidth: return std::to_string(static_cast<int>(v * 100)) + "%";
@@ -764,7 +770,14 @@ public:
         }
         case kDiffusion: return std::to_string(static_cast<int>(v * 100)) + "%";
         case kModRate: return std::to_string(static_cast<int>(v * 200)) + "%";
-        case kModDepth: return std::to_string(static_cast<int>(v * 80.0f) / 10.0f) + " smp";
+        case kModDepth: {
+            // Truthful display: mirror the DSP's compressive depth curve and
+            // per-mode scalar (updateControlCache). The old "v * 8 smp" text
+            // matched neither the previous x7 mapping nor the current one.
+            const float scalar = constantsForMode(currentMode()).modDepthScalar;
+            const float smp = (v <= 0.0f ? 0.0f : std::pow(v, 0.6f)) * 12.5f * scalar;
+            return std::to_string(static_cast<int>(smp * 10.0f) / 10.0f) + " smp";
+        }
         case kMode: {
             static const char* modeNames[] = {
                 "Room", "Hall", "Plate", "Cathedral", "Chamber",
