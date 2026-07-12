@@ -16,6 +16,7 @@ const PluginInfo& verbInfo();
 const PluginInfo& delayInfo();
 const PluginInfo& driftInfo();
 const PluginInfo& limiterInfo();
+const PluginInfo& satInfo();
 void registerCoreBuiltIns();
 std::vector<PluginInfo> all();
 }
