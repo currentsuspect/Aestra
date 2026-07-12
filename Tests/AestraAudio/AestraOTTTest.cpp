@@ -311,7 +311,8 @@ bool testSetParameterRejectsNonFinite() {
     for (size_t off = 8; off + sizeof(float) <= state.size(); off += sizeof(float)) {
         std::memcpy(state.data() + off, &nan, sizeof(float));
     }
-    ott.loadState(state);
+    if (ott.loadState(state))
+        return false; // an all-NaN blob must be rejected, not accepted as success
     for (uint32_t i = 0; i < AestraOTT::kParamCount; ++i) {
         if (!std::isfinite(ott.getParameter(i)))
             return false;
