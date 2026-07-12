@@ -77,8 +77,25 @@ public:
         (void)midiOutput;
 
         if (!m_active.load(std::memory_order_relaxed) || m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
-            copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+            // The plugin always reports the oversampler latency, so internal
+            // bypass must delay by the same amount (through the same ring,
+            // which keeps advancing) or this slot lands ~30 samples early
+            // relative to PDC-compensated tracks.
+            copyDelayed(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+            m_wasBypassed = true;
             return;
+        }
+        if (m_wasBypassed) {
+            // Flush stale wet-path state from before the bypass so reactivation
+            // does not emit it; the dry ring stays hot for latency alignment.
+            for (auto& os : m_oversampler) {
+                os.reset();
+            }
+            m_dcX1[0] = m_dcX1[1] = 0.0f;
+            m_dcY1[0] = m_dcY1[1] = 0.0f;
+            m_toneState[0] = m_toneState[1] = 0.0f;
+            snapSmoothedParams();
+            m_wasBypassed = false;
         }
 
         const uint32_t channels = std::min<uint32_t>(2, numOutputChannels);
@@ -91,8 +108,12 @@ public:
         float blockInputPeak = 0.0f;
         float blockOutputPeak = 0.0f;
 
-        for (uint32_t i = 0; i < numFrames; ++i) {
-            // Smooth continuous params (2 ms one-pole, shared by both channels)
+        // Parameters are read and smoothed once per control block; the
+        // per-sample loop only does the oversampled shaper, DC blocker, tone
+        // one-pole and mix — no atomics or transcendentals in the hot path.
+        for (uint32_t blockStart = 0; blockStart < numFrames; blockStart += kCtrlBlock) {
+            const uint32_t blockEnd = std::min(blockStart + kCtrlBlock, numFrames);
+
             m_driveSmoothed += (getParameter(kDrive) - m_driveSmoothed) * m_smoothCoeff;
             m_toneSmoothed += (getParameter(kTone) - m_toneSmoothed) * m_smoothCoeff;
             m_outputSmoothed += (getParameter(kOutput) - m_outputSmoothed) * m_smoothCoeff;
@@ -104,45 +125,47 @@ public:
             const float dry = 1.0f - wet;
             const float toneCoeff = toneCoeffFromNorm(m_toneSmoothed);
 
-            for (uint32_t ch = 0; ch < channels; ++ch) {
-                const float in = sanitizeSample(readInput(inputs, numInputChannels, ch, i));
-                blockInputPeak = std::max(blockInputPeak, std::abs(in));
+            for (uint32_t i = blockStart; i < blockEnd; ++i) {
+                for (uint32_t ch = 0; ch < channels; ++ch) {
+                    const float in = sanitizeSample(readInput(inputs, numInputChannels, ch, i));
+                    blockInputPeak = std::max(blockInputPeak, std::abs(in));
 
-                // Latency-aligned dry tap
-                const float delayedDry = m_dryDelay[ch][m_dryPos];
-                m_dryDelay[ch][m_dryPos] = in;
+                    // Latency-aligned dry tap
+                    const float delayedDry = m_dryDelay[ch][m_dryPos];
+                    m_dryDelay[ch][m_dryPos] = in;
 
-                // Nonlinear stage at 4x
-                float osBuf[kOsFactor];
-                m_oversampler[ch].upsample(in * driveGain, osBuf);
-                for (uint32_t p = 0; p < kOsFactor; ++p) {
-                    osBuf[p] = shape(osBuf[p], mode);
+                    // Nonlinear stage at 4x
+                    float osBuf[kOsFactor];
+                    m_oversampler[ch].upsample(in * driveGain, osBuf);
+                    for (uint32_t p = 0; p < kOsFactor; ++p) {
+                        osBuf[p] = shape(osBuf[p], mode);
+                    }
+                    float sat = m_oversampler[ch].downsample(osBuf);
+
+                    // DC blocker (~10 Hz high-pass) — tube asymmetry adds DC
+                    const float dcOut = sat - m_dcX1[ch] + m_dcCoeff * m_dcY1[ch];
+                    m_dcX1[ch] = sat;
+                    m_dcY1[ch] = dcOut;
+
+                    // Tone: one-pole low-pass on the wet path
+                    m_toneState[ch] += (dcOut - m_toneState[ch]) * toneCoeff;
+
+                    const float out = delayedDry * dry + m_toneState[ch] * outGain * wet;
+                    blockOutputPeak = std::max(blockOutputPeak, std::abs(out));
+
+                    if (outputs[ch])
+                        outputs[ch][i] = out;
                 }
-                float sat = m_oversampler[ch].downsample(osBuf);
 
-                // DC blocker (~10 Hz high-pass) — tube asymmetry adds DC
-                const float dcOut = sat - m_dcX1[ch] + m_dcCoeff * m_dcY1[ch];
-                m_dcX1[ch] = sat;
-                m_dcY1[ch] = dcOut;
+                m_dryPos = (m_dryPos + 1u) % kDryDelayLen;
 
-                // Tone: one-pole low-pass on the wet path
-                m_toneState[ch] += (dcOut - m_toneState[ch]) * toneCoeff;
-
-                const float out = delayedDry * dry + m_toneState[ch] * outGain * wet;
-                blockOutputPeak = std::max(blockOutputPeak, std::abs(out));
-
-                if (outputs[ch])
-                    outputs[ch][i] = out;
-            }
-
-            m_dryPos = (m_dryPos + 1u) % kDryDelayLen;
-
-            if (!stereo && numOutputChannels > 1 && outputs[1] && outputs[0]) {
-                outputs[1][i] = outputs[0][i];
-            }
-            for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
-                if (outputs[ch])
-                    outputs[ch][i] = 0.0f;
+                if (!stereo && numOutputChannels > 1 && outputs[1] && outputs[0]) {
+                    outputs[1][i] = outputs[0][i];
+                }
+                for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
+                    if (outputs[ch])
+                        outputs[ch][i] = 0.0f;
+                }
             }
         }
 
@@ -161,6 +184,8 @@ public:
     void setParameter(uint32_t id, float value) override {
         if (id >= kParamCount)
             return;
+        if (!std::isfinite(value))
+            return; // NaN survives clamp (comparisons are false) and would poison smoothing
         m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
     }
 
@@ -296,6 +321,31 @@ private:
     // Read-before-write circular buffer of length N delays by exactly N —
     // sized to match the oversampler round-trip latency.
     static constexpr uint32_t kDryDelayLen = DSP::Oversampler::kReportedLatency;
+    static constexpr uint32_t kCtrlBlock = 16; // control-rate interval for param/coefficient updates
+
+    /// Bypass copy delayed by the reported latency, through the same dry ring
+    /// the active path uses (so the ring stays hot across bypass toggles).
+    /// Channels >= 2 pass through like copyOrClear.
+    void copyDelayed(const float* const* inputs, float** outputs, uint32_t numInputChannels, uint32_t numOutputChannels,
+                     uint32_t numFrames) {
+        for (uint32_t i = 0; i < numFrames; ++i) {
+            for (uint32_t ch = 0; ch < 2; ++ch) {
+                const float in = sanitizeSample(readInput(inputs, numInputChannels, ch, i));
+                const float delayed = m_dryDelay[ch][m_dryPos];
+                m_dryDelay[ch][m_dryPos] = in;
+                if (ch < numOutputChannels && outputs[ch])
+                    outputs[ch][i] = delayed;
+            }
+            m_dryPos = (m_dryPos + 1u) % kDryDelayLen;
+        }
+        for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
+            if (outputs[ch] && ch < numInputChannels && inputs[ch]) {
+                std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
+            } else if (outputs[ch]) {
+                std::memset(outputs[ch], 0, numFrames * sizeof(float));
+            }
+        }
+    }
 
     static float shape(float x, Mode mode) {
         switch (mode) {
@@ -328,8 +378,11 @@ private:
         m_dcX1[0] = m_dcX1[1] = 0.0f;
         m_dcY1[0] = m_dcY1[1] = 0.0f;
         m_toneState[0] = m_toneState[1] = 0.0f;
+        m_wasBypassed = false;
         const float sr = static_cast<float>(m_sampleRate);
-        m_smoothCoeff = 1.0f - std::exp(-1.0f / (0.002f * sr));
+        // Smoothing runs once per control block, so the coefficient is scaled
+        // to the block interval to keep the 2 ms time constant.
+        m_smoothCoeff = 1.0f - std::exp(-static_cast<float>(kCtrlBlock) / (0.002f * sr));
         m_dcCoeff = 1.0f - 2.0f * 3.14159265358979323846f * 10.0f / sr;
         m_inputLevel.store(0.0f, std::memory_order_relaxed);
         m_outputLevel.store(0.0f, std::memory_order_relaxed);
@@ -378,6 +431,7 @@ private:
     std::array<DSP::Oversampler, 2> m_oversampler;
     std::array<std::array<float, kDryDelayLen>, 2> m_dryDelay{};
     uint32_t m_dryPos = 0;
+    bool m_wasBypassed = false;
 
     float m_dcX1[2] = {0.0f, 0.0f};
     float m_dcY1[2] = {0.0f, 0.0f};

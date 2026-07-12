@@ -90,23 +90,96 @@ float goertzelMag(const std::vector<float>& buf, size_t start, float freq, doubl
     return static_cast<float>(2.0 * std::sqrt(std::max(0.0, power)) / static_cast<double>(n));
 }
 
-bool testBypassPassesAudioUnchanged() {
+// The plugin reports a constant oversampler latency, so internal bypass must
+// pass audio through the same delay — an undelayed copy would land this slot
+// ~30 samples early relative to PDC-compensated tracks.
+bool testBypassMatchesReportedLatency() {
     AestraSat sat;
     initAndActivate(sat);
     sat.setParameter(AestraSat::kBypass, 1.0f);
     sat.setParameter(AestraSat::kDrive, 1.0f);
+    const uint32_t latency = sat.getLatencySamples();
 
     const auto inL = makeSine(1024, 1000.0f, 0.5f, kSampleRate);
     const auto inR = makeSine(1024, 500.0f, 0.3f, kSampleRate);
     auto out = processStereo(sat, inL, inR);
 
     for (uint32_t i = 0; i < inL.size(); ++i) {
-        if (std::abs(out.left[i] - inL[i]) > 1e-6f)
+        const float expectL = (i >= latency) ? inL[i - latency] : 0.0f;
+        const float expectR = (i >= latency) ? inR[i - latency] : 0.0f;
+        if (std::abs(out.left[i] - expectL) > 1e-6f)
             return false;
-        if (std::abs(out.right[i] - inR[i]) > 1e-6f)
+        if (std::abs(out.right[i] - expectR) > 1e-6f)
             return false;
     }
     return true;
+}
+
+// Toggling bypass mid-stream must keep the delay ring advancing (constant
+// alignment) and must not replay stale wet state on reactivation.
+bool testBypassToggleKeepsAlignmentAndState() {
+    AestraSat sat;
+    initAndActivate(sat);
+    sat.setParameter(AestraSat::kDrive, 1.0f); // hot wet path before bypass
+    sat.setParameter(AestraSat::kMix, 1.0f);
+    const uint32_t latency = sat.getLatencySamples();
+
+    const auto loud = makeSine(4096, 1000.0f, 0.9f, kSampleRate);
+    processStereo(sat, loud, loud); // build up wet/oversampler state
+
+    // Bypass: output must be the input delayed by the reported latency,
+    // seamlessly continuing the ring (first `latency` samples come from the
+    // tail of the previous active block).
+    sat.setParameter(AestraSat::kBypass, 1.0f);
+    const auto quiet = makeSine(4096, 500.0f, 0.1f, kSampleRate);
+    auto bypassed = processStereo(sat, quiet, quiet);
+    for (uint32_t i = latency; i < quiet.size(); ++i) {
+        if (std::abs(bypassed.left[i] - quiet[i - latency]) > 1e-6f)
+            return false;
+    }
+
+    // Reactivate at zero drive: output must stay finite and near the new
+    // quiet input level — any burst of stale pre-bypass oversampler/filter
+    // state (built from the loud driven signal) would exceed this.
+    sat.setParameter(AestraSat::kBypass, 0.0f);
+    sat.setParameter(AestraSat::kDrive, 0.0f);
+    auto resumed = processStereo(sat, quiet, quiet);
+    if (!allFinite(resumed.left) || !allFinite(resumed.right))
+        return false;
+    return peakAmplitude(resumed.left) < 0.3f;
+}
+
+// NaN/Inf must not pass the parameter ingress: the previous value survives.
+bool testSetParameterRejectsNonFinite() {
+    AestraSat sat;
+    initAndActivate(sat);
+    sat.setParameter(AestraSat::kDrive, 0.42f);
+
+    sat.setParameter(AestraSat::kDrive, std::numeric_limits<float>::quiet_NaN());
+    if (std::abs(sat.getParameter(AestraSat::kDrive) - 0.42f) > 1e-6f)
+        return false;
+    sat.setParameter(AestraSat::kDrive, std::numeric_limits<float>::infinity());
+    if (std::abs(sat.getParameter(AestraSat::kDrive) - 0.42f) > 1e-6f)
+        return false;
+    sat.setParameter(AestraSat::kDrive, -std::numeric_limits<float>::infinity());
+    if (std::abs(sat.getParameter(AestraSat::kDrive) - 0.42f) > 1e-6f)
+        return false;
+
+    // A corrupted state blob full of NaNs must not poison the params either.
+    std::vector<uint8_t> state = sat.saveState();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    for (size_t off = 8; off + sizeof(float) <= state.size(); off += sizeof(float)) {
+        std::memcpy(state.data() + off, &nan, sizeof(float));
+    }
+    sat.loadState(state); // magic/version intact, params all NaN
+    for (uint32_t i = 0; i < AestraSat::kParamCount; ++i) {
+        if (!std::isfinite(sat.getParameter(i)))
+            return false;
+    }
+
+    const auto in = makeSine(2048, 1000.0f, 0.5f, kSampleRate);
+    auto out = processStereo(sat, in, in);
+    return allFinite(out.left) && allFinite(out.right);
 }
 
 bool testSilenceProducesSilence() {
@@ -404,7 +477,9 @@ struct TestCase {
 
 int main() {
     const TestCase tests[] = {
-        {"BypassPassesAudioUnchanged", testBypassPassesAudioUnchanged},
+        {"BypassMatchesReportedLatency", testBypassMatchesReportedLatency},
+        {"BypassToggleKeepsAlignmentAndState", testBypassToggleKeepsAlignmentAndState},
+        {"SetParameterRejectsNonFinite", testSetParameterRejectsNonFinite},
         {"SilenceProducesSilence", testSilenceProducesSilence},
         {"DryPathIsExactDelay", testDryPathIsExactDelay},
         {"WetPathLatencyAligned", testWetPathLatencyAligned},
