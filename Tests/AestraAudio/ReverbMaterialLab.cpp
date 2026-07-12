@@ -494,10 +494,13 @@ int main() {
         std::string name;
         float param;
     };
+    // Select each mode via the canonical AestraVerb::modeParam() so the labeled
+    // mode is the mode actually rendered. Hardcoded 0.5/1.0 previously decoded
+    // to Chamber (mode 4) and SmoothPlate (mode 8), not Hall and Plate.
     std::vector<ModeDef> modes = {
-        {"room", 0.0f},
-        {"hall", 0.5f},
-        {"plate", 1.0f},
+        {"room", AestraVerb::modeParam(AestraVerb::Mode::Room)},
+        {"hall", AestraVerb::modeParam(AestraVerb::Mode::Hall)},
+        {"plate", AestraVerb::modeParam(AestraVerb::Mode::Plate)},
     };
 
     std::vector<MaterialResult> results;

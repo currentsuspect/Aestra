@@ -881,9 +881,31 @@ int main() {
     std::cout << "==================================\n\n";
 
     std::vector<ModeQuality> modes;
-    modes.push_back(measureMode("room", 0.0f, 0.6f, 0.5f, 0.7f, sampleRate, numFrames, qualityDir));
-    modes.push_back(measureMode("hall", 0.5f, 0.9f, 0.9f, 0.85f, sampleRate, numFrames, qualityDir));
-    modes.push_back(measureMode("plate", 1.0f, 0.7f, 0.6f, 0.8f, sampleRate, numFrames, qualityDir));
+    // Measure all nine modes. Each mode is selected via the canonical
+    // AestraVerb::modeParam() so its measured evidence matches the mode it is
+    // labeled with. (Previously "hall" passed 0.5, which decodes to Chamber
+    // (mode 4), and "plate" passed 1.0, which decodes to SmoothPlate (mode 8) —
+    // so the published Hall/Plate measurements were mislabeled.)
+    struct ModeSetting {
+        AestraVerb::Mode mode;
+        const char* name;
+        float decay, size, diffusion;
+    };
+    static const ModeSetting kModeSettings[] = {
+        {AestraVerb::Mode::Room,        "room",         0.60f, 0.50f, 0.70f},
+        {AestraVerb::Mode::Hall,        "hall",         0.90f, 0.90f, 0.85f},
+        {AestraVerb::Mode::Plate,       "plate",        0.70f, 0.60f, 0.80f},
+        {AestraVerb::Mode::Cathedral,   "cathedral",    0.95f, 0.95f, 0.80f},
+        {AestraVerb::Mode::Chamber,     "chamber",      0.70f, 0.60f, 0.75f},
+        {AestraVerb::Mode::BrightHall,  "bright_hall",  0.88f, 0.85f, 0.85f},
+        {AestraVerb::Mode::Ambience,    "ambience",     0.40f, 0.40f, 0.60f},
+        {AestraVerb::Mode::Scoring,     "scoring",      0.90f, 0.85f, 0.85f},
+        {AestraVerb::Mode::SmoothPlate, "smooth_plate", 0.72f, 0.60f, 0.85f},
+    };
+    for (const auto& s : kModeSettings) {
+        modes.push_back(measureMode(s.name, AestraVerb::modeParam(s.mode),
+                                    s.decay, s.size, s.diffusion, sampleRate, numFrames, qualityDir));
+    }
 
     // Write JSON report
     {
@@ -906,12 +928,12 @@ int main() {
             f << "## Files\n\n";
             f << "- `reverb_quality_baseline.json` — Machine-readable quality metrics\n";
             f << "- `reverb_quality_baseline.md` — Human-readable quality report\n";
-            f << "- `impulse_room.wav` — Room mode impulse response\n";
-            f << "- `impulse_hall.wav` — Hall mode impulse response\n";
-            f << "- `impulse_plate.wav` — Plate mode impulse response\n";
-            f << "- `noiseburst_room.wav` — Room mode noise burst response\n";
-            f << "- `noiseburst_hall.wav` — Hall mode noise burst response\n";
-            f << "- `noiseburst_plate.wav` — Plate mode noise burst response\n";
+            for (const auto& q : modes) {
+                f << "- `impulse_" << q.name << ".wav` — " << q.name << " mode impulse response\n";
+            }
+            for (const auto& q : modes) {
+                f << "- `noiseburst_" << q.name << ".wav` — " << q.name << " mode noise burst response\n";
+            }
         }
     }
 
