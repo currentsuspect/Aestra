@@ -175,6 +175,23 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     )
 endif()
 
+# Plugin lifecycle smoke: Sat->Filter->OTT->LFO chain through save/reload,
+# reprepare (device change), and audio — parameter preservation + finite output.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PluginLifecycleSmokeTest.cpp")
+    add_executable(PluginLifecycleSmokeTest PluginLifecycleSmokeTest.cpp)
+    target_link_libraries(PluginLifecycleSmokeTest PRIVATE AestraAudio)
+    target_include_directories(PluginLifecycleSmokeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME PluginLifecycleSmokeTest COMMAND PluginLifecycleSmokeTest)
+    set_tests_properties(PluginLifecycleSmokeTest PROPERTIES
+        LABELS "headless;plugins;lifecycle"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCSolverPurityTest.cpp")
     add_executable(PDCSolverPurityTest PDCSolverPurityTest.cpp)
     target_link_libraries(PDCSolverPurityTest PRIVATE AestraAudio)
