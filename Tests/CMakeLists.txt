@@ -1256,6 +1256,17 @@ target_include_directories(AestraOTTTest PRIVATE
 add_test(NAME AestraOTTTest COMMAND AestraOTTTest)
 set_tests_properties(AestraOTTTest PROPERTIES LABELS "audio;plugins;ott")
 
+# Aestra LFO Test
+add_executable(AestraLFOTest AestraAudio/AestraLFOTest.cpp)
+target_link_libraries(AestraLFOTest PRIVATE AestraAudio)
+target_include_directories(AestraLFOTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraLFOTest COMMAND AestraLFOTest)
+set_tests_properties(AestraLFOTest PROPERTIES LABELS "audio;plugins;lfo")
+
 # =============================================================================
 # Audio Quality Tests (S-Tier validation suite, Spec §3, §8, §15)
 # =============================================================================

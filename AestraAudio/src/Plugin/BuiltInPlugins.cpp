@@ -12,6 +12,7 @@
 #include "Plugin/AestraLimit.h"
 #include "Plugin/AestraSat.h"
 #include "Plugin/AestraFilter.h"
+#include "Plugin/AestraLFO.h"
 #include "Plugin/AestraOTT.h"
 
 #include <mutex>
@@ -220,6 +221,26 @@ const PluginInfo& ottInfo() {
     return info;
 }
 
+const PluginInfo& lfoInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.lfo";
+        p.name = "Aestra LFO";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Modulation";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = true;
+        return p;
+    }();
+    return info;
+}
+
 namespace {
 void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
     if (!instance) {
@@ -248,6 +269,8 @@ void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
         filter->setInfo(info);
     } else if (auto ott = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraOTT>(instance)) {
         ott->setInfo(info);
+    } else if (auto lfo = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraLFO>(instance)) {
+        lfo->setInfo(info);
     }
 }
 
@@ -279,6 +302,7 @@ void registerCoreBuiltIns() {
         registry.registerPlugin(makeRegistration<Plugins::AestraSat>(satInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraFilter>(filterInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraOTT>(ottInfo()));
+        registry.registerPlugin(makeRegistration<Plugins::AestraLFO>(lfoInfo()));
     });
 }
 
