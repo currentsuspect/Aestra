@@ -23,6 +23,7 @@
 #include "PatternBrowserPanel.h"
 #include "PianoRollPanel.h"
 #include "Plugin/AestraDelay.h"
+#include "Plugin/AestraLFO.h"
 #include "PluginManager.h"
 #include "SampleEditorPanel.h"
 
@@ -3557,6 +3558,10 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
         const float bpm = m_audioEngine ? m_audioEngine->getBPM() : 120.0f;
         delay->setBPM(bpm);
     }
+    if (auto lfo = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraLFO>(instance)) {
+        const float bpm = m_audioEngine ? m_audioEngine->getBPM() : 120.0f;
+        lfo->setBPM(bpm);
+    }
     instance->activate();
 
     // 4. Insert into first available effect chain slot (via CommandHistory for undo)
@@ -3581,6 +3586,9 @@ void AestraContent::setPluginTempo(float bpm) {
     for (const auto& instance : pluginManager.getActiveInstances()) {
         if (auto delay = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraDelay>(instance)) {
             delay->setBPM(bpm);
+        }
+        if (auto lfo = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraLFO>(instance)) {
+            lfo->setBPM(bpm);
         }
     }
 }

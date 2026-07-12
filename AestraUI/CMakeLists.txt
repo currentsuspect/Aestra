@@ -155,6 +155,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/AestraFilterEditor.cpp
     Widgets/AestraOTTEditor.h
     Widgets/AestraOTTEditor.cpp
+    Widgets/AestraLFOEditor.h
+    Widgets/AestraLFOEditor.cpp
 )
 
 if(AESTRAUI_ENABLE_PREMIUM_EDITORS)
