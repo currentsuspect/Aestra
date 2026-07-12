@@ -16,18 +16,18 @@
 int main() {
     namespace fs = std::filesystem;
 
-    constexpr int kThreads = 16;
-    constexpr int kPerThread = 250; // 4000 directories total
+    constexpr int THREAD_COUNT = 16;
+    constexpr int DIRS_PER_THREAD = 250; // 4000 directories total
 
-    std::vector<std::vector<fs::path>> perThread(kThreads);
+    std::vector<std::vector<fs::path>> perThread(THREAD_COUNT);
     std::atomic<int> createFailures{0};
 
     std::vector<std::thread> workers;
-    workers.reserve(kThreads);
-    for (int t = 0; t < kThreads; ++t) {
+    workers.reserve(THREAD_COUNT);
+    for (int t = 0; t < THREAD_COUNT; ++t) {
         workers.emplace_back([&, t]() {
-            perThread[t].reserve(kPerThread);
-            for (int i = 0; i < kPerThread; ++i) {
+            perThread[t].reserve(DIRS_PER_THREAD);
+            for (int i = 0; i < DIRS_PER_THREAD; ++i) {
                 try {
                     fs::path p = Aestra::Tests::makeUniqueTempDirectory("Stress");
                     // Must be a real, freshly created directory.
@@ -74,7 +74,7 @@ int main() {
     if (!ok) {
         return 1;
     }
-    std::cout << "[PASS] " << total << " unique temp directories created across " << kThreads << " threads\n";
+    std::cout << "[PASS] " << total << " unique temp directories created across " << THREAD_COUNT << " threads\n";
     std::cout << "All TestTempDirectory stress checks passed\n";
     return 0;
 }

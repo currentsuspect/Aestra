@@ -35,7 +35,7 @@ namespace Aestra::Tests {
 
 // Upper bound on create_directory retries; with the per-call token a single
 // attempt essentially always wins, so this is only a safety net.
-inline constexpr int kMaxTempDirAttempts = 4096;
+inline constexpr int MAX_TEMP_DIR_ATTEMPTS = 4096;
 
 // Root under the system temp dir shared by all Aestra tests. Unique per-call
 // subdirectories live beneath it.
@@ -70,7 +70,7 @@ inline std::filesystem::path makeUniqueTempDirectory(const std::string& prefix) 
     fs::create_directories(base, ec); // idempotent; only the leaf below must be exclusive
 
     const std::string token = uniqueTempToken();
-    for (int attempt = 0; attempt < kMaxTempDirAttempts; ++attempt) {
+    for (int attempt = 0; attempt < MAX_TEMP_DIR_ATTEMPTS; ++attempt) {
         std::string name = prefix;
         name += '_';
         name += token;
