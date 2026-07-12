@@ -1,19 +1,15 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "../../Source/Core/ProjectSerializer.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/TrackManager.h"
 #include "Plugin/PluginManager.h"
 
 #include <cmath>
 #include <filesystem>
 #include <iostream>
-#include "../Support/TestTempDirectory.h"
 
 namespace {
-std::filesystem::path makeTempDir() {
-    return Aestra::Tests::makeUniqueTempDirectory("InternalPluginRoundTrip");
-}
-
 void require(bool cond, const char* msg) {
     if (!cond) {
         std::cerr << "[FAIL] " << msg << "\n";
@@ -29,7 +25,8 @@ bool nearlyEqual(float a, float b, float epsilon = 1.0e-6f) {
 int main() {
     using namespace Aestra::Audio;
 
-    const auto tempDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"InternalPluginRoundTrip"};
+    const auto& tempDir = tempDirScope.path();
     const auto projectPath = tempDir / "internal-plugin-project.aes";
 
     auto& pluginManager = PluginManager::getInstance();

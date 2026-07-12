@@ -8,8 +8,9 @@
 #include <iostream>
 
 #ifndef _WIN32
-#include <unistd.h>
 #include "../Support/TestTempDirectory.h"
+
+#include <unistd.h>
 #endif
 
 namespace {
@@ -18,10 +19,6 @@ void require(bool cond, const char* msg) {
         std::cerr << "[FAIL] " << msg << "\n";
         std::exit(1);
     }
-}
-
-std::filesystem::path makeTempDir() {
-    return Aestra::Tests::makeUniqueTempDirectory("PluginScannerSigpipe");
 }
 
 #ifndef _WIN32
@@ -42,7 +39,8 @@ int main() {
     std::cout << "[SKIP] PluginScannerSigpipeTest is Unix-only\n";
     return 0;
 #else
-    const auto dir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory dirScope{"PluginScannerSigpipe"};
+    const auto& dir = dirScope.path();
     const auto clapPath = dir / "broken.clap";
     {
         std::ofstream out(clapPath, std::ios::binary);

@@ -3,6 +3,7 @@
 #include "../../Source/Core/TakeManager.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/TrackManager.h"
 
 #include <atomic>
@@ -11,13 +12,8 @@
 #include <iostream>
 #include <string>
 #include <thread>
-#include "../Support/TestTempDirectory.h"
 
 namespace {
-
-std::filesystem::path makeTempDir() {
-    return Aestra::Tests::makeUniqueTempDirectory("TakeManager");
-}
 
 void require(bool cond, const char* msg) {
     if (!cond) {
@@ -76,7 +72,8 @@ std::string loadFirstLaneName(const std::string& projectPath) {
 } // namespace
 
 int main() {
-    const auto tempDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"TakeManager"};
+    const auto& tempDir = tempDirScope.path();
     const auto projectPath = tempDir / "takes_project.aes";
 
     auto trackManager = makeProject("Main Lane");

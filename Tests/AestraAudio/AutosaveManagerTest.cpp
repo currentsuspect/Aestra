@@ -1,21 +1,18 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "Core/AutosaveManager.h"
+
+#include "../Support/TestTempDirectory.h"
 #include "AestraLog.h"
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
-#include <chrono>
-#include "../Support/TestTempDirectory.h"
 
 namespace {
-
-std::filesystem::path makeTempDir() {
-    return Aestra::Tests::makeUniqueTempDirectory("AutosaveManager");
-}
 
 void require(bool cond, const char* msg) {
     if (!cond) {
@@ -29,7 +26,8 @@ void require(bool cond, const char* msg) {
 int main() {
     using namespace Aestra::Audio;
 
-    const auto tempDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"AutosaveManager"};
+    const auto& tempDir = tempDirScope.path();
     const auto autosavePath = tempDir / "override.autosave.aes";
 
     std::cout << "[INFO] TempDir: " << tempDir.string() << "\n";
@@ -51,8 +49,7 @@ int main() {
         };
 
         manager.initialize("some_project.aes", std::move(config));
-        require(manager.getAutosavePath() == autosavePath.string(),
-                "autosavePathOverride should be respected");
+        require(manager.getAutosavePath() == autosavePath.string(), "autosavePathOverride should be respected");
 
         manager.markDirty();
         std::this_thread::sleep_for(std::chrono::seconds(2));
