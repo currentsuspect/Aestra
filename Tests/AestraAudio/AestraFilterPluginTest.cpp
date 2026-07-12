@@ -354,6 +354,129 @@ bool testTypeMapping() {
            AestraFilter::kTypeBandPass;
 }
 
+// NaN/Inf must not pass the parameter ingress: the previous value survives,
+// and a NaN-filled (but magic-intact) state blob cannot poison processing.
+bool testSetParameterRejectsNonFinite() {
+    AestraFilter flt;
+    flt.initialize(kSampleRate, kBlockSize);
+    flt.activate();
+    flt.setParameter(AestraFilter::kCutoff, 0.42f);
+
+    for (float bad : {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity(),
+                      -std::numeric_limits<float>::infinity()}) {
+        flt.setParameter(AestraFilter::kCutoff, bad);
+        if (std::abs(flt.getParameter(AestraFilter::kCutoff) - 0.42f) > 1e-6f)
+            return false;
+    }
+
+    std::vector<uint8_t> state = flt.saveState();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    for (size_t off = 8; off + sizeof(float) <= state.size(); off += sizeof(float)) {
+        std::memcpy(state.data() + off, &nan, sizeof(float));
+    }
+    flt.loadState(state);
+    for (uint32_t i = 0; i < AestraFilter::kParamCount; ++i) {
+        if (!std::isfinite(flt.getParameter(i)))
+            return false;
+    }
+
+    const auto in = makeSine(2048, 1000.0f, 0.5f, kSampleRate);
+    auto out = processStereo(flt, in, in);
+    return allFinite(out.left) && allFinite(out.right);
+}
+
+// Toggling bypass mid-stream must not replay stale resonance/envelope state.
+bool testBypassToggleIsSafe() {
+    AestraFilter flt;
+    flt.initialize(kSampleRate, kBlockSize);
+    flt.setParameter(AestraFilter::kReso, 1.0f); // max Q rings hard
+    flt.setParameter(AestraFilter::kCutoff, normForHz(1000.0f));
+    flt.activate();
+
+    const auto loud = makeSine(8192, 1000.0f, 0.9f, kSampleRate);
+    processStereo(flt, loud, loud); // charge the integrators at resonance
+
+    flt.setParameter(AestraFilter::kBypass, 1.0f);
+    const auto quiet = makeSine(4096, 200.0f, 0.05f, kSampleRate);
+    auto bypassed = processStereo(flt, quiet, quiet);
+    for (uint32_t i = 0; i < quiet.size(); ++i) {
+        if (std::abs(bypassed.left[i] - quiet[i]) > 1e-6f)
+            return false; // zero-latency bypass stays bit-exact
+    }
+
+    // Resume: no burst of stale high-Q ring from the loud era.
+    flt.setParameter(AestraFilter::kBypass, 0.0f);
+    auto resumed = processStereo(flt, quiet, quiet);
+    if (!allFinite(resumed.left))
+        return false;
+    return peakAmplitude(resumed.left) < 0.4f; // 0.05 input, Q10 peak ~+20 dB worst case
+}
+
+// Type is stepped; switching LP -> HP mid-stream must crossfade, not click.
+bool testTypeSwitchIsClickFree() {
+    AestraFilter flt;
+    flt.initialize(kSampleRate, kBlockSize);
+    flt.setParameter(AestraFilter::kCutoff, normForHz(1000.0f));
+    flt.activate();
+
+    const auto in = makeSine(16384, 1000.0f, 0.5f, kSampleRate);
+    // First half LP...
+    std::vector<float> half1(in.begin(), in.begin() + 8192);
+    auto out1 = processStereo(flt, half1, half1);
+    // ...switch to HP for the second half.
+    flt.setParameter(AestraFilter::kType, AestraFilter::normFromType(AestraFilter::kTypeHighPass));
+    std::vector<float> half2(in.begin() + 8192, in.end());
+    auto out2 = processStereo(flt, half2, half2);
+
+    // A 1 kHz 0.5-amp sine at 48 kHz moves at most ~0.065/sample; an
+    // instantaneous LP->HP jump at the cutoff is a ~90 degree phase step.
+    float maxDelta = std::abs(out2.left[0] - out1.left.back());
+    for (uint32_t i = 1; i < out2.left.size(); ++i)
+        maxDelta = std::max(maxDelta, std::abs(out2.left[i] - out2.left[i - 1]));
+    return maxDelta < 0.15f;
+}
+
+// Rapid automation of every continuous parameter, with hostile block sizes.
+bool testAutomationStress() {
+    AestraFilter flt;
+    flt.initialize(kSampleRate, kBlockSize);
+    flt.activate();
+
+    uint32_t lcg = 0xC0FFEEu;
+    auto next01 = [&lcg]() {
+        lcg = lcg * 1664525u + 1013904223u;
+        return static_cast<float>(lcg >> 8) * (1.0f / 16777216.0f);
+    };
+
+    const auto in = makeSine(96000, 500.0f, 0.5f, kSampleRate); // 2 s
+    std::vector<float> outL(in.size(), 0.0f);
+    std::vector<float> outR(in.size(), 0.0f);
+    const uint32_t sizes[] = {1, 3, 17, 32, 64, 111};
+    uint32_t pos = 0;
+    uint32_t sizeIdx = 0;
+    while (pos < in.size()) {
+        // New random automation targets every chunk (~sub-ms to ~2 ms apart)
+        flt.setParameter(AestraFilter::kCutoff, next01());
+        flt.setParameter(AestraFilter::kReso, next01());
+        flt.setParameter(AestraFilter::kDrive, next01());
+        flt.setParameter(AestraFilter::kEnvAmount, next01());
+        flt.setParameter(AestraFilter::kEnvAttack, next01());
+        flt.setParameter(AestraFilter::kEnvRelease, next01());
+        flt.setParameter(AestraFilter::kType, next01());
+
+        const uint32_t n = std::min<uint32_t>(sizes[sizeIdx % 6], static_cast<uint32_t>(in.size()) - pos);
+        ++sizeIdx;
+        const float* ins[] = {in.data() + pos, in.data() + pos};
+        float* outs[] = {outL.data() + pos, outR.data() + pos};
+        flt.process(ins, outs, 2, 2, n);
+        pos += n;
+    }
+
+    if (!allFinite(outL) || !allFinite(outR))
+        return false;
+    return peakAmplitude(outL) < 16.0f;
+}
+
 bool testStableAcrossSampleRates() {
     for (double sr : {44100.0, 96000.0, 192000.0}) {
         AestraFilter flt;
@@ -397,6 +520,10 @@ int main() {
         {"StateRoundTrip", testStateRoundTrip},
         {"LoadStateRejectsGarbage", testLoadStateRejectsGarbage},
         {"TypeMapping", testTypeMapping},
+        {"SetParameterRejectsNonFinite", testSetParameterRejectsNonFinite},
+        {"BypassToggleIsSafe", testBypassToggleIsSafe},
+        {"TypeSwitchIsClickFree", testTypeSwitchIsClickFree},
+        {"AutomationStress", testAutomationStress},
         {"StableAcrossSampleRates", testStableAcrossSampleRates},
     };
 
