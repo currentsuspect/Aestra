@@ -5,6 +5,8 @@
 #include "NUIRenderer.h"
 #include <algorithm>
 #include <iostream>
+#include <utility>
+#include <vector>
 
 // Forward declare NUIRenderer to avoid dependency
 namespace AestraUI {
@@ -245,7 +247,46 @@ void NUIComponent::addChild(std::shared_ptr<NUIComponent> child) {
     setDirty();
 }
 
+namespace {
+// The dispatch guard is a per-thread context: begin/endEventDispatch and the
+// removeChild()s they bracket all run on the same (UI) thread. Making the state
+// thread_local keeps it correct while avoiding any data race with a removeChild
+// issued from another thread (which simply sees depth 0 and removes at once).
+// Depth counts nested dispatches; the deferred list holds strong refs so queued
+// children stay alive until the dispatch unwinds.
+thread_local int g_eventDispatchDepth = 0;
+thread_local std::vector<std::pair<NUIComponent*, std::shared_ptr<NUIComponent>>> g_deferredRemovals;
+} // namespace
+
+void NUIComponent::beginEventDispatch() {
+    ++g_eventDispatchDepth;
+}
+
+void NUIComponent::endEventDispatch() {
+    if (g_eventDispatchDepth > 0) {
+        --g_eventDispatchDepth;
+    }
+    if (g_eventDispatchDepth == 0 && !g_deferredRemovals.empty()) {
+        auto pending = std::move(g_deferredRemovals);
+        g_deferredRemovals.clear();
+        for (auto& entry : pending) {
+            if (entry.first) {
+                entry.first->removeChild(entry.second); // depth == 0 now -> immediate
+            }
+        }
+    }
+}
+
 void NUIComponent::removeChild(std::shared_ptr<NUIComponent> child) {
+    if (!child) {
+        return;
+    }
+    if (g_eventDispatchDepth > 0) {
+        // Defer until the dispatch unwinds; the strong ref keeps the child alive
+        // through the rest of the current event.
+        g_deferredRemovals.emplace_back(this, std::move(child));
+        return;
+    }
     auto it = std::find(children_.begin(), children_.end(), child);
     if (it != children_.end()) {
         (*it)->parent_ = nullptr;

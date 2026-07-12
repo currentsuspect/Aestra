@@ -235,7 +235,9 @@ void NUIApp::handleMouseEvent(const NUIMouseEvent& event) {
     // The component will handle hover state internally
     // Dispatch event to root component
     // The component will handle hover state internally
+    NUIComponent::beginEventDispatch();
     bool handled = rootComponent_->onMouseEvent(event);
+    NUIComponent::endEventDispatch();
     
     // Handle focus on click
     if (event.pressed && !handled) {
