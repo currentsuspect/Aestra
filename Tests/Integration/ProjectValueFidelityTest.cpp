@@ -29,6 +29,7 @@
 // persisted identity is tracked as its own serialization-cluster issue.
 
 #include "../../Source/Core/ProjectSerializer.h"
+#include "../Support/TestTempDirectory.h"
 #include "Core/AutomationCurve.h"
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
@@ -43,21 +44,6 @@
 #include <string>
 
 namespace {
-
-std::filesystem::path makeTempDir() {
-    auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-    for (int i = 0; i < 1000; ++i) {
-        auto candidate = base / ("ValueFidelity_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
-            return candidate;
-        }
-    }
-    auto fallback = base / "ValueFidelity_fallback";
-    std::filesystem::create_directories(fallback);
-    return fallback;
-}
 
 // Minimal PCM 16-bit mono WAV writer (enough to satisfy SourceManager loading).
 bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, int numSamples) {
@@ -142,8 +128,7 @@ constexpr float kSendPan = 0.111111f;
 // values that survive one save/load cycle but not two still fail.
 // Note: ProjectSerializer currently lives in the global namespace (its header
 // closes `namespace Aestra` before declaring the class) — see the #266 move.
-void assertAllValues(Aestra::Audio::TrackManager& tm,
-                     const ProjectSerializer::LoadResult& load,
+void assertAllValues(Aestra::Audio::TrackManager& tm, const ProjectSerializer::LoadResult& load,
                      const std::string& gen) {
     using namespace Aestra::Audio;
     auto tag = [&gen](const char* what) { return gen + ": " + what; };
@@ -271,7 +256,8 @@ void assertAllValues(Aestra::Audio::TrackManager& tm,
 int main() {
     using namespace Aestra::Audio;
 
-    const auto tempDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"ProjectValueFidelity"};
+    const auto& tempDir = tempDirScope.path();
     const auto wavPath = tempDir / "fidelity.wav";
     const auto projectPath = tempDir / "fidelity.aes";
     std::cout << "[INFO] TempDir: " << tempDir.string() << "\n";

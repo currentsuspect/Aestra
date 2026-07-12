@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "../../Source/Core/ProjectSerializer.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/TrackManager.h"
 #include "Plugin/PluginManager.h"
 
@@ -9,23 +10,6 @@
 #include <iostream>
 
 namespace {
-std::filesystem::path makeTempDir() {
-    auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-
-    for (int i = 0; i < 1000; ++i) {
-        auto candidate = base / ("InternalPluginProjectRoundTrip_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
-            return candidate;
-        }
-    }
-
-    auto fallback = base / "InternalPluginProjectRoundTrip_fallback";
-    std::filesystem::create_directories(fallback);
-    return fallback;
-}
-
 void require(bool cond, const char* msg) {
     if (!cond) {
         std::cerr << "[FAIL] " << msg << "\n";
@@ -41,7 +25,8 @@ bool nearlyEqual(float a, float b, float epsilon = 1.0e-6f) {
 int main() {
     using namespace Aestra::Audio;
 
-    const auto tempDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"InternalPluginRoundTrip"};
+    const auto& tempDir = tempDirScope.path();
     const auto projectPath = tempDir / "internal-plugin-project.aes";
 
     auto& pluginManager = PluginManager::getInstance();

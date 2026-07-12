@@ -8,6 +8,8 @@
 #include <iostream>
 
 #ifndef _WIN32
+#include "../Support/TestTempDirectory.h"
+
 #include <unistd.h>
 #endif
 
@@ -17,22 +19,6 @@ void require(bool cond, const char* msg) {
         std::cerr << "[FAIL] " << msg << "\n";
         std::exit(1);
     }
-}
-
-std::filesystem::path makeTempDir() {
-    const auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-    for (int i = 0; i < 1000; ++i) {
-        const auto candidate = base / ("PluginScannerSigpipe_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
-            return candidate;
-        }
-    }
-
-    const auto fallback = base / "PluginScannerSigpipe_fallback";
-    std::filesystem::create_directories(fallback);
-    return fallback;
 }
 
 #ifndef _WIN32
@@ -53,7 +39,8 @@ int main() {
     std::cout << "[SKIP] PluginScannerSigpipeTest is Unix-only\n";
     return 0;
 #else
-    const auto dir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory dirScope{"PluginScannerSigpipe"};
+    const auto& dir = dirScope.path();
     const auto clapPath = dir / "broken.clap";
     {
         std::ofstream out(clapPath, std::ios::binary);
@@ -63,7 +50,6 @@ int main() {
     const std::string falseExecutable = findFalseExecutable();
     if (falseExecutable.empty()) {
         std::cout << "[SKIP] PluginScannerSigpipeTest: no false executable found\n";
-        std::filesystem::remove_all(dir);
         return 0;
     }
 
@@ -79,8 +65,6 @@ int main() {
     } else {
         unsetenv("AESTRA_PLUGIN_HOST_PATH");
     }
-
-    std::filesystem::remove_all(dir);
 
 #ifdef AESTRA_TEST_HAS_CLAP
     require(plugins.empty(), "Broken out-of-process CLAP scan should not return plugin metadata");
