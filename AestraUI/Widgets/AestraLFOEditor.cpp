@@ -305,7 +305,7 @@ bool AestraLFOEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    return false;
+    return consumeInsideBounds(event);
 }
 
 void AestraLFOEditor::onResize(int width, int height) {
