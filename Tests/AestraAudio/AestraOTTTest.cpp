@@ -291,6 +291,73 @@ bool testParameterMapping() {
     return true;
 }
 
+// NaN/Inf must not pass the parameter ingress; a NaN-filled (magic-intact)
+// state blob must not poison processing.
+bool testSetParameterRejectsNonFinite() {
+    AestraOTT ott;
+    ott.initialize(kSampleRate, kBlockSize);
+    ott.activate();
+    ott.setParameter(AestraOTT::kDepth, 0.42f);
+
+    for (float bad : {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity(),
+                      -std::numeric_limits<float>::infinity()}) {
+        ott.setParameter(AestraOTT::kDepth, bad);
+        if (std::abs(ott.getParameter(AestraOTT::kDepth) - 0.42f) > 1e-6f)
+            return false;
+    }
+
+    std::vector<uint8_t> state = ott.saveState();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    for (size_t off = 8; off + sizeof(float) <= state.size(); off += sizeof(float)) {
+        std::memcpy(state.data() + off, &nan, sizeof(float));
+    }
+    ott.loadState(state);
+    for (uint32_t i = 0; i < AestraOTT::kParamCount; ++i) {
+        if (!std::isfinite(ott.getParameter(i)))
+            return false;
+    }
+
+    const auto in = makeSine(2048, 1000.0f, 0.5f, kSampleRate);
+    auto out = processStereo(ott, in, in);
+    return allFinite(out.left) && allFinite(out.right);
+}
+
+// Rapid automation of every continuous parameter, with hostile block sizes.
+bool testAutomationStress() {
+    AestraOTT ott;
+    ott.initialize(kSampleRate, kBlockSize);
+    ott.activate();
+
+    uint32_t lcg = 0xBADC0DEu;
+    auto next01 = [&lcg]() {
+        lcg = lcg * 1664525u + 1013904223u;
+        return static_cast<float>(lcg >> 8) * (1.0f / 16777216.0f);
+    };
+
+    const auto in = makeSine(96000, 300.0f, 0.5f, kSampleRate); // 2 s
+    std::vector<float> outL(in.size(), 0.0f);
+    std::vector<float> outR(in.size(), 0.0f);
+    const uint32_t sizes[] = {1, 3, 17, 32, 64, 111};
+    uint32_t pos = 0;
+    uint32_t sizeIdx = 0;
+    while (pos < in.size()) {
+        for (uint32_t pIdx = 0; pIdx < AestraOTT::kParamCount; ++pIdx) {
+            if (pIdx != AestraOTT::kBypass)
+                ott.setParameter(pIdx, next01());
+        }
+        const uint32_t n = std::min<uint32_t>(sizes[sizeIdx % 6], static_cast<uint32_t>(in.size()) - pos);
+        ++sizeIdx;
+        const float* ins[] = {in.data() + pos, in.data() + pos};
+        float* outs[] = {outL.data() + pos, outR.data() + pos};
+        ott.process(ins, outs, 2, 2, n);
+        pos += n;
+    }
+
+    if (!allFinite(outL) || !allFinite(outR))
+        return false;
+    return peakAmplitude(outL) < 16.0f;
+}
+
 bool testStableAcrossSampleRates() {
     for (double sr : {44100.0, 96000.0, 192000.0}) {
         AestraOTT ott;
@@ -332,6 +399,8 @@ int main() {
         {"StateRoundTrip", testStateRoundTrip},
         {"LoadStateRejectsGarbage", testLoadStateRejectsGarbage},
         {"ParameterMapping", testParameterMapping},
+        {"SetParameterRejectsNonFinite", testSetParameterRejectsNonFinite},
+        {"AutomationStress", testAutomationStress},
         {"StableAcrossSampleRates", testStableAcrossSampleRates},
     };
 

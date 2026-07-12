@@ -99,8 +99,14 @@ public:
         const bool stereo = channels >= 2;
         const float sr = static_cast<float>(m_sampleRate);
 
-        for (uint32_t i = 0; i < numFrames; ++i) {
-            // Smooth continuous params (2 ms one-pole)
+        // Parameters are read/smoothed and all dB<->linear transforms run once
+        // per control block; per-band gains are linearly interpolated across
+        // the block. The per-sample path is the crossover SVFs, the peak
+        // followers and multiply-adds — no atomics or transcendentals.
+        for (uint32_t blockStart = 0; blockStart < numFrames; blockStart += kCtrlBlock) {
+            const uint32_t blockEnd = std::min(blockStart + kCtrlBlock, numFrames);
+            const uint32_t blockLen = blockEnd - blockStart;
+
             m_depthSmoothed += (getParameter(kDepth) - m_depthSmoothed) * m_smoothCoeff;
             m_timeSmoothed += (getParameter(kTime) - m_timeSmoothed) * m_smoothCoeff;
             m_inGainSmoothed += (getParameter(kInGain) - m_inGainSmoothed) * m_smoothCoeff;
@@ -126,37 +132,17 @@ public:
                 m_timeCached = m_timeSmoothed;
                 updateTimeCoeffs(sr);
             }
-            m_coeffsDirty = false;
 
             const float inGain = dbToLinear(bipolarDbFromNorm(m_inGainSmoothed, 24.0f));
-            const float inL = sanitizeSample(readInput(inputs, numInputChannels, 0, i)) * inGain;
-            const float inR = (stereo ? sanitizeSample(readInput(inputs, numInputChannels, 1, i)) : inL) * inGain;
-
-            // ── LR4 band split (low band allpass-corrected at the high xover) ──
-            float band[kBandCount][2];
-            for (uint32_t ch = 0; ch < 2; ++ch) {
-                const float x = (ch == 0) ? inL : inR;
-                float lowPath, highPath;
-                m_xover1[ch].split(x, m_coeffLow, lowPath, highPath);
-                float apLo, apHi;
-                m_apCorrect[ch].split(lowPath, m_coeffHigh, apLo, apHi);
-                band[kBandLow][ch] = apLo + apHi; // LR4 allpass at fHigh
-                m_xover2[ch].split(highPath, m_coeffHigh, band[kBandMid][ch], band[kBandHigh][ch]);
-            }
-
-            // ── Per-band gain computer (stereo-linked) ──
+            const float outGain = dbToLinear(bipolarDbFromNorm(m_outGainSmoothed, 24.0f));
             const float depth = m_depthSmoothed;
-            float outL = 0.0f;
-            float outR = 0.0f;
-            for (uint32_t b = 0; b < kBandCount; ++b) {
-                const float peak = std::max(std::abs(band[b][0]), std::abs(band[b][1]));
-                float& env = m_env[b];
-                const float coeff = (peak > env) ? m_attackCoeff[b] : m_releaseCoeff[b];
-                env += (peak - env) * coeff;
-                if (env != env || env < 1.0e-12f)
-                    env = 0.0f; // NaN check + denormal flush
 
-                const float envDb = linearToDb(env);
+            // ── Per-band gain targets from the current envelopes; the applied
+            // gain ramps linearly to the target across the block. Envelopes
+            // move over milliseconds, so a 16-sample ramp tracks them closely. ──
+            float dGain[kBandCount];
+            for (uint32_t b = 0; b < kBandCount; ++b) {
+                const float envDb = linearToDb(m_env[b]);
                 float compDb = (kTargetDb - envDb) * kRatioAmount;
                 if (compDb > 0.0f) {
                     // Upward gain: gate away near the noise floor, cap the boost.
@@ -165,21 +151,56 @@ public:
                     compDb = std::min(compDb * upScale, kMaxUpDb);
                 }
                 const float trimDb = bipolarDbFromNorm(m_bandTrimSmoothed[b], 12.0f);
-                const float gain = dbToLinear(depth * compDb + trimDb);
+                const float target = dbToLinear(depth * compDb + trimDb);
                 m_bandGainDb[b].store(depth * compDb, std::memory_order_relaxed);
-
-                outL += band[b][0] * gain;
-                outR += band[b][1] * gain;
+                if (m_coeffsDirty) {
+                    m_bandGain[b] = target;
+                    dGain[b] = 0.0f;
+                } else {
+                    dGain[b] = (target - m_bandGain[b]) / static_cast<float>(blockLen);
+                }
             }
+            m_coeffsDirty = false;
 
-            const float outGain = dbToLinear(bipolarDbFromNorm(m_outGainSmoothed, 24.0f));
-            if (outputs[0])
-                outputs[0][i] = flushDenormal(outL * outGain);
-            if (numOutputChannels > 1 && outputs[1])
-                outputs[1][i] = flushDenormal((stereo ? outR : outL) * outGain);
-            for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
-                if (outputs[ch])
-                    outputs[ch][i] = 0.0f;
+            for (uint32_t i = blockStart; i < blockEnd; ++i) {
+                const float inL = sanitizeSample(readInput(inputs, numInputChannels, 0, i)) * inGain;
+                const float inR = (stereo ? sanitizeSample(readInput(inputs, numInputChannels, 1, i)) : inL) * inGain;
+
+                // ── LR4 band split (low band allpass-corrected at the high xover) ──
+                float band[kBandCount][2];
+                for (uint32_t ch = 0; ch < 2; ++ch) {
+                    const float x = (ch == 0) ? inL : inR;
+                    float lowPath, highPath;
+                    m_xover1[ch].split(x, m_coeffLow, lowPath, highPath);
+                    float apLo, apHi;
+                    m_apCorrect[ch].split(lowPath, m_coeffHigh, apLo, apHi);
+                    band[kBandLow][ch] = apLo + apHi; // LR4 allpass at fHigh
+                    m_xover2[ch].split(highPath, m_coeffHigh, band[kBandMid][ch], band[kBandHigh][ch]);
+                }
+
+                float outL = 0.0f;
+                float outR = 0.0f;
+                for (uint32_t b = 0; b < kBandCount; ++b) {
+                    const float peak = std::max(std::abs(band[b][0]), std::abs(band[b][1]));
+                    float& env = m_env[b];
+                    const float coeff = (peak > env) ? m_attackCoeff[b] : m_releaseCoeff[b];
+                    env += (peak - env) * coeff;
+                    if (env != env || env < 1.0e-12f)
+                        env = 0.0f; // NaN check + denormal flush
+
+                    m_bandGain[b] += dGain[b];
+                    outL += band[b][0] * m_bandGain[b];
+                    outR += band[b][1] * m_bandGain[b];
+                }
+
+                if (outputs[0])
+                    outputs[0][i] = flushDenormal(outL * outGain);
+                if (numOutputChannels > 1 && outputs[1])
+                    outputs[1][i] = flushDenormal((stereo ? outR : outL) * outGain);
+                for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
+                    if (outputs[ch])
+                        outputs[ch][i] = 0.0f;
+                }
             }
         }
     }
@@ -332,6 +353,8 @@ public:
     }
 
 private:
+    static constexpr uint32_t kCtrlBlock = 16; // control-rate interval for param/gain updates
+
     // ── TPT (ZDF) SVF stage, Butterworth damping — building block for LR4 ──
     struct SvfCoeff {
         float a1 = 0.0f;
@@ -407,7 +430,9 @@ private:
             m_bandGainDb[b].store(0.0f, std::memory_order_relaxed);
         }
         const float sr = static_cast<float>(m_sampleRate);
-        m_smoothCoeff = 1.0f - std::exp(-1.0f / (0.002f * sr));
+        // Smoothing runs once per control block, so the coefficient is scaled
+        // to the block interval to keep the 2 ms time constant.
+        m_smoothCoeff = 1.0f - std::exp(-static_cast<float>(kCtrlBlock) / (0.002f * sr));
         m_coeffsDirty = true;
     }
 
@@ -480,6 +505,7 @@ private:
     float m_env[kBandCount] = {};
     float m_attackCoeff[kBandCount] = {};
     float m_releaseCoeff[kBandCount] = {};
+    float m_bandGain[kBandCount] = {1.0f, 1.0f, 1.0f}; // block-interpolated applied gains
 
     float m_smoothCoeff = 0.0f;
     float m_depthSmoothed = 1.0f;
