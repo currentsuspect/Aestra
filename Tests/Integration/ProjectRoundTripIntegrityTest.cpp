@@ -3,6 +3,7 @@
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
 #include "Models/TrackManager.h"
@@ -22,23 +23,9 @@
 
 namespace {
 
-std::filesystem::path makeTempDir() {
-    auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-    for (int i = 0; i < 1000; ++i) {
-        auto candidate = base / ("RoundTrip_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
-            return candidate;
-        }
-    }
-    auto fallback = base / "RoundTrip_fallback";
-    std::filesystem::create_directories(fallback);
-    return fallback;
-}
-
 bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, int numSamples) {
-    if (sampleRate <= 0 || numSamples <= 0) return false;
+    if (sampleRate <= 0 || numSamples <= 0)
+        return false;
     const int numChannels = 1;
     const int bitsPerSample = 16;
     const int bytesPerSample = bitsPerSample / 8;
@@ -47,7 +34,8 @@ bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, in
     const std::uint32_t dataSize = static_cast<std::uint32_t>(numSamples * blockAlign);
 
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
-    if (!out) return false;
+    if (!out)
+        return false;
 
     auto writeU32 = [&](std::uint32_t v) { out.write(reinterpret_cast<const char*>(&v), 4); };
     auto writeU16 = [&](std::uint16_t v) { out.write(reinterpret_cast<const char*>(&v), 2); };
@@ -89,8 +77,8 @@ std::string normalizeJson(const std::string& json) {
 }
 
 std::string serializeProject(Aestra::Audio::TrackManager& tm, double tempo, double playhead) {
-    auto ser = ProjectSerializer::serialize(std::shared_ptr<Aestra::Audio::TrackManager>(&tm, [](Aestra::Audio::TrackManager*) {}),
-                                tempo, playhead, 0);
+    auto ser = ProjectSerializer::serialize(
+        std::shared_ptr<Aestra::Audio::TrackManager>(&tm, [](Aestra::Audio::TrackManager*) {}), tempo, playhead, 0);
     return ser.contents;
 }
 
@@ -103,11 +91,13 @@ void compareProjectSemantic(const std::string& json1, const std::string& json2, 
     auto countField = [](const std::string& json, const char* field) -> int {
         std::string pattern = "\"" + std::string(field) + "\":[";
         size_t pos = json.find(pattern);
-        if (pos == std::string::npos) return 0;
+        if (pos == std::string::npos)
+            return 0;
         int count = 0;
         size_t start = pos + pattern.size();
         for (size_t i = start; i < json.size() && json[i] != '}'; ++i) {
-            if (json[i] == '{') ++count;
+            if (json[i] == '{')
+                ++count;
         }
         return count;
     };
@@ -147,9 +137,8 @@ void compareProjectSemantic(const std::string& json1, const std::string& json2, 
 
     if (lanes1 != lanes2 || clips1 != clips2 || notes1 != notes2 || units1 != units2) {
         std::cout << "[FAIL] " << testName << " - count mismatch (lanes:" << lanes1 << "vs" << lanes2
-                 << " clips:" << clips1 << "vs" << clips2
-                 << " notes:" << notes1 << "vs" << notes2
-                 << " units:" << units1 << "vs" << units2 << ")" << std::endl;
+                  << " clips:" << clips1 << "vs" << clips2 << " notes:" << notes1 << "vs" << notes2
+                  << " units:" << units1 << "vs" << units2 << ")" << std::endl;
         assert(false);
     }
 
@@ -164,7 +153,8 @@ void compareProjectSemantic(const std::string& json1, const std::string& json2, 
 void testEmptyProjectRoundTrip() {
     std::cout << "[TEST] Empty project round-trip..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     auto tm1 = std::make_shared<Aestra::Audio::TrackManager>();
@@ -181,13 +171,13 @@ void testEmptyProjectRoundTrip() {
     std::string secondSave = serializeProject(*tm2, result.tempo, result.playhead);
 
     compareProjectSemantic(firstSave, secondSave, "empty_project");
-    std::filesystem::remove_all(testDir);
 }
 
 void testSourcesLanesClipsPatternsRoundTrip() {
     std::cout << "[TEST] Sources/lanes/clips/patterns round-trip..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testWav = testDir / "audio.wav";
     std::filesystem::path testProject = testDir / "project.aes";
 
@@ -242,13 +232,13 @@ void testSourcesLanesClipsPatternsRoundTrip() {
 
     compareProjectSemantic(firstSave, secondSave, "sources_lanes_clips_patterns");
     compareProjectSemantic(secondSave, thirdSave, "sources_lanes_clips_patterns_2nd_cycle");
-    std::filesystem::remove_all(testDir);
 }
 
 void testArsenalUnitsRoundTrip() {
     std::cout << "[TEST] Arsenal units round-trip..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     auto tm1 = std::make_shared<Aestra::Audio::TrackManager>();
@@ -267,13 +257,13 @@ void testArsenalUnitsRoundTrip() {
     std::string secondSave = serializeProject(*tm2, result.tempo, result.playhead);
 
     compareProjectSemantic(firstSave, secondSave, "arsenal_units");
-    std::filesystem::remove_all(testDir);
 }
 
 void testArsenalDefaultPatternRebindsAfterLoad() {
     std::cout << "[TEST] Arsenal default pattern rebinds after load..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     std::string projectJson = R"({
@@ -329,8 +319,6 @@ void testArsenalDefaultPatternRebindsAfterLoad() {
     const auto& payload = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
     assert(payload.notes.size() == 1);
     assert(payload.notes[0].unitId == 7);
-
-    std::filesystem::remove_all(testDir);
 }
 
 void testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad() {
@@ -339,7 +327,8 @@ void testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad() {
     auto& pluginManager = Aestra::Audio::PluginManager::getInstance();
     assert(pluginManager.initialize());
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testWav = testDir / "sampler.wav";
     std::filesystem::path testProject = testDir / "project.aes";
     assert(writeMinimalWavMono16(testWav, 48000, 4800));
@@ -368,7 +357,8 @@ void testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad() {
                 "muted": false,
                 "solo": false,
                 "armed": false,
-                "audioClipPath": ")" + wavPath + R"(",
+                "audioClipPath": ")" +
+                              wavPath + R"(",
                 "audioDurationSeconds": 0.1,
                 "defaultPatternId": 1,
                 "pluginId": "com.Aestrastudios.sampler",
@@ -408,14 +398,14 @@ void testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad() {
     }
     assert(peak > 1.0e-5f);
 
-    std::filesystem::remove_all(testDir);
     std::cout << "[PASS] Arsenal sampler audioClipPath rehydrates plugin after load" << std::endl;
 }
 
 void testMissingPatternReferenceDoesNotCompound() {
     std::cout << "[TEST] Missing pattern reference does not compound..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     std::string projectJson = R"({
@@ -469,13 +459,13 @@ void testMissingPatternReferenceDoesNotCompound() {
 
     compareProjectSemantic(save1, save2, "missing_pattern_round_1");
     compareProjectSemantic(save2, save3, "missing_pattern_round_2");
-    std::filesystem::remove_all(testDir);
 }
 
 void testMultipleRoundTripCycles() {
     std::cout << "[TEST] Multiple round-trip cycles..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     auto tm1 = std::make_shared<Aestra::Audio::TrackManager>();
@@ -501,13 +491,13 @@ void testMultipleRoundTripCycles() {
     }
 
     std::cout << "[PASS] Multiple round-trip cycles (5 cycles)" << std::endl;
-    std::filesystem::remove_all(testDir);
 }
 
 void testAutomationRoundTrip() {
     std::cout << "[TEST] Automation round-trip..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     auto tm1 = std::make_shared<Aestra::Audio::TrackManager>();
@@ -586,10 +576,16 @@ void testAutomationRoundTrip() {
             // Count objects until end of array
             int braceDepth = 1;
             for (size_t i = start; i < json.size(); ++i) {
-                if (json[i] == '{') ++braceDepth;
-                else if (json[i] == '}') --braceDepth;
-                if (braceDepth == 0) { ++count; break; }
-                else if (json[i] == ',') { std::cerr << ""; } // continue
+                if (json[i] == '{')
+                    ++braceDepth;
+                else if (json[i] == '}')
+                    --braceDepth;
+                if (braceDepth == 0) {
+                    ++count;
+                    break;
+                } else if (json[i] == ',') {
+                    std::cerr << "";
+                } // continue
             }
             pos = start;
         }
@@ -623,14 +619,15 @@ void testAutomationRoundTrip() {
     assert(points1 == points2 && "Automation point count changed across round-trip cycle 1→2");
     assert(points2 == points3 && "Automation point count changed across round-trip cycle 2→3");
 
-    std::cout << "[PASS] Automation round-trip (3 cycles, " << autoCurves3 << " curves, " << points3 << " points)" << std::endl;
-    std::filesystem::remove_all(testDir);
+    std::cout << "[PASS] Automation round-trip (3 cycles, " << autoCurves3 << " curves, " << points3 << " points)"
+              << std::endl;
 }
 
 void testLegacyProjectWithoutAutomation() {
     std::cout << "[TEST] Legacy project without automation key..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project_legacy.aes";
 
     // Old-format project: lanes have no "automation" key
@@ -682,13 +679,13 @@ void testLegacyProjectWithoutAutomation() {
     assert(lane2->automationCurves.empty());
 
     std::cout << "[PASS] Legacy project without automation key loads and round-trips" << std::endl;
-    std::filesystem::remove_all(testDir);
 }
 
 void testAudioClipDurationSecondsMigrationAndTempoRecompute() {
     std::cout << "[TEST] Audio clip duration seconds migration and tempo recompute..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project_audio_duration_migration.aes";
 
     const std::string legacyJson = R"({
@@ -746,13 +743,13 @@ void testAudioClipDurationSecondsMigrationAndTempoRecompute() {
     assert(saved.find("\"durationSeconds\"") != std::string::npos);
 
     std::cout << "[PASS] Audio clip duration seconds migration and tempo recompute" << std::endl;
-    std::filesystem::remove_all(testDir);
 }
 
 void testAudioClipPlacementHelperPersistsClipAndDurationSeconds() {
     std::cout << "[TEST] Audio clip placement helper persists clip and duration seconds..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectRoundTripIntegrity"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testWav = testDir / "placed_audio.wav";
     std::filesystem::path testProject = testDir / "project_audio_placement.aes";
     assert(writeMinimalWavMono16(testWav, 48000, 48000));
@@ -799,10 +796,9 @@ void testAudioClipPlacementHelperPersistsClipAndDurationSeconds() {
     assert(std::abs(loadedLane->clips[0].durationBeats - 2.0) < 1.0e-9);
 
     std::cout << "[PASS] Audio clip placement helper persists clip and duration seconds" << std::endl;
-    std::filesystem::remove_all(testDir);
 }
 
-}
+} // namespace
 
 int main() {
     std::cout << "=== Project Round-Trip Integrity Tests ===" << std::endl;

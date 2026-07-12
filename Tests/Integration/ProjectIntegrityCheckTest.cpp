@@ -12,6 +12,7 @@
 //   4. the autosave path (serialize + writeAtomically) carries the checksum too.
 
 #include "../../Source/Core/ProjectSerializer.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/TrackManager.h"
 
 #include <filesystem>
@@ -29,21 +30,6 @@ void require(bool cond, const std::string& msg) {
         std::cerr << "[FAIL] " << msg << "\n";
         ++g_failures;
     }
-}
-
-std::filesystem::path makeTempDir() {
-    auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-    for (int i = 0; i < 1000; ++i) {
-        auto candidate = base / ("IntegrityCheck_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
-            return candidate;
-        }
-    }
-    auto fallback = base / "IntegrityCheck_fallback";
-    std::filesystem::create_directories(fallback);
-    return fallback;
 }
 
 std::shared_ptr<Aestra::Audio::TrackManager> makeFreshManager() {
@@ -67,7 +53,8 @@ bool reportHasIntegrityIssue(const ProjectSerializer::LoadResult& load) {
 int main() {
     using namespace Aestra::Audio;
 
-    const auto tempDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"ProjectIntegrityCheck"};
+    const auto& tempDir = tempDirScope.path();
     std::cout << "[INFO] TempDir: " << tempDir.string() << "\n";
 
     // Build a small project.
@@ -104,8 +91,7 @@ int main() {
         auto tm3 = makeFreshManager();
         auto load = ProjectSerializer::load(corruptPath.string(), tm3);
         require(load.ok, "corrupted-value file must still load non-destructively");
-        require(load.integrity == ProjectSerializer::LoadIntegrity::Mismatch,
-                "corrupted file did not report Mismatch");
+        require(load.integrity == ProjectSerializer::LoadIntegrity::Mismatch, "corrupted file did not report Mismatch");
         require(reportHasIntegrityIssue(load), "mismatch missing from the structured load report");
     }
 

@@ -3,6 +3,7 @@
 #include "../../Source/Core/TakeManager.h"
 
 #include "../../Source/Core/ProjectSerializer.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/TrackManager.h"
 
 #include <atomic>
@@ -13,25 +14,6 @@
 #include <thread>
 
 namespace {
-
-std::filesystem::path makeTempDir() {
-    static std::atomic<uint64_t> counter{0};
-    auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-
-    const auto tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
-    for (int attempt = 0; attempt < 100; ++attempt) {
-        auto candidate = base / ("TakeManager_" + std::to_string(tid) + "_" + std::to_string(counter.fetch_add(1)));
-        std::error_code ec;
-        if (std::filesystem::create_directories(candidate, ec)) {
-            return candidate;
-        }
-    }
-
-    auto fallback = base / ("TakeManager_fallback_" + std::to_string(counter.fetch_add(1)));
-    std::filesystem::create_directories(fallback);
-    return fallback;
-}
 
 void require(bool cond, const char* msg) {
     if (!cond) {
@@ -90,7 +72,8 @@ std::string loadFirstLaneName(const std::string& projectPath) {
 } // namespace
 
 int main() {
-    const auto tempDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"TakeManager"};
+    const auto& tempDir = tempDirScope.path();
     const auto projectPath = tempDir / "takes_project.aes";
 
     auto trackManager = makeProject("Main Lane");
@@ -158,7 +141,6 @@ int main() {
     require(switchedManifest.activeTake() && switchedManifest.activeTake()->active,
             "Active take marker was not restored");
 
-    std::filesystem::remove_all(tempDir);
     std::cout << "[PASS] TakeManagerTest\n";
     return 0;
 }
