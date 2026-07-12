@@ -11,6 +11,7 @@
 #include "AestraDriftEditor.h"
 #include "AestraLimitEditor.h"
 #include "AestraSatEditor.h"
+#include "AestraFilterEditor.h"
 
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
 #include "RumblePluginEditor.h"
@@ -400,6 +401,14 @@ void PluginUIController::openPluginEditor(
         });
         ed->setPlatformBridge(m_platformBridge);
         editor = ed;
+    } else if (pluginId == "com.Aestrastudios.filter") {
+        auto ed = std::make_shared<AestraFilterEditor>(instance);
+        ed->setOnClose([this, ed]() {
+            if (m_popupLayer) m_popupLayer->removeChild(ed);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
+        });
+        ed->setPlatformBridge(m_platformBridge);
+        editor = ed;
     } else {
         auto ed = std::make_shared<GenericPluginEditor>(instance);
         ed->setOnClose([this, ed]() {
@@ -428,6 +437,8 @@ void PluginUIController::openPluginEditor(
             limit->onResize(static_cast<int>(width), static_cast<int>(height));
         } else if (auto sat = std::dynamic_pointer_cast<AestraSatEditor>(editorComp)) {
             sat->onResize(static_cast<int>(width), static_cast<int>(height));
+        } else if (auto filter = std::dynamic_pointer_cast<AestraFilterEditor>(editorComp)) {
+            filter->onResize(static_cast<int>(width), static_cast<int>(height));
         } else if (auto generic = std::dynamic_pointer_cast<GenericPluginEditor>(editorComp)) {
             generic->onResize();
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
