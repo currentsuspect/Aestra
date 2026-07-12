@@ -468,23 +468,30 @@ public:
                 static const bool useAVX2 =
                     Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
                 if (useAVX2) {
+                    // NOTE argument order: the kernels take (sinInc, cosInc).
+                    // These were passed swapped, which rotated every LFO by
+                    // ~pi/2 per sample: the "0.3 Hz" modulators actually ran
+                    // at sr/4 (12 kHz at 48k), FM-ing all delay lines at audio
+                    // rate and imaging the tail's low-mid modes to 11-13 kHz
+                    // at ~-30 dB — the audible metallic "top ring".
                     DSP::ReverbSIMD::updateLFOsAVX2(
                         lfoSin.data(), lfoCos.data(),
                         lfoSin2.data(), lfoCos2.data(),
-                        control.lfoCosInc.data(), control.lfoSinInc.data(),
-                        control.lfoCosInc2.data(), control.lfoSinInc2.data());
+                        control.lfoSinInc.data(), control.lfoCosInc.data(),
+                        control.lfoSinInc2.data(), control.lfoCosInc2.data());
                 } else
 #endif
 #ifdef AESTRA_REVERB_HAS_SSE
                 {
+                    // Same (sinInc, cosInc) order as above.
                     DSP::ReverbSIMD::updateLFOsSSE(lfoSin.data(), lfoCos.data(),
-                                                   control.lfoCosInc.data(), control.lfoSinInc.data());
+                                                   control.lfoSinInc.data(), control.lfoCosInc.data());
                     DSP::ReverbSIMD::updateLFOsSSE(&lfoSin[4], &lfoCos[4],
-                                                   &control.lfoCosInc[4], &control.lfoSinInc[4]);
+                                                   &control.lfoSinInc[4], &control.lfoCosInc[4]);
                     DSP::ReverbSIMD::updateLFOsSSE(lfoSin2.data(), lfoCos2.data(),
-                                                   control.lfoCosInc2.data(), control.lfoSinInc2.data());
+                                                   control.lfoSinInc2.data(), control.lfoCosInc2.data());
                     DSP::ReverbSIMD::updateLFOsSSE(&lfoSin2[4], &lfoCos2[4],
-                                                   &control.lfoCosInc2[4], &control.lfoSinInc2[4]);
+                                                   &control.lfoSinInc2[4], &control.lfoCosInc2[4]);
                 }
 #else
                 {

@@ -7,17 +7,44 @@
 
 #include "AestraVerb.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
+#include <complex>
 #include <cstdint>
 #include <iostream>
 #include <random>
 #include <string>
+#include <utility>
 #include <vector>
 
 using Aestra::Audio::Plugins::AestraVerb;
 
 namespace {
+
+// Iterative radix-2 FFT (power-of-two sizes) for spectral assertions.
+void fft(std::vector<std::complex<float>>& a) {
+    const size_t n = a.size();
+    for (size_t i = 1, j = 0; i < n; ++i) {
+        size_t bit = n >> 1;
+        for (; j & bit; bit >>= 1) j ^= bit;
+        j ^= bit;
+        if (i < j) std::swap(a[i], a[j]);
+    }
+    for (size_t len = 2; len <= n; len <<= 1) {
+        const float ang = -2.0f * 3.14159265358979323846f / static_cast<float>(len);
+        const std::complex<float> wl(std::cos(ang), std::sin(ang));
+        for (size_t i = 0; i < n; i += len) {
+            std::complex<float> w(1.0f, 0.0f);
+            for (size_t k = 0; k < len / 2; ++k) {
+                const std::complex<float> u = a[i + k], v = a[i + k + len / 2] * w;
+                a[i + k] = u + v;
+                a[i + k + len / 2] = u - v;
+                w *= wl;
+            }
+        }
+    }
+}
 
 int g_failures = 0;
 void check(bool cond, const std::string& what) {
@@ -290,6 +317,47 @@ void probeSampleRateConsistency() {
     check(spread < 10.0, "T60 is sample-rate independent (spread < 10%)");
 }
 
+// Regression guard for the SIMD LFO argument-swap bug: the (sinInc, cosInc)
+// kernel arguments were passed as (cosInc, sinInc), rotating every "sub-Hz"
+// reverb LFO by ~pi/2 per sample. The delay lines were FM'd at sr/4 (12 kHz
+// at 48k), imaging the tail's low-mid modes to 10.7-13 kHz at ~-30 dB below
+// the late-tail spectral max — an audible metallic "top ring" on every mode
+// whenever Mod Depth > 0. After the fix the strongest partial in that band
+// measures ~-86 dB (analysis floor).
+void probeModulationSpectralPurity() {
+    std::cout << "\n--- Modulation spectral purity: no sr/4 FM ring in the late tail ---\n";
+    AestraVerb v;
+    v.initialize(48000.0, 256);
+    configureHall(v);
+    v.activate();
+    auto imp = impulseIn(48000 * 4);
+    auto out = render(v, imp.l, imp.r, 128);
+
+    const size_t N = 131072;
+    const size_t off = 48000; // late window: 1.0 s onward
+    std::vector<std::complex<float>> buf(N, {0.0f, 0.0f});
+    for (size_t i = 0; i < N && off + i < out.l.size(); ++i) {
+        const float w = 0.5f * (1.0f - std::cos(2.0f * 3.14159265358979323846f * i / (N - 1)));
+        buf[i] = {out.l[off + i] * w, 0.0f};
+    }
+    fft(buf);
+    std::vector<float> mag(N / 2);
+    for (size_t i = 0; i < N / 2; ++i) mag[i] = std::abs(buf[i]) + 1e-12f;
+    const size_t lo300 = size_t(300.0 * N / 48000.0), hi13k = size_t(13000.0 * N / 48000.0);
+    float specMax = 1e-12f;
+    for (size_t i = lo300; i < hi13k; ++i) specMax = std::max(specMax, mag[i]);
+    const size_t lo = size_t(9000.0 * N / 48000.0);
+    float worst = -200.0f;
+    double worstHz = 0.0;
+    for (size_t i = lo; i < hi13k; ++i) {
+        const float db = 20.0f * std::log10(mag[i] / specMax);
+        if (db > worst) { worst = db; worstHz = double(i) * 48000.0 / N; }
+    }
+    std::cout << "  strongest 9-13 kHz late-tail component: " << worstHz << " Hz at " << worst
+              << " dB (rel late-tail max)\n";
+    check(worst < -55.0f, "no audio-rate modulation ring in the top octaves (< -55 dB)");
+}
+
 void diagModeSwitchClick() {
     std::cout << "\n--- Mode-switch discontinuity (max |sample delta| around switch) ---\n";
     AestraVerb v;
@@ -366,6 +434,7 @@ int main() {
     probeHighCutDeadKnob();
     probeFreezeStability();
     probeSampleRateConsistency();
+    probeModulationSpectralPurity();
     diagModeSwitchClick();
     diagStereoCorrelationAndBalance();
 
