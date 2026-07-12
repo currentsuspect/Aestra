@@ -11,6 +11,7 @@
 #include "Plugin/AestraDrift.h"
 #include "Plugin/AestraLimit.h"
 #include "Plugin/AestraSat.h"
+#include "Plugin/AestraFilter.h"
 
 #include <mutex>
 
@@ -178,6 +179,26 @@ const PluginInfo& satInfo() {
     return info;
 }
 
+const PluginInfo& filterInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.filter";
+        p.name = "Aestra Filter";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Filter";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = true;
+        return p;
+    }();
+    return info;
+}
+
 namespace {
 void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
     if (!instance) {
@@ -202,6 +223,8 @@ void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
         limit->setInfo(info);
     } else if (auto sat = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraSat>(instance)) {
         sat->setInfo(info);
+    } else if (auto filter = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraFilter>(instance)) {
+        filter->setInfo(info);
     }
 }
 
@@ -231,6 +254,7 @@ void registerCoreBuiltIns() {
         registry.registerPlugin(makeRegistration<Plugins::AestraDrift>(driftInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraLimit>(limiterInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraSat>(satInfo()));
+        registry.registerPlugin(makeRegistration<Plugins::AestraFilter>(filterInfo()));
     });
 }
 
