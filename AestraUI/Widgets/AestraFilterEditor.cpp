@@ -185,10 +185,15 @@ void AestraFilterEditor::drawBypassPill(NUIRenderer& renderer) {
     }
 }
 
+NUIRect AestraFilterEditor::mixTrackRect() const {
+    return NUIRect(m_mixRect.x + 38.0f, m_mixRect.y + 6.0f, m_mixRect.width - 78.0f, m_mixRect.height - 12.0f);
+}
+
 void AestraFilterEditor::drawMixSlider(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     const float mix = m_instance ? m_instance->getParameter(AestraFilter::kMix) : 1.0f;
-    const NUIRect track(m_mixRect.x + 38.0f, m_mixRect.y + 12.0f, m_mixRect.width - 78.0f, 8.0f);
+    const NUIRect hit = mixTrackRect();
+    const NUIRect track(hit.x, m_mixRect.y + 12.0f, hit.width, 8.0f);
 
     renderer.fillRoundedRect(m_mixRect, 10.0f, insetSurface());
     renderer.strokeRoundedRect(m_mixRect, 10.0f, 1.0f, accent().withAlpha(m_draggingMix ? 0.62f : 0.34f));
@@ -271,7 +276,7 @@ bool AestraFilterEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     // Mix slider drag
-    const NUIRect mixTrack(m_mixRect.x + 38.0f, m_mixRect.y + 6.0f, m_mixRect.width - 78.0f, m_mixRect.height - 12.0f);
+    const NUIRect mixTrack = mixTrackRect();
     if (m_draggingMix) {
         if (event.released) {
             m_draggingMix = false;

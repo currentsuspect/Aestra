@@ -28,6 +28,9 @@ private:
     void drawTypeSelector(NUIRenderer& renderer);
     void drawBypassPill(NUIRenderer& renderer);
     void drawMixSlider(NUIRenderer& renderer);
+    // Shared mix-slider hit area, so the drawn track and the drag hit-test
+    // cannot drift apart. drawMixSlider renders a thinner visual bar inside it.
+    NUIRect mixTrackRect() const;
 
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
 
