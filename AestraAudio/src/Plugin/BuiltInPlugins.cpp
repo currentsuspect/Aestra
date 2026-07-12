@@ -12,6 +12,7 @@
 #include "Plugin/AestraLimit.h"
 #include "Plugin/AestraSat.h"
 #include "Plugin/AestraFilter.h"
+#include "Plugin/AestraOTT.h"
 
 #include <mutex>
 
@@ -199,6 +200,26 @@ const PluginInfo& filterInfo() {
     return info;
 }
 
+const PluginInfo& ottInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.ott";
+        p.name = "Aestra OTT";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Dynamics";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = true;
+        return p;
+    }();
+    return info;
+}
+
 namespace {
 void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
     if (!instance) {
@@ -225,6 +246,8 @@ void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
         sat->setInfo(info);
     } else if (auto filter = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraFilter>(instance)) {
         filter->setInfo(info);
+    } else if (auto ott = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraOTT>(instance)) {
+        ott->setInfo(info);
     }
 }
 
@@ -255,6 +278,7 @@ void registerCoreBuiltIns() {
         registry.registerPlugin(makeRegistration<Plugins::AestraLimit>(limiterInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraSat>(satInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraFilter>(filterInfo()));
+        registry.registerPlugin(makeRegistration<Plugins::AestraOTT>(ottInfo()));
     });
 }
 

@@ -1245,6 +1245,17 @@ else()
     message(STATUS "AestraFilterBench built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
 endif()
 
+# Aestra OTT Test
+add_executable(AestraOTTTest AestraAudio/AestraOTTTest.cpp)
+target_link_libraries(AestraOTTTest PRIVATE AestraAudio)
+target_include_directories(AestraOTTTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraOTTTest COMMAND AestraOTTTest)
+set_tests_properties(AestraOTTTest PROPERTIES LABELS "audio;plugins;ott")
+
 # =============================================================================
 # Audio Quality Tests (S-Tier validation suite, Spec §3, §8, §15)
 # =============================================================================
