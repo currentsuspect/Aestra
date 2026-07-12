@@ -67,9 +67,15 @@ public:
         (void)maxBlockSize;
         m_sampleRate = std::max(1.0, sampleRate);
         const auto defaults = getParameters();
-        for (const auto& param : defaults) {
-            if (param.id < kParamCount) {
-                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
+        // Seed parameter defaults only on the first initialization of a fresh
+        // instance. EffectChain::prepare() re-calls initialize() on the live
+        // instance during sample-rate/device changes and must preserve the
+        // user's current parameter values (and any loaded project state).
+        if (!m_paramsInitialized.exchange(true)) {
+            for (const auto& param : defaults) {
+                if (param.id < kParamCount) {
+                    m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
+                }
             }
         }
 
@@ -597,6 +603,7 @@ private:
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
+    std::atomic<bool> m_paramsInitialized{false};
     std::array<std::atomic<float>, kParamCount> m_params;
     std::atomic<float> m_bpm{120.0f};
 

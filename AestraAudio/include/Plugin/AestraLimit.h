@@ -53,8 +53,14 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         m_sampleRate = std::max(1.0, sampleRate);
         m_maxBlockSize = maxBlockSize;
-        for (const auto& param : getParameters()) {
-            m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
+        // Seed parameter defaults only on the first initialization of a fresh
+        // instance. EffectChain::prepare() re-calls initialize() on the live
+        // instance during sample-rate/device changes and must preserve the
+        // user's current parameter values (and any loaded project state).
+        if (!m_paramsInitialized.exchange(true)) {
+            for (const auto& param : getParameters()) {
+                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
+            }
         }
         resetRuntimeState();
         snapSmoothedParams();
@@ -429,6 +435,7 @@ private:
     double m_sampleRate = 48000.0;
     uint32_t m_maxBlockSize = 512;
     std::atomic<bool> m_active{false};
+    std::atomic<bool> m_paramsInitialized{false};
     std::array<std::atomic<float>, kParamCount> m_params{};
 
     // Oversampler states
