@@ -2,12 +2,12 @@
 
 #include "LocalAccountCache.h"
 
+#include "../Support/TestTempDirectory.h"
+
 #include <cassert>
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include "../Support/TestTempDirectory.h"
 
 using Aestra::License::AccountSessionState;
 using Aestra::License::LocalAccountCache;
@@ -15,10 +15,6 @@ using Aestra::License::LocalAccountCacheLoadStatus;
 using Aestra::License::LocalAccountRecord;
 
 namespace {
-
-std::filesystem::path testCachePath() {
-    return Aestra::Tests::makeUniqueTempDirectory("LocalAccountCache") / "account_cache.json";
-}
 
 LocalAccountRecord validRecord() {
     LocalAccountRecord record;
@@ -34,7 +30,8 @@ LocalAccountRecord validRecord() {
 }
 
 void testRoundTrip() {
-    const std::filesystem::path path = testCachePath();
+    const Aestra::Tests::ScopedTempDirectory cacheDir{"LocalAccountCache"};
+    const std::filesystem::path path = cacheDir.path() / "account_cache.json";
     LocalAccountCache cache(path);
     assert(cache.save(validRecord()));
 
@@ -45,7 +42,8 @@ void testRoundTrip() {
 }
 
 void testOversizedCacheLoadIsMalformed() {
-    const std::filesystem::path path = testCachePath();
+    const Aestra::Tests::ScopedTempDirectory cacheDir{"LocalAccountCache"};
+    const std::filesystem::path path = cacheDir.path() / "account_cache.json";
     {
         std::ofstream file(path, std::ios::binary | std::ios::trunc);
         file << std::string(64u * 1024u + 1u, 'x');
@@ -58,7 +56,8 @@ void testOversizedCacheLoadIsMalformed() {
 }
 
 void testOversizedCacheSaveIsRejected() {
-    const std::filesystem::path path = testCachePath();
+    const Aestra::Tests::ScopedTempDirectory cacheDir{"LocalAccountCache"};
+    const std::filesystem::path path = cacheDir.path() / "account_cache.json";
     LocalAccountCache cache(path);
     LocalAccountRecord record = validRecord();
     record.sessionToken = std::string(64u * 1024u, 'x');

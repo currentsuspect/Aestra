@@ -12,6 +12,7 @@
 //   4. the autosave path (serialize + writeAtomically) carries the checksum too.
 
 #include "../../Source/Core/ProjectSerializer.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/TrackManager.h"
 
 #include <filesystem>
@@ -19,7 +20,6 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include "../Support/TestTempDirectory.h"
 
 namespace {
 
@@ -30,10 +30,6 @@ void require(bool cond, const std::string& msg) {
         std::cerr << "[FAIL] " << msg << "\n";
         ++g_failures;
     }
-}
-
-std::filesystem::path makeTempDir() {
-    return Aestra::Tests::makeUniqueTempDirectory("ProjectIntegrityCheck");
 }
 
 std::shared_ptr<Aestra::Audio::TrackManager> makeFreshManager() {
@@ -57,7 +53,8 @@ bool reportHasIntegrityIssue(const ProjectSerializer::LoadResult& load) {
 int main() {
     using namespace Aestra::Audio;
 
-    const auto tempDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"ProjectIntegrityCheck"};
+    const auto& tempDir = tempDirScope.path();
     std::cout << "[INFO] TempDir: " << tempDir.string() << "\n";
 
     // Build a small project.
@@ -94,8 +91,7 @@ int main() {
         auto tm3 = makeFreshManager();
         auto load = ProjectSerializer::load(corruptPath.string(), tm3);
         require(load.ok, "corrupted-value file must still load non-destructively");
-        require(load.integrity == ProjectSerializer::LoadIntegrity::Mismatch,
-                "corrupted file did not report Mismatch");
+        require(load.integrity == ProjectSerializer::LoadIntegrity::Mismatch, "corrupted file did not report Mismatch");
         require(reportHasIntegrityIssue(load), "mismatch missing from the structured load report");
     }
 

@@ -3,6 +3,7 @@
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
 #include "Models/TrackManager.h"
@@ -17,7 +18,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "../Support/TestTempDirectory.h"
 
 using namespace Aestra;
 using namespace Aestra::Audio;
@@ -86,14 +86,11 @@ bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, in
     return out.good();
 }
 
-std::filesystem::path makeTempDir() {
-    return Aestra::Tests::makeUniqueTempDirectory("ProjectLoadRegression");
-}
-
 void testValidProjectLoad() {
     std::cout << "[TEST] Valid project load..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testWav = testDir / "audio.wav";
     std::filesystem::path testProject = testDir / "project.aes";
 
@@ -103,7 +100,8 @@ void testValidProjectLoad() {
         "version": 1,
         "tempo": 120.0,
         "playhead": 0.0,
-        "sources": [{"id": 1, "path": ")" + testWav.generic_string() + R"(", "name": "Test Audio"}],
+        "sources": [{"id": 1, "path": ")" +
+                              testWav.generic_string() + R"(", "name": "Test Audio"}],
         "patterns": [
             {"id": 1, "name": "Test Pattern", "type": "midi", "length": 4.0, "notes": []}
         ],
@@ -141,7 +139,8 @@ void testValidProjectLoad() {
 void testMissingPatternReference() {
     std::cout << "[TEST] Missing pattern reference preserves placeholder..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     // Project references pattern ID 999 which does NOT exist in patterns array
@@ -196,7 +195,8 @@ void testMissingPatternReference() {
 void testMissingArsenalUnitReference() {
     std::cout << "[TEST] Missing Arsenal unit reference preserves note..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     // MIDI note references unit ID 888 which does NOT exist in arsenal
@@ -243,7 +243,8 @@ void testMissingArsenalUnitReference() {
 void testFailedValidationDoesNotClear() {
     std::cout << "[TEST] Failed validation does not clear existing state..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     // Invalid project - missing required "lanes" field
@@ -281,7 +282,8 @@ void testFailedValidationDoesNotClear() {
 void testUnitManagerSurvivesFailedLoad() {
     std::cout << "[TEST] UnitManager survives failed PHASE 3 validation..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     // Invalid project - missing required "lanes" field
@@ -321,7 +323,8 @@ void testUnitManagerSurvivesFailedLoad() {
 void testMissingAudioFileNonDestructive() {
     std::cout << "[TEST] Missing audio file is non-destructive..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     // References a file that does NOT exist
@@ -329,7 +332,8 @@ void testMissingAudioFileNonDestructive() {
         "version": 1,
         "tempo": 120.0,
         "playhead": 0.0,
-        "sources": [{"id": 1, "path": ")" + (testDir / "nonexistent.wav").generic_string() + R"(", "name": "Missing Audio"}],
+        "sources": [{"id": 1, "path": ")" +
+                              (testDir / "nonexistent.wav").generic_string() + R"(", "name": "Missing Audio"}],
         "patterns": [],
         "lanes": [],
         "arsenal": {"nextId": 1, "units": []}
@@ -354,7 +358,8 @@ void testMissingAudioFileNonDestructive() {
 void testUnresolvedRouteTargetNonFatal() {
     std::cout << "[TEST] Unresolved send routing targets are non-fatal..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     // Project with routing sends to a channel ID that doesn't exist.
@@ -437,8 +442,7 @@ void testUnresolvedRouteTargetNonFatal() {
     // Verify that saving and reloading preserves the routing (no data loss).
     std::string saved = ProjectSerializer::serialize(trackManager, 120.0, 0.0, 0).contents;
     assert(!saved.empty());
-    assert(saved.find("\"targetId\": 99") != std::string::npos ||
-           saved.find("\"targetId\":99") != std::string::npos);
+    assert(saved.find("\"targetId\": 99") != std::string::npos || saved.find("\"targetId\":99") != std::string::npos);
 
     // Load the re-saved project and verify routing is still preserved.
     std::filesystem::path testProject2 = testDir / "project2.aes";
@@ -504,10 +508,10 @@ void testV1FixtureMigratesToCurrentVersion() {
     assert(std::abs(patterns[0]->getMidiNotes()[0].velocity - 0.75f) < 1e-6f);
 
     std::string saved = ProjectSerializer::serialize(trackManager, result.tempo, result.playhead, 0).contents;
-    assert(saved.find("\"version\": 2") != std::string::npos ||
-           saved.find("\"version\":2") != std::string::npos);
+    assert(saved.find("\"version\": 2") != std::string::npos || saved.find("\"version\":2") != std::string::npos);
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     auto migratedPath = testDir / "v1_migrated_roundtrip.aes";
     std::ofstream migratedOut(migratedPath);
     migratedOut << saved;
@@ -550,7 +554,8 @@ void testV1FixtureMigratesToCurrentVersion() {
 void testAutomationTarget256DoesNotWrapToVolume() {
     std::cout << "[TEST] AutomationTarget 256 does not wrap to Volume..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     // AutomationTarget is uint8_t. Raw static_cast wraps 256→0 (Volume).
@@ -637,7 +642,8 @@ void testAutomationTarget256DoesNotWrapToVolume() {
 void testMixerLaneStateNumbersClampBeforeCast() {
     std::cout << "[TEST] Mixer lane state numbers clamp before cast..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     std::string projectJson = R"({
@@ -698,7 +704,8 @@ void testMixerLaneStateNumbersClampBeforeCast() {
 void testTrackColorIndexRoundtrip() {
     std::cout << "[TEST] trackColorIndex survives save/load roundtrip..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     std::string projectJson = R"({
@@ -774,18 +781,22 @@ void testTrackColorIndexRoundtrip() {
 void testProjectLoadWarningsAreBounded() {
     std::cout << "[TEST] Project load warnings are bounded..." << std::endl;
 
-    auto testDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadRegression"};
+    const auto& testDir = testDirScope.path();
     std::filesystem::path testProject = testDir / "project.aes";
 
     std::ostringstream lanes;
     for (int i = 0; i < 100; ++i) {
-        if (i > 0) lanes << ",";
+        if (i > 0)
+            lanes << ",";
         lanes << R"({
-                "name": "Track )" << i << R"(",
+                "name": "Track )"
+              << i << R"(",
                 "color": "4294967295",
                 "volume": 1.0,
                 "pan": 0.0,
-                "routing": {"sends": [{"targetId": )" << (100000 + i) << R"(, "gain": 1.0}]},
+                "routing": {"sends": [{"targetId": )"
+              << (100000 + i) << R"(, "gain": 1.0}]},
                 "clips": []
             })";
     }
@@ -796,7 +807,8 @@ void testProjectLoadWarningsAreBounded() {
         "playhead": 0.0,
         "sources": [],
         "patterns": [],
-        "lanes": [)" + lanes.str() + R"(],
+        "lanes": [)" + lanes.str() +
+                              R"(],
         "arsenal": {"nextId": 1, "units": []}
     })";
 
@@ -836,7 +848,7 @@ void testProjectLoadWarningsAreBounded() {
     std::filesystem::remove_all(testDir);
 }
 
-}
+} // namespace
 
 int main() {
     std::cout << "=== Project Load Regression Tests ===" << std::endl;

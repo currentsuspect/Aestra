@@ -2,6 +2,7 @@
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
 #include "Models/TrackManager.h"
@@ -12,13 +13,8 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include "../Support/TestTempDirectory.h"
 
 namespace {
-
-std::filesystem::path makeTempDir() {
-    return Aestra::Tests::makeUniqueTempDirectory("ProjectRoundTrip");
-}
 
 // Minimal PCM 16-bit mono WAV writer (enough to satisfy SourceManager file loading).
 bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, int numSamples) {
@@ -79,7 +75,8 @@ void require(bool cond, const char* msg) {
 int main() {
     using namespace Aestra::Audio;
 
-    const auto tempDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"ProjectRoundTrip"};
+    const auto& tempDir = tempDirScope.path();
     const auto wavPath = tempDir / "test.wav";
     const auto projectPath = tempDir / "project.aes";
     const auto autosavePath = tempDir / "autosave.aes";

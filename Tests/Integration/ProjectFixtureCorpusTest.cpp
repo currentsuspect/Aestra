@@ -15,6 +15,7 @@
 // smoke) and ProjectValueFidelityTest (current-version roundtrip fidelity).
 
 #include "../../Source/Core/ProjectSerializer.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
 #include "Models/TrackManager.h"
@@ -25,7 +26,6 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include "../Support/TestTempDirectory.h"
 
 namespace {
 
@@ -68,8 +68,7 @@ constexpr float kSendPan = 0.111111f;
 // The full expected-value set for v1_rich.aes. Runs against the direct fixture
 // load AND against a load of its re-save, so values must survive migration and
 // a full write cycle.
-void assertRichFixture(Aestra::Audio::TrackManager& tm,
-                       const ProjectSerializer::LoadResult& load,
+void assertRichFixture(Aestra::Audio::TrackManager& tm, const ProjectSerializer::LoadResult& load,
                        const std::string& gen) {
     using namespace Aestra::Audio;
     auto tag = [&gen](const char* what) { return gen + ": " + what; };
@@ -232,7 +231,8 @@ int main() {
             "re-save not stamped with current version (migration did not run)");
 
     // ---------------- The re-save must load with every value intact.
-    const auto tempDir = Aestra::Tests::makeUniqueTempDirectory("ProjectFixtureCorpus");
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"ProjectFixtureCorpus"};
+    const auto& tempDir = tempDirScope.path();
     const auto resavePath = tempDir / "v1_rich_resaved.aes";
     require(ProjectSerializer::writeAtomically(resavePath.string(), resave.contents), "re-save write failed");
 
