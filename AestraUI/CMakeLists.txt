@@ -153,6 +153,8 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/AestraSatEditor.cpp
     Widgets/AestraFilterEditor.h
     Widgets/AestraFilterEditor.cpp
+    Widgets/AestraOTTEditor.h
+    Widgets/AestraOTTEditor.cpp
 )
 
 if(AESTRAUI_ENABLE_PREMIUM_EDITORS)
