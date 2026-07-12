@@ -141,7 +141,6 @@ int main() {
     require(switchedManifest.activeTake() && switchedManifest.activeTake()->active,
             "Active take marker was not restored");
 
-    std::filesystem::remove_all(tempDir);
     std::cout << "[PASS] TakeManagerTest\n";
     return 0;
 }

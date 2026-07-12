@@ -171,7 +171,6 @@ void testEmptyProjectRoundTrip() {
     std::string secondSave = serializeProject(*tm2, result.tempo, result.playhead);
 
     compareProjectSemantic(firstSave, secondSave, "empty_project");
-    std::filesystem::remove_all(testDir);
 }
 
 void testSourcesLanesClipsPatternsRoundTrip() {
@@ -233,7 +232,6 @@ void testSourcesLanesClipsPatternsRoundTrip() {
 
     compareProjectSemantic(firstSave, secondSave, "sources_lanes_clips_patterns");
     compareProjectSemantic(secondSave, thirdSave, "sources_lanes_clips_patterns_2nd_cycle");
-    std::filesystem::remove_all(testDir);
 }
 
 void testArsenalUnitsRoundTrip() {
@@ -259,7 +257,6 @@ void testArsenalUnitsRoundTrip() {
     std::string secondSave = serializeProject(*tm2, result.tempo, result.playhead);
 
     compareProjectSemantic(firstSave, secondSave, "arsenal_units");
-    std::filesystem::remove_all(testDir);
 }
 
 void testArsenalDefaultPatternRebindsAfterLoad() {
@@ -322,8 +319,6 @@ void testArsenalDefaultPatternRebindsAfterLoad() {
     const auto& payload = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
     assert(payload.notes.size() == 1);
     assert(payload.notes[0].unitId == 7);
-
-    std::filesystem::remove_all(testDir);
 }
 
 void testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad() {
@@ -403,7 +398,6 @@ void testArsenalSamplerAudioClipPathRehydratesPluginAfterLoad() {
     }
     assert(peak > 1.0e-5f);
 
-    std::filesystem::remove_all(testDir);
     std::cout << "[PASS] Arsenal sampler audioClipPath rehydrates plugin after load" << std::endl;
 }
 
@@ -465,7 +459,6 @@ void testMissingPatternReferenceDoesNotCompound() {
 
     compareProjectSemantic(save1, save2, "missing_pattern_round_1");
     compareProjectSemantic(save2, save3, "missing_pattern_round_2");
-    std::filesystem::remove_all(testDir);
 }
 
 void testMultipleRoundTripCycles() {
@@ -498,7 +491,6 @@ void testMultipleRoundTripCycles() {
     }
 
     std::cout << "[PASS] Multiple round-trip cycles (5 cycles)" << std::endl;
-    std::filesystem::remove_all(testDir);
 }
 
 void testAutomationRoundTrip() {
@@ -629,7 +621,6 @@ void testAutomationRoundTrip() {
 
     std::cout << "[PASS] Automation round-trip (3 cycles, " << autoCurves3 << " curves, " << points3 << " points)"
               << std::endl;
-    std::filesystem::remove_all(testDir);
 }
 
 void testLegacyProjectWithoutAutomation() {
@@ -688,7 +679,6 @@ void testLegacyProjectWithoutAutomation() {
     assert(lane2->automationCurves.empty());
 
     std::cout << "[PASS] Legacy project without automation key loads and round-trips" << std::endl;
-    std::filesystem::remove_all(testDir);
 }
 
 void testAudioClipDurationSecondsMigrationAndTempoRecompute() {
@@ -753,7 +743,6 @@ void testAudioClipDurationSecondsMigrationAndTempoRecompute() {
     assert(saved.find("\"durationSeconds\"") != std::string::npos);
 
     std::cout << "[PASS] Audio clip duration seconds migration and tempo recompute" << std::endl;
-    std::filesystem::remove_all(testDir);
 }
 
 void testAudioClipPlacementHelperPersistsClipAndDurationSeconds() {
@@ -807,7 +796,6 @@ void testAudioClipPlacementHelperPersistsClipAndDurationSeconds() {
     assert(std::abs(loadedLane->clips[0].durationBeats - 2.0) < 1.0e-9);
 
     std::cout << "[PASS] Audio clip placement helper persists clip and duration seconds" << std::endl;
-    std::filesystem::remove_all(testDir);
 }
 
 } // namespace
