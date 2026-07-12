@@ -99,7 +99,7 @@ public:
             m_envelope = 0.0f;
             snapSmoothedParams();
             m_coeffsDirty = true;
-            m_typeXfadeRemaining = 0;
+            snapTypeGains();
             m_wasBypassed = false;
         }
 
@@ -167,14 +167,13 @@ public:
                 da3 = (a3t - m_a3) * inv;
             }
 
-            // Type is stepped: crossfade LP/BP/HP over ~3 ms on change so
-            // automation cannot click (all three outputs are computed anyway).
-            const auto type = typeFromNorm(m_params[kType].load(std::memory_order_relaxed));
-            if (type != m_currentType) {
-                m_prevType = m_currentType;
-                m_currentType = type;
-                m_typeXfadeRemaining = m_typeXfadeLength;
-            }
+            // Type is stepped; each of LP/BP/HP carries a gain that continuously
+            // slews toward a one-hot target. A plain two-state crossfade drops
+            // the in-progress blend when a switch interrupts a fade (rapid
+            // LP->BP->HP), which can click; per-type gains morph through any
+            // interruption because the current audible blend is the state.
+            const uint32_t selType =
+                static_cast<uint32_t>(typeFromNorm(m_params[kType].load(std::memory_order_relaxed)));
 
             const float wet = m_mixSmoothed;
             const float dry = 1.0f - wet;
@@ -192,10 +191,10 @@ public:
                 const float envCoeff = (peak > m_envelope) ? m_attackCoeff : m_releaseCoeff;
                 m_envelope += (peak - m_envelope) * envCoeff;
 
-                float xfade = 0.0f;
-                if (m_typeXfadeRemaining > 0) {
-                    xfade = static_cast<float>(m_typeXfadeRemaining) / static_cast<float>(m_typeXfadeLength);
-                    --m_typeXfadeRemaining;
+                // Continuous per-type gain slew toward the one-hot selection.
+                for (uint32_t t = 0; t < kTypeCount; ++t) {
+                    const float target = (t == selType) ? 1.0f : 0.0f;
+                    m_typeGain[t] += (target - m_typeGain[t]) * m_typeCoeff;
                 }
 
                 for (uint32_t ch = 0; ch < channels; ++ch) {
@@ -215,10 +214,8 @@ public:
                     const float lp = v2;
                     const float bp = v1;
                     const float hp = driven - m_k * v1 - v2;
-                    float filtered = outputForType(m_currentType, lp, bp, hp);
-                    if (xfade > 0.0f) {
-                        filtered += (outputForType(m_prevType, lp, bp, hp) - filtered) * xfade;
-                    }
+                    const float filtered =
+                        m_typeGain[kTypeLowPass] * lp + m_typeGain[kTypeBandPass] * bp + m_typeGain[kTypeHighPass] * hp;
 
                     if (outputs[ch])
                         outputs[ch][i] = x * dry + filtered * wet;
@@ -420,15 +417,12 @@ public:
 private:
     static constexpr uint32_t kCtrlInterval = 8; // control-rate interval for param/coefficient updates
 
-    static float outputForType(Type type, float lp, float bp, float hp) {
-        switch (type) {
-        case kTypeLowPass:
-            return lp;
-        case kTypeBandPass:
-            return bp;
-        default:
-            return hp;
-        }
+    // Snap the per-type gains to the current one-hot selection so activation
+    // and bypass->active transitions do not morph the filter type.
+    void snapTypeGains() {
+        const uint32_t sel = static_cast<uint32_t>(typeFromNorm(getParameter(kType)));
+        for (uint32_t t = 0; t < kTypeCount; ++t)
+            m_typeGain[t] = (t == sel) ? 1.0f : 0.0f;
     }
 
     void resetRuntimeState() {
@@ -437,14 +431,12 @@ private:
         m_envelope = 0.0f;
         m_wasBypassed = false;
         m_coeffsDirty = true;
-        m_currentType = typeFromNorm(getParameter(kType));
-        m_prevType = m_currentType;
-        m_typeXfadeRemaining = 0;
         const float sr = static_cast<float>(m_sampleRate);
         // Smoothing runs once per control block, so the coefficient is scaled
         // to the block interval to keep the 2 ms time constant.
         m_smoothCoeff = 1.0f - std::exp(-static_cast<float>(kCtrlInterval) / (0.002f * sr));
-        m_typeXfadeLength = std::max(1u, static_cast<uint32_t>(0.003f * sr)); // ~3 ms
+        m_typeCoeff = 1.0f - std::exp(-1.0f / (0.003f * sr)); // ~3 ms type morph (per sample)
+        snapTypeGains();
         m_envLevel.store(0.0f, std::memory_order_relaxed);
     }
 
@@ -532,11 +524,10 @@ private:
     float m_a2 = 0.0f;
     float m_a3 = 0.0f;
 
-    // Type crossfade
-    Type m_currentType = kTypeLowPass;
-    Type m_prevType = kTypeLowPass;
-    uint32_t m_typeXfadeRemaining = 0;
-    uint32_t m_typeXfadeLength = 144;
+    // Continuous per-type morph: one gain per LP/BP/HP, slewed toward the
+    // one-hot selection so switches (even mid-morph) never drop the blend.
+    float m_typeGain[kTypeCount] = {1.0f, 0.0f, 0.0f};
+    float m_typeCoeff = 0.0f;
 
     std::atomic<float> m_envLevel{0.0f};
 };
