@@ -50,7 +50,6 @@ int main() {
     const std::string falseExecutable = findFalseExecutable();
     if (falseExecutable.empty()) {
         std::cout << "[SKIP] PluginScannerSigpipeTest: no false executable found\n";
-        std::filesystem::remove_all(dir);
         return 0;
     }
 
@@ -66,8 +65,6 @@ int main() {
     } else {
         unsetenv("AESTRA_PLUGIN_HOST_PATH");
     }
-
-    std::filesystem::remove_all(dir);
 
 #ifdef AESTRA_TEST_HAS_CLAP
     require(plugins.empty(), "Broken out-of-process CLAP scan should not return plugin metadata");
