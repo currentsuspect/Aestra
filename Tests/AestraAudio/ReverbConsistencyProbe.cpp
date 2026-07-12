@@ -160,54 +160,98 @@ void probeStateRoundtrip() {
 // Diagnostics (printed; do not fail the build)
 // ---------------------------------------------------------------------------
 
-void diagLowCutMapping() {
-    std::cout << "\n--- Low Cut: displayed vs actual cutoff, and measured attenuation ---\n";
-    std::cout << "  knob   displayHz   dspHz   100Hz-atten   500Hz-atten\n";
-    for (float v : {0.0f, 0.25f, 0.5f, 0.75f, 1.0f}) {
-        const double displayHz = v < 0.001f ? 20.0 : 20.0 * std::pow(100.0, v);
-        const double dspHz = v < 0.001f ? 20.0 : std::min(2000.0, 20.0 * std::pow(1000.0, v));
-        // Measure attenuation of steady 100 Hz and 500 Hz tones vs Low Cut = 0.
-        auto measureTone = [&](float hz) -> double {
-            auto tone = [&](AestraVerb& verb) {
-                std::vector<float> in(48000);
-                for (size_t i = 0; i < in.size(); ++i)
-                    in[i] = 0.5f * std::sin(2.0 * M_PI * hz * double(i) / 48000.0);
-                auto out = render(verb, in, in, 128);
-                return rms(out.l, 24000, 48000); // steady-state second half
-            };
-            AestraVerb ref;  ref.initialize(48000.0, 256); configureHall(ref);
-            ref.setParameter(AestraVerb::kMix, 1.0f); ref.setParameter(AestraVerb::kLowCut, 0.0f); ref.activate();
-            AestraVerb cut;  cut.initialize(48000.0, 256); configureHall(cut);
-            cut.setParameter(AestraVerb::kMix, 1.0f); cut.setParameter(AestraVerb::kLowCut, v); cut.activate();
-            return toDb(tone(cut) / std::max(tone(ref), 1e-9));
-        };
-        char buf[160];
-        std::snprintf(buf, sizeof(buf), "  %.2f   %8.1f   %6.1f    %+7.1f dB    %+7.1f dB\n",
-                      v, displayHz, dspHz, measureTone(100.0f), measureTone(500.0f));
-        std::cout << buf;
-    }
-    std::cout << "  (displayHz uses 20*100^v; dspHz uses 20*1000^v clamped to 2000 — they diverge)\n";
+// Measure post-EQ attenuation of a steady tone vs a reference instance that
+// has the given cut parameter at its neutral position.
+double measureCutAtten(uint32_t cutParam, float neutral, float knob, float hz) {
+    auto tone = [&](AestraVerb& verb) {
+        std::vector<float> in(48000);
+        for (size_t i = 0; i < in.size(); ++i)
+            in[i] = 0.5f * std::sin(2.0 * M_PI * hz * double(i) / 48000.0);
+        auto out = render(verb, in, in, 128);
+        return rms(out.l, 24000, 48000); // steady-state second half
+    };
+    AestraVerb ref;  ref.initialize(48000.0, 256); configureHall(ref);
+    ref.setParameter(cutParam, neutral); ref.activate();
+    AestraVerb cut;  cut.initialize(48000.0, 256); configureHall(cut);
+    cut.setParameter(cutParam, knob); cut.activate();
+    return toDb(tone(cut) / std::max(tone(ref), 1e-9));
 }
 
-void diagFreezeStability() {
+void probeLowCutMapping() {
+    std::cout << "\n--- Low Cut: displayed cutoff and measured attenuation ---\n";
+    std::cout << "  knob   displayHz   100Hz-atten   500Hz-atten\n";
+    double at100[5], at500[5];
+    const float knobs[5] = {0.0f, 0.25f, 0.5f, 0.75f, 1.0f};
+    for (int k = 0; k < 5; ++k) {
+        const float v = knobs[k];
+        const double displayHz = v < 0.001f ? 20.0 : 20.0 * std::pow(100.0, v);
+        at100[k] = measureCutAtten(AestraVerb::kLowCut, 0.0f, v, 100.0f);
+        at500[k] = measureCutAtten(AestraVerb::kLowCut, 0.0f, v, 500.0f);
+        char buf[160];
+        std::snprintf(buf, sizeof(buf), "  %.2f   %8.1f    %+7.1f dB    %+7.1f dB\n",
+                      v, displayHz, at100[k], at500[k]);
+        std::cout << buf;
+    }
+    // knob 0.5 = 200 Hz: one-pole HP is ~-7 dB at 100 Hz, ~-0.7 dB at 500 Hz.
+    check(at100[2] < -4.0 && at100[2] > -10.0, "Low Cut @0.5 attenuates 100 Hz like a 200 Hz one-pole HP");
+    check(at500[2] > -3.0, "Low Cut @0.5 leaves 500 Hz nearly untouched (clean HP shape)");
+    // The top of the range must keep moving (no clamped dead zone).
+    check(at100[4] < at100[3] - 3.0, "Low Cut keeps steepening from 0.75 to 1.0 (no dead zone)");
+}
+
+void probeHighCutDeadKnob() {
+    std::cout << "\n--- High Cut: measured attenuation of a 6 kHz tone ---\n";
+    std::cout << "  knob   displayHz   6kHz-atten\n";
+    double at6k[3];
+    const float knobs[3] = {1.0f, 0.75f, 0.5f};
+    for (int k = 0; k < 3; ++k) {
+        const float v = knobs[k];
+        const double displayHz = v > 0.999f ? 20000.0 : 200.0 * std::pow(100.0, v);
+        at6k[k] = measureCutAtten(AestraVerb::kHighCut, 1.0f, v, 6000.0f);
+        char buf[160];
+        std::snprintf(buf, sizeof(buf), "  %.2f   %8.1f    %+7.1f dB\n", v, displayHz, at6k[k]);
+        std::cout << buf;
+    }
+    // knob 0.5 = 2 kHz: a one-pole LP is ~-10 dB at 6 kHz. The old blend
+    // heuristic made the knob a no-op above ~1.8 kHz (0 dB here).
+    check(at6k[2] < -5.0, "High Cut @0.5 (2 kHz) actually attenuates 6 kHz (knob not dead)");
+    check(at6k[1] < -1.0, "High Cut @0.75 (6.3 kHz) has audible effect at 6 kHz");
+}
+
+void probeFreezeStability() {
     std::cout << "\n--- Freeze stability: tail RMS over time (want ~flat) ---\n";
+    // Realistic usage: excite with freeze OFF (input must reach the loop),
+    // engage freeze right after the burst, then measure the held tail.
     AestraVerb v;
     v.initialize(48000.0, 256);
     configureHall(v);
-    v.setParameter(AestraVerb::kFreeze, 1.0f);
     v.activate();
     const size_t exc = 12000, total = 48000 * 8;
     std::vector<float> inL(total, 0.0f), inR(total, 0.0f);
     auto nL = whiteNoise(exc, 11), nR = whiteNoise(exc, 12);
     for (size_t i = 0; i < exc; ++i) { inL[i] = nL[i]; inR[i] = nR[i]; }
-    auto out = render(v, inL, inR, 128);
+    Stereo out{std::vector<float>(total, 0.0f), std::vector<float>(total, 0.0f)};
+    bool frozen = false;
+    for (size_t off = 0; off < total; off += 128) {
+        if (!frozen && off >= exc) { // engage on the first block after the burst
+            v.setParameter(AestraVerb::kFreeze, 1.0f);
+            frozen = true;
+        }
+        const float* ins[2] = {inL.data() + off, inR.data() + off};
+        float* outs[2] = {out.l.data() + off, out.r.data() + off};
+        v.process(ins, outs, 2, 2, 128);
+    }
     const double r1 = rms(out.l, 48000 * 1, 48000 * 1 + 24000);
     const double r3 = rms(out.l, 48000 * 3, 48000 * 3 + 24000);
     const double r7 = rms(out.l, 48000 * 7, 48000 * 7 + 24000);
     char buf[160];
+    const double drift = toDb(r7) - toDb(r1);
     std::snprintf(buf, sizeof(buf), "  t=1s: %.1f dB   t=3s: %.1f dB   t=7s: %.1f dB   (7s-1s drift: %+.1f dB)\n",
-                  toDb(r1), toDb(r3), toDb(r7), toDb(r7) - toDb(r1));
+                  toDb(r1), toDb(r3), toDb(r7), drift);
     std::cout << buf;
+    // A frozen tail must sustain, not fade: before the lossless-loop fix the
+    // in-loop damping filters bled ~22 dB over this window.
+    check(drift > -4.0 && drift < 4.0, "freeze sustains the tail (|6s drift| < 4 dB)");
 }
 
 double measureT60(double sr) {
@@ -231,15 +275,19 @@ double measureT60(double sr) {
     return t60;
 }
 
-void diagSampleRateConsistency() {
+void probeSampleRateConsistency() {
     std::cout << "\n--- Sample-rate consistency: T60 at fixed params (want ~equal) ---\n";
     const double t441 = measureT60(44100.0);
     const double t48 = measureT60(48000.0);
     const double t96 = measureT60(96000.0);
+    const double spread =
+        100.0 * (std::max({t441, t48, t96}) - std::min({t441, t48, t96})) / std::max(t48, 1e-6);
     char buf[160];
     std::snprintf(buf, sizeof(buf), "  44.1k: %.3fs   48k: %.3fs   96k: %.3fs   (spread: %.1f%%)\n",
-                  t441, t48, t96, 100.0 * (std::max({t441, t48, t96}) - std::min({t441, t48, t96})) / std::max(t48, 1e-6));
+                  t441, t48, t96, spread);
     std::cout << buf;
+    // Before SR-normalizing the damping pole the 96k T60 drifted ~25% long.
+    check(spread < 10.0, "T60 is sample-rate independent (spread < 10%)");
 }
 
 void diagModeSwitchClick() {
@@ -314,9 +362,10 @@ int main() {
     probeSilenceTail();
     probeStateRoundtrip();
 
-    diagLowCutMapping();
-    diagFreezeStability();
-    diagSampleRateConsistency();
+    probeLowCutMapping();
+    probeHighCutDeadKnob();
+    probeFreezeStability();
+    probeSampleRateConsistency();
     diagModeSwitchClick();
     diagStereoCorrelationAndBalance();
 

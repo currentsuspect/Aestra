@@ -404,9 +404,11 @@ public:
             const float dryL = inL;
             const float dryR = inR;
 
-            // Freeze: attenuate input so the feedback loop sustains infinitely
+            // Freeze: hard-mute the input. The frozen loop is lossless, so any
+            // residual injection (the old 0.001 scale) accumulates without
+            // bound; capture-and-hold is the predictable behavior.
             const bool freezeActive = smoothedParams[kFreeze] > 0.5f;
-            const float inputScale = freezeActive ? 0.001f : 1.0f;
+            const float inputScale = freezeActive ? 0.0f : 1.0f;
 
             m_predelayL[predelayPos] = inL * inputScale;
             m_predelayR[predelayPos] = inR * inputScale;
@@ -625,22 +627,34 @@ public:
             wetL = widthL * 0.5f;
             wetR = widthR * 0.5f;
 
-            // Post-reverb EQ: Low Cut (one-pole HP) + High Cut (one-pole LP)
+            // Post-reverb EQ: Low Cut (one-pole HP) + High Cut (one-pole LP).
+            // Textbook one-pole forms with the alpha from the control cache;
+            // no output blending. (The previous code fed the HP integrator
+            // with exp(-w) instead of alpha — an inverted coefficient — and
+            // crossfaded both filters against the dry wet signal with ad-hoc
+            // alpha-derived amounts, which made the High Cut a dead knob above
+            // ~1.8 kHz and the Low Cut response neither the displayed cutoff
+            // nor a clean high-pass shape.)
+            // The filter states always track the signal, so toggling the
+            // enabled flags at the range extremes is click-free.
             {
-                // Low Cut: y[n] = x[n] - state; state += (1-alpha)*y[n]
+                // Low Cut one-pole HP: y[n] = x[n] - lp[n]; lp[n] += alpha*y[n]
                 const float hpL = wetL - m_lowCutStateL;
                 const float hpR = wetR - m_lowCutStateR;
-                m_lowCutStateL += (1.0f - control.lowCutCoeff) * hpL;
-                m_lowCutStateR += (1.0f - control.lowCutCoeff) * hpR;
-                wetL = wetL + (hpL - wetL) * std::clamp(control.lowCutCoeff * 10.0f, 0.0f, 1.0f);
-                wetR = wetR + (hpR - wetR) * std::clamp(control.lowCutCoeff * 10.0f, 0.0f, 1.0f);
+                m_lowCutStateL += control.lowCutCoeff * hpL;
+                m_lowCutStateR += control.lowCutCoeff * hpR;
+                if (control.lowCutEnabled) {
+                    wetL = hpL;
+                    wetR = hpR;
+                }
 
-                // High Cut: y[n] += alpha * (x[n] - y[n])
+                // High Cut one-pole LP: y[n] += alpha * (x[n] - y[n])
                 m_highCutStateL += control.highCutCoeff * (wetL - m_highCutStateL);
                 m_highCutStateR += control.highCutCoeff * (wetR - m_highCutStateR);
-                const float hiAmount = 1.0f - std::clamp((control.highCutCoeff - 0.01f) * 5.0f, 0.0f, 1.0f);
-                wetL = wetL + (m_highCutStateL - wetL) * hiAmount;
-                wetR = wetR + (m_highCutStateR - wetR) * hiAmount;
+                if (control.highCutEnabled) {
+                    wetL = m_highCutStateL;
+                    wetR = m_highCutStateR;
+                }
             }
 
             wetL = sanitize(wetL);
@@ -957,8 +971,10 @@ private:
         bool modulationEnabled{true};
         bool diffusionEnabled{true};
         bool freezeActive{false};
-        float lowCutCoeff{0.0f};  // one-pole HP alpha for Low Cut
-        float highCutCoeff{1.0f}; // one-pole LP alpha for High Cut
+        float lowCutCoeff{0.0f};   // one-pole HP alpha for Low Cut
+        float highCutCoeff{1.0f};  // one-pole LP alpha for High Cut
+        bool lowCutEnabled{false}; // true bypass below the bottom of the range
+        bool highCutEnabled{false};// true bypass at the top of the range
         float earlyBlend{0.22f};  // early-to-late balance (0=late-dominant, 1=early-dominant)
         float attackShape{0.0f};  // envelope attack shape (0=soft, 1=hard/sharp)
         int predelaySyncDiv{0};   // 0=off, 1-6=note divisions
@@ -1040,7 +1056,14 @@ private:
         const float decayTime = (0.3f + smoothedParams[kDecay] * 9.7f) * constants.decayScalar;
         const float dampingParam = std::clamp(smoothedParams[kDamping], 0.0f, 1.0f);
         const float damping = std::clamp(dampingParam * constants.dampingScalar, 0.0f, 0.98f);
-        cache.dampingCoeff = 1.0f - damping;
+        // 'damping' is the one-pole pole position at the 44.1k reference rate.
+        // Re-pitch the pole for the actual sample rate (pole' = pole^(refSR/sr))
+        // so the damping filter's cutoff stays fixed in Hz: without this the
+        // cutoff scales with the sample rate and T60 drifts ~25% at 96k for
+        // identical parameters. Identity at the reference rate by construction.
+        const float dampingPole =
+            damping <= 0.0f ? 0.0f : std::pow(damping, kReferenceSampleRate / sr);
+        cache.dampingCoeff = 1.0f - dampingPole;
 
         // Per-mode low damp amount
         switch (mode) {
@@ -1122,10 +1145,24 @@ private:
             cache.lfoCosInc2[line] = std::cos(inc2);
         }
 
-        // Freeze: lock feedback at unity so the tail sustains indefinitely
+        // Freeze: make the feedback loop lossless so the tail sustains
+        // indefinitely. Unity feedback gains alone are NOT enough — the
+        // in-loop damping low-pass and the low-damp shelf subtraction each
+        // bleed energy every pass (measured ~22 dB decay over 6 s). Damping
+        // coeff 1.0 makes the LP transparent (state snaps to input) and
+        // lowDampAmount 0 disables the shelf, leaving only the orthogonal
+        // Householder matrix in the loop.
         cache.freezeActive = smoothedParams[kFreeze] > 0.5f;
         if (cache.freezeActive) {
             cache.feedbackGains.fill(1.0f);
+            cache.dampingCoeff = 1.0f;
+            cache.lowDampAmount = 0.0f;
+            // Freeze the modulation as well: with modulation active the
+            // fractional cubic-Hermite delay reads are not energy-exact and
+            // the unity loop slowly GROWS (~+1 dB/s measured). Zero modulation
+            // makes every read integer-exact, so the loop is truly lossless
+            // and the frozen tail holds level indefinitely.
+            cache.modulationEnabled = false;
         }
 
         for (size_t stage = 0; stage < kDiffuserCount; ++stage) {
@@ -1162,17 +1199,25 @@ private:
             cache.earlyGains[tap] = tapGain[tap] * modeLevel;
         }
 
-        // Post-reverb EQ: Low Cut (one-pole HP) and High Cut (one-pole LP)
+        // Post-reverb EQ: Low Cut (one-pole HP) and High Cut (one-pole LP).
+        // Both use the SAME logarithmic mapping as getParameterDisplay so the
+        // knob reads the true cutoff. (The DSP previously used 20*1000^v
+        // clamped to 2000 Hz while the display showed 20*100^v — the knob
+        // lied by up to 3.2x and its top third was a clamped dead zone.)
         // Low Cut: 20 Hz (0.0) to 2000 Hz (1.0), logarithmic
         const float lowCutParam = std::clamp(smoothedParams[kLowCut], 0.0f, 1.0f);
-        const float lowCutHz = lowCutParam < 0.001f ? 20.0f : 20.0f * std::pow(1000.0f, lowCutParam);
+        const float lowCutHz = 20.0f * std::pow(100.0f, lowCutParam);
         cache.lowCutCoeff = 1.0f - std::exp(-kTwoPi * std::clamp(lowCutHz, 20.0f, 2000.0f) / sr);
+        // True bypass at the bottom of the range (the filter state still
+        // tracks the signal so engaging is click-free).
+        cache.lowCutEnabled = lowCutParam > 0.001f;
 
         // High Cut: 200 Hz (0.0) to 20000 Hz (1.0), logarithmic
         const float highCutParam = std::clamp(smoothedParams[kHighCut], 0.0f, 1.0f);
         const float highCutHz = highCutParam > 0.999f ? 20000.0f : 200.0f * std::pow(100.0f, highCutParam);
         // One-pole LP: alpha = 1 - exp(-2*pi*fc/fs)
         cache.highCutCoeff = 1.0f - std::exp(-kTwoPi * std::clamp(highCutHz, 200.0f, 20000.0f) / sr);
+        cache.highCutEnabled = highCutParam < 0.999f;
 
         // Attack: early-to-late balance. 0=late-dominant (default), 1=early-dominant
         cache.earlyBlend = std::clamp(smoothedParams[kAttack], 0.0f, 1.0f);
