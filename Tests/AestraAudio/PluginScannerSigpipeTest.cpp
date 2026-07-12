@@ -9,6 +9,7 @@
 
 #ifndef _WIN32
 #include <unistd.h>
+#include "../Support/TestTempDirectory.h"
 #endif
 
 namespace {
@@ -20,19 +21,7 @@ void require(bool cond, const char* msg) {
 }
 
 std::filesystem::path makeTempDir() {
-    const auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-    for (int i = 0; i < 1000; ++i) {
-        const auto candidate = base / ("PluginScannerSigpipe_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
-            return candidate;
-        }
-    }
-
-    const auto fallback = base / "PluginScannerSigpipe_fallback";
-    std::filesystem::create_directories(fallback);
-    return fallback;
+    return Aestra::Tests::makeUniqueTempDirectory("PluginScannerSigpipe");
 }
 
 #ifndef _WIN32
