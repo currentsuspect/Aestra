@@ -1121,10 +1121,26 @@ private:
         cache.diffusionEnabled = cache.diffusionG > 0.0001f;
 
         const float modRateScalar = smoothedParams[kModRate] * 2.0f;
-        // Session 006: increase mod depth multiplier from 5.0 to 7.0.
-        // Effective depth at default (0.14): Room 0.14×7×0.45=0.44 smp, Hall 0.14×7×0.64=0.63 smp,
-        // Plate 0.14×7×0.50=0.49 smp. Subtle but audible — avoids the flangey extremes.
-        cache.modDepthSamples = smoothedParams[kModDepth] * 7.0f * constants.modDepthScalar;
+        // Depth re-range after the SIMD LFO argument-swap fix. The historical
+        // linear multipliers (Session 006: 5.0 -> 7.0) were tuned against the
+        // broken modulator, which ran at sr/4 instead of sub-Hz — what was
+        // audible then was the FM artifact, not chorusing. With the real
+        // modulator, x7 measured 0.18 cents of pitch motion at the default
+        // depth and only 0.9 cents at MAX (audibility ~2-5 cents), and gave no
+        // small-room mode smearing (47 dB -> 46 dB ring prominence).
+        // The measured wobble-vs-depth response is strongly superlinear, so a
+        // linear multiplier cannot make the default audible without pushing
+        // max into flange territory (x24: max 10.2 cents). A compressive knob
+        // curve (depth^0.6 x 12.5) lands: default (0.14) 0.46 cents (present,
+        // subtle), 0.6 depth ~1.9 cents, max 3.9 cents — classic hall chorus,
+        // not flange (all measured, 1 kHz zero-crossing wobble p5..p95).
+        // Max read offset is 12.5 x 0.70 (largest mode scalar) = +/-8.75 smp;
+        // the logicalFdnLength margin (28) covers it with room to spare, and
+        // the minimum length (100) keeps the shortest modulated delay clear of
+        // the write head. pow() runs at control rate, not per sample.
+        const float depthParam = std::clamp(smoothedParams[kModDepth], 0.0f, 1.0f);
+        const float depthCurve = depthParam <= 0.0f ? 0.0f : std::pow(depthParam, 0.6f);
+        cache.modDepthSamples = depthCurve * 12.5f * constants.modDepthScalar;
         cache.modulationEnabled = cache.modDepthSamples > 0.0001f && modRateScalar > 0.0001f;
 
         const float width = std::clamp(smoothedParams[kWidth], 0.0f, 1.0f);
@@ -1411,10 +1427,14 @@ private:
 
     int logicalFdnLength(size_t line, const ModeConstants& constants, float sampleScale, float size) const {
         const int maxSize = static_cast<int>(m_delayLines[line].size());
+        // Margin covers the deepest modulated Hermite read: max LFO offset
+        // (24 x 0.70 mode scalar = +/-16.8 samples) plus the interpolator's
+        // extra tap behind the read point, with slack. Was 12, sized for the
+        // old x7 depth multiplier.
         return std::clamp(
             static_cast<int>(std::round(constants.fdnBase[line] * sampleScale * size)),
             100,
-            std::max(100, maxSize - 12)
+            std::max(100, maxSize - 28)
         );
     }
 
