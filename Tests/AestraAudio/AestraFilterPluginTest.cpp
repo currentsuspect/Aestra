@@ -100,17 +100,29 @@ bool testBypassPassesAudioUnchanged() {
     flt.setParameter(AestraFilter::kCutoff, 0.1f);
     flt.activate();
 
-    const auto inL = makeSine(1024, 1000.0f, 0.5f, kSampleRate);
-    const auto inR = makeSine(1024, 500.0f, 0.3f, kSampleRate);
-    auto out = processStereo(flt, inL, inR);
+    const auto refL = makeSine(1024, 1000.0f, 0.5f, kSampleRate);
+    const auto refR = makeSine(1024, 500.0f, 0.3f, kSampleRate);
 
-    for (uint32_t i = 0; i < inL.size(); ++i) {
-        if (std::abs(out.left[i] - inL[i]) > 1e-6f)
-            return false;
-        if (std::abs(out.right[i] - inR[i]) > 1e-6f)
+    // (a) Separate buffers: bypass is a pure passthrough, so require exact
+    // byte-for-byte equality (not epsilon) on both channels.
+    auto out = processStereo(flt, refL, refR);
+    for (uint32_t i = 0; i < refL.size(); ++i) {
+        if (out.left[i] != refL[i] || out.right[i] != refR[i])
             return false;
     }
-    return true;
+
+    // (b) In-place buffers (output == input): the copyOrClear in-place guard
+    // must leave the samples untouched (and finite) on both channels.
+    std::vector<float> ioL = refL;
+    std::vector<float> ioR = refR;
+    const float* ins[] = {ioL.data(), ioR.data()};
+    float* outs[] = {ioL.data(), ioR.data()};
+    flt.process(ins, outs, 2, 2, static_cast<uint32_t>(ioL.size()));
+    for (uint32_t i = 0; i < refL.size(); ++i) {
+        if (ioL[i] != refL[i] || ioR[i] != refR[i])
+            return false;
+    }
+    return allFinite(ioL) && allFinite(ioR);
 }
 
 bool testSilenceProducesSilence() {
@@ -121,7 +133,8 @@ bool testSilenceProducesSilence() {
 
     const auto silence = makeSilence(4096);
     auto out = processStereo(flt, silence, silence);
-    return peakAmplitude(out.left) < 1e-8f && peakAmplitude(out.right) < 1e-8f;
+    return peakAmplitude(out.left) < 1e-8f && peakAmplitude(out.right) < 1e-8f && allFinite(out.left) &&
+           allFinite(out.right);
 }
 
 bool testLowPassResponse() {
@@ -437,6 +450,45 @@ bool testTypeSwitchIsClickFree() {
     return maxDelta < 0.15f;
 }
 
+// Rapid LP->BP->HP automation, switching faster than the type morph completes,
+// must stay continuous: the per-type-gain morph must not drop an in-progress
+// blend (a two-state crossfade would, and click).
+bool testRapidTypeAutomationIsStable() {
+    AestraFilter flt;
+    flt.initialize(kSampleRate, kBlockSize);
+    flt.setParameter(AestraFilter::kCutoff, normForHz(1000.0f));
+    flt.setParameter(AestraFilter::kReso, 0.3f);
+    flt.activate();
+
+    const auto in = makeSine(48000, 1000.0f, 0.5f, kSampleRate);
+    std::vector<float> outL(in.size(), 0.0f);
+    std::vector<float> outR(in.size(), 0.0f);
+    const AestraFilter::Type seq[] = {AestraFilter::kTypeLowPass, AestraFilter::kTypeBandPass,
+                                      AestraFilter::kTypeHighPass};
+    uint32_t pos = 0;
+    uint32_t s = 0;
+    while (pos < in.size()) {
+        // Switch every ~0.77 ms — well inside the ~3 ms morph, so every switch
+        // interrupts the previous one.
+        flt.setParameter(AestraFilter::kType, AestraFilter::normFromType(seq[s % 3]));
+        ++s;
+        const uint32_t n = std::min<uint32_t>(37, static_cast<uint32_t>(in.size()) - pos);
+        const float* ins[] = {in.data() + pos, in.data() + pos};
+        float* outs[] = {outL.data() + pos, outR.data() + pos};
+        flt.process(ins, outs, 2, 2, n);
+        pos += n;
+    }
+
+    if (!allFinite(outL) || !allFinite(outR))
+        return false;
+    float maxDelta = 0.0f;
+    for (uint32_t i = 1; i < outL.size(); ++i)
+        maxDelta = std::max(maxDelta, std::abs(outL[i] - outL[i - 1]));
+    // Continuous morph keeps steps near the signal's own ~0.065/sample; a
+    // dropped-blend click would be a large fraction of the 0.5 amplitude.
+    return maxDelta < 0.15f;
+}
+
 // Rapid automation of every continuous parameter, with hostile block sizes.
 bool testAutomationStress() {
     AestraFilter flt;
@@ -524,6 +576,7 @@ int main() {
         {"SetParameterRejectsNonFinite", testSetParameterRejectsNonFinite},
         {"BypassToggleIsSafe", testBypassToggleIsSafe},
         {"TypeSwitchIsClickFree", testTypeSwitchIsClickFree},
+        {"RapidTypeAutomationIsStable", testRapidTypeAutomationIsStable},
         {"AutomationStress", testAutomationStress},
         {"StableAcrossSampleRates", testStableAcrossSampleRates},
     };
