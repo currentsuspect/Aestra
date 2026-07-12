@@ -1209,6 +1209,17 @@ target_include_directories(AestraSatTest PRIVATE
 add_test(NAME AestraSatTest COMMAND AestraSatTest)
 set_tests_properties(AestraSatTest PROPERTIES LABELS "audio;plugins;saturation")
 
+# Aestra Filter plugin test (AestraFilterTest is the DSP::Filter lab above)
+add_executable(AestraFilterPluginTest AestraAudio/AestraFilterPluginTest.cpp)
+target_link_libraries(AestraFilterPluginTest PRIVATE AestraAudio)
+target_include_directories(AestraFilterPluginTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraFilterPluginTest COMMAND AestraFilterPluginTest)
+set_tests_properties(AestraFilterPluginTest PROPERTIES LABELS "audio;plugins;filter")
+
 # =============================================================================
 # Audio Quality Tests (S-Tier validation suite, Spec §3, §8, §15)
 # =============================================================================
