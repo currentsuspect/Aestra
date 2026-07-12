@@ -211,10 +211,21 @@ public:
         (void)maxBlockSize;
         m_sampleRate = sampleRate > 1.0 ? sampleRate : 48000.0;
         const auto defaults = getParameters();
+        // Seed parameter defaults only on the first initialization of a fresh
+        // instance. EffectChain::prepare() re-calls initialize() on the live
+        // instance during sample-rate/device changes and must preserve the
+        // user's current parameter values (and any loaded project state).
+        if (!m_paramsInitialized.exchange(true)) {
+            for (const auto& param : defaults) {
+                if (param.id < kParamCount) {
+                    m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
+                }
+            }
+        }
+        // Snap smoothed values to the current (preserved-or-default) params.
         for (const auto& param : defaults) {
             if (param.id < kParamCount) {
-                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
-                m_smoothedParams[param.id] = param.defaultValue;
+                m_smoothedParams[param.id] = m_params[param.id].load(std::memory_order_relaxed);
             }
         }
         prepareDelayLines(true);
@@ -1502,6 +1513,7 @@ private:
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
+    std::atomic<bool> m_paramsInitialized{false};
     std::array<std::atomic<float>, kParamCount> m_params{};
     std::array<float, kParamCount> m_smoothedParams{};
 
