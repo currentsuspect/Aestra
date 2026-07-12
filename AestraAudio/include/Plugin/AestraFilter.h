@@ -7,6 +7,12 @@
 // ±4 octaves), which is what turns a static filter into an envelope shaper:
 // auto-wah upward sweeps, reverse "duck" filtering, dynamic brightness.
 //
+// Control-rate architecture: parameters are read and smoothed once per
+// 8-sample control block, transcendental coefficient recomputes (pow/exp/tan)
+// are gated on smoothed-target movement, and the TPT coefficient set is
+// linearly interpolated across the block. The per-sample path is the envelope
+// follower, the drive tanh and the SVF arithmetic.
+//
 // Signal path (per channel, per sample):
 //   in -> drive (transparent-at-zero tanh blend) -> ZDF SVF (LP/BP/HP)
 //      -> mix with dry (zero latency — no compensation needed)
@@ -82,94 +88,149 @@ public:
 
         if (!m_active.load(std::memory_order_relaxed) || m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
             copyOrClear(inputs, outputs, numInputChannels, numOutputChannels, numFrames);
+            m_wasBypassed = true;
             return;
+        }
+        if (m_wasBypassed) {
+            // While bypassed the integrators and envelope stopped evolving;
+            // re-enabling must not restore stale resonance/envelope state.
+            m_ic1[0] = m_ic1[1] = 0.0f;
+            m_ic2[0] = m_ic2[1] = 0.0f;
+            m_envelope = 0.0f;
+            snapSmoothedParams();
+            m_coeffsDirty = true;
+            m_typeXfadeRemaining = 0;
+            m_wasBypassed = false;
         }
 
         const uint32_t channels = std::min<uint32_t>(2, numOutputChannels);
         const bool stereo = channels >= 2;
-        const auto type = typeFromNorm(m_params[kType].load(std::memory_order_relaxed));
         const float sr = static_cast<float>(m_sampleRate);
         const float maxCutoff = 0.45f * sr;
 
-        for (uint32_t i = 0; i < numFrames; ++i) {
-            // Smooth continuous params (2 ms one-pole, shared by both channels)
+        for (uint32_t blockStart = 0; blockStart < numFrames; blockStart += kCtrlInterval) {
+            const uint32_t blockEnd = std::min(blockStart + kCtrlInterval, numFrames);
+            const uint32_t blockLen = blockEnd - blockStart;
+
+            // ── Control block: smooth params, gated coefficient recomputes ──
             m_cutoffSmoothed += (getParameter(kCutoff) - m_cutoffSmoothed) * m_smoothCoeff;
             m_resoSmoothed += (getParameter(kReso) - m_resoSmoothed) * m_smoothCoeff;
             m_driveSmoothed += (getParameter(kDrive) - m_driveSmoothed) * m_smoothCoeff;
             m_envAmtSmoothed += (getParameter(kEnvAmount) - m_envAmtSmoothed) * m_smoothCoeff;
+            m_attackSmoothed += (getParameter(kEnvAttack) - m_attackSmoothed) * m_smoothCoeff;
+            m_releaseSmoothed += (getParameter(kEnvRelease) - m_releaseSmoothed) * m_smoothCoeff;
             m_mixSmoothed += (getParameter(kMix) - m_mixSmoothed) * m_smoothCoeff;
 
-            const float inL = sanitizeSample(readInput(inputs, numInputChannels, 0, i));
-            const float inR = stereo ? sanitizeSample(readInput(inputs, numInputChannels, 1, i)) : inL;
+            if (m_coeffsDirty || std::abs(m_resoSmoothed - m_resoCached) > 1.0e-5f) {
+                m_resoCached = m_resoSmoothed;
+                m_k = 1.0f / qFromNorm(m_resoCached);
+            }
+            if (m_coeffsDirty || std::abs(m_driveSmoothed - m_driveCached) > 1.0e-5f) {
+                m_driveCached = m_driveSmoothed;
+                m_driveGain = dbToLinear(driveDbFromNorm(m_driveCached));
+                m_driveMakeup = 1.0f / std::sqrt(m_driveGain);
+            }
+            if (m_coeffsDirty || std::abs(m_attackSmoothed - m_attackCached) > 1.0e-4f) {
+                m_attackCached = m_attackSmoothed;
+                m_attackCoeff = 1.0f - std::exp(-1.0f / (attackMsFromNorm(m_attackCached) * 0.001f * sr));
+            }
+            if (m_coeffsDirty || std::abs(m_releaseSmoothed - m_releaseCached) > 1.0e-4f) {
+                m_releaseCached = m_releaseSmoothed;
+                m_releaseCoeff = 1.0f - std::exp(-1.0f / (releaseMsFromNorm(m_releaseCached) * 0.001f * sr));
+            }
+            if (m_coeffsDirty || std::abs(m_cutoffSmoothed - m_cutoffCached) > 1.0e-5f) {
+                m_cutoffCached = m_cutoffSmoothed;
+                m_baseCutoffHz = cutoffHzFromNorm(m_cutoffCached);
+            }
 
-            // ── Envelope follower (pre-drive stereo peak) ──
-            const float peak = std::max(std::abs(inL), std::abs(inR));
-            const float attackMs = attackMsFromNorm(getParameter(kEnvAttack));
-            const float releaseMs = releaseMsFromNorm(getParameter(kEnvRelease));
-            const float coeffMs = (peak > m_envelope) ? attackMs : releaseMs;
-            const float envCoeff = 1.0f - std::exp(-1.0f / (coeffMs * 0.001f * sr));
-            m_envelope += (peak - m_envelope) * envCoeff;
-
-            // ── Cutoff with bipolar envelope modulation (octave domain) ──
+            // Envelope-modulated TPT coefficient target for this block; the
+            // set is linearly interpolated across the block so per-sample cost
+            // is three adds instead of exp2 + tan.
             const float envAmount = 2.0f * m_envAmtSmoothed - 1.0f;
-            const float baseCutoff = cutoffHzFromNorm(m_cutoffSmoothed);
             const float modOctaves = envAmount * kEnvModOctaves * std::min(1.0f, m_envelope);
-            const float fc = std::clamp(baseCutoff * std::exp2(modOctaves), 20.0f, maxCutoff);
-
-            // ── ZDF SVF coefficients (shared by both channels) ──
+            const float fc = std::clamp(m_baseCutoffHz * std::exp2(modOctaves), 20.0f, maxCutoff);
             const float g = std::tan(3.14159265358979323846f * fc / sr);
-            const float q = qFromNorm(m_resoSmoothed);
-            const float k = 1.0f / q;
-            const float a1 = 1.0f / (1.0f + g * (g + k));
-            const float a2 = g * a1;
-            const float a3 = g * a2;
+            const float a1t = 1.0f / (1.0f + g * (g + m_k));
+            const float a2t = g * a1t;
+            const float a3t = g * a2t;
+            float da1, da2, da3;
+            if (m_coeffsDirty) {
+                m_a1 = a1t;
+                m_a2 = a2t;
+                m_a3 = a3t;
+                da1 = da2 = da3 = 0.0f;
+                m_coeffsDirty = false;
+            } else {
+                const float inv = 1.0f / static_cast<float>(blockLen);
+                da1 = (a1t - m_a1) * inv;
+                da2 = (a2t - m_a2) * inv;
+                da3 = (a3t - m_a3) * inv;
+            }
 
-            // ── Drive: transparent at 0, tanh soft clip as it rises.
-            // 1/sqrt(G) makeup keeps perceived loudness roughly level: small
-            // signals gain sqrt(G) (+9 dB max), the clip ceiling sits at
-            // 1/sqrt(G) (-9 dB max) instead of collapsing to 1/G. ──
-            const float driveNorm = m_driveSmoothed;
-            const float driveGain = dbToLinear(driveDbFromNorm(driveNorm));
-            const float driveMakeup = 1.0f / std::sqrt(driveGain);
+            // Type is stepped: crossfade LP/BP/HP over ~3 ms on change so
+            // automation cannot click (all three outputs are computed anyway).
+            const auto type = typeFromNorm(m_params[kType].load(std::memory_order_relaxed));
+            if (type != m_currentType) {
+                m_prevType = m_currentType;
+                m_currentType = type;
+                m_typeXfadeRemaining = m_typeXfadeLength;
+            }
 
             const float wet = m_mixSmoothed;
             const float dry = 1.0f - wet;
 
-            for (uint32_t ch = 0; ch < channels; ++ch) {
-                const float x = (ch == 0) ? inL : inR;
-                const float driven = x + driveNorm * (std::tanh(driveGain * x) * driveMakeup - x);
+            for (uint32_t i = blockStart; i < blockEnd; ++i) {
+                m_a1 += da1;
+                m_a2 += da2;
+                m_a3 += da3;
 
-                float& ic1 = m_ic1[ch];
-                float& ic2 = m_ic2[ch];
-                const float v3 = driven - ic2;
-                const float v1 = a1 * ic1 + a2 * v3;
-                const float v2 = ic2 + a2 * ic1 + a3 * v3;
-                ic1 = 2.0f * v1 - ic1;
-                ic2 = 2.0f * v2 - ic2;
+                const float inL = sanitizeSample(readInput(inputs, numInputChannels, 0, i));
+                const float inR = stereo ? sanitizeSample(readInput(inputs, numInputChannels, 1, i)) : inL;
 
-                float filtered;
-                switch (type) {
-                case kTypeLowPass:
-                    filtered = v2;
-                    break;
-                case kTypeBandPass:
-                    filtered = v1;
-                    break;
-                default:
-                    filtered = driven - k * v1 - v2;
-                    break;
+                // ── Envelope follower (pre-drive stereo peak) ──
+                const float peak = std::max(std::abs(inL), std::abs(inR));
+                const float envCoeff = (peak > m_envelope) ? m_attackCoeff : m_releaseCoeff;
+                m_envelope += (peak - m_envelope) * envCoeff;
+
+                float xfade = 0.0f;
+                if (m_typeXfadeRemaining > 0) {
+                    xfade = static_cast<float>(m_typeXfadeRemaining) / static_cast<float>(m_typeXfadeLength);
+                    --m_typeXfadeRemaining;
                 }
 
-                if (outputs[ch])
-                    outputs[ch][i] = x * dry + filtered * wet;
-            }
+                for (uint32_t ch = 0; ch < channels; ++ch) {
+                    const float x = (ch == 0) ? inL : inR;
+                    // Drive: transparent at 0, tanh soft clip as it rises.
+                    // 1/sqrt(G) makeup keeps perceived loudness roughly level.
+                    const float driven = x + m_driveCached * (std::tanh(m_driveGain * x) * m_driveMakeup - x);
 
-            if (!stereo && numOutputChannels > 1 && outputs[1] && outputs[0]) {
-                outputs[1][i] = outputs[0][i];
-            }
-            for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
-                if (outputs[ch])
-                    outputs[ch][i] = 0.0f;
+                    float& ic1 = m_ic1[ch];
+                    float& ic2 = m_ic2[ch];
+                    const float v3 = driven - ic2;
+                    const float v1 = m_a1 * ic1 + m_a2 * v3;
+                    const float v2 = ic2 + m_a2 * ic1 + m_a3 * v3;
+                    ic1 = 2.0f * v1 - ic1;
+                    ic2 = 2.0f * v2 - ic2;
+
+                    const float lp = v2;
+                    const float bp = v1;
+                    const float hp = driven - m_k * v1 - v2;
+                    float filtered = outputForType(m_currentType, lp, bp, hp);
+                    if (xfade > 0.0f) {
+                        filtered += (outputForType(m_prevType, lp, bp, hp) - filtered) * xfade;
+                    }
+
+                    if (outputs[ch])
+                        outputs[ch][i] = x * dry + filtered * wet;
+                }
+
+                if (!stereo && numOutputChannels > 1 && outputs[1] && outputs[0]) {
+                    outputs[1][i] = outputs[0][i];
+                }
+                for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
+                    if (outputs[ch])
+                        outputs[ch][i] = 0.0f;
+                }
             }
         }
 
@@ -187,6 +248,8 @@ public:
     void setParameter(uint32_t id, float value) override {
         if (id >= kParamCount)
             return;
+        if (!std::isfinite(value))
+            return; // NaN survives clamp (comparisons are false) and would poison the SVF coefficients
         m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
     }
 
@@ -341,12 +404,33 @@ public:
     static float normFromType(Type type) { return static_cast<float>(type) / static_cast<float>(kTypeCount - 1); }
 
 private:
+    static constexpr uint32_t kCtrlInterval = 8; // control-rate interval for param/coefficient updates
+
+    static float outputForType(Type type, float lp, float bp, float hp) {
+        switch (type) {
+        case kTypeLowPass:
+            return lp;
+        case kTypeBandPass:
+            return bp;
+        default:
+            return hp;
+        }
+    }
+
     void resetRuntimeState() {
         m_ic1[0] = m_ic1[1] = 0.0f;
         m_ic2[0] = m_ic2[1] = 0.0f;
         m_envelope = 0.0f;
+        m_wasBypassed = false;
+        m_coeffsDirty = true;
+        m_currentType = typeFromNorm(getParameter(kType));
+        m_prevType = m_currentType;
+        m_typeXfadeRemaining = 0;
         const float sr = static_cast<float>(m_sampleRate);
-        m_smoothCoeff = 1.0f - std::exp(-1.0f / (0.002f * sr));
+        // Smoothing runs once per control block, so the coefficient is scaled
+        // to the block interval to keep the 2 ms time constant.
+        m_smoothCoeff = 1.0f - std::exp(-static_cast<float>(kCtrlInterval) / (0.002f * sr));
+        m_typeXfadeLength = std::max(1u, static_cast<uint32_t>(0.003f * sr)); // ~3 ms
         m_envLevel.store(0.0f, std::memory_order_relaxed);
     }
 
@@ -355,7 +439,10 @@ private:
         m_resoSmoothed = getParameter(kReso);
         m_driveSmoothed = getParameter(kDrive);
         m_envAmtSmoothed = getParameter(kEnvAmount);
+        m_attackSmoothed = getParameter(kEnvAttack);
+        m_releaseSmoothed = getParameter(kEnvRelease);
         m_mixSmoothed = getParameter(kMix);
+        m_coeffsDirty = true;
     }
 
     // ── Utility ──
@@ -396,13 +483,42 @@ private:
     float m_ic2[2] = {0.0f, 0.0f};
 
     float m_envelope = 0.0f;
+    bool m_wasBypassed = false;
 
+    // Control-rate smoothed params
     float m_smoothCoeff = 0.0f;
     float m_cutoffSmoothed = 1.0f;
     float m_resoSmoothed = 0.116f;
     float m_driveSmoothed = 0.0f;
     float m_envAmtSmoothed = 0.5f;
+    float m_attackSmoothed = 0.567f;
+    float m_releaseSmoothed = 0.642f;
     float m_mixSmoothed = 1.0f;
+
+    // Cached coefficient inputs (recompute gated on movement)
+    bool m_coeffsDirty = true;
+    float m_resoCached = -1.0f;
+    float m_driveCached = -1.0f;
+    float m_attackCached = -1.0f;
+    float m_releaseCached = -1.0f;
+    float m_cutoffCached = -1.0f;
+    float m_k = 1.41421356f;
+    float m_driveGain = 1.0f;
+    float m_driveMakeup = 1.0f;
+    float m_attackCoeff = 0.0f;
+    float m_releaseCoeff = 0.0f;
+    float m_baseCutoffHz = 20000.0f;
+
+    // Interpolated TPT coefficients
+    float m_a1 = 0.0f;
+    float m_a2 = 0.0f;
+    float m_a3 = 0.0f;
+
+    // Type crossfade
+    Type m_currentType = kTypeLowPass;
+    Type m_prevType = kTypeLowPass;
+    uint32_t m_typeXfadeRemaining = 0;
+    uint32_t m_typeXfadeLength = 144;
 
     std::atomic<float> m_envLevel{0.0f};
 };
