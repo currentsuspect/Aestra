@@ -1591,6 +1591,21 @@ else()
     message(STATUS "PianoRollInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# Editor-close deferred-destruction regression (#475): removeChild() during
+# event dispatch must defer and free safely (no iterator invalidation / UAF).
+if(TARGET AestraUI_Core)
+    add_executable(EditorCloseDeferredTest AestraUI/EditorCloseDeferredTest.cpp)
+    target_link_libraries(EditorCloseDeferredTest PRIVATE AestraUI_Core)
+    target_include_directories(EditorCloseDeferredTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME EditorCloseDeferredTest COMMAND EditorCloseDeferredTest)
+    set_tests_properties(EditorCloseDeferredTest PROPERTIES LABELS "ui;lifecycle;regression")
+else()
+    message(STATUS "EditorCloseDeferredTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # NUITextInput Layout / Caret / Selection regression tests
 # Guard on target presence because headless/CI disables AestraUI targets.
 if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUITextInputLayoutTest.cpp")

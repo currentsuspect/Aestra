@@ -194,7 +194,25 @@ public:
     PluginListItem convertToListItem(const Aestra::Audio::PluginInfo& info) const;
 
 private:
-    
+
+    // Wire an editor's close callback. Captures the editor by weak_ptr (so the
+    // callback does not form a retain cycle that leaks the editor), and removes
+    // it from the popup layer and the active-editor list on close. removeChild()
+    // is deferred while an event dispatch is in flight, so the removal is safe
+    // even though close fires from within the editor's own onMouseEvent.
+    template <typename EditorT>
+    void wireEditorClose(const std::shared_ptr<EditorT>& editor) {
+        std::weak_ptr<EditorT> weak = editor;
+        editor->setOnClose([this, weak]() {
+            auto ed = weak.lock();
+            if (!ed) return;
+            std::shared_ptr<NUIComponent> comp = ed;
+            if (m_popupLayer) m_popupLayer->removeChild(comp);
+            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), comp),
+                                  m_activeEditors.end());
+        });
+    }
+
     // Backend references
     Aestra::Audio::PluginScanner* m_scanner = nullptr;
     Aestra::Audio::PluginManager* m_manager = nullptr;
