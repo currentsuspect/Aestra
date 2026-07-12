@@ -66,8 +66,14 @@ public:
     bool initialize(double sampleRate, uint32_t maxBlockSize) override {
         (void)maxBlockSize;
         m_sampleRate = std::max(1.0, sampleRate);
-        for (const auto& param : getParameters()) {
-            m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
+        // EffectChain::prepare() re-calls initialize() on the *live* instance
+        // during stream restarts / sample-rate changes, so seed defaults only on
+        // the first init — otherwise a device change would silently wipe the
+        // user's current parameter values.
+        if (!m_paramsInitialized.exchange(true)) {
+            for (const auto& param : getParameters()) {
+                m_params[param.id].store(param.defaultValue, std::memory_order_relaxed);
+            }
         }
         resetRuntimeState();
         snapSmoothedParams();
@@ -413,7 +419,10 @@ private:
 
     static SvfCoeff makeCoeff(float fc, float sr) {
         SvfCoeff c;
-        const float clamped = std::clamp(fc, 20.0f, 0.45f * sr);
+        // At extremely low sample rates 0.45*sr can fall below the 20 Hz floor,
+        // which would make std::clamp's bounds invalid (lo > hi). Keep lo <= hi.
+        const float hi = 0.45f * sr;
+        const float clamped = std::clamp(fc, std::min(20.0f, hi), hi);
         const float g = std::tan(3.14159265358979323846f * clamped / sr);
         c.a1 = 1.0f / (1.0f + g * (g + c.k));
         c.a2 = g * c.a1;
@@ -491,7 +500,11 @@ private:
         return std::clamp(sample, -16.0f, 16.0f);
     }
 
-    static float flushDenormal(float value) { return std::abs(value) < 1.0e-20f ? 0.0f : value; }
+    static float flushDenormal(float value) {
+        if (!std::isfinite(value))
+            return 0.0f; // guard the output against NaN/Inf, not just denormals
+        return std::abs(value) < 1.0e-20f ? 0.0f : value;
+    }
 
     static float linearToDb(float linear) {
         if (!std::isfinite(linear) || linear <= 1.0e-6f)
@@ -505,6 +518,7 @@ private:
     PluginInfo m_info;
     double m_sampleRate = 48000.0;
     std::atomic<bool> m_active{false};
+    std::atomic<bool> m_paramsInitialized{false};
     std::array<std::atomic<float>, kParamCount> m_params{};
 
     // Crossover network, per channel

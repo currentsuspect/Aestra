@@ -106,6 +106,22 @@ bool testBypassPassesAudioUnchanged() {
     return true;
 }
 
+// initialize() is re-called by EffectChain::prepare() on stream/sample-rate
+// changes; after the first init it must preserve the user's parameter values,
+// not reset them to defaults.
+bool testReinitializePreservesParams() {
+    AestraOTT ott;
+    ott.initialize(kSampleRate, kBlockSize);
+    ott.setParameter(AestraOTT::kDepth, 0.33f);
+    ott.setParameter(AestraOTT::kXoverLow, 0.7f);
+    ott.setParameter(AestraOTT::kLowGain, 0.8f);
+    // Simulate a device / sample-rate change: EffectChain::prepare re-inits.
+    ott.initialize(96000, kBlockSize);
+    return std::abs(ott.getParameter(AestraOTT::kDepth) - 0.33f) < 1e-6f &&
+           std::abs(ott.getParameter(AestraOTT::kXoverLow) - 0.7f) < 1e-6f &&
+           std::abs(ott.getParameter(AestraOTT::kLowGain) - 0.8f) < 1e-6f;
+}
+
 // The upward gain gate: silence must never be dragged up.
 bool testSilenceStaysSilent() {
     AestraOTT ott;
@@ -115,7 +131,10 @@ bool testSilenceStaysSilent() {
 
     const auto silence = makeSilence(8192);
     auto out = processStereo(ott, silence, silence);
-    return peakAmplitude(out.left) < 1e-8f && peakAmplitude(out.right) < 1e-8f;
+    // allFinite guards against a NaN slipping through: peakAmplitude() can
+    // return 0 for a NaN, so the peak check alone would not catch it.
+    return peakAmplitude(out.left) < 1e-8f && peakAmplitude(out.right) < 1e-8f && allFinite(out.left) &&
+           allFinite(out.right);
 }
 
 // With depth 0 and trims centered, the band split must reconstruct flat:
@@ -388,6 +407,7 @@ int main() {
     const TestCase tests[] = {
         {"BypassPassesAudioUnchanged", testBypassPassesAudioUnchanged},
         {"SilenceStaysSilent", testSilenceStaysSilent},
+        {"ReinitializePreservesParams", testReinitializePreservesParams},
         {"DepthZeroIsSpectrallyFlat", testDepthZeroIsSpectrallyFlat},
         {"DownwardCompressesLoudSignal", testDownwardCompressesLoudSignal},
         {"UpwardBoostsQuietSignal", testUpwardBoostsQuietSignal},
