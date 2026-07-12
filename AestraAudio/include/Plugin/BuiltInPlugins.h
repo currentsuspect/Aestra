@@ -18,6 +18,7 @@ const PluginInfo& driftInfo();
 const PluginInfo& limiterInfo();
 const PluginInfo& satInfo();
 const PluginInfo& filterInfo();
+const PluginInfo& ottInfo();
 void registerCoreBuiltIns();
 std::vector<PluginInfo> all();
 }
