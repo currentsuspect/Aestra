@@ -346,6 +346,13 @@ public:
         std::memcpy(&blob, state.data(), sizeof(blob));
         if (blob.version < 1 || blob.version > 1)
             return false;
+        // Validate the entire decoded set before mutating anything. setParameter
+        // silently drops non-finite values, so applying in place would leave a
+        // half-updated state while still reporting success — fail atomically.
+        for (uint32_t i = 0; i < kParamCount; ++i) {
+            if (!std::isfinite(blob.params[i]) || blob.params[i] < 0.0f || blob.params[i] > 1.0f)
+                return false;
+        }
         for (uint32_t i = 0; i < kParamCount; ++i) {
             setParameter(i, blob.params[i]);
         }
@@ -361,7 +368,14 @@ public:
 
     const PluginInfo& getInfo() const override { return m_info; }
     uint32_t getLatencySamples() const override { return 0; }
-    uint32_t getTailSamples() const override { return 4096; } // resonant ring-out
+    uint32_t getTailSamples() const override {
+        // Resonant ring-out is sample-rate-relative: a 2-pole resonator's -60 dB
+        // decay is ~ln(1000)*Q/(pi*f0), so the worst case here (20 Hz cutoff,
+        // Q 10) rings ~1.1 s. A fixed 4096 samples truncated that ring in
+        // offline bounce and drifted with sample rate — report ~1.2 s scaled to
+        // the current rate.
+        return static_cast<uint32_t>(m_sampleRate * 1.2);
+    }
     WatchdogStats getWatchdogStats() const override { return {}; }
     void resetWatchdog() override {}
     bool isBypassedByWatchdog() const override { return false; }
@@ -450,7 +464,11 @@ private:
                             uint32_t numOutputChannels, uint32_t numFrames) {
         for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
             if (outputs[ch] && ch < numInputChannels && inputs[ch]) {
-                std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
+                // Skip the copy when the host renders in place (out == in):
+                // memcpy on aliased buffers is undefined and the data is already
+                // where it needs to be.
+                if (outputs[ch] != inputs[ch])
+                    std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
             } else if (outputs[ch]) {
                 std::memset(outputs[ch], 0, numFrames * sizeof(float));
             }

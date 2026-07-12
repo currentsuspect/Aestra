@@ -39,13 +39,18 @@ double benchConfig(uint32_t instances, double sampleRate) {
     std::vector<float> outL(kBlockSize), outR(kBlockSize);
     const double w = 2.0 * 3.14159265358979323846 * 220.0 / sampleRate;
 
-    const auto t0 = std::chrono::steady_clock::now();
+    // Pre-generate a representative input block so the timed region measures
+    // only process(), not the oscillator that fills the buffer (~1M std::sin
+    // calls per config would otherwise pollute us/callback at low instance
+    // counts).
     double phase = 0.0;
+    for (uint32_t i = 0; i < kBlockSize; ++i) {
+        inL[i] = inR[i] = static_cast<float>(0.5 * std::sin(phase));
+        phase += w;
+    }
+
+    const auto t0 = std::chrono::steady_clock::now();
     for (uint32_t b = 0; b < kBlocks; ++b) {
-        for (uint32_t i = 0; i < kBlockSize; ++i) {
-            inL[i] = inR[i] = static_cast<float>(0.5 * std::sin(phase));
-            phase += w;
-        }
         for (auto& f : filters) {
             const float* ins[] = {inL.data(), inR.data()};
             float* outs[] = {outL.data(), outR.data()};

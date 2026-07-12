@@ -374,7 +374,8 @@ bool testSetParameterRejectsNonFinite() {
     for (size_t off = 8; off + sizeof(float) <= state.size(); off += sizeof(float)) {
         std::memcpy(state.data() + off, &nan, sizeof(float));
     }
-    flt.loadState(state);
+    if (flt.loadState(state))
+        return false; // an all-NaN blob must be rejected, not accepted as success
     for (uint32_t i = 0; i < AestraFilter::kParamCount; ++i) {
         if (!std::isfinite(flt.getParameter(i)))
             return false;
