@@ -64,6 +64,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/VST3PluginTest.cpp")
     endif()
 endif()
 
+# Test temp-directory reliability stress test — proves makeUniqueTempDirectory
+# never hands two callers the same path under heavy concurrency (regression
+# guard for the ctest -j temp-dir collision).
+add_executable(TestTempDirectoryStressTest Support/TestTempDirectoryStressTest.cpp)
+find_package(Threads REQUIRED)
+target_link_libraries(TestTempDirectoryStressTest PRIVATE Threads::Threads)
+add_test(NAME TestTempDirectoryStressTest COMMAND TestTempDirectoryStressTest)
+set_tests_properties(TestTempDirectoryStressTest PROPERTIES LABELS "support;infrastructure")
+
 # Project RoundTrip Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     add_executable(ProjectRoundTripTest

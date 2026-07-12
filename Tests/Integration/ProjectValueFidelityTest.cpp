@@ -41,22 +41,12 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include "../Support/TestTempDirectory.h"
 
 namespace {
 
 std::filesystem::path makeTempDir() {
-    auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-    for (int i = 0; i < 1000; ++i) {
-        auto candidate = base / ("ValueFidelity_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
-            return candidate;
-        }
-    }
-    auto fallback = base / "ValueFidelity_fallback";
-    std::filesystem::create_directories(fallback);
-    return fallback;
+    return Aestra::Tests::makeUniqueTempDirectory("ProjectValueFidelity");
 }
 
 // Minimal PCM 16-bit mono WAV writer (enough to satisfy SourceManager loading).

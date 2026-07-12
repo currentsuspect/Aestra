@@ -12,24 +12,12 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include "../Support/TestTempDirectory.h"
 
 namespace {
 
 std::filesystem::path makeTempDir() {
-    auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-
-    for (int i = 0; i < 1000; ++i) {
-        auto candidate = base / ("SessionRecovery_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
-            return candidate;
-        }
-    }
-
-    auto fallback = base / "SessionRecovery_fallback";
-    std::filesystem::create_directories(fallback);
-    return fallback;
+    return Aestra::Tests::makeUniqueTempDirectory("SessionRecovery");
 }
 
 bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, int numSamples) {

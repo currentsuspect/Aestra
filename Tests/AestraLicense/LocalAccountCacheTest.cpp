@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include "../Support/TestTempDirectory.h"
 
 using Aestra::License::AccountSessionState;
 using Aestra::License::LocalAccountCache;
@@ -16,9 +17,7 @@ using Aestra::License::LocalAccountRecord;
 namespace {
 
 std::filesystem::path testCachePath() {
-    const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
-    return std::filesystem::temp_directory_path() /
-           ("aestra_local_account_cache_test_" + std::to_string(stamp) + ".json");
+    return Aestra::Tests::makeUniqueTempDirectory("LocalAccountCache") / "account_cache.json";
 }
 
 LocalAccountRecord validRecord() {

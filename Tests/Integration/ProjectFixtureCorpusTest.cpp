@@ -25,6 +25,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include "../Support/TestTempDirectory.h"
 
 namespace {
 
@@ -231,8 +232,7 @@ int main() {
             "re-save not stamped with current version (migration did not run)");
 
     // ---------------- The re-save must load with every value intact.
-    const auto tempDir = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(tempDir);
+    const auto tempDir = Aestra::Tests::makeUniqueTempDirectory("ProjectFixtureCorpus");
     const auto resavePath = tempDir / "v1_rich_resaved.aes";
     require(ProjectSerializer::writeAtomically(resavePath.string(), resave.contents), "re-save write failed");
 

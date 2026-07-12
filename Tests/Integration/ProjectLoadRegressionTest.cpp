@@ -17,6 +17,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "../Support/TestTempDirectory.h"
 
 using namespace Aestra;
 using namespace Aestra::Audio;
@@ -86,20 +87,7 @@ bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, in
 }
 
 std::filesystem::path makeTempDir() {
-    auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-
-    for (int i = 0; i < 1000; ++i) {
-        auto candidate = base / ("ProjectLoadTests_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
-            return candidate;
-        }
-    }
-
-    auto fallback = base / "ProjectLoadTests_fallback";
-    std::filesystem::create_directories(fallback);
-    return fallback;
+    return Aestra::Tests::makeUniqueTempDirectory("ProjectLoadRegression");
 }
 
 void testValidProjectLoad() {
