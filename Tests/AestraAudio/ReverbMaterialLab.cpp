@@ -318,6 +318,9 @@ static MaterialResult analyzeMaterial(const std::string& name, const std::string
 static std::string generateJsonReport(const std::vector<MaterialResult>& results) {
     std::ostringstream j;
     j << "{\n";
+    // schemaVersion distinguishes this sanitize/over-unity schema from the prior
+    // "clamp" field names. Bump when the report field set changes.
+    j << "  \"schemaVersion\": \"2.0.0\",\n";
     j << "  \"results\": [\n";
     for (size_t i = 0; i < results.size(); ++i) {
         const auto& r = results[i];

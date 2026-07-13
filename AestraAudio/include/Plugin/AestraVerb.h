@@ -48,9 +48,9 @@ namespace Plugins {
 
 // Lab-only output-level diagnostics. Zero overhead when AESTRA_REVERB_DIAGNOSTICS
 // is undefined. Named for what they actually measure: the output is *sanitized*
-// (NaN/Inf/denormal flushed, hard-limited only at +/-16 in sanitize()), not
-// clamped at +/-1, so these track pre/post-sanitize peaks and count samples at
-// or above unity (headroom info) — they do not count clipping.
+// (NaN and denormals flushed to zero, and any |value| >= 32 muted to zero as a
+// blow-up guard), not clamped at +/-1 — so these track pre/post-sanitize peaks
+// and count samples at or above unity (headroom info), not clips.
 #ifdef AESTRA_REVERB_DIAGNOSTICS
 #define AESTRA_DIAG_PRE_SANITIZE(l, r) \
     do { \
@@ -1062,9 +1062,10 @@ private:
 
     // ============================================================================
     // Lab-only output-level diagnostics (compile-time gated, zero overhead when
-    // disabled). The output is sanitized (NaN/Inf/denormal flushed, hard-limited
-    // only at +/-16), NOT clamped at +/-1 — so these report sanitize peaks and a
-    // count of samples at or above unity (headroom info), not a clip count.
+    // disabled). The output is sanitized (NaN and denormals flushed to zero, and
+    // any |value| >= 32 muted to zero as a blow-up guard), NOT clamped at +/-1 —
+    // so these report sanitize peaks and a count of samples at or above unity
+    // (headroom info), not a clip count.
     // ============================================================================
 #ifdef AESTRA_REVERB_DIAGNOSTICS
 public:
