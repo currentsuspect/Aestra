@@ -606,7 +606,7 @@ bool AestraDelayEditor::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     // Let NUISlider children handle their own mouse events
-    return NUIComponent::onMouseEvent(event);
+    return NUIComponent::onMouseEvent(event) || consumeInsideBounds(event);
 }
 
 } // namespace AestraUI

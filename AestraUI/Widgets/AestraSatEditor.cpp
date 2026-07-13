@@ -276,7 +276,7 @@ bool AestraSatEditor::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
 
-    return false;
+    return consumeInsideBounds(event);
 }
 
 void AestraSatEditor::onResize(int width, int height) {

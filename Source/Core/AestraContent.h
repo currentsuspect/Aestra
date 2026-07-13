@@ -21,6 +21,7 @@
 #include "../AestraUI/Widgets/UIRoutingMap.h"
 #include "Events/Connection.h"
 #include "NUILabel.h"
+#include "KeyboardNoteInput.h"
 #include "NUISegmentedControl.h"
 #include "OverlayLayer.h"
 #include "PatternSource.h"
@@ -347,6 +348,8 @@ private:
 
     std::shared_ptr<Aestra::Audio::MixerPanel> m_mixerPanel;
     std::shared_ptr<Aestra::Audio::PianoRollPanel> m_pianoRollPanel;
+    // Musical typing: QWERTY plays the piano roll's editing unit live.
+    Aestra::KeyboardNoteInput m_keyboardNoteInput;
     std::shared_ptr<Aestra::Audio::ArsenalPanel> m_sequencerPanel;
     std::shared_ptr<Aestra::Audio::AestraHistoryPanel> m_historyPanel;
     std::shared_ptr<AestraUI::PluginUIController> m_pluginController;

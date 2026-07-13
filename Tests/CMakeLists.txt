@@ -1598,6 +1598,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeJSONTest.cpp")
     message(STATUS "NUIThemeJSONTest added - Issue #259 theme JSON loading test")
 endif()
 
+# KeyboardNoteInput Test — musical-typing translation logic (header-only, no
+# UI targets needed, runs headless on every lane).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/KeyboardNoteInputTest.cpp")
+    add_executable(KeyboardNoteInputTest AestraUI/KeyboardNoteInputTest.cpp)
+    target_include_directories(KeyboardNoteInputTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/Source/Core
+    )
+    add_test(NAME KeyboardNoteInputTest COMMAND KeyboardNoteInputTest)
+    set_tests_properties(KeyboardNoteInputTest PROPERTIES LABELS "ui;input;midi")
+endif()
+
 # PianoRollInteraction Test - tests for pure helper functions
 # Guard on target presence because headless/CI disables AestraUI targets.
 if(TARGET AestraUI_Core)
@@ -1626,6 +1638,23 @@ if(TARGET AestraUI_Core)
     set_tests_properties(EditorCloseDeferredTest PROPERTIES LABELS "ui;lifecycle;regression")
 else()
     message(STATUS "EditorCloseDeferredTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
+# Panel-window click-swallow regression: a floating plugin editor must consume
+# clicks over its own empty area so they don't fall through to widgets behind it
+# (click-through + spurious dismiss).
+if(TARGET AestraUI_Core)
+    add_executable(PanelWindowClickSwallowTest AestraUI/PanelWindowClickSwallowTest.cpp)
+    target_link_libraries(PanelWindowClickSwallowTest PRIVATE AestraUI_Core)
+    target_include_directories(PanelWindowClickSwallowTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    )
+    add_test(NAME PanelWindowClickSwallowTest COMMAND PanelWindowClickSwallowTest)
+    set_tests_properties(PanelWindowClickSwallowTest PROPERTIES LABELS "ui;input;regression")
+else()
+    message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # NUITextInput Layout / Caret / Selection regression tests
