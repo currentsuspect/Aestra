@@ -1576,6 +1576,18 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeJSONTest.cpp")
     message(STATUS "NUIThemeJSONTest added - Issue #259 theme JSON loading test")
 endif()
 
+# KeyboardNoteInput Test — musical-typing translation logic (header-only, no
+# UI targets needed, runs headless on every lane).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/KeyboardNoteInputTest.cpp")
+    add_executable(KeyboardNoteInputTest AestraUI/KeyboardNoteInputTest.cpp)
+    target_include_directories(KeyboardNoteInputTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/Source/Core
+    )
+    add_test(NAME KeyboardNoteInputTest COMMAND KeyboardNoteInputTest)
+    set_tests_properties(KeyboardNoteInputTest PROPERTIES LABELS "ui;input;midi")
+endif()
+
 # PianoRollInteraction Test - tests for pure helper functions
 # Guard on target presence because headless/CI disables AestraUI targets.
 if(TARGET AestraUI_Core)
