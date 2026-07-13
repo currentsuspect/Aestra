@@ -175,6 +175,10 @@ public:
     static constexpr size_t kEarlyTapCount = 12;
     static constexpr float kReferenceSampleRate = 44100.0f;
     static constexpr float kMaxPredelayMs = 500.0f;
+    // Wet makeup gain. With kWetCompGain this can push the full-wet output above
+    // unity on hot input (measured wet peaks up to ~1.56). That is intentional
+    // float headroom, not clipping — the path never clamps at +/-1. See
+    // AestraDocs/design/aestra-verb-gain-staging.md (N4).
     static constexpr float kWetMakeupGain = 4.2f;
     // Session 004: per-mode wet compensation for box-cut/air reductions (linear gain).
     // Index: 0=Room, 1=Hall, 2=Plate, 3=Cathedral, 4=Chamber, 5=BrightHall, 6=Ambience, 7=Scoring, 8=SmoothPlate.
@@ -937,7 +941,24 @@ public:
         case kPredelaySync: {
             static const char* syncNames[] = { "OFF", "1/16", "1/8", "1/4", "1/2", "1 bar", "2 bars" };
             const int idx = std::clamp(static_cast<int>(std::round(v * static_cast<float>(kPredelaySyncCount - 1))), 0, kPredelaySyncCount - 1);
-            return syncNames[idx];
+            if (idx == 0) return syncNames[0];
+            // Truthful display: the predelay buffer caps at m_maxPredelaySamples
+            // (~500 ms), so long note values at slow tempos can't be realized.
+            // Show the actual resulting time and flag when it is capped, rather
+            // than a nominal division the engine silently clamps. (N3.)
+            const float bpm = std::clamp(m_bpm.load(std::memory_order_relaxed), 20.0f, 999.0f);
+            const float divRatio = static_cast<float>(1 << (idx - 1)) / 4.0f; // beats
+            const float wantMs = (60.0f / bpm) * divRatio * 1000.0f;
+            const float sr = static_cast<float>(m_sampleRate > 0 ? m_sampleRate : 48000);
+            const float maxMs = (m_maxPredelaySamples > 1) ? (static_cast<float>(m_maxPredelaySamples) / sr * 1000.0f)
+                                                           : (kMaxPredelayMs);
+            std::string label = syncNames[idx];
+            if (wantMs > maxMs + 0.5f) {
+                label += " (" + std::to_string(static_cast<int>(std::round(maxMs))) + "ms max)";
+            } else {
+                label += " (" + std::to_string(static_cast<int>(std::round(wantMs))) + "ms)";
+            }
+            return label;
         }
         case kModCharacter: {
             static const char* charNames[] = { "Random", "Chorus", "Chaotic" };
