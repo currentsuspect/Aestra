@@ -39,7 +39,7 @@ constexpr float kPresetCardHeight = 58.0f;
 constexpr float kPresetCardGap = 6.0f;
 constexpr float kPresetListBottomPadding = 24.0f;
 constexpr float kPresetArtworkSize = 44.0f;
-constexpr float kPresetArtworkPixels = 384.0f;
+constexpr float kPresetArtworkPixels = 256.0f; // matches the committed 256x256 preset artwork
 
 NUIColor verbSurfaceBg() { return NUIColor(0.044f, 0.044f, 0.044f, 0.985f); }
 NUIColor verbInsetBg() { return NUIColor(0.025f, 0.025f, 0.025f, 0.965f); }
