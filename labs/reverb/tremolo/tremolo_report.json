@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0.0",
+  "config": {"modChar":"Random","modDepth":0.3,"damping":0.5,"metric":"tail dB ripple RMS"},
+  "modes": [
+    {"mode":"room","wobbleHz":24.1699,"rippleOnDb":1.67904,"rippleOffDb":1.80324,"lowDb":1.91055,"midDb":1.6488,"highDb":1.6742},
+    {"mode":"hall","wobbleHz":0.732422,"rippleOnDb":1.77142,"rippleOffDb":1.68869,"lowDb":2.05133,"midDb":1.67894,"highDb":1.71813},
+    {"mode":"plate","wobbleHz":0.732422,"rippleOnDb":2.11239,"rippleOffDb":2.35323,"lowDb":2.30983,"midDb":2.08378,"highDb":2.05807},
+    {"mode":"cathedral","wobbleHz":0.732422,"rippleOnDb":1.83332,"rippleOffDb":1.83947,"lowDb":1.93355,"midDb":1.72341,"highDb":1.87881},
+    {"mode":"chamber","wobbleHz":13.1836,"rippleOnDb":1.68172,"rippleOffDb":1.72072,"lowDb":1.88264,"midDb":1.65631,"highDb":1.71798},
+    {"mode":"bright_hall","wobbleHz":0.732422,"rippleOnDb":1.65919,"rippleOffDb":1.73923,"lowDb":1.86222,"midDb":1.60903,"highDb":1.6683},
+    {"mode":"ambience","wobbleHz":21.9727,"rippleOnDb":1.72071,"rippleOffDb":1.59208,"lowDb":1.93489,"midDb":1.71358,"highDb":1.59788},
+    {"mode":"scoring","wobbleHz":0.732422,"rippleOnDb":1.83031,"rippleOffDb":1.74073,"lowDb":2.00988,"midDb":1.77361,"highDb":1.80255},
+    {"mode":"smooth_plate","wobbleHz":0.732422,"rippleOnDb":2.2428,"rippleOffDb":2.17911,"lowDb":2.4889,"midDb":2.1131,"highDb":2.07528}
+  ],
+  "modDepthSweep": [
+    {"mode":"hall","depth0":1.68869,"depth03":1.77142,"depth1":1.71826},
+    {"mode":"plate","depth0":2.35323,"depth03":2.11239,"depth1":2.20068},
+    {"mode":"room","depth0":1.80324,"depth03":1.67904,"depth1":1.75079},
+    {"mode":"smooth_plate","depth0":2.17911,"depth03":2.2428,"depth1":2.20473}
+  ],
+  "dampingExposure": [
+    {"mode":"plate","rippleDamp05":2.11239,"rippleDamp01":1.13811},
+    {"mode":"hall","rippleDamp05":1.77142,"rippleDamp01":1.05287},
+    {"mode":"room","rippleDamp05":1.67904,"rippleDamp01":1.11014}
+  ]
+}

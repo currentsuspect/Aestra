@@ -658,6 +658,31 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbDormancyTest.cpp")
     set_tests_properties(ReverbDormancyTest PROPERTIES LABELS "audio;dsp;reverb;dormancy")
 endif()
 
+# Reverb Harmonic-Motion / Tremolo investigation labs — experimental tooling,
+# gated so CI-safe/public test builds stay lean (opt in via AESTRA_ENABLE_EXPERIMENTAL_TESTS).
+if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbHarmonicMotionLab.cpp")
+        add_executable(AestraReverbHarmonicMotionLab AestraAudio/ReverbHarmonicMotionLab.cpp)
+        target_link_libraries(AestraReverbHarmonicMotionLab PRIVATE AestraAudio)
+        target_include_directories(AestraReverbHarmonicMotionLab PRIVATE
+            ${CMAKE_SOURCE_DIR}/AestraAudio/include
+            ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+            ${CMAKE_SOURCE_DIR}/AestraCore/include
+        )
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbTremoloLab.cpp")
+        add_executable(AestraReverbTremoloLab AestraAudio/ReverbTremoloLab.cpp)
+        target_link_libraries(AestraReverbTremoloLab PRIVATE AestraAudio)
+        target_include_directories(AestraReverbTremoloLab PRIVATE
+            ${CMAKE_SOURCE_DIR}/AestraAudio/include
+            ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+            ${CMAKE_SOURCE_DIR}/AestraCore/include
+        )
+    endif()
+else()
+    message(STATUS "Reverb tremolo/harmonic-motion investigation labs skipped (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to build)")
+endif()
+
 # Reverb Listening Pack generator (evaluation aid, not a test)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbListeningPack.cpp")
     add_executable(AestraReverbListeningPack AestraAudio/ReverbListeningPack.cpp)

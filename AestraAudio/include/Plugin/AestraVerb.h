@@ -16,7 +16,9 @@
 #define M_PI 3.14159265358979323846
 #endif
 #include <cstring>
+#include <iomanip>
 #include <random>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -877,7 +879,7 @@ public:
             { kSize, "Size", "SIZ", "x", 0.52f, 0.0f, 1.0f, true },
             { kDiffusion, "Diffusion", "DIF", "%", 0.64f, 0.0f, 1.0f, true },
             { kModRate, "Mod Rate", "RTE", "x", 0.42f, 0.0f, 1.0f, true },
-            { kModDepth, "Mod Depth", "DEP", "smpl", 0.14f, 0.0f, 1.0f, true },
+            { kModDepth, "Mod Depth", "DEP", "smpl", 0.07f, 0.0f, 1.0f, true },
             { kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, kModeCount - 1 },
             { kLowCut, "Low Cut", "LO", "Hz", 0.0f, 0.0f, 1.0f, true },
             { kHighCut, "High Cut", "HI", "Hz", 1.0f, 0.0f, 1.0f, true },
@@ -898,7 +900,7 @@ public:
             // (0.90-1.60) — the DSP uses (0.3 + v*9.7) * decayScalar, so a
             // Cathedral "7.1s" was actually 11.4s before this was applied.
             const float scalar = constantsForMode(currentMode()).decayScalar;
-            return std::to_string(static_cast<int>((0.3f + v * 9.7f) * scalar * 10.0f) / 10.0f) + "s";
+            return formatCompactFloat(static_cast<int>((0.3f + v * 9.7f) * scalar * 10.0f) / 10.0f, 1) + "s";
         }
         case kDamping: return std::to_string(static_cast<int>(v * 100)) + "%";
         case kPredelayMs: return std::to_string(static_cast<int>(v * kMaxPredelayMs)) + "ms";
@@ -907,7 +909,7 @@ public:
         case kBypass: return v > 0.5f ? "ON" : "OFF";
         case kSize: {
             const float size = 0.1f + v * 1.9f;
-            return std::to_string(static_cast<int>(size * 100.0f) / 100.0f) + "x";
+            return formatCompactFloat(static_cast<int>(size * 100.0f) / 100.0f, 2) + "x";
         }
         case kDiffusion: return std::to_string(static_cast<int>(v * 100)) + "%";
         case kModRate: return std::to_string(static_cast<int>(v * 200)) + "%";
@@ -917,7 +919,7 @@ public:
             // matched neither the previous x7 mapping nor the current one.
             const float scalar = constantsForMode(currentMode()).modDepthScalar;
             const float smp = (v <= 0.0f ? 0.0f : std::pow(v, 0.6f)) * 12.5f * scalar;
-            return std::to_string(static_cast<int>(smp * 10.0f) / 10.0f) + " smp";
+            return formatCompactFloat(static_cast<int>(smp * 10.0f) / 10.0f, 1) + " smp";
         }
         case kMode: {
             static const char* modeNames[] = {
@@ -967,6 +969,21 @@ public:
         }
         default: return "";
         }
+    }
+
+    static std::string formatCompactFloat(float value, int precision) {
+        std::ostringstream stream;
+        stream << std::fixed << std::setprecision(precision) << value;
+        std::string text = stream.str();
+        if (text.find('.') != std::string::npos) {
+            while (!text.empty() && text.back() == '0') {
+                text.pop_back();
+            }
+            if (!text.empty() && text.back() == '.') {
+                text.pop_back();
+            }
+        }
+        return text;
     }
 
     std::vector<uint8_t> saveState() const override {
@@ -1337,6 +1354,15 @@ private:
         // the logicalFdnLength margin (28) covers it with room to spare, and
         // the minimum length (100) keeps the shortest modulated delay clear of
         // the write head. pow() runs at control rate, not per sample.
+        // Default depth retuned 0.14 -> 0.07 (owner-confirmed by ear). The
+        // audible "tremolo/sheet" was the FDN's narrow peaks/notches being MOVED
+        // across sustained source harmonics by the LFO (individual harmonics
+        // swing even though the broadband tail loudness barely changes). Measured
+        // per-harmonic swing dropped from ~2.7 dB (Plate) / ~2.3 dB (Room) at 0.14
+        // to ~2.0 / ~1.7 dB at 0.07 — below the tremolo audibility knee — while
+        // still smearing the static modes (swing at depth 0 collapses to ~0.1 dB,
+        // re-exposing the ring). See labs/reverb/tremolo/. Higher settings remain
+        // available for anyone who wants overt motion.
         const float depthParam = std::clamp(smoothedParams[kModDepth], 0.0f, 1.0f);
         const float depthCurve = depthParam <= 0.0f ? 0.0f : std::pow(depthParam, 0.6f);
         cache.modDepthSamples = depthCurve * 12.5f * constants.modDepthScalar;
