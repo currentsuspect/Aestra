@@ -630,6 +630,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbQualityLab.cpp")
     )
 endif()
 
+# Reverb Modulation Baseline Lab (F4 pre/post measurement)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbModulationLab.cpp")
+    add_executable(AestraReverbModulationLab AestraAudio/ReverbModulationLab.cpp)
+    target_link_libraries(AestraReverbModulationLab PRIVATE AestraAudio)
+    target_include_directories(AestraReverbModulationLab PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
 # Reverb Material Validation Lab
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbMaterialLab.cpp")
     add_executable(AestraReverbMaterialLab AestraAudio/ReverbMaterialLab.cpp)

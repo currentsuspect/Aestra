@@ -77,6 +77,21 @@ namespace Plugins {
 #define AESTRA_DIAG_WETPRE(l, r) do { } while(0)
 #endif
 
+// Lab-only modulation trace. Records the exact per-line delay-read offset (in
+// fractional samples) the modulator applies, so measurement harnesses can
+// characterize the real modulator — frequency, per-line correlation, excursion,
+// bandwidth — instead of inferring it from the summed output. Zero overhead when
+// AESTRA_REVERB_MOD_TRACE is undefined. When enabled, a bounded conditional
+// store into a preallocated caller buffer (RT-safe, no allocation).
+#ifdef AESTRA_REVERB_MOD_TRACE
+#define AESTRA_MOD_TRACE(off) \
+    do { \
+        if (m_modTraceBuf && m_modTracePos < m_modTraceCap) m_modTraceBuf[m_modTracePos++] = (off); \
+    } while(0)
+#else
+#define AESTRA_MOD_TRACE(off) do { } while(0)
+#endif
+
 class AestraVerb : public IPluginInstance {
 public:
     static constexpr uint32_t kStateMagic = 0x52564205; // 'RVB' v5
@@ -549,6 +564,8 @@ public:
                     if (lfoPhase[line] >= kTwoPi) lfoPhase[line] -= kTwoPi;
                     if (lfoPhase2[line] >= kTwoPi) lfoPhase2[line] -= kTwoPi;
                 }
+                // Interleaved by line: [f0l0..f0l7, f1l0..f1l7, ...]
+                AESTRA_MOD_TRACE(lfoOffset);
                 lineOut[line] = readDelayLine(delayPtrs[line], delayMasks[line], delayPos[line], static_cast<float>(control.lineLengths[line]) + lfoOffset);
             }
             AESTRA_PROFILE_STAGE_END(kFDNDelayRead);
@@ -966,6 +983,27 @@ private:
     uint64_t m_diagClampSampleCount = 0;
     uint64_t m_diagTotalSamples = 0;
     float m_diagSourcePeak = 0.0f;
+#endif
+
+    // ============================================================================
+    // Lab-only modulation trace (compile-time gated, zero overhead when disabled)
+    // ============================================================================
+#ifdef AESTRA_REVERB_MOD_TRACE
+public:
+    // Point the modulator at a caller-owned buffer. The engine appends each
+    // per-line delay-read offset (fractional samples), interleaved by line
+    // ([f0l0..f0l7, f1l0..], kFDNLineCount per frame), until the buffer fills.
+    void beginModTrace(float* buffer, size_t capacity) {
+        m_modTraceBuf = buffer;
+        m_modTraceCap = capacity;
+        m_modTracePos = 0;
+    }
+    size_t modTraceCount() const { return m_modTracePos; }
+
+private:
+    float* m_modTraceBuf = nullptr;
+    size_t m_modTraceCap = 0;
+    size_t m_modTracePos = 0;
 #endif
 
     struct ModeConstants {
