@@ -116,103 +116,103 @@ AestraVerbEditor::AestraVerbEditor(std::shared_ptr<Aestra::Audio::IPluginInstanc
     }};
     m_presets = {{
         // Room
-        {"Vitruvian Space", "Intimate room for voice and acoustic guitar", 0, 0.35f, 0.28f, 0.54f, 0.58f, 0.24f, 0.09f, 0.52f, 0.30f, 0.0f, 0.5f, 0, 0,
+        {"Vitruvian Space", "Intimate room for voice and acoustic guitar", 0, 0.35f, 0.28f, 0.54f, 0.58f, 0.24f, 0.05f, 0.52f, 0.30f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/vitruvian-space.png", 0, false, {}, false},
-        {"Vocal Booth", "Tight, controlled space for dry vocal tracking", 0, 0.22f, 0.18f, 0.62f, 0.50f, 0.18f, 0.06f, 0.44f, 0.24f, 0.0f, 0.5f, 0, 0,
+        {"Vocal Booth", "Tight, controlled space for dry vocal tracking", 0, 0.22f, 0.18f, 0.62f, 0.50f, 0.18f, 0.03f, 0.44f, 0.24f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Studio Room", "Natural small room with early reflections", 0, 0.30f, 0.32f, 0.58f, 0.55f, 0.22f, 0.08f, 0.50f, 0.28f, 0.0f, 0.5f, 0, 0,
+        {"Studio Room", "Natural small room with early reflections", 0, 0.30f, 0.32f, 0.58f, 0.55f, 0.22f, 0.04f, 0.50f, 0.28f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Dense Studio", "Thick small room, great for drums", 0, 0.38f, 0.42f, 0.70f, 0.60f, 0.28f, 0.12f, 0.56f, 0.32f, 0.0f, 0.5f, 0, 0,
+        {"Dense Studio", "Thick small room, great for drums", 0, 0.38f, 0.42f, 0.70f, 0.60f, 0.28f, 0.06f, 0.56f, 0.32f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Bright Room", "Small bright room with crisp reflections", 0, 0.26f, 0.22f, 0.50f, 0.62f, 0.30f, 0.10f, 0.48f, 0.34f, 0.0f, 0.5f, 0, 0,
+        {"Bright Room", "Small bright room with crisp reflections", 0, 0.26f, 0.22f, 0.50f, 0.62f, 0.30f, 0.05f, 0.48f, 0.34f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
         // Hall
-        {"Grand Hall", "Massive hall with long, lush reverb tail", 1, 0.76f, 0.58f, 0.51f, 0.86f, 0.42f, 0.18f, 0.74f, 0.36f, 0.0f, 0.5f, 0, 0,
+        {"Grand Hall", "Massive hall with long, lush reverb tail", 1, 0.76f, 0.58f, 0.51f, 0.86f, 0.42f, 0.09f, 0.74f, 0.36f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/grand-hall.png", 0, false, {}, false},
-        {"Concert Hall", "Orchestral hall with rich spatial depth", 1, 0.68f, 0.52f, 0.55f, 0.80f, 0.38f, 0.16f, 0.70f, 0.32f, 0.0f, 0.5f, 0, 0,
+        {"Concert Hall", "Orchestral hall with rich spatial depth", 1, 0.68f, 0.52f, 0.55f, 0.80f, 0.38f, 0.08f, 0.70f, 0.32f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Chapel Hall", "Stone chapel with bright, reflective surfaces", 1, 0.72f, 0.62f, 0.48f, 0.90f, 0.44f, 0.22f, 0.76f, 0.40f, 0.0f, 0.5f, 0, 0,
+        {"Chapel Hall", "Stone chapel with bright, reflective surfaces", 1, 0.72f, 0.62f, 0.48f, 0.90f, 0.44f, 0.10f, 0.76f, 0.40f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Medium Hall", "Well-balanced hall for most sources", 1, 0.58f, 0.46f, 0.52f, 0.78f, 0.36f, 0.14f, 0.66f, 0.30f, 0.0f, 0.5f, 0, 0,
+        {"Medium Hall", "Well-balanced hall for most sources", 1, 0.58f, 0.46f, 0.52f, 0.78f, 0.36f, 0.07f, 0.66f, 0.30f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Soft Hall", "Gentle hall with smooth, dark tail", 1, 0.62f, 0.50f, 0.60f, 0.82f, 0.34f, 0.12f, 0.68f, 0.34f, 0.0f, 0.5f, 0, 0,
+        {"Soft Hall", "Gentle hall with smooth, dark tail", 1, 0.62f, 0.50f, 0.60f, 0.82f, 0.34f, 0.06f, 0.68f, 0.34f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
         // Plate
-        {"Plate Forge", "Bright metallic plate reverb", 2, 0.54f, 0.48f, 0.46f, 0.82f, 0.34f, 0.20f, 0.78f, 0.32f, 0.0f, 0.5f, 0, 0,
+        {"Plate Forge", "Bright metallic plate reverb", 2, 0.54f, 0.48f, 0.46f, 0.82f, 0.34f, 0.10f, 0.78f, 0.32f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/plate-forge.png", 0, false, {}, false},
-        {"Classic Plate", "EMT-style smooth plate reverb", 2, 0.50f, 0.44f, 0.44f, 0.78f, 0.32f, 0.18f, 0.74f, 0.30f, 0.0f, 0.5f, 0, 0,
+        {"Classic Plate", "EMT-style smooth plate reverb", 2, 0.50f, 0.44f, 0.44f, 0.78f, 0.32f, 0.09f, 0.74f, 0.30f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Dense Plate", "Thick, dense plate for vocals and keys", 2, 0.58f, 0.52f, 0.50f, 0.84f, 0.36f, 0.22f, 0.80f, 0.34f, 0.0f, 0.5f, 0, 0,
+        {"Dense Plate", "Thick, dense plate for vocals and keys", 2, 0.58f, 0.52f, 0.50f, 0.84f, 0.36f, 0.10f, 0.80f, 0.34f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Bright Plate", "Bright, shimmery plate reverb", 2, 0.46f, 0.40f, 0.42f, 0.86f, 0.38f, 0.24f, 0.82f, 0.36f, 0.0f, 0.5f, 0, 0,
+        {"Bright Plate", "Bright, shimmery plate reverb", 2, 0.46f, 0.40f, 0.42f, 0.86f, 0.38f, 0.11f, 0.82f, 0.36f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Dark Plate", "Dark, moody plate with long decay", 2, 0.62f, 0.56f, 0.48f, 0.80f, 0.30f, 0.16f, 0.76f, 0.30f, 0.0f, 0.5f, 0, 0,
+        {"Dark Plate", "Dark, moody plate with long decay", 2, 0.62f, 0.56f, 0.48f, 0.80f, 0.30f, 0.08f, 0.76f, 0.30f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
         // Cathedral
-        {"Celestial Room", "Massive cathedral with ethereal tail", 3, 0.92f, 0.76f, 0.42f, 0.94f, 0.28f, 0.30f, 0.88f, 0.40f, 0.0f, 0.5f, 0, 0,
+        {"Celestial Room", "Massive cathedral with ethereal tail", 3, 0.92f, 0.76f, 0.42f, 0.94f, 0.28f, 0.12f, 0.88f, 0.40f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/celestial-room.png", 0, false, {}, false},
-        {"Stone Cathedral", "Vast stone cathedral with deep reverb", 3, 0.88f, 0.72f, 0.40f, 0.92f, 0.30f, 0.28f, 0.86f, 0.38f, 0.0f, 0.5f, 0, 0,
+        {"Stone Cathedral", "Vast stone cathedral with deep reverb", 3, 0.88f, 0.72f, 0.40f, 0.92f, 0.30f, 0.10f, 0.86f, 0.38f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Epic Cathedral", "Enormous cathedral for cinematic textures", 3, 0.96f, 0.82f, 0.38f, 0.96f, 0.26f, 0.32f, 0.90f, 0.42f, 0.0f, 0.5f, 0, 0,
+        {"Epic Cathedral", "Enormous cathedral for cinematic textures", 3, 0.96f, 0.82f, 0.38f, 0.96f, 0.26f, 0.12f, 0.90f, 0.42f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Sacred Space", "Holy space with long, shimmering decay", 3, 0.84f, 0.68f, 0.44f, 0.90f, 0.32f, 0.26f, 0.84f, 0.36f, 0.0f, 0.5f, 0, 0,
+        {"Sacred Space", "Holy space with long, shimmering decay", 3, 0.84f, 0.68f, 0.44f, 0.90f, 0.32f, 0.11f, 0.84f, 0.36f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Cathedral Warm", "Warm cathedral with gentle low-end", 3, 0.80f, 0.64f, 0.46f, 0.88f, 0.34f, 0.24f, 0.82f, 0.38f, 0.0f, 0.5f, 0, 0,
+        {"Cathedral Warm", "Warm cathedral with gentle low-end", 3, 0.80f, 0.64f, 0.46f, 0.88f, 0.34f, 0.09f, 0.82f, 0.38f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
         // Chamber
-        {"Golden Chamber", "Rich, warm chamber with golden reflections", 4, 0.60f, 0.48f, 0.50f, 0.80f, 0.36f, 0.18f, 0.72f, 0.34f, 0.0f, 0.5f, 0, 0,
+        {"Golden Chamber", "Rich, warm chamber with golden reflections", 4, 0.60f, 0.48f, 0.50f, 0.80f, 0.36f, 0.09f, 0.72f, 0.34f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/golden-chamber.png", 0, false, {}, false},
-        {"Tape Chamber", "Vintage chamber with tape saturation character", 4, 0.55f, 0.44f, 0.52f, 0.76f, 0.34f, 0.16f, 0.68f, 0.32f, 0.0f, 0.5f, 0, 0,
+        {"Tape Chamber", "Vintage chamber with tape saturation character", 4, 0.55f, 0.44f, 0.52f, 0.76f, 0.34f, 0.08f, 0.68f, 0.32f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Large Chamber", "Big chamber with natural room ambience", 4, 0.65f, 0.54f, 0.48f, 0.82f, 0.38f, 0.20f, 0.74f, 0.36f, 0.0f, 0.5f, 0, 0,
+        {"Large Chamber", "Big chamber with natural room ambience", 4, 0.65f, 0.54f, 0.48f, 0.82f, 0.38f, 0.10f, 0.74f, 0.36f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Tight Chamber", "Small, tight chamber for subtle space", 4, 0.40f, 0.32f, 0.56f, 0.72f, 0.30f, 0.14f, 0.62f, 0.28f, 0.0f, 0.5f, 0, 0,
+        {"Tight Chamber", "Small, tight chamber for subtle space", 4, 0.40f, 0.32f, 0.56f, 0.72f, 0.30f, 0.07f, 0.62f, 0.28f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Bright Chamber", "Bright chamber with clear early reflections", 4, 0.52f, 0.42f, 0.46f, 0.84f, 0.40f, 0.22f, 0.76f, 0.38f, 0.0f, 0.5f, 0, 0,
+        {"Bright Chamber", "Bright chamber with clear early reflections", 4, 0.52f, 0.42f, 0.46f, 0.84f, 0.40f, 0.10f, 0.76f, 0.38f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
         // Bright Hall
-        {"Bright Concert", "Bright concert hall with shimmering tail", 5, 0.68f, 0.50f, 0.44f, 0.88f, 0.44f, 0.20f, 0.80f, 0.36f, 0.0f, 0.5f, 0, 0,
+        {"Bright Concert", "Bright concert hall with shimmering tail", 5, 0.68f, 0.50f, 0.44f, 0.88f, 0.44f, 0.10f, 0.80f, 0.36f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/bright-concert.png", 0, false, {}, false},
-        {"Crystal Hall", "Sparkling bright hall with crystalline reflections", 5, 0.72f, 0.54f, 0.42f, 0.90f, 0.46f, 0.22f, 0.82f, 0.38f, 0.0f, 0.5f, 0, 0,
+        {"Crystal Hall", "Sparkling bright hall with crystalline reflections", 5, 0.72f, 0.54f, 0.42f, 0.90f, 0.46f, 0.11f, 0.82f, 0.38f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Glass Hall", "Transparent, glassy hall reverb", 5, 0.64f, 0.46f, 0.46f, 0.86f, 0.42f, 0.18f, 0.78f, 0.34f, 0.0f, 0.5f, 0, 0,
+        {"Glass Hall", "Transparent, glassy hall reverb", 5, 0.64f, 0.46f, 0.46f, 0.86f, 0.42f, 0.09f, 0.78f, 0.34f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Silk Hall", "Smooth, silky bright hall", 5, 0.60f, 0.44f, 0.50f, 0.84f, 0.40f, 0.16f, 0.76f, 0.32f, 0.0f, 0.5f, 0, 0,
+        {"Silk Hall", "Smooth, silky bright hall", 5, 0.60f, 0.44f, 0.50f, 0.84f, 0.40f, 0.08f, 0.76f, 0.32f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Radiant Hall", "Radiant, luminous hall with wide stereo", 5, 0.70f, 0.52f, 0.40f, 0.92f, 0.48f, 0.24f, 0.84f, 0.40f, 0.0f, 0.5f, 0, 0,
+        {"Radiant Hall", "Radiant, luminous hall with wide stereo", 5, 0.70f, 0.52f, 0.40f, 0.92f, 0.48f, 0.12f, 0.84f, 0.40f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
         // Ambience
-        {"Soft Air", "Gentle ambient wash for padding and atmosphere", 6, 0.18f, 0.12f, 0.38f, 0.40f, 0.14f, 0.04f, 0.36f, 0.16f, 0.0f, 0.5f, 0, 0,
+        {"Soft Air", "Gentle ambient wash for padding and atmosphere", 6, 0.18f, 0.12f, 0.38f, 0.40f, 0.14f, 0.02f, 0.36f, 0.16f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/soft-air.png", 0, false, {}, false},
-        {"Subtle Space", "Minimal ambience for subtle depth", 6, 0.14f, 0.10f, 0.42f, 0.38f, 0.12f, 0.03f, 0.34f, 0.14f, 0.0f, 0.5f, 0, 0,
+        {"Subtle Space", "Minimal ambience for subtle depth", 6, 0.14f, 0.10f, 0.42f, 0.38f, 0.12f, 0.02f, 0.34f, 0.14f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Room Tone", "Natural room tone for realistic spaces", 6, 0.20f, 0.14f, 0.40f, 0.42f, 0.16f, 0.05f, 0.38f, 0.18f, 0.0f, 0.5f, 0, 0,
+        {"Room Tone", "Natural room tone for realistic spaces", 6, 0.20f, 0.14f, 0.40f, 0.42f, 0.16f, 0.03f, 0.38f, 0.18f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Air Brush", "Light ambient brush for texture", 6, 0.16f, 0.11f, 0.36f, 0.36f, 0.10f, 0.02f, 0.32f, 0.12f, 0.0f, 0.5f, 0, 0,
+        {"Air Brush", "Light ambient brush for texture", 6, 0.16f, 0.11f, 0.36f, 0.36f, 0.10f, 0.01f, 0.32f, 0.12f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Breath Space", "Very short, breath-like ambience", 6, 0.12f, 0.08f, 0.44f, 0.34f, 0.08f, 0.02f, 0.30f, 0.10f, 0.0f, 0.5f, 0, 0,
+        {"Breath Space", "Very short, breath-like ambience", 6, 0.12f, 0.08f, 0.44f, 0.34f, 0.08f, 0.01f, 0.30f, 0.10f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
         // Scoring
-        {"Cinematic Space", "Vast cinematic space for film scoring", 7, 0.82f, 0.66f, 0.44f, 0.90f, 0.32f, 0.26f, 0.84f, 0.38f, 0.0f, 0.5f, 0, 0,
+        {"Cinematic Space", "Vast cinematic space for film scoring", 7, 0.82f, 0.66f, 0.44f, 0.90f, 0.32f, 0.11f, 0.84f, 0.38f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/cinematic-space.png", 0, false, {}, false},
-        {"Film Score", "Professional scoring stage ambience", 7, 0.78f, 0.62f, 0.46f, 0.88f, 0.34f, 0.24f, 0.82f, 0.36f, 0.0f, 0.5f, 0, 0,
+        {"Film Score", "Professional scoring stage ambience", 7, 0.78f, 0.62f, 0.46f, 0.88f, 0.34f, 0.10f, 0.82f, 0.36f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Epic Score", "Massive scoring stage for orchestral works", 7, 0.86f, 0.70f, 0.42f, 0.92f, 0.30f, 0.28f, 0.86f, 0.40f, 0.0f, 0.5f, 0, 0,
+        {"Epic Score", "Massive scoring stage for orchestral works", 7, 0.86f, 0.70f, 0.42f, 0.92f, 0.30f, 0.12f, 0.86f, 0.40f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Intimate Score", "Intimate scoring stage for small ensemble", 7, 0.70f, 0.56f, 0.50f, 0.84f, 0.36f, 0.22f, 0.78f, 0.34f, 0.0f, 0.5f, 0, 0,
+        {"Intimate Score", "Intimate scoring stage for small ensemble", 7, 0.70f, 0.56f, 0.50f, 0.84f, 0.36f, 0.09f, 0.78f, 0.34f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Dark Score", "Moody, dark scoring ambience", 7, 0.80f, 0.64f, 0.40f, 0.86f, 0.28f, 0.30f, 0.80f, 0.36f, 0.0f, 0.5f, 0, 0,
+        {"Dark Score", "Moody, dark scoring ambience", 7, 0.80f, 0.64f, 0.40f, 0.86f, 0.28f, 0.10f, 0.80f, 0.36f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
         // Smooth Plate
-        {"Smooth Plate", "Silky smooth plate with gentle character", 8, 0.50f, 0.42f, 0.48f, 0.80f, 0.30f, 0.14f, 0.72f, 0.30f, 0.0f, 0.5f, 0, 0,
+        {"Smooth Plate", "Silky smooth plate with gentle character", 8, 0.50f, 0.42f, 0.48f, 0.80f, 0.30f, 0.07f, 0.72f, 0.30f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/smooth-plate.png", 0, false, {}, false},
-        {"Velvet Plate", "Soft, velvety plate reverb", 8, 0.46f, 0.38f, 0.50f, 0.78f, 0.28f, 0.12f, 0.70f, 0.28f, 0.0f, 0.5f, 0, 0,
+        {"Velvet Plate", "Soft, velvety plate reverb", 8, 0.46f, 0.38f, 0.50f, 0.78f, 0.28f, 0.06f, 0.70f, 0.28f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Cream Plate", "Smooth, creamy plate with warm tone", 8, 0.52f, 0.44f, 0.46f, 0.82f, 0.32f, 0.16f, 0.74f, 0.32f, 0.0f, 0.5f, 0, 0,
+        {"Cream Plate", "Smooth, creamy plate with warm tone", 8, 0.52f, 0.44f, 0.46f, 0.82f, 0.32f, 0.08f, 0.74f, 0.32f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Liquid Plate", "Fluid, liquid plate reverb", 8, 0.48f, 0.40f, 0.52f, 0.76f, 0.26f, 0.10f, 0.68f, 0.26f, 0.0f, 0.5f, 0, 0,
+        {"Liquid Plate", "Fluid, liquid plate reverb", 8, 0.48f, 0.40f, 0.52f, 0.76f, 0.26f, 0.05f, 0.68f, 0.26f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
-        {"Gentle Plate", "Gentle, unobtrusive plate for vocals", 8, 0.44f, 0.36f, 0.54f, 0.74f, 0.24f, 0.08f, 0.66f, 0.24f, 0.0f, 0.5f, 0, 0,
+        {"Gentle Plate", "Gentle, unobtrusive plate for vocals", 8, 0.44f, 0.36f, 0.54f, 0.74f, 0.24f, 0.04f, 0.66f, 0.24f, 0.0f, 0.5f, 0, 0,
          "", 0, false, {}, false},
     }};
     syncCategoryFromMode();
@@ -233,7 +233,7 @@ void AestraVerbEditor::buildControls() {
     const Meta metas[] = {
         {"Predelay", kPredelay, 0.02f}, {"Size", kSize, 0.52f}, {"Decay", kDecay, 0.56f},
         {"Damping", kDamping, 0.50f}, {"Diffusion", kDiffusion, 0.64f},
-        {"Mod Rate", kModRate, 0.42f}, {"Mod Depth", kModDepth, 0.14f},
+        {"Mod Rate", kModRate, 0.42f}, {"Mod Depth", kModDepth, 0.07f},
         {"Width", kWidth, 0.68f}, {"Low Cut", kLowCut, 0.0f}, {"High Cut", kHighCut, 1.0f},
         {"Attack", kAttack, 0.0f}, {"Shape", kShape, 0.5f},
         {"Pre Sync", kPredelaySync, 0.0f}, {"Mod Char", kModCharacter, 0.0f}
@@ -266,55 +266,10 @@ float AestraVerbEditor::getParamValue(uint32_t paramId) const {
 }
 
 std::string AestraVerbEditor::formatParameterValue(uint32_t paramId) const {
-    const float v = getParamValue(paramId);
-    std::ostringstream out;
-    switch (paramId) {
-    case kSize:
-        out << std::fixed << std::setprecision(2) << (0.1f + v * 1.9f) << "x";
-        return out.str();
-    case kDecay: {
-        const float seconds = 0.3f + v * 9.7f;
-        if (seconds < 10.0f) out << std::fixed << std::setprecision(1) << seconds << "s";
-        else out << static_cast<int>(std::round(seconds)) << "s";
-        return out.str();
-    }
-    case kDamping: case kDiffusion: case kWidth: case kMix:
-        out << static_cast<int>(std::round(v * 100.0f)) << "%";
-        return out.str();
-    case kPredelay:
-        out << static_cast<int>(std::round(v * 500.0f)) << "ms";
-        return out.str();
-    case kModRate:
-        out << std::fixed << std::setprecision(2) << (v * 2.0f) << "x";
-        return out.str();
-    case kModDepth:
-        out << std::fixed << std::setprecision(1) << (v * 8.0f) << "smp";
-        return out.str();
-    case kLowCut: {
-        const float hz = v < 0.001f ? 20.0f : 20.0f * std::pow(1000.0f, v);
-        out << static_cast<int>(std::round(hz)) << "Hz";
-        return out.str();
-    }
-    case kHighCut: {
-        const float hz = v > 0.999f ? 20000.0f : 200.0f * std::pow(100.0f, v);
-        out << static_cast<int>(std::round(hz)) << "Hz";
-        return out.str();
-    }
-    case kAttack: out << static_cast<int>(std::round(v * 100.0f)) << "%"; return out.str();
-    case kShape: out << static_cast<int>(std::round(v * 100.0f)) << "%"; return out.str();
-    case kPredelaySync: {
-        static const char* syncNames[] = {"OFF", "1/16", "1/8", "1/4", "1/2", "1bar", "2bar"};
-        const int idx = std::clamp(static_cast<int>(std::round(v * 6.0f)), 0, 6);
-        return syncNames[idx];
-    }
-    case kModCharacter: {
-        static const char* charNames[] = {"Random", "Chorus", "Chaotic"};
-        const int idx = std::clamp(static_cast<int>(std::round(v * 2.0f)), 0, 2);
-        return charNames[idx];
-    }
-    default:
-        return m_instance ? m_instance->getParameterDisplay(paramId) : "0";
-    }
+    // The DSP owns the parameter mappings. Reusing its display keeps the editor
+    // truthful for mode-scaled decay/mod depth, filter cutoffs, and capped
+    // tempo-synced predelay instead of duplicating mappings that can drift.
+    return m_instance ? m_instance->getParameterDisplay(paramId) : "0";
 }
 
 void AestraVerbEditor::syncCategoryFromMode() {
@@ -1161,6 +1116,10 @@ void AestraVerbEditor::loadUserPresets() {
         p.damping = parsed.has("damping") ? static_cast<float>(parsed["damping"].asNumber()) : 0.5f;
         p.diffusion = parsed.has("diffusion") ? static_cast<float>(parsed["diffusion"].asNumber()) : 0.7f;
         p.modRate = parsed.has("modRate") ? static_cast<float>(parsed["modRate"].asNumber()) : 0.4f;
+        // Legacy fallback stays 0.14 (the pre-retune default) so an old user
+        // preset saved without a modDepth field loads exactly as it sounded when
+        // created. New presets persist modDepth explicitly; only fresh instances
+        // use the calmer 0.07 default.
         p.modDepth = parsed.has("modDepth") ? static_cast<float>(parsed["modDepth"].asNumber()) : 0.14f;
         p.width = parsed.has("width") ? static_cast<float>(parsed["width"].asNumber()) : 0.68f;
         p.mix = parsed.has("mix") ? static_cast<float>(parsed["mix"].asNumber()) : 0.36f;
@@ -1212,7 +1171,7 @@ float AestraVerbEditor::paramDefault(uint32_t paramId) {
     switch (paramId) {
     case kDecay: return 0.56f; case kDamping: return 0.50f; case kPredelay: return 0.02f;
     case kWidth: return 0.68f; case kMix: return 0.36f; case kSize: return 0.52f;
-    case kDiffusion: return 0.64f; case kModRate: return 0.42f; case kModDepth: return 0.14f;
+    case kDiffusion: return 0.64f; case kModRate: return 0.42f; case kModDepth: return 0.07f;
     case kLowCut: return 0.0f; case kHighCut: return 1.0f; case kFreeze: return 0.0f;
     case kAttack: return 0.0f; case kShape: return 0.5f;
     case kPredelaySync: return 0.0f; case kModCharacter: return 0.0f;

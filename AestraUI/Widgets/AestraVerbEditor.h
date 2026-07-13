@@ -55,7 +55,7 @@ private:
         float damping = 0.5f;
         float diffusion = 0.7f;
         float modRate = 0.4f;
-        float modDepth = 0.14f;
+        float modDepth = 0.07f;
         float width = 0.68f;
         float mix = 0.36f;
         float attack = 0.0f;

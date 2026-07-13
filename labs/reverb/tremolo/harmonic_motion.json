@@ -1,0 +1,21 @@
+{
+  "probeTones": 37,
+  "sweep": [
+    {"mode":"room","depth":0,"typicalDb":0.0950813,"worstDb":6.19333,"worstHz":190.488},
+    {"mode":"room","depth":0.07,"typicalDb":1.74222,"worstDb":6.99264,"worstHz":6842.1},
+    {"mode":"room","depth":0.14,"typicalDb":2.31368,"worstDb":6.65476,"worstHz":6842.1},
+    {"mode":"room","depth":0.3,"typicalDb":3.4777,"worstDb":8.89658,"worstHz":1357.65},
+    {"mode":"hall","depth":0,"typicalDb":0.354399,"worstDb":6.15779,"worstHz":240},
+    {"mode":"hall","depth":0.07,"typicalDb":2.5605,"worstDb":6.48353,"worstHz":7680},
+    {"mode":"hall","depth":0.14,"typicalDb":3.39509,"worstDb":8.09634,"worstHz":1357.65},
+    {"mode":"hall","depth":0.3,"typicalDb":4.20253,"worstDb":7.49114,"worstHz":2155.13},
+    {"mode":"plate","depth":0,"typicalDb":0.0567971,"worstDb":5.63446,"worstHz":269.391},
+    {"mode":"plate","depth":0.07,"typicalDb":2.02192,"worstDb":5.53575,"worstHz":269.391},
+    {"mode":"plate","depth":0.14,"typicalDb":2.67583,"worstDb":6.49828,"worstHz":7680},
+    {"mode":"plate","depth":0.3,"typicalDb":3.75324,"worstDb":7.02703,"worstHz":5430.58},
+    {"mode":"smooth_plate","depth":0,"typicalDb":0.0692356,"worstDb":6.62547,"worstHz":213.816},
+    {"mode":"smooth_plate","depth":0.07,"typicalDb":1.35787,"worstDb":6.62385,"worstHz":339.411},
+    {"mode":"smooth_plate","depth":0.14,"typicalDb":2.06335,"worstDb":7.33985,"worstHz":4838.1},
+    {"mode":"smooth_plate","depth":0.3,"typicalDb":2.93172,"worstDb":6.4814,"worstHz":213.816}
+  ]
+}
