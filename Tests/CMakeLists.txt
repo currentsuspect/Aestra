@@ -632,11 +632,35 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbModulationTest.cpp")
     set_tests_properties(ReverbModulationTest PROPERTIES LABELS "audio;dsp;reverb;modulation")
 endif()
 
+# Reverb F6 stereo regression test (mono compatibility + width)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbStereoTest.cpp")
+    add_executable(ReverbStereoTest AestraAudio/ReverbStereoTest.cpp)
+    target_link_libraries(ReverbStereoTest PRIVATE AestraAudio)
+    target_include_directories(ReverbStereoTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ReverbStereoTest COMMAND ReverbStereoTest)
+    set_tests_properties(ReverbStereoTest PROPERTIES LABELS "audio;dsp;reverb;stereo")
+endif()
+
 # Reverb Quality Measurement Lab
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbQualityLab.cpp")
     add_executable(AestraReverbQualityLab AestraAudio/ReverbQualityLab.cpp)
     target_link_libraries(AestraReverbQualityLab PRIVATE AestraAudio)
     target_include_directories(AestraReverbQualityLab PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
+# Reverb Stereo Characterization Lab (F5/F6 measurement)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbStereoLab.cpp")
+    add_executable(AestraReverbStereoLab AestraAudio/ReverbStereoLab.cpp)
+    target_link_libraries(AestraReverbStereoLab PRIVATE AestraAudio)
+    target_include_directories(AestraReverbStereoLab PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
         ${CMAKE_SOURCE_DIR}/AestraCore/include
