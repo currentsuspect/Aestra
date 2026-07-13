@@ -46,35 +46,40 @@ namespace Plugins {
 #define AESTRA_PROFILE_STAGE_END(stageEnum) do { } while(0)
 #endif
 
-// Lab-only clamp diagnostics. Zero overhead when AESTRA_REVERB_DIAGNOSTICS is undefined.
+// Lab-only output-level diagnostics. Zero overhead when AESTRA_REVERB_DIAGNOSTICS
+// is undefined. Named for what they actually measure: the output is *sanitized*
+// (NaN/Inf/denormal flushed, hard-limited only at +/-16 in sanitize()), not
+// clamped at +/-1, so these track pre/post-sanitize peaks and count samples at
+// or above unity (headroom info) — they do not count clipping.
 #ifdef AESTRA_REVERB_DIAGNOSTICS
-#define AESTRA_DIAG_PRECLAMP(l, r) \
+#define AESTRA_DIAG_PRE_SANITIZE(l, r) \
     do { \
         const float _absL = std::abs(l); \
         const float _absR = std::abs(r); \
         const float _pk = _absL > _absR ? _absL : _absR; \
-        if (_pk > m_diagPreClampPeak) m_diagPreClampPeak = _pk; \
+        if (_pk > m_diagPreSanitizePeak) m_diagPreSanitizePeak = _pk; \
     } while(0)
-#define AESTRA_DIAG_POSTCLAMP(l, r) \
+#define AESTRA_DIAG_POST_SANITIZE(l, r) \
     do { \
         const float _absL = std::abs(l); \
         const float _absR = std::abs(r); \
         const float _pk = _absL > _absR ? _absL : _absR; \
-        if (_pk > m_diagPostClampPeak) m_diagPostClampPeak = _pk; \
-        if (std::abs(l) >= 0.9999f || std::abs(r) >= 0.9999f) m_diagClampSampleCount += 2; \
+        if (_pk > m_diagPostSanitizePeak) m_diagPostSanitizePeak = _pk; \
+        if (_absL >= 1.0f) ++m_diagSamplesAtOrAboveUnity; \
+        if (_absR >= 1.0f) ++m_diagSamplesAtOrAboveUnity; \
         m_diagTotalSamples += 2; \
     } while(0)
-#define AESTRA_DIAG_WETPRE(l, r) \
+#define AESTRA_DIAG_WET_OUTPUT(l, r) \
     do { \
         const float _absL = std::abs(l); \
         const float _absR = std::abs(r); \
         const float _pk = _absL > _absR ? _absL : _absR; \
-        if (_pk > m_diagWetPreClampPeak) m_diagWetPreClampPeak = _pk; \
+        if (_pk > m_diagWetOutputPeak) m_diagWetOutputPeak = _pk; \
     } while(0)
 #else
-#define AESTRA_DIAG_PRECLAMP(l, r) do { } while(0)
-#define AESTRA_DIAG_POSTCLAMP(l, r) do { } while(0)
-#define AESTRA_DIAG_WETPRE(l, r) do { } while(0)
+#define AESTRA_DIAG_PRE_SANITIZE(l, r) do { } while(0)
+#define AESTRA_DIAG_POST_SANITIZE(l, r) do { } while(0)
+#define AESTRA_DIAG_WET_OUTPUT(l, r) do { } while(0)
 #endif
 
 // Lab-only modulation trace. Records the exact per-line delay-read offset (in
@@ -523,20 +528,9 @@ public:
             m_predelayL[predelayPos] = inL * inputScale;
             m_predelayR[predelayPos] = inR * inputScale;
 
-            // Predelay: if sync is active, override manual predelay with BPM-synced value
-            int effectivePredelay = control.predelaySamples;
-            if (control.predelaySyncDiv > 0) {
-                const float bpm = std::clamp(m_bpm.load(std::memory_order_relaxed), 20.0f, 999.0f);
-                const float beatSeconds = 60.0f / bpm;
-                // Division: 1=1/16, 2=1/8, 3=1/4, 4=1/2, 5=1bar, 6=2bars
-                const float divRatio = static_cast<float>(1 << (control.predelaySyncDiv - 1)) / 4.0f;
-                const float syncMs = beatSeconds * divRatio * 1000.0f;
-                effectivePredelay = std::clamp(
-                    static_cast<int>(std::round((syncMs / 1000.0f) * srFloat)),
-                    0, std::max(0, m_maxPredelaySamples));
-            }
-
-            int predelayRead = (predelayPos - effectivePredelay) & preMask;
+            // Predelay: the effective length (manual or BPM-synced) is resolved
+            // at control rate in updateControlCache; just read it here.
+            int predelayRead = (predelayPos - control.predelaySamples) & preMask;
             float delayedL = m_predelayL[predelayRead];
             float delayedR = m_predelayR[predelayRead];
             predelayPos = (predelayPos + 1) & preMask;
@@ -807,17 +801,17 @@ public:
             // F8: the post-EQ, pre-mix wet is the tail's actual contribution.
             blockWetPeak = std::max(blockWetPeak, std::max(std::abs(wetL), std::abs(wetR)));
 
-            AESTRA_DIAG_WETPRE(wetL, wetR);
+            AESTRA_DIAG_WET_OUTPUT(wetL, wetR);
 
             const float sumL = dryL * control.dryGain + wetL * control.wetGain;
             const float sumR = dryR * control.dryGain + wetR * control.wetGain;
 
-            AESTRA_DIAG_PRECLAMP(sumL, sumR);
+            AESTRA_DIAG_PRE_SANITIZE(sumL, sumR);
 
             const float outL = sanitize(sumL);
             const float outR = sanitize(sumR);
 
-            AESTRA_DIAG_POSTCLAMP(outL, outR);
+            AESTRA_DIAG_POST_SANITIZE(outL, outR);
 
             if (numOutputChannels > 0 && outputs[0]) {
                 outputs[0][i] = outL;
@@ -1067,46 +1061,49 @@ private:
 #endif
 
     // ============================================================================
-    // Lab-only clamp diagnostics (compile-time gated, zero overhead when disabled)
+    // Lab-only output-level diagnostics (compile-time gated, zero overhead when
+    // disabled). The output is sanitized (NaN/Inf/denormal flushed, hard-limited
+    // only at +/-16), NOT clamped at +/-1 — so these report sanitize peaks and a
+    // count of samples at or above unity (headroom info), not a clip count.
     // ============================================================================
 #ifdef AESTRA_REVERB_DIAGNOSTICS
 public:
-    struct ClampDiagnostics {
-        float preClampPeak = 0.0f;      // Peak absolute value before std::clamp
-        float postClampPeak = 0.0f;     // Peak absolute value after std::clamp
-        float wetPreClampPeak = 0.0f;   // Peak absolute value of wet signal before final mix
-        uint64_t clampSampleCount = 0;  // Number of output samples at |value| >= 0.9999
-        uint64_t totalSamples = 0;      // Total output samples processed
-        float sourcePeak = 0.0f;        // Peak of the dry input source
+    struct OutputLevelDiagnostics {
+        float preSanitizePeak = 0.0f;        // Peak |value| of the final mix before sanitize()
+        float postSanitizePeak = 0.0f;       // Peak |value| of the output after sanitize()
+        float wetOutputPeak = 0.0f;          // Peak |value| of the wet signal before the dry/wet mix
+        uint64_t samplesAtOrAboveUnity = 0;  // Output samples with |value| >= 1.0 (headroom, not clipping)
+        uint64_t totalSamples = 0;           // Total output samples processed
+        float sourcePeak = 0.0f;             // Peak of the dry input source
     };
 
     void resetDiagnostics() {
-        m_diagPreClampPeak = 0.0f;
-        m_diagPostClampPeak = 0.0f;
-        m_diagWetPreClampPeak = 0.0f;
-        m_diagClampSampleCount = 0;
+        m_diagPreSanitizePeak = 0.0f;
+        m_diagPostSanitizePeak = 0.0f;
+        m_diagWetOutputPeak = 0.0f;
+        m_diagSamplesAtOrAboveUnity = 0;
         m_diagTotalSamples = 0;
         m_diagSourcePeak = 0.0f;
     }
 
     void setSourcePeak(float peak) { m_diagSourcePeak = peak; }
 
-    ClampDiagnostics getClampDiagnostics() const {
-        ClampDiagnostics d;
-        d.preClampPeak = m_diagPreClampPeak;
-        d.postClampPeak = m_diagPostClampPeak;
-        d.wetPreClampPeak = m_diagWetPreClampPeak;
-        d.clampSampleCount = m_diagClampSampleCount;
+    OutputLevelDiagnostics getOutputLevelDiagnostics() const {
+        OutputLevelDiagnostics d;
+        d.preSanitizePeak = m_diagPreSanitizePeak;
+        d.postSanitizePeak = m_diagPostSanitizePeak;
+        d.wetOutputPeak = m_diagWetOutputPeak;
+        d.samplesAtOrAboveUnity = m_diagSamplesAtOrAboveUnity;
         d.totalSamples = m_diagTotalSamples;
         d.sourcePeak = m_diagSourcePeak;
         return d;
     }
 
 private:
-    float m_diagPreClampPeak = 0.0f;
-    float m_diagPostClampPeak = 0.0f;
-    float m_diagWetPreClampPeak = 0.0f;
-    uint64_t m_diagClampSampleCount = 0;
+    float m_diagPreSanitizePeak = 0.0f;
+    float m_diagPostSanitizePeak = 0.0f;
+    float m_diagWetOutputPeak = 0.0f;
+    uint64_t m_diagSamplesAtOrAboveUnity = 0;
     uint64_t m_diagTotalSamples = 0;
     float m_diagSourcePeak = 0.0f;
 #endif
@@ -1439,6 +1436,20 @@ private:
         cache.predelaySyncDiv = std::clamp(
             static_cast<int>(std::round(smoothedParams[kPredelaySync] * static_cast<float>(kPredelaySyncCount - 1))),
             0, kPredelaySyncCount - 1);
+
+        // When tempo sync is active, resolve the BPM-synced predelay here at
+        // control rate instead of recomputing (BPM load + divide + round) every
+        // sample in the hot loop — the tempo only changes at control rate. The
+        // per-sample path then just reads cache.predelaySamples.
+        if (cache.predelaySyncDiv > 0) {
+            const float bpm = std::clamp(m_bpm.load(std::memory_order_relaxed), 20.0f, 999.0f);
+            const float beatSeconds = 60.0f / bpm;
+            // Division: 1=1/16, 2=1/8, 3=1/4, 4=1/2, 5=1bar, 6=2bars
+            const float divRatio = static_cast<float>(1 << (cache.predelaySyncDiv - 1)) / 4.0f;
+            cache.predelaySamples = std::clamp(
+                static_cast<int>(std::round(beatSeconds * divRatio * sr)),
+                0, std::max(0, m_maxPredelaySamples));
+        }
 
         // Modulation character: 0=Random, 1=Chorus, 2=Chaotic
         cache.modCharacter = std::clamp(
