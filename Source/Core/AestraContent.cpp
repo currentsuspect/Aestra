@@ -720,6 +720,21 @@ AestraContent::AestraContent()
         m_pianoRollPanel->setAudioEngine(m_audioEngine);
     }
     m_pianoRollPanel->setVisible(false);
+
+    // Musical typing: QWERTY plays the piano roll's editing unit through the
+    // live-MIDI path. The target unit (tag) is captured at note-on, so
+    // note-offs reach the right unit even if the editing unit changes mid-hold.
+    m_keyboardNoteInput.setTagProvider([this]() -> uint64_t {
+        if (m_pianoRollPanel && m_pianoRollPanel->isVisible()) {
+            return static_cast<uint64_t>(m_pianoRollPanel->getEditingUnitId());
+        }
+        return 0;
+    });
+    m_keyboardNoteInput.setSink([this](uint8_t note, uint8_t velocity, bool on, uint64_t tag) {
+        if (m_audioEngine && tag != 0) {
+            m_audioEngine->postLiveMidiEvent(tag, on ? uint8_t{0x90} : uint8_t{0x80}, note, velocity);
+        }
+    });
     m_pianoRollPanel->setOnPatternEdited([this](PatternID patternId) {
         // Pattern already saved by PianoRollPanel before firing this callback.
         // Refresh every surface that can render the same pattern.
@@ -3769,6 +3784,13 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         m_spaceShortcutLatched = false;
         return true;
     }
+
+    // Musical-typing note-offs need key RELEASES, which nothing else consumes —
+    // handle them before the press-only early-return. Runs even if the piano
+    // roll closed mid-hold: releases only match keys that produced a note-on.
+    if (event.released && m_keyboardNoteInput.handleKeyEvent(event))
+        return true;
+
     if (!event.pressed)
         return false;
 
@@ -3776,6 +3798,13 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     // and note shortcuts must take priority over global handlers
     if (m_pianoRollPanel && m_pianoRollPanel->isVisible()) {
         if (m_pianoRollPanel->handleKeyEvent(event))
+            return true;
+
+        // Musical typing: unconsumed plain keys play the editing unit live.
+        // After the piano roll's own shortcuts, before global handlers.
+        // (Focused text inputs never reach here — the window manager gives the
+        // focused widget first refusal.)
+        if (m_keyboardNoteInput.handleKeyEvent(event))
             return true;
     }
 

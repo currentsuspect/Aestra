@@ -55,6 +55,8 @@ public:
      * @param unitId Unit identifier used for new note creation.
      */
     void setEditingUnit(UnitID unitId);
+    /** @brief Unit currently bound for editing (0 = none) — musical typing target. */
+    UnitID getEditingUnitId() const { return m_editingUnitId; }
     /**
      * @brief Set the callback fired after the current pattern is edited.
      * @param callback Pattern-edited callback.
