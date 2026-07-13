@@ -198,6 +198,24 @@ public:
     static constexpr std::array<float, kFDNLineCount> kLfoSecondaryRates = {
         0.062f, 0.095f, 0.130f, 0.172f, 0.211f, 0.253f, 0.292f, 0.332f
     };
+    // Chaotic ("wow & flutter") character: one deterministic oscillator built from
+    // three incommensurate low-frequency components, read per line at fixed phase
+    // offsets so the eight lines decorrelate. Base rate scales with Mod Rate and is
+    // normalized by sample rate; all components stay well under 10 Hz, so there is
+    // no audio-rate or sample-rate-dependent content. Replaces the old shared
+    // ~183 Hz phase that advanced 8x per sample and ignored Mod Rate.
+    static constexpr float kChaoticBaseHz = 0.70f;      // at Mod Rate 0.5 (scalar 1.0)
+    static constexpr float kChaoticRatioB = 1.31f;      // incommensurate 2nd component
+    static constexpr float kChaoticRatioC = 1.73f;      // incommensurate 3rd component
+    static constexpr std::array<float, kFDNLineCount> kChaoticOffsetA = {
+        0.00f, 0.79f, 1.57f, 2.36f, 3.14f, 3.93f, 4.71f, 5.50f
+    };
+    static constexpr std::array<float, kFDNLineCount> kChaoticOffsetB = {
+        1.27f, 2.58f, 3.94f, 5.21f, 0.43f, 1.72f, 3.05f, 4.33f
+    };
+    static constexpr std::array<float, kFDNLineCount> kChaoticOffsetC = {
+        2.71f, 0.94f, 4.52f, 1.13f, 5.02f, 2.24f, 0.31f, 3.63f
+    };
     // Session 004: per-mode mud cleanup HP cutoff frequencies (Hz).
     // Index: 0=Room, 1=Hall, 2=Plate, 3=Cathedral, 4=Chamber, 5=BrightHall, 6=Ambience, 7=Scoring, 8=SmoothPlate.
     static constexpr std::array<float, kModeCount> kMudHpCutoffHz = {
@@ -310,8 +328,6 @@ public:
         auto platePostPos = m_platePostPos;
         auto dampingState = m_dampingState;
         auto lowDampState = m_lowDampState;
-        auto lfoPhase = m_lfoPhase;
-        auto lfoPhase2 = m_lfoPhase2;
         auto lfoSin = m_lfoSin;
         auto lfoCos = m_lfoCos;
         auto lfoSin2 = m_lfoSin2;
@@ -321,8 +337,9 @@ public:
         auto randomCounter = m_randomCounter;
         auto randomState = m_randomState;
         auto smoothedParams = m_smoothedParams;
-        auto chaoticPhase = m_chaoticPhase;
-        auto chaoticWowState = m_chaoticWowState;
+        float chaoticPhaseA = m_chaoticPhaseA;
+        float chaoticPhaseB = m_chaoticPhaseB;
+        float chaoticPhaseC = m_chaoticPhaseC;
 
         predelayPos &= m_predelayMask;
         earlyPos &= m_earlyMask;
@@ -522,6 +539,16 @@ public:
                     }
                 }
 #endif
+                // Advance the chaotic-character oscillator ONCE per sample (not
+                // once per line as the old shared phase did). Three incommensurate
+                // low-frequency accumulators; the per-line decorrelation comes from
+                // fixed phase offsets at read time.
+                chaoticPhaseA += control.chaoticIncA;
+                chaoticPhaseB += control.chaoticIncB;
+                chaoticPhaseC += control.chaoticIncC;
+                if (chaoticPhaseA >= kTwoPi) chaoticPhaseA -= kTwoPi;
+                if (chaoticPhaseB >= kTwoPi) chaoticPhaseB -= kTwoPi;
+                if (chaoticPhaseC >= kTwoPi) chaoticPhaseC -= kTwoPi;
             }
 
             AESTRA_PROFILE_STAGE_END(kModulationLFO);
@@ -545,24 +572,30 @@ public:
                         // Chorus: more LFO-driven, pitched modulation
                         multi = lfoSin[line] * 0.62f + lfoSin2[line] * 0.30f + randomMod[line] * 0.08f;
                     } else if (control.modCharacter == 2) {
-                        // Chaotic: wow-and-flutter, more aperiodic motion
-                        chaoticPhase += 0.003f + randomMod[line] * 0.005f;
-                        if (chaoticPhase > kTwoPi) chaoticPhase -= kTwoPi;
-                        const float sinP = Aestra::Audio::FastMath::fastSin(chaoticPhase);
-                        const float sinP2 = Aestra::Audio::FastMath::fastSin(chaoticPhase * 2.7f);
-                        const float wow = sinP * 0.4f + sinP2 * 0.2f;
-                        chaoticWowState += (wow - chaoticWowState) * 0.02f;
-                        multi = lfoSin[line] * 0.22f + lfoSin2[line] * 0.18f + randomMod[line] * 0.30f + chaoticWowState * 0.30f;
+                        // Chaotic (wow & flutter): read the shared deterministic
+                        // oscillator (advanced once per sample above) at this line's
+                        // fixed phase offsets, so all eight lines wander below ~2 Hz
+                        // but decorrelated. No shared audio-rate phase.
+                        //
+                        // fastSin only wraps its argument once (valid ~[-PI, 3PI]),
+                        // so the phase+offset sum (both in [0, 2PI) → up to 4PI) must
+                        // be reduced into [0, 2PI) first; otherwise the polynomial is
+                        // evaluated out of domain and returns |value| > 1, blowing the
+                        // excursion past its intended bound.
+                        float aA = chaoticPhaseA + kChaoticOffsetA[line];
+                        float aB = chaoticPhaseB + kChaoticOffsetB[line];
+                        float aC = chaoticPhaseC + kChaoticOffsetC[line];
+                        if (aA >= kTwoPi) aA -= kTwoPi;
+                        if (aB >= kTwoPi) aB -= kTwoPi;
+                        if (aC >= kTwoPi) aC -= kTwoPi;
+                        multi = Aestra::Audio::FastMath::fastSin(aA) * 0.50f +
+                                Aestra::Audio::FastMath::fastSin(aB) * 0.30f +
+                                Aestra::Audio::FastMath::fastSin(aC) * 0.20f;
                     } else {
                         // Random: smooth random modulation (default)
                         multi = lfoSin[line] * 0.40f + lfoSin2[line] * 0.48f + randomMod[line] * 0.12f;
                     }
                     lfoOffset = multi * control.modDepthSamples;
-
-                    lfoPhase[line] += control.lfoPhaseInc[line];
-                    lfoPhase2[line] += control.lfoPhaseInc2[line];
-                    if (lfoPhase[line] >= kTwoPi) lfoPhase[line] -= kTwoPi;
-                    if (lfoPhase2[line] >= kTwoPi) lfoPhase2[line] -= kTwoPi;
                 }
                 // Interleaved by line: [f0l0..f0l7, f1l0..f1l7, ...]
                 AESTRA_MOD_TRACE(lfoOffset);
@@ -712,8 +745,6 @@ public:
         m_platePostPos = platePostPos;
         m_dampingState = dampingState;
         m_lowDampState = lowDampState;
-        m_lfoPhase = lfoPhase;
-        m_lfoPhase2 = lfoPhase2;
         m_lfoSin = lfoSin;
         m_lfoCos = lfoCos;
         m_lfoSin2 = lfoSin2;
@@ -723,8 +754,9 @@ public:
         m_randomCounter = randomCounter;
         m_randomState = randomState;
         m_smoothedParams = smoothedParams;
-        m_chaoticPhase = chaoticPhase;
-        m_chaoticWowState = chaoticWowState;
+        m_chaoticPhaseA = chaoticPhaseA;
+        m_chaoticPhaseB = chaoticPhaseB;
+        m_chaoticPhaseC = chaoticPhaseC;
     }
 
     uint32_t getParameterCount() const override { return kParamCount; }
@@ -1043,8 +1075,11 @@ private:
         std::array<float, kFDNLineCount> lfoCosInc{};
         std::array<float, kFDNLineCount> lfoSinInc2{};
         std::array<float, kFDNLineCount> lfoCosInc2{};
-        std::array<float, kFDNLineCount> lfoPhaseInc{};
-        std::array<float, kFDNLineCount> lfoPhaseInc2{};
+        // Chaotic-character phase increments (radians/sample), one per incommensurate
+        // component. SR-normalized and Mod-Rate-driven; see kChaotic* constants.
+        float chaoticIncA{0.0f};
+        float chaoticIncB{0.0f};
+        float chaoticIncC{0.0f};
         std::array<int, kDiffuserCount> diffuserLengths{};
         std::array<int, kEarlyTapCount> earlyDelayL{};
         std::array<int, kEarlyTapCount> earlyDelayR{};
@@ -1209,15 +1244,22 @@ private:
             cache.feedbackGains[line] = std::pow(10.0f, -3.0f * delaySeconds / std::max(0.1f, decayTime));
 
             const float inc = (kTwoPi * kLfoBaseRates[line] * modRateScalar) / sr;
-            cache.lfoPhaseInc[line] = inc;
             cache.lfoSinInc[line] = std::sin(inc);
             cache.lfoCosInc[line] = std::cos(inc);
 
             const float inc2 = (kTwoPi * kLfoSecondaryRates[line] * modRateScalar) / sr;
-            cache.lfoPhaseInc2[line] = inc2;
             cache.lfoSinInc2[line] = std::sin(inc2);
             cache.lfoCosInc2[line] = std::cos(inc2);
         }
+
+        // Chaotic-character oscillator: three incommensurate low-frequency
+        // components, base rate scaled by Mod Rate and normalized by sample rate.
+        // Advanced once per sample (not once per line) so the frequency is
+        // sample-rate-independent and stays well below 10 Hz.
+        const float chaoticHz = kChaoticBaseHz * modRateScalar;
+        cache.chaoticIncA = (kTwoPi * chaoticHz) / sr;
+        cache.chaoticIncB = (kTwoPi * chaoticHz * kChaoticRatioB) / sr;
+        cache.chaoticIncC = (kTwoPi * chaoticHz * kChaoticRatioC) / sr;
 
         // Freeze: make the feedback loop lossless so the tail sustains
         // indefinitely. Unity feedback gains alone are NOT enough — the
@@ -1401,22 +1443,36 @@ private:
         m_predelayPos = 0;
         m_earlyPos = 0;
 
-        m_chaoticPhase = 0.0f;
-        m_chaoticWowState = 0.0f;
+        m_chaoticPhaseA = 0.0f;
+        m_chaoticPhaseB = 0.0f;
+        m_chaoticPhaseC = 0.0f;
 
         if (randomizeLfos) {
             std::mt19937 rng{0xAE57A000u}; // deterministic seed for reproducible tests
             std::uniform_real_distribution<float> dist(0.0f, kTwoPi);
-            for (auto& phase : m_lfoPhase) phase = dist(rng);
-            for (auto& phase : m_lfoPhase2) phase = dist(rng);
+            // Seed the quadrature oscillators at random initial phases. The phases
+            // are only needed here; the oscillators carry themselves forward by
+            // rotation, so no per-sample phase accumulator is kept. Draw order is
+            // preserved (all primary phases, then all secondary, then the random
+            // states) so Random/Chorus stay bit-identical to before this change.
+            std::array<float, kFDNLineCount> phase1{}, phase2{};
+            for (auto& p : phase1) p = dist(rng);
+            for (auto& p : phase2) p = dist(rng);
+            for (size_t line = 0; line < kFDNLineCount; ++line) {
+                m_lfoSin[line] = std::sin(phase1[line]);
+                m_lfoCos[line] = std::cos(phase1[line]);
+                m_lfoSin2[line] = std::sin(phase2[line]);
+                m_lfoCos2[line] = std::cos(phase2[line]);
+            }
             std::uniform_int_distribution<uint32_t> stateDist(1U, 0x7fffffffU);
             for (auto& state : m_randomState) state = stateDist(rng);
-        }
-        for (size_t line = 0; line < kFDNLineCount; ++line) {
-            m_lfoSin[line] = std::sin(m_lfoPhase[line]);
-            m_lfoCos[line] = std::cos(m_lfoPhase[line]);
-            m_lfoSin2[line] = std::sin(m_lfoPhase2[line]);
-            m_lfoCos2[line] = std::cos(m_lfoPhase2[line]);
+        } else {
+            // Non-randomizing path (e.g. state load on a fresh instance): start the
+            // quadrature oscillators at phase 0, matching the prior behavior.
+            m_lfoSin.fill(0.0f);
+            m_lfoCos.fill(1.0f);
+            m_lfoSin2.fill(0.0f);
+            m_lfoCos2.fill(1.0f);
         }
         m_randomMod.fill(0.0f);
         m_randomTarget.fill(0.0f);
@@ -1658,8 +1714,6 @@ private:
     std::array<int, kFDNLineCount> m_delayPos{};
     std::array<float, kFDNLineCount> m_dampingState{};
     std::array<float, kFDNLineCount> m_lowDampState{};
-    std::array<float, kFDNLineCount> m_lfoPhase{};
-    std::array<float, kFDNLineCount> m_lfoPhase2{};
     std::array<float, kFDNLineCount> m_lfoSin{};
     std::array<float, kFDNLineCount> m_lfoCos{};
     std::array<float, kFDNLineCount> m_lfoSin2{};
@@ -1720,8 +1774,9 @@ private:
     std::atomic<float> m_bpm{120.0f};
 
     // Mod character: random modulation state for Chaotic mode
-    float m_chaoticPhase = 0.0f;
-    float m_chaoticWowState = 0.0f;
+    float m_chaoticPhaseA = 0.0f;
+    float m_chaoticPhaseB = 0.0f;
+    float m_chaoticPhaseC = 0.0f;
 
 #ifdef AESTRA_REVERB_PROFILE
     mutable std::array<StageProfileData, static_cast<size_t>(ProfileStage::kStageCount)> m_profileData{};
