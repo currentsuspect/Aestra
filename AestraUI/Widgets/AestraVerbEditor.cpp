@@ -364,16 +364,25 @@ void AestraVerbEditor::layoutControls() {
     const float presetY = b.y + kPresetListTopOffset;
     m_presetScroll = std::clamp(m_presetScroll, 0, maxPresetScroll());
     const float scrollOffsetY = static_cast<float>(m_presetScroll) * (kPresetCardHeight + kPresetCardGap);
+    // Visible clip band — must match drawPresetStrip so hit-testing never selects
+    // a card that isn't actually drawn (e.g. rows scrolled off-screen).
+    const int clipTop = static_cast<int>(std::round(b.y + 60.0f));
+    const int clipBottom = static_cast<int>(std::round(b.y + b.height - 14.0f)) - 10;
     int categoryRow = 0;
     for (auto& preset : m_presets) {
         if (!presetIsInSelectedCategory(preset)) {
             preset.bounds = {};
             continue;
         }
-        preset.bounds = NUIRect(presetX,
-                                presetY + static_cast<float>(categoryRow) * (kPresetCardHeight + kPresetCardGap) - scrollOffsetY,
-                                presetW, kPresetCardHeight);
+        const NUIRect cardBounds(presetX,
+                                 presetY + static_cast<float>(categoryRow) * (kPresetCardHeight + kPresetCardGap) - scrollOffsetY,
+                                 presetW, kPresetCardHeight);
         ++categoryRow;
+        // Clear bounds for cards clipped out of the visible band; a card that
+        // isn't rendered must not remain clickable.
+        const int cardTop = static_cast<int>(std::round(cardBounds.y));
+        const int cardBottom = static_cast<int>(std::round(cardBounds.bottom()));
+        preset.bounds = (cardTop < clipTop || cardBottom > clipBottom) ? NUIRect{} : cardBounds;
     }
 
     const float contentX = editorContentX(b);
