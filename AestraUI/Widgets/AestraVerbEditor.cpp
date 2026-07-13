@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
-#include <iomanip>
 #include <sstream>
 
 namespace AestraUI {
@@ -35,14 +34,45 @@ constexpr uint32_t kModCharacter = 17;
 constexpr float kPi = 3.14159265358979323846f;
 constexpr float kTwoPi = kPi * 2.0f;
 constexpr int kModeCount = 9;
+constexpr float kPresetListTopOffset = 112.0f;
+constexpr float kPresetCardHeight = 58.0f;
+constexpr float kPresetCardGap = 6.0f;
+constexpr float kPresetListBottomPadding = 24.0f;
+constexpr float kPresetArtworkSize = 44.0f;
+constexpr float kPresetArtworkPixels = 384.0f;
 
 NUIColor verbSurfaceBg() { return NUIColor(0.044f, 0.044f, 0.044f, 0.985f); }
 NUIColor verbInsetBg() { return NUIColor(0.025f, 0.025f, 0.025f, 0.965f); }
 NUIColor verbGold() { return NUIColor(0.88f, 0.63f, 0.13f, 1.0f); }
 NUIColor verbAccent() { return NUIColor(0.498f, 0.353f, 0.941f, 1.0f); }
-float presetColumnWidth(float editorWidth) { return std::clamp(editorWidth * 0.22f, 138.0f, 168.0f); }
+float presetColumnWidth(float editorWidth) { return std::clamp(editorWidth * 0.235f, 168.0f, 210.0f); }
 float editorContentX(const NUIRect& b) { return b.x + 18.0f + presetColumnWidth(b.width) + 18.0f; }
-float rightColWidth(float editorWidth) { return std::clamp(editorWidth * 0.28f, 150.0f, 200.0f); }
+float rightColWidth(float editorWidth) { return std::clamp(editorWidth * 0.29f, 196.0f, 238.0f); }
+
+// Top-left Y that optically centres a single line of text (by cap height) on
+// centreY. drawText() offsets the passed Y by the font ascent to reach the
+// baseline, so we place the baseline at centreY + capHeight/2 then back the
+// ascent out. This tracks adjacent circles/knobs far better than calculateTextY,
+// which centres the whole line box (ascent + descent + gap) and leaves label
+// text sitting low against a geometric centre.
+float opticalTextY(NUIRenderer& renderer, float centreY, float fontSize) {
+    const auto metrics = renderer.getFontMetrics(fontSize);
+    const float capHeight = fontSize * 0.70f;
+    return centreY + capHeight * 0.5f - metrics.ascent;
+}
+
+std::string fitVerbText(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
+    if (text.empty() || maxWidth <= 0.0f) return {};
+    if (renderer.measureText(text, fontSize).width <= maxWidth) return text;
+    constexpr const char* ellipsis = "...";
+    const float ellipsisWidth = renderer.measureText(ellipsis, fontSize).width;
+    if (ellipsisWidth >= maxWidth) return ellipsis;
+    std::string fitted = text;
+    while (!fitted.empty() && renderer.measureText(fitted, fontSize).width + ellipsisWidth > maxWidth) {
+        fitted.pop_back();
+    }
+    return fitted + ellipsis;
+}
 
 void drawVerbArc(NUIRenderer& renderer,
                  NUIPoint center,
@@ -119,101 +149,101 @@ AestraVerbEditor::AestraVerbEditor(std::shared_ptr<Aestra::Audio::IPluginInstanc
         {"Vitruvian Space", "Intimate room for voice and acoustic guitar", 0, 0.35f, 0.28f, 0.54f, 0.58f, 0.24f, 0.05f, 0.52f, 0.30f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/vitruvian-space.png", 0, false, {}, false},
         {"Vocal Booth", "Tight, controlled space for dry vocal tracking", 0, 0.22f, 0.18f, 0.62f, 0.50f, 0.18f, 0.03f, 0.44f, 0.24f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/vocal-booth.png", 0, false, {}, false},
         {"Studio Room", "Natural small room with early reflections", 0, 0.30f, 0.32f, 0.58f, 0.55f, 0.22f, 0.04f, 0.50f, 0.28f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/studio-room.png", 0, false, {}, false},
         {"Dense Studio", "Thick small room, great for drums", 0, 0.38f, 0.42f, 0.70f, 0.60f, 0.28f, 0.06f, 0.56f, 0.32f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/dense-studio.png", 0, false, {}, false},
         {"Bright Room", "Small bright room with crisp reflections", 0, 0.26f, 0.22f, 0.50f, 0.62f, 0.30f, 0.05f, 0.48f, 0.34f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/bright-room.png", 0, false, {}, false},
         // Hall
         {"Grand Hall", "Massive hall with long, lush reverb tail", 1, 0.76f, 0.58f, 0.51f, 0.86f, 0.42f, 0.09f, 0.74f, 0.36f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/grand-hall.png", 0, false, {}, false},
         {"Concert Hall", "Orchestral hall with rich spatial depth", 1, 0.68f, 0.52f, 0.55f, 0.80f, 0.38f, 0.08f, 0.70f, 0.32f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/concert-hall.png", 0, false, {}, false},
         {"Chapel Hall", "Stone chapel with bright, reflective surfaces", 1, 0.72f, 0.62f, 0.48f, 0.90f, 0.44f, 0.10f, 0.76f, 0.40f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/chapel-hall.png", 0, false, {}, false},
         {"Medium Hall", "Well-balanced hall for most sources", 1, 0.58f, 0.46f, 0.52f, 0.78f, 0.36f, 0.07f, 0.66f, 0.30f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/medium-hall.png", 0, false, {}, false},
         {"Soft Hall", "Gentle hall with smooth, dark tail", 1, 0.62f, 0.50f, 0.60f, 0.82f, 0.34f, 0.06f, 0.68f, 0.34f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/soft-hall.png", 0, false, {}, false},
         // Plate
         {"Plate Forge", "Bright metallic plate reverb", 2, 0.54f, 0.48f, 0.46f, 0.82f, 0.34f, 0.10f, 0.78f, 0.32f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/plate-forge.png", 0, false, {}, false},
         {"Classic Plate", "EMT-style smooth plate reverb", 2, 0.50f, 0.44f, 0.44f, 0.78f, 0.32f, 0.09f, 0.74f, 0.30f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/classic-plate.png", 0, false, {}, false},
         {"Dense Plate", "Thick, dense plate for vocals and keys", 2, 0.58f, 0.52f, 0.50f, 0.84f, 0.36f, 0.10f, 0.80f, 0.34f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/dense-plate.png", 0, false, {}, false},
         {"Bright Plate", "Bright, shimmery plate reverb", 2, 0.46f, 0.40f, 0.42f, 0.86f, 0.38f, 0.11f, 0.82f, 0.36f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/bright-plate.png", 0, false, {}, false},
         {"Dark Plate", "Dark, moody plate with long decay", 2, 0.62f, 0.56f, 0.48f, 0.80f, 0.30f, 0.08f, 0.76f, 0.30f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/dark-plate.png", 0, false, {}, false},
         // Cathedral
         {"Celestial Room", "Massive cathedral with ethereal tail", 3, 0.92f, 0.76f, 0.42f, 0.94f, 0.28f, 0.12f, 0.88f, 0.40f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/celestial-room.png", 0, false, {}, false},
         {"Stone Cathedral", "Vast stone cathedral with deep reverb", 3, 0.88f, 0.72f, 0.40f, 0.92f, 0.30f, 0.10f, 0.86f, 0.38f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/stone-cathedral.png", 0, false, {}, false},
         {"Epic Cathedral", "Enormous cathedral for cinematic textures", 3, 0.96f, 0.82f, 0.38f, 0.96f, 0.26f, 0.12f, 0.90f, 0.42f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/epic-cathedral.png", 0, false, {}, false},
         {"Sacred Space", "Holy space with long, shimmering decay", 3, 0.84f, 0.68f, 0.44f, 0.90f, 0.32f, 0.11f, 0.84f, 0.36f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/sacred-space.png", 0, false, {}, false},
         {"Cathedral Warm", "Warm cathedral with gentle low-end", 3, 0.80f, 0.64f, 0.46f, 0.88f, 0.34f, 0.09f, 0.82f, 0.38f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/cathedral-warm.png", 0, false, {}, false},
         // Chamber
         {"Golden Chamber", "Rich, warm chamber with golden reflections", 4, 0.60f, 0.48f, 0.50f, 0.80f, 0.36f, 0.09f, 0.72f, 0.34f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/golden-chamber.png", 0, false, {}, false},
         {"Tape Chamber", "Vintage chamber with tape saturation character", 4, 0.55f, 0.44f, 0.52f, 0.76f, 0.34f, 0.08f, 0.68f, 0.32f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/tape-chamber.png", 0, false, {}, false},
         {"Large Chamber", "Big chamber with natural room ambience", 4, 0.65f, 0.54f, 0.48f, 0.82f, 0.38f, 0.10f, 0.74f, 0.36f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/large-chamber.png", 0, false, {}, false},
         {"Tight Chamber", "Small, tight chamber for subtle space", 4, 0.40f, 0.32f, 0.56f, 0.72f, 0.30f, 0.07f, 0.62f, 0.28f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/tight-chamber.png", 0, false, {}, false},
         {"Bright Chamber", "Bright chamber with clear early reflections", 4, 0.52f, 0.42f, 0.46f, 0.84f, 0.40f, 0.10f, 0.76f, 0.38f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/bright-chamber.png", 0, false, {}, false},
         // Bright Hall
         {"Bright Concert", "Bright concert hall with shimmering tail", 5, 0.68f, 0.50f, 0.44f, 0.88f, 0.44f, 0.10f, 0.80f, 0.36f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/bright-concert.png", 0, false, {}, false},
         {"Crystal Hall", "Sparkling bright hall with crystalline reflections", 5, 0.72f, 0.54f, 0.42f, 0.90f, 0.46f, 0.11f, 0.82f, 0.38f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/crystal-hall.png", 0, false, {}, false},
         {"Glass Hall", "Transparent, glassy hall reverb", 5, 0.64f, 0.46f, 0.46f, 0.86f, 0.42f, 0.09f, 0.78f, 0.34f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/glass-hall.png", 0, false, {}, false},
         {"Silk Hall", "Smooth, silky bright hall", 5, 0.60f, 0.44f, 0.50f, 0.84f, 0.40f, 0.08f, 0.76f, 0.32f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/silk-hall.png", 0, false, {}, false},
         {"Radiant Hall", "Radiant, luminous hall with wide stereo", 5, 0.70f, 0.52f, 0.40f, 0.92f, 0.48f, 0.12f, 0.84f, 0.40f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/radiant-hall.png", 0, false, {}, false},
         // Ambience
         {"Soft Air", "Gentle ambient wash for padding and atmosphere", 6, 0.18f, 0.12f, 0.38f, 0.40f, 0.14f, 0.02f, 0.36f, 0.16f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/soft-air.png", 0, false, {}, false},
         {"Subtle Space", "Minimal ambience for subtle depth", 6, 0.14f, 0.10f, 0.42f, 0.38f, 0.12f, 0.02f, 0.34f, 0.14f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/subtle-space.png", 0, false, {}, false},
         {"Room Tone", "Natural room tone for realistic spaces", 6, 0.20f, 0.14f, 0.40f, 0.42f, 0.16f, 0.03f, 0.38f, 0.18f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/room-tone.png", 0, false, {}, false},
         {"Air Brush", "Light ambient brush for texture", 6, 0.16f, 0.11f, 0.36f, 0.36f, 0.10f, 0.01f, 0.32f, 0.12f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/air-brush.png", 0, false, {}, false},
         {"Breath Space", "Very short, breath-like ambience", 6, 0.12f, 0.08f, 0.44f, 0.34f, 0.08f, 0.01f, 0.30f, 0.10f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/breath-space.png", 0, false, {}, false},
         // Scoring
         {"Cinematic Space", "Vast cinematic space for film scoring", 7, 0.82f, 0.66f, 0.44f, 0.90f, 0.32f, 0.11f, 0.84f, 0.38f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/cinematic-space.png", 0, false, {}, false},
         {"Film Score", "Professional scoring stage ambience", 7, 0.78f, 0.62f, 0.46f, 0.88f, 0.34f, 0.10f, 0.82f, 0.36f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/film-score.png", 0, false, {}, false},
         {"Epic Score", "Massive scoring stage for orchestral works", 7, 0.86f, 0.70f, 0.42f, 0.92f, 0.30f, 0.12f, 0.86f, 0.40f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/epic-score.png", 0, false, {}, false},
         {"Intimate Score", "Intimate scoring stage for small ensemble", 7, 0.70f, 0.56f, 0.50f, 0.84f, 0.36f, 0.09f, 0.78f, 0.34f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/intimate-score.png", 0, false, {}, false},
         {"Dark Score", "Moody, dark scoring ambience", 7, 0.80f, 0.64f, 0.40f, 0.86f, 0.28f, 0.10f, 0.80f, 0.36f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/dark-score.png", 0, false, {}, false},
         // Smooth Plate
         {"Smooth Plate", "Silky smooth plate with gentle character", 8, 0.50f, 0.42f, 0.48f, 0.80f, 0.30f, 0.07f, 0.72f, 0.30f, 0.0f, 0.5f, 0, 0,
          "AestraAssets/plugins/AestraVerb/presets/smooth-plate.png", 0, false, {}, false},
         {"Velvet Plate", "Soft, velvety plate reverb", 8, 0.46f, 0.38f, 0.50f, 0.78f, 0.28f, 0.06f, 0.70f, 0.28f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/velvet-plate.png", 0, false, {}, false},
         {"Cream Plate", "Smooth, creamy plate with warm tone", 8, 0.52f, 0.44f, 0.46f, 0.82f, 0.32f, 0.08f, 0.74f, 0.32f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/cream-plate.png", 0, false, {}, false},
         {"Liquid Plate", "Fluid, liquid plate reverb", 8, 0.48f, 0.40f, 0.52f, 0.76f, 0.26f, 0.05f, 0.68f, 0.26f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/liquid-plate.png", 0, false, {}, false},
         {"Gentle Plate", "Gentle, unobtrusive plate for vocals", 8, 0.44f, 0.36f, 0.54f, 0.74f, 0.24f, 0.04f, 0.66f, 0.24f, 0.0f, 0.5f, 0, 0,
-         "", 0, false, {}, false},
+         "AestraAssets/plugins/AestraVerb/presets/gentle-plate.png", 0, false, {}, false},
     }};
     syncCategoryFromMode();
     buildControls();
@@ -277,6 +307,7 @@ void AestraVerbEditor::syncCategoryFromMode() {
         getParamValue(kMode) * static_cast<float>(kModeCount - 1)));
     const int newCat = categoryForMode(std::clamp(modeIdx, 0, kModeCount - 1));
     if (newCat == m_selectedCategory && !m_dropdownItems.empty()) return;
+    if (newCat != m_selectedCategory) m_presetScroll = 0;
     m_selectedCategory = newCat;
     m_dropdownItems.clear();
     int modes[3] = {};
@@ -289,6 +320,30 @@ void AestraVerbEditor::syncCategoryFromMode() {
         m_dropdownItems.push_back({modeNames[modes[i]], modes[i], {}, false});
     }
     layoutControls();
+}
+
+bool AestraVerbEditor::presetIsInSelectedCategory(const PresetButton& preset) const {
+    return categoryForMode(std::clamp(preset.mode, 0, kModeCount - 1)) == m_selectedCategory;
+}
+
+int AestraVerbEditor::presetCountForSelectedCategory() const {
+    return static_cast<int>(std::count_if(m_presets.begin(), m_presets.end(),
+                                          [this](const PresetButton& preset) {
+                                              return presetIsInSelectedCategory(preset);
+                                          }));
+}
+
+int AestraVerbEditor::visiblePresetRows() const {
+    const auto b = getBounds();
+    const float listTop = b.y + kPresetListTopOffset;
+    const float listBottom = b.y + b.height - kPresetListBottomPadding;
+    const float available = std::max(0.0f, listBottom - listTop);
+    return std::max(1, static_cast<int>((available + kPresetCardGap) /
+                                        (kPresetCardHeight + kPresetCardGap)));
+}
+
+int AestraVerbEditor::maxPresetScroll() const {
+    return std::max(0, presetCountForSelectedCategory() - visiblePresetRows());
 }
 
 void AestraVerbEditor::layoutControls() {
@@ -306,98 +361,111 @@ void AestraVerbEditor::layoutControls() {
 
     const float presetX = b.x + kPad;
     const float presetW = presetColumnWidth(b.width);
-    const float presetY = b.y + 110.0f;
-    const float presetH = 50.0f;
-    const float presetGap = 6.0f;
-    const float scrollOffsetY = static_cast<float>(m_presetScroll) * (presetH + presetGap);
-    for (size_t i = 0; i < m_presets.size(); ++i) {
-        m_presets[i].bounds = NUIRect(presetX, presetY + static_cast<float>(i) * (presetH + presetGap) - scrollOffsetY, presetW, presetH);
+    const float presetY = b.y + kPresetListTopOffset;
+    m_presetScroll = std::clamp(m_presetScroll, 0, maxPresetScroll());
+    const float scrollOffsetY = static_cast<float>(m_presetScroll) * (kPresetCardHeight + kPresetCardGap);
+    int categoryRow = 0;
+    for (auto& preset : m_presets) {
+        if (!presetIsInSelectedCategory(preset)) {
+            preset.bounds = {};
+            continue;
+        }
+        preset.bounds = NUIRect(presetX,
+                                presetY + static_cast<float>(categoryRow) * (kPresetCardHeight + kPresetCardGap) - scrollOffsetY,
+                                presetW, kPresetCardHeight);
+        ++categoryRow;
     }
 
     const float contentX = editorContentX(b);
     const float contentW = b.width - (contentX - b.x) - kPad;
 
-    // Category pills row
-    const float catY = b.y + 68.0f;
-    const float catH = 26.0f;
+    // Primary preset family navigation.
+    const float catY = b.y + 60.0f;
+    const float catH = 28.0f;
     const float catW = contentW / static_cast<float>(kCategoryCount);
     for (size_t i = 0; i < m_categoryPills.size(); ++i) {
         m_categoryPills[i].bounds = NUIRect(contentX + catW * static_cast<float>(i),
                                             catY, catW, catH);
     }
 
-    // Mode dropdown button — 6px gap below pill row
-    const float ddY = b.y + 98.0f;
-    const float ddH = 24.0f;
+    // Secondary algorithm selector.
+    const float ddY = b.y + 94.0f;
+    const float ddH = 30.0f;
     m_dropdownButtonBounds = NUIRect(contentX, ddY, contentW, ddH);
 
     // Dropdown list (positioned below button when open)
-    const float itemH = 22.0f;
+    const float itemH = 26.0f;
     m_dropdownListBounds = NUIRect(contentX, ddY + ddH + 2.0f, contentW, itemH * static_cast<float>(m_dropdownItems.size()));
     for (size_t i = 0; i < m_dropdownItems.size(); ++i) {
         m_dropdownItems[i].bounds = NUIRect(contentX, ddY + ddH + 2.0f + itemH * static_cast<float>(i), contentW, itemH);
     }
 
-    const float mainY = b.y + 128.0f;
+    const float mainY = b.y + 134.0f;
+    const float bodyBottom = b.y + b.height - 14.0f;
+    const float bodyH = std::max(360.0f, bodyBottom - mainY);
     const float rightW = rightColWidth(b.width);
-    const float smallKnob = 32.0f;
-    // Remove left stack column — Predelay/Size now in center param row
-    const float centerW = contentW - rightW - 20.0f;
+    const float centerW = contentW - rightW - 18.0f;
     const float centerX = contentX;
-    const float rightX = centerX + centerW + 14.0f;
+    const float rightX = centerX + centerW + 18.0f;
+
+    const float sectionHeaderH = 26.0f;
+    const float sectionGap = 8.0f;
+    const float sectionRowStep = std::clamp((bodyH - sectionHeaderH * 3.0f - sectionGap * 2.0f) / 11.0f,
+                                            27.0f, 34.0f);
+    const float toneY = mainY;
+    const float toneH = sectionHeaderH + sectionRowStep * 2.0f;
+    const float motionY = toneY + toneH + sectionGap;
+    const float motionH = sectionHeaderH + sectionRowStep * 3.0f;
+    const float characterY = motionY + motionH + sectionGap;
+    const float rowKnobSize = std::clamp(sectionRowStep - 5.0f, 23.0f, 29.0f);
+
+    const float heroHeight = std::clamp(bodyH - 180.0f, 230.0f, 290.0f);
 
     for (auto& k : m_knobs) {
         if (k.paramId == kDecay) {
-            const float macroSize = std::min(190.0f, centerW - 10.0f);
-            k.bounds = NUIRect(centerX, mainY + 2.0f, centerW, 200.0f);
-            const NUIRect knobRect = NUIRect(centerX + (centerW - macroSize) * 0.5f, mainY + 8.0f, macroSize, macroSize);
+            // Reserve a clean visual gap above the lower parameter tiles. The
+            // macro used to overlap their top edge at the default editor size.
+            const float macroSize = std::min({196.0f, centerW - 30.0f, heroHeight - 104.0f});
+            k.bounds = NUIRect(centerX, mainY + 20.0f, centerW, heroHeight - 78.0f);
+            const NUIRect knobRect(centerX + (centerW - macroSize) * 0.5f, mainY + 28.0f,
+                                   macroSize, macroSize);
             if (k.slider) k.slider->setBounds(knobRect);
             k.verticalLayout = false;
             continue;
         }
-        float x = contentX;
+        float x = rightX + 10.0f;
         float y = mainY;
-        float w = centerW;
-        bool vert = false;
+        float w = rightW - 20.0f;
         switch (k.paramId) {
-        // Predelay and Size handled in param row below — skip here
-        case kPredelay:      continue;
-        case kSize:          continue;
-        // TONE section (2 knobs) — evenly distributed
-        case kDamping:       x = rightX;            y = mainY + 4.0f;   w = rightW;  break;
-        case kDiffusion:     x = rightX;            y = mainY + 36.0f;  w = rightW;  break;
-        // MODULATION section (3 knobs)
-        case kModRate:       x = rightX;            y = mainY + 82.0f;  w = rightW;  break;
-        case kModDepth:      x = rightX;            y = mainY + 114.0f; w = rightW;  break;
-        case kWidth:         x = rightX;            y = mainY + 146.0f; w = rightW;  break;
-        // CHARACTER section (6 knobs)
-        case kLowCut:        x = rightX;            y = mainY + 192.0f; w = rightW;  break;
-        case kHighCut:       x = rightX;            y = mainY + 224.0f; w = rightW;  break;
-        case kAttack:        x = rightX;            y = mainY + 256.0f; w = rightW;  break;
-        case kShape:         x = rightX;            y = mainY + 288.0f; w = rightW;  break;
-        case kPredelaySync:  x = rightX;            y = mainY + 320.0f; w = rightW;  break;
-        case kModCharacter:  x = rightX;            y = mainY + 352.0f; w = rightW;  break;
+        case kPredelay: continue;
+        case kSize: continue;
+        case kDamping: y = toneY + sectionHeaderH; break;
+        case kDiffusion: y = toneY + sectionHeaderH + sectionRowStep; break;
+        case kModRate: y = motionY + sectionHeaderH; break;
+        case kModDepth: y = motionY + sectionHeaderH + sectionRowStep; break;
+        case kWidth: y = motionY + sectionHeaderH + sectionRowStep * 2.0f; break;
+        case kLowCut: y = characterY + sectionHeaderH; break;
+        case kHighCut: y = characterY + sectionHeaderH + sectionRowStep; break;
+        case kAttack: y = characterY + sectionHeaderH + sectionRowStep * 2.0f; break;
+        case kShape: y = characterY + sectionHeaderH + sectionRowStep * 3.0f; break;
+        case kPredelaySync: y = characterY + sectionHeaderH + sectionRowStep * 4.0f; break;
+        case kModCharacter: y = characterY + sectionHeaderH + sectionRowStep * 5.0f; break;
         default: break;
         }
-        k.verticalLayout = vert;
-        if (vert) {
-            k.bounds = NUIRect(x, y, w, 74.0f);
-            const float knobX = x + (w - smallKnob) * 0.5f;
-            const NUIRect knobRect = NUIRect(knobX, y + 2.0f, smallKnob, smallKnob);
-            if (k.slider) k.slider->setBounds(knobRect);
-        } else {
-            k.bounds = NUIRect(x, y, w, 34.0f);
-            const NUIRect knobRect = NUIRect(x + 2.0f, y + 2.0f, smallKnob, smallKnob);
-            if (k.slider) k.slider->setBounds(knobRect);
-        }
+        k.verticalLayout = false;
+        k.bounds = NUIRect(x, y, w, sectionRowStep);
+        const NUIRect knobRect(x + 1.0f, y + (sectionRowStep - rowKnobSize) * 0.5f,
+                               rowKnobSize, rowKnobSize);
+        if (k.slider) k.slider->setBounds(knobRect);
     }
 
-    // Horizontal param row (Predelay, Size) below decay hero
-    const float paramRowY = mainY + 202.0f;
+    // Two secondary space controls anchor the bottom of the decay hero.
+    const float paramRowY = mainY + heroHeight - 64.0f;
     const float paramRowH = 56.0f;
-    const float paramW = centerW / 3.0f;
-    m_paramRowBounds[0] = NUIRect(centerX + paramW * 0.5f, paramRowY, paramW, paramRowH);
-    m_paramRowBounds[1] = NUIRect(centerX + paramW * 1.5f, paramRowY, paramW, paramRowH);
+    const float paramGap = 8.0f;
+    const float paramW = (centerW - 24.0f - paramGap) * 0.5f;
+    m_paramRowBounds[0] = NUIRect(centerX + 12.0f, paramRowY, paramW, paramRowH);
+    m_paramRowBounds[1] = NUIRect(centerX + 12.0f + paramW + paramGap, paramRowY, paramW, paramRowH);
     // Position Predelay/Size sliders at their param row knob visual positions
     for (auto& k : m_knobs) {
         if (k.paramId == kPredelay || k.paramId == kSize) {
@@ -405,31 +473,32 @@ void AestraVerbEditor::layoutControls() {
             const auto& pr = m_paramRowBounds[idx];
             k.bounds = pr;
             k.verticalLayout = false;
-            // Visual knob center is at (pr.right() - 24, pr.y + 18), radius 14
-            const NUIRect knobRect(pr.right() - 38.0f, pr.y + 4.0f, 28.0f, 28.0f);
+            const NUIRect knobRect(pr.x + 10.0f, pr.center().y - 16.0f, 32.0f, 32.0f);
             if (k.slider) k.slider->setBounds(knobRect);
         }
     }
 
-    const float mixW = centerW - 40.0f;
-    m_mixBounds = NUIRect(centerX + (centerW - mixW) * 0.5f, mainY + 264.0f, mixW, 30.0f);
-    m_mixTrack = NUIRect(m_mixBounds.x + 34.0f, m_mixBounds.y + 14.0f, m_mixBounds.width - 70.0f, 4.0f);
+    const float mixY = mainY + heroHeight + 10.0f;
+    m_mixBounds = NUIRect(centerX + 12.0f, mixY, centerW - 24.0f, 40.0f);
+    m_mixTrack = NUIRect(m_mixBounds.x + 42.0f, m_mixBounds.y + 18.0f,
+                         m_mixBounds.width - 86.0f, 4.0f);
 
-    // 4-column button grid: BYP FRZ SAVE UNLCK / < > A B — centered in center column
-    const float btnW = 48.0f;
-    const float btnGap = 8.0f;
+    // Two-row utility deck: performance controls first, navigation and compare second.
+    const float btnGap = 6.0f;
+    const float btnW = std::clamp((centerW - 24.0f - btnGap * 3.0f) * 0.25f, 42.0f, 72.0f);
     const float btnRowW = 4.0f * btnW + 3.0f * btnGap;
     const float btnStartX = centerX + (centerW - btnRowW) * 0.5f;
-    const float btnRowY = mainY + 302.0f;
-    const float btnRow2Y = btnRowY + 28.0f;
-    m_bypassBounds = NUIRect(btnStartX, btnRowY, btnW, 22.0f);
-    m_freezeBounds = NUIRect(btnStartX + (btnW + btnGap), btnRowY, btnW, 22.0f);
-    m_saveBounds = NUIRect(btnStartX + (btnW + btnGap) * 2.0f, btnRowY, btnW, 22.0f);
-    m_mixLockBounds = NUIRect(btnStartX + (btnW + btnGap) * 3.0f, btnRowY, btnW, 22.0f);
-    m_navPrevBounds = NUIRect(btnStartX, btnRow2Y, btnW, 22.0f);
-    m_navNextBounds = NUIRect(btnStartX + (btnW + btnGap), btnRow2Y, btnW, 22.0f);
-    m_abBoundsA = NUIRect(btnStartX + (btnW + btnGap) * 2.0f, btnRow2Y, btnW, 22.0f);
-    m_abBoundsB = NUIRect(btnStartX + (btnW + btnGap) * 3.0f, btnRow2Y, btnW, 22.0f);
+    const float btnRowY = mixY + 58.0f;
+    const float btnRow2Y = btnRowY + 34.0f;
+    constexpr float btnH = 26.0f;
+    m_bypassBounds = NUIRect(btnStartX, btnRowY, btnW, btnH);
+    m_freezeBounds = NUIRect(btnStartX + (btnW + btnGap), btnRowY, btnW, btnH);
+    m_saveBounds = NUIRect(btnStartX + (btnW + btnGap) * 2.0f, btnRowY, btnW, btnH);
+    m_mixLockBounds = NUIRect(btnStartX + (btnW + btnGap) * 3.0f, btnRowY, btnW, btnH);
+    m_navPrevBounds = NUIRect(btnStartX, btnRow2Y, btnW, btnH);
+    m_navNextBounds = NUIRect(btnStartX + (btnW + btnGap), btnRow2Y, btnW, btnH);
+    m_abBoundsA = NUIRect(btnStartX + (btnW + btnGap) * 2.0f, btnRow2Y, btnW, btnH);
+    m_abBoundsB = NUIRect(btnStartX + (btnW + btnGap) * 3.0f, btnRow2Y, btnW, btnH);
 
     m_layouting = false;
 }
@@ -448,8 +517,8 @@ void AestraVerbEditor::enforceBoundsInParent(bool recenterWhenPossible) {
     if (parentBounds.width <= 1.0f || parentBounds.height <= 1.0f) return;
     constexpr float kSafeMargin = 14.0f;
     constexpr float kChromeReserve = 56.0f;
-    constexpr float kMinSafeWidth = 640.0f;
-    constexpr float kMinSafeHeight = 500.0f;
+    constexpr float kMinSafeWidth = 720.0f;
+    constexpr float kMinSafeHeight = 560.0f;
     const float topReserve = parentBounds.y <= 1.0f && parentBounds.height > kMinSafeHeight + kChromeReserve + kSafeMargin * 2.0f
         ? kChromeReserve : 0.0f;
     NUIRect usable(parentBounds.x + kSafeMargin,
@@ -488,16 +557,35 @@ void AestraVerbEditor::enforceBoundsInParent(bool recenterWhenPossible) {
 void AestraVerbEditor::drawPresetStrip(NUIRenderer& renderer, NUIColor accent) {
     auto& theme = NUIThemeManager::getInstance();
     auto b = getBounds();
-    const float catY = b.y + 68.0f;
+    const float catY = b.y + 60.0f;
     const float stripX = b.x + kPad;
     const float stripW = presetColumnWidth(b.width);
     const float stripTopY = catY;
     const float stripBottomY = b.y + b.height - 14.0f;
     const float stripH = stripBottomY - stripTopY;
-    renderer.fillRoundedRect({stripX - 5.0f, stripTopY, stripW + 10.0f, stripH}, 8.0f, verbSurfaceBg().withAlpha(0.94f));
+    renderer.fillRoundedRect({stripX - 5.0f, stripTopY, stripW + 10.0f, stripH}, 8.0f,
+                             NUIColor(0.022f, 0.022f, 0.027f, 0.98f));
     renderer.strokeRoundedRect({stripX - 5.0f, stripTopY, stripW + 10.0f, stripH}, 8.0f, 1.0f, NUIColor(1, 1, 1, 0.085f));
-    renderer.drawText("PRESETS", {stripX + 10.0f, stripTopY + 14.0f}, 10.0f,
-                      accent.withAlpha(0.76f));
+    const NUIRect libraryRow(stripX + 7.0f, stripTopY + 5.0f, stripW - 23.0f, 16.0f);
+    renderer.drawText("PRESET LIBRARY", {libraryRow.x, std::round(renderer.calculateTextY(libraryRow, 8.5f))}, 8.5f,
+                      accent.withAlpha(0.82f));
+    static const char* categoryLabels[] = {"ROOMS", "HALLS", "PLATES", "SPECIAL"};
+    const int categoryIndex = std::clamp(m_selectedCategory, 0, kCategoryCount - 1);
+    const NUIRect categoryRow(stripX + 7.0f, stripTopY + 21.0f, stripW - 28.0f, 18.0f);
+    const float categoryTextY = std::round(renderer.calculateTextY(categoryRow, 8.0f));
+    renderer.drawText(categoryLabels[categoryIndex], {categoryRow.x, categoryTextY}, 8.0f,
+                      theme.getColor("textPrimary").withAlpha(0.48f));
+    std::ostringstream presetCountText;
+    presetCountText << presetCountForSelectedCategory() << " PRESETS";
+    const std::string presetCountLabel = presetCountText.str();
+    const float presetCountWidth = renderer.measureText(presetCountLabel, 7.5f).width;
+    // Right-align to the category-row's inner edge (shares ROOMS' baseline) so the
+    // count sits clearly inside the panel rather than hugging the border.
+    renderer.drawText(presetCountLabel, {categoryRow.right() - presetCountWidth, categoryTextY}, 7.5f,
+                      theme.getColor("textPrimary").withAlpha(0.32f));
+    renderer.drawLine({stripX + 6.0f, b.y + kPresetListTopOffset - 7.0f},
+                      {stripX + stripW - 6.0f, b.y + kPresetListTopOffset - 7.0f}, 1.0f,
+                      NUIColor(1, 1, 1, 0.055f));
 
     int activePreset = 0;
     float bestDistance = 1000.0f;
@@ -511,7 +599,7 @@ void AestraVerbEditor::drawPresetStrip(NUIRenderer& renderer, NUIColor accent) {
     }
 
     const int clipTop = static_cast<int>(std::round(stripTopY));
-    const int clipBottom = static_cast<int>(std::round(stripBottomY)) - 24;
+    const int clipBottom = static_cast<int>(std::round(stripBottomY)) - 10;
 
     for (size_t i = 0; i < m_presets.size(); ++i) {
         auto& p = m_presets[i];
@@ -521,24 +609,26 @@ void AestraVerbEditor::drawPresetStrip(NUIRenderer& renderer, NUIColor accent) {
         const bool active = static_cast<int>(i) == activePreset && bestDistance < 0.55f;
         const bool focused = static_cast<int>(i) == m_focusedPreset;
         const bool pressed = static_cast<int>(i) == m_pressedPreset;
-        const NUIColor presetFill = active ? NUIColor(0.044f, 0.044f, 0.044f, 0.98f)
-            : (pressed ? NUIColor(0.04f, 0.04f, 0.04f, 0.99f)
-                       : (p.hovered ? NUIColor(0.052f, 0.052f, 0.052f, 0.98f) : verbInsetBg().withAlpha(0.92f)));
-        renderer.fillRoundedRect(p.bounds, 5.0f, presetFill);
+        const NUIColor presetFill = active ? accent.withAlpha(pressed ? 0.17f : 0.125f)
+            : (pressed ? NUIColor(0.060f, 0.052f, 0.078f, 0.99f)
+                       : (p.hovered ? NUIColor(0.061f, 0.057f, 0.074f, 0.98f) : verbInsetBg().withAlpha(0.92f)));
+        renderer.fillRoundedRect(p.bounds, 6.0f, presetFill);
         renderer.strokeRoundedRect(p.bounds, 5.0f, 1.0f,
-                                   active ? NUIColor(1, 1, 1, 0.0f)
-                                          : (p.hovered ? accent.withAlpha(0.38f) : NUIColor(1, 1, 1, 0.09f)));
+                                   active ? accent.withAlpha(0.42f)
+                                          : (p.hovered ? accent.withAlpha(0.30f) : NUIColor(1, 1, 1, 0.075f)));
         if (focused)
             renderer.strokeRoundedRect({p.bounds.x + 2.0f, p.bounds.y + 2.0f, p.bounds.width - 4.0f, p.bounds.height - 4.0f},
                                        4.0f, 1.0f, accent.withAlpha(0.28f));
-        const NUIRect art(p.bounds.x + 8.0f, p.bounds.y + 8.0f, 34.0f, p.bounds.height - 16.0f);
-        if (!p.artworkLoadAttempted) {
+        const NUIRect art(p.bounds.x + 7.0f, p.bounds.y + 7.0f, kPresetArtworkSize, kPresetArtworkSize);
+        if (!p.artworkLoadAttempted && !p.artworkPath.empty()) {
             p.artworkTexture = renderer.loadTexture(p.artworkPath);
             p.artworkLoadAttempted = true;
         }
         if (p.artworkTexture != 0) {
-            renderer.drawTexture(p.artworkTexture, art, NUIRect(0.0f, 0.0f, 1254.0f, 1254.0f));
-            renderer.fillRoundedRect(art, 3.0f, NUIColor(0.0f, 0.0f, 0.0f, active ? 0.05f : 0.16f));
+            renderer.drawTexture(p.artworkTexture, art,
+                                 NUIRect(0.0f, 0.0f, kPresetArtworkPixels, kPresetArtworkPixels));
+            renderer.fillRoundedRect(art, 4.0f,
+                                     NUIColor(0.0f, 0.0f, 0.0f, active ? 0.02f : (p.hovered ? 0.07f : 0.12f)));
         } else {
             const int modeIdx = std::clamp(p.mode, 0, kModeCount - 1);
             static const float modeHues[] = {0.08f, 0.12f, 0.0f, 0.75f, 0.55f, 0.15f, 0.58f, 0.70f, 0.02f};
@@ -550,24 +640,54 @@ void AestraVerbEditor::drawPresetStrip(NUIRenderer& renderer, NUIColor accent) {
             const char* initial = (modeIdx >= 0 && modeIdx < kModeCount) ? modeInitials[modeIdx] : "R";
             renderer.drawTextCentered(initial, art, 14.0f, accent.withAlpha(0.65f));
         }
-        renderer.strokeRoundedRect(art, 3.0f, 1.0f, NUIColor(1, 1, 1, 0.08f));
+        renderer.strokeRoundedRect(art, 4.0f, 1.0f,
+                                   active ? verbGold().withAlpha(0.34f) : NUIColor(1, 1, 1, 0.10f));
         // Left accent bar for selected preset
         if (active) {
-            renderer.fillRect({p.bounds.x, p.bounds.y + 6.0f, 2.5f, p.bounds.height - 12.0f}, accent.withAlpha(0.85f));
+            renderer.fillRoundedRect({p.bounds.x, p.bounds.y + 7.0f, 2.5f, p.bounds.height - 14.0f}, 1.25f,
+                                     verbGold().withAlpha(0.92f));
         }
-        const NUIRect nameRect(p.bounds.x + 50.0f, p.bounds.y, p.bounds.width - 58.0f, p.bounds.height);
-        renderer.drawText(p.label, {nameRect.x, std::round(renderer.calculateTextY(nameRect, p.label.size() > 12 ? 9.0f : 10.0f))},
-                          p.label.size() > 12 ? 9.0f : 10.0f,
+        const NUIRect nameRect(p.bounds.x + 57.0f, p.bounds.y, p.bounds.width - 72.0f, p.bounds.height);
+        const float nameSize = p.label.size() > 12 ? 9.0f : 10.0f;
+        // Name + sub-text are a stacked pair; lift the name above centre so the
+        // pair straddles the row centre (was bottom-heavy / looked unbalanced).
+        const NUIRect nameLine(nameRect.x, p.bounds.y + 8.0f, nameRect.width, 19.0f);
+        const std::string fittedName = fitVerbText(renderer, p.label, nameSize, nameLine.width);
+        renderer.drawText(fittedName, {nameLine.x, std::round(renderer.calculateTextY(nameLine, nameSize))},
+                          nameSize,
                            active ? verbGold().withAlpha(0.92f) : theme.getColor("textPrimary").withAlpha(0.82f));
-        // Sub-text: mode + decay time
+        // Keep the card summary stable across algorithms. The canonical decay
+        // duration remains visible in the macro because it is mode-dependent.
         static const char* modeNames[] = {"Room", "Hall", "Plate", "Cathedral", "Chamber",
                                           "Bright Hall", "Ambience", "Scoring", "Smooth Plate"};
         const int modeIdx = std::clamp(p.mode, 0, kModeCount - 1);
-        const float decaySec = 0.3f + p.decay * 9.7f;
-        std::ostringstream subText;
-        subText << modeNames[modeIdx] << " \u00b7 " << std::fixed << std::setprecision(1) << decaySec << "s";
-        renderer.drawText(subText.str(), {nameRect.x, std::round(renderer.calculateTextY(nameRect, 10.0f) + 12.0f)}, 9.0f,
-                          NUIColor(0.333f, 0.333f, 0.333f, 1.0f));
+        constexpr float metadataSize = 8.0f;
+        std::ostringstream decayText;
+        decayText << std::lround(p.decay * 100.0f) << "%";
+        const std::string decayLabel = decayText.str();
+        const float decayWidth = renderer.measureText(decayLabel, metadataSize).width;
+        const NUIRect metadataLine(nameRect.x, p.bounds.y + 29.0f, nameRect.width, 18.0f);
+        const float metadataY = std::round(renderer.calculateTextY(metadataLine, metadataSize));
+        const float modeWidth = std::max(0.0f, nameRect.width - decayWidth - 7.0f);
+        const std::string fittedMode = fitVerbText(renderer, modeNames[modeIdx], metadataSize, modeWidth);
+        const NUIColor metadataColor = theme.getColor("textPrimary").withAlpha(active ? 0.56f : 0.40f);
+        renderer.drawText(fittedMode, {metadataLine.x, metadataY}, metadataSize, metadataColor);
+        renderer.drawText(decayLabel, {metadataLine.right() - decayWidth, metadataY}, metadataSize, metadataColor);
+    }
+
+    const int presetCount = presetCountForSelectedCategory();
+    const int rows = visiblePresetRows();
+    if (presetCount > rows) {
+        const float trackTop = b.y + kPresetListTopOffset;
+        const float trackBottom = stripBottomY - 10.0f;
+        const float trackHeight = std::max(1.0f, trackBottom - trackTop);
+        const NUIRect track(stripX + stripW + 1.5f, trackTop, 2.0f, trackHeight);
+        renderer.fillRoundedRect(track, 1.0f, NUIColor(1, 1, 1, 0.055f));
+        const float thumbHeight = std::max(28.0f, trackHeight * static_cast<float>(rows) / static_cast<float>(presetCount));
+        const float scrollRange = static_cast<float>(std::max(1, maxPresetScroll()));
+        const float thumbY = trackTop + (trackHeight - thumbHeight) * static_cast<float>(m_presetScroll) / scrollRange;
+        renderer.fillRoundedRect({track.x, thumbY, track.width, thumbHeight}, 1.0f,
+                                 accent.withAlpha(0.48f));
     }
 }
 
@@ -633,20 +753,40 @@ void AestraVerbEditor::drawModeDropdown(NUIRenderer& renderer, NUIColor accent) 
         "Room", "Hall", "Plate", "Cathedral", "Chamber",
         "Bright Hall", "Ambience", "Scoring", "Smooth Plate"
     };
+    // Small caption so the bar reads as a labelled selector rather than a bare box.
+    // Centre the mode name on the button, then sit the caption on the SAME baseline
+    // (not independently centred) so the small "MODE" doesn't float above it.
+    const float ddNameSize = 10.5f;
+    const float ddCapSize = 8.0f;
+    const float ddNameY = opticalTextY(renderer, btn.center().y, ddNameSize);
+    const float ddBaseline = ddNameY + renderer.getFontMetrics(ddNameSize).ascent;
+    const float ddCapY = ddBaseline - renderer.getFontMetrics(ddCapSize).ascent;
+    renderer.drawText("MODE", {btn.x + 10.0f, std::round(ddCapY)}, ddCapSize,
+                      accent.withAlpha(0.52f));
     const char* currentName = (modeIdx >= 0 && modeIdx < kModeCount) ? modeNames[modeIdx] : "Room";
-    renderer.drawText(currentName, {btn.x + 10.0f, btn.y + 6.0f}, 10.0f,
-                      theme.getColor("textPrimary").withAlpha(0.90f));
+    renderer.drawText(currentName, {btn.x + 48.0f, std::round(ddNameY)}, ddNameSize,
+                      theme.getColor("textPrimary").withAlpha(0.92f));
 
-    static const char* kChevronSvg = R"svg(
+    // Split-button divider + chevron affordance on the right.
+    renderer.drawLine({std::round(btn.right() - 28.0f), btn.y + 6.0f},
+                      {std::round(btn.right() - 28.0f), btn.bottom() - 6.0f}, 1.0f, NUIColor(1, 1, 1, 0.08f));
+    static const char* kChevronDownSvg = R"svg(
         <svg viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     )svg";
-    static auto chevronIcon = std::make_shared<NUIIcon>(kChevronSvg);
+    static const char* kChevronUpSvg = R"svg(
+        <svg viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1 5L5 1L9 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    )svg";
+    static auto chevronDown = std::make_shared<NUIIcon>(kChevronDownSvg);
+    static auto chevronUp = std::make_shared<NUIIcon>(kChevronUpSvg);
+    auto& chevronIcon = m_dropdownOpen ? chevronUp : chevronDown;
     const float chevronSize = 10.0f;
-    chevronIcon->setBounds({std::round(btn.right() - 18.0f), std::round(btn.center().y - chevronSize * 0.5f),
+    chevronIcon->setBounds({std::round(btn.right() - 19.0f), std::round(btn.center().y - chevronSize * 0.5f),
                             chevronSize, chevronSize});
-    chevronIcon->setColor(accent.withAlpha(0.70f));
+    chevronIcon->setColor(accent.withAlpha(anyHovered ? 0.90f : 0.70f));
     chevronIcon->onRender(renderer);
 
     if (m_dropdownOpen && !m_dropdownItems.empty()) {
@@ -663,7 +803,8 @@ void AestraVerbEditor::drawModeDropdown(NUIRenderer& renderer, NUIColor accent) 
                                           item.bounds.width - 4.0f, item.bounds.height - 2.0f},
                                          4.0f, accent.withAlpha(0.08f));
             }
-            renderer.drawText(item.label, {item.bounds.x + 10.0f, item.bounds.y + 5.0f}, 10.0f,
+            renderer.drawText(item.label, {item.bounds.x + 10.0f,
+                                            std::round(renderer.calculateTextY(item.bounds, 10.0f))}, 10.0f,
                               theme.getColor("textPrimary").withAlpha(isCurrent ? 0.96f : (item.hovered ? 0.82f : 0.60f)));
         }
     }
@@ -680,34 +821,38 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, NUI
     const float stateLift = active ? 1.0f : (hover ? 0.55f : 0.0f);
 
     if (k.paramId == kDecay) {
-        const float macroR = std::clamp(std::min(knobRect.width, knobRect.height) * 0.44f, 20.0f, 80.0f);
-        const float ringThickness = 10.0f;
+        const float macroR = std::clamp(std::min(knobRect.width, knobRect.height) * 0.43f, 20.0f, 92.0f);
+        const float ringThickness = 11.0f;
         renderer.drawShadow(NUIRect{cx - macroR * 0.82f, cy - macroR * 0.82f, macroR * 1.64f, macroR * 1.64f}, 0.0f, 3.0f, 6.0f,
                             NUIColor(0, 0, 0, 0.52f));
-        // Background ring track
+        renderer.fillCircle({cx, cy}, macroR - 10.0f, NUIColor(0.012f, 0.012f, 0.016f, 0.98f));
+        renderer.strokeCircle({cx, cy}, macroR - 15.0f, 1.0f, NUIColor(1, 1, 1, 0.045f));
         renderer.strokeCircle({cx, cy}, macroR, ringThickness, NUIColor(0.091f, 0.091f, 0.091f, 1.0f));
-        // Accent arc (value)
         const float dStartAngle = -kPi * 0.5f;
         const float dSweep = kTwoPi * 0.80f;
         const float dValue = k.slider ? k.slider->getValue() : 0.0f;
         const float dEndAngle = dStartAngle + dValue * dSweep;
+        for (int i = 0; i <= 10; ++i) {
+            const float tickAngle = dStartAngle + dSweep * static_cast<float>(i) / 10.0f;
+            const float innerR = macroR + 9.0f;
+            const float outerR = innerR + (i % 5 == 0 ? 5.0f : 3.0f);
+            renderer.drawLine({cx + std::cos(tickAngle) * innerR, cy + std::sin(tickAngle) * innerR},
+                              {cx + std::cos(tickAngle) * outerR, cy + std::sin(tickAngle) * outerR},
+                              1.0f, NUIColor(1, 1, 1, i % 5 == 0 ? 0.16f : 0.08f));
+        }
         drawVerbArc(renderer, {cx, cy}, macroR, dStartAngle, dEndAngle, ringThickness, accent.withAlpha(0.86f + stateLift * 0.10f));
-        // Gold indicator dot at arc end
         const float dotR = 7.0f;
         renderer.fillCircle({cx + std::cos(dEndAngle) * macroR, cy + std::sin(dEndAngle) * macroR}, dotR,
                             verbGold().withAlpha(active ? 1.0f : (hover ? 0.98f : 0.92f)));
-        // Center text
-        const float seconds = 0.3f + getParamValue(kDecay) * 9.7f;
-        std::ostringstream valueStr;
-        valueStr << std::fixed << std::setprecision(2) << seconds;
-        const float textH = 56.0f;
-        const float labelH = 16.0f;
-        const float totalH = textH + 4.0f + labelH;
+        const std::string valueText = formatParameterValue(kDecay);
+        const float textH = 44.0f;
+        const float labelH = 14.0f;
+        const float totalH = textH + 2.0f + labelH;
         const float textTop = cy - totalH * 0.5f;
-        renderer.drawTextCentered(valueStr.str(), {k.bounds.x, textTop, k.bounds.width, textH}, 42.0f,
+        renderer.drawTextCentered(valueText, {k.bounds.x, textTop, k.bounds.width, textH}, 34.0f,
                                   theme.getColor("textPrimary").withAlpha(active ? 1.0f : (hover ? 0.97f : 0.94f)));
-        renderer.drawTextCentered("DECAY \u00b7 S", {k.bounds.x, textTop + textH + 4.0f, k.bounds.width, labelH}, 10.0f,
-                                  accent.withAlpha(0.60f));
+        renderer.drawTextCentered("DECAY", {k.bounds.x, textTop + textH + 2.0f, k.bounds.width, labelH}, 9.0f,
+                                  accent.withAlpha(0.68f));
         return;
     }
 
@@ -749,12 +894,20 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, NUI
     const float pa = startAngle + value * kPi * 1.5f;
     renderer.drawLine({cx, cy}, {cx + std::cos(pa) * (r * 0.56f), cy + std::sin(pa) * (r * 0.56f)}, 2.0f,
                       NUIColor(1.0f, 1.0f, 1.0f, active ? 0.98f : (hover ? 0.92f : 0.84f)));
-    const float textX = knobRect.right() + 10.0f;
-    renderer.drawText(k.label, {textX, k.bounds.y + 14.0f}, 10.0f,
+    const float textX = knobRect.right() + 9.0f;
+    // Optically centre the label + value on the knob's centre (see opticalTextY).
+    const float labelTextY = std::round(opticalTextY(renderer, cy, 9.5f));
+    renderer.drawText(k.label, {textX, labelTextY}, 9.5f,
                       theme.getColor("textPrimary").withAlpha(0.74f + stateLift * 0.12f));
     const NUIColor valueColor = (active || hover) ? accent.withAlpha(0.70f + stateLift * 0.15f)
                                                    : theme.getColor("textPrimary").withAlpha(0.55f);
-    renderer.drawText(formatParameterValue(k.paramId), {k.bounds.right() - 50.0f, k.bounds.y + 14.0f}, 10.0f, valueColor);
+    const std::string valueText = formatParameterValue(k.paramId);
+    const float valueFontSize = k.paramId == kPredelaySync ? 7.5f : 9.5f;
+    const float valueWidth = renderer.measureText(valueText, valueFontSize).width;
+    const float valueTextY = std::round(opticalTextY(renderer, cy, valueFontSize));
+    // Clear breathing room from the card border so long values ("20000Hz") don't
+    // read as bleeding into the edge.
+    renderer.drawText(valueText, {k.bounds.right() - valueWidth - 11.0f, valueTextY}, valueFontSize, valueColor);
 }
 
 void AestraVerbEditor::drawMixSlider(NUIRenderer& renderer, NUIColor accent) {
@@ -764,7 +917,8 @@ void AestraVerbEditor::drawMixSlider(NUIRenderer& renderer, NUIColor accent) {
     if (m_mixFocused)
         renderer.strokeRoundedRect({m_mixBounds.x - 6.0f, m_mixBounds.y + 2.0f, m_mixBounds.width + 12.0f, m_mixBounds.height - 4.0f},
                                    7.0f, 1.0f, accent.withAlpha(0.24f));
-    renderer.drawText("MIX", {m_mixBounds.x, m_mixBounds.y + 8.0f}, 10.0f,
+    const float mixTextY = std::round(renderer.calculateTextY(m_mixBounds, 10.0f));
+    renderer.drawText("MIX", {m_mixBounds.x, mixTextY}, 10.0f,
                       theme.getColor("textPrimary").withAlpha(0.70f + stateLift * 0.12f));
     renderer.fillRoundedRect(m_mixTrack, 2.0f, NUIColor(1, 1, 1, 0.13f + stateLift * 0.035f));
     renderer.fillRoundedRect({m_mixTrack.x, m_mixTrack.y, m_mixTrack.width * mix, m_mixTrack.height}, 2.0f,
@@ -773,7 +927,9 @@ void AestraVerbEditor::drawMixSlider(NUIRenderer& renderer, NUIColor accent) {
     renderer.fillCircle({thumbX, m_mixTrack.center().y}, 7.5f, accent.withAlpha(0.20f + stateLift * 0.10f));
     renderer.fillCircle({thumbX, m_mixTrack.center().y}, 6.0f,
                         theme.getColor("textPrimary").withAlpha(0.92f + stateLift * 0.06f));
-    renderer.drawText(formatParameterValue(kMix), {m_mixBounds.right() - 28.0f, m_mixBounds.y + 8.0f}, 10.0f,
+    const std::string mixValue = formatParameterValue(kMix);
+    const float mixValueWidth = renderer.measureText(mixValue, 10.0f).width;
+    renderer.drawText(mixValue, {m_mixBounds.right() - mixValueWidth, mixTextY}, 10.0f,
                       accent.withAlpha(0.80f + stateLift * 0.14f));
 }
 
@@ -831,21 +987,42 @@ void AestraVerbEditor::drawSectionLabels(NUIRenderer& renderer) {
     auto b = getBounds();
     const float mainX = editorContentX(b);
     const float contentW = b.width - (mainX - b.x) - kPad;
-    const float mainY = b.y + 128.0f;
+    const float mainY = b.y + 134.0f;
+    const float bodyBottom = b.y + b.height - 14.0f;
+    const float bodyH = std::max(360.0f, bodyBottom - mainY);
     const float rightW = rightColWidth(b.width);
-    const float centerW = contentW - rightW - 20.0f;
-    const float rightX = mainX + centerW + 14.0f;
-    const NUIColor labelColor(0.42f, 0.42f, 0.46f, 1.0f);
-    const NUIColor lineColor(1, 1, 1, 0.08f);
-    auto drawSection = [&](const char* label, float y) {
-        renderer.drawText(label, {rightX + 6.0f, y}, 8.5f, labelColor);
-        const NUIPoint lineStart{rightX + 62.0f, y + 4.0f};
-        const NUIPoint lineEnd{rightX + rightW - 4.0f, y + 4.0f};
-        renderer.drawLine(lineStart, lineEnd, 1.0f, lineColor);
+    const float centerW = contentW - rightW - 18.0f;
+    const float rightX = mainX + centerW + 18.0f;
+    constexpr float headerH = 26.0f;
+    constexpr float gap = 8.0f;
+    const float rowStep = std::clamp((bodyH - headerH * 3.0f - gap * 2.0f) / 11.0f, 27.0f, 34.0f);
+    const float toneH = headerH + rowStep * 2.0f;
+    const float motionY = mainY + toneH + gap;
+    const float motionH = headerH + rowStep * 3.0f;
+    const float characterY = motionY + motionH + gap;
+    const float characterH = headerH + rowStep * 6.0f;
+
+    auto drawSection = [&](const char* label, const char* hint, float y, float height, int rows) {
+        const NUIRect card(rightX, y, rightW, height);
+        renderer.fillRoundedRect(card, 9.0f, NUIColor(0.030f, 0.030f, 0.035f, 0.97f));
+        renderer.strokeRoundedRect(card, 9.0f, 1.0f, NUIColor(1, 1, 1, 0.075f));
+        renderer.fillCircle({rightX + 13.0f, y + 13.0f}, 2.0f, verbAccent().withAlpha(0.72f));
+        const NUIRect headerRow(rightX + 21.0f, y, rightW - 33.0f, headerH);
+        renderer.drawText(label, {headerRow.x, std::round(renderer.calculateTextY(headerRow, 8.5f))}, 8.5f,
+                          NUIColor(0.72f, 0.70f, 0.80f, 0.78f));
+        const float hintWidth = renderer.measureText(hint, 7.5f).width;
+        renderer.drawText(hint, {headerRow.right() - hintWidth,
+                                  std::round(renderer.calculateTextY(headerRow, 7.5f))}, 7.5f,
+                          NUIColor(1, 1, 1, 0.26f));
+        for (int i = 1; i < rows; ++i) {
+            const float lineY = y + headerH + rowStep * static_cast<float>(i);
+            renderer.drawLine({rightX + 10.0f, lineY}, {rightX + rightW - 10.0f, lineY},
+                              1.0f, NUIColor(1, 1, 1, 0.035f));
+        }
     };
-    drawSection("TONE", mainY - 2.0f);
-    drawSection("MODULATION", mainY + 72.0f);
-    drawSection("CHARACTER", mainY + 182.0f);
+    drawSection("TONE", "COLOR", mainY, toneH, 2);
+    drawSection("MOTION", "STEREO", motionY, motionH, 3);
+    drawSection("CHARACTER", "DETAIL", characterY, characterH, 6);
 }
 
 void AestraVerbEditor::drawParamRow(NUIRenderer& renderer, NUIColor accent) {
@@ -853,8 +1030,8 @@ void AestraVerbEditor::drawParamRow(NUIRenderer& renderer, NUIColor accent) {
     const uint32_t params[] = {kPredelay, kSize};
     for (int i = 0; i < 2; ++i) {
         const auto& rect = m_paramRowBounds[i];
-        const float cx = rect.center().x;
-        const float cy = rect.y + 16.0f;
+        const float cx = rect.x + 26.0f;
+        const float cy = rect.center().y;
         const float r = 14.0f;
         KnobControl temp;
         temp.paramId = params[i];
@@ -864,8 +1041,14 @@ void AestraVerbEditor::drawParamRow(NUIRenderer& renderer, NUIColor accent) {
         const bool active = temp.slider ? temp.slider->isDragging() : false;
         const bool hover = temp.slider ? temp.slider->isHovered() : false;
         const float stateLift = active ? 1.0f : (hover ? 0.55f : 0.0f);
+        renderer.fillRoundedRect(rect, 7.0f,
+                                 hover ? NUIColor(0.034f, 0.031f, 0.044f, 0.98f)
+                                       : NUIColor(0.020f, 0.020f, 0.024f, 0.92f));
+        renderer.strokeRoundedRect(rect, 7.0f, 1.0f,
+                                   active ? accent.withAlpha(0.46f)
+                                          : (hover ? accent.withAlpha(0.24f) : NUIColor(1, 1, 1, 0.065f)));
         renderer.fillCircle({cx, cy}, r, NUIColor(0.01f, 0.01f, 0.01f, 1.0f));
-        renderer.strokeCircle({cx, cy}, r, 1.0f, NUIColor(0.166f, 0.166f, 0.166f, 1.0f + stateLift * 0.045f));
+        renderer.strokeCircle({cx, cy}, r, 1.0f, NUIColor(1, 1, 1, 0.10f + stateLift * 0.045f));
         if (hover) renderer.strokeCircle({cx, cy}, r + 1.5f, 1.0f, accent.withAlpha(0.20f));
         const float startAngle = kPi * 0.75f;
         const float sweep = kPi * 1.5f;
@@ -876,37 +1059,70 @@ void AestraVerbEditor::drawParamRow(NUIRenderer& renderer, NUIColor accent) {
         const float pa = startAngle + value * kPi * 1.5f;
         renderer.fillCircle({cx + std::cos(pa) * (r - 2.0f), cy + std::sin(pa) * (r - 2.0f)}, 2.5f,
                             theme.getColor("textPrimary").withAlpha(0.90f + stateLift * 0.08f));
-        renderer.drawTextCentered(temp.label, {rect.x, rect.y + 32.0f, rect.width, 12.0f}, 9.0f,
-                                  theme.getColor("textPrimary").withAlpha(0.62f + stateLift * 0.12f));
+        const float textX = rect.x + 52.0f;
+        const NUIRect labelLine(textX, rect.y + 8.0f, rect.right() - textX - 10.0f, 18.0f);
+        const NUIRect valueLine(textX, rect.y + 27.0f, rect.right() - textX - 10.0f, 18.0f);
+        renderer.drawText(temp.label, {labelLine.x, std::round(renderer.calculateTextY(labelLine, 8.5f))}, 8.5f,
+                          theme.getColor("textPrimary").withAlpha(0.50f + stateLift * 0.15f));
         const NUIColor valColor = (active || hover) ? accent.withAlpha(0.85f) : theme.getColor("textPrimary").withAlpha(0.55f);
-        renderer.drawTextCentered(formatParameterValue(temp.paramId), {rect.x, rect.y + 43.0f, rect.width, 12.0f}, 9.5f, valColor);
+        const std::string valueText = fitVerbText(renderer, formatParameterValue(temp.paramId), 10.5f, valueLine.width);
+        renderer.drawText(valueText, {valueLine.x, std::round(renderer.calculateTextY(valueLine, 10.5f))}, 10.5f, valColor);
     }
 }
 
 void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
+    (void)contentRect;
     auto b = getBounds();
     NUIColor accent = verbAccent();
-    drawPresetStrip(renderer, accent);
-    drawCategoryPills(renderer, accent);
     const float mainX = editorContentX(b);
     const float contentW = b.width - (mainX - b.x) - kPad;
-    const NUIPoint headerLine1{mainX - 4.0f, b.y + 122.0f};
-    const NUIPoint headerLine2{mainX + contentW + 4.0f, b.y + 122.0f};
-    renderer.drawLine(headerLine1, headerLine2, 1.0f,
-                      NUIColor(1, 1, 1, 0.050f));
-    renderer.fillRoundedRect({mainX - 8.0f, b.y + 124.0f, contentW + 16.0f, b.height - 138.0f}, 8.0f,
-                             verbSurfaceBg().withAlpha(0.92f));
-    renderer.strokeRoundedRect({mainX - 8.0f, b.y + 124.0f, contentW + 16.0f, b.height - 138.0f}, 8.0f, 1.0f,
-                               NUIColor(1, 1, 1, 0.080f));
-    const float rightColStart = mainX + contentW - rightColWidth(b.width);
-    const NUIPoint sepRight1{rightColStart - 4.0f, b.y + 124.0f};
-    const NUIPoint sepRight2{rightColStart - 4.0f, b.y + b.height - 14.0f};
-    renderer.drawLine(sepRight1, sepRight2, 1.0f, NUIColor(1, 1, 1, 0.045f));
+    const float mainY = b.y + 134.0f;
+    const float bodyBottom = b.y + b.height - 14.0f;
+    const float bodyH = std::max(360.0f, bodyBottom - mainY);
+    const float rightW = rightColWidth(b.width);
+    const float centerW = contentW - rightW - 18.0f;
+    const float heroHeight = std::clamp(bodyH - 180.0f, 230.0f, 290.0f);
+
+    renderer.fillRectGradient({b.x + 8.0f, b.y + 48.0f, b.width - 16.0f, b.height - 58.0f},
+                              NUIColor(0.024f, 0.022f, 0.030f, 0.98f),
+                              NUIColor(0.012f, 0.013f, 0.017f, 0.99f), true);
+    drawPresetStrip(renderer, accent);
+    drawCategoryPills(renderer, accent);
+
+    renderer.fillRoundedRect({mainX - 8.0f, mainY - 6.0f, contentW + 16.0f, bodyH + 12.0f}, 11.0f,
+                             NUIColor(0.018f, 0.018f, 0.022f, 0.94f));
+    renderer.strokeRoundedRect({mainX - 8.0f, mainY - 6.0f, contentW + 16.0f, bodyH + 12.0f}, 11.0f, 1.0f,
+                               NUIColor(1, 1, 1, 0.055f));
+
+    const NUIRect heroCard(mainX, mainY, centerW, heroHeight);
+    renderer.fillRoundedRect(heroCard, 10.0f, NUIColor(0.026f, 0.025f, 0.033f, 0.98f));
+    renderer.strokeRoundedRect(heroCard, 10.0f, 1.0f, accent.withAlpha(0.16f));
+    renderer.fillCircle({heroCard.x + 15.0f, heroCard.y + 15.0f}, 2.0f, accent.withAlpha(0.82f));
+    const NUIRect heroHeader(heroCard.x + 23.0f, heroCard.y + 2.0f, heroCard.width - 37.0f, 26.0f);
+    renderer.drawText("SPACE", {heroHeader.x, std::round(renderer.calculateTextY(heroHeader, 8.5f))}, 8.5f,
+                      NUIColor(0.76f, 0.72f, 0.88f, 0.76f));
+    const std::string modeName = formatParameterValue(kMode);
+    const float modeWidth = renderer.measureText(modeName, 8.5f).width;
+    renderer.drawText(modeName, {heroHeader.right() - modeWidth,
+                                  std::round(renderer.calculateTextY(heroHeader, 8.5f))}, 8.5f,
+                      NUIColor(1, 1, 1, 0.34f));
+
+    const NUIRect mixCard(m_mixBounds.x - 10.0f, m_mixBounds.y - 5.0f,
+                          m_mixBounds.width + 20.0f, m_mixBounds.height + 10.0f);
+    renderer.fillRoundedRect(mixCard, 9.0f, NUIColor(0.026f, 0.025f, 0.033f, 0.96f));
+    renderer.strokeRoundedRect(mixCard, 9.0f, 1.0f, NUIColor(1, 1, 1, 0.06f));
+
+    const NUIRect utilityCard(m_bypassBounds.x - 10.0f, m_bypassBounds.y - 10.0f,
+                              m_mixLockBounds.right() - m_bypassBounds.x + 20.0f,
+                              m_abBoundsB.bottom() - m_bypassBounds.y + 20.0f);
+    renderer.fillRoundedRect(utilityCard, 9.0f, NUIColor(0.023f, 0.023f, 0.029f, 0.94f));
+    renderer.strokeRoundedRect(utilityCard, 9.0f, 1.0f, NUIColor(1, 1, 1, 0.055f));
+
+    drawSectionLabels(renderer);
     for (const auto& k : m_knobs) {
         if (k.paramId == kPredelay || k.paramId == kSize) continue;
         drawKnob(renderer, k, accent);
     }
-    drawSectionLabels(renderer);
     drawParamRow(renderer, accent);
     drawMixSlider(renderer, accent);
     // Button grid with SVG icons: BYP FRZ SAVE UNLCK / < > A B
@@ -922,27 +1138,36 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
         static auto lockIcon = std::make_shared<NUIIcon>(kLockSvg);
         static auto unlockIcon = std::make_shared<NUIIcon>(kUnlockSvg);
 
-        struct BtnInfo { NUIRect bounds; bool on; bool hov; const char* tip; };
+        struct BtnInfo { NUIRect bounds; bool on; bool hov; const char* label; const char* tip; };
         BtnInfo btns[] = {
-            {m_bypassBounds, getParamValue(kBypass) > 0.5f, m_bypassHovered, "Bypass"},
-            {m_freezeBounds, getParamValue(kFreeze) > 0.5f, m_freezeHovered, "Freeze"},
-            {m_saveBounds, false, m_saveHovered, "Save Preset"},
-            {m_mixLockBounds, m_mixLocked, m_mixLockHovered, m_mixLocked ? "Unlock Mix" : "Lock Mix"},
+            {m_bypassBounds, getParamValue(kBypass) > 0.5f, m_bypassHovered, "BYP", "Bypass"},
+            {m_freezeBounds, getParamValue(kFreeze) > 0.5f, m_freezeHovered, "FRZ", "Freeze"},
+            {m_saveBounds, false, m_saveHovered, "SAVE", "Save Preset"},
+            {m_mixLockBounds, m_mixLocked, m_mixLockHovered, "MIX", m_mixLocked ? "Unlock Mix" : "Lock Mix"},
         };
         for (auto& btn : btns) {
             renderer.fillRoundedRect(btn.bounds, 5.0f, btn.on ? accent.withAlpha(0.52f) : (btn.hov ? NUIColor(1, 1, 1, 0.06f) : NUIColor(0, 0, 0, 0)));
             renderer.strokeRoundedRect(btn.bounds, 5.0f, 1.0f, btn.on ? accent.withAlpha(0.65f) : NUIColor(1, 1, 1, 0.14f));
         }
-        auto drawBtnIcon = [&](NUIIcon* icon, const NUIRect& r, bool on, bool hov) {
-            const float iconSize = 12.0f;
-            icon->setBounds({std::round(r.center().x - iconSize * 0.5f), std::round(r.center().y - iconSize * 0.5f), iconSize, iconSize});
-            icon->setColor(NUIColor(1, 1, 1, on ? 0.95f : (hov ? 0.82f : 0.55f)));
+        auto drawBtnIcon = [&](NUIIcon* icon, const BtnInfo& btn) {
+            constexpr float iconSize = 10.0f;
+            constexpr float fontSize = 7.5f;
+            constexpr float gap = 4.0f;
+            const float labelWidth = renderer.measureText(btn.label, fontSize).width;
+            const float groupX = btn.bounds.center().x - (iconSize + gap + labelWidth) * 0.5f;
+            icon->setBounds({std::round(groupX), std::round(btn.bounds.center().y - iconSize * 0.5f),
+                             iconSize, iconSize});
+            const NUIColor color(1, 1, 1, btn.on ? 0.95f : (btn.hov ? 0.82f : 0.55f));
+            icon->setColor(color);
             icon->onRender(renderer);
+            renderer.drawText(btn.label, {groupX + iconSize + gap,
+                                           std::round(renderer.calculateTextY(btn.bounds, fontSize))},
+                              fontSize, color);
         };
-        drawBtnIcon(bypassIcon.get(), m_bypassBounds, btns[0].on, btns[0].hov);
-        drawBtnIcon(freezeIcon.get(), m_freezeBounds, btns[1].on, btns[1].hov);
-        drawBtnIcon(saveIcon.get(), m_saveBounds, btns[2].on, btns[2].hov);
-        drawBtnIcon(m_mixLocked ? lockIcon.get() : unlockIcon.get(), m_mixLockBounds, btns[3].on, btns[3].hov);
+        drawBtnIcon(bypassIcon.get(), btns[0]);
+        drawBtnIcon(freezeIcon.get(), btns[1]);
+        drawBtnIcon(saveIcon.get(), btns[2]);
+        drawBtnIcon(m_mixLocked ? lockIcon.get() : unlockIcon.get(), btns[3]);
 
         // Nav and A/B buttons — SVG chevrons for nav, text for A/B
         static const char* kChevronLeftSvg = R"svg(<svg viewBox="0 0 10 10" fill="none"><path d="M6.5 2L3.5 5L6.5 8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>)svg";
@@ -1231,7 +1456,10 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         if (!hasBounds) continue;
         const bool overKnob = sb.contains({event.position.x, event.position.y});
         const bool dragging = k.slider->isDragging();
-        if (overKnob || dragging) {
+        // An open dropdown is a modal input layer. Keep forwarding an active
+        // drag so it can release cleanly, but do not let new presses reach a
+        // knob underneath the dropdown list.
+        if ((overKnob && !m_dropdownOpen) || dragging) {
             if (k.slider->onMouseEvent(event)) return true;
         }
     }
@@ -1326,6 +1554,7 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
             m_focusedPreset = -1;
             m_mixFocused = false;
             m_selectedCategory = catIdx;
+            m_presetScroll = 0;
             m_dropdownItems.clear();
             int modes[3] = {};
             const int count = modesInCategory(catIdx, modes);
@@ -1365,6 +1594,7 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
             !m_dropdownListBounds.contains({event.position.x, event.position.y})) {
             m_dropdownOpen = false;
             setDirty(true);
+            return true;
         }
         // Preset click
         const int presetIdx = hitTestPreset(event.position.x, event.position.y);
@@ -1394,10 +1624,7 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
         int navDir = 0;
         if (hitTestPresetNav(event.position.x, event.position.y, navDir)) {
-            const float visibleH = 580.0f - (88.0f - 54.0f);
-            const int visibleRows = std::max(1, static_cast<int>(visibleH / (50.0f + 6.0f)));
-            const int maxScroll = std::max(0, static_cast<int>(m_presets.size()) - visibleRows);
-            m_presetScroll = std::max(0, std::min(m_presetScroll + navDir, maxScroll));
+            m_presetScroll = std::clamp(m_presetScroll + navDir, 0, maxPresetScroll());
             layoutControls();
             setDirty(true);
             return true;
@@ -1454,14 +1681,11 @@ bool AestraVerbEditor::onMouseEvent(const NUIMouseEvent& event) {
         const float stripBottom = stripTop + b3.height - 54.0f;
         if (event.position.x >= stripLeft && event.position.x <= stripRight &&
             event.position.y >= stripTop && event.position.y <= stripBottom) {
-            const float visibleH = b3.height - 128.0f;
-            const int visibleRows = std::max(1, static_cast<int>(visibleH / (50.0f + 6.0f)));
-            const int maxScroll = std::max(0, static_cast<int>(m_presets.size()) - visibleRows);
             const int prev = m_presetScroll;
             if (event.wheelDelta > 0.0f) {
                 m_presetScroll = std::max(0, m_presetScroll - 1);
             } else {
-                m_presetScroll = std::max(0, std::min(maxScroll, m_presetScroll + 1));
+                m_presetScroll = std::min(maxPresetScroll(), m_presetScroll + 1);
             }
             if (m_presetScroll != prev) {
                 layoutControls();
