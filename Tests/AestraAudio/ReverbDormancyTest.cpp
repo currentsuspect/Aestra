@@ -174,6 +174,62 @@ int main() {
         std::cout << "  wake transparency: earlyCorr=" << earlyCorr << " worstEnvDiff=" << worstDb << " dB\n";
     }
 
+    // --- 3b. Dormant automation: controls stay current while asleep ---
+    // Prime wet, sleep, then automate Mix fully dry during dormancy. On wake the
+    // dry path must take effect immediately; if the smoothed Mix were left stale
+    // at its wet value, the first wake block would ramp up from ~0 dry gain and
+    // the early output would not track the input.
+    {
+        AestraVerb v; configure(v, sr); // Mix = 1.0 (fully wet)
+        const size_t pre = static_cast<size_t>(sr * 0.1f);
+        const size_t gap = static_cast<size_t>(sr * 13.0f);
+        const size_t wake = static_cast<size_t>(sr * 0.05f);
+
+        auto prime = noiseBurst(pre, pre, 111);
+        std::vector<float> pO(pre);
+        const float* pin[2] = { prime.data(), prime.data() };
+        float* pout[2] = { pO.data(), pO.data() };
+        v.process(pin, pout, 2, 2, static_cast<uint32_t>(pre));
+
+        std::vector<float> s(gap, 0.0f), sO(gap);
+        const size_t block = 256;
+        for (size_t off = 0; off < gap; off += block) {
+            const size_t f = std::min(block, gap - off);
+            const float* in[2] = { s.data() + off, s.data() + off };
+            float* out[2] = { sO.data() + off, sO.data() + off };
+            v.process(in, out, 2, 2, static_cast<uint32_t>(f));
+        }
+
+        // Automate Mix to fully dry while dormant, then let one more silent
+        // (dormant) block run so the snap picks up the new value — this models
+        // continuous host automation writing between process blocks while idle.
+        v.setParameter(AestraVerb::kMix, 0.0f);
+        {
+            std::vector<float> s2(block, 0.0f), s2O(block);
+            const float* in[2] = { s2.data(), s2.data() };
+            float* out[2] = { s2O.data(), s2O.data() };
+            v.process(in, out, 2, 2, static_cast<uint32_t>(block));
+        }
+
+        auto wk = noiseBurst(wake, wake, 222);
+        std::vector<float> wOutL(wake), wOutR(wake);
+        const float* win[2] = { wk.data(), wk.data() };
+        float* wout[2] = { wOutL.data(), wOutR.data() };
+        v.process(win, wout, 2, 2, static_cast<uint32_t>(wake));
+
+        // With Mix snapped to dry, the wake output tracks the dry input closely
+        // from the first samples (dry gain ~1, wet gain ~0). Measure early-window
+        // correlation of output vs input.
+        const size_t earlyN = static_cast<size_t>(sr * 0.01f);
+        double num = 0.0, do_ = 0.0, di = 0.0;
+        for (size_t i = 0; i < earlyN; ++i) {
+            num += (double)wOutL[i] * wk[i]; do_ += (double)wOutL[i] * wOutL[i]; di += (double)wk[i] * wk[i];
+        }
+        const double dryCorr = (do_ > 1e-20 && di > 1e-20) ? num / std::sqrt(do_ * di) : 0.0;
+        check(dryCorr > 0.99, "wake after dormant Mix->dry tracks dry input (corr " + std::to_string(dryCorr) + ")");
+        std::cout << "  dormant automation: dry-track corr=" << dryCorr << "\n";
+    }
+
     // --- 4. CPU benefit: a dormant span is much cheaper than an active span ---
     {
         const size_t n = static_cast<size_t>(sr * 4.0f);

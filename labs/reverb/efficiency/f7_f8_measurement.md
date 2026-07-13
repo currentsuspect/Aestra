@@ -45,14 +45,24 @@ items remain candidates for a later pass (synced-predelay per-sample BPM reload
 ## Decision: do F8 tail dormancy
 
 An **idle** instance (silent input, tail decayed) still runs that entire ~78%
-FDN pipeline every sample. Dormancy skips it. Measured with the dormancy test:
+FDN pipeline every sample. Dormancy skips it.
 
-- Dormant span vs active span: **~68x cheaper** (silent input, instance asleep).
-- Transparent: silent input -> silent output; woken early reflections identical
-  to a fresh instance (corr 1.000); energy envelope within ~0.8 dB.
-- Measurement-safe: the dormant floor is -140 dBFS, below the tail-decay and
-  modulation-purity probes' analysis range, so it never shortens a measured T60
-  or splatters into the tail.
+Measured configuration (single instance, ReverbDormancyTest): Hall, 48 kHz,
+one dormant instance vs one active instance.
 
-This is the high-value efficiency win for multi-instance sessions on the 4 GB /
-low-core target: N idle reverb sends cost almost nothing.
+- Dormant span vs active span: **~68x cheaper** on this dev machine (silent
+  input, instance asleep). The absolute ratio depends on the target CPU and
+  mode, but the effect is structural: dormant processing skips the ~78% FDN
+  pipeline entirely.
+- Transparent (this config): silent input -> silent output; woken early
+  reflections identical to a fresh instance (corr 1.000); energy envelope within
+  ~0.8 dB; controls stay current under automation while asleep.
+- Measurement-safe: the dormant floor is -140 dBFS. The consistency probe's T60
+  check (44.1 / 48 / 96 kHz) and modulation-purity check pass unchanged with
+  dormancy on, so the floor sits below their analysis range — it does not
+  shorten those measured T60s or splatter into the tail.
+
+Because instances are independent, the per-instance saving compounds across the
+idle sends in a session, which is the point on the 4 GB / low-core target.
+Broader coverage (all modes, more sample rates, many-instance sessions) is left
+to a follow-up; the numbers above are the tested setup.

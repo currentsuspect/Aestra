@@ -357,6 +357,16 @@ public:
             const bool wantSleep = inputSilent && !freezeHeld && m_tailEnv < kDormantThreshold &&
                                    m_silentSamples > guardSamples;
             if (wantSleep && m_sleepFaded) {
+                // Keep the smoothed control state current while asleep. The wet
+                // pipeline is skipped, so its smoothing never runs; without this
+                // an automation move during dormancy (e.g. Mix, Decay, Size) would
+                // leave stale targets and the first wake block would ramp from the
+                // pre-sleep value. Snapping is inaudible here because the output is
+                // silent, and it makes the wake start from the latest automation.
+                for (uint32_t p = 0; p < kParamCount; ++p) {
+                    m_smoothedParams[p] = m_params[p].load(std::memory_order_relaxed);
+                }
+
                 // Fully dormant: emit only the dry path (silent input -> silence),
                 // skipping the entire wet pipeline. The FDN state is untouched and
                 // near zero, so the first non-silent block resumes seamlessly.
