@@ -235,8 +235,16 @@ public:
     static constexpr std::array<float, kFDNLineCount> kOutputL = {
         0.42f, -0.31f, 0.37f, 0.23f, -0.36f, 0.29f, 0.33f, -0.27f
     };
+    // Output vector R re-derived for mono compatibility (F6). The original R
+    // correlated -0.557 with kOutputL, which mapped the FDN lines to L/R strongly
+    // anti-correlated and cost 4.4-5.1 dB of tail energy on mono fold-down (every
+    // mode except Hall). This set correlates -0.29 with kOutputL (measured),
+    // pulling worst-case mono fold-down to ~-4.0 dB while keeping the tail wide
+    // (side/mid ~1.13). The diff-boost and width matrix downstream are
+    // mono-preserving, so the fold-down is governed here. See
+    // labs/reverb/stereo/f6_candidates.md for the candidate comparison.
     static constexpr std::array<float, kFDNLineCount> kOutputR = {
-        0.24f, 0.39f, -0.28f, 0.35f, 0.31f, -0.34f, 0.26f, 0.41f
+        0.347f, 0.294f, -0.241f, 0.411f, 0.191f, -0.331f, 0.342f, 0.328f
     };
 
     static uint32_t nextPowerOfTwo(uint32_t v) {
