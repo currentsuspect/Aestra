@@ -658,6 +658,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbDormancyTest.cpp")
     set_tests_properties(ReverbDormancyTest PROPERTIES LABELS "audio;dsp;reverb;dormancy")
 endif()
 
+# Reverb Listening Pack generator (evaluation aid, not a test)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbListeningPack.cpp")
+    add_executable(AestraReverbListeningPack AestraAudio/ReverbListeningPack.cpp)
+    target_link_libraries(AestraReverbListeningPack PRIVATE AestraAudio)
+    target_include_directories(AestraReverbListeningPack PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
 # Reverb Quality Measurement Lab
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbQualityLab.cpp")
     add_executable(AestraReverbQualityLab AestraAudio/ReverbQualityLab.cpp)
