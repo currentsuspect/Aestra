@@ -619,11 +619,35 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbConsistencyProbe.cpp")
     set_tests_properties(ReverbConsistencyProbe PROPERTIES LABELS "audio;dsp;reverb;probe")
 endif()
 
+# Reverb F4 modulation regression test (taps the real per-line modulator)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbModulationTest.cpp")
+    add_executable(ReverbModulationTest AestraAudio/ReverbModulationTest.cpp)
+    target_link_libraries(ReverbModulationTest PRIVATE AestraAudio)
+    target_include_directories(ReverbModulationTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ReverbModulationTest COMMAND ReverbModulationTest)
+    set_tests_properties(ReverbModulationTest PROPERTIES LABELS "audio;dsp;reverb;modulation")
+endif()
+
 # Reverb Quality Measurement Lab
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbQualityLab.cpp")
     add_executable(AestraReverbQualityLab AestraAudio/ReverbQualityLab.cpp)
     target_link_libraries(AestraReverbQualityLab PRIVATE AestraAudio)
     target_include_directories(AestraReverbQualityLab PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
+# Reverb Modulation Baseline Lab (F4 pre/post measurement)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbModulationLab.cpp")
+    add_executable(AestraReverbModulationLab AestraAudio/ReverbModulationLab.cpp)
+    target_link_libraries(AestraReverbModulationLab PRIVATE AestraAudio)
+    target_include_directories(AestraReverbModulationLab PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
         ${CMAKE_SOURCE_DIR}/AestraCore/include
