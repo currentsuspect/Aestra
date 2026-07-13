@@ -297,7 +297,7 @@ bool AestraFilterEditor::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
 
-    return false;
+    return consumeInsideBounds(event);
 }
 
 void AestraFilterEditor::onResize(int width, int height) {
