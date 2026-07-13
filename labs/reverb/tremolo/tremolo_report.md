@@ -1,6 +1,6 @@
 # AestraVerb Tremolo / Tail-Pump Measurement
 
-50 ms broadband burst then silence; the decaying tail's dB envelope is detrended and the residual ripple measured. Default settings (Random mod, depth 0.3, damping 0.5, Mix 100%). RippleDb = RMS pump of the tail around its smooth decay (dB); WobbleHz = its dominant rate; the mod-OFF column is the control (a clean tail decays smoothly ~0 dB); the band columns split the output into low/mid/high.
+50 ms broadband burst then silence; the decaying tail's dB envelope is detrended and the residual ripple measured. Default settings (Random mod, depth 0.3, damping 0.5, Mix 100%). RippleDb = RMS pump of the tail around its smooth decay (dB); WobbleHz = its dominant rate; the mod-OFF column is the unmodulated FDN baseline; the band columns split the output into low/mid/high.
 
 | Mode | WobbleHz | RippleDb (mod on) | RippleDb (mod OFF) | Low | Mid | High |
 |------|----------|-------------------|--------------------|-----|-----|------|

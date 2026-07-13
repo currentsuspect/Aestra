@@ -6,7 +6,8 @@
 // rate, and coherent-peak prominence — per mode. Includes a modulation-OFF
 // control and a modulation-depth sweep to test whether the LFO is the cause, a
 // low/mid/high band split, a damping comparison, and A/B WAV renders (mod off vs
-// max) for ear confirmation.
+// max) for ear confirmation. This broadband-envelope metric does not by itself
+// measure narrow spectral peaks/notches moving across sustained source tones.
 //
 // Output: labs/reverb/tremolo/tremolo_report.md / .json
 
@@ -102,8 +103,10 @@ struct TremStat { float rateHz = 0.0f; float rippleDb = 0.0f; float peakProminen
 // smoothly (a straight line in dB), so any pumping shows up as fluctuation of the
 // dB-envelope around that smooth decay. We take the dB envelope, remove the slow
 // decay trend with a long moving average, and report the residual ripple depth
-// (RMS, in dB) and its dominant rate in 0.3-8 Hz. A non-modulated tail decays
-// smoothly -> ~0 dB ripple, so this isolates the modulation's audible pump.
+// (RMS, in dB) and its dominant rate in 0.3-8 Hz. The modulation-off render is
+// the baseline: an unmodulated sparse FDN can still have substantial envelope
+// ripple, so this metric must not be read as a complete modulation audibility
+// test.
 TremStat measureRipple(const std::vector<float>& env, float envRate) {
     TremStat t;
     const size_t n = env.size();
@@ -263,7 +266,7 @@ int main() {
        << "50 ms broadband burst then silence; the decaying tail's dB envelope is detrended and "
           "the residual ripple measured. Default settings (Random mod, depth 0.3, damping 0.5, "
           "Mix 100%). RippleDb = RMS pump of the tail around its smooth decay (dB); WobbleHz = its "
-          "dominant rate; the mod-OFF column is the control (a clean tail decays smoothly ~0 dB); "
+          "dominant rate; the mod-OFF column is the unmodulated FDN baseline; "
           "the band columns split the output into low/mid/high.\n\n"
        << "| Mode | WobbleHz | RippleDb (mod on) | RippleDb (mod OFF) | Low | Mid | High |\n"
        << "|------|----------|-------------------|--------------------|-----|-----|------|\n";
@@ -354,20 +357,43 @@ int main() {
             dryL[i] = dryR[i] = v * env * 0.12f;
         }
         auto rmsv = [](const std::vector<float>& x) { double a = 0; for (float v : x) a += (double)v * v; return std::sqrt(a / std::max<size_t>(x.size(), 1)); };
-        struct AB { const char* name; AestraVerb::Mode mode; float depth; };
+        struct AB {
+            const char* name;
+            AestraVerb::Mode mode;
+            float depth;
+            float damping;
+        };
         const AB abs_[] = {
-            {"plate_modOFF", AestraVerb::Mode::Plate, 0.0f}, {"plate_modMAX", AestraVerb::Mode::Plate, 1.0f},
-            {"hall_modOFF", AestraVerb::Mode::Hall, 0.0f},   {"hall_modMAX", AestraVerb::Mode::Hall, 1.0f},
+            {"plate_modOFF", AestraVerb::Mode::Plate, 0.0f, 0.5f},
+            {"plate_modDEFAULT", AestraVerb::Mode::Plate, 0.07f, 0.5f},
+            {"plate_modLEGACY", AestraVerb::Mode::Plate, 0.14f, 0.5f},
+            {"plate_modSTRONG", AestraVerb::Mode::Plate, 0.3f, 0.5f},
+            {"plate_modMAX", AestraVerb::Mode::Plate, 1.0f, 0.5f},
+            {"plate_lowDamp_modDEFAULT", AestraVerb::Mode::Plate, 0.07f, 0.1f},
+            {"hall_modOFF", AestraVerb::Mode::Hall, 0.0f, 0.5f},
+            {"hall_modDEFAULT", AestraVerb::Mode::Hall, 0.07f, 0.5f},
+            {"hall_modLEGACY", AestraVerb::Mode::Hall, 0.14f, 0.5f},
+            {"hall_modSTRONG", AestraVerb::Mode::Hall, 0.3f, 0.5f},
+            {"hall_modMAX", AestraVerb::Mode::Hall, 1.0f, 0.5f},
+            {"hall_lowDamp_modDEFAULT", AestraVerb::Mode::Hall, 0.07f, 0.1f},
+            {"room_modOFF", AestraVerb::Mode::Room, 0.0f, 0.5f},
+            {"room_modDEFAULT", AestraVerb::Mode::Room, 0.07f, 0.5f},
+            {"room_modLEGACY", AestraVerb::Mode::Room, 0.14f, 0.5f},
+            {"room_modSTRONG", AestraVerb::Mode::Room, 0.3f, 0.5f},
+            {"room_lowDamp_modDEFAULT", AestraVerb::Mode::Room, 0.07f, 0.1f},
         };
         std::ofstream key(abDir + "/KEY.md");
-        key << "# Tremolo A/B — modulation off vs max\n\nSame chord stab, equal loudness. If "
-               "modOFF and modMAX sound the same (both wobble), the tremolo is the FDN mode "
-               "beating, not the modulation.\n\n| File | Mode | Mod depth |\n|---|---|---|\n";
+        key << "# Tremolo A/B — modulation and damping sweep\n\nSame chord stab, equal loudness. Compare "
+               "modOFF through modMAX to hear how moving FDN peaks/notches change even when the "
+               "broadband tail-envelope ripple remains similar. DEFAULT is the shipped 0.07 depth; LEGACY is the "
+               "previous 0.14 default. The lab holds Mod Rate at 0.5; STRONG is depth 0.30.\n\n"
+               "| File | Mode | Mod depth | Damping |\n"
+               "|---|---|---:|---:|\n";
         for (const auto& a : abs_) {
             AestraVerb v; v.initialize(sr, 256);
             v.setParameter(AestraVerb::kMode, AestraVerb::modeParam(a.mode));
             v.setParameter(AestraVerb::kDecay, 0.7f); v.setParameter(AestraVerb::kSize, 0.6f);
-            v.setParameter(AestraVerb::kDiffusion, 0.8f); v.setParameter(AestraVerb::kDamping, 0.5f);
+            v.setParameter(AestraVerb::kDiffusion, 0.8f); v.setParameter(AestraVerb::kDamping, a.damping);
             v.setParameter(AestraVerb::kModRate, 0.5f); v.setParameter(AestraVerb::kModDepth, a.depth);
             v.setParameter(AestraVerb::kWidth, 0.7f); v.setParameter(AestraVerb::kMix, 0.4f);
             v.activate();
@@ -380,9 +406,11 @@ int main() {
                 v.process(bi, bo, 2, 2, static_cast<uint32_t>(f));
             }
             const double g = 0.1 / std::max(rmsv(oL), 1e-9);
-            for (auto& s : oL) s = float(s * g); for (auto& s : oR) s = float(s * g);
+            for (auto& s : oL) s = float(s * g);
+            for (auto& s : oR) s = float(s * g);
             writeWav(abDir + "/" + a.name + ".wav", oL, oR, sr);
-            key << "| " << a.name << ".wav | " << modeName(a.mode) << " | " << a.depth << " |\n";
+            key << "| " << a.name << ".wav | " << modeName(a.mode) << " | " << a.depth
+                << " | " << a.damping << " |\n";
         }
         std::cout << "A/B ear-confirmation renders written to " << abDir << "/\n";
     }
