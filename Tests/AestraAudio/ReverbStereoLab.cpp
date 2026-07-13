@@ -215,9 +215,10 @@ int main() {
     // --- Reports ---
     std::ostringstream md;
     md << "# AestraVerb Stereo Characterization (F5/F6 re-measurement)\n\n";
-    md << "Measured on the current engine (post SIMD ring-fix, post F4 modulation rewrite). "
-          "Supersedes the review's F5/F6 numbers, which were taken on mislabeled modes and the "
-          "old modulator. 48 kHz, Width 0.7, Decay 0.7, Size 0.6.\n\n";
+    md << "Measured on the current engine (post SIMD ring-fix, post F4 modulation rewrite, "
+          "post F6 output-vector mono-compat fix). Supersedes the review's F5/F6 numbers, which "
+          "were taken on mislabeled modes and the old modulator. For the pre-F6-fix baseline and "
+          "the candidate comparison, see f6_candidates.md. 48 kHz, Width 0.7, Decay 0.7, Size 0.6.\n\n";
     md << "## Per-mode image\n\n";
     md << "| Mode | EarlyCorr | LateCorr | Width | MonoRet(dB) | OnsetLag(smp) | EarlyLvlDiff(dB) |\n";
     md << "|------|-----------|----------|-------|-------------|---------------|------------------|\n";

@@ -1,16 +1,16 @@
 {
   "sampleRate": 48000,
   "injectCorr": -0.37964,
-  "outputCorr": -0.556807,
+  "outputCorr": -0.291136,
   "modes": [
-    {"mode": "room", "earlyCorr": 0.176053, "lateCorr": -0.338814, "widthProxy": 1.42058, "monoRetentionDb": -4.36956, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.713919},
-    {"mode": "hall", "earlyCorr": 0.489818, "lateCorr": -0.039034, "widthProxy": 1.03977, "monoRetentionDb": -2.93523, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.602203},
-    {"mode": "plate", "earlyCorr": 0.0563828, "lateCorr": -0.371322, "widthProxy": 1.47066, "monoRetentionDb": -4.34521, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.40888},
-    {"mode": "cathedral", "earlyCorr": 0.231463, "lateCorr": -0.375692, "widthProxy": 1.48405, "monoRetentionDb": -4.90138, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.840099},
-    {"mode": "chamber", "earlyCorr": 0.147689, "lateCorr": -0.359408, "widthProxy": 1.45662, "monoRetentionDb": -5.0336, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.709721},
-    {"mode": "bright_hall", "earlyCorr": 0.181792, "lateCorr": -0.354627, "widthProxy": 1.44874, "monoRetentionDb": -4.85569, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.479159},
-    {"mode": "ambience", "earlyCorr": 0.0695562, "lateCorr": -0.41766, "widthProxy": 1.5593, "monoRetentionDb": -5.13495, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.595783},
-    {"mode": "scoring", "earlyCorr": 0.233535, "lateCorr": -0.331871, "widthProxy": 1.41154, "monoRetentionDb": -4.59731, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.783931},
-    {"mode": "smooth_plate", "earlyCorr": 0.0787493, "lateCorr": -0.370195, "widthProxy": 1.47473, "monoRetentionDb": -4.8902, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.455715}
+    {"mode": "room", "earlyCorr": 0.176053, "lateCorr": -0.135658, "widthProxy": 1.14578, "monoRetentionDb": -3.29338, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.713919},
+    {"mode": "hall", "earlyCorr": 0.489818, "lateCorr": 0.185647, "widthProxy": 0.828784, "monoRetentionDb": -2.20425, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.602203},
+    {"mode": "plate", "earlyCorr": 0.0563828, "lateCorr": -0.194745, "widthProxy": 1.2164, "monoRetentionDb": -3.40852, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.40888},
+    {"mode": "cathedral", "earlyCorr": 0.231463, "lateCorr": -0.161881, "widthProxy": 1.17741, "monoRetentionDb": -3.80451, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.840099},
+    {"mode": "chamber", "earlyCorr": 0.147689, "lateCorr": -0.129898, "widthProxy": 1.13932, "monoRetentionDb": -3.84748, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.709721},
+    {"mode": "bright_hall", "earlyCorr": 0.181792, "lateCorr": -0.129332, "widthProxy": 1.13885, "monoRetentionDb": -3.72835, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.479159},
+    {"mode": "ambience", "earlyCorr": 0.0699732, "lateCorr": -0.21915, "widthProxy": 1.24948, "monoRetentionDb": -4.00631, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.597672},
+    {"mode": "scoring", "earlyCorr": 0.233535, "lateCorr": -0.116578, "widthProxy": 1.12425, "monoRetentionDb": -3.54782, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.783931},
+    {"mode": "smooth_plate", "earlyCorr": 0.0787493, "lateCorr": -0.158426, "widthProxy": 1.17324, "monoRetentionDb": -3.7596, "onsetLagSamples": 1, "earlyLevelDiffDb": 0.455715}
   ]
 }
