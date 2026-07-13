@@ -199,5 +199,44 @@ int main() {
     { std::ofstream f(dir + "/harmonic_motion.md"); if (f) f << md.str(); }
     { std::ofstream f(dir + "/harmonic_motion.json"); if (f) f << js.str(); }
     std::cout << "\nHarmonic-motion report written to " << dir << "/\n";
+
+    // Prototype A/B render: when PROTO_LABEL is set, render a sustained chord
+    // through Plate and Room at the current build's voicing (and PROTO_MODDEPTH
+    // if given), equal-loudness, tagged by the label — so candidate builds can be
+    // rendered and compared by ear. Also measures each so the numbers accompany
+    // the audio.
+    if (const char* label = std::getenv("PROTO_LABEL")) {
+        const std::string protoDir = dir + "/proto";
+        std::filesystem::create_directories(protoDir, ec);
+        float modDepth = 0.14f;
+        if (const char* md_ = std::getenv("PROTO_MODDEPTH")) modDepth = std::stof(md_);
+        auto writeWav = [](const std::string& p, const std::vector<float>& l, const std::vector<float>& r, float srr) {
+            std::ofstream f(p, std::ios::binary); if (!f) return;
+            const uint32_t n = static_cast<uint32_t>(l.size()), ds = n * 8, fsz = 36 + ds, br = static_cast<uint32_t>(srr) * 8;
+            auto u32 = [&](uint32_t v){ f.write(reinterpret_cast<const char*>(&v),4); };
+            auto u16 = [&](uint16_t v){ f.write(reinterpret_cast<const char*>(&v),2); };
+            f.write("RIFF",4); u32(fsz); f.write("WAVE",4); f.write("fmt ",4); u32(16); u16(3); u16(2);
+            u32(static_cast<uint32_t>(srr)); u32(br); u16(8); u16(32); f.write("data",4); u32(ds);
+            for (uint32_t i=0;i<n;++i){ f.write(reinterpret_cast<const char*>(&l[i]),4); f.write(reinterpret_cast<const char*>(&r[i]),4);} };
+        const std::array<AestraVerb::Mode, 2> pm = { AestraVerb::Mode::Plate, AestraVerb::Mode::Room };
+        const float dur = 4.0f; const size_t src = static_cast<size_t>(sr * dur), nn = src + static_cast<size_t>(sr * 4.0f);
+        const float ch[] = { 261.63f, 329.63f, 392.00f };
+        std::vector<float> dry(nn, 0.0f);
+        for (size_t i = 0; i < src; ++i) { const float t = i / sr; float e = t < 0.01f ? t/0.01f : (t > dur-0.5f ? (dur-t)/0.5f : 1.0f); float v=0; for (float f: ch) v += std::sin(2*kPi*f*t)+0.3f*std::sin(2*kPi*2*f*t); dry[i]=v*e*0.12f; }
+        auto rms=[](const std::vector<float>&x){ double a=0; for(float v:x)a+=(double)v*v; return std::sqrt(a/std::max<size_t>(x.size(),1)); };
+        for (auto mode : pm) {
+            AestraVerb v; v.initialize(sr, 256);
+            v.setParameter(AestraVerb::kMode, AestraVerb::modeParam(mode));
+            v.setParameter(AestraVerb::kDecay,0.7f); v.setParameter(AestraVerb::kSize,0.6f); v.setParameter(AestraVerb::kDiffusion,0.8f);
+            v.setParameter(AestraVerb::kDamping,0.5f); v.setParameter(AestraVerb::kModRate,rate); v.setParameter(AestraVerb::kModDepth,modDepth);
+            v.setParameter(AestraVerb::kWidth,0.7f); v.setParameter(AestraVerb::kMix,0.4f); v.activate();
+            std::vector<float> oL(nn), oR(nn);
+            const size_t block=256;
+            for (size_t off=0; off<nn; off+=block){ const size_t f=std::min(block,nn-off); const float* bi[2]={dry.data()+off,dry.data()+off}; float* bo[2]={oL.data()+off,oR.data()+off}; v.process(bi,bo,2,2,static_cast<uint32_t>(f)); }
+            const double g=0.1/std::max(rms(oL),1e-9); for(auto&s:oL)s=float(s*g); for(auto&s:oR)s=float(s*g);
+            writeWav(protoDir + "/" + modeName(mode) + "_" + label + ".wav", oL, oR, sr);
+            std::cout << "proto " << modeName(mode) << " [" << label << " depth " << modDepth << "] written\n";
+        }
+    }
     return 0;
 }
