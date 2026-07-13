@@ -18,6 +18,8 @@
 #include <cmath>
 #include <complex>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -270,7 +272,7 @@ int main() {
           "the band columns split the output into low/mid/high.\n\n"
        << "| Mode | WobbleHz | RippleDb (mod on) | RippleDb (mod OFF) | Low | Mid | High |\n"
        << "|------|----------|-------------------|--------------------|-----|-----|------|\n";
-    js << "{\n  \"config\": {\"modChar\":\"Random\",\"modDepth\":0.3,\"damping\":0.5,\"metric\":\"tail dB ripple RMS\"},\n  \"modes\": [\n";
+    js << "{\n  \"schemaVersion\": \"1.0.0\",\n  \"config\": {\"modChar\":\"Random\",\"modDepth\":0.3,\"damping\":0.5,\"metric\":\"tail dB ripple RMS\"},\n  \"modes\": [\n";
 
     for (size_t mi = 0; mi < modes.size(); ++mi) {
         const auto mode = modes[mi];
@@ -345,6 +347,10 @@ int main() {
     {
         const std::string abDir = dir + "/ab";
         std::filesystem::create_directories(abDir, ec);
+        if (ec || !std::filesystem::is_directory(abDir)) {
+            std::cerr << "ERROR: could not create " << abDir << ": " << ec.message() << "\n";
+            return 1;
+        }
         const float chordDur = 4.0f;
         const size_t src = static_cast<size_t>(sr * chordDur);
         const size_t n = src + static_cast<size_t>(sr * 4.0f);
@@ -405,18 +411,24 @@ int main() {
                 const float* bi[2] = { dryL.data() + off, dryR.data() + off }; float* bo[2] = { oL.data() + off, oR.data() + off };
                 v.process(bi, bo, 2, 2, static_cast<uint32_t>(f));
             }
-            const double g = 0.1 / std::max(rmsv(oL), 1e-9);
+            const double g = 0.1 / std::max(std::sqrt((rmsv(oL)*rmsv(oL) + rmsv(oR)*rmsv(oR)) * 0.5), 1e-9); // combined stereo RMS
             for (auto& s : oL) s = float(s * g);
             for (auto& s : oR) s = float(s * g);
-            writeWav(abDir + "/" + a.name + ".wav", oL, oR, sr);
+            if (!writeWav(abDir + "/" + a.name + ".wav", oL, oR, sr)) {
+                std::cerr << "ERROR: failed to write " << abDir << "/" << a.name << ".wav\n";
+                return 1;
+            }
             key << "| " << a.name << ".wav | " << modeName(a.mode) << " | " << a.depth
                 << " | " << a.damping << " |\n";
         }
+        if (!key) { std::cerr << "ERROR: failed to write A/B KEY\n"; return 1; }
         std::cout << "A/B ear-confirmation renders written to " << abDir << "/\n";
     }
 
-    { std::ofstream f(dir + "/tremolo_report.md"); if (f) f << md.str(); }
-    { std::ofstream f(dir + "/tremolo_report.json"); if (f) f << js.str(); }
+    bool wroteOk = true;
+    { std::ofstream f(dir + "/tremolo_report.md"); f << md.str(); wroteOk &= static_cast<bool>(f); }
+    { std::ofstream f(dir + "/tremolo_report.json"); f << js.str(); wroteOk &= static_cast<bool>(f); }
+    if (!wroteOk) { std::cerr << "ERROR: failed to write tremolo report\n"; return 1; }
     std::cout << "\nTremolo report written to " << dir << "/\n";
     return 0;
 }

@@ -1116,7 +1116,11 @@ void AestraVerbEditor::loadUserPresets() {
         p.damping = parsed.has("damping") ? static_cast<float>(parsed["damping"].asNumber()) : 0.5f;
         p.diffusion = parsed.has("diffusion") ? static_cast<float>(parsed["diffusion"].asNumber()) : 0.7f;
         p.modRate = parsed.has("modRate") ? static_cast<float>(parsed["modRate"].asNumber()) : 0.4f;
-        p.modDepth = parsed.has("modDepth") ? static_cast<float>(parsed["modDepth"].asNumber()) : 0.07f;
+        // Legacy fallback stays 0.14 (the pre-retune default) so an old user
+        // preset saved without a modDepth field loads exactly as it sounded when
+        // created. New presets persist modDepth explicitly; only fresh instances
+        // use the calmer 0.07 default.
+        p.modDepth = parsed.has("modDepth") ? static_cast<float>(parsed["modDepth"].asNumber()) : 0.14f;
         p.width = parsed.has("width") ? static_cast<float>(parsed["width"].asNumber()) : 0.68f;
         p.mix = parsed.has("mix") ? static_cast<float>(parsed["mix"].asNumber()) : 0.36f;
         p.attack = parsed.has("attack") ? static_cast<float>(parsed["attack"].asNumber()) : 0.0f;

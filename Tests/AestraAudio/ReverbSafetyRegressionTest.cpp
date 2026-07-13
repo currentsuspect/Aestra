@@ -341,6 +341,11 @@ bool runParameterDisplayFormattingCheck() {
                   "size display should use compact precision");
     ok &= require(verb.getParameterDisplay(AestraVerb::kModDepth) == "1.1 smp",
                   "mod-depth display should use compact precision");
+    // Decay's leaked precision was ".800000s" (not ".000000"), so the substring
+    // check above cannot catch it — assert the exact compact value.
+    ok &= require(verb.getParameterDisplay(AestraVerb::kDecay) == "6.8s",
+                  "decay display should use compact precision, got '" +
+                      verb.getParameterDisplay(AestraVerb::kDecay) + "'");
     if (ok) {
         std::cout << "Parameter displays use compact precision (size='"
                   << verb.getParameterDisplay(AestraVerb::kSize) << "', depth='"

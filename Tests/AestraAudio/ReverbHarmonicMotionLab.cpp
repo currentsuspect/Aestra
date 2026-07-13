@@ -18,6 +18,7 @@
 #include <cmath>
 #include <complex>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -177,7 +178,7 @@ int main() {
     js << "{\n  \"probeTones\": " << freqs.size() << ",\n  \"sweep\": [\n";
 
     const std::array<AestraVerb::Mode, 4> modes = { AestraVerb::Mode::Room, AestraVerb::Mode::Hall, AestraVerb::Mode::Plate, AestraVerb::Mode::SmoothPlate };
-    const std::array<float, 4> depths = { 0.0f, 0.07f, 0.14f, 0.30f }; // off / calm / default / pack
+    const std::array<float, 4> depths = { 0.0f, 0.07f, 0.14f, 0.30f }; // off / default (0.07) / old-default / strong
     bool firstJs = true;
     for (auto mode : modes) {
         for (float d : depths) {
@@ -208,7 +209,7 @@ int main() {
     if (const char* label = std::getenv("PROTO_LABEL")) {
         const std::string protoDir = dir + "/proto";
         std::filesystem::create_directories(protoDir, ec);
-        float modDepth = 0.14f;
+        float modDepth = 0.07f; // shipping default
         if (const char* md_ = std::getenv("PROTO_MODDEPTH")) modDepth = std::stof(md_);
         auto writeWav = [](const std::string& p, const std::vector<float>& l, const std::vector<float>& r, float srr) {
             std::ofstream f(p, std::ios::binary); if (!f) return;
