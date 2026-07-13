@@ -877,7 +877,7 @@ public:
             { kSize, "Size", "SIZ", "x", 0.52f, 0.0f, 1.0f, true },
             { kDiffusion, "Diffusion", "DIF", "%", 0.64f, 0.0f, 1.0f, true },
             { kModRate, "Mod Rate", "RTE", "x", 0.42f, 0.0f, 1.0f, true },
-            { kModDepth, "Mod Depth", "DEP", "smpl", 0.14f, 0.0f, 1.0f, true },
+            { kModDepth, "Mod Depth", "DEP", "smpl", 0.07f, 0.0f, 1.0f, true },
             { kMode, "Mode", "MOD", "", 0.0f, 0.0f, 1.0f, true, false, false, kModeCount - 1 },
             { kLowCut, "Low Cut", "LO", "Hz", 0.0f, 0.0f, 1.0f, true },
             { kHighCut, "High Cut", "HI", "Hz", 1.0f, 0.0f, 1.0f, true },
@@ -1337,6 +1337,15 @@ private:
         // the logicalFdnLength margin (28) covers it with room to spare, and
         // the minimum length (100) keeps the shortest modulated delay clear of
         // the write head. pow() runs at control rate, not per sample.
+        // Default depth retuned 0.14 -> 0.07 (owner-confirmed by ear). The
+        // audible "tremolo/sheet" was the FDN's narrow peaks/notches being MOVED
+        // across sustained source harmonics by the LFO (individual harmonics
+        // swing even though the broadband tail loudness barely changes). Measured
+        // per-harmonic swing dropped from ~2.7 dB (Plate) / ~2.3 dB (Room) at 0.14
+        // to ~2.0 / ~1.7 dB at 0.07 — below the tremolo audibility knee — while
+        // still smearing the static modes (swing at depth 0 collapses to ~0.1 dB,
+        // re-exposing the ring). See labs/reverb/tremolo/. Higher settings remain
+        // available for anyone who wants overt motion.
         const float depthParam = std::clamp(smoothedParams[kModDepth], 0.0f, 1.0f);
         const float depthCurve = depthParam <= 0.0f ? 0.0f : std::pow(depthParam, 0.6f);
         cache.modDepthSamples = depthCurve * 12.5f * constants.modDepthScalar;
