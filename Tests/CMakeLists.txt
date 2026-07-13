@@ -658,6 +658,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbDormancyTest.cpp")
     set_tests_properties(ReverbDormancyTest PROPERTIES LABELS "audio;dsp;reverb;dormancy")
 endif()
 
+# Reverb Harmonic-Motion measurement lab
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbHarmonicMotionLab.cpp")
+    add_executable(AestraReverbHarmonicMotionLab AestraAudio/ReverbHarmonicMotionLab.cpp)
+    target_link_libraries(AestraReverbHarmonicMotionLab PRIVATE AestraAudio)
+    target_include_directories(AestraReverbHarmonicMotionLab PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
 # Reverb Tremolo / amplitude-modulation measurement lab
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbTremoloLab.cpp")
     add_executable(AestraReverbTremoloLab AestraAudio/ReverbTremoloLab.cpp)
