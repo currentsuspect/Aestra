@@ -186,6 +186,15 @@ public:
     };
     static constexpr float kTwoPi = 6.28318530718f;
     static constexpr uint32_t kControlInterval = 64;
+    // F8 tail dormancy thresholds. Input samples below kSilenceThreshold count as
+    // silence; when the wet tail's tracked peak falls below kDormantThreshold
+    // (-140 dBFS, below the 24-bit noise floor and inaudible) and the input is
+    // silent, the wet pipeline sleeps. The floor is set this low deliberately:
+    // it keeps dormancy transparent to the tail-decay and modulation-purity
+    // measurements (which analyze the tail down to very low levels), so the
+    // feature can never shorten a measured T60 or splatter into the tail.
+    static constexpr float kSilenceThreshold = 1.0e-6f;
+    static constexpr float kDormantThreshold = 1.0e-7f;
     static constexpr std::array<float, kFDNLineCount> kLfoBaseRates = {
         0.158f, 0.278f, 0.398f, 0.533f, 0.668f, 0.803f, 0.923f, 1.058f
     };
@@ -318,6 +327,64 @@ public:
             return;
         }
 
+        // F8 tail dormancy: when the whole input block is silent, the wet tail
+        // has already decayed below audibility, and freeze is not holding a tail,
+        // skip the entire wet pipeline for this block and emit only the dry path
+        // (the wet contribution would be inaudible anyway). The FDN state is left
+        // untouched — it is near zero, so processing resumes seamlessly on the
+        // first non-silent block. This makes idle reverb instances nearly free,
+        // which matters most when many are inserted on a low-core target.
+        bool fadeToSleep = false;
+        {
+            bool inputSilent = true;
+            for (uint32_t ch = 0; ch < numInputChannels && inputSilent; ++ch) {
+                if (!inputs[ch]) continue;
+                for (uint32_t i = 0; i < numFrames; ++i) {
+                    if (std::abs(inputs[ch][i]) > kSilenceThreshold) { inputSilent = false; break; }
+                }
+            }
+            if (inputSilent) {
+                m_silentSamples = (m_silentSamples > 0xFFFFFFFFu - numFrames) ? 0xFFFFFFFFu
+                                                                             : m_silentSamples + numFrames;
+            } else {
+                m_silentSamples = 0;
+            }
+
+            if (!inputSilent) m_sleepFaded = false;
+
+            const bool freezeHeld = m_params[kFreeze].load(std::memory_order_relaxed) > 0.5f;
+            const uint32_t guardSamples = static_cast<uint32_t>(0.75f * static_cast<float>(m_sampleRate));
+            const bool wantSleep = inputSilent && !freezeHeld && m_tailEnv < kDormantThreshold &&
+                                   m_silentSamples > guardSamples;
+            if (wantSleep && m_sleepFaded) {
+                // Keep the smoothed control state current while asleep. The wet
+                // pipeline is skipped, so its smoothing never runs; without this
+                // an automation move during dormancy (e.g. Mix, Decay, Size) would
+                // leave stale targets and the first wake block would ramp from the
+                // pre-sleep value. Snapping is inaudible here because the output is
+                // silent, and it makes the wake start from the latest automation.
+                for (uint32_t p = 0; p < kParamCount; ++p) {
+                    m_smoothedParams[p] = m_params[p].load(std::memory_order_relaxed);
+                }
+
+                // Fully dormant: emit only the dry path (silent input -> silence),
+                // skipping the entire wet pipeline. The FDN state is untouched and
+                // near zero, so the first non-silent block resumes seamlessly.
+                const float mix = std::clamp(m_params[kMix].load(std::memory_order_relaxed), 0.0f, 1.0f);
+                const float dryGain = std::cos(mix * (kTwoPi * 0.25f));
+                for (uint32_t i = 0; i < numFrames; ++i) {
+                    const float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
+                    const float inR = (numInputChannels > 1 && inputs[1]) ? inputs[1][i] : inL;
+                    if (numOutputChannels > 0 && outputs[0]) outputs[0][i] = inL * dryGain;
+                    if (numOutputChannels > 1 && outputs[1]) outputs[1][i] = inR * dryGain;
+                }
+                return;
+            }
+            // If sleep is wanted but not yet faded, process this block normally
+            // but ramp the wet to zero across it, then sleep next block.
+            fadeToSleep = wantSleep && !m_sleepFaded;
+        }
+
         const Mode mode = currentMode();
         const ModeConstants constants = constantsForMode(mode);
         const float sampleScale = static_cast<float>(m_sampleRate) / kReferenceSampleRate;
@@ -348,6 +415,9 @@ public:
         float chaoticPhaseA = m_chaoticPhaseA;
         float chaoticPhaseB = m_chaoticPhaseB;
         float chaoticPhaseC = m_chaoticPhaseC;
+
+        // F8: track the loudest wet sample this block to decide dormancy next block.
+        float blockWetPeak = 0.0f;
 
         predelayPos &= m_predelayMask;
         earlyPos &= m_earlyMask;
@@ -725,6 +795,18 @@ public:
             wetL = sanitize(wetL);
             wetR = sanitize(wetR);
 
+            // F8: on the transition-to-dormant block, ramp the wet linearly to
+            // zero across the block so the ~-100 dBFS residual reaches exactly
+            // zero with no step before the pipeline is skipped next block.
+            if (fadeToSleep) {
+                const float g = 1.0f - static_cast<float>(i) / static_cast<float>(numFrames);
+                wetL *= g;
+                wetR *= g;
+            }
+
+            // F8: the post-EQ, pre-mix wet is the tail's actual contribution.
+            blockWetPeak = std::max(blockWetPeak, std::max(std::abs(wetL), std::abs(wetR)));
+
             AESTRA_DIAG_WETPRE(wetL, wetR);
 
             const float sumL = dryL * control.dryGain + wetL * control.wetGain;
@@ -765,6 +847,10 @@ public:
         m_chaoticPhaseA = chaoticPhaseA;
         m_chaoticPhaseB = chaoticPhaseB;
         m_chaoticPhaseC = chaoticPhaseC;
+        // F8: remember this block's wet peak; the next block sleeps if this
+        // decayed below the dormant floor (and the input is silent).
+        m_tailEnv = blockWetPeak;
+        if (fadeToSleep) m_sleepFaded = true;
     }
 
     uint32_t getParameterCount() const override { return kParamCount; }
@@ -1454,6 +1540,11 @@ private:
         m_chaoticPhaseA = 0.0f;
         m_chaoticPhaseB = 0.0f;
         m_chaoticPhaseC = 0.0f;
+        // Start non-dormant: the first block always processes so a just-prepared
+        // instance can build a tail even if its opening samples are quiet.
+        m_tailEnv = 1.0f;
+        m_silentSamples = 0;
+        m_sleepFaded = false;
 
         if (randomizeLfos) {
             std::mt19937 rng{0xAE57A000u}; // deterministic seed for reproducible tests
@@ -1785,6 +1876,23 @@ private:
     float m_chaoticPhaseA = 0.0f;
     float m_chaoticPhaseB = 0.0f;
     float m_chaoticPhaseC = 0.0f;
+
+    // F8 tail dormancy: peak of the wet signal seen in the last processed block.
+    // When the input goes silent and this decays below the dormant floor, the
+    // whole wet pipeline (FDN, diffusers, early reflections, modulation, EQ) is
+    // skipped and only the dry path is emitted. Reset high on clearBuffers so a
+    // freshly prepared instance never starts falsely dormant.
+    float m_tailEnv = 1.0f;
+    // Consecutive silent-input samples. Dormancy is only allowed once this
+    // exceeds the guard (max predelay + buildup margin), so we never sleep while
+    // freshly injected energy is still traversing the predelay line and building
+    // in the FDN — the wet peak can momentarily read ~0 during that window.
+    uint32_t m_silentSamples = 0;
+    // Set once the wet has been faded to zero over a transition block, after
+    // which the wet pipeline is fully skipped. Fading (rather than hard-cutting)
+    // the ~-100 dBFS residual keeps the sleep transition free of a broadband
+    // step, so it can't splatter into the tail or the decay measurement.
+    bool m_sleepFaded = false;
 
 #ifdef AESTRA_REVERB_PROFILE
     mutable std::array<StageProfileData, static_cast<size_t>(ProfileStage::kStageCount)> m_profileData{};
