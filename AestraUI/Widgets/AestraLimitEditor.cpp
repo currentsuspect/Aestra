@@ -454,7 +454,7 @@ bool AestraLimitEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    return NUIComponent::onMouseEvent(event);
+    return NUIComponent::onMouseEvent(event) || consumeInsideBounds(event);
 }
 
 } // namespace AestraUI

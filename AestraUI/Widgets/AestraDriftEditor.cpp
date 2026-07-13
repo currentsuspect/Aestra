@@ -248,7 +248,7 @@ bool AestraDriftEditor::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
 
-    return false;
+    return consumeInsideBounds(event);
 }
 
 void AestraDriftEditor::onResize(int width, int height) {
