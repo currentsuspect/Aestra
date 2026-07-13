@@ -163,7 +163,7 @@ int main() {
             v.setParameter(AestraVerb::kSize, 0.6f);
             v.setParameter(AestraVerb::kDiffusion, 0.8f);
             v.setParameter(AestraVerb::kModRate, 0.5f);
-            v.setParameter(AestraVerb::kModDepth, 0.3f);
+            v.setParameter(AestraVerb::kModDepth, 0.07f); // shipping default (post-tremolo retune)
             v.setParameter(AestraVerb::kWidth, 0.7f);
             v.setParameter(AestraVerb::kMix, 0.35f); // musical wet/dry
             v.activate();
