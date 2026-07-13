@@ -290,6 +290,39 @@ bool runAllNineModesFiniteChecks() {
 
 } // namespace
 
+// N3: the synced-predelay display must tell the truth. The buffer caps at
+// ~500 ms, so long note values at slow tempos can't be realized; the display
+// must show the real resulting time and flag when it is capped rather than a
+// nominal division the engine silently clamps.
+bool runPredelaySyncDisplayCheck() {
+    AestraVerb verb;
+    verb.initialize(kSampleRate, 256);
+    verb.setBPM(120.0f);
+    verb.activate();
+    auto display = [&](int idx) {
+        verb.setParameter(AestraVerb::kPredelaySync, static_cast<float>(idx) / 6.0f);
+        return verb.getParameterDisplay(AestraVerb::kPredelaySync);
+    };
+    bool ok = true;
+    // At 120 BPM: 1/4 = 500 ms (right at the cap), 1/2 = 1000 ms and longer must
+    // be flagged as capped; short values must show their true time.
+    const std::string q = display(3);  // 1/4
+    const std::string h = display(4);  // 1/2
+    const std::string bar = display(5); // 1 bar
+    if (q.find("500ms") == std::string::npos || q.find("max") != std::string::npos) {
+        std::cerr << "FAIL: 1/4 @120BPM should show ~500ms and not be capped: '" << q << "'\n"; ok = false;
+    }
+    if (h.find("max") == std::string::npos) {
+        std::cerr << "FAIL: 1/2 @120BPM (1000ms) should be flagged capped: '" << h << "'\n"; ok = false;
+    }
+    if (bar.find("max") == std::string::npos) {
+        std::cerr << "FAIL: 1 bar @120BPM (2000ms) should be flagged capped: '" << bar << "'\n"; ok = false;
+    }
+    if (display(0) != "OFF") { std::cerr << "FAIL: sync OFF display\n"; ok = false; }
+    if (ok) std::cout << "Predelay sync display is truthful (1/4='" << q << "', 1/2='" << h << "').\n";
+    return ok;
+}
+
 int main() {
     bool ok = true;
     ok &= runTinyBlockChecks();
@@ -298,6 +331,7 @@ int main() {
     ok &= runHighFrequencyBuildupChecks();
     ok &= runActiveLoadStateSafetyCheck();
     ok &= runAllNineModesFiniteChecks();
+    ok &= runPredelaySyncDisplayCheck();
 
     if (!ok) {
         return 1;
