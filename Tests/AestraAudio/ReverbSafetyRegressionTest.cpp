@@ -26,8 +26,13 @@ struct RenderStats {
     bool finite = true;
 };
 
+// mode: 0 = Room, 1 = Hall, 2 = Plate. Select via the canonical modeParam() so
+// these actually land on Room/Hall/Plate; the old 0.0/0.5/1.0 constants decoded
+// to Room/Chamber/SmoothPlate.
 void setMode(AestraVerb& verb, int mode) {
-    verb.setParameter(AestraVerb::kMode, mode == 0 ? 0.0f : (mode == 1 ? 0.5f : 1.0f));
+    const AestraVerb::Mode m =
+        mode == 0 ? AestraVerb::Mode::Room : (mode == 1 ? AestraVerb::Mode::Hall : AestraVerb::Mode::Plate);
+    verb.setParameter(AestraVerb::kMode, AestraVerb::modeParam(m));
 }
 
 void setUsableDefaults(AestraVerb& verb, int mode) {
@@ -258,7 +263,96 @@ bool runActiveLoadStateSafetyCheck() {
     return ok;
 }
 
+// Every one of the nine modes, selected via the canonical modeParam(), must
+// render finite, bounded audio. Guards against a mode index that aliases or
+// clamps to a neighbor and against any single mode blowing up.
+bool runAllNineModesFiniteChecks() {
+    bool ok = true;
+    std::vector<float> input = makeBrightTransient(48000, 4000.0f);
+    for (int mode = 0; mode < AestraVerb::kModeCount; ++mode) {
+        AestraVerb verb;
+        verb.initialize(kSampleRate, 256);
+        verb.setParameter(AestraVerb::kMode, AestraVerb::modeParam(mode));
+        verb.setParameter(AestraVerb::kDecay, 0.7f);
+        verb.setParameter(AestraVerb::kSize, 0.6f);
+        verb.setParameter(AestraVerb::kDiffusion, 0.7f);
+        verb.setParameter(AestraVerb::kModRate, 0.42f);
+        verb.setParameter(AestraVerb::kModDepth, 0.2f);
+        verb.setParameter(AestraVerb::kMix, 1.0f);
+        verb.setParameter(AestraVerb::kWidth, 0.7f);
+        verb.activate();
+        auto stats = render(verb, input, 128);
+        ok &= require(stats.finite, "nine-mode sweep produced NaN/Inf");
+        ok &= require(stats.peak < 8.0f, "nine-mode sweep exceeded sane bounds");
+    }
+    return ok;
+}
+
 } // namespace
+
+// N3: the synced-predelay display must tell the truth. The buffer caps at
+// ~500 ms, so long note values at slow tempos can't be realized; the display
+// must show the real resulting time and flag when it is capped rather than a
+// nominal division the engine silently clamps.
+bool runPredelaySyncDisplayCheck() {
+    AestraVerb verb;
+    verb.initialize(kSampleRate, 256);
+    verb.setBPM(120.0f);
+    verb.activate();
+    auto display = [&](int idx) {
+        verb.setParameter(AestraVerb::kPredelaySync, static_cast<float>(idx) / 6.0f);
+        return verb.getParameterDisplay(AestraVerb::kPredelaySync);
+    };
+    bool ok = true;
+    // At 120 BPM: 1/4 = 500 ms (right at the cap), 1/2 = 1000 ms and longer must
+    // be flagged as capped; short values must show their true time.
+    const std::string q = display(3);  // 1/4
+    const std::string h = display(4);  // 1/2
+    const std::string bar = display(5); // 1 bar
+    if (q.find("500ms") == std::string::npos || q.find("max") != std::string::npos) {
+        std::cerr << "FAIL: 1/4 @120BPM should show ~500ms and not be capped: '" << q << "'\n"; ok = false;
+    }
+    if (h.find("max") == std::string::npos) {
+        std::cerr << "FAIL: 1/2 @120BPM (1000ms) should be flagged capped: '" << h << "'\n"; ok = false;
+    }
+    if (bar.find("max") == std::string::npos) {
+        std::cerr << "FAIL: 1 bar @120BPM (2000ms) should be flagged capped: '" << bar << "'\n"; ok = false;
+    }
+    if (display(0) != "OFF") { std::cerr << "FAIL: sync OFF display\n"; ok = false; }
+    if (ok) std::cout << "Predelay sync display is truthful (1/4='" << q << "', 1/2='" << h << "').\n";
+    return ok;
+}
+
+bool runParameterDisplayFormattingCheck() {
+    AestraVerb verb;
+    verb.initialize(kSampleRate, 256);
+    verb.setParameter(AestraVerb::kMode, AestraVerb::modeParam(AestraVerb::Mode::Room));
+    verb.setParameter(AestraVerb::kDecay, 0.56f);
+    verb.setParameter(AestraVerb::kSize, 0.52f);
+    verb.setParameter(AestraVerb::kModDepth, 0.07f);
+
+    bool ok = true;
+    for (uint32_t id : {AestraVerb::kDecay, AestraVerb::kSize, AestraVerb::kModDepth}) {
+        const std::string display = verb.getParameterDisplay(id);
+        ok &= require(display.find(".000000") == std::string::npos,
+                      "parameter display leaked raw std::to_string precision: '" + display + "'");
+    }
+    ok &= require(verb.getParameterDisplay(AestraVerb::kSize) == "1.08x",
+                  "size display should use compact precision");
+    ok &= require(verb.getParameterDisplay(AestraVerb::kModDepth) == "1.1 smp",
+                  "mod-depth display should use compact precision");
+    // Decay's leaked precision was ".800000s" (not ".000000"), so the substring
+    // check above cannot catch it — assert the exact compact value.
+    ok &= require(verb.getParameterDisplay(AestraVerb::kDecay) == "6.8s",
+                  "decay display should use compact precision, got '" +
+                      verb.getParameterDisplay(AestraVerb::kDecay) + "'");
+    if (ok) {
+        std::cout << "Parameter displays use compact precision (size='"
+                  << verb.getParameterDisplay(AestraVerb::kSize) << "', depth='"
+                  << verb.getParameterDisplay(AestraVerb::kModDepth) << "').\n";
+    }
+    return ok;
+}
 
 int main() {
     bool ok = true;
@@ -267,6 +361,9 @@ int main() {
     ok &= runModeSwitchAndDeterminismChecks();
     ok &= runHighFrequencyBuildupChecks();
     ok &= runActiveLoadStateSafetyCheck();
+    ok &= runAllNineModesFiniteChecks();
+    ok &= runPredelaySyncDisplayCheck();
+    ok &= runParameterDisplayFormattingCheck();
 
     if (!ok) {
         return 1;

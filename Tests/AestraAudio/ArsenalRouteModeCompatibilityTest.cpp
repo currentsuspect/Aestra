@@ -75,6 +75,31 @@ void verifyExplicitRouteModeCompatibility() {
             "Explicit routeMode must remain routeId-compatible in current behavior");
 }
 
+void verifyOutOfRangeRouteModeDoesNotCast() {
+    using namespace Aestra::Audio;
+    UnitManager manager;
+    Aestra::JSON root = Aestra::JSON::object();
+    root.set("nextId", Aestra::JSON(2.0));
+    Aestra::JSON units = Aestra::JSON::array();
+    Aestra::JSON unit = Aestra::JSON::object();
+    unit.set("id", Aestra::JSON(1.0));
+    unit.set("name", Aestra::JSON("InvalidRouteMode"));
+    unit.set("enabled", Aestra::JSON(true));
+    unit.set("targetMixerRoute", Aestra::JSON(-1.0));
+    Aestra::JSON routeMode = Aestra::JSON::object();
+    routeMode.set("id", Aestra::JSON(1.0e308));
+    unit.set("routeMode", routeMode);
+    units.push(unit);
+    root.set("units", units);
+
+    manager.loadFromJSON(root);
+    const UnitInfo* loaded = manager.getUnit(1);
+    require(loaded != nullptr, "Unit with out-of-range routeMode failed to load");
+    require(loaded->targetMixerRoute == -1, "routeId should remain source-of-truth");
+    require(loaded->routeMode == ArsenalRouteMode::PreviewToMaster,
+            "Out-of-range routeMode should fall back to routeId-compatible behavior");
+}
+
 void verifyDraftIsScaffoldingOnly() {
     using namespace Aestra::Audio;
     ArsenalProcessingContext ctx;
@@ -103,6 +128,7 @@ int main() {
     verifyRouteIdMapping();
     verifyLegacyRouteIdOnlyLoad();
     verifyExplicitRouteModeCompatibility();
+    verifyOutOfRangeRouteModeDoesNotCast();
     verifyDraftIsScaffoldingOnly();
 
     std::cout << "[PASS] ArsenalRouteModeCompatibilityTest\n";

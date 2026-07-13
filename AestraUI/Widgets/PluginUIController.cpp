@@ -9,6 +9,11 @@
 #include "AestraVerbEditor.h"
 #include "AestraDelayEditor.h"
 #include "AestraDriftEditor.h"
+#include "AestraLimitEditor.h"
+#include "AestraSatEditor.h"
+#include "AestraFilterEditor.h"
+#include "AestraLFOEditor.h"
+#include "AestraOTTEditor.h"
 
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
 #include "RumblePluginEditor.h"
@@ -336,58 +341,62 @@ void PluginUIController::openPluginEditor(
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS
     } else if (pluginId == "com.Aestrastudios.rumble") {
         auto ed = std::make_shared<RumblePluginEditor>(instance);
-        ed->setOnClose([this, ed]() {
-            if (m_popupLayer) m_popupLayer->removeChild(ed);
-            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
-        });
+        wireEditorClose(ed);
         editor = ed;
 #endif
     } else if (pluginId == "com.Aestrastudios.eq") {
         auto ed = std::make_shared<AestraEQEditor>(instance);
-        ed->setOnClose([this, ed]() {
-            if (m_popupLayer) m_popupLayer->removeChild(ed);
-            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
-        });
+        wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
         editor = ed;
     } else if (pluginId == "com.Aestrastudios.comp") {
         auto ed = std::make_shared<AestraCompEditor>(instance);
-        ed->setOnClose([this, ed]() {
-            if (m_popupLayer) m_popupLayer->removeChild(ed);
-            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
-        });
+        wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
         editor = ed;
     } else if (pluginId == "com.Aestrastudios.verb") {
         auto ed = std::make_shared<AestraVerbEditor>(instance);
-        ed->setOnClose([this, ed]() {
-            if (m_popupLayer) m_popupLayer->removeChild(ed);
-            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
-        });
+        wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
         editor = ed;
     } else if (pluginId == "com.Aestrastudios.delay") {
         auto ed = std::make_shared<AestraDelayEditor>(instance);
-        ed->setOnClose([this, ed]() {
-            if (m_popupLayer) m_popupLayer->removeChild(ed);
-            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
-        });
+        wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
         editor = ed;
     } else if (pluginId == "com.Aestrastudios.drift") {
         auto ed = std::make_shared<AestraDriftEditor>(instance);
-        ed->setOnClose([this, ed]() {
-            if (m_popupLayer) m_popupLayer->removeChild(ed);
-            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
-        });
+        wireEditorClose(ed);
+        ed->setPlatformBridge(m_platformBridge);
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.limiter") {
+        auto ed = std::make_shared<AestraLimitEditor>(instance);
+        wireEditorClose(ed);
+        ed->setPlatformBridge(m_platformBridge);
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.sat") {
+        auto ed = std::make_shared<AestraSatEditor>(instance);
+        wireEditorClose(ed);
+        ed->setPlatformBridge(m_platformBridge);
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.filter") {
+        auto ed = std::make_shared<AestraFilterEditor>(instance);
+        wireEditorClose(ed);
+        ed->setPlatformBridge(m_platformBridge);
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.ott") {
+        auto ed = std::make_shared<AestraOTTEditor>(instance);
+        wireEditorClose(ed);
+        ed->setPlatformBridge(m_platformBridge);
+        editor = ed;
+    } else if (pluginId == "com.Aestrastudios.lfo") {
+        auto ed = std::make_shared<AestraLFOEditor>(instance);
+        wireEditorClose(ed);
         ed->setPlatformBridge(m_platformBridge);
         editor = ed;
     } else {
         auto ed = std::make_shared<GenericPluginEditor>(instance);
-        ed->setOnClose([this, ed]() {
-            if (m_popupLayer) m_popupLayer->removeChild(ed);
-            m_activeEditors.erase(std::remove(m_activeEditors.begin(), m_activeEditors.end(), ed), m_activeEditors.end());
-        });
+        wireEditorClose(ed);
         editor = ed;
     }
     
@@ -406,6 +415,16 @@ void PluginUIController::openPluginEditor(
             verb->onResize();
         } else if (auto comp = std::dynamic_pointer_cast<AestraCompEditor>(editorComp)) {
             comp->onResize();
+        } else if (auto limit = std::dynamic_pointer_cast<AestraLimitEditor>(editorComp)) {
+            limit->onResize(static_cast<int>(width), static_cast<int>(height));
+        } else if (auto sat = std::dynamic_pointer_cast<AestraSatEditor>(editorComp)) {
+            sat->onResize(static_cast<int>(width), static_cast<int>(height));
+        } else if (auto filter = std::dynamic_pointer_cast<AestraFilterEditor>(editorComp)) {
+            filter->onResize(static_cast<int>(width), static_cast<int>(height));
+        } else if (auto ott = std::dynamic_pointer_cast<AestraOTTEditor>(editorComp)) {
+            ott->onResize(static_cast<int>(width), static_cast<int>(height));
+        } else if (auto lfoEd = std::dynamic_pointer_cast<AestraLFOEditor>(editorComp)) {
+            lfoEd->onResize(static_cast<int>(width), static_cast<int>(height));
         } else if (auto generic = std::dynamic_pointer_cast<GenericPluginEditor>(editorComp)) {
             generic->onResize();
 #ifdef AESTRAUI_ENABLE_PREMIUM_EDITORS

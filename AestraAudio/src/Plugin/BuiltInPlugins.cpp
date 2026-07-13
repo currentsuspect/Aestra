@@ -9,6 +9,11 @@
 #include "Plugin/AestraVerb.h"
 #include "Plugin/AestraDelay.h"
 #include "Plugin/AestraDrift.h"
+#include "Plugin/AestraLimit.h"
+#include "Plugin/AestraSat.h"
+#include "Plugin/AestraFilter.h"
+#include "Plugin/AestraLFO.h"
+#include "Plugin/AestraOTT.h"
 
 #include <mutex>
 
@@ -136,6 +141,106 @@ const PluginInfo& driftInfo() {
     return info;
 }
 
+const PluginInfo& limiterInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.limiter";
+        p.name = "Aestra Limit";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Dynamics";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = true;
+        return p;
+    }();
+    return info;
+}
+
+const PluginInfo& satInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.sat";
+        p.name = "Aestra Sat";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Distortion";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = true;
+        return p;
+    }();
+    return info;
+}
+
+const PluginInfo& filterInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.filter";
+        p.name = "Aestra Filter";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Filter";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = true;
+        return p;
+    }();
+    return info;
+}
+
+const PluginInfo& ottInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.ott";
+        p.name = "Aestra OTT";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Dynamics";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = true;
+        return p;
+    }();
+    return info;
+}
+
+const PluginInfo& lfoInfo() {
+    static const PluginInfo info = [] {
+        PluginInfo p;
+        p.id = "com.Aestrastudios.lfo";
+        p.name = "Aestra LFO";
+        p.vendor = "Aestra Studios";
+        p.version = "0.1.0";
+        p.category = "Modulation";
+        p.format = PluginFormat::Internal;
+        p.type = PluginType::Effect;
+        p.numAudioInputs = 2;
+        p.numAudioOutputs = 2;
+        p.hasMidiInput = false;
+        p.hasMidiOutput = false;
+        p.hasEditor = true;
+        return p;
+    }();
+    return info;
+}
+
 namespace {
 void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
     if (!instance) {
@@ -156,6 +261,16 @@ void applyInfo(const PluginInfo& info, const PluginInstancePtr& instance) {
         delay->setInfo(info);
     } else if (auto drift = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraDrift>(instance)) {
         drift->setInfo(info);
+    } else if (auto limit = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraLimit>(instance)) {
+        limit->setInfo(info);
+    } else if (auto sat = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraSat>(instance)) {
+        sat->setInfo(info);
+    } else if (auto filter = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraFilter>(instance)) {
+        filter->setInfo(info);
+    } else if (auto ott = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraOTT>(instance)) {
+        ott->setInfo(info);
+    } else if (auto lfo = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraLFO>(instance)) {
+        lfo->setInfo(info);
     }
 }
 
@@ -183,6 +298,11 @@ void registerCoreBuiltIns() {
         registry.registerPlugin(makeRegistration<Plugins::AestraVerb>(verbInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraDelay>(delayInfo()));
         registry.registerPlugin(makeRegistration<Plugins::AestraDrift>(driftInfo()));
+        registry.registerPlugin(makeRegistration<Plugins::AestraLimit>(limiterInfo()));
+        registry.registerPlugin(makeRegistration<Plugins::AestraSat>(satInfo()));
+        registry.registerPlugin(makeRegistration<Plugins::AestraFilter>(filterInfo()));
+        registry.registerPlugin(makeRegistration<Plugins::AestraOTT>(ottInfo()));
+        registry.registerPlugin(makeRegistration<Plugins::AestraLFO>(lfoInfo()));
     });
 }
 

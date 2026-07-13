@@ -1,6 +1,10 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -192,6 +196,47 @@ private:
         return out;
     }
 
+    // Round-trip-precise, exponent-free decimal formatting for doubles.
+    // Plain stream insertion defaults to 6 significant digits, which silently
+    // truncated every double in saved projects (a clip at beat 1024.125 came
+    // back as 1024.12 — an audible position shift). Tries the fewest
+    // significant digits in [15..17] whose plain-decimal rendering strtod's
+    // back to the identical bits, then trims trailing zeros. Plain decimal
+    // (never exponent form) keeps output readable and parseable by every
+    // existing consumer. Note: like the stream insertion it replaces, this
+    // assumes the C numeric locale uses '.' as the decimal separator.
+    static void formatNumber(char* buf, size_t bufSize, double v) {
+        if (!std::isfinite(v)) {
+            // Preserve prior stream behavior for non-finite values ("nan"/"inf");
+            // they are invalid JSON either way and callers guard against them.
+            std::snprintf(buf, bufSize, "%g", v);
+            return;
+        }
+        const double magnitude = std::fabs(v);
+        const int exp10 = (magnitude > 0.0) ? static_cast<int>(std::floor(std::log10(magnitude))) : 0;
+        bool exact = false;
+        for (int sigDigits = 15; sigDigits <= 17 && !exact; ++sigDigits) {
+            // log10 can be off by one near powers of ten; bump decimals to recover.
+            for (int bump = 0; bump <= 2 && !exact; ++bump) {
+                int decimals = sigDigits - 1 - exp10 + bump;
+                decimals = decimals < 0 ? 0 : (decimals > 340 ? 340 : decimals);
+                std::snprintf(buf, bufSize, "%.*f", decimals, v);
+                exact = (std::strtod(buf, nullptr) == v);
+            }
+        }
+        char* dot = std::strchr(buf, '.');
+        if (dot != nullptr) {
+            char* end = buf + std::strlen(buf);
+            while (end > buf && *(end - 1) == '0') {
+                --end;
+            }
+            if (end > buf && *(end - 1) == '.') {
+                --end;
+            }
+            *end = '\0';
+        }
+    }
+
     void serialize(std::stringstream& ss, int indent, int depth) const {
         std::string indentStr(depth * indent, ' ');
         std::string nextIndentStr((depth + 1) * indent, ' ');
@@ -203,9 +248,12 @@ private:
         case Type::Boolean:
             ss << (boolValue_ ? "true" : "false");
             break;
-        case Type::Number:
-            ss << numberValue_;
+        case Type::Number: {
+            char numBuf[512];
+            formatNumber(numBuf, sizeof(numBuf), numberValue_);
+            ss << numBuf;
             break;
+        }
         case Type::String:
             ss << "\"" << escapeString(stringValue_) << "\"";
             break;

@@ -36,6 +36,7 @@ namespace {
         if (key == static_cast<int>(KC::Tab)) return NUIKC::Tab;
         if (key == static_cast<int>(KC::Backspace)) return NUIKC::Backspace;
         if (key == static_cast<int>(KC::Delete)) return NUIKC::Delete;
+        if (key == static_cast<int>(KC::CapsLock)) return NUIKC::CapsLock;
 
         // Arrow keys
         if (key == static_cast<int>(KC::Left)) return NUIKC::Left;
@@ -196,6 +197,12 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     // Do not move this registration before the bridge's — bridge state must be
     // current before AWM routing logic reads it.
     m_window->setMouseMoveCallback([this](int x, int y) {
+        // Feed the FPS governor: without these signals it never leaves the
+        // 30 FPS idle target (the signalActivity wiring only existed in the
+        // unused NUIApp shell, so interaction never boosted to 60).
+        if (m_adaptiveFPS)
+            m_adaptiveFPS->signalActivity(AestraUI::NUIAdaptiveFPS::ActivityType::MouseMove);
+
         m_lastMouseX = x;
         m_lastMouseY = y;
 
@@ -244,6 +251,8 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     });
 
     m_window->setMouseButtonCallback([this](int button, bool pressed) { // Fixed signature
+        if (m_adaptiveFPS)
+            m_adaptiveFPS->signalActivity(AestraUI::NUIAdaptiveFPS::ActivityType::MouseClick);
         // RecoveryDialog is modal - consume all mouse events when visible
         if (m_recoveryDialog && m_recoveryDialog->isDialogVisible()) {
             AestraUI::NUIMouseEvent event;
@@ -287,6 +296,8 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     });
 
     m_window->setKeyCallback([this](int key, bool pressed) {
+        if (m_adaptiveFPS)
+            m_adaptiveFPS->signalActivity(AestraUI::NUIAdaptiveFPS::ActivityType::KeyPress);
         // Track Modifiers
         using NM = AestraUI::NUIModifiers;
         int currentMods = static_cast<int>(m_keyModifiers);
@@ -295,16 +306,22 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         
         // Use Aestra::KeyCode matching Platform constants
         if (key == static_cast<int>(Aestra::KeyCode::Shift)) { // 16
-            if (pressed) currentMods |= static_cast<int>(NM::Shift);
-            else currentMods &= ~static_cast<int>(NM::Shift);
+            if (pressed)
+                currentMods |= static_cast<int>(NM::Shift);
+            else
+                currentMods &= ~static_cast<int>(NM::Shift);
         }
         if (key == static_cast<int>(Aestra::KeyCode::Control)) { // 17
-            if (pressed) currentMods |= static_cast<int>(NM::Ctrl);
-            else currentMods &= ~static_cast<int>(NM::Ctrl);
+            if (pressed)
+                currentMods |= static_cast<int>(NM::Ctrl);
+            else
+                currentMods &= ~static_cast<int>(NM::Ctrl);
         }
         if (key == static_cast<int>(Aestra::KeyCode::Alt)) { // 18
-            if (pressed) currentMods |= static_cast<int>(NM::Alt);
-            else currentMods &= ~static_cast<int>(NM::Alt);
+            if (pressed)
+                currentMods |= static_cast<int>(NM::Alt);
+            else
+                currentMods &= ~static_cast<int>(NM::Alt);
         }
         
         m_keyModifiers = static_cast<NM>(currentMods);
@@ -337,8 +354,15 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
             event.released = !pressed;
             event.modifiers = m_keyModifiers;
 
-            if (event.keyCode == AestraUI::NUIKeyCode::Space) {
-                if (m_content->onKeyEvent(event)) return;
+            // Global-first bucket mirrors AestraRootComponent: releases (note
+            // latches), Space, and Ctrl-chords (app shortcuts like Ctrl+Z must
+            // not be swallowed by a focused widget). Content only claims the
+            // undo/redo/history chords, so clipboard combos still reach
+            // focused text inputs.
+            if (event.keyCode == AestraUI::NUIKeyCode::Space || event.released ||
+                (event.modifiers & AestraUI::NUIModifiers::Ctrl)) {
+                if (m_content->onKeyEvent(event))
+                    return;
             }
 
             if (auto* focused = AestraUI::NUIComponent::getFocusedComponent()) {
@@ -347,32 +371,35 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
                 }
             }
 
-            if (m_content->onKeyEvent(event)) return;
+            if (m_content->onKeyEvent(event))
+                return;
         }
 
         if (pressed) { // Press-only globals
-             
-             // F12: HUD
-             // F12: HUD
-             if (key == static_cast<int>(Aestra::KeyCode::F12)) { // 123
-                 if (m_unifiedHUD) m_unifiedHUD->setVisible(!m_unifiedHUD->isVisible());
-             }
-             // Esc
-             if (key == static_cast<int>(Aestra::KeyCode::Escape)) { // 27
-                 if (m_unifiedHUD && m_unifiedHUD->isVisible()) m_unifiedHUD->setVisible(false);
-                 this->hideActiveMenu();
-             }
-             
-             // Shortcuts (Undo/Redo)
-             bool ctrl = (currentMods & static_cast<int>(NM::Ctrl));
-             if (ctrl) {
-                 if (key == static_cast<int>(Aestra::KeyCode::Z) && m_content && m_content->getTrackManager()) { // Z
-                     m_content->getTrackManager()->getCommandHistory().undo();
-                 }
-                 if (key == static_cast<int>(Aestra::KeyCode::Y) && m_content && m_content->getTrackManager()) { // Y
-                     m_content->getTrackManager()->getCommandHistory().redo();
-                 }
-             }
+
+            // F12: HUD
+            // F12: HUD
+            if (key == static_cast<int>(Aestra::KeyCode::F12)) { // 123
+                if (m_unifiedHUD)
+                    m_unifiedHUD->setVisible(!m_unifiedHUD->isVisible());
+            }
+            // Esc
+            if (key == static_cast<int>(Aestra::KeyCode::Escape)) { // 27
+                if (m_unifiedHUD && m_unifiedHUD->isVisible())
+                    m_unifiedHUD->setVisible(false);
+                this->hideActiveMenu();
+            }
+
+            // Shortcuts (Undo/Redo)
+            bool ctrl = (currentMods & static_cast<int>(NM::Ctrl));
+            if (ctrl) {
+                if (key == static_cast<int>(Aestra::KeyCode::Z) && m_content && m_content->getTrackManager()) { // Z
+                    m_content->getTrackManager()->getCommandHistory().undo();
+                }
+                if (key == static_cast<int>(Aestra::KeyCode::Y) && m_content && m_content->getTrackManager()) { // Y
+                    m_content->getTrackManager()->getCommandHistory().redo();
+                }
+            }
         }
     });
 
@@ -391,6 +418,10 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
     });
 
     m_window->setFocusCallback([this](bool focused) {
+         m_windowFocused = focused;
+         if (!focused && m_content) {
+             m_content->releaseMusicalTypingNotes();
+         }
          if (m_useCustomCursor && m_window) {
              m_window->setCursorVisible(!focused); // Hide if focused (drawn manually)
          }
@@ -527,6 +558,22 @@ void AestraWindowManager::setExportDialog(std::shared_ptr<ExportDialog> dialog) 
     if (m_rootComponent && m_exportDialog) {
         m_rootComponent->addChild(m_exportDialog);
     }
+}
+
+bool AestraWindowManager::requiresContinuousRender() const {
+    if (m_unifiedHUD && m_unifiedHUD->isVisible())
+        return true; // profiler needs fresh samples
+    if (m_activeMenu)
+        return true;
+    if (m_recoveryDialog && m_recoveryDialog->isDialogVisible())
+        return true;
+    if (m_confirmationDialog && m_confirmationDialog->isDialogVisible())
+        return true;
+    if (m_settingsDialog && m_settingsDialog->isVisible())
+        return true;
+    if (m_exportDialog && m_exportDialog->isVisible())
+        return true;
+    return false;
 }
 
 void AestraWindowManager::setUnifiedHUD(std::shared_ptr<UnifiedHUD> hud) {

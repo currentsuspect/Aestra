@@ -28,14 +28,6 @@ AudioExporter::AudioExporter(AudioEngine& engine, TrackManager& trackManager)
 AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManager& trackManager,
                                                   double startBeat, double endBeat,
                                                   const std::string& outputPath, int32_t trackId) {
-    if (trackId >= 0) {
-        AudioExporter::Result unsupported;
-        unsupported.outputPath = outputPath;
-        unsupported.errorMessage =
-            "Isolated-track bounce is not yet supported by AudioExporter::bounceToWav";
-        return unsupported;
-    }
-
     // Validate beat range
     if (!std::isfinite(startBeat) || !std::isfinite(endBeat)) {
         AudioExporter::Result invalid;
@@ -50,14 +42,36 @@ AudioExporter::Result AudioExporter::bounceToWav(AudioEngine& engine, TrackManag
         return invalid;
     }
 
+    // Isolated track bounce: delegate to engine's bounceRangeToWav which uses
+    // AudioRenderer::renderBlock + processArsenalUnits (no master stage).
+    if (trackId >= 0) {
+        Result result;
+        result.outputPath = outputPath;
+        trackManager.buildAndShareSlotMap();
+        if (auto slotMap = trackManager.getChannelSlotMapShared()) {
+            engine.setChannelSlotMap(slotMap);
+        } else {
+            result.errorMessage = "Isolated track bounce failed: missing channel slot map";
+            return result;
+        }
+        bool ok = engine.bounceRangeToWav(startBeat, endBeat, outputPath, trackId);
+        if (!ok) {
+            result.errorMessage = "Isolated track bounce failed";
+            return result;
+        }
+        result.success = true;
+        const double bpm = std::max(static_cast<double>(engine.getBPM()), 1.0);
+        result.durationSeconds = (endBeat - startBeat) * 60.0 / bpm;
+        result.framesRendered = static_cast<uint64_t>(
+            std::ceil(result.durationSeconds * static_cast<double>(engine.getSampleRate())));
+        return result;
+    }
+
     AudioExporter exporter(engine, trackManager);
     Config config;
     config.outputPath = outputPath;
     config.startBeat = startBeat;
     config.endBeat = endBeat;
-    // Use FullSong scope — computeRenderDurationBeats now handles beat ranges
-    // under FullSong. Selection scope reads startTimeSeconds/endTimeSeconds
-    // which bounceToWav does not set, causing zero-duration renders.
     config.scope = RenderScope::FullSong;
     config.sampleRate = engine.getSampleRate();
     config.bitDepth = BitDepth::Float_32;
@@ -192,8 +206,15 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // mismatches between playback and export.
     const bool wasMetronomeEnabled = m_engine.isMetronomeEnabled();
     const bool wasAuditionEnabled = m_engine.isAuditionModeEnabled();
+    // Preview ducking is a monitoring convenience and must never attenuate an
+    // offline render: an audible browser preview during export was measured to
+    // duck the exported file by the full configured attenuation
+    // (RealtimeExportParityTest, Export_Immune_To_Preview_Ducking).
+    const float wasPreviewDuckDb = m_engine.getPreviewDuckingAttenuationDb();
     m_engine.setMetronomeEnabled(false);
     m_engine.setAuditionModeEnabled(false);
+    m_engine.setPreviewDuckingAttenuationDb(0.0f);
+    m_engine.resetPreviewDuckForOfflineRender();
     m_engine.setGlobalSamplePos(startSample);
     m_engine.setTransportPlaying(true);
 
@@ -205,13 +226,15 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // reflects only this render pass, not stale peaks from prior playback.
     m_engine.clearTruePeakHold();
 
-    // Render loop using AudioRenderer::renderBlock (same path as bounceRangeToWav)
+    // Render loop
     uint64_t framesRemaining = totalFrames;
     result.framesRendered = 0;
+
     while (framesRemaining > 0 && !shouldCancel()) {
         uint32_t framesThisBlock = static_cast<uint32_t>(
             std::min<uint64_t>(RENDER_BLOCK_FRAMES, framesRemaining));
 
+        // Master bounce: use full live engine path with master stage
         m_engine.processBlock(m_renderBufferF.data(), nullptr, framesThisBlock, 0.0);
         m_engine.performNonRealtimeMaintenance();
 
@@ -254,6 +277,9 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_trackManager.setOutputSampleRate(static_cast<double>(originalSampleRate));
     m_engine.setMetronomeEnabled(wasMetronomeEnabled);
     m_engine.setAuditionModeEnabled(wasAuditionEnabled);
+    // Restore the configured duck depth only; live playback re-smooths the
+    // duck gain naturally from the current preview state.
+    m_engine.setPreviewDuckingAttenuationDb(wasPreviewDuckDb);
     m_engine.setGlobalSamplePos(savedSamplePos);
     if (wasPlaying) {
         m_engine.setTransportPlaying(true);

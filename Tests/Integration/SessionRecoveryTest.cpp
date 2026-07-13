@@ -2,6 +2,7 @@
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
 #include "Models/TrackManager.h"
@@ -14,23 +15,6 @@
 #include <string>
 
 namespace {
-
-std::filesystem::path makeTempDir() {
-    auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-
-    for (int i = 0; i < 1000; ++i) {
-        auto candidate = base / ("SessionRecovery_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
-            return candidate;
-        }
-    }
-
-    auto fallback = base / "SessionRecovery_fallback";
-    std::filesystem::create_directories(fallback);
-    return fallback;
-}
 
 bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, int numSamples) {
     if (sampleRate <= 0 || numSamples <= 0)
@@ -106,10 +90,8 @@ bool isCrashedSession(const std::filesystem::path& path) {
 }
 
 // Mimics RecoveryDialog::detectAutosave — just checks file existence
-bool detectAutosave(const std::filesystem::path& autosavePath,
-                    const std::filesystem::path& recoveryMarkerPath,
-                    const std::string& expectedSessionToken,
-                    std::string& outTimestamp) {
+bool detectAutosave(const std::filesystem::path& autosavePath, const std::filesystem::path& recoveryMarkerPath,
+                    const std::string& expectedSessionToken, std::string& outTimestamp) {
     std::error_code ec;
     if (!std::filesystem::exists(autosavePath, ec) || ec) {
         return false;
@@ -133,7 +115,8 @@ bool detectAutosave(const std::filesystem::path& autosavePath,
 int main() {
     using namespace Aestra::Audio;
 
-    const auto tempDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"SessionRecovery"};
+    const auto& tempDir = tempDirScope.path();
     const auto wavPath = tempDir / "test.wav";
     const auto autosavePath = tempDir / "autosave.aes";
     const auto recoveryMarkerPath = tempDir / "autosave.aes.recovery";
@@ -244,10 +227,8 @@ int main() {
     require(recoveredChannel1 != nullptr && recoveredChannel2 != nullptr, "Recovered channels missing");
     require(recoveredChannel1->getMainOutputId() == recoveredChannel2->getChannelId(),
             "Recovered main output destination mismatch");
-    require(std::abs(recoveredChannel1->getVolume() - 0.75f) < 1e-6f,
-            "Recovered channel 1 volume mismatch");
-    require(std::abs(recoveredChannel1->getPan() - (-0.25f)) < 1e-6f,
-            "Recovered channel 1 pan mismatch");
+    require(std::abs(recoveredChannel1->getVolume() - 0.75f) < 1e-6f, "Recovered channel 1 volume mismatch");
+    require(std::abs(recoveredChannel1->getPan() - (-0.25f)) < 1e-6f, "Recovered channel 1 pan mismatch");
 
     // --- Clean up
     clearCrashFlag(crashFlagPath);

@@ -114,6 +114,19 @@ class FakeD1Statement {
         status: account.status,
       } as T;
     }
+    if (this.sql.includes("COUNT(*) AS recent_count") && this.sql.includes("FROM account_login_challenges")) {
+      const nowSeconds = this.args[0] as number;
+      const email = this.args[1] as string;
+      const windowStart = this.args[2] as number;
+      const recent = this.state.challenges.filter((row) => row.email === email && row.created_at > windowStart);
+      const pending = recent.filter((row) => row.status === "pending" && row.expires_at > nowSeconds);
+      const latest = recent.reduce<number | null>((best, row) => best === null ? row.created_at : Math.max(best, row.created_at), null);
+      return {
+        recent_count: recent.length,
+        pending_count: pending.length,
+        latest_created_at: latest,
+      } as T;
+    }
     if (this.sql.includes("FROM account_login_challenges")) {
       const id = this.args[0] as string;
       const email = this.args[1] as string;
@@ -808,6 +821,17 @@ describe("D1 account login and session issuance boundary", () => {
     expect(missingBody.ok).toBe(true);
     expect(existingBody.fixture_code).toHaveLength(6);
     expect(missingBody.fixture_code).toHaveLength(6);
+  });
+
+  it("rate limits repeated login challenge creation for the same recipient", async () => {
+    const state = emptyState();
+    const env = await makeLoginEnv(state);
+    const first = await loginStart(env, "target@example.test");
+    const second = await loginStart(env, "target@example.test");
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(429);
+    expect(await second.json()).toMatchObject({ error: { code: "login_start_rate_limited" } });
+    expect(state.challenges).toHaveLength(1);
   });
 
   it("verifies a challenge, creates a Core account, returns a raw session once, and stores only token hash", async () => {

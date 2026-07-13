@@ -147,6 +147,16 @@ list(APPEND AESTRAUI_CORE_SOURCES
     Widgets/AestraDelayEditor.cpp
     Widgets/AestraDriftEditor.h
     Widgets/AestraDriftEditor.cpp
+    Widgets/AestraLimitEditor.h
+    Widgets/AestraLimitEditor.cpp
+    Widgets/AestraSatEditor.h
+    Widgets/AestraSatEditor.cpp
+    Widgets/AestraFilterEditor.h
+    Widgets/AestraFilterEditor.cpp
+    Widgets/AestraOTTEditor.h
+    Widgets/AestraOTTEditor.cpp
+    Widgets/AestraLFOEditor.h
+    Widgets/AestraLFOEditor.cpp
 )
 
 if(AESTRAUI_ENABLE_PREMIUM_EDITORS)

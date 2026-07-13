@@ -1,7 +1,43 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUITheme.h"
 
+#include "AestraJSON.h"
+#include "AestraLog.h"
+
+#include <cctype>
+#include <cmath>
+#include <fstream>
+#include <functional>
+
 namespace AestraUI {
+
+namespace {
+
+// Parses "#RRGGBB" or "#RRGGBBAA" (leading '#' required). Returns false on
+// malformed input without touching `out`.
+bool parseHexColor(const std::string& text, NUIColor& out) {
+    if (text.empty() || text[0] != '#') {
+        return false;
+    }
+    const std::string hex = text.substr(1);
+    if (hex.size() != 6 && hex.size() != 8) {
+        return false;
+    }
+    for (char c : hex) {
+        if (!std::isxdigit(static_cast<unsigned char>(c))) {
+            return false;
+        }
+    }
+    const auto rgb = static_cast<uint32_t>(std::stoul(hex.substr(0, 6), nullptr, 16));
+    float alpha = 1.0f;
+    if (hex.size() == 8) {
+        alpha = static_cast<float>(std::stoul(hex.substr(6, 2), nullptr, 16)) / 255.0f;
+    }
+    out = NUIColor::fromHex(rgb, alpha);
+    return true;
+}
+
+} // namespace
 
 NUITheme::NUITheme() {
 }
@@ -10,9 +46,9 @@ std::shared_ptr<NUITheme> NUITheme::createDefault() {
     auto theme = std::make_shared<NUITheme>();
     
     // Aestra landing-aligned premium dark palette
-    theme->setColor("background", NUIColor::fromHex(0x080a0e));
-    theme->setColor("surface", NUIColor::fromHex(0x0f1118, 0.96f));
-    theme->setColor("surfaceLight", NUIColor::fromHex(0x13161e));
+    theme->setColor("background", NUIColor::fromHex(0x0a0a0a));
+    theme->setColor("surface", NUIColor::fromHex(0x101010, 0.96f));
+    theme->setColor("surfaceLight", NUIColor::fromHex(0x161616));
     
     // Accents
     theme->setColor("primary", NUIColor::fromHex(0x8b7de8));      // Brand purple
@@ -22,14 +58,14 @@ std::shared_ptr<NUITheme> NUITheme::createDefault() {
     theme->setColor("error", NUIColor::fromHex(0xe06a4e));        // Coral
     
     // UI Elements
-    theme->setColor("text", NUIColor::fromHex(0xc0c8e0));
-    theme->setColor("textSecondary", NUIColor::fromHex(0x8b95b0));
-    theme->setColor("textDisabled", NUIColor::fromHex(0x3a4060));
-    
-    theme->setColor("border", NUIColor::fromHex(0x2a2f42, 0.86f));
+    theme->setColor("text", NUIColor::fromHex(0xc8c8c8));
+    theme->setColor("textSecondary", NUIColor::fromHex(0x999999));
+    theme->setColor("textDisabled", NUIColor::fromHex(0x474747));
+
+    theme->setColor("border", NUIColor::fromHex(0x2d2d2d, 0.86f));
     theme->setColor("hover", NUIColor::fromHex(0xffffff, 0.06f));
     theme->setColor("active", NUIColor::fromHex(0x8b7de8, 0.2f));
-    theme->setColor("disabled", NUIColor::fromHex(0x1a1e2a, 0.58f));
+    theme->setColor("disabled", NUIColor::fromHex(0x1d1d1d, 0.58f));
 
     // Dimensions
     theme->setDimension("borderRadius", 12.0f);        // Soft Geometry
@@ -63,9 +99,113 @@ std::shared_ptr<NUITheme> NUITheme::createDefault() {
 }
 
 std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
-    // TODO: Implement JSON loading
-    // For now, return default theme
-    return createDefault();
+    // Start from the default theme so every token missing from the file keeps
+    // its default value. On any failure this default theme is returned (never
+    // nullptr) and the failure is logged.
+    auto theme = createDefault();
+
+    std::ifstream file(filepath, std::ios::binary);
+    if (!file.is_open()) {
+        Aestra::Log::warning("[NUITheme] Cannot open theme file '" + filepath + "' — using default theme");
+        return theme;
+    }
+
+    // Theme files are tiny; reject pathological sizes before parsing
+    // (file parsing is security-sensitive input handling).
+    constexpr std::streamoff kMaxThemeFileBytes = 1 << 20; // 1 MiB
+    file.seekg(0, std::ios::end);
+    const std::streamoff fileSize = file.tellg();
+    if (fileSize < 0 || fileSize > kMaxThemeFileBytes) {
+        Aestra::Log::error("[NUITheme] Theme file '" + filepath + "' rejected (size " + std::to_string(fileSize) +
+                           " bytes) — using default theme");
+        return theme;
+    }
+    file.seekg(0, std::ios::beg);
+    std::string content(static_cast<size_t>(fileSize), '\0');
+    file.read(content.data(), fileSize);
+
+    Aestra::JSON root = Aestra::JSON::parse(content);
+    if (!root.isObject()) {
+        Aestra::Log::error("[NUITheme] Theme file '" + filepath + "' is not a valid JSON object — using default theme");
+        return theme;
+    }
+
+    int applied = 0;
+    int skipped = 0;
+
+    // NOTE: Aestra::JSON's const asObject() intentionally returns an empty map
+    // (SEC-RTM-014); iterate via the non-const copy-returning overload.
+    auto rootObj = root.asObject();
+
+    auto forEachEntry = [&](const char* section, const std::function<bool(const std::string&, Aestra::JSON&)>& apply) {
+        auto it = rootObj.find(section);
+        if (it == rootObj.end()) {
+            return;
+        }
+        if (!it->second.isObject()) {
+            Aestra::Log::warning("[NUITheme] Section '" + std::string(section) + "' in '" + filepath +
+                                 "' is not an object — ignored");
+            return;
+        }
+        auto entries = it->second.asObject();
+        for (auto& [key, value] : entries) {
+            if (apply(key, value)) {
+                ++applied;
+            } else {
+                ++skipped;
+                Aestra::Log::warning("[NUITheme] Invalid value for '" + std::string(section) + "." + key + "' in '" +
+                                     filepath + "' — keeping default");
+            }
+        }
+    };
+
+    forEachEntry("colors", [&](const std::string& key, Aestra::JSON& value) {
+        NUIColor color;
+        if (!value.isString() || !parseHexColor(value.asString(), color)) {
+            return false;
+        }
+        theme->setColor(key, color);
+        return true;
+    });
+
+    auto numericEntry = [](Aestra::JSON& value, float& out, bool requirePositive) {
+        if (!value.isNumber() || !std::isfinite(value.asNumber())) {
+            return false;
+        }
+        if (requirePositive && value.asNumber() <= 0.0) {
+            return false;
+        }
+        out = static_cast<float>(value.asNumber());
+        return true;
+    };
+
+    forEachEntry("dimensions", [&](const std::string& key, Aestra::JSON& value) {
+        float v = 0.0f;
+        if (!numericEntry(value, v, false))
+            return false;
+        theme->setDimension(key, v);
+        return true;
+    });
+
+    forEachEntry("effects", [&](const std::string& key, Aestra::JSON& value) {
+        float v = 0.0f;
+        if (!numericEntry(value, v, false))
+            return false;
+        theme->setEffect(key, v);
+        return true;
+    });
+
+    forEachEntry("fontSizes", [&](const std::string& key, Aestra::JSON& value) {
+        float v = 0.0f;
+        if (!numericEntry(value, v, true))
+            return false; // font sizes must be > 0
+        theme->setFontSize(key, v);
+        return true;
+    });
+
+    Aestra::Log::info("[NUITheme] Loaded theme '" + filepath + "': " + std::to_string(applied) + " tokens applied, " +
+                      std::to_string(skipped) + " invalid tokens kept as defaults");
+    return theme;
 }
 
 // ============================================================================

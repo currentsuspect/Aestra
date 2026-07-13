@@ -302,10 +302,21 @@ void AestraApp::initializeContent() {
     if (m_audioController->getEngine()) {
         m_content->setAudioEngine(m_audioController->getEngine());
     }
+    m_content->setMidiInput(m_audioController->getMidiInput());
     syncRecordingProjectPath(m_content, m_projectPath);
 
     m_windowManager->setContent(m_content);
     m_audioController->setContent(m_content);
+
+    // Performance HUD is created eagerly: it must exist independently of the
+    // lazily built settings dialogs, or F12 / View → Performance Stats are
+    // silent no-ops until the user happens to open Settings or Export first.
+    // The HUD itself is lightweight; the "heavy — deferred" rationale in
+    // buildSettingsAndDialogs() applies to the dialogs, not to this.
+    auto unifiedHUD = std::make_shared<UnifiedHUD>(m_windowManager->getAdaptiveFPS());
+    unifiedHUD->setVisible(false);
+    unifiedHUD->setAudioEngine(m_audioController->getEngine());
+    m_windowManager->setUnifiedHUD(unifiedHUD);
 }
 
 void AestraApp::initializeAutosave(bool enabled) {
@@ -351,6 +362,9 @@ void AestraApp::buildSettingsAndDialogs() {
     audioPage->setOnStreamRestore([this]() {
          m_audioController->closeStream();
          m_audioStreamReady = false;
+         // Stream is restarting: let the RT-scheduling state be re-reported
+         // for the new stream (the audio thread re-verifies on first callback).
+         m_rtStateLogged = false;
          m_audioConfigSynced = false;
          if (m_audioController->openDefaultStream(nullptr)) {
              m_audioController->startStream();
@@ -372,10 +386,8 @@ void AestraApp::buildSettingsAndDialogs() {
     auto exportDialog = std::make_shared<ExportDialog>();
     m_windowManager->setExportDialog(exportDialog);
 
-    auto unifiedHUD = std::make_shared<UnifiedHUD>(m_windowManager->getAdaptiveFPS());
-    unifiedHUD->setVisible(false);
-    unifiedHUD->setAudioEngine(m_audioController->getEngine());
-    m_windowManager->setUnifiedHUD(unifiedHUD);
+    // Performance HUD is created in initializeContent() — it must not be tied
+    // to this lazily built path (see note there).
 }
 
 void AestraApp::ensureSettingsAndDialogs() {
@@ -839,6 +851,13 @@ void AestraApp::finalizeAudioSetup() {
         }
         connectAudioToUI(); // Sync configs now that stream is open
         m_audioStreamReady = true;
+
+        // Re-wire the performance HUD in case the engine wasn't constructed
+        // yet when the HUD was created in initializeContent() (e.g. audio init
+        // failed at startup and recovered here). Idempotent when already set.
+        if (auto* hud = m_windowManager->getUnifiedHUD()) {
+            hud->setAudioEngine(m_audioController->getEngine());
+        }
     }
 }
 
@@ -905,6 +924,13 @@ void AestraApp::run() {
                    transportBar->syncTransportState(tm->isPlaying(), tm->isPaused(), tm->isRecordArmed());
                 }
                 updateWindowTitle();
+
+                // Playback needs the 60 FPS target for smooth playhead/meters;
+                // when stopped this decays back to the idle target via the
+                // governor's timeout.
+                if (auto* fps = m_windowManager->getAdaptiveFPS()) {
+                    fps->setAudioVisualizationActive(tm->isPlaying());
+                }
             }
 
             // Rebuild graph check - uses PlaybackGraphController for canonical drain
@@ -916,8 +942,22 @@ void AestraApp::run() {
             }
         }
 
-        {
+        // ---- Idle frame elision (labs/perf/idle-frame-elision-spec.md) ----
+        // Events and updates above always run at full cadence (input latency
+        // is untouched); only the render+swap work is elided when nothing can
+        // have changed on screen. A ~3 fps heartbeat keeps the window alive.
+        const bool presentThisFrame = shouldRenderThisFrame();
+
+        if (presentThisFrame) {
             AESTRA_ZONE("Render_Prep");
+            // Consume the pending-invalidation bit at render START: everything
+            // dirty up to this point is included in this frame; anything that
+            // dirties DURING render survives and triggers the next frame.
+            // (Clearing after present would eat mid-render invalidations; the
+            // skip path never clears.)
+            if (auto* root = m_windowManager->getRootComponent()) {
+                root->setDirty(false);
+            }
             m_windowManager->render();
         }
 
@@ -931,7 +971,10 @@ void AestraApp::run() {
         }
 
         double sleepTime = m_windowManager->endFrame();
-        m_windowManager->swapBuffers();
+        if (presentThisFrame) {
+            m_windowManager->swapBuffers();
+            m_lastPresentedFrame = std::chrono::steady_clock::now();
+        }
         if (sleepTime > 0.0) {
              if (auto fps = m_windowManager->getAdaptiveFPS()) {
                  fps->sleep(sleepTime);
@@ -942,6 +985,46 @@ void AestraApp::run() {
 
         UnifiedProfiler::getInstance().endFrame();
     }
+}
+
+bool AestraApp::shouldRenderThisFrame() {
+    // Conservative v1 gate: render unless EVERY skip condition holds
+    // (dirty == false && realtime_visuals == false && input_recent == false).
+
+    // Pending invalidation — any component's setDirty(true) propagates here.
+    auto* root = m_windowManager->getRootComponent();
+    if (!root || root->isDirty())
+        return true;
+
+    // Input recency — the adaptive FPS governor already tracks this (fed by
+    // mouse/key callbacks); align with its idle timeout.
+    auto* fps = m_windowManager->getAdaptiveFPS();
+    if (!fps || fps->getIdleTime() < 2.0)
+        return true;
+
+    // Realtime visuals — transport (playhead/meters), record-arm input
+    // monitoring, file preview, and Audition playback.
+    if (m_audioController && m_audioController->getEngine() && m_audioController->getEngine()->isTransportPlaying()) {
+        return true;
+    }
+    if (m_content) {
+        if (auto tm = m_content->getTrackManager()) {
+            if (tm->isPlaying() || tm->isRecordArmed())
+                return true;
+        }
+        if (m_content->hasRealtimePlaybackVisuals())
+            return true;
+    }
+
+    // Overlays that animate or need fresh samples (HUD, dialogs, menus).
+    if (m_windowManager->requiresContinuousRender())
+        return true;
+
+    // Deeply idle: heartbeat only (~3.3 fps) so caret blink, tooltips and any
+    // unsignaled change still surface within ~300 ms.
+    const auto now = std::chrono::steady_clock::now();
+    const double sinceLastPresent = std::chrono::duration<double>(now - m_lastPresentedFrame).count();
+    return sinceLastPresent >= 0.3;
 }
 
 void AestraApp::shutdown() {

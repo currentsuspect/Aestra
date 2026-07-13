@@ -236,10 +236,17 @@ public:
         setDirty(true);
     }
 
+    // Timeline zoom ceiling. 32000 px/beat reaches below one sample per pixel
+    // at 120 BPM / 48 kHz, so the sample-level waveform rendering path is
+    // reachable. Scroll offset is float absolute-pixels: at this zoom the far
+    // end of a long song quantizes to ~1-2 px, which is display-only
+    // (positions are stored in double beats).
+    static constexpr float kMaxTimelinePixelsPerBeat = 32000.0f;
+
     // Issue #120: Track View Zoom/Scroll State Persistence
     float getHorizontalZoom() const { return m_pixelsPerBeat; }
     void setHorizontalZoom(float zoom) {
-        m_pixelsPerBeat = std::clamp(zoom, 1.0f, 300.0f);
+        m_pixelsPerBeat = std::clamp(zoom, 1.0f, kMaxTimelinePixelsPerBeat);
         m_targetPixelsPerBeat = m_pixelsPerBeat;
         for (auto& trackUI : m_trackUIComponents) {
             trackUI->setPixelsPerBeat(m_pixelsPerBeat);

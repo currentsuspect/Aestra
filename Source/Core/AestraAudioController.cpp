@@ -4,6 +4,7 @@
 #include "AudioThreadConstraints.h"
 #include "AudioRT.h"
 #include "AudioTelemetry.h"
+#include "MidiInputService.h"
 #include "PreviewEngine.h"
 #include "TrackManager.h"
 #include "AestraPlatform.h"
@@ -141,6 +142,7 @@ const AudioDeviceInfo* choosePreferredInputDevice(const std::vector<AudioDeviceI
 AestraAudioController::AestraAudioController() {
     m_audioManager = std::make_unique<AudioDeviceManager>();
     m_audioEngine = std::make_unique<AudioEngine>();
+    m_midiInput = std::make_unique<MidiInputService>();
 }
 
 AestraAudioController::~AestraAudioController() {
@@ -154,10 +156,35 @@ bool AestraAudioController::initialize() {
         return false;
     }
     Log::info("Audio engine initialized");
+
+    // Hardware MIDI input: the RtMidi callback thread is the single producer
+    // of the engine's hardware SPSC queue. The raw engine pointer is safe: the
+    // engine is created in our constructor and destroyed only in shutdown(),
+    // after the service has been stopped. Zero ports (or the core-mode stub)
+    // is a normal, silent outcome — play/edit must work without a controller.
+    if (m_midiInput && m_audioEngine) {
+        AudioEngine* engine = m_audioEngine.get();
+        const size_t midiPorts =
+            m_midiInput->start([engine](uint64_t unitId, uint8_t status, uint8_t data1, uint8_t data2) {
+                engine->postHardwareMidiEvent(unitId, status, data1, data2);
+            });
+        Log::info("Hardware MIDI input ports opened: " + std::to_string(midiPorts));
+    }
     return true;
 }
 
 void AestraAudioController::shutdown() {
+    // Detach the content's raw observer pointer before the service goes away:
+    // the content can outlive this shutdown (we hold a shared_ptr to it), and
+    // a late unit-selection callback must not touch a freed MidiInputService.
+    if (auto content = m_content.lock()) {
+        content->setMidiInput(nullptr);
+    }
+    // Stop hardware MIDI first: cancels RtMidi callbacks so no producer can
+    // touch the engine's queue once teardown proceeds.
+    if (m_midiInput) {
+        m_midiInput->stop();
+    }
     if (m_initialized && m_audioManager) {
         stopStream();
         closeStream();
@@ -165,6 +192,7 @@ void AestraAudioController::shutdown() {
     if (m_audioEngine) {
         m_audioEngine->drainDeferredResourcesForShutdown();
     }
+    m_midiInput.reset();
     m_audioEngine.reset();
     m_audioManager.reset();
     m_initialized = false;
@@ -172,7 +200,11 @@ void AestraAudioController::shutdown() {
 
 void AestraAudioController::setContent(std::shared_ptr<AestraContent> content) {
     m_content = content;
-    std::atomic_store_explicit(&m_rtContent, std::move(content), std::memory_order_release);
+    Aestra::Audio::TrackManager* trackManager = content ? content->getTrackManager().get() : nullptr;
+    Aestra::Audio::PreviewEngine* previewEngine = content ? content->getPreviewEngine() : nullptr;
+    m_rtTrackManager.store(trackManager, std::memory_order_release);
+    m_rtPreviewEngine.store(previewEngine, std::memory_order_release);
+    m_rtContent.store(std::move(content), std::memory_order_release);
 }
 
 bool AestraAudioController::openDefaultStream(void* userData) {
@@ -282,7 +314,9 @@ bool AestraAudioController::startStream() {
     if (!m_initialized || !m_audioManager) return false;
     if (m_isAudioRunning) return true;
     if (auto content = m_content.lock()) {
-        std::atomic_store_explicit(&m_rtContent, content, std::memory_order_release);
+        m_rtTrackManager.store(content->getTrackManager().get(), std::memory_order_release);
+        m_rtPreviewEngine.store(content->getPreviewEngine(), std::memory_order_release);
+        m_rtContent.store(std::move(content), std::memory_order_release);
     }
 
     // 1. Get Actual Rate/Buffer from Driver (if any) BEFORE starting thread
@@ -309,13 +343,10 @@ bool AestraAudioController::startStream() {
         m_audioEngine->setInputCallback([](const float* input, uint32_t n, void* user) {
             auto* controller = static_cast<AestraAudioController*>(user);
             if (controller) {
-                // Load once and reuse to avoid repeated atomic operations
-                auto content = std::atomic_load_explicit(&controller->m_rtContent, std::memory_order_acquire);
-                if (content) {
-                    if (auto trackManager = content->getTrackManager()) {
-                        trackManager->updateInputDiagnostics(input, n);
-                        trackManager->processInput(input, n, &controller->m_audioEngine->telemetry());
-                    }
+                auto* trackManager = controller->m_rtTrackManager.load(std::memory_order_acquire);
+                if (trackManager) {
+                    trackManager->updateInputDiagnostics(input, n);
+                    trackManager->processInput(input, n, &controller->m_audioEngine->telemetry());
                 }
             }
         }, this);
@@ -363,11 +394,16 @@ bool AestraAudioController::startStream() {
 void AestraAudioController::stopStream() {
     if (m_audioManager) m_audioManager->stopStream();
     m_isAudioRunning = false;
-    std::atomic_store_explicit(&m_rtContent, std::shared_ptr<AestraContent>{}, std::memory_order_release);
+    m_rtTrackManager.store(nullptr, std::memory_order_release);
+    m_rtPreviewEngine.store(nullptr, std::memory_order_release);
+    m_rtContent.store(nullptr, std::memory_order_release);
 }
 
 void AestraAudioController::closeStream() {
     if (m_audioManager) m_audioManager->closeStream();
+    m_rtTrackManager.store(nullptr, std::memory_order_release);
+    m_rtPreviewEngine.store(nullptr, std::memory_order_release);
+    m_rtContent.store(nullptr, std::memory_order_release);
 }
 
 bool AestraAudioController::setBufferSize(uint32_t bufferSize) {
@@ -418,20 +454,14 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
         std::fill(outputBuffer, outputBuffer + static_cast<size_t>(nFrames) * outCh, 0.0f);
     }
 
-    // Load content snapshot once and reuse for the entire callback to avoid repeated atomic operations
-    auto content = std::atomic_load_explicit(&controller->m_rtContent, std::memory_order_acquire);
-
-    if (inputBuffer && content) {
-        if (auto trackManager = content->getTrackManager()) {
-            trackManager->mixInputMonitoring(inputBuffer, outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
-        }
+    auto* trackManager = controller->m_rtTrackManager.load(std::memory_order_acquire);
+    if (inputBuffer && trackManager) {
+        trackManager->mixInputMonitoring(inputBuffer, outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
     }
 
-    // Preview mixing - reuse the same content snapshot
-    if (content) {
-        if (auto* previewEngine = content->getPreviewEngine()) {
-            previewEngine->processRealtime(outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
-        }
+    auto* previewEngine = controller->m_rtPreviewEngine.load(std::memory_order_acquire);
+    if (previewEngine) {
+        previewEngine->processRealtime(outputBuffer, nFrames, controller->m_streamConfig.numOutputChannels);
     }
 
     if (controller->m_audioEngine) {
@@ -441,19 +471,16 @@ int AestraAudioController::audioCallback(float* outputBuffer, const float* input
     const uint64_t cbEndCycles = Aestra::Audio::RT::readCycleCounter();
     if (controller->m_audioEngine && cbEndCycles > cbStartCycles) {
         auto& tel = controller->m_audioEngine->telemetry();
-        tel.lastBufferFrames.store(nFrames, std::memory_order_relaxed);
-        tel.lastSampleRate.store(static_cast<uint32_t>(actualRate), std::memory_order_relaxed);
         const uint64_t hz = tel.cycleHz.load(std::memory_order_relaxed);
         if (hz > 0) {
-           const uint64_t deltaCycles = cbEndCycles - cbStartCycles;
-           const uint64_t ns = (deltaCycles * 1000000000ull) / hz;
-           tel.lastCallbackNs.store(ns, std::memory_order_relaxed);
-           tel.updateMaxCallbackNs(ns);
-           const uint64_t deadlineNs =
-               (static_cast<uint64_t>(nFrames) * 1000000000ull) / static_cast<uint64_t>(actualRate);
-           if (deadlineNs > 0 && ns > deadlineNs) {
-               tel.incrementOverruns();
-           }
+            const uint64_t deltaCycles = cbEndCycles - cbStartCycles;
+            const uint64_t ns = (deltaCycles * 1000000000ull) / hz;
+            // Consolidated deadline accounting: last/max/avg duration, budget
+            // context, and over-budget counting (AudioTelemetry).
+            tel.recordCallbackDuration(ns, nFrames, static_cast<uint32_t>(actualRate));
+        } else {
+            tel.lastBufferFrames.store(nFrames, std::memory_order_relaxed);
+            tel.lastSampleRate.store(static_cast<uint32_t>(actualRate), std::memory_order_relaxed);
         }
     }
 

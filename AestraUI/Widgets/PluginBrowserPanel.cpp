@@ -827,14 +827,21 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     // Shared vertical midline for the slot row — center everything around it
     const float slotMid = slotRect.y + slotRect.height * 0.5f;
 
-    // Slot Number (Left side, stylistic) — centered on slotMid
+    // Slot Number (Left side, stylistic) — centered on slotMid.
+    // Populated slots get a solid index chip (it shows chain order). Empty slots
+    // stay quiet — a faint bare number revealed only on hover — so an empty rack
+    // reads as a column of available slots rather than a numbered debug table.
     char numBuf[8];
     std::snprintf(numBuf, sizeof(numBuf), "%d", index + 1);
     const float chipH = 14.0f;
     const NUIRect indexChip{slotRect.x + 8.0f, slotMid - chipH * 0.5f, 18.0f, chipH};
-    renderer.fillRoundedRect(indexChip, 7.0f, Colors::buttonBackgroundHover.withAlpha(slot.isEmpty ? 0.62f : 0.76f));
-    renderer.strokeRoundedRect(indexChip, 7.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
-    renderer.drawTextCentered(numBuf, indexChip, 9.0f, Colors::textDisabled.withAlpha(0.68f));
+    if (!slot.isEmpty) {
+        renderer.fillRoundedRect(indexChip, 7.0f, Colors::buttonBackgroundHover.withAlpha(0.76f));
+        renderer.strokeRoundedRect(indexChip, 7.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
+        renderer.drawTextCentered(numBuf, indexChip, 9.0f, Colors::textDisabled.withAlpha(0.68f));
+    } else if (isHovered) {
+        renderer.drawTextCentered(numBuf, indexChip, 9.0f, Colors::textDisabled.withAlpha(0.55f));
+    }
 
     // Available text area to the right of the chip.
     // Use the same vertical extent as the chip so drawTextCentered aligns identically.
@@ -843,38 +850,33 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     const float rowH = chipH; // 14 px — same height as the index chip
 
     if (slot.isEmpty) {
-        const NUIRect textRect{textX, slotMid - rowH * 0.5f, textW, rowH};
+        // Empty rows surface the affordance only on hover; the recessed row and
+        // subtle centre line already signal an available drop target, so the
+        // redundant em-dash placeholder is gone.
         if (isHovered) {
+            const NUIRect textRect{textX, slotMid - rowH * 0.5f, textW, rowH};
             renderer.drawTextCentered("+ Add Insert", textRect, 10.0f, Colors::textPrimary);
-        } else {
-            const NUIColor dashColor = NUIColor(1.0f, 1.0f, 1.0f, 0.12f);
-            renderer.drawTextCentered("\xe2\x80\x94", textRect, 10.0f, dashColor);
         }
     } else {
-        // Name line plus state indicators. Active state is shown by the purple dot;
-        // bypass and auto-quarantine need a text label.
+        // A user bypass simply greys the slot — no text label. The dimmed name
+        // (plus the recessed row background) carries the state. Auto-quarantine
+        // is a safety fault, not a user choice, so it still gets its warning.
+        const bool autoFaulted = slot.bypassed && slot.nonFiniteOutputFault;
         NUIColor nameColor = slot.bypassed ? Colors::textDisabled.withAlpha(0.6f) : Colors::textPrimary;
-        if (slot.bypassed) {
+        if (autoFaulted) {
             const NUIRect nameRect{textX, slotMid - rowH, textW, rowH};
             renderer.drawText(fitText(renderer, slot.name, 10.5f, nameRect.width),
                               {nameRect.x, nameRect.y + 2.0f},
                               10.5f,
                               nameColor);
+            const NUIRect statusRect{textX, slotMid, textW, rowH};
+            renderer.drawText("Output fault", {statusRect.x, statusRect.y + 2.0f}, 8.5f,
+                              NUIThemeManager::getInstance().getColor("warning").withAlpha(0.92f));
         } else {
             renderer.drawTextCentered(fitText(renderer, slot.name, 10.5f, textW),
                                       {textX, slotRect.y, textW, slotRect.height},
                                       10.5f,
                                       nameColor);
-        }
-
-        if (slot.bypassed) {
-            const NUIRect statusRect{textX, slotMid, textW, rowH};
-            const bool autoFaulted = slot.nonFiniteOutputFault;
-            const char* statusText = autoFaulted ? "Output fault" : "Bypassed";
-            const NUIColor statusColor = autoFaulted
-                                             ? NUIThemeManager::getInstance().getColor("warning").withAlpha(0.92f)
-                                             : Colors::textDisabled.withAlpha(0.72f);
-            renderer.drawText(statusText, {statusRect.x, statusRect.y + 2.0f}, 8.5f, statusColor);
         }
 
         // Active indicator / Bypass toggle

@@ -43,6 +43,20 @@ TransportBar::TransportBar()
     
     createButtons();
 
+    m_musicalTypingLabel = std::make_shared<AestraUI::NUILabel>("KEYS C3");
+    m_musicalTypingLabel->setFontSize(11.0f);
+    m_musicalTypingLabel->setAlignment(AestraUI::NUILabel::Alignment::Center);
+    m_musicalTypingLabel->setTextColor(AestraUI::NUIThemeManager::getInstance().getColor("accentPrimary"));
+    m_musicalTypingLabel->setBackgroundVisible(true);
+    m_musicalTypingLabel->setBackgroundColor(
+        AestraUI::NUIThemeManager::getInstance().getColor("surfaceTertiary").withAlpha(0.72f));
+    m_musicalTypingLabel->setBorderVisible(true);
+    m_musicalTypingLabel->setBorderWidth(1.0f);
+    m_musicalTypingLabel->setBorderColor(
+        AestraUI::NUIThemeManager::getInstance().getColor("border").withAlpha(0.52f));
+    m_musicalTypingLabel->setTooltip("Computer keys: Caps Lock toggles, Up/Down shifts octave");
+    addChild(m_musicalTypingLabel);
+
     // Wire up BPM change callback from arrows
     if (m_infoContainer && m_infoContainer->getBPMDisplay()) {
         m_infoContainer->getBPMDisplay()->setOnBPMChange([this](float newBPM) {
@@ -414,6 +428,17 @@ void TransportBar::syncTransportState(bool playing, bool paused, bool recordArme
     }
 }
 
+void TransportBar::setMusicalTypingStatus(bool enabled, int octave) {
+    if (!m_musicalTypingLabel) {
+        return;
+    }
+    m_musicalTypingLabel->setText(enabled ? "KEYS C" + std::to_string(octave) : "KEYS OFF");
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    m_musicalTypingLabel->setTextColor(
+        enabled ? theme.getColor("accentPrimary") : theme.getColor("textSecondary").withAlpha(0.62f));
+    setDirty(true);
+}
+
 void TransportBar::updateButtonStates() {
     // Clear textual fallbacks (we render SVG icons instead)
     if (m_playButton) {
@@ -500,10 +525,10 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
          }
 
         if (isPrimaryTransport) {
-            if (!isRecording && !isActive && !isHovered) {
-                currentBg = themeManager.getColor("buttonBgHover").withAlpha(0.64f);
-                currentBorder = themeManager.getColor("border").withAlpha(0.38f);
-            } else if (isActive && !isRecording) {
+            // No idle backing plate: primaries sit flush on the group shell
+            // exactly like the time display (owner direction). State still
+            // brings the tinted plate in on hover/active/record.
+            if (isActive && !isRecording) {
                 currentBg = themeManager.getColor("accentPrimary").withAlpha(0.22f);
                 currentBorder = themeManager.getColor("accentPrimary").withAlpha(0.46f);
             }
@@ -511,12 +536,12 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
                 iconColor = themeManager.getColor("textPrimary").withAlpha(isActive || isHovered ? 1.0f : 0.94f);
             }
         }
-        
+
         // Draw Button Background
-        if (isHovered || isActive || isRecording || isPrimaryTransport) {
-            renderer.fillRoundedRect(buttonRect, 6.0f, currentBg);
+        if (isHovered || isActive || isRecording) {
+            renderer.fillRoundedRect(buttonRect, themeManager.getRadius("m"), currentBg);
             if (currentBorder.a > 0.0f) {
-                renderer.strokeRoundedRect(buttonRect, 6.0f, 1.0f, currentBorder);
+                renderer.strokeRoundedRect(buttonRect, themeManager.getRadius("m"), 1.0f, currentBorder);
             }
         }
         
@@ -541,19 +566,8 @@ void TransportBar::renderButtonIcons(AestraUI::NUIRenderer& renderer) {
         bool isPlaying = (m_state == TransportState::Playing);
         auto currentIcon = isPlaying ? m_pauseIcon : m_playIcon;
         renderGlassButton(m_playButton, currentIcon, isPlaying, false, true);
-
-        // Breathing glow when playing — subtle pulse so user can see transport is active
-        if (isPlaying) {
-            auto now = std::chrono::steady_clock::now();
-            float timeSec = std::chrono::duration<float>(now.time_since_epoch()).count();
-            float pulse = (std::sin(timeSec * 3.0f) * 0.5f + 0.5f); // 0..1 oscillation ~0.5Hz
-            AestraUI::NUIRect playRect = m_playButton->getBounds();
-            renderer.drawShadow(
-                {playRect.x, playRect.y, playRect.width, playRect.height},
-                4.0f, 1.0f, 6.0f,
-                themeManager.getColor("accentPrimary").withAlpha(0.08f + pulse * 0.06f)
-            );
-        }
+        // No breathing shadow while playing (owner direction: flat active
+        // state) — the accent plate from renderGlassButton is the indicator.
     }
 
     // Stop
@@ -619,7 +633,8 @@ void TransportBar::layoutComponents() {
     float group4Width = (buttonSize * 4) + (spacing * 3);
 
     // Total Content Width
-    float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
+    float totalContentWidth =
+        group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
     float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
@@ -697,6 +712,18 @@ void TransportBar::layoutComponents() {
         // xCursor += buttonSize + spacing;
     }
 
+    if (m_musicalTypingLabel) {
+        constexpr float statusWidth = 82.0f;
+        constexpr float statusHeight = 24.0f;
+        const float statusX = islandX + islandWidth + 10.0f;
+        const bool hasRoom = statusX + statusWidth <= bounds.width - 8.0f;
+        m_musicalTypingLabel->setVisible(hasRoom);
+        if (hasRoom) {
+            m_musicalTypingLabel->setBounds(NUIAbsolute(
+                bounds, statusX, islandY + (islandHeight - statusHeight) * 0.5f, statusWidth, statusHeight));
+        }
+    }
+
     // Pass dimensions to Render via Theme or member not possible easily here without state.
     // We relying on onRender duplicating the math or us storing it?
     // Let's update onRender to match these hardcoded compaction values.
@@ -721,7 +748,8 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     float infoWidth = 260.0f;
     float group4Width = (buttonSize * 4) + (spacing * 3);
 
-    float totalContentWidth = group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
+    float totalContentWidth =
+        group1Width + groupSpacing + group2Width + groupSpacing + infoWidth + groupSpacing + group4Width;
     float islandPadding = TRANSPORT_ISLAND_PADDING;
     float islandWidth = totalContentWidth + (islandPadding * 2.0f);
     
@@ -753,7 +781,7 @@ void TransportBar::onRender(AestraUI::NUIRenderer& renderer) {
     const float groupY = islandRect.y + topInset;
     const auto groupBg = themeManager.getColor("surfaceTertiary").withAlpha(0.56f);
     const auto groupBorder = themeManager.getColor("border").withAlpha(0.52f);
-    const float groupRadius = themeManager.getCurrentTheme().radiusS + 2.0f; // tokenized: 6.0
+    const float groupRadius = themeManager.getRadius("m"); // group shell corner
     const auto drawGroup = [&](float x, float w) {
         if (w <= 0.0f) {
             return;

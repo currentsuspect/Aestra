@@ -314,15 +314,17 @@ void SampleRateConverter::generateFilterBank(SRCQuality quality) {
             double sinc = 1.0;
             if (std::abs(x) > 1e-10) {
                 const double pix = SRCConstants::PI * x * cutoff;
-                sinc = std::sin(pix) / (SRCConstants::PI * x); // sinc(x*cutoff) = sin(pi*x*cutoff)/(pi*x)
+                sinc = std::sin(pix) / (SRCConstants::PI * x * cutoff); // sinc(x*cutoff) = sin(pi*x*cutoff)/(pi*x*cutoff)
             } else {
-                sinc = cutoff; // limx->0 sin(pi*x*c)/(pi*x) = c
+                // sinc(cutoff*x) tends to 1 at x == 0; cutoff is applied by
+                // the nonzero argument and the per-phase normalization.
+                sinc = 1.0;
             }
 
             // Apply Kaiser window centered in the tap array
             const double window = kaiserWindow(tap, numTaps, kaiserBeta);
 
-            // Coefficient is sinc * window (cutoff already incorporated)
+            // Coefficient is sinc(cutoff*x) * window
             const double coeff = sinc * window;
             m_localFilterBank.coeffs[phase][tap] = static_cast<float>(coeff);
             sumWeight += coeff;
@@ -415,7 +417,6 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
 
     // Hoisted constants (invariant across all frames in this call)
     const double historySizeD = static_cast<double>(m_history.size);
-    const double historySizeMinus1 = historySizeD - 1.0;
     const double historySizeMinusHalfTaps = historySizeD - static_cast<double>(halfTaps);
     const double halfTapsD = static_cast<double>(halfTaps);
     const double polyPhaseScale = static_cast<double>(SRCConstants::POLYPHASE_PHASES);
@@ -459,9 +460,9 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
         const double srcPosMinusHalfTaps = srcPosition - halfTapsD;
         const double srcPosMinusHistorySize = srcPosition - historySizeMinusHalfTaps;
 
-        // Track historyPos directly: starts at historySizeMinus1 - srcNextDiff,
+        // Track historyPos directly: starts at historySizeD - srcNextDiff,
         // increases by invRatio each output sample iteration
-        double historyPos = historySizeMinus1 - srcNextDiff;
+        double historyPos = historySizeD - srcNextDiff;
 
         // Generate output samples while we have enough history
         while (outputFrames < maxOutputFrames) {
@@ -474,7 +475,7 @@ uint32_t SampleRateConverter::process(const float* input, uint32_t inputFrames, 
             if (nextOutputSrcPos < srcPosMinusHistorySize) {
                 nextOutputSrcPos = srcPosMinusHalfTaps;
                 srcNextDiff = srcPosition - nextOutputSrcPos;
-                historyPos = historySizeMinus1 - srcNextDiff;
+                historyPos = historySizeD - srcNextDiff;
             }
 
             const uint32_t intPos = static_cast<uint32_t>(historyPos);

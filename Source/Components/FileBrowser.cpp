@@ -359,9 +359,9 @@ FileBrowser::FileBrowser()
     searchInput_->setPadding(12.0f);
     searchInput_->setBorderRadius(0.0f);
     searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
-    searchInput_->setBorderColor(themeManager.getColor("textSecondary").withAlpha(0.35f));
+    searchInput_->setBorderColor(themeManager.getColor("border"));
     searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
-    searchInput_->setBorderWidth(2.0f);
+    searchInput_->setBorderWidth(1.0f);
 
     // Initialize icons with improved visibility for Liminal Dark v2.0
     // Use inline SVG content for reliable icon loading
@@ -748,7 +748,8 @@ void FileBrowser::processScanResults() {
 FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     NUIRect bounds = getBounds();
     const float effectiveW = effectiveWidth_ > 0.0f ? effectiveWidth_ : bounds.width;
-    // Search bar fills the top gap (no BROWSER_TOP_PAD), inset 2px on sides
+    // Search bar sits flush with the browser panel: full width, no insets,
+    // 1px reserved at the bottom for the divider line.
     const float searchH = BROWSER_SEARCH_ROW_H;
     const float headerH = searchH;
     const float contentY = bounds.y + headerH;
@@ -758,8 +759,7 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     const float listW = std::max(0.0f, effectiveW - navW);
 
     BrowserLayout layout;
-    layout.search = NUIRect(bounds.x + 2.0f, bounds.y + 2.0f,
-                            std::max(0.0f, effectiveW - 4.0f), searchH - 4.0f);
+    layout.search = NUIRect(bounds.x, bounds.y, std::max(0.0f, effectiveW), searchH - 1.0f);
     layout.navPane = NUIRect(bounds.x, contentY, navW, contentH);
     layout.listHeader = NUIRect(listX, contentY, listW, BROWSER_LIST_HEADER_H);
     layout.list = NUIRect(listX, contentY + BROWSER_LIST_HEADER_H,
@@ -782,8 +782,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.58f);  // Stronger section headers
     const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.78f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
-    const NUIColor selectedBg = themeManager.getColor("primary").withAlpha(0.16f);  // More prominent selection
-    const NUIColor hoverBg = NUIColor::white().withAlpha(0.065f);
+    const NUIColor selectedBg = themeManager.getColor("primary").withAlpha(0.16f); // More prominent selection
     const NUIColor divider = themeManager.getColor("border").withAlpha(0.48f);  // Sharper panel edge
 
     renderer.fillRect(layout.navPane, paneBg);
@@ -817,8 +816,17 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                       {navHeader.right(), navHeader.y + 27.0f},
                       1.0f, themeManager.getColor("border").withAlpha(0.65f));
 
+    // Scrollable content region below the fixed folder-name header. When the
+    // preview dock steals height the tail rows would clip; instead the content
+    // scrolls under the header exactly like the file list below it.
+    const float navContentTop = layout.navPane.y + 28.0f;
+    navViewportHeight_ = std::max(0.0f, layout.navPane.bottom() - navContentTop);
+    const float navMaxScroll = std::max(0.0f, navContentHeight_ - navViewportHeight_);
+    navScrollOffset_ = std::clamp(navScrollOffset_, 0.0f, navMaxScroll);
+    renderer.setClipRect(NUIRect(layout.navPane.x, navContentTop, layout.navPane.width, navViewportHeight_));
+
     // Start nav content at the same Y as the right column labels
-    float y = layout.navPane.y + 28.0f;
+    float y = navContentTop - navScrollOffset_;
     int hitIndex = 0;
 
     auto collectionCount = [&](const std::string& tag) {
@@ -931,23 +939,20 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
     auto drawRow = [&](BrowserNavAction action, const std::string& label, int count = -1, std::string path = {}) {
         NUIRect row(layout.navPane.x + 5.0f, y, std::max(0.0f, layout.navPane.width - 10.0f), BROWSER_NAV_ROW_H);
-        const bool selected = activeNavAction_ == action &&
-                              (action != BrowserNavAction::CustomPlace || activeNavPath_ == path);
-        const bool hovered = hoveredNavIndex_ == hitIndex;
+        const bool selected =
+            activeNavAction_ == action && (action != BrowserNavAction::CustomPlace || activeNavPath_ == path);
         if (selected) {
             renderer.fillRoundedRect(row, themeProps.radiusS, selectedBg);
-            renderer.fillRoundedRect({row.x, row.y + 4.0f, 2.0f, row.height - 8.0f},
-                                     1.0f,
+            renderer.fillRoundedRect({row.x, row.y + 4.0f, 2.0f, row.height - 8.0f}, 1.0f,
                                      themeManager.getColor("accentPrimary").withAlpha(0.92f));
-        } else if (hovered) {
-            renderer.fillRoundedRect(row, themeProps.radiusS, hoverBg);
         }
+        // Nav hover wash also lives in renderHoverOverlays(), outside the cache.
         drawIcon(row, action, selected);
         renderer.drawText(label, {row.x + 33.0f, std::round(renderer.calculateTextY(row, themeProps.fontSizeS))},
                           themeProps.fontSizeS, selected ? themeManager.getColor("textPrimary").withAlpha(0.90f) : rowText);
         if (count > 0) {
             const std::string countText = std::to_string(count);
-            const auto countSize = renderer.measureText(countText, 11.0f);
+            const auto countSize = renderer.measureText(countText, themeManager.getFontSize("s"));
             renderer.drawText(countText,
                               {row.right() - countSize.width - 8.0f, std::round(renderer.calculateTextY(row, 11.0f))},
                               11.0f,
@@ -1009,8 +1014,25 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         if (placesTop > 0 && placesBottom > placesTop) {
             NUIRect placesOverlay = {layout.navPane.x, placesTop, layout.navPane.width, placesBottom - placesTop};
             renderer.fillRect(placesOverlay, NUIColor(0.486f, 0.227f, 0.929f, 0.15f));
-            renderer.strokeRoundedRect(placesOverlay, 4.0f, 1.0f, NUIColor(0.486f, 0.227f, 0.929f, 0.6f));
+            renderer.strokeRoundedRect(placesOverlay, themeManager.getRadius("s"), 1.0f, NUIColor(0.486f, 0.227f, 0.929f, 0.6f));
         }
+    }
+
+    // Measure content for next frame's scroll clamp (y is post-offset screen
+    // space; add the offset back to recover the intrinsic content height).
+    navContentHeight_ = (y + navScrollOffset_) - navContentTop;
+
+    // Restore the full-pane clip and draw a thin scroll thumb when content
+    // overflows the (preview-shortened) viewport.
+    renderer.setClipRect(layout.navPane);
+    const float navOverflow = navContentHeight_ - navViewportHeight_;
+    if (navOverflow > 0.5f && navViewportHeight_ > 0.0f) {
+        const float sbW = 3.0f;
+        const float sbX = layout.navPane.right() - sbW - 2.0f;
+        const float thumbH = std::max(24.0f, navViewportHeight_ * (navViewportHeight_ / navContentHeight_));
+        const float thumbY = navContentTop + (navScrollOffset_ / navOverflow) * (navViewportHeight_ - thumbH);
+        renderer.fillRoundedRect(NUIRect(sbX, thumbY, sbW, thumbH), sbW * 0.5f,
+                                 themeManager.getColor("textSecondary").withAlpha(0.30f));
     }
 
     renderer.clearClipRect();
@@ -1061,9 +1083,10 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
                       {layout.listHeader.right(), layout.listHeader.bottom()},
                       1.0f, border);
     const NUIRect columnRow(layout.listHeader.x, layout.listHeader.y + 28.0f, layout.listHeader.width, 23.0f);
+    const float columnFont = themeManager.getFontSize("s");
     renderer.drawText("Name", {layout.listHeader.x + 12.0f,
-                               std::round(renderer.calculateTextY(columnRow, 12.0f))},
-                      11.5f, themeManager.getColor("textSecondary").withAlpha(0.62f));
+                               std::round(renderer.calculateTextY(columnRow, columnFont))},
+                      columnFont, themeManager.getColor("textSecondary").withAlpha(0.62f));
 }
 
 void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -1073,6 +1096,18 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
 
     const BrowserLayout browserLayout = computeBrowserLayout();
     scrollbarTrackHeight_ = browserLayout.list.height;
+
+    // Keep the search input glued to the panel. onResize only fires on size
+    // changes, so a pure move (splitter drag, panel slide) would otherwise
+    // leave the input at its old absolute position while the panel renders
+    // at the new one. Diff before setting to avoid dirtying every frame.
+    if (searchInput_) {
+        const NUIRect cur = searchInput_->getBounds();
+        const NUIRect& tgt = browserLayout.search;
+        if (cur.x != tgt.x || cur.y != tgt.y || cur.width != tgt.width || cur.height != tgt.height) {
+            searchInput_->setBounds(tgt);
+        }
+    }
 
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, bounds.height);
 
@@ -1111,6 +1146,41 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     renderer.drawLine({iconX + 7.5f, iconY + 1.5f}, {iconX + 10.5f, iconY + 4.5f}, 1.2f, searchIconColor);
 }
 
+void FileBrowser::renderHoverOverlays(NUIRenderer& renderer) {
+    auto& themeManager = NUIThemeManager::getInstance();
+    const auto& themeProps = themeManager.getCurrentTheme();
+
+    // File-list hover wash (parity with the old in-cache visual: skipped when
+    // the row is selected; translucent, so drawing it over the cached text is
+    // visually equivalent to the old under-text fill at this alpha).
+    if (hoveredIndex_ >= 0 && hoveredIndex_ != selectedIndex_) {
+        const auto& view = getActiveView();
+        if (hoveredIndex_ < static_cast<int>(view.size())) {
+            const BrowserLayout browserLayout = computeBrowserLayout();
+            NUIRect listClip = browserLayout.list;
+            const float scrollbarGutter = scrollbarVisible_ ? scrollbarWidth_ + 4.0f : 0.0f;
+            listClip.width = std::max(0.0f, listClip.width - scrollbarGutter);
+            const float itemY = listClip.y + (hoveredIndex_ * BROWSER_LIST_ROW_H) - scrollOffset_;
+            const NUIRect itemRect(listClip.x, itemY, listClip.width, BROWSER_LIST_ROW_H);
+            if (itemRect.bottom() > listClip.y && itemRect.y < listClip.bottom()) {
+                renderer.setClipRect(listClip);
+                renderer.fillRect(itemRect, NUIColor::white().withAlpha(0.045f));
+                renderer.clearClipRect();
+            }
+        }
+    }
+
+    // Nav-rail hover wash (skipped when the row is the active selection).
+    if (hoveredNavIndex_ >= 0 && hoveredNavIndex_ < static_cast<int>(navHits_.size())) {
+        const BrowserNavHit& hit = navHits_[hoveredNavIndex_];
+        const bool selected = activeNavAction_ == hit.action &&
+                              (hit.action != BrowserNavAction::CustomPlace || activeNavPath_ == hit.path);
+        if (!selected) {
+            renderer.fillRoundedRect(hit.bounds, themeProps.radiusS, NUIColor::white().withAlpha(0.065f));
+        }
+    }
+}
+
 void FileBrowser::onRender(NUIRenderer& renderer) {
     AESTRA_ZONE("FileBrowser_Render");
 
@@ -1124,6 +1194,7 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     if (!renderCache || !renderCache->isEnabled()) {
         // Fallback: Immediate render
         renderStaticContent(renderer, bounds);
+        renderHoverOverlays(renderer);
         // Clip children to prevent search bar spillover during resize
         renderer.setClipRect(bounds);
         renderChildren(renderer);
@@ -1168,6 +1239,10 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     } else {
         renderStaticContent(renderer, bounds);
     }
+
+    // Hover washes render every frame on top of the cached content — this is
+    // what lets hover changes skip cache rebuilds entirely.
+    renderHoverOverlays(renderer);
 
     // Render interactive children (Search Input, Popup Menus) ON TOP of the cache
     // These handle their own dirtiness and shouldn't trigger full cache rebuilds
@@ -1278,12 +1353,12 @@ void FileBrowser::onResize(int width, int height) {
 
         searchInput_->setTextColor(textColor_);
         searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
-        searchInput_->setBorderColor(themeManager.getColor("textSecondary").withAlpha(0.35f));
+        searchInput_->setBorderColor(themeManager.getColor("border"));
         searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
         searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
         searchInput_->setPadding(12.0f);
         searchInput_->setBorderRadius(0.0f);
-        searchInput_->setBorderWidth(2.0f);
+        searchInput_->setBorderWidth(1.0f);
     }
 
     itemHeight_ = BROWSER_LIST_ROW_H;
@@ -1460,6 +1535,19 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
 
+    // === NAV PANE WHEEL (independent of the file list) ===
+    // Scroll the collections/categories/places column when it overflows —
+    // e.g. the preview dock is open and shortened the pane.
+    if (event.wheelDelta != 0 && browserLayout.navPane.contains(event.position)) {
+        const float navOverflow = std::max(0.0f, navContentHeight_ - navViewportHeight_);
+        if (navOverflow > 0.0f) {
+            navScrollOffset_ = std::clamp(navScrollOffset_ - event.wheelDelta * 3.0f * BROWSER_NAV_ROW_H,
+                                          0.0f, navOverflow);
+            invalidateCache();
+            return true;
+        }
+    }
+
     // === MOUSE WHEEL SCROLLING (handle before bounds check so scrolling works on hover) ===
     if (mouseInside && event.wheelDelta != 0) {
         float contentHeight = view.size() * itemHeight;
@@ -1489,7 +1577,8 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             hoveredIndex_ = -1;
             dirty = true;
         }
-        if (dirty) invalidateCache();
+        if (dirty)
+            setDirty(true); // hover overlay only — no cache rebuild
         return false;
     }
 
@@ -1542,7 +1631,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             // Outside list area - clear hover and tooltip
             if (hoveredIndex_ != -1) {
                 hoveredIndex_ = -1;
-                invalidateCache();
+                setDirty(true); // hover overlay only — no cache rebuild
             }
             AestraUI::NUIComponent::hideRemoteTooltip(this);
         }
@@ -1577,8 +1666,8 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                     NUIComponent::hideRemoteTooltip(this);
                 }
 
-	            invalidateCache(); // Trigger redraw when hover state changes
-	        }
+                setDirty(true); // hover overlay only — no cache rebuild
+            }
 
             // Keep tooltip alive while hovering list items (not only on hover-change events).
             if (hoveredIndex_ >= 0 && hoveredIndex_ < static_cast<int>(view.size())) {
@@ -1965,7 +2054,7 @@ void FileBrowser::onMouseLeave() {
     if (hoveredIndex_ >= 0 || hoveredNavIndex_ >= 0) {
         hoveredIndex_ = -1;
         hoveredNavIndex_ = -1;
-        invalidateCache();
+        setDirty(true); // hover overlay only — no cache rebuild
     }
     NUIComponent::onMouseLeave();
 }
@@ -2535,7 +2624,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     if (scanningRoot_ && view.empty()) {
         renderer.setClipRect(listClip);
-        renderer.drawTextCentered("Loading...", listClip, 14.0f, themeManager.getColor("textPrimary").withAlpha(0.62f));
+        renderer.drawTextCentered("Loading...", listClip, themeManager.getFontSize("l"), themeManager.getColor("textPrimary").withAlpha(0.62f));
         renderer.clearClipRect();
         return;
     }
@@ -2548,8 +2637,8 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             : "Try another folder, collection, or search";
         NUIRect titleRect(listClip.x, listClip.y + listClip.height * 0.42f - 12.0f, listClip.width, 20.0f);
         NUIRect hintRect(listClip.x, titleRect.bottom() + 4.0f, listClip.width, 18.0f);
-        renderer.drawTextCentered(title, titleRect, 13.0f, themeManager.getColor("textPrimary").withAlpha(0.72f));
-        renderer.drawTextCentered(hint, hintRect, 11.0f, themeManager.getColor("textSecondary").withAlpha(0.58f));
+        renderer.drawTextCentered(title, titleRect, themeManager.getFontSize("l"), themeManager.getColor("textPrimary").withAlpha(0.72f));
+        renderer.drawTextCentered(hint, hintRect, themeManager.getFontSize("s"), themeManager.getColor("textSecondary").withAlpha(0.58f));
         renderer.clearClipRect();
         return;
     }
@@ -2564,7 +2653,6 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.72f);
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary");
     const NUIColor selectedRow = themeManager.getColor("accentPrimary").withAlpha(0.22f);
-    const NUIColor hoverRow = NUIColor::white().withAlpha(0.045f);
     const NUIColor gridLine = themeManager.getColor("border").withAlpha(0.14f);
     const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.82f);
     const NUIColor folderText = themeManager.getColor("textPrimary").withAlpha(0.92f);
@@ -2579,15 +2667,15 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
         NUIRect itemRect(listClip.x, itemY, listClip.width, itemHeight);
         const bool selected = i == selectedIndex_;
-        const bool hovered = i == hoveredIndex_;
         renderer.fillRect(itemRect, (i % 2 == 0) ? evenRow : oddRow);
         if (selected) {
             renderer.fillRect(itemRect, selectedRow);
             renderer.fillRect({itemRect.x, itemRect.y + 3.0f, 2.0f, itemRect.height - 6.0f},
                               themeManager.getColor("accentPrimary").withAlpha(0.85f));
-        } else if (hovered) {
-            renderer.fillRect(itemRect, hoverRow);
         }
+        // Hover wash is drawn by renderHoverOverlays() OUTSIDE the FBO cache —
+        // hover must never invalidate the cache (rebuilding the whole list per
+        // row crossing cost ~11 ms/frame of the mouse-active render budget).
         renderer.drawLine({itemRect.x, itemRect.bottom()}, {itemRect.right(), itemRect.bottom()}, 1.0f, gridLine);
 
         const FileItem* item = view[i];
@@ -2641,19 +2729,10 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
                           selected ? themeManager.getColor("textPrimary")
                                    : item->isDirectory ? folderText : text);
 
-        // BPM column (right side, audio files only)
-        if (!item->isDirectory && item->detectedBpm > 0 &&
-            (activeQuickFilter_ == QuickFilter::Audio || activeQuickFilter_ == QuickFilter::All)) {
-            const float bpmW = 38.0f;
-            const float bpmX = itemRect.right() - bpmW - 12.0f;
-            std::string bpmStr = std::to_string(item->detectedBpm);
-            auto bpmSize = renderer.measureText(bpmStr, 10.0f);
-            renderer.drawText(bpmStr, {bpmX + (bpmW - bpmSize.width) * 0.5f,
-                                       std::round(renderer.calculateTextY(itemRect, 10.0f))},
-                              10.0f, muted);
-        }
+        // BPM stays in metadata (search/drag) but is not shown as a row
+        // column — owner direction: no number on the right of audio rows.
 
-        // Tag dots (between name and BPM)
+        // Tag dots (after name)
         if (!item->isDirectory) {
             const std::string key = mapKeyForPath(item->path);
             auto tagIt = tagsByPath_.find(key);
@@ -3288,7 +3367,10 @@ bool FileBrowser::handleScrollbarMouseEvent(const NUIMouseEvent& event) {
 bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const BrowserLayout& layout) {
     if (event.cursorCaptured) return false;
 
-    const bool insideNav = layout.navPane.contains(event.position);
+    // Ignore the fixed folder-name header band: rows scrolled up under it are
+    // visually clipped, so they must not be clickable there either.
+    const float navContentTop = layout.navPane.y + 28.0f;
+    const bool insideNav = layout.navPane.contains(event.position) && event.position.y >= navContentTop;
     int newHovered = -1;
     if (insideNav) {
         for (int i = 0; i < static_cast<int>(navHits_.size()); ++i) {
@@ -3301,7 +3383,7 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
 
     if (newHovered != hoveredNavIndex_) {
         hoveredNavIndex_ = newHovered;
-        invalidateCache();
+        setDirty(true); // hover overlay only — no cache rebuild
     }
 
     if (!event.pressed || event.button != NUIMouseButton::Left || newHovered < 0 ||

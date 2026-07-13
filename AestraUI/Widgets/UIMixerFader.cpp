@@ -31,7 +31,7 @@ void UIMixerFader::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
     // Track: Deep Glass Slot
-    m_trackBg = AestraUI::NUIColor(0.05f, 0.05f, 0.08f, 0.6f); 
+    m_trackBg = AestraUI::NUIColor(0.05f, 0.05f, 0.05f, 0.6f);
     // Fill: Gradient handled in render
     m_trackFg = theme.getColor("accentPrimary"); 
     m_handle = theme.getColor("backgroundSecondary"); // Handle Core
@@ -133,11 +133,9 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     NUIRect handleRect{handleX, handleY, handleW, handleH};
     float handleRad = 4.0f;
 
-    // Drop shadow for depth
-    renderer.drawShadow(handleRect, 0.0f, 2.0f, 6.0f, NUIColor(0, 0, 0, 0.4f));
-
-    // Handle Body (dark surface)
-    renderer.fillRoundedRect(handleRect, handleRad, NUIColor(0.18f, 0.18f, 0.22f, 0.98f));
+    // Handle Body (dark surface) — flat, no drop shadow; the border + slit
+    // give it enough definition.
+    renderer.fillRoundedRect(handleRect, handleRad, NUIColor(0.18f, 0.18f, 0.18f, 0.98f));
 
     // Handle Border (accent when active/hovered, subtle white otherwise)
     bool handleActive = isHovered() || m_dragging;
@@ -170,7 +168,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
             tipY = handleY + handleH + 4.0f;
         }
 
-        renderer.fillRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, NUIColor(0.05f, 0.05f, 0.08f, 0.95f));
+        renderer.fillRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, NUIColor(0.05f, 0.05f, 0.05f, 0.95f));
         renderer.strokeRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, 1.0f, m_trackFg.withAlpha(0.5f));
         renderer.drawTextCentered(m_cachedText, {tipX, tipY, tipW, tipH}, 10.5f, m_text);
     }

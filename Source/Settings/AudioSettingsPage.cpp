@@ -265,6 +265,7 @@ void AudioSettingsPage::createUI() {
     m_ditheringLabel = createLabel("Dithering:");
     m_dcRemovalLabel = createLabel("DC Removal:");
     m_softClippingLabel = createLabel("Master Limiter:");
+    m_previewDuckingLabel = createLabel("Preview Ducking:");
     m_multiThreadingLabel = createLabel("Multi-threading:");
     m_threadCountLabel = createLabel("Thread Count:");
     
@@ -290,8 +291,8 @@ void AudioSettingsPage::createUI() {
              m_audioManager->setPreferredDriverType((AudioDriverType)m_driverDropdown->getSelectedValue());
         }
 
-        // When driver changes, we need to update device list (and potentially switch backend)
-        updateDeviceList();
+        // When driver changes, re-enumerate devices off the UI thread (#256)
+        startAsyncDeviceLoad();
     });
 
     m_deviceDropdown = createDropdown([this](int idx) {
@@ -384,6 +385,16 @@ void AudioSettingsPage::createUI() {
     m_ditheringDropdown->addItem("Triangular (TPDF)", (int)DitheringMode::Triangular);
     m_ditheringDropdown->addItem("High Pass", (int)DitheringMode::HighPass);
     m_ditheringDropdown->addItem("Noise Shaped", (int)DitheringMode::NoiseShaped);
+
+    m_previewDuckingDropdown = createDropdown([this](int idx) {
+        (void)idx;
+        m_dirty = true;
+    });
+    m_previewDuckingDropdown->addItem("Off", 0);
+    m_previewDuckingDropdown->addItem("-3 dB", 3);
+    m_previewDuckingDropdown->addItem("-6 dB", 6);
+    m_previewDuckingDropdown->addItem("-9 dB", 9);
+    m_previewDuckingDropdown->setSelectedByValue(6);
     
     // Now safe to set quality preset which triggers callback
     m_qualityPresetDropdown->setSelectedIndex(1);
@@ -424,13 +435,26 @@ void AudioSettingsPage::createUI() {
     });
     addChild(m_testSoundButton);
     Log::info("[AudioSettingsPage] Test sound button created");
-    
+
     // Initial Population
-    // Trigger update logic ONCE without recursion loop
-    Log::info("[AudioSettingsPage] createUI components created. Updating driver list...");
-    updateDriverList();
-    Log::info("[AudioSettingsPage] Initial updateDriverList complete.");
-    
+    // Sample-rate and buffer-size lists are static; populate them now so
+    // loadSettings() below can restore the saved selections. Driver and device
+    // lists require hardware enumeration, which blocks — they are filled in by
+    // startAsyncDeviceLoad() (called from the constructor) off the UI thread (#256).
+    const auto& currentConfig = m_audioManager->getCurrentConfig();
+    m_sampleRateDropdown->addItem("44100 Hz", 44100);
+    m_sampleRateDropdown->addItem("48000 Hz", 48000);
+    m_sampleRateDropdown->addItem("88200 Hz", 88200);
+    m_sampleRateDropdown->addItem("96000 Hz", 96000);
+    m_sampleRateDropdown->setSelectedByValue((int)currentConfig.sampleRate);
+
+    for (int s : {64, 128, 256, 512, 1024, 2048}) {
+        m_bufferSizeDropdown->addItem(std::to_string(s) + " samples", s);
+    }
+    m_bufferSizeDropdown->setSelectedByValue((int)currentConfig.bufferSize);
+
+    updateLatencyEstimate();
+
     // Load persisted settings (overrides defaults if exists)
     // NOTE: loadSettings() is called BEFORE m_isInitializing is set to false.
     // This prevents loadSettings() from triggering openStream calls during startup.
@@ -486,6 +510,7 @@ void AudioSettingsPage::applyChanges() {
         // m_audioEngine->setDCRemovalEnabled(m_dcRemovalToggle->isOn());
         
         m_audioEngine->setSafetyLimiterEnabled(m_softClippingToggle->isOn());
+        m_audioEngine->setPreviewDuckingAttenuationDb(static_cast<float>(m_previewDuckingDropdown->getSelectedValue()));
     }
     
     // Multi-threading
@@ -518,8 +543,8 @@ bool AudioSettingsPage::hasUnsavedChanges() const {
 }
 
 void AudioSettingsPage::onShow() {
-    // Refresh device lists in case hardware changed
-    updateDriverList();
+    // Refresh device lists in case hardware changed — off the UI thread (#256)
+    startAsyncDeviceLoad();
 }
 
 void AudioSettingsPage::onHide() {
@@ -547,88 +572,6 @@ void AudioSettingsPage::updateLatencyEstimate() {
         m_latencyLabel->setText("Est. Latency: -- ms");
     }
 }
-
-void AudioSettingsPage::updateDriverList() {
-    m_driverDropdown->clearItems();
-    
-    // In a real scenario with multiple backends, we'd list them.
-    // Aestras AudioDeviceManager might handle WASAPI/ASIO as "Driver Types"
-    // For now, let's query available driver types
-    auto types = m_audioManager->getAvailableDriverTypes();
-    
-    // Map types to UI
-    for (size_t i = 0; i < types.size(); ++i) {
-        std::string name = "Unknown";
-        if (types[i] == AudioDriverType::WASAPI_SHARED) name = "WASAPI Shared";
-        else if (types[i] == AudioDriverType::WASAPI_EXCLUSIVE) name = "WASAPI Exclusive";
-        else if (types[i] == AudioDriverType::ASIO_EXTERNAL) name = "ASIO (External)";
-        else if (types[i] == AudioDriverType::ASIO_Aestra) name = "ASIO (Aestra)";
-        else if (types[i] == AudioDriverType::DIRECTSOUND) name = "DirectSound";
-        else if (types[i] == AudioDriverType::RTAUDIO) name = "RtAudio (Auto)";
-        else if (types[i] == AudioDriverType::PULSEAUDIO) name = "PulseAudio";
-        else if (types[i] == AudioDriverType::ALSA) name = "ALSA";
-        else if (types[i] == AudioDriverType::JACK) name = "JACK";
-        
-        m_driverDropdown->addItem(name, (int)types[i]);
-    }
-
-    if (types.empty()) {
-        // Fallback
-        m_driverDropdown->addItem("DirectSound", (int)AudioDriverType::DIRECTSOUND);
-    }
-    
-    // Select current driver type
-    auto currentType = m_audioManager->getActiveDriverType();
-    m_driverDropdown->setSelectedByValue((int)currentType);
-    
-    // Update dependent lists
-    updateDeviceList();
-}
-
-void AudioSettingsPage::updateDeviceList() {
-    m_deviceDropdown->clearItems();
-    m_inputDeviceDropdown->clearItems();
-    
-    auto devices = m_audioManager->getDevices();
-    for (const auto& dev : devices) {
-        if (dev.maxOutputChannels > 0) {
-            m_deviceDropdown->addItem(dev.name, (int)dev.id);
-        }
-        if (dev.maxInputChannels > 0) {
-            m_inputDeviceDropdown->addItem(dev.name, (int)dev.id);
-        }
-    }
-    
-    if (m_deviceDropdown->getItemCount() == 0) {
-        m_deviceDropdown->addItem("No Output Devices Found", -1);
-    }
-    if (m_inputDeviceDropdown->getItemCount() == 0) {
-        m_inputDeviceDropdown->addItem("No Input Devices Found", -1);
-    }
-    
-    // Select active device
-    auto currentConfig = m_audioManager->getCurrentConfig();
-    m_deviceDropdown->setSelectedByValue((int)currentConfig.deviceId);
-    m_inputDeviceDropdown->setSelectedByValue((int)currentConfig.inputDeviceId);
-    
-    // Update Standard Rates/Buffers if empty
-    if (m_sampleRateDropdown->getItemCount() == 0) {
-        m_sampleRateDropdown->addItem("44100 Hz", 44100);
-        m_sampleRateDropdown->addItem("48000 Hz", 48000);
-        m_sampleRateDropdown->addItem("88200 Hz", 88200);
-        m_sampleRateDropdown->addItem("96000 Hz", 96000);
-        m_sampleRateDropdown->setSelectedByValue((int)currentConfig.sampleRate);
-    }
-    
-    if (m_bufferSizeDropdown->getItemCount() == 0) {
-        std::vector<int> sizes = {64, 128, 256, 512, 1024, 2048};
-        for (int s : sizes) m_bufferSizeDropdown->addItem(std::to_string(s) + " samples", s);
-        m_bufferSizeDropdown->setSelectedByValue((int)currentConfig.bufferSize);
-    }
-    
-    updateLatencyEstimate();
-}
-
 
 // Layout
 void AudioSettingsPage::layoutComponents() {
@@ -674,6 +617,7 @@ void AudioSettingsPage::layoutComponents() {
     // We'll give it the row height.
     layRow(m_dcRemovalLabel, m_dcRemovalToggle, x2); y += rowHeight + gap;
     layRow(m_softClippingLabel, m_softClippingToggle, x2); y += rowHeight + gap;
+    layRow(m_previewDuckingLabel, m_previewDuckingDropdown, x2); y += rowHeight + gap;
     layRow(m_multiThreadingLabel, m_multiThreadingToggle, x2); y += rowHeight + gap;
     
     // Conditionally show thread count if multithreading is enabled
@@ -718,7 +662,15 @@ void AudioSettingsPage::onUpdate(double deltaTime) {
     // Check for async device load completion
     if (m_deviceDataReady && !m_isLoadingDevices.load()) {
         m_deviceDataReady = false; // Consume the flag
-        onDeviceLoadComplete();
+        if (m_deviceReloadPending) {
+            // A refresh was requested while this load was in flight (e.g. the
+            // driver changed) — the results are stale. Discard them and
+            // re-enumerate; controls stay disabled with the loading indicator.
+            m_deviceReloadPending = false;
+            startAsyncDeviceLoad();
+        } else {
+            onDeviceLoadComplete();
+        }
     }
     
     // Animate loading indicator
@@ -755,6 +707,7 @@ void AudioSettingsPage::saveSettings() {
         file << "threads=" << m_threadCountInput->getValue() << "\n";
         file << "dc_removal=" << (m_dcRemovalToggle->isOn() ? "1" : "0") << "\n";
         file << "master_limiter=" << (m_softClippingToggle->isOn() ? "1" : "0") << "\n";
+        file << "preview_ducking_db=" << m_previewDuckingDropdown->getSelectedValue() << "\n";
         file << "multi_threading=" << (m_multiThreadingToggle->isOn() ? "1" : "0") << "\n";
         file.close();
         Log::info("[AudioSettingsPage] Settings saved to " + configPath.string());
@@ -839,6 +792,11 @@ void AudioSettingsPage::loadSettings() {
             if (m_audioEngine)
                 m_audioEngine->setSafetyLimiterEnabled(val == 1);
         }
+        else if (key == "preview_ducking_db") {
+            m_previewDuckingDropdown->setSelectedByValue(val);
+            if (m_audioEngine)
+                m_audioEngine->setPreviewDuckingAttenuationDb(static_cast<float>(m_previewDuckingDropdown->getSelectedValue()));
+        }
         else if (key == "multi_threading") {
             m_multiThreadingToggle->setOn(val == 1);
         }
@@ -874,13 +832,14 @@ void AudioSettingsPage::setPlayingTestSound(bool playing) {
 //==============================================================================
 
 void AudioSettingsPage::startAsyncDeviceLoad() {
-    // TODO: Async loading implemented but freeze still occurs. 
-    // Likely cause: AudioDeviceManager::getDevices() or getAvailableDriverTypes() 
-    // are blocking on the UI thread before we even get here (called from somewhere else?)
-    // Need to investigate initialization order and cache devices at app startup instead.
-    
-    // Don't start if already loading
+    // This is the only path that may call getAvailableDriverTypes()/getDevices()
+    // (blocking hardware enumeration) — keep those calls on the worker thread (#256).
+
+    // If a load is already in flight, don't drop this request — the in-flight
+    // results may be for a stale driver selection. Remember it and re-enumerate
+    // once the current load finishes (consumed in onUpdate()).
     if (m_isLoadingDevices.load()) {
+        m_deviceReloadPending = true;
         return;
     }
     
@@ -906,42 +865,65 @@ void AudioSettingsPage::startAsyncDeviceLoad() {
     
     m_deviceLoadThread = std::thread([this]() {
         CachedDeviceData data;
-        
-        // === Enumerate driver types ===
-        auto types = m_audioManager->getAvailableDriverTypes();
-        for (int i = 0; i < static_cast<int>(types.size()); ++i) {
-            std::string name = "Unknown";
-            if (types[i] == AudioDriverType::WASAPI_SHARED) name = "WASAPI Shared";
-            else if (types[i] == AudioDriverType::WASAPI_EXCLUSIVE) name = "WASAPI Exclusive";
-            else if (types[i] == AudioDriverType::ASIO_EXTERNAL) name = "ASIO (External)";
-            else if (types[i] == AudioDriverType::ASIO_Aestra) name = "ASIO (Aestra)";
-            else if (types[i] == AudioDriverType::DIRECTSOUND) name = "DirectSound";
-            else if (types[i] == AudioDriverType::RTAUDIO) name = "RtAudio (Auto)";
-            else if (types[i] == AudioDriverType::PULSEAUDIO) name = "PulseAudio";
-            else if (types[i] == AudioDriverType::ALSA) name = "ALSA";
-            else if (types[i] == AudioDriverType::JACK) name = "JACK";
-            
-            data.driverTypes.push_back({ name, static_cast<int>(types[i]) });
-        }
-        
-        // Fallback
-        if (data.driverTypes.empty()) {
-            data.driverTypes.push_back({ "DirectSound", static_cast<int>(AudioDriverType::DIRECTSOUND) });
-        }
-        
-        data.currentDriverType = static_cast<int>(m_audioManager->getActiveDriverType());
-        
-        // === Enumerate devices ===
-        auto devices = m_audioManager->getDevices();
-        for (const auto& dev : devices) {
-            if (dev.maxOutputChannels > 0) {
-                data.outputDevices.push_back({ dev.name, static_cast<int>(dev.id) });
+
+        // Backend enumeration can throw (e.g. RtAudio errors). An uncaught
+        // exception in a std::thread calls std::terminate, and the page would
+        // stay stuck in the loading state — catch, log, and publish fallback
+        // data so the UI always recovers.
+        try {
+            // === Enumerate driver types ===
+            auto types = m_audioManager->getAvailableDriverTypes();
+            for (int i = 0; i < static_cast<int>(types.size()); ++i) {
+                std::string name = "Unknown";
+                if (types[i] == AudioDriverType::WASAPI_SHARED)
+                    name = "WASAPI Shared";
+                else if (types[i] == AudioDriverType::WASAPI_EXCLUSIVE)
+                    name = "WASAPI Exclusive";
+                else if (types[i] == AudioDriverType::ASIO_EXTERNAL)
+                    name = "ASIO (External)";
+                else if (types[i] == AudioDriverType::ASIO_Aestra)
+                    name = "ASIO (Aestra)";
+                else if (types[i] == AudioDriverType::DIRECTSOUND)
+                    name = "DirectSound";
+                else if (types[i] == AudioDriverType::RTAUDIO)
+                    name = "RtAudio (Auto)";
+                else if (types[i] == AudioDriverType::PULSEAUDIO)
+                    name = "PulseAudio";
+                else if (types[i] == AudioDriverType::ALSA)
+                    name = "ALSA";
+                else if (types[i] == AudioDriverType::JACK)
+                    name = "JACK";
+
+                data.driverTypes.push_back({name, static_cast<int>(types[i])});
             }
-            if (dev.maxInputChannels > 0) {
-                data.inputDevices.push_back({ dev.name, static_cast<int>(dev.id) });
+
+            data.currentDriverType = static_cast<int>(m_audioManager->getActiveDriverType());
+
+            // === Enumerate devices ===
+            auto devices = m_audioManager->getDevices();
+            for (const auto& dev : devices) {
+                if (dev.maxOutputChannels > 0) {
+                    data.outputDevices.push_back({dev.name, static_cast<int>(dev.id)});
+                }
+                if (dev.maxInputChannels > 0) {
+                    data.inputDevices.push_back({dev.name, static_cast<int>(dev.id)});
+                }
             }
+
+            auto currentConfig = m_audioManager->getCurrentConfig();
+            data.currentDeviceId = static_cast<int>(currentConfig.deviceId);
+            data.currentInputDeviceId = static_cast<int>(currentConfig.inputDeviceId);
+            data.currentSampleRate = static_cast<int>(currentConfig.sampleRate);
+        } catch (const std::exception& e) {
+            Log::error(std::string("[AudioSettingsPage] Device enumeration failed: ") + e.what());
+        } catch (...) {
+            Log::error("[AudioSettingsPage] Device enumeration failed with unknown error");
         }
 
+        // Fallbacks apply to both the empty-hardware and the failure case
+        if (data.driverTypes.empty()) {
+            data.driverTypes.push_back({"DirectSound", static_cast<int>(AudioDriverType::DIRECTSOUND)});
+        }
         if (data.outputDevices.empty()) {
             data.outputDevices.push_back({ "No Output Devices Found", -1 });
         }
@@ -949,11 +931,6 @@ void AudioSettingsPage::startAsyncDeviceLoad() {
             data.inputDevices.push_back({ "No Input Devices Found", -1 });
         }
 
-        auto currentConfig = m_audioManager->getCurrentConfig();
-        data.currentDeviceId = static_cast<int>(currentConfig.deviceId);
-        data.currentInputDeviceId = static_cast<int>(currentConfig.inputDeviceId);
-        data.currentSampleRate = static_cast<int>(currentConfig.sampleRate);
-        
         // Store results thread-safely
         {
             std::lock_guard<std::mutex> lock(m_deviceDataMutex);

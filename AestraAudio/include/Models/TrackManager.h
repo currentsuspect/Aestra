@@ -7,10 +7,12 @@
 #include "../Core/ChannelSlotMap.h"
 #include "../Core/MixerChannel.h"
 #include "../DSP/ContinuousParamBuffer.h"
+#include "../DSP/PanLaw.h"
 #include "../Playback/PatternPlaybackEngine.h"
 #include "../Playback/TimelineClock.h"
 #include "../RealtimeThreadGuard.h"
 #include "AestraLog.h"
+#include "ClipPrefilterService.h"
 #include "MeterSnapshot.h"
 #include "PatternManager.h"
 #include "PlaylistModel.h"
@@ -64,6 +66,12 @@ public:
     };
 
     /**
+     * @brief Destructor (out-of-line, TrackManager.cpp): documents that the
+     * prefilter worker joins first via member-declaration order.
+     */
+    ~TrackManager();
+
+    /**
      * @brief Construct a track manager and wire its internal playback helpers.
      */
     TrackManager() : m_patternPlaybackEngine(&m_timelineClock, &m_patternManager, &m_unitManager) {
@@ -105,9 +113,9 @@ public:
             return nullptr;
         }
         // IDs start at 1 to avoid collision with Master (ID 0).
-        auto channel =
-            std::make_unique<MixerChannel>(name.empty() ? "Track " + std::to_string(m_channels.size() + 1) : name,
-                                           static_cast<uint32_t>(m_channels.size() + 1));
+        const uint32_t channelId = m_nextChannelId++;
+        auto channel = std::make_unique<MixerChannel>(
+            name.empty() ? "Track " + std::to_string(m_channels.size() + 1) : name, channelId);
         channel->setCommandSink(m_commandSink);
         channel->setInputMonitoringStateChangedCallback([this]() { publishInputMonitoringSnapshot(); });
         if (m_channelPrepareCallback) {
@@ -213,8 +221,19 @@ public:
     /**
      * @brief Set output sample rate
      * @param rate Output device sample rate in Hz.
+     *
+     * Also forwards to the playlist's project sample rate: that value is the
+     * timeline unit buildRuntimeSnapshot() uses to convert beats to engine
+     * samples, so it must track the engine output rate. When they diverge,
+     * clip positions and durations are wrong by the ratio on non-48 kHz
+     * devices (measured: a clip in a 96 kHz engine truncated to half its
+     * duration — SampleRateBufferTruthTest). Not persisted; beats remain the
+     * project's source of truth.
      */
-    void setOutputSampleRate(double rate) { m_outputSampleRate = rate; }
+    void setOutputSampleRate(double rate) {
+        m_outputSampleRate = rate;
+        m_playlistModel.setProjectSampleRate(rate);
+    }
 
     /**
      * @brief Set input sample rate
@@ -302,6 +321,18 @@ public:
      * @param slotMap Shared slot-map instance to publish.
      */
     void setChannelSlotMapShared(std::shared_ptr<ChannelSlotMap> slotMap) { m_channelSlotMap = slotMap; }
+
+    /**
+     * @brief Build a channel slot map from the current channel list and share it.
+     * Rebuilds the published ChannelSlotMap in place so existing audio-engine
+     * consumers keep observing the current routing map.
+     */
+    void buildAndShareSlotMap() {
+        if (!m_channelSlotMap) {
+            m_channelSlotMap = std::make_shared<ChannelSlotMap>();
+        }
+        m_channelSlotMap->rebuild(m_channels);
+    }
 
     /**
      * @brief Set playhead position
@@ -585,7 +616,7 @@ public:
             return;
         }
 
-        const float monitorMixScale = 0.85f / static_cast<float>(monitoredCount);
+        const float monitorMixScale = PanLaw::kEqualPowerCenterGain / static_cast<float>(monitoredCount);
         for (uint32_t frame = 0; frame < frames; ++frame) {
             const size_t inputBaseIndex = static_cast<size_t>(frame) * static_cast<size_t>(m_inputChannelCount);
             float monitoredSample = 0.0f;
@@ -881,6 +912,7 @@ public:
      */
     void clearAllChannels() {
         m_channels.clear();
+        m_nextChannelId = 1;
         requestAudioGraphRebuild(GraphDirtyReason::TrackStructureChanged);
         if (m_channelSlotMap) {
             m_channelSlotMap->clear();
@@ -1440,6 +1472,7 @@ private:
     }
 
     std::vector<std::unique_ptr<MixerChannel>> m_channels;
+    uint32_t m_nextChannelId{1};
     PlaylistModel m_playlistModel;
     PatternManager m_patternManager;
     SourceManager m_sourceManager;
@@ -1496,6 +1529,26 @@ private:
     bool m_recordingSessionUsesPlacementOverride{false};
     bool m_recordingNoArmLogged{false};
     std::string m_recordingProjectPath;
+
+    // Anti-aliased clip prefiltering (Phase 4, F1; AestraDocs/clip-prefilter-lifecycle.md).
+    // Declared LAST so it is destroyed FIRST: the worker joins while every member its
+    // completion callback touches (the graph-dirty atomics above) is still alive.
+    std::unique_ptr<ClipPrefilterService> m_clipPrefilterService;
+
+public:
+    /**
+     * @brief Drain finished anti-alias prefilter results into their sources, clear
+     * stale filtered variants, and queue missing work for downsampled clips.
+     * Called by AudioGraphBuilder before every runtime snapshot (graph-build thread).
+     */
+    void ensureClipPrefilters();
+
+    /**
+     * @brief Block the calling NON-AUDIO thread until all queued prefilter jobs are
+     * done, then apply them. Deterministic completion for offline render and tests.
+     * A graph rebuild is still required for the engine to pick the copies up.
+     */
+    void waitForClipPrefilters();
 };
 
 } // namespace Audio

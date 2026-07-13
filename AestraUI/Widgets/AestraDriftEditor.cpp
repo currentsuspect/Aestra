@@ -18,8 +18,8 @@ constexpr float kWheelEnd = kWheelSweep * 0.5f;    // +135°
 constexpr int kNumTicks = 25; // -12 to +12 inclusive
 
 NUIColor accent() { return NUIColor(0.55f, 0.40f, 0.92f, 1.0f); }
-NUIColor panelSurface() { return NUIColor(0.026f, 0.026f, 0.038f, 0.96f); }
-NUIColor insetSurface() { return NUIColor(0.038f, 0.036f, 0.052f, 0.96f); }
+NUIColor panelSurface() { return NUIColor(0.027f, 0.027f, 0.027f, 0.96f); }
+NUIColor insetSurface() { return NUIColor(0.038f, 0.038f, 0.038f, 0.96f); }
 
 void drawArc(NUIRenderer& renderer, NUIPoint center, float radius, float startAngle, float endAngle,
              float thickness, NUIColor color) {
@@ -96,11 +96,11 @@ void AestraDriftEditor::drawPitchWheel(NUIRenderer& renderer, float cx, float cy
     const float angle = kWheelStart + (semitones + 12.0f) / 24.0f * kWheelSweep;
     const float r = m_wheelRadius;
 
-    renderer.fillCircle({cx, cy}, r + 15.0f, NUIColor(0.010f, 0.011f, 0.018f, 0.44f));
+    renderer.fillCircle({cx, cy}, r + 15.0f, NUIColor(0.011f, 0.011f, 0.011f, 0.44f));
     renderer.fillCircle({cx, cy}, r + 9.0f, insetSurface());
     renderer.strokeCircle({cx, cy}, r + 9.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.060f));
 
-    drawArc(renderer, {cx, cy}, r - 2.0f, kWheelStart, kWheelEnd, 4.0f, NUIColor(0.20f, 0.19f, 0.29f, 1.0f));
+    drawArc(renderer, {cx, cy}, r - 2.0f, kWheelStart, kWheelEnd, 4.0f, NUIColor(0.199f, 0.199f, 0.199f, 1.0f));
     drawArc(renderer, {cx, cy}, r - 2.0f, kWheelStart, angle, 4.0f, accent().withAlpha(0.92f));
 
     // Tick marks
@@ -141,7 +141,7 @@ void AestraDriftEditor::drawPitchWheel(NUIRenderer& renderer, float cx, float cy
     // Center well — Aestra deep recessed knob body
     const float wellR = r * 0.30f;
     renderer.fillCircle({cx, cy}, wellR + 5.0f, accent().withAlpha(0.08f));
-    renderer.fillCircle({cx, cy}, wellR, NUIColor(0.045f, 0.043f, 0.060f, 0.96f));
+    renderer.fillCircle({cx, cy}, wellR, NUIColor(0.045f, 0.045f, 0.045f, 0.96f));
     renderer.strokeCircle({cx, cy}, wellR, 1.2f, accent().withAlpha(0.36f));
 
     // Value text in center well
@@ -248,7 +248,7 @@ bool AestraDriftEditor::onMouseEvent(const NUIMouseEvent& event) {
         return true;
     }
 
-    return false;
+    return consumeInsideBounds(event);
 }
 
 void AestraDriftEditor::onResize(int width, int height) {

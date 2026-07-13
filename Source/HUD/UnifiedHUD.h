@@ -1,19 +1,21 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "../AestraUI/Core/NUIComponent.h"
+#include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraUI/Core/NUIAdaptiveFPS.h"
+#include "../AestraUI/Core/NUIComponent.h"
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
-#include "../AestraCore/include/AestraUnifiedProfiler.h"
-#include "AudioEngine.h"
 #include "AudioCommandQueue.h"
-#include <memory>
-#include <sstream>
-#include <iomanip>
-#include <vector>
+#include "AudioEngine.h"
+
 #include <algorithm>
 #include <array>
+#include <cstring>
+#include <iomanip>
+#include <memory>
+#include <sstream>
+#include <vector>
 
 /**
  * @brief Rocket Engine Profiler - Professional DAW Performance HUD
@@ -116,7 +118,10 @@ public:
 
     void onRender(AestraUI::NUIRenderer& renderer) override {
         if (!m_visible) return;
-        
+        // Zone the HUD's own cost so Render_Prep's ledger balances — the HUD
+        // draws dozens of text runs + two graphs (~1-2 ms observer overhead).
+        AESTRA_ZONE("HUD_Render");
+
         renderBackground(renderer);
         
         float y = getBounds().y + PADDING;
@@ -374,7 +379,36 @@ private:
         oss << "Buffer: " << bufFrames << " @ " << sampleRate << " Hz";
         if (qDrops > 0) oss << "  Drops: " << qDrops;
         renderer.drawText(oss.str(), AestraUI::NUIPoint(x, y), 9.0f, labelColor);
-        y += LINE_HEIGHT + SECTION_SPACING;
+        y += LINE_HEIGHT;
+
+        // Realtime scheduling state (#255): degraded audio priority must be
+        // impossible to miss — it is the difference between "crackles are a
+        // bug" and "crackles are an unconfigured system". Three states:
+        // RT + mlock = healthy (green); RT without mlock = partial, page
+        // faults can still glitch (warning); no RT = degraded (error).
+        {
+            const uint32_t prioBits = tel.getThreadPriorityStatus();
+            const int32_t rtErrno = tel.getLinuxRtPriorityErrno();
+            const bool rtActive = (prioBits & 0x01) != 0;
+            const bool memLocked = (prioBits & 0x02) != 0;
+            oss.str("");
+            const char* statusColor;
+            if (rtActive && memLocked) {
+                oss << "RT: SCHED_FIFO active  mlock: yes";
+                statusColor = "success";
+            } else if (rtActive) {
+                oss << "RT: SCHED_FIFO active  mlock: NO (page faults may glitch)";
+                statusColor = "warning";
+            } else {
+                oss << "RT: DEGRADED (normal priority";
+                if (rtErrno != 0)
+                    oss << ", err " << rtErrno << " (" << std::strerror(rtErrno) << ")";
+                oss << ") — check rtprio limits";
+                statusColor = "error";
+            }
+            renderer.drawText(oss.str(), AestraUI::NUIPoint(x, y), 9.0f, theme.getColor(statusColor));
+            y += LINE_HEIGHT + SECTION_SPACING;
+        }
     }
 
     void renderZoneHotspots(AestraUI::NUIRenderer& renderer, float& y) {

@@ -70,6 +70,25 @@ elseif(UNIX)
 endif()
 
 # =============================================================================
+# RtMidi Integration (MIT-style License) — hardware MIDI input
+# =============================================================================
+# Vendored like RtAudio (same author/license family, owner-approved 2026-07-09).
+# Compiled ONLY into the platform backend targets (AGENTS.md §8), never into
+# AestraAudioCore — core/headless builds get the MidiInputService stub instead.
+
+set(RTMIDI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/External/rtmidi)
+set(RTMIDI_SOURCES ${RTMIDI_DIR}/RtMidi.cpp)
+set(RTMIDI_HEADERS ${RTMIDI_DIR}/RtMidi.h)
+
+# Platform APIs: reuse the audio backend decisions. On Linux, RtMidi shares
+# RtAudio's __LINUX_ALSA__ define (already set above) and the ALSA libs. On
+# Windows it needs Windows Multimedia (__WINDOWS_MM__; winmm already in
+# RTAUDIO_LIBS). On macOS it would use __MACOSX_CORE__ (backend absent, #267).
+if(WIN32)
+    add_definitions(-D__WINDOWS_MM__)
+endif()
+
+# =============================================================================
 # VST3 SDK Integration (MIT License)
 # =============================================================================
 
@@ -180,13 +199,14 @@ set(AESTRA_AUDIO_CORE_SOURCES
     
     # Models
     src/Models/TrackManager.cpp
+    src/Models/ClipPrefilterService.cpp
     src/Models/PlaylistModel.cpp
     src/Models/UnitManager.cpp
     src/Models/PatternManager.cpp
     src/Models/ClipSource.cpp
     src/Models/AudioClip.cpp
     src/Models/PlaylistTrack.cpp
-    
+
     # DSP
     src/DSP/AudioProcessor.cpp
     src/DSP/Filter.cpp
@@ -194,6 +214,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/DSP/ReverbSIMD.cpp
     src/DSP/SincAVX512.cpp
     src/DSP/SampleRateConverter.cpp
+    src/DSP/ClipPrefilter.cpp
     src/DSP/TruePeakMeter.cpp
 
     # IO
@@ -492,9 +513,12 @@ if(TARGET AestraCore)
     target_link_libraries(AestraAudioCore PUBLIC AestraCore)
 endif()
 
-if(TARGET AestraLicense)
-    target_link_libraries(AestraAudioCore PUBLIC AestraLicense)
-endif()
+# AestraAudioCore stays license-free: no AestraAudio source references any
+# AestraLicense symbol (grep-verified 2026-07-09), and a PUBLIC link here dragged
+# licensing into every headless/test/core consumer, contradicting core-mode
+# semantics (AGENTS.md §2; architecture audit 2026Q2 §1.1). Consumers that
+# genuinely need licensing (the app at Source/CMakeLists.txt, license tests)
+# link AestraLicense directly.
 target_link_libraries(AestraAudioCore PUBLIC AestraPlat)
 
 # macOS frameworks needed by VST3 hosting
@@ -557,13 +581,21 @@ if(WIN32)
         include/Drivers/ASIODriver.h     # Added Phase 6
         include/Drivers/ASIOInterface.h  # Added Phase 6
         ${RTAUDIO_HEADERS} # RtAudio headers needed for backend compilation
+        ${RTMIDI_HEADERS}
     )
 
     add_library(AestraAudioWin STATIC
         ${AESTRA_AUDIO_WIN_SOURCES}
         ${AESTRA_AUDIO_WIN_HEADERS}
         ${RTAUDIO_SOURCES}
+        ${RTMIDI_SOURCES}
+        src/IO/MidiInputService.cpp
     )
+
+    # Real hardware MIDI input lives in the backend (AGENTS.md §8); the
+    # no-backend stub build of MidiInputService.cpp happens in AestraAudioCore
+    # only when no platform backend target exists (see end of backend section).
+    target_compile_definitions(AestraAudioWin PRIVATE AESTRA_HAS_RTMIDI)
 
     target_include_directories(AestraAudioWin
         PUBLIC
@@ -572,6 +604,7 @@ if(WIN32)
             ${CMAKE_CURRENT_SOURCE_DIR}/include # Access to Core headers
             ${CMAKE_CURRENT_SOURCE_DIR}/src/Win32
             ${RTAUDIO_DIR}
+            ${RTMIDI_DIR}
     )
 
     target_link_libraries(AestraAudioWin
@@ -599,13 +632,21 @@ elseif(UNIX)
             src/Linux/RtAudioDriver.h
             include/Drivers/AudioPlatformRegistry.h
             ${RTAUDIO_HEADERS}
+            ${RTMIDI_HEADERS}
         )
 
         add_library(AestraAudioLinux STATIC
             ${AESTRA_AUDIO_LINUX_SOURCES}
             ${AESTRA_AUDIO_LINUX_HEADERS}
             ${RTAUDIO_SOURCES}
+            ${RTMIDI_SOURCES}
+            src/IO/MidiInputService.cpp
         )
+
+        # RtMidi reuses __LINUX_ALSA__ (global add_definitions above) and the
+        # ALSA libs already in RTAUDIO_LIBS. Real implementation is backend-only
+        # (AGENTS.md §8); the stub fallback is below the backend section.
+        target_compile_definitions(AestraAudioLinux PRIVATE AESTRA_HAS_RTMIDI)
 
         target_include_directories(AestraAudioLinux
             PUBLIC
@@ -614,6 +655,7 @@ elseif(UNIX)
                 ${CMAKE_CURRENT_SOURCE_DIR}/include
                 ${CMAKE_CURRENT_SOURCE_DIR}/src/Linux
                 ${RTAUDIO_DIR}
+                ${RTMIDI_DIR}
         )
 
         target_link_libraries(AestraAudioLinux
@@ -633,6 +675,14 @@ elseif(UNIX)
         add_library(AestraAudio INTERFACE)
         target_link_libraries(AestraAudio INTERFACE AestraAudioCore)
     endif()
+endif()
+
+# MidiInputService compiles exactly once per build: into the platform backend
+# above (real RtMidi implementation, AESTRA_HAS_RTMIDI defined) when one
+# exists, otherwise here into AestraAudioCore as the no-backend stub — same
+# API, zero ports. Keeps RtMidi out of core/headless builds (AGENTS.md §8).
+if(NOT TARGET AestraAudioWin AND NOT TARGET AestraAudioLinux)
+    target_sources(AestraAudioCore PRIVATE src/IO/MidiInputService.cpp)
 endif()
 
 if(TARGET AestraAudio AND TARGET AestraPremiumPlugins)

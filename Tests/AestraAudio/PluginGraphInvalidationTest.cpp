@@ -244,12 +244,46 @@ void PluginBypassPublishesSnapshotTest() {
     std::cout << "PASS: PluginBypassPublishesSnapshotTest\n";
 }
 
+void PluginDryWetPublishesSnapshotTest() {
+    auto trackManager = makeTrackManagerWithClip();
+    auto* channel = trackManager->getChannel(0);
+    assert(channel != nullptr);
+    auto plugin = std::make_shared<TestGainPlugin>(0.5f);
+    auto& chain = channel->getEffectChain();
+    chain.prepare(static_cast<double>(kSampleRate), kBlockFrames);
+    assert(chain.insertPlugin(0, plugin));
+
+    chain.setSlotDryWetMix(0, 0.25f);
+    auto snapshot = chain.getSnapshot();
+    assert(snapshot != nullptr);
+    assert(std::abs(snapshot->slot(0).dryWetMix - 0.25f) < 0.0001f);
+    std::cout << "PASS: PluginDryWetPublishesSnapshotTest\n";
+}
+
+void PluginChainBypassPublishesSnapshotTest() {
+    EffectChain chain;
+    chain.prepare(static_cast<double>(kSampleRate), kBlockFrames);
+
+    chain.setChainBypassed(true);
+    auto snapshot = chain.getSnapshot();
+    assert(snapshot != nullptr);
+    assert(snapshot->isChainBypassed);
+
+    chain.setChainBypassed(false);
+    snapshot = chain.getSnapshot();
+    assert(snapshot != nullptr);
+    assert(!snapshot->isChainBypassed);
+    std::cout << "PASS: PluginChainBypassPublishesSnapshotTest\n";
+}
+
 } // namespace
 
 int main() {
     PluginInsertTakesEffectWithoutClipMoveTest();
     PluginRemoveTakesEffectWithoutClipMoveTest();
     PluginBypassPublishesSnapshotTest();
+    PluginDryWetPublishesSnapshotTest();
+    PluginChainBypassPublishesSnapshotTest();
     std::cout << "All plugin graph invalidation tests passed\n";
     return 0;
 }

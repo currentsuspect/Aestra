@@ -107,6 +107,19 @@ describe("parseSignRequest", () => {
     expect(() => parseSignRequest({ ...validLease, plugins: ["ok", 1] })).toThrow(SignRequestError);
     expect(() => parseSignRequest({ ...validLease, features: ["ok", false] })).toThrow(SignRequestError);
   });
+
+  it("rejects issue times beyond server clock skew", () => {
+    expect(parseSignRequest({
+      ...validLease,
+      issued_at: 1300,
+      expires_at: 606100,
+    }, 1000).issued_at).toBe(1300);
+    expect(() => parseSignRequest({
+      ...validLease,
+      issued_at: 1301,
+      expires_at: 606101,
+    }, 1000)).toThrow(SignRequestError);
+  });
 });
 
 describe("signCanonicalLease", () => {
@@ -211,6 +224,19 @@ describe("worker endpoints", () => {
         "content-type": "application/json",
       },
       body: JSON.stringify({ ...validLease, tier: "supporter" }),
+    }), env);
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 for future-issued admin sign payloads", async () => {
+    const issuedAt = Math.floor(Date.now() / 1000) + 3600;
+    const response = await worker.fetch(new Request("https://example.test/v1/entitlements/sign", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-admin-key",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ ...validLease, issued_at: issuedAt, expires_at: issuedAt + 604800 }),
     }), env);
     expect(response.status).toBe(400);
   });

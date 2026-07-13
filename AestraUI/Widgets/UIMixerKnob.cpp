@@ -225,10 +225,7 @@ void UIMixerKnob::onRender(NUIRenderer& renderer)
     NUIColor capColor = m_bg;
     if (hovered) capColor = m_bgHover;
 
-    // Drop shadow for depth — smaller blur when knob is tiny (three-knob row)
-    float shadowBlur = std::min(4.0f, capR * 0.5f);
-    renderer.drawShadow(NUIRect{cx - capR, cy - capR, capR * 2, capR * 2}, 0, 2, shadowBlur, NUIColor(0,0,0,0.5f));
-
+    // Flat cap: no drop shadow. The edge highlight below defines it.
     renderer.fillCircle({cx, cy}, capR, capColor);
 
     // Edge highlight for 3D feel

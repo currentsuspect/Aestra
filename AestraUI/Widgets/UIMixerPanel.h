@@ -1,20 +1,23 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include "NUIComponent.h"
-#include "NUITypes.h"
-#include "UIMixerMeter.h"
-#include "UIMixerStrip.h"
-#include "UIMixerInspector.h"
-#include "UIMixerPluginDropdown.h"
 #include "Base/NUISlider.h"
+#include "NUIComponent.h"
+#include "NUIDragDrop.h"
+#include "NUITypes.h"
+#include "UIMixerInspector.h"
+#include "UIMixerMeter.h"
+#include "UIMixerPluginDropdown.h"
+#include "UIMixerStrip.h"
+
+#include <functional>
 #include <memory>
 #include <vector>
-#include <functional>
 
 // Forward declarations
 namespace Aestra {
     class MixerViewModel;
+    struct ChannelViewModel;
     namespace Audio {
         class ContinuousParamBuffer;
         class MeterSnapshotBuffer;
@@ -33,7 +36,7 @@ namespace AestraUI {
  *
  * Requirements: 3.1 - Channel strips with fixed width (96-112px)
  */
-class UIMixerPanel : public NUIComponent {
+class UIMixerPanel : public NUIComponent, public IDropTarget {
 public:
     /**
      * @brief Construct a mixer panel.
@@ -44,12 +47,21 @@ public:
     UIMixerPanel(std::shared_ptr<Aestra::MixerViewModel> viewModel,
                  std::shared_ptr<Aestra::Audio::TrackManager> trackManager);
 
-    ~UIMixerPanel() override = default;
+    ~UIMixerPanel() override;
 
     void onRender(NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
+
+    // IDropTarget — plugin drops land on the strip under the cursor (#395).
+    // The mixer overlays the timeline, so it must claim drops before
+    // TrackManagerUI resolves them geometrically against the lanes behind it.
+    DropFeedback onDragEnter(const DragData& data, const NUIPoint& position) override;
+    DropFeedback onDragOver(const DragData& data, const NUIPoint& position) override;
+    void onDragLeave() override;
+    DropResult onDrop(const DragData& data, const NUIPoint& position) override;
+    NUIRect getDropBounds() const override;
 
     /**
      * @brief Refresh channel list from view model.
@@ -83,6 +95,16 @@ private:
 
     void showPluginDropdown(uint32_t channelId);
     void loadPluginToSelectedChannel(const std::string& pluginId);
+    bool loadPluginToChannel(Aestra::ChannelViewModel* vmChannel, const std::string& pluginId);
+
+    /// Strip under a screen position (channel strips + master), honoring the
+    /// inspector/master occlusion of scrolled strips. Null when none.
+    UIMixerStrip* stripAt(const NUIPoint& position) const;
+
+    /// View-model channel for a strip (master strip resolves to getMaster()).
+    Aestra::ChannelViewModel* channelForStrip(const UIMixerStrip* strip) const;
+
+    void ensureDropTargetRegistration();
 
     std::shared_ptr<Aestra::MixerViewModel> m_viewModel;
     std::shared_ptr<Aestra::Audio::TrackManager> m_trackManager;
@@ -101,6 +123,11 @@ private:
 
     /// Plugin finder dropdown (topmost, shown on Add Insert click)
     std::shared_ptr<UIMixerPluginDropdown> m_pluginDropdown;
+
+    // Drag-and-drop state (#395)
+    bool m_dropTargetRegistered{false};
+    bool m_dropOrderClaimedForDrag{false};
+    int64_t m_dropHoverChannelId{-1}; ///< Channel id of strip under an active plugin drag, -1 = none
 
     // Horizontal scroll offset for channel strips (pixels).
     float m_scrollX{0.0f};

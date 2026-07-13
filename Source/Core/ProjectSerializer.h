@@ -63,12 +63,27 @@ public:
         std::vector<PanelState> panels;
     };
 
+    /**
+     * @brief Content-integrity verdict for a loaded project file (#263).
+     *
+     * Corruption detection, NOT tamper-proofing: the checksum is keyless, so
+     * anyone can recompute it. It exists to catch disk corruption, truncated
+     * writes, and accidental edits — never to authenticate a file.
+     * - Unchecked: file predates the integrity field (or unknown algo) — no warning.
+     * - Verified:  stored checksum matches the recomputed one.
+     * - Mismatch:  content changed since save; load proceeds non-destructively
+     *              with a loud warning (structural corruption still hard-fails
+     *              through the existing validators).
+     */
+    enum class LoadIntegrity { Unchecked, Verified, Mismatch };
+
     struct LoadResult {
         bool ok{false};
         double tempo{120.0};
         double playhead{0.0};
         std::string errorMessage;
         std::vector<std::string> missingAssets;
+        LoadIntegrity integrity{LoadIntegrity::Unchecked};
 
         std::optional<UIState> ui;
         std::unique_ptr<::Aestra::ProjectLoadReport> report;
@@ -105,6 +120,12 @@ public:
 
     static LoadResult load(const std::string& path,
                            const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager);
+
+    // Load with explicit asset base path (used for rollback loads where the
+    // file is in a temp directory but assets are relative to the original project).
+    static LoadResult load(const std::string& path,
+                           const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager,
+                           const std::string& assetBasePath);
 
     static std::string getHistoryDirectory(const std::string& projectPath);
     static std::vector<HistoryEntry> listHistory(const std::string& projectPath);

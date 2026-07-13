@@ -55,10 +55,38 @@ TimelineMinimapBar::TimelineMinimapBar()
     cacheThemeColors_();
 }
 
+namespace {
+inline bool rangesEqual(const TimelineRange& a, const TimelineRange& b) {
+    return a.start == b.start && a.end == b.end;
+}
+} // namespace
+
 void TimelineMinimapBar::setModel(const TimelineMinimapModel& model)
 {
+    // Only repaint when the model actually changed. setModel is called every
+    // frame from TrackManagerUI::onUpdate, and an unconditional repaint() kept
+    // the root component permanently dirty — which would defeat idle frame
+    // elision (labs/perf/idle-frame-elision-spec.md).
+    // The snapshot is referenced by pointer and its version can be bumped
+    // in place, so the last-seen version must be remembered by value —
+    // comparing old->version against new->version through the same pointer
+    // would always pass.
+    const TimelineMinimapModel& o = model_;
+    const uint64_t newSummaryVersion = model.summary ? model.summary->version : 0;
+    const bool sameSummary = (o.summary == model.summary) && (lastSeenSummaryVersion_ == newSummaryVersion);
+    const bool unchanged = sameSummary && rangesEqual(o.view, model.view) && o.playheadBeat == model.playheadBeat &&
+                           rangesEqual(o.loop, model.loop) && rangesEqual(o.selection, model.selection) &&
+                           o.marks == model.marks && o.markCount == model.markCount && o.mode == model.mode &&
+                           o.aggregation == model.aggregation && o.beatsPerBar == model.beatsPerBar &&
+                           o.showSelection == model.showSelection && o.showLoop == model.showLoop &&
+                           o.showMarkers == model.showMarkers && o.showDiagnostics == model.showDiagnostics &&
+                           o.showPlayhead == model.showPlayhead;
+
     model_ = model;
-    repaint();
+    lastSeenSummaryVersion_ = newSummaryVersion;
+    if (!unchanged) {
+        repaint();
+    }
 }
 
 void TimelineMinimapBar::onUpdate(double deltaTime)
@@ -152,7 +180,9 @@ void TimelineMinimapBar::endDrag_()
 void TimelineMinimapBar::cacheThemeColors_()
 {
     auto& theme = NUIThemeManager::getInstance();
-    colors_.glassFill = theme.getColor("surfaceRaised").darkened(0.06f).withAlpha(0.98f);
+    // Near-black shell matching the ruler material exactly (one continuous
+    // band; the old surfaceRaised tint read blue against neighboring rows).
+    colors_.glassFill = NUIColor(0.012f, 0.012f, 0.012f, 0.98f);
     colors_.glassBorder = theme.getColor("border").withAlpha(0.28f);
     colors_.cornerSeparator = theme.getColor("border").withAlpha(0.28f);
 
@@ -253,7 +283,8 @@ void TimelineMinimapBar::renderToggles_(NUIRenderer& renderer, const TimelineMin
 
         renderer.fillRoundedRect(toggleBounds_[i], kToggleRadius, fill);
         renderer.strokeRoundedRect(toggleBounds_[i], kToggleRadius, 1.0f, border);
-        renderer.drawTextCentered(kLabels[i], toggleBounds_[i], 9.5f, text);
+        renderer.drawTextCentered(kLabels[i], toggleBounds_[i],
+                                  NUIThemeManager::getInstance().getFontSize("micro"), text);
     }
 }
 

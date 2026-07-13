@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "tempo": 174.998877,
+  "playhead": 2.345678901,
+  "sources": [
+    {
+      "id": 1,
+      "path": "v1_rich_assets/kick.wav",
+      "name": "kick"
+    }
+  ],
+  "patterns": [
+    {
+      "id": 1,
+      "name": "Rich MIDI Pattern",
+      "type": "midi",
+      "length": 16.0,
+      "notes": [
+        {"pitch": 61, "startBeat": 1024.125, "durationBeats": 0.4375, "velocity": 0.87, "unitId": 7, "pitchOffset": -3, "gate": 0.75, "slide": true},
+        {"pitch": 127, "startBeat": 0.333333333333333315, "durationBeats": 0.142857142857142849, "velocity": 0.01, "unitId": 0, "pitchOffset": 0, "gate": 1.0, "slide": false}
+      ],
+      "scale": {"rootKey": 9, "scaleKind": "minor", "snapToScale": true}
+    },
+    {
+      "id": 2,
+      "name": "Rich Audio Pattern",
+      "type": "audio",
+      "length": 4.0,
+      "sourceId": 1,
+      "slices": [
+        {"start": 480.0625, "length": 1920.125}
+      ]
+    }
+  ],
+  "lanes": [
+    {
+      "name": "Rich Lane A",
+      "color": "4278253260",
+      "volume": 0.333333343267440796,
+      "pan": -0.123456001281738281,
+      "mute": true,
+      "solo": true,
+      "soloSafe": true,
+      "armed": true,
+      "monitorInput": false,
+      "inputChannelIndex": 0,
+      "width": 1.23456001281738281,
+      "trackColorIndex": 5,
+      "routing": {
+        "mainOutputId": 2,
+        "sends": [
+          {"targetId": 2, "gain": 0.333333343267440796, "pan": 0.111111000180244446, "postFader": true, "mute": false, "sidechainOnly": false}
+        ]
+      },
+      "automation": [
+        {
+          "param": "0",
+          "targetEnum": 0,
+          "default": 0.419999986886978149,
+          "points": [
+            {"b": 0.5, "v": 0.100000001490116119, "c": 0.25},
+            {"b": 1024.125, "v": 0.899999976158142090, "c": 0.5}
+          ]
+        }
+      ],
+      "clips": [
+        {
+          "id": "v1-rich-midi-clip",
+          "patternId": 1,
+          "start": 1024.125,
+          "duration": 8.53125,
+          "sourceOffset": 0.0,
+          "name": "Rich MIDI Clip",
+          "edits": {"gain": 1.0, "pan": 0.0, "muted": false, "playbackRate": 1.0, "fadeIn": 0.0, "fadeOut": 0.0, "sourceStart": 0.0}
+        }
+      ]
+    },
+    {
+      "name": "Rich Lane B",
+      "color": "4286611584",
+      "volume": 0.649999976158142090,
+      "pan": 0.150000005960464478,
+      "mute": false,
+      "solo": false,
+      "clips": [
+        {
+          "id": "v1-rich-audio-clip",
+          "patternId": 2,
+          "start": 512.0625,
+          "durationSeconds": 3.14159265358979,
+          "sourceOffsetSeconds": 0.123456789012345,
+          "sourceOffset": 0.0,
+          "name": "Rich Audio Clip",
+          "edits": {"gain": 0.9876539707183838, "pan": -0.05432099848985672, "muted": true, "playbackRate": 1.5, "fadeIn": 0.125, "fadeOut": 0.0625, "sourceStart": 0.75}
+        }
+      ]
+    }
+  ],
+  "arsenal": {"nextId": 1, "units": []}
+}

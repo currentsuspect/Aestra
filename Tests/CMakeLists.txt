@@ -20,6 +20,22 @@ else()
 endif()
 
 # =============================================================================
+# License Tests
+# =============================================================================
+
+if(TARGET AestraLicense)
+    add_executable(LocalAccountCacheTest AestraLicense/LocalAccountCacheTest.cpp)
+    target_link_libraries(LocalAccountCacheTest PRIVATE AestraLicense)
+    target_include_directories(LocalAccountCacheTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraLicense/include
+    )
+    add_test(NAME LocalAccountCacheTest COMMAND LocalAccountCacheTest)
+    set_tests_properties(LocalAccountCacheTest PROPERTIES LABELS "license;account;security")
+else()
+    message(STATUS "LocalAccountCacheTest skipped (AestraLicense target unavailable)")
+endif()
+
+# =============================================================================
 # Integration Tests (Cross-Module)
 # =============================================================================
 
@@ -48,6 +64,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/VST3PluginTest.cpp")
     endif()
 endif()
 
+# Test temp-directory reliability stress test — proves makeUniqueTempDirectory
+# never hands two callers the same path under heavy concurrency (regression
+# guard for the ctest -j temp-dir collision).
+add_executable(TestTempDirectoryStressTest Support/TestTempDirectoryStressTest.cpp)
+find_package(Threads REQUIRED)
+target_link_libraries(TestTempDirectoryStressTest PRIVATE Threads::Threads)
+add_test(NAME TestTempDirectoryStressTest COMMAND TestTempDirectoryStressTest)
+set_tests_properties(TestTempDirectoryStressTest PROPERTIES LABELS "support;infrastructure")
+
 # Project RoundTrip Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     add_executable(ProjectRoundTripTest
@@ -72,13 +97,12 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
     target_compile_definitions(ProjectRoundTripTest PRIVATE
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
-    if(AESTRA_ENABLE_RUNTIME_TESTS)
-        add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
-        add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
-        set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;runtime")
-    else()
-message(STATUS "ProjectRoundTrip tests built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
-    endif()
+    # Registered unconditionally: exercises ProjectSerializer + TrackManager only —
+    # no audio device or host runtime needed (verified headless). Serialization is
+    # AGENTS.md §12 high-risk; roundtrip coverage must run on every CI build.
+    add_test(NAME ProjectRoundTripTest COMMAND ProjectRoundTripTest)
+    add_test(NAME AutosaveRoundTripTest COMMAND ProjectRoundTripTest)
+    set_tests_properties(ProjectRoundTripTest AutosaveRoundTripTest PROPERTIES LABELS "integration;serialization")
 endif()
 
 # Session Recovery Test (autosave + crash flag + recovery flow)
@@ -146,12 +170,93 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripIntegrityTest
     target_compile_definitions(ProjectRoundTripIntegrityTest PRIVATE
         $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
     )
-    if(AESTRA_ENABLE_RUNTIME_TESTS)
-        add_test(NAME ProjectRoundTripIntegrityTest COMMAND ProjectRoundTripIntegrityTest)
-        set_tests_properties(ProjectRoundTripIntegrityTest PROPERTIES LABELS "integration;runtime")
-    else()
-        message(STATUS "ProjectRoundTripIntegrityTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
-    endif()
+    # Registered unconditionally: pure serializer/model roundtrip, no device
+    # dependency (verified headless). See ProjectRoundTripTest note above.
+    add_test(NAME ProjectRoundTripIntegrityTest COMMAND ProjectRoundTripIntegrityTest)
+    set_tests_properties(ProjectRoundTripIntegrityTest PROPERTIES LABELS "integration;serialization")
+endif()
+
+# Project Integrity Check Test — corrupt files must not load silently (#263)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectIntegrityCheckTest.cpp")
+    add_executable(ProjectIntegrityCheckTest
+        Integration/ProjectIntegrityCheckTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectIntegrityCheckTest PRIVATE AestraAudio)
+    target_include_directories(ProjectIntegrityCheckTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    target_compile_definitions(ProjectIntegrityCheckTest PRIVATE
+        AESTRA_PROJECT_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Fixtures/ProjectFormat"
+        $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
+    )
+    add_test(NAME ProjectIntegrityCheckTest COMMAND ProjectIntegrityCheckTest)
+    set_tests_properties(ProjectIntegrityCheckTest PROPERTIES LABELS "integration;serialization")
+endif()
+
+# Project Fixture Corpus Test — checked-in v1 files are the compatibility contract (#249)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectFixtureCorpusTest.cpp")
+    add_executable(ProjectFixtureCorpusTest
+        Integration/ProjectFixtureCorpusTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectFixtureCorpusTest PRIVATE AestraAudio)
+    target_include_directories(ProjectFixtureCorpusTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    target_compile_definitions(ProjectFixtureCorpusTest PRIVATE
+        AESTRA_PROJECT_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Fixtures/ProjectFormat"
+        $<$<CONFIG:Debug>:AESTRA_ENABLE_PROJECT_LOAD_LOGS>
+    )
+    add_test(NAME ProjectFixtureCorpusTest COMMAND ProjectFixtureCorpusTest)
+    set_tests_properties(ProjectFixtureCorpusTest PROPERTIES LABELS "integration;serialization")
+endif()
+
+# Project Value Fidelity Test — numeric fields must roundtrip bit-exactly (#273)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectValueFidelityTest.cpp")
+    add_executable(ProjectValueFidelityTest
+        Integration/ProjectValueFidelityTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectValueFidelityTest PRIVATE AestraAudio)
+    target_include_directories(ProjectValueFidelityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    add_test(NAME ProjectValueFidelityTest COMMAND ProjectValueFidelityTest)
+    set_tests_properties(ProjectValueFidelityTest PROPERTIES LABELS "integration;serialization")
 endif()
 
 # Project Load Regression Tests (routing safety, missing references, non-destructive load)
@@ -335,6 +440,36 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerBenchmark.cpp")
     # (#pragma / hasAVX() checks). Forcing -mavx2 breaks on CPUs without AVX2 support.
 endif()
 
+# Resampler War Test: deterministic SRC quality gate with optional references.
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+    pkg_check_modules(SAMPLERATE QUIET samplerate)
+    pkg_check_modules(SOXR QUIET soxr)
+endif()
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ResamplerWarTest.cpp")
+    add_executable(ResamplerWarTest Integration/ResamplerWarTest.cpp)
+    target_link_libraries(ResamplerWarTest PRIVATE AestraAudioCore)
+    target_include_directories(ResamplerWarTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    target_compile_definitions(ResamplerWarTest PRIVATE AESTRA_SRC_TEST_ACCESS=1)
+    if(SAMPLERATE_FOUND)
+        target_link_libraries(ResamplerWarTest PRIVATE ${SAMPLERATE_LIBRARIES})
+        target_include_directories(ResamplerWarTest PRIVATE ${SAMPLERATE_INCLUDE_DIRS})
+        target_compile_options(ResamplerWarTest PRIVATE ${SAMPLERATE_CFLAGS_OTHER})
+        target_compile_definitions(ResamplerWarTest PRIVATE AESTRA_HAS_LIBSAMPLERATE=1)
+    endif()
+    if(SOXR_FOUND)
+        target_link_libraries(ResamplerWarTest PRIVATE ${SOXR_LIBRARIES})
+        target_include_directories(ResamplerWarTest PRIVATE ${SOXR_INCLUDE_DIRS})
+        target_compile_options(ResamplerWarTest PRIVATE ${SOXR_CFLAGS_OTHER})
+        target_compile_definitions(ResamplerWarTest PRIVATE AESTRA_HAS_SOXR=1)
+    endif()
+    add_test(NAME ResamplerWarTest COMMAND ResamplerWarTest)
+    set_tests_properties(ResamplerWarTest PROPERTIES LABELS "audio;dsp;resampler;quality")
+endif()
+
 # =============================================================================
 # AestraAudio Tests
 # =============================================================================
@@ -446,6 +581,12 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbSIMDParityTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
+    # The test TU gates its real body on AESTRA_ENABLE_RUNTIME_TESTS, but this
+    # check is pure computation (SSE vs scalar FDN kernels — no devices, no
+    # hardware I/O), and the test is registered on the always-on tier. Without
+    # this definition the body compiles out and ctest reports a "pass" that is
+    # actually a silent skip on every SSE machine.
+    target_compile_definitions(ReverbSIMDParityTest PRIVATE AESTRA_ENABLE_RUNTIME_TESTS=1)
     add_test(NAME ReverbSIMDParityTest COMMAND ReverbSIMDParityTest)
     set_tests_properties(ReverbSIMDParityTest PROPERTIES LABELS "audio;dsp;reverb")
 endif()
@@ -462,11 +603,124 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbSafetyRegressionTest.cp
     set_tests_properties(ReverbSafetyRegressionTest PROPERTIES LABELS "audio;dsp;reverb;safety")
 endif()
 
+# Reverb Consistency Probe — hunts for inconsistency/offness (bypass parity,
+# NaN rejection, silence tail, state roundtrip are hard invariants; Low Cut
+# mapping, freeze stability, sample-rate consistency, mode-switch clicks, and
+# stereo correlation are printed diagnostics).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbConsistencyProbe.cpp")
+    add_executable(ReverbConsistencyProbe AestraAudio/ReverbConsistencyProbe.cpp)
+    target_link_libraries(ReverbConsistencyProbe PRIVATE AestraAudio)
+    target_include_directories(ReverbConsistencyProbe PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ReverbConsistencyProbe COMMAND ReverbConsistencyProbe)
+    set_tests_properties(ReverbConsistencyProbe PROPERTIES LABELS "audio;dsp;reverb;probe")
+endif()
+
+# Reverb F4 modulation regression test (taps the real per-line modulator)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbModulationTest.cpp")
+    add_executable(ReverbModulationTest AestraAudio/ReverbModulationTest.cpp)
+    target_link_libraries(ReverbModulationTest PRIVATE AestraAudio)
+    target_include_directories(ReverbModulationTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ReverbModulationTest COMMAND ReverbModulationTest)
+    set_tests_properties(ReverbModulationTest PROPERTIES LABELS "audio;dsp;reverb;modulation")
+endif()
+
+# Reverb F6 stereo regression test (mono compatibility + width)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbStereoTest.cpp")
+    add_executable(ReverbStereoTest AestraAudio/ReverbStereoTest.cpp)
+    target_link_libraries(ReverbStereoTest PRIVATE AestraAudio)
+    target_include_directories(ReverbStereoTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ReverbStereoTest COMMAND ReverbStereoTest)
+    set_tests_properties(ReverbStereoTest PROPERTIES LABELS "audio;dsp;reverb;stereo")
+endif()
+
+# Reverb F8 tail-dormancy test (idle-instance optimization correctness)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbDormancyTest.cpp")
+    add_executable(ReverbDormancyTest AestraAudio/ReverbDormancyTest.cpp)
+    target_link_libraries(ReverbDormancyTest PRIVATE AestraAudio)
+    target_include_directories(ReverbDormancyTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ReverbDormancyTest COMMAND ReverbDormancyTest)
+    set_tests_properties(ReverbDormancyTest PROPERTIES LABELS "audio;dsp;reverb;dormancy")
+endif()
+
+# Reverb Harmonic-Motion / Tremolo investigation labs — experimental tooling,
+# gated so CI-safe/public test builds stay lean (opt in via AESTRA_ENABLE_EXPERIMENTAL_TESTS).
+if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbHarmonicMotionLab.cpp")
+        add_executable(AestraReverbHarmonicMotionLab AestraAudio/ReverbHarmonicMotionLab.cpp)
+        target_link_libraries(AestraReverbHarmonicMotionLab PRIVATE AestraAudio)
+        target_include_directories(AestraReverbHarmonicMotionLab PRIVATE
+            ${CMAKE_SOURCE_DIR}/AestraAudio/include
+            ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+            ${CMAKE_SOURCE_DIR}/AestraCore/include
+        )
+    endif()
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbTremoloLab.cpp")
+        add_executable(AestraReverbTremoloLab AestraAudio/ReverbTremoloLab.cpp)
+        target_link_libraries(AestraReverbTremoloLab PRIVATE AestraAudio)
+        target_include_directories(AestraReverbTremoloLab PRIVATE
+            ${CMAKE_SOURCE_DIR}/AestraAudio/include
+            ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+            ${CMAKE_SOURCE_DIR}/AestraCore/include
+        )
+    endif()
+else()
+    message(STATUS "Reverb tremolo/harmonic-motion investigation labs skipped (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to build)")
+endif()
+
+# Reverb Listening Pack generator (evaluation aid, not a test)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbListeningPack.cpp")
+    add_executable(AestraReverbListeningPack AestraAudio/ReverbListeningPack.cpp)
+    target_link_libraries(AestraReverbListeningPack PRIVATE AestraAudio)
+    target_include_directories(AestraReverbListeningPack PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
 # Reverb Quality Measurement Lab
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbQualityLab.cpp")
     add_executable(AestraReverbQualityLab AestraAudio/ReverbQualityLab.cpp)
     target_link_libraries(AestraReverbQualityLab PRIVATE AestraAudio)
     target_include_directories(AestraReverbQualityLab PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
+# Reverb Stereo Characterization Lab (F5/F6 measurement)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbStereoLab.cpp")
+    add_executable(AestraReverbStereoLab AestraAudio/ReverbStereoLab.cpp)
+    target_link_libraries(AestraReverbStereoLab PRIVATE AestraAudio)
+    target_include_directories(AestraReverbStereoLab PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+endif()
+
+# Reverb Modulation Baseline Lab (F4 pre/post measurement)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbModulationLab.cpp")
+    add_executable(AestraReverbModulationLab AestraAudio/ReverbModulationLab.cpp)
+    target_link_libraries(AestraReverbModulationLab PRIVATE AestraAudio)
+    target_include_directories(AestraReverbModulationLab PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
         ${CMAKE_SOURCE_DIR}/AestraCore/include
@@ -663,6 +917,11 @@ target_link_libraries(AestraPlaybackPathSignalIntegrityTest PRIVATE AestraAudio)
 add_test(NAME AestraPlaybackPathSignalIntegrityTest COMMAND AestraPlaybackPathSignalIntegrityTest)
 set_tests_properties(AestraPlaybackPathSignalIntegrityTest PROPERTIES LABELS "audio;quality;regression;playback")
 
+add_executable(TrackManagerMasterDuckingAuditTest AestraAudio/TrackManagerMasterDuckingAuditTest.cpp)
+target_link_libraries(TrackManagerMasterDuckingAuditTest PRIVATE AestraAudio)
+add_test(NAME TrackManagerMasterDuckingAuditTest COMMAND TrackManagerMasterDuckingAuditTest)
+set_tests_properties(TrackManagerMasterDuckingAuditTest PROPERTIES LABELS "audio;quality;regression;playback;metering")
+
 # AudioEngine output channel safety regression test
 add_executable(AestraAudioEngineOutputChannelTest AestraAudio/AudioEngineOutputChannelTest.cpp)
 target_link_libraries(AestraAudioEngineOutputChannelTest PRIVATE AestraAudioCore)
@@ -712,6 +971,11 @@ add_test(NAME AestraWavLoaderTest COMMAND AestraWavLoaderTest)
 add_executable(AestraAuditionEngineLifecycleTest AestraAudio/AuditionEngineLifecycleTest.cpp)
 target_link_libraries(AestraAuditionEngineLifecycleTest PRIVATE AestraAudio)
 add_test(NAME AestraAuditionEngineLifecycleTest COMMAND AestraAuditionEngineLifecycleTest)
+
+add_executable(PreviewAuditionGainParityTest AestraAudio/PreviewAuditionGainParityTest.cpp)
+target_link_libraries(PreviewAuditionGainParityTest PRIVATE AestraAudio)
+add_test(NAME PreviewAuditionGainParityTest COMMAND PreviewAuditionGainParityTest)
+set_tests_properties(PreviewAuditionGainParityTest PROPERTIES LABELS "audio;preview;audition;gain;regression")
 
 # SamplePool Test
 add_executable(SamplePoolTest AestraAudio/SamplePoolTest.cpp)
@@ -915,6 +1179,7 @@ set_tests_properties(ArsenalBridgeModeRoundTripTest PROPERTIES LABELS "arsenal;p
 # Sample Rate Converter Test
 add_executable(AestraSampleRateConverterTest AestraAudio/SampleRateConverterTest.cpp)
 target_link_libraries(AestraSampleRateConverterTest PRIVATE AestraAudio)
+target_compile_definitions(AestraSampleRateConverterTest PRIVATE AESTRA_SRC_TEST_ACCESS=1)
 if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
     add_test(NAME AestraSampleRateConverterTest COMMAND AestraSampleRateConverterTest)
     set_tests_properties(AestraSampleRateConverterTest PROPERTIES LABELS "experimental;unstable")
@@ -1001,6 +1266,17 @@ target_include_directories(AestraCompPhase1Test PRIVATE
 add_test(NAME AestraCompPhase1Test COMMAND AestraCompPhase1Test)
 set_tests_properties(AestraCompPhase1Test PROPERTIES LABELS "audio;plugins;comp;phase1")
 
+# Aestra Comp Oversampling Test (#228)
+add_executable(AestraCompOversamplingTest AestraAudio/AestraCompOversamplingTest.cpp)
+target_link_libraries(AestraCompOversamplingTest PRIVATE AestraAudio)
+target_include_directories(AestraCompOversamplingTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraCompOversamplingTest COMMAND AestraCompOversamplingTest)
+set_tests_properties(AestraCompOversamplingTest PROPERTIES LABELS "audio;plugins;comp;oversampling")
+
 # Aestra Comp Upgrade Test
 add_executable(AestraCompUpgradeTest AestraAudio/AestraCompUpgradeTest.cpp)
 target_link_libraries(AestraCompUpgradeTest PRIVATE AestraAudio)
@@ -1039,10 +1315,343 @@ target_include_directories(AestraDelayUpgradeTest PRIVATE
 add_test(NAME AestraDelayUpgradeTest COMMAND AestraDelayUpgradeTest)
 set_tests_properties(AestraDelayUpgradeTest PROPERTIES LABELS "audio;plugins;delay;upgrade")
 
-# Serialization Compatibility Test (Requires GTest)
-# add_executable(AestraSerializationCompatibilityTest AestraAudio/SerializationCompatibilityTest.cpp)
-# target_link_libraries(AestraSerializationCompatibilityTest PRIVATE AestraAudio)
-# add_test(NAME AestraSerializationCompatibilityTest COMMAND AestraSerializationCompatibilityTest)
+# Aestra Limit Test
+add_executable(AestraLimitTest AestraAudio/AestraLimitTest.cpp)
+target_link_libraries(AestraLimitTest PRIVATE AestraAudio)
+target_include_directories(AestraLimitTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraLimitTest COMMAND AestraLimitTest)
+set_tests_properties(AestraLimitTest PROPERTIES LABELS "audio;plugins;limiter")
+
+# Aestra Sat Test
+add_executable(AestraSatTest AestraAudio/AestraSatTest.cpp)
+target_link_libraries(AestraSatTest PRIVATE AestraAudio)
+target_include_directories(AestraSatTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraSatTest COMMAND AestraSatTest)
+set_tests_properties(AestraSatTest PROPERTIES LABELS "audio;plugins;saturation")
+
+# Aestra Filter plugin test (AestraFilterTest is the DSP::Filter lab above)
+add_executable(AestraFilterPluginTest AestraAudio/AestraFilterPluginTest.cpp)
+target_link_libraries(AestraFilterPluginTest PRIVATE AestraAudio)
+target_include_directories(AestraFilterPluginTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraFilterPluginTest COMMAND AestraFilterPluginTest)
+set_tests_properties(AestraFilterPluginTest PROPERTIES LABELS "audio;plugins;filter")
+
+# Aestra Filter multi-instance benchmark — build always, register only when
+# experimental tests are enabled (never in the always-on CI tier).
+add_executable(AestraFilterBench AestraAudio/AestraFilterBench.cpp)
+target_link_libraries(AestraFilterBench PRIVATE AestraAudio)
+target_include_directories(AestraFilterBench PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+if(AESTRA_ENABLE_EXPERIMENTAL_TESTS)
+    add_test(NAME AestraFilterBench COMMAND AestraFilterBench)
+    set_tests_properties(AestraFilterBench PROPERTIES LABELS "audio;benchmark;experimental")
+else()
+    message(STATUS "AestraFilterBench built but not registered (set AESTRA_ENABLE_EXPERIMENTAL_TESTS=ON to enable)")
+endif()
+
+# Aestra OTT Test
+add_executable(AestraOTTTest AestraAudio/AestraOTTTest.cpp)
+target_link_libraries(AestraOTTTest PRIVATE AestraAudio)
+target_include_directories(AestraOTTTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraOTTTest COMMAND AestraOTTTest)
+set_tests_properties(AestraOTTTest PROPERTIES LABELS "audio;plugins;ott")
+
+# Aestra LFO Test
+add_executable(AestraLFOTest AestraAudio/AestraLFOTest.cpp)
+target_link_libraries(AestraLFOTest PRIVATE AestraAudio)
+target_include_directories(AestraLFOTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AestraLFOTest COMMAND AestraLFOTest)
+set_tests_properties(AestraLFOTest PROPERTIES LABELS "audio;plugins;lfo")
+
+# Plugin initialization contract — parameters must survive EffectChain::prepare()
+# re-initialize (sample-rate/device changes), across every internal effect.
+add_executable(PluginInitContractTest AestraAudio/PluginInitContractTest.cpp)
+target_link_libraries(PluginInitContractTest PRIVATE AestraAudio)
+target_include_directories(PluginInitContractTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME PluginInitContractTest COMMAND PluginInitContractTest)
+set_tests_properties(PluginInitContractTest PROPERTIES LABELS "audio;plugins;lifecycle")
+
+# =============================================================================
+# Audio Quality Tests (S-Tier validation suite, Spec §3, §8, §15)
+# =============================================================================
+
+# Summing Engine Test — Verifies N-track digital summing accuracy
+# against mathematical reference. Pass: RMS error < -140 dB.
+add_executable(SummingEngineTest AestraAudio/SummingEngineTest.cpp)
+target_link_libraries(SummingEngineTest PRIVATE AestraAudio)
+target_include_directories(SummingEngineTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SummingEngineTest COMMAND SummingEngineTest)
+set_tests_properties(SummingEngineTest PROPERTIES LABELS "audio;quality;summing;s-tier")
+
+# Golden Reference Test — Signal-level regression against in-memory
+# mathematical reference for 1kHz, 440Hz, 10kHz, and impulse signals.
+add_executable(GoldenReferenceTest AestraAudio/GoldenReferenceTest.cpp)
+target_link_libraries(GoldenReferenceTest PRIVATE AestraAudio)
+target_include_directories(GoldenReferenceTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME GoldenReferenceTest COMMAND GoldenReferenceTest)
+set_tests_properties(GoldenReferenceTest PROPERTIES LABELS "audio;quality;golden;s-tier")
+
+# Golden Audio Regression — analytic golden cases for the render path:
+# silence/empty project, impulse via master, multi-track gain+pan mix.
+# Harness: Tests/AestraAudio/GoldenAudio/GoldenAudioHarness.h.
+# Policy doc: AestraDocs/audio-integrity-infrastructure.md.
+add_executable(GoldenAudioRegressionTest AestraAudio/GoldenAudioRegressionTest.cpp)
+target_link_libraries(GoldenAudioRegressionTest PRIVATE AestraAudio)
+target_include_directories(GoldenAudioRegressionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME GoldenAudioRegressionTest COMMAND GoldenAudioRegressionTest)
+set_tests_properties(GoldenAudioRegressionTest PROPERTIES LABELS "audio;quality;golden;integrity;s-tier" TIMEOUT 180)
+
+# Realtime/Export Parity — realtime processBlock output vs offline
+# bounceRangeToWav output for the same session, plus the preview-ducking
+# export-contamination probe. Doc: AestraDocs/audio-integrity-infrastructure.md.
+add_executable(RealtimeExportParityTest AestraAudio/RealtimeExportParityTest.cpp)
+target_link_libraries(RealtimeExportParityTest PRIVATE AestraAudio)
+target_include_directories(RealtimeExportParityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RealtimeExportParityTest COMMAND RealtimeExportParityTest)
+set_tests_properties(RealtimeExportParityTest PROPERTIES LABELS "audio;quality;export;parity;integrity;s-tier" TIMEOUT 180)
+
+# RT Allocation Trap — overrides operator new/delete in the test binary and
+# renders a session; asserts ZERO steady-state heap activity on the audio
+# callback path (thread marked by ScopedRealtimeAudioThread in processBlock).
+# Findings doc: AestraDocs/rt-safety-audit.md.
+add_executable(RTAllocationTrapTest AestraAudio/RTAllocationTrapTest.cpp)
+target_link_libraries(RTAllocationTrapTest PRIVATE AestraAudio)
+target_include_directories(RTAllocationTrapTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RTAllocationTrapTest COMMAND RTAllocationTrapTest)
+set_tests_properties(RTAllocationTrapTest PROPERTIES LABELS "audio;rt-safety;integrity;s-tier" TIMEOUT 180)
+
+# Callback Deadline Telemetry — validates AudioTelemetry::recordCallbackDuration
+# (avg/worst/budget/over-budget math) synthetically, plus a live smoke over
+# real processBlock timings.
+add_executable(CallbackDeadlineTelemetryTest AestraAudio/CallbackDeadlineTelemetryTest.cpp)
+target_link_libraries(CallbackDeadlineTelemetryTest PRIVATE AestraAudio)
+target_include_directories(CallbackDeadlineTelemetryTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME CallbackDeadlineTelemetryTest COMMAND CallbackDeadlineTelemetryTest)
+set_tests_properties(CallbackDeadlineTelemetryTest PROPERTIES LABELS "audio;diagnostics;deadline;integrity" TIMEOUT 120)
+
+# Sample-Rate & Buffer Truth — 96 kHz impulse exactness, 48k-clip-in-96k-engine
+# SRC pitch/time truth, buffer-size independence sweep (64/193/512/1024/2048),
+# sentinel overwrite guarantee, exact post-clip silence.
+add_executable(SampleRateBufferTruthTest AestraAudio/SampleRateBufferTruthTest.cpp)
+target_link_libraries(SampleRateBufferTruthTest PRIVATE AestraAudio)
+target_include_directories(SampleRateBufferTruthTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SampleRateBufferTruthTest COMMAND SampleRateBufferTruthTest)
+set_tests_properties(SampleRateBufferTruthTest PROPERTIES LABELS "audio;quality;samplerate;buffers;integrity;s-tier" TIMEOUT 180)
+
+# Audio Quality Audit — noise floor, THD+N, freq response, DC blocker, soft clipper
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioQualityAuditTest.cpp")
+    add_executable(AudioQualityAuditTest AestraAudio/AudioQualityAuditTest.cpp)
+    target_link_libraries(AudioQualityAuditTest PRIVATE AestraAudio)
+    target_include_directories(AudioQualityAuditTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AudioQualityAuditTest COMMAND AudioQualityAuditTest)
+    set_tests_properties(AudioQualityAuditTest PROPERTIES LABELS "audio;quality;audit;s-tier" TIMEOUT 180)
+endif()
+
+# Audio Purity Audit — transparent path, summing, buffer invariance, hidden clipping, SRC invariants
+add_executable(AudioPurityAuditTest AestraAudio/AudioPurityAuditTest.cpp)
+target_link_libraries(AudioPurityAuditTest PRIVATE AestraAudio)
+target_include_directories(AudioPurityAuditTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AudioPurityAuditTest COMMAND AudioPurityAuditTest
+    --report ${CMAKE_BINARY_DIR}/audio-purity-report.json
+    --text-report ${CMAKE_BINARY_DIR}/audio-purity-report.txt)
+set_tests_properties(AudioPurityAuditTest PROPERTIES LABELS "audio;quality;audit;purity;s-tier" TIMEOUT 240)
+
+# AudioEngine Torture Test — stress harness: silence, NaN/Inf, extreme gain,
+# buffer switching, sample rate switching, transport hammering, multi-track load
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioEngineTortureTest.cpp")
+    add_executable(AudioEngineTortureTest AestraAudio/AudioEngineTortureTest.cpp)
+    target_link_libraries(AudioEngineTortureTest PRIVATE AestraAudio)
+    target_include_directories(AudioEngineTortureTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    # In Debug configs the engine library keeps assert() live and
+    # AudioEngine::processBlock hard-asserts on NaN/Inf, so the poisoned-input
+    # cases must be skipped there. Tests compile with -UNDEBUG unconditionally
+    # (see top of this file), so the test cannot detect the engine's build
+    # config itself — pass it in explicitly.
+    target_compile_definitions(AudioEngineTortureTest PRIVATE
+        $<$<CONFIG:Debug>:AESTRA_ENGINE_ASSERTS_ACTIVE=1>)
+    add_test(NAME AudioEngineTortureTest COMMAND AudioEngineTortureTest)
+    set_tests_properties(AudioEngineTortureTest PROPERTIES LABELS "audio;stress;torture;s-tier" TIMEOUT 300)
+endif()
+
+# Export/Bounce Parity Test — Master bounce must equal sum of isolated
+# track bounces to within -80 dB RMS (accounting for master stage processing).
+add_executable(ExportBounceParityTest AestraAudio/ExportBounceParityTest.cpp)
+target_link_libraries(ExportBounceParityTest PRIVATE AestraAudio)
+target_include_directories(ExportBounceParityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME ExportBounceParityTest COMMAND ExportBounceParityTest)
+set_tests_properties(ExportBounceParityTest PROPERTIES LABELS "audio;quality;export;s-tier")
+
+# =============================================================================
+# Audio Research Bench (Tests/Research)
+# =============================================================================
+# Scientific audio-quality measurement layer: deterministic signal generators
+# (SignalLab.h) + analysis routines (AudioMeasure.h), validated against
+# closed-form analytic expectations. Header-only, test-side, no engine deps.
+# Doc: AestraDocs/audio-research-bench.md.
+
+# Measurement Core Self-Test — proves the measurement layer itself (peak, RMS,
+# DC, tone fit/SINAD-style residual, THD, impulse stats, stereo correlation,
+# diff forensics) against analytic math before it is used to measure DSP.
+add_executable(MeasurementCoreSelfTest Research/MeasurementCoreSelfTest.cpp)
+add_test(NAME MeasurementCoreSelfTest COMMAND MeasurementCoreSelfTest)
+set_tests_properties(MeasurementCoreSelfTest PROPERTIES LABELS "audio;research;audio-research" TIMEOUT 120)
+
+# Resampler Quality Audit — measures BOTH resampling engines: the production
+# clip-playback path (Interpolators + phase accumulator, as run by
+# AudioRenderer/AuditionEngine/SamplerPlugin) and the streaming polyphase
+# SampleRateConverter (currently no production call sites), across a 5-pair
+# rate matrix (44.1<->48, 48<->96, 44.1->96). Gates cite measured evidence;
+# libsamplerate/soxr print optional non-gated diagnostics when present
+# (same optional pattern as ResamplerWarTest above).
+add_executable(ResamplerQualityAuditTest Research/ResamplerQualityAuditTest.cpp)
+target_link_libraries(ResamplerQualityAuditTest PRIVATE AestraAudioCore)
+target_include_directories(ResamplerQualityAuditTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+if(SAMPLERATE_FOUND)
+    target_link_libraries(ResamplerQualityAuditTest PRIVATE ${SAMPLERATE_LIBRARIES})
+    target_include_directories(ResamplerQualityAuditTest PRIVATE ${SAMPLERATE_INCLUDE_DIRS})
+    target_compile_options(ResamplerQualityAuditTest PRIVATE ${SAMPLERATE_CFLAGS_OTHER})
+    target_compile_definitions(ResamplerQualityAuditTest PRIVATE AESTRA_HAS_LIBSAMPLERATE=1)
+endif()
+if(SOXR_FOUND)
+    target_link_libraries(ResamplerQualityAuditTest PRIVATE ${SOXR_LIBRARIES})
+    target_include_directories(ResamplerQualityAuditTest PRIVATE ${SOXR_INCLUDE_DIRS})
+    target_compile_options(ResamplerQualityAuditTest PRIVATE ${SOXR_CFLAGS_OTHER})
+    target_compile_definitions(ResamplerQualityAuditTest PRIVATE AESTRA_HAS_SOXR=1)
+endif()
+add_test(NAME ResamplerQualityAuditTest COMMAND ResamplerQualityAuditTest)
+set_tests_properties(ResamplerQualityAuditTest PROPERTIES LABELS "audio;research;audio-research;resampler" TIMEOUT 180)
+
+# Anti-Alias Policy Lab (Phase 3) — test-side prototype comparison for finding F1
+# (downsampling anti-aliasing): baseline legacy kernel vs an integrated ratio-aware
+# cutoff-scaled sinc (Option A) vs a designed delay-compensated Kaiser prefilter
+# (Option B), plus optional libsamplerate/soxr references. No production DSP is
+# changed; results feed the product decision in AestraDocs/audio-research-bench.md §9.
+add_executable(AntiAliasPolicyLab Research/AntiAliasPolicyLab.cpp)
+target_link_libraries(AntiAliasPolicyLab PRIVATE AestraAudioCore)
+target_include_directories(AntiAliasPolicyLab PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+if(SAMPLERATE_FOUND)
+    target_link_libraries(AntiAliasPolicyLab PRIVATE ${SAMPLERATE_LIBRARIES})
+    target_include_directories(AntiAliasPolicyLab PRIVATE ${SAMPLERATE_INCLUDE_DIRS})
+    target_compile_options(AntiAliasPolicyLab PRIVATE ${SAMPLERATE_CFLAGS_OTHER})
+    target_compile_definitions(AntiAliasPolicyLab PRIVATE AESTRA_HAS_LIBSAMPLERATE=1)
+endif()
+if(SOXR_FOUND)
+    target_link_libraries(AntiAliasPolicyLab PRIVATE ${SOXR_LIBRARIES})
+    target_include_directories(AntiAliasPolicyLab PRIVATE ${SOXR_INCLUDE_DIRS})
+    target_compile_options(AntiAliasPolicyLab PRIVATE ${SOXR_CFLAGS_OTHER})
+    target_compile_definitions(AntiAliasPolicyLab PRIVATE AESTRA_HAS_SOXR=1)
+endif()
+add_test(NAME AntiAliasPolicyLab COMMAND AntiAliasPolicyLab)
+set_tests_properties(AntiAliasPolicyLab PROPERTIES LABELS "audio;research;audio-research;resampler" TIMEOUT 300)
+
+# Session Resampling Truth (Phase 2D) — proves the isolated resampler findings
+# through the actual shipped paths: realtime playback (TrackManager ->
+# AudioGraphBuilder -> AudioEngine::processBlock), offline export
+# (bounceRangeToWav -> AudioExporter), PreviewEngine's own Cubic resampler,
+# and SamplerPlugin pitch-shift. Needs the full engine, so it links AestraAudio
+# (like SampleRateBufferTruthTest / RealtimeExportParityTest), not AestraAudioCore.
+add_executable(SessionResamplingTruthTest Research/SessionResamplingTruthTest.cpp)
+target_link_libraries(SessionResamplingTruthTest PRIVATE AestraAudio)
+target_include_directories(SessionResamplingTruthTest PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME SessionResamplingTruthTest COMMAND SessionResamplingTruthTest)
+set_tests_properties(SessionResamplingTruthTest PROPERTIES LABELS "audio;research;audio-research;resampler" TIMEOUT 300)
 
 # =============================================================================
 # AestraPlat Tests
@@ -1068,6 +1677,36 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/TextRendererSTBSpaceTest.cpp")
     message(STATUS "TextRendererSTBSpaceTest added - Issue #121 regression test")
 endif()
 
+# NUITheme JSON loading test (Issue #259)
+# Compiles NUITheme.cpp directly (its only deps are header-only: NUITypes.h,
+# AestraJSON.h, AestraLog.h) so the test also runs in headless builds where
+# AestraUI targets are disabled.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeJSONTest.cpp")
+    add_executable(NUIThemeJSONTest
+        AestraUI/NUIThemeJSONTest.cpp
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core/NUITheme.cpp
+    )
+    target_include_directories(NUIThemeJSONTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME NUIThemeJSONTest COMMAND NUIThemeJSONTest)
+    set_tests_properties(NUIThemeJSONTest PROPERTIES LABELS "ui;theme")
+    message(STATUS "NUIThemeJSONTest added - Issue #259 theme JSON loading test")
+endif()
+
+# KeyboardNoteInput Test — musical-typing translation logic (header-only, no
+# UI targets needed, runs headless on every lane).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/KeyboardNoteInputTest.cpp")
+    add_executable(KeyboardNoteInputTest AestraUI/KeyboardNoteInputTest.cpp)
+    target_include_directories(KeyboardNoteInputTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/Source/Core
+    )
+    add_test(NAME KeyboardNoteInputTest COMMAND KeyboardNoteInputTest)
+    set_tests_properties(KeyboardNoteInputTest PROPERTIES LABELS "ui;input;midi")
+endif()
+
 # PianoRollInteraction Test - tests for pure helper functions
 # Guard on target presence because headless/CI disables AestraUI targets.
 if(TARGET AestraUI_Core)
@@ -1081,6 +1720,38 @@ if(TARGET AestraUI_Core)
     set_tests_properties(PianoRollInteractionTest PROPERTIES LABELS "ui;interaction")
 else()
     message(STATUS "PianoRollInteractionTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
+# Editor-close deferred-destruction regression (#475): removeChild() during
+# event dispatch must defer and free safely (no iterator invalidation / UAF).
+if(TARGET AestraUI_Core)
+    add_executable(EditorCloseDeferredTest AestraUI/EditorCloseDeferredTest.cpp)
+    target_link_libraries(EditorCloseDeferredTest PRIVATE AestraUI_Core)
+    target_include_directories(EditorCloseDeferredTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+    )
+    add_test(NAME EditorCloseDeferredTest COMMAND EditorCloseDeferredTest)
+    set_tests_properties(EditorCloseDeferredTest PROPERTIES LABELS "ui;lifecycle;regression")
+else()
+    message(STATUS "EditorCloseDeferredTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
+# Panel-window click-swallow regression: a floating plugin editor must consume
+# clicks over its own empty area so they don't fall through to widgets behind it
+# (click-through + spurious dismiss).
+if(TARGET AestraUI_Core)
+    add_executable(PanelWindowClickSwallowTest AestraUI/PanelWindowClickSwallowTest.cpp)
+    target_link_libraries(PanelWindowClickSwallowTest PRIVATE AestraUI_Core)
+    target_include_directories(PanelWindowClickSwallowTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    )
+    add_test(NAME PanelWindowClickSwallowTest COMMAND PanelWindowClickSwallowTest)
+    set_tests_properties(PanelWindowClickSwallowTest PROPERTIES LABELS "ui;input;regression")
+else()
+    message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # NUITextInput Layout / Caret / Selection regression tests
@@ -1099,6 +1770,19 @@ if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIText
 else()
     message(STATUS "NUITextInputLayoutTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
+
+# No EXISTS guard: a missing committed test source must fail configure, not
+# silently drop coverage (repo policy since #454/#463).
+add_executable(MusicalTypingControllerTest
+    AestraUI/MusicalTypingControllerTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/MusicalTypingController.cpp
+)
+target_include_directories(MusicalTypingControllerTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Core
+    ${CMAKE_SOURCE_DIR}/AestraUI/Core
+)
+add_test(NAME MusicalTypingControllerTest COMMAND MusicalTypingControllerTest)
+set_tests_properties(MusicalTypingControllerTest PROPERTIES LABELS "ui;midi;regression")
 
 # =============================================================================
 # Commands Tests (Phase 2 - Undo/Redo System)

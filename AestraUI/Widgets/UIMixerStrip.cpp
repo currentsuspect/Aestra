@@ -35,6 +35,16 @@ namespace {
     constexpr float SELECT_TOP_H = 3.0f;
     constexpr float MIXER_MIN_CHANNEL_HEIGHT = 220.0f;
 
+    // Resolve a palette index to a renderer colour (matches UIMixerHeader::colorFromARGB).
+    NUIColor trackColorFromIndex(int index)
+    {
+        const uint32_t argb = paletteIndexToARGB(index);
+        return NUIColor(((argb >> 16) & 0xFF) / 255.0f,
+                        ((argb >> 8) & 0xFF) / 255.0f,
+                        (argb & 0xFF) / 255.0f,
+                        ((argb >> 24) & 0xFF) / 255.0f);
+    }
+
     std::string compactRouteName(uint32_t targetId, const std::string& targetName)
     {
         if (targetId == 0 || targetName == "Master" || targetName == "MASTER") {
@@ -154,6 +164,20 @@ namespace {
         }
 
         return {};
+    }
+
+    std::string formatDuckGain(float gain, const std::string& sourceLabel)
+    {
+        const std::string prefix = sourceLabel.empty() ? "DUCK" : sourceLabel;
+        if (!std::isfinite(gain) || gain <= 0.0f) {
+            return prefix;
+        }
+        const float db = 20.0f * std::log10(std::clamp(gain, 1.0e-6f, 1.0f));
+        std::ostringstream out;
+        out.setf(std::ios::fixed);
+        out.precision(std::abs(db) >= 9.5f ? 0 : 1);
+        out << prefix << " " << db << "dB";
+        return out.str();
     }
 }
 
@@ -563,6 +587,17 @@ void UIMixerStrip::onUpdate(double deltaTime)
         if (m_cachedTrackColorArgb != static_cast<uint32_t>(channel->trackColorIndex + 1)) {
             m_cachedTrackColorArgb = static_cast<uint32_t>(channel->trackColorIndex + 1);
             invalidateStaticCache();
+
+            // Thread the track colour through the strip's accent controls so each
+            // channel reads as its own instrument. Master (id 0) keeps the neutral
+            // primary accent, and unset tracks fall back to the widget defaults.
+            if (m_channelId != 0 && channel->trackColorIndex >= 0) {
+                const NUIColor accent = trackColorFromIndex(channel->trackColorIndex);
+                if (m_fader) m_fader->setAccentColor(accent);
+                if (m_trimKnob) m_trimKnob->setAccentColor(accent);
+                if (m_panKnob) m_panKnob->setAccentColor(accent);
+                if (m_widthKnob) m_widthKnob->setAccentColor(accent);
+            }
         }
         m_header->setTrackColorIndex(channel->trackColorIndex);
         m_header->setSelected(selected);
@@ -693,7 +728,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     }
 
     if (selected) {
-        renderer.drawShadow(bounds, 0.0f, 8.0f, 18.0f, m_selectedGlow.withAlpha(0.08f));
+        // Flat selection: no drop shadow — a tint + top highlight + outline only.
         renderer.fillRoundedRect(bounds, radius, m_selectedTint);
 
         renderer.fillRect(NUIRect{bounds.x, bounds.y, bounds.width, SELECT_TOP_H}, m_selectedTopHighlight);
@@ -749,6 +784,20 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
     */
 
     renderChildren(renderer);
+    if (m_channelId == 0 && m_viewModel && m_viewModel->isPreviewDuckingActive()) {
+        auto& theme = NUIThemeManager::getInstance();
+        const float duckGain = m_viewModel->getPreviewDuckGain();
+        const std::string label = formatDuckGain(duckGain, m_viewModel->getPreviewDuckSourceLabel());
+        const NUIColor accent = theme.getColor("warning");
+        const NUIColor text = theme.getColor("textPrimary");
+        const float badgeW = std::min(86.0f, std::max(66.0f, bounds.width - 20.0f));
+        const auto fxBounds = getFXSummaryBounds();
+        const float badgeY = fxBounds.height > 0.0f ? fxBounds.y + fxBounds.height + 6.0f : bounds.y + 72.0f;
+        const NUIRect badge(bounds.x + (bounds.width - badgeW) * 0.5f, badgeY, badgeW, 17.0f);
+        renderer.fillRoundedRect(badge, 5.0f, accent.withAlpha(0.18f));
+        renderer.strokeRoundedRect(badge, 5.0f, 1.0f, accent.withAlpha(0.52f));
+        renderer.drawTextCentered(label, badge, 8.4f, text.withAlpha(0.92f));
+    }
     if (channel && channel->muted) {
         renderer.fillRoundedRect(getBounds(), radius, m_mutedOverlay);
     }

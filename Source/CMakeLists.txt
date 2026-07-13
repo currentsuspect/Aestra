@@ -22,6 +22,8 @@ set(Aestra_SOURCES
 	Core/AestraRootComponent.cpp
 	Core/AestraContent.h
 	Core/AestraContent.cpp
+	Core/MusicalTypingController.h
+	Core/MusicalTypingController.cpp
 	Core/ProjectSerializer.cpp
 	Core/TakeManager.h
 	Core/TakeManager.cpp
@@ -124,6 +126,9 @@ if(TARGET AestraLicense)
 	target_link_libraries(Aestra PRIVATE AestraLicense)
 	target_compile_definitions(Aestra PRIVATE AESTRA_HAS_LICENSE_GATE=1)
 else()
+	if(NOT AESTRA_ALLOW_LICENSE_GATE_OFF)
+		message(FATAL_ERROR "Aestra UI requires AestraLicense. Set AESTRA_ALLOW_LICENSE_GATE_OFF=ON only for lab/development builds that intentionally omit offline license verification.")
+	endif()
 	target_compile_definitions(Aestra PRIVATE AESTRA_HAS_LICENSE_GATE=0)
 endif()
 
@@ -149,6 +154,28 @@ target_link_libraries(Aestra PRIVATE
 	AestraUI_OpenGL
 	-Wl,--start-group AestraAudio AestraAudioCore -Wl,--end-group
 )
+
+# Release-only optimization flags
+# Scoped to Release via generator expressions — never applied to Debug/RelWithDebInfo.
+# NO -ffast-math: codebase has ~15 std::isfinite()/std::isnan() guards in audio hot paths.
+# Enabling -ffast-math silently disables those guards (compiler optimizes them away).
+# -ffast-math is a separate project: audit guards, replace with fast-math-safe equivalents, test.
+# NO -fno-exceptions: the app relies on exception handling — Main.cpp's top-level
+# catch, AestraJSON's SEC-RTM-013 parse guards, and std file/parse paths all catch.
+# Disabling exceptions turns those throws into aborts.
+# NO -fno-rtti: Source UI files use std::dynamic_pointer_cast (e.g. dropdown
+# resolution in AudioSettingsPage::onRender), which requires RTTI.
+# Note: CI runs with AESTRA_CI=ON, which forces headless mode — the Aestra app
+# target (and these flags) are NOT exercised by CI. Validate app builds locally.
+if(NOT MSVC)
+    target_compile_options(Aestra PRIVATE
+        $<$<CONFIG:Release>:-O3>
+        $<$<CONFIG:Release>:-flto>
+    )
+    target_link_options(Aestra PRIVATE
+        $<$<CONFIG:Release>:-flto>
+    )
+endif()
 
 # Include directories
 # Add all subdirectories so headers can be included without relative paths

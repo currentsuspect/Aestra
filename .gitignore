@@ -188,6 +188,9 @@ aestra_profile.json
 autosave.aes
 *.aes
 !Tests/Fixtures/**/*.aes
+# Tiny checked-in fixture assets (a few hundred bytes) are part of the
+# project-format compatibility corpus — the *.wav ignore above must not eat them.
+!Tests/Fixtures/**/*.wav
 crash_flag
 runtime_log.txt
 build_log.txt

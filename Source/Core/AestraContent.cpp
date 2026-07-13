@@ -17,18 +17,22 @@
 #include "AuditionEngine.h" // Audition Mode backend
 #include "AuditionPanel.h"  // Audition Mode UI
 #include "Commands/PluginCommands.h"
+#include "MidiInputService.h"
 #include "MixerChannel.h"
 #include "MixerPanel.h"
 #include "PatternBrowserPanel.h"
 #include "PianoRollPanel.h"
 #include "Plugin/AestraDelay.h"
+#include "Plugin/AestraLFO.h"
 #include "PluginManager.h"
 #include "SampleEditorPanel.h"
 
 // AestraUI includes
 #include "../AestraUI/Core/NUIThemeSystem.h"
+#include "../AestraUI/Base/NUITextInput.h"
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraUI/Platform/NUIPlatformBridge.h"
+#include "../AestraUI/Widgets/TrackColorPalette.h"
 
 // Component includes
 #include "AudioVisualizer.h"
@@ -38,8 +42,8 @@
 #include "TransportBar.h"
 
 // Audio includes
-#include "../AestraCore/include/AestraLog.h"
 #include "../AestraAudio/include/Commands/CommandRegistry.h"
+#include "../AestraCore/include/AestraLog.h"
 #include "AudioEngine.h"
 #include "ChannelSlotMap.h"
 #include "ClipSource.h"
@@ -50,10 +54,12 @@
 #include "PreviewEngine.h"
 #include "TrackManager.h"
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <thread>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -68,6 +74,69 @@ constexpr float kMinFileBrowserWidth = 300.0f;
 constexpr float kMinPatternBrowserWidth = 96.0f;
 constexpr float kMinTrackAreaWidth = 420.0f;
 constexpr float kResizeHitWidth = 6.0f;
+
+std::vector<float> buildPreviewWaveform(const std::vector<float>& samples, uint32_t channels, size_t targetSize = 128) {
+    std::vector<float> waveform(targetSize, 0.0f);
+    if (samples.empty() || channels == 0 || targetSize == 0) {
+        return waveform;
+    }
+
+    const size_t totalFrames = samples.size() / channels;
+    if (totalFrames == 0) {
+        return waveform;
+    }
+
+    const double framesPerBin = static_cast<double>(totalFrames) / static_cast<double>(targetSize);
+    for (size_t bin = 0; bin < targetSize; ++bin) {
+        const size_t startFrame = static_cast<size_t>(static_cast<double>(bin) * framesPerBin);
+        const size_t endFrame =
+            std::min(totalFrames, static_cast<size_t>(static_cast<double>(bin + 1) * framesPerBin) + 1);
+
+        float peak = 0.0f;
+        for (size_t frame = startFrame; frame < endFrame; ++frame) {
+            float sum = 0.0f;
+            for (uint32_t ch = 0; ch < channels; ++ch) {
+                sum += std::abs(samples[frame * channels + ch]);
+            }
+            peak = std::max(peak, sum / static_cast<float>(channels));
+        }
+        waveform[bin] = std::min(1.0f, peak);
+    }
+
+    return waveform;
+}
+
+std::vector<float> buildEditorWaveform(const std::vector<float>& samples, uint32_t channels, uint32_t sampleLength,
+                                       size_t buckets = 1024) {
+    std::vector<float> waveform;
+    if (samples.empty() || channels == 0 || sampleLength == 0 || buckets == 0) {
+        return waveform;
+    }
+
+    const size_t framesPerBucket = std::max<size_t>(1, static_cast<size_t>(sampleLength) / buckets);
+    waveform.reserve(buckets * 2);
+    for (size_t bucket = 0; bucket < buckets; ++bucket) {
+        const size_t startFrame = bucket * framesPerBucket;
+        const size_t endFrame = std::min<size_t>(static_cast<size_t>(sampleLength), startFrame + framesPerBucket);
+        if (startFrame >= endFrame) {
+            waveform.push_back(0.0f);
+            waveform.push_back(0.0f);
+            continue;
+        }
+
+        float minV = 1.0f;
+        float maxV = -1.0f;
+        for (size_t frame = startFrame; frame < endFrame; ++frame) {
+            const size_t idx = frame * channels;
+            const float mono = (channels > 1) ? 0.5f * (samples[idx] + samples[idx + 1]) : samples[idx];
+            minV = std::min(minV, mono);
+            maxV = std::max(maxV, mono);
+        }
+        waveform.push_back(maxV);
+        waveform.push_back(minV);
+    }
+    return waveform;
+}
 } // namespace
 
 // =============================================================================
@@ -75,6 +144,7 @@ constexpr float kResizeHitWidth = 6.0f;
 // =============================================================================
 
 AestraContent::~AestraContent() {
+    m_musicalTyping.releaseAllNotes();
     if (m_audioEngine) {
         m_audioEngine->setPreviewEngine(nullptr);
     }
@@ -103,7 +173,10 @@ AestraContent::~AestraContent() {
     }
 }
 
-AestraContent::AestraContent() {
+AestraContent::AestraContent()
+    : m_musicalTyping([this](uint64_t unitId, uint8_t status, uint8_t data1, uint8_t data2) {
+        return m_audioEngine && m_audioEngine->postLiveMidiEvent(unitId, status, data1, data2);
+    }) {
     // Create layers
     m_workspaceLayer = std::make_shared<AestraUI::NUIComponent>();
     m_workspaceLayer->setId("WorkspaceLayer");
@@ -436,28 +509,6 @@ AestraContent::AestraContent() {
     m_previewPanel->setOnPlay([this](const AestraUI::FileItem& file) { playSoundPreview(file); });
     m_previewPanel->setOnStop([this]() { stopSoundPreview(); });
     m_previewPanel->setOnSeek([this](double seconds) { seekSoundPreview(seconds); });
-    m_previewPanel->setOnReplay([this]() {
-        if (m_previewEngine && !m_currentPreviewFile.empty()) {
-            m_previewEngine->stop();
-            double fullDuration = m_previewEngine->getDuration();
-            if (fullDuration <= 0.0) fullDuration = 300.0;
-            float rate = 1.0f;
-            if (m_previewPanel && m_previewPanel->isBpmSyncEnabled()) {
-                int fileBpm = 0;
-                int projectBpm = m_audioEngine ? static_cast<int>(m_audioEngine->getBPM()) : 120;
-                if (fileBpm > 0 && projectBpm > 0) {
-                    rate = std::clamp(static_cast<float>(projectBpm) / static_cast<float>(fileBpm), 0.5f, 2.0f);
-                }
-            }
-            auto result = m_previewEngine->play(m_currentPreviewFile, 0.0f, fullDuration, rate);
-            if (result == Audio::PreviewResult::Success || result == Audio::PreviewResult::Pending) {
-                m_previewIsPlaying = true;
-                m_previewStartTime = std::chrono::steady_clock::now();
-                if (m_previewPanel)
-                    m_previewPanel->setPlaying(true);
-            }
-        }
-    });
     m_workspaceLayer->addChild(m_previewPanel);
 
     // Link file selection to preview panel
@@ -669,6 +720,21 @@ AestraContent::AestraContent() {
         m_pianoRollPanel->setAudioEngine(m_audioEngine);
     }
     m_pianoRollPanel->setVisible(false);
+
+    // Musical typing: QWERTY plays the piano roll's editing unit through the
+    // live-MIDI path. The target unit (tag) is captured at note-on, so
+    // note-offs reach the right unit even if the editing unit changes mid-hold.
+    m_keyboardNoteInput.setTagProvider([this]() -> uint64_t {
+        if (m_pianoRollPanel && m_pianoRollPanel->isVisible()) {
+            return static_cast<uint64_t>(m_pianoRollPanel->getEditingUnitId());
+        }
+        return 0;
+    });
+    m_keyboardNoteInput.setSink([this](uint8_t note, uint8_t velocity, bool on, uint64_t tag) {
+        if (m_audioEngine && tag != 0) {
+            m_audioEngine->postLiveMidiEvent(tag, on ? uint8_t{0x90} : uint8_t{0x80}, note, velocity);
+        }
+    });
     m_pianoRollPanel->setOnPatternEdited([this](PatternID patternId) {
         // Pattern already saved by PianoRollPanel before firing this callback.
         // Refresh every surface that can render the same pattern.
@@ -891,16 +957,7 @@ AestraContent::AestraContent() {
 
             // 2. Perform Load
             AESTRA_LOG_DEBUG("Loading sample into Unit " + std::to_string(id) + ": " + file.path);
-            if (m_trackManager) {
-                auto& unitManager = m_trackManager->getUnitManager();
-                unitManager.setUnitEnabled(id, true);
-                unitManager.setUnitAudioClip(id, file.path);
-                if (m_sequencerPanel) {
-                    m_sequencerPanel->setSelectedUnit(id);
-                    m_sequencerPanel->refreshUnits();
-                }
-                openSampleEditorForUnit(id, file.path);
-            }
+            loadSampleIntoUnitAsync(id, file.path, true);
         });
     });
     m_sequencerPanel->setOnRequestSampleEditor([this](UnitID id) {
@@ -913,11 +970,19 @@ AestraContent::AestraContent() {
     m_sequencerPanel->setOnPluginDroppedToUnit(
         [this](UnitID unitId, const std::string& pluginId) { loadInstrumentIntoArsenalUnit(unitId, pluginId); });
     m_sequencerPanel->setOnSampleDroppedToUnit(
-        [this](UnitID unitId, const std::string& samplePath) { openSampleEditorForUnit(unitId, samplePath); });
+        [this](UnitID unitId, const std::string& samplePath) { loadSampleIntoUnitAsync(unitId, samplePath, true); });
     m_sequencerPanel->setOnSelectedUnitChanged([this](UnitID unitId) {
         if (m_pianoRollPanel) {
             m_pianoRollPanel->setEditingUnit(unitId);
         }
+        // Live hardware MIDI follows the selected unit (musical-typing
+        // semantics). Every selection path — clicks, refreshes, pattern
+        // switches, programmatic setSelectedUnit — fires this callback,
+        // so this is the single target-tracking choke point.
+        if (m_midiInput) {
+            m_midiInput->setTargetUnit(unitId);
+        }
+        m_musicalTyping.setTargetUnit(unitId);
     });
     m_sequencerPanel->setOnPatternEdited([this](PatternID patternId) {
         if (m_patternBrowser) {
@@ -1114,26 +1179,54 @@ AestraContent::AestraContent() {
 // =============================================================================
 
 void AestraContent::onUpdate(double dt) {
+    drainMainThreadTasks();
     updatePendingCountIn();
 
-    // Sync track changes to MixerViewModel
-    auto tm = getTrackManager();
-    if (tm && m_mixerPanel) {
-        auto viewModel = m_mixerPanel->getViewModel();
-        if (viewModel) {
-            auto slotMap = tm->getChannelSlotMapRaw();
-            if (slotMap) {
-                viewModel->syncFromEngine(*tm, *slotMap);
-                m_mixerPanel->refreshChannels();
+    // Drive preview state: clears the pending-load spinner once the decode
+    // is ready, feeds playhead/duration to the panel, and stops at the end.
+    // (This existed but was never called — the panel's spinner and progress
+    // were frozen because nothing pumped the preview engine state.)
+    updateSoundPreview();
 
-                // Force refresh the rack display if we have one bound
-                if (m_pluginController) {
-                    auto mixerUI = m_mixerPanel->getMixerUI();
-                    if (mixerUI) {
-                        auto inspector = mixerUI->getInspector();
-                        if (inspector && inspector->getEffectRack()) {
-                            m_pluginController->refreshRackDisplay(inspector->getEffectRack().get());
-                        }
+    // Sync the mixer view-model from the engine — but only while the mixer is
+    // visible and only when what it displays has actually changed. This block
+    // used to run every frame unconditionally AND redundantly (refreshChannels
+    // already calls syncFromEngine), so it re-dirtied the panel ~2x/frame even
+    // with the mixer closed, keeping the app off idle and hot with a plugin.
+    auto tm = getTrackManager();
+    if (tm && m_mixerPanel && m_mixerPanel->isVisible() && m_mixerPanel->getViewModel()) {
+        // Cheap fingerprint of the displayed state: structural generation plus
+        // per-channel identity/state/level. Quantized levels so float noise
+        // doesn't force a resync; live values (automation, drags) still flip it.
+        uint64_t fp = tm->graphRebuildRequestGeneration() * 1099511628211ull;
+        const size_t channelCount = tm->getChannelCount();
+        fp = fp * 31 + channelCount;
+        for (size_t i = 0; i < channelCount; ++i) {
+            auto* ch = tm->getChannel(i);
+            if (!ch) continue;
+            uint64_t h = ch->getChannelId();
+            h = h * 31 + ch->getColor();
+            h = h * 31 + (static_cast<uint64_t>(ch->isMuted())
+                          | (static_cast<uint64_t>(ch->isSoloed()) << 1)
+                          | (static_cast<uint64_t>(ch->isArmed()) << 2)
+                          | (static_cast<uint64_t>(ch->isMonitoringEnabled()) << 3));
+            h = h * 31 + static_cast<uint64_t>(std::lround(ch->getVolume() * 1000.0f) & 0xFFFFF);
+            h = h * 31 + static_cast<uint64_t>(std::lround((ch->getPan() + 1.0f) * 1000.0f) & 0xFFFFF);
+            for (unsigned char c : ch->getName()) h = h * 31 + c;
+            fp ^= h + 0x9e3779b97f4a7c15ull + (fp << 6) + (fp >> 2);
+        }
+
+        if (fp != m_lastMixerFingerprint) {
+            m_lastMixerFingerprint = fp;
+            m_mixerPanel->refreshChannels(); // calls syncFromEngine internally
+
+            // Force refresh the rack display if we have one bound
+            if (m_pluginController) {
+                auto mixerUI = m_mixerPanel->getMixerUI();
+                if (mixerUI) {
+                    auto inspector = mixerUI->getInspector();
+                    if (inspector && inspector->getEffectRack()) {
+                        m_pluginController->refreshRackDisplay(inspector->getEffectRack().get());
                     }
                 }
             }
@@ -1171,12 +1264,25 @@ void AestraContent::onUpdate(double dt) {
         }
     }
 
-    // Update Mixer Meters (Real-time)
-    if (tm) {
+    // Update Mixer Meters (Real-time) — only while the mixer is visible; meters
+    // aren't shown otherwise, so smoothing them off-screen is wasted work.
+    if (tm && m_mixerPanel && m_mixerPanel->isVisible()) {
         auto snapshots = tm->getMeterSnapshots();
-        if (snapshots && m_mixerPanel) {
+        if (snapshots) {
             auto viewModel = m_mixerPanel->getViewModel();
             if (viewModel) {
+                if (m_audioEngine) {
+                    const auto source = m_audioEngine->getPreviewDuckSource();
+                    std::string sourceLabel;
+                    if (source == Audio::AudioEngine::PreviewDuckSource::BrowserPreview) {
+                        sourceLabel = "PREVIEW";
+                    } else if (source == Audio::AudioEngine::PreviewDuckSource::Audition) {
+                        sourceLabel = "AUDITION";
+                    } else if (source == Audio::AudioEngine::PreviewDuckSource::ArsenalPreview) {
+                        sourceLabel = "ARSENAL";
+                    }
+                    viewModel->setPreviewDuckState(m_audioEngine->getPreviewDuckGain(), sourceLabel);
+                }
                 viewModel->updateMeters(*snapshots, dt);
             }
         }
@@ -1399,13 +1505,12 @@ void AestraContent::onResize(int width, int height) {
         float fbHeight = height - fbTop;
 
         if (showPreviewDock) {
-            const float previewHeight = 68.0f + AestraUI::FilePreviewPanel::kTransportBarHeight;
+            // Full browser width: the dock previously started at the nav-pane
+            // edge, leaving an unpainted (black) strip under the nav pane.
+            const float previewHeight = 68.0f;
             fbHeight -= previewHeight;
-            const float navWidth = std::clamp(fileBrowserWidth * 0.34f, 118.0f, 188.0f);
-            const float previewWidth = std::max(0.0f, fileBrowserWidth - navWidth);
-
-            m_previewPanel->setBounds(AestraUI::NUIAbsolute(contentBounds, navWidth, fbTop + fbHeight,
-                                                            previewWidth, previewHeight));
+            m_previewPanel->setBounds(
+                AestraUI::NUIAbsolute(contentBounds, 0, fbTop + fbHeight, fileBrowserWidth, previewHeight));
         }
 
         m_fileBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, fbTop, fileBrowserWidth, fbHeight));
@@ -2826,12 +2931,23 @@ void AestraContent::setPlatformBridge(AestraUI::NUIPlatformBridge* bridge) {
     }
 }
 
+void AestraContent::setMidiInput(Aestra::Audio::MidiInputService* midiInput) {
+    m_midiInput = midiInput;
+    // Push the current selection so a controller plays the right unit even if
+    // the user never re-selects after startup.
+    if (m_midiInput && m_sequencerPanel) {
+        m_midiInput->setTargetUnit(m_sequencerPanel->getSelectedUnitId());
+    }
+}
+
 void AestraContent::setAudioEngine(Aestra::Audio::AudioEngine* engine) {
+    m_musicalTyping.releaseAllNotes();
     // Detach preview from old engine before overwriting m_audioEngine
     if (m_audioEngine && m_previewEngine) {
         m_audioEngine->setPreviewEngine(nullptr);
     }
     m_audioEngine = engine;
+    m_musicalTyping.setTargetUnit(m_sequencerPanel ? m_sequencerPanel->getSelectedUnitId() : 0);
     Aestra::Audio::CommandRegistry::setAudioEngine(engine);
     if (m_audioEngine && m_previewEngine) {
         m_audioEngine->setPreviewEngine(m_previewEngine.get());
@@ -2921,12 +3037,9 @@ void AestraContent::addDemoTracks() {
         m_trackManager->addChannel(name);
 
         if (auto* lane = playlist.getLane(laneId)) {
-            if (i % 3 == 1)
-                lane->colorRGBA = 0xFFbb86fc;
-            else if (i % 3 == 2)
-                lane->colorRGBA = 0xFF00bcd4;
-            else
-                lane->colorRGBA = 0xFF9a9aa3;
+            // Cycle the shared track palette so the lane strip matches the
+            // name ink and mixer tint derived from the same index.
+            lane->colorRGBA = AestraUI::TRACK_PALETTE[(i - 1) % AestraUI::PALETTE_SIZE];
 
             if (i == 1) {
                 AutomationCurve vol("Volume", AutomationTarget::Volume);
@@ -3036,15 +3149,7 @@ void AestraContent::playSoundPreview(const AestraUI::FileItem& file) {
     }
 
     m_previewDuration = 8.0;
-    float playbackRate = 1.0f;
-    if (m_previewPanel && m_previewPanel->isBpmSyncEnabled() && m_previewPanel->isLoopEnabled()) {
-        int fileBpm = file.detectedBpm;
-        int projectBpm = m_audioEngine ? static_cast<int>(m_audioEngine->getBPM()) : 120;
-        if (fileBpm > 0 && projectBpm > 0) {
-            playbackRate = std::clamp(static_cast<float>(projectBpm) / static_cast<float>(fileBpm), 0.5f, 2.0f);
-        }
-    }
-    auto result = m_previewEngine->play(file.path, 0.0f, m_previewDuration, playbackRate);
+    auto result = m_previewEngine->play(file.path, 0.0f, m_previewDuration);
 
     if (result == PreviewResult::Success || result == PreviewResult::Pending) {
         m_previewIsPlaying = true;
@@ -3086,6 +3191,131 @@ void AestraContent::stopSoundPreview() {
         m_fileBrowser->setActivePlaybackPath("");
     }
     AESTRA_LOG_TRACE("Sound preview stopped");
+}
+
+void AestraContent::enqueueMainThreadTask(std::function<void()> task) {
+    if (!task) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m_mainThreadTasksMutex);
+    m_mainThreadTasks.push_back(std::move(task));
+}
+
+void AestraContent::drainMainThreadTasks() {
+    std::vector<std::function<void()>> tasks;
+    {
+        std::lock_guard<std::mutex> lock(m_mainThreadTasksMutex);
+        tasks.swap(m_mainThreadTasks);
+    }
+
+    for (auto& task : tasks) {
+        if (task) {
+            task();
+        }
+    }
+}
+
+void AestraContent::loadSampleIntoUnitAsync(UnitID unitId, const std::string& samplePath, bool openEditorWhenReady) {
+    if (!m_trackManager || unitId == 0 || samplePath.empty()) {
+        return;
+    }
+
+    uint64_t generation = 0;
+    {
+        std::lock_guard<std::mutex> lock(m_sampleUnitLoadGenerationsMutex);
+        generation = ++m_sampleUnitLoadGenerations[unitId];
+    }
+    auto weakSelf = weak_from_this();
+
+    if (m_trackManager->getUnitManager().getUnit(unitId)) {
+        std::string filename = std::filesystem::path(samplePath).stem().string();
+        if (!filename.empty()) {
+            m_trackManager->getUnitManager().setUnitName(unitId, filename);
+        }
+        m_trackManager->getUnitManager().setUnitEnabled(unitId, true);
+    }
+    if (m_sequencerPanel) {
+        m_sequencerPanel->setSelectedUnit(unitId);
+        m_sequencerPanel->refreshUnits();
+    }
+
+    std::thread([weakSelf, generation, unitId, samplePath, openEditorWhenReady]() {
+        std::vector<float> decodedData;
+        uint32_t sampleRate = 0;
+        uint32_t numChannels = 0;
+        const bool decoded = decodeAudioFile(samplePath, decodedData, sampleRate, numChannels);
+        const uint32_t sampleLength =
+            (decoded && numChannels > 0) ? static_cast<uint32_t>(decodedData.size() / numChannels) : 0;
+        std::vector<float> editorWaveform =
+            decoded ? buildEditorWaveform(decodedData, numChannels, sampleLength) : std::vector<float>();
+
+        std::vector<float> previewAudio;
+        uint32_t previewRate = 0;
+        uint32_t previewChannels = 0;
+        constexpr uint64_t kPreviewMaxFrames = 48000 * 24;
+        constexpr double kPreviewMaxSeconds = static_cast<double>(kPreviewMaxFrames) / 48000.0;
+        std::vector<float> previewWaveform;
+        double durationSeconds = 0.0;
+
+        if (decodeAudioPreview(samplePath, previewAudio, previewRate, previewChannels, kPreviewMaxSeconds)) {
+            previewWaveform = buildPreviewWaveform(previewAudio, previewChannels);
+            if (previewRate > 0 && previewChannels > 0) {
+                durationSeconds =
+                    static_cast<double>(previewAudio.size()) / static_cast<double>(previewRate * previewChannels);
+            }
+        }
+        if (durationSeconds <= 0.0 && sampleRate > 0 && numChannels > 0) {
+            durationSeconds = static_cast<double>(decodedData.size()) / static_cast<double>(sampleRate * numChannels);
+        }
+
+        auto self = std::dynamic_pointer_cast<AestraContent>(weakSelf.lock());
+        if (!self) {
+            return;
+        }
+
+        self->enqueueMainThreadTask([weakSelf, generation, unitId, samplePath, openEditorWhenReady, decoded,
+                                     decodedData = std::move(decodedData), sampleRate, numChannels,
+                                     sampleLength, editorWaveform = std::move(editorWaveform),
+                                     previewWaveform = std::move(previewWaveform), durationSeconds]() mutable {
+            auto self = std::dynamic_pointer_cast<AestraContent>(weakSelf.lock());
+            if (!self || !self->m_trackManager) {
+                return;
+            }
+            {
+                std::lock_guard<std::mutex> lock(self->m_sampleUnitLoadGenerationsMutex);
+                const auto generationIt = self->m_sampleUnitLoadGenerations.find(unitId);
+                if (generationIt == self->m_sampleUnitLoadGenerations.end() || generationIt->second != generation) {
+                    return;
+                }
+            }
+
+            auto& unitManager = self->m_trackManager->getUnitManager();
+            if (!decoded ||
+                !unitManager.setUnitAudioClipFromDecoded(unitId, samplePath, std::move(decodedData), sampleRate,
+                                                         numChannels, std::move(previewWaveform), durationSeconds)) {
+                AESTRA_LOG_ERROR("Failed to load sample into Unit " + std::to_string(unitId) + ": " + samplePath);
+                return;
+            }
+
+            if (self->m_sequencerPanel) {
+                self->m_sequencerPanel->setSelectedUnit(unitId);
+                self->m_sequencerPanel->refreshUnits();
+            }
+            if (openEditorWhenReady) {
+                self->m_sampleEditorUnitId = unitId;
+                self->syncSampleEditorToUnit(unitId);
+                if (self->m_sampleEditorPanel) {
+                    self->m_sampleEditorPanel->loadPreparedSample(samplePath, static_cast<double>(sampleRate),
+                                                                  sampleLength, std::move(editorWaveform));
+                    self->m_sampleEditorPanel->setVisible(true);
+                    self->m_sampleEditorPanel->bringToFront();
+                    self->m_sampleEditorPanel->setDirty(true);
+                }
+                self->onResize(static_cast<int>(self->getBounds().width), static_cast<int>(self->getBounds().height));
+            }
+            AESTRA_LOG_DEBUG("Sample loaded into Unit " + std::to_string(unitId) + " asynchronously: " + samplePath);
+        });
+    }).detach();
 }
 
 void AestraContent::loadSampleIntoSelectedTrack(const std::string& filePath) {
@@ -3283,6 +3513,14 @@ bool AestraContent::isPlayingPreview() const {
     return m_previewIsPlaying;
 }
 
+bool AestraContent::hasRealtimePlaybackVisuals() const {
+    if (m_previewIsPlaying)
+        return true;
+    if (m_auditionEngine && m_auditionEngine->isPlaying())
+        return true;
+    return false;
+}
+
 void AestraContent::updatePreviewPlayhead() {
     if (m_previewPanel && m_previewEngine) {
         m_previewPanel->setDuration(m_previewEngine->getDuration());
@@ -3299,12 +3537,23 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
     if (!m_trackManager)
         return;
 
-    // 2. Get first MixerChannel (track selection not implemented yet)
-    // TODO: Add track selection UI and pass selected index here
-    size_t trackIndex = 0;
-    auto channel = m_trackManager->getChannel(trackIndex);
+    // 2. Resolve the target channel: the selected track's mixer channel when a
+    //    track is selected (mirrors the sample-drop selection path), otherwise
+    //    fall back to the first channel. The shared_ptr keeps the selected
+    //    channel alive for the duration of this call.
+    MixerChannel* channel = nullptr;
+    std::shared_ptr<MixerChannel> selectedChannel;
+    if (m_trackManagerUI) {
+        if (auto* selectedTrack = m_trackManagerUI->getSelectedTrackUI()) {
+            selectedChannel = selectedTrack->getMixerChannel();
+            channel = selectedChannel.get();
+        }
+    }
     if (!channel) {
-        AESTRA_LOG_ERROR("Cannot load effect: No mixer channel at index " + std::to_string(trackIndex));
+        channel = m_trackManager->getChannel(0);
+    }
+    if (!channel) {
+        AESTRA_LOG_ERROR("Cannot load effect: no mixer channel available");
         return;
     }
 
@@ -3324,6 +3573,10 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
         const float bpm = m_audioEngine ? m_audioEngine->getBPM() : 120.0f;
         delay->setBPM(bpm);
     }
+    if (auto lfo = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraLFO>(instance)) {
+        const float bpm = m_audioEngine ? m_audioEngine->getBPM() : 120.0f;
+        lfo->setBPM(bpm);
+    }
     instance->activate();
 
     // 4. Insert into first available effect chain slot (via CommandHistory for undo)
@@ -3333,9 +3586,13 @@ void AestraContent::loadEffectToSelectedTrack(const std::string& pluginId) {
     if (slot < Aestra::Audio::EffectChain::MAX_SLOTS) {
         m_trackManager->getCommandHistory().pushAndExecute(
             std::make_shared<Aestra::Audio::AddPluginCommand>(*channel, slot, std::move(instance)));
-        AESTRA_LOG_DEBUG("Loaded effect to Track " + std::to_string(trackIndex + 1) + " slot " + std::to_string(slot));
+        // The playback graph only picks up chain changes on rebuild (which also
+        // re-prepares chains with the live sample rate/block size) — without this,
+        // the plugin never processes already-playing tracks.
+        m_trackManager->requestAudioGraphRebuild(Aestra::Audio::GraphDirtyReason::EffectChainChanged);
+        AESTRA_LOG_DEBUG("Loaded effect to channel '" + channel->getName() + "' slot " + std::to_string(slot));
     } else {
-        AESTRA_LOG_WARNING("No empty effect slots on Track " + std::to_string(trackIndex + 1));
+        AESTRA_LOG_WARNING("No empty effect slots on channel '" + channel->getName() + "'");
     }
 }
 
@@ -3344,6 +3601,9 @@ void AestraContent::setPluginTempo(float bpm) {
     for (const auto& instance : pluginManager.getActiveInstances()) {
         if (auto delay = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraDelay>(instance)) {
             delay->setBPM(bpm);
+        }
+        if (auto lfo = std::dynamic_pointer_cast<Aestra::Audio::Plugins::AestraLFO>(instance)) {
+            lfo->setBPM(bpm);
         }
     }
 }
@@ -3512,10 +3772,25 @@ void AestraContent::toggleHistoryPanel() {
 
 // Global Shortcuts
 bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
+    // A note release must win even if focus moved after its note-on; otherwise
+    // an editable field can consume the key-up and leave a stuck voice.
+    if (event.released && m_musicalTyping.handleKeyEvent(event)) {
+        if (m_transportBar) {
+            m_transportBar->setMusicalTypingStatus(m_musicalTyping.isEnabled(), m_musicalTyping.displayOctave());
+        }
+        return true;
+    }
     if (event.keyCode == AestraUI::NUIKeyCode::Space && event.released) {
         m_spaceShortcutLatched = false;
         return true;
     }
+
+    // Musical-typing note-offs need key RELEASES, which nothing else consumes —
+    // handle them before the press-only early-return. Runs even if the piano
+    // roll closed mid-hold: releases only match keys that produced a note-on.
+    if (event.released && m_keyboardNoteInput.handleKeyEvent(event))
+        return true;
+
     if (!event.pressed)
         return false;
 
@@ -3523,6 +3798,13 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     // and note shortcuts must take priority over global handlers
     if (m_pianoRollPanel && m_pianoRollPanel->isVisible()) {
         if (m_pianoRollPanel->handleKeyEvent(event))
+            return true;
+
+        // Musical typing: unconsumed plain keys play the editing unit live.
+        // After the piano roll's own shortcuts, before global handlers.
+        // (Focused text inputs never reach here — the window manager gives the
+        // focused widget first refusal.)
+        if (m_keyboardNoteInput.handleKeyEvent(event))
             return true;
     }
 
@@ -3623,7 +3905,22 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
         }
     }
 
+    // Standard text inputs own letter keys. Most dispatch paths already give
+    // focused widgets first refusal; this explicit guard also protects the
+    // root-component path, which routes global shortcuts before focus.
+    if (dynamic_cast<AestraUI::NUITextInput*>(AestraUI::NUIComponent::getFocusedComponent()) == nullptr &&
+        m_musicalTyping.handleKeyEvent(event)) {
+        if (m_transportBar) {
+            m_transportBar->setMusicalTypingStatus(m_musicalTyping.isEnabled(), m_musicalTyping.displayOctave());
+        }
+        return true;
+    }
+
     return false;
+}
+
+void AestraContent::releaseMusicalTypingNotes() {
+    m_musicalTyping.releaseAllNotes();
 }
 
 Aestra::Audio::CommandResult AestraContent::executeMuseCommand(const std::string& input) {

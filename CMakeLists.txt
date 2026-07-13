@@ -35,9 +35,10 @@ option(AESTRA_ENABLE_TESTS "Build test executables" ON)
 option(AESTRA_CI "Configure deterministic CI-safe defaults" OFF)
 option(AESTRA_ENABLE_PREMIUM_PLUGINS "Build private premium plugin modules" OFF)
 option(AESTRA_LICENSE_ENABLE_PREMIUM_LEASES "Allow signed Supporter/Founder leases to activate premium entitlements" OFF)
+option(AESTRA_ALLOW_LICENSE_GATE_OFF "Allow lab/development builds to omit offline license verification" OFF)
 option(AESTRA_ENABLE_TEST_LICENSES "Enable test-only mock license acceptance" OFF)
 option(AESTRA_REVERB_PROFILE "Enable AestraVerb stage profiling (lab/benchmark only)" OFF)
-option(AESTRA_REVERB_DIAGNOSTICS "Enable AestraVerb clamp diagnostics (lab only)" OFF)
+option(AESTRA_REVERB_DIAGNOSTICS "Enable AestraVerb output-level diagnostics (lab only)" OFF)
 
 if(AESTRA_HEADLESS_ONLY)
   set(AESTRA_ENABLE_UI OFF CACHE BOOL "Build the AESTRA_DAW UI application" FORCE)
@@ -129,13 +130,14 @@ endif()
 add_subdirectory(AestraPlat)
 
 # =============================================================================
-# AestraLicense - Offline License Verification (optional for lab builds)
+# AestraLicense - Offline License Verification
 # =============================================================================
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND)
+if(AESTRA_ALLOW_LICENSE_GATE_OFF)
+    message(WARNING "AESTRA_ALLOW_LICENSE_GATE_OFF=ON: omitting offline license verification for this lab/development build.")
+elseif(EXISTS "${CMAKE_SOURCE_DIR}/AestraLicense/CMakeLists.txt")
     add_subdirectory(AestraLicense)
 else()
-    message(WARNING "pkg-config not found. Skipping AestraLicense.")
+    message(FATAL_ERROR "AestraLicense is required. Set AESTRA_ALLOW_LICENSE_GATE_OFF=ON only for lab/development builds that intentionally omit offline license verification.")
 endif()
 
 # =============================================================================

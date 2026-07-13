@@ -272,12 +272,26 @@ private:
 
     void generateWaveformCache(int width, int height);
 
+    // Shared clip display color (bright track palette / channel / clip fallback)
+    AestraUI::NUIColor resolveClipDisplayColor(const ClipInstance& clip) const;
+
     // Zoom-aware waveform drawing helpers
     void drawChannelWaveform(AestraUI::NUIRenderer& renderer, float x, float y, float w, float h,
-                             const std::vector<Aestra::Audio::WaveformPeak>& peaks);
+                             const std::vector<Aestra::Audio::WaveformPeak>& peaks,
+                             const AestraUI::NUIColor& tint);
     void drawCombinedWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
                               const std::vector<Aestra::Audio::WaveformPeak>& peaksL,
-                              const std::vector<Aestra::Audio::WaveformPeak>& peaksR, size_t numChannels);
+                              const std::vector<Aestra::Audio::WaveformPeak>& peaksR, size_t numChannels,
+                              const AestraUI::NUIColor& tint);
+
+    // Deep-zoom helpers: render finer than the peak cache's base mip level.
+    // Both read bounded sample ranges directly from the (immutable) source buffer.
+    void drawSampleWaveform(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds,
+                            const Aestra::Audio::AudioBufferData& buffer, double startFrame, double endFrame,
+                            const AestraUI::NUIColor& tint);
+    static void computeDirectPeaks(const Aestra::Audio::AudioBufferData& buffer, uint32_t channel,
+                                   size_t startFrame, size_t endFrame, int numColumns,
+                                   std::vector<Aestra::Audio::WaveformPeak>& outPeaks);
 
     // Sample clip container
     void drawSampleClip(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& clipBounds);
@@ -291,6 +305,9 @@ private:
     // Reusable peak buffers to avoid per-frame allocations
     std::vector<Aestra::Audio::WaveformPeak> m_waveformPeaksL;
     std::vector<Aestra::Audio::WaveformPeak> m_waveformPeaksR;
+    std::vector<Aestra::Audio::WaveformPeak> m_waveformPeaksMerged;
+    std::vector<AestraUI::NUIPoint> m_waveformTopPts;
+    std::vector<AestraUI::NUIPoint> m_waveformBottomPts;
     
     PlaylistLaneID m_laneId;
     std::shared_ptr<MixerChannel> m_channel;

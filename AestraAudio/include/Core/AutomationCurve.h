@@ -34,10 +34,15 @@ inline AutomationTarget automationTargetFromRawInt(int rawValue) noexcept {
 }
 
 struct AutomationPoint {
+    // beat is the authoritative position domain: it is what the serializer
+    // persists, what the UI edits, and what evaluation/sorting use. sample is
+    // a legacy cache computed at addPoint() time with that moment's tempo —
+    // it goes stale on tempo changes and UI drags, so nothing may evaluate or
+    // sort by it.
     uint64_t sample{0};
     float value{0.0f};
-    double beat{0.0};  // For serialization
-    float curve{0.0f}; // For serialization (curve tension)
+    double beat{0.0};
+    float curve{0.0f};    // Curve tension (serialized; rendering does not use it yet)
     bool selected{false}; // Selection state for UI
 };
 
@@ -76,24 +81,27 @@ struct AutomationCurve {
     std::vector<AutomationPoint>& getPoints() { return points; }
 
     /**
-     * @brief Get interpolated value at a given beat position
+     * @brief Get interpolated value at a given beat position.
+     *
+     * Evaluation is purely beat-domain. The old implementation compared the
+     * stale sample cache against a target derived from the *current* tempo,
+     * which shifted every point in musical time after a BPM change and made
+     * UI point drags (which update beat only) inaudible.
+     *
      * @param beat The beat position
-     * @param samplesPerBeat Samples per beat for the current project tempo/rate
      * @return Interpolated value, or defaultValue if no points
      */
-    float getValueAtBeat(double beat, double samplesPerBeat) const {
+    float getValueAtBeat(double beat) const {
         if (points.empty()) {
             return defaultValue;
         }
 
-        const uint64_t targetSample = static_cast<uint64_t>(beat * samplesPerBeat);
-
-        // Find surrounding points
+        // Find surrounding points (points are sorted by beat)
         const AutomationPoint* prev = nullptr;
         const AutomationPoint* next = nullptr;
 
         for (const auto& pt : points) {
-            if (pt.sample <= targetSample) {
+            if (pt.beat <= beat) {
                 prev = &pt;
             } else {
                 next = &pt;
@@ -111,15 +119,23 @@ struct AutomationCurve {
             return prev->value;
         }
 
-        // Linear interpolation
-        const double sampleRange = static_cast<double>(next->sample - prev->sample);
-        if (sampleRange <= 0.0) {
+        // Linear interpolation in beat domain
+        const double beatRange = next->beat - prev->beat;
+        if (beatRange <= 0.0) {
             return prev->value;
         }
 
-        const double t = static_cast<double>(targetSample - prev->sample) / sampleRange;
+        const double t = (beat - prev->beat) / beatRange;
         return prev->value + static_cast<float>(t) * (next->value - prev->value);
     }
+
+    /**
+     * @brief Legacy overload — samplesPerBeat is ignored; beat is authoritative.
+     *
+     * Kept so older call sites/tests compile; new code should call the
+     * single-argument form.
+     */
+    float getValueAtBeat(double beat, double /*samplesPerBeat*/) const { return getValueAtBeat(beat); }
 
     /**
      * @brief Set the default value for this curve
@@ -131,16 +147,21 @@ struct AutomationCurve {
      * @param beat Beat position
      * @param samplesPerBeat Samples per beat for the current project tempo/rate
      * @param value Value at this point (normalized 0-1 for volume/pan)
-     * @param tension Curve tension (0-1, currently unused)
+     * @param tension Curve tension for serialization (rendering does not use it yet)
      */
-    void addPoint(double beat, float value, double samplesPerBeat, float /*tension*/ = 0.5f) {
+    void addPoint(double beat, float value, double samplesPerBeat, float tension = 0.5f) {
         AutomationPoint pt;
         pt.sample = static_cast<uint64_t>(beat * samplesPerBeat);
         pt.value = value;
+        // beat and curve are what ProjectSerializer persists — leaving them at
+        // their zero defaults made every point created through this API (loader,
+        // UI draw path) serialize at beat 0 on the next save.
+        pt.beat = beat;
+        pt.curve = tension;
 
-        // Insert in sorted order
+        // Insert in sorted order (beat domain — see AutomationPoint docs)
         auto it = points.begin();
-        while (it != points.end() && it->sample < pt.sample) {
+        while (it != points.end() && it->beat < pt.beat) {
             ++it;
         }
         points.insert(it, pt);
@@ -153,9 +174,10 @@ struct AutomationCurve {
     }
 
     void sortPoints() {
-        std::sort(points.begin(), points.end(), [](const AutomationPoint& a, const AutomationPoint& b) {
-            return a.sample < b.sample;
-        });
+        // Beat domain: the UI drag path updates beat (not the sample cache),
+        // so sorting by sample could scramble order after edits.
+        std::sort(points.begin(), points.end(),
+                  [](const AutomationPoint& a, const AutomationPoint& b) { return a.beat < b.beat; });
     }
 
     bool isVisible() const { return true; }

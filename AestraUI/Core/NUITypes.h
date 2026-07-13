@@ -114,6 +114,19 @@ struct NUIColor {
             alpha
         );
     }
+
+    // Create from packed 0xAARRGGBB (e.g., TRACK_PALETTE entries).
+    // An alpha byte of 0 is treated as opaque so 0x00RRGGBB values behave
+    // like fromHex rather than becoming invisible.
+    static NUIColor fromARGB(uint32_t argb) {
+        const uint32_t alphaByte = (argb >> 24) & 0xFF;
+        return NUIColor(
+            ((argb >> 16) & 0xFF) / 255.0f,
+            ((argb >> 8) & 0xFF) / 255.0f,
+            (argb & 0xFF) / 255.0f,
+            alphaByte == 0 ? 1.0f : alphaByte / 255.0f
+        );
+    }
     
     // Utility colors
     static NUIColor white() { return {1.0f, 1.0f, 1.0f, 1.0f}; }
@@ -154,9 +167,9 @@ struct NUIColor {
     static NUIColor Info() { return NUIColor(0.1f, 0.6f, 0.8f, 1.0f); }
     
     // Dark theme colors
-    static NUIColor DarkBackground() { return NUIColor(0.1f, 0.1f, 0.15f, 1.0f); }
-    static NUIColor DarkSurface() { return NUIColor(0.15f, 0.15f, 0.2f, 1.0f); }
-    static NUIColor DarkBorder() { return NUIColor(0.3f, 0.3f, 0.35f, 1.0f); }
+    static NUIColor DarkBackground() { return NUIColor(0.1f, 0.1f, 0.1f, 1.0f); }
+    static NUIColor DarkSurface() { return NUIColor(0.15f, 0.15f, 0.15f, 1.0f); }
+    static NUIColor DarkBorder() { return NUIColor(0.3f, 0.3f, 0.3f, 1.0f); }
     static NUIColor DarkText() { return NUIColor(0.9f, 0.9f, 0.9f, 1.0f); }
     static NUIColor DarkTextSecondary() { return NUIColor(0.6f, 0.6f, 0.6f, 1.0f); }
     

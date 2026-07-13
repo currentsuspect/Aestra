@@ -33,6 +33,9 @@ struct AudioTelemetry {
     std::atomic<uint64_t> overruns{0};
     std::atomic<uint64_t> maxCallbackNs{0};
     std::atomic<uint64_t> lastCallbackNs{0};
+    // Running total + count of timed callbacks, for average callback time.
+    std::atomic<uint64_t> totalCallbackNs{0};
+    std::atomic<uint64_t> timedCallbackCount{0};
     std::atomic<uint64_t> rtAllocationViolations{0};
     std::atomic<uint64_t> rtLockViolations{0};
     std::atomic<uint64_t> rtLogViolations{0};
@@ -141,6 +144,10 @@ struct AudioTelemetry {
      * Called from audio thread startup to record priority configuration status.
      */
     void setThreadPriorityBit(uint32_t bit) noexcept { threadPriorityStatus.fetch_or(bit, std::memory_order_relaxed); }
+    /// Clear all priority bits — call from the stream starter before a
+    /// (re)start so the audio thread's first-callback verification publishes
+    /// the NEW stream's truth instead of a latched stale success.
+    void clearThreadPriorityStatus() noexcept { threadPriorityStatus.store(0, std::memory_order_relaxed); }
 
     /**
      * @brief B-010: Get thread priority status
@@ -169,6 +176,48 @@ struct AudioTelemetry {
     void updateLastCallbackNs(uint64_t ns) noexcept { lastCallbackNs.store(ns, std::memory_order_relaxed); }
     void updateLastBufferFrames(uint32_t frames) noexcept { lastBufferFrames.store(frames, std::memory_order_relaxed); }
     void updateLastSampleRate(uint32_t rate) noexcept { lastSampleRate.store(rate, std::memory_order_relaxed); }
+
+    /**
+     * @brief Record one audio callback's measured duration and budget context.
+     *
+     * Consolidated deadline accounting for the device-callback wrapper:
+     * updates last/max duration, the running total for averages, the budget
+     * context (frames + sample rate), and counts a deadline overrun when the
+     * duration exceeds the buffer budget (frames / sampleRate).
+     *
+     * RT-safe: relaxed atomics only — no allocation, locks, or syscalls.
+     */
+    void recordCallbackDuration(uint64_t ns, uint32_t frames, uint32_t sampleRate) noexcept {
+        lastCallbackNs.store(ns, std::memory_order_relaxed);
+        updateMaxCallbackNs(ns);
+        totalCallbackNs.fetch_add(ns, std::memory_order_relaxed);
+        timedCallbackCount.fetch_add(1, std::memory_order_relaxed);
+        // Publish frames and rate together only when the rate is valid, so
+        // getCallbackBudgetNs() never combines a frames/rate pair that did
+        // not actually co-occur (CodeRabbit review, PR #430).
+        if (sampleRate > 0) {
+            lastBufferFrames.store(frames, std::memory_order_relaxed);
+            lastSampleRate.store(sampleRate, std::memory_order_relaxed);
+            const uint64_t budgetNs =
+                (static_cast<uint64_t>(frames) * 1000000000ull) / static_cast<uint64_t>(sampleRate);
+            if (budgetNs > 0 && ns > budgetNs) {
+                overruns.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
+    }
+
+    /** @brief Average timed-callback duration in ns (0 if none recorded). */
+    uint64_t getAverageCallbackNs() const noexcept {
+        const uint64_t n = timedCallbackCount.load(std::memory_order_relaxed);
+        return n ? totalCallbackNs.load(std::memory_order_relaxed) / n : 0;
+    }
+
+    /** @brief Current callback budget in ns from the last frames/rate context (0 if unknown). */
+    uint64_t getCallbackBudgetNs() const noexcept {
+        const uint32_t frames = lastBufferFrames.load(std::memory_order_relaxed);
+        const uint32_t rate = lastSampleRate.load(std::memory_order_relaxed);
+        return rate ? (static_cast<uint64_t>(frames) * 1000000000ull) / rate : 0;
+    }
     void updateCycleHz(uint64_t hz) noexcept { cycleHz.store(hz, std::memory_order_relaxed); }
     void updateLinuxRtPriorityErrno(int32_t value) noexcept {
         linuxRtPriorityErrno.store(value, std::memory_order_relaxed);

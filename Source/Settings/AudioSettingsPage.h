@@ -86,8 +86,6 @@ public:
 private:
     void createUI();
     void layoutComponents();
-    void updateDriverList();
-    void updateDeviceList();
     void updateSampleRateList();
     void updateBufferSizeList();
     void updateLatencyEstimate();
@@ -134,6 +132,9 @@ private:
     
     std::shared_ptr<AestraUI::NUILabel> m_softClippingLabel;
     std::shared_ptr<AestraUI::NUIToggle> m_softClippingToggle;
+
+    std::shared_ptr<AestraUI::NUILabel> m_previewDuckingLabel;
+    std::shared_ptr<AestraUI::NUIDropdown> m_previewDuckingDropdown;
     
     std::shared_ptr<AestraUI::NUILabel> m_multiThreadingLabel;
     std::shared_ptr<AestraUI::NUIToggle> m_multiThreadingToggle;
@@ -189,8 +190,13 @@ private:
         int currentSampleRate = 48000;
     };
     CachedDeviceData m_cachedDevices;
-    bool m_deviceDataReady{false};
-    
+    std::atomic<bool> m_deviceDataReady{false};
+
+    // Set when startAsyncDeviceLoad() is called while a load is in flight
+    // (e.g. driver changed mid-enumeration); onUpdate() then discards the
+    // stale results and re-enumerates. UI-thread only, no synchronization needed.
+    bool m_deviceReloadPending{false};
+
     // Loading indicator
     std::shared_ptr<AestraUI::NUILabel> m_loadingLabel;
     float m_loadingAnimTimer{0.0f};

@@ -101,7 +101,7 @@ public:
         auto b = getBounds();
         auto& theme = NUIThemeManager::getInstance();
 
-        renderer.fillRect(b, NUIColor(0.045f, 0.045f, 0.065f, 1.0f));
+        renderer.fillRect(b, NUIColor(0.045f, 0.045f, 0.045f, 1.0f));
 
         const float pad = 8.0f;
         const float gutter = 6.0f;
@@ -150,7 +150,7 @@ void ADSRDisplayComponent::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
 
     // Background
-    renderer.fillRoundedRect(NUIRect(b.x, b.y, b.width, b.height), 5.0f, NUIColor(0.055f, 0.055f, 0.075f, 1.0f));
+    renderer.fillRoundedRect(NUIRect(b.x, b.y, b.width, b.height), 5.0f, NUIColor(0.055f, 0.055f, 0.055f, 1.0f));
     renderer.strokeRoundedRect(b, 5.0f, 1.0f, theme.getColor("secondary").withAlpha(0.22f));
 
     const auto g = calculateADSRGeometry(b, m_attack, m_decay, m_sustain, m_release);
@@ -401,7 +401,7 @@ void WaveformDisplayComponent::onRender(NUIRenderer& renderer) {
     renderer.setClipRect(b);
 
     // Background
-    renderer.fillRoundedRect(NUIRect(b.x, b.y, b.width, b.height), 5.0f, NUIColor(0.05f, 0.05f, 0.07f, 1.0f));
+    renderer.fillRoundedRect(NUIRect(b.x, b.y, b.width, b.height), 5.0f, NUIColor(0.05f, 0.05f, 0.05f, 1.0f));
     renderer.strokeRoundedRect(b, 5.0f, 1.0f, theme.getColor("secondary").withAlpha(0.24f));
 
     // Center line
@@ -773,6 +773,30 @@ void SampleEditorPanel::loadSample(const std::string& path) {
             m_waveformData.push_back(minV);
         }
     } else {
+        m_waveformData.resize(1000 * 2);
+        for (size_t i = 0; i < 1000; ++i) {
+            float t = static_cast<float>(i) / 1000.0f;
+            m_waveformData[i * 2] = std::sin(t * 20.0f) * 0.5f;
+            m_waveformData[i * 2 + 1] = -std::sin(t * 20.0f) * 0.5f;
+        }
+    }
+
+    m_waveformDisplay->setWaveformData(m_waveformData);
+    m_waveformDisplay->repaint();
+    m_adsrDisplay->repaint();
+}
+
+void SampleEditorPanel::loadPreparedSample(const std::string& path, double sampleRate, uint32_t sampleLength,
+                                           std::vector<float> waveformData) {
+    if (!m_trackManager) {
+        return;
+    }
+
+    Log::info("[SampleEditor] Loading prepared sample: " + path);
+    m_sampleRate = sampleRate > 0.0 ? sampleRate : 44100.0;
+    m_sampleLength = sampleLength;
+    m_waveformData = std::move(waveformData);
+    if (m_waveformData.empty()) {
         m_waveformData.resize(1000 * 2);
         for (size_t i = 0; i < 1000; ++i) {
             float t = static_cast<float>(i) / 1000.0f;

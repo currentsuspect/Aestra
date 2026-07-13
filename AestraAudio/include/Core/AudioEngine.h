@@ -13,6 +13,7 @@
 #include "EngineState.h"
 #include "GarbageCollector.h"
 #include "Interpolators.h"
+#include "Playback/LiveMidiQueue.h"
 #include "LatencyTopology.h"
 #include "MasterSafetyLimiter.h"
 #include "MeterSnapshot.h"
@@ -177,7 +178,10 @@ public:
     bool isTransportPlaying() const { return m_transportPlaying.load(std::memory_order_relaxed); }
     /** @brief Replace the active audio graph and compile it for rendering. */
     void setGraph(const AudioGraph& graph) {
-        m_state.swapGraph(graph);
+        auto preparedGraph = graph;
+        finalizeAudioGraphRouting(preparedGraph);
+        prepareTrackStateForGraph(preparedGraph);
+        m_state.swapGraph(preparedGraph);
         compileGraph();
         m_graphGeneration.fetch_add(1, std::memory_order_release);
     }
@@ -341,6 +345,32 @@ public:
     /** @brief Get the loop end position in beats. */
     double getLoopEndBeat() const { return m_loopEndBeat.load(std::memory_order_relaxed); }
 
+    /**
+     * @brief Post a live MIDI event (note input) for an Arsenal unit.
+     *
+     * Lock-free, allocation-free; safe to call from exactly ONE non-RT
+     * producer thread (the UI thread today — a hardware MIDI callback thread
+     * will get its own queue). Events are drained on the audio thread each
+     * block and delivered to the unit's plugin alongside pattern playback,
+     * with or without the transport running.
+     *
+     * @return false if the queue was full and the event was dropped.
+     */
+    bool postLiveMidiEvent(uint64_t unitId, uint8_t status, uint8_t data1, uint8_t data2) noexcept {
+        return m_liveMidiQueue.push(LiveMidiQueue::Event{unitId, status, data1, data2});
+    }
+
+    /**
+     * @brief Post a live MIDI event from the hardware MIDI input thread.
+     *
+     * Same contract as postLiveMidiEvent, but on a separate SPSC queue whose
+     * single producer is the hardware MIDI callback thread (RtMidi). Both
+     * queues are drained together on the audio thread each block.
+     */
+    bool postHardwareMidiEvent(uint64_t unitId, uint8_t status, uint8_t data1, uint8_t data2) noexcept {
+        return m_hardwareMidiQueue.push(LiveMidiQueue::Event{unitId, status, data1, data2});
+    }
+
     /** @brief Enable or disable Arsenal pattern playback mode. */
     void setPatternPlaybackMode(bool enabled, double lengthBeats) {
         m_patternPlaybackMode.store(enabled, std::memory_order_relaxed);
@@ -465,8 +495,42 @@ public:
     /** @brief Bind the preview engine mixed into the main output. */
     void setPreviewEngine(PreviewEngine* engine) { m_previewEngine.store(engine, std::memory_order_relaxed); }
 
-    /** @brief Set preview ducking gain (0.0 = ducked by ~6dB, 1.0 = full volume). */
-    void setPreviewDuckGain(float gain) { m_previewDuckGain.store(gain, std::memory_order_relaxed); }
+    /** @brief Source currently responsible for transport ducking. */
+    enum class PreviewDuckSource : uint8_t {
+        None = 0,
+        BrowserPreview = 1,
+        Audition = 2,
+        ArsenalPreview = 3,
+    };
+
+    /** @brief Configure preview duck depth in positive dB; 0 disables ducking. Non-RT only. */
+    void setPreviewDuckingAttenuationDb(float attenuationDb);
+    /** @brief Configured preview duck depth in positive dB; 0 means disabled. */
+    float getPreviewDuckingAttenuationDb() const;
+    /** @brief Check whether preview ducking is enabled. */
+    bool isPreviewDuckingEnabled() const;
+    /** @brief Current transport duck gain caused by audible preview playback. */
+    float getPreviewDuckGain() const { return m_previewDuckGain.load(std::memory_order_relaxed); }
+    /** @brief Source currently responsible for the published preview duck gain. */
+    PreviewDuckSource getPreviewDuckSource() const {
+        return static_cast<PreviewDuckSource>(m_previewDuckSource.load(std::memory_order_relaxed));
+    }
+
+    /**
+     * @brief Snap preview-duck smoothing to unity. Offline render only.
+     *
+     * Preview ducking is a monitoring convenience; it must never attenuate an
+     * offline render. AudioExporter disables the duck depth for the render,
+     * and calls this so an already-engaged duck's release tail (~120 ms)
+     * cannot bleed into the head of the exported file. Non-RT only — call
+     * while no realtime stream is driving processBlock.
+     */
+    void resetPreviewDuckForOfflineRender() {
+        m_smoothedPreviewDuckGain = 1.0f;
+        m_previewDuckHoldSecondsRemaining = 0.0f;
+        m_previewDuckGain.store(1.0f, std::memory_order_relaxed);
+        m_previewDuckSource.store(static_cast<uint8_t>(PreviewDuckSource::None), std::memory_order_relaxed);
+    }
 
     /**
      * @brief Render a range of the timeline (or a specific track) to a WAV file.
@@ -600,6 +664,7 @@ private:
 
     TrackRTState& ensureTrackState(uint32_t trackId);
     void renderGraph(const AudioGraph& graph, uint32_t numFrames, uint32_t bufferOffset = 0);
+    void prepareTrackStateForGraph(const AudioGraph& graph);
     void applyPendingCommands();
     void applyPendingMetronomeCountInRt();
     void clearMetronomeCountInRt();
@@ -609,6 +674,13 @@ private:
     void syncCachedSamplerSampleRatesRt(uint32_t sampleRate) noexcept;
     void injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
                                    uint32_t numFrames) noexcept;
+    void drainLiveMidi(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount) noexcept;
+
+    // Live note input. One SPSC queue per producer thread — UI keyboard and
+    // the hardware MIDI callback thread — both drained on the audio thread
+    // each block by drainLiveMidi().
+    LiveMidiQueue m_liveMidiQueue;
+    LiveMidiQueue m_hardwareMidiQueue;
 
     // Pre-allocated buffers for Arsenal unit processing (RT-safe)
     std::vector<double> m_unitBufferD;         // Stereo interleaved unit output
@@ -861,7 +933,11 @@ private:
 
     // Transport-aware preview ducking
     std::atomic<float> m_previewDuckGain{1.0f}; // Linear gain applied to transport when preview is active
-    float m_smoothedPreviewDuckGain{1.0f};      // Smoothed version for click-free transitions
+    std::atomic<float> m_previewDuckTargetGain{0.5f};
+    std::atomic<float> m_previewDuckingAttenuationDb{6.0f};
+    std::atomic<uint8_t> m_previewDuckSource{static_cast<uint8_t>(PreviewDuckSource::None)};
+    float m_smoothedPreviewDuckGain{1.0f}; // Smoothed version for click-free transitions
+    float m_previewDuckHoldSecondsRemaining{0.0f};
 
     // Recent output ring buffer for oscilloscope/mini-waveform displays.
     std::vector<float> m_waveformHistory;

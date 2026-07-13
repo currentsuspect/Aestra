@@ -3,6 +3,9 @@ import type { Env } from "./signing";
 
 const LOGIN_TTL_SECONDS = 10 * 60;
 const MAX_ATTEMPTS = 5;
+const LOGIN_START_COOLDOWN_SECONDS = 60;
+const MAX_LOGIN_STARTS_PER_HOUR = 5;
+const MAX_PENDING_CHALLENGES_PER_EMAIL = 3;
 
 export class LoginChallengeError extends Error {
   readonly status: number;
@@ -39,9 +42,44 @@ function challengeHash(email: string, challengeId: string, code: string): Promis
   return sha256Hex(`${normalizeEmail(email)}:${challengeId}:${code}`);
 }
 
+type LoginStartQuotaRow = {
+  recent_count: number | string | null;
+  pending_count: number | string | null;
+  latest_created_at: number | string | null;
+};
+
+async function assertCanCreateLoginChallenge(env: Env, email: string, nowSeconds: number): Promise<void> {
+  const normalizedEmail = normalizeEmail(email);
+  const db = requireD1(env);
+  const windowStart = nowSeconds - 60 * 60;
+  const row = await db.prepare(`
+      SELECT
+        COUNT(*) AS recent_count,
+        SUM(CASE WHEN status = 'pending' AND expires_at > ? THEN 1 ELSE 0 END) AS pending_count,
+        MAX(created_at) AS latest_created_at
+      FROM account_login_challenges
+      WHERE email = ? AND created_at > ?
+    `).bind(nowSeconds, normalizedEmail, windowStart).first<LoginStartQuotaRow>();
+
+  const recentCount = Number(row?.recent_count ?? 0);
+  const pendingCount = Number(row?.pending_count ?? 0);
+  const latestCreatedAt = row?.latest_created_at === null || row?.latest_created_at === undefined
+    ? null
+    : Number(row.latest_created_at);
+
+  if (latestCreatedAt !== null && nowSeconds - latestCreatedAt < LOGIN_START_COOLDOWN_SECONDS) {
+    throw new LoginChallengeError(429, "login_start_rate_limited", "login challenge creation is rate limited");
+  }
+  if (pendingCount >= MAX_PENDING_CHALLENGES_PER_EMAIL || recentCount >= MAX_LOGIN_STARTS_PER_HOUR) {
+    throw new LoginChallengeError(429, "login_start_rate_limited", "login challenge creation is rate limited");
+  }
+}
+
 export async function createLoginChallenge(env: Env, email: string, nowSeconds: number):
     Promise<CreatedLoginChallenge> {
   const db = requireD1(env);
+  await assertCanCreateLoginChallenge(env, email, nowSeconds);
+
   const challengeId = `lc_${randomHex(16)}`;
   const code = randomCode();
   const expiresAt = nowSeconds + LOGIN_TTL_SECONDS;

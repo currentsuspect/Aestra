@@ -2,6 +2,7 @@
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../AestraCore/include/AestraLog.h"
+#include "../Support/TestTempDirectory.h"
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
 #include "Models/TrackManager.h"
@@ -14,25 +15,6 @@
 #include <string>
 
 namespace {
-
-std::filesystem::path makeTempDir() {
-    auto base = std::filesystem::temp_directory_path() / "Aestra_tests";
-    std::filesystem::create_directories(base);
-
-    // Ensure uniqueness without relying on high-resolution clocks.
-    for (int i = 0; i < 1000; ++i) {
-        auto candidate = base / ("ProjectRoundTrip_" + std::to_string(i));
-        if (!std::filesystem::exists(candidate)) {
-            std::filesystem::create_directories(candidate);
-            return candidate;
-        }
-    }
-
-    // Fallback (should not happen).
-    auto fallback = base / "ProjectRoundTrip_fallback";
-    std::filesystem::create_directories(fallback);
-    return fallback;
-}
 
 // Minimal PCM 16-bit mono WAV writer (enough to satisfy SourceManager file loading).
 bool writeMinimalWavMono16(const std::filesystem::path& path, int sampleRate, int numSamples) {
@@ -93,7 +75,8 @@ void require(bool cond, const char* msg) {
 int main() {
     using namespace Aestra::Audio;
 
-    const auto tempDir = makeTempDir();
+    const Aestra::Tests::ScopedTempDirectory tempDirScope{"ProjectRoundTrip"};
+    const auto& tempDir = tempDirScope.path();
     const auto wavPath = tempDir / "test.wav";
     const auto projectPath = tempDir / "project.aes";
     const auto autosavePath = tempDir / "autosave.aes";

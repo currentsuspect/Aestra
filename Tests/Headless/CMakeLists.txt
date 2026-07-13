@@ -78,6 +78,87 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CU
     )
 endif()
 
+# Live MIDI Input Test — live note input audible with transport stopped.
+# Core-mode: uses the built-in SamplerPlugin with an injected synthetic sample,
+# so it runs on every CI lane (no premium modules, no files, no devices).
+if(TARGET AestraAudioCore AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/LiveMidiInputTest.cpp")
+    add_executable(LiveMidiInputTest
+        LiveMidiInputTest.cpp
+    )
+    target_link_libraries(LiveMidiInputTest PRIVATE AestraAudioCore)
+    target_include_directories(LiveMidiInputTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME LiveMidiInputTest COMMAND LiveMidiInputTest)
+    set_tests_properties(LiveMidiInputTest PROPERTIES
+        LABELS "headless;arsenal;audio;midi"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Hardware MIDI Input Test — RtMidi message translation (pure) plus the
+# hardware SPSC queue path (AudioEngine::postHardwareMidiEvent) audible with
+# transport stopped. Uses only header-inline APIs, so it links AestraAudioCore
+# and runs on every CI lane regardless of MIDI backend presence.
+# No EXISTS guard: a missing source must fail configure, not silently skip
+# the test (review finding on #454).
+if(TARGET AestraAudioCore)
+    add_executable(HardwareMidiInputTest
+        HardwareMidiInputTest.cpp
+    )
+    target_link_libraries(HardwareMidiInputTest PRIVATE AestraAudioCore)
+    target_include_directories(HardwareMidiInputTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME HardwareMidiInputTest COMMAND HardwareMidiInputTest)
+    set_tests_properties(HardwareMidiInputTest PROPERTIES
+        LABELS "headless;arsenal;audio;midi"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Sampler One-Shot Envelope Test — regression for #452: one-shot samples
+# shorter than the configured release must be audible with the DEFAULT
+# envelope. Drives SamplerPlugin directly; core-linked, every CI lane.
+# No EXISTS guard: a missing committed test source must fail configure.
+if(TARGET AestraAudioCore)
+    add_executable(SamplerOneShotEnvelopeTest
+        SamplerOneShotEnvelopeTest.cpp
+    )
+    target_link_libraries(SamplerOneShotEnvelopeTest PRIVATE AestraAudioCore)
+    target_include_directories(SamplerOneShotEnvelopeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME SamplerOneShotEnvelopeTest COMMAND SamplerOneShotEnvelopeTest)
+    set_tests_properties(SamplerOneShotEnvelopeTest PROPERTIES
+        LABELS "headless;sampler;audio;dsp;regression"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Automation Playback Test — end-to-end regression: lane automation curves
+# must reach the engine (snapshot copy), evaluate in the beat domain across
+# tempo changes, and follow UI point drags. Core-linked, every CI lane.
+# No EXISTS guard: a missing committed test source must fail configure.
+if(TARGET AestraAudioCore)
+    add_executable(AutomationPlaybackTest
+        AutomationPlaybackTest.cpp
+    )
+    target_link_libraries(AutomationPlaybackTest PRIVATE AestraAudioCore)
+    target_include_directories(AutomationPlaybackTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME AutomationPlaybackTest COMMAND AutomationPlaybackTest)
+    set_tests_properties(AutomationPlaybackTest PROPERTIES
+        LABELS "headless;automation;audio;engine;regression"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # PDC v2 P1 — scaffolding tests (see AestraDocs/PDC-v2-Design.md §12)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     add_executable(PDCFlatChainTest PDCFlatChainTest.cpp)
@@ -90,6 +171,23 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCFlatChainTest.cpp")
     add_test(NAME PDCFlatChainTest COMMAND PDCFlatChainTest)
     set_tests_properties(PDCFlatChainTest PROPERTIES
         LABELS "headless;pdc;regression"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Plugin lifecycle smoke: Sat->Filter->OTT->LFO chain through save/reload,
+# reprepare (device change), and audio — parameter preservation + finite output.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PluginLifecycleSmokeTest.cpp")
+    add_executable(PluginLifecycleSmokeTest PluginLifecycleSmokeTest.cpp)
+    target_link_libraries(PluginLifecycleSmokeTest PRIVATE AestraAudio)
+    target_include_directories(PluginLifecycleSmokeTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME PluginLifecycleSmokeTest COMMAND PluginLifecycleSmokeTest)
+    set_tests_properties(PluginLifecycleSmokeTest PROPERTIES
+        LABELS "headless;plugins;lifecycle"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()
@@ -168,6 +266,22 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PDCEngineEdgeConstructionTest.cpp")
     add_test(NAME PDCEngineEdgeConstructionTest COMMAND PDCEngineEdgeConstructionTest)
     set_tests_properties(PDCEngineEdgeConstructionTest PROPERTIES
         LABELS "headless;pdc;engine"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Routing send parity — acceptance tests for BUG-3 (#261) and BUG-5 (#262)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RoutingSendPanParityTest.cpp")
+    add_executable(RoutingSendPanParityTest RoutingSendPanParityTest.cpp)
+    target_link_libraries(RoutingSendPanParityTest PRIVATE AestraAudio)
+    target_include_directories(RoutingSendPanParityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    add_test(NAME RoutingSendPanParityTest COMMAND RoutingSendPanParityTest)
+    set_tests_properties(RoutingSendPanParityTest PROPERTIES
+        LABELS "headless;routing;dsp;regression"
         ENVIRONMENT "AESTRA_HEADLESS=1"
     )
 endif()

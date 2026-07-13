@@ -7,12 +7,126 @@
 #include <cmath>
 #include "AestraLog.h"
 #include "AestraDebug.h"
+#include <cstddef>
 #include <limits>
 
 namespace Aestra {
 namespace Audio {
 
+void finalizeAudioGraphRouting(AudioGraph& graph) {
+    const size_t trackCount = graph.tracks.size();
+    graph.anySolo = false;
+    graph.audibleDownstream.assign(trackCount, {});
+    graph.audibleIncoming.assign(trackCount, {});
+    graph.sidechainIncoming.assign(trackCount, {});
+    graph.topologicalEdges.assign(trackCount, {});
+    graph.topologicalOrder.clear();
+    graph.topologicalOrder.reserve(trackCount);
+    graph.hasRoutingCycle = false;
+
+    uint32_t maxTrackId = 0;
+    for (const auto& track : graph.tracks) {
+        maxTrackId = std::max(maxTrackId, track.trackId);
+        graph.anySolo = graph.anySolo || track.solo;
+    }
+
+    graph.trackIndexById.assign(static_cast<size_t>(maxTrackId) + 1, AudioGraph::kInvalidTrackIndex);
+    for (size_t i = 0; i < trackCount; ++i) {
+        const uint32_t trackId = graph.tracks[i].trackId;
+        if (trackId < graph.trackIndexById.size()) {
+            graph.trackIndexById[trackId] = i;
+        }
+    }
+
+    auto findTrackIndex = [&graph](uint32_t trackId) -> size_t {
+        if (trackId < graph.trackIndexById.size()) {
+            return graph.trackIndexById[trackId];
+        }
+        return AudioGraph::kInvalidTrackIndex;
+    };
+
+    auto addEdge = [&](size_t sourceIndex, uint32_t targetTrackId, bool sidechainOnly) {
+        constexpr uint32_t kMasterOutputId = 0xFFFFFFFFu;
+        if (targetTrackId == kMasterOutputId) {
+            return;
+        }
+
+        const size_t targetIndex = findTrackIndex(targetTrackId);
+        if (targetIndex == AudioGraph::kInvalidTrackIndex || targetIndex == sourceIndex) {
+            return;
+        }
+
+        graph.topologicalEdges[sourceIndex].push_back(targetIndex);
+        if (sidechainOnly) {
+            graph.sidechainIncoming[targetIndex].push_back(sourceIndex);
+            return;
+        }
+
+        graph.audibleDownstream[sourceIndex].push_back(targetIndex);
+        graph.audibleIncoming[targetIndex].push_back(sourceIndex);
+    };
+
+    for (size_t i = 0; i < trackCount; ++i) {
+        const auto& track = graph.tracks[i];
+        addEdge(i, track.mainOutputId, false);
+        for (const auto& send : track.sends) {
+            if (send.mute) {
+                continue;
+            }
+            addEdge(i, send.targetChannelId, send.sidechainOnly);
+        }
+    }
+
+    std::vector<uint32_t> indegree(trackCount, 0);
+    for (const auto& edges : graph.topologicalEdges) {
+        for (const size_t targetIndex : edges) {
+            if (targetIndex < trackCount) {
+                ++indegree[targetIndex];
+            }
+        }
+    }
+
+    std::vector<size_t> queue;
+    queue.reserve(trackCount);
+    for (size_t i = 0; i < trackCount; ++i) {
+        if (indegree[i] == 0) {
+            queue.push_back(i);
+        }
+    }
+
+    size_t read = 0;
+    while (read < queue.size()) {
+        const size_t index = queue[read++];
+        graph.topologicalOrder.push_back(index);
+        for (const size_t targetIndex : graph.topologicalEdges[index]) {
+            if (targetIndex < trackCount && --indegree[targetIndex] == 0) {
+                queue.push_back(targetIndex);
+            }
+        }
+    }
+
+    graph.hasRoutingCycle = graph.topologicalOrder.size() != trackCount;
+    if (graph.hasRoutingCycle) {
+        std::vector<uint8_t> visited(trackCount, 0);
+        for (const size_t index : graph.topologicalOrder) {
+            if (index < trackCount) {
+                visited[index] = 1;
+            }
+        }
+        for (size_t i = 0; i < trackCount; ++i) {
+            if (visited[i] == 0) {
+                graph.topologicalOrder.push_back(i);
+            }
+        }
+    }
+}
+
 AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) {
+    // Phase 4 (F1): apply finished anti-alias prefilter results and queue missing
+    // work for downsampled clips BEFORE the snapshot resolves clip buffers, so this
+    // build picks up every copy that is ready (never blocks; fallback = original).
+    trackManager.ensureClipPrefilters();
+
     AudioGraph graph;
     const size_t channelCount = trackManager.getChannelCount();
     graph.tracks.reserve(channelCount);
@@ -64,7 +178,9 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) 
             }
 
             auto& trackState = graph.tracks[laneIdx];
-            const auto& laneInfo = snapshot->lanes[laneIdx];
+            // Non-const: automationCurves below is genuinely moved out of the
+            // snapshot (std::move through a const ref silently copies).
+            auto& laneInfo = snapshot->lanes[laneIdx];
 
             for (const auto& clipInfo : laneInfo.clips) {
                 if (!clipInfo.isValid())
@@ -111,6 +227,7 @@ AudioGraph AudioGraphBuilder::buildFromTrackManager(TrackManager& trackManager) 
         graph.bpm = snapshot->bpm;
     }
 
+    finalizeAudioGraphRouting(graph);
     return graph;
 }
 

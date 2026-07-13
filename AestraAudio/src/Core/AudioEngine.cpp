@@ -4,6 +4,7 @@
 #include "../../AestraCore/include/AestraLog.h"
 #include "../../AestraCore/include/AestraMath.h"
 #include "AuditionEngine.h"
+#include "DSP/PanLaw.h"
 #include "EffectChain.h" // [NEW]
 #include "GarbageCollector.h"
 #include "IO/AudioExporter.h"
@@ -74,6 +75,27 @@
 namespace Aestra {
 namespace Audio {
 
+void AudioEngine::setPreviewDuckingAttenuationDb(float attenuationDb) {
+    if (!std::isfinite(attenuationDb) || attenuationDb <= 0.0f) {
+        m_previewDuckingAttenuationDb.store(0.0f, std::memory_order_relaxed);
+        m_previewDuckTargetGain.store(1.0f, std::memory_order_relaxed);
+        return;
+    }
+
+    attenuationDb = std::clamp(attenuationDb, 0.0f, 24.0f);
+    const float targetGain = std::pow(10.0f, -attenuationDb / 20.0f);
+    m_previewDuckingAttenuationDb.store(attenuationDb, std::memory_order_relaxed);
+    m_previewDuckTargetGain.store(targetGain, std::memory_order_relaxed);
+}
+
+float AudioEngine::getPreviewDuckingAttenuationDb() const {
+    return m_previewDuckingAttenuationDb.load(std::memory_order_relaxed);
+}
+
+bool AudioEngine::isPreviewDuckingEnabled() const {
+    return m_previewDuckingAttenuationDb.load(std::memory_order_relaxed) > 0.0f;
+}
+
 namespace {
 std::atomic<uint64_t> g_rtMisuseCount{0};
 std::atomic<uint64_t> g_rtMisuseReportedCount{0};
@@ -103,11 +125,8 @@ inline double dbToLinearD(double db) {
     return std::pow(10.0, db / 20.0);
 }
 
-// Fast constant-power pan gains (replaces std::sin/cos)
 inline void fastPanGainsD(double pan, double vol, double& gainL, double& gainR) {
-    float p = (static_cast<float>(pan) + 1.0f) * 0.5f; // 0.0 to 1.0
-    gainL = static_cast<double>(std::cos(p * 1.57079632679f)) * vol;
-    gainR = static_cast<double>(std::sin(p * 1.57079632679f)) * vol;
+    PanLaw::equalPower(pan, vol, gainL, gainR);
 }
 
 inline void addMidiPanic(Aestra::Audio::MidiBuffer& buf) {
@@ -352,6 +371,42 @@ void AudioEngine::injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute
         m_unitAuditionState.active = false;
     } else {
         m_unitAuditionState.noteOffSamplesRemaining -= numFrames;
+    }
+}
+
+void AudioEngine::drainLiveMidi(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount) noexcept {
+    // Drains both live-input queues (UI keyboard + hardware MIDI thread) — each
+    // is SPSC with this function as its sole consumer.
+    //
+    // Bounded work: a producer pushing concurrently can keep pop() succeeding
+    // past the queue's snapshot size, so every drain loop is capped at
+    // kCapacity events per queue per block. Overflow policy: events beyond the
+    // cap stay queued for the next block, and once a queue is full the
+    // producer's push() rejects — late live notes are dropped at the source,
+    // never accumulated (for live input, late is worse than lost).
+    LiveMidiQueue* queues[2] = {&m_liveMidiQueue, &m_hardwareMidiQueue};
+    LiveMidiQueue::Event ev;
+    if (!routes || routeCount == 0) {
+        // No routable units this block: drain and drop so the queues can never
+        // build a backlog of stale notes that would all fire at once later.
+        for (auto* queue : queues) {
+            for (uint32_t n = 0; n < LiveMidiQueue::kCapacity && queue->pop(ev); ++n) {}
+        }
+        return;
+    }
+    // MidiBuffer::addEvent itself caps at kMaxEvents. No allocation, no locks.
+    for (auto* queue : queues) {
+        for (uint32_t n = 0; n < LiveMidiQueue::kCapacity && queue->pop(ev); ++n) {
+            for (size_t i = 0; i < routeCount; ++i) {
+                if (routes[i].unitId == static_cast<UnitID>(ev.unitId) && routes[i].midiBuffer != nullptr) {
+                    const uint8_t data[3] = {ev.status, ev.data1, ev.data2};
+                    // Offset 0: live events sound at the start of the block they
+                    // were drained in (worst-case latency = one block).
+                    routes[i].midiBuffer->addEvent(0, data, 3);
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -904,22 +959,32 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
     }
 
     // === Preview Ducking Gain Calculation ===
-    // When transport is playing and preview is active, duck transport by ~6dB
-    const double duckFadeTimeMs = 50.0; // ~50ms smooth fade
-    const double duckFadeSamples = (static_cast<double>(currentSampleRate) * duckFadeTimeMs) / 1000.0;
-    const double duckFadeDelta = 1.0 / std::max(duckFadeSamples, 1.0);
-
-    // Check if preview is active
-    bool previewIsActive = false;
+    // Duck transport only while preview has produced audible output. PreviewEngine
+    // may exist, decode, or be selected without being audible.
+    bool previewIsAudible = false;
     auto* preview = m_previewEngine.load(std::memory_order_relaxed);
     if (preview) {
-        previewIsActive = preview->isPlaying();
+        previewIsAudible = preview->isAudiblyPlaying();
     }
 
-    // Calculate target duck gain
-    // When preview + transport both playing: duck to 0.5 (-6dB)
-    // Otherwise: restore to 1.0 (0dB)
-    const double targetDuckGain = (previewIsActive && isPlaying) ? 0.5 : 1.0;
+    constexpr double duckAttackSeconds = 0.05; // 50ms linear attack
+    constexpr double duckReleaseSeconds = 0.12;
+    constexpr float duckHoldSeconds = 0.10f;
+    const float blockSeconds = static_cast<float>(numFrames) / static_cast<float>(std::max(currentSampleRate, 1u));
+    if (previewIsAudible && isPlaying) {
+        m_previewDuckHoldSecondsRemaining = duckHoldSeconds;
+    } else {
+        m_previewDuckHoldSecondsRemaining = std::max(0.0f, m_previewDuckHoldSecondsRemaining - blockSeconds);
+    }
+
+    const bool duckingEnabled = isPreviewDuckingEnabled();
+    const bool shouldDuckForPreview = duckingEnabled && isPlaying && m_previewDuckHoldSecondsRemaining > 0.0f;
+    const double targetDuckGain =
+        shouldDuckForPreview ? static_cast<double>(m_previewDuckTargetGain.load(std::memory_order_relaxed)) : 1.0;
+    const double fadeSeconds = targetDuckGain < static_cast<double>(m_smoothedPreviewDuckGain) ? duckAttackSeconds
+                                                                                               : duckReleaseSeconds;
+    const double duckFadeSamples = static_cast<double>(currentSampleRate) * fadeSeconds;
+    const double duckFadeDelta = static_cast<double>(numFrames) / std::max(duckFadeSamples, 1.0);
 
     // Smooth the duck gain transition
     double duckGain = m_smoothedPreviewDuckGain;
@@ -936,6 +1001,10 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
     // Publish smoothed gain for external queries
     m_previewDuckGain.store(static_cast<float>(duckGain), std::memory_order_relaxed);
+    m_previewDuckSource.store(static_cast<uint8_t>((shouldDuckForPreview || duckGain < 0.995)
+                                                       ? PreviewDuckSource::BrowserPreview
+                                                       : PreviewDuckSource::None),
+                              std::memory_order_relaxed);
 
     // === Final Output Stage (double -> float with processing) ===
     // Pre-compute master gain for this block (avoid per-sample target update)
@@ -1054,13 +1123,14 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         m_loudnessState.blockEnergySum += (f2L * f2L) + (f2R * f2R);
         // -----------------------------------
 
-        // Hard clip as last resort (after limiter, before output)
-        L = std::clamp(L, -1.0, 1.0);
-        R = std::clamp(R, -1.0, 1.0);
-
-        // Track clipping events
-        if (std::abs(L) >= 0.999 || std::abs(R) >= 0.999) {
+        // Track output-boundary clips without mutating the limiter-disabled float path.
+        if (absL >= 0.999 || absR >= 0.999) {
             clipCount++;
+        }
+
+        if (limiterOn) {
+            L = std::clamp(L, -1.0, 1.0);
+            R = std::clamp(R, -1.0, 1.0);
         }
 
         const size_t frameBase = static_cast<size_t>(i) * numOutputChannels;
@@ -1267,7 +1337,7 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
 
     const size_t requiredSize =
         static_cast<size_t>(m_maxBufferFrames.load(std::memory_order_relaxed)) * kInternalRenderChannels;
-    const bool needAlloc = m_masterBufferD.size() < requiredSize || m_trackBuffersD.size() != kMaxTracks;
+    const bool needAlloc = m_masterBufferD.size() < requiredSize;
 
     if (needAlloc) {
         m_masterBufferD.resize(requiredSize);
@@ -1311,22 +1381,17 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
 
         std::memset(m_masterBufferD.data(), 0, requiredSize * sizeof(double));
 
-        m_trackBuffersD.clear();
-        m_trackBuffersD.resize(kMaxTracks);
-        for (auto& buf : m_trackBuffersD) {
-            buf.assign(requiredSize, 0.0);
+        if (m_trackBuffersD.capacity() < kMaxTracks) {
+            m_trackBuffersD.reserve(kMaxTracks);
         }
-        m_trackSidechainBuffersD.clear();
-        m_trackSidechainBuffersD.resize(kMaxTracks);
-        for (auto& buf : m_trackSidechainBuffersD) {
-            buf.assign(requiredSize, 0.0);
+        if (m_trackSidechainBuffersD.capacity() < kMaxTracks) {
+            m_trackSidechainBuffersD.reserve(kMaxTracks);
         }
-        if (m_trackState.size() != kMaxTracks) {
-            // TrackRTState contains std::unique_ptr members (PDC v2 P4b.3) and
-            // is move-only. Use resize() so elements are default-constructed in
-            // place rather than copy-assigned.
-            m_trackState.clear();
-            m_trackState.resize(kMaxTracks);
+        if (m_trackState.capacity() < kMaxTracks) {
+            // Reserve vector storage without constructing every TrackRTState.
+            // TrackRTState owns large compensation buffers, so constructing all
+            // kMaxTracks at startup is expensive on low-memory systems.
+            m_trackState.reserve(kMaxTracks);
         }
 
         // Pre-allocate all RT graph scratch vectors to avoid heap allocation in renderGraph.
@@ -1351,18 +1416,11 @@ void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
         m_rtSoloProcessQueue.reserve(kMaxTracks);
         m_rtCycleVisited.resize(kMaxTracks);
 
-        // Pre-size send scratch buffers for each track slot.
-        // Use resize() instead of reserve() so renderGraph() never triggers
-        // heap allocation on the audio thread.  kMaxSendsPerTrack is bounded
-        // (256) so the per-track cost is modest.
-        for (size_t i = 0; i < kMaxTracks; ++i) {
-            m_trackState[i].sendGainL.resize(kMaxSendsPerTrack);
-            m_trackState[i].sendGainR.resize(kMaxSendsPerTrack);
-            m_trackState[i].preFaderBuffer.reserve(requiredSize);
-        }
-
         // Pre-allocate prepared-routes scratch (max sends per track).
         m_preparedRoutesScratch.reserve(kMaxSendsPerTrack);
+
+        auto graphRead = m_state.activeGraphRead();
+        prepareTrackStateForGraph(graphRead.get());
 
 #ifdef _WIN32
         // Lock buffers in memory to prevent page faults during real-time processing
@@ -1779,69 +1837,18 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     const uint64_t blockEnd = blockStart + numFrames;
     const bool isPlaying = m_transportPlaying.load(std::memory_order_relaxed); // [NEW] Check transport
 
-    // Solo detection and routed solo support.
-    bool anySolo = false;
-    // Reset flat track-index map to sentinel for ALL entries.
-    // This clears stale indices from previous graphs where trackIds
-    // existed in previous block but not current graph.tracks.
-    std::fill(m_rtTrackIndexById.begin(), m_rtTrackIndexById.end(), kMaxTracks);
-    for (size_t i = 0; i < graph.tracks.size(); ++i) {
-        const uint32_t tid = graph.tracks[i].trackId;
-        if (tid < kMaxTracks) {
-            m_rtTrackIndexById[tid] = i;
-        }
-    }
-    m_rtTrackIndexByIdActiveCount = graph.tracks.size();
-
-    // Reset per-track edge lists (clear inner vectors; outer vector already sized).
+    // Solo state can still change through RT track state, while routing topology
+    // is compiled into AudioGraph before publication.
+    bool anySolo = graph.anySolo;
     const size_t numTracks = graph.tracks.size();
-    for (size_t i = 0; i < numTracks; ++i) {
-        m_rtAudibleDownstream[i].clear();
-        m_rtAudibleIncoming[i].clear();
-        m_rtSidechainIncoming[i].clear();
-    }
-    m_rtAudibleEligible.assign(availableTracks, false);
-    m_rtProcessActive.assign(availableTracks, false);
-
-    auto addTrackEdge = [&](size_t srcIndex, uint32_t destTrackId, bool sidechainOnly) {
-        if (destTrackId >= kMaxTracks || m_rtTrackIndexById[destTrackId] == kMaxTracks) {
-            return;
-        }
-        const size_t destIndex = m_rtTrackIndexById[destTrackId];
-        if (destIndex >= graph.tracks.size()) {
-            return;
-        }
-        if (destIndex == srcIndex) {
-            return;
-        }
-        if (sidechainOnly) {
-            if (m_rtSidechainIncoming[destIndex].size() < kMaxEdgesPerTrack) {
-                m_rtSidechainIncoming[destIndex].push_back(srcIndex);
-            }
-        } else {
-            if (m_rtAudibleDownstream[srcIndex].size() < kMaxEdgesPerTrack) {
-                m_rtAudibleDownstream[srcIndex].push_back(destIndex);
-            }
-            if (m_rtAudibleIncoming[destIndex].size() < kMaxEdgesPerTrack) {
-                m_rtAudibleIncoming[destIndex].push_back(srcIndex);
-            }
-        }
-    };
+    std::fill(m_rtAudibleEligible.begin(), m_rtAudibleEligible.begin() + availableTracks, false);
+    std::fill(m_rtProcessActive.begin(), m_rtProcessActive.begin() + availableTracks, false);
 
     for (size_t i = 0; i < graph.tracks.size(); ++i) {
         const auto& tr = graph.tracks[i];
         auto& state = ensureTrackState(tr.trackIndex);
         if (tr.solo || state.solo) {
             anySolo = true;
-        }
-        if (tr.mainOutputId != 0xFFFFFFFFu) {
-            addTrackEdge(i, tr.mainOutputId, false);
-        }
-        for (const auto& send : tr.sends) {
-            if (send.mute || send.targetChannelId == 0xFFFFFFFFu) {
-                continue;
-            }
-            addTrackEdge(i, send.targetChannelId, send.sidechainOnly);
         }
     }
 
@@ -1869,7 +1876,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         while (audibleQueueRead < m_rtIndexQueue.size()) {
             const size_t index = m_rtIndexQueue[audibleQueueRead++];
             m_rtSoloProcessQueue.push_back(index);
-            for (const size_t destIndex : m_rtAudibleDownstream[index]) {
+            for (const size_t destIndex : graph.audibleDownstream[index]) {
                 const uint32_t destTrackIndex = graph.tracks[destIndex].trackIndex;
                 if (static_cast<size_t>(destTrackIndex) >= availableTracks || m_rtAudibleEligible[destTrackIndex]) {
                     continue;
@@ -1898,8 +1905,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                 }
             };
 
-            enqueueUpstream(m_rtAudibleIncoming[index]);
-            enqueueUpstream(m_rtSidechainIncoming[index]);
+            enqueueUpstream(graph.audibleIncoming[index]);
+            enqueueUpstream(graph.sidechainIncoming[index]);
         }
     }
 
@@ -1944,7 +1951,20 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             }
 
             injectPendingUnitAudition(unitMidiRoutes.data(), unitMidiRouteCount, numFrames);
+
+            // Live note input in Timeline mode. Gated on !patternPlaybackMode so
+            // exactly one path drains the queue per block — Arsenal mode drains
+            // inside processArsenalUnits (which self-gates on the same flag).
+            if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
+                drainLiveMidi(unitMidiRoutes.data(), unitMidiRouteCount);
+            }
+        } else if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
+            // No routable units in Timeline mode: drain-and-drop so stale live
+            // events cannot pile up and land as a burst when units appear.
+            drainLiveMidi(nullptr, 0);
         }
+    } else if (!m_patternPlaybackMode.load(std::memory_order_relaxed)) {
+        drainLiveMidi(nullptr, 0);
     }
 
     // Clear all per-track buffers for this block up front so routed audio can
@@ -1961,7 +1981,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         auto& buffer = m_trackBuffersD[trackIdx];
         std::memset(buffer.data(), 0, static_cast<size_t>(numFrames) * 2 * sizeof(double));
 
-        const bool receivesSidechainThisBlock = !m_rtSidechainIncoming[gi].empty();
+        const bool receivesSidechainThisBlock = !graph.sidechainIncoming[gi].empty();
         const bool receivedSidechainLastBlock = m_rtSidechainReceiverFlags[trackIdx] != 0;
         if (receivesSidechainThisBlock || receivedSidechainLastBlock) {
             auto& sidechainBuffer = m_trackSidechainBuffersD[trackIdx];
@@ -1970,81 +1990,9 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         m_rtSidechainReceiverFlags[trackIdx] = receivesSidechainThisBlock ? 1 : 0;
     }
 
-    // Process tracks in audible topological order so any routed upstream
-    // content reaches a destination before that destination runs inserts/fader/metering.
-    m_rtProcessOrder.clear();
-    // All vectors pre-allocated in setBufferConfig(); no reserve()/resize() needed.
-    const size_t topoCount = graph.tracks.size();
-    for (size_t i = 0; i < topoCount; ++i) {
-        m_rtTopoIndegree[i] = 0u;
-    }
-    for (size_t i = 0; i < topoCount; ++i) {
-        m_rtTopoEdges[i].clear();
-    }
-    for (size_t i = 0; i < topoCount; ++i) {
-        const auto& track = graph.tracks[i];
-        auto addEdge = [&](uint32_t destTrackId) {
-            if (destTrackId >= kMaxTracks || m_rtTrackIndexById[destTrackId] == kMaxTracks) {
-                return;
-            }
-            const size_t destIndex = m_rtTrackIndexById[destTrackId];
-            if (destIndex == i) {
-                return;
-            }
-            if (m_rtTopoEdges[i].size() >= kMaxEdgesPerTrack) {
-                return;
-            }
-            m_rtTopoEdges[i].push_back(destIndex);
-            m_rtTopoIndegree[destIndex] += 1u;
-        };
-
-        if (track.mainOutputId != 0xFFFFFFFFu) {
-            addEdge(track.mainOutputId);
-        }
-        for (const auto& send : track.sends) {
-            if (send.mute || send.targetChannelId == 0xFFFFFFFFu) {
-                continue;
-            }
-            addEdge(send.targetChannelId);
-        }
-    }
-
-    m_rtIndexQueue.clear();
-    size_t readyRead = 0;
-    for (size_t i = 0; i < topoCount; ++i) {
-        if (m_rtTopoIndegree[i] == 0u) {
-            m_rtIndexQueue.push_back(i);
-        }
-    }
-    while (readyRead < m_rtIndexQueue.size()) {
-        const size_t index = m_rtIndexQueue[readyRead++];
-        m_rtProcessOrder.push_back(index);
-        for (const size_t destIndex : m_rtTopoEdges[index]) {
-            if (--m_rtTopoIndegree[destIndex] == 0u) {
-                m_rtIndexQueue.push_back(destIndex);
-            }
-        }
-    }
-    const bool cycleDetected = m_rtProcessOrder.size() != topoCount;
-    if (cycleDetected) {
-        // [RT-SAFE] Set atomic flag instead of logging on the audio thread.
-        // A non-RT thread can poll hasRoutingCycleDetected() and log once.
-        m_loggedRoutingCycleWarning.store(true, std::memory_order_relaxed);
-        // Zero cycle-visited flags using index writes (no alloc).
-        for (size_t i = 0; i < topoCount; ++i) {
-            m_rtCycleVisited[i] = false;
-        }
-        for (const size_t index : m_rtProcessOrder) {
-            m_rtCycleVisited[index] = true;
-        }
-        for (size_t i = 0; i < topoCount; ++i) {
-            if (!m_rtCycleVisited[i]) {
-                m_rtProcessOrder.push_back(i);
-            }
-        }
-    } else {
-        m_loggedRoutingCycleWarning.store(false, std::memory_order_relaxed);
-    }
+    // Process tracks in the precompiled topological order so routed upstream
+    // content reaches destinations before inserts/fader/metering.
+    m_loggedRoutingCycleWarning.store(graph.hasRoutingCycle, std::memory_order_relaxed);
 
     // Cache loop-invariant atomics before the per-track loop to avoid
     // redundant loads (12 loads x N tracks per audio block).
@@ -2060,7 +2008,7 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
     const bool cachedPatternMode = m_patternPlaybackMode.load(std::memory_order_relaxed);
     const auto cachedInterpQuality = m_interpQuality.load(std::memory_order_relaxed);
 
-    for (const size_t orderedIndex : m_rtProcessOrder) {
+    for (const size_t orderedIndex : graph.topologicalOrder) {
         const auto& track = graph.tracks[orderedIndex];
         const uint32_t trackIdx = track.trackIndex;
         if (static_cast<size_t>(trackIdx) >= availableTracks) {
@@ -2091,16 +2039,17 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
         double volTarget = static_cast<double>(track.volume) * gain;
         double panTarget = clampD(static_cast<double>(track.pan) + static_cast<double>(panParam), -1.0, 1.0);
 
-        // Apply Automation Override (v3.1)
+        // Apply Automation Override (v3.1). Beat-domain evaluation: the curve
+        // interpolates on point beats directly, so tempo changes and UI point
+        // drags (which edit beats) stay musically aligned.
         if (!track.automationCurves.empty() && cachedSampleRate > 0) {
             uint64_t globalPos = m_globalSamplePos.load(std::memory_order_relaxed);
-            const double samplesPerBeat = (static_cast<double>(cachedSampleRate) * 60.0) / std::max(graph.bpm, 1.0);
             double currentBeat = (static_cast<double>(globalPos) / cachedSampleRate) * (graph.bpm / 60.0);
             for (const auto& curve : track.automationCurves) {
                 if (curve.getAutomationTarget() == AutomationTarget::Volume) {
-                    volTarget = curve.getValueAtBeat(currentBeat, samplesPerBeat);
+                    volTarget = curve.getValueAtBeat(currentBeat);
                 } else if (curve.getAutomationTarget() == AutomationTarget::Pan) {
-                    panTarget = clampD(curve.getValueAtBeat(currentBeat, samplesPerBeat), -1.0, 1.0);
+                    panTarget = clampD(curve.getValueAtBeat(currentBeat), -1.0, 1.0);
                 }
             }
         }
@@ -2820,6 +2769,56 @@ TrackRTState& AudioEngine::ensureTrackState(uint32_t trackIndex) {
     return m_trackState[trackIndex];
 }
 
+void AudioEngine::prepareTrackStateForGraph(const AudioGraph& graph) {
+    size_t requiredTrackSlots = 0;
+    for (const auto& track : graph.tracks) {
+        requiredTrackSlots = std::max(requiredTrackSlots, static_cast<size_t>(track.trackIndex) + 1);
+    }
+    if (requiredTrackSlots == 0) {
+        return;
+    }
+
+    if (m_trackState.capacity() < requiredTrackSlots) {
+        m_trackState.reserve(std::min(kMaxTracks, std::max(requiredTrackSlots, m_trackState.capacity() * 2)));
+    }
+    if (m_trackState.size() < requiredTrackSlots) {
+        m_trackState.resize(requiredTrackSlots);
+    }
+    if (m_trackBuffersD.size() < requiredTrackSlots) {
+        m_trackBuffersD.resize(requiredTrackSlots);
+    }
+    if (m_trackSidechainBuffersD.size() < requiredTrackSlots) {
+        m_trackSidechainBuffersD.resize(requiredTrackSlots);
+    }
+
+    const size_t preFaderSize =
+        static_cast<size_t>(m_maxBufferFrames.load(std::memory_order_relaxed)) * kInternalRenderChannels;
+    const size_t renderBufferSize = preFaderSize;
+    for (const auto& track : graph.tracks) {
+        if (track.trackIndex >= m_trackState.size()) {
+            continue;
+        }
+        if (m_trackBuffersD[track.trackIndex].size() < renderBufferSize) {
+            m_trackBuffersD[track.trackIndex].assign(renderBufferSize, 0.0);
+        }
+        if (m_trackSidechainBuffersD[track.trackIndex].size() < renderBufferSize) {
+            m_trackSidechainBuffersD[track.trackIndex].assign(renderBufferSize, 0.0);
+        }
+
+        auto& state = m_trackState[track.trackIndex];
+        const size_t sendCount = std::min(track.sends.size(), kMaxSendsPerTrack);
+        if (state.sendGainL.size() < sendCount) {
+            state.sendGainL.resize(sendCount);
+        }
+        if (state.sendGainR.size() < sendCount) {
+            state.sendGainR.resize(sendCount);
+        }
+        if (state.preFaderBuffer.capacity() < preFaderSize) {
+            state.preFaderBuffer.reserve(preFaderSize);
+        }
+    }
+}
+
 void AudioEngine::setLoopRegion(double startBeat, double endBeat) {
     // Validate that end is after start
     if (endBeat <= startBeat) {
@@ -2834,8 +2833,10 @@ void AudioEngine::compileGraph() {
     std::lock_guard<std::mutex> lock(m_graphMutex);
 
     // Use double-buffering: Write to inactive index
-    const int inactiveIdx = 1 - m_activeRenderTrackIndex.load(std::memory_order_relaxed);
-    auto& targetOrder = m_graphStates[inactiveIdx].renderTracks;
+    const int activeIdx = m_activeRenderTrackIndex.load(std::memory_order_relaxed);
+    const int inactiveIdx = 1 - activeIdx;
+    auto& targetState = m_graphStates[inactiveIdx];
+    auto& targetOrder = targetState.renderTracks;
     targetOrder.clear();
 
     auto* slotMap = m_channelSlotMapRaw.load(std::memory_order_relaxed);
@@ -2843,6 +2844,7 @@ void AudioEngine::compileGraph() {
         return;
 
     targetOrder.reserve(slotMap->getChannelCount());
+    uint32_t maxTrackIndexPlusOne = 0;
 
     // Access the current graph snapshot
     auto graphRead = m_state.activeGraphRead();
@@ -2855,12 +2857,17 @@ void AudioEngine::compileGraph() {
         // Safety Check
         if (idx >= m_trackBuffersD.size())
             continue;
+        maxTrackIndexPlusOne = std::max(maxTrackIndexPlusOne, idx + 1);
 
         RenderTrack rt;
         rt.trackIndex = idx;
         rt.selfBuffer = m_trackBuffersD[idx].data();
 
-        // --- Main Output Routing ---
+        // Ensure trackStates has an entry for this track
+        if (idx >= targetState.trackStates.size()) {
+            targetState.trackStates.resize(idx + 1);
+        }
+
         // --- Main Output Routing ---
         // Phase 4: Real-time Fader Support
         // We set connection gain to 1.0 (Unity) because Volume/Pan will be applied
@@ -2932,6 +2939,7 @@ void AudioEngine::compileGraph() {
 
         targetOrder.push_back(rt);
     }
+    targetState.trackStates.resize(maxTrackIndexPlusOne);
 
     // Atomic Swap
     m_activeRenderTrackIndex.store(inactiveIdx, std::memory_order_release);
@@ -3019,12 +3027,22 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     auto* patternEngine = m_patternEngine.load(std::memory_order_acquire);
     auto* unitManager = m_unitManager.load(std::memory_order_acquire);
 
-    if (!patternEngine || !unitManager)
+    if (!patternEngine || !unitManager) {
+        // Keep the live-queue safety net effective: drop stale live events so
+        // they cannot pile up and land as a burst when units appear later.
+        // Only the realtime block (targetBuffer == nullptr) may touch the
+        // SPSC queue — the offline bounce path runs on another thread.
+        if (targetBuffer == nullptr)
+            drainLiveMidi(nullptr, 0);
         return;
+    }
 
     const uint32_t sampleRate = m_sampleRate.load(std::memory_order_relaxed);
-    if (sampleRate == 0)
+    if (sampleRate == 0) {
+        if (targetBuffer == nullptr)
+            drainLiveMidi(nullptr, 0);
         return;
+    }
 
     // Sync logic moved after snapshot retrieval
 
@@ -3037,6 +3055,9 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     // Get Arsenal snapshot for RT-safe unit iteration
     auto snapshot = unitManager->getAudioSnapshot();
     if (!snapshot || snapshot->units.empty()) {
+        // No routable units: drain-and-drop live events (see note above).
+        if (targetBuffer == nullptr)
+            drainLiveMidi(nullptr, 0);
         return;
     }
 
@@ -3046,6 +3067,8 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     // Buffers must be pre-sized in setBufferConfig()
     if (m_unitBufferD.size() < requiredStereoSamples || m_pluginBufferF.size() < requiredStereoSamples ||
         m_silentBufferF.size() < numFrames) {
+        if (targetBuffer == nullptr)
+            drainLiveMidi(nullptr, 0);
         return;
     }
     // Always zero the silent buffer (just in case)
@@ -3073,6 +3096,16 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
     }
 
     injectPendingUnitAudition(unitMidiRoutes.data(), unitMidiRouteCount, numFrames);
+
+    // Live note input in Arsenal mode (this function early-returns unless
+    // patternPlaybackMode, so this is the only drain per block here). Runs with
+    // or without the transport — playing an instrument must not require play.
+    // Offline isolated-track bounce (targetBuffer set) runs on a non-RT thread
+    // while the realtime callback may still be live: it must never touch the
+    // single-consumer queue, which also keeps live notes out of bounced files.
+    if (targetBuffer == nullptr) {
+        drainLiveMidi(unitMidiRoutes.data(), unitMidiRouteCount);
+    }
 
     // Process each unit plugin
     bufIdx = 0;
@@ -3240,8 +3273,9 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
     while (framesRemaining > 0) {
         uint32_t framesThisBlock = (uint32_t)std::min((uint64_t)blockSize, framesRemaining);
 
-        // Zero buffer
+        // Zero buffers
         std::fill(blockBuffer.begin(), blockBuffer.end(), 0.0);
+        std::fill(m_masterBufferD.begin(), m_masterBufferD.begin() + static_cast<size_t>(framesThisBlock) * 2, 0.0);
 
         // Setup Context
         AudioRenderer::Context ctx;
@@ -3263,6 +3297,12 @@ bool AudioEngine::bounceRangeToWav(double startBeat, double endBeat, const std::
 
         // Render
         m_rtRenderer.renderBlock(ctx, graphState, *this);
+
+        // renderBlock routes tracks to m_masterBufferD via activeConnections.
+        // Copy the result to blockBuffer before processing Arsenal units.
+        for (size_t i = 0; i < static_cast<size_t>(framesThisBlock) * 2; ++i) {
+            blockBuffer[i] = m_masterBufferD[i];
+        }
 
         // Process Arsenal pattern playback (MIDI buffer pop + unit render).
         // renderBlock handles PreviewToMaster; this call processes track-routed

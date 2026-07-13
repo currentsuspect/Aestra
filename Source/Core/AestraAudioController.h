@@ -1,18 +1,20 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
-#include <memory>
+#include "AestraAtomicSharedPtr.h"
+#include "AestraAudio.h"
+#include "AudioDeviceManager.h"
+#include "AudioEngine.h"
+
 #include <atomic>
+#include <memory>
 #include <string>
 #include <vector>
-
-#include "AestraAudio.h"
-#include "AudioEngine.h"
-#include "AudioDeviceManager.h"
 
 // Forward declarations
 class AestraContent;
 namespace Aestra::Audio {
+class MidiInputService;
 class PreviewEngine;
 class TrackManager;
 }
@@ -42,6 +44,7 @@ public:
     // Accessors
     Aestra::Audio::AudioEngine* getEngine() { return m_audioEngine.get(); }
     Aestra::Audio::AudioDeviceManager* getDeviceManager() { return m_audioManager.get(); }
+    Aestra::Audio::MidiInputService* getMidiInput() { return m_midiInput.get(); }
     const Aestra::Audio::AudioStreamConfig& getStreamConfig() const { return m_streamConfig; }
 
     // Helpers
@@ -54,6 +57,10 @@ public:
 private:
     std::unique_ptr<Aestra::Audio::AudioDeviceManager> m_audioManager;
     std::unique_ptr<Aestra::Audio::AudioEngine> m_audioEngine;
+    // Hardware MIDI input. Its RtMidi callback thread posts into the engine's
+    // hardware SPSC queue, so it must be stopped before m_audioEngine is
+    // destroyed (see shutdown()).
+    std::unique_ptr<Aestra::Audio::MidiInputService> m_midiInput;
 
     Aestra::Audio::AudioStreamConfig m_streamConfig;
     bool m_initialized{false};
@@ -61,5 +68,7 @@ private:
 
     // Weak UI reference plus atomically published ownership for callback routing.
     std::weak_ptr<AestraContent> m_content;
-    std::shared_ptr<AestraContent> m_rtContent;
+    Aestra::AtomicSharedPtr<AestraContent> m_rtContent;
+    std::atomic<Aestra::Audio::TrackManager*> m_rtTrackManager{nullptr};
+    std::atomic<Aestra::Audio::PreviewEngine*> m_rtPreviewEngine{nullptr};
 };

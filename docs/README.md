@@ -4,7 +4,6 @@
 ![License](https://img.shields.io/badge/License-ASSAL%20v1.1-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey)
 ![C++](https://img.shields.io/badge/C%2B%2B-17-orange)
-![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
 
 Welcome to the **Aestra Documentation Portal**! This is your guide to understanding, building, validating, and contributing to Aestra.
 
@@ -29,6 +28,7 @@ Aestra is a source-available digital audio workstation under active development.
 ### 🚀 Getting Started
 
 - **[Building Guide](getting-started/building.md)** — Complete build instructions for Windows and Linux
+- **[Validate Public Core Build](getting-started/validate-core-build.md)** — Smoke-test the public/core configuration
 - **[Contributing Guide](developer/contributing.md)** — How to contribute to Aestra (GitHub workflow, PR rules)
 - **[FAQ](technical/faq.md)** — Frequently asked questions for contributors and users
 
@@ -144,7 +144,3 @@ We welcome contributions from the community! Before contributing:
 - ❌ You cannot use, copy, modify, or redistribute the code without permission
 
 The source code is publicly visible for transparency but is **NOT open-source**. All rights reserved.
-
----
-
-*Last updated: April 2026*

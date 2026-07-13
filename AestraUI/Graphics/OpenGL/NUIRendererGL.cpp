@@ -2635,22 +2635,31 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
         float w = ch.width * scale;
         float h = ch.height * scale;
         
-        // Glyph positioning relative to baseline
-        // Allow sub-pixel positioning for smooth baseline alignment
-        float xpos = x + scaledBearingX;
-        float ypos = baseline - scaledBearingY; // Top of glyph
+        // Snap the glyph quad to the pixel grid so the bitmap atlas samples
+        // 1:1 — subpixel placement smears the tiny 9-12px labels into a jagged
+        // blur. Only the pen start was snapped before, so every glyph after the
+        // first drifted off-grid. All four edges are rounded from their true
+        // positions (not width-rounded), so each glyph spans whole pixels
+        // without accumulating drift; the pen advance keeps fractional width so
+        // kerning/spacing stay accurate.
+        const float gx = x + scaledBearingX;
+        const float gy = baseline - scaledBearingY; // Top of glyph
+        const float xpos = std::round(gx);
+        const float ypos = std::round(gy);
+        const float xposR = std::round(gx + w);
+        const float yposB = std::round(gy + h);
 
         minX = std::min(minX, xpos);
         minY = std::min(minY, ypos);
-        maxX = std::max(maxX, xpos + w);
-        maxY = std::max(maxY, ypos + h);
+        maxX = std::max(maxX, xposR);
+        maxY = std::max(maxY, yposB);
 
         // Draw textured quad for character
         // Type 4 = Bitmap Text
-        addVertex(xpos,     ypos + h, ch.u0, ch.v1, glyphColor, 0,0,0,0, 0,0,0, 4.0f); 
-        addVertex(xpos + w, ypos + h, ch.u1, ch.v1, glyphColor, 0,0,0,0, 0,0,0, 4.0f); 
-        addVertex(xpos + w, ypos,     ch.u1, ch.v0, glyphColor, 0,0,0,0, 0,0,0, 4.0f); 
-        addVertex(xpos,     ypos,     ch.u0, ch.v0, glyphColor, 0,0,0,0, 0,0,0, 4.0f);
+        addVertex(xpos,  yposB, ch.u0, ch.v1, glyphColor, 0,0,0,0, 0,0,0, 4.0f);
+        addVertex(xposR, yposB, ch.u1, ch.v1, glyphColor, 0,0,0,0, 0,0,0, 4.0f);
+        addVertex(xposR, ypos,  ch.u1, ch.v0, glyphColor, 0,0,0,0, 0,0,0, 4.0f);
+        addVertex(xpos,  ypos,  ch.u0, ch.v0, glyphColor, 0,0,0,0, 0,0,0, 4.0f);
         
         // Add indices for quad
         uint32_t base = static_cast<uint32_t>(vertices_.size()) - 4;
@@ -2807,7 +2816,7 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
     glUniform1i(primitiveShader_.primitiveTypeLoc, 0);
-    glUniform1i(primitiveShader_.outputLinearLoc, framebufferSRGBEnabled_ ? 1 : 0);
+    glUniform1i(primitiveShader_.outputLinearLoc, (framebufferSRGBEnabled_ && !renderingToLinearTarget_) ? 1 : 0);
     glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
     glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
     glUniform1f(primitiveShader_.textGammaLoc, 1.0f);
@@ -3042,6 +3051,17 @@ uint32_t NUIRendererGL::getGLTextureId(uint32_t textureId) const {
 }
 
 void NUIRendererGL::beginOffscreen(int width, int height) {
+    // Offscreen caches render into linear GL_RGBA8 textures where
+    // GL_FRAMEBUFFER_SRGB does NOT re-encode on write. The shader's
+    // sRGB->linear conversion (uOutputLinear) must therefore be disabled while
+    // rendering into them: values are stored as-authored (sRGB), and the
+    // conversion happens exactly once when the cached texture is composited to
+    // the sRGB screen. With the flag left on, cached content was linearized
+    // on the way in AND on the way out — one uncompensated pow(2.2) that
+    // crushed every dark color drawn through the cache (#observed as the
+    // timeline rendering far darker than its authored palette).
+    renderingToLinearTarget_ = true;
+
     // Backup current size and projection
     widthBackup_ = width_;
     heightBackup_ = height_;
@@ -3056,6 +3076,10 @@ void NUIRendererGL::beginOffscreen(int width, int height) {
 }
 
 void NUIRendererGL::endOffscreen() {
+    // Flush offscreen geometry before restoring the screen color-space mode.
+    flush();
+    renderingToLinearTarget_ = false;
+
     // Restore original projection and size
     width_ = widthBackup_;
     height_ = heightBackup_;
@@ -3080,6 +3104,7 @@ void NUIRendererGL::endBatch() {
 
 void NUIRendererGL::flush() {
     AESTRA_ZONE("Renderer_Flush");
+    AESTRA_ZONE("Renderer_Flush");
     if (vertices_.empty()) {
         return;
     }
@@ -3095,7 +3120,7 @@ void NUIRendererGL::flush() {
     // Use shader
     glUseProgram(primitiveShader_.id);
     glUniformMatrix4fv(primitiveShader_.projectionLoc, 1, GL_FALSE, projectionMatrix_);
-    glUniform1i(primitiveShader_.outputLinearLoc, framebufferSRGBEnabled_ ? 1 : 0);
+    glUniform1i(primitiveShader_.outputLinearLoc, (framebufferSRGBEnabled_ && !renderingToLinearTarget_) ? 1 : 0);
     glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
     glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
     glUniform1f(primitiveShader_.textGammaLoc, 1.0f);
@@ -3127,8 +3152,15 @@ void NUIRendererGL::flush() {
             || currentTextureId_ == fontAtlasTextureIdXSmall_);
         if (isFontAtlasTexture) {
             glUniform2f(primitiveShader_.textTexelSizeLoc, 1.0f / fontAtlasWidth_, 1.0f / fontAtlasHeight_);
-            glUniform1f(primitiveShader_.textSharpenLoc, 0.28f);
-            glUniform1f(primitiveShader_.textGammaLoc, 0.93f);
+            // The x-small/small atlases are supersampled down the hardest, so
+            // their stems average to a washed mid-grey. Fullness comes from the
+            // coverage lift (gamma < 1 thickens strokes uniformly); the unsharp
+            // mask stays gentle because a strong one undershoots and erodes thin
+            // features — the 'e' crossbar thins to a 'c' and edges go ragged.
+            const bool tinyAtlas = (currentTextureId_ == fontAtlasTextureIdXSmall_
+                                    || currentTextureId_ == fontAtlasTextureIdSmall_);
+            glUniform1f(primitiveShader_.textSharpenLoc, tinyAtlas ? 0.20f : 0.28f);
+            glUniform1f(primitiveShader_.textGammaLoc, tinyAtlas ? 0.74f : 0.93f);
         }
     }
     

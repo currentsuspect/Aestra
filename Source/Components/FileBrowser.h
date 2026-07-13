@@ -224,6 +224,10 @@ public:
     };
 
     BrowserLayout computeBrowserLayout() const;
+
+    /// Hover washes drawn per-frame OUTSIDE the FBO cache, so hover changes
+    /// never force a cache rebuild (see renderFileList / nav drawRow).
+    void renderHoverOverlays(NUIRenderer& renderer);
     float getNavPaneWidth() const;
     BrowserNavAction getActiveNavAction() const { return activeNavAction_; }
 
@@ -385,6 +389,10 @@ public:
         std::string activeNavPath_;
         int hoveredNavIndex_ = -1;
         std::vector<BrowserNavHit> navHits_;
+        // Nav pane vertical scroll (engages when the preview dock steals height).
+        float navScrollOffset_ = 0.0f;   // current offset, clamped in render
+        float navContentHeight_ = 0.0f;  // measured content height below the header
+        float navViewportHeight_ = 0.0f; // visible content height below the header
 	    std::shared_ptr<NUIContextMenu> popupMenu_;
 	    std::string popupMenuTargetPath_;
 	    bool popupMenuTargetIsDirectory_ = false;

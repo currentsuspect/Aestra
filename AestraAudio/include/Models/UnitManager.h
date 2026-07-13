@@ -282,6 +282,10 @@ public:
     int getUnitTimelineLane(UnitID id) const;
     /** @brief Attach an audio clip path to a unit. */
     void setUnitAudioClip(UnitID id, const std::string& path);
+    /** @brief Publish a pre-decoded audio clip to a unit without doing file I/O on the caller. */
+    bool setUnitAudioClipFromDecoded(UnitID id, const std::string& path, std::vector<float> decodedData,
+                                     uint32_t sampleRate, uint32_t numChannels, std::vector<float> previewWaveform,
+                                     double durationSeconds);
     /** @brief Set the UI accent color for a unit. */
     void setUnitColor(UnitID id, uint32_t color);
     /** @brief Set the unit group classification. */

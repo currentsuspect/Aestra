@@ -70,6 +70,31 @@ jobs:
           EOF
           curl -s -o /dev/null -w "%{http_code}" -H "Content-Type: application/json" --data @discord_payload.json "$DISCORD_WEBHOOK"
 
+  # Compiles the full desktop app (Source/ + AestraUI) — the one lane that
+  # catches UI/app build breakage. Every other lane passes AESTRA_CI=ON, which
+  # force-disables the UI, so without this job the app can silently stop
+  # building (it did once for a week, #396). Compile-only by design: tests are
+  # owned by the headless lanes. Do NOT add AESTRA_CI=ON here — it would turn
+  # this lane back into a headless build.
+  build-linux-app:
+    name: Linux (UI/App compile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: false
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libasound2-dev libgl1-mesa-dev libx11-dev libsodium-dev libsecret-1-dev libsdl2-dev libfreetype-dev
+
+      - name: Configure (UI enabled)
+        run: cmake -B build-app -S . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DAestra_CORE_MODE=ON -DAESTRA_ENABLE_UI=ON -DAESTRA_ENABLE_TESTS=OFF
+
+      - name: Build app target
+        run: cmake --build build-app --config ${{env.BUILD_TYPE}} --target Aestra --parallel
+
   build-windows:
     name: Windows (MSVC)
     runs-on: windows-latest
@@ -334,11 +359,11 @@ jobs:
         run: cmake --preset ci-tsan
 
       - name: Build
-        run: cmake --build --preset ci-tsan
+        run: cmake --build --preset ci-tsan --parallel 2
 
       - name: Test
         working-directory: build/ci-tsan
-        run: ctest --output-on-failure --output-junit ctest-results-tsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+        run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-tsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
 
       - name: Upload TSan test report
         if: always()
@@ -372,11 +397,11 @@ jobs:
         run: cmake --preset ci-lsan
 
       - name: Build
-        run: cmake --build --preset ci-lsan
+        run: cmake --build --preset ci-lsan --parallel 2
 
       - name: Test
         working-directory: build/ci-lsan
-        run: ctest --output-on-failure --output-junit ctest-results-lsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
+        run: ctest --parallel 2 --output-on-failure --output-junit ctest-results-lsan.xml -E "SecOutOfProcessPluginHost|SecPluginScanIsolation|SecAccountApiClient"
 
       - name: Upload LSan test report
         if: always()

@@ -6,12 +6,14 @@
 #include "MiniAudioDecoder.h"
 #include "PluginManager.h"
 #include "Music/ScaleContext.h"
+#include <array>
 #include <atomic>
 #include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -52,7 +54,71 @@ namespace {
     constexpr size_t PROJECT_MAX_STRING_BYTES = 4096;
     constexpr size_t PROJECT_MAX_PATH_BYTES = 32768;
     constexpr size_t PROJECT_MAX_EFFECT_STATE_HEX_BYTES = 4ull * 1024ull * 1024ull;
+    constexpr size_t PROJECT_LOAD_WARNING_LIMIT_PER_CATEGORY = 64;
     std::atomic<uint64_t> g_projectHistoryCounter{0};
+
+    enum class ProjectLoadWarningCategory : size_t {
+        ReferenceClip = 0,
+        ReferenceUnit,
+        MissingAsset,
+        MissingAssetDecode,
+        LaneCreate,
+        LaneCreateChannel,
+        EffectChain,
+        AutomationTarget,
+        DroppedClip,
+        SendRoute,
+        Count
+    };
+
+    class ProjectLoadWarningLimiter {
+    public:
+        void warning(ProjectLoadWarningCategory category,
+                     const std::string& message,
+                     const std::string& suppressedSummary) {
+            const size_t index = static_cast<size_t>(category);
+            size_t& count = m_counts[index];
+            if (count < PROJECT_LOAD_WARNING_LIMIT_PER_CATEGORY) {
+                Log::warning(message);
+            } else if (count == PROJECT_LOAD_WARNING_LIMIT_PER_CATEGORY) {
+                Log::warning(suppressedSummary);
+            }
+            ++count;
+        }
+
+    private:
+        std::array<size_t, static_cast<size_t>(ProjectLoadWarningCategory::Count)> m_counts{};
+    };
+
+    // --- Content integrity (#263) -------------------------------------------
+    // FNV-1a 64-bit over the canonical compact serialization. Corruption
+    // detection only — keyless, so it authenticates nothing; it catches disk
+    // corruption, truncated writes, and accidental edits.
+    uint64_t fnv1a64(const std::string& data) {
+        uint64_t hash = 1469598103934665603ull;
+        for (const unsigned char c : data) {
+            hash ^= c;
+            hash *= 1099511628211ull;
+        }
+        return hash;
+    }
+
+    constexpr const char* INTEGRITY_ALGO = "fnv1a64";
+
+    // Computes the canonical content hash with the integrity hash field pinned
+    // to "" — save and load call this with an identical tree shape, so both
+    // hash identical bytes. NOTE: mutates root's integrity field; the caller
+    // either overwrites it with the real hash (save) or no longer needs it (load).
+    std::string computeIntegrityHashHex(JSON& root) {
+        JSON integrity = JSON::object();
+        integrity.set("algo", JSON(INTEGRITY_ALGO));
+        integrity.set("hash", JSON(""));
+        root.set("integrity", integrity);
+        const uint64_t hash = fnv1a64(root.toString(0));
+        char buf[17];
+        std::snprintf(buf, sizeof(buf), "%016llx", static_cast<unsigned long long>(hash));
+        return std::string(buf);
+    }
 
     std::string bytesToHex(const std::vector<uint8_t>& bytes) {
         std::ostringstream oss;
@@ -182,6 +248,34 @@ namespace {
     bool isRegularDecodableAsset(const std::filesystem::path& path) {
         std::error_code ec;
         return hasDecodableAudioExtension(path) && std::filesystem::is_regular_file(path, ec) && !ec;
+    }
+
+    std::filesystem::path makePrivateRollbackPath() {
+        namespace fs = std::filesystem;
+
+        std::error_code ec;
+        fs::path base = fs::temp_directory_path(ec);
+        if (ec || base.empty()) {
+            return {};
+        }
+        base /= "Aestra";
+        base /= "project-load-rollback";
+
+        fs::create_directories(base, ec);
+        if (ec) {
+            return {};
+        }
+#ifndef _WIN32
+        // On shared /tmp, permissions may fail if another user owns the dir.
+        // Treat this as non-fatal — the dir exists and we can still write to it
+        // if the umask allows; only the chmod fails.
+        fs::permissions(base, fs::perms::owner_all, fs::perm_options::replace, ec);
+        ec.clear(); // non-fatal
+#endif
+
+        const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+        const auto seq = g_projectHistoryCounter.fetch_add(1, std::memory_order_relaxed);
+        return base / ("rollback-" + std::to_string(stamp) + "-" + std::to_string(seq) + ".aes.rollback");
     }
 
     bool validArraySection(const JSON& root, const char* key, size_t maxCount, std::string& error, bool required = false) {
@@ -813,6 +907,17 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
         root.set("ui", ui);
     }
 
+    // Content integrity (#263): stamp a canonical-content checksum so load can
+    // detect corruption. Must be the LAST field written — the hash covers every
+    // other field, computed with the hash slot pinned to "".
+    {
+        const std::string hashHex = computeIntegrityHashHex(root);
+        JSON integrity = JSON::object();
+        integrity.set("algo", JSON(INTEGRITY_ALGO));
+        integrity.set("hash", JSON(hashHex));
+        root.set("integrity", integrity);
+    }
+
     result.contents = root.toString(indentSpaces);
     result.ok = true;
     return result;
@@ -857,6 +962,12 @@ bool ProjectSerializer::save(const std::string& path,
 
 ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                                       const std::shared_ptr<TrackManager>& trackManager) {
+    return load(path, trackManager, path);
+}
+
+ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
+                                                      const std::shared_ptr<TrackManager>& trackManager,
+                                                      const std::string& assetBasePath) {
     LoadResult result;
     if (!trackManager) {
         result.errorMessage = "Invalid track manager";
@@ -867,6 +978,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         return result;
     }
     const std::filesystem::path projectPath(path);
+    const std::filesystem::path assetRoot(assetBasePath);
 
 #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
     Log::info(std::string("[ProjectLoad] Begin: ") + path);
@@ -916,6 +1028,36 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
     Log::info("[ProjectLoad] Parsed JSON ok");
 #endif
+
+    // Content integrity (#263): verify the checksum BEFORE migrations mutate
+    // the tree. Files that predate the integrity field (or use an unknown
+    // algo) load as Unchecked with no warning — backward compatible. A
+    // mismatch loads non-destructively but loudly: the session may be
+    // recoverable, and holding it hostage would betray recovery obligations;
+    // structurally corrupt files still hard-fail through the validators below.
+    if (root.has("integrity") && root["integrity"].isObject()) {
+        const JSON& integrityField = root["integrity"];
+        const std::string storedAlgo =
+            integrityField.has("algo") && integrityField["algo"].isString() ? integrityField["algo"].asString() : "";
+        const std::string storedHash =
+            integrityField.has("hash") && integrityField["hash"].isString() ? integrityField["hash"].asString() : "";
+        if (storedAlgo == INTEGRITY_ALGO && storedHash.size() == 16) {
+            // Recompute over the canonical form (hash slot pinned to "") — this
+            // overwrites root's integrity field, which nothing downstream reads.
+            const std::string computedHash = computeIntegrityHashHex(root);
+            if (computedHash == storedHash) {
+                result.integrity = LoadIntegrity::Verified;
+            } else {
+                result.integrity = LoadIntegrity::Mismatch;
+                Log::error("[ProjectLoad] CONTENT INTEGRITY MISMATCH: file was modified or corrupted since save "
+                           "(stored " + storedHash + ", computed " + computedHash +
+                           "). Loading non-destructively — verify the session before overwriting backups.");
+            }
+        } else {
+            Log::info("[ProjectLoad] Integrity field present but unrecognized (algo='" + storedAlgo +
+                      "') — skipping verification.");
+        }
+    }
 
     // Version check
     int fileVersion = 0;
@@ -970,6 +1112,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     std::unordered_map<uint64_t, std::string> patternNames;
     std::unordered_set<uint64_t> orphanClipPatternIds;
     std::unordered_set<uint64_t> orphanNoteUnitIds;
+    ProjectLoadWarningLimiter warningLimiter;
 
     if (root.has("sources")) {
         const JSON& sj = root["sources"];
@@ -1013,8 +1156,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     finiteNumberOr(cj[c], "patternId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
                 if (patternId != 0 && !allPatternIds.count(patternId)) {
                     orphanClipPatternIds.insert(patternId);
-                    Log::warning("[ProjectLoad] Clip references missing pattern " + std::to_string(patternId) +
-                               " - clip will be preserved with placeholder");
+                    warningLimiter.warning(
+                        ProjectLoadWarningCategory::ReferenceClip,
+                        "[ProjectLoad] Clip references missing pattern " + std::to_string(patternId) +
+                            " - clip will be preserved with placeholder",
+                        "[ProjectLoad] Additional missing-pattern clip reference warnings suppressed.");
                 }
             }
         }
@@ -1032,8 +1178,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                         finiteNumberOr(notes[n], "unitId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
                     if (unitId != 0 && !allUnitIds.count(unitId)) {
                         orphanNoteUnitIds.insert(unitId);
-                        Log::warning("[ProjectLoad] MIDI note references missing Arsenal unit " + std::to_string(unitId) +
-                                   " - note preserved but unit reference unresolved");
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::ReferenceUnit,
+                            "[ProjectLoad] MIDI note references missing Arsenal unit " + std::to_string(unitId) +
+                                " - note preserved but unit reference unresolved",
+                            "[ProjectLoad] Additional missing-Arsenal-unit MIDI note warnings suppressed.");
                     }
                 }
             }
@@ -1041,8 +1190,20 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     }
 
     // Build structured report for reference validation issues
-    if (!orphanClipPatternIds.empty() || !orphanNoteUnitIds.empty()) {
+    if (!orphanClipPatternIds.empty() || !orphanNoteUnitIds.empty() ||
+        result.integrity == LoadIntegrity::Mismatch) {
         auto report = std::make_unique<ProjectLoadReport>();
+        if (result.integrity == LoadIntegrity::Mismatch) {
+            report->issues.push_back({
+                LoadIssueSeverity::Warning,
+                "integrity",
+                "Project content checksum mismatch - file was modified or corrupted since save; "
+                "loaded non-destructively, verify the session before overwriting backups",
+                0,
+                "",
+                ""
+            });
+        }
         for (const auto& pid : orphanClipPatternIds) {
             report->issues.push_back({
                 LoadIssueSeverity::Warning,
@@ -1076,10 +1237,13 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         for (size_t i = 0; i < sj.size(); ++i) {
             if (!sj[i].has("path")) continue;
             std::string storedPath = sj[i]["path"].asString();
-            std::filesystem::path filePath = resolveProjectAssetPath(projectPath, storedPath);
+            std::filesystem::path filePath = resolveProjectAssetPath(assetRoot, storedPath);
             if (!std::filesystem::exists(filePath) || !std::filesystem::is_regular_file(filePath)) {
                 result.missingAssets.push_back(storedPath);
-                Log::warning("[ProjectLoad] Missing or unreadable audio asset: " + storedPath);
+                warningLimiter.warning(
+                    ProjectLoadWarningCategory::MissingAsset,
+                    "[ProjectLoad] Missing or unreadable audio asset: " + storedPath,
+                    "[ProjectLoad] Additional missing or unreadable audio asset warnings suppressed.");
             }
         }
     }
@@ -1148,7 +1312,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
 
     auto batch = playlist.scopedBatchUpdate();
 
-    // Save snapshot of current state to a rollback file BEFORE clearing.
+    // Save snapshot of current state to a private rollback file BEFORE clearing.
     // If the new load fails, we restore from this file to avoid leaving
     // the project in an empty/corrupted state.
     // Skip rollback creation when loading a rollback file itself (prevents recursion).
@@ -1163,8 +1327,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         }
         if (preloadSnapshot.ok && !preloadSnapshot.contents.empty()) {
             namespace fs = std::filesystem;
-            fs::path tmpPath = fs::path(path).string() + ".rollback";
-            if (writeAtomicallyImpl(tmpPath.string(), preloadSnapshot.contents)) {
+            fs::path tmpPath = makePrivateRollbackPath();
+            if (!tmpPath.empty() && writeAtomicallyImpl(tmpPath.string(), preloadSnapshot.contents)) {
                 rollbackPath = tmpPath.string();
             } else {
                 Log::warning("[ProjectLoad] Could not write rollback file — recovery unavailable");
@@ -1197,7 +1361,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 if (oldId == 0 || storedPath.empty()) {
                     continue;
                 }
-                std::filesystem::path resolvedPath = resolveProjectAssetPath(projectPath, storedPath);
+                std::filesystem::path resolvedPath = resolveProjectAssetPath(assetRoot, storedPath);
                 const std::string sourcePath = storedPath; // Use original storedPath for serialization
                 const std::string filePath = resolvedPath.string(); // Use resolvedPath only for file I/O
                 ClipSourceID newId = sourceManager.getOrCreateSource(sourcePath);
@@ -1206,7 +1370,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                     std::filesystem::exists(resolvedPath) && std::filesystem::is_regular_file(resolvedPath);
                 if (!assetReadable) {
                     result.missingAssets.push_back(storedPath);
-                    Log::warning("[ProjectLoad] Missing or unreadable audio asset: " + storedPath);
+                    warningLimiter.warning(
+                        ProjectLoadWarningCategory::MissingAsset,
+                        "[ProjectLoad] Missing or unreadable audio asset: " + storedPath,
+                        "[ProjectLoad] Additional missing or unreadable audio asset warnings suppressed.");
                 }
                 
                 // Actually decode the audio file and load into source
@@ -1232,7 +1399,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                   " (" + std::to_string(buffer->numFrames) + " frames, " + 
                                   std::to_string(sampleRate) + " Hz)");
                     } else {
-                        Log::warning("[ProjectLoad] Failed to decode: " + filePath + " — creating silent mono fallback");
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::MissingAssetDecode,
+                            "[ProjectLoad] Failed to decode: " + filePath + " — creating silent mono fallback",
+                            "[ProjectLoad] Additional audio decode failure warnings suppressed.");
                         result.missingAssets.push_back(storedPath);
                         auto fallback = std::make_shared<AudioBufferData>();
                         fallback->numChannels = 1;
@@ -1276,10 +1446,14 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             const JSON& slj = pj[i]["slices"];
                             for (size_t s = 0; s < slj.size(); ++s) {
                                 if (!slj[s].isObject()) continue;
-                                payload.slices.push_back({
-                                    finiteNumberOr(slj[s], "start", 0.0, 0.0, 1.0e15),
-                                    finiteNumberOr(slj[s], "length", 0.0, 0.0, 1.0e15)
-                                });
+                                // Mirror the writer, which persists startSamples/lengthSamples
+                                // (AudioSlice fields 3-4). The old first-two-field aggregate
+                                // filled startOffset/duration instead, so slice sample data
+                                // zeroed out on the next save.
+                                AudioSlice slice;
+                                slice.startSamples = finiteNumberOr(slj[s], "start", 0.0, 0.0, 1.0e15);
+                                slice.lengthSamples = finiteNumberOr(slj[s], "length", 0.0, 0.0, 1.0e15);
+                                payload.slices.push_back(slice);
                             }
                         }
                         PatternID newId = patternManager.createAudioPattern(name, length, payload);
@@ -1369,12 +1543,18 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 const std::string laneName = boundedStringOr(lj[i], "name", "Track", PROJECT_MAX_STRING_BYTES);
                 PlaylistLaneID laneId = playlist.createLane(laneName);
                 if (!laneId.isValid()) {
-                    Log::warning("[ProjectLoad] Failed to create lane '" + laneName + "' — skipping");
+                    warningLimiter.warning(
+                        ProjectLoadWarningCategory::LaneCreate,
+                        "[ProjectLoad] Failed to create lane '" + laneName + "' — skipping",
+                        "[ProjectLoad] Additional lane creation failure warnings suppressed.");
                     continue;
                 }
                 MixerChannel* channel = trackManager->addChannel(laneName);
                 if (!channel) {
-                    Log::warning("[ProjectLoad] Failed to create channel for lane '" + laneName + "' — removing lane");
+                    warningLimiter.warning(
+                        ProjectLoadWarningCategory::LaneCreateChannel,
+                        "[ProjectLoad] Failed to create channel for lane '" + laneName + "' — removing lane",
+                        "[ProjectLoad] Additional lane channel creation failure warnings suppressed.");
                     playlist.removeLane(laneId);
                     continue;
                 }
@@ -1464,7 +1644,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 const auto effectState = hexToBytes(lj[i]["effectChainStateHex"].asString());
                                 if (!effectState.empty()) {
                                     if (!chain.loadState(effectState, pluginManager)) {
-                                        Log::warning("[ProjectLoad] Failed to restore effect chain on lane: " + lane->name);
+                                        warningLimiter.warning(
+                                            ProjectLoadWarningCategory::EffectChain,
+                                            "[ProjectLoad] Failed to restore effect chain on lane: " + lane->name,
+                                            "[ProjectLoad] Additional effect chain restore warnings suppressed.");
                                     }
                                 }
                             }
@@ -1490,9 +1673,12 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             {
                                 const int rawTarget = static_cast<int>(target);
                                 if (rawTarget != 0 && rawTarget != 1 && rawTarget != 255) {
-                                    Log::warning("[ProjectLoad] Automation curve '" + param +
-                                                 "' has unrecognized target enum " + std::to_string(rawTarget) +
-                                                 "; curve preserved but may be skipped at runtime.");
+                                    warningLimiter.warning(
+                                        ProjectLoadWarningCategory::AutomationTarget,
+                                        "[ProjectLoad] Automation curve '" + param +
+                                            "' has unrecognized target enum " + std::to_string(rawTarget) +
+                                            "; curve preserved but may be skipped at runtime.",
+                                        "[ProjectLoad] Additional unrecognized automation target warnings suppressed.");
                                 }
                             }
                             
@@ -1577,8 +1763,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 }
                                 playlist.addClip(laneId, clip);
                             } else {
-                                Log::warning("[ProjectLoad] Clip references missing pattern " + std::to_string(oldPatId) +
-                                            " — clip dropped from lane '" + laneName + "'");
+                                warningLimiter.warning(
+                                    ProjectLoadWarningCategory::DroppedClip,
+                                    "[ProjectLoad] Clip references missing pattern " + std::to_string(oldPatId) +
+                                        " — clip dropped from lane '" + laneName + "'",
+                                    "[ProjectLoad] Additional dropped clip missing-pattern warnings suppressed.");
                             }
                         }
                     }
@@ -1602,9 +1791,12 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 if (!channel) continue;
                 for (const auto& send : channel->getSends()) {
                     if (!validChannelIds.count(send.targetChannelId)) {
-                        Log::warning("[ProjectLoad] Send from '" + channel->getName() +
-                                     "' targets channel ID " + std::to_string(send.targetChannelId) +
-                                     " which does not exist; send will be silent.");
+                        warningLimiter.warning(
+                            ProjectLoadWarningCategory::SendRoute,
+                            "[ProjectLoad] Send from '" + channel->getName() +
+                                "' targets channel ID " + std::to_string(send.targetChannelId) +
+                                " which does not exist; send will be silent.",
+                            "[ProjectLoad] Additional unresolved send route warnings suppressed.");
                     }
                 }
             }
@@ -1648,7 +1840,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
             namespace fs = std::filesystem;
             Log::warning("[ProjectLoad] Attempting to restore previous state from rollback");
             try {
-                LoadResult rollbackResult = load(rollbackPath, trackManager);
+                LoadResult rollbackResult = load(rollbackPath, trackManager, path);
                 if (rollbackResult.ok) {
                     Log::info("[ProjectLoad] Rollback successful — previous state restored");
                 } else {

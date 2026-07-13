@@ -1,6 +1,6 @@
 // AestraVerb Quality Measurement Lab
-// Generates impulse responses, noise bursts, and diagnostic metrics for
-// Room, Hall, and Plate modes.
+// Generates impulse responses, noise bursts, and diagnostic metrics for all
+// nine AestraVerb modes.
 //
 // Outputs:
 //   - labs/reverb/quality/reverb_quality_baseline.json
@@ -103,9 +103,18 @@ static bool writeWavFloat(const std::string& path, const std::vector<float>& lef
 // Metric structures
 // ============================================================================
 struct DecayMetrics {
-    float t20 = 0.0f;
-    float t40 = 0.0f;
-    float t60 = 0.0f;
+    // RT60 estimates (ms) extrapolated from three fitted regions of the
+    // Schroeder decay curve. Each is only populated when its measurement region
+    // is actually spanned by the render; otherwise it stays at the "unavailable"
+    // sentinel (-1) and its *Valid flag is false. We never copy a shorter
+    // measurement forward to fake a longer one.
+    float edtMs = -1.0f; // Early Decay Time: slope 0..-10 dB, extrapolated to -60
+    float t20Ms = -1.0f; // slope -5..-25 dB, extrapolated to -60
+    float t30Ms = -1.0f; // slope -5..-35 dB, extrapolated to -60
+    bool edtValid = false;
+    bool t20Valid = false;
+    bool t30Valid = false;
+    float floorDb = 0.0f; // lowest dB the Schroeder curve reached (rel. to peak)
     float maxReboundDb = 0.0f;
     bool monotonic = true;
 };
@@ -153,6 +162,7 @@ struct ModeQuality {
     float rms = 0.0f;
     float peak = 0.0f;
     float hfRatio = 0.0f;
+    uint32_t renderFrames = 0;
     float earlyCentroidHz = 0.0f;
     float lateCentroidHz = 0.0f;
     float earlyHighEnergy = 0.0f;
@@ -164,11 +174,45 @@ struct ModeQuality {
 // ============================================================================
 // Metric computation
 // ============================================================================
+// Least-squares fit of the Schroeder dB curve between two levels (relative to
+// peak, both negative or zero), then extrapolate the fitted slope to a full
+// 60 dB decay. Returns false — leaving the estimate unavailable — when the
+// render never actually reaches the lower level, so we report an honest gap
+// instead of guessing. `curveDb` is monotone-ish decreasing time series in dB.
+static bool fitRt60(const std::vector<float>& curveDb, float windowMs, float hiDb, float loDb,
+                    float& rt60Ms) {
+    const size_t n = curveDb.size();
+    size_t iHi = n, iLo = n;
+    for (size_t i = 0; i < n; ++i) {
+        if (iHi == n && curveDb[i] <= hiDb) iHi = i;
+        if (curveDb[i] <= loDb) { iLo = i; break; }
+    }
+    if (iHi >= n || iLo >= n || iLo <= iHi + 1) return false; // region not spanned
+
+    double sx = 0.0, sy = 0.0, sxx = 0.0, sxy = 0.0;
+    size_t cnt = 0;
+    for (size_t i = iHi; i <= iLo; ++i) {
+        const double x = static_cast<double>(i) * windowMs;
+        const double y = curveDb[i];
+        sx += x;
+        sy += y;
+        sxx += x * x;
+        sxy += x * y;
+        ++cnt;
+    }
+    const double denom = static_cast<double>(cnt) * sxx - sx * sx;
+    if (std::abs(denom) < 1e-12) return false;
+    const double slope = (static_cast<double>(cnt) * sxy - sx * sy) / denom; // dB per ms
+    if (slope >= -1e-9) return false; // not decaying
+    rt60Ms = static_cast<float>(-60.0 / slope);
+    return true;
+}
+
 static DecayMetrics computeDecay(const std::vector<float>& energy, float sampleRate) {
     DecayMetrics m;
     if (energy.empty()) return m;
 
-    // Schroeder backward integration for smoother decay curve
+    // Schroeder backward integration for a smooth, monotone decay curve.
     size_t n = energy.size();
     std::vector<float> schroeder(n);
     double acc = 0.0;
@@ -177,27 +221,32 @@ static DecayMetrics computeDecay(const std::vector<float>& energy, float sampleR
         schroeder[i - 1] = static_cast<float>(acc);
     }
 
-    float peak = schroeder[0];
-    float peakDb = 10.0f * std::log10(std::max(peak, 1e-20f));
-    float prevDb = peakDb;
+    float peakDb = 10.0f * std::log10(std::max(schroeder[0], 1e-20f));
     float windowMs = 256.0f / sampleRate * 1000.0f;
 
-    for (size_t i = 1; i < n; ++i) {
-        float db = 10.0f * std::log10(std::max(schroeder[i], 1e-20f));
-        if (db > prevDb + 1.0f) {
+    // Convert to dB relative to peak; track monotonicity of the raw (per-window)
+    // energy is not meaningful on the integrated curve, so we monitor the
+    // integrated curve for backward steps, which should never happen.
+    std::vector<float> curveDb(n);
+    float prevDb = peakDb;
+    float lowest = peakDb;
+    for (size_t i = 0; i < n; ++i) {
+        float db = 10.0f * std::log10(std::max(schroeder[i], 1e-20f)) - peakDb;
+        curveDb[i] = db;
+        float abs = db + peakDb;
+        if (i > 0 && abs > prevDb + 1.0f) {
             m.monotonic = false;
-            m.maxReboundDb = std::max(m.maxReboundDb, db - prevDb);
+            m.maxReboundDb = std::max(m.maxReboundDb, abs - prevDb);
         }
-        prevDb = db;
-
-        float t = static_cast<float>(i) * windowMs;
-        if (m.t20 == 0.0f && db <= peakDb - 20.0f) m.t20 = t;
-        if (m.t40 == 0.0f && db <= peakDb - 40.0f) m.t40 = t;
-        if (m.t60 == 0.0f && db <= peakDb - 60.0f) m.t60 = t;
+        prevDb = abs;
+        lowest = std::min(lowest, abs);
     }
-    if (m.t20 == 0.0f) m.t20 = static_cast<float>(n) * windowMs;
-    if (m.t40 == 0.0f) m.t40 = m.t20;
-    if (m.t60 == 0.0f) m.t60 = m.t40;
+    m.floorDb = lowest - peakDb;
+
+    // EDT uses the 0..-10 dB region; T20 the -5..-25 region; T30 -5..-35.
+    m.edtValid = fitRt60(curveDb, windowMs, 0.0f, -10.0f, m.edtMs);
+    m.t20Valid = fitRt60(curveDb, windowMs, -5.0f, -25.0f, m.t20Ms);
+    m.t30Valid = fitRt60(curveDb, windowMs, -5.0f, -35.0f, m.t30Ms);
     return m;
 }
 
@@ -563,6 +612,47 @@ static TransientMetrics computeTransient(const std::vector<float>& left, const s
     return m;
 }
 
+// Welch-averaged high-frequency energy fraction (>= 4 kHz relative to >= 20 Hz)
+// measured with real FFT bands. Replaces the old first-difference proxy, which
+// approximated a fixed 6 dB/oct high-shelf rather than a defined band and so
+// could not be read as "fraction of energy above 4 kHz".
+//
+// The analysis skips the first ~50 ms so the broadband direct impulse/onset
+// does not dominate the average — this characterizes the reverb body, not the
+// input click. Windows past the useful tail sit in near-silence and simply
+// contribute negligible energy.
+static float computeHfRatioFft(const std::vector<float>& sig, float sampleRate) {
+    constexpr size_t fftSize = 2048;
+    if (sig.size() < fftSize) return 0.0f;
+    const size_t onsetSkip = std::min(static_cast<size_t>(sampleRate * 0.05f),
+                                      sig.size() > fftSize ? sig.size() - fftSize : 0);
+    const size_t span = sig.size() - onsetSkip;
+    const size_t numWin = std::min<size_t>(16, span / fftSize);
+    if (numWin == 0) return 0.0f;
+    const double stride = numWin > 1
+                              ? static_cast<double>(span - fftSize) / static_cast<double>(numWin - 1)
+                              : 0.0;
+    const float binHz = sampleRate / static_cast<float>(fftSize);
+    double hf = 0.0, total = 0.0;
+    std::vector<std::complex<float>> buf(fftSize);
+    for (size_t w = 0; w < numWin; ++w) {
+        const size_t start = onsetSkip + static_cast<size_t>(w * stride);
+        for (size_t i = 0; i < fftSize; ++i) {
+            const float win = 0.5f * (1.0f - std::cos(2.0f * kPi * static_cast<float>(i) /
+                                                      static_cast<float>(fftSize - 1)));
+            buf[i] = std::complex<float>(sig[start + i] * win, 0.0f);
+        }
+        fft(buf);
+        for (size_t b = 1; b <= fftSize / 2; ++b) {
+            const float hz = static_cast<float>(b) * binHz;
+            const double e = std::norm(buf[b]);
+            if (hz >= 20.0f) total += e;
+            if (hz >= 4000.0f) hf += e;
+        }
+    }
+    return total > 1e-20 ? static_cast<float>(hf / total) : 0.0f;
+}
+
 // ============================================================================
 // Generate test signal responses
 // ============================================================================
@@ -640,16 +730,9 @@ static ModeQuality measureMode(const std::string& name, float modeParam,
     }
     q.rms = static_cast<float>(std::sqrt(sumSq / (2.0 * numFrames)));
 
-    // 4. HF energy ratio
-    double hfEnergy = 0.0, totalEnergy = 0.0;
-    for (uint32_t i = 0; i < numFrames; ++i) {
-        totalEnergy += tailL[i] * tailL[i];
-        if (i > 0) {
-            float diff = tailL[i] - tailL[i-1];
-            hfEnergy += diff * diff;
-        }
-    }
-    q.hfRatio = totalEnergy > 1e-20f ? static_cast<float>(hfEnergy / totalEnergy) : 0.0f;
+    // 4. HF energy ratio (true FFT band: energy >= 4 kHz over energy >= 20 Hz)
+    q.hfRatio = computeHfRatioFft(tailL, sampleRate);
+    q.renderFrames = numFrames;
 
     // 5. Energy decay curve (256-sample windows)
     size_t numWindows = numFrames / 256;
@@ -686,12 +769,12 @@ static std::string generateJsonReport(const std::vector<ModeQuality>& modes, flo
     std::ostringstream j;
     j << "{\n";
     j << "  \"sampleRate\": " << static_cast<int>(sampleRate) << ",\n";
-    j << "  \"frames\": 8192,\n";
     j << "  \"modes\": [\n";
     for (size_t m = 0; m < modes.size(); ++m) {
         const auto& q = modes[m];
         j << "    {\n";
         j << "      \"name\": \"" << q.name << "\",\n";
+        j << "      \"renderFrames\": " << q.renderFrames << ",\n";
         j << "      \"rms\": " << q.rms << ",\n";
         j << "      \"peak\": " << q.peak << ",\n";
         j << "      \"hfRatio\": " << q.hfRatio << ",\n";
@@ -701,10 +784,17 @@ static std::string generateJsonReport(const std::vector<ModeQuality>& modes, flo
         j << "      \"lateHighEnergy\": " << q.lateHighEnergy << ",\n";
         j << "      \"hasNaN\": " << (q.hasNaN ? "true" : "false") << ",\n";
         j << "      \"hasInf\": " << (q.hasInf ? "true" : "false") << ",\n";
+        // Decay times are RT60 estimates extrapolated from fitted regions of the
+        // Schroeder curve. A null value means the render never reached that
+        // region's lower level, so no honest estimate is available.
+        auto emitRt = [&](const char* key, bool valid, float ms) {
+            j << "        \"" << key << "\": " << (valid ? std::to_string(ms) : std::string("null")) << ",\n";
+        };
         j << "      \"decay\": {\n";
-        j << "        \"t20Ms\": " << q.decay.t20 << ",\n";
-        j << "        \"t40Ms\": " << q.decay.t40 << ",\n";
-        j << "        \"t60Ms\": " << q.decay.t60 << ",\n";
+        emitRt("edtMs", q.decay.edtValid, q.decay.edtMs);
+        emitRt("t20Ms", q.decay.t20Valid, q.decay.t20Ms);
+        emitRt("t30Ms", q.decay.t30Valid, q.decay.t30Ms);
+        j << "        \"floorDb\": " << q.decay.floorDb << ",\n";
         j << "        \"monotonic\": " << (q.decay.monotonic ? "true" : "false") << ",\n";
         j << "        \"maxReboundDb\": " << q.decay.maxReboundDb << "\n";
         j << "      },\n";
@@ -751,13 +841,21 @@ static std::string generateMarkdownReport(const std::vector<ModeQuality>& modes)
     md << "# AestraVerb Quality Measurement Baseline\n\n";
     md << "Generated by AestraReverbQualityLab.\n\n";
 
-    md << "## Summary Table\n\n";
-    md << "| Mode | T20 (ms) | T40 (ms) | T60 (ms) | Monotonic | Rebound (dB) |\n";
-    md << "|------|----------|----------|----------|-----------|-------------|\n";
+    md << "## Decay Times (RT60 estimates, ms)\n\n";
+    md << "EDT/T20/T30 are RT60 values extrapolated from the 0..-10, -5..-25 and "
+          "-5..-35 dB regions of the Schroeder curve. `n/a` means the render did not "
+          "reach that region — no value is invented to fill the gap.\n\n";
+    md << "| Mode | EDT | T20 | T30 | Floor (dB) | Monotonic | Rebound (dB) |\n";
+    md << "|------|-----|-----|-----|-----------|-----------|-------------|\n";
+    auto rtCell = [](bool valid, float ms) {
+        return valid ? std::to_string(static_cast<int>(ms)) : std::string("n/a");
+    };
     for (const auto& q : modes) {
-        md << "| " << q.name << " | " << static_cast<int>(q.decay.t20)
-           << " | " << static_cast<int>(q.decay.t40)
-           << " | " << static_cast<int>(q.decay.t60)
+        md << "| " << q.name
+           << " | " << rtCell(q.decay.edtValid, q.decay.edtMs)
+           << " | " << rtCell(q.decay.t20Valid, q.decay.t20Ms)
+           << " | " << rtCell(q.decay.t30Valid, q.decay.t30Ms)
+           << " | " << std::fixed << std::setprecision(1) << q.decay.floorDb
            << " | " << (q.decay.monotonic ? "Yes" : "No")
            << " | " << std::fixed << std::setprecision(1) << q.decay.maxReboundDb
            << " |\n";
@@ -867,7 +965,6 @@ static std::string generateMarkdownReport(const std::vector<ModeQuality>& modes)
 // ============================================================================
 int main() {
     const float sampleRate = 48000.0f;
-    const uint32_t numFrames = 65536; // ~1.36s tail
     const std::string qualityDir = "labs/reverb/quality";
 
     std::error_code ec;
@@ -881,9 +978,37 @@ int main() {
     std::cout << "==================================\n\n";
 
     std::vector<ModeQuality> modes;
-    modes.push_back(measureMode("room", 0.0f, 0.6f, 0.5f, 0.7f, sampleRate, numFrames, qualityDir));
-    modes.push_back(measureMode("hall", 0.5f, 0.9f, 0.9f, 0.85f, sampleRate, numFrames, qualityDir));
-    modes.push_back(measureMode("plate", 1.0f, 0.7f, 0.6f, 0.8f, sampleRate, numFrames, qualityDir));
+    // Measure all nine modes. Each mode is selected via the canonical
+    // AestraVerb::modeParam() so its measured evidence matches the mode it is
+    // labeled with. (Previously "hall" passed 0.5, which decodes to Chamber
+    // (mode 4), and "plate" passed 1.0, which decodes to SmoothPlate (mode 8) —
+    // so the published Hall/Plate measurements were mislabeled.)
+    struct ModeSetting {
+        AestraVerb::Mode mode;
+        const char* name;
+        float decay, size, diffusion;
+    };
+    static const ModeSetting kModeSettings[] = {
+        {AestraVerb::Mode::Room,        "room",         0.60f, 0.50f, 0.70f},
+        {AestraVerb::Mode::Hall,        "hall",         0.90f, 0.90f, 0.85f},
+        {AestraVerb::Mode::Plate,       "plate",        0.70f, 0.60f, 0.80f},
+        {AestraVerb::Mode::Cathedral,   "cathedral",    0.95f, 0.95f, 0.80f},
+        {AestraVerb::Mode::Chamber,     "chamber",      0.70f, 0.60f, 0.75f},
+        {AestraVerb::Mode::BrightHall,  "bright_hall",  0.88f, 0.85f, 0.85f},
+        {AestraVerb::Mode::Ambience,    "ambience",     0.40f, 0.40f, 0.60f},
+        {AestraVerb::Mode::Scoring,     "scoring",      0.90f, 0.85f, 0.85f},
+        {AestraVerb::Mode::SmoothPlate, "smooth_plate", 0.72f, 0.60f, 0.85f},
+    };
+    // Render length adapts to the requested decay so long tails have room to
+    // reach the -35 dB region the T30 fit needs, while short modes don't pay for
+    // dead silence. 2 s floor, ~20 s cap.
+    for (const auto& s : kModeSettings) {
+        const float seconds = std::clamp(2.0f + s.decay * 18.0f, 2.0f, 20.0f);
+        uint32_t numFrames = static_cast<uint32_t>(sampleRate * seconds);
+        numFrames = (numFrames + 255u) & ~255u; // whole 256-sample decay windows
+        modes.push_back(measureMode(s.name, AestraVerb::modeParam(s.mode),
+                                    s.decay, s.size, s.diffusion, sampleRate, numFrames, qualityDir));
+    }
 
     // Write JSON report
     {
@@ -906,12 +1031,12 @@ int main() {
             f << "## Files\n\n";
             f << "- `reverb_quality_baseline.json` — Machine-readable quality metrics\n";
             f << "- `reverb_quality_baseline.md` — Human-readable quality report\n";
-            f << "- `impulse_room.wav` — Room mode impulse response\n";
-            f << "- `impulse_hall.wav` — Hall mode impulse response\n";
-            f << "- `impulse_plate.wav` — Plate mode impulse response\n";
-            f << "- `noiseburst_room.wav` — Room mode noise burst response\n";
-            f << "- `noiseburst_hall.wav` — Hall mode noise burst response\n";
-            f << "- `noiseburst_plate.wav` — Plate mode noise burst response\n";
+            for (const auto& q : modes) {
+                f << "- `impulse_" << q.name << ".wav` — " << q.name << " mode impulse response\n";
+            }
+            for (const auto& q : modes) {
+                f << "- `noiseburst_" << q.name << ".wav` — " << q.name << " mode noise burst response\n";
+            }
         }
     }
 
@@ -920,11 +1045,14 @@ int main() {
 
     // Print summary to console
     std::cout << "\n--- Summary ---\n";
+    auto rtStr = [](bool valid, float ms) {
+        return valid ? (std::to_string(static_cast<int>(ms)) + "ms") : std::string("n/a");
+    };
     for (const auto& q : modes) {
-        std::cout << q.name << ": T20=" << static_cast<int>(q.decay.t20)
-                  << "ms T40=" << static_cast<int>(q.decay.t40)
-                  << "ms T60=" << static_cast<int>(q.decay.t60)
-                  << "ms Peak=" << std::fixed << std::setprecision(3) << q.peak
+        std::cout << q.name << ": EDT=" << rtStr(q.decay.edtValid, q.decay.edtMs)
+                  << " T20=" << rtStr(q.decay.t20Valid, q.decay.t20Ms)
+                  << " T30=" << rtStr(q.decay.t30Valid, q.decay.t30Ms)
+                  << " Peak=" << std::fixed << std::setprecision(3) << q.peak
                   << " RMS=" << q.rms
                   << " HF=" << std::setprecision(1) << (q.hfRatio * 100.0f) << "%"
                   << " Centroid=" << static_cast<int>(q.earlyCentroidHz) << "->"

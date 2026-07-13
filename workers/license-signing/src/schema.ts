@@ -1,4 +1,5 @@
 import type { LeasePayload, LicenseTier } from "./canonicalLease";
+import { MAX_CLIENT_CLOCK_SKEW_SECONDS } from "./constants";
 
 const LEASE_PERIOD_SECONDS = 604800;
 const MAX_STRING_LENGTH = 512;
@@ -88,7 +89,7 @@ function readStringArray(record: Record<string, unknown>, key: string, issues: s
   return out;
 }
 
-export function parseSignRequest(input: unknown): LeasePayload {
+export function parseSignRequest(input: unknown, nowSeconds?: number): LeasePayload {
   const issues: string[] = [];
   if (!isRecord(input)) {
     throw new SignRequestError(["request body must be a JSON object"]);
@@ -105,6 +106,9 @@ export function parseSignRequest(input: unknown): LeasePayload {
   const deviceHash = readString(input, "device_hash", issues);
   const issuedAt = readInteger(input, "issued_at", issues);
   const expiresAt = readInteger(input, "expires_at", issues);
+  if (nowSeconds !== undefined && issuedAt > nowSeconds + MAX_CLIENT_CLOCK_SKEW_SECONDS) {
+    issues.push("issued_at must not be in the future");
+  }
   const gracePolicy = readString(input, "grace_policy", issues);
   if (gracePolicy !== "restrict") {
     issues.push("grace_policy must be restrict");
