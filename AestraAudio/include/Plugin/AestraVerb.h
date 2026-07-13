@@ -404,9 +404,11 @@ public:
             const float dryL = inL;
             const float dryR = inR;
 
-            // Freeze: attenuate input so the feedback loop sustains infinitely
+            // Freeze: hard-mute the input. The frozen loop is lossless, so any
+            // residual injection (the old 0.001 scale) accumulates without
+            // bound; capture-and-hold is the predictable behavior.
             const bool freezeActive = smoothedParams[kFreeze] > 0.5f;
-            const float inputScale = freezeActive ? 0.001f : 1.0f;
+            const float inputScale = freezeActive ? 0.0f : 1.0f;
 
             m_predelayL[predelayPos] = inL * inputScale;
             m_predelayR[predelayPos] = inR * inputScale;
@@ -466,23 +468,30 @@ public:
                 static const bool useAVX2 =
                     Aestra::Core::CPUDetection::get().hasAVX2() && Aestra::Core::CPUDetection::get().hasFMA();
                 if (useAVX2) {
+                    // NOTE argument order: the kernels take (sinInc, cosInc).
+                    // These were passed swapped, which rotated every LFO by
+                    // ~pi/2 per sample: the "0.3 Hz" modulators actually ran
+                    // at sr/4 (12 kHz at 48k), FM-ing all delay lines at audio
+                    // rate and imaging the tail's low-mid modes to 11-13 kHz
+                    // at ~-30 dB — the audible metallic "top ring".
                     DSP::ReverbSIMD::updateLFOsAVX2(
                         lfoSin.data(), lfoCos.data(),
                         lfoSin2.data(), lfoCos2.data(),
-                        control.lfoCosInc.data(), control.lfoSinInc.data(),
-                        control.lfoCosInc2.data(), control.lfoSinInc2.data());
+                        control.lfoSinInc.data(), control.lfoCosInc.data(),
+                        control.lfoSinInc2.data(), control.lfoCosInc2.data());
                 } else
 #endif
 #ifdef AESTRA_REVERB_HAS_SSE
                 {
+                    // Same (sinInc, cosInc) order as above.
                     DSP::ReverbSIMD::updateLFOsSSE(lfoSin.data(), lfoCos.data(),
-                                                   control.lfoCosInc.data(), control.lfoSinInc.data());
+                                                   control.lfoSinInc.data(), control.lfoCosInc.data());
                     DSP::ReverbSIMD::updateLFOsSSE(&lfoSin[4], &lfoCos[4],
-                                                   &control.lfoCosInc[4], &control.lfoSinInc[4]);
+                                                   &control.lfoSinInc[4], &control.lfoCosInc[4]);
                     DSP::ReverbSIMD::updateLFOsSSE(lfoSin2.data(), lfoCos2.data(),
-                                                   control.lfoCosInc2.data(), control.lfoSinInc2.data());
+                                                   control.lfoSinInc2.data(), control.lfoCosInc2.data());
                     DSP::ReverbSIMD::updateLFOsSSE(&lfoSin2[4], &lfoCos2[4],
-                                                   &control.lfoCosInc2[4], &control.lfoSinInc2[4]);
+                                                   &control.lfoSinInc2[4], &control.lfoCosInc2[4]);
                 }
 #else
                 {
@@ -625,22 +634,34 @@ public:
             wetL = widthL * 0.5f;
             wetR = widthR * 0.5f;
 
-            // Post-reverb EQ: Low Cut (one-pole HP) + High Cut (one-pole LP)
+            // Post-reverb EQ: Low Cut (one-pole HP) + High Cut (one-pole LP).
+            // Textbook one-pole forms with the alpha from the control cache;
+            // no output blending. (The previous code fed the HP integrator
+            // with exp(-w) instead of alpha — an inverted coefficient — and
+            // crossfaded both filters against the dry wet signal with ad-hoc
+            // alpha-derived amounts, which made the High Cut a dead knob above
+            // ~1.8 kHz and the Low Cut response neither the displayed cutoff
+            // nor a clean high-pass shape.)
+            // The filter states always track the signal, so toggling the
+            // enabled flags at the range extremes is click-free.
             {
-                // Low Cut: y[n] = x[n] - state; state += (1-alpha)*y[n]
+                // Low Cut one-pole HP: y[n] = x[n] - lp[n]; lp[n] += alpha*y[n]
                 const float hpL = wetL - m_lowCutStateL;
                 const float hpR = wetR - m_lowCutStateR;
-                m_lowCutStateL += (1.0f - control.lowCutCoeff) * hpL;
-                m_lowCutStateR += (1.0f - control.lowCutCoeff) * hpR;
-                wetL = wetL + (hpL - wetL) * std::clamp(control.lowCutCoeff * 10.0f, 0.0f, 1.0f);
-                wetR = wetR + (hpR - wetR) * std::clamp(control.lowCutCoeff * 10.0f, 0.0f, 1.0f);
+                m_lowCutStateL += control.lowCutCoeff * hpL;
+                m_lowCutStateR += control.lowCutCoeff * hpR;
+                if (control.lowCutEnabled) {
+                    wetL = hpL;
+                    wetR = hpR;
+                }
 
-                // High Cut: y[n] += alpha * (x[n] - y[n])
+                // High Cut one-pole LP: y[n] += alpha * (x[n] - y[n])
                 m_highCutStateL += control.highCutCoeff * (wetL - m_highCutStateL);
                 m_highCutStateR += control.highCutCoeff * (wetR - m_highCutStateR);
-                const float hiAmount = 1.0f - std::clamp((control.highCutCoeff - 0.01f) * 5.0f, 0.0f, 1.0f);
-                wetL = wetL + (m_highCutStateL - wetL) * hiAmount;
-                wetR = wetR + (m_highCutStateR - wetR) * hiAmount;
+                if (control.highCutEnabled) {
+                    wetL = m_highCutStateL;
+                    wetR = m_highCutStateR;
+                }
             }
 
             wetL = sanitize(wetL);
@@ -731,7 +752,13 @@ public:
         if (id >= kParamCount) return "";
         const float v = getParameter(id);
         switch (id) {
-        case kDecay: return std::to_string(static_cast<int>((0.3f + v * 9.7f) * 10.0f) / 10.0f) + "s";
+        case kDecay: {
+            // Truthful display: include the current mode's decay scalar
+            // (0.90-1.60) — the DSP uses (0.3 + v*9.7) * decayScalar, so a
+            // Cathedral "7.1s" was actually 11.4s before this was applied.
+            const float scalar = constantsForMode(currentMode()).decayScalar;
+            return std::to_string(static_cast<int>((0.3f + v * 9.7f) * scalar * 10.0f) / 10.0f) + "s";
+        }
         case kDamping: return std::to_string(static_cast<int>(v * 100)) + "%";
         case kPredelayMs: return std::to_string(static_cast<int>(v * kMaxPredelayMs)) + "ms";
         case kWidth: return std::to_string(static_cast<int>(v * 100)) + "%";
@@ -743,7 +770,14 @@ public:
         }
         case kDiffusion: return std::to_string(static_cast<int>(v * 100)) + "%";
         case kModRate: return std::to_string(static_cast<int>(v * 200)) + "%";
-        case kModDepth: return std::to_string(static_cast<int>(v * 80.0f) / 10.0f) + " smp";
+        case kModDepth: {
+            // Truthful display: mirror the DSP's compressive depth curve and
+            // per-mode scalar (updateControlCache). The old "v * 8 smp" text
+            // matched neither the previous x7 mapping nor the current one.
+            const float scalar = constantsForMode(currentMode()).modDepthScalar;
+            const float smp = (v <= 0.0f ? 0.0f : std::pow(v, 0.6f)) * 12.5f * scalar;
+            return std::to_string(static_cast<int>(smp * 10.0f) / 10.0f) + " smp";
+        }
         case kMode: {
             static const char* modeNames[] = {
                 "Room", "Hall", "Plate", "Cathedral", "Chamber",
@@ -957,8 +991,10 @@ private:
         bool modulationEnabled{true};
         bool diffusionEnabled{true};
         bool freezeActive{false};
-        float lowCutCoeff{0.0f};  // one-pole HP alpha for Low Cut
-        float highCutCoeff{1.0f}; // one-pole LP alpha for High Cut
+        float lowCutCoeff{0.0f};   // one-pole HP alpha for Low Cut
+        float highCutCoeff{1.0f};  // one-pole LP alpha for High Cut
+        bool lowCutEnabled{false}; // true bypass below the bottom of the range
+        bool highCutEnabled{false};// true bypass at the top of the range
         float earlyBlend{0.22f};  // early-to-late balance (0=late-dominant, 1=early-dominant)
         float attackShape{0.0f};  // envelope attack shape (0=soft, 1=hard/sharp)
         int predelaySyncDiv{0};   // 0=off, 1-6=note divisions
@@ -1040,7 +1076,14 @@ private:
         const float decayTime = (0.3f + smoothedParams[kDecay] * 9.7f) * constants.decayScalar;
         const float dampingParam = std::clamp(smoothedParams[kDamping], 0.0f, 1.0f);
         const float damping = std::clamp(dampingParam * constants.dampingScalar, 0.0f, 0.98f);
-        cache.dampingCoeff = 1.0f - damping;
+        // 'damping' is the one-pole pole position at the 44.1k reference rate.
+        // Re-pitch the pole for the actual sample rate (pole' = pole^(refSR/sr))
+        // so the damping filter's cutoff stays fixed in Hz: without this the
+        // cutoff scales with the sample rate and T60 drifts ~25% at 96k for
+        // identical parameters. Identity at the reference rate by construction.
+        const float dampingPole =
+            damping <= 0.0f ? 0.0f : std::pow(damping, kReferenceSampleRate / sr);
+        cache.dampingCoeff = 1.0f - dampingPole;
 
         // Per-mode low damp amount
         switch (mode) {
@@ -1091,10 +1134,26 @@ private:
         cache.diffusionEnabled = cache.diffusionG > 0.0001f;
 
         const float modRateScalar = smoothedParams[kModRate] * 2.0f;
-        // Session 006: increase mod depth multiplier from 5.0 to 7.0.
-        // Effective depth at default (0.14): Room 0.14×7×0.45=0.44 smp, Hall 0.14×7×0.64=0.63 smp,
-        // Plate 0.14×7×0.50=0.49 smp. Subtle but audible — avoids the flangey extremes.
-        cache.modDepthSamples = smoothedParams[kModDepth] * 7.0f * constants.modDepthScalar;
+        // Depth re-range after the SIMD LFO argument-swap fix. The historical
+        // linear multipliers (Session 006: 5.0 -> 7.0) were tuned against the
+        // broken modulator, which ran at sr/4 instead of sub-Hz — what was
+        // audible then was the FM artifact, not chorusing. With the real
+        // modulator, x7 measured 0.18 cents of pitch motion at the default
+        // depth and only 0.9 cents at MAX (audibility ~2-5 cents), and gave no
+        // small-room mode smearing (47 dB -> 46 dB ring prominence).
+        // The measured wobble-vs-depth response is strongly superlinear, so a
+        // linear multiplier cannot make the default audible without pushing
+        // max into flange territory (x24: max 10.2 cents). A compressive knob
+        // curve (depth^0.6 x 12.5) lands: default (0.14) 0.46 cents (present,
+        // subtle), 0.6 depth ~1.9 cents, max 3.9 cents — classic hall chorus,
+        // not flange (all measured, 1 kHz zero-crossing wobble p5..p95).
+        // Max read offset is 12.5 x 0.70 (largest mode scalar) = +/-8.75 smp;
+        // the logicalFdnLength margin (28) covers it with room to spare, and
+        // the minimum length (100) keeps the shortest modulated delay clear of
+        // the write head. pow() runs at control rate, not per sample.
+        const float depthParam = std::clamp(smoothedParams[kModDepth], 0.0f, 1.0f);
+        const float depthCurve = depthParam <= 0.0f ? 0.0f : std::pow(depthParam, 0.6f);
+        cache.modDepthSamples = depthCurve * 12.5f * constants.modDepthScalar;
         cache.modulationEnabled = cache.modDepthSamples > 0.0001f && modRateScalar > 0.0001f;
 
         const float width = std::clamp(smoothedParams[kWidth], 0.0f, 1.0f);
@@ -1122,10 +1181,24 @@ private:
             cache.lfoCosInc2[line] = std::cos(inc2);
         }
 
-        // Freeze: lock feedback at unity so the tail sustains indefinitely
+        // Freeze: make the feedback loop lossless so the tail sustains
+        // indefinitely. Unity feedback gains alone are NOT enough — the
+        // in-loop damping low-pass and the low-damp shelf subtraction each
+        // bleed energy every pass (measured ~22 dB decay over 6 s). Damping
+        // coeff 1.0 makes the LP transparent (state snaps to input) and
+        // lowDampAmount 0 disables the shelf, leaving only the orthogonal
+        // Householder matrix in the loop.
         cache.freezeActive = smoothedParams[kFreeze] > 0.5f;
         if (cache.freezeActive) {
             cache.feedbackGains.fill(1.0f);
+            cache.dampingCoeff = 1.0f;
+            cache.lowDampAmount = 0.0f;
+            // Freeze the modulation as well: with modulation active the
+            // fractional cubic-Hermite delay reads are not energy-exact and
+            // the unity loop slowly GROWS (~+1 dB/s measured). Zero modulation
+            // makes every read integer-exact, so the loop is truly lossless
+            // and the frozen tail holds level indefinitely.
+            cache.modulationEnabled = false;
         }
 
         for (size_t stage = 0; stage < kDiffuserCount; ++stage) {
@@ -1162,17 +1235,25 @@ private:
             cache.earlyGains[tap] = tapGain[tap] * modeLevel;
         }
 
-        // Post-reverb EQ: Low Cut (one-pole HP) and High Cut (one-pole LP)
+        // Post-reverb EQ: Low Cut (one-pole HP) and High Cut (one-pole LP).
+        // Both use the SAME logarithmic mapping as getParameterDisplay so the
+        // knob reads the true cutoff. (The DSP previously used 20*1000^v
+        // clamped to 2000 Hz while the display showed 20*100^v — the knob
+        // lied by up to 3.2x and its top third was a clamped dead zone.)
         // Low Cut: 20 Hz (0.0) to 2000 Hz (1.0), logarithmic
         const float lowCutParam = std::clamp(smoothedParams[kLowCut], 0.0f, 1.0f);
-        const float lowCutHz = lowCutParam < 0.001f ? 20.0f : 20.0f * std::pow(1000.0f, lowCutParam);
+        const float lowCutHz = 20.0f * std::pow(100.0f, lowCutParam);
         cache.lowCutCoeff = 1.0f - std::exp(-kTwoPi * std::clamp(lowCutHz, 20.0f, 2000.0f) / sr);
+        // True bypass at the bottom of the range (the filter state still
+        // tracks the signal so engaging is click-free).
+        cache.lowCutEnabled = lowCutParam > 0.001f;
 
         // High Cut: 200 Hz (0.0) to 20000 Hz (1.0), logarithmic
         const float highCutParam = std::clamp(smoothedParams[kHighCut], 0.0f, 1.0f);
         const float highCutHz = highCutParam > 0.999f ? 20000.0f : 200.0f * std::pow(100.0f, highCutParam);
         // One-pole LP: alpha = 1 - exp(-2*pi*fc/fs)
         cache.highCutCoeff = 1.0f - std::exp(-kTwoPi * std::clamp(highCutHz, 200.0f, 20000.0f) / sr);
+        cache.highCutEnabled = highCutParam < 0.999f;
 
         // Attack: early-to-late balance. 0=late-dominant (default), 1=early-dominant
         cache.earlyBlend = std::clamp(smoothedParams[kAttack], 0.0f, 1.0f);
@@ -1359,10 +1440,14 @@ private:
 
     int logicalFdnLength(size_t line, const ModeConstants& constants, float sampleScale, float size) const {
         const int maxSize = static_cast<int>(m_delayLines[line].size());
+        // Margin covers the deepest modulated Hermite read: max LFO offset
+        // (24 x 0.70 mode scalar = +/-16.8 samples) plus the interpolator's
+        // extra tap behind the read point, with slack. Was 12, sized for the
+        // old x7 depth multiplier.
         return std::clamp(
             static_cast<int>(std::round(constants.fdnBase[line] * sampleScale * size)),
             100,
-            std::max(100, maxSize - 12)
+            std::max(100, maxSize - 28)
         );
     }
 
