@@ -619,6 +619,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbConsistencyProbe.cpp")
     set_tests_properties(ReverbConsistencyProbe PROPERTIES LABELS "audio;dsp;reverb;probe")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbDecayMetricTest.cpp")
+    add_executable(ReverbDecayMetricTest AestraAudio/ReverbDecayMetricTest.cpp)
+    target_include_directories(ReverbDecayMetricTest PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio
+    )
+    add_test(NAME ReverbDecayMetricTest COMMAND ReverbDecayMetricTest)
+    set_tests_properties(ReverbDecayMetricTest PROPERTIES LABELS "audio;dsp;reverb;measurement")
+endif()
+
 # Reverb Quality Measurement Lab
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbQualityLab.cpp")
     add_executable(AestraReverbQualityLab AestraAudio/ReverbQualityLab.cpp)

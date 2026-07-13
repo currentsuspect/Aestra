@@ -9,6 +9,7 @@
 //   - labs/reverb/quality/noiseburst_*.wav
 
 #include "AestraVerb.h"
+#include "ReverbDecayMetrics.h"
 
 #include <algorithm>
 #include <cmath>
@@ -102,13 +103,7 @@ static bool writeWavFloat(const std::string& path, const std::vector<float>& lef
 // ============================================================================
 // Metric structures
 // ============================================================================
-struct DecayMetrics {
-    float t20 = 0.0f;
-    float t40 = 0.0f;
-    float t60 = 0.0f;
-    float maxReboundDb = 0.0f;
-    bool monotonic = true;
-};
+using DecayMetrics = Aestra::Audio::Tests::ReverbDecayMetrics;
 
 struct SpectralMetrics {
     float lowEnergy = 0.0f;     // 20-500 Hz
@@ -146,6 +141,7 @@ struct TransientMetrics {
 
 struct ModeQuality {
     std::string name;
+    int modeIndex = 0;
     DecayMetrics decay;
     SpectralMetrics spectral;
     StereoMetrics stereo;
@@ -165,40 +161,7 @@ struct ModeQuality {
 // Metric computation
 // ============================================================================
 static DecayMetrics computeDecay(const std::vector<float>& energy, float sampleRate) {
-    DecayMetrics m;
-    if (energy.empty()) return m;
-
-    // Schroeder backward integration for smoother decay curve
-    size_t n = energy.size();
-    std::vector<float> schroeder(n);
-    double acc = 0.0;
-    for (size_t i = n; i > 0; --i) {
-        acc += energy[i - 1];
-        schroeder[i - 1] = static_cast<float>(acc);
-    }
-
-    float peak = schroeder[0];
-    float peakDb = 10.0f * std::log10(std::max(peak, 1e-20f));
-    float prevDb = peakDb;
-    float windowMs = 256.0f / sampleRate * 1000.0f;
-
-    for (size_t i = 1; i < n; ++i) {
-        float db = 10.0f * std::log10(std::max(schroeder[i], 1e-20f));
-        if (db > prevDb + 1.0f) {
-            m.monotonic = false;
-            m.maxReboundDb = std::max(m.maxReboundDb, db - prevDb);
-        }
-        prevDb = db;
-
-        float t = static_cast<float>(i) * windowMs;
-        if (m.t20 == 0.0f && db <= peakDb - 20.0f) m.t20 = t;
-        if (m.t40 == 0.0f && db <= peakDb - 40.0f) m.t40 = t;
-        if (m.t60 == 0.0f && db <= peakDb - 60.0f) m.t60 = t;
-    }
-    if (m.t20 == 0.0f) m.t20 = static_cast<float>(n) * windowMs;
-    if (m.t40 == 0.0f) m.t40 = m.t20;
-    if (m.t60 == 0.0f) m.t60 = m.t40;
-    return m;
+    return Aestra::Audio::Tests::computeReverbDecayMetrics(energy, sampleRate);
 }
 
 static SpectralMetrics computeSpectral(const std::vector<float>& signal, float sampleRate) {
@@ -566,12 +529,13 @@ static TransientMetrics computeTransient(const std::vector<float>& left, const s
 // ============================================================================
 // Generate test signal responses
 // ============================================================================
-static ModeQuality measureMode(const std::string& name, float modeParam,
+static ModeQuality measureMode(const std::string& name, int modeIndex, float modeParam,
                                float decayParam, float sizeParam, float diffusionParam,
                                float sampleRate, uint32_t numFrames,
                                const std::string& qualityDir) {
     ModeQuality q;
     q.name = name;
+    q.modeIndex = modeIndex;
 
     AestraVerb verb;
     verb.initialize(sampleRate, 256);
@@ -691,6 +655,7 @@ static std::string generateJsonReport(const std::vector<ModeQuality>& modes, flo
     for (size_t m = 0; m < modes.size(); ++m) {
         const auto& q = modes[m];
         j << "    {\n";
+        j << "      \"modeIndex\": " << q.modeIndex << ",\n";
         j << "      \"name\": \"" << q.name << "\",\n";
         j << "      \"rms\": " << q.rms << ",\n";
         j << "      \"peak\": " << q.peak << ",\n";
@@ -702,9 +667,16 @@ static std::string generateJsonReport(const std::vector<ModeQuality>& modes, flo
         j << "      \"hasNaN\": " << (q.hasNaN ? "true" : "false") << ",\n";
         j << "      \"hasInf\": " << (q.hasInf ? "true" : "false") << ",\n";
         j << "      \"decay\": {\n";
-        j << "        \"t20Ms\": " << q.decay.t20 << ",\n";
-        j << "        \"t40Ms\": " << q.decay.t40 << ",\n";
-        j << "        \"t60Ms\": " << q.decay.t60 << ",\n";
+        j << "        \"t20Ms\": ";
+        if (q.decay.t20Reached) j << q.decay.t20; else j << "null";
+        j << ",\n        \"t40Ms\": ";
+        if (q.decay.t40Reached) j << q.decay.t40; else j << "null";
+        j << ",\n        \"t60Ms\": ";
+        if (q.decay.t60Reached) j << q.decay.t60; else j << "null";
+        j << ",\n";
+        j << "        \"t20Reached\": " << (q.decay.t20Reached ? "true" : "false") << ",\n";
+        j << "        \"t40Reached\": " << (q.decay.t40Reached ? "true" : "false") << ",\n";
+        j << "        \"t60Reached\": " << (q.decay.t60Reached ? "true" : "false") << ",\n";
         j << "        \"monotonic\": " << (q.decay.monotonic ? "true" : "false") << ",\n";
         j << "        \"maxReboundDb\": " << q.decay.maxReboundDb << "\n";
         j << "      },\n";
@@ -752,12 +724,16 @@ static std::string generateMarkdownReport(const std::vector<ModeQuality>& modes)
     md << "Generated by AestraReverbQualityLab.\n\n";
 
     md << "## Summary Table\n\n";
-    md << "| Mode | T20 (ms) | T40 (ms) | T60 (ms) | Monotonic | Rebound (dB) |\n";
-    md << "|------|----------|----------|----------|-----------|-------------|\n";
+    md << "| Index | Mode | T20 (ms) | T40 (ms) | T60 (ms) | Monotonic | Rebound (dB) |\n";
+    md << "|------:|------|----------|----------|----------|-----------|-------------|\n";
+    const auto thresholdText = [](float timeMs, bool reached) {
+        return reached ? std::to_string(static_cast<int>(timeMs)) : std::string("not reached");
+    };
     for (const auto& q : modes) {
-        md << "| " << q.name << " | " << static_cast<int>(q.decay.t20)
-           << " | " << static_cast<int>(q.decay.t40)
-           << " | " << static_cast<int>(q.decay.t60)
+        md << "| " << q.modeIndex << " | " << q.name << " | "
+           << thresholdText(q.decay.t20, q.decay.t20Reached)
+           << " | " << thresholdText(q.decay.t40, q.decay.t40Reached)
+           << " | " << thresholdText(q.decay.t60, q.decay.t60Reached)
            << " | " << (q.decay.monotonic ? "Yes" : "No")
            << " | " << std::fixed << std::setprecision(1) << q.decay.maxReboundDb
            << " |\n";
@@ -903,7 +879,7 @@ int main() {
         {AestraVerb::Mode::SmoothPlate, "smooth_plate", 0.72f, 0.60f, 0.85f},
     };
     for (const auto& s : kModeSettings) {
-        modes.push_back(measureMode(s.name, AestraVerb::modeParam(s.mode),
+        modes.push_back(measureMode(s.name, static_cast<int>(s.mode), AestraVerb::modeParam(s.mode),
                                     s.decay, s.size, s.diffusion, sampleRate, numFrames, qualityDir));
     }
 
@@ -942,11 +918,15 @@ int main() {
 
     // Print summary to console
     std::cout << "\n--- Summary ---\n";
+    const auto thresholdText = [](float timeMs, bool reached) {
+        return reached ? std::to_string(static_cast<int>(timeMs)) + "ms" : std::string("not reached");
+    };
     for (const auto& q : modes) {
-        std::cout << q.name << ": T20=" << static_cast<int>(q.decay.t20)
-                  << "ms T40=" << static_cast<int>(q.decay.t40)
-                  << "ms T60=" << static_cast<int>(q.decay.t60)
-                  << "ms Peak=" << std::fixed << std::setprecision(3) << q.peak
+        std::cout << q.name << "[" << q.modeIndex << "]: T20="
+                  << thresholdText(q.decay.t20, q.decay.t20Reached)
+                  << " T40=" << thresholdText(q.decay.t40, q.decay.t40Reached)
+                  << " T60=" << thresholdText(q.decay.t60, q.decay.t60Reached)
+                  << " Peak=" << std::fixed << std::setprecision(3) << q.peak
                   << " RMS=" << q.rms
                   << " HF=" << std::setprecision(1) << (q.hfRatio * 100.0f) << "%"
                   << " Centroid=" << static_cast<int>(q.earlyCentroidHz) << "->"
