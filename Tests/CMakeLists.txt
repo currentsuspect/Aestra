@@ -581,6 +581,12 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbSIMDParityTest.cpp")
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
+    # The test TU gates its real body on AESTRA_ENABLE_RUNTIME_TESTS, but this
+    # check is pure computation (SSE vs scalar FDN kernels — no devices, no
+    # hardware I/O), and the test is registered on the always-on tier. Without
+    # this definition the body compiles out and ctest reports a "pass" that is
+    # actually a silent skip on every SSE machine.
+    target_compile_definitions(ReverbSIMDParityTest PRIVATE AESTRA_ENABLE_RUNTIME_TESTS=1)
     add_test(NAME ReverbSIMDParityTest COMMAND ReverbSIMDParityTest)
     set_tests_properties(ReverbSIMDParityTest PROPERTIES LABELS "audio;dsp;reverb")
 endif()
