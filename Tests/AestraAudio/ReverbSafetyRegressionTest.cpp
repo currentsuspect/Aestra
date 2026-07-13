@@ -26,8 +26,13 @@ struct RenderStats {
     bool finite = true;
 };
 
+// mode: 0 = Room, 1 = Hall, 2 = Plate. Select via the canonical modeParam() so
+// these actually land on Room/Hall/Plate; the old 0.0/0.5/1.0 constants decoded
+// to Room/Chamber/SmoothPlate.
 void setMode(AestraVerb& verb, int mode) {
-    verb.setParameter(AestraVerb::kMode, mode == 0 ? 0.0f : (mode == 1 ? 0.5f : 1.0f));
+    const AestraVerb::Mode m =
+        mode == 0 ? AestraVerb::Mode::Room : (mode == 1 ? AestraVerb::Mode::Hall : AestraVerb::Mode::Plate);
+    verb.setParameter(AestraVerb::kMode, AestraVerb::modeParam(m));
 }
 
 void setUsableDefaults(AestraVerb& verb, int mode) {
@@ -258,6 +263,31 @@ bool runActiveLoadStateSafetyCheck() {
     return ok;
 }
 
+// Every one of the nine modes, selected via the canonical modeParam(), must
+// render finite, bounded audio. Guards against a mode index that aliases or
+// clamps to a neighbor and against any single mode blowing up.
+bool runAllNineModesFiniteChecks() {
+    bool ok = true;
+    std::vector<float> input = makeBrightTransient(48000, 4000.0f);
+    for (int mode = 0; mode < AestraVerb::kModeCount; ++mode) {
+        AestraVerb verb;
+        verb.initialize(kSampleRate, 256);
+        verb.setParameter(AestraVerb::kMode, AestraVerb::modeParam(mode));
+        verb.setParameter(AestraVerb::kDecay, 0.7f);
+        verb.setParameter(AestraVerb::kSize, 0.6f);
+        verb.setParameter(AestraVerb::kDiffusion, 0.7f);
+        verb.setParameter(AestraVerb::kModRate, 0.42f);
+        verb.setParameter(AestraVerb::kModDepth, 0.2f);
+        verb.setParameter(AestraVerb::kMix, 1.0f);
+        verb.setParameter(AestraVerb::kWidth, 0.7f);
+        verb.activate();
+        auto stats = render(verb, input, 128);
+        ok &= require(stats.finite, "nine-mode sweep produced NaN/Inf");
+        ok &= require(stats.peak < 8.0f, "nine-mode sweep exceeded sane bounds");
+    }
+    return ok;
+}
+
 } // namespace
 
 int main() {
@@ -267,6 +297,7 @@ int main() {
     ok &= runModeSwitchAndDeterminismChecks();
     ok &= runHighFrequencyBuildupChecks();
     ok &= runActiveLoadStateSafetyCheck();
+    ok &= runAllNineModesFiniteChecks();
 
     if (!ok) {
         return 1;
