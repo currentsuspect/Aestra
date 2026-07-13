@@ -645,6 +645,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbStereoTest.cpp")
     set_tests_properties(ReverbStereoTest PROPERTIES LABELS "audio;dsp;reverb;stereo")
 endif()
 
+# Reverb F8 tail-dormancy test (idle-instance optimization correctness)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbDormancyTest.cpp")
+    add_executable(ReverbDormancyTest AestraAudio/ReverbDormancyTest.cpp)
+    target_link_libraries(ReverbDormancyTest PRIVATE AestraAudio)
+    target_include_directories(ReverbDormancyTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ReverbDormancyTest COMMAND ReverbDormancyTest)
+    set_tests_properties(ReverbDormancyTest PROPERTIES LABELS "audio;dsp;reverb;dormancy")
+endif()
+
 # Reverb Quality Measurement Lab
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbQualityLab.cpp")
     add_executable(AestraReverbQualityLab AestraAudio/ReverbQualityLab.cpp)
