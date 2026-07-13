@@ -38,7 +38,7 @@ option(AESTRA_LICENSE_ENABLE_PREMIUM_LEASES "Allow signed Supporter/Founder leas
 option(AESTRA_ALLOW_LICENSE_GATE_OFF "Allow lab/development builds to omit offline license verification" OFF)
 option(AESTRA_ENABLE_TEST_LICENSES "Enable test-only mock license acceptance" OFF)
 option(AESTRA_REVERB_PROFILE "Enable AestraVerb stage profiling (lab/benchmark only)" OFF)
-option(AESTRA_REVERB_DIAGNOSTICS "Enable AestraVerb clamp diagnostics (lab only)" OFF)
+option(AESTRA_REVERB_DIAGNOSTICS "Enable AestraVerb output-level diagnostics (lab only)" OFF)
 
 if(AESTRA_HEADLESS_ONLY)
   set(AESTRA_ENABLE_UI OFF CACHE BOOL "Build the AESTRA_DAW UI application" FORCE)

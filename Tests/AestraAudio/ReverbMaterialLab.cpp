@@ -202,14 +202,14 @@ struct MaterialResult {
     std::string metallicSeverity;
     float earlyDensityScore = 0.0f;
     float tailRms = 0.0f;
-    // Clamp diagnostics (Session 017a)
-    float preClampPeak = 0.0f;
-    float postClampPeak = 0.0f;
-    float wetPreClampPeak = 0.0f;
-    uint64_t clampSampleCount = 0;
+    // Output-level diagnostics (Session 017a)
+    float preSanitizePeak = 0.0f;
+    float postSanitizePeak = 0.0f;
+    float wetOutputPeak = 0.0f;
+    uint64_t samplesAtOrAboveUnity = 0;
     uint64_t totalSamples = 0;
     float sourcePeak = 0.0f;
-    std::string clampStatus;  // "clamped" | "not clamped" | "pre-existing vocal clamp case"
+    std::string unityStatus;  // "over unity" | "within unity" | "pre-existing vocal over-unity" | "diagnostics disabled"
 };
 
 static MaterialResult analyzeMaterial(const std::string& name, const std::string& modeName,
@@ -318,6 +318,9 @@ static MaterialResult analyzeMaterial(const std::string& name, const std::string
 static std::string generateJsonReport(const std::vector<MaterialResult>& results) {
     std::ostringstream j;
     j << "{\n";
+    // schemaVersion distinguishes this sanitize/over-unity schema from the prior
+    // "clamp" field names. Bump when the report field set changes.
+    j << "  \"schemaVersion\": \"2.0.0\",\n";
     j << "  \"results\": [\n";
     for (size_t i = 0; i < results.size(); ++i) {
         const auto& r = results[i];
@@ -336,12 +339,12 @@ static std::string generateJsonReport(const std::vector<MaterialResult>& results
         j << "      \"metallicPeakDb\": " << r.metallicPeakDb << ",\n";
         j << "      \"metallicSeverity\": \"" << r.metallicSeverity << "\",\n";
         j << "      \"sourcePeak\": " << r.sourcePeak << ",\n";
-        j << "      \"preClampPeak\": " << r.preClampPeak << ",\n";
-        j << "      \"postClampPeak\": " << r.postClampPeak << ",\n";
-        j << "      \"wetPreClampPeak\": " << r.wetPreClampPeak << ",\n";
-        j << "      \"clampSampleCount\": " << r.clampSampleCount << ",\n";
+        j << "      \"preSanitizePeak\": " << r.preSanitizePeak << ",\n";
+        j << "      \"postSanitizePeak\": " << r.postSanitizePeak << ",\n";
+        j << "      \"wetOutputPeak\": " << r.wetOutputPeak << ",\n";
+        j << "      \"samplesAtOrAboveUnity\": " << r.samplesAtOrAboveUnity << ",\n";
         j << "      \"totalSamples\": " << r.totalSamples << ",\n";
-        j << "      \"clampStatus\": \"" << r.clampStatus << "\"\n";
+        j << "      \"unityStatus\": \"" << r.unityStatus << "\"\n";
         j << "    }" << (i + 1 < results.size() ? "," : "") << "\n";
     }
     j << "  ]\n";
@@ -374,43 +377,43 @@ static std::string generateMarkdownReport(const std::vector<MaterialResult>& res
            << " |\n";
     }
 
-    // Clamp diagnostics table
-    md << "\n## Clamp Diagnostics\n\n";
-    md << "| Source | Mode | SourcePeak | PreClampPeak | PostClampPeak | WetPrePeak | ClampSamples | TotalSamples | ClampPct | Status |\n";
+    // Output-level diagnostics table
+    md << "\n## Output Level Diagnostics\n\n";
+    md << "| Source | Mode | SourcePeak | PreSanitizePeak | PostSanitizePeak | WetOutputPeak | OverUnitySamples | TotalSamples | OverUnityPct | Status |\n";
     md << "|--------|------|-----------|-------------|--------------|-----------|-------------|-------------|---------|--------|\n";
     for (const auto& r : results) {
         float pct = r.totalSamples > 0
-            ? (100.0f * static_cast<float>(r.clampSampleCount) / static_cast<float>(r.totalSamples))
+            ? (100.0f * static_cast<float>(r.samplesAtOrAboveUnity) / static_cast<float>(r.totalSamples))
             : 0.0f;
         md << "| " << r.name << " | " << r.modeName
            << " | " << std::fixed << std::setprecision(4) << r.sourcePeak
-           << " | " << std::setprecision(4) << r.preClampPeak
-           << " | " << std::setprecision(4) << r.postClampPeak
-           << " | " << std::setprecision(4) << r.wetPreClampPeak
-           << " | " << r.clampSampleCount
+           << " | " << std::setprecision(4) << r.preSanitizePeak
+           << " | " << std::setprecision(4) << r.postSanitizePeak
+           << " | " << std::setprecision(4) << r.wetOutputPeak
+           << " | " << r.samplesAtOrAboveUnity
            << " | " << r.totalSamples
            << " | " << std::setprecision(2) << pct << "%"
-           << " | " << r.clampStatus
+           << " | " << r.unityStatus
            << " |\n";
     }
 
-    // Summarize clamped cases
-    md << "\n### Clamp Summary\n\n";
-    int clampedCount = 0;
-    int vocalClampCount = 0;
-    int nonVocalClampCount = 0;
+    // Summarize over-unity cases
+    md << "\n### Over-Unity Summary\n\n";
+    int overUnityCount = 0;
+    int vocalOverUnityCount = 0;
+    int nonVocalOverUnityCount = 0;
     for (const auto& r : results) {
-        if (r.clampSampleCount > 0) {
-            ++clampedCount;
-            if (r.name == "vocal_phrase") ++vocalClampCount;
-            else ++nonVocalClampCount;
+        if (r.samplesAtOrAboveUnity > 0) {
+            ++overUnityCount;
+            if (r.name == "vocal_phrase") ++vocalOverUnityCount;
+            else ++nonVocalOverUnityCount;
         }
     }
-    md << "- Total clamped source/mode pairs: **" << clampedCount << "** / " << results.size() << "\n";
-    md << "- Pre-existing vocal clamps: **" << vocalClampCount << "**\n";
-    md << "- Non-vocal clamps: **" << nonVocalClampCount << "**\n";
-    if (nonVocalClampCount > 0) {
-        md << "\n> ⚠️ **WARNING**: Non-vocal source(s) are clamping unexpectedly.\n";
+    md << "- Total over-unity source/mode pairs: **" << overUnityCount << "** / " << results.size() << "\n";
+    md << "- Pre-existing vocal over-unity: **" << vocalOverUnityCount << "**\n";
+    md << "- Non-vocal over-unity: **" << nonVocalOverUnityCount << "**\n";
+    if (nonVocalOverUnityCount > 0) {
+        md << "\n> ⚠️ **WARNING**: Non-vocal source(s) exceed unity unexpectedly.\n";
     }
 
     // Current Plate/Room tail-energy ratios (post-source window).
@@ -569,42 +572,42 @@ int main() {
 
             auto res = analyzeMaterial(src.name, mode.name, outL, outR, sampleRate, sourceFrames);
 
-            // Populate clamp diagnostics (requires AESTRA_REVERB_DIAGNOSTICS)
+            // Populate output-level diagnostics (requires AESTRA_REVERB_DIAGNOSTICS)
 #ifdef AESTRA_REVERB_DIAGNOSTICS
             {
-                auto diag = verb.getClampDiagnostics();
-                res.preClampPeak = diag.preClampPeak;
-                res.postClampPeak = diag.postClampPeak;
-                res.wetPreClampPeak = diag.wetPreClampPeak;
-                res.clampSampleCount = diag.clampSampleCount;
+                auto diag = verb.getOutputLevelDiagnostics();
+                res.preSanitizePeak = diag.preSanitizePeak;
+                res.postSanitizePeak = diag.postSanitizePeak;
+                res.wetOutputPeak = diag.wetOutputPeak;
+                res.samplesAtOrAboveUnity = diag.samplesAtOrAboveUnity;
                 res.totalSamples = diag.totalSamples;
                 res.sourcePeak = diag.sourcePeak;
 
-                // Determine clamp status
-                if (diag.clampSampleCount > 0) {
+                // Determine unity status
+                if (diag.samplesAtOrAboveUnity > 0) {
                     if (src.name == "vocal_phrase") {
-                        res.clampStatus = "pre-existing vocal clamp case";
+                        res.unityStatus = "pre-existing vocal over-unity";
                     } else {
-                        res.clampStatus = "clamped";
+                        res.unityStatus = "over unity";
                     }
                 } else {
-                    res.clampStatus = "not clamped";
+                    res.unityStatus = "within unity";
                 }
             }
 #else
-            res.clampStatus = "diagnostics disabled";
+            res.unityStatus = "diagnostics disabled";
 #endif
 
             results.push_back(res);
 
-            // Print clamp info inline
+            // Print over-unity info inline
 #ifdef AESTRA_REVERB_DIAGNOSTICS
-            if (res.clampSampleCount > 0) {
+            if (res.samplesAtOrAboveUnity > 0) {
                 float pct = res.totalSamples > 0
-                    ? (100.0f * static_cast<float>(res.clampSampleCount) / static_cast<float>(res.totalSamples))
+                    ? (100.0f * static_cast<float>(res.samplesAtOrAboveUnity) / static_cast<float>(res.totalSamples))
                     : 0.0f;
-                std::cout << " CLAMPED (preClampPeak=" << std::fixed << std::setprecision(4) << res.preClampPeak
-                          << " clampSamples=" << res.clampSampleCount
+                std::cout << " OVER UNITY (preSanitizePeak=" << std::fixed << std::setprecision(4) << res.preSanitizePeak
+                          << " overUnitySamples=" << res.samplesAtOrAboveUnity
                           << " " << std::setprecision(2) << pct << "%)";
             }
 #endif
@@ -677,35 +680,35 @@ int main() {
         }
     }
 
-    // Clamp audit — check ALL source/mode pairs using diagnostics
-    // vocal_phrase is known to clamp in all modes (pre-existing). Report but do not fail.
-    // Non-vocal sources that clamp are unexpected and should fail.
-    std::cout << "\n--- Clamp Audit ---\n";
+    // Over-unity audit — check ALL source/mode pairs using diagnostics
+    // vocal_phrase is known to exceed unity in all modes (pre-existing). Report but do not fail.
+    // Non-vocal sources that exceed unity are unexpected and should fail (float headroom, not clipping).
+    std::cout << "\n--- Over-Unity Audit ---\n";
     for (const auto& r : results) {
-        if (r.clampSampleCount > 0) {
+        if (r.samplesAtOrAboveUnity > 0) {
             float pct = r.totalSamples > 0
-                ? (100.0f * static_cast<float>(r.clampSampleCount) / static_cast<float>(r.totalSamples))
+                ? (100.0f * static_cast<float>(r.samplesAtOrAboveUnity) / static_cast<float>(r.totalSamples))
                 : 0.0f;
             if (r.name == "vocal_phrase") {
                 std::cout << "KNOWN: " << r.modeName << " " << r.name
-                          << " preClampPeak=" << std::fixed << std::setprecision(4) << r.preClampPeak
-                          << " wetPrePeak=" << r.wetPreClampPeak
-                          << " clampSamples=" << r.clampSampleCount
+                          << " preSanitizePeak=" << std::fixed << std::setprecision(4) << r.preSanitizePeak
+                          << " wetPrePeak=" << r.wetOutputPeak
+                          << " overUnitySamples=" << r.samplesAtOrAboveUnity
                           << " (" << std::setprecision(2) << pct << "%)"
-                          << " — pre-existing vocal clamp case\n";
+                          << " — pre-existing vocal over-unity (float headroom, not clipped)\n";
             } else {
                 std::cerr << "FAIL: " << r.modeName << " " << r.name
-                          << " preClampPeak=" << std::fixed << std::setprecision(4) << r.preClampPeak
-                          << " wetPrePeak=" << r.wetPreClampPeak
-                          << " clampSamples=" << r.clampSampleCount
+                          << " preSanitizePeak=" << std::fixed << std::setprecision(4) << r.preSanitizePeak
+                          << " wetPrePeak=" << r.wetOutputPeak
+                          << " overUnitySamples=" << r.samplesAtOrAboveUnity
                           << " (" << std::setprecision(2) << pct << "%)"
-                          << " — unexpected non-vocal clamp\n";
+                          << " — unexpected non-vocal over-unity\n";
                 ++regressionFailures;
             }
         } else {
             std::cout << "PASS: " << r.modeName << " " << r.name
-                      << " preClampPeak=" << std::fixed << std::setprecision(4) << r.preClampPeak
-                      << " — not clamped\n";
+                      << " preSanitizePeak=" << std::fixed << std::setprecision(4) << r.preSanitizePeak
+                      << " — within unity\n";
         }
     }
 
