@@ -199,6 +199,19 @@ $(function() {
 <div class="line">            alpha</div>
 <div class="line">        );</div>
 <div class="line">    }</div>
+<div class="line"> </div>
+<div class="line">    <span class="comment">// Create from packed 0xAARRGGBB (e.g., TRACK_PALETTE entries).</span></div>
+<div class="line">    <span class="comment">// An alpha byte of 0 is treated as opaque so 0x00RRGGBB values behave</span></div>
+<div class="line">    <span class="comment">// like fromHex rather than becoming invisible.</span></div>
+<div class="line">    <span class="keyword">static</span> NUIColor fromARGB(uint32_t argb) {</div>
+<div class="line">        <span class="keyword">const</span> uint32_t alphaByte = (argb &gt;&gt; 24) &amp; 0xFF;</div>
+<div class="line">        <span class="keywordflow">return</span> NUIColor(</div>
+<div class="line">            ((argb &gt;&gt; 16) &amp; 0xFF) / 255.0f,</div>
+<div class="line">            ((argb &gt;&gt; 8) &amp; 0xFF) / 255.0f,</div>
+<div class="line">            (argb &amp; 0xFF) / 255.0f,</div>
+<div class="line">            alphaByte == 0 ? 1.0f : alphaByte / 255.0f</div>
+<div class="line">        );</div>
+<div class="line">    }</div>
 <div class="line">    </div>
 <div class="line">    <span class="comment">// Utility colors</span></div>
 <div class="line">    <span class="keyword">static</span> NUIColor white() { <span class="keywordflow">return</span> {1.0f, 1.0f, 1.0f, 1.0f}; }</div>
@@ -239,9 +252,9 @@ $(function() {
 <div class="line">    <span class="keyword">static</span> NUIColor Info() { <span class="keywordflow">return</span> NUIColor(0.1f, 0.6f, 0.8f, 1.0f); }</div>
 <div class="line">    </div>
 <div class="line">    <span class="comment">// Dark theme colors</span></div>
-<div class="line">    <span class="keyword">static</span> NUIColor DarkBackground() { <span class="keywordflow">return</span> NUIColor(0.1f, 0.1f, 0.15f, 1.0f); }</div>
-<div class="line">    <span class="keyword">static</span> NUIColor DarkSurface() { <span class="keywordflow">return</span> NUIColor(0.15f, 0.15f, 0.2f, 1.0f); }</div>
-<div class="line">    <span class="keyword">static</span> NUIColor DarkBorder() { <span class="keywordflow">return</span> NUIColor(0.3f, 0.3f, 0.35f, 1.0f); }</div>
+<div class="line">    <span class="keyword">static</span> NUIColor DarkBackground() { <span class="keywordflow">return</span> NUIColor(0.1f, 0.1f, 0.1f, 1.0f); }</div>
+<div class="line">    <span class="keyword">static</span> NUIColor DarkSurface() { <span class="keywordflow">return</span> NUIColor(0.15f, 0.15f, 0.15f, 1.0f); }</div>
+<div class="line">    <span class="keyword">static</span> NUIColor DarkBorder() { <span class="keywordflow">return</span> NUIColor(0.3f, 0.3f, 0.3f, 1.0f); }</div>
 <div class="line">    <span class="keyword">static</span> NUIColor DarkText() { <span class="keywordflow">return</span> NUIColor(0.9f, 0.9f, 0.9f, 1.0f); }</div>
 <div class="line">    <span class="keyword">static</span> NUIColor DarkTextSecondary() { <span class="keywordflow">return</span> NUIColor(0.6f, 0.6f, 0.6f, 1.0f); }</div>
 <div class="line">    </div>

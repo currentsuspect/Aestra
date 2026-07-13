@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AudioEngine::postHardwareMidiEvent" name="Aestra::Audio::AudioEngine::postHardwareMidiEvent">
+<area shape="rect" id="Node000001" title="Post a live MIDI event from the hardware MIDI input thread." alt="" coords="5,5,204,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1d/classAestra_1_1Audio_1_1LiveMidiQueue.html#aa7560e3ae222e657753ac3e1548e489a" title="Producer side (one non&#45;RT thread). Returns false if the queue is full." alt="" coords="252,5,467,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,23,238,23,238,28,204,28"/>
+</map>

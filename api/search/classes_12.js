@@ -40,9 +40,10 @@ var searchData=
   ['trackrenderstate_37',['TrackRenderState',['../d0/d5c/structAestra_1_1Audio_1_1TrackRenderState.html',1,'Aestra::Audio']]],
   ['trackrtstate_38',['TrackRTState',['../d3/ded/structAestra_1_1Audio_1_1TrackRTState.html',1,'Aestra::Audio']]],
   ['trackuicomponent_39',['TrackUIComponent',['../dd/ddd/classAestra_1_1Audio_1_1TrackUIComponent.html',1,'Aestra::Audio']]],
-  ['transportbar_40',['transportbar',['../d9/d85/classAestra_1_1TransportBar.html',1,'Aestra::TransportBar'],['../d8/d98/classAestraUI_1_1TransportBar.html',1,'AestraUI::TransportBar']]],
-  ['transportinfocontainer_41',['TransportInfoContainer',['../de/dc2/classAestra_1_1TransportInfoContainer.html',1,'Aestra']]],
-  ['trimclipcommand_42',['TrimClipCommand',['../d2/dea/classAestra_1_1Audio_1_1TrimClipCommand.html',1,'Aestra::Audio']]],
-  ['truepeakmeter_43',['TruePeakMeter',['../dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html',1,'Aestra::Audio']]],
-  ['trustedaccessstate_44',['TrustedAccessState',['../dc/d19/structAestra_1_1TrustedAccessState.html',1,'Aestra']]]
+  ['translatedevent_40',['TranslatedEvent',['../d3/df9/structAestra_1_1Audio_1_1MidiInputService_1_1TranslatedEvent.html',1,'Aestra::Audio::MidiInputService']]],
+  ['transportbar_41',['transportbar',['../d9/d85/classAestra_1_1TransportBar.html',1,'Aestra::TransportBar'],['../d8/d98/classAestraUI_1_1TransportBar.html',1,'AestraUI::TransportBar']]],
+  ['transportinfocontainer_42',['TransportInfoContainer',['../de/dc2/classAestra_1_1TransportInfoContainer.html',1,'Aestra']]],
+  ['trimclipcommand_43',['TrimClipCommand',['../d2/dea/classAestra_1_1Audio_1_1TrimClipCommand.html',1,'Aestra::Audio']]],
+  ['truepeakmeter_44',['TruePeakMeter',['../dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html',1,'Aestra::Audio']]],
+  ['trustedaccessstate_45',['TrustedAccessState',['../dc/d19/structAestra_1_1TrustedAccessState.html',1,'Aestra']]]
 ];

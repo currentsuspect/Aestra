@@ -1,0 +1,5 @@
+<map id="AestraUI::UIMixerPanel::onDragEnter" name="AestraUI::UIMixerPanel::onDragEnter">
+<area shape="rect" id="Node000001" title="Called when drag enters the target area." alt="" coords="5,5,176,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestraUI_1_1UIMixerPanel.html#af5026d2a32a9a7fb92240364a514fdba" title="Called continuously while dragging over target." alt="" coords="224,5,395,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="176,23,210,23,210,28,176,28"/>
+</map>

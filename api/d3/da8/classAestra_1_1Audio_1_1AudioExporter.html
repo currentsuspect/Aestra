@@ -159,19 +159,18 @@ Static Public Member Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Offline audio export/render engine (v2.0) </p>
-<p>Renders the project to a WAV file using <a class="el" href="../../d6/dc6/classAestra_1_1Audio_1_1AudioRenderer.html#a316144516ef46d79d36fbadb22946418" title="Render a single block of audio.">AudioRenderer::renderBlock()</a> — the same rendering path used by bounceRangeToWav() and real-time playback.</p>
-<p>Key differences from v1:</p><ul>
-<li>Uses <a class="el" href="../../d6/dc6/classAestra_1_1Audio_1_1AudioRenderer.html#a316144516ef46d79d36fbadb22946418" title="Render a single block of audio.">AudioRenderer::renderBlock()</a> instead of <a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a401079ac6501c3f1df6221fd7d596f84" title="Process a single audio block (driver callback entry).">AudioEngine::processBlock()</a></li>
-<li>Duration is computed from the actual playlist timeline</li>
-<li>Position advances correctly between blocks</li>
-<li>Master output stage (DC block, soft clip, dither) matches playback</li>
+<p>Renders the project to a WAV file using <a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a401079ac6501c3f1df6221fd7d596f84" title="Process a single audio block (driver callback entry).">AudioEngine::processBlock()</a> for master bus output, or <a class="el" href="../../d6/dc6/classAestra_1_1Audio_1_1AudioRenderer.html#a316144516ef46d79d36fbadb22946418" title="Render a single block of audio.">AudioRenderer::renderBlock()</a> for isolated track output.</p>
+<p>Key features:</p><ul>
+<li>Master-stage processing (safety limiter, hard clamp, LUFS, true-peak) on full mix</li>
+<li>Isolated-track bounce via isolatedTrackIndex (no master stage)</li>
+<li>TPDF dither on PCM_16/PCM_24 quantization</li>
 <li>Supports FullSong, LoopRegion, and Selection scopes</li>
 </ul>
 <p>Usage: <a class="el" href="../../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html" title="Offline audio export/render engine (v2.0)">AudioExporter</a> exporter(engine, trackManager); exporter.setProgressCallback([](float pct) { updateUI(pct); });</p>
 <p><a class="el" href="../../d2/d05/structAestra_1_1Audio_1_1AudioExporter_1_1Config.html" title="Immutable export configuration used for an offline render pass.">AudioExporter::Config</a> config; config.outputPath = "song.wav"; config.sampleRate = 48000; config.bitDepth = BitDepth::PCM_24;</p>
 <p>auto result = exporter.render(config); </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00040">40</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00039">39</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
 </div><h2 class="groupheader">Member Typedef Documentation</h2>
 <a id="abf53a91ae849e07533aa3962dabc37e1" name="abf53a91ae849e07533aa3962dabc37e1"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#abf53a91ae849e07533aa3962dabc37e1">&#9670;&#160;</a></span>CancelCheck</h2>
@@ -185,7 +184,7 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00161">161</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00160">160</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
 
 </div>
 </div>
@@ -201,7 +200,7 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00160">160</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00159">159</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
 
 </div>
 </div>
@@ -226,7 +225,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00046">46</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00045">45</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
 
 </div>
 </div>
@@ -250,7 +249,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00052">52</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00051">51</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
 
 </div>
 </div>
@@ -328,9 +327,9 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Human-readable label for the supplied bit depth. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00487">487</a> of file <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html">AudioExporter.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00513">513</a> of file <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html">AudioExporter.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00069">render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00083">render()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -400,7 +399,8 @@ Static Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Convenience helper matching <a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file.">AudioEngine::bounceRangeToWav</a> signature. </p>
-<p>This static helper creates an <a class="el" href="../../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html" title="Offline audio export/render engine (v2.0)">AudioExporter</a> instance and renders the specified range using the authoritative offline path (processBlock with master-stage processing and dithering). Used by <a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file.">AudioEngine::bounceRangeToWav</a> to consolidate offline render authorities.</p>
+<p>This static helper creates an <a class="el" href="../../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html" title="Offline audio export/render engine (v2.0)">AudioExporter</a> instance and renders the specified range. For master bounce (trackId == -1) it uses the authoritative offline path (processBlock with master-stage processing and dithering). For isolated track bounce (trackId &gt;= 0) it renders only that track via <a class="el" href="../../d6/dc6/classAestra_1_1Audio_1_1AudioRenderer.html#a316144516ef46d79d36fbadb22946418" title="Render a single block of audio.">AudioRenderer::renderBlock</a> without master-stage processing.</p>
+<p>This helper mirrors <a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file.">AudioEngine::bounceRangeToWav</a>'s public signature while returning richer export metadata to callers that need it.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">engine</td><td>Audio engine reference </td></tr>
@@ -416,9 +416,9 @@ Static Public Member Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00028">28</a> of file <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html">AudioExporter.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00081">Aestra::Audio::AudioExporter::Config::bitDepth</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00071">Aestra::Audio::AudioExporter::Config::endBeat</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00117">Aestra::Audio::AudioExporter::Result::errorMessage</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00156">Aestra::Audio::AudioEngine::getSampleRate()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00083">Aestra::Audio::AudioExporter::Config::numChannels</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00063">Aestra::Audio::AudioExporter::Config::outputPath</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00119">Aestra::Audio::AudioExporter::Result::outputPath</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00069">render()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00079">Aestra::Audio::AudioExporter::Config::sampleRate</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00066">Aestra::Audio::AudioExporter::Config::scope</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00069">Aestra::Audio::AudioExporter::Config::startBeat</a>, and <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00086">Aestra::Audio::AudioExporter::Config::tailSeconds</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00080">Aestra::Audio::AudioExporter::Config::bitDepth</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03171">Aestra::Audio::AudioEngine::bounceRangeToWav()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00330">Aestra::Audio::TrackManager::buildAndShareSlotMap()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00122">Aestra::Audio::AudioExporter::Result::durationSeconds</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00070">Aestra::Audio::AudioExporter::Config::endBeat</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00116">Aestra::Audio::AudioExporter::Result::errorMessage</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00120">Aestra::Audio::AudioExporter::Result::framesRendered</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00320">Aestra::Audio::AudioEngine::getBPM()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00307">Aestra::Audio::TrackManager::getChannelSlotMapShared()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00157">Aestra::Audio::AudioEngine::getSampleRate()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00082">Aestra::Audio::AudioExporter::Config::numChannels</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00062">Aestra::Audio::AudioExporter::Config::outputPath</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00118">Aestra::Audio::AudioExporter::Result::outputPath</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00083">render()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00078">Aestra::Audio::AudioExporter::Config::sampleRate</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00065">Aestra::Audio::AudioExporter::Config::scope</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00455">Aestra::Audio::AudioEngine::setChannelSlotMap()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00068">Aestra::Audio::AudioExporter::Config::startBeat</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00114">Aestra::Audio::AudioExporter::Result::success</a>, and <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00085">Aestra::Audio::AudioExporter::Config::tailSeconds</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03138">Aestra::Audio::AudioEngine::bounceRangeToWav()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l03171">Aestra::Audio::AudioEngine::bounceRangeToWav()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -461,7 +461,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Cancel an in-progress render Call this from another thread to stop the render. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00216">216</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00219">219</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
 
 </div>
 </div>
@@ -498,7 +498,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Suggested export filename. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00474">474</a> of file <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html">AudioExporter.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00500">500</a> of file <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html">AudioExporter.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../da/d3c/ExportDialog_8cpp_source.html#l00033">ExportDialog::show()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -537,7 +537,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Get supported bit depths for UI selection. </p>
 <dl class="section return"><dt>Returns</dt><dd>Ordered list of bit depths exposed by the exporter UI. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00483">483</a> of file <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html">AudioExporter.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00509">509</a> of file <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html">AudioExporter.cpp</a>.</p>
 
 </div>
 </div>
@@ -567,7 +567,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Check if a render is currently in progress. </p>
 <dl class="section return"><dt>Returns</dt><dd>True while <a class="el" href="../../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284">render</a> is still running. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00222">222</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00225">225</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
 
 </div>
 </div>
@@ -598,9 +598,9 @@ Static Public Member Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="../../d5/dc1/structAestra_1_1Audio_1_1AudioExporter_1_1Result.html" title="Final result returned by an export attempt.">Result</a> with success status and metadata</dd></dl>
 <p>This is a blocking call that renders the entire project. For UI responsiveness, run this on a background thread. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00069">69</a> of file <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html">AudioExporter.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00083">83</a> of file <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html">AudioExporter.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00081">Aestra::Audio::AudioExporter::Config::bitDepth</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00487">bitDepthToString()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00420">Aestra::Audio::AudioEngine::clearTruePeakHold()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00123">Aestra::Audio::AudioExporter::Result::durationSeconds</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00117">Aestra::Audio::AudioExporter::Result::errorMessage</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00107">Aestra::Audio::AudioExporter::Config::failOnTruePeakExceeded</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00121">Aestra::Audio::AudioExporter::Result::framesRendered</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00316">Aestra::Audio::AudioEngine::getBPM()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00195">Aestra::Audio::AudioEngine::getGlobalSamplePos()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00408">Aestra::Audio::AudioEngine::getMaxTruePeakdBTP()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00156">Aestra::Audio::AudioEngine::getSampleRate()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00463">Aestra::Audio::AudioEngine::isAuditionModeEnabled()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00308">Aestra::Audio::AudioEngine::isMetronomeEnabled()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00177">Aestra::Audio::AudioEngine::isTransportPlaying()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00128">Aestra::Audio::AudioExporter::Result::maxTruePeakdBTP</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00083">Aestra::Audio::AudioExporter::Config::numChannels</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00063">Aestra::Audio::AudioExporter::Config::outputPath</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00119">Aestra::Audio::AudioExporter::Result::outputPath</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00125">Aestra::Audio::AudioExporter::Result::peakDb</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00464">Aestra::Audio::AudioEngine::performNonRealtimeMaintenance()</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00574">Aestra::Audio::AudioEngine::processBlock()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00089">Aestra::Audio::AudioExporter::Config::progressInterval</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00079">Aestra::Audio::AudioExporter::Config::sampleRate</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00066">Aestra::Audio::AudioExporter::Config::scope</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00461">Aestra::Audio::AudioEngine::setAuditionModeEnabled()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00197">Aestra::Audio::AudioEngine::setGlobalSamplePos()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00306">Aestra::Audio::AudioEngine::setMetronomeEnabled()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00217">Aestra::Audio::TrackManager::setOutputSampleRate()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00135">Aestra::Audio::AudioEngine::setSampleRate()</a>, <a class="el" href="../../d0/d8a/AudioExportQuantization_8h_source.html#l00037">Aestra::Audio::ExportQuantization::TpdfDither::setSeed()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00164">Aestra::Audio::AudioEngine::setTransportPlaying()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00115">Aestra::Audio::AudioExporter::Result::success</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00086">Aestra::Audio::AudioExporter::Config::tailSeconds</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00100">Aestra::Audio::AudioExporter::Config::truePeakCeilingdBTP</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00131">Aestra::Audio::AudioExporter::Result::truePeakCeilingExceeded</a>, and <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00097">Aestra::Audio::AudioExporter::Config::validateTruePeak</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00080">Aestra::Audio::AudioExporter::Config::bitDepth</a>, <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00513">bitDepthToString()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00450">Aestra::Audio::AudioEngine::clearTruePeakHold()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00122">Aestra::Audio::AudioExporter::Result::durationSeconds</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00116">Aestra::Audio::AudioExporter::Result::errorMessage</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00106">Aestra::Audio::AudioExporter::Config::failOnTruePeakExceeded</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00120">Aestra::Audio::AudioExporter::Result::framesRendered</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00320">Aestra::Audio::AudioEngine::getBPM()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00199">Aestra::Audio::AudioEngine::getGlobalSamplePos()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00438">Aestra::Audio::AudioEngine::getMaxTruePeakdBTP()</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00091">Aestra::Audio::AudioEngine::getPreviewDuckingAttenuationDb()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00157">Aestra::Audio::AudioEngine::getSampleRate()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00493">Aestra::Audio::AudioEngine::isAuditionModeEnabled()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00312">Aestra::Audio::AudioEngine::isMetronomeEnabled()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00178">Aestra::Audio::AudioEngine::isTransportPlaying()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00127">Aestra::Audio::AudioExporter::Result::maxTruePeakdBTP</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00082">Aestra::Audio::AudioExporter::Config::numChannels</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00062">Aestra::Audio::AudioExporter::Config::outputPath</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00118">Aestra::Audio::AudioExporter::Result::outputPath</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00124">Aestra::Audio::AudioExporter::Result::peakDb</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00519">Aestra::Audio::AudioEngine::performNonRealtimeMaintenance()</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00629">Aestra::Audio::AudioEngine::processBlock()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00088">Aestra::Audio::AudioExporter::Config::progressInterval</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00528">Aestra::Audio::AudioEngine::resetPreviewDuckForOfflineRender()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00078">Aestra::Audio::AudioExporter::Config::sampleRate</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00065">Aestra::Audio::AudioExporter::Config::scope</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00491">Aestra::Audio::AudioEngine::setAuditionModeEnabled()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00201">Aestra::Audio::AudioEngine::setGlobalSamplePos()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00310">Aestra::Audio::AudioEngine::setMetronomeEnabled()</a>, <a class="el" href="../../d4/dfc/TrackManager_8h_source.html#l00233">Aestra::Audio::TrackManager::setOutputSampleRate()</a>, <a class="el" href="../../df/dc3/AudioEngine_8cpp_source.html#l00078">Aestra::Audio::AudioEngine::setPreviewDuckingAttenuationDb()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00136">Aestra::Audio::AudioEngine::setSampleRate()</a>, <a class="el" href="../../d0/d8a/AudioExportQuantization_8h_source.html#l00037">Aestra::Audio::ExportQuantization::TpdfDither::setSeed()</a>, <a class="el" href="../../d3/dc9/AudioEngine_8h_source.html#l00165">Aestra::Audio::AudioEngine::setTransportPlaying()</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00114">Aestra::Audio::AudioExporter::Result::success</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00085">Aestra::Audio::AudioExporter::Config::tailSeconds</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00099">Aestra::Audio::AudioExporter::Config::truePeakCeilingdBTP</a>, <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00130">Aestra::Audio::AudioExporter::Result::truePeakCeilingExceeded</a>, and <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00096">Aestra::Audio::AudioExporter::Config::validateTruePeak</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d0/dd9/AudioExporter_8cpp_source.html#l00028">bounceToWav()</a>, and <a class="el" href="../../d0/d01/HeadlessMusicGenerator_8cpp_source.html#l00338">Aestra::Audio::HeadlessMusicGenerator::exportTo()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -652,7 +652,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00172">172</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00171">171</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
 
 </div>
 </div>
@@ -688,7 +688,7 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00167">167</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/da6/AudioExporter_8h_source.html#l00166">166</a> of file <a class="el" href="../../d8/da6/AudioExporter_8h_source.html">AudioExporter.h</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d0/d01/HeadlessMusicGenerator_8cpp_source.html#l00338">Aestra::Audio::HeadlessMusicGenerator::exportTo()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">

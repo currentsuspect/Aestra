@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::Plugins::AestraLimit" name="Aestra::Audio::Plugins::AestraLimit">
+<area shape="rect" id="Node000001" title=" " alt="" coords="201,137,365,177"/>
+<area shape="rect" id="Node000002" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="5,5,221,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="140,37,261,135,258,139,137,41"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="245,5,320,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="285,44,285,137,280,137,280,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="455,5,505,31"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="481,45,473,81,465,99,453,115,433,130,411,141,365,154,364,149,409,136,430,126,449,111,460,97,468,79,476,44"/>
+</map>

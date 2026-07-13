@@ -102,122 +102,134 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
 <div class="foldopen" id="foldopen00036" data-start="{" data-end="};">
 <div class="line"><a id="l00036" name="l00036"></a><span class="lineno"><a class="line" href="../../d3/df7/structAestra_1_1Audio_1_1AutomationPoint.html">   36</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d3/df7/structAestra_1_1Audio_1_1AutomationPoint.html">AutomationPoint</a> {</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    uint64_t sample{0};</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <span class="keywordtype">float</span> value{0.0f};</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keywordtype">double</span> beat{0.0};  <span class="comment">// For serialization</span></div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <span class="keywordtype">float</span> curve{0.0f}; <span class="comment">// For serialization (curve tension)</span></div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    <span class="keywordtype">bool</span> selected{<span class="keyword">false</span>}; <span class="comment">// Selection state for UI</span></div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>};</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="comment">// beat is the authoritative position domain: it is what the serializer</span></div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <span class="comment">// persists, what the UI edits, and what evaluation/sorting use. sample is</span></div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="comment">// a legacy cache computed at addPoint() time with that moment&#39;s tempo —</span></div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <span class="comment">// it goes stale on tempo changes and UI drags, so nothing may evaluate or</span></div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    <span class="comment">// sort by it.</span></div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    uint64_t sample{0};</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    <span class="keywordtype">float</span> value{0.0f};</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keywordtype">double</span> beat{0.0};</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keywordtype">float</span> curve{0.0f};    <span class="comment">// Curve tension (serialized; rendering does not use it yet)</span></div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keywordtype">bool</span> selected{<span class="keyword">false</span>}; <span class="comment">// Selection state for UI</span></div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>};</div>
 </div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
-<div class="foldopen" id="foldopen00044" data-start="{" data-end="};">
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">   44</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">AutomationCurve</a> {</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    uint32_t laneId{0};</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    std::vector&lt;AutomationPoint&gt; points;</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="comment">// Extended fields for full AutomationCurve API</span></div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    std::string name;</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    AutomationTarget target{AutomationTarget::Custom};</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keywordtype">float</span> defaultValue{0.0f};</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
+<div class="foldopen" id="foldopen00049" data-start="{" data-end="};">
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">   49</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">AutomationCurve</a> {</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    uint32_t laneId{0};</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    std::vector&lt;AutomationPoint&gt; points;</div>
 <div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span> </div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <a class="code hl_struct" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">AutomationCurve</a>() = <span class="keywordflow">default</span>;</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <a class="code hl_struct" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">AutomationCurve</a>(<span class="keyword">const</span> std::string&amp; n, AutomationTarget t) : name(n), target(t) {}</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span> </div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a6dc493377fb364f02369e9816db55742">   59</a></span>    AutomationTarget <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a6dc493377fb364f02369e9816db55742">getAutomationTarget</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> target; }</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="comment">// Extended fields for full AutomationCurve API</span></div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    std::string name;</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    AutomationTarget target{AutomationTarget::Custom};</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    <span class="keywordtype">float</span> defaultValue{0.0f};</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <a class="code hl_struct" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">AutomationCurve</a>() = <span class="keywordflow">default</span>;</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    <a class="code hl_struct" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">AutomationCurve</a>(<span class="keyword">const</span> std::string&amp; n, AutomationTarget t) : name(n), target(t) {}</div>
 <div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span> </div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a63b53ac9e55dddd5e9263cdef0c6e06b">   64</a></span>    <span class="keywordtype">double</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a63b53ac9e55dddd5e9263cdef0c6e06b">getTarget</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(target); }</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a6dc493377fb364f02369e9816db55742">   64</a></span>    AutomationTarget <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a6dc493377fb364f02369e9816db55742">getAutomationTarget</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> target; }</div>
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a2a8cb27ad4205788d30b777c679fc60f">   69</a></span>    <span class="keywordtype">float</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a2a8cb27ad4205788d30b777c679fc60f">getDefaultValue</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> defaultValue; }</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a63b53ac9e55dddd5e9263cdef0c6e06b">   69</a></span>    <span class="keywordtype">double</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a63b53ac9e55dddd5e9263cdef0c6e06b">getTarget</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(target); }</div>
 <div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a51a7ca1a3ad99a06762daef6fb9ac937">   74</a></span>    <span class="keyword">const</span> std::vector&lt;AutomationPoint&gt;&amp; <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a51a7ca1a3ad99a06762daef6fb9ac937">getPoints</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> points; }</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a2a8cb27ad4205788d30b777c679fc60f">   74</a></span>    <span class="keywordtype">float</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a2a8cb27ad4205788d30b777c679fc60f">getDefaultValue</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> defaultValue; }</div>
 <div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span> </div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    std::vector&lt;AutomationPoint&gt;&amp; <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a51a7ca1a3ad99a06762daef6fb9ac937">getPoints</a>() { <span class="keywordflow">return</span> points; }</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
-<div class="foldopen" id="foldopen00084" data-start="{" data-end="}">
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ac7b19a39151a2e1d33416e58b161bb65">   84</a></span>    <span class="keywordtype">float</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ac7b19a39151a2e1d33416e58b161bb65">getValueAtBeat</a>(<span class="keywordtype">double</span> beat, <span class="keywordtype">double</span> samplesPerBeat)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        <span class="keywordflow">if</span> (points.empty()) {</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>            <span class="keywordflow">return</span> defaultValue;</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>        }</div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span> </div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>        <span class="keyword">const</span> uint64_t targetSample = <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(beat * samplesPerBeat);</div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span> </div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>        <span class="comment">// Find surrounding points</span></div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>        <span class="keyword">const</span> <a class="code hl_struct" href="../../d3/df7/structAestra_1_1Audio_1_1AutomationPoint.html">AutomationPoint</a>* prev = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        <span class="keyword">const</span> <a class="code hl_struct" href="../../d3/df7/structAestra_1_1Audio_1_1AutomationPoint.html">AutomationPoint</a>* next = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span> </div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; pt : points) {</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>            <span class="keywordflow">if</span> (pt.sample &lt;= targetSample) {</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>                prev = &amp;pt;</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>            } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>                next = &amp;pt;</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>                <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>            }</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>        }</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span> </div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>        <span class="keywordflow">if</span> (!prev &amp;&amp; !next) {</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>            <span class="keywordflow">return</span> defaultValue;</div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        }</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>        <span class="keywordflow">if</span> (!prev) {</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>            <span class="keywordflow">return</span> next-&gt;value;</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>        }</div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>        <span class="keywordflow">if</span> (!next) {</div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>            <span class="keywordflow">return</span> prev-&gt;value;</div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>        }</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span> </div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        <span class="comment">// Linear interpolation</span></div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>        <span class="keyword">const</span> <span class="keywordtype">double</span> sampleRange = <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(next-&gt;sample - prev-&gt;sample);</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        <span class="keywordflow">if</span> (sampleRange &lt;= 0.0) {</div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>            <span class="keywordflow">return</span> prev-&gt;value;</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        }</div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span> </div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>        <span class="keyword">const</span> <span class="keywordtype">double</span> t = <span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(targetSample - prev-&gt;sample) / sampleRange;</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        <span class="keywordflow">return</span> prev-&gt;value + <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(t) * (next-&gt;value - prev-&gt;value);</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    }</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a51a7ca1a3ad99a06762daef6fb9ac937">   79</a></span>    <span class="keyword">const</span> std::vector&lt;AutomationPoint&gt;&amp; <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a51a7ca1a3ad99a06762daef6fb9ac937">getPoints</a>()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> points; }</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span> </div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    std::vector&lt;AutomationPoint&gt;&amp; <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a51a7ca1a3ad99a06762daef6fb9ac937">getPoints</a>() { <span class="keywordflow">return</span> points; }</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span> </div>
+<div class="foldopen" id="foldopen00094" data-start="{" data-end="}">
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a11deea9376295ee81224da688c30e2e6">   94</a></span>    <span class="keywordtype">float</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a11deea9376295ee81224da688c30e2e6">getValueAtBeat</a>(<span class="keywordtype">double</span> beat)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>        <span class="keywordflow">if</span> (points.empty()) {</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>            <span class="keywordflow">return</span> defaultValue;</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>        }</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span> </div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>        <span class="comment">// Find surrounding points (points are sorted by beat)</span></div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>        <span class="keyword">const</span> <a class="code hl_struct" href="../../d3/df7/structAestra_1_1Audio_1_1AutomationPoint.html">AutomationPoint</a>* prev = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>        <span class="keyword">const</span> <a class="code hl_struct" href="../../d3/df7/structAestra_1_1Audio_1_1AutomationPoint.html">AutomationPoint</a>* next = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span> </div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; pt : points) {</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>            <span class="keywordflow">if</span> (pt.beat &lt;= beat) {</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>                prev = &amp;pt;</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>                next = &amp;pt;</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>                <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>            }</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>        }</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span> </div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>        <span class="keywordflow">if</span> (!prev &amp;&amp; !next) {</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>            <span class="keywordflow">return</span> defaultValue;</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        }</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>        <span class="keywordflow">if</span> (!prev) {</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>            <span class="keywordflow">return</span> next-&gt;value;</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        }</div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        <span class="keywordflow">if</span> (!next) {</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>            <span class="keywordflow">return</span> prev-&gt;value;</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>        }</div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span> </div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        <span class="comment">// Linear interpolation in beat domain</span></div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        <span class="keyword">const</span> <span class="keywordtype">double</span> beatRange = next-&gt;beat - prev-&gt;beat;</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>        <span class="keywordflow">if</span> (beatRange &lt;= 0.0) {</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>            <span class="keywordflow">return</span> prev-&gt;value;</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        }</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span> </div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>        <span class="keyword">const</span> <span class="keywordtype">double</span> t = (beat - prev-&gt;beat) / beatRange;</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>        <span class="keywordflow">return</span> prev-&gt;value + <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(t) * (next-&gt;value - prev-&gt;value);</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    }</div>
 </div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span> </div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ad3a140109742ec9da4cb34b89f28e4ed">  127</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ad3a140109742ec9da4cb34b89f28e4ed">setDefaultValue</a>(<span class="keywordtype">float</span> val) { defaultValue = val; }</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span> </div>
-<div class="foldopen" id="foldopen00136" data-start="{" data-end="}">
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a88a23e8ce4403d157801fb358c0044ec">  136</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a88a23e8ce4403d157801fb358c0044ec">addPoint</a>(<span class="keywordtype">double</span> beat, <span class="keywordtype">float</span> value, <span class="keywordtype">double</span> samplesPerBeat, <span class="keywordtype">float</span> <span class="comment">/*tension*/</span> = 0.5f) {</div>
-<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>        <a class="code hl_struct" href="../../d3/df7/structAestra_1_1Audio_1_1AutomationPoint.html">AutomationPoint</a> pt;</div>
-<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>        pt.sample = <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(beat * samplesPerBeat);</div>
-<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>        pt.value = value;</div>
-<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span> </div>
-<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>        <span class="comment">// Insert in sorted order</span></div>
-<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>        <span class="keyword">auto</span> it = points.begin();</div>
-<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>        <span class="keywordflow">while</span> (it != points.end() &amp;&amp; it-&gt;sample &lt; pt.sample) {</div>
-<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>            ++it;</div>
-<div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>        }</div>
-<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>        points.insert(it, pt);</div>
-<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>    }</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span> </div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a497f3bcf81920d25e06579ab8ad33d00">  138</a></span>    <span class="keywordtype">float</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a497f3bcf81920d25e06579ab8ad33d00">getValueAtBeat</a>(<span class="keywordtype">double</span> beat, <span class="keywordtype">double</span> <span class="comment">/*samplesPerBeat*/</span>)<span class="keyword"> const </span>{ <span class="keywordflow">return</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a497f3bcf81920d25e06579ab8ad33d00">getValueAtBeat</a>(beat); }</div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span> </div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ad3a140109742ec9da4cb34b89f28e4ed">  143</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ad3a140109742ec9da4cb34b89f28e4ed">setDefaultValue</a>(<span class="keywordtype">float</span> val) { defaultValue = val; }</div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span> </div>
+<div class="foldopen" id="foldopen00152" data-start="{" data-end="}">
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno"><a class="line" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a8b57acfb9ef2ad413aff69b25b4015a8">  152</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a8b57acfb9ef2ad413aff69b25b4015a8">addPoint</a>(<span class="keywordtype">double</span> beat, <span class="keywordtype">float</span> value, <span class="keywordtype">double</span> samplesPerBeat, <span class="keywordtype">float</span> tension = 0.5f) {</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>        <a class="code hl_struct" href="../../d3/df7/structAestra_1_1Audio_1_1AutomationPoint.html">AutomationPoint</a> pt;</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>        pt.sample = <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(beat * samplesPerBeat);</div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>        pt.value = value;</div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        <span class="comment">// beat and curve are what ProjectSerializer persists — leaving them at</span></div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>        <span class="comment">// their zero defaults made every point created through this API (loader,</span></div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>        <span class="comment">// UI draw path) serialize at beat 0 on the next save.</span></div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>        pt.beat = beat;</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>        pt.curve = tension;</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span> </div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>        <span class="comment">// Insert in sorted order (beat domain — see AutomationPoint docs)</span></div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>        <span class="keyword">auto</span> it = points.begin();</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>        <span class="keywordflow">while</span> (it != points.end() &amp;&amp; it-&gt;beat &lt; pt.beat) {</div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>            ++it;</div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>        }</div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>        points.insert(it, pt);</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    }</div>
 </div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span> </div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    <span class="keywordtype">void</span> removePoint(<span class="keywordtype">size_t</span> index) {</div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>        <span class="keywordflow">if</span> (index &lt; points.size()) {</div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>            points.erase(points.begin() + index);</div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>        }</div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    }</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span> </div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    <span class="keywordtype">void</span> sortPoints() {</div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        std::sort(points.begin(), points.end(), [](<span class="keyword">const</span> AutomationPoint&amp; a, <span class="keyword">const</span> AutomationPoint&amp; b) {</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>            return a.sample &lt; b.sample;</div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>        });</div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    }</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span> </div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>    <span class="keywordtype">bool</span> isVisible()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> <span class="keyword">true</span>; }</div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>};</div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span> </div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    <span class="keywordtype">void</span> removePoint(<span class="keywordtype">size_t</span> index) {</div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>        <span class="keywordflow">if</span> (index &lt; points.size()) {</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>            points.erase(points.begin() + index);</div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>        }</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>    }</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span> </div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>    <span class="keywordtype">void</span> sortPoints() {</div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>        <span class="comment">// Beat domain: the UI drag path updates beat (not the sample cache),</span></div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>        <span class="comment">// so sorting by sample could scramble order after edits.</span></div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>        std::sort(points.begin(), points.end(),</div>
+<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>                  [](<span class="keyword">const</span> AutomationPoint&amp; a, <span class="keyword">const</span> AutomationPoint&amp; b) { return a.beat &lt; b.beat; });</div>
+<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    }</div>
+<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span> </div>
+<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    <span class="keywordtype">bool</span> isVisible()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> <span class="keyword">true</span>; }</div>
+<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>};</div>
 </div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span> </div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>} <span class="comment">// namespace Aestra</span></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">Aestra::Audio::AutomationCurve</a></div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00044">AutomationCurve.h:44</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a2a8cb27ad4205788d30b777c679fc60f"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a2a8cb27ad4205788d30b777c679fc60f">Aestra::Audio::AutomationCurve::getDefaultValue</a></div><div class="ttdeci">float getDefaultValue() const</div><div class="ttdoc">Get default value.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00069">AutomationCurve.h:69</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a51a7ca1a3ad99a06762daef6fb9ac937"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a51a7ca1a3ad99a06762daef6fb9ac937">Aestra::Audio::AutomationCurve::getPoints</a></div><div class="ttdeci">const std::vector&lt; AutomationPoint &gt; &amp; getPoints() const</div><div class="ttdoc">Get all points.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00074">AutomationCurve.h:74</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a63b53ac9e55dddd5e9263cdef0c6e06b"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a63b53ac9e55dddd5e9263cdef0c6e06b">Aestra::Audio::AutomationCurve::getTarget</a></div><div class="ttdeci">double getTarget() const</div><div class="ttdoc">Get target as double for JSON serialization.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00064">AutomationCurve.h:64</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a6dc493377fb364f02369e9816db55742"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a6dc493377fb364f02369e9816db55742">Aestra::Audio::AutomationCurve::getAutomationTarget</a></div><div class="ttdeci">AutomationTarget getAutomationTarget() const</div><div class="ttdoc">Get the automation target type.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00059">AutomationCurve.h:59</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a88a23e8ce4403d157801fb358c0044ec"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a88a23e8ce4403d157801fb358c0044ec">Aestra::Audio::AutomationCurve::addPoint</a></div><div class="ttdeci">void addPoint(double beat, float value, double samplesPerBeat, float=0.5f)</div><div class="ttdoc">Add a control point to the curve.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00136">AutomationCurve.h:136</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_ac7b19a39151a2e1d33416e58b161bb65"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ac7b19a39151a2e1d33416e58b161bb65">Aestra::Audio::AutomationCurve::getValueAtBeat</a></div><div class="ttdeci">float getValueAtBeat(double beat, double samplesPerBeat) const</div><div class="ttdoc">Get interpolated value at a given beat position.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00084">AutomationCurve.h:84</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_ad3a140109742ec9da4cb34b89f28e4ed"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ad3a140109742ec9da4cb34b89f28e4ed">Aestra::Audio::AutomationCurve::setDefaultValue</a></div><div class="ttdeci">void setDefaultValue(float val)</div><div class="ttdoc">Set the default value for this curve.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00127">AutomationCurve.h:127</a></div></div>
+<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span> </div>
+<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html">Aestra::Audio::AutomationCurve</a></div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00049">AutomationCurve.h:49</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a11deea9376295ee81224da688c30e2e6"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a11deea9376295ee81224da688c30e2e6">Aestra::Audio::AutomationCurve::getValueAtBeat</a></div><div class="ttdeci">float getValueAtBeat(double beat) const</div><div class="ttdoc">Get interpolated value at a given beat position.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00094">AutomationCurve.h:94</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a2a8cb27ad4205788d30b777c679fc60f"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a2a8cb27ad4205788d30b777c679fc60f">Aestra::Audio::AutomationCurve::getDefaultValue</a></div><div class="ttdeci">float getDefaultValue() const</div><div class="ttdoc">Get default value.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00074">AutomationCurve.h:74</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a497f3bcf81920d25e06579ab8ad33d00"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a497f3bcf81920d25e06579ab8ad33d00">Aestra::Audio::AutomationCurve::getValueAtBeat</a></div><div class="ttdeci">float getValueAtBeat(double beat, double) const</div><div class="ttdoc">Legacy overload — samplesPerBeat is ignored; beat is authoritative.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00138">AutomationCurve.h:138</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a51a7ca1a3ad99a06762daef6fb9ac937"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a51a7ca1a3ad99a06762daef6fb9ac937">Aestra::Audio::AutomationCurve::getPoints</a></div><div class="ttdeci">const std::vector&lt; AutomationPoint &gt; &amp; getPoints() const</div><div class="ttdoc">Get all points.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00079">AutomationCurve.h:79</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a63b53ac9e55dddd5e9263cdef0c6e06b"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a63b53ac9e55dddd5e9263cdef0c6e06b">Aestra::Audio::AutomationCurve::getTarget</a></div><div class="ttdeci">double getTarget() const</div><div class="ttdoc">Get target as double for JSON serialization.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00069">AutomationCurve.h:69</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a6dc493377fb364f02369e9816db55742"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a6dc493377fb364f02369e9816db55742">Aestra::Audio::AutomationCurve::getAutomationTarget</a></div><div class="ttdeci">AutomationTarget getAutomationTarget() const</div><div class="ttdoc">Get the automation target type.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00064">AutomationCurve.h:64</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_a8b57acfb9ef2ad413aff69b25b4015a8"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a8b57acfb9ef2ad413aff69b25b4015a8">Aestra::Audio::AutomationCurve::addPoint</a></div><div class="ttdeci">void addPoint(double beat, float value, double samplesPerBeat, float tension=0.5f)</div><div class="ttdoc">Add a control point to the curve.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00152">AutomationCurve.h:152</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AutomationCurve_html_ad3a140109742ec9da4cb34b89f28e4ed"><div class="ttname"><a href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ad3a140109742ec9da4cb34b89f28e4ed">Aestra::Audio::AutomationCurve::setDefaultValue</a></div><div class="ttdeci">void setDefaultValue(float val)</div><div class="ttdoc">Set the default value for this curve.</div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00143">AutomationCurve.h:143</a></div></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1AutomationPoint_html"><div class="ttname"><a href="../../d3/df7/structAestra_1_1Audio_1_1AutomationPoint.html">Aestra::Audio::AutomationPoint</a></div><div class="ttdef"><b>Definition</b> <a href="../../df/dfc/AutomationCurve_8h_source.html#l00036">AutomationCurve.h:36</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

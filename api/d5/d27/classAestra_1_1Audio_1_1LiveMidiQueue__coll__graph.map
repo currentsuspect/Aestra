@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::LiveMidiQueue" name="Aestra::Audio::LiveMidiQueue">
+<area shape="rect" id="Node000001" title="Lock&#45;free single&#45;producer / single&#45;consumer queue for live MIDI events." alt="" coords="5,93,220,119"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="75,5,150,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="115,45,115,93,110,93,110,45"/>
+</map>

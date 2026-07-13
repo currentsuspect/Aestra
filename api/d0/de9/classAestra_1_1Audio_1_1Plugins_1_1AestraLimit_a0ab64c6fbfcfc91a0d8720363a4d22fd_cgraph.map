@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::AestraLimit::initialize" name="Aestra::Audio::Plugins::AestraLimit::initialize">
+<area shape="rect" id="Node000001" title="Initialize the plugin for processing." alt="" coords="5,5,175,45"/>
+<area shape="rect" id="Node000002" href="$d0/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraLimit.html#a09431b976c257b20678394d58cecbbc2" title="Get all parameter descriptors." alt="" coords="223,5,431,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="175,23,209,23,209,28,175,28"/>
+</map>

@@ -206,7 +206,7 @@ Static Public Attributes</h2></td></tr>
 <div class="line"><span class="comment">// In audio callback:</span></div>
 <div class="line">chain.<a class="code hl_function" href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a2e3651b1109e292f881fc3d8a7d11b92">process</a>(buffer, 2, numFrames);</div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html">Aestra::Audio::EffectChain</a></div><div class="ttdoc">Effect chain for insert effects on a mixer channel.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d60/EffectChain_8h_source.html#l00078">EffectChain.h:78</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_a2e3651b1109e292f881fc3d8a7d11b92"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a2e3651b1109e292f881fc3d8a7d11b92">Aestra::Audio::EffectChain::process</a></div><div class="ttdeci">void process(float **buffer, uint32_t numChannels, uint32_t numFrames, const float *const *sidechainInputs=nullptr, uint32_t numSidechainChannels=0)</div><div class="ttdoc">Process audio through the effect chain.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00352">EffectChain.cpp:352</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_a2e3651b1109e292f881fc3d8a7d11b92"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a2e3651b1109e292f881fc3d8a7d11b92">Aestra::Audio::EffectChain::process</a></div><div class="ttdeci">void process(float **buffer, uint32_t numChannels, uint32_t numFrames, const float *const *sidechainInputs=nullptr, uint32_t numSidechainChannels=0)</div><div class="ttdoc">Process audio through the effect chain.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00367">EffectChain.cpp:367</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChain_html_aaff8505a90c35c0272cddbc5b378045e"><div class="ttname"><a href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aaff8505a90c35c0272cddbc5b378045e">Aestra::Audio::EffectChain::insertPlugin</a></div><div class="ttdeci">bool insertPlugin(size_t slotIndex, PluginInstancePtr plugin)</div><div class="ttdoc">Insert plugin into slot.</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d19/EffectChain_8cpp_source.html#l00098">EffectChain.cpp:98</a></div></div>
 </div><!-- fragment --> 
 <p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00078">78</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
@@ -228,7 +228,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Clear all slots. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00248">248</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00256">256</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -250,7 +250,7 @@ Static Public Attributes</h2></td></tr>
 <p>Create a snapshot on-demand (Pass 1 compatibility). </p>
 <p>This method is kept for Pass 1 compatibility tests. Use <a class="el" href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#acff38b783a5eab59f511dbc4791ba397" title="Get the current published snapshot.">getSnapshot()</a> to get the published snapshot after mutations. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00750">750</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00765">765</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -271,9 +271,9 @@ Static Public Attributes</h2></td></tr>
 
 <p>Get number of active (non-empty) slots. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00238">238</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00246">246</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00103">Aestra::Audio::MixerChannel::processAudio()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00106">Aestra::Audio::MixerChannel::processAudio()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -302,7 +302,7 @@ Static Public Attributes</h2></td></tr>
 <p>Get first empty slot index. </p>
 <dl class="section return"><dt>Returns</dt><dd>Slot index, or MAX_SLOTS if all full </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00229">229</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00237">237</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -325,9 +325,9 @@ Static Public Attributes</h2></td></tr>
 <p>Get plugin in slot. </p>
 <dl class="section return"><dt>Returns</dt><dd>Plugin instance or nullptr if empty </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00208">208</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00216">216</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00126">AestraUI::PluginUIController::bindEffectRack()</a>, and <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00246">AestraUI::PluginUIController::refreshRackDisplay()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00131">AestraUI::PluginUIController::bindEffectRack()</a>, and <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00251">AestraUI::PluginUIController::refreshRackDisplay()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -357,7 +357,7 @@ Static Public Attributes</h2></td></tr>
 <p>Get slot information. </p>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to slot, or nullptr if invalid index </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00215">215</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00223">223</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -379,7 +379,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Get dry/wet mix for a slot. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00315">315</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00330">330</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -401,7 +401,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Number of times a slot produced non-finite output and was quarantined. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00295">295</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00310">310</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -424,7 +424,7 @@ Static Public Attributes</h2></td></tr>
 <p>Returns the snapshot that was built on the last mutation. The snapshot is immutable and safe to read from the audio thread.</p>
 <dl class="section return"><dt>Returns</dt><dd>Current immutable snapshot (never nullptr after <a class="el" href="../../d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a437fca489c56905d913c32e2215e2a85" title="Prepare for processing.">prepare()</a>). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00746">746</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00761">761</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00254">Aestra::Audio::MixerChannel::getEffectChainSnapshot()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -455,7 +455,7 @@ Static Public Attributes</h2></td></tr>
 <p>Get total chain latency in samples. </p>
 <p>Sum of latencies from all active plugins. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00710">710</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00725">725</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -497,7 +497,7 @@ Static Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00098">98</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00015">Aestra::Audio::AddPluginCommand::execute()</a>, <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00281">AestraUI::PluginUIController::loadPluginToSlot()</a>, and <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00045">Aestra::Audio::RemovePluginCommand::undo()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00015">Aestra::Audio::AddPluginCommand::execute()</a>, <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00286">AestraUI::PluginUIController::loadPluginToSlot()</a>, and <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00045">Aestra::Audio::RemovePluginCommand::undo()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -553,9 +553,9 @@ Static Public Attributes</h2></td></tr>
 
 <p>Check if slot is bypassed. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00280">280</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00288">288</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00246">AestraUI::PluginUIController::refreshRackDisplay()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00251">AestraUI::PluginUIController::refreshRackDisplay()</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-5-summary" class="dynsummary" style="display:block;">
@@ -584,9 +584,9 @@ Static Public Attributes</h2></td></tr>
 
 <p>Check if a slot was automatically bypassed after unsafe non-finite output. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00288">288</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00296">296</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00246">AestraUI::PluginUIController::refreshRackDisplay()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00251">AestraUI::PluginUIController::refreshRackDisplay()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-6-summary" class="dynsummary" style="display:block;">
@@ -615,7 +615,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Check if slot is empty. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00222">222</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00230">230</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -655,7 +655,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true on success </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00616">616</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00631">631</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../da/dc5/PluginManager_8cpp_source.html#l00187">Aestra::Audio::PluginManager::createInstanceById()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -704,7 +704,7 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if move was successful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00146">146</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00154">154</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -744,7 +744,16 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00326">326</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00341">341</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03535">AestraContent::loadEffectToSelectedTrack()</a>.</p>
+<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-8-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d7/d17/classAestra_1_1Audio_1_1EffectChain_a437fca489c56905d913c32e2215e2a85_icgraph.svg" width="438" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>
@@ -803,16 +812,16 @@ Static Public Attributes</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00352">352</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00367">367</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00043">Aestra::Audio::PluginInfo::id</a>, and <a class="el" href="../../d8/da5/PluginHost_8h_source.html#l00052">Aestra::Audio::PluginInfo::numAudioInputs</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00103">Aestra::Audio::MixerChannel::processAudio()</a>.</p>
-<div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-8-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d8/d00/MixerChannel_8cpp_source.html#l00106">Aestra::Audio::MixerChannel::processAudio()</a>.</p>
+<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-8-content" class="dyncontent" style="display:none;">
+<div id="dynsection-9-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d7/d17/classAestra_1_1Audio_1_1EffectChain_a2e3651b1109e292f881fc3d8a7d11b92_icgraph.svg" width="456" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -843,14 +852,14 @@ Static Public Attributes</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The removed plugin, or nullptr if slot was empty </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00127">127</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00135">135</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00041">Aestra::Audio::RemovePluginCommand::execute()</a>, <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00319">AestraUI::PluginUIController::removePluginFromSlot()</a>, and <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00018">Aestra::Audio::AddPluginCommand::undo()</a>.</p>
-<div id="dynsection-9" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-9-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-9-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00041">Aestra::Audio::RemovePluginCommand::execute()</a>, <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00324">AestraUI::PluginUIController::removePluginFromSlot()</a>, and <a class="el" href="../../d6/d02/PluginCommands_8h_source.html#l00018">Aestra::Audio::AddPluginCommand::undo()</a>.</p>
+<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-9-content" class="dyncontent" style="display:none;">
+<div id="dynsection-10-content" class="dyncontent" style="display:none;">
 <div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../d7/d17/classAestra_1_1Audio_1_1EffectChain_a05ca8fc22e7be0358516ecb73098996e_icgraph.svg" width="100%" height="434"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
 </div>
 
@@ -874,14 +883,14 @@ Static Public Attributes</h2></td></tr>
 <p>Reset all plugins in the chain (Panic/Double-Stop) </p>
 <p>Calls deactivate() then activate() on all plugins to clear internal buffers. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00722">722</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00737">737</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d9/d8f/MixerChannel_8h_source.html#l00227">Aestra::Audio::MixerChannel::resetEffectChain()</a>.</p>
-<div id="dynsection-10" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-10-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-10-summary" class="dynsummary" style="display:block;">
+<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-10-content" class="dyncontent" style="display:none;">
+<div id="dynsection-11-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d7/d17/classAestra_1_1Audio_1_1EffectChain_a90194fa45ef946130b2a299134aa01e1_icgraph.svg" width="456" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -905,7 +914,7 @@ Static Public Attributes</h2></td></tr>
 <p>Save entire chain state. </p>
 <dl class="section return"><dt>Returns</dt><dd>Binary state data </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00567">567</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00582">582</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -914,9 +923,6 @@ Static Public Attributes</h2></td></tr>
 
 <div class="memitem">
 <div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
       <table class="memname">
         <tr>
           <td class="memname">void Aestra::Audio::EffectChain::setChainBypassed </td>
@@ -926,16 +932,11 @@ Static Public Attributes</h2></td></tr>
           <td></td>
         </tr>
       </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
 </div><div class="memdoc">
 
 <p>Bypass entire chain. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d60/EffectChain_8h_source.html#l00191">191</a> of file <a class="el" href="../../df/d60/EffectChain_8h_source.html">EffectChain.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00303">303</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -995,14 +996,14 @@ Static Public Attributes</h2></td></tr>
 
 <p>Set bypass state for a slot. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00265">265</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00273">273</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00126">AestraUI::PluginUIController::bindEffectRack()</a>.</p>
-<div id="dynsection-11" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-11-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-11-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../d5/d3f/PluginUIController_8cpp_source.html#l00131">AestraUI::PluginUIController::bindEffectRack()</a>.</p>
+<div id="dynsection-12" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-12-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-12-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-11-content" class="dyncontent" style="display:none;">
+<div id="dynsection-12-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d7/d17/classAestra_1_1Audio_1_1EffectChain_af9cffe835ebac825b10b033f7faf06b0_icgraph.svg" width="454" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 
@@ -1036,7 +1037,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Set dry/wet mix for a slot (0.0 = dry, 1.0 = wet) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00306">306</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00321">321</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>
@@ -1068,7 +1069,7 @@ Static Public Attributes</h2></td></tr>
 
 <p>Swap plugins between two slots. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00180">180</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html#l00188">188</a> of file <a class="el" href="../../d1/d19/EffectChain_8cpp_source.html">EffectChain.cpp</a>.</p>
 
 </div>
 </div>

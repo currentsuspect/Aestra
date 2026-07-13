@@ -93,23 +93,27 @@ $(function() {
 <code>#include &quot;<a class="el" href="../../d5/d0c/AuditionEngine_8h_source.html">AuditionEngine.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d3/d97/AuditionPanel_8h_source.html">AuditionPanel.h</a>&quot;</code><br />
 <code>#include &quot;Commands/PluginCommands.h&quot;</code><br />
+<code>#include &quot;MidiInputService.h&quot;</code><br />
 <code>#include &quot;MixerChannel.h&quot;</code><br />
 <code>#include &quot;MixerPanel.h&quot;</code><br />
 <code>#include &quot;PatternBrowserPanel.h&quot;</code><br />
 <code>#include &quot;PianoRollPanel.h&quot;</code><br />
 <code>#include &quot;Plugin/AestraDelay.h&quot;</code><br />
+<code>#include &quot;Plugin/AestraLFO.h&quot;</code><br />
 <code>#include &quot;PluginManager.h&quot;</code><br />
 <code>#include &quot;SampleEditorPanel.h&quot;</code><br />
 <code>#include &quot;../AestraUI/Core/NUIThemeSystem.h&quot;</code><br />
+<code>#include &quot;../AestraUI/Base/NUITextInput.h&quot;</code><br />
 <code>#include &quot;../AestraUI/Graphics/NUIRenderer.h&quot;</code><br />
 <code>#include &quot;../AestraUI/Platform/NUIPlatformBridge.h&quot;</code><br />
+<code>#include &quot;../AestraUI/Widgets/TrackColorPalette.h&quot;</code><br />
 <code>#include &quot;AudioVisualizer.h&quot;</code><br />
 <code>#include &quot;FileBrowser.h&quot;</code><br />
 <code>#include &quot;FilePreviewPanel.h&quot;</code><br />
 <code>#include &quot;TrackManagerUI.h&quot;</code><br />
 <code>#include &quot;<a class="el" href="../../d3/df6/TransportBar_8h_source.html">TransportBar.h</a>&quot;</code><br />
-<code>#include &quot;../AestraCore/include/AestraLog.h&quot;</code><br />
 <code>#include &quot;../AestraAudio/include/Commands/CommandRegistry.h&quot;</code><br />
+<code>#include &quot;../AestraCore/include/AestraLog.h&quot;</code><br />
 <code>#include &quot;AudioEngine.h&quot;</code><br />
 <code>#include &quot;ChannelSlotMap.h&quot;</code><br />
 <code>#include &quot;ClipSource.h&quot;</code><br />
@@ -119,10 +123,12 @@ $(function() {
 <code>#include &quot;Plugin/SamplerPlugin.h&quot;</code><br />
 <code>#include &quot;PreviewEngine.h&quot;</code><br />
 <code>#include &quot;TrackManager.h&quot;</code><br />
+<code>#include &lt;algorithm&gt;</code><br />
 <code>#include &lt;cmath&gt;</code><br />
 <code>#include &lt;filesystem&gt;</code><br />
 <code>#include &lt;fstream&gt;</code><br />
 <code>#include &lt;sstream&gt;</code><br />
+<code>#include &lt;thread&gt;</code><br />
 </div><div class="textblock"><div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Include dependency graph for AestraContent.cpp:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -155,7 +161,7 @@ Macros</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00059">59</a> of file <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html">AestraContent.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l00065">65</a> of file <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html">AestraContent.cpp</a>.</p>
 
 </div>
 </div>

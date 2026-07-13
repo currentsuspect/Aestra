@@ -88,82 +88,96 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &quot;AutomationCurve.h&quot;</span></div>
 <div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span> </div>
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;cstdint&gt;</span></div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;memory&gt;</span></div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">namespace </span>Aestra {</div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="keyword">namespace </span>Audio {</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span> </div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="keyword">struct </span>AudioBuffer; <span class="comment">// Forward declaration (defined in SamplePool.h)</span></div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="keyword">struct </span>AudioBufferData;</div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="keyword">class </span>EffectChain;  <span class="comment">// Forward declaration</span></div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
-<div class="foldopen" id="foldopen00023" data-start="{" data-end="};">
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno"><a class="line" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html">   23</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html">ClipRenderState</a> {</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    std::shared_ptr&lt;const AudioBuffer&gt; buffer; <span class="comment">// Owns audioData lifetime for the snapshot</span></div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    std::shared_ptr&lt;const AudioBufferData&gt; bufferOwner;</div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keyword">const</span> <span class="keywordtype">float</span>* audioData{<span class="keyword">nullptr</span>};           <span class="comment">// Interleaved stereo (engine format)</span></div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    uint64_t startSample{0};                   <span class="comment">// Absolute project sample (engine rate)</span></div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    uint64_t endSample{0};                     <span class="comment">// Exclusive end</span></div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="keywordtype">double</span> sampleOffset{0.0};                  <span class="comment">// Offset into audioData in frames (double for sub-sample precision)</span></div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    uint64_t totalFrames{0};                   <span class="comment">// Bounds for audioData to guard OOB</span></div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    <span class="keywordtype">double</span> sourceSampleRate{48000.0};          <span class="comment">// Original clip sample rate</span></div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    uint32_t channels{2};                      <span class="comment">// Source channels (1=mono, 2=stereo)</span></div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    <span class="keywordtype">float</span> gain{1.0f};</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="keywordtype">float</span> pan{0.0f};</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>};</div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;limits&gt;</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;memory&gt;</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;vector&gt;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="keyword">namespace </span>Aestra {</div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="keyword">namespace </span>Audio {</div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span> </div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="keyword">struct </span>AudioBuffer; <span class="comment">// Forward declaration (defined in SamplePool.h)</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="keyword">struct </span>AudioBufferData;</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="keyword">class </span>EffectChain;  <span class="comment">// Forward declaration</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
+<div class="foldopen" id="foldopen00024" data-start="{" data-end="};">
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno"><a class="line" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html">   24</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html">ClipRenderState</a> {</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>    std::shared_ptr&lt;const AudioBuffer&gt; buffer; <span class="comment">// Owns audioData lifetime for the snapshot</span></div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    std::shared_ptr&lt;const AudioBufferData&gt; bufferOwner;</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>    <span class="keyword">const</span> <span class="keywordtype">float</span>* audioData{<span class="keyword">nullptr</span>};           <span class="comment">// Interleaved stereo (engine format)</span></div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    uint64_t startSample{0};                   <span class="comment">// Absolute project sample (engine rate)</span></div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    uint64_t endSample{0};                     <span class="comment">// Exclusive end</span></div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    <span class="keywordtype">double</span> sampleOffset{0.0};                  <span class="comment">// Offset into audioData in frames (double for sub-sample precision)</span></div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>    uint64_t totalFrames{0};                   <span class="comment">// Bounds for audioData to guard OOB</span></div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="keywordtype">double</span> sourceSampleRate{48000.0};          <span class="comment">// Original clip sample rate</span></div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    uint32_t channels{2};                      <span class="comment">// Source channels (1=mono, 2=stereo)</span></div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="keywordtype">float</span> gain{1.0f};</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keywordtype">float</span> pan{0.0f};</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>};</div>
 </div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span> </div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span><span class="keyword">class </span><a class="code hl_class" href="../../df/df3/classAestra_1_1Audio_1_1EffectChainSnapshot.html">EffectChainSnapshot</a>; <span class="comment">// Forward declaration for Pass 3</span></div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
-<div class="foldopen" id="foldopen00042" data-start="{" data-end="};">
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno"><a class="line" href="../../d7/dd2/structAestra_1_1Audio_1_1AudioRoute.html">   42</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d7/dd2/structAestra_1_1Audio_1_1AudioRoute.html">AudioRoute</a> {</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    uint32_t targetChannelId; <span class="comment">// Destination ID (or SPECIAL_ID_MASTER)</span></div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keywordtype">float</span> gain{1.0f};         <span class="comment">// Send Level (Linear)</span></div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keywordtype">float</span> pan{0.0f};          <span class="comment">// Send Pan (-1.0 to 1.0)</span></div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keywordtype">bool</span> postFader{<span class="keyword">true</span>};     <span class="comment">// Pre/Post Fader tap</span></div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <span class="keywordtype">bool</span> mute{<span class="keyword">false</span>};         <span class="comment">// Mute this specific send</span></div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="keywordtype">bool</span> sidechainOnly{<span class="keyword">false</span>}; <span class="comment">// Route exists for sidechain/control input, not audible mix</span></div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>};</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span> </div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span><span class="keyword">class </span><a class="code hl_class" href="../../df/df3/classAestra_1_1Audio_1_1EffectChainSnapshot.html">EffectChainSnapshot</a>; <span class="comment">// Forward declaration for Pass 3</span></div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
+<div class="foldopen" id="foldopen00043" data-start="{" data-end="};">
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno"><a class="line" href="../../d7/dd2/structAestra_1_1Audio_1_1AudioRoute.html">   43</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d7/dd2/structAestra_1_1Audio_1_1AudioRoute.html">AudioRoute</a> {</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    uint32_t targetChannelId; <span class="comment">// Destination ID (or SPECIAL_ID_MASTER)</span></div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keywordtype">float</span> gain{1.0f};         <span class="comment">// Send Level (Linear)</span></div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keywordtype">float</span> pan{0.0f};          <span class="comment">// Send Pan (-1.0 to 1.0)</span></div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <span class="keywordtype">bool</span> postFader{<span class="keyword">true</span>};     <span class="comment">// Pre/Post Fader tap</span></div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="keywordtype">bool</span> mute{<span class="keyword">false</span>};         <span class="comment">// Mute this specific send</span></div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keywordtype">bool</span> sidechainOnly{<span class="keyword">false</span>}; <span class="comment">// Route exists for sidechain/control input, not audible mix</span></div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>};</div>
 </div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
-<div class="foldopen" id="foldopen00054" data-start="{" data-end="};">
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno"><a class="line" href="../../d0/d5c/structAestra_1_1Audio_1_1TrackRenderState.html">   54</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d0/d5c/structAestra_1_1Audio_1_1TrackRenderState.html">TrackRenderState</a> {</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    uint32_t trackId{0};    <span class="comment">// Stable track identity</span></div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    uint32_t trackIndex{0}; <span class="comment">// Compact zero-based index in TrackManager ordering</span></div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    std::vector&lt;ClipRenderState&gt; clips;</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <span class="keywordtype">float</span> volume{1.0f};</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    <span class="keywordtype">float</span> pan{0.0f};</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    <span class="keywordtype">bool</span> mute{<span class="keyword">false</span>};</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <span class="keywordtype">bool</span> solo{<span class="keyword">false</span>};</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="keywordtype">bool</span> isSoloSafe{<span class="keyword">false</span>};</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    std::vector&lt;AutomationCurve&gt; automationCurves;</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    <span class="comment">// Routing (v3.1)</span></div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    uint32_t mainOutputId{0xFFFFFFFF}; <span class="comment">// Master</span></div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    std::vector&lt;AudioRoute&gt; sends;</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    std::shared_ptr&lt;const EffectChainSnapshot&gt; effectChainSnapshot{<span class="keyword">nullptr</span>}; <span class="comment">// Pass 3: snapshot-based effect chain</span></div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>};</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
+<div class="foldopen" id="foldopen00055" data-start="{" data-end="};">
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno"><a class="line" href="../../d0/d5c/structAestra_1_1Audio_1_1TrackRenderState.html">   55</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d0/d5c/structAestra_1_1Audio_1_1TrackRenderState.html">TrackRenderState</a> {</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    uint32_t trackId{0};    <span class="comment">// Stable track identity</span></div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    uint32_t trackIndex{0}; <span class="comment">// Compact zero-based index in TrackManager ordering</span></div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    std::vector&lt;ClipRenderState&gt; clips;</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    <span class="keywordtype">float</span> volume{1.0f};</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    <span class="keywordtype">float</span> pan{0.0f};</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <span class="keywordtype">bool</span> mute{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="keywordtype">bool</span> solo{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keywordtype">bool</span> isSoloSafe{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    std::vector&lt;AutomationCurve&gt; automationCurves;</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    <span class="comment">// Routing (v3.1)</span></div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    uint32_t mainOutputId{0xFFFFFFFF}; <span class="comment">// Master</span></div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    std::vector&lt;AudioRoute&gt; sends;</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    std::shared_ptr&lt;const EffectChainSnapshot&gt; effectChainSnapshot{<span class="keyword">nullptr</span>}; <span class="comment">// Pass 3: snapshot-based effect chain</span></div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>};</div>
 </div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
-<div class="foldopen" id="foldopen00074" data-start="{" data-end="};">
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno"><a class="line" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html">   74</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html">AudioGraph</a> {</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    std::vector&lt;TrackRenderState&gt; tracks;</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <span class="keywordtype">bool</span> anySolo{<span class="keyword">false</span>};</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    <span class="comment">// Precomputed max end sample across all clips (engine sample rate).</span></div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <span class="comment">// Used for transport looping without scanning clips on the RT thread.</span></div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    uint64_t timelineEndSample{0};</div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keywordtype">double</span> bpm{120.0};</div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>};</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
+<div class="foldopen" id="foldopen00075" data-start="{" data-end="};">
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno"><a class="line" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html">   75</a></span><span class="keyword">struct </span><a class="code hl_struct" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html">AudioGraph</a> {</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="keywordtype">size_t</span> kInvalidTrackIndex = std::numeric_limits&lt;size_t&gt;::max();</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    std::vector&lt;TrackRenderState&gt; tracks;</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    <span class="keywordtype">bool</span> anySolo{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="comment">// Precomputed max end sample across all clips (engine sample rate).</span></div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="comment">// Used for transport looping without scanning clips on the RT thread.</span></div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>    uint64_t timelineEndSample{0};</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    <span class="keywordtype">double</span> bpm{120.0};</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span> </div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    <span class="comment">// Routing topology compiled off the audio thread.</span></div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    std::vector&lt;size_t&gt; trackIndexById;</div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    std::vector&lt;std::vector&lt;size_t&gt;&gt; audibleDownstream;</div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    std::vector&lt;std::vector&lt;size_t&gt;&gt; audibleIncoming;</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    std::vector&lt;std::vector&lt;size_t&gt;&gt; sidechainIncoming;</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    std::vector&lt;std::vector&lt;size_t&gt;&gt; topologicalEdges;</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    std::vector&lt;size_t&gt; topologicalOrder;</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    <span class="keywordtype">bool</span> hasRoutingCycle{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>};</div>
 </div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span> </div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span> </div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span><span class="keywordtype">void</span> finalizeAudioGraphRouting(<a class="code hl_struct" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html">AudioGraph</a>&amp; graph);</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span> </div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1EffectChainSnapshot_html"><div class="ttname"><a href="../../df/df3/classAestra_1_1Audio_1_1EffectChainSnapshot.html">Aestra::Audio::EffectChainSnapshot</a></div><div class="ttdoc">Immutable snapshot of an entire effect chain.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d60/EffectChain_8h_source.html#l00333">EffectChain.h:333</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AudioGraph_html"><div class="ttname"><a href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html">Aestra::Audio::AudioGraph</a></div><div class="ttdoc">Immutable graph snapshot consumed by the audio thread.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbf/AudioGraph_8h_source.html#l00074">AudioGraph.h:74</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AudioRoute_html"><div class="ttname"><a href="../../d7/dd2/structAestra_1_1Audio_1_1AudioRoute.html">Aestra::Audio::AudioRoute</a></div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbf/AudioGraph_8h_source.html#l00042">AudioGraph.h:42</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1ClipRenderState_html"><div class="ttname"><a href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html">Aestra::Audio::ClipRenderState</a></div><div class="ttdoc">Render-time clip state used by the audio thread.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbf/AudioGraph_8h_source.html#l00023">AudioGraph.h:23</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1TrackRenderState_html"><div class="ttname"><a href="../../d0/d5c/structAestra_1_1Audio_1_1TrackRenderState.html">Aestra::Audio::TrackRenderState</a></div><div class="ttdoc">Render-time track state.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbf/AudioGraph_8h_source.html#l00054">AudioGraph.h:54</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioGraph_html"><div class="ttname"><a href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html">Aestra::Audio::AudioGraph</a></div><div class="ttdoc">Immutable graph snapshot consumed by the audio thread.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbf/AudioGraph_8h_source.html#l00075">AudioGraph.h:75</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioRoute_html"><div class="ttname"><a href="../../d7/dd2/structAestra_1_1Audio_1_1AudioRoute.html">Aestra::Audio::AudioRoute</a></div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbf/AudioGraph_8h_source.html#l00043">AudioGraph.h:43</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1ClipRenderState_html"><div class="ttname"><a href="../../de/d56/structAestra_1_1Audio_1_1ClipRenderState.html">Aestra::Audio::ClipRenderState</a></div><div class="ttdoc">Render-time clip state used by the audio thread.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbf/AudioGraph_8h_source.html#l00024">AudioGraph.h:24</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1TrackRenderState_html"><div class="ttname"><a href="../../d0/d5c/structAestra_1_1Audio_1_1TrackRenderState.html">Aestra::Audio::TrackRenderState</a></div><div class="ttdoc">Render-time track state.</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dbf/AudioGraph_8h_source.html#l00055">AudioGraph.h:55</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

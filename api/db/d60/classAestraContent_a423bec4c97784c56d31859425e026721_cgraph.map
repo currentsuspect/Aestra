@@ -1,7 +1,9 @@
 <map id="AestraContent::~AestraContent" name="AestraContent::~AestraContent">
-<area shape="rect" id="Node000001" title="Tear down the workspace and owned panels." alt="" coords="5,45,232,70"/>
-<area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="280,5,495,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="225,42,266,37,267,42,226,47"/>
-<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#abc3848a6c2e6d39dad07fd7dcb7eca33" title="Bind the preview engine mixed into the main output." alt="" coords="288,69,487,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="226,67,275,73,274,79,225,73"/>
+<area shape="rect" id="Node000001" title="Tear down the workspace and owned panels." alt="" coords="5,77,232,102"/>
+<area shape="rect" id="Node000002" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="287,5,501,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="174,74,293,46,294,51,175,79"/>
+<area shape="rect" id="Node000003" href="$d5/d52/classAestra_1_1MusicalTypingController.html#a4f104166e0f9d913dda2b06d7b92e529" title="Send note&#45;offs for every held key, used on focus loss and shutdown." alt="" coords="280,69,508,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="232,87,266,87,266,92,232,92"/>
+<area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#abc3848a6c2e6d39dad07fd7dcb7eca33" title="Bind the preview engine mixed into the main output." alt="" coords="295,133,493,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="175,100,294,128,293,133,174,105"/>
 </map>

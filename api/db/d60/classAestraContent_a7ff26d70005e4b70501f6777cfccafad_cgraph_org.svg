@@ -20,7 +20,7 @@
 <!-- Node2 -->
 <g id="Node000002" class="node">
 <title>Node2</title>
-<g id="a_Node000002"><a xlink:href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a88a23e8ce4403d157801fb358c0044ec" target="_top" xlink:title="Add a control point to the curve.">
+<g id="a_Node000002"><a xlink:href="../../d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a8b57acfb9ef2ad413aff69b25b4015a8" target="_top" xlink:title="Add a control point to the curve.">
 <polygon fill="white" stroke="#666666" points="351,-78 206,-78 206,-48 351,-48 351,-78"/>
 <text text-anchor="start" x="214" y="-66" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::Automation</text>
 <text text-anchor="middle" x="278.5" y="-55" font-family="Helvetica,sans-Serif" font-size="10.00">Curve::addPoint</text>

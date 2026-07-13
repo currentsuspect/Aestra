@@ -3,15 +3,16 @@
 <area shape="rect" id="Node000002" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="526,37,735,77"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="797,101,713,80,714,75,799,95"/>
 <area shape="rect" id="Node000006" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4ad10b6d3c3d40e7490eca3f02a6c676" title="Set the playhead position in beats." alt="" coords="531,101,730,141"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="781,124,730,124,730,119,781,119"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="781,124,730,124,730,119,781,119"/>
 <area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a3f46086b14acbf0007e9c0235a2f7c49" title="Stop playback based on the current focus mode." alt="" coords="515,165,747,205"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="799,147,714,168,713,163,797,142"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="799,147,714,168,713,163,797,142"/>
 <area shape="rect" id="Node000003" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="255,5,464,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="512,46,464,40,464,35,513,41"/>
 <area shape="rect" id="Node000005" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="252,69,467,109"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="513,74,467,79,466,74,512,69"/>
+<area shape="poly" id="edge5_Node000002_Node000005" title=" " alt="" coords="513,74,467,79,466,74,512,69"/>
 <area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,5,204,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="241,28,204,28,204,23,241,23"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="241,37,204,37,204,31,241,32"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="218,14,254,14,254,19,218,19"/>
 <area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#a78c40e3abcccefa46157ebbb7b8f38a3" title="Pause playback based on the current focus mode." alt="" coords="262,165,457,205"/>
-<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="501,188,457,188,457,183,501,183"/>
+<area shape="poly" id="edge8_Node000007_Node000008" title=" " alt="" coords="501,188,457,188,457,183,501,183"/>
 </map>

@@ -3,13 +3,14 @@
 <area shape="rect" id="Node000002" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="516,69,725,109"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="761,108,725,104,726,99,761,103"/>
 <area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#acd45e0922aede06c12894ca10bb42bac" title="Set the active workspace mode." alt="" coords="515,134,727,159"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="761,134,727,138,726,132,761,128"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="761,134,727,138,726,132,761,128"/>
 <area shape="rect" id="Node000003" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="255,5,464,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="524,69,441,48,442,43,526,63"/>
 <area shape="rect" id="Node000005" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="252,69,467,109"/>
-<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="503,92,467,92,467,87,503,87"/>
+<area shape="poly" id="edge5_Node000002_Node000005" title=" " alt="" coords="503,92,467,92,467,87,503,87"/>
 <area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,5,204,45"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="241,28,204,28,204,23,241,23"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="241,37,204,37,204,31,241,32"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="218,14,254,14,254,19,218,19"/>
 <area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#a93c11d72cedc0fa43592a62e6d2c23a0" title="Handle global keyboard shortcuts for the workspace." alt="" coords="259,134,459,159"/>
-<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="501,149,459,149,459,144,501,144"/>
+<area shape="poly" id="edge7_Node000006_Node000007" title=" " alt="" coords="501,149,459,149,459,144,501,144"/>
 </map>

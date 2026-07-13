@@ -4,7 +4,7 @@ var searchData=
   ['icommand_1',['ICommand',['../d1/d5e/classAestra_1_1Audio_1_1ICommand.html',1,'Aestra::Audio']]],
   ['idroptarget_2',['IDropTarget',['../d3/d88/classAestraUI_1_1IDropTarget.html',1,'AestraUI']]],
   ['ilogger_3',['ILogger',['../d8/dc6/classAestra_1_1ILogger.html',1,'Aestra']]],
-  ['impl_4',['impl',['../d0/dce/structAestra_1_1Audio_1_1WaveformCacheBuilder_1_1Impl.html',1,'Aestra::Audio::WaveformCacheBuilder::Impl'],['../d2/d47/structAestraUI_1_1PluginEditorWindow_1_1Impl.html',1,'AestraUI::PluginEditorWindow::Impl']]],
+  ['impl_4',['impl',['../d3/d21/structAestra_1_1Audio_1_1MidiInputService_1_1Impl.html',1,'Aestra::Audio::MidiInputService::Impl'],['../d0/dce/structAestra_1_1Audio_1_1WaveformCacheBuilder_1_1Impl.html',1,'Aestra::Audio::WaveformCacheBuilder::Impl'],['../d2/d47/structAestraUI_1_1PluginEditorWindow_1_1Impl.html',1,'AestraUI::PluginEditorWindow::Impl']]],
   ['inprocesspluginfactory_5',['InProcessPluginFactory',['../df/d30/classAestra_1_1Audio_1_1InProcessPluginFactory.html',1,'Aestra::Audio']]],
   ['insertslot_6',['InsertSlot',['../d9/d5b/classAestraUI_1_1InsertSlot.html',1,'AestraUI']]],
   ['insertviewmodel_7',['InsertViewModel',['../dd/d28/structAestra_1_1ChannelViewModel_1_1InsertViewModel.html',1,'Aestra::ChannelViewModel']]],

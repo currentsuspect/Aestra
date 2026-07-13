@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::DSP::Oversampler" name="Aestra::Audio::DSP::Oversampler">
+<area shape="rect" id="Node000001" title="Mono 1x/2x/4x oversampler built from cascaded halfband stages." alt="" coords="46,152,189,192"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,5,80,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="39,44,36,85,38,107,46,127,57,139,70,150,67,154,53,143,42,129,33,108,30,85,34,44"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="159,5,225,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="192,45,183,86,165,129,144,154,140,150,160,127,178,84,187,44"/>
+</map>

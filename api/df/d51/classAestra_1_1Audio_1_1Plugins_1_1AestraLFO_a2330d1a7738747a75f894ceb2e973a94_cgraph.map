@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::Plugins::AestraLFO::process" name="Aestra::Audio::Plugins::AestraLFO::process">
+<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,37,169,77"/>
+<area shape="rect" id="Node000002" href="$df/d51/classAestra_1_1Audio_1_1Plugins_1_1AestraLFO.html#a38b1e885f6eaa5c7c109f7241c3fe89c" title="Get current parameter value (normalized 0&#45;1)" alt="" coords="245,5,439,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="169,44,231,37,232,42,170,50"/>
+<area shape="rect" id="Node000003" href="$df/d51/classAestra_1_1Audio_1_1Plugins_1_1AestraLFO.html#aeb0e95d8759de4fcb9222b4513d40269" title="Division length in beats (quarter notes), matching AestraDelay&#39;s table." alt="" coords="217,69,467,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="170,65,204,69,204,75,169,70"/>
+</map>

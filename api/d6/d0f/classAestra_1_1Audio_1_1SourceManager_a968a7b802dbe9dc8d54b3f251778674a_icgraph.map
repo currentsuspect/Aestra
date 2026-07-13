@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::SourceManager::getAllSourceIDs" name="Aestra::Audio::SourceManager::getAllSourceIDs">
+<area shape="rect" id="Node000001" title="Get all source IDs." alt="" coords="541,37,760,77"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a93242cb25f3e5b28316741a5efac881f" title="Drain finished anti&#45;alias prefilter results into their sources, clear stale filtered variants,..." alt="" coords="285,37,493,77"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="528,60,493,60,493,55,528,55"/>
+<area shape="rect" id="Node000003" href="$d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a808cde6e5a45b7255833bcdab7ac081b" title="Build a render graph from the current TrackManager state." alt="" coords="5,5,237,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="271,46,237,42,238,37,272,41"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a053a4811d93fb0e055bb0e745126e404" title="Block the calling NON&#45;AUDIO thread until all queued prefilter jobs are done, then apply them." alt="" coords="17,69,225,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="272,74,226,80,225,74,271,69"/>
+</map>

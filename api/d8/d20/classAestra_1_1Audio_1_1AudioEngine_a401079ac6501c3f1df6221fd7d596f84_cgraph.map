@@ -1,11 +1,13 @@
 <map id="Aestra::Audio::AudioEngine::processBlock" name="Aestra::Audio::AudioEngine::processBlock">
-<area shape="rect" id="Node000001" title="Process a single audio block (driver callback entry)." alt="" coords="5,101,204,141"/>
+<area shape="rect" id="Node000001" title="Process a single audio block (driver callback entry)." alt="" coords="5,133,204,173"/>
 <area shape="rect" id="Node000002" href="$d7/da4/classAestra_1_1Audio_1_1EngineState.html#a8c10dfaa447b39a42842b9c9b4431e1d" title="Acquires a read handle to the currently active graph slot." alt="" coords="264,5,459,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="147,99,251,55,274,47,275,52,253,60,149,104"/>
-<area shape="rect" id="Node000003" href="$db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#aeeaf1bbf2592bfefe8bcba4189630b4f" title="Mixes metronome click into the output buffer if enabled and playing." alt="" coords="265,69,457,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="204,106,251,100,252,106,205,112"/>
-<area shape="rect" id="Node000004" href="$dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#a3e1fb8d09426fbc16b9fb246851d0ba2" title="Process an interleaved stereo block and update peaks." alt="" coords="254,133,469,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="205,131,240,136,240,141,204,136"/>
-<area shape="rect" id="Node000005" href="$dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a" title="B&#45;009: Record a successful (stable) audio block." alt="" coords="252,197,471,237"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="149,139,253,183,275,191,274,196,251,188,147,144"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="130,131,184,93,251,55,269,47,271,52,253,60,187,97,133,135"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#afd0c6b2868cc4899df9f93a76b86e0ed" title="Check whether preview ducking is enabled." alt="" coords="262,69,461,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="185,131,267,110,268,115,186,136"/>
+<area shape="rect" id="Node000004" href="$db/d0e/classAestra_1_1Audio_1_1MetronomeEngine.html#aeeaf1bbf2592bfefe8bcba4189630b4f" title="Mixes metronome click into the output buffer if enabled and playing." alt="" coords="265,133,457,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="204,151,251,151,251,156,204,156"/>
+<area shape="rect" id="Node000005" href="$dd/d42/classAestra_1_1Audio_1_1TruePeakMeter.html#a3e1fb8d09426fbc16b9fb246851d0ba2" title="Process an interleaved stereo block and update peaks." alt="" coords="254,197,469,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="186,171,268,191,267,197,185,176"/>
+<area shape="rect" id="Node000006" href="$dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a" title="B&#45;009: Record a successful (stable) audio block." alt="" coords="252,261,471,301"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="133,171,187,209,253,247,271,254,269,259,251,252,184,214,130,176"/>
 </map>

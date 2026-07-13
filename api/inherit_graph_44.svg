@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d5/dc1/structAestra_1_1Audio_1_1AudioExporter_1_1Result.html" target="_top" xlink:title="Final result returned by an export attempt.">
+<g id="a_Node000000"><a xlink:href="d2/d05/structAestra_1_1Audio_1_1AudioExporter_1_1Config.html" target="_top" xlink:title="Immutable export configuration used for an offline render pass.">
 <polygon fill="white" stroke="#666666" points="157,-30 0,-30 0,0 157,0 157,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioExporter</text>
-<text text-anchor="middle" x="78.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::Result</text>
+<text text-anchor="middle" x="78.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::Config</text>
 </a>
 </g>
 </g>

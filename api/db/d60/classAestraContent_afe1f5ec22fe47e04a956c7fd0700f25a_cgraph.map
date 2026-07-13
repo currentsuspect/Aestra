@@ -1,0 +1,5 @@
+<map id="AestraContent::releaseMusicalTypingNotes" name="AestraContent::releaseMusicalTypingNotes">
+<area shape="rect" id="Node000001" title="Release notes held by computer&#45;keyboard musical typing." alt="" coords="5,5,227,45"/>
+<area shape="rect" id="Node000002" href="$d5/d52/classAestra_1_1MusicalTypingController.html#a4f104166e0f9d913dda2b06d7b92e529" title="Send note&#45;offs for every held key, used on focus loss and shutdown." alt="" coords="275,5,503,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="227,23,261,23,261,28,227,28"/>
+</map>

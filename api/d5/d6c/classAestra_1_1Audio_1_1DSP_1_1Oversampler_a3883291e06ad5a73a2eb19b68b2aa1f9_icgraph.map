@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::DSP::Oversampler::upsample" name="Aestra::Audio::DSP::Oversampler::upsample">
+<area shape="rect" id="Node000001" title="One input sample &#45;&gt; factor() subsamples in out (out must hold &gt;= 4)." alt="" coords="221,5,408,45"/>
+<area shape="rect" id="Node000002" href="$d7/db4/classAestra_1_1Audio_1_1Plugins_1_1AestraComp.html#a8b80715be9d54c0deee1c88925783c6f" title="Process audio through the plugin." alt="" coords="5,5,173,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="207,28,174,28,174,23,207,23"/>
+</map>

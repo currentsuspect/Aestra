@@ -1,7 +1,13 @@
 <map id="Aestra::Audio::SourceManager::getSource" name="Aestra::Audio::SourceManager::getSource">
-<area shape="rect" id="Node000001" title="Get a source by ID." alt="" coords="272,37,491,77"/>
-<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ab1aa3e02093843cdf71d966a0d0ec2a6" title="Build a runtime snapshot for audio rendering." alt="" coords="12,5,217,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="258,45,217,40,218,35,259,40"/>
-<area shape="rect" id="Node000003" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a6fff22f797d8e03841f60afdcda1bf7a" title="Create or replace a source for a recorded take." alt="" coords="5,69,224,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="259,75,225,79,224,74,258,69"/>
+<area shape="rect" id="Node000001" title="Get a source by ID." alt="" coords="552,69,771,109"/>
+<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ab1aa3e02093843cdf71d966a0d0ec2a6" title="Build a runtime snapshot for audio rendering." alt="" coords="292,5,497,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="563,69,478,48,479,43,565,63"/>
+<area shape="rect" id="Node000003" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a6fff22f797d8e03841f60afdcda1bf7a" title="Create or replace a source for a recorded take." alt="" coords="285,69,504,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="538,92,504,92,504,87,538,87"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a93242cb25f3e5b28316741a5efac881f" title="Drain finished anti&#45;alias prefilter results into their sources, clear stale filtered variants,..." alt="" coords="291,133,499,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="565,115,479,136,478,131,563,110"/>
+<area shape="rect" id="Node000005" href="$d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a808cde6e5a45b7255833bcdab7ac081b" title="Build a render graph from the current TrackManager state." alt="" coords="5,101,237,141"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="277,142,237,138,238,132,277,137"/>
+<area shape="rect" id="Node000006" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a053a4811d93fb0e055bb0e745126e404" title="Block the calling NON&#45;AUDIO thread until all queued prefilter jobs are done, then apply them." alt="" coords="17,165,225,205"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="277,170,226,176,225,170,277,164"/>
 </map>

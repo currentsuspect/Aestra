@@ -167,7 +167,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span> </div>
 <div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span><span class="keywordtype">void</span> RumblePluginEditor::drawHero(NUIRenderer&amp; renderer, <span class="keyword">const</span> NUIRect&amp; bounds) {</div>
 <div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    renderer.fillRoundedRect(bounds, kCardRadius, NUIColor(0.15f, 0.10f, 0.18f, 0.92f));</div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    renderer.fillRoundedRect(bounds, kCardRadius, NUIColor(0.116f, 0.116f, 0.116f, 0.92f));</div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    renderer.strokeRoundedRect(bounds, kCardRadius, 1.0f, theme.getColor(<span class="stringliteral">&quot;accentPrimary&quot;</span>).withAlpha(0.45f));</div>
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span> </div>
 <div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    renderer.drawText(<span class="stringliteral">&quot;Low-end first. Sweep and punch are derived from the current macros.&quot;</span>,</div>
@@ -179,8 +179,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span><span class="keywordtype">void</span> RumblePluginEditor::drawControl(NUIRenderer&amp; renderer, <span class="keyword">const</span> MacroControl&amp; control, <span class="keywordtype">bool</span> hovered) {</div>
 <div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    <span class="keyword">const</span> NUIColor accent = theme.getColor(<span class="stringliteral">&quot;accentPrimary&quot;</span>);</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    <span class="keyword">const</span> NUIColor cardColor = hovered || control.isDragging ? NUIColor(0.16f, 0.14f, 0.18f, 0.98f)</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>                                                             : NUIColor(0.12f, 0.11f, 0.14f, 0.96f);</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    <span class="keyword">const</span> NUIColor cardColor = hovered || control.isDragging ? NUIColor(0.147f, 0.147f, 0.147f, 0.98f)</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>                                                             : NUIColor(0.114f, 0.114f, 0.114f, 0.96f);</div>
 <div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span> </div>
 <div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    renderer.fillRoundedRect(control.cardBounds, kCardRadius, cardColor);</div>
 <div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    renderer.strokeRoundedRect(control.cardBounds, kCardRadius, 1.0f,</div>
@@ -195,7 +195,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>                      {control.cardBounds.x + 14.0f, control.cardBounds.y + 58.0f}, 10.0f,</div>
 <div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>                      accent.withAlpha(0.95f));</div>
 <div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span> </div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    renderer.fillRoundedRect(control.trackBounds, 4.0f, NUIColor(0.02f, 0.02f, 0.03f, 0.78f));</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    renderer.fillRoundedRect(control.trackBounds, 4.0f, NUIColor(0.021f, 0.021f, 0.021f, 0.78f));</div>
 <div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> filledWidth = std::max(0.0f, std::min(control.trackBounds.width, control.trackBounds.width * control.normalizedValue));</div>
 <div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    <span class="keywordflow">if</span> (filledWidth &gt; 0.0f) {</div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        renderer.fillRoundedRect({control.trackBounds.x, control.trackBounds.y, filledWidth, control.trackBounds.height},</div>

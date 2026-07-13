@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::Plugins::AestraSat::getParameter" name="Aestra::Audio::Plugins::AestraSat::getParameter">
+<area shape="rect" id="Node000001" title="Get current parameter value (normalized 0&#45;1)" alt="" coords="292,69,481,109"/>
+<area shape="rect" id="Node000002" href="$d0/da7/classAestra_1_1Audio_1_1Plugins_1_1AestraSat.html#ae96e64ce87c649a4a1026f51b9a279a7" title="Get parameter value as display string." alt="" coords="5,5,244,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="290,69,206,48,208,43,291,63"/>
+<area shape="rect" id="Node000003" href="$d0/da7/classAestra_1_1Audio_1_1Plugins_1_1AestraSat.html#a997f7670d0f7df729b0187eb945f51f6" title="Process audio through the plugin." alt="" coords="43,69,207,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="278,92,207,92,207,87,278,87"/>
+<area shape="rect" id="Node000004" href="$d0/da7/classAestra_1_1Audio_1_1Plugins_1_1AestraSat.html#a16b190738febe9c31679d739c86679ad" title="Save plugin state to binary data." alt="" coords="41,133,208,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="291,115,208,136,206,131,290,110"/>
+</map>

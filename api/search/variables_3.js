@@ -1,8 +1,8 @@
 var searchData=
 [
   ['data_0',['data',['../dc/d7e/structAestra_1_1Audio_1_1MidiBuffer_1_1Event.html#a247379836c673354b733cae7aeacf0e1',1,'Aestra::Audio::MidiBuffer::Event']]],
-  ['data1_1',['data1',['../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#ad6e805b0cdbe75fe45e47695562f7302',1,'Aestra::Audio::ScheduledEvent']]],
-  ['data2_2',['data2',['../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#a1faedd2dda17c8c1a830f7c53e2d8cf6',1,'Aestra::Audio::ScheduledEvent']]],
+  ['data1_1',['data1',['../d5/dfd/structAestra_1_1Audio_1_1LiveMidiQueue_1_1Event.html#aed61889317d70d2bd33ae1a5b725608c',1,'Aestra::Audio::LiveMidiQueue::Event::data1'],['../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#ad6e805b0cdbe75fe45e47695562f7302',1,'Aestra::Audio::ScheduledEvent::data1']]],
+  ['data2_2',['data2',['../d5/dfd/structAestra_1_1Audio_1_1LiveMidiQueue_1_1Event.html#a257d15857d82df3765a5bb2e6edd7ef1',1,'Aestra::Audio::LiveMidiQueue::Event::data2'],['../db/d5e/structAestra_1_1Audio_1_1ScheduledEvent.html#a1faedd2dda17c8c1a830f7c53e2d8cf6',1,'Aestra::Audio::ScheduledEvent::data2']]],
   ['db_5fmax_3',['DB_MAX',['../db/d9f/namespaceAestra_1_1MixerMath.html#a6c80ec5570a93f626bf72272f17df93c',1,'Aestra::MixerMath']]],
   ['db_5fmin_4',['DB_MIN',['../db/d9f/namespaceAestra_1_1MixerMath.html#a25e4117c1a67674d77b60e4fab6257a9',1,'Aestra::MixerMath']]],
   ['db_5fsilence_5fthreshold_5',['DB_SILENCE_THRESHOLD',['../db/d9f/namespaceAestra_1_1MixerMath.html#a667d8ed3bd7b3fc3795f9b965828f275',1,'Aestra::MixerMath']]],

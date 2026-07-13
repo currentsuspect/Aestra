@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d9/dfd/structAestra_1_1Audio_1_1AudioEngine_1_1TrackEdgeDelaySnapshot.html" target="_top" xlink:title="PDC v2 (P4b.2): per&#45;track per&#45;edge compensation snapshot for tests and tooling.">
+<g id="a_Node000000"><a xlink:href="d6/d35/structAestra_1_1Audio_1_1AudioEngine_1_1SamplerCacheSnapshot.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="149,-30 0,-30 0,0 149,0 149,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::AudioEngine</text>
-<text text-anchor="middle" x="74.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::TrackEdgeDelaySnapshot</text>
+<text text-anchor="middle" x="74.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::SamplerCacheSnapshot</text>
 </a>
 </g>
 </g>

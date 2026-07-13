@@ -167,7 +167,7 @@ Static Public Member Functions</h2></td></tr>
 <div class="line">uint32_t written = src.<a class="code hl_function" href="../../da/d42/classAestra_1_1Audio_1_1SampleRateConverter.html#a7a4886e23b4f7e4a064408c1ef70d57f">process</a>(input, inputFrames, output, maxOutputFrames);</div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1SampleRateConverter_html"><div class="ttname"><a href="../../da/d42/classAestra_1_1Audio_1_1SampleRateConverter.html">Aestra::Audio::SampleRateConverter</a></div><div class="ttdoc">Real-time sample rate converter.</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d7f/SampleRateConverter_8h_source.html#l00203">SampleRateConverter.h:203</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1SampleRateConverter_html_a7a1c9e737a9465d331bff29fbb862f5b"><div class="ttname"><a href="../../da/d42/classAestra_1_1Audio_1_1SampleRateConverter.html#a7a1c9e737a9465d331bff29fbb862f5b">Aestra::Audio::SampleRateConverter::configure</a></div><div class="ttdeci">void configure(uint32_t srcRate, uint32_t dstRate, uint32_t channels, SRCQuality quality)</div><div class="ttdoc">Configure the converter for a specific rate conversion.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/dd2/SampleRateConverter_8cpp_source.html#l00176">SampleRateConverter.cpp:176</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1SampleRateConverter_html_a7a4886e23b4f7e4a064408c1ef70d57f"><div class="ttname"><a href="../../da/d42/classAestra_1_1Audio_1_1SampleRateConverter.html#a7a4886e23b4f7e4a064408c1ef70d57f">Aestra::Audio::SampleRateConverter::process</a></div><div class="ttdeci">uint32_t process(const float *input, uint32_t inputFrames, float *output, uint32_t maxOutputFrames) noexcept</div><div class="ttdoc">Process audio through the rate converter.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/dd2/SampleRateConverter_8cpp_source.html#l00378">SampleRateConverter.cpp:378</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1SampleRateConverter_html_a7a4886e23b4f7e4a064408c1ef70d57f"><div class="ttname"><a href="../../da/d42/classAestra_1_1Audio_1_1SampleRateConverter.html#a7a4886e23b4f7e4a064408c1ef70d57f">Aestra::Audio::SampleRateConverter::process</a></div><div class="ttdeci">uint32_t process(const float *input, uint32_t inputFrames, float *output, uint32_t maxOutputFrames) noexcept</div><div class="ttdoc">Process audio through the rate converter.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/dd2/SampleRateConverter_8cpp_source.html#l00380">SampleRateConverter.cpp:380</a></div></div>
 </div><!-- fragment --> 
 <p class="definition">Definition at line <a class="el" href="../../dc/d7f/SampleRateConverter_8h_source.html#l00203">203</a> of file <a class="el" href="../../dc/d7f/SampleRateConverter_8h_source.html">SampleRateConverter.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
@@ -626,7 +626,7 @@ If srcRate == dstRate, <a class="el" href="../../da/d42/classAestra_1_1Audio_1_1
 <dd>
 Caller must ensure output buffer is large enough. Safe estimate: maxOutputFrames &gt;= inputFrames * (dstRate / srcRate) + <a class="el" href="../../da/d42/classAestra_1_1Audio_1_1SampleRateConverter.html#afd6588ced31c23ef41106e73861fb849" title="Get the latency introduced by the converter.">getLatency()</a> </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dd2/SampleRateConverter_8cpp_source.html#l00378">378</a> of file <a class="el" href="../../d7/dd2/SampleRateConverter_8cpp_source.html">SampleRateConverter.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dd2/SampleRateConverter_8cpp_source.html#l00380">380</a> of file <a class="el" href="../../d7/dd2/SampleRateConverter_8cpp_source.html">SampleRateConverter.cpp</a>.</p>
 
 </div>
 </div>
@@ -706,7 +706,7 @@ Caller must ensure output buffer is large enough. Safe estimate: maxOutputFrames
 </dl>
 <dl class="section note"><dt>Note</dt><dd>REAL-TIME SAFE: Can be called from audio thread </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dd2/SampleRateConverter_8cpp_source.html#l00599">599</a> of file <a class="el" href="../../d7/dd2/SampleRateConverter_8cpp_source.html">SampleRateConverter.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dd2/SampleRateConverter_8cpp_source.html#l00600">600</a> of file <a class="el" href="../../d7/dd2/SampleRateConverter_8cpp_source.html">SampleRateConverter.cpp</a>.</p>
 
 </div>
 </div>

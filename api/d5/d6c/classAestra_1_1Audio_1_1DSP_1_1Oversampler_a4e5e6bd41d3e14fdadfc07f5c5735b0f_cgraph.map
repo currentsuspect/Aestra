@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::DSP::Oversampler::downsample" name="Aestra::Audio::DSP::Oversampler::downsample">
+<area shape="rect" id="Node000001" title="factor() subsamples &#45;&gt; one output sample." alt="" coords="5,5,211,45"/>
+<area shape="rect" id="Node000002" href="$d0/d72/classAestra_1_1Audio_1_1DSP_1_1HalfbandStage.html#aaa020a93b14553df4a2272b9483ee4f6" title="Two input samples at 2x rate &#45;&gt; one output sample (decimating FIR)." alt="" coords="259,5,476,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="211,23,245,23,245,28,211,28"/>
+</map>

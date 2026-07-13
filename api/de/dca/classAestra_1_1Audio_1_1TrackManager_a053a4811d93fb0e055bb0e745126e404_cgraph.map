@@ -1,0 +1,15 @@
+<map id="Aestra::Audio::TrackManager::waitForClipPrefilters" name="Aestra::Audio::TrackManager::waitForClipPrefilters">
+<area shape="rect" id="Node000001" title="Block the calling NON&#45;AUDIO thread until all queued prefilter jobs are done, then apply them." alt="" coords="5,133,213,173"/>
+<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a93242cb25f3e5b28316741a5efac881f" title="Drain finished anti&#45;alias prefilter results into their sources, clear stale filtered variants,..." alt="" coords="261,133,469,173"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,151,248,151,248,156,213,156"/>
+<area shape="rect" id="Node000003" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a968a7b802dbe9dc8d54b3f251778674a" title="Get all source IDs." alt="" coords="517,5,736,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="392,131,447,93,516,55,534,48,536,52,518,60,450,97,395,135"/>
+<area shape="rect" id="Node000004" href="$df/dff/classAestra_1_1Audio_1_1ClipSource.html#a8410af642639615e40f590ab8d1516a3" title="Filtered copy valid for targetRate and the CURRENT buffer content, or null." alt="" coords="533,69,720,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="447,131,531,110,532,115,448,136"/>
+<area shape="rect" id="Node000005" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a9ff176b37e38e80db51e298f112c9fa3" title="Get the project sample rate." alt="" coords="524,133,729,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="470,151,510,151,510,156,470,156"/>
+<area shape="rect" id="Node000006" href="$d6/d0f/classAestra_1_1Audio_1_1SourceManager.html#a9df135788c4b7117579dc103b01d9f94" title="Get a source by ID." alt="" coords="517,197,736,237"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="448,171,532,191,531,197,447,176"/>
+<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="523,261,731,301"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="395,171,450,209,518,247,536,254,534,259,516,252,447,214,392,176"/>
+</map>

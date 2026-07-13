@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::DSP::Oversampler::upsample" name="Aestra::Audio::DSP::Oversampler::upsample">
+<area shape="rect" id="Node000001" title="One input sample &#45;&gt; factor() subsamples in out (out must hold &gt;= 4)." alt="" coords="5,5,192,45"/>
+<area shape="rect" id="Node000002" href="$d0/d72/classAestra_1_1Audio_1_1DSP_1_1HalfbandStage.html#ab3411bf8dbae79ddf6ae16fafdb6d056" title="One input sample &#45;&gt; two output samples at 2x rate." alt="" coords="240,5,439,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="192,23,226,23,226,28,192,28"/>
+</map>

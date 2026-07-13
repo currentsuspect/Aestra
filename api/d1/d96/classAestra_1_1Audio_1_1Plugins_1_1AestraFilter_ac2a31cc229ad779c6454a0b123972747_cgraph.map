@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::AestraFilter::process" name="Aestra::Audio::Plugins::AestraFilter::process">
+<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,5,169,45"/>
+<area shape="rect" id="Node000002" href="$d1/d96/classAestra_1_1Audio_1_1Plugins_1_1AestraFilter.html#a1ff702e7d53bd8a4f7b26bb2fe2d73fa" title="Get current parameter value (normalized 0&#45;1)" alt="" coords="217,5,419,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="170,23,204,23,204,28,170,28"/>
+</map>

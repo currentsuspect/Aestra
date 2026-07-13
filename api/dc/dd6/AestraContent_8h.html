@@ -83,23 +83,30 @@ $(function() {
 
 <p>Main content area for Aestra.  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &quot;../AestraUI/Core/NUIComponent.h&quot;</code><br />
-<code>#include &quot;../AestraUI/Core/NUIThemeSystem.h&quot;</code><br />
-<code>#include &quot;NUISegmentedControl.h&quot;</code><br />
-<code>#include &quot;NUILabel.h&quot;</code><br />
-<code>#include &quot;../AestraUI/Widgets/UIRoutingMap.h&quot;</code><br />
-<code>#include &quot;ViewTypes.h&quot;</code><br />
-<code>#include &quot;<a class="el" href="../../d3/df6/TransportBar_8h_source.html">TransportBar.h</a>&quot;</code><br />
-<code>#include &quot;PatternSource.h&quot;</code><br />
-<code>#include &quot;<a class="el" href="../../d7/dfb/OverlayLayer_8h_source.html">OverlayLayer.h</a>&quot;</code><br />
-<code>#include &quot;../AestraAudio/include/Models/UnitManager.h&quot;</code><br />
-<code>#include &quot;../AestraAudio/include/Commands/CommandParser.h&quot;</code><br />
+<div class="textblock"><code>#include &quot;../AestraAudio/include/Commands/CommandParser.h&quot;</code><br />
 <code>#include &quot;../AestraAudio/include/Commands/CommandResult.h&quot;</code><br />
 <code>#include &quot;../AestraAudio/include/Commands/SessionLog.h&quot;</code><br />
+<code>#include &quot;../AestraAudio/include/Models/UnitManager.h&quot;</code><br />
+<code>#include &quot;../AestraUI/Core/NUIComponent.h&quot;</code><br />
+<code>#include &quot;../AestraUI/Core/NUIThemeSystem.h&quot;</code><br />
+<code>#include &quot;../AestraUI/Widgets/UIRoutingMap.h&quot;</code><br />
 <code>#include &quot;Events/Connection.h&quot;</code><br />
-<code>#include &lt;memory&gt;</code><br />
-<code>#include &lt;string&gt;</code><br />
+<code>#include &quot;NUILabel.h&quot;</code><br />
+<code>#include &quot;KeyboardNoteInput.h&quot;</code><br />
+<code>#include &quot;NUISegmentedControl.h&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d7/dfb/OverlayLayer_8h_source.html">OverlayLayer.h</a>&quot;</code><br />
+<code>#include &quot;PatternSource.h&quot;</code><br />
+<code>#include &quot;MusicalTypingController.h&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../d3/df6/TransportBar_8h_source.html">TransportBar.h</a>&quot;</code><br />
+<code>#include &quot;ViewTypes.h&quot;</code><br />
+<code>#include &lt;atomic&gt;</code><br />
 <code>#include &lt;chrono&gt;</code><br />
+<code>#include &lt;functional&gt;</code><br />
+<code>#include &lt;memory&gt;</code><br />
+<code>#include &lt;mutex&gt;</code><br />
+<code>#include &lt;string&gt;</code><br />
+<code>#include &lt;unordered_map&gt;</code><br />
+<code>#include &lt;vector&gt;</code><br />
 </div><div class="textblock"><div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Include dependency graph for AestraContent.h:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -176,7 +183,7 @@ Enumerations</h2></td></tr>
 
 <p>Playback scope - what the transport will play Makes playback intent explicit to prevent user confusion. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dd6/AestraContent_8h_source.html#l00085">85</a> of file <a class="el" href="../../dc/dd6/AestraContent_8h_source.html">AestraContent.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dd6/AestraContent_8h_source.html#l00094">94</a> of file <a class="el" href="../../dc/dd6/AestraContent_8h_source.html">AestraContent.h</a>.</p>
 
 </div>
 </div>
@@ -202,7 +209,7 @@ Enumerations</h2></td></tr>
 
 <p>View focus - which part of the UI is emphasized Arsenal, Timeline, and Audition are the three main modes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dd6/AestraContent_8h_source.html#l00074">74</a> of file <a class="el" href="../../dc/dd6/AestraContent_8h_source.html">AestraContent.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dd6/AestraContent_8h_source.html#l00083">83</a> of file <a class="el" href="../../dc/dd6/AestraContent_8h_source.html">AestraContent.h</a>.</p>
 
 </div>
 </div>

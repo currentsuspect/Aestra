@@ -1,6 +1,6 @@
 <map id="AestraContent::addDemoTracks" name="AestraContent::addDemoTracks">
 <area shape="rect" id="Node000001" title="Populate the project with demo tracks for testing." alt="" coords="5,45,232,70"/>
-<area shape="rect" id="Node000002" href="$d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a88a23e8ce4403d157801fb358c0044ec" title="Add a control point to the curve." alt="" coords="280,5,473,45"/>
+<area shape="rect" id="Node000002" href="$d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#a8b57acfb9ef2ad413aff69b25b4015a8" title="Add a control point to the curve." alt="" coords="280,5,473,45"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="221,42,266,36,267,42,222,47"/>
 <area shape="rect" id="Node000003" href="$d1/d61/structAestra_1_1Audio_1_1AutomationCurve.html#ad3a140109742ec9da4cb34b89f28e4ed" title="Set the default value for this curve." alt="" coords="280,69,473,109"/>
 <area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="222,67,267,73,266,78,221,73"/>

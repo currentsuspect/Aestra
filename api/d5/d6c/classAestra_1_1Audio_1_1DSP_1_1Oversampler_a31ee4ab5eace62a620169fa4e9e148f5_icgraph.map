@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::DSP::Oversampler::setFactor" name="Aestra::Audio::DSP::Oversampler::setFactor">
+<area shape="rect" id="Node000001" title="RT&#45;safe factor switch: selects 1/2/4 (anything else falls back to 1) and resets filter state." alt="" coords="225,5,407,45"/>
+<area shape="rect" id="Node000002" href="$d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html#a675ac0f32b3d995be83a3de9448d3477" title="Non&#45;RT convenience: design kernels and select the factor in one call." alt="" coords="5,5,177,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="211,28,178,28,178,23,211,23"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::MidiInputService::setTargetUnit" name="Aestra::Audio::MidiInputService::setTargetUnit">
+<area shape="rect" id="Node000001" title="The unit live hardware input plays. 0 = no target (events dropped)." alt="" coords="257,5,436,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a88967824174ebd36ba1d535fce9ea7d6" title="Bind hardware MIDI input; live notes follow the selected unit." alt="" coords="5,13,209,38"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="244,28,210,28,210,23,244,23"/>
+</map>

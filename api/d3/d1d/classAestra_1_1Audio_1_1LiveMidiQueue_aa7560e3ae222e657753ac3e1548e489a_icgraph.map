@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::LiveMidiQueue::push" name="Aestra::Audio::LiveMidiQueue::push">
+<area shape="rect" id="Node000001" title="Producer side (one non&#45;RT thread). Returns false if the queue is full." alt="" coords="516,37,731,77"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ae68295389b13c32749cf89f7cf14512e" title="Post a live MIDI event from the hardware MIDI input thread." alt="" coords="269,5,468,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="502,45,468,40,469,35,503,40"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a2fbcb0afd72f57c31b645b89b70e2346" title="Post a live MIDI event (note input) for an Arsenal unit." alt="" coords="269,69,468,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="503,75,469,79,468,74,502,70"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#a124c4627537f1e3710165263eaea3515" title="Create the main application workspace component." alt="" coords="5,77,221,102"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="256,92,221,92,221,87,256,87"/>
+</map>

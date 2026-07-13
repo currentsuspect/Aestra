@@ -76,6 +76,7 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="#pub-static-attribs">Static Public Attributes</a> &#124;
 <a href="../../d4/d4e/structAestra_1_1Audio_1_1AudioGraph-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">Aestra::Audio::AudioGraph Struct Reference</div></div>
 </div><!--header-->
@@ -103,11 +104,30 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a1c421ad411b26e178dc64da60aab1898"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae5c9e8f7eeb5592de7e6d4bb66222ed9" id="r_ae5c9e8f7eeb5592de7e6d4bb66222ed9"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#ae5c9e8f7eeb5592de7e6d4bb66222ed9">bpm</a> {120.0}</td></tr>
 <tr class="separator:ae5c9e8f7eeb5592de7e6d4bb66222ed9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a713eb0b8434c33643ae546a49bdef76f" id="r_a713eb0b8434c33643ae546a49bdef76f"><td class="memItemLeft" align="right" valign="top">std::vector&lt; size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a713eb0b8434c33643ae546a49bdef76f">trackIndexById</a></td></tr>
+<tr class="separator:a713eb0b8434c33643ae546a49bdef76f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3f05fadbe9d99274e6d8e29512ba533d" id="r_a3f05fadbe9d99274e6d8e29512ba533d"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a3f05fadbe9d99274e6d8e29512ba533d">audibleDownstream</a></td></tr>
+<tr class="separator:a3f05fadbe9d99274e6d8e29512ba533d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acc2694c39eb5dfef046d95fee1d89db0" id="r_acc2694c39eb5dfef046d95fee1d89db0"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#acc2694c39eb5dfef046d95fee1d89db0">audibleIncoming</a></td></tr>
+<tr class="separator:acc2694c39eb5dfef046d95fee1d89db0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ade2140cf877a7e7c9e34b4043cfa7808" id="r_ade2140cf877a7e7c9e34b4043cfa7808"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#ade2140cf877a7e7c9e34b4043cfa7808">sidechainIncoming</a></td></tr>
+<tr class="separator:ade2140cf877a7e7c9e34b4043cfa7808"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa5ba0c8b32237d8f5362a77fd6d1b51" id="r_afa5ba0c8b32237d8f5362a77fd6d1b51"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::vector&lt; size_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#afa5ba0c8b32237d8f5362a77fd6d1b51">topologicalEdges</a></td></tr>
+<tr class="separator:afa5ba0c8b32237d8f5362a77fd6d1b51"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9170923830e5cfdad6da03aeb37131d7" id="r_a9170923830e5cfdad6da03aeb37131d7"><td class="memItemLeft" align="right" valign="top">std::vector&lt; size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a9170923830e5cfdad6da03aeb37131d7">topologicalOrder</a></td></tr>
+<tr class="separator:a9170923830e5cfdad6da03aeb37131d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac08152da6571ed6c0da0d3bc41eaf126" id="r_ac08152da6571ed6c0da0d3bc41eaf126"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#ac08152da6571ed6c0da0d3bc41eaf126">hasRoutingCycle</a> {false}</td></tr>
+<tr class="separator:ac08152da6571ed6c0da0d3bc41eaf126"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
+Static Public Attributes</h2></td></tr>
+<tr class="memitem:a4cdaef1cc389dd3a72ea92430be6b166" id="r_a4cdaef1cc389dd3a72ea92430be6b166"><td class="memItemLeft" align="right" valign="top">static constexpr size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d8b/structAestra_1_1Audio_1_1AudioGraph.html#a4cdaef1cc389dd3a72ea92430be6b166">kInvalidTrackIndex</a> = std::numeric_limits&lt;size_t&gt;::max()</td></tr>
+<tr class="separator:a4cdaef1cc389dd3a72ea92430be6b166"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Immutable graph snapshot consumed by the audio thread. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00074">74</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00075">75</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="a76289e1d3e51ec5d4486e505224dd5a9" name="a76289e1d3e51ec5d4486e505224dd5a9"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a76289e1d3e51ec5d4486e505224dd5a9">&#9670;&#160;</a></span>anySolo</h2>
@@ -121,7 +141,39 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00076">76</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00079">79</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+</div>
+</div>
+<a id="a3f05fadbe9d99274e6d8e29512ba533d" name="a3f05fadbe9d99274e6d8e29512ba533d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3f05fadbe9d99274e6d8e29512ba533d">&#9670;&#160;</a></span>audibleDownstream</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;std::vector&lt;size_t&gt; &gt; Aestra::Audio::AudioGraph::audibleDownstream</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00087">87</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+</div>
+</div>
+<a id="acc2694c39eb5dfef046d95fee1d89db0" name="acc2694c39eb5dfef046d95fee1d89db0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acc2694c39eb5dfef046d95fee1d89db0">&#9670;&#160;</a></span>audibleIncoming</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;std::vector&lt;size_t&gt; &gt; Aestra::Audio::AudioGraph::audibleIncoming</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00088">88</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -137,7 +189,63 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00080">80</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00083">83</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+</div>
+</div>
+<a id="ac08152da6571ed6c0da0d3bc41eaf126" name="ac08152da6571ed6c0da0d3bc41eaf126"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac08152da6571ed6c0da0d3bc41eaf126">&#9670;&#160;</a></span>hasRoutingCycle</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::AudioGraph::hasRoutingCycle {false}</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00092">92</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+</div>
+</div>
+<a id="a4cdaef1cc389dd3a72ea92430be6b166" name="a4cdaef1cc389dd3a72ea92430be6b166"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4cdaef1cc389dd3a72ea92430be6b166">&#9670;&#160;</a></span>kInvalidTrackIndex</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr size_t Aestra::Audio::AudioGraph::kInvalidTrackIndex = std::numeric_limits&lt;size_t&gt;::max()</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00076">76</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+</div>
+</div>
+<a id="ade2140cf877a7e7c9e34b4043cfa7808" name="ade2140cf877a7e7c9e34b4043cfa7808"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ade2140cf877a7e7c9e34b4043cfa7808">&#9670;&#160;</a></span>sidechainIncoming</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;std::vector&lt;size_t&gt; &gt; Aestra::Audio::AudioGraph::sidechainIncoming</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00089">89</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -153,7 +261,55 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00079">79</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00082">82</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+</div>
+</div>
+<a id="afa5ba0c8b32237d8f5362a77fd6d1b51" name="afa5ba0c8b32237d8f5362a77fd6d1b51"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afa5ba0c8b32237d8f5362a77fd6d1b51">&#9670;&#160;</a></span>topologicalEdges</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;std::vector&lt;size_t&gt; &gt; Aestra::Audio::AudioGraph::topologicalEdges</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00090">90</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+</div>
+</div>
+<a id="a9170923830e5cfdad6da03aeb37131d7" name="a9170923830e5cfdad6da03aeb37131d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9170923830e5cfdad6da03aeb37131d7">&#9670;&#160;</a></span>topologicalOrder</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;size_t&gt; Aestra::Audio::AudioGraph::topologicalOrder</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00091">91</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+
+</div>
+</div>
+<a id="a713eb0b8434c33643ae546a49bdef76f" name="a713eb0b8434c33643ae546a49bdef76f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a713eb0b8434c33643ae546a49bdef76f">&#9670;&#160;</a></span>trackIndexById</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;size_t&gt; Aestra::Audio::AudioGraph::trackIndexById</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00086">86</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>
@@ -169,7 +325,7 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00075">75</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html#l00078">78</a> of file <a class="el" href="../../d4/dbf/AudioGraph_8h_source.html">AudioGraph.h</a>.</p>
 
 </div>
 </div>

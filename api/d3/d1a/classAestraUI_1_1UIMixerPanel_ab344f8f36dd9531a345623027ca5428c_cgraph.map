@@ -1,0 +1,5 @@
+<map id="AestraUI::UIMixerPanel::onDrop" name="AestraUI::UIMixerPanel::onDrop">
+<area shape="rect" id="Node000001" title="Called when drop occurs." alt="" coords="5,5,176,45"/>
+<area shape="rect" id="Node000002" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a1b69c77ab991681c9ce3f7ce4b8a4959" title="Get the display name shown in the UI." alt="" coords="224,5,431,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="176,23,210,23,210,28,176,28"/>
+</map>

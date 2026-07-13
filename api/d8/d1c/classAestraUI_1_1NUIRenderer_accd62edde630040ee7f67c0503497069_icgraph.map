@@ -1,0 +1,5 @@
+<map id="AestraUI::NUIRenderer::setClipRect" name="AestraUI::NUIRenderer::setClipRect">
+<area shape="rect" id="Node000001" title="Set the current clip rectangle (scissor test)." alt="" coords="223,5,392,45"/>
+<area shape="rect" id="Node000002" href="$d5/d99/classAestraUI_1_1FileBrowser.html#ab3728bdebc18bd1dcfc38413229e7a68" title="Hover washes drawn per&#45;frame OUTSIDE the FBO cache, so hover changes never force a cache rebuild (see..." alt="" coords="5,5,175,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="209,28,175,28,175,23,209,23"/>
+</map>

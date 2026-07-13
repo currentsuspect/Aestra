@@ -145,13 +145,17 @@ Variables</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>High-precision interpolation functions for audio resampling. </p>
-<p>All functions use double precision internally for 144dB+ dynamic range. Output is converted to float for the audio buffer.</p>
-<p>Quality Modes:</p><ul>
-<li>Cubic: 4-point Catmull-Rom, ~80dB SNR, lowest CPU</li>
-<li>Sinc8: 8-point Blackman-windowed sinc, ~100dB SNR</li>
-<li>Sinc16: 16-point Kaiser-windowed sinc, ~120dB SNR</li>
-<li>Sinc32: 32-point Kaiser-windowed sinc, ~130dB SNR</li>
-<li>Sinc64: 64-point Kaiser-windowed sinc, ~144dB SNR (mastering) </li>
+<p>All functions use double precision internally; output is converted to float for the audio buffer.</p>
+<p>Quality modes (SNR figures are kernel stopband DESIGN TARGETS, not delivered resampling SINAD):</p><ul>
+<li>Cubic: 4-point Catmull-Rom, ~80dB target, lowest CPU</li>
+<li>Sinc8: 8-point Blackman-windowed sinc, ~100dB target</li>
+<li>Sinc16: 16-point Kaiser-windowed sinc, ~120dB target</li>
+<li>Sinc32: 32-point Kaiser-windowed sinc, ~130dB target</li>
+<li>Sinc64: 64-point Kaiser-windowed sinc, ~144dB stopband design target</li>
+</ul>
+<p>Measured delivered behavior is PATH-SPECIFIC (Audio Research Bench Phases 1 + 2D, 2026-07; see AestraDocs/audio-research-bench.md §8):</p><ul>
+<li>MAINLINE session playback and full-mix export (AudioEngine::renderGraph) dispatch quality Sinc64 to the legacy exact-sinc <a class="el" href="../../d7/d2f/structAestra_1_1Audio_1_1Interpolators_1_1Sinc64Interpolator.html">Sinc64Interpolator</a> and measured ~146-154 dB full-band single-tone residual SINAD at 1 kHz in full-session tests (SessionResamplingTruthTest).</li>
+<li><a class="el" href="../../d5/dc9/structAestra_1_1Audio_1_1Interpolators_1_1Sinc64Turbo.html">Sinc64Turbo</a> consumers (SamplerPlugin, AuditionEngine/ClipResampler) measured ~88 dB at FRACTIONAL rate ratios (bounded by nearest-phase LUT quantization, not the kernel) and ~154 dB at exact 2:1. Phase 1's ~88 dB figure describes these paths only, not Aestra resampling globally. (Isolated-track bounce was in this class until Phase 2E unified its kernel table with renderGraph's — it now measures mainline-equivalent.) ALL of these kernels reconstruct at the SOURCE Nyquist: on every measured path, downsampling is not anti-aliased by a ratio-aware low-pass, so content between the output and source Nyquist frequencies folds back into the output band. </li>
 </ul>
 </div><h2 class="groupheader">Enumeration Type Documentation</h2>
 <a id="a8e917e5f76757ec9a3eb21c73ddd0c60" name="a8e917e5f76757ec9a3eb21c73ddd0c60"></a>
@@ -174,7 +178,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00854">854</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00882">882</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
 
 </div>
 </div>
@@ -213,7 +217,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00047">47</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00065">65</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
 
 </div>
 </div>
@@ -275,7 +279,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00863">863</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00891">891</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
 
 </div>
 </div>
@@ -319,7 +323,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00057">57</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00075">75</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
 
 </div>
 </div>
@@ -346,7 +350,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00893">893</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00921">921</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
 
 </div>
 </div>
@@ -374,7 +378,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00080">80</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00098">98</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
 
 </div>
 </div>
@@ -427,7 +431,7 @@ Variables</h2></td></tr>
 <p>Mono sinc interpolation — reads single-channel float data. </p>
 <p>Uses a Blackman-Harris-windowed sinc kernel matching the requested quality. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00906">906</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00934">934</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
 
 </div>
 </div>
@@ -452,7 +456,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00039">39</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00057">57</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
 
 </div>
 </div>
@@ -476,7 +480,7 @@ Variables</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00040">40</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d8d/Interpolators_8h_source.html#l00058">58</a> of file <a class="el" href="../../dc/d8d/Interpolators_8h_source.html">Interpolators.h</a>.</p>
 
 </div>
 </div>

@@ -98,121 +98,130 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="preprocessor">#include &quot;LocalAccountCache.h&quot;</span></div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="preprocessor">#include &quot;MembershipViewModel.h&quot;</span></div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#include &lt;memory&gt;</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="preprocessor">#include &lt;algorithm&gt;</span></div>
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &lt;functional&gt;</span></div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span> </div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="keyword">using namespace </span>AestraUI;</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span><span class="keyword">class </span><a class="code hl_class" href="../../db/d60/classAestraContent.html">AestraContent</a>;</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
-<div class="foldopen" id="foldopen00027" data-start="{" data-end="};">
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno"><a class="line" href="../../d8/db1/classAestraRootComponent.html">   27</a></span><span class="keyword">class </span><a class="code hl_class" href="../../d8/db1/classAestraRootComponent.html">AestraRootComponent</a> : <span class="keyword">public</span> <a class="code hl_class" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> {</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="keyword">using </span>TransportAction = Aestra::TransportAction;</div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    std::shared_ptr&lt;NUICustomWindow&gt; m_rootCustomWindow;</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    std::shared_ptr&lt;Aestra::SettingsDialog&gt; m_rootSettingsDialog;</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    std::shared_ptr&lt;UnifiedHUD&gt; m_rootUnifiedHUD;</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    <span class="keyword">class </span><a class="code hl_class" href="../../db/d60/classAestraContent.html">AestraContent</a>* m_rootContent{<span class="keyword">nullptr</span>};</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    std::function&lt;void(TransportAction)&gt; m_rootTransportCallback;</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    std::function&lt;void()&gt; m_rootSaveCallback;</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span> </div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <a class="code hl_class" href="../../d8/db1/classAestraRootComponent.html">AestraRootComponent</a>() = <span class="keywordflow">default</span>;</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    </div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keywordtype">void</span> setTransportCallback(std::function&lt;<span class="keywordtype">void</span>(TransportAction)&gt; cb) {</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>        m_rootTransportCallback = cb;</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    }</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keywordtype">void</span> setSaveCallback(std::function&lt;<span class="keywordtype">void</span>()&gt; cb) {</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>        m_rootSaveCallback = cb;</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    }</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    </div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    <span class="keywordtype">void</span> setContent(<span class="keyword">class</span> <a class="code hl_class" href="../../db/d60/classAestraContent.html">AestraContent</a>* content) {</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>        m_rootContent = content;</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    }</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    </div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="keywordtype">void</span> setCustomWindow(std::shared_ptr&lt;NUICustomWindow&gt; window) {</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>        m_rootCustomWindow = window;</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>        addChild(m_rootCustomWindow);</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    }</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    </div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    <span class="keywordtype">void</span> setSettingsDialog(std::shared_ptr&lt;Aestra::SettingsDialog&gt; dialog) {</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        m_rootSettingsDialog = dialog;</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    }</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    </div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keywordtype">void</span> setUnifiedHUD(std::shared_ptr&lt;UnifiedHUD&gt; hud) {</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>        m_rootUnifiedHUD = hud;</div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>        addChild(m_rootUnifiedHUD);</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    }</div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    </div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    std::shared_ptr&lt;UnifiedHUD&gt; getUnifiedHUD()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>        <span class="keywordflow">return</span> m_rootUnifiedHUD;</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    }</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    </div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keywordtype">void</span> onUpdate(<span class="keywordtype">double</span> deltaTime)<span class="keyword"> override </span>{</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>        updateMembershipBadge();</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>        NUIComponent::updateGlobalTooltip(deltaTime);</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>        NUIComponent::onUpdate(deltaTime);</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>    }</div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>    <span class="keywordtype">void</span> onRender(<a class="code hl_class" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a>&amp; renderer)<span class="keyword"> override </span>{</div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>        <span class="comment">// Don&#39;t draw background here - let custom window handle it</span></div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>        <span class="comment">// Just render children (custom window and audio settings dialog)</span></div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>        renderChildren(renderer);</div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>        </div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>        <span class="comment">// Audio settings dialog is handled by its own render method</span></div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>        </div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        <span class="comment">// Fix: Render global tooltips last so they appear on top of everything</span></div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>        NUIComponent::renderGlobalTooltip(renderer);</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    }</div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    </div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <span class="keywordtype">bool</span> onKeyEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">NUIKeyEvent</a>&amp; event) <span class="keyword">override</span>;</div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    </div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    <span class="keywordtype">void</span> onResize(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height)<span class="keyword"> override </span>{</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>        <span class="keywordflow">if</span> (m_rootCustomWindow) {</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>            m_rootCustomWindow-&gt;setBounds(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>(0, 0, width, height));</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>        }</div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>        </div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>        <span class="comment">// Resize all children (including audio settings dialog)</span></div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; child : getChildren()) {</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>            <span class="keywordflow">if</span> (child) {</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>                child-&gt;onResize(width, height);</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>            }</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>        }</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>        </div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>        NUIComponent::onResize(width, height);</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    }</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span> </div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    <span class="keywordtype">void</span> updateMembershipBadge() {</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>        <span class="keywordflow">if</span> (!m_rootCustomWindow || !m_rootCustomWindow-&gt;getTitleBar()) {</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>            <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>        }</div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span> </div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>        std::string tier = <span class="stringliteral">&quot;Core&quot;</span>;</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>        std::string status = <span class="stringliteral">&quot;Signed out&quot;</span>;</div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        <span class="keywordtype">bool</span> verified = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span><span class="preprocessor">#if defined(AESTRA_HAS_LICENSE_GATE) &amp;&amp; AESTRA_HAS_LICENSE_GATE</span></div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>        Aestra::License::EntitlementStore entitlements;</div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>        Aestra::License::LocalAccountCache accountCache;</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        Aestra::License::AccountSession accountSession(accountCache, entitlements);</div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>        Aestra::License::MembershipViewModel viewModel(accountSession, entitlements);</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>        <span class="keyword">const</span> Aestra::License::MembershipViewState state = viewModel.current();</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        tier = Aestra::License::membershipBadgeTierText(state);</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        status = Aestra::License::membershipBadgeStatusText(state);</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        verified = state.verified;</div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>        m_rootCustomWindow-&gt;getTitleBar()-&gt;setMembershipBadge(tier, status, verified);</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>    }</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>};</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &lt;memory&gt;</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span><span class="keyword">using namespace </span>AestraUI;</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span> </div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span><span class="keyword">class </span><a class="code hl_class" href="../../db/d60/classAestraContent.html">AestraContent</a>;</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
+<div class="foldopen" id="foldopen00028" data-start="{" data-end="};">
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno"><a class="line" href="../../d8/db1/classAestraRootComponent.html">   28</a></span><span class="keyword">class </span><a class="code hl_class" href="../../d8/db1/classAestraRootComponent.html">AestraRootComponent</a> : <span class="keyword">public</span> <a class="code hl_class" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">NUIComponent</a> {</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>    <span class="keyword">using </span>TransportAction = Aestra::TransportAction;</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    std::shared_ptr&lt;NUICustomWindow&gt; m_rootCustomWindow;</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    std::shared_ptr&lt;Aestra::SettingsDialog&gt; m_rootSettingsDialog;</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    std::shared_ptr&lt;UnifiedHUD&gt; m_rootUnifiedHUD;</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keyword">class </span><a class="code hl_class" href="../../db/d60/classAestraContent.html">AestraContent</a>* m_rootContent{<span class="keyword">nullptr</span>};</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    std::function&lt;void(TransportAction)&gt; m_rootTransportCallback;</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    std::function&lt;void()&gt; m_rootSaveCallback;</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="keywordtype">double</span> kMembershipBadgeRefreshIntervalSeconds = 1.0;</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <span class="keywordtype">double</span> m_membershipBadgeRefreshSeconds = kMembershipBadgeRefreshIntervalSeconds;</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span> </div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span><span class="keyword">public</span>:</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    <a class="code hl_class" href="../../d8/db1/classAestraRootComponent.html">AestraRootComponent</a>() = <span class="keywordflow">default</span>;</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    </div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keywordtype">void</span> setTransportCallback(std::function&lt;<span class="keywordtype">void</span>(TransportAction)&gt; cb) {</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>        m_rootTransportCallback = cb;</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    }</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <span class="keywordtype">void</span> setSaveCallback(std::function&lt;<span class="keywordtype">void</span>()&gt; cb) {</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>        m_rootSaveCallback = cb;</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    }</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    </div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="keywordtype">void</span> setContent(<span class="keyword">class</span> <a class="code hl_class" href="../../db/d60/classAestraContent.html">AestraContent</a>* content) {</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>        m_rootContent = content;</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    }</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    </div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <span class="keywordtype">void</span> setCustomWindow(std::shared_ptr&lt;NUICustomWindow&gt; window) {</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        m_rootCustomWindow = window;</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        addChild(m_rootCustomWindow);</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    }</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    </div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="keywordtype">void</span> setSettingsDialog(std::shared_ptr&lt;Aestra::SettingsDialog&gt; dialog) {</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>        m_rootSettingsDialog = dialog;</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    }</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    </div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    <span class="keywordtype">void</span> setUnifiedHUD(std::shared_ptr&lt;UnifiedHUD&gt; hud) {</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>        m_rootUnifiedHUD = hud;</div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>        addChild(m_rootUnifiedHUD);</div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    }</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    </div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    std::shared_ptr&lt;UnifiedHUD&gt; getUnifiedHUD()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>        <span class="keywordflow">return</span> m_rootUnifiedHUD;</div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    }</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    </div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keywordtype">void</span> onUpdate(<span class="keywordtype">double</span> deltaTime)<span class="keyword"> override </span>{</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>        updateMembershipBadge(deltaTime);</div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>        NUIComponent::updateGlobalTooltip(deltaTime);</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>        NUIComponent::onUpdate(deltaTime);</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span>    }</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span> </div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>    <span class="keywordtype">void</span> onRender(<a class="code hl_class" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a>&amp; renderer)<span class="keyword"> override </span>{</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span>        <span class="comment">// Don&#39;t draw background here - let custom window handle it</span></div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>        <span class="comment">// Just render children (custom window and audio settings dialog)</span></div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>        renderChildren(renderer);</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>        </div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>        <span class="comment">// Audio settings dialog is handled by its own render method</span></div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>        </div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>        <span class="comment">// Fix: Render global tooltips last so they appear on top of everything</span></div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>        NUIComponent::renderGlobalTooltip(renderer);</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    }</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    </div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    <span class="keywordtype">bool</span> onKeyEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">NUIKeyEvent</a>&amp; event) <span class="keyword">override</span>;</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    </div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    <span class="keywordtype">void</span> onResize(<span class="keywordtype">int</span> width, <span class="keywordtype">int</span> height)<span class="keyword"> override </span>{</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>        <span class="keywordflow">if</span> (m_rootCustomWindow) {</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>            m_rootCustomWindow-&gt;setBounds(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">NUIRect</a>(0, 0, width, height));</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>        }</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>        </div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>        <span class="comment">// Resize all children (including audio settings dialog)</span></div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; child : getChildren()) {</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>            <span class="keywordflow">if</span> (child) {</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>                child-&gt;onResize(width, height);</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>            }</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>        }</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>        </div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        NUIComponent::onResize(width, height);</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    }</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span> </div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    <span class="keywordtype">void</span> updateMembershipBadge(<span class="keywordtype">double</span> deltaTime) {</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>        <span class="keywordflow">if</span> (!m_rootCustomWindow || !m_rootCustomWindow-&gt;getTitleBar()) {</div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>            <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>        }</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>        <span class="keywordflow">if</span> (m_membershipBadgeRefreshSeconds &lt; kMembershipBadgeRefreshIntervalSeconds) {</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>            m_membershipBadgeRefreshSeconds +=</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>                std::max(std::min(deltaTime, kMembershipBadgeRefreshIntervalSeconds), 0.0);</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>            <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>        }</div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>        m_membershipBadgeRefreshSeconds = 0.0;</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span> </div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>        std::string tier = <span class="stringliteral">&quot;Core&quot;</span>;</div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        std::string status = <span class="stringliteral">&quot;Signed out&quot;</span>;</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        <span class="keywordtype">bool</span> verified = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span><span class="preprocessor">#if defined(AESTRA_HAS_LICENSE_GATE) &amp;&amp; AESTRA_HAS_LICENSE_GATE</span></div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>        Aestra::License::EntitlementStore entitlements;</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>        Aestra::License::LocalAccountCache accountCache;</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>        Aestra::License::AccountSession accountSession(accountCache, entitlements);</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>        Aestra::License::MembershipViewModel viewModel(accountSession, entitlements);</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>        <span class="keyword">const</span> Aestra::License::MembershipViewState state = viewModel.current();</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>        tier = Aestra::License::membershipBadgeTierText(state);</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>        status = Aestra::License::membershipBadgeStatusText(state);</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>        verified = state.verified;</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>        m_rootCustomWindow-&gt;getTitleBar()-&gt;setMembershipBadge(tier, status, verified);</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    }</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>};</div>
 </div>
-<div class="ttc" id="aclassAestraContent_html"><div class="ttname"><a href="../../db/d60/classAestraContent.html">AestraContent</a></div><div class="ttdoc">Main content area for Aestra.</div><div class="ttdef"><b>Definition</b> <a href="../../dc/dd6/AestraContent_8h_source.html#l00095">AestraContent.h:95</a></div></div>
-<div class="ttc" id="aclassAestraRootComponent_html"><div class="ttname"><a href="../../d8/db1/classAestraRootComponent.html">AestraRootComponent</a></div><div class="ttdoc">Root component that contains the custom window.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d28/AestraRootComponent_8h_source.html#l00027">AestraRootComponent.h:27</a></div></div>
+<div class="ttc" id="aclassAestraContent_html"><div class="ttname"><a href="../../db/d60/classAestraContent.html">AestraContent</a></div><div class="ttdoc">Main content area for Aestra.</div><div class="ttdef"><b>Definition</b> <a href="../../dc/dd6/AestraContent_8h_source.html#l00104">AestraContent.h:104</a></div></div>
+<div class="ttc" id="aclassAestraRootComponent_html"><div class="ttname"><a href="../../d8/db1/classAestraRootComponent.html">AestraRootComponent</a></div><div class="ttdoc">Root component that contains the custom window.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d28/AestraRootComponent_8h_source.html#l00028">AestraRootComponent.h:28</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIComponent_html"><div class="ttname"><a href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></div><div class="ttdoc">Base class for all UI components in the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d36/NUIComponent_8h_source.html#l00043">NUIComponent.h:43</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a></div><div class="ttdoc">Abstract renderer interface for the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d2d/NUIRenderer_8h_source.html#l00023">NUIRenderer.h:23</a></div></div>
-<div class="ttc" id="astructAestraUI_1_1NUIKeyEvent_html"><div class="ttname"><a href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00437">NUITypes.h:437</a></div></div>
+<div class="ttc" id="astructAestraUI_1_1NUIKeyEvent_html"><div class="ttname"><a href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00450">NUITypes.h:450</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIRect_html"><div class="ttname"><a href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00058">NUITypes.h:58</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

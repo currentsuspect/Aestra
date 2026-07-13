@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::EffectChain::prepare" name="Aestra::Audio::EffectChain::prepare">
+<area shape="rect" id="Node000001" title="Prepare for processing." alt="" coords="241,5,432,45"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a9274902c21392bdc5757a71c146978fe" title="Load an effect plugin onto the selected track." alt="" coords="5,5,193,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="228,28,194,28,194,23,228,23"/>
+</map>

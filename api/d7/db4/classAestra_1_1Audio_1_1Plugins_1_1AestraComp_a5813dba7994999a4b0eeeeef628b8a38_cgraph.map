@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::Plugins::AestraComp::activate" name="Aestra::Audio::Plugins::AestraComp::activate">
+<area shape="rect" id="Node000001" title="Activate the plugin for processing Called when audio engine starts or plugin is enabled." alt="" coords="5,5,176,45"/>
+<area shape="rect" id="Node000002" href="$d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html#a6d833467d0dec03356467e757b411b2b" title="Non&#45;RT: design both stage kernels (factor&#45;independent)." alt="" coords="224,5,444,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="176,23,210,23,210,28,176,28"/>
+<area shape="rect" id="Node000003" href="$d0/d72/classAestra_1_1Audio_1_1DSP_1_1HalfbandStage.html#af0c00e1a6d3fd776f0c322d2cb7e5c50" title="Compute the Kaiser&#45;windowed&#45;sinc halfband kernel." alt="" coords="492,5,669,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="444,23,478,23,478,28,444,28"/>
+</map>

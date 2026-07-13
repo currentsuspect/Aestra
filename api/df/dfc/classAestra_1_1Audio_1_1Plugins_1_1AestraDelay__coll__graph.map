@@ -1,7 +1,7 @@
 <map id="Aestra::Audio::Plugins::AestraDelay" name="Aestra::Audio::Plugins::AestraDelay">
-<area shape="rect" id="Node000001" title=" " alt="" coords="115,137,279,177"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="115,152,279,192"/>
 <area shape="rect" id="Node000002" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="5,5,221,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="130,41,188,136,183,138,125,44"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="128,41,189,150,185,153,124,44"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="245,5,320,31"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="270,44,211,138,207,136,266,41"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="272,44,210,153,206,150,267,41"/>
 </map>

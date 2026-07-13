@@ -1,0 +1,8 @@
+<map id="Aestra::Audio::TrackManager::buildAndShareSlotMap" name="Aestra::Audio::TrackManager::buildAndShareSlotMap">
+<area shape="rect" id="Node000001" title="Build a channel slot map from the current channel list and share it." alt="" coords="509,5,717,45"/>
+<area shape="rect" id="Node000002" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="252,5,461,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="495,28,462,28,462,23,495,23"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,5,204,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="238,37,204,37,204,31,238,32"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="217,14,252,14,252,19,217,19"/>
+</map>

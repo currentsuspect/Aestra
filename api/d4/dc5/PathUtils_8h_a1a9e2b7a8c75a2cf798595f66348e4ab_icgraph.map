@@ -1,14 +1,17 @@
 <map id="Aestra::Audio::utf8ToWide" name="Aestra::Audio::utf8ToWide">
-<area shape="rect" id="Node000001" title="Convert a UTF&#45;8 string to wide string (UTF&#45;16 on Windows)" alt="" coords="752,54,943,79"/>
-<area shape="poly" id="edge7_Node000001_Node000001" title=" " alt="" coords="890,45,878,36,847,33,822,35,809,40,806,45,813,52,809,56,801,46,805,36,821,30,847,27,880,31,893,41"/>
-<area shape="rect" id="Node000002" href="$d4/dc5/PathUtils_8h.html#a1567842971c631789eeeb0e992be5fa8" title="Convert a raw string path to wide string for Windows APIs." alt="" coords="520,47,704,87"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="738,69,704,69,704,64,738,64"/>
-<area shape="poly" id="edge6_Node000002_Node000002" title=" " alt="" coords="652,35,638,28,612,25,589,27,576,32,571,38,573,46,568,47,566,37,573,28,588,22,612,20,639,23,654,30"/>
-<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="255,5,454,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="506,52,454,44,455,39,507,47"/>
-<area shape="rect" id="Node000004" href="$d4/dc5/PathUtils_8h.html#a01048ff9ba43efef7b20013a2b57ff0c" title="Get a std::filesystem::path from a raw string, handling Unicode properly." alt="" coords="237,94,472,119"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="507,86,437,97,436,91,506,80"/>
-<area shape="poly" id="edge4_Node000004_Node000004" title=" " alt="" coords="400,85,398,80,389,76,355,73,327,75,312,80,310,85,317,92,313,96,304,86,309,76,326,69,355,67,391,71,401,76,405,82"/>
-<area shape="rect" id="Node000005" href="$dc/d73/classAestra_1_1Audio_1_1StreamingDecoder.html#a6e7bd9cfc49510d7394c436ae7ea6d74" title="Start streaming a file." alt="" coords="5,87,189,127"/>
-<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="224,109,189,109,189,104,224,104"/>
+<area shape="rect" id="Node000001" title="Convert a UTF&#45;8 string to wide string (UTF&#45;16 on Windows)" alt="" coords="777,54,968,79"/>
+<area shape="poly" id="edge9_Node000001_Node000001" title=" " alt="" coords="915,45,904,36,873,33,848,35,834,40,831,45,838,52,835,56,826,46,831,36,846,30,873,27,906,31,918,41"/>
+<area shape="rect" id="Node000002" href="$d4/dc5/PathUtils_8h.html#a1567842971c631789eeeb0e992be5fa8" title="Convert a raw string path to wide string for Windows APIs." alt="" coords="545,47,729,87"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="763,69,730,69,730,64,763,64"/>
+<area shape="poly" id="edge8_Node000002_Node000002" title=" " alt="" coords="677,35,663,28,637,25,615,27,601,32,596,38,599,46,594,47,591,37,598,28,614,22,637,20,665,23,680,30"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="281,5,479,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="531,52,479,44,480,39,532,47"/>
+<area shape="rect" id="Node000005" href="$d4/dc5/PathUtils_8h.html#a01048ff9ba43efef7b20013a2b57ff0c" title="Get a std::filesystem::path from a raw string, handling Unicode properly." alt="" coords="263,94,497,119"/>
+<area shape="poly" id="edge5_Node000002_Node000005" title=" " alt="" coords="532,86,462,97,462,91,531,80"/>
+<area shape="rect" id="Node000004" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="5,5,215,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="267,37,215,37,215,31,267,32"/>
+<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="229,14,281,14,281,19,229,19"/>
+<area shape="poly" id="edge6_Node000005_Node000005" title=" " alt="" coords="426,85,423,80,415,76,380,73,352,75,338,80,335,85,342,92,339,96,330,86,334,76,351,69,380,67,416,71,426,76,430,82"/>
+<area shape="rect" id="Node000006" href="$dc/d73/classAestra_1_1Audio_1_1StreamingDecoder.html#a6e7bd9cfc49510d7394c436ae7ea6d74" title="Start streaming a file." alt="" coords="18,87,202,127"/>
+<area shape="poly" id="edge7_Node000005_Node000006" title=" " alt="" coords="249,109,202,109,202,104,249,104"/>
 </map>

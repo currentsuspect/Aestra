@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::AestraVerb::process" name="Aestra::Audio::Plugins::AestraVerb::process">
+<area shape="rect" id="Node000001" title="Process audio through the plugin." alt="" coords="5,5,169,45"/>
+<area shape="rect" id="Node000002" href="$de/dee/namespaceAestra_1_1Audio_1_1FastMath.html#a602759081e528cd637b8e1991089dde5" title="Fast sine approximation using 5th&#45;order polynomial." alt="" coords="217,5,393,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="169,23,204,23,204,28,169,28"/>
+</map>

@@ -13,7 +13,7 @@ var searchData=
   ['renametrackcommand_10',['RenameTrackCommand',['../dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html',1,'Aestra::Audio']]],
   ['rendertrack_11',['RenderTrack',['../d1/df7/structAestra_1_1Audio_1_1RenderTrack.html',1,'Aestra::Audio']]],
   ['resizenotecommand_12',['ResizeNoteCommand',['../d1/de2/classAestra_1_1Audio_1_1ResizeNoteCommand.html',1,'Aestra::Audio']]],
-  ['result_13',['result',['../d5/dc1/structAestra_1_1Audio_1_1AudioExporter_1_1Result.html',1,'Aestra::Audio::AudioExporter::Result'],['../d8/d7e/structTakeManager_1_1Result.html',1,'TakeManager::Result']]],
+  ['result_13',['result',['../d5/dc1/structAestra_1_1Audio_1_1AudioExporter_1_1Result.html',1,'Aestra::Audio::AudioExporter::Result'],['../d8/da7/structAestra_1_1Audio_1_1ClipPrefilterService_1_1Result.html',1,'Aestra::Audio::ClipPrefilterService::Result'],['../d8/d7e/structTakeManager_1_1Result.html',1,'TakeManager::Result']]],
   ['rewindbutton_14',['RewindButton',['../de/d35/classAestraUI_1_1RewindButton.html',1,'AestraUI']]],
   ['rtaudiobackend_15',['RtAudioBackend',['../d5/d20/classAestra_1_1Audio_1_1RtAudioBackend.html',1,'Aestra::Audio']]],
   ['rtaudiodriver_16',['RtAudioDriver',['../d1/d81/classAestra_1_1Audio_1_1RtAudioDriver.html',1,'Aestra::Audio']]],

@@ -125,8 +125,8 @@
 <g id="edge7_Node000001_Node000007" class="edge">
 <title>Node1&#45;&gt;Node7</title>
 <g id="a_edge7_Node000001_Node000007"><a xlink:title=" ">
-<path fill="none" stroke="#63b8ff" d="M444.15,-102.78C423.79,-83.67 392.08,-56.63 360,-40 352.68,-36.21 344.71,-32.91 336.67,-30.07"/>
-<polygon fill="#63b8ff" stroke="#63b8ff" points="441.98,-105.55 451.63,-109.93 446.82,-100.49 441.98,-105.55"/>
+<path fill="none" stroke="#63b8ff" d="M444.51,-102.68C424.22,-83.26 392.41,-55.7 360,-39 353.39,-35.59 346.23,-32.62 338.96,-30.04"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="442.09,-105.21 451.7,-109.68 446.98,-100.2 442.09,-105.21"/>
 </a>
 </g>
 </g>
@@ -136,6 +136,24 @@
 <g id="a_edge6_Node000006_Node000003"><a xlink:title=" ">
 <path fill="none" stroke="#63b8ff" d="M211.15,-69.9C202.63,-72.01 194.05,-74.38 186,-77 153.11,-87.7 116.62,-104.7 95.03,-115.34"/>
 <polygon fill="#63b8ff" stroke="#63b8ff" points="212.16,-73.25 221.08,-67.54 210.54,-66.44 212.16,-73.25"/>
+</a>
+</g>
+</g>
+<!-- Node8 -->
+<g id="Node000008" class="node">
+<title>Node8</title>
+<g id="a_Node000008"><a xlink:href="../../db/d60/classAestraContent.html#a9cd2ff0a44640c8c7c68543fc33f56d1" target="_top" xlink:title="Advance workspace state and child&#45;panel updates.">
+<polygon fill="white" stroke="#666666" points="145,-24.5 5,-24.5 5,-5.5 145,-5.5 145,-24.5"/>
+<text text-anchor="middle" x="75" y="-12.5" font-family="Helvetica,sans-Serif" font-size="10.00">AestraContent::onUpdate</text>
+</a>
+</g>
+</g>
+<!-- Node7&#45;&gt;Node8 -->
+<g id="edge8_Node000007_Node000008" class="edge">
+<title>Node7&#45;&gt;Node8</title>
+<g id="a_edge8_Node000007_Node000008"><a xlink:title=" ">
+<path fill="none" stroke="#63b8ff" d="M184.74,-15C171.48,-15 157.96,-15 145.15,-15"/>
+<polygon fill="#63b8ff" stroke="#63b8ff" points="184.82,-18.5 194.82,-15 184.82,-11.5 184.82,-18.5"/>
 </a>
 </g>
 </g>

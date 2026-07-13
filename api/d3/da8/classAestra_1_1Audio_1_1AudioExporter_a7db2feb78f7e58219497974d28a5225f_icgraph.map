@@ -1,5 +1,6 @@
 <map id="Aestra::Audio::AudioExporter::bounceToWav" name="Aestra::Audio::AudioExporter::bounceToWav">
 <area shape="rect" id="Node000001" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="252,5,461,45"/>
 <area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,5,204,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="238,28,204,28,204,23,238,23"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="238,37,204,37,204,31,238,32"/>
+<area shape="poly" id="edge2_Node000002_Node000001" title=" " alt="" coords="217,14,252,14,252,19,217,19"/>
 </map>

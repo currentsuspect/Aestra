@@ -102,16 +102,16 @@ Public Member Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>High-quality clip resampler using polyphase Sinc64. </p>
-<p>Provides sample-accurate resampling for clip playback with pitch shifting. Uses the optimized Sinc64Turbo polyphase filter bank for mastering-grade quality.</p>
+<p>Provides sample-accurate resampling for clip playback with pitch shifting. Uses the optimized Sinc64Turbo polyphase filter bank (see the quality note on ClipResamplingQuality above for measured performance).</p>
 <p>Usage: </p><div class="fragment"><div class="line"><a class="code hl_class" href="../../d5/da8/classAestra_1_1Audio_1_1ClipResampler.html">ClipResampler</a> resampler;</div>
 <div class="line">resampler.<a class="code hl_function" href="../../d5/da8/classAestra_1_1Audio_1_1ClipResampler.html#ab23d39e97455a48ffd1d92ee1921a0cb">setQuality</a>(ClipResamplingQuality::High);</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">float</span> sample = resampler.<a class="code hl_function" href="../../d5/da8/classAestra_1_1Audio_1_1ClipResampler.html#a2d5a0e8cf4a79d577a2077b263992182">getSample</a>(audioData, numFrames, 2, sourcePosition);</div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1ClipResampler_html"><div class="ttname"><a href="../../d5/da8/classAestra_1_1Audio_1_1ClipResampler.html">Aestra::Audio::ClipResampler</a></div><div class="ttdoc">High-quality clip resampler using polyphase Sinc64.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/db5/ClipResampler_8h_source.html#l00037">ClipResampler.h:37</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1ClipResampler_html_a2d5a0e8cf4a79d577a2077b263992182"><div class="ttname"><a href="../../d5/da8/classAestra_1_1Audio_1_1ClipResampler.html#a2d5a0e8cf4a79d577a2077b263992182">Aestra::Audio::ClipResampler::getSample</a></div><div class="ttdeci">float getSample(const float *data, int64_t numFrames, uint32_t numChannels, double position, uint32_t channel) const noexcept</div><div class="ttdoc">Get a resampled sample from interleaved audio data.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/db5/ClipResampler_8h_source.html#l00058">ClipResampler.h:58</a></div></div>
-<div class="ttc" id="aclassAestra_1_1Audio_1_1ClipResampler_html_ab23d39e97455a48ffd1d92ee1921a0cb"><div class="ttname"><a href="../../d5/da8/classAestra_1_1Audio_1_1ClipResampler.html#ab23d39e97455a48ffd1d92ee1921a0cb">Aestra::Audio::ClipResampler::setQuality</a></div><div class="ttdeci">void setQuality(ClipResamplingQuality quality) noexcept</div><div class="ttdoc">Set resampling quality.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/db5/ClipResampler_8h_source.html#l00044">ClipResampler.h:44</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1ClipResampler_html"><div class="ttname"><a href="../../d5/da8/classAestra_1_1Audio_1_1ClipResampler.html">Aestra::Audio::ClipResampler</a></div><div class="ttdoc">High-quality clip resampler using polyphase Sinc64.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/db5/ClipResampler_8h_source.html#l00046">ClipResampler.h:46</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1ClipResampler_html_a2d5a0e8cf4a79d577a2077b263992182"><div class="ttname"><a href="../../d5/da8/classAestra_1_1Audio_1_1ClipResampler.html#a2d5a0e8cf4a79d577a2077b263992182">Aestra::Audio::ClipResampler::getSample</a></div><div class="ttdeci">float getSample(const float *data, int64_t numFrames, uint32_t numChannels, double position, uint32_t channel) const noexcept</div><div class="ttdoc">Get a resampled sample from interleaved audio data.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/db5/ClipResampler_8h_source.html#l00067">ClipResampler.h:67</a></div></div>
+<div class="ttc" id="aclassAestra_1_1Audio_1_1ClipResampler_html_ab23d39e97455a48ffd1d92ee1921a0cb"><div class="ttname"><a href="../../d5/da8/classAestra_1_1Audio_1_1ClipResampler.html#ab23d39e97455a48ffd1d92ee1921a0cb">Aestra::Audio::ClipResampler::setQuality</a></div><div class="ttdeci">void setQuality(ClipResamplingQuality quality) noexcept</div><div class="ttdoc">Set resampling quality.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/db5/ClipResampler_8h_source.html#l00053">ClipResampler.h:53</a></div></div>
 </div><!-- fragment --> 
-<p class="definition">Definition at line <a class="el" href="../../d8/db5/ClipResampler_8h_source.html#l00037">37</a> of file <a class="el" href="../../d8/db5/ClipResampler_8h_source.html">ClipResampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/db5/ClipResampler_8h_source.html#l00046">46</a> of file <a class="el" href="../../d8/db5/ClipResampler_8h_source.html">ClipResampler.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
 <a id="ab6586df0e100c555672a5e39f8f2b91f" name="ab6586df0e100c555672a5e39f8f2b91f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab6586df0e100c555672a5e39f8f2b91f">&#9670;&#160;</a></span>getQuality()</h2>
@@ -136,7 +136,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/db5/ClipResampler_8h_source.html#l00046">46</a> of file <a class="el" href="../../d8/db5/ClipResampler_8h_source.html">ClipResampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/db5/ClipResampler_8h_source.html#l00055">55</a> of file <a class="el" href="../../d8/db5/ClipResampler_8h_source.html">ClipResampler.h</a>.</p>
 
 </div>
 </div>
@@ -205,9 +205,9 @@ Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Interpolated sample value </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/db5/ClipResampler_8h_source.html#l00058">58</a> of file <a class="el" href="../../d8/db5/ClipResampler_8h_source.html">ClipResampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/db5/ClipResampler_8h_source.html#l00067">67</a> of file <a class="el" href="../../d8/db5/ClipResampler_8h_source.html">ClipResampler.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/d66/AuditionEngine_8cpp_source.html#l00438">Aestra::Audio::AuditionEngine::processBlock()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/d66/AuditionEngine_8cpp_source.html#l00439">Aestra::Audio::AuditionEngine::processBlock()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -272,7 +272,7 @@ Public Member Functions</h2></td></tr>
 
 <p>Get stereo sample pair (optimized for stereo clips) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/db5/ClipResampler_8h_source.html#l00084">84</a> of file <a class="el" href="../../d8/db5/ClipResampler_8h_source.html">ClipResampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/db5/ClipResampler_8h_source.html#l00093">93</a> of file <a class="el" href="../../d8/db5/ClipResampler_8h_source.html">ClipResampler.h</a>.</p>
 
 </div>
 </div>
@@ -302,9 +302,9 @@ Public Member Functions</h2></td></tr>
 
 <p>Set resampling quality. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/db5/ClipResampler_8h_source.html#l00044">44</a> of file <a class="el" href="../../d8/db5/ClipResampler_8h_source.html">ClipResampler.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/db5/ClipResampler_8h_source.html#l00053">53</a> of file <a class="el" href="../../d8/db5/ClipResampler_8h_source.html">ClipResampler.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/d66/AuditionEngine_8cpp_source.html#l00438">Aestra::Audio::AuditionEngine::processBlock()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/d66/AuditionEngine_8cpp_source.html#l00439">Aestra::Audio::AuditionEngine::processBlock()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">

@@ -126,6 +126,19 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:adb3f809e031270ad8af493351dfdee7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a012a1c5070a29ad537489b28145597ed" id="r_a012a1c5070a29ad537489b28145597ed"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/classAestra_1_1Audio_1_1ClipSource.html#a012a1c5070a29ad537489b28145597ed">setWaveformCache</a> (std::shared_ptr&lt; <a class="el" href="../../d7/dae/classAestra_1_1Audio_1_1WaveformCache.html">WaveformCache</a> &gt; cache)</td></tr>
 <tr class="separator:a012a1c5070a29ad537489b28145597ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8410af642639615e40f590ab8d1516a3" id="r_a8410af642639615e40f590ab8d1516a3"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; const <a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html">AudioBufferData</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/classAestra_1_1Audio_1_1ClipSource.html#a8410af642639615e40f590ab8d1516a3">getFilteredBufferFor</a> (uint32_t targetRate) const</td></tr>
+<tr class="memdesc:a8410af642639615e40f590ab8d1516a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Filtered copy valid for <code>targetRate</code> and the CURRENT buffer content, or null.  <br /></td></tr>
+<tr class="separator:a8410af642639615e40f590ab8d1516a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a10d0b1a25c2536af25f5fb9f19f516f4" id="r_a10d0b1a25c2536af25f5fb9f19f516f4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/classAestra_1_1Audio_1_1ClipSource.html#a10d0b1a25c2536af25f5fb9f19f516f4">setFilteredVariant</a> (std::shared_ptr&lt; <a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html">AudioBufferData</a> &gt; filtered, uint32_t targetRate, uint64_t contentRevision, uint32_t specVersion)</td></tr>
+<tr class="separator:a10d0b1a25c2536af25f5fb9f19f516f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6b7c997ffcdebe99ddc53c93497e01f3" id="r_a6b7c997ffcdebe99ddc53c93497e01f3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/classAestra_1_1Audio_1_1ClipSource.html#a6b7c997ffcdebe99ddc53c93497e01f3">clearFilteredVariant</a> ()</td></tr>
+<tr class="separator:a6b7c997ffcdebe99ddc53c93497e01f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a71f7d23d7dc9bcbd7c77a4c1b5f90cc1" id="r_a71f7d23d7dc9bcbd7c77a4c1b5f90cc1"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/classAestra_1_1Audio_1_1ClipSource.html#a71f7d23d7dc9bcbd7c77a4c1b5f90cc1">filteredVariantRate</a> () const</td></tr>
+<tr class="separator:a71f7d23d7dc9bcbd7c77a4c1b5f90cc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a19d81462b5aa117ce8c777a560d8e3cc" id="r_a19d81462b5aa117ce8c777a560d8e3cc"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/classAestra_1_1Audio_1_1ClipSource.html#a19d81462b5aa117ce8c777a560d8e3cc">filteredVariantSpec</a> () const</td></tr>
+<tr class="separator:a19d81462b5aa117ce8c777a560d8e3cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ac8115a248b87952bc79db1c29d6df7" id="r_a1ac8115a248b87952bc79db1c29d6df7"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/classAestra_1_1Audio_1_1ClipSource.html#a1ac8115a248b87952bc79db1c29d6df7">hasFilteredVariant</a> () const</td></tr>
+<tr class="separator:a1ac8115a248b87952bc79db1c29d6df7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Audio source for clips. </p>
@@ -171,6 +184,87 @@ Public Member Functions</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a6b7c997ffcdebe99ddc53c93497e01f3" name="a6b7c997ffcdebe99ddc53c93497e01f3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6b7c997ffcdebe99ddc53c93497e01f3">&#9670;&#160;</a></span>clearFilteredVariant()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::ClipSource::clearFilteredVariant </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00120">120</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+</div>
+</div>
+<a id="a71f7d23d7dc9bcbd7c77a4c1b5f90cc1" name="a71f7d23d7dc9bcbd7c77a4c1b5f90cc1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a71f7d23d7dc9bcbd7c77a4c1b5f90cc1">&#9670;&#160;</a></span>filteredVariantRate()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Aestra::Audio::ClipSource::filteredVariantRate </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00127">127</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+</div>
+</div>
+<a id="a19d81462b5aa117ce8c777a560d8e3cc" name="a19d81462b5aa117ce8c777a560d8e3cc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a19d81462b5aa117ce8c777a560d8e3cc">&#9670;&#160;</a></span>filteredVariantSpec()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t Aestra::Audio::ClipSource::filteredVariantSpec </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00128">128</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+</div>
+</div>
 <a id="aa95639cbc7c2604658876f51249bd3c0" name="aa95639cbc7c2604658876f51249bd3c0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa95639cbc7c2604658876f51249bd3c0">&#9670;&#160;</a></span>getBuffer()</h2>
 
@@ -276,6 +370,45 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00067">67</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+</div>
+</div>
+<a id="a8410af642639615e40f590ab8d1516a3" name="a8410af642639615e40f590ab8d1516a3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8410af642639615e40f590ab8d1516a3">&#9670;&#160;</a></span>getFilteredBufferFor()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::shared_ptr&lt; const <a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html">AudioBufferData</a> &gt; Aestra::Audio::ClipSource::getFilteredBufferFor </td>
+          <td>(</td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>targetRate</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Filtered copy valid for <code>targetRate</code> and the CURRENT buffer content, or null. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00104">104</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d1/d5a/TrackManager_8cpp_source.html#l00021">Aestra::Audio::TrackManager::ensureClipPrefilters()</a>.</p>
+<div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-0-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-0-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../df/dff/classAestra_1_1Audio_1_1ClipSource_a8410af642639615e40f590ab8d1516a3_icgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
 
 </div>
 </div>
@@ -491,7 +624,34 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00087">87</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00088">88</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+</div>
+</div>
+<a id="a1ac8115a248b87952bc79db1c29d6df7" name="a1ac8115a248b87952bc79db1c29d6df7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1ac8115a248b87952bc79db1c29d6df7">&#9670;&#160;</a></span>hasFilteredVariant()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::ClipSource::hasFilteredVariant </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00129">129</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
 
 </div>
 </div>
@@ -605,6 +765,56 @@ Public Member Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a10d0b1a25c2536af25f5fb9f19f516f4" name="a10d0b1a25c2536af25f5fb9f19f516f4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a10d0b1a25c2536af25f5fb9f19f516f4">&#9670;&#160;</a></span>setFilteredVariant()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::ClipSource::setFilteredVariant </td>
+          <td>(</td>
+          <td class="paramtype">std::shared_ptr&lt; <a class="el" href="../../d0/d3e/structAestra_1_1Audio_1_1AudioBufferData.html">AudioBufferData</a> &gt;&#160;</td>
+          <td class="paramname"><em>filtered</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>targetRate</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>contentRevision</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>specVersion</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00112">112</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+
+</div>
+</div>
 <a id="a9781290d42097eeb1d27fd8f4216fc93" name="a9781290d42097eeb1d27fd8f4216fc93"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a9781290d42097eeb1d27fd8f4216fc93">&#9670;&#160;</a></span>setName()</h2>
 
@@ -657,7 +867,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00088">88</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d7d/ClipSource_8h_source.html#l00089">89</a> of file <a class="el" href="../../de/d7d/ClipSource_8h_source.html">ClipSource.h</a>.</p>
 
 </div>
 </div>

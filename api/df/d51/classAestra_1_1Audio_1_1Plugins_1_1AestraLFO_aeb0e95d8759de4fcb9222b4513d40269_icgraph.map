@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::AestraLFO::noteDivisionMultiplier" name="Aestra::Audio::Plugins::AestraLFO::noteDivisionMultiplier">
+<area shape="rect" id="Node000001" title="Division length in beats (quarter notes), matching AestraDelay&#39;s table." alt="" coords="217,5,467,45"/>
+<area shape="rect" id="Node000002" href="$df/d51/classAestra_1_1Audio_1_1Plugins_1_1AestraLFO.html#a2330d1a7738747a75f894ceb2e973a94" title="Process audio through the plugin." alt="" coords="5,5,169,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,28,170,28,170,23,204,23"/>
+</map>

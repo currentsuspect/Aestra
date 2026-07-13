@@ -24,7 +24,7 @@ var searchData=
   ['eqstateblobv6_21',['EQStateBlobV6',['../d6/d79/structAestra_1_1Audio_1_1Plugins_1_1EQStateBlobV6.html',1,'Aestra::Audio::Plugins']]],
   ['eqstateblobv7_22',['EQStateBlobV7',['../d2/d1b/structAestra_1_1Audio_1_1Plugins_1_1EQStateBlobV7.html',1,'Aestra::Audio::Plugins']]],
   ['eqstateblobv8_23',['EQStateBlobV8',['../d0/d72/structAestra_1_1Audio_1_1Plugins_1_1EQStateBlobV8.html',1,'Aestra::Audio::Plugins']]],
-  ['event_24',['Event',['../dc/d7e/structAestra_1_1Audio_1_1MidiBuffer_1_1Event.html',1,'Aestra::Audio::MidiBuffer']]],
+  ['event_24',['event',['../d5/dfd/structAestra_1_1Audio_1_1LiveMidiQueue_1_1Event.html',1,'Aestra::Audio::LiveMidiQueue::Event'],['../dc/d7e/structAestra_1_1Audio_1_1MidiBuffer_1_1Event.html',1,'Aestra::Audio::MidiBuffer::Event']]],
   ['exportdialog_25',['ExportDialog',['../da/d6d/classExportDialog.html',1,'']]],
   ['exportjobresult_26',['ExportJobResult',['../d2/d13/structExportDialog_1_1ExportJobResult.html',1,'ExportDialog']]]
 ];

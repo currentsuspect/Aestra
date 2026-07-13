@@ -1,5 +1,7 @@
 <map id="AestraUI::NUIRenderer::fillRoundedRect" name="AestraUI::NUIRenderer::fillRoundedRect">
-<area shape="rect" id="Node000001" title="Draw a filled rounded rectangle." alt="" coords="239,5,408,45"/>
-<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a3a105b59305ebc04e7f57f6f3ab61b06" title="Render the workspace and active overlays." alt="" coords="5,13,191,38"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="225,28,191,28,191,23,225,23"/>
+<area shape="rect" id="Node000001" title="Draw a filled rounded rectangle." alt="" coords="239,27,408,67"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#a3a105b59305ebc04e7f57f6f3ab61b06" title="Render the workspace and active overlays." alt="" coords="5,5,191,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="225,37,190,33,191,27,226,32"/>
+<area shape="rect" id="Node000003" href="$d5/d99/classAestraUI_1_1FileBrowser.html#ab3728bdebc18bd1dcfc38413229e7a68" title="Hover washes drawn per&#45;frame OUTSIDE the FBO cache, so hover changes never force a cache rebuild (see..." alt="" coords="13,55,183,95"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="225,62,183,67,183,62,225,57"/>
 </map>

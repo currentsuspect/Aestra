@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::Plugins::AestraOTT::setParameter" name="Aestra::Audio::Plugins::AestraOTT::setParameter">
+<area shape="rect" id="Node000001" title="Set parameter value (normalized 0&#45;1)" alt="" coords="220,5,412,45"/>
+<area shape="rect" id="Node000002" href="$d7/d6c/classAestra_1_1Audio_1_1Plugins_1_1AestraOTT.html#a9735a69bbf4cb04c34ef4c6754ea13d3" title="Load plugin state from binary data." alt="" coords="5,5,172,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="206,28,172,28,172,23,206,23"/>
+</map>

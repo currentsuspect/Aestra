@@ -1,9 +1,19 @@
 <map id="AestraContent::onUpdate" name="AestraContent::onUpdate">
-<area shape="rect" id="Node000001" title="Advance workspace state and child&#45;panel updates." alt="" coords="5,70,192,95"/>
+<area shape="rect" id="Node000001" title="Advance workspace state and child&#45;panel updates." alt="" coords="5,170,192,195"/>
 <area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4a4c5a06259215ef717cd8505594bb51" title="Copy recent waveform history into an interleaved output buffer." alt="" coords="258,5,457,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="156,67,253,46,254,51,157,73"/>
-<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#a6d6a3b71a388ff56b576ca03c97be758" title="Get the shared track manager." alt="" coords="240,70,475,95"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="192,80,226,80,226,85,192,85"/>
-<area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a51f83d663477adc0b47f634111b3641f" title="Get the waveform&#45;history buffer capacity in frames." alt="" coords="246,120,469,160"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="157,93,254,114,253,120,156,98"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="109,168,161,114,198,82,239,55,252,48,255,53,241,60,201,86,164,117,112,172"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a4b4cbe73ff5f6ca57929c0bf12809de0" title="Current transport duck gain caused by audible preview playback." alt="" coords="258,69,457,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="125,168,177,144,239,119,263,111,265,116,241,124,179,149,127,172"/>
+<area shape="rect" id="Node000004" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a1d746766f9e5abfa38840eb01a1d7ee0" title="Source currently responsible for the published preview duck gain." alt="" coords="258,133,457,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="192,169,244,163,245,169,192,175"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a6d6a3b71a388ff56b576ca03c97be758" title="Get the shared track manager." alt="" coords="240,198,475,223"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="192,190,227,194,226,199,192,195"/>
+<area shape="rect" id="Node000006" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a51f83d663477adc0b47f634111b3641f" title="Get the waveform&#45;history buffer capacity in frames." alt="" coords="246,248,469,288"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="133,193,241,232,270,241,269,247,239,237,131,198"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#aa8ffca5e396634b441f182a95bc7d687" title="Advance preview&#45;state bookkeeping." alt="" coords="253,312,461,352"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="114,194,166,244,202,273,241,298,256,305,254,309,239,302,199,277,162,248,110,198"/>
+<area shape="rect" id="Node000008" href="$db/d60/classAestraContent.html#a148523f2593cf55bbf1087010ba6bcc1" title="Stop the active file&#45;browser preview." alt="" coords="537,280,728,320"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="461,317,524,310,524,315,462,323"/>
+<area shape="rect" id="Node000009" href="$db/d60/classAestraContent.html#a2f4207ec65ca602457e5020c383db27a" title="Update the preview playhead visible in the UI." alt="" coords="523,344,743,384"/>
+<area shape="poly" id="edge8_Node000007_Node000009" title=" " alt="" coords="462,341,509,347,509,352,461,347"/>
 </map>

@@ -1,21 +1,3 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="Node000000" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="5,269,221,294"/>
-<area shape="rect" id="Node000001" href="$d8/d09/classAestra_1_1Audio_1_1CLAPPluginInstance.html" title="CLAP plugin instance implementation." alt="" coords="277,5,467,45"/>
-<area shape="poly" id="edge41_Node000000_Node000001" title=" " alt="" coords="123,255,144,212,176,158,217,103,268,55,288,43,291,48,271,59,221,106,180,161,149,214,128,257"/>
-<area shape="rect" id="Node000002" href="$d6/d29/classAestra_1_1Audio_1_1OutOfProcessPluginInstance.html" title=" " alt="" coords="269,69,475,109"/>
-<area shape="poly" id="edge42_Node000000_Node000002" title=" " alt="" coords="129,256,186,188,225,151,268,119,292,107,294,112,271,124,228,155,190,192,134,259"/>
-<area shape="rect" id="Node000003" href="$d7/db4/classAestra_1_1Audio_1_1Plugins_1_1AestraComp.html" title=" " alt="" coords="290,133,454,173"/>
-<area shape="poly" id="edge43_Node000000_Node000003" title=" " alt="" coords="141,259,199,221,268,183,298,171,300,176,270,188,201,225,144,263"/>
-<area shape="rect" id="Node000004" href="$dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html" title=" " alt="" coords="290,197,454,237"/>
-<area shape="poly" id="edge44_Node000000_Node000004" title=" " alt="" coords="178,263,290,235,291,240,180,268"/>
-<area shape="rect" id="Node000005" href="$d3/d79/classAestra_1_1Audio_1_1Plugins_1_1AestraDrift.html" title=" " alt="" coords="290,261,454,301"/>
-<area shape="poly" id="edge45_Node000000_Node000005" title=" " alt="" coords="235,279,290,279,290,284,235,284"/>
-<area shape="rect" id="Node000006" href="$db/d0e/classAestra_1_1Audio_1_1Plugins_1_1AestraEQ.html" title=" " alt="" coords="290,325,454,365"/>
-<area shape="poly" id="edge46_Node000000_Node000006" title=" " alt="" coords="180,295,291,323,290,328,178,300"/>
-<area shape="rect" id="Node000007" href="$d4/de9/classAestra_1_1Audio_1_1Plugins_1_1AestraVerb.html" title=" " alt="" coords="290,389,454,429"/>
-<area shape="poly" id="edge47_Node000000_Node000007" title=" " alt="" coords="144,300,201,337,270,375,300,387,298,392,268,380,199,342,141,304"/>
-<area shape="rect" id="Node000008" href="$db/dae/classAestra_1_1Audio_1_1Plugins_1_1SamplerPlugin.html" title=" " alt="" coords="290,453,454,493"/>
-<area shape="poly" id="edge48_Node000000_Node000008" title=" " alt="" coords="134,303,190,371,228,407,271,439,294,451,292,456,268,444,225,411,186,374,129,307"/>
-<area shape="rect" id="Node000009" href="$d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html" title="VST3 plugin instance implementation." alt="" coords="277,517,467,557"/>
-<area shape="poly" id="edge49_Node000000_Node000009" title=" " alt="" coords="128,306,149,349,180,402,221,456,271,503,291,515,288,520,268,507,217,460,176,405,144,351,123,308"/>
+<area shape="rect" id="Node000000" href="$d5/dc9/structAestra_1_1Audio_1_1Interpolators_1_1Sinc64Turbo.html" title=" " alt="" coords="5,5,205,45"/>
 </map>

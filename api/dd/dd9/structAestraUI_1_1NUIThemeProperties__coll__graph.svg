@@ -132,13 +132,13 @@ var sectionId = 'dynsection-0';
 <text text-anchor="middle" x="389" y="-577.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey"> durationFast</text>
 <text text-anchor="middle" x="389" y="-566.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">durationNormal</text>
 <text text-anchor="middle" x="389" y="-555.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">durationSlow</text>
-<text text-anchor="middle" x="389" y="-544.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeH1</text>
-<text text-anchor="middle" x="389" y="-533.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeH2</text>
-<text text-anchor="middle" x="389" y="-522.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeH3</text>
-<text text-anchor="middle" x="389" y="-511.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeL</text>
-<text text-anchor="middle" x="389" y="-500.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeM</text>
-<text text-anchor="middle" x="389" y="-489.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeS</text>
-<text text-anchor="middle" x="389" y="-478.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeXL</text>
+<text text-anchor="middle" x="389" y="-544.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeDisplayL</text>
+<text text-anchor="middle" x="389" y="-533.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeDisplayS</text>
+<text text-anchor="middle" x="389" y="-522.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeH1</text>
+<text text-anchor="middle" x="389" y="-511.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeH2</text>
+<text text-anchor="middle" x="389" y="-500.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeH3</text>
+<text text-anchor="middle" x="389" y="-489.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeL</text>
+<text text-anchor="middle" x="389" y="-478.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">fontSizeM</text>
 <text text-anchor="middle" x="389" y="-467.61" font-family="Helvetica,sans-Serif" font-size="10.00" fill="grey">...</text>
 </g>
 <!-- Node3&#45;&gt;Node2 -->

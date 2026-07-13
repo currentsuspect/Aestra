@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::DSP::Oversampler::prepare" name="Aestra::Audio::DSP::Oversampler::prepare">
+<area shape="rect" id="Node000001" title="Non&#45;RT convenience: design kernels and select the factor in one call." alt="" coords="5,37,177,77"/>
+<area shape="rect" id="Node000002" href="$d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html#a6d833467d0dec03356467e757b411b2b" title="Non&#45;RT: design both stage kernels (factor&#45;independent)." alt="" coords="225,5,445,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="177,43,212,39,212,44,178,49"/>
+<area shape="rect" id="Node000004" href="$d5/d6c/classAestra_1_1Audio_1_1DSP_1_1Oversampler.html#a31ee4ab5eace62a620169fa4e9e148f5" title="RT&#45;safe factor switch: selects 1/2/4 (anything else falls back to 1) and resets filter state." alt="" coords="245,69,426,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="178,66,231,73,231,78,177,71"/>
+<area shape="rect" id="Node000003" href="$d0/d72/classAestra_1_1Audio_1_1DSP_1_1HalfbandStage.html#af0c00e1a6d3fd776f0c322d2cb7e5c50" title="Compute the Kaiser&#45;windowed&#45;sinc halfband kernel." alt="" coords="493,5,671,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="445,23,480,23,480,28,445,28"/>
+</map>

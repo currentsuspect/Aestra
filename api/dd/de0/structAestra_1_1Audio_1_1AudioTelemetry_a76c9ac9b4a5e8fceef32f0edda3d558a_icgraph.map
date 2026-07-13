@@ -9,7 +9,8 @@
 <area shape="rect" id="Node000005" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="255,37,464,77"/>
 <area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="501,77,464,73,464,68,501,72"/>
 <area shape="rect" id="Node000007" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="252,101,467,141"/>
-<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="501,107,467,111,467,105,501,101"/>
+<area shape="poly" id="edge7_Node000004_Node000007" title=" " alt="" coords="501,107,467,111,467,105,501,101"/>
 <area shape="rect" id="Node000006" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,37,204,77"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="241,60,204,60,204,55,241,55"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="241,69,204,69,204,63,241,64"/>
+<area shape="poly" id="edge6_Node000006_Node000005" title=" " alt="" coords="218,46,254,46,254,51,218,51"/>
 </map>

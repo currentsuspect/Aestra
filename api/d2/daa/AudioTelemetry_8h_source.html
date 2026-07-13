@@ -99,158 +99,202 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    std::atomic&lt;uint64_t&gt; overruns{0};</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    std::atomic&lt;uint64_t&gt; maxCallbackNs{0};</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>    std::atomic&lt;uint64_t&gt; lastCallbackNs{0};</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    std::atomic&lt;uint64_t&gt; rtAllocationViolations{0};</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    std::atomic&lt;uint64_t&gt; rtLockViolations{0};</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    std::atomic&lt;uint64_t&gt; rtLogViolations{0};</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span> </div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    <span class="comment">// Callback budget context (set from the audio thread wrapper)</span></div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    std::atomic&lt;uint32_t&gt; lastBufferFrames{0};</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    std::atomic&lt;uint32_t&gt; lastSampleRate{0};</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="comment">// Cycle counter calibration (Hz). If 0, callback ns timing may be unavailable.</span></div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    std::atomic&lt;uint64_t&gt; cycleHz{0};</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    std::atomic&lt;int32_t&gt; linuxRtPriorityErrno{0};</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span> </div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <span class="comment">// SRC activity: number of processed blocks that executed resampling work.</span></div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    std::atomic&lt;uint64_t&gt; srcActiveBlocks{0};</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="comment">// Running total + count of timed callbacks, for average callback time.</span></div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    std::atomic&lt;uint64_t&gt; totalCallbackNs{0};</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    std::atomic&lt;uint64_t&gt; timedCallbackCount{0};</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    std::atomic&lt;uint64_t&gt; rtAllocationViolations{0};</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    std::atomic&lt;uint64_t&gt; rtLockViolations{0};</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    std::atomic&lt;uint64_t&gt; rtLogViolations{0};</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    <span class="comment">// Callback budget context (set from the audio thread wrapper)</span></div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    std::atomic&lt;uint32_t&gt; lastBufferFrames{0};</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    std::atomic&lt;uint32_t&gt; lastSampleRate{0};</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <span class="comment">// Cycle counter calibration (Hz). If 0, callback ns timing may be unavailable.</span></div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    std::atomic&lt;uint64_t&gt; cycleHz{0};</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    std::atomic&lt;int32_t&gt; linuxRtPriorityErrno{0};</div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span> </div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="comment">// B-009: Underrun recovery state</span></div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    std::atomic&lt;uint32_t&gt; consecutiveUnderruns{0};      <span class="comment">// Current streak</span></div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    std::atomic&lt;uint32_t&gt; stableFramesSinceRecovery{0}; <span class="comment">// Frames since last underrun</span></div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    std::atomic&lt;bool&gt; inRecoveryMode{<span class="keyword">false</span>};            <span class="comment">// True when recovering</span></div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    std::atomic&lt;uint64_t&gt; recoveryModeActivations{0};   <span class="comment">// Total recovery mode entries</span></div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span> </div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    <span class="comment">// B-009: Configuration (can be tuned at runtime)</span></div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kRecoveryThreshold = 3; <span class="comment">// Underruns to trigger recovery</span></div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kRecoveryFrames = 100;  <span class="comment">// Stable frames to exit recovery</span></div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span> </div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <span class="comment">// B-010: Thread priority verification status</span></div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="comment">// Windows bitmask: bit 0 = SetThreadPriority success</span></div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="comment">//                  bit 1 = MMCSS (AvSetMmThreadCharacteristics) success</span></div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="comment">//                  bit 2 = MMCSS priority (AvSetMmThreadPriority) success</span></div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    <span class="comment">// Linux bitmask:   bit 0 = callback thread SCHED_FIFO success</span></div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    <span class="comment">//                  bit 1 = mlockall success</span></div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    std::atomic&lt;uint32_t&gt; threadPriorityStatus{0};</div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span> </div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    <span class="comment">// B-010: Thread priority status bits</span></div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kPriorityBit_ThreadPriority = 0x01;</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kPriorityBit_MMCSS = 0x02;</div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kPriorityBit_MMCSSPriority = 0x04;</div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span><span class="preprocessor">#if defined(_WIN32)</span></div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kPriorityBits_PlatformSuccess =</div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>        kPriorityBit_ThreadPriority | kPriorityBit_MMCSS | kPriorityBit_MMCSSPriority;</div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span><span class="preprocessor">#elif defined(__linux__)</span></div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="comment">// SRC activity: number of processed blocks that executed resampling work.</span></div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    std::atomic&lt;uint64_t&gt; srcActiveBlocks{0};</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="comment">// B-009: Underrun recovery state</span></div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    std::atomic&lt;uint32_t&gt; consecutiveUnderruns{0};      <span class="comment">// Current streak</span></div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>    std::atomic&lt;uint32_t&gt; stableFramesSinceRecovery{0}; <span class="comment">// Frames since last underrun</span></div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>    std::atomic&lt;bool&gt; inRecoveryMode{<span class="keyword">false</span>};            <span class="comment">// True when recovering</span></div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>    std::atomic&lt;uint64_t&gt; recoveryModeActivations{0};   <span class="comment">// Total recovery mode entries</span></div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span> </div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    <span class="comment">// B-009: Configuration (can be tuned at runtime)</span></div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kRecoveryThreshold = 3; <span class="comment">// Underruns to trigger recovery</span></div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kRecoveryFrames = 100;  <span class="comment">// Stable frames to exit recovery</span></div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span> </div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="comment">// B-010: Thread priority verification status</span></div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    <span class="comment">// Windows bitmask: bit 0 = SetThreadPriority success</span></div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    <span class="comment">//                  bit 1 = MMCSS (AvSetMmThreadCharacteristics) success</span></div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="comment">//                  bit 2 = MMCSS priority (AvSetMmThreadPriority) success</span></div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="comment">// Linux bitmask:   bit 0 = callback thread SCHED_FIFO success</span></div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    <span class="comment">//                  bit 1 = mlockall success</span></div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    std::atomic&lt;uint32_t&gt; threadPriorityStatus{0};</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="comment">// B-010: Thread priority status bits</span></div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kPriorityBit_ThreadPriority = 0x01;</div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kPriorityBit_MMCSS = 0x02;</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kPriorityBit_MMCSSPriority = 0x04;</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span><span class="preprocessor">#if defined(_WIN32)</span></div>
 <div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kPriorityBits_PlatformSuccess =</div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>        kPriorityBit_ThreadPriority | kPriorityBit_MMCSS;</div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span><span class="preprocessor">#else</span></div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kPriorityBits_PlatformSuccess = kPriorityBit_ThreadPriority;</div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span> </div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    <span class="comment">// Convenience methods for relaxed memory ordering access</span></div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span>    <span class="comment">// Increments</span></div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>    <span class="keywordtype">void</span> incrementBlocksProcessed() <span class="keyword">noexcept</span> { blocksProcessed.fetch_add(1, std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="keywordtype">void</span> incrementXruns() <span class="keyword">noexcept</span> { xruns.fetch_add(1, std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    <span class="keywordtype">void</span> incrementOverruns() <span class="keyword">noexcept</span> { overruns.fetch_add(1, std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <span class="keywordtype">void</span> incrementSrcActiveBlocks() <span class="keyword">noexcept</span> { srcActiveBlocks.fetch_add(1, std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <span class="keywordtype">void</span> incrementRtAllocationViolations() <span class="keyword">noexcept</span> {</div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>        rtAllocationViolations.fetch_add(1, std::memory_order_relaxed);</div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    }</div>
-<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    <span class="keywordtype">void</span> incrementRtLockViolations() <span class="keyword">noexcept</span> { rtLockViolations.fetch_add(1, std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    <span class="keywordtype">void</span> incrementRtLogViolations() <span class="keyword">noexcept</span> { rtLogViolations.fetch_add(1, std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span> </div>
-<div class="foldopen" id="foldopen00101" data-start="{" data-end="}">
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a01a3ba4adba8fa43ad9309c0d810d9b7">  101</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a01a3ba4adba8fa43ad9309c0d810d9b7">incrementUnderruns</a>() noexcept {</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>        underruns.fetch_add(1, std::memory_order_relaxed);</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>        uint32_t consecutive = consecutiveUnderruns.fetch_add(1, std::memory_order_relaxed) + 1;</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>        stableFramesSinceRecovery.store(0, std::memory_order_relaxed);</div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span> </div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        <span class="comment">// Trigger recovery mode if threshold exceeded</span></div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>        <span class="keywordflow">if</span> (consecutive &gt;= kRecoveryThreshold &amp;&amp; !inRecoveryMode.load(std::memory_order_relaxed)) {</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>            inRecoveryMode.store(<span class="keyword">true</span>, std::memory_order_release);</div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>            recoveryModeActivations.fetch_add(1, std::memory_order_relaxed);</div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>        }</div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    }</div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>        kPriorityBit_ThreadPriority | kPriorityBit_MMCSS | kPriorityBit_MMCSSPriority;</div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span><span class="preprocessor">#elif defined(__linux__)</span></div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kPriorityBits_PlatformSuccess =</div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>        kPriorityBit_ThreadPriority | kPriorityBit_MMCSS;</div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> uint32_t kPriorityBits_PlatformSuccess = kPriorityBit_ThreadPriority;</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span> </div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span>    <span class="comment">// Convenience methods for relaxed memory ordering access</span></div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span>    <span class="comment">// Increments</span></div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span>    <span class="keywordtype">void</span> incrementBlocksProcessed() <span class="keyword">noexcept</span> { blocksProcessed.fetch_add(1, std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span>    <span class="keywordtype">void</span> incrementXruns() <span class="keyword">noexcept</span> { xruns.fetch_add(1, std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span>    <span class="keywordtype">void</span> incrementOverruns() <span class="keyword">noexcept</span> { overruns.fetch_add(1, std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    <span class="keywordtype">void</span> incrementSrcActiveBlocks() <span class="keyword">noexcept</span> { srcActiveBlocks.fetch_add(1, std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>    <span class="keywordtype">void</span> incrementRtAllocationViolations() <span class="keyword">noexcept</span> {</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>        rtAllocationViolations.fetch_add(1, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    }</div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    <span class="keywordtype">void</span> incrementRtLockViolations() <span class="keyword">noexcept</span> { rtLockViolations.fetch_add(1, std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <span class="keywordtype">void</span> incrementRtLogViolations() <span class="keyword">noexcept</span> { rtLogViolations.fetch_add(1, std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span> </div>
+<div class="foldopen" id="foldopen00104" data-start="{" data-end="}">
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a01a3ba4adba8fa43ad9309c0d810d9b7">  104</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a01a3ba4adba8fa43ad9309c0d810d9b7">incrementUnderruns</a>() noexcept {</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>        underruns.fetch_add(1, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>        uint32_t consecutive = consecutiveUnderruns.fetch_add(1, std::memory_order_relaxed) + 1;</div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>        stableFramesSinceRecovery.store(0, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span> </div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>        <span class="comment">// Trigger recovery mode if threshold exceeded</span></div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>        <span class="keywordflow">if</span> (consecutive &gt;= kRecoveryThreshold &amp;&amp; !inRecoveryMode.load(std::memory_order_relaxed)) {</div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>            inRecoveryMode.store(<span class="keyword">true</span>, std::memory_order_release);</div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>            recoveryModeActivations.fetch_add(1, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>        }</div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    }</div>
 </div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span> </div>
-<div class="foldopen" id="foldopen00119" data-start="{" data-end="}">
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a">  119</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a">recordStableBlock</a>() noexcept {</div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>        consecutiveUnderruns.store(0, std::memory_order_relaxed);</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span> </div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>        <span class="keywordflow">if</span> (inRecoveryMode.load(std::memory_order_relaxed)) {</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>            uint32_t stable = stableFramesSinceRecovery.fetch_add(1, std::memory_order_relaxed) + 1;</div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>            <span class="keywordflow">if</span> (stable &gt;= kRecoveryFrames) {</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>                inRecoveryMode.store(<span class="keyword">false</span>, std::memory_order_release);</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>                stableFramesSinceRecovery.store(0, std::memory_order_relaxed);</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>            }</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>        }</div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    }</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span> </div>
+<div class="foldopen" id="foldopen00122" data-start="{" data-end="}">
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a">  122</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a">recordStableBlock</a>() noexcept {</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>        consecutiveUnderruns.store(0, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span> </div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>        <span class="keywordflow">if</span> (inRecoveryMode.load(std::memory_order_relaxed)) {</div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>            uint32_t stable = stableFramesSinceRecovery.fetch_add(1, std::memory_order_relaxed) + 1;</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>            <span class="keywordflow">if</span> (stable &gt;= kRecoveryFrames) {</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>                inRecoveryMode.store(<span class="keyword">false</span>, std::memory_order_release);</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>                stableFramesSinceRecovery.store(0, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>            }</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>        }</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>    }</div>
 </div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span> </div>
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#aab0b4c341ade61db69293bfb1c1054f5">  136</a></span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#aab0b4c341ade61db69293bfb1c1054f5">isInRecoveryMode</a>() const noexcept { <span class="keywordflow">return</span> inRecoveryMode.load(std::memory_order_acquire); }</div>
-<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span> </div>
-<div class="line"><a id="l00143" name="l00143"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#af0685c8b5aff1218bee301f95729cd99">  143</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#af0685c8b5aff1218bee301f95729cd99">setThreadPriorityBit</a>(uint32_t bit) <span class="keyword">noexcept</span> { threadPriorityStatus.fetch_or(bit, std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span> </div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#adfb8743ec3249e7d36af3804201d42a9">  150</a></span>    uint32_t <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#adfb8743ec3249e7d36af3804201d42a9">getThreadPriorityStatus</a>() const noexcept { <span class="keywordflow">return</span> threadPriorityStatus.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span> </div>
+<div class="line"><a id="l00139" name="l00139"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#aab0b4c341ade61db69293bfb1c1054f5">  139</a></span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#aab0b4c341ade61db69293bfb1c1054f5">isInRecoveryMode</a>() const noexcept { <span class="keywordflow">return</span> inRecoveryMode.load(std::memory_order_acquire); }</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span> </div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#af0685c8b5aff1218bee301f95729cd99">  146</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#af0685c8b5aff1218bee301f95729cd99">setThreadPriorityBit</a>(uint32_t bit) <span class="keyword">noexcept</span> { threadPriorityStatus.fetch_or(bit, std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a78dd93b57ee5e1e21f8da81999989628">  150</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a78dd93b57ee5e1e21f8da81999989628">clearThreadPriorityStatus</a>() noexcept { threadPriorityStatus.store(0, std::memory_order_relaxed); }</div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span> </div>
-<div class="foldopen" id="foldopen00155" data-start="{" data-end="}">
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ac20b10cdb35905bb003933bfb06b2130">  155</a></span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ac20b10cdb35905bb003933bfb06b2130">isThreadPriorityOptimal</a>() const noexcept {</div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>        <span class="keywordflow">return</span> (<a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#adfb8743ec3249e7d36af3804201d42a9">getThreadPriorityStatus</a>() &amp; kPriorityBits_PlatformSuccess) == kPriorityBits_PlatformSuccess;</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    }</div>
-</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#adfb8743ec3249e7d36af3804201d42a9">  157</a></span>    uint32_t <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#adfb8743ec3249e7d36af3804201d42a9">getThreadPriorityStatus</a>() const noexcept { <span class="keywordflow">return</span> threadPriorityStatus.load(std::memory_order_relaxed); }</div>
 <div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span> </div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    <span class="comment">// Updates</span></div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    <span class="keywordtype">void</span> updateMaxCallbackNs(uint64_t ns) <span class="keyword">noexcept</span> {</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>        uint64_t current = maxCallbackNs.load(std::memory_order_relaxed);</div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span>        <span class="keywordflow">while</span> (ns &gt; current) {</div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>            <span class="keywordflow">if</span> (maxCallbackNs.compare_exchange_weak(current, ns, std::memory_order_relaxed)) {</div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>                <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>            }</div>
-<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>        }</div>
-<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>    }</div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span> </div>
-<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    <span class="keywordtype">void</span> updateLastCallbackNs(uint64_t ns) <span class="keyword">noexcept</span> { lastCallbackNs.store(ns, std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>    <span class="keywordtype">void</span> updateLastBufferFrames(uint32_t frames) <span class="keyword">noexcept</span> { lastBufferFrames.store(frames, std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>    <span class="keywordtype">void</span> updateLastSampleRate(uint32_t rate) <span class="keyword">noexcept</span> { lastSampleRate.store(rate, std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>    <span class="keywordtype">void</span> updateCycleHz(uint64_t hz) <span class="keyword">noexcept</span> { cycleHz.store(hz, std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>    <span class="keywordtype">void</span> updateLinuxRtPriorityErrno(int32_t value) <span class="keyword">noexcept</span> {</div>
-<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>        linuxRtPriorityErrno.store(value, std::memory_order_relaxed);</div>
-<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>    }</div>
-<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span> </div>
-<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>    <span class="comment">// Reads with relaxed ordering</span></div>
-<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>    uint64_t getBlocksProcessed() const noexcept { <span class="keywordflow">return</span> blocksProcessed.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>    uint64_t getXruns() const noexcept { <span class="keywordflow">return</span> xruns.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span>    uint64_t getUnderruns() const noexcept { <span class="keywordflow">return</span> underruns.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00181" name="l00181"></a><span class="lineno">  181</span>    uint64_t getOverruns() const noexcept { <span class="keywordflow">return</span> overruns.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno">  182</span>    uint64_t getMaxCallbackNs() const noexcept { <span class="keywordflow">return</span> maxCallbackNs.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span>    uint64_t getLastCallbackNs() const noexcept { <span class="keywordflow">return</span> lastCallbackNs.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>    uint64_t getRtAllocationViolations() const noexcept {</div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno">  185</span>        <span class="keywordflow">return</span> rtAllocationViolations.load(std::memory_order_relaxed);</div>
-<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>    }</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>    uint64_t getRtLockViolations() const noexcept { <span class="keywordflow">return</span> rtLockViolations.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>    uint64_t getRtLogViolations() const noexcept { <span class="keywordflow">return</span> rtLogViolations.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>    uint32_t getLastBufferFrames() const noexcept { <span class="keywordflow">return</span> lastBufferFrames.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>    uint32_t getLastSampleRate() const noexcept { <span class="keywordflow">return</span> lastSampleRate.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>    uint64_t getCycleHz() const noexcept { <span class="keywordflow">return</span> cycleHz.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>    int32_t getLinuxRtPriorityErrno() const noexcept {</div>
-<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>        <span class="keywordflow">return</span> linuxRtPriorityErrno.load(std::memory_order_relaxed);</div>
-<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>    }</div>
-<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>    uint64_t getSrcActiveBlocks() const noexcept { <span class="keywordflow">return</span> srcActiveBlocks.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    uint32_t getConsecutiveUnderruns() const noexcept { <span class="keywordflow">return</span> consecutiveUnderruns.load(std::memory_order_relaxed); }</div>
-<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    uint64_t getRecoveryModeActivations() const noexcept {</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>        <span class="keywordflow">return</span> recoveryModeActivations.load(std::memory_order_relaxed);</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    }</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>};</div>
+<div class="foldopen" id="foldopen00162" data-start="{" data-end="}">
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ac20b10cdb35905bb003933bfb06b2130">  162</a></span>    <span class="keywordtype">bool</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ac20b10cdb35905bb003933bfb06b2130">isThreadPriorityOptimal</a>() const noexcept {</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span>        <span class="keywordflow">return</span> (<a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#adfb8743ec3249e7d36af3804201d42a9">getThreadPriorityStatus</a>() &amp; kPriorityBits_PlatformSuccess) == kPriorityBits_PlatformSuccess;</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>    }</div>
 </div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span> </div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>} <span class="comment">// namespace Audio</span></div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span> </div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    <span class="comment">// Updates</span></div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>    <span class="keywordtype">void</span> updateMaxCallbackNs(uint64_t ns) <span class="keyword">noexcept</span> {</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>        uint64_t current = maxCallbackNs.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>        <span class="keywordflow">while</span> (ns &gt; current) {</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>            <span class="keywordflow">if</span> (maxCallbackNs.compare_exchange_weak(current, ns, std::memory_order_relaxed)) {</div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span>                <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span>            }</div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span>        }</div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span>    }</div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span> </div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span>    <span class="keywordtype">void</span> updateLastCallbackNs(uint64_t ns) <span class="keyword">noexcept</span> { lastCallbackNs.store(ns, std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span>    <span class="keywordtype">void</span> updateLastBufferFrames(uint32_t frames) <span class="keyword">noexcept</span> { lastBufferFrames.store(frames, std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>    <span class="keywordtype">void</span> updateLastSampleRate(uint32_t rate) <span class="keyword">noexcept</span> { lastSampleRate.store(rate, std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span> </div>
+<div class="foldopen" id="foldopen00190" data-start="{" data-end="}">
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a4988dd8aa2b6da257f40bc75ea5330bf">  190</a></span>    <span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a4988dd8aa2b6da257f40bc75ea5330bf">recordCallbackDuration</a>(uint64_t ns, uint32_t frames, uint32_t sampleRate) <span class="keyword">noexcept</span> {</div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>        lastCallbackNs.store(ns, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>        updateMaxCallbackNs(ns);</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>        totalCallbackNs.fetch_add(ns, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>        timedCallbackCount.fetch_add(1, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>        <span class="comment">// Publish frames and rate together only when the rate is valid, so</span></div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>        <span class="comment">// getCallbackBudgetNs() never combines a frames/rate pair that did</span></div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>        <span class="comment">// not actually co-occur (CodeRabbit review, PR #430).</span></div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>        <span class="keywordflow">if</span> (sampleRate &gt; 0) {</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>            lastBufferFrames.store(frames, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>            lastSampleRate.store(sampleRate, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>            <span class="keyword">const</span> uint64_t budgetNs =</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>                (<span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(frames) * 1000000000ull) / <span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(sampleRate);</div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>            <span class="keywordflow">if</span> (budgetNs &gt; 0 &amp;&amp; ns &gt; budgetNs) {</div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>                overruns.fetch_add(1, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>            }</div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>        }</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    }</div>
+</div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span> </div>
+<div class="foldopen" id="foldopen00210" data-start="{" data-end="}">
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ae1bf852eba7bd6411b280c88b85a0684">  210</a></span>    uint64_t <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ae1bf852eba7bd6411b280c88b85a0684">getAverageCallbackNs</a>() const noexcept {</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>        <span class="keyword">const</span> uint64_t n = timedCallbackCount.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>        <span class="keywordflow">return</span> n ? totalCallbackNs.load(std::memory_order_relaxed) / n : 0;</div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>    }</div>
+</div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span> </div>
+<div class="foldopen" id="foldopen00216" data-start="{" data-end="}">
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno"><a class="line" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a3f2ca465ea9da15e593897056da346d9">  216</a></span>    uint64_t <a class="code hl_function" href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a3f2ca465ea9da15e593897056da346d9">getCallbackBudgetNs</a>() const noexcept {</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>        <span class="keyword">const</span> uint32_t frames = lastBufferFrames.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>        <span class="keyword">const</span> uint32_t rate = lastSampleRate.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        <span class="keywordflow">return</span> rate ? (<span class="keyword">static_cast&lt;</span>uint64_t<span class="keyword">&gt;</span>(frames) * 1000000000ull) / rate : 0;</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    }</div>
+</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    <span class="keywordtype">void</span> updateCycleHz(uint64_t hz) <span class="keyword">noexcept</span> { cycleHz.store(hz, std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    <span class="keywordtype">void</span> updateLinuxRtPriorityErrno(int32_t value) <span class="keyword">noexcept</span> {</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        linuxRtPriorityErrno.store(value, std::memory_order_relaxed);</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>    }</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span> </div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    <span class="comment">// Reads with relaxed ordering</span></div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    uint64_t getBlocksProcessed() const noexcept { <span class="keywordflow">return</span> blocksProcessed.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    uint64_t getXruns() const noexcept { <span class="keywordflow">return</span> xruns.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    uint64_t getUnderruns() const noexcept { <span class="keywordflow">return</span> underruns.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    uint64_t getOverruns() const noexcept { <span class="keywordflow">return</span> overruns.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    uint64_t getMaxCallbackNs() const noexcept { <span class="keywordflow">return</span> maxCallbackNs.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    uint64_t getLastCallbackNs() const noexcept { <span class="keywordflow">return</span> lastCallbackNs.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>    uint64_t getRtAllocationViolations() const noexcept {</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>        <span class="keywordflow">return</span> rtAllocationViolations.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>    }</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    uint64_t getRtLockViolations() const noexcept { <span class="keywordflow">return</span> rtLockViolations.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>    uint64_t getRtLogViolations() const noexcept { <span class="keywordflow">return</span> rtLogViolations.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    uint32_t getLastBufferFrames() const noexcept { <span class="keywordflow">return</span> lastBufferFrames.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    uint32_t getLastSampleRate() const noexcept { <span class="keywordflow">return</span> lastSampleRate.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    uint64_t getCycleHz() const noexcept { <span class="keywordflow">return</span> cycleHz.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    int32_t getLinuxRtPriorityErrno() const noexcept {</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>        <span class="keywordflow">return</span> linuxRtPriorityErrno.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    }</div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    uint64_t getSrcActiveBlocks() const noexcept { <span class="keywordflow">return</span> srcActiveBlocks.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    uint32_t getConsecutiveUnderruns() const noexcept { <span class="keywordflow">return</span> consecutiveUnderruns.load(std::memory_order_relaxed); }</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>    uint64_t getRecoveryModeActivations() const noexcept {</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>        <span class="keywordflow">return</span> recoveryModeActivations.load(std::memory_order_relaxed);</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    }</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>};</div>
+</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span> </div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>} <span class="comment">// namespace Audio</span></div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html">Aestra::Audio::AudioTelemetry</a></div><div class="ttdoc">Lightweight telemetry counters updated from the RT thread.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00029">AudioTelemetry.h:29</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_a01a3ba4adba8fa43ad9309c0d810d9b7"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a01a3ba4adba8fa43ad9309c0d810d9b7">Aestra::Audio::AudioTelemetry::incrementUnderruns</a></div><div class="ttdeci">void incrementUnderruns() noexcept</div><div class="ttdoc">B-009: Record an underrun and manage recovery state.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00101">AudioTelemetry.h:101</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_a76c9ac9b4a5e8fceef32f0edda3d558a"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a">Aestra::Audio::AudioTelemetry::recordStableBlock</a></div><div class="ttdeci">void recordStableBlock() noexcept</div><div class="ttdoc">B-009: Record a successful (stable) audio block.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00119">AudioTelemetry.h:119</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_aab0b4c341ade61db69293bfb1c1054f5"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#aab0b4c341ade61db69293bfb1c1054f5">Aestra::Audio::AudioTelemetry::isInRecoveryMode</a></div><div class="ttdeci">bool isInRecoveryMode() const noexcept</div><div class="ttdoc">B-009: Check if currently in recovery mode.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00136">AudioTelemetry.h:136</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_ac20b10cdb35905bb003933bfb06b2130"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ac20b10cdb35905bb003933bfb06b2130">Aestra::Audio::AudioTelemetry::isThreadPriorityOptimal</a></div><div class="ttdeci">bool isThreadPriorityOptimal() const noexcept</div><div class="ttdoc">B-010: Check if all thread priority settings succeeded.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00155">AudioTelemetry.h:155</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_adfb8743ec3249e7d36af3804201d42a9"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#adfb8743ec3249e7d36af3804201d42a9">Aestra::Audio::AudioTelemetry::getThreadPriorityStatus</a></div><div class="ttdeci">uint32_t getThreadPriorityStatus() const noexcept</div><div class="ttdoc">B-010: Get thread priority status.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00150">AudioTelemetry.h:150</a></div></div>
-<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_af0685c8b5aff1218bee301f95729cd99"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#af0685c8b5aff1218bee301f95729cd99">Aestra::Audio::AudioTelemetry::setThreadPriorityBit</a></div><div class="ttdeci">void setThreadPriorityBit(uint32_t bit) noexcept</div><div class="ttdoc">B-010: Set thread priority status bit.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00143">AudioTelemetry.h:143</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_a01a3ba4adba8fa43ad9309c0d810d9b7"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a01a3ba4adba8fa43ad9309c0d810d9b7">Aestra::Audio::AudioTelemetry::incrementUnderruns</a></div><div class="ttdeci">void incrementUnderruns() noexcept</div><div class="ttdoc">B-009: Record an underrun and manage recovery state.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00104">AudioTelemetry.h:104</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_a3f2ca465ea9da15e593897056da346d9"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a3f2ca465ea9da15e593897056da346d9">Aestra::Audio::AudioTelemetry::getCallbackBudgetNs</a></div><div class="ttdeci">uint64_t getCallbackBudgetNs() const noexcept</div><div class="ttdoc">Current callback budget in ns from the last frames/rate context (0 if unknown).</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00216">AudioTelemetry.h:216</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_a4988dd8aa2b6da257f40bc75ea5330bf"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a4988dd8aa2b6da257f40bc75ea5330bf">Aestra::Audio::AudioTelemetry::recordCallbackDuration</a></div><div class="ttdeci">void recordCallbackDuration(uint64_t ns, uint32_t frames, uint32_t sampleRate) noexcept</div><div class="ttdoc">Record one audio callback's measured duration and budget context.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00190">AudioTelemetry.h:190</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_a76c9ac9b4a5e8fceef32f0edda3d558a"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a76c9ac9b4a5e8fceef32f0edda3d558a">Aestra::Audio::AudioTelemetry::recordStableBlock</a></div><div class="ttdeci">void recordStableBlock() noexcept</div><div class="ttdoc">B-009: Record a successful (stable) audio block.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00122">AudioTelemetry.h:122</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_a78dd93b57ee5e1e21f8da81999989628"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#a78dd93b57ee5e1e21f8da81999989628">Aestra::Audio::AudioTelemetry::clearThreadPriorityStatus</a></div><div class="ttdeci">void clearThreadPriorityStatus() noexcept</div><div class="ttdoc">Clear all priority bits — call from the stream starter before a (re)start so the audio thread's first...</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00150">AudioTelemetry.h:150</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_aab0b4c341ade61db69293bfb1c1054f5"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#aab0b4c341ade61db69293bfb1c1054f5">Aestra::Audio::AudioTelemetry::isInRecoveryMode</a></div><div class="ttdeci">bool isInRecoveryMode() const noexcept</div><div class="ttdoc">B-009: Check if currently in recovery mode.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00139">AudioTelemetry.h:139</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_ac20b10cdb35905bb003933bfb06b2130"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ac20b10cdb35905bb003933bfb06b2130">Aestra::Audio::AudioTelemetry::isThreadPriorityOptimal</a></div><div class="ttdeci">bool isThreadPriorityOptimal() const noexcept</div><div class="ttdoc">B-010: Check if all thread priority settings succeeded.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00162">AudioTelemetry.h:162</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_adfb8743ec3249e7d36af3804201d42a9"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#adfb8743ec3249e7d36af3804201d42a9">Aestra::Audio::AudioTelemetry::getThreadPriorityStatus</a></div><div class="ttdeci">uint32_t getThreadPriorityStatus() const noexcept</div><div class="ttdoc">B-010: Get thread priority status.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00157">AudioTelemetry.h:157</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_ae1bf852eba7bd6411b280c88b85a0684"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#ae1bf852eba7bd6411b280c88b85a0684">Aestra::Audio::AudioTelemetry::getAverageCallbackNs</a></div><div class="ttdeci">uint64_t getAverageCallbackNs() const noexcept</div><div class="ttdoc">Average timed-callback duration in ns (0 if none recorded).</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00210">AudioTelemetry.h:210</a></div></div>
+<div class="ttc" id="astructAestra_1_1Audio_1_1AudioTelemetry_html_af0685c8b5aff1218bee301f95729cd99"><div class="ttname"><a href="../../dd/de0/structAestra_1_1Audio_1_1AudioTelemetry.html#af0685c8b5aff1218bee301f95729cd99">Aestra::Audio::AudioTelemetry::setThreadPriorityBit</a></div><div class="ttdeci">void setThreadPriorityBit(uint32_t bit) noexcept</div><div class="ttdoc">B-010: Set thread priority status bit.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/daa/AudioTelemetry_8h_source.html#l00146">AudioTelemetry.h:146</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

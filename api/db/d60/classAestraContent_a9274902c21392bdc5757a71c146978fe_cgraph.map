@@ -1,7 +1,13 @@
 <map id="AestraContent::loadEffectToSelectedTrack" name="AestraContent::loadEffectToSelectedTrack">
-<area shape="rect" id="Node000001" title="Load an effect plugin onto the selected track." alt="" coords="5,37,193,77"/>
+<area shape="rect" id="Node000001" title="Load an effect plugin onto the selected track." alt="" coords="5,133,193,173"/>
 <area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#af9ea6f00d65d1352cf858b6f9c57b42a" title="Get transport tempo in beats per minute." alt="" coords="249,5,448,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="193,43,235,37,236,42,194,48"/>
-<area shape="rect" id="Node000003" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="241,69,456,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="194,67,228,71,227,76,193,72"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="124,131,176,93,240,55,257,48,259,53,243,60,178,97,127,135"/>
+<area shape="rect" id="Node000003" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a107c869111f74c0e34ea921eabea4e63" title="Access the insert&#45;effect chain." alt="" coords="245,69,452,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="177,131,257,110,258,115,179,136"/>
+<area shape="rect" id="Node000004" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="241,133,456,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="194,151,228,151,228,156,194,156"/>
+<area shape="rect" id="Node000005" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a1b69c77ab991681c9ce3f7ce4b8a4959" title="Get the display name shown in the UI." alt="" coords="245,197,452,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="179,171,258,191,257,197,177,176"/>
+<area shape="rect" id="Node000006" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a437fca489c56905d913c32e2215e2a85" title="Prepare for processing." alt="" coords="253,261,444,301"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="127,171,178,209,243,247,259,254,257,259,240,252,176,214,124,176"/>
 </map>

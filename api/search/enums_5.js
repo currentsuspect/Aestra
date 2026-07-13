@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['waveformtype_0',['WaveformType',['../d3/dfc/Oscillator_8h.html#a49b63ec3390396e71d3221c2d1605039',1,'Aestra::Audio']]]
+  ['viewfocus_0',['ViewFocus',['../dc/dd6/AestraContent_8h.html#adcb0a7e988b7d2d5fc5ee5c1bddad1a3',1,'AestraContent.h']]]
 ];

@@ -1,0 +1,7 @@
+<map id="Aestra::Audio::Plugins::AestraSat" name="Aestra::Audio::Plugins::AestraSat">
+<area shape="rect" id="Node000001" title=" " alt="" coords="115,108,279,148"/>
+<area shape="rect" id="Node000002" href="$de/d54/classAestra_1_1Audio_1_1IPluginInstance.html" title="Abstract plugin instance interface." alt="" coords="5,5,221,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="133,40,185,106,180,109,129,43"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="245,5,320,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="267,43,214,109,210,106,263,40"/>
+</map>

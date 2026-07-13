@@ -12,10 +12,11 @@ var searchData=
   ['bouncerangetowav_9',['bounceRangeToWav',['../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d',1,'Aestra::Audio::AudioEngine']]],
   ['bouncetowav_10',['bounceToWav',['../d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f',1,'Aestra::Audio::AudioExporter']]],
   ['bringtofront_11',['bringtofront',['../db/d1a/classAestraUI_1_1NUIComponent.html#a2b3f7ebc1d4af1d46fcb206080bf7cf3',1,'AestraUI::NUIComponent::bringToFront()'],['../d6/d10/classAestraUI_1_1PluginEditorWindow.html#a07c0fd664aaa17afa9b22f617e3568db',1,'AestraUI::PluginEditorWindow::bringToFront()']]],
-  ['buildasync_12',['buildAsync',['../dd/da3/classAestra_1_1Audio_1_1WaveformCacheBuilder.html#aca6af3e323befa137cccd914fd3e70bc',1,'Aestra::Audio::WaveformCacheBuilder']]],
-  ['buildfrombuffer_13',['buildFromBuffer',['../d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a75cd9864beb1d28868ed0661e9a7c06a',1,'Aestra::Audio::WaveformCache']]],
-  ['buildfromraw_14',['buildFromRaw',['../d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a478cf711be324a673fa69590c792f91d',1,'Aestra::Audio::WaveformCache']]],
-  ['buildfromtrackmanager_15',['buildFromTrackManager',['../d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a808cde6e5a45b7255833bcdab7ac081b',1,'Aestra::Audio::AudioGraphBuilder']]],
-  ['buildruntimesnapshot_16',['buildRuntimeSnapshot',['../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ab1aa3e02093843cdf71d966a0d0ec2a6',1,'Aestra::Audio::PlaylistModel']]],
-  ['buildsync_17',['buildSync',['../dd/da3/classAestra_1_1Audio_1_1WaveformCacheBuilder.html#a782ae41aa68534e6a2c3052e413d82be',1,'Aestra::Audio::WaveformCacheBuilder']]]
+  ['buildandshareslotmap_12',['buildAndShareSlotMap',['../de/dca/classAestra_1_1Audio_1_1TrackManager.html#acbc584900d275217aaa337bace034e8b',1,'Aestra::Audio::TrackManager']]],
+  ['buildasync_13',['buildAsync',['../dd/da3/classAestra_1_1Audio_1_1WaveformCacheBuilder.html#aca6af3e323befa137cccd914fd3e70bc',1,'Aestra::Audio::WaveformCacheBuilder']]],
+  ['buildfrombuffer_14',['buildFromBuffer',['../d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a75cd9864beb1d28868ed0661e9a7c06a',1,'Aestra::Audio::WaveformCache']]],
+  ['buildfromraw_15',['buildFromRaw',['../d7/dae/classAestra_1_1Audio_1_1WaveformCache.html#a478cf711be324a673fa69590c792f91d',1,'Aestra::Audio::WaveformCache']]],
+  ['buildfromtrackmanager_16',['buildFromTrackManager',['../d0/d3f/classAestra_1_1Audio_1_1AudioGraphBuilder.html#a808cde6e5a45b7255833bcdab7ac081b',1,'Aestra::Audio::AudioGraphBuilder']]],
+  ['buildruntimesnapshot_17',['buildRuntimeSnapshot',['../db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ab1aa3e02093843cdf71d966a0d0ec2a6',1,'Aestra::Audio::PlaylistModel']]],
+  ['buildsync_18',['buildSync',['../dd/da3/classAestra_1_1Audio_1_1WaveformCacheBuilder.html#a782ae41aa68534e6a2c3052e413d82be',1,'Aestra::Audio::WaveformCacheBuilder']]]
 ];

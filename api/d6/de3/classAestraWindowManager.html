@@ -120,6 +120,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:af074af8de14b605e54c074843fa034d0" id="r_af074af8de14b605e54c074843fa034d0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d8/db1/classAestraRootComponent.html">AestraRootComponent</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/de3/classAestraWindowManager.html#af074af8de14b605e54c074843fa034d0">getRootComponent</a> ()</td></tr>
 <tr class="memdesc:af074af8de14b605e54c074843fa034d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the root component attached to the window.  <br /></td></tr>
 <tr class="separator:af074af8de14b605e54c074843fa034d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f6e595825e2d79b92f33aa1807fdfc1" id="r_a9f6e595825e2d79b92f33aa1807fdfc1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/de3/classAestraWindowManager.html#a9f6e595825e2d79b92f33aa1807fdfc1">requiresContinuousRender</a> () const</td></tr>
+<tr class="memdesc:a9f6e595825e2d79b92f33aa1807fdfc1"><td class="mdescLeft">&#160;</td><td class="mdescRight">True when some overlay needs rendering every frame regardless of dirtiness: the performance HUD (needs fresh profiler samples), any visible dialog, or an open menu.  <br /></td></tr>
+<tr class="separator:a9f6e595825e2d79b92f33aa1807fdfc1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a77c1fad41289bc2894dfea221f203fe0" id="r_a77c1fad41289bc2894dfea221f203fe0"><td class="memItemLeft" align="right" valign="top">AestraUI::NUICustomWindow *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/de3/classAestraWindowManager.html#a77c1fad41289bc2894dfea221f203fe0">getCustomWindow</a> ()</td></tr>
 <tr class="memdesc:a77c1fad41289bc2894dfea221f203fe0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the custom window chrome widget.  <br /></td></tr>
 <tr class="separator:a77c1fad41289bc2894dfea221f203fe0"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -276,7 +279,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Construct the window manager and its top-level UI services. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00068">68</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00069">69</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/dce/NUIAdaptiveFPS_8h_source.html#l00066">AestraUI::NUIAdaptiveFPS::Config::enableLogging</a>, <a class="el" href="../../d7/dce/NUIAdaptiveFPS_8h_source.html#l00060">AestraUI::NUIAdaptiveFPS::Config::fps30</a>, <a class="el" href="../../d7/dce/NUIAdaptiveFPS_8h_source.html#l00061">AestraUI::NUIAdaptiveFPS::Config::fps60</a>, <a class="el" href="../../d7/dce/NUIAdaptiveFPS_8h_source.html#l00062">AestraUI::NUIAdaptiveFPS::Config::idleTimeout</a>, <a class="el" href="../../d7/dce/NUIAdaptiveFPS_8h_source.html#l00064">AestraUI::NUIAdaptiveFPS::Config::performanceSampleCount</a>, <a class="el" href="../../d7/dce/NUIAdaptiveFPS_8h_source.html#l00063">AestraUI::NUIAdaptiveFPS::Config::performanceThreshold</a>, and <a class="el" href="../../d7/dce/NUIAdaptiveFPS_8h_source.html#l00065">AestraUI::NUIAdaptiveFPS::Config::transitionSpeed</a>.</p>
 
@@ -299,9 +302,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Tear down the native window, renderer, and owned UI hierarchy. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00082">82</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00083">83</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00402">shutdown()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00433">shutdown()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
@@ -330,7 +333,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Mark the start of a rendered frame. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00626">626</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00673">673</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -351,7 +354,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Finish the current frame and return suggested sleep time. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00642">642</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00689">689</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -380,7 +383,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Get the adaptive-FPS controller. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00071">71</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00077">77</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -409,7 +412,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Get the confirmation dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00087">87</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00093">93</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -438,7 +441,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Get the custom window chrome widget. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00066">66</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00072">72</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -467,7 +470,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Get the most recent frame delta in seconds. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00151">151</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00157">157</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -496,7 +499,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Get the export dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00091">91</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00097">97</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -525,7 +528,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Get the current modifier-key state. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00142">142</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00148">148</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -554,7 +557,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Get the last known mouse x position. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00137">137</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00143">143</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -583,7 +586,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Get the last known mouse y position. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00139">139</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00145">145</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -612,7 +615,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Get the recovery dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00089">89</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00095">95</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -699,7 +702,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Get the settings dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00085">85</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00091">91</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -728,7 +731,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Get the unified HUD overlay. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00068">68</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00074">74</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -778,9 +781,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Hide the active dropdown menu if present. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00574">574</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00621">621</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00546">showDropdownMenu()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00593">showDropdownMenu()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -809,7 +812,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Initialize the window, renderer, and root component. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00086">86</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00087">87</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../da/d7c/AestraPlatform_8h_source.html#l00029">Aestra::WindowDesc::decorated</a>, <a class="el" href="../../da/d7c/AestraPlatform_8h_source.html#l00021">Aestra::WindowDesc::height</a>, <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00043">AestraWindowManager::WindowConfig::height</a>, <a class="el" href="../../da/d7c/AestraPlatform_8h_source.html#l00027">Aestra::WindowDesc::resizable</a>, <a class="el" href="../../da/d7c/AestraPlatform_8h_source.html#l00031">Aestra::WindowDesc::startMaximized</a>, <a class="el" href="../../da/d7c/AestraPlatform_8h_source.html#l00017">Aestra::WindowDesc::title</a>, <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00039">AestraWindowManager::WindowConfig::title</a>, <a class="el" href="../../da/d7c/AestraPlatform_8h_source.html#l00019">Aestra::WindowDesc::width</a>, and <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00041">AestraWindowManager::WindowConfig::width</a>.</p>
 
@@ -832,7 +835,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Load and prepare custom cursor assets. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00703">703</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00750">750</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -853,7 +856,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Check whether the native window is fullscreen. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00618">618</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00665">665</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -874,7 +877,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Check whether any dropdown menu is open. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00582">582</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00629">629</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -895,7 +898,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Pump platform events once. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00419">419</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00450">450</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -916,7 +919,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Render the current UI frame. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00649">649</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00696">696</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d6/de3/classAestraWindowManager.html#a7ae60654f3abbb4adef1c2ffcb3ab9b4">renderCustomCursor()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -926,6 +929,28 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 <div id="dynsection-2-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../d6/de3/classAestraWindowManager_a0aadf9364d335c3d88d7dc54e9bca1ba_cgraph.svg" width="406" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
+
+</div>
+</div>
+<a id="a9f6e595825e2d79b92f33aa1807fdfc1" name="a9f6e595825e2d79b92f33aa1807fdfc1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9f6e595825e2d79b92f33aa1807fdfc1">&#9670;&#160;</a></span>requiresContinuousRender()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool AestraWindowManager::requiresContinuousRender </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>True when some overlay needs rendering every frame regardless of dirtiness: the performance HUD (needs fresh profiler samples), any visible dialog, or an open menu. </p>
+<p>Used by idle frame elision (labs/perf/idle-frame-elision-spec.md). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00563">563</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -955,7 +980,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Update cursor visibility and style. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00130">130</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00136">136</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -977,7 +1002,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Attach the confirmation dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00513">513</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00544">544</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -999,7 +1024,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Attach the main content view. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00443">443</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00474">474</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1021,7 +1046,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Attach the export dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00525">525</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00556">556</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1043,7 +1068,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Toggle the title-bar exporting state. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00598">598</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00645">645</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1065,7 +1090,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Update the title-bar export progress indicator. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00590">590</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00637">637</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1095,7 +1120,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Override the cached modifier-key state. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00144">144</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00150">150</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -1117,7 +1142,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Attach the main menu bar. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00537">537</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00584">584</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1139,7 +1164,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Set the callback fired when the export button is pressed. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00606">606</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00653">653</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1161,7 +1186,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Attach the recovery dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00519">519</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00550">550</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1189,7 +1214,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00131">131</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html#l00137">137</a> of file <a class="el" href="../../d2/d4b/AestraWindowManager_8h_source.html">AestraWindowManager.h</a>.</p>
 
 </div>
 </div>
@@ -1209,7 +1234,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00434">434</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00465">465</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1231,7 +1256,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Attach the settings dialog. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00505">505</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00536">536</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1251,7 +1276,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00423">423</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00454">454</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1273,7 +1298,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Attach the unified HUD overlay. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00532">532</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00579">579</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1295,7 +1320,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Update the native window title. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00586">586</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00633">633</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1327,9 +1352,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Show a dropdown context menu anchored to the title area. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00546">546</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00593">593</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00574">hideActiveMenu()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00621">hideActiveMenu()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -1357,9 +1382,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Shut down the window manager and release owned resources. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00402">402</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00433">433</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00082">~AestraWindowManager()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00083">~AestraWindowManager()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -1387,7 +1412,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Swap the renderer backbuffer to screen. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00622">622</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00669">669</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -1408,7 +1433,7 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>applyWindowState</b> 
 
 <p>Toggle fullscreen mode. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00614">614</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html#l00661">661</a> of file <a class="el" href="../../d8/d0b/AestraWindowManager_8cpp_source.html">AestraWindowManager.cpp</a>.</p>
 
 </div>
 </div>
