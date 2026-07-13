@@ -212,7 +212,7 @@ bool AestraOTTEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    return false;
+    return consumeInsideBounds(event);
 }
 
 void AestraOTTEditor::onResize(int width, int height) {

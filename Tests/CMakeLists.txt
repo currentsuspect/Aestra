@@ -1606,6 +1606,23 @@ else()
     message(STATUS "EditorCloseDeferredTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# Panel-window click-swallow regression: a floating plugin editor must consume
+# clicks over its own empty area so they don't fall through to widgets behind it
+# (click-through + spurious dismiss).
+if(TARGET AestraUI_Core)
+    add_executable(PanelWindowClickSwallowTest AestraUI/PanelWindowClickSwallowTest.cpp)
+    target_link_libraries(PanelWindowClickSwallowTest PRIVATE AestraUI_Core)
+    target_include_directories(PanelWindowClickSwallowTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    )
+    add_test(NAME PanelWindowClickSwallowTest COMMAND PanelWindowClickSwallowTest)
+    set_tests_properties(PanelWindowClickSwallowTest PROPERTIES LABELS "ui;input;regression")
+else()
+    message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # NUITextInput Layout / Caret / Selection regression tests
 # Guard on target presence because headless/CI disables AestraUI targets.
 if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUITextInputLayoutTest.cpp")

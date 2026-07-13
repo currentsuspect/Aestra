@@ -50,6 +50,14 @@ public:
     bool hitTestCloseButton(float x, float y) const;
     bool hitTestTitleBar(float x, float y) const;
 
+    // Consume any mouse event that lands inside the panel bounds. A floating
+    // editor is opaque to the mouse over its own area: a click on empty panel
+    // space (hitting no control) must NOT fall through to widgets behind it,
+    // which would otherwise both act on the click-through and dismiss the
+    // editor. Subclasses call this as their onMouseEvent fall-through, after
+    // all interactive controls have had a chance to consume the event.
+    bool consumeInsideBounds(const NUIMouseEvent& event) const { return getBounds().contains(event.position); }
+
     void setEnforceParentBounds(bool enforce) { m_enforceParentBounds = enforce; }
     void enforceBoundsInParent(float safeMargin = 14.0f);
 
