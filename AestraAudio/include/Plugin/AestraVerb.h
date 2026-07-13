@@ -117,6 +117,18 @@ public:
 
     static constexpr int kModeCount = 9;
 
+    // Canonical inverse of modeIndex(). modeIndex() decodes the kMode parameter
+    // as round(param * (kModeCount - 1)), so modeParam(i) round-trips exactly to
+    // mode i. Use this — NOT hand-picked 0.0/0.5/1.0 constants — to select a
+    // specific mode in tests, labs, and presets: param 0.5 decodes to Chamber
+    // (mode 4), not Hall, and 1.0 decodes to SmoothPlate (mode 8), not Plate.
+    static constexpr float modeParam(int index) {
+        return static_cast<float>(index) / static_cast<float>(kModeCount - 1);
+    }
+    static constexpr float modeParam(Mode mode) {
+        return modeParam(static_cast<int>(mode));
+    }
+
     enum class PredelaySync : int {
         Off = 0,
         Sixteenth = 1,   // 1/16 note
@@ -1592,6 +1604,21 @@ private:
     mutable std::array<StageProfileData, static_cast<size_t>(ProfileStage::kStageCount)> m_profileData{};
 #endif
 };
+
+// modeIndex() decodes as round(param * (kModeCount - 1)). Because i/8 is exactly
+// representable in float for i in [0, 8], modeParam(i) * 8 recovers i exactly,
+// so the round-trip is lossless. Lock the two historically mis-mapped anchors at
+// compile time: 0.5 is NOT Hall, and 1.0 is NOT Plate. (These live at namespace
+// scope because a constexpr member function cannot be evaluated inside its own
+// still-incomplete class definition.)
+static_assert(AestraVerb::modeParam(AestraVerb::Mode::Room) == 0.0f,
+              "Room must map to param 0.0");
+static_assert(AestraVerb::modeParam(AestraVerb::Mode::SmoothPlate) == 1.0f,
+              "SmoothPlate must map to param 1.0");
+static_assert(AestraVerb::modeParam(AestraVerb::Mode::Hall) * static_cast<float>(AestraVerb::kModeCount - 1) == 1.0f,
+              "Hall must decode to mode index 1");
+static_assert(AestraVerb::modeParam(AestraVerb::Mode::Plate) * static_cast<float>(AestraVerb::kModeCount - 1) == 2.0f,
+              "Plate must decode to mode index 2");
 
 } // namespace Plugins
 } // namespace Audio
