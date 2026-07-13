@@ -323,6 +323,32 @@ bool runPredelaySyncDisplayCheck() {
     return ok;
 }
 
+bool runParameterDisplayFormattingCheck() {
+    AestraVerb verb;
+    verb.initialize(kSampleRate, 256);
+    verb.setParameter(AestraVerb::kMode, AestraVerb::modeParam(AestraVerb::Mode::Room));
+    verb.setParameter(AestraVerb::kDecay, 0.56f);
+    verb.setParameter(AestraVerb::kSize, 0.52f);
+    verb.setParameter(AestraVerb::kModDepth, 0.07f);
+
+    bool ok = true;
+    for (uint32_t id : {AestraVerb::kDecay, AestraVerb::kSize, AestraVerb::kModDepth}) {
+        const std::string display = verb.getParameterDisplay(id);
+        ok &= require(display.find(".000000") == std::string::npos,
+                      "parameter display leaked raw std::to_string precision: '" + display + "'");
+    }
+    ok &= require(verb.getParameterDisplay(AestraVerb::kSize) == "1.08x",
+                  "size display should use compact precision");
+    ok &= require(verb.getParameterDisplay(AestraVerb::kModDepth) == "1.1 smp",
+                  "mod-depth display should use compact precision");
+    if (ok) {
+        std::cout << "Parameter displays use compact precision (size='"
+                  << verb.getParameterDisplay(AestraVerb::kSize) << "', depth='"
+                  << verb.getParameterDisplay(AestraVerb::kModDepth) << "').\n";
+    }
+    return ok;
+}
+
 int main() {
     bool ok = true;
     ok &= runTinyBlockChecks();
@@ -332,6 +358,7 @@ int main() {
     ok &= runActiveLoadStateSafetyCheck();
     ok &= runAllNineModesFiniteChecks();
     ok &= runPredelaySyncDisplayCheck();
+    ok &= runParameterDisplayFormattingCheck();
 
     if (!ok) {
         return 1;

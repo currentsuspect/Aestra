@@ -16,7 +16,9 @@
 #define M_PI 3.14159265358979323846
 #endif
 #include <cstring>
+#include <iomanip>
 #include <random>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -898,7 +900,7 @@ public:
             // (0.90-1.60) — the DSP uses (0.3 + v*9.7) * decayScalar, so a
             // Cathedral "7.1s" was actually 11.4s before this was applied.
             const float scalar = constantsForMode(currentMode()).decayScalar;
-            return std::to_string(static_cast<int>((0.3f + v * 9.7f) * scalar * 10.0f) / 10.0f) + "s";
+            return formatCompactFloat(static_cast<int>((0.3f + v * 9.7f) * scalar * 10.0f) / 10.0f, 1) + "s";
         }
         case kDamping: return std::to_string(static_cast<int>(v * 100)) + "%";
         case kPredelayMs: return std::to_string(static_cast<int>(v * kMaxPredelayMs)) + "ms";
@@ -907,7 +909,7 @@ public:
         case kBypass: return v > 0.5f ? "ON" : "OFF";
         case kSize: {
             const float size = 0.1f + v * 1.9f;
-            return std::to_string(static_cast<int>(size * 100.0f) / 100.0f) + "x";
+            return formatCompactFloat(static_cast<int>(size * 100.0f) / 100.0f, 2) + "x";
         }
         case kDiffusion: return std::to_string(static_cast<int>(v * 100)) + "%";
         case kModRate: return std::to_string(static_cast<int>(v * 200)) + "%";
@@ -917,7 +919,7 @@ public:
             // matched neither the previous x7 mapping nor the current one.
             const float scalar = constantsForMode(currentMode()).modDepthScalar;
             const float smp = (v <= 0.0f ? 0.0f : std::pow(v, 0.6f)) * 12.5f * scalar;
-            return std::to_string(static_cast<int>(smp * 10.0f) / 10.0f) + " smp";
+            return formatCompactFloat(static_cast<int>(smp * 10.0f) / 10.0f, 1) + " smp";
         }
         case kMode: {
             static const char* modeNames[] = {
@@ -967,6 +969,21 @@ public:
         }
         default: return "";
         }
+    }
+
+    static std::string formatCompactFloat(float value, int precision) {
+        std::ostringstream stream;
+        stream << std::fixed << std::setprecision(precision) << value;
+        std::string text = stream.str();
+        if (text.find('.') != std::string::npos) {
+            while (!text.empty() && text.back() == '0') {
+                text.pop_back();
+            }
+            if (!text.empty() && text.back() == '.') {
+                text.pop_back();
+            }
+        }
+        return text;
     }
 
     std::vector<uint8_t> saveState() const override {
