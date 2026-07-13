@@ -597,6 +597,22 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbSafetyRegressionTest.cp
     set_tests_properties(ReverbSafetyRegressionTest PROPERTIES LABELS "audio;dsp;reverb;safety")
 endif()
 
+# Reverb Consistency Probe — hunts for inconsistency/offness (bypass parity,
+# NaN rejection, silence tail, state roundtrip are hard invariants; Low Cut
+# mapping, freeze stability, sample-rate consistency, mode-switch clicks, and
+# stereo correlation are printed diagnostics).
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbConsistencyProbe.cpp")
+    add_executable(ReverbConsistencyProbe AestraAudio/ReverbConsistencyProbe.cpp)
+    target_link_libraries(ReverbConsistencyProbe PRIVATE AestraAudio)
+    target_include_directories(ReverbConsistencyProbe PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME ReverbConsistencyProbe COMMAND ReverbConsistencyProbe)
+    set_tests_properties(ReverbConsistencyProbe PROPERTIES LABELS "audio;dsp;reverb;probe")
+endif()
+
 # Reverb Quality Measurement Lab
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/ReverbQualityLab.cpp")
     add_executable(AestraReverbQualityLab AestraAudio/ReverbQualityLab.cpp)
