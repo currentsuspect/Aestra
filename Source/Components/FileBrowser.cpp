@@ -1669,10 +1669,13 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                 setDirty(true); // hover overlay only — no cache rebuild
             }
 
-            // Keep tooltip alive while hovering list items (not only on hover-change events).
+            // Keep tooltip alive while hovering a *truncated* list item (not only on
+            // hover-change events). Fully-legible names need no tooltip — this
+            // keep-alive path used to show one unconditionally, overriding the
+            // isTruncated check above and tooltipping every item.
             if (hoveredIndex_ >= 0 && hoveredIndex_ < static_cast<int>(view.size())) {
                 const FileItem* item = view[hoveredIndex_];
-                if (item) {
+                if (item && item->isTruncated) {
                     AestraUI::NUIComponent::showRemoteTooltip(item->name, event.position, this);
                 }
             }
