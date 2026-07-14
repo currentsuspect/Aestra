@@ -72,6 +72,11 @@ private:
     bool m_lastRefreshFailed = false;
     std::string m_pendingLoginEmail;
     std::string m_pendingChallengeId;
+    // Feedback for the sign-in flow (Send Code / Verify). Kept separate from
+    // m_lastRefreshValue so a long status sentence isn't dumped into the SYNC card's
+    // right-aligned "Last refresh" value, where it overflowed across the card.
+    std::string m_signInMessage;
+    float m_signInFormBottomY = 0.0f;
 
     // Redesign layout bounds (for hit testing)
     AestraUI::NUIRect m_founderCardBounds;

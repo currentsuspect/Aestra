@@ -392,22 +392,22 @@ void MembershipSettingsPage::startLogin() {
 #if defined(AESTRA_HAS_LICENSE_GATE) && AESTRA_HAS_LICENSE_GATE
     const std::string email = m_emailInput ? m_emailInput->getText() : "";
     if (!m_accountService) {
-        m_lastRefreshValue = "Account service is unavailable.";
+        m_signInMessage = "Account service is unavailable.";
     } else if (email.empty()) {
-        m_lastRefreshValue = "Email is required.";
+        m_signInMessage = "Email is required.";
     } else {
         const Aestra::License::AccountLoginStartServiceResult result = m_accountService->loginStart(email);
         if (result.status == Aestra::License::AccountServiceStatus::Success && !result.challengeId.empty()) {
             m_pendingLoginEmail = email;
             m_pendingChallengeId = result.challengeId;
-            m_lastRefreshValue = "Login code sent. Enter it below.";
+            m_signInMessage = "Login code sent. Enter it below.";
         } else {
             m_pendingChallengeId.clear();
-            m_lastRefreshValue = serviceStatusMessage(result.status);
+            m_signInMessage = serviceStatusMessage(result.status);
         }
     }
 #else
-    m_lastRefreshValue = "License services unavailable.";
+    m_signInMessage = "License services unavailable.";
 #endif
     refreshDisplay();
 }
@@ -418,24 +418,24 @@ void MembershipSettingsPage::verifyLogin() {
         !m_pendingLoginEmail.empty() ? m_pendingLoginEmail : (m_emailInput ? m_emailInput->getText() : "");
     const std::string code = m_codeInput ? m_codeInput->getText() : "";
     if (!m_accountService) {
-        m_lastRefreshValue = "Account service is unavailable.";
+        m_signInMessage = "Account service is unavailable.";
     } else if (email.empty() || m_pendingChallengeId.empty() || code.empty()) {
-        m_lastRefreshValue = "Email, challenge, and code are required.";
+        m_signInMessage = "Email, challenge, and code are required.";
     } else {
         const Aestra::License::AccountServiceResult login =
             m_accountService->loginVerify(email, m_pendingChallengeId, code);
         if (login.status != Aestra::License::AccountServiceStatus::Success) {
-            m_lastRefreshValue = serviceStatusMessage(login.status);
+            m_signInMessage = serviceStatusMessage(login.status);
         } else {
             m_pendingChallengeId.clear();
             const Aestra::License::AccountServiceResult refresh = m_accountService->refreshEntitlements();
-            m_lastRefreshValue = refresh.status == Aestra::License::AccountServiceStatus::Success
+            m_signInMessage = refresh.status == Aestra::License::AccountServiceStatus::Success
                                        ? "Signed in and synced now."
                                        : "Signed in. " + serviceStatusMessage(refresh.status);
         }
     }
 #else
-    m_lastRefreshValue = "License services unavailable.";
+    m_signInMessage = "License services unavailable.";
 #endif
     refreshDisplay();
 }
@@ -701,6 +701,17 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
     // --- 5. SIGN-IN UI (if needed, rendered above the new design) ---
     if (m_signInTitleLabel && m_signInTitleLabel->isVisible()) {
         renderChildren(renderer);
+
+        // Sign-in feedback (Send Code / Verify) on its own line under the form,
+        // left-aligned so it can't overflow like it did in the SYNC card. "Sent"/
+        // "Signed in" reads as positive; everything else is a plain notice.
+        if (!m_signInMessage.empty()) {
+            const bool positive = m_signInMessage.find("sent") != std::string::npos ||
+                                  m_signInMessage.find("Signed in") != std::string::npos;
+            const auto msgColor = positive ? AestraUI::NUIColor(0.45f, 0.78f, 0.55f, 1.0f) // green
+                                            : textSecondary;
+            renderer.drawText(m_signInMessage, {b.x + 20.0f, m_signInFormBottomY + 10.0f}, 12.0f, msgColor);
+        }
     }
 
     // --- 6. SIGN-OUT CONFIRMATION OVERLAY ---
@@ -868,8 +879,9 @@ void MembershipSettingsPage::layoutComponents() {
         // The sign-in form and the account Actions row are mutually exclusive
         // (sign-in shows only while signed out, when the Actions row is hidden), so
         // the form takes the Actions row's slot instead of sitting a whole row
-        // below the now-empty space — which left it hanging too low.
-        float signY = b.y + vPad + founderH + cardGap + cardH + cardGap;
+        // below the now-empty space — which left it hanging too low. The small
+        // lift seats the "Sign in" heading just under the cards.
+        float signY = b.y + vPad + founderH + cardGap + cardH + cardGap - 10.0f;
         const float inputWidth = std::max(180.0f, contentW - buttonWidth - sBtnGap);
         m_signInTitleLabel->setBounds(AestraUI::NUIRect(x, signY, contentW, rowHeight));
         m_signInTitleLabel->setVisible(true);
@@ -883,6 +895,7 @@ void MembershipSettingsPage::layoutComponents() {
         m_codeInput->setVisible(true);
         m_verifyLoginButton->setBounds(AestraUI::NUIRect(x + inputWidth + sBtnGap, signY, buttonWidth, buttonHeight));
         m_verifyLoginButton->setVisible(true);
+        m_signInFormBottomY = signY + buttonHeight; // status line renders below this
     } else {
         if (m_signInTitleLabel) m_signInTitleLabel->setVisible(false);
         if (m_emailInput) m_emailInput->setVisible(false);
