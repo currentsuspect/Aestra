@@ -85,6 +85,11 @@ public:
         // so automation or fast knob moves glide instead of zippering. Coeff is
         // computed once per block; ~8 ms time constant.
         const float smoothCoeff = 1.0f - std::exp(-1.0f / (static_cast<float>(m_sampleRate) * 0.008f));
+        // Once the smoother is within this of its target, snap exactly onto it.
+        // A one-pole only asymptotes, so without this the residual decays into
+        // denormal floats — a CPU penalty on the audio thread. 1e-6 is far below
+        // the audible resolution of these normalized (0..1) params.
+        constexpr float kSmoothSnapEps = 1.0e-6f;
         const float pitchTarget = m_params[kPitch].load(std::memory_order_relaxed);
         const float mixTarget = m_params[kMix].load(std::memory_order_relaxed);
         float pitchSmoothed = m_pitchSmoothed;
@@ -122,6 +127,7 @@ public:
             outR *= norm;
 
             pitchSmoothed += smoothCoeff * (pitchTarget - pitchSmoothed);
+            if (std::fabs(pitchTarget - pitchSmoothed) < kSmoothSnapEps) pitchSmoothed = pitchTarget;
             const float pitchNorm = pitchSmoothed;
             const float pitchSemitones = -12.0f + pitchNorm * 24.0f;
             const float pitchRatio = std::pow(2.0f, pitchSemitones / 12.0f);
@@ -137,6 +143,7 @@ public:
             writePos = (writePos + 1) & kBufferMask;
 
             mixSmoothed += smoothCoeff * (mixTarget - mixSmoothed);
+            if (std::fabs(mixTarget - mixSmoothed) < kSmoothSnapEps) mixSmoothed = mixTarget;
             const float mix = mixSmoothed;
             const float wet = mix;
             const float dry = 1.0f - wet;
