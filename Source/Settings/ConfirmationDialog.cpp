@@ -22,6 +22,8 @@ void ConfirmationDialog::show(const std::string& title, const std::string& messa
     m_message = message;
     m_callback = callback;
     m_response = DialogResponse::None;
+    m_focusIndex = 2; // default focus on the primary action (Save)
+    m_pressedButton = DialogResponse::None;
     m_isVisible = true;
     setVisible(true);
     
@@ -51,6 +53,15 @@ void ConfirmationDialog::handleResponse(DialogResponse response) {
     
     if (m_callback) {
         m_callback(response);
+    }
+}
+
+DialogResponse ConfirmationDialog::responseForFocus(int index) const {
+    switch (index) {
+        case 0: return DialogResponse::Cancel;
+        case 1: return DialogResponse::DontSave;
+        case 2: return DialogResponse::Save;
+        default: return DialogResponse::Save;
     }
 }
 
@@ -160,6 +171,17 @@ void ConfirmationDialog::onRender(AestraUI::NUIRenderer& renderer) {
     }
     renderer.fillRoundedRect(m_saveButtonRect, 7.0f, m_saveHovered ? accentHover : accent);
     renderer.drawTextCentered("Save", m_saveButtonRect, 13.0f, textWhite);
+
+    // Keyboard focus highlight: a faint accent ring around the focused button
+    // (Left/Right move it, Enter activates it).
+    const AestraUI::NUIRect focusRect =
+        (m_focusIndex == 0) ? m_cancelButtonRect : (m_focusIndex == 1) ? m_dontSaveButtonRect : m_saveButtonRect;
+    AestraUI::NUIRect ring = focusRect;
+    ring.x -= 2.0f;
+    ring.y -= 2.0f;
+    ring.width += 4.0f;
+    ring.height += 4.0f;
+    renderer.strokeRoundedRect(ring, 9.0f, 1.5f, accent.withAlpha(0.55f));
 }
 
 bool ConfirmationDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
@@ -172,33 +194,43 @@ bool ConfirmationDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     float mouseX = event.position.x;
     float mouseY = event.position.y;
     
-    // Update hover states
+    // Update hover states; hovering also moves keyboard focus so the two stay in sync.
     m_saveHovered = m_saveButtonRect.contains(mouseX, mouseY);
     m_dontSaveHovered = m_dontSaveButtonRect.contains(mouseX, mouseY);
     m_cancelHovered = m_cancelButtonRect.contains(mouseX, mouseY);
-    
-    // Handle clicks (pressed == true and button is Left)
-    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
-        if (m_saveHovered) {
-            handleResponse(DialogResponse::Save);
+    if (m_cancelHovered) m_focusIndex = 0;
+    else if (m_dontSaveHovered) m_focusIndex = 1;
+    else if (m_saveHovered) m_focusIndex = 2;
+
+    // Arm on press, fire on release. Consuming BOTH the press and the release while
+    // the dialog is visible prevents the release from clicking through to the app
+    // behind once the dialog hides (the old code responded on press, so the release
+    // reached whatever was underneath).
+    if (event.button == AestraUI::NUIMouseButton::Left) {
+        if (event.pressed) {
+            if (m_saveHovered) m_pressedButton = DialogResponse::Save;
+            else if (m_dontSaveHovered) m_pressedButton = DialogResponse::DontSave;
+            else if (m_cancelHovered) m_pressedButton = DialogResponse::Cancel;
+            else if (!m_dialogRect.contains(mouseX, mouseY)) m_pressedButton = DialogResponse::Cancel; // click-outside
+            else m_pressedButton = DialogResponse::None;
             return true;
         }
-        if (m_dontSaveHovered) {
-            handleResponse(DialogResponse::DontSave);
-            return true;
-        }
-        if (m_cancelHovered) {
-            handleResponse(DialogResponse::Cancel);
-            return true;
-        }
-        
-        // Click outside dialog = cancel
-        if (!m_dialogRect.contains(mouseX, mouseY)) {
-            handleResponse(DialogResponse::Cancel);
+        if (event.released) {
+            const DialogResponse armed = m_pressedButton;
+            m_pressedButton = DialogResponse::None;
+            // Only fire if the release lands on the same button that was pressed.
+            const bool overArmed =
+                (armed == DialogResponse::Save && m_saveHovered) ||
+                (armed == DialogResponse::DontSave && m_dontSaveHovered) ||
+                (armed == DialogResponse::Cancel &&
+                 (m_cancelHovered || !m_dialogRect.contains(mouseX, mouseY)));
+            if (armed != DialogResponse::None && overArmed) {
+                handleResponse(armed);
+            }
             return true;
         }
     }
-    
+
     // Consume all mouse events while dialog is visible
     return true;
 }
@@ -209,19 +241,29 @@ bool ConfirmationDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
     }
     
     if (event.pressed) {
-        // Escape = Cancel
+        // Escape = Cancel (regardless of focus).
         if (event.keyCode == AestraUI::NUIKeyCode::Escape) {
             handleResponse(DialogResponse::Cancel);
             return true;
         }
-        
-        // Enter = Save (primary action)
+
+        // Left/Right move the focus highlight across the button row.
+        if (event.keyCode == AestraUI::NUIKeyCode::Left) {
+            m_focusIndex = (m_focusIndex + 2) % 3; // wrap left
+            return true;
+        }
+        if (event.keyCode == AestraUI::NUIKeyCode::Right) {
+            m_focusIndex = (m_focusIndex + 1) % 3; // wrap right
+            return true;
+        }
+
+        // Enter/Tab-less activate: fire the focused button.
         if (event.keyCode == AestraUI::NUIKeyCode::Enter) {
-            handleResponse(DialogResponse::Save);
+            handleResponse(responseForFocus(m_focusIndex));
             return true;
         }
     }
-    
+
     // Consume all key events while dialog is visible
     return true;
 }
