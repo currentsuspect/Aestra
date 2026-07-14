@@ -333,6 +333,8 @@ private:
     std::shared_ptr<Aestra::Audio::PatternBrowserPanel> m_patternBrowser;
     bool m_pluginScanWasRunning{false};
     float m_fileBrowserWidthPref{-1.0f};
+    float m_pluginBrowserWidthPref{-1.0f};
+    float m_patternNavBrowserWidthPref{-1.0f};
     float m_patternBrowserWidthPref{-1.0f};
     bool m_browserResizing{false};
     BrowserResizeTarget m_browserResizeTarget{BrowserResizeTarget::None};
