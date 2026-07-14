@@ -4697,7 +4697,13 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 AudioSlicePayload payload;
                 payload.audioSourceId = sourceId;
                 payload.durationSeconds = durationSeconds;
-                payload.slices.push_back({0.0, static_cast<double>(source->getNumFrames())});
+                // Populate the sample-domain fields the serializer persists
+                // (startSamples/lengthSamples). The old {0.0, numFrames} form set
+                // startOffset/duration instead, so the slice saved as start:0 length:0.
+                AudioSlice fullSlice;
+                fullSlice.startSamples = 0.0;
+                fullSlice.lengthSamples = static_cast<double>(source->getNumFrames());
+                payload.slices.push_back(fullSlice);
 
                 auto& patternManager = self->m_trackManager->getPatternManager();
                 PatternID patternId = patternManager.createAudioPattern(displayName, durationBeats, payload);

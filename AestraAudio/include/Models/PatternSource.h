@@ -54,10 +54,15 @@ struct MidiPayload {
  * @brief Audio slice definition
  */
 struct AudioSlice {
-    double startOffset{0.0};
-    double duration{0.0};
-    double startSamples{0.0};  // Alternative representation in samples (as double for JSON)
-    double lengthSamples{0.0}; // Alternative representation in samples (as double for JSON)
+    // NOTE: only startSamples/lengthSamples are persisted (ProjectSerializer writes
+    // and reads these). startOffset/duration are legacy and are not serialized —
+    // do NOT rely on positional aggregate init like {0.0, numFrames}, which fills
+    // startOffset/duration and leaves the persisted fields empty. Set the sample
+    // fields explicitly. See #447.
+    double startOffset{0.0};    // legacy, not persisted
+    double duration{0.0};       // legacy, not persisted
+    double startSamples{0.0};   // persisted "start" (samples, as double for JSON)
+    double lengthSamples{0.0};  // persisted "length" (samples, as double for JSON)
 };
 
 /**
