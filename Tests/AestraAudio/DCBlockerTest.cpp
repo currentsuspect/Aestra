@@ -15,6 +15,10 @@ using Aestra::Audio::DCBlocker;
 
 namespace {
 
+// M_PI is not defined by MSVC without _USE_MATH_DEFINES; use a local constant so
+// the test builds identically across GCC/Clang/MSVC.
+constexpr double kPi = 3.14159265358979323846;
+
 int g_failures = 0;
 
 void check(bool cond, const char* msg) {
@@ -57,7 +61,7 @@ void test_preserves_audio_band() {
     // Skip the first 100 ms so the filter transient settles before measuring.
     const int settle = 4800;
     for (int i = 0; i < n; ++i) {
-        const double x = std::sin(2.0 * M_PI * freq * static_cast<double>(i) / sr);
+        const double x = std::sin(2.0 * kPi * freq * static_cast<double>(i) / sr);
         const double y = b.process(x);
         if (i >= settle) {
             peakIn = std::max(peakIn, std::fabs(x));
@@ -82,7 +86,7 @@ void test_dc_plus_sine_recenters() {
     double sum = 0.0;
     int counted = 0;
     for (int i = 0; i < n; ++i) {
-        const double x = dc + 0.4 * std::sin(2.0 * M_PI * freq * static_cast<double>(i) / sr);
+        const double x = dc + 0.4 * std::sin(2.0 * kPi * freq * static_cast<double>(i) / sr);
         const double y = b.process(x);
         if (i >= settle) {
             sum += y;
