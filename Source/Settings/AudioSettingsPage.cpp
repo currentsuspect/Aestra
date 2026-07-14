@@ -506,9 +506,8 @@ void AudioSettingsPage::applyChanges() {
     
     // Toggles
     if (m_audioEngine) {
-        // DC Removal (Mock - Engine doesn't have explicit param exposed yet, assume enabled by default or add later)
-        // m_audioEngine->setDCRemovalEnabled(m_dcRemovalToggle->isOn());
-        
+        m_audioEngine->setDCRemovalEnabled(m_dcRemovalToggle->isOn());
+
         m_audioEngine->setSafetyLimiterEnabled(m_softClippingToggle->isOn());
         m_audioEngine->setPreviewDuckingAttenuationDb(static_cast<float>(m_previewDuckingDropdown->getSelectedValue()));
     }

@@ -4,6 +4,7 @@
 #include <string>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <thread>
 #include <mutex>
@@ -139,6 +140,17 @@ public:
      * @return true if successful
      */
     bool forceAutosave();
+
+    /**
+     * @brief Run one autosave decision synchronously: save only if the project is
+     * dirty and the debounce (minDirtyDelay) has elapsed. Applies the same
+     * dirty/debounce gate the background thread uses, so an explicit caller (or a
+     * deterministic test) can drive an autosave-if-needed without waiting on the
+     * scheduler. Like forceAutosave(), it is independent of the background
+     * `enabled` flag — that flag governs only the automatic timer.
+     * @return true if an autosave was performed.
+     */
+    bool autosaveIfDue();
     
     std::string getAutosavePath() const;
     std::string getBackupDirectory() const;
@@ -183,7 +195,9 @@ private:
     std::atomic<bool> m_shouldStop{false};
     std::atomic<bool> m_initialized{false};
     
-    std::chrono::steady_clock::time_point m_lastDirtyTime;
+    // steady_clock milliseconds since epoch. Atomic so markDirty() (callable from
+    // any thread) and the autosave gate can write/read it without the mutex.
+    std::atomic<int64_t> m_lastDirtyTimeMs{0};
     std::chrono::steady_clock::time_point m_lastAutosaveTime;
     
     std::unique_ptr<std::thread> m_autosaveThread;

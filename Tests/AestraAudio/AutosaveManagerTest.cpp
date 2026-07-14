@@ -48,7 +48,7 @@ int main() {
             return true;
         };
 
-        manager.initialize("some_project.aes", std::move(config));
+        manager.initialize((tempDir / "some_project.aes").string(), std::move(config));
         require(manager.getAutosavePath() == autosavePath.string(), "autosavePathOverride should be respected");
 
         manager.markDirty();
@@ -62,33 +62,48 @@ int main() {
         std::cout << "[INFO] Autosave with override passed.\n";
     }
 
-    // --- Test 2: markClean suppresses further autosaves ---
+    // --- Test 2: markClean suppresses a due autosave ---
+    // Driven synchronously via autosaveIfDue() rather than sleeping against the
+    // background thread: the previous version raced markClean() vs. the 1s autosave
+    // timer, which flaked under ThreadSanitizer's 5-15x slowdown (issue #437). Here
+    // there is no timing dependency at all. A dedicated path keeps Test 1's file
+    // untouched.
     {
+        const auto suppressPath = tempDir / "suppress.autosave.aes";
         AutosaveManager manager;
         int serializeCount = 0;
 
         AutosaveManager::Config config;
-        config.enabled = true;
+        config.enabled = false; // no background thread; we drive the gate explicitly
         config.autosaveInterval = std::chrono::seconds(1);
         config.minDirtyDelay = std::chrono::seconds(0);
-        config.autosavePathOverride = autosavePath.string();
+        config.autosavePathOverride = suppressPath.string();
         config.serializer = [&](std::string& outData) -> bool {
             outData = "updated data";
             ++serializeCount;
             return true;
         };
 
-        manager.initialize("project2.aes", std::move(config));
+        manager.initialize((tempDir / "project2.aes").string(), std::move(config));
+
+        // markClean() after markDirty() must clear the pending-change state so a
+        // due autosave is suppressed.
         manager.markDirty();
         manager.markClean();
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-        manager.shutdown();
+        require(!manager.autosaveIfDue(), "markClean should have suppressed autosave");
+        require(serializeCount == 0, "suppressed autosave must not serialize");
+        require(!std::filesystem::exists(suppressPath), "suppressed autosave must not write a file");
 
-        // The existing file from test 1 should still be there; test 2 should NOT have
-        // overwritten it because markClean() was called before the thread woke.
-        std::ifstream in(autosavePath, std::ios::binary);
+        // Sanity: with changes genuinely pending, the same gate does autosave —
+        // proving the suppression above was due to markClean(), not a dead path.
+        manager.markDirty();
+        require(manager.autosaveIfDue(), "a dirty project should autosave when due");
+        require(serializeCount == 1, "exactly one serialize after the due autosave");
+        std::ifstream in(suppressPath, std::ios::binary);
         std::string contents((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-        require(contents == "test autosave data", "markClean should have suppressed autosave");
+        require(contents == "updated data", "due autosave should write serialized data");
+
+        manager.shutdown();
         std::cout << "[INFO] markClean suppression passed.\n";
     }
 
@@ -106,7 +121,7 @@ int main() {
             return true;
         };
 
-        manager.initialize("project3.aes", std::move(config));
+        manager.initialize((tempDir / "project3.aes").string(), std::move(config));
         bool ok = manager.forceAutosave();
         require(ok, "forceAutosave should succeed");
         manager.shutdown();
@@ -132,7 +147,7 @@ int main() {
             return true;
         };
 
-        manager.initialize("project4.aes", std::move(config));
+        manager.initialize((tempDir / "project4.aes").string(), std::move(config));
         manager.forceAutosave();
         manager.forceAutosave();
         manager.forceAutosave();
@@ -149,6 +164,38 @@ int main() {
         }
         require(backupCount <= 2, "Backup rotation should limit to maxBackupFiles");
         std::cout << "[INFO] Backup rotation passed (" << backupCount << " backups).\n";
+    }
+
+    // --- Test 5: a change made during the save must not be lost ---
+    // The autosave path claims the dirty flag before the (slow) serialize. If a
+    // markDirty() lands mid-save, the project must stay dirty so the next cycle
+    // catches it — rather than being cleared by an unconditional markClean().
+    {
+        const auto concurrentPath = tempDir / "concurrent.autosave.aes";
+        AutosaveManager manager;
+        bool markedDuringSave = false;
+
+        AutosaveManager::Config config;
+        config.enabled = false; // drive synchronously; no background thread
+        config.minDirtyDelay = std::chrono::seconds(0);
+        config.autosavePathOverride = concurrentPath.string();
+        config.serializer = [&](std::string& outData) -> bool {
+            outData = "concurrent data";
+            // Simulate a user edit arriving while the save is in flight.
+            if (!markedDuringSave) {
+                markedDuringSave = true;
+                manager.markDirty();
+            }
+            return true;
+        };
+
+        manager.initialize((tempDir / "project5.aes").string(), std::move(config));
+        manager.markDirty();
+        require(manager.autosaveIfDue(), "autosave should run for a dirty project");
+        require(markedDuringSave, "serializer should have observed the save in progress");
+        require(manager.isDirty(), "a change made during the save must keep the project dirty");
+        manager.shutdown();
+        std::cout << "[INFO] concurrent-dirty preservation passed.\n";
     }
 
     std::cout << "[PASS] AutosaveManagerTest\n";
