@@ -26,3 +26,13 @@ Run tests with:
 ```bash
 ctest --test-dir build --output-on-failure
 ```
+
+## Premium-enabled builds
+
+If a build tree is configured with `-DAESTRA_LICENSE_ENABLE_PREMIUM_LEASES=ON`, the license verification public key is baked in from the environment at configure time. That build directory then requires `AESTRA_LICENSE_PUBLIC_KEY_HEX` on **every reconfigure** (CMake reconfigures automatically when a `CMakeLists.txt` changes), or configuration aborts:
+
+```bash
+export AESTRA_LICENSE_PUBLIC_KEY_HEX=<64 hex chars>   # verification public key, not the signing secret
+```
+
+Default public/core builds leave this option `OFF` and do not need the variable. See [docs/getting-started/building.md](docs/getting-started/building.md#troubleshooting) for details.

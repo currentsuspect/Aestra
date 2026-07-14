@@ -125,3 +125,14 @@ The root `CMakeLists.txt` will fall back to vendored dependencies only if the ex
 ### Windows binary path does not match the command in an older doc
 
 Prefer checking `build/bin` or `build/bin/<Config>`. Older docs may still mention outdated target names or output folders.
+
+### Configure fails: `AESTRA_LICENSE_ENABLE_PREMIUM_LEASES requires ... AESTRA_LICENSE_PUBLIC_KEY_HEX`
+
+A build tree configured with `-DAESTRA_LICENSE_ENABLE_PREMIUM_LEASES=ON` bakes the license verification public key from the environment at configure time. Once that option is cached in a build directory, **every reconfigure** (including the automatic one CMake runs when a `CMakeLists.txt` changes) needs the key present, or configuration aborts:
+
+```bash
+export AESTRA_LICENSE_PUBLIC_KEY_HEX=<64 hex chars>   # verification public key (safe to expose; not the signing secret)
+cmake --build <build-dir> --parallel
+```
+
+Export it in your shell profile if you routinely build a premium-enabled tree. Default (public/core) builds leave `AESTRA_LICENSE_ENABLE_PREMIUM_LEASES=OFF` and do not require the variable.
