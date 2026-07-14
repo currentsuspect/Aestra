@@ -166,6 +166,38 @@ int main() {
         std::cout << "[INFO] Backup rotation passed (" << backupCount << " backups).\n";
     }
 
+    // --- Test 5: a change made during the save must not be lost ---
+    // The autosave path claims the dirty flag before the (slow) serialize. If a
+    // markDirty() lands mid-save, the project must stay dirty so the next cycle
+    // catches it — rather than being cleared by an unconditional markClean().
+    {
+        const auto concurrentPath = tempDir / "concurrent.autosave.aes";
+        AutosaveManager manager;
+        bool markedDuringSave = false;
+
+        AutosaveManager::Config config;
+        config.enabled = false; // drive synchronously; no background thread
+        config.minDirtyDelay = std::chrono::seconds(0);
+        config.autosavePathOverride = concurrentPath.string();
+        config.serializer = [&](std::string& outData) -> bool {
+            outData = "concurrent data";
+            // Simulate a user edit arriving while the save is in flight.
+            if (!markedDuringSave) {
+                markedDuringSave = true;
+                manager.markDirty();
+            }
+            return true;
+        };
+
+        manager.initialize((tempDir / "project5.aes").string(), std::move(config));
+        manager.markDirty();
+        require(manager.autosaveIfDue(), "autosave should run for a dirty project");
+        require(markedDuringSave, "serializer should have observed the save in progress");
+        require(manager.isDirty(), "a change made during the save must keep the project dirty");
+        manager.shutdown();
+        std::cout << "[INFO] concurrent-dirty preservation passed.\n";
+    }
+
     std::cout << "[PASS] AutosaveManagerTest\n";
     return 0;
 }
