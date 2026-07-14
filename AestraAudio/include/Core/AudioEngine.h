@@ -9,6 +9,7 @@
 #include "AudioTelemetry.h"
 #include "ChannelSlotMap.h"
 #include "ContinuousParamBuffer.h"
+#include "DSP/DCBlocker.h"
 #include "DSP/TruePeakMeter.h"
 #include "EngineState.h"
 #include "GarbageCollector.h"
@@ -305,6 +306,11 @@ public:
     void setSafetyLimiterEnabled(bool enabled) { m_safetyLimiterEnabled.store(enabled, std::memory_order_relaxed); }
     /** @brief Check whether the master safety limiter is enabled. */
     bool isSafetyLimiterEnabled() const { return m_safetyLimiterEnabled.load(std::memory_order_relaxed); }
+
+    /** @brief Enable or disable master-bus DC removal (one-pole DC blocker). Default: off. */
+    void setDCRemovalEnabled(bool enabled) { m_dcRemovalEnabled.store(enabled, std::memory_order_relaxed); }
+    /** @brief Check whether master-bus DC removal is enabled. */
+    bool isDCRemovalEnabled() const { return m_dcRemovalEnabled.load(std::memory_order_relaxed); }
 
     /** @brief Enable or disable the metronome. */
     void setMetronomeEnabled(bool enabled) { m_metronomeEngine.setEnabled(enabled); }
@@ -698,19 +704,8 @@ private:
         return x * (27.0 + x2) / (27.0 + 9.0 * x2);
     }
 
-    // DC blocker (double precision)
-    struct DCBlockerD {
-        double x1{0.0};
-        double y1{0.0};
-        static constexpr double R = 0.9997; // Slightly more aggressive
-
-        inline double process(double x) {
-            double y = x - x1 + R * y1;
-            x1 = x;
-            y1 = y;
-            return y;
-        }
-    };
+    // DC blocker (double precision) — shared one-pole, see DSP/DCBlocker.h
+    using DCBlockerD = DCBlocker;
 
     AudioCommandQueue m_commandQueue;
     AudioTelemetry m_telemetry;
@@ -899,6 +894,14 @@ private:
     SmoothedParamD m_smoothedMasterGain;
     MasterSafetyLimiter m_safetyLimiter;
     std::atomic<bool> m_safetyLimiterEnabled{true};
+
+    // Master-bus DC removal (off by default; see setDCRemovalEnabled).
+    // m_dcRemovalPrevOn is RT-thread-only bookkeeping used to clear the blocker
+    // state on the off->on transition so enabling never injects a stale-state step.
+    std::atomic<bool> m_dcRemovalEnabled{false};
+    DCBlockerD m_dcBlockerL;
+    DCBlockerD m_dcBlockerR;
+    bool m_dcRemovalPrevOn{false};
 
     // Peak detection
     std::atomic<float> m_peakL{0.0f};

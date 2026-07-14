@@ -1966,6 +1966,16 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Audio/DelayLineTest.cpp")
     set_tests_properties(DelayLineTest PROPERTIES LABELS "audio;dsp;delay")
 endif()
 
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/DCBlockerTest.cpp")
+    add_executable(DCBlockerTest AestraAudio/DCBlockerTest.cpp)
+    target_include_directories(DCBlockerTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME DCBlockerTest COMMAND DCBlockerTest)
+    set_tests_properties(DCBlockerTest PROPERTIES LABELS "audio;dsp;dc-removal")
+endif()
+
 # AudioEngine Diagnostics Test
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/AudioEngineDiagnosticsTest.cpp")
     add_executable(AudioEngineDiagnosticsTest AestraAudio/AudioEngineDiagnosticsTest.cpp)

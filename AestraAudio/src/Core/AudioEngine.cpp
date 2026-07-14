@@ -1049,6 +1049,15 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 
     const bool limiterOn = m_safetyLimiterEnabled.load(std::memory_order_relaxed);
 
+    // Master-bus DC removal. Clear the blocker state on the off->on transition so
+    // enabling never plays back a stale-state step from a previous engagement.
+    const bool dcRemovalOn = m_dcRemovalEnabled.load(std::memory_order_relaxed);
+    if (dcRemovalOn && !m_dcRemovalPrevOn) {
+        m_dcBlockerL.reset();
+        m_dcBlockerR.reset();
+    }
+    m_dcRemovalPrevOn = dcRemovalOn;
+
     // Signal integrity counters (local, then atomic update at end)
     uint32_t nanCount = 0;
     uint32_t clipCount = 0;
@@ -1073,6 +1082,13 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
 #ifdef AESTRA_DEBUG
             assert(false && "NaN/Inf detected in right channel output");
 #endif
+        }
+
+        // DC removal runs before the limiter and metering so the offset is gone
+        // from peak/RMS/LUFS and the limiter acts on the corrected signal.
+        if (dcRemovalOn) {
+            L = m_dcBlockerL.process(L);
+            R = m_dcBlockerR.process(R);
         }
 
         if (limiterOn) {
