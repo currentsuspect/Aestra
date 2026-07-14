@@ -4,6 +4,8 @@
 #include "../AestraUI/Graphics/NUIRenderer.h"
 #include "../AestraCore/include/AestraLog.h"
 
+#include <cmath>
+
 namespace Aestra {
 
 ConfirmationDialog::ConfirmationDialog()
@@ -54,29 +56,33 @@ void ConfirmationDialog::handleResponse(DialogResponse response) {
 
 void ConfirmationDialog::calculateLayout() {
     AestraUI::NUIRect parentBounds = getBounds();
-    
-	    // Dialog dimensions - wider for better button spacing
-	    const float dialogWidth = 420.0f;
-	    const float dialogHeight = 160.0f;
-	    const float buttonWidth = 110.0f;
-	    const float buttonHeight = 34.0f;
-	    const float buttonSpacing = 10.0f;
-	    const float buttonMargin = 24.0f;
-    
-    // Center dialog in parent
-    m_dialogRect.x = parentBounds.x + (parentBounds.width - dialogWidth) / 2.0f;
-    m_dialogRect.y = parentBounds.y + (parentBounds.height - dialogHeight) / 2.0f;
+
+    // Dialog dimensions
+    const float dialogWidth = 400.0f;
+    const float dialogHeight = 172.0f;
+    const float buttonHeight = 36.0f;
+    const float buttonSpacing = 10.0f;
+    const float margin = 22.0f;
+
+    // Center dialog in parent (rounded so 1px strokes/text stay crisp).
+    m_dialogRect.x = std::round(parentBounds.x + (parentBounds.width - dialogWidth) / 2.0f);
+    m_dialogRect.y = std::round(parentBounds.y + (parentBounds.height - dialogHeight) / 2.0f);
     m_dialogRect.width = dialogWidth;
     m_dialogRect.height = dialogHeight;
-    
-	    // Calculate button positions (centered at bottom)
-	    float totalButtonsWidth = 3 * buttonWidth + 2 * buttonSpacing;
-	    float buttonsStartX = m_dialogRect.x + (dialogWidth - totalButtonsWidth) * 0.5f;
-	    float buttonY = m_dialogRect.y + dialogHeight - buttonMargin - buttonHeight;
-    
-    m_saveButtonRect = {buttonsStartX, buttonY, buttonWidth, buttonHeight};
-    m_dontSaveButtonRect = {buttonsStartX + buttonWidth + buttonSpacing, buttonY, buttonWidth, buttonHeight};
-    m_cancelButtonRect = {buttonsStartX + 2 * (buttonWidth + buttonSpacing), buttonY, buttonWidth, buttonHeight};
+
+    // Right-aligned button row, primary (Save) rightmost — modern convention:
+    // [ Cancel ] [ Don't Save ] [ Save ].
+    const float cancelWidth = 84.0f;
+    const float dontSaveWidth = 104.0f;
+    const float saveWidth = 96.0f;
+    const float totalWidth = cancelWidth + dontSaveWidth + saveWidth + buttonSpacing * 2.0f;
+
+    const float buttonY = m_dialogRect.y + dialogHeight - margin - buttonHeight;
+    const float startX = m_dialogRect.right() - margin - totalWidth;
+
+    m_cancelButtonRect = {startX, buttonY, cancelWidth, buttonHeight};
+    m_dontSaveButtonRect = {m_cancelButtonRect.right() + buttonSpacing, buttonY, dontSaveWidth, buttonHeight};
+    m_saveButtonRect = {m_dontSaveButtonRect.right() + buttonSpacing, buttonY, saveWidth, buttonHeight};
 }
 
 void ConfirmationDialog::onRender(AestraUI::NUIRenderer& renderer) {
@@ -85,69 +91,75 @@ void ConfirmationDialog::onRender(AestraUI::NUIRenderer& renderer) {
     }
     
     calculateLayout();
-    
-    // Modern dark theme colors
-    AestraUI::NUIColor overlayColor(0.0f, 0.0f, 0.0f, 0.7f);
-    AestraUI::NUIColor dialogBg(0.12f, 0.12f, 0.14f, 1.0f);       // Dark gray
-    AestraUI::NUIColor dialogBorder(0.25f, 0.25f, 0.28f, 1.0f);   // Subtle border
-    AestraUI::NUIColor titleColor(1.0f, 1.0f, 1.0f, 1.0f);        // White
-    AestraUI::NUIColor messageColor(0.7f, 0.7f, 0.72f, 1.0f);     // Light gray
-    
-    // Button colors
-    AestraUI::NUIColor saveBgNormal(0.4f, 0.6f, 1.0f, 1.0f);      // Blue accent
-    AestraUI::NUIColor saveBgHover(0.5f, 0.7f, 1.0f, 1.0f);       // Lighter blue
-    AestraUI::NUIColor buttonBgNormal(0.2f, 0.2f, 0.22f, 1.0f);   // Dark button
-    AestraUI::NUIColor buttonBgHover(0.3f, 0.3f, 0.33f, 1.0f);    // Hover state
-    AestraUI::NUIColor buttonBorder(0.35f, 0.35f, 0.38f, 1.0f);   // Button border
-    AestraUI::NUIColor textWhite(1.0f, 1.0f, 1.0f, 1.0f);
-    AestraUI::NUIColor textLight(0.9f, 0.9f, 0.92f, 1.0f);
-    
-    // Draw semi-transparent overlay
-    AestraUI::NUIRect parentBounds = getBounds();
+
+    // --- Palette (Aestra dark + brand purple) ---
+    const AestraUI::NUIColor overlayColor(0.0f, 0.0f, 0.0f, 0.55f);
+    const AestraUI::NUIColor dialogBg(0.078f, 0.078f, 0.090f, 1.0f);
+    const AestraUI::NUIColor dialogBorder(1.0f, 1.0f, 1.0f, 0.10f);
+    const AestraUI::NUIColor titleColor(0.96f, 0.96f, 0.98f, 1.0f);
+    const AestraUI::NUIColor messageColor(0.62f, 0.62f, 0.66f, 1.0f);
+    const AestraUI::NUIColor divider(1.0f, 1.0f, 1.0f, 0.07f);
+
+    // Brand purple (matches AestraVerb / accentPrimary).
+    const AestraUI::NUIColor accent(0.498f, 0.353f, 0.941f, 1.0f);
+    const AestraUI::NUIColor accentHover(0.576f, 0.443f, 0.973f, 1.0f);
+    const AestraUI::NUIColor textWhite(1.0f, 1.0f, 1.0f, 1.0f);
+    const AestraUI::NUIColor textLight(0.86f, 0.86f, 0.90f, 1.0f);
+    const AestraUI::NUIColor textMuted(0.66f, 0.66f, 0.70f, 1.0f);
+
+    // Dim the app behind the modal.
+    const AestraUI::NUIRect parentBounds = getBounds();
     renderer.fillRect(parentBounds, overlayColor);
-    
-    // Draw dialog shadow (offset dark rectangle)
-    AestraUI::NUIRect shadowRect = m_dialogRect;
-    shadowRect.x += 4.0f;
-    shadowRect.y += 4.0f;
-    renderer.fillRoundedRect(shadowRect, 8.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.4f));
-    
-    // Draw dialog background with rounded corners
-    renderer.fillRoundedRect(m_dialogRect, 8.0f, dialogBg);
-    renderer.strokeRoundedRect(m_dialogRect, 8.0f, 1.0f, dialogBorder);
-    
-    // Draw title (larger, bold-ish)
-    float titleX = m_dialogRect.x + 24.0f;
-    float titleY = m_dialogRect.y + 28.0f;
-    renderer.drawText(m_title, AestraUI::NUIPoint(titleX, titleY), 14.0f, titleColor);
-    
-    // Draw message
-    float messageX = m_dialogRect.x + 24.0f;
-    float messageY = m_dialogRect.y + 58.0f;
-    renderer.drawText(m_message, AestraUI::NUIPoint(messageX, messageY), 13.0f, messageColor);
-    
-    // === SAVE BUTTON (Primary - Blue) ===
-    AestraUI::NUIColor saveBg = m_saveHovered ? saveBgHover : saveBgNormal;
-    renderer.fillRoundedRect(m_saveButtonRect, 6.0f, saveBg);
-    
-    // Center "Save" text using drawTextCentered
-    renderer.drawTextCentered("Save", m_saveButtonRect, 13.0f, textWhite);
-    
-    // === DON'T SAVE BUTTON ===
-    AestraUI::NUIColor dontSaveBg = m_dontSaveHovered ? buttonBgHover : buttonBgNormal;
-    renderer.fillRoundedRect(m_dontSaveButtonRect, 6.0f, dontSaveBg);
-    renderer.strokeRoundedRect(m_dontSaveButtonRect, 6.0f, 1.0f, buttonBorder);
-    
-    // Center "Don't Save" text using drawTextCentered
+
+    // Soft drop shadow (offsetX, offsetY, blur, color).
+    renderer.drawShadow(m_dialogRect, 0.0f, 10.0f, 22.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.55f));
+
+    // Dialog surface.
+    renderer.fillRoundedRect(m_dialogRect, 12.0f, dialogBg);
+    renderer.strokeRoundedRect(m_dialogRect, 12.0f, 1.0f, dialogBorder);
+
+    // Header: an accent "unsaved" dot, then the title on its baseline.
+    const float padX = m_dialogRect.x + 24.0f;
+    const float titleBaselineY = m_dialogRect.y + 40.0f;
+    const float dotR = 4.0f;
+    renderer.fillCircle({padX + dotR, titleBaselineY - 5.0f}, dotR, accent);
+    renderer.fillCircle({padX + dotR, titleBaselineY - 5.0f}, dotR + 3.0f, accent.withAlpha(0.18f));
+    renderer.drawText(m_title, AestraUI::NUIPoint(padX + dotR * 2.0f + 12.0f,
+                                                   std::round(titleBaselineY - 13.0f)),
+                      15.0f, titleColor);
+
+    // Message.
+    renderer.drawText(m_message, AestraUI::NUIPoint(padX, std::round(m_dialogRect.y + 66.0f)), 12.5f, messageColor);
+
+    // Divider above the button row.
+    const float dividerY = std::round(m_saveButtonRect.y - 16.0f);
+    renderer.drawLine({m_dialogRect.x + 20.0f, dividerY}, {m_dialogRect.right() - 20.0f, dividerY}, 1.0f, divider);
+
+    // --- Buttons ---
+    // Cancel: ghost (border only).
+    if (m_cancelHovered)
+        renderer.fillRoundedRect(m_cancelButtonRect, 7.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.06f));
+    renderer.strokeRoundedRect(m_cancelButtonRect, 7.0f, 1.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.14f));
+    renderer.drawTextCentered("Cancel", m_cancelButtonRect, 13.0f, m_cancelHovered ? textLight : textMuted);
+
+    // Don't Save: subtle filled + border.
+    renderer.fillRoundedRect(m_dontSaveButtonRect, 7.0f,
+                             m_dontSaveHovered ? AestraUI::NUIColor(0.20f, 0.20f, 0.23f, 1.0f)
+                                               : AestraUI::NUIColor(0.145f, 0.145f, 0.165f, 1.0f));
+    renderer.strokeRoundedRect(m_dontSaveButtonRect, 7.0f, 1.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.12f));
     renderer.drawTextCentered("Don't Save", m_dontSaveButtonRect, 13.0f, textLight);
-    
-    // === CANCEL BUTTON ===
-    AestraUI::NUIColor cancelBg = m_cancelHovered ? buttonBgHover : buttonBgNormal;
-    renderer.fillRoundedRect(m_cancelButtonRect, 6.0f, cancelBg);
-    renderer.strokeRoundedRect(m_cancelButtonRect, 6.0f, 1.0f, buttonBorder);
-    
-    // Center "Cancel" text using drawTextCentered
-    renderer.drawTextCentered("Cancel", m_cancelButtonRect, 13.0f, textLight);
+
+    // Save: primary, filled accent with a soft hover glow.
+    if (m_saveHovered) {
+        AestraUI::NUIRect glow = m_saveButtonRect;
+        glow.x -= 3.0f;
+        glow.y -= 3.0f;
+        glow.width += 6.0f;
+        glow.height += 6.0f;
+        renderer.fillRoundedRect(glow, 9.0f, accent.withAlpha(0.22f));
+    }
+    renderer.fillRoundedRect(m_saveButtonRect, 7.0f, m_saveHovered ? accentHover : accent);
+    renderer.drawTextCentered("Save", m_saveButtonRect, 13.0f, textWhite);
 }
 
 bool ConfirmationDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
