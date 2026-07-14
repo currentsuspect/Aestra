@@ -399,6 +399,7 @@ AestraContent::AestraContent()
     m_fileBrowser->setOnNavActionSelected([this](AestraUI::FileBrowser::BrowserNavAction action) {
         const bool isPlugins = (action == AestraUI::FileBrowser::BrowserNavAction::Plugins);
         const bool isPatterns = (action == AestraUI::FileBrowser::BrowserNavAction::Patterns);
+        m_fileBrowser->setSearchPlaceholder(isPlugins ? "Search plugins..." : "Search library...");
         if (m_pluginBrowser) {
             m_pluginBrowser->setVisible(isPlugins);
         }
@@ -415,10 +416,12 @@ AestraContent::AestraContent()
             float navW = m_fileBrowser->getNavPaneWidth();
             auto fbBounds = m_fileBrowser->getBounds();
             float pbWidth = std::max(0.0f, fbBounds.width - navW);
-            // Align with file browser content area (below search bar)
+            // Cover from just below the search bar to the bottom (the "Plugins"
+            // header is offset internally via CONTENT_TOP_PAD, not by moving bounds).
             constexpr float searchH = 28.0f;
             m_pluginBrowser->setBounds(
-                AestraUI::NUIRect(fbBounds.x + navW, fbBounds.y + searchH, pbWidth, fbBounds.height - searchH));
+                AestraUI::NUIRect(fbBounds.x + navW, fbBounds.y + searchH, pbWidth,
+                                  std::max(0.0f, fbBounds.height - searchH)));
         }
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     });
@@ -1182,6 +1185,16 @@ void AestraContent::onUpdate(double dt) {
     drainMainThreadTasks();
     updatePendingCountIn();
 
+    // PluginManager may start an initial asynchronous scan when no valid cache
+    // exists. Its bootstrap scan has no UI callback, so observe the transition
+    // here and publish the completed result on the main thread.
+    auto& pluginScanner = Aestra::Audio::PluginManager::getInstance().getScanner();
+    const bool pluginScanRunning = pluginScanner.isScanning();
+    if (m_pluginScanWasRunning && !pluginScanRunning) {
+        refreshPluginList();
+    }
+    m_pluginScanWasRunning = pluginScanRunning;
+
     // Drive preview state: clears the pending-load spinner once the decode
     // is ready, feeds playhead/duration to the panel, and stops at the end.
     // (This existed but was never called — the panel's spinner and progress
@@ -1459,6 +1472,11 @@ void AestraContent::onResize(int width, int height) {
     const size_t browserTab = m_browserToggle ? m_browserToggle->getSelectedIndex() : 0;
     const auto activeNavAction =
         m_fileBrowser ? m_fileBrowser->getActiveNavAction() : AestraUI::FileBrowser::BrowserNavAction::Sounds;
+    if (m_fileBrowser) {
+        m_fileBrowser->setSearchPlaceholder(
+            activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Plugins ? "Search plugins..."
+                                                                                : "Search library...");
+    }
     const bool legacyPatternTabActive = browserTab == 2;
     const bool patternNavActive = activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Patterns;
     const bool browserPatternTabActive = legacyPatternTabActive || patternNavActive;
@@ -1519,14 +1537,21 @@ void AestraContent::onResize(int width, int height) {
     if (m_pluginBrowser) {
         bool isPlugins = m_fileBrowser && m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Plugins;
         if (isPlugins && m_fileBrowser->isVisible()) {
-            float navW = m_fileBrowser->getNavPaneWidth();
-            float pbLeft = navW;
-            float pbWidth = std::max(0.0f, fileBrowserWidth - navW);
-            // Align with file browser content area (below search bar)
+            // Overlay the file browser's actual bounds (which span full height),
+            // offset below its search bar, so the panel reaches the bottom and
+            // never leaks the file list behind it. Uses the same absolute bounds
+            // as the nav-action callback to avoid coordinate-convention drift.
+            // Cover the file browser from just below its search bar to the bottom,
+            // so nothing behind it (breadcrumb / Name header / file list) leaks. The
+            // "Plugins" header is offset DOWN inside the panel (CONTENT_TOP_PAD), not
+            // by moving the panel, so the placement stays without exposing the gap.
+            const auto fbB = m_fileBrowser->getBounds();
+            const float navW = m_fileBrowser->getNavPaneWidth();
             constexpr float searchH = 28.0f;
-            float pbTop = sidebarTopY + searchH;
-            float pbHeight = height - pbTop;
-            m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, pbLeft, pbTop - contentBounds.y, pbWidth, pbHeight));
+            const float pbTop = fbB.y + searchH;
+            m_pluginBrowser->setBounds(AestraUI::NUIRect(fbB.x + navW, pbTop,
+                                                         std::max(0.0f, fbB.width - navW),
+                                                         std::max(0.0f, fbB.bottom() - pbTop)));
             m_pluginBrowser->setVisible(true);
         } else {
             float pbTop = sidebarTopY;
@@ -3692,18 +3717,11 @@ void AestraContent::refreshPluginList() {
         return;
 
     auto& pm = Aestra::Audio::PluginManager::getInstance();
+    const auto& scannedPlugins = pm.getScanner().getScannedPlugins();
     std::vector<AestraUI::PluginListItem> uiPlugins;
-    // Map internal PluginInfo to UI item
-    for (const auto& p : pm.getScanner().getScannedPlugins()) {
-        AestraUI::PluginListItem item;
-        item.id = p.id;
-        item.name = p.name;
-        item.vendor = p.vendor;
-        item.version = p.version;
-        item.category = p.category;
-        item.formatStr = (p.format == Aestra::Audio::PluginFormat::VST3) ? "VST3" : "CLAP (Exp.)";
-        item.typeName = (p.type == Aestra::Audio::PluginType::Instrument) ? "Instrument" : "Effect";
-        uiPlugins.push_back(item);
+    uiPlugins.reserve(scannedPlugins.size());
+    for (const auto& p : scannedPlugins) {
+        uiPlugins.push_back(m_pluginController->convertToListItem(p));
     }
     m_pluginBrowser->setPluginList(uiPlugins);
     AESTRA_LOG_DEBUG("Refreshed plugin list UI: " + std::to_string(uiPlugins.size()) + " plugins found.");

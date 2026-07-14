@@ -3639,6 +3639,12 @@ void FileBrowser::setSearchQuery(const std::string& query) {
     }
 }
 
+void FileBrowser::setSearchPlaceholder(const std::string& placeholder) {
+    if (searchInput_ && searchInput_->getPlaceholderText() != placeholder) {
+        searchInput_->setPlaceholderText(placeholder);
+    }
+}
+
 void FileBrowser::applyFilter() {
     filteredFiles_.clear();
     std::string query = searchInput_ ? searchInput_->getText() : "";
