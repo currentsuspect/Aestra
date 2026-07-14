@@ -407,7 +407,7 @@ void MembershipSettingsPage::startLogin() {
         }
     }
 #else
-    m_signInMessage = "License services unavailable.";
+    m_signInMessage = "Account sign-in isn't available in this build.";
 #endif
     refreshDisplay();
 }
@@ -435,7 +435,7 @@ void MembershipSettingsPage::verifyLogin() {
         }
     }
 #else
-    m_signInMessage = "License services unavailable.";
+    m_signInMessage = "Account sign-in isn't available in this build.";
 #endif
     refreshDisplay();
 }
