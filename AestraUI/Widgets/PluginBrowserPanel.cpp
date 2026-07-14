@@ -164,11 +164,16 @@ void PluginBrowserPanel::renderHeaderBar(NUIRenderer& renderer) {
     renderer.drawLine({bounds.x, headerY + headerH}, {bounds.right(), headerY + headerH}, 1.0f, Colors::divider);
 
     // Title, with a muted count once a scan has populated the list.
-    renderer.drawText("Plugins", {bounds.x + 14.0f, headerY + 15.0f}, 12.0f, Colors::textPrimary.withAlpha(0.90f));
+    renderer.drawText("Plugins", {bounds.x + 14.0f, headerY + 12.0f}, 12.0f, Colors::textPrimary.withAlpha(0.90f));
     if (!m_allPlugins.empty()) {
         float titleW = renderer.measureText("Plugins", 12.0f).width;
+        const bool filtered = m_typeFilter != PluginTypeFilter::All || m_formatFilter != PluginFormatFilter::All ||
+                              m_showFavoritesOnly || !m_searchQuery.empty();
         std::string count = std::to_string(m_filteredPlugins.size());
-        renderer.drawText(count, {bounds.x + 14.0f + titleW + 7.0f, headerY + 16.0f}, 10.0f,
+        if (filtered) {
+            count += " / " + std::to_string(m_allPlugins.size());
+        }
+        renderer.drawText(count, {bounds.x + 14.0f + titleW + 7.0f, headerY + 13.0f}, 10.0f,
                           Colors::textSecondary.withAlpha(0.45f));
     }
 
@@ -201,20 +206,20 @@ void PluginBrowserPanel::renderFilterBar(NUIRenderer& renderer) {
     // is widened — the pills grow with it instead of leaving a gap.
     const float margin = 12.0f;
     const float gap = 6.0f;
-    const float pillH = 22.0f;
+    const float pillH = 19.0f;
     const float availW = std::max(0.0f, bounds.width - 2.0f * margin);
     const float pillW = std::max(24.0f, (availW - 2.0f * gap) / 3.0f);
     const float startX = bounds.x + margin;
-    const float row1Y = barY + 7.0f;
-    const float row2Y = barY + 33.0f;
+    const float row1Y = barY + 5.0f;
+    const float row2Y = barY + 28.0f;
 
     auto drawPill = [&](const std::string& label, bool active, FilterPillHit::Type type, int col, float y) {
         NUIRect rect = {startX + col * (pillW + gap), y, pillW, pillH};
         renderer.fillRoundedRect(rect, pillH * 0.5f, active ? Colors::pillActiveBg : Colors::pillInactiveBg);
 
         NUIColor textColor = active ? Colors::pillActiveText : Colors::pillInactiveText;
-        auto measured = renderer.measureText(label, 11.0f);
-        renderer.drawText(label, {rect.x + (rect.width - measured.width) * 0.5f, rect.y + 4.5f}, 11.0f, textColor);
+        auto measured = renderer.measureText(label, 10.0f);
+        renderer.drawText(label, {rect.x + (rect.width - measured.width) * 0.5f, rect.y + 4.0f}, 10.0f, textColor);
 
         m_filterPillHits.push_back({type, rect});
     };
@@ -236,7 +241,7 @@ void PluginBrowserPanel::renderPluginList(NUIRenderer& renderer) {
     float listTop = bounds.y + CONTENT_TOP_PAD + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
     float listHeight = bounds.height - CONTENT_TOP_PAD - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
 
-    renderer.setClipRect({bounds.x + 8.0f, listTop, bounds.width - 16.0f, listHeight});
+    renderer.setClipRect({bounds.x + 8.0f, listTop, bounds.width - 12.0f, listHeight});
 
     // Rebuild star rects each render
     m_starRects.assign(m_filteredPlugins.size(), NUIRect{});
@@ -252,21 +257,27 @@ void PluginBrowserPanel::renderPluginList(NUIRenderer& renderer) {
 
     if (m_filteredPlugins.empty() && !m_scanning) {
         float centerY = listTop + listHeight * 0.5f;
-        renderer.drawText("No plugins found",
-                         {bounds.x + bounds.width * 0.5f - 55, centerY - 14},
-                         13.0f, Colors::textPrimary.withAlpha(0.85f));
-        renderer.drawText("Click Scan to discover installed plugins",
-                         {bounds.x + bounds.width * 0.5f - 105, centerY + 4},
-                         11.0f, Colors::textSecondary.withAlpha(0.40f));
+        const bool hasCatalog = !m_allPlugins.empty();
+        const std::string title = hasCatalog ? "No matches" : "No plugins found";
+        const std::string hint = hasCatalog ? "Adjust filters or search" : "Use Scan above to discover plugins";
+        renderer.drawTextCentered(title, {bounds.x + 12.0f, centerY - 16.0f, bounds.width - 24.0f, 18.0f},
+                                  13.0f, Colors::textPrimary.withAlpha(0.85f));
+        renderer.drawTextCentered(hint, {bounds.x + 12.0f, centerY + 4.0f, bounds.width - 24.0f, 16.0f},
+                                  10.0f, Colors::textSecondary.withAlpha(0.52f));
+    }
 
-        // Show Scan button only if never scanned (allPlugins empty)
-        if (m_allPlugins.empty()) {
-            NUIRect scanBtn = {bounds.x + bounds.width * 0.5f - 30, centerY + 22, 60, 24};
-            renderer.fillRoundedRect(scanBtn, 6.0f, Colors::accentPrimary.withAlpha(0.25f));
-            renderer.strokeRoundedRect(scanBtn, 6.0f, 1.0f, Colors::accentPrimary.withAlpha(0.50f));
-            auto label = renderer.measureText("Scan", 11.0f);
-            renderer.drawText("Scan", {scanBtn.x + (scanBtn.width - label.width) * 0.5f, scanBtn.y + 5.5f}, 11.0f, Colors::accentPrimary);
-        }
+    const float contentHeight = static_cast<float>(m_filteredPlugins.size()) * ROW_HEIGHT;
+    const float maxScroll = std::max(0.0f, contentHeight - listHeight);
+    if (maxScroll > 0.0f) {
+        const float trackY = listTop + 4.0f;
+        const float trackH = std::max(0.0f, listHeight - 8.0f);
+        const float thumbH = std::max(24.0f, trackH * (listHeight / contentHeight));
+        const float travel = std::max(0.0f, trackH - thumbH);
+        const float thumbY = trackY + travel * std::clamp(m_scrollOffset / maxScroll, 0.0f, 1.0f);
+        const float scrollbarX = bounds.right() - 7.0f;
+        renderer.fillRoundedRect({scrollbarX, trackY, 2.0f, trackH}, 1.0f, Colors::pillInactiveBg);
+        renderer.fillRoundedRect({scrollbarX, thumbY, 2.0f, thumbH}, 1.0f,
+                                 Colors::textSecondary.withAlpha(0.42f));
     }
 
     renderer.clearClipRect();
@@ -343,7 +354,7 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
     float nameX = dotX + 14;
     const float nameMaxW = contentRightEdge - nameX;
     std::string name = fitText(renderer, plugin.name, 13.0f, nameMaxW);
-    renderer.drawText(name, {nameX, rowRect.y + 8.0f}, 13.0f,
+    renderer.drawText(name, {nameX, rowRect.y + 5.0f}, 13.0f,
                       activeRow ? Colors::textPrimary : Colors::textPrimary.withAlpha(0.90f));
 
     // Vendor · type (muted, second line)
@@ -351,7 +362,7 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
     std::string vendorMeta = plugin.vendor;
     if (!plugin.typeName.empty()) vendorMeta += " · " + plugin.typeName;
     vendorMeta = fitText(renderer, vendorMeta, 10.0f, vendorMaxW);
-    renderer.drawText(vendorMeta, {nameX, rowRect.y + 24.0f}, 10.0f, Colors::textSecondary.withAlpha(0.58f));
+    renderer.drawText(vendorMeta, {nameX, rowRect.y + 20.0f}, 10.0f, Colors::textSecondary.withAlpha(0.58f));
 }
 
 void PluginBrowserPanel::renderScanProgress(NUIRenderer& renderer) {
@@ -622,6 +633,11 @@ void PluginBrowserPanel::setSearchQuery(const std::string& query) {
 }
 
 void PluginBrowserPanel::applyFilters() {
+    std::string selectedId;
+    if (m_selectedIndex >= 0 && m_selectedIndex < static_cast<int>(m_filteredPlugins.size())) {
+        selectedId = m_filteredPlugins[m_selectedIndex].id;
+    }
+
     m_filteredPlugins.clear();
 
     for (const auto& p : m_allPlugins) {
@@ -666,10 +682,24 @@ void PluginBrowserPanel::applyFilters() {
         m_filteredPlugins.push_back(p);
     }
 
-    if (m_selectedIndex >= static_cast<int>(m_filteredPlugins.size())) {
-        m_selectedIndex = -1;
+    m_selectedIndex = -1;
+    if (!selectedId.empty()) {
+        for (size_t i = 0; i < m_filteredPlugins.size(); ++i) {
+            if (m_filteredPlugins[i].id == selectedId) {
+                m_selectedIndex = static_cast<int>(i);
+                break;
+            }
+        }
     }
 
+    // Indices refer to the previous filtered view. Do not let a quick filter
+    // change turn the first click on a different row into a false double-click.
+    m_lastClickIndex = -1;
+    m_lastClickTime = 0.0;
+    m_hoveredIndex = -1;
+    m_hoveredRow = -1;
+    m_isPressed = false;
+    m_pressedIndex = -1;
     m_scrollOffset = 0.0f;
     m_targetScrollOffset = 0.0f;
 }

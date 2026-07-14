@@ -141,6 +141,7 @@ public:
     
     // Search/filter
     void setSearchQuery(const std::string& query);
+    void setSearchPlaceholder(const std::string& placeholder);
     void applyFilter();
     std::string getSearchQuery() const;
     bool isSearchBoxFocused() const;
