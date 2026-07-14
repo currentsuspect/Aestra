@@ -217,10 +217,18 @@ public:
     };
 
     struct BrowserLayout {
+        NUIRect searchBar;
         NUIRect search;
         NUIRect navPane;
         NUIRect listHeader;
         NUIRect list;
+        NUIRect backButton;
+        NUIRect forwardButton;
+        NUIRect upButton;
+        NUIRect pathLabel;
+        NUIRect filterButton;
+        NUIRect sortButton;
+        NUIRect searchActionButton;
         float navWidth = 0.0f;
     };
 
@@ -256,6 +264,7 @@ public:
         struct ScanResult {
             ScanKind kind;
             std::string path;
+            std::string error;
             int depth = 0;
             uint64_t generation = 0;
             std::vector<FileItem> items;
@@ -265,7 +274,8 @@ public:
         void stopScanWorker();
         void enqueueScan(ScanKind kind, const std::string& path, int depth);
         void processScanResults();
-        std::vector<FileItem> scanDirectory(const std::string& path, int depth, bool showHidden, uint64_t generation) const;
+        std::vector<FileItem> scanDirectory(const std::string& path, int depth, bool showHidden,
+                                            uint64_t generation, std::string& error) const;
         FileItem* findItemByPath(const std::string& path);
         void scanWorkerLoop();
 
@@ -320,6 +330,8 @@ public:
 	    void pushToHistory(const std::string& path);
 	    void navigateBack();
 	    void navigateForward();
+        void clearActiveFilters();
+        std::string getQuickFilterLabel() const;
 
         // Legacy settings migration (v1 pipe-separated → v2 JSON)
         void migrateLegacySettings(const std::string& filePath);
@@ -389,6 +401,16 @@ public:
         BrowserNavAction activeNavAction_ = BrowserNavAction::Sounds;
         std::string activeNavPath_;
         int hoveredNavIndex_ = -1;
+        enum class ChromeAction {
+            None,
+            Back,
+            Forward,
+            Up,
+            Filter,
+            Sort,
+            SearchAction
+        };
+        ChromeAction hoveredChromeAction_ = ChromeAction::None;
         std::vector<BrowserNavHit> navHits_;
         // Nav pane vertical scroll (engages when the preview dock steals height).
         float navScrollOffset_ = 0.0f;   // current offset, clamped in render
@@ -402,6 +424,7 @@ public:
 	    // Tags / filtering
 	    std::unordered_map<std::string, std::vector<std::string>> tagsByPath_;
 	    std::string activeTagFilter_;
+	    std::string scanError_;
 	    std::vector<std::string> customPlacePaths_;
     
     // Preview panel state
