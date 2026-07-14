@@ -36,12 +36,12 @@ namespace AestraUI {
 namespace {
 
 constexpr float kPreviewPanelHeight = 90.0f;
-constexpr float BROWSER_SEARCH_ROW_H = 28.0f;
+constexpr float BROWSER_SEARCH_ROW_H = 34.0f;
 constexpr float BROWSER_TOP_PAD = 7.0f;
 constexpr float BROWSER_CONTENT_GAP = 8.0f;
-constexpr float BROWSER_NAV_ROW_H = 28.0f;
-constexpr float BROWSER_LIST_HEADER_H = 52.0f;
-constexpr float BROWSER_LIST_ROW_H = 28.0f;
+constexpr float BROWSER_NAV_ROW_H = 30.0f;
+constexpr float BROWSER_LIST_HEADER_H = 58.0f;
+constexpr float BROWSER_LIST_ROW_H = 30.0f;
 
 static std::string getSettingsPath() {
     const char* home = getenv("HOME");
@@ -338,7 +338,7 @@ FileBrowser::FileBrowser()
 
     // Initialize search input
     searchInput_ = std::make_shared<NUITextInput>();
-    searchInput_->setPlaceholderText("Search library...");
+    searchInput_->setPlaceholderText("Search files and folders");
     addChild(searchInput_);
 
     // Bind search callback
@@ -356,8 +356,8 @@ FileBrowser::FileBrowser()
     searchInput_->setMaxLength(512);
     searchInput_->setTextColor(themeManager.getColor("textPrimary"));
     searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
-    searchInput_->setPadding(12.0f);
-    searchInput_->setBorderRadius(0.0f);
+    searchInput_->setPadding(6.0f);
+    searchInput_->setBorderRadius(5.0f);
     searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
     searchInput_->setBorderColor(themeManager.getColor("border"));
     searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
@@ -532,7 +532,7 @@ void FileBrowser::scanWorkerLoop() {
         result.path = task.path;
         result.depth = task.depth;
         result.generation = task.generation;
-        result.items = scanDirectory(task.path, task.depth, task.showHidden, task.generation);
+        result.items = scanDirectory(task.path, task.depth, task.showHidden, task.generation, result.error);
 
         {
             std::lock_guard<std::mutex> lock(scanMutex_);
@@ -582,14 +582,17 @@ FileType FileFilter::getType(const std::string& path, bool isDir) {
     return FileType::Unknown;
 }
 
-std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int depth, bool showHidden, uint64_t generation) const {
+std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int depth, bool showHidden,
+                                                 uint64_t generation, std::string& error) const {
     std::vector<FileItem> items;
+    error.clear();
     try {
         const std::filesystem::path dir(path);
         const auto options = std::filesystem::directory_options::skip_permission_denied;
         std::error_code iterEc;
         std::filesystem::directory_iterator it(dir, options, iterEc);
         if (iterEc) {
+            error = iterEc.message();
             Log::warning(std::string("[FileBrowser] Scan failed for ") + path + ": " + iterEc.message());
             return items;
         }
@@ -601,6 +604,7 @@ std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int de
             }
 
             if (iterEc) {
+                error = iterEc.message();
                 Log::warning(std::string("[FileBrowser] Scan iteration failed for ") + path + ": " + iterEc.message());
                 break;
             }
@@ -644,6 +648,7 @@ std::vector<FileItem> FileBrowser::scanDirectory(const std::string& path, int de
             items.push_back(std::move(item));
         }
     } catch (const std::exception& e) {
+        error = e.what();
         Log::warning(std::string("[FileBrowser] Scan failed for ") + path + ": " + e.what());
     }
 
@@ -680,6 +685,7 @@ void FileBrowser::processScanResults() {
 
         if (result.kind == ScanKind::Root) {
             scanningRoot_ = false;
+            scanError_ = std::move(result.error);
 
             rootItems_ = std::move(result.items);
             sortFiles();
@@ -714,8 +720,16 @@ void FileBrowser::processScanResults() {
         if (result.kind == ScanKind::Folder) {
             if (FileItem* folder = findItemByPath(result.path)) {
                 folder->children = std::move(result.items);
-                folder->hasLoadedChildren = true;
+                folder->hasLoadedChildren = result.error.empty();
                 folder->isLoadingChildren = false;
+
+                if (!result.error.empty()) {
+                    FileItem placeholder("Folder unavailable — collapse and reopen to retry", "",
+                                         FileType::Unknown, false, 0, "");
+                    placeholder.depth = folder->depth + 1;
+                    placeholder.isPlaceholder = true;
+                    folder->children.push_back(std::move(placeholder));
+                }
 
                 std::stable_sort(folder->children.begin(), folder->children.end(),
                                  [this](const FileItem& a, const FileItem& b) { return compareFileItems(a, b); });
@@ -748,8 +762,6 @@ void FileBrowser::processScanResults() {
 FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     NUIRect bounds = getBounds();
     const float effectiveW = effectiveWidth_ > 0.0f ? effectiveWidth_ : bounds.width;
-    // Search bar sits flush with the browser panel: full width, no insets,
-    // 1px reserved at the bottom for the divider line.
     const float searchH = BROWSER_SEARCH_ROW_H;
     const float headerH = searchH;
     const float contentY = bounds.y + headerH;
@@ -759,11 +771,22 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     const float listW = std::max(0.0f, effectiveW - navW);
 
     BrowserLayout layout;
-    layout.search = NUIRect(bounds.x, bounds.y, std::max(0.0f, effectiveW), searchH - 1.0f);
+    layout.searchBar = NUIRect(bounds.x, bounds.y, std::max(0.0f, effectiveW), searchH);
+    layout.search = NUIRect(bounds.x + 30.0f, bounds.y + 4.0f,
+                            std::max(0.0f, effectiveW - 64.0f), searchH - 8.0f);
     layout.navPane = NUIRect(bounds.x, contentY, navW, contentH);
     layout.listHeader = NUIRect(listX, contentY, listW, BROWSER_LIST_HEADER_H);
     layout.list = NUIRect(listX, contentY + BROWSER_LIST_HEADER_H,
                          listW, std::max(0.0f, contentH - BROWSER_LIST_HEADER_H));
+    const float chromeY = layout.listHeader.y + 3.0f;
+    layout.backButton = NUIRect(layout.listHeader.x + 5.0f, chromeY, 22.0f, 24.0f);
+    layout.forwardButton = NUIRect(layout.backButton.right() + 2.0f, chromeY, 22.0f, 24.0f);
+    layout.upButton = NUIRect(layout.forwardButton.right() + 2.0f, chromeY, 22.0f, 24.0f);
+    layout.pathLabel = NUIRect(layout.upButton.right() + 7.0f, chromeY,
+                               std::max(0.0f, layout.listHeader.right() - layout.upButton.right() - 14.0f), 24.0f);
+    layout.sortButton = NUIRect(layout.listHeader.right() - 31.0f, layout.listHeader.y + 31.0f, 26.0f, 23.0f);
+    layout.filterButton = NUIRect(layout.sortButton.x - 29.0f, layout.sortButton.y, 26.0f, 23.0f);
+    layout.searchActionButton = NUIRect(layout.searchBar.right() - 30.0f, layout.searchBar.y + 4.0f, 26.0f, 26.0f);
     layout.navWidth = navW;
     return layout;
 }
@@ -1043,50 +1066,87 @@ void FileBrowser::renderListHeader(NUIRenderer& renderer, const BrowserLayout& l
     const NUIColor headerBg = themeManager.getColor("backgroundSecondary").darkened(0.03f);
     const NUIColor border = themeManager.getColor("border").withAlpha(0.40f);
     const NUIColor text = themeManager.getColor("textPrimary");
+    const NUIColor muted = themeManager.getColor("textSecondary");
+    const NUIColor accent = themeManager.getColor("accentPrimary");
+    const auto& view = getActiveView();
     renderer.fillRect(layout.listHeader, headerBg);
 
-    std::string crumbText = "Current Project";
-    if (!rootPath_.empty() && !currentPath_.empty()) {
-        std::error_code ec;
-        const auto rel = std::filesystem::relative(currentPath_, rootPath_, ec);
-        if (!ec && !rel.empty() && rel.string() != ".") {
-            crumbText = "Current Project / " + rel.generic_string();
-        }
-    }
-
-    const float crumbX = layout.listHeader.x + 28.0f;
-    const float crumbRight = layout.listHeader.right() - 28.0f;
-    const NUIRect crumb(crumbX, layout.listHeader.y + 5.0f,
-                        std::max(0.0f, crumbRight - crumbX), 20.0f);
     const auto& themeProps = themeManager.getCurrentTheme();
-    renderer.drawText(crumbText,
-                      {crumb.x, std::round(renderer.calculateTextY(crumb, themeProps.fontSizeXS))},
-                      themeProps.fontSizeXS,
-                      text.withAlpha(0.76f));
 
-    // Breadcrumb arrow (replaces ">" text glyph)
-    const float arrowCx = layout.listHeader.x + 14.0f;
-    const float arrowCy = crumb.y + crumb.height * 0.5f;
-    const float arrowS = 3.0f;
-    renderer.drawLine({arrowCx - arrowS * 0.5f, arrowCy - arrowS}, {arrowCx + arrowS * 0.5f, arrowCy}, 1.4f, text.withAlpha(0.50f));
-    renderer.drawLine({arrowCx + arrowS * 0.5f, arrowCy}, {arrowCx - arrowS * 0.5f, arrowCy + arrowS}, 1.4f, text.withAlpha(0.50f));
+    const auto drawChevron = [&](const NUIRect& rect, bool pointsRight, bool enabled) {
+        const float cx = rect.x + rect.width * 0.5f;
+        const float cy = rect.y + rect.height * 0.5f;
+        const float direction = pointsRight ? 1.0f : -1.0f;
+        const NUIColor color = muted.withAlpha(enabled ? 0.78f : 0.24f);
+        renderer.drawLine({cx - direction * 2.0f, cy - 4.0f}, {cx + direction * 2.0f, cy}, 1.5f, color);
+        renderer.drawLine({cx + direction * 2.0f, cy}, {cx - direction * 2.0f, cy + 4.0f}, 1.5f, color);
+    };
+    drawChevron(layout.backButton, false, navHistoryIndex_ > 0);
+    drawChevron(layout.forwardButton, true,
+                navHistoryIndex_ >= 0 && navHistoryIndex_ < static_cast<int>(navHistory_.size()) - 1);
 
-    // Dropdown arrow (replaces "v" text glyph)
-    const float dropCx = crumbRight + 14.0f;
-    const float dropCy = crumb.y + crumb.height * 0.5f;
-    renderer.drawLine({dropCx - arrowS, dropCy - arrowS * 0.5f}, {dropCx, dropCy + arrowS * 0.5f}, 1.4f, text.withAlpha(0.50f));
-    renderer.drawLine({dropCx, dropCy + arrowS * 0.5f}, {dropCx + arrowS, dropCy - arrowS * 0.5f}, 1.4f, text.withAlpha(0.50f));
-    renderer.drawLine({layout.listHeader.x, layout.listHeader.y + 27.0f},
-                      {layout.listHeader.right(), layout.listHeader.y + 27.0f},
+    const bool canNavigateUp = !currentPath_.empty() &&
+                               (rootPath_.empty() || mapKeyForPath(currentPath_) != mapKeyForPath(rootPath_));
+    const float upCx = layout.upButton.x + layout.upButton.width * 0.5f;
+    const float upCy = layout.upButton.y + layout.upButton.height * 0.5f;
+    const NUIColor upColor = muted.withAlpha(canNavigateUp ? 0.78f : 0.24f);
+    renderer.drawLine({upCx - 4.0f, upCy + 2.0f}, {upCx, upCy - 2.0f}, 1.5f, upColor);
+    renderer.drawLine({upCx, upCy - 2.0f}, {upCx + 4.0f, upCy + 2.0f}, 1.5f, upColor);
+    renderer.drawLine({upCx, upCy - 2.0f}, {upCx, upCy + 5.0f}, 1.5f, upColor);
+
+    std::string location = "Library";
+    if (!currentPath_.empty()) {
+        std::filesystem::path p(currentPath_);
+        location = p.filename().string();
+        if (location.empty()) location = currentPath_;
+    }
+    location = ellipsizeMiddle(renderer, location, themeProps.fontSizeS, layout.pathLabel.width);
+    renderer.drawText(location,
+                      {layout.pathLabel.x, std::round(renderer.calculateTextY(layout.pathLabel, themeProps.fontSizeS))},
+                      themeProps.fontSizeS, text.withAlpha(0.88f));
+
+    renderer.drawLine({layout.listHeader.x, layout.listHeader.y + 29.0f},
+                      {layout.listHeader.right(), layout.listHeader.y + 29.0f},
                       1.0f, border.withAlpha(0.65f));
     renderer.drawLine({layout.listHeader.x, layout.listHeader.bottom()},
                       {layout.listHeader.right(), layout.listHeader.bottom()},
                       1.0f, border);
-    const NUIRect columnRow(layout.listHeader.x, layout.listHeader.y + 28.0f, layout.listHeader.width, 23.0f);
-    const float columnFont = themeManager.getFontSize("s");
-    renderer.drawText("Name", {layout.listHeader.x + 12.0f,
-                               std::round(renderer.calculateTextY(columnRow, columnFont))},
-                      columnFont, themeManager.getColor("textSecondary").withAlpha(0.62f));
+    std::string status;
+    if (selectedIndices_.size() > 1) {
+        status = std::to_string(selectedIndices_.size()) + " selected";
+    } else {
+        status = std::to_string(view.size()) + (view.size() == 1 ? " item" : " items");
+        const std::string filterLabel = getQuickFilterLabel();
+        if (filterLabel != "All") status += "  ·  " + filterLabel;
+        if (!activeTagFilter_.empty()) status += "  ·  " + activeTagFilter_;
+    }
+    const NUIRect statusRect(layout.listHeader.x + 10.0f, layout.listHeader.y + 31.0f,
+                             std::max(0.0f, layout.filterButton.x - layout.listHeader.x - 14.0f), 23.0f);
+    renderer.drawText(ellipsizeEnd(renderer, status, themeProps.fontSizeXS, statusRect.width),
+                      {statusRect.x, std::round(renderer.calculateTextY(statusRect, themeProps.fontSizeXS))},
+                      themeProps.fontSizeXS, muted.withAlpha(0.66f));
+
+    const bool filterActive = isFilterActive();
+    const NUIColor controlColor = filterActive ? accent.withAlpha(0.94f) : muted.withAlpha(0.62f);
+    const float filterCx = layout.filterButton.x + layout.filterButton.width * 0.5f;
+    const float filterCy = layout.filterButton.y + layout.filterButton.height * 0.5f;
+    renderer.drawLine({filterCx - 5.0f, filterCy - 4.0f}, {filterCx + 5.0f, filterCy - 4.0f}, 1.2f, controlColor);
+    renderer.drawLine({filterCx - 3.0f, filterCy}, {filterCx + 3.0f, filterCy}, 1.2f, controlColor);
+    renderer.drawLine({filterCx - 1.0f, filterCy + 4.0f}, {filterCx + 1.0f, filterCy + 4.0f}, 1.2f, controlColor);
+    if (filterActive) renderer.fillCircle({layout.filterButton.right() - 5.0f, layout.filterButton.y + 5.0f}, 2.0f, accent);
+
+    const NUIColor sortColor = muted.withAlpha(0.62f);
+    const float sortCx = layout.sortButton.x + layout.sortButton.width * 0.5f;
+    const float sortCy = layout.sortButton.y + layout.sortButton.height * 0.5f;
+    renderer.drawLine({sortCx - 5.0f, sortCy - 4.0f}, {sortCx + 2.0f, sortCy - 4.0f}, 1.2f, sortColor);
+    renderer.drawLine({sortCx - 5.0f, sortCy}, {sortCx, sortCy}, 1.2f, sortColor);
+    renderer.drawLine({sortCx - 5.0f, sortCy + 4.0f}, {sortCx - 2.0f, sortCy + 4.0f}, 1.2f, sortColor);
+    renderer.drawLine({sortCx + 5.0f, sortCy - 4.0f}, {sortCx + 5.0f, sortCy + 4.0f}, 1.2f, sortColor);
+    const float arrowDirection = sortAscending_ ? -1.0f : 1.0f;
+    renderer.drawLine({sortCx + 2.5f, sortCy + arrowDirection * 1.5f},
+                      {sortCx + 5.0f, sortCy + arrowDirection * 4.0f}, 1.2f, sortColor);
+    renderer.drawLine({sortCx + 7.5f, sortCy + arrowDirection * 1.5f},
+                      {sortCx + 5.0f, sortCy + arrowDirection * 4.0f}, 1.2f, sortColor);
 }
 
 void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& bounds) {
@@ -1112,6 +1172,10 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     NUIRect fileBrowserBounds(bounds.x, bounds.y, bounds.width, bounds.height);
 
     renderer.fillRect(fileBrowserBounds, themeManager.getColor("backgroundPrimary"));
+    renderer.fillRect(browserLayout.searchBar, themeManager.getColor("backgroundSecondary").darkened(0.02f));
+    renderer.drawLine({browserLayout.searchBar.x, browserLayout.searchBar.bottom() - 1.0f},
+                      {browserLayout.searchBar.right(), browserLayout.searchBar.bottom() - 1.0f},
+                      1.0f, themeManager.getColor("border").withAlpha(0.52f));
 
     const auto& themeProps = themeManager.getCurrentTheme();
     const float cornerRadius = themeProps.radiusM;
@@ -1136,14 +1200,10 @@ void FileBrowser::renderStaticContent(NUIRenderer& renderer, const NUIRect& boun
     renderListHeader(renderer, browserLayout);
     renderFileList(renderer);
     renderScrollbar(renderer);
-
-    // Search icon in search bar area (drawn before child search input renders on top)
-    const NUIRect& searchBounds = browserLayout.search;
-    const float iconX = searchBounds.x + 8.0f;
-    const float iconY = searchBounds.y + searchBounds.height * 0.5f;
-    const NUIColor searchIconColor = themeManager.getColor("textSecondary").withAlpha(0.50f);
-    renderer.strokeCircle({iconX + 5.0f, iconY - 1.0f}, 3.5f, 1.2f, searchIconColor);
-    renderer.drawLine({iconX + 7.5f, iconY + 1.5f}, {iconX + 10.5f, iconY + 4.5f}, 1.2f, searchIconColor);
+    if (isFocused() && (!searchInput_ || !searchInput_->isFocused())) {
+        renderer.strokeRoundedRect(browserLayout.list, 2.0f, 1.0f,
+                                   themeManager.getColor("accentPrimary").withAlpha(0.28f));
+    }
 }
 
 void FileBrowser::renderHoverOverlays(NUIRenderer& renderer) {
@@ -1178,6 +1238,21 @@ void FileBrowser::renderHoverOverlays(NUIRenderer& renderer) {
         if (!selected) {
             renderer.fillRoundedRect(hit.bounds, themeProps.radiusS, NUIColor::white().withAlpha(0.065f));
         }
+    }
+
+    const BrowserLayout layout = computeBrowserLayout();
+    NUIRect chromeHover;
+    switch (hoveredChromeAction_) {
+        case ChromeAction::Back: chromeHover = layout.backButton; break;
+        case ChromeAction::Forward: chromeHover = layout.forwardButton; break;
+        case ChromeAction::Up: chromeHover = layout.upButton; break;
+        case ChromeAction::Filter: chromeHover = layout.filterButton; break;
+        case ChromeAction::Sort: chromeHover = layout.sortButton; break;
+        case ChromeAction::SearchAction: chromeHover = layout.searchActionButton; break;
+        case ChromeAction::None: break;
+    }
+    if (!chromeHover.isEmpty()) {
+        renderer.fillRoundedRect(chromeHover, themeProps.radiusS, NUIColor::white().withAlpha(0.07f));
     }
 }
 
@@ -1253,20 +1328,31 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
 
     if (searchInput_ && searchInput_->isVisible()) {
         auto& themeManager = NUIThemeManager::getInstance();
-        const NUIRect search = searchInput_->getBounds();
+        const BrowserLayout layout = computeBrowserLayout();
+        const NUIRect search = layout.searchBar;
         const NUIColor iconColor = themeManager.getColor("textSecondary").withAlpha(0.58f);
-        const float cx = search.x + 17.0f;
+        const float cx = search.x + 15.0f;
         const float cy = search.y + search.height * 0.5f;
         renderer.strokeCircle({cx, cy - 1.0f}, 4.6f, 1.3f, iconColor);
         renderer.drawLine({cx + 3.7f, cy + 2.7f}, {cx + 7.2f, cy + 6.2f}, 1.3f, iconColor);
 
-        const float fx = search.right() - 18.0f;
-        const float lineStartY = search.y + search.height * 0.5f - 5.0f;
-        for (int i = 0; i < 3; ++i) {
-            const float y = lineStartY + static_cast<float>(i) * 5.0f;
-            renderer.drawLine({fx - 6.0f, y}, {fx + 6.0f, y}, 1.1f, iconColor.withAlpha(0.78f));
-            const float knobX = fx + (i == 1 ? -2.5f : 3.0f);
-            renderer.fillCircle({knobX, y}, 1.7f, iconColor);
+        const float fx = layout.searchActionButton.x + layout.searchActionButton.width * 0.5f;
+        if (!searchInput_->getText().empty()) {
+            renderer.drawLine({fx - 4.0f, cy - 4.0f}, {fx + 4.0f, cy + 4.0f}, 1.3f, iconColor);
+            renderer.drawLine({fx + 4.0f, cy - 4.0f}, {fx - 4.0f, cy + 4.0f}, 1.3f, iconColor);
+        } else {
+            const float lineStartY = cy - 5.0f;
+            for (int i = 0; i < 3; ++i) {
+                const float y = lineStartY + static_cast<float>(i) * 5.0f;
+                renderer.drawLine({fx - 6.0f, y}, {fx + 6.0f, y}, 1.1f, iconColor.withAlpha(0.78f));
+                const float knobX = fx + (i == 1 ? -2.5f : 3.0f);
+                renderer.fillCircle({knobX, y}, 1.7f, iconColor);
+            }
+            if (isFilterActive()) {
+                renderer.fillCircle({layout.searchActionButton.right() - 4.0f,
+                                     layout.searchActionButton.y + 4.0f}, 2.0f,
+                                    themeManager.getColor("accentPrimary"));
+            }
         }
     }
 
@@ -1356,8 +1442,8 @@ void FileBrowser::onResize(int width, int height) {
         searchInput_->setBorderColor(themeManager.getColor("border"));
         searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
         searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
-        searchInput_->setPadding(12.0f);
-        searchInput_->setBorderRadius(0.0f);
+        searchInput_->setPadding(6.0f);
+        searchInput_->setBorderRadius(5.0f);
         searchInput_->setBorderWidth(1.0f);
     }
 
@@ -1423,6 +1509,36 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         if (searchInput_->isFocused() && !searchInput_->getBounds().contains(event.position)) {
             searchInput_->setFocused(false);
         }
+    }
+
+    ChromeAction newChromeAction = ChromeAction::None;
+    if (!event.cursorCaptured) {
+        if (browserLayout.backButton.contains(event.position)) newChromeAction = ChromeAction::Back;
+        else if (browserLayout.forwardButton.contains(event.position)) newChromeAction = ChromeAction::Forward;
+        else if (browserLayout.upButton.contains(event.position)) newChromeAction = ChromeAction::Up;
+        else if (browserLayout.filterButton.contains(event.position)) newChromeAction = ChromeAction::Filter;
+        else if (browserLayout.sortButton.contains(event.position)) newChromeAction = ChromeAction::Sort;
+        else if (browserLayout.searchActionButton.contains(event.position)) newChromeAction = ChromeAction::SearchAction;
+    }
+    if (newChromeAction != hoveredChromeAction_) {
+        hoveredChromeAction_ = newChromeAction;
+        setDirty(true);
+    }
+
+    if (event.pressed && event.button == NUIMouseButton::Left && newChromeAction != ChromeAction::None) {
+        switch (newChromeAction) {
+            case ChromeAction::Back: navigateBack(); break;
+            case ChromeAction::Forward: navigateForward(); break;
+            case ChromeAction::Up: navigateUp(); break;
+            case ChromeAction::Filter: showQuickFilterMenu(); break;
+            case ChromeAction::Sort: showSortMenu(); break;
+            case ChromeAction::SearchAction:
+                if (searchInput_ && !searchInput_->getText().empty()) searchInput_->clear();
+                else showQuickFilterMenu();
+                break;
+            case ChromeAction::None: break;
+        }
+        return true;
     }
 
     // Claim keyboard focus when interacting with the file browser (so it can own arrow-key navigation).
@@ -1734,8 +1850,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 		                // Check for expander click (match renderFileList layout)
 		                if (clickedFile->isDirectory) {
 		                    const float indentStep = 18.0f;
-		                    const float maxIndent = std::min(72.0f, listW * 0.35f);
-		                    const float indent = std::min(static_cast<float>(clickedFile->depth) * indentStep, maxIndent);
+			                    const float indent = std::min(static_cast<float>(clickedFile->depth) * indentStep, 68.0f);
 		                    const float contentX = listX + 12.0f + indent;
 		                    const float arrowSize = 12.0f;
 		                    const float itemY = listY + (itemIndex * itemHeight) - scrollOffset_;
@@ -1769,7 +1884,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
 
                 // Update selection with multi-select support
                 bool ctrl = event.modifiers & NUIModifiers::Ctrl;
-                bool shift = (event.modifiers & NUIModifiers::Shift) || (event.modifiers & NUIModifiers::CapsLock);
+                bool shift = event.modifiers & NUIModifiers::Shift;
                 toggleFileSelection(itemIndex, ctrl, shift);
 	                // Update selectedFile_ from active view
 	                const auto& activeView = getActiveView();
@@ -1861,12 +1976,35 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
     if (NUIComponent::onKeyEvent(event)) return true;
 
     if (event.pressed) {
+        if (event.modifiers & NUIModifiers::Alt) {
+            if (event.keyCode == NUIKeyCode::Left) { navigateBack(); return true; }
+            if (event.keyCode == NUIKeyCode::Right) { navigateForward(); return true; }
+            if (event.keyCode == NUIKeyCode::Up) { navigateUp(); return true; }
+        }
+
         // Quick filter shortcuts (Ctrl+1..4)
         if (event.modifiers & NUIModifiers::Ctrl) {
+            if (event.keyCode == NUIKeyCode::Num0) { clearActiveFilters(); return true; }
             if (event.keyCode == NUIKeyCode::Num1) { activeQuickFilter_ = QuickFilter::All; applyFilter(); return true; }
             if (event.keyCode == NUIKeyCode::Num2) { activeQuickFilter_ = QuickFilter::Audio; applyFilter(); return true; }
             if (event.keyCode == NUIKeyCode::Num3) { activeQuickFilter_ = QuickFilter::Projects; applyFilter(); return true; }
             if (event.keyCode == NUIKeyCode::Num4) { activeQuickFilter_ = QuickFilter::Folders; applyFilter(); return true; }
+            if (event.keyCode == NUIKeyCode::A) {
+                const auto& activeView = getActiveView();
+                selectedIndices_.clear();
+                selectedIndices_.reserve(activeView.size());
+                for (int i = 0; i < static_cast<int>(activeView.size()); ++i) {
+                    if (activeView[i] && !activeView[i]->isPlaceholder) selectedIndices_.push_back(i);
+                }
+                if (!selectedIndices_.empty()) {
+                    selectedIndex_ = selectedIndices_.back();
+                    selectedFile_ = activeView[selectedIndex_];
+                    lastShiftSelectIndex_ = selectedIndices_.front();
+                    updateScrollPosition();
+                }
+                invalidateCache();
+                return true;
+            }
         }
 
         // Ctrl+F -> Focus Search
@@ -1879,18 +2017,42 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
 
         // Esc -> Clear search or blur
         if (event.keyCode == NUIKeyCode::Escape) {
-            if (searchInput_ && searchInput_->isFocused()) {
-                if (searchInput_->getText().empty()) {
-                    searchInput_->setFocused(false);
-                } else {
-                    searchInput_->setText(""); // Will trigger onTextChange -> applyFilter
+            if (isFilterActive()) {
+                clearActiveFilters();
+                return true;
+            }
+        }
+
+        if (event.keyCode == NUIKeyCode::F5) {
+            refresh();
+            return true;
+        }
+
+        if (!(event.modifiers & NUIModifiers::Ctrl) &&
+            !(event.modifiers & NUIModifiers::Alt) &&
+            !(event.modifiers & NUIModifiers::Super)) {
+            char c = event.character;
+            if (c == 0) {
+                if (event.keyCode >= NUIKeyCode::A && event.keyCode <= NUIKeyCode::Z) {
+                    c = 'a' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::A));
+                    const bool shift = event.modifiers & NUIModifiers::Shift;
+                    const bool caps = event.modifiers & NUIModifiers::CapsLock;
+                    if (shift != caps) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+                } else if (event.keyCode >= NUIKeyCode::Num0 && event.keyCode <= NUIKeyCode::Num9) {
+                    c = '0' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::Num0));
                 }
+            }
+            if (c >= 32 && c <= 126 && searchInput_) {
+                searchInput_->setFocused(true);
+                NUIKeyEvent resolvedEvent = event;
+                resolvedEvent.character = c;
+                searchInput_->onKeyEvent(resolvedEvent);
                 return true;
             }
         }
     }
 
-    // Handle navigation/activation on KeyDown only. KeyUp previously re-triggered actions ("moves twice").
+    // Handle navigation/activation on key-down only.
     if (!event.pressed) {
         switch (event.keyCode) {
             case NUIKeyCode::Up:
@@ -1899,99 +2061,51 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
             case NUIKeyCode::Right:
             case NUIKeyCode::Enter:
             case NUIKeyCode::Backspace:
+            case NUIKeyCode::Home:
+            case NUIKeyCode::End:
+            case NUIKeyCode::PageUp:
+            case NUIKeyCode::PageDown:
                 return true; // consume
-
-            default:
-                // Type-to-Search: if printable character, focus search and pass event
-                char c = event.character;
-                if (c == 0) {
-                     if (event.keyCode >= NUIKeyCode::A && event.keyCode <= NUIKeyCode::Z) {
-                          c = 'a' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::A));
-                          bool shift = (event.modifiers & NUIModifiers::Shift);
-                          bool caps = (event.modifiers & NUIModifiers::CapsLock);
-                          if (shift != caps) c = std::toupper(c);
-                     }
-                     else if (event.keyCode >= NUIKeyCode::Num0 && event.keyCode <= NUIKeyCode::Num9) {
-                          c = '0' + (static_cast<int>(event.keyCode) - static_cast<int>(NUIKeyCode::Num0));
-                     }
-                }
-
-                if (c >= 32 && c <= 126 && searchInput_) {
-                    searchInput_->setFocused(true);
-
-                    // Construct a new event with the resolved character to ensure NUITextInput handles it
-                    NUIKeyEvent resolvedEvent = event;
-                    resolvedEvent.character = c;
-
-                    searchInput_->onKeyEvent(resolvedEvent);
-                    return true;
-                }
-                return false;
+            default: return false;
         }
     }
 
     const auto& view = getActiveView();
 
+    const auto selectFromKeyboard = [&](int index, bool extendRange) {
+        if (view.empty()) return false;
+        index = std::clamp(index, 0, static_cast<int>(view.size()) - 1);
+        if (!view[index] || view[index]->isPlaceholder) return false;
+        toggleFileSelection(index, false, extendRange);
+        selectedFile_ = view[index];
+        updateScrollPosition();
+        if (onFileSelected_) onFileSelected_(*selectedFile_);
+        tryAutoPreview();
+        invalidateCache();
+        return true;
+    };
+
     switch (event.keyCode) {
         case NUIKeyCode::Up:
-            if (selectedIndex_ > 0 && !view.empty()) {
-                selectedIndex_--;
-                selectedFile_ = view[selectedIndex_];
-                const bool rangeSelect = (event.modifiers & NUIModifiers::Shift) || (event.modifiers & NUIModifiers::CapsLock);
-                if (rangeSelect) {
-                    toggleFileSelection(selectedIndex_, false, true);
-                } else {
-                    selectedIndices_.clear();
-                    selectedIndices_.push_back(selectedIndex_);
-                    lastShiftSelectIndex_ = selectedIndex_;
-                }
-                updateScrollPosition();
-                if (onFileSelected_) {
-                    onFileSelected_(*selectedFile_);
-                }
-                // Trigger sound preview for audio files
-                if (onSoundPreview_ && selectedFile_ && !selectedFile_->isDirectory) {
-                    FileType type = selectedFile_->type;
-                    if (type == FileType::AudioFile || type == FileType::MusicFile ||
-                        type == FileType::WavFile || type == FileType::Mp3File ||
-                        type == FileType::FlacFile) {
-                        onSoundPreview_(*selectedFile_);
-                    }
-                }
-                invalidateCache();
-                return true;
-            }
+            if (selectFromKeyboard(selectedIndex_ < 0 ? 0 : selectedIndex_ - 1,
+                                   event.modifiers & NUIModifiers::Shift)) return true;
             break;
 
         case NUIKeyCode::Down:
-            if (!view.empty() && selectedIndex_ < static_cast<int>(view.size()) - 1) {
-                selectedIndex_++;
-                selectedFile_ = view[selectedIndex_];
-                const bool rangeSelect = (event.modifiers & NUIModifiers::Shift) || (event.modifiers & NUIModifiers::CapsLock);
-                if (rangeSelect) {
-                    toggleFileSelection(selectedIndex_, false, true);
-                } else {
-                    selectedIndices_.clear();
-                    selectedIndices_.push_back(selectedIndex_);
-                    lastShiftSelectIndex_ = selectedIndex_;
-                }
-                updateScrollPosition();
-                if (onFileSelected_) {
-                    onFileSelected_(*selectedFile_);
-                }
-                // Trigger sound preview for audio files
-                if (onSoundPreview_ && selectedFile_ && !selectedFile_->isDirectory) {
-                    FileType type = selectedFile_->type;
-                    if (type == FileType::AudioFile || type == FileType::MusicFile ||
-                        type == FileType::WavFile || type == FileType::Mp3File ||
-                        type == FileType::FlacFile) {
-                        onSoundPreview_(*selectedFile_);
-                    }
-                }
-                invalidateCache();
-                return true;
-            }
+            if (selectFromKeyboard(selectedIndex_ < 0 ? 0 : selectedIndex_ + 1,
+                                   event.modifiers & NUIModifiers::Shift)) return true;
             break;
+
+        case NUIKeyCode::Home:
+            return selectFromKeyboard(0, event.modifiers & NUIModifiers::Shift);
+        case NUIKeyCode::End:
+            return selectFromKeyboard(static_cast<int>(view.size()) - 1, event.modifiers & NUIModifiers::Shift);
+        case NUIKeyCode::PageUp:
+            return selectFromKeyboard(selectedIndex_ - std::max(1, visibleItems_ - 1),
+                                      event.modifiers & NUIModifiers::Shift);
+        case NUIKeyCode::PageDown:
+            return selectFromKeyboard(selectedIndex_ + std::max(1, visibleItems_ - 1),
+                                      event.modifiers & NUIModifiers::Shift);
 
         case NUIKeyCode::Right:
             if (selectedFile_ && selectedFile_->isDirectory) {
@@ -2006,10 +2120,13 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
             if (selectedFile_ && selectedFile_->isDirectory) {
                 if (selectedFile_->isExpanded) {
                     toggleFolder(const_cast<FileItem*>(selectedFile_));
+                } else {
+                    navigateUp();
                 }
                 return true;
             }
-            break;
+            navigateUp();
+            return true;
 
 	        case NUIKeyCode::Enter:
 	            if (selectedFile_) {
@@ -2054,9 +2171,10 @@ bool FileBrowser::onKeyEvent(const NUIKeyEvent& event) {
 }
 
 void FileBrowser::onMouseLeave() {
-    if (hoveredIndex_ >= 0 || hoveredNavIndex_ >= 0) {
+    if (hoveredIndex_ >= 0 || hoveredNavIndex_ >= 0 || hoveredChromeAction_ != ChromeAction::None) {
         hoveredIndex_ = -1;
         hoveredNavIndex_ = -1;
+        hoveredChromeAction_ = ChromeAction::None;
         setDirty(true); // hover overlay only — no cache rebuild
     }
     NUIComponent::onMouseLeave();
@@ -2185,6 +2303,23 @@ void FileBrowser::navigateForward() {
         setCurrentPath(navHistory_[navHistoryIndex_]);
         isNavigatingHistory_ = false;
     }
+}
+
+void FileBrowser::clearActiveFilters() {
+    activeQuickFilter_ = QuickFilter::All;
+    activeTagFilter_.clear();
+    if (searchInput_ && !searchInput_->getText().empty()) searchInput_->clear();
+    else applyFilter();
+}
+
+std::string FileBrowser::getQuickFilterLabel() const {
+    switch (activeQuickFilter_) {
+        case QuickFilter::All: return "All";
+        case QuickFilter::Audio: return "Audio";
+        case QuickFilter::Projects: return "Projects";
+        case QuickFilter::Folders: return "Folders";
+    }
+    return "All";
 }
 
 void FileBrowser::refresh() {
@@ -2449,6 +2584,7 @@ void FileBrowser::loadDirectoryContents() {
     hoveredIndex_ = -1;
     dragPotential_ = false;
     dragSourceIndex_ = -1;
+    scanError_.clear();
 
     // Bump generation to invalidate any in-flight scans for the previous directory.
     scanGeneration_.fetch_add(1, std::memory_order_acq_rel);
@@ -2627,17 +2763,31 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     if (scanningRoot_ && view.empty()) {
         renderer.setClipRect(listClip);
-        renderer.drawTextCentered("Loading...", listClip, themeManager.getFontSize("l"), themeManager.getColor("textPrimary").withAlpha(0.62f));
+        NUIRect titleRect(listClip.x, listClip.y + listClip.height * 0.43f - 12.0f, listClip.width, 20.0f);
+        NUIRect hintRect(listClip.x, titleRect.bottom() + 4.0f, listClip.width, 18.0f);
+        renderer.drawTextCentered("Scanning library", titleRect, themeManager.getFontSize("l"),
+                                  themeManager.getColor("textPrimary").withAlpha(0.72f));
+        renderer.drawTextCentered("Large folders stay responsive while results load", hintRect,
+                                  themeManager.getFontSize("s"),
+                                  themeManager.getColor("textSecondary").withAlpha(0.56f));
         renderer.clearClipRect();
         return;
     }
 
     if (view.empty()) {
         renderer.setClipRect(listClip);
-        const std::string title = !activeTagFilter_.empty() ? ("No files in " + activeTagFilter_) : "No files";
-        const std::string hint = !activeTagFilter_.empty()
-            ? "Right-click a file and use Add to Collection"
-            : "Try another folder, collection, or search";
+        std::string title;
+        std::string hint;
+        if (!scanError_.empty()) {
+            title = "Folder unavailable";
+            hint = "Press F5 to retry or choose another location";
+        } else if (isFilterActive()) {
+            title = "No matches";
+            hint = "Press Esc to clear search and filters";
+        } else {
+            title = "No supported files here";
+            hint = "Audio, MIDI, and Aestra projects appear in the browser";
+        }
         NUIRect titleRect(listClip.x, listClip.y + listClip.height * 0.42f - 12.0f, listClip.width, 20.0f);
         NUIRect hintRect(listClip.x, titleRect.bottom() + 4.0f, listClip.width, 18.0f);
         renderer.drawTextCentered(title, titleRect, themeManager.getFontSize("l"), themeManager.getColor("textPrimary").withAlpha(0.72f));
@@ -2656,6 +2806,7 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
     const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.72f);
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary");
     const NUIColor selectedRow = themeManager.getColor("accentPrimary").withAlpha(0.22f);
+    const NUIColor secondarySelectedRow = themeManager.getColor("accentPrimary").withAlpha(0.12f);
     const NUIColor gridLine = themeManager.getColor("border").withAlpha(0.14f);
     const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.82f);
     const NUIColor folderText = themeManager.getColor("textPrimary").withAlpha(0.92f);
@@ -2669,12 +2820,14 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         if (itemY + itemHeight < listClip.y || itemY > listClip.bottom()) continue;
 
         NUIRect itemRect(listClip.x, itemY, listClip.width, itemHeight);
-        const bool selected = i == selectedIndex_;
+        const bool primarySelected = i == selectedIndex_;
+        const bool selected = primarySelected ||
+                              std::find(selectedIndices_.begin(), selectedIndices_.end(), i) != selectedIndices_.end();
         renderer.fillRect(itemRect, (i % 2 == 0) ? evenRow : oddRow);
         if (selected) {
-            renderer.fillRect(itemRect, selectedRow);
+            renderer.fillRect(itemRect, primarySelected ? selectedRow : secondarySelectedRow);
             renderer.fillRect({itemRect.x, itemRect.y + 3.0f, 2.0f, itemRect.height - 6.0f},
-                              themeManager.getColor("accentPrimary").withAlpha(0.85f));
+                              themeManager.getColor("accentPrimary").withAlpha(primarySelected ? 0.85f : 0.44f));
         }
         // Hover wash is drawn by renderHoverOverlays() OUTSIDE the FBO cache —
         // hover must never invalidate the cache (rebuilding the whole list per
@@ -2727,10 +2880,12 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
             item->isTruncated = false;
         }
 
+        const NUIColor itemTextColor = item->isPlaceholder
+                                           ? muted.withAlpha(0.60f)
+                                           : selected ? themeManager.getColor("textPrimary")
+                                                      : item->isDirectory ? folderText : text;
         renderer.drawText(displayName, {contentX, std::round(renderer.calculateTextY(itemRect, labelFont))},
-                          labelFont,
-                          selected ? themeManager.getColor("textPrimary")
-                                   : item->isDirectory ? folderText : text);
+                          labelFont, itemTextColor);
 
         // BPM stays in metadata (search/drag) but is not shown as a row
         // column — owner direction: no number on the right of audio rows.
@@ -2945,8 +3100,13 @@ void FileBrowser::showQuickFilterMenu() {
 		    if (!popupMenu_) return;
 
 		    popupMenu_->clear();
-		    popupMenuTargetPath_.clear();
-		    popupMenuTargetIsDirectory_ = false;
+			    popupMenuTargetPath_.clear();
+			    popupMenuTargetIsDirectory_ = false;
+
+                if (isFilterActive()) {
+                    popupMenu_->addItem("Clear Search and Filters", [this]() { clearActiveFilters(); });
+                    popupMenu_->addSeparator();
+                }
 
 		    popupMenu_->addRadioItem("All Files", "quick_filter", activeQuickFilter_ == QuickFilter::All, [this]() {
 		        activeQuickFilter_ = QuickFilter::All;
@@ -2964,6 +3124,21 @@ applyFilter();
         activeQuickFilter_ = QuickFilter::Folders;
         applyFilter();
     });
+
+    const auto tags = getAllTagsSorted();
+    if (!tags.empty()) {
+        popupMenu_->addSeparator();
+        popupMenu_->addRadioItem("All Collections", "tag_filter", activeTagFilter_.empty(), [this]() {
+            activeTagFilter_.clear();
+            applyFilter();
+        });
+        for (const auto& tag : tags) {
+            popupMenu_->addRadioItem("Collection: " + tag, "tag_filter", activeTagFilter_ == tag, [this, tag]() {
+                activeTagFilter_ = tag;
+                applyFilter();
+            });
+        }
+    }
 
     const float menuX = lastMousePos_.x;
     const float menuY = lastMousePos_.y + 6.0f;
