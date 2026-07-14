@@ -96,6 +96,10 @@ private:
     bool hitTestPresetNav(float x, float y, int& direction) const;
     bool hitTestAB(float x, float y, bool& isA) const;
     bool hitTestMixLock(float x, float y) const;
+    bool presetIsInSelectedCategory(const PresetButton& preset) const;
+    int presetCountForSelectedCategory() const;
+    int visiblePresetRows() const;
+    int maxPresetScroll() const;
     void syncCategoryFromMode();
     void updateParameter(uint32_t paramId, float v);
     void applyPreset(const PresetButton& preset);
@@ -160,7 +164,7 @@ private:
     ABState m_abA;
     ABState m_abB;
     int m_activeAB = 0; // 0 = none, 1 = A, 2 = B
-    static constexpr float kWinW = 760, kWinH = 560, kPad = 18, kRadius = 10;
+    static constexpr float kWinW = 880, kWinH = 620, kPad = 18, kRadius = 10;
     static constexpr float kKnobSize = 76, kKnobGap = 16;
     static constexpr int kParamCount = 18;
     static constexpr int kMaxVisiblePresets = 12;
