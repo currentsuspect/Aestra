@@ -153,6 +153,24 @@ bool AutosaveManager::forceAutosave() {
     return performAutosave();
 }
 
+bool AutosaveManager::autosaveIfDue() {
+    // Same gate as autosaveThreadFunc(): only save when there are pending changes
+    // that have survived the debounce window. markClean() clearing m_isDirty is
+    // exactly what suppresses a would-be autosave here.
+    if (!m_isDirty.load(std::memory_order_acquire)) {
+        return false;
+    }
+    const auto timeSinceDirty = std::chrono::steady_clock::now() - m_lastDirtyTime;
+    if (timeSinceDirty < m_config.minDirtyDelay) {
+        return false;
+    }
+    if (performAutosave()) {
+        markClean();
+        return true;
+    }
+    return false;
+}
+
 std::string AutosaveManager::getAutosavePath() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (!m_config.autosavePathOverride.empty()) return m_config.autosavePathOverride;

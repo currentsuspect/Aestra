@@ -139,6 +139,17 @@ public:
      * @return true if successful
      */
     bool forceAutosave();
+
+    /**
+     * @brief Run one autosave decision synchronously: save only if the project is
+     * dirty and the debounce (minDirtyDelay) has elapsed. Applies the same
+     * dirty/debounce gate the background thread uses, so an explicit caller (or a
+     * deterministic test) can drive an autosave-if-needed without waiting on the
+     * scheduler. Like forceAutosave(), it is independent of the background
+     * `enabled` flag — that flag governs only the automatic timer.
+     * @return true if an autosave was performed.
+     */
+    bool autosaveIfDue();
     
     std::string getAutosavePath() const;
     std::string getBackupDirectory() const;
