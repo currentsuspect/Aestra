@@ -415,10 +415,12 @@ AestraContent::AestraContent()
             float navW = m_fileBrowser->getNavPaneWidth();
             auto fbBounds = m_fileBrowser->getBounds();
             float pbWidth = std::max(0.0f, fbBounds.width - navW);
-            // Align with file browser content area (below search bar)
+            // Cover from just below the search bar to the bottom (the "Plugins"
+            // header is offset internally via CONTENT_TOP_PAD, not by moving bounds).
             constexpr float searchH = 28.0f;
             m_pluginBrowser->setBounds(
-                AestraUI::NUIRect(fbBounds.x + navW, fbBounds.y + searchH, pbWidth, fbBounds.height - searchH));
+                AestraUI::NUIRect(fbBounds.x + navW, fbBounds.y + searchH, pbWidth,
+                                  std::max(0.0f, fbBounds.height - searchH)));
         }
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     });
@@ -1519,14 +1521,21 @@ void AestraContent::onResize(int width, int height) {
     if (m_pluginBrowser) {
         bool isPlugins = m_fileBrowser && m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Plugins;
         if (isPlugins && m_fileBrowser->isVisible()) {
-            float navW = m_fileBrowser->getNavPaneWidth();
-            float pbLeft = navW;
-            float pbWidth = std::max(0.0f, fileBrowserWidth - navW);
-            // Align with file browser content area (below search bar)
+            // Overlay the file browser's actual bounds (which span full height),
+            // offset below its search bar, so the panel reaches the bottom and
+            // never leaks the file list behind it. Uses the same absolute bounds
+            // as the nav-action callback to avoid coordinate-convention drift.
+            // Cover the file browser from just below its search bar to the bottom,
+            // so nothing behind it (breadcrumb / Name header / file list) leaks. The
+            // "Plugins" header is offset DOWN inside the panel (CONTENT_TOP_PAD), not
+            // by moving the panel, so the placement stays without exposing the gap.
+            const auto fbB = m_fileBrowser->getBounds();
+            const float navW = m_fileBrowser->getNavPaneWidth();
             constexpr float searchH = 28.0f;
-            float pbTop = sidebarTopY + searchH;
-            float pbHeight = height - pbTop;
-            m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, pbLeft, pbTop - contentBounds.y, pbWidth, pbHeight));
+            const float pbTop = fbB.y + searchH;
+            m_pluginBrowser->setBounds(AestraUI::NUIRect(fbB.x + navW, pbTop,
+                                                         std::max(0.0f, fbB.width - navW),
+                                                         std::max(0.0f, fbB.bottom() - pbTop)));
             m_pluginBrowser->setVisible(true);
         } else {
             float pbTop = sidebarTopY;

@@ -252,10 +252,14 @@ private:
     NUIPoint m_dragStartPos;
 
     // Layout constants
-    static constexpr float ROW_HEIGHT = 34.0f;
+    static constexpr float ROW_HEIGHT = 42.0f;
     static constexpr float HEADER_BAR_HEIGHT = 44.0f;
-    static constexpr float FILTER_BAR_HEIGHT = 36.0f;
+    static constexpr float FILTER_BAR_HEIGHT = 62.0f;
     static constexpr float SEARCH_HEIGHT = 0.0f;
+    // The panel bounds cover the file browser from just below its search bar; this
+    // pushes the panel's own header/filters/list down so they sit clear of the
+    // search bar while the panel background still covers the file list behind it.
+    static constexpr float CONTENT_TOP_PAD = 6.0f;
 };
 
 /**
