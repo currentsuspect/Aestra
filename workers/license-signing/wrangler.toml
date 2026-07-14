@@ -17,3 +17,10 @@ binding = "AESTRA_LICENSE_DB"
 database_name = "aestra-license"
 database_id = "4c09044c-95fc-4896-87ac-51cac5b99b91"
 migrations_dir = "migrations"
+
+# Bind the account API to the production host so the DAW client (which defaults to
+# https://www.aestra.studio) reaches the worker instead of the static site. Scoped
+# to /v1/account/* — all other paths still serve the website.
+[[routes]]
+pattern = "www.aestra.studio/v1/account/*"
+zone_name = "aestra.studio"
