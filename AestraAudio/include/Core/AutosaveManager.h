@@ -4,6 +4,7 @@
 #include <string>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <thread>
 #include <mutex>
@@ -194,7 +195,9 @@ private:
     std::atomic<bool> m_shouldStop{false};
     std::atomic<bool> m_initialized{false};
     
-    std::chrono::steady_clock::time_point m_lastDirtyTime;
+    // steady_clock milliseconds since epoch. Atomic so markDirty() (callable from
+    // any thread) and the autosave gate can write/read it without the mutex.
+    std::atomic<int64_t> m_lastDirtyTimeMs{0};
     std::chrono::steady_clock::time_point m_lastAutosaveTime;
     
     std::unique_ptr<std::thread> m_autosaveThread;

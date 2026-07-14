@@ -15,6 +15,16 @@ namespace fs = std::filesystem;
 namespace Aestra {
 namespace Audio {
 
+namespace {
+// Monotonic milliseconds since the steady_clock epoch. Used for the dirty-time
+// stamp so it can live in an atomic and be compared without the mutex.
+int64_t steadyNowMs() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
+} // namespace
+
 //==============================================================================
 // RecoveryInfo
 //==============================================================================
@@ -70,7 +80,7 @@ void AutosaveManager::initialize(const std::string& projectPath, Config config) 
     m_isAutosaving = false;
     m_shouldStop = false;
     m_lastAutosaveTime = std::chrono::steady_clock::now();
-    m_lastDirtyTime = std::chrono::steady_clock::now();
+    m_lastDirtyTimeMs.store(steadyNowMs(), std::memory_order_release);
     
     // Ensure backup directory exists
     if (!m_projectPath.empty()) {
@@ -121,7 +131,7 @@ void AutosaveManager::shutdown() {
 
 void AutosaveManager::markDirty() {
     m_isDirty.store(true, std::memory_order_release);
-    m_lastDirtyTime = std::chrono::steady_clock::now();
+    m_lastDirtyTimeMs.store(steadyNowMs(), std::memory_order_release);
     m_cv.notify_all();
 }
 
@@ -160,15 +170,24 @@ bool AutosaveManager::autosaveIfDue() {
     if (!m_isDirty.load(std::memory_order_acquire)) {
         return false;
     }
-    const auto timeSinceDirty = std::chrono::steady_clock::now() - m_lastDirtyTime;
-    if (timeSinceDirty < m_config.minDirtyDelay) {
+    const int64_t sinceMs = steadyNowMs() - m_lastDirtyTimeMs.load(std::memory_order_acquire);
+    const int64_t minDelayMs =
+        std::chrono::duration_cast<std::chrono::milliseconds>(m_config.minDirtyDelay).count();
+    if (sinceMs < minDelayMs) {
         return false;
     }
-    if (performAutosave()) {
-        markClean();
-        return true;
+    // Claim the dirty state BEFORE the (slow) file I/O. A markDirty() that lands
+    // during the save then re-sets the flag and is caught next cycle, instead of
+    // being wiped by an unconditional markClean() afterward.
+    if (!m_isDirty.exchange(false, std::memory_order_acq_rel)) {
+        return false;
     }
-    return false;
+    if (!performAutosave()) {
+        m_isDirty.store(true, std::memory_order_release); // save failed; stay dirty
+        return false;
+    }
+    notifyStatus("Project saved");
+    return true;
 }
 
 std::string AutosaveManager::getAutosavePath() const {
@@ -343,20 +362,28 @@ void AutosaveManager::autosaveThreadFunc() {
         if (!m_isDirty.load(std::memory_order_acquire)) {
             continue;
         }
-        
-        auto now = std::chrono::steady_clock::now();
-        auto timeSinceDirty = now - m_lastDirtyTime;
-        if (timeSinceDirty < m_config.minDirtyDelay) {
-            auto remaining = m_config.minDirtyDelay - timeSinceDirty;
+
+        const int64_t sinceMs = steadyNowMs() - m_lastDirtyTimeMs.load(std::memory_order_acquire);
+        const int64_t minDelayMs =
+            std::chrono::duration_cast<std::chrono::milliseconds>(m_config.minDirtyDelay).count();
+        if (sinceMs < minDelayMs) {
             lock.unlock();
-            std::this_thread::sleep_for(remaining);
+            std::this_thread::sleep_for(std::chrono::milliseconds(minDelayMs - sinceMs));
             continue;
         }
-        
+
         lock.unlock();
-        
+
+        // Claim the dirty state before the save so a concurrent markDirty() during
+        // the file I/O keeps the project dirty for the next cycle rather than being
+        // cleared by an unconditional markClean().
+        if (!m_isDirty.exchange(false, std::memory_order_acq_rel)) {
+            continue;
+        }
         if (performAutosave()) {
-            markClean();
+            notifyStatus("Project saved");
+        } else {
+            m_isDirty.store(true, std::memory_order_release); // save failed; stay dirty
         }
     }
     
