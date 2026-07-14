@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="dd/d89/structAestra_1_1Audio_1_1SolvedLatencyTopology_1_1EdgeSolution.html" target="_top" xlink:title=" ">
+<g id="a_Node000000"><a xlink:href="da/dff/structAestra_1_1Audio_1_1SolvedLatencyTopology.html" target="_top" xlink:title="Immutable output artifact produced by the PDC solver.">
 <polygon fill="white" stroke="#666666" points="159,-30 0,-30 0,0 159,0 159,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::SolvedLatency</text>
-<text text-anchor="middle" x="79.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Topology::EdgeSolution</text>
+<text text-anchor="middle" x="79.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Topology</text>
 </a>
 </g>
 </g>

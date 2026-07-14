@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d0/dce/structAestra_1_1Audio_1_1WaveformCacheBuilder_1_1Impl.html" target="_top" xlink:title=" ">
+<g id="a_Node000000"><a xlink:href="dd/da3/classAestra_1_1Audio_1_1WaveformCacheBuilder.html" target="_top" xlink:title="Helper for async waveform cache building.">
 <polygon fill="white" stroke="#666666" points="168,-30 0,-30 0,0 168,0 168,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::WaveformCache</text>
-<text text-anchor="middle" x="84" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Builder::Impl</text>
+<text text-anchor="middle" x="84" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Builder</text>
 </a>
 </g>
 </g>

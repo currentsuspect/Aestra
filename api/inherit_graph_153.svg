@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d9/d9d/structAestra_1_1Audio_1_1MeterSnapshotBuffer_1_1MeterReadout.html" target="_top" xlink:title=" ">
+<g id="a_Node000000"><a xlink:href="d7/d84/structAestra_1_1Audio_1_1MeterSnapshotBuffer.html" target="_top" xlink:title="Lock&#45;free meter snapshot buffer for audio→UI communication.">
 <polygon fill="white" stroke="#666666" points="161,-30 0,-30 0,0 161,0 161,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::MeterSnapshot</text>
-<text text-anchor="middle" x="80.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Buffer::MeterReadout</text>
+<text text-anchor="middle" x="80.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">Buffer</text>
 </a>
 </g>
 </g>

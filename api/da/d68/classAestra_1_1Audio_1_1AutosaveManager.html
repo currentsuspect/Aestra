@@ -135,6 +135,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab65ccc3a949219d93a68ac5c08a23abd" id="r_ab65ccc3a949219d93a68ac5c08a23abd"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d68/classAestra_1_1Audio_1_1AutosaveManager.html#ab65ccc3a949219d93a68ac5c08a23abd">forceAutosave</a> ()</td></tr>
 <tr class="memdesc:ab65ccc3a949219d93a68ac5c08a23abd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Force an immediate autosave (even if not dirty)  <br /></td></tr>
 <tr class="separator:ab65ccc3a949219d93a68ac5c08a23abd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0118783f57d828148843af3143546cb2" id="r_a0118783f57d828148843af3143546cb2"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d68/classAestra_1_1Audio_1_1AutosaveManager.html#a0118783f57d828148843af3143546cb2">autosaveIfDue</a> ()</td></tr>
+<tr class="memdesc:a0118783f57d828148843af3143546cb2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run one autosave decision synchronously: save only if the project is dirty and the debounce (minDirtyDelay) has elapsed.  <br /></td></tr>
+<tr class="separator:a0118783f57d828148843af3143546cb2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0aaacb8f5d2219102fa011017cac25b1" id="r_a0aaacb8f5d2219102fa011017cac25b1"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d68/classAestra_1_1Audio_1_1AutosaveManager.html#a0aaacb8f5d2219102fa011017cac25b1">getAutosavePath</a> () const</td></tr>
 <tr class="separator:a0aaacb8f5d2219102fa011017cac25b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad8db860286d4ec5ffecafed317d6c69f" id="r_ad8db860286d4ec5ffecafed317d6c69f"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d68/classAestra_1_1Audio_1_1AutosaveManager.html#ad8db860286d4ec5ffecafed317d6c69f">getBackupDirectory</a> () const</td></tr>
@@ -170,7 +173,7 @@ Static Public Member Functions</h2></td></tr>
 </ul>
 <p>Usage: // In application layer (where <a class="el" href="../../d0/d4b/classProjectSerializer.html">ProjectSerializer</a> is available): autosaveManager.initialize(projectPath, trackManager, { .serializer = [](std::string&amp; outData) -&gt; bool { auto result = ProjectSerializer::serialize(trackManager, tempo, position, 0); if (result.ok) { outData = result.contents; return true; } return false; } }); </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00037">37</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00038">38</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
 </div><h2 class="groupheader">Member Typedef Documentation</h2>
 <a id="a98cdc74ae83c19696aa6ca84ea9750fa" name="a98cdc74ae83c19696aa6ca84ea9750fa"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a98cdc74ae83c19696aa6ca84ea9750fa">&#9670;&#160;</a></span>ErrorCallback</h2>
@@ -184,7 +187,7 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00160">160</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00172">172</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
 
 </div>
 </div>
@@ -209,7 +212,7 @@ Static Public Member Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if serialization succeeded </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00048">48</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00049">49</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
 
 </div>
 </div>
@@ -225,7 +228,7 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00159">159</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00171">171</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
 
 </div>
 </div>
@@ -245,11 +248,33 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00048">48</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00058">58</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a0118783f57d828148843af3143546cb2" name="a0118783f57d828148843af3143546cb2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0118783f57d828148843af3143546cb2">&#9670;&#160;</a></span>autosaveIfDue()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::AutosaveManager::autosaveIfDue </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Run one autosave decision synchronously: save only if the project is dirty and the debounce (minDirtyDelay) has elapsed. </p>
+<p>Applies the same dirty/debounce gate the background thread uses, so an explicit caller (or a deterministic test) can drive an autosave-if-needed without waiting on the scheduler. Like <a class="el" href="../../da/d68/classAestra_1_1Audio_1_1AutosaveManager.html#ab65ccc3a949219d93a68ac5c08a23abd" title="Force an immediate autosave (even if not dirty)">forceAutosave()</a>, it is independent of the background <code>enabled</code> flag — that flag governs only the automatic timer. </p><dl class="section return"><dt>Returns</dt><dd>true if an autosave was performed. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00166">166</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+
+</div>
+</div>
 <a id="a9e2119bf6b1d3bf0d9319671dc1ce315" name="a9e2119bf6b1d3bf0d9319671dc1ce315"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a9e2119bf6b1d3bf0d9319671dc1ce315">&#9670;&#160;</a></span>checkForRecovery()</h2>
 
@@ -274,7 +299,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00180">180</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00217">217</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -302,7 +327,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00240">240</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00277">277</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -324,7 +349,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Force an immediate autosave (even if not dirty) </p>
 <dl class="section return"><dt>Returns</dt><dd>true if successful </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00152">152</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00162">162</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../db/d11/AestraApp_8cpp_source.html#l01030">AestraApp::shutdown()</a>.</p>
 <div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
@@ -352,7 +377,7 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00156">156</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00193">193</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -371,7 +396,7 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00163">163</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00200">200</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -390,7 +415,7 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00296">296</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00333">333</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -429,9 +454,9 @@ Static Public Member Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00052">52</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00062">62</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00098">shutdown()</a>.</p>
+<p class="reference">References <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00108">shutdown()</a>.</p>
 <div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-1-summary" class="dynsummary" style="display:block;">
@@ -465,7 +490,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00166">166</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00178">178</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
 
 </div>
 </div>
@@ -492,7 +517,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00128">128</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00129">129</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
 
 </div>
 </div>
@@ -519,7 +544,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00135">135</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00136">136</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
 
 </div>
 </div>
@@ -547,7 +572,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00209">209</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00246">246</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -568,7 +593,7 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Mark the project as "clean" (saved) Call this after successful manual save. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00128">128</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00138">138</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -590,7 +615,7 @@ Static Public Member Functions</h2></td></tr>
 <p>Mark the project as "dirty" (modified) Call this after any user edit that should trigger an autosave. </p>
 <p>Thread-safe, can be called from any thread. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00122">122</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00132">132</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -628,7 +653,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00262">262</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00299">299</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -648,7 +673,7 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00135">135</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00145">145</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
 </div>
 </div>
@@ -676,7 +701,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00163">163</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00175">175</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
 
 </div>
 </div>
@@ -704,7 +729,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00162">162</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html#l00174">174</a> of file <a class="el" href="../../d7/dec/AutosaveManager_8h_source.html">AutosaveManager.h</a>.</p>
 
 </div>
 </div>
@@ -725,9 +750,9 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Shutdown the autosave manager (stops background thread) </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00098">98</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00108">108</a> of file <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html">AutosaveManager.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00052">initialize()</a>, and <a class="el" href="../../db/d11/AestraApp_8cpp_source.html#l01030">AestraApp::shutdown()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d6d/AutosaveManager_8cpp_source.html#l00062">initialize()</a>, and <a class="el" href="../../db/d11/AestraApp_8cpp_source.html#l01030">AestraApp::shutdown()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">

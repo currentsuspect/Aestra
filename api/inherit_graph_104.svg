@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d0/d72/classAestra_1_1Audio_1_1DSP_1_1HalfbandStage.html" target="_top" xlink:title="One 2x halfband stage: polyphase interpolator + decimating FIR sharing the same linear&#45;phase kernel.">
+<g id="a_Node000000"><a xlink:href="de/dd2/classAestra_1_1Audio_1_1DSP_1_1Filter.html" target="_top" xlink:title="Professional&#45;grade biquad filter for audio processing.">
 <polygon fill="white" stroke="#666666" points="107,-30 0,-30 0,0 107,0 107,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::DSP</text>
-<text text-anchor="middle" x="53.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::HalfbandStage</text>
+<text text-anchor="middle" x="53.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::Filter</text>
 </a>
 </g>
 </g>
