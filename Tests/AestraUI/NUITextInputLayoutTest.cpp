@@ -182,7 +182,12 @@ static void test_getTextPosition_widget_space() {
     NUIPoint pos2 = input.callGetTextPosition(2);
 
     ASSERT(pos0.x == 10.0f + 8.0f + 0.0f, "char 0 x = bounds.x + padding + charX[0]");
-    ASSERT(pos0.y == 20.0f + 8.0f + 0.0f, "char 0 y = bounds.y + padding + line.y");
+    // Y must equal the line's actual render Y — the single source of truth for
+    // where the text is drawn. This input is single-line, and single-line text is
+    // vertically centered within the widget (getLineRenderY), NOT top-aligned at
+    // bounds.y + padding. Asserting against getLineRenderY keeps this a real
+    // regression guard while staying correct for the centered single-line path.
+    ASSERT(pos0.y == input.callGetLineRenderY(lines[0]), "char 0 y = line render Y (centered for single-line)");
     ASSERT(pos2.x == 10.0f + 8.0f + 10.0f, "char 2 x = bounds.x + padding + charX[2]");
     PASS("getTextPosition returns widget-space coordinates");
 }
