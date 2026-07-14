@@ -54,6 +54,7 @@ public:
     bool usesCompactRail() const;
     void showPatternsTab();
     void showClipsTab();
+    void setSearchQuery(const std::string& query);
 
     // IDropTarget Implementation
     AestraUI::DropFeedback onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) override;
@@ -101,7 +102,10 @@ private:
         bool isPlacedOnTimeline = false;
     };
     std::vector<ClipEntry> m_clips;
-    
+    std::string m_searchQuery;
+    std::vector<size_t> m_filteredPatternIndices;
+    std::vector<size_t> m_filteredClipIndices;
+
     Aestra::Audio::PatternID m_selectedPatternId;
     Aestra::Audio::PatternID m_hoveredPatternId;
     Aestra::Audio::ClipSourceID m_selectedClipId;
@@ -110,7 +114,7 @@ private:
     // UI Layout
     float m_headerHeight = 40.0f; // Header now contains Buttons
     float m_footerHeight = 0.0f;
-    float m_itemHeight = 32.0f;
+    float m_itemHeight = 38.0f;
     float m_scrollOffset = 0.0f;
     float m_targetScrollOffset = 0.0f;
     
@@ -170,7 +174,10 @@ private:
     void renderContent(AestraUI::NUIRenderer& renderer);
     void renderPatternList(AestraUI::NUIRenderer& renderer);
     void renderClipList(AestraUI::NUIRenderer& renderer);
-    
+    void rebuildFilteredItems();
+    const std::vector<size_t>& getFilteredPatternIndices() const { return m_filteredPatternIndices; }
+    const std::vector<size_t>& getFilteredClipIndices() const { return m_filteredClipIndices; }
+
     void renderPatternItem(AestraUI::NUIRenderer& renderer, const PatternEntry& entry, float y, bool selected, bool hovered);
     void renderClipItem(AestraUI::NUIRenderer& renderer, const ClipEntry& entry, float y, bool selected, bool hovered);
     
