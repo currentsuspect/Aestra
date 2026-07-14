@@ -81,6 +81,15 @@ public:
 
         const float twoPi = 2.0f * kPi;
 
+        // Per-sample one-pole smoothing for the automatable params (Pitch, Mix),
+        // so automation or fast knob moves glide instead of zippering. Coeff is
+        // computed once per block; ~8 ms time constant.
+        const float smoothCoeff = 1.0f - std::exp(-1.0f / (static_cast<float>(m_sampleRate) * 0.008f));
+        const float pitchTarget = m_params[kPitch].load(std::memory_order_relaxed);
+        const float mixTarget = m_params[kMix].load(std::memory_order_relaxed);
+        float pitchSmoothed = m_pitchSmoothed;
+        float mixSmoothed = m_mixSmoothed;
+
         for (uint32_t i = 0; i < numFrames; ++i) {
             const float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
             const float inR = stereo ? ((numInputChannels > 1 && inputs[1]) ? inputs[1][i] : inL) : inL;
@@ -112,7 +121,8 @@ public:
             outL *= norm;
             outR *= norm;
 
-            const float pitchNorm = m_params[kPitch].load(std::memory_order_relaxed);
+            pitchSmoothed += smoothCoeff * (pitchTarget - pitchSmoothed);
+            const float pitchNorm = pitchSmoothed;
             const float pitchSemitones = -12.0f + pitchNorm * 24.0f;
             const float pitchRatio = std::pow(2.0f, pitchSemitones / 12.0f);
             const float delta = 1.0f - pitchRatio;
@@ -126,7 +136,8 @@ public:
 
             writePos = (writePos + 1) & kBufferMask;
 
-            const float mix = m_params[kMix].load(std::memory_order_relaxed);
+            mixSmoothed += smoothCoeff * (mixTarget - mixSmoothed);
+            const float mix = mixSmoothed;
             const float wet = mix;
             const float dry = 1.0f - wet;
 
@@ -142,6 +153,8 @@ public:
         m_writePos = writePos;
         m_tapPhase[0] = tapPhase[0];
         m_tapPhase[1] = tapPhase[1];
+        m_pitchSmoothed = pitchSmoothed;
+        m_mixSmoothed = mixSmoothed;
     }
 
     uint32_t getParameterCount() const override { return kParamCount; }
@@ -153,6 +166,7 @@ public:
 
     void setParameter(uint32_t id, float value) override {
         if (id >= kParamCount) return;
+        if (!std::isfinite(value)) return; // NaN survives clamp and would poison the Pitch/Mix smoothers
         m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
     }
 
@@ -257,6 +271,9 @@ private:
         m_baseDelay = kBaseDelay;
         m_tapPhase[0] = 0.0f;
         m_tapPhase[1] = kGrainSizeF * 0.5f;
+        // Snap smoothers to the current targets so load/activate doesn't glide.
+        m_pitchSmoothed = m_params[kPitch].load(std::memory_order_relaxed);
+        m_mixSmoothed = m_params[kMix].load(std::memory_order_relaxed);
     }
 
     PluginInfo m_info;
@@ -269,6 +286,13 @@ private:
     int m_writePos = 0;
     float m_baseDelay = kBaseDelay;
     float m_tapPhase[2] = {0.0f, kGrainSizeF * 0.5f};
+
+    // Smoothed automatable params. Drift reads Pitch/Mix per-sample; without
+    // smoothing, automating Mix (a dry/wet gain crossfade) or Pitch zippers.
+    // setParameter only stores the atomic target; process() ramps toward it,
+    // matching the smoothing contract the other internal plugins follow.
+    float m_pitchSmoothed = 0.5f;
+    float m_mixSmoothed = 1.0f;
 };
 
 } // namespace Plugins

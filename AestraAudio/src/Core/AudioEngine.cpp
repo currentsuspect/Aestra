@@ -2057,6 +2057,15 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
                     // Third-party formats are skipped until host param queues
                     // exist (#467). Applied before the effect chain processes
                     // this block, so the value is in effect for these frames.
+                    //
+                    // Smoothing policy: the *plugin* owns parameter smoothing.
+                    // setParameter only stores a target; each internal plugin's
+                    // process() ramps toward it — the same contract used for UI
+                    // knob moves. We deliberately hand the raw target over once
+                    // per block instead of ramping engine-side, so automation
+                    // and manual edits share one smoother and never cascade into
+                    // double-smoothing. Every internal effect honors this (Drift
+                    // was the last to gain per-sample Mix/Pitch smoothing).
                     if (track.effectChainSnapshot && curve.effectSlot < EffectChainSnapshot::MAX_SLOTS) {
                         const auto& slot = track.effectChainSnapshot->slot(curve.effectSlot);
                         if (slot.plugin && slot.plugin->getInfo().format == PluginFormat::Internal) {
