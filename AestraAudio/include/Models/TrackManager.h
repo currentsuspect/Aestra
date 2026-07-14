@@ -1251,7 +1251,13 @@ private:
         AudioSlicePayload payload;
         payload.audioSourceId = sourceId;
         payload.durationSeconds = durationSeconds;
-        payload.slices.push_back({0.0, static_cast<double>(buffer->numFrames)});
+        // Populate the sample-domain fields the serializer persists
+        // (startSamples/lengthSamples). The old {0.0, numFrames} form set
+        // startOffset/duration instead, so the slice saved as start:0 length:0.
+        AudioSlice fullSlice;
+        fullSlice.startSamples = 0.0;
+        fullSlice.lengthSamples = static_cast<double>(buffer->numFrames);
+        payload.slices.push_back(fullSlice);
 
         PatternID patternId = m_patternManager.createAudioPattern(takeName, durationBeats, payload);
         if (!patternId.isValid()) {
