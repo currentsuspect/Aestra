@@ -72,15 +72,24 @@ private:
     bool m_saveHovered;
     bool m_dontSaveHovered;
     bool m_cancelHovered;
-    
+
+    // Keyboard focus across the button row (0 = Cancel, 1 = Don't Save, 2 = Save).
+    // Left/Right move it; Enter activates the focused button.
+    int m_focusIndex{2};
+    // Button the mouse press landed on; the response fires on release so the
+    // matching release is consumed too (no click-through to the app behind).
+    DialogResponse m_pressedButton{DialogResponse::None};
+
     // Button rectangles (calculated during render)
     AestraUI::NUIRect m_saveButtonRect;
     AestraUI::NUIRect m_dontSaveButtonRect;
     AestraUI::NUIRect m_cancelButtonRect;
     AestraUI::NUIRect m_dialogRect;
-    
+
     void handleResponse(DialogResponse response);
     void calculateLayout();
+    // Maps a focus index / response to its button rect and vice-versa.
+    DialogResponse responseForFocus(int index) const;
 };
 
 } // namespace Aestra
