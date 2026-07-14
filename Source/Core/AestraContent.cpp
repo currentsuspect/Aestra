@@ -399,6 +399,7 @@ AestraContent::AestraContent()
     m_fileBrowser->setOnNavActionSelected([this](AestraUI::FileBrowser::BrowserNavAction action) {
         const bool isPlugins = (action == AestraUI::FileBrowser::BrowserNavAction::Plugins);
         const bool isPatterns = (action == AestraUI::FileBrowser::BrowserNavAction::Patterns);
+        m_fileBrowser->setSearchPlaceholder(isPlugins ? "Search plugins..." : "Search library...");
         if (m_pluginBrowser) {
             m_pluginBrowser->setVisible(isPlugins);
         }
@@ -1184,6 +1185,16 @@ void AestraContent::onUpdate(double dt) {
     drainMainThreadTasks();
     updatePendingCountIn();
 
+    // PluginManager may start an initial asynchronous scan when no valid cache
+    // exists. Its bootstrap scan has no UI callback, so observe the transition
+    // here and publish the completed result on the main thread.
+    auto& pluginScanner = Aestra::Audio::PluginManager::getInstance().getScanner();
+    const bool pluginScanRunning = pluginScanner.isScanning();
+    if (m_pluginScanWasRunning && !pluginScanRunning) {
+        refreshPluginList();
+    }
+    m_pluginScanWasRunning = pluginScanRunning;
+
     // Drive preview state: clears the pending-load spinner once the decode
     // is ready, feeds playhead/duration to the panel, and stops at the end.
     // (This existed but was never called — the panel's spinner and progress
@@ -1461,6 +1472,11 @@ void AestraContent::onResize(int width, int height) {
     const size_t browserTab = m_browserToggle ? m_browserToggle->getSelectedIndex() : 0;
     const auto activeNavAction =
         m_fileBrowser ? m_fileBrowser->getActiveNavAction() : AestraUI::FileBrowser::BrowserNavAction::Sounds;
+    if (m_fileBrowser) {
+        m_fileBrowser->setSearchPlaceholder(
+            activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Plugins ? "Search plugins..."
+                                                                                : "Search library...");
+    }
     const bool legacyPatternTabActive = browserTab == 2;
     const bool patternNavActive = activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Patterns;
     const bool browserPatternTabActive = legacyPatternTabActive || patternNavActive;
@@ -3701,18 +3717,11 @@ void AestraContent::refreshPluginList() {
         return;
 
     auto& pm = Aestra::Audio::PluginManager::getInstance();
+    const auto& scannedPlugins = pm.getScanner().getScannedPlugins();
     std::vector<AestraUI::PluginListItem> uiPlugins;
-    // Map internal PluginInfo to UI item
-    for (const auto& p : pm.getScanner().getScannedPlugins()) {
-        AestraUI::PluginListItem item;
-        item.id = p.id;
-        item.name = p.name;
-        item.vendor = p.vendor;
-        item.version = p.version;
-        item.category = p.category;
-        item.formatStr = (p.format == Aestra::Audio::PluginFormat::VST3) ? "VST3" : "CLAP (Exp.)";
-        item.typeName = (p.type == Aestra::Audio::PluginType::Instrument) ? "Instrument" : "Effect";
-        uiPlugins.push_back(item);
+    uiPlugins.reserve(scannedPlugins.size());
+    for (const auto& p : scannedPlugins) {
+        uiPlugins.push_back(m_pluginController->convertToListItem(p));
     }
     m_pluginBrowser->setPluginList(uiPlugins);
     AESTRA_LOG_DEBUG("Refreshed plugin list UI: " + std::to_string(uiPlugins.size()) + " plugins found.");

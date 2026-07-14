@@ -1754,6 +1754,22 @@ else()
     message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# Plugin-browser filtering must preserve selection by stable plugin ID rather
+# than silently selecting whichever row inherits the old numeric index.
+if(TARGET AestraUI_Core)
+    add_executable(PluginBrowserSelectionTest AestraUI/PluginBrowserSelectionTest.cpp)
+    target_link_libraries(PluginBrowserSelectionTest PRIVATE AestraUI_Core)
+    target_include_directories(PluginBrowserSelectionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    )
+    add_test(NAME PluginBrowserSelectionTest COMMAND PluginBrowserSelectionTest)
+    set_tests_properties(PluginBrowserSelectionTest PROPERTIES LABELS "ui;plugin-browser;regression")
+else()
+    message(STATUS "PluginBrowserSelectionTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # NUITextInput Layout / Caret / Selection regression tests
 # Guard on target presence because headless/CI disables AestraUI targets.
 if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUITextInputLayoutTest.cpp")

@@ -642,6 +642,12 @@ void AestraApp::initializePlugins() {
     if (Aestra::Audio::PluginManager::getInstance().initialize()) {
         Log::info("Plugin Manager initialized");
         Aestra::Audio::PluginManager::getInstance().getScanner().addDefaultSearchPaths();
+        if (m_content) {
+            // AestraContent is constructed before PluginManager loads its cache.
+            // Refresh now so cached third-party plugins are visible immediately
+            // instead of leaving the browser on its built-in-only bootstrap list.
+            m_content->refreshPluginList();
+        }
     }
 }
 
