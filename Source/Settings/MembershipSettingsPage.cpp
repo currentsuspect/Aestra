@@ -865,7 +865,11 @@ void MembershipSettingsPage::layoutComponents() {
         const float buttonHeight = 32.0f;
         const float sBtnGap = 8.0f;
         const float buttonWidth = 110.0f;
-        float signY = b.y + vPad + founderH + cardGap + cardH + cardGap + actionH + 16.0f;
+        // The sign-in form and the account Actions row are mutually exclusive
+        // (sign-in shows only while signed out, when the Actions row is hidden), so
+        // the form takes the Actions row's slot instead of sitting a whole row
+        // below the now-empty space — which left it hanging too low.
+        float signY = b.y + vPad + founderH + cardGap + cardH + cardGap;
         const float inputWidth = std::max(180.0f, contentW - buttonWidth - sBtnGap);
         m_signInTitleLabel->setBounds(AestraUI::NUIRect(x, signY, contentW, rowHeight));
         m_signInTitleLabel->setVisible(true);
@@ -887,14 +891,25 @@ void MembershipSettingsPage::layoutComponents() {
         if (m_verifyLoginButton) m_verifyLoginButton->setVisible(false);
     }
 
-    // Legacy: hide old children that are no longer visually used
+    // Legacy: hide old children that are no longer visually used. The panel draws
+    // its header/info/features/actions itself; these child widgets predate that and
+    // are only kept for state plumbing. Any left visible get drawn by
+    // renderChildren() at their default (0,0) bounds — that stray "Account: Signed
+    // out" was leaking into the window's top-left corner.
     m_titleLabel->setVisible(false);
+    m_accountLabel->setVisible(false);
     m_tierLabel->setVisible(false);
     m_statusLabel->setVisible(false);
     m_verificationLabel->setVisible(false);
     m_syncLabel->setVisible(false);
     m_lastRefreshLabel->setVisible(false);
     m_detailLabel->setVisible(false);
+    m_featuresTitleLabel->setVisible(false);
+    for (auto& fl : m_featureLabels) {
+        if (fl) fl->setVisible(false);
+    }
+    m_refreshButton->setVisible(false);
+    m_signOutButton->setVisible(false);
     m_featuresTitleLabel->setVisible(false);
     for (auto& f : m_featureLabels) f->setVisible(false);
 }
