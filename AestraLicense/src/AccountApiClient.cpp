@@ -236,9 +236,10 @@ LicenseRefreshResult AccountApiClient::refreshEntitlements(const std::string& se
 
 AccountApiConfig accountApiConfigFromEnvironment() {
     AccountApiConfig config;
-    // Default to Aestra's home. AESTRA_ACCOUNT_API_BASE_URL overrides it (e.g. a
-    // staging server or a local mock during development).
-    config.baseUrl = "https://aestra.studio";
+    // Default to Aestra's home. Use the canonical www host directly: the apex
+    // (aestra.studio) 307-redirects to www, and pointing here avoids that hop.
+    // AESTRA_ACCOUNT_API_BASE_URL overrides it (staging / local mock).
+    config.baseUrl = "https://www.aestra.studio";
     if (const char* envUrl = std::getenv("AESTRA_ACCOUNT_API_BASE_URL")) {
         config.baseUrl = envUrl;
     }

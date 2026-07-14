@@ -82,7 +82,13 @@ HttpResponse CurlHttpTransport::send(const HttpRequest& request) {
     curl_easy_setopt(curl, CURLOPT_URL, request.url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeBody);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseBody);
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L);
+    // Follow redirects (bounded). The account host may 3xx apex -> www (e.g.
+    // Vercel), and without this the request dies on the redirect instead of
+    // reaching the API. CURL_REDIR_POST_ALL keeps POST bodies across 301/302/307/308
+    // so login/verify calls aren't silently downgraded to GET.
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L);
+    curl_easy_setopt(curl, CURLOPT_POSTREDIR, static_cast<long>(CURL_REDIR_POST_ALL));
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, static_cast<long>(request.timeoutMs));
     curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, static_cast<long>(request.timeoutMs));
