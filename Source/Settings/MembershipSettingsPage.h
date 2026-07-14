@@ -92,6 +92,13 @@ private:
     std::string m_actionErrorMessage;
     float m_actionErrorTimer = 0.0f;
 
+    // Persisted account state (mirrored from updateFromState) so the render/hit
+    // paths can show account actions only when they actually apply. Without this
+    // the Actions row (Refresh / Manage / Sign out) drew in every state, so the
+    // signed-out view showed a nonsensical "Sign out" next to the sign-in form.
+    bool m_signedIn = false;
+    bool m_canSignOut = false;
+
     // Sign-out confirmation overlay
     bool m_showingSignOutConfirm = false;
     AestraUI::NUIRect m_confirmDialogBounds;

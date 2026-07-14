@@ -297,6 +297,8 @@ void MembershipSettingsPage::refreshDisplay() {
         m_featureLabels[i]->setVisible(true);
     }
 
+    m_signedIn = state.signedIn;
+    m_canSignOut = state.canSignOut;
     m_refreshButton->setEnabled(state.canRefresh);
     m_signOutButton->setEnabled(state.canSignOut);
     const bool showSignIn = !state.signedIn;
@@ -323,6 +325,8 @@ void MembershipSettingsPage::refreshDisplay() {
             AestraUI::NUIThemeManager::getInstance().getColor("textPrimary").withAlpha(0.76f));
         m_featureLabels[i]->setVisible(i == 0);
     }
+    m_signedIn = false;
+    m_canSignOut = false;
     m_refreshButton->setEnabled(false);
     m_signOutButton->setEnabled(false);
     m_signInTitleLabel->setVisible(false);
@@ -656,7 +660,9 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
     }
 
     // --- 4. ACTIONS ROW ---
-    {
+    // Refresh / Manage / Sign out only make sense for an active account. Drawing
+    // them while signed out put a nonsensical "Sign out" beside the sign-in form.
+    if (m_signedIn) {
         const auto drawActionBtn = [&](const AestraUI::NUIRect& rect, bool hovered,
                                         const char* label, const char* iconName, bool danger) {
             auto borderCol = danger ? textDanger.withAlpha(0.35f) : borderSecondary.withAlpha(0.45f);
@@ -792,7 +798,9 @@ bool MembershipSettingsPage::onMouseEvent(const AestraUI::NUIMouseEvent& event) 
         repaint();
     }
 
-    if (event.pressed) {
+    // Action buttons only exist (and only hit-test) while signed in — mirrors the
+    // render gate so a signed-out click can't trigger an invisible button.
+    if (event.pressed && m_signedIn) {
         if (m_btnRefreshBounds.contains(mx, my)) {
             if (!m_isRefreshing) {
                 refreshAccount();
