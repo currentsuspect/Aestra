@@ -426,6 +426,7 @@ private:
     enum class State : uint8_t {
         None,
         Painting,       // Creating a new note (Drag extends duration)
+        BrushPainting,  // Ctrl+pencil drag: lay one note per snap cell crossed
         Moving,         // Moving existing note(s)
         Resizing,       // Resizing existing note(s) (Right edge)
         ResizingLeft,   // Resizing from left edge (moves start, keeps end)
@@ -492,6 +493,10 @@ private:
     // so pitch is audible before commit. Suppressed while the transport plays.
     void auditionPitch(int pitch);
     void auditionStop();
+
+    // Paint-brush: stamp one snapped note at the cursor cell if empty, used for
+    // Ctrl+pencil drag strokes. Returns true if a note was added.
+    bool paintBrushAt(float localX, float localY);
 };
 
 // -----------------------------------------------------------------------------

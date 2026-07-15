@@ -1107,6 +1107,30 @@ void PianoRollNoteLayer::auditionStop() {
     auditionPitch_ = -1;
 }
 
+bool PianoRollNoteLayer::paintBrushAt(float localX, float localY) {
+    const double snappedBeat = snapToGrid(std::max(0.0, static_cast<double>(localX) / pixelsPerBeat_));
+    const int pitch = snapPitchToScale(std::clamp(127 - static_cast<int>(localY / keyHeight_), 0, 127));
+
+    // One note per cell: skip if a note already starts on this pitch+beat so a
+    // jittery drag doesn't stack duplicates.
+    for (const auto& n : notes_) {
+        if (n.isDeleted) continue;
+        if (n.pitch == pitch && std::abs(n.startBeat - snappedBeat) < 0.001) return false;
+    }
+
+    MidiNote note;
+    note.pitch = pitch;
+    note.startBeat = snappedBeat;
+    note.durationBeats = lastNoteDuration_;
+    note.velocity = lastNoteVelocity_;
+    note.unitId = defaultUnitId_;
+    note.selected = true; // the whole stroke ends up selected
+    note.animationScale = 1.0f;
+    notes_.push_back(note);
+    auditionPitch(pitch);
+    return true;
+}
+
 void PianoRollNoteLayer::strumSelectedNotes(double spreadBeats) {
     std::vector<int> selected;
     for (size_t i = 0; i < notes_.size(); ++i) {
@@ -1564,7 +1588,21 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         // User Request: "Pen... placing notes moving notes... place but not extend or move" -> Enable Move/Resize in Pen mode.
         
         bool intentToPaint = (tool_ == GlobalTool::Pencil && clickedIndex == -1);
-        
+
+        // Ctrl+pencil on empty space starts a paint-brush stroke: notes are
+        // stamped into each snap cell the cursor crosses (see drag handling).
+        if (intentToPaint && (event.modifiers & NUIModifiers::Ctrl)) {
+            for (auto& note : notes_) note.selected = false;
+            state_ = State::BrushPainting;
+            dragStartNotes_ = notes_; // snapshot for a single-stroke undo
+            dragStartPos_ = event.position;
+            dragStartScrollX_ = scrollX_;
+            dragStartScrollY_ = scrollY_;
+            paintBrushAt(localX, localY);
+            repaint();
+            return true;
+        }
+
         if (intentToPaint) {
             // --- PAINT NEW NOTE ---
             if (!(event.modifiers & NUIModifiers::Shift)) {
@@ -1759,11 +1797,17 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
         
+        if (state_ == State::BrushPainting) {
+            // Stamp a note in whatever snap cell the cursor is over now.
+            if (paintBrushAt(localX, localY)) repaint();
+            return true;
+        }
+
         if (state_ == State::Painting && paintingNoteIndex_ != -1) {
             float dx = (event.position.x - dragStartPos_.x) + (scrollX_ - dragStartScrollX_);
             double beatDelta = dx / pixelsPerBeat_;
-            
-            double newDur = lastNoteDuration_ + beatDelta; 
+
+            double newDur = lastNoteDuration_ + beatDelta;
             newDur = std::max(0.125, snapToGrid(newDur));
             
             notes_[paintingNoteIndex_].durationBeats = newDur;
