@@ -359,6 +359,9 @@ public:
     /** @brief Set the current playhead beat used for rendering. */
     void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
 
+    /** @brief Set whether transport is playing, so sounding notes can light up. */
+    void setPlaying(bool playing) { isPlaying_ = playing; }
+
     /** @brief Set the callback fired whenever notes change. */
     void setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb);
     void setOnHoveredPitchChanged(std::function<void(int pitch)> cb) {
@@ -380,7 +383,8 @@ private:
     float scrollY_;
     double playheadBeat_ = 0.0;
     double totalDurationBeats_ = 400.0;
-    
+    bool isPlaying_ = false;
+
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
     std::function<void(int pitch)> onHoveredPitchChanged_;
     uint64_t defaultUnitId_ = 0;

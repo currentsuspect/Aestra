@@ -1118,12 +1118,23 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
 
         const float normalizedVelocity = std::clamp(n.velocity, 0.0f, 1.0f);
         const bool isHovered = static_cast<int>(noteIndex) == hoveredNoteIndex_;
+        // A note "sounds" while the playhead sits within its span during
+        // playback — it briefly lifts so the ear and eye stay in sync.
+        const bool isSounding = isPlaying_ && playheadBeat_ >= n.startBeat &&
+                                playheadBeat_ < n.startBeat + n.durationBeats;
         const NUIColor baseColor = n.selected ? noteColorSelected : noteColor;
-        const NUIColor coreColor = baseColor.withAlpha(0.68f + normalizedVelocity * 0.28f);
-        const NUIColor edgeColor = n.selected ? NUIColor::white().withAlpha(0.78f)
-                                              : (isHovered ? NUIColor::white().withAlpha(0.38f)
-                                                           : baseColor.lightened(0.16f).withAlpha(0.74f));
+        NUIColor coreColor = baseColor.withAlpha(0.68f + normalizedVelocity * 0.28f);
+        NUIColor edgeColor = n.selected ? NUIColor::white().withAlpha(0.78f)
+                                        : (isHovered ? NUIColor::white().withAlpha(0.38f)
+                                                     : baseColor.lightened(0.16f).withAlpha(0.74f));
+        if (isSounding) {
+            coreColor = baseColor.lightened(0.30f).withAlpha(1.0f);
+            edgeColor = NUIColor::white().withAlpha(0.88f);
+        }
 
+        if (isSounding) {
+            renderer.drawShadow(r, 0.0f, 0.0f, 9.0f, baseColor.withAlpha(0.55f));
+        }
         renderer.drawShadow(NUIRect(r.x, r.y + 1.0f, r.width, r.height),
                             0.0f,
                             2.0f,
@@ -2685,7 +2696,8 @@ void PianoRollView::syncChildren() {
     m_notes->setScrollOffsetY(m_scrollY);
     m_notes->setPlayheadBeat(m_playheadBeat);
     m_notes->setTotalDurationBeats(m_totalDurationBeats);
-    
+    m_notes->setPlaying(m_isPlayingCallback && m_isPlayingCallback());
+
     if (m_controls) {
         m_controls->setPixelsPerBeat(m_pixelsPerBeat);
         m_controls->setScrollX(m_scrollX);
