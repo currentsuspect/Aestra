@@ -1903,7 +1903,8 @@ target_include_directories(CommandRegistryParseSafetyTest PRIVATE
 add_test(NAME CommandRegistryParseSafetyTest COMMAND CommandRegistryParseSafetyTest)
 set_tests_properties(CommandRegistryParseSafetyTest PROPERTIES LABELS "commands;regression")
 
-# Rumble State Test (requires runtime plugin system)
+# Rumble state and migration are deterministic pure-logic coverage. Keep this in
+# the normal test tier so stable parameter IDs cannot drift behind a runtime gate.
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
     add_executable(RumbleStateTest Commands/RumbleStateTest.cpp)
     if(UNIX AND NOT APPLE)
@@ -1915,12 +1916,8 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CU
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
-    if(AESTRA_ENABLE_RUNTIME_TESTS)
-        add_test(NAME RumbleStateTest COMMAND RumbleStateTest)
-        set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state;runtime")
-    else()
-        message(STATUS "RumbleStateTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
-    endif()
+    add_test(NAME RumbleStateTest COMMAND RumbleStateTest)
+    set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state")
 endif()
 
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleUnauthorizedOutputSafetyTest.cpp")

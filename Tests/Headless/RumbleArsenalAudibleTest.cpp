@@ -97,8 +97,10 @@ int main() {
     engine.setUnitManager(&unitManager);
     engine.setPatternPlaybackEngine(&playbackEngine);
     engine.setPatternPlaybackMode(true, 2.0);
+    engine.setGlobalSamplePos(0);
     engine.setTransportPlaying(true);
 
+    playbackEngine.flush();
     playbackEngine.schedulePatternInstance(patternId, 0.0, 1);
 
     std::vector<float> output(blockSize * channels, 0.0f);
@@ -106,12 +108,16 @@ int main() {
     captured.reserve(totalFrames * channels);
 
     uint32_t framesRemaining = totalFrames;
+    uint32_t renderedFrames = 0;
     while (framesRemaining > 0) {
+        playbackEngine.refillWindow(renderedFrames, static_cast<int>(sampleRate), static_cast<int>(sampleRate));
         const uint32_t framesThisBlock = std::min(blockSize, framesRemaining);
         std::fill(output.begin(), output.end(), 0.0f);
         engine.processBlock(output.data(), nullptr, framesThisBlock, 0.0);
-        captured.insert(captured.end(), output.begin(), output.begin() + static_cast<std::ptrdiff_t>(framesThisBlock * channels));
+        captured.insert(captured.end(), output.begin(),
+                        output.begin() + static_cast<std::ptrdiff_t>(framesThisBlock * channels));
         framesRemaining -= framesThisBlock;
+        renderedFrames += framesThisBlock;
     }
 
     const auto stats = analyze(captured);
