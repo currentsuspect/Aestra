@@ -213,14 +213,23 @@ public:
     struct BrowserNavHit {
         BrowserNavAction action;
         NUIRect bounds;
+        std::string label;
         std::string path;
     };
 
     struct BrowserLayout {
+        NUIRect searchBar;
         NUIRect search;
         NUIRect navPane;
         NUIRect listHeader;
         NUIRect list;
+        NUIRect backButton;
+        NUIRect forwardButton;
+        NUIRect upButton;
+        NUIRect pathLabel;
+        NUIRect filterButton;
+        NUIRect sortButton;
+        NUIRect searchActionButton;
         float navWidth = 0.0f;
     };
 
@@ -230,7 +239,15 @@ public:
     /// never force a cache rebuild (see renderFileList / nav drawRow).
     void renderHoverOverlays(NUIRenderer& renderer);
     float getNavPaneWidth() const;
+    bool usesCompactNavigation() const;
     BrowserNavAction getActiveNavAction() const { return activeNavAction_; }
+
+    // Shared results-pane host for specialized browser views. FileBrowser owns
+    // their geometry and active-state visibility; the application retains the
+    // component lifetime and workspace z-order.
+    void registerContentView(BrowserNavAction action, const std::shared_ptr<NUIComponent>& component);
+    void setContentViewsEnabled(bool enabled);
+    NUIRect getContentViewBounds() const;
 
     void setOnNavActionSelected(std::function<void(BrowserNavAction)> callback) { onNavActionSelected_ = callback; }
 
@@ -256,6 +273,7 @@ public:
         struct ScanResult {
             ScanKind kind;
             std::string path;
+            std::string error;
             int depth = 0;
             uint64_t generation = 0;
             std::vector<FileItem> items;
@@ -265,7 +283,8 @@ public:
         void stopScanWorker();
         void enqueueScan(ScanKind kind, const std::string& path, int depth);
         void processScanResults();
-        std::vector<FileItem> scanDirectory(const std::string& path, int depth, bool showHidden, uint64_t generation) const;
+        std::vector<FileItem> scanDirectory(const std::string& path, int depth, bool showHidden,
+                                            uint64_t generation, std::string& error) const;
         FileItem* findItemByPath(const std::string& path);
         void scanWorkerLoop();
 
@@ -320,6 +339,8 @@ public:
 	    void pushToHistory(const std::string& path);
 	    void navigateBack();
 	    void navigateForward();
+        void clearActiveFilters();
+        std::string getQuickFilterLabel() const;
 
         // Legacy settings migration (v1 pipe-separated → v2 JSON)
         void migrateLegacySettings(const std::string& filePath);
@@ -389,8 +410,25 @@ public:
         BrowserNavAction activeNavAction_ = BrowserNavAction::Sounds;
         std::string activeNavPath_;
         int hoveredNavIndex_ = -1;
+        enum class ChromeAction {
+            None,
+            Back,
+            Forward,
+            Up,
+            Filter,
+            Sort,
+            SearchAction
+        };
+        ChromeAction hoveredChromeAction_ = ChromeAction::None;
         std::vector<BrowserNavHit> navHits_;
-        // Nav pane vertical scroll (engages when the preview dock steals height).
+        struct BrowserContentView {
+            BrowserNavAction action;
+            std::weak_ptr<NUIComponent> component;
+        };
+        std::vector<BrowserContentView> contentViews_;
+        bool contentViewsEnabled_ = true;
+        void updateContentViews();
+        // Nav pane vertical scroll for short browser viewports.
         float navScrollOffset_ = 0.0f;   // current offset, clamped in render
         float navContentHeight_ = 0.0f;  // measured content height below the header
         float navViewportHeight_ = 0.0f; // visible content height below the header
@@ -402,25 +440,26 @@ public:
 	    // Tags / filtering
 	    std::unordered_map<std::string, std::vector<std::string>> tagsByPath_;
 	    std::string activeTagFilter_;
+	    std::string scanError_;
 	    std::vector<std::string> customPlacePaths_;
     
     // Preview panel state
-    bool previewPanelVisible_;
-    float previewPanelWidth_;
-    std::vector<float> waveformData_;      // Cached waveform amplitude data
-    bool isLoadingPreview_;                // True while loading waveform/preview
-    float loadingAnimationTime_;           // Animation timer for loading spinner
-    bool isLoadingPlayback_;               // True while loading audio for playback
-    bool wasLoadingPlayback_;              // Previous frame's playback loading state
-    
-    // Breadcrumb state
-    struct Breadcrumb {
-        std::string name;
-        std::string path;
-        std::vector<std::string> hiddenPaths; // For ellipsis menu
-        float x;
-        float width;
-    };
+        bool previewPanelVisible_{false};
+        float previewPanelWidth_{0.0f};
+        std::vector<float> waveformData_;  // Cached waveform amplitude data
+        bool isLoadingPreview_{false};     // True while loading waveform/preview
+        float loadingAnimationTime_{0.0f}; // Animation timer for loading spinner
+        bool isLoadingPlayback_;           // True while loading audio for playback
+        bool wasLoadingPlayback_;          // Previous frame's playback loading state
+
+        // Breadcrumb state
+        struct Breadcrumb {
+            std::string name;
+            std::string path;
+            std::vector<std::string> hiddenPaths; // For ellipsis menu
+            float x;
+            float width;
+        };
     std::vector<Breadcrumb> breadcrumbs_;
     int hoveredBreadcrumbIndex_;
     NUIRect breadcrumbBounds_;
