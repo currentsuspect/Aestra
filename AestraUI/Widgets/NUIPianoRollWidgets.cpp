@@ -667,6 +667,17 @@ void PianoRollToolbar::setupUI() {
             }
         });
 
+        // --- CHORD MODE TOGGLE (pencil stamps a diatonic triad) ---
+        bool chordModeActive = false;
+        if (auto n = notes_.lock()) {
+            chordModeActive = n->getChordMode();
+        }
+        menu->addCheckbox("Chord (Triad)", chordModeActive, [this](bool) {
+            if (auto n = notes_.lock()) {
+                n->setChordMode(!n->getChordMode());
+            }
+        });
+
         // --- STRUM SUBMENU (staggers the selected chord low → high) ---
         auto strumMenu = std::make_shared<NUIContextMenu>();
         const struct { const char* name; double beats; } kStrumSpreads[] = {
@@ -1107,6 +1118,33 @@ void PianoRollNoteLayer::auditionStop() {
     auditionPitch_ = -1;
 }
 
+std::vector<int> PianoRollNoteLayer::buildTriad(int rootPitch) const {
+    rootPitch = std::clamp(rootPitch, 0, 127);
+    // No scale context → a plain major triad is the sensible default.
+    if (scaleType_ == ScaleType::Chromatic) {
+        std::vector<int> chord = {rootPitch};
+        if (rootPitch + 4 <= 127) chord.push_back(rootPitch + 4);
+        if (rootPitch + 7 <= 127) chord.push_back(rootPitch + 7);
+        return chord;
+    }
+
+    // Diatonic triad = root + the 2nd and 4th scale tones above it (the third and
+    // fifth), so the chord quality follows the degree the root sits on.
+    std::vector<int> chord = {rootPitch};
+    const int wantDegrees[] = {2, 4};
+    int found = 0;
+    int scaleStepsUp = 0;
+    for (int p = rootPitch + 1; p <= 127 && found < 2; ++p) {
+        if (!MusicTheory::isNoteInScale(p, rootKey_, scaleType_)) continue;
+        ++scaleStepsUp;
+        if (scaleStepsUp == wantDegrees[found]) {
+            chord.push_back(p);
+            ++found;
+        }
+    }
+    return chord;
+}
+
 bool PianoRollNoteLayer::paintBrushAt(float localX, float localY) {
     const double snappedBeat = snapToGrid(std::max(0.0, static_cast<double>(localX) / pixelsPerBeat_));
     const int pitch = snapPitchToScale(std::clamp(127 - static_cast<int>(localY / keyHeight_), 0, 127));
@@ -1272,15 +1310,20 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     // Only while the pencil hovers empty space — never over an existing note.
     if (tool_ == GlobalTool::Pencil && state_ == State::None && hoveredNoteIndex_ == -1 &&
         hoveredPitch_ >= 0 && hoverBeat_ >= 0.0) {
-        const int previewPitch = snapPitchToScale(hoveredPitch_);
+        // In chord mode the phantom shows the whole diatonic triad a click stamps.
+        const std::vector<int> previewPitches =
+            chordMode_ ? buildTriad(snapPitchToScale(hoveredPitch_))
+                       : std::vector<int>{snapPitchToScale(hoveredPitch_)};
         const float px = snapRectX(beatToScreenX(hoverBeat_, pixelsPerBeat_, scrollX_, b.x));
-        const float py = b.y + (127 - previewPitch) * keyHeight_ - scrollY_;
         const float pw = std::max(6.0f, std::round(static_cast<float>(lastNoteDuration_ * pixelsPerBeat_)) - 2.0f);
         const float ph = std::max(5.0f, keyHeight_ - 4.0f);
-        if (px + pw >= b.x && px <= b.right() && py + ph >= b.y && py <= b.bottom()) {
-            const NUIRect pr(px + 1.0f, py + 2.0f, pw, ph);
-            renderer.fillRoundedRect(pr, 3.0f, noteColor.withAlpha(0.20f));
-            renderer.strokeRoundedRect(pr, 3.0f, 1.0f, noteColor.lightened(0.16f).withAlpha(0.48f));
+        for (int previewPitch : previewPitches) {
+            const float py = b.y + (127 - previewPitch) * keyHeight_ - scrollY_;
+            if (px + pw >= b.x && px <= b.right() && py + ph >= b.y && py <= b.bottom()) {
+                const NUIRect pr(px + 1.0f, py + 2.0f, pw, ph);
+                renderer.fillRoundedRect(pr, 3.0f, noteColor.withAlpha(0.20f));
+                renderer.strokeRoundedRect(pr, 3.0f, 1.0f, noteColor.lightened(0.16f).withAlpha(0.48f));
+            }
         }
     }
 
@@ -1603,12 +1646,48 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
 
+        // Chord mode: a click stamps the diatonic triad rooted at the cell
+        // (discrete — no drag-to-lengthen; the stamped chord lands selected so
+        // it can be resized or strummed as a unit right after).
+        if (intentToPaint && chordMode_) {
+            auto oldNotes = notes_;
+            if (!(event.modifiers & NUIModifiers::Shift)) {
+                for (auto& note : notes_) note.selected = false;
+            }
+            const double startBeat = snapToGrid(std::max(0.0, static_cast<double>(localX) / pixelsPerBeat_));
+            const int rootPitch = snapPitchToScale(std::clamp(127 - static_cast<int>(localY / keyHeight_), 0, 127));
+            for (int p : buildTriad(rootPitch)) {
+                bool occupied = false;
+                for (const auto& n : notes_) {
+                    if (!n.isDeleted && n.pitch == p && std::abs(n.startBeat - startBeat) < 0.001) {
+                        occupied = true;
+                        break;
+                    }
+                }
+                if (occupied) continue;
+                MidiNote note;
+                note.pitch = p;
+                note.startBeat = startBeat;
+                note.durationBeats = lastNoteDuration_;
+                note.velocity = lastNoteVelocity_;
+                note.unitId = defaultUnitId_;
+                note.selected = true;
+                note.animationScale = 1.0f;
+                notes_.push_back(note);
+            }
+            auditionPitch(rootPitch);
+            pushUndo("Add Chord", oldNotes, notes_);
+            commitNotes();
+            repaint();
+            return true;
+        }
+
         if (intentToPaint) {
             // --- PAINT NEW NOTE ---
             if (!(event.modifiers & NUIModifiers::Shift)) {
                 for (auto& note : notes_) note.selected = false;
             }
-            
+
             state_ = State::Painting;
             dragStartNotes_ = notes_; 
             

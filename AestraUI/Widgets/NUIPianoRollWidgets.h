@@ -380,6 +380,10 @@ public:
     /** @brief Set the default unit assigned to newly created notes. */
     void setDefaultUnitId(uint64_t unitId) { defaultUnitId_ = unitId; }
 
+    /** @brief Toggle chord mode: the pencil stamps a diatonic triad, not one note. */
+    void setChordMode(bool enabled) { chordMode_ = enabled; }
+    bool getChordMode() const { return chordMode_; }
+
     /**
      * @brief Stagger the selected notes into an upward strum.
      *
@@ -476,6 +480,11 @@ private:
     int rootKey_ = 0;
     ScaleType scaleType_ = ScaleType::Chromatic;
     bool snapToScale_ = false;
+
+    // Chord mode: stamp a diatonic triad (root + scale third + scale fifth).
+    bool chordMode_ = false;
+    /** @brief Build the diatonic triad rooted at @p rootPitch under the current scale. */
+    std::vector<int> buildTriad(int rootPitch) const;
 
     // Edge Scrolling During Drag
     static constexpr float kEdgeThreshold = 50.0f;
