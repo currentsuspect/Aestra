@@ -102,6 +102,8 @@ public:
     bool isCrashed() const override;
 
 private:
+    struct ModuleHolder;
+
     bool m_loaded = false;
     bool m_active = false;
     bool m_editorOpen = false;
@@ -119,8 +121,9 @@ private:
     double m_sampleRate = 44100.0;
     uint32_t m_maxBlockSize = 512;
 
-    // VST3 SDK objects (using void* to avoid header pollution, cast in .cpp)
-    void* m_module = nullptr;          // VST3::Hosting::Module
+    // VST3 SDK objects. ModuleHolder keeps the SDK module type out of this
+    // public header while retaining typed RAII ownership in VST3Host.cpp.
+    std::unique_ptr<ModuleHolder> m_module;
     void* m_factory = nullptr;         // IPluginFactory*
     void* m_hostApplication = nullptr; // VST3::HostApplication
     void* m_component = nullptr;       // IComponent*
