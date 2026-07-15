@@ -5,6 +5,7 @@
 #include "NUISlider.h"
 #include "NUITypes.h"
 #include "PluginHost.h"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,6 +18,7 @@ public:
     void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onResize(int width, int height) override;
+    void onUpdate(double deltaTime) override;
     using AestraPanelWindow::onResize;
     void onResize() { layoutControls(); }
     void setPlatformBridge(NUIPlatformBridge* bridge) override;
@@ -41,6 +43,9 @@ private:
     void drawBypassPill(NUIRenderer& renderer);
     void drawPillSwitches(NUIRenderer& renderer, float wx, float wy);
     void drawSyncPanel(NUIRenderer& renderer, float wx, float wy);
+    void drawEchoDisplay(NUIRenderer& renderer, float wx, float wy);
+    void drawSectionFrame(NUIRenderer& renderer, const NUIRect& localRect, const std::string& title,
+                          const NUIColor& color, float wx, float wy);
     void drawKnob(NUIRenderer& renderer, const KnobControl& k, float wx, float wy);
     void drawMixSlider(NUIRenderer& renderer, float wx, float wy);
     std::string formattedValue(uint32_t paramId) const;
@@ -64,19 +69,23 @@ private:
     NUIRect m_bypassRect;
     NUIRect m_mixSliderRect;
     NUIRect m_syncReadoutRect;
+    NUIRect m_timingSectionRect;
+    NUIRect m_echoDisplayRect;
+    NUIRect m_characterSectionRect;
     bool m_bypassHovered = false;
 
     int m_hoveredBaseButton = -1;
     int m_hoveredModifierButton = -1;
-    int m_syncBaseIndex = 1;      // default 1/8
-    int m_syncModifierIndex = 0;  // default Straight
+    int m_syncBaseIndex = 1;     // default 1/8
+    int m_syncModifierIndex = 0; // default Straight
     bool m_draggingMix = false;
+    double m_controlSyncTimer = 0.0;
 
-    static constexpr float kWinW = 620.0f;
-    static constexpr float kWinH = 400.0f;
-    static constexpr float kPad = 20.0f;
+    static constexpr float kWinW = 760.0f;
+    static constexpr float kWinH = 480.0f;
+    static constexpr float kPad = 18.0f;
     static constexpr float kRadius = 15.0f;
-    static constexpr float kKnobSize = 50.0f;
+    static constexpr float kKnobSize = 58.0f;
 };
 
 } // namespace AestraUI
