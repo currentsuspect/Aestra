@@ -158,6 +158,22 @@ static void test_shared_timeline_grid_density() {
     PASS("Piano Roll and Track Manager share adaptive grid density");
 }
 
+static void test_connect_note_legato() {
+    // Note at [0,1) with a follower starting at 2 → elongate end to 2 (gap filled).
+    ASSERT(computeConnectedNoteEnd(0.0, 1.0, {0.0, 2.0}, 0.25) == 2.0,
+           "connect should extend the note up to the next note's start");
+    // Already overlapping the next note (next starts before end) → never shorten.
+    ASSERT(computeConnectedNoteEnd(0.0, 3.0, {0.0, 2.0}, 0.25) == 3.0,
+           "connect must never shorten a note that already reaches past the next");
+    // No follower → extend to the next snap boundary beyond the end.
+    ASSERT(computeConnectedNoteEnd(0.0, 1.3, {0.0}, 0.5) == 1.5,
+           "connect should fill out to the next snap line when nothing follows");
+    // No follower, end already on a boundary → advance to the next boundary.
+    ASSERT(computeConnectedNoteEnd(0.0, 2.0, {0.0}, 1.0) == 3.0,
+           "connect should reach the next beat when the end sits on one");
+    PASS("Ctrl+L connect elongates to the next note or the next grid line");
+}
+
 // ---------------------------------------------------------------------------
 // Scale Pitch Movement Tests
 // ---------------------------------------------------------------------------
@@ -242,6 +258,7 @@ int main() {
     test_negative_box_dimensions();
     test_velocity_panel_normalization();
     test_shared_timeline_grid_density();
+    test_connect_note_legato();
     test_c_major_in_scale_detection();
     test_a_natural_minor_detection();
     test_chromatic_returns_original();

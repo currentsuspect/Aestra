@@ -1169,6 +1169,44 @@ bool PianoRollNoteLayer::paintBrushAt(float localX, float localY) {
     return true;
 }
 
+void PianoRollNoteLayer::connectSelectedNotes() {
+    std::vector<int> selected;
+    for (size_t i = 0; i < notes_.size(); ++i) {
+        if (notes_[i].selected && !notes_[i].isDeleted) selected.push_back(static_cast<int>(i));
+    }
+    if (selected.empty()) return;
+
+    // Grid used for the "nothing follows" fallback.
+    double snapDur = MusicTheory::getSnapDuration(snap_);
+    if (snap_ == SnapGrid::None || snapDur <= 0.0001) snapDur = 1.0; // fall back to one beat
+
+    // Candidate starts to connect against (own start is excluded by the helper's
+    // strict "> start" test, so passing all of them is fine).
+    std::vector<double> starts;
+    starts.reserve(notes_.size());
+    for (const auto& n : notes_) {
+        if (!n.isDeleted) starts.push_back(n.startBeat);
+    }
+
+    auto oldNotes = notes_;
+    bool changed = false;
+    for (int idx : selected) {
+        const double start = notes_[idx].startBeat;
+        const double end = start + notes_[idx].durationBeats;
+        const double newEnd = computeConnectedNoteEnd(start, end, starts, snapDur);
+        if (newEnd > end + 0.0001) {
+            notes_[idx].durationBeats = newEnd - start;
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        pushUndo("Connect", oldNotes, notes_);
+        commitNotes();
+        repaint();
+    }
+}
+
 void PianoRollNoteLayer::strumSelectedNotes(double spreadBeats) {
     std::vector<int> selected;
     for (size_t i = 0; i < notes_.size(); ++i) {
@@ -2040,6 +2078,13 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
         }
         else if (ctrl && event.keyCode == NUIKeyCode::Y) {
             redo();
+            return true;
+        }
+
+        // Ctrl+L: elongate selected notes to connect to the next note (legato),
+        // or out to the next snap/beat boundary when nothing follows.
+        if (ctrl && event.keyCode == NUIKeyCode::L) {
+            connectSelectedNotes();
             return true;
         }
 

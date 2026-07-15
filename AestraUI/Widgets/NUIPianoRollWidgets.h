@@ -392,6 +392,15 @@ public:
      */
     void strumSelectedNotes(double spreadBeats);
 
+    /**
+     * @brief Elongate selected notes to connect to the following note (legato).
+     *
+     * Each selected note's end is extended forward to meet the start of the next
+     * note in time; when nothing follows, it extends to the next snap/beat
+     * boundary instead. Only ever lengthens — never shortens.
+     */
+    void connectSelectedNotes();
+
     /** @brief Set the platform bridge for cursor style changes. */
     void setPlatformBridge(NUIPlatformBridge* bridge);
 
