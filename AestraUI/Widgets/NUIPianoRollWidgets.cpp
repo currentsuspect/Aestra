@@ -1068,6 +1068,26 @@ int PianoRollNoteLayer::snapPitchToScale(int pitch) {
     return bestPitch;
 }
 
+void PianoRollNoteLayer::auditionPitch(int pitch) {
+    // Never talk over the transport — playback owns the audio focus.
+    if (isPlayingCallback_ && isPlayingCallback_()) {
+        auditionStop();
+        return;
+    }
+    pitch = std::clamp(pitch, 0, 127);
+    if (pitch == auditionPitch_) return;
+    if (!onPreviewNote_) { auditionPitch_ = pitch; return; }
+    if (auditionPitch_ != -1) onPreviewNote_(auditionPitch_, 0); // release previous
+    onPreviewNote_(pitch, static_cast<int>(std::lround(lastNoteVelocity_ * 127.0f)));
+    auditionPitch_ = pitch;
+}
+
+void PianoRollNoteLayer::auditionStop() {
+    if (auditionPitch_ == -1) return;
+    if (onPreviewNote_) onPreviewNote_(auditionPitch_, 0);
+    auditionPitch_ = -1;
+}
+
 void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
     auto b = getBounds();
@@ -1196,6 +1216,30 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
             renderer.fillRoundedRect(pr, 3.0f, noteColor.withAlpha(0.20f));
             renderer.strokeRoundedRect(pr, 3.0f, 1.0f, noteColor.lightened(0.16f).withAlpha(0.48f));
         }
+    }
+
+    // Floating pitch label while placing or moving a note — read the pitch you
+    // hear, tracking the note and flipping below if it would clip at the top.
+    if ((state_ == State::Painting || state_ == State::Moving) && dragAnchorIndex_ >= 0 &&
+        dragAnchorIndex_ < static_cast<int>(notes_.size()) && !notes_[dragAnchorIndex_].isDeleted) {
+        const auto& an = notes_[dragAnchorIndex_];
+        const float ax = snapRectX(beatToScreenX(an.startBeat, pixelsPerBeat_, scrollX_, b.x));
+        const float ay = b.y + (127 - an.pitch) * keyHeight_ - scrollY_;
+        const std::string label = MusicTheory::getPitchName(an.pitch);
+        constexpr float kFontSize = 10.0f;
+        const auto measured = renderer.measureText(label, kFontSize);
+        const float bubbleW = measured.width + 12.0f;
+        const float bubbleH = 17.0f;
+        float bubbleY = ay - bubbleH - 3.0f;
+        if (bubbleY < b.y) bubbleY = ay + keyHeight_ + 3.0f;
+        const float bubbleX = std::clamp(ax, b.x + 2.0f, b.right() - bubbleW - 2.0f);
+        const NUIRect bubble(bubbleX, bubbleY, bubbleW, bubbleH);
+        renderer.fillRoundedRect(bubble, 4.0f, NUIColor::black().withAlpha(0.92f));
+        renderer.strokeRoundedRect(bubble, 4.0f, 1.0f, themeManager.getColor("accentPrimary").withAlpha(0.80f));
+        renderer.drawText(label,
+                          NUIPoint(bubble.x + 6.0f, bubble.y + (bubble.height - measured.height) * 0.5f),
+                          kFontSize,
+                          NUIColor::white().withAlpha(0.95f));
     }
 
     // Rubber-band selection rectangle (already normalized during drag)
@@ -1425,7 +1469,10 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             
             notes_.push_back(newNote);
             paintingNoteIndex_ = static_cast<int>(notes_.size()) - 1;
-            
+            dragAnchorIndex_ = paintingNoteIndex_;
+
+            auditionPitch(paintPitch_); // sound the note as it's laid down
+
             dragStartPos_ = event.position;
             dragStartScrollX_ = scrollX_;
             dragStartScrollY_ = scrollY_;
@@ -1510,6 +1557,14 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             dragStartScrollX_ = scrollX_;
             dragStartScrollY_ = scrollY_;
             dragStartNotes_ = notes_;
+
+            // Grabbing a note to move it sounds its pitch, and keeps sounding
+            // the new pitch as you drag it up/down.
+            if (state_ == State::Moving) {
+                moveAnchorPitch_ = notes_[clickedIndex].pitch;
+                dragAnchorIndex_ = clickedIndex;
+                auditionPitch(moveAnchorPitch_);
+            }
 
             // Spec 2: adopt clicked note's length for subsequent placement
             lastNoteDuration_ = notes_[clickedIndex].durationBeats;
@@ -1615,6 +1670,8 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                     notes_[i].pitch = snapPitchToScale(newPitch);
                 }
             }
+            // Re-audition when the grabbed note lands on a new pitch.
+            auditionPitch(snapPitchToScale(std::clamp(moveAnchorPitch_ + pitchDelta, 0, 127)));
             repaint();
             return true;
         }
@@ -1686,6 +1743,8 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     
     // --- RELEASE ---
     if (event.released && event.button == NUIMouseButton::Left) {
+        auditionStop(); // release any note sounded while painting/dragging
+        dragAnchorIndex_ = -1;
         if (state_ == State::SelectingBox) {
             // Marquee selection done. Selection was cleared on click (without Shift),
             // and notes inside the box were selected during drag.
@@ -2830,8 +2889,14 @@ void PianoRollView::setIsPlayingCallback(std::function<bool()> cb) {
 
 void PianoRollView::setOnPreviewNote(std::function<void(int pitch, int velocity)> cb) {
     if (m_keys) {
-        m_keys->setOnPreviewNote(std::move(cb));
+        m_keys->setOnPreviewNote(cb);
         m_keys->setIsPlayingFromParent(m_isPlayingCallback);
+    }
+    if (m_notes) {
+        // The note layer auditions pitches while notes are placed and dragged,
+        // through the same synth path the key lane uses.
+        m_notes->setOnPreviewNote(std::move(cb));
+        m_notes->setIsPlayingCallback(m_isPlayingCallback);
     }
 }
 

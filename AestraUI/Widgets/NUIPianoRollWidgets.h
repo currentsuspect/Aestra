@@ -362,6 +362,13 @@ public:
     /** @brief Set whether transport is playing, so sounding notes can light up. */
     void setPlaying(bool playing) { isPlaying_ = playing; }
 
+    /** @brief Set callback used to audition a pitch (velocity 0 = note-off). */
+    void setOnPreviewNote(std::function<void(int pitch, int velocity)> cb) {
+        onPreviewNote_ = std::move(cb);
+    }
+    /** @brief Set callback to check if transport is playing (suppresses audition). */
+    void setIsPlayingCallback(std::function<bool()> cb) { isPlayingCallback_ = std::move(cb); }
+
     /** @brief Set the callback fired whenever notes change. */
     void setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb);
     void setOnHoveredPitchChanged(std::function<void(int pitch)> cb) {
@@ -387,6 +394,9 @@ private:
 
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
     std::function<void(int pitch)> onHoveredPitchChanged_;
+    std::function<void(int pitch, int velocity)> onPreviewNote_;
+    std::function<bool()> isPlayingCallback_;
+    int auditionPitch_ = -1; // Pitch currently sounding from edit audition; -1 if none
     uint64_t defaultUnitId_ = 0;
 
     // Tool
@@ -433,6 +443,12 @@ private:
     int paintingNoteIndex_ = -1; // Index in notes_ of the note being painted
     double paintStartBeat_ = 0.0;
     int paintPitch_ = 0;
+
+    // For Moving: pitch of the grabbed note at drag start, so audition can
+    // follow the note under the cursor as it's dragged up and down.
+    int moveAnchorPitch_ = 0;
+    // Note being placed/dragged, so a floating pitch label can track it.
+    int dragAnchorIndex_ = -1;
     
     // For Select Box
     NUIRect selectionRect_;
@@ -456,6 +472,11 @@ private:
     void commitNotes();
     double snapToGrid(double beat);
     int snapPitchToScale(int pitch);
+
+    // Edit audition — play the note under the cursor while placing/dragging it,
+    // so pitch is audible before commit. Suppressed while the transport plays.
+    void auditionPitch(int pitch);
+    void auditionStop();
 };
 
 // -----------------------------------------------------------------------------
