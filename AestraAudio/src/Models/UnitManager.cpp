@@ -591,6 +591,18 @@ bool UnitManager::setUnitAudioClipFromDecoded(UnitID id, const std::string& path
 }
 void UnitManager::setUnitColor(UnitID id, uint32_t color) { if (auto* u = getUnit(id)) u->color = color; }
 void UnitManager::setUnitGroup(UnitID id, UnitGroup group) { if (auto* u = getUnit(id)) u->group = std::move(group); }
+bool UnitManager::setUnitType(UnitID id, UnitType type) {
+    auto* unit = getUnit(id);
+    if (!unit) {
+        return false;
+    }
+
+    unit->type = type;
+    unit->group = unitGroupForType(type);
+    applySamplerDefaultsForUnitType(*unit);
+    publishSnapshot();
+    return true;
+}
 UnitType UnitManager::getUnitType(UnitID id) const {
     if (const auto* u = getUnit(id)) {
         return u->type;
