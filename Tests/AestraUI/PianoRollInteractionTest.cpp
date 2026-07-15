@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "Helpers/PianoRollInteraction.h"
+#include "Helpers/TimelineGridRenderer.h"
 #include "Common/MusicHelpers.h"
 #include <cassert>
 #include <iostream>
@@ -147,6 +148,16 @@ static void test_velocity_panel_normalization() {
     PASS("velocity panel uses normalized MidiNote velocities");
 }
 
+static void test_shared_timeline_grid_density() {
+    ASSERT(timelineGridLevelFade(10.0f) == 0.0f, "dense grid levels should be hidden");
+    ASSERT(timelineGridLevelFade(21.0f) == 0.5f, "grid levels should crossfade at midpoint");
+    ASSERT(timelineGridLevelFade(32.0f) == 1.0f, "wide grid levels should be fully visible");
+    ASSERT(timelineGridBarStride(80.0f, 4) == 1, "normal zoom should show every bar");
+    ASSERT(timelineGridBarStride(5.0f, 4) == 2, "zoomed-out grid should promote to two-bar blocks");
+    ASSERT(timelineGridBarStride(1.0f, 4) == 8, "extreme zoom should preserve power-of-two hierarchy");
+    PASS("Piano Roll and Track Manager share adaptive grid density");
+}
+
 // ---------------------------------------------------------------------------
 // Scale Pitch Movement Tests
 // ---------------------------------------------------------------------------
@@ -230,6 +241,7 @@ int main() {
     test_marquee_ignores_deleted();
     test_negative_box_dimensions();
     test_velocity_panel_normalization();
+    test_shared_timeline_grid_density();
     test_c_major_in_scale_detection();
     test_a_natural_minor_detection();
     test_chromatic_returns_original();

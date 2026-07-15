@@ -32,9 +32,13 @@ public:
 
     /** @brief Set the vertical scroll offset applied to the lane. */
     void setScrollOffsetY(float offset);
+    void setHoveredKey(int pitch) { hoveredKey_ = pitch; repaint(); }
 
     /** @brief Set callback for note preview (pitch, velocity). Called when user clicks a key. */
     void setOnPreviewNote(std::function<void(int pitch, int velocity)> cb);
+    void setOnHoveredKeyChanged(std::function<void(int pitch)> cb) {
+        onHoveredKeyChanged_ = std::move(cb);
+    }
 
     /** @brief Set callback to check if transport is playing (suppress preview when playing). */
     void setIsPlayingCallback(std::function<bool()> cb);
@@ -48,6 +52,7 @@ private:
     int hoveredKey_; // -1 if none
     int previewPitch_; // Currently playing preview note (-1 if none)
     std::function<void(int pitch, int velocity)> onPreviewNote_;
+    std::function<void(int pitch)> onHoveredKeyChanged_;
     std::function<bool()> m_isPlayingCallback;
 };
 
@@ -204,6 +209,7 @@ private:
     std::function<void(int barsDelta)> onAdjustPatternLength_;
     std::function<void(int patternValue)> onPatternChoiceSelected_;
     bool m_updatingPatternDropdown = false;
+    SnapGrid m_currentSnap = SnapGrid::Beat;
 
     void closeActiveContextMenu();
     
@@ -235,6 +241,8 @@ public:
     void setScrollOffsetY(float offset);
     /** @brief Set the playhead beat rendered on the grid. */
     void setPlayheadBeat(double beat) { playheadBeat_ = beat; repaint(); }
+    void setTotalDurationBeats(double beats) { totalDurationBeats_ = std::max(0.0, beats); repaint(); }
+    void setHoveredPitch(int pitch) { hoveredPitch_ = pitch; repaint(); }
     
     /** @brief Set the bar signature in beats per bar. */
     void setBeatsPerBar(int bpb) { beatsPerBar_ = bpb; repaint(); }
@@ -254,6 +262,8 @@ private:
     float scrollY_; // Added implementation
     int beatsPerBar_ = 4;
     double playheadBeat_ = 0.0;
+    double totalDurationBeats_ = 8.0;
+    int hoveredPitch_ = -1;
     
     // Scale State
     int rootKey_ = 0; // 0=C, 1=C#, etc.
@@ -351,6 +361,9 @@ public:
 
     /** @brief Set the callback fired whenever notes change. */
     void setOnNotesChanged(std::function<void(const std::vector<MidiNote>&)> cb);
+    void setOnHoveredPitchChanged(std::function<void(int pitch)> cb) {
+        onHoveredPitchChanged_ = std::move(cb);
+    }
     /** @brief Set the default unit assigned to newly created notes. */
     void setDefaultUnitId(uint64_t unitId) { defaultUnitId_ = unitId; }
 
@@ -369,6 +382,7 @@ private:
     double totalDurationBeats_ = 400.0;
     
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
+    std::function<void(int pitch)> onHoveredPitchChanged_;
     uint64_t defaultUnitId_ = 0;
 
     // Tool
@@ -397,6 +411,8 @@ private:
 
     // Smart Cursor hover state
     int hoveredNoteIndex_ = -1;
+    int hoveredPitch_ = -1;
+    double hoverBeat_ = -1.0; // Snapped cursor beat for the draw-mode preview; <0 when idle
     bool hoverOnRightEdge_ = false;
     bool hoverOnLeftEdge_ = false;
 
@@ -550,6 +566,7 @@ private:
     std::function<void(double beat, bool active)> m_onPlayheadScrubbed;
 
     bool m_isResizingPanel = false; // Added for splitter dragging
+    bool m_splitterHovered = false;
     float m_dragStartPanelHeight = 0.0f;
     NUIPoint m_dragStartPos;
 

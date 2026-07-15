@@ -3,6 +3,7 @@
 #include "../Platform/NUIPlatformBridge.h"
 #include "../Common/MusicHelpers.h"
 #include "../Helpers/PianoRollInteraction.h"
+#include "../Helpers/TimelineGridRenderer.h"
 #include "NUIDropdown.h"
 #include "NUIButton.h"
 #include "NUIContextMenu.h"
@@ -164,6 +165,7 @@ bool PianoRollKeyLane::onMouseEvent(const NUIMouseEvent& event) {
     if (!getBounds().contains(event.position)) {
         if (hoveredKey_ != -1) {
             hoveredKey_ = -1;
+            if (onHoveredKeyChanged_) onHoveredKeyChanged_(-1);
             repaint();
         }
         return false;
@@ -176,6 +178,7 @@ bool PianoRollKeyLane::onMouseEvent(const NUIMouseEvent& event) {
 
     if (hoveredKey_ != pitch) {
         hoveredKey_ = pitch;
+        if (onHoveredKeyChanged_) onHoveredKeyChanged_(pitch);
         repaint();
     }
 
@@ -492,74 +495,85 @@ bool PianoRollRuler::onMouseEvent(const NUIMouseEvent& event) {
 // Ruler Render: "Mature" Playlist Style
 void PianoRollRuler::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
-    auto b = getBounds();
-    auto& themeManager = NUIThemeManager::getInstance();
-    
-    // CLIP: Prevent left bleeding
-    renderer.setClipRect(b);
-    
-    auto bg = themeManager.getColor("backgroundSecondary").darkened(0.025f);
-    auto textCol = themeManager.getColor("textPrimary").withAlpha(0.86f);
-    auto tickCol = themeManager.getColor("textSecondary").withAlpha(0.52f);
-    auto borderCol = themeManager.getColor("border").withAlpha(0.66f);
-    
-    renderer.fillRect(b, bg);
-    
-    // Bottom border
-    renderer.drawLine(NUIPoint(b.x, b.y + b.height), NUIPoint(b.x + b.width, b.y + b.height), 1.0f, borderCol);
+    const auto bounds = getBounds();
+    auto& theme = NUIThemeManager::getInstance();
 
-    float startBeat = scrollX_ / pixelsPerBeat_;
-    float endBeat = (scrollX_ + b.width) / pixelsPerBeat_;
-    
-    int iStart = static_cast<int>(startBeat);
-    int iEnd = static_cast<int>(endBeat) + 1;
+    const auto rulerBackground = NUIColor(0.012f, 0.012f, 0.012f, 1.0f);
+    const auto border = NUIColor::white().withAlpha(0.075f);
+    const auto highlight = NUIColor::white().withAlpha(0.014f);
+    const auto text = theme.getColor("textPrimary").withAlpha(0.86f);
+    const auto tick = NUIColor::fromHex(0x2e2e2e).withAlpha(0.82f);
 
-    for (int i = iStart; i <= iEnd; ++i) {
-        float x = snapVerticalLineX(beatToScreenX(static_cast<double>(i), pixelsPerBeat_, scrollX_, b.x));
-        
-        // Prevent drawing text partially off-screen left if we can help it, 
-        // but setClipRect handles the actual pixels.
-        
-        bool isBar = (beatsPerBar_ > 0 && i % beatsPerBar_ == 0);
-        
-        if (isBar) {
-            // Bar: Taller tick, Label
-            int barNum = (i / beatsPerBar_) + 1;
-            
-            // Modern Look: Line doesn't go all the way, just top portion or bottom tick
-            // Playlist usually has numbers at the start of the bar.
-            
-            // Major Tick (Bottom up)
-            renderer.fillRect(NUIRect(x, b.y, 1.0f, b.height), borderCol.withAlpha(0.48f));
-            renderer.drawLine(NUIPoint(x, b.y + b.height * 0.45f), NUIPoint(x, b.y + b.height), 1.0f, tickCol);
-            
-            // Label
-            renderer.drawText(std::to_string(barNum), NUIPoint(x + 6, b.y + 5), 11.0f, textCol);
-        } else {
-            // Beat: Short Tick
-            renderer.drawLine(NUIPoint(x, b.y + b.height * 0.75f), NUIPoint(x, b.y + b.height), 1.0f, tickCol.withAlpha(0.6f));
+    renderer.fillRoundedRect(bounds, 3.0f, rulerBackground);
+    renderer.fillRect(NUIRect(bounds.x, bounds.y, bounds.width, 1.0f), highlight);
+    renderer.strokeRoundedRect(bounds, 3.0f, 1.0f, border);
+    renderer.drawLine(NUIPoint(bounds.x, bounds.bottom() - 1.0f),
+                      NUIPoint(bounds.right(), bounds.bottom() - 1.0f),
+                      1.0f,
+                      border);
+
+    renderer.setClipRect(bounds);
+
+    const int beatsPerBar = std::max(1, beatsPerBar_);
+    const float pixelsPerBar = pixelsPerBeat_ * beatsPerBar;
+    int barStride = 1;
+    while ((pixelsPerBar * static_cast<float>(barStride)) < 28.0f && barStride < 128) {
+        barStride *= 2;
+    }
+
+    int startBar = static_cast<int>(std::floor(scrollX_ / pixelsPerBar));
+    startBar = static_cast<int>(std::floor(static_cast<double>(startBar) / barStride)) * barStride;
+    const int visibleBars = static_cast<int>(std::ceil((scrollX_ + bounds.width) / pixelsPerBar)) - startBar;
+    const int endBar = startBar + visibleBars + barStride;
+
+    for (int bar = startBar; bar <= endBar; bar += barStride) {
+        const float x = snapVerticalLineX(bounds.x + bar * pixelsPerBar - scrollX_);
+        const int barNumber = bar + 1;
+        const bool isMajorBar = barStride > 1 || barNumber == 1 || ((barNumber - 1) % 4 == 0);
+        const float fontSize = isMajorBar ? 11.0f : 10.0f;
+        const float textY = std::round(renderer.calculateTextY(bounds, fontSize));
+        renderer.drawText(std::to_string(barNumber),
+                          NUIPoint(x + 4.0f, textY),
+                          fontSize,
+                          isMajorBar ? text : text.withAlpha(0.76f));
+
+        const float tickHeight = isMajorBar ? bounds.height * 0.58f : bounds.height * 0.24f;
+        renderer.drawLine(NUIPoint(x, bounds.bottom() - tickHeight),
+                          NUIPoint(x, bounds.bottom()),
+                          isMajorBar ? 1.15f : 1.0f,
+                          isMajorBar ? tick : tick.withAlpha(0.58f));
+
+        if (pixelsPerBeat_ >= 10.0f && barStride == 1) {
+            for (int beat = 1; beat < beatsPerBar; ++beat) {
+                const float beatX = x + beat * pixelsPerBeat_;
+                renderer.drawLine(NUIPoint(beatX, bounds.bottom() - bounds.height * 0.22f),
+                                  NUIPoint(beatX, bounds.bottom()),
+                                  1.0f,
+                                  NUIColor::fromHex(0x262626).withAlpha(0.36f));
+            }
         }
     }
 
-    const float playheadX = snapVerticalLineX(
-        beatToScreenX(playheadBeat_, pixelsPerBeat_, scrollX_, b.x));
-    if (playheadX >= b.x && playheadX <= b.right()) {
-        const auto accent = themeManager.getColor("accentPrimary");
-        const NUIRect handle(playheadX - 5.0f, b.y + 3.0f, 10.0f, 16.0f);
-        renderer.fillRoundedRect(handle, 4.0f, accent.withAlpha(isScrubbing_ ? 1.0f : 0.90f));
-        renderer.strokeRoundedRect(handle, 4.0f, 1.0f, NUIColor::white().withAlpha(0.46f));
-        renderer.fillRoundedRect(NUIRect(playheadX - 1.0f, handle.y + 4.0f, 2.0f, 8.0f),
-                                 1.0f,
-                                 NUIColor::white().withAlpha(0.72f));
-        renderer.drawLine(NUIPoint(playheadX, handle.bottom()),
-                          NUIPoint(playheadX, b.bottom()),
-                          2.0f,
-                          accent.withAlpha(0.92f));
+    const float playheadX =
+        snapVerticalLineX(beatToScreenX(playheadBeat_, pixelsPerBeat_, scrollX_, bounds.x));
+    if (playheadX >= bounds.x && playheadX <= bounds.right()) {
+        const auto accent = theme.getColor("accentPrimary");
+        const float markerRadius = isScrubbing_ ? 6.5f : 6.0f;
+        const NUIPoint markerCenter(playheadX, bounds.bottom() - markerRadius);
+        renderer.fillCircle(markerCenter,
+                            markerRadius + 2.0f,
+                            theme.getColor("backgroundPrimary").withAlpha(0.94f));
+        renderer.fillCircle(markerCenter, markerRadius, accent.withAlpha(isScrubbing_ ? 0.34f : 0.20f));
+        renderer.strokeCircle(markerCenter, markerRadius, 1.3f, accent.withAlpha(0.98f));
+        renderer.fillCircle(markerCenter, 1.7f, accent);
+        renderer.drawLine(NUIPoint(playheadX, markerCenter.y + markerRadius),
+                          NUIPoint(playheadX, bounds.bottom()),
+                          1.0f,
+                          accent.withAlpha(0.88f));
     }
 
     renderer.clearClipRect();
 }
-
 void PianoRollRuler::setPixelsPerBeat(float ppb) { pixelsPerBeat_ = std::max(10.0f, ppb); repaint(); }
 void PianoRollRuler::setScrollX(float scrollX) { scrollX_ = scrollX; repaint(); }
 
@@ -611,13 +625,11 @@ void PianoRollToolbar::setupUI() {
         auto snapMenu = std::make_shared<NUIContextMenu>();
         auto snaps = MusicTheory::getSnapOptions();
         for (auto snap : snaps) {
-            bool isSelected = false; // Need to track this
-            if (auto g = grid_.lock()) {
-                // We'll need a getter for snap in PianoRollGrid or track it here
-            }
             snapMenu->addItem(MusicTheory::getSnapName(snap), [this, snap]() {
+                m_currentSnap = snap;
                 if (auto g = grid_.lock()) g->setSnap(snap);
                 if (auto n = notes_.lock()) n->setSnap(snap);
+                repaint();
             });
         }
         menu->addSubmenu("Snap", snapMenu);
@@ -625,10 +637,10 @@ void PianoRollToolbar::setupUI() {
         // --- ROOT KEY SUBMENU ---
         auto rootMenu = std::make_shared<NUIContextMenu>();
         auto roots = MusicTheory::getRootNames();
-        for (int i = 0; i < roots.size(); ++i) {
+        for (size_t i = 0; i < roots.size(); ++i) {
             rootMenu->addItem(roots[i], [this, i]() {
-                if (auto g = grid_.lock()) g->setRootKey(i);
-                if (auto n = notes_.lock()) n->setRootKey(i);
+                if (auto g = grid_.lock()) g->setRootKey(static_cast<int>(i));
+                if (auto n = notes_.lock()) n->setRootKey(static_cast<int>(i));
             });
         }
         menu->addSubmenu("Root Key", rootMenu);
@@ -636,7 +648,7 @@ void PianoRollToolbar::setupUI() {
         // --- SCALE SUBMENU ---
         auto scaleMenu = std::make_shared<NUIContextMenu>();
         auto scales = MusicTheory::getScales();
-        for (int i = 0; i < scales.size(); ++i) {
+        for (size_t i = 0; i < scales.size(); ++i) {
             scaleMenu->addItem(scales[i].name, [this, i]() {
                 if (auto g = grid_.lock()) g->setScaleType(static_cast<ScaleType>(i));
                 if (auto n = notes_.lock()) n->setScaleType(static_cast<ScaleType>(i));
@@ -865,6 +877,21 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
 
     renderButton(m_lengthUpBtn, m_lengthUpIcon, false);
 
+    currentX += 8.0f;
+    const std::string snapLabel = "SNAP  " + MusicTheory::getSnapName(m_currentSnap);
+    const float snapFontSize = 9.0f;
+    const auto snapTextSize = renderer.measureText(snapLabel, snapFontSize);
+    const float snapWidth = std::max(78.0f, snapTextSize.width + 18.0f);
+    const NUIRect snapRect(currentX, currentY, snapWidth, buttonSize);
+    renderer.fillRoundedRect(snapRect, radius, groupBg);
+    renderer.strokeRoundedRect(snapRect, radius, 1.0f, groupBorder);
+    renderer.drawText(snapLabel,
+                      NUIPoint(snapRect.x + (snapRect.width - snapTextSize.width) * 0.5f,
+                               snapRect.y + (snapRect.height - snapTextSize.height) * 0.5f + 1.0f),
+                      snapFontSize,
+                      themeManager.getColor("textSecondary").withAlpha(0.76f));
+    currentX += snapWidth;
+
     // Editing Pattern Label (Right Side)
     if (!m_patternName.empty()) {
         const float labelLeft = std::max(patternDropdownRight + 10.0f, currentX + 12.0f);
@@ -936,92 +963,73 @@ PianoRollGrid::PianoRollGrid()
 
 void PianoRollGrid::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
-    auto b = getBounds();
-    auto& themeManager = NUIThemeManager::getInstance();
-    
-    // CLIP TO BOUNDS to prevent bleeding
-    renderer.setClipRect(b);
+    const auto bounds = getBounds();
+    auto& theme = NUIThemeManager::getInstance();
 
-    renderer.fillRect(b, themeManager.getColor("backgroundPrimary").darkened(0.01f));
+    renderer.setClipRect(bounds);
+    renderer.fillRect(bounds, NUIColor::black());
 
-    const auto rowAccidental = themeManager.getColor("surfaceRaised").withAlpha(0.11f);
-    const auto rowRoot = themeManager.getColor("accentPrimary").withAlpha(0.075f);
-    const auto rowOutOfScale = themeManager.getColor("backgroundPrimary").darkened(0.05f).withAlpha(0.45f);
-    const auto rowLine = themeManager.getColor("border").withAlpha(0.075f);
-    const auto gridSubdivision = themeManager.getColor("border").withAlpha(0.065f);
-    const auto gridBeat = themeManager.getColor("border").withAlpha(0.15f);
-    const auto gridBar = themeManager.getColor("textSecondary").withAlpha(0.24f);
+    const auto accidentalRow = NUIColor::white().withAlpha(0.022f);
+    const auto rootRow = theme.getColor("accentPrimary").withAlpha(0.055f);
+    const auto outOfScaleRow = NUIColor::black().withAlpha(0.24f);
+    const auto rowLine = NUIColor::white().withAlpha(0.045f);
 
-    const double visibleStartBeat = static_cast<double>(scrollX_) / pixelsPerBeat_;
-    const double visibleEndBeat = static_cast<double>(scrollX_ + b.width) / pixelsPerBeat_;
-    const int firstVisibleBar = static_cast<int>(std::floor(visibleStartBeat / beatsPerBar_));
-    const int lastVisibleBar = static_cast<int>(std::ceil(visibleEndBeat / beatsPerBar_));
-    const auto zebraColor = themeManager.getColor("surfaceRaised").withAlpha(0.035f);
-    for (int bar = firstVisibleBar; bar <= lastVisibleBar; ++bar) {
-        if ((bar & 1) == 0) continue;
-        const double barStartBeat = static_cast<double>(bar * beatsPerBar_);
-        const float barX = beatToScreenX(barStartBeat, pixelsPerBeat_, scrollX_, b.x);
-        const float barWidth = pixelsPerBeat_ * static_cast<float>(beatsPerBar_);
-        renderer.fillRect(NUIRect(barX, b.y, barWidth, b.height), zebraColor);
-    }
-
-    // 1. Draw Rows (Matching Keys)
-    int startPitch = 127 - static_cast<int>((scrollY_) / keyHeight_);
-    int endPitch = 127 - static_cast<int>((scrollY_ + b.height) / keyHeight_);
-    
-    // Expand range for safety margin (2 extra rows on each end)
+    int startPitch = 127 - static_cast<int>(scrollY_ / keyHeight_);
+    int endPitch = 127 - static_cast<int>((scrollY_ + bounds.height) / keyHeight_);
     startPitch = std::clamp(startPitch + 2, 0, 127);
     endPitch = std::clamp(endPitch - 2, 0, 127);
-    
-    for (int p = startPitch; p >= endPitch; --p) {
-        // Calculate screen Y position
-        float worldY = (127 - p) * keyHeight_;
-        float y = b.y + worldY - scrollY_;
-        
-        NUIRect rowRect(b.x, y, b.width, keyHeight_);
-        
-        const int pitchClass = ((p % 12) + 12) % 12;
+
+    for (int pitch = startPitch; pitch >= endPitch; --pitch) {
+        const float y = bounds.y + (127 - pitch) * keyHeight_ - scrollY_;
+        const NUIRect row(bounds.x, y, bounds.width, keyHeight_);
+        const int pitchClass = ((pitch % 12) + 12) % 12;
         const bool isRoot = pitchClass == rootKey_;
-        const bool isInScale = scaleType_ == ScaleType::Chromatic || MusicTheory::isNoteInScale(p, rootKey_, scaleType_);
+        const bool isInScale =
+            scaleType_ == ScaleType::Chromatic || MusicTheory::isNoteInScale(pitch, rootKey_, scaleType_);
 
         if (isRoot) {
-            renderer.fillRect(rowRect, rowRoot);
-        } else if (isBlackKey(p)) {
-            renderer.fillRect(rowRect, rowAccidental);
+            renderer.fillRect(row, rootRow);
+        } else if (isBlackKey(pitch)) {
+            renderer.fillRect(row, accidentalRow);
         }
-        if (!isInScale) {
-            renderer.fillRect(rowRect, rowOutOfScale);
-        }
-
-        renderer.drawLine(NUIPoint(b.x, y), NUIPoint(b.right(), y), 1.0f, rowLine);
+        if (!isInScale) renderer.fillRect(row, outOfScaleRow);
+        renderer.drawLine(NUIPoint(bounds.x, y), NUIPoint(bounds.right(), y), 1.0f, rowLine);
     }
 
-    // Vertical Lines (Snap Grid)
-    double snapDur = MusicTheory::getSnapDuration(snap_);
-    if (snapDur <= 0.0001) snapDur = 1.0;
-    if (snap_ == SnapGrid::None) snapDur = 1.0; 
-    
-    // Dynamic Density: If too dense, double interval
-    while ((pixelsPerBeat_ * snapDur) < 12.0f) {
-        snapDur *= 2.0;
+    renderTimelineGrid(
+        renderer, bounds, bounds.x, bounds.right(), scrollX_, pixelsPerBeat_, beatsPerBar_);
+
+    if (hoveredPitch_ >= 0 && hoveredPitch_ <= 127) {
+        const float hoverY = bounds.y + (127 - hoveredPitch_) * keyHeight_ - scrollY_;
+        const NUIRect hoverRow(bounds.x, hoverY, bounds.width, keyHeight_);
+        const auto hoverColor = theme.getColor("accentPrimary").withAlpha(0.075f);
+        renderer.fillRect(hoverRow, hoverColor);
+        renderer.drawLine(NUIPoint(bounds.x, hoverRow.y),
+                          NUIPoint(bounds.right(), hoverRow.y),
+                          1.0f,
+                          theme.getColor("accentPrimary").withAlpha(0.28f));
+        renderer.drawLine(NUIPoint(bounds.x, hoverRow.bottom()),
+                          NUIPoint(bounds.right(), hoverRow.bottom()),
+                          1.0f,
+                          theme.getColor("accentPrimary").withAlpha(0.18f));
     }
 
-    double current = std::floor(visibleStartBeat / snapDur) * snapDur;
-    
-    for (; current <= visibleEndBeat + snapDur; current += snapDur) {
-        // Calculate X in double precision relative to scrollX_ BEFORE casting to float
-        float x = snapVerticalLineX(beatToScreenX(current, pixelsPerBeat_, scrollX_, b.x));
-        
-        const bool isBar = std::fmod(std::abs(current), static_cast<double>(beatsPerBar_)) < 0.001;
-        const bool isBeat = std::fmod(std::abs(current), 1.0) < 0.001;
-        const float lineWidth = isBar ? 1.5f : 1.0f;
-        const NUIColor col = isBar ? gridBar : (isBeat ? gridBeat : gridSubdivision);
-        renderer.drawLine(NUIPoint(x, b.y), NUIPoint(x, b.y + b.height), lineWidth, col);
+    const float patternEndX =
+        beatToScreenX(totalDurationBeats_, pixelsPerBeat_, scrollX_, bounds.x);
+    if (patternEndX < bounds.right()) {
+        const float shadeX = std::max(bounds.x, patternEndX);
+        renderer.fillRect(NUIRect(shadeX, bounds.y, bounds.right() - shadeX, bounds.height),
+                          NUIColor::black().withAlpha(0.58f));
+    }
+    if (patternEndX >= bounds.x && patternEndX <= bounds.right()) {
+        renderer.drawLine(NUIPoint(patternEndX, bounds.y),
+                          NUIPoint(patternEndX, bounds.bottom()),
+                          2.0f,
+                          theme.getColor("accentPrimary").withAlpha(0.58f));
     }
 
     renderer.clearClipRect();
 }
-
 void PianoRollGrid::setPixelsPerBeat(float ppb) { pixelsPerBeat_ = std::max(10.0f, ppb); repaint(); }
 void PianoRollGrid::setKeyHeight(float height) { keyHeight_ = std::max(8.0f, height); repaint(); }
 void PianoRollGrid::setScrollOffsetX(float offset) { scrollX_ = offset; repaint(); }
@@ -1109,11 +1117,12 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         NUIRect r(x + 1.0f, y + 2.0f, std::max(6.0f, w - 2.0f), std::max(5.0f, h - 4.0f));
 
         const float normalizedVelocity = std::clamp(n.velocity, 0.0f, 1.0f);
+        const bool isHovered = static_cast<int>(noteIndex) == hoveredNoteIndex_;
         const NUIColor baseColor = n.selected ? noteColorSelected : noteColor;
         const NUIColor coreColor = baseColor.withAlpha(0.68f + normalizedVelocity * 0.28f);
-        const NUIColor edgeColor = n.selected
-                                       ? NUIColor::white().withAlpha(0.72f)
-                                       : baseColor.lightened(0.16f).withAlpha(0.74f);
+        const NUIColor edgeColor = n.selected ? NUIColor::white().withAlpha(0.78f)
+                                              : (isHovered ? NUIColor::white().withAlpha(0.38f)
+                                                           : baseColor.lightened(0.16f).withAlpha(0.74f));
 
         renderer.drawShadow(NUIRect(r.x, r.y + 1.0f, r.width, r.height),
                             0.0f,
@@ -1121,18 +1130,24 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
                             5.0f,
                             NUIColor(0, 0, 0, n.selected ? 0.22f : 0.14f));
         renderer.fillRoundedRect(r, 3.0f, coreColor);
-        renderer.strokeRoundedRect(r, 3.0f, n.selected ? 1.5f : 1.0f, edgeColor);
+        renderer.strokeRoundedRect(r, 3.0f, n.selected ? 1.5f : (isHovered ? 1.25f : 1.0f), edgeColor);
         renderer.fillRoundedRect(NUIRect(r.x + 1.0f, r.y + 2.0f, 2.5f, std::max(2.0f, r.height - 4.0f)),
                                  1.0f,
                                  NUIColor::white().withAlpha(n.selected ? 0.68f : 0.42f));
 
-        // Edge resize affordance on hover
-        if (static_cast<int>(noteIndex) == hoveredNoteIndex_ && (hoverOnRightEdge_ || hoverOnLeftEdge_)) {
+        if (isHovered && !hoverOnRightEdge_ && !hoverOnLeftEdge_) {
+            renderer.fillRoundedRect(NUIRect(r.x + 4.0f, r.y + 1.0f, std::max(2.0f, r.width - 8.0f), 1.0f),
+                                     0.5f,
+                                     NUIColor::white().withAlpha(0.24f));
+        }
+
+        // Selected notes retain subtle resize handles; hovered edges intensify them.
+        if (n.selected || (isHovered && (hoverOnRightEdge_ || hoverOnLeftEdge_))) {
             const NUIColor affordanceColor = NUIColor::white().withAlpha(0.72f);
-            if (hoverOnRightEdge_) {
+            if (n.selected || hoverOnRightEdge_) {
                 renderer.fillRoundedRect(NUIRect(r.right() - 3.0f, r.y + 3.0f, 2.0f, r.height - 6.0f), 1.0f, affordanceColor);
             }
-            if (hoverOnLeftEdge_) {
+            if (n.selected || hoverOnLeftEdge_) {
                 renderer.fillRoundedRect(NUIRect(r.x + 1.0f, r.y + 3.0f, 2.0f, r.height - 6.0f), 1.0f, affordanceColor);
             }
         }
@@ -1152,6 +1167,23 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
                 NUIColor labelColor = NUIColor::white().withAlpha(0.88f);
                 renderer.drawText(pitchLabel, NUIPoint(labelX, labelY), kFontSize, labelColor);
             }
+        }
+    }
+
+    // Draw-mode preview: a translucent phantom of the note a click would place,
+    // tracking the snapped cursor cell so placement reads before you commit it.
+    // Only while the pencil hovers empty space — never over an existing note.
+    if (tool_ == GlobalTool::Pencil && state_ == State::None && hoveredNoteIndex_ == -1 &&
+        hoveredPitch_ >= 0 && hoverBeat_ >= 0.0) {
+        const int previewPitch = snapPitchToScale(hoveredPitch_);
+        const float px = snapRectX(beatToScreenX(hoverBeat_, pixelsPerBeat_, scrollX_, b.x));
+        const float py = b.y + (127 - previewPitch) * keyHeight_ - scrollY_;
+        const float pw = std::max(6.0f, std::round(static_cast<float>(lastNoteDuration_ * pixelsPerBeat_)) - 2.0f);
+        const float ph = std::max(5.0f, keyHeight_ - 4.0f);
+        if (px + pw >= b.x && px <= b.right() && py + ph >= b.y && py <= b.bottom()) {
+            const NUIRect pr(px + 1.0f, py + 2.0f, pw, ph);
+            renderer.fillRoundedRect(pr, 3.0f, noteColor.withAlpha(0.20f));
+            renderer.strokeRoundedRect(pr, 3.0f, 1.0f, noteColor.lightened(0.16f).withAlpha(0.48f));
         }
     }
 
@@ -1196,16 +1228,40 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             hoverOnLeftEdge_ = false;
             if (platformBridge_) platformBridge_->setCursorStyle(NUICursorStyle::Arrow);
         }
+        if (hoveredPitch_ != -1) {
+            hoveredPitch_ = -1;
+            if (onHoveredPitchChanged_) onHoveredPitchChanged_(-1);
+        }
+        if (hoverBeat_ >= 0.0) {
+            hoverBeat_ = -1.0;
+            repaint();
+        }
         return false;
     }
 
     auto b = getBounds();
     float localX = event.position.x - b.x + scrollX_;
     float localY = event.position.y - b.y + scrollY_;
+    const int cursorPitch = std::clamp(127 - static_cast<int>(localY / keyHeight_), 0, 127);
+    if (hoveredPitch_ != cursorPitch) {
+        hoveredPitch_ = cursorPitch;
+        if (onHoveredPitchChanged_) onHoveredPitchChanged_(cursorPitch);
+    }
 
     // --- HOVER / SMART CURSOR (no button activity) ---
     if (state_ == State::None && !event.pressed && !event.released) {
         int hitIdx = findNoteAt(localX, localY);
+        // Track the snapped beat the cursor sits on so the pencil can render a
+        // phantom of the note a click would place. Only meaningful over empty
+        // space with the pencil active; suppressed elsewhere so it never lingers.
+        const double snappedHoverBeat =
+            (tool_ == GlobalTool::Pencil && hitIdx == -1)
+                ? snapToGrid(std::max(0.0, static_cast<double>(localX) / pixelsPerBeat_))
+                : -1.0;
+        if (hoverBeat_ != snappedHoverBeat) {
+            hoverBeat_ = snappedHoverBeat;
+            repaint();
+        }
         if (hitIdx == -1) {
             if (hoveredNoteIndex_ != -1) {
                 hoveredNoteIndex_ = -1;
@@ -2209,16 +2265,8 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     renderer.setClipRect(contentRect);
 
     constexpr int beatsPerBar = 4;
-    const double visibleStartBeat = scrollX_ / pixelsPerBeat_;
-    const double visibleEndBeat = (scrollX_ + contentRect.width) / pixelsPerBeat_;
-    const int firstVisibleBar = static_cast<int>(std::floor(visibleStartBeat / beatsPerBar));
-    const int lastVisibleBar = static_cast<int>(std::ceil(visibleEndBeat / beatsPerBar));
-    const auto zebraColor = themeManager.getColor("surfaceRaised").withAlpha(0.035f);
-    for (int bar = firstVisibleBar; bar <= lastVisibleBar; ++bar) {
-        if ((bar & 1) == 0) continue;
-        const float x = contentRect.x + static_cast<float>(bar * beatsPerBar) * pixelsPerBeat_ - scrollX_;
-        renderer.fillRect(NUIRect(x, contentRect.y, pixelsPerBeat_ * beatsPerBar, contentRect.height), zebraColor);
-    }
+    const float startX = contentRect.x;
+    renderTimelineGrid(renderer, contentRect, startX, contentRect.right(), scrollX_, pixelsPerBeat_, beatsPerBar);
 
     const float availH = std::max(1.0f, b.height - 28.0f);
     const float bottomY = b.bottom() - 8.0f;
@@ -2231,39 +2279,25 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
                       guideColor.withAlpha(0.72f));
     renderer.drawLine(NUIPoint(contentRect.x, bottomY), NUIPoint(contentRect.right(), bottomY), 1.0f, guideColor);
 
-    // 1. Draw Grid Background (Sync with PianoRollGrid)
-    auto snap = layer->getSnap();
-    double snapDur = MusicTheory::getSnapDuration(snap);
-    if (snapDur <= 0.0001) snapDur = 1.0;
-    if (snap == SnapGrid::None) snapDur = 1.0; 
-
-    // Dynamic Density
-    while ((pixelsPerBeat_ * snapDur) < 12.0f) {
-        snapDur *= 2.0;
+    const float patternEndX = startX + static_cast<float>(layer->getTotalDurationBeats() * pixelsPerBeat_) - scrollX_;
+    if (patternEndX < contentRect.right()) {
+        const float shadeX = std::max(contentRect.x, patternEndX);
+        renderer.fillRect(NUIRect(shadeX, contentRect.y, contentRect.right() - shadeX, contentRect.height),
+                          NUIColor::black().withAlpha(0.58f));
     }
-
-    float startX = b.x + sidebarW;
-    // Align to snap
-    double current = std::floor(visibleStartBeat / snapDur) * snapDur;
-
-    auto gridCol = themeManager.getColor("border").withAlpha(0.07f);
-    auto barCol = themeManager.getColor("border").withAlpha(0.14f);
-    for (; current <= visibleEndBeat + snapDur; current += snapDur) {
-        // Double precision relative subtraction
-        double relX = (current * pixelsPerBeat_) - static_cast<double>(scrollX_);
-        float x = startX + static_cast<float>(relX);
-        
-        bool isBar = (std::fmod(std::abs(current), (double)beatsPerBar) < 0.001);
-        
-        // Draw line
-        renderer.drawLine(NUIPoint(x, b.y), NUIPoint(x, b.y + b.height), 1.0f, isBar ? barCol : gridCol);
+    if (patternEndX >= contentRect.x && patternEndX <= contentRect.right()) {
+        renderer.drawLine(NUIPoint(patternEndX, contentRect.y),
+                          NUIPoint(patternEndX, contentRect.bottom()),
+                          2.0f,
+                          themeManager.getColor("accentPrimary").withAlpha(0.58f));
     }
     
     // 2. Render velocity stems using MidiNote's normalized 0..1 representation.
     const auto& notes = layer->getNotes();
     auto velColorBase = themeManager.getColor("accentPrimary").lightened(0.05f);
 
-    for (const auto& n : notes) {
+    for (size_t noteIndex = 0; noteIndex < notes.size(); ++noteIndex) {
+        const auto& n = notes[noteIndex];
         if (n.isDeleted && n.animationScale < 0.01f) continue;
         
         float x = startX + static_cast<float>(n.startBeat * pixelsPerBeat_) - scrollX_;
@@ -2293,6 +2327,21 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
         if (w > 4.0f) {
             renderer.drawLine(NUIPoint(x, y), NUIPoint(x + w, y), n.selected ? 2.0f : 1.0f, col.withAlpha(0.64f));
         }
+
+        if (isDragging_ && static_cast<int>(noteIndex) == hoveringNoteIndex_) {
+            const std::string value = std::to_string(static_cast<int>(std::lround(normalizedVelocity * 127.0f)));
+            const float fontSize = 9.0f;
+            const auto textSize = renderer.measureText(value, fontSize);
+            const float bubbleWidth = textSize.width + 10.0f;
+            const float bubbleY = y - 18.0f >= contentRect.y ? y - 18.0f : y + 8.0f;
+            const NUIRect bubble(x + 7.0f, bubbleY, bubbleWidth, 16.0f);
+            renderer.fillRoundedRect(bubble, 4.0f, NUIColor::black().withAlpha(0.92f));
+            renderer.strokeRoundedRect(bubble, 4.0f, 1.0f, col.withAlpha(0.82f));
+            renderer.drawText(value,
+                              NUIPoint(bubble.x + 5.0f, bubble.y + (bubble.height - textSize.height) * 0.5f),
+                              fontSize,
+                              NUIColor::white().withAlpha(0.92f));
+        }
     }
     
     renderer.clearClipRect();
@@ -2320,6 +2369,14 @@ PianoRollView::PianoRollView()
     m_grid = std::make_shared<PianoRollGrid>();
     m_notes = std::make_shared<PianoRollNoteLayer>();
     m_controls = std::make_shared<PianoRollControlPanel>();
+
+    m_notes->setOnHoveredPitchChanged([this](int pitch) {
+        if (m_grid) m_grid->setHoveredPitch(pitch);
+        if (m_keys) m_keys->setHoveredKey(pitch);
+    });
+    m_keys->setOnHoveredKeyChanged([this](int pitch) {
+        if (m_grid) m_grid->setHoveredPitch(pitch);
+    });
     
     // Toolbar
     m_toolbar = std::make_shared<PianoRollToolbar>();
@@ -2454,30 +2511,36 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
             playheadX >= gridBounds.x && playheadX <= gridBounds.right()) {
             const float playheadStartY = rulerBounds.bottom();
             const float playheadEndY = m_controls ? m_controls->getBounds().bottom() : gridBounds.bottom();
-            renderer.drawLine(NUIPoint(playheadX, playheadStartY),
-                              NUIPoint(playheadX, playheadEndY),
-                              5.0f,
-                              accent.withAlpha(0.10f));
-            renderer.drawLine(NUIPoint(playheadX, playheadStartY),
-                              NUIPoint(playheadX, playheadEndY),
-                              2.0f,
-                              accent.withAlpha(0.92f));
-
-            const float triangleH = 8.0f;
-            const float triangleW = 5.0f;
-            for (float dx = 0.0f; dx <= triangleW; dx += 1.0f) {
-                renderer.drawLine(NUIPoint(playheadX + dx, playheadStartY),
-                                  NUIPoint(playheadX + dx,
-                                           playheadStartY + triangleH - dx * (triangleH / triangleW)),
-                                  1.0f,
-                                  accent);
-                renderer.drawLine(NUIPoint(playheadX - dx, playheadStartY),
-                                  NUIPoint(playheadX - dx,
-                                           playheadStartY + triangleH - dx * (triangleH / triangleW)),
-                                  1.0f,
-                                  accent);
+            if (m_isPlayingCallback && m_isPlayingCallback()) {
+                const float glowWidth = 4.0f;
+                const float lineHeight = playheadEndY - playheadStartY;
+                renderer.fillRectGradient(NUIRect(playheadX - glowWidth, playheadStartY, glowWidth, lineHeight),
+                                          accent.withAlpha(0.0f),
+                                          accent.withAlpha(0.14f),
+                                          false);
+                renderer.fillRectGradient(NUIRect(playheadX, playheadStartY, glowWidth, lineHeight),
+                                          accent.withAlpha(0.14f),
+                                          accent.withAlpha(0.0f),
+                                          false);
             }
+            renderer.drawLine(NUIPoint(playheadX, playheadStartY),
+                              NUIPoint(playheadX, playheadEndY),
+                              1.0f,
+                              accent.withAlpha(0.55f));
         }
+    }
+
+    if (m_controls) {
+        const auto controlBounds = m_controls->getBounds();
+        const float gripWidth = 34.0f;
+        const NUIRect splitterGrip(controlBounds.x + (controlBounds.width - gripWidth) * 0.5f,
+                                   controlBounds.y - 2.0f,
+                                   gripWidth,
+                                   4.0f);
+        renderer.fillRoundedRect(splitterGrip,
+                                 2.0f,
+                                 theme.getColor("accentPrimary").withAlpha(
+                                     m_isResizingPanel ? 0.92f : (m_splitterHovered ? 0.52f : 0.22f)));
     }
 
     if (m_toolbar) {
@@ -2614,12 +2677,14 @@ void PianoRollView::syncChildren() {
     m_grid->setScrollOffsetX(x);
     m_grid->setScrollOffsetY(y);
     m_grid->setPlayheadBeat(m_playheadBeat);
+    m_grid->setTotalDurationBeats(m_totalDurationBeats);
     
     m_notes->setPixelsPerBeat(m_pixelsPerBeat);
     m_notes->setKeyHeight(m_keyHeight);
     m_notes->setScrollOffsetX(m_scrollX);
     m_notes->setScrollOffsetY(m_scrollY);
     m_notes->setPlayheadBeat(m_playheadBeat);
+    m_notes->setTotalDurationBeats(m_totalDurationBeats);
     
     if (m_controls) {
         m_controls->setPixelsPerBeat(m_pixelsPerBeat);
@@ -2653,7 +2718,12 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
 
     auto b = getBounds();
     float splitterY = b.y + b.height - m_controlPanelHeight;
-    float splitterZone = 5.0f;
+    float splitterZone = 7.0f;
+    const bool splitterHovered = std::abs(event.position.y - splitterY) < splitterZone;
+    if (m_splitterHovered != splitterHovered) {
+        m_splitterHovered = splitterHovered;
+        repaint();
+    }
     
     if (event.pressed && event.button == NUIMouseButton::Left) {
         if (std::abs(event.position.y - splitterY) < splitterZone) {
@@ -2663,7 +2733,7 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
             return true;
         }
     }
-    else if (m_isResizingPanel && event.pressed) {
+    else if (m_isResizingPanel && !event.released) {
         float dy = event.position.y - m_dragStartPos.y;
         // Dragging UP increases height
         float newH = m_dragStartPanelHeight - dy;
