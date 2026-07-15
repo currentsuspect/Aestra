@@ -24,6 +24,14 @@ bool usesPianoRollForType(Aestra::Audio::UnitType type)
     return type == Aestra::Audio::UnitType::Instrument;
 }
 
+NUIColor colorFromUnitValue(uint32_t value) {
+    constexpr float scale = 1.0f / 255.0f;
+    return NUIColor(static_cast<float>((value >> 16) & 0xff) * scale,
+                    static_cast<float>((value >> 8) & 0xff) * scale,
+                    static_cast<float>(value & 0xff) * scale,
+                    1.0f);
+}
+
 AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
     AestraUI::NUIComponent* root = component;
     while (root && root->getParent()) {
@@ -83,7 +91,7 @@ void UnitRow::updateState() {
             m_groupLabel = "808";
             break;
         case Aestra::Audio::UnitType::Instrument:
-            m_groupLabel = "Instrument";
+            m_groupLabel = "MIDI";
             break;
         case Aestra::Audio::UnitType::Audio:
             m_groupLabel = "Audio";
@@ -102,9 +110,11 @@ void UnitRow::updateState() {
         }
     }
 
+    const auto displayType = shouldUseNoteRoll() ? Aestra::Audio::UnitType::Instrument : m_type;
+
     // Ensure name label exists and stays in sync
     if (!m_nameLabel) {
-        m_nameLabel = std::make_shared<UnitNameLabel>(m_name, m_type);
+        m_nameLabel = std::make_shared<UnitNameLabel>(m_name, displayType);
         addChild(m_nameLabel);
         layoutNameLabel();
 
@@ -116,13 +126,17 @@ void UnitRow::updateState() {
         };
     } else {
         m_nameLabel->setUnitName(m_name);
-        m_nameLabel->setUnitType(m_type);
+        m_nameLabel->setUnitType(displayType);
     }
 
     invalidateVisuals();
 }
 
 void UnitRow::onRender(NUIRenderer& renderer) {
+    if (m_nameLabel) {
+        m_nameLabel->setUnitType(shouldUseNoteRoll() ? Aestra::Audio::UnitType::Instrument : m_type);
+    }
+
     // Invalidate cache if flagged (e.g. state change or hover)
     if (m_needsCacheUpdate) {
         renderer.invalidateCache(reinterpret_cast<uint64_t>(this));
@@ -151,14 +165,15 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
     const auto& themeProps = theme.getCurrentTheme();
     const float radius = std::max(0.0f, themeProps.radiusM - 1.0f);
+    const NUIColor unitAccent = colorFromUnitValue(m_color);
     NUIColor cardBg = theme.getColor("backgroundSecondary");
     NUIColor border = theme.getColor("border").withAlpha(0.08f);
     if (m_isDropHighlighted) {
         cardBg = theme.getColor("accentPrimary").withAlpha(0.18f);
         border = theme.getColor("accentPrimary").withAlpha(0.95f);
     } else if (m_isSelected) {
-        cardBg = theme.getColor("accentPrimary").withAlpha(0.14f);
-        border = theme.getColor("accentPrimary").withAlpha(0.55f);
+        cardBg = unitAccent.withAlpha(0.10f);
+        border = unitAccent.withAlpha(0.72f);
     } else if (m_isHovered) {
         cardBg = theme.getColor("surfaceRaised");
         border = theme.getColor("accentPrimary").withAlpha(0.22f);
@@ -166,14 +181,19 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
     renderer.fillRoundedRect(cardBounds, radius, cardBg);
     renderer.strokeRoundedRect(cardBounds, radius, m_isDropHighlighted ? 2.0f : 1.0f, border);
+    renderer.fillRoundedRect({cardBounds.x + 1.0f, cardBounds.y + 8.0f, 4.0f, cardBounds.height - 16.0f},
+                             2.0f, unitAccent.withAlpha(m_isEnabled ? 0.95f : 0.35f));
+
+    m_controlWidth = std::clamp(cardBounds.width * 0.38f, 220.0f, 312.0f);
 
     NUIRect dragRect(cardBounds.x + 6.0f, cardBounds.y + 6.0f, 32.0f, cardBounds.height - 12.0f);
     drawDragHandle(renderer, dragRect);
 
-    NUIRect controlRect(cardBounds.x + 42.0f, cardBounds.y, std::min(310.0f, cardBounds.width * 0.42f), cardBounds.height);
+    NUIRect controlRect(cardBounds.x + 42.0f, cardBounds.y,
+                        std::max(0.0f, m_controlWidth - 48.0f), cardBounds.height);
     drawControlBlock(renderer, controlRect);
 
-    float separatorX = controlRect.right() + 6.0f;
+    float separatorX = cardBounds.x + m_controlWidth;
     renderer.drawLine(NUIPoint(separatorX, cardBounds.y + 8.0f),
                       NUIPoint(separatorX, cardBounds.y + cardBounds.height - 8.0f),
                       1.0f,
@@ -187,11 +207,16 @@ void UnitRow::drawContent(NUIRenderer& renderer) {
 
 void UnitRow::drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds) {
     auto& theme = NUIThemeManager::getInstance();
-    renderer.drawText("⠿", NUIPoint(bounds.x + 1.0f, bounds.y + 7.0f), 12.0f, theme.getColor("textSecondary").withAlpha(0.7f));
-    renderer.drawText(std::to_string(static_cast<unsigned long long>(m_unitId)),
-                      NUIPoint(bounds.x + 2.0f, bounds.y + 24.0f),
-                      9.0f,
-                      theme.getColor("textSecondary").withAlpha(0.56f));
+    const NUIColor gripColor = theme.getColor("textSecondary").withAlpha(m_isHovered ? 0.78f : 0.45f);
+    const float clusterX = bounds.x + bounds.width * 0.5f - 3.0f;
+    const float clusterY = bounds.y + bounds.height * 0.5f - 6.0f;
+    for (int row = 0; row < 3; ++row) {
+        for (int col = 0; col < 2; ++col) {
+            renderer.fillCircle({clusterX + static_cast<float>(col) * 6.0f,
+                                 clusterY + static_cast<float>(row) * 6.0f},
+                                1.35f, gripColor);
+        }
+    }
 }
 
 void UnitRow::drawPowerIcon(NUIRenderer& renderer, const NUIRect& bounds, bool active) {
@@ -304,10 +329,11 @@ void UnitRow::drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     }
     const float centerY = bounds.y + bounds.height * 0.5f;
     const float nameX = bounds.x + 12.0f;
+    const NUIColor unitAccent = colorFromUnitValue(m_color);
 
     renderer.fillCircle(NUIPoint(nameX, bounds.y + 18.0f),
                         3.0f,
-                        m_isEnabled ? theme.getColor("success") : theme.getColor("textDisabled"));
+                        m_isEnabled ? unitAccent : theme.getColor("textDisabled"));
 
     // Name + type label are rendered by the UnitNameLabel child component.
 
@@ -333,6 +359,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     struct NoteSpan {
         int startStep{0};
         int endStep{0};
+        double startBeat{0.0};
+        double endBeat{0.0};
         int pitch{48};
         float velocity{1.0f};
     };
@@ -349,7 +377,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     
     // === Step Grid Layout ===
     float availWidth = timelineStrip.width;
-    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f); // Min 26px
+    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
     float totalWidth = stepWidth * m_stepCount;
     
     // Clamp scroll
@@ -362,14 +390,20 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     std::vector<int> stepPitch(m_stepCount, -1);
     std::vector<float> stepLength(m_stepCount, 0.0f);
     bool unitHasContent = !m_pluginId.empty() || !m_audioClip.empty();
-    const bool stepMode = usesStepSequencerForType(m_type);
+    bool noteRollMode = usesPianoRollForType(m_type);
+    double visibleLengthBeats = static_cast<double>(m_stepCount) * 0.25;
     if (m_patternId.isValid()) {
         auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId);
         if (pattern && pattern->isMidi()) {
+            visibleLengthBeats = std::max(0.25, pattern->lengthBeats);
             auto& midi = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
             for (const auto& note : midi.notes) {
                 if (note.unitId != m_unitId && note.unitId != 0) continue;
                 unitHasContent = true;
+                if (m_type == Aestra::Audio::UnitType::Sampler &&
+                    (note.unitId == 0 || note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01)) {
+                    noteRollMode = true;
+                }
                 const int startStep = std::clamp(static_cast<int>(std::floor(note.startBeat / 0.25 + 0.0001)), 0, m_stepCount - 1);
                 const double endBeat = std::max(note.startBeat + 0.25, note.startBeat + note.durationBeats);
                 const int endExclusive =
@@ -378,7 +412,8 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 for (int step = startStep; step < endExclusive; ++step) {
                     activeSteps.push_back(step);
                 }
-                noteSpans.push_back(NoteSpan{startStep, endExclusive, note.pitch, note.velocity});
+                noteSpans.push_back(NoteSpan{startStep, endExclusive, note.startBeat, endBeat, note.pitch,
+                                             note.velocity});
                 stepPitch[startStep] = note.pitch;
                 stepLength[startStep] = static_cast<float>(note.durationBeats);
             }
@@ -387,7 +422,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     std::sort(activeSteps.begin(), activeSteps.end());
     activeSteps.erase(std::unique(activeSteps.begin(), activeSteps.end()), activeSteps.end());
 
-    if (m_type == Aestra::Audio::UnitType::Sampler) {
+    if (m_type == Aestra::Audio::UnitType::Sampler && !noteRollMode) {
         const NUIColor inactiveFill = theme.getColor("surfaceTertiary");
         const NUIColor inactiveStroke = theme.getColor("border").withAlpha(0.10f);
         const NUIColor activeFill = theme.getColor("primary");
@@ -462,7 +497,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         for (size_t i = 1; i < slidePoints.size(); ++i) {
             renderer.drawLine(slidePoints[i - 1], slidePoints[i], 1.5f, activeFill.withAlpha(0.6f));
         }
-    } else if (usesPianoRollForType(m_type) && !noteSpans.empty()) {
+    } else if (noteRollMode) {
         for (int lane = 0; lane < 5; ++lane) {
             const float y = timelineStrip.y + ((lane + 1) * timelineStrip.height / 5.0f);
             renderer.drawLine(NUIPoint(timelineStrip.x, y),
@@ -471,8 +506,15 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                               theme.getColor("border").withAlpha(0.07f));
         }
 
-        int minPitch = noteSpans[0].pitch;
-        int maxPitch = noteSpans[0].pitch;
+        for (double beat = 4.0; beat < visibleLengthBeats; beat += 4.0) {
+            const float x = timelineStrip.x +
+                            static_cast<float>(beat / visibleLengthBeats) * totalWidth - m_scrollX;
+            renderer.drawLine(NUIPoint(x, timelineStrip.y), NUIPoint(x, timelineStrip.bottom()), 1.0f,
+                              theme.getColor("border").withAlpha(0.10f));
+        }
+
+        int minPitch = noteSpans.empty() ? 60 : noteSpans[0].pitch;
+        int maxPitch = noteSpans.empty() ? 72 : noteSpans[0].pitch;
         for (const auto& span : noteSpans) {
             minPitch = std::min(minPitch, span.pitch);
             maxPitch = std::max(maxPitch, span.pitch);
@@ -485,8 +527,12 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
         const float noteHeight = 4.0f;
 
         for (const auto& span : noteSpans) {
-            const float startX = timelineStrip.x + (span.startStep * stepWidth) + 1.5f - m_scrollX;
-            const float endX = timelineStrip.x + (span.endStep * stepWidth) - 1.5f - m_scrollX;
+            const float startX = timelineStrip.x +
+                                 static_cast<float>(span.startBeat / visibleLengthBeats) * totalWidth + 1.5f -
+                                 m_scrollX;
+            const float endX = timelineStrip.x +
+                               static_cast<float>(span.endBeat / visibleLengthBeats) * totalWidth - 1.5f -
+                               m_scrollX;
             const float width = std::max(6.0f, endX - startX);
             if (startX + width < timelineStrip.x || startX > timelineStrip.right()) {
                 continue;
@@ -530,6 +576,27 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
     }
 }
 
+bool UnitRow::shouldUseNoteRoll() const {
+    if (usesPianoRollForType(m_type)) {
+        return true;
+    }
+    if (m_type != Aestra::Audio::UnitType::Sampler || !m_trackManager || !m_patternId.isValid()) {
+        return false;
+    }
+
+    const auto* pattern = m_trackManager->getPatternManager().getPattern(m_patternId);
+    if (!pattern || !pattern->isMidi()) {
+        return false;
+    }
+
+    const auto& midi = std::get<Aestra::Audio::MidiPayload>(pattern->payload);
+    return std::any_of(midi.notes.begin(), midi.notes.end(), [this](const Aestra::Audio::MidiNote& note) {
+        const bool belongsToUnit = note.unitId == m_unitId || note.unitId == 0;
+        return belongsToUnit &&
+               (note.unitId == 0 || note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01);
+    });
+}
+
 bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
     // Forward to UnitNameLabel first (same local-coordinate transform as old m_nameInput)
     if (m_nameLabel) {
@@ -544,15 +611,16 @@ bool UnitRow::onMouseEvent(const NUIMouseEvent& event) {
 
     auto bounds = getBounds();
     const NUIRect localDragRect(6.0f, 6.0f, 32.0f, 44.0f);
-    const NUIRect localControlRect(42.0f, 0.0f, std::min(310.0f, bounds.width * 0.42f), 56.0f);
-    const float separatorX = localControlRect.right() + 6.0f;
+    m_controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
+    const NUIRect localControlRect(42.0f, 0.0f, std::max(0.0f, m_controlWidth - 48.0f), 56.0f);
+    const float separatorX = m_controlWidth;
     const NUIRect localContextRect(separatorX + 8.0f, 6.0f, std::max(0.0f, bounds.width - (separatorX + 14.0f)), 44.0f);
     const NUIPoint localPoint(event.position.x - bounds.x, event.position.y - bounds.y);
 
     auto resolveGridStep = [this](const NUIPoint& position, const NUIRect& gridBounds) -> int {
         float relativeX = position.x - gridBounds.x;
         float availWidth = gridBounds.width;
-        float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
+        float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
         float contentX = relativeX + m_scrollX;
         return static_cast<int>(contentX / stepWidth);
     };
@@ -759,7 +827,7 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
     const NUIPoint localPoint(event.position.x - rowBounds.x - bounds.x,
                               event.position.y - rowBounds.y - bounds.y);
 
-    if (usesPianoRollForType(m_type)) {
+    if (shouldUseNoteRoll()) {
         if (m_onOpenPatternEditor && m_patternId.isValid()) {
             m_onOpenPatternEditor(m_patternId);
         }
@@ -788,7 +856,7 @@ void UnitRow::handleContextClick(const NUIMouseEvent& event, const NUIRect& boun
     // === Single click: Grid Interaction - Toggle Steps ===
     float relativeX = localPoint.x;
     float availWidth = bounds.width;
-    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
+    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
     
     float contentX = relativeX + m_scrollX;
     int stepIndex = static_cast<int>(contentX / stepWidth);
@@ -974,9 +1042,9 @@ void UnitRow::onResize(int width, int height) {
 void UnitRow::layoutNameLabel() {
     if (!m_nameLabel) return;
     auto bounds = getBounds();
-    float controlWidth = std::min(310.0f, bounds.width * 0.42f);
+    float controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
     float labelX = 54.0f; // 42 (control block) + 12 (name indent)
-    float labelWidth = std::max(80.0f, controlWidth - 100.0f);
+    float labelWidth = std::max(56.0f, controlWidth - 158.0f);
     m_nameLabel->setBounds(NUIRect(labelX, 8.0f, labelWidth, 30.0f));
 }
 
