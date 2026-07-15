@@ -1207,6 +1207,80 @@ void PianoRollNoteLayer::connectSelectedNotes() {
     }
 }
 
+void PianoRollNoteLayer::quantizeSelectedNotes() {
+    double snapDur = MusicTheory::getSnapDuration(snap_);
+    if (snap_ == SnapGrid::None || snapDur <= 0.0001) snapDur = 0.25; // sensible 1/16 default
+
+    auto oldNotes = notes_;
+    bool changed = false;
+    for (auto& n : notes_) {
+        if (!n.selected || n.isDeleted) continue;
+        const double q = quantizeBeatToGrid(n.startBeat, snapDur);
+        if (std::abs(q - n.startBeat) > 0.0001) {
+            n.startBeat = q;
+            changed = true;
+        }
+    }
+    if (changed) {
+        pushUndo("Quantize", oldNotes, notes_);
+        commitNotes();
+        repaint();
+    }
+}
+
+void PianoRollNoteLayer::glueSelectedNotes() {
+    // Collect selected note indices grouped by pitch.
+    std::vector<int> selected;
+    for (size_t i = 0; i < notes_.size(); ++i) {
+        if (notes_[i].selected && !notes_[i].isDeleted) selected.push_back(static_cast<int>(i));
+    }
+    if (selected.size() < 2) return;
+
+    auto oldNotes = notes_;
+    std::vector<MidiNote> merged;      // rebuilt selected notes
+    std::vector<bool> consumed(notes_.size(), false);
+
+    // For each pitch, sweep left→right and coalesce runs that overlap or touch.
+    std::sort(selected.begin(), selected.end(), [&](int a, int b) {
+        if (notes_[a].pitch != notes_[b].pitch) return notes_[a].pitch < notes_[b].pitch;
+        return notes_[a].startBeat < notes_[b].startBeat;
+    });
+
+    bool changed = false;
+    size_t k = 0;
+    while (k < selected.size()) {
+        MidiNote run = notes_[selected[k]];
+        double runEnd = run.startBeat + run.durationBeats;
+        size_t j = k + 1;
+        while (j < selected.size() && notes_[selected[j]].pitch == run.pitch &&
+               notes_[selected[j]].startBeat <= runEnd + 0.0001) {
+            runEnd = std::max(runEnd, notes_[selected[j]].startBeat + notes_[selected[j]].durationBeats);
+            changed = true; // at least two notes folded together
+            ++j;
+        }
+        run.durationBeats = runEnd - run.startBeat;
+        run.selected = true;
+        merged.push_back(run);
+        for (size_t m = k; m < j; ++m) consumed[selected[m]] = true;
+        k = j;
+    }
+
+    if (!changed) return;
+
+    // Keep everything that wasn't glued, then append the merged notes.
+    std::vector<MidiNote> rebuilt;
+    rebuilt.reserve(notes_.size());
+    for (size_t i = 0; i < notes_.size(); ++i) {
+        if (!consumed[i]) rebuilt.push_back(notes_[i]);
+    }
+    for (auto& m : merged) rebuilt.push_back(m);
+    notes_ = std::move(rebuilt);
+
+    pushUndo("Glue", oldNotes, notes_);
+    commitNotes();
+    repaint();
+}
+
 void PianoRollNoteLayer::strumSelectedNotes(double spreadBeats) {
     std::vector<int> selected;
     for (size_t i = 0; i < notes_.size(); ++i) {
@@ -2100,6 +2174,17 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
         // or out to the next snap/beat boundary when nothing follows.
         if (ctrl && event.keyCode == NUIKeyCode::L) {
             connectSelectedNotes();
+            return true;
+        }
+
+        // Q: quantize selected note starts to the grid. Ctrl+G: glue selected
+        // notes on the same pitch into one. Both are no-ops without a selection.
+        if (!ctrl && event.keyCode == NUIKeyCode::Q) {
+            quantizeSelectedNotes();
+            return true;
+        }
+        if (ctrl && event.keyCode == NUIKeyCode::G) {
+            glueSelectedNotes();
             return true;
         }
 

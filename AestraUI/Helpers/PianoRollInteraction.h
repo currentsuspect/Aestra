@@ -10,6 +10,15 @@
 namespace AestraUI {
 
 /**
+ * Snap a beat position to the nearest @p snapDur grid line, clamped to >= 0.
+ * A non-positive grid returns the position unchanged (nothing to quantize to).
+ */
+inline double quantizeBeatToGrid(double beat, double snapDur) {
+    if (snapDur <= 0.0001) return beat;
+    return std::max(0.0, std::round(beat / snapDur) * snapDur);
+}
+
+/**
  * Compute the elongated end for a note being "connected" (legato) to the next
  * note in time. The note's end extends forward to the nearest start greater than
  * its own; when nothing follows, it extends to the next @p snapDur boundary. The

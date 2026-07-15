@@ -174,6 +174,14 @@ static void test_connect_note_legato() {
     PASS("Ctrl+L connect elongates to the next note or the next grid line");
 }
 
+static void test_quantize_to_grid() {
+    ASSERT(quantizeBeatToGrid(0.24, 0.25) == 0.25, "quantize should snap up to the nearest grid line");
+    ASSERT(quantizeBeatToGrid(0.10, 0.25) == 0.0, "quantize should snap down to the nearest grid line");
+    ASSERT(quantizeBeatToGrid(1.0, 0.5) == 1.0, "quantize should leave on-grid positions untouched");
+    ASSERT(quantizeBeatToGrid(0.30, 0.0) == 0.30, "a zero grid leaves the position unchanged");
+    PASS("Q quantizes note starts to the nearest grid line");
+}
+
 // ---------------------------------------------------------------------------
 // Scale Pitch Movement Tests
 // ---------------------------------------------------------------------------
@@ -259,6 +267,7 @@ int main() {
     test_velocity_panel_normalization();
     test_shared_timeline_grid_density();
     test_connect_note_legato();
+    test_quantize_to_grid();
     test_c_major_in_scale_detection();
     test_a_natural_minor_detection();
     test_chromatic_returns_original();

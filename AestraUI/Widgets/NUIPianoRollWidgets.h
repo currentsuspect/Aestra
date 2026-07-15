@@ -401,6 +401,12 @@ public:
      */
     void connectSelectedNotes();
 
+    /** @brief Snap the starts of the selected notes to the current snap grid. */
+    void quantizeSelectedNotes();
+
+    /** @brief Merge overlapping/touching selected notes on the same pitch into one. */
+    void glueSelectedNotes();
+
     /** @brief Set the platform bridge for cursor style changes. */
     void setPlatformBridge(NUIPlatformBridge* bridge);
 
