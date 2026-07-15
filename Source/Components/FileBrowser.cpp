@@ -35,7 +35,10 @@ namespace AestraUI {
 
 namespace {
 
-constexpr float kPreviewPanelHeight = 90.0f;
+constexpr float kPreviewPanelHeight = 68.0f;
+constexpr float kCompactNavWidth = 52.0f;
+constexpr float kCompactNavStartWidth = 320.0f;
+constexpr float kExpandedNavStartWidth = 440.0f;
 constexpr float BROWSER_SEARCH_ROW_H = 34.0f;
 constexpr float BROWSER_TOP_PAD = 7.0f;
 constexpr float BROWSER_CONTENT_GAP = 8.0f;
@@ -58,6 +61,21 @@ AestraUI::NUIComponent* getRootComponent(AestraUI::NUIComponent* component) {
         root = root->getParent();
     }
     return root;
+}
+
+float computeNavigationWidth(float browserWidth) {
+    if (browserWidth <= kCompactNavStartWidth) {
+        return std::min(browserWidth, kCompactNavWidth);
+    }
+
+    const float expandedWidth = std::clamp(browserWidth * 0.34f, 118.0f, 188.0f);
+    if (browserWidth >= kExpandedNavStartWidth) {
+        return expandedWidth;
+    }
+
+    const float expandedAtBreakpoint = kExpandedNavStartWidth * 0.34f;
+    const float progress = (browserWidth - kCompactNavStartWidth) / (kExpandedNavStartWidth - kCompactNavStartWidth);
+    return kCompactNavWidth + progress * (expandedAtBreakpoint - kCompactNavWidth);
 }
 
 void detachPopupMenu(const std::shared_ptr<AestraUI::NUIContextMenu>& menu) {
@@ -346,7 +364,9 @@ FileBrowser::FileBrowser()
         if (onSearchTextChanged_) {
             onSearchTextChanged_(text);
         }
-        applyFilter();
+        if (activeNavAction_ != BrowserNavAction::Plugins && activeNavAction_ != BrowserNavAction::Patterns) {
+            applyFilter();
+        }
     });
     searchInput_->setOnEscapeKey([this]() {
         searchInput_->clear();
@@ -761,12 +781,12 @@ void FileBrowser::processScanResults() {
 
 FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
     NUIRect bounds = getBounds();
-    const float effectiveW = effectiveWidth_ > 0.0f ? effectiveWidth_ : bounds.width;
+    const float effectiveW = bounds.width;
     const float searchH = BROWSER_SEARCH_ROW_H;
     const float headerH = searchH;
     const float contentY = bounds.y + headerH;
     const float contentH = std::max(0.0f, bounds.height - headerH);
-    const float navW = std::clamp(effectiveW * 0.34f, 118.0f, 188.0f);
+    const float navW = computeNavigationWidth(effectiveW);
     const float listX = bounds.x + navW;
     const float listW = std::max(0.0f, effectiveW - navW);
 
@@ -776,8 +796,9 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
                             std::max(0.0f, effectiveW - 64.0f), searchH - 8.0f);
     layout.navPane = NUIRect(bounds.x, contentY, navW, contentH);
     layout.listHeader = NUIRect(listX, contentY, listW, BROWSER_LIST_HEADER_H);
-    layout.list = NUIRect(listX, contentY + BROWSER_LIST_HEADER_H,
-                         listW, std::max(0.0f, contentH - BROWSER_LIST_HEADER_H));
+    const float previewH = previewPanelVisible_ ? std::min(kPreviewPanelHeight, contentH) : 0.0f;
+    layout.list = NUIRect(listX, contentY + BROWSER_LIST_HEADER_H, listW,
+                          std::max(0.0f, contentH - BROWSER_LIST_HEADER_H - previewH));
     const float chromeY = layout.listHeader.y + 3.0f;
     layout.backButton = NUIRect(layout.listHeader.x + 5.0f, chromeY, 22.0f, 24.0f);
     layout.forwardButton = NUIRect(layout.backButton.right() + 2.0f, chromeY, 22.0f, 24.0f);
@@ -793,8 +814,55 @@ FileBrowser::BrowserLayout FileBrowser::computeBrowserLayout() const {
 
 float FileBrowser::getNavPaneWidth() const {
     NUIRect bounds = getBounds();
-    const float effectiveW = effectiveWidth_ > 0.0f ? effectiveWidth_ : bounds.width;
-    return std::clamp(effectiveW * 0.34f, 118.0f, 188.0f);
+    const float effectiveW = bounds.width;
+    return computeNavigationWidth(effectiveW);
+}
+
+bool FileBrowser::usesCompactNavigation() const {
+    return getNavPaneWidth() < 112.0f;
+}
+
+NUIRect FileBrowser::getContentViewBounds() const {
+    const BrowserLayout layout = computeBrowserLayout();
+    return NUIRect(layout.listHeader.x, layout.searchBar.bottom(), layout.listHeader.width,
+                   std::max(0.0f, layout.list.bottom() - layout.searchBar.bottom()));
+}
+
+void FileBrowser::registerContentView(BrowserNavAction action, const std::shared_ptr<NUIComponent>& component) {
+    if (!component) {
+        return;
+    }
+
+    for (auto& view : contentViews_) {
+        if (view.action == action) {
+            view.component = component;
+            updateContentViews();
+            return;
+        }
+    }
+
+    contentViews_.push_back({action, component});
+    updateContentViews();
+}
+
+void FileBrowser::setContentViewsEnabled(bool enabled) {
+    if (contentViewsEnabled_ == enabled) {
+        return;
+    }
+    contentViewsEnabled_ = enabled;
+    updateContentViews();
+}
+
+void FileBrowser::updateContentViews() {
+    const NUIRect contentBounds = getContentViewBounds();
+    for (auto& view : contentViews_) {
+        if (auto component = view.component.lock()) {
+            const bool active = contentViewsEnabled_ && isVisible() && view.action == activeNavAction_;
+            component->setBounds(contentBounds);
+            component->setEnabled(active);
+            component->setVisible(active);
+        }
+    }
 }
 
 void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayout& layout) {
@@ -807,6 +875,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
     const NUIColor selectedBg = themeManager.getColor("primary").withAlpha(0.16f); // More prominent selection
     const NUIColor divider = themeManager.getColor("border").withAlpha(0.48f);  // Sharper panel edge
+    const bool compact = layout.navWidth < 112.0f;
 
     renderer.fillRect(layout.navPane, paneBg);
     renderer.setClipRect(layout.navPane);
@@ -829,19 +898,30 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         folderName = p.filename().string();
         if (folderName.empty()) folderName = currentPath_;
     }
-    renderer.drawText(folderName,
-                      {navHeader.x + themeProps.spacingM, std::round(renderer.calculateTextY(
-                          NUIRect(navHeader.x, navHeader.y + 5.0f, navHeader.width, 20.0f), themeProps.fontSizeXS))},
-                      themeProps.fontSizeXS, themeManager.getColor("textPrimary").withAlpha(0.76f));
+    if (!compact) {
+        renderer.drawText(
+            folderName,
+            {navHeader.x + themeProps.spacingM,
+             std::round(renderer.calculateTextY(NUIRect(navHeader.x, navHeader.y + 5.0f, navHeader.width, 20.0f),
+                                                themeProps.fontSizeXS))},
+            themeProps.fontSizeXS, themeManager.getColor("textPrimary").withAlpha(0.76f));
+    } else {
+        const std::string compactLabel = "LIB";
+        const auto labelSize = renderer.measureText(compactLabel, 9.0f);
+        renderer.drawText(compactLabel,
+                          {navHeader.x + (navHeader.width - labelSize.width) * 0.5f,
+                           std::round(renderer.calculateTextY(
+                               NUIRect(navHeader.x, navHeader.y + 5.0f, navHeader.width, 20.0f), 9.0f))},
+                          9.0f, themeManager.getColor("textSecondary").withAlpha(0.58f));
+    }
 
     // Inner divider (like right header)
     renderer.drawLine({navHeader.x, navHeader.y + 27.0f},
                       {navHeader.right(), navHeader.y + 27.0f},
                       1.0f, themeManager.getColor("border").withAlpha(0.65f));
 
-    // Scrollable content region below the fixed folder-name header. When the
-    // preview dock steals height the tail rows would clip; instead the content
-    // scrolls under the header exactly like the file list below it.
+    // Scrollable content region below the fixed folder-name header. Short
+    // windows keep the tail rows reachable without moving the header.
     const float navContentTop = layout.navPane.y + 28.0f;
     navViewportHeight_ = std::max(0.0f, layout.navPane.bottom() - navContentTop);
     const float navMaxScroll = std::max(0.0f, navContentHeight_ - navViewportHeight_);
@@ -863,6 +943,13 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     };
 
     auto drawSection = [&](const std::string& label) {
+        if (compact) {
+            y += 5.0f;
+            renderer.drawLine({layout.navPane.x + 15.0f, y}, {layout.navPane.right() - 15.0f, y}, 1.0f,
+                              divider.withAlpha(0.38f));
+            y += 6.0f;
+            return;
+        }
         std::string upper = label;
         std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
         NUIRect labelRect(layout.navPane.x + themeProps.spacingM, y, layout.navPane.width - themeProps.spacingM * 2.0f, 22.0f);
@@ -880,7 +967,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
 
     auto drawIcon = [&](const NUIRect& rect, BrowserNavAction action, bool selected) {
         const NUIColor iconColor = selected ? themeManager.getColor("textPrimary").withAlpha(0.86f) : muted.withAlpha(0.70f);
-        const float cx = rect.x + 13.0f;
+        const float cx = compact ? rect.x + rect.width * 0.5f : rect.x + 13.0f;
         const float cy = rect.y + rect.height * 0.5f;
 
         auto drawSvgIcon = [&](const char* svg) {
@@ -971,9 +1058,12 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         }
         // Nav hover wash also lives in renderHoverOverlays(), outside the cache.
         drawIcon(row, action, selected);
-        renderer.drawText(label, {row.x + 33.0f, std::round(renderer.calculateTextY(row, themeProps.fontSizeS))},
-                          themeProps.fontSizeS, selected ? themeManager.getColor("textPrimary").withAlpha(0.90f) : rowText);
-        if (count > 0) {
+        if (!compact) {
+            renderer.drawText(label, {row.x + 33.0f, std::round(renderer.calculateTextY(row, themeProps.fontSizeS))},
+                              themeProps.fontSizeS,
+                              selected ? themeManager.getColor("textPrimary").withAlpha(0.90f) : rowText);
+        }
+        if (!compact && count > 0) {
             const std::string countText = std::to_string(count);
             const auto countSize = renderer.measureText(countText, themeManager.getFontSize("s"));
             renderer.drawText(countText,
@@ -981,17 +1071,17 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
                               11.0f,
                               muted.withAlpha(selected ? 0.82f : 0.54f));
         }
-        navHits_.push_back({action, row, std::move(path)});
+        navHits_.push_back({action, row, label, std::move(path)});
         y += BROWSER_NAV_ROW_H;
         ++hitIndex;
     };
 
     auto drawDivider = [&]() {
-        y += 5.0f;
+        y += compact ? 3.0f : 5.0f;
         renderer.drawLine({layout.navPane.x + 14.0f, y},
                           {layout.navPane.right() - 14.0f, y},
                           1.0f, divider.withAlpha(0.45f));
-        y += 8.0f;
+        y += compact ? 4.0f : 8.0f;
     };
 
     drawSection("Collections");
@@ -1046,7 +1136,7 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     navContentHeight_ = (y + navScrollOffset_) - navContentTop;
 
     // Restore the full-pane clip and draw a thin scroll thumb when content
-    // overflows the (preview-shortened) viewport.
+    // overflows the available viewport.
     renderer.setClipRect(layout.navPane);
     const float navOverflow = navContentHeight_ - navViewportHeight_;
     if (navOverflow > 0.5f && navViewportHeight_ > 0.0f) {
@@ -1264,6 +1354,10 @@ void FileBrowser::onRender(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     if (bounds.isEmpty()) return;
 
+    // Specialized views (Plugins, Patterns, future browser modes) share this
+    // geometry even when the File Browser's static FBO cache is reused.
+    updateContentViews();
+
     // FBO Caching Logic
     auto* renderCache = renderer.getRenderCache();
     if (!renderCache || !renderCache->isEnabled()) {
@@ -1464,6 +1558,7 @@ void FileBrowser::onResize(int width, int height) {
     updateScrollbarVisibility();
     invalidateAllItemCaches(); // Force text re-layout on resize
     invalidateCache();
+    updateContentViews();
 }
 
 void FileBrowser::invalidateAllItemCaches() {
@@ -1652,8 +1747,7 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     // === NAV PANE WHEEL (independent of the file list) ===
-    // Scroll the collections/categories/places column when it overflows —
-    // e.g. the preview dock is open and shortened the pane.
+    // Scroll the collections/categories/places column when it overflows.
     if (event.wheelDelta != 0 && browserLayout.navPane.contains(event.position)) {
         const float navOverflow = std::max(0.0f, navContentHeight_ - navViewportHeight_);
         if (navOverflow > 0.0f) {
@@ -1749,7 +1843,9 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
                 hoveredIndex_ = -1;
                 setDirty(true); // hover overlay only — no cache rebuild
             }
-            AestraUI::NUIComponent::hideRemoteTooltip(this);
+            if (!browserLayout.navPane.contains(event.position)) {
+                AestraUI::NUIComponent::hideRemoteTooltip(this);
+            }
         }
 
         if (!event.cursorCaptured && isInsideList) {
@@ -2177,6 +2273,7 @@ void FileBrowser::onMouseLeave() {
         hoveredChromeAction_ = ChromeAction::None;
         setDirty(true); // hover overlay only — no cache rebuild
     }
+    NUIComponent::hideRemoteTooltip(this);
     NUIComponent::onMouseLeave();
 }
 
@@ -3564,6 +3661,14 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         setDirty(true); // hover overlay only — no cache rebuild
     }
 
+    if (usesCompactNavigation() && newHovered >= 0 && newHovered < static_cast<int>(navHits_.size())) {
+        NUIPoint tooltipPosition = event.position;
+        tooltipPosition.x = layout.navPane.right() + 8.0f;
+        NUIComponent::showRemoteTooltip(navHits_[newHovered].label, tooltipPosition, this);
+    } else if (newHovered < 0 || !usesCompactNavigation()) {
+        NUIComponent::hideRemoteTooltip(this);
+    }
+
     if (!event.pressed || event.button != NUIMouseButton::Left || newHovered < 0 ||
         newHovered >= static_cast<int>(navHits_.size())) {
         return false;
@@ -3572,6 +3677,7 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
     const BrowserNavAction action = navHits_[newHovered].action;
     activeNavAction_ = action;
     activeNavPath_ = navHits_[newHovered].path;
+    updateContentViews();
     auto setFilter = [this](QuickFilter filter) {
         if (activeQuickFilter_ != filter) {
             activeQuickFilter_ = filter;
@@ -3818,6 +3924,17 @@ void FileBrowser::setSearchPlaceholder(const std::string& placeholder) {
     if (searchInput_ && searchInput_->getPlaceholderText() != placeholder) {
         searchInput_->setPlaceholderText(placeholder);
     }
+}
+
+void FileBrowser::setPreviewPanelVisible(bool visible) {
+    if (previewPanelVisible_ == visible) {
+        return;
+    }
+
+    previewPanelVisible_ = visible;
+    const auto bounds = getBounds();
+    onResize(static_cast<int>(bounds.width), static_cast<int>(bounds.height));
+    invalidateCache();
 }
 
 void FileBrowser::applyFilter() {
