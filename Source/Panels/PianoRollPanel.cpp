@@ -102,6 +102,27 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
             m_audioEngine->commandQueue().push(cmd);
         }
     });
+    m_pianoRoll->setOnPlayheadScrubbed([this](double beat, bool active) {
+        if (!m_trackManager) return;
+
+        m_trackManager->setUserScrubbing(active);
+        double positionSeconds = 0.0;
+        if (m_trackManager->isPatternMode()) {
+            const double bpm = std::max(1.0, m_trackManager->getTimelineClock().getCurrentTempo());
+            positionSeconds = beat * (60.0 / bpm);
+        } else {
+            positionSeconds = m_trackManager->getPlaylistModel().beatToSeconds(beat);
+        }
+        positionSeconds = std::max(0.0, positionSeconds);
+
+        m_trackManager->setPosition(positionSeconds);
+        m_trackManager->setPlayStartPosition(positionSeconds);
+        if (m_audioEngine) {
+            const uint32_t sampleRate = m_audioEngine->getSampleRate();
+            const uint64_t samplePosition = static_cast<uint64_t>(positionSeconds * sampleRate);
+            m_audioEngine->setGlobalSamplePos(samplePosition);
+        }
+    });
 
     // Wire CommandHistory state-changed callback to reload pattern into UI on undo/redo
     if (m_trackManager) {

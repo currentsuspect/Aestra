@@ -122,6 +122,32 @@ static void test_negative_box_dimensions() {
 }
 
 // ---------------------------------------------------------------------------
+// Test: velocity editor preserves MidiNote's normalized 0..1 representation
+// ---------------------------------------------------------------------------
+static void test_velocity_panel_normalization() {
+    ASSERT(velocityFromPanelPosition(100.0f, 100.0f, 80.0f) == 0.0f,
+           "velocity at panel floor should be zero");
+    ASSERT(velocityFromPanelPosition(60.0f, 100.0f, 80.0f) == 0.5f,
+           "velocity at panel midpoint should be normalized to 0.5");
+    ASSERT(velocityFromPanelPosition(20.0f, 100.0f, 80.0f) == 1.0f,
+           "velocity at panel ceiling should be one");
+    ASSERT(velocityFromPanelPosition(0.0f, 100.0f, 80.0f) == 1.0f,
+           "velocity above panel should clamp to one");
+    ASSERT(velocityFromPanelPosition(120.0f, 100.0f, 80.0f) == 0.0f,
+           "velocity below panel should clamp to zero");
+
+    ASSERT(velocityToPanelHeight(0.0f, 80.0f) == 0.0f,
+           "zero velocity should render at zero height");
+    ASSERT(velocityToPanelHeight(0.5f, 80.0f) == 40.0f,
+           "normalized midpoint should render at half height");
+    ASSERT(velocityToPanelHeight(1.0f, 80.0f) == 80.0f,
+           "full velocity should render at full height");
+    ASSERT(velocityToPanelHeight(127.0f, 80.0f) == 80.0f,
+           "legacy out-of-range velocity should render safely");
+    PASS("velocity panel uses normalized MidiNote velocities");
+}
+
+// ---------------------------------------------------------------------------
 // Scale Pitch Movement Tests
 // ---------------------------------------------------------------------------
 
@@ -203,6 +229,7 @@ int main() {
     test_marquee_detects_note_inside();
     test_marquee_ignores_deleted();
     test_negative_box_dimensions();
+    test_velocity_panel_normalization();
     test_c_major_in_scale_detection();
     test_a_natural_minor_detection();
     test_chromatic_returns_original();

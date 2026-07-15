@@ -118,12 +118,15 @@ public:
 
     // Callback: delta (wheel), mouseX (local)
     std::function<void(float delta, float mouseX)> onZoomRequested; // ADDED
+    /** @brief Called while the user clicks or drags the ruler playhead. */
+    std::function<void(double beat, bool active)> onPlayheadScrubbed;
 
 private:
     float scrollX_; // REORDERED
     float pixelsPerBeat_; // REORDERED
     int beatsPerBar_;
     double playheadBeat_ = 0.0;
+    bool isScrubbing_ = false;
 };
 
 // -----------------------------------------------------------------------------
@@ -503,6 +506,7 @@ public:
     void setOnPreviewNote(std::function<void(int pitch, int velocity)> cb);
     void setOnAdjustPatternLength(std::function<void(int barsDelta)> cb);
     void setOnPatternChoiceSelected(std::function<void(int patternValue)> cb);
+    void setOnPlayheadScrubbed(std::function<void(double beat, bool active)> cb);
 
     void setPixelsPerBeat(float ppb);
     void setBeatsPerBar(int bpb);
@@ -528,7 +532,7 @@ private:
 
     float m_keyLaneWidth;
     float m_rulerHeight;
-    float m_controlPanelHeight = 100.0f;
+    float m_controlPanelHeight = 116.0f;
     
     float m_pixelsPerBeat;
     float m_keyHeight;
@@ -543,6 +547,7 @@ private:
     bool m_showLocalMinimap = true;
 
     std::function<bool()> m_isPlayingCallback;
+    std::function<void(double beat, bool active)> m_onPlayheadScrubbed;
 
     bool m_isResizingPanel = false; // Added for splitter dragging
     float m_dragStartPanelHeight = 0.0f;

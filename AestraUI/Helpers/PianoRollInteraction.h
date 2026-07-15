@@ -40,6 +40,17 @@ bool isNoteInSelectionBox(const MidiNote& note,
                           float scrollX = 0.0f, float scrollY = 0.0f);
 
 /**
+ * Convert a pointer Y coordinate in the velocity lane to the normalized
+ * velocity representation used by MidiNote (0.0f to 1.0f).
+ */
+float velocityFromPanelPosition(float pointerY, float bottomY, float availableHeight);
+
+/**
+ * Convert a normalized MidiNote velocity to a rendered lane height.
+ */
+float velocityToPanelHeight(float velocity, float availableHeight);
+
+/**
  * Check if a note should be considered for interaction (not deleted).
  */
 inline bool isNoteActive(const MidiNote& note) {
