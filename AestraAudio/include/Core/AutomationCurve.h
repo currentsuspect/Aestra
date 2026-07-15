@@ -55,6 +55,15 @@ struct AutomationCurve {
     AutomationTarget target{AutomationTarget::Custom};
     float defaultValue{0.0f};
 
+    // Plugin-parameter addressing — meaningful only when target == Custom.
+    // effectSlot indexes the lane's channel effect chain; paramId is the
+    // plugin's stable parameter id (stability guaranteed per AGENTS.md §19).
+    // The engine applies Custom curves to Internal-format plugins only:
+    // their parameter storage is atomic, so per-block setParameter from the
+    // render thread is RT-safe; third-party formats need host param queues.
+    uint32_t effectSlot{0};
+    uint32_t paramId{0};
+
     AutomationCurve() = default;
     AutomationCurve(const std::string& n, AutomationTarget t) : name(n), target(t) {}
 
