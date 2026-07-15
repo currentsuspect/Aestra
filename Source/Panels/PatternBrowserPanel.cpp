@@ -122,10 +122,7 @@ AestraUI::NUIRect computePlayButtonRect(const AestraUI::NUIRect& cardRect) {
 } // namespace
 
 PatternBrowserPanel::PatternBrowserPanel(TrackManager* trackManager)
-    : m_trackManager(trackManager)
-    , m_headerHeight(40.0f) 
-    , m_itemHeight(44.0f)
-{
+    : m_trackManager(trackManager), m_headerHeight(40.0f), m_itemHeight(38.0f) {
     setId("PatternBrowserPanel");
     
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -260,8 +257,12 @@ PatternBrowserPanel::~PatternBrowserPanel() {
 
 void PatternBrowserPanel::refreshPatterns() {
     m_patterns.clear();
-    if (!m_trackManager) return;
-    
+    if (!m_trackManager) {
+        rebuildFilteredItems();
+        setDirty(true);
+        return;
+    }
+
     auto& playlistModel = m_trackManager->getPlaylistModel();
     auto allPatterns = m_trackManager->getPatternManager().getAllPatterns();
     for (const auto& p : allPatterns) {
@@ -289,6 +290,7 @@ void PatternBrowserPanel::refreshPatterns() {
         return lhs.id.value < rhs.id.value;
     });
 
+    rebuildFilteredItems();
     setDirty(true);
 }
 
@@ -316,9 +318,44 @@ void PatternBrowserPanel::showClipsTab() {
     switchMode(BrowserMode::Clips);
 }
 
+void PatternBrowserPanel::setSearchQuery(const std::string& query) {
+    if (m_searchQuery == query) {
+        return;
+    }
+    m_searchQuery = query;
+    m_scrollOffset = 0.0f;
+    m_targetScrollOffset = 0.0f;
+    rebuildFilteredItems();
+    setDirty(true);
+}
+
+void PatternBrowserPanel::rebuildFilteredItems() {
+    m_filteredPatternIndices.clear();
+    m_filteredClipIndices.clear();
+    m_filteredPatternIndices.reserve(m_patterns.size());
+    m_filteredClipIndices.reserve(m_clips.size());
+    const std::string query = toLowerASCII(m_searchQuery);
+    for (size_t i = 0; i < m_patterns.size(); ++i) {
+        if (query.empty() || toLowerASCII(m_patterns[i].name).find(query) != std::string::npos) {
+            m_filteredPatternIndices.push_back(i);
+        }
+    }
+    for (size_t i = 0; i < m_clips.size(); ++i) {
+        const auto& clip = m_clips[i];
+        if (query.empty() || toLowerASCII(clip.name).find(query) != std::string::npos ||
+            toLowerASCII(clip.filename).find(query) != std::string::npos) {
+            m_filteredClipIndices.push_back(i);
+        }
+    }
+}
+
 void PatternBrowserPanel::refreshClips() {
     m_clips.clear();
-    if (!m_trackManager) return;
+    if (!m_trackManager) {
+        rebuildFilteredItems();
+        setDirty(true);
+        return;
+    }
 
     std::unordered_set<uint64_t> placedSourceIds;
     auto& playlistModel = m_trackManager->getPlaylistModel();
@@ -370,6 +407,7 @@ void PatternBrowserPanel::refreshClips() {
         return lhs.id.value < rhs.id.value;
     });
 
+    rebuildFilteredItems();
     setDirty(true);
 }
 
@@ -446,13 +484,18 @@ void PatternBrowserPanel::renderHeader(AestraUI::NUIRenderer& renderer) {
         );
     }
 
-    const size_t itemCount = (m_mode == BrowserMode::Clips) ? m_clips.size() : m_patterns.size();
-    const std::string title = (m_mode == BrowserMode::Clips ? "Clips (" : "Patterns (") + std::to_string(itemCount) + ")";
-    renderer.drawText(title,
-                      AestraUI::NUIPoint(bounds.x + 10.0f, bounds.y + 12.0f),
-                      themeProps.fontSizeXS,
-                      theme.getColor("textPrimary").withAlpha(0.78f));
-    
+    const size_t itemCount =
+        (m_mode == BrowserMode::Clips) ? getFilteredClipIndices().size() : getFilteredPatternIndices().size();
+    const size_t totalCount = (m_mode == BrowserMode::Clips) ? m_clips.size() : m_patterns.size();
+    const std::string title = m_mode == BrowserMode::Clips ? "Clips" : "Patterns";
+    renderer.drawText(title, AestraUI::NUIPoint(bounds.x + 12.0f, bounds.y + 12.0f), themeProps.fontSizeXS,
+                      theme.getColor("textPrimary").withAlpha(0.88f));
+    const float titleWidth = renderer.measureText(title, themeProps.fontSizeXS).width;
+    const std::string count = m_searchQuery.empty() ? std::to_string(totalCount)
+                                                    : std::to_string(itemCount) + " / " + std::to_string(totalCount);
+    renderer.drawText(count, AestraUI::NUIPoint(bounds.x + 18.0f + titleWidth, bounds.y + 13.0f), 10.0f,
+                      theme.getColor("textSecondary").withAlpha(0.48f));
+
     // Mode toggle is rendered by addChild mechanism automatically
     // The buttons are also rendered by addChild mechanism
     
@@ -482,13 +525,32 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
     AestraUI::NUIRect listRect(bounds.x, bounds.y + m_headerHeight, bounds.width, bounds.height - m_headerHeight - m_footerHeight);
     
     // Check if empty
-    bool isEmpty = (m_mode == BrowserMode::Patterns) ? m_patterns.empty() : m_clips.empty();
-    
+    const bool isEmpty =
+        (m_mode == BrowserMode::Patterns) ? getFilteredPatternIndices().empty() : getFilteredClipIndices().empty();
+
     if (isEmpty) {
         auto& theme = AestraUI::NUIThemeManager::getInstance();
         const auto& themeProps = theme.getCurrentTheme();
         const bool dropActive = m_isDragOver;
+        const bool noSearchResults = !m_searchQuery.empty();
         const bool compactRail = bounds.width < 170.0f;
+        struct EmptyStateCopy {
+            std::string chipLabel;
+            std::string chipDetail;
+            std::string title;
+            std::string detailLine1;
+            std::string detailLine2;
+        } copy;
+        if (dropActive) {
+            copy = {"Drop", "release", "Release To Import", "Release audio files here", "to add them to Clips"};
+        } else if (noSearchResults) {
+            copy = {"No matches", "ready", "No Matching Results", "Try a different name", ""};
+        } else if (m_mode == BrowserMode::Patterns) {
+            copy = {"Patterns", "ready", "No Patterns Yet", "Create a pattern, or drop files", "to switch into Clips"};
+        } else {
+            copy = {"Clips", "ready", "Clip Bin Ready", "Clip Bin stages files for fast timeline placement",
+                    "Use Clips as an optional bin"};
+        }
         if (compactRail) {
             renderer.fillRect(listRect, theme.getColor("backgroundSecondary"));
             const AestraUI::NUIRect chip{
@@ -503,13 +565,9 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
             renderer.strokeRoundedRect(chip, themeProps.radiusS + 1.0f, 1.0f,
                                        dropActive ? theme.getColor("accentPrimary").withAlpha(0.38f)
                                                   : theme.getColor("borderSubtle").withAlpha(0.070f));
-            renderer.drawTextCentered(dropActive ? "Drop" : (m_mode == BrowserMode::Patterns ? "Patterns" : "Clips"),
-                                      chip,
-                                      10.5f,
+            renderer.drawTextCentered(copy.chipLabel, chip, 10.5f,
                                       theme.getColor("textPrimary").withAlpha(dropActive ? 0.92f : 0.70f));
-            renderer.drawTextCentered(dropActive ? "release" : "ready",
-                                      {chip.x, chip.bottom() + 7.0f, chip.width, 14.0f},
-                                      9.0f,
+            renderer.drawTextCentered(copy.chipDetail, {chip.x, chip.bottom() + 7.0f, chip.width, 14.0f}, 9.0f,
                                       theme.getColor("textSecondary").withAlpha(0.56f));
             return;
         }
@@ -528,24 +586,6 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
                                    dropActive ? accent.withAlpha(0.26f)
                                               : theme.getColor("borderSubtle").withAlpha(0.24f));
 
-        const std::string title = dropActive
-            ? "Release To Import"
-            : (m_mode == BrowserMode::Patterns ? "No Patterns Yet" : "Clip Bin Ready");
-        const std::string detailLine1 = compactRail
-            ? (dropActive ? "Release to import" : (m_mode == BrowserMode::Patterns ? "Create or drop MIDI" : "Drop files, then paint or drag"))
-            : (dropActive
-            ? "Release audio files here"
-            : (m_mode == BrowserMode::Patterns
-                ? "Create a pattern, or drop files"
-                : "Clip Bin stages files for fast timeline placement"));
-        const std::string detailLine2 = compactRail
-            ? ""
-            : (dropActive
-            ? "to add them to Clips"
-            : (m_mode == BrowserMode::Patterns
-                ? "to switch into Clips"
-                : "Use Clips as an optional bin"));
-
         const AestraUI::NUIRect iconChip{
             stateCard.center().x - (compactRail ? 20.0f : 26.0f),
             stateCard.y + (compactRail ? 12.0f : 20.0f),
@@ -562,19 +602,18 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
                                   iconChip,
                                   compactRail ? 8.0f : 9.0f,
                                   dropActive ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.92f));
-        renderer.drawTextCentered(title,
-                                  {stateCard.x + 14.0f, iconChip.bottom() + (compactRail ? 8.0f : 12.0f), stateCard.width - 28.0f, 18.0f},
-                                  compactRail ? 11.0f : 13.0f,
-                                  theme.getColor("textPrimary").withAlpha(0.94f));
-        renderer.drawTextCentered(detailLine1,
-                                  {stateCard.x + 14.0f, iconChip.bottom() + (compactRail ? 24.0f : 34.0f), stateCard.width - 28.0f, 14.0f},
-                                  compactRail ? 9.0f : 10.5f,
-                                  theme.getColor("textSecondary").withAlpha(0.86f));
-        if (!detailLine2.empty()) {
-            renderer.drawTextCentered(detailLine2,
+        renderer.drawTextCentered(
+            copy.title,
+            {stateCard.x + 14.0f, iconChip.bottom() + (compactRail ? 8.0f : 12.0f), stateCard.width - 28.0f, 18.0f},
+            compactRail ? 11.0f : 13.0f, theme.getColor("textPrimary").withAlpha(0.94f));
+        renderer.drawTextCentered(
+            copy.detailLine1,
+            {stateCard.x + 14.0f, iconChip.bottom() + (compactRail ? 24.0f : 34.0f), stateCard.width - 28.0f, 14.0f},
+            compactRail ? 9.0f : 10.5f, theme.getColor("textSecondary").withAlpha(0.86f));
+        if (!copy.detailLine2.empty()) {
+            renderer.drawTextCentered(copy.detailLine2,
                                       {stateCard.x + 24.0f, iconChip.bottom() + 48.0f, stateCard.width - 48.0f, 14.0f},
-                                      10.5f,
-                                      theme.getColor("textSecondary").withAlpha(0.86f));
+                                      10.5f, theme.getColor("textSecondary").withAlpha(0.86f));
         }
 
         if (!compactRail) {
@@ -606,8 +645,9 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
 void PatternBrowserPanel::renderPatternList(AestraUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
     float y = bounds.y + m_headerHeight - m_scrollOffset;
-    
-    for (const auto& entry : m_patterns) {
+
+    for (const size_t index : getFilteredPatternIndices()) {
+        const auto& entry = m_patterns[index];
         if (y + m_itemHeight < bounds.y + m_headerHeight) { y += m_itemHeight; continue; } 
         if (y > bounds.y + bounds.height) break;
         
@@ -622,8 +662,9 @@ void PatternBrowserPanel::renderPatternList(AestraUI::NUIRenderer& renderer) {
 void PatternBrowserPanel::renderClipList(AestraUI::NUIRenderer& renderer) {
     auto bounds = getBounds();
     float y = bounds.y + m_headerHeight - m_scrollOffset;
-    
-    for (const auto& entry : m_clips) {
+
+    for (const size_t index : getFilteredClipIndices()) {
+        const auto& entry = m_clips[index];
         if (y + m_itemHeight < bounds.y + m_headerHeight) { y += m_itemHeight; continue; }
         if (y > bounds.y + bounds.height) break;
         
@@ -700,6 +741,8 @@ void PatternBrowserPanel::renderPatternItem(AestraUI::NUIRenderer& renderer, con
 bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     auto b = getBounds();
     auto& dragManager = AestraUI::NUIDragDropManager::getInstance();
+    const auto filteredPatterns = getFilteredPatternIndices();
+    const auto filteredClips = getFilteredClipIndices();
 
     if (!b.contains(event.position) && !m_dragPotential) {
         return NUIComponent::onMouseEvent(event);
@@ -727,8 +770,8 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         float listScrollY = relativeY - m_headerHeight + m_scrollOffset;
         int itemIndex = static_cast<int>(listScrollY / m_itemHeight);
         if (m_mode == BrowserMode::Patterns) {
-            if (itemIndex >= 0 && itemIndex < static_cast<int>(m_patterns.size())) {
-                const auto& pattern = m_patterns[itemIndex];
+            if (itemIndex >= 0 && itemIndex < static_cast<int>(filteredPatterns.size())) {
+                const auto& pattern = m_patterns[filteredPatterns[static_cast<size_t>(itemIndex)]];
                 m_hoveredPatternId = pattern.id;
                 const AestraUI::NUIRect cardRect = computeBinCardRect(b, b.y + m_headerHeight + (itemIndex * m_itemHeight) - m_scrollOffset, m_itemHeight);
                 const AestraUI::NUIRect playButtonRect = computePlayButtonRect(cardRect);
@@ -777,7 +820,7 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_hoveredPatternId = PatternID();
             }
 
-            if (m_dragPotential && itemIndex >= 0 && itemIndex < static_cast<int>(m_patterns.size())) {
+            if (m_dragPotential && itemIndex >= 0 && itemIndex < static_cast<int>(filteredPatterns.size())) {
                 float dx = event.position.x - m_dragStartPos.x;
                 float dy = event.position.y - m_dragStartPos.y;
                 float dist = std::sqrt(dx * dx + dy * dy);
@@ -808,8 +851,8 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 }
             }
         } else {
-            if (itemIndex >= 0 && itemIndex < static_cast<int>(m_clips.size())) {
-                const auto& clip = m_clips[itemIndex];
+            if (itemIndex >= 0 && itemIndex < static_cast<int>(filteredClips.size())) {
+                const auto& clip = m_clips[filteredClips[static_cast<size_t>(itemIndex)]];
                 m_hoveredClipId = clip.id;
                 const AestraUI::NUIRect cardRect = computeBinCardRect(b, b.y + m_headerHeight + (itemIndex * m_itemHeight) - m_scrollOffset, m_itemHeight);
                 const AestraUI::NUIRect playButtonRect = computePlayButtonRect(cardRect);
@@ -849,13 +892,13 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_hoveredClipId = ClipSourceID{};
             }
 
-            if (m_dragPotential && itemIndex >= 0 && itemIndex < static_cast<int>(m_clips.size())) {
+            if (m_dragPotential && itemIndex >= 0 && itemIndex < static_cast<int>(filteredClips.size())) {
                 float dx = event.position.x - m_dragStartPos.x;
                 float dy = event.position.y - m_dragStartPos.y;
                 float dist = std::sqrt(dx * dx + dy * dy);
 
                 if (dist >= dragManager.getDragThreshold()) {
-                    const auto& clip = m_clips[itemIndex];
+                    const auto& clip = m_clips[filteredClips[static_cast<size_t>(itemIndex)]];
                     AestraUI::DragData dragData;
                     dragData.type = AestraUI::DragDataType::File;
                     dragData.filePath = clip.filename;
@@ -885,7 +928,9 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     
     // Mouse Wheel - Scroll Handling
     if (std::abs(event.wheelDelta) > 0.001f && getBounds().contains(event.position)) {
-        float listHeight = (m_mode == BrowserMode::Patterns) ? m_patterns.size() * m_itemHeight : m_clips.size() * m_itemHeight;
+        const float itemCount =
+            static_cast<float>((m_mode == BrowserMode::Patterns) ? filteredPatterns.size() : filteredClips.size());
+        float listHeight = itemCount * m_itemHeight;
         float viewportHeight = b.height - m_headerHeight - m_footerHeight;
         float maxScroll = std::max(0.0f, listHeight - viewportHeight);
         
@@ -995,9 +1040,9 @@ void PatternBrowserPanel::onUpdate(double deltaTime) {
     if (m_modeToggle) m_modeToggle->onUpdate(deltaTime);
     ensureDropTargetRegistration();
     const float viewportHeight = std::max(0.0f, getBounds().height - m_headerHeight - m_footerHeight);
-    const float listHeight = ((m_mode == BrowserMode::Patterns)
-        ? static_cast<float>(m_patterns.size())
-        : static_cast<float>(m_clips.size())) * m_itemHeight;
+    const float itemCount = static_cast<float>((m_mode == BrowserMode::Patterns) ? getFilteredPatternIndices().size()
+                                                                                 : getFilteredClipIndices().size());
+    const float listHeight = itemCount * m_itemHeight;
     const float maxScroll = std::max(0.0f, listHeight - viewportHeight);
     m_targetScrollOffset = safeClampBrowserScroll(m_targetScrollOffset, maxScroll);
     m_scrollOffset = safeClampBrowserScroll(m_scrollOffset, maxScroll);
