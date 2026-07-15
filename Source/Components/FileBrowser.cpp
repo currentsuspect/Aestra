@@ -364,7 +364,9 @@ FileBrowser::FileBrowser()
         if (onSearchTextChanged_) {
             onSearchTextChanged_(text);
         }
-        applyFilter();
+        if (activeNavAction_ != BrowserNavAction::Plugins && activeNavAction_ != BrowserNavAction::Patterns) {
+            applyFilter();
+        }
     });
     searchInput_->setOnEscapeKey([this]() {
         searchInput_->clear();
@@ -822,9 +824,8 @@ bool FileBrowser::usesCompactNavigation() const {
 
 NUIRect FileBrowser::getContentViewBounds() const {
     const BrowserLayout layout = computeBrowserLayout();
-    const NUIRect bounds = getBounds();
     return NUIRect(layout.listHeader.x, layout.searchBar.bottom(), layout.listHeader.width,
-                   std::max(0.0f, bounds.bottom() - layout.searchBar.bottom()));
+                   std::max(0.0f, layout.list.bottom() - layout.searchBar.bottom()));
 }
 
 void FileBrowser::registerContentView(BrowserNavAction action, const std::shared_ptr<NUIComponent>& component) {
