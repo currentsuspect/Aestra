@@ -404,6 +404,11 @@ public:
     /** @brief Snap the starts of the selected notes to the current snap grid. */
     void quantizeSelectedNotes();
 
+    /** @brief Record an undo step for an edit applied externally (e.g. velocity lane). */
+    void pushExternalEdit(const std::vector<MidiNote>& before, const std::string& description) {
+        pushUndo(description, before, notes_);
+    }
+
     /** @brief Merge overlapping/touching selected notes on the same pitch into one. */
     void glueSelectedNotes();
 
@@ -550,6 +555,7 @@ private:
     int hoveringNoteIndex_ = -1;
     bool isDragging_ = false;
     NUIPoint dragStartPos_;
+    std::vector<MidiNote> dragUndoSnapshot_; // notes at velocity-drag start, for one undo step
 };
 
 // -----------------------------------------------------------------------------

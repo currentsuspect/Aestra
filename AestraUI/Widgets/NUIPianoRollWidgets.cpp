@@ -2635,6 +2635,7 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                 isDragging_ = true;
                 hoveringNoteIndex_ = foundIdx;
                 dragStartPos_ = event.position;
+                dragUndoSnapshot_ = layer->getNotes(); // baseline for one undo step
 
                 // Set velocity immediately based on click Y (Global)
                 const float availH = std::max(1.0f, b.height - 28.0f);
@@ -2656,6 +2657,11 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
             if (event.released) {
                  isDragging_ = false;
                  hoveringNoteIndex_ = -1;
+                 // Fold the whole velocity drag into a single undo step.
+                 if (!dragUndoSnapshot_.empty()) {
+                     layer->pushExternalEdit(dragUndoSnapshot_, "Velocity");
+                     dragUndoSnapshot_.clear();
+                 }
                  return true;
             }
 
