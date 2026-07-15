@@ -1687,6 +1687,41 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return false;
     }
 
+    // Wheel events need explicit hit routing because workspace siblings overlap
+    // the browser's screen area and the generic child dispatcher only follows
+    // z-order. Keep floating overlays first, then route the visible browser view
+    // under the pointer before the timeline can consume the gesture.
+    if (event.wheelDelta != 0.0f) {
+        if (m_overlayLayer && m_overlayLayer->onMouseEvent(event)) {
+            return true;
+        }
+
+        if (m_fileBrowser && m_fileBrowser->isVisible() && m_fileBrowser->isEnabled() &&
+            m_fileBrowser->getBounds().contains(event.position)) {
+            const auto activeView = m_fileBrowser->getActiveNavAction();
+            if (activeView == AestraUI::FileBrowser::BrowserNavAction::Plugins && m_pluginBrowser &&
+                m_pluginBrowser->isVisible() && m_pluginBrowser->isEnabled() &&
+                m_pluginBrowser->getBounds().contains(event.position) && m_pluginBrowser->onMouseEvent(event)) {
+                return true;
+            }
+            if (activeView == AestraUI::FileBrowser::BrowserNavAction::Patterns && m_patternBrowser &&
+                m_patternBrowser->isVisible() && m_patternBrowser->isEnabled() &&
+                m_patternBrowser->getBounds().contains(event.position) &&
+                static_cast<AestraUI::NUIComponent*>(m_patternBrowser.get())->onMouseEvent(event)) {
+                return true;
+            }
+            if (m_fileBrowser->onMouseEvent(event)) {
+                return true;
+            }
+
+            // Do not let a wheel gesture over browser chrome fall through to
+            // the timeline merely because the current browser pane cannot scroll.
+            return true;
+        }
+
+        return m_workspaceLayer && m_workspaceLayer->onMouseEvent(event);
+    }
+
     if (!m_browserResizing && event.pressed && m_overlayLayer && m_overlayLayer->onMouseEvent(event)) {
         return true;
     }

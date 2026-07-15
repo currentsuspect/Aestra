@@ -173,16 +173,28 @@ bool PlatformWindowLinux::pollEvents() {
 
         case SDL_MOUSEWHEEL:
             if (m_mouseWheelCallback) {
-                float delta = static_cast<float>(e.wheel.y);
+                // Preserve high-resolution touchpad deltas. SDL's integer x/y
+                // fields may round a fractional gesture to zero, which leaves
+                // drag scrollbars working while two-finger scrolling appears dead.
+#if SDL_VERSION_ATLEAST(2, 0, 18)
+                const float verticalDelta = e.wheel.preciseY;
+                const float horizontalDelta = e.wheel.preciseX;
+#else
+                const float verticalDelta = static_cast<float>(e.wheel.y);
+                const float horizontalDelta = static_cast<float>(e.wheel.x);
+#endif
+                float delta = verticalDelta;
                 // Use magnitude comparison to detect horizontal vs vertical gestures
                 // This handles touchpads that may report both axes for the same gesture
-                const bool horizontalGesture = (std::abs(e.wheel.x) > std::abs(e.wheel.y));
+                const bool horizontalGesture = (std::abs(horizontalDelta) > std::abs(verticalDelta));
                 if (horizontalGesture) {
                     // SDL wheel.x > 0 means scroll right, map to negative delta so consumers
                     // that do target -= wheelDelta move view content to the right.
-                    delta = -static_cast<float>(e.wheel.x);
+                    delta = -horizontalDelta;
                     m_syntheticShiftForHorizontalWheel = true;
                 }
+                if (e.wheel.direction == SDL_MOUSEWHEEL_FLIPPED)
+                    delta = -delta;
                 m_mouseWheelCallback(delta);
                 m_syntheticShiftForHorizontalWheel = false;
             }

@@ -542,10 +542,10 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
         float listHeight = bounds.height - CONTENT_TOP_PAD - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
         float contentHeight = m_filteredPlugins.size() * ROW_HEIGHT;
         float maxScroll = std::max(0.0f, contentHeight - listHeight);
-
         m_targetScrollOffset -= event.wheelDelta * 40.0f;
         if (m_targetScrollOffset < 0.0f) m_targetScrollOffset = 0.0f;
         if (m_targetScrollOffset > maxScroll) m_targetScrollOffset = maxScroll;
+        repaint();
         return true;
     }
 
@@ -598,8 +598,12 @@ void PluginBrowserPanel::onUpdate(double deltaTime) {
     float diff = m_targetScrollOffset - m_scrollOffset;
     if (std::abs(diff) > 0.5f) {
         m_scrollOffset += diff * std::min(1.0f, static_cast<float>(deltaTime * 15.0));
+        repaint();
     } else {
-        m_scrollOffset = m_targetScrollOffset;
+        if (m_scrollOffset != m_targetScrollOffset) {
+            m_scrollOffset = m_targetScrollOffset;
+            repaint();
+        }
     }
 }
 
