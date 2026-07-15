@@ -2607,59 +2607,45 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
 
         float localX = event.position.x - b.x + scrollX_ - sidebarW;
-        
-        if (event.pressed && event.button == NUIMouseButton::Left) {
-            float minDist = 10.0f; // Pixel threshold
-            int foundIdx = -1;
-            
+
+        // Find the note whose velocity stem sits under a given lane-x, preferring
+        // a selected one. Shared by the initial press and the sweep-drag below.
+        auto noteUnderX = [&](float lx) -> int {
             const auto& notes = layer->getNotes();
-            std::vector<int> candidates;
+            int found = -1;
             for (int i = 0; i < static_cast<int>(notes.size()); ++i) {
                 if (notes[i].isDeleted) continue;
-                
                 float nStart = static_cast<float>(notes[i].startBeat * pixelsPerBeat_);
                 float nEnd = static_cast<float>((notes[i].startBeat + notes[i].durationBeats) * pixelsPerBeat_);
-                float minW = 6.0f; // Lollipop head radius
-                if (nEnd < nStart + minW) nEnd = nStart + minW; 
-                
-                // Hit Test: Head (Start) OR Body (Length Line)
-                // Relaxed tolerance for Head
-                bool hitHead = std::abs(nStart - localX) < 10.0f;
-                bool hitBody = (localX >= nStart - 2.0f && localX <= nEnd + 2.0f);
-                
+                if (nEnd < nStart + 6.0f) nEnd = nStart + 6.0f; // lollipop head radius
+                const bool hitHead = std::abs(nStart - lx) < 10.0f;
+                const bool hitBody = (lx >= nStart - 2.0f && lx <= nEnd + 2.0f);
                 if (hitHead || hitBody) {
-                    candidates.push_back(i);
+                    found = i; // last (topmost) wins by default
+                    if (notes[i].selected) return i; // but a selected note takes priority
                 }
             }
-            
-            if (!candidates.empty()) {
-                // Default heuristic: Last one (usually rendered last = on top)
-                foundIdx = candidates.back();
-                
-                // Priority: Selected Note
-                for (int idx : candidates) {
-                    if (notes[idx].selected) {
-                        foundIdx = idx;
-                        break;
-                    }
-                }
-            }
-            
+            return found;
+        };
+
+        if (event.pressed && event.button == NUIMouseButton::Left) {
+            int foundIdx = noteUnderX(localX);
+
             if (foundIdx != -1) {
                 isDragging_ = true;
                 hoveringNoteIndex_ = foundIdx;
                 dragStartPos_ = event.position;
-                
+
                 // Set velocity immediately based on click Y (Global)
                 const float availH = std::max(1.0f, b.height - 28.0f);
                 const float bottomY = b.bottom() - 8.0f;
                 const float newVelocity = velocityFromPanelPosition(event.position.y, bottomY, availH);
-                
-                auto modNotes = notes;
+
+                auto modNotes = layer->getNotes();
                 modNotes[foundIdx].velocity = newVelocity;
-                
+
                 // Single Edit Only (Batch removed)
-                
+
                 layer->setNotes(modNotes);
                 repaint();
                 return true;
@@ -2673,15 +2659,20 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
                  return true;
             }
 
-            // Move
+            // Sweep-paint: as the cursor moves across the lane, the note under it
+            // takes the cursor's height, so dragging draws a velocity ramp/curve.
+            // When between stems, keep painting the last note so quick sweeps
+            // don't drop out.
             const float availH = std::max(1.0f, b.height - 28.0f);
             const float bottomY = b.bottom() - 8.0f;
             const float newVelocity = velocityFromPanelPosition(event.position.y, bottomY, availH);
-            
+
+            const int swept = noteUnderX(localX);
+            if (swept != -1) hoveringNoteIndex_ = swept;
+
             auto modNotes = layer->getNotes();
             if (hoveringNoteIndex_ >= 0 && static_cast<size_t>(hoveringNoteIndex_) < modNotes.size()) {
                  modNotes[hoveringNoteIndex_].velocity = newVelocity;
-                 // Single Edit Only (Batch removed)
                  layer->setNotes(modNotes);
                  repaint();
             }
