@@ -294,6 +294,14 @@ void AudioEngine::applyPendingCommands() {
                 std::max<uint32_t>(1, m_sampleRate.load(std::memory_order_relaxed) / 8);
             m_unitAuditionState.noteOnPending = true;
             m_unitAuditionState.active = true;
+            // Wake the master out of the post-stop Silent fast path so the
+            // audition is actually rendered. After the transport stops the fade
+            // settles to Silent, whose early-return drops everything before the
+            // unit-audition MIDI is injected — mirrors the metronome count-in
+            // recovery, and matches the pre-first-play (None) state.
+            if (m_fadeState.load(std::memory_order_relaxed) == FadeState::Silent) {
+                m_fadeState.store(FadeState::None, std::memory_order_relaxed);
+            }
             break;
         }
         // MUSE-WIRING: LoadProjectState / UpdateClipState / StartPreview / StopPreview
