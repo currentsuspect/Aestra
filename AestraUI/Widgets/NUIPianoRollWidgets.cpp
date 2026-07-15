@@ -667,6 +667,19 @@ void PianoRollToolbar::setupUI() {
             }
         });
 
+        // --- STRUM SUBMENU (staggers the selected chord low → high) ---
+        auto strumMenu = std::make_shared<NUIContextMenu>();
+        const struct { const char* name; double beats; } kStrumSpreads[] = {
+            {"Tight (1/64)", 0.0625}, {"1/32", 0.125}, {"1/16", 0.25}, {"Wide (1/8)", 0.5},
+        };
+        for (const auto& spread : kStrumSpreads) {
+            const double beats = spread.beats;
+            strumMenu->addItem(spread.name, [this, beats]() {
+                if (auto n = notes_.lock()) n->strumSelectedNotes(beats);
+            });
+        }
+        menu->addSubmenu("Strum Selection", strumMenu);
+
         auto b = m_menuBtn->getBounds();
         if (auto* parent = getParent()) {
             parent->addChild(m_activeContextMenu);
@@ -1092,6 +1105,29 @@ void PianoRollNoteLayer::auditionStop() {
     // The one-shot voice releases itself; just clear the guard so the next
     // placement or pitch-drag can audition again, even on the same pitch.
     auditionPitch_ = -1;
+}
+
+void PianoRollNoteLayer::strumSelectedNotes(double spreadBeats) {
+    std::vector<int> selected;
+    for (size_t i = 0; i < notes_.size(); ++i) {
+        if (notes_[i].selected && !notes_[i].isDeleted) selected.push_back(static_cast<int>(i));
+    }
+    if (selected.size() < 2) return;
+
+    // Anchor at the earliest selected start so the strum begins where the chord
+    // sits, then cascade low pitch → high pitch.
+    double baseStart = std::numeric_limits<double>::max();
+    for (int i : selected) baseStart = std::min(baseStart, notes_[i].startBeat);
+    std::sort(selected.begin(), selected.end(),
+              [&](int a, int b) { return notes_[a].pitch < notes_[b].pitch; });
+
+    auto oldNotes = notes_;
+    for (size_t k = 0; k < selected.size(); ++k) {
+        notes_[selected[k]].startBeat = std::max(0.0, baseStart + static_cast<double>(k) * spreadBeats);
+    }
+    pushUndo("Strum", oldNotes, notes_);
+    commitNotes();
+    repaint();
 }
 
 void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {

@@ -380,6 +380,14 @@ public:
     /** @brief Set the default unit assigned to newly created notes. */
     void setDefaultUnitId(uint64_t unitId) { defaultUnitId_ = unitId; }
 
+    /**
+     * @brief Stagger the selected notes into an upward strum.
+     *
+     * Notes are anchored at the earliest selected start and cascaded low-to-high
+     * pitch by @p spreadBeats each. No-op for fewer than two selected notes.
+     */
+    void strumSelectedNotes(double spreadBeats);
+
     /** @brief Set the platform bridge for cursor style changes. */
     void setPlatformBridge(NUIPlatformBridge* bridge);
 
