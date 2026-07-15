@@ -1069,22 +1069,28 @@ int PianoRollNoteLayer::snapPitchToScale(int pitch) {
 }
 
 void PianoRollNoteLayer::auditionPitch(int pitch) {
-    // Never talk over the transport — playback owns the audio focus.
+    // Never talk over the transport — playback owns the audio focus. Clear the
+    // sounding pitch while suppressed so the very next idle placement re-fires
+    // (otherwise the same-pitch guard below would swallow it after playback stops).
     if (isPlayingCallback_ && isPlayingCallback_()) {
-        auditionStop();
+        auditionPitch_ = -1;
         return;
     }
     pitch = std::clamp(pitch, 0, 127);
+    // The audition path is a one-shot voice that auto-releases (~125 ms), so a
+    // fresh press must always fire. auditionStop() resets the guard on release;
+    // the guard's only job is to avoid machine-gunning one pitch while a drag
+    // jitters within the same row.
     if (pitch == auditionPitch_) return;
-    if (!onPreviewNote_) { auditionPitch_ = pitch; return; }
-    if (auditionPitch_ != -1) onPreviewNote_(auditionPitch_, 0); // release previous
-    onPreviewNote_(pitch, static_cast<int>(std::lround(lastNoteVelocity_ * 127.0f)));
+    if (onPreviewNote_) {
+        onPreviewNote_(pitch, static_cast<int>(std::lround(lastNoteVelocity_ * 127.0f)));
+    }
     auditionPitch_ = pitch;
 }
 
 void PianoRollNoteLayer::auditionStop() {
-    if (auditionPitch_ == -1) return;
-    if (onPreviewNote_) onPreviewNote_(auditionPitch_, 0);
+    // The one-shot voice releases itself; just clear the guard so the next
+    // placement or pitch-drag can audition again, even on the same pitch.
     auditionPitch_ = -1;
 }
 
