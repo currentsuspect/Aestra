@@ -2186,16 +2186,38 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             auto& playlist = m_trackManager->getPlaylistModel();
             auto lane = playlist.getLane(m_laneId);
 
-            if (lane && !lane->automationCurves.empty()) {
-                auto& curve = lane->automationCurves[0]; // For now, automate first curve (Volume)
+            if (lane) {
+                // Target-selector chips (Vol / Pan) at the grid's top-left switch
+                // which curve subsequent edits route to. Checked before point edits
+                // so clicking a chip never drops a point.
+                if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
+                    AestraUI::NUIRect gridArea(gridStartX, bounds.y, bounds.width - (gridStartX - bounds.x), bounds.height);
+                    const Aestra::Audio::AutomationTarget chipTargets[2] = {
+                        Aestra::Audio::AutomationTarget::Volume, Aestra::Audio::AutomationTarget::Pan};
+                    for (int ci = 0; ci < 2; ++ci) {
+                        if (automationTargetChipRect(ci, gridArea).contains(event.position)) {
+                            m_activeAutomationTarget = chipTargets[ci];
+                            activeAutomationCurve(true); // materialize the curve so it can be edited
+                            setDirty(true);
+                            repaint();
+                            if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
+                            return true;
+                        }
+                    }
+                }
+
+                // Route edits to the curve for the active target. Delete/drag need an
+                // existing curve; point-add creates it on demand.
+                Aestra::Audio::AutomationCurve* curvePtr = activeAutomationCurve(false);
 
                 // Right Click -> Delete Point
-                if (event.pressed && event.button == AestraUI::NUIMouseButton::Right) {
+                if (curvePtr && event.pressed && event.button == AestraUI::NUIMouseButton::Right) {
+                    auto& curve = *curvePtr;
                     auto& points = curve.getPoints();
                     for (int i = 0; i < (int)points.size(); ++i) {
                         float px = gridStartX + (static_cast<float>(points[i].beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
                         float py = bounds.y + (1.0f - static_cast<float>(points[i].value)) * bounds.height;
-                        
+
                         if (AestraUI::distance({px, py}, event.position) < 12.0f) {
                             curve.removePoint(i);
                             setDirty(true);
@@ -2209,22 +2231,23 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 // Left Click -> Select/Add Point
                 if (event.pressed && event.button == AestraUI::NUIMouseButton::Left && isInsideBounds) {
                     int hitIndex = -1;
-                    auto& points = curve.getPoints();
-                    for (int i = 0; i < (int)points.size(); ++i) {
-                        float px = gridStartX + (static_cast<float>(points[i].beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
-                        float py = bounds.y + (1.0f - static_cast<float>(points[i].value)) * bounds.height;
-                        
-                        if (AestraUI::distance({px, py}, event.position) < 12.0f) {
-                            hitIndex = i;
-                            break;
+                    if (curvePtr) {
+                        auto& points = curvePtr->getPoints();
+                        for (int i = 0; i < (int)points.size(); ++i) {
+                            float px = gridStartX + (static_cast<float>(points[i].beat) * m_pixelsPerBeat) - m_timelineScrollOffset;
+                            float py = bounds.y + (1.0f - static_cast<float>(points[i].value)) * bounds.height;
+
+                            if (AestraUI::distance({px, py}, event.position) < 12.0f) {
+                                hitIndex = i;
+                                break;
+                            }
                         }
                     }
 
                     if (hitIndex != -1) {
                         m_isDraggingPoint = true;
                         m_draggedPointIndex = hitIndex;
-                        m_draggedCurveIndex = 0;
-                        
+
                         // Capture mouse
                         if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
                             if (auto win = parentMgr->getPlatformWindow()) {
@@ -2235,48 +2258,51 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                         if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback(); // Force parent update
                         return true;
                     } else if (isInsideBounds) {
-                        // Add new point - Default to smooth curve (0.5 tension)
-                        double bpm = m_trackManager ? m_trackManager->getPlaylistModel().getBPM() : 120.0;
-                        double sampleRate = m_trackManager ? m_trackManager->getPlaylistModel().getProjectSampleRate() : 48000.0;
-                        double samplesPerBeat = (sampleRate * 60.0) / std::max(bpm, 1.0);
-                        curve.addPoint(beat, value, samplesPerBeat, 0.5f);
-                        setDirty(true);
-                        repaint(); // Immediate update
-                        if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback(); // Force parent update
-                        
-                        // Start dragging the new point
-                        auto& pts = curve.getPoints();
-                        for (int i = 0; i < (int)pts.size(); ++i) {
-                            if (std::abs(pts[i].beat - beat) < 0.001) {
-                                m_isDraggingPoint = true;
-                                m_draggedPointIndex = i;
-                                m_draggedCurveIndex = 0;
-                                
-                                // Capture mouse
-                                if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
-                                    if (auto win = parentMgr->getPlatformWindow()) {
-                                        win->setMouseCapture(true);
+                        // Add new point to the active-target curve (created on demand).
+                        if (!curvePtr) curvePtr = activeAutomationCurve(true);
+                        if (curvePtr) {
+                            double bpm = m_trackManager ? m_trackManager->getPlaylistModel().getBPM() : 120.0;
+                            double sampleRate = m_trackManager ? m_trackManager->getPlaylistModel().getProjectSampleRate() : 48000.0;
+                            double samplesPerBeat = (sampleRate * 60.0) / std::max(bpm, 1.0);
+                            curvePtr->addPoint(beat, value, samplesPerBeat, 0.5f);
+                            setDirty(true);
+                            repaint(); // Immediate update
+                            if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback(); // Force parent update
+
+                            // Start dragging the new point
+                            auto& pts = curvePtr->getPoints();
+                            for (int i = 0; i < (int)pts.size(); ++i) {
+                                if (std::abs(pts[i].beat - beat) < 0.001) {
+                                    m_isDraggingPoint = true;
+                                    m_draggedPointIndex = i;
+
+                                    // Capture mouse
+                                    if (auto parentMgr = dynamic_cast<TrackManagerUI*>(getParent())) {
+                                        if (auto win = parentMgr->getPlatformWindow()) {
+                                            win->setMouseCapture(true);
+                                        }
                                     }
+                                    break;
                                 }
-                                break;
                             }
+                            return true;
                         }
-                        return true;
                     }
                 }
 
-                // Dragging Logic
-                if (m_isDraggingPoint && m_draggedCurveIndex == 0) {
+                // Dragging Logic — route to the active-target curve.
+                if (curvePtr && m_isDraggingPoint) {
+                    auto& curve = *curvePtr;
                     auto& pts = curve.getPoints();
                     if (m_draggedPointIndex >= 0 && m_draggedPointIndex < (int)pts.size()) {
                         double newBeat = std::max(0.0, beat);
                         double newValue = value;
-                        
+
                         pts[m_draggedPointIndex].beat = newBeat;
                         pts[m_draggedPointIndex].value = newValue;
-                        
+
                         curve.sortPoints();
-                        
+
                         // Re-find index after sort
                         for (int i = 0; i < (int)pts.size(); ++i) {
                             if (pts[i].beat == newBeat && pts[i].value == newValue) {
@@ -2284,7 +2310,7 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                                 break;
                             }
                         }
-                        
+
                         setDirty(true);
                         repaint(); // Ensure immediate redraw
                         if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
@@ -2662,6 +2688,37 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 }
 
 
+Aestra::Audio::AutomationCurve* TrackUIComponent::activeAutomationCurve(bool createIfMissing) {
+    if (!m_trackManager) return nullptr;
+    auto lane = m_trackManager->getPlaylistModel().getLane(m_laneId);
+    if (!lane) return nullptr;
+    for (auto& c : lane->automationCurves) {
+        if (c.getAutomationTarget() == m_activeAutomationTarget) return &c;
+    }
+    if (!createIfMissing) return nullptr;
+    const bool isPan = (m_activeAutomationTarget == Aestra::Audio::AutomationTarget::Pan);
+    Aestra::Audio::AutomationCurve curve(isPan ? "Pan" : "Volume", m_activeAutomationTarget);
+    curve.setDefaultValue(isPan ? 0.5f : 0.8f); // Pan centered; Volume unity-ish default
+    lane->automationCurves.push_back(std::move(curve));
+    return &lane->automationCurves.back();
+}
+
+AestraUI::NUIColor TrackUIComponent::automationTargetColor(Aestra::Audio::AutomationTarget target, bool active) const {
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    AestraUI::NUIColor c;
+    switch (target) {
+        case Aestra::Audio::AutomationTarget::Volume: c = theme.getColor("accentCyan"); break;
+        case Aestra::Audio::AutomationTarget::Pan:    c = AestraUI::NUIColor(0.96f, 0.62f, 0.20f, 1.0f); break; // amber
+        default:                                       c = AestraUI::NUIColor(0.66f, 0.55f, 0.98f, 1.0f); break; // purple (Custom)
+    }
+    return active ? c : c.withAlpha(0.28f);
+}
+
+AestraUI::NUIRect TrackUIComponent::automationTargetChipRect(int index, const AestraUI::NUIRect& gridArea) const {
+    constexpr float chipW = 34.0f, chipH = 16.0f, gap = 4.0f, padX = 6.0f, padY = 4.0f;
+    return AestraUI::NUIRect(gridArea.x + padX + static_cast<float>(index) * (chipW + gap), gridArea.y + padY, chipW, chipH);
+}
+
 void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds, float gridStartX) {
     auto& playlist = m_trackManager->getPlaylistModel();
     auto lane = playlist.getLane(m_laneId);
@@ -2681,13 +2738,16 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
     for (const auto& curve : lane->automationCurves) {
         if (!curve.isVisible()) continue;
 
+        const bool activeCurve = (curve.getAutomationTarget() == m_activeAutomationTarget);
+        const AestraUI::NUIColor curveColor = automationTargetColor(curve.getAutomationTarget(), activeCurve);
+
         const auto& points = curve.getPoints();
         if (points.empty()) {
             // Draw a flat line at default value if no points
             float y = gridArea.y + (1.0f - static_cast<float>(curve.getDefaultValue())) * gridArea.height;
             renderer.drawLine(AestraUI::NUIPoint(gridArea.x, y),
                               AestraUI::NUIPoint(gridArea.right(), y),
-                              1.5f, theme.getColor("accentCyan").withAlpha(0.4f));
+                              1.5f, curveColor.withAlpha(activeCurve ? 0.4f : 0.18f));
             continue;
         }
 
@@ -2695,9 +2755,6 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
         double sampleRate = m_trackManager ? m_trackManager->getPlaylistModel().getProjectSampleRate() : 48000.0;
         double samplesPerBeat = (sampleRate * 60.0) / std::max(bpm, 1.0);
 
-        AestraUI::NUIColor curveColor = theme.getColor("accentCyan");
-
-        // Draw lines between points
         // Draw lines between points
         std::vector<AestraUI::NUIPoint> polyPoints;
         polyPoints.reserve(1024);
@@ -2763,6 +2820,28 @@ void TrackUIComponent::renderAutomationLayer(AestraUI::NUIRenderer& renderer, co
             AestraUI::NUIColor ptColor = p.selected ? theme.getColor("primary") : curveColor;
             renderer.fillRect(AestraUI::NUIRect(x - 3, y - 3, 6, 6), ptColor);
             renderer.strokeRect(AestraUI::NUIRect(x - 4, y - 4, 8, 8), 1.0f, theme.getColor("border"));
+        }
+    }
+
+    // Target-selector chips (Vol / Pan): the active target is filled with its curve
+    // color, inactive is a subtle outline. Clicking a chip routes edits to that
+    // curve and creates it on demand (#468).
+    struct AutoChip { Aestra::Audio::AutomationTarget target; const char* label; };
+    const AutoChip chips[2] = {
+        {Aestra::Audio::AutomationTarget::Volume, "Vol"},
+        {Aestra::Audio::AutomationTarget::Pan, "Pan"},
+    };
+    for (int ci = 0; ci < 2; ++ci) {
+        const AestraUI::NUIRect chip = automationTargetChipRect(ci, gridArea);
+        const bool active = (m_activeAutomationTarget == chips[ci].target);
+        const AestraUI::NUIColor col = automationTargetColor(chips[ci].target, true);
+        if (active) {
+            renderer.fillRoundedRect(chip, 3.0f, col.withAlpha(0.85f));
+            renderer.drawText(chips[ci].label, {chip.x + 6.0f, chip.y + 3.0f}, 10.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+        } else {
+            renderer.fillRoundedRect(chip, 3.0f, col.withAlpha(0.12f));
+            renderer.strokeRoundedRect(chip, 3.0f, 1.0f, col.withAlpha(0.5f));
+            renderer.drawText(chips[ci].label, {chip.x + 6.0f, chip.y + 3.0f}, 10.0f, col.withAlpha(0.9f));
         }
     }
 }

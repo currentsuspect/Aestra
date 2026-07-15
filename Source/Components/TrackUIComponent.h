@@ -226,6 +226,22 @@ private:
     int m_draggedCurveIndex = -1;
     AestraUI::NUIPoint m_lastAutomationMousePos;
 
+    // Which automation target the user is editing. Point edits (add/move/delete)
+    // route to the lane curve carrying this target; the Vol/Pan chips drawn at the
+    // top-left of the automation lane switch it. Was previously hardcoded to the
+    // first curve (Volume only) — see #468.
+    Aestra::Audio::AutomationTarget m_activeAutomationTarget = Aestra::Audio::AutomationTarget::Volume;
+
+    // Resolve the lane curve matching m_activeAutomationTarget. When createIfMissing
+    // is true a curve for that target is appended (used on first point add); returns
+    // nullptr if the lane is gone or the curve is absent and creation was not asked.
+    Aestra::Audio::AutomationCurve* activeAutomationCurve(bool createIfMissing);
+    // Per-target curve color; dimmed when the target is not the active one.
+    AestraUI::NUIColor automationTargetColor(Aestra::Audio::AutomationTarget target, bool active) const;
+    // Screen rect of the target-selector chip at slot `index` (0=Vol, 1=Pan) within
+    // the automation grid area. Same math is used for drawing and hit-testing.
+    AestraUI::NUIRect automationTargetChipRect(int index, const AestraUI::NUIRect& gridArea) const;
+
     // Optimization
     uint32_t m_backgroundTexture = 0;
     bool m_backgroundValid = false;
