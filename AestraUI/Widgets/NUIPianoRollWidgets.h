@@ -449,6 +449,9 @@ private:
     int moveAnchorPitch_ = 0;
     // Note being placed/dragged, so a floating pitch label can track it.
     int dragAnchorIndex_ = -1;
+    // Note whose velocity was last nudged by Alt+wheel — shows a value bubble
+    // while the cursor stays on it, cleared when the hover moves away.
+    int velocityBubbleIndex_ = -1;
     
     // For Select Box
     NUIRect selectionRect_;

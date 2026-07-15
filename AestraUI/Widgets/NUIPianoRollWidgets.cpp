@@ -1248,6 +1248,30 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
                           NUIColor::white().withAlpha(0.95f));
     }
 
+    // Velocity value bubble after an Alt+wheel nudge, while the cursor stays on
+    // the note it edited (guarded so a -1/-1 match can't show a phantom bubble).
+    if (velocityBubbleIndex_ >= 0 && velocityBubbleIndex_ == hoveredNoteIndex_ &&
+        velocityBubbleIndex_ < static_cast<int>(notes_.size()) && !notes_[velocityBubbleIndex_].isDeleted) {
+        const auto& vn = notes_[velocityBubbleIndex_];
+        const float vx = snapRectX(beatToScreenX(vn.startBeat, pixelsPerBeat_, scrollX_, b.x));
+        const float vy = b.y + (127 - vn.pitch) * keyHeight_ - scrollY_;
+        const std::string label = "V " + std::to_string(static_cast<int>(std::lround(vn.velocity * 127.0f)));
+        constexpr float kFontSize = 10.0f;
+        const auto measured = renderer.measureText(label, kFontSize);
+        const float bubbleW = measured.width + 12.0f;
+        const float bubbleH = 17.0f;
+        float bubbleY = vy - bubbleH - 3.0f;
+        if (bubbleY < b.y) bubbleY = vy + keyHeight_ + 3.0f;
+        const float bubbleX = std::clamp(vx, b.x + 2.0f, b.right() - bubbleW - 2.0f);
+        const NUIRect bubble(bubbleX, bubbleY, bubbleW, bubbleH);
+        renderer.fillRoundedRect(bubble, 4.0f, NUIColor::black().withAlpha(0.92f));
+        renderer.strokeRoundedRect(bubble, 4.0f, 1.0f, themeManager.getColor("accentPrimary").withAlpha(0.80f));
+        renderer.drawText(label,
+                          NUIPoint(bubble.x + 6.0f, bubble.y + (bubble.height - measured.height) * 0.5f),
+                          kFontSize,
+                          NUIColor::white().withAlpha(0.95f));
+    }
+
     // Rubber-band selection rectangle (already normalized during drag)
     if (state_ == State::SelectingBox && selectionRect_.width > 0 && selectionRect_.height > 0) {
         renderer.fillRoundedRect(selectionRect_, 2.0f, NUIColor(0.545f, 0.498f, 1.0f, 0.15f));
@@ -1355,6 +1379,34 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                     platformBridge_->setCursorStyle(NUICursorStyle::Grab);
             }
         }
+    }
+
+    // --- ALT + WHEEL OVER A NOTE = VELOCITY ---
+    // Plain / Shift / Ctrl wheel stay bound to scroll+zoom; Alt shapes the
+    // velocity of the note under the cursor (and the whole selection if that
+    // note is part of it), so dynamics can be dialled in without leaving the grid.
+    if (event.wheelDelta != 0.0f && (event.modifiers & NUIModifiers::Alt) && hoveredNoteIndex_ >= 0 &&
+        hoveredNoteIndex_ < static_cast<int>(notes_.size()) && !notes_[hoveredNoteIndex_].isDeleted) {
+        auto oldNotes = notes_;
+        const float delta = event.wheelDelta * 0.04f; // ~5 MIDI steps per notch
+        const bool editSelection = notes_[hoveredNoteIndex_].selected;
+        for (auto& n : notes_) {
+            if (n.isDeleted) continue;
+            if (editSelection ? n.selected : (&n == &notes_[hoveredNoteIndex_])) {
+                n.velocity = std::clamp(n.velocity + delta, 0.0f, 1.0f);
+            }
+        }
+        lastNoteVelocity_ = notes_[hoveredNoteIndex_].velocity; // adopt for new notes
+        velocityBubbleIndex_ = hoveredNoteIndex_;
+        // Coalesce a continuous scrub into one undo step instead of one per notch.
+        if (!undoStack_.empty() && undoStack_.back().description == "Velocity") {
+            undoStack_.back().notesAfter = notes_;
+        } else {
+            pushUndo("Velocity", oldNotes, notes_);
+        }
+        commitNotes();
+        repaint();
+        return true;
     }
 
     // --- RIGHT CLICK / ERASER (FAST ERASE) ---
