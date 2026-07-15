@@ -362,6 +362,9 @@ public:
     /** @brief Set whether transport is playing, so sounding notes can light up. */
     void setPlaying(bool playing) { isPlaying_ = playing; }
 
+    /** @brief Set beats-per-bar, used for the bar:beat readout while editing. */
+    void setBeatsPerBar(int bpb) { beatsPerBar_ = std::max(1, bpb); }
+
     /** @brief Set callback used to audition a pitch (velocity 0 = note-off). */
     void setOnPreviewNote(std::function<void(int pitch, int velocity)> cb) {
         onPreviewNote_ = std::move(cb);
@@ -391,6 +394,7 @@ private:
     double playheadBeat_ = 0.0;
     double totalDurationBeats_ = 400.0;
     bool isPlaying_ = false;
+    int beatsPerBar_ = 4;
 
     std::function<void(const std::vector<MidiNote>&)> onNotesChanged_;
     std::function<void(int pitch)> onHoveredPitchChanged_;

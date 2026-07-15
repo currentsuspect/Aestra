@@ -1224,14 +1224,43 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         }
     }
 
-    // Floating pitch label while placing or moving a note — read the pitch you
-    // hear, tracking the note and flipping below if it would clip at the top.
-    if ((state_ == State::Painting || state_ == State::Moving) && dragAnchorIndex_ >= 0 &&
-        dragAnchorIndex_ < static_cast<int>(notes_.size()) && !notes_[dragAnchorIndex_].isDeleted) {
+    // Floating edit HUD while placing/moving/resizing a note: read what you're
+    // doing — pitch + bar:beat when moving, length while resizing, pitch + length
+    // while drawing. Tracks the grabbed note and flips below if it clips the top.
+    const bool isEditingNote = (state_ == State::Painting || state_ == State::Moving ||
+                                state_ == State::Resizing || state_ == State::ResizingLeft);
+    if (isEditingNote && dragAnchorIndex_ >= 0 && dragAnchorIndex_ < static_cast<int>(notes_.size()) &&
+        !notes_[dragAnchorIndex_].isDeleted) {
         const auto& an = notes_[dragAnchorIndex_];
+
+        const auto formatLength = [](double beats) {
+            char buf[24];
+            if (std::abs(beats - std::round(beats)) < 0.01)
+                std::snprintf(buf, sizeof(buf), "%d beat%s", static_cast<int>(std::round(beats)),
+                              std::abs(beats - 1.0) < 0.01 ? "" : "s");
+            else
+                std::snprintf(buf, sizeof(buf), "%.2f beats", beats);
+            return std::string(buf);
+        };
+        const auto formatBarBeat = [this](double startBeat) {
+            const int bpb = std::max(1, beatsPerBar_);
+            const double barIndex = std::floor(startBeat / bpb);
+            const double beatInBar = startBeat - barIndex * bpb;
+            char buf[24];
+            std::snprintf(buf, sizeof(buf), "%d:%.2f", static_cast<int>(barIndex) + 1, beatInBar + 1.0);
+            return std::string(buf);
+        };
+
+        std::string label;
+        if (state_ == State::Resizing || state_ == State::ResizingLeft)
+            label = formatLength(an.durationBeats);
+        else if (state_ == State::Moving)
+            label = MusicTheory::getPitchName(an.pitch) + "  " + formatBarBeat(an.startBeat);
+        else // Painting: pitch + the length being dragged out
+            label = MusicTheory::getPitchName(an.pitch) + "  " + formatLength(an.durationBeats);
+
         const float ax = snapRectX(beatToScreenX(an.startBeat, pixelsPerBeat_, scrollX_, b.x));
         const float ay = b.y + (127 - an.pitch) * keyHeight_ - scrollY_;
-        const std::string label = MusicTheory::getPitchName(an.pitch);
         constexpr float kFontSize = 10.0f;
         const auto measured = renderer.measureText(label, kFontSize);
         const float bubbleW = measured.width + 12.0f;
@@ -1616,11 +1645,12 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             dragStartScrollY_ = scrollY_;
             dragStartNotes_ = notes_;
 
+            // Anchor the edit HUD to the grabbed note for move/resize.
+            dragAnchorIndex_ = clickedIndex;
             // Grabbing a note to move it sounds its pitch, and keeps sounding
             // the new pitch as you drag it up/down.
             if (state_ == State::Moving) {
                 moveAnchorPitch_ = notes_[clickedIndex].pitch;
-                dragAnchorIndex_ = clickedIndex;
                 auditionPitch(moveAnchorPitch_);
             }
 
@@ -2971,6 +3001,7 @@ void PianoRollView::setPixelsPerBeat(float ppb) {
 void PianoRollView::setBeatsPerBar(int bpb) {
     if (m_grid) m_grid->setBeatsPerBar(bpb);
     if (m_ruler) m_ruler->setBeatsPerBar(bpb);
+    if (m_notes) m_notes->setBeatsPerBar(bpb);
 }
 
 void PianoRollView::setTool(GlobalTool tool) {
