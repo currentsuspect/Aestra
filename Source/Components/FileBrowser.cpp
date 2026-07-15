@@ -3015,6 +3015,16 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
         }
     }
 
+    // A scan that produced partial results but also hit an error must not read as
+    // a clean, complete listing. The empty-state branch above covers no-results;
+    // here (non-empty view) overlay a compact warning strip at the top of the list.
+    if (!scanError_.empty()) {
+        NUIRect warnRect(listClip.x, listClip.y, listClip.width, 20.0f);
+        renderer.fillRect(warnRect, themeManager.getColor("warning").withAlpha(0.16f));
+        renderer.drawTextCentered("Some items couldn't be read \xe2\x80\x94 press F5 to retry", warnRect,
+                                  themeManager.getFontSize("s"), themeManager.getColor("warning").withAlpha(0.90f));
+    }
+
     renderer.clearClipRect();
 }
 
@@ -3674,6 +3684,7 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
         return false;
     }
 
+    const BrowserNavAction previousAction = activeNavAction_;
     const BrowserNavAction action = navHits_[newHovered].action;
     activeNavAction_ = action;
     activeNavPath_ = navHits_[newHovered].path;
@@ -3792,6 +3803,19 @@ bool FileBrowser::handleNavigationMouseEvent(const NUIMouseEvent& event, const B
             activeTagFilter_.clear();
             setFilter(QuickFilter::All);
             break;
+    }
+
+    // Returning from an embedded view (Plugins/Patterns) to a file-backed view:
+    // while embedded, search-text changes route to the embedded view rather than
+    // applyFilter(), so the file list still reflects the pre-embedded query. The
+    // per-case setFilter() above only re-filters when the quick filter changed, so
+    // reapply here to honor the current search text on the way back to files.
+    const bool leavingEmbeddedView =
+        (previousAction == BrowserNavAction::Plugins || previousAction == BrowserNavAction::Patterns);
+    const bool enteringFileView =
+        (action != BrowserNavAction::Plugins && action != BrowserNavAction::Patterns);
+    if (leavingEmbeddedView && enteringFileView) {
+        applyFilter();
     }
 
     if (onNavActionSelected_) {

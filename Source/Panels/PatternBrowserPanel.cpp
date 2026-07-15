@@ -741,8 +741,8 @@ void PatternBrowserPanel::renderPatternItem(AestraUI::NUIRenderer& renderer, con
 bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     auto b = getBounds();
     auto& dragManager = AestraUI::NUIDragDropManager::getInstance();
-    const auto filteredPatterns = getFilteredPatternIndices();
-    const auto filteredClips = getFilteredClipIndices();
+    const auto& filteredPatterns = getFilteredPatternIndices();
+    const auto& filteredClips = getFilteredClipIndices();
 
     if (!b.contains(event.position) && !m_dragPotential) {
         return NUIComponent::onMouseEvent(event);
@@ -820,7 +820,10 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_hoveredPatternId = PatternID();
             }
 
-            if (m_dragPotential && itemIndex >= 0 && itemIndex < static_cast<int>(filteredPatterns.size())) {
+            // Drag initiation relies on m_dragPotential and the saved m_dragPatternId,
+            // not the row currently under the cursor: the pointer may have moved off
+            // the row or out of the list before crossing the drag threshold.
+            if (m_dragPotential) {
                 float dx = event.position.x - m_dragStartPos.x;
                 float dy = event.position.y - m_dragStartPos.y;
                 float dist = std::sqrt(dx * dx + dy * dy);
@@ -892,29 +895,41 @@ bool PatternBrowserPanel::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_hoveredClipId = ClipSourceID{};
             }
 
-            if (m_dragPotential && itemIndex >= 0 && itemIndex < static_cast<int>(filteredClips.size())) {
+            // Resolve the dragged clip by its saved id, not the row under the cursor
+            // (which may have moved off the row/list before the drag threshold). This
+            // also drops the itemIndex-in-bounds requirement so the drag still starts.
+            if (m_dragPotential) {
                 float dx = event.position.x - m_dragStartPos.x;
                 float dy = event.position.y - m_dragStartPos.y;
                 float dist = std::sqrt(dx * dx + dy * dy);
 
                 if (dist >= dragManager.getDragThreshold()) {
-                    const auto& clip = m_clips[filteredClips[static_cast<size_t>(itemIndex)]];
-                    AestraUI::DragData dragData;
-                    dragData.type = AestraUI::DragDataType::File;
-                    dragData.filePath = clip.filename;
-                    dragData.displayName = clip.name;
-                    dragData.customData = clip.id;
-                    dragData.previewWidth = 140.0f;
-                    dragData.previewHeight = m_itemHeight;
-                    dragData.accentColor = m_selectedColor;
+                    size_t dragIdx = m_clips.size();
+                    for (size_t i = 0; i < m_clips.size(); ++i) {
+                        if (m_clips[i].id == m_dragClipId) {
+                            dragIdx = i;
+                            break;
+                        }
+                    }
+                    if (dragIdx < m_clips.size()) {
+                        const auto& clip = m_clips[dragIdx];
+                        AestraUI::DragData dragData;
+                        dragData.type = AestraUI::DragDataType::File;
+                        dragData.filePath = clip.filename;
+                        dragData.displayName = clip.name;
+                        dragData.customData = clip.id;
+                        dragData.previewWidth = 140.0f;
+                        dragData.previewHeight = m_itemHeight;
+                        dragData.accentColor = m_selectedColor;
 
-                    dragManager.beginDrag(dragData, m_dragStartPos, this);
-                    m_isDragging = true;
-                    m_dragPotential = false;
+                        dragManager.beginDrag(dragData, m_dragStartPos, this);
+                        m_isDragging = true;
+                        m_dragPotential = false;
 
-                    if (m_onClipDragStart) m_onClipDragStart(clip.id);
+                        if (m_onClipDragStart) m_onClipDragStart(clip.id);
 
-                    return true;
+                        return true;
+                    }
                 }
             }
         }
