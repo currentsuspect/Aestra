@@ -309,6 +309,8 @@ private:
     };
     BrowserResizeTarget hitTestBrowserResizeTarget(const AestraUI::NUIPoint& mouseScreen) const;
     void updateBrowserResizeDrag(const AestraUI::NUIPoint& mouseScreen);
+    float* getActiveBrowserWidthPrefPtr();
+    const float* getActiveBrowserWidthPrefPtr() const;
 
     // Pattern loop length helpers
     double getActivePatternLengthBeats() const;

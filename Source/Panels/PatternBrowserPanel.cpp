@@ -534,6 +534,23 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
         const bool dropActive = m_isDragOver;
         const bool noSearchResults = !m_searchQuery.empty();
         const bool compactRail = bounds.width < 170.0f;
+        struct EmptyStateCopy {
+            std::string chipLabel;
+            std::string chipDetail;
+            std::string title;
+            std::string detailLine1;
+            std::string detailLine2;
+        } copy;
+        if (dropActive) {
+            copy = {"Drop", "release", "Release To Import", "Release audio files here", "to add them to Clips"};
+        } else if (noSearchResults) {
+            copy = {"No matches", "ready", "No Matching Results", "Try a different name", ""};
+        } else if (m_mode == BrowserMode::Patterns) {
+            copy = {"Patterns", "ready", "No Patterns Yet", "Create a pattern, or drop files", "to switch into Clips"};
+        } else {
+            copy = {"Clips", "ready", "Clip Bin Ready", "Clip Bin stages files for fast timeline placement",
+                    "Use Clips as an optional bin"};
+        }
         if (compactRail) {
             renderer.fillRect(listRect, theme.getColor("backgroundSecondary"));
             const AestraUI::NUIRect chip{
@@ -548,14 +565,9 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
             renderer.strokeRoundedRect(chip, themeProps.radiusS + 1.0f, 1.0f,
                                        dropActive ? theme.getColor("accentPrimary").withAlpha(0.38f)
                                                   : theme.getColor("borderSubtle").withAlpha(0.070f));
-            renderer.drawTextCentered(
-                dropActive
-                    ? "Drop"
-                    : (noSearchResults ? "No matches" : (m_mode == BrowserMode::Patterns ? "Patterns" : "Clips")),
-                chip, 10.5f, theme.getColor("textPrimary").withAlpha(dropActive ? 0.92f : 0.70f));
-            renderer.drawTextCentered(dropActive ? "release" : "ready",
-                                      {chip.x, chip.bottom() + 7.0f, chip.width, 14.0f},
-                                      9.0f,
+            renderer.drawTextCentered(copy.chipLabel, chip, 10.5f,
+                                      theme.getColor("textPrimary").withAlpha(dropActive ? 0.92f : 0.70f));
+            renderer.drawTextCentered(copy.chipDetail, {chip.x, chip.bottom() + 7.0f, chip.width, 14.0f}, 9.0f,
                                       theme.getColor("textSecondary").withAlpha(0.56f));
             return;
         }
@@ -574,30 +586,6 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
                                    dropActive ? accent.withAlpha(0.26f)
                                               : theme.getColor("borderSubtle").withAlpha(0.24f));
 
-        const std::string title =
-            dropActive ? "Release To Import"
-                       : (noSearchResults ? "No Matching Results"
-                                          : (m_mode == BrowserMode::Patterns ? "No Patterns Yet" : "Clip Bin Ready"));
-        const std::string detailLine1 =
-            compactRail
-                ? (dropActive
-                       ? "Release to import"
-                       : (noSearchResults ? "Try another search"
-                                          : (m_mode == BrowserMode::Patterns ? "Create or drop MIDI"
-                                                                             : "Drop files, then paint or drag")))
-                : (dropActive ? "Release audio files here"
-                              : (noSearchResults ? "Try a different name"
-                                                 : (m_mode == BrowserMode::Patterns
-                                                        ? "Create a pattern, or drop files"
-                                                        : "Clip Bin stages files for fast timeline placement")));
-        const std::string detailLine2 =
-            compactRail
-                ? ""
-                : (dropActive ? "to add them to Clips"
-                              : (noSearchResults ? ""
-                                                 : (m_mode == BrowserMode::Patterns ? "to switch into Clips"
-                                                                                    : "Use Clips as an optional bin")));
-
         const AestraUI::NUIRect iconChip{
             stateCard.center().x - (compactRail ? 20.0f : 26.0f),
             stateCard.y + (compactRail ? 12.0f : 20.0f),
@@ -614,19 +602,18 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
                                   iconChip,
                                   compactRail ? 8.0f : 9.0f,
                                   dropActive ? theme.getColor("textPrimary") : theme.getColor("textSecondary").withAlpha(0.92f));
-        renderer.drawTextCentered(title,
-                                  {stateCard.x + 14.0f, iconChip.bottom() + (compactRail ? 8.0f : 12.0f), stateCard.width - 28.0f, 18.0f},
-                                  compactRail ? 11.0f : 13.0f,
-                                  theme.getColor("textPrimary").withAlpha(0.94f));
-        renderer.drawTextCentered(detailLine1,
-                                  {stateCard.x + 14.0f, iconChip.bottom() + (compactRail ? 24.0f : 34.0f), stateCard.width - 28.0f, 14.0f},
-                                  compactRail ? 9.0f : 10.5f,
-                                  theme.getColor("textSecondary").withAlpha(0.86f));
-        if (!detailLine2.empty()) {
-            renderer.drawTextCentered(detailLine2,
+        renderer.drawTextCentered(
+            copy.title,
+            {stateCard.x + 14.0f, iconChip.bottom() + (compactRail ? 8.0f : 12.0f), stateCard.width - 28.0f, 18.0f},
+            compactRail ? 11.0f : 13.0f, theme.getColor("textPrimary").withAlpha(0.94f));
+        renderer.drawTextCentered(
+            copy.detailLine1,
+            {stateCard.x + 14.0f, iconChip.bottom() + (compactRail ? 24.0f : 34.0f), stateCard.width - 28.0f, 14.0f},
+            compactRail ? 9.0f : 10.5f, theme.getColor("textSecondary").withAlpha(0.86f));
+        if (!copy.detailLine2.empty()) {
+            renderer.drawTextCentered(copy.detailLine2,
                                       {stateCard.x + 24.0f, iconChip.bottom() + 48.0f, stateCard.width - 48.0f, 14.0f},
-                                      10.5f,
-                                      theme.getColor("textSecondary").withAlpha(0.86f));
+                                      10.5f, theme.getColor("textSecondary").withAlpha(0.86f));
         }
 
         if (!compactRail) {

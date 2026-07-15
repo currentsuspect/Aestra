@@ -1471,12 +1471,7 @@ void AestraContent::onResize(int width, int height) {
     const size_t browserTab = m_browserToggle ? m_browserToggle->getSelectedIndex() : 0;
     const auto activeNavAction =
         m_fileBrowser ? m_fileBrowser->getActiveNavAction() : AestraUI::FileBrowser::BrowserNavAction::Sounds;
-    float* activeBrowserWidthPref = &m_fileBrowserWidthPref;
-    if (activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Plugins) {
-        activeBrowserWidthPref = &m_pluginBrowserWidthPref;
-    } else if (activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Patterns) {
-        activeBrowserWidthPref = &m_patternNavBrowserWidthPref;
-    }
+    float* activeBrowserWidthPref = getActiveBrowserWidthPrefPtr();
     if (*activeBrowserWidthPref <= 0.0f) {
         *activeBrowserWidthPref = computedFileBrowserWidth;
     }
@@ -1865,16 +1860,25 @@ void AestraContent::syncViewState() {
 // SECTION: Panel State Persistence (Issue #120)
 // =============================================================================
 
-float AestraContent::getBrowserWidth() const {
-    float preferredWidth = m_fileBrowserWidthPref;
+float* AestraContent::getActiveBrowserWidthPrefPtr() {
+    return const_cast<float*>(static_cast<const AestraContent*>(this)->getActiveBrowserWidthPrefPtr());
+}
+
+const float* AestraContent::getActiveBrowserWidthPrefPtr() const {
     if (m_fileBrowser) {
         const auto action = m_fileBrowser->getActiveNavAction();
         if (action == AestraUI::FileBrowser::BrowserNavAction::Plugins) {
-            preferredWidth = m_pluginBrowserWidthPref;
-        } else if (action == AestraUI::FileBrowser::BrowserNavAction::Patterns) {
-            preferredWidth = m_patternNavBrowserWidthPref;
+            return &m_pluginBrowserWidthPref;
+        }
+        if (action == AestraUI::FileBrowser::BrowserNavAction::Patterns) {
+            return &m_patternNavBrowserWidthPref;
         }
     }
+    return &m_fileBrowserWidthPref;
+}
+
+float AestraContent::getBrowserWidth() const {
+    const float preferredWidth = *getActiveBrowserWidthPrefPtr();
     if (preferredWidth > 0.0f) {
         return preferredWidth;
     }
@@ -1886,16 +1890,7 @@ float AestraContent::getBrowserWidth() const {
 
 void AestraContent::setBrowserWidth(float width) {
     if (width > 0.0f) {
-        float* preferredWidth = &m_fileBrowserWidthPref;
-        if (m_fileBrowser) {
-            const auto action = m_fileBrowser->getActiveNavAction();
-            if (action == AestraUI::FileBrowser::BrowserNavAction::Plugins) {
-                preferredWidth = &m_pluginBrowserWidthPref;
-            } else if (action == AestraUI::FileBrowser::BrowserNavAction::Patterns) {
-                preferredWidth = &m_patternNavBrowserWidthPref;
-            }
-        }
-        *preferredWidth = width;
+        *getActiveBrowserWidthPrefPtr() = width;
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     }
 }
@@ -2392,16 +2387,7 @@ void AestraContent::updateBrowserResizeDrag(const AestraUI::NUIPoint& mouseScree
     const float deltaX = mouseScreen.x - m_browserResizeStartX;
 
     if (m_browserResizeTarget == BrowserResizeTarget::FileRail) {
-        float* preferredWidth = &m_fileBrowserWidthPref;
-        if (m_fileBrowser) {
-            const auto action = m_fileBrowser->getActiveNavAction();
-            if (action == AestraUI::FileBrowser::BrowserNavAction::Plugins) {
-                preferredWidth = &m_pluginBrowserWidthPref;
-            } else if (action == AestraUI::FileBrowser::BrowserNavAction::Patterns) {
-                preferredWidth = &m_patternNavBrowserWidthPref;
-            }
-        }
-        *preferredWidth = std::max(kMinFileBrowserWidth, m_browserResizeStartFileWidth + deltaX);
+        *getActiveBrowserWidthPrefPtr() = std::max(kMinFileBrowserWidth, m_browserResizeStartFileWidth + deltaX);
     } else if (m_browserResizeTarget == BrowserResizeTarget::PatternRail) {
         m_patternBrowserWidthPref = std::max(kMinPatternBrowserWidth, m_browserResizeStartPatternWidth + deltaX);
     }
