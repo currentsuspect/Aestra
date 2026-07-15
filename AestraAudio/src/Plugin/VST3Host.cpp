@@ -35,6 +35,12 @@ using namespace Steinberg::Vst;
 namespace Aestra {
 namespace Audio {
 
+struct VST3PluginInstance::ModuleHolder {
+    explicit ModuleHolder(VST3::Hosting::Module::Ptr moduleIn) : module(std::move(moduleIn)) {}
+
+    VST3::Hosting::Module::Ptr module;
+};
+
 // Helper for UTF-16 (VST3) to UTF-8 (Aestra) conversion
 static std::string utf16_to_utf8(const Steinberg::Vst::TChar* str) {
     if (!str)
@@ -117,8 +123,8 @@ bool VST3PluginInstance::load(const std::filesystem::path& path, int classIndex)
             return false;
         }
 
-        m_module = new VST3::Hosting::Module::Ptr(std::move(module));
-        auto& mod = *static_cast<VST3::Hosting::Module::Ptr*>(m_module);
+        m_module = std::make_unique<ModuleHolder>(std::move(module));
+        auto& mod = m_module->module;
         m_hostApplication = new HostApplication();
         auto hostApplication = static_cast<HostApplication*>(m_hostApplication);
 
@@ -263,10 +269,7 @@ void VST3PluginInstance::unload() {
         m_component = nullptr;
     }
 
-    if (m_module) {
-        delete static_cast<VST3::Hosting::Module::Ptr*>(m_module);
-        m_module = nullptr;
-    }
+    m_module.reset();
 
     if (m_hostApplication) {
         delete static_cast<HostApplication*>(m_hostApplication);
