@@ -1651,7 +1651,21 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
             }
             return true;
         }
-        
+
+        // Ctrl+drag on empty space = marquee select, in any tool. This is how a
+        // lasso coexists with the pencil (whose plain drag places notes): the
+        // pencil keeps drawing, and Ctrl temporarily borrows a selection box.
+        if (clickedIndex == -1 && (event.modifiers & NUIModifiers::Ctrl)) {
+            state_ = State::SelectingBox;
+            dragStartPos_ = event.position;
+            selectionRect_ = NUIRect(event.position.x, event.position.y, 0, 0);
+            if (!(event.modifiers & NUIModifiers::Shift)) {
+                for (auto& n : notes_) n.selected = false;
+            }
+            repaint();
+            return true;
+        }
+
         // 1. Eraser Tool
         if (tool_ == GlobalTool::Eraser) {
             if (clickedIndex != -1) {
@@ -1670,9 +1684,10 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         
         bool intentToPaint = (tool_ == GlobalTool::Pencil && clickedIndex == -1);
 
-        // Ctrl+pencil on empty space starts a paint-brush stroke: notes are
+        // Shift+pencil on empty space starts a paint-brush stroke: notes are
         // stamped into each snap cell the cursor crosses (see drag handling).
-        if (intentToPaint && (event.modifiers & NUIModifiers::Ctrl)) {
+        // (Ctrl is reserved for the marquee, so the brush lives on Shift.)
+        if (intentToPaint && (event.modifiers & NUIModifiers::Shift)) {
             for (auto& note : notes_) note.selected = false;
             state_ = State::BrushPainting;
             dragStartNotes_ = notes_; // snapshot for a single-stroke undo
@@ -2254,14 +2269,16 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                     auto oldNotes = notes_;
                     for (auto& n : notes_) {
                         if (n.selected && !n.isDeleted) {
-                            if (snapToScale_ && scaleType_ != ScaleType::Chromatic) {
+                            if (shift) {
+                                n.pitch = std::min(127, n.pitch + 12); // whole octave
+                            } else if (snapToScale_ && scaleType_ != ScaleType::Chromatic) {
                                 n.pitch = MusicTheory::nextPitchInScale(n.pitch, rootKey_, scaleType_);
                             } else {
                                 n.pitch = std::min(127, n.pitch + 1);
                             }
                         }
                     }
-                    pushUndo("Transpose Up", oldNotes, notes_);
+                    pushUndo(shift ? "Octave Up" : "Transpose Up", oldNotes, notes_);
                     commitNotes();
                     repaint();
                     return true;
@@ -2270,14 +2287,16 @@ bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
                     auto oldNotes = notes_;
                     for (auto& n : notes_) {
                         if (n.selected && !n.isDeleted) {
-                            if (snapToScale_ && scaleType_ != ScaleType::Chromatic) {
+                            if (shift) {
+                                n.pitch = std::max(0, n.pitch - 12); // whole octave
+                            } else if (snapToScale_ && scaleType_ != ScaleType::Chromatic) {
                                 n.pitch = MusicTheory::previousPitchInScale(n.pitch, rootKey_, scaleType_);
                             } else {
                                 n.pitch = std::max(0, n.pitch - 1);
                             }
                         }
                     }
-                    pushUndo("Transpose Down", oldNotes, notes_);
+                    pushUndo(shift ? "Octave Down" : "Transpose Down", oldNotes, notes_);
                     commitNotes();
                     repaint();
                     return true;
