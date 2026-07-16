@@ -210,6 +210,47 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessMain.cpp")
   message(STATUS "AestraHeadless configured")
 endif()
 
+# =============================================================================
+# MuseRepl - Agentic runtime entry point (JSONL over stdin/stdout, no UI)
+# =============================================================================
+
+if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/MuseReplMain.cpp")
+  add_executable(MuseRepl
+    Source/App/MuseReplMain.cpp
+  )
+
+  if(MSVC)
+    target_compile_options(MuseRepl PRIVATE /utf-8)
+  endif()
+
+  set_target_properties(MuseRepl PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  )
+
+  target_link_libraries(MuseRepl PRIVATE
+    AestraAudioCore
+    AestraCore
+  )
+
+  target_include_directories(MuseRepl PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+  )
+
+  if(WIN32)
+    target_compile_definitions(MuseRepl PRIVATE
+      _CRT_SECURE_NO_WARNINGS
+      NOMINMAX
+    )
+  endif()
+
+  message(STATUS "MuseRepl configured")
+endif()
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessExportMain.cpp")
   add_executable(AestraHeadlessExport
     Source/App/HeadlessExportMain.cpp
