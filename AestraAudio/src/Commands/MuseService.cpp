@@ -70,23 +70,68 @@ JSON trackToJson(const MixerChannel& channel, size_t index) {
 MuseService::MuseService(TrackManager* trackManager, AudioEngine* engine)
     : m_trackManager(trackManager), m_engine(engine) {}
 
+namespace {
+
+// Query verbs MuseService answers directly (mutations live in MuseGrammar).
+bool isQueryVerb(const std::string& verb) {
+    return verb == "get_transport" || verb == "list_tracks" || verb == "list_clips" ||
+           verb == "get_session_state";
+}
+
+bool isKnownVerb(const std::string& verb) {
+    if (isQueryVerb(verb)) return true;
+    for (const auto& cmd : MuseGrammar::allCommands()) {
+        if (cmd.verb == verb) return true;
+    }
+    return false;
+}
+
+} // namespace
+
 std::string MuseService::handleRequest(const std::string& requestJson) {
     double id = 0.0;
     std::string verb;
 
+    // Parsing gets its own try so only malformed JSON reports parse_error;
+    // runtime failures later map to execution_error.
+    JSON request;
     try {
-        JSON request = JSON::parse(requestJson);
+        request = JSON::parse(requestJson);
+    } catch (const std::exception& e) {
+        return makeError(id, "parse_error", std::string("invalid request: ") + e.what()).toString();
+    } catch (...) {
+        return makeError(id, "parse_error", "invalid request").toString();
+    }
+
+    try {
         if (!request.isObject()) {
             return makeError(id, "parse_error", "request must be a JSON object").toString();
         }
 
-        if (request.has("id") && request["id"].isNumber()) {
+        if (request.has("id")) {
+            if (!request["id"].isNumber()) {
+                // A wrong-typed id would silently echo 0 and mis-correlate
+                // responses; reject instead.
+                return makeError(id, "parse_error", "id must be a number").toString();
+            }
             id = request["id"].asNumber();
         }
         if (!request.has("verb") || !request["verb"].isString()) {
             return makeError(id, "parse_error", "missing string field: verb").toString();
         }
         verb = request["verb"].asString();
+
+        // Classify the verb before any dependency checks so protocol status
+        // never depends on how the service happens to be wired.
+        if (!isKnownVerb(verb)) {
+            return makeError(id, "parse_error", "unknown command: " + verb).toString();
+        }
+
+        // Queries take no arguments; accepting them would silently drop
+        // caller intent.
+        if (isQueryVerb(verb) && request.has("args") && request["args"].size() > 0) {
+            return makeError(id, "validation_error", verb + " takes no arguments", verb).toString();
+        }
 
         // ------------------------------------------------------------------
         // Query verbs: read-only, no history, stable IDs.
@@ -155,12 +200,12 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 if (!lane) continue;
                 JSON laneJson = JSON::object();
                 laneJson.set("index", JSON(static_cast<double>(i)));
-                laneJson.set("id", JSON(static_cast<double>(laneId.low)));
+                laneJson.set("id", JSON(laneId.toString())); // full UUID — lossless
                 laneJson.set("name", JSON(lane->name));
                 JSON clips = JSON::array();
                 for (const auto& clip : lane->clips) {
                     JSON c = JSON::object();
-                    c.set("id", JSON(static_cast<double>(clip.id.low)));
+                    c.set("id", JSON(clip.id.toString())); // full UUID — lossless
                     c.set("name", JSON(clip.name));
                     c.set("startBeat", JSON(clip.startBeat));
                     c.set("durationBeats", JSON(clip.durationBeats));
@@ -256,10 +301,9 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
         response.set("executionMs", JSON(cmdResult.executionMs));
         return response.toString();
     } catch (const std::exception& e) {
-        return makeError(id, "parse_error", std::string("invalid request: ") + e.what(), verb)
-            .toString();
+        return makeError(id, "execution_error", e.what(), verb).toString();
     } catch (...) {
-        return makeError(id, "parse_error", "invalid request", verb).toString();
+        return makeError(id, "execution_error", "internal error", verb).toString();
     }
 }
 

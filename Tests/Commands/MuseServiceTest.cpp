@@ -63,6 +63,9 @@ int main() {
         r = call(service, "{\"id\": 8, \"verb\": \"warp_reality\"}");
         check(status(r) == "parse_error" && r["message"].asString().find("unknown") != std::string::npos,
               "unknown verb -> parse_error with message");
+
+        r = call(service, "{\"id\": \"abc\", \"verb\": \"list_tracks\"}");
+        check(status(r) == "parse_error", "non-numeric id -> parse_error, not silent 0");
     }
 
     // --- Eyes: queries on an empty session ---
@@ -124,13 +127,46 @@ int main() {
         check(vol > 0.49 && vol < 0.51, "failed mutations leave state untouched");
     }
 
+    // --- Contract honesty: nothing the protocol ignores returns ok ---
+    {
+        JSON r = call(service,
+                      "{\"id\": 35, \"verb\": \"set_volume\", "
+                      "\"args\": {\"track\": 0, \"value\": 0.5, \"wobble\": 9}}");
+        check(status(r) == "validation_error", "unknown mutation flag -> validation_error");
+
+        r = call(service,
+                 "{\"id\": 36, \"verb\": \"add_track\", "
+                 "\"args\": {\"name\": \"X\", \"type\": \"sampler\"}}");
+        check(status(r) == "validation_error",
+              "add_track type (unconsumed by factory) -> validation_error");
+
+        r = call(service, "{\"id\": 37, \"verb\": \"list_tracks\", \"args\": {\"track\": 0}}");
+        check(status(r) == "validation_error", "arguments to a query -> validation_error");
+    }
+
+    // --- Stable IDs survive edits that shift indexes ---
+    {
+        JSON r = call(service, "{\"id\": 38, \"verb\": \"list_tracks\"}");
+        const double bassId = r["result"]["tracks"][1]["id"].asNumber();
+
+        r = call(service, "{\"id\": 39, \"verb\": \"delete_track\", \"args\": {\"track\": 0}}");
+        check(status(r) == "ok", "delete_track ok");
+
+        r = call(service, "{\"id\": 40, \"verb\": \"list_tracks\"}");
+        check(r["result"]["tracks"].size() == 1, "one track remains after delete");
+        check(r["result"]["tracks"][0]["id"].asNumber() == bassId,
+              "surviving track keeps its id after index shift");
+        check(r["result"]["tracks"][0]["name"].asString() == "Bass",
+              "surviving track is Bass");
+    }
+
     // --- Revision loop: undo through the same history the UI uses ---
     {
         auto& history = trackManager->getCommandHistory();
         check(history.canUndo(), "mutations were recorded as undoable history");
-        history.undo(); // un-mute Bass
-        JSON r = call(service, "{\"id\": 40, \"verb\": \"list_tracks\"}");
-        check(!r["result"]["tracks"][1]["muted"].asBool(), "undo reverses the muse mutation");
+        history.undo(); // restore the deleted Drums track
+        JSON r = call(service, "{\"id\": 41, \"verb\": \"list_tracks\"}");
+        check(r["result"]["tracks"].size() == 2, "undo restores the deleted track");
     }
 
     std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))

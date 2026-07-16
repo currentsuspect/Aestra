@@ -89,6 +89,23 @@ CommandResult CommandParser::execute(const std::string& verb,
         return finish(result);
     }
 
+    // Reject flags the schema does not define — accepting them would let a
+    // caller believe intent was honoured when it was silently dropped.
+    for (const auto& entry : flags) {
+        bool known = false;
+        for (const auto& flagSchema : schema->flags) {
+            if (flagSchema.name == entry.first) {
+                known = true;
+                break;
+            }
+        }
+        if (!known) {
+            result.status = CommandStatus::ValidationError;
+            result.message = "unknown flag for " + verb + ": --" + entry.first;
+            return finish(result);
+        }
+    }
+
     // Validate required flags present and values within type + range
     std::string validationError;
     if (!validateFlags(*schema, flags, validationError)) {
@@ -105,12 +122,13 @@ CommandResult CommandParser::execute(const std::string& verb,
         return finish(result);
     }
 
-    result.undoable = cmd->changesProjectState();
+    const bool undoable = cmd->changesProjectState();
 
-    // Execute through CommandHistory
+    // Execute through CommandHistory; only a successful execution is undoable.
     try {
         auto shared = std::shared_ptr<ICommand>(std::move(cmd));
         history.pushAndExecute(shared);
+        result.undoable = undoable;
     } catch (const std::exception& e) {
         result.status = CommandStatus::ExecutionError;
         result.message = e.what();

@@ -19,12 +19,10 @@ static const std::vector<CommandSchema> s_schemas = {
     }},
 
     // === Track (8) ===
+    // NOTE: no "type" flag until the factory consumes one — advertising a
+    // flag the registry ignores would make the schema lie to agents.
     {"add_track", CommandCategory::Track, {
-        {"name", FlagType::String, false},
-        // Optional until the registry consumes it: the factory currently
-        // creates a plain mixer channel regardless of type. Required-but-
-        // ignored would make the schema lie to agents about behaviour.
-        {"type", FlagType::String, false}
+        {"name", FlagType::String, false}
     }},
     {"delete_track", CommandCategory::Track, {
         {"track", FlagType::Int, true}
