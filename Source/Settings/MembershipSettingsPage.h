@@ -111,6 +111,7 @@ private:
     AestraUI::NUIRect m_confirmSignOutBtnBounds;
     bool m_confirmCancelHovered = false;
     bool m_confirmSignOutHovered = false;
+    int m_confirmPressedButton = -1;
 
     // Callback fired after confirmed sign-out (parent should close dialog + show activation screen)
     std::function<void()> m_onSignOutConfirmed;

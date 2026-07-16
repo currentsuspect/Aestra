@@ -195,41 +195,43 @@ void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
     if (!m_visible) return;
     
     auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const auto& props = theme.getCurrentTheme();
     
     // 1. Dimmed Background Overlay
-    renderer.fillRect(getBounds(), AestraUI::NUIColor(0, 0, 0, 0.5f));
+    renderer.fillRect(getBounds(), theme.getColor("overlay"));
     
     // 2. Dialog Window Shadow
     // (Simple drop shadow simulation if renderer supports it, or just dark rect)
     
     // 3. Dialog Window Background - FORCE correct key to avoid purple fallback
     // Use rounded rect with standard radius (e.g. 8px or theme radius)
-    float radius = 8.0f; // Standard rounded corner radius
-    renderer.fillRoundedRect(m_dialogBounds, radius, theme.getColor("backgroundPrimary"));
-    renderer.strokeRoundedRect(m_dialogBounds, radius, 1.0f, theme.getColor("borderSubtle"));
+    float radius = props.radiusL;
+    renderer.fillRoundedRect(m_dialogBounds, radius, theme.getColor("elevatedPanel"));
+    renderer.strokeRoundedRect(m_dialogBounds, radius, props.layout.dividerWidth, theme.getColor("borderStrong"));
     
     // 4. Title bar background (unified 32px chrome)
-    AestraUI::NUIRect titleBar(m_dialogBounds.x, m_dialogBounds.y, m_dialogBounds.width, 32.0f);
-    renderer.fillRect(titleBar, theme.getColor("backgroundPrimary"));
+    AestraUI::NUIRect titleBar(m_dialogBounds.x, m_dialogBounds.y, m_dialogBounds.width,
+                              props.layout.panelHeaderHeight);
+    renderer.fillRect(titleBar, theme.getColor("elevatedPanel"));
     renderer.drawLine({titleBar.x, titleBar.bottom() - 0.5f},
                       {titleBar.right(), titleBar.bottom() - 0.5f},
                       0.5f, theme.getColor("borderSubtle"));
 
     // 5. Title text — vertically centered via font metrics
-    float titleBaseline = renderer.calculateTextY(titleBar, 12.0f);
-    renderer.drawText("Settings", {m_dialogBounds.x + 12.0f, titleBaseline}, 12.0f,
+    float titleBaseline = renderer.calculateTextY(titleBar, props.fontSizeM);
+    renderer.drawText("Settings", {m_dialogBounds.x + 12.0f, titleBaseline}, props.fontSizeM,
                       theme.getColor("textSecondary"));
 
     // 6. Close button — line-drawn X matching AestraPanelWindow chrome
     if (m_closeButtonHovered) {
-        renderer.fillRoundedRect(m_closeButtonBounds, 6.0f, AestraUI::NUIColor(0xff, 0xd9, 0x5f).withAlpha(0.22f));
+        renderer.fillRoundedRect(m_closeButtonBounds, props.radiusS, theme.getColor("controlHover"));
     }
     float cx = m_closeButtonBounds.x + m_closeButtonBounds.width * 0.5f;
     float cy = m_closeButtonBounds.y + m_closeButtonBounds.height * 0.5f;
     float d = 5.0f;
     AestraUI::NUIColor xColor = m_closeButtonHovered
-                                    ? AestraUI::NUIColor(0xff, 0xe5, 0x73)
-                                    : theme.getColor("textDisabled");
+                                    ? theme.getColor("textPrimary")
+                                    : theme.getColor("textSecondary");
     renderer.drawLine({cx - d, cy - d}, {cx + d, cy + d}, 1.5f, xColor);
     renderer.drawLine({cx + d, cy - d}, {cx - d, cy + d}, 1.5f, xColor);
 
@@ -240,7 +242,7 @@ void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
 
     // 8. Sidebar Items
     for (const auto& item : m_sidebarItems) {
-        AestraUI::NUIColor bg = item.active ? theme.getColor("primary").withAlpha(0.2f) :
+        AestraUI::NUIColor bg = item.active ? theme.getColor("selection") :
                               (item.hovered ? theme.getColor("list.hover") : AestraUI::NUIColor(0,0,0,0));
 
         if (item.active || item.hovered) {
@@ -252,7 +254,7 @@ void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
             renderer.fillRect(AestraUI::NUIRect(item.bounds.x, item.bounds.y, 3, item.bounds.height), theme.getColor("primary"));
         }
 
-        renderer.drawText(item.title, AestraUI::NUIPoint(item.bounds.x + 20, item.bounds.y + 8), 14.0f,
+        renderer.drawText(item.title, AestraUI::NUIPoint(item.bounds.x + 20, item.bounds.y + 8), props.fontSizeM,
                          item.active ? theme.getColor("textSelect") : theme.getColor("text"));
     }
 
@@ -263,7 +265,8 @@ void SettingsDialog::onRender(AestraUI::NUIRenderer& renderer) {
 
     // 10. Blink Effect
     if (m_blinkAnimation > 0.0f) {
-        renderer.strokeRoundedRect(m_dialogBounds, radius, 2.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, m_blinkAnimation * 0.5f));
+        renderer.strokeRoundedRect(m_dialogBounds, radius, 2.0f,
+                                   theme.getColor("focusRing").withAlpha(m_blinkAnimation * 0.5f));
     }
 
     // Render Children (Page content + Buttons)
