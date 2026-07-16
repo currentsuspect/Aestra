@@ -592,3 +592,49 @@ TakeManager::Result TakeManager::duplicateTake(const std::string& projectPath, c
     Aestra::Log::info("[Takes] Duplicated take '" + source->name + "' as '" + copy.name + "'");
     return makeResult(true, "", manifest, copy);
 }
+
+TakeManager::Result TakeManager::deleteTake(const std::string& projectPath, const std::string& takeId) {
+    namespace fs = std::filesystem;
+
+    Manifest manifest = loadManifest(projectPath);
+    if (!manifest.ok) {
+        return makeResult(false, manifest.errorMessage, manifest);
+    }
+
+    const std::string sanitizedId = sanitizeIdPart(takeId);
+    const TakeEntry* target = manifest.findTake(sanitizedId);
+    if (!target) {
+        return makeResult(false, "Take not found: " + takeId, manifest);
+    }
+    if (sanitizedId == manifest.activeTakeId) {
+        return makeResult(false, "Cannot delete the active take — switch to another take first", manifest, *target);
+    }
+
+    TakeEntry deleted = *target;
+    const std::string snapshotPath = resolveSnapshotPath(projectPath, deleted);
+
+    // Children keep their history by moving up to the deleted take's parent.
+    for (auto& take : manifest.takes) {
+        if (take.parentId == deleted.id) {
+            take.parentId = deleted.parentId;
+        }
+    }
+    manifest.takes.erase(std::remove_if(manifest.takes.begin(), manifest.takes.end(),
+                                        [&deleted](const TakeEntry& take) { return take.id == deleted.id; }),
+                         manifest.takes.end());
+
+    std::string error;
+    if (!saveManifest(manifest, error)) {
+        return makeResult(false, error, manifest, deleted);
+    }
+
+    // Snapshot removal is best-effort: an orphan file is harmless, a manifest
+    // pointing at a deleted file is not — so the manifest write comes first.
+    if (!snapshotPath.empty()) {
+        std::error_code ec;
+        fs::remove(snapshotPath, ec);
+    }
+
+    Aestra::Log::info("[Takes] Deleted take '" + deleted.name + "'");
+    return makeResult(true, "", manifest, deleted);
+}

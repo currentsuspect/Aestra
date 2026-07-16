@@ -103,8 +103,10 @@ void AestraHistoryPanel::onRender(NUIRenderer& renderer)
 
         bool hovered = (i == m_hoveredEntry);
         if (hovered) {
+            // Keep the lift subtle — the hover token is light, and a strong
+            // fill washes out light row text.
             renderer.fillRect(NUIRect(bounds.x, rowY, bounds.width, ROW_HEIGHT),
-                theme.getColor("hover").withAlpha(entry.isRedo ? 0.42f : 0.92f));
+                theme.getColor("hover").withAlpha(entry.isRedo ? 0.08f : 0.14f));
         }
 
         // Category dot

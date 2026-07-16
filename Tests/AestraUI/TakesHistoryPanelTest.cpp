@@ -281,6 +281,25 @@ void testTakesPanel() {
     require(readFileContents(TakeManager::resolveSnapshotPath(projectPath, *branch)) == sourceContentsBefore,
             "Branch snapshot should start as a copy of its source");
 
+    // Delete: refused for the active take, works for others, row disappears.
+    panel.setOnDeleteTake([&](const std::string& takeId) { return TakeManager::deleteTake(projectPath, takeId).ok; });
+    int activeRow = -1, chorusRow = -1;
+    for (int i = 0; i < panel.getTakeCount(); ++i) {
+        if (panel.getTakeAt(i).active) activeRow = i;
+        if (panel.getTakeAt(i).name == "Chorus V2") chorusRow = i;
+    }
+    require(activeRow >= 0 && chorusRow >= 0, "Active and Chorus V2 takes should exist before delete");
+    panel.selectTake(activeRow);
+    require(!panel.requestDeleteSelected(), "Deleting the active take must be refused by the panel");
+    require(!panel.getStatusText().empty(), "Refused delete should explain itself");
+    const int countBeforeDelete = panel.getTakeCount();
+    panel.selectTake(chorusRow);
+    require(panel.requestDeleteSelected(), "Deleting a non-active take should succeed");
+    require(panel.getTakeCount() == countBeforeDelete - 1, "Deleted take row should disappear");
+    for (int i = 0; i < panel.getTakeCount(); ++i) {
+        require(panel.getTakeAt(i).name != "Chorus V2", "Deleted take must not reappear");
+    }
+
     // A failing action surfaces a status message instead of silently dropping.
     panel.setOnDuplicateTake([](const std::string&) { return false; });
     panel.selectTake(0);

@@ -65,6 +65,8 @@ public:
     }
     /** @brief Duplicate a take without activating it. */
     void setOnDuplicateTake(std::function<bool(const std::string& takeId)> cb) { m_onDuplicateTake = std::move(cb); }
+    /** @brief Delete a non-active take. */
+    void setOnDeleteTake(std::function<bool(const std::string& takeId)> cb) { m_onDeleteTake = std::move(cb); }
     /** @brief Branch: duplicate a take and continue working on the branch. */
     void setOnBranchTake(std::function<bool(const std::string& takeId)> cb) { m_onBranchTake = std::move(cb); }
     /** @brief Restore a recovery snapshot after safely saving the current take. */
@@ -112,6 +114,8 @@ public:
     bool requestDuplicateSelected();
     /** @brief Branch from the selected take and switch to the branch. */
     bool requestBranchSelected();
+    /** @brief Delete the selected take (refused for the active take). */
+    bool requestDeleteSelected();
     /** @brief Restore the selected recovery snapshot. */
     bool requestRestoreSelectedSnapshot();
     /** @brief Start inline rename for the selected take. */
@@ -169,6 +173,7 @@ private:
     std::function<bool(const std::string&)> m_onOpenTake;
     std::function<bool(const std::string&, const std::string&)> m_onRenameTake;
     std::function<bool(const std::string&)> m_onDuplicateTake;
+    std::function<bool(const std::string&)> m_onDeleteTake;
     std::function<bool(const std::string&)> m_onBranchTake;
     std::function<bool(const std::string&)> m_onRestoreSnapshot;
 

@@ -191,6 +191,35 @@ int main() {
     require(loadFirstLaneName(TakeManager::resolveSnapshotPath(projectPath.string(), *branchEntry)) == "Main Lane",
             "Branch snapshot should start from its source state");
 
+    // --- Delete: refuses the active take, reparents children, removes files --
+    require(!TakeManager::deleteTake(projectPath.string(), branch.take.id).ok,
+            "Deleting the active take must be refused");
+    require(!TakeManager::deleteTake(projectPath.string(), "no_such_take").ok,
+            "Deleting a missing take must fail");
+
+    // duplicated (parent = renamed variation) must survive its parent's
+    // deletion by moving up to the variation's parent ("main").
+    const std::string dupSnapshotPath = TakeManager::resolveSnapshotPath(projectPath.string(), duplicated.take);
+    const auto beforeDeleteManifest = TakeManager::loadManifest(projectPath.string());
+    require(beforeDeleteManifest.ok, "Manifest should load before deletion");
+    const auto* renamedBeforeDelete = beforeDeleteManifest.findTake(created.take.id);
+    require(renamedBeforeDelete != nullptr, "Renamed take should exist before deletion");
+    const std::string renamedSnapshotPath =
+        TakeManager::resolveSnapshotPath(projectPath.string(), *renamedBeforeDelete);
+    require(std::filesystem::exists(renamedSnapshotPath), "Renamed take snapshot should exist before deletion");
+
+    auto deleted = TakeManager::deleteTake(projectPath.string(), created.take.id);
+    require(deleted.ok, "Failed to delete a non-active take");
+    auto afterDelete = TakeManager::loadManifest(projectPath.string());
+    require(afterDelete.ok, "Manifest should reload after deletion");
+    require(afterDelete.findTake(created.take.id) == nullptr, "Deleted take must leave the manifest");
+    require(!std::filesystem::exists(renamedSnapshotPath), "Deleted take snapshot must be removed from disk");
+    const auto* orphan = afterDelete.findTake(duplicated.take.id);
+    require(orphan != nullptr, "Child of a deleted take must survive");
+    require(orphan->parentId == "main", "Child of a deleted take must reparent to its grandparent");
+    require(std::filesystem::exists(dupSnapshotPath), "Deleting a take must not touch other snapshots");
+    require(afterDelete.activeTakeId == branch.take.id, "Deletion must not change the active take");
+
     std::cout << "[PASS] TakeManagerTest\n";
     return 0;
 }

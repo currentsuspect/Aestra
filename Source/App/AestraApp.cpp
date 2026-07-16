@@ -1536,6 +1536,17 @@ void AestraApp::wireTakesPanel() {
         return result.ok;
     });
 
+    takesPanel->setOnDeleteTake([this](const std::string& takeId) {
+        if (m_projectPath.empty()) {
+            return false;
+        }
+        auto result = TakeManager::deleteTake(m_projectPath, takeId);
+        if (!result.ok) {
+            Log::warning("[Takes] Could not delete Take: " + result.errorMessage);
+        }
+        return result.ok;
+    });
+
     takesPanel->setOnBranchTake([this](const std::string& takeId) { return branchFromTake(takeId); });
 
     takesPanel->setOnRestoreSnapshot([this](const std::string& path) {

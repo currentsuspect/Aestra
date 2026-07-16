@@ -109,4 +109,15 @@ public:
      */
     static Result duplicateTake(const std::string& projectPath, const std::string& takeId,
                                 const std::string& newName = "");
+
+    /**
+     * @brief Deletes a take and its snapshot.
+     *
+     * The active take can never be deleted (switch away first), so the working
+     * state is always safe. Children of the deleted take are re-parented to
+     * its parent to keep lineage intact.
+     * @param projectPath  Path to the project directory.
+     * @param takeId       ID of the take to delete.
+     */
+    static Result deleteTake(const std::string& projectPath, const std::string& takeId);
 };

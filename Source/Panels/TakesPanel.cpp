@@ -166,9 +166,11 @@ std::vector<std::string> TakesPanel::actionButtonLabels() const {
     if (m_selectedTake >= 0) {
         const bool active = m_takeRows[static_cast<size_t>(m_selectedTake)].take.active;
         if (active) {
-            return {"RENAME", "DUPLICATE", "BRANCH"};
+            // The active take can't be opened (it already is) or deleted
+            // (the working state must never be pulled out from under itself).
+            return {"RENAME", "DUP", "BRANCH"};
         }
-        return {"OPEN", "RENAME", "DUPLICATE", "BRANCH"};
+        return {"OPEN", "RENAME", "DUP", "BRANCH", "DELETE"};
     }
     return {};
 }
@@ -274,6 +276,20 @@ bool TakesPanel::requestBranchSelected() {
                         "Could not branch from take");
 }
 
+bool TakesPanel::requestDeleteSelected() {
+    if (m_selectedTake < 0) {
+        return false;
+    }
+    const auto& take = m_takeRows[static_cast<size_t>(m_selectedTake)].take;
+    if (take.active) {
+        setStatus("Switch to another take before deleting this one");
+        return false;
+    }
+    const std::string takeId = take.id;
+    return invokeAction([this, takeId]() { return m_onDeleteTake && m_onDeleteTake(takeId); },
+                        "Could not delete take");
+}
+
 bool TakesPanel::requestRestoreSelectedSnapshot() {
     if (m_selectedSnapshot < 0) {
         return false;
@@ -372,11 +388,14 @@ bool TakesPanel::runRowAction(int actionIndex) {
         beginRenameSelected();
         return true;
     }
-    if (label == "DUPLICATE") {
+    if (label == "DUP") {
         return requestDuplicateSelected();
     }
     if (label == "BRANCH") {
         return requestBranchSelected();
+    }
+    if (label == "DELETE") {
+        return requestDeleteSelected();
     }
     if (label == "RESTORE") {
         return requestRestoreSelectedSnapshot();
@@ -452,7 +471,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
                               theme.getColor("accentPrimary").withAlpha(0.18f));
         } else if (i == m_hoveredTake) {
             renderer.fillRect(NUIRect(bounds.x, rowY, bounds.width, ROW_HEIGHT),
-                              theme.getColor("hover").withAlpha(0.8f));
+                              theme.getColor("hover").withAlpha(0.12f));
         }
 
         const float indent = static_cast<float>(row.depth) * DEPTH_INDENT;
@@ -493,9 +512,10 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
         const auto rects = actionButtonRects(layout);
         for (size_t i = 0; i < labels.size() && i < rects.size(); ++i) {
             const bool hovered = static_cast<int>(i) == m_hoveredAction;
+            const bool destructive = labels[i] == "DELETE";
+            const char* fillToken = destructive ? "warning" : (hovered ? "accentPrimary" : "borderSubtle");
             renderer.fillRoundedRect(rects[i], 4.0f,
-                                     theme.getColor(hovered ? "accentPrimary" : "borderSubtle")
-                                         .withAlpha(hovered ? 0.32f : 0.5f));
+                                     theme.getColor(fillToken).withAlpha(hovered ? 0.32f : (destructive ? 0.2f : 0.5f)));
             const NUISize textSize = renderer.measureText(labels[i], 10.0f);
             renderer.drawText(labels[i],
                               NUIPoint(rects[i].x + (rects[i].width - textSize.width) * 0.5f,
@@ -516,7 +536,7 @@ void TakesPanel::onRender(NUIRenderer& renderer) {
                                   theme.getColor("accentPrimary").withAlpha(0.18f));
             } else if (i == m_hoveredSnapshot) {
                 renderer.fillRect(NUIRect(bounds.x, rowY, bounds.width, ROW_HEIGHT),
-                                  theme.getColor("hover").withAlpha(0.8f));
+                                  theme.getColor("hover").withAlpha(0.12f));
             }
             renderer.fillCircle(NUIPoint(bounds.x + LEFT_PAD, rowY + ROW_HEIGHT * 0.5f), 3.0f,
                                 theme.getColor("warning").withAlpha(0.75f));
