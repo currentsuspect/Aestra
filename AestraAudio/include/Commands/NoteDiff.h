@@ -24,9 +24,12 @@ struct NoteDiffResult {
     std::vector<std::pair<MidiNote, MidiNote>> moved;
     /** @brief Pairs of (before, after) for notes that changed duration. */
     std::vector<std::pair<MidiNote, MidiNote>> resized;
+    /** @brief Pairs of (before, after) for in-place expression changes (velocity/pan). */
+    std::vector<std::pair<MidiNote, MidiNote>> modified;
 
     bool empty() const {
-        return added.empty() && removed.empty() && moved.empty() && resized.empty();
+        return added.empty() && removed.empty() && moved.empty() && resized.empty() &&
+               modified.empty();
     }
 };
 

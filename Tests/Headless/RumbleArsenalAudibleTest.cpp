@@ -86,8 +86,8 @@ int main() {
     pattern->payload = MidiPayload{};
 
     auto& notes = std::get<MidiPayload>(pattern->payload).notes;
-    notes.push_back(MidiNote{36, 0.0, 0.5, 110.0f, unitId});
-    notes.push_back(MidiNote{38, 1.0, 0.4, 100.0f, unitId});
+    notes.push_back(MidiNote{36, 0.0, 0.5, 110.0f, 0.0f, unitId});
+    notes.push_back(MidiNote{38, 1.0, 0.4, 100.0f, 0.0f, unitId});
 
     AudioEngine engine;
     require(engine.initialize(), "AudioEngine failed to initialize");

@@ -54,9 +54,11 @@ void testValidThemeApplies() {
         "colors": {
             "primary": "#ff0000",
             "background": "#00ff00",
-            "surface": "#0000ff80"
+            "surface": "#0000ff80",
+            "focusRing": "#112233",
+            "dragTarget": "#44556680"
         },
-        "dimensions": { "borderRadius": 3.5, "shadowNudge": -2.0 },
+        "dimensions": { "borderRadius": 3.5, "standardControlHeight": 30.0, "shadowNudge": -2.0 },
         "effects": { "glowIntensity": 0.9 },
         "fontSizes": { "normal": 17.0 }
     })");
@@ -67,7 +69,12 @@ void testValidThemeApplies() {
     check(colorsEqual(theme->getColor("background"), NUIColor::fromHex(0x00ff00)), "background = #00ff00");
     check(colorsEqual(theme->getColor("surface"), NUIColor::fromHex(0x0000ff, 128.0f / 255.0f)),
           "surface #RRGGBBAA alpha applied");
+    check(colorsEqual(theme->getColor("focusRing"), NUIColor::fromHex(0x112233)), "semantic focus ring applied");
+    check(colorsEqual(theme->getColor("dragTarget"), NUIColor::fromHex(0x445566, 128.0f / 255.0f)),
+          "semantic drag target applied");
     check(nearlyEqual(theme->getDimension("borderRadius"), 3.5f), "borderRadius = 3.5");
+    check(nearlyEqual(theme->getDimension("standardControlHeight"), 30.0f),
+          "semantic control dimension applied");
     check(nearlyEqual(theme->getDimension("shadowNudge"), -2.0f), "negative dimension accepted");
     check(nearlyEqual(theme->getEffect("glowIntensity"), 0.9f), "glowIntensity = 0.9");
     check(nearlyEqual(theme->getFontSize("normal"), 17.0f), "fontSize normal = 17");
@@ -89,6 +96,10 @@ void testMissingFieldsKeepDefaults() {
           "untouched dimension keeps default");
     check(nearlyEqual(theme->getFontSize("normal"), defaults->getFontSize("normal")),
           "untouched font size keeps default");
+    check(colorsEqual(theme->getColor("armed"), defaults->getColor("armed")),
+          "missing semantic color keeps default");
+    check(nearlyEqual(theme->getDimension("minimumHitArea"), defaults->getDimension("minimumHitArea")),
+          "missing semantic dimension keeps default");
     std::remove(path.c_str());
 }
 
@@ -127,7 +138,7 @@ void testInvalidEntriesKeepDefaults() {
             "textSecondary": "#abc",
             "error": "#ff00ff"
         },
-        "dimensions": { "borderRadius": "twelve" },
+        "dimensions": { "borderRadius": "twelve", "compactControlHeight": -1.0 },
         "fontSizes": { "normal": -5, "small": 11.0 }
     })");
 
@@ -142,6 +153,8 @@ void testInvalidEntriesKeepDefaults() {
     check(colorsEqual(theme->getColor("error"), NUIColor::fromHex(0xff00ff)), "valid sibling color applied");
     check(nearlyEqual(theme->getDimension("borderRadius"), defaults->getDimension("borderRadius")),
           "string-as-dimension rejected");
+    check(nearlyEqual(theme->getDimension("compactControlHeight"), defaults->getDimension("compactControlHeight")),
+          "non-positive semantic dimension rejected");
     check(nearlyEqual(theme->getFontSize("normal"), defaults->getFontSize("normal")),
           "non-positive font size rejected");
     check(nearlyEqual(theme->getFontSize("small"), 11.0f), "valid sibling font size applied");
