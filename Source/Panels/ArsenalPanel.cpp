@@ -107,7 +107,7 @@ bool patternUsesNoteRoll(const PatternSource* pattern, UnitID unitId, UnitType t
     return std::any_of(midi.notes.begin(), midi.notes.end(), [unitId](const MidiNote& note) {
         const bool belongsToUnit = note.unitId == unitId || note.unitId == 0;
         return belongsToUnit &&
-               (note.unitId == 0 || note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01);
+               (note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01);
     });
 }
 
