@@ -2816,7 +2816,9 @@ void AestraContent::playFromCurrentFocus() {
         }
 
         AESTRA_LOG_DEBUG("[Arsenal] Focus-aware play scheduling pattern " + std::to_string(activePattern.value));
-        m_trackManager->playPatternInArsenal(activePattern);
+        // Resume from the cued transport position (e.g. a scrubbed piano-roll
+        // playhead) instead of always rewinding to beat zero.
+        m_trackManager->playPatternInArsenal(activePattern, m_trackManager->getPosition());
         return;
     }
 
