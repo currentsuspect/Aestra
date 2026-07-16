@@ -291,6 +291,9 @@ void TakesPanel::beginRenameSelected() {
     m_renameActive = true;
     m_renameTakeId = take.id;
     m_renameBuffer = take.name;
+    // Printable characters are delivered through the focused-component text
+    // path (see AestraWindowManager charCallback), so claim focus for the edit.
+    setFocused(true);
     setStatus("");
     setDirty(true);
 }
@@ -304,6 +307,7 @@ bool TakesPanel::commitRename() {
     m_renameActive = false;
     m_renameTakeId.clear();
     m_renameBuffer.clear();
+    setFocused(false);
     if (name.empty()) {
         setStatus("Take name cannot be empty");
         return false;
@@ -316,7 +320,12 @@ void TakesPanel::cancelRename() {
     m_renameActive = false;
     m_renameTakeId.clear();
     m_renameBuffer.clear();
+    setFocused(false);
     setDirty(true);
+}
+
+bool TakesPanel::onKeyEvent(const NUIKeyEvent& event) {
+    return handleKeyEvent(event);
 }
 
 bool TakesPanel::handleKeyEvent(const NUIKeyEvent& event) {

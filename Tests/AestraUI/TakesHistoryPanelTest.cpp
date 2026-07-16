@@ -223,6 +223,9 @@ void testTakesPanel() {
     }
     panel.beginRenameSelected();
     require(panel.isRenameActive(), "Rename edit should be active");
+    // Text input is delivered via the focused-component path — the panel must
+    // hold focus for the duration of the edit and release it afterwards.
+    require(panel.isFocused(), "Rename edit must claim keyboard focus");
     // Clear the prefilled name, type a new one, commit with Enter.
     while (!panel.getRenameBuffer().empty()) {
         require(panel.handleKeyEvent(keyPress(AestraUI::NUIKeyCode::Backspace)), "Backspace should be consumed");
@@ -233,6 +236,7 @@ void testTakesPanel() {
     require(panel.getRenameBuffer() == "Chorus V2", "Rename buffer should reflect typed name");
     require(panel.handleKeyEvent(keyPress(AestraUI::NUIKeyCode::Enter)), "Enter should commit rename");
     require(!panel.isRenameActive(), "Rename edit should end on commit");
+    require(!panel.isFocused(), "Committing a rename must release keyboard focus");
     auto renamedManifest = TakeManager::loadManifest(projectPath);
     require(renamedManifest.ok, "Manifest should reload after rename");
     bool foundRenamed = false;
@@ -245,6 +249,7 @@ void testTakesPanel() {
     panel.beginRenameSelected();
     require(panel.handleKeyEvent(keyPress(AestraUI::NUIKeyCode::Escape)), "Escape should be consumed");
     require(!panel.isRenameActive(), "Escape should cancel rename");
+    require(!panel.isFocused(), "Cancelling a rename must release keyboard focus");
 
     // Branch: duplicate + activate, source take untouched (non-destructive).
     const auto beforeBranch = TakeManager::loadManifest(projectPath);

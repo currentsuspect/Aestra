@@ -42,6 +42,8 @@ public:
 
     void onRender(AestraUI::NUIRenderer& renderer) override;
     bool onMouseEvent(const AestraUI::NUIMouseEvent& event) override;
+    /** @brief Focused key delivery (text input arrives here while renaming). */
+    bool onKeyEvent(const AestraUI::NUIKeyEvent& event) override;
 
     /** @brief Handle keys while an inline rename is active. Returns true if consumed. */
     bool handleKeyEvent(const AestraUI::NUIKeyEvent& event);
