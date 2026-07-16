@@ -1484,10 +1484,10 @@ bool PianoRollNoteLayer::handleNotePropertiesMouse(const NUIMouseEvent& event) {
     }
 
     if (event.released) {
-        if (propDragField_ != -1) {
-            propDragField_ = -1;
-            commitNotes();
-        }
+        // No commitNotes() while the popup is open: it sorts notes_ by start
+        // beat, which would silently retarget propNoteIndex_ after a Start
+        // edit. closeNoteProperties() commits once, on Accept/cancel.
+        propDragField_ = -1;
         return true;
     }
 
@@ -1507,7 +1507,6 @@ bool PianoRollNoteLayer::handleNotePropertiesMouse(const NUIMouseEvent& event) {
             applyNotePropertyDelta(field,
                                    (event.wheelDelta > 0.0f ? 1.0f : -1.0f) * kStepPixels[field],
                                    !(event.modifiers & NUIModifiers::Alt));
-            commitNotes();
         }
         return true;
     }
