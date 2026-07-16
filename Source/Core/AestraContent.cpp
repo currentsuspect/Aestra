@@ -2654,7 +2654,9 @@ void AestraContent::startPatternClipPreview(PatternID patternId) {
     }
 
     m_trackManager->preparePatternForArsenal(patternId);
-    m_trackManager->playPatternInArsenal(patternId);
+    // Clip preview intentionally starts from the top; every other play path
+    // resumes from the cued transport position (playPatternInArsenal default).
+    m_trackManager->playPatternInArsenal(patternId, 0.0);
 }
 
 void AestraContent::stopPatternClipPreview(bool restoreTimelineUi) {
@@ -2851,6 +2853,8 @@ void AestraContent::playFromCurrentFocus() {
         }
 
         AESTRA_LOG_DEBUG("[Arsenal] Focus-aware play scheduling pattern " + std::to_string(activePattern.value));
+        // Resumes from the cued transport position (e.g. a scrubbed piano-roll
+        // playhead) — playPatternInArsenal's default — not from beat zero.
         m_trackManager->playPatternInArsenal(activePattern);
         return;
     }

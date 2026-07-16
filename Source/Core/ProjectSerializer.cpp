@@ -744,6 +744,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 nj.set("startBeat", JSON(note.startBeat));
                 nj.set("durationBeats", JSON(note.durationBeats));
                 nj.set("velocity", JSON(static_cast<double>(note.velocity)));
+                nj.set("pan", JSON(static_cast<double>(note.pan)));
                 nj.set("unitId", JSON(static_cast<double>(note.unitId)));
                 nj.set("pitchOffset", JSON(static_cast<double>(note.pitchOffset)));
                 nj.set("gate", JSON(static_cast<double>(note.gate)));
@@ -1477,6 +1478,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             note.startBeat = finiteNumberOr(notes[n], "startBeat", 0.0, 0.0, 1000000.0);
                             note.durationBeats = finiteNumberOr(notes[n], "durationBeats", 0.25, 0.0, 1000000.0);
                             note.velocity = static_cast<float>(finiteNumberOr(notes[n], "velocity", 1.0, 0.0, 1.0));
+                            note.pan = static_cast<float>(finiteNumberOr(notes[n], "pan", 0.0, -1.0, 1.0));
                             note.unitId = static_cast<uint64_t>(
                                 finiteNumberOr(notes[n], "unitId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
                             note.pitchOffset = static_cast<int8_t>(finiteNumberOr(notes[n], "pitchOffset", 0.0, -128.0, 127.0));
