@@ -757,7 +757,11 @@ private:
         bool noteOnPending{false};
         bool active{false};
     };
-    UnitAuditionState m_unitAuditionState;
+    // Small slot pool so a chord stamp auditions every pitch, not just the
+    // root. Slots are claimed per AuditionUnit command (free-first, else the
+    // one closest to its note-off) — all touched on the RT thread only.
+    static constexpr size_t kUnitAuditionSlots = 4;
+    std::array<UnitAuditionState, kUnitAuditionSlots> m_unitAuditionStates;
     // std::vector<TrackRTState> m_trackState; <-- Moved to m_rtGraphState (actually m_graphStates)
     // But we need persistent state across swaps?
     // TrackRTState contains current Volume/Pan/SmoothedParams.
