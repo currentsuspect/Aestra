@@ -415,6 +415,9 @@ public:
     /** @brief Merge overlapping/touching selected notes on the same pitch into one. */
     void glueSelectedNotes();
 
+    /** @brief Add slight random velocity variation to the selected notes. */
+    void humanizeSelectedVelocities();
+
     /** @brief Set the platform bridge for cursor style changes. */
     void setPlatformBridge(NUIPlatformBridge* bridge);
 
@@ -462,6 +465,9 @@ private:
         CopyDragging    // Alt+drag copy of selection
     };
     State state_ = State::None;
+    // Alt held during a move/resize/paint drag: snapToGrid passes through
+    // untouched for fine positioning. Recomputed on every mouse event.
+    bool fineDrag_ = false;
 
     // Smart Cursor hover state
     int hoveredNoteIndex_ = -1;
@@ -492,6 +498,23 @@ private:
     // Note whose velocity was last nudged by Alt+wheel — shows a value bubble
     // while the cursor stays on it, cleared when the hover moves away.
     int velocityBubbleIndex_ = -1;
+
+    // Note Properties popup (double-click a note). While open it captures
+    // pointer + keys; rows drag (or wheel) to adjust, Reset restores the
+    // opening values, Accept/outside-click commits one undo step, Escape cancels.
+    int propNoteIndex_ = -1;        // notes_ index being edited; -1 = closed
+    NUIRect propPanelRect_;         // fixed at open, screen coords
+    std::vector<MidiNote> propUndoSnapshot_; // full notes_ at open (undo baseline)
+    MidiNote propOriginalNote_{};   // target note at open (Reset target)
+    MidiNote propDragStartNote_{};  // target note at row-drag start
+    int propDragField_ = -1;        // row being dragged; -1 = none
+    NUIPoint propDragStartPos_;
+
+    void openNoteProperties(int noteIndex);
+    void closeNoteProperties(bool accept);
+    bool handleNotePropertiesMouse(const NUIMouseEvent& event);
+    void renderNoteProperties(NUIRenderer& renderer);
+    void applyNotePropertyDelta(int field, float dy, bool coarseStep);
     
     // For Select Box
     NUIRect selectionRect_;
@@ -536,29 +559,33 @@ private:
 // -----------------------------------------------------------------------------
 class PianoRollControlPanel : public NUIComponent {
 public:
+    /** @brief Which per-note property the lane draws and edits. */
+    enum class LaneMode : uint8_t { Velocity, Pan };
+
     PianoRollControlPanel();
-    
+
     void onRender(NUIRenderer& renderer) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
-    
+
     void setNoteLayer(std::shared_ptr<PianoRollNoteLayer> layer);
     void setGrid(std::shared_ptr<PianoRollGrid> grid); // Added logic to link Grid
-    
+
     void setPixelsPerBeat(float ppb);
     void setScrollX(float scrollX);
 
 private:
     std::weak_ptr<PianoRollNoteLayer> noteLayer_;
     std::weak_ptr<PianoRollGrid> grid_; // Grid link
-    
+
     float pixelsPerBeat_;
     float scrollX_;
-    
+    LaneMode laneMode_ = LaneMode::Velocity; // Toggled by clicking the lane's sidebar
+
     // Interaction
     int hoveringNoteIndex_ = -1;
     bool isDragging_ = false;
     NUIPoint dragStartPos_;
-    std::vector<MidiNote> dragUndoSnapshot_; // notes at velocity-drag start, for one undo step
+    std::vector<MidiNote> dragUndoSnapshot_; // notes at lane-drag start, for one undo step
 };
 
 // -----------------------------------------------------------------------------

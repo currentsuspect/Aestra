@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip> // For string formatting
+#include <random>  // Humanize velocity jitter
 
 namespace AestraUI {
 
@@ -691,6 +692,11 @@ void PianoRollToolbar::setupUI() {
         }
         menu->addSubmenu("Strum Selection", strumMenu);
 
+        // --- HUMANIZE ---
+        menu->addItem("Humanize Velocity", [this]() {
+            if (auto n = notes_.lock()) n->humanizeSelectedVelocities();
+        });
+
         // --- SHORTCUT CHEAT SHEET ---
         menu->addItem("Keyboard Shortcuts", [this]() {
             if (onShowShortcutHelp_) onShowShortcutHelp_();
@@ -1073,6 +1079,7 @@ PianoRollNoteLayer::PianoRollNoteLayer()
 }
 
 double PianoRollNoteLayer::snapToGrid(double beat) {
+    if (fineDrag_) return beat; // Alt held mid-drag: free positioning
     if (snap_ == SnapGrid::None) return beat;
     double grid = MusicTheory::getSnapDuration(snap_);
     if (grid <= 0.00001) return beat;
@@ -1309,6 +1316,280 @@ void PianoRollNoteLayer::strumSelectedNotes(double spreadBeats) {
     repaint();
 }
 
+void PianoRollNoteLayer::humanizeSelectedVelocities() {
+    // A gentle ±10 MIDI steps of jitter — enough to break the machine-gun
+    // feel of identical velocities without mangling drawn dynamics.
+    static std::mt19937 rng{std::random_device{}()};
+    std::uniform_real_distribution<float> jitter(-0.08f, 0.08f);
+
+    auto oldNotes = notes_;
+    bool changed = false;
+    for (auto& n : notes_) {
+        if (n.selected && !n.isDeleted) {
+            n.velocity = std::clamp(n.velocity + jitter(rng), 0.05f, 1.0f);
+            changed = true;
+        }
+    }
+    if (!changed) return;
+    pushUndo("Humanize", oldNotes, notes_);
+    commitNotes();
+    repaint();
+}
+
+// --- Note Properties popup -------------------------------------------------
+// Fixed layout shared by the renderer and the hit tests below.
+namespace {
+constexpr float kPropW = 208.0f;
+constexpr float kPropPad = 10.0f;
+constexpr float kPropTitleH = 24.0f;
+constexpr float kPropRowH = 22.0f;
+constexpr int kPropRowCount = 5; // Pitch, Velocity, Pan, Start, Length
+constexpr float kPropFooterH = 28.0f;
+constexpr float kPropH =
+    kPropPad + kPropTitleH + kPropRowCount * kPropRowH + 8.0f + kPropFooterH + kPropPad;
+} // namespace
+
+void PianoRollNoteLayer::openNoteProperties(int noteIndex) {
+    if (noteIndex < 0 || noteIndex >= static_cast<int>(notes_.size()) ||
+        notes_[noteIndex].isDeleted) {
+        return;
+    }
+    propNoteIndex_ = noteIndex;
+    propUndoSnapshot_ = notes_;
+    propOriginalNote_ = notes_[noteIndex];
+    propDragField_ = -1;
+
+    // Sit beside the note, flipped/clamped to stay inside the layer.
+    const auto b = getBounds();
+    const auto& n = notes_[noteIndex];
+    const float nx = b.x + static_cast<float>(n.startBeat * pixelsPerBeat_) - scrollX_;
+    const float ny = b.y + (127 - n.pitch) * keyHeight_ - scrollY_;
+    float px = nx + 26.0f;
+    float py = ny - kPropH - 8.0f;
+    if (py < b.y + 4.0f) py = ny + keyHeight_ + 8.0f;
+    px = std::clamp(px, b.x + 4.0f, std::max(b.x + 4.0f, b.right() - kPropW - 4.0f));
+    py = std::clamp(py, b.y + 4.0f, std::max(b.y + 4.0f, b.bottom() - kPropH - 4.0f));
+    propPanelRect_ = NUIRect(px, py, kPropW, kPropH);
+    repaint();
+}
+
+void PianoRollNoteLayer::closeNoteProperties(bool accept) {
+    if (propNoteIndex_ < 0) return;
+    if (!accept) {
+        notes_ = propUndoSnapshot_;
+    } else if (propNoteIndex_ < static_cast<int>(notes_.size())) {
+        const auto& n = notes_[propNoteIndex_];
+        const auto& o = propOriginalNote_;
+        const bool changed = n.pitch != o.pitch ||
+                             std::abs(n.startBeat - o.startBeat) > 1e-9 ||
+                             std::abs(n.durationBeats - o.durationBeats) > 1e-9 ||
+                             std::abs(n.velocity - o.velocity) > 1e-6f ||
+                             std::abs(n.pan - o.pan) > 1e-6f;
+        if (changed) {
+            pushUndo("Note Properties", propUndoSnapshot_, notes_);
+        }
+    }
+    propNoteIndex_ = -1;
+    propDragField_ = -1;
+    propUndoSnapshot_.clear();
+    commitNotes();
+    repaint();
+}
+
+void PianoRollNoteLayer::applyNotePropertyDelta(int field, float dy, bool coarseStep) {
+    if (propNoteIndex_ < 0 || propNoteIndex_ >= static_cast<int>(notes_.size())) return;
+    auto& n = notes_[propNoteIndex_];
+    const MidiNote& s = propDragStartNote_;
+
+    double timeStep = MusicTheory::getSnapDuration(snap_);
+    if (timeStep <= 0.0) timeStep = 0.25; // SnapGrid::None still steps musically
+    if (!coarseStep) timeStep = 0.01;     // Alt: fine time adjustment
+
+    switch (field) {
+        case 0: { // Pitch — one semitone per few pixels, auditioned as it moves
+            const int np = std::clamp(s.pitch + static_cast<int>(std::lround(dy / 6.0f)), 0, 127);
+            if (np != n.pitch) {
+                n.pitch = np;
+                auditionPitch(np);
+            }
+            break;
+        }
+        case 1: // Velocity
+            n.velocity = std::clamp(s.velocity + dy / 160.0f, 0.0f, 1.0f);
+            break;
+        case 2: // Pan
+            n.pan = std::clamp(s.pan + dy / 90.0f, -1.0f, 1.0f);
+            break;
+        case 3: { // Start time
+            const double steps = std::trunc(dy / 8.0f);
+            n.startBeat = std::max(0.0, s.startBeat + steps * timeStep);
+            break;
+        }
+        case 4: { // Length
+            const double steps = std::trunc(dy / 8.0f);
+            n.durationBeats = std::max(0.125, s.durationBeats + steps * timeStep);
+            break;
+        }
+        default:
+            break;
+    }
+    repaint();
+}
+
+bool PianoRollNoteLayer::handleNotePropertiesMouse(const NUIMouseEvent& event) {
+    if (propNoteIndex_ < 0) return false;
+    if (propNoteIndex_ >= static_cast<int>(notes_.size())) {
+        propNoteIndex_ = -1;
+        return false;
+    }
+
+    const NUIRect& r = propPanelRect_;
+    const float rowsTop = r.y + kPropPad + kPropTitleH;
+    const auto fieldAt = [&](const NUIPoint& p) -> int {
+        if (p.x < r.x + 4.0f || p.x > r.right() - 4.0f) return -1;
+        const int row = static_cast<int>(std::floor((p.y - rowsTop) / kPropRowH));
+        return (row >= 0 && row < kPropRowCount) ? row : -1;
+    };
+
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        if (!r.contains(event.position)) {
+            closeNoteProperties(true); // click-away accepts, like Accept
+            return true;
+        }
+        const float btnY = r.bottom() - kPropPad - 22.0f;
+        const NUIRect resetRect(r.x + kPropPad, btnY, 88.0f, 22.0f);
+        const NUIRect acceptRect(r.right() - kPropPad - 88.0f, btnY, 88.0f, 22.0f);
+        if (resetRect.contains(event.position)) {
+            notes_[propNoteIndex_] = propOriginalNote_;
+            repaint();
+            return true;
+        }
+        if (acceptRect.contains(event.position)) {
+            closeNoteProperties(true);
+            return true;
+        }
+        const int field = fieldAt(event.position);
+        if (field != -1) {
+            propDragField_ = field;
+            propDragStartPos_ = event.position;
+            propDragStartNote_ = notes_[propNoteIndex_];
+        }
+        return true;
+    }
+
+    if (event.released) {
+        if (propDragField_ != -1) {
+            propDragField_ = -1;
+            commitNotes();
+        }
+        return true;
+    }
+
+    if (propDragField_ != -1) {
+        // Row drag: up increases. Alt refines the time fields.
+        const float dy = propDragStartPos_.y - event.position.y;
+        applyNotePropertyDelta(propDragField_, dy, !(event.modifiers & NUIModifiers::Alt));
+        return true;
+    }
+
+    if (event.wheelDelta != 0.0f) {
+        const int field = fieldAt(event.position);
+        if (field != -1) {
+            // One step per notch, expressed as the drag distance of one step.
+            static constexpr float kStepPixels[kPropRowCount] = {6.0f, 4.0f, 4.0f, 8.0f, 8.0f};
+            propDragStartNote_ = notes_[propNoteIndex_];
+            applyNotePropertyDelta(field,
+                                   (event.wheelDelta > 0.0f ? 1.0f : -1.0f) * kStepPixels[field],
+                                   !(event.modifiers & NUIModifiers::Alt));
+            commitNotes();
+        }
+        return true;
+    }
+
+    return true; // modal: swallow hover/motion so nothing edits underneath
+}
+
+void PianoRollNoteLayer::renderNoteProperties(NUIRenderer& renderer) {
+    if (propNoteIndex_ < 0 || propNoteIndex_ >= static_cast<int>(notes_.size())) return;
+    const auto& n = notes_[propNoteIndex_];
+    auto& theme = NUIThemeManager::getInstance();
+    const NUIRect& r = propPanelRect_;
+
+    renderer.drawShadow(r, 0.0f, 5.0f, 18.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.5f));
+    renderer.fillRoundedRect(r, 8.0f, theme.getColor("backgroundSecondary").withAlpha(0.98f));
+    renderer.strokeRoundedRect(r, 8.0f, 1.0f, theme.getColor("border").withAlpha(0.85f));
+
+    const auto accent = theme.getColor("accentPrimary");
+    const auto labelColor = theme.getColor("textSecondary").withAlpha(0.85f);
+    const auto valueColor = theme.getColor("textPrimary").withAlpha(0.96f);
+
+    const std::string title = "Note Properties - " + MusicTheory::getPitchName(n.pitch);
+    renderer.drawText(title, NUIPoint(r.x + kPropPad + 2.0f, r.y + kPropPad + 2.0f), 10.5f,
+                      accent.withAlpha(0.95f));
+
+    // Row values
+    const int velMidi = static_cast<int>(std::lround(std::clamp(n.velocity, 0.0f, 1.0f) * 127.0f));
+    const int panPct = static_cast<int>(std::lround(std::abs(n.pan) * 100.0f));
+    const std::string panText =
+        panPct == 0 ? "C" : ((n.pan < 0.0f ? "L " : "R ") + std::to_string(panPct));
+    char startBuf[32];
+    {
+        const int bpb = std::max(1, beatsPerBar_);
+        const int bar = static_cast<int>(n.startBeat / bpb) + 1;
+        const double rem = n.startBeat - static_cast<double>((bar - 1) * bpb);
+        const int beat = static_cast<int>(rem) + 1;
+        const int pct = static_cast<int>(std::lround((rem - (beat - 1)) * 100.0));
+        std::snprintf(startBuf, sizeof(startBuf), "%d:%d +%02d", bar, beat, pct);
+    }
+    char lenBuf[24];
+    std::snprintf(lenBuf, sizeof(lenBuf), "%.2f beats", n.durationBeats);
+
+    struct Row {
+        const char* label;
+        std::string value;
+    };
+    const Row rows[kPropRowCount] = {
+        {"Pitch", MusicTheory::getPitchName(n.pitch)},
+        {"Velocity", std::to_string(velMidi)},
+        {"Pan", panText},
+        {"Start", startBuf},
+        {"Length", lenBuf},
+    };
+
+    const float rowsTop = r.y + kPropPad + kPropTitleH;
+    for (int i = 0; i < kPropRowCount; ++i) {
+        const NUIRect rowRect(r.x + 4.0f, rowsTop + i * kPropRowH, r.width - 8.0f, kPropRowH);
+        if (i == propDragField_) {
+            renderer.fillRoundedRect(rowRect, 4.0f, accent.withAlpha(0.16f));
+        }
+        const float textY = rowRect.y + 5.0f;
+        renderer.drawText(rows[i].label, NUIPoint(r.x + kPropPad + 2.0f, textY), 10.0f, labelColor);
+        const auto valDim = renderer.measureText(rows[i].value, 10.0f);
+        renderer.drawText(rows[i].value,
+                          NUIPoint(r.right() - kPropPad - 2.0f - valDim.width, textY), 10.0f,
+                          i == propDragField_ ? accent.withAlpha(0.98f) : valueColor);
+    }
+
+    // Footer buttons
+    const float btnY = r.bottom() - kPropPad - 22.0f;
+    const NUIRect resetRect(r.x + kPropPad, btnY, 88.0f, 22.0f);
+    const NUIRect acceptRect(r.right() - kPropPad - 88.0f, btnY, 88.0f, 22.0f);
+    renderer.fillRoundedRect(resetRect, 5.0f, theme.getColor("surfaceRaised").withAlpha(0.9f));
+    renderer.strokeRoundedRect(resetRect, 5.0f, 1.0f, theme.getColor("border").withAlpha(0.7f));
+    renderer.fillRoundedRect(acceptRect, 5.0f, accent.withAlpha(0.28f));
+    renderer.strokeRoundedRect(acceptRect, 5.0f, 1.0f, accent.withAlpha(0.8f));
+    const auto resetDim = renderer.measureText("Reset", 10.0f);
+    renderer.drawText("Reset",
+                      NUIPoint(resetRect.x + (resetRect.width - resetDim.width) * 0.5f,
+                               resetRect.y + 5.0f),
+                      10.0f, labelColor);
+    const auto acceptDim = renderer.measureText("Accept", 10.0f);
+    renderer.drawText("Accept",
+                      NUIPoint(acceptRect.x + (acceptRect.width - acceptDim.width) * 0.5f,
+                               acceptRect.y + 5.0f),
+                      10.0f, valueColor);
+}
+
 void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
     auto b = getBounds();
@@ -1527,6 +1808,8 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
         renderer.strokeRoundedRect(selectionRect_, 2.0f, 1.0f, NUIColor(0.545f, 0.498f, 1.0f, 0.55f));
     }
 
+    renderNoteProperties(renderer);
+
     renderer.clearClipRect();
 
     // Cleanup Deleted Notes
@@ -1576,6 +1859,20 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     auto b = getBounds();
     float localX = event.position.x - b.x + scrollX_;
     float localY = event.position.y - b.y + scrollY_;
+
+    // Holding Alt mid-drag bypasses the grid for fine placement. Clone drags
+    // (CopyDragging) are excluded — Alt is what starts them, so it can't
+    // double as the fine toggle there. Recomputed every event so it can never
+    // go stale between gestures.
+    fineDrag_ = (event.modifiers & NUIModifiers::Alt) &&
+                (state_ == State::Painting || state_ == State::Moving ||
+                 state_ == State::Resizing || state_ == State::ResizingLeft);
+
+    // The Note Properties popup is modal within the layer while open.
+    if (propNoteIndex_ >= 0) {
+        return handleNotePropertiesMouse(event);
+    }
+
     const int cursorPitch = std::clamp(127 - static_cast<int>(localY / keyHeight_), 0, 127);
     if (hoveredPitch_ != cursorPitch) {
         hoveredPitch_ = cursorPitch;
@@ -1630,11 +1927,13 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    // --- ALT + WHEEL OVER A NOTE = VELOCITY ---
-    // Plain / Shift / Ctrl wheel stay bound to scroll+zoom; Alt shapes the
-    // velocity of the note under the cursor (and the whole selection if that
-    // note is part of it), so dynamics can be dialled in without leaving the grid.
-    if (event.wheelDelta != 0.0f && (event.modifiers & NUIModifiers::Alt) && hoveredNoteIndex_ >= 0 &&
+    // --- WHEEL OVER A NOTE = VELOCITY ---
+    // Scrolling over a note shapes its velocity (and the whole selection if
+    // that note is part of it) — no modifier needed, though Alt still works.
+    // Ctrl (zoom) and Shift (h-scroll) keep their bindings, and over empty
+    // space the wheel scrolls the grid as usual.
+    if (event.wheelDelta != 0.0f && !(event.modifiers & NUIModifiers::Ctrl) &&
+        !(event.modifiers & NUIModifiers::Shift) && hoveredNoteIndex_ >= 0 &&
         hoveredNoteIndex_ < static_cast<int>(notes_.size()) && !notes_[hoveredNoteIndex_].isDeleted) {
         auto oldNotes = notes_;
         const float delta = event.wheelDelta * 0.04f; // ~5 MIDI steps per notch
@@ -1692,16 +1991,13 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         setFocused(true); // Gain keyboard focus for shortcuts
         int clickedIndex = findNoteAt(localX, localY);
         
-        // DOUBLE CLICK: Add / Delete
+        // DOUBLE CLICK: note → precision properties popup; empty space → add.
+        // (Deletion stays on right-click / eraser / Delete.)
         if (event.doubleClick) {
-            auto oldNotes = notes_;
             if (clickedIndex != -1) {
-                 // Delete existing note
-                 notes_.erase(notes_.begin() + clickedIndex);
-                 pushUndo("Delete Note", oldNotes, notes_);
-                 commitNotes();
-                 repaint();
+                 openNoteProperties(clickedIndex);
             } else {
+                 auto oldNotes = notes_;
                  // Create New Note
                  double beat = std::max(0.0, static_cast<double>(localX / pixelsPerBeat_));
                  beat = snapToGrid(beat);
@@ -1807,7 +2103,15 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
                 note.animationScale = 1.0f;
                 notes_.push_back(note);
             }
-            auditionPitch(rootPitch);
+            // Sound the whole triad — the engine keeps a small pool of
+            // audition voices, one command per pitch.
+            if (!(isPlayingCallback_ && isPlayingCallback_()) && onPreviewNote_) {
+                const int velocity = static_cast<int>(std::lround(lastNoteVelocity_ * 127.0f));
+                for (int p : buildTriad(rootPitch)) {
+                    onPreviewNote_(p, velocity);
+                }
+                auditionPitch_ = rootPitch;
+            }
             pushUndo("Add Chord", oldNotes, notes_);
             commitNotes();
             repaint();
@@ -2162,7 +2466,21 @@ static std::vector<MidiNote> s_noteClipboard;
 
 bool PianoRollNoteLayer::onKeyEvent(const NUIKeyEvent& event) {
     bool ctrl = (event.modifiers & NUIModifiers::Ctrl);
-    
+
+    // Note Properties popup is modal: Enter accepts, Escape cancels, and
+    // everything else is swallowed so shortcuts can't edit the note beneath.
+    if (propNoteIndex_ >= 0 && event.pressed) {
+        if (event.keyCode == NUIKeyCode::Escape) {
+            closeNoteProperties(false);
+            return true;
+        }
+        if (event.keyCode == NUIKeyCode::Enter) {
+            closeNoteProperties(true);
+            return true;
+        }
+        return true;
+    }
+
     if (event.pressed) {
         // Undo / Redo
         if (ctrl && event.keyCode == NUIKeyCode::Z) {
@@ -2605,12 +2923,17 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
     auto layer = noteLayer_.lock();
     if (layer) {
         auto b = getBounds();
-        // Ignore sidebar clicks for velocity (except dragging started inside)
-        // If not dragging and in sidebar, let base handle it (or return true if we want to block)
+        // Sidebar: clicking it flips the lane between velocity and pan.
         if (!isDragging_ && event.position.x < b.x + sidebarW) {
+             if (event.pressed && event.button == NUIMouseButton::Left) {
+                 laneMode_ = (laneMode_ == LaneMode::Velocity) ? LaneMode::Pan : LaneMode::Velocity;
+                 repaint();
+                 return true;
+             }
              return NUIComponent::onMouseEvent(event);
         }
 
+        const bool panMode = laneMode_ == LaneMode::Pan;
         float localX = event.position.x - b.x + scrollX_ - sidebarW;
 
         // Find the note whose velocity stem sits under a given lane-x, preferring
@@ -2636,19 +2959,31 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
         if (event.pressed && event.button == NUIMouseButton::Left) {
             int foundIdx = noteUnderX(localX);
 
+            // Map the cursor height to the lane's value: velocity is unipolar
+            // from the lane floor; pan is bipolar around the centre line
+            // (top = right, bottom = left).
+            const auto laneValueAtY = [&](float y) -> float {
+                const float availH = std::max(1.0f, b.height - 28.0f);
+                const float bottomY = b.bottom() - 8.0f;
+                if (panMode) {
+                    const float centerY = bottomY - availH * 0.5f;
+                    return std::clamp((centerY - y) / std::max(1.0f, availH * 0.5f), -1.0f, 1.0f);
+                }
+                return velocityFromPanelPosition(y, bottomY, availH);
+            };
+
             if (foundIdx != -1) {
                 isDragging_ = true;
                 hoveringNoteIndex_ = foundIdx;
                 dragStartPos_ = event.position;
                 dragUndoSnapshot_ = layer->getNotes(); // baseline for one undo step
 
-                // Set velocity immediately based on click Y (Global)
-                const float availH = std::max(1.0f, b.height - 28.0f);
-                const float bottomY = b.bottom() - 8.0f;
-                const float newVelocity = velocityFromPanelPosition(event.position.y, bottomY, availH);
+                // Set the value immediately based on click Y (Global)
+                const float newValue = laneValueAtY(event.position.y);
 
                 auto modNotes = layer->getNotes();
-                modNotes[foundIdx].velocity = newVelocity;
+                if (panMode) modNotes[foundIdx].pan = newValue;
+                else modNotes[foundIdx].velocity = newValue;
 
                 // Single Edit Only (Batch removed)
 
@@ -2662,28 +2997,36 @@ bool PianoRollControlPanel::onMouseEvent(const NUIMouseEvent& event) {
             if (event.released) {
                  isDragging_ = false;
                  hoveringNoteIndex_ = -1;
-                 // Fold the whole velocity drag into a single undo step.
+                 // Fold the whole lane drag into a single undo step.
                  if (!dragUndoSnapshot_.empty()) {
-                     layer->pushExternalEdit(dragUndoSnapshot_, "Velocity");
+                     layer->pushExternalEdit(dragUndoSnapshot_, panMode ? "Pan" : "Velocity");
                      dragUndoSnapshot_.clear();
                  }
                  return true;
             }
 
             // Sweep-paint: as the cursor moves across the lane, the note under it
-            // takes the cursor's height, so dragging draws a velocity ramp/curve.
+            // takes the cursor's height, so dragging draws a ramp/curve.
             // When between stems, keep painting the last note so quick sweeps
             // don't drop out.
             const float availH = std::max(1.0f, b.height - 28.0f);
             const float bottomY = b.bottom() - 8.0f;
-            const float newVelocity = velocityFromPanelPosition(event.position.y, bottomY, availH);
+            float newValue;
+            if (panMode) {
+                const float centerY = bottomY - availH * 0.5f;
+                newValue = std::clamp((centerY - event.position.y) / std::max(1.0f, availH * 0.5f),
+                                      -1.0f, 1.0f);
+            } else {
+                newValue = velocityFromPanelPosition(event.position.y, bottomY, availH);
+            }
 
             const int swept = noteUnderX(localX);
             if (swept != -1) hoveringNoteIndex_ = swept;
 
             auto modNotes = layer->getNotes();
             if (hoveringNoteIndex_ >= 0 && static_cast<size_t>(hoveringNoteIndex_) < modNotes.size()) {
-                 modNotes[hoveringNoteIndex_].velocity = newVelocity;
+                 if (panMode) modNotes[hoveringNoteIndex_].pan = newValue;
+                 else modNotes[hoveringNoteIndex_].velocity = newValue;
                  layer->setNotes(modNotes);
                  repaint();
             }
@@ -2713,15 +3056,26 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
                       1.0f,
                       border);
 
+    // Stacked mode tabs — the active lane reads accent, the other dim; a click
+    // anywhere on the sidebar swaps them (handled in onMouseEvent).
+    const bool panMode = laneMode_ == LaneMode::Pan;
     const float labelSize = themeManager.getFontSize("xs");
-    const auto textDim = renderer.measureText("VELOCITY", labelSize);
+    const auto activeColor = themeManager.getColor("accentPrimary").withAlpha(0.95f);
+    const auto inactiveColor = themeManager.getColor("textSecondary").withAlpha(0.42f);
+    const auto velDim = renderer.measureText("VELOCITY", labelSize);
     renderer.drawText("VELOCITY",
-                      NUIPoint(b.x + (sidebarW - textDim.width) * 0.5f, b.y + 13.0f),
+                      NUIPoint(b.x + (sidebarW - velDim.width) * 0.5f, b.y + 13.0f),
                       labelSize,
-                      themeManager.getColor("textPrimary").withAlpha(0.78f));
-    const auto rangeDim = renderer.measureText("MIDI 0 - 127", 8.0f);
-    renderer.drawText("MIDI 0 - 127",
-                      NUIPoint(b.x + (sidebarW - rangeDim.width) * 0.5f, b.y + 31.0f),
+                      panMode ? inactiveColor : activeColor);
+    const auto panDim = renderer.measureText("PAN", labelSize);
+    renderer.drawText("PAN",
+                      NUIPoint(b.x + (sidebarW - panDim.width) * 0.5f, b.y + 31.0f),
+                      labelSize,
+                      panMode ? activeColor : inactiveColor);
+    const char* rangeText = panMode ? "L - C - R" : "MIDI 0 - 127";
+    const auto rangeDim = renderer.measureText(rangeText, 8.0f);
+    renderer.drawText(rangeText,
+                      NUIPoint(b.x + (sidebarW - rangeDim.width) * 0.5f, b.y + 49.0f),
                       8.0f,
                       themeManager.getColor("textSecondary").withAlpha(0.48f));
     
@@ -2760,28 +3114,45 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
                           themeManager.getColor("accentPrimary").withAlpha(0.58f));
     }
     
-    // 2. Render velocity stems using MidiNote's normalized 0..1 representation.
+    // 2. Render the lane stems: velocity rises from the floor; pan hangs off
+    //    the centre line (up = right, down = left).
     const auto& notes = layer->getNotes();
     auto velColorBase = themeManager.getColor("accentPrimary").lightened(0.05f);
+    const float centerY = bottomY - availH * 0.5f;
 
     for (size_t noteIndex = 0; noteIndex < notes.size(); ++noteIndex) {
         const auto& n = notes[noteIndex];
         if (n.isDeleted && n.animationScale < 0.01f) continue;
-        
+
         float x = startX + static_cast<float>(n.startBeat * pixelsPerBeat_) - scrollX_;
-        
+
         // Skip if out of view
         if (x > b.x + b.width) continue;
-        
-        const float normalizedVelocity = std::clamp(n.velocity, 0.0f, 1.0f);
-        float h = velocityToPanelHeight(normalizedVelocity, availH);
-        float y = bottomY - h;
 
-        float alpha = 0.48f + normalizedVelocity * 0.48f;
+        const float normalizedVelocity = std::clamp(n.velocity, 0.0f, 1.0f);
+        float y;
+        float stemTop;
+        float stemH;
+        float intensity; // drives the stem alpha
+        if (panMode) {
+            const float pv = std::clamp(n.pan, -1.0f, 1.0f);
+            y = centerY - pv * availH * 0.5f;
+            stemTop = std::min(y, centerY);
+            stemH = std::max(2.0f, std::abs(y - centerY));
+            intensity = std::abs(pv);
+        } else {
+            const float h = velocityToPanelHeight(normalizedVelocity, availH);
+            y = bottomY - h;
+            stemTop = y;
+            stemH = std::max(2.0f, h);
+            intensity = normalizedVelocity;
+        }
+
+        float alpha = 0.48f + intensity * 0.48f;
         auto col = velColorBase.withAlpha(alpha);
         if (n.selected) col = themeManager.getColor("accentSecondary").withAlpha(0.92f);
 
-        renderer.fillRoundedRect(NUIRect(x - 2.0f, y, 4.0f, std::max(2.0f, h)), 2.0f, col.withAlpha(alpha * 0.78f));
+        renderer.fillRoundedRect(NUIRect(x - 2.0f, stemTop, 4.0f, stemH), 2.0f, col.withAlpha(alpha * 0.78f));
 
         const float handleSize = n.selected ? 7.0f : 6.0f;
         NUIRect handleRect(x - handleSize * 0.5f, y - handleSize * 0.5f, handleSize, handleSize);
@@ -2797,7 +3168,14 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
         }
 
         if (isDragging_ && static_cast<int>(noteIndex) == hoveringNoteIndex_) {
-            const std::string value = std::to_string(static_cast<int>(std::lround(normalizedVelocity * 127.0f)));
+            std::string value;
+            if (panMode) {
+                const int panSteps = static_cast<int>(std::lround(std::abs(n.pan) * 100.0f));
+                if (panSteps == 0) value = "C";
+                else value = (n.pan < 0.0f ? "L " : "R ") + std::to_string(panSteps);
+            } else {
+                value = std::to_string(static_cast<int>(std::lround(normalizedVelocity * 127.0f)));
+            }
             const float fontSize = 9.0f;
             const auto textSize = renderer.measureText(value, fontSize);
             const float bubbleWidth = textSize.width + 10.0f;
@@ -3041,10 +3419,11 @@ void PianoRollView::renderShortcutHelp(NUIRenderer& renderer) {
         {"Shift+Drag", "paint a run of notes"},
         {"Ctrl+Drag", "marquee select (any tool)"},
         {"Alt+Drag", "clone the selection"},
-        {"Alt+Wheel", "adjust velocity under cursor"},
+        {"Alt mid-drag", "bypass snap for fine moves"},
+        {"Wheel on note", "adjust velocity"},
         {"Right-Click", "erase"},
-        {"Double-Click", "add or remove a note"},
-        {"Velocity Lane", "sweep across to shape levels"},
+        {"Double-Click", "add note / note properties"},
+        {"Lane sidebar", "switch velocity / pan lane"},
     };
     static constexpr Entry kKeys[] = {
         {"Q", "quantize note starts"},
