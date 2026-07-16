@@ -16,6 +16,10 @@ namespace Plugins {
 class RumbleInstance : public Aestra::Audio::IPluginInstance {
 public:
     RumbleInstance();
+#if defined(AESTRA_ENABLE_TEST_LICENSES) && AESTRA_ENABLE_TEST_LICENSES
+    enum class TestLicense { GrantRumble };
+    explicit RumbleInstance(TestLicense);
+#endif
     ~RumbleInstance() override = default;
 
     bool initialize(double sampleRate, uint32_t maxBlockSize) override;
@@ -41,7 +45,7 @@ public:
     bool openEditor(void* parentWindow) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return {460, 320}; }
+    std::pair<int, int> getEditorSize() const override { return {720, 480}; }
     bool resizeEditor(int width, int height) override { return false; }
 
     const Aestra::Audio::PluginInfo& getInfo() const override;
@@ -54,6 +58,8 @@ public:
     bool isCrashed() const override { return false; }
 
 private:
+    void initializeDefaultParameters();
+
     enum ParamID : uint32_t {
         kParamAmpDecay = 0,
         kParamDrive,
@@ -78,6 +84,8 @@ private:
         kParamVelocityToAmp,
         kParamTune,
         kParamFine,
+        kParamHarmonics,
+        kParamSubClean,
         kParamCount,
     };
 
@@ -107,10 +115,13 @@ private:
         bool noteIsHeld = false;
         double phase = 0.0;
         double phaseIncrement = 0.0;
+        double resonatorMagnitude = 0.0;
         double amplitudeEnvelope = 0.0;
         double decayCoeff = 0.0;
         double pitchDecayProgress = 1.0;
         double pitchDecayIncrement = 0.0;
+        double attackPitchEnvelope = 0.0;
+        double attackPitchCoeff = 0.0;
         double transientEnvelope = 0.0;
         double transientCoeff = 0.0;
         double clickEnvelope = 0.0;
@@ -120,21 +131,53 @@ private:
         double attackIncrement = 0.0;
         float filterIc1Eq = 0.0f;
         float filterIc2Eq = 0.0f;
+        float filterCachedCutoffHz = -1.0f;
+        float filterCachedQ = -1.0f;
+        float filterCachedG = 0.0f;
+        float filterCachedDamping = 1.0f;
         float clickFilterState = 0.0f;
+        float clickSlowFilterState = 0.0f;
         float dcInputPrev = 0.0f;
         float dcOutputPrev = 0.0f;
         uint32_t clickNoiseState = 0;
     };
 
+    struct DspParameters {
+        float driveAmount = 0.0f;
+        float driveMix = 0.0f;
+        float toneHz = 1000.0f;
+        float outputGain = 1.0f;
+        float pitchAmountSemitones = 0.0f;
+        float pitchCurveExponent = 1.0f;
+        float resonanceQ = 0.5f;
+        float transientAmount = 0.0f;
+        float clickLevel = 0.0f;
+        float clickToneHz = 1000.0f;
+        float clickFilterAlpha = 0.0f;
+        float glideTimeSeconds = 0.01f;
+        float filterEnvAmount = 0.0f;
+        float filterKeytrack = 0.0f;
+        float harmonics = 0.0f;
+        float subClean = 1.0f;
+        float decayCoeff = 0.0f;
+        float clickCoeff = 0.0f;
+        float satMode = 0.0f;
+    };
+
     void handleMidiEvent(const Aestra::Audio::MidiBuffer::Event& event);
     void beginNote(uint8_t note, uint8_t velocity, bool resetEnvelopes);
     void handleNoteOff(uint8_t note);
+    void rememberHeldNote(uint8_t note);
+    void forgetHeldNote(uint8_t note);
     void resetVoiceProcessingState();
-    void updateSmoothedParameters();
+    void refreshParameterTargets();
+    bool updateSmoothedParameters();
+    DspParameters mapDspParameters() const;
+    static bool isSmoothedParameter(uint32_t id);
     static const char* getParameterKey(uint32_t id);
     static float midiNoteToFrequency(uint8_t note);
     static float clamp01(float value);
-    static uint32_t seedClickNoise(uint8_t note, uint64_t timestampMs);
+    static uint32_t seedClickNoise(uint8_t note, uint64_t samplePosition, uint32_t triggerIndex);
     static float nextClickNoiseSample(uint32_t& state);
     float mapAmpDecaySeconds(float normalized) const;
     float mapDriveAmount(float normalized) const;
@@ -161,6 +204,7 @@ private:
     float processFilter(float input, float cutoffHz, float resonanceQ);
     float processDcBlocker(float input);
     float processOversampledTanh(float input, float drive, OversampledTanhStage& stage);
+    static float processSafetyKnee(float input);
 
     std::atomic<bool> m_active{false};
     double m_sampleRate = 44100.0;
@@ -168,20 +212,22 @@ private:
 
     std::array<std::atomic<float>, kParamCount> m_params;
     std::array<float, kParamCount> m_smoothedParams{};
+    std::array<float, kParamCount> m_parameterTargets{};
     Voice m_voice;
     bool m_licensed = true;
     OversampledTanhStage m_driveStageSoft;
     OversampledTanhStage m_driveStageHard;
-    OversampledTanhStage m_outputLimiterStage;
     float m_parameterSmoothingCoeff = 0.0f;
     float m_oversampleAntiAliasAlpha = 0.0f;
     float m_dcBlockerR = 0.0f;
     float m_smoothedSatMode = 0.0f;
-    uint64_t m_sessionSeedMs = 0;
+    bool m_parameterSmoothingActive = false;
     uint64_t m_processedSamples = 0;
+    uint32_t m_triggerIndex = 0;
     std::array<bool, 128> m_heldNotes{};
     std::array<uint8_t, 128> m_heldVelocities{};
-    std::vector<uint8_t> m_heldNoteOrder;
+    std::array<uint8_t, 128> m_heldNoteOrder{};
+    uint8_t m_heldNoteCount = 0;
 };
 
 } // namespace Plugins

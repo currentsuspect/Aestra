@@ -19,7 +19,7 @@ PluginInfo makeRumbleInfo() {
     info.id = "com.Aestrastudios.rumble";
     info.name = "Aestra Rumble";
     info.vendor = "Aestra Studios";
-    info.version = "0.1.0";
+    info.version = "0.2.0";
     info.category = "Instrument";
     info.format = PluginFormat::Internal;
     info.type = PluginType::Instrument;

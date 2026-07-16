@@ -17,7 +17,7 @@ const Aestra::Audio::PluginInfo& rumblePluginInfo() {
         pluginInfo.id = "com.Aestrastudios.rumble";
         pluginInfo.name = "Aestra Rumble";
         pluginInfo.vendor = "Aestra Studios";
-        pluginInfo.version = "0.1.0";
+        pluginInfo.version = "0.2.0";
         pluginInfo.category = "Instrument";
         pluginInfo.format = Aestra::Audio::PluginFormat::Internal;
         pluginInfo.type = Aestra::Audio::PluginType::Instrument;
@@ -34,10 +34,19 @@ const Aestra::Audio::PluginInfo& rumblePluginInfo() {
 void registerRumblePlugin() {
     static std::once_flag once;
     std::call_once(once, [] {
+#if defined(AESTRA_ENABLE_TEST_LICENSES) && AESTRA_ENABLE_TEST_LICENSES
+        auto createInstance = [] { return std::make_shared<RumbleInstance>(RumbleInstance::TestLicense::GrantRumble); };
+        auto canAccess = [] { return true; };
+#else
+        auto createInstance = [] { return std::make_shared<RumbleInstance>(); };
+        auto canAccess = [] {
+            return Aestra::License::EntitlementStore().canAccess(Aestra::License::ProductFeature::Rumble);
+        };
+#endif
         Aestra::Audio::InternalPluginRegistry::instance().registerPlugin({
             rumblePluginInfo(),
-            [] { return std::make_shared<RumbleInstance>(); },
-            [] { return Aestra::License::EntitlementStore().canAccess(Aestra::License::ProductFeature::Rumble); },
+            createInstance,
+            canAccess,
         });
     });
 }

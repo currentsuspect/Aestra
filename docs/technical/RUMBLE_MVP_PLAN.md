@@ -1,5 +1,10 @@
 # Aestra Rumble — MVP Plan
 
+> Historical design record. This document describes the original MVP and is not the current Rumble specification.
+> Rumble 0.2 has a stateful resonator core, split attack/sigh pitch motion, deterministic click synthesis, parallel
+> drive with clean-sub preservation, 25 stable parameters, and an eight-control Impact-first editor. The MVP constraints and
+> four-parameter snapshots below are retained only to explain the original implementation path.
+
 Date: 2026-03-09
 Status: In progress — core MVP path compiling and headless render validation passing
 Owner: Resonance + Dylan
