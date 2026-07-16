@@ -286,14 +286,32 @@ void AudioEngine::applyPendingCommands() {
             break;
         }
         case AudioQueueCommandType::AuditionUnit: {
-            m_unitAuditionState.unitId = static_cast<UnitID>(cmd.trackIndex);
-            m_unitAuditionState.note = static_cast<uint8_t>(std::clamp(static_cast<int>(cmd.value1), 0, 127));
-            m_unitAuditionState.velocity =
+            // Claim a slot from the pool: a free one when possible, otherwise
+            // the one closest to its note-off. A chord stamp sends one command
+            // per pitch, so simultaneous triad tones each get their own slot.
+            UnitAuditionState* slot = nullptr;
+            for (auto& s : m_unitAuditionStates) {
+                if (!s.active) {
+                    slot = &s;
+                    break;
+                }
+            }
+            if (!slot) {
+                slot = &m_unitAuditionStates[0];
+                for (auto& s : m_unitAuditionStates) {
+                    if (s.noteOffSamplesRemaining < slot->noteOffSamplesRemaining) {
+                        slot = &s;
+                    }
+                }
+            }
+            slot->unitId = static_cast<UnitID>(cmd.trackIndex);
+            slot->note = static_cast<uint8_t>(std::clamp(static_cast<int>(cmd.value1), 0, 127));
+            slot->velocity =
                 static_cast<uint8_t>(std::clamp(static_cast<int>(cmd.value2 * 127.0f), 1, 127));
-            m_unitAuditionState.noteOffSamplesRemaining =
+            slot->noteOffSamplesRemaining =
                 std::max<uint32_t>(1, m_sampleRate.load(std::memory_order_relaxed) / 8);
-            m_unitAuditionState.noteOnPending = true;
-            m_unitAuditionState.active = true;
+            slot->noteOnPending = true;
+            slot->active = true;
             // Wake the master out of the post-stop Silent fast path so the
             // audition is actually rendered. After the transport stops the fade
             // settles to Silent, whose early-return drops everything before the
@@ -351,34 +369,40 @@ void AudioEngine::applyPendingCommands() {
 
 void AudioEngine::injectPendingUnitAudition(PatternPlaybackEngine::UnitMidiRoute* routes, size_t routeCount,
                                             uint32_t numFrames) noexcept {
-    if (!m_unitAuditionState.active || !routes || routeCount == 0 || numFrames == 0) {
+    if (!routes || routeCount == 0 || numFrames == 0) {
         return;
     }
 
-    MidiBuffer* target = nullptr;
-    for (size_t i = 0; i < routeCount; ++i) {
-        if (routes[i].unitId == m_unitAuditionState.unitId) {
-            target = routes[i].midiBuffer;
-            break;
+    for (auto& slot : m_unitAuditionStates) {
+        if (!slot.active) {
+            continue;
         }
-    }
 
-    if (!target) {
-        return;
-    }
+        MidiBuffer* target = nullptr;
+        for (size_t i = 0; i < routeCount; ++i) {
+            if (routes[i].unitId == slot.unitId) {
+                target = routes[i].midiBuffer;
+                break;
+            }
+        }
 
-    if (m_unitAuditionState.noteOnPending) {
-        target->addNoteOn(1, m_unitAuditionState.note, m_unitAuditionState.velocity, 0);
-        m_unitAuditionState.noteOnPending = false;
-    }
+        if (!target) {
+            continue;
+        }
 
-    if (m_unitAuditionState.noteOffSamplesRemaining <= numFrames) {
-        const uint32_t noteOffOffset = std::min(numFrames - 1, m_unitAuditionState.noteOffSamplesRemaining - 1);
-        target->addNoteOff(1, m_unitAuditionState.note, 0, noteOffOffset);
-        m_unitAuditionState.noteOffSamplesRemaining = 0;
-        m_unitAuditionState.active = false;
-    } else {
-        m_unitAuditionState.noteOffSamplesRemaining -= numFrames;
+        if (slot.noteOnPending) {
+            target->addNoteOn(1, slot.note, slot.velocity, 0);
+            slot.noteOnPending = false;
+        }
+
+        if (slot.noteOffSamplesRemaining <= numFrames) {
+            const uint32_t noteOffOffset = std::min(numFrames - 1, slot.noteOffSamplesRemaining - 1);
+            target->addNoteOff(1, slot.note, 0, noteOffOffset);
+            slot.noteOffSamplesRemaining = 0;
+            slot.active = false;
+        } else {
+            slot.noteOffSamplesRemaining -= numFrames;
+        }
     }
 }
 
