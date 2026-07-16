@@ -578,6 +578,8 @@ public:
 
     void setPixelsPerBeat(float ppb);
     void setScrollX(float scrollX);
+    /** @brief Set the bar signature so the lane grid matches the ruler/note grid. */
+    void setBeatsPerBar(int bpb) { beatsPerBar_ = std::max(1, bpb); repaint(); }
 
 private:
     std::weak_ptr<PianoRollNoteLayer> noteLayer_;
@@ -585,6 +587,7 @@ private:
 
     float pixelsPerBeat_;
     float scrollX_;
+    int beatsPerBar_ = 4;
     LaneMode laneMode_ = LaneMode::Velocity; // Toggled by clicking the lane's sidebar
 
     // Interaction

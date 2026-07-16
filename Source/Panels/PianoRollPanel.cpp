@@ -98,7 +98,10 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
             cmd.type = AudioQueueCommandType::AuditionUnit;
             cmd.trackIndex = static_cast<uint32_t>(m_editingUnitId);
             cmd.value1 = static_cast<float>(pitch);
-            cmd.value2 = static_cast<float>(velocity);
+            // The engine expects value2 normalized 0..1 (it scales by 127 and
+            // clamps to [1,127]); raw MIDI velocity here pinned every audition
+            // to full velocity.
+            cmd.value2 = static_cast<float>(velocity) / 127.0f;
             cmd.samplePos = 0;
             m_audioEngine->commandQueue().push(cmd);
         }

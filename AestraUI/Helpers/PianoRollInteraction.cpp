@@ -15,7 +15,9 @@ int findNoteAtLocal(const std::vector<MidiNote>& notes,
 
         float nx = static_cast<float>(n.startBeat * pixelsPerBeat);
         float ny = (127 - n.pitch) * keyHeight;
-        float nw = static_cast<float>(n.durationBeats * pixelsPerBeat);
+        // Zoomed far out a short note renders ~1px wide; keep a few pixels of
+        // click target so it stays selectable.
+        float nw = std::max(4.0f, static_cast<float>(n.durationBeats * pixelsPerBeat));
         float nh = keyHeight;
 
         if (localX >= nx && localX < nx + nw &&

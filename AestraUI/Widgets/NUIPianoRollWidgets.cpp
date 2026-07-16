@@ -170,6 +170,11 @@ bool PianoRollKeyLane::onMouseEvent(const NUIMouseEvent& event) {
             if (onHoveredKeyChanged_) onHoveredKeyChanged_(-1);
             repaint();
         }
+        // A press that started on a key can be released outside the lane —
+        // still end the preview so the next press re-fires cleanly.
+        if (event.released && event.button == NUIMouseButton::Left) {
+            previewPitch_ = -1;
+        }
         return false;
     }
 
@@ -195,12 +200,12 @@ bool PianoRollKeyLane::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
     else if (event.released && event.button == NUIMouseButton::Left && previewPitch_ != -1) {
-        if (onPreviewNote_) {
-            onPreviewNote_(previewPitch_, 0);
-        }
+        // The engine audition voice is one-shot (auto note-off, velocity
+        // clamped to >=1) — sending a velocity-0 "note-off" would retrigger a
+        // near-silent voice on top of it, so just clear the preview state.
         previewPitch_ = -1;
     }
-    
+
     return NUIComponent::onMouseEvent(event);
 }
 
@@ -1878,6 +1883,10 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     if (hoveredPitch_ != cursorPitch) {
         hoveredPitch_ = cursorPitch;
         if (onHoveredPitchChanged_) onHoveredPitchChanged_(cursorPitch);
+        // Vertical moves within the same snapped beat leave hoverBeat_
+        // unchanged, so without this the pencil's phantom note would linger
+        // on the previous pitch row.
+        repaint();
     }
 
     // --- HOVER / SMART CURSOR (no button activity) ---
@@ -3100,9 +3109,8 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     NUIRect contentRect(b.x + sidebarW, b.y, b.width - sidebarW, b.height);
     renderer.setClipRect(contentRect);
 
-    constexpr int beatsPerBar = 4;
     const float startX = contentRect.x;
-    renderTimelineGrid(renderer, contentRect, startX, contentRect.right(), scrollX_, pixelsPerBeat_, beatsPerBar);
+    renderTimelineGrid(renderer, contentRect, startX, contentRect.right(), scrollX_, pixelsPerBeat_, beatsPerBar_);
 
     const float availH = std::max(1.0f, b.height - 28.0f);
     const float bottomY = b.bottom() - 8.0f;
@@ -3831,6 +3839,7 @@ void PianoRollView::setBeatsPerBar(int bpb) {
     if (m_grid) m_grid->setBeatsPerBar(bpb);
     if (m_ruler) m_ruler->setBeatsPerBar(bpb);
     if (m_notes) m_notes->setBeatsPerBar(bpb);
+    if (m_controls) m_controls->setBeatsPerBar(bpb);
 }
 
 void PianoRollView::setTool(GlobalTool tool) {
