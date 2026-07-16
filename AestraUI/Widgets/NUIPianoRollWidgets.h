@@ -173,6 +173,8 @@ public:
     void setOnPatternChoiceSelected(std::function<void(int patternValue)> cb) {
         onPatternChoiceSelected_ = std::move(cb);
     }
+    /** @brief Set callback fired by the menu's "Keyboard Shortcuts" item. */
+    void setOnShowShortcutHelp(std::function<void()> cb) { onShowShortcutHelp_ = std::move(cb); }
     /** @brief Get the currently open context menu, if any. */
     std::shared_ptr<NUIComponent> getActiveContextMenu() const { return m_activeContextMenu; }
     /** @brief Close and remove the currently open context menu, if any. */
@@ -208,6 +210,7 @@ private:
     std::shared_ptr<NUIComponent> m_activeContextMenu;
     std::function<void(int barsDelta)> onAdjustPatternLength_;
     std::function<void(int patternValue)> onPatternChoiceSelected_;
+    std::function<void()> onShowShortcutHelp_;
     bool m_updatingPatternDropdown = false;
     SnapGrid m_currentSnap = SnapGrid::Beat;
 
@@ -636,6 +639,7 @@ private:
     double m_totalDurationBeats = 400.0;
     double m_patternLengthBeats = 8.0;
     bool m_showLocalMinimap = true;
+    bool m_showShortcutHelp = false;
 
     std::function<bool()> m_isPlayingCallback;
     std::function<void(double beat, bool active)> m_onPlayheadScrubbed;
@@ -648,6 +652,7 @@ private:
     void syncChildren();
     void layoutChildren();
     void updateScrollbars(); // Renamed to updateNavigation?
+    void renderShortcutHelp(NUIRenderer& renderer);
 };
 
 } // namespace AestraUI

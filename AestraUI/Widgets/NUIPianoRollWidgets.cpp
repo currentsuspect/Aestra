@@ -691,6 +691,11 @@ void PianoRollToolbar::setupUI() {
         }
         menu->addSubmenu("Strum Selection", strumMenu);
 
+        // --- SHORTCUT CHEAT SHEET ---
+        menu->addItem("Keyboard Shortcuts", [this]() {
+            if (onShowShortcutHelp_) onShowShortcutHelp_();
+        });
+
         auto b = m_menuBtn->getBounds();
         if (auto* parent = getParent()) {
             parent->addChild(m_activeContextMenu);
@@ -2846,6 +2851,10 @@ PianoRollView::PianoRollView()
     m_toolbar->setGrid(m_grid);
     m_toolbar->setNoteLayer(m_notes);
     m_toolbar->setPatternLengthBeats(m_patternLengthBeats);
+    m_toolbar->setOnShowShortcutHelp([this]() {
+        m_showShortcutHelp = !m_showShortcutHelp;
+        repaint();
+    });
 
     m_controls->setNoteLayer(m_notes);
     
@@ -3012,6 +3021,106 @@ void PianoRollView::onRender(NUIRenderer& renderer) {
         }
     }
 
+    if (m_showShortcutHelp) {
+        renderShortcutHelp(renderer);
+    }
+}
+
+void PianoRollView::renderShortcutHelp(NUIRenderer& renderer) {
+    auto& theme = NUIThemeManager::getInstance();
+    const auto bounds = getBounds();
+    const float toolbarH = 50.0f;
+    const NUIRect area(bounds.x, bounds.y + toolbarH, bounds.width, bounds.height - toolbarH);
+
+    // Dim the editors underneath so the sheet reads as modal.
+    renderer.fillRect(area, theme.getColor("backgroundPrimary").withAlpha(0.62f));
+
+    struct Entry { const char* keys; const char* action; };
+    static constexpr Entry kMouse[] = {
+        {"Drag", "draw a note, keep dragging for length"},
+        {"Shift+Drag", "paint a run of notes"},
+        {"Ctrl+Drag", "marquee select (any tool)"},
+        {"Alt+Drag", "clone the selection"},
+        {"Alt+Wheel", "adjust velocity under cursor"},
+        {"Right-Click", "erase"},
+        {"Double-Click", "add or remove a note"},
+        {"Velocity Lane", "sweep across to shape levels"},
+    };
+    static constexpr Entry kKeys[] = {
+        {"Q", "quantize note starts"},
+        {"Ctrl+G", "glue same-pitch runs"},
+        {"Ctrl+L", "connect notes (legato)"},
+        {"Ctrl+Z / Y", "undo / redo"},
+        {"Ctrl+C / V / D", "copy / paste / duplicate"},
+        {"Ctrl+A", "select all"},
+        {"Arrows", "nudge / transpose"},
+        {"Shift+Left/Right", "resize by grid"},
+        {"Shift+Up/Down", "octave jump"},
+        {"Delete", "remove selection"},
+    };
+    constexpr size_t kMouseCount = sizeof(kMouse) / sizeof(kMouse[0]);
+    constexpr size_t kKeysCount = sizeof(kKeys) / sizeof(kKeys[0]);
+    constexpr size_t kRows = kMouseCount > kKeysCount ? kMouseCount : kKeysCount;
+
+    const float rowH = 19.0f;
+    const float padX = 24.0f;
+    const float padY = 18.0f;
+    const float titleH = 18.0f;
+    const float sectionH = 16.0f;
+    const float footerH = 14.0f;
+    const float colGap = 28.0f;
+    const float keyColW = 118.0f;
+    const float panelW = std::min(660.0f, area.width - 32.0f);
+    const float panelH = padY + titleH + 12.0f + sectionH + kRows * rowH + 14.0f + footerH + padY;
+    const NUIRect panel(area.x + (area.width - panelW) * 0.5f,
+                        area.y + std::max(8.0f, (area.height - panelH) * 0.5f),
+                        panelW,
+                        panelH);
+
+    renderer.drawShadow(panel, 0.0f, 6.0f, 26.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.45f));
+    renderer.fillRoundedRect(panel, 10.0f, theme.getColor("backgroundSecondary").withAlpha(0.98f));
+    renderer.strokeRoundedRect(panel, 10.0f, 1.0f, theme.getColor("border").withAlpha(0.7f));
+
+    const auto accent = theme.getColor("accentPrimary");
+    const auto keyColor = theme.getColor("textPrimary").withAlpha(0.95f);
+    const auto actionColor = theme.getColor("textSecondary").withAlpha(0.92f);
+
+    float y = panel.y + padY;
+    const char* title = "PIANO ROLL SHORTCUTS";
+    const auto titleSize = renderer.measureText(title, 11.0f);
+    renderer.drawText(title,
+                      NUIPoint(panel.x + (panel.width - titleSize.width) * 0.5f, y),
+                      11.0f,
+                      accent.withAlpha(0.95f));
+    y += titleH + 12.0f;
+
+    const float colW = (panelW - padX * 2.0f - colGap) * 0.5f;
+    const float leftX = panel.x + padX;
+    const float rightX = leftX + colW + colGap;
+
+    renderer.drawText("MOUSE", NUIPoint(leftX, y), 9.0f, actionColor.withAlpha(0.6f));
+    renderer.drawText("KEYS", NUIPoint(rightX, y), 9.0f, actionColor.withAlpha(0.6f));
+    y += sectionH;
+
+    for (size_t i = 0; i < kRows; ++i) {
+        const float rowY = y + i * rowH;
+        if (i < kMouseCount) {
+            renderer.drawText(kMouse[i].keys, NUIPoint(leftX, rowY), 10.5f, keyColor);
+            renderer.drawText(kMouse[i].action, NUIPoint(leftX + keyColW, rowY), 10.5f, actionColor);
+        }
+        if (i < kKeysCount) {
+            renderer.drawText(kKeys[i].keys, NUIPoint(rightX, rowY), 10.5f, keyColor);
+            renderer.drawText(kKeys[i].action, NUIPoint(rightX + keyColW, rowY), 10.5f, actionColor);
+        }
+    }
+    y += kRows * rowH + 14.0f;
+
+    const char* footer = "Chord & Strum live in the toolbar menu. F1 toggles this sheet; any key or click closes it.";
+    const auto footerSize = renderer.measureText(footer, 9.5f);
+    renderer.drawText(footer,
+                      NUIPoint(panel.x + (panel.width - footerSize.width) * 0.5f, y),
+                      9.5f,
+                      actionColor.withAlpha(0.7f));
 }
 
 void PianoRollView::onResize(int width, int height) {
@@ -3164,6 +3273,16 @@ void PianoRollView::syncChildren() {
 bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
     if (!getBounds().contains(event.position) && !m_isResizingPanel) return false;
 
+    // The shortcut sheet captures the pointer: any click or scroll dismisses it
+    // instead of reaching the editors underneath.
+    if (m_showShortcutHelp) {
+        if (event.pressed || event.wheelDelta != 0.0f) {
+            m_showShortcutHelp = false;
+            repaint();
+        }
+        return true;
+    }
+
     if (m_toolbar) {
         if (auto menu = m_toolbar->getActiveContextMenu(); menu && menu->isVisible()) {
             if (menu->onMouseEvent(event)) return true;
@@ -3248,6 +3367,18 @@ bool PianoRollView::onMouseEvent(const NUIMouseEvent& event) {
 }
 
 bool PianoRollView::onKeyEvent(const NUIKeyEvent& event) {
+    if (event.pressed && event.keyCode == NUIKeyCode::F1) {
+        m_showShortcutHelp = !m_showShortcutHelp;
+        repaint();
+        return true;
+    }
+    if (m_showShortcutHelp && event.pressed) {
+        // While the sheet is up, any key dismisses it rather than editing the
+        // notes it covers.
+        m_showShortcutHelp = false;
+        repaint();
+        return true;
+    }
     if (m_notes->onKeyEvent(event)) return true;
     return NUIComponent::onKeyEvent(event);
 }
