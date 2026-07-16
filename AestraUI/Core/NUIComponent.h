@@ -81,9 +81,9 @@ public:
     void removeAllChildren();
 
     // Event-dispatch guard. While a mouse-event dispatch is in flight (bracketed
-    // by NUIApp around the root onMouseEvent), removeChild() defers the actual
-    // removal until the dispatch unwinds. This prevents a handler that
-    // closes/removes a component from mutating a parent's children_ mid-iteration
+    // by NUIApp around the root onMouseEvent), addChild()/removeChild() defer the
+    // actual hierarchy mutation until dispatch unwinds. This prevents callbacks
+    // that open or close popups from mutating a parent's children_ mid-iteration
     // (iterator invalidation) or freeing a component still on the call stack
     // (use-after-free). Nestable via an internal depth counter.
     static void beginEventDispatch();
