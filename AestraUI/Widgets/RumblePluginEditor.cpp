@@ -33,13 +33,13 @@ NUIColor cleanAccent() {
     return NUIColor(0.35f, 0.72f, 1.0f, 1.0f);
 }
 NUIColor shellSurface() {
-    return NUIColor(0.026f, 0.025f, 0.032f, 0.985f);
+    return editorNeutral(NUIColor(0.026f, 0.025f, 0.032f, 0.985f));
 }
 NUIColor panelSurface() {
-    return NUIColor(0.043f, 0.041f, 0.052f, 0.98f);
+    return editorNeutral(NUIColor(0.043f, 0.041f, 0.052f, 0.98f));
 }
 NUIColor insetSurface() {
-    return NUIColor(0.022f, 0.021f, 0.027f, 0.98f);
+    return editorNeutral(NUIColor(0.022f, 0.021f, 0.027f, 0.98f));
 }
 
 std::shared_ptr<NUIIcon> chevronLeftIcon() {
@@ -289,7 +289,7 @@ void RumblePluginEditor::drawHeader(NUIRenderer& renderer) {
     const auto drawArrowButton = [&](const NUIRect& rect, const std::shared_ptr<NUIIcon>& icon, bool hovered) {
         renderer.fillRoundedRect(rect, 9.0f, hovered ? bodyAccent().withAlpha(0.26f) : insetSurface());
         renderer.strokeRoundedRect(rect, 9.0f, 1.0f,
-                                   hovered ? bodyAccent().withAlpha(0.62f) : NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+                                   hovered ? bodyAccent().withAlpha(0.62f) : editorInk(0.08f));
         drawSvgIcon(renderer, icon, rect, hovered ? bodyAccent() : theme.getColor("textPrimary").withAlpha(0.72f),
                     15.0f);
     };
@@ -307,7 +307,7 @@ void RumblePluginEditor::drawHeader(NUIRenderer& renderer) {
                                                                        : insetSurface());
     renderer.strokeRoundedRect(m_presetButtonBounds, 9.0f, 1.0f,
                                m_presetButtonHovered || m_presetMenuOpen ? bodyAccent().withAlpha(0.65f)
-                                                                         : NUIColor(1.0f, 1.0f, 1.0f, 0.09f));
+                                                                         : editorInk(0.09f));
     renderer.fillRoundedRect({m_presetButtonBounds.x + 9.0f, m_presetButtonBounds.y + 10.0f, 3.0f, 28.0f}, 1.5f,
                              (factory ? presetAccent(m_activePreset) : bodyAccent()).withAlpha(0.88f));
     renderer.drawText(factory ? std::string(preset.category) : "CUSTOM",
@@ -318,7 +318,7 @@ void RumblePluginEditor::drawHeader(NUIRenderer& renderer) {
                       factory ? presetAccent(m_activePreset) : theme.getColor("textPrimary"));
     renderer.drawLine({m_presetButtonBounds.right() - 32.0f, m_presetButtonBounds.y + 8.0f},
                       {m_presetButtonBounds.right() - 32.0f, m_presetButtonBounds.bottom() - 8.0f}, 1.0f,
-                      NUIColor(1.0f, 1.0f, 1.0f, 0.07f));
+                      editorInk(0.07f));
     const NUIRect chevronBounds(m_presetButtonBounds.right() - 30.0f, m_presetButtonBounds.y, 28.0f,
                                 m_presetButtonBounds.height);
     drawSvgIcon(renderer, m_presetMenuOpen ? chevronUpIcon() : chevronDownIcon(), chevronBounds,
@@ -361,7 +361,7 @@ void RumblePluginEditor::drawImpactShape(NUIRenderer& renderer) {
     for (int i = 1; i < 4; ++i) {
         const float x = m_impactShapeBounds.x + m_impactShapeBounds.width * static_cast<float>(i) / 4.0f;
         renderer.drawLine({x, m_impactShapeBounds.y + 12.0f}, {x, m_impactShapeBounds.bottom() - 12.0f}, 1.0f,
-                          NUIColor(1.0f, 1.0f, 1.0f, 0.035f));
+                          editorInk(0.035f));
     }
     const float punch = m_controls.size() > 0 ? m_controls[0].normalizedValue : 0.0f;
     const float sweep = m_controls.size() > 1 ? m_controls[1].normalizedValue : 0.0f;
@@ -389,23 +389,23 @@ void RumblePluginEditor::drawKnob(NUIRenderer& renderer, const MacroControl& con
     const bool dragging = m_draggingControl == controlIndex;
     const NUIColor accent = controlAccent(control.parameterId);
     renderer.fillRoundedRect(control.bounds, 11.0f,
-                             hovered || dragging ? NUIColor(0.068f, 0.064f, 0.080f, 0.98f)
-                                                 : NUIColor(0.036f, 0.034f, 0.043f, 0.82f));
+                             hovered || dragging ? editorNeutral(NUIColor(0.068f, 0.064f, 0.080f, 0.98f))
+                                                 : editorNeutral(NUIColor(0.036f, 0.034f, 0.043f, 0.82f)));
     renderer.strokeRoundedRect(control.bounds, 11.0f, 1.0f,
-                               hovered || dragging ? accent.withAlpha(0.50f) : NUIColor(1.0f, 1.0f, 1.0f, 0.045f));
+                               hovered || dragging ? accent.withAlpha(0.50f) : editorInk(0.045f));
 
     const NUIPoint center = control.knobBounds.center();
     const float radius = control.knobBounds.width * 0.5f;
     const float valueAngle = kKnobStart + control.normalizedValue * kKnobSweep;
     renderer.fillCircle(center, radius, insetSurface());
-    renderer.strokeCircle(center, radius, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.07f));
+    renderer.strokeCircle(center, radius, 1.0f, editorInk(0.07f));
     drawArc(renderer, center, radius - 6.0f, kKnobStart, kKnobStart + kKnobSweep, primary ? 4.0f : 3.2f,
-            NUIColor(1.0f, 1.0f, 1.0f, 0.09f));
+            editorInk(0.09f));
     drawArc(renderer, center, radius - 6.0f, kKnobStart, valueAngle, primary ? 4.0f : 3.2f, accent.withAlpha(0.94f));
     const float needleLength = radius - (primary ? 16.0f : 13.0f);
     const NUIPoint tip{center.x + std::cos(valueAngle) * needleLength, center.y + std::sin(valueAngle) * needleLength};
     renderer.drawLine(center, tip, 2.0f, accent.withAlpha(0.86f));
-    renderer.fillCircle(center, primary ? 7.0f : 5.5f, NUIColor(0.075f, 0.071f, 0.088f, 1.0f));
+    renderer.fillCircle(center, primary ? 7.0f : 5.5f, editorNeutral(NUIColor(0.075f, 0.071f, 0.088f, 1.0f)));
     renderer.fillCircle(center, primary ? 2.8f : 2.2f, accent.withAlpha(0.90f));
 
     const float labelY = control.knobBounds.bottom() + (primary ? 8.0f : 5.0f);
@@ -423,7 +423,7 @@ void RumblePluginEditor::drawKnob(NUIRenderer& renderer, const MacroControl& con
 
 void RumblePluginEditor::drawPresetBrowser(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(m_presetMenuBounds, 16.0f, NUIColor(0.018f, 0.017f, 0.023f, 1.0f));
+    renderer.fillRoundedRect(m_presetMenuBounds, 16.0f, editorNeutral(NUIColor(0.018f, 0.017f, 0.023f, 1.0f)));
     renderer.strokeRoundedRect(m_presetMenuBounds, 16.0f, 1.2f, bodyAccent().withAlpha(0.58f));
     renderer.drawText("FACTORY SOUNDS", {m_presetMenuBounds.x + 18.0f, m_presetMenuBounds.y + 17.0f}, 11.0f,
                       theme.getColor("textPrimary"));
@@ -444,10 +444,10 @@ void RumblePluginEditor::drawPresetBrowser(NUIRenderer& renderer) {
         const NUIColor accent = presetAccent(i);
         renderer.fillRoundedRect(m_presetItemBounds[i], 8.0f,
                                  active    ? accent.withAlpha(0.22f)
-                                 : hovered ? NUIColor(0.095f, 0.088f, 0.115f, 0.96f)
+                                 : hovered ? editorNeutral(NUIColor(0.095f, 0.088f, 0.115f, 0.96f))
                                            : panelSurface());
         renderer.strokeRoundedRect(m_presetItemBounds[i], 8.0f, 1.0f,
-                                   active || hovered ? accent.withAlpha(0.58f) : NUIColor(1.0f, 1.0f, 1.0f, 0.055f));
+                                   active || hovered ? accent.withAlpha(0.58f) : editorInk(0.055f));
         renderer.drawText(std::string(Aestra::Plugins::kRumbleFactoryPresets[i].name),
                           {m_presetItemBounds[i].x + 10.0f, m_presetItemBounds[i].y + 13.0f}, 9.5f,
                           active ? accent : theme.getColor("textPrimary").withAlpha(0.88f));

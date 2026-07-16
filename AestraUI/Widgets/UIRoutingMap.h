@@ -29,6 +29,7 @@ public:
     explicit UIRoutingMap(Mode mode = Mode::Minimap);
 
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
     void onUpdate(double deltaTime) override;
     void onResize(int width, int height) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
@@ -244,6 +245,7 @@ private:
     NUIColor m_textInfo;
     NUIColor m_accent;
     NUIColor m_warning;
+    NUIColor m_error;
 
     void cacheThemeColors();
     void rebuildGraph();

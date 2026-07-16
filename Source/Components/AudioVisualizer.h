@@ -40,6 +40,7 @@ public:
     void onRender(NUIRenderer& renderer) override;
     void onUpdate(double deltaTime) override;
     void onResize(int width, int height) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override;
     
     // Audio data input
     void setAudioData(const float* leftChannel, const float* rightChannel, size_t numSamples, double sampleRate);
@@ -115,6 +116,7 @@ private:
     float decayRate_;
     NUIColor primaryColor_;
     NUIColor secondaryColor_;
+    bool customColorScheme_{false};
     bool showStereo_;
     bool showPeakHold_;
     

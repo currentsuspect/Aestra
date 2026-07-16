@@ -29,6 +29,7 @@ public:
     ~AestraPanelWindow() override = default;
 
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
     void setPanelTitle(const std::string& title);

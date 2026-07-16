@@ -27,6 +27,7 @@ public:
     explicit UIMixerKnob(UIMixerKnobType type);
 
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
     void setValue(float value);

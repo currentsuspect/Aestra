@@ -29,13 +29,13 @@ NUIColor motionAccent() {
     return NUIColor(1.0f, 0.45f, 0.64f, 1.0f);
 }
 NUIColor shellSurface() {
-    return NUIColor(0.024f, 0.023f, 0.031f, 0.99f);
+    return editorNeutral(NUIColor(0.024f, 0.023f, 0.031f, 0.99f));
 }
 NUIColor panelSurface() {
-    return NUIColor(0.040f, 0.038f, 0.050f, 0.99f);
+    return editorNeutral(NUIColor(0.040f, 0.038f, 0.050f, 0.99f));
 }
 NUIColor insetSurface() {
-    return NUIColor(0.018f, 0.017f, 0.024f, 0.99f);
+    return editorNeutral(NUIColor(0.018f, 0.017f, 0.024f, 0.99f));
 }
 
 NUIColor parameterAccent(uint32_t parameterId) {
@@ -193,7 +193,7 @@ void AestraDriftEditor::drawPitchPanel(NUIRenderer& renderer) {
                                            : insetSurface());
         renderer.strokeRoundedRect(m_intervalBounds[i], 7.0f, 1.0f,
                                    active || hovered ? pitchAccent().withAlpha(0.56f)
-                                                     : NUIColor(1.0f, 1.0f, 1.0f, 0.05f));
+                                                     : editorInk(0.05f));
         const std::string label =
             kIntervals[i] > 0 ? "+" + std::to_string(kIntervals[i]) : std::to_string(kIntervals[i]);
         renderer.drawTextCentered(label, m_intervalBounds[i], 9.0f,
@@ -211,9 +211,9 @@ void AestraDriftEditor::drawPitchWheel(NUIRenderer& renderer) {
     renderer.fillCircle(center, radius, insetSurface());
     renderer.strokeCircle(center, radius, 1.0f,
                           m_pitchHovered || m_draggingPitch ? pitchAccent().withAlpha(0.54f)
-                                                            : NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+                                                            : editorInk(0.08f));
     drawArc(renderer, center, radius - 11.0f, kWheelStart, kWheelStart + kWheelSweep, 6.0f,
-            NUIColor(1.0f, 1.0f, 1.0f, 0.09f));
+            editorInk(0.09f));
     drawArc(renderer, center, radius - 11.0f, kWheelStart, angle, 6.0f, pitchAccent().withAlpha(0.94f));
     for (int semitones : kIntervals) {
         const float t = (static_cast<float>(semitones) + 12.0f) / 24.0f;
@@ -228,7 +228,7 @@ void AestraDriftEditor::drawPitchWheel(NUIRenderer& renderer) {
     }
     const NUIPoint needle{center.x + std::cos(angle) * (radius - 35.0f), center.y + std::sin(angle) * (radius - 35.0f)};
     renderer.drawLine(center, needle, 2.3f, pitchAccent().withAlpha(0.88f));
-    renderer.fillCircle(center, 28.0f, NUIColor(0.048f, 0.045f, 0.060f, 1.0f));
+    renderer.fillCircle(center, 28.0f, editorNeutral(NUIColor(0.048f, 0.045f, 0.060f, 1.0f)));
     renderer.strokeCircle(center, 28.0f, 1.0f, pitchAccent().withAlpha(0.30f));
     renderer.drawTextCentered(pitchValueString(), {center.x - 34.0f, center.y - 11.0f, 68.0f, 22.0f}, 18.0f,
                               pitchAccent());
@@ -263,21 +263,21 @@ void AestraDriftEditor::drawKnob(NUIRenderer& renderer, const KnobControl& contr
         control.parameterId == Drift::kMotionRate && m_instance->getParameter(Drift::kMotion) < 0.001f;
     const NUIColor color = parameterAccent(control.parameterId);
     renderer.fillRoundedRect(control.bounds, 10.0f,
-                             hovered || dragging ? NUIColor(0.070f, 0.064f, 0.086f, 0.98f) : insetSurface());
+                             hovered || dragging ? editorNeutral(NUIColor(0.070f, 0.064f, 0.086f, 0.98f)) : insetSurface());
     renderer.strokeRoundedRect(control.bounds, 10.0f, 1.0f,
-                               hovered || dragging ? color.withAlpha(0.48f) : NUIColor(1.0f, 1.0f, 1.0f, 0.045f));
+                               hovered || dragging ? color.withAlpha(0.48f) : editorInk(0.045f));
     const float value = m_instance->getParameter(control.parameterId);
     const NUIPoint center = control.knobBounds.center();
     const float radius = control.knobBounds.width * 0.5f;
     const float angle = kWheelStart + value * kWheelSweep;
-    renderer.fillCircle(center, radius, NUIColor(0.030f, 0.029f, 0.039f, 1.0f));
-    renderer.strokeCircle(center, radius, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.07f));
+    renderer.fillCircle(center, radius, editorNeutral(NUIColor(0.030f, 0.029f, 0.039f, 1.0f)));
+    renderer.strokeCircle(center, radius, 1.0f, editorInk(0.07f));
     drawArc(renderer, center, radius - 6.0f, kWheelStart, kWheelStart + kWheelSweep, 3.5f,
-            NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+            editorInk(0.08f));
     drawArc(renderer, center, radius - 6.0f, kWheelStart, angle, 3.5f, color.withAlpha(rateInactive ? 0.30f : 0.92f));
     const NUIPoint needle{center.x + std::cos(angle) * (radius - 14.0f), center.y + std::sin(angle) * (radius - 14.0f)};
     renderer.drawLine(center, needle, 1.8f, color.withAlpha(rateInactive ? 0.28f : 0.86f));
-    renderer.fillCircle(center, 4.5f, NUIColor(0.070f, 0.066f, 0.086f, 1.0f));
+    renderer.fillCircle(center, 4.5f, editorNeutral(NUIColor(0.070f, 0.066f, 0.086f, 1.0f)));
     renderer.fillCircle(center, 1.8f, color.withAlpha(rateInactive ? 0.30f : 0.90f));
 
     const float labelY = control.knobBounds.bottom() + 5.0f;
@@ -297,7 +297,7 @@ void AestraDriftEditor::drawMixBar(NUIRenderer& renderer) {
     renderer.strokeRoundedRect(m_mixBounds, 11.0f, 1.0f, pitchAccent().withAlpha(m_draggingMix ? 0.56f : 0.18f));
     renderer.drawText("BLEND", {m_mixBounds.x + 14.0f, m_mixBounds.y + 15.0f}, 9.0f, theme.getColor("textPrimary"));
     const NUIRect track(m_mixBounds.x + 70.0f, m_mixBounds.y + 17.0f, m_mixBounds.width - 132.0f, 8.0f);
-    renderer.fillRoundedRect(track, 4.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.09f));
+    renderer.fillRoundedRect(track, 4.0f, editorInk(0.09f));
     renderer.fillRoundedRect({track.x, track.y, track.width * mix, track.height}, 4.0f, pitchAccent().withAlpha(0.90f));
     const NUIPoint thumb{track.x + track.width * mix, track.center().y};
     renderer.fillCircle(thumb, 8.0f, pitchAccent().withAlpha(0.20f));

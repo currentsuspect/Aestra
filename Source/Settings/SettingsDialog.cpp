@@ -3,6 +3,8 @@
 #include "../AestraUI/Core/NUIThemeSystem.h"
 #include "../AestraCore/include/AestraLog.h"
 
+#include <algorithm>
+
 namespace Aestra {
 
 SettingsDialog::SettingsDialog() 
@@ -51,14 +53,8 @@ void SettingsDialog::show() {
         auto parentBounds = getParent()->getBounds();
         if (parentBounds.width > 0 && parentBounds.height > 0) {
             setBounds(parentBounds); // Force resize to parent
+            updateDialogBounds(parentBounds);
         }
-    }
-
-    // Center on screen
-    auto componentBounds = getBounds();
-    if (componentBounds.width > 0 && componentBounds.height > 0) {
-        m_dialogBounds.x = componentBounds.x + (componentBounds.width - m_dialogBounds.width) / 2;
-        m_dialogBounds.y = componentBounds.y + (componentBounds.height - m_dialogBounds.height) / 2;
     }
     
     layoutComponents();
@@ -113,11 +109,12 @@ void SettingsDialog::setActivePage(const std::string& pageID) {
 
 void SettingsDialog::layoutComponents() {
     if (!m_visible) return;
-    
-    float padding = 20.0f;
-    float sidebarWidth = 220.0f;
-    float footerHeight = 60.0f;
-    float titleHeight = 32.0f;
+
+    const auto& props = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
+    const float padding = props.layout.dialogPadding;
+    const float sidebarWidth = std::clamp(m_dialogBounds.width * 0.23f, 150.0f, 220.0f);
+    const float footerHeight = props.layout.dialogActionHeight + padding * 2.0f;
+    const float titleHeight = props.layout.panelHeaderHeight;
 
     // Sidebar
     m_sidebarBounds = AestraUI::NUIRect(
@@ -144,16 +141,16 @@ void SettingsDialog::layoutComponents() {
 
     // Sidebar items layout
     float itemY = m_sidebarBounds.y + padding;
-    float itemHeight = 36.0f;
+    const float itemHeight = std::max(props.layout.standardRowHeight, 32.0f);
     for (auto& item : m_sidebarItems) {
         item.bounds = AestraUI::NUIRect(m_dialogBounds.x, itemY, sidebarWidth, itemHeight);
         itemY += itemHeight;
     }
     
     // Footer buttons
-    float buttonWidth = 100.0f;
-    float buttonHeight = 32.0f;
-    float buttonY = m_dialogBounds.y + m_dialogBounds.height - 46.0f;
+    const float buttonWidth = m_dialogBounds.width < 560.0f ? 84.0f : 98.0f;
+    const float buttonHeight = props.layout.dialogActionHeight;
+    const float buttonY = m_dialogBounds.bottom() - padding - buttonHeight;
     float rightX = m_dialogBounds.x + m_dialogBounds.width - padding;
     
     m_okButton->setBounds(AestraUI::NUIRect(rightX - buttonWidth, buttonY, buttonWidth, buttonHeight));
@@ -168,13 +165,26 @@ void SettingsDialog::layoutComponents() {
     }
 }
 
+void SettingsDialog::updateDialogBounds(const AestraUI::NUIRect& parentBounds) {
+    constexpr float kPreferredWidth = 950.0f;
+    constexpr float kPreferredHeight = 600.0f;
+    constexpr float kWindowMargin = 16.0f;
+    constexpr float kMinimumWidth = 360.0f;
+    constexpr float kMinimumHeight = 320.0f;
+
+    const float availableWidth = std::max(kMinimumWidth, parentBounds.width - kWindowMargin * 2.0f);
+    const float availableHeight = std::max(kMinimumHeight, parentBounds.height - kWindowMargin * 2.0f);
+    m_dialogBounds.width = std::min(kPreferredWidth, availableWidth);
+    m_dialogBounds.height = std::min(kPreferredHeight, availableHeight);
+    m_dialogBounds.x = parentBounds.x + (parentBounds.width - m_dialogBounds.width) * 0.5f;
+    m_dialogBounds.y = parentBounds.y + (parentBounds.height - m_dialogBounds.height) * 0.5f;
+}
+
 void SettingsDialog::onResize(int width, int height) {
     // Parent bounds (window size)
     setBounds(AestraUI::NUIRect(0, 0, (float)width, (float)height));
     
-    // Center dialog
-    m_dialogBounds.x = (width - m_dialogBounds.width) / 2;
-    m_dialogBounds.y = (height - m_dialogBounds.height) / 2;
+    updateDialogBounds(getBounds());
     
     layoutComponents();
 }

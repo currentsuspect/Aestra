@@ -1785,12 +1785,12 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
 
     // Draw background (control area + full grid area - no bounds restriction)
     AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
-    const AestraUI::NUIColor gridBgColor = AestraUI::NUIColor::black(); // pure black grid (owner direction)
+    const AestraUI::NUIColor gridBgColor = themeManager.getColor("timelineBed"); // pure black on dark (owner direction), recessed on light
 
     if (m_playlistVisible) {
         // Background for control area (always visible)
         AestraUI::NUIRect controlBg(bounds.x, bounds.y, controlAreaWidth, bounds.height);
-        renderer.fillRect(controlBg, AestraUI::NUIColor(0.035f, 0.035f, 0.035f, 1.0f));
+        renderer.fillRect(controlBg, themeManager.getColor("recessedPanel"));
 
         // Background for grid area (match track background; zebra grid provides contrast)
         float scrollbarWidth = kTimelineScrollbarWidth;
@@ -1870,9 +1870,10 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         if (trackBounds.bottom() < viewportTop || trackBounds.y > viewportBottom)
             continue;
 
-        // Uniform pure-black row base (owner direction: no row zebra; the bar
-        // zebra inside drawPlaylistGrid provides the only alternation).
-        renderer.fillRect(trackBounds, AestraUI::NUIColor::black());
+        // Uniform row base (owner direction: no row zebra; the bar zebra
+        // inside drawPlaylistGrid provides the only alternation). Pure black
+        // on dark themes, recessed light bed on light themes.
+        renderer.fillRect(trackBounds, themeManager.getColor("timelineBed"));
 
         track->renderStatic(renderer);
 
@@ -1883,7 +1884,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         const AestraUI::NUIRect gapRect(bounds.x + gridStartX, trackBounds.bottom(),
                                         std::max(0.0f, trackWidth - gridStartX),
                                         static_cast<float>(m_trackSpacing));
-        renderer.fillRect(gapRect, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.30f));
+        renderer.fillRect(gapRect, AestraUI::NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(0.30f));
     }
 
     // Clear clip rect before drawing header/ruler (they should draw fully)
@@ -1901,7 +1902,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         AestraUI::NUIRect headerRect(bounds.x, bounds.y, headerWidth, headerHeight);
         // Elevated header: base fill + soft vertical gradient + glass top edge.
         // Rendered into the playlist FBO cache, so the richness is free per frame.
-        renderer.fillRect(headerRect, AestraUI::NUIColor(0.031f, 0.031f, 0.031f, 1.0f));
+        renderer.fillRect(headerRect, themeManager.getColor("recessedPanel"));
         // Shade-only elevation — any white component reads as a sheen on this
         // near-black chrome (owner direction: no light gradients anywhere).
         renderer.fillRectGradient(headerRect, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.0f),
@@ -3738,8 +3739,8 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
 
     // Opaque near-black ruler material — identical across the full row and the
     // grid shell so the corner over the track controls is flush by construction.
-    auto glassBg = AestraUI::NUIColor(0.012f, 0.012f, 0.012f, 1.0f);
-    auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.014f);
+    auto glassBg = themeManager.getColor("recessedPanel");
+    auto glassHighlight = themeManager.getColor("textPrimary").withAlpha(0.014f);
 
     auto textCol = themeManager.getColor("textPrimary").withAlpha(0.86f);
     auto majorTickCol = themeManager.getColor("gridMajor");
@@ -4158,7 +4159,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
 
     AestraUI::NUIRect textureBounds(0, 0, static_cast<float>(width), static_cast<float>(height));
     AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
-    const AestraUI::NUIColor gridBgColor = AestraUI::NUIColor(0.08235f, 0.08235f, 0.08235f, 1.0f); // #151515
+    const AestraUI::NUIColor gridBgColor = themeManager.getColor("workspaceBackground");
     AestraUI::NUIColor borderColor = themeManager.getColor("border");
 
     // Draw background panels
@@ -4196,9 +4197,9 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     double maxExtentInBeats = maxExtent / secondsPerBeat;
 
     // Ruler Render: "Mature" Playlist Style
-    auto bg = AestraUI::NUIColor(0.08f, 0.08f, 0.08f, 1.0f);
-    auto textCol = AestraUI::NUIColor(0.82f, 0.82f, 0.82f, 1.0f); // bright gray for ruler labels
-    auto tickCol = AestraUI::NUIColor(0.45f, 0.45f, 0.45f, 1.0f); // visible tick marks
+    auto bg = themeManager.getColor("recessedPanel");
+    auto textCol = themeManager.getColor("textPrimary");
+    auto tickCol = themeManager.getColor("gridMajor");
 
     // Draw ruler background
     renderer.fillRect(rulerRect, bg);
@@ -5166,7 +5167,7 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
             const float clipLabelFont = themeManager.getFontSize("xs");
             const float labelTextY = headerRect.y + std::max(0.0f, (headerRect.height - clipLabelFont) * 0.5f);
             AestraUI::NUIPoint textPos(clipPreview.x + 6.0f, labelTextY);
-            renderer.drawText(displayName, textPos, clipLabelFont, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+            renderer.drawText(displayName, textPos, clipLabelFont, AestraUI::NUIThemeManager::getInstance().getCurrentTheme().textPrimary);
         }
     }
 }

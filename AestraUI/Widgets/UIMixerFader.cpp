@@ -31,13 +31,15 @@ void UIMixerFader::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
     // Track: Deep Glass Slot
-    m_trackBg = AestraUI::NUIColor(0.05f, 0.05f, 0.05f, 0.6f);
+    m_trackBg = theme.getColor("meterBackground").withAlpha(0.72f);
     // Fill: Gradient handled in render
     m_trackFg = theme.getColor("accentPrimary"); 
     m_handle = theme.getColor("backgroundSecondary"); // Handle Core
     m_handleHover = theme.getColor("textPrimary");    // Handle Active
     m_text = theme.getColor("textPrimary");
     m_textSecondary = theme.getColor("textSecondary");
+    m_border = theme.getColor("borderStrong");
+    m_tooltipBg = theme.getColor("elevatedPanel").withAlpha(0.98f);
 }
 
 float UIMixerFader::clampDb(float db) const
@@ -102,7 +104,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
 
     // 1. Track Background (deep recessed slot)
     renderer.fillRoundedRect(trackRect, 2.0f, m_trackBg);
-    renderer.strokeRoundedRect(trackRect, 2.0f, 1.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.6f));
+    renderer.strokeRoundedRect(trackRect, 2.0f, 1.0f, m_border.withAlpha(0.60f));
 
     // 2. Filled Portion (subtle, no wide glow)
     const float norm = (m_valueDb - m_minDb) / std::max(1e-3f, (m_maxDb - m_minDb));
@@ -135,11 +137,11 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
 
     // Handle Body (dark surface) — flat, no drop shadow; the border + slit
     // give it enough definition.
-    renderer.fillRoundedRect(handleRect, handleRad, NUIColor(0.18f, 0.18f, 0.18f, 0.98f));
+    renderer.fillRoundedRect(handleRect, handleRad, m_handle.withAlpha(0.98f));
 
     // Handle Border (accent when active/hovered, subtle white otherwise)
     bool handleActive = isHovered() || m_dragging;
-    NUIColor handleBorder = handleActive ? m_trackFg : NUIColor(1.0f, 1.0f, 1.0f, 0.25f);
+    NUIColor handleBorder = handleActive ? m_trackFg : m_border;
     renderer.strokeRoundedRect(handleRect, handleRad, 1.0f, handleBorder);
 
     // Center accent line (the "light slit")
@@ -148,7 +150,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
     renderer.fillRoundedRect(
         NUIRect{handleX + (handleW - slitW)*0.5f, handleY + (handleH - slitH)*0.5f, slitW, slitH},
         1.5f,
-        handleActive ? m_trackFg : NUIColor(1.0f, 1.0f, 1.0f, 0.5f)
+        handleActive ? m_trackFg : m_textSecondary
     );
 
     // 4. Fixed dB readout at top of fader area (not attached to handle)
@@ -168,7 +170,7 @@ void UIMixerFader::onRender(NUIRenderer& renderer)
             tipY = handleY + handleH + 4.0f;
         }
 
-        renderer.fillRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, NUIColor(0.05f, 0.05f, 0.05f, 0.95f));
+        renderer.fillRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, m_tooltipBg);
         renderer.strokeRoundedRect({tipX, tipY, tipW, tipH}, 3.0f, 1.0f, m_trackFg.withAlpha(0.5f));
         renderer.drawTextCentered(m_cachedText, {tipX, tipY, tipW, tipH}, 10.5f, m_text);
     }

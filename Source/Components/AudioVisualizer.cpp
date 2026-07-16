@@ -197,6 +197,17 @@ void AudioVisualizer::onResize(int width, int height) {
     currentSample_ = 0;
 }
 
+void AudioVisualizer::onThemeChanged(const NUIThemeProperties& theme) {
+    backgroundColor_ = theme.backgroundPrimary;
+    gridColor_ = theme.border;
+    textColor_ = theme.textPrimary;
+    if (!customColorScheme_) {
+        primaryColor_ = theme.accentCyan;
+        secondaryColor_ = theme.accentMagenta;
+    }
+    NUIComponent::onThemeChanged(theme);
+}
+
 // =============================================================================
 // SECTION: Audio Data Input
 // =============================================================================
@@ -303,6 +314,7 @@ void AudioVisualizer::setDecayRate(float decayRate) {
 void AudioVisualizer::setColorScheme(const NUIColor& primary, const NUIColor& secondary) {
     primaryColor_ = primary;
     secondaryColor_ = secondary;
+    customColorScheme_ = true;
     setDirty(true);
 }
 
@@ -378,7 +390,7 @@ void AudioVisualizer::renderWaveform(NUIRenderer& renderer) {
     
     // Liminal Dark v2.0 background gradient - top: #121214 â†’ bottom: #18181b
     NUIColor topColor = backgroundColor_;  // #121214 - Deep charcoal
-    NUIColor bottomColor = NUIColor(0.094f, 0.094f, 0.094f, 1.0f);  // #181818 - Slightly lighter
+    NUIColor bottomColor = AestraUI::NUIThemeManager::getInstance().getColor("backgroundSecondary");
     
     // Draw gradient background
     for (int i = 0; i < static_cast<int>(bounds.height); ++i) {
@@ -521,7 +533,7 @@ void AudioVisualizer::renderWaveform(NUIRenderer& renderer) {
     
     // Audio active pulse indicator - Liminal Dark v2.0
     float pulse = 0.5f + 0.5f * std::sin(animationTime_ * 3.5f);
-    NUIColor pulseColor = NUIColor(0.620f, 1.0f, 0.380f, pulse * glowIntensity);  // #9eff61 - Accent lime
+    NUIColor pulseColor = AestraUI::NUIThemeManager::getInstance().getColor("accentLime").withAlpha(pulse * glowIntensity);
     float pulseRadius = 5.0f + (glowIntensity * 2.0f);
     renderer.fillCircle(NUIPoint(bounds.x + bounds.width - 15, bounds.y + bounds.height - 15), 
                        pulseRadius, pulseColor);
@@ -718,7 +730,7 @@ void AudioVisualizer::renderOscilloscope(NUIRenderer& renderer) {
     // Add trigger level indicator
     float triggerLevel = 0.3f; // Fixed trigger level for demo
     float triggerY = centerY - triggerLevel * bounds.height / 2.0f;
-    renderer.drawLine(NUIPoint(bounds.x, triggerY), NUIPoint(bounds.x + bounds.width, triggerY), 1, NUIColor(1.0f, 1.0f, 0.0f, 0.6f));
+    renderer.drawLine(NUIPoint(bounds.x, triggerY), NUIPoint(bounds.x + bounds.width, triggerY), 1, AestraUI::NUIThemeManager::getInstance().getColor("warning").withAlpha(0.6f));
     
     // Add timebase indicator
     std::string timebaseText = "1ms/div";
