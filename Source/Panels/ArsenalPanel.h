@@ -102,9 +102,8 @@ private:
     std::shared_ptr<AestraUI::NUIComponent> m_listContainer;
     std::vector<std::shared_ptr<AestraUI::UnitRow>> m_unitRows;
     
-    // Footer controls
-    std::shared_ptr<AestraUI::NUIComponent> m_footer;
-    std::shared_ptr<AestraUI::NUIButton> m_playBtn; // Play/Stop Button
+    // Header controls
+    std::shared_ptr<AestraUI::NUIButton> m_addUnitBtn;
     
     // Color picker popup
     std::shared_ptr<AestraUI::UnitColorPicker> m_colorPicker;
@@ -122,9 +121,11 @@ private:
     void layoutUnits();
     
     // Pattern Progress Visualization
-    static constexpr float PROGRESS_HEADER_HEIGHT = 28.0f;
+    static constexpr float COMMAND_HEADER_HEIGHT = 52.0f;
+    static constexpr float PROGRESS_HEADER_HEIGHT = 34.0f;
     int m_currentPlayStep = -1;  // Current step for visualization (-1 = not playing)
     void drawProgressHeader(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& bounds);
+    void drawCommandHeader(AestraUI::NUIRenderer& renderer);
     int calculateCurrentStep(); // Calculate step from TrackManager clock
     void adjustPatternBars(int deltaBars);
     void createUnitOfType(UnitType type);
@@ -170,6 +171,8 @@ private:
     bool m_dropTargetRegistered = false;
     bool m_showUnitTypePicker = false;
     AestraUI::NUIRect m_addUnitButtonRect{};
+    AestraUI::NUIRect m_commandHeaderRect{};
+    AestraUI::NUIRect m_progressHeaderRect{};
     AestraUI::NUIRect m_unitTypePickerRect{};
     AestraUI::NUIRect m_barsDecrementRect{};
     AestraUI::NUIRect m_barsValueRect{};
