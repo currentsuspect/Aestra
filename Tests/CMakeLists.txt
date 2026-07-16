@@ -1321,6 +1321,14 @@ target_include_directories(AestraDelayUpgradeTest PRIVATE
 add_test(NAME AestraDelayUpgradeTest COMMAND AestraDelayUpgradeTest)
 set_tests_properties(AestraDelayUpgradeTest PROPERTIES LABELS "audio;plugins;delay;upgrade")
 
+add_executable(AestraDriftQualityTest AestraAudio/AestraDriftQualityTest.cpp)
+target_link_libraries(AestraDriftQualityTest PRIVATE AestraAudio)
+target_include_directories(AestraDriftQualityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+)
+add_test(NAME AestraDriftQualityTest COMMAND AestraDriftQualityTest)
+set_tests_properties(AestraDriftQualityTest PROPERTIES LABELS "audio;plugins;drift;quality")
+
 # Aestra Limit Test
 add_executable(AestraLimitTest AestraAudio/AestraLimitTest.cpp)
 target_link_libraries(AestraLimitTest PRIVATE AestraAudio)
