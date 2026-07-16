@@ -111,11 +111,13 @@ public:
                                 const std::string& newName = "");
 
     /**
-     * @brief Deletes a take and its snapshot.
+     * @brief Deletes a take from the manifest and removes its snapshot.
      *
      * The active take can never be deleted (switch away first), so the working
      * state is always safe. Children of the deleted take are re-parented to
-     * its parent to keep lineage intact.
+     * its parent to keep lineage intact. Success means the manifest was
+     * updated; snapshot-file removal is best-effort and may leave an orphaned
+     * (harmless, unreferenced) file behind.
      * @param projectPath  Path to the project directory.
      * @param takeId       ID of the take to delete.
      */

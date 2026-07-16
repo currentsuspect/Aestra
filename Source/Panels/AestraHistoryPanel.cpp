@@ -60,7 +60,9 @@ void AestraHistoryPanel::rebuildEntries()
         m_entries.push_back({name.empty() ? "(unnamed)" : name, false, i});
     }
     m_contentHeight = m_entries.size() * ROW_HEIGHT + ROW_HEIGHT;
-    m_scrollY = std::min(m_scrollY, std::max(0.0f, m_contentHeight - ROW_HEIGHT));
+    // Clamp against the visible height so a shrunken list snaps back fully.
+    const float visibleH = std::max(0.0f, getBounds().height - HEADER_HEIGHT);
+    m_scrollY = std::min(m_scrollY, std::max(0.0f, m_contentHeight - visibleH));
 }
 
 void AestraHistoryPanel::onResize(int width, int height) {
@@ -77,9 +79,8 @@ void AestraHistoryPanel::onRender(NUIRenderer& renderer)
     if (bounds.width <= 0 || bounds.height <= 0) return;
 
     // Content area starts below WindowPanel's title bar + padding
-    float headerH = 36.0f; // WindowPanel title bar height
-    float contentY = bounds.y + headerH;
-    float contentH = bounds.height - headerH;
+    float contentY = bounds.y + HEADER_HEIGHT;
+    float contentH = bounds.height - HEADER_HEIGHT;
 
     // Empty state
     if (m_entries.empty()) {
@@ -140,9 +141,8 @@ bool AestraHistoryPanel::onMouseEvent(const NUIMouseEvent& event)
     if (!isVisible()) return false;
 
     auto bounds = getBounds();
-    float headerH = 32.0f;
-    float contentY = bounds.y + headerH;
-    float contentH = bounds.height - headerH;
+    float contentY = bounds.y + HEADER_HEIGHT;
+    float contentH = bounds.height - HEADER_HEIGHT;
     const bool inContent = bounds.contains(event.position) && event.position.y >= contentY;
 
     // Handle click on entries (scroll-aware)

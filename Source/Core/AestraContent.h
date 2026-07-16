@@ -362,6 +362,9 @@ private:
     std::shared_ptr<Aestra::Audio::ArsenalPanel> m_sequencerPanel;
     std::shared_ptr<Aestra::Audio::AestraHistoryPanel> m_historyPanel;
     std::shared_ptr<Aestra::Audio::TakesPanel> m_takesPanel;
+    // First-open flag: the Takes panel gets a default rect once, then keeps
+    // whatever bounds the user dragged/resized across close/reopen.
+    bool m_takesRectInitialized{false};
     std::shared_ptr<AestraUI::PluginUIController> m_pluginController;
     std::shared_ptr<AestraUI::UIRoutingMap> m_routingMapPanel;
 

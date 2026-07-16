@@ -43,6 +43,7 @@ public:
 
 private:
     static constexpr float ROW_HEIGHT = 26.0f;
+    static constexpr float HEADER_HEIGHT = 36.0f; // content offset below the WindowPanel title bar
     static constexpr float INDICATOR_SIZE = 6.0f;
     static constexpr float LEFT_PAD = 12.0f;
     static constexpr float TEXT_LEFT_PAD = 28.0f;

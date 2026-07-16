@@ -1468,7 +1468,11 @@ bool AestraApp::branchFromTake(const std::string& takeId) {
 
     auto result = switchToTake(dup.take.id);
     if (!result.ok) {
-        Log::error("[Takes] Branch created but could not switch to it: " + result.errorMessage);
+        // Don't leave a half-made branch behind: the duplicate is not active
+        // (the failed switch rolled back), so it can be deleted safely.
+        auto rollback = TakeManager::deleteTake(m_projectPath, dup.take.id);
+        Log::error("[Takes] Branch created but could not switch to it: " + result.errorMessage +
+                   (rollback.ok ? " (branch rolled back)" : " (rollback also failed: " + rollback.errorMessage + ")"));
         return false;
     }
     return true;
@@ -1559,8 +1563,14 @@ void AestraApp::wireTakesPanel() {
         auto result = loadProjectFromPath(path, m_projectPath);
         if (!result.ok) {
             Log::error("Failed to restore snapshot: " + path + " (" + result.errorMessage + ")");
+            return false;
         }
-        return result.ok;
+        // The project file still holds the pre-restore save; the restored
+        // state is unsaved work until the user commits it.
+        if (m_content && m_content->getTrackManager()) {
+            m_content->getTrackManager()->markModified();
+        }
+        return true;
     });
 }
 

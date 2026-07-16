@@ -582,6 +582,7 @@ TakeManager::Result TakeManager::duplicateTake(const std::string& projectPath, c
         return makeResult(false, "Could not copy take snapshot: " + ec.message(), manifest);
     }
 
+    const std::string sourceName = source->name; // push_back below may reallocate and dangle `source`
     manifest.takes.push_back(copy);
     std::string error;
     if (!saveManifest(manifest, error)) {
@@ -589,7 +590,7 @@ TakeManager::Result TakeManager::duplicateTake(const std::string& projectPath, c
         return makeResult(false, error, manifest, copy);
     }
 
-    Aestra::Log::info("[Takes] Duplicated take '" + source->name + "' as '" + copy.name + "'");
+    Aestra::Log::info("[Takes] Duplicated take '" + sourceName + "' as '" + copy.name + "'");
     return makeResult(true, "", manifest, copy);
 }
 

@@ -3852,6 +3852,7 @@ void AestraContent::toggleHistoryPanel() {
         float y = 80.0f;
         m_viewState.historyRect = AestraUI::NUIRect(x, y, w, h);
         m_historyPanel->setBounds(m_viewState.historyRect);
+        m_historyPanel->bringToFront();
         m_historyPanel->refreshHistory();
     }
     onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
@@ -3863,14 +3864,20 @@ void AestraContent::toggleTakesPanel() {
     bool show = !m_takesPanel->isVisible();
     m_takesPanel->setVisible(show);
     if (show) {
-        // Position below transport bar, offset from the History panel spot
-        auto root = getBounds();
-        float w = 320.0f;
-        float h = std::min(520.0f, root.height * 0.7f);
-        float x = std::max(0.0f, root.width * 0.5f - w - 12.0f);
-        float y = 80.0f;
-        m_viewState.takesRect = AestraUI::NUIRect(x, y, w, h);
+        // Default position below the transport bar on first open only —
+        // later opens keep the user's dragged/resized bounds (clamped by
+        // the onResize below).
+        if (!m_takesRectInitialized) {
+            auto root = getBounds();
+            float w = 320.0f;
+            float h = std::min(520.0f, root.height * 0.7f);
+            float x = std::max(0.0f, root.width * 0.5f - w - 12.0f);
+            float y = 80.0f;
+            m_viewState.takesRect = AestraUI::NUIRect(x, y, w, h);
+            m_takesRectInitialized = true;
+        }
         m_takesPanel->setBounds(m_viewState.takesRect);
+        m_takesPanel->bringToFront();
         m_takesPanel->refreshTakes();
     }
     onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));

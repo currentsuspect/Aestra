@@ -32,6 +32,10 @@ void TakesPanel::rebuildRows() {
     if (m_selectedTake >= 0 && m_selectedTake < static_cast<int>(m_takeRows.size())) {
         previousSelectedId = m_takeRows[static_cast<size_t>(m_selectedTake)].take.id;
     }
+    std::string previousSelectedSnapshotPath;
+    if (m_selectedSnapshot >= 0 && m_selectedSnapshot < static_cast<int>(m_snapshotRows.size())) {
+        previousSelectedSnapshotPath = m_snapshotRows[static_cast<size_t>(m_selectedSnapshot)].path;
+    }
 
     m_takeRows.clear();
     m_snapshotRows.clear();
@@ -81,8 +85,14 @@ void TakesPanel::rebuildRows() {
             }
         }
     }
-    if (m_selectedSnapshot >= static_cast<int>(m_snapshotRows.size())) {
-        m_selectedSnapshot = -1;
+    m_selectedSnapshot = -1;
+    if (!previousSelectedSnapshotPath.empty()) {
+        for (int i = 0; i < static_cast<int>(m_snapshotRows.size()); ++i) {
+            if (m_snapshotRows[static_cast<size_t>(i)].path == previousSelectedSnapshotPath) {
+                m_selectedSnapshot = i;
+                break;
+            }
+        }
     }
     if (m_renameActive) {
         // The renamed take may have vanished (external change) — drop the edit.

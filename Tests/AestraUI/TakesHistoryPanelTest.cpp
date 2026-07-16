@@ -21,8 +21,10 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <string>
+#include <utility>
 
 using Aestra::Audio::AestraHistoryPanel;
 using Aestra::Audio::TakesPanel;
@@ -69,6 +71,14 @@ AestraUI::NUIMouseEvent leftPress(float x, float y) {
     e.type = AestraUI::NUIMouseEventType::Down;
     e.pressed = true;
     e.button = AestraUI::NUIMouseButton::Left;
+    e.position = {x, y};
+    return e;
+}
+
+AestraUI::NUIMouseEvent scrollBy(float x, float y, float wheelDelta) {
+    AestraUI::NUIMouseEvent e;
+    e.type = AestraUI::NUIMouseEventType::Scroll;
+    e.wheelDelta = wheelDelta;
     e.position = {x, y};
     return e;
 }
@@ -147,6 +157,38 @@ void testHistoryPanel() {
     require(!panel.onMouseEvent(leftPress(10.0f, 50.0f)), "Hidden history panel must not consume events");
 
     std::cout << "[PASS] History panel timeline\n";
+}
+
+// Clicking rows after scrolling must hit the visually shifted entries —
+// regression for the scroll offset being tracked but never applied.
+void testHistoryPanelScrolledClick() {
+    auto trackManager = std::make_shared<TrackManager>();
+    auto& history = trackManager->getCommandHistory();
+
+    AestraHistoryPanel panel(trackManager);
+    // 36px header + room for ~3 of the 26px rows: most entries start clipped.
+    panel.setBounds(AestraUI::NUIRect(0.0f, 0.0f, 280.0f, 114.0f));
+    panel.setVisible(true);
+
+    int counter = 0;
+    for (int i = 0; i < 10; ++i) {
+        history.pushAndExecute(std::make_shared<NamedTestCommand>("Cmd " + std::to_string(i), counter));
+    }
+    panel.refreshHistory();
+    require(panel.getEntryCount() == 10, "All commands should be listed");
+    require(counter == 10, "All commands should have executed");
+
+    // Two wheel notches = 60px of scroll (30px per notch).
+    require(panel.onMouseEvent(scrollBy(100.0f, 60.0f, -1.0f)), "Scroll should be consumed");
+    require(panel.onMouseEvent(scrollBy(100.0f, 60.0f, -1.0f)), "Scroll should be consumed");
+
+    // With scrollY=60, row i spans y = [36 + 26*i - 60, +26) → y=40 hits row 2.
+    // Entry 2 = undoStack[2], so undoTo(2) keeps exactly 2 commands applied.
+    require(panel.onMouseEvent(leftPress(100.0f, 40.0f)), "Row click should be consumed");
+    require(counter == 2, "Scrolled click should activate the visually shifted entry");
+    require(history.canRedo(), "Timeline jump should leave redoable commands");
+
+    std::cout << "[PASS] History panel scrolled click\n";
 }
 
 // =============================================================================
@@ -318,6 +360,7 @@ void testTakesPanel() {
 
 int main() {
     testHistoryPanel();
+    testHistoryPanelScrolledClick();
     testTakesPanel();
     std::cout << "[PASS] TakesHistoryPanelTest\n";
     return 0;
