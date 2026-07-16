@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIScrollbar.h"
 #include "NUIRenderer.h"
+#include "NUIThemeSystem.h"
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -15,6 +16,18 @@ NUIScrollbar::NUIScrollbar(Orientation orientation)
     : NUIComponent()
     , orientation_(orientation)
 {
+    auto& theme = NUIThemeManager::getInstance();
+    const auto& props = theme.getCurrentTheme();
+    trackColor_ = theme.getColor("recessedPanel").withAlpha(0.72f);
+    thumbColor_ = theme.getColor("textMuted").withAlpha(0.42f);
+    thumbHoverColor_ = theme.getColor("textSecondary").withAlpha(0.62f);
+    thumbPressedColor_ = theme.getColor("textPrimary").withAlpha(0.76f);
+    arrowColor_ = theme.getColor("textMuted");
+    arrowHoverColor_ = theme.getColor("textSecondary");
+    arrowPressedColor_ = theme.getColor("textPrimary");
+    borderColor_ = theme.getColor("borderSubtle");
+    borderRadius_ = props.radiusXS;
+    arrowSize_ = props.fontSizeM;
     // Normal 16px width scrollbar
     setSize(orientation == Orientation::Vertical ? 16 : 200, 
             orientation == Orientation::Vertical ? 200 : 16);
@@ -30,8 +43,8 @@ NUIScrollbar::NUIScrollbar(Orientation orientation)
             </svg>
         )";
         upArrowIcon_ = std::make_shared<NUIIcon>(upArrowSvg);
-        upArrowIcon_->setIconSize(NUIIconSize::Medium);  // 24px for better visibility
-        upArrowIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));  // Bright white
+        upArrowIcon_->setIconSize(props.layout.standardIconSize, props.layout.standardIconSize);
+        upArrowIcon_->setColor(arrowColor_);
         
         const char* downArrowSvg = R"(
             <svg viewBox="0 0 24 24" fill="currentColor">
@@ -39,8 +52,8 @@ NUIScrollbar::NUIScrollbar(Orientation orientation)
             </svg>
         )";
         downArrowIcon_ = std::make_shared<NUIIcon>(downArrowSvg);
-        downArrowIcon_->setIconSize(NUIIconSize::Medium);  // 24px for better visibility
-        downArrowIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));  // Bright white
+        downArrowIcon_->setIconSize(props.layout.standardIconSize, props.layout.standardIconSize);
+        downArrowIcon_->setColor(arrowColor_);
     } else {
         // Horizontal scrollbar: left arrow (left side), right arrow (right side)
         const char* leftArrowSvg = R"(
@@ -49,8 +62,8 @@ NUIScrollbar::NUIScrollbar(Orientation orientation)
             </svg>
         )";
         upArrowIcon_ = std::make_shared<NUIIcon>(leftArrowSvg);  // upArrowIcon_ = left for horizontal
-        upArrowIcon_->setIconSize(NUIIconSize::Medium);  // 24px for better visibility
-        upArrowIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));  // Bright white
+        upArrowIcon_->setIconSize(props.layout.standardIconSize, props.layout.standardIconSize);
+        upArrowIcon_->setColor(arrowColor_);
         
         const char* rightArrowSvg = R"(
             <svg viewBox="0 0 24 24" fill="currentColor">
@@ -58,8 +71,8 @@ NUIScrollbar::NUIScrollbar(Orientation orientation)
             </svg>
         )";
         downArrowIcon_ = std::make_shared<NUIIcon>(rightArrowSvg);  // downArrowIcon_ = right for horizontal
-        downArrowIcon_->setIconSize(NUIIconSize::Medium);  // 24px for better visibility
-        downArrowIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));  // Bright white
+        downArrowIcon_->setIconSize(props.layout.standardIconSize, props.layout.standardIconSize);
+        downArrowIcon_->setColor(arrowColor_);
     }
 }
 
@@ -102,7 +115,7 @@ void NUIScrollbar::onUpdate(double deltaTime)
 
 bool NUIScrollbar::onMouseEvent(const NUIMouseEvent& event)
 {
-    if (!isVisible() || isAutoHidden_) return false;
+    if (!isVisible() || !isEnabled() || isAutoHidden_) return false;
 
     lastMousePosition_ = event.position;
 
@@ -589,6 +602,7 @@ void NUIScrollbar::drawThumb(NUIRenderer& renderer)
     NUIRect thumbRect = getThumbRect();
     
     if (style_ == Style::Timeline) {
+        const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
         // Enhanced modern style thumb with hover feedback on edges
         NUIColor thumbColor = thumbColor_;
         bool isThumbHovered = (hoveredPart_ == Part::Thumb);
@@ -606,13 +620,14 @@ void NUIScrollbar::drawThumb(NUIRenderer& renderer)
         }
         
         // Main thumb body
-        renderer.fillRoundedRect(thumbRect, 4.0f, thumbColor);
+        renderer.fillRoundedRect(thumbRect, theme.radiusS, thumbColor);
         
         // Draw enhanced edge handles with hover/active states
         float handleWidth = 12.0f;  // Match edge detection zone
-        NUIColor handleBaseColor = thumbColor.lightened(0.3f);
-        NUIColor handleHoverColor = NUIColor(0.73f, 0.52f, 0.99f, 1.0f);  // Purple accent
-        NUIColor handleActiveColor = NUIColor(0.6f, 0.4f, 0.9f, 1.0f);   // Darker purple when dragging
+        NUIColor handleBaseColor = theme.borderStrong;
+        NUIColor handleHoverColor = theme.primaryHover;
+        NUIColor handleActiveColor = theme.primaryPressed;
+        const NUIColor gripColor = theme.textPrimary.withAlpha(0.50f);
         
         if (orientation_ == Orientation::Horizontal) {
             NUIRect leftHandle(thumbRect.x, thumbRect.y, handleWidth, thumbRect.height);
@@ -624,8 +639,6 @@ void NUIScrollbar::drawThumb(NUIRenderer& renderer)
                 leftColor = handleActiveColor;
             } else if (isStartEdgeHovered) {
                 leftColor = handleHoverColor;
-                // Add subtle glow on hover
-                renderer.drawGlow(leftHandle, 4.0f, 0.5f, handleHoverColor.withAlpha(0.4f));
             }
             
             // Right/End handle color
@@ -634,8 +647,6 @@ void NUIScrollbar::drawThumb(NUIRenderer& renderer)
                 rightColor = handleActiveColor;
             } else if (isEndEdgeHovered) {
                 rightColor = handleHoverColor;
-                // Add subtle glow on hover
-                renderer.drawGlow(rightHandle, 4.0f, 0.5f, handleHoverColor.withAlpha(0.4f));
             }
             
             renderer.fillRoundedRect(leftHandle, 2.0f, leftColor);
@@ -645,12 +656,12 @@ void NUIScrollbar::drawThumb(NUIRenderer& renderer)
             float lineX = leftHandle.x + handleWidth * 0.5f;
             float lineTop = leftHandle.y + 4.0f;
             float lineBottom = leftHandle.y + leftHandle.height - 4.0f;
-            renderer.drawLine(NUIPoint(lineX - 2.0f, lineTop), NUIPoint(lineX - 2.0f, lineBottom), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
-            renderer.drawLine(NUIPoint(lineX + 2.0f, lineTop), NUIPoint(lineX + 2.0f, lineBottom), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+            renderer.drawLine(NUIPoint(lineX - 2.0f, lineTop), NUIPoint(lineX - 2.0f, lineBottom), 1.0f, gripColor);
+            renderer.drawLine(NUIPoint(lineX + 2.0f, lineTop), NUIPoint(lineX + 2.0f, lineBottom), 1.0f, gripColor);
             
             lineX = rightHandle.x + handleWidth * 0.5f;
-            renderer.drawLine(NUIPoint(lineX - 2.0f, lineTop), NUIPoint(lineX - 2.0f, lineBottom), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
-            renderer.drawLine(NUIPoint(lineX + 2.0f, lineTop), NUIPoint(lineX + 2.0f, lineBottom), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+            renderer.drawLine(NUIPoint(lineX - 2.0f, lineTop), NUIPoint(lineX - 2.0f, lineBottom), 1.0f, gripColor);
+            renderer.drawLine(NUIPoint(lineX + 2.0f, lineTop), NUIPoint(lineX + 2.0f, lineBottom), 1.0f, gripColor);
         } else {
             NUIRect topHandle(thumbRect.x, thumbRect.y, thumbRect.width, handleWidth);
             NUIRect bottomHandle(thumbRect.x, thumbRect.y + thumbRect.height - handleWidth, thumbRect.width, handleWidth);
@@ -661,7 +672,6 @@ void NUIScrollbar::drawThumb(NUIRenderer& renderer)
                 topColor = handleActiveColor;
             } else if (isStartEdgeHovered) {
                 topColor = handleHoverColor;
-                renderer.drawGlow(topHandle, 4.0f, 0.5f, handleHoverColor.withAlpha(0.4f));
             }
             
             // Bottom/End handle color
@@ -670,7 +680,6 @@ void NUIScrollbar::drawThumb(NUIRenderer& renderer)
                 bottomColor = handleActiveColor;
             } else if (isEndEdgeHovered) {
                 bottomColor = handleHoverColor;
-                renderer.drawGlow(bottomHandle, 4.0f, 0.5f, handleHoverColor.withAlpha(0.4f));
             }
             
             renderer.fillRoundedRect(topHandle, 2.0f, topColor);
@@ -680,12 +689,12 @@ void NUIScrollbar::drawThumb(NUIRenderer& renderer)
             float lineY = topHandle.y + handleWidth * 0.5f;
             float lineLeft = topHandle.x + 4.0f;
             float lineRight = topHandle.x + topHandle.width - 4.0f;
-            renderer.drawLine(NUIPoint(lineLeft, lineY - 2.0f), NUIPoint(lineRight, lineY - 2.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
-            renderer.drawLine(NUIPoint(lineLeft, lineY + 2.0f), NUIPoint(lineRight, lineY + 2.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+            renderer.drawLine(NUIPoint(lineLeft, lineY - 2.0f), NUIPoint(lineRight, lineY - 2.0f), 1.0f, gripColor);
+            renderer.drawLine(NUIPoint(lineLeft, lineY + 2.0f), NUIPoint(lineRight, lineY + 2.0f), 1.0f, gripColor);
             
             lineY = bottomHandle.y + handleWidth * 0.5f;
-            renderer.drawLine(NUIPoint(lineLeft, lineY - 2.0f), NUIPoint(lineRight, lineY - 2.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
-            renderer.drawLine(NUIPoint(lineLeft, lineY + 2.0f), NUIPoint(lineRight, lineY + 2.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.5f));
+            renderer.drawLine(NUIPoint(lineLeft, lineY - 2.0f), NUIPoint(lineRight, lineY - 2.0f), 1.0f, gripColor);
+            renderer.drawLine(NUIPoint(lineLeft, lineY + 2.0f), NUIPoint(lineRight, lineY + 2.0f), 1.0f, gripColor);
         }
         
         return;

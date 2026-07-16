@@ -44,6 +44,7 @@ private:
     State state_;
     bool animated_;
     bool hovered_;
+    bool pressed_{false};
     std::function<void(bool)> onToggle_;
 };
 
@@ -239,4 +240,3 @@ private:
 };
 
 } // namespace AestraUI
-

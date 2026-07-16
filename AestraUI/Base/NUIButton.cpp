@@ -1,5 +1,6 @@
 #include "NUIButton.h"
 #include "NUITheme.h"
+#include "NUIThemeSystem.h"
 #include <algorithm>
 #include <cmath>
 
@@ -53,6 +54,8 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     if (!isVisible()) return;
 
     auto theme = getTheme();
+    auto& themeManager = NUIThemeManager::getInstance();
+    const auto& themeProps = themeManager.getCurrentTheme();
     const bool active = isEnabled() && (pressed_ || (toggleable_ && toggled_));
     const bool hovered = isEnabled() && isHovered();
     
@@ -64,11 +67,11 @@ void NUIButton::onRender(NUIRenderer& renderer) {
     if (active || hovered) {
         borderColor = backgroundColor;
     } else {
-        borderColor = theme ? theme->getBorder() : NUIColor::fromHex(0x555555);
+        borderColor = theme ? theme->getBorder() : themeProps.borderSubtle;
     }
     
     auto bounds = getBounds();
-    float radius = cornerRadius_ >= 0.0f ? cornerRadius_ : (theme ? theme->getBorderRadius() : 4.0f);
+    float radius = cornerRadius_ >= 0.0f ? cornerRadius_ : (theme ? theme->getBorderRadius() : themeProps.radiusM);
     NUIRect visualRect{
         std::floor(bounds.x) + 0.5f,
         std::floor(bounds.y) + 0.5f,
@@ -92,20 +95,7 @@ void NUIButton::onRender(NUIRenderer& renderer) {
             drawColor = drawColor.withAlpha(std::max(0.18f, drawColor.a));
         }
         
-        const bool raisedButton = style_ != Style::Text && style_ != Style::Icon;
-        if (raisedButton) {
-            const float minDim = std::min(visualRect.width, visualRect.height);
-            const bool circularButton = radius >= (minDim * 0.45f);
-            if (!circularButton) {
-                renderer.drawShadow(visualRect, 0.0f, 6.0f, 16.0f, NUIColor(0, 0, 0, active ? 0.12f : 0.20f));
-            }
-        }
         renderer.fillRoundedRect(visualRect, radius, drawColor);
-        if (!hasCustomBg_) {
-            NUIRect sheen = visualRect;
-            sheen.height = std::max(1.0f, visualRect.height * 0.42f);
-            renderer.fillRoundedRect(sheen, radius, NUIColor::white().withAlpha(active ? 0.03f : 0.05f));
-        }
     }
     
     // Draw border
@@ -122,10 +112,13 @@ void NUIButton::onRender(NUIRenderer& renderer) {
              else if (hovered) borderColor = theme->getColor("borderActive").withAlpha(0.55f);
              else borderColor = borderColor.withAlpha(0.85f);
         } else {
-             borderColor = NUIColor::fromHex(0x555555);
+             NUIControlVisualState state{isEnabled(), hovered, pressed_, toggleable_ && toggled_, isFocused()};
+             borderColor = resolveControlColors(themeProps, state).border;
         }
         
-        float borderWidth = hasCustomBorderWidth_ ? borderWidth_ : (theme ? theme->getBorderWidth() : 1.0f);
+        const NUIControlVisualState state{isEnabled(), hovered, pressed_, toggleable_ && toggled_, isFocused()};
+        const float resolvedBorderWidth = resolveControlColors(themeProps, state).borderWidth;
+        float borderWidth = hasCustomBorderWidth_ ? borderWidth_ : (theme ? theme->getBorderWidth() : resolvedBorderWidth);
         // Inset stroke
         NUIRect strokeRect = visualRect;
         strokeRect.x += borderWidth * 0.5f;
@@ -135,23 +128,10 @@ void NUIButton::onRender(NUIRenderer& renderer) {
         float strokeRadius = std::max(0.0f, radius - borderWidth * 0.5f);
         
         renderer.strokeRoundedRect(strokeRect, strokeRadius, borderWidth, borderColor);
-        if (style_ != Style::Text && style_ != Style::Icon) {
-            NUIRect innerStroke = strokeRect;
-            innerStroke.x += 1.0f;
-            innerStroke.y += 1.0f;
-            innerStroke.width -= 2.0f;
-            innerStroke.height -= 2.0f;
-            if (innerStroke.width > 0.0f && innerStroke.height > 0.0f) {
-                renderer.strokeRoundedRect(innerStroke,
-                                           std::max(0.0f, strokeRadius - 1.0f),
-                                           1.0f,
-                                           NUIColor::white().withAlpha(active ? 0.015f : 0.04f));
-            }
-        }
     }
     
     // Draw text
-    float fontSize = fontSize_ > 0.0f ? fontSize_ : (theme ? theme->getFontSizeNormal() : 12.0f);
+    float fontSize = fontSize_ > 0.0f ? fontSize_ : (theme ? theme->getFontSizeNormal() : themeProps.fontSizeS);
     NUIColor textColor = getCurrentTextColor();
     
     renderer.drawTextCentered(text_, visualRect, fontSize, textColor);
@@ -181,6 +161,7 @@ bool NUIButton::onMouseEvent(const NUIMouseEvent& event) {
     
     if (event.pressed && event.button == NUIMouseButton::Left) {
         pressed_ = true;
+        setFocused(true);
         setDirty();
         return true;
     }
@@ -209,6 +190,7 @@ bool NUIButton::onMouseEvent(const NUIMouseEvent& event) {
 
 NUIColor NUIButton::getCurrentBackgroundColor() const {
     auto theme = getTheme();
+    const auto& themeProps = NUIThemeManager::getInstance().getCurrentTheme();
     const bool active = isEnabled() && (pressed_ || (toggleable_ && toggled_));
     const bool hovered = isEnabled() && isHovered();
     
@@ -224,7 +206,20 @@ NUIColor NUIButton::getCurrentBackgroundColor() const {
        }
     }
 
-    if (!theme) return NUIColor::fromHex(0x333333);
+    if (!theme) {
+        const NUIControlVisualState state{isEnabled(), hovered, pressed_, toggleable_ && toggled_, isFocused()};
+        auto colors = resolveControlColors(themeProps, state);
+        if (style_ == Style::Primary) {
+            if (!isEnabled()) return themeProps.buttonBgDefault.withAlpha(0.55f);
+            if (active) return themeProps.primaryPressed;
+            if (hovered) return themeProps.primaryHover;
+            return themeProps.primary;
+        }
+        if ((style_ == Style::Text || style_ == Style::Icon || style_ == Style::Secondary) && !active && !hovered) {
+            return NUIColor::transparent();
+        }
+        return colors.background;
+    }
     
     if (!isEnabled()) return theme->getDisabled();
     
@@ -246,7 +241,11 @@ NUIColor NUIButton::getCurrentTextColor() const {
     
     if (hasCustomText_) return textColor_;
     
-    if (!theme) return NUIColor::white();
+    if (!theme) {
+        const auto& props = NUIThemeManager::getInstance().getCurrentTheme();
+        if (!isEnabled()) return props.textDisabled;
+        return style_ == Style::Primary ? props.buttonTextActive : props.buttonTextDefault;
+    }
     if (!isEnabled()) return theme->getColor("textDisabled", NUIColor::fromHex(0x888888));
     
     // For primary style, text should verify contrast against surface

@@ -294,7 +294,7 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
         const float centerX = area.x + area.width * 0.5f;
         const float centerY = listY + (area.height - headerH) * 0.32f;
         renderer.drawText("Build a listening queue from the browser", AestraUI::NUIPoint(centerX - 106.0f, centerY - 8.0f), 13.0f, theme.getColor("textSecondary").withAlpha(0.92f));
-        renderer.drawText("Drag files here or use Audition from the timeline menu", AestraUI::NUIPoint(centerX - 142.0f, centerY + 12.0f), 11.0f, theme.getColor("textTertiary").withAlpha(0.90f));
+        renderer.drawText("Drag files here or use Audition from the timeline menu", AestraUI::NUIPoint(centerX - 142.0f, centerY + 12.0f), 11.0f, theme.getColor("textMuted").withAlpha(0.90f));
         return;
     }
     
@@ -350,7 +350,7 @@ void AuditionPanel::renderQueue(AestraUI::NUIRenderer& renderer, const AestraUI:
                 }
             }
         } else {
-            const AestraUI::NUIColor numberColor = theme.getColor("textTertiary").withAlpha(0.92f);
+            const AestraUI::NUIColor numberColor = theme.getColor("textMuted").withAlpha(0.92f);
             renderer.drawText(std::to_string(i + 1), AestraUI::NUIPoint(colNo, y + 12.0f), themeProps.fontSizeXS, numberColor);
         }
 
@@ -848,7 +848,7 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
         } else {
              AestraUI::NUIColor artFill(m_currentHeaderColor.r * 0.8f, m_currentHeaderColor.g * 0.8f, m_currentHeaderColor.b * 0.8f, 1.0f);
              renderer.fillRoundedRect(artRect, themeProps.radiusL, artFill.withAlpha(0.14f));
-             renderer.drawText("♪", AestraUI::NUIPoint(artRect.x + artSize * 0.5f - 6.0f, artRect.y + artSize * 0.5f - 10.0f), 22.0f, theme.getColor("textTertiary").withAlpha(0.40f));
+             renderer.drawText("♪", AestraUI::NUIPoint(artRect.x + artSize * 0.5f - 6.0f, artRect.y + artSize * 0.5f - 10.0f), 22.0f, theme.getColor("textMuted").withAlpha(0.40f));
         }
     }
 
@@ -914,7 +914,7 @@ void AuditionPanel::onRender(AestraUI::NUIRenderer& renderer) {
             subtitleText,
             AestraUI::NUIRect(transportCenterX - textW * 0.5f, subtitleY, textW, 22.0f),
             15.0f,
-            theme.getColor("textTertiary").withAlpha(0.95f * titleAlpha));
+            theme.getColor("textMuted").withAlpha(0.95f * titleAlpha));
     }
     
     // === 4. Content Calls ===
@@ -1036,7 +1036,7 @@ void AuditionPanel::renderWaveform(AestraUI::NUIRenderer& renderer, const Aestra
         const float centerX = area.x + area.width * 0.5f;
         const float centerY = area.y + area.height * 0.5f;
         renderer.drawText("Drop a track to analyze its shape", AestraUI::NUIPoint(centerX - 98.0f, centerY - 12.0f), themeProps.fontSizeXS, theme.getColor("textSecondary").withAlpha(0.9f));
-        renderer.drawText("Scrub here once a source is loaded", AestraUI::NUIPoint(centerX - 92.0f, centerY + 8.0f), themeProps.fontSizeXS, theme.getColor("textTertiary").withAlpha(0.95f));
+        renderer.drawText("Scrub here once a source is loaded", AestraUI::NUIPoint(centerX - 92.0f, centerY + 8.0f), themeProps.fontSizeXS, theme.getColor("textMuted").withAlpha(0.95f));
         return;
     }
 

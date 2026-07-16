@@ -377,60 +377,26 @@ void TrackUIComponent::updateUI() {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
 
     const AestraUI::NUIColor inactiveBg = AestraUI::NUIColor::transparent();
-    const AestraUI::NUIColor inactiveHover = AestraUI::NUIColor::transparent();
+    const AestraUI::NUIColor inactiveHover = themeManager.getColor("controlHover");
     const AestraUI::NUIColor inactiveText = themeManager.getColor("textSecondary");
     const AestraUI::NUIColor activeText = themeManager.getColor("textPrimary").withAlpha(0.96f);
-    const AestraUI::NUIColor muteActive = themeManager.getColor("warning").withAlpha(0.92f);
-    const AestraUI::NUIColor soloActive = themeManager.getColor("success").withAlpha(0.92f);
-    const AestraUI::NUIColor recordActive = themeManager.getColor("error").withAlpha(0.92f);
+    const auto configureStatusButton = [&](const auto& button, bool active,
+                                           const AestraUI::NUIColor& statusColor) {
+        if (!button) return;
+        button->setToggled(active);
+        button->setGlowEnabled(false);
+        button->setBackgroundColor(active ? statusColor.withAlpha(0.14f) : inactiveBg);
+        button->setHoverColor(active ? statusColor.withAlpha(0.20f) : inactiveHover);
+        button->setTextColor(active ? activeText : inactiveText);
+        button->setBorderEnabled(active);
+        if (active) button->setBorderColor(statusColor.withAlpha(0.48f));
+    };
 
-    if (m_muteButton) {
-        m_muteButton->setToggled(m_channel->isMuted());
-        m_muteButton->setGlowEnabled(false);
-        
-        if (m_channel->isMuted()) {
-            m_muteButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-            m_muteButton->setTextColor(muteActive);
-            m_muteButton->setHoverColor(AestraUI::NUIColor::transparent());
-            m_muteButton->setBorderEnabled(false);
-        } else {
-            m_muteButton->setBackgroundColor(inactiveBg);
-            m_muteButton->setTextColor(inactiveText);
-            m_muteButton->setHoverColor(inactiveHover);
-            m_muteButton->setBorderEnabled(false);
-        }
-    }
-
-    if (m_soloButton) {
-        m_soloButton->setToggled(m_channel->isSoloed());
-        m_soloButton->setGlowEnabled(false);
-        
-        if (m_channel->isSoloed()) {
-            m_soloButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-            m_soloButton->setTextColor(soloActive);
-            m_soloButton->setHoverColor(AestraUI::NUIColor::transparent());
-            m_soloButton->setBorderEnabled(false);
-        } else {
-            m_soloButton->setBackgroundColor(inactiveBg);
-            m_soloButton->setTextColor(inactiveText);
-            m_soloButton->setHoverColor(inactiveHover);
-            m_soloButton->setBorderEnabled(false);
-        }
-    }
+    configureStatusButton(m_muteButton, m_channel->isMuted(), themeManager.getColor("muted"));
+    configureStatusButton(m_soloButton, m_channel->isSoloed(), themeManager.getColor("soloed"));
+    configureStatusButton(m_recordButton, m_channel->isArmed(), themeManager.getColor("armed"));
 
     if (m_recordButton) {
-        m_recordButton->setToggled(m_channel->isArmed());
-        m_recordButton->setGlowEnabled(false);
-        m_recordButton->setBackgroundColor(inactiveBg);
-        m_recordButton->setTextColor(inactiveText);
-        m_recordButton->setHoverColor(inactiveHover);
-        m_recordButton->setBorderEnabled(false);
-
-        if (m_channel->isArmed()) {
-            m_recordButton->setBackgroundColor(AestraUI::NUIColor::transparent());
-            m_recordButton->setTextColor(recordActive);
-            m_recordButton->setHoverColor(AestraUI::NUIColor::transparent());
-        }
         updateRecordTooltip();
     }
 

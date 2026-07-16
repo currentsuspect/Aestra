@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "GeneralSettingsPage.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
 
 namespace Aestra {
 
@@ -8,8 +9,10 @@ GeneralSettingsPage::GeneralSettingsPage() {
 }
 
 void GeneralSettingsPage::createUI() {
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     m_projectsPathLabel = std::make_shared<AestraUI::NUILabel>();
     m_projectsPathLabel->setText("Projects Folder:");
+    m_projectsPathLabel->setFontSize(theme.getFontSize("m"));
     addChild(m_projectsPathLabel);
 
     m_projectsPathInput = std::make_shared<AestraUI::NUITextInput>();
@@ -19,15 +22,17 @@ void GeneralSettingsPage::createUI() {
 
     m_browseButton = std::make_shared<AestraUI::NUIButton>();
     m_browseButton->setText("Browse...");
+    m_browseButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     addChild(m_browseButton);
     
     m_autoSaveLabel = std::make_shared<AestraUI::NUILabel>();
     m_autoSaveLabel->setText("Auto-Save:");
+    m_autoSaveLabel->setFontSize(theme.getFontSize("m"));
     addChild(m_autoSaveLabel);
     
     m_autoSaveToggle = std::make_shared<AestraUI::NUIButton>();
     m_autoSaveToggle->setToggleable(true);
-        m_autoSaveToggle->setToggled(true); // default ON
+    m_autoSaveToggle->setToggled(true); // default ON
     syncAutoSaveLabel();
     m_autoSaveToggle->setOnToggle([this](bool enabled) {
         m_dirty = true;
@@ -67,9 +72,10 @@ void GeneralSettingsPage::onResize(int width, int height) {
 
 void GeneralSettingsPage::layoutComponents() {
     auto b = getBounds();
-    float padding = 20.0f;
-    float rowHeight = 30.0f;
-    float gap = 15.0f;
+    const auto& theme = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
+    float padding = theme.spacingM;
+    float rowHeight = theme.layout.standardControlHeight;
+    float gap = theme.spacingS;
     float x = b.x + padding;
     float y = b.y + padding;
     

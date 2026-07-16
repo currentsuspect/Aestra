@@ -15,7 +15,18 @@ NUITextInput::NUITextInput(const std::string& text)
     , text_(text)
     , blinkStartTime_(std::chrono::steady_clock::now())
 {
-    setSize(200, 30); // Default size
+    auto& theme = NUIThemeManager::getInstance();
+    const auto& props = theme.getCurrentTheme();
+    textColor_ = props.textPrimary;
+    backgroundColor_ = props.inputBgDefault;
+    borderColor_ = props.borderSubtle;
+    focusedBorderColor_ = props.focusRing;
+    placeholderColor_ = props.textMuted;
+    selectionColor_ = props.selected;
+    caretColor_ = props.textPrimary;
+    borderRadius_ = props.radiusM;
+    padding_ = props.spacingS;
+    setSize(200, props.layout.standardControlHeight);
     invalidateLayout();
 }
 
@@ -116,7 +127,7 @@ void NUITextInput::onRender(NUIRenderer& renderer)
 
 bool NUITextInput::onMouseEvent(const NUIMouseEvent& event)
 {
-    if (!isVisible()) return false;
+    if (!isVisible() || !isEnabled()) return false;
 
     NUIRect bounds = getBounds();
     if (!bounds.contains(event.position)) return false;
@@ -569,7 +580,8 @@ void NUITextInput::drawText(NUIRenderer& renderer)
             textX = std::round(textRect.right() - textSize.width);
         }
 
-        renderer.drawText(displayText, NUIPoint(textX, textY), fontSize, textColor_);
+        const NUIColor color = isEnabled() ? textColor_ : NUIThemeManager::getInstance().getColor("textDisabled");
+        renderer.drawText(displayText, NUIPoint(textX, textY), fontSize, color);
     }
     else
     {
@@ -588,7 +600,8 @@ void NUITextInput::drawText(NUIRenderer& renderer)
             float textX = std::round(bounds.x + padding_);
             float textY = std::round(getLineRenderY(line));
 
-            renderer.drawText(lineText, NUIPoint(textX, textY), fontSize, textColor_);
+            const NUIColor color = isEnabled() ? textColor_ : NUIThemeManager::getInstance().getColor("textDisabled");
+            renderer.drawText(lineText, NUIPoint(textX, textY), fontSize, color);
         }
     }
 }
@@ -662,7 +675,8 @@ void NUITextInput::drawPlaceholder(NUIRenderer& renderer)
     float textX = std::round(textRect.x + (textRect.width - textSize.width) / 2.0f);
 
     // Draw placeholder with reduced opacity if not already handled by color
-    renderer.drawText(placeholderText_, NUIPoint(textX, textY), fontSize, placeholderColor_);
+    const NUIColor color = isEnabled() ? placeholderColor_ : NUIThemeManager::getInstance().getColor("textDisabled");
+    renderer.drawText(placeholderText_, NUIPoint(textX, textY), fontSize, color);
 }
 
 void NUITextInput::invalidateLayout()
@@ -1290,32 +1304,9 @@ void NUITextInput::triggerEscapeKey()
 void NUITextInput::drawEnhancedBackground(NUIRenderer& renderer)
 {
     NUIRect bounds = getBounds();
-
-    // No focus glow halo (owner direction: flat focus state) — the focused
-    // border color below is the focus indicator.
-
-    // Inner shadow effect
-    NUIRect innerShadowRect = bounds;
-    innerShadowRect.x += 1;
-    innerShadowRect.y += 1;
-    innerShadowRect.width -= 2;
-    innerShadowRect.height -= 2;
-    renderer.fillRoundedRect(innerShadowRect, borderRadius_ - 1, 
-        NUIColor(0, 0, 0, 0.1f));
-    
-    // Main background with gradient
-    NUIColor topColor = backgroundColor_.lightened(0.05f);
-    NUIColor bottomColor = backgroundColor_.darkened(0.05f);
-    
-    for (int i = 0; i < 2; ++i)
-    {
-        float factor = static_cast<float>(i);
-        NUIColor gradientColor = NUIColor::lerp(topColor, bottomColor, factor);
-        NUIRect gradientRect = bounds;
-        gradientRect.y += i;
-        gradientRect.height -= i;
-        renderer.fillRoundedRect(gradientRect, borderRadius_, gradientColor);
-    }
+    auto& theme = NUIThemeManager::getInstance();
+    renderer.fillRoundedRect(bounds, borderRadius_,
+                             isEnabled() ? backgroundColor_ : backgroundColor_.withAlpha(0.55f));
     
     // Border with validation highlighting
     NUIColor borderColor = borderColor_;
@@ -1324,15 +1315,19 @@ void NUITextInput::drawEnhancedBackground(NUIRenderer& renderer)
     if (isFocused())
     {
         borderColor = focusedBorderColor_;
-        // When focused, maintain width but change color
+        borderWidth = std::max(borderWidth, 1.5f);
     }
     else if (hasValidationError_)
     {
-        borderColor = NUIColor::fromHex(0xff4444); // Red for errors
+        borderColor = theme.getColor("error");
     }
     else if (hasValidationSuccess_)
     {
-        borderColor = NUIColor::fromHex(0x44ff44); // Green for success
+        borderColor = theme.getColor("success");
+    }
+    else if (!isEnabled())
+    {
+        borderColor = theme.getColor("borderSubtle").withAlpha(0.45f);
     }
     
     renderer.strokeRoundedRect(bounds, borderRadius_, borderWidth, borderColor);
