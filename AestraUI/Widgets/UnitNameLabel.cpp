@@ -3,20 +3,42 @@
 #include "NUIThemeSystem.h"
 #include "NUIRenderer.h"
 #include "AestraLog.h"
+#include <algorithm>
 #include <chrono>
 
 namespace AestraUI {
+
+namespace {
+std::string fitText(NUIRenderer& renderer, const std::string& text, float fontSize, float maxWidth) {
+    if (text.empty() || renderer.measureText(text, fontSize).width <= maxWidth) {
+        return text;
+    }
+
+    constexpr const char* ellipsis = "...";
+    std::string fitted = text;
+    while (!fitted.empty() && renderer.measureText(fitted + ellipsis, fontSize).width > maxWidth) {
+        fitted.pop_back();
+    }
+    return fitted.empty() ? ellipsis : fitted + ellipsis;
+}
+} // namespace
 
 UnitNameLabel::UnitNameLabel(const std::string& name, Aestra::Audio::UnitType type)
     : m_unitName(name), m_unitType(type) {
 }
 
 void UnitNameLabel::setUnitName(const std::string& name) {
+    if (m_unitName == name) {
+        return;
+    }
     m_unitName = name;
     repaint();
 }
 
 void UnitNameLabel::setUnitType(Aestra::Audio::UnitType type) {
+    if (m_unitType == type) {
+        return;
+    }
     m_unitType = type;
     repaint();
 }
@@ -30,9 +52,10 @@ void UnitNameLabel::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
     auto bounds = getBounds();
 
-    std::string displayName = m_unitName.empty()
-                                  ? ("Unit")
-                                  : m_unitName;
+    const std::string displayName = fitText(renderer, m_unitName.empty() ? "Unit" : m_unitName,
+                                            12.0f, std::max(0.0f, bounds.width - 20.0f));
+
+    renderer.setClipRect(bounds);
 
     renderer.drawText(displayName,
                       NUIPoint(bounds.x + 10.0f, bounds.y + 3.0f),
@@ -48,7 +71,7 @@ void UnitNameLabel::onRender(NUIRenderer& renderer) {
         typeLabel = "808";
         break;
     case Aestra::Audio::UnitType::Instrument:
-        typeLabel = "Instrument";
+        typeLabel = "MIDI";
         break;
     case Aestra::Audio::UnitType::Audio:
         typeLabel = "Audio";
@@ -62,6 +85,7 @@ void UnitNameLabel::onRender(NUIRenderer& renderer) {
                       NUIPoint(bounds.x + 10.0f, bounds.y + 19.0f),
                       9.0f,
                       theme.getColor("textSecondary").withAlpha(0.5f));
+    renderer.clearClipRect();
 }
 
 bool UnitNameLabel::onMouseEvent(const NUIMouseEvent& event) {
