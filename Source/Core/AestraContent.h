@@ -64,6 +64,7 @@ namespace Aestra::Audio {
     class PatternBrowserPanel;
     class WindowPanel;
     class AestraHistoryPanel;
+    class TakesPanel;
     class AuditionEngine;  // For Audition Mode
     class PlaybackGraphController;
 }
@@ -128,6 +129,7 @@ public:
         /** @brief Arsenal overlay bounds in overlay-local coordinates. */
         AestraUI::NUIRect sequencerRect = {0, 0, 600, 300};
         AestraUI::NUIRect historyRect = {0, 80, 280, 460};
+        AestraUI::NUIRect takesRect = {0, 80, 320, 480};
 
         /** @brief True while an overlay panel is being dragged. */
         bool isDragging = false;
@@ -184,6 +186,10 @@ public:
     void toggleArsenalPanel();
     /** @brief Toggle the History panel visibility. */
     void toggleHistoryPanel();
+    /** @brief Toggle the Takes panel visibility. */
+    void toggleTakesPanel();
+    /** @brief Get the Takes panel (for app-level action wiring). */
+    std::shared_ptr<Aestra::Audio::TakesPanel> getTakesPanel() const { return m_takesPanel; }
 
     /** @brief Compute the safe workspace rectangle after chrome and sidebars. */
     AestraUI::NUIRect computeSafeRect() const;
@@ -355,6 +361,10 @@ private:
     Aestra::KeyboardNoteInput m_keyboardNoteInput;
     std::shared_ptr<Aestra::Audio::ArsenalPanel> m_sequencerPanel;
     std::shared_ptr<Aestra::Audio::AestraHistoryPanel> m_historyPanel;
+    std::shared_ptr<Aestra::Audio::TakesPanel> m_takesPanel;
+    // First-open flag: the Takes panel gets a default rect once, then keeps
+    // whatever bounds the user dragged/resized across close/reopen.
+    bool m_takesRectInitialized{false};
     std::shared_ptr<AestraUI::PluginUIController> m_pluginController;
     std::shared_ptr<AestraUI::UIRoutingMap> m_routingMapPanel;
 

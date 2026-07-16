@@ -12,6 +12,7 @@
 #include "../AestraUI/Widgets/UIMixerInspector.h"
 #include "../AestraUI/Widgets/UIMixerPanel.h"
 #include "AestraHistoryPanel.h"
+#include "TakesPanel.h"
 #include "ArsenalPanel.h"
 #include "AudioGraphBuilder.h"
 #include "AuditionEngine.h" // Audition Mode backend
@@ -1088,6 +1089,26 @@ AestraContent::AestraContent()
             m_sequencerPanel->refreshUnits();
         m_trackManager->markModified();
     });
+    // Create Takes panel — data providers and action callbacks are wired by the
+    // app layer (AestraApp) because take operations need the project path and
+    // the save/load safety rules that live there.
+    m_takesPanel = std::make_shared<Aestra::Audio::TakesPanel>();
+    m_takesPanel->setVisible(false);
+    m_takesPanel->setOnClose([this]() { toggleTakesPanel(); });
+    m_takesPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::Takes, pos); });
+    m_takesPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::Takes, pos); });
+    m_takesPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::Takes); });
+    m_takesPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
+        const auto allowed = computeAllowedRectForPanels();
+        m_viewState.takesRect = clampRectToAllowed(proposed, allowed);
+        if (m_takesPanel)
+            m_takesPanel->setBounds(m_viewState.takesRect);
+        setDirty(true);
+    });
+    m_takesPanel->setMaximized(false);
+    m_takesPanel->setOnMaximizeToggle(
+        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
+
     // NOTE: History panel is added LAST so it's on top and receives mouse events first.
 
     // Wire CommandHistory state-changed callback to refresh the history panel
@@ -1154,7 +1175,8 @@ AestraContent::AestraContent()
     m_audioVisualizer->setShowStereo(true);
     m_overlayLayer->addChild(m_audioVisualizer);
 
-    // Add History panel LAST to overlay so it's on top and receives mouse events first
+    // Add Takes + History panels LAST to overlay so they're on top and receive mouse events first
+    m_overlayLayer->addChild(m_takesPanel);
     m_overlayLayer->addChild(m_historyPanel);
 
     // Initialize preview engine
@@ -1658,6 +1680,15 @@ void AestraContent::onResize(int width, int height) {
         } else {
             m_viewState.historyRect = clampRectToAllowed(m_viewState.historyRect, allowed);
             m_historyPanel->setBounds(m_viewState.historyRect);
+        }
+    }
+
+    if (m_takesPanel && m_takesPanel->isVisible()) {
+        if (m_takesPanel->isMaximized()) {
+            m_takesPanel->setBounds(maxRect);
+        } else {
+            m_viewState.takesRect = clampRectToAllowed(m_viewState.takesRect, allowed);
+            m_takesPanel->setBounds(m_viewState.takesRect);
         }
     }
 
@@ -2488,6 +2519,9 @@ void AestraContent::beginPanelDrag(Audio::ViewType view, const AestraUI::NUIPoin
     case Audio::ViewType::History:
         m_viewState.dragStartRect = m_viewState.historyRect;
         break;
+    case Audio::ViewType::Takes:
+        m_viewState.dragStartRect = m_viewState.takesRect;
+        break;
     default:
         break;
     }
@@ -2529,6 +2563,11 @@ void AestraContent::updatePanelDrag(Audio::ViewType view, const AestraUI::NUIPoi
         m_viewState.historyRect = finalRect;
         if (m_historyPanel)
             m_historyPanel->setBounds(finalRect);
+        break;
+    case Audio::ViewType::Takes:
+        m_viewState.takesRect = finalRect;
+        if (m_takesPanel)
+            m_takesPanel->setBounds(finalRect);
         break;
     default:
         break;
@@ -3813,7 +3852,33 @@ void AestraContent::toggleHistoryPanel() {
         float y = 80.0f;
         m_viewState.historyRect = AestraUI::NUIRect(x, y, w, h);
         m_historyPanel->setBounds(m_viewState.historyRect);
+        m_historyPanel->bringToFront();
         m_historyPanel->refreshHistory();
+    }
+    onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
+}
+
+void AestraContent::toggleTakesPanel() {
+    if (!m_takesPanel)
+        return;
+    bool show = !m_takesPanel->isVisible();
+    m_takesPanel->setVisible(show);
+    if (show) {
+        // Default position below the transport bar on first open only —
+        // later opens keep the user's dragged/resized bounds (clamped by
+        // the onResize below).
+        if (!m_takesRectInitialized) {
+            auto root = getBounds();
+            float w = 320.0f;
+            float h = std::min(520.0f, root.height * 0.7f);
+            float x = std::max(0.0f, root.width * 0.5f - w - 12.0f);
+            float y = 80.0f;
+            m_viewState.takesRect = AestraUI::NUIRect(x, y, w, h);
+            m_takesRectInitialized = true;
+        }
+        m_takesPanel->setBounds(m_viewState.takesRect);
+        m_takesPanel->bringToFront();
+        m_takesPanel->refreshTakes();
     }
     onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
 }
@@ -3841,6 +3906,11 @@ bool AestraContent::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
 
     if (!event.pressed)
         return false;
+
+    // Takes panel inline rename captures typing while active — it must win
+    // over global shortcuts so Ctrl+Z etc. don't fire mid-edit.
+    if (m_takesPanel && m_takesPanel->isVisible() && m_takesPanel->handleKeyEvent(event))
+        return true;
 
     // Forward to piano roll when visible — its local undo/redo
     // and note shortcuts must take priority over global handlers

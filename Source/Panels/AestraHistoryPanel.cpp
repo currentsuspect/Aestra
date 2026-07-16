@@ -35,6 +35,16 @@ AestraHistoryPanel::AestraHistoryPanel(std::shared_ptr<TrackManager> trackManage
 
 void AestraHistoryPanel::refreshHistory() { rebuildEntries(); }
 
+void AestraHistoryPanel::activateEntry(int index)
+{
+    if (!m_trackManager || index < 0 || index >= static_cast<int>(m_entries.size())) return;
+    auto& history = m_trackManager->getCommandHistory();
+    if (m_entries[index].isRedo) history.redoTo(m_entries[index].stackIndex);
+    else history.undoTo(m_entries[index].stackIndex);
+    refreshHistory();
+    if (m_onHistoryChanged) m_onHistoryChanged();
+}
+
 void AestraHistoryPanel::rebuildEntries()
 {
     m_entries.clear();
@@ -50,6 +60,9 @@ void AestraHistoryPanel::rebuildEntries()
         m_entries.push_back({name.empty() ? "(unnamed)" : name, false, i});
     }
     m_contentHeight = m_entries.size() * ROW_HEIGHT + ROW_HEIGHT;
+    // Clamp against the visible height so a shrunken list snaps back fully.
+    const float visibleH = std::max(0.0f, getBounds().height - HEADER_HEIGHT);
+    m_scrollY = std::min(m_scrollY, std::max(0.0f, m_contentHeight - visibleH));
 }
 
 void AestraHistoryPanel::onResize(int width, int height) {
@@ -66,9 +79,8 @@ void AestraHistoryPanel::onRender(NUIRenderer& renderer)
     if (bounds.width <= 0 || bounds.height <= 0) return;
 
     // Content area starts below WindowPanel's title bar + padding
-    float headerH = 36.0f; // WindowPanel title bar height
-    float contentY = bounds.y + headerH;
-    float contentH = bounds.height - headerH;
+    float contentY = bounds.y + HEADER_HEIGHT;
+    float contentH = bounds.height - HEADER_HEIGHT;
 
     // Empty state
     if (m_entries.empty()) {
@@ -82,18 +94,20 @@ void AestraHistoryPanel::onRender(NUIRenderer& renderer)
     int headRedo = 0;
     for (const auto& e : m_entries) { if (e.isRedo) ++headRedo; else break; }
 
-    // Draw entries top-down from header
+    // Draw entries top-down from header, offset by the scroll position
     for (int i = 0; i < static_cast<int>(m_entries.size()); ++i) {
         const auto& entry = m_entries[i];
-        float rowY = contentY + i * ROW_HEIGHT;
+        float rowY = contentY + i * ROW_HEIGHT - m_scrollY;
 
-                // Skip entries outside visible area
+        // Skip entries outside visible area
         if (rowY + ROW_HEIGHT < contentY || rowY > contentY + contentH) continue;
 
         bool hovered = (i == m_hoveredEntry);
         if (hovered) {
+            // Keep the lift subtle — the hover token is light, and a strong
+            // fill washes out light row text.
             renderer.fillRect(NUIRect(bounds.x, rowY, bounds.width, ROW_HEIGHT),
-                theme.getColor("hover").withAlpha(entry.isRedo ? 0.42f : 0.92f));
+                theme.getColor("hover").withAlpha(entry.isRedo ? 0.08f : 0.14f));
         }
 
         // Category dot
@@ -111,7 +125,7 @@ void AestraHistoryPanel::onRender(NUIRenderer& renderer)
     }
 
     // HEAD marker
-    float headY = contentY + headRedo * ROW_HEIGHT;
+    float headY = contentY + headRedo * ROW_HEIGHT - m_scrollY;
     if (headY >= contentY && headY < contentY + contentH) {
         renderer.fillRect(NUIRect(bounds.x, headY, 3.0f, ROW_HEIGHT), theme.getColor("secondary").withAlpha(0.92f));
         renderer.drawText("HEAD", NUIPoint(bounds.x + 6.0f, headY + 7.0f), 9.0f,
@@ -124,24 +138,20 @@ void AestraHistoryPanel::onRender(NUIRenderer& renderer)
 
 bool AestraHistoryPanel::onMouseEvent(const NUIMouseEvent& event)
 {
-    if (event.pressed && isVisible()) {    }
-
     if (!isVisible()) return false;
 
     auto bounds = getBounds();
-    float headerH = 32.0f;
-    float contentY = bounds.y + headerH;
-    float contentH = bounds.height - headerH;
+    float contentY = bounds.y + HEADER_HEIGHT;
+    float contentH = bounds.height - HEADER_HEIGHT;
+    const bool inContent = bounds.contains(event.position) && event.position.y >= contentY;
 
-    // Handle click on entries
-    if (event.pressed && event.button == NUIMouseButton::Left && m_trackManager) {        for (int i = 0; i < static_cast<int>(m_entries.size()); ++i) {
-            float rowY = contentY + i * ROW_HEIGHT;
-            bool match = (event.position.y >= rowY && event.position.y < rowY + ROW_HEIGHT);            if (match) {
-                auto& history = m_trackManager->getCommandHistory();
-                if (m_entries[i].isRedo) history.redoTo(m_entries[i].stackIndex);
-                else history.undoTo(m_entries[i].stackIndex);
-                refreshHistory();
-                if (m_onHistoryChanged) m_onHistoryChanged();
+    // Handle click on entries (scroll-aware)
+    if (event.pressed && event.button == NUIMouseButton::Left && m_trackManager && inContent) {
+        for (int i = 0; i < static_cast<int>(m_entries.size()); ++i) {
+            float rowY = contentY + i * ROW_HEIGHT - m_scrollY;
+            if (rowY + ROW_HEIGHT < contentY) continue;
+            if (event.position.y >= rowY && event.position.y < rowY + ROW_HEIGHT) {
+                activateEntry(i);
                 return true;
             }
         }
@@ -150,9 +160,12 @@ bool AestraHistoryPanel::onMouseEvent(const NUIMouseEvent& event)
     // Handle hover
     if (event.type == NUIMouseEventType::Move) {
         m_hoveredEntry = -1;
-        for (int i = 0; i < static_cast<int>(m_entries.size()); ++i) {
-            float rowY = contentY + i * ROW_HEIGHT;
-            if (event.position.y >= rowY && event.position.y < rowY + ROW_HEIGHT) { m_hoveredEntry = i; break; }
+        if (inContent) {
+            for (int i = 0; i < static_cast<int>(m_entries.size()); ++i) {
+                float rowY = contentY + i * ROW_HEIGHT - m_scrollY;
+                if (rowY + ROW_HEIGHT < contentY) continue;
+                if (event.position.y >= rowY && event.position.y < rowY + ROW_HEIGHT) { m_hoveredEntry = i; break; }
+            }
         }
     }
 
