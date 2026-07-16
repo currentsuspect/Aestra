@@ -421,8 +421,8 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             }
 
             float gain = (v.velocity * v.velocity) * env * kSamplerOutputHeadroom * voiceComp;
-            L += outL * gain;
-            R += outR * gain;
+            L += outL * gain * v.gainL;
+            R += outR * gain * v.gainR;
 
             // Advance
             v.position += v.playbackRate;
@@ -439,7 +439,26 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
     uint8_t note = event.data[1];
     uint8_t velocity = event.data[2];
 
+    if (status == 0xA0) { // Per-note pan, sent just before the matching note-on
+        m_pendingNotePan[note & 0x7F] = velocity; // 1..127, 64 = centre
+        return;
+    }
+
     if (status == 0x90 && velocity > 0) { // Note On
+        // Consume the pending pan for this note (0 = none → centre) and
+        // re-arm the slot so later notes without pan stay centred. Unity at
+        // centre keeps unpanned projects bit-identical to before.
+        float noteGainL = 1.0f;
+        float noteGainR = 1.0f;
+        {
+            const uint8_t panByte = m_pendingNotePan[note & 0x7F];
+            m_pendingNotePan[note & 0x7F] = 0;
+            if (panByte != 0 && panByte != 64) {
+                const float pan = std::clamp((static_cast<float>(panByte) - 64.0f) / 63.0f, -1.0f, 1.0f);
+                noteGainL = std::min(1.0f, 1.0f - pan);
+                noteGainR = std::min(1.0f, 1.0f + pan);
+            }
+        }
         const float pitchParam = m_params[kParamPitch].load(std::memory_order_relaxed);
         const float globalSemitones = (pitchParam - 0.5f) * 24.0f + (m_fineTuneCents.load(std::memory_order_relaxed) / 100.0f);
         const int rootMidiNote = m_rootMidiNote.load(std::memory_order_relaxed);
@@ -461,6 +480,8 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
             voice.active = true;
             voice.note = note;
             voice.velocity = velocity / 127.0f;
+            voice.gainL = noteGainL;
+            voice.gainR = noteGainR;
 
             if (legato) {
                 voice.targetPlaybackRate = targetRate;
@@ -526,6 +547,8 @@ void SamplerPlugin::handleMidiEvent(const MidiBuffer::Event& event, double baseR
         freeVoice->active = true;
         freeVoice->note = note;
         freeVoice->velocity = velocity / 127.0f;
+        freeVoice->gainL = noteGainL;
+        freeVoice->gainR = noteGainR;
         freeVoice->position = noteStartFrame;
         freeVoice->playbackRate = targetRate;
         freeVoice->targetPlaybackRate = targetRate;

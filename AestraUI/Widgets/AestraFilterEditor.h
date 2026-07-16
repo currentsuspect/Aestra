@@ -15,6 +15,7 @@ class AestraFilterEditor : public AestraPanelWindow {
 public:
     explicit AestraFilterEditor(std::shared_ptr<Aestra::Audio::IPluginInstance> instance);
     void drawContent(NUIRenderer& renderer, const NUIRect& contentRect) override;
+    void onUpdate(double deltaTime) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onResize(int width, int height) override;
     using AestraPanelWindow::onResize;
@@ -23,6 +24,8 @@ public:
 
 private:
     void layoutControls();
+    void drawResponseDisplay(NUIRenderer& renderer);
+    void drawSectionLabel(NUIRenderer& renderer, const char* label, const NUIRect& bounds);
     void drawKnob(NUIRenderer& renderer, const NUIRect& rect, uint32_t paramId, const char* label, bool large,
                   bool bipolar);
     void drawTypeSelector(NUIRenderer& renderer);
@@ -35,6 +38,7 @@ private:
     std::shared_ptr<Aestra::Audio::IPluginInstance> m_instance;
 
     NUIRect m_cutoffRect;
+    NUIRect m_responseRect;
     NUIRect m_resoRect;
     NUIRect m_driveRect;
     NUIRect m_envRect;
@@ -51,9 +55,10 @@ private:
     float m_dragStartValue = 0.0f;
     bool m_draggingMix = false;
     bool m_bypassHovered = false;
+    double m_visualRefreshTimer = 0.0;
 
-    static constexpr float kWinW = 520.0f;
-    static constexpr float kWinH = 320.0f;
+    static constexpr float kWinW = 700.0f;
+    static constexpr float kWinH = 420.0f;
 };
 
 } // namespace AestraUI

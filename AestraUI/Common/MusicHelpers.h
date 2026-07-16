@@ -11,6 +11,7 @@ struct MidiNote {
     double startBeat;    // Start position in beats
     double durationBeats;// Duration in beats
     float velocity;      // 0..1
+    float pan = 0.0f;    // -1 (left) .. 1 (right), 0 = centre
     uint64_t unitId = 0; // Arsenal unit routing
     bool selected = false;
     bool isDeleted = false; // For delete animation
