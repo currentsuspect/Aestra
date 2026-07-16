@@ -1,7 +1,7 @@
 <map id="AestraUI::PianoRollRuler" name="AestraUI::PianoRollRuler">
-<area shape="rect" id="Node000001" title=" " alt="" coords="736,131,917,157"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="749,149,931,174"/>
 <area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="375,91,560,117"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="574,113,736,131,735,137,573,118"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="574,116,726,139,769,146,768,151,725,144,573,121"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="5,5,225,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="240,23,296,29,351,41,406,64,449,89,446,94,403,69,350,47,295,35,239,29"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="35,84,195,124"/>
@@ -9,5 +9,7 @@
 <area shape="rect" id="Node000005" title=" " alt="" coords="36,148,195,188"/>
 <area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="208,159,278,150,350,136,374,127,416,114,417,119,376,132,351,141,279,156,209,164"/>
 <area shape="rect" id="Node000006" title=" " alt="" coords="383,141,552,181"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="566,154,735,146,735,151,566,159"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="566,159,749,159,749,164,566,164"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="384,205,551,245"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="564,206,725,179,766,171,767,177,726,184,565,212"/>
 </map>

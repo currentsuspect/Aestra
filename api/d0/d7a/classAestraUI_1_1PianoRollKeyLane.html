@@ -113,9 +113,13 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab0a4f3085a9acc03b07becd4fc42d8ad" id="r_ab0a4f3085a9acc03b07becd4fc42d8ad"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d7a/classAestraUI_1_1PianoRollKeyLane.html#ab0a4f3085a9acc03b07becd4fc42d8ad">setScrollOffsetY</a> (float offset)</td></tr>
 <tr class="memdesc:ab0a4f3085a9acc03b07becd4fc42d8ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the vertical scroll offset applied to the lane.  <br /></td></tr>
 <tr class="separator:ab0a4f3085a9acc03b07becd4fc42d8ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a23f0f9e523c30cd83b5f1f3fee4149d1" id="r_a23f0f9e523c30cd83b5f1f3fee4149d1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d7a/classAestraUI_1_1PianoRollKeyLane.html#a23f0f9e523c30cd83b5f1f3fee4149d1">setHoveredKey</a> (int pitch)</td></tr>
+<tr class="separator:a23f0f9e523c30cd83b5f1f3fee4149d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab4309a31e2a62563e2dc003c53195180" id="r_ab4309a31e2a62563e2dc003c53195180"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d7a/classAestraUI_1_1PianoRollKeyLane.html#ab4309a31e2a62563e2dc003c53195180">setOnPreviewNote</a> (std::function&lt; void(int pitch, int velocity)&gt; cb)</td></tr>
 <tr class="memdesc:ab4309a31e2a62563e2dc003c53195180"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set callback for note preview (pitch, velocity).  <br /></td></tr>
 <tr class="separator:ab4309a31e2a62563e2dc003c53195180"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a490c9bd2ef5a53a6477e83c7949c11a4" id="r_a490c9bd2ef5a53a6477e83c7949c11a4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d7a/classAestraUI_1_1PianoRollKeyLane.html#a490c9bd2ef5a53a6477e83c7949c11a4">setOnHoveredKeyChanged</a> (std::function&lt; void(int pitch)&gt; cb)</td></tr>
+<tr class="separator:a490c9bd2ef5a53a6477e83c7949c11a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afc17911ab6ead0dee7f02cc8517919a3" id="r_afc17911ab6ead0dee7f02cc8517919a3"><td class="memItemLeft" align="right" valign="top"><a id="afc17911ab6ead0dee7f02cc8517919a3" name="afc17911ab6ead0dee7f02cc8517919a3"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>setIsPlayingCallback</b> (std::function&lt; bool()&gt; cb)</td></tr>
 <tr class="memdesc:afc17911ab6ead0dee7f02cc8517919a3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set callback to check if transport is playing (suppress preview when playing). <br /></td></tr>
@@ -295,7 +299,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Create the vertical piano-key lane. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00081">81</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00084">84</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -355,7 +359,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00149">149</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00166">166</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -385,7 +389,35 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00086">86</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00089">89</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a23f0f9e523c30cd83b5f1f3fee4149d1" name="a23f0f9e523c30cd83b5f1f3fee4149d1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a23f0f9e523c30cd83b5f1f3fee4149d1">&#9670;&#160;</a></span>setHoveredKey()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PianoRollKeyLane::setHoveredKey </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>pitch</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00035">35</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -415,7 +447,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Forward isPlaying callback from <a class="el" href="../../d1/dab/classAestraUI_1_1PianoRollView.html">PianoRollView</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00043">43</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00047">47</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -437,7 +469,35 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the rendered key height in pixels. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00177">177</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00212">212</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a490c9bd2ef5a53a6477e83c7949c11a4" name="a490c9bd2ef5a53a6477e83c7949c11a4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a490c9bd2ef5a53a6477e83c7949c11a4">&#9670;&#160;</a></span>setOnHoveredKeyChanged()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::PianoRollKeyLane::setOnHoveredKeyChanged </td>
+          <td>(</td>
+          <td class="paramtype">std::function&lt; void(int pitch)&gt;&#160;</td>
+          <td class="paramname"><em>cb</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00039">39</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
 </div>
 </div>
@@ -460,7 +520,7 @@ Additional Inherited Members</h2></td></tr>
 <p>Set callback for note preview (pitch, velocity). </p>
 <p>Called when user clicks a key. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00187">187</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00222">222</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -482,7 +542,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the vertical scroll offset applied to the lane. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00182">182</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l00217">217</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>

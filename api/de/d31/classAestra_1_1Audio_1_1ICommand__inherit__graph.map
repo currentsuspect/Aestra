@@ -1,53 +1,55 @@
 <map id="Aestra::Audio::ICommand" name="Aestra::Audio::ICommand">
-<area shape="rect" id="Node000001" title="Abstract base class for all undoable operations." alt="" coords="5,682,193,707"/>
+<area shape="rect" id="Node000001" title="Abstract base class for all undoable operations." alt="" coords="5,714,193,739"/>
 <area shape="rect" id="Node000002" href="$d4/d73/classAestra_1_1Audio_1_1AddChannelCommand.html" title="Command to add a mixer channel to TrackManager." alt="" coords="273,5,468,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="100,668,114,539,140,355,159,261,182,175,208,104,223,76,239,55,254,43,272,34,274,39,257,48,243,59,228,79,213,106,187,176,164,262,145,356,119,540,106,668"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="100,700,112,566,138,372,157,272,180,181,207,107,223,78,239,55,255,43,272,34,275,39,258,48,243,59,227,80,212,109,185,183,162,274,143,373,118,566,105,700"/>
 <area shape="rect" id="Node000003" href="$dd/dd7/classAestra_1_1Audio_1_1AddClipCommand.html" title=" " alt="" coords="253,70,488,95"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="101,668,115,547,142,378,161,291,183,212,209,148,224,123,240,105,255,93,258,98,243,109,228,126,214,151,188,214,166,293,147,379,120,548,106,668"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="100,700,114,573,140,394,159,303,181,219,208,151,223,125,239,105,255,93,258,98,243,109,228,128,213,153,186,221,164,304,145,395,119,574,106,700"/>
 <area shape="rect" id="Node000004" href="$d7/d42/classAestra_1_1Audio_1_1AddNoteCommand.html" title="Command to add a MIDI note to a pattern (undoable)" alt="" coords="251,119,491,145"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="101,667,117,556,146,402,165,324,187,253,212,195,239,155,257,143,261,147,243,159,216,197,192,255,170,325,151,403,123,557,107,668"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="101,700,116,583,144,419,163,336,185,260,210,197,224,174,240,155,257,143,260,147,243,159,229,177,215,200,190,261,168,337,149,420,121,584,106,701"/>
 <area shape="rect" id="Node000005" href="$df/dad/classAestra_1_1Audio_1_1AddPluginCommand.html" title=" " alt="" coords="279,169,462,209"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="97,668,101,582,107,524,119,461,136,396,162,332,195,272,240,219,258,206,278,197,280,202,260,211,243,223,200,275,166,334,142,397,124,462,113,525,106,582,103,668"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="102,700,119,595,149,451,168,378,190,311,213,257,239,219,258,206,278,197,280,202,260,211,243,223,218,259,194,313,173,379,154,452,124,596,107,701"/>
 <area shape="rect" id="Node000006" href="$d1/da6/classAestra_1_1Audio_1_1CommandTransaction.html" title="Groups multiple commands into a single undoable transaction (v1.0)" alt="" coords="241,234,500,259"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="98,668,104,589,112,538,124,481,142,424,166,367,198,315,240,270,258,257,261,262,243,274,203,318,171,370,147,426,129,483,117,539,109,590,104,668"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="98,700,101,616,108,561,120,500,137,437,162,376,196,319,240,270,258,257,261,262,243,274,200,322,167,378,142,439,125,501,113,561,107,617,103,700"/>
 <area shape="rect" id="Node000007" href="$d7/d09/classAestra_1_1Audio_1_1CreateLaneCommand.html" title="Command to create a new lane (track) in the playlist." alt="" coords="275,284,466,324"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="100,668,110,601,134,510,152,462,175,415,204,372,240,334,274,314,277,319,243,338,208,375,180,418,157,465,139,512,116,602,106,669"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="99,700,108,628,129,529,147,476,171,424,202,376,240,334,274,314,276,318,243,338,206,379,176,427,152,478,135,530,113,628,105,701"/>
 <area shape="rect" id="Node000008" href="$da/d55/classAestra_1_1Audio_1_1DeleteTrackCommand.html" title=" " alt="" coords="273,348,468,388"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="103,668,117,611,142,538,161,500,183,463,209,428,240,398,272,380,275,384,243,402,213,431,187,466,165,502,147,540,122,613,108,669"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="101,700,113,638,138,557,156,513,179,471,206,432,240,398,272,379,274,384,243,402,210,435,183,474,161,516,143,558,119,640,107,701"/>
 <area shape="rect" id="Node000009" href="$d1/d39/classAestra_1_1Audio_1_1DuplicateClipCommand.html" title="Command to duplicate a clip at a new position." alt="" coords="281,412,460,452"/>
-<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="107,668,124,623,152,567,190,510,214,484,240,462,280,442,282,447,243,466,217,488,195,513,157,570,129,625,111,670"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="104,700,120,649,147,585,186,518,211,488,240,462,259,450,280,441,282,446,261,455,243,466,215,492,191,521,152,587,125,651,109,702"/>
 <area shape="rect" id="Node000010" href="$d6/dec/classAestra_1_1Audio_1_1MacroCommand.html" title="Groups multiple commands into a single undoable transaction." alt="" coords="259,477,483,502"/>
-<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="110,668,130,632,159,589,196,546,240,511,264,500,266,505,243,516,199,550,163,592,135,635,115,671"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="107,700,126,658,154,606,192,554,214,531,240,511,262,500,264,504,243,516,218,535,196,558,158,609,130,660,112,702"/>
 <area shape="rect" id="Node000011" href="$dd/df8/classAestra_1_1Audio_1_1MoveClipCommand.html" title="Command to move a clip to a new position (and optionally a new lane)" alt="" coords="248,526,493,551"/>
-<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="117,669,168,613,202,584,240,560,269,549,271,554,243,565,205,589,172,617,121,673"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="112,700,133,668,162,630,198,592,240,560,265,549,268,554,243,565,201,596,166,633,137,671,117,703"/>
 <area shape="rect" id="Node000012" href="$d6/d5a/classAestra_1_1Audio_1_1MoveNoteCommand.html" title="Command to move a MIDI note to a new position and/or pitch (undoable)" alt="" coords="245,575,496,601"/>
-<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="127,672,179,639,240,610,279,598,281,603,242,614,181,644,130,676"/>
+<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="120,702,171,654,204,630,240,610,272,598,274,603,242,614,207,634,174,659,123,706"/>
 <area shape="rect" id="Node000013" href="$da/da3/classAestra_1_1Audio_1_1PlayCommand.html" title=" " alt="" coords="265,625,477,650"/>
-<area shape="poly" id="edge12_Node000001_Node000013" title=" " alt="" coords="168,676,241,660,302,648,303,653,242,665,169,681"/>
+<area shape="poly" id="edge12_Node000001_Node000013" title=" " alt="" coords="135,705,184,682,241,660,289,647,291,653,242,665,186,687,137,710"/>
 <area shape="rect" id="Node000014" href="$dd/d5e/classAestra_1_1Audio_1_1RemoveClipCommand.html" title="Command to remove a clip from the playlist." alt="" coords="273,675,469,715"/>
-<area shape="poly" id="edge13_Node000001_Node000014" title=" " alt="" coords="207,692,272,692,272,697,207,697"/>
+<area shape="poly" id="edge13_Node000001_Node000014" title=" " alt="" coords="207,711,272,704,273,709,207,717"/>
 <area shape="rect" id="Node000015" href="$d6/d41/classAestra_1_1Audio_1_1RemoveNoteCommand.html" title="Command to remove a MIDI note from a pattern (undoable)" alt="" coords="269,739,472,779"/>
-<area shape="poly" id="edge14_Node000001_Node000015" title=" " alt="" coords="168,708,286,736,284,741,167,713"/>
+<area shape="poly" id="edge14_Node000001_Node000015" title=" " alt="" coords="207,737,269,744,269,749,207,742"/>
 <area shape="rect" id="Node000016" href="$d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html" title=" " alt="" coords="265,803,476,843"/>
-<area shape="poly" id="edge15_Node000001_Node000016" title=" " alt="" coords="128,714,179,752,242,788,274,800,272,805,240,793,176,756,124,718"/>
+<area shape="poly" id="edge15_Node000001_Node000016" title=" " alt="" coords="138,743,187,766,242,788,281,800,279,805,240,793,185,771,136,748"/>
 <area shape="rect" id="Node000017" href="$dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html" title=" " alt="" coords="268,867,473,907"/>
-<area shape="poly" id="edge16_Node000001_Node000017" title=" " alt="" coords="117,717,167,785,202,822,243,852,269,865,267,870,240,857,199,826,163,789,113,721"/>
+<area shape="poly" id="edge16_Node000001_Node000017" title=" " alt="" coords="121,748,173,801,206,829,243,852,270,864,268,869,240,857,203,833,169,805,118,752"/>
 <area shape="rect" id="Node000018" href="$d1/de2/classAestra_1_1Audio_1_1ResizeNoteCommand.html" title="Command to resize a MIDI note&#39;s duration (undoable)" alt="" coords="275,931,466,971"/>
-<area shape="poly" id="edge17_Node000001_Node000018" title=" " alt="" coords="112,720,130,763,158,817,195,871,218,895,243,916,276,934,273,938,240,921,214,899,191,874,153,819,125,765,107,722"/>
+<area shape="poly" id="edge17_Node000001_Node000018" title=" " alt="" coords="115,751,134,788,163,833,199,879,243,916,276,933,274,938,240,921,195,882,158,837,130,791,110,754"/>
 <area shape="rect" id="Node000019" href="$dc/dc8/classAestra_1_1Audio_1_1SetBpmCommand.html" title=" " alt="" coords="253,995,488,1021"/>
-<area shape="poly" id="edge18_Node000001_Node000019" title=" " alt="" coords="108,720,122,776,147,847,165,884,187,920,213,953,243,981,265,993,262,998,240,985,209,956,183,923,160,887,142,849,117,777,103,722"/>
+<area shape="poly" id="edge18_Node000001_Node000019" title=" " alt="" coords="110,752,125,802,152,864,191,928,215,956,243,980,265,993,263,998,240,985,211,960,186,931,147,867,120,804,105,754"/>
 <area shape="rect" id="Node000020" href="$d8/dbb/classAestra_1_1Audio_1_1SetMuteCommand.html" title="Command to toggle a channel&#39;s mute state." alt="" coords="251,1045,490,1070"/>
-<area shape="poly" id="edge19_Node000001_Node000020" title=" " alt="" coords="106,720,117,784,140,869,158,913,181,956,209,996,243,1030,263,1042,260,1047,240,1034,205,999,176,959,153,916,135,871,112,786,101,721"/>
+<area shape="poly" id="edge19_Node000001_Node000020" title=" " alt="" coords="107,752,120,811,145,887,163,926,185,965,211,1000,243,1030,264,1042,261,1047,240,1034,207,1003,180,968,158,929,140,889,115,812,102,753"/>
 <area shape="rect" id="Node000021" href="$d9/d7b/classAestra_1_1Audio_1_1SetPanCommand.html" title="Command to change a channel&#39;s pan position." alt="" coords="257,1094,485,1119"/>
-<area shape="poly" id="edge20_Node000001_Node000021" title=" " alt="" coords="104,721,112,793,134,891,151,942,175,993,205,1039,243,1079,262,1092,259,1096,240,1083,201,1043,170,996,146,944,129,892,107,794,99,721"/>
+<area shape="poly" id="edge20_Node000001_Node000021" title=" " alt="" coords="105,753,115,819,138,909,156,956,179,1001,208,1043,243,1079,263,1092,260,1096,240,1083,204,1047,174,1004,151,958,133,910,110,821,100,753"/>
 <area shape="rect" id="Node000022" href="$d2/d02/classAestra_1_1Audio_1_1SetSoloCommand.html" title="Command to toggle a channel&#39;s solo state." alt="" coords="254,1143,487,1169"/>
-<area shape="poly" id="edge21_Node000001_Node000022" title=" " alt="" coords="103,721,108,801,115,854,127,912,145,971,169,1029,202,1083,243,1129,261,1141,258,1145,240,1133,197,1086,164,1032,140,973,122,913,110,855,103,802,98,721"/>
+<area shape="poly" id="edge21_Node000001_Node000022" title=" " alt="" coords="104,753,111,828,131,930,149,985,173,1038,204,1087,243,1129,262,1141,259,1146,240,1133,200,1090,168,1040,144,987,126,932,106,829,99,753"/>
 <area shape="rect" id="Node000023" href="$d0/d26/classAestra_1_1Audio_1_1SetVolumeCommand.html" title="Command to change a channel&#39;s volume." alt="" coords="277,1193,464,1233"/>
-<area shape="poly" id="edge22_Node000001_Node000023" title=" " alt="" coords="103,721,106,808,112,867,123,932,140,998,165,1064,199,1125,243,1178,259,1190,278,1199,276,1204,257,1195,239,1182,195,1128,160,1066,135,1000,118,933,106,868,100,809,97,721"/>
+<area shape="poly" id="edge22_Node000001_Node000023" title=" " alt="" coords="103,753,108,835,115,890,127,950,144,1012,169,1072,201,1129,243,1178,260,1190,278,1199,276,1204,257,1195,240,1182,197,1132,164,1075,139,1013,122,951,110,891,103,835,98,753"/>
 <area shape="rect" id="Node000024" href="$d6/d73/classAestra_1_1Audio_1_1SplitClipCommand.html" title=" " alt="" coords="285,1257,456,1297"/>
-<area shape="poly" id="edge23_Node000001_Node000024" title=" " alt="" coords="107,721,122,834,151,992,170,1072,192,1144,216,1204,243,1243,263,1258,286,1267,284,1272,260,1262,239,1247,212,1206,187,1146,165,1073,146,993,117,835,101,722"/>
+<area shape="poly" id="edge23_Node000001_Node000024" title=" " alt="" coords="107,753,124,860,153,1008,172,1083,194,1151,217,1206,243,1243,263,1258,286,1267,284,1272,260,1262,239,1247,213,1209,189,1153,167,1084,148,1009,119,861,102,753"/>
 <area shape="rect" id="Node000025" href="$db/d15/classAestra_1_1Audio_1_1StopCommand.html" title=" " alt="" coords="264,1322,477,1347"/>
-<area shape="poly" id="edge24_Node000001_Node000025" title=" " alt="" coords="106,721,119,846,146,1023,165,1114,187,1196,213,1263,228,1288,243,1307,265,1322,262,1327,240,1311,223,1292,208,1265,182,1198,159,1115,141,1024,114,846,100,721"/>
+<area shape="poly" id="edge24_Node000001_Node000025" title=" " alt="" coords="106,753,120,872,148,1040,167,1125,189,1203,215,1266,228,1290,243,1307,265,1322,262,1327,240,1311,224,1293,210,1268,184,1204,162,1126,143,1041,115,873,101,753"/>
 <area shape="rect" id="Node000026" href="$d2/dea/classAestra_1_1Audio_1_1TrimClipCommand.html" title="Command to trim a clip&#39;s start/end positions." alt="" coords="252,1371,489,1397"/>
-<area shape="poly" id="edge25_Node000001_Node000026" title=" " alt="" coords="105,721,117,855,143,1047,161,1145,184,1235,211,1308,227,1336,243,1357,260,1369,257,1373,239,1361,222,1339,206,1311,179,1237,156,1147,137,1048,112,855,100,721"/>
+<area shape="poly" id="edge25_Node000001_Node000026" title=" " alt="" coords="105,753,118,881,145,1064,163,1157,186,1242,213,1311,227,1337,243,1357,260,1369,257,1373,239,1361,223,1340,208,1313,181,1243,158,1158,139,1064,113,882,100,753"/>
+<area shape="rect" id="Node000027" href="$d3/d2f/classAestra_1_1Audio_1_1UpdateNoteCommand.html" title="Command to update a MIDI note&#39;s expression (velocity/pan) in place (undoable)" alt="" coords="273,1421,468,1461"/>
+<area shape="poly" id="edge26_Node000001_Node000027" title=" " alt="" coords="105,753,117,889,143,1086,161,1187,184,1280,212,1355,227,1384,243,1406,258,1418,274,1427,272,1432,255,1422,239,1410,222,1387,207,1358,179,1281,156,1188,138,1087,112,890,100,753"/>
 </map>

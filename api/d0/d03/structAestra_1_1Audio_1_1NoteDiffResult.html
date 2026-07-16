@@ -113,6 +113,9 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a21ec8d57e9c6e601cfb5c32086f1b240" id="r_a21ec8d57e9c6e601cfb5c32086f1b240"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::pair&lt; <a class="el" href="../../da/d9d/structAestra_1_1Audio_1_1MidiNote.html">MidiNote</a>, <a class="el" href="../../da/d9d/structAestra_1_1Audio_1_1MidiNote.html">MidiNote</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d03/structAestra_1_1Audio_1_1NoteDiffResult.html#a21ec8d57e9c6e601cfb5c32086f1b240">resized</a></td></tr>
 <tr class="memdesc:a21ec8d57e9c6e601cfb5c32086f1b240"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pairs of (before, after) for notes that changed duration.  <br /></td></tr>
 <tr class="separator:a21ec8d57e9c6e601cfb5c32086f1b240"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ada51f37d88739ea975d0dde5402c0a81" id="r_ada51f37d88739ea975d0dde5402c0a81"><td class="memItemLeft" align="right" valign="top">std::vector&lt; std::pair&lt; <a class="el" href="../../da/d9d/structAestra_1_1Audio_1_1MidiNote.html">MidiNote</a>, <a class="el" href="../../da/d9d/structAestra_1_1Audio_1_1MidiNote.html">MidiNote</a> &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d03/structAestra_1_1Audio_1_1NoteDiffResult.html#ada51f37d88739ea975d0dde5402c0a81">modified</a></td></tr>
+<tr class="memdesc:ada51f37d88739ea975d0dde5402c0a81"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pairs of (before, after) for in-place expression changes (velocity/pan).  <br /></td></tr>
+<tr class="separator:ada51f37d88739ea975d0dde5402c0a81"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Result of diffing two note states. </p>
@@ -143,7 +146,7 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00028">28</a> of file <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html">NoteDiff.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00030">30</a> of file <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html">NoteDiff.h</a>.</p>
 
 </div>
 </div>
@@ -164,7 +167,27 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00020">20</a> of file <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html">NoteDiff.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00219">Aestra::Audio::PianoRollPanel::savePattern()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00245">Aestra::Audio::PianoRollPanel::savePattern()</a>.</p>
+
+</div>
+</div>
+<a id="ada51f37d88739ea975d0dde5402c0a81" name="ada51f37d88739ea975d0dde5402c0a81"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ada51f37d88739ea975d0dde5402c0a81">&#9670;&#160;</a></span>modified</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt;std::pair&lt;<a class="el" href="../../da/d9d/structAestra_1_1Audio_1_1MidiNote.html">MidiNote</a>, <a class="el" href="../../da/d9d/structAestra_1_1Audio_1_1MidiNote.html">MidiNote</a>&gt; &gt; Aestra::Audio::NoteDiffResult::modified</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Pairs of (before, after) for in-place expression changes (velocity/pan). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00028">28</a> of file <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html">NoteDiff.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00245">Aestra::Audio::PianoRollPanel::savePattern()</a>.</p>
 
 </div>
 </div>
@@ -184,7 +207,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00024">24</a> of file <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html">NoteDiff.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00219">Aestra::Audio::PianoRollPanel::savePattern()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00245">Aestra::Audio::PianoRollPanel::savePattern()</a>.</p>
 
 </div>
 </div>
@@ -204,7 +227,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00022">22</a> of file <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html">NoteDiff.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00219">Aestra::Audio::PianoRollPanel::savePattern()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00245">Aestra::Audio::PianoRollPanel::savePattern()</a>.</p>
 
 </div>
 </div>
@@ -224,7 +247,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html#l00026">26</a> of file <a class="el" href="../../d0/d2b/NoteDiff_8h_source.html">NoteDiff.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00219">Aestra::Audio::PianoRollPanel::savePattern()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/de8/PianoRollPanel_8cpp_source.html#l00245">Aestra::Audio::PianoRollPanel::savePattern()</a>.</p>
 
 </div>
 </div>

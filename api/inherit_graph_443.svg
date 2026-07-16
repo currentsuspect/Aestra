@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d8/d6c/structProjectSerializer_1_1UIState.html" target="_top" xlink:title=" ">
+<g id="a_Node000000"><a xlink:href="d8/ddf/structProjectSerializer_1_1LoadResult.html" target="_top" xlink:title=" ">
 <polygon fill="white" stroke="#666666" points="102,-30 0,-30 0,0 102,0 102,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">ProjectSerializer::</text>
-<text text-anchor="middle" x="51" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">UIState</text>
+<text text-anchor="middle" x="51" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">LoadResult</text>
 </a>
 </g>
 </g>

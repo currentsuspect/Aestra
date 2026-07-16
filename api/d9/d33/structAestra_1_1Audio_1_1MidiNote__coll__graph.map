@@ -1,15 +1,15 @@
 <map id="Aestra::Audio::MidiNote" name="Aestra::Audio::MidiNote">
-<area shape="rect" id="Node000001" title="MIDI note structure for audio engine." alt="" coords="182,108,358,133"/>
+<area shape="rect" id="Node000001" title="MIDI note structure for audio engine." alt="" coords="182,123,358,148"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="5,5,44,31"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="35,42,47,64,64,82,83,91,112,98,182,109,181,114,111,104,81,96,60,86,42,67,30,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="31,44,40,72,58,97,78,107,108,115,182,125,182,131,107,120,76,112,55,101,35,75,26,45"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="69,5,135,31"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="105,44,110,65,121,82,148,95,190,105,189,111,146,100,118,86,105,67,100,45"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="103,44,106,72,111,85,118,97,144,110,185,120,183,125,142,115,115,101,106,88,101,73,97,45"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="201,5,251,31"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="224,45,225,64,230,83,239,96,251,106,248,110,235,99,225,85,219,65,219,45"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="223,44,221,71,227,98,237,110,249,120,246,125,233,114,222,100,216,71,217,44"/>
 <area shape="rect" id="Node000005" title=" " alt="" coords="275,5,350,31"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="305,44,277,109,272,107,300,42"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="306,45,286,100,277,123,272,121,281,98,301,43"/>
 <area shape="rect" id="Node000006" title=" " alt="" coords="374,5,433,31"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="388,43,368,65,344,86,300,110,298,106,340,82,364,61,384,40"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="393,44,374,73,348,101,327,115,305,125,303,120,324,110,344,97,370,70,389,41"/>
 <area shape="rect" id="Node000007" title=" " alt="" coords="475,5,526,31"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="491,44,476,67,454,86,408,107,359,118,357,113,406,102,451,82,472,63,487,41"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="498,46,486,75,465,101,447,110,421,118,359,128,358,123,420,112,445,105,462,97,481,72,493,44"/>
 </map>

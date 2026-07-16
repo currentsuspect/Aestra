@@ -26,5 +26,6 @@ var searchData=
   ['unitnamelabel_23',['UnitNameLabel',['../de/de0/classAestraUI_1_1UnitNameLabel.html',1,'AestraUI']]],
   ['unitrow_24',['UnitRow',['../da/d6f/classAestraUI_1_1UnitRow.html',1,'AestraUI']]],
   ['unitstate_25',['UnitState',['../d3/d38/structAestra_1_1Audio_1_1UnitState.html',1,'Aestra::Audio']]],
-  ['userprofile_26',['UserProfile',['../da/deb/structAestra_1_1UserProfile.html',1,'Aestra']]]
+  ['updatenotecommand_26',['UpdateNoteCommand',['../d3/d2f/classAestra_1_1Audio_1_1UpdateNoteCommand.html',1,'Aestra::Audio']]],
+  ['userprofile_27',['UserProfile',['../da/deb/structAestra_1_1UserProfile.html',1,'Aestra']]]
 ];

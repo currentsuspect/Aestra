@@ -27,9 +27,10 @@ var searchData=
   ['mmcss_24',['MMCSS',['../d6/d61/classAestra_1_1MMCSS.html',1,'Aestra']]],
   ['modaloverlay_25',['ModalOverlay',['../d9/d9a/classAestraUI_1_1ModalOverlay.html',1,'AestraUI']]],
   ['modeconstants_26',['ModeConstants',['../d9/d64/structAestra_1_1Audio_1_1Plugins_1_1AestraVerb_1_1ModeConstants.html',1,'Aestra::Audio::Plugins::AestraVerb']]],
-  ['moveclipcommand_27',['MoveClipCommand',['../dd/df8/classAestra_1_1Audio_1_1MoveClipCommand.html',1,'Aestra::Audio']]],
-  ['movenotecommand_28',['MoveNoteCommand',['../d6/d5a/classAestra_1_1Audio_1_1MoveNoteCommand.html',1,'Aestra::Audio']]],
-  ['multilogger_29',['MultiLogger',['../d9/d21/classAestra_1_1MultiLogger.html',1,'Aestra']]],
-  ['musicaltypingcontroller_30',['MusicalTypingController',['../d5/d52/classAestra_1_1MusicalTypingController.html',1,'Aestra']]],
-  ['mutebutton_31',['MuteButton',['../d9/dab/classAestraUI_1_1MuteButton.html',1,'AestraUI']]]
+  ['moduleholder_27',['ModuleHolder',['../dd/d55/structAestra_1_1Audio_1_1VST3PluginInstance_1_1ModuleHolder.html',1,'Aestra::Audio::VST3PluginInstance']]],
+  ['moveclipcommand_28',['MoveClipCommand',['../dd/df8/classAestra_1_1Audio_1_1MoveClipCommand.html',1,'Aestra::Audio']]],
+  ['movenotecommand_29',['MoveNoteCommand',['../d6/d5a/classAestra_1_1Audio_1_1MoveNoteCommand.html',1,'Aestra::Audio']]],
+  ['multilogger_30',['MultiLogger',['../d9/d21/classAestra_1_1MultiLogger.html',1,'Aestra']]],
+  ['musicaltypingcontroller_31',['MusicalTypingController',['../d5/d52/classAestra_1_1MusicalTypingController.html',1,'Aestra']]],
+  ['mutebutton_32',['MuteButton',['../d9/dab/classAestraUI_1_1MuteButton.html',1,'AestraUI']]]
 ];

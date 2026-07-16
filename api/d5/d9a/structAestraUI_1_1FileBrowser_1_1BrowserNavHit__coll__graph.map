@@ -1,13 +1,13 @@
 <map id="AestraUI::FileBrowser::BrowserNavHit" name="AestraUI::FileBrowser::BrowserNavHit">
-<area shape="rect" id="Node000001" title=" " alt="" coords="161,240,323,280"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="161,255,323,295"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="5,152,148,177"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="110,182,210,237,207,242,107,186"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="107,183,214,252,211,257,104,187"/>
 <area shape="rect" id="Node000003" href="$da/d4e/structAestraUI_1_1NUIRect.html" title=" " alt="" coords="173,152,311,177"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="245,191,245,240,239,240,239,191"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="245,191,245,254,239,254,239,191"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="217,13,267,38"/>
 <area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="245,52,245,152,239,152,239,52"/>
 <area shape="rect" id="Node000005" title=" " alt="" coords="336,152,423,177"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="353,187,271,242,268,238,350,183"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="357,188,301,233,269,257,266,252,298,229,353,184"/>
 <area shape="rect" id="Node000006" title=" " alt="" coords="310,5,449,45"/>
 <area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="382,59,382,152,377,152,377,59"/>
 </map>

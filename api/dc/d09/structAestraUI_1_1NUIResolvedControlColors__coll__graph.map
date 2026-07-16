@@ -1,0 +1,8 @@
+<map id="AestraUI::NUIResolvedControlColors" name="AestraUI::NUIResolvedControlColors">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,255,223,295"/>
+<area shape="rect" id="Node000002" href="$d2/d25/structAestraUI_1_1NUIColor.html" title=" " alt="" coords="167,137,311,163"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="219,174,135,256,132,252,216,171"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="54,5,105,31"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="77,45,70,99,69,131,73,162,88,212,106,253,101,256,83,214,67,163,64,131,64,99,71,44"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="106,37,227,135,223,139,102,41"/>
+</map>

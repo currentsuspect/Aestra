@@ -1,9 +1,9 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
 <area shape="rect" id="Node000000" href="$dc/d24/classAestra_1_1Audio_1_1IPluginFactory.html" title="Interface for creating plugin instances." alt="" coords="5,77,213,102"/>
 <area shape="rect" id="Node000001" href="$dd/d4a/classAestra_1_1Audio_1_1HybridPluginFactory.html" title=" " alt="" coords="264,5,464,45"/>
-<area shape="poly" id="edge38_Node000000_Node000001" title=" " alt="" coords="174,71,283,43,284,48,175,76"/>
+<area shape="poly" id="edge39_Node000000_Node000001" title=" " alt="" coords="174,71,283,43,284,48,175,76"/>
 <area shape="rect" id="Node000002" href="$df/d30/classAestra_1_1Audio_1_1InProcessPluginFactory.html" title="Default factory for loading plugins in the current process." alt="" coords="275,69,453,109"/>
-<area shape="poly" id="edge39_Node000000_Node000002" title=" " alt="" coords="227,87,275,87,275,92,227,92"/>
+<area shape="poly" id="edge40_Node000000_Node000002" title=" " alt="" coords="227,87,275,87,275,92,227,92"/>
 <area shape="rect" id="Node000003" href="$d2/d86/classAestra_1_1Audio_1_1OutOfProcessPluginFactory.html" title="Factory for loading native third&#45;party plugins behind a helper process." alt="" coords="261,133,467,173"/>
-<area shape="poly" id="edge40_Node000000_Node000003" title=" " alt="" coords="175,103,284,131,283,136,174,108"/>
+<area shape="poly" id="edge41_Node000000_Node000003" title=" " alt="" coords="175,103,284,131,283,136,174,108"/>
 </map>

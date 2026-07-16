@@ -50,7 +50,7 @@
 <!-- Node3 -->
 <g id="Node000003" class="node">
 <title>Node3</title>
-<g id="a_Node000003"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#a38dd0919971f99afdf36f03ec629ec38" target="_top" xlink:title="Start Arsenal playback from beat zero for the supplied pattern.">
+<g id="a_Node000003"><a xlink:href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeccd21184c921cc6ed16d473d86f0b5a" target="_top" xlink:title="Start Arsenal playback for the supplied pattern.">
 <polygon fill="white" stroke="#666666" points="156,-126 0,-126 0,-96 156,-96 156,-126"/>
 <text text-anchor="start" x="8" y="-114" font-family="Helvetica,sans-Serif" font-size="10.00">Aestra::Audio::TrackManager</text>
 <text text-anchor="middle" x="78" y="-103" font-family="Helvetica,sans-Serif" font-size="10.00">::playPatternInArsenal</text>

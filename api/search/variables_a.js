@@ -29,8 +29,9 @@ var searchData=
   ['minvalue_26',['minValue',['../d7/d5d/structAestra_1_1Audio_1_1PluginParameter.html#a2bc188405057c7dec476d09aa4bdfd49',1,'Aestra::Audio::PluginParameter']]],
   ['mixeropen_27',['mixerOpen',['../dc/dce/structAestraContent_1_1ViewState.html#ad8a56dbd2868ed720f6076922fd34f24',1,'AestraContent::ViewState']]],
   ['mixerrect_28',['mixerRect',['../dc/dce/structAestraContent_1_1ViewState.html#ae23f703bf0aa8d2f47c6117b2b3a5ff6',1,'AestraContent::ViewState']]],
-  ['monitored_29',['monitored',['../d4/d81/structAestra_1_1ChannelViewModel.html#a2f0176df67b5e44e35d8278e4777e964',1,'Aestra::ChannelViewModel']]],
-  ['monitoringlatency_30',['monitoringLatency',['../da/dff/structAestra_1_1Audio_1_1SolvedLatencyTopology.html#ad2aea0edb91b94cf0745d1de9c65c4c6',1,'Aestra::Audio::SolvedLatencyTopology']]],
-  ['moved_31',['moved',['../d0/d03/structAestra_1_1Audio_1_1NoteDiffResult.html#aac52f1da4741c694f4efb9292282df6d',1,'Aestra::Audio::NoteDiffResult']]],
-  ['muted_32',['muted',['../d2/dba/structAestra_1_1Audio_1_1LatencyGraph_1_1Node.html#a93a0966ac03c04b1c44bc9497c0f3754',1,'Aestra::Audio::LatencyGraph::Node::muted'],['../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#ad7554fdb632b95ec8597228890fef154',1,'Aestra::Audio::PlaylistLane::muted'],['../d4/d81/structAestra_1_1ChannelViewModel.html#a7abbdd395c1ae9db1cb3a1664c59de4b',1,'Aestra::ChannelViewModel::muted']]]
+  ['modified_29',['modified',['../d0/d03/structAestra_1_1Audio_1_1NoteDiffResult.html#ada51f37d88739ea975d0dde5402c0a81',1,'Aestra::Audio::NoteDiffResult']]],
+  ['monitored_30',['monitored',['../d4/d81/structAestra_1_1ChannelViewModel.html#a2f0176df67b5e44e35d8278e4777e964',1,'Aestra::ChannelViewModel']]],
+  ['monitoringlatency_31',['monitoringLatency',['../da/dff/structAestra_1_1Audio_1_1SolvedLatencyTopology.html#ad2aea0edb91b94cf0745d1de9c65c4c6',1,'Aestra::Audio::SolvedLatencyTopology']]],
+  ['moved_32',['moved',['../d0/d03/structAestra_1_1Audio_1_1NoteDiffResult.html#aac52f1da4741c694f4efb9292282df6d',1,'Aestra::Audio::NoteDiffResult']]],
+  ['muted_33',['muted',['../d2/dba/structAestra_1_1Audio_1_1LatencyGraph_1_1Node.html#a93a0966ac03c04b1c44bc9497c0f3754',1,'Aestra::Audio::LatencyGraph::Node::muted'],['../d0/d83/structAestra_1_1Audio_1_1PlaylistLane.html#ad7554fdb632b95ec8597228890fef154',1,'Aestra::Audio::PlaylistLane::muted'],['../d4/d81/structAestra_1_1ChannelViewModel.html#a7abbdd395c1ae9db1cb3a1664c59de4b',1,'Aestra::ChannelViewModel::muted']]]
 ];

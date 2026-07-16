@@ -6,7 +6,7 @@
 <area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="540,133,454,112,455,107,542,127"/>
 <area shape="rect" id="Node000004" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af099c463dfaefc7d884bb200b597b537" title="Clone an existing pattern and return the new ID." alt="" coords="260,133,480,173"/>
 <area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="515,156,480,156,480,151,515,151"/>
-<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a38dd0919971f99afdf36f03ec629ec38" title="Start Arsenal playback from beat zero for the supplied pattern." alt="" coords="266,197,474,237"/>
+<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeccd21184c921cc6ed16d473d86f0b5a" title="Start Arsenal playback for the supplied pattern." alt="" coords="266,197,474,237"/>
 <area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="542,179,455,200,454,195,540,174"/>
 <area shape="rect" id="Node000008" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a17dc231c335a5cf97a71c109c4f640e1" title="Refill lookahead window with events (non&#45;RT thread) Called periodically by scheduler." alt="" coords="259,261,481,301"/>
 <area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="601,183,546,218,482,252,451,264,449,259,480,247,543,214,598,179"/>

@@ -279,160 +279,163 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>    <span class="keywordflow">if</span> (!m_visible) <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>    </div>
 <div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>    <span class="keyword">auto</span>&amp; theme = AestraUI::NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    </div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    <span class="comment">// 1. Dimmed Background Overlay</span></div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(getBounds(), <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a>(0, 0, 0, 0.5f));</div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    </div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    <span class="comment">// 2. Dialog Window Shadow</span></div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    <span class="comment">// (Simple drop shadow simulation if renderer supports it, or just dark rect)</span></div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    </div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    <span class="comment">// 3. Dialog Window Background - FORCE correct key to avoid purple fallback</span></div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    <span class="comment">// Use rounded rect with standard radius (e.g. 8px or theme radius)</span></div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    <span class="keywordtype">float</span> radius = 8.0f; <span class="comment">// Standard rounded corner radius</span></div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(m_dialogBounds, radius, theme.getColor(<span class="stringliteral">&quot;backgroundPrimary&quot;</span>));</div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(m_dialogBounds, radius, 1.0f, theme.getColor(<span class="stringliteral">&quot;borderSubtle&quot;</span>));</div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    </div>
-<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    <span class="comment">// 4. Title bar background (unified 32px chrome)</span></div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> titleBar(m_dialogBounds.x, m_dialogBounds.y, m_dialogBounds.width, 32.0f);</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(titleBar, theme.getColor(<span class="stringliteral">&quot;backgroundPrimary&quot;</span>));</div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">drawLine</a>({titleBar.x, titleBar.bottom() - 0.5f},</div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>                      {titleBar.right(), titleBar.bottom() - 0.5f},</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>                      0.5f, theme.getColor(<span class="stringliteral">&quot;borderSubtle&quot;</span>));</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span> </div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>    <span class="comment">// 5. Title text — vertically centered via font metrics</span></div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>    <span class="keywordtype">float</span> titleBaseline = renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe">calculateTextY</a>(titleBar, 12.0f);</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(<span class="stringliteral">&quot;Settings&quot;</span>, {m_dialogBounds.x + 12.0f, titleBaseline}, 12.0f,</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>                      theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>));</div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span> </div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>    <span class="comment">// 6. Close button — line-drawn X matching AestraPanelWindow chrome</span></div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>    <span class="keywordflow">if</span> (m_closeButtonHovered) {</div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(m_closeButtonBounds, 6.0f, <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a>(0xff, 0xd9, 0x5f).withAlpha(0.22f));</div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    }</div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    <span class="keywordtype">float</span> cx = m_closeButtonBounds.x + m_closeButtonBounds.width * 0.5f;</div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    <span class="keywordtype">float</span> cy = m_closeButtonBounds.y + m_closeButtonBounds.height * 0.5f;</div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    <span class="keywordtype">float</span> d = 5.0f;</div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a> xColor = m_closeButtonHovered</div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>                                    ? <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a>(0xff, 0xe5, 0x73)</div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>                                    : theme.getColor(<span class="stringliteral">&quot;textDisabled&quot;</span>);</div>
-<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">drawLine</a>({cx - d, cy - d}, {cx + d, cy + d}, 1.5f, xColor);</div>
-<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">drawLine</a>({cx + d, cy - d}, {cx - d, cy + d}, 1.5f, xColor);</div>
-<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span> </div>
-<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    <span class="comment">// 7. Sidebar Background</span></div>
-<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(m_sidebarBounds, theme.getColor(<span class="stringliteral">&quot;backgroundSecondary&quot;</span>));</div>
-<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(m_sidebarBounds.x + m_sidebarBounds.width - 1, m_sidebarBounds.y, 1, m_sidebarBounds.height),</div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>                     theme.getColor(<span class="stringliteral">&quot;divider&quot;</span>));</div>
-<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span> </div>
-<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>    <span class="comment">// 8. Sidebar Items</span></div>
-<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; item : m_sidebarItems) {</div>
-<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>        <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a> bg = item.active ? theme.getColor(<span class="stringliteral">&quot;primary&quot;</span>).withAlpha(0.2f) :</div>
-<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>                              (item.hovered ? theme.getColor(<span class="stringliteral">&quot;list.hover&quot;</span>) : <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a>(0,0,0,0));</div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span> </div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>        <span class="keywordflow">if</span> (item.active || item.hovered) {</div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(item.bounds, bg);</div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>        }</div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span> </div>
-<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>        <span class="comment">// Active indicator strip</span></div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>        <span class="keywordflow">if</span> (item.active) {</div>
-<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(item.bounds.x, item.bounds.y, 3, item.bounds.height), theme.getColor(<span class="stringliteral">&quot;primary&quot;</span>));</div>
-<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>        }</div>
-<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span> </div>
-<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(item.title, <a class="code hl_struct" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">AestraUI::NUIPoint</a>(item.bounds.x + 20, item.bounds.y + 8), 14.0f,</div>
-<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>                         item.active ? theme.getColor(<span class="stringliteral">&quot;textSelect&quot;</span>) : theme.getColor(<span class="stringliteral">&quot;text&quot;</span>));</div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>    }</div>
-<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span> </div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    <span class="comment">// 9. Footer Divider</span></div>
-<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>    <span class="keywordtype">float</span> footerY = m_dialogBounds.y + m_dialogBounds.height - 60.0f;</div>
-<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(m_dialogBounds.x + 220, footerY, m_dialogBounds.width - 220, 1),</div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>                     theme.getColor(<span class="stringliteral">&quot;divider&quot;</span>));</div>
-<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span> </div>
-<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    <span class="comment">// 10. Blink Effect</span></div>
-<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    <span class="keywordflow">if</span> (m_blinkAnimation &gt; 0.0f) {</div>
-<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(m_dialogBounds, radius, 2.0f, <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a>(1.0f, 1.0f, 1.0f, m_blinkAnimation * 0.5f));</div>
-<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    }</div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span> </div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    <span class="comment">// Render Children (Page content + Buttons)</span></div>
-<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    <span class="comment">// We only want to render the active page</span></div>
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>    <span class="keywordflow">if</span> (m_activePage) {</div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>        m_activePage-&gt;onRender(renderer);</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    }</div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>    </div>
-<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>    <span class="comment">// Render footer buttons</span></div>
-<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    m_applyButton-&gt;onRender(renderer);</div>
-<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>    m_cancelButton-&gt;onRender(renderer);</div>
-<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>    m_okButton-&gt;onRender(renderer);</div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>}</div>
-<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span> </div>
-<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span><span class="keywordtype">bool</span> SettingsDialog::onMouseEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">AestraUI::NUIMouseEvent</a>&amp; event) {</div>
-<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>    <span class="keywordflow">if</span> (!m_visible) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>    </div>
-<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>    <span class="comment">// Footer buttons interaction</span></div>
-<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>    <span class="keywordflow">if</span> (m_applyButton-&gt;onMouseEvent(event)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>    <span class="keywordflow">if</span> (m_cancelButton-&gt;onMouseEvent(event)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>    <span class="keywordflow">if</span> (m_okButton-&gt;onMouseEvent(event)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>    </div>
-<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>    <span class="comment">// Active Page interaction</span></div>
-<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>    <span class="keywordflow">if</span> (m_activePage &amp;&amp; m_activePage-&gt;onMouseEvent(event)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>    <span class="keyword">const</span> <span class="keyword">auto</span>&amp; props = theme.getCurrentTheme();</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>    </div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>    <span class="comment">// 1. Dimmed Background Overlay</span></div>
+<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(getBounds(), theme.getColor(<span class="stringliteral">&quot;overlay&quot;</span>));</div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span>    </div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>    <span class="comment">// 2. Dialog Window Shadow</span></div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>    <span class="comment">// (Simple drop shadow simulation if renderer supports it, or just dark rect)</span></div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>    </div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>    <span class="comment">// 3. Dialog Window Background - FORCE correct key to avoid purple fallback</span></div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>    <span class="comment">// Use rounded rect with standard radius (e.g. 8px or theme radius)</span></div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>    <span class="keywordtype">float</span> radius = props.radiusL;</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(m_dialogBounds, radius, theme.getColor(<span class="stringliteral">&quot;elevatedPanel&quot;</span>));</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(m_dialogBounds, radius, props.layout.dividerWidth, theme.getColor(<span class="stringliteral">&quot;borderStrong&quot;</span>));</div>
+<div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span>    </div>
+<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>    <span class="comment">// 4. Title bar background (unified 32px chrome)</span></div>
+<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> titleBar(m_dialogBounds.x, m_dialogBounds.y, m_dialogBounds.width,</div>
+<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>                              props.layout.panelHeaderHeight);</div>
+<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(titleBar, theme.getColor(<span class="stringliteral">&quot;elevatedPanel&quot;</span>));</div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">drawLine</a>({titleBar.x, titleBar.bottom() - 0.5f},</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>                      {titleBar.right(), titleBar.bottom() - 0.5f},</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>                      0.5f, theme.getColor(<span class="stringliteral">&quot;borderSubtle&quot;</span>));</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span> </div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>    <span class="comment">// 5. Title text — vertically centered via font metrics</span></div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>    <span class="keywordtype">float</span> titleBaseline = renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe">calculateTextY</a>(titleBar, props.fontSizeM);</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(<span class="stringliteral">&quot;Settings&quot;</span>, {m_dialogBounds.x + 12.0f, titleBaseline}, props.fontSizeM,</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>                      theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>));</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span> </div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>    <span class="comment">// 6. Close button — line-drawn X matching AestraPanelWindow chrome</span></div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>    <span class="keywordflow">if</span> (m_closeButtonHovered) {</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8edd36aab59578f6c121fae6046db289">fillRoundedRect</a>(m_closeButtonBounds, props.radiusS, theme.getColor(<span class="stringliteral">&quot;controlHover&quot;</span>));</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    }</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    <span class="keywordtype">float</span> cx = m_closeButtonBounds.x + m_closeButtonBounds.width * 0.5f;</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    <span class="keywordtype">float</span> cy = m_closeButtonBounds.y + m_closeButtonBounds.height * 0.5f;</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    <span class="keywordtype">float</span> d = 5.0f;</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a> xColor = m_closeButtonHovered</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>                                    ? theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>)</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>                                    : theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>);</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">drawLine</a>({cx - d, cy - d}, {cx + d, cy + d}, 1.5f, xColor);</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8287a2b8a0d43d3eb03d7354121b4a95">drawLine</a>({cx + d, cy - d}, {cx - d, cy + d}, 1.5f, xColor);</div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span> </div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>    <span class="comment">// 7. Sidebar Background</span></div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(m_sidebarBounds, theme.getColor(<span class="stringliteral">&quot;backgroundSecondary&quot;</span>));</div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(m_sidebarBounds.x + m_sidebarBounds.width - 1, m_sidebarBounds.y, 1, m_sidebarBounds.height),</div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>                     theme.getColor(<span class="stringliteral">&quot;divider&quot;</span>));</div>
+<div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span> </div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>    <span class="comment">// 8. Sidebar Items</span></div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; item : m_sidebarItems) {</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>        <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a> bg = item.active ? theme.getColor(<span class="stringliteral">&quot;selection&quot;</span>) :</div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>                              (item.hovered ? theme.getColor(<span class="stringliteral">&quot;list.hover&quot;</span>) : <a class="code hl_struct" href="../../d2/d25/structAestraUI_1_1NUIColor.html">AestraUI::NUIColor</a>(0,0,0,0));</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span> </div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>        <span class="keywordflow">if</span> (item.active || item.hovered) {</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(item.bounds, bg);</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>        }</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span> </div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>        <span class="comment">// Active indicator strip</span></div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>        <span class="keywordflow">if</span> (item.active) {</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>            renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(item.bounds.x, item.bounds.y, 3, item.bounds.height), theme.getColor(<span class="stringliteral">&quot;primary&quot;</span>));</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>        }</div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span> </div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a91ed36d4b7fbb90f1d98f0a116b6debc">drawText</a>(item.title, <a class="code hl_struct" href="../../dd/d25/structAestraUI_1_1NUIPoint.html">AestraUI::NUIPoint</a>(item.bounds.x + 20, item.bounds.y + 8), props.fontSizeM,</div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>                         item.active ? theme.getColor(<span class="stringliteral">&quot;textSelect&quot;</span>) : theme.getColor(<span class="stringliteral">&quot;text&quot;</span>));</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    }</div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span> </div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>    <span class="comment">// 9. Footer Divider</span></div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>    <span class="keywordtype">float</span> footerY = m_dialogBounds.y + m_dialogBounds.height - 60.0f;</div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>    renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">fillRect</a>(<a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>(m_dialogBounds.x + 220, footerY, m_dialogBounds.width - 220, 1),</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>                     theme.getColor(<span class="stringliteral">&quot;divider&quot;</span>));</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span> </div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    <span class="comment">// 10. Blink Effect</span></div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    <span class="keywordflow">if</span> (m_blinkAnimation &gt; 0.0f) {</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>        renderer.<a class="code hl_function" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a8ca30417ddb0b0523e3d9e9ba3eaefdf">strokeRoundedRect</a>(m_dialogBounds, radius, 2.0f,</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>                                   theme.getColor(<span class="stringliteral">&quot;focusRing&quot;</span>).withAlpha(m_blinkAnimation * 0.5f));</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    }</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span> </div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    <span class="comment">// Render Children (Page content + Buttons)</span></div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    <span class="comment">// We only want to render the active page</span></div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>    <span class="keywordflow">if</span> (m_activePage) {</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>        m_activePage-&gt;onRender(renderer);</div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    }</div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>    </div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>    <span class="comment">// Render footer buttons</span></div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    m_applyButton-&gt;onRender(renderer);</div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    m_cancelButton-&gt;onRender(renderer);</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    m_okButton-&gt;onRender(renderer);</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>}</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span> </div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span><span class="keywordtype">bool</span> SettingsDialog::onMouseEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">AestraUI::NUIMouseEvent</a>&amp; event) {</div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>    <span class="keywordflow">if</span> (!m_visible) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>    </div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>    <span class="comment">// Footer buttons interaction</span></div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>    <span class="keywordflow">if</span> (m_applyButton-&gt;onMouseEvent(event)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>    <span class="keywordflow">if</span> (m_cancelButton-&gt;onMouseEvent(event)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>    <span class="keywordflow">if</span> (m_okButton-&gt;onMouseEvent(event)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>    </div>
-<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>    <span class="comment">// Sidebar interaction</span></div>
-<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>    <span class="keywordtype">bool</span> sidebarHovered = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; item : m_sidebarItems) {</div>
-<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>        <span class="keywordflow">if</span> (item.bounds.contains(event.position)) {</div>
-<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>            <span class="keywordflow">if</span> (!item.hovered) {</div>
-<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>                item.hovered = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>                setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>            }</div>
-<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>            sidebarHovered = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>            </div>
-<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>            <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == AestraUI::NUIMouseButton::Left) {</div>
-<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>                setActivePage(item.id);</div>
-<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>            }</div>
-<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>            <span class="keywordflow">if</span> (item.hovered) {</div>
-<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>                item.hovered = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>                setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>            }</div>
-<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>        }</div>
-<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>    }</div>
-<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    </div>
-<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>    <span class="comment">// Close button</span></div>
-<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    <span class="keywordtype">bool</span> closeHovered = m_closeButtonBounds.contains(event.position);</div>
-<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>    <span class="keywordflow">if</span> (closeHovered != m_closeButtonHovered) {</div>
-<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>        m_closeButtonHovered = closeHovered;</div>
-<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>        setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    }</div>
-<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>    </div>
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == AestraUI::NUIMouseButton::Left) {</div>
-<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>        <span class="keywordflow">if</span> (closeHovered) {</div>
-<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>            hide();</div>
-<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>        }</div>
-<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>        </div>
-<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>        <span class="comment">// Click outside dialog?</span></div>
-<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>        <span class="keywordflow">if</span> (!m_dialogBounds.contains(event.position)) {</div>
-<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>            m_blinkAnimation = 1.0f;</div>
-<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>            setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>        }</div>
-<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    }</div>
-<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>    </div>
-<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>; <span class="comment">// Consume all events to stay modal</span></div>
-<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>}</div>
-<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span> </div>
-<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span><span class="keywordtype">bool</span> SettingsDialog::onKeyEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a>&amp; event) {</div>
-<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    <span class="keywordflow">if</span> (!m_visible) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    </div>
-<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span>    <span class="keywordflow">if</span> (m_activePage &amp;&amp; m_activePage-&gt;onKeyEvent(event)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    </div>
-<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.keyCode == AestraUI::NUIKeyCode::Escape) {</div>
-<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>        hide();</div>
-<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    }</div>
-<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>    </div>
-<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>; <span class="comment">// Modal</span></div>
-<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>}</div>
-<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span> </div>
-<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>    <span class="comment">// Active Page interaction</span></div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>    <span class="keywordflow">if</span> (m_activePage &amp;&amp; m_activePage-&gt;onMouseEvent(event)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>    </div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>    <span class="comment">// Sidebar interaction</span></div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>    <span class="keywordtype">bool</span> sidebarHovered = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>    <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; item : m_sidebarItems) {</div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>        <span class="keywordflow">if</span> (item.bounds.contains(event.position)) {</div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>            <span class="keywordflow">if</span> (!item.hovered) {</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>                item.hovered = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>                setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>            }</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>            sidebarHovered = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>            </div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>            <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == AestraUI::NUIMouseButton::Left) {</div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>                setActivePage(item.id);</div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>            }</div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>            <span class="keywordflow">if</span> (item.hovered) {</div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>                item.hovered = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>                setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>            }</div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>        }</div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    }</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>    </div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    <span class="comment">// Close button</span></div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>    <span class="keywordtype">bool</span> closeHovered = m_closeButtonBounds.contains(event.position);</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    <span class="keywordflow">if</span> (closeHovered != m_closeButtonHovered) {</div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>        m_closeButtonHovered = closeHovered;</div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>        setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    }</div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    </div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == AestraUI::NUIMouseButton::Left) {</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>        <span class="keywordflow">if</span> (closeHovered) {</div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>            hide();</div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>        }</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>        </div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>        <span class="comment">// Click outside dialog?</span></div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>        <span class="keywordflow">if</span> (!m_dialogBounds.contains(event.position)) {</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>            m_blinkAnimation = 1.0f;</div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>            setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>        }</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>    }</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    </div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>; <span class="comment">// Consume all events to stay modal</span></div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>}</div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span> </div>
+<div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span><span class="keywordtype">bool</span> SettingsDialog::onKeyEvent(<span class="keyword">const</span> <a class="code hl_struct" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a>&amp; event) {</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    <span class="keywordflow">if</span> (!m_visible) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    </div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    <span class="keywordflow">if</span> (m_activePage &amp;&amp; m_activePage-&gt;onKeyEvent(event)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>    </div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.keyCode == AestraUI::NUIKeyCode::Escape) {</div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>        hide();</div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    }</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    </div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>; <span class="comment">// Modal</span></div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>}</div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span> </div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>} <span class="comment">// namespace Aestra</span></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a></div><div class="ttdoc">Abstract renderer interface for the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d2d/NUIRenderer_8h_source.html#l00023">NUIRenderer.h:23</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a316c06990c4cb6f5a13fd7de95bca7a4"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a316c06990c4cb6f5a13fd7de95bca7a4">AestraUI::NUIRenderer::fillRect</a></div><div class="ttdeci">virtual void fillRect(const NUIRect &amp;rect, const NUIColor &amp;color)=0</div><div class="ttdoc">Draw a filled rectangle.</div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html_a7cef2d4a1418396f273e2b1afd8660fe"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html#a7cef2d4a1418396f273e2b1afd8660fe">AestraUI::NUIRenderer::calculateTextY</a></div><div class="ttdeci">float calculateTextY(const NUIRect &amp;rect, float fontSize) const</div><div class="ttdoc">Calculate baseline-aligned Y position for vertically centered text using measured size.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d2d/NUIRenderer_8h_source.html#l00246">NUIRenderer.h:246</a></div></div>
