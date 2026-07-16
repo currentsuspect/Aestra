@@ -178,6 +178,7 @@ private:
     void drawDragHandle(NUIRenderer& renderer, const NUIRect& bounds);
     void drawControlBlock(NUIRenderer& renderer, const NUIRect& bounds);
     void drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds);
+    bool shouldUseNoteRoll() const;
 
     void handleControlClick(const NUIMouseEvent& event, const NUIRect& bounds);
     void handleContextClick(const NUIMouseEvent& event, const NUIRect& bounds);
