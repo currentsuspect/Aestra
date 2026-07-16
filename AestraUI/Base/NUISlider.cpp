@@ -61,6 +61,18 @@ void NUISlider::onRender(NUIRenderer& renderer)
     }
 }
 
+void NUISlider::onThemeChanged(const NUIThemeProperties& theme)
+{
+    if (!customColors_) {
+        trackColor_ = theme.sliderTrack;
+        fillColor_ = theme.sliderHandle;
+        thumbColor_ = theme.textPrimary;
+        thumbHoverColor_ = theme.sliderHandleHover;
+        sliderRadius_ = theme.radiusM;
+    }
+    NUIComponent::onThemeChanged(theme);
+}
+
 bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isEnabled() || !isVisible()) return false;
@@ -284,24 +296,28 @@ void NUISlider::setSliderRadius(float radius)
 void NUISlider::setTrackColor(const NUIColor& color)
 {
     trackColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUISlider::setFillColor(const NUIColor& color)
 {
     fillColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUISlider::setThumbColor(const NUIColor& color)
 {
     thumbColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUISlider::setThumbHoverColor(const NUIColor& color)
 {
     thumbHoverColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 

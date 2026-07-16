@@ -4,6 +4,7 @@
 #include "NUITypes.h"
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 
 namespace AestraUI {
@@ -32,6 +33,13 @@ public:
      * Load a theme from a JSON file.
      */
     static std::shared_ptr<NUITheme> loadFromFile(const std::string& filepath);
+
+    /** True when this instance was created from a valid JSON object. */
+    bool loadedSuccessfully() const { return loadedSuccessfully_; }
+    bool hasColorOverride(const std::string& name) const;
+    bool hasDimensionOverride(const std::string& name) const;
+    bool hasEffectOverride(const std::string& name) const;
+    bool hasFontSizeOverride(const std::string& name) const;
     
     // ========================================================================
     // Colors
@@ -95,10 +103,17 @@ public:
     // NUIFont getDefaultFont() const;
     
 private:
+    void clearOverrideTracking();
+
     std::unordered_map<std::string, NUIColor> colors_;
     std::unordered_map<std::string, float> dimensions_;
     std::unordered_map<std::string, float> effects_;
     std::unordered_map<std::string, float> fontSizes_;
+    std::unordered_set<std::string> colorOverrides_;
+    std::unordered_set<std::string> dimensionOverrides_;
+    std::unordered_set<std::string> effectOverrides_;
+    std::unordered_set<std::string> fontSizeOverrides_;
+    bool loadedSuccessfully_ = false;
 };
 
 } // namespace AestraUI

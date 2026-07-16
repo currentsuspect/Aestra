@@ -2,6 +2,7 @@
 #include "NUIProgressBar.h"
 #include "NUIRenderer.h"
 #include "NUITheme.h"
+#include "NUIThemeSystem.h"
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -12,7 +13,13 @@ namespace AestraUI {
 NUIProgressBar::NUIProgressBar()
     : NUIComponent()
 {
-    setSize(200, 20); // Default size
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
+    backgroundColor_ = theme.meterBackground;
+    progressColor_ = theme.meterActive;
+    borderColor_ = theme.borderSubtle;
+    textColor_ = theme.textPrimary;
+    borderRadius_ = theme.radiusS;
+    setSize(200, theme.layout.compactControlHeight);
 }
 
 void NUIProgressBar::onRender(NUIRenderer& renderer)
@@ -38,6 +45,18 @@ void NUIProgressBar::onRender(NUIRenderer& renderer)
     {
         drawText(renderer);
     }
+}
+
+void NUIProgressBar::onThemeChanged(const NUIThemeProperties& theme)
+{
+    if (!customColors_) {
+        backgroundColor_ = theme.meterBackground;
+        progressColor_ = theme.meterActive;
+        borderColor_ = theme.borderSubtle;
+        textColor_ = theme.textPrimary;
+        borderRadius_ = theme.radiusS;
+    }
+    NUIComponent::onThemeChanged(theme);
 }
 
 void NUIProgressBar::onUpdate(double deltaTime)
@@ -112,24 +131,28 @@ void NUIProgressBar::setOrientation(Orientation orientation)
 void NUIProgressBar::setBackgroundColor(const NUIColor& color)
 {
     backgroundColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIProgressBar::setProgressColor(const NUIColor& color)
 {
     progressColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIProgressBar::setBorderColor(const NUIColor& color)
 {
     borderColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIProgressBar::setTextColor(const NUIColor& color)
 {
     textColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 

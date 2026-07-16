@@ -53,6 +53,7 @@ public:
 
     // Component interface
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
     void onFocusGained() override;
@@ -245,6 +246,7 @@ private:
     NUIColor placeholderColor_ = NUIColor::fromHex(0xff888888);
     NUIColor selectionColor_ = NUIColor::fromHex(0xffa855f7);
     NUIColor caretColor_ = NUIColor::fromHex(0xffffffff);
+    bool customColors_ = false;
     float borderWidth_ = 1.0f;
     float borderRadius_ = 4.0f;
     float padding_ = 8.0f;

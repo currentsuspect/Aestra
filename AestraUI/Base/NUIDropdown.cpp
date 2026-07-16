@@ -29,7 +29,7 @@ NUIDropdown::NUIDropdown()
     try {
         auto& mgr = NUIThemeManager::getInstance();
         const auto& props = mgr.getCurrentTheme();
-        backgroundColor_ = props.surfaceRaised;
+        backgroundColor_ = props.surfaceTertiary; // keep in sync with refreshThemeColors()
         hoverColor_ = props.buttonBgHover;
         selectedColor_ = props.selected;
         borderColor_ = props.border;

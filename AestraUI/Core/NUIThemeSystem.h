@@ -5,7 +5,11 @@
 #include "NUIAnimation.h"
 #include <unordered_map>
 #include <string>
+#include <algorithm>
 #include <memory>
+#include <cstdint>
+#include <functional>
+#include <map>
 
 namespace AestraUI {
 
@@ -298,6 +302,8 @@ NUIResolvedControlColors resolveControlColors(const NUIThemeProperties& theme,
 // Theme manager
 class NUIThemeManager {
 public:
+    using ThemeSubscriptionId = std::uint64_t;
+
     static NUIThemeManager& getInstance();
     
     // Theme management
@@ -305,7 +311,10 @@ public:
     NUIThemeVariant getThemeVariant() const { return currentVariant_; }
     
     void setCustomTheme(const std::string& name, const NUIThemeProperties& properties);
-    void setActiveTheme(const std::string& name);
+    bool loadThemeFromFile(const std::string& name, const std::string& filepath,
+                           const std::string& baseTheme = "Aestra-dark");
+    bool setActiveTheme(const std::string& name);
+    bool hasTheme(const std::string& name) const;
     std::string getActiveTheme() const { return activeTheme_; }
     
     // Theme access
@@ -317,6 +326,10 @@ public:
     void switchThemeVariant(NUIThemeVariant variant, float durationMs = 300.0f);
     
     // Theme callbacks
+    ThemeSubscriptionId subscribeToThemeChanges(std::function<void(const NUIThemeProperties&)> callback);
+    void unsubscribeFromThemeChanges(ThemeSubscriptionId subscriptionId);
+    // Compatibility callback slot. New owners should use subscriptions so they
+    // do not replace one another.
     void setOnThemeChanged(std::function<void(const NUIThemeProperties&)> callback);
     
     // Utility methods
@@ -347,11 +360,14 @@ private:
     NUIThemeManager();
     void initializeDefaultThemes();
     void updateSystemTheme();
+    void notifyThemeChanged();
     
     NUIThemeVariant currentVariant_;
     std::string activeTheme_;
     std::unordered_map<std::string, NUIThemeProperties> themes_;
     std::function<void(const NUIThemeProperties&)> onThemeChanged_;
+    std::map<ThemeSubscriptionId, std::function<void(const NUIThemeProperties&)>> themeSubscribers_;
+    ThemeSubscriptionId nextSubscriptionId_ = 1;
     
     // Animation for theme switching
     std::shared_ptr<NUIAnimation> themeTransitionAnimation_;
@@ -363,7 +379,7 @@ private:
 // Theme-aware component base
 class NUIThemedComponent {
 public:
-    virtual ~NUIThemedComponent() = default;
+    virtual ~NUIThemedComponent();
     
     // Theme integration
     virtual void onThemeChanged(const NUIThemeProperties& theme) {}
@@ -383,6 +399,7 @@ protected:
     
 private:
     bool isThemeRegistered_ = false;
+    NUIThemeManager::ThemeSubscriptionId themeSubscriptionId_ = 0;
 };
 
 // Predefined theme presets
@@ -399,5 +416,41 @@ public:
     static NUIThemeProperties createHighContrastLight();
     static NUIThemeProperties createHighContrastDark();
 };
+
+// ---------------------------------------------------------------------------
+// Plugin-editor chrome helpers (polarity-aware neutrals)
+// ---------------------------------------------------------------------------
+
+/** True when the active theme is light (lights-on). */
+inline bool editorLightUi() {
+    const auto& bg = NUIThemeManager::getInstance().getCurrentTheme().backgroundPrimary;
+    return (0.2126f * bg.r + 0.7152f * bg.g + 0.0722f * bg.b) >= 0.5f;
+}
+
+/**
+ * Map a plugin editor's dark neutral gray onto the active theme's polarity.
+ * Dark themes return the given gray untouched (editors keep their tuned
+ * near-blacks bit-for-bit); light themes mirror it onto the light-surface
+ * ramp, preserving the raised/recessed ordering (lighter = more raised).
+ */
+inline NUIColor editorNeutral(float darkGray, float alpha = 1.0f) {
+    if (!editorLightUi()) return NUIColor(darkGray, darkGray, darkGray, alpha);
+    const float g = std::min(0.905f + darkGray * 0.38f, 0.985f);
+    return NUIColor(g, g, g, alpha);
+}
+
+/** Tinted variant: dark themes keep the tuned color; light themes map its
+    luma onto the light ramp (the subtle tint reads as gray up there anyway). */
+inline NUIColor editorNeutral(const NUIColor& dark) {
+    if (!editorLightUi()) return dark;
+    const float luma = 0.2126f * dark.r + 0.7152f * dark.g + 0.0722f * dark.b;
+    const float g = std::min(0.905f + luma * 0.38f, 0.985f);
+    return NUIColor(g, g, g, dark.a);
+}
+
+/** The active theme's text ink — replaces hardcoded white overlays/labels. */
+inline NUIColor editorInk(float alpha = 1.0f) {
+    return NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(alpha);
+}
 
 } // namespace AestraUI

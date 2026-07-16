@@ -36,6 +36,7 @@ public:
 
     // Component interface
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override;
     void onUpdate(double deltaTime) override;
 
     // Progress properties
@@ -154,6 +155,7 @@ private:
     NUIColor progressColor_ = NUIColor::fromHex(0xffa855f7);
     NUIColor borderColor_ = NUIColor::fromHex(0xff666666);
     NUIColor textColor_ = NUIColor::fromHex(0xffffffff);
+    bool customColors_ = false;
     float borderWidth_ = 1.0f;
     float borderRadius_ = 4.0f;
     float thickness_ = 8.0f;

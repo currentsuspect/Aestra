@@ -61,17 +61,29 @@ void NUIIcon::setIconSize(float width, float height) {
 void NUIIcon::setColor(const NUIColor& color) {
     color_ = color;
     hasCustomColor_ = true;
+    themeColorName_.clear();
     setDirty(true);
 }
 
 void NUIIcon::setColorFromTheme(const std::string& colorName) {
     auto& themeManager = NUIThemeManager::getInstance();
-    setColor(themeManager.getColor(colorName));
+    color_ = themeManager.getColor(colorName);
+    hasCustomColor_ = true;
+    themeColorName_ = colorName;
+    setDirty(true);
 }
 
 void NUIIcon::clearColor() {
     hasCustomColor_ = false;
+    themeColorName_.clear();
     setDirty(true);
+}
+
+void NUIIcon::onThemeChanged(const NUIThemeProperties& theme) {
+    (void)theme;
+    if (!themeColorName_.empty())
+        color_ = NUIThemeManager::getInstance().getColor(themeColorName_);
+    NUIComponent::onThemeChanged(theme);
 }
 
 void NUIIcon::updateBounds() {

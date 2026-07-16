@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUILabel.h"
 #include "NUITheme.h"
+#include "NUIThemeSystem.h"
 #include "Graphics/NUIRenderer.h"
 #include <algorithm>
 #include <cmath>
@@ -10,7 +11,12 @@ namespace AestraUI {
 NUILabel::NUILabel(const std::string& text)
     : text_(text)
 {
-    setSize(100, 20); // Default size
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
+    textColor_ = theme.textPrimary;
+    backgroundColor_ = NUIColor::transparent();
+    borderColor_ = theme.borderSubtle;
+    fontSize_ = theme.fontSizeM;
+    setSize(100, theme.layout.compactControlHeight);
 }
 
 void NUILabel::onRender(NUIRenderer& renderer)
@@ -103,6 +109,18 @@ void NUILabel::onRender(NUIRenderer& renderer)
     }
 }
 
+void NUILabel::onThemeChanged(const NUIThemeProperties& theme)
+{
+    if (!customTextColor_)
+        textColor_ = theme.textPrimary;
+    if (!customBackgroundColor_)
+        backgroundColor_ = NUIColor::transparent();
+    if (!customBorderColor_)
+        borderColor_ = theme.borderSubtle;
+    textSizeValid_ = false;
+    NUIComponent::onThemeChanged(theme);
+}
+
 void NUILabel::setText(const std::string& text)
 {
     if (text_ != text) {
@@ -121,6 +139,7 @@ void NUILabel::setFont(std::shared_ptr<NUIFont> font)
 void NUILabel::setTextColor(const NUIColor& color)
 {
     textColor_ = color;
+    customTextColor_ = true;
     repaint();
 }
 
@@ -160,6 +179,7 @@ void NUILabel::setEllipsize(bool ellipsize)
 void NUILabel::setBackgroundColor(const NUIColor& color)
 {
     backgroundColor_ = color;
+    customBackgroundColor_ = true;
     repaint();
 }
 
@@ -172,6 +192,7 @@ void NUILabel::setBackgroundVisible(bool visible)
 void NUILabel::setBorderColor(const NUIColor& color)
 {
     borderColor_ = color;
+    customBorderColor_ = true;
     repaint();
 }
 
