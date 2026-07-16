@@ -1965,6 +1965,16 @@ target_include_directories(CommandRegistryParseSafetyTest PRIVATE
 add_test(NAME CommandRegistryParseSafetyTest COMMAND CommandRegistryParseSafetyTest)
 set_tests_properties(CommandRegistryParseSafetyTest PROPERTIES LABELS "commands;regression")
 
+# MuseService — the structured JSON surface agents drive Aestra through.
+add_executable(MuseServiceTest Commands/MuseServiceTest.cpp)
+target_link_libraries(MuseServiceTest PRIVATE AestraAudioCore)
+target_include_directories(MuseServiceTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseServiceTest COMMAND MuseServiceTest)
+set_tests_properties(MuseServiceTest PROPERTIES LABELS "commands;muse")
+
 # Rumble state and migration are deterministic pure-logic coverage. Keep this in
 # the normal test tier so stable parameter IDs cannot drift behind a runtime gate.
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
