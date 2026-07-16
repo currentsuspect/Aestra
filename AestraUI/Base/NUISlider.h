@@ -45,6 +45,7 @@ public:
 
     // Component interface
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onMouseEnter() override;
     void onMouseLeave() override;
@@ -191,6 +192,7 @@ private:
     NUIColor fillColor_ = NUIColor::fromHex(0xffa855f7);
     NUIColor thumbColor_ = NUIColor::fromHex(0xffffffff);
     NUIColor thumbHoverColor_ = NUIColor::fromHex(0xffe5e7eb);
+    bool customColors_ = false;
 
     // Interaction state
     bool isDragging_ = false;

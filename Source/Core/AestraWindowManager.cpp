@@ -11,6 +11,7 @@
 #include "TrackManagerUI.h"
 #include "FileBrowser.h"
 #include "TransportBar.h"
+#include "Preferences.h"
 
 #include "../AestraUI/Graphics/OpenGL/NUIRendererGL.h"
 #include "../AestraUI/Core/NUIDragDrop.h"
@@ -150,15 +151,27 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
         return false;
     }
 
-    // Initialize Aestra theme
+    // Initialize the persisted theme before constructing theme-aware widgets.
     auto& themeManager = NUIThemeManager::getInstance();
-    themeManager.setActiveTheme("Aestra-dark");
+    auto& preferences = Preferences::instance();
+    if (!themeManager.setActiveTheme(preferences.theme)) {
+        preferences.theme = "Aestra-dark";
+        themeManager.setActiveTheme(preferences.theme);
+        Log::warning("Unknown saved theme; using Aestra-dark");
+    }
     Log::info("Theme system initialized");
 
     // Create root component
     m_rootComponent = std::make_shared<AestraRootComponent>();
     m_rootComponent->setBounds(NUIRect(0, 0, desc.width, desc.height));
     m_window->setRootComponent(m_rootComponent.get()); // WIRED: Events flow to this root
+    m_themeSubscriptionId = themeManager.subscribeToThemeChanges(
+        [this](const NUIThemeProperties& theme) {
+            if (m_rootComponent)
+                m_rootComponent->onThemeChanged(theme);
+            if (m_adaptiveFPS)
+                m_adaptiveFPS->signalActivity(AestraUI::NUIAdaptiveFPS::ActivityType::Animation);
+        });
 
     // Create custom window with title bar
     m_customWindow = std::make_shared<NUICustomWindow>();
@@ -431,6 +444,10 @@ bool AestraWindowManager::initialize(const WindowConfig& config) {
 }
 
 void AestraWindowManager::shutdown() {
+    if (m_themeSubscriptionId != 0) {
+        NUIThemeManager::getInstance().unsubscribeFromThemeChanges(m_themeSubscriptionId);
+        m_themeSubscriptionId = 0;
+    }
     if (m_window) {
         m_window->destroy();
     }
@@ -707,6 +724,13 @@ void AestraWindowManager::render() {
     NUIColor bgColor = themeManager.getColor("background").withAlpha(1.0f);
 
     m_renderer->clear(bgColor);
+    // Dark-on-light text lacks the bloom light-on-dark gets; thicken strokes
+    // on light themes so labels keep the same perceived weight in both modes.
+    {
+        const auto& themeBg = themeManager.getCurrentTheme().backgroundPrimary;
+        const float bgLuma = 0.2126f * themeBg.r + 0.7152f * themeBg.g + 0.0722f * themeBg.b;
+        m_renderer->setTextContrast(bgLuma < 0.5f ? 1.0f : 0.88f);
+    }
     m_renderer->beginFrame();
     if (m_confirmationDialog && m_confirmationDialog->isDialogVisible()) {
         m_confirmationDialog->setBounds(m_rootComponent->getBounds());

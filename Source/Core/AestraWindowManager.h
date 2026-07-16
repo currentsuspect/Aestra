@@ -194,6 +194,7 @@ private:
     std::shared_ptr<class ExportDialog> m_exportDialog;
 
     std::unique_ptr<AestraUI::NUIAdaptiveFPS> m_adaptiveFPS;
+    AestraUI::NUIThemeManager::ThemeSubscriptionId m_themeSubscriptionId{0};
 
     // Menus
     std::shared_ptr<AestraUI::NUIMenuBar> m_menuBar;

@@ -23,7 +23,7 @@ constexpr float kPi = 3.14159265358979323846f;
 
 NUIColor accent() { return NUIColor(0.55f, 0.40f, 0.92f, 1.0f); }
 NUIColor accentSoft() { return NUIColor(0.55f, 0.40f, 0.92f, 0.35f); }
-NUIColor graphBg() { return NUIColor(0.045f, 0.045f, 0.045f, 0.96f); }
+NUIColor graphBg() { return editorNeutral(0.045f, 0.96f); }
 
 std::shared_ptr<NUIIcon> makeSvgIcon(const char* svg) {
     return std::make_shared<NUIIcon>(svg);
@@ -1398,7 +1398,7 @@ void AestraEQEditor::drawOutputGainPill(NUIRenderer& renderer) {
     const NUIColor outline =
         m_outputGainHovered || m_draggingOutputGain ? accent().withAlpha(0.44f) : NUIColor(1, 1, 1, 0.14f);
     const NUIColor fill = m_outputGainHovered || m_draggingOutputGain ? accent().withAlpha(0.11f)
-                                                                      : NUIColor(0.035f, 0.035f, 0.035f, 0.88f);
+                                                                      : editorNeutral(0.035f, 0.88f);
     renderer.fillRoundedRect(m_outputGainRect, 7.0f, fill);
     renderer.strokeRoundedRect(m_outputGainRect, 7.0f, 1.0f, outline);
     std::string gainText = formatGain(gain);
@@ -1452,7 +1452,7 @@ void AestraEQEditor::drawComparePills(NUIRenderer& renderer) {
     const char* label = m_compareActiveSlot == 0 ? "A>B" : "B>A";
     renderer.fillRoundedRect(m_compareCopyRect, 7.0f,
                              m_compareCopyHovered ? accent().withAlpha(0.11f)
-                                                  : NUIColor(0.035f, 0.035f, 0.035f, 0.88f));
+                                                  : editorNeutral(0.035f, 0.88f));
     renderer.strokeRoundedRect(m_compareCopyRect, 7.0f, 1.0f,
                                m_compareCopyHovered ? accent().withAlpha(0.42f) : NUIColor(1, 1, 1, 0.13f));
     drawSvgIcon(renderer, compareCopyIcon(), {m_compareCopyRect.x + 7.0f, m_compareCopyRect.y + 5.0f, 14.0f, 14.0f},
@@ -1492,7 +1492,7 @@ void AestraEQEditor::drawAnalyzerSettingsPanel(NUIRenderer& renderer) {
         return;
 
     auto& theme = NUIThemeManager::getInstance();
-    renderer.fillRoundedRect(m_analyzerPanelRect, 8.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.94f));
+    renderer.fillRoundedRect(m_analyzerPanelRect, 8.0f, editorNeutral(0.031f, 0.94f));
     renderer.strokeRoundedRect(m_analyzerPanelRect, 8.0f, 1.0f, accent().withAlpha(0.34f));
     renderer.drawText("Analyzer", {m_analyzerPanelRect.x + 10.0f, m_analyzerPanelRect.y + 9.0f}, 9.5f,
                       theme.getColor("textPrimary").withAlpha(0.92f));
@@ -1632,7 +1632,7 @@ void AestraEQEditor::drawKnob(NUIRenderer& renderer, const NUIRect& bounds, floa
     const float r = bounds.width * 0.42f;
     const NUIColor col = active ? a : NUIColor(a.r, a.g, a.b, 0.30f);
     renderer.fillCircle({cx, cy}, r + 5.0f, col.withAlpha(active ? 0.08f : 0.04f));
-    renderer.fillCircle({cx, cy}, r, NUIColor(0.045f, 0.045f, 0.045f, 0.96f));
+    renderer.fillCircle({cx, cy}, r, editorNeutral(0.045f, 0.96f));
     renderer.strokeCircle({cx, cy}, r, 1.0f, col.withAlpha(active ? 0.34f : 0.18f));
 
     const float sa = kPi * 0.75f;
@@ -1665,7 +1665,7 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
         return;
 
     const std::string typeLabel = bandTypeSuffix(bd.typeName);
-    renderer.fillRoundedRect(m_bandInspectorRect, 7.0f, NUIColor(0.046f, 0.046f, 0.046f, 0.97f));
+    renderer.fillRoundedRect(m_bandInspectorRect, 7.0f, editorNeutral(0.046f, 0.97f));
     renderer.strokeRoundedRect(m_bandInspectorRect, 7.0f, 1.0f, band.withAlpha(0.16f));
     renderer.fillRect({m_bandInspectorRect.x, m_bandInspectorRect.y, m_bandInspectorRect.width, 2.0f},
                       band.withAlpha(0.72f));
@@ -1746,7 +1746,7 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
                                                m_bandInspectorRect.right() - chipW - 10.0f);
                 const NUIRect hoverChip{chipX, slotRail.bottom() + 7.0f, chipW, 19.0f};
                 const NUIColor hoverColor = bandColor(hoverBand.slotIndex);
-                renderer.fillRoundedRect(hoverChip, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.96f));
+                renderer.fillRoundedRect(hoverChip, 5.0f, editorNeutral(0.026f, 0.96f));
                 renderer.strokeRoundedRect(hoverChip, 5.0f, 1.0f, hoverColor.withAlpha(0.34f));
                 renderer.drawTextCentered(hoverText, hoverChip, 7.8f, theme.getColor("textSecondary").withAlpha(0.88f));
             }
@@ -1818,7 +1818,7 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
         const NUIRect tip{std::clamp(bd.stereoButton.center().x - tipW * 0.5f, m_bandInspectorRect.x + 8.0f,
                                      m_bandInspectorRect.right() - tipW - 8.0f),
                           bd.stereoButton.bottom() + 7.0f, tipW, 20.0f};
-        renderer.fillRoundedRect(tip, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.96f));
+        renderer.fillRoundedRect(tip, 5.0f, editorNeutral(0.026f, 0.96f));
         renderer.strokeRoundedRect(tip, 5.0f, 1.0f, band.withAlpha(0.28f));
         renderer.drawTextCentered(modeHelp, tip, 8.2f, theme.getColor("textSecondary").withAlpha(0.88f));
     }
@@ -1828,7 +1828,7 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
         const NUIRect tip{std::clamp(m_selectedCollapseRect.center().x - tipW * 0.5f, m_bandInspectorRect.x + 8.0f,
                                      m_bandInspectorRect.right() - tipW - 8.0f),
                           m_selectedCollapseRect.bottom() + 7.0f, tipW, 20.0f};
-        renderer.fillRoundedRect(tip, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.96f));
+        renderer.fillRoundedRect(tip, 5.0f, editorNeutral(0.026f, 0.96f));
         renderer.strokeRoundedRect(tip, 5.0f, 1.0f, band.withAlpha(0.28f));
         renderer.drawTextCentered(collapseHelp, tip, 8.2f, theme.getColor("textSecondary").withAlpha(0.88f));
     }
@@ -1854,7 +1854,7 @@ void AestraEQEditor::drawBandCard(NUIRenderer& renderer, size_t idx) {
         const float trackY = lane.center().y;
         const float tickX = trackX + trackW * amount;
 
-        renderer.fillRoundedRect(lane, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.95f));
+        renderer.fillRoundedRect(lane, 5.0f, editorNeutral(0.026f, 0.95f));
         renderer.fillRoundedRect({lane.x, lane.y, labelW, lane.height}, 5.0f,
                                  bd.enabled ? band.withAlpha(0.050f) : band.withAlpha(0.018f));
         renderer.fillRoundedRect({trackX, trackY - 1.5f, trackW, 3.0f}, 1.5f, NUIColor(1, 1, 1, 0.080f));
@@ -2114,7 +2114,7 @@ void AestraEQEditor::drawAnalyzerCollisionOverlay(NUIRenderer& renderer, const N
             std::clamp(inner.x + peakNorm * inner.width - chipW * 0.5f, inner.x + 8.0f, inner.right() - chipW - 8.0f);
         const NUIRect chip{chipX, inner.y + 28.0f, chipW, 22.0f};
         const NUIColor heat(1.0f, 0.40f, 0.18f, 1.0f);
-        renderer.fillRoundedRect(chip, 6.0f, NUIColor(0.035f, 0.035f, 0.035f, 0.88f));
+        renderer.fillRoundedRect(chip, 6.0f, editorNeutral(0.035f, 0.88f));
         renderer.strokeRoundedRect(chip, 6.0f, 1.0f, heat.withAlpha(0.34f + peakMask * 0.22f));
         renderer.drawText(maskBuf, {chip.x + 8.0f, chip.y + 6.0f}, 8.3f, heat.withAlpha(0.92f));
         renderer.drawText(freqBuf, {chip.right() - 38.0f, chip.y + 6.0f}, 8.3f,
@@ -2208,11 +2208,11 @@ void AestraEQEditor::drawGraphCursorReadout(NUIRenderer& renderer, const NUIRect
     const NUIColor preview = canAddBand ? accent() : theme.getColor("textSecondary");
 
     renderer.drawLine({m_graphCursorPoint.x, inner.y}, {m_graphCursorPoint.x, inner.bottom()}, 1.0f,
-                      NUIColor(1.0f, 1.0f, 1.0f, canAddBand ? 0.085f : 0.040f));
+                      editorInk(canAddBand ? 0.085f : 0.040f));
     renderer.drawLine({inner.x, m_graphCursorPoint.y}, {inner.right(), m_graphCursorPoint.y}, 1.0f,
-                      NUIColor(1.0f, 1.0f, 1.0f, canAddBand ? 0.070f : 0.035f));
+                      editorInk(canAddBand ? 0.070f : 0.035f));
     renderer.fillCircle(m_graphCursorPoint, 10.0f, preview.withAlpha(canAddBand ? 0.050f : 0.025f));
-    renderer.fillCircle(m_graphCursorPoint, 4.0f, NUIColor(0.045f, 0.045f, 0.045f, 0.64f));
+    renderer.fillCircle(m_graphCursorPoint, 4.0f, editorNeutral(0.045f, 0.64f));
     renderer.strokeCircle(m_graphCursorPoint, 7.0f, 1.1f, preview.withAlpha(canAddBand ? 0.34f : 0.16f));
     renderer.drawLine({m_graphCursorPoint.x - 3.0f, m_graphCursorPoint.y},
                       {m_graphCursorPoint.x + 3.0f, m_graphCursorPoint.y}, 1.2f,
@@ -2314,7 +2314,7 @@ void AestraEQEditor::drawNodeHoverTooltip(NUIRenderer& renderer, const NUIRect& 
     y = std::clamp(y, inner.y + 6.0f, inner.bottom() - h - 6.0f);
     const NUIRect r{x, y, w, h};
 
-    renderer.fillRoundedRect(r, 5.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.90f));
+    renderer.fillRoundedRect(r, 5.0f, editorNeutral(0.031f, 0.90f));
     renderer.strokeRoundedRect(r, 5.0f, 1.0f, band.withAlpha(0.32f));
     const float stemX = std::clamp(node.x, r.x + 8.0f, r.right() - 8.0f);
     const float stemY = r.y > node.y ? r.y : r.bottom();
@@ -2344,7 +2344,7 @@ void AestraEQEditor::drawSelectedNodeQuickActions(NUIRenderer& renderer, const N
     const bool canType = bd.typeId != 0 || !bd.legacySlot;
     const bool canDelete = !bd.legacySlot;
 
-    renderer.fillRoundedRect(m_nodeQuickActionRect, 7.0f, NUIColor(0.028f, 0.028f, 0.028f, 0.94f));
+    renderer.fillRoundedRect(m_nodeQuickActionRect, 7.0f, editorNeutral(0.028f, 0.94f));
     renderer.strokeRoundedRect(m_nodeQuickActionRect, 7.0f, 1.0f, band.withAlpha(0.32f));
     const float stemX = std::clamp(node.x, m_nodeQuickActionRect.x + 10.0f, m_nodeQuickActionRect.right() - 10.0f);
     const float stemY = m_nodeQuickActionRect.y > node.y ? m_nodeQuickActionRect.y : m_nodeQuickActionRect.bottom();
@@ -2359,11 +2359,11 @@ void AestraEQEditor::drawSelectedNodeQuickActions(NUIRenderer& renderer, const N
         const NUIColor base = destructive ? red : band;
         const NUIColor fill = soloAction ? base.withAlpha(hovered ? 0.24f : 0.17f)
                                          : (enabled && hovered ? base.withAlpha(destructive ? 0.12f : 0.15f)
-                                                               : NUIColor(1.0f, 1.0f, 1.0f, enabled ? 0.026f : 0.010f));
+                                                               : editorInk(enabled ? 0.026f : 0.010f));
         const NUIColor edge = soloAction ? base.withAlpha(hovered ? 0.72f : 0.54f)
                               : enabled  ? (hovered ? base.withAlpha(destructive ? 0.48f : 0.44f)
                                                     : base.withAlpha(destructive ? 0.24f : 0.20f))
-                                         : NUIColor(1.0f, 1.0f, 1.0f, 0.040f);
+                                         : editorInk(0.040f);
         if (soloAction) {
             renderer.fillRoundedRect({r.x - 3.0f, r.y - 3.0f, r.width + 6.0f, r.height + 6.0f}, 7.0f,
                                      base.withAlpha(0.075f));
@@ -2440,7 +2440,7 @@ void AestraEQEditor::drawSelectedNodeQuickActions(NUIRenderer& renderer, const N
             }
             tipY = std::clamp(tipY, inner.y + 4.0f, inner.bottom() - 22.0f);
             const NUIRect tip{tipX, tipY, tipW, 18.0f};
-            renderer.fillRoundedRect(tip, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.94f));
+            renderer.fillRoundedRect(tip, 5.0f, editorNeutral(0.026f, 0.94f));
             renderer.strokeRoundedRect(tip, 5.0f, 1.0f, band.withAlpha(0.26f));
             renderer.drawTextCentered(label, tip, 7.7f, theme.getColor("textSecondary").withAlpha(0.86f));
         }
@@ -2462,7 +2462,7 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     for (int db = -gridMax; db <= gridMax; db += gridStep) {
         const float y = inner.bottom() - (static_cast<float>(db) + dbRange) / (dbRange * 2.0f) * inner.height;
         const float alpha = (db == 0) ? 0.28f : 0.10f;
-        renderer.drawLine({inner.x, y}, {inner.right(), y}, db == 0 ? 1.2f : 1.0f, NUIColor(1.0f, 1.0f, 1.0f, alpha));
+        renderer.drawLine({inner.x, y}, {inner.right(), y}, db == 0 ? 1.2f : 1.0f, editorInk(alpha));
         const std::string lbl = (db > 0 ? "+" : "") + std::to_string(db);
         renderer.drawTextCentered(lbl, {bounds.x + 3.0f, y - 7.0f, 26.0f, 14.0f}, 8.6f,
                                   theme.getColor("textSecondary").withAlpha(0.66f));
@@ -2474,7 +2474,7 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
     for (int i = 0; i < 6; ++i) {
         const float norm = (std::log10(freqs[i]) - logMin) / (logMax - logMin);
         const float x = inner.x + norm * inner.width;
-        renderer.drawLine({x, inner.y}, {x, inner.bottom()}, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.07f));
+        renderer.drawLine({x, inner.y}, {x, inner.bottom()}, 1.0f, editorInk(0.07f));
         renderer.drawTextCentered(freqLabels[i], {x - 14.0f, inner.bottom() + 1.0f, 28.0f, 14.0f}, 8.6f,
                                   theme.getColor("textSecondary").withAlpha(0.70f));
     }
@@ -2560,7 +2560,7 @@ void AestraEQEditor::drawResponseCurve(NUIRenderer& renderer, const NUIRect& bou
         renderer.fillCircle(
             node, radius + (quietDynamicNode ? 2.4f : 4.0f),
             c.withAlpha((selected || dragging || soloed ? 0.18f : (quietDynamicNode ? 0.050f : 0.10f)) * activeAlpha));
-        renderer.fillCircle(node, radius, NUIColor(0.045f, 0.045f, 0.045f, 0.96f));
+        renderer.fillCircle(node, radius, editorNeutral(0.045f, 0.96f));
         renderer.strokeCircle(node, radius, bd.enabled ? (quietDynamicNode ? 1.1f : 1.6f) : 1.1f,
                               c.withAlpha(bd.enabled ? (quietDynamicNode ? 0.58f : 1.0f) : 0.42f));
         if (bd.enabled) {
@@ -2631,7 +2631,7 @@ void AestraEQEditor::drawDynamicDetectorHandle(NUIRenderer& renderer, const NUIR
     const NUIRect handle{x - 6.0f, y - 6.0f, 12.0f, 12.0f};
     renderer.fillRoundedRect({handle.x - 4.0f, handle.y - 4.0f, handle.width + 8.0f, handle.height + 8.0f}, 5.0f,
                              c.withAlpha(dragging ? 0.12f : 0.06f));
-    renderer.fillRoundedRect(handle, 3.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.94f));
+    renderer.fillRoundedRect(handle, 3.0f, editorNeutral(0.031f, 0.94f));
     renderer.strokeRoundedRect(handle, 3.0f, dragging ? 1.6f : 1.1f, c.withAlpha(dragging ? 0.95f : 0.72f));
 
     char freqBuf[24];
@@ -2641,7 +2641,7 @@ void AestraEQEditor::drawDynamicDetectorHandle(NUIRenderer& renderer, const NUIR
     else
         std::snprintf(freqBuf, sizeof(freqBuf), "%.0f", hz);
     const NUIRect chip{std::clamp(x - 42.0f, inner.x + 6.0f, inner.right() - 84.0f), y + 11.0f, 84.0f, 19.0f};
-    renderer.fillRoundedRect(chip, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.86f));
+    renderer.fillRoundedRect(chip, 5.0f, editorNeutral(0.026f, 0.86f));
     renderer.strokeRoundedRect(chip, 5.0f, 1.0f, c.withAlpha(0.24f));
     renderer.drawText("DET", {chip.x + 7.0f, std::round(renderer.calculateTextY(chip, 7.4f))}, 7.4f,
                       c.withAlpha(0.76f));
@@ -2665,7 +2665,7 @@ void AestraEQEditor::drawFloatingBandWindow(NUIRenderer& renderer, const NUIRect
     const NUIRect r = layout.panel;
     const NUIColor c = bandColor(bd.slotIndex);
 
-    renderer.fillRoundedRect(r, 6.0f, NUIColor(0.052f, 0.052f, 0.052f, 0.96f));
+    renderer.fillRoundedRect(r, 6.0f, editorNeutral(0.052f, 0.96f));
     renderer.strokeRoundedRect(r, 6.0f, 1.0f, c.withAlpha(bd.enabled ? 0.35f : 0.16f));
     const float connectorX = std::clamp(node.x, r.x + 12.0f, r.right() - 12.0f);
     const float connectorY = node.y < r.y ? r.y + 8.0f : r.bottom() - 8.0f;
@@ -2679,7 +2679,7 @@ void AestraEQEditor::drawFloatingBandWindow(NUIRenderer& renderer, const NUIRect
     renderer.drawText(bandId, {r.x + 8.0f, tooltipHeaderY}, kTooltipHeaderFont,
                       c.withAlpha(bd.enabled ? 0.98f : 0.44f));
     renderer.fillRoundedRect(layout.typeRect, 4.0f,
-                             bd.enabled ? c.withAlpha(0.055f) : NUIColor(1.0f, 1.0f, 1.0f, 0.010f));
+                             bd.enabled ? c.withAlpha(0.055f) : editorInk(0.010f));
     if (bd.typeId != 0 || !bd.legacySlot)
         renderer.strokeRoundedRect(layout.typeRect, 4.0f, 1.0f, c.withAlpha(0.16f));
     renderer.drawTextCentered(typeLabel, layout.typeRect, 8.0f,
@@ -2688,9 +2688,9 @@ void AestraEQEditor::drawFloatingBandWindow(NUIRenderer& renderer, const NUIRect
         (bd.legacySlot && m_instance && bd.stereoId != 0) ? m_instance->getParameter(bd.stereoId) : bd.stereoNorm;
     const bool stereoScoped = quantizeStereoNorm(stereoNorm) > 0.0f;
     renderer.fillRoundedRect(layout.stereoRect, 4.0f,
-                             stereoScoped ? c.withAlpha(0.18f) : NUIColor(1.0f, 1.0f, 1.0f, 0.028f));
+                             stereoScoped ? c.withAlpha(0.18f) : editorInk(0.028f));
     renderer.strokeRoundedRect(layout.stereoRect, 4.0f, 1.0f,
-                               stereoScoped ? c.withAlpha(0.40f) : NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+                               stereoScoped ? c.withAlpha(0.40f) : editorInk(0.08f));
     renderer.drawTextCentered(stereoModeShortName(stereoNorm), layout.stereoRect, 7.4f,
                               stereoScoped ? c.withAlpha(0.96f) : theme.getColor("textSecondary").withAlpha(0.58f));
     renderer.fillCircle(layout.enableRect.center(), 3.0f,
@@ -2709,7 +2709,7 @@ void AestraEQEditor::drawFloatingBandWindow(NUIRenderer& renderer, const NUIRect
         const float trackY = row.center().y + 5.0f;
         const float tickX = trackX + trackW * amount;
 
-        renderer.fillRoundedRect(row, 4.0f, NUIColor(0.018f, 0.018f, 0.018f, 0.86f));
+        renderer.fillRoundedRect(row, 4.0f, editorNeutral(0.018f, 0.86f));
         renderer.fillRoundedRect({row.x, row.y, labelW, row.height}, 4.0f,
                                  bd.enabled ? c.withAlpha(draggingThis ? 0.16f : 0.075f) : c.withAlpha(0.025f));
         renderer.fillRoundedRect({trackX, trackY - 1.0f, trackW, 2.0f}, 1.0f, NUIColor(1, 1, 1, 0.055f));
@@ -2797,7 +2797,7 @@ void AestraEQEditor::drawBandTypeMenu(NUIRenderer& renderer) {
                              quantizeTypeNorm(m_instance ? m_instance->getParameter(bd.typeId) : bd.typeNorm) * 3.0f)),
                          0, 3)
             : std::clamp(static_cast<int>(std::round(std::clamp(bd.typeNorm, 0.0f, 1.0f) * 7.0f)), 0, 7);
-    renderer.fillRoundedRect(m_typeMenuRect, 8.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.96f));
+    renderer.fillRoundedRect(m_typeMenuRect, 8.0f, editorNeutral(0.031f, 0.96f));
     renderer.strokeRoundedRect(m_typeMenuRect, 8.0f, 1.0f, band.withAlpha(0.42f));
 
     for (size_t i = 0; i < optionCount; ++i) {
@@ -2824,7 +2824,7 @@ void AestraEQEditor::drawBandStereoMenu(NUIRenderer& renderer) {
         (bd.legacySlot && bd.stereoId != 0 && m_instance) ? m_instance->getParameter(bd.stereoId) : bd.stereoNorm;
     const int current = std::clamp(static_cast<int>(std::round(quantizeStereoNorm(stereoNorm) * 4.0f)), 0, 4);
 
-    renderer.fillRoundedRect(m_stereoMenuRect, 8.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.96f));
+    renderer.fillRoundedRect(m_stereoMenuRect, 8.0f, editorNeutral(0.031f, 0.96f));
     renderer.strokeRoundedRect(m_stereoMenuRect, 8.0f, 1.0f, band.withAlpha(0.42f));
 
     static constexpr const char* kLabels[] = {"Stereo", "Left", "Right", "Mid", "Side"};
@@ -2855,7 +2855,7 @@ void AestraEQEditor::drawBandContextMenu(NUIRenderer& renderer) {
     const NUIColor band = bandColor(bd.slotIndex);
     const std::string bandId = bd.name.empty() ? bandIdLabel(static_cast<size_t>(m_bandContextMenuBand)) : bd.name;
     const std::string typeLabel = bandTypeSuffix(bd.typeName);
-    renderer.fillRoundedRect(m_bandContextMenuRect, 8.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.96f));
+    renderer.fillRoundedRect(m_bandContextMenuRect, 8.0f, editorNeutral(0.031f, 0.96f));
     renderer.strokeRoundedRect(m_bandContextMenuRect, 8.0f, 1.0f, band.withAlpha(0.34f));
     renderer.drawText(bandId, {m_bandContextMenuRect.x + 10.0f, m_bandContextMenuRect.y + 10.0f}, 9.5f,
                       band.withAlpha(0.96f));
@@ -2948,7 +2948,7 @@ void AestraEQEditor::drawNumericEditBox(NUIRenderer& renderer) {
     const NUIColor band = m_numericEditBand >= 0 && m_numericEditBand < static_cast<int>(m_bands.size())
                               ? bandColor(m_bands[static_cast<size_t>(m_numericEditBand)].slotIndex)
                               : accent();
-    renderer.fillRoundedRect(r, 7.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.96f));
+    renderer.fillRoundedRect(r, 7.0f, editorNeutral(0.031f, 0.96f));
     renderer.strokeRoundedRect(r, 7.0f, 1.2f, band.withAlpha(0.62f));
     const char* label = "VALUE";
     switch (m_numericEditTarget) {

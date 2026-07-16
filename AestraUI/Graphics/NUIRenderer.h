@@ -85,6 +85,14 @@ public:
     /**
      * Set the current clip rectangle (scissor test).
      */
+    /**
+     * Compensate text weight for background polarity. Light glyphs on dark
+     * bloom (irradiation); dark glyphs on light do not, so text tuned on a
+     * dark theme reads thin in light mode. 1.0 = dark-theme tuning; values
+     * below 1.0 thicken strokes (light themes want ~0.86-0.92).
+     */
+    virtual void setTextContrast(float contrast) { (void)contrast; }
+
     virtual void setClipRect(const NUIRect& rect) = 0;
     
     /**

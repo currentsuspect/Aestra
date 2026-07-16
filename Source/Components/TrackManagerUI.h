@@ -64,6 +64,10 @@ class TrackManagerUI : public ::AestraUI::NUIComponent, public ::AestraUI::IDrop
 public:
     TrackManagerUI(std::shared_ptr<TrackManager> trackManager);
     ~TrackManagerUI() override;
+    void onThemeChanged(const ::AestraUI::NUIThemeProperties& theme) override {
+        invalidateAllCaches();
+        ::AestraUI::NUIComponent::onThemeChanged(theme);
+    }
 
     void setPlatformWindow(::AestraUI::NUIPlatformBridge* window);
     ::AestraUI::NUIPlatformBridge* getPlatformWindow() const { return m_window; }

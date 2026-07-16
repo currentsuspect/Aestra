@@ -36,7 +36,8 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
                                float gridEndX,
                                float scrollX,
                                float pixelsPerBeat,
-                               int beatsPerBar) {
+                               int beatsPerBar,
+                               const NUIColor& ink = NUIColor::white()) {
     const float gridWidth = std::max(0.0f, gridEndX - gridStartX);
     beatsPerBar = std::max(1, beatsPerBar);
     const float pixelsPerBar = pixelsPerBeat * static_cast<float>(beatsPerBar);
@@ -73,7 +74,7 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
             }
             if (rectWidth > 0.0f) {
                 renderer.fillRect(NUIRect(rectX, bounds.y, rectWidth, bounds.height),
-                                  NUIColor::white().withAlpha(alpha));
+                                  ink.withAlpha(alpha));
             }
         }
     };
@@ -91,7 +92,7 @@ inline void renderTimelineGrid(NUIRenderer& renderer,
         renderer.drawLine(NUIPoint(x, bounds.y),
                           NUIPoint(x, bounds.bottom()),
                           1.0f,
-                          NUIColor::white().withAlpha(alpha));
+                          ink.withAlpha(alpha));
     };
     const float beatLineAlpha = lineAlpha(pixelsPerBeat);
     const float halfBeatLineAlpha = lineAlpha(pixelsPerBeat * 0.5f);

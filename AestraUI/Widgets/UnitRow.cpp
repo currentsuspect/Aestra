@@ -259,7 +259,7 @@ void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     auto& theme = NUIThemeManager::getInstance();
     
     NUIColor bgColor = active ? theme.getColor("warning") : theme.getColor("backgroundPrimary");
-    NUIColor textColor = active ? NUIColor(0.0f, 0.0f, 0.0f, 1.0f) : theme.getColor("textSecondary");
+    NUIColor textColor = active ? theme.getContrastColor(bgColor) : theme.getColor("textSecondary");
     NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
 
     // Circular Button
@@ -280,7 +280,7 @@ void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     auto& theme = NUIThemeManager::getInstance();
 
     NUIColor bgColor = active ? theme.getColor("success") : theme.getColor("backgroundPrimary");
-    NUIColor textColor = active ? NUIColor(0.0f, 0.0f, 0.0f, 1.0f) : theme.getColor("textSecondary");
+    NUIColor textColor = active ? theme.getContrastColor(bgColor) : theme.getColor("textSecondary");
     NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
 
     // Circular Button

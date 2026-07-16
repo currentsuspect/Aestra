@@ -41,8 +41,8 @@ constexpr float kPresetListBottomPadding = 24.0f;
 constexpr float kPresetArtworkSize = 44.0f;
 constexpr float kPresetArtworkPixels = 256.0f; // matches the committed 256x256 preset artwork
 
-NUIColor verbSurfaceBg() { return NUIColor(0.044f, 0.044f, 0.044f, 0.985f); }
-NUIColor verbInsetBg() { return NUIColor(0.025f, 0.025f, 0.025f, 0.965f); }
+NUIColor verbSurfaceBg() { return editorNeutral(0.044f, 0.985f); }
+NUIColor verbInsetBg() { return editorNeutral(0.025f, 0.965f); }
 NUIColor verbGold() { return NUIColor(0.88f, 0.63f, 0.13f, 1.0f); }
 NUIColor verbAccent() { return NUIColor(0.498f, 0.353f, 0.941f, 1.0f); }
 float presetColumnWidth(float editorWidth) { return std::clamp(editorWidth * 0.235f, 168.0f, 210.0f); }
@@ -573,7 +573,7 @@ void AestraVerbEditor::drawPresetStrip(NUIRenderer& renderer, NUIColor accent) {
     const float stripBottomY = b.y + b.height - 14.0f;
     const float stripH = stripBottomY - stripTopY;
     renderer.fillRoundedRect({stripX - 5.0f, stripTopY, stripW + 10.0f, stripH}, 8.0f,
-                             NUIColor(0.022f, 0.022f, 0.027f, 0.98f));
+                             editorNeutral(NUIColor(0.022f, 0.022f, 0.027f, 0.98f)));
     renderer.strokeRoundedRect({stripX - 5.0f, stripTopY, stripW + 10.0f, stripH}, 8.0f, 1.0f, NUIColor(1, 1, 1, 0.085f));
     const NUIRect libraryRow(stripX + 7.0f, stripTopY + 5.0f, stripW - 23.0f, 16.0f);
     renderer.drawText("PRESET LIBRARY", {libraryRow.x, std::round(renderer.calculateTextY(libraryRow, 8.5f))}, 8.5f,
@@ -619,8 +619,8 @@ void AestraVerbEditor::drawPresetStrip(NUIRenderer& renderer, NUIColor accent) {
         const bool focused = static_cast<int>(i) == m_focusedPreset;
         const bool pressed = static_cast<int>(i) == m_pressedPreset;
         const NUIColor presetFill = active ? accent.withAlpha(pressed ? 0.17f : 0.125f)
-            : (pressed ? NUIColor(0.060f, 0.052f, 0.078f, 0.99f)
-                       : (p.hovered ? NUIColor(0.061f, 0.057f, 0.074f, 0.98f) : verbInsetBg().withAlpha(0.92f)));
+            : (pressed ? editorNeutral(NUIColor(0.060f, 0.052f, 0.078f, 0.99f))
+                       : (p.hovered ? editorNeutral(NUIColor(0.061f, 0.057f, 0.074f, 0.98f)) : verbInsetBg().withAlpha(0.92f)));
         renderer.fillRoundedRect(p.bounds, 6.0f, presetFill);
         renderer.strokeRoundedRect(p.bounds, 5.0f, 1.0f,
                                    active ? accent.withAlpha(0.42f)
@@ -644,7 +644,7 @@ void AestraVerbEditor::drawPresetStrip(NUIRenderer& renderer, NUIColor accent) {
             const float hue = modeHues[modeIdx];
             renderer.fillRectGradient(art,
                 NUIColor(hue * 0.8f + 0.15f, hue * 0.4f + 0.08f, 0.20f, 1.0f),
-                NUIColor(0.029f, 0.029f, 0.029f, 1.0f), true);
+                editorNeutral(0.029f, 1.0f), true);
             static const char* modeInitials[] = {"R", "H", "P", "C", "Ch", "B", "A", "S", "Sp"};
             const char* initial = (modeIdx >= 0 && modeIdx < kModeCount) ? modeInitials[modeIdx] : "R";
             renderer.drawTextCentered(initial, art, 14.0f, accent.withAlpha(0.65f));
@@ -705,7 +705,7 @@ void AestraVerbEditor::drawCategoryPills(NUIRenderer& renderer, NUIColor accent)
     const auto outer = NUIRect(m_categoryPills.front().bounds.x, m_categoryPills.front().bounds.y,
                                m_categoryPills.back().bounds.right() - m_categoryPills.front().bounds.x,
                                m_categoryPills.front().bounds.height);
-    renderer.fillRoundedRect(outer, 13.0f, NUIColor(0.027f, 0.027f, 0.027f, 0.985f));
+    renderer.fillRoundedRect(outer, 13.0f, editorNeutral(0.027f, 0.985f));
     renderer.strokeRoundedRect(outer, 13.0f, 1.0f, NUIColor(1, 1, 1, 0.14f));
     const float pad = 2.0f;
     for (const auto& pill : m_categoryPills) {
@@ -799,7 +799,7 @@ void AestraVerbEditor::drawModeDropdown(NUIRenderer& renderer, NUIColor accent) 
     chevronIcon->onRender(renderer);
 
     if (m_dropdownOpen && !m_dropdownItems.empty()) {
-        renderer.fillRoundedRect(m_dropdownListBounds, 6.0f, NUIColor(0.027f, 0.027f, 0.027f, 0.985f));
+        renderer.fillRoundedRect(m_dropdownListBounds, 6.0f, editorNeutral(0.027f, 0.985f));
         renderer.strokeRoundedRect(m_dropdownListBounds, 6.0f, 1.0f, NUIColor(1, 1, 1, 0.14f));
         for (const auto& item : m_dropdownItems) {
             const bool isCurrent = item.mode == modeIdx;
@@ -834,9 +834,9 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, NUI
         const float ringThickness = 11.0f;
         renderer.drawShadow(NUIRect{cx - macroR * 0.82f, cy - macroR * 0.82f, macroR * 1.64f, macroR * 1.64f}, 0.0f, 3.0f, 6.0f,
                             NUIColor(0, 0, 0, 0.52f));
-        renderer.fillCircle({cx, cy}, macroR - 10.0f, NUIColor(0.012f, 0.012f, 0.016f, 0.98f));
+        renderer.fillCircle({cx, cy}, macroR - 10.0f, editorNeutral(NUIColor(0.012f, 0.012f, 0.016f, 0.98f)));
         renderer.strokeCircle({cx, cy}, macroR - 15.0f, 1.0f, NUIColor(1, 1, 1, 0.045f));
-        renderer.strokeCircle({cx, cy}, macroR, ringThickness, NUIColor(0.091f, 0.091f, 0.091f, 1.0f));
+        renderer.strokeCircle({cx, cy}, macroR, ringThickness, editorNeutral(0.091f, 1.0f));
         const float dStartAngle = -kPi * 0.5f;
         const float dSweep = kTwoPi * 0.80f;
         const float dValue = k.slider ? k.slider->getValue() : 0.0f;
@@ -868,8 +868,8 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, NUI
     if (k.verticalLayout) {
         renderer.drawShadow(NUIRect{cx - r * 0.78f, cy - r * 0.78f, r * 1.56f, r * 1.56f}, 0.0f, 2.0f, 4.0f,
                             NUIColor(0, 0, 0, 0.48f));
-        renderer.fillCircle({cx, cy}, r * 0.76f, hover ? verbSurfaceBg().withAlpha(1.0f) : NUIColor(0.039f, 0.039f, 0.039f, 1.0f));
-        renderer.strokeCircle({cx, cy}, r * 0.76f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.09f + stateLift * 0.045f));
+        renderer.fillCircle({cx, cy}, r * 0.76f, hover ? verbSurfaceBg().withAlpha(1.0f) : editorNeutral(0.039f, 1.0f));
+        renderer.strokeCircle({cx, cy}, r * 0.76f, 1.0f, editorInk(0.09f + stateLift * 0.045f));
         renderer.fillCircle({cx - r * 0.19f, cy - r * 0.22f}, r * 0.25f, NUIColor(1, 1, 1, 0.026f + stateLift * 0.016f));
         const float startAngle = kPi * 0.75f;
         const float sweep = kPi * 1.5f;
@@ -879,7 +879,7 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, NUI
         drawVerbArc(renderer, {cx, cy}, r, startAngle, endAngle, 3.0f, accent.withAlpha(0.86f + stateLift * 0.11f));
         const float pa = startAngle + value * kPi * 1.5f;
         renderer.drawLine({cx, cy}, {cx + std::cos(pa) * (r * 0.56f), cy + std::sin(pa) * (r * 0.56f)}, 2.0f,
-                          NUIColor(1.0f, 1.0f, 1.0f, active ? 0.98f : (hover ? 0.92f : 0.84f)));
+                          editorInk(active ? 0.98f : (hover ? 0.92f : 0.84f)));
         const float labelY = k.bounds.y + knobRect.height + 6.0f;
         renderer.drawTextCentered(k.label, {k.bounds.x, labelY, k.bounds.width, 14.0f}, 10.0f,
                                   theme.getColor("textPrimary").withAlpha(0.74f + stateLift * 0.12f));
@@ -891,8 +891,8 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, NUI
     renderer.drawShadow(NUIRect{cx - r * 0.78f, cy - r * 0.78f, r * 1.56f, r * 1.56f}, 0.0f, 2.0f, 4.0f,
                         NUIColor(0, 0, 0, 0.48f));
     if (hover) renderer.strokeCircle({cx, cy}, r + 1.5f, 1.0f, accent.withAlpha(0.25f));
-    renderer.fillCircle({cx, cy}, r * 0.76f, hover ? verbSurfaceBg().withAlpha(1.0f) : NUIColor(0.039f, 0.039f, 0.039f, 1.0f));
-    renderer.strokeCircle({cx, cy}, r * 0.76f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.09f + stateLift * 0.045f));
+    renderer.fillCircle({cx, cy}, r * 0.76f, hover ? verbSurfaceBg().withAlpha(1.0f) : editorNeutral(0.039f, 1.0f));
+    renderer.strokeCircle({cx, cy}, r * 0.76f, 1.0f, editorInk(0.09f + stateLift * 0.045f));
     renderer.fillCircle({cx - r * 0.19f, cy - r * 0.22f}, r * 0.25f, NUIColor(1, 1, 1, 0.026f + stateLift * 0.016f));
     const float startAngle = kPi * 0.75f;
     const float sweep = kPi * 1.5f;
@@ -902,7 +902,7 @@ void AestraVerbEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, NUI
     drawVerbArc(renderer, {cx, cy}, r, startAngle, endAngle, 3.0f, accent.withAlpha(0.86f + stateLift * 0.11f));
     const float pa = startAngle + value * kPi * 1.5f;
     renderer.drawLine({cx, cy}, {cx + std::cos(pa) * (r * 0.56f), cy + std::sin(pa) * (r * 0.56f)}, 2.0f,
-                      NUIColor(1.0f, 1.0f, 1.0f, active ? 0.98f : (hover ? 0.92f : 0.84f)));
+                      editorInk(active ? 0.98f : (hover ? 0.92f : 0.84f)));
     const float textX = knobRect.right() + 9.0f;
     // Optically centre the label + value on the knob's centre (see opticalTextY).
     const float labelTextY = std::round(opticalTextY(renderer, cy, 9.5f));
@@ -1013,7 +1013,7 @@ void AestraVerbEditor::drawSectionLabels(NUIRenderer& renderer) {
 
     auto drawSection = [&](const char* label, const char* hint, float y, float height, int rows) {
         const NUIRect card(rightX, y, rightW, height);
-        renderer.fillRoundedRect(card, 9.0f, NUIColor(0.030f, 0.030f, 0.035f, 0.97f));
+        renderer.fillRoundedRect(card, 9.0f, editorNeutral(NUIColor(0.030f, 0.030f, 0.035f, 0.97f)));
         renderer.strokeRoundedRect(card, 9.0f, 1.0f, NUIColor(1, 1, 1, 0.075f));
         renderer.fillCircle({rightX + 13.0f, y + 13.0f}, 2.0f, verbAccent().withAlpha(0.72f));
         const NUIRect headerRow(rightX + 21.0f, y, rightW - 33.0f, headerH);
@@ -1051,19 +1051,19 @@ void AestraVerbEditor::drawParamRow(NUIRenderer& renderer, NUIColor accent) {
         const bool hover = temp.slider ? temp.slider->isHovered() : false;
         const float stateLift = active ? 1.0f : (hover ? 0.55f : 0.0f);
         renderer.fillRoundedRect(rect, 7.0f,
-                                 hover ? NUIColor(0.034f, 0.031f, 0.044f, 0.98f)
-                                       : NUIColor(0.020f, 0.020f, 0.024f, 0.92f));
+                                 hover ? editorNeutral(NUIColor(0.034f, 0.031f, 0.044f, 0.98f))
+                                       : editorNeutral(NUIColor(0.020f, 0.020f, 0.024f, 0.92f)));
         renderer.strokeRoundedRect(rect, 7.0f, 1.0f,
                                    active ? accent.withAlpha(0.46f)
                                           : (hover ? accent.withAlpha(0.24f) : NUIColor(1, 1, 1, 0.065f)));
-        renderer.fillCircle({cx, cy}, r, NUIColor(0.01f, 0.01f, 0.01f, 1.0f));
+        renderer.fillCircle({cx, cy}, r, editorNeutral(0.01f, 1.0f));
         renderer.strokeCircle({cx, cy}, r, 1.0f, NUIColor(1, 1, 1, 0.10f + stateLift * 0.045f));
         if (hover) renderer.strokeCircle({cx, cy}, r + 1.5f, 1.0f, accent.withAlpha(0.20f));
         const float startAngle = kPi * 0.75f;
         const float sweep = kPi * 1.5f;
         const float value = temp.slider ? temp.slider->getValue() : 0.0f;
         const float endAngle = startAngle + value * sweep;
-        drawVerbArc(renderer, {cx, cy}, r, startAngle, startAngle + sweep, 3.0f, NUIColor(0.166f, 0.166f, 0.166f, 1.0f));
+        drawVerbArc(renderer, {cx, cy}, r, startAngle, startAngle + sweep, 3.0f, editorNeutral(0.166f, 1.0f));
         drawVerbArc(renderer, {cx, cy}, r, startAngle, endAngle, 3.0f, accent.withAlpha(0.86f + stateLift * 0.11f));
         const float pa = startAngle + value * kPi * 1.5f;
         renderer.fillCircle({cx + std::cos(pa) * (r - 2.0f), cy + std::sin(pa) * (r - 2.0f)}, 2.5f,
@@ -1093,18 +1093,18 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
     const float heroHeight = std::clamp(bodyH - 180.0f, 230.0f, 290.0f);
 
     renderer.fillRectGradient({b.x + 8.0f, b.y + 48.0f, b.width - 16.0f, b.height - 58.0f},
-                              NUIColor(0.024f, 0.022f, 0.030f, 0.98f),
-                              NUIColor(0.012f, 0.013f, 0.017f, 0.99f), true);
+                              editorNeutral(NUIColor(0.024f, 0.022f, 0.030f, 0.98f)),
+                              editorNeutral(NUIColor(0.012f, 0.013f, 0.017f, 0.99f)), true);
     drawPresetStrip(renderer, accent);
     drawCategoryPills(renderer, accent);
 
     renderer.fillRoundedRect({mainX - 8.0f, mainY - 6.0f, contentW + 16.0f, bodyH + 12.0f}, 11.0f,
-                             NUIColor(0.018f, 0.018f, 0.022f, 0.94f));
+                             editorNeutral(NUIColor(0.018f, 0.018f, 0.022f, 0.94f)));
     renderer.strokeRoundedRect({mainX - 8.0f, mainY - 6.0f, contentW + 16.0f, bodyH + 12.0f}, 11.0f, 1.0f,
                                NUIColor(1, 1, 1, 0.055f));
 
     const NUIRect heroCard(mainX, mainY, centerW, heroHeight);
-    renderer.fillRoundedRect(heroCard, 10.0f, NUIColor(0.026f, 0.025f, 0.033f, 0.98f));
+    renderer.fillRoundedRect(heroCard, 10.0f, editorNeutral(NUIColor(0.026f, 0.025f, 0.033f, 0.98f)));
     renderer.strokeRoundedRect(heroCard, 10.0f, 1.0f, accent.withAlpha(0.16f));
     renderer.fillCircle({heroCard.x + 15.0f, heroCard.y + 15.0f}, 2.0f, accent.withAlpha(0.82f));
     const NUIRect heroHeader(heroCard.x + 23.0f, heroCard.y + 2.0f, heroCard.width - 37.0f, 26.0f);
@@ -1118,13 +1118,13 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
 
     const NUIRect mixCard(m_mixBounds.x - 10.0f, m_mixBounds.y - 5.0f,
                           m_mixBounds.width + 20.0f, m_mixBounds.height + 10.0f);
-    renderer.fillRoundedRect(mixCard, 9.0f, NUIColor(0.026f, 0.025f, 0.033f, 0.96f));
+    renderer.fillRoundedRect(mixCard, 9.0f, editorNeutral(NUIColor(0.026f, 0.025f, 0.033f, 0.96f)));
     renderer.strokeRoundedRect(mixCard, 9.0f, 1.0f, NUIColor(1, 1, 1, 0.06f));
 
     const NUIRect utilityCard(m_bypassBounds.x - 10.0f, m_bypassBounds.y - 10.0f,
                               m_mixLockBounds.right() - m_bypassBounds.x + 20.0f,
                               m_abBoundsB.bottom() - m_bypassBounds.y + 20.0f);
-    renderer.fillRoundedRect(utilityCard, 9.0f, NUIColor(0.023f, 0.023f, 0.029f, 0.94f));
+    renderer.fillRoundedRect(utilityCard, 9.0f, editorNeutral(NUIColor(0.023f, 0.023f, 0.029f, 0.94f)));
     renderer.strokeRoundedRect(utilityCard, 9.0f, 1.0f, NUIColor(1, 1, 1, 0.055f));
 
     drawSectionLabels(renderer);
@@ -1218,7 +1218,7 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
         for (auto& btn : btns) {
             if (btn.hov && btn.tip) {
                 const NUIRect tipBounds(btn.bounds.x, btn.bounds.y - 18.0f, btn.bounds.width, 16.0f);
-                renderer.fillRoundedRect(tipBounds, 3.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.92f));
+                renderer.fillRoundedRect(tipBounds, 3.0f, editorNeutral(0.0f, 0.92f));
                 renderer.drawTextCentered(btn.tip, tipBounds, 8.0f, NUIColor(1, 1, 1, 0.78f));
             }
         }
@@ -1227,7 +1227,7 @@ void AestraVerbEditor::drawContent(NUIRenderer& renderer, const NUIRect& content
         const auto& tip = m_presets[static_cast<size_t>(m_hoveredPreset)];
         if (!tip.tooltip.empty()) {
             const NUIRect tipBounds(tip.bounds.x, tip.bounds.bottom() + 4.0f, tip.bounds.width, 20.0f);
-            renderer.fillRoundedRect(tipBounds, 4.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.92f));
+            renderer.fillRoundedRect(tipBounds, 4.0f, editorNeutral(0.0f, 0.92f));
             renderer.drawText(tip.tooltip, {tip.bounds.x + 6.0f, tip.bounds.bottom() + 8.0f}, 8.5f,
                               NUIColor(1, 1, 1, 0.78f));
         }

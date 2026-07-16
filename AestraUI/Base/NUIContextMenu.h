@@ -96,6 +96,7 @@ public:
 
     // Component interface
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     bool onKeyEvent(const NUIKeyEvent& event) override;
     void onMouseEnter() override;
@@ -213,6 +214,7 @@ private:
     NUIColor hoverColor_ = NUIColor::fromHex(0xff3a3d42);
     NUIColor separatorColor_ = NUIColor::fromHex(0xff666666);
     NUIColor shortcutColor_ = NUIColor::fromHex(0xff888888);
+    bool customColors_ = false;
     float borderWidth_ = 1.0f;
     float borderRadius_ = 7.0f;
     float itemHeight_ = 28.0f;

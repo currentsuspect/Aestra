@@ -65,6 +65,9 @@ void testValidThemeApplies() {
 
     auto theme = NUITheme::loadFromFile(path);
     check(theme != nullptr, "theme is not null");
+    check(theme->loadedSuccessfully(), "valid JSON reports a successful load");
+    check(theme->hasColorOverride("primary") && !theme->hasColorOverride("textMuted"),
+          "explicit color overrides are distinguished from defaults");
     check(colorsEqual(theme->getColor("primary"), NUIColor::fromHex(0xff0000)), "primary = #ff0000");
     check(colorsEqual(theme->getColor("background"), NUIColor::fromHex(0x00ff00)), "background = #00ff00");
     check(colorsEqual(theme->getColor("surface"), NUIColor::fromHex(0x0000ff, 128.0f / 255.0f)),
@@ -108,6 +111,7 @@ void testNonexistentFileReturnsDefault() {
     auto theme = NUITheme::loadFromFile("theme_does_not_exist_test.json");
     auto defaults = NUITheme::createDefault();
     check(theme != nullptr, "theme is not null");
+    check(!theme->loadedSuccessfully(), "missing file reports a failed load");
     check(colorsEqual(theme->getColor("primary"), defaults->getColor("primary")), "matches default theme");
 }
 
@@ -117,6 +121,7 @@ void testMalformedJSONReturnsDefault() {
     auto theme = NUITheme::loadFromFile(path);
     auto defaults = NUITheme::createDefault();
     check(theme != nullptr, "theme is not null");
+    check(!theme->loadedSuccessfully(), "malformed JSON reports a failed load");
     check(colorsEqual(theme->getColor("primary"), defaults->getColor("primary")), "matches default theme");
     std::remove(path.c_str());
 
@@ -138,7 +143,7 @@ void testInvalidEntriesKeepDefaults() {
             "textSecondary": "#abc",
             "error": "#ff00ff"
         },
-        "dimensions": { "borderRadius": "twelve", "compactControlHeight": -1.0 },
+        "dimensions": { "borderRadius": "twelve", "compactControlHeight": -1.0, "spacingM": -8.0 },
         "fontSizes": { "normal": -5, "small": 11.0 }
     })");
 
@@ -155,6 +160,8 @@ void testInvalidEntriesKeepDefaults() {
           "string-as-dimension rejected");
     check(nearlyEqual(theme->getDimension("compactControlHeight"), defaults->getDimension("compactControlHeight")),
           "non-positive semantic dimension rejected");
+    check(nearlyEqual(theme->getDimension("spacingM"), defaults->getDimension("spacingM")),
+          "non-positive spacing token rejected");
     check(nearlyEqual(theme->getFontSize("normal"), defaults->getFontSize("normal")),
           "non-positive font size rejected");
     check(nearlyEqual(theme->getFontSize("small"), 11.0f), "valid sibling font size applied");

@@ -39,6 +39,7 @@ public:
 
     // Component interface
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onMouseEnter() override;
     void onMouseLeave() override;
@@ -169,6 +170,7 @@ private:
     NUIColor toggleThumbColor_ = NUIColor::fromHex(0xffffffff);
     NUIColor toggleTrackColor_ = NUIColor::fromHex(0xff2a2d32);
     NUIColor toggleTrackCheckedColor_ = NUIColor::fromHex(0xffa855f7);
+    bool customColors_ = false;
 
     // Text properties
     NUITextAlignment textAlignment_ = NUITextAlignment::Left;
