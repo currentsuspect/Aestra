@@ -16,6 +16,7 @@ public:
     UIMixerFXSummary();
 
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
     void setFxCount(int count);

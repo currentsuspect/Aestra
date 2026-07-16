@@ -63,6 +63,25 @@ void NUICheckbox::onRender(NUIRenderer& renderer)
     }
 }
 
+void NUICheckbox::onThemeChanged(const NUIThemeProperties& theme)
+{
+    if (!customColors_) {
+        textColor_ = theme.textPrimary;
+        backgroundColor_ = theme.buttonBgDefault;
+        borderColor_ = theme.borderSubtle;
+        checkColor_ = theme.primary;
+        hoverColor_ = theme.buttonBgHover;
+        pressedColor_ = theme.buttonBgActive;
+        toggleThumbColor_ = theme.textOnPrimary;
+        toggleTrackColor_ = theme.toggleDefault;
+        toggleTrackCheckedColor_ = theme.toggleActive;
+        checkboxRadius_ = theme.radiusXS;
+    }
+    if (checkIcon_)
+        checkIcon_->setColor(checkColor_);
+    NUIComponent::onThemeChanged(theme);
+}
+
 bool NUICheckbox::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isEnabled() || !isVisible()) return false;
@@ -174,54 +193,63 @@ void NUICheckbox::setCheckboxRadius(float radius)
 void NUICheckbox::setTextColor(const NUIColor& color)
 {
     textColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUICheckbox::setBackgroundColor(const NUIColor& color)
 {
     backgroundColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUICheckbox::setBorderColor(const NUIColor& color)
 {
     borderColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUICheckbox::setCheckColor(const NUIColor& color)
 {
     checkColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUICheckbox::setHoverColor(const NUIColor& color)
 {
     hoverColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUICheckbox::setPressedColor(const NUIColor& color)
 {
     pressedColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUICheckbox::setToggleThumbColor(const NUIColor& color)
 {
     toggleThumbColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUICheckbox::setToggleTrackColor(const NUIColor& color)
 {
     toggleTrackColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUICheckbox::setToggleTrackCheckedColor(const NUIColor& color)
 {
     toggleTrackCheckedColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
@@ -538,8 +566,8 @@ void NUICheckbox::drawCheckmark(NUIRenderer& renderer, const NUIRect& rect)
     // Position the checkmark icon
     checkIcon_->setIconSize(iconSize, iconSize);
     checkIcon_->setPosition(centerX - iconSize * 0.5f, centerY - iconSize * 0.5f);
-    // Use white/primary color for checkmark to contrast with accent background
-    checkIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+    // Contrast against the accent fill via the theme's on-primary token.
+    checkIcon_->setColor(NUIThemeManager::getInstance().getCurrentTheme().textOnPrimary);
     
     // Render the checkmark
     checkIcon_->onRender(renderer);

@@ -505,7 +505,7 @@ void PianoRollRuler::onRender(NUIRenderer& renderer) {
     const auto bounds = getBounds();
     auto& theme = NUIThemeManager::getInstance();
 
-    const auto rulerBackground = NUIColor(0.012f, 0.012f, 0.012f, 1.0f);
+    const auto rulerBackground = NUIThemeManager::getInstance().getColor("backgroundPrimary");
     const auto border = NUIColor::white().withAlpha(0.075f);
     const auto highlight = NUIColor::white().withAlpha(0.014f);
     const auto text = theme.getColor("textPrimary").withAlpha(0.86f);
@@ -1010,12 +1010,14 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     auto& theme = NUIThemeManager::getInstance();
 
     renderer.setClipRect(bounds);
-    renderer.fillRect(bounds, NUIColor::black());
+    renderer.fillRect(bounds, theme.getColor("timelineBed"));
 
-    const auto accidentalRow = NUIColor::white().withAlpha(0.022f);
+    const auto gridInk = theme.getCurrentTheme().textPrimary;
+    const auto accidentalRow = gridInk.withAlpha(0.032f);
     const auto rootRow = theme.getColor("accentPrimary").withAlpha(0.055f);
-    const auto outOfScaleRow = NUIColor::black().withAlpha(0.24f);
-    const auto rowLine = NUIColor::white().withAlpha(0.045f);
+    // Out-of-scale rows recede toward the bed's own polarity, not toward black.
+    const auto outOfScaleRow = gridInk.withAlpha(0.10f);
+    const auto rowLine = gridInk.withAlpha(0.045f);
 
     int startPitch = 127 - static_cast<int>(scrollY_ / keyHeight_);
     int endPitch = 127 - static_cast<int>((scrollY_ + bounds.height) / keyHeight_);
@@ -1040,7 +1042,7 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     }
 
     renderTimelineGrid(
-        renderer, bounds, bounds.x, bounds.right(), scrollX_, pixelsPerBeat_, beatsPerBar_);
+        renderer, bounds, bounds.x, bounds.right(), scrollX_, pixelsPerBeat_, beatsPerBar_, gridInk);
 
     if (hoveredPitch_ >= 0 && hoveredPitch_ <= 127) {
         const float hoverY = bounds.y + (127 - hoveredPitch_) * keyHeight_ - scrollY_;
@@ -1062,7 +1064,7 @@ void PianoRollGrid::onRender(NUIRenderer& renderer) {
     if (patternEndX < bounds.right()) {
         const float shadeX = std::max(bounds.x, patternEndX);
         renderer.fillRect(NUIRect(shadeX, bounds.y, bounds.right() - shadeX, bounds.height),
-                          NUIColor::black().withAlpha(0.58f));
+                          NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(0.14f));
     }
     if (patternEndX >= bounds.x && patternEndX <= bounds.right()) {
         renderer.drawLine(NUIPoint(patternEndX, bounds.y),
@@ -1811,8 +1813,8 @@ void PianoRollNoteLayer::onRender(NUIRenderer& renderer) {
 
     // Rubber-band selection rectangle (already normalized during drag)
     if (state_ == State::SelectingBox && selectionRect_.width > 0 && selectionRect_.height > 0) {
-        renderer.fillRoundedRect(selectionRect_, 2.0f, NUIColor(0.545f, 0.498f, 1.0f, 0.15f));
-        renderer.strokeRoundedRect(selectionRect_, 2.0f, 1.0f, NUIColor(0.545f, 0.498f, 1.0f, 0.55f));
+        renderer.fillRoundedRect(selectionRect_, 2.0f, NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(0.15f));
+        renderer.strokeRoundedRect(selectionRect_, 2.0f, 1.0f, NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(0.55f));
     }
 
     renderNoteProperties(renderer);
@@ -3111,7 +3113,8 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     renderer.setClipRect(contentRect);
 
     const float startX = contentRect.x;
-    renderTimelineGrid(renderer, contentRect, startX, contentRect.right(), scrollX_, pixelsPerBeat_, beatsPerBar_);
+    renderTimelineGrid(renderer, contentRect, startX, contentRect.right(), scrollX_, pixelsPerBeat_, beatsPerBar_,
+                       themeManager.getCurrentTheme().textPrimary);
 
     const float availH = std::max(1.0f, b.height - 28.0f);
     const float bottomY = b.bottom() - 8.0f;
@@ -3128,7 +3131,7 @@ void PianoRollControlPanel::onRender(NUIRenderer& renderer) {
     if (patternEndX < contentRect.right()) {
         const float shadeX = std::max(contentRect.x, patternEndX);
         renderer.fillRect(NUIRect(shadeX, contentRect.y, contentRect.right() - shadeX, contentRect.height),
-                          NUIColor::black().withAlpha(0.58f));
+                          NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(0.14f));
     }
     if (patternEndX >= contentRect.x && patternEndX <= contentRect.right()) {
         renderer.drawLine(NUIPoint(patternEndX, contentRect.y),

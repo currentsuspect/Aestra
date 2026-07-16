@@ -54,10 +54,9 @@ void UIMixerButtonRow::cacheThemeColors()
     m_textOnBright = theme.getColor("textPrimary");
     m_textOnRed = theme.getColor("textPrimary");
 
-    // Active glow colors (amber mute, yellow solo, red arm)
-    m_muteOn = NUIColor(1.0f, 0.75f, 0.2f, 1.0f);   // amber
-    m_soloOn = NUIColor(1.0f, 0.92f, 0.3f, 1.0f);   // yellow
-    m_armOn  = NUIColor(1.0f, 0.25f, 0.25f, 1.0f);  // red
+    m_muteOn = theme.getColor("muted");
+    m_soloOn = theme.getColor("soloed");
+    m_armOn = theme.getColor("armed");
 }
 
 void UIMixerButtonRow::layoutButtons()

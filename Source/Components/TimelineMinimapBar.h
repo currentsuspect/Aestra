@@ -29,6 +29,7 @@ public:
     TimelineMinimapBar();
 
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors_(); NUIComponent::onThemeChanged(theme); }
     void onUpdate(double deltaTime) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onMouseLeave() override;

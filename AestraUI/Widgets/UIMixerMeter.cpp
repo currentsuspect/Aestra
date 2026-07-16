@@ -29,7 +29,7 @@ void UIMixerMeter::cacheThemeColors()
     m_colorYellowDim = m_colorYellow.withSaturation(0.0f).withAlpha(0.55f);
     m_colorRedDim = m_colorRed.withSaturation(0.0f).withAlpha(0.55f);
     // Match fader track background (Dark Glass)
-    m_colorBackground = AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.3f);
+    m_colorBackground = theme.getColor("meterBackground").withAlpha(0.3f);
     m_colorPeakHold = theme.getColor("textPrimary"); // #E5E5E8
     m_colorPeakOverlay = m_colorPeakHold.withAlpha(0.8f);
     m_colorPeakOverlayDim = m_colorPeakOverlay.withSaturation(0.0f).withAlpha(0.6f);
@@ -250,7 +250,7 @@ void UIMixerMeter::renderMeterBar(NUIRenderer& renderer, const NUIRect& bounds,
         // Draw hold line (white 0.85 alpha, 1px thick)
         const NUIColor holdColor = m_dimmed
             ? m_colorPeakOverlayDim
-            : NUIColor(1.0f, 1.0f, 1.0f, 0.85f);
+            : m_colorPeakHold.withAlpha(0.85f);
         renderer.fillRect(NUIRect{meterArea.x, peakY, meterArea.width, PEAK_HOLD_HEIGHT}, holdColor);
     }
 
@@ -310,7 +310,7 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
         
         // Background (distinct from main meter)
         // Use a visible gray track (0.25f)
-        renderer.fillRect(corrBounds, NUIColor(0.25f, 0.25f, 0.25f, 1.0f));
+        renderer.fillRect(corrBounds, NUIThemeManager::getInstance().getColor("controlBackground"));
         
         // Center line (white/bright) - 2px width
         float centerX = corrBounds.x + corrBounds.width * 0.5f;
@@ -392,7 +392,7 @@ void UIMixerMeter::onRender(NUIRenderer& renderer)
             lineHeight
         };
         std::string lufsLabel = "LUFS " + m_cachedLufsStr;
-        renderer.drawTextCentered(lufsLabel, lufsRect, 7.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.45f));
+        renderer.drawTextCentered(lufsLabel, lufsRect, 7.0f, NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(0.45f));
         
     } else if (hasPeak) {
         // Regular tracks: Show Peak dB or −∞ at silence floor

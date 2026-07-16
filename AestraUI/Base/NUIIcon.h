@@ -31,6 +31,7 @@ public:
     
     // Component interface
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override;
     
     // Icon management
     void loadSVG(const std::string& svgContent);
@@ -68,6 +69,7 @@ private:
     std::shared_ptr<NUISVGDocument> svgDoc_;
     NUIColor color_ = NUIColor::white();
     bool hasCustomColor_ = false;
+    std::string themeColorName_;
     float iconWidth_ = 24.0f;
     float iconHeight_ = 24.0f;
 };

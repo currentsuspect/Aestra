@@ -24,6 +24,7 @@ public:
     UIMixerFader();
 
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
     void setRangeDb(float minDb, float maxDb);
@@ -69,6 +70,8 @@ private:
     NUIColor m_handleHover;
     NUIColor m_text;
     NUIColor m_textSecondary;
+    NUIColor m_border;
+    NUIColor m_tooltipBg;
 
     static constexpr float FADER_FLOOR_THRESHOLD = -60.0f;
 

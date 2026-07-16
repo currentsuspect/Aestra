@@ -20,7 +20,7 @@ NUIColor cyanAccent() {
     return NUIColor(0.0f, 0.90f, 0.80f, 1.0f);
 }
 NUIColor cardBg() {
-    return NUIColor(0.084f, 0.084f, 0.084f, 0.95f);
+    return NUIThemeManager::getInstance().getColor("editorCard");
 }
 NUIRect offsetRect(const NUIRect& r, float dx, float dy) {
     return NUIRect(r.x + dx, r.y + dy, r.width, r.height);
@@ -267,10 +267,10 @@ void AestraDelayEditor::drawPillSwitches(NUIRenderer& renderer, float wx, float 
         const NUIRect groupLabelRect(outer.x - labelW, outer.y, labelW - 8.0f, outer.height);
         renderer.drawText(groupLabel, {groupLabelRect.x + 2.0f, groupLabelRect.y + 12.0f}, 9.0f,
                           theme.getColor("textSecondary").withAlpha(0.70f));
-        renderer.fillRoundedRect(outer, 9.0f, NUIColor(0.018f, 0.018f, 0.022f, 0.98f));
-        renderer.strokeRoundedRect(outer, 9.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.13f));
+        renderer.fillRoundedRect(outer, 9.0f, NUIThemeManager::getInstance().getColor("editorWell"));
+        renderer.strokeRoundedRect(outer, 9.0f, 1.0f, editorInk().withAlpha(0.13f));
         renderer.drawLine({right.x, outer.y + 7.0f}, {right.x, outer.bottom() - 7.0f}, 1.0f,
-                          NUIColor(1.0f, 1.0f, 1.0f, 0.10f));
+                          editorInk().withAlpha(0.10f));
         auto seg = [&](const NUIRect& rect, const char* label, bool active) {
             const NUIRect inset(rect.x + 3.0f, rect.y + 3.0f, rect.width - 6.0f, rect.height - 6.0f);
             if (active) {
@@ -294,7 +294,7 @@ void AestraDelayEditor::drawSectionFrame(NUIRenderer& renderer, const NUIRect& l
                                          const NUIColor& color, float wx, float wy) {
     auto& theme = NUIThemeManager::getInstance();
     const NUIRect rect = offsetRect(localRect, wx, wy);
-    renderer.fillRoundedRect(rect, 14.0f, NUIColor(0.020f, 0.020f, 0.024f, 0.98f));
+    renderer.fillRoundedRect(rect, 14.0f, NUIThemeManager::getInstance().getColor("editorWell"));
     renderer.strokeRoundedRect(rect, 14.0f, 1.5f, color.withAlpha(0.58f));
     renderer.fillRoundedRect({rect.x + 12.0f, rect.y + 12.0f, 4.0f, 16.0f}, 2.0f, color);
     renderer.drawText(title, {rect.x + 24.0f, rect.y + 14.0f}, 10.5f, theme.getColor("textPrimary").withAlpha(0.92f));
@@ -312,7 +312,7 @@ void AestraDelayEditor::drawEchoDisplay(NUIRenderer& renderer, float wx, float w
     const float stereo = m_instance->getParameter(Delay::kStereoShift) * 2.0f - 1.0f;
     const float modulation = m_instance->getParameter(Delay::kModDepth);
 
-    renderer.fillRoundedRect(rect, 10.0f, NUIColor(0.008f, 0.008f, 0.012f, 0.98f));
+    renderer.fillRoundedRect(rect, 10.0f, NUIThemeManager::getInstance().getColor("editorWell"));
     renderer.strokeRoundedRect(rect, 10.0f, 1.0f, cyanAccent().withAlpha(0.26f));
     renderer.drawText("ECHO PATH", {rect.x + 12.0f, rect.y + 9.0f}, 9.5f,
                       theme.getColor("textSecondary").withAlpha(0.82f));
@@ -382,7 +382,8 @@ void AestraDelayEditor::drawSyncPanel(NUIRenderer& renderer, float wx, float wy)
             renderer.fillRoundedRect(r, 6.0f, accent());
             renderer.drawTextCentered(btn.label, r, 9.5f, theme.getColor("textPrimary"));
         } else {
-            NUIColor fill = hovered ? NUIColor(0.099f, 0.099f, 0.099f, 0.92f) : NUIColor(0.068f, 0.068f, 0.068f, 0.90f);
+            NUIColor fill = NUIThemeManager::getInstance().getColor("editorControl");
+            if (hovered) fill = fill.lightened(0.03f);
             renderer.fillRoundedRect(r, 6.0f, fill);
             renderer.strokeRoundedRect(r, 6.0f, 1.0f, accent().withAlpha(0.32f));
             renderer.drawTextCentered(btn.label, r, 9.5f, theme.getColor("textSecondary").withAlpha(0.88f));
@@ -442,7 +443,7 @@ void AestraDelayEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, fl
     const float cy = knobRect.center().y;
     const float r = kKnobSize * 0.40f;
     renderer.fillCircle({cx, cy}, r + 7.0f, knobAccent.withAlpha(0.07f));
-    renderer.fillCircle({cx, cy}, r, NUIColor(0.045f, 0.045f, 0.045f, 0.96f));
+    renderer.fillCircle({cx, cy}, r, NUIThemeManager::getInstance().getColor("editorWell").withAlpha(0.96f));
     renderer.strokeCircle({cx, cy}, r, 1.0f, knobAccent.withAlpha(0.32f));
 
     const float sa = kPi * 0.75f;
@@ -469,7 +470,7 @@ void AestraDelayEditor::drawMixSlider(NUIRenderer& renderer, float wx, float wy)
     const float mix = m_instance ? m_instance->getParameter(Delay::kMix) : 0.0f;
     NUIRect mixRect = offsetRect(m_mixSliderRect, wx, wy);
     const NUIRect track(mixRect.x + 58.0f, mixRect.y + 12.0f, mixRect.width - 104.0f, 8.0f);
-    renderer.fillRoundedRect(mixRect, 10.0f, NUIColor(0.068f, 0.068f, 0.068f, 0.92f));
+    renderer.fillRoundedRect(mixRect, 10.0f, NUIThemeManager::getInstance().getColor("editorControl"));
     renderer.strokeRoundedRect(mixRect, 10.0f, 1.0f, accent().withAlpha(0.35f));
     renderer.drawText("Mix", {mixRect.x + 14.0f, mixRect.y + 10.0f}, 10.5f,
                       theme.getColor("textPrimary").withAlpha(0.95f));

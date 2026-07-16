@@ -23,12 +23,14 @@ NUIColor accent() {
     return NUIColor(0.28f, 0.72f, 0.62f, 1.0f);
 } // filter teal
 NUIColor panelSurface() {
-    return NUIColor(0.018f, 0.021f, 0.022f, 0.98f);
+    return editorNeutral(NUIColor(0.018f, 0.021f, 0.022f, 0.98f));
 }
 NUIColor insetSurface() {
-    return NUIColor(0.028f, 0.034f, 0.035f, 0.98f);
+    return editorNeutral(NUIColor(0.028f, 0.034f, 0.035f, 0.98f));
 }
 NUIColor gridColor() {
+    // Teal-tinted grid ink over the response well; darkened on light themes.
+    if (editorLightUi()) return NUIColor(0.16f, 0.26f, 0.24f, 0.16f);
     return NUIColor(0.45f, 0.58f, 0.56f, 0.12f);
 }
 
@@ -164,7 +166,7 @@ void AestraFilterEditor::drawResponseDisplay(NUIRenderer& renderer) {
     // sit on the response border or compete with the live envelope meter.
     const NUIRect graph{m_responseRect.x + 14.0f, m_responseRect.y + 31.0f, m_responseRect.width - 28.0f,
                         m_responseRect.height - 65.0f};
-    renderer.fillRoundedRect(graph, 7.0f, NUIColor(0.006f, 0.010f, 0.011f, 0.98f));
+    renderer.fillRoundedRect(graph, 7.0f, editorNeutral(NUIColor(0.006f, 0.010f, 0.011f, 0.98f)));
 
     auto xForHz = [&graph](float hz) {
         const float norm = std::log10(std::clamp(hz, 20.0f, 20000.0f) / 20.0f) / 3.0f;
@@ -231,7 +233,7 @@ void AestraFilterEditor::drawResponseDisplay(NUIRenderer& renderer) {
     renderer.clearClipRect();
 
     const NUIRect envTrack{graph.x, m_responseRect.bottom() - 8.0f, graph.width, 3.0f};
-    renderer.fillRoundedRect(envTrack, 1.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.06f));
+    renderer.fillRoundedRect(envTrack, 1.5f, editorInk(0.06f));
     renderer.fillRoundedRect({envTrack.x, envTrack.y, envTrack.width * envelope, envTrack.height}, 1.5f,
                              accent().withAlpha(0.72f));
 }
@@ -245,10 +247,10 @@ void AestraFilterEditor::drawKnob(NUIRenderer& renderer, const NUIRect& rect, ui
     const float angle = kKnobStart + value * kKnobSweep;
 
     renderer.fillCircle(c, r + 4.0f, insetSurface());
-    renderer.strokeCircle(c, r + 4.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.060f));
+    renderer.strokeCircle(c, r + 4.0f, 1.0f, editorInk(0.060f));
 
     drawArc(renderer, c, r - 3.0f, kKnobStart, kKnobStart + kKnobSweep, large ? 4.0f : 3.0f,
-            NUIColor(0.199f, 0.199f, 0.199f, 1.0f));
+            editorNeutral(0.199f, 1.0f));
     if (bipolar) {
         // Bipolar knobs fill from the top-center detent toward the value.
         const float centerAngle = kKnobStart + 0.5f * kKnobSweep;
@@ -264,7 +266,7 @@ void AestraFilterEditor::drawKnob(NUIRenderer& renderer, const NUIRect& rect, ui
     renderer.fillCircle(tip, large ? 3.5f : 2.5f, accent());
 
     const float wellR = r * (large ? 0.34f : 0.28f);
-    renderer.fillCircle(c, wellR, NUIColor(0.045f, 0.045f, 0.045f, 0.96f));
+    renderer.fillCircle(c, wellR, editorNeutral(0.045f, 0.96f));
     renderer.strokeCircle(c, wellR, 1.2f, accent().withAlpha(0.36f));
 
     renderer.drawTextCentered(label, NUIRect(rect.x, rect.bottom() + 4.0f, rect.width, 14.0f), 10.5f,
@@ -287,7 +289,7 @@ void AestraFilterEditor::drawTypeSelector(NUIRenderer& renderer) {
             renderer.drawTextCentered(kLabels[i], m_typeRects[i], 9.0f, accent().withAlpha(0.98f));
         } else {
             renderer.fillRoundedRect(m_typeRects[i], 7.0f, insetSurface());
-            renderer.strokeRoundedRect(m_typeRects[i], 7.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+            renderer.strokeRoundedRect(m_typeRects[i], 7.0f, 1.0f, editorInk(0.08f));
             renderer.drawTextCentered(kLabels[i], m_typeRects[i], 9.0f,
                                       theme.getColor("textPrimary").withAlpha(0.62f));
         }

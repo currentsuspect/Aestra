@@ -31,6 +31,7 @@ public:
 
     // Component interface
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override;
 
     // Text properties
     void setText(const std::string& text);
@@ -99,6 +100,9 @@ private:
     
     // Editable state
     bool editable_ = false;
+    bool customTextColor_ = false;
+    bool customBackgroundColor_ = false;
+    bool customBorderColor_ = false;
     
     // OPTIMIZATION: Cache text measurements
     mutable NUISize cachedTextSize_{0, 0};

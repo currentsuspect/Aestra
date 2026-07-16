@@ -49,6 +49,7 @@ public:
 
     // Component interface
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override;
     bool onMouseEvent(const NUIMouseEvent& event) override;
     void onUpdate(double deltaTime) override;
     void onMouseEnter() override;
@@ -198,6 +199,7 @@ private:
     NUIColor arrowHoverColor_ = NUIColor(0.95f, 0.95f, 0.95f, 0.45f);    // Brighter on hover
     NUIColor arrowPressedColor_ = NUIColor(0.70f, 0.70f, 0.70f, 0.65f);  // Stronger on press
     NUIColor borderColor_ = NUIColor(0.30f, 0.30f, 0.30f, 0.35f);        // Subtle border
+    bool customColors_ = false;
     float borderWidth_ = 1.0f;
     float borderRadius_ = 4.0f;
     float arrowSize_ = 12.0f;

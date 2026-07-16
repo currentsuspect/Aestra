@@ -125,6 +125,23 @@ void NUITextInput::onRender(NUIRenderer& renderer)
     }
 }
 
+void NUITextInput::onThemeChanged(const NUIThemeProperties& theme)
+{
+    if (!customColors_) {
+        textColor_ = theme.textPrimary;
+        backgroundColor_ = theme.inputBgDefault;
+        borderColor_ = theme.borderSubtle;
+        focusedBorderColor_ = theme.focusRing;
+        placeholderColor_ = theme.textMuted;
+        selectionColor_ = theme.selected;
+        caretColor_ = theme.textPrimary;
+        borderRadius_ = theme.radiusM;
+        padding_ = theme.spacingS;
+    }
+    invalidateLayout();
+    NUIComponent::onThemeChanged(theme);
+}
+
 bool NUITextInput::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;
@@ -352,12 +369,14 @@ void NUITextInput::setMinLength(int minLength)
 void NUITextInput::setTextColor(const NUIColor& color)
 {
     textColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUITextInput::setBackgroundColor(const NUIColor& color)
 {
     backgroundColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
@@ -370,30 +389,35 @@ void NUITextInput::setBackgroundVisible(bool visible)
 void NUITextInput::setBorderColor(const NUIColor& color)
 {
     borderColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUITextInput::setFocusedBorderColor(const NUIColor& color)
 {
     focusedBorderColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUITextInput::setPlaceholderColor(const NUIColor& color)
 {
     placeholderColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUITextInput::setSelectionColor(const NUIColor& color)
 {
     selectionColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUITextInput::setCaretColor(const NUIColor& color)
 {
     caretColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 

@@ -20,8 +20,8 @@ void AestraPanelWindow::cacheThemeColors()
     m_border = theme.getColor("borderSubtle");
     m_textSecondary = theme.getColor("textSecondary");
     m_textTertiary = theme.getColor("textDisabled");
-    m_closeHover = NUIColor::fromHex(0xffd95f5f);
-    m_closeActive = NUIColor::fromHex(0xffe57373);
+    m_closeHover = theme.getColor("error").withAlpha(0.78f);
+    m_closeActive = theme.getColor("error");
 }
 
 void AestraPanelWindow::setPanelTitle(const std::string& title)

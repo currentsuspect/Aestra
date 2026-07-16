@@ -10,6 +10,7 @@ namespace AestraUI {
 
 class NUIRenderer;
 class NUITheme;
+struct NUIThemeProperties;
 class NUIFont;
 
 /**
@@ -137,6 +138,8 @@ public:
     // Theme
     void setTheme(std::shared_ptr<NUITheme> theme);
     std::shared_ptr<NUITheme> getTheme() const;
+    /** Refresh cached theme state, then propagate the change to descendants. */
+    virtual void onThemeChanged(const NUIThemeProperties& theme);
     
     // Callbacks
     NUIMouseCallback onMouseDown;

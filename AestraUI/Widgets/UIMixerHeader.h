@@ -17,6 +17,7 @@ public:
     UIMixerHeader();
 
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
     bool onMouseEvent(const NUIMouseEvent& event) override;
 
     void setTrackName(std::string name);

@@ -1,9 +1,12 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "NUIThemeSystem.h"
+#include "NUIComponent.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <fstream>
 #include <iostream>
 #include <string>
 
@@ -12,6 +15,18 @@ using namespace AestraUI;
 namespace {
 
 int gFailures = 0;
+
+class ThemeProbe final : public NUIComponent {
+public:
+    void onThemeChanged(const NUIThemeProperties& theme) override {
+        ++changeCount;
+        observedPrimary = theme.primary;
+        NUIComponent::onThemeChanged(theme);
+    }
+
+    int changeCount = 0;
+    NUIColor observedPrimary;
+};
 
 void check(bool condition, const std::string& label) {
     std::cout << "  " << (condition ? "PASS " : "FAIL ") << label << '\n';
@@ -126,6 +141,95 @@ void testThemeChangeResolution() {
     manager.setOnThemeChanged({});
 }
 
+void testIndependentSubscriptionsAndAtomicSwitching() {
+    std::cout << "[Test] independent subscribers and atomic switching\n";
+    auto& manager = NUIThemeManager::getInstance();
+    manager.setActiveTheme("Aestra-dark");
+
+    auto target = NUIThemePresets::createAestraLight();
+    target.primary = NUIColor::fromHex(0x13579b);
+    target.layout.standardControlHeight = 31.0f;
+    manager.setCustomTheme("subscription-test", target);
+
+    int firstCount = 0;
+    int secondCount = 0;
+    bool observedCompleteTheme = false;
+    const auto first = manager.subscribeToThemeChanges([&](const NUIThemeProperties&) { ++firstCount; });
+    const auto second = manager.subscribeToThemeChanges([&](const NUIThemeProperties& theme) {
+        ++secondCount;
+        observedCompleteTheme = colorsEqual(theme.primary, target.primary) &&
+                                nearlyEqual(theme.layout.standardControlHeight, 31.0f);
+    });
+
+    manager.switchTheme("subscription-test", 300.0f);
+    check(manager.getActiveTheme() == "subscription-test", "animated API activates the requested theme atomically");
+    check(firstCount == 1 && secondCount == 1, "independent subscribers each receive one notification");
+    check(observedCompleteTheme, "subscriber receives a complete target theme, not a partial interpolation");
+
+    manager.unsubscribeFromThemeChanges(first);
+    manager.setActiveTheme("Aestra-dark");
+    check(firstCount == 1 && secondCount == 2, "unsubscribing one listener does not disconnect another");
+    manager.unsubscribeFromThemeChanges(second);
+}
+
+void testLiveJSONThemeRegistration() {
+    std::cout << "[Test] JSON overrides register into the live manager\n";
+    const std::string path = "live_theme_registration_test.json";
+    {
+        std::ofstream out(path, std::ios::binary | std::ios::trunc);
+        out << R"({
+            "colors": { "accent": "#2468ac", "focusRing": "#abcdef" },
+            "dimensions": { "standardControlHeight": 30.0 },
+            "fontSizes": { "normal": 13.0 }
+        })";
+    }
+
+    auto& manager = NUIThemeManager::getInstance();
+    const auto base = NUIThemePresets::createAestraDark();
+    check(manager.loadThemeFromFile("live-json-test", path), "valid JSON theme registers successfully");
+    check(manager.setActiveTheme("live-json-test"), "registered JSON theme can become active");
+    const auto& loaded = manager.getCurrentTheme();
+    check(colorsEqual(loaded.primary, NUIColor::fromHex(0x2468ac)), "legacy accent key maps to live primary role");
+    check(colorsEqual(loaded.focusRing, NUIColor::fromHex(0xabcdef)), "semantic focus ring maps into live state");
+    check(colorsEqual(loaded.backgroundPrimary, base.backgroundPrimary), "missing live token inherits the base preset");
+    check(nearlyEqual(loaded.layout.standardControlHeight, 30.0f), "live control dimension is overridden");
+    check(nearlyEqual(loaded.fontSizeM, 13.0f), "legacy normal font size maps to live body text");
+
+    int reloadCount = 0;
+    const auto reloadSubscription = manager.subscribeToThemeChanges(
+        [&](const NUIThemeProperties&) { ++reloadCount; });
+    check(manager.loadThemeFromFile("live-json-test", path), "active JSON theme can be reloaded");
+    check(reloadCount == 1, "reloading the active theme emits one update");
+    manager.unsubscribeFromThemeChanges(reloadSubscription);
+    std::remove(path.c_str());
+
+    const std::string invalidPath = "invalid_live_theme_registration_test.json";
+    {
+        std::ofstream out(invalidPath, std::ios::binary | std::ios::trunc);
+        out << "{ invalid";
+    }
+    check(!manager.loadThemeFromFile("invalid-live-json-test", invalidPath),
+          "malformed JSON is rejected by live registration");
+    check(!manager.hasTheme("invalid-live-json-test"), "failed registration does not install a misleading fallback");
+    std::remove(invalidPath.c_str());
+    manager.setActiveTheme("Aestra-dark");
+}
+
+void testHierarchyInvalidation() {
+    std::cout << "[Test] component hierarchy theme propagation\n";
+    auto root = std::make_shared<ThemeProbe>();
+    auto child = std::make_shared<ThemeProbe>();
+    root->addChild(child);
+    root->setDirty(false);
+    child->setDirty(false);
+
+    const auto theme = NUIThemePresets::createAestraLight();
+    root->onThemeChanged(theme);
+    check(root->changeCount == 1 && child->changeCount == 1, "theme change reaches each hierarchy node once");
+    check(root->isDirty() && child->isDirty(), "theme change invalidates root and descendants");
+    check(colorsEqual(child->observedPrimary, theme.primary), "descendant observes the complete active theme");
+}
+
 void testCompatibilityAliases() {
     std::cout << "[Test] live component token aliases\n";
     auto& manager = NUIThemeManager::getInstance();
@@ -164,6 +268,23 @@ void testLightPresetCompleteness() {
           "light primary action text remains readable");
 }
 
+void testHighContrastPreset() {
+    std::cout << "[Test] high-contrast preset is distinct and readable\n";
+    const auto ordinary = NUIThemePresets::createAestraDark();
+    const auto highContrast = NUIThemePresets::createHighContrastDark();
+
+    check(!colorsEqual(highContrast.borderStrong, ordinary.borderStrong),
+          "high contrast is not an alias of ordinary dark");
+    check(contrastRatio(highContrast.textPrimary, highContrast.backgroundPrimary) >= 7.0f,
+          "high-contrast primary text exceeds enhanced contrast");
+    check(contrastRatio(highContrast.textSecondary, highContrast.backgroundSecondary) >= 4.5f,
+          "high-contrast secondary text remains readable");
+    check(contrastRatio(highContrast.textOnPrimary, highContrast.primary) >= 4.5f,
+          "high-contrast accent action text remains readable");
+    check(highContrast.gridMajor.a > ordinary.gridMajor.a && highContrast.gridMinor.a > ordinary.gridMinor.a,
+          "high-contrast grid hierarchy is stronger without flattening major/minor distinction");
+}
+
 } // namespace
 
 int main() {
@@ -171,8 +292,12 @@ int main() {
     testStatePriorityAndGeometry();
     testDefaultContrast();
     testThemeChangeResolution();
+    testIndependentSubscriptionsAndAtomicSwitching();
+    testLiveJSONThemeRegistration();
+    testHierarchyInvalidation();
     testCompatibilityAliases();
     testLightPresetCompleteness();
+    testHighContrastPreset();
 
     if (gFailures == 0) {
         std::cout << "All UI theme consistency checks passed\n";
