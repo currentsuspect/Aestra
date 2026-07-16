@@ -3733,7 +3733,7 @@ void AestraContent::loadInstrumentIntoArsenalUnit(UnitID unitId, const std::stri
     }
 
     unitManager.setUnitName(unitId, unitName);
-    unitManager.setUnitGroup(unitId, UnitGroup::Synth);
+    unitManager.setUnitType(unitId, UnitType::Instrument);
     unitManager.clearUnitTimelineLane(unitId);
     unitManager.setUnitEnabled(unitId, true);
     unitManager.attachPlugin(unitId, pluginId, instance);
