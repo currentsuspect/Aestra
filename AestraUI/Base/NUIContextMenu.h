@@ -214,7 +214,7 @@ private:
     NUIColor separatorColor_ = NUIColor::fromHex(0xff666666);
     NUIColor shortcutColor_ = NUIColor::fromHex(0xff888888);
     float borderWidth_ = 1.0f;
-    float borderRadius_ = 6.0f;
+    float borderRadius_ = 7.0f;
     float itemHeight_ = 28.0f;
     float itemPadding_ = 10.0f;
     float iconSize_ = 16.0f;
