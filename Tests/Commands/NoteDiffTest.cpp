@@ -25,7 +25,7 @@ static int testsFailed = 0;
 // ---------------------------------------------------------------------------
 static MidiNote make(int pitch, double start, double dur, float vel = 0.8f,
                      uint64_t unitId = 0) {
-    return MidiNote{pitch, start, dur, vel, unitId, 0, 1.0f, false};
+    return MidiNote{pitch, start, dur, vel, 0.0f, unitId, 0, 1.0f, false};
 }
 
 

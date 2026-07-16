@@ -14,6 +14,7 @@
 #include <chrono>
 #include <filesystem>
 #include <cstdio>
+#include <utility>
 
 ExportDialog::ExportDialog() {
     setId("exportDialog");
@@ -26,6 +27,9 @@ ExportDialog::~ExportDialog() {
     }
     if (m_exportFuture.valid()) {
         m_exportFuture.wait();
+    }
+    if (m_fileDialogFuture.valid()) {
+        m_fileDialogFuture.wait();
     }
     restoreAudioStreamIfNeeded();
 }
@@ -40,6 +44,7 @@ void ExportDialog::show(const std::string& projectPath, Aestra::Audio::AudioEngi
     m_cancelRequested = false;
     m_exportError.clear();
     m_exportElapsed = 0.0;
+    m_pressedButton = -1;
 
     // Defaults from engine
     uint32_t sr = engine.getSampleRate();
@@ -64,6 +69,7 @@ void ExportDialog::hide() {
     m_visible = false;
     setVisible(false);
     m_tailInputFocused = false;
+    m_pressedButton = -1;
     if (m_exporting.load()) {
         m_cancelRequested.store(true);
         // Non-blocking: destructor will join the future when needed
@@ -74,17 +80,18 @@ void ExportDialog::hide() {
 
 void ExportDialog::layoutDialog() {
     auto parentBounds = getBounds();
+    const auto& theme = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
     m_dialogRect.x = parentBounds.x + (parentBounds.width - DIALOG_WIDTH) * 0.5f;
     m_dialogRect.y = parentBounds.y + (parentBounds.height - DIALOG_HEIGHT) * 0.5f;
     m_dialogRect.width = DIALOG_WIDTH;
     m_dialogRect.height = DIALOG_HEIGHT;
 
-    float pad = 24.0f;
+    float pad = theme.spacingL;
     float contentX = m_dialogRect.x + pad;
     float contentW = m_dialogRect.width - pad * 2.0f;
-    float rowH = 30.0f;
+    float rowH = theme.layout.standardControlHeight;
     float labelW = 110.0f;
-    float gap = 12.0f;
+    float gap = theme.spacingS;
     float y = m_dialogRect.y + 56.0f; // Below title
 
     if (m_panelState == PanelState::Settings) {
@@ -111,22 +118,22 @@ void ExportDialog::layoutDialog() {
 
         // Buttons at bottom
         float btnW = 110.0f;
-        float btnH = 36.0f;
-        float btnY = m_dialogRect.bottom() - btnH - 18.0f;
-        float totalBtnW = btnW * 2.0f + 12.0f;
+        float btnH = theme.layout.dialogActionHeight;
+        float btnY = m_dialogRect.bottom() - btnH - theme.spacingM;
+        float totalBtnW = btnW * 2.0f + theme.spacingS;
         float btnStartX = m_dialogRect.x + (m_dialogRect.width - totalBtnW) * 0.5f;
         m_startButtonRect = AestraUI::NUIRect(btnStartX, btnY, btnW, btnH);
-        m_closeButtonRect = AestraUI::NUIRect(btnStartX + btnW + 12.0f, btnY, btnW, btnH);
+        m_closeButtonRect = AestraUI::NUIRect(btnStartX + btnW + theme.spacingS, btnY, btnW, btnH);
     } else {
         // Progress/Complete state
         float btnW = 110.0f;
-        float btnH = 36.0f;
-        float btnY = m_dialogRect.y + m_dialogRect.height - btnH - 20.0f;
-        float totalBtnW = btnW + (m_panelState == PanelState::Progress ? btnW + 12.0f : 0.0f);
+        float btnH = theme.layout.dialogActionHeight;
+        float btnY = m_dialogRect.y + m_dialogRect.height - btnH - theme.spacingM;
+        float totalBtnW = btnW;
         float btnStartX = m_dialogRect.x + (m_dialogRect.width - totalBtnW) * 0.5f;
         if (m_panelState == PanelState::Progress) {
             m_cancelButtonRect = AestraUI::NUIRect(btnStartX, btnY, btnW, btnH);
-            m_closeButtonRect = AestraUI::NUIRect(btnStartX + btnW + 12.0f, btnY, btnW, btnH);
+            m_closeButtonRect = {};
         } else {
             m_closeButtonRect = AestraUI::NUIRect(btnStartX, btnY, btnW, btnH);
         }
@@ -142,6 +149,16 @@ void ExportDialog::onUpdate(double deltaTime) {
     if (m_exportFuture.valid() &&
         m_exportFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
         applyExportResult(m_exportFuture.get());
+    }
+
+    if (m_fileDialogFuture.valid() &&
+        m_fileDialogFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+        const std::string pickedPath = m_fileDialogFuture.get();
+        m_fileDialogPending = false;
+        if (!pickedPath.empty()) {
+            m_outputPath = pickedPath;
+        }
+        setDirty(true);
     }
 }
 
@@ -223,29 +240,31 @@ void ExportDialog::onRender(AestraUI::NUIRenderer& renderer) {
 
 void ExportDialog::drawOverlay(AestraUI::NUIRenderer& renderer) {
     auto parentBounds = getBounds();
-    renderer.fillRect(parentBounds, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.72f));
+    renderer.fillRect(parentBounds, AestraUI::NUIThemeManager::getInstance().getColor("overlay"));
 }
 
 void ExportDialog::drawDialog(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
-    AestraUI::NUIColor dialogBg = theme.getColor("surfaceTertiary");
-    AestraUI::NUIColor border = theme.getColor("border").withAlpha(0.8f);
+    const auto& props = theme.getCurrentTheme();
+    AestraUI::NUIColor dialogBg = theme.getColor("elevatedPanel");
+    AestraUI::NUIColor border = theme.getColor("borderStrong");
 
     // Shadow
-    renderer.fillRoundedRect(AestraUI::NUIRect(m_dialogRect.x + 6, m_dialogRect.y + 10, m_dialogRect.width, m_dialogRect.height), 12.0f, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.32f));
-    renderer.fillRoundedRect(m_dialogRect, 12.0f, dialogBg);
-    renderer.strokeRoundedRect(m_dialogRect, 12.0f, 1.0f, border);
+    renderer.drawShadow(m_dialogRect, 0.0f, props.spacingS, props.spacingL, theme.getColor("shadow"));
+    renderer.fillRoundedRect(m_dialogRect, props.radiusL, dialogBg);
+    renderer.strokeRoundedRect(m_dialogRect, props.radiusL, props.layout.dividerWidth, border);
 
     // Title bar area
-    float titleY = m_dialogRect.y + 14.0f;
+    float titleY = m_dialogRect.y + props.spacingM;
     std::string title = (m_panelState == PanelState::Settings) ? "Export Audio" :
                         (m_panelState == PanelState::Progress) ? "Rendering..." : "Export Complete";
-    renderer.drawText(title, AestraUI::NUIPoint(m_dialogRect.x + 20.0f, titleY), 16.0f, theme.getColor("textPrimary"));
+    renderer.drawText(title, AestraUI::NUIPoint(m_dialogRect.x + props.spacingL, titleY),
+                      props.fontSizeXL, theme.getColor("textPrimary"));
 
     // Separator
     renderer.drawLine(AestraUI::NUIPoint(m_dialogRect.x + 16.0f, titleY + 24.0f),
                       AestraUI::NUIPoint(m_dialogRect.x + m_dialogRect.width - 16.0f, titleY + 24.0f),
-                      1.0f, border);
+                      props.layout.dividerWidth, theme.getColor("borderSubtle"));
 
     if (m_panelState == PanelState::Settings) {
         drawSettingsPanel(renderer);
@@ -256,59 +275,70 @@ void ExportDialog::drawDialog(AestraUI::NUIRenderer& renderer) {
 
 void ExportDialog::drawSettingsPanel(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
-    float pad = 24.0f;
+    const auto& props = theme.getCurrentTheme();
+    float pad = props.spacingL;
     float contentX = m_dialogRect.x + pad;
     float labelW = 110.0f;
-    float rowH = 30.0f;
-    float gap = 12.0f;
+    float rowH = props.layout.standardControlHeight;
+    float gap = props.spacingS;
     float y = m_dialogRect.y + 56.0f;
-    const AestraUI::NUIColor fieldBg = theme.getColor("surfaceRaised");
-    const AestraUI::NUIColor fieldBorder = theme.getColor("border").withAlpha(0.85f);
-    const AestraUI::NUIColor fieldBorderActive = theme.getColor("primary").withAlpha(0.85f);
+    const AestraUI::NUIColor fieldBg = theme.getColor("controlBackground");
+    const AestraUI::NUIColor fieldBorder = theme.getColor("borderSubtle");
+    const AestraUI::NUIColor fieldBorderActive = theme.getColor("focusRing");
 
     auto drawLabel = [&](const std::string& text, float yPos) {
-        renderer.drawText(text, AestraUI::NUIPoint(contentX, yPos + 7.0f), 12.0f, theme.getColor("textSecondary"));
+        renderer.drawText(text, AestraUI::NUIPoint(contentX, yPos + 7.0f), props.fontSizeM,
+                          theme.getColor("textSecondary"));
     };
 
     auto drawDropdown = [&](const AestraUI::NUIRect& rect, const std::string& value, bool isOpen) {
         AestraUI::NUIColor borderCol = isOpen ? fieldBorderActive : fieldBorder;
-        renderer.fillRoundedRect(rect, 6.0f, fieldBg);
-        renderer.strokeRoundedRect(rect, 6.0f, 1.0f, borderCol);
-        renderer.drawText(value, AestraUI::NUIPoint(rect.x + 8.0f, rect.y + 7.0f), 12.0f, theme.getColor("textPrimary"));
-        renderer.drawText(isOpen ? "^" : "v", AestraUI::NUIPoint(rect.x + rect.width - 16.0f, rect.y + 7.0f), 10.0f, theme.getColor("textSecondary"));
+        renderer.fillRoundedRect(rect, props.radiusM, fieldBg);
+        renderer.strokeRoundedRect(rect, props.radiusM, isOpen ? 1.5f : props.layout.dividerWidth, borderCol);
+        renderer.drawText(value, AestraUI::NUIPoint(rect.x + props.spacingS, rect.y + 7.0f), props.fontSizeM,
+                          theme.getColor("textPrimary"));
+        renderer.drawText(isOpen ? "^" : "v", AestraUI::NUIPoint(rect.x + rect.width - 16.0f, rect.y + 7.0f),
+                          props.fontSizeXS, theme.getColor("textSecondary"));
     };
 
     auto drawDropdownPopup = [&](const AestraUI::NUIRect& popup, const std::vector<std::string>& options, int selected) {
-        float itemH = 26.0f;
+        float itemH = props.layout.standardMenuRowHeight;
         float popupH = options.size() * itemH + 4.0f;
         AestraUI::NUIRect actualPopup = popup;
         actualPopup.height = popupH;
         actualPopup.y = popup.y + popup.height + 2.0f;
 
-        renderer.fillRoundedRect(actualPopup, 6.0f, fieldBg);
-        renderer.strokeRoundedRect(actualPopup, 6.0f, 1.0f, fieldBorder);
+        renderer.fillRoundedRect(actualPopup, props.radiusM, fieldBg);
+        renderer.strokeRoundedRect(actualPopup, props.radiusM, props.layout.dividerWidth, fieldBorder);
 
         for (size_t i = 0; i < options.size(); i++) {
             AestraUI::NUIRect itemRect(actualPopup.x + 2.0f, actualPopup.y + 2.0f + i * itemH, actualPopup.width - 4.0f, itemH);
-            AestraUI::NUIColor itemBg = (static_cast<int>(i) == selected) ? theme.getColor("primary").withAlpha(0.2f) : AestraUI::NUIColor(0,0,0,0);
-            renderer.fillRoundedRect(itemRect, 3.0f, itemBg);
-            renderer.drawText(options[i], AestraUI::NUIPoint(itemRect.x + 8.0f, itemRect.y + 7.0f), 12.0f, theme.getColor("textPrimary"));
+            AestraUI::NUIColor itemBg = (static_cast<int>(i) == selected)
+                                             ? theme.getColor("selection")
+                                             : AestraUI::NUIColor::transparent();
+            renderer.fillRoundedRect(itemRect, props.radiusXS, itemBg);
+            renderer.drawText(options[i],
+                              AestraUI::NUIPoint(itemRect.x + props.spacingS, itemRect.y + props.spacingS - 1.0f),
+                              props.fontSizeM, theme.getColor("textPrimary"));
         }
     };
 
     // Output path
     drawLabel("Output", y);
-    renderer.fillRoundedRect(m_outputFieldRect, 6.0f, fieldBg);
-    renderer.strokeRoundedRect(m_outputFieldRect, 6.0f, 1.0f, fieldBorder);
+    renderer.fillRoundedRect(m_outputFieldRect, props.radiusM, fieldBg);
+    renderer.strokeRoundedRect(m_outputFieldRect, props.radiusM, props.layout.dividerWidth, fieldBorder);
     std::string displayPath = m_outputPath;
     if (displayPath.size() > 42) displayPath = "..." + displayPath.substr(displayPath.size() - 39);
-    renderer.drawText(displayPath, AestraUI::NUIPoint(m_outputFieldRect.x + 8.0f, m_outputFieldRect.y + 7.0f), 11.0f, theme.getColor("textPrimary"));
+    renderer.drawText(displayPath, AestraUI::NUIPoint(m_outputFieldRect.x + props.spacingS,
+                                                       m_outputFieldRect.y + 7.0f),
+                      props.fontSizeS, theme.getColor("textPrimary"));
     {
-        bool hovered = (m_hoveredButton == 3);
+        bool hovered = !m_fileDialogPending && (m_hoveredButton == 3);
         AestraUI::NUIColor btnBg = hovered ? theme.getColor("hover") : fieldBg;
-        renderer.fillRoundedRect(m_browseButtonRect, 6.0f, btnBg);
-        renderer.strokeRoundedRect(m_browseButtonRect, 6.0f, 1.0f, fieldBorder);
-        renderer.drawTextCentered("Browse", m_browseButtonRect, 11.0f, theme.getColor("textPrimary"));
+        renderer.fillRoundedRect(m_browseButtonRect, props.radiusM, btnBg);
+        renderer.strokeRoundedRect(m_browseButtonRect, props.radiusM, props.layout.dividerWidth, fieldBorder);
+        renderer.drawTextCentered(m_fileDialogPending ? "Waiting..." : "Browse", m_browseButtonRect, props.fontSizeS,
+                                  theme.getColor(m_fileDialogPending ? "textMuted" : "textPrimary"));
     }
     y += rowH + gap;
 
@@ -331,23 +361,32 @@ void ExportDialog::drawSettingsPanel(AestraUI::NUIRenderer& renderer) {
     drawLabel("Tail (seconds)", y);
     {
         const AestraUI::NUIColor tailBorder = m_tailInputFocused ? fieldBorderActive : fieldBorder;
-        renderer.fillRoundedRect(m_tailInputRect, 6.0f, fieldBg);
-        renderer.strokeRoundedRect(m_tailInputRect, 6.0f, 1.0f, tailBorder);
-        renderer.drawText(m_tailInput, AestraUI::NUIPoint(m_tailInputRect.x + 8.0f, m_tailInputRect.y + 7.0f), 12.0f, theme.getColor("textPrimary"));
+        renderer.fillRoundedRect(m_tailInputRect, props.radiusM, fieldBg);
+        renderer.strokeRoundedRect(m_tailInputRect, props.radiusM,
+                                   m_tailInputFocused ? 1.5f : props.layout.dividerWidth, tailBorder);
+        renderer.drawText(m_tailInput, AestraUI::NUIPoint(m_tailInputRect.x + props.spacingS,
+                                                          m_tailInputRect.y + 7.0f),
+                          props.fontSizeM, theme.getColor("textPrimary"));
     }
 
     // Buttons
     {
         bool startHovered = (m_hoveredButton == 0);
-        AestraUI::NUIColor startBg = startHovered ? theme.getColor("primary").withAlpha(0.8f) : theme.getColor("primary");
-        renderer.fillRoundedRect(m_startButtonRect, 6.0f, startBg);
-        renderer.drawTextCentered("Export", m_startButtonRect, 13.0f, theme.getColor("backgroundPrimary"));
+        const bool startPressed = m_pressedButton == 0;
+        AestraUI::NUIColor startBg = startPressed ? theme.getColor("primaryPressed")
+                                        : startHovered ? theme.getColor("primaryHover")
+                                                       : theme.getColor("primary");
+        renderer.fillRoundedRect(m_startButtonRect, props.radiusM, startBg);
+        renderer.drawTextCentered("Export", m_startButtonRect, props.fontSizeM, theme.getColor("textOnPrimary"));
 
         bool closeHovered = (m_hoveredButton == 2);
-        AestraUI::NUIColor closeBg = closeHovered ? theme.getColor("hover") : fieldBg;
-        renderer.fillRoundedRect(m_closeButtonRect, 6.0f, closeBg);
-        renderer.strokeRoundedRect(m_closeButtonRect, 6.0f, 1.0f, fieldBorder);
-        renderer.drawTextCentered("Cancel", m_closeButtonRect, 13.0f, theme.getColor("textPrimary"));
+        const bool closePressed = m_pressedButton == 2;
+        AestraUI::NUIColor closeBg = closePressed ? theme.getColor("controlPressed")
+                                        : closeHovered ? theme.getColor("controlHover")
+                                                       : fieldBg;
+        renderer.fillRoundedRect(m_closeButtonRect, props.radiusM, closeBg);
+        renderer.strokeRoundedRect(m_closeButtonRect, props.radiusM, props.layout.dividerWidth, fieldBorder);
+        renderer.drawTextCentered("Cancel", m_closeButtonRect, props.fontSizeM, theme.getColor("textPrimary"));
     }
 
     if (m_scopeOpen) {
@@ -361,37 +400,41 @@ void ExportDialog::drawSettingsPanel(AestraUI::NUIRenderer& renderer) {
 
 void ExportDialog::drawProgressPanel(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
-    float pad = 24.0f;
+    const auto& props = theme.getCurrentTheme();
+    float pad = props.spacingL;
     float contentX = m_dialogRect.x + pad;
     float contentW = m_dialogRect.width - pad * 2.0f;
     float y = m_dialogRect.y + 52.0f;
-    const AestraUI::NUIColor fieldBg = theme.getColor("surfaceRaised");
-    const AestraUI::NUIColor fieldBorder = theme.getColor("border").withAlpha(0.85f);
+    const AestraUI::NUIColor fieldBg = theme.getColor("controlBackground");
+    const AestraUI::NUIColor fieldBorder = theme.getColor("borderSubtle");
 
     if (m_panelState == PanelState::Progress) {
         // Status text
         std::string status = "Rendering audio...";
-        renderer.drawText(status, AestraUI::NUIPoint(contentX, y), 13.0f, theme.getColor("textPrimary"));
+        renderer.drawText(status, AestraUI::NUIPoint(contentX, y), props.fontSizeM,
+                          theme.getColor("textPrimary"));
         y += 24.0f;
 
         // Progress bar (manual draw for full control)
         float barH = 20.0f;
         AestraUI::NUIRect barRect(contentX, y, contentW, barH);
-        renderer.fillRoundedRect(barRect, 4.0f, fieldBg);
+        renderer.fillRoundedRect(barRect, props.radiusS, theme.getColor("meterBackground"));
+        renderer.strokeRoundedRect(barRect, props.radiusS, props.layout.dividerWidth, fieldBorder);
 
         float progress = std::max(0.0f, std::min(1.0f, m_progress.load()));
         if (progress > 0.0f) {
             float fillW = std::max(4.0f, contentW * progress);
             AestraUI::NUIRect fillRect(contentX, y, fillW, barH);
-            renderer.fillRoundedRect(fillRect, 4.0f, theme.getColor("primary"));
+            renderer.fillRoundedRect(fillRect, props.radiusS, theme.getColor("meterActive"));
         }
 
         // Progress text
         int pct = static_cast<int>(progress * 100.0f);
         std::string pctText = std::to_string(pct) + "%";
-        auto textSize = renderer.measureText(pctText, 11.0f);
+        auto textSize = renderer.measureText(pctText, props.fontSizeS);
         float textX = contentX + (contentW - textSize.width) * 0.5f;
-        renderer.drawText(pctText, AestraUI::NUIPoint(textX, y + 4.0f), 11.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+        renderer.drawText(pctText, AestraUI::NUIPoint(textX, y + 4.0f), props.fontSizeS,
+                          theme.getColor("textPrimary"));
         y += barH + 16.0f;
 
         // Elapsed time
@@ -399,52 +442,60 @@ void ExportDialog::drawProgressPanel(AestraUI::NUIRenderer& renderer) {
         int elapsedSec = static_cast<int>(m_exportElapsed) % 60;
         char timeBuf[32];
         snprintf(timeBuf, sizeof(timeBuf), "Elapsed: %d:%02d", elapsedMin, elapsedSec);
-        renderer.drawText(timeBuf, AestraUI::NUIPoint(contentX, y), 11.0f, theme.getColor("textSecondary"));
+        renderer.drawText(timeBuf, AestraUI::NUIPoint(contentX, y), props.fontSizeS,
+                          theme.getColor("textSecondary"));
 
         // Buttons
         {
             bool cancelHovered = (m_hoveredButton == 1);
-            AestraUI::NUIColor cancelBg = cancelHovered ? AestraUI::NUIColor(0.8f, 0.2f, 0.2f, 0.8f) : AestraUI::NUIColor(0.6f, 0.15f, 0.15f, 1.0f);
-            renderer.fillRoundedRect(m_cancelButtonRect, 6.0f, cancelBg);
-            renderer.drawTextCentered("Cancel", m_cancelButtonRect, 13.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
-
-            bool closeHovered = (m_hoveredButton == 2);
-            AestraUI::NUIColor closeBg = closeHovered ? theme.getColor("hover") : fieldBg;
-            renderer.fillRoundedRect(m_closeButtonRect, 6.0f, closeBg);
-            renderer.strokeRoundedRect(m_closeButtonRect, 6.0f, 1.0f, fieldBorder);
-            renderer.drawTextCentered("Close", m_closeButtonRect, 13.0f, theme.getColor("textPrimary"));
+            const bool cancelPressed = m_pressedButton == 1;
+            const AestraUI::NUIColor cancelBg = cancelPressed ? theme.getColor("error").darkened(0.16f)
+                                                    : cancelHovered ? theme.getColor("error").lightened(0.08f)
+                                                                    : theme.getColor("error");
+            renderer.fillRoundedRect(m_cancelButtonRect, props.radiusM, cancelBg);
+            renderer.drawTextCentered("Cancel", m_cancelButtonRect, props.fontSizeM, props.onError);
         }
     } else if (m_panelState == PanelState::Complete) {
         // Result
         if (!m_exportError.empty()) {
-            renderer.drawText("Export Failed", AestraUI::NUIPoint(contentX, y), 14.0f, AestraUI::NUIColor(0.9f, 0.3f, 0.3f, 1.0f));
+            renderer.drawText("Export Failed", AestraUI::NUIPoint(contentX, y), props.fontSizeL,
+                              theme.getColor("error"));
             y += 24.0f;
-            renderer.drawText(m_exportError, AestraUI::NUIPoint(contentX, y), 12.0f, theme.getColor("textSecondary"));
+            renderer.drawText(m_exportError, AestraUI::NUIPoint(contentX, y), props.fontSizeM,
+                              theme.getColor("textSecondary"));
         } else {
-            renderer.drawText("Export Complete", AestraUI::NUIPoint(contentX, y), 14.0f, theme.getColor("success"));
+            renderer.drawText("Export Complete", AestraUI::NUIPoint(contentX, y), props.fontSizeL,
+                              theme.getColor("success"));
             y += 24.0f;
 
             // Output path
-            renderer.drawText("Output:", AestraUI::NUIPoint(contentX, y), 11.0f, theme.getColor("textSecondary"));
+            renderer.drawText("Output:", AestraUI::NUIPoint(contentX, y), props.fontSizeS,
+                              theme.getColor("textSecondary"));
             y += 16.0f;
             std::string displayPath = m_exportResultPath;
             if (displayPath.size() > 50) displayPath = "..." + displayPath.substr(displayPath.size() - 47);
-            renderer.drawText(displayPath, AestraUI::NUIPoint(contentX, y), 11.0f, theme.getColor("textPrimary"));
+            renderer.drawText(displayPath, AestraUI::NUIPoint(contentX, y), props.fontSizeS,
+                              theme.getColor("textPrimary"));
             y += 18.0f;
 
             // Stats
             char statsBuf[128];
             snprintf(statsBuf, sizeof(statsBuf), "Duration: %.1fs  |  Peak: %.1f dB", m_exportDuration, m_exportPeakDb);
-            renderer.drawText(statsBuf, AestraUI::NUIPoint(contentX, y), 11.0f, theme.getColor("textSecondary"));
+            renderer.drawText(statsBuf, AestraUI::NUIPoint(contentX, y), props.fontSizeS,
+                              theme.getColor("textSecondary"));
         }
 
         y += 32.0f;
 
         // Close button
         bool closeHovered = (m_hoveredButton == 2);
-        AestraUI::NUIColor closeBg = closeHovered ? theme.getColor("primary").withAlpha(0.8f) : theme.getColor("primary");
-        renderer.fillRoundedRect(m_closeButtonRect, 6.0f, closeBg);
-        renderer.drawTextCentered(m_exportError.empty() ? "Done" : "Close", m_closeButtonRect, 13.0f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+        const bool closePressed = m_pressedButton == 2;
+        AestraUI::NUIColor closeBg = closePressed ? theme.getColor("primaryPressed")
+                                        : closeHovered ? theme.getColor("primaryHover")
+                                                       : theme.getColor("primary");
+        renderer.fillRoundedRect(m_closeButtonRect, props.radiusM, closeBg);
+        renderer.drawTextCentered(m_exportError.empty() ? "Done" : "Close", m_closeButtonRect,
+                                  props.fontSizeM, theme.getColor("textOnPrimary"));
     }
 }
 
@@ -453,9 +504,25 @@ bool ExportDialog::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
     updateButtonHover(event.position);
 
-    if (event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
-        handleMouseClick(event.position);
-        return true;
+    if (event.button == AestraUI::NUIMouseButton::Left) {
+        if (event.pressed) {
+            if (m_hoveredButton >= 0) {
+                m_pressedButton = m_hoveredButton;
+                setDirty(true);
+            } else {
+                handleMouseClick(event.position);
+            }
+            return true;
+        }
+        if (event.released) {
+            const int armedButton = m_pressedButton;
+            m_pressedButton = -1;
+            setDirty(true);
+            if (armedButton >= 0 && armedButton == m_hoveredButton) {
+                handleMouseClick(event.position);
+            }
+            return true;
+        }
     }
 
     return true; // Modal
@@ -511,9 +578,11 @@ bool ExportDialog::onKeyEvent(const AestraUI::NUIKeyEvent& event) {
 }
 
 void ExportDialog::handleMouseClick(AestraUI::NUIPoint pos) {
+    const float menuItemHeight =
+        AestraUI::NUIThemeManager::getInstance().getLayoutDimension("standardMenuRowHeight");
     // Check dropdown popups first
     if (m_scopeOpen) {
-        float itemH = 26.0f;
+        float itemH = menuItemHeight;
         float popupH = m_scopeOptions.size() * itemH + 4.0f;
         AestraUI::NUIRect popup = m_scopeDropdownRect;
         popup.height = popupH;
@@ -529,7 +598,7 @@ void ExportDialog::handleMouseClick(AestraUI::NUIPoint pos) {
         return;
     }
     if (m_sampleRateOpen) {
-        float itemH = 26.0f;
+        float itemH = menuItemHeight;
         float popupH = m_sampleRateOptions.size() * itemH + 4.0f;
         AestraUI::NUIRect popup = m_sampleRateDropdownRect;
         popup.height = popupH;
@@ -545,7 +614,7 @@ void ExportDialog::handleMouseClick(AestraUI::NUIPoint pos) {
         return;
     }
     if (m_bitDepthOpen) {
-        float itemH = 26.0f;
+        float itemH = menuItemHeight;
         float popupH = m_bitDepthOptions.size() * itemH + 4.0f;
         AestraUI::NUIRect popup = m_bitDepthDropdownRect;
         popup.height = popupH;
@@ -578,20 +647,35 @@ void ExportDialog::handleMouseClick(AestraUI::NUIPoint pos) {
     m_tailInputFocused = false;
 
     // Browse button
-    if (m_browseButtonRect.contains(pos)) {
+    if (m_browseButtonRect.contains(pos) && !m_fileDialogPending) {
+        Aestra::IPlatformUtils::SaveFileDialogOptions options;
+        options.title = "Export Audio";
+        options.filter = std::string("WAV Files\0*.wav\0All Files\0*.*\0",
+                                     sizeof("WAV Files\0*.wav\0All Files\0*.*\0") - 1);
+        options.defaultPath = m_outputPath;
+        options.defaultExtension = "wav";
+#if AESTRA_PLATFORM_LINUX
+        // Zenity is an external process. Waiting for it on the UI thread stops
+        // Wayland event dispatch and can trigger the compositor's hung-client
+        // dialog. Poll the result from onUpdate instead; no Aestra UI objects
+        // are touched by this worker.
+        m_fileDialogPending = true;
+        m_fileDialogFuture = std::async(std::launch::async, [options = std::move(options)]() {
+            if (auto* utils = Aestra::Platform::getUtils()) {
+                return utils->saveFileDialog(options);
+            }
+            return std::string{};
+        });
+        setDirty(true);
+#else
         if (auto* utils = Aestra::Platform::getUtils()) {
-            Aestra::IPlatformUtils::SaveFileDialogOptions options;
-            options.title = "Export Audio";
-            options.filter = std::string("WAV Files\0*.wav\0All Files\0*.*\0",
-                                         sizeof("WAV Files\0*.wav\0All Files\0*.*\0") - 1);
-            options.defaultPath = m_outputPath;
-            options.defaultExtension = "wav";
             const std::string pickedPath = utils->saveFileDialog(options);
             if (!pickedPath.empty()) {
                 m_outputPath = pickedPath;
                 setDirty(true);
             }
         }
+#endif
         return;
     }
 
@@ -626,10 +710,9 @@ void ExportDialog::updateButtonHover(AestraUI::NUIPoint pos) {
     if (m_panelState == PanelState::Settings) {
         if (m_startButtonRect.contains(pos)) m_hoveredButton = 0;
         else if (m_closeButtonRect.contains(pos)) m_hoveredButton = 2;
-        else if (m_browseButtonRect.contains(pos)) m_hoveredButton = 3;
+        else if (!m_fileDialogPending && m_browseButtonRect.contains(pos)) m_hoveredButton = 3;
     } else if (m_panelState == PanelState::Progress) {
         if (m_cancelButtonRect.contains(pos)) m_hoveredButton = 1;
-        else if (m_closeButtonRect.contains(pos)) m_hoveredButton = 2;
     } else {
         if (m_closeButtonRect.contains(pos)) m_hoveredButton = 2;
     }

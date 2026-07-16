@@ -79,12 +79,12 @@ void UIRoutingMap::cacheThemeColors() {
     auto& tm = NUIThemeManager::getInstance();
     m_bg = tm.getColor("backgroundPrimary");
     m_bgSecondary = tm.getColor("backgroundSecondary");
-    m_bgTertiary = tm.getColor("backgroundTertiary");
-    m_border = tm.getColor("borderPrimary");
-    m_borderSecondary = tm.getColor("borderSecondary");
+    m_bgTertiary = tm.getColor("elevatedPanel");
+    m_border = tm.getColor("borderStrong");
+    m_borderSecondary = tm.getColor("borderSubtle");
     m_text = tm.getColor("textPrimary");
     m_textSecondary = tm.getColor("textSecondary");
-    m_textInfo = tm.getColor("textInfo");
+    m_textInfo = tm.getColor("info");
     m_accent = tm.getColor("accentPrimary");
     m_warning = tm.getColor("warning");
 }

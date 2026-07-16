@@ -49,7 +49,7 @@ int main() {
     pattern->lengthBeats = 4.0;
     pattern->payload = MidiPayload{};
     auto& notes = std::get<MidiPayload>(pattern->payload).notes;
-    notes.push_back(MidiNote{pitch, 2.0, 0.5, 1.0f, unitId});
+    notes.push_back(MidiNote{pitch, 2.0, 0.5, 1.0f, 0.0f, unitId});
 
     PatternPlaybackEngine playback(&clock, &patternManager, &unitManager);
     playback.schedulePatternInstance(patternId, 0.0, 1);

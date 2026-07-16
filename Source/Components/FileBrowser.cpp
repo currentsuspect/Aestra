@@ -380,7 +380,7 @@ FileBrowser::FileBrowser()
     searchInput_->setBorderRadius(5.0f);
     searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
     searchInput_->setBorderColor(themeManager.getColor("border"));
-    searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
+    searchInput_->setFocusedBorderColor(themeManager.getColor("focusRing"));
     searchInput_->setBorderWidth(1.0f);
 
     // Initialize icons with improved visibility for Liminal Dark v2.0
@@ -873,8 +873,8 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
     const NUIColor sectionColor = themeManager.getColor("textSecondary").withAlpha(0.58f);  // Stronger section headers
     const NUIColor rowText = themeManager.getColor("textPrimary").withAlpha(0.78f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.48f);
-    const NUIColor selectedBg = themeManager.getColor("primary").withAlpha(0.16f); // More prominent selection
-    const NUIColor divider = themeManager.getColor("border").withAlpha(0.48f);  // Sharper panel edge
+    const NUIColor selectedBg = themeManager.getColor("selection");
+    const NUIColor divider = themeManager.getColor("divider");
     const bool compact = layout.navWidth < 112.0f;
 
     renderer.fillRect(layout.navPane, paneBg);
@@ -1126,8 +1126,9 @@ void FileBrowser::renderNavigationPane(NUIRenderer& renderer, const BrowserLayou
         }
         if (placesTop > 0 && placesBottom > placesTop) {
             NUIRect placesOverlay = {layout.navPane.x, placesTop, layout.navPane.width, placesBottom - placesTop};
-            renderer.fillRect(placesOverlay, NUIColor(0.486f, 0.227f, 0.929f, 0.15f));
-            renderer.strokeRoundedRect(placesOverlay, themeManager.getRadius("s"), 1.0f, NUIColor(0.486f, 0.227f, 0.929f, 0.6f));
+            renderer.fillRect(placesOverlay, themeManager.getColor("dragTarget"));
+            renderer.strokeRoundedRect(placesOverlay, themeManager.getRadius("s"), 1.0f,
+                                       themeManager.getColor("focusRing"));
         }
     }
 
@@ -1534,7 +1535,7 @@ void FileBrowser::onResize(int width, int height) {
         searchInput_->setTextColor(textColor_);
         searchInput_->setBackgroundColor(themeManager.getColor("backgroundSecondary").darkened(0.02f));
         searchInput_->setBorderColor(themeManager.getColor("border"));
-        searchInput_->setFocusedBorderColor(NUIColor::fromHex(0xffa855f7));
+        searchInput_->setFocusedBorderColor(themeManager.getColor("focusRing"));
         searchInput_->setPlaceholderColor(themeManager.getColor("textSecondary").withAlpha(0.56f));
         searchInput_->setPadding(6.0f);
         searchInput_->setBorderRadius(5.0f);
@@ -2902,9 +2903,9 @@ void FileBrowser::renderFileList(NUIRenderer& renderer) {
 
     const NUIColor oddRow = themeManager.getColor("backgroundSecondary").withAlpha(0.72f);
     const NUIColor evenRow = themeManager.getColor("backgroundPrimary");
-    const NUIColor selectedRow = themeManager.getColor("accentPrimary").withAlpha(0.22f);
+    const NUIColor selectedRow = themeManager.getColor("selection");
     const NUIColor secondarySelectedRow = themeManager.getColor("accentPrimary").withAlpha(0.12f);
-    const NUIColor gridLine = themeManager.getColor("border").withAlpha(0.14f);
+    const NUIColor gridLine = themeManager.getColor("gridMinor");
     const NUIColor text = themeManager.getColor("textPrimary").withAlpha(0.82f);
     const NUIColor folderText = themeManager.getColor("textPrimary").withAlpha(0.92f);
     const NUIColor muted = themeManager.getColor("textSecondary").withAlpha(0.56f);

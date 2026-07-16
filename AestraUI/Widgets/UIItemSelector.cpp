@@ -47,7 +47,7 @@ UIItemSelector::UIItemSelector()
     m_textInput->setVisible(false);
     m_textInput->setJustification(NUITextInput::Justification::Center);
     m_textInput->setBorderWidth(0.0f); // Seamless
-    m_textInput->setBackgroundColor(NUIColor::fromHex(0xff2a2d32)); // Dark bg
+    m_textInput->setBackgroundColor(NUIThemeManager::getInstance().getColor("controlBackground"));
     
     m_textInput->setOnReturnKey([this]() { commitEditing(); });
     m_textInput->setOnEscapeKey([this]() { cancelEditing(); });
@@ -258,6 +258,7 @@ void UIItemSelector::onUpdate(double deltaTime) {
 void UIItemSelector::onRender(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
     auto& themeManager = NUIThemeManager::getInstance();
+    const auto& theme = themeManager.getCurrentTheme();
     
     // Colors
     NUIColor bgColor = themeManager.getColor("surfaceTertiary").withAlpha(0.3f); 
@@ -266,25 +267,15 @@ void UIItemSelector::onRender(NUIRenderer& renderer) {
     NUIColor textPrimary = themeManager.getColor("textPrimary");
     NUIColor textSecondary = themeManager.getColor("textSecondary");
     
-    const float radius = 4.0f; // Slightly more boxy than BPM pill? Or same? Let's use 4.0f
-    
-    // Hover glow
-    if (m_isHovered) {
-        NUIRect glowBounds = bounds;
-        glowBounds.x -= 1.0f; glowBounds.y -= 1.0f;
-        glowBounds.width += 2.0f; glowBounds.height += 2.0f;
-        NUIColor glowColor = accentColor;
-        glowColor.a = 0.2f;
-        renderer.strokeRoundedRect(glowBounds, radius + 1.0f, 2.0f, glowColor);
-    }
+    const float radius = theme.radiusS;
     
     // Background
     renderer.fillRoundedRect(bounds, radius, bgColor);
     
     // Border
-    NUIColor currentBorder = m_isHovered ? accentColor : borderColor;
-    if (m_isHovered) currentBorder.a = 0.5f;
-    renderer.strokeRoundedRect(bounds, radius, 1.0f, currentBorder);
+    NUIColor currentBorder = isFocused() ? theme.focusRing
+                                         : (m_isHovered ? theme.borderStrong : borderColor);
+    renderer.strokeRoundedRect(bounds, radius, isFocused() ? 1.5f : theme.layout.dividerWidth, currentBorder);
     
     // Pulse
     if (m_pulseAnimation > 0.0f) {
@@ -299,19 +290,28 @@ void UIItemSelector::onRender(NUIRenderer& renderer) {
     
     std::string text = getSelectedItem();
     if (text.empty()) text = "None"; // Or "Select..."
+    const std::string originalText = text;
     
-    // Truncate if too long (simple char limit for now)
-    if (text.length() > 20) text = text.substr(0, 17) + "...";
-    
-    float fontSize = 12.0f; // Compact
+    float fontSize = theme.fontSizeM;
     
     // Calculate layout
-    NUISize textSize = renderer.measureText(text, fontSize);
-    float textY = std::round(renderer.calculateTextY(bounds, fontSize));
-    
     // Center text in available space (bounds width - arrow space)
     float arrowSpace = 25.0f;
     float contentWidth = bounds.width - arrowSpace;
+    const float availableTextWidth = std::max(0.0f, contentWidth - theme.spacingS * 2.0f);
+    const std::string ellipsis = "...";
+    while (!text.empty() && renderer.measureText(text, fontSize).width > availableTextWidth) {
+        text.pop_back();
+    }
+    if (text != originalText && !text.empty()) {
+        while (!text.empty() && renderer.measureText(text + ellipsis, fontSize).width > availableTextWidth) {
+            text.pop_back();
+        }
+        text += ellipsis;
+    }
+
+    NUISize textSize = renderer.measureText(text, fontSize);
+    float textY = std::round(renderer.calculateTextY(bounds, fontSize));
     float textX = std::round(bounds.x + (contentWidth - textSize.width) * 0.5f);
     
     // Clip text rect?
@@ -343,18 +343,29 @@ void UIItemSelector::onRender(NUIRenderer& renderer) {
 }
 
 bool UIItemSelector::onMouseEvent(const NUIMouseEvent& event) {
+    if (!isVisible() || !isEnabled()) return false;
+
     NUIRect bounds = getBounds();
-    NUIRect upBounds = getUpArrowBounds();
-    NUIRect downBounds = getDownArrowBounds();
+    const float hitWidth = std::max(25.0f,
+                                    NUIThemeManager::getInstance().getLayoutDimension("minimumHitArea"));
+    const NUIRect arrowHitRegion(bounds.right() - hitWidth, bounds.y, hitWidth, bounds.height);
+    const NUIRect upHit(arrowHitRegion.x, arrowHitRegion.y, arrowHitRegion.width, arrowHitRegion.height * 0.5f);
+    const NUIRect downHit(arrowHitRegion.x, upHit.bottom(), arrowHitRegion.width,
+                          arrowHitRegion.height - upHit.height);
     
     bool inBounds = bounds.contains(event.position);
-    bool inUp = upBounds.contains(event.position);
-    bool inDown = downBounds.contains(event.position);
+    bool inUp = upHit.contains(event.position);
+    bool inDown = downHit.contains(event.position);
     
     bool wasHovered = m_isHovered;
     m_isHovered = inBounds;
+    const bool wasUpHovered = m_upArrowHovered;
+    const bool wasDownHovered = m_downArrowHovered;
     m_upArrowHovered = inUp;
     m_downArrowHovered = inDown;
+    if (wasHovered != m_isHovered || wasUpHovered != m_upArrowHovered || wasDownHovered != m_downArrowHovered) {
+        setDirty(true);
+    }
     
     // Mouse Wheel
     if (event.wheelDelta != 0.0f && inBounds) {
@@ -365,6 +376,7 @@ bool UIItemSelector::onMouseEvent(const NUIMouseEvent& event) {
     
     // Click
     if (event.pressed && event.button == NUIMouseButton::Left) {
+        setFocused(true);
         if (inUp) {
             m_upArrowPressed = true;
             m_holdDelay = 0.3f;

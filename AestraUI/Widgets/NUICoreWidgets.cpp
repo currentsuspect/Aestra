@@ -16,7 +16,8 @@ void NUIToggle::onRender(NUIRenderer& renderer)
     if (!isVisible()) return;
 
     auto bounds = getBounds();
-    auto& theme = NUIThemeManager::getInstance();
+    auto& themeManager = NUIThemeManager::getInstance();
+    const auto& theme = themeManager.getCurrentTheme();
 
     // Dimensions
     float width = 40.0f;
@@ -31,13 +32,21 @@ void NUIToggle::onRender(NUIRenderer& renderer)
     bool on = (state_ == State::On);
     
     // Colors
-    auto bgOff = theme.getColor("surfaceRaised"); // Darker/Off
-    auto bgOn = theme.getColor("primary");       // Brand Color/On
-    auto knobColor = theme.getColor("textPrimary");
+    auto trackColor = on ? theme.toggleActive : theme.toggleDefault;
+    if (pressed_) {
+        trackColor = on ? theme.primaryPressed : theme.pressed;
+    } else if (hovered_) {
+        trackColor = on ? theme.primaryHover : theme.toggleHover;
+    }
+    if (!isEnabled() || state_ == State::Disabled) {
+        trackColor = trackColor.withAlpha(0.38f);
+    }
+    auto knobColor = on ? theme.textOnPrimary : theme.textPrimary;
     
     // Draw Track
-    renderer.fillRoundedRect(toggleRect, radius, on ? bgOn : bgOff);
-    renderer.strokeRoundedRect(toggleRect, radius, 1.0f, theme.getColor("border").withAlpha(0.5f));
+    renderer.fillRoundedRect(toggleRect, radius, trackColor);
+    renderer.strokeRoundedRect(toggleRect, radius, isFocused() ? 1.5f : theme.layout.dividerWidth,
+                               isFocused() ? theme.focusRing : theme.borderStrong);
 
     // Draw Knob
     float knobPadding = 3.0f;
@@ -56,23 +65,29 @@ void NUIToggle::onRender(NUIRenderer& renderer)
 
 bool NUIToggle::onMouseEvent(const NUIMouseEvent& event)
 {
-    if (!isEnabled() || state_ == State::Disabled)
+    if (!isVisible() || !isEnabled() || state_ == State::Disabled)
         return false;
 
-    // Check if event is within bounds
-    if (!containsPoint(event.position)) {
-        return false;
-    }
+    const bool inside = containsPoint(event.position);
 
-    // Old widget code used event.type/enum; map to current event fields
-    if (event.pressed && event.button == NUIMouseButton::Left)
-    {
-        setOn(!isOn());
-        if (onToggle_)
-        {
-            onToggle_(isOn());
+    if (event.button == NUIMouseButton::Left) {
+        if (event.pressed && inside) {
+            pressed_ = true;
+            setFocused(true);
+            repaint();
+            return true;
         }
-        return true;
+        if (event.released && pressed_) {
+            pressed_ = false;
+            if (inside) {
+                setOn(!isOn());
+                if (onToggle_) {
+                    onToggle_(isOn());
+                }
+            }
+            repaint();
+            return true;
+        }
     }
     return false;
 }
@@ -492,7 +507,7 @@ void NUIComboBox::onRender(NUIRenderer& renderer)
     const auto bounds = getBounds();
     auto& theme = NUIThemeManager::getInstance();
 
-    const auto bg = active_ ? theme.getColor("surfaceRaised") : theme.getColor("inputBackground");
+    const auto bg = active_ ? theme.getColor("surfaceRaised") : theme.getColor("inputBgDefault");
     const auto border = active_ ? theme.getColor("primary") : theme.getColor("border");
     const auto text = isEnabled() ? theme.getColor("textPrimary") : theme.getColor("textDisabled");
 
