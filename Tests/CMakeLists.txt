@@ -1777,6 +1777,45 @@ else()
     message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# Takes/History workspace panels: command-timeline presentation + navigation,
+# takes manifest listing, actions, inline rename, non-destructive branching.
+if(TARGET AestraUI_Core)
+    add_executable(TakesHistoryPanelTest
+        AestraUI/TakesHistoryPanelTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/AestraHistoryPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/TakesPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/TakeManager.cpp
+    )
+    target_link_libraries(TakesHistoryPanelTest PRIVATE AestraUI_Core AestraAudio)
+    target_include_directories(TakesHistoryPanelTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+    )
+    add_test(NAME TakesHistoryPanelTest COMMAND TakesHistoryPanelTest)
+    set_tests_properties(TakesHistoryPanelTest PROPERTIES LABELS "ui;takes;history;regression")
+else()
+    message(STATUS "TakesHistoryPanelTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # Plugin-browser filtering must preserve selection by stable plugin ID rather
 # than silently selecting whichever row inherits the old numeric index.
 if(TARGET AestraUI_Core)
