@@ -19,7 +19,7 @@ int main() {
     info.id = "com.Aestrastudios.rumble";
     info.name = "Aestra Rumble";
     info.vendor = "Aestra Studios";
-    info.version = "0.1.0";
+    info.version = "0.2.0";
     info.category = "Instrument";
     info.format = PluginFormat::Internal;
     info.type = PluginType::Instrument;
@@ -50,7 +50,7 @@ int main() {
     std::cout << "✅ PASS\n";
 
     std::cout << "TEST: plugin initializes and exposes parameters... ";
-    if (!instance->initialize(48000.0, 512) || instance->getParameterCount() != 4 ||
+    if (!instance->initialize(48000.0, 512) || instance->getParameterCount() != 25 ||
         instance->getParameters().empty() || instance->getTailSamples() == 0) {
         std::cerr << "FAIL: plugin failed initialization/parameter checks\n";
         return 1;

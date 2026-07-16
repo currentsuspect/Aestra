@@ -967,6 +967,12 @@ add_executable(AestraWavLoaderTest AestraAudio/WavLoaderTest.cpp)
 target_link_libraries(AestraWavLoaderTest PRIVATE AestraAudio)
 add_test(NAME AestraWavLoaderTest COMMAND AestraWavLoaderTest)
 
+# Arsenal content-type transition regression
+add_executable(ArsenalUnitTypeTransitionTest AestraAudio/ArsenalUnitTypeTransitionTest.cpp)
+target_link_libraries(ArsenalUnitTypeTransitionTest PRIVATE AestraAudio)
+add_test(NAME ArsenalUnitTypeTransitionTest COMMAND ArsenalUnitTypeTransitionTest)
+set_tests_properties(ArsenalUnitTypeTransitionTest PROPERTIES LABELS "audio;arsenal;unit-type")
+
 # Audition Engine lifecycle regression
 add_executable(AestraAuditionEngineLifecycleTest AestraAudio/AuditionEngineLifecycleTest.cpp)
 target_link_libraries(AestraAuditionEngineLifecycleTest PRIVATE AestraAudio)
@@ -1314,6 +1320,14 @@ target_include_directories(AestraDelayUpgradeTest PRIVATE
 )
 add_test(NAME AestraDelayUpgradeTest COMMAND AestraDelayUpgradeTest)
 set_tests_properties(AestraDelayUpgradeTest PROPERTIES LABELS "audio;plugins;delay;upgrade")
+
+add_executable(AestraDriftQualityTest AestraAudio/AestraDriftQualityTest.cpp)
+target_link_libraries(AestraDriftQualityTest PRIVATE AestraAudio)
+target_include_directories(AestraDriftQualityTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+)
+add_test(NAME AestraDriftQualityTest COMMAND AestraDriftQualityTest)
+set_tests_properties(AestraDriftQualityTest PROPERTIES LABELS "audio;plugins;drift;quality")
 
 # Aestra Limit Test
 add_executable(AestraLimitTest AestraAudio/AestraLimitTest.cpp)
@@ -1912,7 +1926,8 @@ target_include_directories(CommandRegistryParseSafetyTest PRIVATE
 add_test(NAME CommandRegistryParseSafetyTest COMMAND CommandRegistryParseSafetyTest)
 set_tests_properties(CommandRegistryParseSafetyTest PROPERTIES LABELS "commands;regression")
 
-# Rumble State Test (requires runtime plugin system)
+# Rumble state and migration are deterministic pure-logic coverage. Keep this in
+# the normal test tier so stable parameter IDs cannot drift behind a runtime gate.
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")
     add_executable(RumbleStateTest Commands/RumbleStateTest.cpp)
     if(UNIX AND NOT APPLE)
@@ -1924,12 +1939,8 @@ if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CU
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
     )
-    if(AESTRA_ENABLE_RUNTIME_TESTS)
-        add_test(NAME RumbleStateTest COMMAND RumbleStateTest)
-        set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state;runtime")
-    else()
-        message(STATUS "RumbleStateTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
-    endif()
+    add_test(NAME RumbleStateTest COMMAND RumbleStateTest)
+    set_tests_properties(RumbleStateTest PROPERTIES LABELS "plugins;rumble;state")
 endif()
 
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleUnauthorizedOutputSafetyTest.cpp")

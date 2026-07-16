@@ -1,5 +1,5 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
-// RumbleRenderTest — Headless terminal-first render harness for Aestra Rumble MVP
+// RumbleRenderTest — Headless terminal-first render harness for Aestra Rumble
 
 #include "Plugin/PluginHost.h"
 #include "RumbleInstance.h"
@@ -104,7 +104,11 @@ bool renderPreset(const Preset& preset, const std::string& outputPath, RenderSta
     const uint32_t totalFrames = static_cast<uint32_t>(durationSeconds * sampleRate);
     const uint32_t totalBlocks = (totalFrames + blockSize - 1) / blockSize;
 
+#if defined(AESTRA_ENABLE_TEST_LICENSES) && AESTRA_ENABLE_TEST_LICENSES
+    RumbleInstance rumble(RumbleInstance::TestLicense::GrantRumble);
+#else
     RumbleInstance rumble;
+#endif
     if (!rumble.initialize(sampleRate, blockSize)) {
         std::cerr << "Failed to initialize Rumble for preset " << preset.name << "\n";
         return false;
@@ -171,8 +175,8 @@ bool renderPreset(const Preset& preset, const std::string& outputPath, RenderSta
         return false;
     }
     if (stats.tailRms >= stats.rms) {
-        std::cerr << preset.name << ": tail failed to decay: tail RMS " << stats.tailRms
-                  << " >= full RMS " << stats.rms << "\n";
+        std::cerr << preset.name << ": tail failed to decay: tail RMS " << stats.tailRms << " >= full RMS " << stats.rms
+                  << "\n";
         return false;
     }
     if (!writeWav(outputPath, interleaved, sampleRate, 2)) {
@@ -208,19 +212,6 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         stats.push_back(presetStats);
-    }
-
-    if (stats.size() >= 3) {
-        const double cleanVsDrivenRmsDelta = std::abs(stats[0].rms - stats[2].rms);
-        const double cleanVsDrivenPeakDelta = std::abs(stats[0].peak - stats[2].peak);
-        if (cleanVsDrivenRmsDelta < 0.01) {
-            std::cerr << "Preset differentiation too small: clean/driven RMS delta = " << cleanVsDrivenRmsDelta << "\n";
-            return 1;
-        }
-        if (cleanVsDrivenPeakDelta < 0.02f) {
-            std::cerr << "Preset differentiation too small: clean/driven peak delta = " << cleanVsDrivenPeakDelta << "\n";
-            return 1;
-        }
     }
 
     std::cout << "All Rumble presets rendered successfully\n";

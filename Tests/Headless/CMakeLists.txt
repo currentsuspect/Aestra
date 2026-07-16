@@ -44,12 +44,78 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OfflineRenderRegressionTest.cpp")
     )
 endif()
 
+# Rumble DSP Quality Contract
+if(AESTRA_ENABLE_TEST_LICENSES AND TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND
+   EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleQualityTest.cpp")
+    add_executable(RumbleQualityTest RumbleQualityTest.cpp)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumbleQualityTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumbleQualityTest PRIVATE AestraPremiumPlugins AestraAudioCore)
+    endif()
+    target_include_directories(RumbleQualityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RumbleQualityTest COMMAND RumbleQualityTest)
+    set_tests_properties(RumbleQualityTest PROPERTIES
+        LABELS "headless;rumble;plugin;quality"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Rumble Factory Preset Bank Contract
+if(AESTRA_ENABLE_TEST_LICENSES AND TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND
+   EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumblePresetBankTest.cpp")
+    add_executable(RumblePresetBankTest RumblePresetBankTest.cpp)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumblePresetBankTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumblePresetBankTest PRIVATE AestraPremiumPlugins AestraAudioCore)
+    endif()
+    target_include_directories(RumblePresetBankTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME RumblePresetBankTest COMMAND RumblePresetBankTest)
+    set_tests_properties(RumblePresetBankTest PROPERTIES
+        LABELS "headless;rumble;plugin;presets"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
+# Rumble Spectral + Performance Contract
+if(AESTRA_ENABLE_TEST_LICENSES AND TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND
+   EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleSpectralPerformanceTest.cpp")
+    add_executable(RumbleSpectralPerformanceTest RumbleSpectralPerformanceTest.cpp)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumbleSpectralPerformanceTest PRIVATE
+            -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumbleSpectralPerformanceTest PRIVATE AestraPremiumPlugins AestraAudioCore)
+    endif()
+    target_include_directories(RumbleSpectralPerformanceTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Tests/Research
+    )
+    add_test(NAME RumbleSpectralPerformanceTest COMMAND RumbleSpectralPerformanceTest)
+    set_tests_properties(RumbleSpectralPerformanceTest PROPERTIES
+        LABELS "headless;rumble;plugin;spectral;performance"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # Rumble Render Test
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleRenderTest.cpp")
     add_executable(RumbleRenderTest
         RumbleRenderTest.cpp
     )
-    target_link_libraries(RumbleRenderTest PRIVATE AestraPremiumPlugins AestraAudioCore)
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(RumbleRenderTest PRIVATE -Wl,--start-group AestraRumble AestraAudioCore -Wl,--end-group)
+    else()
+        target_link_libraries(RumbleRenderTest PRIVATE AestraPremiumPlugins AestraAudioCore)
+    endif()
     target_include_directories(RumbleRenderTest PRIVATE
         ${CMAKE_SOURCE_DIR}/AestraAudio/include
         ${CMAKE_SOURCE_DIR}/AestraCore/include
