@@ -777,12 +777,12 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
 
     const int patternBars = std::max(1, static_cast<int>(std::lround(m_patternLengthBeats / 4.0)));
     const std::string lengthLabel = std::to_string(patternBars) + " Bars";
-    const float lengthFontSize = 10.0f;
+    const float lengthFontSize = themeManager.getFontSize("xs");
     const auto lengthSize = renderer.measureText(lengthLabel, lengthFontSize);
-    const float pillPadX = 10.0f;
+    const float pillPadX = themeManager.getSpacing("s");
     const float pillW = std::max(56.0f, lengthSize.width + pillPadX * 2.0f);
     const NUIRect pillRect(currentX, currentY, pillW, buttonSize);
-    renderer.fillRoundedRect(pillRect, radius, themeManager.getColor("surfaceSecondary").withAlpha(0.92f));
+    renderer.fillRoundedRect(pillRect, radius, themeManager.getColor("controlBackground").withAlpha(0.92f));
     renderer.strokeRoundedRect(pillRect, radius, 1.0f, borderCol.withAlpha(0.35f));
     renderer.drawText(lengthLabel,
                       NUIPoint(pillRect.x + (pillRect.width - lengthSize.width) * 0.5f,

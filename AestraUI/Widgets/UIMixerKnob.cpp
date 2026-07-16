@@ -30,7 +30,7 @@ void UIMixerKnob::cacheThemeColors()
 {
     auto& theme = NUIThemeManager::getInstance();
     m_bg = theme.getColor("surfaceTertiary");
-    m_bgHover = theme.getColor("surfaceSecondary");
+    m_bgHover = theme.getColor("controlHover");
     m_ring = theme.getColor("borderSubtle").withAlpha(0.65f);
     m_ringHover = theme.getColor("border").withAlpha(0.85f);
     m_indicator = theme.getColor("accentPrimary");

@@ -1865,15 +1865,8 @@ float* AestraContent::getActiveBrowserWidthPrefPtr() {
 }
 
 const float* AestraContent::getActiveBrowserWidthPrefPtr() const {
-    if (m_fileBrowser) {
-        const auto action = m_fileBrowser->getActiveNavAction();
-        if (action == AestraUI::FileBrowser::BrowserNavAction::Plugins) {
-            return &m_pluginBrowserWidthPref;
-        }
-        if (action == AestraUI::FileBrowser::BrowserNavAction::Patterns) {
-            return &m_patternNavBrowserWidthPref;
-        }
-    }
+    // Plugins and Patterns replace the contents of the same browser shell. Keeping a
+    // separate width for each view made the shell visibly jump when navigation changed.
     return &m_fileBrowserWidthPref;
 }
 

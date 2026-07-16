@@ -238,7 +238,7 @@ void UnitRow::drawMuteIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
 
     // Circular Button
-    float radius = theme.getRadius("radiusXS") * 2.0f;
+    float radius = theme.getRadius("xs") * 2.0f;
     renderer.fillRoundedRect(bounds, radius, bgColor);
     // Glow if active
     if (active) {
@@ -259,7 +259,7 @@ void UnitRow::drawSoloIcon(NUIRenderer& renderer, const NUIRect& bounds, bool ac
     NUIColor borderColor = active ? bgColor : theme.getColor("textDisabled");
 
     // Circular Button
-    float radius = theme.getRadius("radiusXS") * 2.0f;
+    float radius = theme.getRadius("xs") * 2.0f;
     renderer.fillRoundedRect(bounds, radius, bgColor);
     // Glow if active
     if (active) {
