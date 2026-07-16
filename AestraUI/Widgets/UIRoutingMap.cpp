@@ -87,6 +87,7 @@ void UIRoutingMap::cacheThemeColors() {
     m_textInfo = tm.getColor("info");
     m_accent = tm.getColor("accentPrimary");
     m_warning = tm.getColor("warning");
+    m_error = tm.getColor("error");
 }
 
 void UIRoutingMap::rebuildGraph() {
@@ -730,7 +731,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
     // === Chrome: flat rounded card ===
     // Solid dark card so the workspace doesn't bleed through. Flat — no fake
     // drop shadow, no depth gradient (matches the app's flat surface language).
-    renderer.fillRoundedRect(bounds, kCornerRadius, NUIColor(0.046f, 0.046f, 0.046f, 1.0f));
+    renderer.fillRoundedRect(bounds, kCornerRadius, m_bg);
 
     // === Title bar === charcoal (backgroundSecondary), matching the transport
     // bar and every docked panel's chrome — rounded top, squared flush bottom.
@@ -822,7 +823,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
             float itemH = 22.0f;
             float dropH = static_cast<float>(m_searchMatches.size()) * itemH + 4.0f;
             NUIRect dropRect{searchX, dropY, searchW, dropH};
-            renderer.fillRoundedRect(dropRect, 5.0f, NUIColor(0.085f, 0.085f, 0.085f, 0.98f));
+            renderer.fillRoundedRect(dropRect, 5.0f, m_bgTertiary.withAlpha(0.98f));
             renderer.strokeRoundedRect(dropRect, 5.0f, 1.0f, m_border.withAlpha(0.35f));
             for (size_t i = 0; i < m_searchMatches.size() && i < 5; ++i) {
                 int nodeIdx = m_searchMatches[i];
@@ -1106,7 +1107,7 @@ void UIRoutingMap::renderFullPanel(NUIRenderer& renderer) {
         const float pillH = kLegFont + kPadY * 2.0f + 2.0f;
         NUIRect legendBg{bounds.x + 14.0f, bounds.bottom() - pillH - 12.0f,
                          contentW + kPadX * 2.0f, pillH};
-        renderer.fillRoundedRect(legendBg, 5.0f, NUIColor(0.046f, 0.046f, 0.046f, 0.85f));
+        renderer.fillRoundedRect(legendBg, 5.0f, m_bgTertiary.withAlpha(0.85f));
         renderer.strokeRoundedRect(legendBg, 5.0f, 1.0f, m_border.withAlpha(0.14f));
 
         const float textY = legendBg.y + kPadY;
@@ -1168,11 +1169,9 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
         // the destination stays visually distinct.
         NUIColor bg;
         if (node.type == Node::Master) {
-            bg = node.hovered ? NUIColor(0.22f, 0.16f, 0.32f, 1.0f)
-                              : NUIColor(0.18f, 0.13f, 0.27f, 1.0f);
+            bg = node.hovered ? m_accent.withAlpha(0.28f) : m_accent.withAlpha(0.20f);
         } else {
-            bg = node.hovered ? NUIColor(0.137f, 0.137f, 0.137f, 1.0f)
-                              : NUIColor(0.097f, 0.097f, 0.097f, 1.0f);
+            bg = node.hovered ? m_bgTertiary : m_bgSecondary;
         }
         renderer.fillRoundedRect(nodeRect, radius, bg);
 
@@ -1195,8 +1194,7 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
 
         // Muted overlay: dim the entire node
         if (node.muted) {
-            renderer.fillRoundedRect(nodeRect, radius,
-                                      NUIColor(0.0f, 0.0f, 0.0f, 0.55f));
+            renderer.fillRoundedRect(nodeRect, radius, m_bg.withAlpha(0.72f));
         }
 
         if (node.type == Node::Master) {
@@ -1260,14 +1258,14 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
             }
             if (node.muted) {
                 NUIRect bRect{badgeX - 16.0f, ny + 6.0f, 16.0f, 16.0f};
-                renderer.fillRoundedRect(bRect, 4.0f, NUIColor(0.7f, 0.2f, 0.2f, 0.85f));
+                renderer.fillRoundedRect(bRect, 4.0f, m_error.withAlpha(0.85f));
                 renderer.drawTextCentered("M", bRect, 10.0f, NUIColor::white());
             }
 
             // Routing warning badge (top-left, overlapping the color strip)
             if (node.hasRoutingWarning) {
                 NUIRect wRect{nx + 6.0f, ny + 6.0f, 16.0f, 16.0f};
-                renderer.fillRoundedRect(wRect, 4.0f, NUIColor(0.9f, 0.5f, 0.2f, 0.9f));
+                renderer.fillRoundedRect(wRect, 4.0f, m_warning.withAlpha(0.9f));
                 renderer.drawTextCentered("!", wRect, 11.0f, NUIColor::white());
             }
 
@@ -1281,7 +1279,7 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
                 float trackH_meter = 3.0f;
                 float meterY = ny + nh - trackH_meter - 4.0f;
                 NUIRect track{nx + 14.0f, meterY, nw - 24.0f, trackH_meter};
-                renderer.fillRoundedRect(track, 1.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+                renderer.fillRoundedRect(track, 1.5f, m_text.withAlpha(0.08f));
 
                 // Map dB to 0..1: -60dB → 0, 0dB → 1
                 float normalized = std::clamp((node.peakDb + 60.0f) / 60.0f, 0.0f, 1.0f);
@@ -1326,13 +1324,13 @@ void UIRoutingMap::drawNode(NUIRenderer& renderer, const Node& node, float scale
     } else {
         // === Minimap mode ===
         // Brighter overlay so nodes contrast against the dark card.
-        NUIColor nodeFill = NUIColor(1.0f, 1.0f, 1.0f, node.hovered ? 0.18f : 0.12f);
+        NUIColor nodeFill = m_text.withAlpha(node.hovered ? 0.18f : 0.12f);
         renderer.fillRoundedRect(nodeRect, radius, nodeFill);
 
         // Border picks up solo/selection state too
         bool isSelected = (m_viewModel &&
                            static_cast<int32_t>(node.id) == m_viewModel->getSelectedChannelId());
-        NUIColor strokeColor = NUIColor(1.0f, 1.0f, 1.0f, 0.22f);
+        NUIColor strokeColor = m_text.withAlpha(0.22f);
         if (node.soloed) strokeColor = m_warning.withAlpha(0.95f);
         else if (isSelected) strokeColor = m_accent.withAlpha(0.85f);
         else if (node.hovered) strokeColor = m_accent.withAlpha(0.7f);
@@ -2351,29 +2349,30 @@ void UIRoutingMap::drawSendLevelLabel(NUIRenderer& renderer, const NUIPoint& a, 
     float textW = renderer.measureText(buf, fontSize).width;
     float textH = fontSize + 2.0f;
     NUIRect bg{mx - textW * 0.5f - 3.0f, my - textH * 0.5f, textW + 6.0f, textH};
-    renderer.fillRoundedRect(bg, 3.0f, NUIColor(0.065f, 0.065f, 0.065f, 0.85f));
+    renderer.fillRoundedRect(bg, 3.0f, m_bgSecondary.withAlpha(0.85f));
     renderer.strokeRoundedRect(bg, 3.0f, 0.5f, m_borderSecondary.withAlpha(0.4f));
     renderer.drawTextCentered(buf, bg, fontSize, m_textSecondary.withAlpha(0.85f));
 }
 
 NUIColor UIRoutingMap::resolveInsertColor(const std::string& name) const {
+    auto& tm = NUIThemeManager::getInstance();
     std::string low;
     low.reserve(name.size());
     for (char c : name) low.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
 
     if (low.find("eq") != std::string::npos || low.find("filter") != std::string::npos)
-        return NUIColor(0.46f, 0.92f, 0.92f, 0.92f); // cyan
+        return tm.getColor("accentCyan").withAlpha(0.92f);
     if (low.find("comp") != std::string::npos || low.find("limit") != std::string::npos)
-        return NUIColor(0.96f, 0.60f, 0.26f, 0.92f); // orange
+        return tm.getColor("accentAmber").withAlpha(0.92f);
     if (low.find("reverb") != std::string::npos || low.find("delay") != std::string::npos)
-        return NUIColor(0.36f, 0.58f, 0.96f, 0.92f); // blue
+        return tm.getColor("info").withAlpha(0.92f);
     if (low.find("dist") != std::string::npos || low.find("sat") != std::string::npos || low.find("drive") != std::string::npos)
-        return NUIColor(0.96f, 0.36f, 0.36f, 0.92f); // red
+        return tm.getColor("accentRed").withAlpha(0.92f);
     if (low.find("chorus") != std::string::npos || low.find("flang") != std::string::npos || low.find("phaser") != std::string::npos)
-        return NUIColor(0.46f, 0.86f, 0.46f, 0.92f); // green
+        return tm.getColor("accentLime").withAlpha(0.92f);
     if (low.find("sampler") != std::string::npos || low.find("sample") != std::string::npos)
-        return NUIColor(0.96f, 0.86f, 0.36f, 0.92f); // yellow
-    return NUIColor(0.72f, 0.52f, 0.96f, 0.92f); // purple default
+        return tm.getColor("warning").withAlpha(0.92f);
+    return tm.getColor("accentPrimary").withAlpha(0.92f);
 }
 
 void UIRoutingMap::drawInsertDots(NUIRenderer& renderer, const Node& node, float nx, float ny, float nw, float nh) {
@@ -2385,7 +2384,7 @@ void UIRoutingMap::drawInsertDots(NUIRenderer& renderer, const Node& node, float
     for (size_t i = 0; i < node.insertNames.size(); ++i) {
         NUIColor col = resolveInsertColor(node.insertNames[i]);
         renderer.fillCircle({startX + i * (dotR * 2.0f + gap), startY}, dotR, col);
-        renderer.strokeCircle({startX + i * (dotR * 2.0f + gap), startY}, dotR, 0.5f, NUIColor(1.0f, 1.0f, 1.0f, 0.25f));
+        renderer.strokeCircle({startX + i * (dotR * 2.0f + gap), startY}, dotR, 0.5f, m_text.withAlpha(0.25f));
     }
 }
 
@@ -2447,7 +2446,7 @@ void UIRoutingMap::renderMiniOverview(NUIRenderer& renderer) {
     float offsetY = insetY + insetH * 0.5f - (m_worldMinY + worldH * 0.5f) * scale;
 
     // Background
-    renderer.fillRoundedRect({insetX, insetY, insetW, insetH}, 6.0f, NUIColor(0.055f, 0.055f, 0.055f, 0.92f));
+    renderer.fillRoundedRect({insetX, insetY, insetW, insetH}, 6.0f, m_bgSecondary.withAlpha(0.92f));
     renderer.strokeRoundedRect({insetX, insetY, insetW, insetH}, 6.0f, 1.0f, m_border.withAlpha(0.35f));
 
     // Draw all edges as thin faint lines
@@ -2475,8 +2474,8 @@ void UIRoutingMap::renderMiniOverview(NUIRenderer& renderer) {
         float ny = offsetY + node.y * scale;
         float nw = node.w * scale;
         float nh = node.h * scale;
-        NUIColor fill = NUIColor(0.169f, 0.169f, 0.169f, 0.85f);
-        if (node.type == Node::Master) fill = NUIColor(0.25f, 0.18f, 0.36f, 0.85f);
+        NUIColor fill = m_bgTertiary.withAlpha(0.85f);
+        if (node.type == Node::Master) fill = m_accent.withAlpha(0.24f);
         renderer.fillRoundedRect({nx, ny, nw, nh}, 2.0f, fill);
         renderer.strokeRoundedRect({nx, ny, nw, nh}, 2.0f, 0.5f, m_border.withAlpha(0.4f));
     }
@@ -2535,7 +2534,7 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
     m_inspectorPanelRect = NUIRect{insetX, insetY, kInspectorW, insetH};
 
     // Background
-    renderer.fillRoundedRect(m_inspectorPanelRect, 8.0f, NUIColor(0.065f, 0.065f, 0.065f, 0.96f));
+    renderer.fillRoundedRect(m_inspectorPanelRect, 8.0f, m_bgSecondary.withAlpha(0.96f));
     renderer.strokeRoundedRect(m_inspectorPanelRect, 8.0f, 1.0f, m_border.withAlpha(0.45f));
 
     // Clip content to panel interior (scrollable area)
@@ -2574,7 +2573,7 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
         }
         if (ch->muted) {
             NUIRect bRect{badgeX, y, 20.0f, 18.0f};
-            renderer.fillRoundedRect(bRect, 4.0f, NUIColor(0.7f, 0.2f, 0.2f, 0.85f));
+            renderer.fillRoundedRect(bRect, 4.0f, m_error.withAlpha(0.85f));
             renderer.drawTextCentered("M", bRect, 10.0f, NUIColor::white());
         }
         y += 24.0f;
@@ -2583,10 +2582,10 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
     // Routing warning
     if (node.hasRoutingWarning) {
         std::string warn = m_viewModel->getRoutingWarning(node.id);
-        renderer.fillRoundedRect({left, y, textW, 20.0f}, 4.0f, NUIColor(0.9f, 0.5f, 0.2f, 0.18f));
-        renderer.strokeRoundedRect({left, y, textW, 20.0f}, 4.0f, 1.0f, NUIColor(0.9f, 0.5f, 0.2f, 0.5f));
+        renderer.fillRoundedRect({left, y, textW, 20.0f}, 4.0f, m_warning.withAlpha(0.18f));
+        renderer.strokeRoundedRect({left, y, textW, 20.0f}, 4.0f, 1.0f, m_warning.withAlpha(0.5f));
         std::string wtext = fitLabel(renderer, warn, 10.0f, textW - 8.0f);
-        renderer.drawText(wtext, {left + 6.0f, y + 3.0f}, 10.0f, NUIColor(0.9f, 0.5f, 0.2f, 0.9f));
+        renderer.drawText(wtext, {left + 6.0f, y + 3.0f}, 10.0f, m_warning.withAlpha(0.9f));
         y += 28.0f;
     }
 
@@ -2684,7 +2683,7 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
                 metaX += renderer.measureText("pre", 9.0f).width + 8.0f;
             }
             if (send.muted) {
-                renderer.drawText("muted", {metaX, metaY}, 9.0f, NUIColor(0.7f, 0.2f, 0.2f, 0.75f));
+                renderer.drawText("muted", {metaX, metaY}, 9.0f, m_error.withAlpha(0.75f));
             }
 
             y += 28.0f;
@@ -2697,8 +2696,8 @@ void UIRoutingMap::renderInspector(NUIRenderer& renderer) {
     // Close button (top-right of panel)
     m_inspectorCloseRect = NUIRect{insetX + kInspectorW - 26.0f, insetY + 8.0f, 18.0f, 18.0f};
     renderer.fillRoundedRect(m_inspectorCloseRect, 5.0f,
-                             m_inspectorCloseHovered ? NUIColor(0.9f, 0.3f, 0.3f, 0.45f)
-                                                      : NUIColor(0.2f, 0.2f, 0.2f, 0.4f));
+                             m_inspectorCloseHovered ? m_warning.withAlpha(0.45f)
+                                                      : m_bgTertiary.withAlpha(0.4f));
     renderer.drawTextCentered("x", m_inspectorCloseRect, 12.0f, m_textSecondary.withAlpha(0.85f));
 }
 

@@ -45,8 +45,6 @@ namespace Colors {
     static const NUIColor badgeVst3Text = NUIColor(0.655f, 0.545f, 0.980f, 1.0f);
     static const NUIColor badgeClapBg   = NUIColor(0.204f, 0.835f, 0.600f, 0.20f);
     static const NUIColor badgeClapText = NUIColor(0.204f, 0.835f, 0.600f, 1.0f);
-    static const NUIColor badgeIntBg    = NUIColor(1.0f, 1.0f, 1.0f, 0.08f);
-    static const NUIColor badgeIntText  = NUIColor(1.0f, 1.0f, 1.0f, 0.40f);
 
     // Active pill
     NUIColor pillActiveBg() { return NUIThemeManager::getInstance().getColor("selection"); }
@@ -877,7 +875,7 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
 
     // DEBUG: Visual indicator for pending removal
     if (slot.pendingRemoval) {
-        renderer.strokeRoundedRect(slotRect, 4.0f, 2.0f, NUIColor(1.0f, 0.0f, 0.0f, 0.8f));
+        renderer.strokeRoundedRect(slotRect, 4.0f, 2.0f, NUIThemeManager::getInstance().getColor("error").withAlpha(0.8f));
     }
 
     // Shared vertical midline for the slot row — center everything around it
