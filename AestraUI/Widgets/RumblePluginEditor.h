@@ -75,6 +75,11 @@ private:
     bool m_previousPresetHovered = false;
     bool m_nextPresetHovered = false;
 
+    // Manual double-click detection (the platform never sets
+    // NUIMouseEvent::doubleClick) for knob reset-to-default.
+    long long m_lastClickTimeMs = 0;
+    NUIPoint m_lastClickPos;
+
     static constexpr float kWindowWidth = 840.0f;
     static constexpr float kWindowHeight = 520.0f;
     static constexpr float kPadding = 14.0f;

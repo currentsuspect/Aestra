@@ -236,9 +236,10 @@ void RumbleInstance::process(const float* const* inputs, float** outputs, uint32
         const double effectiveSemitones = static_cast<double>(dsp.pitchAmountSemitones) *
                                               (0.72 * pitchEnvelope + 0.28 * m_voice.attackPitchEnvelope) +
                                           punchPitchSemitones;
-        const float pitchedBase = dsp.pitchAmountSemitones > 1.0e-7f
-                                      ? m_voice.glideTargetPitch_hz * std::pow(2.0, effectiveSemitones / 12.0)
-                                      : m_voice.glideTargetPitch_hz;
+        // Unconditional: punch pitch (transient term) must sound even when the
+        // main Pitch Amount is zero, and zero semitones is already a neutral ratio.
+        const float pitchedBase =
+            m_voice.glideTargetPitch_hz * static_cast<float>(std::pow(2.0, effectiveSemitones / 12.0));
 
         if (m_voice.isGliding) {
             const float glideStep = 1.0f / std::max(1.0f, dsp.glideTimeSeconds * static_cast<float>(m_sampleRate));

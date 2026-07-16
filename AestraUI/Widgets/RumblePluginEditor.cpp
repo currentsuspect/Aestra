@@ -5,9 +5,11 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include "RumblePresetBank.h"
+#include "../../AestraCore/include/AestraLog.h"
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <iterator>
 
@@ -166,11 +168,21 @@ void RumblePluginEditor::buildControls() {
     };
 
     const auto parameters = m_instance->getParameters();
-    m_controls.reserve(std::size(meta));
+    // The macro layout, preset application, and preset matching all assume the
+    // full 25-parameter contract. Silently dropping a missing ID would shift
+    // the index-based zones while presets still write every ID — reject the
+    // incompatible instance outright instead of rendering a lying panel.
     for (const auto& item : meta) {
         if (item.parameterId >= parameters.size()) {
-            continue;
+            Aestra::Log::error("[RumbleEditor] Instance exposes " + std::to_string(parameters.size()) +
+                               " parameters; id " + std::to_string(item.parameterId) +
+                               " missing — refusing to build controls");
+            m_controls.clear();
+            return;
         }
+    }
+    m_controls.reserve(std::size(meta));
+    for (const auto& item : meta) {
         MacroControl control;
         control.parameterId = item.parameterId;
         control.title = item.title;
@@ -530,11 +542,9 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
         return false;
     }
 
-    const bool contains = getBounds().contains(event.position);
-    if (!contains && !isDraggingWindow()) {
-        return false;
-    }
-
+    // Handle an active knob drag before the bounds check: a release outside
+    // the panel must still end the drag, or the knob stays latched to the
+    // pointer when it re-enters.
     if (m_draggingControl >= 0) {
         if (event.released) {
             m_draggingControl = -1;
@@ -546,6 +556,11 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
             setControlValue(m_draggingControl, m_dragStartValue + delta);
             return true;
         }
+    }
+
+    const bool contains = getBounds().contains(event.position);
+    if (!contains && !isDraggingWindow()) {
+        return false;
     }
 
     if (event.pressed && event.button == NUIMouseButton::Left) {
@@ -581,7 +596,19 @@ bool RumblePluginEditor::onMouseEvent(const NUIMouseEvent& event) {
 
         const int controlIndex = hitTestControl(event.position);
         if (controlIndex >= 0) {
-            if (event.doubleClick) {
+            // The platform never populates event.doubleClick — pair up quick
+            // same-spot presses manually so reset-to-default actually fires.
+            const long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                        std::chrono::steady_clock::now().time_since_epoch())
+                                        .count();
+            const bool isDoubleClick =
+                event.doubleClick ||
+                ((nowMs - m_lastClickTimeMs) < 400 &&
+                 std::abs(event.position.x - m_lastClickPos.x) < 5.0f &&
+                 std::abs(event.position.y - m_lastClickPos.y) < 5.0f);
+            m_lastClickTimeMs = isDoubleClick ? 0 : nowMs;
+            m_lastClickPos = event.position;
+            if (isDoubleClick) {
                 setControlValue(controlIndex, m_controls[static_cast<size_t>(controlIndex)].defaultValue);
                 return true;
             }
