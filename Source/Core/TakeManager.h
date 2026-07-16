@@ -89,4 +89,24 @@ public:
      * @param takeId       ID of the take to activate.
      */
     static Result setActiveTake(const std::string& projectPath, const std::string& takeId);
+
+    /**
+     * @brief Renames an existing take. Snapshot contents are untouched.
+     * @param projectPath  Path to the project directory.
+     * @param takeId       ID of the take to rename.
+     * @param newName      New human-readable name (must be non-empty).
+     */
+    static Result renameTake(const std::string& projectPath, const std::string& takeId, const std::string& newName);
+
+    /**
+     * @brief Duplicates a take by copying its snapshot into a new take entry.
+     *
+     * The duplicate records the source take as its parent and does NOT become
+     * active — the caller's working state is never touched.
+     * @param projectPath  Path to the project directory.
+     * @param takeId       ID of the take to duplicate.
+     * @param newName      Name for the duplicate (empty derives "<source> Copy").
+     */
+    static Result duplicateTake(const std::string& projectPath, const std::string& takeId,
+                                const std::string& newName = "");
 };

@@ -500,3 +500,95 @@ TakeManager::Result TakeManager::setActiveTake(const std::string& projectPath, c
 
     return makeResult(true, "", manifest, selectedCopy);
 }
+
+TakeManager::Result TakeManager::renameTake(const std::string& projectPath, const std::string& takeId,
+                                            const std::string& newName) {
+    Manifest manifest = loadManifest(projectPath);
+    if (!manifest.ok) {
+        return makeResult(false, manifest.errorMessage, manifest);
+    }
+
+    std::string trimmedName = newName;
+    trimmedName.erase(0, trimmedName.find_first_not_of(" \t\r\n"));
+    trimmedName.erase(trimmedName.find_last_not_of(" \t\r\n") + 1);
+    if (trimmedName.empty()) {
+        return makeResult(false, "Take name cannot be empty", manifest);
+    }
+    if (trimmedName.size() > TAKE_MAX_STRING_BYTES) {
+        trimmedName.resize(TAKE_MAX_STRING_BYTES);
+    }
+
+    const std::string sanitizedId = sanitizeIdPart(takeId);
+    TakeEntry* target = nullptr;
+    for (auto& take : manifest.takes) {
+        if (take.id == sanitizedId) {
+            target = &take;
+            break;
+        }
+    }
+    if (!target) {
+        return makeResult(false, "Take not found: " + takeId, manifest);
+    }
+
+    target->name = trimmedName;
+    target->updatedAtMs = nowMs();
+
+    std::string error;
+    if (!saveManifest(manifest, error)) {
+        return makeResult(false, error, manifest, *target);
+    }
+    return makeResult(true, "", manifest, *target);
+}
+
+TakeManager::Result TakeManager::duplicateTake(const std::string& projectPath, const std::string& takeId,
+                                               const std::string& newName) {
+    namespace fs = std::filesystem;
+
+    Manifest manifest = loadManifest(projectPath);
+    if (!manifest.ok) {
+        return makeResult(false, manifest.errorMessage, manifest);
+    }
+    if (manifest.takes.size() >= TAKE_MAX_ENTRIES) {
+        return makeResult(false, "Maximum number of takes reached (" + std::to_string(TAKE_MAX_ENTRIES) + ")", manifest);
+    }
+
+    const std::string sanitizedId = sanitizeIdPart(takeId);
+    const TakeEntry* source = manifest.findTake(sanitizedId);
+    if (!source) {
+        return makeResult(false, "Take not found: " + takeId, manifest);
+    }
+
+    const std::string sourceSnapshot = resolveSnapshotPath(projectPath, *source);
+    std::error_code ec;
+    if (sourceSnapshot.empty() || !fs::exists(sourceSnapshot, ec) || ec) {
+        return makeResult(false, "Source take snapshot is missing: " + source->id, manifest);
+    }
+
+    TakeEntry copy;
+    copy.id = makeTakeId();
+    copy.name = newName.empty() ? (source->name + " Copy") : newName;
+    copy.parentId = source->id;
+    copy.snapshotPath = makeSnapshotFilename(copy.id);
+    copy.createdAtMs = nowMs();
+    copy.updatedAtMs = copy.createdAtMs;
+    copy.active = false;
+
+    const std::string copySnapshot = resolveSnapshotPath(projectPath, copy);
+    if (copySnapshot.empty()) {
+        return makeResult(false, "Could not resolve duplicate snapshot path", manifest);
+    }
+    fs::copy_file(sourceSnapshot, copySnapshot, fs::copy_options::overwrite_existing, ec);
+    if (ec) {
+        return makeResult(false, "Could not copy take snapshot: " + ec.message(), manifest);
+    }
+
+    manifest.takes.push_back(copy);
+    std::string error;
+    if (!saveManifest(manifest, error)) {
+        fs::remove(copySnapshot, ec); // best effort: don't leave an orphan snapshot
+        return makeResult(false, error, manifest, copy);
+    }
+
+    Aestra::Log::info("[Takes] Duplicated take '" + source->name + "' as '" + copy.name + "'");
+    return makeResult(true, "", manifest, copy);
+}

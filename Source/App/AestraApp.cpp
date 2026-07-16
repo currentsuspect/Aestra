@@ -22,6 +22,7 @@
 #include "PluginManager.h"
 #include "AudioGraphBuilder.h"
 #include "TakeManager.h"
+#include "../Panels/TakesPanel.h"
 #include "../../AestraAudio/include/Core/PlaybackGraphController.h"
 #include "../../AestraAudio/include/IO/AudioExporter.h"
 
@@ -61,10 +62,6 @@ void syncRecordingProjectPath(const std::shared_ptr<AestraContent>& content, con
     }
 }
 
-std::string takeMenuLabel(const TakeManager::TakeEntry& take) {
-    const std::string name = take.name.empty() ? take.id : take.name;
-    return take.active ? ("[current] " + name) : name;
-}
 }
 
 // =============================================================================
@@ -308,6 +305,8 @@ void AestraApp::initializeContent() {
     m_windowManager->setContent(m_content);
     m_audioController->setContent(m_content);
 
+    wireTakesPanel();
+
     // Performance HUD is created eagerly: it must exist independently of the
     // lazily built settings dialogs, or F12 / View → Performance Stats are
     // silent no-ops until the user happens to open Settings or Export first.
@@ -450,77 +449,20 @@ void AestraApp::buildMenuBar() {
             }
         });
 
-        auto takesMenu = std::make_shared<AestraUI::NUIContextMenu>();
-        const bool hasProjectContext = m_content && m_content->getTrackManager() && !m_projectPath.empty();
-        if (!hasProjectContext) {
-            auto emptyItem = std::make_shared<AestraUI::NUIContextMenuItem>("No Active Project");
-            emptyItem->setEnabled(false);
-            takesMenu->addItem(emptyItem);
-        } else {
-            takesMenu->addItem("Create Take from Current State", [this]() {
-                if (!createTakeFromCurrentProject()) {
-                    Log::error("Failed to create Take");
-                }
-            });
-            takesMenu->addItem("Save Active Take", [this]() {
-                if (!saveProject()) {
-                    Log::error("Failed to save active Take");
-                }
-            });
-            takesMenu->addSeparator();
+        menu->addSeparator();
 
-            const auto manifest = TakeManager::loadManifest(m_projectPath);
-            if (!manifest.ok) {
-                if (manifest.errorMessage == "No Takes manifest") {
-                    auto emptyItem = std::make_shared<AestraUI::NUIContextMenuItem>("No Takes Yet");
-                    emptyItem->setEnabled(false);
-                    takesMenu->addItem(emptyItem);
-                } else {
-                    Log::warning("[Takes] Could not load manifest: " + manifest.errorMessage);
-                    auto errItem = std::make_shared<AestraUI::NUIContextMenuItem>("Error loading takes");
-                    errItem->setEnabled(false);
-                    takesMenu->addItem(errItem);
-                }
-            } else {
-                size_t count = 0;
-                for (const auto& take : manifest.takes) {
-                    if (count++ >= 20)
-                        break;
-                    auto item = std::make_shared<AestraUI::NUIContextMenuItem>(takeMenuLabel(take));
-                    item->setEnabled(!take.active);
-                    item->setOnClick([this, takeId = take.id]() {
-                        auto result = switchToTake(takeId);
-                        if (!result.ok) {
-                            Log::error("Failed to switch Take: " + takeId + " (" + result.errorMessage + ")");
-                        }
-                    });
-                    takesMenu->addItem(item);
-                }
-            }
-        }
+        // Takes = "which version of the work do I want?" — opens the Takes
+        // workspace panel (create/name/open/duplicate/branch project versions).
+        menu->addItem("Takes", [this]() {
+            if (m_content) m_content->toggleTakesPanel();
+        });
 
-        menu->addSubmenu("Takes", takesMenu);
+        // History = "what actions did I perform?" — opens the command-timeline
+        // panel wired to the undo/redo system.
+        menu->addItem("History  Ctrl+H", [this]() {
+            if (m_content) m_content->toggleHistoryPanel();
+        });
 
-        auto historyMenu = std::make_shared<AestraUI::NUIContextMenu>();
-        const auto historyEntries = ProjectSerializer::listHistory(m_projectPath);
-        if (historyEntries.empty()) {
-            auto emptyItem = std::make_shared<AestraUI::NUIContextMenuItem>("No Save History");
-            emptyItem->setEnabled(false);
-            historyMenu->addItem(emptyItem);
-        } else {
-            size_t count = 0;
-            for (const auto& entry : historyEntries) {
-                if (count++ >= 10) break;
-                historyMenu->addItem(entry.label, [this, snapshotPath = entry.path]() {
-                    auto result = loadProjectFromPath(snapshotPath, m_projectPath);
-                    if (!result.ok) {
-                        Log::error("Failed to restore snapshot: " + snapshotPath + " (" + result.errorMessage + ")");
-                    }
-                });
-            }
-        }
-
-        menu->addSubmenu("Project History", historyMenu);
         menu->addSeparator();
         menu->addItem("Export Audio...", [this]() { startExport(); });
         menu->addSeparator();
@@ -615,6 +557,9 @@ void AestraApp::buildMenuBar() {
         });
         menu->addItem("Show History  Ctrl+H", [this]() {
             if (m_content) m_content->toggleHistoryPanel();
+        });
+        menu->addItem("Show Takes", [this]() {
+            if (m_content) m_content->toggleTakesPanel();
         });
 
         m_windowManager->showDropdownMenu(menu, 100.0f);
@@ -1290,6 +1235,13 @@ ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& 
     if (result.ui) {
         applyUIState(*result.ui);
     }
+    // Loading may change the project (and its takes manifest) out from under
+    // an open Takes panel — re-pull the providers.
+    if (m_content) {
+        if (auto takesPanel = m_content->getTakesPanel(); takesPanel && takesPanel->isVisible()) {
+            takesPanel->refreshTakes();
+        }
+    }
     updateWindowTitle();
     Log::info("Project loaded into app state from " + path);
     return result;
@@ -1364,6 +1316,12 @@ bool AestraApp::saveProjectToPath(const std::string& path) {
         } else {
             Log::warning("[Takes] Project saved but take snapshot failed, keeping dirty state");
             return false;
+        }
+    }
+    // A save updates the active take's timestamp — keep an open Takes panel honest.
+    if (ok) {
+        if (auto takesPanel = m_content->getTakesPanel(); takesPanel && takesPanel->isVisible()) {
+            takesPanel->refreshTakes();
         }
     }
     return ok;
@@ -1485,6 +1443,114 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId)
 
     Log::info("[Takes] Switched to Take: " + activeResult.take.name);
     return result;
+}
+
+bool AestraApp::branchFromTake(const std::string& takeId) {
+    if (m_projectPath.empty() || takeId.empty()) {
+        return false;
+    }
+
+    // Preserve the working state before anything else touches the manifest.
+    if (!saveProject()) {
+        Log::warning("[Takes] Could not save the current Take before branching");
+        return false;
+    }
+
+    const auto manifest = TakeManager::loadManifest(m_projectPath);
+    const auto* source = manifest.ok ? manifest.findTake(takeId) : nullptr;
+    const std::string branchName = source ? (source->name + " Branch") : "";
+
+    auto dup = TakeManager::duplicateTake(m_projectPath, takeId, branchName);
+    if (!dup.ok) {
+        Log::warning("[Takes] Could not branch from Take: " + dup.errorMessage);
+        return false;
+    }
+
+    auto result = switchToTake(dup.take.id);
+    if (!result.ok) {
+        Log::error("[Takes] Branch created but could not switch to it: " + result.errorMessage);
+        return false;
+    }
+    return true;
+}
+
+void AestraApp::wireTakesPanel() {
+    if (!m_content) {
+        return;
+    }
+    auto takesPanel = m_content->getTakesPanel();
+    if (!takesPanel) {
+        return;
+    }
+
+    takesPanel->setTakesProvider([this]() -> TakeManager::Manifest {
+        if (m_projectPath.empty()) {
+            TakeManager::Manifest manifest;
+            manifest.errorMessage = "No Takes manifest";
+            return manifest;
+        }
+        return TakeManager::loadManifest(m_projectPath);
+    });
+
+    takesPanel->setSnapshotsProvider([this]() {
+        std::vector<Aestra::Audio::TakesPanel::SnapshotEntry> entries;
+        if (m_projectPath.empty()) {
+            return entries;
+        }
+        for (const auto& entry : ProjectSerializer::listHistory(m_projectPath)) {
+            entries.push_back({entry.path, entry.label});
+        }
+        return entries;
+    });
+
+    takesPanel->setOnCreateTake([this]() { return createTakeFromCurrentProject(); });
+    takesPanel->setOnSaveActiveTake([this]() { return saveProject(); });
+
+    takesPanel->setOnOpenTake([this](const std::string& takeId) {
+        auto result = switchToTake(takeId);
+        if (!result.ok) {
+            Log::error("[Takes] Failed to open Take: " + takeId + " (" + result.errorMessage + ")");
+        }
+        return result.ok;
+    });
+
+    takesPanel->setOnRenameTake([this](const std::string& takeId, const std::string& name) {
+        if (m_projectPath.empty()) {
+            return false;
+        }
+        auto result = TakeManager::renameTake(m_projectPath, takeId, name);
+        if (!result.ok) {
+            Log::warning("[Takes] Could not rename Take: " + result.errorMessage);
+        }
+        return result.ok;
+    });
+
+    takesPanel->setOnDuplicateTake([this](const std::string& takeId) {
+        if (m_projectPath.empty()) {
+            return false;
+        }
+        auto result = TakeManager::duplicateTake(m_projectPath, takeId);
+        if (!result.ok) {
+            Log::warning("[Takes] Could not duplicate Take: " + result.errorMessage);
+        }
+        return result.ok;
+    });
+
+    takesPanel->setOnBranchTake([this](const std::string& takeId) { return branchFromTake(takeId); });
+
+    takesPanel->setOnRestoreSnapshot([this](const std::string& path) {
+        // Save the current take first so a snapshot restore never silently
+        // destroys the working state.
+        if (!saveProject()) {
+            Log::warning("[Takes] Could not save the current Take before restoring a snapshot");
+            return false;
+        }
+        auto result = loadProjectFromPath(path, m_projectPath);
+        if (!result.ok) {
+            Log::error("Failed to restore snapshot: " + path + " (" + result.errorMessage + ")");
+        }
+        return result.ok;
+    });
 }
 
 void AestraApp::reinitAutosaveManager() {
