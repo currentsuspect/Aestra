@@ -195,6 +195,8 @@ uniform bool uUseTexture;
 uniform vec2 uTextTexelSize;
 uniform float uTextSharpen;
 uniform float uTextGamma;
+uniform float uTextBold; // SDF edge-center shift; 0 = neutral, positive = bolder
+uniform float uTextAlphaLift; // exponent on text alpha; 1 = neutral, <1 lifts faded text
 uniform bool uOutputLinear;
 
 // Squircle SDF Implementation
@@ -256,13 +258,13 @@ void main() {
              float dist = texColor.r;
              float ddist = fwidth(dist);
              float edgeWidth = ddist * 0.7;
-             float center = 0.5 - smoothstep(0.1, 0.5, ddist) * 0.08; 
+             float center = 0.5 - smoothstep(0.1, 0.5, ddist) * 0.08 - uTextBold; 
              float alpha = smoothstep(center - edgeWidth, center + edgeWidth, dist);
-             color.a *= alpha;
+             color.a = pow(color.a, uTextAlphaLift) * alpha;
         } else if (primitiveID == 4) {
                // Bitmap text — atlas stores coverage in alpha channel.
                float coverage = pow(sampleTextCoverage(vTexCoord), uTextGamma);
-               color.a *= coverage;
+               color.a = pow(color.a, uTextAlphaLift) * coverage;
         } else {
              // Regular textured primitive
              color *= texColor;
@@ -2820,6 +2822,8 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
     glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
     glUniform1f(primitiveShader_.textGammaLoc, 1.0f);
+    glUniform1f(primitiveShader_.textBoldLoc, (1.0f - textContrast_) * 0.25f);
+    glUniform1f(primitiveShader_.textAlphaLiftLoc, textContrast_ < 1.0f ? 0.72f : 1.0f);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -3124,6 +3128,8 @@ void NUIRendererGL::flush() {
     glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
     glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
     glUniform1f(primitiveShader_.textGammaLoc, 1.0f);
+    glUniform1f(primitiveShader_.textBoldLoc, (1.0f - textContrast_) * 0.25f);
+    glUniform1f(primitiveShader_.textAlphaLiftLoc, textContrast_ < 1.0f ? 0.72f : 1.0f);
     // Note: opacity is already in vertex colors
     glUniform1i(primitiveShader_.primitiveTypeLoc, currentPrimitiveType_);
     // Default to no texturing; enable below if a texture is bound
@@ -3160,7 +3166,7 @@ void NUIRendererGL::flush() {
             const bool tinyAtlas = (currentTextureId_ == fontAtlasTextureIdXSmall_
                                     || currentTextureId_ == fontAtlasTextureIdSmall_);
             glUniform1f(primitiveShader_.textSharpenLoc, tinyAtlas ? 0.20f : 0.28f);
-            glUniform1f(primitiveShader_.textGammaLoc, tinyAtlas ? 0.74f : 0.93f);
+            glUniform1f(primitiveShader_.textGammaLoc, (tinyAtlas ? 0.74f : 0.93f) * textContrast_);
         }
     }
     
@@ -3245,6 +3251,8 @@ bool NUIRendererGL::loadShaders() {
     primitiveShader_.textTexelSizeLoc = glGetUniformLocation(primitiveShader_.id, "uTextTexelSize");
     primitiveShader_.textSharpenLoc = glGetUniformLocation(primitiveShader_.id, "uTextSharpen");
     primitiveShader_.textGammaLoc = glGetUniformLocation(primitiveShader_.id, "uTextGamma");
+    primitiveShader_.textBoldLoc = glGetUniformLocation(primitiveShader_.id, "uTextBold");
+    primitiveShader_.textAlphaLiftLoc = glGetUniformLocation(primitiveShader_.id, "uTextAlphaLift");
     primitiveShader_.outputLinearLoc = glGetUniformLocation(primitiveShader_.id, "uOutputLinear");
 
     

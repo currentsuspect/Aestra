@@ -49,6 +49,7 @@ public:
     // ========================================================================
     
     void beginFrame() override;
+    void setTextContrast(float contrast) override { textContrast_ = contrast; }
     void endFrame() override;
     void clear(const NUIColor& color) override;
     
@@ -204,6 +205,8 @@ private:
         int32_t textTexelSizeLoc = -1;
         int32_t textSharpenLoc = -1;
         int32_t textGammaLoc = -1;
+        int32_t textBoldLoc = -1;
+        int32_t textAlphaLiftLoc = -1;
         int32_t outputLinearLoc = -1;
     };
     
@@ -312,6 +315,7 @@ private:
     bool scissorEnabled_ = false;
     bool debugTextBounds_ = false;
     bool framebufferSRGBEnabled_ = false;
+    float textContrast_ = 1.0f;
 
     
     // OpenGL objects
