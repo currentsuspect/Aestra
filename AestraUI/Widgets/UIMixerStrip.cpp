@@ -713,7 +713,7 @@ void UIMixerStrip::onRender(NUIRenderer& renderer)
 
     // Unified "Deep Black" background for ALL strips.
     // Use Squircle (Rounded Rect) for standard Apple-like look
-    float radius = NUIThemeManager::getInstance().getRadius("radiusM");
+    float radius = NUIThemeManager::getInstance().getRadius("m");
     renderer.fillRoundedRect(bounds, radius, m_stripBg);
 
     // Master gets a slightly different tone to distinguish it (optional, but good for hierarchy)

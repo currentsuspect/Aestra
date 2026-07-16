@@ -245,6 +245,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/RemoveNoteCommand.cpp
     src/Commands/MoveNoteCommand.cpp
     src/Commands/ResizeNoteCommand.cpp
+    src/Commands/UpdateNoteCommand.cpp
     src/Commands/NoteDiff.cpp
     src/Commands/MuseGrammar.cpp
     src/Commands/CommandParser.cpp

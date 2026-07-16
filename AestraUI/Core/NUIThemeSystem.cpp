@@ -5,6 +5,35 @@
 
 namespace AestraUI {
 
+NUIResolvedControlColors resolveControlColors(const NUIThemeProperties& theme,
+                                              const NUIControlVisualState& state) {
+    NUIResolvedControlColors colors{theme.buttonBgDefault, theme.borderSubtle, theme.buttonTextDefault, 1.0f};
+
+    if (!state.enabled) {
+        colors.background = theme.buttonBgDefault.withAlpha(0.55f);
+        colors.border = theme.borderSubtle.withAlpha(0.45f);
+        colors.text = theme.textDisabled;
+    } else if (state.pressed) {
+        colors.background = theme.buttonBgActive;
+        colors.border = theme.borderActive.withAlpha(0.82f);
+        colors.text = theme.buttonTextActive;
+    } else if (state.selected) {
+        colors.background = theme.selected;
+        colors.border = theme.borderActive.withAlpha(0.64f);
+        colors.text = theme.buttonTextActive;
+    } else if (state.hovered) {
+        colors.background = theme.buttonBgHover;
+        colors.border = theme.borderStrong;
+        colors.text = theme.buttonTextDefault;
+    }
+
+    if (state.enabled && state.focused) {
+        colors.border = theme.focusRing;
+        colors.borderWidth = 1.5f;
+    }
+    return colors;
+}
+
 // NUIThemeManager Implementation
 NUIThemeManager& NUIThemeManager::getInstance() {
     static NUIThemeManager instance;
@@ -144,10 +173,12 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     const auto& theme = getCurrentTheme();
     
     // Core Structure
-    if (colorName == "backgroundPrimary") return theme.backgroundPrimary;
-    if (colorName == "backgroundSecondary") return theme.backgroundSecondary;
-    if (colorName == "surfaceTertiary") return theme.surfaceTertiary;
-    if (colorName == "surfaceRaised") return theme.surfaceRaised;
+    if (colorName == "backgroundPrimary" || colorName == "appBackground" || colorName == "workspaceBackground")
+        return theme.backgroundPrimary;
+    if (colorName == "backgroundSecondary" || colorName == "recessedPanel") return theme.backgroundSecondary;
+    if (colorName == "backgroundTertiary" || colorName == "surfaceTertiary" || colorName == "elevatedPanel")
+        return theme.surfaceTertiary;
+    if (colorName == "surfaceRaised" || colorName == "surfaceSecondary") return theme.surfaceRaised;
     
     // Legacy compatibility
     if (colorName == "background") return theme.background;
@@ -171,6 +202,7 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "accentCyan") return theme.accentCyan;
     if (colorName == "accentMagenta") return theme.accentMagenta;
     if (colorName == "accentLime") return theme.accentLime;
+    if (colorName == "accentAmber") return theme.warning;
     if (colorName == "accentPrimary") return theme.accentPrimary;
     if (colorName == "accentSecondary") return theme.accentSecondary;
     
@@ -178,13 +210,18 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "text") return theme.textPrimary;
     if (colorName == "textPrimary") return theme.textPrimary;
     if (colorName == "textSecondary") return theme.textSecondary;
+    if (colorName == "textMuted" || colorName == "textTertiary") return theme.textMuted;
     if (colorName == "textDisabled") return theme.textDisabled;
+    if (colorName == "textInfo") return theme.info;
+    if (colorName == "textOnAccent" || colorName == "textOnPrimary") return theme.textOnPrimary;
+    if (colorName == "textOnSecondary") return theme.textOnSecondary;
     if (colorName == "textLink") return theme.textLink;
     if (colorName == "textCritical") return theme.textCritical;
     
     // Borders
     if (colorName == "border") return theme.border;
-    if (colorName == "borderSubtle") return theme.borderSubtle;
+    if (colorName == "borderSubtle" || colorName == "borderSecondary") return theme.borderSubtle;
+    if (colorName == "borderStrong" || colorName == "borderPrimary") return theme.borderStrong;
     if (colorName == "borderActive") return theme.borderActive;
     if (colorName == "divider") return theme.divider;
     if (colorName == "separator") return theme.divider; // Alias
@@ -200,6 +237,12 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "hover") return theme.hover;
     if (colorName == "pressed") return theme.pressed;
     if (colorName == "focused") return theme.focused;
+    if (colorName == "focusRing") return theme.focusRing;
+    if (colorName == "armed") return theme.armed;
+    if (colorName == "muted") return theme.muted;
+    if (colorName == "soloed") return theme.soloed;
+    if (colorName == "bypassed") return theme.bypassed;
+    if (colorName == "dragTarget") return theme.dragTarget;
     
     // Dropdown theme tokens
     if (colorName == "dropdown.background") return theme.surfaceTertiary.withAlpha(0.97f);
@@ -222,20 +265,21 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "dropdown.item.selectedText") return theme.primary; // Purple text for selected only
     if (colorName == "dropdown.item.disabled") return theme.textDisabled;
     
-    if (colorName == "selected") return theme.selected;
+    if (colorName == "selected" || colorName == "selection") return theme.selected;
     
     // Interactive Elements
-    if (colorName == "buttonBgDefault") return theme.buttonBgDefault;
-    if (colorName == "buttonBgHover") return theme.buttonBgHover;
-    if (colorName == "buttonBgActive") return theme.buttonBgActive;
+    if (colorName == "buttonBgDefault" || colorName == "controlBackground") return theme.buttonBgDefault;
+    if (colorName == "buttonBgHover" || colorName == "controlHover") return theme.buttonBgHover;
+    if (colorName == "buttonBgActive" || colorName == "controlPressed") return theme.buttonBgActive;
     if (colorName == "buttonTextDefault") return theme.buttonTextDefault;
     if (colorName == "buttonTextActive") return theme.buttonTextActive;
+    if (colorName == "controlDisabled") return theme.disabled;
     
     if (colorName == "toggleDefault") return theme.toggleDefault;
     if (colorName == "toggleHover") return theme.toggleHover;
     if (colorName == "toggleActive") return theme.toggleActive;
     
-    if (colorName == "inputBgDefault") return theme.inputBgDefault;
+    if (colorName == "inputBgDefault" || colorName == "inputBackground") return theme.inputBgDefault;
     if (colorName == "inputBgHover") return theme.inputBgHover;
     if (colorName == "inputBorderFocus") return theme.inputBorderFocus;
     
@@ -245,11 +289,16 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "sliderHandlePressed") return theme.sliderHandlePressed;
     
     if (colorName == "highlightGlow") return theme.highlightGlow;
+    if (colorName == "shadow") return theme.shadow;
+    if (colorName == "overlay") return theme.overlay;
+    if (colorName == "backdrop") return theme.backdrop;
     
     // Meter tokens
     if (colorName == "meterSafe") return theme.meterSafe;
     if (colorName == "meterWarn") return theme.meterWarn;
     if (colorName == "meterCrit") return theme.meterCrit;
+    if (colorName == "meterBackground") return theme.meterBackground;
+    if (colorName == "meterActive") return theme.meterActive;
     
     // Glass Aesthetic tokens
     if (colorName == "glassHover") return theme.glassHover;
@@ -276,9 +325,11 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "arsenalAccent") return theme.accentCyan;                         // Accent for highlights
     
     // Grid Tokens (for TrackManagerUI/TrackUIComponent)
-    if (colorName == "gridBar") return NUIColor::white().withAlpha(0.10f);              // Bar line (enhanced visibility)
-    if (colorName == "gridBeat") return NUIColor::white().withAlpha(0.06f);             // Beat line (enhanced visibility)
-    if (colorName == "gridSubdivision") return NUIColor::white().withAlpha(0.035f);     // Sub-beat line
+    if (colorName == "gridMajor") return theme.gridMajor;
+    if (colorName == "gridMinor") return theme.gridMinor;
+    if (colorName == "gridBar") return theme.gridMajor;
+    if (colorName == "gridBeat") return theme.gridMinor;
+    if (colorName == "gridSubdivision") return theme.gridMinor.withAlpha(theme.gridMinor.a * 0.58f);
     
     // Waveform Preview Tokens
     if (colorName == "waveformFill") return theme.accentCyan.withAlpha(0.7f);          // Waveform fill color
@@ -381,6 +432,19 @@ float NUIThemeManager::getLayoutDimension(const std::string& dimensionName) cons
     if (dimensionName == "panelMargin") return layout.panelMargin;
     if (dimensionName == "componentPadding") return layout.componentPadding;
     if (dimensionName == "buttonPadding") return layout.buttonPadding;
+    if (dimensionName == "compactControlHeight") return layout.compactControlHeight;
+    if (dimensionName == "standardControlHeight") return layout.standardControlHeight;
+    if (dimensionName == "dialogActionHeight") return layout.dialogActionHeight;
+    if (dimensionName == "standardRowHeight") return layout.standardRowHeight;
+    if (dimensionName == "compactMenuRowHeight") return layout.compactMenuRowHeight;
+    if (dimensionName == "standardMenuRowHeight") return layout.standardMenuRowHeight;
+    if (dimensionName == "panelHeaderHeight") return layout.panelHeaderHeight;
+    if (dimensionName == "sectionHeaderHeight") return layout.sectionHeaderHeight;
+    if (dimensionName == "standardIconSize") return layout.standardIconSize;
+    if (dimensionName == "minimumHitArea") return layout.minimumHitArea;
+    if (dimensionName == "dividerWidth") return layout.dividerWidth;
+    if (dimensionName == "panelPadding") return layout.panelPadding;
+    if (dimensionName == "dialogPadding") return layout.dialogPadding;
 
     // Window dimensions
     if (dimensionName == "minWindowWidth") return layout.minWindowWidth;
@@ -553,12 +617,24 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     // --- Text ---
     theme.textPrimary   = NUIColor::fromHex(0xffffff, 0.90f);
     theme.textSecondary = NUIColor::fromHex(0xffffff, 0.50f);
+    theme.textMuted     = NUIColor::fromHex(0xffffff, 0.38f);
     theme.textDisabled  = NUIColor::fromHex(0xffffff, 0.25f);
     theme.textLink      = theme.secondary;                                 // cyan for links
     theme.textCritical  = theme.error;
+    theme.textOnPrimary = NUIColor::white();
+    theme.textOnSecondary = NUIColor::white();
+    theme.onBackground = theme.textPrimary;
+    theme.onSurface = theme.textPrimary;
+    theme.onPrimary = theme.textOnPrimary;
+    theme.onSecondary = theme.textOnSecondary;
+    theme.onError = NUIColor::white();
+    theme.onWarning = NUIColor::fromHex(0x111111);
+    theme.onSuccess = NUIColor::fromHex(0x111111);
+    theme.onInfo = NUIColor::fromHex(0x111111);
 
     // --- Borders & Dividers ---
     theme.borderSubtle   = NUIColor::fromHex(0x2b2b2b, 0.90f);  // Brighter for visible row dividers
+    theme.borderStrong   = NUIColor::fromHex(0x3a3a3a, 0.95f);
     theme.border         = NUIColor::fromHex(0x2b2b2b);          // Structural separator edge
     theme.borderActive   = theme.primary;
     theme.divider        = NUIColor::fromHex(0x252525, 0.95f);
@@ -587,6 +663,9 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     theme.sliderHandle        = theme.primary;
     theme.sliderHandleHover   = theme.primaryHover;
     theme.sliderHandlePressed = theme.primaryPressed;
+    theme.inputBgDefault      = theme.backgroundSecondary;
+    theme.inputBgHover        = theme.surfaceTertiary;
+    theme.inputBorderFocus    = theme.primary;
 
     // --- Interactive States ---
     theme.hover    = NUIColor::white().withAlpha(0.060f);
@@ -594,6 +673,12 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     theme.focused  = theme.primary.withAlpha(0.22f);
     theme.selected = theme.primary.withAlpha(0.18f);
     theme.disabled = NUIColor(0.5f, 0.5f, 0.5f, 0.38f);
+    theme.focusRing = theme.primary.withAlpha(0.86f);
+    theme.armed = theme.error;
+    theme.muted = theme.warning;
+    theme.soloed = theme.info;
+    theme.bypassed = theme.textDisabled;
+    theme.dragTarget = theme.primary.withAlpha(0.28f);
 
     // --- Glow ---
     theme.highlightGlow = theme.primary.withAlpha(0.20f);
@@ -602,6 +687,16 @@ NUIThemeProperties NUIThemePresets::createAestraDark() {
     theme.meterSafe = theme.secondary;
     theme.meterWarn = theme.warning;
     theme.meterCrit = theme.accentMagenta;
+    theme.meterBackground = NUIColor::fromHex(0x080808, 0.92f);
+    theme.meterActive = theme.meterSafe;
+    theme.gridMajor = NUIColor::white().withAlpha(0.10f);
+    theme.gridMinor = NUIColor::white().withAlpha(0.06f);
+
+    // Floating surfaces and modal scrims. These must be initialized explicitly:
+    // NUIColor's default is opaque black, which would hide the app under a modal.
+    theme.shadow = NUIColor::black().withAlpha(0.42f);
+    theme.overlay = NUIColor::black().withAlpha(0.55f);
+    theme.backdrop = NUIColor::black().withAlpha(0.35f);
 
     // --- Shadows (minimal, ambient only for floating modals) ---
     theme.shadowXS = NUIThemeProperties::Shadow(0, 1, 2,  0, NUIColor::black(), 0.10f);
@@ -624,19 +719,43 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     theme.background = NUIColor(0.98f, 0.98f, 0.98f, 1.0f);
     theme.surface = NUIColor(1.0f, 1.0f, 1.0f, 1.0f);
     theme.surfaceVariant = NUIColor(0.95f, 0.95f, 0.95f, 1.0f);
+    theme.backgroundPrimary = theme.background;
+    theme.backgroundSecondary = theme.surface;
+    theme.surfaceTertiary = theme.surfaceVariant;
+    theme.surfaceRaised = NUIColor(0.92f, 0.92f, 0.93f, 1.0f);
     theme.primary = NUIColor(0.2f, 0.4f, 0.8f, 1.0f);
     theme.primaryVariant = NUIColor(0.1f, 0.3f, 0.7f, 1.0f);
+    theme.primaryHover = NUIColor(0.26f, 0.46f, 0.86f, 1.0f);
+    theme.primaryPressed = theme.primaryVariant;
     theme.secondary = NUIColor(0.4f, 0.4f, 0.5f, 1.0f);
     theme.secondaryVariant = NUIColor(0.3f, 0.3f, 0.4f, 1.0f);
     theme.error = NUIColor(0.8f, 0.2f, 0.2f, 1.0f);
     theme.warning = NUIColor(0.9f, 0.6f, 0.1f, 1.0f);
     theme.success = NUIColor(0.2f, 0.7f, 0.3f, 1.0f);
     theme.info = NUIColor(0.1f, 0.6f, 0.8f, 1.0f);
+    theme.accentCyan = theme.info;
+    theme.accentMagenta = theme.error;
+    theme.accentLime = theme.success;
+    theme.accentPrimary = theme.primary;
+    theme.accentSecondary = theme.secondary;
     
     // Text colors
     theme.textPrimary = NUIColor(0.1f, 0.1f, 0.1f, 1.0f);
     theme.textSecondary = NUIColor(0.4f, 0.4f, 0.4f, 1.0f);
+    theme.textMuted = NUIColor(0.48f, 0.48f, 0.48f, 1.0f);
     theme.textDisabled = NUIColor(0.6f, 0.6f, 0.6f, 1.0f);
+    theme.textLink = theme.primary;
+    theme.textCritical = theme.error;
+    theme.textOnPrimary = NUIColor::white();
+    theme.textOnSecondary = NUIColor::white();
+    theme.onBackground = theme.textPrimary;
+    theme.onSurface = theme.textPrimary;
+    theme.onPrimary = theme.textOnPrimary;
+    theme.onSecondary = theme.textOnSecondary;
+    theme.onError = NUIColor::white();
+    theme.onWarning = NUIColor::fromHex(0x161616);
+    theme.onSuccess = NUIColor::fromHex(0x161616);
+    theme.onInfo = NUIColor::fromHex(0x161616);
     
     // Interactive states
     theme.hover = NUIColor(0.0f, 0.0f, 0.0f, 0.04f);
@@ -644,9 +763,19 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     theme.focused = theme.primary.withAlpha(0.12f);
     theme.selected = theme.primary.withAlpha(0.08f);
     theme.disabled = NUIColor(0.6f, 0.6f, 0.6f, 0.38f);
+    theme.focusRing = theme.primary.withAlpha(0.82f);
+    theme.armed = theme.error;
+    theme.muted = theme.warning;
+    theme.soloed = theme.info;
+    theme.bypassed = theme.textDisabled;
+    theme.dragTarget = theme.primary.withAlpha(0.18f);
+    theme.highlightGlow = theme.primary.withAlpha(0.14f);
     
     // Borders
     theme.border = NUIColor(0.8f, 0.8f, 0.8f, 1.0f);
+    theme.borderSubtle = theme.border.withAlpha(0.72f);
+    theme.borderStrong = NUIColor(0.68f, 0.68f, 0.70f, 1.0f);
+    theme.borderActive = theme.primary;
     theme.divider = NUIColor(0.9f, 0.9f, 0.9f, 1.0f);
     theme.outline = NUIColor(0.7f, 0.7f, 0.7f, 1.0f);
     theme.outlineVariant = NUIColor(0.85f, 0.85f, 0.85f, 1.0f);
@@ -662,6 +791,29 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     theme.meterSafe = NUIColor(0.733f, 0.525f, 0.988f, 1.0f);
     theme.meterWarn = NUIColor(1.0f, 0.0f, 0.8f, 1.0f);
     theme.meterCrit = NUIColor(1.0f, 0.2f, 0.4f, 1.0f);
+    theme.meterBackground = NUIColor(0.88f, 0.88f, 0.89f, 1.0f);
+    theme.meterActive = theme.meterSafe;
+    theme.gridMajor = NUIColor(0.0f, 0.0f, 0.0f, 0.12f);
+    theme.gridMinor = NUIColor(0.0f, 0.0f, 0.0f, 0.065f);
+    theme.shadow = NUIColor::black().withAlpha(0.22f);
+    theme.overlay = NUIColor::black().withAlpha(0.34f);
+    theme.backdrop = NUIColor::black().withAlpha(0.18f);
+
+    theme.buttonBgDefault = theme.surfaceVariant;
+    theme.buttonBgHover = theme.surfaceRaised;
+    theme.buttonBgActive = theme.selected;
+    theme.buttonTextDefault = theme.textPrimary;
+    theme.buttonTextActive = theme.textPrimary;
+    theme.toggleDefault = theme.surfaceVariant;
+    theme.toggleHover = theme.surfaceRaised;
+    theme.toggleActive = theme.primary;
+    theme.inputBgDefault = theme.surface;
+    theme.inputBgHover = theme.surfaceVariant;
+    theme.inputBorderFocus = theme.focusRing;
+    theme.sliderTrack = theme.borderSubtle;
+    theme.sliderHandle = theme.primary;
+    theme.sliderHandleHover = theme.primaryHover;
+    theme.sliderHandlePressed = theme.primaryPressed;
 
     // Glass Aesthetic (v9.0 Systematic)
     theme.glassHover = NUIColor(0.0f, 0.0f, 0.0f, 0.05f);

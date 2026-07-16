@@ -106,7 +106,10 @@ public:
     void deactivate() override { m_active.store(false, std::memory_order_relaxed); }
     bool isActive() const override { return m_active.load(std::memory_order_relaxed); }
 
-    void setBPM(float bpm) { m_bpm.store(std::clamp(bpm, 20.0f, 999.0f), std::memory_order_relaxed); }
+    void setBPM(float bpm) {
+        if (std::isfinite(bpm))
+            m_bpm.store(std::clamp(bpm, 20.0f, 999.0f), std::memory_order_relaxed);
+    }
 
     float getBPM() const { return m_bpm.load(std::memory_order_relaxed); }
 
@@ -115,12 +118,14 @@ public:
         (void)midiInput;
         (void)midiOutput;
 
-        if (!m_active.load(std::memory_order_relaxed) || m_params[kBypass].load(std::memory_order_relaxed) > 0.5f) {
+        if (!m_active.load(std::memory_order_relaxed)) {
             for (uint32_t ch = 0; ch < numOutputChannels; ++ch) {
-                if (outputs[ch] && ch < numInputChannels && inputs[ch])
-                    std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
-                else if (outputs[ch])
+                if (outputs[ch] && ch < numInputChannels && inputs[ch]) {
+                    if (outputs[ch] != inputs[ch])
+                        std::memcpy(outputs[ch], inputs[ch], numFrames * sizeof(float));
+                } else if (outputs[ch]) {
                     std::memset(outputs[ch], 0, numFrames * sizeof(float));
+                }
             }
             return;
         }
@@ -145,6 +150,13 @@ public:
         float hpfPrevInR = m_hpfPrevInR;
         float hpfPrevOutL = m_hpfPrevOutL;
         float hpfPrevOutR = m_hpfPrevOutR;
+        float delaySamplesCurrentL = m_delaySamplesCurrentL;
+        float delaySamplesCurrentR = m_delaySamplesCurrentR;
+        float delaySamplesTargetL = m_delaySamplesTargetL;
+        float delaySamplesTargetR = m_delaySamplesTargetR;
+        uint32_t delayTransitionRemaining = m_delayTransitionRemaining;
+        uint32_t delayTransitionTotal = m_delayTransitionTotal;
+        bool delayTapInitialized = m_delayTapInitialized;
 
         constexpr float pi = 3.14159265358979323846f;
         constexpr float twoPi = 2.0f * pi;
@@ -167,6 +179,7 @@ public:
             const float hpfCoeff = std::exp(-twoPi * hpfCutoffHz * invSampleRate);
             const float outputTrim = std::pow(10.0f, (m_outputTrimSmoothed * 24.0f - 12.0f) / 20.0f);
             const bool pingPong = m_params[kStereoMode].load(std::memory_order_relaxed) > 0.5f;
+            const bool bypassed = m_params[kBypass].load(std::memory_order_relaxed) > 0.5f;
 
             const float maxShiftMs = std::min(delayMs * 0.5f, 500.0f * 1000.0f * invSampleRate);
             const float stereoOffsetMs = stereoShift * maxShiftMs;
@@ -176,6 +189,17 @@ public:
                                                        1.0f, static_cast<float>((bufMask + 1) - 2));
             const float delaySamplesBaseR = std::clamp(effectiveDelayMsR * static_cast<float>(m_sampleRate) / 1000.0f,
                                                        1.0f, static_cast<float>((bufMask + 1) - 2));
+            if (!delayTapInitialized) {
+                delaySamplesCurrentL = delaySamplesTargetL = delaySamplesBaseL;
+                delaySamplesCurrentR = delaySamplesTargetR = delaySamplesBaseR;
+                delayTapInitialized = true;
+            } else if (delayTransitionRemaining == 0 && (std::abs(delaySamplesBaseL - delaySamplesCurrentL) > 0.25f ||
+                                                         std::abs(delaySamplesBaseR - delaySamplesCurrentR) > 0.25f)) {
+                delaySamplesTargetL = delaySamplesBaseL;
+                delaySamplesTargetR = delaySamplesBaseR;
+                delayTransitionTotal = std::max<uint32_t>(32u, static_cast<uint32_t>(std::round(m_sampleRate * 0.020)));
+                delayTransitionRemaining = delayTransitionTotal;
+            }
             const float maxModSamples = std::min(std::min(delaySamplesBaseL, delaySamplesBaseR) * 0.25f,
                                                  static_cast<float>(m_sampleRate) * 0.0005f);
             const float pingPongPeriodBase = std::max(1.0f, std::round((delaySamplesBaseL + delaySamplesBaseR) * 0.5f));
@@ -186,17 +210,35 @@ public:
                     lfoPhase -= 1.0f;
                 const float lfo = std::sin(twoPi * lfoPhase) * modDepth * maxModSamples;
 
-                const float delaySamplesL = delaySamplesBaseL + lfo;
-                const float delaySamplesR = delaySamplesBaseR - lfo;
-
-                const float inL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
-                const float inR = (numInputChannels > 1 && inputs[1]) ? inputs[1][i] : inL;
+                const float rawInL = (numInputChannels > 0 && inputs[0]) ? inputs[0][i] : 0.0f;
+                const float rawInR = (numInputChannels > 1 && inputs[1]) ? inputs[1][i] : rawInL;
+                const float inL = sanitizeDelayValue(rawInL);
+                const float inR = sanitizeDelayValue(rawInR);
                 const float monoIn = (inL + inR) * 0.5f;
                 const bool pingPongInjectLeft =
                     ((pingPongSampleCounter / static_cast<uint64_t>(pingPongPeriodBase)) & 1ULL) == 0ULL;
 
-                const float delayOutL = readDelayLine(m_bufL, pos, delaySamplesL, bufMask);
-                const float delayOutR = readDelayLine(m_bufR, pos, delaySamplesR, bufMask);
+                float delayOutL = 0.0f;
+                float delayOutR = 0.0f;
+                if (delayTransitionRemaining > 0 && delayTransitionTotal > 0) {
+                    const float linearFade =
+                        1.0f - static_cast<float>(delayTransitionRemaining) / static_cast<float>(delayTransitionTotal);
+                    const float fade = linearFade * linearFade * (3.0f - 2.0f * linearFade);
+                    const float oldL = readDelayLine(m_bufL, pos, delaySamplesCurrentL + lfo, bufMask);
+                    const float oldR = readDelayLine(m_bufR, pos, delaySamplesCurrentR - lfo, bufMask);
+                    const float nextL = readDelayLine(m_bufL, pos, delaySamplesTargetL + lfo, bufMask);
+                    const float nextR = readDelayLine(m_bufR, pos, delaySamplesTargetR - lfo, bufMask);
+                    delayOutL = oldL + (nextL - oldL) * fade;
+                    delayOutR = oldR + (nextR - oldR) * fade;
+                    --delayTransitionRemaining;
+                    if (delayTransitionRemaining == 0) {
+                        delaySamplesCurrentL = delaySamplesTargetL;
+                        delaySamplesCurrentR = delaySamplesTargetR;
+                    }
+                } else {
+                    delayOutL = readDelayLine(m_bufL, pos, delaySamplesCurrentL + lfo, bufMask);
+                    delayOutR = readDelayLine(m_bufR, pos, delaySamplesCurrentR - lfo, bufMask);
+                }
 
                 constexpr float kPingPongBleed = 0.18f;
                 constexpr float kPingPongBleedNorm = 1.0f / (1.0f + kPingPongBleed);
@@ -231,10 +273,15 @@ public:
                 const float outR = sanitizeDelayValue((inR * (1.0f - mix) + wetR * mix) * outputTrim);
 
                 if (numOutputChannels > 0 && outputs[0])
-                    outputs[0][i] = outL;
+                    outputs[0][i] = bypassed ? rawInL : outL;
                 if (numOutputChannels > 1 && outputs[1])
-                    outputs[1][i] = outR;
+                    outputs[1][i] = bypassed ? rawInR : outR;
             }
+        }
+
+        for (uint32_t ch = 2; ch < numOutputChannels; ++ch) {
+            if (outputs[ch])
+                std::memset(outputs[ch], 0, numFrames * sizeof(float));
         }
 
         m_lfoPhase = lfoPhase;
@@ -246,6 +293,13 @@ public:
         m_hpfPrevOutR = hpfPrevOutR;
         m_pos = pos;
         m_pingPongSampleCounter = pingPongSampleCounter;
+        m_delaySamplesCurrentL = delaySamplesCurrentL;
+        m_delaySamplesCurrentR = delaySamplesCurrentR;
+        m_delaySamplesTargetL = delaySamplesTargetL;
+        m_delaySamplesTargetR = delaySamplesTargetR;
+        m_delayTransitionRemaining = delayTransitionRemaining;
+        m_delayTransitionTotal = delayTransitionTotal;
+        m_delayTapInitialized = delayTapInitialized;
     }
 
     uint32_t getParameterCount() const override { return kParamCount; }
@@ -257,7 +311,7 @@ public:
     }
 
     void setParameter(uint32_t id, float value) override {
-        if (id >= kParamCount)
+        if (id >= kParamCount || !std::isfinite(value))
             return;
         m_params[id].store(std::clamp(value, 0.0f, 1.0f), std::memory_order_relaxed);
     }
@@ -427,7 +481,10 @@ public:
     bool loadState(const std::vector<uint8_t>& state) override {
         if (state.size() < sizeof(uint32_t) * 2)
             return false;
-        struct Header { uint32_t magic; uint32_t version; };
+        struct Header {
+            uint32_t magic;
+            uint32_t version;
+        };
         Header header_local;
         std::memcpy(&header_local, state.data(), sizeof(header_local));
         if (header_local.magic == kStateMagicV3) {
@@ -440,6 +497,8 @@ public:
                 return false;
             StateBlobV3 blob_local;
             std::memcpy(&blob_local, state.data(), sizeof(blob_local));
+            if (blob_local.version != 3 || !allFinite(blob_local.params))
+                return false;
             for (uint32_t i = 0; i < kParamCount; ++i)
                 setParameter(i, blob_local.params[i]);
             snapSmoothedParamsToTargets();
@@ -455,6 +514,8 @@ public:
                 return false;
             LegacyStateBlobV2 blob_local;
             std::memcpy(&blob_local, state.data(), sizeof(blob_local));
+            if (blob_local.version != 2 || !allFinite(blob_local.params))
+                return false;
             for (uint32_t i = 0; i < 11; ++i)
                 setParameter(i, blob_local.params[i]);
             setParameter(kFeedbackHighpass, 0.0f);
@@ -472,6 +533,8 @@ public:
                 return false;
             StateBlobV1 blob_local;
             std::memcpy(&blob_local, state.data(), sizeof(blob_local));
+            if (blob_local.version != 1 || !allFinite(blob_local.params))
+                return false;
             {
                 const auto defaults = getParameters();
                 for (uint32_t i = 0; i < kParamCount; ++i)
@@ -489,7 +552,7 @@ public:
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return {620, 360}; }
+    std::pair<int, int> getEditorSize() const override { return {760, 480}; }
     bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }
@@ -514,6 +577,14 @@ public:
     void setInfo(const PluginInfo& info) { m_info = info; }
 
 private:
+    template <size_t N> static bool allFinite(const float (&values)[N]) {
+        for (float value : values) {
+            if (!std::isfinite(value))
+                return false;
+        }
+        return true;
+    }
+
     static std::string formatTimeMs(float ms) {
         return std::to_string(static_cast<int>(std::round(std::clamp(ms, 10.0f, 2000.0f)))) + "ms";
     }
@@ -574,6 +645,13 @@ private:
         m_hpfPrevInR = 0.0f;
         m_hpfPrevOutL = 0.0f;
         m_hpfPrevOutR = 0.0f;
+        m_delaySamplesCurrentL = 0.0f;
+        m_delaySamplesCurrentR = 0.0f;
+        m_delaySamplesTargetL = 0.0f;
+        m_delaySamplesTargetR = 0.0f;
+        m_delayTransitionRemaining = 0;
+        m_delayTransitionTotal = 0;
+        m_delayTapInitialized = false;
     }
 
     void snapSmoothedParamsToTargets() {
@@ -619,6 +697,13 @@ private:
     float m_hpfPrevInR = 0.0f;
     float m_hpfPrevOutL = 0.0f;
     float m_hpfPrevOutR = 0.0f;
+    float m_delaySamplesCurrentL = 0.0f;
+    float m_delaySamplesCurrentR = 0.0f;
+    float m_delaySamplesTargetL = 0.0f;
+    float m_delaySamplesTargetR = 0.0f;
+    uint32_t m_delayTransitionRemaining = 0;
+    uint32_t m_delayTransitionTotal = 0;
+    bool m_delayTapInitialized = false;
 
     float m_timeSmoothed = 0.25f;
     float m_feedbackSmoothed = 0.3f;
