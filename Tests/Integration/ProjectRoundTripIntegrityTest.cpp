@@ -194,8 +194,8 @@ void testSourcesLanesClipsPatternsRoundTrip() {
 
     auto& patternManager = tm1->getPatternManager();
     Aestra::Audio::MidiPayload payload;
-    payload.notes.push_back({60, 0.0, 1.0, 1.0f, 0, 0, 1.0f, false});
-    payload.notes.push_back({64, 1.0, 1.0, 0.8f, 0, 0, 1.0f, false});
+    payload.notes.push_back({60, 0.0, 1.0, 1.0f, 0.0f, 0, 0, 1.0f, false});
+    payload.notes.push_back({64, 1.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false});
     auto patternId = patternManager.createMidiPattern("Test Pattern", 4.0, payload);
 
     Aestra::Audio::ClipInstance clip;

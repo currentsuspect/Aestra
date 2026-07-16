@@ -117,7 +117,26 @@ void AestraDelayEditor::buildControls() {
 }
 
 void AestraDelayEditor::onResize(int width, int height) {
+    (void)width;
+    (void)height;
     layoutControls();
+    AestraPanelWindow::onResize(width, height);
+}
+
+void AestraDelayEditor::onUpdate(double deltaTime) {
+    AestraPanelWindow::onUpdate(deltaTime);
+    m_controlSyncTimer += deltaTime;
+    if (!m_instance || m_controlSyncTimer < 1.0 / 30.0)
+        return;
+    m_controlSyncTimer = 0.0;
+    for (auto& knob : m_knobs) {
+        if (knob.slider)
+            knob.slider->setValue(std::clamp(m_instance->getParameter(knob.paramId), 0.0f, 1.0f));
+    }
+    using Delay = Aestra::Audio::Plugins::AestraDelay;
+    const int division = Delay::noteDivisionIndexFromParam(m_instance->getParameter(Delay::kNoteDivision));
+    divisionIndexToBaseModifier(division, m_syncBaseIndex, m_syncModifierIndex);
+    setDirty(true);
 }
 
 void AestraDelayEditor::layoutControls() {
@@ -127,63 +146,88 @@ void AestraDelayEditor::layoutControls() {
 
     const float pillY = AestraPanelWindow::TITLE_BAR_H + 42.0f;
     const float pillH = 34.0f;
-    const float groupGap = 14.0f;
+    const float groupGap = 18.0f;
     const float groupW = (contentW - groupGap) * 0.5f;
-    m_freeRect = {contentX, pillY, groupW * 0.5f, pillH};
-    m_syncRect = {contentX + groupW * 0.5f, pillY, groupW * 0.5f, pillH};
-    m_stereoRect = {contentX + groupW + groupGap, pillY, groupW * 0.5f, pillH};
-    m_pingPongRect = {contentX + groupW + groupGap + groupW * 0.5f, pillY, groupW * 0.5f, pillH};
+    constexpr float timeLabelW = 76.0f;
+    constexpr float routeLabelW = 78.0f;
+    const float timeToggleX = contentX + timeLabelW;
+    const float timeToggleW = groupW - timeLabelW;
+    const float routeGroupX = contentX + groupW + groupGap;
+    const float routeToggleX = routeGroupX + routeLabelW;
+    const float routeToggleW = groupW - routeLabelW;
+    m_freeRect = {timeToggleX, pillY, timeToggleW * 0.5f, pillH};
+    m_syncRect = {timeToggleX + timeToggleW * 0.5f, pillY, timeToggleW * 0.5f, pillH};
+    m_stereoRect = {routeToggleX, pillY, routeToggleW * 0.5f, pillH};
+    m_pingPongRect = {routeToggleX + routeToggleW * 0.5f, pillY, routeToggleW * 0.5f, pillH};
+
+    // setSize() dispatches onResize() during construction, before buildControls()
+    // has populated the fixed Delay control set.
+    if (m_knobs.size() < 8)
+        return;
 
     const bool sync = m_instance && m_instance->getParameter(Aestra::Audio::Plugins::AestraDelay::kSyncMode) > 0.5f;
-    const float gridY = pillY + pillH + 14.0f;
+    const float mainY = pillY + pillH + 14.0f;
+    const float mainBottom = b.height - 54.0f;
+    const float mainH = mainBottom - mainY;
+    const float mainGap = 12.0f;
+    const float timingW = contentW * 0.61f;
+    m_timingSectionRect = {contentX, mainY, timingW, mainH};
+    m_characterSectionRect = {contentX + timingW + mainGap, mainY, contentW - timingW - mainGap, mainH};
+    m_echoDisplayRect = {m_timingSectionRect.x + 12.0f, m_timingSectionRect.y + 31.0f,
+                         m_timingSectionRect.width - 24.0f, 112.0f};
 
-    const float knobY = gridY + 16.0f;
-    const float cellGap = 12.0f;
-    const float cellW = (contentW - cellGap * 3.0f) / 4.0f;
-    const float cellH = 84.0f;
-    for (size_t i = 0; i < m_knobs.size(); ++i) {
-        const int row = static_cast<int>(i / 4);
-        const int col = static_cast<int>(i % 4);
-        const float x = contentX + static_cast<float>(col) * (cellW + cellGap);
-        const float y = knobY + static_cast<float>(row) * (cellH + 10.0f);
-        m_knobs[i].bounds = {x, y, cellW, cellH};
-        // Slider children expect ABSOLUTE bounds (mirrors AestraCompEditor pattern).
-        const NUIRect knobAbs = {x + b.x + (cellW - kKnobSize) * 0.5f, y + b.y + 16.0f, kKnobSize, kKnobSize};
-        if (m_knobs[i].slider) {
-            m_knobs[i].slider->setBounds(knobAbs);
-        }
+    const float knobGap = 8.0f;
+    const float timingKnobY = m_echoDisplayRect.bottom() + 10.0f;
+    const float timingKnobW = (m_echoDisplayRect.width - knobGap * 3.0f) / 4.0f;
+    const float timingKnobH = m_timingSectionRect.bottom() - timingKnobY - 10.0f;
+    const int timingIndices[] = {0, 1, 3, 7};
+    for (int col = 0; col < 4; ++col) {
+        auto& knob = m_knobs[static_cast<size_t>(timingIndices[col])];
+        knob.bounds = {m_echoDisplayRect.x + static_cast<float>(col) * (timingKnobW + knobGap), timingKnobY,
+                       timingKnobW, timingKnobH};
     }
 
-    // Sync panel replaces the Time knob (index 0) in sync mode
+    const float characterX = m_characterSectionRect.x + 12.0f;
+    const float characterY = m_characterSectionRect.y + 31.0f;
+    const float characterW = m_characterSectionRect.width - 24.0f;
+    const float characterH = m_characterSectionRect.height - 41.0f;
+    const float characterCellW = (characterW - knobGap) * 0.5f;
+    const float characterCellH = (characterH - knobGap) * 0.5f;
+    const int characterIndices[] = {2, 6, 5, 4};
+    for (int index = 0; index < 4; ++index) {
+        const int row = index / 2;
+        const int col = index % 2;
+        auto& knob = m_knobs[static_cast<size_t>(characterIndices[index])];
+        knob.bounds = {characterX + static_cast<float>(col) * (characterCellW + knobGap),
+                       characterY + static_cast<float>(row) * (characterCellH + knobGap), characterCellW,
+                       characterCellH};
+    }
+
+    for (auto& knob : m_knobs) {
+        const NUIRect knobAbs = {knob.bounds.x + b.x + (knob.bounds.width - kKnobSize) * 0.5f,
+                                 knob.bounds.y + b.y + 27.0f, kKnobSize, kKnobSize};
+        if (knob.slider)
+            knob.slider->setBounds(knobAbs);
+    }
+
     if (sync && !m_baseButtons.empty() && !m_modifierButtons.empty()) {
-        const float syncPanelX = m_knobs[0].bounds.x;
-        const float syncPanelW = m_knobs[0].bounds.width;
-        const float containerH = m_knobs[0].bounds.height; // 84 px
-        const float btnGap = 6.0f;
-        const float btnH = 30.0f;
-        const float rowGap = 6.0f;
-        const float readoutGap = 4.0f;
-        const float labelH = 10.0f;
-
-        const float contentH = btnH + rowGap + btnH + readoutGap + labelH;
-        const float topPadding = (containerH - contentH) * 0.5f;
-        const float syncPanelY = m_knobs[0].bounds.y + topPadding;
-
-        const float baseBtnW = (syncPanelW - btnGap * 3.0f) / 4.0f;
-        for (int i = 0; i < 4; ++i) {
-            m_baseButtons[i].bounds = {syncPanelX + static_cast<float>(i) * (baseBtnW + btnGap), syncPanelY, baseBtnW,
-                                       btnH};
-        }
-
-        const float modBtnW = (syncPanelW - btnGap * 2.0f) / 3.0f;
-        const float modRowY = syncPanelY + btnH + rowGap;
-        for (int i = 0; i < 3; ++i) {
-            m_modifierButtons[i].bounds = {syncPanelX + static_cast<float>(i) * (modBtnW + btnGap), modRowY, modBtnW,
-                                           btnH};
-        }
-
-        const float readoutY = modRowY + btnH + readoutGap;
-        m_syncReadoutRect = {syncPanelX, readoutY, syncPanelW, labelH};
+        const float btnY = m_echoDisplayRect.bottom() - 30.0f;
+        const float btnH = 22.0f;
+        const float btnGap = 4.0f;
+        const float splitGap = 12.0f;
+        const float availableW = m_echoDisplayRect.width - 24.0f - splitGap;
+        const float baseGroupW = availableW * 0.49f;
+        const float modifierGroupW = availableW - baseGroupW;
+        const float baseX = m_echoDisplayRect.x + 12.0f;
+        const float modifierX = baseX + baseGroupW + splitGap;
+        const float baseBtnW = (baseGroupW - btnGap * 3.0f) / 4.0f;
+        for (int i = 0; i < 4; ++i)
+            m_baseButtons[i].bounds = {baseX + static_cast<float>(i) * (baseBtnW + btnGap), btnY, baseBtnW, btnH};
+        const float modifierBtnW = (modifierGroupW - btnGap * 2.0f) / 3.0f;
+        for (int i = 0; i < 3; ++i)
+            m_modifierButtons[i].bounds = {modifierX + static_cast<float>(i) * (modifierBtnW + btnGap), btnY,
+                                           modifierBtnW, btnH};
+        m_syncReadoutRect = {m_echoDisplayRect.right() - 154.0f, m_echoDisplayRect.y + 9.0f, 142.0f, 18.0f};
     }
 
     // --- bypass pill (absolute, same style as Comp/EQ) ---
@@ -199,8 +243,11 @@ void AestraDelayEditor::layoutControls() {
         using Delay = Aestra::Audio::Plugins::AestraDelay;
         const bool isSync = m_instance->getParameter(Delay::kSyncMode) > 0.5f;
         for (auto& k : m_knobs) {
-            if (k.paramId == Delay::kTime)
+            if (k.paramId == Delay::kTime) {
                 k.readOnly = isSync;
+                if (k.slider)
+                    k.slider->setVisible(!isSync);
+            }
         }
     }
 }
@@ -211,30 +258,104 @@ void AestraDelayEditor::drawPillSwitches(NUIRenderer& renderer, float wx, float 
     const bool sync = m_instance && m_instance->getParameter(Delay::kSyncMode) > 0.5f;
     const bool ping = m_instance && m_instance->getParameter(Delay::kStereoMode) > 0.5f;
 
-    auto drawGroup = [&](const NUIRect& leftLocal, const NUIRect& rightLocal, const char* l, const char* r,
-                         bool rightActive, const NUIColor& activeColor) {
+    auto drawGroup = [&](const NUIRect& leftLocal, const NUIRect& rightLocal, const char* groupLabel, const char* l,
+                         const char* r, bool rightActive, const NUIColor& activeColor) {
         NUIRect left = offsetRect(leftLocal, wx, wy);
         NUIRect right = offsetRect(rightLocal, wx, wy);
         const NUIRect outer(left.x, left.y, left.width + right.width, left.height);
-        renderer.fillRoundedRect(outer, 10.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.96f));
-        renderer.strokeRoundedRect(outer, 10.0f, 1.0f, accent().withAlpha(0.45f));
+        const float labelW = groupLabel[0] == 'T' ? 76.0f : 78.0f;
+        const NUIRect groupLabelRect(outer.x - labelW, outer.y, labelW - 8.0f, outer.height);
+        renderer.drawText(groupLabel, {groupLabelRect.x + 2.0f, groupLabelRect.y + 12.0f}, 9.0f,
+                          theme.getColor("textSecondary").withAlpha(0.70f));
+        renderer.fillRoundedRect(outer, 9.0f, NUIColor(0.018f, 0.018f, 0.022f, 0.98f));
+        renderer.strokeRoundedRect(outer, 9.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.13f));
+        renderer.drawLine({right.x, outer.y + 7.0f}, {right.x, outer.bottom() - 7.0f}, 1.0f,
+                          NUIColor(1.0f, 1.0f, 1.0f, 0.10f));
         auto seg = [&](const NUIRect& rect, const char* label, bool active) {
-            renderer.fillRoundedRect(rect, 9.0f, active ? activeColor : NUIColor(0, 0, 0, 0));
-            renderer.drawTextCentered(label, rect, 11.0f,
-                                      active ? theme.getColor("textPrimary")
-                                             : theme.getColor("textSecondary").withAlpha(0.86f));
+            const NUIRect inset(rect.x + 3.0f, rect.y + 3.0f, rect.width - 6.0f, rect.height - 6.0f);
+            if (active) {
+                renderer.fillRoundedRect(inset, 7.0f, activeColor.withAlpha(0.15f));
+                renderer.strokeRoundedRect(inset, 7.0f, 1.0f, activeColor.withAlpha(0.72f));
+                renderer.fillCircle({inset.x + 11.0f, inset.center().y}, 2.5f, activeColor);
+            }
+            renderer.drawTextCentered(label, inset, 10.0f,
+                                      active ? activeColor.withAlpha(0.98f)
+                                             : theme.getColor("textSecondary").withAlpha(0.72f));
         };
         seg(left, l, !rightActive);
         seg(right, r, rightActive);
     };
 
-    drawGroup(m_freeRect, m_syncRect, "Free", "Sync", sync, accent());
-    drawGroup(m_stereoRect, m_pingPongRect, "Stereo", "Ping-Pong", ping, accent().withAlpha(0.82f));
+    drawGroup(m_freeRect, m_syncRect, "TIME MODE", "Free", "Sync", sync, cyanAccent());
+    drawGroup(m_stereoRect, m_pingPongRect, "ROUTING", "Stereo", "Ping Pong", ping, accent());
+}
 
-    // Divider between time mode and channel mode groups
-    const float dividerX = wx + m_syncRect.x + m_syncRect.width + 7.0f;
-    renderer.drawLine({dividerX, wy + m_syncRect.y + 6.0f}, {dividerX, wy + m_syncRect.y + m_syncRect.height - 6.0f},
-                      1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.30f));
+void AestraDelayEditor::drawSectionFrame(NUIRenderer& renderer, const NUIRect& localRect, const std::string& title,
+                                         const NUIColor& color, float wx, float wy) {
+    auto& theme = NUIThemeManager::getInstance();
+    const NUIRect rect = offsetRect(localRect, wx, wy);
+    renderer.fillRoundedRect(rect, 14.0f, NUIColor(0.020f, 0.020f, 0.024f, 0.98f));
+    renderer.strokeRoundedRect(rect, 14.0f, 1.5f, color.withAlpha(0.58f));
+    renderer.fillRoundedRect({rect.x + 12.0f, rect.y + 12.0f, 4.0f, 16.0f}, 2.0f, color);
+    renderer.drawText(title, {rect.x + 24.0f, rect.y + 14.0f}, 10.5f, theme.getColor("textPrimary").withAlpha(0.92f));
+}
+
+void AestraDelayEditor::drawEchoDisplay(NUIRenderer& renderer, float wx, float wy) {
+    if (!m_instance)
+        return;
+    auto& theme = NUIThemeManager::getInstance();
+    using Delay = Aestra::Audio::Plugins::AestraDelay;
+    const NUIRect rect = offsetRect(m_echoDisplayRect, wx, wy);
+    const bool sync = m_instance->getParameter(Delay::kSyncMode) > 0.5f;
+    const bool pingPong = m_instance->getParameter(Delay::kStereoMode) > 0.5f;
+    const float feedback = std::clamp(m_instance->getParameter(Delay::kFeedback), 0.0f, 1.0f);
+    const float stereo = m_instance->getParameter(Delay::kStereoShift) * 2.0f - 1.0f;
+    const float modulation = m_instance->getParameter(Delay::kModDepth);
+
+    renderer.fillRoundedRect(rect, 10.0f, NUIColor(0.008f, 0.008f, 0.012f, 0.98f));
+    renderer.strokeRoundedRect(rect, 10.0f, 1.0f, cyanAccent().withAlpha(0.26f));
+    renderer.drawText("ECHO PATH", {rect.x + 12.0f, rect.y + 9.0f}, 9.5f,
+                      theme.getColor("textSecondary").withAlpha(0.82f));
+
+    std::string readout;
+    if (sync) {
+        readout = m_instance->getParameterDisplay(Delay::kNoteDivision) + "  /  " + syncReadoutText();
+    } else {
+        readout = formattedValue(Delay::kTime) + "  /  FREE";
+    }
+    const float readoutW = renderer.measureText(readout, 10.0f).width;
+    renderer.drawText(readout, {rect.right() - 12.0f - readoutW, rect.y + 9.0f}, 10.0f, cyanAccent().withAlpha(0.94f));
+
+    const float startX = rect.x + 27.0f;
+    const float endX = rect.right() - 20.0f;
+    const float topY = rect.y + 43.0f;
+    const float bottomY = rect.y + 66.0f;
+    renderer.drawText("L", {rect.x + 11.0f, topY - 5.0f}, 8.5f, cyanAccent().withAlpha(0.72f));
+    renderer.drawText("R", {rect.x + 11.0f, bottomY - 5.0f}, 8.5f, accent().withAlpha(0.78f));
+    renderer.drawLine({startX, topY}, {endX, topY}, 1.0f, cyanAccent().withAlpha(0.12f));
+    renderer.drawLine({startX, bottomY}, {endX, bottomY}, 1.0f, accent().withAlpha(0.12f));
+    renderer.fillCircle({startX, topY}, 3.4f, cyanAccent());
+    renderer.fillCircle({startX, bottomY}, 3.4f, accent());
+
+    NUIPoint previousL{startX, topY};
+    NUIPoint previousR{startX, bottomY};
+    constexpr int repeats = 5;
+    for (int repeat = 0; repeat < repeats; ++repeat) {
+        const float progress = static_cast<float>(repeat + 1) / static_cast<float>(repeats);
+        const float x = startX + (endX - startX) * progress;
+        const float stereoOffset = stereo * 5.0f * progress;
+        const float motion = std::sin(progress * kPi * 3.0f) * modulation * 4.0f;
+        const float decay = std::pow(std::max(feedback, 0.08f), static_cast<float>(repeat) * 0.55f);
+        const float alpha = 0.22f + decay * 0.72f;
+        NUIPoint pointL{x - stereoOffset, pingPong && (repeat & 1) ? bottomY : topY + motion};
+        NUIPoint pointR{x + stereoOffset, pingPong && !(repeat & 1) ? topY : bottomY - motion};
+        renderer.drawLine(previousL, pointL, 1.5f, cyanAccent().withAlpha(alpha * 0.72f));
+        renderer.drawLine(previousR, pointR, 1.5f, accent().withAlpha(alpha * 0.72f));
+        renderer.fillCircle(pointL, 2.2f + decay * 2.0f, cyanAccent().withAlpha(alpha));
+        renderer.fillCircle(pointR, 2.2f + decay * 2.0f, accent().withAlpha(alpha));
+        previousL = pointL;
+        previousR = pointR;
+    }
 }
 
 void AestraDelayEditor::drawSyncPanel(NUIRenderer& renderer, float wx, float wy) {
@@ -244,6 +365,16 @@ void AestraDelayEditor::drawSyncPanel(NUIRenderer& renderer, float wx, float wy)
         return;
 
     auto& theme = NUIThemeManager::getInstance();
+
+    const NUIRect timeCard = offsetRect(m_knobs[0].bounds, wx, wy);
+    renderer.fillRoundedRect(timeCard, 10.0f, cardBg());
+    renderer.strokeRoundedRect(timeCard, 10.0f, 1.0f, cyanAccent().withAlpha(0.30f));
+    renderer.drawText("DIVISION", {timeCard.x + 10.0f, timeCard.y + 9.0f}, 9.0f,
+                      theme.getColor("textSecondary").withAlpha(0.82f));
+    const std::string division = m_instance->getParameterDisplay(Aestra::Audio::Plugins::AestraDelay::kNoteDivision);
+    renderer.drawTextCentered(division, {timeCard.x, timeCard.y + 30.0f, timeCard.width, 36.0f}, 20.0f, cyanAccent());
+    renderer.drawTextCentered(syncReadoutText(), {timeCard.x, timeCard.bottom() - 27.0f, timeCard.width, 18.0f}, 10.0f,
+                              theme.getColor("textPrimary").withAlpha(0.86f));
 
     auto drawTierButton = [&](const TierButton& btn, bool active, bool hovered) {
         NUIRect r = offsetRect(btn.bounds, wx, wy);
@@ -263,13 +394,6 @@ void AestraDelayEditor::drawSyncPanel(NUIRenderer& renderer, float wx, float wy)
     }
     for (int i = 0; i < 3; ++i) {
         drawTierButton(m_modifierButtons[i], i == m_syncModifierIndex, i == m_hoveredModifierButton);
-    }
-
-    // Derived ms readout
-    NUIRect readout = offsetRect(m_syncReadoutRect, wx, wy);
-    const std::string text = syncReadoutText();
-    if (!text.empty()) {
-        renderer.drawTextCentered(text, readout, 9.5f, theme.getColor("textPrimary").withAlpha(0.92f));
     }
 }
 
@@ -298,8 +422,16 @@ std::string AestraDelayEditor::formattedValue(uint32_t paramId) const {
 
 void AestraDelayEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, float wx, float wy) {
     auto& theme = NUIThemeManager::getInstance();
+    using Delay = Aestra::Audio::Plugins::AestraDelay;
     const float value = k.slider ? static_cast<float>(k.slider->getValue()) : 0.0f;
-    const NUIColor knobAccent = k.readOnly ? cyanAccent() : accent();
+    NUIColor knobAccent = accent();
+    if (k.paramId == Delay::kTime || k.paramId == Delay::kStereoShift || k.paramId == Delay::kDamping ||
+        k.paramId == Delay::kFeedbackHighpass)
+        knobAccent = cyanAccent();
+    else if (k.paramId == Delay::kModDepth || k.paramId == Delay::kModRate)
+        knobAccent = NUIColor(0.94f, 0.34f, 0.68f, 1.0f);
+    if (k.readOnly)
+        knobAccent = cyanAccent().withAlpha(0.72f);
     NUIRect bounds = offsetRect(k.bounds, wx, wy);
     // Slider bounds are already absolute (set in layoutControls).
     NUIRect knobRect = k.slider ? k.slider->getBounds() : NUIRect();
@@ -328,7 +460,7 @@ void AestraDelayEditor::drawKnob(NUIRenderer& renderer, const KnobControl& k, fl
     renderer.drawText(k.label, {bounds.x + 10.0f, bounds.y + 6.5f}, 10.5f,
                       theme.getColor("textPrimary").withAlpha(0.90f));
     const std::string valueStr = formattedValue(k.paramId);
-    renderer.drawText(valueStr, {bounds.x + 10.0f, bounds.bottom() - 15.5f}, 10.5f, knobAccent.withAlpha(0.96f));
+    renderer.drawText(valueStr, {bounds.x + 10.0f, bounds.bottom() - 18.0f}, 10.0f, knobAccent.withAlpha(0.96f));
 }
 
 void AestraDelayEditor::drawMixSlider(NUIRenderer& renderer, float wx, float wy) {
@@ -336,7 +468,7 @@ void AestraDelayEditor::drawMixSlider(NUIRenderer& renderer, float wx, float wy)
     using Delay = Aestra::Audio::Plugins::AestraDelay;
     const float mix = m_instance ? m_instance->getParameter(Delay::kMix) : 0.0f;
     NUIRect mixRect = offsetRect(m_mixSliderRect, wx, wy);
-    const NUIRect track(mixRect.x + 38.0f, mixRect.y + 12.0f, mixRect.width - 78.0f, 8.0f);
+    const NUIRect track(mixRect.x + 58.0f, mixRect.y + 12.0f, mixRect.width - 104.0f, 8.0f);
     renderer.fillRoundedRect(mixRect, 10.0f, NUIColor(0.068f, 0.068f, 0.068f, 0.92f));
     renderer.strokeRoundedRect(mixRect, 10.0f, 1.0f, accent().withAlpha(0.35f));
     renderer.drawText("Mix", {mixRect.x + 14.0f, mixRect.y + 10.0f}, 10.5f,
@@ -367,14 +499,27 @@ void AestraDelayEditor::drawBypassPill(NUIRenderer& renderer) {
 }
 
 void AestraDelayEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentRect) {
+    (void)contentRect;
     // Recompute layout each frame so cached rects (and absolute slider bounds)
     // follow window movement.
     layoutControls();
     const auto b = getBounds();
     const float wx = b.x;
     const float wy = b.y;
+    auto& theme = NUIThemeManager::getInstance();
+    const float identityY = wy + AestraPanelWindow::TITLE_BAR_H + 8.0f;
+    renderer.fillCircle({wx + kPad + 10.0f, identityY + 9.0f}, 9.0f, accent().withAlpha(0.18f));
+    renderer.strokeCircle({wx + kPad + 10.0f, identityY + 9.0f}, 9.0f, 1.5f, accent().withAlpha(0.80f));
+    renderer.fillCircle({wx + kPad + 12.5f, identityY + 6.5f}, 2.5f, cyanAccent());
+    renderer.drawText("DELAY", {wx + kPad + 28.0f, identityY + 1.0f}, 13.0f,
+                      theme.getColor("textPrimary").withAlpha(0.96f));
+    renderer.drawText("STEREO ECHO ENGINE", {wx + kPad + 28.0f, identityY + 16.0f}, 8.5f,
+                      theme.getColor("textSecondary").withAlpha(0.72f));
     drawBypassPill(renderer);
     drawPillSwitches(renderer, wx, wy);
+    drawSectionFrame(renderer, m_timingSectionRect, "TIME + FEEDBACK", cyanAccent(), wx, wy);
+    drawSectionFrame(renderer, m_characterSectionRect, "TONE + MOTION", accent(), wx, wy);
+    drawEchoDisplay(renderer, wx, wy);
     drawSyncPanel(renderer, wx, wy);
 
     using Delay = Aestra::Audio::Plugins::AestraDelay;

@@ -30,7 +30,7 @@ static int testsFailed = 0;
 void test_add_note_command_execute() {
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
-    MidiNote note{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false};
+    MidiNote note{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false};
 
     AddNoteCommand cmd(pm, pid, note);
     cmd.execute();
@@ -44,7 +44,7 @@ void test_add_note_command_execute() {
 void test_add_note_command_undo() {
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
-    MidiNote note{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false};
+    MidiNote note{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false};
 
     AddNoteCommand cmd(pm, pid, note);
     cmd.execute();
@@ -60,8 +60,8 @@ void test_add_note_command_undo_disambiguation() {
     // must be independent: adding+removing note2 must NOT accidentally remove note1.
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
-    MidiNote note1{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false};
-    MidiNote note2{60, 0.0, 2.0, 0.8f, 0, 0, 1.0f, false};
+    MidiNote note1{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false};
+    MidiNote note2{60, 0.0, 2.0, 0.8f, 0.0f, 0, 0, 1.0f, false};
 
     // Add both notes
     AddNoteCommand cmd1(pm, pid, note1);
@@ -92,7 +92,7 @@ void test_add_note_command_undo_disambiguation() {
 void test_add_note_command_redo() {
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
-    MidiNote note{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false};
+    MidiNote note{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false};
 
     AddNoteCommand cmd(pm, pid, note);
     cmd.execute();
@@ -107,7 +107,7 @@ void test_add_note_command_redo() {
 void test_add_note_command_double_execute_noop() {
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
-    MidiNote note{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false};
+    MidiNote note{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false};
 
     AddNoteCommand cmd(pm, pid, note);
     cmd.execute();
@@ -124,7 +124,7 @@ void test_add_note_command_double_execute_noop() {
 void test_remove_note_command_execute() {
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
-    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false}).execute();
+    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false}).execute();
 
     auto* pat = pm.getPattern(pid);
     MidiNote toRemove = pat->getMidiNotes()[0];
@@ -139,7 +139,7 @@ void test_remove_note_command_execute() {
 void test_remove_note_command_undo() {
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
-    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false}).execute();
+    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false}).execute();
 
     auto* pat = pm.getPattern(pid);
     MidiNote toRemove = pat->getMidiNotes()[0];
@@ -158,7 +158,7 @@ void test_remove_note_command_undo() {
 void test_move_note_command_execute() {
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
-    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false}).execute();
+    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false}).execute();
 
     auto* pat = pm.getPattern(pid);
     MidiNote original = pat->getMidiNotes()[0];
@@ -175,7 +175,7 @@ void test_move_note_command_execute() {
 void test_move_note_command_undo() {
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
-    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false}).execute();
+    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false}).execute();
 
     auto* pat = pm.getPattern(pid);
     MidiNote original = pat->getMidiNotes()[0];
@@ -196,7 +196,7 @@ void test_move_note_command_undo() {
 void test_resize_note_command_execute() {
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
-    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false}).execute();
+    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false}).execute();
 
     auto* pat = pm.getPattern(pid);
     MidiNote original = pat->getMidiNotes()[0];
@@ -212,7 +212,7 @@ void test_resize_note_command_execute() {
 void test_resize_note_command_undo() {
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
-    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false}).execute();
+    AddNoteCommand(pm, pid, MidiNote{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false}).execute();
 
     auto* pat = pm.getPattern(pid);
     MidiNote original = pat->getMidiNotes()[0];
@@ -291,9 +291,9 @@ void test_overlapping_notes_preserved() {
     PatternManager pm;
     PatternID pid = pm.createMidiPattern("test", 16.0, MidiPayload{});
 
-    MidiNote n1{60, 0.0, 1.0, 0.8f, 0, 0, 1.0f, false};
-    MidiNote n2{60, 2.0, 1.0, 0.8f, 0, 0, 1.0f, false};
-    MidiNote n3{60, 4.0, 1.0, 0.8f, 0, 0, 1.0f, false};
+    MidiNote n1{60, 0.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false};
+    MidiNote n2{60, 2.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false};
+    MidiNote n3{60, 4.0, 1.0, 0.8f, 0.0f, 0, 0, 1.0f, false};
 
     AddNoteCommand(pm, pid, n1).execute();
     AddNoteCommand(pm, pid, n2).execute();
