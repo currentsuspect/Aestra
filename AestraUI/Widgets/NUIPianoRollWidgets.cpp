@@ -897,9 +897,11 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
 
     const int patternBars = std::max(1, static_cast<int>(std::lround(m_patternLengthBeats / 4.0)));
     const std::string lengthLabel = std::to_string(patternBars) + " Bars";
-    const float lengthFontSize = 10.0f;
+    const float lengthFontSize = themeManager.getFontSize("xs");
     const auto lengthSize = renderer.measureText(lengthLabel, lengthFontSize);
-    const float pillPadX = 12.0f;
+    // develop's layout (grouped [-][pill][+] with the down button first) with
+    // this branch's semantic spacing/color tokens.
+    const float pillPadX = themeManager.getSpacing("s");
     const float pillW = std::max(64.0f, lengthSize.width + pillPadX * 2.0f);
     const float lengthGroupX = currentX - 3.0f;
     const float lengthGroupW = buttonSize * 2.0f + pillW + buttonSpacing * 2.0f + 6.0f;
@@ -907,8 +909,8 @@ void PianoRollToolbar::onRender(NUIRenderer& renderer) {
 
     renderButton(m_lengthDownBtn, m_lengthDownIcon, false);
     const NUIRect pillRect(currentX, currentY, pillW, buttonSize);
-    renderer.fillRoundedRect(pillRect, radius, themeManager.getColor("surfaceRaised").withAlpha(0.80f));
-    renderer.strokeRoundedRect(pillRect, radius, 1.0f, borderCol);
+    renderer.fillRoundedRect(pillRect, radius, themeManager.getColor("controlBackground").withAlpha(0.92f));
+    renderer.strokeRoundedRect(pillRect, radius, 1.0f, borderCol.withAlpha(0.35f));
     renderer.drawText(lengthLabel,
                       NUIPoint(pillRect.x + (pillRect.width - lengthSize.width) * 0.5f,
                                pillRect.y + (pillRect.height - lengthSize.height) * 0.5f + 1.0f),

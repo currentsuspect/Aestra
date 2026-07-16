@@ -63,6 +63,7 @@ struct NUIThemeProperties {
     // Text & Typography
     NUIColor textPrimary;            // Main text (#E5E5E8)
     NUIColor textSecondary;          // Subtext, labels (#A6A6AA)
+    NUIColor textMuted;              // Low-emphasis metadata and placeholders
     NUIColor textDisabled;           // Inactive states (#5A5A5D)
     NUIColor textLink;               // Links/actions (#8B7FFF)
     NUIColor textCritical;           // Errors (#FF5E5E)
@@ -71,6 +72,7 @@ struct NUIThemeProperties {
     
     // Borders & Highlights
     NUIColor borderSubtle;           // Divider lines (#2c2c2f)
+    NUIColor borderStrong;           // Structural/control edge with increased contrast
     NUIColor borderActive;           // Selected/focused (#8B7FFF)
     NUIColor border;
     NUIColor divider;
@@ -83,6 +85,15 @@ struct NUIThemeProperties {
     NUIColor focused;
     NUIColor selected;
     NUIColor disabled;
+    NUIColor focusRing;
+
+    // Domain states remain separate from generic interaction states so
+    // selection does not compete with transport and mixer status.
+    NUIColor armed;
+    NUIColor muted;
+    NUIColor soloed;
+    NUIColor bypassed;
+    NUIColor dragTarget;
     
     // Interactive Element Defaults
     NUIColor buttonBgDefault;        // #242428
@@ -114,6 +125,11 @@ struct NUIThemeProperties {
     NUIColor meterSafe;
     NUIColor meterWarn;
     NUIColor meterCrit;
+    NUIColor meterBackground;
+    NUIColor meterActive;
+
+    NUIColor gridMajor;
+    NUIColor gridMinor;
     
     // Glass Aesthetic tokens
     NUIColor glassHover;             // Neutral clear glass highlighting
@@ -234,6 +250,21 @@ struct NUIThemeProperties {
         float componentPadding = 8.0f;
         float buttonPadding = 4.0f;
 
+        // Shared compact-desktop control metrics.
+        float compactControlHeight = 24.0f;
+        float standardControlHeight = 28.0f;
+        float dialogActionHeight = 36.0f;
+        float standardRowHeight = 28.0f;
+        float compactMenuRowHeight = 24.0f;
+        float standardMenuRowHeight = 28.0f;
+        float panelHeaderHeight = 32.0f;
+        float sectionHeaderHeight = 24.0f;
+        float standardIconSize = 16.0f;
+        float minimumHitArea = 24.0f;
+        float dividerWidth = 1.0f;
+        float panelPadding = 8.0f;
+        float dialogPadding = 16.0f;
+
         // Window dimensions
         float minWindowWidth = 800.0f;
         float minWindowHeight = 600.0f;
@@ -243,6 +274,26 @@ struct NUIThemeProperties {
 
     LayoutDimensions layout;
 };
+
+struct NUIControlVisualState {
+    bool enabled = true;
+    bool hovered = false;
+    bool pressed = false;
+    bool selected = false;
+    bool focused = false;
+};
+
+struct NUIResolvedControlColors {
+    NUIColor background;
+    NUIColor border;
+    NUIColor text;
+    float borderWidth = 1.0f;
+};
+
+// Priority: disabled > pressed > selected > hovered > idle. Focus changes
+// border treatment without changing control geometry.
+NUIResolvedControlColors resolveControlColors(const NUIThemeProperties& theme,
+                                              const NUIControlVisualState& state);
 
 // Theme manager
 class NUIThemeManager {

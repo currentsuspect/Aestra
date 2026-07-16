@@ -227,8 +227,25 @@ NUIRect NUIComponent::getGlobalBounds() const {
 // Hierarchy
 // ============================================================================
 
+namespace {
+// The dispatch guard is a per-thread context: begin/endEventDispatch and the
+// hierarchy mutations they bracket all run on the same (UI) thread. Depth
+// counts nested dispatches; queued entries hold strong refs so children stay
+// alive until dispatch unwinds.
+thread_local int g_eventDispatchDepth = 0;
+thread_local std::vector<std::pair<NUIComponent*, std::shared_ptr<NUIComponent>>> g_deferredRemovals;
+thread_local std::vector<std::pair<NUIComponent*, std::shared_ptr<NUIComponent>>> g_deferredAdditions;
+} // namespace
+
 void NUIComponent::addChild(std::shared_ptr<NUIComponent> child) {
     if (!child) return;
+
+    // Adding a popup from a mouse callback can otherwise reallocate the
+    // parent's children vector while that same vector is being iterated.
+    if (g_eventDispatchDepth > 0) {
+        g_deferredAdditions.emplace_back(this, std::move(child));
+        return;
+    }
     
     // Remove from previous parent
     if (child->parent_) {
@@ -247,17 +264,6 @@ void NUIComponent::addChild(std::shared_ptr<NUIComponent> child) {
     setDirty();
 }
 
-namespace {
-// The dispatch guard is a per-thread context: begin/endEventDispatch and the
-// removeChild()s they bracket all run on the same (UI) thread. Making the state
-// thread_local keeps it correct while avoiding any data race with a removeChild
-// issued from another thread (which simply sees depth 0 and removes at once).
-// Depth counts nested dispatches; the deferred list holds strong refs so queued
-// children stay alive until the dispatch unwinds.
-thread_local int g_eventDispatchDepth = 0;
-thread_local std::vector<std::pair<NUIComponent*, std::shared_ptr<NUIComponent>>> g_deferredRemovals;
-} // namespace
-
 void NUIComponent::beginEventDispatch() {
     ++g_eventDispatchDepth;
 }
@@ -272,6 +278,15 @@ void NUIComponent::endEventDispatch() {
         for (auto& entry : pending) {
             if (entry.first) {
                 entry.first->removeChild(entry.second); // depth == 0 now -> immediate
+            }
+        }
+    }
+    if (g_eventDispatchDepth == 0 && !g_deferredAdditions.empty()) {
+        auto pending = std::move(g_deferredAdditions);
+        g_deferredAdditions.clear();
+        for (auto& entry : pending) {
+            if (entry.first) {
+                entry.first->addChild(entry.second); // depth == 0 now -> immediate
             }
         }
     }
@@ -563,17 +578,18 @@ void NUIComponent::updateGlobalTooltip(double deltaTime) {
 
 void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer) {
     if (!s_tooltipState.active || s_tooltipState.alpha <= 0.01f) return;
+    auto& theme = NUIThemeManager::getInstance();
+    const auto& props = theme.getCurrentTheme();
     
     // Reuse minimap tooltip pattern - position relative to hoverPos (actual mouse position)
-    constexpr float kTooltipPadX = 6.0f;
-    constexpr float kTooltipPadY = 3.0f;
-    constexpr float kTooltipRadius = 4.0f;
-    
-    const float fontSize = 10.0f;
+    const float tooltipPadX = props.spacingS;
+    const float tooltipPadY = props.spacingXS;
+    const float tooltipRadius = props.radiusS;
+    const float fontSize = props.fontSizeXS;
     const auto size = renderer.measureText(s_tooltipState.text, fontSize);
     
-    const float w = size.width + kTooltipPadX * 2.0f;
-    const float h = size.height + kTooltipPadY * 2.0f;
+    const float w = size.width + tooltipPadX * 2.0f;
+    const float h = size.height + tooltipPadY * 2.0f;
     
     // Position: offset from mouse cursor (like minimap tooltip)
     float x = s_tooltipState.hoverPos.x + 10.0f;
@@ -590,12 +606,12 @@ void NUIComponent::renderGlobalTooltip(NUIRenderer& renderer) {
     const NUIRect tipRect(x, y, w, h);
     
     // Theme colors (matching minimap style)
-    const NUIColor bg = NUIColor(0.12f, 0.12f, 0.12f, 0.92f * s_tooltipState.alpha);
-    const NUIColor border = NUIColor(0.4f, 0.4f, 0.4f, 0.65f * s_tooltipState.alpha);
-    const NUIColor text = NUIColor(0.95f, 0.95f, 0.95f, 0.92f * s_tooltipState.alpha);
+    const NUIColor bg = theme.getColor("elevatedPanel").withAlpha(0.98f * s_tooltipState.alpha);
+    const NUIColor border = theme.getColor("borderStrong").withAlpha(0.88f * s_tooltipState.alpha);
+    const NUIColor text = theme.getColor("textPrimary").withAlpha(0.96f * s_tooltipState.alpha);
     
-    renderer.fillRoundedRect(tipRect, kTooltipRadius, bg);
-    renderer.strokeRoundedRect(tipRect, kTooltipRadius, 1.0f, border);
+    renderer.fillRoundedRect(tipRect, tooltipRadius, bg);
+    renderer.strokeRoundedRect(tipRect, tooltipRadius, props.layout.dividerWidth, border);
     renderer.drawTextCentered(s_tooltipState.text, tipRect, fontSize, text);
 }
 

@@ -52,12 +52,12 @@ public:
     
     // Render dropdown list separately for proper z-order
     void renderDropdownList(NUIRenderer& renderer);
-    void setBackgroundColor(const NUIColor& color) { backgroundColor_ = color; setDirty(true); }
-    void setHoverColor(const NUIColor& color) { hoverColor_ = color; setDirty(true); }
-    void setSelectedColor(const NUIColor& color) { selectedColor_ = color; setDirty(true); }
-    void setBorderColor(const NUIColor& color) { borderColor_ = color; setDirty(true); }
-    void setTextColor(const NUIColor& color) { textColor_ = color; setDirty(true); }
-    void setArrowColor(const NUIColor& color) { arrowColor_ = color; setDirty(true); }
+    void setBackgroundColor(const NUIColor& color) { backgroundColor_ = color; customBackground_ = true; setDirty(true); }
+    void setHoverColor(const NUIColor& color) { hoverColor_ = color; customHover_ = true; setDirty(true); }
+    void setSelectedColor(const NUIColor& color) { selectedColor_ = color; customSelected_ = true; setDirty(true); }
+    void setBorderColor(const NUIColor& color) { borderColor_ = color; customBorder_ = true; setDirty(true); }
+    void setTextColor(const NUIColor& color) { textColor_ = color; customText_ = true; setDirty(true); }
+    void setArrowColor(const NUIColor& color) { arrowColor_ = color; customArrow_ = true; setDirty(true); }
 
     // Selection state
     int getSelectedIndex() const { return selectedIndex_; }
@@ -113,6 +113,12 @@ private:
     NUIColor borderColor_;
     NUIColor textColor_;
     NUIColor arrowColor_;
+    bool customBackground_ = false;
+    bool customHover_ = false;
+    bool customSelected_ = false;
+    bool customBorder_ = false;
+    bool customText_ = false;
+    bool customArrow_ = false;
 
     // Callbacks
     std::function<void()> onOpen_;
@@ -133,6 +139,7 @@ private:
 
     // Internal rendering helper used by cache generation and normal rendering
     void renderDropdownListInternal(NUIRenderer& renderer);
+    void refreshThemeColors();
 };
 
 
