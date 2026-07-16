@@ -37,6 +37,7 @@ struct MidiNote {
     double startBeat{0.0};     // Start position in beats
     double durationBeats{0.0}; // Duration in beats
     float velocity{0.0f};      // 0..1
+    float pan{0.0f};           // -1 (left) .. 1 (right), 0 = centre
     uint64_t unitId{0};        // Unit ID for routing
     int8_t pitchOffset{0};     // Semitone offset from root for step-based pitched samplers
     float gate{1.0f};          // Note length as a fraction of one step

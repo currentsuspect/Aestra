@@ -180,7 +180,7 @@ void ArsenalPanel::refreshUnits() {
         m_playBtn = std::make_shared<NUIButton>("PLAY");
         m_playBtn->setId("ArsenalPlayBtn");
         m_playBtn->setBackgroundColor(theme.getColor("accentPrimary"));
-        m_playBtn->setTextColor(theme.getColor("textOnAccent"));
+        m_playBtn->setTextColor(theme.getColor("textOnPrimary"));
         
         // Initial State
         if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
@@ -318,8 +318,8 @@ void ArsenalPanel::refreshUnits() {
     auto addBtn = std::make_shared<NUIButton>("+ Add Unit");
     addBtn->setStyle(NUIButton::Style::Secondary);
     addBtn->setBackgroundColor(NUIColor::transparent());
-    addBtn->setHoverColor(theme.getColor("surfaceSecondary").withAlpha(0.45f));
-    addBtn->setPressedColor(theme.getColor("surfaceSecondary").withAlpha(0.32f));
+    addBtn->setHoverColor(theme.getColor("controlHover"));
+    addBtn->setPressedColor(theme.getColor("controlPressed"));
     addBtn->setTextColor(theme.getColor("textSecondary").withAlpha(0.5f));
     addBtn->setOnClick([this]() {
         onAddUnit();
@@ -801,31 +801,32 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
 
     const auto& themeProps = theme.getCurrentTheme();
     const float cardRadius = themeProps.radiusM;
-    const float pillRadius = themeProps.radiusS + 1.0f;
+    const float pillRadius = themeProps.radiusS;
     const auto disabledText = theme.getColor("textDisabled");
 
     const NUIRect leftCard(bounds.x + 4.0f, bounds.y + 1.0f, std::max(216.0f, controlWidth - 10.0f), bounds.height - 2.0f);
     renderer.fillRoundedRect(leftCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.92f));
     renderer.strokeRoundedRect(leftCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.85f));
 
-    m_barsDecrementRect = NUIRect(leftCard.x + 10.0f, leftCard.y + 4.0f, 18.0f, leftCard.height - 8.0f);
+    const float compactHitArea = themeProps.layout.minimumHitArea;
+    m_barsDecrementRect = NUIRect(leftCard.x + 10.0f, leftCard.y + 4.0f, compactHitArea, leftCard.height - 8.0f);
     m_barsValueRect = NUIRect(m_barsDecrementRect.right() + 4.0f, leftCard.y + 4.0f, 56.0f, leftCard.height - 8.0f);
-    m_barsIncrementRect = NUIRect(m_barsValueRect.right() + 4.0f, leftCard.y + 4.0f, 18.0f, leftCard.height - 8.0f);
+    m_barsIncrementRect = NUIRect(m_barsValueRect.right() + 4.0f, leftCard.y + 4.0f, compactHitArea, leftCard.height - 8.0f);
 
     const auto pillFill = theme.getColor("surfaceTertiary").withAlpha(0.78f);
     const auto pillStroke = theme.getColor("borderSubtle").withAlpha(0.85f);
     const auto pillText = theme.getColor("textSecondary").withAlpha(0.9f);
     renderer.fillRoundedRect(m_barsDecrementRect, pillRadius, pillFill);
     renderer.strokeRoundedRect(m_barsDecrementRect, pillRadius, 1.0f, pillStroke);
-    renderer.drawTextCentered("-", m_barsDecrementRect, 10.5f, decEnabled ? pillText : disabledText);
+    renderer.drawTextCentered("-", m_barsDecrementRect, themeProps.fontSizeXS, decEnabled ? pillText : disabledText);
 
     renderer.fillRoundedRect(m_barsValueRect, pillRadius, pillFill);
     renderer.strokeRoundedRect(m_barsValueRect, pillRadius, 1.0f, pillStroke);
-    renderer.drawTextCentered(std::to_string(bars) + " Bars", m_barsValueRect, 8.5f, pillText);
+    renderer.drawTextCentered(std::to_string(bars) + " Bars", m_barsValueRect, themeProps.fontSizeMicro, pillText);
 
     renderer.fillRoundedRect(m_barsIncrementRect, pillRadius, pillFill);
     renderer.strokeRoundedRect(m_barsIncrementRect, pillRadius, 1.0f, pillStroke);
-    renderer.drawTextCentered("+", m_barsIncrementRect, 10.5f, incEnabled ? pillText : disabledText);
+    renderer.drawTextCentered("+", m_barsIncrementRect, themeProps.fontSizeXS, incEnabled ? pillText : disabledText);
 
     const float contentBadgeWidth = contentLabel == "Piano Roll" ? 74.0f : 62.0f;
     const NUIRect contentBadge(m_barsIncrementRect.right() + 8.0f, leftCard.y + 4.0f, contentBadgeWidth, leftCard.height - 8.0f);
@@ -836,14 +837,14 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
                     theme.getColor("surfaceTertiary").withAlpha(0.78f),
                     theme.getColor("borderSubtle").withAlpha(0.85f),
                     theme.getColor("textSecondary").withAlpha(0.9f),
-                    8.25f);
+                    themeProps.fontSizeMicro);
     drawArsenalChip(renderer,
                     unitsBadge,
                     std::to_string(unitCount) + " Units",
                     theme.getColor("surfaceTertiary").withAlpha(0.78f),
                     theme.getColor("borderSubtle").withAlpha(0.85f),
                     theme.getColor("textSecondary").withAlpha(0.9f),
-                    8.25f);
+                    themeProps.fontSizeMicro);
 
     const NUIRect gridCard(gridStartX - 2.0f, bounds.y + 1.0f, std::max(0.0f, availWidth + 4.0f), bounds.height - 2.0f);
     renderer.fillRoundedRect(gridCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.82f));
@@ -852,7 +853,7 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
     float indicatorHeight = PROGRESS_HEADER_HEIGHT - 10.0f;
     float indicatorY = bounds.y + 5.0f;
-    const float indicatorRadius = themeProps.radiusXS + 0.5f;
+    const float indicatorRadius = themeProps.radiusXS;
 
     // Scanlines/Clipping: Clip to header bounds to prevent overflow
     renderer.setClipRect(bounds);

@@ -49,6 +49,8 @@ AudioVisualizer::AudioVisualizer()
     backgroundColor_ = themeManager.getColor("backgroundPrimary");  // #121214 - Deep charcoal with gradient
     gridColor_ = themeManager.getColor("border");                   // #2e2e35 - Grid lines
     textColor_ = themeManager.getColor("textPrimary");              // #e6e6eb - Soft white
+    primaryColor_ = themeManager.getColor("accentCyan");
+    secondaryColor_ = themeManager.getColor("accentMagenta");
 }
 
 // =============================================================================
@@ -563,6 +565,7 @@ void AudioVisualizer::renderLevelMeter(NUIRenderer& renderer) {
 
 void AudioVisualizer::renderVU(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
     
     // VU meter with color zones
     float meterWidth = bounds.width - 20;
@@ -588,27 +591,27 @@ void AudioVisualizer::renderVU(NUIRenderer& renderer) {
     
     // Green zone (0-60%) with glow
     NUIRect greenRect(meter.x, meter.y + meterHeight - greenZone, meter.width, greenZone);
-    renderer.fillRoundedRect(greenRect, 4, NUIColor(0.0f, 1.0f, 0.0f, 0.4f));
-    renderer.strokeRoundedRect(greenRect, 4, 1, NUIColor(0.0f, 1.0f, 0.0f, 0.6f));
+    renderer.fillRoundedRect(greenRect, 4, theme.meterSafe.withAlpha(0.4f));
+    renderer.strokeRoundedRect(greenRect, 4, 1, theme.meterSafe.withAlpha(0.6f));
     
     // Yellow zone (60-80%) with glow
     NUIRect yellowRect(meter.x, meter.y + meterHeight - yellowZone, meter.width, yellowZone - greenZone);
-    renderer.fillRoundedRect(yellowRect, 4, NUIColor(1.0f, 1.0f, 0.0f, 0.4f));
-    renderer.strokeRoundedRect(yellowRect, 4, 1, NUIColor(1.0f, 1.0f, 0.0f, 0.6f));
+    renderer.fillRoundedRect(yellowRect, 4, theme.meterWarn.withAlpha(0.4f));
+    renderer.strokeRoundedRect(yellowRect, 4, 1, theme.meterWarn.withAlpha(0.6f));
     
     // Red zone (80-100%) with glow
     NUIRect redRect(meter.x, meter.y + meterHeight - meterHeight, meter.width, meterHeight - yellowZone);
-    renderer.fillRoundedRect(redRect, 4, NUIColor(1.0f, 0.0f, 0.0f, 0.4f));
-    renderer.strokeRoundedRect(redRect, 4, 1, NUIColor(1.0f, 0.0f, 0.0f, 0.6f));
+    renderer.fillRoundedRect(redRect, 4, theme.meterCrit.withAlpha(0.4f));
+    renderer.strokeRoundedRect(redRect, 4, 1, theme.meterCrit.withAlpha(0.6f));
     
     // Level indicator with energy-based glow
     float level = std::max(leftRMS_, rightRMS_);
     float levelHeight = level * meterHeight;
     float glowIntensity = std::clamp(level * 2.0f, 0.3f, 1.0f);
     
-    NUIColor levelColor = NUIColor(0.0f, 1.0f, 0.0f); // Green
-    if (level > 0.8f) levelColor = NUIColor(1.0f, 0.0f, 0.0f); // Red
-    else if (level > 0.6f) levelColor = NUIColor(1.0f, 1.0f, 0.0f); // Yellow
+    NUIColor levelColor = theme.meterSafe;
+    if (level > 0.8f) levelColor = theme.meterCrit;
+    else if (level > 0.6f) levelColor = theme.meterWarn;
     
     // Glow layer
     NUIRect glowRect(meter.x, meter.y + meterHeight - levelHeight - 2, meter.width, 8);
@@ -725,6 +728,7 @@ void AudioVisualizer::renderOscilloscope(NUIRenderer& renderer) {
 
 void AudioVisualizer::renderCompactMeter(NUIRenderer& renderer) {
     NUIRect bounds = getBounds();
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
     
     // Very slim vertical meters - side by side
     const float padding = 2.0f;
@@ -750,11 +754,11 @@ void AudioVisualizer::renderCompactMeter(NUIRenderer& renderer) {
     // Clip flash at the top of each meter
     if (leftClipIndicator_ > 0.02f) {
         NUIRect clipRect(leftMeter.x, leftMeter.y - 1.0f, leftMeter.width, 3.0f);
-        renderer.fillRoundedRect(clipRect, 1.0f, NUIColor(1.0f, 0.15f, 0.15f, leftClipIndicator_));
+        renderer.fillRoundedRect(clipRect, 1.0f, theme.meterCrit.withAlpha(leftClipIndicator_));
     }
     if (rightClipIndicator_ > 0.02f) {
         NUIRect clipRect(rightMeter.x, rightMeter.y - 1.0f, rightMeter.width, 3.0f);
-        renderer.fillRoundedRect(clipRect, 1.0f, NUIColor(1.0f, 0.15f, 0.15f, rightClipIndicator_));
+        renderer.fillRoundedRect(clipRect, 1.0f, theme.meterCrit.withAlpha(rightClipIndicator_));
     }
 }
 
@@ -905,8 +909,9 @@ void AudioVisualizer::renderArrangementWaveform(NUIRenderer& renderer) {
 }
 
 void AudioVisualizer::renderLevelBar(NUIRenderer& renderer, const NUIRect& bounds, float level, float peak, const NUIColor& color) {
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
     // Background
-    renderer.fillRoundedRect(bounds, 3.0f, backgroundColor_.darkened(0.25f));
+    renderer.fillRoundedRect(bounds, 3.0f, theme.meterBackground);
 
     auto linToNorm = [](float lin) -> float {
         const float eps = 1e-6f;
@@ -936,13 +941,13 @@ void AudioVisualizer::renderLevelBar(NUIRenderer& renderer, const NUIRect& bound
         const NUIColor safeTop = color;
 
         // Warning zone shifts toward yellow/orange
-        const NUIColor warnBase = NUIColor::lerp(color, NUIColor(1.0f, 0.85f, 0.25f), 0.8f);
+        const NUIColor warnBase = NUIColor::lerp(color, theme.meterWarn, 0.8f);
         const NUIColor warnBottom = warnBase.darkened(0.1f);
         const NUIColor warnTop = warnBase.lightened(0.1f);
 
         // Clip zone is red-hot
-        const NUIColor clipBottom = NUIColor(1.0f, 0.3f, 0.2f);
-        const NUIColor clipTop = NUIColor(1.0f, 0.05f, 0.05f);
+        const NUIColor clipBottom = theme.meterCrit.darkened(0.18f);
+        const NUIColor clipTop = theme.meterCrit;
 
         // Safe segment
         float safeSegTop = std::max(topY, warnY);

@@ -366,7 +366,7 @@ public:
     bool openEditor(void*) override { return false; }
     void closeEditor() override {}
     bool isEditorOpen() const override { return false; }
-    std::pair<int, int> getEditorSize() const override { return {520, 320}; }
+    std::pair<int, int> getEditorSize() const override { return {700, 420}; }
     bool resizeEditor(int, int) override { return false; }
 
     const PluginInfo& getInfo() const override { return m_info; }

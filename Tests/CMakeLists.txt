@@ -1695,6 +1695,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeJSONTest.cpp")
     message(STATUS "NUIThemeJSONTest added - Issue #259 theme JSON loading test")
 endif()
 
+if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeConsistencyTest.cpp")
+    add_executable(NUIThemeConsistencyTest AestraUI/NUIThemeConsistencyTest.cpp)
+    target_link_libraries(NUIThemeConsistencyTest PRIVATE AestraUI_Core)
+    add_test(NAME NUIThemeConsistencyTest COMMAND NUIThemeConsistencyTest)
+    set_tests_properties(NUIThemeConsistencyTest PROPERTIES LABELS "ui;theme;consistency")
+else()
+    message(STATUS "NUIThemeConsistencyTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # KeyboardNoteInput Test — musical-typing translation logic (header-only, no
 # UI targets needed, runs headless on every lane).
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/KeyboardNoteInputTest.cpp")

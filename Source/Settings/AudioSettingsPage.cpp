@@ -250,6 +250,7 @@ void AudioSettingsPage::createUI() {
     auto createLabel = [&](const std::string& text) {
         auto l = std::make_shared<AestraUI::NUILabel>();
         l->setText(text);
+        l->setFontSize(AestraUI::NUIThemeManager::getInstance().getFontSize("m"));
         addChild(l);
         return l;
     };
@@ -424,6 +425,7 @@ void AudioSettingsPage::createUI() {
 
     m_testSoundButton = std::make_shared<AestraUI::NUIButton>();
     m_testSoundButton->setText("Test Sound");
+    m_testSoundButton->setStyle(AestraUI::NUIButton::Style::Secondary);
     m_testSoundButton->setOnClick([this]() {
         bool playing = m_audioEngine->isTestToneEnabled();
         playing = !playing;
@@ -575,10 +577,11 @@ void AudioSettingsPage::updateLatencyEstimate() {
 // Layout
 void AudioSettingsPage::layoutComponents() {
     auto b = getBounds();
-    float padding = 20.0f;
+    const auto& theme = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
+    float padding = theme.spacingM;
     float colWidth = (b.width - padding * 3) / 2.0f;
-    float rowHeight = 30.0f;
-    float gap = 15.0f;
+    float rowHeight = theme.layout.standardControlHeight;
+    float gap = theme.spacingS;
     
     float x1 = b.x + padding;
     float x2 = b.x + padding * 2 + colWidth;
@@ -595,14 +598,17 @@ void AudioSettingsPage::layoutComponents() {
     layRow(m_inputDeviceLabel, m_inputDeviceDropdown, x1); y += rowHeight + gap;
     layRow(m_sampleRateLabel, m_sampleRateDropdown, x1); y += rowHeight + gap;
     layRow(m_bufferSizeLabel, m_bufferSizeDropdown, x1); y += rowHeight + gap;
-    m_latencyLabel->setBounds(AestraUI::NUIRect(x1 + 110, y, colWidth - 110, 20)); y += 30;
+    m_latencyLabel->setBounds(AestraUI::NUIRect(x1 + 110, y, colWidth - 110,
+                                                theme.layout.compactControlHeight));
+    y += theme.layout.standardControlHeight;
     
     // Test Sound Button (below left column)
-    m_testSoundButton->setBounds(AestraUI::NUIRect(x1, y, colWidth, 32));
+    m_testSoundButton->setBounds(AestraUI::NUIRect(x1, y, colWidth, theme.layout.standardControlHeight));
     
     // Loading indicator (centered in left column)
     if (m_loadingLabel) {
-        m_loadingLabel->setBounds(AestraUI::NUIRect(x1, y + 45, colWidth, 24));
+        m_loadingLabel->setBounds(AestraUI::NUIRect(x1, y + theme.spacingXL, colWidth,
+                                                    theme.layout.compactControlHeight));
     }
 
     // Right Column: Processing (reset Y)

@@ -176,7 +176,7 @@ void UIMixerInspector::cacheThemeColors()
     m_tabActive = theme.getColor("buttonBgActive").withAlpha(0.99f);
     m_tabHover = theme.getColor("buttonBgHover").withAlpha(0.99f);
     m_addBg = theme.getColor("surfaceTertiary");
-    m_addHover = theme.getColor("surfaceSecondary");
+    m_addHover = theme.getColor("controlHover");
     m_addText = theme.getColor("textPrimary");
 }
 

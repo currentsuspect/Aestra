@@ -51,6 +51,71 @@ hairline strokes, not component radii — leave those literal.
 
 `xs` 4 · `s` 8 · `m` 16 · `l` 24 · `xl` 32 · `xxl` 48
 
+## Semantic color roles
+
+Use semantic roles for shared application structure and state. Component-specific colors are reserved for information
+that has domain meaning, such as track identity, EQ bands, meters, and analyzer curves.
+
+| role | purpose |
+| --- | --- |
+| `appBackground`, `workspaceBackground` | root and workspace canvas |
+| `elevatedPanel`, `recessedPanel` | floating and inset panel hierarchy |
+| `controlBackground`, `controlHover`, `controlPressed`, `controlDisabled` | neutral control states |
+| `borderSubtle`, `borderStrong`, `focusRing` | structural, interactive, and keyboard-focus edges |
+| `textPrimary`, `textSecondary`, `textMuted`, `textDisabled` | text hierarchy |
+| `selection` | persistent selected state; hover must not reuse it |
+| `armed`, `muted`, `soloed`, `bypassed` | transport/mixer/plugin status |
+| `dragTarget` | valid drag destination feedback |
+| `meterBackground`, `meterActive` | shared meter structure |
+| `gridMajor`, `gridMinor` | timeline and editor grids |
+| `overlay`, `backdrop`, `shadow` | modal scrim, secondary scrim, and floating-surface depth |
+
+State priority for shared controls is deterministic: disabled, pressed, selected, hovered, then idle. Focus changes the
+border treatment without changing geometry. `resolveControlColors()` implements this ordering.
+
+The JSON-backed `NUITheme` accepts the same semantic color names in its `colors` object. New keys are optional: loading
+starts from defaults, so older theme files remain valid and inherit missing roles.
+
+Preset scrims must remain translucent. An opaque `overlay` hides application context behind dialogs; primary action
+foregrounds must use `textOnPrimary` so their contrast follows the accent rather than a local text constant.
+
+Live application code should use the canonical names above. The manager retains compatibility aliases for historical
+call sites and extensions: `backgroundTertiary` -> `elevatedPanel`, `surfaceSecondary` -> `surfaceRaised`,
+`borderPrimary`/`borderSecondary` -> `borderStrong`/`borderSubtle`, `textTertiary` -> `textMuted`, `textInfo` -> `info`,
+`textOnAccent` -> `textOnPrimary`, `inputBackground` -> `inputBgDefault`, and `accentAmber` -> `warning`. Unknown names
+still use the legacy primary fallback, so new call sites must not depend on fallback behavior.
+
+## Compact control metrics
+
+| token | px | role |
+| --- | ---: | --- |
+| `compactControlHeight` | 24 | dense tool and inline controls |
+| `standardControlHeight` | 28 | ordinary controls |
+| `dialogActionHeight` | 36 | modal actions |
+| `standardRowHeight` | 28 | list/property rows |
+| `compactMenuRowHeight` | 24 | dense menus |
+| `standardMenuRowHeight` | 28 | ordinary menus |
+| `panelHeaderHeight` | 32 | panel title bars |
+| `sectionHeaderHeight` | 24 | in-panel section headers |
+| `standardIconSize` | 16 | ordinary control icons |
+| `minimumHitArea` | 24 | smallest compact desktop hit target |
+| `dividerWidth` | 1 | structural separators |
+| `panelPadding` | 8 | dense panel inset |
+| `dialogPadding` | 16 | modal inset |
+
+These are defaults, not forced geometry. Large transport controls, knobs, artwork, waveforms, graphs, and optical glyph
+offsets remain surface-specific.
+
+## Transient surface lifecycle
+
+Dialogs that cover the application use full root-window bounds and center their visible panel within that coordinate
+space. Lazily created dialogs must receive the root's current bounds before their first layout; they cannot rely on an
+earlier resize callback.
+
+Menus and popovers are inserted frontmost only after the mouse/key dispatch that opened them has unwound. Both child
+addition and removal are deferred during dispatch so callbacks cannot invalidate a parent hierarchy mid-iteration.
+Visual states may invalidate the UI, but opening an external Linux file chooser must not block the Aestra event loop.
+
 ## Rollout
 
 1. **PR 1** — define this grammar + pilot on the shell (timeline, browser,

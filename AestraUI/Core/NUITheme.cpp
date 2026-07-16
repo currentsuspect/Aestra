@@ -8,6 +8,7 @@
 #include <cmath>
 #include <fstream>
 #include <functional>
+#include <unordered_set>
 
 namespace AestraUI {
 
@@ -37,6 +38,16 @@ bool parseHexColor(const std::string& text, NUIColor& out) {
     return true;
 }
 
+bool requiresPositiveDimension(const std::string& name) {
+    static const std::unordered_set<std::string> positiveDimensions{
+        "borderRadius", "borderRadiusSmall", "borderRadiusLarge", "padding", "paddingSmall", "paddingLarge",
+        "margin", "borderWidth", "compactControlHeight", "standardControlHeight", "dialogActionHeight",
+        "standardRowHeight", "compactMenuRowHeight", "standardMenuRowHeight", "panelHeaderHeight",
+        "sectionHeaderHeight", "standardIconSize", "minimumHitArea", "dividerWidth", "panelPadding",
+        "dialogPadding"};
+    return positiveDimensions.find(name) != positiveDimensions.end();
+}
+
 } // namespace
 
 NUITheme::NUITheme() {
@@ -60,12 +71,25 @@ std::shared_ptr<NUITheme> NUITheme::createDefault() {
     // UI Elements
     theme->setColor("text", NUIColor::fromHex(0xc8c8c8));
     theme->setColor("textSecondary", NUIColor::fromHex(0x999999));
+    theme->setColor("textMuted", NUIColor::fromHex(0x777777));
     theme->setColor("textDisabled", NUIColor::fromHex(0x474747));
 
     theme->setColor("border", NUIColor::fromHex(0x2d2d2d, 0.86f));
+    theme->setColor("borderSubtle", NUIColor::fromHex(0x2b2b2b, 0.90f));
+    theme->setColor("borderStrong", NUIColor::fromHex(0x3a3a3a, 0.95f));
     theme->setColor("hover", NUIColor::fromHex(0xffffff, 0.06f));
     theme->setColor("active", NUIColor::fromHex(0x8b7de8, 0.2f));
     theme->setColor("disabled", NUIColor::fromHex(0x1d1d1d, 0.58f));
+    theme->setColor("focusRing", NUIColor::fromHex(0x8b7de8, 0.86f));
+    theme->setColor("armed", NUIColor::fromHex(0xe06a4e));
+    theme->setColor("muted", NUIColor::fromHex(0xe8a230));
+    theme->setColor("soloed", NUIColor::fromHex(0x4a9eff));
+    theme->setColor("bypassed", NUIColor::fromHex(0x777777));
+    theme->setColor("dragTarget", NUIColor::fromHex(0x8b7de8, 0.28f));
+    theme->setColor("meterBackground", NUIColor::fromHex(0x080808, 0.92f));
+    theme->setColor("meterActive", NUIColor::fromHex(0x4a9eff));
+    theme->setColor("gridMajor", NUIColor::fromHex(0xffffff, 0.10f));
+    theme->setColor("gridMinor", NUIColor::fromHex(0xffffff, 0.06f));
 
     // Dimensions
     theme->setDimension("borderRadius", 12.0f);        // Soft Geometry
@@ -78,6 +102,19 @@ std::shared_ptr<NUITheme> NUITheme::createDefault() {
     
     theme->setDimension("margin", 8.0f);
     theme->setDimension("borderWidth", 1.0f);
+    theme->setDimension("compactControlHeight", 24.0f);
+    theme->setDimension("standardControlHeight", 28.0f);
+    theme->setDimension("dialogActionHeight", 36.0f);
+    theme->setDimension("standardRowHeight", 28.0f);
+    theme->setDimension("compactMenuRowHeight", 24.0f);
+    theme->setDimension("standardMenuRowHeight", 28.0f);
+    theme->setDimension("panelHeaderHeight", 32.0f);
+    theme->setDimension("sectionHeaderHeight", 24.0f);
+    theme->setDimension("standardIconSize", 16.0f);
+    theme->setDimension("minimumHitArea", 24.0f);
+    theme->setDimension("dividerWidth", 1.0f);
+    theme->setDimension("panelPadding", 8.0f);
+    theme->setDimension("dialogPadding", 16.0f);
     
     // Effects
     theme->setEffect("glowIntensity", 0.5f);           // Enhanced Glow
@@ -181,7 +218,7 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
 
     forEachEntry("dimensions", [&](const std::string& key, Aestra::JSON& value) {
         float v = 0.0f;
-        if (!numericEntry(value, v, false))
+        if (!numericEntry(value, v, requiresPositiveDimension(key)))
             return false;
         theme->setDimension(key, v);
         return true;

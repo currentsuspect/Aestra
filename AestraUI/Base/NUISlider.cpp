@@ -2,6 +2,7 @@
 #include "NUISlider.h"
 #include "NUIRenderer.h"
 #include "NUITheme.h"
+#include "NUIThemeSystem.h"
 #include "../Platform/NUIPlatformBridge.h"
 #include <algorithm>
 #include <chrono>
@@ -23,6 +24,12 @@ NUISlider::NUISlider(const std::string& name)
     : NUIComponent()
 {
     setId(name);
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
+    trackColor_ = theme.sliderTrack;
+    fillColor_ = theme.sliderHandle;
+    thumbColor_ = theme.textPrimary;
+    thumbHoverColor_ = theme.sliderHandleHover;
+    sliderRadius_ = theme.radiusM;
     setSize(100, 6); // Modern 6px height for horizontal slider
 }
 
@@ -142,6 +149,7 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
 
     if (event.pressed && event.button == NUIMouseButton::Left)
     {
+        setFocused(true);
         // Start dragging
         isDragging_ = true;
         lastMousePosition_ = event.position;
@@ -407,25 +415,23 @@ void NUISlider::drawRotarySlider(NUIRenderer& renderer)
         std::string label = formatValueForTooltip(value_);
 
         // Calculate pill dimensions
-        float pillPadding = 6.0f;
-        float pillHeight = 18.0f;
-        float fontSize = 10.0f;
-        // Estimate text width (rough approximation)
-        float pillWidth = static_cast<float>(label.length()) * 7.0f + pillPadding * 2.0f;
+        const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
+        float pillPadding = theme.spacingXS + 2.0f;
+        float pillHeight = theme.layout.compactControlHeight;
+        float fontSize = theme.fontSizeXS;
+        float pillWidth = renderer.measureText(label, fontSize).width + pillPadding * 2.0f;
 
         NUIRect pillRect(knobCenterX - pillWidth / 2.0f, pillY, pillWidth, pillHeight);
 
         // Draw pill background with opacity
-        NUIColor bgColor = NUIColor::fromHex(0xff2a2d32);
-        bgColor.a = static_cast<uint8_t>(255 * opacity * 0.8f); // 80% opacity max
-        renderer.fillRoundedRect(pillRect, 4.0f, bgColor);
+        renderer.fillRoundedRect(pillRect, theme.radiusS,
+                                 theme.surfaceTertiary.withAlpha(static_cast<float>(opacity)));
+        renderer.strokeRoundedRect(pillRect, theme.radiusS, theme.layout.dividerWidth,
+                                   theme.borderStrong.withAlpha(static_cast<float>(opacity)));
 
         // Draw text with opacity
-        NUIColor textColor = NUIColor::fromHex(0xffffffff);
-        textColor.a = static_cast<uint8_t>(255 * opacity);
-        float textX = pillRect.x + pillWidth / 2.0f;
-        float textY = pillRect.y + pillHeight / 2.0f - fontSize / 2.0f;
-        renderer.drawText(label, NUIPoint(textX, textY), fontSize, textColor);
+        renderer.drawTextCentered(label, pillRect, fontSize,
+                                  theme.textPrimary.withAlpha(static_cast<float>(opacity)));
     }
 }
 
@@ -521,8 +527,10 @@ void NUISlider::drawSliderText(NUIRenderer& renderer)
 
     NUIRect bounds = getBounds();
     auto theme = getTheme();
-    NUIColor textColor = theme ? theme->getText() : NUIColor::fromHex(0xffffffff);
-    float fontSize = theme ? theme->getFontSize("slider.value", 11.0f) : 11.0f;
+    auto& themeManager = NUIThemeManager::getInstance();
+    NUIColor textColor = theme ? theme->getText()
+                               : themeManager.getColor(isEnabled() ? "textPrimary" : "textDisabled");
+    float fontSize = theme ? theme->getFontSize("slider.value", 11.0f) : themeManager.getFontSize("s");
 
     // Format value
     auto s = std::to_string(value_);
@@ -541,7 +549,18 @@ void NUISlider::drawSliderText(NUIRenderer& renderer)
 
 bool NUISlider::isPointOnSlider(const NUIPoint& point) const
 {
-    return getBounds().contains(point);
+    NUIRect hitBounds = getBounds();
+    const float minimumHitArea = NUIThemeManager::getInstance().getLayoutDimension("minimumHitArea");
+    if (orientation_ == Orientation::Horizontal && hitBounds.height < minimumHitArea) {
+        const float expansion = (minimumHitArea - hitBounds.height) * 0.5f;
+        hitBounds.y -= expansion;
+        hitBounds.height = minimumHitArea;
+    } else if (orientation_ == Orientation::Vertical && hitBounds.width < minimumHitArea) {
+        const float expansion = (minimumHitArea - hitBounds.width) * 0.5f;
+        hitBounds.x -= expansion;
+        hitBounds.width = minimumHitArea;
+    }
+    return hitBounds.contains(point);
 }
 
 bool NUISlider::isPointOnThumb(const NUIPoint& point) const
@@ -642,55 +661,44 @@ void NUISlider::triggerDragEnd()
 
 void NUISlider::drawEnhancedTrack(NUIRenderer& renderer, const NUIRect& trackRect)
 {
-    renderer.fillRoundedRect({trackRect.x, trackRect.y + 1.0f, trackRect.width, trackRect.height},
-                             trackRect.height * 0.5f,
-                             NUIColor(0, 0, 0, 0.20f));
-    renderer.fillRoundedRect(trackRect, trackRect.height * 0.5f, trackColor_.darkened(0.08f));
-    renderer.strokeRoundedRect(trackRect, trackRect.height * 0.5f, 1.0f, NUIColor::white().withAlpha(0.05f));
+    auto& theme = NUIThemeManager::getInstance();
+    const NUIColor track = isEnabled() ? trackColor_ : trackColor_.withAlpha(0.45f);
+    renderer.fillRoundedRect(trackRect, trackRect.height * 0.5f, track);
+    renderer.strokeRoundedRect(trackRect, trackRect.height * 0.5f, 1.0f,
+                               theme.getColor("borderSubtle"));
 }
 
 void NUISlider::drawActiveTrack(NUIRenderer& renderer, const NUIRect& fillRect)
 {
     if (fillRect.width > 1.0f) {
         NUIColor activeColor = fillColor_.a > 0.0f ? fillColor_ : thumbColor_;
-        renderer.fillRoundedRect(fillRect, fillRect.height * 0.5f, activeColor.withAlpha(0.92f));
-        renderer.fillRoundedRect({fillRect.x, fillRect.y, fillRect.width, std::max(1.0f, fillRect.height * 0.42f)},
-                                 fillRect.height * 0.5f,
-                                 NUIColor::white().withAlpha(0.06f));
+        renderer.fillRoundedRect(fillRect, fillRect.height * 0.5f,
+                                 activeColor.withAlpha(isEnabled() ? 0.92f : 0.35f));
     }
 }
 
 void NUISlider::drawEnhancedThumb(NUIRenderer& renderer, const NUIPoint& thumbPos)
 {
-    float scale = isDragging_ ? 1.0f : (isHovered_ ? 1.1f : 1.0f);
-    float radius = sliderRadius_ * scale;
-
-    NUIPoint shadowPos = thumbPos;
-    shadowPos.y += 2;
-    renderer.fillCircle(shadowPos, radius + 1.0f, NUIColor(0, 0, 0, 0.26f));
+    const float radius = sliderRadius_;
 
     NUIColor thumbFill = isDragging_ ? thumbColor_.lightened(0.08f)
                                      : (isHovered_ ? thumbHoverColor_ : thumbColor_);
-    renderer.fillCircle(thumbPos, radius, thumbFill);
-    renderer.strokeCircle(thumbPos, radius, 1.0f, NUIColor::white().withAlpha(0.10f));
-    renderer.fillCircle({thumbPos.x, thumbPos.y - radius * 0.18f}, std::max(1.0f, radius * 0.42f), NUIColor::white().withAlpha(0.07f));
-
-    if (isDragging_) {
-        renderer.fillCircle(thumbPos, 2.5f, NUIColor::white().withAlpha(0.22f));
-    }
+    renderer.fillCircle(thumbPos, radius, isEnabled() ? thumbFill : thumbFill.withAlpha(0.38f));
+    renderer.strokeCircle(thumbPos, radius, isFocused() && isEnabled() ? 1.5f : 1.0f,
+                          isFocused() && isEnabled()
+                              ? NUIThemeManager::getInstance().getColor("focusRing")
+                              : NUIThemeManager::getInstance().getColor("borderStrong"));
 }
 
 void NUISlider::drawNumericDisplay(NUIRenderer& renderer, const NUIPoint& thumbPos)
 {
-    // Mini numeric display above thumb
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
     std::string valueText = std::to_string(static_cast<int>(value_));
-    
-    // Background for text
-    NUIRect textBg(thumbPos.x - 15, thumbPos.y - 25, 30, 15);
-    renderer.fillRoundedRect(textBg, 3.0f, NUIColor(0, 0, 0, 0.8f));
-    
-    // Text (placeholder - would need proper font rendering)
-    // renderer.drawTextCentered(valueText, textBg, 10.0f, NUIColor::white());
+    const float width = renderer.measureText(valueText, theme.fontSizeXS).width + theme.spacingS * 2.0f;
+    NUIRect textBg(thumbPos.x - width * 0.5f, thumbPos.y - 27.0f, width, 18.0f);
+    renderer.fillRoundedRect(textBg, theme.radiusS, theme.surfaceTertiary);
+    renderer.strokeRoundedRect(textBg, theme.radiusS, theme.layout.dividerWidth, theme.borderStrong);
+    renderer.drawTextCentered(valueText, textBg, theme.fontSizeXS, theme.textPrimary);
 }
 
 } // namespace AestraUI

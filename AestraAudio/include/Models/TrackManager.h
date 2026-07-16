@@ -942,15 +942,24 @@ public:
     const PatternPlaybackEngine& getPatternPlaybackEngine() const { return m_patternPlaybackEngine; }
 
     /**
-     * @brief Start Arsenal playback from beat zero for the supplied pattern.
+     * @brief Start Arsenal playback for the supplied pattern.
      * @param pid Pattern identifier to schedule for playback.
+     * @param startSeconds Transport position to start from. Negative (the
+     *        default) resumes from the current position — e.g. a scrubbed
+     *        piano-roll playhead — matching how timeline play() cues. Pass an
+     *        explicit value (e.g. 0.0 for a from-the-top preview) to override.
+     *        The engine wraps positions past the pattern length, so any cue
+     *        point is safe.
      */
-    void playPatternInArsenal(PatternID pid) {
+    void playPatternInArsenal(PatternID pid, double startSeconds = -1.0) {
+        if (startSeconds < 0.0) {
+            startSeconds = std::max(0.0, m_position.load(std::memory_order_relaxed));
+        }
         m_patternMode.store(true, std::memory_order_relaxed);
         m_isPlaying.store(true, std::memory_order_relaxed);
         m_isPaused.store(false, std::memory_order_relaxed);
-        m_position.store(0.0, std::memory_order_relaxed);
-        m_playStartPosition.store(0.0, std::memory_order_relaxed);
+        m_position.store(startSeconds, std::memory_order_relaxed);
+        m_playStartPosition.store(startSeconds, std::memory_order_relaxed);
         m_patternPlaybackEngine.flush();
 
         {
@@ -964,7 +973,7 @@ public:
             }
         }
 
-        pushTransportCommand(1.0f, 0.0);
+        pushTransportCommand(1.0f, startSeconds);
         m_patternPlaybackEngine.schedulePatternInstance(pid, 0.0, 1);
     }
 

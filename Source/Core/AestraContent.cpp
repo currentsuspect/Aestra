@@ -1687,6 +1687,41 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return false;
     }
 
+    // Wheel events need explicit hit routing because workspace siblings overlap
+    // the browser's screen area and the generic child dispatcher only follows
+    // z-order. Keep floating overlays first, then route the visible browser view
+    // under the pointer before the timeline can consume the gesture.
+    if (event.wheelDelta != 0.0f) {
+        if (m_overlayLayer && m_overlayLayer->onMouseEvent(event)) {
+            return true;
+        }
+
+        if (m_fileBrowser && m_fileBrowser->isVisible() && m_fileBrowser->isEnabled() &&
+            m_fileBrowser->getBounds().contains(event.position)) {
+            const auto activeView = m_fileBrowser->getActiveNavAction();
+            if (activeView == AestraUI::FileBrowser::BrowserNavAction::Plugins && m_pluginBrowser &&
+                m_pluginBrowser->isVisible() && m_pluginBrowser->isEnabled() &&
+                m_pluginBrowser->getBounds().contains(event.position) && m_pluginBrowser->onMouseEvent(event)) {
+                return true;
+            }
+            if (activeView == AestraUI::FileBrowser::BrowserNavAction::Patterns && m_patternBrowser &&
+                m_patternBrowser->isVisible() && m_patternBrowser->isEnabled() &&
+                m_patternBrowser->getBounds().contains(event.position) &&
+                static_cast<AestraUI::NUIComponent*>(m_patternBrowser.get())->onMouseEvent(event)) {
+                return true;
+            }
+            if (m_fileBrowser->onMouseEvent(event)) {
+                return true;
+            }
+
+            // Do not let a wheel gesture over browser chrome fall through to
+            // the timeline merely because the current browser pane cannot scroll.
+            return true;
+        }
+
+        return m_workspaceLayer && m_workspaceLayer->onMouseEvent(event);
+    }
+
     if (!m_browserResizing && event.pressed && m_overlayLayer && m_overlayLayer->onMouseEvent(event)) {
         return true;
     }
@@ -1865,15 +1900,8 @@ float* AestraContent::getActiveBrowserWidthPrefPtr() {
 }
 
 const float* AestraContent::getActiveBrowserWidthPrefPtr() const {
-    if (m_fileBrowser) {
-        const auto action = m_fileBrowser->getActiveNavAction();
-        if (action == AestraUI::FileBrowser::BrowserNavAction::Plugins) {
-            return &m_pluginBrowserWidthPref;
-        }
-        if (action == AestraUI::FileBrowser::BrowserNavAction::Patterns) {
-            return &m_patternNavBrowserWidthPref;
-        }
-    }
+    // Plugins and Patterns replace the contents of the same browser shell. Keeping a
+    // separate width for each view made the shell visibly jump when navigation changed.
     return &m_fileBrowserWidthPref;
 }
 
@@ -2619,7 +2647,9 @@ void AestraContent::startPatternClipPreview(PatternID patternId) {
     }
 
     m_trackManager->preparePatternForArsenal(patternId);
-    m_trackManager->playPatternInArsenal(patternId);
+    // Clip preview intentionally starts from the top; every other play path
+    // resumes from the cued transport position (playPatternInArsenal default).
+    m_trackManager->playPatternInArsenal(patternId, 0.0);
 }
 
 void AestraContent::stopPatternClipPreview(bool restoreTimelineUi) {
@@ -2816,6 +2846,8 @@ void AestraContent::playFromCurrentFocus() {
         }
 
         AESTRA_LOG_DEBUG("[Arsenal] Focus-aware play scheduling pattern " + std::to_string(activePattern.value));
+        // Resumes from the cued transport position (e.g. a scrubbed piano-roll
+        // playhead) — playPatternInArsenal's default — not from beat zero.
         m_trackManager->playPatternInArsenal(activePattern);
         return;
     }
