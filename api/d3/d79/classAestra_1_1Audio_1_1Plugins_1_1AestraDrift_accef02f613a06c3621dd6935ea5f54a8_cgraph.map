@@ -1,5 +1,7 @@
 <map id="Aestra::Audio::Plugins::AestraDrift::loadState" name="Aestra::Audio::Plugins::AestraDrift::loadState">
-<area shape="rect" id="Node000001" title="Load plugin state from binary data." alt="" coords="5,5,176,45"/>
-<area shape="rect" id="Node000002" href="$d3/d79/classAestra_1_1Audio_1_1Plugins_1_1AestraDrift.html#a1616e275d1fbb34da78becd04a70756c" title="Set parameter value (normalized 0&#45;1)" alt="" coords="224,5,419,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="176,23,210,23,210,28,176,28"/>
+<area shape="rect" id="Node000001" title="Load plugin state from binary data." alt="" coords="5,37,176,77"/>
+<area shape="rect" id="Node000002" href="$d3/d79/classAestra_1_1Audio_1_1Plugins_1_1AestraDrift.html#acac9a00d4f35aeceac497179f965beee" title="Get all parameter descriptors." alt="" coords="224,5,427,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="176,43,210,38,211,44,177,48"/>
+<area shape="rect" id="Node000003" href="$d3/d79/classAestra_1_1Audio_1_1Plugins_1_1AestraDrift.html#a1616e275d1fbb34da78becd04a70756c" title="Set parameter value (normalized 0&#45;1)" alt="" coords="228,69,423,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="177,66,215,72,214,77,176,72"/>
 </map>

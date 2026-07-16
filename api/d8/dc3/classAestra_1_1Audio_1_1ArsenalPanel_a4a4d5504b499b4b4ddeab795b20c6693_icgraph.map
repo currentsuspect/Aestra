@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::ArsenalPanel::onDragOver" name="Aestra::Audio::ArsenalPanel::onDragOver">
+<area shape="rect" id="Node000001" title="Handle drag&#45;over for plugin/sample drops." alt="" coords="255,5,456,45"/>
+<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a7266ec7364ef44a8d24ab10258278d97" title="Handle drag&#45;enter for plugin/sample drops." alt="" coords="5,5,207,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="241,28,207,28,207,23,241,23"/>
+</map>

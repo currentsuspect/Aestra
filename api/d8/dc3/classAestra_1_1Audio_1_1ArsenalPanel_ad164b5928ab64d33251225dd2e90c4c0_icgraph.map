@@ -1,9 +1,16 @@
 <map id="Aestra::Audio::ArsenalPanel::unregisterDropTargets" name="Aestra::Audio::ArsenalPanel::unregisterDropTargets">
-<area shape="rect" id="Node000001" title="Unregister the panel and current rows from drag/drop." alt="" coords="504,37,705,77"/>
-<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#afcb4b10be1a700b9e7c2998f9d7c541f" title="Rebuild the UI rows from the current UnitManager state." alt="" coords="255,5,456,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="490,45,456,41,457,36,491,40"/>
-<area shape="rect" id="Node000004" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a9ebac6a3fb72a7a5332da7a397f4cadc" title="Destroy the Arsenal sequencer panel." alt="" coords="255,69,456,109"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="491,75,457,79,456,74,490,69"/>
+<area shape="rect" id="Node000001" title="Unregister the panel and current rows from drag/drop." alt="" coords="504,133,705,173"/>
+<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#afcb4b10be1a700b9e7c2998f9d7c541f" title="Rebuild the UI rows from the current UnitManager state." alt="" coords="255,101,456,141"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="490,141,456,137,457,132,491,136"/>
+<area shape="rect" id="Node000007" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a9ebac6a3fb72a7a5332da7a397f4cadc" title="Destroy the Arsenal sequencer panel." alt="" coords="255,165,456,205"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="491,171,457,175,456,170,490,165"/>
+<area shape="poly" id="edge5_Node000002_Node000002" title=" " alt="" coords="398,90,383,83,355,80,331,82,317,87,312,93,314,100,309,102,306,92,314,82,330,77,355,75,384,78,400,85"/>
 <area shape="rect" id="Node000003" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a054437827bbf8d4cda98b022cb03669e" title="Create the Arsenal sequencer panel." alt="" coords="5,5,207,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="241,28,207,28,207,23,241,23"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="297,98,206,60,172,48,174,43,208,55,299,93"/>
+<area shape="rect" id="Node000004" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a96d188406be91124f4c413783ae273d7" title="Commit a drop operation onto the Arsenal panel." alt="" coords="5,69,207,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="241,109,207,105,207,100,241,104"/>
+<area shape="rect" id="Node000005" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aa25fcc7b11ea29f5a00382d1c0c2ce7b" title="Paste clipboard notes into the selected unit." alt="" coords="5,133,207,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="241,139,207,143,207,138,241,133"/>
+<area shape="rect" id="Node000006" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aabded31db5191dc40f6eeb98d4054eb8" title="Set the active pattern edited by Arsenal." alt="" coords="5,197,207,237"/>
+<area shape="poly" id="edge6_Node000002_Node000006" title=" " alt="" coords="271,149,256,156,232,172,208,188,179,200,177,195,205,183,229,167,253,151,269,144"/>
 </map>

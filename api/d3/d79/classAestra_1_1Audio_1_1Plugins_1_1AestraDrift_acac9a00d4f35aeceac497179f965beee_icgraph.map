@@ -1,5 +1,7 @@
 <map id="Aestra::Audio::Plugins::AestraDrift::getParameters" name="Aestra::Audio::Plugins::AestraDrift::getParameters">
-<area shape="rect" id="Node000001" title="Get all parameter descriptors." alt="" coords="217,5,420,45"/>
-<area shape="rect" id="Node000002" href="$d3/d79/classAestra_1_1Audio_1_1Plugins_1_1AestraDrift.html#ac4eb95f4d8d54e12c2ab7b8ed2871bd0" title="Initialize the plugin for processing." alt="" coords="5,5,169,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="204,28,170,28,170,23,204,23"/>
+<area shape="rect" id="Node000001" title="Get all parameter descriptors." alt="" coords="224,37,427,77"/>
+<area shape="rect" id="Node000002" href="$d3/d79/classAestra_1_1Audio_1_1Plugins_1_1AestraDrift.html#ac4eb95f4d8d54e12c2ab7b8ed2871bd0" title="Initialize the plugin for processing." alt="" coords="9,5,173,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="210,44,173,39,173,34,211,39"/>
+<area shape="rect" id="Node000003" href="$d3/d79/classAestra_1_1Audio_1_1Plugins_1_1AestraDrift.html#accef02f613a06c3621dd6935ea5f54a8" title="Load plugin state from binary data." alt="" coords="5,69,176,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="211,76,176,80,176,75,210,70"/>
 </map>

@@ -1,0 +1,14 @@
+<map id="Aestra::Audio::ArsenalPanel::registerDropTargets" name="Aestra::Audio::ArsenalPanel::registerDropTargets">
+<area shape="rect" id="Node000001" title="Register the panel and current rows for lifecycle&#45;scoped drag/drop." alt="" coords="504,101,705,141"/>
+<area shape="rect" id="Node000002" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#afcb4b10be1a700b9e7c2998f9d7c541f" title="Rebuild the UI rows from the current UnitManager state." alt="" coords="255,101,456,141"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="490,124,456,124,456,119,490,119"/>
+<area shape="poly" id="edge5_Node000002_Node000002" title=" " alt="" coords="398,90,383,83,355,80,331,82,317,87,312,93,314,100,309,102,306,92,314,82,330,77,355,75,384,78,400,85"/>
+<area shape="rect" id="Node000003" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a054437827bbf8d4cda98b022cb03669e" title="Create the Arsenal sequencer panel." alt="" coords="5,5,207,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="297,98,206,60,172,48,174,43,208,55,299,93"/>
+<area shape="rect" id="Node000004" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#a96d188406be91124f4c413783ae273d7" title="Commit a drop operation onto the Arsenal panel." alt="" coords="5,69,207,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="241,109,207,105,207,100,241,104"/>
+<area shape="rect" id="Node000005" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aa25fcc7b11ea29f5a00382d1c0c2ce7b" title="Paste clipboard notes into the selected unit." alt="" coords="5,133,207,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="241,139,207,143,207,138,241,133"/>
+<area shape="rect" id="Node000006" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html#aabded31db5191dc40f6eeb98d4054eb8" title="Set the active pattern edited by Arsenal." alt="" coords="5,197,207,237"/>
+<area shape="poly" id="edge6_Node000002_Node000006" title=" " alt="" coords="299,150,208,188,174,200,172,195,206,183,297,145"/>
+</map>
