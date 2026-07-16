@@ -29,6 +29,13 @@ bool notesEqualPosition(const Aestra::Audio::MidiNote& a, const Aestra::Audio::M
            a.unitId == b.unitId;
 }
 
+/**
+ * Expression inequality: velocity or pan changed on an otherwise-identical note.
+ */
+bool notesExpressionDiffers(const Aestra::Audio::MidiNote& a, const Aestra::Audio::MidiNote& b) {
+    return std::abs(a.velocity - b.velocity) > 1e-4f || std::abs(a.pan - b.pan) > 1e-4f;
+}
+
 } // anonymous namespace
 
 namespace Aestra {
@@ -54,6 +61,11 @@ NoteDiffResult diffNotes(const std::vector<MidiNote>& before,
             if (notesEqualFull(bnote, after[ai])) {
                 matchedBefore.insert(bi);
                 matchedAfter.insert(ai);
+                // Full-field equality ignores expression, so a velocity/pan
+                // change on an otherwise-untouched note surfaces here.
+                if (notesExpressionDiffers(bnote, after[ai])) {
+                    result.modified.push_back({bnote, after[ai]});
+                }
                 break;
             }
         }
@@ -132,11 +144,14 @@ NoteDiffResult diffNotes(const std::vector<MidiNote>& before,
             if (beforeUsed[bi] || afterUsed[ai]) continue;
             beforeUsed[bi] = true;
             afterUsed[ai] = true;
+            const auto& bnote = beforeVec[bi].second;
+            const auto& anote = afterVec[ai].second;
             if (dist >= 1e-6) {
                 // Non-exact match = resize
-                const auto& bnote = beforeVec[bi].second;
-                const auto& anote = afterVec[ai].second;
                 result.resized.push_back({bnote, anote});
+            } else if (notesExpressionDiffers(bnote, anote)) {
+                // Same position and duration but new velocity/pan.
+                result.modified.push_back({bnote, anote});
             }
         }
 
@@ -240,6 +255,7 @@ NoteDiffResult diffNotes(const std::vector<MidiNote>& before,
     sortNotes(result.added);
     sortPairs(result.resized);
     sortPairs(result.moved);
+    sortPairs(result.modified);
 
     return result;
 }

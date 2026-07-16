@@ -135,8 +135,8 @@ ScenarioResult runScenario(const std::filesystem::path& tempRoot,
     pattern->lengthBeats = kRenderBeats;
     pattern->payload = MidiPayload{};
     auto& notes = std::get<MidiPayload>(pattern->payload).notes;
-    notes.push_back(MidiNote{60, 0.0, 0.75, 120.0f, unitId});
-    notes.push_back(MidiNote{64, 1.0, 0.75, 110.0f, unitId});
+    notes.push_back(MidiNote{60, 0.0, 0.75, 120.0f, 0.0f, unitId});
+    notes.push_back(MidiNote{64, 1.0, 0.75, 110.0f, 0.0f, unitId});
 
     AudioEngine engine;
     require(engine.initialize(), "AudioEngine initialize failed");
@@ -249,8 +249,8 @@ void runMixedScenario(const std::filesystem::path& tempRoot, float trackVolume) 
     previewPattern->lengthBeats = kRenderBeats;
     previewPattern->payload = MidiPayload{};
     auto& previewNotes = std::get<MidiPayload>(previewPattern->payload).notes;
-    previewNotes.push_back(MidiNote{72, 0.0, 0.75, 120.0f, previewUnitId});
-    previewNotes.push_back(MidiNote{76, 1.0, 0.75, 110.0f, previewUnitId});
+    previewNotes.push_back(MidiNote{72, 0.0, 0.75, 120.0f, 0.0f, previewUnitId});
+    previewNotes.push_back(MidiNote{76, 1.0, 0.75, 110.0f, 0.0f, previewUnitId});
 
     PatternID trackPatternId = patternManager.createPattern();
     auto* trackPattern = patternManager.getPattern(trackPatternId);
@@ -260,8 +260,8 @@ void runMixedScenario(const std::filesystem::path& tempRoot, float trackVolume) 
     trackPattern->lengthBeats = kRenderBeats;
     trackPattern->payload = MidiPayload{};
     auto& trackNotes = std::get<MidiPayload>(trackPattern->payload).notes;
-    trackNotes.push_back(MidiNote{60, 0.0, 0.75, 120.0f, trackUnitId});
-    trackNotes.push_back(MidiNote{64, 1.0, 0.75, 110.0f, trackUnitId});
+    trackNotes.push_back(MidiNote{60, 0.0, 0.75, 120.0f, 0.0f, trackUnitId});
+    trackNotes.push_back(MidiNote{64, 1.0, 0.75, 110.0f, 0.0f, trackUnitId});
 
     AudioEngine engine;
     require(engine.initialize(), "AudioEngine initialize failed in mixed scenario");
@@ -387,7 +387,7 @@ void runIsolatedBounceScenario(const std::filesystem::path& tempRoot) {
     track0Pat->lengthBeats = kRenderBeats;
     track0Pat->payload = MidiPayload{};
     auto& tn0 = std::get<MidiPayload>(track0Pat->payload).notes;
-    tn0.push_back(MidiNote{72, 0.0, 0.75, 120.0f, track0Unit});
+    tn0.push_back(MidiNote{72, 0.0, 0.75, 120.0f, 0.0f, track0Unit});
 
     AudioEngine engine;
     require(engine.initialize(), "AudioEngine initialize failed in bounce scenario");

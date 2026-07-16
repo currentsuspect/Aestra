@@ -39,7 +39,7 @@ struct ScheduledEvent {
     /** @brief Second MIDI data byte, usually velocity. */
     uint8_t data2;        // 1 byte (velocity)
     /** @brief Event priority inside a frame. */
-    uint8_t priority;     // 1 byte (0=note-off first, 1=note-on second)
+    uint8_t priority;     // 1 byte (0=note-off, 1=per-note pan, 2=note-on)
     uint8_t _padding[6];  // 6 bytes -> Total 32.
 };
 static_assert(sizeof(ScheduledEvent) == 32, "ScheduledEvent must be 32 bytes");

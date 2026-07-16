@@ -448,8 +448,9 @@ void PatternBrowserPanel::onRender(AestraUI::NUIRenderer& renderer) {
     
     // Drag Over Feedback
     if (m_isDragOver) {
-        renderer.fillRoundedRect(bounds, 0.0f, m_selectedColor.withAlpha(0.1f));
-        renderer.strokeRect(bounds, 2.0f, m_selectedColor);
+        auto& theme = AestraUI::NUIThemeManager::getInstance();
+        renderer.fillRoundedRect(bounds, 0.0f, theme.getColor("dragTarget"));
+        renderer.strokeRect(bounds, 1.5f, theme.getColor("focusRing"));
     }
 
     renderHeader(renderer);
@@ -594,7 +595,7 @@ void PatternBrowserPanel::renderContent(AestraUI::NUIRenderer& renderer) {
         };
         renderer.fillRoundedRect(iconChip, 14.0f,
                                  dropActive ? accent.withAlpha(0.16f)
-                                            : theme.getColor("backgroundTertiary").withAlpha(0.52f));
+                                            : theme.getColor("controlBackground").withAlpha(0.52f));
         renderer.strokeRoundedRect(iconChip, 14.0f, 1.0f,
                                    dropActive ? accent.withAlpha(0.30f)
                                               : theme.getColor("border").withAlpha(0.22f));
@@ -730,7 +731,7 @@ void PatternBrowserPanel::renderPatternItem(AestraUI::NUIRenderer& renderer, con
 
     if (hovered && m_playIcon) {
         const AestraUI::NUIRect playButton = computePlayButtonRect(cardRect);
-        renderer.fillRoundedRect(playButton, themeProps.radiusM, theme.getColor("backgroundTertiary").withAlpha(0.80f));
+        renderer.fillRoundedRect(playButton, themeProps.radiusM, theme.getColor("controlBackground").withAlpha(0.80f));
         renderer.strokeRoundedRect(playButton, themeProps.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.38f));
         m_playIcon->setBounds(AestraUI::NUIRect(playButton.x + 3.5f, playButton.y + 3.0f, 10.0f, 10.0f));
         m_playIcon->setColor(theme.getColor("textPrimary").withAlpha(0.92f));
@@ -1021,7 +1022,7 @@ void PatternBrowserPanel::renderClipItem(AestraUI::NUIRenderer& renderer, const 
 
     if (hovered && m_playIcon) {
         const AestraUI::NUIRect playButton = computePlayButtonRect(cardRect);
-        renderer.fillRoundedRect(playButton, themeProps.radiusM, theme.getColor("backgroundTertiary").withAlpha(0.80f));
+        renderer.fillRoundedRect(playButton, themeProps.radiusM, theme.getColor("controlBackground").withAlpha(0.80f));
         renderer.strokeRoundedRect(playButton, themeProps.radiusM, 1.0f, theme.getColor("borderSubtle").withAlpha(0.38f));
         m_playIcon->setBounds(AestraUI::NUIRect(playButton.x + 3.5f, playButton.y + 3.0f, 10.0f, 10.0f));
         m_playIcon->setColor(theme.getColor("textPrimary").withAlpha(0.92f));

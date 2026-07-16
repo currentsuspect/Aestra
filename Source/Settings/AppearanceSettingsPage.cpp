@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AppearanceSettingsPage.h"
+#include "../AestraUI/Core/NUIThemeSystem.h"
 
 namespace Aestra {
 
@@ -10,6 +11,7 @@ AppearanceSettingsPage::AppearanceSettingsPage() {
 void AppearanceSettingsPage::createUI() {
     m_themeLabel = std::make_shared<AestraUI::NUILabel>();
     m_themeLabel->setText("UI Theme:");
+    m_themeLabel->setFontSize(AestraUI::NUIThemeManager::getInstance().getFontSize("m"));
     addChild(m_themeLabel);
 
     m_themeDropdown = std::make_shared<AestraUI::NUIDropdown>();
@@ -32,8 +34,9 @@ void AppearanceSettingsPage::onResize(int width, int height) {
 
 void AppearanceSettingsPage::layoutComponents() {
     auto b = getBounds();
-    float padding = 20.0f;
-    float rowHeight = 30.0f;
+    const auto& theme = AestraUI::NUIThemeManager::getInstance().getCurrentTheme();
+    float padding = theme.spacingM;
+    float rowHeight = theme.layout.standardControlHeight;
     float x = b.x + padding;
     float y = b.y + padding;
     

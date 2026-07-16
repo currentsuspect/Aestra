@@ -124,6 +124,8 @@ private:
         bool active = false;
         int note = 0;
         float velocity = 0.0f;
+        float gainL = 1.0f; // Per-note pan, latched at note-on (unity centre)
+        float gainR = 1.0f;
         double position = 0.0; // Sample index
         double playbackRate = 1.0; // sample index increment/frame
         double targetPlaybackRate = 1.0;
@@ -136,6 +138,11 @@ private:
 
     static constexpr int kMaxVoices = 32;
     std::array<Voice, kMaxVoices> m_voices;
+
+    // Per-note pan latch: the pattern scheduler sends pan as polyphonic
+    // aftertouch (0xA0, note, 0..127) just before the matching note-on, which
+    // consumes and re-centres its slot. Audio-thread only — no atomics needed.
+    std::array<uint8_t, 128> m_pendingNotePan{};
 
     // Helpers
     void handleMidiEvent(const MidiBuffer::Event& event, double baseRate,
