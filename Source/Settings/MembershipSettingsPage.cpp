@@ -152,24 +152,25 @@ MembershipSettingsPage::MembershipSettingsPage()
 }
 
 void MembershipSettingsPage::createUI() {
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
     m_titleLabel = std::make_shared<AestraUI::NUILabel>();
     m_titleLabel->setText("Account");
-    m_titleLabel->setFontSize(15.0f);
+    m_titleLabel->setFontSize(theme.getFontSize("xl"));
     addChild(m_titleLabel);
 
-    m_accountLabel = makeMembershipLabel(12.0f, 0.78f);
-    m_tierLabel = makeMembershipLabel(24.0f);
-    m_statusLabel = makeMembershipLabel(13.0f);
+    m_accountLabel = makeMembershipLabel(theme.getFontSize("m"), 0.78f);
+    m_tierLabel = makeMembershipLabel(theme.getFontSize("display-s"));
+    m_statusLabel = makeMembershipLabel(theme.getFontSize("m"));
     m_statusLabel->setBackgroundVisible(true);
     m_statusLabel->setBackgroundColor(AestraUI::NUIThemeManager::getInstance().getColor("accent").withAlpha(0.16f));
     m_statusLabel->setBorderVisible(true);
     m_statusLabel->setBorderColor(AestraUI::NUIThemeManager::getInstance().getColor("accent").withAlpha(0.34f));
     m_statusLabel->setBorderWidth(1.0f);
-    m_verificationLabel = makeMembershipLabel(12.0f, 0.72f);
-    m_syncLabel = makeMembershipLabel(12.0f, 0.72f);
-    m_lastRefreshLabel = makeMembershipLabel(12.0f, 0.72f);
-    m_detailLabel = makeMembershipLabel(13.0f, 0.80f);
-    m_featuresTitleLabel = makeMembershipLabel(13.0f);
+    m_verificationLabel = makeMembershipLabel(theme.getFontSize("m"), 0.72f);
+    m_syncLabel = makeMembershipLabel(theme.getFontSize("m"), 0.72f);
+    m_lastRefreshLabel = makeMembershipLabel(theme.getFontSize("m"), 0.72f);
+    m_detailLabel = makeMembershipLabel(theme.getFontSize("m"), 0.80f);
+    m_featuresTitleLabel = makeMembershipLabel(theme.getFontSize("l"));
     m_featuresTitleLabel->setText("Features");
 
     addChild(m_accountLabel);
@@ -183,12 +184,12 @@ void MembershipSettingsPage::createUI() {
 
     m_featureLabels.reserve(12);
     for (int i = 0; i < 12; ++i) {
-        auto row = makeMembershipLabel(12.0f, 0.78f);
+        auto row = makeMembershipLabel(theme.getFontSize("m"), 0.78f);
         m_featureLabels.push_back(row);
         addChild(row);
     }
 
-    m_signInTitleLabel = makeMembershipLabel(13.0f);
+    m_signInTitleLabel = makeMembershipLabel(theme.getFontSize("l"));
     m_signInTitleLabel->setText("Sign in");
     addChild(m_signInTitleLabel);
 
@@ -289,7 +290,7 @@ void MembershipSettingsPage::refreshDisplay() {
         m_featureLabels[i]->setText(rows[i]);
         const bool heading = rows[i] == "Available" || rows[i] == "Locked";
         const bool note = rows[i] == "Requires verified membership.";
-        m_featureLabels[i]->setFontSize(heading ? 12.0f : 11.5f);
+        m_featureLabels[i]->setFontSize(AestraUI::NUIThemeManager::getInstance().getFontSize(heading ? "m" : "s"));
         m_featureLabels[i]->setTextColor(
             AestraUI::NUIThemeManager::getInstance()
                 .getColor("textPrimary")
@@ -320,7 +321,7 @@ void MembershipSettingsPage::refreshDisplay() {
     m_featuresTitleLabel->setText("Features");
     for (std::size_t i = 0; i < m_featureLabels.size(); ++i) {
         m_featureLabels[i]->setText(i == 0 ? "+ Core DAW" : "");
-        m_featureLabels[i]->setFontSize(11.5f);
+        m_featureLabels[i]->setFontSize(AestraUI::NUIThemeManager::getInstance().getFontSize("s"));
         m_featureLabels[i]->setTextColor(
             AestraUI::NUIThemeManager::getInstance().getColor("textPrimary").withAlpha(0.76f));
         m_featureLabels[i]->setVisible(i == 0);
@@ -461,6 +462,7 @@ void MembershipSettingsPage::confirmSignOut() {
     m_showingSignOutConfirm = true;
     m_confirmCancelHovered = false;
     m_confirmSignOutHovered = false;
+    m_confirmPressedButton = -1;
 
     const AestraUI::NUIRect b = getBounds();
     const float dialogW = 400.0f;
@@ -494,6 +496,7 @@ void MembershipSettingsPage::onUpdate(double deltaTime) {
 
 void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const auto& props = theme.getCurrentTheme();
     const AestraUI::NUIRect b = getBounds();
     if (b.isEmpty()) return;
 
@@ -526,40 +529,44 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
         float cy = cb.y + 20.0f;
 
         // Tier label
-        renderer.drawText("MEMBERSHIP TIER", {cx, cy}, 11.0f, textTertiary);
+        renderer.drawText("MEMBERSHIP TIER", {cx, cy}, props.fontSizeS, textTertiary);
         cy += 16.0f;
 
         // Tier name
-        renderer.drawText(m_tierLabel->getText(), {cx, cy}, 26.0f, textPrimary);
+        renderer.drawText(m_tierLabel->getText(), {cx, cy}, props.fontSizeDisplayS, textPrimary);
         cy += 38.0f;
 
-        // Verified pill (top-right)
+        // Account status pill (top-right)
         {
-            const float pillW = 78.0f;
+            const std::string statusText = m_signedIn ? "Verified" : "Signed out";
+            const AestraUI::NUIColor statusColor = m_signedIn ? textSuccess : textTertiary;
+            const char* statusIcon = m_signedIn ? "shield-check" : "log-out";
+            const float pillW = std::max(78.0f,
+                                         renderer.measureText(statusText, props.fontSizeS).width + 40.0f);
             const float pillH = 22.0f;
             const float px = cb.right() - pillW - 20.0f;
             const float py = cb.y + 20.0f;
             renderer.fillRoundedRect(AestraUI::NUIRect(px, py, pillW, pillH), 999.0f,
-                                     theme.getColor("success").withAlpha(0.14f));
+                                     statusColor.withAlpha(m_signedIn ? 0.14f : 0.08f));
             renderer.strokeRoundedRect(AestraUI::NUIRect(px, py, pillW, pillH), 999.0f, 0.5f,
-                                       theme.getColor("success").withAlpha(0.35f));
-            drawMembershipIcon(renderer, "shield-check", px + 14.0f, py + pillH * 0.5f, 14.0f, textSuccess);
-            renderer.drawText("Verified", {px + 24.0f, py + 5.0f}, 11.0f, textSuccess);
+                                       statusColor.withAlpha(m_signedIn ? 0.35f : 0.22f));
+            drawMembershipIcon(renderer, statusIcon, px + 14.0f, py + pillH * 0.5f, 14.0f, statusColor);
+            renderer.drawText(statusText, {px + 24.0f, py + 5.0f}, props.fontSizeS, statusColor);
         }
 
         // Account meta rows
         drawMembershipIcon(renderer, "mail", cx + 7.0f, cy + 7.0f, 15.0f, textSecondary.withAlpha(0.6f));
         renderer.drawText(m_accountLabel->getText().empty() ? "currentsuspect@gmail.com"
                                                             : m_accountLabel->getText(),
-                          {cx + 20.0f, cy + 2.0f}, 13.0f, textSecondary);
+                          {cx + 20.0f, cy + 2.0f}, props.fontSizeM, textSecondary);
         cy += 22.0f;
         drawMembershipIcon(renderer, "file-badge", cx + 7.0f, cy + 7.0f, 15.0f, textSecondary.withAlpha(0.6f));
         renderer.drawText(m_verificationLabel->getText().empty() ? "Signed lease \u00b7 verified locally"
                                                                : m_verificationLabel->getText(),
-                          {cx + 20.0f, cy + 2.0f}, 13.0f, textSecondary);
+                          {cx + 20.0f, cy + 2.0f}, props.fontSizeM, textSecondary);
         cy += 22.0f;
         drawMembershipIcon(renderer, "clock", cx + 7.0f, cy + 7.0f, 15.0f, textSecondary.withAlpha(0.6f));
-        renderer.drawText("Last refresh: this session", {cx + 20.0f, cy + 2.0f}, 13.0f, textSecondary);
+        renderer.drawText("Last refresh: this session", {cx + 20.0f, cy + 2.0f}, props.fontSizeM, textSecondary);
     }
 
     // --- 2. FEATURES CARD ---
@@ -571,7 +578,7 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
 
         float fx = cb.x + 18.0f;
         float fy = cb.y + 16.0f;
-        renderer.drawText("FEATURES", {fx, fy}, 11.0f, textTertiary);
+        renderer.drawText("FEATURES", {fx, fy}, props.fontSizeS, textTertiary);
         fy += 24.0f;
 
         struct FeatureChip { const char* label; const char* iconName; const char* statusIcon; bool unlocked; };
@@ -614,13 +621,16 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
 
             auto iconCol = chips[i].unlocked ? textSecondary : textSecondary.withAlpha(0.45f);
             drawMembershipIcon(renderer, chips[i].iconName, ix + 20.0f, midY, 14.0f, iconCol);
-            renderer.drawText(chips[i].label, {ix + 36.0f, midY - 6.5f}, 13.0f, chipTextCol);
+            renderer.drawText(chips[i].label,
+                              {ix + 36.0f, renderer.calculateTextY(chipRect, props.fontSizeM)},
+                              props.fontSizeM, chipTextCol);
         }
 
         // Footer note
         float footY = fy + 4.0f * (chipH + chipGap) + 10.0f;
         drawMembershipIcon(renderer, "info", fx + 7.0f, footY + 7.0f, 14.0f, textTertiary);
-        renderer.drawText("Locked features require verified membership", {fx + 22.0f, footY + 3.0f}, 11.0f, textTertiary);
+        renderer.drawText("Locked features require verified membership", {fx + 22.0f, footY + 3.0f},
+                          props.fontSizeS, textTertiary);
     }
 
     // --- 3. SYNC & SESSION CARD ---
@@ -632,7 +642,7 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
 
         float sx = cb.x + 18.0f;
         float sy = cb.y + 16.0f;
-        renderer.drawText("SYNC & SESSION", {sx, sy}, 11.0f, textTertiary);
+        renderer.drawText("SYNC & SESSION", {sx, sy}, props.fontSizeS, textTertiary);
         sy += 28.0f;
 
         struct SyncRow { const char* iconName; const char* label; const char* value; bool muted; };
@@ -649,12 +659,17 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
                 renderer.drawLine({sx, ry + rowH}, {cb.right() - 18.0f, ry + rowH}, 0.5f, borderFaint);
             }
             drawMembershipIcon(renderer, rows[i].iconName, sx + 7.0f, ry + rowH * 0.5f, 15.0f, textSecondary.withAlpha(0.6f));
-            renderer.drawText(rows[i].label, {sx + 22.0f, ry + 9.0f}, 13.0f, textSecondary);
+            const AestraUI::NUIRect rowRect(sx, ry, cb.right() - 18.0f - sx, rowH);
+            renderer.drawText(rows[i].label, {sx + 22.0f, renderer.calculateTextY(rowRect, props.fontSizeM)},
+                              props.fontSizeM, textSecondary);
             auto valCol = (i == 0 && m_lastRefreshFailed) ? textDanger
                           : rows[i].muted               ? textTertiary
                                                         : textPrimary;
-            auto valSize = renderer.measureText(rows[i].value, 13.0f);
-            renderer.drawText(rows[i].value, {cb.right() - 18.0f - valSize.width, ry + 9.0f}, 13.0f, valCol);
+            auto valSize = renderer.measureText(rows[i].value, props.fontSizeM);
+            renderer.drawText(rows[i].value,
+                              {cb.right() - 18.0f - valSize.width,
+                               renderer.calculateTextY(rowRect, props.fontSizeM)},
+                              props.fontSizeM, valCol);
         }
         // TODO: bind Sync mode row to actual sync state when Cloud Sync is implemented
     }
@@ -678,12 +693,13 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
             renderer.strokeRoundedRect(rect, 8.0f, 0.5f, borderCol);
 
             // Measure content block width (icon + gap + text)
-            auto textSize = renderer.measureText(label, 13.0f);
+            auto textSize = renderer.measureText(label, props.fontSizeM);
             float contentW = 15.0f + 6.0f + textSize.width;
             float contentX = rect.x + (rect.width - contentW) * 0.5f;
             float midY = rect.y + rect.height * 0.5f;
             drawMembershipIcon(renderer, iconName, contentX + 7.5f, midY, 15.0f, textCol);
-            renderer.drawText(label, {contentX + 21.0f, midY - 6.5f}, 13.0f, textCol);
+            renderer.drawText(label, {contentX + 21.0f, renderer.calculateTextY(rect, props.fontSizeM)},
+                              props.fontSizeM, textCol);
         };
 
         const char* refreshLabel = m_isRefreshing ? "Refreshing\u2026" : "Refresh license";
@@ -694,7 +710,7 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
         // Inline error below actions row
         if (!m_actionErrorMessage.empty()) {
             float errY = m_actionsRowBounds.bottom() + 8.0f;
-            renderer.drawText(m_actionErrorMessage, {m_actionsRowBounds.x, errY}, 12.0f, textDanger);
+            renderer.drawText(m_actionErrorMessage, {m_actionsRowBounds.x, errY}, props.fontSizeM, textDanger);
         }
     }
 
@@ -708,49 +724,53 @@ void MembershipSettingsPage::onRender(AestraUI::NUIRenderer& renderer) {
         if (!m_signInMessage.empty()) {
             const bool positive = m_signInMessage.find("sent") != std::string::npos ||
                                   m_signInMessage.find("Signed in") != std::string::npos;
-            const auto msgColor = positive ? AestraUI::NUIColor(0.45f, 0.78f, 0.55f, 1.0f) // green
-                                            : textSecondary;
-            renderer.drawText(m_signInMessage, {b.x + 20.0f, m_signInFormBottomY + 10.0f}, 12.0f, msgColor);
+            const auto msgColor = positive ? theme.getColor("success") : textSecondary;
+            renderer.drawText(m_signInMessage, {b.x + 20.0f, m_signInFormBottomY + 10.0f},
+                              props.fontSizeM, msgColor);
         }
     }
 
     // --- 6. SIGN-OUT CONFIRMATION OVERLAY ---
     if (m_showingSignOutConfirm) {
         // Dim overlay
-        renderer.fillRect(b, AestraUI::NUIColor(0.0f, 0.0f, 0.0f, 0.5f));
+        renderer.fillRect(b, theme.getColor("overlay"));
 
         // Dialog
         auto& db = m_confirmDialogBounds;
-        renderer.fillRoundedRect(db, 10.0f, bgSecondary);
-        renderer.strokeRoundedRect(db, 10.0f, 0.5f, borderFaint);
+        renderer.fillRoundedRect(db, props.radiusL, theme.getColor("elevatedPanel"));
+        renderer.strokeRoundedRect(db, props.radiusL, props.layout.dividerWidth, theme.getColor("borderStrong"));
 
         float dx = db.x + 24.0f;
         float dy = db.y + 28.0f;
-        renderer.drawText("Sign out of Aestra?", {dx, dy}, 15.0f, textPrimary);
+        renderer.drawText("Sign out of Aestra?", {dx, dy}, props.fontSizeXL, textPrimary);
         dy += 26.0f;
         renderer.drawText("Your local license cache will be cleared. You'll need to sign in",
-                          {dx, dy}, 12.0f, textSecondary);
+                          {dx, dy}, props.fontSizeM, textSecondary);
         renderer.drawText("again to access your membership features.",
-                          {dx, dy + 16.0f}, 12.0f, textSecondary);
+                          {dx, dy + 16.0f}, props.fontSizeM, textSecondary);
 
         // Cancel button
         {
             const auto& btn = m_confirmCancelBtnBounds;
-            auto btnBg = m_confirmCancelHovered ? bgTertiary : bgSecondary;
-            auto btnBorder = borderFaint;
-            renderer.fillRoundedRect(btn, 6.0f, btnBg);
-            renderer.strokeRoundedRect(btn, 6.0f, 0.5f, btnBorder);
-            renderer.drawTextCentered("Cancel", btn, 13.0f, textSecondary);
+            auto btnBg = m_confirmPressedButton == 0 ? theme.getColor("controlPressed")
+                                                     : m_confirmCancelHovered ? theme.getColor("controlHover")
+                                                                               : theme.getColor("controlBackground");
+            renderer.fillRoundedRect(btn, props.radiusM, btnBg);
+            renderer.strokeRoundedRect(btn, props.radiusM, props.layout.dividerWidth,
+                                       theme.getColor("borderStrong"));
+            renderer.drawTextCentered("Cancel", btn, props.fontSizeM, textSecondary);
         }
 
         // Sign out button (danger)
         {
             const auto& btn = m_confirmSignOutBtnBounds;
-            auto btnBg = m_confirmSignOutHovered ? textDanger.withAlpha(0.18f) : textDanger.withAlpha(0.08f);
+            auto btnBg = m_confirmPressedButton == 1 ? textDanger.withAlpha(0.26f)
+                                                     : m_confirmSignOutHovered ? textDanger.withAlpha(0.18f)
+                                                                                 : textDanger.withAlpha(0.08f);
             auto btnBorder = textDanger.withAlpha(0.45f);
-            renderer.fillRoundedRect(btn, 6.0f, btnBg);
-            renderer.strokeRoundedRect(btn, 6.0f, 0.5f, btnBorder);
-            renderer.drawTextCentered("Sign out", btn, 13.0f, textDanger);
+            renderer.fillRoundedRect(btn, props.radiusM, btnBg);
+            renderer.strokeRoundedRect(btn, props.radiusM, props.layout.dividerWidth, btnBorder);
+            renderer.drawTextCentered("Sign out", btn, props.fontSizeM, textDanger);
         }
     }
 }
@@ -775,24 +795,31 @@ bool MembershipSettingsPage::onMouseEvent(const AestraUI::NUIMouseEvent& event) 
             repaint();
         }
 
-        if (event.pressed) {
-            if (m_confirmCancelBtnBounds.contains(mx, my)) {
+        if (event.button == AestraUI::NUIMouseButton::Left && event.pressed) {
+            m_confirmPressedButton = m_confirmCancelHovered ? 0
+                                     : m_confirmSignOutHovered ? 1
+                                     : !m_confirmDialogBounds.contains(mx, my) ? 2
+                                                                                : -1;
+            repaint();
+            return true;
+        }
+        if (event.button == AestraUI::NUIMouseButton::Left && event.released) {
+            const int armedButton = m_confirmPressedButton;
+            m_confirmPressedButton = -1;
+            if ((armedButton == 0 && m_confirmCancelHovered) ||
+                (armedButton == 2 && !m_confirmDialogBounds.contains(mx, my))) {
                 m_showingSignOutConfirm = false;
                 repaint();
                 return true;
             }
-            if (m_confirmSignOutBtnBounds.contains(mx, my)) {
+            if (armedButton == 1 && m_confirmSignOutHovered) {
                 m_showingSignOutConfirm = false;
                 signOut();
                 if (m_onSignOutConfirmed) m_onSignOutConfirmed();
                 return true;
             }
-            // Click outside dialog = cancel
-            if (!m_confirmDialogBounds.contains(mx, my)) {
-                m_showingSignOutConfirm = false;
-                repaint();
-                return true;
-            }
+            repaint();
+            return true;
         }
         return true; // Consume all mouse events while modal is open
     }

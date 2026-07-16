@@ -81,6 +81,7 @@ private:
     // Button hover states
     bool m_recoverHovered;
     bool m_discardHovered;
+    RecoveryResponse m_pressedResponse{RecoveryResponse::None};
     
     // Button rectangles (calculated during render)
     AestraUI::NUIRect m_recoverButtonRect;
