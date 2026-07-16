@@ -401,7 +401,7 @@ void UnitRow::drawContextBlock(NUIRenderer& renderer, const NUIRect& bounds) {
                 if (note.unitId != m_unitId && note.unitId != 0) continue;
                 unitHasContent = true;
                 if (m_type == Aestra::Audio::UnitType::Sampler &&
-                    (note.unitId == 0 || note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01)) {
+                    (note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01)) {
                     noteRollMode = true;
                 }
                 const int startStep = std::clamp(static_cast<int>(std::floor(note.startBeat / 0.25 + 0.0001)), 0, m_stepCount - 1);
@@ -593,7 +593,7 @@ bool UnitRow::shouldUseNoteRoll() const {
     return std::any_of(midi.notes.begin(), midi.notes.end(), [this](const Aestra::Audio::MidiNote& note) {
         const bool belongsToUnit = note.unitId == m_unitId || note.unitId == 0;
         return belongsToUnit &&
-               (note.unitId == 0 || note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01);
+               (note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01);
     });
 }
 
