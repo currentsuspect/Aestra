@@ -88,10 +88,10 @@ NUIContextMenu::NUIContextMenu()
     
     // Apply Aestra theme colors - using the new layered system
     auto& themeManager = NUIThemeManager::getInstance();
-    backgroundColor_ = themeManager.getColor("surfaceTertiary");      // #242428 - Dialogs/popups
-    borderColor_ = themeManager.getColor("borderActive");             // #8B7FFF - Active purple border
+    backgroundColor_ = themeManager.getColor("elevatedPanel");
+    borderColor_ = themeManager.getColor("borderStrong");
     textColor_ = themeManager.getColor("textPrimary");                // #E5E5E8 - Main text
-    hoverColor_ = themeManager.getColor("primary");                   // #8B7FFF - Aestra purple highlight
+    hoverColor_ = themeManager.getColor("controlHover");
     separatorColor_ = themeManager.getColor("borderSubtle");          // #2c2c2f - Subtle dividers
     shortcutColor_ = themeManager.getColor("textSecondary");          // #A6A6AA - Muted shortcuts
 }
@@ -128,7 +128,7 @@ void NUIContextMenu::onRender(NUIRenderer& renderer)
 
 bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
 {
-    if (!isVisible()) return false;
+    if (!isVisible() || !isEnabled()) return false;
 
     // This UI tree lays popup/menu bounds in the same absolute/window space
     // as incoming mouse events, so hit-test against raw bounds here.
@@ -191,7 +191,7 @@ bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
 
 bool NUIContextMenu::onKeyEvent(const NUIKeyEvent& event)
 {
-    if (!isVisible()) return false;
+    if (!isVisible() || !isEnabled()) return false;
 
     if (event.pressed)
     {
@@ -506,17 +506,17 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
 
     NUIRect itemRect = getItemRect(index);
     
-    // Draw hover background with Aestra's purple highlight
-    if (index == hoveredItemIndex_)
-    {
-        auto& themeManager = NUIThemeManager::getInstance();
-        NUIColor purpleHighlight = themeManager.getColor("primary").withAlpha(0.15f);
-        renderer.fillRoundedRect(itemRect, 2.0f, purpleHighlight);
+    auto& themeManager = NUIThemeManager::getInstance();
+    const auto& props = themeManager.getCurrentTheme();
+    if (index == pressedItemIndex_ && item->isEnabled()) {
+        renderer.fillRoundedRect(itemRect, props.radiusS, themeManager.getColor("controlPressed"));
+    } else if (index == hoveredItemIndex_ && item->isEnabled()) {
+        renderer.fillRoundedRect(itemRect, props.radiusS, hoverColor_);
     }
     
     // Draw item content
     float x = itemRect.x + itemPadding_ + 4.0f;
-    const float itemFontSize = 13.0f;
+    const float itemFontSize = props.fontSizeM;
     float y = std::round(renderer.calculateTextY(itemRect, itemFontSize));
     
     // Draw icon if present
@@ -536,8 +536,6 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
         float indicatorSize = 14.0f;
         float indicatorY = itemRect.y + (itemRect.height - indicatorSize) * 0.5f;
         NUIRect indicatorRect(x, indicatorY, indicatorSize, indicatorSize);
-        
-        auto& themeManager = NUIThemeManager::getInstance();
         
         if (item->getType() == NUIContextMenuItem::Type::Checkbox)
         {
@@ -580,15 +578,14 @@ void NUIContextMenu::drawItem(NUIRenderer& renderer, std::shared_ptr<NUIContextM
     }
     
     // Draw text
-    NUIColor textColor = item->isEnabled() ? textColor_ : textColor_.withAlpha(0.4f);
+    NUIColor textColor = item->isEnabled() ? textColor_ : themeManager.getColor("textDisabled");
     renderer.drawText(item->getText(), NUIPoint(x, y), itemFontSize, textColor);
     
     // Draw shortcut
     if (!item->getShortcut().empty())
     {
-        auto& themeManager = NUIThemeManager::getInstance();
         float shortcutX = itemRect.x + itemRect.width - itemPadding_ - 60.0f;
-        const float shortcutFontSize = 12.0f;
+        const float shortcutFontSize = props.fontSizeS;
         float shortcutY = std::round(renderer.calculateTextY(itemRect, shortcutFontSize));
         renderer.drawText(item->getShortcut(), NUIPoint(shortcutX, shortcutY), shortcutFontSize, themeManager.getColor("textSecondary"));
     }

@@ -967,6 +967,12 @@ add_executable(AestraWavLoaderTest AestraAudio/WavLoaderTest.cpp)
 target_link_libraries(AestraWavLoaderTest PRIVATE AestraAudio)
 add_test(NAME AestraWavLoaderTest COMMAND AestraWavLoaderTest)
 
+# Arsenal content-type transition regression
+add_executable(ArsenalUnitTypeTransitionTest AestraAudio/ArsenalUnitTypeTransitionTest.cpp)
+target_link_libraries(ArsenalUnitTypeTransitionTest PRIVATE AestraAudio)
+add_test(NAME ArsenalUnitTypeTransitionTest COMMAND ArsenalUnitTypeTransitionTest)
+set_tests_properties(ArsenalUnitTypeTransitionTest PROPERTIES LABELS "audio;arsenal;unit-type")
+
 # Audition Engine lifecycle regression
 add_executable(AestraAuditionEngineLifecycleTest AestraAudio/AuditionEngineLifecycleTest.cpp)
 target_link_libraries(AestraAuditionEngineLifecycleTest PRIVATE AestraAudio)
@@ -1701,6 +1707,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeJSONTest.cpp")
     add_test(NAME NUIThemeJSONTest COMMAND NUIThemeJSONTest)
     set_tests_properties(NUIThemeJSONTest PROPERTIES LABELS "ui;theme")
     message(STATUS "NUIThemeJSONTest added - Issue #259 theme JSON loading test")
+endif()
+
+if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeConsistencyTest.cpp")
+    add_executable(NUIThemeConsistencyTest AestraUI/NUIThemeConsistencyTest.cpp)
+    target_link_libraries(NUIThemeConsistencyTest PRIVATE AestraUI_Core)
+    add_test(NAME NUIThemeConsistencyTest COMMAND NUIThemeConsistencyTest)
+    set_tests_properties(NUIThemeConsistencyTest PROPERTIES LABELS "ui;theme;consistency")
+else()
+    message(STATUS "NUIThemeConsistencyTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # KeyboardNoteInput Test — musical-typing translation logic (header-only, no

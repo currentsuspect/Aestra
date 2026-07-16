@@ -1,5 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "PianoRollInteraction.h"
+#include <algorithm>
+#include <cmath>
 
 namespace AestraUI {
 
@@ -13,7 +15,9 @@ int findNoteAtLocal(const std::vector<MidiNote>& notes,
 
         float nx = static_cast<float>(n.startBeat * pixelsPerBeat);
         float ny = (127 - n.pitch) * keyHeight;
-        float nw = static_cast<float>(n.durationBeats * pixelsPerBeat);
+        // Zoomed far out a short note renders ~1px wide; keep a few pixels of
+        // click target so it stays selectable.
+        float nw = std::max(4.0f, static_cast<float>(n.durationBeats * pixelsPerBeat));
         float nh = keyHeight;
 
         if (localX >= nx && localX < nx + nw &&
@@ -41,6 +45,21 @@ bool isNoteInSelectionBox(const MidiNote& note,
 
     return !(nx + nw <= normX || nx >= normX + normW ||
              ny + nh <= normY || ny >= normY + normH);
+}
+
+float velocityFromPanelPosition(float pointerY, float bottomY, float availableHeight) {
+    if (!std::isfinite(pointerY) || !std::isfinite(bottomY) ||
+        !std::isfinite(availableHeight) || availableHeight <= 0.0f) {
+        return 0.0f;
+    }
+    return std::clamp((bottomY - pointerY) / availableHeight, 0.0f, 1.0f);
+}
+
+float velocityToPanelHeight(float velocity, float availableHeight) {
+    if (!std::isfinite(velocity) || !std::isfinite(availableHeight) || availableHeight <= 0.0f) {
+        return 0.0f;
+    }
+    return std::clamp(velocity, 0.0f, 1.0f) * availableHeight;
 }
 
 } // namespace AestraUI

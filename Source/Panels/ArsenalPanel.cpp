@@ -20,7 +20,7 @@ const char* unitTypeDisplayName(UnitType type) {
     switch (type) {
     case UnitType::Sampler: return "Sampler";
     case UnitType::PitchedSampler: return "808";
-    case UnitType::Instrument: return "Instrument";
+    case UnitType::Instrument: return "MIDI";
     case UnitType::Audio: return "Audio";
     default: return "Sampler";
     }
@@ -30,7 +30,7 @@ const char* unitTypeDescription(UnitType type) {
     switch (type) {
     case UnitType::Sampler: return "Classic step sequencer";
     case UnitType::PitchedSampler: return "808s, bass, slides";
-    case UnitType::Instrument: return "Melodies and chords";
+    case UnitType::Instrument: return "Notes, chords, instruments";
     case UnitType::Audio: return "Drop a clip directly";
     default: return "";
     }
@@ -43,7 +43,7 @@ std::string unitTypeContentLabel(UnitType type, int stepCount, double durationSe
     case UnitType::PitchedSampler:
         return std::to_string(stepCount) + " Steps · Pitched";
     case UnitType::Instrument:
-        return "Piano Roll";
+        return "Note Roll";
     case UnitType::Audio: {
         if (durationSeconds > 0.0) {
             const int total = static_cast<int>(std::round(durationSeconds));
@@ -95,6 +95,22 @@ bool isAudioFileDrag(const AestraUI::DragData& data) {
     return ext == "wav" || ext == "mp3" || ext == "flac" || ext == "ogg" || ext == "aiff";
 }
 
+bool patternUsesNoteRoll(const PatternSource* pattern, UnitID unitId, UnitType type) {
+    if (type == UnitType::Instrument) {
+        return true;
+    }
+    if (type != UnitType::Sampler || !pattern || !pattern->isMidi()) {
+        return false;
+    }
+
+    const auto& midi = std::get<MidiPayload>(pattern->payload);
+    return std::any_of(midi.notes.begin(), midi.notes.end(), [unitId](const MidiNote& note) {
+        const bool belongsToUnit = note.unitId == unitId || note.unitId == 0;
+        return belongsToUnit &&
+               (note.pitch != 60 || std::abs(note.durationBeats - 0.25) > 0.01);
+    });
+}
+
 float safeClampPanelScroll(float value, float upper) {
     if (!std::isfinite(value) || !std::isfinite(upper) || upper <= 0.0f) {
         return 0.0f;
@@ -120,7 +136,7 @@ void drawArsenalChip(AestraUI::NUIRenderer& renderer,
 } // namespace
 
 ArsenalPanel::ArsenalPanel(std::shared_ptr<TrackManager> trackManager)
-    : WindowPanel("")
+    : WindowPanel("ARSENAL")
     , m_trackManager(std::move(trackManager))
 {
     // setId("ArsenalPanel"); // Handled by WindowPanel title
@@ -175,40 +191,6 @@ void ArsenalPanel::refreshUnits() {
     m_listContainer->removeAllChildren();
     m_unitRows.clear();
 
-    // Add Play Button (Top Left of Header)
-    {
-        m_playBtn = std::make_shared<NUIButton>("PLAY");
-        m_playBtn->setId("ArsenalPlayBtn");
-        m_playBtn->setBackgroundColor(theme.getColor("accentPrimary"));
-        m_playBtn->setTextColor(theme.getColor("textOnAccent"));
-        
-        // Initial State
-        if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
-            m_playBtn->setText("STOP");
-            m_playBtn->setBackgroundColor(theme.getColor("error"));
-        }
-        
-        std::weak_ptr<NUIButton> weakBtn = m_playBtn;
-        m_playBtn->setOnClick([this, weakBtn]() {
-             if (auto btn = weakBtn.lock()) {
-                 Log::info("[ArsenalPanel] Play clicked. activePatternID=" + 
-                     std::to_string(m_activePatternID.value) + " isValid=" + 
-                     std::to_string(m_activePatternID.isValid()));
-                 if (m_trackManager->isPlaying() && m_trackManager->isPatternMode()) {
-                     m_trackManager->stopArsenalPlayback(true);
-                 } else {
-                     if (m_onRequestPlaybackActivation) {
-                         m_onRequestPlaybackActivation();
-                     }
-                     m_trackManager->playPatternInArsenal(m_activePatternID);
-                 }
-             }
-        });
-        m_listContainer->addChild(m_playBtn);
-    }
-    
-
-    
     // Build unit rows
     auto& unitMgr = m_trackManager->getUnitManager();
     auto unitIDs = unitMgr.getAllUnitIDs();
@@ -315,16 +297,14 @@ void ArsenalPanel::refreshUnits() {
     }
     
     // Add "Add Unit" button
-    auto addBtn = std::make_shared<NUIButton>("+ Add Unit");
-    addBtn->setStyle(NUIButton::Style::Secondary);
-    addBtn->setBackgroundColor(NUIColor::transparent());
-    addBtn->setHoverColor(theme.getColor("surfaceSecondary").withAlpha(0.45f));
-    addBtn->setPressedColor(theme.getColor("surfaceSecondary").withAlpha(0.32f));
-    addBtn->setTextColor(theme.getColor("textSecondary").withAlpha(0.5f));
-    addBtn->setOnClick([this]() {
-        onAddUnit();
-    });
-    m_listContainer->addChild(addBtn);
+    m_addUnitBtn = std::make_shared<NUIButton>("+ ADD UNIT");
+    m_addUnitBtn->setStyle(NUIButton::Style::Secondary);
+    m_addUnitBtn->setBackgroundColor(theme.getColor("surfaceTertiary").withAlpha(0.88f));
+    m_addUnitBtn->setHoverColor(theme.getColor("accentPrimary").withAlpha(0.20f));
+    m_addUnitBtn->setPressedColor(theme.getColor("accentPrimary").withAlpha(0.30f));
+    m_addUnitBtn->setTextColor(theme.getColor("textPrimary").withAlpha(0.92f));
+    m_addUnitBtn->setOnClick([this]() { onAddUnit(); });
+    m_listContainer->addChild(m_addUnitBtn);
     
     layoutUnits();
     syncRowSelection();
@@ -339,6 +319,7 @@ void ArsenalPanel::refreshUnits() {
 
 void ArsenalPanel::onAddUnit() {
     m_showUnitTypePicker = !m_showUnitTypePicker;
+    if (m_addUnitBtn) m_addUnitBtn->setText(m_showUnitTypePicker ? "CLOSE" : "+ ADD UNIT");
     repaint();
 }
 
@@ -347,12 +328,13 @@ void ArsenalPanel::createUnitOfType(UnitType type) {
     const auto count = m_trackManager->getUnitManager().getUnitCount() + 1;
     std::string name = (type == UnitType::Sampler ? "Sampler " :
                         type == UnitType::PitchedSampler ? "808 " :
-                        type == UnitType::Instrument ? "Instrument " : "Audio ") + std::to_string(count);
+                        type == UnitType::Instrument ? "MIDI " : "Audio ") + std::to_string(count);
     m_selectedUnitId = m_trackManager->getUnitManager().createUnit(name, type);
     if (m_onSelectedUnitChanged) {
         m_onSelectedUnitChanged(m_selectedUnitId);
     }
     m_showUnitTypePicker = false;
+    if (m_addUnitBtn) m_addUnitBtn->setText("+ ADD UNIT");
     refreshUnits();
 }
 
@@ -527,54 +509,75 @@ void ArsenalPanel::ensureDefaultPattern() {
 }
 
 void ArsenalPanel::onRender(NUIRenderer& renderer) {
-    // The base WindowPanel::onRender will handle its own background, title, and children rendering.
     WindowPanel::onRender(renderer);
+    drawCommandHeader(renderer);
+    if (m_listContainer && isVisible()) drawProgressHeader(renderer, m_progressHeaderRect);
 
-    auto& theme = NUIThemeManager::getInstance();
-    const auto bounds = getBounds();
-
-    std::string patternName = "Pattern";
-    std::string trackContext = "No Track";
-    if (m_trackManager && m_activePatternID.isValid()) {
-        if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID)) {
-            if (!pattern->name.empty()) {
-                patternName = pattern->name;
-            }
-        }
-    }
-    if (m_trackManager && m_selectedUnitId != 0) {
-        if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
-            if (!unit->name.empty()) {
-                trackContext = unit->name;
-            }
-        }
-    }
-    const auto& themeProps = theme.getCurrentTheme();
-    renderer.drawText(patternName,
-                      NUIPoint(bounds.x + 12.0f, bounds.y + 5.0f),
-                      themeProps.fontSizeXS,
-                      theme.getColor("textPrimary").withAlpha(0.9f));
-    renderer.drawText(patternName + " · " + trackContext,
-                      NUIPoint(bounds.x + 12.0f, bounds.y + 16.0f),
-                      8.5f,
-                      theme.getColor("textSecondary").withAlpha(0.5f));
-
-    // Render progress header (step indicators above grid)
-    if (m_listContainer && isVisible()) {
-        NUIRect containerBounds = m_listContainer->getBounds();
-        NUIRect headerBounds(containerBounds.x, containerBounds.y, 
-                            containerBounds.width, PROGRESS_HEADER_HEIGHT);
-        drawProgressHeader(renderer, headerBounds);
-    }
+    // The custom header surfaces are drawn after WindowPanel's child pass.
+    if (m_addUnitBtn) m_addUnitBtn->onRender(renderer);
 
     if (m_showUnitTypePicker) {
         drawUnitTypePicker(renderer);
     }
-    
+
     // Only render the color picker if it's visible.
     if (m_colorPicker && m_colorPicker->isShowing()) {
         m_colorPicker->onRender(renderer);
     }
+}
+
+void ArsenalPanel::drawCommandHeader(NUIRenderer& renderer) {
+    if (!m_listContainer || m_commandHeaderRect.width <= 0.0f) return;
+
+    auto& theme = NUIThemeManager::getInstance();
+    const auto& themeProps = theme.getCurrentTheme();
+    renderer.fillRoundedRect(m_commandHeaderRect, themeProps.radiusM,
+                             theme.getColor("backgroundSecondary").withAlpha(0.97f));
+    renderer.strokeRoundedRect(m_commandHeaderRect, themeProps.radiusM, 1.0f,
+                               theme.getColor("borderSubtle").withAlpha(0.82f));
+
+    const float iconX = m_commandHeaderRect.x + 15.0f;
+    const float iconY = m_commandHeaderRect.y + 13.0f;
+    const auto accent = theme.getColor("accentPrimary");
+    for (int row = 0; row < 3; ++row) {
+        const float width = 18.0f - static_cast<float>(row) * 3.0f;
+        renderer.fillRoundedRect({iconX, iconY + static_cast<float>(row) * 8.0f, width, 4.0f}, 2.0f,
+                                 accent.withAlpha(0.95f - static_cast<float>(row) * 0.18f));
+    }
+
+    std::string patternName = "Pattern";
+    std::string selectedName = "No unit selected";
+    std::string selectedType = "READY";
+    int unitCount = 0;
+    if (m_trackManager) {
+        unitCount = static_cast<int>(m_trackManager->getUnitManager().getUnitCount());
+        if (m_activePatternID.isValid()) {
+            if (const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID);
+                pattern && !pattern->name.empty()) {
+                patternName = pattern->name;
+            }
+        }
+        if (m_selectedUnitId != 0) {
+            if (const auto* unit = m_trackManager->getUnitManager().getUnit(m_selectedUnitId)) {
+                selectedName = unit->name.empty() ? "Untitled unit" : unit->name;
+                selectedType = unitTypeDisplayName(unit->type);
+                if (m_activePatternID.isValid()) {
+                    const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID);
+                    if (patternUsesNoteRoll(pattern, m_selectedUnitId, unit->type)) {
+                        selectedType = "MIDI";
+                    }
+                }
+            }
+        }
+    }
+
+    const float textX = iconX + 28.0f;
+    renderer.drawText(patternName, {textX, m_commandHeaderRect.y + 10.0f}, themeProps.fontSizeS,
+                      theme.getColor("textPrimary").withAlpha(0.96f));
+    renderer.drawText(selectedName + "  ·  " + selectedType + "  ·  " + std::to_string(unitCount) +
+                          (unitCount == 1 ? " UNIT" : " UNITS"),
+                      {textX, m_commandHeaderRect.y + 28.0f}, 8.5f,
+                      theme.getColor("textSecondary").withAlpha(0.70f));
 }
 
 void ArsenalPanel::layoutUnits() {
@@ -582,13 +585,18 @@ void ArsenalPanel::layoutUnits() {
     
     NUIRect bounds = m_listContainer->getBounds();
     const float horizontalPadding = 8.0f;
-    const float topPadding = 6.0f;
     const float width = std::max(0.0f, bounds.width - horizontalPadding * 2.0f);
     const float startX = bounds.x + horizontalPadding;
-    const float startY = bounds.y + topPadding;
+    m_commandHeaderRect = {startX, bounds.y + 8.0f, width, COMMAND_HEADER_HEIGHT};
 
-    // Reserve space for progress header
-    float yPos = startY + PROGRESS_HEADER_HEIGHT + 8.0f - m_scrollY;
+    constexpr float buttonH = 30.0f;
+    constexpr float addW = 112.0f;
+    const float buttonY = m_commandHeaderRect.y + (m_commandHeaderRect.height - buttonH) * 0.5f;
+    m_addUnitButtonRect = {m_commandHeaderRect.right() - 10.0f - addW, buttonY, addW, buttonH};
+    if (m_addUnitBtn) m_addUnitBtn->setBounds(m_addUnitButtonRect);
+
+    m_progressHeaderRect = {startX, m_commandHeaderRect.bottom() + 8.0f, width, PROGRESS_HEADER_HEIGHT};
+    float yPos = m_progressHeaderRect.bottom() + 8.0f - m_scrollY;
     float spacing = 8.0f;
     float rowHeight = 56.0f;
     
@@ -600,16 +608,6 @@ void ArsenalPanel::layoutUnits() {
         }
     }
     
-    // Add Unit button (last child)
-    auto children = m_listContainer->getChildren();
-    if (!children.empty()) {
-        auto addBtn = children.back();
-        bool isAddButton = m_unitRows.empty() || (addBtn != m_unitRows.back());
-        if (addBtn && isAddButton) {
-            m_addUnitButtonRect = NUIRect(startX, yPos + 8.0f, 120.0f, 28.0f);
-            addBtn->setBounds(m_addUnitButtonRect);
-        }
-    }
 }
 
 void ArsenalPanel::onResize(int width, int height) {
@@ -621,7 +619,9 @@ void ArsenalPanel::onResize(int width, int height) {
 
 void ArsenalPanel::onUpdate(double dt) {
     WindowPanel::onUpdate(dt);
-    const float viewportHeight = std::max(0.0f, (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - PROGRESS_HEADER_HEIGHT);
+    const float reservedHeight = COMMAND_HEADER_HEIGHT + PROGRESS_HEADER_HEIGHT + 32.0f;
+    const float viewportHeight = std::max(0.0f,
+        (m_listContainer ? m_listContainer->getBounds().height : 0.0f) - reservedHeight);
     const float contentHeight = static_cast<float>(m_unitRows.size()) * (56.0f + 8.0f);
     const float maxScroll = std::max(0.0f, contentHeight - viewportHeight);
     m_targetScrollY = safeClampPanelScroll(m_targetScrollY, maxScroll);
@@ -636,23 +636,6 @@ void ArsenalPanel::onUpdate(double dt) {
     } else if (std::abs(delta) > 0.0f) {
         m_scrollY = m_targetScrollY;
         layoutUnits();
-    }
-    
-    // Sync Play/Stop button text and color with actual engine state
-    if (m_playBtn && m_trackManager) {
-        bool playingNow = m_trackManager->isPlaying() && m_trackManager->isPatternMode();
-        bool btnStatePlaying = (m_playBtn->getText() == "STOP");
-        
-        if (playingNow != btnStatePlaying) {
-            auto& theme = NUIThemeManager::getInstance();
-            if (playingNow) {
-                m_playBtn->setText("STOP");
-                m_playBtn->setBackgroundColor(theme.getColor("error"));
-            } else {
-                m_playBtn->setText("PLAY");
-                m_playBtn->setBackgroundColor(theme.getColor("accentPrimary"));
-            }
-        }
     }
 }
 
@@ -774,9 +757,9 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
     m_currentPlayStep = calculateCurrentStep();
     
     // Step layout (matches UnitRow grid layout)
-    float controlWidth = 312.0f;
-    float gridStartX = bounds.x + controlWidth + 6.0f;
-    float availWidth = bounds.width - controlWidth - 12.0f;
+    const float controlWidth = std::clamp(bounds.width * 0.38f, 220.0f, 312.0f);
+    const float gridStartX = bounds.x + controlWidth + 14.0f;
+    const float availWidth = std::max(0.0f, bounds.width - controlWidth - 20.0f);
 
     double lengthBeats = static_cast<double>(m_stepCount) * 0.25;
     UnitType selectedType = UnitType::Sampler;
@@ -793,66 +776,63 @@ void ArsenalPanel::drawProgressHeader(NUIRenderer& renderer, const NUIRect& boun
         }
     }
     std::string contentLabel = unitTypeContentLabel(selectedType, m_stepCount, selectedDurationSeconds);
+    if (m_trackManager && m_activePatternID.isValid()) {
+        const auto* pattern = m_trackManager->getPatternManager().getPattern(m_activePatternID);
+        if (patternUsesNoteRoll(pattern, m_selectedUnitId, selectedType)) {
+            contentLabel = "Note Roll";
+        }
+    }
 
-    const int unitCount = m_trackManager ? static_cast<int>(m_trackManager->getUnitManager().getUnitCount()) : 0;
     const int bars = std::clamp(static_cast<int>(std::round(lengthBeats / 4.0)), kArsenalMinPatternBars, kArsenalMaxPatternBars);
     const bool decEnabled = bars > kArsenalMinPatternBars;
     const bool incEnabled = bars < kArsenalMaxPatternBars;
 
     const auto& themeProps = theme.getCurrentTheme();
     const float cardRadius = themeProps.radiusM;
-    const float pillRadius = themeProps.radiusS + 1.0f;
+    const float pillRadius = themeProps.radiusS;
     const auto disabledText = theme.getColor("textDisabled");
 
     const NUIRect leftCard(bounds.x + 4.0f, bounds.y + 1.0f, std::max(216.0f, controlWidth - 10.0f), bounds.height - 2.0f);
     renderer.fillRoundedRect(leftCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.92f));
     renderer.strokeRoundedRect(leftCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.85f));
 
-    m_barsDecrementRect = NUIRect(leftCard.x + 10.0f, leftCard.y + 4.0f, 18.0f, leftCard.height - 8.0f);
+    const float compactHitArea = themeProps.layout.minimumHitArea;
+    m_barsDecrementRect = NUIRect(leftCard.x + 10.0f, leftCard.y + 4.0f, compactHitArea, leftCard.height - 8.0f);
     m_barsValueRect = NUIRect(m_barsDecrementRect.right() + 4.0f, leftCard.y + 4.0f, 56.0f, leftCard.height - 8.0f);
-    m_barsIncrementRect = NUIRect(m_barsValueRect.right() + 4.0f, leftCard.y + 4.0f, 18.0f, leftCard.height - 8.0f);
+    m_barsIncrementRect = NUIRect(m_barsValueRect.right() + 4.0f, leftCard.y + 4.0f, compactHitArea, leftCard.height - 8.0f);
 
     const auto pillFill = theme.getColor("surfaceTertiary").withAlpha(0.78f);
     const auto pillStroke = theme.getColor("borderSubtle").withAlpha(0.85f);
     const auto pillText = theme.getColor("textSecondary").withAlpha(0.9f);
     renderer.fillRoundedRect(m_barsDecrementRect, pillRadius, pillFill);
     renderer.strokeRoundedRect(m_barsDecrementRect, pillRadius, 1.0f, pillStroke);
-    renderer.drawTextCentered("-", m_barsDecrementRect, 10.5f, decEnabled ? pillText : disabledText);
+    renderer.drawTextCentered("-", m_barsDecrementRect, themeProps.fontSizeXS, decEnabled ? pillText : disabledText);
 
     renderer.fillRoundedRect(m_barsValueRect, pillRadius, pillFill);
     renderer.strokeRoundedRect(m_barsValueRect, pillRadius, 1.0f, pillStroke);
-    renderer.drawTextCentered(std::to_string(bars) + " Bars", m_barsValueRect, 8.5f, pillText);
+    renderer.drawTextCentered(std::to_string(bars) + " Bars", m_barsValueRect, themeProps.fontSizeMicro, pillText);
 
     renderer.fillRoundedRect(m_barsIncrementRect, pillRadius, pillFill);
     renderer.strokeRoundedRect(m_barsIncrementRect, pillRadius, 1.0f, pillStroke);
-    renderer.drawTextCentered("+", m_barsIncrementRect, 10.5f, incEnabled ? pillText : disabledText);
+    renderer.drawTextCentered("+", m_barsIncrementRect, themeProps.fontSizeXS, incEnabled ? pillText : disabledText);
 
-    const float contentBadgeWidth = contentLabel == "Piano Roll" ? 74.0f : 62.0f;
+    const float contentBadgeWidth = contentLabel == "Note Roll" ? 74.0f : 62.0f;
     const NUIRect contentBadge(m_barsIncrementRect.right() + 8.0f, leftCard.y + 4.0f, contentBadgeWidth, leftCard.height - 8.0f);
-    const NUIRect unitsBadge(contentBadge.right() + 6.0f, leftCard.y + 4.0f, 54.0f, leftCard.height - 8.0f);
     drawArsenalChip(renderer,
                     contentBadge,
                     contentLabel,
                     theme.getColor("surfaceTertiary").withAlpha(0.78f),
                     theme.getColor("borderSubtle").withAlpha(0.85f),
                     theme.getColor("textSecondary").withAlpha(0.9f),
-                    8.25f);
-    drawArsenalChip(renderer,
-                    unitsBadge,
-                    std::to_string(unitCount) + " Units",
-                    theme.getColor("surfaceTertiary").withAlpha(0.78f),
-                    theme.getColor("borderSubtle").withAlpha(0.85f),
-                    theme.getColor("textSecondary").withAlpha(0.9f),
-                    8.25f);
-
+                    themeProps.fontSizeMicro);
     const NUIRect gridCard(gridStartX - 2.0f, bounds.y + 1.0f, std::max(0.0f, availWidth + 4.0f), bounds.height - 2.0f);
     renderer.fillRoundedRect(gridCard, cardRadius, theme.getColor("backgroundSecondary").withAlpha(0.82f));
     renderer.strokeRoundedRect(gridCard, cardRadius, 1.0f, theme.getColor("borderSubtle").withAlpha(0.7f));
 
-    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 26.0f);
+    float stepWidth = std::max(availWidth / static_cast<float>(m_stepCount), 20.0f);
     float indicatorHeight = PROGRESS_HEADER_HEIGHT - 10.0f;
     float indicatorY = bounds.y + 5.0f;
-    const float indicatorRadius = themeProps.radiusXS + 0.5f;
+    const float indicatorRadius = themeProps.radiusXS;
 
     // Scanlines/Clipping: Clip to header bounds to prevent overflow
     renderer.setClipRect(bounds);
@@ -912,10 +892,11 @@ void ArsenalPanel::drawUnitTypePicker(NUIRenderer& renderer) {
 
     const float cardWidth = 332.0f;
     const float cardHeight = 156.0f;
-    m_unitTypePickerRect = NUIRect(m_addUnitButtonRect.x,
-                                   m_addUnitButtonRect.bottom() + 8.0f,
-                                   cardWidth,
-                                   cardHeight);
+    const float pickerX = m_listContainer
+                              ? std::max(m_listContainer->getBounds().x + 8.0f,
+                                         m_addUnitButtonRect.right() - cardWidth)
+                              : m_addUnitButtonRect.x;
+    m_unitTypePickerRect = NUIRect(pickerX, m_addUnitButtonRect.bottom() + 8.0f, cardWidth, cardHeight);
 
     const float pickerRadius = std::max(themeProps.radiusL - 2.0f, 0.0f);
     renderer.fillRoundedRect(m_unitTypePickerRect, pickerRadius, theme.getColor("backgroundSecondary").withAlpha(0.98f));
@@ -1159,6 +1140,7 @@ bool ArsenalPanel::onMouseEvent(const NUIMouseEvent& event) {
             }
         } else if (!m_addUnitButtonRect.contains(event.position)) {
             m_showUnitTypePicker = false;
+            if (m_addUnitBtn) m_addUnitBtn->setText("+ ADD UNIT");
             repaint();
             return true;
         }

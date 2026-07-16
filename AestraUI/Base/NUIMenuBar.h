@@ -23,7 +23,7 @@ public:
         std::function<void()> onClick;
     };
     
-    NUIMenuBar() : hoveredIndex_(-1) {
+    NUIMenuBar() : hoveredIndex_(-1), pressedIndex_(-1) {
         setId("MenuBar");
     }
     
@@ -35,6 +35,7 @@ public:
     void clear() {
         items_.clear();
         hoveredIndex_ = -1;
+        pressedIndex_ = -1;
         setDirty(true);
     }
     
@@ -43,15 +44,10 @@ public:
         auto& theme = NUIThemeManager::getInstance();
         const auto& props = theme.getCurrentTheme();
 
-        const NUIColor textIdle = theme.getColor("textPrimary").withAlpha(0.78f);
-        const NUIColor textHover = theme.getColor("textPrimary").withAlpha(0.96f);
-        const NUIColor hoverBg = theme.getColor("accentPrimary").withAlpha(0.14f);
-        const NUIColor hoverStroke = theme.getColor("accentPrimary").withAlpha(0.22f);
-
-        const float fontSize = props.fontSizeXS;            // tokenized: 12.0
-        const float paddingX = props.spacingS + 3.0f;       // tokenized: 11.0 (8 + 3)
-        const float gap = 2.0f;
-        const float radius = props.radiusS + 1.0f;          // tokenized: 5.0 (4 + 1)
+        const float fontSize = props.fontSizeXS;
+        const float paddingX = props.spacingS + props.spacingXS;
+        const float gap = props.spacingXS;
+        const float radius = props.radiusS;
         float x = bounds.x;
 
         // Calculate and render each menu item
@@ -64,12 +60,19 @@ public:
             itemRects_.push_back(itemRect);
 
             const bool hovered = (hoveredIndex_ == static_cast<int>(i));
-            if (hovered) {
-                renderer.fillRoundedRect(itemRect, radius, hoverBg);
-                renderer.strokeRoundedRect(itemRect, radius, 1.0f, hoverStroke);
+            const bool pressed = (pressedIndex_ == static_cast<int>(i));
+            NUIControlVisualState state;
+            state.enabled = isEnabled();
+            state.hovered = hovered;
+            state.pressed = pressed;
+            state.focused = isFocused() && hovered;
+            const auto colors = resolveControlColors(props, state);
+            if (hovered || pressed) {
+                renderer.fillRoundedRect(itemRect, radius, colors.background);
+                renderer.strokeRoundedRect(itemRect, radius, props.layout.dividerWidth, colors.border);
             }
 
-            renderer.drawTextCentered(item.label, itemRect, fontSize, hovered ? textHover : textIdle);
+            renderer.drawTextCentered(item.label, itemRect, fontSize, colors.text);
 
             x += itemRect.width + gap;
         }
@@ -88,6 +91,9 @@ public:
             if (hoveredIndex_ != -1) {
                 hoveredIndex_ = -1;
                 setDirty(true);
+            }
+            if (event.released) {
+                pressedIndex_ = -1;
             }
             return false;
         }
@@ -119,14 +125,24 @@ public:
             setDirty(true);
         }
         
-        // Handle click
+        // Arm on press and invoke on a matching release so pressed feedback is
+        // distinct from hover and release cannot click through to another item.
         if (event.pressed && event.button == NUIMouseButton::Left) {
             if (hoveredIndex_ >= 0 && hoveredIndex_ < static_cast<int>(items_.size())) {
-                if (items_[hoveredIndex_].onClick) {
-                    items_[hoveredIndex_].onClick();
-                }
+                pressedIndex_ = hoveredIndex_;
+                setDirty(true);
                 return true;
             }
+        }
+        if (event.released && event.button == NUIMouseButton::Left) {
+            const int armedIndex = pressedIndex_;
+            pressedIndex_ = -1;
+            setDirty(true);
+            if (armedIndex >= 0 && armedIndex == hoveredIndex_ &&
+                armedIndex < static_cast<int>(items_.size()) && items_[armedIndex].onClick) {
+                items_[armedIndex].onClick();
+            }
+            return true;
         }
         
         return true; // Consume events in our bounds
@@ -136,6 +152,7 @@ private:
     std::vector<MenuItem> items_;
     std::vector<NUIRect> itemRects_; // Computed during render
     int hoveredIndex_;
+    int pressedIndex_;
 };
 
 } // namespace AestraUI

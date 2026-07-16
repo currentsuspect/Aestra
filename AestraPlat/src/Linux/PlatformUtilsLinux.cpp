@@ -27,6 +27,12 @@ namespace Aestra {
 
 namespace {
 
+// Zenity 4 can otherwise negotiate its minimum file-chooser size on some
+// Wayland compositors, clipping the file list and action row into a tiny
+// top-left window. These remain hints: the compositor may constrain them on
+// smaller displays.
+constexpr const char* ZENITY_FILE_DIALOG_PRESENTATION = " --modal --width=760 --height=560";
+
 std::string runDialogCommand(const std::string& command) {
     std::array<char, 512> buffer{};
     std::string output;
@@ -61,7 +67,8 @@ std::string PlatformUtilsLinux::openFileDialog(const std::string& title, const s
     const std::string escapedTitle = shellEscape(title.empty() ? "Open File" : title);
 
     std::string path = runDialogCommand(
-        "command -v zenity >/dev/null 2>&1 && zenity --file-selection --title=" + escapedTitle);
+        "command -v zenity >/dev/null 2>&1 && zenity --file-selection --title=" + escapedTitle +
+        ZENITY_FILE_DIALOG_PRESENTATION);
     if (!path.empty()) return path;
 
     path = runDialogCommand(
@@ -78,8 +85,9 @@ std::string PlatformUtilsLinux::saveFileDialog(const SaveFileDialogOptions& opti
     const std::string escapedTitle = shellEscape(options.title.empty() ? "Save File" : options.title);
     const std::string filenameArg = options.defaultPath.empty() ? "" : (" --filename=" + shellEscape(options.defaultPath));
 
-    std::string path = runDialogCommand("command -v zenity >/dev/null 2>&1 && zenity --file-selection --save --confirm-overwrite --title=" +
-                                        escapedTitle + filenameArg);
+    std::string path = runDialogCommand(
+        "command -v zenity >/dev/null 2>&1 && zenity --file-selection --save --confirm-overwrite --title=" +
+        escapedTitle + filenameArg + ZENITY_FILE_DIALOG_PRESENTATION);
     if (!path.empty()) return path;
 
     path = runDialogCommand("command -v qarma >/dev/null 2>&1 && qarma --file-selection --save --confirm-overwrite --title=" +

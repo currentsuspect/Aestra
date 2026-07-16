@@ -5,7 +5,7 @@
 // m_popupLayer->removeChild(self). Before the fix, that erased the parent's
 // children_ mid-iteration (iterator invalidation) and, with a weak_ptr close
 // capture, freed the editor while it was still on the call stack (use-after-
-// free). The fix defers removeChild() while an event dispatch is in flight
+// free). The fix defers hierarchy mutations while an event dispatch is in flight
 // (NUIComponent::begin/endEventDispatch) and flushes it when the dispatch
 // unwinds. These tests exercise that directly at the NUIComponent level.
 
@@ -110,12 +110,32 @@ void testNestedDispatchDepth() {
     check(root->getChildren().empty(), "flushed at outer unwind");
 }
 
+// Popup creation from a release callback must not mutate the parent's child
+// vector until the dispatch loop has finished iterating it.
+void testAdditionDuringDispatchIsDeferred() {
+    auto root = std::make_shared<NUIComponent>();
+    auto existing = std::make_shared<NUIComponent>();
+    auto popup = std::make_shared<NUIComponent>();
+    root->addChild(existing);
+
+    NUIComponent::beginEventDispatch();
+    root->addChild(popup);
+    check(root->getChildren().size() == 1, "addition preserved outside active child vector during dispatch");
+    check(popup->getParent() == nullptr, "deferred popup remains detached during dispatch");
+    NUIComponent::endEventDispatch();
+
+    check(root->getChildren().size() == 2, "addition flushed after dispatch");
+    check(root->getChildren().back() == popup, "deferred popup keeps frontmost insertion order");
+    check(popup->getParent() == root.get(), "deferred popup parent assigned after dispatch");
+}
+
 } // namespace
 
 int main() {
     testSelfRemovalDuringDispatchIsSafe();
     testRemoveOutsideDispatchIsImmediate();
     testNestedDispatchDepth();
+    testAdditionDuringDispatchIsDeferred();
 
     if (g_failures > 0) {
         std::cout << g_failures << " check(s) failed\n";

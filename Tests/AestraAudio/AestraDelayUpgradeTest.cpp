@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <vector>
 
 using Aestra::Audio::Plugins::AestraDelay;
@@ -236,6 +237,137 @@ bool testModulationMaxStaysFinite() {
     return true;
 }
 
+bool testDelayTimeChangesAreCrossfaded() {
+    AestraDelay delay;
+    delay.initialize(48000.0, 512);
+    delay.setParameter(AestraDelay::kSyncMode, 0.0f);
+    delay.setParameter(AestraDelay::kTime, 0.0f); // Start at 10ms.
+    delay.setParameter(AestraDelay::kFeedback, 0.0f);
+    delay.setParameter(AestraDelay::kDamping, 0.0f);
+    delay.setParameter(AestraDelay::kStereoShift, 0.5f);
+    delay.setParameter(AestraDelay::kModDepth, 0.0f);
+    delay.setParameter(AestraDelay::kMix, 1.0f);
+    delay.setParameter(AestraDelay::kBypass, 0.0f);
+    delay.activate();
+
+    constexpr size_t firstFrames = 30000;
+    constexpr size_t secondFrames = 2048;
+    constexpr float omega = 2.0f * 3.14159265358979323846f * 437.0f / 48000.0f;
+    std::vector<float> firstL(firstFrames, 0.0f);
+    std::vector<float> firstR(firstFrames, 0.0f);
+    for (size_t i = 0; i < firstFrames; ++i) {
+        firstL[i] = std::sin(omega * static_cast<float>(i));
+        firstR[i] = firstL[i];
+    }
+    const auto before = processStereo(delay, firstL, firstR);
+
+    delay.setParameter(AestraDelay::kSyncMode, 1.0f);
+    delay.setParameter(AestraDelay::kNoteDivision, AestraDelay::noteDivisionParamFromIndex(AestraDelay::kDiv1_4));
+    std::vector<float> secondL(secondFrames, 0.0f);
+    std::vector<float> secondR(secondFrames, 0.0f);
+    for (size_t i = 0; i < secondFrames; ++i) {
+        secondL[i] = std::sin(omega * static_cast<float>(firstFrames + i));
+        secondR[i] = secondL[i];
+    }
+    const auto after = processStereo(delay, secondL, secondR);
+
+    float maxDelta = std::abs(after.left.front() - before.left.back());
+    for (size_t i = 1; i < 1024; ++i)
+        maxDelta = std::max(maxDelta, std::abs(after.left[i] - after.left[i - 1]));
+    if (maxDelta > 0.12f) {
+        std::cerr << "Delay-time change produced a discontinuity. max delta=" << maxDelta << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool testBypassAdvancesDelayState() {
+    AestraDelay delay;
+    delay.initialize(48000.0, 512);
+    delay.setParameter(AestraDelay::kTime, 0.0f);
+    delay.setParameter(AestraDelay::kFeedback, 0.0f);
+    delay.setParameter(AestraDelay::kStereoShift, 0.5f);
+    delay.setParameter(AestraDelay::kModDepth, 0.0f);
+    delay.setParameter(AestraDelay::kMix, 1.0f);
+    delay.activate();
+
+    std::vector<float> impulseL(100, 0.0f);
+    std::vector<float> impulseR(100, 0.0f);
+    impulseL[0] = 1.0f;
+    impulseR[0] = 1.0f;
+    processStereo(delay, impulseL, impulseR);
+
+    delay.setParameter(AestraDelay::kBypass, 1.0f);
+    std::vector<float> bypassL(600, 0.0f);
+    std::vector<float> bypassR(600, 0.0f);
+    const auto bypassed = processStereo(delay, bypassL, bypassR);
+    if (*std::max_element(bypassed.left.begin(), bypassed.left.end()) != 0.0f) {
+        std::cerr << "Bypass did not remain sample-transparent.\n";
+        return false;
+    }
+
+    delay.setParameter(AestraDelay::kBypass, 0.0f);
+    std::vector<float> resumedL(600, 0.0f);
+    std::vector<float> resumedR(600, 0.0f);
+    const auto resumed = processStereo(delay, resumedL, resumedR);
+    float peak = 0.0f;
+    for (float sample : resumed.left)
+        peak = std::max(peak, std::abs(sample));
+    if (peak > 1.0e-6f) {
+        std::cerr << "A frozen pre-bypass repeat resurfaced after resume. peak=" << peak << "\n";
+        return false;
+    }
+    return true;
+}
+
+bool testNonFiniteControlAndStateAreRejected() {
+    AestraDelay delay;
+    delay.initialize(48000.0, 512);
+    delay.setParameter(AestraDelay::kFeedback, 0.42f);
+    delay.setParameter(AestraDelay::kFeedback, std::nanf(""));
+    if (std::abs(delay.getParameter(AestraDelay::kFeedback) - 0.42f) > 1.0e-6f) {
+        std::cerr << "Non-finite parameter input changed the live value.\n";
+        return false;
+    }
+
+    auto state = delay.saveState();
+    const float nanValue = std::nanf("");
+    constexpr size_t feedbackOffset = sizeof(uint32_t) * 2 + sizeof(float) * AestraDelay::kFeedback;
+    std::memcpy(state.data() + feedbackOffset, &nanValue, sizeof(nanValue));
+    delay.setParameter(AestraDelay::kTime, 0.73f);
+    if (delay.loadState(state)) {
+        std::cerr << "Delay accepted a state containing NaN.\n";
+        return false;
+    }
+    if (std::abs(delay.getParameter(AestraDelay::kTime) - 0.73f) > 1.0e-6f) {
+        std::cerr << "Rejected state partially mutated parameters.\n";
+        return false;
+    }
+    return true;
+}
+
+bool testNonFiniteAudioIsContained() {
+    AestraDelay delay;
+    delay.initialize(48000.0, 512);
+    delay.setParameter(AestraDelay::kTime, 0.0f);
+    delay.setParameter(AestraDelay::kFeedback, 1.0f);
+    delay.setParameter(AestraDelay::kMix, 1.0f);
+    delay.activate();
+
+    std::vector<float> inL(1024, 0.0f);
+    std::vector<float> inR(1024, 0.0f);
+    inL[0] = std::nanf("");
+    inR[1] = std::numeric_limits<float>::infinity();
+    const auto out = processStereo(delay, inL, inR);
+    for (size_t i = 0; i < out.left.size(); ++i) {
+        if (!std::isfinite(out.left[i]) || !std::isfinite(out.right[i])) {
+            std::cerr << "Non-finite audio escaped containment at sample " << i << ".\n";
+            return false;
+        }
+    }
+    return true;
+}
+
 bool testDryPathIsNotSaturatedAtZeroMix() {
     AestraDelay delay;
     delay.initialize(48000.0, 512);
@@ -364,6 +496,14 @@ int main() {
     if (!testHotWetRepeatIsClean())
         return 1;
     if (!testModulationMaxStaysFinite())
+        return 1;
+    if (!testDelayTimeChangesAreCrossfaded())
+        return 1;
+    if (!testBypassAdvancesDelayState())
+        return 1;
+    if (!testNonFiniteControlAndStateAreRejected())
+        return 1;
+    if (!testNonFiniteAudioIsContained())
         return 1;
     if (!testDryPathIsNotSaturatedAtZeroMix())
         return 1;

@@ -556,6 +556,11 @@ void AestraWindowManager::setRecoveryDialog(std::shared_ptr<Aestra::RecoveryDial
 void AestraWindowManager::setExportDialog(std::shared_ptr<ExportDialog> dialog) {
     m_exportDialog = std::move(dialog);
     if (m_rootComponent && m_exportDialog) {
+        // Export is built lazily from a menu callback, after the root's initial
+        // resize pass. Give it the current window coordinate space before it
+        // computes its centered dialog rect; otherwise a default 0x0 bounds
+        // places most of the panel off-screen at the top-left.
+        m_exportDialog->setBounds(m_rootComponent->getBounds());
         m_rootComponent->addChild(m_exportDialog);
     }
 }

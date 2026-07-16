@@ -131,7 +131,7 @@ struct UnitInfo {
     std::vector<float> audioPreviewWaveform;
     /** @brief High-level group classification used by the Arsenal UI. */
     UnitGroup group;
-    /** @brief Permanent unit type chosen at creation. */
+    /** @brief Unit content type used to select sequencing and editing behavior. */
     UnitType type{UnitType::Sampler};
     /** @brief Default pattern associated with this unit for Piano Roll editing. */
     PatternID defaultPatternId;
@@ -290,7 +290,9 @@ public:
     void setUnitColor(UnitID id, uint32_t color);
     /** @brief Set the unit group classification. */
     void setUnitGroup(UnitID id, UnitGroup group);
-    /** @brief Get the permanent unit type for a unit. */
+    /** @brief Set the unit content type and keep its group classification aligned. */
+    bool setUnitType(UnitID id, UnitType type);
+    /** @brief Get the current content type for a unit. */
     UnitType getUnitType(UnitID id) const;
 
     /**

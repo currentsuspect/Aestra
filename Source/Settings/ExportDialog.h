@@ -136,6 +136,8 @@ private:
     std::atomic<bool> m_exporting{false};
     std::atomic<bool> m_cancelRequested{false};
     std::future<ExportJobResult> m_exportFuture;
+    std::future<std::string> m_fileDialogFuture;
+    bool m_fileDialogPending = false;
     std::string m_exportResultPath;
     double m_exportDuration = 0.0;
     double m_exportPeakDb = -96.0;
@@ -159,6 +161,7 @@ private:
     AestraUI::NUIRect m_tailInputRect;
 
     int m_hoveredButton = -1;
+    int m_pressedButton = -1;
     bool m_bitDepthOpen = false;
     bool m_sampleRateOpen = false;
     bool m_scopeOpen = false;
