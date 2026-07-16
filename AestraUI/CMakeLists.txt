@@ -194,6 +194,9 @@ target_include_directories(AestraUI_Core PUBLIC
 
 if(AESTRAUI_ENABLE_PREMIUM_EDITORS)
     target_compile_definitions(AestraUI_Core PRIVATE AESTRAUI_ENABLE_PREMIUM_EDITORS)
+    target_include_directories(AestraUI_Core PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraPlugins/AestraRumble/include
+    )
 endif()
 
 # The main application mixer widgets depend on AestraAudio + AestraCore headers.
