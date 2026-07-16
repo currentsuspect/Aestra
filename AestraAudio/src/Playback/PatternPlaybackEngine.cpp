@@ -225,7 +225,29 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
 
             uint16_t channelIdx = getChannelForUnit(note.unitId);
 
+            // Off-centre notes ship their pan as a polyphonic-aftertouch event
+            // (0xA0, note, pan) at the same frame with priority 1, so it lands
+            // after note-offs but before every note-on of that frame. Keyed by
+            // note number, simultaneous chord notes each latch their own pan.
+            // Centred notes emit nothing — the sampler defaults to centre.
+            // Encoded 1..127 (64 = centre); 0 is the sampler's "no pan" slot.
+            const bool hasPan = std::abs(note.pan) > 0.004f;
+            const uint8_t panByte =
+                static_cast<uint8_t>(std::clamp<long>(64 + std::lround(note.pan * 64.0f), 1, 127));
+
             if (noteFrame >= scheduleFromFrame && noteFrame < windowEnd) {
+                if (hasPan) {
+                    ScheduledEvent panEvent{};
+                    panEvent.sampleFrame = noteFrame;
+                    panEvent.instanceId = inst.instanceId;
+                    panEvent.unitId = note.unitId;
+                    panEvent.channelIdx = channelIdx;
+                    panEvent.statusByte = 0xA0;
+                    panEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
+                    panEvent.data2 = panByte;
+                    panEvent.priority = 1;
+                    m_scratchEvents.push_back(panEvent);
+                }
                 ScheduledEvent onEvent{};
                 onEvent.sampleFrame = noteFrame;
                 onEvent.instanceId = inst.instanceId;
@@ -234,11 +256,23 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 onEvent.statusByte = 0x90;
                 onEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 onEvent.data2 = toMidiVelocity(note.velocity);
-                onEvent.priority = 1;
+                onEvent.priority = 2;
                 m_scratchEvents.push_back(onEvent);
             } else if (noteFrame < scheduleFromFrame && offFrame > scheduleFromFrame &&
                        noteFrame >= previousScheduledThroughFrame) {
                 // Playback entered while this note was already active; start it immediately at the buffer edge once.
+                if (hasPan) {
+                    ScheduledEvent panEvent{};
+                    panEvent.sampleFrame = scheduleFromFrame;
+                    panEvent.instanceId = inst.instanceId;
+                    panEvent.unitId = note.unitId;
+                    panEvent.channelIdx = channelIdx;
+                    panEvent.statusByte = 0xA0;
+                    panEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
+                    panEvent.data2 = panByte;
+                    panEvent.priority = 1;
+                    m_scratchEvents.push_back(panEvent);
+                }
                 ScheduledEvent resumeOnEvent{};
                 resumeOnEvent.sampleFrame = scheduleFromFrame;
                 resumeOnEvent.instanceId = inst.instanceId;
@@ -247,7 +281,7 @@ void PatternPlaybackEngine::refillWindow(uint64_t currentFrame, int sampleRate, 
                 resumeOnEvent.statusByte = 0x90;
                 resumeOnEvent.data1 = static_cast<uint8_t>(resolvedMidiNote);
                 resumeOnEvent.data2 = toMidiVelocity(note.velocity);
-                resumeOnEvent.priority = 1;
+                resumeOnEvent.priority = 2;
                 m_scratchEvents.push_back(resumeOnEvent);
             }
 

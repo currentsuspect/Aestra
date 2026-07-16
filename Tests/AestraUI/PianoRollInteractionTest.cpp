@@ -16,14 +16,14 @@ static int testsFailed = 0;
 
 // ---------------------------------------------------------------------------
 // Test: deleted notes are ignored in hit testing
-// MidiNote: pitch, startBeat, durationBeats, velocity, unitId, selected, isDeleted, animationScale
+// MidiNote: pitch, startBeat, durationBeats, velocity, pan, unitId, selected, isDeleted, animationScale
 // ---------------------------------------------------------------------------
 static void test_deleted_notes_ignored() {
     std::vector<MidiNote> notes;
     // Note at pitch 60, beat 0, duration 1 beat
     // Screen position: nx = startBeat * pixelsPerBeat = 0, ny = (127 - pitch) * keyHeight = 67*24 = 1608
-    notes.push_back({60, 0.0, 1.0, 0.8f, 0, false, false, 1.0f}); // active note (selected=false, isDeleted=false)
-    notes.push_back({60, 0.0, 1.0, 0.8f, 0, false, true, 1.0f});  // deleted note (selected=false, isDeleted=true)
+    notes.push_back({60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}); // active note (selected=false, isDeleted=false)
+    notes.push_back({60, 0.0, 1.0, 0.8f, 0.0f, 0, false, true, 1.0f});  // deleted note (selected=false, isDeleted=true)
 
     // Search at the position of the active note (nx=0, ny=1608) - should return index 0
     int idx = findNoteAtLocal(notes, 0.0f, 1608.0f, 80.0f, 24.0f);
@@ -36,8 +36,8 @@ static void test_deleted_notes_ignored() {
 // ---------------------------------------------------------------------------
 static void test_topmost_note_returned() {
     std::vector<MidiNote> notes;
-    notes.push_back({60, 0.0, 1.0, 0.8f, 0, false, false, 1.0f}); // bottom note
-    notes.push_back({62, 0.0, 1.0, 0.8f, 0, false, false, 1.0f}); // top note (higher pitch = rendered on top)
+    notes.push_back({60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}); // bottom note
+    notes.push_back({62, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}); // top note (higher pitch = rendered on top)
 
     // Search for note at pitch 62 position - should return index 1
     int idx = findNoteAtLocal(notes, 0.0f, (127 - 62) * 24.0f, 80.0f, 24.0f);
@@ -54,7 +54,7 @@ static void test_topmost_note_returned() {
 // ---------------------------------------------------------------------------
 static void test_no_note_found_outside() {
     std::vector<MidiNote> notes;
-    notes.push_back({60, 0.0, 1.0, 0.8f, 0, false, false, 1.0f});
+    notes.push_back({60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f});
 
     // Search far to the right (beat 10)
     int idx = findNoteAtLocal(notes, 800.0f, 0.0f, 80.0f, 24.0f);
@@ -70,7 +70,7 @@ static void test_no_note_found_outside() {
 // Test: marquee selection detects note inside box
 // ---------------------------------------------------------------------------
 static void test_marquee_detects_note_inside() {
-    MidiNote note{60, 0.0, 1.0, 0.8f, 0, false, false, 1.0f}; // at beat 0, pitch 60
+    MidiNote note{60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f}; // at beat 0, pitch 60
 
     // Note screen position: nx=(127-60)*24=1608, ny=0 (startBeat=0)
     // Box from x=0 to x=2000, y=1500 to y=1800 should contain the note
@@ -81,10 +81,10 @@ static void test_marquee_detects_note_inside() {
 
 // ---------------------------------------------------------------------------
 // Test: marquee selection ignores deleted notes
-// MidiNote: pitch, startBeat, durationBeats, velocity, unitId, selected, isDeleted, animationScale
+// MidiNote: pitch, startBeat, durationBeats, velocity, pan, unitId, selected, isDeleted, animationScale
 // ---------------------------------------------------------------------------
 static void test_marquee_ignores_deleted() {
-    MidiNote deletedNote{60, 0.0, 1.0, 0.8f, 0, false, true, 1.0f}; // selected=false, isDeleted=true
+    MidiNote deletedNote{60, 0.0, 1.0, 0.8f, 0.0f, 0, false, true, 1.0f}; // selected=false, isDeleted=true
 
     // The helper function isNoteInSelectionBox doesn't check isDeleted directly,
     // but this test documents expected caller behavior: deleted notes should
@@ -101,7 +101,7 @@ static void test_marquee_ignores_deleted() {
 // Test: negative box dimensions handled
 // ---------------------------------------------------------------------------
 static void test_negative_box_dimensions() {
-    MidiNote note{60, 0.0, 1.0, 0.8f, 0, false, false, 1.0f};
+    MidiNote note{60, 0.0, 1.0, 0.8f, 0.0f, 0, false, false, 1.0f};
     // Note screen position: nx=0 (startBeat=0, pixelsPerBeat=80), ny=1608 ((127-60)*24), width=80, height=24
 
     // Box clearly outside note's position (note at x=0, box at x=0-100)

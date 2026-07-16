@@ -8,6 +8,7 @@
 #include "Commands/RemoveNoteCommand.h"
 #include "Commands/MoveNoteCommand.h"
 #include "Commands/ResizeNoteCommand.h"
+#include "Commands/UpdateNoteCommand.h"
 #include "Commands/NoteDiff.h"
 #include "Commands/CommandHistory.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -192,6 +193,7 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
             uiNote.startBeat = vn.startBeat;
             uiNote.durationBeats = vn.durationBeats;
             uiNote.velocity = vn.velocity;
+            uiNote.pan = vn.pan;
             uiNote.unitId = vn.unitId;
             uiNote.selected = false;
             uiNote.isDeleted = false;
@@ -256,6 +258,7 @@ void PianoRollPanel::savePattern() {
         backendNote.startBeat = uiNote.startBeat;
         backendNote.durationBeats = uiNote.durationBeats;
         backendNote.velocity = uiNote.velocity;
+        backendNote.pan = uiNote.pan;
         backendNote.unitId = uiNote.unitId != 0 ? uiNote.unitId : m_editingUnitId;
         currentNotes.push_back(backendNote);
     }
@@ -298,6 +301,11 @@ void PianoRollPanel::savePattern() {
                 pm, m_currentPatternId, oldNote, newNote.durationBeats);
             history.pushAndExecute(cmd);
         }
+        for (const auto& [oldNote, newNote] : diff.modified) {
+            auto cmd = std::make_shared<UpdateNoteCommand>(
+                pm, m_currentPatternId, oldNote, newNote.velocity, newNote.pan);
+            history.pushAndExecute(cmd);
+        }
         for (const auto& note : diff.added) {
             auto cmd = std::make_shared<AddNoteCommand>(pm, m_currentPatternId, note);
             history.pushAndExecute(cmd);
@@ -308,7 +316,8 @@ void PianoRollPanel::savePattern() {
                   " (added:" + std::to_string(diff.added.size()) +
                   " removed:" + std::to_string(diff.removed.size()) +
                   " moved:" + std::to_string(diff.moved.size()) +
-                  " resized:" + std::to_string(diff.resized.size()) + ")");
+                  " resized:" + std::to_string(diff.resized.size()) +
+                  " modified:" + std::to_string(diff.modified.size()) + ")");
 
         m_applyingUndoRedo = false;
     }
