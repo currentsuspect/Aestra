@@ -11,6 +11,7 @@
 #include "NUIRenderer.h"
 #include "NUIThemeSystem.h"
 #include <algorithm>
+#include <chrono>  // Manual double-click timing
 #include <cmath>
 #include <iomanip> // For string formatting
 #include <random>  // Humanize velocity jitter
@@ -1927,13 +1928,12 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    // --- WHEEL OVER A NOTE = VELOCITY ---
-    // Scrolling over a note shapes its velocity (and the whole selection if
-    // that note is part of it) — no modifier needed, though Alt still works.
-    // Ctrl (zoom) and Shift (h-scroll) keep their bindings, and over empty
-    // space the wheel scrolls the grid as usual.
-    if (event.wheelDelta != 0.0f && !(event.modifiers & NUIModifiers::Ctrl) &&
-        !(event.modifiers & NUIModifiers::Shift) && hoveredNoteIndex_ >= 0 &&
+    // --- ALT + WHEEL OVER A NOTE = VELOCITY ---
+    // Alt shapes the velocity of the note under the cursor (and the whole
+    // selection if that note is part of it). Kept behind a modifier so plain
+    // wheel always scrolls — mixing "scroll the grid" and "edit the note" on
+    // the same gesture made scrolling feel unpredictable.
+    if (event.wheelDelta != 0.0f && (event.modifiers & NUIModifiers::Alt) && hoveredNoteIndex_ >= 0 &&
         hoveredNoteIndex_ < static_cast<int>(notes_.size()) && !notes_[hoveredNoteIndex_].isDeleted) {
         auto oldNotes = notes_;
         const float delta = event.wheelDelta * 0.04f; // ~5 MIDI steps per notch
@@ -1990,10 +1990,24 @@ bool PianoRollNoteLayer::onMouseEvent(const NUIMouseEvent& event) {
     if (event.pressed && event.button == NUIMouseButton::Left) {
         setFocused(true); // Gain keyboard focus for shortcuts
         int clickedIndex = findNoteAt(localX, localY);
-        
+
+        // The platform never sets event.doubleClick, so detect it here: a
+        // second left press within 400ms landing within a few pixels.
+        const long long nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                    std::chrono::steady_clock::now().time_since_epoch())
+                                    .count();
+        const bool isDoubleClick =
+            event.doubleClick ||
+            ((nowMs - lastClickTimeMs_) < 400 &&
+             std::abs(event.position.x - lastClickPos_.x) < 5.0f &&
+             std::abs(event.position.y - lastClickPos_.y) < 5.0f);
+        // Consume the pair so a triple-click can't read as two doubles.
+        lastClickTimeMs_ = isDoubleClick ? 0 : nowMs;
+        lastClickPos_ = event.position;
+
         // DOUBLE CLICK: note → precision properties popup; empty space → add.
         // (Deletion stays on right-click / eraser / Delete.)
-        if (event.doubleClick) {
+        if (isDoubleClick) {
             if (clickedIndex != -1) {
                  openNoteProperties(clickedIndex);
             } else {
@@ -3420,7 +3434,7 @@ void PianoRollView::renderShortcutHelp(NUIRenderer& renderer) {
         {"Ctrl+Drag", "marquee select (any tool)"},
         {"Alt+Drag", "clone the selection"},
         {"Alt mid-drag", "bypass snap for fine moves"},
-        {"Wheel on note", "adjust velocity"},
+        {"Alt+Wheel", "adjust velocity under cursor"},
         {"Right-Click", "erase"},
         {"Double-Click", "add note / note properties"},
         {"Lane sidebar", "switch velocity / pan lane"},

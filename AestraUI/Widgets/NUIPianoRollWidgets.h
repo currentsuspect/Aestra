@@ -479,6 +479,12 @@ private:
     // Alt+drag copy state
     std::vector<int> copyDragIndices_;
     NUIPlatformBridge* platformBridge_ = nullptr;
+
+    // Manual double-click detection: the platform layer never populates
+    // NUIMouseEvent::doubleClick, so pair up quick same-spot left presses
+    // ourselves (same approach as UnitRow / UnitNameLabel).
+    long long lastClickTimeMs_ = 0;
+    NUIPoint lastClickPos_;
     
     NUIPoint dragStartPos_;
     float dragStartScrollX_ = 0.0f;
