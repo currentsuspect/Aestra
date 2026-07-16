@@ -744,6 +744,7 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 nj.set("startBeat", JSON(note.startBeat));
                 nj.set("durationBeats", JSON(note.durationBeats));
                 nj.set("velocity", JSON(static_cast<double>(note.velocity)));
+                nj.set("pan", JSON(static_cast<double>(note.pan)));
                 nj.set("unitId", JSON(static_cast<double>(note.unitId)));
                 nj.set("pitchOffset", JSON(static_cast<double>(note.pitchOffset)));
                 nj.set("gate", JSON(static_cast<double>(note.gate)));
@@ -820,7 +821,13 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
                 cj.set("param", JSON(curve.getTarget()));
                 cj.set("targetEnum", JSON(static_cast<double>(curve.getAutomationTarget())));
                 cj.set("default", JSON(curve.getDefaultValue()));
-                
+                if (curve.getAutomationTarget() == Aestra::Audio::AutomationTarget::Custom) {
+                    // Plugin-parameter address (older builds ignore unknown keys;
+                    // loads without them default to slot 0 / param 0).
+                    cj.set("slot", JSON(static_cast<double>(curve.effectSlot)));
+                    cj.set("paramId", JSON(static_cast<double>(curve.paramId)));
+                }
+
                 JSON ptsJson = JSON::array();
                 for (const auto& p : curve.getPoints()) {
                     JSON pj = JSON::object();
@@ -1471,6 +1478,7 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             note.startBeat = finiteNumberOr(notes[n], "startBeat", 0.0, 0.0, 1000000.0);
                             note.durationBeats = finiteNumberOr(notes[n], "durationBeats", 0.25, 0.0, 1000000.0);
                             note.velocity = static_cast<float>(finiteNumberOr(notes[n], "velocity", 1.0, 0.0, 1.0));
+                            note.pan = static_cast<float>(finiteNumberOr(notes[n], "pan", 0.0, -1.0, 1.0));
                             note.unitId = static_cast<uint64_t>(
                                 finiteNumberOr(notes[n], "unitId", 0.0, 0.0, static_cast<double>(UINT64_MAX)));
                             note.pitchOffset = static_cast<int8_t>(finiteNumberOr(notes[n], "pitchOffset", 0.0, -128.0, 127.0));
@@ -1684,7 +1692,11 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             
                             AutomationCurve curve(param, target);
                             curve.setDefaultValue(finiteNumberOr(aj[a], "default", 0.0, -1.0e6, 1.0e6));
-                            
+                            // Plugin-parameter address (Custom target). Bounded:
+                            // slot to the effect-chain size, paramId defensively.
+                            curve.effectSlot = static_cast<uint32_t>(finiteNumberOr(aj[a], "slot", 0.0, 0.0, 9.0));
+                            curve.paramId = static_cast<uint32_t>(finiteNumberOr(aj[a], "paramId", 0.0, 0.0, 1.0e6));
+
                             if (!aj[a].has("points") || !aj[a]["points"].isArray()) continue;
                             const JSON& pts = aj[a]["points"];
                             for (size_t p = 0; p < pts.size(); ++p) {

@@ -2,6 +2,7 @@
 #include "NUICheckbox.h"
 #include "NUIRenderer.h"
 #include "NUITheme.h"
+#include "NUIThemeSystem.h"
 #include <algorithm>
 #include <cmath>
 
@@ -11,7 +12,19 @@ NUICheckbox::NUICheckbox(const std::string& text)
     : NUIComponent()
     , text_(text)
 {
-    setSize(100, 20); // Default size
+    auto& theme = NUIThemeManager::getInstance();
+    const auto& props = theme.getCurrentTheme();
+    textColor_ = props.textPrimary;
+    backgroundColor_ = props.buttonBgDefault;
+    borderColor_ = props.borderSubtle;
+    checkColor_ = props.primary;
+    hoverColor_ = props.buttonBgHover;
+    pressedColor_ = props.buttonBgActive;
+    toggleThumbColor_ = props.textPrimary;
+    toggleTrackColor_ = props.toggleDefault;
+    toggleTrackCheckedColor_ = props.toggleActive;
+    checkboxRadius_ = props.radiusXS;
+    setSize(100, props.layout.minimumHitArea);
     
     // Create checkmark icon
     checkIcon_ = NUIIcon::createCheckIcon();
@@ -22,40 +35,19 @@ void NUICheckbox::onRender(NUIRenderer& renderer)
 {
     if (!isVisible()) return;
 
-    // Calculate scale animation for hover and press effects
-    float scale = 1.0f;
-    if (isPressed_)
-    {
-        scale = 0.9f; // Scale down when pressed
-    }
-    else if (isHovered_)
-    {
-        scale = 1.05f; // Scale up on hover
-    }
-    
-    // Apply scaling to bounds
-    NUIRect originalBounds = getBounds();
-    NUIRect scaledBounds = originalBounds;
-    if (scale != 1.0f)
-    {
-        float scaleOffset = (1.0f - scale) * 0.5f;
-        scaledBounds.x += originalBounds.width * scaleOffset;
-        scaledBounds.y += originalBounds.height * scaleOffset;
-        scaledBounds.width *= scale;
-        scaledBounds.height *= scale;
-    }
+    const NUIRect stableBounds = getBounds();
 
     // Draw the appropriate checkbox style
     switch (style_)
     {
         case Style::Checkbox:
-            drawEnhancedCheckbox(renderer, scaledBounds);
+            drawEnhancedCheckbox(renderer, stableBounds);
             break;
         case Style::Toggle:
-            drawEnhancedToggle(renderer, scaledBounds);
+            drawEnhancedToggle(renderer, stableBounds);
             break;
         case Style::Radio:
-            drawEnhancedRadio(renderer, scaledBounds);
+            drawEnhancedRadio(renderer, stableBounds);
             break;
     }
 
@@ -63,6 +55,11 @@ void NUICheckbox::onRender(NUIRenderer& renderer)
     if (!text_.empty())
     {
         drawText(renderer);
+    }
+
+    if (isEnabled() && isFocused()) {
+        const auto& props = NUIThemeManager::getInstance().getCurrentTheme();
+        renderer.strokeRoundedRect(stableBounds, props.radiusS, 1.5f, props.focusRing);
     }
 }
 
@@ -77,6 +74,7 @@ bool NUICheckbox::onMouseEvent(const NUIMouseEvent& event)
     if (event.pressed && event.button == NUIMouseButton::Left)
     {
         isPressed_ = true;
+        setFocused(true);
         setDirty(true);
         return true;
     }
@@ -466,7 +464,8 @@ void NUICheckbox::drawText(NUIRenderer& renderer)
 
     NUIRect bounds = getBounds();
     auto theme = getTheme();
-    float fontSize = theme ? theme->getFontSize("checkbox.label", 13.0f) : 13.0f;
+    float fontSize = theme ? theme->getFontSize("checkbox.label", 11.0f)
+                           : NUIThemeManager::getInstance().getFontSize("s");
 
     NUISize textSize = renderer.measureText(text_, fontSize);
 
@@ -474,15 +473,19 @@ void NUICheckbox::drawText(NUIRenderer& renderer)
     float textX = bounds.x + checkboxSize_ + textMargin_;
     float textY = bounds.y + (bounds.height - textSize.height) * 0.5f;
 
-    renderer.drawText(text_, NUIPoint(textX, textY), fontSize, textColor_);
+    const NUIColor color = isEnabled() ? textColor_ : NUIThemeManager::getInstance().getColor("textDisabled");
+    renderer.drawText(text_, NUIPoint(textX, textY), fontSize, color);
 }
 
 bool NUICheckbox::isPointOnCheckbox(const NUIPoint& point) const
 {
-    NUIRect bounds = getBounds();
-    NUIRect checkboxRect(bounds.x, bounds.y + (bounds.height - checkboxSize_) * 0.5f, 
-                        checkboxSize_, checkboxSize_);
-    return checkboxRect.contains(point);
+    const NUIRect bounds = getBounds();
+    const float visibleWidth = style_ == Style::Toggle ? checkboxSize_ * 2.0f : checkboxSize_;
+    const float minimumHitArea = NUIThemeManager::getInstance().getLayoutDimension("minimumHitArea");
+    const float hitWidth = std::max(visibleWidth, minimumHitArea);
+    const float hitHeight = std::max(checkboxSize_, std::min(bounds.height, minimumHitArea));
+    const NUIRect hitRect(bounds.x, bounds.y + (bounds.height - hitHeight) * 0.5f, hitWidth, hitHeight);
+    return hitRect.contains(point);
 }
 
 bool NUICheckbox::isPointOnText(const NUIPoint& point) const
@@ -557,196 +560,86 @@ void NUICheckbox::drawIndeterminate(NUIRenderer& renderer, const NUIRect& rect)
 
 void NUICheckbox::drawEnhancedCheckbox(NUIRenderer& renderer, const NUIRect& bounds)
 {
-    // Calculate checkbox position
-    float checkboxX = bounds.x;
-    float checkboxY = bounds.y + (bounds.height - checkboxSize_) * 0.5f;
-    NUIRect checkboxRect(checkboxX, checkboxY, checkboxSize_, checkboxSize_);
-    
-    // Choose colors based on state
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
+    NUIRect checkboxRect(bounds.x, bounds.y + (bounds.height - checkboxSize_) * 0.5f,
+                         checkboxSize_, checkboxSize_);
+
     NUIColor bgColor = backgroundColor_;
     NUIColor borderColor = borderColor_;
-    
-    // When checked, use accent color for background
-    if (state_ == State::Checked)
-    {
-        bgColor = checkColor_; // Use accent color for checked background
+
+    if (state_ == State::Checked) {
+        bgColor = checkColor_;
         borderColor = checkColor_;
-    }
-    else if (isPressed_)
-    {
+    } else if (isPressed_) {
         bgColor = pressedColor_;
-    }
-    else if (isHovered_)
-    {
+    } else if (isHovered_) {
         bgColor = hoverColor_;
     }
-    
-    // Pulse effect when checked
-    if (state_ == State::Checked)
-    {
-        // Draw pulse rings with accent color
-        for (int i = 3; i >= 1; --i)
-        {
-            NUIRect pulseRect = checkboxRect;
-            pulseRect.x -= i * 2;
-            pulseRect.y -= i * 2;
-            pulseRect.width += i * 4;
-            pulseRect.height += i * 4;
-            renderer.strokeRoundedRect(pulseRect, checkboxRadius_ + i, 1.0f, 
-                checkColor_.withAlpha(0.3f / i));
-        }
+    if (!isEnabled()) {
+        bgColor = bgColor.withAlpha(0.42f);
+        borderColor = theme.borderSubtle.withAlpha(0.52f);
     }
-    
-    // Enhanced checkbox with shadow and gradient
-    NUIRect shadowRect = checkboxRect;
-    shadowRect.x += 1;
-    shadowRect.y += 1;
-    renderer.fillRoundedRect(shadowRect, checkboxRadius_, NUIColor(0, 0, 0, 0.2f));
-    
-    // Gradient background effect
-    NUIColor topColor = bgColor.lightened(0.1f);
-    NUIColor bottomColor = bgColor.darkened(0.05f);
-    
-    // Draw gradient background (simulated with multiple rectangles)
-    for (int i = 0; i < 2; ++i)
-    {
-        float factor = static_cast<float>(i);
-        NUIColor gradientColor = NUIColor::lerp(topColor, bottomColor, factor);
-        NUIRect gradientRect = checkboxRect;
-        gradientRect.y += i;
-        gradientRect.height -= i;
-        renderer.fillRoundedRect(gradientRect, checkboxRadius_, gradientColor);
-    }
-    
-    // Enhanced border
-    renderer.strokeRoundedRect(checkboxRect, checkboxRadius_, 1.5f, borderColor.lightened(0.2f));
-    
-    // Draw checkmark or indeterminate indicator with glow
-    if (state_ == State::Checked)
-    {
+
+    renderer.fillRoundedRect(checkboxRect, checkboxRadius_, bgColor);
+    renderer.strokeRoundedRect(checkboxRect, checkboxRadius_, theme.layout.dividerWidth, borderColor);
+
+    if (state_ == State::Checked) {
         drawGlowingCheckmark(renderer, checkboxRect);
-    }
-    else if (state_ == State::Indeterminate)
-    {
+    } else if (state_ == State::Indeterminate) {
         drawIndeterminate(renderer, checkboxRect);
     }
 }
 
 void NUICheckbox::drawEnhancedToggle(NUIRenderer& renderer, const NUIRect& bounds)
 {
-    // Calculate toggle dimensions
-    float toggleWidth = checkboxSize_ * 2.0f;
-    float toggleHeight = checkboxSize_ * 0.6f;
-    float toggleX = bounds.x;
-    float toggleY = bounds.y + (bounds.height - toggleHeight) * 0.5f;
-    
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
+    const float toggleWidth = checkboxSize_ * 2.0f;
+    const float toggleHeight = checkboxSize_ * 0.6f;
+    const float toggleX = bounds.x;
+    const float toggleY = bounds.y + (bounds.height - toggleHeight) * 0.5f;
     NUIRect toggleRect(toggleX, toggleY, toggleWidth, toggleHeight);
-    
-    // Choose track color based on state
+
     NUIColor trackColor = (state_ == State::Checked) ? toggleTrackCheckedColor_ : toggleTrackColor_;
-    
-    // Enhanced toggle track with shadow and gradient
-    NUIRect shadowRect = toggleRect;
-    shadowRect.x += 1;
-    shadowRect.y += 1;
-    renderer.fillRoundedRect(shadowRect, toggleHeight * 0.5f, NUIColor(0, 0, 0, 0.2f));
-    
-    // Gradient track background
-    NUIColor topColor = trackColor.lightened(0.1f);
-    NUIColor bottomColor = trackColor.darkened(0.1f);
-    
-    for (int i = 0; i < 2; ++i)
-    {
-        float factor = static_cast<float>(i);
-        NUIColor gradientColor = NUIColor::lerp(topColor, bottomColor, factor);
-        NUIRect gradientRect = toggleRect;
-        gradientRect.y += i;
-        gradientRect.height -= i;
-        renderer.fillRoundedRect(gradientRect, toggleHeight * 0.5f, gradientColor);
+    if (state_ != State::Checked) {
+        if (isPressed_) trackColor = pressedColor_;
+        else if (isHovered_) trackColor = hoverColor_;
     }
-    
-    // Track border
-    renderer.strokeRoundedRect(toggleRect, toggleHeight * 0.5f, 1.0f, trackColor.lightened(0.3f));
-    
-    // Calculate thumb position with smooth animation
-    float thumbSize = toggleHeight * 0.8f;
-    float thumbY = toggleY + (toggleHeight - thumbSize) * 0.5f;
-    float thumbX = toggleX + (state_ == State::Checked ? toggleWidth - thumbSize - 2.0f : 2.0f);
-    
-    NUIRect thumbRect(thumbX, thumbY, thumbSize, thumbSize);
-    NUIPoint thumbCenter = thumbRect.center();
-    
-    // Enhanced thumb with shadow and gradient
-    NUIPoint shadowCenter = thumbCenter;
-    shadowCenter.x += 1;
-    shadowCenter.y += 1;
-    renderer.fillCircle(shadowCenter, thumbSize * 0.5f, NUIColor(0, 0, 0, 0.3f));
-    
-    // Gradient thumb
-    NUIColor thumbTopColor = toggleThumbColor_.lightened(0.2f);
-    NUIColor thumbBottomColor = toggleThumbColor_.darkened(0.1f);
-    renderer.fillCircle(thumbCenter, thumbSize * 0.5f, thumbTopColor);
-    renderer.fillCircle(thumbCenter, thumbSize * 0.4f, thumbBottomColor);
-    
-    // Thumb border
-    renderer.strokeCircle(thumbCenter, thumbSize * 0.5f, 1.0f, toggleThumbColor_.lightened(0.4f));
+    if (!isEnabled()) trackColor = trackColor.withAlpha(0.38f);
+
+    renderer.fillRoundedRect(toggleRect, toggleHeight * 0.5f, trackColor);
+    renderer.strokeRoundedRect(toggleRect, toggleHeight * 0.5f, theme.layout.dividerWidth,
+                               isEnabled() ? theme.borderStrong : theme.borderSubtle);
+
+    const float thumbSize = toggleHeight * 0.8f;
+    const float thumbY = toggleY + (toggleHeight - thumbSize) * 0.5f;
+    const float thumbX = toggleX + (state_ == State::Checked ? toggleWidth - thumbSize - 2.0f : 2.0f);
+    const NUIPoint thumbCenter = NUIRect(thumbX, thumbY, thumbSize, thumbSize).center();
+    renderer.fillCircle(thumbCenter, thumbSize * 0.5f,
+                        isEnabled() ? toggleThumbColor_ : toggleThumbColor_.withAlpha(0.42f));
 }
 
 void NUICheckbox::drawEnhancedRadio(NUIRenderer& renderer, const NUIRect& bounds)
 {
-    // Calculate radio button position
-    float radioX = bounds.x;
-    float radioY = bounds.y + (bounds.height - checkboxSize_) * 0.5f;
-    NUIPoint radioCenter(radioX + checkboxSize_ * 0.5f, radioY + checkboxSize_ * 0.5f);
-    float radioRadius = checkboxSize_ * 0.5f;
-    
-    // Choose colors based on state
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
+    const float radioY = bounds.y + (bounds.height - checkboxSize_) * 0.5f;
+    const NUIPoint radioCenter(bounds.x + checkboxSize_ * 0.5f, radioY + checkboxSize_ * 0.5f);
+    const float radioRadius = checkboxSize_ * 0.5f;
+
     NUIColor bgColor = backgroundColor_;
     NUIColor borderColor = borderColor_;
-    
-    if (isPressed_)
-    {
-        bgColor = pressedColor_;
+    if (isPressed_) bgColor = pressedColor_;
+    else if (isHovered_) bgColor = hoverColor_;
+    if (!isEnabled()) {
+        bgColor = bgColor.withAlpha(0.42f);
+        borderColor = theme.borderSubtle.withAlpha(0.52f);
     }
-    else if (isHovered_)
-    {
-        bgColor = hoverColor_;
-    }
-    
-    // Pulse effect when checked
-    if (state_ == State::Checked)
-    {
-        // Draw pulse rings
-        for (int i = 3; i >= 1; --i)
-        {
-            renderer.strokeCircle(radioCenter, radioRadius + i * 3, 1.0f, 
-                checkColor_.withAlpha(0.3f / i));
-        }
-    }
-    
-    // Enhanced radio button with shadow and gradient
-    NUIPoint shadowCenter = radioCenter;
-    shadowCenter.x += 1;
-    shadowCenter.y += 1;
-    renderer.fillCircle(shadowCenter, radioRadius, NUIColor(0, 0, 0, 0.2f));
-    
-    // Gradient background
-    NUIColor topColor = bgColor.lightened(0.1f);
-    NUIColor bottomColor = bgColor.darkened(0.05f);
-    renderer.fillCircle(radioCenter, radioRadius, topColor);
-    renderer.fillCircle(radioCenter, radioRadius * 0.8f, bottomColor);
-    
-    // Enhanced border
-    renderer.strokeCircle(radioCenter, radioRadius, 1.5f, borderColor.lightened(0.2f));
-    
-    // Draw radio button center if checked
-    if (state_ == State::Checked)
-    {
-        float centerRadius = radioRadius * 0.4f;
-        renderer.fillCircle(radioCenter, centerRadius, checkColor_);
-        
-        // Inner glow
-        renderer.strokeCircle(radioCenter, centerRadius, 1.0f, checkColor_.lightened(0.5f));
+
+    renderer.fillCircle(radioCenter, radioRadius, bgColor);
+    renderer.strokeCircle(radioCenter, radioRadius, theme.layout.dividerWidth, borderColor);
+
+    if (state_ == State::Checked) {
+        renderer.fillCircle(radioCenter, radioRadius * 0.42f,
+                            isEnabled() ? checkColor_ : checkColor_.withAlpha(0.42f));
     }
 }
 
@@ -760,8 +653,7 @@ void NUICheckbox::drawGlowingCheckmark(NUIRenderer& renderer, const NUIRect& rec
     // Position the checkmark icon
     checkIcon_->setIconSize(iconSize, iconSize);
     checkIcon_->setPosition(centerX - iconSize * 0.5f, centerY - iconSize * 0.5f);
-    // Use white/primary color for checkmark to contrast with accent background
-    checkIcon_->setColor(NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+    checkIcon_->setColor(NUIThemeManager::getInstance().getColor(isEnabled() ? "textOnPrimary" : "textDisabled"));
     
     // Render the checkmark
     checkIcon_->onRender(renderer);

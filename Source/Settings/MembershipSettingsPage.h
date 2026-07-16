@@ -72,6 +72,11 @@ private:
     bool m_lastRefreshFailed = false;
     std::string m_pendingLoginEmail;
     std::string m_pendingChallengeId;
+    // Feedback for the sign-in flow (Send Code / Verify). Kept separate from
+    // m_lastRefreshValue so a long status sentence isn't dumped into the SYNC card's
+    // right-aligned "Last refresh" value, where it overflowed across the card.
+    std::string m_signInMessage;
+    float m_signInFormBottomY = 0.0f;
 
     // Redesign layout bounds (for hit testing)
     AestraUI::NUIRect m_founderCardBounds;
@@ -92,6 +97,13 @@ private:
     std::string m_actionErrorMessage;
     float m_actionErrorTimer = 0.0f;
 
+    // Persisted account state (mirrored from updateFromState) so the render/hit
+    // paths can show account actions only when they actually apply. Without this
+    // the Actions row (Refresh / Manage / Sign out) drew in every state, so the
+    // signed-out view showed a nonsensical "Sign out" next to the sign-in form.
+    bool m_signedIn = false;
+    bool m_canSignOut = false;
+
     // Sign-out confirmation overlay
     bool m_showingSignOutConfirm = false;
     AestraUI::NUIRect m_confirmDialogBounds;
@@ -99,6 +111,7 @@ private:
     AestraUI::NUIRect m_confirmSignOutBtnBounds;
     bool m_confirmCancelHovered = false;
     bool m_confirmSignOutHovered = false;
+    int m_confirmPressedButton = -1;
 
     // Callback fired after confirmed sign-out (parent should close dialog + show activation screen)
     std::function<void()> m_onSignOutConfirmed;

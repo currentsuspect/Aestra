@@ -36,6 +36,13 @@
 
 namespace {
 
+// Shared by layout, rendering, hit testing, and drag math so visible and
+// interactive geometry cannot drift independently.
+constexpr float kTimelineHeaderHeight = 38.0f;
+constexpr float kTimelineRulerHeight = 28.0f;
+constexpr float kTimelineHorizontalScrollbarHeight = 24.0f;
+constexpr float kTimelineScrollbarWidth = 15.0f;
+
 float safeClampFloat(float value, float a, float b) {
     if (!std::isfinite(value))
         return 0.0f;
@@ -267,9 +274,9 @@ bool TrackManagerUI::isCustomCursorActive() const {
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
         const float gridStartX = bounds.x + controlAreaWidth + 5.0f;
-        const float headerHeight = 38.0f;
-        const float rulerHeight = 28.0f;
-        const float horizontalScrollbarHeight = 24.0f;
+        const float headerHeight = kTimelineHeaderHeight;
+        const float rulerHeight = kTimelineRulerHeight;
+        const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
         const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
 
         AestraUI::NUIRect gridBounds(gridStartX, trackAreaTop, bounds.width - controlAreaWidth - 20.0f,
@@ -369,7 +376,8 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     updateToolbarBounds();
 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    const float radius = 5.0f;
+    const float radius = themeManager.getRadius("s");
+    const float standardIconSize = themeManager.getLayoutDimension("standardIconSize");
     auto utilityBg = themeManager.getColor("buttonBgDefault").withAlpha(0.94f);
     auto utilityHoverBg = themeManager.getColor("buttonBgHover").withAlpha(0.98f);
     auto utilityBorder = themeManager.getColor("border").withAlpha(0.24f);
@@ -417,7 +425,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
 
         // Draw icon
         if (icon) {
-            const float iconSz = 19.0f;
+            const float iconSz = standardIconSize;
             AestraUI::NUIRect iconRect(std::round(bounds.x + (bounds.width - iconSz) * 0.5f),
                                        std::round(bounds.y + (bounds.height - iconSz) * 0.5f), iconSz, iconSz);
             icon->setBounds(iconRect);
@@ -440,8 +448,8 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
         auto currentBg = utilityBg;
         auto currentBorder = utilityBorder;
         if (followActive) {
-            currentBg = AestraUI::NUIColor(0.486f, 0.361f, 0.749f, 0.22f);
-            currentBorder = AestraUI::NUIColor(0.486f, 0.361f, 0.749f, 0.48f);
+            currentBg = themeManager.getColor("selection");
+            currentBorder = themeManager.getColor("borderActive").withAlpha(0.64f);
         } else if (m_followPlayheadHovered) {
             currentBg = utilityHoverBg;
             currentBorder = utilityHoverBorder;
@@ -453,7 +461,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
     }
 
     if (m_followPlayheadIcon) {
-        const float iconSz = 16.0f;
+        const float iconSz = standardIconSize;
         AestraUI::NUIRect iconRect(
             std::round(m_followPlayheadBounds.x + (m_followPlayheadBounds.width - iconSz) * 0.5f),
             std::round(m_followPlayheadBounds.y + (m_followPlayheadBounds.height - iconSz) * 0.5f), iconSz, iconSz);
@@ -477,7 +485,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
             renderer.strokeRoundedRect(m_addTrackBounds, radius, 1.0f, currentBorder);
         }
         if (m_addTrackIcon) {
-            const float iconSz = 16.0f;
+            const float iconSz = standardIconSize;
             AestraUI::NUIRect iconRect(
                 std::round(m_addTrackBounds.x + (m_addTrackBounds.width - iconSz) * 0.5f),
                 std::round(m_addTrackBounds.y + (m_addTrackBounds.height - iconSz) * 0.5f), iconSz, iconSz);
@@ -497,7 +505,7 @@ void TrackManagerUI::renderToolbar(AestraUI::NUIRenderer& renderer) {
             renderer.strokeRoundedRect(m_menuIconBounds, radius, 1.0f, currentBorder);
         }
         if (m_menuIcon) {
-            const float iconSz = 17.0f;
+            const float iconSz = standardIconSize;
             AestraUI::NUIRect iconRect(
                 std::round(m_menuIconBounds.x + (m_menuIconBounds.width - iconSz) * 0.5f),
                 std::round(m_menuIconBounds.y + (m_menuIconBounds.height - iconSz) * 0.5f), iconSz, iconSz);
@@ -715,7 +723,7 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
         // Render horizontal resize cursor (⬌)
         auto& theme = AestraUI::NUIThemeManager::getInstance();
         AestraUI::NUIColor cursorColor =
-            isTrimming ? theme.getColor("accentCyan") : AestraUI::NUIColor(255, 255, 255, 200);
+            isTrimming ? theme.getColor("accentCyan") : theme.getColor("textPrimary").withAlpha(0.78f);
 
         // Draw left-right arrows (simple ⬌ shape)
         float cx = position.x;
@@ -750,9 +758,9 @@ void TrackManagerUI::renderToolCursor(AestraUI::NUIRenderer& renderer, const Aes
     const auto& layout = themeManager.getLayoutDimensions();
     float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = bounds.x + controlAreaWidth + 5;
-    float headerHeight = 38.0f;
-    float rulerHeight = 28.0f;
-    float horizontalScrollbarHeight = 24.0f;
+    float headerHeight = kTimelineHeaderHeight;
+    float rulerHeight = kTimelineRulerHeight;
+    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
     float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
 
     AestraUI::NUIRect gridBounds(gridStartX, trackAreaTop, bounds.width - controlAreaWidth - 20.0f,
@@ -865,9 +873,9 @@ void TrackManagerUI::renderMinimapResizeCursor(AestraUI::NUIRenderer& renderer, 
         const auto& layout = themeManager.getLayoutDimensions();
         const float controlAreaWidth = layout.trackControlsWidth;
         const float gridStartX = bounds.x + controlAreaWidth + 5.0f;
-        const float headerHeight = 38.0f;
-        const float rulerHeight = 28.0f;
-        const float horizontalScrollbarHeight = 24.0f;
+        const float headerHeight = kTimelineHeaderHeight;
+        const float rulerHeight = kTimelineRulerHeight;
+        const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
         const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
 
         AestraUI::NUIRect gridBounds(gridStartX, trackAreaTop, bounds.width - controlAreaWidth - 20.0f,
@@ -1065,10 +1073,10 @@ bool TrackManagerUI::clampInstantClipDragPosition(AestraUI::NUIPoint& position) 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const float controlAreaWidth = themeManager.getLayoutDimensions().trackControlsWidth;
     const AestraUI::NUIRect bounds = getGlobalBounds();
-    const float headerHeight = 38.0f;
-    const float horizontalScrollbarHeight = 24.0f;
-    const float rulerHeight = 28.0f;
-    const float scrollbarWidth = 15.0f;
+    const float headerHeight = kTimelineHeaderHeight;
+    const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+    const float rulerHeight = kTimelineRulerHeight;
+    const float scrollbarWidth = kTimelineScrollbarWidth;
     const float gridStartX = bounds.x + controlAreaWidth + 5.0f;
     const float gridEndX = bounds.x + bounds.width - scrollbarWidth;
     const float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
@@ -1478,9 +1486,9 @@ void TrackManagerUI::layoutTracks() {
     const auto& layout = themeManager.getLayoutDimensions();
 
     float headerHeight = 40.0f;
-    float scrollbarWidth = 15.0f;
-    float horizontalScrollbarHeight = 24.0f;
-    float rulerHeight = 28.0f;
+    float scrollbarWidth = kTimelineScrollbarWidth;
+    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+    float rulerHeight = kTimelineRulerHeight;
 
     float viewportHeight = std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight);
 
@@ -1601,10 +1609,10 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
     // IMPORTANT: This pass must be clipped to the track viewport; otherwise partially-visible
     // tracks can draw "above" the viewport and bleed into the ruler/corner region.
     if (m_playlistVisible) {
-        const float headerHeight = 38.0f;
-        const float horizontalScrollbarHeight = 24.0f;
-        const float rulerHeight = 28.0f;
-        const float scrollbarWidth = 15.0f;
+        const float headerHeight = kTimelineHeaderHeight;
+        const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+        const float rulerHeight = kTimelineRulerHeight;
+        const float scrollbarWidth = kTimelineScrollbarWidth;
 
         // Since panels are overlays, we render the playlist underneath them.
         // If we want clipping to stop at panel borders, we'd need to subtract them here.
@@ -1685,11 +1693,11 @@ void TrackManagerUI::onRender(AestraUI::NUIRenderer& renderer) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
 
-        float headerHeight = 38.0f;
-        float rulerHeight = 28.0f;
-        float horizontalScrollbarHeight = 24.0f;
+        float headerHeight = kTimelineHeaderHeight;
+        float rulerHeight = kTimelineRulerHeight;
+        float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
         float controlAreaWidth = layout.trackControlsWidth;
-        float scrollbarWidth = 15.0f;
+        float scrollbarWidth = kTimelineScrollbarWidth;
 
         float gridTop = getBounds().y + headerHeight + rulerHeight + horizontalScrollbarHeight;
         float gridLeft = getBounds().x + controlAreaWidth + 5.0f; // +5 margin
@@ -1785,7 +1793,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         renderer.fillRect(controlBg, AestraUI::NUIColor(0.035f, 0.035f, 0.035f, 1.0f));
 
         // Background for grid area (match track background; zebra grid provides contrast)
-        float scrollbarWidth = 15.0f;
+        float scrollbarWidth = kTimelineScrollbarWidth;
         float gridWidth = bounds.width - controlAreaWidth - scrollbarWidth - 5;
         AestraUI::NUIRect gridBg(bounds.x + gridStartX, bounds.y, gridWidth, bounds.height);
         renderer.fillRect(gridBg, gridBgColor);
@@ -1819,7 +1827,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
             infoSize = renderer.measureText(infoText, infoFont);
         }
 
-        const float headerHeight = 38.0f;
+        const float headerHeight = kTimelineHeaderHeight;
         const AestraUI::NUIRect headerBounds(bounds.x, bounds.y, headerAvailableWidth, headerHeight);
         const float rightPad = layout.panelMargin + 18.0f;
         const float textX = std::max(headerBounds.x + margin, headerBounds.right() - infoSize.width - rightPad);
@@ -1829,10 +1837,10 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
     }
 
     // Render Static Track Content (with Viewport Culling AND Clipping)
-    constexpr float kHeaderHeight = 38.0f;
-    constexpr float kHScrollbarHeight = 24.0f;
-    constexpr float kRulerHeight = 28.0f;
-    constexpr float kScrollbarWidth = 15.0f;
+    constexpr float kHeaderHeight = kTimelineHeaderHeight;
+    constexpr float kHScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+    constexpr float kRulerHeight = kTimelineRulerHeight;
+    constexpr float kScrollbarWidth = kTimelineScrollbarWidth;
     const float headerHeight = kHeaderHeight;
     const float horizontalScrollbarHeight = kHScrollbarHeight;
     const float rulerHeight = kRulerHeight;
@@ -1889,7 +1897,7 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
         AestraUI::NUIColor bgColor = themeManager.getColor("backgroundPrimary");
         AestraUI::NUIColor borderColor = themeManager.getColor("border");
 
-        float headerHeight = 38.0f;
+        float headerHeight = kTimelineHeaderHeight;
         AestraUI::NUIRect headerRect(bounds.x, bounds.y, headerWidth, headerHeight);
         // Elevated header: base fill + soft vertical gradient + glass top edge.
         // Rendered into the playlist FBO cache, so the richness is free per frame.
@@ -1913,8 +1921,8 @@ void TrackManagerUI::renderTrackManagerStatic(AestraUI::NUIRenderer& renderer) {
                           headerBorder);
 
         // Draw time ruler below header
-        float rulerHeight = 28.0f;
-        float horizontalScrollbarHeight = 24.0f;
+        float rulerHeight = kTimelineRulerHeight;
+        float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
         AestraUI::NUIRect rulerRect(bounds.x, bounds.y + headerHeight + horizontalScrollbarHeight, headerWidth,
                                     rulerHeight);
         renderTimeRuler(renderer, rulerRect);
@@ -1929,10 +1937,10 @@ void TrackManagerUI::renderTrackManagerDynamic(AestraUI::NUIRenderer& renderer) 
     const auto& layout = themeManager.getLayoutDimensions();
 
     if (m_playlistVisible) {
-        constexpr float kHeaderHeight = 38.0f;
-        constexpr float kHScrollbarHeight = 24.0f;
-        constexpr float kRulerHeight = 28.0f;
-        constexpr float kScrollbarWidth = 15.0f;
+        constexpr float kHeaderHeight = kTimelineHeaderHeight;
+        constexpr float kHScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+        constexpr float kRulerHeight = kTimelineRulerHeight;
+        constexpr float kScrollbarWidth = kTimelineScrollbarWidth;
         const float headerHeight = kHeaderHeight;
         const float horizontalScrollbarHeight = kHScrollbarHeight;
         const float rulerHeight = kRulerHeight;
@@ -1991,13 +1999,13 @@ void TrackManagerUI::renderTrackManagerDynamic(AestraUI::NUIRenderer& renderer) 
         float selStartX = gridStartX + static_cast<float>(selStartBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
         float selEndX = gridStartX + static_cast<float>(selEndBeat * m_pixelsPerBeat) - m_timelineScrollOffset;
 
-        float headerHeight = 38.0f;
-        float rulerHeight = 28.0f;
-        float horizontalScrollbarHeight = 24.0f;
+        float headerHeight = kTimelineHeaderHeight;
+        float rulerHeight = kTimelineRulerHeight;
+        float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
         float trackAreaTop = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
         float trackAreaHeight = bounds.height - (headerHeight + horizontalScrollbarHeight + rulerHeight);
 
-        float scrollbarWidth = 15.0f;
+        float scrollbarWidth = kTimelineScrollbarWidth;
         float gridWidth = bounds.width - controlAreaWidth - scrollbarWidth - 5.0f;
         float gridEndX = gridStartX + gridWidth;
 
@@ -2032,10 +2040,10 @@ void TrackManagerUI::renderChildren(AestraUI::NUIRenderer& renderer) {
     const auto& layout = themeManager.getLayoutDimensions();
     AestraUI::NUIRect bounds = getBounds();
 
-    const float headerHeight = 38.0f;
-    const float rulerHeight = 28.0f;
-    const float horizontalScrollbarHeight = 24.0f;
-    const float scrollbarWidth = 15.0f;
+    const float headerHeight = kTimelineHeaderHeight;
+    const float rulerHeight = kTimelineRulerHeight;
+    const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+    const float scrollbarWidth = kTimelineScrollbarWidth;
 
     const float viewportHeight = std::max(0.0f, bounds.height - headerHeight - horizontalScrollbarHeight - rulerHeight);
     const float viewportTopAbs = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
@@ -2299,7 +2307,7 @@ void TrackManagerUI::onUpdate(double deltaTime) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
         const auto& layout = themeManager.getLayoutDimensions();
         float controlAreaWidth = layout.trackControlsWidth;
-        float scrollbarWidth = 15.0f;
+        float scrollbarWidth = kTimelineScrollbarWidth;
 
         AestraUI::NUIRect bounds = getBounds();
         float gridStartX = bounds.x + controlAreaWidth + 5.0f;
@@ -2602,9 +2610,9 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                               (m_currentTool == PlaylistTool::MultiSelect || ctrlHeld));
 
     if (startSelectionBox && !m_isDrawingSelectionBox) {
-        float headerHeight = 38.0f;
-        float rulerHeight = 28.0f;
-        float horizontalScrollbarHeight = 24.0f;
+        float headerHeight = kTimelineHeaderHeight;
+        float rulerHeight = kTimelineRulerHeight;
+        float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
         float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
 
         // Only start selection box in track area
@@ -2625,11 +2633,11 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             auto& themeManager = AestraUI::NUIThemeManager::getInstance();
             const auto& layout = themeManager.getLayoutDimensions();
 
-            float headerHeight = 38.0f;
-            float rulerHeight = 28.0f;
-            float horizontalScrollbarHeight = 24.0f;
+            float headerHeight = kTimelineHeaderHeight;
+            float rulerHeight = kTimelineRulerHeight;
+            float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
             float controlAreaWidth = layout.trackControlsWidth;
-            float scrollbarWidth = 15.0f;
+            float scrollbarWidth = kTimelineScrollbarWidth;
 
             AestraUI::NUIRect globalBounds = getBounds();
 
@@ -2690,9 +2698,9 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     }
 
     // Layout constants
-    float headerHeight = 38.0f;
-    float rulerHeight = 28.0f;
-    float horizontalScrollbarHeight = 24.0f;
+    float headerHeight = kTimelineHeaderHeight;
+    float rulerHeight = kTimelineRulerHeight;
+    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
     AestraUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, bounds.width, rulerHeight);
 
     // Track area (below ruler)
@@ -3093,9 +3101,9 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         float controlAreaWidth = layout.trackControlsWidth;
         float gridStartX = controlAreaWidth + 5;
 
-        float headerHeight = 38.0f;
-        float rulerHeight = 28.0f;
-        float horizontalScrollbarHeight = 24.0f;
+        float headerHeight = kTimelineHeaderHeight;
+        float rulerHeight = kTimelineRulerHeight;
+        float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
         float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
 
         AestraUI::NUIRect gridBounds(bounds.x + gridStartX, bounds.y + trackAreaTop,
@@ -3384,9 +3392,9 @@ void TrackManagerUI::updateScrollbar() {
         return;
 
     AestraUI::NUIRect bounds = getBounds();
-    float headerHeight = 38.0f;
-    float rulerHeight = 28.0f;
-    float horizontalScrollbarHeight = 24.0f;
+    float headerHeight = kTimelineHeaderHeight;
+    float rulerHeight = kTimelineRulerHeight;
+    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
 
     // In v3.1, panels are floating overlays and do not affect the scrollbar's viewport directly.
     float viewportHeight = bounds.height - headerHeight - rulerHeight - horizontalScrollbarHeight;
@@ -3725,8 +3733,8 @@ void TrackManagerUI::deselectAllTracks() {
 
 void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const AestraUI::NUIRect& rulerBounds) {
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
-    auto borderColor = AestraUI::NUIColor::white().withAlpha(0.075f);
-    auto accentColor = AestraUI::NUIColor(0.486f, 0.361f, 0.749f, 1.0f);
+    auto borderColor = themeManager.getColor("borderSubtle");
+    auto accentColor = themeManager.getColor("accentPrimary");
 
     // Opaque near-black ruler material — identical across the full row and the
     // grid shell so the corner over the track controls is flush by construction.
@@ -3734,7 +3742,8 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     auto glassHighlight = AestraUI::NUIColor::white().withAlpha(0.014f);
 
     auto textCol = themeManager.getColor("textPrimary").withAlpha(0.86f);
-    auto tickCol = AestraUI::NUIColor::fromHex(0x2e2e2e).withAlpha(0.82f);
+    auto majorTickCol = themeManager.getColor("gridMajor");
+    auto minorTickCol = themeManager.getColor("gridMinor");
 
     // Restore layout definition
     const auto& layout = themeManager.getLayoutDimensions();
@@ -3743,7 +3752,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
     float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = rulerBounds.x + controlAreaWidth + 5.0f;
 
-    float scrollbarWidth = 15.0f;
+    float scrollbarWidth = kTimelineScrollbarWidth;
     float trackWidth = rulerBounds.width - scrollbarWidth;
     float gridWidth = std::max(0.0f, trackWidth - controlAreaWidth - 10.0f);
 
@@ -3820,7 +3829,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
         float tickHeight = isMajorBar ? rulerBounds.height * 0.58f : rulerBounds.height * 0.24f;
         renderer.drawLine(AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height - tickHeight),
                           AestraUI::NUIPoint(x, rulerBounds.y + rulerBounds.height), isMajorBar ? 1.15f : 1.0f,
-                          isMajorBar ? tickCol : tickCol.withAlpha(0.58f));
+                          isMajorBar ? majorTickCol : minorTickCol);
 
         // Beat ticks within the bar (only if zoomed in enough AND not striding)
         // DOWNBEATS (1, 2, 3, 4) are BRIGHTER and TALLER for visibility
@@ -3829,7 +3838,7 @@ void TrackManagerUI::renderTimeRuler(AestraUI::NUIRenderer& renderer, const Aest
                 float beatX = x + (beat * m_pixelsPerBeat);
 
                 float beatTickHeight = rulerBounds.height * 0.22f;
-                AestraUI::NUIColor beatTickColor = AestraUI::NUIColor::fromHex(0x262626).withAlpha(0.36f);
+                AestraUI::NUIColor beatTickColor = minorTickCol;
 
                 renderer.drawLine(AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height - beatTickHeight),
                                   AestraUI::NUIPoint(beatX, rulerBounds.y + rulerBounds.height), 1.0f, beatTickColor);
@@ -3915,7 +3924,7 @@ void TrackManagerUI::renderLoopMarkers(AestraUI::NUIRenderer& renderer, const Ae
     // Calculate grid start (same as ruler)
     float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = rulerBounds.x + controlAreaWidth + 5.0f;
-    float scrollbarWidth = 15.0f;
+    float scrollbarWidth = kTimelineScrollbarWidth;
     float trackWidth = rulerBounds.width - scrollbarWidth;
     float gridWidth = trackWidth - controlAreaWidth - 10.0f;
     gridWidth = std::max(0.0f, gridWidth);
@@ -4046,16 +4055,16 @@ void TrackManagerUI::renderPlayhead(AestraUI::NUIRenderer& renderer) {
     float playheadX = gridStartX + static_cast<float>(relPositionX);
 
     // Calculate bounds and triangle size for precise culling
-    float scrollbarWidth = 15.0f;
+    float scrollbarWidth = kTimelineScrollbarWidth;
     float trackWidth = bounds.width - scrollbarWidth;
     float gridWidth = trackWidth - (controlAreaWidth + 5.0f);
     float gridEndX = gridStartX + gridWidth;
     float triangleSize = 6.0f; // Marker extends this much left/right from playhead center
 
     // Calculate playhead boundaries
-    float headerHeight = 38.0f;
-    float horizontalScrollbarHeight = 24.0f;
-    float rulerHeight = 28.0f;
+    float headerHeight = kTimelineHeaderHeight;
+    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+    float rulerHeight = kTimelineRulerHeight;
     float playheadStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
 
     // In v3.1, overlays are hit-test transparent and don't affect playhead line culling directly.
@@ -4144,7 +4153,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
     // Calculate layout dimensions
     float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = controlAreaWidth + 5;
-    float scrollbarWidth = 15.0f;
+    float scrollbarWidth = kTimelineScrollbarWidth;
     float gridWidth = width - controlAreaWidth - scrollbarWidth - 5;
 
     AestraUI::NUIRect textureBounds(0, 0, static_cast<float>(width), static_cast<float>(height));
@@ -4167,7 +4176,7 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
                       borderColor);
 
     // Draw header bar
-    float headerHeight = 38.0f;
+    float headerHeight = kTimelineHeaderHeight;
     AestraUI::NUIRect headerRect(0, 0, static_cast<float>(width), headerHeight);
     renderer.fillRect(headerRect, bgColor);
     renderer.drawLine({headerRect.x, headerRect.y}, {headerRect.x, headerRect.bottom()}, 1.0f, borderColor);
@@ -4176,8 +4185,8 @@ void TrackManagerUI::updateBackgroundCache(AestraUI::NUIRenderer& renderer) {
                       borderColor);
 
     // Draw time ruler
-    float rulerHeight = 28.0f;
-    float horizontalScrollbarHeight = 24.0f;
+    float rulerHeight = kTimelineRulerHeight;
+    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
     AestraUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, static_cast<float>(width), rulerHeight);
 
     // Render ruler ticks (static part only - no moving elements)
@@ -4697,7 +4706,13 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
                 AudioSlicePayload payload;
                 payload.audioSourceId = sourceId;
                 payload.durationSeconds = durationSeconds;
-                payload.slices.push_back({0.0, static_cast<double>(source->getNumFrames())});
+                // Populate the sample-domain fields the serializer persists
+                // (startSamples/lengthSamples). The old {0.0, numFrames} form set
+                // startOffset/duration instead, so the slice saved as start:0 length:0.
+                AudioSlice fullSlice;
+                fullSlice.startSamples = 0.0;
+                fullSlice.lengthSamples = static_cast<double>(source->getNumFrames());
+                payload.slices.push_back(fullSlice);
 
                 auto& patternManager = self->m_trackManager->getPatternManager();
                 PatternID patternId = patternManager.createAudioPattern(displayName, durationBeats, payload);
@@ -5034,9 +5049,9 @@ int TrackManagerUI::getTrackAtPosition(float y) const {
     // Get ruler height and track area start
     // MUST match renderTrackManagerDirect layout exactly:
     // header(38) + horizontalScrollbar(24) + ruler(28)
-    float headerHeight = 38.0f;
-    float horizontalScrollbarHeight = 24.0f;
-    float rulerHeight = 28.0f;
+    float headerHeight = kTimelineHeaderHeight;
+    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+    float rulerHeight = kTimelineRulerHeight;
     float trackAreaY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
 
     // Relative Y position in track area
@@ -5097,9 +5112,9 @@ void TrackManagerUI::renderDropPreview(AestraUI::NUIRenderer& renderer) {
 
     // Calculate track Y position - MUST match layoutTracks() calculation exactly
     // layoutTracks uses: headerHeight(38) + horizontalScrollbarHeight(24) + rulerHeight(28)
-    float headerHeight = 38.0f;
-    float horizontalScrollbarHeight = 24.0f;
-    float rulerHeight = 28.0f;
+    float headerHeight = kTimelineHeaderHeight;
+    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+    float rulerHeight = kTimelineRulerHeight;
     float trackAreaStartY = bounds.y + headerHeight + horizontalScrollbarHeight + rulerHeight;
     float trackY = trackAreaStartY + (m_dropTargetTrack * (m_trackHeight + m_trackSpacing)) - m_scrollOffset;
 
@@ -5328,9 +5343,9 @@ void Aestra::Audio::TrackManagerUI::renderPendingImports(AestraUI::NUIRenderer& 
     auto& themeManager = AestraUI::NUIThemeManager::getInstance();
     const auto& layout = themeManager.getLayoutDimensions();
 
-    float headerHeight = 38.0f;
-    float rulerHeight = 28.0f;
-    float horizontalScrollbarHeight = 24.0f;
+    float headerHeight = kTimelineHeaderHeight;
+    float rulerHeight = kTimelineRulerHeight;
+    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
     float controlAreaWidth = layout.trackControlsWidth;
     float gridStartX = getBounds().x + controlAreaWidth + 5.0f;
     float trackAreaTop = getBounds().y + headerHeight + horizontalScrollbarHeight + rulerHeight;

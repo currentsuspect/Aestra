@@ -21,22 +21,18 @@ namespace AestraUI {
 // ============================================================================
 
 namespace Colors {
-    static const NUIColor panelBackground = NUIThemeManager::getInstance().getColor("backgroundPrimary");
-    static const NUIColor panelTop = NUIThemeManager::getInstance().getColor("backgroundSecondary");
-    static const NUIColor panelBorder = NUIThemeManager::getInstance().getColor("border").withAlpha(0.40f);
-    static const NUIColor textPrimary = NUIThemeManager::getInstance().getColor("textPrimary");
-    static const NUIColor textSecondary = NUIThemeManager::getInstance().getColor("textSecondary");
-    static const NUIColor textDisabled = NUIThemeManager::getInstance().getColor("textDisabled");
-    static const NUIColor accentPrimary = NUIThemeManager::getInstance().getColor("accentPrimary");
-    static const NUIColor accentSecondary = NUIThemeManager::getInstance().getColor("accentSecondary");
-    static const NUIColor accentWarning = NUIThemeManager::getInstance().getColor("warning");
-    static const NUIColor buttonBackground = NUIThemeManager::getInstance().getColor("buttonBgDefault");
-    static const NUIColor buttonBackgroundHover = NUIThemeManager::getInstance().getColor("buttonBgHover");
-    static const NUIColor inputBackground = NUIThemeManager::getInstance().getColor("inputBgDefault");
-    static const NUIColor rowBackground = NUIThemeManager::getInstance().getColor("backgroundSecondary").withAlpha(0.72f);
-    static const NUIColor listHover = NUIColor::white().withAlpha(0.045f);
-    static const NUIColor listSelected = NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(0.16f);
-    static const NUIColor divider = NUIThemeManager::getInstance().getColor("border").withAlpha(0.48f);
+    NUIColor panelBackground() { return NUIThemeManager::getInstance().getColor("appBackground"); }
+    NUIColor panelTop() { return NUIThemeManager::getInstance().getColor("recessedPanel"); }
+    NUIColor panelBorder() { return NUIThemeManager::getInstance().getColor("borderSubtle"); }
+    NUIColor textPrimary() { return NUIThemeManager::getInstance().getColor("textPrimary"); }
+    NUIColor textSecondary() { return NUIThemeManager::getInstance().getColor("textSecondary"); }
+    NUIColor textDisabled() { return NUIThemeManager::getInstance().getColor("textDisabled"); }
+    NUIColor accentPrimary() { return NUIThemeManager::getInstance().getColor("accentPrimary"); }
+    NUIColor buttonBackground() { return NUIThemeManager::getInstance().getColor("controlBackground"); }
+    NUIColor buttonBackgroundHover() { return NUIThemeManager::getInstance().getColor("controlHover"); }
+    NUIColor listHover() { return NUIThemeManager::getInstance().getColor("controlHover"); }
+    NUIColor listSelected() { return NUIThemeManager::getInstance().getColor("selection"); }
+    NUIColor divider() { return NUIThemeManager::getInstance().getColor("divider"); }
 
     // Type dot colors
     static const NUIColor typeEffect    = NUIColor(0.376f, 0.647f, 0.980f, 1.0f);  // #60a5fa
@@ -53,14 +49,15 @@ namespace Colors {
     static const NUIColor badgeIntText  = NUIColor(1.0f, 1.0f, 1.0f, 0.40f);
 
     // Active pill
-    static const NUIColor pillActiveBg  = NUIColor(0.486f, 0.227f, 0.929f, 1.0f);  // #7c3aed filled
-    static const NUIColor pillActiveText = NUIColor(1.0f, 1.0f, 1.0f, 1.0f);
-    static const NUIColor pillInactiveBorder = NUIColor(1.0f, 1.0f, 1.0f, 0.15f);
-    static const NUIColor pillInactiveText = NUIColor(1.0f, 1.0f, 1.0f, 0.60f);
+    NUIColor pillActiveBg() { return NUIThemeManager::getInstance().getColor("selection"); }
+    NUIColor pillActiveText() { return NUIThemeManager::getInstance().getColor("textPrimary"); }
+    NUIColor pillInactiveBg() { return NUIThemeManager::getInstance().getColor("controlBackground"); }
+    NUIColor pillInactiveBorder() { return NUIThemeManager::getInstance().getColor("borderSubtle"); }
+    NUIColor pillInactiveText() { return NUIThemeManager::getInstance().getColor("textSecondary"); }
 
     // Favorite star
-    static const NUIColor starActive    = NUIColor(0.655f, 0.545f, 0.980f, 1.0f);  // #a78bfa
-    static const NUIColor starGhost     = NUIColor(0.655f, 0.545f, 0.980f, 0.35f);
+    NUIColor starActive() { return NUIThemeManager::getInstance().getColor("accentPrimary"); }
+    NUIColor starGhost() { return NUIThemeManager::getInstance().getColor("accentPrimary").withAlpha(0.35f); }
 }
 
 namespace {
@@ -137,7 +134,11 @@ void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
     std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     auto bounds = getBounds();
 
-    renderer.fillRect(bounds, Colors::panelBackground);
+    // Clip everything to the panel. The header/filter bars draw unclipped, so
+    // overflowing filter pills used to bleed to the right into the track manager.
+    renderer.setClipRect(bounds);
+
+    renderer.fillRect(bounds, Colors::panelBackground());
 
     renderHeaderBar(renderer);
     renderFilterBar(renderer);
@@ -146,82 +147,97 @@ void PluginBrowserPanel::onRender(NUIRenderer& renderer) {
     if (m_scanning) {
         renderScanProgress(renderer);
     }
+
+    renderer.clearClipRect();
 }
 
 void PluginBrowserPanel::renderHeaderBar(NUIRenderer& renderer) {
     auto bounds = getBounds();
     constexpr float headerH = HEADER_BAR_HEIGHT;
 
-    renderer.fillRect({bounds.x, bounds.y, bounds.width, headerH}, Colors::panelTop);
-    renderer.drawLine({bounds.x, bounds.y + headerH}, {bounds.right(), bounds.y + headerH}, 1.0f, Colors::divider);
+    const float headerY = bounds.y + CONTENT_TOP_PAD;
+    renderer.fillRect({bounds.x, headerY, bounds.width, headerH}, Colors::panelTop());
+    renderer.drawLine({bounds.x, headerY + headerH}, {bounds.right(), headerY + headerH}, 1.0f, Colors::divider());
 
-    renderer.drawText("Plugins", {bounds.x + 14.0f, bounds.y + 15.0f}, 12.0f, Colors::textPrimary.withAlpha(0.82f));
+    // Title, with a muted count once a scan has populated the list.
+    renderer.drawText("Plugins", {bounds.x + 14.0f, headerY + 12.0f}, 12.0f, Colors::textPrimary().withAlpha(0.90f));
+    if (!m_allPlugins.empty()) {
+        float titleW = renderer.measureText("Plugins", 12.0f).width;
+        const bool filtered = m_typeFilter != PluginTypeFilter::All || m_formatFilter != PluginFormatFilter::All ||
+                              m_showFavoritesOnly || !m_searchQuery.empty();
+        std::string count = std::to_string(m_filteredPlugins.size());
+        if (filtered) {
+            count += " / " + std::to_string(m_allPlugins.size());
+        }
+        renderer.drawText(count, {bounds.x + 14.0f + titleW + 7.0f, headerY + 13.0f}, 10.0f,
+                          Colors::textSecondary().withAlpha(0.45f));
+    }
 
+    // Scan control — accent pill, consistent with the filter pills.
     NUIRect scanBtn = getScanButtonRect();
+    const float scanRadius = scanBtn.height * 0.5f;
     if (m_scanning) {
-        renderer.fillRoundedRect(scanBtn, 5.0f, Colors::buttonBackground.withAlpha(0.50f));
-        auto dots = renderer.measureText("...", 10.0f);
-        renderer.drawText("...", {scanBtn.x + (scanBtn.width - dots.width) * 0.5f, scanBtn.y + 5}, 10.0f, Colors::textDisabled);
+        renderer.fillRoundedRect(scanBtn, scanRadius, Colors::accentPrimary().withAlpha(0.10f));
+        auto dots = renderer.measureText("\xe2\x80\xa6", 11.0f); // ellipsis glyph
+        renderer.drawText("\xe2\x80\xa6", {scanBtn.x + (scanBtn.width - dots.width) * 0.5f, scanBtn.y + 3.0f}, 11.0f,
+                          Colors::accentPrimary().withAlpha(0.75f));
     } else {
-        renderer.fillRoundedRect(scanBtn, 5.0f, Colors::buttonBackground);
-        renderer.strokeRoundedRect(scanBtn, 5.0f, 1.0f, Colors::panelBorder);
+        renderer.fillRoundedRect(scanBtn, scanRadius, Colors::accentPrimary().withAlpha(0.16f));
         auto label = renderer.measureText("Scan", 10.0f);
-        renderer.drawText("Scan", {scanBtn.x + (scanBtn.width - label.width) * 0.5f, scanBtn.y + 5}, 10.0f, Colors::textSecondary.withAlpha(0.82f));
+        renderer.drawText("Scan", {scanBtn.x + (scanBtn.width - label.width) * 0.5f, scanBtn.y + 4.5f}, 10.0f,
+                          Colors::accentPrimary());
     }
 }
 
 void PluginBrowserPanel::renderFilterBar(NUIRenderer& renderer) {
     auto bounds = getBounds();
-    float barY = bounds.y + HEADER_BAR_HEIGHT;
+    float barY = bounds.y + CONTENT_TOP_PAD + HEADER_BAR_HEIGHT;
     m_filterPillHits.clear();
 
-    renderer.fillRect({bounds.x, barY, bounds.width, FILTER_BAR_HEIGHT}, Colors::panelTop);
-    renderer.drawLine({bounds.x, barY + FILTER_BAR_HEIGHT}, {bounds.right(), barY + FILTER_BAR_HEIGHT}, 1.0f, Colors::divider);
+    renderer.fillRect({bounds.x, barY, bounds.width, FILTER_BAR_HEIGHT}, Colors::panelTop());
+    renderer.drawLine({bounds.x, barY + FILTER_BAR_HEIGHT}, {bounds.right(), barY + FILTER_BAR_HEIGHT}, 1.0f, Colors::divider());
 
-    float x = bounds.x + 12.0f;
-    const float y = barY + 7.0f;
-    const float pillH = 22.0f;
+    // Equal-width pills that span the full width in two rows of three. This fills
+    // the bar edge-to-edge (no left-clustered dead space) and adapts as the panel
+    // is widened — the pills grow with it instead of leaving a gap.
+    const float margin = 12.0f;
     const float gap = 6.0f;
+    const float pillH = 19.0f;
+    const float availW = std::max(0.0f, bounds.width - 2.0f * margin);
+    const float pillW = std::max(24.0f, (availW - 2.0f * gap) / 3.0f);
+    const float startX = bounds.x + margin;
+    const float row1Y = barY + 5.0f;
+    const float row2Y = barY + 28.0f;
 
-    auto drawPill = [&](const std::string& label, bool active, FilterPillHit::Type type) {
-        float w = std::max(32.0f, renderer.measureText(label, 11.0f).width + 20.0f);
-        NUIRect rect = {x, y, w, pillH};
+    auto drawPill = [&](const std::string& label, bool active, FilterPillHit::Type type, int col, float y) {
+        NUIRect rect = {startX + col * (pillW + gap), y, pillW, pillH};
+        renderer.fillRoundedRect(rect, pillH * 0.5f, active ? Colors::pillActiveBg() : Colors::pillInactiveBg());
 
-        if (active) {
-            renderer.fillRoundedRect(rect, 11.0f, Colors::pillActiveBg);
-        } else {
-            renderer.strokeRoundedRect(rect, 11.0f, 1.0f, Colors::pillInactiveBorder);
-        }
-
-        NUIColor textColor = active ? Colors::pillActiveText : Colors::pillInactiveText;
-        auto measured = renderer.measureText(label, 11.0f);
-        renderer.drawText(label, {rect.x + (rect.width - measured.width) * 0.5f, rect.y + 4.5f}, 11.0f, textColor);
+        NUIColor textColor = active ? Colors::pillActiveText() : Colors::pillInactiveText();
+        auto measured = renderer.measureText(label, 10.0f);
+        renderer.drawText(label, {rect.x + (rect.width - measured.width) * 0.5f, rect.y + 4.0f}, 10.0f, textColor);
 
         m_filterPillHits.push_back({type, rect});
-        x += w + gap;
     };
 
+    // Row 1 — plugin type (primary axis)
     bool allActive = (m_typeFilter == PluginTypeFilter::All && m_formatFilter == PluginFormatFilter::All && !m_showFavoritesOnly);
-    drawPill("All", allActive, FilterPillHit::TypeAll);
-    drawPill("FX", m_typeFilter == PluginTypeFilter::Effects, FilterPillHit::TypeFX);
-    drawPill("Inst", m_typeFilter == PluginTypeFilter::Instruments, FilterPillHit::TypeInst);
+    drawPill("All", allActive, FilterPillHit::TypeAll, 0, row1Y);
+    drawPill("FX", m_typeFilter == PluginTypeFilter::Effects, FilterPillHit::TypeFX, 1, row1Y);
+    drawPill("Inst", m_typeFilter == PluginTypeFilter::Instruments, FilterPillHit::TypeInst, 2, row1Y);
 
-    x += 4.0f;
-
-    drawPill("VST3", m_formatFilter == PluginFormatFilter::VST3, FilterPillHit::FormatVST3);
-    drawPill("CLAP", m_formatFilter == PluginFormatFilter::CLAP, FilterPillHit::FormatCLAP);
-
-    x += 4.0f;
-
-    drawPill(m_showFavoritesOnly ? "\xe2\x98\x85 Faves" : "\xe2\x98\x85", m_showFavoritesOnly, FilterPillHit::Fav);
+    // Row 2 — format + favorites (secondary axis)
+    drawPill("VST3", m_formatFilter == PluginFormatFilter::VST3, FilterPillHit::FormatVST3, 0, row2Y);
+    drawPill("CLAP", m_formatFilter == PluginFormatFilter::CLAP, FilterPillHit::FormatCLAP, 1, row2Y);
+    drawPill("Faves", m_showFavoritesOnly, FilterPillHit::Fav, 2, row2Y);
 }
 
 void PluginBrowserPanel::renderPluginList(NUIRenderer& renderer) {
     auto bounds = getBounds();
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
-    float listHeight = bounds.height - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
+    float listTop = bounds.y + CONTENT_TOP_PAD + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
+    float listHeight = bounds.height - CONTENT_TOP_PAD - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
 
-    renderer.setClipRect({bounds.x + 8.0f, listTop, bounds.width - 16.0f, listHeight});
+    renderer.setClipRect({bounds.x + 8.0f, listTop, bounds.width - 12.0f, listHeight});
 
     // Rebuild star rects each render
     m_starRects.assign(m_filteredPlugins.size(), NUIRect{});
@@ -237,21 +253,27 @@ void PluginBrowserPanel::renderPluginList(NUIRenderer& renderer) {
 
     if (m_filteredPlugins.empty() && !m_scanning) {
         float centerY = listTop + listHeight * 0.5f;
-        renderer.drawText("No plugins found",
-                         {bounds.x + bounds.width * 0.5f - 55, centerY - 14},
-                         13.0f, Colors::textPrimary.withAlpha(0.85f));
-        renderer.drawText("Click Scan to discover installed plugins",
-                         {bounds.x + bounds.width * 0.5f - 105, centerY + 4},
-                         11.0f, Colors::textSecondary.withAlpha(0.40f));
+        const bool hasCatalog = !m_allPlugins.empty();
+        const std::string title = hasCatalog ? "No matches" : "No plugins found";
+        const std::string hint = hasCatalog ? "Adjust filters or search" : "Use Scan above to discover plugins";
+        renderer.drawTextCentered(title, {bounds.x + 12.0f, centerY - 16.0f, bounds.width - 24.0f, 18.0f},
+                                  13.0f, Colors::textPrimary().withAlpha(0.85f));
+        renderer.drawTextCentered(hint, {bounds.x + 12.0f, centerY + 4.0f, bounds.width - 24.0f, 16.0f},
+                                  10.0f, Colors::textSecondary().withAlpha(0.52f));
+    }
 
-        // Show Scan button only if never scanned (allPlugins empty)
-        if (m_allPlugins.empty()) {
-            NUIRect scanBtn = {bounds.x + bounds.width * 0.5f - 30, centerY + 22, 60, 24};
-            renderer.fillRoundedRect(scanBtn, 6.0f, Colors::accentPrimary.withAlpha(0.25f));
-            renderer.strokeRoundedRect(scanBtn, 6.0f, 1.0f, Colors::accentPrimary.withAlpha(0.50f));
-            auto label = renderer.measureText("Scan", 11.0f);
-            renderer.drawText("Scan", {scanBtn.x + (scanBtn.width - label.width) * 0.5f, scanBtn.y + 5.5f}, 11.0f, Colors::accentPrimary);
-        }
+    const float contentHeight = static_cast<float>(m_filteredPlugins.size()) * ROW_HEIGHT;
+    const float maxScroll = std::max(0.0f, contentHeight - listHeight);
+    if (maxScroll > 0.0f) {
+        const float trackY = listTop + 4.0f;
+        const float trackH = std::max(0.0f, listHeight - 8.0f);
+        const float thumbH = std::max(24.0f, trackH * (listHeight / contentHeight));
+        const float travel = std::max(0.0f, trackH - thumbH);
+        const float thumbY = trackY + travel * std::clamp(m_scrollOffset / maxScroll, 0.0f, 1.0f);
+        const float scrollbarX = bounds.right() - 7.0f;
+        renderer.fillRoundedRect({scrollbarX, trackY, 2.0f, trackH}, 1.0f, Colors::pillInactiveBg());
+        renderer.fillRoundedRect({scrollbarX, thumbY, 2.0f, thumbH}, 1.0f,
+                                 Colors::textSecondary().withAlpha(0.42f));
     }
 
     renderer.clearClipRect();
@@ -265,12 +287,12 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
 
     // Row background
     if (index == m_selectedIndex) {
-        renderer.fillRoundedRect(rowRect, 6.0f, Colors::listSelected);
+        renderer.fillRoundedRect(rowRect, 6.0f, Colors::listSelected());
         renderer.fillRoundedRect({rowRect.x, rowRect.y + 4.0f, 3.0f, rowRect.height - 8.0f},
                                  1.5f,
-                                 Colors::accentPrimary.withAlpha(0.85f));
+                                 Colors::accentPrimary().withAlpha(0.85f));
     } else if (index == m_hoveredIndex) {
-        renderer.fillRoundedRect(rowRect, 6.0f, Colors::listHover);
+        renderer.fillRoundedRect(rowRect, 6.0f, Colors::listHover());
     }
 
     // Star rect (for hit-testing)
@@ -281,80 +303,87 @@ void PluginBrowserPanel::renderPluginRow(NUIRenderer& renderer,
 
     // Render star
     if (plugin.isFavorite) {
-        renderer.drawText("\xe2\x98\x85", {starX + 1, starY + 1}, 12.0f, Colors::starActive);
+        renderer.drawText("\xe2\x98\x85", {starX + 1, starY + 1}, 12.0f, Colors::starActive());
     } else if (index == m_hoveredRow) {
-        renderer.drawText("\xe2\x98\x85", {starX + 1, starY + 1}, 12.0f, Colors::starGhost);
+        renderer.drawText("\xe2\x98\x85", {starX + 1, starY + 1}, 12.0f, Colors::starGhost());
     }
 
-    // Type dot
+    // Type dot — with a soft outer halo on hover/selection so it reads as a status pip.
     float dotX = rowRect.x + 22;
-    float dotY = rowRect.y + (rowRect.height - 8) * 0.5f;
-    NUIColor dotColor = Colors::textDisabled.withAlpha(0.3f);
+    float dotCX = dotX + 4.0f;
+    float dotCY = rowRect.y + rowRect.height * 0.5f;
+    NUIColor dotColor = Colors::textDisabled().withAlpha(0.3f);
     if (plugin.typeName == "Effect") dotColor = Colors::typeEffect;
     else if (plugin.typeName == "Instrument") dotColor = Colors::typeInstrument;
     else if (plugin.typeName == "Analyzer") dotColor = Colors::typeAnalyzer;
     else if (plugin.typeName == "MIDI") dotColor = Colors::typeMidi;
-    renderer.fillRoundedRect({dotX, dotY, 8.0f, 8.0f}, 4.0f, dotColor);
+    if (index == m_selectedIndex || index == m_hoveredIndex) {
+        renderer.fillCircle({dotCX, dotCY}, 6.5f, dotColor.withAlpha(0.20f));
+    }
+    renderer.fillCircle({dotCX, dotCY}, 4.0f, dotColor);
+
+    // Format badge (right-aligned) — only for third-party formats. Internal
+    // plugins are the default, so tagging every one of them just adds noise;
+    // skipping "Int" declutters the list and gives the name more room.
+    const bool external = (plugin.formatStr != "Int" && !plugin.formatStr.empty());
+    float contentRightEdge = rowRect.right() - 8.0f;
+    if (external) {
+        std::string badgeLabel = "VST3";
+        NUIColor badgeBg = Colors::badgeVst3Bg;
+        NUIColor badgeText = Colors::badgeVst3Text;
+        if (plugin.formatStr.find("CLAP") != std::string::npos) {
+            badgeLabel = "CLAP";
+            badgeBg = Colors::badgeClapBg;
+            badgeText = Colors::badgeClapText;
+        }
+        float badgeLabelW = renderer.measureText(badgeLabel, 9.0f).width;
+        NUIRect badgeRect = {rowRect.right() - (badgeLabelW + 12.0f) - 6.0f,
+                             rowRect.y + (rowRect.height - 16.0f) * 0.5f,
+                             badgeLabelW + 12.0f, 16.0f};
+        renderer.fillRoundedRect(badgeRect, 4.0f, badgeBg);
+        renderer.drawText(badgeLabel, {badgeRect.x + (badgeRect.width - badgeLabelW) * 0.5f, badgeRect.y + 2.5f}, 9.0f, badgeText);
+        contentRightEdge = badgeRect.x - 8.0f;
+    }
 
     // Name
+    const bool activeRow = (index == m_selectedIndex);
     float nameX = dotX + 14;
-    const float badgeW = 28.0f; // reserved for format badge
-    const float nameMaxW = rowRect.width - (nameX - rowRect.x) - badgeW - 8.0f;
+    const float nameMaxW = contentRightEdge - nameX;
     std::string name = fitText(renderer, plugin.name, 13.0f, nameMaxW);
-    renderer.drawText(name, {nameX, rowRect.y + 5}, 13.0f, Colors::textPrimary.withAlpha(0.90f));
+    renderer.drawText(name, {nameX, rowRect.y + 5.0f}, 13.0f,
+                      activeRow ? Colors::textPrimary() : Colors::textPrimary().withAlpha(0.90f));
 
-    // Format badge (right-aligned)
-    float badgeX = rowRect.right() - badgeW - 4;
-    float badgeY = rowRect.y + (rowRect.height - 16) * 0.5f;
-    NUIRect badgeRect = {badgeX, badgeY, 0, 16};
-    NUIColor badgeBg = Colors::badgeIntBg;
-    NUIColor badgeText = Colors::badgeIntText;
-    std::string badgeLabel = "Int";
-    if (plugin.formatStr == "VST3") {
-        badgeLabel = "V3";
-        badgeBg = Colors::badgeVst3Bg;
-        badgeText = Colors::badgeVst3Text;
-    } else if (plugin.formatStr.find("CLAP") != std::string::npos) {
-        badgeLabel = "CL";
-        badgeBg = Colors::badgeClapBg;
-        badgeText = Colors::badgeClapText;
-    }
-    float badgeLabelW = renderer.measureText(badgeLabel, 9.0f).width;
-    badgeRect.width = badgeLabelW + 10;
-    badgeRect.x = rowRect.right() - badgeRect.width - 4;
-    renderer.fillRoundedRect(badgeRect, 4.0f, badgeBg);
-    renderer.drawText(badgeLabel, {badgeRect.x + (badgeRect.width - badgeLabelW) * 0.5f, badgeRect.y + 2.5f}, 9.0f, badgeText);
-
-    // Vendor · type (muted, between name and badge)
-    float vendorMaxW = badgeRect.x - nameX - 12;
+    // Vendor · type (muted, second line)
+    float vendorMaxW = contentRightEdge - nameX;
     std::string vendorMeta = plugin.vendor;
     if (!plugin.typeName.empty()) vendorMeta += " · " + plugin.typeName;
     vendorMeta = fitText(renderer, vendorMeta, 10.0f, vendorMaxW);
-    renderer.drawText(vendorMeta, {nameX, rowRect.y + 19}, 10.0f, Colors::textSecondary.withAlpha(0.45f));
+    renderer.drawText(vendorMeta, {nameX, rowRect.y + 20.0f}, 10.0f, Colors::textSecondary().withAlpha(0.58f));
 }
 
 void PluginBrowserPanel::renderScanProgress(NUIRenderer& renderer) {
     auto bounds = getBounds();
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
+    float listTop = bounds.y + CONTENT_TOP_PAD + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
 
     renderer.fillRect({bounds.x, listTop, bounds.width,
-                       bounds.height - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f},
-                      Colors::panelBackground.withAlpha(0.82f));
+                       bounds.height - CONTENT_TOP_PAD - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f},
+                      Colors::panelBackground().withAlpha(0.82f));
 
     float barWidth = bounds.width - 40;
     float barX = bounds.x + 20;
     float barY = listTop + 60;
 
-    renderer.fillRoundedRect({barX, barY, barWidth, 8}, 4.0f, Colors::buttonBackground);
-    renderer.fillRoundedRect({barX, barY, barWidth * m_scanProgress, 8}, 4.0f, Colors::accentPrimary);
+    renderer.fillRoundedRect({barX, barY, barWidth, 6}, 3.0f, Colors::pillInactiveBg());
+    renderer.fillRoundedRect({barX, barY, std::max(6.0f, barWidth * m_scanProgress), 6}, 3.0f, Colors::accentPrimary());
 
-    std::string status = m_scanStatus.empty() ? "Scanning plugins..." : m_scanStatus;
-    renderer.drawText(status, {barX, barY - 20}, 12.0f, Colors::textPrimary);
+    std::string status = m_scanStatus.empty() ? "Scanning plugins\xe2\x80\xa6" : m_scanStatus;
+    status = fitText(renderer, status, 12.0f, barWidth);
+    renderer.drawText(status, {barX, barY - 22}, 12.0f, Colors::textPrimary().withAlpha(0.9f));
 }
 
 bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
     // Early exit if not visible - don't lock mutex or consume events
-    if (!isVisible()) return false;
+    if (!isVisible() || !isEnabled()) return false;
 
     std::lock_guard<std::recursive_mutex> lock(m_uiMutex);
     auto bounds = getBounds();
@@ -399,7 +428,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
         }
 
         // Plugin list clicks (Press down)
-        float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
+        float listTop = bounds.y + CONTENT_TOP_PAD + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
         if (insideBounds && my >= listTop) {
             int rowIndex = hitTestRow(static_cast<int>(my));
             if (rowIndex >= 0 && rowIndex < static_cast<int>(m_filteredPlugins.size())) {
@@ -495,7 +524,7 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
     }
 
     // Hover tracking
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
+    float listTop = bounds.y + CONTENT_TOP_PAD + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
     if (insideBounds && my >= listTop) {
         m_hoveredIndex = hitTestRow(static_cast<int>(my));
         m_hoveredRow = m_hoveredIndex;
@@ -506,13 +535,13 @@ bool PluginBrowserPanel::onMouseEvent(const NUIMouseEvent& event) {
 
     // Scroll handling
     if (insideBounds && event.wheelDelta != 0.0f) {
-        float listHeight = bounds.height - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
+        float listHeight = bounds.height - CONTENT_TOP_PAD - HEADER_BAR_HEIGHT - FILTER_BAR_HEIGHT - 4.0f;
         float contentHeight = m_filteredPlugins.size() * ROW_HEIGHT;
         float maxScroll = std::max(0.0f, contentHeight - listHeight);
-
         m_targetScrollOffset -= event.wheelDelta * 40.0f;
         if (m_targetScrollOffset < 0.0f) m_targetScrollOffset = 0.0f;
         if (m_targetScrollOffset > maxScroll) m_targetScrollOffset = maxScroll;
+        repaint();
         return true;
     }
 
@@ -565,8 +594,12 @@ void PluginBrowserPanel::onUpdate(double deltaTime) {
     float diff = m_targetScrollOffset - m_scrollOffset;
     if (std::abs(diff) > 0.5f) {
         m_scrollOffset += diff * std::min(1.0f, static_cast<float>(deltaTime * 15.0));
+        repaint();
     } else {
-        m_scrollOffset = m_targetScrollOffset;
+        if (m_scrollOffset != m_targetScrollOffset) {
+            m_scrollOffset = m_targetScrollOffset;
+            repaint();
+        }
     }
 }
 
@@ -600,6 +633,11 @@ void PluginBrowserPanel::setSearchQuery(const std::string& query) {
 }
 
 void PluginBrowserPanel::applyFilters() {
+    std::string selectedId;
+    if (m_selectedIndex >= 0 && m_selectedIndex < static_cast<int>(m_filteredPlugins.size())) {
+        selectedId = m_filteredPlugins[m_selectedIndex].id;
+    }
+
     m_filteredPlugins.clear();
 
     for (const auto& p : m_allPlugins) {
@@ -644,10 +682,24 @@ void PluginBrowserPanel::applyFilters() {
         m_filteredPlugins.push_back(p);
     }
 
-    if (m_selectedIndex >= static_cast<int>(m_filteredPlugins.size())) {
-        m_selectedIndex = -1;
+    m_selectedIndex = -1;
+    if (!selectedId.empty()) {
+        for (size_t i = 0; i < m_filteredPlugins.size(); ++i) {
+            if (m_filteredPlugins[i].id == selectedId) {
+                m_selectedIndex = static_cast<int>(i);
+                break;
+            }
+        }
     }
 
+    // Indices refer to the previous filtered view. Do not let a quick filter
+    // change turn the first click on a different row into a false double-click.
+    m_lastClickIndex = -1;
+    m_lastClickTime = 0.0;
+    m_hoveredIndex = -1;
+    m_hoveredRow = -1;
+    m_isPressed = false;
+    m_pressedIndex = -1;
     m_scrollOffset = 0.0f;
     m_targetScrollOffset = 0.0f;
 }
@@ -718,12 +770,12 @@ void PluginBrowserPanel::setScanStatus(const std::string& status) {
 
 NUIRect PluginBrowserPanel::getScanButtonRect() const {
     auto bounds = getBounds();
-    return {bounds.right() - 58.0f, bounds.y + 12.0f, 46.0f, 20.0f};
+    return {bounds.right() - 58.0f, bounds.y + CONTENT_TOP_PAD + 12.0f, 46.0f, 20.0f};
 }
 
 int PluginBrowserPanel::hitTestRow(int y) const {
     auto bounds = getBounds();
-    float listTop = bounds.y + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
+    float listTop = bounds.y + CONTENT_TOP_PAD + HEADER_BAR_HEIGHT + FILTER_BAR_HEIGHT + 4.0f;
 
     if (y < listTop) return -1;
 
@@ -751,10 +803,13 @@ EffectChainRack::EffectChainRack() {
 
 void EffectChainRack::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
 
-    renderer.fillRoundedRect(bounds, 10.0f, Colors::panelBackground.withAlpha(0.94f));
-    renderer.fillRoundedRect({bounds.x, bounds.y, bounds.width, 28.0f}, 10.0f, Colors::panelTop.withAlpha(0.62f));
-    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, Colors::panelBorder.withAlpha(0.84f));
+    renderer.fillRoundedRect(bounds, theme.radiusL, Colors::panelBackground().withAlpha(0.94f));
+    renderer.fillRoundedRect({bounds.x, bounds.y, bounds.width, theme.layout.standardControlHeight},
+                             theme.radiusL, Colors::panelTop().withAlpha(0.62f));
+    renderer.strokeRoundedRect(bounds, theme.radiusL, theme.layout.dividerWidth,
+                               Colors::panelBorder().withAlpha(0.84f));
 
     // Enable clipping
     renderer.setClipRect(bounds);
@@ -775,6 +830,7 @@ void EffectChainRack::onRender(NUIRenderer& renderer) {
 
 void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset) {
     NUIRect slotRect = slotRectForTop(yOffset);
+    const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
 
     const auto& slot = m_slots[index];
     const bool isHovered = (index == m_hoveredSlot);
@@ -788,35 +844,35 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     if (slot.isEmpty && !isBeingDragged) {
         // Empty Slot: Subtle transparency or very faint glass
         // Using Aestra "Deep Glass" tokens if available, otherwise manual
-        bgColor = isHovered ? Colors::buttonBackgroundHover.withAlpha(0.64f) : Colors::buttonBackground.withAlpha(0.48f);
-        borderColor = isHovered ? Colors::accentPrimary.withAlpha(0.30f) : Colors::panelBorder.withAlpha(0.30f);
+        bgColor = isHovered ? Colors::buttonBackgroundHover().withAlpha(0.64f) : Colors::buttonBackground().withAlpha(0.48f);
+        borderColor = isHovered ? Colors::accentPrimary().withAlpha(0.30f) : Colors::panelBorder().withAlpha(0.30f);
     } else {
         // Populated: Solid dark glass
         // If bypassed, make it slightly dimmer/transparent
         if (isBeingDragged) {
-            bgColor = isHovered ? Colors::buttonBackgroundHover.withAlpha(0.72f) : Colors::buttonBackground.withAlpha(0.62f);
-            borderColor = Colors::accentPrimary.withAlpha(0.2f);
+            bgColor = isHovered ? Colors::buttonBackgroundHover().withAlpha(0.72f) : Colors::buttonBackground().withAlpha(0.62f);
+            borderColor = Colors::accentPrimary().withAlpha(0.2f);
         } else if (slot.bypassed) {
-             bgColor = Colors::buttonBackground.withAlpha(0.58f);
-             borderColor = Colors::panelBorder.withAlpha(0.5f);
+             bgColor = theme.bypassed.withAlpha(0.14f);
+             borderColor = theme.bypassed.withAlpha(0.62f);
         } else {
-             bgColor = isHovered ? Colors::buttonBackgroundHover.withAlpha(0.84f) : Colors::buttonBackground.withAlpha(0.72f);
-             borderColor = isHovered ? Colors::accentPrimary.withAlpha(0.76f) : Colors::accentPrimary.withAlpha(0.20f);
+             bgColor = isHovered ? Colors::buttonBackgroundHover().withAlpha(0.84f) : Colors::buttonBackground().withAlpha(0.72f);
+             borderColor = isHovered ? Colors::accentPrimary().withAlpha(0.76f) : Colors::accentPrimary().withAlpha(0.20f);
         }
     }
 
-    renderer.fillRoundedRect(slotRect, 8.0f, bgColor);
+    renderer.fillRoundedRect(slotRect, theme.radiusM, bgColor);
 
     // Dashed border for empty slots to signal droppability
     if (slot.isEmpty && !isBeingDragged) {
-        renderer.strokeRoundedRect(slotRect, 8.0f, 1.0f, borderColor);
+        renderer.strokeRoundedRect(slotRect, theme.radiusM, theme.layout.dividerWidth, borderColor);
         renderer.fillRoundedRect({slotRect.x + 6.0f, slotRect.y + slotRect.height * 0.5f - 0.5f,
                                   slotRect.width - 12.0f, 1.0f},
                                  0.5f,
-                                 isHovered ? Colors::accentPrimary.withAlpha(0.12f)
-                                           : Colors::panelBorder.withAlpha(0.16f));
+                                 isHovered ? Colors::accentPrimary().withAlpha(0.12f)
+                                           : Colors::panelBorder().withAlpha(0.16f));
     } else {
-        renderer.strokeRoundedRect(slotRect, 8.0f, 1.0f, borderColor);
+        renderer.strokeRoundedRect(slotRect, theme.radiusM, theme.layout.dividerWidth, borderColor);
     }
 
     // DEBUG: Visual indicator for pending removal
@@ -836,11 +892,11 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
     const float chipH = 14.0f;
     const NUIRect indexChip{slotRect.x + 8.0f, slotMid - chipH * 0.5f, 18.0f, chipH};
     if (!slot.isEmpty) {
-        renderer.fillRoundedRect(indexChip, 7.0f, Colors::buttonBackgroundHover.withAlpha(0.76f));
-        renderer.strokeRoundedRect(indexChip, 7.0f, 1.0f, Colors::panelBorder.withAlpha(0.35f));
-        renderer.drawTextCentered(numBuf, indexChip, 9.0f, Colors::textDisabled.withAlpha(0.68f));
+        renderer.fillRoundedRect(indexChip, 7.0f, Colors::buttonBackgroundHover().withAlpha(0.76f));
+        renderer.strokeRoundedRect(indexChip, 7.0f, 1.0f, Colors::panelBorder().withAlpha(0.35f));
+        renderer.drawTextCentered(numBuf, indexChip, theme.fontSizeMicro, Colors::textDisabled().withAlpha(0.68f));
     } else if (isHovered) {
-        renderer.drawTextCentered(numBuf, indexChip, 9.0f, Colors::textDisabled.withAlpha(0.55f));
+        renderer.drawTextCentered(numBuf, indexChip, theme.fontSizeMicro, Colors::textDisabled().withAlpha(0.55f));
     }
 
     // Available text area to the right of the chip.
@@ -855,27 +911,26 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
         // redundant em-dash placeholder is gone.
         if (isHovered) {
             const NUIRect textRect{textX, slotMid - rowH * 0.5f, textW, rowH};
-            renderer.drawTextCentered("+ Add Insert", textRect, 10.0f, Colors::textPrimary);
+            renderer.drawTextCentered("+ Add Insert", textRect, theme.fontSizeXS, Colors::textPrimary());
         }
     } else {
-        // A user bypass simply greys the slot — no text label. The dimmed name
-        // (plus the recessed row background) carries the state. Auto-quarantine
-        // is a safety fault, not a user choice, so it still gets its warning.
+        // Bypass uses color plus an explicit badge so it cannot be confused with
+        // a disabled slot. Auto-quarantine remains a distinct warning state.
         const bool autoFaulted = slot.bypassed && slot.nonFiniteOutputFault;
-        NUIColor nameColor = slot.bypassed ? Colors::textDisabled.withAlpha(0.6f) : Colors::textPrimary;
+        NUIColor nameColor = slot.bypassed ? theme.textMuted : Colors::textPrimary();
         if (autoFaulted) {
             const NUIRect nameRect{textX, slotMid - rowH, textW, rowH};
-            renderer.drawText(fitText(renderer, slot.name, 10.5f, nameRect.width),
+            renderer.drawText(fitText(renderer, slot.name, theme.fontSizeS, nameRect.width),
                               {nameRect.x, nameRect.y + 2.0f},
-                              10.5f,
+                              theme.fontSizeS,
                               nameColor);
             const NUIRect statusRect{textX, slotMid, textW, rowH};
-            renderer.drawText("Output fault", {statusRect.x, statusRect.y + 2.0f}, 8.5f,
+            renderer.drawText("Output fault", {statusRect.x, statusRect.y + 2.0f}, theme.fontSizeMicro,
                               NUIThemeManager::getInstance().getColor("warning").withAlpha(0.92f));
         } else {
-            renderer.drawTextCentered(fitText(renderer, slot.name, 10.5f, textW),
+            renderer.drawTextCentered(fitText(renderer, slot.name, theme.fontSizeS, textW),
                                       {textX, slotRect.y, textW, slotRect.height},
-                                      10.5f,
+                                      theme.fontSizeS,
                                       nameColor);
         }
 
@@ -887,6 +942,14 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
 
         // Dry/Wet Knob Rendering
         NUIRect knobRect = {knobX, knobY, knobSize, knobSize};
+
+        if (slot.bypassed && !autoFaulted) {
+            const NUIRect bypassBadge{knobX - 39.0f, slotMid - 7.0f, 24.0f, 14.0f};
+            renderer.fillRoundedRect(bypassBadge, theme.radiusS, theme.bypassed.withAlpha(0.22f));
+            renderer.strokeRoundedRect(bypassBadge, theme.radiusS, theme.layout.dividerWidth,
+                                       theme.bypassed.withAlpha(0.72f));
+            renderer.drawTextCentered("BYP", bypassBadge, theme.fontSizeMicro, theme.bypassed);
+        }
 
         // Helper to draw arc
         auto drawArcPoly = [&](float startAngle, float endAngle, float width, NUIColor col) {
@@ -907,13 +970,13 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
         };
 
         // Background Arc
-        drawArcPoly(0.75f * 3.14159f, 2.25f * 3.14159f, 2.0f, Colors::textDisabled.withAlpha(0.2f));
+        drawArcPoly(0.75f * 3.14159f, 2.25f * 3.14159f, 2.0f, Colors::textDisabled().withAlpha(0.2f));
 
         // Value Arc (Dim if bypassed)
         float startAng = 0.75f * 3.14159f;
         float range = 1.5f * 3.14159f;
         float endAng = startAng + range * slot.dryWet;
-        NUIColor arcColor = slot.bypassed ? Colors::textDisabled.withAlpha(0.3f) : Colors::accentPrimary;
+        NUIColor arcColor = slot.bypassed ? Colors::textDisabled().withAlpha(0.3f) : Colors::accentPrimary();
         drawArcPoly(startAng, endAng, 2.0f, arcColor);
 
         // Bypass Indicator (Dot left of knob)
@@ -924,12 +987,10 @@ void EffectChainRack::renderSlot(NUIRenderer& renderer, int index, float yOffset
 
         if (!slot.bypassed) {
             // Active: LED On
-        renderer.fillRoundedRect(statusDot, 3.0f, Colors::accentPrimary);
-             // Glow
-             renderer.fillRoundedRect({statusDot.x - 2, statusDot.y - 2, 10, 10}, 5.0f, Colors::accentPrimary.withAlpha(0.4f));
+            renderer.fillRoundedRect(statusDot, 3.0f, Colors::accentPrimary());
         } else {
              // Bypassed: LED Off (Dark/Stroked)
-             renderer.strokeRoundedRect(statusDot, 3.0f, 1.0f, Colors::textDisabled.withAlpha(0.5f));
+             renderer.strokeRoundedRect(statusDot, 3.0f, 1.0f, Colors::textDisabled().withAlpha(0.5f));
         }
     }
 }
@@ -945,7 +1006,7 @@ NUIRect EffectChainRack::getSlotBounds(int index) const {
 }
 
 bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
-    if (!isVisible()) return false;
+    if (!isVisible() || !isEnabled()) return false;
 
     m_currentMousePos = event.position;
 

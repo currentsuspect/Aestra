@@ -1695,6 +1695,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeJSONTest.cpp")
     message(STATUS "NUIThemeJSONTest added - Issue #259 theme JSON loading test")
 endif()
 
+if(TARGET AestraUI_Core AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/NUIThemeConsistencyTest.cpp")
+    add_executable(NUIThemeConsistencyTest AestraUI/NUIThemeConsistencyTest.cpp)
+    target_link_libraries(NUIThemeConsistencyTest PRIVATE AestraUI_Core)
+    add_test(NAME NUIThemeConsistencyTest COMMAND NUIThemeConsistencyTest)
+    set_tests_properties(NUIThemeConsistencyTest PROPERTIES LABELS "ui;theme;consistency")
+else()
+    message(STATUS "NUIThemeConsistencyTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # KeyboardNoteInput Test — musical-typing translation logic (header-only, no
 # UI targets needed, runs headless on every lane).
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraUI/KeyboardNoteInputTest.cpp")
@@ -1752,6 +1761,22 @@ if(TARGET AestraUI_Core)
     set_tests_properties(PanelWindowClickSwallowTest PROPERTIES LABELS "ui;input;regression")
 else()
     message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
+# Plugin-browser filtering must preserve selection by stable plugin ID rather
+# than silently selecting whichever row inherits the old numeric index.
+if(TARGET AestraUI_Core)
+    add_executable(PluginBrowserSelectionTest AestraUI/PluginBrowserSelectionTest.cpp)
+    target_link_libraries(PluginBrowserSelectionTest PRIVATE AestraUI_Core)
+    target_include_directories(PluginBrowserSelectionTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+    )
+    add_test(NAME PluginBrowserSelectionTest COMMAND PluginBrowserSelectionTest)
+    set_tests_properties(PluginBrowserSelectionTest PROPERTIES LABELS "ui;plugin-browser;regression")
+else()
+    message(STATUS "PluginBrowserSelectionTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
 # NUITextInput Layout / Caret / Selection regression tests

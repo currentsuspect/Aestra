@@ -37,6 +37,7 @@ struct MidiNote {
     double startBeat{0.0};     // Start position in beats
     double durationBeats{0.0}; // Duration in beats
     float velocity{0.0f};      // 0..1
+    float pan{0.0f};           // -1 (left) .. 1 (right), 0 = centre
     uint64_t unitId{0};        // Unit ID for routing
     int8_t pitchOffset{0};     // Semitone offset from root for step-based pitched samplers
     float gate{1.0f};          // Note length as a fraction of one step
@@ -54,10 +55,15 @@ struct MidiPayload {
  * @brief Audio slice definition
  */
 struct AudioSlice {
-    double startOffset{0.0};
-    double duration{0.0};
-    double startSamples{0.0};  // Alternative representation in samples (as double for JSON)
-    double lengthSamples{0.0}; // Alternative representation in samples (as double for JSON)
+    // NOTE: only startSamples/lengthSamples are persisted (ProjectSerializer writes
+    // and reads these). startOffset/duration are legacy and are not serialized —
+    // do NOT rely on positional aggregate init like {0.0, numFrames}, which fills
+    // startOffset/duration and leaves the persisted fields empty. Set the sample
+    // fields explicitly. See #447.
+    double startOffset{0.0};    // legacy, not persisted
+    double duration{0.0};       // legacy, not persisted
+    double startSamples{0.0};   // persisted "start" (samples, as double for JSON)
+    double lengthSamples{0.0};  // persisted "length" (samples, as double for JSON)
 };
 
 /**

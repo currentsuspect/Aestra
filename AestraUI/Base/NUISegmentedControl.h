@@ -27,8 +27,8 @@ public:
         : segments_(segments)
         , selectedIndex_(0)
         , indicatorPosition_(0.0f)
-        , cornerRadius_(12.0f)
-        , accentColor_(NUIColor(0.55f, 0.36f, 0.96f, 1.0f))
+        , cornerRadius_(-1.0f)
+        , accentColor_(NUIThemeManager::getInstance().getColor("accentPrimary"))
         , hoveredIndex_(-1)
         , visualStyle_(VisualStyle::Pill)
     {
@@ -67,6 +67,10 @@ public:
     void onRender(NUIRenderer& renderer) override {
         auto bounds = getBounds();
         auto& theme = NUIThemeManager::getInstance();
+        const auto& props = theme.getCurrentTheme();
+        const float radius = cornerRadius_ >= 0.0f ? cornerRadius_ : props.radiusL;
+        const float fontSize = props.fontSizeS;
+        const bool enabled = isEnabled();
 
         if (visualStyle_ == VisualStyle::UnderlineTabs) {
             renderer.fillRect(bounds, theme.getColor("backgroundSecondary"));
@@ -81,18 +85,24 @@ public:
                     const float segmentX = bounds.x + static_cast<float>(i) * segmentWidth;
                     const NUIRect segmentBounds(segmentX, bounds.y, segmentWidth, bounds.height);
                     const bool isSelected = i == selectedIndex_;
-                    const bool hovered = static_cast<int>(i) == hoveredIndex_;
+                    const bool hovered = enabled && static_cast<int>(i) == hoveredIndex_;
                     if (hovered && !isSelected) {
                         renderer.fillRect(segmentBounds, theme.getColor("surfaceRaised").withAlpha(0.38f));
                     }
-                    const NUIColor textColor = isSelected
+                    const NUIColor textColor = !enabled
+                        ? theme.getColor("textDisabled")
+                        : isSelected
                         ? theme.getColor("textPrimary")
                         : theme.getColor("textPrimary").withAlpha(hovered ? 0.72f : 0.50f);
-                    renderer.drawTextCentered(segments_[i], segmentBounds, 11.5f, textColor);
+                    renderer.drawTextCentered(segments_[i], segmentBounds, fontSize, textColor);
                     if (isSelected) {
                         renderer.fillRect({segmentBounds.x, segmentBounds.bottom() - 2.0f, segmentBounds.width, 2.0f}, accentColor_);
                     }
                 }
+            }
+
+            if (enabled && isFocused()) {
+                renderer.strokeRect(bounds, 1.5f, theme.getColor("focusRing"));
             }
 
             NUIComponent::onRender(renderer);
@@ -100,13 +110,11 @@ public:
         }
         
         // Background track
-        NUIColor trackColor(0.060f, 0.065f, 0.080f, 0.96f);
-        renderer.fillRoundedRect(bounds, cornerRadius_, trackColor);
+        renderer.fillRoundedRect(bounds, radius, theme.getColor("controlBackground"));
         
-        renderer.strokeRoundedRect(bounds, cornerRadius_, 1.0f,
-            theme.getColor("borderSubtle").withAlpha(0.46f));
-        renderer.strokeRoundedRect({bounds.x + 1.0f, bounds.y + 1.0f, bounds.width - 2.0f, bounds.height - 2.0f},
-            std::max(0.0f, cornerRadius_ - 1.0f), 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.018f));
+        renderer.strokeRoundedRect(bounds, radius, isFocused() && enabled ? 1.5f : 1.0f,
+                                   isFocused() && enabled ? theme.getColor("focusRing")
+                                                          : theme.getColor("borderSubtle"));
 
         if (segments_.empty()) {
             NUIComponent::onRender(renderer);
@@ -115,7 +123,7 @@ public:
         
         // Calculate segment dimensions
         float segmentWidth = bounds.width / static_cast<float>(segments_.size());
-        float padding = 2.0f;
+        float padding = props.spacingXS * 0.5f;
         float indicatorWidth = segmentWidth - padding * 2;
         float indicatorHeight = bounds.height - padding * 2;
         
@@ -125,9 +133,8 @@ public:
                 float segmentX = bounds.x + padding + i * segmentWidth;
                 NUIRect inactiveRect(segmentX, bounds.y + padding, indicatorWidth, indicatorHeight);
                 const bool hovered = static_cast<int>(i) == hoveredIndex_;
-                renderer.fillRoundedRect(inactiveRect, cornerRadius_ - padding, 
-                    hovered ? NUIColor(1.0f, 1.0f, 1.0f, 0.045f)
-                            : NUIColor(0.0f, 0.0f, 0.0f, 0.0f));
+                renderer.fillRoundedRect(inactiveRect, radius - padding,
+                    hovered && enabled ? theme.getColor("controlHover") : NUIColor::transparent());
             }
         }
         
@@ -135,20 +142,20 @@ public:
         float indicatorX = bounds.x + padding + indicatorPosition_ * segmentWidth;
         NUIRect indicatorRect(indicatorX, bounds.y + padding, indicatorWidth, indicatorHeight);
         
-        renderer.fillRoundedRect(indicatorRect, cornerRadius_ - padding, accentColor_.withAlpha(0.56f));
-        renderer.strokeRoundedRect(indicatorRect, cornerRadius_ - padding, 1.0f, accentColor_.withAlpha(0.74f));
-        
-        NUIRect highlightRect(indicatorRect.x + 2, indicatorRect.y, indicatorRect.width - 4, 1.0f);
-        renderer.fillRect(highlightRect, NUIColor(1.0f, 1.0f, 1.0f, 0.12f));
+        renderer.fillRoundedRect(indicatorRect, radius - padding,
+                                 enabled ? theme.getColor("selection") : theme.getColor("controlDisabled"));
+        renderer.strokeRoundedRect(indicatorRect, radius - padding, 1.0f,
+                                   enabled ? accentColor_.withAlpha(0.64f) : theme.getColor("borderSubtle"));
         
         // Draw segment labels
-        float fontSize = 11.75f;
         for (size_t i = 0; i < segments_.size(); ++i) {
             float segmentX = bounds.x + i * segmentWidth;
             NUIRect segmentBounds(segmentX, bounds.y, segmentWidth, bounds.height);
             
             bool isSelected = (i == selectedIndex_);
-            NUIColor textColor = isSelected
+            NUIColor textColor = !enabled
+                ? theme.getColor("textDisabled")
+                : isSelected
                 ? theme.getColor("textPrimary").withAlpha(0.96f)
                 : theme.getColor("textSecondary").withAlpha(static_cast<int>(i) == hoveredIndex_ ? 0.86f : 0.66f);
             
@@ -198,6 +205,7 @@ public:
         
         if (event.pressed && event.button == NUIMouseButton::Left) {
             if (bounds.contains(event.position)) {
+                setFocused(true);
                 // Determine which segment was clicked
                 float relativeX = event.position.x - bounds.x;
                 float segmentWidth = bounds.width / static_cast<float>(segments_.size());

@@ -8,6 +8,7 @@
 #include "Commands/RemoveNoteCommand.h"
 #include "Commands/MoveNoteCommand.h"
 #include "Commands/ResizeNoteCommand.h"
+#include "Commands/UpdateNoteCommand.h"
 #include "Commands/NoteDiff.h"
 #include "Commands/CommandHistory.h"
 #include "../AestraCore/include/AestraLog.h"
@@ -97,9 +98,33 @@ PianoRollPanel::PianoRollPanel(std::shared_ptr<TrackManager> trackManager)
             cmd.type = AudioQueueCommandType::AuditionUnit;
             cmd.trackIndex = static_cast<uint32_t>(m_editingUnitId);
             cmd.value1 = static_cast<float>(pitch);
-            cmd.value2 = static_cast<float>(velocity);
+            // The engine expects value2 normalized 0..1 (it scales by 127 and
+            // clamps to [1,127]); raw MIDI velocity here pinned every audition
+            // to full velocity.
+            cmd.value2 = static_cast<float>(velocity) / 127.0f;
             cmd.samplePos = 0;
             m_audioEngine->commandQueue().push(cmd);
+        }
+    });
+    m_pianoRoll->setOnPlayheadScrubbed([this](double beat, bool active) {
+        if (!m_trackManager) return;
+
+        m_trackManager->setUserScrubbing(active);
+        double positionSeconds = 0.0;
+        if (m_trackManager->isPatternMode()) {
+            const double bpm = std::max(1.0, m_trackManager->getTimelineClock().getCurrentTempo());
+            positionSeconds = beat * (60.0 / bpm);
+        } else {
+            positionSeconds = m_trackManager->getPlaylistModel().beatToSeconds(beat);
+        }
+        positionSeconds = std::max(0.0, positionSeconds);
+
+        m_trackManager->setPosition(positionSeconds);
+        m_trackManager->setPlayStartPosition(positionSeconds);
+        if (m_audioEngine) {
+            const uint32_t sampleRate = m_audioEngine->getSampleRate();
+            const uint64_t samplePosition = static_cast<uint64_t>(positionSeconds * sampleRate);
+            m_audioEngine->setGlobalSamplePos(samplePosition);
         }
     });
 
@@ -171,6 +196,7 @@ void PianoRollPanel::loadPattern(PatternID patternId) {
             uiNote.startBeat = vn.startBeat;
             uiNote.durationBeats = vn.durationBeats;
             uiNote.velocity = vn.velocity;
+            uiNote.pan = vn.pan;
             uiNote.unitId = vn.unitId;
             uiNote.selected = false;
             uiNote.isDeleted = false;
@@ -235,6 +261,7 @@ void PianoRollPanel::savePattern() {
         backendNote.startBeat = uiNote.startBeat;
         backendNote.durationBeats = uiNote.durationBeats;
         backendNote.velocity = uiNote.velocity;
+        backendNote.pan = uiNote.pan;
         backendNote.unitId = uiNote.unitId != 0 ? uiNote.unitId : m_editingUnitId;
         currentNotes.push_back(backendNote);
     }
@@ -277,6 +304,11 @@ void PianoRollPanel::savePattern() {
                 pm, m_currentPatternId, oldNote, newNote.durationBeats);
             history.pushAndExecute(cmd);
         }
+        for (const auto& [oldNote, newNote] : diff.modified) {
+            auto cmd = std::make_shared<UpdateNoteCommand>(
+                pm, m_currentPatternId, oldNote, newNote.velocity, newNote.pan);
+            history.pushAndExecute(cmd);
+        }
         for (const auto& note : diff.added) {
             auto cmd = std::make_shared<AddNoteCommand>(pm, m_currentPatternId, note);
             history.pushAndExecute(cmd);
@@ -287,7 +319,8 @@ void PianoRollPanel::savePattern() {
                   " (added:" + std::to_string(diff.added.size()) +
                   " removed:" + std::to_string(diff.removed.size()) +
                   " moved:" + std::to_string(diff.moved.size()) +
-                  " resized:" + std::to_string(diff.resized.size()) + ")");
+                  " resized:" + std::to_string(diff.resized.size()) +
+                  " modified:" + std::to_string(diff.modified.size()) + ")");
 
         m_applyingUndoRedo = false;
     }

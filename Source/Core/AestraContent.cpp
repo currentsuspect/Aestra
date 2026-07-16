@@ -70,7 +70,7 @@ using namespace AestraUI;
 using namespace Aestra::Audio;
 
 namespace {
-constexpr float kMinFileBrowserWidth = 300.0f;
+constexpr float kMinFileBrowserWidth = 260.0f;
 constexpr float kMinPatternBrowserWidth = 96.0f;
 constexpr float kMinTrackAreaWidth = 420.0f;
 constexpr float kResizeHitWidth = 6.0f;
@@ -399,33 +399,30 @@ AestraContent::AestraContent()
     m_fileBrowser->setOnNavActionSelected([this](AestraUI::FileBrowser::BrowserNavAction action) {
         const bool isPlugins = (action == AestraUI::FileBrowser::BrowserNavAction::Plugins);
         const bool isPatterns = (action == AestraUI::FileBrowser::BrowserNavAction::Patterns);
-        if (m_pluginBrowser) {
-            m_pluginBrowser->setVisible(isPlugins);
-        }
+        m_fileBrowser->setSearchPlaceholder(isPlugins ? "Search plugins..."
+                                                      : (isPatterns ? "Search patterns..." : "Search library..."));
         if (m_patternBrowser) {
             if (isPatterns) {
                 m_patternBrowser->showPatternsTab();
                 m_patternBrowser->refreshPatterns();
-                m_patternBrowser->setVisible(true);
-            } else {
-                m_patternBrowser->setVisible(false);
             }
         }
-        if (isPlugins && m_fileBrowser && m_pluginBrowser) {
-            float navW = m_fileBrowser->getNavPaneWidth();
-            auto fbBounds = m_fileBrowser->getBounds();
-            float pbWidth = std::max(0.0f, fbBounds.width - navW);
-            // Align with file browser content area (below search bar)
-            constexpr float searchH = 28.0f;
-            m_pluginBrowser->setBounds(
-                AestraUI::NUIRect(fbBounds.x + navW, fbBounds.y + searchH, pbWidth, fbBounds.height - searchH));
+        const std::string searchQuery = m_fileBrowser->getSearchQuery();
+        if (isPlugins && m_pluginBrowser) {
+            m_pluginBrowser->setSearchQuery(searchQuery);
+        } else if (isPatterns && m_patternBrowser) {
+            m_patternBrowser->setSearchQuery(searchQuery);
         }
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     });
 
     m_fileBrowser->setOnSearchTextChanged([this](const std::string& text) {
-        if (m_pluginBrowser) {
+        const auto action =
+            m_fileBrowser ? m_fileBrowser->getActiveNavAction() : AestraUI::FileBrowser::BrowserNavAction::Sounds;
+        if (action == AestraUI::FileBrowser::BrowserNavAction::Plugins && m_pluginBrowser) {
             m_pluginBrowser->setSearchQuery(text);
+        } else if (action == AestraUI::FileBrowser::BrowserNavAction::Patterns && m_patternBrowser) {
+            m_patternBrowser->setSearchQuery(text);
         }
     });
 
@@ -503,6 +500,7 @@ AestraContent::AestraContent()
     m_pluginController->bindBrowser(m_pluginBrowser.get());
 
     m_workspaceLayer->addChild(m_pluginBrowser);
+    m_fileBrowser->registerContentView(AestraUI::FileBrowser::BrowserNavAction::Plugins, m_pluginBrowser);
 
     // Create file preview panel (add to workspace, below browser)
     m_previewPanel = std::make_shared<AestraUI::FilePreviewPanel>();
@@ -598,6 +596,7 @@ AestraContent::AestraContent()
         m_fileBrowser->selectFile(filePath);
     });
     m_workspaceLayer->addChild(m_patternBrowser);
+    m_fileBrowser->registerContentView(AestraUI::FileBrowser::BrowserNavAction::Patterns, m_patternBrowser);
 
     // Create panels (add to overlay)
     m_mixerPanel = std::make_shared<MixerPanel>(m_trackManager);
@@ -1182,6 +1181,16 @@ void AestraContent::onUpdate(double dt) {
     drainMainThreadTasks();
     updatePendingCountIn();
 
+    // PluginManager may start an initial asynchronous scan when no valid cache
+    // exists. Its bootstrap scan has no UI callback, so observe the transition
+    // here and publish the completed result on the main thread.
+    auto& pluginScanner = Aestra::Audio::PluginManager::getInstance().getScanner();
+    const bool pluginScanRunning = pluginScanner.isScanning();
+    if (m_pluginScanWasRunning && !pluginScanRunning) {
+        refreshPluginList();
+    }
+    m_pluginScanWasRunning = pluginScanRunning;
+
     // Drive preview state: clears the pending-load spinner once the decode
     // is ready, feeds playhead/duration to the panel, and stops at the end.
     // (This existed but was never called — the panel's spinner and progress
@@ -1381,7 +1390,10 @@ void AestraContent::onRender(AestraUI::NUIRenderer& renderer) {
     } else if (m_pluginBrowser && m_pluginBrowser->isVisible()) {
         drawDividerRail(m_pluginBrowser);
     }
-    if (m_patternBrowser && m_patternBrowser->isVisible()) {
+    const bool embeddedPatternVisible =
+        m_fileBrowser && m_fileBrowser->isVisible() &&
+        m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Patterns;
+    if (m_patternBrowser && m_patternBrowser->isVisible() && !embeddedPatternVisible) {
         drawDividerRail(m_patternBrowser);
     }
 
@@ -1459,6 +1471,19 @@ void AestraContent::onResize(int width, int height) {
     const size_t browserTab = m_browserToggle ? m_browserToggle->getSelectedIndex() : 0;
     const auto activeNavAction =
         m_fileBrowser ? m_fileBrowser->getActiveNavAction() : AestraUI::FileBrowser::BrowserNavAction::Sounds;
+    float* activeBrowserWidthPref = getActiveBrowserWidthPrefPtr();
+    if (*activeBrowserWidthPref <= 0.0f) {
+        *activeBrowserWidthPref = computedFileBrowserWidth;
+    }
+    if (m_fileBrowser) {
+        if (activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Plugins) {
+            m_fileBrowser->setSearchPlaceholder("Search plugins...");
+        } else if (activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Patterns) {
+            m_fileBrowser->setSearchPlaceholder("Search patterns...");
+        } else {
+            m_fileBrowser->setSearchPlaceholder("Search library...");
+        }
+    }
     const bool legacyPatternTabActive = browserTab == 2;
     const bool patternNavActive = activeNavAction == AestraUI::FileBrowser::BrowserNavAction::Patterns;
     const bool browserPatternTabActive = legacyPatternTabActive || patternNavActive;
@@ -1479,13 +1504,13 @@ void AestraContent::onResize(int width, int height) {
         patternRailVisible ? std::max(minPatternWidth, std::min(width * 0.24f, 280.0f)) : 0.0f;
     const float maxFileByTrack = std::max(kMinFileBrowserWidth, width - kMinTrackAreaWidth - minPatternWidth);
     const float fileBrowserWidth =
-        std::clamp(m_fileBrowserWidthPref, kMinFileBrowserWidth, std::min(maxFileBrowserWidth, maxFileByTrack));
+        std::clamp(*activeBrowserWidthPref, kMinFileBrowserWidth, std::min(maxFileBrowserWidth, maxFileByTrack));
     const float maxPatternByTrack = std::max(minPatternWidth, width - kMinTrackAreaWidth - fileBrowserWidth);
     const float patternBrowserWidth = patternRailVisible ? std::clamp(m_patternBrowserWidthPref, minPatternWidth,
                                                                       std::min(maxPatternWidth, maxPatternByTrack))
                                                          : 0.0f;
 
-    m_fileBrowserWidthPref = fileBrowserWidth;
+    *activeBrowserWidthPref = fileBrowserWidth;
     if (patternRailVisible) {
         m_patternBrowserWidthPref = patternBrowserWidth;
     }
@@ -1497,42 +1522,24 @@ void AestraContent::onResize(int width, int height) {
     if (m_previewPanel) {
         m_previewPanel->setVisible(showPreviewDock);
     }
+    if (m_fileBrowser) {
+        m_fileBrowser->setPreviewPanelVisible(showPreviewDock);
+    }
 
     // Browser toggle removed - browser panes now start directly at sidebarTopY without toggle offset
 
     if (m_fileBrowser) {
-        float fbTop = sidebarTopY;
-        float fbHeight = height - fbTop;
-
-        if (showPreviewDock) {
-            // Full browser width: the dock previously started at the nav-pane
-            // edge, leaving an unpainted (black) strip under the nav pane.
-            const float previewHeight = 68.0f;
-            fbHeight -= previewHeight;
-            m_previewPanel->setBounds(
-                AestraUI::NUIAbsolute(contentBounds, 0, fbTop + fbHeight, fileBrowserWidth, previewHeight));
-        }
-
+        const float fbTop = sidebarTopY;
+        const float fbHeight = height - fbTop;
         m_fileBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, fbTop, fileBrowserWidth, fbHeight));
-    }
+        m_fileBrowser->setContentViewsEnabled(!isAuditionMode && m_fileBrowser->isVisible());
 
-    if (m_pluginBrowser) {
-        bool isPlugins = m_fileBrowser && m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Plugins;
-        if (isPlugins && m_fileBrowser->isVisible()) {
-            float navW = m_fileBrowser->getNavPaneWidth();
-            float pbLeft = navW;
-            float pbWidth = std::max(0.0f, fileBrowserWidth - navW);
-            // Align with file browser content area (below search bar)
-            constexpr float searchH = 28.0f;
-            float pbTop = sidebarTopY + searchH;
-            float pbHeight = height - pbTop;
-            m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, pbLeft, pbTop - contentBounds.y, pbWidth, pbHeight));
-            m_pluginBrowser->setVisible(true);
-        } else {
-            float pbTop = sidebarTopY;
-            float pbHeight = height - pbTop;
-            m_pluginBrowser->setBounds(AestraUI::NUIAbsolute(contentBounds, 0, pbTop - contentBounds.y, fileBrowserWidth, pbHeight));
-            m_pluginBrowser->setVisible(false);
+        if (showPreviewDock && m_previewPanel) {
+            const auto browserLayout = m_fileBrowser->computeBrowserLayout();
+            const auto fbBounds = m_fileBrowser->getBounds();
+            m_previewPanel->setBounds(
+                AestraUI::NUIRect(browserLayout.list.x, browserLayout.list.bottom(), browserLayout.list.width,
+                                  std::max(0.0f, fbBounds.bottom() - browserLayout.list.bottom())));
         }
     }
 
@@ -1542,12 +1549,7 @@ void AestraContent::onResize(int width, int height) {
             m_patternBrowser->setBounds(
                 AestraUI::NUIAbsolute(contentBounds, 0.0f, clipTop, fileBrowserWidth, height - clipTop));
         } else if (patternNavActive && m_fileBrowser) {
-            const float navW = m_fileBrowser->getNavPaneWidth();
-            constexpr float searchH = 28.0f;
-            const float patternTop = sidebarTopY + searchH;
-            const float patternWidth = std::max(0.0f, fileBrowserWidth - navW);
-            m_patternBrowser->setBounds(
-                AestraUI::NUIAbsolute(contentBounds, navW, patternTop, patternWidth, height - patternTop));
+            // FileBrowser owns embedded Patterns geometry and visibility.
         } else {
             float patternBrowserX = fileBrowserWidth;
             float pbY = isAuditionMode ? 0.0f : transportHeight;
@@ -1685,6 +1687,41 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         return false;
     }
 
+    // Wheel events need explicit hit routing because workspace siblings overlap
+    // the browser's screen area and the generic child dispatcher only follows
+    // z-order. Keep floating overlays first, then route the visible browser view
+    // under the pointer before the timeline can consume the gesture.
+    if (event.wheelDelta != 0.0f) {
+        if (m_overlayLayer && m_overlayLayer->onMouseEvent(event)) {
+            return true;
+        }
+
+        if (m_fileBrowser && m_fileBrowser->isVisible() && m_fileBrowser->isEnabled() &&
+            m_fileBrowser->getBounds().contains(event.position)) {
+            const auto activeView = m_fileBrowser->getActiveNavAction();
+            if (activeView == AestraUI::FileBrowser::BrowserNavAction::Plugins && m_pluginBrowser &&
+                m_pluginBrowser->isVisible() && m_pluginBrowser->isEnabled() &&
+                m_pluginBrowser->getBounds().contains(event.position) && m_pluginBrowser->onMouseEvent(event)) {
+                return true;
+            }
+            if (activeView == AestraUI::FileBrowser::BrowserNavAction::Patterns && m_patternBrowser &&
+                m_patternBrowser->isVisible() && m_patternBrowser->isEnabled() &&
+                m_patternBrowser->getBounds().contains(event.position) &&
+                static_cast<AestraUI::NUIComponent*>(m_patternBrowser.get())->onMouseEvent(event)) {
+                return true;
+            }
+            if (m_fileBrowser->onMouseEvent(event)) {
+                return true;
+            }
+
+            // Do not let a wheel gesture over browser chrome fall through to
+            // the timeline merely because the current browser pane cannot scroll.
+            return true;
+        }
+
+        return m_workspaceLayer && m_workspaceLayer->onMouseEvent(event);
+    }
+
     if (!m_browserResizing && event.pressed && m_overlayLayer && m_overlayLayer->onMouseEvent(event)) {
         return true;
     }
@@ -1710,7 +1747,7 @@ bool AestraContent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             m_browserResizing = true;
             m_browserResizeTarget = target;
             m_browserResizeStartX = event.position.x;
-            m_browserResizeStartFileWidth = std::max(kMinFileBrowserWidth, m_fileBrowserWidthPref);
+            m_browserResizeStartFileWidth = std::max(kMinFileBrowserWidth, getBrowserWidth());
             m_browserResizeStartPatternWidth = std::max(kMinPatternBrowserWidth, m_patternBrowserWidthPref);
             return true;
         }
@@ -1858,9 +1895,20 @@ void AestraContent::syncViewState() {
 // SECTION: Panel State Persistence (Issue #120)
 // =============================================================================
 
+float* AestraContent::getActiveBrowserWidthPrefPtr() {
+    return const_cast<float*>(static_cast<const AestraContent*>(this)->getActiveBrowserWidthPrefPtr());
+}
+
+const float* AestraContent::getActiveBrowserWidthPrefPtr() const {
+    // Plugins and Patterns replace the contents of the same browser shell. Keeping a
+    // separate width for each view made the shell visibly jump when navigation changed.
+    return &m_fileBrowserWidthPref;
+}
+
 float AestraContent::getBrowserWidth() const {
-    if (m_fileBrowserWidthPref > 0.0f) {
-        return m_fileBrowserWidthPref;
+    const float preferredWidth = *getActiveBrowserWidthPrefPtr();
+    if (preferredWidth > 0.0f) {
+        return preferredWidth;
     }
     if (m_fileBrowser) {
         return m_fileBrowser->getBounds().width;
@@ -1870,7 +1918,7 @@ float AestraContent::getBrowserWidth() const {
 
 void AestraContent::setBrowserWidth(float width) {
     if (width > 0.0f) {
-        m_fileBrowserWidthPref = width;
+        *getActiveBrowserWidthPrefPtr() = width;
         onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height));
     }
 }
@@ -2351,7 +2399,10 @@ AestraContent::hitTestBrowserResizeTarget(const AestraUI::NUIPoint& mouseScreen)
         return std::abs(mouseScreen.x - global.right()) <= kResizeHitWidth;
     };
 
-    if (isNearRightEdge(m_patternBrowser)) {
+    const bool embeddedPatternVisible =
+        m_fileBrowser && m_fileBrowser->isVisible() &&
+        m_fileBrowser->getActiveNavAction() == AestraUI::FileBrowser::BrowserNavAction::Patterns;
+    if (!embeddedPatternVisible && isNearRightEdge(m_patternBrowser)) {
         return BrowserResizeTarget::PatternRail;
     }
     if (isNearRightEdge(m_fileBrowser) || isNearRightEdge(m_pluginBrowser) || isNearRightEdge(m_previewPanel)) {
@@ -2364,7 +2415,7 @@ void AestraContent::updateBrowserResizeDrag(const AestraUI::NUIPoint& mouseScree
     const float deltaX = mouseScreen.x - m_browserResizeStartX;
 
     if (m_browserResizeTarget == BrowserResizeTarget::FileRail) {
-        m_fileBrowserWidthPref = std::max(kMinFileBrowserWidth, m_browserResizeStartFileWidth + deltaX);
+        *getActiveBrowserWidthPrefPtr() = std::max(kMinFileBrowserWidth, m_browserResizeStartFileWidth + deltaX);
     } else if (m_browserResizeTarget == BrowserResizeTarget::PatternRail) {
         m_patternBrowserWidthPref = std::max(kMinPatternBrowserWidth, m_browserResizeStartPatternWidth + deltaX);
     }
@@ -2596,7 +2647,9 @@ void AestraContent::startPatternClipPreview(PatternID patternId) {
     }
 
     m_trackManager->preparePatternForArsenal(patternId);
-    m_trackManager->playPatternInArsenal(patternId);
+    // Clip preview intentionally starts from the top; every other play path
+    // resumes from the cued transport position (playPatternInArsenal default).
+    m_trackManager->playPatternInArsenal(patternId, 0.0);
 }
 
 void AestraContent::stopPatternClipPreview(bool restoreTimelineUi) {
@@ -2793,6 +2846,8 @@ void AestraContent::playFromCurrentFocus() {
         }
 
         AESTRA_LOG_DEBUG("[Arsenal] Focus-aware play scheduling pattern " + std::to_string(activePattern.value));
+        // Resumes from the cued transport position (e.g. a scrubbed piano-roll
+        // playhead) — playPatternInArsenal's default — not from beat zero.
         m_trackManager->playPatternInArsenal(activePattern);
         return;
     }
@@ -3692,18 +3747,11 @@ void AestraContent::refreshPluginList() {
         return;
 
     auto& pm = Aestra::Audio::PluginManager::getInstance();
+    const auto& scannedPlugins = pm.getScanner().getScannedPlugins();
     std::vector<AestraUI::PluginListItem> uiPlugins;
-    // Map internal PluginInfo to UI item
-    for (const auto& p : pm.getScanner().getScannedPlugins()) {
-        AestraUI::PluginListItem item;
-        item.id = p.id;
-        item.name = p.name;
-        item.vendor = p.vendor;
-        item.version = p.version;
-        item.category = p.category;
-        item.formatStr = (p.format == Aestra::Audio::PluginFormat::VST3) ? "VST3" : "CLAP (Exp.)";
-        item.typeName = (p.type == Aestra::Audio::PluginType::Instrument) ? "Instrument" : "Effect";
-        uiPlugins.push_back(item);
+    uiPlugins.reserve(scannedPlugins.size());
+    for (const auto& p : scannedPlugins) {
+        uiPlugins.push_back(m_pluginController->convertToListItem(p));
     }
     m_pluginBrowser->setPluginList(uiPlugins);
     AESTRA_LOG_DEBUG("Refreshed plugin list UI: " + std::to_string(uiPlugins.size()) + " plugins found.");

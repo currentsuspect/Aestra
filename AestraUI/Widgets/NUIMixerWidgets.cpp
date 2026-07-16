@@ -53,29 +53,22 @@ void MuteButton::onRender(NUIRenderer& renderer)
 {
     auto& theme = NUIThemeManager::getInstance();
     auto b = getBounds();
-    NUIColor base = theme.getColor("warning");
-    NUIColor bg = theme.getColor("buttonBgDefault").withAlpha(0.98f);
-    NUIColor border = theme.getColor("border").withAlpha(0.28f);
-    NUIColor text = theme.getColor("textSecondary").withAlpha(0.86f);
+    const auto& props = theme.getCurrentTheme();
+    NUIColor base = theme.getColor("muted");
+    auto colors = resolveControlColors(props, {true, isHovered(), false, isOn(), isFocused()});
+    NUIColor bg = colors.background;
+    NUIColor border = colors.border;
+    NUIColor text = colors.text;
 
     if (isOn()) {
-        bg = theme.getColor("buttonBgActive").withAlpha(0.99f);
-        border = base.withAlpha(0.34f);
+        bg = base.withAlpha(0.16f);
+        border = base.withAlpha(0.52f);
         text = theme.getColor("textPrimary");
-    } else if (isHovered()) {
-        bg = theme.getColor("buttonBgHover").withAlpha(0.99f);
-        border = theme.getColor("border").withAlpha(0.38f);
-        text = theme.getColor("textPrimary").withAlpha(0.92f);
     }
 
-    renderer.drawShadow(b, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
-    renderer.fillRoundedRect(b, 7.0f, bg);
-    renderer.strokeRoundedRect(b, 7.0f, 1.0f, border);
-    renderer.strokeRoundedRect({b.x + 1.0f, b.y + 1.0f, b.width - 2.0f, b.height - 2.0f},
-                               6.0f,
-                               1.0f,
-                               NUIColor::white().withAlpha(0.025f));
-    renderer.drawTextCentered("M", b, 12.0f, text);
+    renderer.fillRoundedRect(b, props.radiusM, bg);
+    renderer.strokeRoundedRect(b, props.radiusM, colors.borderWidth, border);
+    renderer.drawTextCentered("M", b, props.fontSizeM, text);
 }
 
 SoloButton::SoloButton()
@@ -88,29 +81,22 @@ void SoloButton::onRender(NUIRenderer& renderer)
     auto& theme = NUIThemeManager::getInstance();
     auto b = getBounds();
     
-    NUIColor base = theme.getColor("accentCyan");
-    NUIColor bg = theme.getColor("buttonBgDefault").withAlpha(0.98f);
-    NUIColor border = theme.getColor("border").withAlpha(0.28f);
-    NUIColor text = theme.getColor("textSecondary").withAlpha(0.86f);
+    const auto& props = theme.getCurrentTheme();
+    NUIColor base = theme.getColor("soloed");
+    auto colors = resolveControlColors(props, {true, isHovered(), false, isOn(), isFocused()});
+    NUIColor bg = colors.background;
+    NUIColor border = colors.border;
+    NUIColor text = colors.text;
 
     if (isOn()) {
-        bg = theme.getColor("buttonBgActive").withAlpha(0.99f);
-        border = base.withAlpha(0.32f);
+        bg = base.withAlpha(0.16f);
+        border = base.withAlpha(0.52f);
         text = theme.getColor("textPrimary");
-    } else if (isHovered()) {
-        bg = theme.getColor("buttonBgHover").withAlpha(0.99f);
-        border = theme.getColor("border").withAlpha(0.38f);
-        text = theme.getColor("textPrimary").withAlpha(0.92f);
     }
 
-    renderer.drawShadow(b, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
-    renderer.fillRoundedRect(b, 7.0f, bg);
-    renderer.strokeRoundedRect(b, 7.0f, 1.0f, border);
-    renderer.strokeRoundedRect({b.x + 1.0f, b.y + 1.0f, b.width - 2.0f, b.height - 2.0f},
-                               6.0f,
-                               1.0f,
-                               NUIColor::white().withAlpha(0.025f));
-    renderer.drawTextCentered("S", b, 12.0f, text);
+    renderer.fillRoundedRect(b, props.radiusM, bg);
+    renderer.strokeRoundedRect(b, props.radiusM, colors.borderWidth, border);
+    renderer.drawTextCentered("S", b, props.fontSizeM, text);
 }
 
 ArmButton::ArmButton()
@@ -123,28 +109,21 @@ void ArmButton::onRender(NUIRenderer& renderer)
     auto& theme = NUIThemeManager::getInstance();
     auto b = getBounds();
     
-    NUIColor base = theme.getColor("error");
-    NUIColor bg = theme.getColor("buttonBgDefault").withAlpha(0.98f);
-    NUIColor border = theme.getColor("border").withAlpha(0.28f);
-    NUIColor text = theme.getColor("textSecondary").withAlpha(0.86f);
+    const auto& props = theme.getCurrentTheme();
+    NUIColor base = theme.getColor("armed");
+    auto colors = resolveControlColors(props, {true, isHovered(), false, isOn(), isFocused()});
+    NUIColor bg = colors.background;
+    NUIColor border = colors.border;
+    NUIColor text = colors.text;
 
     if (isOn()) {
-        bg = theme.getColor("buttonBgActive").withAlpha(0.99f);
-        border = base.withAlpha(0.34f);
+        bg = base.withAlpha(0.16f);
+        border = base.withAlpha(0.52f);
         text = theme.getColor("textPrimary");
-    } else if (isHovered()) {
-        bg = theme.getColor("buttonBgHover").withAlpha(0.99f);
-        border = theme.getColor("border").withAlpha(0.38f);
-        text = theme.getColor("textPrimary").withAlpha(0.92f);
     }
 
-    renderer.drawShadow(b, 0.0f, 4.0f, 12.0f, NUIColor(0, 0, 0, 0.12f));
-    renderer.fillRoundedRect(b, 7.0f, bg);
-    renderer.strokeRoundedRect(b, 7.0f, 1.0f, border);
-    renderer.strokeRoundedRect({b.x + 1.0f, b.y + 1.0f, b.width - 2.0f, b.height - 2.0f},
-                               6.0f,
-                               1.0f,
-                               NUIColor::white().withAlpha(0.025f));
+    renderer.fillRoundedRect(b, props.radiusM, bg);
+    renderer.strokeRoundedRect(b, props.radiusM, colors.borderWidth, border);
     
     // Circle or icon for Record? Keeping "R" for consistency but could be circle
     // Let's use a small filled circle for R to look like a rec light
@@ -153,7 +132,7 @@ void ArmButton::onRender(NUIRenderer& renderer)
         float cy = b.y + b.height * 0.5f;
         renderer.fillCircle({cx, cy}, 3.5f, base.withAlpha(0.92f));
     } else {
-        renderer.drawTextCentered("R", b, 12.0f, text);
+        renderer.drawTextCentered("R", b, props.fontSizeM, text);
     }
 }
 
