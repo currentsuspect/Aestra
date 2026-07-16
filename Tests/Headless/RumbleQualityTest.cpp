@@ -205,7 +205,10 @@ int main() {
     std::cout << "Punch early-energy ratio: " << (punchAttackRms / std::max(1.0e-12, dryAttackRms))
               << ", tail ratio: " << (punchTailRms / std::max(1.0e-12, dryTailRms)) << "\n";
     ok &= check(punchAttackRms > dryAttackRms * 1.25, "Punch does not add at least 25% RMS energy to the first 50 ms");
+    // Both sides of the contract: Punch must neither leak into nor carve away
+    // the settled tail — it is an attack-stage effect.
     ok &= check(punchTailRms < dryTailRms * 1.15, "Punch leaks more than 15% extra RMS energy into the settled tail");
+    ok &= check(punchTailRms > dryTailRms * 0.85, "Punch removes more than 15% of the settled tail's RMS energy");
     ok &= check(punchOn.finite && punchOn.peak < 0.98f, "maximum Punch is non-finite or exceeds safety ceiling");
 
     for (double sampleRate : {44100.0, 48000.0, 96000.0}) {
