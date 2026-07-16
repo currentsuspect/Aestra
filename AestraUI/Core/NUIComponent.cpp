@@ -488,6 +488,13 @@ std::shared_ptr<NUITheme> NUIComponent::getTheme() const {
     return nullptr;
 }
 
+void NUIComponent::onThemeChanged(const NUIThemeProperties& theme) {
+    (void)theme;
+    setDirty(true);
+    for (auto& child : children_)
+        child->onThemeChanged(theme);
+}
+
 // ============================================================================
 // Protected Methods
 // ============================================================================

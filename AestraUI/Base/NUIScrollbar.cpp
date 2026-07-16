@@ -85,6 +85,27 @@ void NUIScrollbar::onRender(NUIRenderer& renderer)
     drawArrows(renderer);
 }
 
+void NUIScrollbar::onThemeChanged(const NUIThemeProperties& theme)
+{
+    if (!customColors_) {
+        trackColor_ = theme.backgroundSecondary.withAlpha(0.72f);
+        thumbColor_ = theme.textMuted.withAlpha(0.42f);
+        thumbHoverColor_ = theme.textSecondary.withAlpha(0.62f);
+        thumbPressedColor_ = theme.textPrimary.withAlpha(0.76f);
+        arrowColor_ = theme.textMuted;
+        arrowHoverColor_ = theme.textSecondary;
+        arrowPressedColor_ = theme.textPrimary;
+        borderColor_ = theme.borderSubtle;
+        borderRadius_ = theme.radiusXS;
+        arrowSize_ = theme.fontSizeM;
+        if (upArrowIcon_)
+            upArrowIcon_->setColor(arrowColor_);
+        if (downArrowIcon_)
+            downArrowIcon_->setColor(arrowColor_);
+    }
+    NUIComponent::onThemeChanged(theme);
+}
+
 void NUIScrollbar::onUpdate(double deltaTime)
 {
     if (isAnimating_ && !isDragging_) {
@@ -426,48 +447,56 @@ void NUIScrollbar::setMinimumThumbSize(double size)
 void NUIScrollbar::setTrackColor(const NUIColor& color)
 {
     trackColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIScrollbar::setThumbColor(const NUIColor& color)
 {
     thumbColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIScrollbar::setThumbHoverColor(const NUIColor& color)
 {
     thumbHoverColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIScrollbar::setThumbPressedColor(const NUIColor& color)
 {
     thumbPressedColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIScrollbar::setArrowColor(const NUIColor& color)
 {
     arrowColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIScrollbar::setArrowHoverColor(const NUIColor& color)
 {
     arrowHoverColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIScrollbar::setArrowPressedColor(const NUIColor& color)
 {
     arrowPressedColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIScrollbar::setBorderColor(const NUIColor& color)
 {
     borderColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
@@ -1129,12 +1158,12 @@ void NUIScrollbar::drawEnhancedThumb(NUIRenderer& renderer, const NUIRect& thumb
         // Top horizontal white marker
         NUIRect topMarker(visualThumb.x + 2.0f, markerY, visualThumb.width - 4.0f, markerHeight);
         const float markerAlpha = thumbHot ? 0.24f : 0.12f;
-        renderer.fillRoundedRect(topMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, markerAlpha));
+        renderer.fillRoundedRect(topMarker, 1.0f, NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(markerAlpha));
         
         // Bottom horizontal white marker
         NUIRect bottomMarker(visualThumb.x + 2.0f, markerY + markerHeight + markerSpacing, 
                              visualThumb.width - 4.0f, markerHeight);
-        renderer.fillRoundedRect(bottomMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, markerAlpha));
+        renderer.fillRoundedRect(bottomMarker, 1.0f, NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(markerAlpha));
     }
     else
     {
@@ -1149,12 +1178,12 @@ void NUIScrollbar::drawEnhancedThumb(NUIRenderer& renderer, const NUIRect& thumb
         // Left vertical white marker
         NUIRect leftMarker(markerX, visualThumb.y + 2.0f, markerWidth, visualThumb.height - 4.0f);
         const float markerAlpha = thumbHot ? 0.24f : 0.12f;
-        renderer.fillRoundedRect(leftMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, markerAlpha));
+        renderer.fillRoundedRect(leftMarker, 1.0f, NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(markerAlpha));
         
         // Right vertical white marker
         NUIRect rightMarker(markerX + markerWidth + markerSpacing, visualThumb.y + 2.0f, 
                             markerWidth, visualThumb.height - 4.0f);
-        renderer.fillRoundedRect(rightMarker, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, markerAlpha));
+        renderer.fillRoundedRect(rightMarker, 1.0f, NUIThemeManager::getInstance().getCurrentTheme().textPrimary.withAlpha(markerAlpha));
     }
     
     // Subtle inner highlight
