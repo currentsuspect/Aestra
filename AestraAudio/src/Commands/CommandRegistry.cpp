@@ -667,7 +667,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
                 noteVelocity = static_cast<float>(c - '0') / 9.0f;
             } else {
                 return CommandRegistry::fail(std::string("invalid step character '") + c +
-                                             "' (use x, X, 1-9, -, .)");
+                                             "' (use x, X, 1-9, -, ., or space)");
             }
             MidiNote note;
             note.pitch = *pitchOpt;

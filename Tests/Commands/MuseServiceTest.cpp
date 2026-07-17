@@ -12,6 +12,7 @@
 
 #include "AestraJSON.h"
 
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cmath>
@@ -712,7 +713,12 @@ int main() {
     // --- Sample discovery + expressive step strings ---
     {
         // A tiny library: one wav, one decoy, one nested wav.
-        const auto libDir = std::filesystem::temp_directory_path() / "muse_service_test_lib";
+        // Unique per run so stale files or parallel runs cannot change counts.
+        const auto uniqueSuffix = std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count());
+        const auto libDir = std::filesystem::temp_directory_path() /
+                            ("muse_service_test_lib_" + uniqueSuffix);
+        std::filesystem::remove_all(libDir);
         std::filesystem::create_directories(libDir / "kicks");
         {
             // Real WAVs (the validator checks magic bytes, not just extension).
@@ -722,8 +728,11 @@ int main() {
             std::filesystem::copy_file(source, libDir / "kicks" / "deep.wav",
                                        std::filesystem::copy_options::overwrite_existing);
             std::FILE* f = std::fopen((libDir / "notes.txt").string().c_str(), "wb");
-            std::fputs("not audio", f);
-            std::fclose(f);
+            check(f != nullptr, "decoy file created");
+            if (f) {
+                std::fputs("not audio", f);
+                std::fclose(f);
+            }
         }
 
         JSON req = JSON::object();

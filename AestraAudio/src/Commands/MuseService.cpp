@@ -453,27 +453,66 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             }
 
             constexpr size_t kMaxEntries = 500;
-            constexpr int kMaxDepth = 3;
+            constexpr int kMaxDepth = 3;   // subdirectory nesting below root
+            constexpr size_t kScanBudget = 20000; // entries examined, audio or not
             bool truncated = false;
             std::vector<std::filesystem::path> found;
-            std::filesystem::recursive_directory_iterator it(
-                root, std::filesystem::directory_options::skip_permission_denied, ec);
-            const std::filesystem::recursive_directory_iterator end;
-            for (; !ec && it != end; it.increment(ec)) {
-                if (it.depth() >= kMaxDepth) {
-                    it.disable_recursion_pending();
-                    continue;
+            size_t scanned = 0;
+
+            // Deterministic bounded traversal: depth-first with per-directory
+            // sorted entries, so a truncated listing is always the same
+            // stable prefix across calls and platforms. Directory read
+            // failures are errors, not silently partial results.
+            std::vector<std::pair<std::filesystem::path, int>> pending;
+            pending.emplace_back(root, 0);
+            while (!pending.empty() && !truncated) {
+                const auto [dir, depth] = pending.back();
+                pending.pop_back();
+
+                std::vector<std::filesystem::directory_entry> entries;
+                std::error_code dirEc;
+                std::filesystem::directory_iterator dirIt(
+                    dir, std::filesystem::directory_options::skip_permission_denied, dirEc);
+                const std::filesystem::directory_iterator dirEnd;
+                for (; !dirEc && dirIt != dirEnd; dirIt.increment(dirEc)) {
+                    entries.push_back(*dirIt);
                 }
-                if (!it->is_regular_file(ec)) continue;
-                const std::string path = it->path().string();
-                if (!AudioFileValidator::isValidAudioFile(path)) continue;
-                if (found.size() >= kMaxEntries) {
-                    truncated = true;
-                    break;
+                if (dirEc) {
+                    return makeError(id, "execution_error",
+                                     "error reading directory " + dir.string() + ": " +
+                                         dirEc.message(),
+                                     verb)
+                        .toString();
                 }
-                found.push_back(it->path());
+                std::sort(entries.begin(), entries.end(),
+                          [](const auto& a, const auto& b) { return a.path() < b.path(); });
+
+                std::vector<std::filesystem::path> subdirs;
+                for (const auto& entry : entries) {
+                    if (++scanned > kScanBudget) {
+                        truncated = true;
+                        break;
+                    }
+                    std::error_code typeEc;
+                    if (entry.is_directory(typeEc)) {
+                        if (depth < kMaxDepth) subdirs.push_back(entry.path());
+                        continue;
+                    }
+                    if (typeEc) continue;
+                    std::error_code fileEc;
+                    if (!entry.is_regular_file(fileEc) || fileEc) continue;
+                    if (!AudioFileValidator::isValidAudioFile(entry.path().string())) continue;
+                    if (found.size() >= kMaxEntries) {
+                        truncated = true;
+                        break;
+                    }
+                    found.push_back(entry.path());
+                }
+                // Reverse push so the stack pops subdirectories in sorted order.
+                for (auto it = subdirs.rbegin(); it != subdirs.rend(); ++it) {
+                    pending.emplace_back(*it, depth + 1);
+                }
             }
-            // Deterministic order for agents diffing across calls.
             std::sort(found.begin(), found.end());
 
             JSON samples = JSON::array();
@@ -483,7 +522,8 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 entry.set("name", JSON(path.filename().string()));
                 std::error_code sizeEc;
                 const auto size = std::filesystem::file_size(path, sizeEc);
-                entry.set("sizeBytes", JSON(sizeEc ? 0.0 : static_cast<double>(size)));
+                // Absent field = size unknown; never a fake zero.
+                if (!sizeEc) entry.set("sizeBytes", JSON(static_cast<double>(size)));
                 samples.push(entry);
             }
             JSON result = JSON::object();
