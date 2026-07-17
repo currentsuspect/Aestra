@@ -946,6 +946,13 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
         response.set("verb", JSON(verb));
         response.set("message", JSON(cmdResult.message));
         response.set("undoable", JSON(cmdResult.undoable));
+        if (cmdResult.createdId != 0) {
+            // Structured id of the object the command created (e.g. the new
+            // pattern from clone_pattern) — agents must not parse the message.
+            JSON result = JSON::object();
+            result.set("createdId", JSON(static_cast<double>(cmdResult.createdId)));
+            response.set("result", result);
+        }
         response.set("executionMs", JSON(cmdResult.executionMs));
         return response.toString();
     } catch (const std::exception& e) {

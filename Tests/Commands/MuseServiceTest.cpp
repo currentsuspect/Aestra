@@ -583,11 +583,11 @@ int main() {
                       "{\"id\": 180, \"verb\": \"clone_pattern\", \"args\": {\"pattern\": " + p +
                           "}}");
         check(status(r) == "ok", "clone_pattern ok");
-        const std::string msg = r["message"].asString();
-        check(msg.find("cloned pattern -> ") != std::string::npos,
-              "clone response carries the new pattern id");
-        const uint64_t clonedId =
-            std::stoull(msg.substr(msg.find("-> ") + 3));
+        check(r["message"].asString().find("cloned pattern -> ") != std::string::npos,
+              "clone message is human-readable");
+        check(r.has("result") && r["result"]["createdId"].isNumber(),
+              "clone response carries the new id as structured data");
+        const uint64_t clonedId = static_cast<uint64_t>(r["result"]["createdId"].asNumber());
 
         r = call(service, "{\"id\": 181, \"verb\": \"list_patterns\"}");
         check(status(r) == "ok", "list_patterns ok");

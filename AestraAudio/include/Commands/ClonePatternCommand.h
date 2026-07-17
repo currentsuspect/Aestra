@@ -4,6 +4,7 @@
 #include "Commands/ICommand.h"
 #include "Models/PatternManager.h"
 
+#include <stdexcept>
 #include <string>
 
 namespace Aestra {
@@ -23,7 +24,13 @@ public:
     void execute() override {
         if (m_executed) return;
         m_clonedId = m_patternManager.clonePattern(m_sourceId);
-        m_executed = m_clonedId.isValid();
+        if (!m_clonedId.isValid()) {
+            // Loud, not silent: a failed clone must never be recorded as an
+            // executed command or reported as success.
+            throw std::runtime_error("failed to clone pattern " +
+                                     std::to_string(m_sourceId.value));
+        }
+        m_executed = true;
     }
 
     void undo() override {

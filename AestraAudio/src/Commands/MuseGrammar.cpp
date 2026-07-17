@@ -166,7 +166,7 @@ static const std::vector<CommandSchema> s_schemas = {
     {"clone_pattern", CommandCategory::Pattern, {
         {"pattern", FlagType::Int, true, 1.0}
     },
-     "Duplicate a pattern (notes, name, length). The response message carries the new pattern id; list_patterns shows it."},
+     "Duplicate a pattern (notes, name, length). The new pattern id is returned in result.createdId; list_patterns shows it."},
     {"set_pattern_length", CommandCategory::Pattern, {
         {"pattern", FlagType::Int, true, 1.0},
         {"beats", FlagType::Float, true, 1.0, 512.0}

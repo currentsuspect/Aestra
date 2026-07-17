@@ -152,9 +152,20 @@ CommandResult CommandParser::execute(const std::string& verb,
         result.undoable = undoable;
 
         // clone_pattern creates a new object the caller needs to address;
-        // surface its id instead of making the agent diff list_patterns.
+        // surface its id (structured in createdId, and in the message for
+        // humans) instead of making the agent diff list_patterns.
         if (const auto* clone = dynamic_cast<const ClonePatternCommand*>(shared.get())) {
+            // CommandHistory::pushAndExecute swallows a throwing execute()
+            // (the command is not recorded); an invalid id here means the
+            // clone did not happen.
+            if (!clone->getClonedPatternId().isValid()) {
+                result.status = CommandStatus::ExecutionError;
+                result.message = "failed to clone pattern";
+                result.undoable = false;
+                return finish(result);
+            }
             result.status = CommandStatus::Success;
+            result.createdId = clone->getClonedPatternId().value;
             result.message = "cloned pattern -> " +
                              std::to_string(clone->getClonedPatternId().value);
             return finish(result);
