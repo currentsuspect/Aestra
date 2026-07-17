@@ -476,11 +476,30 @@ int main() {
         check(sawShifted, "row pitch 40 reads back at 52 after transpose");
         trackManager->getCommandHistory().undo();
 
+        // Undo must land every note back on its original pitch.
+        r = call(service,
+                 "{\"id\": 156, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        size_t at40 = 0, at52 = 0;
+        for (size_t i = 0; i < r["result"]["notes"].size(); ++i) {
+            const double pitch = r["result"]["notes"][i]["pitch"].asNumber();
+            if (pitch == 40.0) ++at40;
+            if (pitch == 52.0) ++at52;
+        }
+        check(at40 == 5 && at52 == 0, "undo returns all row notes to pitch 40");
+
         // Out-of-range transpose is rejected, state untouched.
         r = call(service,
                  "{\"id\": 152, \"verb\": \"transpose_pattern\", \"args\": {\"pattern\": " + p +
                      ", \"semitones\": -48}}");
         check(status(r) == "execution_error", "transpose past MIDI range rejected");
+        r = call(service,
+                 "{\"id\": 157, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        bool pitchesIntact = true;
+        for (size_t i = 0; i < r["result"]["notes"].size(); ++i) {
+            const double pitch = r["result"]["notes"][i]["pitch"].asNumber();
+            if (pitch != 36.0 && pitch != 40.0 && pitch != 41.0) pitchesIntact = false;
+        }
+        check(pitchesIntact, "rejected transpose left no partially shifted pitches");
 
         // Cleanup: drop the scratch notes so later sections see the original
         // two-note pattern.
@@ -494,6 +513,25 @@ int main() {
         r = call(service,
                  "{\"id\": 155, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
         check(r["result"]["notes"].size() == 2, "pattern back to its two original notes");
+
+        // Batch composition: a whole groove in one gesture, one undo step.
+        r = call(service,
+                 "{\"id\": 158, \"verb\": \"batch\", \"args\": {\"commands\": ["
+                 "{\"verb\": \"set_steps\", \"args\": {\"pattern\": " + p +
+                     ", \"unit\": " + u + ", \"pitch\": 45, \"steps\": \"x---x---\"}},"
+                 "{\"verb\": \"set_steps\", \"args\": {\"pattern\": " + p +
+                     ", \"unit\": " + u + ", \"pitch\": 47, \"steps\": \"--x---x-\"}},"
+                 "{\"verb\": \"quantize_pattern\", \"args\": {\"pattern\": " + p +
+                     ", \"grid\": 0.25}}]}}");
+        check(status(r) == "ok", "batch of musical verbs ok");
+        r = call(service,
+                 "{\"id\": 159, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        check(r["result"]["notes"].size() == 6, "batch groove landed both rows");
+        trackManager->getCommandHistory().undo();
+        r = call(service,
+                 "{\"id\": 160, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        check(r["result"]["notes"].size() == 2,
+              "single undo reverts the whole musical batch");
     }
 
     // --- Render: the beat comes back as a file with signal in it ---
