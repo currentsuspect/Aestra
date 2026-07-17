@@ -1,4 +1,5 @@
 #include "Commands/CommandParser.h"
+#include "Commands/ClonePatternCommand.h"
 #include "Commands/CommandHistory.h"
 #include "Commands/CommandRegistry.h"
 
@@ -109,7 +110,8 @@ std::unique_ptr<ICommand> CommandParser::buildValidated(
     auto cmd = CommandRegistry::instance().build(verb, flags);
     if (!cmd) {
         outStatus = CommandStatus::ExecutionError;
-        outMessage = "failed to build command for: " + verb;
+        const std::string reason = CommandRegistry::consumeLastBuildError();
+        outMessage = reason.empty() ? "failed to build command for: " + verb : reason;
         return nullptr;
     }
 
@@ -148,6 +150,26 @@ CommandResult CommandParser::execute(const std::string& verb,
         auto shared = std::shared_ptr<ICommand>(std::move(cmd));
         history.pushAndExecute(shared);
         result.undoable = undoable;
+
+        // clone_pattern creates a new object the caller needs to address;
+        // surface its id (structured in createdId, and in the message for
+        // humans) instead of making the agent diff list_patterns.
+        if (const auto* clone = dynamic_cast<const ClonePatternCommand*>(shared.get())) {
+            // CommandHistory::pushAndExecute swallows a throwing execute()
+            // (the command is not recorded); an invalid id here means the
+            // clone did not happen.
+            if (!clone->getClonedPatternId().isValid()) {
+                result.status = CommandStatus::ExecutionError;
+                result.message = "failed to clone pattern";
+                result.undoable = false;
+                return finish(result);
+            }
+            result.status = CommandStatus::Success;
+            result.createdId = clone->getClonedPatternId().value;
+            result.message = "cloned pattern -> " +
+                             std::to_string(clone->getClonedPatternId().value);
+            return finish(result);
+        }
     } catch (const std::exception& e) {
         result.status = CommandStatus::ExecutionError;
         result.message = e.what();

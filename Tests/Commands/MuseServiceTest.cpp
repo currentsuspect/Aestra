@@ -534,6 +534,92 @@ int main() {
               "single undo reverts the whole musical batch");
     }
 
+    // --- Agent UX: refusals carry reasons, schema carries semantics ---
+    {
+        const std::string p = std::to_string(static_cast<long long>(kickPattern));
+        const std::string u = std::to_string(static_cast<long long>(kickUnit));
+
+        // Factory refusals name the object and the rule, not just the verb.
+        JSON r = call(service,
+                      "{\"id\": 170, \"verb\": \"set_steps\", \"args\": {\"pattern\": 999999, "
+                      "\"unit\": " + u + ", \"pitch\": 40, \"steps\": \"x---\"}}");
+        check(status(r) == "execution_error" &&
+                  r["message"].asString().find("no such MIDI pattern: 999999") != std::string::npos,
+              "unknown pattern refusal names the pattern");
+
+        r = call(service, "{\"id\": 171, \"verb\": \"set_steps\", \"args\": {\"pattern\": " + p +
+                              ", \"unit\": " + u + ", \"pitch\": 40, \"steps\": \"x--q\"}}");
+        check(r["message"].asString().find("invalid step character 'q'") != std::string::npos,
+              "bad step char refusal names the character");
+
+        r = call(service,
+                 "{\"id\": 172, \"verb\": \"set_volume\", \"args\": {\"track\": 97, \"value\": 0.5}}");
+        check(r["message"].asString().find("no such track: 97") != std::string::npos,
+              "unknown track refusal names the index");
+
+        r = call(service,
+                 "{\"id\": 173, \"verb\": \"add_unit\", \"args\": {\"name\": \"X\", \"type\": "
+                 "\"theremin\"}}");
+        check(r["message"].asString().find("unknown unit type: theremin") != std::string::npos,
+              "unknown unit type refusal names the type");
+
+        // The schema manifest documents queries, actions, and semantics.
+        const std::string schema = Aestra::Audio::MuseGrammar::schemaToJsonString();
+        JSON manifest = JSON::parse(schema);
+        check(manifest.has("commands") && manifest.has("queries") && manifest.has("actions") &&
+                  manifest.has("notes"),
+              "schema manifest has commands, queries, actions, notes");
+        check(manifest["notes"]["samplerPitch"].asString().find("60") != std::string::npos,
+              "schema notes document the sampler root");
+        check(manifest["commands"][0].has("description"),
+              "mutation entries carry descriptions");
+    }
+
+    // --- Pattern lifecycle: clone and length ---
+    {
+        const std::string p = std::to_string(static_cast<long long>(kickPattern));
+
+        JSON r = call(service,
+                      "{\"id\": 180, \"verb\": \"clone_pattern\", \"args\": {\"pattern\": " + p +
+                          "}}");
+        check(status(r) == "ok", "clone_pattern ok");
+        check(r["message"].asString().find("cloned pattern -> ") != std::string::npos,
+              "clone message is human-readable");
+        check(r.has("result") && r["result"]["createdId"].isNumber(),
+              "clone response carries the new id as structured data");
+        const uint64_t clonedId = static_cast<uint64_t>(r["result"]["createdId"].asNumber());
+
+        r = call(service, "{\"id\": 181, \"verb\": \"list_patterns\"}");
+        check(status(r) == "ok", "list_patterns ok");
+        bool sawClone = false;
+        size_t patternCount = r["result"]["patterns"].size();
+        double sourceNotes = -1.0, cloneNotes = -2.0;
+        for (size_t i = 0; i < patternCount; ++i) {
+            JSON entry = r["result"]["patterns"][i];
+            if (entry["id"].asNumber() == static_cast<double>(clonedId)) {
+                sawClone = true;
+                cloneNotes = entry["noteCount"].asNumber();
+            }
+            if (entry["id"].asNumber() == kickPattern) sourceNotes = entry["noteCount"].asNumber();
+        }
+        check(sawClone, "clone appears in list_patterns");
+        check(cloneNotes == sourceNotes, "clone carries the source notes");
+
+        r = call(service, "{\"id\": 182, \"verb\": \"set_pattern_length\", \"args\": {\"pattern\": " +
+                              std::to_string(clonedId) + ", \"beats\": 16}}");
+        check(status(r) == "ok", "set_pattern_length ok");
+        r = call(service, "{\"id\": 183, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " +
+                              std::to_string(clonedId) + "}}");
+        check(r["result"]["lengthBeats"].asNumber() == 16.0, "length readback is 16 beats");
+
+        // Undo unwinds length then the clone itself.
+        trackManager->getCommandHistory().undo();
+        trackManager->getCommandHistory().undo();
+        r = call(service, "{\"id\": 184, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " +
+                              std::to_string(clonedId) + "}}");
+        check(status(r) == "execution_error", "undo removes the cloned pattern");
+    }
+
     // --- Render: the beat comes back as a file with signal in it ---
     {
         const std::string outPath =

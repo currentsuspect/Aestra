@@ -22,11 +22,21 @@ struct CommandSchema {
     std::string verb;
     CommandCategory category;
     std::vector<FlagSchema> flags;
+    /** One-line semantics for agents; rendered into the schema manifest. */
+    std::string description;
 };
 
 namespace MuseGrammar {
     const std::vector<CommandSchema>& allCommands();
-    /** @brief The full command schema as a JSON string — the agent tool manifest. */
+    /**
+     * @brief The full agent tool manifest as a JSON string.
+     *
+     * An object with "commands" (mutations from allCommands()), "queries" and
+     * "actions" (documented here, implemented by MuseService — keep in sync
+     * with its isQueryVerb/isActionVerb), and "notes" (engine semantics an
+     * agent cannot discover through the protocol: sampler root, unit routing,
+     * step characters, id stability).
+     */
     std::string schemaToJsonString();
     void exportSchemaToJson(const std::string& outputPath);
 }
