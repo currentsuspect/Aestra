@@ -111,7 +111,8 @@ namespace {
 // Query verbs MuseService answers directly (mutations live in MuseGrammar).
 bool isQueryVerb(const std::string& verb) {
     return verb == "get_transport" || verb == "list_tracks" || verb == "list_clips" ||
-           verb == "get_session_state" || verb == "list_units" || verb == "get_pattern";
+           verb == "get_session_state" || verb == "list_units" || verb == "get_pattern" ||
+           verb == "list_patterns";
 }
 
 // Service actions: handled here like queries, but they do work (render a
@@ -407,6 +408,32 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             }
             JSON result = JSON::object();
             result.set("units", units);
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "list_patterns") {
+            if (!m_trackManager) {
+                return makeError(id, "execution_error", "no track manager", verb).toString();
+            }
+            JSON patterns = JSON::array();
+            for (const auto& pattern : m_trackManager->getPatternManager().getAllPatterns()) {
+                if (!pattern) continue;
+                JSON entry = JSON::object();
+                entry.set("id", JSON(static_cast<double>(pattern->id.value)));
+                entry.set("name", JSON(pattern->name));
+                entry.set("lengthBeats", JSON(pattern->lengthBeats));
+                const bool isMidi = pattern->isMidi();
+                entry.set("type", JSON(isMidi ? "midi" : "other"));
+                entry.set("noteCount",
+                          JSON(isMidi ? static_cast<double>(
+                                            std::get<MidiPayload>(pattern->payload).notes.size())
+                                      : 0.0));
+                patterns.push(entry);
+            }
+            JSON result = JSON::object();
+            result.set("patterns", patterns);
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
@@ -919,6 +946,13 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
         response.set("verb", JSON(verb));
         response.set("message", JSON(cmdResult.message));
         response.set("undoable", JSON(cmdResult.undoable));
+        if (cmdResult.createdId != 0) {
+            // Structured id of the object the command created (e.g. the new
+            // pattern from clone_pattern) — agents must not parse the message.
+            JSON result = JSON::object();
+            result.set("createdId", JSON(static_cast<double>(cmdResult.createdId)));
+            response.set("result", result);
+        }
         response.set("executionMs", JSON(cmdResult.executionMs));
         return response.toString();
     } catch (const std::exception& e) {
