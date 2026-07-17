@@ -111,6 +111,11 @@ static const std::vector<CommandSchema> s_schemas = {
         {"to_start", FlagType::Float, true, 0.0},
         {"to_pitch", FlagType::Int, false, 0.0, 127.0}
     }},
+    {"arrange_pattern", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"track", FlagType::Int, true, 0.0},
+        {"start", FlagType::Float, true, 0.0}
+    }},
     {"set_note", CommandCategory::Pattern, {
         {"pattern", FlagType::Int, true, 1.0},
         {"unit", FlagType::Int, true, 1.0},

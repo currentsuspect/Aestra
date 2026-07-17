@@ -5,6 +5,8 @@
 #include "Commands/CommandResult.h"
 #include "Commands/CommandTransaction.h"
 #include "Core/AudioEngine.h"
+#include "Core/PlaybackGraphController.h"
+#include "IO/AudioExporter.h"
 #include "Models/TrackManager.h"
 #include "Models/UnitManager.h"
 
@@ -117,7 +119,7 @@ bool isQueryVerb(const std::string& verb) {
 // through CommandHistory — a bounce is not an undoable project edit; batch
 // pushes one CommandTransaction so the whole group is a single undo step.
 bool isActionVerb(const std::string& verb) {
-    return verb == "render_pattern" || verb == "batch";
+    return verb == "render_pattern" || verb == "render_song" || verb == "batch";
 }
 
 // JSON args -> flag map for the schema/registry path. Returns false with
@@ -329,6 +331,8 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                     c.set("name", JSON(clip.name));
                     c.set("startBeat", JSON(clip.startBeat));
                     c.set("durationBeats", JSON(clip.durationBeats));
+                    // 0 = not a pattern clip
+                    c.set("pattern", JSON(static_cast<double>(clip.patternId.value)));
                     clips.push(c);
                 }
                 laneJson.set("clips", clips);
@@ -394,6 +398,9 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 u.set("soloed", JSON(unit->isSolo));
                 u.set("defaultPatternId",
                       JSON(static_cast<double>(unit->defaultPatternId.value)));
+                // -1 = preview-to-master; >= 0 routes into that timeline track.
+                u.set("timelineLane",
+                      JSON(static_cast<double>(unitManager.getUnitTimelineLane(unitId))));
                 u.set("samplePath", JSON(unit->audioClipPath));
                 u.set("sampleDurationSeconds", JSON(unit->audioDurationSeconds));
                 units.push(u);
@@ -601,6 +608,114 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             return finish(response);
         }
 
+        if (verb == "render_song") {
+            if (!m_trackManager || !m_engine) {
+                return makeError(id, "execution_error",
+                                 "render_song needs a track manager and an audio engine", verb)
+                    .toString();
+            }
+            if (!request.has("args") || !request["args"].isObject()) {
+                return makeError(id, "validation_error",
+                                 "render_song requires args: {\"file\": <path>}", verb)
+                    .toString();
+            }
+            JSON& args = request["args"];
+            for (auto& entry : args.asObject()) {
+                if (entry.first != "file" && entry.first != "tail") {
+                    return makeError(id, "validation_error",
+                                     "unknown arg for render_song: " + entry.first, verb)
+                        .toString();
+                }
+            }
+            if (!args.has("file") || !args["file"].isString() || args["file"].asString().empty()) {
+                return makeError(id, "validation_error", "arg 'file' must be a non-empty string",
+                                 verb)
+                    .toString();
+            }
+            double tailSeconds = 1.0;
+            if (args.has("tail")) {
+                if (!args["tail"].isNumber()) {
+                    return makeError(id, "validation_error", "arg 'tail' must be a number", verb)
+                        .toString();
+                }
+                tailSeconds = args["tail"].asNumber();
+                if (!(tailSeconds >= 0.0 && tailSeconds <= 30.0)) {
+                    return makeError(id, "validation_error", "arg 'tail' must be 0..30 seconds",
+                                     verb)
+                        .toString();
+                }
+            }
+
+            // Channels may have been added since the engine was wired; the
+            // exporter render path resolves tracks through the slot map.
+            m_trackManager->buildAndShareSlotMap();
+            if (auto slotMap = m_trackManager->getChannelSlotMapShared()) {
+                m_engine->setChannelSlotMap(slotMap);
+            }
+
+            // The timeline render path routes tracks to master through the
+            // published audio graph; in the app AestraApp::run() drains
+            // rebuilds continuously, headless we drain here.
+            PlaybackGraphController graphController;
+            graphController.setTrackManager(m_trackManager);
+            graphController.setAudioEngine(m_engine);
+            graphController.requestRebuild(GraphDirtyReason::TimelineChanged);
+            graphController.drainIfDirty(static_cast<double>(m_engine->getSampleRate()));
+
+            AudioExporter::Result exportResult;
+            {
+                // TrackManager::play() is what schedules timeline MIDI clip
+                // instances into the pattern engine — the exporter only
+                // drives the engine transport. Guarantee stop + pattern-mode
+                // restore on every exit.
+                struct TimelineGuard {
+                    TrackManager& trackManager;
+                    AudioEngine& engine;
+                    ~TimelineGuard() {
+                        trackManager.stop();
+                        std::vector<float> settle(1024, 0.0f);
+                        for (int i = 0; i < 2; ++i) {
+                            engine.processBlock(settle.data(), nullptr, 512, 0.0);
+                            engine.performNonRealtimeMaintenance();
+                        }
+                    }
+                } guard{*m_trackManager, *m_engine};
+
+                // Leave any Arsenal pattern-mode state behind: TrackManager's
+                // play() only schedules timeline MIDI clip instances when its
+                // own pattern-mode flag is clear.
+                m_trackManager->stopArsenalPlayback(false);
+                m_engine->setPatternPlaybackMode(false, 4.0);
+                m_trackManager->setPosition(0.0);
+                m_trackManager->play();
+
+                AudioExporter exporter(*m_engine, *m_trackManager);
+                AudioExporter::Config config;
+                config.outputPath = args["file"].asString();
+                config.scope = AudioExporter::RenderScope::FullSong;
+                config.sampleRate = m_engine->getSampleRate();
+                config.bitDepth = AudioExporter::BitDepth::Float_32;
+                config.numChannels = 2;
+                config.tailSeconds = tailSeconds;
+                exportResult = exporter.render(config);
+            }
+
+            if (!exportResult.success) {
+                return makeError(id, "execution_error", exportResult.errorMessage, verb)
+                    .toString();
+            }
+
+            JSON result = JSON::object();
+            result.set("file", JSON(exportResult.outputPath));
+            result.set("durationSeconds", JSON(exportResult.durationSeconds));
+            result.set("frames", JSON(static_cast<double>(exportResult.framesRendered)));
+            result.set("sampleRate", JSON(static_cast<double>(m_engine->getSampleRate())));
+            result.set("peakDb", JSON(exportResult.peakDb));
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
         if (verb == "render_pattern") {
             if (!m_trackManager || !m_engine) {
                 return makeError(id, "execution_error",
@@ -698,7 +813,11 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                     TrackManager& trackManager;
                     std::vector<float>& block;
                     ~TransportGuard() {
-                        trackManager.stop();
+                        // Full Arsenal teardown: stop, flush the scheduled
+                        // instance, and leave pattern mode — a lingering
+                        // pattern-mode flag or instance would bleed into the
+                        // next timeline play/render.
+                        trackManager.stopArsenalPlayback(false);
                         for (int i = 0; i < 2; ++i) {
                             std::memset(block.data(), 0, block.size() * sizeof(float));
                             engine.processBlock(block.data(), nullptr, kBlockFrames, 0.0);
