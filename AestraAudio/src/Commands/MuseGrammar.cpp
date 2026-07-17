@@ -147,9 +147,10 @@ static const std::vector<CommandSchema> s_schemas = {
         {"steps", FlagType::String, true},
         {"step", FlagType::Float, false, 0.015625, 4.0},
         {"velocity", FlagType::Float, false, 0.0, 1.0},
-        {"gate", FlagType::Float, false, 0.05, 1.0}
+        {"gate", FlagType::Float, false, 0.05, 1.0},
+        {"swing", FlagType::Float, false, 0.0, 0.9}
     },
-     "Write one drum row from a step string. The string defines the ENTIRE row for (unit, pitch): re-issuing rewrites it, an all-rest string clears it."},
+     "Write one drum row from a step string. The string defines the ENTIRE row for (unit, pitch): re-issuing rewrites it, an all-rest string clears it. Digits 1-9 are hits at velocity n/9; swing delays every second step."},
     {"quantize_pattern", CommandCategory::Pattern, {
         {"pattern", FlagType::Int, true, 1.0},
         {"grid", FlagType::Float, true, 0.015625, 16.0},
@@ -275,6 +276,7 @@ std::string schemaToJsonString() {
   {"verb": "list_patterns", "args": "none", "description": "id, name, lengthBeats, noteCount, type per pattern."},
   {"verb": "list_plugins", "args": "none", "description": "available effect plugins: id, name, category. Use id or name with add_effect."},
   {"verb": "get_effects", "args": "{\"track\": <index>}", "description": "a track's effect chain: slot, id, name, bypassed, and every parameter (id, name, value 0..1, display, unit)."},
+  {"verb": "list_samples", "args": "{\"dir\": <path>}", "description": "audio files under a directory (recursive, depth 3, max 500): path, name, sizeBytes. Feed paths to load_sample."},
   {"verb": "get_pattern", "args": "{\"pattern\": <id>}", "description": "one pattern with its notes (pitch, start, duration, velocity, pan, unit)."},
   {"verb": "get_session_state", "args": "none", "description": "transport + tracks + laneCount + unitCount + canUndo in one call."}
 ],
@@ -288,7 +290,7 @@ std::string schemaToJsonString() {
   "unitTypes": "sampler = polyphonic sampler; 808 = mono pitched sampler with glide.",
   "patterns": "Every non-audio unit gets a default MIDI pattern at creation (list_units.defaultPatternId). A pattern is just a container: notes carry their unit, so one pattern can hold a whole multi-unit groove.",
   "routing": "A unit routes to at most one timeline track. arrange_pattern routes the pattern's units to its track and rejects conflicting arrangements.",
-  "steps": "Step strings: 'x' hit, 'X' accented hit (+0.2 velocity), '-', '.', ' ' rest. Default step is 0.25 beats (16ths).",
+  "steps": "Step strings: 'x' hit at the row velocity, 'X' accented hit (+0.2), digits '1'-'9' hit at velocity n/9, '-', '.', ' ' rest. Default step is 0.25 beats (16ths). swing (0..0.9) delays every second step by swing * step/2 for shuffle feels.",
   "ids": "Track, unit, pattern and clip ids are stable across edits; indexes shift when items are deleted.",
   "units_of_measure": "velocity 0..1, pan -1..1, volume 0..1 linear, positions and durations in beats.",
   "effects": "Effect parameters are normalized 0..1; get_effects shows the human display value after a set. A track chain has 10 slots.",

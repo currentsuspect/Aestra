@@ -7,8 +7,11 @@
 #include "Core/AudioEngine.h"
 #include "Core/PlaybackGraphController.h"
 #include "IO/AudioExporter.h"
+#include "IO/AudioFileValidator.h"
 #include "Plugin/EffectChain.h"
 #include "Plugin/PluginManager.h"
+
+#include <filesystem>
 #include "Models/TrackManager.h"
 #include "Models/UnitManager.h"
 
@@ -114,12 +117,13 @@ namespace {
 bool isQueryVerb(const std::string& verb) {
     return verb == "get_transport" || verb == "list_tracks" || verb == "list_clips" ||
            verb == "get_session_state" || verb == "list_units" || verb == "get_pattern" ||
-           verb == "list_patterns" || verb == "list_plugins" || verb == "get_effects";
+           verb == "list_patterns" || verb == "list_plugins" || verb == "get_effects" ||
+           verb == "list_samples";
 }
 
 // The few queries that take arguments; every other query rejects them.
 bool queryTakesArgs(const std::string& verb) {
-    return verb == "get_pattern" || verb == "get_effects";
+    return verb == "get_pattern" || verb == "get_effects" || verb == "list_samples";
 }
 
 // Service actions: handled here like queries, but they do work (render a
@@ -415,6 +419,76 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             }
             JSON result = JSON::object();
             result.set("units", units);
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "list_samples") {
+            if (!request.has("args") || !request["args"].isObject()) {
+                return makeError(id, "validation_error",
+                                 "list_samples requires args: {\"dir\": <path>}", verb)
+                    .toString();
+            }
+            JSON& args = request["args"];
+            for (auto& entry : args.asObject()) {
+                if (entry.first != "dir") {
+                    return makeError(id, "validation_error",
+                                     "unknown arg for list_samples: " + entry.first, verb)
+                        .toString();
+                }
+            }
+            if (!args.has("dir") || !args["dir"].isString() || args["dir"].asString().empty()) {
+                return makeError(id, "validation_error", "arg 'dir' must be a non-empty string",
+                                 verb)
+                    .toString();
+            }
+
+            const std::filesystem::path root(args["dir"].asString());
+            std::error_code ec;
+            if (!std::filesystem::is_directory(root, ec)) {
+                return makeError(id, "execution_error",
+                                 "not a directory: " + args["dir"].asString(), verb)
+                    .toString();
+            }
+
+            constexpr size_t kMaxEntries = 500;
+            constexpr int kMaxDepth = 3;
+            bool truncated = false;
+            std::vector<std::filesystem::path> found;
+            std::filesystem::recursive_directory_iterator it(
+                root, std::filesystem::directory_options::skip_permission_denied, ec);
+            const std::filesystem::recursive_directory_iterator end;
+            for (; !ec && it != end; it.increment(ec)) {
+                if (it.depth() >= kMaxDepth) {
+                    it.disable_recursion_pending();
+                    continue;
+                }
+                if (!it->is_regular_file(ec)) continue;
+                const std::string path = it->path().string();
+                if (!AudioFileValidator::isValidAudioFile(path)) continue;
+                if (found.size() >= kMaxEntries) {
+                    truncated = true;
+                    break;
+                }
+                found.push_back(it->path());
+            }
+            // Deterministic order for agents diffing across calls.
+            std::sort(found.begin(), found.end());
+
+            JSON samples = JSON::array();
+            for (const auto& path : found) {
+                JSON entry = JSON::object();
+                entry.set("path", JSON(path.string()));
+                entry.set("name", JSON(path.filename().string()));
+                std::error_code sizeEc;
+                const auto size = std::filesystem::file_size(path, sizeEc);
+                entry.set("sizeBytes", JSON(sizeEc ? 0.0 : static_cast<double>(size)));
+                samples.push(entry);
+            }
+            JSON result = JSON::object();
+            result.set("samples", samples);
+            result.set("truncated", JSON(truncated));
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
