@@ -697,6 +697,10 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
     // 1. Save Sources
     JSON sourcesJson = JSON::array();
     std::vector<ClipSourceID> sourceIds = sourceManager.getAllSourceIDs();
+    // Deterministic order: the store is an unordered_map, and byte-stable
+    // save→load→save (#446) needs identical array order every time.
+    std::sort(sourceIds.begin(), sourceIds.end(),
+              [](const ClipSourceID& a, const ClipSourceID& b) { return a.value < b.value; });
     for (const auto& id : sourceIds) {
         if (const auto* source = sourceManager.getSource(id)) {
             JSON s = JSON::object();
@@ -712,6 +716,11 @@ ProjectSerializer::SerializeResult ProjectSerializer::serialize(const std::share
     // 2. Save Patterns
     JSON patternsJson = JSON::array();
     std::vector<std::shared_ptr<PatternSource>> patterns = patternManager.getAllPatterns();
+    // Deterministic order (see sources note above / #446).
+    std::sort(patterns.begin(), patterns.end(),
+              [](const std::shared_ptr<PatternSource>& a, const std::shared_ptr<PatternSource>& b) {
+                  return a->id.value < b->id.value;
+              });
     for (const auto& p : patterns) {
         JSON pjs = JSON::object();
         pjs.set("id", JSON(static_cast<double>(p->id.value)));
@@ -1371,7 +1380,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 std::filesystem::path resolvedPath = resolveProjectAssetPath(assetRoot, storedPath);
                 const std::string sourcePath = storedPath; // Use original storedPath for serialization
                 const std::string filePath = resolvedPath.string(); // Use resolvedPath only for file I/O
-                ClipSourceID newId = sourceManager.getOrCreateSource(sourcePath);
+                // Restore the serialized source identity (#446); the idMap
+                // remains for files whose ids collide or fail to restore.
+                ClipSourceID newId = sourceManager.getOrCreateSourceWithId(ClipSourceID{oldId}, sourcePath);
                 idMap[oldId] = newId;
                 const bool assetReadable =
                     std::filesystem::exists(resolvedPath) && std::filesystem::is_regular_file(resolvedPath);
@@ -1463,7 +1474,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                 payload.slices.push_back(slice);
                             }
                         }
-                        PatternID newId = patternManager.createAudioPattern(name, length, payload);
+                        // Restore serialized pattern identity (#446); the map
+                        // still covers collision/mint fallbacks.
+                        PatternID newId = patternManager.createAudioPatternWithId(PatternID{oldId}, name, length, payload);
                         patternMap[oldId] = newId;
                     }
                 } else {
@@ -1487,7 +1500,8 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             payload.notes.push_back(note);
                         }
                     }
-                    PatternID newId = patternManager.createMidiPattern(name, length, payload);
+                    // Restore serialized pattern identity (#446), as above.
+                    PatternID newId = patternManager.createMidiPatternWithId(PatternID{oldId}, name, length, payload);
                     patternMap[oldId] = newId;
     
                     // Deserialize scale context if present
@@ -1539,6 +1553,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         }
     
         // 4. Load Lanes and Clips
+        // Clip ids restored from the file must stay unique — a hand-edited or
+        // corrupted file with duplicates would silently break id lookups.
+        std::unordered_set<AestraUUID> seenClipIds;
         if (root.has("lanes")) {
             const JSON& lj = root["lanes"];
         #if defined(AESTRA_ENABLE_PROJECT_LOAD_LOGS)
@@ -1549,7 +1566,17 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                 Log::info("[ProjectLoad] Lane[" + std::to_string(i) + "] name='" + lj[i]["name"].asString() + "'");
         #endif
                 const std::string laneName = boundedStringOr(lj[i], "name", "Track", PROJECT_MAX_STRING_BYTES);
-                PlaylistLaneID laneId = playlist.createLane(laneName);
+                // Restore the serialized lane identity so save→load→save is
+                // id-stable (#446); invalid/missing ids fall back to minting.
+                PlaylistLaneID storedLaneId;
+                {
+                    AestraUUID parsedLaneId;
+                    if (AestraUUID::tryParse(boundedStringOr(lj[i], "id", "", PROJECT_MAX_STRING_BYTES),
+                                             parsedLaneId)) {
+                        storedLaneId = PlaylistLaneID(parsedLaneId);
+                    }
+                }
+                PlaylistLaneID laneId = playlist.createLaneWithId(storedLaneId, laneName);
                 if (!laneId.isValid()) {
                     warningLimiter.warning(
                         ProjectLoadWarningCategory::LaneCreate,
@@ -1722,6 +1749,9 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                             if (patternMap.count(oldPatId)) {
                                 ClipInstance clip;
                                 clip.id = ClipInstanceID::fromString(boundedStringOr(cj[c], "id", "", PROJECT_MAX_STRING_BYTES));
+                                if (clip.id.isValid() && !seenClipIds.insert(clip.id).second) {
+                                    clip.id = ClipInstanceID(); // duplicate in file — mint below
+                                }
                                 clip.patternId = patternMap[oldPatId];
                                 clip.sourceId = clip.patternId.value;
                                 clip.startBeat = finiteNumberOr(cj[c], "start", 0.0, 0.0, 1000000.0);

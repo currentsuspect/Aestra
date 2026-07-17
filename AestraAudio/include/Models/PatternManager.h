@@ -1,6 +1,7 @@
 #pragma once
 #include "PatternSource.h"
 
+#include <limits>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -56,7 +57,23 @@ public:
      * @return Identifier of the created audio pattern.
      */
     PatternID createAudioPattern(const std::string& name, double lengthBeats, const AudioSlicePayload& payload) {
-        PatternID id{nextId++};
+        return createAudioPatternWithId(PatternID{}, name, lengthBeats, payload);
+    }
+
+    /**
+     * @brief Create an audio pattern restoring a serialized identity (#446).
+     *
+     * When @p requestedId is valid and unused it becomes the pattern's ID and
+     * the mint counter advances past it; otherwise a fresh ID is minted.
+     * @param requestedId Serialized pattern ID to restore (invalid = mint).
+     * @param name Pattern display name.
+     * @param lengthBeats Pattern duration in beats.
+     * @param payload Audio pattern payload.
+     * @return Identifier of the created audio pattern.
+     */
+    PatternID createAudioPatternWithId(PatternID requestedId, const std::string& name, double lengthBeats,
+                                       const AudioSlicePayload& payload) {
+        const PatternID id = claimId(requestedId);
         auto pattern = std::make_unique<PatternSource>();
         pattern->id = id;
         pattern->name = name;
@@ -75,7 +92,23 @@ public:
      * @return Identifier of the created MIDI pattern.
      */
     PatternID createMidiPattern(const std::string& name, double lengthBeats, const MidiPayload& payload) {
-        PatternID id{nextId++};
+        return createMidiPatternWithId(PatternID{}, name, lengthBeats, payload);
+    }
+
+    /**
+     * @brief Create a MIDI pattern restoring a serialized identity (#446).
+     *
+     * When @p requestedId is valid and unused it becomes the pattern's ID and
+     * the mint counter advances past it; otherwise a fresh ID is minted.
+     * @param requestedId Serialized pattern ID to restore (invalid = mint).
+     * @param name Pattern display name.
+     * @param lengthBeats Pattern duration in beats.
+     * @param payload MIDI pattern payload.
+     * @return Identifier of the created MIDI pattern.
+     */
+    PatternID createMidiPatternWithId(PatternID requestedId, const std::string& name, double lengthBeats,
+                                      const MidiPayload& payload) {
+        const PatternID id = claimId(requestedId);
         auto pattern = std::make_unique<PatternSource>();
         pattern->id = id;
         pattern->name = name;
@@ -158,6 +191,25 @@ public:
     }
 
 private:
+    /**
+     * @brief Resolve the ID a new pattern should use.
+     *
+     * Valid + unused requested IDs are restored verbatim and the mint counter
+     * jumps past them so later mints can never collide with restored IDs.
+     * UINT64_MAX is never restored: bumping the counter past it would wrap
+     * to zero and poison every later mint.
+     */
+    PatternID claimId(PatternID requestedId) {
+        if (requestedId.isValid() && requestedId.value != std::numeric_limits<uint64_t>::max()
+            && m_patterns.find(requestedId.value) == m_patterns.end()) {
+            if (requestedId.value >= nextId) {
+                nextId = requestedId.value + 1;
+            }
+            return requestedId;
+        }
+        return PatternID{nextId++};
+    }
+
     uint64_t nextId{1};
     std::unordered_map<uint64_t, std::unique_ptr<PatternSource>> m_patterns;
 };
