@@ -26,6 +26,23 @@ public:
         const std::string& verb,
         const std::unordered_map<std::string, std::string>& flags);
 
+    /**
+     * @brief Record why a factory refused to build, then return nullptr.
+     *
+     * Factories call `return CommandRegistry::fail("no such pattern: 7");`
+     * instead of a bare `return nullptr;` so callers can surface the reason
+     * to the agent instead of a generic "failed to build command".
+     */
+    static std::unique_ptr<ICommand> fail(const std::string& reason);
+
+    /**
+     * @brief Take the reason recorded by the most recent failed build.
+     *
+     * build() clears it before invoking the factory; empty when the factory
+     * gave no reason. Thread-local, like command execution itself.
+     */
+    static std::string consumeLastBuildError();
+
     static void initialize(TrackManager* trackManager);
 
     /** Set the AudioEngine for transport commands (play/stop/set_bpm). */

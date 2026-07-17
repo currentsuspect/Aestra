@@ -4,6 +4,8 @@
 #include "Commands/AddNoteCommand.h"
 #include "Commands/AddUnitCommand.h"
 #include "Commands/ArrangePatternCommand.h"
+#include "Commands/ClonePatternCommand.h"
+#include "Commands/SetPatternLengthCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/LoadSampleCommand.h"
 #include "Commands/MoveClipCommand.h"
@@ -103,11 +105,25 @@ std::optional<uint64_t> safeStoull(std::string_view s) {
 }
 
 AudioEngine* s_audioEngine = nullptr;
+
+// Reason recorded by the most recent factory refusal (see CommandRegistry::fail).
+thread_local std::string t_lastBuildError;
 } // namespace
 
 CommandRegistry& CommandRegistry::instance() {
     static CommandRegistry s_instance;
     return s_instance;
+}
+
+std::unique_ptr<ICommand> CommandRegistry::fail(const std::string& reason) {
+    t_lastBuildError = reason;
+    return nullptr;
+}
+
+std::string CommandRegistry::consumeLastBuildError() {
+    std::string reason = std::move(t_lastBuildError);
+    t_lastBuildError.clear();
+    return reason;
 }
 
 void CommandRegistry::registerCommand(const std::string& verb, Factory factory) {
@@ -118,6 +134,7 @@ std::unique_ptr<ICommand> CommandRegistry::build(
     const std::string& verb,
     const std::unordered_map<std::string, std::string>& flags)
 {
+    t_lastBuildError.clear();
     auto it = m_factories.find(verb);
     if (it == m_factories.end())
         return nullptr;
@@ -185,6 +202,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         reg.registerCommand("set_steps", noopTrack);
         reg.registerCommand("quantize_pattern", noopTrack);
         reg.registerCommand("transpose_pattern", noopTrack);
+        reg.registerCommand("clone_pattern", noopTrack);
+        reg.registerCommand("set_pattern_length", noopTrack);
         return;
     }
 
@@ -199,6 +218,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!trackRaw) return nullptr;
         auto trackOpt = safeStoi(*trackRaw);
         if (!trackOpt) return nullptr;
+        if (*trackOpt < 0 || !tm->getChannel(static_cast<size_t>(*trackOpt)))
+            return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         return std::make_unique<DeleteTrackCommand>(*tm, *trackOpt);
     });
 
@@ -209,6 +230,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!trackOpt) return nullptr;
         auto nameIt = flags.find("name");
         if (nameIt == flags.end()) return nullptr;
+        if (*trackOpt < 0 || !tm->getChannel(static_cast<size_t>(*trackOpt)))
+            return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         return std::make_unique<RenameTrackCommand>(*tm, *trackOpt, nameIt->second);
     });
 
@@ -222,7 +245,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         bool state = parseFlagBool(*stateRaw);
         if (!trackOpt.has_value() || *trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
-        if (!ch) return nullptr;
+        if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         return std::make_unique<SetMuteCommand>(*ch, state);
     });
 
@@ -236,7 +259,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         bool state = parseFlagBool(*stateRaw);
         if (*trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
-        if (!ch) return nullptr;
+        if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         return std::make_unique<SetSoloCommand>(*ch, state);
     });
 
@@ -251,7 +274,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!valueOpt) return nullptr;
         if (*trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
-        if (!ch) return nullptr;
+        if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         return std::make_unique<SetVolumeCommand>(*ch, *valueOpt);
     });
 
@@ -266,7 +289,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!valueOpt) return nullptr;
         if (*trackOpt < 0) return nullptr;
         MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
-        if (!ch) return nullptr;
+        if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
         return std::make_unique<SetPanCommand>(*ch, *valueOpt);
     });
 
@@ -285,7 +308,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
 
         PlaylistLaneID laneId = pm->getLaneId(static_cast<size_t>(*trackOpt));
         if (!laneId.isValid())
-            return nullptr;
+            return CommandRegistry::fail("track " + std::string(*trackRaw) + " has no playlist lane");
 
         ClipInstance clip;
         clip.startBeat = (*barOpt - 1) * 4.0;
@@ -384,7 +407,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
             if (typeIt->second == "808") {
                 type = UnitType::PitchedSampler;
             } else if (typeIt->second != "sampler") {
-                return nullptr; // schema comment advertises the accepted values
+                return CommandRegistry::fail("unknown unit type: " + typeIt->second +
+                                             " (expected sampler or 808)");
             }
         }
         return std::make_unique<AddUnitCommand>(tm->getUnitManager(), name, type);
@@ -398,9 +422,11 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         auto fileRaw = requireFlag(flags, "file");
         if (!fileRaw) return nullptr;
 
-        if (!tm->getUnitManager().getUnit(*unitOpt)) return nullptr;
+        if (!tm->getUnitManager().getUnit(*unitOpt))
+            return CommandRegistry::fail("no such unit: " + std::string(*unitRaw));
         std::error_code ec;
-        if (!std::filesystem::exists(std::filesystem::path(std::string(*fileRaw)), ec)) return nullptr;
+        if (!std::filesystem::exists(std::filesystem::path(std::string(*fileRaw)), ec))
+            return CommandRegistry::fail("file not found: " + std::string(*fileRaw));
         return std::make_unique<LoadSampleCommand>(tm->getUnitManager(), *unitOpt, std::string(*fileRaw));
     });
 
@@ -472,8 +498,11 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         }
 
         const PatternSource* pattern = tm->getPatternManager().getPattern(key->patternId);
-        if (!pattern || !pattern->isMidi()) return nullptr;
-        if (!tm->getUnitManager().getUnit(key->unitId)) return nullptr;
+        if (!pattern || !pattern->isMidi())
+            return CommandRegistry::fail("no such MIDI pattern: " +
+                                         std::to_string(key->patternId.value));
+        if (!tm->getUnitManager().getUnit(key->unitId))
+            return CommandRegistry::fail("no such unit: " + std::to_string(key->unitId));
 
         MidiNote note;
         note.pitch = key->pitch;
@@ -489,7 +518,12 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         auto key = parseNoteKey(flags);
         if (!key) return nullptr;
         auto note = findNote(*tm, key->patternId, key->unitId, key->pitch, key->startBeat);
-        if (!note) return nullptr;
+        if (!note)
+            return CommandRegistry::fail("no note at pattern " +
+                                         std::to_string(key->patternId.value) + ", unit " +
+                                         std::to_string(key->unitId) + ", pitch " +
+                                         std::to_string(key->pitch) + ", start " +
+                                         std::to_string(key->startBeat));
         return std::make_unique<RemoveNoteCommand>(tm->getPatternManager(), key->patternId, *note);
     });
 
@@ -502,7 +536,12 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!toStartOpt) return nullptr;
 
         auto note = findNote(*tm, key->patternId, key->unitId, key->pitch, key->startBeat);
-        if (!note) return nullptr;
+        if (!note)
+            return CommandRegistry::fail("no note at pattern " +
+                                         std::to_string(key->patternId.value) + ", unit " +
+                                         std::to_string(key->unitId) + ", pitch " +
+                                         std::to_string(key->pitch) + ", start " +
+                                         std::to_string(key->startBeat));
 
         int toPitch = note->pitch;
         if (auto it = flags.find("to_pitch"); it != flags.end()) {
@@ -530,10 +569,12 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
 
         const PatternID patternId{*patternOpt};
         const PatternSource* pattern = tm->getPatternManager().getPattern(patternId);
-        if (!pattern || !pattern->isMidi()) return nullptr;
+        if (!pattern || !pattern->isMidi())
+            return CommandRegistry::fail("no such MIDI pattern: " + std::string(*patternRaw));
         // Tracks are mixer channels; the command creates matching playlist
         // lanes, but the channel itself must already exist.
-        if (static_cast<size_t>(*trackOpt) >= tm->getChannelCount()) return nullptr;
+        if (static_cast<size_t>(*trackOpt) >= tm->getChannelCount())
+            return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
 
         // A unit has a single timeline route: arranging it onto a different
         // track would silently reroute every earlier clip that uses it.
@@ -541,7 +582,10 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         for (const MidiNote& note : std::get<MidiPayload>(pattern->payload).notes) {
             if (note.unitId == 0) continue;
             const int route = tm->getUnitManager().getUnitTimelineLane(note.unitId);
-            if (route >= 0 && route != *trackOpt) return nullptr;
+            if (route >= 0 && route != *trackOpt)
+                return CommandRegistry::fail(
+                    "unit " + std::to_string(note.unitId) + " is already routed to track " +
+                    std::to_string(route) + "; arrange on that track or undo the earlier arrange");
         }
 
         return std::make_unique<ArrangePatternCommand>(*tm, patternId,
@@ -586,18 +630,23 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
 
         const PatternID patternId{*patternOpt};
         const PatternSource* pattern = tm->getPatternManager().getPattern(patternId);
-        if (!pattern || !pattern->isMidi()) return nullptr;
-        if (!tm->getUnitManager().getUnit(*unitOpt)) return nullptr;
+        if (!pattern || !pattern->isMidi())
+            return CommandRegistry::fail("no such MIDI pattern: " + std::string(*patternRaw));
+        if (!tm->getUnitManager().getUnit(*unitOpt))
+            return CommandRegistry::fail("no such unit: " + std::string(*unitRaw));
 
         // steps: 'x' hit, 'X' accent, '-' '.' or ' ' rest. Anything else is a
         // typo the agent should hear about, not a silent rest.
         const std::string steps(*stepsRaw);
-        if (steps.empty() || steps.size() > 256) return nullptr;
+        if (steps.empty() || steps.size() > 256)
+            return CommandRegistry::fail("steps must be 1..256 characters");
         std::vector<MidiNote> rowNotes;
         for (size_t i = 0; i < steps.size(); ++i) {
             const char c = steps[i];
             if (c == '-' || c == '.' || c == ' ') continue;
-            if (c != 'x' && c != 'X') return nullptr;
+            if (c != 'x' && c != 'X')
+                return CommandRegistry::fail(std::string("invalid step character '") + c +
+                                             "' (use x, X, -, .)");
             MidiNote note;
             note.pitch = *pitchOpt;
             note.startBeat = static_cast<double>(i) * stepBeats;
@@ -638,7 +687,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
 
         const PatternID patternId{*patternOpt};
         const PatternSource* pattern = tm->getPatternManager().getPattern(patternId);
-        if (!pattern || !pattern->isMidi()) return nullptr;
+        if (!pattern || !pattern->isMidi())
+            return CommandRegistry::fail("no such MIDI pattern: " + std::string(*patternRaw));
 
         return std::make_unique<QuantizePatternCommand>(tm->getPatternManager(), patternId,
                                                         static_cast<double>(*gridOpt), strength,
@@ -664,25 +714,61 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
 
         const PatternID patternId{*patternOpt};
         const PatternSource* pattern = tm->getPatternManager().getPattern(patternId);
-        if (!pattern || !pattern->isMidi()) return nullptr;
+        if (!pattern || !pattern->isMidi())
+            return CommandRegistry::fail("no such MIDI pattern: " + std::string(*patternRaw));
 
         // Reject rather than clamp: a clamped transpose is not invertible,
         // which would corrupt undo.
         for (const MidiNote& note : std::get<MidiPayload>(pattern->payload).notes) {
             if (unitId != 0 && note.unitId != unitId) continue;
             const int shifted = note.pitch + *semitonesOpt;
-            if (shifted < 0 || shifted > 127) return nullptr;
+            if (shifted < 0 || shifted > 127)
+                return CommandRegistry::fail(
+                    "transpose would move pitch " + std::to_string(note.pitch) + " to " +
+                    std::to_string(shifted) + " (outside MIDI range 0..127)");
         }
 
         return std::make_unique<TransposePatternCommand>(tm->getPatternManager(), patternId,
                                                          *semitonesOpt, unitId);
     });
 
+    reg.registerCommand("clone_pattern", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto patternRaw = requireFlag(flags, "pattern");
+        if (!patternRaw) return nullptr;
+        auto patternOpt = safeStoull(*patternRaw);
+        if (!patternOpt) return nullptr;
+        const PatternID patternId{*patternOpt};
+        if (!tm->getPatternManager().getPattern(patternId))
+            return CommandRegistry::fail("no such pattern: " + std::string(*patternRaw));
+        return std::make_unique<ClonePatternCommand>(tm->getPatternManager(), patternId);
+    });
+
+    reg.registerCommand("set_pattern_length", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto patternRaw = requireFlag(flags, "pattern");
+        if (!patternRaw) return nullptr;
+        auto patternOpt = safeStoull(*patternRaw);
+        if (!patternOpt) return nullptr;
+        auto beatsRaw = requireFlag(flags, "beats");
+        if (!beatsRaw) return nullptr;
+        auto beatsOpt = safeStof(*beatsRaw);
+        if (!beatsOpt) return nullptr;
+        const PatternID patternId{*patternOpt};
+        if (!tm->getPatternManager().getPattern(patternId))
+            return CommandRegistry::fail("no such pattern: " + std::string(*patternRaw));
+        return std::make_unique<SetPatternLengthCommand>(tm->getPatternManager(), patternId,
+                                                         static_cast<double>(*beatsOpt));
+    });
+
     reg.registerCommand("set_note", [tm = trackManager, parseNoteKey, findNote](const auto& flags) -> std::unique_ptr<ICommand> {
         auto key = parseNoteKey(flags);
         if (!key) return nullptr;
         auto note = findNote(*tm, key->patternId, key->unitId, key->pitch, key->startBeat);
-        if (!note) return nullptr;
+        if (!note)
+            return CommandRegistry::fail("no note at pattern " +
+                                         std::to_string(key->patternId.value) + ", unit " +
+                                         std::to_string(key->unitId) + ", pitch " +
+                                         std::to_string(key->pitch) + ", start " +
+                                         std::to_string(key->startBeat));
 
         float velocity = note->velocity;
         if (auto it = flags.find("velocity"); it != flags.end()) {
