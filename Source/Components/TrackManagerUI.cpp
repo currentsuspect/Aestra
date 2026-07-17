@@ -4372,10 +4372,11 @@ void TrackManagerUI::deleteSelectedClip() {
 AestraUI::DropFeedback TrackManagerUI::onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
     Log::info("[TrackManagerUI] Drag entered");
 
-    // Accept file drops, plugins, and MIDI clips. (Timeline clip moves are an
-    // internal mouse drag, not a DragData transfer — see m_draggedClipId.)
+    // Accept file drops, plugins, patterns, and MIDI clips. (Timeline clip
+    // moves are an internal mouse drag, not a DragData transfer — see
+    // m_draggedClipId.)
     if (data.type != AestraUI::DragDataType::File && data.type != AestraUI::DragDataType::Plugin &&
-        data.type != AestraUI::DragDataType::MidiClip) {
+        data.type != AestraUI::DragDataType::MidiClip && data.type != AestraUI::DragDataType::Pattern) {
         return AestraUI::DropFeedback::Invalid;
     }
 
