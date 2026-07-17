@@ -16,6 +16,18 @@ class CommandParser {
 public:
     CommandResult parse(const std::string& input, CommandHistory& history);
 
+    /**
+     * @brief Execute a verb from an already-tokenised flag map.
+     *
+     * The shared back half of parse(): schema lookup, flag validation,
+     * registry build, and execution through CommandHistory. MuseService's
+     * JSON surface enters here so text and structured requests can never
+     * diverge in behaviour.
+     */
+    CommandResult execute(const std::string& verb,
+                          const std::unordered_map<std::string, std::string>& flags,
+                          CommandHistory& history);
+
 private:
     std::unordered_map<std::string, std::string> tokeniseFlags(
         const std::vector<std::string>& tokens,

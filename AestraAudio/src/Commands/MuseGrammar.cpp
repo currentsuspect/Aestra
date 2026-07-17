@@ -19,9 +19,10 @@ static const std::vector<CommandSchema> s_schemas = {
     }},
 
     // === Track (8) ===
+    // NOTE: no "type" flag until the factory consumes one — advertising a
+    // flag the registry ignores would make the schema lie to agents.
     {"add_track", CommandCategory::Track, {
-        {"name", FlagType::String, false},
-        {"type", FlagType::String, true}
+        {"name", FlagType::String, false}
     }},
     {"delete_track", CommandCategory::Track, {
         {"track", FlagType::Int, true}
