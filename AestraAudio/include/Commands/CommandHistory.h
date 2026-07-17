@@ -41,6 +41,21 @@ public:
     void pushAndExecute(std::shared_ptr<ICommand> cmd);
 
     /**
+     * @brief Push a command that the caller already executed.
+     *
+     * Same undo/redo bookkeeping as pushAndExecute, without running
+     * execute(). For stepwise batches where members were applied one-by-one
+     * (see CommandTransaction::markExecuted). Not valid inside an active
+     * transaction.
+     * @param cmd Already-executed command to track
+     * @return true when the command was recorded on the undo stack; false
+     *         when it was refused (null, not undoable, or a deferred
+     *         transaction is active). Callers must not report the operation
+     *         as undoable unless this returns true.
+     */
+    bool pushExecuted(std::shared_ptr<ICommand> cmd);
+
+    /**
      * @brief Begin a transaction. All pushAndExecute calls until commitTransaction
      * will be batched into the transaction.
      * @param transaction The transaction to populate

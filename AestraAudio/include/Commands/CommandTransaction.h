@@ -38,6 +38,17 @@ public:
     
     // Transaction interface
     void add(std::shared_ptr<ICommand> cmd);
+
+    /**
+     * @brief Adopt members that were already executed one-by-one.
+     *
+     * For stepwise batch execution (each member validated against the state
+     * its predecessors produced): the caller executes members itself, then
+     * marks the transaction executed so undo/redo treat it as one applied
+     * step. Pair with CommandHistory::pushExecuted().
+     */
+    void markExecuted() { m_executed = true; }
+
     size_t size() const { return m_commands.size(); }
     bool isEmpty() const { return m_commands.empty(); }
     void clear() { m_commands.clear(); }

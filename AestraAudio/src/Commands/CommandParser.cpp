@@ -59,6 +59,65 @@ CommandResult CommandParser::parse(const std::string& input, CommandHistory& his
     return executed;
 }
 
+std::unique_ptr<ICommand> CommandParser::buildValidated(
+    const std::string& verb,
+    const std::unordered_map<std::string, std::string>& flags,
+    CommandStatus& outStatus,
+    std::string& outMessage) {
+    // Look up verb in MuseGrammar::allCommands()
+    const auto& allCmds = MuseGrammar::allCommands();
+    const CommandSchema* schema = nullptr;
+    for (const auto& cmd : allCmds) {
+        if (cmd.verb == verb) {
+            schema = &cmd;
+            break;
+        }
+    }
+
+    if (!schema) {
+        outStatus = CommandStatus::ParseError;
+        outMessage = "unknown command: " + verb;
+        return nullptr;
+    }
+
+    // Reject flags the schema does not define — accepting them would let a
+    // caller believe intent was honoured when it was silently dropped.
+    for (const auto& entry : flags) {
+        bool known = false;
+        for (const auto& flagSchema : schema->flags) {
+            if (flagSchema.name == entry.first) {
+                known = true;
+                break;
+            }
+        }
+        if (!known) {
+            outStatus = CommandStatus::ValidationError;
+            outMessage = "unknown flag for " + verb + ": --" + entry.first;
+            return nullptr;
+        }
+    }
+
+    // Validate required flags present and values within type + range
+    std::string validationError;
+    if (!validateFlags(*schema, flags, validationError)) {
+        outStatus = CommandStatus::ValidationError;
+        outMessage = std::move(validationError);
+        return nullptr;
+    }
+
+    // Build ICommand via registry
+    auto cmd = CommandRegistry::instance().build(verb, flags);
+    if (!cmd) {
+        outStatus = CommandStatus::ExecutionError;
+        outMessage = "failed to build command for: " + verb;
+        return nullptr;
+    }
+
+    outStatus = CommandStatus::Success;
+    outMessage.clear();
+    return cmd;
+}
+
 CommandResult CommandParser::execute(const std::string& verb,
                                      const std::unordered_map<std::string, std::string>& flags,
                                      CommandHistory& history) {
@@ -73,52 +132,12 @@ CommandResult CommandParser::execute(const std::string& verb,
         return r;
     };
 
-    // Look up verb in MuseGrammar::allCommands()
-    const auto& allCmds = MuseGrammar::allCommands();
-    const CommandSchema* schema = nullptr;
-    for (const auto& cmd : allCmds) {
-        if (cmd.verb == verb) {
-            schema = &cmd;
-            break;
-        }
-    }
-
-    if (!schema) {
-        result.status = CommandStatus::ParseError;
-        result.message = "unknown command: " + verb;
-        return finish(result);
-    }
-
-    // Reject flags the schema does not define — accepting them would let a
-    // caller believe intent was honoured when it was silently dropped.
-    for (const auto& entry : flags) {
-        bool known = false;
-        for (const auto& flagSchema : schema->flags) {
-            if (flagSchema.name == entry.first) {
-                known = true;
-                break;
-            }
-        }
-        if (!known) {
-            result.status = CommandStatus::ValidationError;
-            result.message = "unknown flag for " + verb + ": --" + entry.first;
-            return finish(result);
-        }
-    }
-
-    // Validate required flags present and values within type + range
-    std::string validationError;
-    if (!validateFlags(*schema, flags, validationError)) {
-        result.status = CommandStatus::ValidationError;
-        result.message = std::move(validationError);
-        return finish(result);
-    }
-
-    // Build ICommand via registry
-    auto cmd = CommandRegistry::instance().build(verb, flags);
+    CommandStatus buildStatus = CommandStatus::Success;
+    std::string buildMessage;
+    auto cmd = buildValidated(verb, flags, buildStatus, buildMessage);
     if (!cmd) {
-        result.status = CommandStatus::ExecutionError;
-        result.message = "failed to build command for: " + verb;
+        result.status = buildStatus;
+        result.message = std::move(buildMessage);
         return finish(result);
     }
 
