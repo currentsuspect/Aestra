@@ -120,7 +120,9 @@ int main() {
     // Engine wired like MuseRepl so render_pattern can pump the live path.
     AudioEngine engine;
     engine.setSampleRate(48000);
-    engine.setBufferConfig(512, 2);
+    // Must cover AudioExporter's 4096-frame render blocks: processBlock does
+    // not split blocks larger than the configured maximum, it overruns.
+    engine.setBufferConfig(4096, 2);
     MuseService::wireHeadlessEngine(trackManager, engine);
     if (!engine.initialize()) {
         std::cout << "FAIL: engine initialize\n";
@@ -535,6 +537,101 @@ int main() {
         check(status(r) == "parse_error" &&
                   r["message"].asString().find("commands[0]") != std::string::npos,
               "unknown verb inside batch -> parse_error naming the index");
+    }
+
+    // --- Arrange: pattern onto the timeline as a clip ---
+    {
+        const std::string p = std::to_string(static_cast<long long>(kickPattern));
+
+        // Earlier sections leave track 0 muted (the typed-args mute survived
+        // the delete/undo reorder); the arranged pattern routes here, so an
+        // accidentally muted target would make the song render silent for
+        // reasons unrelated to the arrange path.
+        JSON unmute = call(service,
+                           "{\"id\": 109, \"verb\": \"mute_track\", "
+                           "\"args\": {\"track\": 0, \"state\": false}}");
+        check(status(unmute) == "ok", "unmute render target track");
+
+        JSON r = call(service, "{\"id\": 110, \"verb\": \"list_clips\"}");
+        const size_t lanesBefore = r["result"]["lanes"].size();
+
+        r = call(service, "{\"id\": 111, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
+                              p + ", \"track\": 0, \"start\": 0}}");
+        check(status(r) == "ok", "arrange_pattern ok");
+
+        r = call(service, "{\"id\": 112, \"verb\": \"list_clips\"}");
+        check(r["result"]["lanes"].size() > lanesBefore, "arrange created the missing lane");
+        check(r["result"]["lanes"][0]["clips"].size() == 1, "lane carries one clip");
+        check(r["result"]["lanes"][0]["clips"][0]["pattern"].asNumber() == kickPattern,
+              "clip is bound to the pattern");
+        check(r["result"]["lanes"][0]["clips"][0]["durationBeats"].asNumber() > 0.0,
+              "clip sized from pattern length");
+
+        r = call(service, "{\"id\": 113, \"verb\": \"list_units\"}");
+        check(r["result"]["units"][0]["timelineLane"].asNumber() == 0.0,
+              "pattern's unit routed to timeline lane 0");
+
+        r = call(service, "{\"id\": 114, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
+                              p + ", \"track\": 0, \"start\": 8}}");
+        check(status(r) == "ok", "second arrange at beat 8 ok");
+        r = call(service, "{\"id\": 115, \"verb\": \"list_clips\"}");
+        check(r["result"]["lanes"][0]["clips"].size() == 2, "two clips on the lane");
+
+        // Undo unwinds the whole gesture: clip, unit routing, created lane.
+        trackManager->getCommandHistory().undo();
+        trackManager->getCommandHistory().undo();
+        r = call(service, "{\"id\": 116, \"verb\": \"list_clips\"}");
+        check(r["result"]["lanes"].size() == lanesBefore, "undo removes the created lane");
+        r = call(service, "{\"id\": 117, \"verb\": \"list_units\"}");
+        check(r["result"]["units"][0]["timelineLane"].asNumber() == -1.0,
+              "undo restores the unit's preview routing");
+
+        // Contract: bad targets never build.
+        r = call(service,
+                 "{\"id\": 118, \"verb\": \"arrange_pattern\", "
+                 "\"args\": {\"pattern\": 999999, \"track\": 0, \"start\": 0}}");
+        check(status(r) == "execution_error", "arrange unknown pattern -> execution_error");
+        r = call(service, "{\"id\": 119, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
+                              p + ", \"track\": 99, \"start\": 0}}");
+        check(status(r) == "execution_error", "arrange onto missing channel -> execution_error");
+    }
+
+    // --- Render the arrangement: the song comes back as audio ---
+    {
+        const std::string p = std::to_string(static_cast<long long>(kickPattern));
+        const std::string outPath =
+            (std::filesystem::temp_directory_path() / "muse_service_test_song.wav").string();
+        std::filesystem::remove(outPath);
+
+        JSON r = call(service, "{\"id\": 120, \"verb\": \"render_song\"}");
+        check(status(r) == "validation_error", "render_song without args -> validation_error");
+
+        r = call(service, fileRequest(121, "render_song", "pattern", 1.0, outPath));
+        check(status(r) == "validation_error", "render_song unknown arg -> validation_error");
+
+        r = call(service, "{\"id\": 122, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
+                              p + ", \"track\": 0, \"start\": 0}}");
+        check(status(r) == "ok", "re-arrange for render ok");
+
+        JSON req = JSON::object();
+        req.set("id", JSON(123.0));
+        req.set("verb", JSON("render_song"));
+        JSON reqArgs = JSON::object();
+        reqArgs.set("file", JSON(outPath));
+        reqArgs.set("tail", JSON(0.25));
+        req.set("args", reqArgs);
+        r = call(service, req.toString());
+        check(status(r) == "ok", "render_song ok");
+        check(r["result"]["frames"].asNumber() > 0.0, "song render reports frames");
+        check(std::filesystem::exists(outPath) && std::filesystem::file_size(outPath) > 44,
+              "song wav exists with data");
+        // The timeline clip triggers the loud test click through the routed
+        // unit; silence means the clip->schedule->unit->track path is broken.
+        check(r["result"]["peakDb"].asNumber() > -90.0,
+              "song render is not silent (peakDb " +
+                  std::to_string(r["result"]["peakDb"].asNumber()) + ")");
+        check(!engine.isTransportPlaying(), "engine transport stopped after song render");
+        std::filesystem::remove(outPath);
     }
 
     std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))
