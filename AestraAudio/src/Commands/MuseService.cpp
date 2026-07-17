@@ -118,6 +118,19 @@ bool isActionVerb(const std::string& verb) {
     return verb == "render_pattern";
 }
 
+// JSON numbers are doubles; an id must be a non-negative integer that a
+// double represents exactly, or the cast would silently target the wrong
+// object.
+bool numberToId(double value, uint64_t& out) {
+    constexpr double kMaxExactJsonInteger = 9007199254740991.0; // 2^53 - 1
+    if (!std::isfinite(value) || value < 0.0 || value != std::floor(value) ||
+        value > kMaxExactJsonInteger) {
+        return false;
+    }
+    out = static_cast<uint64_t>(value);
+    return true;
+}
+
 // Interleaved stereo float32 WAV — the format the offline test renderer uses.
 bool writeFloat32Wav(const std::string& path, const std::vector<float>& samples,
                      uint32_t sampleRate) {
@@ -145,7 +158,8 @@ bool writeFloat32Wav(const std::string& path, const std::vector<float>& samples,
     file.write("data", 4);
     u32(dataBytes);
     file.write(reinterpret_cast<const char*>(samples.data()), dataBytes);
-    return file.good();
+    file.close(); // a failed flush on close must not report success
+    return !file.fail();
 }
 
 const char* unitTypeName(UnitType type) {
@@ -385,12 +399,15 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                         .toString();
                 }
             }
-            if (!args.has("pattern") || !args["pattern"].isNumber()) {
-                return makeError(id, "validation_error", "arg 'pattern' must be a number", verb)
+            uint64_t patternValue = 0;
+            if (!args.has("pattern") || !args["pattern"].isNumber() ||
+                !numberToId(args["pattern"].asNumber(), patternValue)) {
+                return makeError(id, "validation_error",
+                                 "arg 'pattern' must be a non-negative integer", verb)
                     .toString();
             }
 
-            const PatternID patternId{static_cast<uint64_t>(args["pattern"].asNumber())};
+            const PatternID patternId{patternValue};
             const PatternSource* pattern =
                 m_trackManager->getPatternManager().getPattern(patternId);
             if (!pattern) {
@@ -445,8 +462,11 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                         .toString();
                 }
             }
-            if (!args.has("pattern") || !args["pattern"].isNumber()) {
-                return makeError(id, "validation_error", "arg 'pattern' must be a number", verb)
+            uint64_t patternValue = 0;
+            if (!args.has("pattern") || !args["pattern"].isNumber() ||
+                !numberToId(args["pattern"].asNumber(), patternValue)) {
+                return makeError(id, "validation_error",
+                                 "arg 'pattern' must be a non-negative integer", verb)
                     .toString();
             }
             if (!args.has("file") || !args["file"].isString() || args["file"].asString().empty()) {
@@ -490,46 +510,85 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 static_cast<uint64_t>(durationSeconds * static_cast<double>(sampleRate));
             constexpr uint32_t kBlockFrames = 512;
 
-            // Offline bounce through the exact live engine path, the same way
-            // the headless test renderer pumps it. Arsenal preview routing is
-            // what the user hears when a pattern plays, so it is what the
-            // agent gets back. Pattern playback needs both sides armed: the
-            // scheduler (playPatternInArsenal) and the engine's pattern mode
-            // (the app sets it wherever it starts pattern playback).
-            m_engine->setPatternPlaybackMode(true, lengthBeats);
-            m_trackManager->playPatternInArsenal(patternId, 0.0);
+            // Bound the render before touching engine state: the whole take
+            // is buffered in memory and the RIFF format caps a WAV at 4 GiB.
+            constexpr double kMaxRenderSeconds = 600.0;
+            const uint64_t dataBytes = totalFrames * 2ull * sizeof(float);
+            if (durationSeconds > kMaxRenderSeconds ||
+                36ull + dataBytes > 0xFFFFFFFFull) {
+                return makeError(id, "validation_error",
+                                 "render too long: " + std::to_string(durationSeconds) +
+                                     "s (max " + std::to_string(kMaxRenderSeconds) + "s)",
+                                 verb)
+                    .toString();
+            }
 
             std::vector<float> rendered;
             rendered.reserve(static_cast<size_t>(totalFrames) * 2u);
             std::vector<float> block(static_cast<size_t>(kBlockFrames) * 2u, 0.0f);
             float peak = 0.0f;
-            uint64_t framesRemaining = totalFrames;
-            while (framesRemaining > 0) {
-                const uint32_t framesThisBlock =
-                    static_cast<uint32_t>(std::min<uint64_t>(kBlockFrames, framesRemaining));
-                std::memset(block.data(), 0, block.size() * sizeof(float));
-                m_engine->processBlock(block.data(), nullptr, framesThisBlock, 0.0);
-                // The pattern scheduler's RT queue is refilled from the
-                // control thread; offline that's us (AudioExporter does the
-                // same per block).
-                m_engine->performNonRealtimeMaintenance();
-                for (uint32_t i = 0; i < framesThisBlock * 2u; ++i) {
-                    peak = std::max(peak, std::abs(block[i]));
+            bool nonFinite = false;
+
+            {
+                // Everything after playback starts must be undone even if the
+                // pump throws: stop the transport, drain the stop command with
+                // settle blocks, and leave pattern mode (app default length).
+                struct TransportGuard {
+                    AudioEngine& engine;
+                    TrackManager& trackManager;
+                    std::vector<float>& block;
+                    ~TransportGuard() {
+                        trackManager.stop();
+                        for (int i = 0; i < 2; ++i) {
+                            std::memset(block.data(), 0, block.size() * sizeof(float));
+                            engine.processBlock(block.data(), nullptr, kBlockFrames, 0.0);
+                            engine.performNonRealtimeMaintenance();
+                        }
+                        engine.setPatternPlaybackMode(false, 4.0);
+                    }
+                } guard{*m_engine, *m_trackManager, block};
+
+                // Offline bounce through the exact live engine path, the same
+                // way the headless test renderer pumps it. Arsenal preview
+                // routing is what the user hears when a pattern plays, so it
+                // is what the agent gets back. Pattern playback needs both
+                // sides armed: the scheduler (playPatternInArsenal) and the
+                // engine's pattern mode (the app sets it wherever it starts
+                // pattern playback).
+                m_engine->setPatternPlaybackMode(true, lengthBeats);
+                m_trackManager->playPatternInArsenal(patternId, 0.0);
+
+                uint64_t framesRemaining = totalFrames;
+                while (framesRemaining > 0 && !nonFinite) {
+                    const uint32_t framesThisBlock =
+                        static_cast<uint32_t>(std::min<uint64_t>(kBlockFrames, framesRemaining));
+                    std::memset(block.data(), 0, block.size() * sizeof(float));
+                    m_engine->processBlock(block.data(), nullptr, framesThisBlock, 0.0);
+                    // The pattern scheduler's RT queue is refilled from the
+                    // control thread; offline that's us (AudioExporter does
+                    // the same per block).
+                    m_engine->performNonRealtimeMaintenance();
+                    for (uint32_t i = 0; i < framesThisBlock * 2u; ++i) {
+                        // Plugin output is untrusted: NaN/Inf must fail the
+                        // render, not land in the file as "ok".
+                        if (!std::isfinite(block[i])) {
+                            nonFinite = true;
+                            break;
+                        }
+                        peak = std::max(peak, std::abs(block[i]));
+                    }
+                    if (nonFinite) break;
+                    rendered.insert(rendered.end(), block.begin(),
+                                    block.begin() + static_cast<size_t>(framesThisBlock) * 2u);
+                    framesRemaining -= framesThisBlock;
                 }
-                rendered.insert(rendered.end(), block.begin(),
-                                block.begin() + static_cast<size_t>(framesThisBlock) * 2u);
-                framesRemaining -= framesThisBlock;
             }
-            m_trackManager->stop();
-            // The stop command sits in the engine queue until a block drains
-            // it; pump two settle blocks (output discarded) so the transport
-            // is actually stopped when this returns.
-            for (int i = 0; i < 2; ++i) {
-                std::memset(block.data(), 0, block.size() * sizeof(float));
-                m_engine->processBlock(block.data(), nullptr, kBlockFrames, 0.0);
-                m_engine->performNonRealtimeMaintenance();
+
+            if (nonFinite) {
+                return makeError(id, "execution_error",
+                                 "engine produced non-finite audio; render aborted", verb)
+                    .toString();
             }
-            m_engine->setPatternPlaybackMode(false, 4.0); // app default when leaving pattern mode
 
             if (!writeFloat32Wav(args["file"].asString(), rendered, sampleRate)) {
                 return makeError(id, "execution_error",
