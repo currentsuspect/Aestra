@@ -8,7 +8,7 @@ namespace Aestra {
 namespace Audio {
 
 enum class FlagType { String, Int, Float, Bool };
-enum class CommandCategory { Transport, Track, Clip };
+enum class CommandCategory { Transport, Track, Clip, Unit, Pattern };
 
 struct FlagSchema {
     std::string name;
