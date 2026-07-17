@@ -620,6 +620,95 @@ int main() {
         check(status(r) == "execution_error", "undo removes the cloned pattern");
     }
 
+    // --- Effects: the mixing loop (discover, insert, tweak, read back) ---
+    {
+        JSON r = call(service, "{\"id\": 190, \"verb\": \"list_plugins\"}");
+        check(status(r) == "ok", "list_plugins ok");
+        check(r["result"]["effects"].size() > 0, "effects are discoverable");
+        bool sawEq = false;
+        std::string eqName;
+        for (size_t i = 0; i < r["result"]["effects"].size(); ++i) {
+            if (r["result"]["effects"][i]["id"].asString() == "com.Aestrastudios.eq") {
+                sawEq = true;
+                eqName = r["result"]["effects"][i]["name"].asString();
+            }
+        }
+        check(sawEq, "built-in EQ listed");
+
+        // Insert by id; the response carries the slot as structured data.
+        r = call(service,
+                 "{\"id\": 191, \"verb\": \"add_effect\", "
+                 "\"args\": {\"track\": 0, \"effect\": \"com.Aestrastudios.eq\"}}");
+        check(status(r) == "ok", "add_effect by id ok");
+        check(r.has("result") && r["result"]["createdId"].isNumber(),
+              "add_effect returns the slot as structured data");
+        const int slot = static_cast<int>(r["result"]["createdId"].asNumber());
+
+        // Read the chain, pick a writable parameter, set it by name.
+        r = call(service, "{\"id\": 192, \"verb\": \"get_effects\", \"args\": {\"track\": 0}}");
+        check(status(r) == "ok", "get_effects ok");
+        check(r["result"]["effects"].size() == 1, "chain shows one effect");
+        JSON effect = r["result"]["effects"][0];
+        check(effect["name"].asString() == eqName, "chain entry matches list_plugins name");
+        check(effect["params"].size() > 0, "effect exposes parameters");
+        const std::string paramName = effect["params"][0]["name"].asString();
+        const double originalValue = effect["params"][0]["value"].asNumber();
+
+        r = call(service, "{\"id\": 193, \"verb\": \"set_effect_param\", \"args\": {\"track\": 0, "
+                          "\"slot\": " + std::to_string(slot) + ", \"param\": \"" + paramName +
+                          "\", \"value\": 0.8}}");
+        check(status(r) == "ok", "set_effect_param by name ok");
+        r = call(service, "{\"id\": 194, \"verb\": \"get_effects\", \"args\": {\"track\": 0}}");
+        const double paramValue = r["result"]["effects"][0]["params"][0]["value"].asNumber();
+        check(paramValue > 0.79 && paramValue < 0.81, "parameter readback reflects the set");
+        trackManager->getCommandHistory().undo();
+        r = call(service, "{\"id\": 195, \"verb\": \"get_effects\", \"args\": {\"track\": 0}}");
+        check(std::abs(r["result"]["effects"][0]["params"][0]["value"].asNumber() -
+                       originalValue) < 1e-6,
+              "param undo restores the original value");
+        trackManager->getCommandHistory().redo();
+
+        // Bypass round-trip.
+        r = call(service, "{\"id\": 196, \"verb\": \"bypass_effect\", \"args\": {\"track\": 0, "
+                          "\"slot\": " + std::to_string(slot) + ", \"state\": true}}");
+        check(status(r) == "ok", "bypass_effect ok");
+        r = call(service, "{\"id\": 197, \"verb\": \"get_effects\", \"args\": {\"track\": 0}}");
+        check(r["result"]["effects"][0]["bypassed"].asBool(), "bypass readback true");
+
+        // Refusals carry reasons.
+        r = call(service,
+                 "{\"id\": 198, \"verb\": \"add_effect\", "
+                 "\"args\": {\"track\": 0, \"effect\": \"MegaVerb 9000\"}}");
+        check(status(r) == "execution_error" &&
+                  r["message"].asString().find("unknown effect: MegaVerb 9000") !=
+                      std::string::npos,
+              "unknown effect refusal names it");
+        r = call(service, "{\"id\": 199, \"verb\": \"set_effect_param\", \"args\": {\"track\": 0, "
+                          "\"slot\": " + std::to_string(slot) +
+                          ", \"param\": \"wobble\", \"value\": 0.5}}");
+        check(r["message"].asString().find("no parameter 'wobble'") != std::string::npos,
+              "unknown param refusal names it");
+        r = call(service,
+                 "{\"id\": 200, \"verb\": \"remove_effect\", \"args\": {\"track\": 0, \"slot\": 7}}");
+        check(r["message"].asString().find("no effect in slot 7") != std::string::npos,
+              "empty slot refusal names it");
+
+        // Remove and verify the chain is empty again.
+        r = call(service, "{\"id\": 201, \"verb\": \"remove_effect\", \"args\": {\"track\": 0, "
+                          "\"slot\": " + std::to_string(slot) + "}}");
+        check(status(r) == "ok", "remove_effect ok");
+        r = call(service, "{\"id\": 202, \"verb\": \"get_effects\", \"args\": {\"track\": 0}}");
+        check(r["result"]["effects"].size() == 0, "chain empty after remove");
+        trackManager->getCommandHistory().undo();
+        r = call(service, "{\"id\": 203, \"verb\": \"get_effects\", \"args\": {\"track\": 0}}");
+        check(r["result"]["effects"].size() == 1, "undo restores the removed effect");
+        trackManager->getCommandHistory().undo(); // bypass
+        trackManager->getCommandHistory().undo(); // param
+        trackManager->getCommandHistory().undo(); // add_effect
+        r = call(service, "{\"id\": 204, \"verb\": \"get_effects\", \"args\": {\"track\": 0}}");
+        check(r["result"]["effects"].size() == 0, "full undo chain leaves a clean track");
+    }
+
     // --- Render: the beat comes back as a file with signal in it ---
     {
         const std::string outPath =

@@ -5,7 +5,9 @@
 #include "Commands/AddUnitCommand.h"
 #include "Commands/ArrangePatternCommand.h"
 #include "Commands/ClonePatternCommand.h"
+#include "Commands/EffectCommands.h"
 #include "Commands/SetPatternLengthCommand.h"
+#include "Plugin/PluginManager.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/LoadSampleCommand.h"
 #include "Commands/MoveClipCommand.h"
@@ -204,6 +206,10 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         reg.registerCommand("transpose_pattern", noopTrack);
         reg.registerCommand("clone_pattern", noopTrack);
         reg.registerCommand("set_pattern_length", noopTrack);
+        reg.registerCommand("add_effect", noopTrack);
+        reg.registerCommand("remove_effect", noopTrack);
+        reg.registerCommand("bypass_effect", noopTrack);
+        reg.registerCommand("set_effect_param", noopTrack);
         return;
     }
 
@@ -730,6 +736,157 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
 
         return std::make_unique<TransposePatternCommand>(tm->getPatternManager(), patternId,
                                                          *semitonesOpt, unitId);
+    });
+
+    // Shared by the effect factories: case-insensitive string equality.
+    const auto equalsIgnoreCase = [](std::string_view a, std::string_view b) {
+        if (a.size() != b.size()) return false;
+        for (size_t i = 0; i < a.size(); ++i) {
+            if (std::tolower(static_cast<unsigned char>(a[i])) !=
+                std::tolower(static_cast<unsigned char>(b[i])))
+                return false;
+        }
+        return true;
+    };
+
+    reg.registerCommand("add_effect", [tm = trackManager, equalsIgnoreCase](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt || *trackOpt < 0) return nullptr;
+        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
+        auto effectRaw = requireFlag(flags, "effect");
+        if (!effectRaw) return nullptr;
+
+        auto& pluginManager = PluginManager::getInstance();
+        const PluginInfo* match = nullptr;
+        const auto effects = pluginManager.getEffectPlugins();
+        for (const auto& info : effects) {
+            if (info.id == *effectRaw || equalsIgnoreCase(info.name, *effectRaw)) {
+                match = &info;
+                break;
+            }
+        }
+        if (!match)
+            return CommandRegistry::fail("unknown effect: " + std::string(*effectRaw) +
+                                         " (list_plugins shows what is available)");
+
+        auto& chain = ch->getEffectChain();
+        size_t slot = chain.getFirstEmptySlot();
+        if (auto it = flags.find("slot"); it != flags.end()) {
+            auto s = safeStoi(it->second);
+            if (!s) return nullptr;
+            slot = static_cast<size_t>(*s);
+            if (chain.getPlugin(slot))
+                return CommandRegistry::fail("slot " + it->second + " on track " +
+                                             std::string(*trackRaw) + " is occupied");
+        }
+        if (slot >= EffectChain::MAX_SLOTS)
+            return CommandRegistry::fail("no empty effect slots on track " +
+                                         std::string(*trackRaw));
+
+        // Same lifecycle the app runs before inserting an effect.
+        auto instance = pluginManager.createInstanceById(match->id);
+        if (!instance)
+            return CommandRegistry::fail("failed to create effect: " + match->id);
+        if (!instance->initialize(pluginManager.getDefaultSampleRate(),
+                                  pluginManager.getDefaultBlockSize()))
+            return CommandRegistry::fail("failed to initialize effect: " + match->id);
+        instance->activate();
+        chain.prepare(pluginManager.getDefaultSampleRate(), pluginManager.getDefaultBlockSize());
+
+        return std::make_unique<AddEffectCommand>(*tm, *ch, slot, std::move(instance),
+                                                  match->name);
+    });
+
+    reg.registerCommand("remove_effect", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt || *trackOpt < 0) return nullptr;
+        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
+        auto slotRaw = requireFlag(flags, "slot");
+        if (!slotRaw) return nullptr;
+        auto slotOpt = safeStoi(*slotRaw);
+        if (!slotOpt) return nullptr;
+        if (!ch->getEffectChain().getPlugin(static_cast<size_t>(*slotOpt)))
+            return CommandRegistry::fail("no effect in slot " + std::string(*slotRaw) +
+                                         " of track " + std::string(*trackRaw));
+        return std::make_unique<RemoveEffectCommand>(*tm, *ch, static_cast<size_t>(*slotOpt));
+    });
+
+    reg.registerCommand("bypass_effect", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt || *trackOpt < 0) return nullptr;
+        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
+        auto slotRaw = requireFlag(flags, "slot");
+        if (!slotRaw) return nullptr;
+        auto slotOpt = safeStoi(*slotRaw);
+        if (!slotOpt) return nullptr;
+        auto stateRaw = requireFlag(flags, "state");
+        if (!stateRaw) return nullptr;
+        if (!ch->getEffectChain().getPlugin(static_cast<size_t>(*slotOpt)))
+            return CommandRegistry::fail("no effect in slot " + std::string(*slotRaw) +
+                                         " of track " + std::string(*trackRaw));
+        return std::make_unique<SetEffectBypassCommand>(*tm, *ch, static_cast<size_t>(*slotOpt),
+                                                        parseFlagBool(*stateRaw));
+    });
+
+    reg.registerCommand("set_effect_param", [tm = trackManager, equalsIgnoreCase](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt || *trackOpt < 0) return nullptr;
+        MixerChannel* ch = tm->getChannel(static_cast<size_t>(*trackOpt));
+        if (!ch) return CommandRegistry::fail("no such track: " + std::string(*trackRaw));
+        auto slotRaw = requireFlag(flags, "slot");
+        if (!slotRaw) return nullptr;
+        auto slotOpt = safeStoi(*slotRaw);
+        if (!slotOpt) return nullptr;
+        auto plugin = ch->getEffectChain().getPlugin(static_cast<size_t>(*slotOpt));
+        if (!plugin)
+            return CommandRegistry::fail("no effect in slot " + std::string(*slotRaw) +
+                                         " of track " + std::string(*trackRaw));
+        auto paramRaw = requireFlag(flags, "param");
+        if (!paramRaw) return nullptr;
+        auto valueRaw = requireFlag(flags, "value");
+        if (!valueRaw) return nullptr;
+        auto valueOpt = safeStof(*valueRaw);
+        if (!valueOpt) return nullptr;
+
+        // param is a name (case-insensitive) or a numeric id from get_effects.
+        const auto params = plugin->getParameters();
+        const PluginParameter* target = nullptr;
+        if (auto numeric = safeStoi(*paramRaw)) {
+            for (const auto& param : params) {
+                if (param.id == static_cast<uint32_t>(*numeric)) {
+                    target = &param;
+                    break;
+                }
+            }
+        }
+        if (!target) {
+            for (const auto& param : params) {
+                if (equalsIgnoreCase(param.name, *paramRaw) ||
+                    equalsIgnoreCase(param.shortName, *paramRaw)) {
+                    target = &param;
+                    break;
+                }
+            }
+        }
+        if (!target)
+            return CommandRegistry::fail("no parameter '" + std::string(*paramRaw) + "' on " +
+                                         plugin->getInfo().name +
+                                         " (get_effects lists parameters)");
+        if (target->isReadOnly)
+            return CommandRegistry::fail("parameter '" + target->name + "' is read-only");
+
+        return std::make_unique<SetEffectParamCommand>(plugin, target->id, *valueOpt);
     });
 
     reg.registerCommand("clone_pattern", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {

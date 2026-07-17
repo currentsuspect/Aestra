@@ -172,6 +172,32 @@ static const std::vector<CommandSchema> s_schemas = {
         {"beats", FlagType::Float, true, 1.0, 512.0}
     },
      "Set the length of a pattern in beats. Playback and arranged clip scheduling use this length."},
+
+    // === Effects (4) ===
+    {"add_effect", CommandCategory::Track, {
+        {"track", FlagType::Int, true, 0.0},
+        {"effect", FlagType::String, true},
+        {"slot", FlagType::Int, false, 0.0, 9.0}
+    },
+     "Insert an effect on a track (first empty slot unless given). effect = id or name from list_plugins. result.createdId carries the slot."},
+    {"remove_effect", CommandCategory::Track, {
+        {"track", FlagType::Int, true, 0.0},
+        {"slot", FlagType::Int, true, 0.0, 9.0}
+    },
+     "Remove the effect in a slot of a track's chain."},
+    {"bypass_effect", CommandCategory::Track, {
+        {"track", FlagType::Int, true, 0.0},
+        {"slot", FlagType::Int, true, 0.0, 9.0},
+        {"state", FlagType::Bool, true}
+    },
+     "Bypass (true) or re-enable (false) an effect slot."},
+    {"set_effect_param", CommandCategory::Track, {
+        {"track", FlagType::Int, true, 0.0},
+        {"slot", FlagType::Int, true, 0.0, 9.0},
+        {"param", FlagType::String, true},
+        {"value", FlagType::Float, true, 0.0, 1.0}
+    },
+     "Set an effect parameter, normalized 0..1. param = name (case-insensitive) or numeric id from get_effects; get_effects shows the resulting display value."},
     {"set_note", CommandCategory::Pattern, {
         {"pattern", FlagType::Int, true, 1.0},
         {"unit", FlagType::Int, true, 1.0},
@@ -247,6 +273,8 @@ std::string schemaToJsonString() {
   {"verb": "list_units", "args": "none", "description": "id, name, type, defaultPatternId, timelineLane (-1 = preview), samplePath per unit."},
   {"verb": "list_clips", "args": "none", "description": "playlist lanes with clips (id, name, startBeat, durationBeats, pattern; pattern 0 = not a pattern clip)."},
   {"verb": "list_patterns", "args": "none", "description": "id, name, lengthBeats, noteCount, type per pattern."},
+  {"verb": "list_plugins", "args": "none", "description": "available effect plugins: id, name, category. Use id or name with add_effect."},
+  {"verb": "get_effects", "args": "{\"track\": <index>}", "description": "a track's effect chain: slot, id, name, bypassed, and every parameter (id, name, value 0..1, display, unit)."},
   {"verb": "get_pattern", "args": "{\"pattern\": <id>}", "description": "one pattern with its notes (pitch, start, duration, velocity, pan, unit)."},
   {"verb": "get_session_state", "args": "none", "description": "transport + tracks + laneCount + unitCount + canUndo in one call."}
 ],
@@ -263,6 +291,7 @@ std::string schemaToJsonString() {
   "steps": "Step strings: 'x' hit, 'X' accented hit (+0.2 velocity), '-', '.', ' ' rest. Default step is 0.25 beats (16ths).",
   "ids": "Track, unit, pattern and clip ids are stable across edits; indexes shift when items are deleted.",
   "units_of_measure": "velocity 0..1, pan -1..1, volume 0..1 linear, positions and durations in beats.",
+  "effects": "Effect parameters are normalized 0..1; get_effects shows the human display value after a set. A track chain has 10 slots.",
   "undo": "Every mutation and every batch is one step in the same undo history the UI uses."
 }
 }
