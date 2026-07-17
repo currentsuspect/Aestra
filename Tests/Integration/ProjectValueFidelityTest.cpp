@@ -23,10 +23,10 @@
 // at beat 0; and the slice loader filling startOffset/duration instead of the
 // startSamples/lengthSamples fields the writer persists.
 //
-// NOT asserted here: byte-identical save->load->save output. Clip UUIDs and
-// pattern numeric IDs are re-minted by the loader (identity is session-scoped
-// today), which also reorders the patterns array between generations. Stable
-// persisted identity is tracked as its own serialization-cluster issue.
+// NOT asserted here: byte-identical save->load->save output and identity
+// stability — ProjectIdentityStabilityTest owns those (#446: the loader now
+// restores clip/lane UUIDs and pattern/source numeric IDs, and the writer
+// emits patterns/sources in sorted order).
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
