@@ -529,6 +529,15 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         // lanes, but the channel itself must already exist.
         if (static_cast<size_t>(*trackOpt) >= tm->getChannelCount()) return nullptr;
 
+        // A unit has a single timeline route: arranging it onto a different
+        // track would silently reroute every earlier clip that uses it.
+        // Reject the conflict instead of corrupting existing arrangements.
+        for (const MidiNote& note : std::get<MidiPayload>(pattern->payload).notes) {
+            if (note.unitId == 0) continue;
+            const int route = tm->getUnitManager().getUnitTimelineLane(note.unitId);
+            if (route >= 0 && route != *trackOpt) return nullptr;
+        }
+
         return std::make_unique<ArrangePatternCommand>(*tm, patternId,
                                                        static_cast<size_t>(*trackOpt),
                                                        static_cast<double>(*startOpt));

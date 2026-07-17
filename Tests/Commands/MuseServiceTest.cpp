@@ -576,6 +576,15 @@ int main() {
         check(status(r) == "ok", "second arrange at beat 8 ok");
         r = call(service, "{\"id\": 115, \"verb\": \"list_clips\"}");
         check(r["result"]["lanes"][0]["clips"].size() == 2, "two clips on the lane");
+        check(r["result"]["lanes"][0]["clips"][1]["startBeat"].asNumber() == 8.0,
+              "second clip starts at the requested beat");
+
+        // Conflict: the pattern's unit is routed to lane 0; arranging it on
+        // another track would silently reroute the clips already placed.
+        r = call(service, "{\"id\": 130, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
+                              p + ", \"track\": 1, \"start\": 0}}");
+        check(status(r) == "execution_error",
+              "arrange onto a conflicting track -> execution_error");
 
         // Undo unwinds the whole gesture: clip, unit routing, created lane.
         trackManager->getCommandHistory().undo();
@@ -609,9 +618,33 @@ int main() {
         r = call(service, fileRequest(121, "render_song", "pattern", 1.0, outPath));
         check(status(r) == "validation_error", "render_song unknown arg -> validation_error");
 
+        // The arrange section undid its clips: the timeline is empty here.
+        JSON emptyReq = JSON::object();
+        emptyReq.set("id", JSON(124.0));
+        emptyReq.set("verb", JSON("render_song"));
+        JSON emptyArgs = JSON::object();
+        emptyArgs.set("file", JSON(outPath));
+        emptyReq.set("args", emptyArgs);
+        r = call(service, emptyReq.toString());
+        check(status(r) == "execution_error", "empty timeline -> execution_error");
+        check(!std::filesystem::exists(outPath), "empty timeline writes no file");
+
         r = call(service, "{\"id\": 122, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
                               p + ", \"track\": 0, \"start\": 0}}");
         check(status(r) == "ok", "re-arrange for render ok");
+        r = call(service, "{\"id\": 125, \"verb\": \"arrange_pattern\", \"args\": {\"pattern\": " +
+                              p + ", \"track\": 0, \"start\": 8}}");
+        check(status(r) == "ok", "late clip at beat 8 for render ok");
+
+        // Unwritable destination must fail loudly, not report a phantom file.
+        JSON badDest = JSON::object();
+        badDest.set("id", JSON(126.0));
+        badDest.set("verb", JSON("render_song"));
+        JSON badDestArgs = JSON::object();
+        badDestArgs.set("file", JSON("/nonexistent_muse_dir/song.wav"));
+        badDest.set("args", badDestArgs);
+        r = call(service, badDest.toString());
+        check(status(r) == "execution_error", "unwritable destination -> execution_error");
 
         JSON req = JSON::object();
         req.set("id", JSON(123.0));
@@ -623,6 +656,10 @@ int main() {
         r = call(service, req.toString());
         check(status(r) == "ok", "render_song ok");
         check(r["result"]["frames"].asNumber() > 0.0, "song render reports frames");
+        // Two 8-beat clips at 0 and 8 = 16 beats; at 120 BPM that's 8 s. A
+        // render that ignored the late clip would come back shorter.
+        check(r["result"]["durationSeconds"].asNumber() >= 8.0,
+              "render duration reaches the late clip");
         check(std::filesystem::exists(outPath) && std::filesystem::file_size(outPath) > 44,
               "song wav exists with data");
         // The timeline clip triggers the loud test click through the routed

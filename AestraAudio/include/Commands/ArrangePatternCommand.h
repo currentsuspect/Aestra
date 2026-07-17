@@ -40,19 +40,40 @@ public:
         m_previousUnitRoutes.clear();
 
         auto& playlist = m_trackManager.getPlaylistModel();
+        auto& unitManager = m_trackManager.getUnitManager();
         const PatternSource* pattern = m_trackManager.getPatternManager().getPattern(m_patternId);
         if (!pattern || !pattern->isMidi()) return;
+
+        // A failure after partial mutation must not leave lanes or routes
+        // behind: unwind everything staged so far before returning without
+        // m_executed set.
+        const auto rollbackStaged = [&]() {
+            for (auto it = m_previousUnitRoutes.rbegin(); it != m_previousUnitRoutes.rend();
+                 ++it) {
+                unitManager.assignUnitToTimelineLane(it->first, it->second);
+            }
+            for (auto it = m_createdLanes.rbegin(); it != m_createdLanes.rend(); ++it) {
+                playlist.removeLane(*it);
+            }
+            m_previousUnitRoutes.clear();
+            m_createdLanes.clear();
+        };
 
         while (playlist.getLaneCount() <= m_trackIndex) {
             PlaylistLaneID laneId =
                 playlist.createLane("Lane " + std::to_string(playlist.getLaneCount() + 1));
-            if (!laneId.isValid()) return;
+            if (!laneId.isValid()) {
+                rollbackStaged();
+                return;
+            }
             m_createdLanes.push_back(laneId);
         }
         const PlaylistLaneID laneId = playlist.getLaneId(m_trackIndex);
-        if (!laneId.isValid()) return;
+        if (!laneId.isValid()) {
+            rollbackStaged();
+            return;
+        }
 
-        auto& unitManager = m_trackManager.getUnitManager();
         std::unordered_set<UnitID> routed;
         for (const MidiNote& note : std::get<MidiPayload>(pattern->payload).notes) {
             if (note.unitId == 0 || !routed.insert(note.unitId).second) continue;
@@ -71,7 +92,11 @@ public:
         clip.sourceId = m_patternId.value;
 
         m_clipId = playlist.addClip(laneId, clip);
-        m_executed = m_clipId.isValid();
+        if (!m_clipId.isValid()) {
+            rollbackStaged();
+            return;
+        }
+        m_executed = true;
     }
 
     void undo() override {
