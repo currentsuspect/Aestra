@@ -634,6 +634,12 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
             if (!v) return nullptr;
             gate = *v;
         }
+        double swing = 0.0;
+        if (auto it = flags.find("swing"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            swing = static_cast<double>(*v);
+        }
 
         const PatternID patternId{*patternOpt};
         const PatternSource* pattern = tm->getPatternManager().getPattern(patternId);
@@ -642,8 +648,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!tm->getUnitManager().getUnit(*unitOpt))
             return CommandRegistry::fail("no such unit: " + std::string(*unitRaw));
 
-        // steps: 'x' hit, 'X' accent, '-' '.' or ' ' rest. Anything else is a
-        // typo the agent should hear about, not a silent rest.
+        // steps: 'x' hit, 'X' accent, digits '1'-'9' hit at velocity n/9,
+        // '-' '.' or ' ' rest. Anything else is a typo the agent should hear
+        // about, not a silent rest.
         const std::string steps(*stepsRaw);
         if (steps.empty() || steps.size() > 256)
             return CommandRegistry::fail("steps must be 1..256 characters");
@@ -651,14 +658,27 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         for (size_t i = 0; i < steps.size(); ++i) {
             const char c = steps[i];
             if (c == '-' || c == '.' || c == ' ') continue;
-            if (c != 'x' && c != 'X')
+            float noteVelocity;
+            if (c == 'x') {
+                noteVelocity = velocity;
+            } else if (c == 'X') {
+                noteVelocity = std::min(1.0f, velocity + 0.2f);
+            } else if (c >= '1' && c <= '9') {
+                noteVelocity = static_cast<float>(c - '0') / 9.0f;
+            } else {
                 return CommandRegistry::fail(std::string("invalid step character '") + c +
-                                             "' (use x, X, -, .)");
+                                             "' (use x, X, 1-9, -, ., or space)");
+            }
             MidiNote note;
             note.pitch = *pitchOpt;
             note.startBeat = static_cast<double>(i) * stepBeats;
+            // Swing: every second step lands late by swing * step/2 — the
+            // classic shuffle placement.
+            if (i % 2 == 1) {
+                note.startBeat += swing * stepBeats * 0.5;
+            }
             note.durationBeats = stepBeats * static_cast<double>(gate);
-            note.velocity = (c == 'X') ? std::min(1.0f, velocity + 0.2f) : velocity;
+            note.velocity = noteVelocity;
             note.unitId = *unitOpt;
             rowNotes.push_back(note);
         }
