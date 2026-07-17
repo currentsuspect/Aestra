@@ -59,37 +59,32 @@ void CommandHistory::pushAndExecute(std::shared_ptr<ICommand> cmd) {
     }
 }
 
-void CommandHistory::pushExecuted(std::shared_ptr<ICommand> cmd) {
-    if (!cmd)
-        return;
+bool CommandHistory::pushExecuted(std::shared_ptr<ICommand> cmd) {
+    if (!cmd || !cmd->isUndoable())
+        return false;
 
+    bool recorded = false;
     {
+        // Transaction check and stack insertion under one lock so a
+        // transaction beginning on another thread cannot slip between them.
         std::lock_guard<std::mutex> lock(m_mutex);
         if (m_activeTransaction && m_transactionNestingLevel > 0) {
             // Deferred-execution transactions would re-run this command at
             // commit; refuse rather than execute it twice.
             std::cerr << "CommandHistory::pushExecuted: not valid inside an active transaction"
                       << std::endl;
-            return;
+        } else {
+            m_undoStack.push_back(cmd);
+            m_redoStack.clear();
+            trimHistory();
+            recorded = true;
         }
     }
 
-    if (!cmd->isUndoable()) {
-        return;
-    }
-
-    bool stateChanged = false;
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_undoStack.push_back(cmd);
-        m_redoStack.clear();
-        trimHistory();
-        stateChanged = true;
-    }
-
-    if (stateChanged) {
+    if (recorded) {
         for (const auto& cb : m_onStateChangedCallbacks) { if (cb) cb(); }
     }
+    return recorded;
 }
 
 void CommandHistory::beginTransaction(std::shared_ptr<CommandTransaction> transaction) {

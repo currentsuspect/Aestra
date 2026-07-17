@@ -515,46 +515,53 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             auto transaction = std::make_shared<CommandTransaction>("Muse Batch");
             std::vector<std::shared_ptr<ICommand>> executed;
             executed.reserve(count);
-            const auto rollback = [&executed]() {
+            // Unwind the executed prefix in reverse and produce the final
+            // error response. A rollback failure must not hide behind the
+            // member error: the response then reports execution_error and
+            // says the session may be inconsistent.
+            const auto failBatch = [&](const char* errorStatus,
+                                       const std::string& message) -> std::string {
+                bool rollbackClean = true;
                 for (auto it = executed.rbegin(); it != executed.rend(); ++it) {
                     try {
                         (*it)->undo();
                     } catch (...) {
-                        // Best effort: keep unwinding the rest of the prefix.
+                        // Keep unwinding the rest of the prefix, but remember.
+                        rollbackClean = false;
                     }
                 }
+                if (!rollbackClean) {
+                    return makeError(id, "execution_error",
+                                     message +
+                                         " (rollback also failed; session state may be "
+                                         "inconsistent)",
+                                     verb)
+                        .toString();
+                }
+                return makeError(id, errorStatus, message, verb).toString();
             };
 
             for (size_t i = 0; i < count; ++i) {
                 const std::string prefix = "commands[" + std::to_string(i) + "]: ";
                 JSON& item = commands[i];
                 if (!item.isObject() || !item.has("verb") || !item["verb"].isString()) {
-                    rollback();
-                    return makeError(id, "validation_error",
-                                     prefix + "must be an object with a string verb", verb)
-                        .toString();
+                    return failBatch("validation_error",
+                                     prefix + "must be an object with a string verb");
                 }
                 const std::string subVerb = item["verb"].asString();
                 if (isQueryVerb(subVerb) || isActionVerb(subVerb)) {
-                    rollback();
-                    return makeError(id, "validation_error",
-                                     prefix + "only mutation verbs are allowed in a batch", verb)
-                        .toString();
+                    return failBatch("validation_error",
+                                     prefix + "only mutation verbs are allowed in a batch");
                 }
 
                 std::unordered_map<std::string, std::string> flags;
                 if (item.has("args")) {
                     if (!item["args"].isObject()) {
-                        rollback();
-                        return makeError(id, "validation_error", prefix + "args must be an object",
-                                         verb)
-                            .toString();
+                        return failBatch("validation_error", prefix + "args must be an object");
                     }
                     std::string convertError;
                     if (!jsonArgsToFlags(item["args"], flags, convertError)) {
-                        rollback();
-                        return makeError(id, "validation_error", prefix + convertError, verb)
-                            .toString();
+                        return failBatch("validation_error", prefix + convertError);
                     }
                 }
 
@@ -562,28 +569,29 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 std::string buildMessage;
                 auto built = parser.buildValidated(subVerb, flags, buildStatus, buildMessage);
                 if (!built) {
-                    rollback();
-                    return makeError(id, statusName(buildStatus), prefix + buildMessage, verb)
-                        .toString();
+                    return failBatch(statusName(buildStatus), prefix + buildMessage);
                 }
 
                 std::shared_ptr<ICommand> cmd(std::move(built));
                 try {
                     cmd->execute();
                 } catch (const std::exception& e) {
-                    rollback();
-                    return makeError(id, "execution_error", prefix + e.what(), verb).toString();
+                    return failBatch("execution_error", prefix + e.what());
                 } catch (...) {
-                    rollback();
-                    return makeError(id, "execution_error", prefix + "command threw", verb)
-                        .toString();
+                    return failBatch("execution_error", prefix + "command threw");
                 }
                 executed.push_back(cmd);
                 transaction->add(cmd);
             }
 
             transaction->markExecuted();
-            m_trackManager->getCommandHistory().pushExecuted(transaction);
+            if (!m_trackManager->getCommandHistory().pushExecuted(transaction)) {
+                // Executed but not recorded (e.g. a deferred transaction is
+                // active on this history). "ok, undoable" would be a lie —
+                // keep all-or-nothing honest by rolling the batch back.
+                return failBatch("execution_error",
+                                 "batch could not be recorded in history; rolled back");
+            }
 
             JSON result = JSON::object();
             result.set("count", JSON(static_cast<double>(count)));

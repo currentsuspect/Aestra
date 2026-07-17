@@ -35,8 +35,8 @@ public:
      *
      * The front half of execute(): schema lookup, unknown-flag rejection,
      * flag validation, and registry build. Batch execution uses this to
-     * validate every member against pre-batch state before running any of
-     * them. Returns nullptr with outStatus/outMessage set on failure.
+     * validate each member against the current state immediately before
+     * executing it. Returns nullptr with outStatus/outMessage set on failure.
      */
     std::unique_ptr<ICommand> buildValidated(
         const std::string& verb,
