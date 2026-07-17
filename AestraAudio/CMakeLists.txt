@@ -252,6 +252,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/CommandRegistry.cpp
     src/Commands/SessionLog.cpp
     src/Commands/MuseStubs.cpp
+    src/Commands/MuseService.cpp
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp

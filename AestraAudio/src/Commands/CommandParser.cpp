@@ -41,25 +41,7 @@ CommandResult CommandParser::parse(const std::string& input, CommandHistory& his
     result.verb = tokens[0];
     tokens.erase(tokens.begin());
 
-    // 2. Look up verb in MuseGrammar::allCommands()
-    const auto& allCmds = MuseGrammar::allCommands();
-    const CommandSchema* schema = nullptr;
-    for (const auto& cmd : allCmds) {
-        if (cmd.verb == result.verb) {
-            schema = &cmd;
-            break;
-        }
-    }
-
-    if (!schema) {
-        result.status = CommandStatus::ParseError;
-        result.message = "unknown command: " + result.verb;
-        auto endTime = std::chrono::steady_clock::now();
-        result.executionMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
-        return result;
-    }
-
-    // 3. Tokenise remaining tokens into {"flag": "value"} map
+    // 2. Tokenise remaining tokens into {"flag": "value"} map
     std::string tokeniseError;
     auto parsedFlags = tokeniseFlags(tokens, tokeniseError);
     if (!tokeniseError.empty()) {
@@ -70,46 +52,92 @@ CommandResult CommandParser::parse(const std::string& input, CommandHistory& his
         return result;
     }
 
-    // 4. Validate required flags present and values within type + range
+    // 3. Shared back half: schema lookup, validation, build, execute
+    CommandResult executed = execute(result.verb, parsedFlags, history);
+    auto endTime = std::chrono::steady_clock::now();
+    executed.executionMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
+    return executed;
+}
+
+CommandResult CommandParser::execute(const std::string& verb,
+                                     const std::unordered_map<std::string, std::string>& flags,
+                                     CommandHistory& history) {
+    CommandResult result;
+    result.commandId = 0;
+    result.verb = verb;
+
+    auto startTime = std::chrono::steady_clock::now();
+    const auto finish = [&](CommandResult& r) -> CommandResult& {
+        auto endTime = std::chrono::steady_clock::now();
+        r.executionMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
+        return r;
+    };
+
+    // Look up verb in MuseGrammar::allCommands()
+    const auto& allCmds = MuseGrammar::allCommands();
+    const CommandSchema* schema = nullptr;
+    for (const auto& cmd : allCmds) {
+        if (cmd.verb == verb) {
+            schema = &cmd;
+            break;
+        }
+    }
+
+    if (!schema) {
+        result.status = CommandStatus::ParseError;
+        result.message = "unknown command: " + verb;
+        return finish(result);
+    }
+
+    // Reject flags the schema does not define — accepting them would let a
+    // caller believe intent was honoured when it was silently dropped.
+    for (const auto& entry : flags) {
+        bool known = false;
+        for (const auto& flagSchema : schema->flags) {
+            if (flagSchema.name == entry.first) {
+                known = true;
+                break;
+            }
+        }
+        if (!known) {
+            result.status = CommandStatus::ValidationError;
+            result.message = "unknown flag for " + verb + ": --" + entry.first;
+            return finish(result);
+        }
+    }
+
+    // Validate required flags present and values within type + range
     std::string validationError;
-    if (!validateFlags(*schema, parsedFlags, validationError)) {
+    if (!validateFlags(*schema, flags, validationError)) {
         result.status = CommandStatus::ValidationError;
         result.message = std::move(validationError);
-        auto endTime = std::chrono::steady_clock::now();
-        result.executionMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
-        return result;
+        return finish(result);
     }
 
-    // 5. Build ICommand via registry
-    auto cmd = CommandRegistry::instance().build(result.verb, parsedFlags);
+    // Build ICommand via registry
+    auto cmd = CommandRegistry::instance().build(verb, flags);
     if (!cmd) {
         result.status = CommandStatus::ExecutionError;
-        result.message = "failed to build command for: " + result.verb;
-        auto endTime = std::chrono::steady_clock::now();
-        result.executionMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
-        return result;
+        result.message = "failed to build command for: " + verb;
+        return finish(result);
     }
 
-    result.undoable = cmd->changesProjectState();
+    const bool undoable = cmd->changesProjectState();
 
-    // 6. Execute through CommandHistory
+    // Execute through CommandHistory; only a successful execution is undoable.
     try {
         auto shared = std::shared_ptr<ICommand>(std::move(cmd));
         history.pushAndExecute(shared);
+        result.undoable = undoable;
     } catch (const std::exception& e) {
         result.status = CommandStatus::ExecutionError;
         result.message = e.what();
-        auto endTime = std::chrono::steady_clock::now();
-        result.executionMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
-        return result;
+        return finish(result);
     }
 
-    // 7. Success
     result.status = CommandStatus::Success;
     result.message = "ok";
-    auto endTime = std::chrono::steady_clock::now();
-    result.executionMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
-    return result;
+    return finish(result);
 }
 
 std::unordered_map<std::string, std::string> CommandParser::tokeniseFlags(
