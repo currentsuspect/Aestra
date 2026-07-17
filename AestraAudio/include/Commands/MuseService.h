@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #pragma once
 
+#include <memory>
 #include <string>
 
 namespace Aestra {
@@ -36,6 +37,18 @@ public:
 
     /** @brief Process one JSON request line and return the JSON response. */
     std::string handleRequest(const std::string& requestJson);
+
+    /**
+     * @brief Attach an engine to a track manager the way the app does.
+     *
+     * Headless hosts (MuseRepl, tests) must wire the same five links
+     * AestraContent wires — unit manager, pattern playback engine, continuous
+     * params, channel slot map, and the transport command sink — or units
+     * render silence and transport commands never reach the engine.
+     * Both objects must outlive the wiring (the sink captures raw pointers).
+     */
+    static void wireHeadlessEngine(const std::shared_ptr<TrackManager>& trackManager,
+                                   AudioEngine& engine);
 
 private:
     TrackManager* m_trackManager = nullptr;

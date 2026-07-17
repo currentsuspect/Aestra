@@ -6,7 +6,9 @@
 
 #include "Commands/CommandRegistry.h"
 #include "Commands/MuseService.h"
+#include "Core/AudioEngine.h"
 #include "Models/TrackManager.h"
+#include "Plugin/PluginManager.h"
 
 #include "AestraJSON.h"
 
@@ -18,6 +20,7 @@
 #include <memory>
 #include <string>
 
+using Aestra::Audio::AudioEngine;
 using Aestra::Audio::CommandRegistry;
 using Aestra::Audio::MuseService;
 using Aestra::Audio::TrackManager;
@@ -45,14 +48,16 @@ std::string status(JSON& response) {
     return response.has("status") ? response["status"].asString() : "<missing>";
 }
 
-// Minimal valid PCM16 mono WAV (8 frames of silence) for load_sample.
+// Minimal valid PCM16 mono WAV for load_sample: a loud 480-frame click so a
+// rendered pattern that triggers it is measurably non-silent.
 std::string writeTestWav() {
     const std::string path =
         (std::filesystem::temp_directory_path() / "muse_service_test_sample.wav").string();
     const uint32_t sampleRate = 48000;
     const uint16_t channels = 1;
     const uint16_t bitsPerSample = 16;
-    const uint32_t dataBytes = 8 * sizeof(int16_t);
+    const uint32_t numFrames = 480;
+    const uint32_t dataBytes = numFrames * sizeof(int16_t);
     const uint32_t byteRate = sampleRate * channels * bitsPerSample / 8;
     const uint16_t blockAlign = channels * bitsPerSample / 8;
 
@@ -73,8 +78,10 @@ std::string writeTestWav() {
     u16(bitsPerSample);
     std::fwrite("data", 1, 4, f);
     u32(dataBytes);
-    const int16_t silence[8] = {};
-    std::fwrite(silence, sizeof(int16_t), 8, f);
+    for (uint32_t i = 0; i < numFrames; ++i) {
+        const int16_t sample = (i % 2 == 0) ? 29000 : -29000;
+        std::fwrite(&sample, sizeof(int16_t), 1, f);
+    }
     std::fclose(f);
     return path;
 }
@@ -82,12 +89,32 @@ std::string writeTestWav() {
 } // namespace
 
 int main() {
+    // Built-ins (the sampler) register inside PluginManager::initialize();
+    // without it load_sample sets the path but never instantiates a plugin,
+    // and renders come back silent.
+    if (!Aestra::Audio::PluginManager::getInstance().initialize()) {
+        std::cout << "FAIL: plugin manager initialize\n";
+        return 1;
+    }
+
     auto trackManager = std::make_shared<TrackManager>();
     // Mirror the app wiring (AestraContent): units need the pattern manager
     // to auto-create their default MIDI pattern.
     trackManager->getUnitManager().setPatternManager(&trackManager->getPatternManager());
+
+    // Engine wired like MuseRepl so render_pattern can pump the live path.
+    AudioEngine engine;
+    engine.setSampleRate(48000);
+    engine.setBufferConfig(512, 2);
+    MuseService::wireHeadlessEngine(trackManager, engine);
+    if (!engine.initialize()) {
+        std::cout << "FAIL: engine initialize\n";
+        return 1;
+    }
+
     CommandRegistry::initialize(trackManager.get());
-    MuseService service(trackManager.get(), nullptr);
+    CommandRegistry::setAudioEngine(&engine);
+    MuseService service(trackManager.get(), &engine);
 
     // --- Protocol: malformed input never crashes, always structured error ---
     {
@@ -336,6 +363,40 @@ int main() {
                  "{\"id\": 77, \"verb\": \"get_pattern\", "
                  "\"args\": {\"pattern\": 1, \"wobble\": 2}}");
         check(status(r) == "validation_error", "get_pattern unknown arg -> validation_error");
+    }
+
+    // --- Render: the beat comes back as a file with signal in it ---
+    {
+        const std::string p = std::to_string(static_cast<long long>(kickPattern));
+        const std::string outPath =
+            (std::filesystem::temp_directory_path() / "muse_service_test_render.wav").string();
+        std::filesystem::remove(outPath);
+
+        JSON r = call(service, "{\"id\": 80, \"verb\": \"render_pattern\"}");
+        check(status(r) == "validation_error", "render_pattern without args -> validation_error");
+
+        r = call(service,
+                 "{\"id\": 81, \"verb\": \"render_pattern\", "
+                 "\"args\": {\"pattern\": 999999, \"file\": \"" + outPath + "\"}}");
+        check(status(r) == "execution_error", "render_pattern unknown pattern -> execution_error");
+
+        r = call(service, "{\"id\": 82, \"verb\": \"render_pattern\", \"args\": {\"pattern\": " +
+                              p + ", \"file\": \"" + outPath + "\", \"tail\": 0.25}}");
+        check(status(r) == "ok", "render_pattern ok");
+        check(r["result"]["frames"].asNumber() > 0.0, "render reports frames");
+        check(std::filesystem::exists(outPath) && std::filesystem::file_size(outPath) > 44,
+              "rendered wav exists with data");
+        // The pattern triggers the loud test click through the sampler; a
+        // silent render means the pattern->unit->engine path is broken.
+        check(r["result"]["peakDb"].asNumber() > -90.0,
+              "rendered audio is not silent (peakDb " +
+                  std::to_string(r["result"]["peakDb"].asNumber()) + ")");
+        check(!engine.isTransportPlaying(), "engine transport stopped after render");
+
+        r = call(service, "{\"id\": 83, \"verb\": \"render_pattern\", \"args\": {\"pattern\": " +
+                              p + ", \"file\": \"" + outPath + "\", \"wobble\": 1}}");
+        check(status(r) == "validation_error", "render_pattern unknown arg -> validation_error");
+        std::filesystem::remove(outPath);
     }
 
     std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))
