@@ -26,6 +26,8 @@ struct CommandSchema {
 
 namespace MuseGrammar {
     const std::vector<CommandSchema>& allCommands();
+    /** @brief The full command schema as a JSON string — the agent tool manifest. */
+    std::string schemaToJsonString();
     void exportSchemaToJson(const std::string& outputPath);
 }
 

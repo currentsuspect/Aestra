@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <sstream>
 
 namespace Aestra {
 namespace Audio {
@@ -77,11 +78,8 @@ const std::vector<CommandSchema>& allCommands() {
     return s_schemas;
 }
 
-void exportSchemaToJson(const std::string& outputPath) {
-    std::ofstream out(outputPath);
-    if (!out.is_open())
-        return;
-
+std::string schemaToJsonString() {
+    std::ostringstream out;
     out << "[\n";
     for (size_t i = 0; i < s_schemas.size(); ++i) {
         const auto& cmd = s_schemas[i];
@@ -127,6 +125,14 @@ void exportSchemaToJson(const std::string& outputPath) {
         out << "\n";
     }
     out << "]\n";
+    return out.str();
+}
+
+void exportSchemaToJson(const std::string& outputPath) {
+    std::ofstream out(outputPath);
+    if (!out.is_open())
+        return;
+    out << schemaToJsonString();
 }
 
 } // namespace MuseGrammar

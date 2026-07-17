@@ -1,0 +1,97 @@
+// © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
+//
+// MuseRepl — the stdin/stdout entry point to Aestra's agentic runtime.
+//
+// One JSON request per input line, one JSON response per output line
+// (JSONL both ways). Everything goes through MuseService: the same schema
+// validation, command factories, and undo history the UI uses. This is how
+// an external agent (or a human with a pipe) drives a headless session:
+//
+//   $ MuseRepl <<'EOF'
+//   {"id": 1, "verb": "set_bpm", "args": {"value": 142}}
+//   {"id": 2, "verb": "add_track", "args": {"name": "Drums"}}
+//   {"id": 3, "verb": "list_tracks"}
+//   EOF
+//
+// Flags:
+//   --schema      print the MuseGrammar command schema as JSON and exit
+//                 (the agent's tool manifest)
+//   --sample-rate <hz>  engine sample rate (default 48000)
+
+#include "AudioEngine.h"
+#include "Commands/CommandRegistry.h"
+#include "Commands/MuseGrammar.h"
+#include "Commands/MuseService.h"
+#include "TrackManager.h"
+
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+#include <string>
+
+using namespace Aestra::Audio;
+
+int main(int argc, char** argv) {
+    uint32_t sampleRate = 48000;
+
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--schema") {
+            std::cout << MuseGrammar::schemaToJsonString();
+            return 0;
+        }
+        if (arg == "--sample-rate" && i + 1 < argc) {
+            const long parsed = std::strtol(argv[++i], nullptr, 10);
+            if (parsed >= 8000 && parsed <= 192000) {
+                sampleRate = static_cast<uint32_t>(parsed);
+            } else {
+                std::cerr << "invalid --sample-rate, using 48000\n";
+            }
+            continue;
+        }
+        if (arg == "--help" || arg == "-h") {
+            std::cout << "MuseRepl: JSONL in on stdin, JSONL out on stdout.\n"
+                         "  --schema             print command schema JSON and exit\n"
+                         "  --sample-rate <hz>   engine sample rate (default 48000)\n";
+            return 0;
+        }
+        std::cerr << "unknown argument: " << arg << "\n";
+        return 2;
+    }
+
+    // Session setup mirrors the app's wiring: TrackManager owns the model and
+    // history, AudioEngine owns transport/tempo, the registry binds both.
+    auto trackManager = std::make_shared<TrackManager>();
+    trackManager->setOutputSampleRate(static_cast<double>(sampleRate));
+    trackManager->setInputSampleRate(static_cast<double>(sampleRate));
+    trackManager->setInputChannelCount(0);
+
+    AudioEngine engine;
+    engine.setSampleRate(sampleRate);
+    engine.setBufferConfig(512, 2);
+
+    CommandRegistry::initialize(trackManager.get());
+    CommandRegistry::setAudioEngine(&engine);
+
+    MuseService service(trackManager.get(), &engine);
+
+    std::string line;
+    while (std::getline(std::cin, line)) {
+        // Skip blank lines so hand-driven sessions can space things out.
+        bool blank = true;
+        for (char c : line) {
+            if (!std::isspace(static_cast<unsigned char>(c))) {
+                blank = false;
+                break;
+            }
+        }
+        if (blank) continue;
+
+        std::cout << service.handleRequest(line) << "\n";
+        std::cout.flush();
+    }
+
+    return 0;
+}
