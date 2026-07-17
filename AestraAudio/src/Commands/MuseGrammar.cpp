@@ -71,6 +71,53 @@ static const std::vector<CommandSchema> s_schemas = {
         {"id", FlagType::Int, true},
         {"start", FlagType::Float, true},
         {"end", FlagType::Float, true}
+    }},
+
+    // === Unit (2) ===
+    // "type" accepts: sampler (default), 808. The schema format cannot
+    // express enums yet; the factory rejects anything else.
+    {"add_unit", CommandCategory::Unit, {
+        {"name", FlagType::String, false},
+        {"type", FlagType::String, false}
+    }},
+    {"load_sample", CommandCategory::Unit, {
+        {"unit", FlagType::Int, true, 1.0},
+        {"file", FlagType::String, true}
+    }},
+
+    // === Pattern (4) ===
+    // Notes are identified by (pattern, unit, pitch, start) — the same key
+    // the piano-roll note commands match on.
+    {"add_note", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"unit", FlagType::Int, true, 1.0},
+        {"pitch", FlagType::Int, true, 0.0, 127.0},
+        {"start", FlagType::Float, true, 0.0},
+        {"duration", FlagType::Float, true, 0.001},
+        {"velocity", FlagType::Float, false, 0.0, 1.0},
+        {"pan", FlagType::Float, false, -1.0, 1.0}
+    }},
+    {"delete_note", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"unit", FlagType::Int, true, 1.0},
+        {"pitch", FlagType::Int, true, 0.0, 127.0},
+        {"start", FlagType::Float, true, 0.0}
+    }},
+    {"move_note", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"unit", FlagType::Int, true, 1.0},
+        {"pitch", FlagType::Int, true, 0.0, 127.0},
+        {"start", FlagType::Float, true, 0.0},
+        {"to_start", FlagType::Float, true, 0.0},
+        {"to_pitch", FlagType::Int, false, 0.0, 127.0}
+    }},
+    {"set_note", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"unit", FlagType::Int, true, 1.0},
+        {"pitch", FlagType::Int, true, 0.0, 127.0},
+        {"start", FlagType::Float, true, 0.0},
+        {"velocity", FlagType::Float, false, 0.0, 1.0},
+        {"pan", FlagType::Float, false, -1.0, 1.0}
     }}
 };
 
@@ -91,6 +138,8 @@ std::string schemaToJsonString() {
         case CommandCategory::Transport: catStr = "transport"; break;
         case CommandCategory::Track: catStr = "track"; break;
         case CommandCategory::Clip: catStr = "clip"; break;
+        case CommandCategory::Unit: catStr = "unit"; break;
+        case CommandCategory::Pattern: catStr = "pattern"; break;
         }
         out << "    \"category\": \"" << catStr << "\",\n";
         out << "    \"flags\": [\n";

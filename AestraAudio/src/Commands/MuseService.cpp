@@ -5,6 +5,9 @@
 #include "Commands/CommandResult.h"
 #include "Core/AudioEngine.h"
 #include "Models/TrackManager.h"
+#include "Models/UnitManager.h"
+
+#include <variant>
 
 #include "AestraJSON.h"
 
@@ -75,7 +78,17 @@ namespace {
 // Query verbs MuseService answers directly (mutations live in MuseGrammar).
 bool isQueryVerb(const std::string& verb) {
     return verb == "get_transport" || verb == "list_tracks" || verb == "list_clips" ||
-           verb == "get_session_state";
+           verb == "get_session_state" || verb == "list_units" || verb == "get_pattern";
+}
+
+const char* unitTypeName(UnitType type) {
+    switch (type) {
+    case UnitType::Sampler: return "sampler";
+    case UnitType::PitchedSampler: return "808";
+    case UnitType::Instrument: return "instrument";
+    case UnitType::Audio: return "audio";
+    }
+    return "unknown";
 }
 
 bool isKnownVerb(const std::string& verb) {
@@ -127,9 +140,10 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             return makeError(id, "parse_error", "unknown command: " + verb).toString();
         }
 
-        // Queries take no arguments; accepting them would silently drop
-        // caller intent.
-        if (isQueryVerb(verb) && request.has("args") && request["args"].size() > 0) {
+        // Queries take no arguments — except get_pattern, which takes exactly
+        // one. Accepting anything else would silently drop caller intent.
+        if (isQueryVerb(verb) && verb != "get_pattern" && request.has("args") &&
+            request["args"].size() > 0) {
             return makeError(id, "validation_error", verb + " takes no arguments", verb).toString();
         }
 
@@ -247,8 +261,97 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             result.set("tracks", tracks);
             result.set("laneCount",
                        JSON(static_cast<double>(m_trackManager->getPlaylistModel().getLaneCount())));
+            result.set("unitCount",
+                       JSON(static_cast<double>(m_trackManager->getUnitManager().getUnitCount())));
             result.set("canUndo", JSON(m_trackManager->getCommandHistory().canUndo()));
 
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "list_units") {
+            if (!m_trackManager) {
+                return makeError(id, "execution_error", "no track manager", verb).toString();
+            }
+            auto& unitManager = m_trackManager->getUnitManager();
+            JSON units = JSON::array();
+            for (UnitID unitId : unitManager.getAllUnitIDs()) {
+                const UnitInfo* unit = unitManager.getUnit(unitId);
+                if (!unit) continue;
+                JSON u = JSON::object();
+                u.set("id", JSON(static_cast<double>(unit->id)));
+                u.set("name", JSON(unit->name));
+                u.set("type", JSON(unitTypeName(unit->type)));
+                u.set("enabled", JSON(unit->isEnabled));
+                u.set("muted", JSON(unit->isMuted));
+                u.set("soloed", JSON(unit->isSolo));
+                u.set("defaultPatternId",
+                      JSON(static_cast<double>(unit->defaultPatternId.value)));
+                u.set("samplePath", JSON(unit->audioClipPath));
+                u.set("sampleDurationSeconds", JSON(unit->audioDurationSeconds));
+                units.push(u);
+            }
+            JSON result = JSON::object();
+            result.set("units", units);
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "get_pattern") {
+            if (!m_trackManager) {
+                return makeError(id, "execution_error", "no track manager", verb).toString();
+            }
+            // The one parameterized query: args must be exactly
+            // {"pattern": <number>}.
+            if (!request.has("args") || !request["args"].isObject()) {
+                return makeError(id, "validation_error",
+                                 "get_pattern requires args: {\"pattern\": <id>}", verb)
+                    .toString();
+            }
+            JSON& args = request["args"];
+            for (auto& entry : args.asObject()) {
+                if (entry.first != "pattern") {
+                    return makeError(id, "validation_error",
+                                     "unknown arg for get_pattern: " + entry.first, verb)
+                        .toString();
+                }
+            }
+            if (!args.has("pattern") || !args["pattern"].isNumber()) {
+                return makeError(id, "validation_error", "arg 'pattern' must be a number", verb)
+                    .toString();
+            }
+
+            const PatternID patternId{static_cast<uint64_t>(args["pattern"].asNumber())};
+            const PatternSource* pattern =
+                m_trackManager->getPatternManager().getPattern(patternId);
+            if (!pattern) {
+                return makeError(id, "execution_error",
+                                 "no such pattern: " + std::to_string(patternId.value), verb)
+                    .toString();
+            }
+
+            JSON result = JSON::object();
+            result.set("id", JSON(static_cast<double>(pattern->id.value)));
+            result.set("name", JSON(pattern->name));
+            result.set("lengthBeats", JSON(pattern->lengthBeats));
+            const bool isMidi = pattern->isMidi();
+            result.set("type", JSON(isMidi ? "midi" : "other"));
+            if (isMidi) {
+                JSON notes = JSON::array();
+                for (const MidiNote& note : std::get<MidiPayload>(pattern->payload).notes) {
+                    JSON n = JSON::object();
+                    n.set("pitch", JSON(static_cast<double>(note.pitch)));
+                    n.set("start", JSON(note.startBeat));
+                    n.set("duration", JSON(note.durationBeats));
+                    n.set("velocity", JSON(static_cast<double>(note.velocity)));
+                    n.set("pan", JSON(static_cast<double>(note.pan)));
+                    n.set("unit", JSON(static_cast<double>(note.unitId)));
+                    notes.push(n);
+                }
+                result.set("notes", notes);
+            }
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
