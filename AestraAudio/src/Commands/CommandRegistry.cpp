@@ -8,6 +8,9 @@
 #include "Commands/LoadSampleCommand.h"
 #include "Commands/MoveClipCommand.h"
 #include "Commands/MoveNoteCommand.h"
+#include "Commands/QuantizePatternCommand.h"
+#include "Commands/SetStepsCommand.h"
+#include "Commands/TransposePatternCommand.h"
 #include "Commands/RemoveClipCommand.h"
 #include "Commands/RemoveNoteCommand.h"
 #include "Commands/SetMuteCommand.h"
@@ -179,6 +182,9 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         reg.registerCommand("move_note", noopTrack);
         reg.registerCommand("set_note", noopTrack);
         reg.registerCommand("arrange_pattern", noopTrack);
+        reg.registerCommand("set_steps", noopTrack);
+        reg.registerCommand("quantize_pattern", noopTrack);
+        reg.registerCommand("transpose_pattern", noopTrack);
         return;
     }
 
@@ -541,6 +547,135 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         return std::make_unique<ArrangePatternCommand>(*tm, patternId,
                                                        static_cast<size_t>(*trackOpt),
                                                        static_cast<double>(*startOpt));
+    });
+
+    reg.registerCommand("set_steps", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto patternRaw = requireFlag(flags, "pattern");
+        if (!patternRaw) return nullptr;
+        auto patternOpt = safeStoull(*patternRaw);
+        if (!patternOpt) return nullptr;
+        auto unitRaw = requireFlag(flags, "unit");
+        if (!unitRaw) return nullptr;
+        auto unitOpt = safeStoull(*unitRaw);
+        if (!unitOpt) return nullptr;
+        auto pitchRaw = requireFlag(flags, "pitch");
+        if (!pitchRaw) return nullptr;
+        auto pitchOpt = safeStoi(*pitchRaw);
+        if (!pitchOpt) return nullptr;
+        auto stepsRaw = requireFlag(flags, "steps");
+        if (!stepsRaw) return nullptr;
+
+        double stepBeats = 0.25; // 16th notes
+        if (auto it = flags.find("step"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            stepBeats = static_cast<double>(*v);
+        }
+        float velocity = 0.8f;
+        if (auto it = flags.find("velocity"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            velocity = *v;
+        }
+        float gate = 0.9f;
+        if (auto it = flags.find("gate"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            gate = *v;
+        }
+
+        const PatternID patternId{*patternOpt};
+        const PatternSource* pattern = tm->getPatternManager().getPattern(patternId);
+        if (!pattern || !pattern->isMidi()) return nullptr;
+        if (!tm->getUnitManager().getUnit(*unitOpt)) return nullptr;
+
+        // steps: 'x' hit, 'X' accent, '-' '.' or ' ' rest. Anything else is a
+        // typo the agent should hear about, not a silent rest.
+        const std::string steps(*stepsRaw);
+        if (steps.empty() || steps.size() > 256) return nullptr;
+        std::vector<MidiNote> rowNotes;
+        for (size_t i = 0; i < steps.size(); ++i) {
+            const char c = steps[i];
+            if (c == '-' || c == '.' || c == ' ') continue;
+            if (c != 'x' && c != 'X') return nullptr;
+            MidiNote note;
+            note.pitch = *pitchOpt;
+            note.startBeat = static_cast<double>(i) * stepBeats;
+            note.durationBeats = stepBeats * static_cast<double>(gate);
+            note.velocity = (c == 'X') ? std::min(1.0f, velocity + 0.2f) : velocity;
+            note.unitId = *unitOpt;
+            rowNotes.push_back(note);
+        }
+
+        const double rowLengthBeats = static_cast<double>(steps.size()) * stepBeats;
+        return std::make_unique<SetStepsCommand>(tm->getPatternManager(), patternId,
+                                                 std::move(rowNotes), *unitOpt, *pitchOpt,
+                                                 rowLengthBeats);
+    });
+
+    reg.registerCommand("quantize_pattern", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto patternRaw = requireFlag(flags, "pattern");
+        if (!patternRaw) return nullptr;
+        auto patternOpt = safeStoull(*patternRaw);
+        if (!patternOpt) return nullptr;
+        auto gridRaw = requireFlag(flags, "grid");
+        if (!gridRaw) return nullptr;
+        auto gridOpt = safeStof(*gridRaw);
+        if (!gridOpt) return nullptr;
+
+        double strength = 1.0;
+        if (auto it = flags.find("strength"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            strength = static_cast<double>(*v);
+        }
+        uint64_t unitId = 0; // all units
+        if (auto it = flags.find("unit"); it != flags.end()) {
+            auto v = safeStoull(it->second);
+            if (!v) return nullptr;
+            unitId = *v;
+        }
+
+        const PatternID patternId{*patternOpt};
+        const PatternSource* pattern = tm->getPatternManager().getPattern(patternId);
+        if (!pattern || !pattern->isMidi()) return nullptr;
+
+        return std::make_unique<QuantizePatternCommand>(tm->getPatternManager(), patternId,
+                                                        static_cast<double>(*gridOpt), strength,
+                                                        unitId);
+    });
+
+    reg.registerCommand("transpose_pattern", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto patternRaw = requireFlag(flags, "pattern");
+        if (!patternRaw) return nullptr;
+        auto patternOpt = safeStoull(*patternRaw);
+        if (!patternOpt) return nullptr;
+        auto semitonesRaw = requireFlag(flags, "semitones");
+        if (!semitonesRaw) return nullptr;
+        auto semitonesOpt = safeStoi(*semitonesRaw);
+        if (!semitonesOpt) return nullptr;
+
+        uint64_t unitId = 0; // all units
+        if (auto it = flags.find("unit"); it != flags.end()) {
+            auto v = safeStoull(it->second);
+            if (!v) return nullptr;
+            unitId = *v;
+        }
+
+        const PatternID patternId{*patternOpt};
+        const PatternSource* pattern = tm->getPatternManager().getPattern(patternId);
+        if (!pattern || !pattern->isMidi()) return nullptr;
+
+        // Reject rather than clamp: a clamped transpose is not invertible,
+        // which would corrupt undo.
+        for (const MidiNote& note : std::get<MidiPayload>(pattern->payload).notes) {
+            if (unitId != 0 && note.unitId != unitId) continue;
+            const int shifted = note.pitch + *semitonesOpt;
+            if (shifted < 0 || shifted > 127) return nullptr;
+        }
+
+        return std::make_unique<TransposePatternCommand>(tm->getPatternManager(), patternId,
+                                                         *semitonesOpt, unitId);
     });
 
     reg.registerCommand("set_note", [tm = trackManager, parseNoteKey, findNote](const auto& flags) -> std::unique_ptr<ICommand> {
