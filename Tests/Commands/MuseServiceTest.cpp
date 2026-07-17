@@ -12,6 +12,7 @@
 
 #include "AestraJSON.h"
 
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cmath>
@@ -707,6 +708,98 @@ int main() {
         trackManager->getCommandHistory().undo(); // add_effect
         r = call(service, "{\"id\": 204, \"verb\": \"get_effects\", \"args\": {\"track\": 0}}");
         check(r["result"]["effects"].size() == 0, "full undo chain leaves a clean track");
+    }
+
+    // --- Sample discovery + expressive step strings ---
+    {
+        // A tiny library: one wav, one decoy, one nested wav.
+        // Unique per run so stale files or parallel runs cannot change counts.
+        const auto uniqueSuffix = std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count());
+        const auto libDir = std::filesystem::temp_directory_path() /
+                            ("muse_service_test_lib_" + uniqueSuffix);
+        std::filesystem::remove_all(libDir);
+        std::filesystem::create_directories(libDir / "kicks");
+        {
+            // Real WAVs (the validator checks magic bytes, not just extension).
+            const std::string source = writeTestWav();
+            std::filesystem::copy_file(source, libDir / "top.wav",
+                                       std::filesystem::copy_options::overwrite_existing);
+            std::filesystem::copy_file(source, libDir / "kicks" / "deep.wav",
+                                       std::filesystem::copy_options::overwrite_existing);
+            std::FILE* f = std::fopen((libDir / "notes.txt").string().c_str(), "wb");
+            check(f != nullptr, "decoy file created");
+            if (f) {
+                std::fputs("not audio", f);
+                std::fclose(f);
+            }
+        }
+
+        JSON req = JSON::object();
+        req.set("id", JSON(210.0));
+        req.set("verb", JSON("list_samples"));
+        JSON dirArgs = JSON::object();
+        dirArgs.set("dir", JSON(libDir.string()));
+        req.set("args", dirArgs);
+        JSON r = call(service, req.toString());
+        check(status(r) == "ok", "list_samples ok");
+        check(r["result"]["samples"].size() == 2, "only audio files listed (txt skipped)");
+        check(!r["result"]["truncated"].asBool(), "listing not truncated");
+        bool sawNested = false;
+        for (size_t i = 0; i < r["result"]["samples"].size(); ++i) {
+            if (r["result"]["samples"][i]["name"].asString() == "deep.wav") sawNested = true;
+        }
+        check(sawNested, "nested sample found");
+
+        r = call(service,
+                 "{\"id\": 211, \"verb\": \"list_samples\", \"args\": {\"dir\": \"/nonexistent_muse_lib\"}}");
+        check(status(r) == "execution_error", "missing dir -> execution_error");
+        r = call(service, "{\"id\": 212, \"verb\": \"list_samples\"}");
+        check(status(r) == "validation_error", "missing dir arg -> validation_error");
+        std::filesystem::remove_all(libDir);
+
+        // Velocity digits: '9' is full velocity, '3' is a third.
+        const std::string p = std::to_string(static_cast<long long>(kickPattern));
+        const std::string u = std::to_string(static_cast<long long>(kickUnit));
+        r = call(service, "{\"id\": 213, \"verb\": \"set_steps\", \"args\": {\"pattern\": " + p +
+                              ", \"unit\": " + u + ", \"pitch\": 44, \"steps\": \"9-3-\"}}");
+        check(status(r) == "ok", "digit steps ok");
+        r = call(service,
+                 "{\"id\": 214, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        double v9 = -1.0, v3 = -1.0;
+        for (size_t i = 0; i < r["result"]["notes"].size(); ++i) {
+            JSON note = r["result"]["notes"][i];
+            if (note["pitch"].asNumber() == 44.0) {
+                if (note["start"].asNumber() == 0.0) v9 = note["velocity"].asNumber();
+                if (note["start"].asNumber() == 0.5) v3 = note["velocity"].asNumber();
+            }
+        }
+        check(std::abs(v9 - 1.0) < 1e-6, "digit 9 lands at full velocity");
+        check(std::abs(v3 - 3.0 / 9.0) < 1e-6, "digit 3 lands at a third velocity");
+
+        // Swing: odd steps land late by swing * step / 2.
+        r = call(service, "{\"id\": 215, \"verb\": \"set_steps\", \"args\": {\"pattern\": " + p +
+                              ", \"unit\": " + u +
+                              ", \"pitch\": 44, \"steps\": \"x-x-xx\", \"swing\": 0.6}}");
+        check(status(r) == "ok", "swing steps ok");
+        r = call(service,
+                 "{\"id\": 216, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        bool sawSwung = false, sawStraight = false;
+        for (size_t i = 0; i < r["result"]["notes"].size(); ++i) {
+            JSON note = r["result"]["notes"][i];
+            if (note["pitch"].asNumber() != 44.0) continue;
+            const double start = note["start"].asNumber();
+            // step 5 (odd) at 1.25 + 0.6*0.125 = 1.325
+            if (std::abs(start - 1.325) < 1e-6) sawSwung = true;
+            if (std::abs(start - 1.0) < 1e-6) sawStraight = true;
+        }
+        check(sawSwung, "odd step swung late");
+        check(sawStraight, "even step stays on the grid");
+
+        // Cleanup: clear the scratch row.
+        r = call(service, "{\"id\": 217, \"verb\": \"set_steps\", \"args\": {\"pattern\": " + p +
+                              ", \"unit\": " + u + ", \"pitch\": 44, \"steps\": \"-\"}}");
+        check(status(r) == "ok", "scratch row cleared");
     }
 
     // --- Render: the beat comes back as a file with signal in it ---
