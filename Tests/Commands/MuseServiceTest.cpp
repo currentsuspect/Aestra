@@ -6,7 +6,9 @@
 
 #include "Commands/CommandRegistry.h"
 #include "Commands/MuseService.h"
+#include "Core/AudioEngine.h"
 #include "Models/TrackManager.h"
+#include "Plugin/PluginManager.h"
 
 #include "AestraJSON.h"
 
@@ -18,6 +20,7 @@
 #include <memory>
 #include <string>
 
+using Aestra::Audio::AudioEngine;
 using Aestra::Audio::CommandRegistry;
 using Aestra::Audio::MuseService;
 using Aestra::Audio::TrackManager;
@@ -45,14 +48,31 @@ std::string status(JSON& response) {
     return response.has("status") ? response["status"].asString() : "<missing>";
 }
 
-// Minimal valid PCM16 mono WAV (8 frames of silence) for load_sample.
+// Requests carrying filesystem paths must be serialized, not interpolated —
+// Windows paths contain backslashes that are invalid JSON escapes raw.
+std::string fileRequest(double id, const std::string& verb, const std::string& idKey,
+                        double idValue, const std::string& file, double tail = -1.0) {
+    JSON req = JSON::object();
+    req.set("id", JSON(id));
+    req.set("verb", JSON(verb));
+    JSON args = JSON::object();
+    args.set(idKey, JSON(idValue));
+    args.set("file", JSON(file));
+    if (tail >= 0.0) args.set("tail", JSON(tail));
+    req.set("args", args);
+    return req.toString();
+}
+
+// Minimal valid PCM16 mono WAV for load_sample: a loud 480-frame click so a
+// rendered pattern that triggers it is measurably non-silent.
 std::string writeTestWav() {
     const std::string path =
         (std::filesystem::temp_directory_path() / "muse_service_test_sample.wav").string();
     const uint32_t sampleRate = 48000;
     const uint16_t channels = 1;
     const uint16_t bitsPerSample = 16;
-    const uint32_t dataBytes = 8 * sizeof(int16_t);
+    const uint32_t numFrames = 480;
+    const uint32_t dataBytes = numFrames * sizeof(int16_t);
     const uint32_t byteRate = sampleRate * channels * bitsPerSample / 8;
     const uint16_t blockAlign = channels * bitsPerSample / 8;
 
@@ -73,8 +93,10 @@ std::string writeTestWav() {
     u16(bitsPerSample);
     std::fwrite("data", 1, 4, f);
     u32(dataBytes);
-    const int16_t silence[8] = {};
-    std::fwrite(silence, sizeof(int16_t), 8, f);
+    for (uint32_t i = 0; i < numFrames; ++i) {
+        const int16_t sample = (i % 2 == 0) ? 29000 : -29000;
+        std::fwrite(&sample, sizeof(int16_t), 1, f);
+    }
     std::fclose(f);
     return path;
 }
@@ -82,12 +104,32 @@ std::string writeTestWav() {
 } // namespace
 
 int main() {
+    // Built-ins (the sampler) register inside PluginManager::initialize();
+    // without it load_sample sets the path but never instantiates a plugin,
+    // and renders come back silent.
+    if (!Aestra::Audio::PluginManager::getInstance().initialize()) {
+        std::cout << "FAIL: plugin manager initialize\n";
+        return 1;
+    }
+
     auto trackManager = std::make_shared<TrackManager>();
     // Mirror the app wiring (AestraContent): units need the pattern manager
     // to auto-create their default MIDI pattern.
     trackManager->getUnitManager().setPatternManager(&trackManager->getPatternManager());
+
+    // Engine wired like MuseRepl so render_pattern can pump the live path.
+    AudioEngine engine;
+    engine.setSampleRate(48000);
+    engine.setBufferConfig(512, 2);
+    MuseService::wireHeadlessEngine(trackManager, engine);
+    if (!engine.initialize()) {
+        std::cout << "FAIL: engine initialize\n";
+        return 1;
+    }
+
     CommandRegistry::initialize(trackManager.get());
-    MuseService service(trackManager.get(), nullptr);
+    CommandRegistry::setAudioEngine(&engine);
+    MuseService service(trackManager.get(), &engine);
 
     // --- Protocol: malformed input never crashes, always structured error ---
     {
@@ -241,16 +283,12 @@ int main() {
     // --- Beat path: sample loading ---
     {
         JSON r = call(service,
-                      "{\"id\": 55, \"verb\": \"load_sample\", \"args\": {\"unit\": " +
-                          std::to_string(static_cast<long long>(kickUnit)) +
-                          ", \"file\": \"/nonexistent/kick.wav\"}}");
+                      fileRequest(55, "load_sample", "unit", kickUnit, "/nonexistent/kick.wav"));
         check(status(r) == "execution_error", "load_sample on missing file -> execution_error");
 
         const std::string wavPath = writeTestWav();
         check(!wavPath.empty(), "test wav written");
-        r = call(service, "{\"id\": 56, \"verb\": \"load_sample\", \"args\": {\"unit\": " +
-                              std::to_string(static_cast<long long>(kickUnit)) +
-                              ", \"file\": \"" + wavPath + "\"}}");
+        r = call(service, fileRequest(56, "load_sample", "unit", kickUnit, wavPath));
         check(status(r) == "ok", "load_sample ok");
         r = call(service, "{\"id\": 57, \"verb\": \"list_units\"}");
         check(r["result"]["units"][0]["samplePath"].asString() == wavPath,
@@ -336,6 +374,82 @@ int main() {
                  "{\"id\": 77, \"verb\": \"get_pattern\", "
                  "\"args\": {\"pattern\": 1, \"wobble\": 2}}");
         check(status(r) == "validation_error", "get_pattern unknown arg -> validation_error");
+    }
+
+    // --- Render: the beat comes back as a file with signal in it ---
+    {
+        const std::string outPath =
+            (std::filesystem::temp_directory_path() / "muse_service_test_render.wav").string();
+        std::filesystem::remove(outPath);
+
+        JSON r = call(service, "{\"id\": 80, \"verb\": \"render_pattern\"}");
+        check(status(r) == "validation_error", "render_pattern without args -> validation_error");
+
+        r = call(service, fileRequest(81, "render_pattern", "pattern", 999999.0, outPath));
+        check(status(r) == "execution_error", "render_pattern unknown pattern -> execution_error");
+
+        r = call(service, "{\"id\": 84, \"verb\": \"render_pattern\", "
+                          "\"args\": {\"pattern\": -3, \"file\": \"x.wav\"}}");
+        check(status(r) == "validation_error", "negative pattern id -> validation_error");
+
+        r = call(service, fileRequest(82, "render_pattern", "pattern", kickPattern, outPath, 0.25));
+        check(status(r) == "ok", "render_pattern ok");
+        const double frames = r["result"]["frames"].asNumber();
+        check(frames > 0.0, "render reports frames");
+        // The pattern triggers the loud test click through the sampler; a
+        // silent render means the pattern->unit->engine path is broken.
+        check(r["result"]["peakDb"].asNumber() > -90.0,
+              "rendered audio is not silent (peakDb " +
+                  std::to_string(r["result"]["peakDb"].asNumber()) + ")");
+        check(!engine.isTransportPlaying(), "engine transport stopped after render");
+
+        // The file must honor the advertised contract: IEEE-float stereo at
+        // the engine rate, with chunk sizes agreeing with reported frames.
+        {
+            std::ifstream wav(outPath, std::ios::binary);
+            check(wav.good(), "rendered wav exists");
+            char riff[4] = {}, wave[4] = {};
+            uint32_t riffSize = 0, fmtSize = 0, byteRate = 0, dataSize = 0, sampleRate = 0;
+            uint16_t format = 0, channels = 0, blockAlign = 0, bits = 0;
+            char tag[4] = {};
+            wav.read(riff, 4);
+            wav.read(reinterpret_cast<char*>(&riffSize), 4);
+            wav.read(wave, 4);
+            wav.read(tag, 4); // "fmt "
+            wav.read(reinterpret_cast<char*>(&fmtSize), 4);
+            wav.read(reinterpret_cast<char*>(&format), 2);
+            wav.read(reinterpret_cast<char*>(&channels), 2);
+            wav.read(reinterpret_cast<char*>(&sampleRate), 4);
+            wav.read(reinterpret_cast<char*>(&byteRate), 4);
+            wav.read(reinterpret_cast<char*>(&blockAlign), 2);
+            wav.read(reinterpret_cast<char*>(&bits), 2);
+            wav.read(tag, 4); // "data"
+            wav.read(reinterpret_cast<char*>(&dataSize), 4);
+            check(std::memcmp(riff, "RIFF", 4) == 0 && std::memcmp(wave, "WAVE", 4) == 0,
+                  "wav container tags");
+            check(format == 3 && channels == 2 && bits == 32,
+                  "wav is IEEE-float stereo 32-bit");
+            check(sampleRate == 48000, "wav sample rate matches engine");
+            check(dataSize == static_cast<uint32_t>(frames) * 8u,
+                  "wav data size agrees with reported frames");
+            check(std::filesystem::file_size(outPath) == 44u + dataSize,
+                  "file size agrees with header");
+            const double reported = r["result"]["durationSeconds"].asNumber();
+            check(std::abs(frames / 48000.0 - reported) < 0.001,
+                  "durationSeconds agrees with frames");
+        }
+
+        JSON bad = JSON::object();
+        bad.set("id", JSON(83.0));
+        bad.set("verb", JSON("render_pattern"));
+        JSON badArgs = JSON::object();
+        badArgs.set("pattern", JSON(kickPattern));
+        badArgs.set("file", JSON(outPath));
+        badArgs.set("wobble", JSON(1.0));
+        bad.set("args", badArgs);
+        r = call(service, bad.toString());
+        check(status(r) == "validation_error", "render_pattern unknown arg -> validation_error");
+        std::filesystem::remove(outPath);
     }
 
     std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))
