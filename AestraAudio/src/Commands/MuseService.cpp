@@ -7,6 +7,8 @@
 #include "Core/AudioEngine.h"
 #include "Core/PlaybackGraphController.h"
 #include "IO/AudioExporter.h"
+#include "Plugin/EffectChain.h"
+#include "Plugin/PluginManager.h"
 #include "Models/TrackManager.h"
 #include "Models/UnitManager.h"
 
@@ -112,7 +114,12 @@ namespace {
 bool isQueryVerb(const std::string& verb) {
     return verb == "get_transport" || verb == "list_tracks" || verb == "list_clips" ||
            verb == "get_session_state" || verb == "list_units" || verb == "get_pattern" ||
-           verb == "list_patterns";
+           verb == "list_patterns" || verb == "list_plugins" || verb == "get_effects";
+}
+
+// The few queries that take arguments; every other query rejects them.
+bool queryTakesArgs(const std::string& verb) {
+    return verb == "get_pattern" || verb == "get_effects";
 }
 
 // Service actions: handled here like queries, but they do work (render a
@@ -249,9 +256,9 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             return makeError(id, "parse_error", "unknown command: " + verb).toString();
         }
 
-        // Queries take no arguments — except get_pattern, which takes exactly
-        // one. Accepting anything else would silently drop caller intent.
-        if (isQueryVerb(verb) && verb != "get_pattern" && request.has("args") &&
+        // Most queries take no arguments; accepting any would silently drop
+        // caller intent.
+        if (isQueryVerb(verb) && !queryTakesArgs(verb) && request.has("args") &&
             request["args"].size() > 0) {
             return makeError(id, "validation_error", verb + " takes no arguments", verb).toString();
         }
@@ -408,6 +415,94 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             }
             JSON result = JSON::object();
             result.set("units", units);
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "list_plugins") {
+            JSON plugins = JSON::array();
+            for (const auto& info : PluginManager::getInstance().getEffectPlugins()) {
+                JSON entry = JSON::object();
+                entry.set("id", JSON(info.id));
+                entry.set("name", JSON(info.name));
+                entry.set("category", JSON(info.category));
+                plugins.push(entry);
+            }
+            JSON result = JSON::object();
+            result.set("effects", plugins);
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "get_effects") {
+            if (!m_trackManager) {
+                return makeError(id, "execution_error", "no track manager", verb).toString();
+            }
+            if (!request.has("args") || !request["args"].isObject()) {
+                return makeError(id, "validation_error",
+                                 "get_effects requires args: {\"track\": <index>}", verb)
+                    .toString();
+            }
+            JSON& args = request["args"];
+            for (auto& entry : args.asObject()) {
+                if (entry.first != "track") {
+                    return makeError(id, "validation_error",
+                                     "unknown arg for get_effects: " + entry.first, verb)
+                        .toString();
+                }
+            }
+            uint64_t trackIndex = 0;
+            if (!args.has("track") || !args["track"].isNumber() ||
+                !numberToId(args["track"].asNumber(), trackIndex)) {
+                return makeError(id, "validation_error",
+                                 "arg 'track' must be a non-negative integer", verb)
+                    .toString();
+            }
+            MixerChannel* channel = m_trackManager->getChannel(static_cast<size_t>(trackIndex));
+            if (!channel) {
+                return makeError(id, "execution_error",
+                                 "no such track: " + std::to_string(trackIndex), verb)
+                    .toString();
+            }
+
+            auto& chain = channel->getEffectChain();
+            JSON slots = JSON::array();
+            for (size_t slot = 0; slot < EffectChain::MAX_SLOTS; ++slot) {
+                auto plugin = chain.getPlugin(slot);
+                if (!plugin) continue;
+                JSON entry = JSON::object();
+                entry.set("slot", JSON(static_cast<double>(slot)));
+                entry.set("id", JSON(plugin->getInfo().id));
+                entry.set("name", JSON(plugin->getInfo().name));
+                entry.set("bypassed", JSON(chain.isSlotBypassed(slot)));
+                JSON params = JSON::array();
+                for (const auto& param : plugin->getParameters()) {
+                    JSON paramJson = JSON::object();
+                    paramJson.set("id", JSON(static_cast<double>(param.id)));
+                    paramJson.set("name", JSON(param.name));
+                    // Plugin output is untrusted: a NaN/Inf value would break
+                    // the JSON contract — fail loudly instead.
+                    const float value = plugin->getParameter(param.id);
+                    if (!std::isfinite(value)) {
+                        return makeError(id, "execution_error",
+                                         "plugin " + plugin->getInfo().name +
+                                             " returned a non-finite value for parameter '" +
+                                             param.name + "'",
+                                         verb)
+                            .toString();
+                    }
+                    paramJson.set("value", JSON(static_cast<double>(value)));
+                    paramJson.set("display", JSON(plugin->getParameterDisplay(param.id)));
+                    if (!param.unit.empty()) paramJson.set("unit", JSON(param.unit));
+                    params.push(paramJson);
+                }
+                entry.set("params", params);
+                slots.push(entry);
+            }
+            JSON result = JSON::object();
+            result.set("effects", slots);
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
@@ -946,7 +1041,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
         response.set("verb", JSON(verb));
         response.set("message", JSON(cmdResult.message));
         response.set("undoable", JSON(cmdResult.undoable));
-        if (cmdResult.createdId != 0) {
+        if (cmdResult.hasCreatedId) {
             // Structured id of the object the command created (e.g. the new
             // pattern from clone_pattern) — agents must not parse the message.
             JSON result = JSON::object();
