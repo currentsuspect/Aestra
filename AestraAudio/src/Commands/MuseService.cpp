@@ -11,11 +11,15 @@
 
 #include "AestraJSON.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <exception>
+#include <fstream>
 #include <unordered_map>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -73,12 +77,89 @@ JSON trackToJson(const MixerChannel& channel, size_t index) {
 MuseService::MuseService(TrackManager* trackManager, AudioEngine* engine)
     : m_trackManager(trackManager), m_engine(engine) {}
 
+void MuseService::wireHeadlessEngine(const std::shared_ptr<TrackManager>& trackManager,
+                                     AudioEngine& engine) {
+    engine.setTrackManager(trackManager);
+    engine.setUnitManager(&trackManager->getUnitManager());
+    engine.setPatternPlaybackEngine(&trackManager->getPatternPlaybackEngine());
+    engine.setContinuousParams(trackManager->getContinuousParams());
+    trackManager->buildAndShareSlotMap();
+    if (auto slotMap = trackManager->getChannelSlotMapShared()) {
+        engine.setChannelSlotMap(slotMap);
+    }
+
+    // Transport commands (play/stop/seek) travel from TrackManager to the
+    // engine through this sink — the same relay AestraContent installs.
+    TrackManager* tm = trackManager.get();
+    AudioEngine* enginePtr = &engine;
+    tm->setCommandSink([enginePtr, tm](const AudioQueueCommand& cmd) {
+        enginePtr->commandQueue().push(cmd);
+        if (cmd.type == AudioQueueCommandType::SetTransportState) {
+            const double sampleRate =
+                std::max(1.0, static_cast<double>(enginePtr->getSampleRate()));
+            tm->onTransportStateApplied(cmd.value1 != 0.0f,
+                                        static_cast<double>(cmd.samplePos) / sampleRate);
+        }
+    });
+}
+
 namespace {
 
 // Query verbs MuseService answers directly (mutations live in MuseGrammar).
 bool isQueryVerb(const std::string& verb) {
     return verb == "get_transport" || verb == "list_tracks" || verb == "list_clips" ||
            verb == "get_session_state" || verb == "list_units" || verb == "get_pattern";
+}
+
+// Service actions: handled here like queries, but they do work (render a
+// file) rather than read state. Not routed through CommandHistory — a bounce
+// is not an undoable project edit.
+bool isActionVerb(const std::string& verb) {
+    return verb == "render_pattern";
+}
+
+// JSON numbers are doubles; an id must be a non-negative integer that a
+// double represents exactly, or the cast would silently target the wrong
+// object.
+bool numberToId(double value, uint64_t& out) {
+    constexpr double kMaxExactJsonInteger = 9007199254740991.0; // 2^53 - 1
+    if (!std::isfinite(value) || value < 0.0 || value != std::floor(value) ||
+        value > kMaxExactJsonInteger) {
+        return false;
+    }
+    out = static_cast<uint64_t>(value);
+    return true;
+}
+
+// Interleaved stereo float32 WAV — the format the offline test renderer uses.
+bool writeFloat32Wav(const std::string& path, const std::vector<float>& samples,
+                     uint32_t sampleRate) {
+    std::ofstream file(path, std::ios::binary);
+    if (!file) return false;
+
+    const uint32_t dataBytes = static_cast<uint32_t>(samples.size() * sizeof(float));
+    const uint16_t channels = 2;
+    const uint16_t bitsPerSample = 32;
+    const uint16_t blockAlign = channels * bitsPerSample / 8;
+
+    auto u32 = [&](uint32_t v) { file.write(reinterpret_cast<const char*>(&v), 4); };
+    auto u16 = [&](uint16_t v) { file.write(reinterpret_cast<const char*>(&v), 2); };
+    file.write("RIFF", 4);
+    u32(36 + dataBytes);
+    file.write("WAVE", 4);
+    file.write("fmt ", 4);
+    u32(16);
+    u16(3); // IEEE float
+    u16(channels);
+    u32(sampleRate);
+    u32(sampleRate * blockAlign);
+    u16(blockAlign);
+    u16(bitsPerSample);
+    file.write("data", 4);
+    u32(dataBytes);
+    file.write(reinterpret_cast<const char*>(samples.data()), dataBytes);
+    file.close(); // a failed flush on close must not report success
+    return !file.fail();
 }
 
 const char* unitTypeName(UnitType type) {
@@ -92,7 +173,7 @@ const char* unitTypeName(UnitType type) {
 }
 
 bool isKnownVerb(const std::string& verb) {
-    if (isQueryVerb(verb)) return true;
+    if (isQueryVerb(verb) || isActionVerb(verb)) return true;
     for (const auto& cmd : MuseGrammar::allCommands()) {
         if (cmd.verb == verb) return true;
     }
@@ -318,12 +399,15 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                         .toString();
                 }
             }
-            if (!args.has("pattern") || !args["pattern"].isNumber()) {
-                return makeError(id, "validation_error", "arg 'pattern' must be a number", verb)
+            uint64_t patternValue = 0;
+            if (!args.has("pattern") || !args["pattern"].isNumber() ||
+                !numberToId(args["pattern"].asNumber(), patternValue)) {
+                return makeError(id, "validation_error",
+                                 "arg 'pattern' must be a non-negative integer", verb)
                     .toString();
             }
 
-            const PatternID patternId{static_cast<uint64_t>(args["pattern"].asNumber())};
+            const PatternID patternId{patternValue};
             const PatternSource* pattern =
                 m_trackManager->getPatternManager().getPattern(patternId);
             if (!pattern) {
@@ -352,6 +436,174 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 }
                 result.set("notes", notes);
             }
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "render_pattern") {
+            if (!m_trackManager || !m_engine) {
+                return makeError(id, "execution_error",
+                                 "render_pattern needs a track manager and an audio engine", verb)
+                    .toString();
+            }
+            if (!request.has("args") || !request["args"].isObject()) {
+                return makeError(
+                           id, "validation_error",
+                           "render_pattern requires args: {\"pattern\": <id>, \"file\": <path>}",
+                           verb)
+                    .toString();
+            }
+            JSON& args = request["args"];
+            for (auto& entry : args.asObject()) {
+                if (entry.first != "pattern" && entry.first != "file" && entry.first != "tail") {
+                    return makeError(id, "validation_error",
+                                     "unknown arg for render_pattern: " + entry.first, verb)
+                        .toString();
+                }
+            }
+            uint64_t patternValue = 0;
+            if (!args.has("pattern") || !args["pattern"].isNumber() ||
+                !numberToId(args["pattern"].asNumber(), patternValue)) {
+                return makeError(id, "validation_error",
+                                 "arg 'pattern' must be a non-negative integer", verb)
+                    .toString();
+            }
+            if (!args.has("file") || !args["file"].isString() || args["file"].asString().empty()) {
+                return makeError(id, "validation_error", "arg 'file' must be a non-empty string",
+                                 verb)
+                    .toString();
+            }
+            double tailSeconds = 1.0;
+            if (args.has("tail")) {
+                if (!args["tail"].isNumber()) {
+                    return makeError(id, "validation_error", "arg 'tail' must be a number", verb)
+                        .toString();
+                }
+                tailSeconds = args["tail"].asNumber();
+                if (!(tailSeconds >= 0.0 && tailSeconds <= 30.0)) {
+                    return makeError(id, "validation_error", "arg 'tail' must be 0..30 seconds",
+                                     verb)
+                        .toString();
+                }
+            }
+
+            const PatternID patternId{static_cast<uint64_t>(args["pattern"].asNumber())};
+            const PatternSource* pattern =
+                m_trackManager->getPatternManager().getPattern(patternId);
+            if (!pattern) {
+                return makeError(id, "execution_error",
+                                 "no such pattern: " + std::to_string(patternId.value), verb)
+                    .toString();
+            }
+            if (!pattern->isMidi()) {
+                return makeError(id, "execution_error", "pattern is not a MIDI pattern", verb)
+                    .toString();
+            }
+
+            const double bpm = std::max(1.0, static_cast<double>(m_engine->getBPM()));
+            // playPatternInArsenal resolves pattern length to at least 8 beats.
+            const double lengthBeats = std::max(8.0, pattern->lengthBeats);
+            const double durationSeconds = lengthBeats * 60.0 / bpm + tailSeconds;
+            const uint32_t sampleRate = m_engine->getSampleRate();
+            const uint64_t totalFrames =
+                static_cast<uint64_t>(durationSeconds * static_cast<double>(sampleRate));
+            constexpr uint32_t kBlockFrames = 512;
+
+            // Bound the render before touching engine state: the whole take
+            // is buffered in memory and the RIFF format caps a WAV at 4 GiB.
+            constexpr double kMaxRenderSeconds = 600.0;
+            const uint64_t dataBytes = totalFrames * 2ull * sizeof(float);
+            if (durationSeconds > kMaxRenderSeconds ||
+                36ull + dataBytes > 0xFFFFFFFFull) {
+                return makeError(id, "validation_error",
+                                 "render too long: " + std::to_string(durationSeconds) +
+                                     "s (max " + std::to_string(kMaxRenderSeconds) + "s)",
+                                 verb)
+                    .toString();
+            }
+
+            std::vector<float> rendered;
+            rendered.reserve(static_cast<size_t>(totalFrames) * 2u);
+            std::vector<float> block(static_cast<size_t>(kBlockFrames) * 2u, 0.0f);
+            float peak = 0.0f;
+            bool nonFinite = false;
+
+            {
+                // Everything after playback starts must be undone even if the
+                // pump throws: stop the transport, drain the stop command with
+                // settle blocks, and leave pattern mode (app default length).
+                struct TransportGuard {
+                    AudioEngine& engine;
+                    TrackManager& trackManager;
+                    std::vector<float>& block;
+                    ~TransportGuard() {
+                        trackManager.stop();
+                        for (int i = 0; i < 2; ++i) {
+                            std::memset(block.data(), 0, block.size() * sizeof(float));
+                            engine.processBlock(block.data(), nullptr, kBlockFrames, 0.0);
+                            engine.performNonRealtimeMaintenance();
+                        }
+                        engine.setPatternPlaybackMode(false, 4.0);
+                    }
+                } guard{*m_engine, *m_trackManager, block};
+
+                // Offline bounce through the exact live engine path, the same
+                // way the headless test renderer pumps it. Arsenal preview
+                // routing is what the user hears when a pattern plays, so it
+                // is what the agent gets back. Pattern playback needs both
+                // sides armed: the scheduler (playPatternInArsenal) and the
+                // engine's pattern mode (the app sets it wherever it starts
+                // pattern playback).
+                m_engine->setPatternPlaybackMode(true, lengthBeats);
+                m_trackManager->playPatternInArsenal(patternId, 0.0);
+
+                uint64_t framesRemaining = totalFrames;
+                while (framesRemaining > 0 && !nonFinite) {
+                    const uint32_t framesThisBlock =
+                        static_cast<uint32_t>(std::min<uint64_t>(kBlockFrames, framesRemaining));
+                    std::memset(block.data(), 0, block.size() * sizeof(float));
+                    m_engine->processBlock(block.data(), nullptr, framesThisBlock, 0.0);
+                    // The pattern scheduler's RT queue is refilled from the
+                    // control thread; offline that's us (AudioExporter does
+                    // the same per block).
+                    m_engine->performNonRealtimeMaintenance();
+                    for (uint32_t i = 0; i < framesThisBlock * 2u; ++i) {
+                        // Plugin output is untrusted: NaN/Inf must fail the
+                        // render, not land in the file as "ok".
+                        if (!std::isfinite(block[i])) {
+                            nonFinite = true;
+                            break;
+                        }
+                        peak = std::max(peak, std::abs(block[i]));
+                    }
+                    if (nonFinite) break;
+                    rendered.insert(rendered.end(), block.begin(),
+                                    block.begin() + static_cast<size_t>(framesThisBlock) * 2u);
+                    framesRemaining -= framesThisBlock;
+                }
+            }
+
+            if (nonFinite) {
+                return makeError(id, "execution_error",
+                                 "engine produced non-finite audio; render aborted", verb)
+                    .toString();
+            }
+
+            if (!writeFloat32Wav(args["file"].asString(), rendered, sampleRate)) {
+                return makeError(id, "execution_error",
+                                 "cannot write output file: " + args["file"].asString(), verb)
+                    .toString();
+            }
+
+            const double peakDb = peak > 0.0f ? 20.0 * std::log10(static_cast<double>(peak))
+                                              : -144.0;
+            JSON result = JSON::object();
+            result.set("file", JSON(args["file"].asString()));
+            result.set("durationSeconds", JSON(durationSeconds));
+            result.set("frames", JSON(static_cast<double>(totalFrames)));
+            result.set("sampleRate", JSON(static_cast<double>(sampleRate)));
+            result.set("peakDb", JSON(peakDb));
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);

@@ -22,6 +22,7 @@
 #include "Commands/CommandRegistry.h"
 #include "Commands/MuseGrammar.h"
 #include "Commands/MuseService.h"
+#include "Plugin/PluginManager.h"
 #include "TrackManager.h"
 
 #include <cctype>
@@ -63,6 +64,13 @@ int main(int argc, char** argv) {
 
     // Session setup mirrors the app's wiring: TrackManager owns the model and
     // history, AudioEngine owns transport/tempo, the registry binds both.
+    // Built-in plugins (the sampler load_sample instantiates) register inside
+    // PluginManager::initialize(); without it units stay silent.
+    if (!PluginManager::getInstance().initialize()) {
+        std::cerr << "failed to initialize plugin manager\n";
+        return 1;
+    }
+
     auto trackManager = std::make_shared<TrackManager>();
     trackManager->setOutputSampleRate(static_cast<double>(sampleRate));
     trackManager->setInputSampleRate(static_cast<double>(sampleRate));
@@ -74,6 +82,11 @@ int main(int argc, char** argv) {
     AudioEngine engine;
     engine.setSampleRate(sampleRate);
     engine.setBufferConfig(512, 2);
+    MuseService::wireHeadlessEngine(trackManager, engine);
+    if (!engine.initialize()) {
+        std::cerr << "failed to initialize audio engine\n";
+        return 1;
+    }
 
     CommandRegistry::initialize(trackManager.get());
     CommandRegistry::setAudioEngine(&engine);
