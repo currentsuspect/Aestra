@@ -2,6 +2,7 @@
 #include "ClipSource.h"
 
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -44,7 +45,9 @@ public:
      * Path is still the dedupe key: an existing source for @p filePath wins
      * regardless of the requested ID. Otherwise a valid, unused requested ID
      * is restored verbatim (advancing the mint counter past it) and an
-     * invalid or taken ID falls back to a fresh mint.
+     * invalid or taken ID falls back to a fresh mint. UINT64_MAX is never
+     * restored: bumping the counter past it would wrap to zero and poison
+     * every later mint.
      * @param requestedId Serialized source ID to restore (invalid = mint).
      * @param filePath Source file path (dedupe key).
      * @param displayName Optional user-facing name.
@@ -58,7 +61,8 @@ public:
         }
 
         ClipSourceID id{};
-        if (requestedId.isValid() && m_sources.find(requestedId.value) == m_sources.end()) {
+        if (requestedId.isValid() && requestedId.value != std::numeric_limits<uint64_t>::max()
+            && m_sources.find(requestedId.value) == m_sources.end()) {
             id = requestedId;
             if (requestedId.value >= nextId) {
                 nextId = requestedId.value + 1;

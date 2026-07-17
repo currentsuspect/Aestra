@@ -1,6 +1,7 @@
 #pragma once
 #include "PatternSource.h"
 
+#include <limits>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -195,9 +196,12 @@ private:
      *
      * Valid + unused requested IDs are restored verbatim and the mint counter
      * jumps past them so later mints can never collide with restored IDs.
+     * UINT64_MAX is never restored: bumping the counter past it would wrap
+     * to zero and poison every later mint.
      */
     PatternID claimId(PatternID requestedId) {
-        if (requestedId.isValid() && m_patterns.find(requestedId.value) == m_patterns.end()) {
+        if (requestedId.isValid() && requestedId.value != std::numeric_limits<uint64_t>::max()
+            && m_patterns.find(requestedId.value) == m_patterns.end()) {
             if (requestedId.value >= nextId) {
                 nextId = requestedId.value + 1;
             }

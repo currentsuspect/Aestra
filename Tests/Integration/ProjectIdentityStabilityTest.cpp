@@ -17,6 +17,8 @@
 //   - AestraUUID::tryParse round-trips toString() and rejects garbage
 //     (invalid/absent ids keep minting, so legacy files still load)
 //   - duplicate clip ids in a hand-edited file are re-minted, not aliased
+//   - UINT64_MAX pattern/source ids are re-minted (restoring would wrap the
+//     mint counter to zero and poison every later mint)
 
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../Support/TestTempDirectory.h"
@@ -29,6 +31,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -254,6 +257,27 @@ int main() {
         auto dupClipIds = collectClipIds(*tmDup);
         require(dupClipIds.size() == 2, "both clips must survive a duplicate-id file");
         require(dupClipIds[0] != dupClipIds[1], "duplicate clip ids must be re-minted, not aliased");
+    }
+
+    // ---------------- UINT64_MAX ids are re-minted (restoring would wrap the counter)
+    {
+        constexpr uint64_t maxId = std::numeric_limits<uint64_t>::max();
+
+        PatternManager pm;
+        const PatternID cappedPat = pm.createAudioPatternWithId(PatternID{maxId}, "max", 4.0, AudioSlicePayload{});
+        require(cappedPat.isValid() && cappedPat.value != maxId,
+                "UINT64_MAX pattern id must be re-minted, not restored");
+        const PatternID afterCapPat = pm.createAudioPattern("next", 4.0, AudioSlicePayload{});
+        require(afterCapPat.isValid() && afterCapPat.value != cappedPat.value,
+                "pattern mint after a UINT64_MAX request must stay valid and unique");
+
+        SourceManager sm;
+        const ClipSourceID cappedSrc = sm.getOrCreateSourceWithId(ClipSourceID{maxId}, (tempDir / "max_a.wav").string());
+        require(cappedSrc.isValid() && cappedSrc.value != maxId,
+                "UINT64_MAX source id must be re-minted, not restored");
+        const ClipSourceID afterCapSrc = sm.getOrCreateSourceWithId(ClipSourceID{}, (tempDir / "max_b.wav").string());
+        require(afterCapSrc.isValid() && afterCapSrc.value != cappedSrc.value,
+                "source mint after a UINT64_MAX request must stay valid and unique");
     }
 
     std::cout << "[PASS] ProjectIdentityStabilityTest\n";
