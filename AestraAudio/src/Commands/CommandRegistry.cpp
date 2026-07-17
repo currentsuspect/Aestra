@@ -1,14 +1,20 @@
 #include "Commands/CommandRegistry.h"
 #include "Commands/AddChannelCommand.h"
 #include "Commands/AddClipCommand.h"
+#include "Commands/AddNoteCommand.h"
+#include "Commands/AddUnitCommand.h"
 #include "Commands/DuplicateClipCommand.h"
+#include "Commands/LoadSampleCommand.h"
 #include "Commands/MoveClipCommand.h"
+#include "Commands/MoveNoteCommand.h"
 #include "Commands/RemoveClipCommand.h"
+#include "Commands/RemoveNoteCommand.h"
 #include "Commands/SetMuteCommand.h"
 #include "Commands/SetPanCommand.h"
 #include "Commands/SetSoloCommand.h"
 #include "Commands/SetVolumeCommand.h"
 #include "Commands/TrimClipCommand.h"
+#include "Commands/UpdateNoteCommand.h"
 #include "Commands/MuseStubs.h"
 #include "Models/ClipInstance.h"
 #include "Models/TrackManager.h"
@@ -18,9 +24,11 @@
 #include <cctype>
 #include <cmath>
 #include <exception>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <variant>
 
 namespace Aestra {
 namespace Audio {
@@ -163,6 +171,12 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         reg.registerCommand("move_clip", noopTrack);
         reg.registerCommand("duplicate_clip", noopTrack);
         reg.registerCommand("trim_clip", noopTrack);
+        reg.registerCommand("add_unit", noopTrack);
+        reg.registerCommand("load_sample", noopTrack);
+        reg.registerCommand("add_note", noopTrack);
+        reg.registerCommand("delete_note", noopTrack);
+        reg.registerCommand("move_note", noopTrack);
+        reg.registerCommand("set_note", noopTrack);
         return;
     }
 
@@ -350,6 +364,168 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         ClipInstanceID clipId;
         clipId.low = *idOpt;
         return std::make_unique<TrimClipCommand>(*pm, clipId, *startOpt, *endOpt);
+    });
+
+    // ===== Unit (2) =====
+    reg.registerCommand("add_unit", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto nameIt = flags.find("name");
+        std::string name = (nameIt != flags.end()) ? nameIt->second : "";
+        UnitType type = UnitType::Sampler;
+        auto typeIt = flags.find("type");
+        if (typeIt != flags.end()) {
+            if (typeIt->second == "808") {
+                type = UnitType::PitchedSampler;
+            } else if (typeIt->second != "sampler") {
+                return nullptr; // schema comment advertises the accepted values
+            }
+        }
+        return std::make_unique<AddUnitCommand>(tm->getUnitManager(), name, type);
+    });
+
+    reg.registerCommand("load_sample", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto unitRaw = requireFlag(flags, "unit");
+        if (!unitRaw) return nullptr;
+        auto unitOpt = safeStoull(*unitRaw);
+        if (!unitOpt) return nullptr;
+        auto fileRaw = requireFlag(flags, "file");
+        if (!fileRaw) return nullptr;
+
+        if (!tm->getUnitManager().getUnit(*unitOpt)) return nullptr;
+        std::error_code ec;
+        if (!std::filesystem::exists(std::filesystem::path(std::string(*fileRaw)), ec)) return nullptr;
+        return std::make_unique<LoadSampleCommand>(tm->getUnitManager(), *unitOpt, std::string(*fileRaw));
+    });
+
+    // ===== Pattern / note (4) =====
+    // Notes are addressed by (pattern, unit, pitch, start) — the same key the
+    // piano-roll note commands match on. `findNote` resolves that key against
+    // stored notes with a small tolerance on start, because the caller's beat
+    // value round-tripped through JSON text.
+    const auto findNote = [](TrackManager& tm, PatternID patternId, uint64_t unitId, int pitch,
+                             double startBeat) -> std::optional<MidiNote> {
+        const PatternSource* pattern = tm.getPatternManager().getPattern(patternId);
+        if (!pattern || !pattern->isMidi()) return std::nullopt;
+        for (const MidiNote& note : std::get<MidiPayload>(pattern->payload).notes) {
+            if (note.pitch == pitch && note.unitId == unitId &&
+                std::abs(note.startBeat - startBeat) < 1e-6) {
+                return note;
+            }
+        }
+        return std::nullopt;
+    };
+
+    // Shared front half: parse pattern/unit/pitch/start, which every note verb takes.
+    struct NoteKey {
+        PatternID patternId;
+        uint64_t unitId;
+        int pitch;
+        double startBeat;
+    };
+    const auto parseNoteKey =
+        [](const std::unordered_map<std::string, std::string>& flags) -> std::optional<NoteKey> {
+        auto patternRaw = requireFlag(flags, "pattern");
+        if (!patternRaw) return std::nullopt;
+        auto patternOpt = safeStoull(*patternRaw);
+        if (!patternOpt) return std::nullopt;
+        auto unitRaw = requireFlag(flags, "unit");
+        if (!unitRaw) return std::nullopt;
+        auto unitOpt = safeStoull(*unitRaw);
+        if (!unitOpt) return std::nullopt;
+        auto pitchRaw = requireFlag(flags, "pitch");
+        if (!pitchRaw) return std::nullopt;
+        auto pitchOpt = safeStoi(*pitchRaw);
+        if (!pitchOpt) return std::nullopt;
+        auto startRaw = requireFlag(flags, "start");
+        if (!startRaw) return std::nullopt;
+        auto startOpt = safeStof(*startRaw);
+        if (!startOpt) return std::nullopt;
+        return NoteKey{PatternID{*patternOpt}, *unitOpt, *pitchOpt, static_cast<double>(*startOpt)};
+    };
+
+    reg.registerCommand("add_note", [tm = trackManager, parseNoteKey](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto key = parseNoteKey(flags);
+        if (!key) return nullptr;
+        auto durationRaw = requireFlag(flags, "duration");
+        if (!durationRaw) return nullptr;
+        auto durationOpt = safeStof(*durationRaw);
+        if (!durationOpt) return nullptr;
+
+        float velocity = 0.8f;
+        if (auto it = flags.find("velocity"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            velocity = *v;
+        }
+        float pan = 0.0f;
+        if (auto it = flags.find("pan"); it != flags.end()) {
+            auto p = safeStof(it->second);
+            if (!p) return nullptr;
+            pan = *p;
+        }
+
+        const PatternSource* pattern = tm->getPatternManager().getPattern(key->patternId);
+        if (!pattern || !pattern->isMidi()) return nullptr;
+        if (!tm->getUnitManager().getUnit(key->unitId)) return nullptr;
+
+        MidiNote note;
+        note.pitch = key->pitch;
+        note.startBeat = key->startBeat;
+        note.durationBeats = static_cast<double>(*durationOpt);
+        note.velocity = velocity;
+        note.pan = pan;
+        note.unitId = key->unitId;
+        return std::make_unique<AddNoteCommand>(tm->getPatternManager(), key->patternId, note);
+    });
+
+    reg.registerCommand("delete_note", [tm = trackManager, parseNoteKey, findNote](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto key = parseNoteKey(flags);
+        if (!key) return nullptr;
+        auto note = findNote(*tm, key->patternId, key->unitId, key->pitch, key->startBeat);
+        if (!note) return nullptr;
+        return std::make_unique<RemoveNoteCommand>(tm->getPatternManager(), key->patternId, *note);
+    });
+
+    reg.registerCommand("move_note", [tm = trackManager, parseNoteKey, findNote](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto key = parseNoteKey(flags);
+        if (!key) return nullptr;
+        auto toStartRaw = requireFlag(flags, "to_start");
+        if (!toStartRaw) return nullptr;
+        auto toStartOpt = safeStof(*toStartRaw);
+        if (!toStartOpt) return nullptr;
+
+        auto note = findNote(*tm, key->patternId, key->unitId, key->pitch, key->startBeat);
+        if (!note) return nullptr;
+
+        int toPitch = note->pitch;
+        if (auto it = flags.find("to_pitch"); it != flags.end()) {
+            auto p = safeStoi(it->second);
+            if (!p) return nullptr;
+            toPitch = *p;
+        }
+        return std::make_unique<MoveNoteCommand>(tm->getPatternManager(), key->patternId, *note,
+                                                 static_cast<double>(*toStartOpt), toPitch);
+    });
+
+    reg.registerCommand("set_note", [tm = trackManager, parseNoteKey, findNote](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto key = parseNoteKey(flags);
+        if (!key) return nullptr;
+        auto note = findNote(*tm, key->patternId, key->unitId, key->pitch, key->startBeat);
+        if (!note) return nullptr;
+
+        float velocity = note->velocity;
+        if (auto it = flags.find("velocity"); it != flags.end()) {
+            auto v = safeStof(it->second);
+            if (!v) return nullptr;
+            velocity = *v;
+        }
+        float pan = note->pan;
+        if (auto it = flags.find("pan"); it != flags.end()) {
+            auto p = safeStof(it->second);
+            if (!p) return nullptr;
+            pan = *p;
+        }
+        return std::make_unique<UpdateNoteCommand>(tm->getPatternManager(), key->patternId, *note,
+                                                   velocity, pan);
     });
 }
 

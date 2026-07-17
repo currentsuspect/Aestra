@@ -67,6 +67,9 @@ int main(int argc, char** argv) {
     trackManager->setOutputSampleRate(static_cast<double>(sampleRate));
     trackManager->setInputSampleRate(static_cast<double>(sampleRate));
     trackManager->setInputChannelCount(0);
+    // The app wires this in AestraContent; without it, creating a unit does
+    // not create its default MIDI pattern.
+    trackManager->getUnitManager().setPatternManager(&trackManager->getPatternManager());
 
     AudioEngine engine;
     engine.setSampleRate(sampleRate);
