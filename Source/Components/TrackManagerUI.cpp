@@ -4372,9 +4372,11 @@ void TrackManagerUI::deleteSelectedClip() {
 AestraUI::DropFeedback TrackManagerUI::onDragEnter(const AestraUI::DragData& data, const AestraUI::NUIPoint& position) {
     Log::info("[TrackManagerUI] Drag entered");
 
-    // Accept file drops, audio clip moves, plugins, and MIDI clips
-    if (data.type != AestraUI::DragDataType::File && data.type != AestraUI::DragDataType::AudioClip &&
-        data.type != AestraUI::DragDataType::Plugin && data.type != AestraUI::DragDataType::MidiClip) {
+    // Accept file drops, plugins, patterns, and MIDI clips. (Timeline clip
+    // moves are an internal mouse drag, not a DragData transfer — see
+    // m_draggedClipId.)
+    if (data.type != AestraUI::DragDataType::File && data.type != AestraUI::DragDataType::Plugin &&
+        data.type != AestraUI::DragDataType::MidiClip && data.type != AestraUI::DragDataType::Pattern) {
         return AestraUI::DropFeedback::Invalid;
     }
 
@@ -4400,9 +4402,7 @@ AestraUI::DropFeedback TrackManagerUI::onDragEnter(const AestraUI::DragData& dat
     if (m_dropTargetTrack >= 0 && m_dropTargetTrack <= trackCount) {
         m_showDropPreview = true;
         setDirty(true);
-        // Move for clips; Copy for files and plugins
-        return data.type == AestraUI::DragDataType::AudioClip ? AestraUI::DropFeedback::Move
-                                                              : AestraUI::DropFeedback::Copy;
+        return AestraUI::DropFeedback::Copy;
     }
 
     return AestraUI::DropFeedback::Invalid;
@@ -4456,9 +4456,7 @@ AestraUI::DropFeedback TrackManagerUI::onDragOver(const AestraUI::DragData& data
         if (m_dropTargetTrack >= 0 && m_dropTargetTrack <= trackCount) {
             m_showDropPreview = true;
             setDirty(true);
-            // Move for clips; Copy for files and plugins
-            return data.type == AestraUI::DragDataType::AudioClip ? AestraUI::DropFeedback::Move
-                                                                  : AestraUI::DropFeedback::Copy;
+            return AestraUI::DropFeedback::Copy;
         } else {
             m_showDropPreview = false;
             setDirty(true);
@@ -4468,8 +4466,7 @@ AestraUI::DropFeedback TrackManagerUI::onDragOver(const AestraUI::DragData& data
 
     // Return appropriate feedback based on preview state
     if (m_showDropPreview) {
-        return data.type == AestraUI::DragDataType::AudioClip ? AestraUI::DropFeedback::Move
-                                                              : AestraUI::DropFeedback::Copy;
+        return AestraUI::DropFeedback::Copy;
     }
     return AestraUI::DropFeedback::Invalid;
 }
@@ -4531,32 +4528,7 @@ AestraUI::DropResult TrackManagerUI::onDrop(const AestraUI::DragData& data, cons
         targetLaneId = playlist.getLaneId(laneIndex);
     }
 
-    // 3. Handle AudioClip repositioning
-    if (data.type == AestraUI::DragDataType::AudioClip) {
-        ClipInstanceID clipId = ClipInstanceID::fromString(data.sourceClipIdString);
-
-        if (clipId.isValid()) {
-            auto cmd = std::make_shared<MoveClipCommand>(playlist, clipId, timePositionBeats, targetLaneId);
-            m_trackManager->getCommandHistory().pushAndExecute(cmd);
-            result.accepted = true;
-            result.message =
-                "Clip moved to lane " + std::to_string(laneIndex) + " at beat " + std::to_string(timePositionBeats);
-            Log::info("[TrackManagerUI] Clip moved via PlaylistModel: " + data.sourceClipIdString);
-        } else {
-            result.accepted = false;
-            result.message = "Invalid clip reference";
-        }
-
-        refreshTracks();
-        invalidateCache();
-        clearDropPreview();
-        refreshTracks();
-        invalidateCache();
-        clearDropPreview();
-        return result;
-    }
-
-    // 4. Handle Pattern Drop
+    // 3. Handle Pattern Drop
     if (data.type == AestraUI::DragDataType::Pattern) {
         PatternID pid;
 

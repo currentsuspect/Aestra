@@ -18,7 +18,6 @@ class NUIRenderer;
 enum class DragDataType {
     None,
     File,           // File from browser (path string)
-    AudioClip,      // Audio clip being moved in timeline
     MidiClip,       // MIDI clip being moved
     Pattern,        // Pattern from browser (to timeline)
     Plugin,         // Plugin from browser
@@ -33,14 +32,10 @@ struct DragData {
     std::string filePath;           // For file drags
     std::string displayName;        // Shown in drag ghost
     NUIColor accentColor;           // Visual feedback color
-    int sourceTrackIndex = -1;      // For clip moves
-    double sourceTimePosition = 0;  // For clip moves
     std::any customData;            // For extensibility
-    
-    // v3.0 arrangement manipulation
-    std::string sourceClipIdString; // UUID as string
-    int sourceLaneIndex = -1;
-    
+
+    std::string sourceClipIdString; // Plugin drags carry the plugin identifier here
+
     // Original dimensions for visual preview
     float previewWidth = 100.0f;
     float previewHeight = 30.0f;
