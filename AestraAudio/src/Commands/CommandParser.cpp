@@ -2,6 +2,7 @@
 #include "Commands/ClonePatternCommand.h"
 #include "Commands/CommandHistory.h"
 #include "Commands/CommandRegistry.h"
+#include "Commands/EffectCommands.h"
 
 #include <algorithm>
 #include <chrono>
@@ -166,8 +167,25 @@ CommandResult CommandParser::execute(const std::string& verb,
             }
             result.status = CommandStatus::Success;
             result.createdId = clone->getClonedPatternId().value;
+            result.hasCreatedId = true;
             result.message = "cloned pattern -> " +
                              std::to_string(clone->getClonedPatternId().value);
+            return finish(result);
+        }
+        // add_effect: the slot is how the effect is addressed afterwards.
+        // pushAndExecute swallows a throwing execute(), so confirm the insert
+        // actually happened before reporting a slot.
+        if (const auto* addEffect = dynamic_cast<const AddEffectCommand*>(shared.get())) {
+            if (!addEffect->wasExecuted()) {
+                result.status = CommandStatus::ExecutionError;
+                result.message = "failed to add effect";
+                result.undoable = false;
+                return finish(result);
+            }
+            result.status = CommandStatus::Success;
+            result.createdId = static_cast<uint64_t>(addEffect->getSlotIndex());
+            result.hasCreatedId = true;
+            result.message = "added effect in slot " + std::to_string(addEffect->getSlotIndex());
             return finish(result);
         }
     } catch (const std::exception& e) {
