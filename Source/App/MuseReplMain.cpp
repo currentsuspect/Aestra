@@ -81,7 +81,9 @@ int main(int argc, char** argv) {
 
     AudioEngine engine;
     engine.setSampleRate(sampleRate);
-    engine.setBufferConfig(512, 2);
+    // Must cover AudioExporter's 4096-frame render blocks (render_song):
+    // processBlock does not split blocks larger than the configured maximum.
+    engine.setBufferConfig(4096, 2);
     MuseService::wireHeadlessEngine(trackManager, engine);
     if (!engine.initialize()) {
         std::cerr << "failed to initialize audio engine\n";

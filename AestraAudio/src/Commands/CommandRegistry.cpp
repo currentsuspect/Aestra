@@ -3,6 +3,7 @@
 #include "Commands/AddClipCommand.h"
 #include "Commands/AddNoteCommand.h"
 #include "Commands/AddUnitCommand.h"
+#include "Commands/ArrangePatternCommand.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/LoadSampleCommand.h"
 #include "Commands/MoveClipCommand.h"
@@ -177,6 +178,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         reg.registerCommand("delete_note", noopTrack);
         reg.registerCommand("move_note", noopTrack);
         reg.registerCommand("set_note", noopTrack);
+        reg.registerCommand("arrange_pattern", noopTrack);
         return;
     }
 
@@ -504,6 +506,41 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         }
         return std::make_unique<MoveNoteCommand>(tm->getPatternManager(), key->patternId, *note,
                                                  static_cast<double>(*toStartOpt), toPitch);
+    });
+
+    reg.registerCommand("arrange_pattern", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto patternRaw = requireFlag(flags, "pattern");
+        if (!patternRaw) return nullptr;
+        auto patternOpt = safeStoull(*patternRaw);
+        if (!patternOpt) return nullptr;
+        auto trackRaw = requireFlag(flags, "track");
+        if (!trackRaw) return nullptr;
+        auto trackOpt = safeStoi(*trackRaw);
+        if (!trackOpt || *trackOpt < 0) return nullptr;
+        auto startRaw = requireFlag(flags, "start");
+        if (!startRaw) return nullptr;
+        auto startOpt = safeStof(*startRaw);
+        if (!startOpt) return nullptr;
+
+        const PatternID patternId{*patternOpt};
+        const PatternSource* pattern = tm->getPatternManager().getPattern(patternId);
+        if (!pattern || !pattern->isMidi()) return nullptr;
+        // Tracks are mixer channels; the command creates matching playlist
+        // lanes, but the channel itself must already exist.
+        if (static_cast<size_t>(*trackOpt) >= tm->getChannelCount()) return nullptr;
+
+        // A unit has a single timeline route: arranging it onto a different
+        // track would silently reroute every earlier clip that uses it.
+        // Reject the conflict instead of corrupting existing arrangements.
+        for (const MidiNote& note : std::get<MidiPayload>(pattern->payload).notes) {
+            if (note.unitId == 0) continue;
+            const int route = tm->getUnitManager().getUnitTimelineLane(note.unitId);
+            if (route >= 0 && route != *trackOpt) return nullptr;
+        }
+
+        return std::make_unique<ArrangePatternCommand>(*tm, patternId,
+                                                       static_cast<size_t>(*trackOpt),
+                                                       static_cast<double>(*startOpt));
     });
 
     reg.registerCommand("set_note", [tm = trackManager, parseNoteKey, findNote](const auto& flags) -> std::unique_ptr<ICommand> {
