@@ -116,6 +116,29 @@ static const std::vector<CommandSchema> s_schemas = {
         {"track", FlagType::Int, true, 0.0},
         {"start", FlagType::Float, true, 0.0}
     }},
+    // steps: one char per step — 'x' hit, 'X' accented hit, '-' or '.' rest.
+    // The string defines the ENTIRE row for that (unit, pitch): re-issuing
+    // the verb rewrites the groove, an all-rest string clears it.
+    {"set_steps", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"unit", FlagType::Int, true, 1.0},
+        {"pitch", FlagType::Int, true, 0.0, 127.0},
+        {"steps", FlagType::String, true},
+        {"step", FlagType::Float, false, 0.015625, 4.0},
+        {"velocity", FlagType::Float, false, 0.0, 1.0},
+        {"gate", FlagType::Float, false, 0.05, 1.0}
+    }},
+    {"quantize_pattern", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"grid", FlagType::Float, true, 0.015625, 16.0},
+        {"strength", FlagType::Float, false, 0.0, 1.0},
+        {"unit", FlagType::Int, false, 1.0}
+    }},
+    {"transpose_pattern", CommandCategory::Pattern, {
+        {"pattern", FlagType::Int, true, 1.0},
+        {"semitones", FlagType::Int, true, -48.0, 48.0},
+        {"unit", FlagType::Int, false, 1.0}
+    }},
     {"set_note", CommandCategory::Pattern, {
         {"pattern", FlagType::Int, true, 1.0},
         {"unit", FlagType::Int, true, 1.0},

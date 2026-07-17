@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <iostream>
@@ -376,6 +377,123 @@ int main() {
                  "{\"id\": 77, \"verb\": \"get_pattern\", "
                  "\"args\": {\"pattern\": 1, \"wobble\": 2}}");
         check(status(r) == "validation_error", "get_pattern unknown arg -> validation_error");
+    }
+
+    // --- Musical verbs: whole grooves in one gesture ---
+    {
+        const std::string p = std::to_string(static_cast<long long>(kickPattern));
+        const std::string u = std::to_string(static_cast<long long>(kickUnit));
+
+        JSON r = call(service,
+                      "{\"id\": 140, \"verb\": \"set_steps\", \"args\": {\"pattern\": " + p +
+                          ", \"unit\": " + u +
+                          ", \"pitch\": 40, \"steps\": \"x---X---x---X-x-\"}}");
+        check(status(r) == "ok", "set_steps writes a 16-step row");
+
+        r = call(service,
+                 "{\"id\": 141, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        size_t rowNotes = 0;
+        double accentVelocity = 0.0;
+        double plainVelocity = 0.0;
+        for (size_t i = 0; i < r["result"]["notes"].size(); ++i) {
+            JSON note = r["result"]["notes"][i];
+            if (note["pitch"].asNumber() == 40.0) {
+                ++rowNotes;
+                if (note["start"].asNumber() == 1.0) accentVelocity = note["velocity"].asNumber();
+                if (note["start"].asNumber() == 0.0) plainVelocity = note["velocity"].asNumber();
+            }
+        }
+        check(rowNotes == 5, "step string with 5 hits lands 5 notes");
+        check(accentVelocity > plainVelocity, "accented step is louder than plain step");
+
+        // Rewriting the row replaces it — the revision gesture.
+        r = call(service, "{\"id\": 142, \"verb\": \"set_steps\", \"args\": {\"pattern\": " + p +
+                              ", \"unit\": " + u + ", \"pitch\": 40, \"steps\": \"x-------\"}}");
+        check(status(r) == "ok", "rewriting the row ok");
+        r = call(service,
+                 "{\"id\": 143, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        rowNotes = 0;
+        for (size_t i = 0; i < r["result"]["notes"].size(); ++i) {
+            if (r["result"]["notes"][i]["pitch"].asNumber() == 40.0) ++rowNotes;
+        }
+        check(rowNotes == 1, "rewritten row replaced the old one");
+
+        // Undo restores the previous groove, not an empty row.
+        trackManager->getCommandHistory().undo();
+        r = call(service,
+                 "{\"id\": 144, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        rowNotes = 0;
+        for (size_t i = 0; i < r["result"]["notes"].size(); ++i) {
+            if (r["result"]["notes"][i]["pitch"].asNumber() == 40.0) ++rowNotes;
+        }
+        check(rowNotes == 5, "undoing the rewrite restores the previous row");
+
+        // Garbage in the step string is an error, not a silent rest.
+        r = call(service, "{\"id\": 145, \"verb\": \"set_steps\", \"args\": {\"pattern\": " + p +
+                              ", \"unit\": " + u + ", \"pitch\": 40, \"steps\": \"x--q\"}}");
+        check(status(r) == "execution_error", "invalid step character rejected");
+
+        // Quantize: drag an off-grid note onto the grid.
+        r = call(service, "{\"id\": 146, \"verb\": \"add_note\", \"args\": {\"pattern\": " + p +
+                              ", \"unit\": " + u +
+                              ", \"pitch\": 41, \"start\": 1.13, \"duration\": 0.5}}");
+        check(status(r) == "ok", "off-grid note added");
+        r = call(service, "{\"id\": 147, \"verb\": \"quantize_pattern\", \"args\": {\"pattern\": " +
+                              p + ", \"grid\": 0.25}}");
+        check(status(r) == "ok", "quantize_pattern ok");
+        r = call(service,
+                 "{\"id\": 148, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        double quantizedStart = -1.0;
+        for (size_t i = 0; i < r["result"]["notes"].size(); ++i) {
+            if (r["result"]["notes"][i]["pitch"].asNumber() == 41.0) {
+                quantizedStart = r["result"]["notes"][i]["start"].asNumber();
+            }
+        }
+        check(std::abs(quantizedStart - 1.25) < 1e-9, "off-grid note snapped to 1.25");
+        trackManager->getCommandHistory().undo();
+        r = call(service,
+                 "{\"id\": 149, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        for (size_t i = 0; i < r["result"]["notes"].size(); ++i) {
+            if (r["result"]["notes"][i]["pitch"].asNumber() == 41.0) {
+                quantizedStart = r["result"]["notes"][i]["start"].asNumber();
+            }
+        }
+        // 1.13 crossed the JSON->flag->float boundary, so compare at float
+        // precision.
+        check(std::abs(quantizedStart - 1.13) < 1e-6, "undo restores the exact off-grid start");
+
+        // Transpose: shift the whole pattern up an octave and back.
+        r = call(service,
+                 "{\"id\": 150, \"verb\": \"transpose_pattern\", \"args\": {\"pattern\": " + p +
+                     ", \"semitones\": 12}}");
+        check(status(r) == "ok", "transpose up an octave ok");
+        r = call(service,
+                 "{\"id\": 151, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        bool sawShifted = false;
+        for (size_t i = 0; i < r["result"]["notes"].size(); ++i) {
+            if (r["result"]["notes"][i]["pitch"].asNumber() == 52.0) sawShifted = true;
+        }
+        check(sawShifted, "row pitch 40 reads back at 52 after transpose");
+        trackManager->getCommandHistory().undo();
+
+        // Out-of-range transpose is rejected, state untouched.
+        r = call(service,
+                 "{\"id\": 152, \"verb\": \"transpose_pattern\", \"args\": {\"pattern\": " + p +
+                     ", \"semitones\": -48}}");
+        check(status(r) == "execution_error", "transpose past MIDI range rejected");
+
+        // Cleanup: drop the scratch notes so later sections see the original
+        // two-note pattern.
+        r = call(service, "{\"id\": 153, \"verb\": \"delete_note\", \"args\": {\"pattern\": " + p +
+                              ", \"unit\": " + u + ", \"pitch\": 41, \"start\": 1.13}}");
+        check(status(r) == "ok", "scratch quantize note removed");
+        r = call(service, "{\"id\": 154, \"verb\": \"set_steps\", \"args\": {\"pattern\": " + p +
+                              ", \"unit\": " + u +
+                              ", \"pitch\": 40, \"steps\": \"----------------\"}}");
+        check(status(r) == "ok", "row cleared with an all-rest step string");
+        r = call(service,
+                 "{\"id\": 155, \"verb\": \"get_pattern\", \"args\": {\"pattern\": " + p + "}}");
+        check(r["result"]["notes"].size() == 2, "pattern back to its two original notes");
     }
 
     // --- Render: the beat comes back as a file with signal in it ---
