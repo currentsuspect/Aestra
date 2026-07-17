@@ -3,6 +3,7 @@
 
 #include "Commands/CommandParser.h"
 #include "Commands/CommandResult.h"
+#include "Commands/CommandTransaction.h"
 #include "Core/AudioEngine.h"
 #include "Models/TrackManager.h"
 #include "Models/UnitManager.h"
@@ -112,10 +113,34 @@ bool isQueryVerb(const std::string& verb) {
 }
 
 // Service actions: handled here like queries, but they do work (render a
-// file) rather than read state. Not routed through CommandHistory — a bounce
-// is not an undoable project edit.
+// file, run a batch) rather than read state. render_pattern is not routed
+// through CommandHistory — a bounce is not an undoable project edit; batch
+// pushes one CommandTransaction so the whole group is a single undo step.
 bool isActionVerb(const std::string& verb) {
-    return verb == "render_pattern";
+    return verb == "render_pattern" || verb == "batch";
+}
+
+// JSON args -> flag map for the schema/registry path. Returns false with
+// outError set when a value has a type the flag grammar cannot carry.
+bool jsonArgsToFlags(JSON& args, std::unordered_map<std::string, std::string>& outFlags,
+                     std::string& outError) {
+    // Non-const asObject() returns a copy of the map (the const overload
+    // returns an empty static — a known footgun).
+    for (auto& entry : args.asObject()) {
+        const std::string& key = entry.first;
+        JSON& value = entry.second;
+        if (value.isString()) {
+            outFlags[key] = value.asString();
+        } else if (value.isNumber()) {
+            outFlags[key] = numberToFlagString(value.asNumber());
+        } else if (value.isBool()) {
+            outFlags[key] = value.asBool() ? "true" : "false";
+        } else {
+            outError = "arg '" + key + "' must be a string, number, or bool";
+            return false;
+        }
+    }
+    return true;
 }
 
 // JSON numbers are doubles; an id must be a non-negative integer that a
@@ -441,6 +466,141 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             return finish(response);
         }
 
+        if (verb == "batch") {
+            if (!m_trackManager) {
+                return makeError(id, "execution_error", "no track manager", verb).toString();
+            }
+            if (!request.has("args") || !request["args"].isObject()) {
+                return makeError(id, "validation_error",
+                                 "batch requires args: {\"commands\": [{\"verb\": ..., \"args\": "
+                                 "...}, ...]}",
+                                 verb)
+                    .toString();
+            }
+            JSON& args = request["args"];
+            for (auto& entry : args.asObject()) {
+                if (entry.first != "commands") {
+                    return makeError(id, "validation_error",
+                                     "unknown arg for batch: " + entry.first, verb)
+                        .toString();
+                }
+            }
+            if (!args.has("commands") || !args["commands"].isArray()) {
+                return makeError(id, "validation_error", "arg 'commands' must be an array", verb)
+                    .toString();
+            }
+            JSON& commands = args["commands"];
+            const size_t count = commands.size();
+            constexpr size_t kMaxBatchCommands = 64;
+            if (count == 0) {
+                return makeError(id, "validation_error", "batch must contain at least one command",
+                                 verb)
+                    .toString();
+            }
+            if (count > kMaxBatchCommands) {
+                return makeError(id, "validation_error",
+                                 "batch too large: " + std::to_string(count) + " commands (max " +
+                                     std::to_string(kMaxBatchCommands) + ")",
+                                 verb)
+                    .toString();
+            }
+
+            // All-or-nothing, stepwise: each member is validated, built, and
+            // executed against the state its predecessors produced — so a
+            // batch can set the pan of a track it just added. On any failure
+            // the executed prefix is undone in reverse and nothing is
+            // recorded. On success the whole group lands in history as one
+            // already-executed CommandTransaction: a single undo step.
+            CommandParser parser;
+            auto transaction = std::make_shared<CommandTransaction>("Muse Batch");
+            std::vector<std::shared_ptr<ICommand>> executed;
+            executed.reserve(count);
+            // Unwind the executed prefix in reverse and produce the final
+            // error response. A rollback failure must not hide behind the
+            // member error: the response then reports execution_error and
+            // says the session may be inconsistent.
+            const auto failBatch = [&](const char* errorStatus,
+                                       const std::string& message) -> std::string {
+                bool rollbackClean = true;
+                for (auto it = executed.rbegin(); it != executed.rend(); ++it) {
+                    try {
+                        (*it)->undo();
+                    } catch (...) {
+                        // Keep unwinding the rest of the prefix, but remember.
+                        rollbackClean = false;
+                    }
+                }
+                if (!rollbackClean) {
+                    return makeError(id, "execution_error",
+                                     message +
+                                         " (rollback also failed; session state may be "
+                                         "inconsistent)",
+                                     verb)
+                        .toString();
+                }
+                return makeError(id, errorStatus, message, verb).toString();
+            };
+
+            for (size_t i = 0; i < count; ++i) {
+                const std::string prefix = "commands[" + std::to_string(i) + "]: ";
+                JSON& item = commands[i];
+                if (!item.isObject() || !item.has("verb") || !item["verb"].isString()) {
+                    return failBatch("validation_error",
+                                     prefix + "must be an object with a string verb");
+                }
+                const std::string subVerb = item["verb"].asString();
+                if (isQueryVerb(subVerb) || isActionVerb(subVerb)) {
+                    return failBatch("validation_error",
+                                     prefix + "only mutation verbs are allowed in a batch");
+                }
+
+                std::unordered_map<std::string, std::string> flags;
+                if (item.has("args")) {
+                    if (!item["args"].isObject()) {
+                        return failBatch("validation_error", prefix + "args must be an object");
+                    }
+                    std::string convertError;
+                    if (!jsonArgsToFlags(item["args"], flags, convertError)) {
+                        return failBatch("validation_error", prefix + convertError);
+                    }
+                }
+
+                CommandStatus buildStatus = CommandStatus::Success;
+                std::string buildMessage;
+                auto built = parser.buildValidated(subVerb, flags, buildStatus, buildMessage);
+                if (!built) {
+                    return failBatch(statusName(buildStatus), prefix + buildMessage);
+                }
+
+                std::shared_ptr<ICommand> cmd(std::move(built));
+                try {
+                    cmd->execute();
+                } catch (const std::exception& e) {
+                    return failBatch("execution_error", prefix + e.what());
+                } catch (...) {
+                    return failBatch("execution_error", prefix + "command threw");
+                }
+                executed.push_back(cmd);
+                transaction->add(cmd);
+            }
+
+            transaction->markExecuted();
+            if (!m_trackManager->getCommandHistory().pushExecuted(transaction)) {
+                // Executed but not recorded (e.g. a deferred transaction is
+                // active on this history). "ok, undoable" would be a lie —
+                // keep all-or-nothing honest by rolling the batch back.
+                return failBatch("execution_error",
+                                 "batch could not be recorded in history; rolled back");
+            }
+
+            JSON result = JSON::object();
+            result.set("count", JSON(static_cast<double>(count)));
+            JSON response = makeOk();
+            response.set("result", result);
+            response.set("undoable", JSON(true));
+            return finish(response);
+        }
+
         if (verb == "render_pattern") {
             if (!m_trackManager || !m_engine) {
                 return makeError(id, "execution_error",
@@ -624,22 +784,9 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             if (!args.isObject()) {
                 return makeError(id, "parse_error", "args must be an object", verb).toString();
             }
-            // Non-const asObject() returns a copy of the map (the const
-            // overload returns an empty static — a known footgun).
-            for (auto& entry : args.asObject()) {
-                const std::string& key = entry.first;
-                JSON& value = entry.second;
-                if (value.isString()) {
-                    flags[key] = value.asString();
-                } else if (value.isNumber()) {
-                    flags[key] = numberToFlagString(value.asNumber());
-                } else if (value.isBool()) {
-                    flags[key] = value.asBool() ? "true" : "false";
-                } else {
-                    return makeError(id, "parse_error",
-                                     "arg '" + key + "' must be a string, number, or bool", verb)
-                        .toString();
-                }
+            std::string convertError;
+            if (!jsonArgsToFlags(args, flags, convertError)) {
+                return makeError(id, "parse_error", convertError, verb).toString();
             }
         }
 

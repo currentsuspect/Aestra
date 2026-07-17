@@ -452,6 +452,91 @@ int main() {
         std::filesystem::remove(outPath);
     }
 
+    // --- Batch: all-or-nothing groups that undo as one step ---
+    {
+        // Baseline state for this section.
+        JSON r = call(service, "{\"id\": 90, \"verb\": \"list_tracks\"}");
+        const size_t tracksBefore = r["result"]["tracks"].size();
+        const bool muteBefore = r["result"]["tracks"][0]["muted"].asBool();
+
+        r = call(service,
+                 "{\"id\": 91, \"verb\": \"batch\", \"args\": {\"commands\": ["
+                 "{\"verb\": \"add_track\", \"args\": {\"name\": \"Perc\"}},"
+                 "{\"verb\": \"set_volume\", \"args\": {\"track\": 0, \"value\": 0.25}},"
+                 "{\"verb\": \"mute_track\", \"args\": {\"track\": 0, \"state\": " +
+                     std::string(muteBefore ? "false" : "true") + "}}]}}");
+        check(status(r) == "ok", "batch of three mutations ok");
+        check(r["result"]["count"].asNumber() == 3.0, "batch reports member count");
+        check(r["undoable"].asBool(), "batch is undoable");
+
+        r = call(service, "{\"id\": 92, \"verb\": \"list_tracks\"}");
+        check(r["result"]["tracks"].size() == tracksBefore + 1, "batch added the track");
+        const double vol = r["result"]["tracks"][0]["volume"].asNumber();
+        check(vol > 0.24 && vol < 0.26 &&
+                  r["result"]["tracks"][0]["muted"].asBool() == !muteBefore,
+              "batch applied volume and mute flip");
+
+        // One undo reverts the entire batch.
+        trackManager->getCommandHistory().undo();
+        r = call(service, "{\"id\": 93, \"verb\": \"list_tracks\"}");
+        check(r["result"]["tracks"].size() == tracksBefore, "single undo removes batch track");
+        check(r["result"]["tracks"][0]["muted"].asBool() == muteBefore,
+              "single undo reverts mute from the same batch");
+
+        // Dependent batch: members run against the state their predecessors
+        // produced, so a batch can configure the track it just added.
+        r = call(service,
+                 "{\"id\": 101, \"verb\": \"batch\", \"args\": {\"commands\": ["
+                 "{\"verb\": \"add_track\", \"args\": {\"name\": \"Lead\"}},"
+                 "{\"verb\": \"set_pan\", \"args\": {\"track\": " +
+                     std::to_string(tracksBefore) + ", \"value\": -0.5}}]}}");
+        check(status(r) == "ok", "dependent batch (pan the track it added) ok");
+        r = call(service, "{\"id\": 102, \"verb\": \"list_tracks\"}");
+        const double newPan = r["result"]["tracks"][tracksBefore]["pan"].asNumber();
+        check(newPan < -0.49 && newPan > -0.51, "dependent batch applied pan to new track");
+        trackManager->getCommandHistory().undo();
+        r = call(service, "{\"id\": 103, \"verb\": \"list_tracks\"}");
+        check(r["result"]["tracks"].size() == tracksBefore, "dependent batch undoes as one step");
+
+        // A failing member anywhere means nothing executes — including
+        // rolling back members that already ran.
+        r = call(service,
+                 "{\"id\": 94, \"verb\": \"batch\", \"args\": {\"commands\": ["
+                 "{\"verb\": \"add_track\", \"args\": {\"name\": \"Ghost\"}},"
+                 "{\"verb\": \"set_volume\", \"args\": {\"track\": 0, \"value\": 9.0}}"
+                 "]}}");
+        check(status(r) == "validation_error" &&
+                  r["message"].asString().find("commands[1]") != std::string::npos,
+              "invalid member -> validation_error naming the index");
+        r = call(service, "{\"id\": 95, \"verb\": \"list_tracks\"}");
+        check(r["result"]["tracks"].size() == tracksBefore,
+              "failed batch executed nothing (no Ghost track)");
+
+        // Contract: shape errors and non-mutation members are rejected.
+        r = call(service, "{\"id\": 96, \"verb\": \"batch\", \"args\": {\"commands\": []}}");
+        check(status(r) == "validation_error", "empty batch -> validation_error");
+
+        r = call(service,
+                 "{\"id\": 97, \"verb\": \"batch\", \"args\": {\"commands\": ["
+                 "{\"verb\": \"list_tracks\"}]}}");
+        check(status(r) == "validation_error", "query verb inside batch -> validation_error");
+
+        r = call(service,
+                 "{\"id\": 98, \"verb\": \"batch\", \"args\": {\"commands\": ["
+                 "{\"verb\": \"batch\", \"args\": {\"commands\": []}}]}}");
+        check(status(r) == "validation_error", "nested batch -> validation_error");
+
+        r = call(service, "{\"id\": 99, \"verb\": \"batch\"}");
+        check(status(r) == "validation_error", "batch without args -> validation_error");
+
+        r = call(service,
+                 "{\"id\": 100, \"verb\": \"batch\", \"args\": {\"commands\": ["
+                 "{\"verb\": \"warp_reality\"}]}}");
+        check(status(r) == "parse_error" &&
+                  r["message"].asString().find("commands[0]") != std::string::npos,
+              "unknown verb inside batch -> parse_error naming the index");
+    }
+
     std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))
               << std::endl;
     return g_failures == 0 ? 0 : 1;
