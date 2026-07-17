@@ -39,6 +39,44 @@ public:
     }
 
     /**
+     * @brief Get or create a source restoring a serialized identity (#446).
+     *
+     * Path is still the dedupe key: an existing source for @p filePath wins
+     * regardless of the requested ID. Otherwise a valid, unused requested ID
+     * is restored verbatim (advancing the mint counter past it) and an
+     * invalid or taken ID falls back to a fresh mint.
+     * @param requestedId Serialized source ID to restore (invalid = mint).
+     * @param filePath Source file path (dedupe key).
+     * @param displayName Optional user-facing name.
+     * @return Source ID (returns ClipSourceID{0} on failure)
+     */
+    ClipSourceID getOrCreateSourceWithId(ClipSourceID requestedId, const std::string& filePath,
+                                         const std::string& displayName = {}) {
+        auto it = m_pathToId.find(filePath);
+        if (it != m_pathToId.end()) {
+            return it->second;
+        }
+
+        ClipSourceID id{};
+        if (requestedId.isValid() && m_sources.find(requestedId.value) == m_sources.end()) {
+            id = requestedId;
+            if (requestedId.value >= nextId) {
+                nextId = requestedId.value + 1;
+            }
+        } else {
+            id = ClipSourceID{nextId++};
+        }
+
+        auto source = std::make_unique<ClipSource>(id, displayName.empty() ? makeDisplayName(filePath) : displayName);
+        source->setFilePath(filePath);
+
+        m_sources[id.value] = std::move(source);
+        m_pathToId[filePath] = id;
+
+        return id;
+    }
+
+    /**
      * @brief Create or replace a source for a recorded take.
      * @param filePath Stable file path written for the take.
      * @param displayName User-facing clip name.

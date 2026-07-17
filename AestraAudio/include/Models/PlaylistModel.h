@@ -81,10 +81,26 @@ public:
      * @return Identifier of the created lane.
      */
     PlaylistLaneID createLane(const std::string& name = "") {
+        return createLaneWithId(PlaylistLaneID{}, name);
+    }
+
+    /**
+     * @brief Create a lane restoring a serialized identity (#446).
+     *
+     * A valid, unused requested ID becomes the lane's ID; an invalid or taken
+     * one falls back to the generated ID so old files keep loading.
+     * @param requestedId Serialized lane ID to restore (invalid = generate).
+     * @param name Lane display name.
+     * @return The created lane's ID.
+     */
+    PlaylistLaneID createLaneWithId(const PlaylistLaneID& requestedId, const std::string& name = "") {
         std::unique_lock<std::shared_mutex> lock(m_mutex);
 
         PlaylistLane lane(static_cast<int>(m_lanes.size()));
         lane.name = name.empty() ? "Track " + std::to_string(lane.index + 1) : name;
+        if (requestedId.isValid() && m_laneMap.find(requestedId) == m_laneMap.end()) {
+            lane.id = requestedId;
+        }
 
         PlaylistLaneID id = lane.id;
         m_lanes.push_back(std::move(lane));

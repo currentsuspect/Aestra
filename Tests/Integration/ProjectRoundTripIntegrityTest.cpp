@@ -310,7 +310,10 @@ void testArsenalDefaultPatternRebindsAfterLoad() {
     const auto* unit = tm->getUnitManager().getUnit(7);
     assert(unit);
     assert(unit->defaultPatternId.isValid());
-    assert(unit->defaultPatternId.value != 42);
+    // Serialized pattern identity is restored on load since #446, so the
+    // rebind map resolves 42 -> 42. The binding itself (unit points at the
+    // pattern that carries its notes) is what this test guards.
+    assert(unit->defaultPatternId.value == 42);
 
     const auto* pattern = tm->getPatternManager().getPattern(unit->defaultPatternId);
     assert(pattern);
