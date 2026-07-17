@@ -33,6 +33,7 @@
 #include <cmath>
 #include <exception>
 #include <filesystem>
+#include <limits>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -862,7 +863,8 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         // param is a name (case-insensitive) or a numeric id from get_effects.
         const auto params = plugin->getParameters();
         const PluginParameter* target = nullptr;
-        if (auto numeric = safeStoi(*paramRaw)) {
+        if (auto numeric = safeStoull(*paramRaw);
+            numeric && *numeric <= std::numeric_limits<uint32_t>::max()) {
             for (const auto& param : params) {
                 if (param.id == static_cast<uint32_t>(*numeric)) {
                     target = &param;

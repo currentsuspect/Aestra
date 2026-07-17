@@ -482,8 +482,18 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                     JSON paramJson = JSON::object();
                     paramJson.set("id", JSON(static_cast<double>(param.id)));
                     paramJson.set("name", JSON(param.name));
-                    paramJson.set("value",
-                                  JSON(static_cast<double>(plugin->getParameter(param.id))));
+                    // Plugin output is untrusted: a NaN/Inf value would break
+                    // the JSON contract — fail loudly instead.
+                    const float value = plugin->getParameter(param.id);
+                    if (!std::isfinite(value)) {
+                        return makeError(id, "execution_error",
+                                         "plugin " + plugin->getInfo().name +
+                                             " returned a non-finite value for parameter '" +
+                                             param.name + "'",
+                                         verb)
+                            .toString();
+                    }
+                    paramJson.set("value", JSON(static_cast<double>(value)));
                     paramJson.set("display", JSON(plugin->getParameterDisplay(param.id)));
                     if (!param.unit.empty()) paramJson.set("unit", JSON(param.unit));
                     params.push(paramJson);

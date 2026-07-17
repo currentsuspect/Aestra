@@ -50,6 +50,8 @@ public:
     bool changesProjectState() const override { return true; }
 
     size_t getSlotIndex() const { return m_slotIndex; }
+    /** True once execute() actually inserted the plugin (see CommandParser). */
+    bool wasExecuted() const { return m_executed; }
 
 private:
     TrackManager& m_trackManager;

@@ -173,7 +173,15 @@ CommandResult CommandParser::execute(const std::string& verb,
             return finish(result);
         }
         // add_effect: the slot is how the effect is addressed afterwards.
+        // pushAndExecute swallows a throwing execute(), so confirm the insert
+        // actually happened before reporting a slot.
         if (const auto* addEffect = dynamic_cast<const AddEffectCommand*>(shared.get())) {
+            if (!addEffect->wasExecuted()) {
+                result.status = CommandStatus::ExecutionError;
+                result.message = "failed to add effect";
+                result.undoable = false;
+                return finish(result);
+            }
             result.status = CommandStatus::Success;
             result.createdId = static_cast<uint64_t>(addEffect->getSlotIndex());
             result.hasCreatedId = true;
