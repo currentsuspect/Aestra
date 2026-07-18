@@ -42,7 +42,10 @@ public:
     // =============================================================================
     
     /**
-     * @brief Serialization callback - called on background thread to get project data
+     * @brief Serialization callback used to capture project data.
+     *
+     * Called on the background thread by default, or by
+     * captureSnapshotIfDue() when owner-thread capture is enabled.
      * @param outData Output string to fill with serialized project data
      * @return true if serialization succeeded
      */
@@ -63,6 +66,11 @@ public:
 
         // Serialization callback (REQUIRED)
         SerializerFunc serializer;
+
+        // When true, the owner must call captureSnapshotIfDue() from the thread
+        // that owns the serialized model. The background thread then performs
+        // only backup rotation and file I/O on the immutable captured string.
+        bool captureSnapshotOnCallingThread{false};
 
         // Optional explicit autosave path. When set, overrides the derived
         // path from getAutosavePathForProject(). Used when the application
@@ -133,7 +141,7 @@ public:
     // =============================================================================
     
     void setEnabled(bool enabled);
-    bool isEnabled() const { return m_config.enabled; }
+    bool isEnabled() const { return m_enabled.load(std::memory_order_acquire); }
     
     /**
      * @brief Force an immediate autosave (even if not dirty)
@@ -151,6 +159,16 @@ public:
      * @return true if an autosave was performed.
      */
     bool autosaveIfDue();
+
+    /**
+     * @brief Capture one due snapshot on the calling/model-owner thread.
+     *
+     * Valid only when Config::captureSnapshotOnCallingThread is true. The
+     * serialized string is queued for background commit, so this call performs
+     * no file I/O. A concurrent markDirty() remains pending for the next capture.
+     * @return true if a snapshot was captured and queued.
+     */
+    bool captureSnapshotIfDue();
     
     std::string getAutosavePath() const;
     std::string getBackupDirectory() const;
@@ -180,6 +198,9 @@ public:
 private:
     void autosaveThreadFunc();
     bool performAutosave();
+    bool performAutosaveWithData(std::string data, uint64_t generation);
+    bool writeAutosaveData(const std::string& data, uint64_t generation);
+    bool claimDirtyIfDue();
     void rotateBackups();
     void notifyStatus(const std::string& msg);
     void notifyError(const std::string& err);
@@ -194,6 +215,8 @@ private:
     std::atomic<bool> m_isAutosaving{false};
     std::atomic<bool> m_shouldStop{false};
     std::atomic<bool> m_initialized{false};
+    std::atomic<bool> m_enabled{false};
+    std::atomic<uint64_t> m_nextSnapshotGeneration{1};
     
     // steady_clock milliseconds since epoch. Atomic so markDirty() (callable from
     // any thread) and the autosave gate can write/read it without the mutex.
@@ -202,7 +225,12 @@ private:
     
     std::unique_ptr<std::thread> m_autosaveThread;
     mutable std::mutex m_mutex;
+    std::mutex m_commitMutex;
     std::condition_variable m_cv;
+    std::string m_pendingSnapshot;
+    uint64_t m_pendingSnapshotGeneration{0};
+    uint64_t m_lastCommittedGeneration{0}; // guarded by m_commitMutex
+    bool m_hasPendingSnapshot{false};
     
     StatusCallback m_onStatus;
     ErrorCallback m_onError;
