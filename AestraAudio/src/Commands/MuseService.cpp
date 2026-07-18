@@ -2,6 +2,7 @@
 #include "Commands/MuseService.h"
 
 #include "Commands/CommandParser.h"
+#include "Commands/MuseGrammar.h"
 #include "Commands/CommandResult.h"
 #include "Commands/CommandTransaction.h"
 #include "Core/AudioEngine.h"
@@ -124,7 +125,7 @@ bool isQueryVerb(const std::string& verb) {
     return verb == "get_transport" || verb == "list_tracks" || verb == "list_clips" ||
            verb == "get_session_state" || verb == "list_units" || verb == "get_pattern" ||
            verb == "list_patterns" || verb == "list_plugins" || verb == "get_effects" ||
-           verb == "list_samples" || verb == "get_meters";
+           verb == "list_samples" || verb == "get_meters" || verb == "get_schema";
 }
 
 // The few queries that take arguments; every other query rejects them.
@@ -426,6 +427,15 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             }
             JSON result = JSON::object();
             result.set("units", units);
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "get_schema") {
+            // The tool manifest, over the wire: a socket client can bootstrap
+            // without access to the binary's --schema flag.
+            JSON result = JSON::parse(MuseGrammar::schemaToJsonString());
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
