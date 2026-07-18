@@ -560,6 +560,15 @@ else()
     message(STATUS "AestraRealtimePathStressTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
 endif()
 
+add_executable(RealtimeObjectPublisherTest AestraAudio/RealtimeObjectPublisherTest.cpp)
+target_link_libraries(RealtimeObjectPublisherTest PRIVATE Threads::Threads)
+target_include_directories(RealtimeObjectPublisherTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RealtimeObjectPublisherTest COMMAND RealtimeObjectPublisherTest)
+set_tests_properties(RealtimeObjectPublisherTest PROPERTIES LABELS "audio;rt-safety;reclamation;regression")
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     add_executable(SamplerStereoParityTest AestraAudio/SamplerStereoParityTest.cpp)
     target_link_libraries(SamplerStereoParityTest PRIVATE AestraAudio)
