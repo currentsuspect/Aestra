@@ -126,10 +126,13 @@ void AestraApp::writeCrashFlag() {
         // right after startup can lose it to the OS cache — exactly the case
         // crash detection exists for (issue #284).
         if (!Aestra::syncOfstream(out, flagPath)) {
+            // Best-effort: the unsynced flag stays on disk, but don't log success.
             Log::warning("[CrashDetection] Failed to sync crash flag: " + flagPath);
+            out.close();
+        } else {
+            out.close();
+            Log::info("[CrashDetection] Wrote crash flag: " + flagPath);
         }
-        out.close();
-        Log::info("[CrashDetection] Wrote crash flag: " + flagPath);
     } else {
         Log::warning("[CrashDetection] Failed to write crash flag: " + flagPath);
     }
