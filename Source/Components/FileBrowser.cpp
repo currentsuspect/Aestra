@@ -1607,6 +1607,102 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
+    if (handleChromeMouse(event, browserLayout)) {
+        return true;
+    }
+
+    // Claim keyboard focus when interacting with the file browser (so it can own arrow-key navigation).
+    if (event.pressed && event.button == NUIMouseButton::Left) {
+        if (bounds.contains(event.position)) {
+            // If the click is on the search input, it will take focus itself.
+            if (!searchInput_ || !searchInput_->getBounds().contains(event.position)) {
+                setFocused(true);
+            }
+        }
+    }
+
+    if (handleActiveDragMouse(event)) {
+        return true;
+    }
+
+    // Popup menu handling (context + dropdowns)
+    if (NUIComponent::onMouseEvent(event)) {
+        return true;
+    }
+    if (popupMenu_ && popupMenu_->isVisible() &&
+        event.pressed && (event.button == NUIMouseButton::Left || event.button == NUIMouseButton::Right) &&
+        !popupMenu_->getBounds().contains(event.position)) {
+        hidePopupMenu();
+        // Continue processing the click (e.g., select item) after closing.
+    }
+
+    if (handleDragInitiation(event, view)) {
+        return true;
+    }
+
+    // If we're dragging the scrollbar, handle mouse events even outside bounds
+    if (isDraggingScrollbar_) {
+        // Always check scrollbar events if we're dragging
+        if (handleScrollbarMouseEvent(event)) {
+            return true;
+        }
+    }
+
+    // Check if mouse is within bounds
+    bool mouseInside = bounds.contains(event.position.x, event.position.y);
+
+    if (handleNavigationMouseEvent(event, browserLayout)) {
+        return true;
+    }
+
+    if (handleWheelScroll(event, browserLayout, mouseInside, view)) {
+        return true;
+    }
+
+    // Clear hover if mouse leaves the file browser entirely (but allow scrollbar dragging)
+    if (!mouseInside && !isDraggingScrollbar_) {
+        bool dirty = false;
+        if (hoveredIndex_ != -1) {
+            hoveredIndex_ = -1;
+            dirty = true;
+        }
+        if (dirty)
+            setDirty(true); // hover overlay only — no cache rebuild
+        return false;
+    }
+
+    // Scrollbar visibility for this event (list overflow)
+    const float contentHeight = view.size() * itemHeight;
+    const float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
+    const bool needsScrollbar = maxScroll > 0.0f;
+
+    updateBreadcrumbHover(event);
+
+    // Breadcrumb interaction
+    if (handleBreadcrumbMouseEvent(event)) {
+        return true;
+    }
+
+    // Check scrollbar events if scrollbar is needed (but not dragging - handled above)
+    if (needsScrollbar && !view.empty() && !isDraggingScrollbar_) {
+        if (handleScrollbarMouseEvent(event)) {
+            return true;
+        }
+    }
+
+    if (handleListMouse(event, view, browserLayout)) {
+        return true;
+    }
+
+    if (mouseInside && event.pressed && event.button == NUIMouseButton::Right) {
+        hidePopupMenu();
+        return true;
+    }
+
+    return false;
+}
+
+bool FileBrowser::handleChromeMouse(const NUIMouseEvent& event, const BrowserLayout& browserLayout) {
     ChromeAction newChromeAction = ChromeAction::None;
     if (!event.cursorCaptured) {
         if (browserLayout.backButton.contains(event.position)) newChromeAction = ChromeAction::Back;
@@ -1636,20 +1732,11 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         }
         return true;
     }
+    return false;
+}
 
-    // Claim keyboard focus when interacting with the file browser (so it can own arrow-key navigation).
-    if (event.pressed && event.button == NUIMouseButton::Left) {
-        if (bounds.contains(event.position)) {
-            // If the click is on the search input, it will take focus itself.
-            if (!searchInput_ || !searchInput_->getBounds().contains(event.position)) {
-                setFocused(true);
-            }
-        }
-    }
-
-    // === DRAG AND DROP HANDLING ===
+bool FileBrowser::handleActiveDragMouse(const NUIMouseEvent& event) {
     auto& dragManager = NUIDragDropManager::getInstance();
-
     // If global drag is active, update it with mouse movement
     if (dragManager.isDragging()) {
         dragManager.updateDrag(event.position);
@@ -1681,18 +1768,11 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
             invalidateCache();
         }
     }
+    return false;
+}
 
-    // Popup menu handling (context + dropdowns)
-    if (NUIComponent::onMouseEvent(event)) {
-        return true;
-    }
-    if (popupMenu_ && popupMenu_->isVisible() &&
-        event.pressed && (event.button == NUIMouseButton::Left || event.button == NUIMouseButton::Right) &&
-        !popupMenu_->getBounds().contains(event.position)) {
-        hidePopupMenu();
-        // Continue processing the click (e.g., select item) after closing.
-    }
-
+bool FileBrowser::handleDragInitiation(const NUIMouseEvent& event, const std::vector<const FileItem*>& view) {
+    auto& dragManager = NUIDragDropManager::getInstance();
     // Check for potential drag initiation (mouse moved while button held)
     if (dragPotential_ && dragSourceIndex_ >= 0 && dragSourceIndex_ < static_cast<int>(view.size())) {
         float dx = event.position.x - dragStartPos_.x;
@@ -1731,22 +1811,11 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         dragPotential_ = false;
         dragSourceIndex_ = -1;
     }
+    return false;
+}
 
-    // If we're dragging the scrollbar, handle mouse events even outside bounds
-    if (isDraggingScrollbar_) {
-        // Always check scrollbar events if we're dragging
-        if (handleScrollbarMouseEvent(event)) {
-            return true;
-        }
-    }
-
-    // Check if mouse is within bounds
-    bool mouseInside = bounds.contains(event.position.x, event.position.y);
-
-    if (handleNavigationMouseEvent(event, browserLayout)) {
-        return true;
-    }
-
+bool FileBrowser::handleWheelScroll(const NUIMouseEvent& event, const BrowserLayout& browserLayout, bool mouseInside, const std::vector<const FileItem*>& view) {
+    const float itemHeight = BROWSER_LIST_ROW_H;
     // === NAV PANE WHEEL (independent of the file list) ===
     // Scroll the collections/categories/places column when it overflows.
     if (event.wheelDelta != 0 && browserLayout.navPane.contains(event.position)) {
@@ -1780,29 +1849,10 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         invalidateCache();
         return true;  // Consume the wheel event
     }
+    return false;
+}
 
-    // Clear hover if mouse leaves the file browser entirely (but allow scrollbar dragging)
-    if (!mouseInside && !isDraggingScrollbar_) {
-        bool dirty = false;
-        if (hoveredIndex_ != -1) {
-            hoveredIndex_ = -1;
-            dirty = true;
-        }
-        if (dirty)
-            setDirty(true); // hover overlay only — no cache rebuild
-        return false;
-    }
-
-    // Handle scrollbar mouse events first - check if scrollbar should be visible
-        const float contentHeight = view.size() * itemHeight;
-        const float maxScroll = std::max(0.0f, contentHeight - scrollbarTrackHeight_);
-        const bool needsScrollbar = maxScroll > 0.0f;
-	    const float scrollbarGutter = scrollbarWidth_ + themeManager.getSpacing("xs");
-	    const float listX = browserLayout.list.x;
-	    const float listW = std::max(0.0f, browserLayout.list.width - scrollbarGutter);
-
-    // Wheel handling moved earlier in function (before bounds check)
-
+void FileBrowser::updateBreadcrumbHover(const NUIMouseEvent& event) {
     // Breadcrumb hover (for chip highlight)
     if (!breadcrumbs_.empty() && breadcrumbBounds_.contains(event.position)) {
         int newHovered = -1;
@@ -1821,19 +1871,16 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         hoveredBreadcrumbIndex_ = -1;
         invalidateCache();
     }
+}
 
-    // Breadcrumb interaction
-    if (handleBreadcrumbMouseEvent(event)) {
-        return true;
-    }
-
-    // Check scrollbar events if scrollbar is needed (but not dragging - handled above)
-    if (needsScrollbar && !view.empty() && !isDraggingScrollbar_) {
-        if (handleScrollbarMouseEvent(event)) {
-            return true;
-        }
-    }
-
+bool FileBrowser::handleListMouse(const NUIMouseEvent& event, const std::vector<const FileItem*>& view, const BrowserLayout& browserLayout) {
+    auto& themeManager = NUIThemeManager::getInstance();
+    const float itemHeight = BROWSER_LIST_ROW_H;
+    const float listY = browserLayout.list.y;
+    const float listHeight = browserLayout.list.height;
+    const float scrollbarGutter = scrollbarWidth_ + themeManager.getSpacing("xs");
+    const float listX = browserLayout.list.x;
+    const float listW = std::max(0.0f, browserLayout.list.width - scrollbarGutter);
 	    // Check if click is in file list area
         bool isInsideList = (event.position.x >= listX && event.position.x <= listX + listW &&
                              event.position.y >= listY && event.position.y <= listY + listHeight);
@@ -2045,12 +2092,6 @@ bool FileBrowser::onMouseEvent(const NUIMouseEvent& event) {
         (event.button == NUIMouseButton::Left || event.button == NUIMouseButton::Right)) {
         return true;
     }
-
-    if (mouseInside && event.pressed && event.button == NUIMouseButton::Right) {
-        hidePopupMenu();
-        return true;
-    }
-
     return false;
 }
 
