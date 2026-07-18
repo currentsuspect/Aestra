@@ -87,6 +87,13 @@ set(Aestra_SOURCES
 	Components/TrackUIComponent.cpp
 	Components/TrackManagerUI.h
 	Components/TrackManagerUI.cpp
+	Components/TrackManagerUIInternal.h
+	Components/TrackManagerUIToolbar.cpp
+	Components/TrackManagerUIClipOps.cpp
+	Components/TrackManagerUIRender.cpp
+	Components/TrackManagerUIEvents.cpp
+	Components/TrackManagerUIView.cpp
+	Components/TrackManagerUIDragDrop.cpp
 	Components/MixerView.h
 	Components/MixerView.cpp
 	Components/MixerMath.h
