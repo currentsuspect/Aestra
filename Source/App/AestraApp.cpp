@@ -4,6 +4,7 @@
 #include "ServiceLocator.h"
 #include "AestraRootComponent.h"
 #include "Preferences.h"
+#include "../AestraCore/include/AestraFile.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraCore/include/PointerRegistry.h"
 #include "FileBrowser.h"
@@ -118,10 +119,15 @@ std::string AestraApp::getCrashFlagPath() {
 
 void AestraApp::writeCrashFlag() {
     std::string flagPath = getCrashFlagPath();
-    std::error_code ec;
     std::ofstream out(flagPath, std::ios::trunc);
     if (out) {
         out << std::chrono::system_clock::now().time_since_epoch().count() << "\n";
+        // The flag is a crash sentinel: without fsync a hard crash or power loss
+        // right after startup can lose it to the OS cache — exactly the case
+        // crash detection exists for (issue #284).
+        if (!Aestra::syncOfstream(out, flagPath)) {
+            Log::warning("[CrashDetection] Failed to sync crash flag: " + flagPath);
+        }
         out.close();
         Log::info("[CrashDetection] Wrote crash flag: " + flagPath);
     } else {
