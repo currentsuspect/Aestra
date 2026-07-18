@@ -9,6 +9,9 @@
 #include "AutosaveManager.h"
 #include "ProjectSerializer.h"
 
+#include "Commands/MuseService.h"
+#include "Commands/MuseSocketServer.h"
+
 #include <chrono>
 #include <filesystem>
 #include <memory>
@@ -107,6 +110,13 @@ private:
 private:
     std::unique_ptr<AestraWindowManager> m_windowManager;
     std::unique_ptr<AestraAudioController> m_audioController;
+
+    // Muse socket entry (opt-in via AESTRA_MUSE_PORT): agents drive the live
+    // session through the same command system as the UI. Socket IO runs on
+    // its own thread; requests execute on the main thread once per frame.
+    std::unique_ptr<Aestra::Audio::MuseService> m_museService;
+    std::unique_ptr<Aestra::Audio::MuseSocketServer> m_museSocketServer;
+    void startMuseSocketIfConfigured();
 
     std::shared_ptr<AestraContent> m_content;
     std::shared_ptr<Aestra::ILogger> m_asyncLogger;

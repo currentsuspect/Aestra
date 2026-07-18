@@ -253,6 +253,7 @@ set(AESTRA_AUDIO_CORE_SOURCES
     src/Commands/SessionLog.cpp
     src/Commands/MuseStubs.cpp
     src/Commands/MuseService.cpp
+    src/Commands/MuseSocketServer.cpp
     
     # Headless / batch processing
     src/Headless/HeadlessMusicGenerator.cpp
@@ -513,6 +514,11 @@ target_link_libraries(AestraAudioCore
 
 if(TARGET AestraCore)
     target_link_libraries(AestraAudioCore PUBLIC AestraCore)
+endif()
+
+# MuseSocketServer uses winsock on Windows.
+if(WIN32)
+    target_link_libraries(AestraAudioCore PUBLIC ws2_32)
 endif()
 
 # AestraAudioCore stays license-free: no AestraAudio source references any
