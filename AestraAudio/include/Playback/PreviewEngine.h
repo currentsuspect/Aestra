@@ -2,16 +2,17 @@
 #pragma once
 
 #include "../IO/SamplePool.h"
+#include "RealtimeObjectPublisher.h"
 
 #include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <memory>
-#include "AestraAtomicSharedPtr.h"
 #include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace Aestra {
 namespace Audio {
@@ -96,8 +97,10 @@ private:
     void decodeAsync(const std::string& path, std::shared_ptr<PreviewVoice> voice, double maxSeconds);
     PreviewResult startVoiceWithBuffer(std::shared_ptr<AudioBuffer> buffer, const std::string& path, float gainDb,
                                        double maxSeconds);
+    void publishActiveVoice(std::shared_ptr<PreviewVoice> voice);
+    void collectRetiredVoices();
 
-    AtomicSharedPtr<PreviewVoice> m_activeVoice;
+    RealtimeObjectPublisher<PreviewVoice> m_activeVoice;
     std::atomic<double> m_outputSampleRate;
     std::atomic<float> m_globalGainDb;
     std::atomic<float> m_playbackRate{1.0f};

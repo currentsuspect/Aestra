@@ -37,7 +37,7 @@ double previewDecodeSecondsLimit(double maxSeconds) {
 } // namespace
 
 PreviewEngine::PreviewEngine()
-    : m_activeVoice(nullptr), m_outputSampleRate(48000.0), m_globalGainDb(0.0f), m_decodeGeneration(0),
+    : m_outputSampleRate(48000.0), m_globalGainDb(0.0f), m_decodeGeneration(0),
       m_workerRunning(true) // Initialize running state
 {
     // Start worker thread
@@ -56,6 +56,16 @@ PreviewEngine::~PreviewEngine() {
     if (m_workerThread.joinable()) {
         m_workerThread.join();
     }
+    m_activeVoice.publish(nullptr);
+    m_activeVoice.collectRetired();
+}
+
+void PreviewEngine::publishActiveVoice(std::shared_ptr<PreviewVoice> voice) {
+    m_activeVoice.publish(std::move(voice));
+}
+
+void PreviewEngine::collectRetiredVoices() {
+    m_activeVoice.collectRetired();
 }
 
 float PreviewEngine::dbToLinear(float db) const {
@@ -108,7 +118,7 @@ PreviewResult PreviewEngine::startVoiceWithBuffer(std::shared_ptr<AudioBuffer> b
     voice->bufferReady.store(true, std::memory_order_release);
     voice->playing.store(true, std::memory_order_release);
 
-    m_activeVoice.store(voice, std::memory_order_release);
+    publishActiveVoice(voice);
     Log::info("PreviewEngine: Playing '" + path + "' (" + std::to_string(sampleRate) + " Hz, " +
               std::to_string(voice->durationSeconds) + " sec)");
     return PreviewResult::Success;
@@ -162,7 +172,7 @@ void PreviewEngine::workerLoop() {
         // 4. Update Voice
         auto voice = job.voice;
         // Verify voice is still active (redundant with generation but safe)
-        auto currentVoice = m_activeVoice.load(std::memory_order_acquire);
+        auto currentVoice = m_activeVoice.owner();
         if (currentVoice.get() != voice.get()) {
             voice->playing.store(false, std::memory_order_release);
             continue;
@@ -209,7 +219,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
     voice->playing.store(true, std::memory_order_release);      // Voice is active
 
     // Set as active voice immediately (will output silence until buffer ready)
-    m_activeVoice.store(voice, std::memory_order_release);
+    publishActiveVoice(voice);
 
     // Start async decode (non-blocking)
     decodeAsync(path, voice, maxSeconds);
@@ -219,7 +229,7 @@ PreviewResult PreviewEngine::play(const std::string& path, float gainDb, double 
 }
 
 void PreviewEngine::stop() {
-    auto voice = m_activeVoice.load(std::memory_order_acquire);
+    auto voice = m_activeVoice.owner();
     if (voice) {
         voice->stopRequested.store(true, std::memory_order_release);
         voice->fadeOutActive = true;
@@ -242,7 +252,13 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
         m_lastOutputPeak.store(0.0f, std::memory_order_release);
         return;
     }
-    auto voice = m_activeVoice.load(std::memory_order_acquire);
+    PreviewVoice* voice = m_activeVoice.acquireRealtime();
+
+    struct VoiceUseGuard {
+        RealtimeObjectPublisher<PreviewVoice>& publisher;
+        ~VoiceUseGuard() { publisher.releaseRealtime(); }
+    } voiceUseGuard{m_activeVoice};
+
     if (!voice || !voice->playing.load(std::memory_order_acquire) || !interleavedOutput) {
         m_lastOutputPeak.store(0.0f, std::memory_order_release);
         return;
@@ -255,7 +271,7 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
         return;
     }
 
-    auto buffer = voice->buffer;
+    const AudioBuffer* buffer = voice->buffer.get();
     if (!buffer || buffer->data.empty() || buffer->sampleRate == 0) {
         m_lastOutputPeak.store(0.0f, std::memory_order_release);
         return;
@@ -576,7 +592,7 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
         voice->playing.store(false, std::memory_order_release);
         blockPreviewPeak = 0.0f;
         PreviewVoice* expected = nullptr;
-        if (m_completedVoice.compare_exchange_strong(expected, voice.get(), std::memory_order_acq_rel,
+        if (m_completedVoice.compare_exchange_strong(expected, voice, std::memory_order_acq_rel,
                                                      std::memory_order_relaxed)) {
             m_completionPending.store(true, std::memory_order_release);
         }
@@ -588,13 +604,13 @@ void PreviewEngine::processRealtime(float* interleavedOutput, uint32_t numFrames
 }
 
 bool PreviewEngine::isPlaying() const {
-    auto voice = m_activeVoice.load(std::memory_order_acquire);
+    auto voice = m_activeVoice.owner();
     return voice && voice->playing.load(std::memory_order_acquire);
 }
 
 bool PreviewEngine::isAudiblyPlaying() const {
     constexpr float kAudiblePreviewThreshold = 1.0e-5f;
-    auto voice = m_activeVoice.load(std::memory_order_acquire);
+    auto voice = m_activeVoice.owner();
     return voice && voice->playing.load(std::memory_order_acquire) &&
            !voice->stopRequested.load(std::memory_order_acquire) &&
            voice->bufferReady.load(std::memory_order_acquire) &&
@@ -602,7 +618,7 @@ bool PreviewEngine::isAudiblyPlaying() const {
 }
 
 bool PreviewEngine::isBufferReady() const {
-    auto voice = m_activeVoice.load(std::memory_order_acquire);
+    auto voice = m_activeVoice.owner();
     return voice && voice->bufferReady.load(std::memory_order_acquire);
 }
 
@@ -619,26 +635,27 @@ float PreviewEngine::getGlobalPreviewVolume() const {
 }
 
 void PreviewEngine::seek(double seconds) {
-    auto voice = m_activeVoice.load(std::memory_order_acquire);
+    auto voice = m_activeVoice.owner();
     if (voice) {
         voice->seekRequestSeconds.store(seconds, std::memory_order_release);
     }
 }
 
 double PreviewEngine::getPlaybackPosition() const {
-    auto voice = m_activeVoice.load(std::memory_order_acquire);
+    auto voice = m_activeVoice.owner();
     return voice ? voice->elapsedSeconds : 0.0;
 }
 
 double PreviewEngine::getDuration() const {
-    auto voice = m_activeVoice.load(std::memory_order_acquire);
+    auto voice = m_activeVoice.owner();
     return voice ? voice->durationSeconds : 0.0;
 }
 
 void PreviewEngine::handleDeferredCompletion() {
+    collectRetiredVoices();
     if (m_completionPending.exchange(false, std::memory_order_acq_rel)) {
         PreviewVoice* completed = m_completedVoice.exchange(nullptr, std::memory_order_acq_rel);
-        auto voice = m_activeVoice.load(std::memory_order_acquire);
+        auto voice = m_activeVoice.owner();
         if (!completed || !voice || voice.get() != completed) {
             return;
         }
@@ -650,9 +667,7 @@ void PreviewEngine::handleDeferredCompletion() {
             path = m_completedPathStr;
         }
 
-        std::shared_ptr<PreviewVoice> expected = voice;
-        m_activeVoice.compare_exchange_strong(expected, std::shared_ptr<PreviewVoice>(),
-                                                     std::memory_order_acq_rel, std::memory_order_relaxed);
+        publishActiveVoice(nullptr);
 
         if (!path.empty() && m_onComplete) {
             m_onComplete(path);

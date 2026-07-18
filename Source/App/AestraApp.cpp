@@ -82,7 +82,7 @@ AestraApp::AestraApp()
     Log::init(m_asyncLogger);
     Log::info("Logging initialized to console and " + logPath);
 
-    // Note: m_projectPath initialized lazily in initialize() after Platform is ready
+    // Project document paths are initialized lazily after Platform is ready.
     m_windowManager = std::make_unique<AestraWindowManager>();
     m_audioController = std::make_unique<AestraAudioController>();
 }
@@ -159,7 +159,8 @@ std::string AestraApp::readCrashFlagToken() {
     return token;
 }
 
-void AestraApp::writeRecoveryMarkerForAutosave(const std::string& autosavePath) const {
+void AestraApp::writeRecoveryMarkerForAutosave(const std::string& autosavePath,
+                                               const std::string& canonicalProjectPath) const {
     if (m_recoverySessionToken.empty()) {
         return;
     }
@@ -170,6 +171,24 @@ void AestraApp::writeRecoveryMarkerForAutosave(const std::string& autosavePath) 
         return;
     }
     out << m_recoverySessionToken << "\n";
+    out << canonicalProjectPath << "\n";
+}
+
+std::string AestraApp::readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,
+                                                       const std::string& expectedSessionToken) {
+    if (expectedSessionToken.empty()) {
+        return {};
+    }
+
+    std::ifstream marker(recoveryMarkerPath, std::ios::binary);
+    std::string markerToken;
+    if (!std::getline(marker, markerToken) || markerToken != expectedSessionToken) {
+        return {};
+    }
+
+    std::string originalProjectPath;
+    std::getline(marker, originalProjectPath);
+    return originalProjectPath;
 }
 
 bool AestraApp::initialize(const std::string& projectPath) {
@@ -191,8 +210,8 @@ bool AestraApp::initialize(const std::string& projectPath) {
         }
     }
 
-    // Initialize m_projectPath AFTER Platform is initialized
-    m_projectPath = getAutosavePath();
+    // An app-data autosave is recovery state, never an implicit canonical project.
+    m_documentState.startUntitled(getAutosavePath());
 
     // ALWAYS write crash flag at session start. It is cleared only on clean
     // shutdown. If the app crashes at any point, the flag persists and the
@@ -301,7 +320,7 @@ void AestraApp::initializeContent() {
         m_content->setAudioEngine(m_audioController->getEngine());
     }
     m_content->setMidiInput(m_audioController->getMidiInput());
-    syncRecordingProjectPath(m_content, m_projectPath);
+    syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
 
     m_windowManager->setContent(m_content);
     m_audioController->setContent(m_content);
@@ -323,9 +342,11 @@ void AestraApp::initializeAutosave(bool enabled) {
     Aestra::Audio::AutosaveManager::Config config;
     config.enabled = enabled;
     config.autosaveInterval = std::chrono::seconds(60);
-    config.autosavePathOverride = getAutosavePath();
-    config.onAutosaveCommitted = [this](const std::string& autosavePath) {
-        writeRecoveryMarkerForAutosave(autosavePath);
+    config.captureSnapshotOnCallingThread = true;
+    config.autosavePathOverride = m_documentState.autosavePath();
+    const std::string canonicalProjectPath = m_documentState.canonicalPath();
+    config.onAutosaveCommitted = [this, canonicalProjectPath](const std::string& autosavePath) {
+        writeRecoveryMarkerForAutosave(autosavePath, canonicalProjectPath);
     };
     config.serializer = [this](std::string& outData) -> bool {
         if (!m_content || !m_content->getTrackManager()) return false;
@@ -338,7 +359,7 @@ void AestraApp::initializeAutosave(bool enabled) {
         outData = std::move(ser.contents);
         return true;
     };
-    m_autoSaveManager.initialize(m_projectPath, std::move(config));
+    m_autoSaveManager.initialize(m_documentState.canonicalPath(), std::move(config));
 }
 
 void AestraApp::buildRecoveryDialog() {
@@ -406,10 +427,11 @@ void AestraApp::buildMenuBar() {
         menu->addItem("New Project", [this]() {
             if (m_content && m_content->getTrackManager()) m_content->getTrackManager()->stop();
             if (m_content) m_content->resetToDefaultProject();
-            m_projectPath = getAutosavePath();
+            m_documentState.startUntitled(getAutosavePath());
             reinitAutosaveManager();
-            syncRecordingProjectPath(m_content, m_projectPath);
+            syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
             m_lastWindowTitle.clear();
+            updateWindowTitle();
             Log::info("New project created");
         });
 
@@ -431,24 +453,7 @@ void AestraApp::buildMenuBar() {
 
         menu->addItem("Save", [this]() { saveCurrentProject(); });
 
-        menu->addItem("Save As...", [this]() {
-            if (auto* utils = Aestra::Platform::getUtils()) {
-                Aestra::IPlatformUtils::SaveFileDialogOptions options;
-                options.title = "Save Project As";
-                options.filter = std::string("Aestra Project\0*.aes\0All Files\0*.*\0",
-                                             sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
-                options.defaultPath = m_projectPath.empty() ? getAutosavePath() : m_projectPath;
-                options.defaultExtension = "aes";
-                const std::string pickedPath = utils->saveFileDialog(options);
-                if (!pickedPath.empty()) {
-                    m_projectPath = pickedPath;
-                    reinitAutosaveManager();
-                    if (saveProject()) {
-                        Log::info("Project saved as: " + pickedPath);
-                    }
-                }
-            }
-        });
+        menu->addItem("Save As...", [this]() { saveProjectAs(); });
 
         menu->addSeparator();
 
@@ -598,49 +603,60 @@ void AestraApp::initializePlugins() {
 }
 
 void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashedSession) {
-    if (!projectPath.empty() && std::filesystem::exists(projectPath)) {
-        const std::string previousProjectPath = m_projectPath;
-        m_projectPath = projectPath;
-        auto result = loadProject();
-        if (result.ok) {
-            reinitAutosaveManager();
-            syncRecordingProjectPath(m_content, m_projectPath);
-            if (result.ui) applyUIState(*result.ui);
-        } else {
-            m_projectPath = previousProjectPath;
+    const bool hasRequestedProject = !projectPath.empty() && std::filesystem::exists(projectPath);
+    const std::string autosavePath = m_documentState.autosavePath();
+    std::string timestamp;
+    const std::string recoveryMarkerPath = getRecoveryMarkerPath(autosavePath);
+    std::vector<std::string> recoveryCandidates;
+    const bool primaryAutosaveDetected =
+        crashedSession && !m_previousRecoverySessionToken.empty() &&
+        RecoveryDialog::detectAutosave(autosavePath, recoveryMarkerPath, m_previousRecoverySessionToken, timestamp);
+    if (primaryAutosaveDetected) {
+        recoveryCandidates.push_back(autosavePath);
+    }
+    if (crashedSession && !m_previousRecoverySessionToken.empty()) {
+        for (auto& backup : Aestra::Audio::AutosaveManager::listBackupsForAutosavePath(autosavePath)) {
+            recoveryCandidates.push_back(std::move(backup));
         }
-        return;
     }
 
-    std::string autosavePath = getAutosavePath();
-    std::string timestamp;
-
-    const std::string recoveryMarkerPath = getRecoveryMarkerPath(autosavePath);
-
-    if (crashedSession && !m_previousRecoverySessionToken.empty() &&
-        RecoveryDialog::detectAutosave(autosavePath, recoveryMarkerPath, m_previousRecoverySessionToken, timestamp)) {
+    if (!recoveryCandidates.empty()) {
+        const std::string recoveryDisplayPath = recoveryCandidates.front();
         Log::info("[Recovery] Crash detected, showing recovery dialog");
-        m_pendingAutosavePath = autosavePath;
+        m_pendingAutosavePath = recoveryDisplayPath;
         m_recoveryHandled = false;
 
         if (auto recoveryDialog = m_windowManager->getRecoveryDialog()) {
             auto alive = m_aliveToken;
-            recoveryDialog->show(autosavePath, [this, alive, autosavePath](Aestra::RecoveryResponse response) {
-                if (!*alive) return;
+            const std::string originalProjectPath =
+                readRecoveryOriginalProjectPath(recoveryMarkerPath, m_previousRecoverySessionToken);
+            recoveryDialog->show(recoveryDisplayPath,
+                                 [this, alive, autosavePath, projectPath, hasRequestedProject, originalProjectPath,
+                                  recoveryCandidates](Aestra::RecoveryResponse response) {
+                if (!*alive)
+                    return;
                 m_recoveryHandled = true;
+                m_pendingAutosavePath.clear();
                 if (response == Aestra::RecoveryResponse::Recover) {
-                    const std::string previousProjectPath = m_projectPath;
-                    m_projectPath = autosavePath;
-                    auto result = loadProject();
+                    auto selected = ProjectSerializer::loadFirstValid(
+                        recoveryCandidates, m_content ? m_content->getTrackManager() : nullptr, originalProjectPath);
+                    auto result = std::move(selected.result);
                     if (result.ok) {
-                        reinitAutosaveManager();
-                        syncRecordingProjectPath(m_content, m_projectPath);
-                        if (result.ui) applyUIState(*result.ui);
-                        Log::info("[Recovery] Autosave recovered successfully");
+                        result = applyLoadedProject(selected.loadedPath, ProjectLoadSource::Recovery,
+                                                    originalProjectPath, std::move(result));
+                        if (m_content && m_content->getTrackManager()) {
+                            m_content->getTrackManager()->markModified();
+                        }
+                        m_autoSaveManager.markDirty();
+                        updateWindowTitle();
+                        Log::info("[Recovery] Autosave recovered successfully from: " + selected.loadedPath);
                     } else {
-                        m_projectPath = previousProjectPath;
                         Log::error("[Recovery] Failed to load autosave");
-                        if (m_content) m_content->resetToDefaultProject();
+                        if (m_content)
+                            m_content->resetToDefaultProject();
+                        m_documentState.startUntitled(getAutosavePath());
+                        reinitAutosaveManager();
+                        syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
                     }
                 } else if (response == Aestra::RecoveryResponse::Discard) {
                     std::error_code ec;
@@ -651,10 +667,19 @@ void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashe
                     } else {
                         Log::info("[Recovery] Autosave discarded");
                     }
-                    if (m_content) m_content->resetToDefaultProject();
-                    m_projectPath = getAutosavePath();
-                    reinitAutosaveManager();
-                    syncRecordingProjectPath(m_content, m_projectPath);
+                    if (hasRequestedProject) {
+                        auto result = loadProjectFromPath(projectPath);
+                        if (!result.ok) {
+                            Log::error("Failed to load requested project after discarding recovery: " + projectPath);
+                        }
+                    } else {
+                        if (m_content)
+                            m_content->resetToDefaultProject();
+                        m_documentState.startUntitled(getAutosavePath());
+                        reinitAutosaveManager();
+                        syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
+                        updateWindowTitle();
+                    }
                 }
             });
             Log::info("[Recovery] Showing recovery dialog for autosave");
@@ -664,9 +689,19 @@ void AestraApp::loadOrRecoverProject(const std::string& projectPath, bool crashe
             std::filesystem::remove(autosavePath, ec);
             std::filesystem::remove(recoveryMarkerPath, ec);
             m_recoveryHandled = true;
+            if (hasRequestedProject) {
+                loadProjectFromPath(projectPath);
+            }
         }
-    } else {
-        m_recoveryHandled = true;
+        return;
+    }
+
+    m_recoveryHandled = true;
+    if (hasRequestedProject) {
+        auto result = loadProjectFromPath(projectPath);
+        if (!result.ok) {
+            Log::error("Failed to load requested project: " + projectPath + " (" + result.errorMessage + ")");
+        }
     }
 }
 
@@ -924,8 +959,10 @@ void AestraApp::run() {
             m_windowManager->render();
         }
 
-        // Autosave is handled entirely by AutosaveManager's background thread,
-        // triggered via markDirty() from TrackManager::setOnModified().
+        // Capture the mutable project graph only on its owning application
+        // thread. AutosaveManager commits the resulting immutable string on its
+        // worker, so active edits never race ProjectSerializer traversal.
+        m_autoSaveManager.captureSnapshotIfDue();
 
         // Non-realtime audio work (graph rebuilds, plugin state commits) should
         // happen before frame pacing so it doesn't eat into the sleep budget.
@@ -1187,7 +1224,7 @@ void AestraApp::requestClose() {
                  [this](Aestra::DialogResponse response) {
                      switch (response) {
                      case Aestra::DialogResponse::Save:
-                         if (saveProject()) {
+                         if (saveCurrentProject()) {
                              m_running = false;
                          } else {
                              m_pendingClose = false;
@@ -1213,25 +1250,76 @@ void AestraApp::requestClose() {
                  });
 }
 
-void AestraApp::saveCurrentProject() {
-    saveProject();
+bool AestraApp::saveCurrentProject() {
+    return m_documentState.requiresSaveAs() ? saveProjectAs() : saveProject();
 }
 
-ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& path, const std::string& activeProjectPathOverride) {
+bool AestraApp::saveProjectAs() {
+    auto* utils = Aestra::Platform::getUtils();
+    if (!utils) {
+        Log::warning("Cannot save project: platform file dialog is unavailable");
+        return false;
+    }
+
+    Aestra::IPlatformUtils::SaveFileDialogOptions options;
+    options.title = "Save Project As";
+    options.filter =
+        std::string("Aestra Project\0*.aes\0All Files\0*.*\0", sizeof("Aestra Project\0*.aes\0All Files\0*.*\0") - 1);
+    options.defaultPath = m_documentState.canonicalPath();
+    options.defaultExtension = "aes";
+    const std::string pickedPath = utils->saveFileDialog(options);
+    if (pickedPath.empty()) {
+        return false;
+    }
+
+    const bool ok = saveProjectToPath(pickedPath, true);
+    if (ok) {
+        Log::info("Project saved as: " + pickedPath);
+    }
+    return ok;
+}
+
+ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& path, ProjectLoadSource source,
+                                                             const std::string& canonicalPath) {
     ProjectSerializer::LoadResult result;
     if (path.empty()) {
         result.errorMessage = "Project path is empty";
         return result;
     }
 
-    const std::string previousProjectPath = m_projectPath;
-    m_projectPath = activeProjectPathOverride.empty() ? path : activeProjectPathOverride;
-
-    result = ProjectSerializer::load(path, m_content ? m_content->getTrackManager() : nullptr);
+    const std::string assetBasePath =
+        source == ProjectLoadSource::Canonical || canonicalPath.empty() ? path : canonicalPath;
+    result = ProjectSerializer::load(path, m_content ? m_content->getTrackManager() : nullptr, assetBasePath);
     if (!result.ok) {
-        m_projectPath = previousProjectPath;
         Log::error("Failed to load project: " + path + " (" + result.errorMessage + ")");
         return result;
+    }
+
+    return applyLoadedProject(path, source, canonicalPath, std::move(result));
+}
+
+ProjectSerializer::LoadResult AestraApp::applyLoadedProject(const std::string& path, ProjectLoadSource source,
+                                                            const std::string& canonicalPath,
+                                                            ProjectSerializer::LoadResult result) {
+
+    // Snapshot callers may pass the current canonical path by reference.
+    // Resolve it before mutating the document state.
+    const std::string resolvedCanonicalPath =
+        canonicalPath.empty() ? m_documentState.canonicalPath() : canonicalPath;
+
+    switch (source) {
+    case ProjectLoadSource::Canonical:
+        m_documentState.openCanonical(path);
+        break;
+    case ProjectLoadSource::Recovery:
+        m_documentState.recoverFrom(path, resolvedCanonicalPath);
+        break;
+    case ProjectLoadSource::Snapshot:
+        m_documentState.restoreSnapshot(path, resolvedCanonicalPath);
+        break;
+    }
+    if (result.integrity == ProjectSerializer::LoadIntegrity::Mismatch) {
+        m_documentState.protectCanonicalFromOverwrite();
     }
 
     if (m_audioController && m_audioController->getEngine()) {
@@ -1277,7 +1365,7 @@ ProjectSerializer::LoadResult AestraApp::loadProjectFromPath(const std::string& 
         }
     }
 
-    syncRecordingProjectPath(m_content, m_projectPath);
+    syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
     reinitAutosaveManager();
     if (result.ui) {
         applyUIState(*result.ui);
@@ -1302,19 +1390,20 @@ ProjectSerializer::LoadResult AestraApp::loadProject() {
         return result;
     }
 
-    if (m_projectPath.empty()) {
+    if (m_documentState.canonicalPath().empty()) {
         result.errorMessage = "Project path is empty";
         return result;
     }
 
-    return loadProjectFromPath(m_projectPath);
+    return loadProjectFromPath(m_documentState.canonicalPath());
 }
 
 bool AestraApp::saveProject() {
-    if (m_projectPath.empty()) {
-        m_projectPath = getAutosavePath();
+    if (m_documentState.requiresSaveAs()) {
+        Log::warning("Cannot use Save without a canonical project path");
+        return false;
     }
-    return saveProjectToPath(m_projectPath);
+    return saveProjectToPath(m_documentState.canonicalPath());
 }
 
 ProjectSerializer::SerializeResult AestraApp::serializeCurrentProject(int indentSpaces,
@@ -1332,7 +1421,7 @@ ProjectSerializer::SerializeResult AestraApp::serializeCurrentProject(int indent
     return ProjectSerializer::serialize(m_content->getTrackManager(), tempo, playhead, indentSpaces, uiState);
 }
 
-bool AestraApp::saveProjectToPath(const std::string& path) {
+bool AestraApp::saveProjectToPath(const std::string& path, bool establishCanonical) {
     if (!m_content || !m_content->getTrackManager()) {
         Log::warning("Cannot save project without an active TrackManager");
         return false;
@@ -1354,11 +1443,17 @@ bool AestraApp::saveProjectToPath(const std::string& path) {
                                             tempo,
                                             playhead,
                                             &uiState);
-    if (ok && path == m_projectPath) {
+    if (ok && establishCanonical) {
+        m_documentState.adoptCanonical(path);
+        reinitAutosaveManager();
+    }
+
+    if (ok && path == m_documentState.canonicalPath()) {
+        m_documentState.adoptCanonical(path);
         if (saveActiveTakeSnapshot(&uiState)) {
             m_content->getTrackManager()->setModified(false);
             m_autoSaveManager.markClean();
-            syncRecordingProjectPath(m_content, m_projectPath);
+            syncRecordingProjectPath(m_content, m_documentState.canonicalPath());
             updateWindowTitle();
         } else {
             Log::warning("[Takes] Project saved but take snapshot failed, keeping dirty state");
@@ -1375,7 +1470,7 @@ bool AestraApp::saveProjectToPath(const std::string& path) {
 }
 
 bool AestraApp::saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState) {
-    if (m_projectPath.empty() || !m_content || !m_content->getTrackManager()) {
+    if (m_documentState.canonicalPath().empty() || !m_content || !m_content->getTrackManager()) {
         return false;
     }
 
@@ -1392,7 +1487,7 @@ bool AestraApp::saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState
         return false;
     }
 
-    auto result = TakeManager::saveActiveTake(m_projectPath, ser.contents);
+    auto result = TakeManager::saveActiveTake(m_documentState.canonicalPath(), ser.contents);
     if (!result.ok) {
         Log::warning("[Takes] Could not save active Take: " + result.errorMessage);
         return false;
@@ -1401,7 +1496,7 @@ bool AestraApp::saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState
 }
 
 bool AestraApp::createTakeFromCurrentProject() {
-    if (m_projectPath.empty() || !m_content || !m_content->getTrackManager()) {
+    if (m_documentState.canonicalPath().empty() || !m_content || !m_content->getTrackManager()) {
         return false;
     }
 
@@ -1416,9 +1511,9 @@ bool AestraApp::createTakeFromCurrentProject() {
         return false;
     }
 
-    const auto manifest = TakeManager::loadManifest(m_projectPath);
+    const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
     const std::string takeName = "Take " + std::to_string(manifest.ok ? manifest.takes.size() + 1 : 2);
-    auto result = TakeManager::createTake(m_projectPath, ser.contents, takeName);
+    auto result = TakeManager::createTake(m_documentState.canonicalPath(), ser.contents, takeName);
     if (!result.ok) {
         Log::warning("[Takes] Could not create Take: " + result.errorMessage);
         return false;
@@ -1434,7 +1529,7 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId)
         result.errorMessage = "Take id is empty";
         return result;
     }
-    if (m_projectPath.empty()) {
+    if (m_documentState.canonicalPath().empty()) {
         result.errorMessage = "Project path is empty";
         return result;
     }
@@ -1444,7 +1539,7 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId)
         return result;
     }
 
-    const auto manifest = TakeManager::loadManifest(m_projectPath);
+    const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
     if (!manifest.ok) {
         result.errorMessage = manifest.errorMessage;
         return result;
@@ -1456,20 +1551,20 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId)
         return result;
     }
 
-    const std::string snapshotPath = TakeManager::resolveSnapshotPath(m_projectPath, *take);
+    const std::string snapshotPath = TakeManager::resolveSnapshotPath(m_documentState.canonicalPath(), *take);
     if (snapshotPath.empty() || !std::filesystem::exists(snapshotPath)) {
         result.errorMessage = "Take snapshot is missing: " + snapshotPath;
         return result;
     }
 
-    result = loadProjectFromPath(snapshotPath, m_projectPath);
+    result = loadProjectFromPath(snapshotPath, ProjectLoadSource::Snapshot, m_documentState.canonicalPath());
     if (!result.ok) {
         return result;
     }
 
-    auto activeResult = TakeManager::setActiveTake(m_projectPath, takeId);
+    auto activeResult = TakeManager::setActiveTake(m_documentState.canonicalPath(), takeId);
     if (!activeResult.ok) {
-        auto rollback = loadProjectFromPath(m_projectPath, m_projectPath);
+        auto rollback = loadProjectFromPath(m_documentState.canonicalPath());
         if (!rollback.ok) {
             Log::error("[Takes] CRITICAL: Failed to rollback after failed Take switch: " + rollback.errorMessage);
         }
@@ -1479,7 +1574,7 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId)
     }
 
     if (!saveProject()) {
-        auto rollback = loadProjectFromPath(m_projectPath, m_projectPath);
+        auto rollback = loadProjectFromPath(m_documentState.canonicalPath());
         if (!rollback.ok) {
             Log::error("[Takes] CRITICAL: Failed to rollback after failed mirror save: " + rollback.errorMessage);
         }
@@ -1493,7 +1588,7 @@ ProjectSerializer::LoadResult AestraApp::switchToTake(const std::string& takeId)
 }
 
 bool AestraApp::branchFromTake(const std::string& takeId) {
-    if (m_projectPath.empty() || takeId.empty()) {
+    if (m_documentState.canonicalPath().empty() || takeId.empty()) {
         return false;
     }
 
@@ -1503,11 +1598,11 @@ bool AestraApp::branchFromTake(const std::string& takeId) {
         return false;
     }
 
-    const auto manifest = TakeManager::loadManifest(m_projectPath);
+    const auto manifest = TakeManager::loadManifest(m_documentState.canonicalPath());
     const auto* source = manifest.ok ? manifest.findTake(takeId) : nullptr;
     const std::string branchName = source ? (source->name + " Branch") : "";
 
-    auto dup = TakeManager::duplicateTake(m_projectPath, takeId, branchName);
+    auto dup = TakeManager::duplicateTake(m_documentState.canonicalPath(), takeId, branchName);
     if (!dup.ok) {
         Log::warning("[Takes] Could not branch from Take: " + dup.errorMessage);
         return false;
@@ -1517,7 +1612,7 @@ bool AestraApp::branchFromTake(const std::string& takeId) {
     if (!result.ok) {
         // Don't leave a half-made branch behind: the duplicate is not active
         // (the failed switch rolled back), so it can be deleted safely.
-        auto rollback = TakeManager::deleteTake(m_projectPath, dup.take.id);
+        auto rollback = TakeManager::deleteTake(m_documentState.canonicalPath(), dup.take.id);
         Log::error("[Takes] Branch created but could not switch to it: " + result.errorMessage +
                    (rollback.ok ? " (branch rolled back)" : " (rollback also failed: " + rollback.errorMessage + ")"));
         return false;
@@ -1535,20 +1630,20 @@ void AestraApp::wireTakesPanel() {
     }
 
     takesPanel->setTakesProvider([this]() -> TakeManager::Manifest {
-        if (m_projectPath.empty()) {
+        if (m_documentState.canonicalPath().empty()) {
             TakeManager::Manifest manifest;
             manifest.errorMessage = "No Takes manifest";
             return manifest;
         }
-        return TakeManager::loadManifest(m_projectPath);
+        return TakeManager::loadManifest(m_documentState.canonicalPath());
     });
 
     takesPanel->setSnapshotsProvider([this]() {
         std::vector<Aestra::Audio::TakesPanel::SnapshotEntry> entries;
-        if (m_projectPath.empty()) {
+        if (m_documentState.canonicalPath().empty()) {
             return entries;
         }
-        for (const auto& entry : ProjectSerializer::listHistory(m_projectPath)) {
+        for (const auto& entry : ProjectSerializer::listHistory(m_documentState.canonicalPath())) {
             entries.push_back({entry.path, entry.label});
         }
         return entries;
@@ -1566,10 +1661,10 @@ void AestraApp::wireTakesPanel() {
     });
 
     takesPanel->setOnRenameTake([this](const std::string& takeId, const std::string& name) {
-        if (m_projectPath.empty()) {
+        if (m_documentState.canonicalPath().empty()) {
             return false;
         }
-        auto result = TakeManager::renameTake(m_projectPath, takeId, name);
+        auto result = TakeManager::renameTake(m_documentState.canonicalPath(), takeId, name);
         if (!result.ok) {
             Log::warning("[Takes] Could not rename Take: " + result.errorMessage);
         }
@@ -1577,10 +1672,10 @@ void AestraApp::wireTakesPanel() {
     });
 
     takesPanel->setOnDuplicateTake([this](const std::string& takeId) {
-        if (m_projectPath.empty()) {
+        if (m_documentState.canonicalPath().empty()) {
             return false;
         }
-        auto result = TakeManager::duplicateTake(m_projectPath, takeId);
+        auto result = TakeManager::duplicateTake(m_documentState.canonicalPath(), takeId);
         if (!result.ok) {
             Log::warning("[Takes] Could not duplicate Take: " + result.errorMessage);
         }
@@ -1588,10 +1683,10 @@ void AestraApp::wireTakesPanel() {
     });
 
     takesPanel->setOnDeleteTake([this](const std::string& takeId) {
-        if (m_projectPath.empty()) {
+        if (m_documentState.canonicalPath().empty()) {
             return false;
         }
-        auto result = TakeManager::deleteTake(m_projectPath, takeId);
+        auto result = TakeManager::deleteTake(m_documentState.canonicalPath(), takeId);
         if (!result.ok) {
             Log::warning("[Takes] Could not delete Take: " + result.errorMessage);
         }
@@ -1607,7 +1702,7 @@ void AestraApp::wireTakesPanel() {
             Log::warning("[Takes] Could not save the current Take before restoring a snapshot");
             return false;
         }
-        auto result = loadProjectFromPath(path, m_projectPath);
+        auto result = loadProjectFromPath(path, ProjectLoadSource::Snapshot, m_documentState.canonicalPath());
         if (!result.ok) {
             Log::error("Failed to restore snapshot: " + path + " (" + result.errorMessage + ")");
             return false;
@@ -1625,9 +1720,11 @@ void AestraApp::reinitAutosaveManager() {
     Aestra::Audio::AutosaveManager::Config config;
     config.enabled = m_autoSaveManager.isEnabled();
     config.autosaveInterval = std::chrono::seconds(60);
-    config.autosavePathOverride = getAutosavePath();
-    config.onAutosaveCommitted = [this](const std::string& autosavePath) {
-        writeRecoveryMarkerForAutosave(autosavePath);
+    config.captureSnapshotOnCallingThread = true;
+    config.autosavePathOverride = m_documentState.autosavePath();
+    const std::string canonicalProjectPath = m_documentState.canonicalPath();
+    config.onAutosaveCommitted = [this, canonicalProjectPath](const std::string& autosavePath) {
+        writeRecoveryMarkerForAutosave(autosavePath, canonicalProjectPath);
     };
     config.serializer = [this](std::string& outData) -> bool {
         if (!m_content || !m_content->getTrackManager()) return false;
@@ -1640,7 +1737,7 @@ void AestraApp::reinitAutosaveManager() {
         outData = std::move(ser.contents);
         return true;
     };
-    m_autoSaveManager.initialize(m_projectPath, std::move(config));
+    m_autoSaveManager.initialize(m_documentState.canonicalPath(), std::move(config));
 }
 
 ProjectSerializer::UIState AestraApp::captureUIState() const {
@@ -1674,10 +1771,7 @@ void AestraApp::applyUIState(const ProjectSerializer::UIState& state) {
 }
 
 void AestraApp::updateWindowTitle() {
-    // Logic moved here or delegated to WindowManager::setWindowTitle
-    std::string title = "Aestra";
-    if (m_projectPath.size()) title = m_projectPath + " - Aestra";
-    m_windowManager->setWindowTitle(title);
+    m_windowManager->setWindowTitle(m_documentState.windowTitle());
 }
 
 void AestraApp::startExport() {
@@ -1694,6 +1788,6 @@ void AestraApp::startExport() {
     auto& trackMgr = *m_content->getTrackManager();
     auto exportDialog = m_windowManager->getExportDialog();
     if (exportDialog) {
-        exportDialog->show(m_projectPath, *engine, trackMgr);
+        exportDialog->show(m_documentState.canonicalPath(), *engine, trackMgr);
     }
 }
