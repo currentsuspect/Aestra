@@ -24,6 +24,7 @@ set(Aestra_SOURCES
 	Core/AestraContent.cpp
 	Core/MusicalTypingController.h
 	Core/MusicalTypingController.cpp
+	Core/ProjectDocumentState.h
 	Core/ProjectSerializer.cpp
 	Core/TakeManager.h
 	Core/TakeManager.cpp
