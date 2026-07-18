@@ -240,9 +240,9 @@ AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
         ++outcome.iterations;
 
         // The remaining budget becomes the transport deadline, so a hung
-        // provider cannot blow past --max-seconds (floor keeps the final
-        // request viable).
-        request.timeoutSeconds = static_cast<int>(std::max<long long>(remaining, 5));
+        // provider cannot blow past --max-seconds. remaining >= 1 here (the
+        // truncated-to-seconds check above already returned at <= 0).
+        request.timeoutSeconds = static_cast<int>(remaining);
         const ModelResponse response = m_provider.complete(request);
         outcome.usage.inputTokens += response.usage.inputTokens;
         outcome.usage.outputTokens += response.usage.outputTokens;

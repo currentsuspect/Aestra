@@ -126,15 +126,18 @@ ModelResponse OpenAICompatProvider::complete(const ModelRequest& request) {
             }
             JSON& function = callEntry["function"];
             call.name = function["name"].asString();
-            // Arguments arrive as a JSON *string*. Garbage here must not
-            // silently become an empty-argument call — reject the response so
-            // the loop reports the provider, not a phantom Muse edit.
-            const std::string argumentsText =
-                function.has("arguments") && function["arguments"].isString()
-                    ? function["arguments"].asString()
-                    : "{}";
+            // Arguments arrive as a JSON *string*. Anything else — missing,
+            // non-string, or unparseable — must not silently become an
+            // empty-argument call; reject the response so the loop reports
+            // the provider, not a phantom Muse edit.
+            if (!function.has("arguments") || !function["arguments"].isString()) {
+                response.error = "tool call \"" + call.name +
+                                 "\" carried missing or non-string arguments";
+                response.stopReason = StopReason::Error;
+                return response;
+            }
             try {
-                call.arguments = JSON::parse(argumentsText);
+                call.arguments = JSON::parse(function["arguments"].asString());
             } catch (const std::exception& e) {
                 response.error = "tool call \"" + call.name +
                                  "\" carried unparseable arguments: " + e.what();
