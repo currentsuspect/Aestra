@@ -18,6 +18,10 @@
 #include <thread>
 #include <vector>
 
+#ifndef _WIN32
+#include <sys/resource.h>
+#endif
+
 using namespace Aestra::Audio;
 
 namespace {
@@ -89,7 +93,12 @@ int main(int argc, char** argv) {
     constexpr uint32_t kSampleRate = 48000;
     constexpr uint32_t kFrames = 64;
     constexpr uint32_t kChannels = 2;
-    const bool lowMemoryProfile = argc > 1 && std::string(argv[1]) == "--low-memory-profile";
+    bool lowMemoryProfile = false;
+    bool diagnostics = false;
+    for (int i = 1; i < argc; ++i) {
+        lowMemoryProfile = lowMemoryProfile || std::string(argv[i]) == "--low-memory-profile";
+        diagnostics = diagnostics || std::string(argv[i]) == "--diagnostics";
+    }
     const int blockCount = lowMemoryProfile ? 512 : 256;
 
     // Use a guaranteed-writable temp directory instead of hardcoded /tmp/
@@ -165,6 +174,19 @@ int main(int argc, char** argv) {
     uint64_t localOverruns = 0;
     uint64_t lastCallbackNs = 0;
     uint64_t maxCallbackNs = 0;
+    int maxCallbackBlock = -1;
+    uint64_t maxEngineNs = 0;
+    uint64_t maxMonitoringNs = 0;
+    uint64_t maxPreviewNs = 0;
+    uint64_t maxSamplerNs = 0;
+
+#ifndef _WIN32
+    rusage usageBefore {};
+    rusage usageAfter {};
+    if (diagnostics) {
+        getrusage(RUSAGE_SELF, &usageBefore);
+    }
+#endif
 
     for (int block = 0; block < blockCount; ++block) {
         if ((block % 7) == 0) {
@@ -177,12 +199,37 @@ int main(int argc, char** argv) {
 
         const auto start = std::chrono::steady_clock::now();
         engine.processBlock(engineOut.data(), nullptr, kFrames, 0.0);
+        const auto afterEngine = diagnostics ? std::chrono::steady_clock::now() : start;
         tracks.mixInputMonitoring(input.data(), monitorOut.data(), kFrames, kChannels);
+        const auto afterMonitoring = diagnostics ? std::chrono::steady_clock::now() : start;
         preview.processRealtime(engineOut.data(), kFrames, kChannels);
+        const auto afterPreview = diagnostics ? std::chrono::steady_clock::now() : start;
         sampler.process(nullptr, samplerOutputs, 0, 2, kFrames, block == 0 ? &midi : nullptr, nullptr);
         const auto elapsed = std::chrono::steady_clock::now() - start;
         lastCallbackNs = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed).count());
-        maxCallbackNs = std::max(maxCallbackNs, lastCallbackNs);
+        if (lastCallbackNs > maxCallbackNs) {
+            maxCallbackNs = lastCallbackNs;
+            maxCallbackBlock = block;
+        }
+
+        if (diagnostics) {
+            maxEngineNs = std::max(
+                maxEngineNs,
+                static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(afterEngine - start).count()));
+            maxMonitoringNs = std::max(
+                maxMonitoringNs,
+                static_cast<uint64_t>(
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(afterMonitoring - afterEngine).count()));
+            maxPreviewNs = std::max(
+                maxPreviewNs,
+                static_cast<uint64_t>(
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(afterPreview - afterMonitoring).count()));
+            maxSamplerNs = std::max(
+                maxSamplerNs,
+                static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                          start + elapsed - afterPreview)
+                                          .count()));
+        }
 
         if (elapsed > deadline) {
             ++localOverruns;
@@ -191,10 +238,16 @@ int main(int argc, char** argv) {
 
     const auto& tel = engine.telemetry();
     const size_t rssKb = currentRssKb();
+#ifndef _WIN32
+    if (diagnostics) {
+        getrusage(RUSAGE_SELF, &usageAfter);
+    }
+#endif
     std::cout << "profile=" << (lowMemoryProfile ? "low-memory" : "standard") << "\n";
     std::cout << "blocks=" << blockCount << "\n";
     std::cout << "lastCallbackNs=" << lastCallbackNs << "\n";
     std::cout << "maxCallbackNs=" << maxCallbackNs << "\n";
+    std::cout << "maxCallbackBlock=" << maxCallbackBlock << "\n";
     std::cout << "xruns=" << tel.getXruns() << "\n";
     std::cout << "underruns=" << tel.getUnderruns() << "\n";
     if (rssKb > 0) {
@@ -205,6 +258,16 @@ int main(int argc, char** argv) {
     std::cout << "engineOverruns=" << tel.getOverruns() << "\n";
     std::cout << "rtLockViolations=" << tel.getRtLockViolations() << "\n";
     std::cout << "rtLogViolations=" << tel.getRtLogViolations() << "\n";
+    if (diagnostics) {
+        std::cout << "maxEngineNs=" << maxEngineNs << "\n";
+        std::cout << "maxMonitoringNs=" << maxMonitoringNs << "\n";
+        std::cout << "maxPreviewNs=" << maxPreviewNs << "\n";
+        std::cout << "maxSamplerNs=" << maxSamplerNs << "\n";
+#ifndef _WIN32
+        std::cout << "voluntaryContextSwitches=" << usageAfter.ru_nvcsw - usageBefore.ru_nvcsw << "\n";
+        std::cout << "involuntaryContextSwitches=" << usageAfter.ru_nivcsw - usageBefore.ru_nivcsw << "\n";
+#endif
+    }
 
     if (localOverruns > 0 || tel.getOverruns() > 0 || tel.getRtLockViolations() != 0 || tel.getRtLogViolations() != 0) {
         return 1;
