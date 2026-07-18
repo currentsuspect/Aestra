@@ -556,6 +556,22 @@ private:
     void renderToolbar(::AestraUI::NUIRenderer& renderer);
     bool handleToolbarClick(const ::AestraUI::NUIPoint& position);
     void renderToolCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
+
+    // onMouseEvent decomposition — called by the dispatcher in this order;
+    // bool handlers return true when the event was consumed.
+    void updateToolbarHover(const ::AestraUI::NUIMouseEvent& event);
+    bool handleContextMenuMouse(const ::AestraUI::NUIMouseEvent& event);
+    bool handleSelectionBoxMouse(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    bool handleTimelineWheel(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
+                             bool isInRuler, bool isInTrackArea);
+    bool handleRulerPress(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
+                          bool isInRuler);
+    bool handleRulerSelectionDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    bool handleRulerSelectionMenu(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos,
+                                  bool isInRuler);
+    bool handleLoopMarkerDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    bool handlePlayheadDrag(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
+    bool handleSplitToolClick(const ::AestraUI::NUIMouseEvent& event, const ::AestraUI::NUIPoint& localPos);
     void renderMinimapResizeCursor(::AestraUI::NUIRenderer& renderer, const ::AestraUI::NUIPoint& position);
 
     // Split tool
