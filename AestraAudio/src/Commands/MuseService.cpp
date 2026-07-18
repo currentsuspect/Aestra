@@ -13,6 +13,7 @@
 
 #include <filesystem>
 #include "Models/TrackManager.h"
+#include "Models/MeterSnapshot.h"
 #include "Models/UnitManager.h"
 
 #include <variant>
@@ -91,6 +92,11 @@ void MuseService::wireHeadlessEngine(const std::shared_ptr<TrackManager>& trackM
     engine.setUnitManager(&trackManager->getUnitManager());
     engine.setPatternPlaybackEngine(&trackManager->getPatternPlaybackEngine());
     engine.setContinuousParams(trackManager->getContinuousParams());
+    // Meters: the engine writes per-slot peaks/RMS/LUFS only when a snapshot
+    // buffer is installed (the app does this in AestraApp).
+    auto meterBuffer = std::make_shared<MeterSnapshotBuffer>();
+    engine.setMeterSnapshots(meterBuffer);
+    trackManager->setMeterSnapshots(meterBuffer);
     trackManager->buildAndShareSlotMap();
     if (auto slotMap = trackManager->getChannelSlotMapShared()) {
         engine.setChannelSlotMap(slotMap);
@@ -118,7 +124,7 @@ bool isQueryVerb(const std::string& verb) {
     return verb == "get_transport" || verb == "list_tracks" || verb == "list_clips" ||
            verb == "get_session_state" || verb == "list_units" || verb == "get_pattern" ||
            verb == "list_patterns" || verb == "list_plugins" || verb == "get_effects" ||
-           verb == "list_samples";
+           verb == "list_samples" || verb == "get_meters";
 }
 
 // The few queries that take arguments; every other query rejects them.
@@ -406,6 +412,7 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
                 u.set("name", JSON(unit->name));
                 u.set("type", JSON(unitTypeName(unit->type)));
                 u.set("enabled", JSON(unit->isEnabled));
+                u.set("gain", JSON(static_cast<double>(unit->gain)));
                 u.set("muted", JSON(unit->isMuted));
                 u.set("soloed", JSON(unit->isSolo));
                 u.set("defaultPatternId",
@@ -419,6 +426,53 @@ std::string MuseService::handleRequest(const std::string& requestJson) {
             }
             JSON result = JSON::object();
             result.set("units", units);
+            JSON response = makeOk();
+            response.set("result", result);
+            return finish(response);
+        }
+
+        if (verb == "get_meters") {
+            if (!m_trackManager) {
+                return makeError(id, "execution_error", "no track manager", verb).toString();
+            }
+            auto meters = m_trackManager->getMeterSnapshots();
+            if (!meters) {
+                return makeError(id, "execution_error", "no meter buffer installed", verb)
+                    .toString();
+            }
+            auto slotMap = m_trackManager->getChannelSlotMapShared();
+
+            const auto linearToDb = [](float linear) {
+                return linear > 0.0f ? 20.0 * std::log10(static_cast<double>(linear)) : -144.0;
+            };
+            const auto readoutToJson = [&](const MeterSnapshotBuffer::MeterReadout& m) {
+                JSON entry = JSON::object();
+                entry.set("peakDbL", JSON(linearToDb(m.peakL)));
+                entry.set("peakDbR", JSON(linearToDb(m.peakR)));
+                entry.set("rmsDbL", JSON(linearToDb(m.rmsL)));
+                entry.set("rmsDbR", JSON(linearToDb(m.rmsR)));
+                entry.set("lufs", JSON(static_cast<double>(m.lufs)));
+                entry.set("clip", JSON(m.clipL || m.clipR));
+                return entry;
+            };
+
+            JSON result = JSON::object();
+            result.set("master",
+                       readoutToJson(meters->readMeter(
+                           static_cast<int>(ChannelSlotMap::MASTER_SLOT_INDEX))));
+            JSON tracks = JSON::array();
+            const size_t count = m_trackManager->getChannelCount();
+            for (size_t i = 0; i < count; ++i) {
+                const MixerChannel* channel = m_trackManager->getChannel(i);
+                if (!channel || !slotMap) continue;
+                const uint32_t slot = slotMap->getSlotIndex(channel->getChannelId());
+                if (slot == ChannelSlotMap::INVALID_SLOT) continue;
+                JSON entry = readoutToJson(meters->readMeter(static_cast<int>(slot)));
+                entry.set("index", JSON(static_cast<double>(i)));
+                entry.set("id", JSON(static_cast<double>(channel->getChannelId())));
+                tracks.push(entry);
+            }
+            result.set("tracks", tracks);
             JSON response = makeOk();
             response.set("result", result);
             return finish(response);
