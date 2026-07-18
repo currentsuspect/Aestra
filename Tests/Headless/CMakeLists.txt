@@ -44,6 +44,26 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/OfflineRenderRegressionTest.cpp")
     )
 endif()
 
+# Engine Output Stage Characterization (pins processBlock behavior pre-refactor)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/EngineOutputStageCharacterizationTest.cpp")
+    add_executable(EngineOutputStageCharacterizationTest
+        EngineOutputStageCharacterizationTest.cpp
+    )
+    target_link_libraries(EngineOutputStageCharacterizationTest PRIVATE AestraAudio)
+    target_include_directories(EngineOutputStageCharacterizationTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME EngineOutputStageCharacterizationTest
+        COMMAND EngineOutputStageCharacterizationTest
+    )
+    set_tests_properties(EngineOutputStageCharacterizationTest PROPERTIES
+        LABELS "headless;characterization;engine"
+        ENVIRONMENT "AESTRA_HEADLESS=1"
+    )
+endif()
+
 # Rumble DSP Quality Contract
 if(AESTRA_ENABLE_TEST_LICENSES AND TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND
    EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/RumbleQualityTest.cpp")
