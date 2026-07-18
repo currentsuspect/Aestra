@@ -1052,9 +1052,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         return result;
     }
 
-    JSON root = JSON::parse(contents);
-    if (!root.isObject()) {
-        result.errorMessage = "Invalid project file: not a valid JSON object";
+    bool consumedAllInput = false;
+    JSON root = JSON::parseStrict(contents, consumedAllInput);
+    if (!root.isObject() || !consumedAllInput) {
+        result.errorMessage = "Invalid project file: not exactly one valid JSON object";
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }
