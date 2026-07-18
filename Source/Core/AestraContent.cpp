@@ -174,6 +174,27 @@ AestraContent::~AestraContent() {
     }
 }
 
+void AestraContent::wireFloatingPanel(const std::shared_ptr<Audio::WindowPanel>& panel, Audio::ViewType view,
+                                      AestraUI::NUIRect ViewState::* stateRect, float minWidth, float minHeight) {
+    panel->setOnMaximizeToggle(
+        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
+    panel->setOnDragStart([this, view](const AestraUI::NUIPoint& pos) { beginPanelDrag(view, pos); });
+    panel->setOnDragMove([this, view](const AestraUI::NUIPoint& pos) { updatePanelDrag(view, pos); });
+    panel->setOnDragEnd([this, view]() { endPanelDrag(view); });
+    if (minWidth > 0.0f && minHeight > 0.0f) {
+        panel->setMinimumPanelSize(minWidth, minHeight);
+    }
+    panel->setOnResizeMove([this, stateRect, weakPanel = std::weak_ptr<Audio::WindowPanel>(panel)](
+                               const AestraUI::NUIRect& proposed) {
+        const auto allowed = computeAllowedRectForPanels();
+        m_viewState.*stateRect = clampRectToAllowed(proposed, allowed);
+        if (auto livePanel = weakPanel.lock()) {
+            livePanel->setBounds(m_viewState.*stateRect);
+        }
+        setDirty(true);
+    });
+}
+
 AestraContent::AestraContent()
     : m_musicalTyping([this](uint64_t unitId, uint8_t status, uint8_t data1, uint8_t data2) {
         return m_audioEngine && m_audioEngine->postLiveMidiEvent(unitId, status, data1, data2);
@@ -219,6 +240,85 @@ AestraContent::AestraContent()
 
     // Defer audio-engine wiring until setAudioEngine() receives the live controller engine.
 
+    setupTrackManagerUI();
+    setupTransportBar();
+    setupBrowserPanels();
+    setupMixerPanels();
+    setupPianoRollPanel();
+    setupArsenalPanels();
+    setupHistoryAndTakesPanels();
+
+
+    // Create Focus Toggle Buttons
+    auto& theme = AestraUI::NUIThemeManager::getInstance();
+    const auto& themeProps = theme.getCurrentTheme();
+    m_viewToggle =
+        std::make_shared<AestraUI::NUISegmentedControl>(std::vector<std::string>{"Arsenal", "Timeline", "Audition"});
+    m_viewToggle->setCornerRadius(themeProps.radiusL);             // tokenized: 12.0
+    m_viewToggle->setAccentColor(theme.getColor("primary"));        // tokenized: theme accent
+    m_viewToggle->setOnSelectionChanged([this](size_t index) {
+        ViewFocus newFocus;
+        switch (index) {
+        case 0:
+            newFocus = ViewFocus::Arsenal;
+            break;
+        case 1:
+            newFocus = ViewFocus::Timeline;
+            break;
+        case 2:
+            newFocus = ViewFocus::Audition;
+            break;
+        default:
+            newFocus = ViewFocus::Timeline;
+            break;
+        }
+        setViewFocus(newFocus);
+
+        // Auto-open Arsenal panel when switching TO Arsenal mode
+        if (newFocus == ViewFocus::Arsenal) {
+            setArsenalPanelVisible(true);
+        }
+    });
+
+    // Initialize with Timeline mode as default (panel closed)
+    m_viewToggle->setSelectedIndex(1); // Select "Timeline"
+    setViewFocus(ViewFocus::Timeline);
+    setArsenalPanelVisible(false);
+
+    // History panel is now a tab in the segmented control (index 3)
+
+    // Create compact master meters
+    m_waveformVisualizer = std::make_shared<AestraUI::AudioVisualizer>();
+    m_waveformVisualizer->setMode(AestraUI::AudioVisualizationMode::CompactWaveform);
+    m_waveformVisualizer->setShowStereo(true);
+    m_overlayLayer->addChild(m_waveformVisualizer);
+
+    m_audioVisualizer = std::make_shared<AestraUI::AudioVisualizer>();
+    m_audioVisualizer->setMode(AestraUI::AudioVisualizationMode::CompactMeter);
+    m_audioVisualizer->setShowStereo(true);
+    m_overlayLayer->addChild(m_audioVisualizer);
+
+    // Add Takes + History panels LAST to overlay so they're on top and receive mouse events first
+    m_overlayLayer->addChild(m_takesPanel);
+    m_overlayLayer->addChild(m_historyPanel);
+
+    // Initialize preview engine
+    m_previewEngine = std::make_unique<PreviewEngine>();
+    if (m_audioEngine) {
+        m_audioEngine->setPreviewEngine(m_previewEngine.get());
+    }
+    m_previewIsPlaying = false;
+    m_previewDuration = 8.0;
+
+    // Add Transport Bar LAST to ensure it renders on top of sidebars (Z-Order Fix)
+    if (m_transportBar) {
+        m_workspaceLayer->addChild(m_transportBar);
+    }
+
+    syncViewState();
+}
+
+void AestraContent::setupTrackManagerUI() {
     // Create track manager UI (add to workspace)
     m_trackManagerUI = std::make_shared<TrackManagerUI>(m_trackManager);
 
@@ -339,7 +439,9 @@ AestraContent::AestraContent()
     });
 
     m_workspaceLayer->addChild(m_trackManagerUI);
+}
 
+void AestraContent::setupTransportBar() {
     // Create transport bar (Moved to Workspace Layer and Early Init for correct Z-Order behind Sidebars)
     m_transportBar = std::make_shared<Aestra::TransportBar>();
     m_transportBar->setOnToggleView([this](Audio::ViewType view) { toggleView(view); });
@@ -384,7 +486,9 @@ AestraContent::AestraContent()
     // Browsers are added to workspace too.
     // If we want Transport ON TOP, add it LAST.
     // m_workspaceLayer->addChild(m_transportBar); // Deferred to end
+}
 
+void AestraContent::setupBrowserPanels() {
     // Browser toggle removed - browser content now starts directly with search/navigation
 
     // Create file browser (add to workspace)
@@ -598,24 +702,14 @@ AestraContent::AestraContent()
     });
     m_workspaceLayer->addChild(m_patternBrowser);
     m_fileBrowser->registerContentView(AestraUI::FileBrowser::BrowserNavAction::Patterns, m_patternBrowser);
+}
 
+void AestraContent::setupMixerPanels() {
     // Create panels (add to overlay)
     m_mixerPanel = std::make_shared<MixerPanel>(m_trackManager);
     m_mixerPanel->setVisible(false);
     m_mixerPanel->setOnClose([this]() { toggleView(Audio::ViewType::Mixer); });
-    m_mixerPanel->setOnMaximizeToggle(
-        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
-    m_mixerPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::Mixer, pos); });
-    m_mixerPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::Mixer, pos); });
-    m_mixerPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::Mixer); });
-    m_mixerPanel->setMinimumPanelSize(560.0f, 300.0f);
-    m_mixerPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
-        const auto allowed = computeAllowedRectForPanels();
-        m_viewState.mixerRect = clampRectToAllowed(proposed, allowed);
-        if (m_mixerPanel)
-            m_mixerPanel->setBounds(m_viewState.mixerRect);
-        setDirty(true);
-    });
+    wireFloatingPanel(m_mixerPanel, ViewType::Mixer, &ViewState::mixerRect, 560.0f, 300.0f);
     m_overlayLayer->addChild(m_mixerPanel);
     if (m_platformBridge) {
         m_mixerPanel->setPlatformBridge(m_platformBridge);
@@ -714,7 +808,9 @@ AestraContent::AestraContent()
             }
         }
     }
+}
 
+void AestraContent::setupPianoRollPanel() {
     m_pianoRollPanel = std::make_shared<PianoRollPanel>(m_trackManager);
     if (m_audioEngine) {
         m_pianoRollPanel->setAudioEngine(m_audioEngine);
@@ -755,23 +851,11 @@ AestraContent::AestraContent()
         m_pianoRollPanel->savePattern();
         toggleView(Audio::ViewType::PianoRoll);
     });
-    m_pianoRollPanel->setOnMaximizeToggle(
-        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
-    m_pianoRollPanel->setOnDragStart(
-        [this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::PianoRoll, pos); });
-    m_pianoRollPanel->setOnDragMove(
-        [this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::PianoRoll, pos); });
-    m_pianoRollPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::PianoRoll); });
-    m_pianoRollPanel->setMinimumPanelSize(560.0f, 280.0f);
-    m_pianoRollPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
-        const auto allowed = computeAllowedRectForPanels();
-        m_viewState.pianoRollRect = clampRectToAllowed(proposed, allowed);
-        if (m_pianoRollPanel)
-            m_pianoRollPanel->setBounds(m_viewState.pianoRollRect);
-        setDirty(true);
-    });
+    wireFloatingPanel(m_pianoRollPanel, ViewType::PianoRoll, &ViewState::pianoRollRect, 560.0f, 280.0f);
     m_overlayLayer->addChild(m_pianoRollPanel);
+}
 
+void AestraContent::setupArsenalPanels() {
     // Wire PatternManager to UnitManager and PlaylistModel for pattern cloning
     if (m_trackManager) {
         m_trackManager->getUnitManager().setPatternManager(&m_trackManager->getPatternManager());
@@ -1043,41 +1127,17 @@ AestraContent::AestraContent()
     m_sequencerPanel->setVisible(false);
     m_sequencerPanel->unregisterDropTargets();
     m_sequencerPanel->setOnClose([this]() { setArsenalPanelVisible(false); });
-    m_sequencerPanel->setOnMaximizeToggle(
-        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
-    m_sequencerPanel->setOnDragStart(
-        [this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::Sequencer, pos); });
-    m_sequencerPanel->setOnDragMove(
-        [this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::Sequencer, pos); });
-    m_sequencerPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::Sequencer); });
-    m_sequencerPanel->setMinimumPanelSize(520.0f, 260.0f);
-    m_sequencerPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
-        const auto allowed = computeAllowedRectForPanels();
-        m_viewState.sequencerRect = clampRectToAllowed(proposed, allowed);
-        if (m_sequencerPanel)
-            m_sequencerPanel->setBounds(m_viewState.sequencerRect);
-        setDirty(true);
-    });
+    wireFloatingPanel(m_sequencerPanel, ViewType::Sequencer, &ViewState::sequencerRect, 520.0f, 260.0f);
     m_overlayLayer->addChild(m_sequencerPanel);
+}
 
+void AestraContent::setupHistoryAndTakesPanels() {
     // Create History panel
     m_historyPanel = std::make_shared<Aestra::Audio::AestraHistoryPanel>(m_trackManager);
     m_historyPanel->setVisible(false);
     m_historyPanel->setOnClose([this]() { toggleHistoryPanel(); });
-    m_historyPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::History, pos); });
-    m_historyPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::History, pos); });
-    m_historyPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::History); });
-    m_historyPanel->setMinimumPanelSize(240.0f, 220.0f);
-    m_historyPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
-        const auto allowed = computeAllowedRectForPanels();
-        m_viewState.historyRect = clampRectToAllowed(proposed, allowed);
-        if (m_historyPanel)
-            m_historyPanel->setBounds(m_viewState.historyRect);
-        setDirty(true);
-    });
+    wireFloatingPanel(m_historyPanel, ViewType::History, &ViewState::historyRect, 240.0f, 220.0f);
     m_historyPanel->setMaximized(false);
-    m_historyPanel->setOnMaximizeToggle(
-        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
     m_historyPanel->setOnHistoryChanged([this]() {
         if (m_trackManagerUI) {
             m_trackManagerUI->refreshTracks();
@@ -1095,19 +1155,8 @@ AestraContent::AestraContent()
     m_takesPanel = std::make_shared<Aestra::Audio::TakesPanel>();
     m_takesPanel->setVisible(false);
     m_takesPanel->setOnClose([this]() { toggleTakesPanel(); });
-    m_takesPanel->setOnDragStart([this](const AestraUI::NUIPoint& pos) { beginPanelDrag(ViewType::Takes, pos); });
-    m_takesPanel->setOnDragMove([this](const AestraUI::NUIPoint& pos) { updatePanelDrag(ViewType::Takes, pos); });
-    m_takesPanel->setOnDragEnd([this]() { endPanelDrag(ViewType::Takes); });
-    m_takesPanel->setOnResizeMove([this](const AestraUI::NUIRect& proposed) {
-        const auto allowed = computeAllowedRectForPanels();
-        m_viewState.takesRect = clampRectToAllowed(proposed, allowed);
-        if (m_takesPanel)
-            m_takesPanel->setBounds(m_viewState.takesRect);
-        setDirty(true);
-    });
+    wireFloatingPanel(m_takesPanel, ViewType::Takes, &ViewState::takesRect);
     m_takesPanel->setMaximized(false);
-    m_takesPanel->setOnMaximizeToggle(
-        [this](bool) { onResize(static_cast<int>(getBounds().width), static_cast<int>(getBounds().height)); });
 
     // NOTE: History panel is added LAST so it's on top and receives mouse events first.
 
@@ -1125,74 +1174,6 @@ AestraContent::AestraContent()
 
     // Transport Bar moved to early initialization (above) for Z-order fix
     // m_transportBar added to m_workspaceLayer there.
-
-    // Create Focus Toggle Buttons
-    auto& theme = AestraUI::NUIThemeManager::getInstance();
-    const auto& themeProps = theme.getCurrentTheme();
-    m_viewToggle =
-        std::make_shared<AestraUI::NUISegmentedControl>(std::vector<std::string>{"Arsenal", "Timeline", "Audition"});
-    m_viewToggle->setCornerRadius(themeProps.radiusL);             // tokenized: 12.0
-    m_viewToggle->setAccentColor(theme.getColor("primary"));        // tokenized: theme accent
-    m_viewToggle->setOnSelectionChanged([this](size_t index) {
-        ViewFocus newFocus;
-        switch (index) {
-        case 0:
-            newFocus = ViewFocus::Arsenal;
-            break;
-        case 1:
-            newFocus = ViewFocus::Timeline;
-            break;
-        case 2:
-            newFocus = ViewFocus::Audition;
-            break;
-        default:
-            newFocus = ViewFocus::Timeline;
-            break;
-        }
-        setViewFocus(newFocus);
-
-        // Auto-open Arsenal panel when switching TO Arsenal mode
-        if (newFocus == ViewFocus::Arsenal) {
-            setArsenalPanelVisible(true);
-        }
-    });
-
-    // Initialize with Timeline mode as default (panel closed)
-    m_viewToggle->setSelectedIndex(1); // Select "Timeline"
-    setViewFocus(ViewFocus::Timeline);
-    setArsenalPanelVisible(false);
-
-    // History panel is now a tab in the segmented control (index 3)
-
-    // Create compact master meters
-    m_waveformVisualizer = std::make_shared<AestraUI::AudioVisualizer>();
-    m_waveformVisualizer->setMode(AestraUI::AudioVisualizationMode::CompactWaveform);
-    m_waveformVisualizer->setShowStereo(true);
-    m_overlayLayer->addChild(m_waveformVisualizer);
-
-    m_audioVisualizer = std::make_shared<AestraUI::AudioVisualizer>();
-    m_audioVisualizer->setMode(AestraUI::AudioVisualizationMode::CompactMeter);
-    m_audioVisualizer->setShowStereo(true);
-    m_overlayLayer->addChild(m_audioVisualizer);
-
-    // Add Takes + History panels LAST to overlay so they're on top and receive mouse events first
-    m_overlayLayer->addChild(m_takesPanel);
-    m_overlayLayer->addChild(m_historyPanel);
-
-    // Initialize preview engine
-    m_previewEngine = std::make_unique<PreviewEngine>();
-    if (m_audioEngine) {
-        m_audioEngine->setPreviewEngine(m_previewEngine.get());
-    }
-    m_previewIsPlaying = false;
-    m_previewDuration = 8.0;
-
-    // Add Transport Bar LAST to ensure it renders on top of sidebars (Z-Order Fix)
-    if (m_transportBar) {
-        m_workspaceLayer->addChild(m_transportBar);
-    }
-
-    syncViewState();
 }
 
 // =============================================================================
