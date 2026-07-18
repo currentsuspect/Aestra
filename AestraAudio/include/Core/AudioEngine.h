@@ -83,11 +83,9 @@ public:
     /** @brief Destroy the realtime audio engine and release owned resources. */
     ~AudioEngine();
 
-    /**
-     * @brief Singleton Accessor (v3.1)
-     * @return Process-wide audio engine instance.
-     */
-    static AudioEngine& getInstance();
+    // No singleton accessor: every AudioEngine is explicitly owned by its
+    // creator (controller unique_ptr, headless tools, tests). Enforced by the
+    // NoAudioEngineSingletonGuard source check.
 
     /**
      * @brief Process a single audio block (driver callback entry).
