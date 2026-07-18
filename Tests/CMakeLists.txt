@@ -1549,6 +1549,16 @@ add_test(NAME NoAudioEngineSingletonGuard
         -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton.cmake)
 set_tests_properties(NoAudioEngineSingletonGuard PROPERTIES LABELS "guard;architecture" TIMEOUT 120)
 
+# Self-test: runs the guard against fixture trees — every forbidden shape
+# (including renamed static/global mechanisms) must fail, benign ownership
+# patterns and the tracked CommandRegistry exemption (#559) must pass.
+add_test(NAME NoAudioEngineSingletonGuardSelfTest
+    COMMAND ${CMAKE_COMMAND}
+        -DGUARD_SCRIPT=${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton.cmake
+        -DWORK_DIR=${CMAKE_BINARY_DIR}/guard_selftest
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton_selftest.cmake)
+set_tests_properties(NoAudioEngineSingletonGuardSelfTest PROPERTIES LABELS "guard;architecture" TIMEOUT 120)
+
 # Callback Deadline Telemetry — validates AudioTelemetry::recordCallbackDuration
 # (avg/worst/budget/over-budget math) synthetically, plus a live smoke over
 # real processBlock timings.

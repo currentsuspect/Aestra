@@ -41,7 +41,10 @@ int g_failures = 0;
 constexpr uint32_t kFrames = 256;
 constexpr uint32_t kChannels = 2;
 
-// Render one block and verify every sample is finite. Returns peak magnitude.
+// Render one block and verify every sample is finite AND that the engine
+// actually wrote the buffer: with no graph attached and transport stopped the
+// documented output is silence, so the 0.5f sentinel fill must come back as
+// exactly zero. A no-op processBlock (or one that leaves stale data) fails.
 float renderBlock(AudioEngine& engine) {
     std::vector<float> buffer(static_cast<size_t>(kFrames) * kChannels, 0.5f);
     engine.processBlock(buffer.data(), nullptr, kFrames, 0.0);
@@ -54,6 +57,7 @@ float renderBlock(AudioEngine& engine) {
         }
         peak = std::max(peak, std::fabs(s));
     }
+    CHECK(peak == 0.0f);
     return peak;
 }
 
