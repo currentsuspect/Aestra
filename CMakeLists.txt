@@ -335,6 +335,21 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessExportMain.cpp")
     set_tests_properties(AestraHeadlessExportRejectsBadArgs PROPERTIES
       WILL_FAIL TRUE
       LABELS "cli;headless")
+
+    # Real end-to-end export invocation: arg parse -> template project -> export
+    # attempt. Regression guard for the getInstance() abort (SIGABRT on develop;
+    # passes once the export path owns its engine). Exit 0 must come with a real
+    # non-empty WAV; exit 1 (graceful diagnosed failure) is tolerated only until
+    # the HeadlessMusicGenerator commit layer is implemented — see the driver
+    # script for the full contract.
+    add_test(NAME AestraHeadlessExportEndToEnd
+      COMMAND ${CMAKE_COMMAND}
+        -DEXPORT_BIN=$<TARGET_FILE:AestraHeadlessExport>
+        -DOUT_FILE=${CMAKE_BINARY_DIR}/headless_export_e2e.wav
+        -P ${CMAKE_SOURCE_DIR}/Tests/Headless/run_headless_export_e2e.cmake)
+    set_tests_properties(AestraHeadlessExportEndToEnd PROPERTIES
+      LABELS "cli;headless;export;integrity"
+      TIMEOUT 120)
   endif()
 
   message(STATUS "AestraHeadlessExport configured")
