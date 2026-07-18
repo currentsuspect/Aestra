@@ -160,9 +160,11 @@ int main(int argc, char* argv[]) {
     Log::info("========================================");
     
     try {
-        // Initialize audio engine
+        // Initialize audio engine. This tool owns its engine for the lifetime of
+        // the export (mirroring HeadlessMain / MuseReplMain) rather than reaching
+        // for a process-wide singleton — nothing else constructs one here.
         Log::info("Initializing audio engine...");
-        AudioEngine& engine = AudioEngine::getInstance();
+        AudioEngine engine;
         engine.setSampleRate(args.sampleRate);
         engine.setBPM(static_cast<float>(args.tempo));
         
