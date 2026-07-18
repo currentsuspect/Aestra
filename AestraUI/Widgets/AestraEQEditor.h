@@ -31,6 +31,17 @@ public:
     void onResize() { layoutControls(); }
 
 private:
+    // onMouseEvent decomposition — called by the dispatcher in this order;
+    // bool handlers return true when the event was consumed.
+    bool handleRightClickActions(const NUIMouseEvent& event);
+    bool handleOpenMenusClick(const NUIMouseEvent& event);
+    bool handleHeaderButtonsClick(const NUIMouseEvent& event);
+    bool handleAnalyzerPanelClick(const NUIMouseEvent& event);
+    bool handleWheel(const NUIMouseEvent& event);
+    bool handlePress(const NUIMouseEvent& event);
+    bool handleDragUpdate(const NUIMouseEvent& event);
+    void handleHoverUpdate(const NUIMouseEvent& event);
+
     enum class Knob { None, Enable, Freq, Gain, Q, Type, Stereo, DynamicEnable, Threshold, Attack, Release };
     enum class BandMenuAction {
         Reset,
