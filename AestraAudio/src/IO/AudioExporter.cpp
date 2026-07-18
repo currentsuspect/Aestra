@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "AudioExporter.h"
+#include "AudioGraphBuilder.h"
 #include "AestraFile.h"
 #include "AestraLog.h"
 
@@ -201,6 +202,11 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     // Set engine to export sample rate
     m_engine.setSampleRate(config.sampleRate);
     m_trackManager.setOutputSampleRate(sampleRate);
+    // Clip start/end samples in AudioGraph are derived from timeline beats at
+    // graph-build time. Rebuild after changing the project/output rate or a
+    // 48 -> 96 kHz export retains 48 kHz clip bounds and renders silence over
+    // the second half of every clip.
+    m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager));
 
     // Offline export should follow the exact live engine path to avoid render-path
     // mismatches between playback and export.
@@ -275,6 +281,7 @@ AudioExporter::Result AudioExporter::render(const Config& config) {
     m_engine.setTransportPlaying(false);
     m_engine.setSampleRate(originalSampleRate);
     m_trackManager.setOutputSampleRate(static_cast<double>(originalSampleRate));
+    m_engine.setGraph(AudioGraphBuilder::buildFromTrackManager(m_trackManager));
     m_engine.setMetronomeEnabled(wasMetronomeEnabled);
     m_engine.setAuditionModeEnabled(wasAuditionEnabled);
     // Restore the configured duck depth only; live playback re-smooths the
