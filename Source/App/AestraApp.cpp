@@ -245,6 +245,8 @@ bool AestraApp::initialize(const std::string& projectPath) {
         restoreUIState(uiState);
     }
 
+    startMuseSocketIfConfigured();
+
     return transitionToRunning();
 }
 
@@ -891,6 +893,17 @@ void AestraApp::run() {
                     controller->drainIfDirty(m_audioController->getSampleRate());
                 }
             }
+
+            // Muse socket: execute agent requests on the main thread, exactly
+            // like user edits (shared undo history, shared command system).
+            if (m_museSocketServer && m_museService) {
+                if (m_museSocketServer->processPending(*m_museService) > 0) {
+                    // Defeat idle frame elision so agent edits show up.
+                    if (auto* root = m_windowManager->getRootComponent()) {
+                        root->setDirty(true);
+                    }
+                }
+            }
         }
 
         // ---- Idle frame elision (labs/perf/idle-frame-elision-spec.md) ----
@@ -978,6 +991,38 @@ bool AestraApp::shouldRenderThisFrame() {
     return sinceLastPresent >= 0.3;
 }
 
+void AestraApp::startMuseSocketIfConfigured() {
+    const char* portEnv = std::getenv("AESTRA_MUSE_PORT");
+    if (!portEnv || !*portEnv) return;
+
+    if (!m_content || !m_content->getTrackManager() || !m_audioController ||
+        !m_audioController->getEngine()) {
+        Log::warning("[MuseSocket] AESTRA_MUSE_PORT set but session not ready; not starting");
+        return;
+    }
+
+    int port = 0;
+    try {
+        port = std::stoi(portEnv);
+    } catch (const std::exception&) {
+        port = -1;
+    }
+    if (port < 0 || port > 65535) {
+        Log::warning(std::string("[MuseSocket] invalid AESTRA_MUSE_PORT: ") + portEnv);
+        return;
+    }
+
+    m_museService = std::make_unique<Aestra::Audio::MuseService>(
+        m_content->getTrackManager().get(), m_audioController->getEngine());
+    m_museSocketServer = std::make_unique<Aestra::Audio::MuseSocketServer>();
+    std::string error;
+    if (!m_museSocketServer->start(static_cast<uint16_t>(port), error)) {
+        Log::warning("[MuseSocket] failed to start: " + error);
+        m_museSocketServer.reset();
+        m_museService.reset();
+    }
+}
+
 void AestraApp::shutdown() {
     Log::info("[SHUTDOWN] Entering shutdown function...");
     Aestra::AppLifecycle::instance().transitionTo(Aestra::AppState::ShuttingDown);
@@ -985,6 +1030,9 @@ void AestraApp::shutdown() {
     // Invalidate lifetime token so any async callbacks that fire during teardown
     // bail out before touching partially-destroyed members.
     if (m_aliveToken) *m_aliveToken = false;
+
+    // Stop the Muse socket before anything it references tears down.
+    if (m_museSocketServer) m_museSocketServer->stop();
 
     // Emergency autosave before clearing crash flag — if shutdown crashes after this,
     // the autosave is still available for recovery on next launch.
