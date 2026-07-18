@@ -1527,6 +1527,38 @@ target_include_directories(RTGuardConsolidationTest PRIVATE
 add_test(NAME RTGuardConsolidationTest COMMAND RTGuardConsolidationTest)
 set_tests_properties(RTGuardConsolidationTest PROPERTIES LABELS "audio;rt-safety;integrity" TIMEOUT 120)
 
+# AudioEngine Ownership Test — pins the explicit-ownership contract that
+# replaced the removed process-wide engine instance (R2): two live engines are
+# independent, destroying one leaves the other intact, and lifetimes can be
+# interleaved arbitrarily with no global registration.
+add_executable(AudioEngineOwnershipTest AestraAudio/AudioEngineOwnershipTest.cpp)
+target_link_libraries(AudioEngineOwnershipTest PRIVATE AestraAudio)
+target_include_directories(AudioEngineOwnershipTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME AudioEngineOwnershipTest COMMAND AudioEngineOwnershipTest)
+set_tests_properties(AudioEngineOwnershipTest PROPERTIES LABELS "audio;engine;integrity" TIMEOUT 120)
+
+# Zero-tolerance source guard (R2): fails if any AudioEngine global-instance
+# mechanism (accessor, registration pointer) reappears anywhere in the tree.
+add_test(NAME NoAudioEngineSingletonGuard
+    COMMAND ${CMAKE_COMMAND}
+        -DREPO_ROOT=${CMAKE_SOURCE_DIR}
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton.cmake)
+set_tests_properties(NoAudioEngineSingletonGuard PROPERTIES LABELS "guard;architecture" TIMEOUT 120)
+
+# Self-test: runs the guard against fixture trees — every forbidden shape
+# (including renamed static/global mechanisms) must fail, benign ownership
+# patterns and the tracked CommandRegistry exemption (#559) must pass.
+add_test(NAME NoAudioEngineSingletonGuardSelfTest
+    COMMAND ${CMAKE_COMMAND}
+        -DGUARD_SCRIPT=${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton.cmake
+        -DWORK_DIR=${CMAKE_BINARY_DIR}/guard_selftest
+        -P ${CMAKE_SOURCE_DIR}/Tests/Guards/no_audioengine_singleton_selftest.cmake)
+set_tests_properties(NoAudioEngineSingletonGuardSelfTest PROPERTIES LABELS "guard;architecture" TIMEOUT 120)
+
 # Callback Deadline Telemetry — validates AudioTelemetry::recordCallbackDuration
 # (avg/worst/budget/over-budget math) synthetically, plus a live smoke over
 # real processBlock timings.

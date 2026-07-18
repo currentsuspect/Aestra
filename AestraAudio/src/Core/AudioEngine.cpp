@@ -143,20 +143,6 @@ inline void addMidiPanic(Aestra::Audio::MidiBuffer& buf) {
 }
 } // namespace
 
-// Global pointer for singleton access
-static AudioEngine* g_audioEngineInstance = nullptr;
-
-AudioEngine& AudioEngine::getInstance() {
-    if (!g_audioEngineInstance) {
-        // Engine not registered — this is a programming error.
-        // In debug builds, assert to catch it early. In release, log and abort.
-        Aestra::Log::error("[AudioEngine] getInstance() called before engine was created!");
-        assert(g_audioEngineInstance && "AudioEngine::getInstance() called before engine was created");
-        std::abort();
-    }
-    return *g_audioEngineInstance;
-}
-
 void AudioEngine::startMetronomeCountIn(uint32_t beats) {
     m_pendingMetronomeCountInStop.store(false, std::memory_order_release);
     m_pendingMetronomeCountInBeats.store(std::max<uint32_t>(1, beats), std::memory_order_release);
@@ -1682,7 +1668,6 @@ const AudioEngine::BiquadCoeff AudioEngine::kKWeightRLB = {
  */
 AudioEngine::AudioEngine() {
     installRealtimeMisuseHandler();
-    g_audioEngineInstance = this; // Register singleton
     Aestra::Log::info("[AudioEngine] Created (Original Ctor). Ptr: " +
                       std::to_string(reinterpret_cast<uintptr_t>(this)));
 
@@ -1718,9 +1703,6 @@ AudioEngine::~AudioEngine() {
     stopLoudnessWorker();
     delete m_unitManagerSnapshot.load(std::memory_order_relaxed);
     m_unitManagerSnapshot.store(nullptr, std::memory_order_relaxed);
-    if (g_audioEngineInstance == this) {
-        g_audioEngineInstance = nullptr; // [NEW] Clear singleton
-    }
 }
 
 void AudioEngine::startLoudnessWorker() {
