@@ -73,6 +73,8 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
+#include "RealtimeThreadGuard.h" // Canonical real-time thread detection (isRealtimeAudioThread / ScopedRealtimeAudioThread)
+
 #include <atomic>
 #include <cassert>
 #include <cstddef>
@@ -89,37 +91,11 @@
 namespace Aestra {
 namespace Audio {
 
-/**
- * @brief Thread-local flag indicating we're on the audio thread
- * 
- * Set to true at the start of the audio callback, false at the end.
- * Used by debug checks to detect constraint violations.
- */
-inline thread_local bool g_isAudioThread = false;
-
-/**
- * @brief Check if current thread is the audio thread
- */
-inline bool isAudioThread() {
-    return g_isAudioThread;
-}
-
-/**
- * @brief RAII guard for marking audio thread scope
- */
-class AudioThreadGuard {
-public:
-    AudioThreadGuard() { 
-        g_isAudioThread = true; 
-    }
-    ~AudioThreadGuard() { 
-        g_isAudioThread = false; 
-    }
-    
-    // Non-copyable
-    AudioThreadGuard(const AudioThreadGuard&) = delete;
-    AudioThreadGuard& operator=(const AudioThreadGuard&) = delete;
-};
+// Real-time thread detection lives in RealtimeThreadGuard.h and is the single
+// source of truth: isRealtimeAudioThread() / ScopedRealtimeAudioThread. This
+// header used to carry a parallel g_isAudioThread bool + AudioThreadGuard; those
+// were consolidated away so every constraint check keys off one flag. Mark the
+// audio callback scope with Aestra::Audio::ScopedRealtimeAudioThread.
 
 /**
  * @brief Runtime violation counter (for diagnostics)
@@ -179,7 +155,7 @@ struct AudioThreadStats {
  */
 #define AESTRA_ASSERT_NOT_AUDIO_THREAD() \
     do { \
-        if (Aestra::Audio::isAudioThread()) { \
+        if (Aestra::Audio::isRealtimeAudioThread()) { \
             Aestra::Audio::AudioThreadStats::instance().allocationViolations.fetch_add(1); \
             assert(false && "Audio thread constraint violation: forbidden operation"); \
         } \
@@ -192,7 +168,7 @@ struct AudioThreadStats {
  */
 #define AESTRA_ASSERT_AUDIO_THREAD() \
     do { \
-        assert(Aestra::Audio::isAudioThread() && "Expected to be on audio thread"); \
+        assert(Aestra::Audio::isRealtimeAudioThread() && "Expected to be on audio thread"); \
     } while(0)
 
 /**
@@ -221,7 +197,7 @@ struct AudioThreadStats {
         auto& stats = Aestra::Audio::AudioThreadStats::instance(); \
         stats.totalAllocations.fetch_add(1, std::memory_order_relaxed); \
         stats.updatePeak(size); \
-        if (Aestra::Audio::isAudioThread()) { \
+        if (Aestra::Audio::isRealtimeAudioThread()) { \
             stats.allocationViolations.fetch_add(1, std::memory_order_relaxed); \
             /* Debug break in MSVC: __debugbreak(); */ \
             (void)(source); \
@@ -243,7 +219,7 @@ struct AudioThreadStats {
  */
 #define AESTRA_TRACK_LOCK() \
     do { \
-        if (Aestra::Audio::isAudioThread()) { \
+        if (Aestra::Audio::isRealtimeAudioThread()) { \
             Aestra::Audio::AudioThreadStats::instance().lockViolations.fetch_add(1, std::memory_order_relaxed); \
         } \
     } while(0)
@@ -253,7 +229,7 @@ struct AudioThreadStats {
  */
 #define AESTRA_TRACK_FILE_IO() \
     do { \
-        if (Aestra::Audio::isAudioThread()) { \
+        if (Aestra::Audio::isRealtimeAudioThread()) { \
             Aestra::Audio::AudioThreadStats::instance().ioViolations.fetch_add(1, std::memory_order_relaxed); \
         } \
     } while(0)
