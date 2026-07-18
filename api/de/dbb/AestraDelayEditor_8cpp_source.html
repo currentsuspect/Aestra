@@ -104,7 +104,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    <span class="keywordflow">return</span> NUIColor(0.0f, 0.90f, 0.80f, 1.0f);</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>}</div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>NUIColor cardBg() {</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    <span class="keywordflow">return</span> NUIColor(0.084f, 0.084f, 0.084f, 0.95f);</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    <span class="keywordflow">return</span> NUIThemeManager::getInstance().getColor(<span class="stringliteral">&quot;editorCard&quot;</span>);</div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>}</div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>NUIRect offsetRect(<span class="keyword">const</span> NUIRect&amp; r, <span class="keywordtype">float</span> dx, <span class="keywordtype">float</span> dy) {</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keywordflow">return</span> NUIRect(r.x + dx, r.y + dy, r.width, r.height);</div>
@@ -351,10 +351,10 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>        <span class="keyword">const</span> NUIRect groupLabelRect(outer.x - labelW, outer.y, labelW - 8.0f, outer.height);</div>
 <div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>        renderer.drawText(groupLabel, {groupLabelRect.x + 2.0f, groupLabelRect.y + 12.0f}, 9.0f,</div>
 <div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>                          theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.70f));</div>
-<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>        renderer.fillRoundedRect(outer, 9.0f, NUIColor(0.018f, 0.018f, 0.022f, 0.98f));</div>
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>        renderer.strokeRoundedRect(outer, 9.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.13f));</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>        renderer.fillRoundedRect(outer, 9.0f, NUIThemeManager::getInstance().getColor(<span class="stringliteral">&quot;editorWell&quot;</span>));</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>        renderer.strokeRoundedRect(outer, 9.0f, 1.0f, editorInk().withAlpha(0.13f));</div>
 <div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>        renderer.drawLine({right.x, outer.y + 7.0f}, {right.x, outer.bottom() - 7.0f}, 1.0f,</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>                          NUIColor(1.0f, 1.0f, 1.0f, 0.10f));</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>                          editorInk().withAlpha(0.10f));</div>
 <div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>        <span class="keyword">auto</span> seg = [&amp;](<span class="keyword">const</span> NUIRect&amp; rect, <span class="keyword">const</span> <span class="keywordtype">char</span>* label, <span class="keywordtype">bool</span> active) {</div>
 <div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>            <span class="keyword">const</span> NUIRect inset(rect.x + 3.0f, rect.y + 3.0f, rect.width - 6.0f, rect.height - 6.0f);</div>
 <div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>            <span class="keywordflow">if</span> (active) {</div>
@@ -378,7 +378,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>                                         <span class="keyword">const</span> NUIColor&amp; color, <span class="keywordtype">float</span> wx, <span class="keywordtype">float</span> wy) {</div>
 <div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
 <div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>    <span class="keyword">const</span> NUIRect rect = offsetRect(localRect, wx, wy);</div>
-<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>    renderer.fillRoundedRect(rect, 14.0f, NUIColor(0.020f, 0.020f, 0.024f, 0.98f));</div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>    renderer.fillRoundedRect(rect, 14.0f, NUIThemeManager::getInstance().getColor(<span class="stringliteral">&quot;editorWell&quot;</span>));</div>
 <div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>    renderer.strokeRoundedRect(rect, 14.0f, 1.5f, color.withAlpha(0.58f));</div>
 <div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>    renderer.fillRoundedRect({rect.x + 12.0f, rect.y + 12.0f, 4.0f, 16.0f}, 2.0f, color);</div>
 <div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>    renderer.drawText(title, {rect.x + 24.0f, rect.y + 14.0f}, 10.5f, theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.92f));</div>
@@ -396,7 +396,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> stereo = m_instance-&gt;getParameter(Delay::kStereoShift) * 2.0f - 1.0f;</div>
 <div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> modulation = m_instance-&gt;getParameter(Delay::kModDepth);</div>
 <div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span> </div>
-<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    renderer.fillRoundedRect(rect, 10.0f, NUIColor(0.008f, 0.008f, 0.012f, 0.98f));</div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>    renderer.fillRoundedRect(rect, 10.0f, NUIThemeManager::getInstance().getColor(<span class="stringliteral">&quot;editorWell&quot;</span>));</div>
 <div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>    renderer.strokeRoundedRect(rect, 10.0f, 1.0f, cyanAccent().withAlpha(0.26f));</div>
 <div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    renderer.drawText(<span class="stringliteral">&quot;ECHO PATH&quot;</span>, {rect.x + 12.0f, rect.y + 9.0f}, 9.5f,</div>
 <div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>                      theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.82f));</div>
@@ -466,379 +466,380 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>            renderer.fillRoundedRect(r, 6.0f, accent());</div>
 <div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span>            renderer.drawTextCentered(btn.label, r, 9.5f, theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>));</div>
 <div class="line"><a id="l00384" name="l00384"></a><span class="lineno">  384</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>            NUIColor fill = hovered ? NUIColor(0.099f, 0.099f, 0.099f, 0.92f) : NUIColor(0.068f, 0.068f, 0.068f, 0.90f);</div>
-<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>            renderer.fillRoundedRect(r, 6.0f, fill);</div>
-<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>            renderer.strokeRoundedRect(r, 6.0f, 1.0f, accent().withAlpha(0.32f));</div>
-<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>            renderer.drawTextCentered(btn.label, r, 9.5f, theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.88f));</div>
-<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>        }</div>
-<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>    };</div>
-<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span> </div>
-<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; 4; ++i) {</div>
-<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>        drawTierButton(m_baseButtons[i], i == m_syncBaseIndex, i == m_hoveredBaseButton);</div>
-<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>    }</div>
-<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; 3; ++i) {</div>
-<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>        drawTierButton(m_modifierButtons[i], i == m_syncModifierIndex, i == m_hoveredModifierButton);</div>
-<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>    }</div>
-<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>}</div>
-<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span> </div>
-<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>std::string AestraDelayEditor::syncReadoutText()<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
-<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>    <span class="keywordflow">if</span> (!m_instance)</div>
-<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>        <span class="keywordflow">return</span> {};</div>
-<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>    <span class="keywordflow">if</span> (<span class="keyword">auto</span> delay = std::dynamic_pointer_cast&lt;Delay&gt;(m_instance)) {</div>
-<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>        <span class="keywordtype">int</span> ms = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(std::round(delay-&gt;getEffectiveDelayMs()));</div>
-<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>        <span class="keywordflow">return</span> std::to_string(ms) + <span class="stringliteral">&quot;ms&quot;</span>;</div>
-<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>    }</div>
-<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>    <span class="keywordflow">return</span> {};</div>
-<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>}</div>
-<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span> </div>
-<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>std::string AestraDelayEditor::formattedValue(uint32_t paramId)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>    <span class="keywordflow">if</span> (!m_instance)</div>
-<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>        <span class="keywordflow">return</span> {};</div>
-<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
-<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>    <span class="keywordflow">if</span> (paramId == Delay::kTime) {</div>
-<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>        <span class="keywordflow">if</span> (<span class="keyword">auto</span> delay = std::dynamic_pointer_cast&lt;Delay&gt;(m_instance)) {</div>
-<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>            <span class="keywordflow">return</span> std::to_string(<span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(std::round(delay-&gt;getEffectiveDelayMs()))) + <span class="stringliteral">&quot;ms&quot;</span>;</div>
-<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>        }</div>
-<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>    }</div>
-<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>    <span class="keywordflow">return</span> m_instance-&gt;<a class="code hl_function" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#aa1090348c29e19ce1c9fbdd63c92a23e">getParameterDisplay</a>(paramId);</div>
-<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>}</div>
-<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span> </div>
-<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span><span class="keywordtype">void</span> AestraDelayEditor::drawKnob(NUIRenderer&amp; renderer, <span class="keyword">const</span> KnobControl&amp; k, <span class="keywordtype">float</span> wx, <span class="keywordtype">float</span> wy) {</div>
-<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
-<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> value = k.slider ? <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(k.slider-&gt;getValue()) : 0.0f;</div>
-<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>    NUIColor knobAccent = accent();</div>
-<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>    <span class="keywordflow">if</span> (k.paramId == Delay::kTime || k.paramId == Delay::kStereoShift || k.paramId == Delay::kDamping ||</div>
-<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>        k.paramId == Delay::kFeedbackHighpass)</div>
-<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>        knobAccent = cyanAccent();</div>
-<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (k.paramId == Delay::kModDepth || k.paramId == Delay::kModRate)</div>
-<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span>        knobAccent = NUIColor(0.94f, 0.34f, 0.68f, 1.0f);</div>
-<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>    <span class="keywordflow">if</span> (k.readOnly)</div>
-<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>        knobAccent = cyanAccent().withAlpha(0.72f);</div>
-<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>    NUIRect bounds = offsetRect(k.bounds, wx, wy);</div>
-<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span>    <span class="comment">// Slider bounds are already absolute (set in layoutControls).</span></div>
-<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>    NUIRect knobRect = k.slider ? k.slider-&gt;getBounds() : NUIRect();</div>
-<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>    renderer.fillRoundedRect(bounds, 10.0f, cardBg());</div>
-<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, NUIColor(1, 1, 1, 0.10f));</div>
-<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span> </div>
-<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> cx = knobRect.center().x;</div>
-<div class="line"><a id="l00442" name="l00442"></a><span class="lineno">  442</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> cy = knobRect.center().y;</div>
-<div class="line"><a id="l00443" name="l00443"></a><span class="lineno">  443</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> r = kKnobSize * 0.40f;</div>
-<div class="line"><a id="l00444" name="l00444"></a><span class="lineno">  444</span>    renderer.fillCircle({cx, cy}, r + 7.0f, knobAccent.withAlpha(0.07f));</div>
-<div class="line"><a id="l00445" name="l00445"></a><span class="lineno">  445</span>    renderer.fillCircle({cx, cy}, r, NUIColor(0.045f, 0.045f, 0.045f, 0.96f));</div>
-<div class="line"><a id="l00446" name="l00446"></a><span class="lineno">  446</span>    renderer.strokeCircle({cx, cy}, r, 1.0f, knobAccent.withAlpha(0.32f));</div>
-<div class="line"><a id="l00447" name="l00447"></a><span class="lineno">  447</span> </div>
-<div class="line"><a id="l00448" name="l00448"></a><span class="lineno">  448</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> sa = kPi * 0.75f;</div>
-<div class="line"><a id="l00449" name="l00449"></a><span class="lineno">  449</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> ea = sa + value * kPi * 1.5f;</div>
-<div class="line"><a id="l00450" name="l00450"></a><span class="lineno">  450</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; 34; ++i) {</div>
-<div class="line"><a id="l00451" name="l00451"></a><span class="lineno">  451</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> a1 = sa + (ea - sa) * <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(i) / 34.0f;</div>
-<div class="line"><a id="l00452" name="l00452"></a><span class="lineno">  452</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> a2 = sa + (ea - sa) * <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(i + 1) / 34.0f;</div>
-<div class="line"><a id="l00453" name="l00453"></a><span class="lineno">  453</span>        renderer.drawLine({cx + std::cos(a1) * (r - 3.0f), cy + std::sin(a1) * (r - 3.0f)},</div>
-<div class="line"><a id="l00454" name="l00454"></a><span class="lineno">  454</span>                          {cx + std::cos(a2) * (r - 3.0f), cy + std::sin(a2) * (r - 3.0f)}, 3.0f,</div>
-<div class="line"><a id="l00455" name="l00455"></a><span class="lineno">  455</span>                          knobAccent.withAlpha(k.readOnly ? 0.50f : 0.92f));</div>
-<div class="line"><a id="l00456" name="l00456"></a><span class="lineno">  456</span>    }</div>
-<div class="line"><a id="l00457" name="l00457"></a><span class="lineno">  457</span> </div>
-<div class="line"><a id="l00458" name="l00458"></a><span class="lineno">  458</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> pa = sa + value * kPi * 1.5f;</div>
-<div class="line"><a id="l00459" name="l00459"></a><span class="lineno">  459</span>    renderer.fillCircle({cx + std::cos(pa) * (r - 7.0f), cy + std::sin(pa) * (r - 7.0f)}, 3.2f, knobAccent);</div>
-<div class="line"><a id="l00460" name="l00460"></a><span class="lineno">  460</span>    renderer.drawText(k.label, {bounds.x + 10.0f, bounds.y + 6.5f}, 10.5f,</div>
-<div class="line"><a id="l00461" name="l00461"></a><span class="lineno">  461</span>                      theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.90f));</div>
-<div class="line"><a id="l00462" name="l00462"></a><span class="lineno">  462</span>    <span class="keyword">const</span> std::string valueStr = formattedValue(k.paramId);</div>
-<div class="line"><a id="l00463" name="l00463"></a><span class="lineno">  463</span>    renderer.drawText(valueStr, {bounds.x + 10.0f, bounds.bottom() - 18.0f}, 10.0f, knobAccent.withAlpha(0.96f));</div>
-<div class="line"><a id="l00464" name="l00464"></a><span class="lineno">  464</span>}</div>
-<div class="line"><a id="l00465" name="l00465"></a><span class="lineno">  465</span> </div>
-<div class="line"><a id="l00466" name="l00466"></a><span class="lineno">  466</span><span class="keywordtype">void</span> AestraDelayEditor::drawMixSlider(NUIRenderer&amp; renderer, <span class="keywordtype">float</span> wx, <span class="keywordtype">float</span> wy) {</div>
-<div class="line"><a id="l00467" name="l00467"></a><span class="lineno">  467</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l00468" name="l00468"></a><span class="lineno">  468</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
-<div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> mix = m_instance ? m_instance-&gt;<a class="code hl_function" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#a403d5dd8e170e35fd04fe41b59e432d8">getParameter</a>(Delay::kMix) : 0.0f;</div>
-<div class="line"><a id="l00470" name="l00470"></a><span class="lineno">  470</span>    NUIRect mixRect = offsetRect(m_mixSliderRect, wx, wy);</div>
-<div class="line"><a id="l00471" name="l00471"></a><span class="lineno">  471</span>    <span class="keyword">const</span> NUIRect track(mixRect.x + 58.0f, mixRect.y + 12.0f, mixRect.width - 104.0f, 8.0f);</div>
-<div class="line"><a id="l00472" name="l00472"></a><span class="lineno">  472</span>    renderer.fillRoundedRect(mixRect, 10.0f, NUIColor(0.068f, 0.068f, 0.068f, 0.92f));</div>
-<div class="line"><a id="l00473" name="l00473"></a><span class="lineno">  473</span>    renderer.strokeRoundedRect(mixRect, 10.0f, 1.0f, accent().withAlpha(0.35f));</div>
-<div class="line"><a id="l00474" name="l00474"></a><span class="lineno">  474</span>    renderer.drawText(<span class="stringliteral">&quot;Mix&quot;</span>, {mixRect.x + 14.0f, mixRect.y + 10.0f}, 10.5f,</div>
-<div class="line"><a id="l00475" name="l00475"></a><span class="lineno">  475</span>                      theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.95f));</div>
-<div class="line"><a id="l00476" name="l00476"></a><span class="lineno">  476</span>    renderer.fillRoundedRect(track, 3.0f, NUIColor(1, 1, 1, 0.10f));</div>
-<div class="line"><a id="l00477" name="l00477"></a><span class="lineno">  477</span>    renderer.fillRoundedRect({track.x, track.y, track.width * mix, track.height}, 3.0f, accent().withAlpha(0.92f));</div>
-<div class="line"><a id="l00478" name="l00478"></a><span class="lineno">  478</span>    renderer.fillCircle({track.x + track.width * mix, track.center().y}, 9.0f, theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>));</div>
-<div class="line"><a id="l00479" name="l00479"></a><span class="lineno">  479</span>    <span class="keyword">const</span> std::string pctStr = std::to_string(<span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(std::round(mix * 100.0f))) + <span class="stringliteral">&quot;%&quot;</span>;</div>
-<div class="line"><a id="l00480" name="l00480"></a><span class="lineno">  480</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> pctW = renderer.measureText(pctStr, 10.0f).width;</div>
-<div class="line"><a id="l00481" name="l00481"></a><span class="lineno">  481</span>    renderer.drawText(pctStr, {mixRect.right() - 14.0f - pctW, mixRect.y + 10.0f}, 10.0f, accent().withAlpha(0.96f));</div>
-<div class="line"><a id="l00482" name="l00482"></a><span class="lineno">  482</span>}</div>
-<div class="line"><a id="l00483" name="l00483"></a><span class="lineno">  483</span> </div>
-<div class="line"><a id="l00484" name="l00484"></a><span class="lineno">  484</span><span class="keywordtype">void</span> AestraDelayEditor::drawBypassPill(NUIRenderer&amp; renderer) {</div>
-<div class="line"><a id="l00485" name="l00485"></a><span class="lineno">  485</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l00486" name="l00486"></a><span class="lineno">  486</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> bypassed = m_instance &amp;&amp; m_instance-&gt;getParameter(Aestra::Audio::Plugins::AestraDelay::kBypass) &gt; 0.5f;</div>
-<div class="line"><a id="l00487" name="l00487"></a><span class="lineno">  487</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kFont = 10.0f;</div>
-<div class="line"><a id="l00488" name="l00488"></a><span class="lineno">  488</span>    <span class="keywordflow">if</span> (bypassed) {</div>
-<div class="line"><a id="l00489" name="l00489"></a><span class="lineno">  489</span>        renderer.fillRoundedRect(m_bypassRect, 7.0f,</div>
-<div class="line"><a id="l00490" name="l00490"></a><span class="lineno">  490</span>                                 NUIColor(0.92f, 0.28f, 0.22f).withAlpha(m_bypassHovered ? 0.94f : 0.78f));</div>
-<div class="line"><a id="l00491" name="l00491"></a><span class="lineno">  491</span>        renderer.strokeRoundedRect(m_bypassRect, 7.0f, 1.0f, NUIColor(0.92f, 0.28f, 0.22f).withAlpha(0.50f));</div>
-<div class="line"><a id="l00492" name="l00492"></a><span class="lineno">  492</span>        renderer.drawTextCentered(<span class="stringliteral">&quot;BYPASSED&quot;</span>, m_bypassRect, kFont, theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>));</div>
-<div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>        renderer.fillRoundedRect(m_bypassRect, 7.0f,</div>
-<div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span>                                 theme.getColor(<span class="stringliteral">&quot;success&quot;</span>).withAlpha(m_bypassHovered ? 0.30f : 0.18f));</div>
-<div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span>        renderer.strokeRoundedRect(m_bypassRect, 7.0f, 1.0f, theme.getColor(<span class="stringliteral">&quot;success&quot;</span>).withAlpha(0.40f));</div>
-<div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span>        renderer.drawTextCentered(<span class="stringliteral">&quot;ACTIVE&quot;</span>, m_bypassRect, kFont, theme.getColor(<span class="stringliteral">&quot;success&quot;</span>));</div>
-<div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>    }</div>
-<div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span>}</div>
-<div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span> </div>
-<div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span><span class="keywordtype">void</span> AestraDelayEditor::drawContent(NUIRenderer&amp; renderer, <span class="keyword">const</span> NUIRect&amp; contentRect) {</div>
-<div class="line"><a id="l00502" name="l00502"></a><span class="lineno">  502</span>    (void)contentRect;</div>
-<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>    <span class="comment">// Recompute layout each frame so cached rects (and absolute slider bounds)</span></div>
-<div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span>    <span class="comment">// follow window movement.</span></div>
-<div class="line"><a id="l00505" name="l00505"></a><span class="lineno">  505</span>    layoutControls();</div>
-<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span>    <span class="keyword">const</span> <span class="keyword">auto</span> b = getBounds();</div>
-<div class="line"><a id="l00507" name="l00507"></a><span class="lineno">  507</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> wx = b.x;</div>
-<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> wy = b.y;</div>
-<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> identityY = wy + AestraPanelWindow::TITLE_BAR_H + 8.0f;</div>
-<div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span>    renderer.fillCircle({wx + kPad + 10.0f, identityY + 9.0f}, 9.0f, accent().withAlpha(0.18f));</div>
-<div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>    renderer.strokeCircle({wx + kPad + 10.0f, identityY + 9.0f}, 9.0f, 1.5f, accent().withAlpha(0.80f));</div>
-<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>    renderer.fillCircle({wx + kPad + 12.5f, identityY + 6.5f}, 2.5f, cyanAccent());</div>
-<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>    renderer.drawText(<span class="stringliteral">&quot;DELAY&quot;</span>, {wx + kPad + 28.0f, identityY + 1.0f}, 13.0f,</div>
-<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>                      theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.96f));</div>
-<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>    renderer.drawText(<span class="stringliteral">&quot;STEREO ECHO ENGINE&quot;</span>, {wx + kPad + 28.0f, identityY + 16.0f}, 8.5f,</div>
-<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>                      theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.72f));</div>
-<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>    drawBypassPill(renderer);</div>
-<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>    drawPillSwitches(renderer, wx, wy);</div>
-<div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>    drawSectionFrame(renderer, m_timingSectionRect, <span class="stringliteral">&quot;TIME + FEEDBACK&quot;</span>, cyanAccent(), wx, wy);</div>
-<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span>    drawSectionFrame(renderer, m_characterSectionRect, <span class="stringliteral">&quot;TONE + MOTION&quot;</span>, accent(), wx, wy);</div>
-<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>    drawEchoDisplay(renderer, wx, wy);</div>
-<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>    drawSyncPanel(renderer, wx, wy);</div>
-<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span> </div>
-<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
-<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> sync = m_instance &amp;&amp; m_instance-&gt;<a class="code hl_function" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#a403d5dd8e170e35fd04fe41b59e432d8">getParameter</a>(Delay::kSyncMode) &gt; 0.5f;</div>
-<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_knobs.size(); ++i) {</div>
-<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>        <span class="comment">// Hide Time knob (index 0) in sync mode</span></div>
-<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>        <span class="keywordflow">if</span> (sync &amp;&amp; i == 0)</div>
-<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>        drawKnob(renderer, m_knobs[i], wx, wy);</div>
-<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span>    }</div>
-<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span>    drawMixSlider(renderer, wx, wy);</div>
-<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>}</div>
-<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span> </div>
-<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span><span class="keywordtype">int</span> AestraDelayEditor::hitTestBaseButton(<span class="keywordtype">float</span> localX, <span class="keywordtype">float</span> localY)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_baseButtons.size(); ++i) {</div>
-<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>        <span class="keywordflow">if</span> (m_baseButtons[i].bounds.contains({localX, localY}))</div>
-<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>            <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
-<div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>    }</div>
-<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>    <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>}</div>
-<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span> </div>
-<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span><span class="keywordtype">int</span> AestraDelayEditor::hitTestModifierButton(<span class="keywordtype">float</span> localX, <span class="keywordtype">float</span> localY)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_modifierButtons.size(); ++i) {</div>
-<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>        <span class="keywordflow">if</span> (m_modifierButtons[i].bounds.contains({localX, localY}))</div>
-<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>            <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
-<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>    }</div>
-<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>    <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span>}</div>
-<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span> </div>
-<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span><span class="keywordtype">int</span> AestraDelayEditor::computeDivisionIndex(<span class="keywordtype">int</span> baseIdx, <span class="keywordtype">int</span> modifierIdx)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
-<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span>    <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">int</span> kTable[4][3] = {</div>
-<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>        {Delay::kDiv1_4, Delay::kDiv1_4D, Delay::kDiv1_4T},</div>
-<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>        {Delay::kDiv1_8, Delay::kDiv1_8D, Delay::kDiv1_8T},</div>
-<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>        {Delay::kDiv1_16, Delay::kDiv1_16D, Delay::kDiv1_16T},</div>
-<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>        {Delay::kDiv1_32, Delay::kDiv1_32, Delay::kDiv1_32},</div>
-<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>    };</div>
-<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>    <span class="keywordflow">return</span> kTable[baseIdx][modifierIdx];</div>
-<div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>}</div>
-<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span> </div>
-<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span><span class="keywordtype">void</span> AestraDelayEditor::divisionIndexToBaseModifier(<span class="keywordtype">int</span> divisionIdx, <span class="keywordtype">int</span>&amp; baseIdx, <span class="keywordtype">int</span>&amp; modifierIdx)<span class="keyword"> const </span>{</div>
-<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
-<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span>    <span class="keywordflow">switch</span> (divisionIdx) {</div>
-<div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span>    <span class="keywordflow">case</span> Delay::kDiv1_4:</div>
-<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span>        baseIdx = 0;</div>
-<div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>        modifierIdx = 0;</div>
-<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>        <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span>    <span class="keywordflow">case</span> Delay::kDiv1_8:</div>
-<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>        baseIdx = 1;</div>
-<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>        modifierIdx = 0;</div>
-<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>        <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>    <span class="keywordflow">case</span> Delay::kDiv1_16:</div>
-<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>        baseIdx = 2;</div>
-<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>        modifierIdx = 0;</div>
-<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>        <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>    <span class="keywordflow">case</span> Delay::kDiv1_32:</div>
-<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>        baseIdx = 3;</div>
-<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>        modifierIdx = 0;</div>
-<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>        <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span>    <span class="keywordflow">case</span> Delay::kDiv1_4D:</div>
-<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>        baseIdx = 0;</div>
-<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>        modifierIdx = 1;</div>
-<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>        <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>    <span class="keywordflow">case</span> Delay::kDiv1_8D:</div>
-<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>        baseIdx = 1;</div>
-<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>        modifierIdx = 1;</div>
-<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>        <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span>    <span class="keywordflow">case</span> Delay::kDiv1_16D:</div>
-<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>        baseIdx = 2;</div>
-<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span>        modifierIdx = 1;</div>
-<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>        <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>    <span class="keywordflow">case</span> Delay::kDiv1_4T:</div>
-<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>        baseIdx = 0;</div>
-<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>        modifierIdx = 2;</div>
-<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>        <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>    <span class="keywordflow">case</span> Delay::kDiv1_8T:</div>
-<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>        baseIdx = 1;</div>
-<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>        modifierIdx = 2;</div>
-<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>        <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>    <span class="keywordflow">case</span> Delay::kDiv1_16T:</div>
-<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>        baseIdx = 2;</div>
-<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>        modifierIdx = 2;</div>
-<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>        <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>    <span class="keywordflow">default</span>:</div>
-<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>        baseIdx = 1;</div>
-<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>        modifierIdx = 0;</div>
-<div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span>        <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>    }</div>
-<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>}</div>
-<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span> </div>
-<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span><span class="keywordtype">void</span> AestraDelayEditor::applySyncSelection() {</div>
-<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
-<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>    <span class="keywordflow">if</span> (!m_instance)</div>
-<div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> divIdx = computeDivisionIndex(m_syncBaseIndex, m_syncModifierIndex);</div>
-<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>    m_instance-&gt;setParameter(Delay::kNoteDivision, Delay::noteDivisionParamFromIndex(divIdx));</div>
-<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>    setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>}</div>
-<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span> </div>
-<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span><span class="keywordtype">bool</span> AestraDelayEditor::onMouseEvent(<span class="keyword">const</span> NUIMouseEvent&amp; event) {</div>
-<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>    <span class="keywordflow">if</span> (!isVisible())</div>
-<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span> </div>
-<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>    <span class="comment">// Let base class handle title bar / close / drag first</span></div>
-<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>    <span class="keywordflow">if</span> (AestraPanelWindow::onMouseEvent(event)) {</div>
-<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>    }</div>
-<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span> </div>
-<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>    <span class="keyword">const</span> <span class="keyword">auto</span> b = getBounds();</div>
-<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> mx = <span class="keyword">event</span>.position.x - b.x;</div>
-<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> my = <span class="keyword">event</span>.position.y - b.y;</div>
-<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> contains = b.contains(event.position);</div>
-<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span> </div>
-<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>    <span class="comment">// Bypass click (uses absolute bounds, already offset in layoutControls)</span></div>
-<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left &amp;&amp; m_bypassRect.contains(event.position)) {</div>
-<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>        <span class="keywordflow">if</span> (m_instance) {</div>
-<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>            <span class="keyword">const</span> <span class="keywordtype">bool</span> bypassed = m_instance-&gt;getParameter(Aestra::Audio::Plugins::AestraDelay::kBypass) &gt; 0.5f;</div>
-<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>            m_instance-&gt;setParameter(Aestra::Audio::Plugins::AestraDelay::kBypass, bypassed ? 0.0f : 1.0f);</div>
-<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>            setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>        }</div>
-<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>    }</div>
-<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span> </div>
-<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>    <span class="keywordflow">if</span> (!contains &amp;&amp; !isDraggingWindow() &amp;&amp; !m_draggingMix)</div>
-<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span> </div>
-<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
-<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
-<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>        <span class="keywordflow">if</span> (m_instance) {</div>
-<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>            <span class="keywordflow">if</span> (m_freeRect.contains({mx, my})) {</div>
-<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>                m_instance-&gt;<a class="code hl_function" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#ab86170bcf69aa08d0164624b80002e3d">setParameter</a>(Delay::kSyncMode, 0.0f);</div>
-<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>                layoutControls();</div>
-<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>                setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>            }</div>
-<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>            <span class="keywordflow">if</span> (m_syncRect.contains({mx, my})) {</div>
-<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>                m_instance-&gt;setParameter(Delay::kSyncMode, 1.0f);</div>
-<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>                layoutControls();</div>
-<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>                setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>            }</div>
-<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>            <span class="keywordflow">if</span> (m_stereoRect.contains({mx, my})) {</div>
-<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>                m_instance-&gt;setParameter(Delay::kStereoMode, 0.0f);</div>
-<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>                setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>            }</div>
-<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>            <span class="keywordflow">if</span> (m_pingPongRect.contains({mx, my})) {</div>
-<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>                m_instance-&gt;setParameter(Delay::kStereoMode, 1.0f);</div>
-<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>                setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>            }</div>
-<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>            <span class="keywordflow">if</span> (m_instance-&gt;getParameter(Delay::kSyncMode) &gt; 0.5f) {</div>
-<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>                <span class="keyword">const</span> <span class="keywordtype">int</span> base = hitTestBaseButton(mx, my);</div>
-<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>                <span class="keywordflow">if</span> (base &gt;= 0 &amp;&amp; base != m_syncBaseIndex) {</div>
-<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>                    m_syncBaseIndex = base;</div>
-<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>                    <span class="comment">// 1/32 has no dotted/triplet variants — reset modifier to Straight</span></div>
-<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>                    <span class="keywordflow">if</span> (base == 3)</div>
-<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>                        m_syncModifierIndex = 0;</div>
-<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>                    applySyncSelection();</div>
-<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>                    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>                }</div>
-<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>                <span class="keyword">const</span> <span class="keywordtype">int</span> mod = hitTestModifierButton(mx, my);</div>
-<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>                <span class="keywordflow">if</span> (mod &gt;= 0 &amp;&amp; mod != m_syncModifierIndex) {</div>
-<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>                    <span class="comment">// Prevent dotted/triplet on 1/32 base</span></div>
-<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>                    <span class="keywordflow">if</span> (m_syncBaseIndex == 3 &amp;&amp; mod != 0)</div>
-<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>                        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>                    m_syncModifierIndex = mod;</div>
-<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>                    applySyncSelection();</div>
-<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>                    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>                }</div>
-<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>            }</div>
-<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>            <span class="keywordflow">if</span> (m_mixSliderRect.contains({mx, my})) {</div>
-<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>                m_draggingMix = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>                <span class="keyword">const</span> <span class="keywordtype">float</span> sliderX = m_mixSliderRect.x + 58.0f;</div>
-<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>                <span class="keyword">const</span> <span class="keywordtype">float</span> sliderW = m_mixSliderRect.width - 104.0f;</div>
-<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>                m_instance-&gt;setParameter(Delay::kMix, std::clamp((mx - sliderX) / sliderW, 0.0f, 1.0f));</div>
-<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>                setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>            }</div>
-<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>        }</div>
-<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>    }</div>
-<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span> </div>
-<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>    <span class="keywordflow">if</span> (m_draggingMix &amp;&amp; m_instance) {</div>
-<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>        <span class="keywordflow">if</span> (!event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
-<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>            m_draggingMix = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>        }</div>
-<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> sliderX = m_mixSliderRect.x + 58.0f;</div>
-<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> sliderW = m_mixSliderRect.width - 104.0f;</div>
-<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>        m_instance-&gt;setParameter(Delay::kMix, std::clamp((mx - sliderX) / sliderW, 0.0f, 1.0f));</div>
-<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>        setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>    }</div>
-<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span> </div>
-<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>    <span class="keywordflow">if</span> (!event.pressed &amp;&amp; !event.released) {</div>
-<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>        <span class="comment">// Sync panel hover tracking</span></div>
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>        <span class="keywordflow">if</span> (m_instance &amp;&amp; m_instance-&gt;getParameter(Delay::kSyncMode) &gt; 0.5f) {</div>
-<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>            <span class="keyword">const</span> <span class="keywordtype">int</span> hb = hitTestBaseButton(mx, my);</div>
-<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>            <span class="keyword">const</span> <span class="keywordtype">int</span> hm = hitTestModifierButton(mx, my);</div>
-<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>            <span class="keywordflow">if</span> (hb != m_hoveredBaseButton || hm != m_hoveredModifierButton) {</div>
-<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>                m_hoveredBaseButton = hb;</div>
-<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>                m_hoveredModifierButton = hm;</div>
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>                <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_baseButtons.size(); ++i) {</div>
-<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>                    m_baseButtons[i].hovered = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i) == hb;</div>
-<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>                }</div>
-<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>                <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_modifierButtons.size(); ++i) {</div>
-<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>                    m_modifierButtons[i].hovered = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i) == hm;</div>
-<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>                }</div>
-<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>                setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>            }</div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (m_hoveredBaseButton &gt;= 0 || m_hoveredModifierButton &gt;= 0) {</div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>            m_hoveredBaseButton = -1;</div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>            m_hoveredModifierButton = -1;</div>
-<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; btn : m_baseButtons)</div>
-<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>                btn.hovered = false;</div>
-<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; btn : m_modifierButtons)</div>
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>                btn.hovered = false;</div>
-<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>            setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>        }</div>
-<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>    }</div>
-<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span> </div>
-<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>    <span class="comment">// Hover for bypass pill</span></div>
-<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>    <span class="keywordflow">if</span> (!event.pressed &amp;&amp; !event.released) {</div>
-<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> hover = m_bypassRect.contains(event.position);</div>
-<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>        <span class="keywordflow">if</span> (hover != m_bypassHovered) {</div>
-<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>            m_bypassHovered = hover;</div>
-<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>            setDirty(<span class="keyword">true</span>);</div>
-<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>        }</div>
-<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>    }</div>
-<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span> </div>
-<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>    <span class="comment">// Let NUISlider children handle their own mouse events</span></div>
-<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>    <span class="keywordflow">return</span> NUIComponent::onMouseEvent(event) || consumeInsideBounds(event);</div>
-<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>}</div>
-<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span> </div>
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>} <span class="comment">// namespace AestraUI</span></div>
+<div class="line"><a id="l00385" name="l00385"></a><span class="lineno">  385</span>            NUIColor fill = NUIThemeManager::getInstance().getColor(<span class="stringliteral">&quot;editorControl&quot;</span>);</div>
+<div class="line"><a id="l00386" name="l00386"></a><span class="lineno">  386</span>            <span class="keywordflow">if</span> (hovered) fill = fill.lightened(0.03f);</div>
+<div class="line"><a id="l00387" name="l00387"></a><span class="lineno">  387</span>            renderer.fillRoundedRect(r, 6.0f, fill);</div>
+<div class="line"><a id="l00388" name="l00388"></a><span class="lineno">  388</span>            renderer.strokeRoundedRect(r, 6.0f, 1.0f, accent().withAlpha(0.32f));</div>
+<div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>            renderer.drawTextCentered(btn.label, r, 9.5f, theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.88f));</div>
+<div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>        }</div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>    };</div>
+<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span> </div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; 4; ++i) {</div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>        drawTierButton(m_baseButtons[i], i == m_syncBaseIndex, i == m_hoveredBaseButton);</div>
+<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    }</div>
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; 3; ++i) {</div>
+<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>        drawTierButton(m_modifierButtons[i], i == m_syncModifierIndex, i == m_hoveredModifierButton);</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>    }</div>
+<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>}</div>
+<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span> </div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>std::string AestraDelayEditor::syncReadoutText()<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
+<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>    <span class="keywordflow">if</span> (!m_instance)</div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>        <span class="keywordflow">return</span> {};</div>
+<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>    <span class="keywordflow">if</span> (<span class="keyword">auto</span> delay = std::dynamic_pointer_cast&lt;Delay&gt;(m_instance)) {</div>
+<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>        <span class="keywordtype">int</span> ms = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(std::round(delay-&gt;getEffectiveDelayMs()));</div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>        <span class="keywordflow">return</span> std::to_string(ms) + <span class="stringliteral">&quot;ms&quot;</span>;</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>    }</div>
+<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>    <span class="keywordflow">return</span> {};</div>
+<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>}</div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span> </div>
+<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>std::string AestraDelayEditor::formattedValue(uint32_t paramId)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>    <span class="keywordflow">if</span> (!m_instance)</div>
+<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>        <span class="keywordflow">return</span> {};</div>
+<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>    <span class="keywordflow">if</span> (paramId == Delay::kTime) {</div>
+<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>        <span class="keywordflow">if</span> (<span class="keyword">auto</span> delay = std::dynamic_pointer_cast&lt;Delay&gt;(m_instance)) {</div>
+<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>            <span class="keywordflow">return</span> std::to_string(<span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(std::round(delay-&gt;getEffectiveDelayMs()))) + <span class="stringliteral">&quot;ms&quot;</span>;</div>
+<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>        }</div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>    }</div>
+<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>    <span class="keywordflow">return</span> m_instance-&gt;<a class="code hl_function" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#aa1090348c29e19ce1c9fbdd63c92a23e">getParameterDisplay</a>(paramId);</div>
+<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span>}</div>
+<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span> </div>
+<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span><span class="keywordtype">void</span> AestraDelayEditor::drawKnob(NUIRenderer&amp; renderer, <span class="keyword">const</span> KnobControl&amp; k, <span class="keywordtype">float</span> wx, <span class="keywordtype">float</span> wy) {</div>
+<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
+<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> value = k.slider ? <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(k.slider-&gt;getValue()) : 0.0f;</div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>    NUIColor knobAccent = accent();</div>
+<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>    <span class="keywordflow">if</span> (k.paramId == Delay::kTime || k.paramId == Delay::kStereoShift || k.paramId == Delay::kDamping ||</div>
+<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>        k.paramId == Delay::kFeedbackHighpass)</div>
+<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>        knobAccent = cyanAccent();</div>
+<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span>    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (k.paramId == Delay::kModDepth || k.paramId == Delay::kModRate)</div>
+<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>        knobAccent = NUIColor(0.94f, 0.34f, 0.68f, 1.0f);</div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>    <span class="keywordflow">if</span> (k.readOnly)</div>
+<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>        knobAccent = cyanAccent().withAlpha(0.72f);</div>
+<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span>    NUIRect bounds = offsetRect(k.bounds, wx, wy);</div>
+<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>    <span class="comment">// Slider bounds are already absolute (set in layoutControls).</span></div>
+<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>    NUIRect knobRect = k.slider ? k.slider-&gt;getBounds() : NUIRect();</div>
+<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>    renderer.fillRoundedRect(bounds, 10.0f, cardBg());</div>
+<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span>    renderer.strokeRoundedRect(bounds, 10.0f, 1.0f, NUIColor(1, 1, 1, 0.10f));</div>
+<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span> </div>
+<div class="line"><a id="l00442" name="l00442"></a><span class="lineno">  442</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> cx = knobRect.center().x;</div>
+<div class="line"><a id="l00443" name="l00443"></a><span class="lineno">  443</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> cy = knobRect.center().y;</div>
+<div class="line"><a id="l00444" name="l00444"></a><span class="lineno">  444</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> r = kKnobSize * 0.40f;</div>
+<div class="line"><a id="l00445" name="l00445"></a><span class="lineno">  445</span>    renderer.fillCircle({cx, cy}, r + 7.0f, knobAccent.withAlpha(0.07f));</div>
+<div class="line"><a id="l00446" name="l00446"></a><span class="lineno">  446</span>    renderer.fillCircle({cx, cy}, r, NUIThemeManager::getInstance().getColor(<span class="stringliteral">&quot;editorWell&quot;</span>).withAlpha(0.96f));</div>
+<div class="line"><a id="l00447" name="l00447"></a><span class="lineno">  447</span>    renderer.strokeCircle({cx, cy}, r, 1.0f, knobAccent.withAlpha(0.32f));</div>
+<div class="line"><a id="l00448" name="l00448"></a><span class="lineno">  448</span> </div>
+<div class="line"><a id="l00449" name="l00449"></a><span class="lineno">  449</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> sa = kPi * 0.75f;</div>
+<div class="line"><a id="l00450" name="l00450"></a><span class="lineno">  450</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> ea = sa + value * kPi * 1.5f;</div>
+<div class="line"><a id="l00451" name="l00451"></a><span class="lineno">  451</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; 34; ++i) {</div>
+<div class="line"><a id="l00452" name="l00452"></a><span class="lineno">  452</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> a1 = sa + (ea - sa) * <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(i) / 34.0f;</div>
+<div class="line"><a id="l00453" name="l00453"></a><span class="lineno">  453</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> a2 = sa + (ea - sa) * <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(i + 1) / 34.0f;</div>
+<div class="line"><a id="l00454" name="l00454"></a><span class="lineno">  454</span>        renderer.drawLine({cx + std::cos(a1) * (r - 3.0f), cy + std::sin(a1) * (r - 3.0f)},</div>
+<div class="line"><a id="l00455" name="l00455"></a><span class="lineno">  455</span>                          {cx + std::cos(a2) * (r - 3.0f), cy + std::sin(a2) * (r - 3.0f)}, 3.0f,</div>
+<div class="line"><a id="l00456" name="l00456"></a><span class="lineno">  456</span>                          knobAccent.withAlpha(k.readOnly ? 0.50f : 0.92f));</div>
+<div class="line"><a id="l00457" name="l00457"></a><span class="lineno">  457</span>    }</div>
+<div class="line"><a id="l00458" name="l00458"></a><span class="lineno">  458</span> </div>
+<div class="line"><a id="l00459" name="l00459"></a><span class="lineno">  459</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> pa = sa + value * kPi * 1.5f;</div>
+<div class="line"><a id="l00460" name="l00460"></a><span class="lineno">  460</span>    renderer.fillCircle({cx + std::cos(pa) * (r - 7.0f), cy + std::sin(pa) * (r - 7.0f)}, 3.2f, knobAccent);</div>
+<div class="line"><a id="l00461" name="l00461"></a><span class="lineno">  461</span>    renderer.drawText(k.label, {bounds.x + 10.0f, bounds.y + 6.5f}, 10.5f,</div>
+<div class="line"><a id="l00462" name="l00462"></a><span class="lineno">  462</span>                      theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.90f));</div>
+<div class="line"><a id="l00463" name="l00463"></a><span class="lineno">  463</span>    <span class="keyword">const</span> std::string valueStr = formattedValue(k.paramId);</div>
+<div class="line"><a id="l00464" name="l00464"></a><span class="lineno">  464</span>    renderer.drawText(valueStr, {bounds.x + 10.0f, bounds.bottom() - 18.0f}, 10.0f, knobAccent.withAlpha(0.96f));</div>
+<div class="line"><a id="l00465" name="l00465"></a><span class="lineno">  465</span>}</div>
+<div class="line"><a id="l00466" name="l00466"></a><span class="lineno">  466</span> </div>
+<div class="line"><a id="l00467" name="l00467"></a><span class="lineno">  467</span><span class="keywordtype">void</span> AestraDelayEditor::drawMixSlider(NUIRenderer&amp; renderer, <span class="keywordtype">float</span> wx, <span class="keywordtype">float</span> wy) {</div>
+<div class="line"><a id="l00468" name="l00468"></a><span class="lineno">  468</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
+<div class="line"><a id="l00469" name="l00469"></a><span class="lineno">  469</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
+<div class="line"><a id="l00470" name="l00470"></a><span class="lineno">  470</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> mix = m_instance ? m_instance-&gt;<a class="code hl_function" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#a403d5dd8e170e35fd04fe41b59e432d8">getParameter</a>(Delay::kMix) : 0.0f;</div>
+<div class="line"><a id="l00471" name="l00471"></a><span class="lineno">  471</span>    NUIRect mixRect = offsetRect(m_mixSliderRect, wx, wy);</div>
+<div class="line"><a id="l00472" name="l00472"></a><span class="lineno">  472</span>    <span class="keyword">const</span> NUIRect track(mixRect.x + 58.0f, mixRect.y + 12.0f, mixRect.width - 104.0f, 8.0f);</div>
+<div class="line"><a id="l00473" name="l00473"></a><span class="lineno">  473</span>    renderer.fillRoundedRect(mixRect, 10.0f, NUIThemeManager::getInstance().getColor(<span class="stringliteral">&quot;editorControl&quot;</span>));</div>
+<div class="line"><a id="l00474" name="l00474"></a><span class="lineno">  474</span>    renderer.strokeRoundedRect(mixRect, 10.0f, 1.0f, accent().withAlpha(0.35f));</div>
+<div class="line"><a id="l00475" name="l00475"></a><span class="lineno">  475</span>    renderer.drawText(<span class="stringliteral">&quot;Mix&quot;</span>, {mixRect.x + 14.0f, mixRect.y + 10.0f}, 10.5f,</div>
+<div class="line"><a id="l00476" name="l00476"></a><span class="lineno">  476</span>                      theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.95f));</div>
+<div class="line"><a id="l00477" name="l00477"></a><span class="lineno">  477</span>    renderer.fillRoundedRect(track, 3.0f, NUIColor(1, 1, 1, 0.10f));</div>
+<div class="line"><a id="l00478" name="l00478"></a><span class="lineno">  478</span>    renderer.fillRoundedRect({track.x, track.y, track.width * mix, track.height}, 3.0f, accent().withAlpha(0.92f));</div>
+<div class="line"><a id="l00479" name="l00479"></a><span class="lineno">  479</span>    renderer.fillCircle({track.x + track.width * mix, track.center().y}, 9.0f, theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>));</div>
+<div class="line"><a id="l00480" name="l00480"></a><span class="lineno">  480</span>    <span class="keyword">const</span> std::string pctStr = std::to_string(<span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(std::round(mix * 100.0f))) + <span class="stringliteral">&quot;%&quot;</span>;</div>
+<div class="line"><a id="l00481" name="l00481"></a><span class="lineno">  481</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> pctW = renderer.measureText(pctStr, 10.0f).width;</div>
+<div class="line"><a id="l00482" name="l00482"></a><span class="lineno">  482</span>    renderer.drawText(pctStr, {mixRect.right() - 14.0f - pctW, mixRect.y + 10.0f}, 10.0f, accent().withAlpha(0.96f));</div>
+<div class="line"><a id="l00483" name="l00483"></a><span class="lineno">  483</span>}</div>
+<div class="line"><a id="l00484" name="l00484"></a><span class="lineno">  484</span> </div>
+<div class="line"><a id="l00485" name="l00485"></a><span class="lineno">  485</span><span class="keywordtype">void</span> AestraDelayEditor::drawBypassPill(NUIRenderer&amp; renderer) {</div>
+<div class="line"><a id="l00486" name="l00486"></a><span class="lineno">  486</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
+<div class="line"><a id="l00487" name="l00487"></a><span class="lineno">  487</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> bypassed = m_instance &amp;&amp; m_instance-&gt;getParameter(Aestra::Audio::Plugins::AestraDelay::kBypass) &gt; 0.5f;</div>
+<div class="line"><a id="l00488" name="l00488"></a><span class="lineno">  488</span>    <span class="keyword">constexpr</span> <span class="keywordtype">float</span> kFont = 10.0f;</div>
+<div class="line"><a id="l00489" name="l00489"></a><span class="lineno">  489</span>    <span class="keywordflow">if</span> (bypassed) {</div>
+<div class="line"><a id="l00490" name="l00490"></a><span class="lineno">  490</span>        renderer.fillRoundedRect(m_bypassRect, 7.0f,</div>
+<div class="line"><a id="l00491" name="l00491"></a><span class="lineno">  491</span>                                 NUIColor(0.92f, 0.28f, 0.22f).withAlpha(m_bypassHovered ? 0.94f : 0.78f));</div>
+<div class="line"><a id="l00492" name="l00492"></a><span class="lineno">  492</span>        renderer.strokeRoundedRect(m_bypassRect, 7.0f, 1.0f, NUIColor(0.92f, 0.28f, 0.22f).withAlpha(0.50f));</div>
+<div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span>        renderer.drawTextCentered(<span class="stringliteral">&quot;BYPASSED&quot;</span>, m_bypassRect, kFont, theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>));</div>
+<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span>        renderer.fillRoundedRect(m_bypassRect, 7.0f,</div>
+<div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span>                                 theme.getColor(<span class="stringliteral">&quot;success&quot;</span>).withAlpha(m_bypassHovered ? 0.30f : 0.18f));</div>
+<div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span>        renderer.strokeRoundedRect(m_bypassRect, 7.0f, 1.0f, theme.getColor(<span class="stringliteral">&quot;success&quot;</span>).withAlpha(0.40f));</div>
+<div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>        renderer.drawTextCentered(<span class="stringliteral">&quot;ACTIVE&quot;</span>, m_bypassRect, kFont, theme.getColor(<span class="stringliteral">&quot;success&quot;</span>));</div>
+<div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span>    }</div>
+<div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span>}</div>
+<div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span> </div>
+<div class="line"><a id="l00502" name="l00502"></a><span class="lineno">  502</span><span class="keywordtype">void</span> AestraDelayEditor::drawContent(NUIRenderer&amp; renderer, <span class="keyword">const</span> NUIRect&amp; contentRect) {</div>
+<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>    (void)contentRect;</div>
+<div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span>    <span class="comment">// Recompute layout each frame so cached rects (and absolute slider bounds)</span></div>
+<div class="line"><a id="l00505" name="l00505"></a><span class="lineno">  505</span>    <span class="comment">// follow window movement.</span></div>
+<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span>    layoutControls();</div>
+<div class="line"><a id="l00507" name="l00507"></a><span class="lineno">  507</span>    <span class="keyword">const</span> <span class="keyword">auto</span> b = getBounds();</div>
+<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> wx = b.x;</div>
+<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> wy = b.y;</div>
+<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
+<div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> identityY = wy + AestraPanelWindow::TITLE_BAR_H + 8.0f;</div>
+<div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>    renderer.fillCircle({wx + kPad + 10.0f, identityY + 9.0f}, 9.0f, accent().withAlpha(0.18f));</div>
+<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>    renderer.strokeCircle({wx + kPad + 10.0f, identityY + 9.0f}, 9.0f, 1.5f, accent().withAlpha(0.80f));</div>
+<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>    renderer.fillCircle({wx + kPad + 12.5f, identityY + 6.5f}, 2.5f, cyanAccent());</div>
+<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>    renderer.drawText(<span class="stringliteral">&quot;DELAY&quot;</span>, {wx + kPad + 28.0f, identityY + 1.0f}, 13.0f,</div>
+<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>                      theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.96f));</div>
+<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    renderer.drawText(<span class="stringliteral">&quot;STEREO ECHO ENGINE&quot;</span>, {wx + kPad + 28.0f, identityY + 16.0f}, 8.5f,</div>
+<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>                      theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.72f));</div>
+<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>    drawBypassPill(renderer);</div>
+<div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>    drawPillSwitches(renderer, wx, wy);</div>
+<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span>    drawSectionFrame(renderer, m_timingSectionRect, <span class="stringliteral">&quot;TIME + FEEDBACK&quot;</span>, cyanAccent(), wx, wy);</div>
+<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>    drawSectionFrame(renderer, m_characterSectionRect, <span class="stringliteral">&quot;TONE + MOTION&quot;</span>, accent(), wx, wy);</div>
+<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>    drawEchoDisplay(renderer, wx, wy);</div>
+<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>    drawSyncPanel(renderer, wx, wy);</div>
+<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span> </div>
+<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
+<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> sync = m_instance &amp;&amp; m_instance-&gt;<a class="code hl_function" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#a403d5dd8e170e35fd04fe41b59e432d8">getParameter</a>(Delay::kSyncMode) &gt; 0.5f;</div>
+<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_knobs.size(); ++i) {</div>
+<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>        <span class="comment">// Hide Time knob (index 0) in sync mode</span></div>
+<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>        <span class="keywordflow">if</span> (sync &amp;&amp; i == 0)</div>
+<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span>        drawKnob(renderer, m_knobs[i], wx, wy);</div>
+<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span>    }</div>
+<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>    drawMixSlider(renderer, wx, wy);</div>
+<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>}</div>
+<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span> </div>
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span><span class="keywordtype">int</span> AestraDelayEditor::hitTestBaseButton(<span class="keywordtype">float</span> localX, <span class="keywordtype">float</span> localY)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_baseButtons.size(); ++i) {</div>
+<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>        <span class="keywordflow">if</span> (m_baseButtons[i].bounds.contains({localX, localY}))</div>
+<div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>            <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
+<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>    }</div>
+<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>    <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>}</div>
+<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span> </div>
+<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span><span class="keywordtype">int</span> AestraDelayEditor::hitTestModifierButton(<span class="keywordtype">float</span> localX, <span class="keywordtype">float</span> localY)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_modifierButtons.size(); ++i) {</div>
+<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>        <span class="keywordflow">if</span> (m_modifierButtons[i].bounds.contains({localX, localY}))</div>
+<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>            <span class="keywordflow">return</span> <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i);</div>
+<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>    }</div>
+<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span>    <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>}</div>
+<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span> </div>
+<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span><span class="keywordtype">int</span> AestraDelayEditor::computeDivisionIndex(<span class="keywordtype">int</span> baseIdx, <span class="keywordtype">int</span> modifierIdx)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
+<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>    <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">int</span> kTable[4][3] = {</div>
+<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>        {Delay::kDiv1_4, Delay::kDiv1_4D, Delay::kDiv1_4T},</div>
+<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>        {Delay::kDiv1_8, Delay::kDiv1_8D, Delay::kDiv1_8T},</div>
+<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>        {Delay::kDiv1_16, Delay::kDiv1_16D, Delay::kDiv1_16T},</div>
+<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>        {Delay::kDiv1_32, Delay::kDiv1_32, Delay::kDiv1_32},</div>
+<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>    };</div>
+<div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>    <span class="keywordflow">return</span> kTable[baseIdx][modifierIdx];</div>
+<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>}</div>
+<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span> </div>
+<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span><span class="keywordtype">void</span> AestraDelayEditor::divisionIndexToBaseModifier(<span class="keywordtype">int</span> divisionIdx, <span class="keywordtype">int</span>&amp; baseIdx, <span class="keywordtype">int</span>&amp; modifierIdx)<span class="keyword"> const </span>{</div>
+<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
+<div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span>    <span class="keywordflow">switch</span> (divisionIdx) {</div>
+<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span>    <span class="keywordflow">case</span> Delay::kDiv1_4:</div>
+<div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>        baseIdx = 0;</div>
+<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>        modifierIdx = 0;</div>
+<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span>        <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>    <span class="keywordflow">case</span> Delay::kDiv1_8:</div>
+<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>        baseIdx = 1;</div>
+<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>        modifierIdx = 0;</div>
+<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>        <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>    <span class="keywordflow">case</span> Delay::kDiv1_16:</div>
+<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>        baseIdx = 2;</div>
+<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>        modifierIdx = 0;</div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>        <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>    <span class="keywordflow">case</span> Delay::kDiv1_32:</div>
+<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>        baseIdx = 3;</div>
+<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>        modifierIdx = 0;</div>
+<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span>        <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>    <span class="keywordflow">case</span> Delay::kDiv1_4D:</div>
+<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>        baseIdx = 0;</div>
+<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>        modifierIdx = 1;</div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>        <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>    <span class="keywordflow">case</span> Delay::kDiv1_8D:</div>
+<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>        baseIdx = 1;</div>
+<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>        modifierIdx = 1;</div>
+<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span>        <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>    <span class="keywordflow">case</span> Delay::kDiv1_16D:</div>
+<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span>        baseIdx = 2;</div>
+<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>        modifierIdx = 1;</div>
+<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>        <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>    <span class="keywordflow">case</span> Delay::kDiv1_4T:</div>
+<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>        baseIdx = 0;</div>
+<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>        modifierIdx = 2;</div>
+<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>        <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>    <span class="keywordflow">case</span> Delay::kDiv1_8T:</div>
+<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>        baseIdx = 1;</div>
+<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>        modifierIdx = 2;</div>
+<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>        <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>    <span class="keywordflow">case</span> Delay::kDiv1_16T:</div>
+<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>        baseIdx = 2;</div>
+<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>        modifierIdx = 2;</div>
+<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>        <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>    <span class="keywordflow">default</span>:</div>
+<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>        baseIdx = 1;</div>
+<div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span>        modifierIdx = 0;</div>
+<div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>        <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>    }</div>
+<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>}</div>
+<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span> </div>
+<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span><span class="keywordtype">void</span> AestraDelayEditor::applySyncSelection() {</div>
+<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
+<div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>    <span class="keywordflow">if</span> (!m_instance)</div>
+<div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> divIdx = computeDivisionIndex(m_syncBaseIndex, m_syncModifierIndex);</div>
+<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>    m_instance-&gt;setParameter(Delay::kNoteDivision, Delay::noteDivisionParamFromIndex(divIdx));</div>
+<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>    setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>}</div>
+<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span> </div>
+<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span><span class="keywordtype">bool</span> AestraDelayEditor::onMouseEvent(<span class="keyword">const</span> NUIMouseEvent&amp; event) {</div>
+<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>    <span class="keywordflow">if</span> (!isVisible())</div>
+<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span> </div>
+<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>    <span class="comment">// Let base class handle title bar / close / drag first</span></div>
+<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>    <span class="keywordflow">if</span> (AestraPanelWindow::onMouseEvent(event)) {</div>
+<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>    }</div>
+<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span> </div>
+<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>    <span class="keyword">const</span> <span class="keyword">auto</span> b = getBounds();</div>
+<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> mx = <span class="keyword">event</span>.position.x - b.x;</div>
+<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> my = <span class="keyword">event</span>.position.y - b.y;</div>
+<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> contains = b.contains(event.position);</div>
+<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span> </div>
+<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>    <span class="comment">// Bypass click (uses absolute bounds, already offset in layoutControls)</span></div>
+<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left &amp;&amp; m_bypassRect.contains(event.position)) {</div>
+<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>        <span class="keywordflow">if</span> (m_instance) {</div>
+<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>            <span class="keyword">const</span> <span class="keywordtype">bool</span> bypassed = m_instance-&gt;getParameter(Aestra::Audio::Plugins::AestraDelay::kBypass) &gt; 0.5f;</div>
+<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>            m_instance-&gt;setParameter(Aestra::Audio::Plugins::AestraDelay::kBypass, bypassed ? 0.0f : 1.0f);</div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>            setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>        }</div>
+<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>    }</div>
+<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span> </div>
+<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>    <span class="keywordflow">if</span> (!contains &amp;&amp; !isDraggingWindow() &amp;&amp; !m_draggingMix)</div>
+<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span> </div>
+<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>    <span class="keyword">using </span>Delay = <a class="code hl_class" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a>;</div>
+<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>    <span class="keywordflow">if</span> (event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
+<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>        <span class="keywordflow">if</span> (m_instance) {</div>
+<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>            <span class="keywordflow">if</span> (m_freeRect.contains({mx, my})) {</div>
+<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>                m_instance-&gt;<a class="code hl_function" href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#ab86170bcf69aa08d0164624b80002e3d">setParameter</a>(Delay::kSyncMode, 0.0f);</div>
+<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>                layoutControls();</div>
+<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>                setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>            }</div>
+<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>            <span class="keywordflow">if</span> (m_syncRect.contains({mx, my})) {</div>
+<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>                m_instance-&gt;setParameter(Delay::kSyncMode, 1.0f);</div>
+<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>                layoutControls();</div>
+<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>                setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>            }</div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>            <span class="keywordflow">if</span> (m_stereoRect.contains({mx, my})) {</div>
+<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>                m_instance-&gt;setParameter(Delay::kStereoMode, 0.0f);</div>
+<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>                setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>            }</div>
+<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>            <span class="keywordflow">if</span> (m_pingPongRect.contains({mx, my})) {</div>
+<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>                m_instance-&gt;setParameter(Delay::kStereoMode, 1.0f);</div>
+<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>                setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>            }</div>
+<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>            <span class="keywordflow">if</span> (m_instance-&gt;getParameter(Delay::kSyncMode) &gt; 0.5f) {</div>
+<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>                <span class="keyword">const</span> <span class="keywordtype">int</span> base = hitTestBaseButton(mx, my);</div>
+<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>                <span class="keywordflow">if</span> (base &gt;= 0 &amp;&amp; base != m_syncBaseIndex) {</div>
+<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>                    m_syncBaseIndex = base;</div>
+<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>                    <span class="comment">// 1/32 has no dotted/triplet variants — reset modifier to Straight</span></div>
+<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>                    <span class="keywordflow">if</span> (base == 3)</div>
+<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>                        m_syncModifierIndex = 0;</div>
+<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>                    applySyncSelection();</div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>                    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>                }</div>
+<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>                <span class="keyword">const</span> <span class="keywordtype">int</span> mod = hitTestModifierButton(mx, my);</div>
+<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>                <span class="keywordflow">if</span> (mod &gt;= 0 &amp;&amp; mod != m_syncModifierIndex) {</div>
+<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>                    <span class="comment">// Prevent dotted/triplet on 1/32 base</span></div>
+<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>                    <span class="keywordflow">if</span> (m_syncBaseIndex == 3 &amp;&amp; mod != 0)</div>
+<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>                        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>                    m_syncModifierIndex = mod;</div>
+<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>                    applySyncSelection();</div>
+<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>                    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>                }</div>
+<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>            }</div>
+<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>            <span class="keywordflow">if</span> (m_mixSliderRect.contains({mx, my})) {</div>
+<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>                m_draggingMix = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>                <span class="keyword">const</span> <span class="keywordtype">float</span> sliderX = m_mixSliderRect.x + 58.0f;</div>
+<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>                <span class="keyword">const</span> <span class="keywordtype">float</span> sliderW = m_mixSliderRect.width - 104.0f;</div>
+<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>                m_instance-&gt;setParameter(Delay::kMix, std::clamp((mx - sliderX) / sliderW, 0.0f, 1.0f));</div>
+<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>                setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>                <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>            }</div>
+<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>        }</div>
+<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>    }</div>
+<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span> </div>
+<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>    <span class="keywordflow">if</span> (m_draggingMix &amp;&amp; m_instance) {</div>
+<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>        <span class="keywordflow">if</span> (!event.pressed &amp;&amp; event.button == NUIMouseButton::Left) {</div>
+<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>            m_draggingMix = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>        }</div>
+<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> sliderX = m_mixSliderRect.x + 58.0f;</div>
+<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> sliderW = m_mixSliderRect.width - 104.0f;</div>
+<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>        m_instance-&gt;setParameter(Delay::kMix, std::clamp((mx - sliderX) / sliderW, 0.0f, 1.0f));</div>
+<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>        setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>    }</div>
+<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span> </div>
+<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>    <span class="keywordflow">if</span> (!event.pressed &amp;&amp; !event.released) {</div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>        <span class="comment">// Sync panel hover tracking</span></div>
+<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>        <span class="keywordflow">if</span> (m_instance &amp;&amp; m_instance-&gt;getParameter(Delay::kSyncMode) &gt; 0.5f) {</div>
+<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>            <span class="keyword">const</span> <span class="keywordtype">int</span> hb = hitTestBaseButton(mx, my);</div>
+<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>            <span class="keyword">const</span> <span class="keywordtype">int</span> hm = hitTestModifierButton(mx, my);</div>
+<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>            <span class="keywordflow">if</span> (hb != m_hoveredBaseButton || hm != m_hoveredModifierButton) {</div>
+<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>                m_hoveredBaseButton = hb;</div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>                m_hoveredModifierButton = hm;</div>
+<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>                <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_baseButtons.size(); ++i) {</div>
+<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>                    m_baseButtons[i].hovered = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i) == hb;</div>
+<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>                }</div>
+<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>                <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; m_modifierButtons.size(); ++i) {</div>
+<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>                    m_modifierButtons[i].hovered = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i) == hm;</div>
+<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>                }</div>
+<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>                setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>            }</div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (m_hoveredBaseButton &gt;= 0 || m_hoveredModifierButton &gt;= 0) {</div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>            m_hoveredBaseButton = -1;</div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>            m_hoveredModifierButton = -1;</div>
+<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; btn : m_baseButtons)</div>
+<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>                btn.hovered = false;</div>
+<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; btn : m_modifierButtons)</div>
+<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>                btn.hovered = false;</div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>            setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>        }</div>
+<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>    }</div>
+<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span> </div>
+<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>    <span class="comment">// Hover for bypass pill</span></div>
+<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>    <span class="keywordflow">if</span> (!event.pressed &amp;&amp; !event.released) {</div>
+<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> hover = m_bypassRect.contains(event.position);</div>
+<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>        <span class="keywordflow">if</span> (hover != m_bypassHovered) {</div>
+<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>            m_bypassHovered = hover;</div>
+<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>            setDirty(<span class="keyword">true</span>);</div>
+<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>        }</div>
+<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>    }</div>
+<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span> </div>
+<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>    <span class="comment">// Let NUISlider children handle their own mouse events</span></div>
+<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>    <span class="keywordflow">return</span> NUIComponent::onMouseEvent(event) || consumeInsideBounds(event);</div>
+<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>}</div>
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span> </div>
+<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>} <span class="comment">// namespace AestraUI</span></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1AestraDelay_html"><div class="ttname"><a href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html">Aestra::Audio::Plugins::AestraDelay</a></div><div class="ttdef"><b>Definition</b> <a href="../../d7/d42/AestraDelay_8h_source.html#l00023">AestraDelay.h:23</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1AestraDelay_html_a403d5dd8e170e35fd04fe41b59e432d8"><div class="ttname"><a href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#a403d5dd8e170e35fd04fe41b59e432d8">Aestra::Audio::Plugins::AestraDelay::getParameter</a></div><div class="ttdeci">float getParameter(uint32_t id) const override</div><div class="ttdoc">Get current parameter value (normalized 0-1)</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d42/AestraDelay_8h_source.html#l00307">AestraDelay.h:307</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1Plugins_1_1AestraDelay_html_aa1090348c29e19ce1c9fbdd63c92a23e"><div class="ttname"><a href="../../dc/de5/classAestra_1_1Audio_1_1Plugins_1_1AestraDelay.html#aa1090348c29e19ce1c9fbdd63c92a23e">Aestra::Audio::Plugins::AestraDelay::getParameterDisplay</a></div><div class="ttdeci">std::string getParameterDisplay(uint32_t id) const override</div><div class="ttdoc">Get parameter value as display string.</div><div class="ttdef"><b>Definition</b> <a href="../../d7/d42/AestraDelay_8h_source.html#l00338">AestraDelay.h:338</a></div></div>

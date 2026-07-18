@@ -1,0 +1,5 @@
+<map id="AestraUI::UIMixerPluginDropdown::onThemeChanged" name="AestraUI::UIMixerPluginDropdown::onThemeChanged">
+<area shape="rect" id="Node000001" title="Refresh cached theme state, then propagate the change to descendants." alt="" coords="5,5,248,45"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a4685e1bd30fd0f50650effa1ac46b41c" title="Refresh cached theme state, then propagate the change to descendants." alt="" coords="296,5,481,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,23,282,23,282,28,248,28"/>
+</map>

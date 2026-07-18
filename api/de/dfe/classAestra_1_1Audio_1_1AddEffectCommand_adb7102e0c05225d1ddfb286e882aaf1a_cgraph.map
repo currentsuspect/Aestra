@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::AddEffectCommand::redo" name="Aestra::Audio::AddEffectCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,69,184,109"/>
+<area shape="rect" id="Node000002" href="$de/dfe/classAestra_1_1Audio_1_1AddEffectCommand.html#a794e34f0289c458918b257cc9e07e358" title="Execute the command (first time)" alt="" coords="232,69,411,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="185,87,218,87,218,92,185,92"/>
+<area shape="rect" id="Node000003" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a107c869111f74c0e34ea921eabea4e63" title="Access the insert&#45;effect chain." alt="" coords="459,5,666,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="397,67,473,46,475,51,398,72"/>
+<area shape="rect" id="Node000004" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#aaff8505a90c35c0272cddbc5b378045e" title="Insert plugin into slot." alt="" coords="467,69,658,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="411,87,454,87,454,92,411,92"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="459,133,667,173"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="398,107,475,127,473,132,397,112"/>
+</map>

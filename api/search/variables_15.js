@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['y_0',['y',['../d6/d3b/structAestra_1_1WindowDesc.html#abf0c291bf7fc6b635a2e9e1d159f0026',1,'Aestra::WindowDesc::y'],['../dc/d36/structAestraWindowManager_1_1WindowState.html#ad9cabcde576d36e71ee3285be0645ce7',1,'AestraWindowManager::WindowState::y']]]
+  ['x_0',['x',['../d6/d3b/structAestra_1_1WindowDesc.html#afde864968b177561e46cf6ce6c374a10',1,'Aestra::WindowDesc::x'],['../dc/d36/structAestraWindowManager_1_1WindowState.html#a192c5f76cdbf8da96a10067f146e250f',1,'AestraWindowManager::WindowState::x']]]
 ];

@@ -1,17 +1,25 @@
 <map id="Aestra::Audio::PatternManager::getPattern" name="Aestra::Audio::PatternManager::getPattern">
-<area shape="rect" id="Node000001" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="529,133,749,173"/>
-<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a1c8f0ef3616ea06db71244b90724e019" title="Add a clip from a pattern." alt="" coords="267,5,473,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="598,128,543,93,480,60,449,48,451,43,482,55,546,88,601,123"/>
-<area shape="rect" id="Node000003" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ab1aa3e02093843cdf71d966a0d0ec2a6" title="Build a runtime snapshot for audio rendering." alt="" coords="267,69,473,109"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="540,133,454,112,455,107,542,127"/>
-<area shape="rect" id="Node000004" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af099c463dfaefc7d884bb200b597b537" title="Clone an existing pattern and return the new ID." alt="" coords="260,133,480,173"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="515,156,480,156,480,151,515,151"/>
-<area shape="rect" id="Node000007" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeccd21184c921cc6ed16d473d86f0b5a" title="Start Arsenal playback for the supplied pattern." alt="" coords="266,197,474,237"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="542,179,455,200,454,195,540,174"/>
-<area shape="rect" id="Node000008" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a17dc231c335a5cf97a71c109c4f640e1" title="Refill lookahead window with events (non&#45;RT thread) Called periodically by scheduler." alt="" coords="259,261,481,301"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="601,183,546,218,482,252,451,264,449,259,480,247,543,214,598,179"/>
-<area shape="rect" id="Node000005" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aff0e94c9370a5bc4754d2d123b070c26" title="Duplicate an existing unit, copying its state and pattern." alt="" coords="7,101,209,141"/>
-<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="246,141,208,136,209,131,247,136"/>
-<area shape="rect" id="Node000006" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a4d98e6682744afcce2ab892f2acdfe6a" title="Split a clip at the given beat position." alt="" coords="5,165,211,205"/>
-<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="247,171,211,175,211,170,246,166"/>
+<area shape="rect" id="Node000001" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="787,165,1007,205"/>
+<area shape="rect" id="Node000002" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a1c8f0ef3616ea06db71244b90724e019" title="Add a clip from a pattern." alt="" coords="525,5,730,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="865,157,808,107,774,82,737,60,710,48,712,43,740,55,777,77,812,103,868,153"/>
+<area shape="rect" id="Node000003" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#ab1aa3e02093843cdf71d966a0d0ec2a6" title="Build a runtime snapshot for audio rendering." alt="" coords="525,69,730,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="836,162,738,124,701,112,703,107,740,119,838,157"/>
+<area shape="rect" id="Node000004" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#af099c463dfaefc7d884bb200b597b537" title="Clone an existing pattern and return the new ID." alt="" coords="517,133,737,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="773,173,737,169,738,164,773,168"/>
+<area shape="rect" id="Node000009" href="$d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#ad4b9c78f82e9865b469af4bd109f6643" title="Execute the command (first time)" alt="" coords="520,197,735,237"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="773,203,735,207,735,202,773,197"/>
+<area shape="rect" id="Node000011" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeccd21184c921cc6ed16d473d86f0b5a" title="Start Arsenal playback for the supplied pattern." alt="" coords="523,261,731,301"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="838,213,740,252,703,264,701,259,738,247,836,208"/>
+<area shape="rect" id="Node000012" href="$dd/de4/classAestra_1_1Audio_1_1PatternPlaybackEngine.html#a17dc231c335a5cf97a71c109c4f640e1" title="Refill lookahead window with events (non&#45;RT thread) Called periodically by scheduler." alt="" coords="516,325,739,365"/>
+<area shape="poly" id="edge11_Node000001_Node000012" title=" " alt="" coords="868,217,812,267,777,293,740,316,712,328,710,323,737,311,774,289,808,263,865,213"/>
+<area shape="rect" id="Node000005" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aff0e94c9370a5bc4754d2d123b070c26" title="Duplicate an existing unit, copying its state and pattern." alt="" coords="260,37,461,77"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="533,131,515,124,491,108,467,92,437,80,439,75,469,87,493,103,517,119,535,126"/>
+<area shape="rect" id="Node000006" href="$da/d4c/classAestra_1_1Audio_1_1ClonePatternCommand.html#ae97d0e27ce802580c9e4cf5161267851" title="Execute the command (first time)" alt="" coords="261,101,461,141"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="503,141,461,136,461,131,504,136"/>
+<area shape="rect" id="Node000008" href="$db/db8/classAestra_1_1Audio_1_1PlaylistModel.html#a4d98e6682744afcce2ab892f2acdfe6a" title="Split a clip at the given beat position." alt="" coords="258,165,463,205"/>
+<area shape="poly" id="edge7_Node000004_Node000008" title=" " alt="" coords="504,171,464,176,463,170,503,166"/>
+<area shape="rect" id="Node000007" href="$da/d4c/classAestra_1_1Audio_1_1ClonePatternCommand.html#aef92b8aa10110a822139f516da2ac4bb" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,101,205,141"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="247,124,205,124,205,119,247,119"/>
+<area shape="rect" id="Node000010" href="$d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#abcba5124b6452cf16b69e9aae6098252" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="253,229,468,269"/>
+<area shape="poly" id="edge9_Node000009_Node000010" title=" " alt="" coords="507,234,468,239,468,234,506,229"/>
 </map>

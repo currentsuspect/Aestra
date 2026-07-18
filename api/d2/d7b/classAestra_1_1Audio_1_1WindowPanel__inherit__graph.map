@@ -1,17 +1,19 @@
 <map id="Aestra::Audio::WindowPanel" name="Aestra::Audio::WindowPanel">
-<area shape="rect" id="Node000001" title="WindowPanel &#45; A dockable window panel with title bar." alt="" coords="507,119,711,145"/>
+<area shape="rect" id="Node000001" title="WindowPanel &#45; A dockable window panel with title bar." alt="" coords="507,149,711,174"/>
 <area shape="rect" id="Node000004" href="$d4/d33/classAestra_1_1Audio_1_1AestraHistoryPanel.html" title="Visual git&#45;log&#45;style command history viewer with clickable undo/redo." alt="" coords="759,5,965,45"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="643,110,696,83,758,55,791,43,792,48,760,60,699,87,646,115"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="634,138,689,96,757,55,786,43,788,48,760,60,692,101,637,142"/>
 <area shape="rect" id="Node000005" href="$d8/dc3/classAestra_1_1Audio_1_1ArsenalPanel.html" title="The Arsenal: Unit&#45;Based Sequencer Window Standardized as a WindowPanel (v3.1)" alt="" coords="761,70,963,95"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="688,114,795,93,796,98,689,119"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="653,141,758,104,800,93,802,98,759,109,655,146"/>
 <area shape="rect" id="Node000006" href="$d3/dc6/classAestra_1_1Audio_1_1MixerPanel.html" title="Mixer Panel &#45; Multi&#45;track audio mixer Standardized as a native NUIComponent (v3.1)" alt="" coords="768,119,956,145"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="725,129,768,129,768,135,725,135"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="724,145,767,140,768,146,724,151"/>
 <area shape="rect" id="Node000007" href="$db/d74/classAestra_1_1Audio_1_1PianoRollPanel.html" title="Piano Roll Panel &#45; MIDI editor with piano keyboard." alt="" coords="773,169,951,209"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="679,145,774,167,773,172,678,150"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="725,171,773,177,772,182,724,177"/>
 <area shape="rect" id="Node000008" href="$d3/d55/classAestra_1_1Audio_1_1SampleEditorPanel.html" title="Sample Editor panel for editing loaded audio samples." alt="" coords="760,233,964,273"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="641,150,695,185,760,219,790,231,788,236,758,224,692,189,638,155"/>
-<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="273,119,459,145"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="472,129,507,129,507,135,472,135"/>
-<area shape="rect" id="Node000003" title=" " alt="" coords="5,112,225,152"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="239,129,273,129,273,135,239,135"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="653,177,760,219,795,231,793,236,758,224,651,182"/>
+<area shape="rect" id="Node000009" href="$d5/d2c/classAestra_1_1Audio_1_1TakesPanel.html" title="Workspace panel for project Takes — named, versioned project states." alt="" coords="768,298,956,323"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="633,182,687,233,722,260,760,283,792,295,790,300,757,288,719,265,684,237,629,186"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html" title="Base class for all UI components in the Aestra UI framework." alt="" coords="273,149,459,174"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="472,159,507,159,507,164,472,164"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,141,225,181"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="239,159,273,159,273,164,239,164"/>
 </map>

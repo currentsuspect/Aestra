@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::RemoveEffectCommand::execute" name="Aestra::Audio::RemoveEffectCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="261,5,469,45"/>
+<area shape="rect" id="Node000002" href="$de/dcd/classAestra_1_1Audio_1_1RemoveEffectCommand.html#a777f755fe76c5eed24cb72ca4498f717" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,213,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,28,213,28,213,23,248,23"/>
+</map>

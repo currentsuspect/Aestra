@@ -1,0 +1,5 @@
+<map id="AestraUI::TimelineMinimapBar::onThemeChanged" name="AestraUI::TimelineMinimapBar::onThemeChanged">
+<area shape="rect" id="Node000001" title="Refresh cached theme state, then propagate the change to descendants." alt="" coords="5,5,205,45"/>
+<area shape="rect" id="Node000002" href="$db/d1a/classAestraUI_1_1NUIComponent.html#a4685e1bd30fd0f50650effa1ac46b41c" title="Refresh cached theme state, then propagate the change to descendants." alt="" coords="253,5,439,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="206,23,239,23,239,28,206,28"/>
+</map>

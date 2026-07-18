@@ -320,6 +320,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ae78c8d88544a10c21cff6bd302328a3a inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae8ca4f2306a0d6ff0fbffb261b1c436a inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_ae8ca4f2306a0d6ff0fbffb261b1c436a"><td class="memItemLeft" align="right" valign="top">std::shared_ptr&lt; <a class="el" href="../../d6/d1b/classAestraUI_1_1NUITheme.html">NUITheme</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#ae8ca4f2306a0d6ff0fbffb261b1c436a">getTheme</a> () const</td></tr>
 <tr class="separator:ae8ca4f2306a0d6ff0fbffb261b1c436a inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4685e1bd30fd0f50650effa1ac46b41c inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a4685e1bd30fd0f50650effa1ac46b41c"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4685e1bd30fd0f50650effa1ac46b41c">onThemeChanged</a> (const <a class="el" href="../../d1/d57/structAestraUI_1_1NUIThemeProperties.html">NUIThemeProperties</a> &amp;theme)</td></tr>
+<tr class="memdesc:a4685e1bd30fd0f50650effa1ac46b41c inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="mdescLeft">&#160;</td><td class="mdescRight">Refresh cached theme state, then propagate the change to descendants.  <br /></td></tr>
+<tr class="separator:a4685e1bd30fd0f50650effa1ac46b41c inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4dfebf2bb36a871ef2a71e683cc1b01a inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a4dfebf2bb36a871ef2a71e683cc1b01a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4dfebf2bb36a871ef2a71e683cc1b01a">setTooltip</a> (const std::string &amp;text)</td></tr>
 <tr class="separator:a4dfebf2bb36a871ef2a71e683cc1b01a inherit pub_methods_classAestraUI_1_1NUIComponent"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1d87d5d3062bbbbab05b21752e5c2f4d inherit pub_methods_classAestraUI_1_1NUIComponent" id="r_a1d87d5d3062bbbbab05b21752e5c2f4d"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a1d87d5d3062bbbbab05b21752e5c2f4d">getTooltip</a> () const</td></tr>
@@ -392,7 +395,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Create the editable piano-roll note layer. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01084">1084</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01086">1086</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -415,9 +418,9 @@ Additional Inherited Members</h2></td></tr>
 <p>Elongate selected notes to connect to the following note (legato). </p>
 <p>Each selected note's end is extended forward to meet the start of the next note in time; when nothing follows, it extends to the next snap/beat boundary instead. Only ever lengthens — never shortens. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01192">1192</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01194">1194</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02749">pushUndo()</a>.</p>
+<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02751">pushUndo()</a>.</p>
 <div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-2-summary" class="dynsummary" style="display:block;">
@@ -615,9 +618,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Merge overlapping/touching selected notes on the same pitch into one. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01251">1251</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01253">1253</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02749">pushUndo()</a>.</p>
+<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02751">pushUndo()</a>.</p>
 <div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-3-summary" class="dynsummary" style="display:block;">
@@ -645,9 +648,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Add slight random velocity variation to the selected notes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01327">1327</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01329">1329</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02749">pushUndo()</a>.</p>
+<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02751">pushUndo()</a>.</p>
 <div id="dynsection-4" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-4-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-4-summary" class="dynsummary" style="display:block;">
@@ -684,7 +687,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02491">2491</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02493">2493</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -714,7 +717,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01846">1846</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01848">1848</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -744,7 +747,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a>.</p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01600">1600</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01602">1602</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -787,7 +790,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00411">411</a> of file <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html">NUIPianoRollWidgets.h</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02749">pushUndo()</a>.</p>
+<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02751">pushUndo()</a>.</p>
 <div id="dynsection-5" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-5-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-5-summary" class="dynsummary" style="display:block;">
@@ -832,11 +835,11 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Push an undo command onto the local history stack. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02749">2749</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02751">2751</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00285">AestraUI::PianoRollCommand::description</a>, <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00289">AestraUI::PianoRollCommand::notesAfter</a>, and <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00287">AestraUI::PianoRollCommand::notesBefore</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01192">connectSelectedNotes()</a>, <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01251">glueSelectedNotes()</a>, <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01327">humanizeSelectedVelocities()</a>, <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00411">pushExternalEdit()</a>, <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01230">quantizeSelectedNotes()</a>, and <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01304">strumSelectedNotes()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01194">connectSelectedNotes()</a>, <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01253">glueSelectedNotes()</a>, <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01329">humanizeSelectedVelocities()</a>, <a class="el" href="../../d1/dae/NUIPianoRollWidgets_8h_source.html#l00411">pushExternalEdit()</a>, <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01232">quantizeSelectedNotes()</a>, and <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01306">strumSelectedNotes()</a>.</p>
 <div id="dynsection-6" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-6-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
 <div id="dynsection-6-summary" class="dynsummary" style="display:block;">
@@ -864,9 +867,9 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Snap the starts of the selected notes to the current snap grid. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01230">1230</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01232">1232</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02749">pushUndo()</a>.</p>
+<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02751">pushUndo()</a>.</p>
 <div id="dynsection-7" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-7-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-7-summary" class="dynsummary" style="display:block;">
@@ -894,7 +897,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Redo the last undone local note edit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02800">2800</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02802">2802</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1006,7 +1009,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set ghost patterns rendered behind the active notes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02831">2831</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02833">2833</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1058,7 +1061,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the vertical pitch-row height. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02837">2837</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02839">2839</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1080,7 +1083,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Replace the currently edited note list. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02822">2822</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02824">2824</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1130,7 +1133,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the callback fired whenever notes change. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02898">2898</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02900">2900</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1182,7 +1185,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the horizontal zoom level in pixels per beat. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02836">2836</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02838">2838</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1204,7 +1207,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the platform bridge for cursor style changes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02900">2900</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02902">2902</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1346,7 +1349,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the horizontal scroll offset. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02838">2838</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02840">2840</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1368,7 +1371,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the vertical scroll offset. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02839">2839</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02841">2841</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1450,7 +1453,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set the active editing tool. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02742">2742</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02744">2744</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1501,9 +1504,9 @@ Additional Inherited Members</h2></td></tr>
 <p>Stagger the selected notes into an upward strum. </p>
 <p>Notes are anchored at the earliest selected start and cascaded low-to-high pitch by <code>spreadBeats</code> each. No-op for fewer than two selected notes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01304">1304</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l01306">1306</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02749">pushUndo()</a>.</p>
+<p class="reference">References <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02751">pushUndo()</a>.</p>
 <div id="dynsection-8" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
   <img id="dynsection-8-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
 <div id="dynsection-8-summary" class="dynsummary" style="display:block;">
@@ -1531,7 +1534,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Undo the last local note edit. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02789">2789</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02791">2791</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>
@@ -1575,7 +1578,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Call during drag to update edge scrolling and apply scroll offset. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02841">2841</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html#l02843">2843</a> of file <a class="el" href="../../db/de2/NUIPianoRollWidgets_8cpp_source.html">NUIPianoRollWidgets.cpp</a>.</p>
 
 </div>
 </div>

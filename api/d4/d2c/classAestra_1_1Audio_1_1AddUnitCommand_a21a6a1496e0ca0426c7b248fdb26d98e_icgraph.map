@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::AddUnitCommand::execute" name="Aestra::Audio::AddUnitCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="289,5,525,45"/>
+<area shape="rect" id="Node000002" href="$d4/d2c/classAestra_1_1Audio_1_1AddUnitCommand.html#a0998e2cdb7ccbbc78d11417563008b5c" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,241,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="275,28,242,28,242,23,275,23"/>
+</map>

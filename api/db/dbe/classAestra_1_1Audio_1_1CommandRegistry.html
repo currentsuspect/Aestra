@@ -99,6 +99,12 @@ Public Member Functions</h2></td></tr>
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:aecc07bc290a522a5f9d367061782e85c" id="r_aecc07bc290a522a5f9d367061782e85c"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html">CommandRegistry</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#aecc07bc290a522a5f9d367061782e85c">instance</a> ()</td></tr>
 <tr class="separator:aecc07bc290a522a5f9d367061782e85c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae5a2648a9167e92cf4875d8bbdb5b977" id="r_ae5a2648a9167e92cf4875d8bbdb5b977"><td class="memItemLeft" align="right" valign="top">static std::unique_ptr&lt; <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html">ICommand</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ae5a2648a9167e92cf4875d8bbdb5b977">fail</a> (const std::string &amp;reason)</td></tr>
+<tr class="memdesc:ae5a2648a9167e92cf4875d8bbdb5b977"><td class="mdescLeft">&#160;</td><td class="mdescRight">Record why a factory refused to build, then return nullptr.  <br /></td></tr>
+<tr class="separator:ae5a2648a9167e92cf4875d8bbdb5b977"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad7b2a4074b0b099b6b8879f5374d971b" id="r_ad7b2a4074b0b099b6b8879f5374d971b"><td class="memItemLeft" align="right" valign="top">static std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ad7b2a4074b0b099b6b8879f5374d971b">consumeLastBuildError</a> ()</td></tr>
+<tr class="memdesc:ad7b2a4074b0b099b6b8879f5374d971b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Take the reason recorded by the most recent failed build.  <br /></td></tr>
+<tr class="separator:ad7b2a4074b0b099b6b8879f5374d971b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a53549a72bbd76890986a024c283d6fbf" id="r_a53549a72bbd76890986a024c283d6fbf"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a53549a72bbd76890986a024c283d6fbf">initialize</a> (<a class="el" href="../../de/dca/classAestra_1_1Audio_1_1TrackManager.html">TrackManager</a> *trackManager)</td></tr>
 <tr class="separator:a53549a72bbd76890986a024c283d6fbf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6a742d61667fe0457245460291739a8d" id="r_a6a742d61667fe0457245460291739a8d"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#a6a742d61667fe0457245460291739a8d">setAudioEngine</a> (<a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html">AudioEngine</a> *engine)</td></tr>
@@ -154,7 +160,77 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00105">105</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00136">136</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
+
+</div>
+</div>
+<a id="ad7b2a4074b0b099b6b8879f5374d971b" name="ad7b2a4074b0b099b6b8879f5374d971b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad7b2a4074b0b099b6b8879f5374d971b">&#9670;&#160;</a></span>consumeLastBuildError()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::string Aestra::Audio::CommandRegistry::consumeLastBuildError </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Take the reason recorded by the most recent failed build. </p>
+<p>build() clears it before invoking the factory; empty when the factory gave no reason. Thread-local, like command execution itself. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00126">126</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00064">Aestra::Audio::CommandParser::buildValidated()</a>.</p>
+<div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-0-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-0-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry_ad7b2a4074b0b099b6b8879f5374d971b_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="ae5a2648a9167e92cf4875d8bbdb5b977" name="ae5a2648a9167e92cf4875d8bbdb5b977"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae5a2648a9167e92cf4875d8bbdb5b977">&#9670;&#160;</a></span>fail()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::unique_ptr&lt; <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html">ICommand</a> &gt; Aestra::Audio::CommandRegistry::fail </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>reason</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">static</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Record why a factory refused to build, then return nullptr. </p>
+<p>Factories call <code>return <a class="el" href="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ae5a2648a9167e92cf4875d8bbdb5b977" title="Record why a factory refused to build, then return nullptr.">CommandRegistry::fail</a>("no such pattern: 7");</code> instead of a bare <code>return nullptr;</code> so callers can surface the reason to the agent instead of a generic "failed to build command". </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00121">121</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
 
 </div>
 </div>
@@ -181,7 +257,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00119">119</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00151">151</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
 
 </div>
 </div>
@@ -209,7 +285,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00123">123</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00155">155</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
 
 </div>
 </div>
@@ -236,7 +312,7 @@ Static Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00096">96</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00116">116</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
 
 </div>
 </div>
@@ -266,7 +342,7 @@ Static Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00101">101</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00132">132</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
 
 </div>
 </div>
@@ -296,14 +372,14 @@ Static Public Member Functions</h2></td></tr>
 
 <p>Set the <a class="el" href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html" title="Real-time audio engine with 144dB dynamic range.">AudioEngine</a> for transport commands (play/stop/set_bpm). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00115">115</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00147">147</a> of file <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html">CommandRegistry.cpp</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l02998">AestraContent::setAudioEngine()</a>.</p>
-<div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
-  <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
-<div id="dynsection-0-summary" class="dynsummary" style="display:block;">
+<p class="reference">Referenced by <a class="el" href="../../dd/de4/AestraContent_8cpp_source.html#l03037">AestraContent::setAudioEngine()</a>.</p>
+<div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-1-summary" class="dynsummary" style="display:block;">
 </div>
-<div id="dynsection-0-content" class="dyncontent" style="display:none;">
+<div id="dynsection-1-content" class="dyncontent" style="display:none;">
 <div class="center"><iframe scrolling="no" frameborder="0" src="../../db/dbe/classAestra_1_1Audio_1_1CommandRegistry_a6a742d61667fe0457245460291739a8d_icgraph.svg" width="522" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 </div>
 

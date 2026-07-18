@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::SetEffectParamCommand::execute" name="Aestra::Audio::SetEffectParamCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="228,5,417,45"/>
+<area shape="rect" id="Node000002" href="$da/dc2/classAestra_1_1Audio_1_1SetEffectParamCommand.html#aa0b3f324b619226a454cc317984a4fd5" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,180,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="214,28,180,28,180,23,214,23"/>
+</map>

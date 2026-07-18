@@ -125,8 +125,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span><span class="keyword">constexpr</span> <span class="keywordtype">float</span> kPresetArtworkSize = 44.0f;</div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span><span class="keyword">constexpr</span> <span class="keywordtype">float</span> kPresetArtworkPixels = 256.0f; <span class="comment">// matches the committed 256x256 preset artwork</span></div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>NUIColor verbSurfaceBg() { <span class="keywordflow">return</span> NUIColor(0.044f, 0.044f, 0.044f, 0.985f); }</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>NUIColor verbInsetBg() { <span class="keywordflow">return</span> NUIColor(0.025f, 0.025f, 0.025f, 0.965f); }</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>NUIColor verbSurfaceBg() { <span class="keywordflow">return</span> editorNeutral(0.044f, 0.985f); }</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>NUIColor verbInsetBg() { <span class="keywordflow">return</span> editorNeutral(0.025f, 0.965f); }</div>
 <div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>NUIColor verbGold() { <span class="keywordflow">return</span> NUIColor(0.88f, 0.63f, 0.13f, 1.0f); }</div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>NUIColor verbAccent() { <span class="keywordflow">return</span> NUIColor(0.498f, 0.353f, 0.941f, 1.0f); }</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span><span class="keywordtype">float</span> presetColumnWidth(<span class="keywordtype">float</span> editorWidth) { <span class="keywordflow">return</span> std::clamp(editorWidth * 0.235f, 168.0f, 210.0f); }</div>
@@ -657,7 +657,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> stripBottomY = b.y + b.height - 14.0f;</div>
 <div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> stripH = stripBottomY - stripTopY;</div>
 <div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>    renderer.fillRoundedRect({stripX - 5.0f, stripTopY, stripW + 10.0f, stripH}, 8.0f,</div>
-<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>                             NUIColor(0.022f, 0.022f, 0.027f, 0.98f));</div>
+<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>                             editorNeutral(NUIColor(0.022f, 0.022f, 0.027f, 0.98f)));</div>
 <div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>    renderer.strokeRoundedRect({stripX - 5.0f, stripTopY, stripW + 10.0f, stripH}, 8.0f, 1.0f, NUIColor(1, 1, 1, 0.085f));</div>
 <div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>    <span class="keyword">const</span> NUIRect libraryRow(stripX + 7.0f, stripTopY + 5.0f, stripW - 23.0f, 16.0f);</div>
 <div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>    renderer.drawText(<span class="stringliteral">&quot;PRESET LIBRARY&quot;</span>, {libraryRow.x, std::round(renderer.calculateTextY(libraryRow, 8.5f))}, 8.5f,</div>
@@ -703,8 +703,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> focused = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i) == m_focusedPreset;</div>
 <div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> pressed = <span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(i) == m_pressedPreset;</div>
 <div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>        <span class="keyword">const</span> NUIColor presetFill = active ? accent.withAlpha(pressed ? 0.17f : 0.125f)</div>
-<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>            : (pressed ? NUIColor(0.060f, 0.052f, 0.078f, 0.99f)</div>
-<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>                       : (p.hovered ? NUIColor(0.061f, 0.057f, 0.074f, 0.98f) : verbInsetBg().withAlpha(0.92f)));</div>
+<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>            : (pressed ? editorNeutral(NUIColor(0.060f, 0.052f, 0.078f, 0.99f))</div>
+<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>                       : (p.hovered ? editorNeutral(NUIColor(0.061f, 0.057f, 0.074f, 0.98f)) : verbInsetBg().withAlpha(0.92f)));</div>
 <div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>        renderer.fillRoundedRect(p.bounds, 6.0f, presetFill);</div>
 <div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>        renderer.strokeRoundedRect(p.bounds, 5.0f, 1.0f,</div>
 <div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>                                   active ? accent.withAlpha(0.42f)</div>
@@ -728,7 +728,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>            <span class="keyword">const</span> <span class="keywordtype">float</span> hue = modeHues[modeIdx];</div>
 <div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>            renderer.fillRectGradient(art,</div>
 <div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>                NUIColor(hue * 0.8f + 0.15f, hue * 0.4f + 0.08f, 0.20f, 1.0f),</div>
-<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>                NUIColor(0.029f, 0.029f, 0.029f, 1.0f), <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>                editorNeutral(0.029f, 1.0f), <span class="keyword">true</span>);</div>
 <div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>            <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">char</span>* modeInitials[] = {<span class="stringliteral">&quot;R&quot;</span>, <span class="stringliteral">&quot;H&quot;</span>, <span class="stringliteral">&quot;P&quot;</span>, <span class="stringliteral">&quot;C&quot;</span>, <span class="stringliteral">&quot;Ch&quot;</span>, <span class="stringliteral">&quot;B&quot;</span>, <span class="stringliteral">&quot;A&quot;</span>, <span class="stringliteral">&quot;S&quot;</span>, <span class="stringliteral">&quot;Sp&quot;</span>};</div>
 <div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>            <span class="keyword">const</span> <span class="keywordtype">char</span>* initial = (modeIdx &gt;= 0 &amp;&amp; modeIdx &lt; kModeCount) ? modeInitials[modeIdx] : <span class="stringliteral">&quot;R&quot;</span>;</div>
 <div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>            renderer.drawTextCentered(initial, art, 14.0f, accent.withAlpha(0.65f));</div>
@@ -789,7 +789,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>    <span class="keyword">const</span> <span class="keyword">auto</span> outer = NUIRect(m_categoryPills.front().bounds.x, m_categoryPills.front().bounds.y,</div>
 <div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>                               m_categoryPills.back().bounds.right() - m_categoryPills.front().bounds.x,</div>
 <div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>                               m_categoryPills.front().bounds.height);</div>
-<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>    renderer.fillRoundedRect(outer, 13.0f, NUIColor(0.027f, 0.027f, 0.027f, 0.985f));</div>
+<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>    renderer.fillRoundedRect(outer, 13.0f, editorNeutral(0.027f, 0.985f));</div>
 <div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>    renderer.strokeRoundedRect(outer, 13.0f, 1.0f, NUIColor(1, 1, 1, 0.14f));</div>
 <div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> pad = 2.0f;</div>
 <div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; pill : m_categoryPills) {</div>
@@ -883,7 +883,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>    chevronIcon-&gt;onRender(renderer);</div>
 <div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span> </div>
 <div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>    <span class="keywordflow">if</span> (m_dropdownOpen &amp;&amp; !m_dropdownItems.empty()) {</div>
-<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>        renderer.fillRoundedRect(m_dropdownListBounds, 6.0f, NUIColor(0.027f, 0.027f, 0.027f, 0.985f));</div>
+<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>        renderer.fillRoundedRect(m_dropdownListBounds, 6.0f, editorNeutral(0.027f, 0.985f));</div>
 <div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>        renderer.strokeRoundedRect(m_dropdownListBounds, 6.0f, 1.0f, NUIColor(1, 1, 1, 0.14f));</div>
 <div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; item : m_dropdownItems) {</div>
 <div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>            <span class="keyword">const</span> <span class="keywordtype">bool</span> isCurrent = item.mode == modeIdx;</div>
@@ -918,9 +918,9 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> ringThickness = 11.0f;</div>
 <div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>        renderer.drawShadow(NUIRect{cx - macroR * 0.82f, cy - macroR * 0.82f, macroR * 1.64f, macroR * 1.64f}, 0.0f, 3.0f, 6.0f,</div>
 <div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>                            NUIColor(0, 0, 0, 0.52f));</div>
-<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>        renderer.fillCircle({cx, cy}, macroR - 10.0f, NUIColor(0.012f, 0.012f, 0.016f, 0.98f));</div>
+<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>        renderer.fillCircle({cx, cy}, macroR - 10.0f, editorNeutral(NUIColor(0.012f, 0.012f, 0.016f, 0.98f)));</div>
 <div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>        renderer.strokeCircle({cx, cy}, macroR - 15.0f, 1.0f, NUIColor(1, 1, 1, 0.045f));</div>
-<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>        renderer.strokeCircle({cx, cy}, macroR, ringThickness, NUIColor(0.091f, 0.091f, 0.091f, 1.0f));</div>
+<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>        renderer.strokeCircle({cx, cy}, macroR, ringThickness, editorNeutral(0.091f, 1.0f));</div>
 <div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> dStartAngle = -kPi * 0.5f;</div>
 <div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> dSweep = kTwoPi * 0.80f;</div>
 <div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> dValue = k.slider ? k.slider-&gt;getValue() : 0.0f;</div>
@@ -952,8 +952,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>    <span class="keywordflow">if</span> (k.verticalLayout) {</div>
 <div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>        renderer.drawShadow(NUIRect{cx - r * 0.78f, cy - r * 0.78f, r * 1.56f, r * 1.56f}, 0.0f, 2.0f, 4.0f,</div>
 <div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>                            NUIColor(0, 0, 0, 0.48f));</div>
-<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>        renderer.fillCircle({cx, cy}, r * 0.76f, hover ? verbSurfaceBg().withAlpha(1.0f) : NUIColor(0.039f, 0.039f, 0.039f, 1.0f));</div>
-<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>        renderer.strokeCircle({cx, cy}, r * 0.76f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.09f + stateLift * 0.045f));</div>
+<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>        renderer.fillCircle({cx, cy}, r * 0.76f, hover ? verbSurfaceBg().withAlpha(1.0f) : editorNeutral(0.039f, 1.0f));</div>
+<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>        renderer.strokeCircle({cx, cy}, r * 0.76f, 1.0f, editorInk(0.09f + stateLift * 0.045f));</div>
 <div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>        renderer.fillCircle({cx - r * 0.19f, cy - r * 0.22f}, r * 0.25f, NUIColor(1, 1, 1, 0.026f + stateLift * 0.016f));</div>
 <div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> startAngle = kPi * 0.75f;</div>
 <div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> sweep = kPi * 1.5f;</div>
@@ -963,7 +963,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>        drawVerbArc(renderer, {cx, cy}, r, startAngle, endAngle, 3.0f, accent.withAlpha(0.86f + stateLift * 0.11f));</div>
 <div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> pa = startAngle + value * kPi * 1.5f;</div>
 <div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span>        renderer.drawLine({cx, cy}, {cx + std::cos(pa) * (r * 0.56f), cy + std::sin(pa) * (r * 0.56f)}, 2.0f,</div>
-<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>                          NUIColor(1.0f, 1.0f, 1.0f, active ? 0.98f : (hover ? 0.92f : 0.84f)));</div>
+<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>                          editorInk(active ? 0.98f : (hover ? 0.92f : 0.84f)));</div>
 <div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> labelY = k.bounds.y + knobRect.height + 6.0f;</div>
 <div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>        renderer.drawTextCentered(k.label, {k.bounds.x, labelY, k.bounds.width, 14.0f}, 10.0f,</div>
 <div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>                                  theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.74f + stateLift * 0.12f));</div>
@@ -975,8 +975,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>    renderer.drawShadow(NUIRect{cx - r * 0.78f, cy - r * 0.78f, r * 1.56f, r * 1.56f}, 0.0f, 2.0f, 4.0f,</div>
 <div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>                        NUIColor(0, 0, 0, 0.48f));</div>
 <div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>    <span class="keywordflow">if</span> (hover) renderer.strokeCircle({cx, cy}, r + 1.5f, 1.0f, accent.withAlpha(0.25f));</div>
-<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>    renderer.fillCircle({cx, cy}, r * 0.76f, hover ? verbSurfaceBg().withAlpha(1.0f) : NUIColor(0.039f, 0.039f, 0.039f, 1.0f));</div>
-<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>    renderer.strokeCircle({cx, cy}, r * 0.76f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.09f + stateLift * 0.045f));</div>
+<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>    renderer.fillCircle({cx, cy}, r * 0.76f, hover ? verbSurfaceBg().withAlpha(1.0f) : editorNeutral(0.039f, 1.0f));</div>
+<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>    renderer.strokeCircle({cx, cy}, r * 0.76f, 1.0f, editorInk(0.09f + stateLift * 0.045f));</div>
 <div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>    renderer.fillCircle({cx - r * 0.19f, cy - r * 0.22f}, r * 0.25f, NUIColor(1, 1, 1, 0.026f + stateLift * 0.016f));</div>
 <div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> startAngle = kPi * 0.75f;</div>
 <div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> sweep = kPi * 1.5f;</div>
@@ -986,7 +986,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>    drawVerbArc(renderer, {cx, cy}, r, startAngle, endAngle, 3.0f, accent.withAlpha(0.86f + stateLift * 0.11f));</div>
 <div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> pa = startAngle + value * kPi * 1.5f;</div>
 <div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>    renderer.drawLine({cx, cy}, {cx + std::cos(pa) * (r * 0.56f), cy + std::sin(pa) * (r * 0.56f)}, 2.0f,</div>
-<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>                      NUIColor(1.0f, 1.0f, 1.0f, active ? 0.98f : (hover ? 0.92f : 0.84f)));</div>
+<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>                      editorInk(active ? 0.98f : (hover ? 0.92f : 0.84f)));</div>
 <div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> textX = knobRect.right() + 9.0f;</div>
 <div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>    <span class="comment">// Optically centre the label + value on the knob&#39;s centre (see opticalTextY).</span></div>
 <div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> labelTextY = std::round(opticalTextY(renderer, cy, 9.5f));</div>
@@ -1097,7 +1097,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01013" name="l01013"></a><span class="lineno"> 1013</span> </div>
 <div class="line"><a id="l01014" name="l01014"></a><span class="lineno"> 1014</span>    <span class="keyword">auto</span> drawSection = [&amp;](<span class="keyword">const</span> <span class="keywordtype">char</span>* label, <span class="keyword">const</span> <span class="keywordtype">char</span>* hint, <span class="keywordtype">float</span> y, <span class="keywordtype">float</span> height, <span class="keywordtype">int</span> rows) {</div>
 <div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span>        <span class="keyword">const</span> NUIRect card(rightX, y, rightW, height);</div>
-<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>        renderer.fillRoundedRect(card, 9.0f, NUIColor(0.030f, 0.030f, 0.035f, 0.97f));</div>
+<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>        renderer.fillRoundedRect(card, 9.0f, editorNeutral(NUIColor(0.030f, 0.030f, 0.035f, 0.97f)));</div>
 <div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span>        renderer.strokeRoundedRect(card, 9.0f, 1.0f, NUIColor(1, 1, 1, 0.075f));</div>
 <div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span>        renderer.fillCircle({rightX + 13.0f, y + 13.0f}, 2.0f, verbAccent().withAlpha(0.72f));</div>
 <div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span>        <span class="keyword">const</span> NUIRect headerRow(rightX + 21.0f, y, rightW - 33.0f, headerH);</div>
@@ -1135,19 +1135,19 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01051" name="l01051"></a><span class="lineno"> 1051</span>        <span class="keyword">const</span> <span class="keywordtype">bool</span> hover = temp.slider ? temp.slider-&gt;isHovered() : <span class="keyword">false</span>;</div>
 <div class="line"><a id="l01052" name="l01052"></a><span class="lineno"> 1052</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> stateLift = active ? 1.0f : (hover ? 0.55f : 0.0f);</div>
 <div class="line"><a id="l01053" name="l01053"></a><span class="lineno"> 1053</span>        renderer.fillRoundedRect(rect, 7.0f,</div>
-<div class="line"><a id="l01054" name="l01054"></a><span class="lineno"> 1054</span>                                 hover ? NUIColor(0.034f, 0.031f, 0.044f, 0.98f)</div>
-<div class="line"><a id="l01055" name="l01055"></a><span class="lineno"> 1055</span>                                       : NUIColor(0.020f, 0.020f, 0.024f, 0.92f));</div>
+<div class="line"><a id="l01054" name="l01054"></a><span class="lineno"> 1054</span>                                 hover ? editorNeutral(NUIColor(0.034f, 0.031f, 0.044f, 0.98f))</div>
+<div class="line"><a id="l01055" name="l01055"></a><span class="lineno"> 1055</span>                                       : editorNeutral(NUIColor(0.020f, 0.020f, 0.024f, 0.92f)));</div>
 <div class="line"><a id="l01056" name="l01056"></a><span class="lineno"> 1056</span>        renderer.strokeRoundedRect(rect, 7.0f, 1.0f,</div>
 <div class="line"><a id="l01057" name="l01057"></a><span class="lineno"> 1057</span>                                   active ? accent.withAlpha(0.46f)</div>
 <div class="line"><a id="l01058" name="l01058"></a><span class="lineno"> 1058</span>                                          : (hover ? accent.withAlpha(0.24f) : NUIColor(1, 1, 1, 0.065f)));</div>
-<div class="line"><a id="l01059" name="l01059"></a><span class="lineno"> 1059</span>        renderer.fillCircle({cx, cy}, r, NUIColor(0.01f, 0.01f, 0.01f, 1.0f));</div>
+<div class="line"><a id="l01059" name="l01059"></a><span class="lineno"> 1059</span>        renderer.fillCircle({cx, cy}, r, editorNeutral(0.01f, 1.0f));</div>
 <div class="line"><a id="l01060" name="l01060"></a><span class="lineno"> 1060</span>        renderer.strokeCircle({cx, cy}, r, 1.0f, NUIColor(1, 1, 1, 0.10f + stateLift * 0.045f));</div>
 <div class="line"><a id="l01061" name="l01061"></a><span class="lineno"> 1061</span>        <span class="keywordflow">if</span> (hover) renderer.strokeCircle({cx, cy}, r + 1.5f, 1.0f, accent.withAlpha(0.20f));</div>
 <div class="line"><a id="l01062" name="l01062"></a><span class="lineno"> 1062</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> startAngle = kPi * 0.75f;</div>
 <div class="line"><a id="l01063" name="l01063"></a><span class="lineno"> 1063</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> sweep = kPi * 1.5f;</div>
 <div class="line"><a id="l01064" name="l01064"></a><span class="lineno"> 1064</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> value = temp.slider ? temp.slider-&gt;getValue() : 0.0f;</div>
 <div class="line"><a id="l01065" name="l01065"></a><span class="lineno"> 1065</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> endAngle = startAngle + value * sweep;</div>
-<div class="line"><a id="l01066" name="l01066"></a><span class="lineno"> 1066</span>        drawVerbArc(renderer, {cx, cy}, r, startAngle, startAngle + sweep, 3.0f, NUIColor(0.166f, 0.166f, 0.166f, 1.0f));</div>
+<div class="line"><a id="l01066" name="l01066"></a><span class="lineno"> 1066</span>        drawVerbArc(renderer, {cx, cy}, r, startAngle, startAngle + sweep, 3.0f, editorNeutral(0.166f, 1.0f));</div>
 <div class="line"><a id="l01067" name="l01067"></a><span class="lineno"> 1067</span>        drawVerbArc(renderer, {cx, cy}, r, startAngle, endAngle, 3.0f, accent.withAlpha(0.86f + stateLift * 0.11f));</div>
 <div class="line"><a id="l01068" name="l01068"></a><span class="lineno"> 1068</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> pa = startAngle + value * kPi * 1.5f;</div>
 <div class="line"><a id="l01069" name="l01069"></a><span class="lineno"> 1069</span>        renderer.fillCircle({cx + std::cos(pa) * (r - 2.0f), cy + std::sin(pa) * (r - 2.0f)}, 2.5f,</div>
@@ -1177,18 +1177,18 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01093" name="l01093"></a><span class="lineno"> 1093</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> heroHeight = std::clamp(bodyH - 180.0f, 230.0f, 290.0f);</div>
 <div class="line"><a id="l01094" name="l01094"></a><span class="lineno"> 1094</span> </div>
 <div class="line"><a id="l01095" name="l01095"></a><span class="lineno"> 1095</span>    renderer.fillRectGradient({b.x + 8.0f, b.y + 48.0f, b.width - 16.0f, b.height - 58.0f},</div>
-<div class="line"><a id="l01096" name="l01096"></a><span class="lineno"> 1096</span>                              NUIColor(0.024f, 0.022f, 0.030f, 0.98f),</div>
-<div class="line"><a id="l01097" name="l01097"></a><span class="lineno"> 1097</span>                              NUIColor(0.012f, 0.013f, 0.017f, 0.99f), <span class="keyword">true</span>);</div>
+<div class="line"><a id="l01096" name="l01096"></a><span class="lineno"> 1096</span>                              editorNeutral(NUIColor(0.024f, 0.022f, 0.030f, 0.98f)),</div>
+<div class="line"><a id="l01097" name="l01097"></a><span class="lineno"> 1097</span>                              editorNeutral(NUIColor(0.012f, 0.013f, 0.017f, 0.99f)), <span class="keyword">true</span>);</div>
 <div class="line"><a id="l01098" name="l01098"></a><span class="lineno"> 1098</span>    drawPresetStrip(renderer, accent);</div>
 <div class="line"><a id="l01099" name="l01099"></a><span class="lineno"> 1099</span>    drawCategoryPills(renderer, accent);</div>
 <div class="line"><a id="l01100" name="l01100"></a><span class="lineno"> 1100</span> </div>
 <div class="line"><a id="l01101" name="l01101"></a><span class="lineno"> 1101</span>    renderer.fillRoundedRect({mainX - 8.0f, mainY - 6.0f, contentW + 16.0f, bodyH + 12.0f}, 11.0f,</div>
-<div class="line"><a id="l01102" name="l01102"></a><span class="lineno"> 1102</span>                             NUIColor(0.018f, 0.018f, 0.022f, 0.94f));</div>
+<div class="line"><a id="l01102" name="l01102"></a><span class="lineno"> 1102</span>                             editorNeutral(NUIColor(0.018f, 0.018f, 0.022f, 0.94f)));</div>
 <div class="line"><a id="l01103" name="l01103"></a><span class="lineno"> 1103</span>    renderer.strokeRoundedRect({mainX - 8.0f, mainY - 6.0f, contentW + 16.0f, bodyH + 12.0f}, 11.0f, 1.0f,</div>
 <div class="line"><a id="l01104" name="l01104"></a><span class="lineno"> 1104</span>                               NUIColor(1, 1, 1, 0.055f));</div>
 <div class="line"><a id="l01105" name="l01105"></a><span class="lineno"> 1105</span> </div>
 <div class="line"><a id="l01106" name="l01106"></a><span class="lineno"> 1106</span>    <span class="keyword">const</span> NUIRect heroCard(mainX, mainY, centerW, heroHeight);</div>
-<div class="line"><a id="l01107" name="l01107"></a><span class="lineno"> 1107</span>    renderer.fillRoundedRect(heroCard, 10.0f, NUIColor(0.026f, 0.025f, 0.033f, 0.98f));</div>
+<div class="line"><a id="l01107" name="l01107"></a><span class="lineno"> 1107</span>    renderer.fillRoundedRect(heroCard, 10.0f, editorNeutral(NUIColor(0.026f, 0.025f, 0.033f, 0.98f)));</div>
 <div class="line"><a id="l01108" name="l01108"></a><span class="lineno"> 1108</span>    renderer.strokeRoundedRect(heroCard, 10.0f, 1.0f, accent.withAlpha(0.16f));</div>
 <div class="line"><a id="l01109" name="l01109"></a><span class="lineno"> 1109</span>    renderer.fillCircle({heroCard.x + 15.0f, heroCard.y + 15.0f}, 2.0f, accent.withAlpha(0.82f));</div>
 <div class="line"><a id="l01110" name="l01110"></a><span class="lineno"> 1110</span>    <span class="keyword">const</span> NUIRect heroHeader(heroCard.x + 23.0f, heroCard.y + 2.0f, heroCard.width - 37.0f, 26.0f);</div>
@@ -1202,13 +1202,13 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01118" name="l01118"></a><span class="lineno"> 1118</span> </div>
 <div class="line"><a id="l01119" name="l01119"></a><span class="lineno"> 1119</span>    <span class="keyword">const</span> NUIRect mixCard(m_mixBounds.x - 10.0f, m_mixBounds.y - 5.0f,</div>
 <div class="line"><a id="l01120" name="l01120"></a><span class="lineno"> 1120</span>                          m_mixBounds.width + 20.0f, m_mixBounds.height + 10.0f);</div>
-<div class="line"><a id="l01121" name="l01121"></a><span class="lineno"> 1121</span>    renderer.fillRoundedRect(mixCard, 9.0f, NUIColor(0.026f, 0.025f, 0.033f, 0.96f));</div>
+<div class="line"><a id="l01121" name="l01121"></a><span class="lineno"> 1121</span>    renderer.fillRoundedRect(mixCard, 9.0f, editorNeutral(NUIColor(0.026f, 0.025f, 0.033f, 0.96f)));</div>
 <div class="line"><a id="l01122" name="l01122"></a><span class="lineno"> 1122</span>    renderer.strokeRoundedRect(mixCard, 9.0f, 1.0f, NUIColor(1, 1, 1, 0.06f));</div>
 <div class="line"><a id="l01123" name="l01123"></a><span class="lineno"> 1123</span> </div>
 <div class="line"><a id="l01124" name="l01124"></a><span class="lineno"> 1124</span>    <span class="keyword">const</span> NUIRect utilityCard(m_bypassBounds.x - 10.0f, m_bypassBounds.y - 10.0f,</div>
 <div class="line"><a id="l01125" name="l01125"></a><span class="lineno"> 1125</span>                              m_mixLockBounds.right() - m_bypassBounds.x + 20.0f,</div>
 <div class="line"><a id="l01126" name="l01126"></a><span class="lineno"> 1126</span>                              m_abBoundsB.bottom() - m_bypassBounds.y + 20.0f);</div>
-<div class="line"><a id="l01127" name="l01127"></a><span class="lineno"> 1127</span>    renderer.fillRoundedRect(utilityCard, 9.0f, NUIColor(0.023f, 0.023f, 0.029f, 0.94f));</div>
+<div class="line"><a id="l01127" name="l01127"></a><span class="lineno"> 1127</span>    renderer.fillRoundedRect(utilityCard, 9.0f, editorNeutral(NUIColor(0.023f, 0.023f, 0.029f, 0.94f)));</div>
 <div class="line"><a id="l01128" name="l01128"></a><span class="lineno"> 1128</span>    renderer.strokeRoundedRect(utilityCard, 9.0f, 1.0f, NUIColor(1, 1, 1, 0.055f));</div>
 <div class="line"><a id="l01129" name="l01129"></a><span class="lineno"> 1129</span> </div>
 <div class="line"><a id="l01130" name="l01130"></a><span class="lineno"> 1130</span>    drawSectionLabels(renderer);</div>
@@ -1302,7 +1302,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01218" name="l01218"></a><span class="lineno"> 1218</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; btn : btns) {</div>
 <div class="line"><a id="l01219" name="l01219"></a><span class="lineno"> 1219</span>            <span class="keywordflow">if</span> (btn.hov &amp;&amp; btn.tip) {</div>
 <div class="line"><a id="l01220" name="l01220"></a><span class="lineno"> 1220</span>                <span class="keyword">const</span> NUIRect tipBounds(btn.bounds.x, btn.bounds.y - 18.0f, btn.bounds.width, 16.0f);</div>
-<div class="line"><a id="l01221" name="l01221"></a><span class="lineno"> 1221</span>                renderer.fillRoundedRect(tipBounds, 3.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.92f));</div>
+<div class="line"><a id="l01221" name="l01221"></a><span class="lineno"> 1221</span>                renderer.fillRoundedRect(tipBounds, 3.0f, editorNeutral(0.0f, 0.92f));</div>
 <div class="line"><a id="l01222" name="l01222"></a><span class="lineno"> 1222</span>                renderer.drawTextCentered(btn.tip, tipBounds, 8.0f, NUIColor(1, 1, 1, 0.78f));</div>
 <div class="line"><a id="l01223" name="l01223"></a><span class="lineno"> 1223</span>            }</div>
 <div class="line"><a id="l01224" name="l01224"></a><span class="lineno"> 1224</span>        }</div>
@@ -1311,7 +1311,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01227" name="l01227"></a><span class="lineno"> 1227</span>        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; tip = m_presets[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(m_hoveredPreset)];</div>
 <div class="line"><a id="l01228" name="l01228"></a><span class="lineno"> 1228</span>        <span class="keywordflow">if</span> (!tip.tooltip.empty()) {</div>
 <div class="line"><a id="l01229" name="l01229"></a><span class="lineno"> 1229</span>            <span class="keyword">const</span> NUIRect tipBounds(tip.bounds.x, tip.bounds.bottom() + 4.0f, tip.bounds.width, 20.0f);</div>
-<div class="line"><a id="l01230" name="l01230"></a><span class="lineno"> 1230</span>            renderer.fillRoundedRect(tipBounds, 4.0f, NUIColor(0.0f, 0.0f, 0.0f, 0.92f));</div>
+<div class="line"><a id="l01230" name="l01230"></a><span class="lineno"> 1230</span>            renderer.fillRoundedRect(tipBounds, 4.0f, editorNeutral(0.0f, 0.92f));</div>
 <div class="line"><a id="l01231" name="l01231"></a><span class="lineno"> 1231</span>            renderer.drawText(tip.tooltip, {tip.bounds.x + 6.0f, tip.bounds.bottom() + 8.0f}, 8.5f,</div>
 <div class="line"><a id="l01232" name="l01232"></a><span class="lineno"> 1232</span>                              NUIColor(1, 1, 1, 0.78f));</div>
 <div class="line"><a id="l01233" name="l01233"></a><span class="lineno"> 1233</span>        }</div>

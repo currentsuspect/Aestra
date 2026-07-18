@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::TrackManager::setCommandSink" name="Aestra::Audio::TrackManager::setCommandSink">
+<area shape="rect" id="Node000001" title="Install the audio&#45;command sink used to talk to the live engine." alt="" coords="253,5,461,45"/>
+<area shape="rect" id="Node000002" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a4193ccb9e33e6ad56eb3f03a98fdfa65" title="Attach an engine to a track manager the way the app does." alt="" coords="5,5,205,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="239,28,206,28,206,23,239,23"/>
+</map>

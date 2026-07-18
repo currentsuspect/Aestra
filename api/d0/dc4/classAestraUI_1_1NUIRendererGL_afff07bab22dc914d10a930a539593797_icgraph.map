@@ -1,29 +1,27 @@
 <map id="AestraUI::NUIRendererGL::flush" name="AestraUI::NUIRendererGL::flush">
-<area shape="rect" id="Node000001" title="Flush all pending draw calls immediately." alt="" coords="475,344,661,384"/>
+<area shape="rect" id="Node000001" title="Flush all pending draw calls immediately." alt="" coords="475,312,661,352"/>
 <area shape="rect" id="Node000002" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#afdee9e13cdbf67176f053c4c2aaf979f" title="Clear the clip rectangle." alt="" coords="240,5,427,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="557,331,541,275,515,204,476,131,452,97,425,66,398,48,401,43,428,62,457,93,481,128,520,202,546,273,562,330"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="555,300,538,249,511,187,473,123,450,93,425,66,398,48,400,43,428,62,454,89,478,120,515,185,543,247,560,298"/>
 <area shape="rect" id="Node000003" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#ad66fdf8729e47c299721aef9c0b5e2b1" title="Draw a line." alt="" coords="240,120,427,160"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="549,333,528,296,500,253,465,211,425,174,405,162,408,158,428,170,469,207,504,250,533,293,553,330"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="545,302,495,238,462,204,425,174,404,162,406,158,428,170,465,200,499,234,549,299"/>
 <area shape="rect" id="Node000004" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#a0271b1b51fb587f21831f81b79bc7735" title="Draw a polyline (connected line segments)." alt="" coords="5,63,192,103"/>
-<area shape="poly" id="edge5_Node000001_Node000004" title=" " alt="" coords="557,332,541,280,515,219,477,158,453,132,425,110,398,96,370,84,309,71,249,68,192,70,192,65,249,62,310,66,371,79,401,91,428,106,457,128,481,155,520,216,546,278,562,330"/>
+<area shape="poly" id="edge5_Node000001_Node000004" title=" " alt="" coords="554,300,537,254,510,202,473,151,450,129,425,110,369,86,309,73,248,69,192,71,192,66,248,64,310,68,371,81,428,106,454,125,477,147,514,199,542,252,559,298"/>
 <area shape="rect" id="Node000006" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#ae6f7a05a99d1a43c5b1d555a61d6650d" title="Draw a texture from raw RGBA pixel data." alt="" coords="240,184,427,224"/>
-<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="539,336,489,286,458,261,425,238,402,227,404,222,428,234,461,256,492,282,542,332"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="530,306,481,271,425,238,398,227,400,222,428,234,484,267,533,301"/>
 <area shape="rect" id="Node000007" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#a5ae8c11109759c03f8de1ba4467845dd" title="Draw a texture/image." alt="" coords="240,248,427,288"/>
-<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="512,341,426,302,394,291,396,286,428,298,514,336"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="480,311,406,291,408,285,482,306"/>
 <area shape="rect" id="Node000008" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#acdba135c78a88725d02418a453ecb874" title="End batching and flush all queued draw calls." alt="" coords="240,312,427,352"/>
-<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="461,352,427,347,427,342,462,347"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="461,335,427,335,427,329,461,329"/>
 <area shape="rect" id="Node000009" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#a7f8059fde90c0e575710489050a31546" title="End the current frame and present to screen." alt="" coords="240,376,427,416"/>
-<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="462,381,427,386,427,381,461,376"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="482,358,408,379,406,373,480,353"/>
 <area shape="rect" id="Node000010" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#ae90e8cb5382aaa2c06e3c2de22b26e61" title="Draw a waveform as an optimized filled shape (triangle strip)." alt="" coords="240,440,427,480"/>
-<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="514,392,428,430,396,442,394,437,426,426,512,387"/>
+<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="533,363,484,397,428,430,400,442,398,437,425,426,481,393,530,358"/>
 <area shape="rect" id="Node000011" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#a93ce3bf832ad1ae9c4d34ee03e59d6f8" title="Draw a waveform with gradient fill (bright at top, darker at bottom)." alt="" coords="240,504,427,544"/>
-<area shape="poly" id="edge11_Node000001_Node000011" title=" " alt="" coords="542,396,492,446,461,472,428,494,404,506,402,501,425,490,458,467,489,442,539,392"/>
+<area shape="poly" id="edge11_Node000001_Node000011" title=" " alt="" coords="549,365,499,430,465,464,428,494,406,506,404,502,425,490,462,460,495,426,545,362"/>
 <area shape="rect" id="Node000012" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#a55450a568a3b620d6b631ec5f84d9bcf" title="Optional render&#45;to&#45;texture begin." alt="" coords="240,568,427,608"/>
-<area shape="poly" id="edge12_Node000001_Node000012" title=" " alt="" coords="553,398,533,435,504,478,469,521,428,558,408,570,405,566,425,554,465,517,500,475,528,432,549,395"/>
+<area shape="poly" id="edge12_Node000001_Node000012" title=" " alt="" coords="557,366,538,409,510,461,473,513,428,558,409,570,407,566,425,554,469,509,505,458,533,407,552,364"/>
 <area shape="rect" id="Node000013" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#a4afe15df575e2330a2573cd3f5358533" title="Optional render&#45;to&#45;texture end." alt="" coords="240,632,427,672"/>
-<area shape="poly" id="edge13_Node000001_Node000013" title=" " alt="" coords="560,398,542,447,515,507,477,569,454,597,428,622,410,634,407,630,425,618,450,593,473,566,510,505,537,445,555,396"/>
-<area shape="rect" id="Node000014" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#a9a1fbf1470fdfa4f8e3e39c4b01041d4" title="Set the current clip rectangle (scissor test)." alt="" coords="240,696,427,736"/>
-<area shape="poly" id="edge14_Node000001_Node000014" title=" " alt="" coords="564,398,550,459,524,536,506,576,485,616,459,653,428,686,412,698,408,694,425,682,455,650,480,613,501,574,519,534,545,457,559,397"/>
+<area shape="poly" id="edge13_Node000001_Node000013" title=" " alt="" coords="562,366,546,421,520,490,481,560,456,593,428,622,411,634,408,630,425,618,452,590,476,557,515,488,541,420,557,365"/>
 <area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="237,119,180,105,182,100,238,114"/>
 <area shape="rect" id="Node000005" href="$d0/dc4/classAestraUI_1_1NUIRendererGL.html#ac2c124b8ba23c1e9a46d4ffb40c3aa72" title="Draw a rectangle outline." alt="" coords="5,127,192,167"/>
 <area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="227,146,192,147,192,141,227,140"/>

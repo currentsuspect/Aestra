@@ -107,6 +107,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a7319bc3b1bc819316d46fe5bfe584b28"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0a1100e68e9b48942933cd901d7095d9" id="r_a0a1100e68e9b48942933cd901d7095d9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d41/classAestraUI_1_1UIMixerStrip.html#a0a1100e68e9b48942933cd901d7095d9">onRender</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer) override</td></tr>
 <tr class="separator:a0a1100e68e9b48942933cd901d7095d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afca31fac96525e72572a6587078deb37" id="r_afca31fac96525e72572a6587078deb37"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d41/classAestraUI_1_1UIMixerStrip.html#afca31fac96525e72572a6587078deb37">onThemeChanged</a> (const <a class="el" href="../../d1/d57/structAestraUI_1_1NUIThemeProperties.html">NUIThemeProperties</a> &amp;theme) override</td></tr>
+<tr class="memdesc:afca31fac96525e72572a6587078deb37"><td class="mdescLeft">&#160;</td><td class="mdescRight">Refresh cached theme state, then propagate the change to descendants.  <br /></td></tr>
+<tr class="separator:afca31fac96525e72572a6587078deb37"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a36fd9f3fba5d54fee2949c6542d49f95" id="r_a36fd9f3fba5d54fee2949c6542d49f95"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d41/classAestraUI_1_1UIMixerStrip.html#a36fd9f3fba5d54fee2949c6542d49f95">onUpdate</a> (double deltaTime) override</td></tr>
 <tr class="separator:a36fd9f3fba5d54fee2949c6542d49f95"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa3b4a0bc2811e9b3709f75efd1c54bea" id="r_aa3b4a0bc2811e9b3709f75efd1c54bea"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d41/classAestraUI_1_1UIMixerStrip.html#aa3b4a0bc2811e9b3709f75efd1c54bea">onResize</a> (int width, int height) override</td></tr>
@@ -358,7 +361,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00045">45</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00046">46</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
 
 </div>
 </div>
@@ -483,6 +486,47 @@ Additional Inherited Members</h2></td></tr>
 
 </div>
 </div>
+<a id="afca31fac96525e72572a6587078deb37" name="afca31fac96525e72572a6587078deb37"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afca31fac96525e72572a6587078deb37">&#9670;&#160;</a></span>onThemeChanged()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::UIMixerStrip::onThemeChanged </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d1/d57/structAestraUI_1_1NUIThemeProperties.html">NUIThemeProperties</a> &amp;&#160;</td>
+          <td class="paramname"><em>theme</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Refresh cached theme state, then propagate the change to descendants. </p>
+
+<p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4685e1bd30fd0f50650effa1ac46b41c">AestraUI::NUIComponent</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00042">42</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d6/dbb/NUIComponent_8cpp_source.html#l00491">AestraUI::NUIComponent::onThemeChanged()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../db/d41/classAestraUI_1_1UIMixerStrip_afca31fac96525e72572a6587078deb37_cgraph.svg" width="411" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
 <a id="a36fd9f3fba5d54fee2949c6542d49f95" name="a36fd9f3fba5d54fee2949c6542d49f95"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a36fd9f3fba5d54fee2949c6542d49f95">&#9670;&#160;</a></span>onUpdate()</h2>
 
@@ -546,7 +590,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00057">57</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00058">58</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
 
 </div>
 </div>
@@ -562,7 +606,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00054">54</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00055">55</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
 
 </div>
 </div>
@@ -578,7 +622,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00060">60</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00061">61</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
 
 </div>
 </div>
@@ -594,7 +638,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00062">62</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00063">63</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
 
 </div>
 </div>
@@ -610,7 +654,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00061">61</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html#l00062">62</a> of file <a class="el" href="../../df/d80/UIMixerStrip_8h_source.html">UIMixerStrip.h</a>.</p>
 
 </div>
 </div>

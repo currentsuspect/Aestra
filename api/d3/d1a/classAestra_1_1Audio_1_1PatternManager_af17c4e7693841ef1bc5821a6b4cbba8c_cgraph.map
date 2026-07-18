@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::PatternManager::createMidiPattern" name="Aestra::Audio::PatternManager::createMidiPattern">
+<area shape="rect" id="Node000001" title="Create a MIDI pattern." alt="" coords="5,5,225,45"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#ac8e1d96a07695282b8eb255ad01a6b9a" title="Create a MIDI pattern restoring a serialized identity (#446)." alt="" coords="273,5,493,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="225,23,260,23,260,28,225,28"/>
+</map>

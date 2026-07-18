@@ -1,0 +1,13 @@
+<map id="Aestra::Audio::AddUnitCommand::execute" name="Aestra::Audio::AddUnitCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,61,241,101"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a177f299019d9d669ad029446abe34180" title="Create a unit with generated defaults." alt="" coords="289,29,491,69"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="241,65,275,60,276,66,242,70"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a3452277bf4dabe8eb354f7b18177733f" title="Set enabled state for a unit." alt="" coords="289,93,491,133"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="242,93,276,97,275,102,241,98"/>
+<area shape="poly" id="edge2_Node000002_Node000002" title=" " alt="" coords="344,30,341,20,349,10,365,5,390,3,419,6,435,13,432,18,417,11,390,8,366,10,352,15,346,21,349,28"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="788,93,989,133"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="491,108,539,107,740,107,774,107,774,113,740,112,539,112,491,113"/>
+<area shape="rect" id="Node000005" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="539,121,740,161"/>
+<area shape="poly" id="edge5_Node000003_Node000005" title=" " alt="" coords="491,122,525,126,525,131,491,127"/>
+<area shape="poly" id="edge6_Node000005_Node000004" title=" " alt="" coords="740,127,774,123,775,129,741,133"/>
+</map>

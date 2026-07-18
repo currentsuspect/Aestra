@@ -1,10 +1,14 @@
 <map id="Aestra::Audio::EffectChain::isSlotBypassed" name="Aestra::Audio::EffectChain::isSlotBypassed">
-<area shape="rect" id="Node000001" title="Check if slot is bypassed." alt="" coords="761,5,952,45"/>
-<area shape="rect" id="Node000002" href="$da/d71/classAestraUI_1_1PluginUIController.html#a4989078f2e5a64d24f32437e694dd792" title="Refresh rack display from effect chain state." alt="" coords="509,5,713,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="748,28,714,28,714,23,748,23"/>
-<area shape="rect" id="Node000003" href="$da/d71/classAestraUI_1_1PluginUIController.html#a6f6aad77c64762f12e40f6899c8e0e8b" title="Bind an EffectChainRack to an audio EffectChain." alt="" coords="5,5,209,45"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="496,25,461,24,257,24,209,25,209,20,257,19,461,19,496,19"/>
-<area shape="rect" id="Node000004" href="$da/d71/classAestraUI_1_1PluginUIController.html#a212dbf3849e370089393c7b225bd33b2" title="Load a plugin into an effect slot." alt="" coords="257,33,461,73"/>
-<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="496,41,462,45,461,39,496,35"/>
-<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="244,43,209,39,210,34,244,38"/>
+<area shape="rect" id="Node000001" title="Check if slot is bypassed." alt="" coords="761,37,952,77"/>
+<area shape="rect" id="Node000002" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#a3db908d65982c10891f49a41c1e9f8d7" title="Execute the command (first time)" alt="" coords="514,5,709,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="747,46,708,41,709,35,748,41"/>
+<area shape="rect" id="Node000004" href="$da/d71/classAestraUI_1_1PluginUIController.html#a4989078f2e5a64d24f32437e694dd792" title="Refresh rack display from effect chain state." alt="" coords="509,69,713,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="748,74,714,79,713,73,748,69"/>
+<area shape="rect" id="Node000003" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#a432e4bf7538aea50531284f1eb1a5257" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="272,5,447,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="500,28,447,28,447,23,500,23"/>
+<area shape="rect" id="Node000005" href="$da/d71/classAestraUI_1_1PluginUIController.html#a6f6aad77c64762f12e40f6899c8e0e8b" title="Bind an EffectChainRack to an audio EffectChain." alt="" coords="5,95,209,135"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="496,98,209,112,209,107,495,92"/>
+<area shape="rect" id="Node000006" href="$da/d71/classAestraUI_1_1PluginUIController.html#a212dbf3849e370089393c7b225bd33b2" title="Load a plugin into an effect slot." alt="" coords="257,123,461,163"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="504,115,455,125,454,120,502,110"/>
+<area shape="poly" id="edge6_Node000006_Node000005" title=" " alt="" coords="244,133,209,129,210,123,244,127"/>
 </map>

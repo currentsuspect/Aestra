@@ -1,0 +1,16 @@
+<map id="AestraContent::toggleTakesPanel" name="AestraContent::toggleTakesPanel">
+<area shape="rect" id="Node000001" title="Toggle the Takes panel visibility." alt="" coords="5,69,205,109"/>
+<area shape="rect" id="Node000002" href="$db/d60/classAestraContent.html#ad0290fd113d01c4f8cfcc66a6ac47794" title="Relayout the workspace after a host resize." alt="" coords="253,77,436,102"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="206,87,239,87,239,92,206,92"/>
+<area shape="rect" id="Node000003" href="$db/d60/classAestraContent.html#ac3a61a9e4765aadb4e43f89145418a38" title="Clamp an overlay rectangle to the current allowed bounds." alt="" coords="529,5,721,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="400,74,483,55,522,46,524,51,485,60,402,79"/>
+<area shape="rect" id="Node000004" href="$db/d60/classAestraContent.html#ab127c5e597ccf0ba3ec1f5b63e113b15" title="Compute the rectangle panels are allowed to occupy." alt="" coords="509,69,741,109"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="436,87,495,87,495,92,436,92"/>
+<area shape="rect" id="Node000007" href="$db/d60/classAestraContent.html#ace0d73e7c0b8d912331716f8ff4eb1ee" title="Compute the maximized overlay rectangle." alt="" coords="484,134,765,159"/>
+<area shape="poly" id="edge6_Node000002_Node000007" title=" " alt="" coords="399,99,485,119,537,129,536,134,483,124,398,105"/>
+<area shape="rect" id="Node000005" href="$db/d60/classAestraContent.html#a747fc3bfb5c3b565623f999c228c9e75" title="Compute the safe workspace rectangle after chrome and sidebars." alt="" coords="813,77,1052,102"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="741,87,799,87,799,92,741,92"/>
+<area shape="rect" id="Node000006" href="$db/d60/classAestraContent.html#a75c1ce436d0185fc1d0acf11d301ee83" title="Get the x coordinate of the visible browser edge." alt="" coords="839,127,1027,167"/>
+<area shape="poly" id="edge5_Node000004_Node000006" title=" " alt="" coords="733,107,825,124,824,129,732,112"/>
+<area shape="poly" id="edge7_Node000007_Node000006" title=" " alt="" coords="766,144,825,144,825,149,766,149"/>
+</map>

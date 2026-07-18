@@ -1,0 +1,19 @@
+<map id="Aestra::Audio::MuseService::wireHeadlessEngine" name="Aestra::Audio::MuseService::wireHeadlessEngine">
+<area shape="rect" id="Node000001" title="Attach an engine to a track manager the way the app does." alt="" coords="5,197,205,237"/>
+<area shape="rect" id="Node000002" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a40feedfcfd8b528f84e5df72b29fed1d" title="Access the command queue used to communicate with the audio thread." alt="" coords="258,5,457,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="118,195,171,127,209,88,252,55,263,49,265,54,255,60,212,92,175,130,122,199"/>
+<area shape="rect" id="Node000003" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a5d58311171dbdf556b2f670c4435a417" title="Publish the channel&#45;slot map used by the audio thread." alt="" coords="258,69,457,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="131,195,185,157,252,119,269,112,271,117,255,124,188,162,134,199"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a0943c742e0076a3d4087ec29a33ab8c9" title="Install the audio&#45;command sink used to talk to the live engine." alt="" coords="253,133,461,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="184,195,264,174,266,179,186,200"/>
+<area shape="rect" id="Node000005" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#af888d556e4e0c92fe141bba9e023800f" title="Publish the continuous parameter buffer used for automation." alt="" coords="258,197,457,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="206,215,244,215,244,220,206,220"/>
+<area shape="rect" id="Node000006" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a81edad1c17f18624a84d59e60333cde6" title="Bind the pattern playback engine used for scheduled MIDI." alt="" coords="258,261,457,301"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="186,235,266,255,264,261,184,240"/>
+<area shape="rect" id="Node000007" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a59f895f9a59c21c8fa19bf150a8c9cb3" title="Set the TrackManager for playlist rendering." alt="" coords="258,325,457,365"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="134,235,188,273,255,311,271,318,269,323,252,316,185,278,131,240"/>
+<area shape="rect" id="Node000009" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a668aef03a8f1fb6999a3b42c705c1be1" title="Bind the unit manager used for Arsenal rendering." alt="" coords="258,389,457,429"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="122,236,175,304,212,342,255,375,265,381,263,386,252,380,209,346,171,308,118,239"/>
+<area shape="rect" id="Node000008" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#a0c30690eadea033ba723bcbca0c1d14c" title="Calculate and apply plugin delay compensation across all tracks." alt="" coords="509,325,744,365"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="457,343,496,343,496,348,457,348"/>
+</map>

@@ -1,24 +1,4 @@
 var searchData=
 [
-  ['realtimethreadpool_0',['RealTimeThreadPool',['../da/d10/classAestra_1_1RealTimeThreadPool.html',1,'Aestra']]],
-  ['recordbutton_1',['RecordButton',['../de/dba/classAestraUI_1_1RecordButton.html',1,'AestraUI']]],
-  ['recordingcapture_2',['RecordingCapture',['../d0/d3c/structAestra_1_1Audio_1_1TrackManager_1_1RecordingCapture.html',1,'Aestra::Audio::TrackManager']]],
-  ['recoverydialog_3',['RecoveryDialog',['../d0/dcc/classAestra_1_1RecoveryDialog.html',1,'Aestra']]],
-  ['recoveryinfo_4',['RecoveryInfo',['../d1/d26/structAestra_1_1Audio_1_1AutosaveManager_1_1RecoveryInfo.html',1,'Aestra::Audio::AutosaveManager']]],
-  ['reflectionpanel_5',['ReflectionPanel',['../d3/d28/classAestraUI_1_1ReflectionPanel.html',1,'AestraUI']]],
-  ['registration_6',['Registration',['../dc/d11/structAestra_1_1Audio_1_1InternalPluginRegistry_1_1Registration.html',1,'Aestra::Audio::InternalPluginRegistry']]],
-  ['removeclipcommand_7',['RemoveClipCommand',['../dd/d5e/classAestra_1_1Audio_1_1RemoveClipCommand.html',1,'Aestra::Audio']]],
-  ['removenotecommand_8',['RemoveNoteCommand',['../d6/d41/classAestra_1_1Audio_1_1RemoveNoteCommand.html',1,'Aestra::Audio']]],
-  ['removeplugincommand_9',['RemovePluginCommand',['../d8/dee/classAestra_1_1Audio_1_1RemovePluginCommand.html',1,'Aestra::Audio']]],
-  ['renametrackcommand_10',['RenameTrackCommand',['../dc/d3a/classAestra_1_1Audio_1_1RenameTrackCommand.html',1,'Aestra::Audio']]],
-  ['rendertrack_11',['RenderTrack',['../d1/df7/structAestra_1_1Audio_1_1RenderTrack.html',1,'Aestra::Audio']]],
-  ['resizenotecommand_12',['ResizeNoteCommand',['../d1/de2/classAestra_1_1Audio_1_1ResizeNoteCommand.html',1,'Aestra::Audio']]],
-  ['result_13',['result',['../d5/dc1/structAestra_1_1Audio_1_1AudioExporter_1_1Result.html',1,'Aestra::Audio::AudioExporter::Result'],['../d8/da7/structAestra_1_1Audio_1_1ClipPrefilterService_1_1Result.html',1,'Aestra::Audio::ClipPrefilterService::Result'],['../d8/d7e/structTakeManager_1_1Result.html',1,'TakeManager::Result']]],
-  ['rewindbutton_14',['RewindButton',['../de/d35/classAestraUI_1_1RewindButton.html',1,'AestraUI']]],
-  ['rtaudiobackend_15',['RtAudioBackend',['../d5/d20/classAestra_1_1Audio_1_1RtAudioBackend.html',1,'Aestra::Audio']]],
-  ['rtaudiodriver_16',['RtAudioDriver',['../d1/d81/classAestra_1_1Audio_1_1RtAudioDriver.html',1,'Aestra::Audio']]],
-  ['rtinputmonitorroute_17',['RtInputMonitorRoute',['../d9/dbb/structAestra_1_1Audio_1_1TrackManager_1_1RtInputMonitorRoute.html',1,'Aestra::Audio::TrackManager']]],
-  ['rtviolationevent_18',['RTViolationEvent',['../d9/dbb/structAestra_1_1Audio_1_1RTViolationEvent.html',1,'Aestra::Audio']]],
-  ['rumbleplugineditor_19',['RumblePluginEditor',['../dd/dad/classAestraUI_1_1RumblePluginEditor.html',1,'AestraUI']]],
-  ['runtimeconnection_20',['RuntimeConnection',['../d4/d32/structAestra_1_1Audio_1_1RuntimeConnection.html',1,'Aestra::Audio']]]
+  ['quantizepatterncommand_0',['QuantizePatternCommand',['../d7/dc5/classAestra_1_1Audio_1_1QuantizePatternCommand.html',1,'Aestra::Audio']]]
 ];

@@ -101,10 +101,10 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="keyword">constexpr</span> <span class="keywordtype">float</span> kPi = 3.14159265358979323846f;</div>
 <div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>NUIColor accentColor() { <span class="keywordflow">return</span> NUIColor(0.95f, 0.60f, 0.12f, 1.0f); }</div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>NUIColor bgDark() { <span class="keywordflow">return</span> NUIColor(0.02f, 0.02f, 0.02f, 0.96f); }</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>NUIColor textDim() { <span class="keywordflow">return</span> NUIColor(1.0f, 1.0f, 1.0f, 0.30f); }</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>NUIColor textBright() { <span class="keywordflow">return</span> NUIColor(1.0f, 1.0f, 1.0f, 0.88f); }</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>NUIColor meterBg() { <span class="keywordflow">return</span> NUIColor(0.008f, 0.008f, 0.008f, 1.0f); }</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>NUIColor bgDark() { <span class="keywordflow">return</span> editorNeutral(0.02f, 0.96f); }</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>NUIColor textDim() { <span class="keywordflow">return</span> editorInk(0.30f); }</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>NUIColor textBright() { <span class="keywordflow">return</span> editorInk(0.88f); }</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>NUIColor meterBg() { <span class="keywordflow">return</span> editorNeutral(0.008f, 1.0f); }</div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span><span class="keywordtype">float</span> smoothMeter(<span class="keywordtype">float</span> current, <span class="keywordtype">float</span> target, <span class="keywordtype">float</span> attack, <span class="keywordtype">float</span> release) {</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> coeff = target &gt; current ? attack : release;</div>
@@ -334,10 +334,10 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    <span class="keyword">const</span> NUIColor knobAccent = control.isPrimary ? accent : accent.withAlpha(0.72f);</div>
 <div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span> </div>
 <div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>    <span class="comment">// Cell background</span></div>
-<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    renderer.fillRoundedRect(control.bounds, 8.0f, NUIColor(0.035f, 0.035f, 0.035f, 0.96f));</div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    renderer.fillRoundedRect(control.bounds, 8.0f, editorNeutral(0.035f, 0.96f));</div>
 <div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    renderer.strokeRoundedRect(control.bounds, 8.0f, 1.0f,</div>
 <div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>                               control.isPrimary ? NUIColor(0.28f, 0.18f, 0.06f, 1.0f)</div>
-<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>                                                 : NUIColor(0.119f, 0.119f, 0.119f, 1.0f));</div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>                                                 : editorNeutral(0.119f, 1.0f));</div>
 <div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span> </div>
 <div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>    <span class="keyword">const</span> NUIRect knobRect = control.slider ? control.slider-&gt;getBounds() : NUIRect();</div>
 <div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> cx = knobRect.center().x;</div>
@@ -399,8 +399,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>        renderer.strokeRoundedRect(rect, 5.0f, 1.0f, accent);</div>
 <div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>        renderer.drawTextCentered(label, rect, 9.5f, NUIColor(1, 1, 1, 0.97f));</div>
 <div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>        <span class="keyword">const</span> NUIColor bg = hovered ? NUIColor(0.041f, 0.041f, 0.041f, 0.90f)</div>
-<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>                                    : NUIColor(0.022f, 0.022f, 0.022f, 0.90f);</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>        <span class="keyword">const</span> NUIColor bg = hovered ? editorNeutral(0.041f, 0.90f)</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>                                    : editorNeutral(0.022f, 0.90f);</div>
 <div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>        renderer.fillRoundedRect(rect, 5.0f, bg);</div>
 <div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>        renderer.drawLine({rect.x + 5.0f, rect.y + 1.0f},</div>
 <div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>                          {rect.x + rect.width - 5.0f, rect.y + 1.0f},</div>

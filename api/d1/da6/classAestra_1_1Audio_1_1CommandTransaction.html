@@ -120,6 +120,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:af92c345e77d68b36db84e94a60704c54"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a985a041a4b1b38698d59d8ae0ee5dd70" id="r_a985a041a4b1b38698d59d8ae0ee5dd70"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/da6/classAestra_1_1Audio_1_1CommandTransaction.html#a985a041a4b1b38698d59d8ae0ee5dd70">add</a> (std::shared_ptr&lt; <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html">ICommand</a> &gt; cmd)</td></tr>
 <tr class="separator:a985a041a4b1b38698d59d8ae0ee5dd70"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a07d9fe254d818e65fea2312b768ddb" id="r_a2a07d9fe254d818e65fea2312b768ddb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/da6/classAestra_1_1Audio_1_1CommandTransaction.html#a2a07d9fe254d818e65fea2312b768ddb">markExecuted</a> ()</td></tr>
+<tr class="memdesc:a2a07d9fe254d818e65fea2312b768ddb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adopt members that were already executed one-by-one.  <br /></td></tr>
+<tr class="separator:a2a07d9fe254d818e65fea2312b768ddb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6d6a62b4b509f5864431fb1c30ba232e" id="r_a6d6a62b4b509f5864431fb1c30ba232e"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/da6/classAestra_1_1Audio_1_1CommandTransaction.html#a6d6a62b4b509f5864431fb1c30ba232e">size</a> () const</td></tr>
 <tr class="separator:a6d6a62b4b509f5864431fb1c30ba232e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a38312d56ecfa062271cf0dccd508f990" id="r_a38312d56ecfa062271cf0dccd508f990"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/da6/classAestra_1_1Audio_1_1CommandTransaction.html#a38312d56ecfa062271cf0dccd508f990">isEmpty</a> () const</td></tr>
@@ -224,7 +227,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html#l00043">43</a> of file <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html">CommandTransaction.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html#l00054">54</a> of file <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html">CommandTransaction.h</a>.</p>
 
 </div>
 </div>
@@ -313,7 +316,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html#l00042">42</a> of file <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html">CommandTransaction.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html#l00053">53</a> of file <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html">CommandTransaction.h</a>.</p>
 
 </div>
 </div>
@@ -333,6 +336,36 @@ Public Member Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d06/CommandTransaction_8cpp_source.html#l00072">72</a> of file <a class="el" href="../../d0/d06/CommandTransaction_8cpp_source.html">CommandTransaction.cpp</a>.</p>
+
+</div>
+</div>
+<a id="a2a07d9fe254d818e65fea2312b768ddb" name="a2a07d9fe254d818e65fea2312b768ddb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2a07d9fe254d818e65fea2312b768ddb">&#9670;&#160;</a></span>markExecuted()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Aestra::Audio::CommandTransaction::markExecuted </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Adopt members that were already executed one-by-one. </p>
+<p>For stepwise batch execution (each member validated against the state its predecessors produced): the caller executes members itself, then marks the transaction executed so undo/redo treat it as one applied step. Pair with <a class="el" href="../../df/d31/classAestra_1_1Audio_1_1CommandHistory.html#a3dc3b072f240d017cdf83e69175ffbc8" title="Push a command that the caller already executed.">CommandHistory::pushExecuted()</a>. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html#l00050">50</a> of file <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html">CommandTransaction.h</a>.</p>
 
 </div>
 </div>
@@ -391,7 +424,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html#l00046">46</a> of file <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html">CommandTransaction.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html#l00057">57</a> of file <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html">CommandTransaction.h</a>.</p>
 
 </div>
 </div>
@@ -418,7 +451,7 @@ Public Member Functions</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html#l00041">41</a> of file <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html">CommandTransaction.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html#l00052">52</a> of file <a class="el" href="../../d4/d15/CommandTransaction_8h_source.html">CommandTransaction.h</a>.</p>
 
 </div>
 </div>

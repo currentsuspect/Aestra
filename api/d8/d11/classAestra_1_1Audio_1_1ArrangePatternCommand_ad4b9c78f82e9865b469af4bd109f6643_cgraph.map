@@ -1,0 +1,11 @@
+<map id="Aestra::Audio::ArrangePatternCommand::execute" name="Aestra::Audio::ArrangePatternCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,101,220,141"/>
+<area shape="rect" id="Node000002" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a77910950ec791176dd209ba9c83e219a" title="Get a pattern by ID (returns nullptr if not found)" alt="" coords="268,5,488,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="158,99,267,55,290,47,292,52,269,60,160,104"/>
+<area shape="rect" id="Node000003" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#af01fa49b38f12155c47b1917bad27ea4" title="Get the pattern manager." alt="" coords="274,69,482,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="220,106,260,101,261,106,220,111"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aacc633d4302bc413e6aead5df052520b" title="Get the playlist model." alt="" coords="274,133,482,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="220,132,261,137,260,142,220,137"/>
+<area shape="rect" id="Node000005" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#ae644fa1ba9f25586fd7d597ed08d651f" title="Get the unit manager (Arsenal)" alt="" coords="274,197,482,237"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="160,139,269,183,292,191,290,196,267,188,158,144"/>
+</map>

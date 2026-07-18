@@ -31,6 +31,7 @@ var searchData=
   ['moveclipcommand_28',['MoveClipCommand',['../dd/df8/classAestra_1_1Audio_1_1MoveClipCommand.html',1,'Aestra::Audio']]],
   ['movenotecommand_29',['MoveNoteCommand',['../d6/d5a/classAestra_1_1Audio_1_1MoveNoteCommand.html',1,'Aestra::Audio']]],
   ['multilogger_30',['MultiLogger',['../d9/d21/classAestra_1_1MultiLogger.html',1,'Aestra']]],
-  ['musicaltypingcontroller_31',['MusicalTypingController',['../d5/d52/classAestra_1_1MusicalTypingController.html',1,'Aestra']]],
-  ['mutebutton_32',['MuteButton',['../d9/dab/classAestraUI_1_1MuteButton.html',1,'AestraUI']]]
+  ['museservice_31',['MuseService',['../da/dfd/classAestra_1_1Audio_1_1MuseService.html',1,'Aestra::Audio']]],
+  ['musicaltypingcontroller_32',['MusicalTypingController',['../d5/d52/classAestra_1_1MusicalTypingController.html',1,'Aestra']]],
+  ['mutebutton_33',['MuteButton',['../d9/dab/classAestraUI_1_1MuteButton.html',1,'AestraUI']]]
 ];

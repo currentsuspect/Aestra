@@ -1,8 +1,12 @@
 <map id="Aestra::Audio::UnitManager::createUnit" name="Aestra::Audio::UnitManager::createUnit">
-<area shape="rect" id="Node000001" title="Create a unit with generated defaults." alt="" coords="255,37,456,77"/>
-<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="398,26,383,19,355,16,331,18,317,23,312,29,314,36,309,38,306,28,314,18,330,13,355,11,384,14,400,21"/>
-<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a76a3d808754d68b7b032b8ccc6965143" title="Create a unit with explicit display name and group." alt="" coords="5,5,207,45"/>
-<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="241,45,207,41,207,36,241,40"/>
-<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aff0e94c9370a5bc4754d2d123b070c26" title="Duplicate an existing unit, copying its state and pattern." alt="" coords="5,69,207,109"/>
-<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="241,75,207,79,207,74,241,69"/>
+<area shape="rect" id="Node000001" title="Create a unit with generated defaults." alt="" coords="573,69,775,109"/>
+<area shape="poly" id="edge1_Node000001_Node000001" title=" " alt="" coords="720,58,704,51,674,48,648,50,632,55,627,61,630,68,625,70,622,60,630,50,647,45,674,43,705,45,722,53"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a76a3d808754d68b7b032b8ccc6965143" title="Create a unit with explicit display name and group." alt="" coords="307,5,508,45"/>
+<area shape="poly" id="edge2_Node000001_Node000002" title=" " alt="" coords="576,69,491,48,492,43,577,63"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aff0e94c9370a5bc4754d2d123b070c26" title="Duplicate an existing unit, copying its state and pattern." alt="" coords="307,69,508,109"/>
+<area shape="poly" id="edge3_Node000001_Node000003" title=" " alt="" coords="560,92,508,92,508,87,560,87"/>
+<area shape="rect" id="Node000004" href="$d4/d2c/classAestra_1_1Audio_1_1AddUnitCommand.html#a21a6a1496e0ca0426c7b248fdb26d98e" title="Execute the command (first time)" alt="" coords="289,133,525,173"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="577,115,492,136,491,131,576,110"/>
+<area shape="rect" id="Node000005" href="$d4/d2c/classAestra_1_1Audio_1_1AddUnitCommand.html#a0998e2cdb7ccbbc78d11417563008b5c" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,133,241,173"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="275,156,242,156,242,151,275,151"/>
 </map>

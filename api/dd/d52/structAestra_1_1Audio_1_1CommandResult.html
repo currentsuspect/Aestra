@@ -85,7 +85,7 @@ $(function() {
 <div id="dynsection-0-summary" class="dynsummary" style="display:block;">
 </div>
 <div id="dynsection-0-content" class="dyncontent" style="display:none;">
-<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/d11/structAestra_1_1Audio_1_1CommandResult__coll__graph.svg" width="592" height="228"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d9/d11/structAestra_1_1Audio_1_1CommandResult__coll__graph.svg" width="618" height="228"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
 <center><span class="legend">[<a href="../../graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
@@ -102,6 +102,11 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a2b252a09684058e0fe002440df83ec16"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3874670242586ed920293a9536a0f255" id="r_a3874670242586ed920293a9536a0f255"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d52/structAestra_1_1Audio_1_1CommandResult.html#a3874670242586ed920293a9536a0f255">undoable</a> = false</td></tr>
 <tr class="separator:a3874670242586ed920293a9536a0f255"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a28de6f18d2ca73cf7c4ec9aab15b09f1" id="r_a28de6f18d2ca73cf7c4ec9aab15b09f1"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d52/structAestra_1_1Audio_1_1CommandResult.html#a28de6f18d2ca73cf7c4ec9aab15b09f1">createdId</a> = 0</td></tr>
+<tr class="memdesc:a28de6f18d2ca73cf7c4ec9aab15b09f1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Id of an object the command created, valid when hasCreatedId is true.  <br /></td></tr>
+<tr class="separator:a28de6f18d2ca73cf7c4ec9aab15b09f1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6987aaab7c7f5e9ec61e25ad966cf56" id="r_af6987aaab7c7f5e9ec61e25ad966cf56"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d52/structAestra_1_1Audio_1_1CommandResult.html#af6987aaab7c7f5e9ec61e25ad966cf56">hasCreatedId</a> = false</td></tr>
+<tr class="separator:af6987aaab7c7f5e9ec61e25ad966cf56"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
@@ -123,6 +128,27 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
+<a id="a28de6f18d2ca73cf7c4ec9aab15b09f1" name="a28de6f18d2ca73cf7c4ec9aab15b09f1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a28de6f18d2ca73cf7c4ec9aab15b09f1">&#9670;&#160;</a></span>createdId</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t Aestra::Audio::CommandResult::createdId = 0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Id of an object the command created, valid when hasCreatedId is true. </p>
+<p>Structured so agents never have to parse it out of the human-readable message (clone_pattern: new pattern id; add_effect: slot index, where 0 is a legitimate value — hence the explicit flag). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00029">29</a> of file <a class="el" href="../../d5/dfb/CommandResult_8h_source.html">CommandResult.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00124">Aestra::Audio::CommandParser::execute()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>.</p>
+
+</div>
+</div>
 <a id="a2b252a09684058e0fe002440df83ec16" name="a2b252a09684058e0fe002440df83ec16"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a2b252a09684058e0fe002440df83ec16">&#9670;&#160;</a></span>executionMs</h2>
 
@@ -136,6 +162,22 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00021">21</a> of file <a class="el" href="../../d5/dfb/CommandResult_8h_source.html">CommandResult.h</a>.</p>
+
+</div>
+</div>
+<a id="af6987aaab7c7f5e9ec61e25ad966cf56" name="af6987aaab7c7f5e9ec61e25ad966cf56"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af6987aaab7c7f5e9ec61e25ad966cf56">&#9670;&#160;</a></span>hasCreatedId</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool Aestra::Audio::CommandResult::hasCreatedId = false</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00030">30</a> of file <a class="el" href="../../d5/dfb/CommandResult_8h_source.html">CommandResult.h</a>.</p>
 
 </div>
 </div>

@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::SetPatternLengthCommand::redo" name="Aestra::Audio::SetPatternLengthCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,189,45"/>
+<area shape="rect" id="Node000002" href="$d2/d0c/classAestra_1_1Audio_1_1SetPatternLengthCommand.html#a580f0a2d7a89f55a62a84a8c16744a23" title="Execute the command (first time)" alt="" coords="237,5,429,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="190,23,224,23,224,28,190,28"/>
+<area shape="rect" id="Node000003" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#abee9e6cbed1f10357d030516169e842d" title="Apply a mutation lambda to a pattern, creating it on demand." alt="" coords="477,5,697,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="430,23,464,23,464,28,430,28"/>
+<area shape="rect" id="Node000004" href="$d3/d1a/classAestra_1_1Audio_1_1PatternManager.html#a14e806e03276c9b4ea16c838fab092d8" title="Get or create a pattern." alt="" coords="745,5,965,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="697,23,732,23,732,28,697,28"/>
+</map>

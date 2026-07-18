@@ -159,53 +159,55 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    <span class="keywordtype">bool</span> saveActiveTakeSnapshot(<span class="keyword">const</span> <a class="code hl_struct" href="../../d8/d6c/structProjectSerializer_1_1UIState.html">ProjectSerializer::UIState</a>* uiState = <span class="keyword">nullptr</span>);</div>
 <div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    <span class="keywordtype">bool</span> createTakeFromCurrentProject();</div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span>    <a class="code hl_struct" href="../../d8/ddf/structProjectSerializer_1_1LoadResult.html">ProjectSerializer::LoadResult</a> switchToTake(<span class="keyword">const</span> std::string&amp; takeId);</div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <span class="keywordtype">void</span> reinitAutosaveManager();</div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    <a class="code hl_struct" href="../../d8/d6c/structProjectSerializer_1_1UIState.html">ProjectSerializer::UIState</a> captureUIState() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    <span class="keywordtype">void</span> applyUIState(<span class="keyword">const</span> <a class="code hl_struct" href="../../d8/d6c/structProjectSerializer_1_1UIState.html">ProjectSerializer::UIState</a>&amp; state);</div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    <span class="keywordtype">void</span> updateWindowTitle();</div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    <span class="keywordtype">void</span> startExport();</div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    <span class="keyword">static</span> std::string getRecoveryMarkerPath(<span class="keyword">const</span> std::string&amp; autosavePath);</div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    <span class="keyword">static</span> std::string readCrashFlagToken();</div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    <span class="keywordtype">void</span> writeRecoveryMarkerForAutosave(<span class="keyword">const</span> std::string&amp; autosavePath) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span> </div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span>    std::unique_ptr&lt;AestraWindowManager&gt; m_windowManager;</div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span>    std::unique_ptr&lt;AestraAudioController&gt; m_audioController;</div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span> </div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    std::shared_ptr&lt;AestraContent&gt; m_content;</div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    std::shared_ptr&lt;Aestra::ILogger&gt; m_asyncLogger;</div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span> </div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    <span class="keywordtype">bool</span> m_running;</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    <span class="keywordtype">bool</span> m_pendingClose{<span class="keyword">false</span>};</div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    std::string m_projectPath;</div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span> </div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    <span class="comment">// Auto-save</span></div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>    <a class="code hl_class" href="../../da/d68/classAestra_1_1Audio_1_1AutosaveManager.html">Aestra::Audio::AutosaveManager</a> m_autoSaveManager;</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span> </div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <span class="comment">// Window title state (to avoid updating every frame)</span></div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span>    std::string m_lastWindowTitle;</div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    <span class="keywordtype">bool</span> m_lastModifiedState{<span class="keyword">false</span>};</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span> </div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    <span class="comment">// Recovery state (for deferred project loading during startup)</span></div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    std::string m_pendingAutosavePath;</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    std::string m_recoverySessionToken;</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>    std::string m_previousRecoverySessionToken;</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    <span class="keywordtype">bool</span> m_recoveryHandled{<span class="keyword">false</span>};</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span> </div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    <span class="comment">// Lifetime token — set to false during shutdown so async callbacks can bail</span></div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>    std::shared_ptr&lt;bool&gt; m_aliveToken;</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span> </div>
-<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>    <span class="comment">// Startup optimization flags</span></div>
-<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>    <span class="keywordtype">bool</span> m_audioStreamReady = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>    <span class="keywordtype">bool</span> m_audioConfigSynced = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    <span class="keywordtype">bool</span> m_rtStateLogged = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>};</div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    <span class="keywordtype">bool</span> branchFromTake(<span class="keyword">const</span> std::string&amp; takeId);</div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    <span class="keywordtype">void</span> wireTakesPanel();</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span>    <span class="keywordtype">void</span> reinitAutosaveManager();</div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span>    <a class="code hl_struct" href="../../d8/d6c/structProjectSerializer_1_1UIState.html">ProjectSerializer::UIState</a> captureUIState() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span>    <span class="keywordtype">void</span> applyUIState(<span class="keyword">const</span> <a class="code hl_struct" href="../../d8/d6c/structProjectSerializer_1_1UIState.html">ProjectSerializer::UIState</a>&amp; state);</div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span>    <span class="keywordtype">void</span> updateWindowTitle();</div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span>    <span class="keywordtype">void</span> startExport();</div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span>    <span class="keyword">static</span> std::string getRecoveryMarkerPath(<span class="keyword">const</span> std::string&amp; autosavePath);</div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span>    <span class="keyword">static</span> std::string readCrashFlagToken();</div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span>    <span class="keywordtype">void</span> writeRecoveryMarkerForAutosave(<span class="keyword">const</span> std::string&amp; autosavePath) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span> </div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span><span class="keyword">private</span>:</div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span>    std::unique_ptr&lt;AestraWindowManager&gt; m_windowManager;</div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span>    std::unique_ptr&lt;AestraAudioController&gt; m_audioController;</div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span> </div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span>    std::shared_ptr&lt;AestraContent&gt; m_content;</div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    std::shared_ptr&lt;Aestra::ILogger&gt; m_asyncLogger;</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span> </div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span>    <span class="keywordtype">bool</span> m_running;</div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    <span class="keywordtype">bool</span> m_pendingClose{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>    std::string m_projectPath;</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span> </div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span>    <span class="comment">// Auto-save</span></div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <a class="code hl_class" href="../../da/d68/classAestra_1_1Audio_1_1AutosaveManager.html">Aestra::Audio::AutosaveManager</a> m_autoSaveManager;</div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span> </div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span>    <span class="comment">// Window title state (to avoid updating every frame)</span></div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    std::string m_lastWindowTitle;</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>    <span class="keywordtype">bool</span> m_lastModifiedState{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span> </div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    <span class="comment">// Recovery state (for deferred project loading during startup)</span></div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>    std::string m_pendingAutosavePath;</div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>    std::string m_recoverySessionToken;</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>    std::string m_previousRecoverySessionToken;</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    <span class="keywordtype">bool</span> m_recoveryHandled{<span class="keyword">false</span>};</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span> </div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>    <span class="comment">// Lifetime token — set to false during shutdown so async callbacks can bail</span></div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>    std::shared_ptr&lt;bool&gt; m_aliveToken;</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span> </div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>    <span class="comment">// Startup optimization flags</span></div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    <span class="keywordtype">bool</span> m_audioStreamReady = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>    <span class="keywordtype">bool</span> m_audioConfigSynced = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>    <span class="keywordtype">bool</span> m_rtStateLogged = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>};</div>
 </div>
 <div class="ttc" id="aAestraContent_8h_html"><div class="ttname"><a href="../../dc/dd6/AestraContent_8h.html">AestraContent.h</a></div><div class="ttdoc">Main content area for Aestra.</div></div>
 <div class="ttc" id="aclassAestraApp_html"><div class="ttname"><a href="../../d6/d43/classAestraApp.html">AestraApp</a></div><div class="ttdoc">Main application class.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d97/AestraApp_8h_source.html#l00023">AestraApp.h:23</a></div></div>
-<div class="ttc" id="aclassAestraApp_html_a12653cc93e99665a6fe3e795f6724058"><div class="ttname"><a href="../../d6/d43/classAestraApp.html#a12653cc93e99665a6fe3e795f6724058">AestraApp::initialize</a></div><div class="ttdeci">bool initialize(const std::string &amp;projectPath=&quot;&quot;)</div><div class="ttdoc">Initialize all subsystems.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d11/AestraApp_8cpp_source.html#l00179">AestraApp.cpp:179</a></div></div>
-<div class="ttc" id="aclassAestraApp_html_a3e1e08e14a87156e2b9b82e5c6be23d3"><div class="ttname"><a href="../../d6/d43/classAestraApp.html#a3e1e08e14a87156e2b9b82e5c6be23d3">AestraApp::shutdown</a></div><div class="ttdeci">void shutdown()</div><div class="ttdoc">Shutdown all subsystems.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d11/AestraApp_8cpp_source.html#l01036">AestraApp.cpp:1036</a></div></div>
-<div class="ttc" id="aclassAestraApp_html_ab5b9cbe1d125683e846e573c373696af"><div class="ttname"><a href="../../d6/d43/classAestraApp.html#ab5b9cbe1d125683e846e573c373696af">AestraApp::run</a></div><div class="ttdeci">void run()</div><div class="ttdoc">Main application loop.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d11/AestraApp_8cpp_source.html#l00900">AestraApp.cpp:900</a></div></div>
+<div class="ttc" id="aclassAestraApp_html_a12653cc93e99665a6fe3e795f6724058"><div class="ttname"><a href="../../d6/d43/classAestraApp.html#a12653cc93e99665a6fe3e795f6724058">AestraApp::initialize</a></div><div class="ttdeci">bool initialize(const std::string &amp;projectPath=&quot;&quot;)</div><div class="ttdoc">Initialize all subsystems.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d11/AestraApp_8cpp_source.html#l00176">AestraApp.cpp:176</a></div></div>
+<div class="ttc" id="aclassAestraApp_html_a3e1e08e14a87156e2b9b82e5c6be23d3"><div class="ttname"><a href="../../d6/d43/classAestraApp.html#a3e1e08e14a87156e2b9b82e5c6be23d3">AestraApp::shutdown</a></div><div class="ttdeci">void shutdown()</div><div class="ttdoc">Shutdown all subsystems.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d11/AestraApp_8cpp_source.html#l00981">AestraApp.cpp:981</a></div></div>
+<div class="ttc" id="aclassAestraApp_html_ab5b9cbe1d125683e846e573c373696af"><div class="ttname"><a href="../../d6/d43/classAestraApp.html#ab5b9cbe1d125683e846e573c373696af">AestraApp::run</a></div><div class="ttdeci">void run()</div><div class="ttdoc">Main application loop.</div><div class="ttdef"><b>Definition</b> <a href="../../db/d11/AestraApp_8cpp_source.html#l00845">AestraApp.cpp:845</a></div></div>
 <div class="ttc" id="aclassAestraApp_html_adcd8a93cd540d9c087178c5e37364773"><div class="ttname"><a href="../../d6/d43/classAestraApp.html#adcd8a93cd540d9c087178c5e37364773">AestraApp::getAestraContent</a></div><div class="ttdeci">std::shared_ptr&lt; AestraContent &gt; getAestraContent() const</div><div class="ttdoc">Access content manager (needed for audio callbacks)</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d97/AestraApp_8h_source.html#l00047">AestraApp.h:47</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1AudioEngine_html"><div class="ttname"><a href="../../d8/d20/classAestra_1_1Audio_1_1AudioEngine.html">Aestra::Audio::AudioEngine</a></div><div class="ttdoc">Real-time audio engine with 144dB dynamic range.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/dc9/AudioEngine_8h_source.html#l00057">AudioEngine.h:57</a></div></div>
 <div class="ttc" id="aclassAestra_1_1Audio_1_1AutosaveManager_html"><div class="ttname"><a href="../../da/d68/classAestra_1_1Audio_1_1AutosaveManager.html">Aestra::Audio::AutosaveManager</a></div><div class="ttdoc">Manages automatic project saving and crash recovery (v1.0)</div><div class="ttdef"><b>Definition</b> <a href="../../d7/dec/AutosaveManager_8h_source.html#l00038">AutosaveManager.h:38</a></div></div>

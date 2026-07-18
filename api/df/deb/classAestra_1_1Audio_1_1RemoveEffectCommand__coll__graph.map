@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::RemoveEffectCommand" name="Aestra::Audio::RemoveEffectCommand">
+<area shape="rect" id="Node000001" title="Command to remove an effect plugin from a track&#39;s chain (undoable)" alt="" coords="5,79,213,119"/>
+<area shape="rect" id="Node000002" href="$d1/d5e/classAestra_1_1Audio_1_1ICommand.html" title="Abstract base class for all undoable operations." alt="" coords="15,5,203,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="112,44,112,79,107,79,107,44"/>
+</map>

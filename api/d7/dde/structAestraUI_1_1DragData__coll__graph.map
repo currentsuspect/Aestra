@@ -1,20 +1,16 @@
 <map id="AestraUI::DragData" name="AestraUI::DragData">
-<area shape="rect" id="Node000001" title="Data payload for drag operations." alt="" coords="393,273,541,299"/>
+<area shape="rect" id="Node000001" title="Data payload for drag operations." alt="" coords="229,273,377,299"/>
 <area shape="rect" id="Node000002" title=" " alt="" coords="5,154,120,179"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="75,191,94,221,106,236,121,247,142,256,170,263,240,273,393,282,392,287,240,279,169,268,140,261,119,252,103,240,90,225,71,194"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="76,190,95,221,123,247,148,260,174,270,229,280,228,285,173,275,145,265,120,252,91,224,71,193"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="145,154,231,179"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="174,192,162,221,161,235,167,247,196,258,253,267,393,278,392,284,253,272,195,263,164,251,156,236,156,220,169,190"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="174,192,162,221,162,235,167,248,191,261,229,271,228,276,189,266,163,251,157,236,157,220,169,190"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="119,5,257,45"/>
 <area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="191,59,191,154,185,154,185,59"/>
 <area shape="rect" id="Node000005" href="$d2/d25/structAestraUI_1_1NUIColor.html" title=" " alt="" coords="427,154,571,179"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="479,192,471,206,465,242,467,273,462,273,460,242,465,204,474,189"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="469,189,324,275,321,271,467,184"/>
 <area shape="rect" id="Node000006" title=" " alt="" coords="340,13,391,38"/>
-<area shape="poly" id="edge9_Node000001_Node000006" title=" " alt="" coords="350,50,332,78,316,111,309,146,311,164,317,180,341,212,372,237,405,257,435,271,433,276,402,262,368,242,337,215,312,183,306,165,304,146,311,109,327,75,345,47"/>
+<area shape="poly" id="edge7_Node000001_Node000006" title=" " alt="" coords="356,51,335,97,317,153,307,221,305,273,300,273,302,220,312,151,330,95,351,49"/>
 <area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="388,46,490,152,486,156,384,50"/>
-<area shape="rect" id="Node000007" title=" " alt="" coords="595,154,634,179"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="596,191,582,207,568,230,551,251,529,265,506,276,504,271,527,261,548,247,564,227,578,204,592,187"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="691,154,757,179"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="724,194,716,224,708,239,696,251,670,264,631,274,541,284,540,279,630,268,668,259,693,247,703,236,711,222,719,193"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="865,154,911,179"/>
-<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="888,194,879,224,871,239,859,252,842,258,813,264,730,274,541,285,541,280,730,269,812,259,840,253,856,247,867,236,874,222,883,192"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="595,154,642,179"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="601,192,567,224,523,252,487,265,449,275,377,285,377,280,448,270,485,260,520,247,563,219,597,188"/>
 </map>

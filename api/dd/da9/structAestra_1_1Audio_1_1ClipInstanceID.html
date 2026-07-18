@@ -131,11 +131,14 @@ Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a1be9975e7865c29f41a3c2dfc18a7e00" id="r_a1be9975e7865c29f41a3c2dfc18a7e00"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html#a1be9975e7865c29f41a3c2dfc18a7e00">generate</a> ()</td></tr>
 <tr class="separator:a1be9975e7865c29f41a3c2dfc18a7e00"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abfd9fa9e1025d01f02ede2fff9c28acb" id="r_abfd9fa9e1025d01f02ede2fff9c28acb"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html">ClipInstanceID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID.html#abfd9fa9e1025d01f02ede2fff9c28acb">fromString</a> (const std::string &amp;str)</td></tr>
-<tr class="memdesc:abfd9fa9e1025d01f02ede2fff9c28acb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse from string (stub - just returns generate())  <br /></td></tr>
+<tr class="memdesc:abfd9fa9e1025d01f02ede2fff9c28acb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse the <a class="el" href="../../db/d96/structAestra_1_1Audio_1_1AestraUUID.html#ac0e193f6bab4eaeecb0f096ff6f99181" title="Convert to string representation.">toString()</a> representation.  <br /></td></tr>
 <tr class="separator:abfd9fa9e1025d01f02ede2fff9c28acb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_static_methods_structAestra_1_1Audio_1_1AestraUUID"><td colspan="2" onclick="javascript:toggleInherit('pub_static_methods_structAestra_1_1Audio_1_1AestraUUID')"><img src="../../closed.png" alt="-"/>&#160;Static Public Member Functions inherited from <a class="el" href="../../db/d96/structAestra_1_1Audio_1_1AestraUUID.html">Aestra::Audio::AestraUUID</a></td></tr>
 <tr class="memitem:a96e0bd6925f2bbd22aaf85447862ce73 inherit pub_static_methods_structAestra_1_1Audio_1_1AestraUUID" id="r_a96e0bd6925f2bbd22aaf85447862ce73"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="../../db/d96/structAestra_1_1Audio_1_1AestraUUID.html">AestraUUID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d96/structAestra_1_1Audio_1_1AestraUUID.html#a96e0bd6925f2bbd22aaf85447862ce73">generate</a> ()</td></tr>
 <tr class="separator:a96e0bd6925f2bbd22aaf85447862ce73 inherit pub_static_methods_structAestra_1_1Audio_1_1AestraUUID"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a12ee8bd7d482dfdca1f71c67a8ef5991 inherit pub_static_methods_structAestra_1_1Audio_1_1AestraUUID" id="r_a12ee8bd7d482dfdca1f71c67a8ef5991"><td class="memItemLeft" align="right" valign="top">static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d96/structAestra_1_1Audio_1_1AestraUUID.html#a12ee8bd7d482dfdca1f71c67a8ef5991">tryParse</a> (const std::string &amp;str, <a class="el" href="../../db/d96/structAestra_1_1Audio_1_1AestraUUID.html">AestraUUID</a> &amp;out)</td></tr>
+<tr class="memdesc:a12ee8bd7d482dfdca1f71c67a8ef5991 inherit pub_static_methods_structAestra_1_1Audio_1_1AestraUUID"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse the <a class="el" href="../../db/d96/structAestra_1_1Audio_1_1AestraUUID.html#ac0e193f6bab4eaeecb0f096ff6f99181" title="Convert to string representation.">toString()</a> representation (32 lowercase/uppercase hex chars).  <br /></td></tr>
+<tr class="separator:a12ee8bd7d482dfdca1f71c67a8ef5991 inherit pub_static_methods_structAestra_1_1Audio_1_1AestraUUID"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
@@ -203,9 +206,19 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Parse from string (stub - just returns generate()) </p>
+<p>Parse the <a class="el" href="../../db/d96/structAestra_1_1Audio_1_1AestraUUID.html#ac0e193f6bab4eaeecb0f096ff6f99181" title="Convert to string representation.">toString()</a> representation. </p>
+<dl class="section return"><dt>Returns</dt><dd>The parsed ID, or an invalid (zero) ID when the string doesn't parse — callers mint a fresh ID for invalid ones, which keeps old project files (without clip ids) loading fine while saved ids stay stable across load cycles (#446). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00028">28</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d91/ClipInstance_8h_source.html#l00032">32</a> of file <a class="el" href="../../d6/d91/ClipInstance_8h_source.html">ClipInstance.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../dc/d2b/AestraUUID_8h_source.html#l00067">Aestra::Audio::AestraUUID::tryParse()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../dd/da9/structAestra_1_1Audio_1_1ClipInstanceID_abfd9fa9e1025d01f02ede2fff9c28acb_cgraph.svg" width="450" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
 
 </div>
 </div>

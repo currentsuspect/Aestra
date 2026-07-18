@@ -12,7 +12,7 @@ var searchData=
   ['defaultpath_9',['defaultPath',['../d0/da3/structAestra_1_1IPlatformUtils_1_1SaveFileDialogOptions.html#aee3e96636dbc241b3a7d2e7048dd2396',1,'Aestra::IPlatformUtils::SaveFileDialogOptions']]],
   ['defaultpatternid_10',['defaultPatternId',['../d2/d63/structAestra_1_1Audio_1_1UnitInfo.html#ae78ed36978e3b17323032a95432b8aea',1,'Aestra::Audio::UnitInfo']]],
   ['defaultvalue_11',['defaultValue',['../d7/d5d/structAestra_1_1Audio_1_1PluginParameter.html#aec9dbc0caf32c95553c2df8cf814c7b0',1,'Aestra::Audio::PluginParameter']]],
-  ['description_12',['description',['../db/d44/structAestraUI_1_1PianoRollCommand.html#a887d266036c5117b89ac367e2535a54f',1,'AestraUI::PianoRollCommand']]],
+  ['description_12',['description',['../db/d44/structAestraUI_1_1PianoRollCommand.html#a887d266036c5117b89ac367e2535a54f',1,'AestraUI::PianoRollCommand::description'],['../da/de5/structAestra_1_1Audio_1_1CommandSchema.html#aa5f1b4c4c6e6286dfde81b63d25e202e',1,'Aestra::Audio::CommandSchema::description']]],
   ['deviceid_13',['deviceId',['../db/dd2/structAestra_1_1Audio_1_1AudioStreamConfig.html#a87e4a22535bccfad4dbeffa95a46cea7',1,'Aestra::Audio::AudioStreamConfig']]],
   ['dispatchjitterms_14',['dispatchJitterMs',['../d5/d75/structAestra_1_1Audio_1_1AudioEngineDiagnostics.html#a1accf104bc2ccd5ed4cbbbeb59cc9326',1,'Aestra::Audio::AudioEngineDiagnostics']]],
   ['dithering_15',['dithering',['../db/d69/structAestra_1_1Audio_1_1AudioQualitySettings.html#a584c0e7dc333a9010ac6c9095c971d87',1,'Aestra::Audio::AudioQualitySettings']]],

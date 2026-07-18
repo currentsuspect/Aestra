@@ -1,5 +1,11 @@
 <map id="Aestra::Audio::EffectChain::setSlotBypassed" name="Aestra::Audio::EffectChain::setSlotBypassed">
-<area shape="rect" id="Node000001" title="Set bypass state for a slot." alt="" coords="257,5,448,45"/>
-<area shape="rect" id="Node000002" href="$da/d71/classAestraUI_1_1PluginUIController.html#a6f6aad77c64762f12e40f6899c8e0e8b" title="Bind an EffectChainRack to an audio EffectChain." alt="" coords="5,5,209,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="244,28,210,28,210,23,244,23"/>
+<area shape="rect" id="Node000001" title="Set bypass state for a slot." alt="" coords="480,69,671,109"/>
+<area shape="rect" id="Node000002" href="$da/d71/classAestraUI_1_1PluginUIController.html#a6f6aad77c64762f12e40f6899c8e0e8b" title="Bind an EffectChainRack to an audio EffectChain." alt="" coords="228,5,432,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="484,68,406,48,408,43,485,63"/>
+<area shape="rect" id="Node000003" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#a3db908d65982c10891f49a41c1e9f8d7" title="Execute the command (first time)" alt="" coords="233,69,427,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="466,92,427,92,427,87,466,87"/>
+<area shape="rect" id="Node000005" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#ad2d2eaeeabad423eb6152ad65ff9972d" title="Undo the command." alt="" coords="242,133,418,173"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="485,115,408,136,406,131,484,110"/>
+<area shape="rect" id="Node000004" href="$d0/d9a/classAestra_1_1Audio_1_1SetEffectBypassCommand.html#a432e4bf7538aea50531284f1eb1a5257" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,69,180,109"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="219,92,180,92,180,87,219,87"/>
 </map>

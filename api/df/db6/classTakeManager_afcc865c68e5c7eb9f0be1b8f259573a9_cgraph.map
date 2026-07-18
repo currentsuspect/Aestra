@@ -1,0 +1,11 @@
+<map id="TakeManager::renameTake" name="TakeManager::renameTake">
+<area shape="rect" id="Node000001" title="Renames an existing take." alt="" coords="5,42,200,67"/>
+<area shape="rect" id="Node000002" href="$df/db6/classTakeManager.html#a80febfa550c9e4c5f35cdb15bd6ea6cc" title="Loads the manifest from disk." alt="" coords="248,42,449,67"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="200,52,234,52,234,57,200,57"/>
+<area shape="rect" id="Node000003" href="$da/d15/structTakeManager_1_1Manifest.html#ac9df3e5450e4f9aee685e9814437d01f" title="Look up a take by its unique ID." alt="" coords="522,5,695,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="449,41,508,34,509,39,450,46"/>
+<area shape="rect" id="Node000004" href="$df/db6/classTakeManager.html#acb75e1e71f374b7b3c85690629eaf607" title="Returns the manifest.json path for a given project." alt="" coords="497,70,720,95"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="450,63,484,67,483,72,449,68"/>
+<area shape="rect" id="Node000005" href="$df/db6/classTakeManager.html#acfe0e3332867ecd9c0c1ea8817706e57" title="Returns the takes/ directory path for a given project." alt="" coords="768,70,1001,95"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="720,80,754,80,754,85,720,85"/>
+</map>

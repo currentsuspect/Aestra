@@ -1,0 +1,14 @@
+<map id="Aestra::Audio::LoadSampleCommand::undo" name="Aestra::Audio::LoadSampleCommand::undo">
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,92,203,132"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a267accfa4e098834b8952e18b7e4d416" title="Attach an audio clip path to a unit." alt="" coords="251,92,452,132"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="203,109,237,109,237,115,203,115"/>
+<area shape="rect" id="Node000003" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="502,5,717,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="411,89,535,47,537,52,413,94"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="767,124,968,164"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="452,101,579,98,650,100,719,105,786,118,785,123,718,111,649,105,579,103,452,107"/>
+<area shape="rect" id="Node000005" href="$d0/db8/classAestra_1_1Audio_1_1MetadataParser.html#a0ff4112d758059453e4919ccb97954f6" title="Extract metadata from an audio file." alt="" coords="500,120,719,160"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="452,120,487,124,486,129,452,126"/>
+<area shape="rect" id="Node000006" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="509,184,710,224"/>
+<area shape="poly" id="edge5_Node000002_Node000006" title=" " alt="" coords="400,130,501,169,525,177,523,183,499,175,398,135"/>
+<area shape="poly" id="edge6_Node000006_Node000004" title=" " alt="" coords="695,181,766,165,768,170,697,187"/>
+</map>

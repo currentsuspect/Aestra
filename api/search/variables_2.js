@@ -17,5 +17,6 @@ var searchData=
   ['control_14',['control',['../de/d1d/structAestra_1_1KeyModifiers.html#a729f4ce29fcfa8c47fe6a1af253339dc',1,'Aestra::KeyModifiers']]],
   ['correlation_15',['correlation',['../d4/d81/structAestra_1_1ChannelViewModel.html#af321ec30ed47c906b5a3bfd8de4e79af',1,'Aestra::ChannelViewModel']]],
   ['createdatms_16',['createdAtMs',['../d6/d74/structTakeManager_1_1TakeEntry.html#a7d41ebad87c59c74f83f9209f161de5c',1,'TakeManager::TakeEntry']]],
-  ['current_17',['current',['../d2/d99/structAestra_1_1Audio_1_1SmoothedParamD.html#a2a39843b33b1968bb781e406060f7365',1,'Aestra::Audio::SmoothedParamD']]]
+  ['createdid_17',['createdId',['../dd/d52/structAestra_1_1Audio_1_1CommandResult.html#a28de6f18d2ca73cf7c4ec9aab15b09f1',1,'Aestra::Audio::CommandResult']]],
+  ['current_18',['current',['../d2/d99/structAestra_1_1Audio_1_1SmoothedParamD.html#a2a39843b33b1968bb781e406060f7365',1,'Aestra::Audio::SmoothedParamD']]]
 ];

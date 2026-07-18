@@ -1,0 +1,17 @@
+<map id="Aestra::Audio::LoadSampleCommand::redo" name="Aestra::Audio::LoadSampleCommand::redo">
+<area shape="rect" id="Node000001" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,9,203,49"/>
+<area shape="rect" id="Node000002" href="$d7/d73/classAestra_1_1Audio_1_1LoadSampleCommand.html#ab4ea52c64e06c15c9f08cd10949d6800" title="Execute the command (first time)" alt="" coords="251,9,448,49"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="203,27,237,27,237,32,203,32"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="1012,5,1213,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="448,25,745,20,964,20,998,20,998,26,964,25,745,25,448,30"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a267accfa4e098834b8952e18b7e4d416" title="Attach an audio clip path to a unit." alt="" coords="496,63,697,103"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="443,47,491,57,490,62,442,52"/>
+<area shape="poly" id="edge5_Node000004_Node000003" title=" " alt="" coords="680,60,745,48,876,34,998,26,998,32,876,39,746,53,681,65"/>
+<area shape="rect" id="Node000005" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="747,63,962,103"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="697,80,733,80,733,85,697,85"/>
+<area shape="rect" id="Node000006" href="$d0/db8/classAestra_1_1Audio_1_1MetadataParser.html#a0ff4112d758059453e4919ccb97954f6" title="Extract metadata from an audio file." alt="" coords="745,127,964,167"/>
+<area shape="poly" id="edge6_Node000004_Node000006" title=" " alt="" coords="679,100,761,121,760,126,677,105"/>
+<area shape="rect" id="Node000007" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="754,191,955,231"/>
+<area shape="poly" id="edge7_Node000004_Node000007" title=" " alt="" coords="625,101,680,139,747,176,764,184,762,189,744,181,677,143,622,105"/>
+<area shape="poly" id="edge8_Node000007_Node000003" title=" " alt="" coords="939,188,963,176,1000,149,1035,117,1087,55,1091,58,1039,120,1004,153,965,181,941,193"/>
+</map>

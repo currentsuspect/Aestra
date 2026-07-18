@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::UnitManager::removeUnit" name="Aestra::Audio::UnitManager::removeUnit">
+<area shape="rect" id="Node000001" title="Remove a unit by identifier." alt="" coords="289,5,491,45"/>
+<area shape="rect" id="Node000002" href="$d4/d2c/classAestra_1_1Audio_1_1AddUnitCommand.html#a48b6105f8c6d65b366ca097f59c60450" title="Undo the command." alt="" coords="5,5,241,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="276,28,242,28,242,23,276,23"/>
+</map>

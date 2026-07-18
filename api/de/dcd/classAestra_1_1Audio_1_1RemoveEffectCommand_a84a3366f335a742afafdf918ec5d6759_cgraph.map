@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::RemoveEffectCommand::execute" name="Aestra::Audio::RemoveEffectCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,69,213,109"/>
+<area shape="rect" id="Node000002" href="$d8/d9b/classAestra_1_1Audio_1_1MixerChannel.html#a107c869111f74c0e34ea921eabea4e63" title="Access the insert&#45;effect chain." alt="" coords="262,5,469,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="189,67,271,46,273,51,191,72"/>
+<area shape="rect" id="Node000003" href="$d7/d17/classAestra_1_1Audio_1_1EffectChain.html#a05ca8fc22e7be0358516ecb73098996e" title="Remove plugin from slot." alt="" coords="270,69,461,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="213,87,256,87,256,92,213,92"/>
+<area shape="rect" id="Node000004" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#a46d9c986c264576c28e32e061b81d877" title="Request a non&#45;real&#45;time rebuild of the live playback graph." alt="" coords="261,133,469,173"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="191,107,273,127,271,133,189,112"/>
+</map>

@@ -106,6 +106,9 @@ $(function() {
 Public Member Functions</h2></td></tr>
 <tr class="memitem:ad5c8bd63c38e129a846b5fb4e094cb7e" id="r_ad5c8bd63c38e129a846b5fb4e094cb7e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d58/classAestraUI_1_1UIMixerPluginDropdown.html#ad5c8bd63c38e129a846b5fb4e094cb7e">onRender</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer) override</td></tr>
 <tr class="separator:ad5c8bd63c38e129a846b5fb4e094cb7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3b76f77d69ef64a3a18e3b7f779908d0" id="r_a3b76f77d69ef64a3a18e3b7f779908d0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d58/classAestraUI_1_1UIMixerPluginDropdown.html#a3b76f77d69ef64a3a18e3b7f779908d0">onThemeChanged</a> (const <a class="el" href="../../d1/d57/structAestraUI_1_1NUIThemeProperties.html">NUIThemeProperties</a> &amp;theme) override</td></tr>
+<tr class="memdesc:a3b76f77d69ef64a3a18e3b7f779908d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Refresh cached theme state, then propagate the change to descendants.  <br /></td></tr>
+<tr class="separator:a3b76f77d69ef64a3a18e3b7f779908d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3d16dd92958126de50d9907b729e58c5" id="r_a3d16dd92958126de50d9907b729e58c5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d58/classAestraUI_1_1UIMixerPluginDropdown.html#a3d16dd92958126de50d9907b729e58c5">onMouseEvent</a> (const <a class="el" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">NUIMouseEvent</a> &amp;event) override</td></tr>
 <tr class="separator:a3d16dd92958126de50d9907b729e58c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1dcd62666ea4433b47f52e8fc5bf62dc" id="r_a1dcd62666ea4433b47f52e8fc5bf62dc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d58/classAestraUI_1_1UIMixerPluginDropdown.html#a1dcd62666ea4433b47f52e8fc5bf62dc">onKeyEvent</a> (const <a class="el" href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">NUIKeyEvent</a> &amp;event) override</td></tr>
@@ -342,7 +345,7 @@ Additional Inherited Members</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html#l00033">33</a> of file <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html">UIMixerPluginDropdown.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html#l00034">34</a> of file <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html">UIMixerPluginDropdown.h</a>.</p>
 
 </div>
 </div>
@@ -436,6 +439,47 @@ Additional Inherited Members</h2></td></tr>
 
 </div>
 </div>
+<a id="a3b76f77d69ef64a3a18e3b7f779908d0" name="a3b76f77d69ef64a3a18e3b7f779908d0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3b76f77d69ef64a3a18e3b7f779908d0">&#9670;&#160;</a></span>onThemeChanged()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::UIMixerPluginDropdown::onThemeChanged </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d1/d57/structAestraUI_1_1NUIThemeProperties.html">NUIThemeProperties</a> &amp;&#160;</td>
+          <td class="paramname"><em>theme</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Refresh cached theme state, then propagate the change to descendants. </p>
+
+<p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4685e1bd30fd0f50650effa1ac46b41c">AestraUI::NUIComponent</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html#l00025">25</a> of file <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html">UIMixerPluginDropdown.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d6/dbb/NUIComponent_8cpp_source.html#l00491">AestraUI::NUIComponent::onThemeChanged()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../da/d58/classAestraUI_1_1UIMixerPluginDropdown_a3b76f77d69ef64a3a18e3b7f779908d0_cgraph.svg" width="487" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
 <a id="ac81e0468bbac5cdb842688307201da02" name="ac81e0468bbac5cdb842688307201da02"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac81e0468bbac5cdb842688307201da02">&#9670;&#160;</a></span>showAt()</h2>
 
@@ -479,7 +523,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html#l00038">38</a> of file <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html">UIMixerPluginDropdown.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html#l00039">39</a> of file <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html">UIMixerPluginDropdown.h</a>.</p>
 
 </div>
 </div>
@@ -495,7 +539,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html#l00040">40</a> of file <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html">UIMixerPluginDropdown.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html#l00041">41</a> of file <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html">UIMixerPluginDropdown.h</a>.</p>
 
 </div>
 </div>
@@ -511,7 +555,7 @@ Additional Inherited Members</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html#l00036">36</a> of file <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html">UIMixerPluginDropdown.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html#l00037">37</a> of file <a class="el" href="../../d2/dc0/UIMixerPluginDropdown_8h_source.html">UIMixerPluginDropdown.h</a>.</p>
 
 </div>
 </div>

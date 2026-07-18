@@ -107,7 +107,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>NUIColor accent() { <span class="keywordflow">return</span> NUIColor(0.55f, 0.40f, 0.92f, 1.0f); }</div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>NUIColor accentSoft() { <span class="keywordflow">return</span> NUIColor(0.55f, 0.40f, 0.92f, 0.35f); }</div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>NUIColor graphBg() { <span class="keywordflow">return</span> NUIColor(0.045f, 0.045f, 0.045f, 0.96f); }</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>NUIColor graphBg() { <span class="keywordflow">return</span> editorNeutral(0.045f, 0.96f); }</div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span> </div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>std::shared_ptr&lt;NUIIcon&gt; makeSvgIcon(<span class="keyword">const</span> <span class="keywordtype">char</span>* svg) {</div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="keywordflow">return</span> std::make_shared&lt;NUIIcon&gt;(svg);</div>
@@ -1482,7 +1482,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01398" name="l01398"></a><span class="lineno"> 1398</span>    <span class="keyword">const</span> NUIColor outline =</div>
 <div class="line"><a id="l01399" name="l01399"></a><span class="lineno"> 1399</span>        m_outputGainHovered || m_draggingOutputGain ? accent().withAlpha(0.44f) : NUIColor(1, 1, 1, 0.14f);</div>
 <div class="line"><a id="l01400" name="l01400"></a><span class="lineno"> 1400</span>    <span class="keyword">const</span> NUIColor fill = m_outputGainHovered || m_draggingOutputGain ? accent().withAlpha(0.11f)</div>
-<div class="line"><a id="l01401" name="l01401"></a><span class="lineno"> 1401</span>                                                                      : NUIColor(0.035f, 0.035f, 0.035f, 0.88f);</div>
+<div class="line"><a id="l01401" name="l01401"></a><span class="lineno"> 1401</span>                                                                      : editorNeutral(0.035f, 0.88f);</div>
 <div class="line"><a id="l01402" name="l01402"></a><span class="lineno"> 1402</span>    renderer.fillRoundedRect(m_outputGainRect, 7.0f, fill);</div>
 <div class="line"><a id="l01403" name="l01403"></a><span class="lineno"> 1403</span>    renderer.strokeRoundedRect(m_outputGainRect, 7.0f, 1.0f, outline);</div>
 <div class="line"><a id="l01404" name="l01404"></a><span class="lineno"> 1404</span>    std::string gainText = formatGain(gain);</div>
@@ -1536,7 +1536,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01452" name="l01452"></a><span class="lineno"> 1452</span>    <span class="keyword">const</span> <span class="keywordtype">char</span>* label = m_compareActiveSlot == 0 ? <span class="stringliteral">&quot;A&gt;B&quot;</span> : <span class="stringliteral">&quot;B&gt;A&quot;</span>;</div>
 <div class="line"><a id="l01453" name="l01453"></a><span class="lineno"> 1453</span>    renderer.fillRoundedRect(m_compareCopyRect, 7.0f,</div>
 <div class="line"><a id="l01454" name="l01454"></a><span class="lineno"> 1454</span>                             m_compareCopyHovered ? accent().withAlpha(0.11f)</div>
-<div class="line"><a id="l01455" name="l01455"></a><span class="lineno"> 1455</span>                                                  : NUIColor(0.035f, 0.035f, 0.035f, 0.88f));</div>
+<div class="line"><a id="l01455" name="l01455"></a><span class="lineno"> 1455</span>                                                  : editorNeutral(0.035f, 0.88f));</div>
 <div class="line"><a id="l01456" name="l01456"></a><span class="lineno"> 1456</span>    renderer.strokeRoundedRect(m_compareCopyRect, 7.0f, 1.0f,</div>
 <div class="line"><a id="l01457" name="l01457"></a><span class="lineno"> 1457</span>                               m_compareCopyHovered ? accent().withAlpha(0.42f) : NUIColor(1, 1, 1, 0.13f));</div>
 <div class="line"><a id="l01458" name="l01458"></a><span class="lineno"> 1458</span>    drawSvgIcon(renderer, compareCopyIcon(), {m_compareCopyRect.x + 7.0f, m_compareCopyRect.y + 5.0f, 14.0f, 14.0f},</div>
@@ -1576,7 +1576,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01492" name="l01492"></a><span class="lineno"> 1492</span>        <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l01493" name="l01493"></a><span class="lineno"> 1493</span> </div>
 <div class="line"><a id="l01494" name="l01494"></a><span class="lineno"> 1494</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l01495" name="l01495"></a><span class="lineno"> 1495</span>    renderer.fillRoundedRect(m_analyzerPanelRect, 8.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.94f));</div>
+<div class="line"><a id="l01495" name="l01495"></a><span class="lineno"> 1495</span>    renderer.fillRoundedRect(m_analyzerPanelRect, 8.0f, editorNeutral(0.031f, 0.94f));</div>
 <div class="line"><a id="l01496" name="l01496"></a><span class="lineno"> 1496</span>    renderer.strokeRoundedRect(m_analyzerPanelRect, 8.0f, 1.0f, accent().withAlpha(0.34f));</div>
 <div class="line"><a id="l01497" name="l01497"></a><span class="lineno"> 1497</span>    renderer.drawText(<span class="stringliteral">&quot;Analyzer&quot;</span>, {m_analyzerPanelRect.x + 10.0f, m_analyzerPanelRect.y + 9.0f}, 9.5f,</div>
 <div class="line"><a id="l01498" name="l01498"></a><span class="lineno"> 1498</span>                      theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.92f));</div>
@@ -1716,7 +1716,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01632" name="l01632"></a><span class="lineno"> 1632</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> r = bounds.width * 0.42f;</div>
 <div class="line"><a id="l01633" name="l01633"></a><span class="lineno"> 1633</span>    <span class="keyword">const</span> NUIColor col = active ? a : NUIColor(a.r, a.g, a.b, 0.30f);</div>
 <div class="line"><a id="l01634" name="l01634"></a><span class="lineno"> 1634</span>    renderer.fillCircle({cx, cy}, r + 5.0f, col.withAlpha(active ? 0.08f : 0.04f));</div>
-<div class="line"><a id="l01635" name="l01635"></a><span class="lineno"> 1635</span>    renderer.fillCircle({cx, cy}, r, NUIColor(0.045f, 0.045f, 0.045f, 0.96f));</div>
+<div class="line"><a id="l01635" name="l01635"></a><span class="lineno"> 1635</span>    renderer.fillCircle({cx, cy}, r, editorNeutral(0.045f, 0.96f));</div>
 <div class="line"><a id="l01636" name="l01636"></a><span class="lineno"> 1636</span>    renderer.strokeCircle({cx, cy}, r, 1.0f, col.withAlpha(active ? 0.34f : 0.18f));</div>
 <div class="line"><a id="l01637" name="l01637"></a><span class="lineno"> 1637</span> </div>
 <div class="line"><a id="l01638" name="l01638"></a><span class="lineno"> 1638</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> sa = kPi * 0.75f;</div>
@@ -1749,7 +1749,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01665" name="l01665"></a><span class="lineno"> 1665</span>        <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l01666" name="l01666"></a><span class="lineno"> 1666</span> </div>
 <div class="line"><a id="l01667" name="l01667"></a><span class="lineno"> 1667</span>    <span class="keyword">const</span> std::string typeLabel = bandTypeSuffix(bd.typeName);</div>
-<div class="line"><a id="l01668" name="l01668"></a><span class="lineno"> 1668</span>    renderer.fillRoundedRect(m_bandInspectorRect, 7.0f, NUIColor(0.046f, 0.046f, 0.046f, 0.97f));</div>
+<div class="line"><a id="l01668" name="l01668"></a><span class="lineno"> 1668</span>    renderer.fillRoundedRect(m_bandInspectorRect, 7.0f, editorNeutral(0.046f, 0.97f));</div>
 <div class="line"><a id="l01669" name="l01669"></a><span class="lineno"> 1669</span>    renderer.strokeRoundedRect(m_bandInspectorRect, 7.0f, 1.0f, band.withAlpha(0.16f));</div>
 <div class="line"><a id="l01670" name="l01670"></a><span class="lineno"> 1670</span>    renderer.fillRect({m_bandInspectorRect.x, m_bandInspectorRect.y, m_bandInspectorRect.width, 2.0f},</div>
 <div class="line"><a id="l01671" name="l01671"></a><span class="lineno"> 1671</span>                      band.withAlpha(0.72f));</div>
@@ -1830,7 +1830,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01746" name="l01746"></a><span class="lineno"> 1746</span>                                               m_bandInspectorRect.right() - chipW - 10.0f);</div>
 <div class="line"><a id="l01747" name="l01747"></a><span class="lineno"> 1747</span>                <span class="keyword">const</span> NUIRect hoverChip{chipX, slotRail.bottom() + 7.0f, chipW, 19.0f};</div>
 <div class="line"><a id="l01748" name="l01748"></a><span class="lineno"> 1748</span>                <span class="keyword">const</span> NUIColor hoverColor = bandColor(hoverBand.slotIndex);</div>
-<div class="line"><a id="l01749" name="l01749"></a><span class="lineno"> 1749</span>                renderer.fillRoundedRect(hoverChip, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.96f));</div>
+<div class="line"><a id="l01749" name="l01749"></a><span class="lineno"> 1749</span>                renderer.fillRoundedRect(hoverChip, 5.0f, editorNeutral(0.026f, 0.96f));</div>
 <div class="line"><a id="l01750" name="l01750"></a><span class="lineno"> 1750</span>                renderer.strokeRoundedRect(hoverChip, 5.0f, 1.0f, hoverColor.withAlpha(0.34f));</div>
 <div class="line"><a id="l01751" name="l01751"></a><span class="lineno"> 1751</span>                renderer.drawTextCentered(hoverText, hoverChip, 7.8f, theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.88f));</div>
 <div class="line"><a id="l01752" name="l01752"></a><span class="lineno"> 1752</span>            }</div>
@@ -1902,7 +1902,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01818" name="l01818"></a><span class="lineno"> 1818</span>        <span class="keyword">const</span> NUIRect tip{std::clamp(bd.stereoButton.center().x - tipW * 0.5f, m_bandInspectorRect.x + 8.0f,</div>
 <div class="line"><a id="l01819" name="l01819"></a><span class="lineno"> 1819</span>                                     m_bandInspectorRect.right() - tipW - 8.0f),</div>
 <div class="line"><a id="l01820" name="l01820"></a><span class="lineno"> 1820</span>                          bd.stereoButton.bottom() + 7.0f, tipW, 20.0f};</div>
-<div class="line"><a id="l01821" name="l01821"></a><span class="lineno"> 1821</span>        renderer.fillRoundedRect(tip, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.96f));</div>
+<div class="line"><a id="l01821" name="l01821"></a><span class="lineno"> 1821</span>        renderer.fillRoundedRect(tip, 5.0f, editorNeutral(0.026f, 0.96f));</div>
 <div class="line"><a id="l01822" name="l01822"></a><span class="lineno"> 1822</span>        renderer.strokeRoundedRect(tip, 5.0f, 1.0f, band.withAlpha(0.28f));</div>
 <div class="line"><a id="l01823" name="l01823"></a><span class="lineno"> 1823</span>        renderer.drawTextCentered(modeHelp, tip, 8.2f, theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.88f));</div>
 <div class="line"><a id="l01824" name="l01824"></a><span class="lineno"> 1824</span>    }</div>
@@ -1912,7 +1912,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01828" name="l01828"></a><span class="lineno"> 1828</span>        <span class="keyword">const</span> NUIRect tip{std::clamp(m_selectedCollapseRect.center().x - tipW * 0.5f, m_bandInspectorRect.x + 8.0f,</div>
 <div class="line"><a id="l01829" name="l01829"></a><span class="lineno"> 1829</span>                                     m_bandInspectorRect.right() - tipW - 8.0f),</div>
 <div class="line"><a id="l01830" name="l01830"></a><span class="lineno"> 1830</span>                          m_selectedCollapseRect.bottom() + 7.0f, tipW, 20.0f};</div>
-<div class="line"><a id="l01831" name="l01831"></a><span class="lineno"> 1831</span>        renderer.fillRoundedRect(tip, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.96f));</div>
+<div class="line"><a id="l01831" name="l01831"></a><span class="lineno"> 1831</span>        renderer.fillRoundedRect(tip, 5.0f, editorNeutral(0.026f, 0.96f));</div>
 <div class="line"><a id="l01832" name="l01832"></a><span class="lineno"> 1832</span>        renderer.strokeRoundedRect(tip, 5.0f, 1.0f, band.withAlpha(0.28f));</div>
 <div class="line"><a id="l01833" name="l01833"></a><span class="lineno"> 1833</span>        renderer.drawTextCentered(collapseHelp, tip, 8.2f, theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.88f));</div>
 <div class="line"><a id="l01834" name="l01834"></a><span class="lineno"> 1834</span>    }</div>
@@ -1938,7 +1938,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l01854" name="l01854"></a><span class="lineno"> 1854</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> trackY = lane.center().y;</div>
 <div class="line"><a id="l01855" name="l01855"></a><span class="lineno"> 1855</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> tickX = trackX + trackW * amount;</div>
 <div class="line"><a id="l01856" name="l01856"></a><span class="lineno"> 1856</span> </div>
-<div class="line"><a id="l01857" name="l01857"></a><span class="lineno"> 1857</span>        renderer.fillRoundedRect(lane, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.95f));</div>
+<div class="line"><a id="l01857" name="l01857"></a><span class="lineno"> 1857</span>        renderer.fillRoundedRect(lane, 5.0f, editorNeutral(0.026f, 0.95f));</div>
 <div class="line"><a id="l01858" name="l01858"></a><span class="lineno"> 1858</span>        renderer.fillRoundedRect({lane.x, lane.y, labelW, lane.height}, 5.0f,</div>
 <div class="line"><a id="l01859" name="l01859"></a><span class="lineno"> 1859</span>                                 bd.enabled ? band.withAlpha(0.050f) : band.withAlpha(0.018f));</div>
 <div class="line"><a id="l01860" name="l01860"></a><span class="lineno"> 1860</span>        renderer.fillRoundedRect({trackX, trackY - 1.5f, trackW, 3.0f}, 1.5f, NUIColor(1, 1, 1, 0.080f));</div>
@@ -2198,7 +2198,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02114" name="l02114"></a><span class="lineno"> 2114</span>            std::clamp(inner.x + peakNorm * inner.width - chipW * 0.5f, inner.x + 8.0f, inner.right() - chipW - 8.0f);</div>
 <div class="line"><a id="l02115" name="l02115"></a><span class="lineno"> 2115</span>        <span class="keyword">const</span> NUIRect chip{chipX, inner.y + 28.0f, chipW, 22.0f};</div>
 <div class="line"><a id="l02116" name="l02116"></a><span class="lineno"> 2116</span>        <span class="keyword">const</span> NUIColor heat(1.0f, 0.40f, 0.18f, 1.0f);</div>
-<div class="line"><a id="l02117" name="l02117"></a><span class="lineno"> 2117</span>        renderer.fillRoundedRect(chip, 6.0f, NUIColor(0.035f, 0.035f, 0.035f, 0.88f));</div>
+<div class="line"><a id="l02117" name="l02117"></a><span class="lineno"> 2117</span>        renderer.fillRoundedRect(chip, 6.0f, editorNeutral(0.035f, 0.88f));</div>
 <div class="line"><a id="l02118" name="l02118"></a><span class="lineno"> 2118</span>        renderer.strokeRoundedRect(chip, 6.0f, 1.0f, heat.withAlpha(0.34f + peakMask * 0.22f));</div>
 <div class="line"><a id="l02119" name="l02119"></a><span class="lineno"> 2119</span>        renderer.drawText(maskBuf, {chip.x + 8.0f, chip.y + 6.0f}, 8.3f, heat.withAlpha(0.92f));</div>
 <div class="line"><a id="l02120" name="l02120"></a><span class="lineno"> 2120</span>        renderer.drawText(freqBuf, {chip.right() - 38.0f, chip.y + 6.0f}, 8.3f,</div>
@@ -2292,11 +2292,11 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02208" name="l02208"></a><span class="lineno"> 2208</span>    <span class="keyword">const</span> NUIColor preview = canAddBand ? accent() : theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>);</div>
 <div class="line"><a id="l02209" name="l02209"></a><span class="lineno"> 2209</span> </div>
 <div class="line"><a id="l02210" name="l02210"></a><span class="lineno"> 2210</span>    renderer.drawLine({m_graphCursorPoint.x, inner.y}, {m_graphCursorPoint.x, inner.bottom()}, 1.0f,</div>
-<div class="line"><a id="l02211" name="l02211"></a><span class="lineno"> 2211</span>                      NUIColor(1.0f, 1.0f, 1.0f, canAddBand ? 0.085f : 0.040f));</div>
+<div class="line"><a id="l02211" name="l02211"></a><span class="lineno"> 2211</span>                      editorInk(canAddBand ? 0.085f : 0.040f));</div>
 <div class="line"><a id="l02212" name="l02212"></a><span class="lineno"> 2212</span>    renderer.drawLine({inner.x, m_graphCursorPoint.y}, {inner.right(), m_graphCursorPoint.y}, 1.0f,</div>
-<div class="line"><a id="l02213" name="l02213"></a><span class="lineno"> 2213</span>                      NUIColor(1.0f, 1.0f, 1.0f, canAddBand ? 0.070f : 0.035f));</div>
+<div class="line"><a id="l02213" name="l02213"></a><span class="lineno"> 2213</span>                      editorInk(canAddBand ? 0.070f : 0.035f));</div>
 <div class="line"><a id="l02214" name="l02214"></a><span class="lineno"> 2214</span>    renderer.fillCircle(m_graphCursorPoint, 10.0f, preview.withAlpha(canAddBand ? 0.050f : 0.025f));</div>
-<div class="line"><a id="l02215" name="l02215"></a><span class="lineno"> 2215</span>    renderer.fillCircle(m_graphCursorPoint, 4.0f, NUIColor(0.045f, 0.045f, 0.045f, 0.64f));</div>
+<div class="line"><a id="l02215" name="l02215"></a><span class="lineno"> 2215</span>    renderer.fillCircle(m_graphCursorPoint, 4.0f, editorNeutral(0.045f, 0.64f));</div>
 <div class="line"><a id="l02216" name="l02216"></a><span class="lineno"> 2216</span>    renderer.strokeCircle(m_graphCursorPoint, 7.0f, 1.1f, preview.withAlpha(canAddBand ? 0.34f : 0.16f));</div>
 <div class="line"><a id="l02217" name="l02217"></a><span class="lineno"> 2217</span>    renderer.drawLine({m_graphCursorPoint.x - 3.0f, m_graphCursorPoint.y},</div>
 <div class="line"><a id="l02218" name="l02218"></a><span class="lineno"> 2218</span>                      {m_graphCursorPoint.x + 3.0f, m_graphCursorPoint.y}, 1.2f,</div>
@@ -2398,7 +2398,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02314" name="l02314"></a><span class="lineno"> 2314</span>    y = std::clamp(y, inner.y + 6.0f, inner.bottom() - h - 6.0f);</div>
 <div class="line"><a id="l02315" name="l02315"></a><span class="lineno"> 2315</span>    <span class="keyword">const</span> NUIRect r{x, y, w, h};</div>
 <div class="line"><a id="l02316" name="l02316"></a><span class="lineno"> 2316</span> </div>
-<div class="line"><a id="l02317" name="l02317"></a><span class="lineno"> 2317</span>    renderer.fillRoundedRect(r, 5.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.90f));</div>
+<div class="line"><a id="l02317" name="l02317"></a><span class="lineno"> 2317</span>    renderer.fillRoundedRect(r, 5.0f, editorNeutral(0.031f, 0.90f));</div>
 <div class="line"><a id="l02318" name="l02318"></a><span class="lineno"> 2318</span>    renderer.strokeRoundedRect(r, 5.0f, 1.0f, band.withAlpha(0.32f));</div>
 <div class="line"><a id="l02319" name="l02319"></a><span class="lineno"> 2319</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> stemX = std::clamp(node.x, r.x + 8.0f, r.right() - 8.0f);</div>
 <div class="line"><a id="l02320" name="l02320"></a><span class="lineno"> 2320</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> stemY = r.y &gt; node.y ? r.y : r.bottom();</div>
@@ -2428,7 +2428,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02344" name="l02344"></a><span class="lineno"> 2344</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> canType = bd.typeId != 0 || !bd.legacySlot;</div>
 <div class="line"><a id="l02345" name="l02345"></a><span class="lineno"> 2345</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> canDelete = !bd.legacySlot;</div>
 <div class="line"><a id="l02346" name="l02346"></a><span class="lineno"> 2346</span> </div>
-<div class="line"><a id="l02347" name="l02347"></a><span class="lineno"> 2347</span>    renderer.fillRoundedRect(m_nodeQuickActionRect, 7.0f, NUIColor(0.028f, 0.028f, 0.028f, 0.94f));</div>
+<div class="line"><a id="l02347" name="l02347"></a><span class="lineno"> 2347</span>    renderer.fillRoundedRect(m_nodeQuickActionRect, 7.0f, editorNeutral(0.028f, 0.94f));</div>
 <div class="line"><a id="l02348" name="l02348"></a><span class="lineno"> 2348</span>    renderer.strokeRoundedRect(m_nodeQuickActionRect, 7.0f, 1.0f, band.withAlpha(0.32f));</div>
 <div class="line"><a id="l02349" name="l02349"></a><span class="lineno"> 2349</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> stemX = std::clamp(node.x, m_nodeQuickActionRect.x + 10.0f, m_nodeQuickActionRect.right() - 10.0f);</div>
 <div class="line"><a id="l02350" name="l02350"></a><span class="lineno"> 2350</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> stemY = m_nodeQuickActionRect.y &gt; node.y ? m_nodeQuickActionRect.y : m_nodeQuickActionRect.bottom();</div>
@@ -2443,11 +2443,11 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02359" name="l02359"></a><span class="lineno"> 2359</span>        <span class="keyword">const</span> NUIColor base = destructive ? red : band;</div>
 <div class="line"><a id="l02360" name="l02360"></a><span class="lineno"> 2360</span>        <span class="keyword">const</span> NUIColor fill = soloAction ? base.withAlpha(hovered ? 0.24f : 0.17f)</div>
 <div class="line"><a id="l02361" name="l02361"></a><span class="lineno"> 2361</span>                                         : (enabled &amp;&amp; hovered ? base.withAlpha(destructive ? 0.12f : 0.15f)</div>
-<div class="line"><a id="l02362" name="l02362"></a><span class="lineno"> 2362</span>                                                               : NUIColor(1.0f, 1.0f, 1.0f, enabled ? 0.026f : 0.010f));</div>
+<div class="line"><a id="l02362" name="l02362"></a><span class="lineno"> 2362</span>                                                               : editorInk(enabled ? 0.026f : 0.010f));</div>
 <div class="line"><a id="l02363" name="l02363"></a><span class="lineno"> 2363</span>        <span class="keyword">const</span> NUIColor edge = soloAction ? base.withAlpha(hovered ? 0.72f : 0.54f)</div>
 <div class="line"><a id="l02364" name="l02364"></a><span class="lineno"> 2364</span>                              : enabled  ? (hovered ? base.withAlpha(destructive ? 0.48f : 0.44f)</div>
 <div class="line"><a id="l02365" name="l02365"></a><span class="lineno"> 2365</span>                                                    : base.withAlpha(destructive ? 0.24f : 0.20f))</div>
-<div class="line"><a id="l02366" name="l02366"></a><span class="lineno"> 2366</span>                                         : NUIColor(1.0f, 1.0f, 1.0f, 0.040f);</div>
+<div class="line"><a id="l02366" name="l02366"></a><span class="lineno"> 2366</span>                                         : editorInk(0.040f);</div>
 <div class="line"><a id="l02367" name="l02367"></a><span class="lineno"> 2367</span>        <span class="keywordflow">if</span> (soloAction) {</div>
 <div class="line"><a id="l02368" name="l02368"></a><span class="lineno"> 2368</span>            renderer.fillRoundedRect({r.x - 3.0f, r.y - 3.0f, r.width + 6.0f, r.height + 6.0f}, 7.0f,</div>
 <div class="line"><a id="l02369" name="l02369"></a><span class="lineno"> 2369</span>                                     base.withAlpha(0.075f));</div>
@@ -2524,7 +2524,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02440" name="l02440"></a><span class="lineno"> 2440</span>            }</div>
 <div class="line"><a id="l02441" name="l02441"></a><span class="lineno"> 2441</span>            tipY = std::clamp(tipY, inner.y + 4.0f, inner.bottom() - 22.0f);</div>
 <div class="line"><a id="l02442" name="l02442"></a><span class="lineno"> 2442</span>            <span class="keyword">const</span> NUIRect tip{tipX, tipY, tipW, 18.0f};</div>
-<div class="line"><a id="l02443" name="l02443"></a><span class="lineno"> 2443</span>            renderer.fillRoundedRect(tip, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.94f));</div>
+<div class="line"><a id="l02443" name="l02443"></a><span class="lineno"> 2443</span>            renderer.fillRoundedRect(tip, 5.0f, editorNeutral(0.026f, 0.94f));</div>
 <div class="line"><a id="l02444" name="l02444"></a><span class="lineno"> 2444</span>            renderer.strokeRoundedRect(tip, 5.0f, 1.0f, band.withAlpha(0.26f));</div>
 <div class="line"><a id="l02445" name="l02445"></a><span class="lineno"> 2445</span>            renderer.drawTextCentered(label, tip, 7.7f, theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.86f));</div>
 <div class="line"><a id="l02446" name="l02446"></a><span class="lineno"> 2446</span>        }</div>
@@ -2546,7 +2546,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02462" name="l02462"></a><span class="lineno"> 2462</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> db = -gridMax; db &lt;= gridMax; db += gridStep) {</div>
 <div class="line"><a id="l02463" name="l02463"></a><span class="lineno"> 2463</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> y = inner.bottom() - (<span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(db) + dbRange) / (dbRange * 2.0f) * inner.height;</div>
 <div class="line"><a id="l02464" name="l02464"></a><span class="lineno"> 2464</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> alpha = (db == 0) ? 0.28f : 0.10f;</div>
-<div class="line"><a id="l02465" name="l02465"></a><span class="lineno"> 2465</span>        renderer.drawLine({inner.x, y}, {inner.right(), y}, db == 0 ? 1.2f : 1.0f, NUIColor(1.0f, 1.0f, 1.0f, alpha));</div>
+<div class="line"><a id="l02465" name="l02465"></a><span class="lineno"> 2465</span>        renderer.drawLine({inner.x, y}, {inner.right(), y}, db == 0 ? 1.2f : 1.0f, editorInk(alpha));</div>
 <div class="line"><a id="l02466" name="l02466"></a><span class="lineno"> 2466</span>        <span class="keyword">const</span> std::string lbl = (db &gt; 0 ? <span class="stringliteral">&quot;+&quot;</span> : <span class="stringliteral">&quot;&quot;</span>) + std::to_string(db);</div>
 <div class="line"><a id="l02467" name="l02467"></a><span class="lineno"> 2467</span>        renderer.drawTextCentered(lbl, {bounds.x + 3.0f, y - 7.0f, 26.0f, 14.0f}, 8.6f,</div>
 <div class="line"><a id="l02468" name="l02468"></a><span class="lineno"> 2468</span>                                  theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.66f));</div>
@@ -2558,7 +2558,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02474" name="l02474"></a><span class="lineno"> 2474</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; 6; ++i) {</div>
 <div class="line"><a id="l02475" name="l02475"></a><span class="lineno"> 2475</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> norm = (std::log10(freqs[i]) - logMin) / (logMax - logMin);</div>
 <div class="line"><a id="l02476" name="l02476"></a><span class="lineno"> 2476</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> x = inner.x + norm * inner.width;</div>
-<div class="line"><a id="l02477" name="l02477"></a><span class="lineno"> 2477</span>        renderer.drawLine({x, inner.y}, {x, inner.bottom()}, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.07f));</div>
+<div class="line"><a id="l02477" name="l02477"></a><span class="lineno"> 2477</span>        renderer.drawLine({x, inner.y}, {x, inner.bottom()}, 1.0f, editorInk(0.07f));</div>
 <div class="line"><a id="l02478" name="l02478"></a><span class="lineno"> 2478</span>        renderer.drawTextCentered(freqLabels[i], {x - 14.0f, inner.bottom() + 1.0f, 28.0f, 14.0f}, 8.6f,</div>
 <div class="line"><a id="l02479" name="l02479"></a><span class="lineno"> 2479</span>                                  theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.70f));</div>
 <div class="line"><a id="l02480" name="l02480"></a><span class="lineno"> 2480</span>    }</div>
@@ -2644,7 +2644,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02560" name="l02560"></a><span class="lineno"> 2560</span>        renderer.fillCircle(</div>
 <div class="line"><a id="l02561" name="l02561"></a><span class="lineno"> 2561</span>            node, radius + (quietDynamicNode ? 2.4f : 4.0f),</div>
 <div class="line"><a id="l02562" name="l02562"></a><span class="lineno"> 2562</span>            c.withAlpha((selected || dragging || soloed ? 0.18f : (quietDynamicNode ? 0.050f : 0.10f)) * activeAlpha));</div>
-<div class="line"><a id="l02563" name="l02563"></a><span class="lineno"> 2563</span>        renderer.fillCircle(node, radius, NUIColor(0.045f, 0.045f, 0.045f, 0.96f));</div>
+<div class="line"><a id="l02563" name="l02563"></a><span class="lineno"> 2563</span>        renderer.fillCircle(node, radius, editorNeutral(0.045f, 0.96f));</div>
 <div class="line"><a id="l02564" name="l02564"></a><span class="lineno"> 2564</span>        renderer.strokeCircle(node, radius, bd.enabled ? (quietDynamicNode ? 1.1f : 1.6f) : 1.1f,</div>
 <div class="line"><a id="l02565" name="l02565"></a><span class="lineno"> 2565</span>                              c.withAlpha(bd.enabled ? (quietDynamicNode ? 0.58f : 1.0f) : 0.42f));</div>
 <div class="line"><a id="l02566" name="l02566"></a><span class="lineno"> 2566</span>        <span class="keywordflow">if</span> (bd.enabled) {</div>
@@ -2715,7 +2715,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02631" name="l02631"></a><span class="lineno"> 2631</span>    <span class="keyword">const</span> NUIRect handle{x - 6.0f, y - 6.0f, 12.0f, 12.0f};</div>
 <div class="line"><a id="l02632" name="l02632"></a><span class="lineno"> 2632</span>    renderer.fillRoundedRect({handle.x - 4.0f, handle.y - 4.0f, handle.width + 8.0f, handle.height + 8.0f}, 5.0f,</div>
 <div class="line"><a id="l02633" name="l02633"></a><span class="lineno"> 2633</span>                             c.withAlpha(dragging ? 0.12f : 0.06f));</div>
-<div class="line"><a id="l02634" name="l02634"></a><span class="lineno"> 2634</span>    renderer.fillRoundedRect(handle, 3.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.94f));</div>
+<div class="line"><a id="l02634" name="l02634"></a><span class="lineno"> 2634</span>    renderer.fillRoundedRect(handle, 3.0f, editorNeutral(0.031f, 0.94f));</div>
 <div class="line"><a id="l02635" name="l02635"></a><span class="lineno"> 2635</span>    renderer.strokeRoundedRect(handle, 3.0f, dragging ? 1.6f : 1.1f, c.withAlpha(dragging ? 0.95f : 0.72f));</div>
 <div class="line"><a id="l02636" name="l02636"></a><span class="lineno"> 2636</span> </div>
 <div class="line"><a id="l02637" name="l02637"></a><span class="lineno"> 2637</span>    <span class="keywordtype">char</span> freqBuf[24];</div>
@@ -2725,7 +2725,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02641" name="l02641"></a><span class="lineno"> 2641</span>    <span class="keywordflow">else</span></div>
 <div class="line"><a id="l02642" name="l02642"></a><span class="lineno"> 2642</span>        std::snprintf(freqBuf, <span class="keyword">sizeof</span>(freqBuf), <span class="stringliteral">&quot;%.0f&quot;</span>, hz);</div>
 <div class="line"><a id="l02643" name="l02643"></a><span class="lineno"> 2643</span>    <span class="keyword">const</span> NUIRect chip{std::clamp(x - 42.0f, inner.x + 6.0f, inner.right() - 84.0f), y + 11.0f, 84.0f, 19.0f};</div>
-<div class="line"><a id="l02644" name="l02644"></a><span class="lineno"> 2644</span>    renderer.fillRoundedRect(chip, 5.0f, NUIColor(0.026f, 0.026f, 0.026f, 0.86f));</div>
+<div class="line"><a id="l02644" name="l02644"></a><span class="lineno"> 2644</span>    renderer.fillRoundedRect(chip, 5.0f, editorNeutral(0.026f, 0.86f));</div>
 <div class="line"><a id="l02645" name="l02645"></a><span class="lineno"> 2645</span>    renderer.strokeRoundedRect(chip, 5.0f, 1.0f, c.withAlpha(0.24f));</div>
 <div class="line"><a id="l02646" name="l02646"></a><span class="lineno"> 2646</span>    renderer.drawText(<span class="stringliteral">&quot;DET&quot;</span>, {chip.x + 7.0f, std::round(renderer.calculateTextY(chip, 7.4f))}, 7.4f,</div>
 <div class="line"><a id="l02647" name="l02647"></a><span class="lineno"> 2647</span>                      c.withAlpha(0.76f));</div>
@@ -2749,7 +2749,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02665" name="l02665"></a><span class="lineno"> 2665</span>    <span class="keyword">const</span> NUIRect r = layout.panel;</div>
 <div class="line"><a id="l02666" name="l02666"></a><span class="lineno"> 2666</span>    <span class="keyword">const</span> NUIColor c = bandColor(bd.slotIndex);</div>
 <div class="line"><a id="l02667" name="l02667"></a><span class="lineno"> 2667</span> </div>
-<div class="line"><a id="l02668" name="l02668"></a><span class="lineno"> 2668</span>    renderer.fillRoundedRect(r, 6.0f, NUIColor(0.052f, 0.052f, 0.052f, 0.96f));</div>
+<div class="line"><a id="l02668" name="l02668"></a><span class="lineno"> 2668</span>    renderer.fillRoundedRect(r, 6.0f, editorNeutral(0.052f, 0.96f));</div>
 <div class="line"><a id="l02669" name="l02669"></a><span class="lineno"> 2669</span>    renderer.strokeRoundedRect(r, 6.0f, 1.0f, c.withAlpha(bd.enabled ? 0.35f : 0.16f));</div>
 <div class="line"><a id="l02670" name="l02670"></a><span class="lineno"> 2670</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> connectorX = std::clamp(node.x, r.x + 12.0f, r.right() - 12.0f);</div>
 <div class="line"><a id="l02671" name="l02671"></a><span class="lineno"> 2671</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> connectorY = node.y &lt; r.y ? r.y + 8.0f : r.bottom() - 8.0f;</div>
@@ -2763,7 +2763,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02679" name="l02679"></a><span class="lineno"> 2679</span>    renderer.drawText(bandId, {r.x + 8.0f, tooltipHeaderY}, kTooltipHeaderFont,</div>
 <div class="line"><a id="l02680" name="l02680"></a><span class="lineno"> 2680</span>                      c.withAlpha(bd.enabled ? 0.98f : 0.44f));</div>
 <div class="line"><a id="l02681" name="l02681"></a><span class="lineno"> 2681</span>    renderer.fillRoundedRect(layout.typeRect, 4.0f,</div>
-<div class="line"><a id="l02682" name="l02682"></a><span class="lineno"> 2682</span>                             bd.enabled ? c.withAlpha(0.055f) : NUIColor(1.0f, 1.0f, 1.0f, 0.010f));</div>
+<div class="line"><a id="l02682" name="l02682"></a><span class="lineno"> 2682</span>                             bd.enabled ? c.withAlpha(0.055f) : editorInk(0.010f));</div>
 <div class="line"><a id="l02683" name="l02683"></a><span class="lineno"> 2683</span>    <span class="keywordflow">if</span> (bd.typeId != 0 || !bd.legacySlot)</div>
 <div class="line"><a id="l02684" name="l02684"></a><span class="lineno"> 2684</span>        renderer.strokeRoundedRect(layout.typeRect, 4.0f, 1.0f, c.withAlpha(0.16f));</div>
 <div class="line"><a id="l02685" name="l02685"></a><span class="lineno"> 2685</span>    renderer.drawTextCentered(typeLabel, layout.typeRect, 8.0f,</div>
@@ -2772,9 +2772,9 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02688" name="l02688"></a><span class="lineno"> 2688</span>        (bd.legacySlot &amp;&amp; m_instance &amp;&amp; bd.stereoId != 0) ? m_instance-&gt;getParameter(bd.stereoId) : bd.stereoNorm;</div>
 <div class="line"><a id="l02689" name="l02689"></a><span class="lineno"> 2689</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> stereoScoped = quantizeStereoNorm(stereoNorm) &gt; 0.0f;</div>
 <div class="line"><a id="l02690" name="l02690"></a><span class="lineno"> 2690</span>    renderer.fillRoundedRect(layout.stereoRect, 4.0f,</div>
-<div class="line"><a id="l02691" name="l02691"></a><span class="lineno"> 2691</span>                             stereoScoped ? c.withAlpha(0.18f) : NUIColor(1.0f, 1.0f, 1.0f, 0.028f));</div>
+<div class="line"><a id="l02691" name="l02691"></a><span class="lineno"> 2691</span>                             stereoScoped ? c.withAlpha(0.18f) : editorInk(0.028f));</div>
 <div class="line"><a id="l02692" name="l02692"></a><span class="lineno"> 2692</span>    renderer.strokeRoundedRect(layout.stereoRect, 4.0f, 1.0f,</div>
-<div class="line"><a id="l02693" name="l02693"></a><span class="lineno"> 2693</span>                               stereoScoped ? c.withAlpha(0.40f) : NUIColor(1.0f, 1.0f, 1.0f, 0.08f));</div>
+<div class="line"><a id="l02693" name="l02693"></a><span class="lineno"> 2693</span>                               stereoScoped ? c.withAlpha(0.40f) : editorInk(0.08f));</div>
 <div class="line"><a id="l02694" name="l02694"></a><span class="lineno"> 2694</span>    renderer.drawTextCentered(stereoModeShortName(stereoNorm), layout.stereoRect, 7.4f,</div>
 <div class="line"><a id="l02695" name="l02695"></a><span class="lineno"> 2695</span>                              stereoScoped ? c.withAlpha(0.96f) : theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>).withAlpha(0.58f));</div>
 <div class="line"><a id="l02696" name="l02696"></a><span class="lineno"> 2696</span>    renderer.fillCircle(layout.enableRect.center(), 3.0f,</div>
@@ -2793,7 +2793,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02709" name="l02709"></a><span class="lineno"> 2709</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> trackY = row.center().y + 5.0f;</div>
 <div class="line"><a id="l02710" name="l02710"></a><span class="lineno"> 2710</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> tickX = trackX + trackW * amount;</div>
 <div class="line"><a id="l02711" name="l02711"></a><span class="lineno"> 2711</span> </div>
-<div class="line"><a id="l02712" name="l02712"></a><span class="lineno"> 2712</span>        renderer.fillRoundedRect(row, 4.0f, NUIColor(0.018f, 0.018f, 0.018f, 0.86f));</div>
+<div class="line"><a id="l02712" name="l02712"></a><span class="lineno"> 2712</span>        renderer.fillRoundedRect(row, 4.0f, editorNeutral(0.018f, 0.86f));</div>
 <div class="line"><a id="l02713" name="l02713"></a><span class="lineno"> 2713</span>        renderer.fillRoundedRect({row.x, row.y, labelW, row.height}, 4.0f,</div>
 <div class="line"><a id="l02714" name="l02714"></a><span class="lineno"> 2714</span>                                 bd.enabled ? c.withAlpha(draggingThis ? 0.16f : 0.075f) : c.withAlpha(0.025f));</div>
 <div class="line"><a id="l02715" name="l02715"></a><span class="lineno"> 2715</span>        renderer.fillRoundedRect({trackX, trackY - 1.0f, trackW, 2.0f}, 1.0f, NUIColor(1, 1, 1, 0.055f));</div>
@@ -2881,7 +2881,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02797" name="l02797"></a><span class="lineno"> 2797</span>                             quantizeTypeNorm(m_instance ? m_instance-&gt;getParameter(bd.typeId) : bd.typeNorm) * 3.0f)),</div>
 <div class="line"><a id="l02798" name="l02798"></a><span class="lineno"> 2798</span>                         0, 3)</div>
 <div class="line"><a id="l02799" name="l02799"></a><span class="lineno"> 2799</span>            : <a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a>::clamp(static_cast&lt;int&gt;(<a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a>::round(<a class="code hl_namespace" href="../../d8/dcc/namespacestd.html">std</a>::clamp(bd.typeNorm, 0.0f, 1.0f) * 7.0f)), 0, 7);</div>
-<div class="line"><a id="l02800" name="l02800"></a><span class="lineno"> 2800</span>    renderer.fillRoundedRect(m_typeMenuRect, 8.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.96f));</div>
+<div class="line"><a id="l02800" name="l02800"></a><span class="lineno"> 2800</span>    renderer.fillRoundedRect(m_typeMenuRect, 8.0f, editorNeutral(0.031f, 0.96f));</div>
 <div class="line"><a id="l02801" name="l02801"></a><span class="lineno"> 2801</span>    renderer.strokeRoundedRect(m_typeMenuRect, 8.0f, 1.0f, band.withAlpha(0.42f));</div>
 <div class="line"><a id="l02802" name="l02802"></a><span class="lineno"> 2802</span> </div>
 <div class="line"><a id="l02803" name="l02803"></a><span class="lineno"> 2803</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; optionCount; ++i) {</div>
@@ -2908,7 +2908,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02824" name="l02824"></a><span class="lineno"> 2824</span>        (bd.legacySlot &amp;&amp; bd.stereoId != 0 &amp;&amp; m_instance) ? m_instance-&gt;getParameter(bd.stereoId) : bd.stereoNorm;</div>
 <div class="line"><a id="l02825" name="l02825"></a><span class="lineno"> 2825</span>    <span class="keyword">const</span> <span class="keywordtype">int</span> current = std::clamp(<span class="keyword">static_cast&lt;</span><span class="keywordtype">int</span><span class="keyword">&gt;</span>(std::round(quantizeStereoNorm(stereoNorm) * 4.0f)), 0, 4);</div>
 <div class="line"><a id="l02826" name="l02826"></a><span class="lineno"> 2826</span> </div>
-<div class="line"><a id="l02827" name="l02827"></a><span class="lineno"> 2827</span>    renderer.fillRoundedRect(m_stereoMenuRect, 8.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.96f));</div>
+<div class="line"><a id="l02827" name="l02827"></a><span class="lineno"> 2827</span>    renderer.fillRoundedRect(m_stereoMenuRect, 8.0f, editorNeutral(0.031f, 0.96f));</div>
 <div class="line"><a id="l02828" name="l02828"></a><span class="lineno"> 2828</span>    renderer.strokeRoundedRect(m_stereoMenuRect, 8.0f, 1.0f, band.withAlpha(0.42f));</div>
 <div class="line"><a id="l02829" name="l02829"></a><span class="lineno"> 2829</span> </div>
 <div class="line"><a id="l02830" name="l02830"></a><span class="lineno"> 2830</span>    <span class="keyword">static</span> <span class="keyword">constexpr</span> <span class="keyword">const</span> <span class="keywordtype">char</span>* kLabels[] = {<span class="stringliteral">&quot;Stereo&quot;</span>, <span class="stringliteral">&quot;Left&quot;</span>, <span class="stringliteral">&quot;Right&quot;</span>, <span class="stringliteral">&quot;Mid&quot;</span>, <span class="stringliteral">&quot;Side&quot;</span>};</div>
@@ -2939,7 +2939,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02855" name="l02855"></a><span class="lineno"> 2855</span>    <span class="keyword">const</span> NUIColor band = bandColor(bd.slotIndex);</div>
 <div class="line"><a id="l02856" name="l02856"></a><span class="lineno"> 2856</span>    <span class="keyword">const</span> std::string bandId = bd.name.empty() ? bandIdLabel(<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(m_bandContextMenuBand)) : bd.name;</div>
 <div class="line"><a id="l02857" name="l02857"></a><span class="lineno"> 2857</span>    <span class="keyword">const</span> std::string typeLabel = bandTypeSuffix(bd.typeName);</div>
-<div class="line"><a id="l02858" name="l02858"></a><span class="lineno"> 2858</span>    renderer.fillRoundedRect(m_bandContextMenuRect, 8.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.96f));</div>
+<div class="line"><a id="l02858" name="l02858"></a><span class="lineno"> 2858</span>    renderer.fillRoundedRect(m_bandContextMenuRect, 8.0f, editorNeutral(0.031f, 0.96f));</div>
 <div class="line"><a id="l02859" name="l02859"></a><span class="lineno"> 2859</span>    renderer.strokeRoundedRect(m_bandContextMenuRect, 8.0f, 1.0f, band.withAlpha(0.34f));</div>
 <div class="line"><a id="l02860" name="l02860"></a><span class="lineno"> 2860</span>    renderer.drawText(bandId, {m_bandContextMenuRect.x + 10.0f, m_bandContextMenuRect.y + 10.0f}, 9.5f,</div>
 <div class="line"><a id="l02861" name="l02861"></a><span class="lineno"> 2861</span>                      band.withAlpha(0.96f));</div>
@@ -3032,7 +3032,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l02948" name="l02948"></a><span class="lineno"> 2948</span>    <span class="keyword">const</span> NUIColor band = m_numericEditBand &gt;= 0 &amp;&amp; m_numericEditBand &lt; static_cast&lt;int&gt;(m_bands.size())</div>
 <div class="line"><a id="l02949" name="l02949"></a><span class="lineno"> 2949</span>                              ? bandColor(m_bands[<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(m_numericEditBand)].slotIndex)</div>
 <div class="line"><a id="l02950" name="l02950"></a><span class="lineno"> 2950</span>                              : accent();</div>
-<div class="line"><a id="l02951" name="l02951"></a><span class="lineno"> 2951</span>    renderer.fillRoundedRect(r, 7.0f, NUIColor(0.031f, 0.031f, 0.031f, 0.96f));</div>
+<div class="line"><a id="l02951" name="l02951"></a><span class="lineno"> 2951</span>    renderer.fillRoundedRect(r, 7.0f, editorNeutral(0.031f, 0.96f));</div>
 <div class="line"><a id="l02952" name="l02952"></a><span class="lineno"> 2952</span>    renderer.strokeRoundedRect(r, 7.0f, 1.2f, band.withAlpha(0.62f));</div>
 <div class="line"><a id="l02953" name="l02953"></a><span class="lineno"> 2953</span>    <span class="keyword">const</span> <span class="keywordtype">char</span>* label = <span class="stringliteral">&quot;VALUE&quot;</span>;</div>
 <div class="line"><a id="l02954" name="l02954"></a><span class="lineno"> 2954</span>    <span class="keywordflow">switch</span> (m_numericEditTarget) {</div>

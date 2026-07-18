@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::TrackManager::getUnitManager" name="Aestra::Audio::TrackManager::getUnitManager">
+<area shape="rect" id="Node000001" title="Get the unit manager (Arsenal)" alt="" coords="531,37,739,77"/>
+<area shape="rect" id="Node000002" href="$d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#ad4b9c78f82e9865b469af4bd109f6643" title="Execute the command (first time)" alt="" coords="268,5,483,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="517,45,483,41,483,36,517,40"/>
+<area shape="rect" id="Node000004" href="$d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#a522d22ec3517c3b12f1c9a568fd596f3" title="Undo the command." alt="" coords="268,69,483,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="517,74,483,79,483,73,517,69"/>
+<area shape="rect" id="Node000003" href="$d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#abcba5124b6452cf16b69e9aae6098252" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,5,220,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="255,28,220,28,220,23,255,23"/>
+</map>

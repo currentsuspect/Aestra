@@ -1,5 +1,23 @@
 <map id="Aestra::Audio::PatternManager::applyPatch" name="Aestra::Audio::PatternManager::applyPatch">
-<area shape="rect" id="Node000001" title="Apply a mutation lambda to a pattern, creating it on demand." alt="" coords="261,5,481,45"/>
-<area shape="rect" id="Node000002" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeccd21184c921cc6ed16d473d86f0b5a" title="Start Arsenal playback for the supplied pattern." alt="" coords="5,5,213,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,28,213,28,213,23,248,23"/>
+<area shape="rect" id="Node000001" title="Apply a mutation lambda to a pattern, creating it on demand." alt="" coords="584,197,804,237"/>
+<area shape="rect" id="Node000002" href="$d7/dc5/classAestra_1_1Audio_1_1QuantizePatternCommand.html#a6351158994d0ef3e5b9f75cd61c5ae2f" title="Execute the command (first time)" alt="" coords="305,5,526,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="669,188,612,123,576,89,535,60,510,48,512,43,537,55,579,84,616,119,673,185"/>
+<area shape="rect" id="Node000004" href="$d2/d0c/classAestra_1_1Audio_1_1SetPatternLengthCommand.html#a580f0a2d7a89f55a62a84a8c16744a23" title="Execute the command (first time)" alt="" coords="319,69,511,109"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="653,192,598,157,535,124,503,112,505,107,537,119,601,152,656,187"/>
+<area shape="rect" id="Node000006" href="$d6/d95/classAestra_1_1Audio_1_1SetStepsCommand.html#a5406c284058daa93160f239c1db0fdca" title="Execute the command (first time)" alt="" coords="295,133,536,173"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="592,197,502,176,504,171,593,192"/>
+<area shape="rect" id="Node000008" href="$de/dca/classAestra_1_1Audio_1_1TrackManager.html#aeccd21184c921cc6ed16d473d86f0b5a" title="Start Arsenal playback for the supplied pattern." alt="" coords="311,197,519,237"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="570,220,519,220,519,215,570,215"/>
+<area shape="rect" id="Node000009" href="$d7/dc5/classAestra_1_1Audio_1_1QuantizePatternCommand.html#a99e8c49e3abea3dd519439a585d17029" title="Undo the command." alt="" coords="305,261,526,301"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="593,243,504,264,502,259,592,238"/>
+<area shape="rect" id="Node000010" href="$d2/d0c/classAestra_1_1Audio_1_1SetPatternLengthCommand.html#a8946a0511511b32c1392107621deb4f0" title="Undo the command." alt="" coords="323,325,507,365"/>
+<area shape="poly" id="edge9_Node000001_Node000010" title=" " alt="" coords="656,248,601,283,537,316,505,328,503,323,535,311,598,278,653,243"/>
+<area shape="rect" id="Node000011" href="$d6/d95/classAestra_1_1Audio_1_1SetStepsCommand.html#a14751af4a7755ebe3c72e810ce283e45" title="Undo the command." alt="" coords="295,389,536,429"/>
+<area shape="poly" id="edge10_Node000001_Node000011" title=" " alt="" coords="673,250,616,316,579,350,537,380,512,392,510,387,535,375,576,346,612,312,669,247"/>
+<area shape="rect" id="Node000003" href="$d7/dc5/classAestra_1_1Audio_1_1QuantizePatternCommand.html#ab3cd01b070835f30fcadea96baee0b09" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="15,5,237,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="291,28,237,28,237,23,291,23"/>
+<area shape="rect" id="Node000005" href="$d2/d0c/classAestra_1_1Audio_1_1SetPatternLengthCommand.html#ab88d94eec9f692120475566b29cfdd60" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="34,69,218,109"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="305,92,218,92,218,87,305,87"/>
+<area shape="rect" id="Node000007" href="$d6/d95/classAestra_1_1Audio_1_1SetStepsCommand.html#a892fba1410076198a90ca2b71846871f" title="Redo the command (must be explicitly implemented) Implementers should consider: is redo() exactly exe..." alt="" coords="5,133,247,173"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="281,156,247,156,247,151,281,151"/>
 </map>

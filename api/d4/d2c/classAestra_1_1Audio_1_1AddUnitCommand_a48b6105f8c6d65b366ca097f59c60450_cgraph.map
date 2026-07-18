@@ -1,0 +1,9 @@
+<map id="Aestra::Audio::AddUnitCommand::undo" name="Aestra::Audio::AddUnitCommand::undo">
+<area shape="rect" id="Node000001" title="Undo the command." alt="" coords="5,5,241,45"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aa6f0bea20529d2f2e245860f2730c6cb" title="Remove a unit by identifier." alt="" coords="289,5,491,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="242,23,276,23,276,28,242,28"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="539,5,740,45"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="491,23,525,23,525,28,491,28"/>
+<area shape="rect" id="Node000004" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="788,5,989,45"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="740,23,774,23,774,28,740,28"/>
+</map>

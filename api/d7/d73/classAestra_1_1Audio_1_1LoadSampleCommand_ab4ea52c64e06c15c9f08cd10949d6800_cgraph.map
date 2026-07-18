@@ -1,0 +1,15 @@
+<map id="Aestra::Audio::LoadSampleCommand::execute" name="Aestra::Audio::LoadSampleCommand::execute">
+<area shape="rect" id="Node000001" title="Execute the command (first time)" alt="" coords="5,9,203,49"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a337860946234910b96f53b802d0c21d0" title="Get a mutable unit by identifier." alt="" coords="767,5,968,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="203,25,500,20,719,20,753,20,753,26,719,25,500,25,203,30"/>
+<area shape="rect" id="Node000003" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a267accfa4e098834b8952e18b7e4d416" title="Attach an audio clip path to a unit." alt="" coords="251,63,452,103"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="198,47,245,57,244,62,197,52"/>
+<area shape="poly" id="edge4_Node000003_Node000002" title=" " alt="" coords="434,60,500,48,631,34,753,26,753,32,631,39,500,53,435,65"/>
+<area shape="rect" id="Node000004" href="$d2/d29/classAestra_1_1Audio_1_1PluginManager.html#a2b16ad3e0f43d5b9a12690af12156878" title="Get the singleton instance." alt="" coords="502,63,717,103"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="452,80,488,80,488,85,452,85"/>
+<area shape="rect" id="Node000005" href="$d0/db8/classAestra_1_1Audio_1_1MetadataParser.html#a0ff4112d758059453e4919ccb97954f6" title="Extract metadata from an audio file." alt="" coords="500,127,719,167"/>
+<area shape="poly" id="edge5_Node000003_Node000005" title=" " alt="" coords="433,100,516,121,514,126,432,105"/>
+<area shape="rect" id="Node000006" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#a6c8467163ee1bf8434a63f4e85279d05" title="Publish the current Arsenal state as an immutable snapshot." alt="" coords="509,191,710,231"/>
+<area shape="poly" id="edge6_Node000003_Node000006" title=" " alt="" coords="380,101,434,139,501,176,519,184,517,189,499,181,431,143,377,105"/>
+<area shape="poly" id="edge7_Node000006_Node000002" title=" " alt="" coords="693,188,717,176,755,149,789,117,842,55,846,58,793,120,759,153,720,181,696,193"/>
+</map>

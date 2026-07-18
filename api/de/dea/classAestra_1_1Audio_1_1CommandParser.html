@@ -85,11 +85,137 @@ $(function() {
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a3bec9e548a3266e855fb388cd02a91b4" id="r_a3bec9e548a3266e855fb388cd02a91b4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d52/structAestra_1_1Audio_1_1CommandResult.html">CommandResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#a3bec9e548a3266e855fb388cd02a91b4">parse</a> (const std::string &amp;input, <a class="el" href="../../df/d31/classAestra_1_1Audio_1_1CommandHistory.html">CommandHistory</a> &amp;history)</td></tr>
 <tr class="separator:a3bec9e548a3266e855fb388cd02a91b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae6d70fc94a0653054be42b7da9a11a8e" id="r_ae6d70fc94a0653054be42b7da9a11a8e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../dd/d52/structAestra_1_1Audio_1_1CommandResult.html">CommandResult</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#ae6d70fc94a0653054be42b7da9a11a8e">execute</a> (const std::string &amp;verb, const std::unordered_map&lt; std::string, std::string &gt; &amp;flags, <a class="el" href="../../df/d31/classAestra_1_1Audio_1_1CommandHistory.html">CommandHistory</a> &amp;history)</td></tr>
+<tr class="memdesc:ae6d70fc94a0653054be42b7da9a11a8e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Execute a verb from an already-tokenised flag map.  <br /></td></tr>
+<tr class="separator:ae6d70fc94a0653054be42b7da9a11a8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20bf36e749c84e2cc982268d324faabb" id="r_a20bf36e749c84e2cc982268d324faabb"><td class="memItemLeft" align="right" valign="top">std::unique_ptr&lt; <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html">ICommand</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#a20bf36e749c84e2cc982268d324faabb">buildValidated</a> (const std::string &amp;verb, const std::unordered_map&lt; std::string, std::string &gt; &amp;flags, CommandStatus &amp;outStatus, std::string &amp;outMessage)</td></tr>
+<tr class="memdesc:a20bf36e749c84e2cc982268d324faabb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate and build a command without executing it.  <br /></td></tr>
+<tr class="separator:a20bf36e749c84e2cc982268d324faabb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
-<p class="definition">Definition at line <a class="el" href="../../da/d64/CommandParser_8h_source.html#l00015">15</a> of file <a class="el" href="../../da/d64/CommandParser_8h_source.html">CommandParser.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d64/CommandParser_8h_source.html#l00017">17</a> of file <a class="el" href="../../da/d64/CommandParser_8h_source.html">CommandParser.h</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="a20bf36e749c84e2cc982268d324faabb" name="a20bf36e749c84e2cc982268d324faabb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a20bf36e749c84e2cc982268d324faabb">&#9670;&#160;</a></span>buildValidated()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::unique_ptr&lt; <a class="el" href="../../d1/d5e/classAestra_1_1Audio_1_1ICommand.html">ICommand</a> &gt; Aestra::Audio::CommandParser::buildValidated </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>verb</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::unordered_map&lt; std::string, std::string &gt; &amp;&#160;</td>
+          <td class="paramname"><em>flags</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">CommandStatus &amp;&#160;</td>
+          <td class="paramname"><em>outStatus</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::string &amp;&#160;</td>
+          <td class="paramname"><em>outMessage</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Validate and build a command without executing it. </p>
+<p>The front half of <a class="el" href="../../de/dea/classAestra_1_1Audio_1_1CommandParser.html#ae6d70fc94a0653054be42b7da9a11a8e" title="Execute a verb from an already-tokenised flag map.">execute()</a>: schema lookup, unknown-flag rejection, flag validation, and registry build. Batch execution uses this to validate each member against the current state immediately before executing it. Returns nullptr with outStatus/outMessage set on failure. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00064">64</a> of file <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html">CommandParser.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/de4/CommandRegistry_8cpp_source.html#l00126">Aestra::Audio::CommandRegistry::consumeLastBuildError()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00124">execute()</a>, and <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>.</p>
+<div id="dynsection-0" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-0-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-0-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-0-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dea/classAestra_1_1Audio_1_1CommandParser_a20bf36e749c84e2cc982268d324faabb_cgraph.svg" width="522" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+<div id="dynsection-1" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-1-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-1-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-1-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dea/classAestra_1_1Audio_1_1CommandParser_a20bf36e749c84e2cc982268d324faabb_icgraph.svg" width="100%" height="300"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+
+</div>
+</div>
+<a id="ae6d70fc94a0653054be42b7da9a11a8e" name="ae6d70fc94a0653054be42b7da9a11a8e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae6d70fc94a0653054be42b7da9a11a8e">&#9670;&#160;</a></span>execute()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../dd/d52/structAestra_1_1Audio_1_1CommandResult.html">CommandResult</a> Aestra::Audio::CommandParser::execute </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>verb</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::unordered_map&lt; std::string, std::string &gt; &amp;&#160;</td>
+          <td class="paramname"><em>flags</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../df/d31/classAestra_1_1Audio_1_1CommandHistory.html">CommandHistory</a> &amp;&#160;</td>
+          <td class="paramname"><em>history</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Execute a verb from an already-tokenised flag map. </p>
+<p>The shared back half of parse(): schema lookup, flag validation, registry build, and execution through <a class="el" href="../../df/d31/classAestra_1_1Audio_1_1CommandHistory.html" title="Manages undo/redo stacks for commands.">CommandHistory</a>. <a class="el" href="../../da/dfd/classAestra_1_1Audio_1_1MuseService.html" title="Muse&#39;s structured machine interface: one JSON request in, one JSON response out.">MuseService</a>'s <a class="el" href="../../df/dee/classAestra_1_1JSON.html">JSON</a> surface enters here so text and structured requests can never diverge in behaviour. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00124">124</a> of file <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html">CommandParser.cpp</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00064">buildValidated()</a>, <a class="el" href="../../d5/dfb/CommandResult_8h_source.html#l00029">Aestra::Audio::CommandResult::createdId</a>, and <a class="el" href="../../d7/d81/CommandHistory_8cpp_source.html#l00014">Aestra::Audio::CommandHistory::pushAndExecute()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d1/d59/MuseService_8cpp_source.html#l00224">Aestra::Audio::MuseService::handleRequest()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><div class="zoom"><iframe scrolling="no" frameborder="0" src="../../de/dea/classAestra_1_1Audio_1_1CommandParser_ae6d70fc94a0653054be42b7da9a11a8e_cgraph.svg" width="100%" height="386"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div></div>
+</div>
+<div id="dynsection-3" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-3-trigger" src="../../closed.png" alt="+"/> Here is the caller graph for this function:</div>
+<div id="dynsection-3-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-3-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../de/dea/classAestra_1_1Audio_1_1CommandParser_ae6d70fc94a0653054be42b7da9a11a8e_icgraph.svg" width="483" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
 <a id="a3bec9e548a3266e855fb388cd02a91b4" name="a3bec9e548a3266e855fb388cd02a91b4"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3bec9e548a3266e855fb388cd02a91b4">&#9670;&#160;</a></span>parse()</h2>
 
@@ -116,7 +242,7 @@ Public Member Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00026">26</a> of file <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html">CommandParser.cpp</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html#l00028">28</a> of file <a class="el" href="../../d8/de8/CommandParser_8cpp_source.html">CommandParser.cpp</a>.</p>
 
 </div>
 </div>

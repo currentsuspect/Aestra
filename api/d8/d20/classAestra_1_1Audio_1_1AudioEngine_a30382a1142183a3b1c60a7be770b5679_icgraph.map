@@ -12,14 +12,16 @@
 <area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="516,266,482,271,481,265,516,261"/>
 <area shape="rect" id="Node000008" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="270,325,479,365"/>
 <area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="574,278,482,316,447,328,445,323,480,311,572,273"/>
-<area shape="rect" id="Node000010" href="$da/da3/classAestra_1_1Audio_1_1PlayCommand.html#af1559aa07f6d72026e9dd75207d24f82" title="Undo the command." alt="" coords="269,389,481,429"/>
-<area shape="poly" id="edge11_Node000001_Node000010" title=" " alt="" coords="602,282,550,332,517,357,483,380,456,392,454,387,480,375,514,353,546,328,598,278"/>
-<area shape="rect" id="Node000011" href="$db/d15/classAestra_1_1Audio_1_1StopCommand.html#a42babea4b3e8d540d6f64abe0fceafa8" title="Undo the command." alt="" coords="268,453,481,493"/>
-<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="613,283,592,320,562,363,526,407,483,444,461,456,459,451,480,439,522,403,558,360,587,317,609,280"/>
+<area shape="rect" id="Node000011" href="$da/da3/classAestra_1_1Audio_1_1PlayCommand.html#af1559aa07f6d72026e9dd75207d24f82" title="Undo the command." alt="" coords="269,389,481,429"/>
+<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="602,282,550,332,517,357,483,380,456,392,454,387,480,375,514,353,546,328,598,278"/>
+<area shape="rect" id="Node000012" href="$db/d15/classAestra_1_1Audio_1_1StopCommand.html#a42babea4b3e8d540d6f64abe0fceafa8" title="Undo the command." alt="" coords="268,453,481,493"/>
+<area shape="poly" id="edge13_Node000001_Node000012" title=" " alt="" coords="613,283,592,320,562,363,526,407,483,444,461,456,459,451,480,439,522,403,558,360,587,317,609,280"/>
 <area shape="rect" id="Node000003" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="8,5,217,45"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="262,37,217,37,217,32,262,32"/>
 <area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="231,14,275,14,275,19,231,19"/>
 <area shape="poly" id="edge9_Node000008_Node000003" title=" " alt="" coords="273,320,266,315,234,284,206,249,183,211,162,172,133,100,116,46,122,45,138,98,167,170,187,209,211,246,238,281,270,311,276,316"/>
-<area shape="rect" id="Node000009" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="5,325,220,365"/>
-<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="256,348,220,348,220,343,256,343"/>
+<area shape="rect" id="Node000009" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="5,293,220,333"/>
+<area shape="poly" id="edge10_Node000008_Node000009" title=" " alt="" coords="256,334,220,329,221,324,257,328"/>
+<area shape="rect" id="Node000010" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="13,357,213,397"/>
+<area shape="poly" id="edge11_Node000008_Node000010" title=" " alt="" coords="257,362,213,368,212,362,256,357"/>
 </map>

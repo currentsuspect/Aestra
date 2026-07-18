@@ -117,13 +117,13 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    <span class="keywordflow">return</span> NUIColor(0.35f, 0.72f, 1.0f, 1.0f);</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>}</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>NUIColor shellSurface() {</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keywordflow">return</span> NUIColor(0.026f, 0.025f, 0.032f, 0.985f);</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keywordflow">return</span> editorNeutral(NUIColor(0.026f, 0.025f, 0.032f, 0.985f));</div>
 <div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>}</div>
 <div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>NUIColor panelSurface() {</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keywordflow">return</span> NUIColor(0.043f, 0.041f, 0.052f, 0.98f);</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keywordflow">return</span> editorNeutral(NUIColor(0.043f, 0.041f, 0.052f, 0.98f));</div>
 <div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>}</div>
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>NUIColor insetSurface() {</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keywordflow">return</span> NUIColor(0.022f, 0.021f, 0.027f, 0.98f);</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keywordflow">return</span> editorNeutral(NUIColor(0.022f, 0.021f, 0.027f, 0.98f));</div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>}</div>
 <div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span> </div>
 <div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>std::shared_ptr&lt;NUIIcon&gt; chevronLeftIcon() {</div>
@@ -373,7 +373,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>    <span class="keyword">const</span> <span class="keyword">auto</span> drawArrowButton = [&amp;](<span class="keyword">const</span> NUIRect&amp; rect, <span class="keyword">const</span> std::shared_ptr&lt;NUIIcon&gt;&amp; icon, <span class="keywordtype">bool</span> hovered) {</div>
 <div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>        renderer.fillRoundedRect(rect, 9.0f, hovered ? bodyAccent().withAlpha(0.26f) : insetSurface());</div>
 <div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>        renderer.strokeRoundedRect(rect, 9.0f, 1.0f,</div>
-<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>                                   hovered ? bodyAccent().withAlpha(0.62f) : NUIColor(1.0f, 1.0f, 1.0f, 0.08f));</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>                                   hovered ? bodyAccent().withAlpha(0.62f) : editorInk(0.08f));</div>
 <div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>        drawSvgIcon(renderer, icon, rect, hovered ? bodyAccent() : theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.72f),</div>
 <div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>                    15.0f);</div>
 <div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>    };</div>
@@ -391,7 +391,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>                                                                       : insetSurface());</div>
 <div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>    renderer.strokeRoundedRect(m_presetButtonBounds, 9.0f, 1.0f,</div>
 <div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>                               m_presetButtonHovered || m_presetMenuOpen ? bodyAccent().withAlpha(0.65f)</div>
-<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>                                                                         : NUIColor(1.0f, 1.0f, 1.0f, 0.09f));</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>                                                                         : editorInk(0.09f));</div>
 <div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>    renderer.fillRoundedRect({m_presetButtonBounds.x + 9.0f, m_presetButtonBounds.y + 10.0f, 3.0f, 28.0f}, 1.5f,</div>
 <div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>                             (factory ? presetAccent(m_activePreset) : bodyAccent()).withAlpha(0.88f));</div>
 <div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>    renderer.drawText(factory ? std::string(preset.category) : <span class="stringliteral">&quot;CUSTOM&quot;</span>,</div>
@@ -402,7 +402,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>                      factory ? presetAccent(m_activePreset) : theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>));</div>
 <div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    renderer.drawLine({m_presetButtonBounds.right() - 32.0f, m_presetButtonBounds.y + 8.0f},</div>
 <div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>                      {m_presetButtonBounds.right() - 32.0f, m_presetButtonBounds.bottom() - 8.0f}, 1.0f,</div>
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>                      NUIColor(1.0f, 1.0f, 1.0f, 0.07f));</div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>                      editorInk(0.07f));</div>
 <div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    <span class="keyword">const</span> NUIRect chevronBounds(m_presetButtonBounds.right() - 30.0f, m_presetButtonBounds.y, 28.0f,</div>
 <div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>                                m_presetButtonBounds.height);</div>
 <div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    drawSvgIcon(renderer, m_presetMenuOpen ? chevronUpIcon() : chevronDownIcon(), chevronBounds,</div>
@@ -445,7 +445,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00361" name="l00361"></a><span class="lineno">  361</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 1; i &lt; 4; ++i) {</div>
 <div class="line"><a id="l00362" name="l00362"></a><span class="lineno">  362</span>        <span class="keyword">const</span> <span class="keywordtype">float</span> x = m_impactShapeBounds.x + m_impactShapeBounds.width * <span class="keyword">static_cast&lt;</span><span class="keywordtype">float</span><span class="keyword">&gt;</span>(i) / 4.0f;</div>
 <div class="line"><a id="l00363" name="l00363"></a><span class="lineno">  363</span>        renderer.drawLine({x, m_impactShapeBounds.y + 12.0f}, {x, m_impactShapeBounds.bottom() - 12.0f}, 1.0f,</div>
-<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>                          NUIColor(1.0f, 1.0f, 1.0f, 0.035f));</div>
+<div class="line"><a id="l00364" name="l00364"></a><span class="lineno">  364</span>                          editorInk(0.035f));</div>
 <div class="line"><a id="l00365" name="l00365"></a><span class="lineno">  365</span>    }</div>
 <div class="line"><a id="l00366" name="l00366"></a><span class="lineno">  366</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> punch = m_controls.size() &gt; 0 ? m_controls[0].normalizedValue : 0.0f;</div>
 <div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> sweep = m_controls.size() &gt; 1 ? m_controls[1].normalizedValue : 0.0f;</div>
@@ -473,23 +473,23 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span>    <span class="keyword">const</span> <span class="keywordtype">bool</span> dragging = m_draggingControl == controlIndex;</div>
 <div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span>    <span class="keyword">const</span> NUIColor accent = controlAccent(control.parameterId);</div>
 <div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>    renderer.fillRoundedRect(control.bounds, 11.0f,</div>
-<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>                             hovered || dragging ? NUIColor(0.068f, 0.064f, 0.080f, 0.98f)</div>
-<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>                                                 : NUIColor(0.036f, 0.034f, 0.043f, 0.82f));</div>
+<div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>                             hovered || dragging ? editorNeutral(NUIColor(0.068f, 0.064f, 0.080f, 0.98f))</div>
+<div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>                                                 : editorNeutral(NUIColor(0.036f, 0.034f, 0.043f, 0.82f)));</div>
 <div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>    renderer.strokeRoundedRect(control.bounds, 11.0f, 1.0f,</div>
-<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>                               hovered || dragging ? accent.withAlpha(0.50f) : NUIColor(1.0f, 1.0f, 1.0f, 0.045f));</div>
+<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>                               hovered || dragging ? accent.withAlpha(0.50f) : editorInk(0.045f));</div>
 <div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span> </div>
 <div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>    <span class="keyword">const</span> NUIPoint center = control.knobBounds.center();</div>
 <div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> radius = control.knobBounds.width * 0.5f;</div>
 <div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> valueAngle = kKnobStart + control.normalizedValue * kKnobSweep;</div>
 <div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>    renderer.fillCircle(center, radius, insetSurface());</div>
-<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>    renderer.strokeCircle(center, radius, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.07f));</div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>    renderer.strokeCircle(center, radius, 1.0f, editorInk(0.07f));</div>
 <div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>    drawArc(renderer, center, radius - 6.0f, kKnobStart, kKnobStart + kKnobSweep, primary ? 4.0f : 3.2f,</div>
-<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>            NUIColor(1.0f, 1.0f, 1.0f, 0.09f));</div>
+<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>            editorInk(0.09f));</div>
 <div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>    drawArc(renderer, center, radius - 6.0f, kKnobStart, valueAngle, primary ? 4.0f : 3.2f, accent.withAlpha(0.94f));</div>
 <div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> needleLength = radius - (primary ? 16.0f : 13.0f);</div>
 <div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>    <span class="keyword">const</span> NUIPoint tip{center.x + std::cos(valueAngle) * needleLength, center.y + std::sin(valueAngle) * needleLength};</div>
 <div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>    renderer.drawLine(center, tip, 2.0f, accent.withAlpha(0.86f));</div>
-<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>    renderer.fillCircle(center, primary ? 7.0f : 5.5f, NUIColor(0.075f, 0.071f, 0.088f, 1.0f));</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>    renderer.fillCircle(center, primary ? 7.0f : 5.5f, editorNeutral(NUIColor(0.075f, 0.071f, 0.088f, 1.0f)));</div>
 <div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>    renderer.fillCircle(center, primary ? 2.8f : 2.2f, accent.withAlpha(0.90f));</div>
 <div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span> </div>
 <div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> labelY = control.knobBounds.bottom() + (primary ? 8.0f : 5.0f);</div>
@@ -507,7 +507,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span> </div>
 <div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span><span class="keywordtype">void</span> RumblePluginEditor::drawPresetBrowser(NUIRenderer&amp; renderer) {</div>
 <div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>    <span class="keyword">auto</span>&amp; theme = NUIThemeManager::getInstance();</div>
-<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>    renderer.fillRoundedRect(m_presetMenuBounds, 16.0f, NUIColor(0.018f, 0.017f, 0.023f, 1.0f));</div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>    renderer.fillRoundedRect(m_presetMenuBounds, 16.0f, editorNeutral(NUIColor(0.018f, 0.017f, 0.023f, 1.0f)));</div>
 <div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>    renderer.strokeRoundedRect(m_presetMenuBounds, 16.0f, 1.2f, bodyAccent().withAlpha(0.58f));</div>
 <div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>    renderer.drawText(<span class="stringliteral">&quot;FACTORY SOUNDS&quot;</span>, {m_presetMenuBounds.x + 18.0f, m_presetMenuBounds.y + 17.0f}, 11.0f,</div>
 <div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>                      theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>));</div>
@@ -528,10 +528,10 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00444" name="l00444"></a><span class="lineno">  444</span>        <span class="keyword">const</span> NUIColor accent = presetAccent(i);</div>
 <div class="line"><a id="l00445" name="l00445"></a><span class="lineno">  445</span>        renderer.fillRoundedRect(m_presetItemBounds[i], 8.0f,</div>
 <div class="line"><a id="l00446" name="l00446"></a><span class="lineno">  446</span>                                 active    ? accent.withAlpha(0.22f)</div>
-<div class="line"><a id="l00447" name="l00447"></a><span class="lineno">  447</span>                                 : hovered ? NUIColor(0.095f, 0.088f, 0.115f, 0.96f)</div>
+<div class="line"><a id="l00447" name="l00447"></a><span class="lineno">  447</span>                                 : hovered ? editorNeutral(NUIColor(0.095f, 0.088f, 0.115f, 0.96f))</div>
 <div class="line"><a id="l00448" name="l00448"></a><span class="lineno">  448</span>                                           : panelSurface());</div>
 <div class="line"><a id="l00449" name="l00449"></a><span class="lineno">  449</span>        renderer.strokeRoundedRect(m_presetItemBounds[i], 8.0f, 1.0f,</div>
-<div class="line"><a id="l00450" name="l00450"></a><span class="lineno">  450</span>                                   active || hovered ? accent.withAlpha(0.58f) : NUIColor(1.0f, 1.0f, 1.0f, 0.055f));</div>
+<div class="line"><a id="l00450" name="l00450"></a><span class="lineno">  450</span>                                   active || hovered ? accent.withAlpha(0.58f) : editorInk(0.055f));</div>
 <div class="line"><a id="l00451" name="l00451"></a><span class="lineno">  451</span>        renderer.drawText(std::string(Aestra::Plugins::kRumbleFactoryPresets[i].name),</div>
 <div class="line"><a id="l00452" name="l00452"></a><span class="lineno">  452</span>                          {m_presetItemBounds[i].x + 10.0f, m_presetItemBounds[i].y + 13.0f}, 9.5f,</div>
 <div class="line"><a id="l00453" name="l00453"></a><span class="lineno">  453</span>                          active ? accent : theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.88f));</div>

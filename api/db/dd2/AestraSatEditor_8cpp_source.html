@@ -107,10 +107,10 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    <span class="keywordflow">return</span> NUIColor(0.94f, 0.52f, 0.22f, 1.0f);</div>
 <div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>} <span class="comment">// heat orange</span></div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>NUIColor panelSurface() {</div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keywordflow">return</span> NUIColor(0.027f, 0.027f, 0.027f, 0.96f);</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>    <span class="keywordflow">return</span> editorNeutral(0.027f, 0.96f);</div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>}</div>
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>NUIColor insetSurface() {</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="keywordflow">return</span> NUIColor(0.038f, 0.038f, 0.038f, 0.96f);</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>    <span class="keywordflow">return</span> editorNeutral(0.038f, 0.96f);</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>}</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span><span class="keywordtype">void</span> drawArc(NUIRenderer&amp; renderer, NUIPoint center, <span class="keywordtype">float</span> radius, <span class="keywordtype">float</span> startAngle, <span class="keywordtype">float</span> endAngle, <span class="keywordtype">float</span> thickness,</div>
@@ -175,7 +175,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>    <span class="keyword">const</span> NUIRect workArea{contentRect.x + 12.0f, contentRect.y + 10.0f, contentRect.width - 24.0f,</div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span>                           contentRect.height - 18.0f};</div>
 <div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span>    renderer.fillRoundedRect(workArea, 14.0f, panelSurface());</div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    renderer.strokeRoundedRect(workArea, 14.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.055f));</div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span>    renderer.strokeRoundedRect(workArea, 14.0f, 1.0f, editorInk(0.055f));</div>
 <div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span> </div>
 <div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span>    drawModeSelector(renderer);</div>
 <div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span>    drawBypassPill(renderer);</div>
@@ -194,10 +194,10 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> angle = kKnobStart + value * kKnobSweep;</div>
 <div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span> </div>
 <div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span>    renderer.fillCircle(c, r + 4.0f, insetSurface());</div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    renderer.strokeCircle(c, r + 4.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.060f));</div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span>    renderer.strokeCircle(c, r + 4.0f, 1.0f, editorInk(0.060f));</div>
 <div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span> </div>
 <div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span>    drawArc(renderer, c, r - 3.0f, kKnobStart, kKnobStart + kKnobSweep, large ? 4.0f : 3.0f,</div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>            NUIColor(0.199f, 0.199f, 0.199f, 1.0f));</div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span>            editorNeutral(0.199f, 1.0f));</div>
 <div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>    drawArc(renderer, c, r - 3.0f, kKnobStart, angle, large ? 4.0f : 3.0f, accent().withAlpha(0.92f));</div>
 <div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span> </div>
 <div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> needleLen = r - (large ? 14.0f : 10.0f);</div>
@@ -206,7 +206,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    renderer.fillCircle(tip, large ? 3.5f : 2.5f, accent());</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span> </div>
 <div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>    <span class="keyword">const</span> <span class="keywordtype">float</span> wellR = r * (large ? 0.34f : 0.30f);</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    renderer.fillCircle(c, wellR, NUIColor(0.045f, 0.045f, 0.045f, 0.96f));</div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    renderer.fillCircle(c, wellR, editorNeutral(0.045f, 0.96f));</div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>    renderer.strokeCircle(c, wellR, 1.2f, accent().withAlpha(0.36f));</div>
 <div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span> </div>
 <div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>    renderer.drawTextCentered(label, NUIRect(rect.x, rect.bottom() + 4.0f, rect.width, 14.0f), 10.5f,</div>
@@ -229,7 +229,7 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>            renderer.drawTextCentered(kLabels[i], m_modeRects[i], 10.0f, accent().withAlpha(0.98f));</div>
 <div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span>        } <span class="keywordflow">else</span> {</div>
 <div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>            renderer.fillRoundedRect(m_modeRects[i], 7.0f, insetSurface());</div>
-<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>            renderer.strokeRoundedRect(m_modeRects[i], 7.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.08f));</div>
+<div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>            renderer.strokeRoundedRect(m_modeRects[i], 7.0f, 1.0f, editorInk(0.08f));</div>
 <div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>            renderer.drawTextCentered(kLabels[i], m_modeRects[i], 10.0f,</div>
 <div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>                                      theme.getColor(<span class="stringliteral">&quot;textPrimary&quot;</span>).withAlpha(0.62f));</div>
 <div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>        }</div>

@@ -126,42 +126,43 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span><span class="keyword">private</span>:</div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keywordtype">void</span> createUI();</div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    <span class="keywordtype">void</span> layoutComponents();</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keywordtype">void</span> updateSidebar();</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span> </div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    <span class="keywordtype">bool</span> m_visible;</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> m_dialogBounds;</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> m_sidebarBounds;</div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> m_contentBounds;</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> m_closeButtonBounds; </div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <span class="keywordtype">bool</span> m_closeButtonHovered;</div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span> </div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>    <span class="comment">// Sidebar</span></div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="keyword">struct </span>SidebarItem {</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>        std::string id;</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>        std::string title;</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        <span class="keywordtype">bool</span> hovered;</div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        <span class="keywordtype">bool</span> active;</div>
-<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> bounds;</div>
-<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>    };</div>
-<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    std::vector&lt;SidebarItem&gt; m_sidebarItems;</div>
-<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    std::map&lt;std::string, std::shared_ptr&lt;ISettingsPage&gt;&gt; m_pages;</div>
-<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    std::shared_ptr&lt;ISettingsPage&gt; m_activePage;</div>
-<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span> </div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    std::string m_activePageId;</div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span> </div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="comment">// Footer buttons</span></div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    std::shared_ptr&lt;AestraUI::NUIButton&gt; m_applyButton;</div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    std::shared_ptr&lt;AestraUI::NUIButton&gt; m_cancelButton;</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    std::shared_ptr&lt;AestraUI::NUIButton&gt; m_okButton;</div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span>    <span class="comment">// State</span></div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    std::function&lt;void()&gt; m_onClose;</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    <span class="keywordtype">float</span> m_blinkAnimation; <span class="comment">// For clicking outside</span></div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>};</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keywordtype">void</span> updateDialogBounds(<span class="keyword">const</span> <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a>&amp; parentBounds);</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keywordtype">void</span> updateSidebar();</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span> </div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    <span class="keywordtype">bool</span> m_visible;</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> m_dialogBounds;</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> m_sidebarBounds;</div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> m_contentBounds;</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>    <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> m_closeButtonBounds; </div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span>    <span class="keywordtype">bool</span> m_closeButtonHovered;</div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span> </div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>    <span class="comment">// Sidebar</span></div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>    <span class="keyword">struct </span>SidebarItem {</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>        std::string id;</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>        std::string title;</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>        <span class="keywordtype">bool</span> hovered;</div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>        <span class="keywordtype">bool</span> active;</div>
+<div class="line"><a id="l00060" name="l00060"></a><span class="lineno">   60</span>        <a class="code hl_struct" href="../../da/d4e/structAestraUI_1_1NUIRect.html">AestraUI::NUIRect</a> bounds;</div>
+<div class="line"><a id="l00061" name="l00061"></a><span class="lineno">   61</span>    };</div>
+<div class="line"><a id="l00062" name="l00062"></a><span class="lineno">   62</span>    std::vector&lt;SidebarItem&gt; m_sidebarItems;</div>
+<div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    std::map&lt;std::string, std::shared_ptr&lt;ISettingsPage&gt;&gt; m_pages;</div>
+<div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    std::shared_ptr&lt;ISettingsPage&gt; m_activePage;</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    std::string m_activePageId;</div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span> </div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    <span class="comment">// Footer buttons</span></div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span>    std::shared_ptr&lt;AestraUI::NUIButton&gt; m_applyButton;</div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span>    std::shared_ptr&lt;AestraUI::NUIButton&gt; m_cancelButton;</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span>    std::shared_ptr&lt;AestraUI::NUIButton&gt; m_okButton;</div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span> </div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span>    <span class="comment">// State</span></div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span>    std::function&lt;void()&gt; m_onClose;</div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span>    <span class="keywordtype">float</span> m_blinkAnimation; <span class="comment">// For clicking outside</span></div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span>};</div>
 </div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span> </div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span>} <span class="comment">// namespace Aestra</span></div>
-<div class="ttc" id="aclassAestraUI_1_1NUIComponent_html"><div class="ttname"><a href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></div><div class="ttdoc">Base class for all UI components in the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d36/NUIComponent_8h_source.html#l00043">NUIComponent.h:43</a></div></div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span> </div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span>} <span class="comment">// namespace Aestra</span></div>
+<div class="ttc" id="aclassAestraUI_1_1NUIComponent_html"><div class="ttname"><a href="../../db/d1a/classAestraUI_1_1NUIComponent.html">AestraUI::NUIComponent</a></div><div class="ttdoc">Base class for all UI components in the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d36/NUIComponent_8h_source.html#l00044">NUIComponent.h:44</a></div></div>
 <div class="ttc" id="aclassAestraUI_1_1NUIRenderer_html"><div class="ttname"><a href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">AestraUI::NUIRenderer</a></div><div class="ttdoc">Abstract renderer interface for the Aestra UI framework.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d2d/NUIRenderer_8h_source.html#l00023">NUIRenderer.h:23</a></div></div>
 <div class="ttc" id="aclassAestra_1_1SettingsDialog_html"><div class="ttname"><a href="../../d8/d6f/classAestra_1_1SettingsDialog.html">Aestra::SettingsDialog</a></div><div class="ttdef"><b>Definition</b> <a href="../../d1/d62/SettingsDialog_8h_source.html#l00015">SettingsDialog.h:15</a></div></div>
 <div class="ttc" id="astructAestraUI_1_1NUIKeyEvent_html"><div class="ttname"><a href="../../dd/d88/structAestraUI_1_1NUIKeyEvent.html">AestraUI::NUIKeyEvent</a></div><div class="ttdef"><b>Definition</b> <a href="../../dc/d90/NUITypes_8h_source.html#l00450">NUITypes.h:450</a></div></div>

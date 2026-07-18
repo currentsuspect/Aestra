@@ -103,6 +103,9 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:abd73861819cb7917df3e36289b817146"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3936110249a7056e9c0d49a61bda1c47" id="r_a3936110249a7056e9c0d49a61bda1c47"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/db2/classAestraUI_1_1TimelineMinimapBar.html#a3936110249a7056e9c0d49a61bda1c47">onRender</a> (<a class="el" href="../../d8/d1c/classAestraUI_1_1NUIRenderer.html">NUIRenderer</a> &amp;renderer) override</td></tr>
 <tr class="separator:a3936110249a7056e9c0d49a61bda1c47"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a2f6c62641f5a38a737d922d8cd71a7" id="r_a8a2f6c62641f5a38a737d922d8cd71a7"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/db2/classAestraUI_1_1TimelineMinimapBar.html#a8a2f6c62641f5a38a737d922d8cd71a7">onThemeChanged</a> (const <a class="el" href="../../d1/d57/structAestraUI_1_1NUIThemeProperties.html">NUIThemeProperties</a> &amp;theme) override</td></tr>
+<tr class="memdesc:a8a2f6c62641f5a38a737d922d8cd71a7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Refresh cached theme state, then propagate the change to descendants.  <br /></td></tr>
+<tr class="separator:a8a2f6c62641f5a38a737d922d8cd71a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa34919624618f11389d364a158f53b9a" id="r_aa34919624618f11389d364a158f53b9a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/db2/classAestraUI_1_1TimelineMinimapBar.html#aa34919624618f11389d364a158f53b9a">onUpdate</a> (double deltaTime) override</td></tr>
 <tr class="separator:aa34919624618f11389d364a158f53b9a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a142ae3fe75ea4dc715a0d5e5af879440" id="r_a142ae3fe75ea4dc715a0d5e5af879440"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/db2/classAestraUI_1_1TimelineMinimapBar.html#a142ae3fe75ea4dc715a0d5e5af879440">onMouseEvent</a> (const <a class="el" href="../../db/d1d/structAestraUI_1_1NUIMouseEvent.html">NUIMouseEvent</a> &amp;event) override</td></tr>
@@ -340,7 +343,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the current cursor hint for the host UI. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00041">41</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00042">42</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
 
 </div>
 </div>
@@ -369,7 +372,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Get the current minimap model. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00039">39</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00040">40</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
 
 </div>
 </div>
@@ -462,6 +465,47 @@ Additional Inherited Members</h2></td></tr>
 
 </div>
 </div>
+<a id="a8a2f6c62641f5a38a737d922d8cd71a7" name="a8a2f6c62641f5a38a737d922d8cd71a7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8a2f6c62641f5a38a737d922d8cd71a7">&#9670;&#160;</a></span>onThemeChanged()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void AestraUI::TimelineMinimapBar::onThemeChanged </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="../../d1/d57/structAestraUI_1_1NUIThemeProperties.html">NUIThemeProperties</a> &amp;&#160;</td>
+          <td class="paramname"><em>theme</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">override</span><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Refresh cached theme state, then propagate the change to descendants. </p>
+
+<p>Reimplemented from <a class="el" href="../../db/d1a/classAestraUI_1_1NUIComponent.html#a4685e1bd30fd0f50650effa1ac46b41c">AestraUI::NUIComponent</a>.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00032">32</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d6/dbb/NUIComponent_8cpp_source.html#l00491">AestraUI::NUIComponent::onThemeChanged()</a>.</p>
+<div id="dynsection-2" onclick="return toggleVisibility(this)" class="dynheader closed" style="cursor:pointer;">
+  <img id="dynsection-2-trigger" src="../../closed.png" alt="+"/> Here is the call graph for this function:</div>
+<div id="dynsection-2-summary" class="dynsummary" style="display:block;">
+</div>
+<div id="dynsection-2-content" class="dyncontent" style="display:none;">
+<div class="center"><iframe scrolling="no" frameborder="0" src="../../d0/db2/classAestraUI_1_1TimelineMinimapBar_a8a2f6c62641f5a38a737d922d8cd71a7_cgraph.svg" width="444" height="51"><p><b>This browser is not able to show SVG: try Firefox, Chrome, Safari, or Opera instead.</b></p></iframe></div>
+</div>
+
+</div>
+</div>
 <a id="aa34919624618f11389d364a158f53b9a" name="aa34919624618f11389d364a158f53b9a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa34919624618f11389d364a158f53b9a">&#9670;&#160;</a></span>onUpdate()</h2>
 
@@ -518,7 +562,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Set an additional leading inset applied before the minimap content. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00045">45</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00046">46</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
 
 </div>
 </div>
@@ -570,7 +614,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Enable or disable the top-left mode toggles. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00043">43</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00044">44</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
 
 </div>
 </div>
@@ -589,7 +633,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Callback fired when the minimap mode toggle changes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00056">56</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00057">57</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
 
 </div>
 </div>
@@ -607,7 +651,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Callback requesting that the host center the view around a beat. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00048">48</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00049">49</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
 
 </div>
 </div>
@@ -625,7 +669,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Callback requesting viewport-edge resizing. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00052">52</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00053">53</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
 
 </div>
 </div>
@@ -643,7 +687,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Callback requesting a new view-start beat. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00050">50</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00051">51</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
 
 </div>
 </div>
@@ -661,7 +705,7 @@ Additional Inherited Members</h2></td></tr>
 
 <p>Callback requesting zoom around an anchor beat. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00054">54</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html#l00055">55</a> of file <a class="el" href="../../d6/d19/TimelineMinimapBar_8h_source.html">TimelineMinimapBar.h</a>.</p>
 
 </div>
 </div>

@@ -104,8 +104,8 @@ $(document).ready(function() { init_codefold(1); });
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    m_border = theme.getColor(<span class="stringliteral">&quot;borderSubtle&quot;</span>);</div>
 <div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>    m_textSecondary = theme.getColor(<span class="stringliteral">&quot;textSecondary&quot;</span>);</div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>    m_textTertiary = theme.getColor(<span class="stringliteral">&quot;textDisabled&quot;</span>);</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    m_closeHover = NUIColor::fromHex(0xffd95f5f);</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    m_closeActive = NUIColor::fromHex(0xffe57373);</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>    m_closeHover = theme.getColor(<span class="stringliteral">&quot;error&quot;</span>).withAlpha(0.78f);</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>    m_closeActive = theme.getColor(<span class="stringliteral">&quot;error&quot;</span>);</div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>}</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span> </div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span><span class="keywordtype">void</span> AestraPanelWindow::setPanelTitle(<span class="keyword">const</span> std::string&amp; title)</div>

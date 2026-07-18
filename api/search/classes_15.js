@@ -1,16 +1,12 @@
 var searchData=
 [
-  ['wasapiexclusivedriver_0',['WASAPIExclusiveDriver',['../d1/db7/classAestra_1_1Audio_1_1WASAPIExclusiveDriver.html',1,'Aestra::Audio']]],
-  ['wasapishareddriver_1',['WASAPISharedDriver',['../d0/ddd/classAestra_1_1Audio_1_1WASAPISharedDriver.html',1,'Aestra::Audio']]],
-  ['watchdogstats_2',['WatchdogStats',['../d7/d54/structAestra_1_1Audio_1_1IPluginInstance_1_1WatchdogStats.html',1,'Aestra::Audio::IPluginInstance']]],
-  ['waveformcache_3',['WaveformCache',['../d7/dae/classAestra_1_1Audio_1_1WaveformCache.html',1,'Aestra::Audio']]],
-  ['waveformcachebuilder_4',['WaveformCacheBuilder',['../dd/da3/classAestra_1_1Audio_1_1WaveformCacheBuilder.html',1,'Aestra::Audio']]],
-  ['waveformdisplay_5',['WaveformDisplay',['../d3/d29/classAestraUI_1_1WaveformDisplay.html',1,'AestraUI']]],
-  ['waveformdisplaycomponent_6',['WaveformDisplayComponent',['../dd/d01/classAestra_1_1Audio_1_1WaveformDisplayComponent.html',1,'Aestra::Audio']]],
-  ['waveformmiplevel_7',['WaveformMipLevel',['../df/d1d/structAestra_1_1Audio_1_1WaveformMipLevel.html',1,'Aestra::Audio']]],
-  ['waveformpeak_8',['WaveformPeak',['../d7/de7/structAestra_1_1Audio_1_1WaveformPeak.html',1,'Aestra::Audio']]],
-  ['windowconfig_9',['WindowConfig',['../d7/da3/structAestraWindowManager_1_1WindowConfig.html',1,'AestraWindowManager']]],
-  ['windowdesc_10',['WindowDesc',['../d6/d3b/structAestra_1_1WindowDesc.html',1,'Aestra']]],
-  ['windowpanel_11',['WindowPanel',['../dc/d3e/classAestra_1_1Audio_1_1WindowPanel.html',1,'Aestra::Audio']]],
-  ['windowstate_12',['WindowState',['../dc/d36/structAestraWindowManager_1_1WindowState.html',1,'AestraWindowManager']]]
+  ['validationresult_0',['ValidationResult',['../d1/d32/structAestra_1_1Audio_1_1ProjectValidator_1_1ValidationResult.html',1,'Aestra::Audio::ProjectValidator']]],
+  ['vector2_1',['Vector2',['../d2/d46/structAestra_1_1Vector2.html',1,'Aestra']]],
+  ['vector3_2',['Vector3',['../db/d2f/structAestra_1_1Vector3.html',1,'Aestra']]],
+  ['vector4_3',['Vector4',['../d5/d17/structAestra_1_1Vector4.html',1,'Aestra']]],
+  ['viewstate_4',['ViewState',['../dc/dce/structAestraContent_1_1ViewState.html',1,'AestraContent']]],
+  ['vst3hosttestaccess_5',['VST3HostTestAccess',['../dc/daf/classAestra_1_1Audio_1_1VST3HostTestAccess.html',1,'Aestra::Audio']]],
+  ['vst3pluginfactory_6',['VST3PluginFactory',['../d3/ded/classAestra_1_1Audio_1_1VST3PluginFactory.html',1,'Aestra::Audio']]],
+  ['vst3plugininstance_7',['VST3PluginInstance',['../d9/dad/classAestra_1_1Audio_1_1VST3PluginInstance.html',1,'Aestra::Audio']]],
+  ['vubridge_8',['VUBridge',['../d3/de7/classAestraUI_1_1VUBridge.html',1,'AestraUI']]]
 ];

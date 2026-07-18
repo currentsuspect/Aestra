@@ -1,5 +1,7 @@
 <map id="Aestra::Audio::UnitManager::assignUnitToTimelineLane" name="Aestra::Audio::UnitManager::assignUnitToTimelineLane">
-<area shape="rect" id="Node000001" title="Assign a unit to a Timeline lane for arrangement playback." alt="" coords="255,5,456,45"/>
-<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aa8c164ecb307961d9b6e747cdc27f590" title="Legacy alias for Timeline lane assignment." alt="" coords="5,5,207,45"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="241,28,207,28,207,23,241,23"/>
+<area shape="rect" id="Node000001" title="Assign a unit to a Timeline lane for arrangement playback." alt="" coords="268,37,469,77"/>
+<area shape="rect" id="Node000002" href="$d4/d49/classAestra_1_1Audio_1_1UnitManager.html#aa8c164ecb307961d9b6e747cdc27f590" title="Legacy alias for Timeline lane assignment." alt="" coords="12,5,213,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="254,46,213,41,214,35,255,40"/>
+<area shape="rect" id="Node000003" href="$d8/d11/classAestra_1_1Audio_1_1ArrangePatternCommand.html#a522d22ec3517c3b12f1c9a568fd596f3" title="Undo the command." alt="" coords="5,69,220,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="255,74,221,79,220,73,254,69"/>
 </map>

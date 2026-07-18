@@ -11,10 +11,10 @@
 <!-- Node0 -->
 <g id="Node000000" class="node">
 <title>Node0</title>
-<g id="a_Node000000"><a xlink:href="d5/d46/structAestraUI_1_1NUISVGCache_1_1CacheKeyHash.html" target="_top" xlink:title="Hash function for CacheKey.">
+<g id="a_Node000000"><a xlink:href="d1/df6/structAestraUI_1_1NUISVGCache_1_1CacheEntry.html" target="_top" xlink:title="Cached entry containing rasterized RGBA data and metadata.">
 <polygon fill="white" stroke="#666666" points="133,-30 0,-30 0,0 133,0 133,-30"/>
 <text text-anchor="start" x="8" y="-18" font-family="Helvetica,sans-Serif" font-size="10.00">AestraUI::NUISVGCache</text>
-<text text-anchor="middle" x="66.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::CacheKeyHash</text>
+<text text-anchor="middle" x="66.5" y="-7" font-family="Helvetica,sans-Serif" font-size="10.00">::CacheEntry</text>
 </a>
 </g>
 </g>

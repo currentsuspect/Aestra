@@ -8,11 +8,13 @@
 <area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="762,138,721,143,721,138,762,133"/>
 <area shape="rect" id="Node000005" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a9312fb6a7145e21d39409a19c0203284" title="Render the project to an audio file using the full live engine path (processBlock)." alt="" coords="517,197,726,237"/>
 <area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="820,150,729,188,694,200,692,195,727,183,818,145"/>
-<area shape="rect" id="Node000006" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="255,165,464,205"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="503,206,464,201,464,195,503,200"/>
-<area shape="rect" id="Node000008" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="252,229,467,269"/>
-<area shape="poly" id="edge8_Node000005_Node000008" title=" " alt="" coords="503,234,467,239,467,234,503,229"/>
-<area shape="rect" id="Node000007" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,165,204,205"/>
-<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="241,197,204,197,204,191,241,192"/>
-<area shape="poly" id="edge7_Node000007_Node000006" title=" " alt="" coords="218,174,254,174,254,179,218,179"/>
+<area shape="rect" id="Node000006" href="$d3/da8/classAestra_1_1Audio_1_1AudioExporter.html#a7db2feb78f7e58219497974d28a5225f" title="Convenience helper matching AudioEngine::bounceRangeToWav signature." alt="" coords="255,133,464,173"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="525,197,441,176,442,171,526,191"/>
+<area shape="rect" id="Node000008" href="$d7/df1/classAestra_1_1Audio_1_1HeadlessMusicGenerator.html#a3caf88466d0e3d9bb27d8a9d23abce1b" title="Export with progress callback." alt="" coords="252,197,467,237"/>
+<area shape="poly" id="edge8_Node000005_Node000008" title=" " alt="" coords="503,220,467,220,467,215,503,215"/>
+<area shape="rect" id="Node000009" href="$da/dfd/classAestra_1_1Audio_1_1MuseService.html#a59ffe55e7bb9da7a1f78a89225b896e3" title="Process one JSON request line and return the JSON response." alt="" coords="259,261,459,301"/>
+<area shape="poly" id="edge9_Node000005_Node000009" title=" " alt="" coords="526,243,442,264,441,259,525,238"/>
+<area shape="rect" id="Node000007" href="$d8/d20/classAestra_1_1Audio_1_1AudioEngine.html#ad2430b75e9c36df0219cf51dd1ba5d0d" title="Render a range of the timeline (or a specific track) to a WAV file." alt="" coords="5,133,204,173"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="241,165,204,165,204,159,241,160"/>
+<area shape="poly" id="edge7_Node000007_Node000006" title=" " alt="" coords="218,142,254,142,254,147,218,147"/>
 </map>

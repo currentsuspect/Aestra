@@ -1,0 +1,5 @@
+<map id="Aestra::Audio::CommandParser::buildValidated" name="Aestra::Audio::CommandParser::buildValidated">
+<area shape="rect" id="Node000001" title="Validate and build a command without executing it." alt="" coords="5,5,229,45"/>
+<area shape="rect" id="Node000002" href="$db/dbe/classAestra_1_1Audio_1_1CommandRegistry.html#ad7b2a4074b0b099b6b8879f5374d971b" title="Take the reason recorded by the most recent failed build." alt="" coords="277,5,516,45"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="230,23,264,23,264,28,230,28"/>
+</map>
