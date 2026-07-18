@@ -2454,102 +2454,10 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
     // Update toolbar bounds before checking hover (critical!)
     updateToolbarBounds();
 
-    if (!event.cursorCaptured) {
-        // Update toolbar hover states
-        bool oldMenuHovered = m_menuHovered;
-        bool oldAddHovered = m_addTrackHovered;
-        bool oldSelectHovered = m_selectToolHovered;
-        bool oldSplitHovered = m_splitToolHovered;
-        bool oldMultiSelectHovered = m_multiSelectToolHovered;
-        bool oldFollowHovered = m_followPlayheadHovered;
+    updateToolbarHover(event);
 
-        m_menuHovered = m_menuIconBounds.contains(event.position);
-        m_addTrackHovered = m_addTrackBounds.contains(event.position);
-        m_selectToolHovered = m_selectToolBounds.contains(event.position);
-        m_splitToolHovered = m_splitToolBounds.contains(event.position);
-        m_multiSelectToolHovered = m_multiSelectToolBounds.contains(event.position);
-        m_followPlayheadHovered = m_followPlayheadBounds.contains(event.position);
-
-        // Toolbar Tooltips
-        bool anyToolbarHovered = m_menuHovered || m_addTrackHovered || m_selectToolHovered || m_splitToolHovered ||
-                                 m_multiSelectToolHovered || m_followPlayheadHovered;
-        bool anyOldHovered = oldMenuHovered || oldAddHovered || oldSelectHovered || oldSplitHovered ||
-                             oldMultiSelectHovered || oldFollowHovered;
-
-        if (m_toolbarBounds.contains(event.position) && anyToolbarHovered) {
-            std::string tooltipText;
-            if (m_menuHovered && !oldMenuHovered)
-                tooltipText = "Menu";
-            else if (m_addTrackHovered && !oldAddHovered)
-                tooltipText = "Add Track";
-            else if (m_selectToolHovered && !oldSelectHovered)
-                tooltipText = "Select Tool";
-            else if (m_splitToolHovered && !oldSplitHovered)
-                tooltipText = "Split Tool";
-            else if (m_multiSelectToolHovered && !oldMultiSelectHovered)
-                tooltipText = "Multi-Select Tool";
-            else if (m_followPlayheadHovered && !oldFollowHovered)
-                tooltipText = "Follow Playhead";
-            if (!tooltipText.empty()) {
-                AestraUI::NUIComponent::showRemoteTooltip(tooltipText, event.position, this);
-            }
-        } else if (!anyToolbarHovered && anyOldHovered) {
-            AestraUI::NUIComponent::hideRemoteTooltip(this);
-        }
-
-        // Toolbar is rendered outside the playlist cache; don't invalidate the cache on hover.
-        if (m_menuHovered != oldMenuHovered || m_addTrackHovered != oldAddHovered ||
-            m_selectToolHovered != oldSelectHovered || m_splitToolHovered != oldSplitHovered ||
-            m_multiSelectToolHovered != oldMultiSelectHovered || m_followPlayheadHovered != oldFollowHovered) {
-            setDirty(true);
-        }
-    }
-
-    // === CONTEXT MENU Handling ===
-    // Special handling for Right-Click on Follow Button
-    if (event.pressed && event.button == AestraUI::NUIMouseButton::Right &&
-        m_followPlayheadBounds.contains(event.position)) {
-        if (m_activeContextMenu) {
-            detachContextMenu(m_activeContextMenu);
-            m_activeContextMenu = nullptr;
-        }
-
-        m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
-        auto menu = m_activeContextMenu;
-
-        // Add Modes
-        menu->addRadioItem("Page", "FollowMode", m_followMode == FollowMode::Page, [this]() {
-            setFollowMode(FollowMode::Page);
-            setFollowPlayhead(true); // Auto-enable on selection
-        });
-
-        menu->addRadioItem("Continuous", "FollowMode", m_followMode == FollowMode::Continuous, [this]() {
-            setFollowMode(FollowMode::Continuous);
-            setFollowPlayhead(true);
-        });
-
-        attachAndShowContextMenu(
-            this, menu,
-            AestraUI::NUIPoint(m_followPlayheadBounds.x, m_followPlayheadBounds.y + m_followPlayheadBounds.height));
+    if (handleContextMenuMouse(event)) {
         return true;
-    }
-
-    // If context menu is active, give it priority.
-    if (m_activeContextMenu) {
-        // Forward event to menu (handles interactions in menu AND submenus)
-        // onMouseEvent returns true if the event was handled (clicked inside menu/submenu)
-        bool handled = m_activeContextMenu->onMouseEvent(event);
-
-        // If click was NOT handled by the menu (i.e. clicked outside), close it.
-        if (!handled && event.pressed) {
-            detachContextMenu(m_activeContextMenu);
-            m_activeContextMenu = nullptr;
-            // Let execution continue so the click can interact with whatever is underneath
-            // (e.g. Stop button, Track header, etc.)
-        } else if (handled) {
-            // Menu handled the event, consume it.
-            return true;
-        }
     }
 
     // === DROPDOWNS removed (now via Context Menu) ===
@@ -2603,6 +2511,160 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         }
     }
 
+    if (handleSelectionBoxMouse(event, localPos)) {
+        return true;
+    }
+
+    // Layout constants
+    float headerHeight = kTimelineHeaderHeight;
+    float rulerHeight = kTimelineRulerHeight;
+    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
+    AestraUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, bounds.width, rulerHeight);
+
+    // Track area (below ruler)
+    float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
+    AestraUI::NUIRect trackArea(0, trackAreaTop, bounds.width, bounds.height - trackAreaTop);
+
+    bool isInRuler = rulerRect.contains(localPos);
+    bool isInTrackArea = trackArea.contains(localPos);
+
+    if (handleTimelineWheel(event, localPos, isInRuler, isInTrackArea)) {
+        return true;
+    }
+    if (handleRulerPress(event, localPos, isInRuler)) {
+        return true;
+    }
+    if (handleRulerSelectionDrag(event, localPos)) {
+        return true;
+    }
+    if (handleRulerSelectionMenu(event, localPos, isInRuler)) {
+        return true;
+    }
+    if (handleLoopMarkerDrag(event, localPos)) {
+        return true;
+    }
+    if (handlePlayheadDrag(event, localPos)) {
+        return true;
+    }
+
+    // (Vertical scroll handling moved to main wheel handler above)
+
+    // First, let children handle the event
+    bool handled = AestraUI::NUIComponent::onMouseEvent(event);
+    if (handled)
+        return true;
+
+    if (handleSplitToolClick(event, localPos)) {
+        return true;
+    }
+
+    return handled;
+}
+
+void TrackManagerUI::updateToolbarHover(const AestraUI::NUIMouseEvent& event) {
+    if (!event.cursorCaptured) {
+        // Update toolbar hover states
+        bool oldMenuHovered = m_menuHovered;
+        bool oldAddHovered = m_addTrackHovered;
+        bool oldSelectHovered = m_selectToolHovered;
+        bool oldSplitHovered = m_splitToolHovered;
+        bool oldMultiSelectHovered = m_multiSelectToolHovered;
+        bool oldFollowHovered = m_followPlayheadHovered;
+
+        m_menuHovered = m_menuIconBounds.contains(event.position);
+        m_addTrackHovered = m_addTrackBounds.contains(event.position);
+        m_selectToolHovered = m_selectToolBounds.contains(event.position);
+        m_splitToolHovered = m_splitToolBounds.contains(event.position);
+        m_multiSelectToolHovered = m_multiSelectToolBounds.contains(event.position);
+        m_followPlayheadHovered = m_followPlayheadBounds.contains(event.position);
+
+        // Toolbar Tooltips
+        bool anyToolbarHovered = m_menuHovered || m_addTrackHovered || m_selectToolHovered || m_splitToolHovered ||
+                                 m_multiSelectToolHovered || m_followPlayheadHovered;
+        bool anyOldHovered = oldMenuHovered || oldAddHovered || oldSelectHovered || oldSplitHovered ||
+                             oldMultiSelectHovered || oldFollowHovered;
+
+        if (m_toolbarBounds.contains(event.position) && anyToolbarHovered) {
+            std::string tooltipText;
+            if (m_menuHovered && !oldMenuHovered)
+                tooltipText = "Menu";
+            else if (m_addTrackHovered && !oldAddHovered)
+                tooltipText = "Add Track";
+            else if (m_selectToolHovered && !oldSelectHovered)
+                tooltipText = "Select Tool";
+            else if (m_splitToolHovered && !oldSplitHovered)
+                tooltipText = "Split Tool";
+            else if (m_multiSelectToolHovered && !oldMultiSelectHovered)
+                tooltipText = "Multi-Select Tool";
+            else if (m_followPlayheadHovered && !oldFollowHovered)
+                tooltipText = "Follow Playhead";
+            if (!tooltipText.empty()) {
+                AestraUI::NUIComponent::showRemoteTooltip(tooltipText, event.position, this);
+            }
+        } else if (!anyToolbarHovered && anyOldHovered) {
+            AestraUI::NUIComponent::hideRemoteTooltip(this);
+        }
+
+        // Toolbar is rendered outside the playlist cache; don't invalidate the cache on hover.
+        if (m_menuHovered != oldMenuHovered || m_addTrackHovered != oldAddHovered ||
+            m_selectToolHovered != oldSelectHovered || m_splitToolHovered != oldSplitHovered ||
+            m_multiSelectToolHovered != oldMultiSelectHovered || m_followPlayheadHovered != oldFollowHovered) {
+            setDirty(true);
+        }
+    }
+}
+
+bool TrackManagerUI::handleContextMenuMouse(const AestraUI::NUIMouseEvent& event) {
+    // === CONTEXT MENU Handling ===
+    // Special handling for Right-Click on Follow Button
+    if (event.pressed && event.button == AestraUI::NUIMouseButton::Right &&
+        m_followPlayheadBounds.contains(event.position)) {
+        if (m_activeContextMenu) {
+            detachContextMenu(m_activeContextMenu);
+            m_activeContextMenu = nullptr;
+        }
+
+        m_activeContextMenu = std::make_shared<AestraUI::NUIContextMenu>();
+        auto menu = m_activeContextMenu;
+
+        // Add Modes
+        menu->addRadioItem("Page", "FollowMode", m_followMode == FollowMode::Page, [this]() {
+            setFollowMode(FollowMode::Page);
+            setFollowPlayhead(true); // Auto-enable on selection
+        });
+
+        menu->addRadioItem("Continuous", "FollowMode", m_followMode == FollowMode::Continuous, [this]() {
+            setFollowMode(FollowMode::Continuous);
+            setFollowPlayhead(true);
+        });
+
+        attachAndShowContextMenu(
+            this, menu,
+            AestraUI::NUIPoint(m_followPlayheadBounds.x, m_followPlayheadBounds.y + m_followPlayheadBounds.height));
+        return true;
+    }
+
+    // If context menu is active, give it priority.
+    if (m_activeContextMenu) {
+        // Forward event to menu (handles interactions in menu AND submenus)
+        // onMouseEvent returns true if the event was handled (clicked inside menu/submenu)
+        bool handled = m_activeContextMenu->onMouseEvent(event);
+
+        // If click was NOT handled by the menu (i.e. clicked outside), close it.
+        if (!handled && event.pressed) {
+            detachContextMenu(m_activeContextMenu);
+            m_activeContextMenu = nullptr;
+            // Let execution continue so the click can interact with whatever is underneath
+            // (e.g. Stop button, Track header, etc.)
+        } else if (handled) {
+            // Menu handled the event, consume it.
+            return true;
+        }
+    }
+    return false;
+}
+
+bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos) {
     // === SELECTION BOX: Right-click drag or MultiSelect tool or Ctrl+LeftClick ===
     // Start selection box on right-click drag OR left-click with MultiSelect tool OR Ctrl+LeftClick
     bool ctrlHeld = (event.modifiers & AestraUI::NUIModifiers::Ctrl);
@@ -2697,20 +2759,14 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         invalidateCache();
         return true;
     }
+    return false;
+}
 
-    // Layout constants
-    float headerHeight = kTimelineHeaderHeight;
-    float rulerHeight = kTimelineRulerHeight;
-    float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
-    AestraUI::NUIRect rulerRect(0, headerHeight + horizontalScrollbarHeight, bounds.width, rulerHeight);
-
-    // Track area (below ruler)
-    float trackAreaTop = headerHeight + horizontalScrollbarHeight + rulerHeight;
-    AestraUI::NUIRect trackArea(0, trackAreaTop, bounds.width, bounds.height - trackAreaTop);
-
-    bool isInRuler = rulerRect.contains(localPos);
-    bool isInTrackArea = trackArea.contains(localPos);
-
+bool TrackManagerUI::handleTimelineWheel(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos, bool isInRuler, bool isInTrackArea) {
+    const AestraUI::NUIRect bounds = getBounds();
+    const float headerHeight = kTimelineHeaderHeight;
+    const float rulerHeight = kTimelineRulerHeight;
+    const float horizontalScrollbarHeight = kTimelineHorizontalScrollbarHeight;
     // Mouse wheel handling
     if (event.wheelDelta != 0.0f && (isInRuler || isInTrackArea)) {
         const bool shiftHeld = (event.modifiers & AestraUI::NUIModifiers::Shift);
@@ -2802,6 +2858,10 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             return true;
         }
     }
+    return false;
+}
+
+bool TrackManagerUI::handleRulerPress(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos, bool isInRuler) {
     // === RULER INTERACTION: Loop markers, Playhead scrubbing OR timeline selection ===
     if (isInRuler) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -2902,7 +2962,10 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             return true;
         }
     }
+    return false;
+}
 
+bool TrackManagerUI::handleRulerSelectionDrag(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos) {
     // Handle ruler selection dragging
     if (m_isDraggingRulerSelection) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -2971,7 +3034,10 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
         return true;
     }
+    return false;
+}
 
+bool TrackManagerUI::handleRulerSelectionMenu(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos, bool isInRuler) {
     // === RULER SELECTION CONTEXT MENU (Click on active range) ===
     if (isInRuler && event.pressed && event.button == AestraUI::NUIMouseButton::Left && m_hasRulerSelection &&
         !m_hoveringLoopStart && !m_hoveringLoopEnd) {
@@ -3002,7 +3068,10 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             return true;
         }
     }
+    return false;
+}
 
+bool TrackManagerUI::handleLoopMarkerDrag(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos) {
     // Handle loop marker dragging
     if (m_isDraggingLoopStart || m_isDraggingLoopEnd) {
         auto& themeManager = AestraUI::NUIThemeManager::getInstance();
@@ -3049,7 +3118,10 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
         invalidateCache(); // Loop marker position changed
         return true;
     }
+    return false;
+}
 
+bool TrackManagerUI::handlePlayheadDrag(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos) {
     // Handle playhead dragging (continuous scrub)
     // IMPORTANT: Don't handle playhead if we're doing ruler selection!
     if (m_isDraggingPlayhead && !m_isDraggingRulerSelection) {
@@ -3086,14 +3158,11 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
 
         return true;
     }
+    return false;
+}
 
-    // (Vertical scroll handling moved to main wheel handler above)
-
-    // First, let children handle the event
-    bool handled = AestraUI::NUIComponent::onMouseEvent(event);
-    if (handled)
-        return true;
-
+bool TrackManagerUI::handleSplitToolClick(const AestraUI::NUIMouseEvent& event, const AestraUI::NUIPoint& localPos) {
+    const AestraUI::NUIRect bounds = getBounds();
     // === SPLIT TOOL: Click to split track at position ===
     if (m_currentTool == PlaylistTool::Split && event.pressed && event.button == AestraUI::NUIMouseButton::Left) {
         // Check if click is in track area
@@ -3132,8 +3201,7 @@ bool TrackManagerUI::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
             }
         }
     }
-
-    return handled;
+    return false;
 }
 
 void TrackManagerUI::setPlaylistMode(PlaylistMode mode) {
