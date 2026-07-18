@@ -2012,6 +2012,18 @@ target_include_directories(MuseSocketServerTest PRIVATE
 add_test(NAME MuseSocketServerTest COMMAND MuseSocketServerTest)
 set_tests_properties(MuseSocketServerTest PROPERTIES LABELS "commands;muse")
 
+if(TARGET MuseAgentCore)
+    add_executable(MuseAgentLoopTest Commands/MuseAgentLoopTest.cpp)
+    target_link_libraries(MuseAgentLoopTest PRIVATE MuseAgentCore AestraAudioCore)
+    target_include_directories(MuseAgentLoopTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+    )
+    add_test(NAME MuseAgentLoopTest COMMAND MuseAgentLoopTest)
+    set_tests_properties(MuseAgentLoopTest PROPERTIES LABELS "commands;muse")
+endif()
+
 # Rumble state and migration are deterministic pure-logic coverage. Keep this in
 # the normal test tier so stable parameter IDs cannot drift behind a runtime gate.
 if(TARGET AestraAudioCore AND TARGET AestraPremiumPlugins AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Commands/RumbleStateTest.cpp")

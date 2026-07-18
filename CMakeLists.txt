@@ -251,6 +251,50 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/MuseReplMain.cpp")
   message(STATUS "MuseRepl configured")
 endif()
 
+# =============================================================================
+# muse-agent — the standalone Muse driver (interchangeable intelligence).
+# Deliberately OUTSIDE the Aestra binary: HTTP, TLS, and provider adapters
+# never enter the DAW. Only built where libcurl is available.
+# =============================================================================
+
+find_package(CURL QUIET)
+if(CURL_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/Source/MuseAgent/MuseAgentMain.cpp")
+  add_library(MuseAgentCore STATIC
+    Source/MuseAgent/AgentLoop.cpp
+    Source/MuseAgent/AnthropicProvider.cpp
+    Source/MuseAgent/HttpClient.cpp
+    Source/MuseAgent/MuseSocketClient.cpp
+    Source/MuseAgent/OpenAICompatProvider.cpp
+  )
+  set_target_properties(MuseAgentCore PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+  )
+  target_include_directories(MuseAgentCore PUBLIC
+    ${CMAKE_SOURCE_DIR}/Source/MuseAgent
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+  )
+  target_link_libraries(MuseAgentCore PUBLIC AestraCore CURL::libcurl)
+  if(WIN32)
+    target_link_libraries(MuseAgentCore PUBLIC ws2_32)
+    target_compile_definitions(MuseAgentCore PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+  endif()
+
+  add_executable(muse-agent Source/MuseAgent/MuseAgentMain.cpp)
+  if(MSVC)
+    target_compile_options(muse-agent PRIVATE /utf-8)
+  endif()
+  set_target_properties(muse-agent PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+  )
+  target_link_libraries(muse-agent PRIVATE MuseAgentCore)
+  message(STATUS "muse-agent configured (libcurl ${CURL_VERSION_STRING})")
+elseif(NOT CURL_FOUND)
+  message(STATUS "muse-agent skipped: libcurl not found")
+endif()
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/Source/App/HeadlessExportMain.cpp")
   add_executable(AestraHeadlessExport
     Source/App/HeadlessExportMain.cpp
