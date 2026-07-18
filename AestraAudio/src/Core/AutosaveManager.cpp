@@ -79,6 +79,12 @@ void AutosaveManager::initialize(const std::string& projectPath, Config config) 
     m_isDirty = false;
     m_isAutosaving = false;
     m_shouldStop = false;
+    m_enabled.store(m_config.enabled, std::memory_order_release);
+    m_nextSnapshotGeneration.store(1, std::memory_order_release);
+    m_pendingSnapshot.clear();
+    m_pendingSnapshotGeneration = 0;
+    m_lastCommittedGeneration = 0;
+    m_hasPendingSnapshot = false;
     m_lastAutosaveTime = std::chrono::steady_clock::now();
     m_lastDirtyTimeMs.store(steadyNowMs(), std::memory_order_release);
     
@@ -93,7 +99,7 @@ void AutosaveManager::initialize(const std::string& projectPath, Config config) 
     }
     
     // Start background thread if enabled
-    if (m_config.enabled) {
+    if (m_enabled.load(std::memory_order_acquire)) {
         m_autosaveThread = std::make_unique<std::thread>(
             &AutosaveManager::autosaveThreadFunc, this);
         Log::info("AutosaveManager initialized for: " + projectPath);
@@ -121,6 +127,9 @@ void AutosaveManager::shutdown() {
     
     std::lock_guard<std::mutex> lock(m_mutex);
     m_initialized = false;
+    m_pendingSnapshot.clear();
+    m_pendingSnapshotGeneration = 0;
+    m_hasPendingSnapshot = false;
     
     Log::info("AutosaveManager shutdown");
 }
@@ -143,7 +152,7 @@ void AutosaveManager::markClean() {
 }
 
 void AutosaveManager::setEnabled(bool enabled) {
-    m_config.enabled = enabled;
+    m_enabled.store(enabled, std::memory_order_release);
     if (enabled && !m_autosaveThread) {
         // Restart thread if enabling
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -153,6 +162,7 @@ void AutosaveManager::setEnabled(bool enabled) {
                 &AutosaveManager::autosaveThreadFunc, this);
         }
     }
+    m_cv.notify_all();
 }
 
 //==============================================================================
@@ -187,6 +197,48 @@ bool AutosaveManager::autosaveIfDue() {
         return false;
     }
     notifyStatus("Project saved");
+    return true;
+}
+
+bool AutosaveManager::claimDirtyIfDue() {
+    if (!m_isDirty.load(std::memory_order_acquire)) {
+        return false;
+    }
+    const int64_t sinceMs = steadyNowMs() - m_lastDirtyTimeMs.load(std::memory_order_acquire);
+    const int64_t minDelayMs =
+        std::chrono::duration_cast<std::chrono::milliseconds>(m_config.minDirtyDelay).count();
+    if (sinceMs < minDelayMs) {
+        return false;
+    }
+    return m_isDirty.exchange(false, std::memory_order_acq_rel);
+}
+
+bool AutosaveManager::captureSnapshotIfDue() {
+    if (!m_config.captureSnapshotOnCallingThread || !m_initialized.load(std::memory_order_acquire) ||
+        !m_enabled.load(std::memory_order_acquire) || !claimDirtyIfDue()) {
+        return false;
+    }
+
+    std::string data;
+    if (!m_config.serializer || !m_config.serializer(data)) {
+        m_isDirty.store(true, std::memory_order_release);
+        notifyError("Autosave failed: serialization error");
+        return false;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_shouldStop.load(std::memory_order_acquire)) {
+            m_isDirty.store(true, std::memory_order_release);
+            return false;
+        }
+        // Only the latest immutable snapshot matters if the writer has not yet
+        // consumed an older one. Dirty changes made during capture remain set.
+        m_pendingSnapshot = std::move(data);
+        m_pendingSnapshotGeneration = m_nextSnapshotGeneration.fetch_add(1, std::memory_order_acq_rel);
+        m_hasPendingSnapshot = true;
+    }
+    m_cv.notify_all();
     return true;
 }
 
@@ -342,20 +394,58 @@ std::chrono::seconds AutosaveManager::getTimeSinceLastAutosave() const {
 
 void AutosaveManager::autosaveThreadFunc() {
     Log::info("Autosave thread started");
+
+    if (m_config.captureSnapshotOnCallingThread) {
+        while (!m_shouldStop.load(std::memory_order_acquire)) {
+            std::string snapshot;
+            uint64_t snapshotGeneration = 0;
+            {
+                std::unique_lock<std::mutex> lock(m_mutex);
+                m_cv.wait(lock, [this] {
+                    return m_shouldStop.load(std::memory_order_acquire) ||
+                           (m_enabled.load(std::memory_order_acquire) && m_hasPendingSnapshot);
+                });
+
+                if (m_shouldStop.load(std::memory_order_acquire)) {
+                    break;
+                }
+                if (!m_enabled.load(std::memory_order_acquire) || !m_hasPendingSnapshot) {
+                    continue;
+                }
+
+                snapshot = std::move(m_pendingSnapshot);
+                snapshotGeneration = m_pendingSnapshotGeneration;
+                m_pendingSnapshot.clear();
+                m_pendingSnapshotGeneration = 0;
+                m_hasPendingSnapshot = false;
+            }
+
+            if (performAutosaveWithData(std::move(snapshot), snapshotGeneration)) {
+                notifyStatus("Project saved");
+            } else {
+                // The immutable snapshot could not be committed. Capture a new
+                // current snapshot on the owner thread on the next cycle.
+                m_isDirty.store(true, std::memory_order_release);
+            }
+        }
+
+        Log::info("Autosave thread stopped");
+        return;
+    }
     
     while (!m_shouldStop.load(std::memory_order_acquire)) {
         std::unique_lock<std::mutex> lock(m_mutex);
         
-        auto waitResult = m_cv.wait_for(lock, m_config.autosaveInterval, [this] {
+        m_cv.wait_for(lock, m_config.autosaveInterval, [this] {
             return m_shouldStop.load(std::memory_order_acquire) || 
-                   (m_config.enabled && m_isDirty.load(std::memory_order_acquire));
+                   (m_enabled.load(std::memory_order_acquire) && m_isDirty.load(std::memory_order_acquire));
         });
         
         if (m_shouldStop.load(std::memory_order_acquire)) {
             break;
         }
         
-        if (!m_config.enabled) {
+        if (!m_enabled.load(std::memory_order_acquire)) {
             continue;
         }
         
@@ -391,10 +481,8 @@ void AutosaveManager::autosaveThreadFunc() {
 }
 
 bool AutosaveManager::performAutosave() {
-    bool expected = false;
-    if (!m_isAutosaving.compare_exchange_strong(expected, true)) {
-        return false;
-    }
+    std::lock_guard<std::mutex> commitLock(m_commitMutex);
+    m_isAutosaving.store(true, std::memory_order_release);
 
     struct AutosavingGuard {
         std::atomic<bool>& flag;
@@ -402,28 +490,48 @@ bool AutosaveManager::performAutosave() {
         ~AutosavingGuard() { flag.store(false, std::memory_order_release); }
     } guard(m_isAutosaving);
 
+    if (!m_config.serializer) {
+        notifyError("Autosave failed: no serializer callback");
+        return false;
+    }
+
+    std::string data;
+    if (!m_config.serializer(data)) {
+        notifyError("Autosave failed: serialization error");
+        return false;
+    }
+
+    const uint64_t generation = m_nextSnapshotGeneration.fetch_add(1, std::memory_order_acq_rel);
+    return writeAutosaveData(data, generation);
+}
+
+bool AutosaveManager::performAutosaveWithData(std::string data, uint64_t generation) {
+    std::lock_guard<std::mutex> commitLock(m_commitMutex);
+    m_isAutosaving.store(true, std::memory_order_release);
+
+    struct AutosavingGuard {
+        std::atomic<bool>& flag;
+        explicit AutosavingGuard(std::atomic<bool>& f) : flag(f) {}
+        ~AutosavingGuard() { flag.store(false, std::memory_order_release); }
+    } guard(m_isAutosaving);
+
+    return writeAutosaveData(data, generation);
+}
+
+bool AutosaveManager::writeAutosaveData(const std::string& data, uint64_t generation) {
+    if (generation <= m_lastCommittedGeneration) {
+        return true;
+    }
+
     std::string autosavePath = getAutosavePath();
     if (autosavePath.empty()) {
         notifyError("Autosave failed: no autosave path");
         return false;
     }
 
-    if (!m_config.serializer) {
-        notifyError("Autosave failed: no serializer callback");
-        return false;
-    }
-
     notifyStatus("Autosaving...");
-
     rotateBackups();
-    
-    // Call the serializer callback to get project data
-    std::string data;
-    if (!m_config.serializer(data)) {
-        notifyError("Autosave failed: serialization error");
-        return false;
-    }
-    
+
     // Write atomically
     fs::path target(autosavePath);
     fs::path tmp = target;
@@ -490,6 +598,8 @@ bool AutosaveManager::performAutosave() {
     if (m_config.onAutosaveCommitted) {
         m_config.onAutosaveCommitted(autosavePath);
     }
+
+    m_lastCommittedGeneration = generation;
     
     return true;
 }
