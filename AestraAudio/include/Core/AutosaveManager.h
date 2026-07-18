@@ -179,6 +179,7 @@ public:
     
     static RecoveryInfo checkForRecovery(const std::string& projectPath);
     static std::vector<std::string> listBackups(const std::string& projectPath);
+    static std::vector<std::string> listBackupsForAutosavePath(const std::string& autosavePath);
     static void cleanupAutosaves(const std::string& projectPath);
     static bool recoverTo(const RecoveryInfo& recoveryInfo, const std::string& targetPath);
     

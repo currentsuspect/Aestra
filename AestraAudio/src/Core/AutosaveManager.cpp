@@ -262,6 +262,46 @@ std::string AutosaveManager::getBackupDirectory() const {
     return getBackupDirForProject(m_projectPath);
 }
 
+std::vector<std::string> AutosaveManager::listBackupsForAutosavePath(const std::string& autosavePath) {
+    if (autosavePath.empty()) {
+        return {};
+    }
+
+    const fs::path autosave(autosavePath);
+    const fs::path backupDir = autosave.has_parent_path()
+                                   ? autosave.parent_path() / (autosave.stem().string() + ".autosave")
+                                   : fs::path{};
+    if (backupDir.empty()) {
+        return {};
+    }
+
+    std::error_code ec;
+    if (!fs::is_directory(backupDir, ec) || ec) {
+        return {};
+    }
+
+    std::vector<std::string> backups;
+    for (const auto& entry : fs::directory_iterator(backupDir, ec)) {
+        if (ec) {
+            break;
+        }
+        if (entry.is_regular_file(ec) && !ec && entry.path().extension() == ".aes") {
+            backups.push_back(entry.path().string());
+        }
+    }
+    std::sort(backups.begin(), backups.end(), [](const std::string& a, const std::string& b) {
+        std::error_code aEc;
+        std::error_code bEc;
+        const auto aTime = fs::last_write_time(a, aEc);
+        const auto bTime = fs::last_write_time(b, bEc);
+        if (aEc || bEc || aTime == bTime) {
+            return a > b;
+        }
+        return aTime > bTime;
+    });
+    return backups;
+}
+
 //==============================================================================
 // Recovery (Static)
 //==============================================================================

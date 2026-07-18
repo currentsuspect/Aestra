@@ -981,6 +981,23 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     return load(path, trackManager, path);
 }
 
+ProjectSerializer::CandidateLoadResult
+ProjectSerializer::loadFirstValid(const std::vector<std::string>& candidatePaths,
+                                  const std::shared_ptr<TrackManager>& trackManager,
+                                  const std::string& assetBasePath) {
+    CandidateLoadResult selected;
+    for (const auto& candidate : candidatePaths) {
+        selected.result = load(candidate, trackManager, assetBasePath.empty() ? candidate : assetBasePath);
+        if (selected.result.ok) {
+            selected.loadedPath = candidate;
+            return selected;
+        }
+        Log::warning("[ProjectLoad] Recovery candidate rejected: " + candidate + " (" +
+                     selected.result.errorMessage + ")");
+    }
+    return selected;
+}
+
 ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                                       const std::shared_ptr<TrackManager>& trackManager,
                                                       const std::string& assetBasePath) {
