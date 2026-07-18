@@ -204,6 +204,35 @@ public:
     /** @brief Resolve resize cursor style for floating panel edges at a mouse position. */
     AestraUI::NUICursorStyle getPanelResizeCursorStyle(const AestraUI::NUIPoint& mouseScreen) const;
 
+    // Constructor decomposition — each sets up one workspace region, called
+    // once in sequence from the constructor (order matters: later sections
+    // reference members created by earlier ones).
+    /** @brief Create TrackManagerUI and wire its toggles, loop and audition callbacks. */
+    void setupTrackManagerUI();
+    /** @brief Create the transport bar and wire it to the audio engine. */
+    void setupTransportBar();
+    /** @brief Create the file/plugin/preview/pattern browser panels. */
+    void setupBrowserPanels();
+    /** @brief Create the mixer overlay and the routing-map full panel. */
+    void setupMixerPanels();
+    /** @brief Create the piano-roll overlay and musical-typing wiring. */
+    void setupPianoRollPanel();
+    /** @brief Create the Arsenal and sample-editor overlays. */
+    void setupArsenalPanels();
+    /** @brief Create the History and Takes overlays. */
+    void setupHistoryAndTakesPanels();
+
+    /**
+     * @brief Wire the floating-panel behaviors shared by every overlay panel.
+     *
+     * Covers maximize-refresh, the drag trio (begin/update/end), the clamped
+     * resize that persists into @p stateRect, and an optional minimum size.
+     * Panel-specific wiring (close action, visibility, z-order addChild)
+     * stays at the call site.
+     */
+    void wireFloatingPanel(const std::shared_ptr<Aestra::Audio::WindowPanel>& panel, Aestra::Audio::ViewType view,
+                           AestraUI::NUIRect ViewState::* stateRect, float minWidth = 0.0f, float minHeight = 0.0f);
+
     /** @brief Begin dragging an overlay panel. */
     void beginPanelDrag(Aestra::Audio::ViewType view, const AestraUI::NUIPoint& mouseScreen);
     /** @brief Update the active overlay-panel drag. */
