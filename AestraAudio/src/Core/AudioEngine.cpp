@@ -947,82 +947,9 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         processArsenalUnits(numFrames, 0, currentGlobalPos);
     }
 
-    // === Test Tone Injection ===
-    if (m_testToneEnabled.load(std::memory_order_relaxed)) {
-        const double sampleRate = static_cast<double>(currentSampleRate);
-        if (sampleRate > 0.0) {
-            const double frequency = 440.0;
-            const double amplitude = 0.05; // -26dB
-            const double twoPi = 2.0 * PI_D;
-            const double phaseIncrement = twoPi * frequency / sampleRate;
+    mixTestTone(numFrames, currentSampleRate);
 
-            double phase = m_testTonePhase;
-            // Loop unrolling for stereo
-            for (uint32_t i = 0; i < numFrames; ++i) {
-                // Determine source index (might be different if we split-looped above, but test tone is global/overlay)
-                // Actually, since we write to m_masterBufferD, we just mix it in.
-                // Simple sin approximation or std::sin is fine for test tone.
-                double sample = amplitude * std::sin(phase);
-
-                // Mix into master buffer (Post-Graph, Pre-Master Fader)
-                m_masterBufferD[i * 2] += sample;     // L
-                m_masterBufferD[i * 2 + 1] += sample; // R
-
-                phase += phaseIncrement;
-                if (phase >= twoPi)
-                    phase -= twoPi;
-            }
-            m_testTonePhase = phase;
-        }
-    }
-
-    // === Preview Ducking Gain Calculation ===
-    // Duck transport only while preview has produced audible output. PreviewEngine
-    // may exist, decode, or be selected without being audible.
-    bool previewIsAudible = false;
-    auto* preview = m_previewEngine.load(std::memory_order_relaxed);
-    if (preview) {
-        previewIsAudible = preview->isAudiblyPlaying();
-    }
-
-    constexpr double duckAttackSeconds = 0.05; // 50ms linear attack
-    constexpr double duckReleaseSeconds = 0.12;
-    constexpr float duckHoldSeconds = 0.10f;
-    const float blockSeconds = static_cast<float>(numFrames) / static_cast<float>(std::max(currentSampleRate, 1u));
-    if (previewIsAudible && isPlaying) {
-        m_previewDuckHoldSecondsRemaining = duckHoldSeconds;
-    } else {
-        m_previewDuckHoldSecondsRemaining = std::max(0.0f, m_previewDuckHoldSecondsRemaining - blockSeconds);
-    }
-
-    const bool duckingEnabled = isPreviewDuckingEnabled();
-    const bool shouldDuckForPreview = duckingEnabled && isPlaying && m_previewDuckHoldSecondsRemaining > 0.0f;
-    const double targetDuckGain =
-        shouldDuckForPreview ? static_cast<double>(m_previewDuckTargetGain.load(std::memory_order_relaxed)) : 1.0;
-    const double fadeSeconds = targetDuckGain < static_cast<double>(m_smoothedPreviewDuckGain) ? duckAttackSeconds
-                                                                                               : duckReleaseSeconds;
-    const double duckFadeSamples = static_cast<double>(currentSampleRate) * fadeSeconds;
-    const double duckFadeDelta = static_cast<double>(numFrames) / std::max(duckFadeSamples, 1.0);
-
-    // Smooth the duck gain transition
-    double duckGain = m_smoothedPreviewDuckGain;
-    if (duckGain < targetDuckGain) {
-        duckGain += duckFadeDelta;
-        if (duckGain > targetDuckGain)
-            duckGain = targetDuckGain;
-    } else if (duckGain > targetDuckGain) {
-        duckGain -= duckFadeDelta;
-        if (duckGain < targetDuckGain)
-            duckGain = targetDuckGain;
-    }
-    m_smoothedPreviewDuckGain = duckGain;
-
-    // Publish smoothed gain for external queries
-    m_previewDuckGain.store(static_cast<float>(duckGain), std::memory_order_relaxed);
-    m_previewDuckSource.store(static_cast<uint8_t>((shouldDuckForPreview || duckGain < 0.995)
-                                                       ? PreviewDuckSource::BrowserPreview
-                                                       : PreviewDuckSource::None),
-                              std::memory_order_relaxed);
+    const double duckGain = computePreviewDuckGain(numFrames, currentSampleRate, isPlaying);
 
     // === Final Output Stage (double -> float with processing) ===
     // Pre-compute master gain for this block (avoid per-sample target update)
@@ -1293,6 +1220,114 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         }
     }
 
+    mixMetronomeClicks(outputBuffer, numFrames);
+
+    // Advance position (Atomic update to pre-calculated next position)
+    if (m_transportPlaying.load(std::memory_order_relaxed) ||
+        m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
+        m_globalSamplePos.store(nextGlobalPos, std::memory_order_relaxed);
+
+        // Handle Loop Metronome Reset
+        if (loopSplitFrame < numFrames) {
+            m_metronomeEngine.reset(nextGlobalPos, static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)));
+        }
+    }
+
+    updateTruePeakMeters(outputBuffer, numFrames, numOutputChannels);
+
+    // Telemetry (lightweight counter only on RT thread)
+    m_telemetry.incrementBlocksProcessed();
+
+    // B-009: Record stable block for underrun recovery tracking
+    m_telemetry.recordStableBlock();
+
+    RESTORE_DENORMALS
+    return 0;
+}
+
+void AudioEngine::mixTestTone(uint32_t numFrames, uint32_t currentSampleRate) {
+    // === Test Tone Injection ===
+    if (m_testToneEnabled.load(std::memory_order_relaxed)) {
+        const double sampleRate = static_cast<double>(currentSampleRate);
+        if (sampleRate > 0.0) {
+            const double frequency = 440.0;
+            const double amplitude = 0.05; // -26dB
+            const double twoPi = 2.0 * PI_D;
+            const double phaseIncrement = twoPi * frequency / sampleRate;
+
+            double phase = m_testTonePhase;
+            // Loop unrolling for stereo
+            for (uint32_t i = 0; i < numFrames; ++i) {
+                // Determine source index (might be different if we split-looped above, but test tone is global/overlay)
+                // Actually, since we write to m_masterBufferD, we just mix it in.
+                // Simple sin approximation or std::sin is fine for test tone.
+                double sample = amplitude * std::sin(phase);
+
+                // Mix into master buffer (Post-Graph, Pre-Master Fader)
+                m_masterBufferD[i * 2] += sample;     // L
+                m_masterBufferD[i * 2 + 1] += sample; // R
+
+                phase += phaseIncrement;
+                if (phase >= twoPi)
+                    phase -= twoPi;
+            }
+            m_testTonePhase = phase;
+        }
+    }
+}
+
+double AudioEngine::computePreviewDuckGain(uint32_t numFrames, uint32_t currentSampleRate, bool isPlaying) {
+    // === Preview Ducking Gain Calculation ===
+    // Duck transport only while preview has produced audible output. PreviewEngine
+    // may exist, decode, or be selected without being audible.
+    bool previewIsAudible = false;
+    auto* preview = m_previewEngine.load(std::memory_order_relaxed);
+    if (preview) {
+        previewIsAudible = preview->isAudiblyPlaying();
+    }
+
+    constexpr double duckAttackSeconds = 0.05; // 50ms linear attack
+    constexpr double duckReleaseSeconds = 0.12;
+    constexpr float duckHoldSeconds = 0.10f;
+    const float blockSeconds = static_cast<float>(numFrames) / static_cast<float>(std::max(currentSampleRate, 1u));
+    if (previewIsAudible && isPlaying) {
+        m_previewDuckHoldSecondsRemaining = duckHoldSeconds;
+    } else {
+        m_previewDuckHoldSecondsRemaining = std::max(0.0f, m_previewDuckHoldSecondsRemaining - blockSeconds);
+    }
+
+    const bool duckingEnabled = isPreviewDuckingEnabled();
+    const bool shouldDuckForPreview = duckingEnabled && isPlaying && m_previewDuckHoldSecondsRemaining > 0.0f;
+    const double targetDuckGain =
+        shouldDuckForPreview ? static_cast<double>(m_previewDuckTargetGain.load(std::memory_order_relaxed)) : 1.0;
+    const double fadeSeconds = targetDuckGain < static_cast<double>(m_smoothedPreviewDuckGain) ? duckAttackSeconds
+                                                                                               : duckReleaseSeconds;
+    const double duckFadeSamples = static_cast<double>(currentSampleRate) * fadeSeconds;
+    const double duckFadeDelta = static_cast<double>(numFrames) / std::max(duckFadeSamples, 1.0);
+
+    // Smooth the duck gain transition
+    double duckGain = m_smoothedPreviewDuckGain;
+    if (duckGain < targetDuckGain) {
+        duckGain += duckFadeDelta;
+        if (duckGain > targetDuckGain)
+            duckGain = targetDuckGain;
+    } else if (duckGain > targetDuckGain) {
+        duckGain -= duckFadeDelta;
+        if (duckGain < targetDuckGain)
+            duckGain = targetDuckGain;
+    }
+    m_smoothedPreviewDuckGain = duckGain;
+
+    // Publish smoothed gain for external queries
+    m_previewDuckGain.store(static_cast<float>(duckGain), std::memory_order_relaxed);
+    m_previewDuckSource.store(static_cast<uint8_t>((shouldDuckForPreview || duckGain < 0.995)
+                                                       ? PreviewDuckSource::BrowserPreview
+                                                       : PreviewDuckSource::None),
+                              std::memory_order_relaxed);
+    return duckGain;
+}
+
+void AudioEngine::mixMetronomeClicks(float* outputBuffer, uint32_t numFrames) {
     // === Metronome Click Mixing ===
     if (m_metronomeCountInActive.load(std::memory_order_relaxed) &&
         !m_transportPlaying.load(std::memory_order_relaxed)) {
@@ -1317,18 +1352,9 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
                               m_globalSamplePos.load(std::memory_order_relaxed),
                               static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)),
                               m_transportPlaying.load(std::memory_order_relaxed));
+}
 
-    // Advance position (Atomic update to pre-calculated next position)
-    if (m_transportPlaying.load(std::memory_order_relaxed) ||
-        m_fadeState.load(std::memory_order_relaxed) == FadeState::FadingOut) {
-        m_globalSamplePos.store(nextGlobalPos, std::memory_order_relaxed);
-
-        // Handle Loop Metronome Reset
-        if (loopSplitFrame < numFrames) {
-            m_metronomeEngine.reset(nextGlobalPos, static_cast<uint32_t>(m_sampleRate.load(std::memory_order_relaxed)));
-        }
-    }
-
+void AudioEngine::updateTruePeakMeters(const float* outputBuffer, uint32_t numFrames, uint32_t numOutputChannels) {
     // === True Peak Metering (Phase 2) ===
     // Run on the FINAL master output buffer, after fades + metronome + all
     // processing. The meter is single-writer (audio thread only); UI reads
@@ -1342,15 +1368,6 @@ int AudioEngine::processBlock(float* outputBuffer, const float* inputBuffer, uin
         m_truePeakLAtomic.store(0.0f, std::memory_order_relaxed);
         m_truePeakRAtomic.store(0.0f, std::memory_order_relaxed);
     }
-
-    // Telemetry (lightweight counter only on RT thread)
-    m_telemetry.incrementBlocksProcessed();
-
-    // B-009: Record stable block for underrun recovery tracking
-    m_telemetry.recordStableBlock();
-
-    RESTORE_DENORMALS
-    return 0;
 }
 
 void AudioEngine::setBufferConfig(uint32_t maxFrames, uint32_t numChannels) {
