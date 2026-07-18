@@ -677,12 +677,13 @@ bool testLoginFlowFull() {
     return ok;
 }
 
-bool testAccountApiRequiresExplicitBaseUrl() {
+bool testAccountApiUsesCanonicalDefaultBaseUrl() {
     ScopedEnvironmentVariable baseUrl("AESTRA_ACCOUNT_API_BASE_URL");
     baseUrl.unset();
     const AccountApiConfig config = accountApiConfigFromEnvironment();
     bool ok = true;
-    ok &= expect(config.baseUrl.empty(), "accountApiConfigFromEnvironment requires explicit base URL");
+    ok &= expect(config.baseUrl == "https://www.aestra.studio",
+                 "accountApiConfigFromEnvironment uses the canonical production URL by default");
     return ok;
 }
 
@@ -691,11 +692,12 @@ bool testRealWorkerLoginStartSendsMail() {
         std::cout << "libcurl transport unavailable; skipping real Worker login test.\n";
         return true;
     }
-    const AccountApiConfig config = accountApiConfigFromEnvironment();
-    if (config.baseUrl.empty()) {
-        std::cout << "no Worker URL; skipping real Worker login test.\n";
+    const char* explicitBaseUrl = std::getenv("AESTRA_ACCOUNT_API_BASE_URL");
+    if (!explicitBaseUrl || !*explicitBaseUrl) {
+        std::cout << "no explicit Worker URL; skipping real Worker login test.\n";
         return true;
     }
+    const AccountApiConfig config = accountApiConfigFromEnvironment();
 
     std::unique_ptr<IHttpTransport> curlTransport = createDefaultHttpTransport();
     AccountApiClient client(config, *curlTransport);
@@ -719,7 +721,7 @@ int main() {
     ok &= testServiceFailureBoundaries();
 #ifndef _WIN32
     ok &= testLoginFlowFull();
-    ok &= testAccountApiRequiresExplicitBaseUrl();
+    ok &= testAccountApiUsesCanonicalDefaultBaseUrl();
     ok &= testRealWorkerLoginStartSendsMail();
 #endif
     fs::remove_all(fs::temp_directory_path() / "aestra_account_api_client_tests");
