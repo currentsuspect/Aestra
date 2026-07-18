@@ -1318,6 +1318,10 @@ ProjectSerializer::LoadResult AestraApp::applyLoadedProject(const std::string& p
         m_documentState.restoreSnapshot(path, resolvedCanonicalPath);
         break;
     }
+    if (result.integrity == ProjectSerializer::LoadIntegrity::Mismatch) {
+        m_documentState.protectCanonicalFromOverwrite();
+    }
+
     if (m_audioController && m_audioController->getEngine()) {
         auto* engine = m_audioController->getEngine();
         engine->setTransportPlaying(false);
