@@ -106,6 +106,37 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
 endif()
 
 # Session Recovery Test (autosave + crash flag + recovery flow)
+add_executable(ProjectDocumentStateTest Integration/ProjectDocumentStateTest.cpp)
+target_include_directories(ProjectDocumentStateTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Core
+)
+add_test(NAME ProjectDocumentStateTest COMMAND ProjectDocumentStateTest)
+set_tests_properties(ProjectDocumentStateTest PROPERTIES LABELS "unit;project;identity;recovery")
+
+add_executable(ProjectLifecycleInteractionTest
+    Integration/ProjectLifecycleInteractionTest.cpp
+    ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+)
+target_link_libraries(ProjectLifecycleInteractionTest PRIVATE AestraAudio)
+target_include_directories(ProjectLifecycleInteractionTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+    ${CMAKE_SOURCE_DIR}/Source/Core
+    ${CMAKE_SOURCE_DIR}/Tests
+)
+add_test(NAME ProjectLifecycleInteractionTest COMMAND ProjectLifecycleInteractionTest)
+set_tests_properties(ProjectLifecycleInteractionTest PROPERTIES LABELS "integration;project;recovery;integrity")
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/SessionRecoveryTest.cpp")
     add_executable(SessionRecoveryTest
         Integration/SessionRecoveryTest.cpp
@@ -559,6 +590,15 @@ if(AESTRA_ENABLE_RUNTIME_TESTS)
 else()
     message(STATUS "AestraRealtimePathStressTest built but not registered (set AESTRA_ENABLE_RUNTIME_TESTS=ON to enable)")
 endif()
+
+add_executable(RealtimeObjectPublisherTest AestraAudio/RealtimeObjectPublisherTest.cpp)
+target_link_libraries(RealtimeObjectPublisherTest PRIVATE Threads::Threads)
+target_include_directories(RealtimeObjectPublisherTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME RealtimeObjectPublisherTest COMMAND RealtimeObjectPublisherTest)
+set_tests_properties(RealtimeObjectPublisherTest PROPERTIES LABELS "audio;rt-safety;reclamation;regression")
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/AestraAudio/SamplerStereoParityTest.cpp")
     add_executable(SamplerStereoParityTest AestraAudio/SamplerStereoParityTest.cpp)

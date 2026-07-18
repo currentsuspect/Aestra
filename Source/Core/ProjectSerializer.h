@@ -94,6 +94,11 @@ public:
         std::string contents;
     };
 
+    struct CandidateLoadResult {
+        LoadResult result;
+        std::string loadedPath;
+    };
+
     struct HistoryEntry {
         std::string path;
         std::string label;
@@ -126,6 +131,13 @@ public:
     static LoadResult load(const std::string& path,
                            const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager,
                            const std::string& assetBasePath);
+
+    // Recovery files are ordered newest-first. Try them without requiring the
+    // application layer to replicate serializer failure handling.
+    static CandidateLoadResult
+    loadFirstValid(const std::vector<std::string>& candidatePaths,
+                   const std::shared_ptr<Aestra::Audio::TrackManager>& trackManager,
+                   const std::string& assetBasePath);
 
     static std::string getHistoryDirectory(const std::string& projectPath);
     static std::vector<HistoryEntry> listHistory(const std::string& projectPath);

@@ -981,6 +981,23 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
     return load(path, trackManager, path);
 }
 
+ProjectSerializer::CandidateLoadResult
+ProjectSerializer::loadFirstValid(const std::vector<std::string>& candidatePaths,
+                                  const std::shared_ptr<TrackManager>& trackManager,
+                                  const std::string& assetBasePath) {
+    CandidateLoadResult selected;
+    for (const auto& candidate : candidatePaths) {
+        selected.result = load(candidate, trackManager, assetBasePath.empty() ? candidate : assetBasePath);
+        if (selected.result.ok) {
+            selected.loadedPath = candidate;
+            return selected;
+        }
+        Log::warning("[ProjectLoad] Recovery candidate rejected: " + candidate + " (" +
+                     selected.result.errorMessage + ")");
+    }
+    return selected;
+}
+
 ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
                                                       const std::shared_ptr<TrackManager>& trackManager,
                                                       const std::string& assetBasePath) {
@@ -1035,9 +1052,10 @@ ProjectSerializer::LoadResult ProjectSerializer::load(const std::string& path,
         return result;
     }
 
-    JSON root = JSON::parse(contents);
-    if (!root.isObject()) {
-        result.errorMessage = "Invalid project file: not a valid JSON object";
+    bool consumedAllInput = false;
+    JSON root = JSON::parseStrict(contents, consumedAllInput);
+    if (!root.isObject() || !consumedAllInput) {
+        result.errorMessage = "Invalid project file: not exactly one valid JSON object";
         Log::error("[ProjectLoad] " + result.errorMessage);
         return result;
     }

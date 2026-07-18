@@ -19,6 +19,7 @@
 #include "GoldenAudio/GoldenAudioHarness.h"
 
 #include "DSP/ContinuousParamBuffer.h"
+#include "IO/AudioExporter.h"
 #include "IO/MiniAudioDecoder.h"
 #include "Playback/PreviewEngine.h"
 
@@ -99,6 +100,17 @@ double rmsOf(const std::vector<float>& v) {
     double sumSq = 0.0;
     for (float s : v) sumSq += static_cast<double>(s) * static_cast<double>(s);
     return std::sqrt(sumSq / static_cast<double>(v.size()));
+}
+
+double rmsRange(const std::vector<float>& interleaved, size_t firstFrame, size_t endFrame, uint32_t channels) {
+    if (channels == 0 || firstFrame >= endFrame || endFrame * channels > interleaved.size()) return 0.0;
+    double sumSq = 0.0;
+    const size_t firstSample = firstFrame * channels;
+    const size_t endSample = endFrame * channels;
+    for (size_t i = firstSample; i < endSample; ++i) {
+        sumSq += static_cast<double>(interleaved[i]) * static_cast<double>(interleaved[i]);
+    }
+    return std::sqrt(sumSq / static_cast<double>(endSample - firstSample));
 }
 
 // Warm the engine's param/track state to steady state before the measured
@@ -243,6 +255,61 @@ bool runDuckContaminationCase(const std::shared_ptr<TrackManager>& tm, const Ses
     return pass;
 }
 
+// -----------------------------------------------------------------------------
+// Case 3: exporting above the live sample rate preserves the whole timeline
+// -----------------------------------------------------------------------------
+bool runCrossSampleRateCase(const SessionConfig& liveCfg, const fs::path& tempRoot) {
+    constexpr uint32_t exportRate = 96000;
+    const uint32_t sourceFrames = liveCfg.sampleRate * kSeconds;
+    auto tm = buildSession(liveCfg, sourceFrames);
+
+    AudioEngine engine;
+    prepareEngine(engine, tm, liveCfg);
+    applyParams(engine);
+    warmupEngine(engine, liveCfg);
+
+    AudioExporter exporter(engine, *tm);
+    AudioExporter::Config config;
+    config.outputPath = (tempRoot / "parity_48_to_96.wav").string();
+    config.scope = AudioExporter::RenderScope::FullSong;
+    config.startBeat = 0.0;
+    config.endBeat = kBeats;
+    config.sampleRate = exportRate;
+    config.bitDepth = AudioExporter::BitDepth::Float_32;
+    config.numChannels = liveCfg.channels;
+    config.tailSeconds = 0.0;
+
+    const auto result = exporter.render(config);
+    if (!result.success) {
+        std::cerr << "cross-sample-rate export failed: " << result.errorMessage << "\n";
+        return false;
+    }
+
+    std::vector<float> decoded;
+    uint32_t decodedRate = 0;
+    uint32_t decodedChannels = 0;
+    if (!decodeAudioFile(config.outputPath, decoded, decodedRate, decodedChannels)) {
+        std::cerr << "failed to decode cross-sample-rate export\n";
+        return false;
+    }
+
+    const size_t decodedFrames = decodedChannels > 0 ? decoded.size() / decodedChannels : 0;
+    const size_t expectedFrames = static_cast<size_t>(exportRate) * kSeconds;
+    const double firstHalfRms = rmsRange(decoded, exportRate / 4, exportRate, decodedChannels);
+    const double secondHalfRms = rmsRange(decoded, exportRate, exportRate * 7 / 4, decodedChannels);
+    const double halfDeltaDb =
+        20.0 * std::log10(std::max(secondHalfRms, 1e-15) / std::max(firstHalfRms, 1e-15));
+
+    const bool pass = decodedRate == exportRate && decodedChannels == liveCfg.channels &&
+                      decodedFrames == expectedFrames && secondHalfRms > 0.01 && std::abs(halfDeltaDb) < 1.0 &&
+                      engine.getSampleRate() == liveCfg.sampleRate &&
+                      tm->getPlaylistModel().getProjectSampleRate() == static_cast<double>(liveCfg.sampleRate);
+    std::cout << (pass ? "[PASS]" : "[FAIL]") << " Export_48k_To_96k_Full_Timeline"
+              << " frames=" << decodedFrames << "/" << expectedFrames << " firstHalfRms=" << firstHalfRms
+              << " secondHalfRms=" << secondHalfRms << " delta=" << halfDeltaDb << " dB\n";
+    return pass;
+}
+
 } // namespace
 
 int main() {
@@ -264,6 +331,7 @@ int main() {
     int failures = 0;
     if (!runParityCase(tm, cfg, cleanExport)) ++failures;
     if (!runDuckContaminationCase(tm, cfg, cleanExport, tempRoot)) ++failures;
+    if (!runCrossSampleRateCase(cfg, tempRoot)) ++failures;
 
     fs::remove_all(tempRoot, ec);
     std::cout << "\n" << (failures == 0 ? "ALL PASS" : "FAILURES: " + std::to_string(failures)) << "\n";
