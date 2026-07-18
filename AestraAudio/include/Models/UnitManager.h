@@ -115,6 +115,8 @@ struct UnitInfo {
     std::string name;
     /** @brief Accent color used by Arsenal and related UI. */
     uint32_t color{0x808080}; // Default grey
+    /** @brief Linear output gain applied at the unit's mix point (1 = unity). */
+    float gain{1.0f};
     /** @brief Whether the unit is muted. */
     bool isMuted{false};
     /** @brief Whether the unit is soloed. */
@@ -154,6 +156,8 @@ struct UnitState {
      * - >= 0 routes to Timeline track path
      */
     int routeId;
+    /** @brief Linear output gain applied at the unit's mix point. */
+    float gain{1.0f};
     /** @brief True when the unit is muted (audio thread visibility). */
     bool isMuted{false};
     /** @brief True when the unit is soloed (audio thread visibility). */
@@ -282,6 +286,8 @@ public:
     int getUnitTimelineLane(UnitID id) const;
     /** @brief Attach an audio clip path to a unit. */
     void setUnitAudioClip(UnitID id, const std::string& path);
+    /** @brief Set the unit's linear output gain (published to the audio snapshot). */
+    void setUnitGain(UnitID id, float gain);
     /** @brief Publish a pre-decoded audio clip to a unit without doing file I/O on the caller. */
     bool setUnitAudioClipFromDecoded(UnitID id, const std::string& path, std::vector<float> decodedData,
                                      uint32_t sampleRate, uint32_t numChannels, std::vector<float> previewWaveform,
