@@ -89,4 +89,37 @@ public:
      * @param takeId       ID of the take to activate.
      */
     static Result setActiveTake(const std::string& projectPath, const std::string& takeId);
+
+    /**
+     * @brief Renames an existing take. Snapshot contents are untouched.
+     * @param projectPath  Path to the project directory.
+     * @param takeId       ID of the take to rename.
+     * @param newName      New human-readable name (must be non-empty).
+     */
+    static Result renameTake(const std::string& projectPath, const std::string& takeId, const std::string& newName);
+
+    /**
+     * @brief Duplicates a take by copying its snapshot into a new take entry.
+     *
+     * The duplicate records the source take as its parent and does NOT become
+     * active — the caller's working state is never touched.
+     * @param projectPath  Path to the project directory.
+     * @param takeId       ID of the take to duplicate.
+     * @param newName      Name for the duplicate (empty derives "<source> Copy").
+     */
+    static Result duplicateTake(const std::string& projectPath, const std::string& takeId,
+                                const std::string& newName = "");
+
+    /**
+     * @brief Deletes a take from the manifest and removes its snapshot.
+     *
+     * The active take can never be deleted (switch away first), so the working
+     * state is always safe. Children of the deleted take are re-parented to
+     * its parent to keep lineage intact. Success means the manifest was
+     * updated; snapshot-file removal is best-effort and may leave an orphaned
+     * (harmless, unreferenced) file behind.
+     * @param projectPath  Path to the project directory.
+     * @param takeId       ID of the take to delete.
+     */
+    static Result deleteTake(const std::string& projectPath, const std::string& takeId);
 };

@@ -1,9 +1,191 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIThemeSystem.h"
+#include "NUITheme.h"
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace AestraUI {
+
+namespace {
+
+void applyJSONThemeOverrides(const NUITheme& source, NUIThemeProperties& target) {
+    const auto color = [&](const char* name, NUIColor& value) {
+        if (source.hasColorOverride(name))
+            value = source.getColor(name, value);
+    };
+
+    color("appBackground", target.backgroundPrimary);
+    color("workspaceBackground", target.backgroundPrimary);
+    color("backgroundPrimary", target.backgroundPrimary);
+    color("recessedPanel", target.backgroundSecondary);
+    color("backgroundSecondary", target.backgroundSecondary);
+    color("elevatedPanel", target.surfaceTertiary);
+    color("surfaceTertiary", target.surfaceTertiary);
+    color("surfaceRaised", target.surfaceRaised);
+    color("background", target.background);
+    color("surface", target.surface);
+    color("surfaceVariant", target.surfaceVariant);
+
+    color("primary", target.primary);
+    color("accent", target.primary);
+    color("primaryHover", target.primaryHover);
+    color("accentHover", target.primaryHover);
+    color("primaryPressed", target.primaryPressed);
+    color("accentPressed", target.primaryPressed);
+    color("secondary", target.secondary);
+    color("accentCyan", target.accentCyan);
+    color("accentMagenta", target.accentMagenta);
+    color("accentLime", target.accentLime);
+    color("accentPrimary", target.accentPrimary);
+    color("accentSecondary", target.accentSecondary);
+
+    color("success", target.success);
+    color("warning", target.warning);
+    color("error", target.error);
+    color("info", target.info);
+    color("text", target.textPrimary);
+    color("textPrimary", target.textPrimary);
+    color("textSecondary", target.textSecondary);
+    color("textMuted", target.textMuted);
+    color("textDisabled", target.textDisabled);
+    color("textLink", target.textLink);
+    color("textCritical", target.textCritical);
+    color("textOnPrimary", target.textOnPrimary);
+    color("textOnSecondary", target.textOnSecondary);
+
+    color("border", target.border);
+    color("borderSubtle", target.borderSubtle);
+    color("borderStrong", target.borderStrong);
+    color("borderActive", target.borderActive);
+    color("divider", target.divider);
+    color("selection", target.selected);
+    color("selected", target.selected);
+    color("hover", target.hover);
+    color("pressed", target.pressed);
+    color("focused", target.focused);
+    color("disabled", target.disabled);
+    color("focusRing", target.focusRing);
+    color("armed", target.armed);
+    color("muted", target.muted);
+    color("soloed", target.soloed);
+    color("bypassed", target.bypassed);
+    color("dragTarget", target.dragTarget);
+
+    color("controlBackground", target.buttonBgDefault);
+    color("buttonBgDefault", target.buttonBgDefault);
+    color("controlHover", target.buttonBgHover);
+    color("buttonBgHover", target.buttonBgHover);
+    color("controlPressed", target.buttonBgActive);
+    color("buttonBgActive", target.buttonBgActive);
+    color("buttonTextDefault", target.buttonTextDefault);
+    color("buttonTextActive", target.buttonTextActive);
+    color("toggleDefault", target.toggleDefault);
+    color("toggleHover", target.toggleHover);
+    color("toggleActive", target.toggleActive);
+    color("inputBackground", target.inputBgDefault);
+    color("inputBgDefault", target.inputBgDefault);
+    color("inputBgHover", target.inputBgHover);
+    color("inputBorderFocus", target.inputBorderFocus);
+    color("sliderTrack", target.sliderTrack);
+    color("sliderHandle", target.sliderHandle);
+    color("sliderHandleHover", target.sliderHandleHover);
+    color("sliderHandlePressed", target.sliderHandlePressed);
+
+    color("shadow", target.shadow);
+    color("overlay", target.overlay);
+    color("backdrop", target.backdrop);
+    color("meterSafe", target.meterSafe);
+    color("meterWarn", target.meterWarn);
+    color("meterCrit", target.meterCrit);
+    color("meterBackground", target.meterBackground);
+    color("meterActive", target.meterActive);
+    color("gridMajor", target.gridMajor);
+    color("gridMinor", target.gridMinor);
+    color("mixerStripBg", target.mixerStripBg);
+    color("mixerMasterBorder", target.mixerMasterBorder);
+
+    const auto hasColor = [&](const char* primaryName, const char* alias = nullptr) {
+        return source.hasColorOverride(primaryName) || (alias && source.hasColorOverride(alias));
+    };
+    if (hasColor("primary", "accent")) {
+        if (!hasColor("primaryHover", "accentHover"))
+            target.primaryHover = target.primary.lightened(0.10f);
+        if (!hasColor("primaryPressed", "accentPressed"))
+            target.primaryPressed = target.primary.darkened(0.10f);
+        if (!hasColor("accentPrimary")) target.accentPrimary = target.primary;
+        if (!hasColor("borderActive")) target.borderActive = target.primary;
+        if (!hasColor("focusRing")) target.focusRing = target.primary.withAlpha(0.86f);
+        if (!hasColor("selection", "selected")) target.selected = target.primary.withAlpha(0.18f);
+        if (!hasColor("dragTarget")) target.dragTarget = target.primary.withAlpha(0.28f);
+        if (!hasColor("textLink")) target.textLink = target.primary;
+        if (!hasColor("toggleActive")) target.toggleActive = target.primary.withAlpha(0.85f);
+        if (!hasColor("inputBorderFocus")) target.inputBorderFocus = target.focusRing;
+        if (!hasColor("sliderHandle")) target.sliderHandle = target.primary;
+        if (!hasColor("sliderHandleHover")) target.sliderHandleHover = target.primaryHover;
+        if (!hasColor("sliderHandlePressed")) target.sliderHandlePressed = target.primaryPressed;
+    }
+    if (hasColor("warning")) {
+        if (!hasColor("muted")) target.muted = target.warning;
+        if (!hasColor("meterWarn")) target.meterWarn = target.warning;
+    }
+    if (hasColor("error")) {
+        if (!hasColor("armed")) target.armed = target.error;
+        if (!hasColor("meterCrit")) target.meterCrit = target.error;
+        if (!hasColor("textCritical")) target.textCritical = target.error;
+    }
+    if (hasColor("info") && !hasColor("soloed"))
+        target.soloed = target.info;
+
+    const auto dimension = [&](const char* name, float& value) {
+        if (source.hasDimensionOverride(name))
+            value = source.getDimension(name, value);
+    };
+    dimension("spacingXS", target.spacingXS);
+    dimension("spacingS", target.spacingS);
+    dimension("spacingM", target.spacingM);
+    dimension("spacingL", target.spacingL);
+    dimension("spacingXL", target.spacingXL);
+    dimension("spacingXXL", target.spacingXXL);
+    dimension("borderRadiusSmall", target.radiusS);
+    dimension("borderRadius", target.radiusM);
+    dimension("borderRadiusLarge", target.radiusL);
+    dimension("compactControlHeight", target.layout.compactControlHeight);
+    dimension("standardControlHeight", target.layout.standardControlHeight);
+    dimension("dialogActionHeight", target.layout.dialogActionHeight);
+    dimension("standardRowHeight", target.layout.standardRowHeight);
+    dimension("compactMenuRowHeight", target.layout.compactMenuRowHeight);
+    dimension("standardMenuRowHeight", target.layout.standardMenuRowHeight);
+    dimension("panelHeaderHeight", target.layout.panelHeaderHeight);
+    dimension("sectionHeaderHeight", target.layout.sectionHeaderHeight);
+    dimension("standardIconSize", target.layout.standardIconSize);
+    dimension("minimumHitArea", target.layout.minimumHitArea);
+    dimension("dividerWidth", target.layout.dividerWidth);
+    dimension("panelPadding", target.layout.panelPadding);
+    dimension("dialogPadding", target.layout.dialogPadding);
+    dimension("fileBrowserWidth", target.layout.fileBrowserWidth);
+    dimension("trackControlsWidth", target.layout.trackControlsWidth);
+    dimension("trackHeight", target.layout.trackHeight);
+    dimension("transportBarHeight", target.layout.transportBarHeight);
+
+    const auto fontSize = [&](const char* name, float& value) {
+        if (source.hasFontSizeOverride(name))
+            value = source.getFontSize(name, value);
+    };
+    fontSize("micro", target.fontSizeMicro);
+    fontSize("xs", target.fontSizeXS);
+    fontSize("small", target.fontSizeS);
+    fontSize("s", target.fontSizeS);
+    fontSize("normal", target.fontSizeM);
+    fontSize("m", target.fontSizeM);
+    fontSize("large", target.fontSizeL);
+    fontSize("l", target.fontSizeL);
+    fontSize("xl", target.fontSizeXL);
+    fontSize("display-s", target.fontSizeDisplayS);
+    fontSize("display-l", target.fontSizeDisplayL);
+}
+
+} // namespace
 
 NUIResolvedControlColors resolveControlColors(const NUIThemeProperties& theme,
                                               const NUIControlVisualState& state) {
@@ -81,15 +263,39 @@ void NUIThemeManager::setThemeVariant(NUIThemeVariant variant) {
 
 void NUIThemeManager::setCustomTheme(const std::string& name, const NUIThemeProperties& properties) {
     themes_[name] = properties;
+    if (activeTheme_ == name)
+        notifyThemeChanged();
 }
 
-void NUIThemeManager::setActiveTheme(const std::string& name) {
-    if (themes_.find(name) != themes_.end()) {
-        activeTheme_ = name;
-        if (onThemeChanged_) {
-            onThemeChanged_(getCurrentTheme());
-        }
-    }
+bool NUIThemeManager::loadThemeFromFile(const std::string& name, const std::string& filepath,
+                                        const std::string& baseTheme) {
+    const auto base = themes_.find(baseTheme);
+    if (name.empty() || base == themes_.end())
+        return false;
+
+    auto loaded = NUITheme::loadFromFile(filepath);
+    if (!loaded || !loaded->loadedSuccessfully())
+        return false;
+
+    NUIThemeProperties properties = base->second;
+    applyJSONThemeOverrides(*loaded, properties);
+    setCustomTheme(name, properties);
+    return true;
+}
+
+bool NUIThemeManager::setActiveTheme(const std::string& name) {
+    if (!hasTheme(name))
+        return false;
+    if (activeTheme_ == name)
+        return true;
+
+    activeTheme_ = name;
+    notifyThemeChanged();
+    return true;
+}
+
+bool NUIThemeManager::hasTheme(const std::string& name) const {
+    return themes_.find(name) != themes_.end();
 }
 
 const NUIThemeProperties& NUIThemeManager::getCurrentTheme() const {
@@ -105,46 +311,11 @@ NUIThemeProperties& NUIThemeManager::getCurrentThemeMutable() {
 }
 
 void NUIThemeManager::switchTheme(const std::string& name, float durationMs) {
-    if (themes_.find(name) == themes_.end()) return;
-    
-    if (durationMs <= 0.0f) {
-        setActiveTheme(name);
-        return;
-    }
-    
-    isTransitioning_ = true;
-    transitionFromTheme_ = getCurrentTheme();
-    transitionToTheme_ = themes_[name];
-    
-    themeTransitionAnimation_ = std::make_shared<NUIAnimation>();
-    themeTransitionAnimation_->setDuration(durationMs);
-    themeTransitionAnimation_->setEasing(NUIEasingType::EaseOutCubic);
-    themeTransitionAnimation_->setStartValue(0.0f);
-    themeTransitionAnimation_->setEndValue(1.0f);
-    
-    themeTransitionAnimation_->setOnUpdate([this](float progress) {
-        // Interpolate between themes
-        NUIThemeProperties currentTheme;
-        currentTheme.background = NUIColor::lerpHSL(transitionFromTheme_.background, transitionToTheme_.background, progress);
-        currentTheme.surface = NUIColor::lerpHSL(transitionFromTheme_.surface, transitionToTheme_.surface, progress);
-        currentTheme.primary = NUIColor::lerpHSL(transitionFromTheme_.primary, transitionToTheme_.primary, progress);
-        // ... interpolate other properties as needed
-        
-        if (onThemeChanged_) {
-            onThemeChanged_(currentTheme);
-        }
-    });
-    
-    themeTransitionAnimation_->setOnComplete([this]() {
-        isTransitioning_ = false;
-        // Note: activeTheme_ should be set before calling switchTheme
-        if (onThemeChanged_) {
-            onThemeChanged_(getCurrentTheme());
-        }
-    });
-    
-    themeTransitionAnimation_->start();
-    NUIAnimationManager::getInstance().addAnimation(themeTransitionAnimation_);
+    (void)durationMs;
+    // A partial interpolated theme is visually and semantically unsafe. Theme
+    // activation stays atomic until every semantic property has a defined
+    // transition rule.
+    setActiveTheme(name);
 }
 
 void NUIThemeManager::switchThemeVariant(NUIThemeVariant variant, float durationMs) {
@@ -167,6 +338,37 @@ void NUIThemeManager::switchThemeVariant(NUIThemeVariant variant, float duration
 
 void NUIThemeManager::setOnThemeChanged(std::function<void(const NUIThemeProperties&)> callback) {
     onThemeChanged_ = callback;
+}
+
+NUIThemeManager::ThemeSubscriptionId NUIThemeManager::subscribeToThemeChanges(
+    std::function<void(const NUIThemeProperties&)> callback) {
+    if (!callback)
+        return 0;
+    const ThemeSubscriptionId id = nextSubscriptionId_++;
+    themeSubscribers_.emplace(id, std::move(callback));
+    return id;
+}
+
+void NUIThemeManager::unsubscribeFromThemeChanges(ThemeSubscriptionId subscriptionId) {
+    if (subscriptionId != 0)
+        themeSubscribers_.erase(subscriptionId);
+}
+
+void NUIThemeManager::notifyThemeChanged() {
+    const auto& theme = getCurrentTheme();
+    if (onThemeChanged_)
+        onThemeChanged_(theme);
+
+    // Listeners may unsubscribe while handling a change. Copying callbacks is
+    // bounded, user-driven UI work and keeps notification lifetime-safe.
+    std::vector<std::function<void(const NUIThemeProperties&)>> callbacks;
+    callbacks.reserve(themeSubscribers_.size());
+    for (const auto& [id, callback] : themeSubscribers_) {
+        (void)id;
+        callbacks.push_back(callback);
+    }
+    for (const auto& callback : callbacks)
+        callback(theme);
 }
 
 NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
@@ -310,6 +512,41 @@ NUIColor NUIThemeManager::getColor(const std::string& colorName) const {
     if (colorName == "mixerMasterBorder") return theme.mixerMasterBorder;
     
     // === Arsenal / Step Sequencer Tokens ===
+    // Timeline work bed + track chrome: derived per theme polarity. Dark
+    // themes keep the owner-directed pure-black grid and near-black chrome;
+    // light themes get a recessed light bed and clean white chrome instead.
+    if (colorName == "timelineBed" || colorName == "trackChrome") {
+        const float bgLuma = 0.2126f * theme.backgroundPrimary.r +
+                             0.7152f * theme.backgroundPrimary.g +
+                             0.0722f * theme.backgroundPrimary.b;
+        const bool darkTheme = bgLuma < 0.5f;
+        if (colorName == "timelineBed") {
+            return darkTheme ? NUIColor::black()
+                             : NUIColor(0.936f, 0.938f, 0.942f, 1.0f);
+        }
+        return darkTheme ? NUIColor(0.038f, 0.039f, 0.045f, 1.0f)
+                         : theme.backgroundSecondary;
+    }
+    // Plugin-editor internals share one polarity-aware language: cards,
+    // display wells, and control fills that are near-black on dark themes
+    // and clean light surfaces on light ones. Identity accents stay per-editor.
+    if (colorName == "editorCard" || colorName == "editorWell" || colorName == "editorControl") {
+        const float bgLuma = 0.2126f * theme.backgroundPrimary.r +
+                             0.7152f * theme.backgroundPrimary.g +
+                             0.0722f * theme.backgroundPrimary.b;
+        const bool darkTheme = bgLuma < 0.5f;
+        if (colorName == "editorCard") {
+            return darkTheme ? NUIColor(0.084f, 0.084f, 0.084f, 0.95f)
+                             : NUIColor(0.962f, 0.963f, 0.968f, 0.97f);
+        }
+        if (colorName == "editorWell") {
+            return darkTheme ? NUIColor(0.010f, 0.010f, 0.014f, 0.98f)
+                             : NUIColor(0.915f, 0.918f, 0.925f, 0.98f);
+        }
+        return darkTheme ? NUIColor(0.068f, 0.068f, 0.068f, 0.90f)
+                         : NUIColor(0.935f, 0.937f, 0.943f, 0.92f);
+    }
+
     // Step Grid Colors
     if (colorName == "stepActive") return theme.primary;                              // Active step (on)
     if (colorName == "stepInactive") return theme.surfaceRaised;                      // Inactive step (off)
@@ -536,16 +773,25 @@ void NUIThemeManager::updateSystemTheme() {
 }
 
 // NUIThemedComponent Implementation
+NUIThemedComponent::~NUIThemedComponent() {
+    unregisterFromThemeUpdates();
+}
+
 void NUIThemedComponent::registerForThemeUpdates() {
     if (!isThemeRegistered_) {
-        // TODO: Register with theme manager
+        themeSubscriptionId_ = NUIThemeManager::getInstance().subscribeToThemeChanges(
+            [this](const NUIThemeProperties& theme) {
+                applyTheme(theme);
+                onThemeChanged(theme);
+            });
         isThemeRegistered_ = true;
     }
 }
 
 void NUIThemedComponent::unregisterFromThemeUpdates() {
     if (isThemeRegistered_) {
-        // TODO: Unregister from theme manager
+        NUIThemeManager::getInstance().unsubscribeFromThemeChanges(themeSubscriptionId_);
+        themeSubscriptionId_ = 0;
         isThemeRegistered_ = false;
     }
 }
@@ -722,7 +968,7 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     theme.backgroundPrimary = theme.background;
     theme.backgroundSecondary = theme.surface;
     theme.surfaceTertiary = theme.surfaceVariant;
-    theme.surfaceRaised = NUIColor(0.92f, 0.92f, 0.93f, 1.0f);
+    theme.surfaceRaised = NUIColor(0.955f, 0.957f, 0.962f, 1.0f);
     theme.primary = NUIColor(0.2f, 0.4f, 0.8f, 1.0f);
     theme.primaryVariant = NUIColor(0.1f, 0.3f, 0.7f, 1.0f);
     theme.primaryHover = NUIColor(0.26f, 0.46f, 0.86f, 1.0f);
@@ -740,10 +986,10 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     theme.accentSecondary = theme.secondary;
     
     // Text colors
-    theme.textPrimary = NUIColor(0.1f, 0.1f, 0.1f, 1.0f);
-    theme.textSecondary = NUIColor(0.4f, 0.4f, 0.4f, 1.0f);
-    theme.textMuted = NUIColor(0.48f, 0.48f, 0.48f, 1.0f);
-    theme.textDisabled = NUIColor(0.6f, 0.6f, 0.6f, 1.0f);
+    theme.textPrimary = NUIColor(0.08f, 0.08f, 0.09f, 1.0f);
+    theme.textSecondary = NUIColor(0.26f, 0.26f, 0.28f, 1.0f);
+    theme.textMuted = NUIColor(0.38f, 0.38f, 0.40f, 1.0f);
+    theme.textDisabled = NUIColor(0.55f, 0.55f, 0.57f, 1.0f);
     theme.textLink = theme.primary;
     theme.textCritical = theme.error;
     theme.textOnPrimary = NUIColor::white();
@@ -772,9 +1018,9 @@ NUIThemeProperties NUIThemePresets::createAestraLight() {
     theme.highlightGlow = theme.primary.withAlpha(0.14f);
     
     // Borders
-    theme.border = NUIColor(0.8f, 0.8f, 0.8f, 1.0f);
+    theme.border = NUIColor(0.78f, 0.78f, 0.80f, 1.0f);
     theme.borderSubtle = theme.border.withAlpha(0.72f);
-    theme.borderStrong = NUIColor(0.68f, 0.68f, 0.70f, 1.0f);
+    theme.borderStrong = NUIColor(0.62f, 0.62f, 0.65f, 1.0f);
     theme.borderActive = theme.primary;
     theme.divider = NUIColor(0.9f, 0.9f, 0.9f, 1.0f);
     theme.outline = NUIColor(0.7f, 0.7f, 0.7f, 1.0f);
@@ -833,7 +1079,67 @@ NUIThemeProperties NUIThemePresets::createFluentLight() { return createAestraLig
 NUIThemeProperties NUIThemePresets::createFluentDark() { return createAestraDark(); }
 NUIThemeProperties NUIThemePresets::createCupertinoLight() { return createAestraLight(); }
 NUIThemeProperties NUIThemePresets::createCupertinoDark() { return createAestraDark(); }
-NUIThemeProperties NUIThemePresets::createHighContrastLight() { return createAestraLight(); }
-NUIThemeProperties NUIThemePresets::createHighContrastDark() { return createAestraDark(); }
+NUIThemeProperties NUIThemePresets::createHighContrastLight() {
+    auto theme = createAestraLight();
+    theme.backgroundPrimary = NUIColor::white();
+    theme.backgroundSecondary = NUIColor::fromHex(0xf5f5f5);
+    theme.surfaceTertiary = NUIColor::fromHex(0xebebeb);
+    theme.surfaceRaised = NUIColor::fromHex(0xdedede);
+    theme.background = theme.backgroundPrimary;
+    theme.surface = theme.backgroundSecondary;
+    theme.surfaceVariant = theme.surfaceTertiary;
+    theme.textPrimary = NUIColor::black();
+    theme.textSecondary = NUIColor::fromHex(0x303030);
+    theme.textMuted = NUIColor::fromHex(0x4a4a4a);
+    theme.borderSubtle = NUIColor::fromHex(0x777777);
+    theme.borderStrong = NUIColor::black();
+    theme.border = theme.borderStrong;
+    theme.divider = theme.borderSubtle;
+    theme.focusRing = theme.primary;
+    return theme;
+}
+
+NUIThemeProperties NUIThemePresets::createHighContrastDark() {
+    auto theme = createAestraDark();
+    theme.backgroundPrimary = NUIColor::black();
+    theme.backgroundSecondary = NUIColor::fromHex(0x0b0b0b);
+    theme.surfaceTertiary = NUIColor::fromHex(0x151515);
+    theme.surfaceRaised = NUIColor::fromHex(0x202020);
+    theme.background = theme.backgroundPrimary;
+    theme.surface = theme.backgroundSecondary;
+    theme.surfaceVariant = theme.surfaceTertiary;
+    theme.primary = NUIColor::fromHex(0xa78bfa);
+    theme.primaryHover = NUIColor::fromHex(0xc4b5fd);
+    theme.primaryPressed = NUIColor::fromHex(0x8b5cf6);
+    theme.accentPrimary = theme.primary;
+    theme.textOnPrimary = NUIColor::black();
+    theme.onPrimary = theme.textOnPrimary;
+    theme.textPrimary = NUIColor::white();
+    theme.textSecondary = NUIColor::white().withAlpha(0.78f);
+    theme.textMuted = NUIColor::white().withAlpha(0.62f);
+    theme.textDisabled = NUIColor::white().withAlpha(0.42f);
+    theme.borderSubtle = NUIColor::fromHex(0x666666);
+    theme.borderStrong = NUIColor::fromHex(0xb0b0b0);
+    theme.border = theme.borderStrong;
+    theme.divider = theme.borderSubtle;
+    theme.borderActive = theme.primary;
+    theme.focusRing = theme.primary;
+    theme.selected = theme.primary.withAlpha(0.34f);
+    theme.hover = NUIColor::white().withAlpha(0.13f);
+    theme.pressed = NUIColor::white().withAlpha(0.20f);
+    theme.buttonBgDefault = theme.surfaceTertiary;
+    theme.buttonBgHover = theme.surfaceRaised;
+    theme.buttonBgActive = theme.selected;
+    theme.inputBgDefault = theme.backgroundSecondary;
+    theme.inputBgHover = theme.surfaceTertiary;
+    theme.inputBorderFocus = theme.focusRing;
+    theme.sliderTrack = theme.borderSubtle;
+    theme.sliderHandle = theme.primary;
+    theme.sliderHandleHover = theme.primaryHover;
+    theme.sliderHandlePressed = theme.primaryPressed;
+    theme.gridMajor = NUIColor::white().withAlpha(0.24f);
+    theme.gridMinor = NUIColor::white().withAlpha(0.12f);
+    return theme;
+}
 
 } // namespace AestraUI

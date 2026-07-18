@@ -259,6 +259,33 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectValueFidelityTest.cpp"
     set_tests_properties(ProjectValueFidelityTest PROPERTIES LABELS "integration;serialization")
 endif()
 
+# Identity stability (#446): serialized clip/lane/pattern/source IDs survive
+# load, save->load->save is a byte-identical fixed point, post-load mints
+# never collide with restored IDs.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectIdentityStabilityTest.cpp")
+    add_executable(ProjectIdentityStabilityTest
+        Integration/ProjectIdentityStabilityTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+    )
+    target_link_libraries(ProjectIdentityStabilityTest PRIVATE AestraAudio)
+    target_include_directories(ProjectIdentityStabilityTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+    )
+    add_test(NAME ProjectIdentityStabilityTest COMMAND ProjectIdentityStabilityTest)
+    set_tests_properties(ProjectIdentityStabilityTest PROPERTIES LABELS "integration;serialization;identity")
+endif()
+
 # Project Load Regression Tests (routing safety, missing references, non-destructive load)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectLoadRegressionTest.cpp")
     add_executable(ProjectLoadRegressionTest
@@ -1777,6 +1804,45 @@ else()
     message(STATUS "PanelWindowClickSwallowTest skipped (AestraUI_Core target unavailable in this build mode)")
 endif()
 
+# Takes/History workspace panels: command-timeline presentation + navigation,
+# takes manifest listing, actions, inline rename, non-destructive branching.
+if(TARGET AestraUI_Core)
+    add_executable(TakesHistoryPanelTest
+        AestraUI/TakesHistoryPanelTest.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/WindowPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/AestraHistoryPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Panels/TakesPanel.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/ProjectSerializer.cpp
+        ${CMAKE_SOURCE_DIR}/Source/Core/TakeManager.cpp
+    )
+    target_link_libraries(TakesHistoryPanelTest PRIVATE AestraUI_Core AestraAudio)
+    target_include_directories(TakesHistoryPanelTest PRIVATE
+        ${CMAKE_SOURCE_DIR}/AestraUI
+        ${CMAKE_SOURCE_DIR}/AestraUI/Core
+        ${CMAKE_SOURCE_DIR}/AestraUI/Base
+        ${CMAKE_SOURCE_DIR}/AestraUI/Widgets
+        ${CMAKE_SOURCE_DIR}/AestraUI/Graphics
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Core
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/DSP
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Models
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Playback
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/IO
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Drivers
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Plugin
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Commands
+        ${CMAKE_SOURCE_DIR}/AestraAudio/include/Headless
+        ${CMAKE_SOURCE_DIR}/AestraCore/include
+        ${CMAKE_SOURCE_DIR}/Source
+        ${CMAKE_SOURCE_DIR}/Source/Core
+        ${CMAKE_SOURCE_DIR}/Source/Panels
+    )
+    add_test(NAME TakesHistoryPanelTest COMMAND TakesHistoryPanelTest)
+    set_tests_properties(TakesHistoryPanelTest PROPERTIES LABELS "ui;takes;history;regression")
+else()
+    message(STATUS "TakesHistoryPanelTest skipped (AestraUI_Core target unavailable in this build mode)")
+endif()
+
 # Plugin-browser filtering must preserve selection by stable plugin ID rather
 # than silently selecting whichever row inherits the old numeric index.
 if(TARGET AestraUI_Core)
@@ -1925,6 +1991,16 @@ target_include_directories(CommandRegistryParseSafetyTest PRIVATE
 )
 add_test(NAME CommandRegistryParseSafetyTest COMMAND CommandRegistryParseSafetyTest)
 set_tests_properties(CommandRegistryParseSafetyTest PROPERTIES LABELS "commands;regression")
+
+# MuseService — the structured JSON surface agents drive Aestra through.
+add_executable(MuseServiceTest Commands/MuseServiceTest.cpp)
+target_link_libraries(MuseServiceTest PRIVATE AestraAudioCore)
+target_include_directories(MuseServiceTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+)
+add_test(NAME MuseServiceTest COMMAND MuseServiceTest)
+set_tests_properties(MuseServiceTest PROPERTIES LABELS "commands;muse")
 
 # Rumble state and migration are deterministic pure-logic coverage. Keep this in
 # the normal test tier so stable parameter IDs cannot drift behind a runtime gate.

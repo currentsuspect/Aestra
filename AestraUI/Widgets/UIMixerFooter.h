@@ -15,6 +15,7 @@ public:
     UIMixerFooter();
 
     void onRender(NUIRenderer& renderer) override;
+    void onThemeChanged(const NUIThemeProperties& theme) override { cacheThemeColors(); NUIComponent::onThemeChanged(theme); }
 
     void setTrackNumber(int number);
 

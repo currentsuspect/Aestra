@@ -172,7 +172,7 @@ void ChannelStrip::onRender(AestraUI::NUIRenderer& renderer) {
         
         // Meter background (Dark Slot)
         AestraUI::NUIRect meterBg(meterX, meterY, meterW, meterH);
-        renderer.fillRoundedRect(meterBg, 2.0f, AestraUI::NUIColor(0.05f, 0.05f, 0.05f, 0.8f));
+        renderer.fillRoundedRect(meterBg, 2.0f, theme.getColor("meterBackground"));
         
         // Get current level (Mock/Placeholder)
         float level = m_track->getVolume(); // Simple mapping
@@ -193,12 +193,12 @@ void ChannelStrip::onRender(AestraUI::NUIRenderer& renderer) {
             
             if (isActive) {
                 float n = static_cast<float>(i) / numSegments;
-                if (n < 0.7f) segColor = AestraUI::NUIColor::fromHex(0x00ffaa); // Cyan
-                else if (n < 0.9f) segColor = AestraUI::NUIColor::fromHex(0xffaa00); // Amber
-                else segColor = AestraUI::NUIColor::fromHex(0xff3333); // Red
+                if (n < 0.7f) segColor = theme.getColor("meterSafe");
+                else if (n < 0.9f) segColor = theme.getColor("meterWarn");
+                else segColor = theme.getColor("meterCrit");
                 segColor = segColor.withAlpha(0.9f);
             } else {
-                segColor = AestraUI::NUIColor(0.2f, 0.2f, 0.2f, 0.3f);
+                segColor = theme.getColor("meterBackground").withAlpha(0.55f);
             }
             
             renderer.fillRect(AestraUI::NUIRect(meterX + 1.0f, y + segGap, meterW - 2.0f, segH - segGap), segColor);
@@ -273,15 +273,13 @@ void MixerView::onRender(AestraUI::NUIRenderer& renderer) {
     auto& theme = AestraUI::NUIThemeManager::getInstance();
     auto bounds = getBounds();
     
-    // Deep Void Background
-    auto bgColor = AestraUI::NUIColor::fromHex(0x050505); // Matches Playlist
-    renderer.fillRect(bounds, bgColor);
+    renderer.fillRect(bounds, theme.getColor("workspaceBackground"));
     
     // Subtle Top Gradient (Header Shadow)
     renderer.fillRectGradient(
         AestraUI::NUIRect(bounds.x, bounds.y, bounds.width, 20.0f),
-        AestraUI::NUIColor(0,0,0,0.4f),
-        AestraUI::NUIColor(0,0,0,0.0f),
+        theme.getColor("shadow").withAlpha(0.40f),
+        theme.getColor("shadow").withAlpha(0.0f),
         true
     );
     

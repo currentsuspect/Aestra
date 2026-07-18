@@ -93,6 +93,8 @@ private:
     bool saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState = nullptr);
     bool createTakeFromCurrentProject();
     ProjectSerializer::LoadResult switchToTake(const std::string& takeId);
+    bool branchFromTake(const std::string& takeId);
+    void wireTakesPanel();
     void reinitAutosaveManager();
     ProjectSerializer::UIState captureUIState() const;
     void applyUIState(const ProjectSerializer::UIState& state);

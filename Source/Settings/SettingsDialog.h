@@ -41,6 +41,7 @@ public:
 private:
     void createUI();
     void layoutComponents();
+    void updateDialogBounds(const AestraUI::NUIRect& parentBounds);
     void updateSidebar();
 
     bool m_visible;

@@ -126,6 +126,23 @@ void NUIContextMenu::onRender(NUIRenderer& renderer)
     }
 }
 
+void NUIContextMenu::onThemeChanged(const NUIThemeProperties& theme)
+{
+    if (!customColors_) {
+        backgroundColor_ = theme.surfaceTertiary;
+        borderColor_ = theme.borderStrong;
+        textColor_ = theme.textPrimary;
+        hoverColor_ = theme.buttonBgHover;
+        separatorColor_ = theme.borderSubtle;
+        shortcutColor_ = theme.textSecondary;
+        borderRadius_ = theme.radiusM;
+        itemHeight_ = theme.layout.standardMenuRowHeight;
+        iconSize_ = theme.layout.standardIconSize;
+        updateSize();
+    }
+    NUIComponent::onThemeChanged(theme);
+}
+
 bool NUIContextMenu::onMouseEvent(const NUIMouseEvent& event)
 {
     if (!isVisible() || !isEnabled()) return false;
@@ -359,36 +376,42 @@ void NUIContextMenu::hide()
 void NUIContextMenu::setBackgroundColor(const NUIColor& color)
 {
     backgroundColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIContextMenu::setBorderColor(const NUIColor& color)
 {
     borderColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIContextMenu::setTextColor(const NUIColor& color)
 {
     textColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIContextMenu::setHoverColor(const NUIColor& color)
 {
     hoverColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIContextMenu::setSeparatorColor(const NUIColor& color)
 {
     separatorColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 
 void NUIContextMenu::setShortcutColor(const NUIColor& color)
 {
     shortcutColor_ = color;
+    customColors_ = true;
     setDirty(true);
 }
 

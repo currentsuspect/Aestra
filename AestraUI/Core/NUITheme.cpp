@@ -9,6 +9,7 @@
 #include <fstream>
 #include <functional>
 #include <unordered_set>
+#include <vector>
 
 namespace AestraUI {
 
@@ -44,8 +45,37 @@ bool requiresPositiveDimension(const std::string& name) {
         "margin", "borderWidth", "compactControlHeight", "standardControlHeight", "dialogActionHeight",
         "standardRowHeight", "compactMenuRowHeight", "standardMenuRowHeight", "panelHeaderHeight",
         "sectionHeaderHeight", "standardIconSize", "minimumHitArea", "dividerWidth", "panelPadding",
-        "dialogPadding"};
+        "dialogPadding", "spacingXS", "spacingS", "spacingM", "spacingL", "spacingXL", "spacingXXL",
+        "fileBrowserWidth", "trackControlsWidth", "trackHeight", "transportBarHeight"};
     return positiveDimensions.find(name) != positiveDimensions.end();
+}
+
+bool hasCompleteJSONStructure(const std::string& content) {
+    std::vector<char> stack;
+    bool inString = false;
+    bool escaped = false;
+    for (char c : content) {
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
+            } else if (c == '"') {
+                inString = false;
+            }
+            continue;
+        }
+        if (c == '"') {
+            inString = true;
+        } else if (c == '{' || c == '[') {
+            stack.push_back(c);
+        } else if (c == '}' || c == ']') {
+            if (stack.empty() || (c == '}' && stack.back() != '{') || (c == ']' && stack.back() != '['))
+                return false;
+            stack.pop_back();
+        }
+    }
+    return !inString && !escaped && stack.empty();
 }
 
 } // namespace
@@ -131,6 +161,8 @@ std::shared_ptr<NUITheme> NUITheme::createDefault() {
     theme->setFontSize("large", 20.0f);
     theme->setFontSize("title", 28.0f);
     theme->setFontSize("huge", 48.0f);
+
+    theme->loadedSuccessfully_ = true;
     
     return theme;
 }
@@ -140,6 +172,8 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
     // its default value. On any failure this default theme is returned (never
     // nullptr) and the failure is logged.
     auto theme = createDefault();
+    theme->loadedSuccessfully_ = false;
+    theme->clearOverrideTracking();
 
     std::ifstream file(filepath, std::ios::binary);
     if (!file.is_open()) {
@@ -161,11 +195,19 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
     std::string content(static_cast<size_t>(fileSize), '\0');
     file.read(content.data(), fileSize);
 
+    if (!hasCompleteJSONStructure(content)) {
+        Aestra::Log::error("[NUITheme] Theme file '" + filepath +
+                           "' has incomplete JSON structure — using default theme");
+        return theme;
+    }
+
     Aestra::JSON root = Aestra::JSON::parse(content);
     if (!root.isObject()) {
         Aestra::Log::error("[NUITheme] Theme file '" + filepath + "' is not a valid JSON object — using default theme");
         return theme;
     }
+
+    theme->loadedSuccessfully_ = true;
 
     int applied = 0;
     int skipped = 0;
@@ -251,6 +293,11 @@ std::shared_ptr<NUITheme> NUITheme::loadFromFile(const std::string& filepath) {
 
 void NUITheme::setColor(const std::string& name, const NUIColor& color) {
     colors_[name] = color;
+    colorOverrides_.insert(name);
+}
+
+bool NUITheme::hasColorOverride(const std::string& name) const {
+    return colorOverrides_.find(name) != colorOverrides_.end();
 }
 
 NUIColor NUITheme::getColor(const std::string& name, const NUIColor& defaultColor) const {
@@ -267,6 +314,11 @@ NUIColor NUITheme::getColor(const std::string& name, const NUIColor& defaultColo
 
 void NUITheme::setDimension(const std::string& name, float value) {
     dimensions_[name] = value;
+    dimensionOverrides_.insert(name);
+}
+
+bool NUITheme::hasDimensionOverride(const std::string& name) const {
+    return dimensionOverrides_.find(name) != dimensionOverrides_.end();
 }
 
 float NUITheme::getDimension(const std::string& name, float defaultValue) const {
@@ -283,6 +335,11 @@ float NUITheme::getDimension(const std::string& name, float defaultValue) const 
 
 void NUITheme::setEffect(const std::string& name, float value) {
     effects_[name] = value;
+    effectOverrides_.insert(name);
+}
+
+bool NUITheme::hasEffectOverride(const std::string& name) const {
+    return effectOverrides_.find(name) != effectOverrides_.end();
 }
 
 float NUITheme::getEffect(const std::string& name, float defaultValue) const {
@@ -299,6 +356,11 @@ float NUITheme::getEffect(const std::string& name, float defaultValue) const {
 
 void NUITheme::setFontSize(const std::string& name, float size) {
     fontSizes_[name] = size;
+    fontSizeOverrides_.insert(name);
+}
+
+bool NUITheme::hasFontSizeOverride(const std::string& name) const {
+    return fontSizeOverrides_.find(name) != fontSizeOverrides_.end();
 }
 
 float NUITheme::getFontSize(const std::string& name, float defaultSize) const {
@@ -307,6 +369,13 @@ float NUITheme::getFontSize(const std::string& name, float defaultSize) const {
         return it->second;
     }
     return defaultSize;
+}
+
+void NUITheme::clearOverrideTracking() {
+    colorOverrides_.clear();
+    dimensionOverrides_.clear();
+    effectOverrides_.clear();
+    fontSizeOverrides_.clear();
 }
 
 // TODO: Implement font creation when NUIFont supports copying

@@ -23,12 +23,18 @@ struct ClipInstanceID : public AestraUUID {
     bool isValid() const { return low != 0 || high != 0; }
 
     /**
-     * @brief Parse from string (stub - just returns generate())
+     * @brief Parse the toString() representation.
+     * @return The parsed ID, or an invalid (zero) ID when the string doesn't
+     *         parse — callers mint a fresh ID for invalid ones, which keeps
+     *         old project files (without clip ids) loading fine while saved
+     *         ids stay stable across load cycles (#446).
      */
     static ClipInstanceID fromString(const std::string& str) {
-        // Stub implementation - in real code would parse UUID string
-        (void)str;
-        return generate();
+        AestraUUID parsed;
+        if (AestraUUID::tryParse(str, parsed)) {
+            return ClipInstanceID(parsed);
+        }
+        return ClipInstanceID();
     }
 };
 

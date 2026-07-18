@@ -50,6 +50,8 @@ set(Aestra_SOURCES
 	Panels/AuditionPanel.cpp
 	Panels/AestraHistoryPanel.h
 	Panels/AestraHistoryPanel.cpp
+	Panels/TakesPanel.h
+	Panels/TakesPanel.cpp
 	Panels/SampleEditorPanel.h
 	Panels/SampleEditorPanel.cpp
 	

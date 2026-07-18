@@ -57,6 +57,41 @@ struct AestraUUID {
         snprintf(buf, sizeof(buf), "%016" PRIx64 "%016" PRIx64, high, low);
         return std::string(buf);
     }
+
+    /**
+     * @brief Parse the toString() representation (32 lowercase/uppercase hex chars).
+     * @param str Candidate string.
+     * @param out Receives the parsed UUID on success (untouched on failure).
+     * @return true when the string is exactly 32 hex characters.
+     */
+    static bool tryParse(const std::string& str, AestraUUID& out) {
+        if (str.size() != 32) {
+            return false;
+        }
+        uint64_t parsedHigh = 0;
+        uint64_t parsedLow = 0;
+        for (size_t i = 0; i < 32; ++i) {
+            const char c = str[i];
+            uint64_t digit;
+            if (c >= '0' && c <= '9') {
+                digit = static_cast<uint64_t>(c - '0');
+            } else if (c >= 'a' && c <= 'f') {
+                digit = static_cast<uint64_t>(c - 'a') + 10;
+            } else if (c >= 'A' && c <= 'F') {
+                digit = static_cast<uint64_t>(c - 'A') + 10;
+            } else {
+                return false;
+            }
+            if (i < 16) {
+                parsedHigh = (parsedHigh << 4) | digit;
+            } else {
+                parsedLow = (parsedLow << 4) | digit;
+            }
+        }
+        out.high = parsedHigh;
+        out.low = parsedLow;
+        return true;
+    }
 };
 
 } // namespace Audio

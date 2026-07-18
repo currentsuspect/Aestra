@@ -23,10 +23,10 @@ NUIColor accent() {
     return NUIColor(0.94f, 0.52f, 0.22f, 1.0f);
 } // heat orange
 NUIColor panelSurface() {
-    return NUIColor(0.027f, 0.027f, 0.027f, 0.96f);
+    return editorNeutral(0.027f, 0.96f);
 }
 NUIColor insetSurface() {
-    return NUIColor(0.038f, 0.038f, 0.038f, 0.96f);
+    return editorNeutral(0.038f, 0.96f);
 }
 
 void drawArc(NUIRenderer& renderer, NUIPoint center, float radius, float startAngle, float endAngle, float thickness,
@@ -91,7 +91,7 @@ void AestraSatEditor::drawContent(NUIRenderer& renderer, const NUIRect& contentR
     const NUIRect workArea{contentRect.x + 12.0f, contentRect.y + 10.0f, contentRect.width - 24.0f,
                            contentRect.height - 18.0f};
     renderer.fillRoundedRect(workArea, 14.0f, panelSurface());
-    renderer.strokeRoundedRect(workArea, 14.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.055f));
+    renderer.strokeRoundedRect(workArea, 14.0f, 1.0f, editorInk(0.055f));
 
     drawModeSelector(renderer);
     drawBypassPill(renderer);
@@ -110,10 +110,10 @@ void AestraSatEditor::drawKnob(NUIRenderer& renderer, const NUIRect& rect, uint3
     const float angle = kKnobStart + value * kKnobSweep;
 
     renderer.fillCircle(c, r + 4.0f, insetSurface());
-    renderer.strokeCircle(c, r + 4.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.060f));
+    renderer.strokeCircle(c, r + 4.0f, 1.0f, editorInk(0.060f));
 
     drawArc(renderer, c, r - 3.0f, kKnobStart, kKnobStart + kKnobSweep, large ? 4.0f : 3.0f,
-            NUIColor(0.199f, 0.199f, 0.199f, 1.0f));
+            editorNeutral(0.199f, 1.0f));
     drawArc(renderer, c, r - 3.0f, kKnobStart, angle, large ? 4.0f : 3.0f, accent().withAlpha(0.92f));
 
     const float needleLen = r - (large ? 14.0f : 10.0f);
@@ -122,7 +122,7 @@ void AestraSatEditor::drawKnob(NUIRenderer& renderer, const NUIRect& rect, uint3
     renderer.fillCircle(tip, large ? 3.5f : 2.5f, accent());
 
     const float wellR = r * (large ? 0.34f : 0.30f);
-    renderer.fillCircle(c, wellR, NUIColor(0.045f, 0.045f, 0.045f, 0.96f));
+    renderer.fillCircle(c, wellR, editorNeutral(0.045f, 0.96f));
     renderer.strokeCircle(c, wellR, 1.2f, accent().withAlpha(0.36f));
 
     renderer.drawTextCentered(label, NUIRect(rect.x, rect.bottom() + 4.0f, rect.width, 14.0f), 10.5f,
@@ -145,7 +145,7 @@ void AestraSatEditor::drawModeSelector(NUIRenderer& renderer) {
             renderer.drawTextCentered(kLabels[i], m_modeRects[i], 10.0f, accent().withAlpha(0.98f));
         } else {
             renderer.fillRoundedRect(m_modeRects[i], 7.0f, insetSurface());
-            renderer.strokeRoundedRect(m_modeRects[i], 7.0f, 1.0f, NUIColor(1.0f, 1.0f, 1.0f, 0.08f));
+            renderer.strokeRoundedRect(m_modeRects[i], 7.0f, 1.0f, editorInk(0.08f));
             renderer.drawTextCentered(kLabels[i], m_modeRects[i], 10.0f,
                                       theme.getColor("textPrimary").withAlpha(0.62f));
         }

@@ -31,8 +31,19 @@ public:
     /** @brief Set callback for when user clicks to undo/redo (so UI panels refresh). */
     void setOnHistoryChanged(std::function<void()> cb) { m_onHistoryChanged = std::move(cb); }
 
+    // --- Introspection (used by tests and tooling) ---------------------------
+    /** @brief Number of displayed history entries (redo + undo). */
+    int getEntryCount() const { return static_cast<int>(m_entries.size()); }
+    /** @brief Display name of an entry (top row first). */
+    const std::string& getEntryName(int index) const { return m_entries[static_cast<size_t>(index)].name; }
+    /** @brief True if the entry sits on the redo stack (above HEAD). */
+    bool isEntryRedo(int index) const { return m_entries[static_cast<size_t>(index)].isRedo; }
+    /** @brief Navigate to an entry exactly like a mouse click on its row. */
+    void activateEntry(int index);
+
 private:
     static constexpr float ROW_HEIGHT = 26.0f;
+    static constexpr float HEADER_HEIGHT = 36.0f; // content offset below the WindowPanel title bar
     static constexpr float INDICATOR_SIZE = 6.0f;
     static constexpr float LEFT_PAD = 12.0f;
     static constexpr float TEXT_LEFT_PAD = 28.0f;

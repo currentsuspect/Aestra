@@ -141,6 +141,85 @@ int main() {
     require(switchedManifest.activeTake() && switchedManifest.activeTake()->active,
             "Active take marker was not restored");
 
+    // --- Rename: name changes persist, snapshot contents stay untouched ------
+    auto renamed = TakeManager::renameTake(projectPath.string(), created.take.id, "  Drum Bus V2  ");
+    require(renamed.ok, "Failed to rename Take");
+    require(renamed.take.name == "Drum Bus V2", "Rename should trim whitespace");
+    auto renamedManifest = TakeManager::loadManifest(projectPath.string());
+    require(renamedManifest.ok, "Failed to reload manifest after rename");
+    const auto* renamedTake = renamedManifest.findTake(created.take.id);
+    require(renamedTake != nullptr && renamedTake->name == "Drum Bus V2", "Rename did not persist");
+    require(loadFirstLaneName(TakeManager::resolveSnapshotPath(projectPath.string(), *renamedTake)) ==
+                "Variation Saved Lane",
+            "Rename must not modify the take snapshot");
+    require(!TakeManager::renameTake(projectPath.string(), created.take.id, "   ").ok,
+            "Blank take names must be rejected");
+    require(!TakeManager::renameTake(projectPath.string(), "no_such_take", "X").ok,
+            "Renaming a missing take must fail");
+
+    // --- Duplicate: non-destructive copy, records lineage, stays inactive ----
+    auto duplicated = TakeManager::duplicateTake(projectPath.string(), created.take.id);
+    require(duplicated.ok, "Failed to duplicate Take");
+    require(duplicated.take.parentId == created.take.id, "Duplicate should record its source as parent");
+    require(duplicated.take.name == "Drum Bus V2 Copy", "Duplicate should derive a Copy name");
+    require(duplicated.manifest.activeTakeId == "main", "Duplicating must not change the active take");
+    require(duplicated.manifest.takes.size() == 3, "Duplicate should add a manifest entry");
+    require(loadFirstLaneName(TakeManager::resolveSnapshotPath(projectPath.string(), duplicated.take)) ==
+                "Variation Saved Lane",
+            "Duplicate snapshot should be a copy of its source");
+    require(loadFirstLaneName(TakeManager::resolveSnapshotPath(projectPath.string(), *renamedTake)) ==
+                "Variation Saved Lane",
+            "Duplicating must not modify the source snapshot");
+    require(!TakeManager::duplicateTake(projectPath.string(), "no_such_take").ok,
+            "Duplicating a missing take must fail");
+
+    // --- Branch flow: duplicate + activate leaves every prior take intact ----
+    auto branch = TakeManager::duplicateTake(projectPath.string(), "main", "Main Branch");
+    require(branch.ok, "Failed to create branch duplicate");
+    auto branchActive = TakeManager::setActiveTake(projectPath.string(), branch.take.id);
+    require(branchActive.ok, "Failed to activate branch take");
+    auto branchedManifest = TakeManager::loadManifest(projectPath.string());
+    require(branchedManifest.ok, "Failed to reload manifest after branching");
+    require(branchedManifest.activeTakeId == branch.take.id, "Branch take should be active");
+    const auto* branchEntry = branchedManifest.findTake(branch.take.id);
+    require(branchEntry != nullptr && branchEntry->parentId == "main", "Branch should descend from Main");
+    const auto* mainAfterBranch = branchedManifest.findTake("main");
+    require(mainAfterBranch != nullptr, "Main take must survive branching");
+    require(loadFirstLaneName(TakeManager::resolveSnapshotPath(projectPath.string(), *mainAfterBranch)) ==
+                "Main Lane",
+            "Branching must not modify the Main snapshot");
+    require(loadFirstLaneName(TakeManager::resolveSnapshotPath(projectPath.string(), *branchEntry)) == "Main Lane",
+            "Branch snapshot should start from its source state");
+
+    // --- Delete: refuses the active take, reparents children, removes files --
+    require(!TakeManager::deleteTake(projectPath.string(), branch.take.id).ok,
+            "Deleting the active take must be refused");
+    require(!TakeManager::deleteTake(projectPath.string(), "no_such_take").ok,
+            "Deleting a missing take must fail");
+
+    // duplicated (parent = renamed variation) must survive its parent's
+    // deletion by moving up to the variation's parent ("main").
+    const std::string dupSnapshotPath = TakeManager::resolveSnapshotPath(projectPath.string(), duplicated.take);
+    const auto beforeDeleteManifest = TakeManager::loadManifest(projectPath.string());
+    require(beforeDeleteManifest.ok, "Manifest should load before deletion");
+    const auto* renamedBeforeDelete = beforeDeleteManifest.findTake(created.take.id);
+    require(renamedBeforeDelete != nullptr, "Renamed take should exist before deletion");
+    const std::string renamedSnapshotPath =
+        TakeManager::resolveSnapshotPath(projectPath.string(), *renamedBeforeDelete);
+    require(std::filesystem::exists(renamedSnapshotPath), "Renamed take snapshot should exist before deletion");
+
+    auto deleted = TakeManager::deleteTake(projectPath.string(), created.take.id);
+    require(deleted.ok, "Failed to delete a non-active take");
+    auto afterDelete = TakeManager::loadManifest(projectPath.string());
+    require(afterDelete.ok, "Manifest should reload after deletion");
+    require(afterDelete.findTake(created.take.id) == nullptr, "Deleted take must leave the manifest");
+    require(!std::filesystem::exists(renamedSnapshotPath), "Deleted take snapshot must be removed from disk");
+    const auto* orphan = afterDelete.findTake(duplicated.take.id);
+    require(orphan != nullptr, "Child of a deleted take must survive");
+    require(orphan->parentId == "main", "Child of a deleted take must reparent to its grandparent");
+    require(std::filesystem::exists(dupSnapshotPath), "Deleting a take must not touch other snapshots");
+    require(afterDelete.activeTakeId == branch.take.id, "Deletion must not change the active take");
+
     std::cout << "[PASS] TakeManagerTest\n";
     return 0;
 }

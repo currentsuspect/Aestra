@@ -180,9 +180,9 @@ void TimelineMinimapBar::endDrag_()
 void TimelineMinimapBar::cacheThemeColors_()
 {
     auto& theme = NUIThemeManager::getInstance();
-    // Near-black shell matching the ruler material exactly (one continuous
-    // band; the old surfaceRaised tint read blue against neighboring rows).
-    colors_.glassFill = NUIColor(0.012f, 0.012f, 0.012f, 0.98f);
+    // Match the ruler's recessed material so the band remains continuous in
+    // every theme.
+    colors_.glassFill = theme.getColor("recessedPanel");
     colors_.glassBorder = theme.getColor("border").withAlpha(0.28f);
     colors_.cornerSeparator = theme.getColor("border").withAlpha(0.28f);
 
@@ -196,8 +196,8 @@ void TimelineMinimapBar::cacheThemeColors_()
     colors_.selectionFill = theme.getColor("accentCyan").withAlpha(0.10f);
     colors_.loopFill = theme.getColor("accentPrimary").withAlpha(0.08f);
 
-    colors_.playheadDark = NUIColor(0.0f, 0.0f, 0.0f, 0.75f);
-    colors_.playheadBright = NUIColor(1.0f, 1.0f, 1.0f, 0.85f);
+    colors_.playheadDark = theme.getColor("shadow").withAlpha(0.75f);
+    colors_.playheadBright = theme.getColor("textPrimary").withAlpha(0.85f);
 
     colors_.text = theme.getColor("textPrimary");
 }

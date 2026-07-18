@@ -888,7 +888,7 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
             AestraUI::NUIPoint(clipBounds.x + 4.0f, clipBounds.y + kClipHeaderHeight + 1.0f),
             AestraUI::NUIPoint(clipBounds.right() - 4.0f, clipBounds.y + kClipHeaderHeight + 1.0f),
             1.0f,
-            AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.09f)
+            themeManager.getCurrentTheme().textPrimary.withAlpha(0.09f)
         );
 
         const std::string displayName = truncateClipLabel(sampleName, clipBounds.width - 16.0f, 6.0f);
@@ -904,7 +904,7 @@ void TrackUIComponent::drawSampleClipForClip(AestraUI::NUIRenderer& renderer, co
             renderer.drawText(displayName,
                               AestraUI::NUIPoint(clipBounds.x + 6.0f, textY),
                               kClipLabelFontSize,
-                              AestraUI::NUIColor(1.0f, 1.0f, 1.0f, clipSelected ? 0.92f : 0.78f));
+                              themeManager.getCurrentTheme().textPrimary.withAlpha(clipSelected ? 0.92f : 0.78f));
         }
     }
 }
@@ -1026,7 +1026,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
     }
 
     const float clipRadius = themeManager.getRadius("s");
-    renderer.fillRoundedRect(clipBounds, clipRadius, AestraUI::NUIColor(0.071f, 0.071f, 0.071f, 0.96f));
+    renderer.fillRoundedRect(clipBounds, clipRadius, themeManager.getColor("elevatedPanel").withAlpha(0.96f));
     renderer.fillRoundedRect(clipBounds, clipRadius, baseColor.withAlpha(isSelected ? 0.38f : 0.28f));
     renderer.strokeRoundedRect(
         clipBounds,
@@ -1051,7 +1051,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
         AestraUI::NUIPoint(clipBounds.x + 6.0f, clipBounds.y + headerHeight + 1.0f),
         AestraUI::NUIPoint(clipBounds.right() - 6.0f, clipBounds.y + headerHeight + 1.0f),
         1.0f,
-        AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.08f)
+        themeManager.getCurrentTheme().textPrimary.withAlpha(0.08f)
     );
 
     std::string clipName = clip.name;
@@ -1065,7 +1065,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
     const std::string displayName = truncateClipLabel(clipName, clipBounds.width - 46.0f, 5.9f);
     if (!displayName.empty()) {
         renderer.drawText(displayName, AestraUI::NUIPoint(clipBounds.x + 10.0f, clipBounds.y + 4.0f),
-                          9.5f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+                          9.5f, themeManager.getCurrentTheme().textPrimary);
     }
 
     if (m_trackManager && clip.patternId.isValid()) {
@@ -1099,7 +1099,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
                     AestraUI::NUIPoint(clipBounds.x + 7.0f, y),
                     AestraUI::NUIPoint(clipBounds.right() - 4.0f, y),
                     1.0f,
-                    AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.06f)
+                    themeManager.getCurrentTheme().textPrimary.withAlpha(0.06f)
                 );
             }
 
@@ -1113,7 +1113,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
                     AestraUI::NUIPoint(stepX, noteAreaY + 1.0f),
                     AestraUI::NUIPoint(stepX, clipBounds.bottom() - 4.0f),
                     1.0f,
-                    AestraUI::NUIColor(1.0f, 1.0f, 1.0f, major ? 0.08f : 0.04f)
+                    themeManager.getCurrentTheme().textPrimary.withAlpha(major ? 0.08f : 0.04f)
                 );
             }
             
@@ -1136,7 +1136,7 @@ void TrackUIComponent::drawPatternClipForClip(AestraUI::NUIRenderer& renderer, c
                     if (noteRect.x + noteRect.width > clipBounds.x + clipBounds.width) {
                         noteRect.width = (clipBounds.x + clipBounds.width) - noteRect.x;
                     }
-                    renderer.fillRoundedRect(noteRect, themeProps.radiusXS, AestraUI::NUIColor(1.0f, 0.985f, 0.93f, isSelected ? 0.88f : 0.78f));
+                    renderer.fillRoundedRect(noteRect, themeProps.radiusXS, themeManager.getCurrentTheme().textPrimary.withAlpha(isSelected ? 0.88f : 0.78f));
                     if (noteRect.width > 6.0f && noteRect.height > 2.5f) {
                         renderer.fillRoundedRect(
                             {noteRect.x + 1.0f, noteRect.y + 1.0f, std::max(0.0f, noteRect.width - 2.0f), std::max(0.0f, noteRect.height - 2.0f)},
@@ -1178,7 +1178,7 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
          AestraUI::NUIColor selectedColor = themeManager.getColor("accentPrimary").withAlpha(0.075f);
          trackBgColor = selectedColor; 
     } else if (isHovered()) {
-         trackBgColor = AestraUI::NUIColor::white().withAlpha(0.026f);
+         trackBgColor = themeManager.getCurrentTheme().textPrimary.withAlpha(0.026f);
     }
     
     // Apply background
@@ -1193,9 +1193,9 @@ void TrackUIComponent::renderStatic(AestraUI::NUIRenderer& renderer) {
     if (m_isPrimaryForLane) {
         AestraUI::NUIRect controlBounds(bounds.x, bounds.y, controlAreaWidth, bounds.height);
 
-        // Control Area base: elevated surface from palette.
-        // Near-black chrome per owner direction (was surfaceTertiary, read bluish-grey).
-        AestraUI::NUIColor baseControlColor(0.038f, 0.039f, 0.045f, 1.0f);
+        // Control Area base: near-black chrome on dark themes (owner
+        // direction — surfaceTertiary read bluish-grey), clean surface on light.
+        AestraUI::NUIColor baseControlColor = themeManager.getColor("trackChrome");
 
         // Static Control Area State
         if (m_channel) {
@@ -1592,7 +1592,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
                     trackPoints.push_back({cx + std::cos(theta) * r, cy + std::sin(theta) * r});
                 }
                 renderer.drawPolyline(trackPoints.data(), static_cast<int>(trackPoints.size()), 2.0f,
-                                      AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.13f));
+                                      themeManager.getCurrentTheme().textPrimary.withAlpha(0.13f));
 
                 // Active value arc
                 if (t > 0.0f) {
@@ -1612,7 +1612,7 @@ void TrackUIComponent::renderControlOverlay(AestraUI::NUIRenderer& renderer) {
                 // Pointer dot at current value
                 const float ptrX = cx + std::cos(currentAng) * (r * 0.72f);
                 const float ptrY = cy + std::sin(currentAng) * (r * 0.72f);
-                renderer.fillCircle({ptrX, ptrY}, 1.8f, AestraUI::NUIColor(1.0f, 1.0f, 1.0f, 0.9f));
+                renderer.fillCircle({ptrX, ptrY}, 1.8f, themeManager.getCurrentTheme().textPrimary.withAlpha(0.9f));
             }
         }
 
@@ -1654,7 +1654,8 @@ void TrackUIComponent::drawPlaylistGrid(AestraUI::NUIRenderer& renderer, const A
     const float gridEndX = bounds.right();
 
     AestraUI::renderTimelineGrid(
-        renderer, bounds, gridStartX, gridEndX, m_timelineScrollOffset, m_pixelsPerBeat, m_beatsPerBar);
+        renderer, bounds, gridStartX, gridEndX, m_timelineScrollOffset, m_pixelsPerBeat, m_beatsPerBar,
+        themeManager.getCurrentTheme().textPrimary);
 }
 
 void TrackUIComponent::onMouseEnter() {

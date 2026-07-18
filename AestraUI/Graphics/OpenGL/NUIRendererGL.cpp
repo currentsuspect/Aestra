@@ -195,6 +195,8 @@ uniform bool uUseTexture;
 uniform vec2 uTextTexelSize;
 uniform float uTextSharpen;
 uniform float uTextGamma;
+uniform float uTextBold; // SDF edge-center shift; 0 = neutral, positive = bolder
+uniform float uTextAlphaLift; // exponent on text alpha; 1 = neutral, <1 lifts faded text
 uniform bool uOutputLinear;
 
 // Squircle SDF Implementation
@@ -256,13 +258,13 @@ void main() {
              float dist = texColor.r;
              float ddist = fwidth(dist);
              float edgeWidth = ddist * 0.7;
-             float center = 0.5 - smoothstep(0.1, 0.5, ddist) * 0.08; 
+             float center = 0.5 - smoothstep(0.1, 0.5, ddist) * 0.08 - uTextBold; 
              float alpha = smoothstep(center - edgeWidth, center + edgeWidth, dist);
-             color.a *= alpha;
+             color.a = pow(color.a, uTextAlphaLift) * alpha;
         } else if (primitiveID == 4) {
                // Bitmap text — atlas stores coverage in alpha channel.
                float coverage = pow(sampleTextCoverage(vTexCoord), uTextGamma);
-               color.a *= coverage;
+               color.a = pow(color.a, uTextAlphaLift) * coverage;
         } else {
              // Regular textured primitive
              color *= texColor;
@@ -493,7 +495,7 @@ bool NUIRendererGL::initialize(int width, int height) {
 
     // Set initial state
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE); // Ensure we don't write to depth buffer in 2D mode
     glDisable(GL_CULL_FACE);
@@ -607,7 +609,7 @@ void NUIRendererGL::beginFrame() {
         glDisable(GL_FRAMEBUFFER_SRGB);
     }
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
     vertices_.clear();
     indices_.clear();
@@ -2540,7 +2542,7 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
     // instead of the standard blend which gives: result = text * coverage^2 + bg * (1 - coverage)
     glBlendFunc(GL_ONE, GL_SRC_ALPHA);
     // Actually revert — pre-multiplied bleeds edges on dark backgrounds. Use standard.
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     
     // Pre-allocate vertex buffer space (4 vertices per glyph, 6 indices per glyph)
     // This avoids repeated vector resizing for large text blocks
@@ -2706,7 +2708,7 @@ void NUIRendererGL::renderTextWithFont(const std::string& text, const NUIPoint& 
     }
 
     // Restore blend func for non-text geometry
-    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // Already default
+    // glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // Already default
 }
 
 // ============================================================================
@@ -2820,6 +2822,8 @@ void NUIRendererGL::drawTexture(const NUIRect& bounds, const unsigned char* rgba
     glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
     glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
     glUniform1f(primitiveShader_.textGammaLoc, 1.0f);
+    glUniform1f(primitiveShader_.textBoldLoc, (1.0f - textContrast_) * 0.25f);
+    glUniform1f(primitiveShader_.textAlphaLiftLoc, textContrast_ < 1.0f ? 0.35f : 1.0f);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -3050,6 +3054,12 @@ uint32_t NUIRendererGL::getGLTextureId(uint32_t textureId) const {
     return it->second.glId;
 }
 
+// NOTE on blending: all default blend sites use glBlendFuncSeparate with
+// (ONE, ONE_MINUS_SRC_ALPHA) for the alpha channel. The classic
+// (SRC_ALPHA, ...) alpha blend squares coverage: text drawn at alpha a onto
+// an opaque cache texel left it at 1-a+a^2 < 1, so composites re-blended
+// glyphs against the surface behind the panel — invisible over dark themes,
+// a gray wash over light ones (and sub-1.0 backbuffer alpha for DWM).
 void NUIRendererGL::beginOffscreen(int width, int height) {
     // Offscreen caches render into linear GL_RGBA8 textures where
     // GL_FRAMEBUFFER_SRGB does NOT re-encode on write. The shader's
@@ -3124,6 +3134,8 @@ void NUIRendererGL::flush() {
     glUniform2f(primitiveShader_.textTexelSizeLoc, 0.0f, 0.0f);
     glUniform1f(primitiveShader_.textSharpenLoc, 0.0f);
     glUniform1f(primitiveShader_.textGammaLoc, 1.0f);
+    glUniform1f(primitiveShader_.textBoldLoc, (1.0f - textContrast_) * 0.25f);
+    glUniform1f(primitiveShader_.textAlphaLiftLoc, textContrast_ < 1.0f ? 0.35f : 1.0f);
     // Note: opacity is already in vertex colors
     glUniform1i(primitiveShader_.primitiveTypeLoc, currentPrimitiveType_);
     // Default to no texturing; enable below if a texture is bound
@@ -3160,7 +3172,7 @@ void NUIRendererGL::flush() {
             const bool tinyAtlas = (currentTextureId_ == fontAtlasTextureIdXSmall_
                                     || currentTextureId_ == fontAtlasTextureIdSmall_);
             glUniform1f(primitiveShader_.textSharpenLoc, tinyAtlas ? 0.20f : 0.28f);
-            glUniform1f(primitiveShader_.textGammaLoc, tinyAtlas ? 0.74f : 0.93f);
+            glUniform1f(primitiveShader_.textGammaLoc, (tinyAtlas ? 0.74f : 0.93f) * textContrast_);
         }
     }
     
@@ -3212,7 +3224,7 @@ bool NUIRendererGL::initializeGL() {
     
     // Enable blending for transparency
     glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     
     // OpenGL context should already be created by platform layer
     return true;
@@ -3245,6 +3257,8 @@ bool NUIRendererGL::loadShaders() {
     primitiveShader_.textTexelSizeLoc = glGetUniformLocation(primitiveShader_.id, "uTextTexelSize");
     primitiveShader_.textSharpenLoc = glGetUniformLocation(primitiveShader_.id, "uTextSharpen");
     primitiveShader_.textGammaLoc = glGetUniformLocation(primitiveShader_.id, "uTextGamma");
+    primitiveShader_.textBoldLoc = glGetUniformLocation(primitiveShader_.id, "uTextBold");
+    primitiveShader_.textAlphaLiftLoc = glGetUniformLocation(primitiveShader_.id, "uTextAlphaLift");
     primitiveShader_.outputLinearLoc = glGetUniformLocation(primitiveShader_.id, "uOutputLinear");
 
     

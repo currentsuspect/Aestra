@@ -119,11 +119,11 @@ void GenericPluginEditor::drawParameter(NUIRenderer& renderer, const ParameterWi
                     LABEL_WIDTH + SLIDER_WIDTH + VALUE_WIDTH + PADDING * 3.0f + 12.0f,
                     PARAMETER_HEIGHT - 2.0f);
     renderer.fillRoundedRect(rowRect, 9.0f,
-        hovered || p.isDragging ? NUIColor(0.181f, 0.181f, 0.181f, 0.92f)
-                                : NUIColor(0.111f, 0.111f, 0.111f, 0.74f));
+        hovered || p.isDragging ? editorNeutral(0.181f, 0.92f)
+                                : editorNeutral(0.111f, 0.74f));
     renderer.strokeRoundedRect(rowRect, 9.0f, 1.0f,
         hovered || p.isDragging ? theme.getColor("accentPrimary").withAlpha(0.30f)
-                                : NUIColor(1.0f, 1.0f, 1.0f, 0.05f));
+                                : editorInk(0.05f));
 
     float labelY = offsetY + p.sliderBounds.y + (p.sliderBounds.height * 0.5f) - 5.0f; 
     renderer.drawText(p.shortName, 
@@ -135,7 +135,7 @@ void GenericPluginEditor::drawParameter(NUIRenderer& renderer, const ParameterWi
     NUIRect track(offsetX + p.sliderBounds.x, trackY, 
                   p.sliderBounds.width, trackH);
 
-    renderer.fillRoundedRect(track, 3.0f, NUIColor(0.039f, 0.039f, 0.039f, 0.78f));
+    renderer.fillRoundedRect(track, 3.0f, editorNeutral(0.039f, 0.78f));
 
     float fillWidth = track.width * p.normalizedValue;
     if (fillWidth > 0) {
@@ -158,7 +158,7 @@ void GenericPluginEditor::drawParameter(NUIRenderer& renderer, const ParameterWi
     NUIRect thumbRect(thumbX, thumbY, thumbSize, thumbSize);
 
     if (hovered || p.isDragging) {
-         renderer.fillRoundedRect(thumbRect, thumbSize * 0.5f, NUIColor(1.0f, 1.0f, 1.0f, 1.0f));
+         renderer.fillRoundedRect(thumbRect, thumbSize * 0.5f, editorInk(1.0f));
          renderer.strokeRoundedRect(thumbRect, thumbSize * 0.5f, 1.5f, theme.getColor("accentPrimary"));
     } else {
          float idleSize = 8.0f;
