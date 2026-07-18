@@ -434,8 +434,10 @@ bool AestraAudioController::setBufferSize(uint32_t bufferSize) {
 
 int AestraAudioController::audioCallback(float* outputBuffer, const float* inputBuffer,
                          uint32_t nFrames, double streamTime, void* userData) {
-    // B-005: Mark this as audio thread for constraint checking
-    Aestra::Audio::AudioThreadGuard audioThreadGuard;
+    // B-005: Mark this as audio thread for constraint checking.
+    // Uses the canonical RT flag (RealtimeThreadGuard.h); nests cleanly with the
+    // inner ScopedRealtimeAudioThread inside AudioEngine::processBlock.
+    Aestra::Audio::ScopedRealtimeAudioThread audioThreadGuard;
     Aestra::Audio::AudioThreadStats::instance().totalCallbacks.fetch_add(1, std::memory_order_relaxed);
 
     AestraAudioController* controller = static_cast<AestraAudioController*>(userData);

@@ -3,7 +3,6 @@
 #include "AppLifecycle.h"
 #include "ServiceLocator.h"
 #include "AestraRootComponent.h"
-#include "AudioThreadConstraints.h"
 #include "Preferences.h"
 #include "../AestraCore/include/AestraUnifiedProfiler.h"
 #include "../AestraCore/include/PointerRegistry.h"

@@ -1513,6 +1513,20 @@ target_include_directories(RTAllocationTrapTest PRIVATE
 add_test(NAME RTAllocationTrapTest COMMAND RTAllocationTrapTest)
 set_tests_properties(RTAllocationTrapTest PROPERTIES LABELS "audio;rt-safety;integrity;s-tier" TIMEOUT 180)
 
+# RT Guard Consolidation Test — proves the app-layer constraint macros in
+# Source/AudioThreadConstraints.h recognize a thread marked only by the canonical
+# ScopedRealtimeAudioThread (RealtimeThreadGuard.h). Regression guard for R1.
+# Header-only: RealtimeThreadGuard.h + AudioThreadConstraints.h define everything
+# inline, so no link deps (avoids dragging in the plugin registry link chain).
+add_executable(RTGuardConsolidationTest AestraAudio/RTGuardConsolidationTest.cpp)
+target_include_directories(RTGuardConsolidationTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/AestraAudio/include
+    ${CMAKE_SOURCE_DIR}/AestraCore/include
+    ${CMAKE_SOURCE_DIR}/Source
+)
+add_test(NAME RTGuardConsolidationTest COMMAND RTGuardConsolidationTest)
+set_tests_properties(RTGuardConsolidationTest PROPERTIES LABELS "audio;rt-safety;integrity" TIMEOUT 120)
+
 # Callback Deadline Telemetry — validates AudioTelemetry::recordCallbackDuration
 # (avg/worst/budget/over-budget math) synthetically, plus a live smoke over
 # real processBlock timings.
