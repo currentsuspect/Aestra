@@ -22,23 +22,38 @@
 #include "Commands/CommandRegistry.h"
 #include "Commands/MuseGrammar.h"
 #include "Commands/MuseService.h"
+#include "Commands/MuseSocketServer.h"
 #include "Plugin/PluginManager.h"
 #include "TrackManager.h"
 
 #include <cctype>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 
 using namespace Aestra::Audio;
 
 int main(int argc, char** argv) {
     uint32_t sampleRate = 48000;
 
+    int socketPort = -1; // -1 = stdin/stdout mode
+
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
+        if (arg == "--port" && i + 1 < argc) {
+            const long parsed = std::strtol(argv[++i], nullptr, 10);
+            if (parsed >= 0 && parsed <= 65535) {
+                socketPort = static_cast<int>(parsed);
+            } else {
+                std::cerr << "invalid --port\n";
+                return 2;
+            }
+            continue;
+        }
         if (arg == "--schema") {
             std::cout << MuseGrammar::schemaToJsonString();
             return 0;
@@ -55,7 +70,9 @@ int main(int argc, char** argv) {
         if (arg == "--help" || arg == "-h") {
             std::cout << "MuseRepl: JSONL in on stdin, JSONL out on stdout.\n"
                          "  --schema             print command schema JSON and exit\n"
-                         "  --sample-rate <hz>   engine sample rate (default 48000)\n";
+                         "  --sample-rate <hz>   engine sample rate (default 48000)\n"
+                         "  --port <port>        serve JSONL on 127.0.0.1:<port> instead of\n"
+                         "                       stdin/stdout (0 = ephemeral, printed)\n";
             return 0;
         }
         std::cerr << "unknown argument: " << arg << "\n";
@@ -94,6 +111,24 @@ int main(int argc, char** argv) {
     CommandRegistry::setAudioEngine(&engine);
 
     MuseService service(trackManager.get(), &engine);
+
+    // Socket mode: the same headless session served over localhost — what
+    // muse-agent connects to when no GUI is running.
+    if (socketPort >= 0) {
+        MuseSocketServer server;
+        std::string error;
+        if (!server.start(static_cast<uint16_t>(socketPort), error)) {
+            std::cerr << "failed to start socket server: " << error << "\n";
+            return 1;
+        }
+        std::cout << "muse-port " << server.port() << std::endl;
+        while (server.isRunning()) {
+            if (server.processPending(service) == 0) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        }
+        return 0;
+    }
 
     std::string line;
     while (std::getline(std::cin, line)) {
