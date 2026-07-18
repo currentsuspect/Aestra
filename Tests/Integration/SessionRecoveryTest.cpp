@@ -3,6 +3,7 @@
 #include "../../Source/Core/ProjectSerializer.h"
 #include "../AestraCore/include/AestraLog.h"
 #include "../Support/TestTempDirectory.h"
+#include "Core/AutosaveManager.h"
 #include "Models/ClipSource.h"
 #include "Models/PatternSource.h"
 #include "Models/TrackManager.h"
@@ -229,6 +230,28 @@ int main() {
             "Recovered main output destination mismatch");
     require(std::abs(recoveredChannel1->getVolume() - 0.75f) < 1e-6f, "Recovered channel 1 volume mismatch");
     require(std::abs(recoveredChannel1->getPan() - (-0.25f)) < 1e-6f, "Recovered channel 1 pan mismatch");
+
+    // --- Rotated fallback: a corrupt primary must not strand a valid backup
+    const auto backupDir = tempDir / "autosave.autosave";
+    std::filesystem::create_directories(backupDir);
+    const auto rotatedBackup = backupDir / "20260718_120000.aes";
+    std::filesystem::copy_file(autosavePath, rotatedBackup, std::filesystem::copy_options::overwrite_existing);
+    {
+        std::ofstream corruptPrimary(autosavePath, std::ios::binary | std::ios::trunc);
+        corruptPrimary << "{\"version\":";
+    }
+
+    auto recoveryCandidates = AutosaveManager::listBackupsForAutosavePath(autosavePath.string());
+    require(recoveryCandidates.size() == 1 && recoveryCandidates.front() == rotatedBackup.string(),
+            "Recovery should discover the rotated backup after primary corruption");
+
+    auto tm3 = std::make_shared<TrackManager>();
+    tm3->getPlaylistModel().setPatternManager(&tm3->getPatternManager());
+    recoveryCandidates.insert(recoveryCandidates.begin(), autosavePath.string());
+    auto selected = ProjectSerializer::loadFirstValid(recoveryCandidates, tm3, autosavePath.string());
+    require(selected.result.ok, "Valid rotated backup did not load after corrupt primary");
+    require(selected.loadedPath == rotatedBackup.string(), "Recovery did not select the valid rotated backup");
+    require(tm3->getChannelCount() == 2, "Rotated backup recovery lost project channels");
 
     // --- Clean up
     clearCrashFlag(crashFlagPath);

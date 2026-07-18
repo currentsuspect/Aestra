@@ -155,7 +155,7 @@ int main() {
         manager.forceAutosave();
         manager.shutdown();
 
-        auto backupDir = tempDir / "override.autosave";
+        auto backupDir = tempDir / "override.autosave.autosave";
         int backupCount = 0;
         if (std::filesystem::exists(backupDir)) {
             for (const auto& entry : std::filesystem::directory_iterator(backupDir)) {
@@ -165,6 +165,10 @@ int main() {
             }
         }
         require(backupCount <= 2, "Backup rotation should limit to maxBackupFiles");
+        const auto recoveryBackups = AutosaveManager::listBackupsForAutosavePath(autosavePath.string());
+        require(!recoveryBackups.empty(), "rotated backups must be discoverable from the explicit autosave path");
+        require(static_cast<int>(recoveryBackups.size()) == backupCount,
+                "recovery backup discovery should match the files retained by rotation");
         std::cout << "[INFO] Backup rotation passed (" << backupCount << " backups).\n";
     }
 
