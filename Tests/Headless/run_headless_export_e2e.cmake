@@ -40,6 +40,15 @@ message(STATUS "AestraHeadlessExport exit: ${exit_code}")
 message(STATUS "AestraHeadlessExport stdout:\n${stdout_log}")
 message(STATUS "AestraHeadlessExport stderr:\n${stderr_log}")
 
+# Singleton regression check first, independent of exit code: the abort path
+# dies on a signal (exit_code becomes e.g. "Subprocess aborted", not "1"), so
+# this must run before the exit-code dispatch to produce the specific diagnosis.
+if(stdout_log MATCHES "getInstance\\(\\) called before engine was created" OR
+   stderr_log MATCHES "getInstance\\(\\) called before engine was created")
+    message(FATAL_ERROR "Export path still depends on the AudioEngine singleton "
+                        "(getInstance() called before any engine was constructed).")
+endif()
+
 if(exit_code STREQUAL "0")
     # Full success claimed: hold the binary to it.
     if(NOT EXISTS "${OUT_FILE}")
@@ -56,10 +65,8 @@ if(exit_code STREQUAL "0")
 elseif(exit_code STREQUAL "1")
     # Graceful diagnosed failure. Acceptable only while the generator commit
     # layer is unimplemented — but it must be a *diagnosed* failure, never a
-    # crash, and never a silent success with no file.
-    if(stderr_log MATCHES "getInstance\\(\\) called before engine was created")
-        message(FATAL_ERROR "Export path still depends on the AudioEngine singleton.")
-    endif()
+    # crash, and never a silent success with no file. (The singleton-abort
+    # message is already checked above, before the exit-code dispatch.)
     message(STATUS "Export failed gracefully (generator commit layer not yet implemented) — no crash.")
 else()
     message(FATAL_ERROR
