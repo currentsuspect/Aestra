@@ -324,6 +324,17 @@ public:
 	    bool handleScrollbarMouseEvent(const NUIMouseEvent& event);
 	    bool handleBreadcrumbMouseEvent(const NUIMouseEvent& event);
         bool handleNavigationMouseEvent(const NUIMouseEvent& event, const BrowserLayout& layout);
+
+        // onMouseEvent decomposition — called by the dispatcher in this order;
+        // bool handlers return true when the event was consumed.
+        bool handleChromeMouse(const NUIMouseEvent& event, const BrowserLayout& browserLayout);
+        bool handleActiveDragMouse(const NUIMouseEvent& event);
+        bool handleDragInitiation(const NUIMouseEvent& event, const std::vector<const FileItem*>& view);
+        bool handleWheelScroll(const NUIMouseEvent& event, const BrowserLayout& browserLayout, bool mouseInside,
+                               const std::vector<const FileItem*>& view);
+        void updateBreadcrumbHover(const NUIMouseEvent& event);
+        bool handleListMouse(const NUIMouseEvent& event, const std::vector<const FileItem*>& view,
+                             const BrowserLayout& browserLayout);
 	    void updateScrollbarVisibility();
 	    void showFavoritesMenu();
 	    void showAddFolderMenu();
