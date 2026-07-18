@@ -674,9 +674,24 @@ elseif(UNIX)
         )
 
         add_library(AestraAudio INTERFACE)
-        target_link_libraries(AestraAudio INTERFACE
-            "$<LINK_GROUP:RESCAN,AestraAudioLinux,AestraAudioCore>"
-        )
+        if(TARGET AestraRumble)
+            # Rumble's static plugin registration references InternalPluginRegistry
+            # symbols that live in AestraAudioCore. Appended whole-archive AFTER the
+            # closed rescan group (the old AestraPremiumPlugins wiring) it could not
+            # resolve those symbols backwards — GNU ld is single-pass — which broke
+            # every full-UI test binary that didn't coincidentally pull the registry
+            # first (issue #555: undefined refs on some, silent/empty plugin registry
+            # on others). Fold it INTO the rescan group, keeping WHOLE_ARCHIVE so the
+            # self-registration TU is always linked and always resolvable.
+            target_link_libraries(AestraAudio INTERFACE
+                "$<LINK_GROUP:RESCAN,AestraAudioLinux,AestraAudioCore,$<LINK_LIBRARY:WHOLE_ARCHIVE,AestraRumble>>"
+            )
+            set(AESTRA_RUMBLE_IN_LINK_GROUP TRUE)
+        else()
+            target_link_libraries(AestraAudio INTERFACE
+                "$<LINK_GROUP:RESCAN,AestraAudioLinux,AestraAudioCore>"
+            )
+        endif()
     else()
         # No ALSA - stub already in AestraAudioCore
         # Create an interface library for compatibility
@@ -693,7 +708,10 @@ if(NOT TARGET AestraAudioWin AND NOT TARGET AestraAudioLinux)
     target_sources(AestraAudioCore PRIVATE src/IO/MidiInputService.cpp)
 endif()
 
-if(TARGET AestraAudio AND TARGET AestraPremiumPlugins)
+# On Linux+ALSA with Rumble present, Rumble is already whole-archived inside
+# the rescan group above; appending the premium interface (which wraps the same
+# archive in WHOLE_ARCHIVE) would double-link it into every consumer.
+if(TARGET AestraAudio AND TARGET AestraPremiumPlugins AND NOT AESTRA_RUMBLE_IN_LINK_GROUP)
     target_link_libraries(AestraAudio INTERFACE AestraPremiumPlugins)
 endif()
 
