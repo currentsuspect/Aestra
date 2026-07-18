@@ -7,10 +7,10 @@
 #include "AestraContent.h"
 #include "AestraWindowManager.h"
 #include "AutosaveManager.h"
-#include "ProjectSerializer.h"
-
 #include "Commands/MuseService.h"
 #include "Commands/MuseSocketServer.h"
+#include "ProjectDocumentState.h"
+#include "ProjectSerializer.h"
 
 #include <chrono>
 #include <filesystem>
@@ -19,7 +19,7 @@
 
 /**
  * @brief Main application class
- * 
+ *
  * Manages the lifecycle of all AESTRA subsystems and the main event loop.
  * Refactored to delegate to AestraWindowManager and AestraAudioController.
  */
@@ -48,7 +48,9 @@ public:
      * @brief Access content manager (needed for audio callbacks)
      */
     std::shared_ptr<AestraContent> getAestraContent() const { return m_content; }
-    Aestra::Audio::AudioEngine* getAudioEngine() const { return m_audioController ? m_audioController->getEngine() : nullptr; }
+    Aestra::Audio::AudioEngine* getAudioEngine() const {
+        return m_audioController ? m_audioController->getEngine() : nullptr;
+    }
 
     // Helpers exposed for easier refactoring
     static std::string getAppDataPath();
@@ -60,19 +62,21 @@ public:
     static bool isCrashedSession();
 
 private:
+    enum class ProjectLoadSource { Canonical, Recovery, Snapshot };
+
     // Initialization helpers (extracted from initialize() for readability)
     bool transitionToInitializing();
     bool initializePlatformAndWindow(const Aestra::UIState& uiState);
     bool initializeAudio();
     void initializeContent();
     void initializeAutosave(bool enabled);
-    void buildRecoveryDialog();              // lightweight — needed during startup
+    void buildRecoveryDialog(); // lightweight — needed during startup
     // Idle frame elision (labs/perf/idle-frame-elision-spec.md)
     bool shouldRenderThisFrame();
     std::chrono::steady_clock::time_point m_lastPresentedFrame{};
 
-    void buildSettingsAndDialogs();          // heavy — deferred until first open
-    void ensureSettingsAndDialogs();         // lazy guard
+    void buildSettingsAndDialogs();  // heavy — deferred until first open
+    void ensureSettingsAndDialogs(); // lazy guard
     void buildMenuBar();
     void initializePlugins();
     void loadOrRecoverProject(const std::string& projectPath, bool crashedSession);
@@ -86,13 +90,20 @@ private:
 
     // Project management
     void requestClose();
-    void saveCurrentProject();
-    ProjectSerializer::LoadResult loadProjectFromPath(const std::string& path, const std::string& activeProjectPathOverride = "");
+    bool saveCurrentProject();
+    bool saveProjectAs();
+    ProjectSerializer::LoadResult loadProjectFromPath(const std::string& path,
+                                                      ProjectLoadSource source = ProjectLoadSource::Canonical,
+                                                      const std::string& canonicalPath = "");
+    ProjectSerializer::LoadResult applyLoadedProject(const std::string& path,
+                                                     ProjectLoadSource source,
+                                                     const std::string& canonicalPath,
+                                                     ProjectSerializer::LoadResult result);
     ProjectSerializer::LoadResult loadProject();
     bool saveProject();
-    bool saveProjectToPath(const std::string& path);
-    ProjectSerializer::SerializeResult serializeCurrentProject(int indentSpaces,
-                                                               const ProjectSerializer::UIState* uiState = nullptr) const;
+    bool saveProjectToPath(const std::string& path, bool establishCanonical = false);
+    ProjectSerializer::SerializeResult
+    serializeCurrentProject(int indentSpaces, const ProjectSerializer::UIState* uiState = nullptr) const;
     bool saveActiveTakeSnapshot(const ProjectSerializer::UIState* uiState = nullptr);
     bool createTakeFromCurrentProject();
     ProjectSerializer::LoadResult switchToTake(const std::string& takeId);
@@ -105,7 +116,9 @@ private:
     void startExport();
     static std::string getRecoveryMarkerPath(const std::string& autosavePath);
     static std::string readCrashFlagToken();
-    void writeRecoveryMarkerForAutosave(const std::string& autosavePath) const;
+    static std::string readRecoveryOriginalProjectPath(const std::string& recoveryMarkerPath,
+                                                       const std::string& expectedSessionToken);
+    void writeRecoveryMarkerForAutosave(const std::string& autosavePath, const std::string& canonicalProjectPath) const;
 
 private:
     std::unique_ptr<AestraWindowManager> m_windowManager;
@@ -123,7 +136,7 @@ private:
 
     bool m_running;
     bool m_pendingClose{false};
-    std::string m_projectPath;
+    Aestra::ProjectDocumentState m_documentState;
 
     // Auto-save
     Aestra::Audio::AutosaveManager m_autoSaveManager;

@@ -106,6 +106,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/ProjectRoundTripTest.cpp")
 endif()
 
 # Session Recovery Test (autosave + crash flag + recovery flow)
+add_executable(ProjectDocumentStateTest Integration/ProjectDocumentStateTest.cpp)
+target_include_directories(ProjectDocumentStateTest PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source/Core
+)
+add_test(NAME ProjectDocumentStateTest COMMAND ProjectDocumentStateTest)
+set_tests_properties(ProjectDocumentStateTest PROPERTIES LABELS "unit;project;identity;recovery")
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Integration/SessionRecoveryTest.cpp")
     add_executable(SessionRecoveryTest
         Integration/SessionRecoveryTest.cpp
