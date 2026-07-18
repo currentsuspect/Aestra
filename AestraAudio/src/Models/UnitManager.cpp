@@ -267,6 +267,7 @@ void UnitManager::publishSnapshot() {
         state.plugin = unit->plugin;
         state.routeId = unit->targetMixerRoute;
         state.routeMode = arsenalRouteModeFromRouteId(state.routeId);
+        state.gain = unit->gain;
         state.isMuted = unit->isMuted;
         state.isSolo = unit->isSolo;
         snapshot->units.push_back(state);
@@ -474,6 +475,13 @@ int UnitManager::getUnitTimelineLane(UnitID id) const {
     }
     return -1;
 }
+void UnitManager::setUnitGain(UnitID id, float gain) {
+    if (auto* u = getUnit(id)) {
+        u->gain = gain;
+        publishSnapshot();
+    }
+}
+
 void UnitManager::setUnitAudioClip(UnitID id, const std::string& path) {
     auto* u = getUnit(id);
     if (!u) {
@@ -673,6 +681,7 @@ JSON UnitManager::saveToJSON() const {
         u.set("solo", JSON(unit->isSolo));
         u.set("armed", JSON(unit->isArmed));
         u.set("audioClipPath", JSON(unit->audioClipPath));
+        u.set("gain", JSON(static_cast<double>(unit->gain)));
         u.set("audioDurationSeconds", JSON(unit->audioDurationSeconds));
         u.set("defaultPatternId", JSON(static_cast<double>(unit->defaultPatternId.value)));
         const ArsenalRouteMode resolvedRouteMode = arsenalRouteModeFromRouteId(unit->targetMixerRoute);
@@ -788,6 +797,7 @@ void UnitManager::loadFromJSON(const JSON& json) {
         unit.isSolo = ju.has("solo") ? ju["solo"].asBool() : false;
         unit.isArmed = ju.has("armed") ? ju["armed"].asBool() : false;
         unit.audioClipPath = ju.has("audioClipPath") ? ju["audioClipPath"].asString() : std::string{};
+        unit.gain = ju.has("gain") ? static_cast<float>(ju["gain"].asNumber()) : 1.0f;
         unit.audioDurationSeconds = ju.has("audioDurationSeconds") ? ju["audioDurationSeconds"].asNumber() : 0.0;
         if (ju.has("defaultPatternId")) {
             unit.defaultPatternId = PatternID(static_cast<uint64_t>(ju["defaultPatternId"].asNumber()));

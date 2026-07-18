@@ -1095,6 +1095,58 @@ int main() {
         std::filesystem::remove(outPath);
     }
 
+    // --- Unit gain + meters: the last mixing dimensions ---
+    {
+        const std::string p = std::to_string(static_cast<long long>(kickPattern));
+        const std::string u = std::to_string(static_cast<long long>(kickUnit));
+        const std::string outPath =
+            (std::filesystem::temp_directory_path() / "muse_service_test_gain.wav").string();
+
+        // Baseline render at unity gain, then at half gain: the peak must
+        // drop by ~6 dB — proof the gain reaches the audio path.
+        JSON r = call(service, fileRequest(230, "render_pattern", "pattern", kickPattern, outPath,
+                                           0.1));
+        check(status(r) == "ok", "unity-gain render ok");
+        const double unityPeak = r["result"]["peakDb"].asNumber();
+
+        r = call(service, "{\"id\": 231, \"verb\": \"set_unit_gain\", \"args\": {\"unit\": " + u +
+                              ", \"value\": 0.5}}");
+        check(status(r) == "ok", "set_unit_gain ok");
+        r = call(service, "{\"id\": 232, \"verb\": \"list_units\"}");
+        check(std::abs(r["result"]["units"][0]["gain"].asNumber() - 0.5) < 1e-6,
+              "gain readback is 0.5");
+
+        r = call(service, fileRequest(233, "render_pattern", "pattern", kickPattern, outPath,
+                                      0.1));
+        const double halfPeak = r["result"]["peakDb"].asNumber();
+        check(std::abs((unityPeak - halfPeak) - 6.02) < 0.5,
+              "half gain drops the rendered peak by ~6 dB (was " + std::to_string(unityPeak) +
+                  ", now " + std::to_string(halfPeak) + ")");
+
+        trackManager->getCommandHistory().undo();
+        r = call(service, "{\"id\": 234, \"verb\": \"list_units\"}");
+        check(std::abs(r["result"]["units"][0]["gain"].asNumber() - 1.0) < 1e-6,
+              "undo restores unity gain");
+
+        r = call(service,
+                 "{\"id\": 235, \"verb\": \"set_unit_gain\", \"args\": {\"unit\": 999, \"value\": 1}}");
+        check(status(r) == "execution_error" &&
+                  r["message"].asString().find("no such unit: 999") != std::string::npos,
+              "unknown unit refusal names it");
+
+        // Meters: after the renders above the buffer holds the last block.
+        r = call(service, "{\"id\": 236, \"verb\": \"get_meters\"}");
+        check(status(r) == "ok", "get_meters ok");
+        check(r["result"].has("master") && r["result"]["master"]["peakDbL"].isNumber(),
+              "master meter present with numeric peak");
+        check(r["result"]["tracks"].size() >= 2, "per-track meters present");
+        check(r["result"]["master"]["clip"].isBool(), "clip flag is boolean");
+
+        r = call(service, "{\"id\": 237, \"verb\": \"get_meters\", \"args\": {\"x\": 1}}");
+        check(status(r) == "validation_error", "get_meters takes no arguments");
+        std::filesystem::remove(outPath);
+    }
+
     std::cout << (g_failures == 0 ? "ALL PASSED" : "FAILURES: " + std::to_string(g_failures))
               << std::endl;
     return g_failures == 0 ? 0 : 1;

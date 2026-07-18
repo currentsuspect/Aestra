@@ -7,6 +7,7 @@
 #include "Commands/ClonePatternCommand.h"
 #include "Commands/EffectCommands.h"
 #include "Commands/SetPatternLengthCommand.h"
+#include "Commands/SetUnitGainCommand.h"
 #include "Plugin/PluginManager.h"
 #include "Commands/DuplicateClipCommand.h"
 #include "Commands/LoadSampleCommand.h"
@@ -197,6 +198,7 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         reg.registerCommand("trim_clip", noopTrack);
         reg.registerCommand("add_unit", noopTrack);
         reg.registerCommand("load_sample", noopTrack);
+        reg.registerCommand("set_unit_gain", noopTrack);
         reg.registerCommand("add_note", noopTrack);
         reg.registerCommand("delete_note", noopTrack);
         reg.registerCommand("move_note", noopTrack);
@@ -435,6 +437,20 @@ void CommandRegistry::initialize(TrackManager* trackManager) {
         if (!std::filesystem::exists(std::filesystem::path(std::string(*fileRaw)), ec))
             return CommandRegistry::fail("file not found: " + std::string(*fileRaw));
         return std::make_unique<LoadSampleCommand>(tm->getUnitManager(), *unitOpt, std::string(*fileRaw));
+    });
+
+    reg.registerCommand("set_unit_gain", [tm = trackManager](const auto& flags) -> std::unique_ptr<ICommand> {
+        auto unitRaw = requireFlag(flags, "unit");
+        if (!unitRaw) return nullptr;
+        auto unitOpt = safeStoull(*unitRaw);
+        if (!unitOpt) return nullptr;
+        auto valueRaw = requireFlag(flags, "value");
+        if (!valueRaw) return nullptr;
+        auto valueOpt = safeStof(*valueRaw);
+        if (!valueOpt) return nullptr;
+        if (!tm->getUnitManager().getUnit(*unitOpt))
+            return CommandRegistry::fail("no such unit: " + std::string(*unitRaw));
+        return std::make_unique<SetUnitGainCommand>(tm->getUnitManager(), *unitOpt, *valueOpt);
     });
 
     // ===== Pattern / note (4) =====
