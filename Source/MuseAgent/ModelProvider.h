@@ -64,6 +64,7 @@ struct ModelRequest {
     std::vector<Message> messages;
     std::vector<ToolDefinition> tools;
     int maxTokens = 16000;
+    int timeoutSeconds = 300; // per-request transport deadline (set from the loop budget)
 };
 
 struct ModelResponse {

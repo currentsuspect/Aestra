@@ -1,6 +1,7 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "AgentLoop.h"
 
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 
@@ -227,7 +228,10 @@ AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
     long long museRequestId = 1;
 
     while (outcome.iterations < m_options.maxIterations) {
-        if (std::chrono::steady_clock::now() > deadline) {
+        const auto remaining = std::chrono::duration_cast<std::chrono::seconds>(
+                                   deadline - std::chrono::steady_clock::now())
+                                   .count();
+        if (remaining <= 0) {
             outcome.stopReason = "max_seconds";
             outcome.summary = "time budget exhausted after " +
                               std::to_string(outcome.iterations) + " turns";
@@ -235,6 +239,10 @@ AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
         }
         ++outcome.iterations;
 
+        // The remaining budget becomes the transport deadline, so a hung
+        // provider cannot blow past --max-seconds (floor keeps the final
+        // request viable).
+        request.timeoutSeconds = static_cast<int>(std::max<long long>(remaining, 5));
         const ModelResponse response = m_provider.complete(request);
         outcome.usage.inputTokens += response.usage.inputTokens;
         outcome.usage.outputTokens += response.usage.outputTokens;
@@ -247,6 +255,11 @@ AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
         if (response.stopReason == StopReason::Refusal) {
             outcome.stopReason = "refusal";
             outcome.summary = "the model declined the request";
+            return outcome;
+        }
+        if (response.stopReason == StopReason::MaxTokens && response.toolCalls.empty()) {
+            outcome.stopReason = "max_tokens";
+            outcome.summary = "the model hit its per-turn output token limit";
             return outcome;
         }
 
@@ -275,11 +288,23 @@ AgentLoop::Outcome AgentLoop::run(const std::string& brief) {
             result.toolName = call.name;
 
             if (call.name == "finish") {
+                // Success is declared with substance: a finish without a real
+                // summary bounces back as an error so the model can correct it.
+                JSON arguments = call.arguments;
+                const bool validSummary = arguments.isObject() &&
+                                          arguments.has("summary") &&
+                                          arguments["summary"].isString() &&
+                                          !arguments["summary"].asString().empty();
+                if (!validSummary) {
+                    result.text = "finish requires a non-empty string \"summary\" "
+                                  "describing what was done and verified";
+                    result.isError = true;
+                    request.messages.push_back(result);
+                    continue;
+                }
                 outcome.finished = true;
                 outcome.stopReason = "finished";
-                outcome.summary = call.arguments.has("summary")
-                                      ? JSON(call.arguments)["summary"].asString()
-                                      : "";
+                outcome.summary = arguments["summary"].asString();
                 return outcome;
             }
             if (call.name == "ask_user") {

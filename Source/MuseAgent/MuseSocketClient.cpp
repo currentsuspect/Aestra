@@ -28,6 +28,14 @@ struct MuseSocketClient::Impl {
 };
 
 namespace {
+
+// A peer that vanished must surface as a send() error, not a SIGPIPE kill.
+#ifdef MSG_NOSIGNAL
+constexpr int kSendFlags = MSG_NOSIGNAL;
+#else
+constexpr int kSendFlags = 0;
+#endif
+
 void closeSocket(SocketHandle socket) {
     if (socket == kInvalidSocket) return;
 #ifdef _WIN32
@@ -57,6 +65,12 @@ bool MuseSocketClient::connect(const std::string& host, uint16_t port, std::stri
         outError = "socket() failed";
         return false;
     }
+#ifdef SO_NOSIGPIPE
+    {
+        const int enable = 1;
+        ::setsockopt(m_impl->socket, SOL_SOCKET, SO_NOSIGPIPE, &enable, sizeof(enable));
+    }
+#endif
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_port = htons(port);
@@ -90,7 +104,7 @@ std::string MuseSocketClient::request(const std::string& line) {
 #else
                               toSend.size() - sent,
 #endif
-                              0);
+                              kSendFlags);
         if (n <= 0) {
             closeSocket(m_impl->socket);
             m_impl->socket = kInvalidSocket;

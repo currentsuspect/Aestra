@@ -48,6 +48,7 @@ public:
     struct Turn {
         std::vector<ToolCall> calls;
         std::string text;
+        bool truncated = false; // report StopReason::MaxTokens for this turn
     };
 
     explicit FakeProvider(std::vector<Turn> turns) : m_turns(std::move(turns)) {}
@@ -70,7 +71,10 @@ public:
         const Turn& turn = m_turns[m_next++];
         response.text = turn.text;
         response.toolCalls = turn.calls;
-        response.stopReason = turn.calls.empty() ? StopReason::EndTurn : StopReason::ToolUse;
+        response.stopReason = turn.truncated
+                                  ? StopReason::MaxTokens
+                                  : (turn.calls.empty() ? StopReason::EndTurn
+                                                        : StopReason::ToolUse);
         return response;
     }
 
@@ -201,6 +205,39 @@ int main() {
         const AgentLoop::Outcome outcome = loop.run("do nothing");
         check(!outcome.finished && outcome.stopReason == "end_without_finish",
               "ending without finish is not success");
+    }
+
+    // --- finish without a real summary bounces back as an error ---
+    {
+        FakeProvider provider({
+            {{makeCall("finish", "{}")}, ""},
+            {{makeCall("finish", "{\"summary\": \"\"}")}, ""},
+            {{makeCall("finish", "{\"summary\": \"done properly this time\"}")}, ""},
+        });
+        AgentLoop::Options options;
+        AgentLoop loop(provider, transport, options);
+        const AgentLoop::Outcome outcome = loop.run("finish sloppily");
+        check(outcome.finished && outcome.summary == "done properly this time",
+              "empty finish rejected until a real summary arrives");
+
+        bool sawFinishError = false;
+        for (const auto& message : provider.m_lastRequest.messages) {
+            if (message.role == "tool" && message.isError &&
+                message.text.find("non-empty string") != std::string::npos) {
+                sawFinishError = true;
+            }
+        }
+        check(sawFinishError, "sloppy finish returned as an error tool result");
+    }
+
+    // --- Truncation surfaces as max_tokens, not end_without_finish ---
+    {
+        FakeProvider provider({{{}, "half a thou", true}});
+        AgentLoop::Options options;
+        AgentLoop loop(provider, transport, options);
+        const AgentLoop::Outcome outcome = loop.run("say something long");
+        check(!outcome.finished && outcome.stopReason == "max_tokens",
+              "provider truncation reported as max_tokens");
     }
 
     // --- Collaborative mode: ask_user offered and routed ---

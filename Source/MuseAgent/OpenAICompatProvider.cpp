@@ -71,8 +71,8 @@ ModelResponse OpenAICompatProvider::complete(const ModelRequest& request) {
         headers.emplace_back("Authorization", "Bearer " + m_apiKey);
     }
 
-    const HttpResponse http =
-        httpPostJson(m_baseUrl + "/v1/chat/completions", headers, body.toString());
+    const HttpResponse http = httpPostJson(m_baseUrl + "/v1/chat/completions", headers,
+                                           body.toString(), request.timeoutSeconds);
 
     if (!http.error.empty()) {
         response.error = "transport: " + http.error;
@@ -89,7 +89,8 @@ ModelResponse OpenAICompatProvider::complete(const ModelRequest& request) {
 
     if (http.status != 200) {
         std::string detail = http.body;
-        if (parsed.has("error") && parsed["error"].has("message")) {
+        if (parsed.has("error") && parsed["error"].has("message") &&
+            parsed["error"]["message"].isString()) {
             detail = parsed["error"]["message"].asString();
         }
         response.error = "HTTP " + std::to_string(http.status) + ": " + detail;
@@ -101,6 +102,10 @@ ModelResponse OpenAICompatProvider::complete(const ModelRequest& request) {
         return response;
     }
     JSON& choice = parsed["choices"][0];
+    if (!choice.has("message")) {
+        response.error = "malformed choice (missing \"message\")";
+        return response;
+    }
     JSON& message = choice["message"];
     if (message.has("content") && message["content"].isString()) {
         response.text = message["content"].asString();
@@ -110,16 +115,31 @@ ModelResponse OpenAICompatProvider::complete(const ModelRequest& request) {
         for (size_t i = 0; i < calls.size(); ++i) {
             JSON& callEntry = calls[i];
             ToolCall call;
-            call.id = callEntry.has("id") ? callEntry["id"].asString()
-                                          : "call_" + std::to_string(i);
+            call.id = callEntry.has("id") && callEntry["id"].isString()
+                          ? callEntry["id"].asString()
+                          : "call_" + std::to_string(i);
+            if (!callEntry.has("function") || !callEntry["function"].has("name") ||
+                !callEntry["function"]["name"].isString()) {
+                response.error = "malformed tool call (missing function name)";
+                response.stopReason = StopReason::Error;
+                return response;
+            }
             JSON& function = callEntry["function"];
             call.name = function["name"].asString();
-            // Arguments arrive as a JSON string; a model emitting garbage
-            // here becomes an error result the loop can surface.
+            // Arguments arrive as a JSON *string*. Garbage here must not
+            // silently become an empty-argument call — reject the response so
+            // the loop reports the provider, not a phantom Muse edit.
+            const std::string argumentsText =
+                function.has("arguments") && function["arguments"].isString()
+                    ? function["arguments"].asString()
+                    : "{}";
             try {
-                call.arguments = JSON::parse(function["arguments"].asString());
-            } catch (const std::exception&) {
-                call.arguments = JSON::object();
+                call.arguments = JSON::parse(argumentsText);
+            } catch (const std::exception& e) {
+                response.error = "tool call \"" + call.name +
+                                 "\" carried unparseable arguments: " + e.what();
+                response.stopReason = StopReason::Error;
+                return response;
             }
             response.toolCalls.push_back(call);
         }
@@ -127,16 +147,17 @@ ModelResponse OpenAICompatProvider::complete(const ModelRequest& request) {
 
     if (parsed.has("usage")) {
         JSON& usage = parsed["usage"];
-        if (usage.has("prompt_tokens"))
+        if (usage.has("prompt_tokens") && usage["prompt_tokens"].isNumber())
             response.usage.inputTokens =
                 static_cast<long long>(usage["prompt_tokens"].asNumber());
-        if (usage.has("completion_tokens"))
+        if (usage.has("completion_tokens") && usage["completion_tokens"].isNumber())
             response.usage.outputTokens =
                 static_cast<long long>(usage["completion_tokens"].asNumber());
     }
 
-    const std::string finish =
-        choice.has("finish_reason") ? choice["finish_reason"].asString() : "stop";
+    const std::string finish = choice.has("finish_reason") && choice["finish_reason"].isString()
+                                   ? choice["finish_reason"].asString()
+                                   : "stop";
     if (finish == "tool_calls" || !response.toolCalls.empty()) {
         response.stopReason = StopReason::ToolUse;
     } else if (finish == "length") {

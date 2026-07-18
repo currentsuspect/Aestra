@@ -42,8 +42,8 @@ public:
         bool finished = false;      // the model called finish
         std::string summary;        // finish summary, or the stop explanation
         std::string stopReason;     // "finished" | "max_iterations" | "max_tool_calls"
-                                    // | "max_seconds" | "provider_error" | "refusal"
-                                    // | "end_without_finish"
+                                    // | "max_seconds" | "max_tokens" | "provider_error"
+                                    // | "refusal" | "end_without_finish"
         int iterations = 0;
         int toolCalls = 0;
         Usage usage;
