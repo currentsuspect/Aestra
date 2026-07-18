@@ -160,6 +160,21 @@ public:
         return parseValue(jsonString, pos, 0);
     }
 
+    // Parse exactly one JSON value and reject any non-whitespace suffix. Keep
+    // parse() for compatibility with non-file call sites that historically
+    // accepted a prefix value.
+    static JSON parseStrict(const std::string& jsonString, bool& consumedAllInput) {
+        consumedAllInput = false;
+        if (exceedsMaxDepth(jsonString)) {
+            return JSON();
+        }
+        size_t pos = 0;
+        JSON value = parseValue(jsonString, pos, 0);
+        skipWhitespace(jsonString, pos);
+        consumedAllInput = pos == jsonString.size();
+        return value;
+    }
+
 private:
     Type type_;
     bool boolValue_ = false;

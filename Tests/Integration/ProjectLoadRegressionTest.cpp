@@ -134,6 +134,35 @@ void testValidProjectLoad() {
     std::cout << "[PASS] Valid project load" << std::endl;
 }
 
+void testTrailingJsonObjectIsRejectedNonDestructively() {
+    std::cout << "[TEST] Trailing JSON object is rejected non-destructively..." << std::endl;
+
+    const Aestra::Tests::ScopedTempDirectory testDirScope{"ProjectLoadTrailingJson"};
+    const auto projectPath = testDirScope.path() / "trailing.aes";
+
+    auto source = std::make_shared<TrackManager>();
+    source->getPlaylistModel().createLane("Serialized Lane");
+    source->addChannel("Serialized Lane");
+    auto serialized = ProjectSerializer::serialize(source, 120.0, 0.0, 0);
+    assert(serialized.ok);
+
+    std::ofstream out(projectPath, std::ios::binary | std::ios::trunc);
+    out << serialized.contents << "\n{\"unexpectedSuffix\":true}";
+    out.close();
+
+    auto destination = std::make_shared<TrackManager>();
+    destination->getPlaylistModel().createLane("Existing Lane");
+    destination->addChannel("Existing Lane");
+    const size_t channelsBefore = destination->getChannelCount();
+
+    auto result = ProjectSerializer::load(projectPath.string(), destination);
+    assert(!result.ok);
+    assert(result.errorMessage.find("exactly one") != std::string::npos);
+    assert(destination->getChannelCount() == channelsBefore);
+
+    std::cout << "[PASS] Trailing JSON object is rejected non-destructively" << std::endl;
+}
+
 void testMissingPatternReference() {
     std::cout << "[TEST] Missing pattern reference preserves placeholder..." << std::endl;
 
@@ -830,6 +859,7 @@ int main() {
     std::cout << "=== Project Load Regression Tests ===" << std::endl;
 
     testValidProjectLoad();
+    testTrailingJsonObjectIsRejectedNonDestructively();
     testMissingPatternReference();
     testMissingArsenalUnitReference();
     testFailedValidationDoesNotClear();
