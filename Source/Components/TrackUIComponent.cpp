@@ -226,6 +226,11 @@ TrackUIComponent::TrackUIComponent(PlaylistLaneID laneId, std::shared_ptr<MixerC
 
 
 TrackUIComponent::~TrackUIComponent() {
+    // Torn down mid-drag: cancel the capture so the bridge never routes to a
+    // dangling owner and the cursor is never stranded hidden.
+    if (m_platformBridge && m_platformBridge->isCursorCaptureOwner(this)) {
+        m_platformBridge->cancelCursorCapture();
+    }
     detachContextMenu(m_recordModeMenu);
     Log::debug("TrackUIComponent destroyed for lane: " + m_laneId.toString());
 }
@@ -1874,11 +1879,14 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_volumeKnobDragStartPos = event.position;
                 m_volumeKnobDragStartValue = m_volumeKnobValue;
 
-                // Cursor capture: hide system cursor for infinite drag
+                // Cursor capture via the unified service: hides + confines to
+                // a small anchor rect + routes motion here only + recenters, so
+                // the hidden pointer can't roam other panels (foreign hover /
+                // escape). Restores at the knob center on release.
                 if (m_platformBridge) {
-                    m_volumeWarpOrigin = event.position;
-                    m_volumeLastDragY = event.position.y;
-                    m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Hidden);
+                    m_platformBridge->beginCursorCapture(
+                        this, AestraUI::NUICursorRestorePolicy::KnobCenter,
+                        static_cast<int>(event.position.x), static_cast<int>(event.position.y));
                 }
 
                 if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
@@ -1887,20 +1895,20 @@ bool TrackUIComponent::onMouseEvent(const AestraUI::NUIMouseEvent& event) {
                 m_isDraggingVolumeKnob = false;
                 AestraUI::NUIComponent::hideRemoteTooltip(this);
 
-                // Restore cursor to knob center (matches current value position)
+                // End capture: service warps to knob center, unhides, releases
+                // confinement — in that order.
                 if (m_platformBridge) {
-                    m_platformBridge->setCursorPosition(
+                    m_platformBridge->endCursorCapture(
                         static_cast<int>(m_volumeKnobBounds.x + m_volumeKnobBounds.width * 0.5f),
                         static_cast<int>(m_volumeKnobBounds.y + m_volumeKnobBounds.height * 0.5f));
-                    m_platformBridge->setCursorStyle(AestraUI::NUICursorStyle::Arrow);
                 }
 
                 if (m_onCacheInvalidationCallback) m_onCacheInvalidationCallback();
                 handledByControls = true;
             } else if (m_isDraggingVolumeKnob && event.button == AestraUI::NUIMouseButton::None) {
-                // Dragging: frame-to-frame delta (up = louder)
-                float dy = m_volumeLastDragY - event.position.y;
-                m_volumeLastDragY = event.position.y;
+                // Dragging: service-owned delta (up = louder). event.delta.y is
+                // down-positive, so negate to keep up = louder.
+                float dy = -event.delta.y;
                 float delta = dy * 0.008f;
                 if (event.modifiers & AestraUI::NUIModifiers::Shift) {
                     delta *= 0.25f;

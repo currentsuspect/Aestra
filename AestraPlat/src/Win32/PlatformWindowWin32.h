@@ -54,6 +54,8 @@ public:
 
     // Set cursor position (screen coordinates)
     void setCursorPosition(int x, int y) override;
+    void setCursorClip(bool clipped) override;
+    void setCursorClipRect(int x, int y, int w, int h) override;
     void getCursorPosition(int& x, int& y) const override;
 
     // Mouse Capture

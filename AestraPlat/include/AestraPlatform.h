@@ -245,6 +245,17 @@ public:
     /** @brief Clip cursor to window bounds (for hidden-cursor drag to prevent escape). */
     virtual void setCursorClip(bool clipped) {}
 
+    /**
+     * @brief Clip the cursor to a small WINDOW-RELATIVE rectangle.
+     *
+     * Confining to the whole window is insufficient for a borderless
+     * custom-titlebar app: the title bar and in-window panels are inside the
+     * window, so the hidden drag pointer can still roam over them. A tiny rect
+     * around the drag anchor hard-locks the pointer to the control. Coords are
+     * client-area (same space as setCursorPosition). Default no-op.
+     */
+    virtual void setCursorClipRect(int x, int y, int w, int h) {}
+
     /** @brief Query current modifier-key state for wheel and gesture events. */
     virtual KeyModifiers getCurrentModifiers() const = 0;
 

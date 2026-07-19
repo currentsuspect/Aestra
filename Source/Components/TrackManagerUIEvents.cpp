@@ -318,8 +318,7 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
 
             AestraUI::NUIRect globalBounds = getBounds();
 
-            int winX, winY;
-            m_window->getPosition(winX, winY);
+
 
             float gridTopLocal = globalBounds.y + headerHeight + rulerHeight + horizontalScrollbarHeight;
             float gridLeftLocal = globalBounds.x + controlAreaWidth + 5.0f;
@@ -333,9 +332,11 @@ bool TrackManagerUI::handleSelectionBoxMouse(const AestraUI::NUIMouseEvent& even
             // Apply bounds to internal selection logic
             m_selectionBoxEnd = {targetX, targetY};
 
-            // Force physical cursor to match clamped position
-            // Add window offset to get screen coordinates
-            m_window->setCursorPosition(winX + (int)targetX, winY + (int)targetY);
+            // Force physical cursor to match the clamped position. setCursorPosition
+            // takes WINDOW-RELATIVE coords (targetX/Y are already window-local); the
+            // backend converts to screen. (Previously added the window offset, which
+            // is wrong under the window-relative cursor contract.)
+            m_window->setCursorPosition((int)targetX, (int)targetY);
         } else {
             m_selectionBoxEnd = event.position;
         }

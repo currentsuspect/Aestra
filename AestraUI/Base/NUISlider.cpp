@@ -150,9 +150,8 @@ bool NUISlider::onMouseEvent(const NUIMouseEvent& event)
                     // Check modifier state for fine-tuning (can change mid-drag)
                     isFineDrag_ = (event.modifiers & (NUIModifiers::Ctrl | NUIModifiers::Super)) != 0;
 
-                    // Compute frame-to-frame delta
-                    float dy = event.position.y - m_lastDragY;
-                    m_lastDragY = event.position.y;
+                    // Service-owned delta (recentered; no absolute-coord read).
+                    float dy = event.delta.y;
 
                     float sensitivity = isFineDrag_ ? FINE_DRAG_SENSITIVITY : COARSE_DRAG_SENSITIVITY;
                     float delta = -dy * sensitivity * (maxValue_ - minValue_);
