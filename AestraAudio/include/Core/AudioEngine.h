@@ -695,6 +695,12 @@ private:
     // master/destination/sends, meter publication. Verbatim extraction of the
     // renderGraph() per-track loop body; srcActiveThisBlock is the loop-carried
     // "any resampling happened" telemetry flag.
+    // renderTrack phase helpers (verbatim extractions; RT path — no allocation).
+    void renderTrackClips(const TrackRenderState& track, std::vector<double>& buffer, const RenderContext& ctx,
+                          bool& srcActiveThisBlock);
+    void renderTrackUnits(uint32_t trackIdx, std::vector<double>& buffer, const RenderContext& ctx);
+    float processTrackEffects(const TrackRenderState& track, uint32_t trackIdx, std::vector<double>& buffer,
+                              uint32_t numFrames);
     void renderTrack(const AudioGraph& graph, size_t orderedIndex, const RenderContext& ctx,
                      bool& srcActiveThisBlock);
     void prepareTrackStateForGraph(const AudioGraph& graph);
