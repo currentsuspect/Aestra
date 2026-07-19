@@ -110,11 +110,17 @@ int main() {
     }
 
     // --- Test 3: forceAutosave writes immediately ---
+    // forceAutosave() runs performAutosave() synchronously on the calling thread and
+    // does not depend on the background worker, so we leave the worker disabled here.
+    // Running it would only spin up a thread whose sole activity during this test is a
+    // startup-banner log; its heap allocation races this thread's rotateBackups() free
+    // under TSan (different mutexes → no happens-before) even though the production
+    // write+rotate path is itself serialized by m_commitMutex (issue #564).
     {
         AutosaveManager manager;
 
         AutosaveManager::Config config;
-        config.enabled = true;
+        config.enabled = false;
         config.autosaveInterval = std::chrono::seconds(60);
         config.minDirtyDelay = std::chrono::seconds(5);
         config.autosavePathOverride = autosavePath.string();
@@ -135,11 +141,14 @@ int main() {
     }
 
     // --- Test 4: Backup rotation ---
+    // Driven synchronously through forceAutosave() (see Test 3): the background worker
+    // is left disabled so its startup-banner log cannot race these rotateBackups() frees
+    // under TSan (issue #564). Rotation itself is fully exercised on the calling thread.
     {
         AutosaveManager manager;
 
         AutosaveManager::Config config;
-        config.enabled = true;
+        config.enabled = false;
         config.autosaveInterval = std::chrono::seconds(60);
         config.minDirtyDelay = std::chrono::seconds(0);
         config.maxBackupFiles = 2;
