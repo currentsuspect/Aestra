@@ -1,5 +1,6 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUIPlatformBridge.h"
+#include <cstdio>
 #include "NUITypes.h"
 #include "NUIComponent.h"
 #include "NUIRenderer.h"
@@ -118,8 +119,6 @@ void NUIPlatformBridge::setupEventBridges() {
         if (m_rootComponent) {
             NUIMouseEvent event;
             event.type = NUIMouseEventType::Move;
-            event.position = {static_cast<float>(x), static_cast<float>(y)};
-            event.delta = {deltaX, deltaY};
             event.button = NUIMouseButton::None;
             event.pressed = false;
             event.released = false;
@@ -131,12 +130,21 @@ void NUIPlatformBridge::setupEventBridges() {
                 event.modifiers = convertModifiers(mods);
             }
 
-            // Routed dispatch: while captured, ONLY the capture owner sees
-            // motion — the rest of the tree must not hit-test, hover, or
-            // react to the hidden wandering pointer.
             if (m_cursorService.isCaptured() && m_cursorCaptureOwner) {
+                // Captured: the service owns delta. It computes the semantic
+                // drag delta from raw physical motion and recenters the pointer
+                // to the anchor (so it can never reach the window edge). The
+                // OS pointer is a pure implementation detail here — the owner
+                // sees an anchored position and a service-computed delta only.
+                const auto d = m_cursorService.feedPhysicalMotion(x, y);
+                event.position = {static_cast<float>(m_cursorService.anchorX()),
+                                  static_cast<float>(m_cursorService.anchorY())};
+                event.delta = {static_cast<float>(d.dx), static_cast<float>(d.dy)};
+                // Routed dispatch: ONLY the capture owner sees motion.
                 m_cursorCaptureOwner->onMouseEvent(event);
             } else {
+                event.position = {static_cast<float>(x), static_cast<float>(y)};
+                event.delta = {deltaX, deltaY};
                 m_rootComponent->onMouseEvent(event);
             }
         }
@@ -649,7 +657,10 @@ void NUIPlatformBridge::applyCursorStyle(NUICursorStyle style) {
         case NUICursorStyle::Grabbing:   cursor = :: LoadCursor(NULL, IDC_HAND); break;
         case NUICursorStyle::Hidden:
             NUIComponent::setCursorCaptureActive(true);
-            if (m_window) m_window->setCursorClip(true);
+            // Don't re-assert a whole-window clip while a drag capture owns the
+            // pointer — the service confines to a small anchor rect (see
+            // hostSetPointerGrab); a whole-window clip here would clobber it.
+            if (m_window && !m_cursorService.isCaptured()) m_window->setCursorClip(true);
             ::SetCursor(NULL);
             return;
         default: cursor = ::LoadCursor(NULL, IDC_ARROW); break;
@@ -666,7 +677,9 @@ void NUIPlatformBridge::applyCursorStyle(NUICursorStyle style) {
         NUIComponent::setCursorCaptureActive(true);
         if (m_window) {
             m_window->setCursorVisible(false);
-            m_window->setCursorClip(true);
+            // See Win32 branch: the service owns a small anchor-rect clip during
+            // capture; don't clobber it with a whole-window clip.
+            if (!m_cursorService.isCaptured()) m_window->setCursorClip(true);
         }
         return;
     }

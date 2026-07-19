@@ -275,9 +275,8 @@ bool UIMixerFader::onMouseEvent(const NUIMouseEvent& event)
     if (m_dragging && event.button == NUIMouseButton::None) {
         // Cursor-warp mode: use frame-to-frame delta
         if (m_platformBridge) {
-            // Compute frame-to-frame delta
-            float dy = event.position.y - m_lastDragY;
-            m_lastDragY = event.position.y;
+            // Service-owned delta (recentered; no absolute-coord read).
+            float dy = event.delta.y;
 
             // Invert Y for fader: up = positive
             const float deltaPx = -dy;

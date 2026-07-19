@@ -330,9 +330,8 @@ bool UIMixerKnob::onMouseEvent(const NUIMouseEvent& event)
     if (m_dragging && event.button == NUIMouseButton::None) {
         // Cursor-warp mode: use frame-to-frame delta
         if (m_platformBridge) {
-            // Compute frame-to-frame delta
-            float dy = event.position.y - m_lastDragY;
-            m_lastDragY = event.position.y;
+            // Service-owned delta (recentered; no absolute-coord read).
+            float dy = event.delta.y;
 
             // Reduced sensitivity for cursor-warp mode since every pixel counts
             float sensitivity = (event.modifiers & NUIModifiers::Shift) ? 0.11f : 0.5f;

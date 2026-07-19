@@ -1,5 +1,6 @@
 // © 2026 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 #include "NUICursorService.h"
+#include <cstdio>
 
 namespace AestraUI {
 
@@ -20,6 +21,10 @@ bool NUICursorService::beginDragCapture(NUICursorRestorePolicy policy, int grabO
     m_grabOriginX = grabOriginX;
     m_grabOriginY = grabOriginY;
     m_captured = true;
+
+    m_lastPhysX = grabOriginX;
+    m_lastPhysY = grabOriginY;
+    m_expectRecenterEvent = false;
 
     m_host.hostHideCursor();
     // Confine the pointer for the duration of the capture: on native Wayland a
@@ -59,6 +64,33 @@ void NUICursorService::cancelDragCapture() {
     m_host.hostShowCursor();
     m_host.hostSetPointerGrab(false);
     m_inTransition = false;
+}
+
+NUICursorService::Delta NUICursorService::feedPhysicalMotion(int physX, int physY) {
+    if (!m_captured) {
+        return {};
+    }
+    // Suppress the synthetic motion produced by our own recenter warp: it lands
+    // on the anchor and must not be reported as drag motion.
+    if (m_expectRecenterEvent && physX == m_grabOriginX && physY == m_grabOriginY) {
+        m_expectRecenterEvent = false;
+        m_lastPhysX = m_grabOriginX;
+        m_lastPhysY = m_grabOriginY;
+        return {};
+    }
+
+    const Delta d{physX - m_lastPhysX, physY - m_lastPhysY};
+    if (d.dx == 0 && d.dy == 0) {
+        return d; // no motion, no recenter (avoids warp spam while idle)
+    }
+
+    // Recenter to the anchor so the next delta is measured from the anchor
+    // again — the pointer is pinned and can never drift to the window edge.
+    m_host.hostWarpCursor(m_grabOriginX, m_grabOriginY);
+    m_lastPhysX = m_grabOriginX;
+    m_lastPhysY = m_grabOriginY;
+    m_expectRecenterEvent = true;
+    return d;
 }
 
 } // namespace AestraUI

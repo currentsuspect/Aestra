@@ -65,6 +65,7 @@ public:
 
     // Cursor Clip
     void setCursorClip(bool clipped) override;
+    void setCursorClipRect(int x, int y, int w, int h) override;
 
     // Modifier key state query
     KeyModifiers getCurrentModifiers() const override;
