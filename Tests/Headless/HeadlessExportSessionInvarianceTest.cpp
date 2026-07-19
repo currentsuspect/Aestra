@@ -94,7 +94,17 @@ int main() {
                 "successful export should write a non-trivial WAV");
 
         requireUnchanged(trackManager, before, "success");
-        std::cout << "[INFO] success path: transport state preserved.\n";
+
+        // Re-export the same project: the commit layer is idempotent, so it must
+        // not append duplicate channels/units/clips to the TrackManager.
+        const size_t channelsAfterFirst = trackManager.getChannelCount();
+        fs::remove(outPath);
+        const bool ok2 = gen.exportTo(outPath.string(), 48000, AudioExporter::BitDepth::PCM_16);
+        require(ok2, "re-export of the same project should also succeed");
+        require(trackManager.getChannelCount() == channelsAfterFirst,
+                "re-export must not duplicate committed channels (idempotent commit)");
+        requireUnchanged(trackManager, before, "re-export");
+        std::cout << "[INFO] success path: transport state preserved, commit idempotent.\n";
     }
     fs::remove(outPath);
 

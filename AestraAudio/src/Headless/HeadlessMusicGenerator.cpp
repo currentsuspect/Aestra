@@ -36,6 +36,7 @@ HeadlessMusicGenerator& HeadlessMusicGenerator::createProject(const std::string&
     m_playlistClips.clear();
     m_channelNames.clear();
     m_currentPatternName.clear();
+    m_committed = false;
     m_toneSamplePath.clear();
     m_laneUnits.clear();
     m_laneIds.clear();
@@ -355,14 +356,30 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
         Log::error("[HeadlessGenerator] Validation failed: " + error);
         return false;
     }
-    
+
+    // Reconcile the render sample rate before committing so the sampler
+    // instruments are initialized at the same rate the engine renders at (the
+    // exportTo sampleRate argument overrides the configured project rate).
+    const uint32_t effectiveRate = sampleRate > 0 ? sampleRate : m_sampleRate;
+    m_sampleRate = effectiveRate;
+
     // Commit patterns to track manager
     commitPatternsToManager();
 
     // Commit playlist
     commitPlaylistToModel();
 
-    const uint32_t effectiveRate = sampleRate > 0 ? sampleRate : m_sampleRate;
+    // Remove the temp tone sample on every exit path, including an exception
+    // out of render() (the sampler decoded it into memory at load time).
+    struct ToneSampleCleanup {
+        const std::string& path;
+        ~ToneSampleCleanup() {
+            if (!path.empty()) {
+                std::error_code ec;
+                std::filesystem::remove(path, ec);
+            }
+        }
+    } toneCleanup{m_toneSamplePath};
 
     // --- Wire the export engine to render the committed timeline ---------------
     // AudioExporter::render drives AudioEngine::processBlock — the same path the
@@ -439,14 +456,7 @@ bool HeadlessMusicGenerator::exportTo(const std::string& outputPath,
     
     // Render
     Log::info("[HeadlessGenerator] Exporting to: " + outputPath);
-    auto result = exporter.render(config);
-
-    // The sampler decoded the tone into memory at load time, so the temp source
-    // file is no longer needed once the render is done.
-    if (!m_toneSamplePath.empty()) {
-        std::error_code rmEc;
-        std::filesystem::remove(m_toneSamplePath, rmEc);
-    }
+    auto result = exporter.render(config); // toneCleanup removes the temp sample on scope exit
 
     if (result.success) {
         Log::info("[HeadlessGenerator] Export complete: " + 
@@ -622,12 +632,16 @@ uint64_t HeadlessMusicGenerator::ensureLaneInstrument(uint32_t laneIndex) {
 }
 
 void HeadlessMusicGenerator::commitPatternsToManager() {
-    // The MIDI PatternSources are created in commitPlaylistToModel(): each note
-    // routes to the sampler unit backing the lane its clip is placed on, so the
-    // routed pattern can only be built once the placement (and thus the lane
-    // instrument) is known. Here we just prepare the shared sampler source.
-    m_laneUnits.clear();
-    m_laneIds.clear();
+    // Commit once per project: re-committing would append duplicate lanes,
+    // units and clips to the TrackManager on a second exportTo() call. State is
+    // reset by createProject(). The MIDI PatternSources themselves are created
+    // in commitPlaylistToModel(): each note routes to the sampler unit backing
+    // the lane its clip is placed on, so the routed pattern can only be built
+    // once the placement (and thus the lane instrument) is known. Here we just
+    // prepare the shared sampler source.
+    if (m_committed) {
+        return;
+    }
     if (!prepareToneSample()) {
         Log::warning("[HeadlessGenerator] Tone sample unavailable — render will be silent");
     }
@@ -636,6 +650,9 @@ void HeadlessMusicGenerator::commitPatternsToManager() {
 }
 
 void HeadlessMusicGenerator::commitPlaylistToModel() {
+    if (m_committed) {
+        return;
+    }
     auto& patternManager = m_trackManager.getPatternManager();
     auto& playlist = m_trackManager.getPlaylistModel();
 
@@ -677,6 +694,7 @@ void HeadlessMusicGenerator::commitPlaylistToModel() {
         ++committed;
     }
 
+    m_committed = true;
     Log::info("[HeadlessGenerator] Committed " + std::to_string(committed) + " clips to playlist");
 }
 

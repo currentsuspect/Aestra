@@ -314,7 +314,8 @@ private:
     // Mixer
     std::vector<std::string> m_channelNames;
 
-    // #556 render wiring — populated by the commit layer, reset per export.
+    // #556 render wiring — populated by the commit layer once per project.
+    bool m_committed = false;                      // guards against duplicate commits on re-export
     std::string m_toneSamplePath;                 // synthetic sampler source (temp file)
     std::map<uint32_t, uint64_t> m_laneUnits;     // laneIndex -> sampler UnitID
     std::map<uint32_t, PlaylistLaneID> m_laneIds; // laneIndex -> playlist lane
