@@ -428,8 +428,11 @@ void SamplerPlugin::process(const float* const* inputs, float** outputs, uint32_
             v.position += v.playbackRate;
         }
 
-        outputs[0][i] = L;
-        outputs[1][i] = R;
+        // Guard against non-finite output: sinc interpolation at extreme
+        // playback rates (or a corrupted sample) can produce NaN/Inf, which
+        // must not leave the plugin and poison the engine mix.
+        outputs[0][i] = std::isfinite(L) ? L : 0.0f;
+        outputs[1][i] = std::isfinite(R) ? R : 0.0f;
     }
 }
 

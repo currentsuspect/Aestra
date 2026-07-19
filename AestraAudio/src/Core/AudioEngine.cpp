@@ -118,6 +118,15 @@ inline double clampD(double v, double lo, double hi) {
     return (v < lo) ? lo : (v > hi) ? hi : v;
 }
 
+// Replace NaN/Inf with silence at a mix boundary. A misbehaving plugin or a
+// corrupted clip source can emit non-finite samples; catching them where they
+// enter the mix keeps the poison out of per-track effect state, meters, and
+// sends, rather than relying only on the final output-stage guard after the
+// damage has already accumulated. Branch is bounded and RT-safe.
+inline double sanitizeMix(double v) noexcept {
+    return std::isfinite(v) ? v : 0.0;
+}
+
 inline double dbToLinearD(double db) {
     // UI uses -90 dB as "silence"
     if (db <= -90.0)
@@ -2107,8 +2116,8 @@ void AudioEngine::renderGraph(const AudioGraph& graph, uint32_t numFrames, uint3
             unit.plugin->process(nullptr, outputs, 0, 2, numFrames, midiBuf, nullptr);
 
             for (uint32_t i = 0; i < numFrames; ++i) {
-                masterBuf[i * 2] += static_cast<double>(outputs[0][i]);
-                masterBuf[i * 2 + 1] += static_cast<double>(outputs[1][i]);
+                masterBuf[i * 2] += sanitizeMix(static_cast<double>(outputs[0][i]));
+                masterBuf[i * 2 + 1] += sanitizeMix(static_cast<double>(outputs[1][i]));
             }
         }
     }
@@ -2198,13 +2207,15 @@ void AudioEngine::renderTrackClips(const TrackRenderState& track, std::vector<do
                         }
                     }
 
+                    // Sanitize clip source reads: a corrupted audio file can
+                    // contain NaN/Inf that would otherwise poison the mix.
                     double sL, sR;
                     if (channels == 1) {
-                        sL = static_cast<double>(src[i]);
+                        sL = sanitizeMix(static_cast<double>(src[i]));
                         sR = sL;
                     } else {
-                        sL = static_cast<double>(src[i * 2]);
-                        sR = static_cast<double>(src[i * 2 + 1]);
+                        sL = sanitizeMix(static_cast<double>(src[i * 2]));
+                        sR = sanitizeMix(static_cast<double>(src[i * 2 + 1]));
                     }
 
                     dst[i * 2] += sL * clipGain * fade;
@@ -2455,8 +2466,8 @@ void AudioEngine::renderTrackUnits(uint32_t trackIdx, std::vector<double>& buffe
                 const double unitGain = static_cast<double>(unit.gain);
                 double* dDst = buffer.data();
                 for (uint32_t k = 0; k < numFrames; ++k) {
-                    dDst[k * 2] += static_cast<double>(outputs[0][k]) * unitGain;
-                    dDst[k * 2 + 1] += static_cast<double>(outputs[1][k]) * unitGain;
+                    dDst[k * 2] += sanitizeMix(static_cast<double>(outputs[0][k])) * unitGain;
+                    dDst[k * 2 + 1] += sanitizeMix(static_cast<double>(outputs[1][k])) * unitGain;
                 }
             }
         }
@@ -3336,8 +3347,8 @@ void AudioEngine::processArsenalUnits(uint32_t numFrames, uint32_t bufferOffset,
             (targetBuffer ? targetBuffer : m_masterBufferD.data()) + static_cast<size_t>(bufferOffset) * 2;
         const double unitGain = static_cast<double>(unit.gain);
         for (uint32_t i = 0; i < numFrames; ++i) {
-            masterD[i * 2 + 0] += static_cast<double>(outputs[0][i]) * unitGain; // Left
-            masterD[i * 2 + 1] += static_cast<double>(outputs[1][i]) * unitGain; // Right
+            masterD[i * 2 + 0] += sanitizeMix(static_cast<double>(outputs[0][i])) * unitGain; // Left
+            masterD[i * 2 + 1] += sanitizeMix(static_cast<double>(outputs[1][i])) * unitGain; // Right
         }
 
         bufIdx++;
