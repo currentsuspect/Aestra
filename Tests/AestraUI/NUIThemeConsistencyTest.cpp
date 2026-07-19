@@ -340,6 +340,33 @@ void testChromeDimensionConfigLoad() {
         check(nearlyEqual(t.layout.titleBarHeight, 41.0f), "zero titleBarHeight is rejected, default retained");
         check(nearlyEqual(t.layout.viewToggleWidth, 321.0f), "negative viewToggleWidth is rejected, default retained");
     }
+
+    // Non-numeric input hits parseDimension()'s 0.0f fallback; an extent
+    // dimension must reject it and keep the current value (CR #582 follow-up).
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  viewToggleHeight: bad\n"),
+          "config with a non-numeric chrome dimension still parses");
+    check(nearlyEqual(manager.getCurrentTheme().layout.viewToggleHeight, 27.0f),
+          "non-numeric viewToggleHeight is rejected, default retained");
+
+    // Spacing tokens differ from extents: zero is a legitimate flush layout, so
+    // panelMargin/componentPadding accept 0 rather than being rejected.
+    {
+        auto& theme = manager.getCurrentThemeMutable();
+        theme.layout.panelMargin = 12.0f;
+        theme.layout.componentPadding = 8.0f;
+    }
+    check(configLoader.loadConfigFromString(
+              "layout:\n"
+              "  panelMargin: 0\n"
+              "  componentPadding: 0\n"),
+          "config with zero spacing parses");
+    {
+        const auto& t = manager.getCurrentTheme();
+        check(nearlyEqual(t.layout.panelMargin, 0.0f), "zero panelMargin is accepted (flush layout)");
+        check(nearlyEqual(t.layout.componentPadding, 0.0f), "zero componentPadding is accepted (flush layout)");
+    }
 }
 
 } // namespace

@@ -245,32 +245,44 @@ void NUIConfigLoader::applyLayout(const Aestra::JSON& layout) {
     auto& themeManager = NUIThemeManager::getInstance();
     auto& theme = themeManager.getCurrentThemeMutable();
 
-    // Only override a layout dimension when the JSON supplies a usable value.
+    // Only override a layout value when the JSON supplies a usable one.
     // parseDimension() returns 0.0f for malformed input (non-numeric, NaN, "px"
-    // typos), and a zero/negative dimension is never valid — applying it would
-    // silently clobber the theme default and collapse the layout. Reject those
-    // and keep the current value instead.
-    const auto applyDim = [&](const char* key, float& target) {
+    // typos), so both helpers reject non-finite values and keep the current
+    // default rather than silently clobbering it.
+    //
+    // The zero policy differs by role:
+    //  - applyExtent: dimensions that must occupy space (title bar, view toggle,
+    //    control sizes). Zero collapses the layout, so require strictly > 0.
+    //  - applySpacingDim: margins/padding where zero is a legitimate value
+    //    (a flush, no-gap layout), so accept finite >= 0.
+    const auto applyExtent = [&](const char* key, float& target) {
         if (!layout.has(key)) return;
         const float value = parseDimension(layout[key]);
         if (std::isfinite(value) && value > 0.0f) {
             target = value;
         }
     };
+    const auto applySpacingDim = [&](const char* key, float& target) {
+        if (!layout.has(key)) return;
+        const float value = parseDimension(layout[key]);
+        if (std::isfinite(value) && value >= 0.0f) {
+            target = value;
+        }
+    };
 
-    applyDim("trackHeight", theme.layout.trackHeight);
-    applyDim("trackControlsWidth", theme.layout.trackControlsWidth);
-    applyDim("fileBrowserWidth", theme.layout.fileBrowserWidth);
-    applyDim("transportBarHeight", theme.layout.transportBarHeight);
-    applyDim("titleBarHeight", theme.layout.titleBarHeight);
-    applyDim("viewToggleWidth", theme.layout.viewToggleWidth);
-    applyDim("viewToggleHeight", theme.layout.viewToggleHeight);
-    applyDim("transportButtonSize", theme.layout.transportButtonSize);
-    applyDim("controlButtonWidth", theme.layout.controlButtonWidth);
-    applyDim("controlButtonHeight", theme.layout.controlButtonHeight);
-    applyDim("gridLineSpacing", theme.layout.gridLineSpacing);
-    applyDim("panelMargin", theme.layout.panelMargin);
-    applyDim("componentPadding", theme.layout.componentPadding);
+    applyExtent("trackHeight", theme.layout.trackHeight);
+    applyExtent("trackControlsWidth", theme.layout.trackControlsWidth);
+    applyExtent("fileBrowserWidth", theme.layout.fileBrowserWidth);
+    applyExtent("transportBarHeight", theme.layout.transportBarHeight);
+    applyExtent("titleBarHeight", theme.layout.titleBarHeight);
+    applyExtent("viewToggleWidth", theme.layout.viewToggleWidth);
+    applyExtent("viewToggleHeight", theme.layout.viewToggleHeight);
+    applyExtent("transportButtonSize", theme.layout.transportButtonSize);
+    applyExtent("controlButtonWidth", theme.layout.controlButtonWidth);
+    applyExtent("controlButtonHeight", theme.layout.controlButtonHeight);
+    applyExtent("gridLineSpacing", theme.layout.gridLineSpacing);
+    applySpacingDim("panelMargin", theme.layout.panelMargin);
+    applySpacingDim("componentPadding", theme.layout.componentPadding);
 }
 
 void NUIConfigLoader::applySpacing(const Aestra::JSON& spacing) {
