@@ -82,6 +82,9 @@ void testSemanticDefaults() {
           "compact controls meet the minimum hit area");
     check(theme.layout.transportButtonSize == theme.layout.standardControlHeight,
           "transport and standard controls share the 28 px metric");
+    check(theme.layout.titleBarHeight == 32.0f && theme.layout.viewToggleWidth == 310.0f &&
+              theme.layout.viewToggleHeight == theme.layout.compactControlHeight,
+          "application chrome defaults use the shared compact metric");
     check(theme.layout.standardMenuRowHeight == theme.layout.standardRowHeight,
           "ordinary menu and list rows share a metric");
 }
@@ -179,7 +182,12 @@ void testLiveJSONThemeRegistration() {
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         out << R"({
             "colors": { "accent": "#2468ac", "focusRing": "#abcdef" },
-            "dimensions": { "standardControlHeight": 30.0 },
+            "dimensions": {
+                "standardControlHeight": 30.0,
+                "titleBarHeight": 34.0,
+                "viewToggleWidth": 300.0,
+                "viewToggleHeight": 26.0
+            },
             "fontSizes": { "normal": 13.0 }
         })";
     }
@@ -193,6 +201,10 @@ void testLiveJSONThemeRegistration() {
     check(colorsEqual(loaded.focusRing, NUIColor::fromHex(0xabcdef)), "semantic focus ring maps into live state");
     check(colorsEqual(loaded.backgroundPrimary, base.backgroundPrimary), "missing live token inherits the base preset");
     check(nearlyEqual(loaded.layout.standardControlHeight, 30.0f), "live control dimension is overridden");
+    check(nearlyEqual(manager.getLayoutDimension("titleBarHeight"), 34.0f) &&
+              nearlyEqual(manager.getLayoutDimension("viewToggleWidth"), 300.0f) &&
+              nearlyEqual(manager.getLayoutDimension("viewToggleHeight"), 26.0f),
+          "application chrome dimensions are overridden and exposed through the manager");
     check(nearlyEqual(loaded.fontSizeM, 13.0f), "legacy normal font size maps to live body text");
 
     int reloadCount = 0;

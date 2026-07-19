@@ -86,6 +86,9 @@ void NUIConfigLoader::saveConfig(const std::string& filePath) {
     layout.set("trackControlsWidth", theme.layout.trackControlsWidth);
     layout.set("fileBrowserWidth", theme.layout.fileBrowserWidth);
     layout.set("transportBarHeight", theme.layout.transportBarHeight);
+    layout.set("titleBarHeight", theme.layout.titleBarHeight);
+    layout.set("viewToggleWidth", theme.layout.viewToggleWidth);
+    layout.set("viewToggleHeight", theme.layout.viewToggleHeight);
     config.set("layout", layout);
 
     // Save spacing
@@ -245,6 +248,9 @@ void NUIConfigLoader::applyLayout(const Aestra::JSON& layout) {
     if (layout.has("trackControlsWidth")) theme.layout.trackControlsWidth = parseDimension(layout["trackControlsWidth"]);
     if (layout.has("fileBrowserWidth")) theme.layout.fileBrowserWidth = parseDimension(layout["fileBrowserWidth"]);
     if (layout.has("transportBarHeight")) theme.layout.transportBarHeight = parseDimension(layout["transportBarHeight"]);
+    if (layout.has("titleBarHeight")) theme.layout.titleBarHeight = parseDimension(layout["titleBarHeight"]);
+    if (layout.has("viewToggleWidth")) theme.layout.viewToggleWidth = parseDimension(layout["viewToggleWidth"]);
+    if (layout.has("viewToggleHeight")) theme.layout.viewToggleHeight = parseDimension(layout["viewToggleHeight"]);
     if (layout.has("transportButtonSize")) theme.layout.transportButtonSize = parseDimension(layout["transportButtonSize"]);
     if (layout.has("controlButtonWidth")) theme.layout.controlButtonWidth = parseDimension(layout["controlButtonWidth"]);
     if (layout.has("controlButtonHeight")) theme.layout.controlButtonHeight = parseDimension(layout["controlButtonHeight"]);
