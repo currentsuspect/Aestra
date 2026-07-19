@@ -1,6 +1,7 @@
 // © 2025 Aestra Studios — All Rights Reserved. Licensed for personal & educational use only.
 
 #include "PluginBrowserPanel.h"
+#include "../Platform/NUIPlatformBridge.h"
 #include "NUIRenderer.h"
 #include "NUIDragDrop.h"
 #include "NUIContextMenu.h"
@@ -799,6 +800,14 @@ EffectChainRack::EffectChainRack() {
     m_bypassOverride.fill(-1);
 }
 
+EffectChainRack::~EffectChainRack() {
+    // Torn down mid-drag: cancel the capture so the bridge never routes to a
+    // dangling owner and the cursor is never stranded hidden.
+    if (m_platformBridge && m_platformBridge->isCursorCaptureOwner(this)) {
+        m_platformBridge->cancelCursorCapture();
+    }
+}
+
 void EffectChainRack::onRender(NUIRenderer& renderer) {
     auto bounds = getBounds();
     const auto& theme = NUIThemeManager::getInstance().getCurrentTheme();
@@ -1058,6 +1067,13 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
     // RELEASED Event Handling (Must be checked before general Drag handling to allow drops)
     if (event.released && event.button == NUIMouseButton::Left) {
         if (m_activeKnobSlot != -1) {
+            if (m_platformBridge) {
+                // Restore at the dry/wet knob center of the released slot.
+                NUIRect slotRect = getSlotBounds(m_activeKnobSlot);
+                m_platformBridge->endCursorCapture(
+                    static_cast<int>(slotRect.x + slotRect.width - 22.0f + 9.0f),
+                    static_cast<int>(slotRect.y + 14.0f));
+            }
             m_activeKnobSlot = -1;
             return true;
         }
@@ -1104,14 +1120,14 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
 
     // KNOB DRAG Handling
     if (m_activeKnobSlot != -1) {
-        const float dx = event.position.x - m_dragStartPos.x;
-        const float dy = m_dragStartPos.y - event.position.y; // Up is positive (Values go up as mouse goes up)
-        const float dragDelta = dx + dy;
+        // Service-owned frame delta; keep the original diagonal semantics
+        // (right and/or up = increase). Shift = fine, matching the app-wide rule.
+        const float dragDelta = event.delta.x + (-event.delta.y);
 
         float sensitivity = 0.005f;
-        if (event.modifiers & NUIModifiers::Shift) sensitivity *= 0.1f;
+        if (event.modifiers & NUIModifiers::Shift) sensitivity *= 0.25f;
 
-        float newValue = std::clamp(m_dragStartValue + dragDelta * sensitivity, 0.0f, 1.0f);
+        float newValue = std::clamp(m_slots[m_activeKnobSlot].dryWet + dragDelta * sensitivity, 0.0f, 1.0f);
 
         if (std::abs(newValue - m_slots[m_activeKnobSlot].dryWet) > 0.001f) {
             m_slots[m_activeKnobSlot].dryWet = newValue;
@@ -1132,8 +1148,11 @@ bool EffectChainRack::onMouseEvent(const NUIMouseEvent& event) {
              if (isOverKnob(slotIdx)) {
                  if (!m_slots[slotIdx].isEmpty) {
                      m_activeKnobSlot = slotIdx;
-                     m_dragStartValue = m_slots[slotIdx].dryWet;
-                     m_dragStartPos = event.position;
+                     if (m_platformBridge) {
+                         m_platformBridge->beginCursorCapture(
+                             this, NUICursorRestorePolicy::KnobCenter,
+                             static_cast<int>(event.position.x), static_cast<int>(event.position.y));
+                     }
                      return true;
                  }
              }
