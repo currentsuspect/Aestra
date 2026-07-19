@@ -348,7 +348,6 @@ bool AestraFilterEditor::onMouseEvent(const NUIMouseEvent& event) {
         return false;
 
     const float mx = event.position.x;
-    const float my = event.position.y;
 
     // Bypass pill
     if (m_bypassRect.contains(event.position) && event.pressed && event.button == NUIMouseButton::Left) {
@@ -371,16 +370,20 @@ bool AestraFilterEditor::onMouseEvent(const NUIMouseEvent& event) {
         }
     }
 
-    // Knob vertical drag
+    // Knob vertical drag (rotary → cursor capture)
     if (m_draggingParam >= 0) {
         if (event.released) {
+            endKnobCapture();
             m_draggingParam = -1;
             return true;
         }
         if (event.button == NUIMouseButton::None) {
-            const float delta = (m_dragStartY - my) / kDragRangePx;
+            // Service-owned frame delta (up = increase); accumulates into the
+            // current value, so total travel matches the old absolute mapping.
+            const float step = -event.delta.y / kDragRangePx;
+            const float cur = m_instance->getParameter(static_cast<uint32_t>(m_draggingParam));
             m_instance->setParameter(static_cast<uint32_t>(m_draggingParam),
-                                     std::clamp(m_dragStartValue + delta, 0.0f, 1.0f));
+                                     std::clamp(cur + step, 0.0f, 1.0f));
             setDirty();
             return true;
         }
@@ -397,8 +400,9 @@ bool AestraFilterEditor::onMouseEvent(const NUIMouseEvent& event) {
         for (const auto& k : knobs) {
             if (k.rect.contains(event.position)) {
                 m_draggingParam = static_cast<int>(k.param);
-                m_dragStartY = my;
                 m_dragStartValue = m_instance->getParameter(k.param);
+                beginKnobCapture({k.rect.x + k.rect.width * 0.5f, k.rect.y + k.rect.height * 0.5f},
+                                 event.position);
                 return true;
             }
         }
